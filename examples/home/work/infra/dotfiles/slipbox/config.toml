@@ -330,6 +330,7 @@ sidebar_vault = { bold = true, underline = true }
 "leader ; g g" = "find.word_next"
 "leader ; g h" = "find.word_prev"
 "leader ; g i" = "find.clear"
+"leader ; g j" = "find.replace_vault"
 "leader ; R a" = "task.toggle"
 "leader ; a d" = "edit.insert"
 "leader ; a e" = "edit.append"

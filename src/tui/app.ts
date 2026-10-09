@@ -24,6 +24,7 @@ import { defaultTarget, type ExportFormat, exportNotes, exportTarget, FORMATS, f
 import { listTasks, toggleTask } from "../core/tasks.ts";
 import { merge3, unifiedDiff } from "../core/merge.ts";
 import { compilePattern, findAll } from "../core/replace.ts";
+import { planReplace } from "../core/replace-files.ts";
 import { writeDirty } from "../core/stale.ts";
 import { editorArgv } from "../core/editor.ts";
 import { cannotEdit, insertKey, insertText, lineOf, offsetOf, placeAt, startInsert, stopInsert } from "./editing.ts";
@@ -380,6 +381,8 @@ export interface PromptOverlay {
   view?: View;
   /** Find's replace field, when open (ctrl+h, space f r; tab from the find field). */
   replace?: ReplaceState;
+  /** A find across files (25.4): the window whose find toggles it uses — alt+r, alt+w flip them — and its label. */
+  toggles?: { view: View; label: () => string };
 }
 
 export type Overlay = ListOverlay | PromptOverlay | SaveAsOverlay;
@@ -6957,6 +6960,12 @@ export class App {
       return;
     }
     if (o.kind === "prompt") {
+      // A find across files: the window's toggles, said in its label.
+      if (o.toggles && (key === "alt+r" || key === "alt+w")) {
+        this.toggleFindOpt(o.toggles.view, key === "alt+r" ? "regex" : "whole");
+        o.label = o.toggles.label();
+        return;
+      }
       // The find row's toggles, while typing in it.
       if (o.view && (key === "alt+r" || key === "alt+w")) {
         this.toggleFindOpt(o.view, key === "alt+r" ? "regex" : "whole");
@@ -8683,16 +8692,17 @@ export class App {
     // What it rewrites, and what it moves: a folder's every file (its open buffers are replaced by the moved files').
     const touched = new Set([...plan.files.map((f) => f.abs), ...(plan.move ? [plan.move.from] : []), ...(plan.moves ?? []).map(([from]) => join(this.loc.root, from))]);
     const dirty = this.dirtyBuffers().filter((b) => touched.has(b.abs));
-    if (dirty.length) return this.message("warn", `unsaved: ${dirty.map((b) => this.displayName(b)).join(", ")} — save first: the rename rewrites or moves ${dirty.length === 1 ? "it" : "them"}`);
+    if (dirty.length) return this.message("warn", `unsaved: ${dirty.map((b) => this.displayName(b)).join(", ")} — save first: the ${plan.kind === "replace" ? "replace rewrites" : "rename rewrites or moves"} ${dirty.length === 1 ? "it" : "them"}`);
     const n = plan.files.reduce((k, f) => k + f.edits.length, 0);
     const more = extra?.(plan);
     const items: ListItem[] = [
       ...plan.warnings.map((w) => ({ label: `! ${w}`, data: plan })),
       ...(more?.items ?? []),
       ...plan.skipped.map((s) => ({ label: `skipped ${s.shown}:${s.line}`, detail: s.reason, data: plan })),
-      ...plan.files.flatMap((f) => f.edits.map((e) => ({ label: `${f.shown}:${e.line}`, detail: `${e.before.trim()}  →  ${e.after.trim()}`, data: plan }))),
+      // A replace's edit can span lines: each break shown.
+      ...plan.files.flatMap((f) => f.edits.map((e) => ({ label: `${f.shown}:${e.line}`, detail: `${e.before.trim().replace(/\n/g, " ⏎ ")}  →  ${e.after.trim().replace(/\n/g, " ⏎ ")}`, data: plan }))),
     ];
-    if (!plan.files.length) items.push({ label: plan.kind === "relink" ? "no broken link points where a file moved from" : plan.kind === "convert" ? "nothing left to convert" : "no links to change", data: plan });
+    if (!plan.files.length) items.push({ label: plan.kind === "relink" ? "no broken link points where a file moved from" : plan.kind === "convert" ? "nothing left to convert" : plan.kind === "replace" ? "nothing to replace" : "no links to change", data: plan });
     const what =
       plan.kind === "note" || plan.kind === "heading"
         ? `${plan.from} → ${plan.to}`
@@ -8706,7 +8716,9 @@ export class App {
                 ? `${plan.from}/ → a plain folder of ${plan.to}`
                 : plan.kind === "convert"
                   ? "links → plain paths"
-                  : "relink";
+                  : plan.kind === "replace"
+                    ? `${JSON.stringify(plan.from)} → ${JSON.stringify(plan.to)}`
+                    : "relink";
     this.openList({
       title: `${plan.undo ? "undo: " : ""}${what}: ${n} change${n === 1 ? "" : "s"} in ${plan.files.length} file${plan.files.length === 1 ? "" : "s"} — enter: do it, esc: cancel`,
       items,
@@ -8747,7 +8759,7 @@ export class App {
 
   /** Carry out a previewed rename; open notes follow it (the moved one under its new path). */
   applyRename(plan: RenamePlan): void {
-    if ((plan.kind === "relink" || plan.kind === "convert") && !plan.files.length) return;
+    if ((plan.kind === "relink" || plan.kind === "convert" || plan.kind === "replace") && !plan.files.length) return;
     let applied: Applied;
     try {
       applied = applyPlan(this.graph, plan);
@@ -8817,7 +8829,7 @@ export class App {
     if (plan.makeVault || plan.unmakeVault) this.selectInExplorer(plan.from);
     const n = plan.files.reduce((k, f) => k + f.edits.length, 0);
     const what = plan.undo
-      ? { note: `renamed ${plan.from} back to ${plan.to}`, folder: `moved ${plan.from}/ back to ${plan.to}/`, vault: `named the folder ${plan.from} back to ${plan.to}`, relink: "undid the relink", "make-vault": "", "unmake-vault": "", heading: `renamed the heading ${plan.from} back to ${plan.to}`, convert: "undid the conversion to plain paths" }[plan.kind]
+      ? { note: `renamed ${plan.from} back to ${plan.to}`, folder: `moved ${plan.from}/ back to ${plan.to}/`, vault: `named the folder ${plan.from} back to ${plan.to}`, relink: "undid the relink", "make-vault": "", "unmake-vault": "", heading: `renamed the heading ${plan.from} back to ${plan.to}`, convert: "undid the conversion to plain paths", replace: `undid the replace of ${JSON.stringify(plan.to)} with ${JSON.stringify(plan.from)}` }[plan.kind]
       : plan.kind === "note" || plan.kind === "heading"
         ? `renamed ${plan.from} → ${plan.to}`
         : plan.kind === "folder"
@@ -8830,8 +8842,52 @@ export class App {
                 ? `made ${plan.from}/ a plain folder of ${plan.to} (its .slipbox/ is in the trash)`
                 : plan.kind === "convert"
                   ? "converted links to plain paths"
-                  : "relinked";
+                  : plan.kind === "replace"
+                    ? `replaced ${JSON.stringify(plan.from)} with ${JSON.stringify(plan.to)}`
+                    : "relinked";
     this.message("info", `${what}: ${n} change${n === 1 ? "" : "s"} in ${plan.files.length} file${plan.files.length === 1 ? "" : "s"}`);
+  }
+
+  /** A find across files' label: what it asks, and which of the window's find toggles are on. */
+  acrossLabel(base: string, view = this.view): string {
+    const o = view?.findOpts;
+    const on = [o?.regex && "regex", o?.whole && "whole words"].filter(Boolean);
+    return `${base}${on.length ? ` (${on.join(", ")})` : ""}`;
+  }
+
+  /**
+   * Replace across files (25.4): what to find — the find's query, or a selection on one line, typed already — then
+   * what with, then the rename's preview of every line it changes, in every note and every file the explorer shows;
+   * enter does it, `space v shift+u` takes it back. The window's find toggles are its (alt+r, alt+w flip them here).
+   * Refused where an unsaved file has a match: its text on disk isn't what's open.
+   */
+  replaceInEveryNote(): void {
+    const view = this.view;
+    const opts = () => ({ ...(view?.findOpts ?? { regex: false, whole: false }) });
+    const said = (base: string) => () => this.acrossLabel(base, view);
+    const selected = view?.sel && !view.sel.line ? this.selectionText(view) : "";
+    const seed = selected && !selected.includes("\n") ? selected : (view?.find?.query ?? "");
+    const find = said("replace in every note — find");
+    this.prompt(find(), (query) => {
+      if (!query) return;
+      const re = compilePattern(query, opts());
+      if (typeof re === "string") return this.message("warn", `not a regex: ${re}`);
+      const withLabel = said(`replace ${JSON.stringify(query)} in every note with`);
+      this.prompt(withLabel(), (replacement) => {
+        // The toggles as they are now: flipped here, the query may be no regex.
+        const o = opts();
+        const re = compilePattern(query, o);
+        if (typeof re === "string") return this.message("warn", `not a regex: ${re}`);
+        const rels = [...this.graph.notes.keys(), ...this.shownFiles().map((f) => f.path)];
+        const abs = new Set(rels.map((r) => this.graph.abs(r)));
+        const dirty = this.dirtyBuffers().filter((b) => abs.has(b.abs) && findAll(b.source, re, 0, b.source.length, o.regex).length);
+        if (dirty.length) return this.message("warn", `unsaved: ${dirty.map((b) => this.displayName(b)).join(", ")} — save first: the replace rewrites ${dirty.length === 1 ? "it" : "them"}`);
+        this.previewRename(() => planReplace(this.graph, query, replacement, rels, o));
+      });
+      if (view) (this.overlay as PromptOverlay).toggles = { view, label: withLabel };
+    });
+    (this.overlay as PromptOverlay).text = seed;
+    if (view) (this.overlay as PromptOverlay).toggles = { view, label: find };
   }
 
   /** Undo the vault's last rename, move or relink (7.4): its preview, then carried out as a rename is. */

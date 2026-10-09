@@ -207,6 +207,8 @@ export const DEFAULT_KEYS: Record<string, string> = {
   "leader f g": "find.vault",
   "leader f s": "search.open",
   "leader f r": "find.replace",
+  "ctrl+shift+h": "find.replace_vault",
+  "leader f shift+r": "find.replace_vault",
   "ctrl+p": "switcher.open",
   "leader f f": "switcher.open",
   "leader f o": "outline.pick",

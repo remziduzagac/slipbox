@@ -1,7 +1,7 @@
-// The renames log (7.4): each rename, move or relink carried out in a vault — every file it
-// rewrote, with the span of its text that was different before, and what moved — so the last one
-// can be undone exactly, as long as nothing it wrote has changed since. In the vault's state, as
-// its redirects are: personal, never committed.
+// The renames log (7.4): each rename, move, relink or replace across files (25.4) carried out in a
+// vault — every file it rewrote, with the span of its text that was different before, and what
+// moved — so the last one can be undone exactly, as long as nothing it wrote has changed since. In
+// the vault's state, as its redirects are: personal, never committed.
 
 import { join } from "node:path";
 import { readJson, writeJson } from "./fsutil.ts";
@@ -25,7 +25,7 @@ export interface LoggedRename {
   id: string;
   /** When (ISO). */
   at: string;
-  kind: "note" | "folder" | "vault" | "relink" | "heading" | "convert";
+  kind: "note" | "folder" | "vault" | "relink" | "heading" | "convert" | "replace";
   from: string;
   to: string;
   move: { from: string; to: string; dir: boolean } | null;

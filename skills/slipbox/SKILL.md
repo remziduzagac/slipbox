@@ -78,6 +78,7 @@ counts without the text.
 ```bash
 slipbox find <text> [<note>] --json      # data.matches[{path,line,column,match,text}]; --regex --whole
 slipbox replace <note> <old> <new> --dry-run --json   # see data.changes first, then run it without
+slipbox replace --all <old> <new> --dry-run --json    # every note (--files: text files too); undo takes it back
 slipbox task <note> --json               # data.tasks[{line,checked,text}]
 slipbox task <note> <line> --check       # tick one (--uncheck, or neither to toggle)
 slipbox write <note> --stdin --if-unchanged <sha>     # replace the text, only if unchanged since read

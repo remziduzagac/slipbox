@@ -2437,3 +2437,49 @@ describe("brackets (25.3)", () => {
     expect([emptyPair("()", 1), emptyPair("''", 1), emptyPair("(x)", 1), emptyPair("(]", 1)]).toEqual([true, true, false, false]);
   });
 });
+
+describe("replace across files: the lines it changes (25.4)", () => {
+  test("a line's matches one edit; a match across a break, its lines one; numbered on from the last; a CRLF's \\r left out", async () => {
+    const { lineEdits } = await import("../src/core/replace-files.ts");
+    const { compilePattern, findAll } = await import("../src/core/replace.ts");
+    const edits = (text: string, query: string, replacement: string, regex = false) =>
+      lineEdits(text, findAll(text, compilePattern(query, { regex, whole: false }) as RegExp, 0, text.length, regex), replacement, regex);
+    expect(edits("a x a\nno\nx a\n", "a", "b")).toEqual([
+      { line: 1, before: "a x a", after: "b x b" },
+      { line: 3, before: "x a", after: "x b" },
+    ]);
+    // Across a break: both lines, joined; the line after it numbered on.
+    expect(edits("one\ntwo end\nthree\nlast end\n", "o end\\nth|t end", "X", true)).toEqual([
+      { line: 2, before: "two end\nthree", after: "twXree" },
+      { line: 4, before: "last end", after: "lasX" },
+    ]);
+    expect(edits("w\r\nk w\r\n", "w", "v")).toEqual([
+      { line: 1, before: "w", after: "v" },
+      { line: 2, before: "k w", after: "k v" },
+    ]);
+    // A replacement with a break in it, groups, an empty match inserting at each line's start.
+    expect(edits("k=1\nj=2\n", "(\\w)=(\\d)", "$1:\n$2", true)).toEqual([
+      { line: 1, before: "k=1", after: "k:\n1" },
+      { line: 2, before: "j=2", after: "j:\n2" },
+    ]);
+    expect(edits("a\nb\n", "^", "> ", true)).toEqual([
+      { line: 1, before: "a", after: "> a" },
+      { line: 2, before: "b", after: "> b" },
+    ]);
+    // A match at the line's end (`$`, before its break) is the line's, with the others on it.
+    expect(edits("a x \nb\n", "x|$", "y", true)).toEqual([
+      { line: 1, before: "a x ", after: "a y y" },
+      { line: 2, before: "b", after: "by" },
+    ]);
+    // On an empty line: its own number, the next line's after it.
+    expect(edits("a\n\nb\n", "^", "> ", true)).toEqual([
+      { line: 1, before: "a", after: "> a" },
+      { line: 2, before: "", after: "> " },
+      { line: 3, before: "b", after: "> b" },
+    ]);
+    // A later match on the line crossing a break takes the next line in too.
+    expect(edits("a x\nb c\n", "a|x\\nb", "_", true)).toEqual([{ line: 1, before: "a x\nb c", after: "_ _ c" }]);
+    // A match replaced by itself changes nothing: no edit.
+    expect(edits("same\n", "same", "same")).toEqual([]);
+  });
+});

@@ -45,6 +45,7 @@ import { sanitize, UNSAFE } from "../core/sanitize.ts";
 import { climbsOut, type DecodedFile, decodeText, ensureDir, landsInside, readJson, readRegular, readText, WriteRefused, writeNote } from "../core/fsutil.ts";
 import { exportNotes, exportTarget, FORMATS, formatFor, writeExport } from "../core/export/index.ts";
 import { compilePattern, expandReplacement, findAll, firstPerLine, replaceMatches } from "../core/replace.ts";
+import { planReplace } from "../core/replace-files.ts";
 import { listTasks, toggleTask } from "../core/tasks.ts";
 import { editorArgv } from "../core/editor.ts";
 import { discoverNvims, NVIM_REMOTE, probeNvim } from "../core/nvim.ts";
@@ -208,6 +209,7 @@ Usage:
                                     [add <line[:col]> <text> | edit <label> <text> | rm <label> | rename <label> <new>] [--if-unchanged <sha>]
   slipbox find <query> [note]       find text in a note, or every note  [--regex] [--whole] [--ignore-case] [--files]
   slipbox replace <note> <old> <new>  replace in a note  [--regex] [--whole] [--ignore-case] [--first | --first-per-line] [--lines A-B] [--dry-run] [--if-unchanged <sha>]
+  slipbox replace --all <old> <new>  replace in every note, undone as a rename is  [--files] [--regex] [--whole] [--ignore-case] [--dry-run] [--plan]
   slipbox task <note> [line]        list tasks, or toggle one      [--check] [--uncheck] [--if-unchanged <sha>]
   slipbox read <note>               a note's text, and its sha
   slipbox stat <note>               a note's size, dates, title, counts, encoding (the TUI's note info)
@@ -224,7 +226,8 @@ Usage:
   slipbox rename-heading <note> <heading> <new>  rename a heading; links to it fixed everywhere  [--dry-run] [--plan]
   slipbox relink [note]             rewrite links broken by a move slipbox saw, to where the file is  [--dry-run] [--plan]
   slipbox convert-links [note]      wikilinks and links from the root rewritten as relative paths  [--dry-run] [--plan]
-  slipbox undo                      take back the last mv, name, rename-heading, relink or convert-links here  [--dry-run] [--plan]
+  slipbox undo                      take back the last mv, name, rename-heading, relink, convert-links or replace --all here
+                                    [--dry-run] [--plan]
   slipbox apply [plan]              write a plan --plan saved (refused if a file changed since); none: those waiting  [--dry-run]
   slipbox send <note>               open it in a running editor   [--line N] [--server <socket>]
   slipbox history                   notes read lately, newest first, and what's open
@@ -314,13 +317,15 @@ export async function runCli(argv: string[], io: Io): Promise<number> {
     // A file named by its pointer (21.10) is that file: its path from here on, so the command works in
     // its folder as it would with the path.
     const NOTE_FIRST = ["render", "export", "links", "backlinks", "outline", "footnotes", "replace", "task", "read", "stat", "write", "send", "mv", "rename-heading", "relink", "convert-links", "cp", "rm", "diff", "context"];
-    const named = command === "context" ? rest.map((_, i) => i) : NOTE_FIRST.includes(command) || ["diagnostics", "doctor", "deinit", "index", "link"].includes(command) ? [0] : command === "find" ? [1] : [];
+    // `replace --all` names no note: its first argument is what it finds.
+    const noNote = command === "replace" && has(args, "all");
+    const named = command === "context" ? rest.map((_, i) => i) : noNote ? [] : NOTE_FIRST.includes(command) || ["diagnostics", "doctor", "deinit", "index", "link"].includes(command) ? [0] : command === "find" ? [1] : [];
     for (const i of named) if (rest[i] !== undefined) rest[i] = vaultFormArg(rest[i]!, io.cwd);
     const from = flag(args, "from");
     if (from !== undefined) args.flags.set("from", vaultFormArg(from, io.cwd));
     // The note argument, when it names a file, also says which vault this is (resolve's is --from:
     // where the link is written; diagnostics' its file, whose root's checks it runs).
-    const noteAt = NOTE_FIRST.includes(command) || command === "diagnostics" ? rest[0] : command === "find" ? rest[1] : command === "resolve" ? flag(args, "from") : command === "link" ? (flag(args, "from") ?? rest[0]) : undefined;
+    const noteAt = noNote ? undefined : NOTE_FIRST.includes(command) || command === "diagnostics" ? rest[0] : command === "find" ? rest[1] : command === "resolve" ? flag(args, "from") : command === "link" ? (flag(args, "from") ?? rest[0]) : undefined;
     let pathArg = noteArgPath(noteAt, io.cwd, flag(args, "root"));
     // A nested vault's folder, moved, copied or deleted, is a folder of the vault holding it (18.7).
     if (pathArg && ["mv", "cp", "rm"].includes(command)) {
@@ -419,7 +424,7 @@ export const FLAGS: Record<string, string[]> = {
   link: ["text", "style", "embed"],
   find: ["regex", "whole", "ignore-case", "files"],
   ls: ["files"],
-  replace: ["regex", "whole", "ignore-case", "first", "first-per-line", "lines", "dry-run", "if-unchanged"],
+  replace: ["regex", "whole", "ignore-case", "first", "first-per-line", "lines", "dry-run", "if-unchanged", "all", "files", "plan"],
   task: ["check", "uncheck", "if-unchanged"],
   footnotes: ["if-unchanged"],
   problems: ["lint"],
@@ -1677,6 +1682,8 @@ const HANDLERS: Record<string, Handler> = {
   },
 
   replace(s, rest) {
+    if (has(s.args, "all")) return replaceAll(s, rest);
+    if (has(s.args, "files") || has(s.args, "plan")) throw new UsageError("--files and --plan go with --all: replace in every note");
     if (rest.length < 3) throw new UsageError("replace needs <note> <old> <new> (the new text may be \"\")");
     const [noteArg, query, replacement] = rest as [string, string, string];
     if (!query) throw new UsageError("replace needs something to find (an empty pattern matches nothing)");
@@ -2195,6 +2202,22 @@ function folderArg(s: Session, arg: string): string | null {
   return null;
 }
 
+/**
+ * `replace --all <old> <new>` (25.4): in every note — and with --files, every text file — as a rename is: --dry-run its
+ * preview, --plan saved for `apply`, logged for `undo`.
+ */
+function replaceAll(s: Session, rest: string[]): Promise<Result> {
+  if (rest.length !== 2) throw new UsageError("replace --all needs <old> <new> (the new text may be \"\"), and no note");
+  const [query, replacement] = rest as [string, string];
+  if (!query) throw new UsageError("replace needs something to find (an empty pattern matches nothing)");
+  for (const f of ["first", "first-per-line", "lines", "if-unchanged"]) if (has(s.args, f)) throw new UsageError(`--${f} is for one note's replace, not --all`);
+  pattern(s, query); // not a regex: a usage error, before anything is read
+  const rels = [...s.graph.notes.keys(), ...(has(s.args, "files") ? textFiles(s).map((f) => f.path) : [])];
+  for (const k of s.graph.skipped) if (/^larger than/.test(k.reason)) s.warnings.push(`${k.rel}: not searched (${k.reason})`);
+  const opts = { regex: has(s.args, "regex"), whole: has(s.args, "whole"), ignoreCase: has(s.args, "ignore-case") };
+  return renameResult(s, () => planReplace(s.graph, query, replacement, rels, opts));
+}
+
 /** A rename's plan (7.2), or, without --dry-run, the rename done. */
 async function renameResult(s: Session, plan: () => RenamePlan, g = s.graph): Promise<Result> {
   // A code file links from its comments (16.10): its grammar loaded first, so a move finds those too (20.19).
@@ -2222,22 +2245,26 @@ async function renameResult(s: Session, plan: () => RenamePlan, g = s.graph): Pr
   const links = p.files.reduce((n, f) => n + f.edits.length, 0);
   const verb = p.undo
     ? applied
-      ? { note: "renamed", folder: "moved folder", vault: "renamed folder", relink: "undid the relink of", "make-vault": "", "unmake-vault": "", heading: "renamed heading", convert: "undid the conversion of" }[p.kind]
-      : { note: "would rename", folder: "would move folder", vault: "would rename folder", relink: "would undo the relink of", "make-vault": "", "unmake-vault": "", heading: "would rename heading", convert: "would undo the conversion of" }[p.kind]
+      ? { note: "renamed", folder: "moved folder", vault: "renamed folder", relink: "undid the relink of", "make-vault": "", "unmake-vault": "", heading: "renamed heading", convert: "undid the conversion of", replace: "undid the replace of" }[p.kind]
+      : { note: "would rename", folder: "would move folder", vault: "would rename folder", relink: "would undo the relink of", "make-vault": "", "unmake-vault": "", heading: "would rename heading", convert: "would undo the conversion of", replace: "would undo the replace of" }[p.kind]
     : applied
-    ? { note: "renamed", folder: "moved folder", vault: "renamed folder", relink: "relinked", "make-vault": "made", "unmake-vault": "made", heading: "renamed heading", convert: "converted" }[p.kind]
-    : { note: "would rename", folder: "would move folder", vault: "would rename folder", relink: "would relink", "make-vault": "would make", "unmake-vault": "would make", heading: "would rename heading", convert: "would convert" }[p.kind];
+    ? { note: "renamed", folder: "moved folder", vault: "renamed folder", relink: "relinked", "make-vault": "made", "unmake-vault": "made", heading: "renamed heading", convert: "converted", replace: "replaced" }[p.kind]
+    : { note: "would rename", folder: "would move folder", vault: "would rename folder", relink: "would relink", "make-vault": "would make", "unmake-vault": "would make", heading: "would rename heading", convert: "would convert", replace: "would replace" }[p.kind];
   const head = p.undo
     ? p.kind === "relink" || p.kind === "convert"
       ? `${verb} ${p.to}`
-      : `${verb} ${p.from} back to ${p.to}`
-    : p.kind === "relink" || p.kind === "convert"
-      ? `${verb} ${p.from}`
-      : p.kind === "make-vault"
-        ? `${verb} ${p.from}/ a root of its own${p.to !== p.from ? `, called ${p.to}` : ""}`
-        : p.kind === "unmake-vault"
-          ? `${verb} ${p.from}/ a plain folder of ${p.to}`
-          : `${verb} ${p.from} → ${p.to}`;
+      : p.kind === "replace"
+        ? `${verb} ${JSON.stringify(p.to)} with ${JSON.stringify(p.from)}`
+        : `${verb} ${p.from} back to ${p.to}`
+    : p.kind === "replace"
+      ? `${verb} ${JSON.stringify(p.from)} with ${JSON.stringify(p.to)}`
+      : p.kind === "relink" || p.kind === "convert"
+        ? `${verb} ${p.from}`
+        : p.kind === "make-vault"
+          ? `${verb} ${p.from}/ a root of its own${p.to !== p.from ? `, called ${p.to}` : ""}`
+          : p.kind === "unmake-vault"
+            ? `${verb} ${p.from}/ a plain folder of ${p.to}`
+            : `${verb} ${p.from} → ${p.to}`;
   const human = [
     `${head}: ${links} change${links === 1 ? "" : "s"} in ${p.files.length} file${p.files.length === 1 ? "" : "s"}${saved ? ` — planned: slipbox apply ${saved.id} writes it (refused if any of these files changes first)` : ""}`,
     ...p.files.flatMap((f) => f.edits.map((e) => `  ${f.shown}:${e.line}\n    - ${e.before}\n    + ${e.after}`)),

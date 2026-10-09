@@ -376,12 +376,12 @@ while a file it rewrites or moves is unsaved** (a moved folder's notes included)
 are reloaded, and a window on a renamed or moved note shows it under its new path, its history following — every note
 of a moved folder alike.
 
-**Undo** (`7.4`): `space v shift+u` (the explorer's `shift+u`, `:undo-rename`) takes back the root's last rename,
-move, naming, heading rename, relink or conversion to path links — made here or by the CLI (`slipbox mv`, `name`,
-`rename-heading`, `relink`, `convert-links`) — as `slipbox undo` does (`docs/design/cli.md`, "Renames"): its
-preview first (`undo: notes/first.md → notes/alpha.md`, each line the other way), then every file as it was and what
-moved back where it was, open notes following it back. Refused when a file it wrote has changed since. `u` puts
-back a delete; `shift+u` a rename.
+**Undo** (`7.4`): `space v shift+u` (the explorer's `shift+u`, `:undo-rename`) takes back the root's last rename, move,
+naming, heading rename, relink, conversion to path links or replace in every note — made here or by the CLI
+(`slipbox mv`, `name`, `rename-heading`, `relink`, `convert-links`, `replace --all`) — as `slipbox undo` does
+(`docs/design/cli.md`, "Renames"): its preview first (`undo: notes/first.md → notes/alpha.md`, each line the other way),
+then every file as it was and what moved back where it was, open notes following it back. Refused when a file it wrote
+has changed since. `u` puts back a delete; `shift+u` a rename.
 
 ## Files in the explorer (plans `18.1`–`18.10`)
 
@@ -678,7 +678,13 @@ past theirs), so the content behind never runs up to the edge.
   `path:line`, the last query's answer the one shown; in a note, or where no server gives them, the root's
   headings, slipbox's own symbols. `enter` opens the file there. Find in every
   note (`ctrl+shift+f`, `space f g`) lists each line with the text or regex as `path:line` with the
-  line, an open note searched as it is now.
+  line, an open note searched as it is now. Its question takes the window's find toggles, said in it: `alt+r` and
+  `alt+w` flip them there.
+- **Replace in every note** (`25.4`; `ctrl+shift+h`, `space f shift+r`): what to find — the window's find, or a
+  selection on one line, typed already — then what with, then the rename's preview of each line it changes in every
+  note and every file the explorer shows (`slipbox replace --all`'s, `--files` as the explorer has them). `enter` does
+  it, `esc` leaves everything; `space v shift+u` takes it back, as a rename. A match across lines is one row, each
+  break a `⏎`. Refused while a file with a match is unsaved: what's open isn't what's on disk.
 - **Search** (`6.5`, `6.9`; `space f s`, `:search words`): the root's notes ranked by the words as they're typed —
   as `slipbox search` ranks them (`docs/design/cli.md`, "Search") — each a row: `path:line`, the section's heading
   and the line, its words marked, `+n` for the file's other sections with some of them. `enter` opens it on that

@@ -1374,8 +1374,12 @@ export function registerActions(app: App): void {
         });
       };
       if (arg) return run(arg);
-      a.prompt("find in every note", run);
+      const label = () => a.acrossLabel("find in every note");
+      a.prompt(label(), run);
+      if (a.view) (a.overlay as PromptOverlay).toggles = { view: a.view, label };
     },
+    // Replace across files (25.4): asked, then previewed and carried out as a rename is.
+    "find.replace_vault": (a) => a.replaceInEveryNote(),
     // Find and replace: the find row with a replace row under it, on the markdown (replacing.ts).
     // A selection on one line is the query; across lines, it's where to replace.
     "find.replace": (a) =>

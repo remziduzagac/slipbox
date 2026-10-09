@@ -134,6 +134,7 @@ Everything else is testable headlessly with `TextCanvas` (see [testing.md](testi
 | `core/brackets.ts` | 25.3 | the bracket matching one (`%`, the marks); pairs closed as typed, stepped over, deleted |
 | `core/nvim.ts` | 4.12 | finding and asking the running nvims |
 | `core/replace.ts` | 4.16 | find's patterns (plain, regex, whole words), replacements, vim's `:s` parsed |
+| `core/replace-files.ts` | 25.4 | a find replaced across files, as a rename's plan: previewed, undone |
 | `core/merge.ts` | 5.5 | line diff (Myers), three-way merge, the diff the conflict prompt shows |
 | `core/theme/*` | 2.6 | semantic roles, built-in themes, base16 loader |
 | `core/glyphs.ts` | 2.8 | Nerd, Unicode and ASCII glyph sets |

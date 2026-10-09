@@ -47,7 +47,8 @@ export interface FileChange {
 }
 
 export interface RenamePlan {
-  kind: "note" | "folder" | "vault" | "relink" | "make-vault" | "unmake-vault" | "heading" | "convert";
+  /** `replace`: a find's matches replaced across files (25.4), `from` the find and `to` its replacement. */
+  kind: "note" | "folder" | "vault" | "relink" | "make-vault" | "unmake-vault" | "heading" | "convert" | "replace";
   from: string;
   to: string;
   /** What moves: a file or a folder, absolute paths; null for a vault's rename or a relink. */
@@ -294,16 +295,31 @@ function shownFor(g: Graph, abs: string): string {
 export class Collector {
   readonly files = new Map<string, FileChange>();
   readonly skipped: RenamePlan["skipped"] = [];
+  /** Why a file can't be rewritten, where it's more than unreadable. */
+  private readonly why = new Map<string, string>();
 
   constructor(readonly g: Graph) {}
 
-  /** The file's change so far (its text read once, then edited in turn). */
+  /** Why the file at `abs` isn't rewritten, for its skipped rows. */
+  private reason(abs: string): string {
+    return this.why.get(abs) ?? "can't be read";
+  }
+
+  /**
+   * The file's change so far (its text read once, then edited in turn); null where it can't be — or mustn't be: one
+   * not valid UTF-8 would be written back with U+FFFD where its bytes were.
+   */
   file(abs: string, vault: string | null): FileChange | null {
     let f = this.files.get(abs);
     if (!f) {
       let text: string;
       try {
-        text = readText(abs).text;
+        const d = readText(abs);
+        if (d.invalidUtf8) {
+          this.why.set(abs, "not valid UTF-8: not rewritten");
+          return null;
+        }
+        text = d.text;
       } catch {
         return null;
       }
@@ -317,7 +333,7 @@ export class Collector {
   edit(site: Site, next: string, vault: string | null): void {
     if (next === site.target) return;
     const f = this.file(site.abs, vault);
-    if (!f) return void this.skipped.push({ shown: shownFor(this.g, site.abs), line: site.line, reason: "can't be read" });
+    if (!f) return void this.skipped.push({ shown: shownFor(this.g, site.abs), line: site.line, reason: this.reason(site.abs) });
     const group = classify(site.abs, this.g.config.walk.extensions).group;
     const r = replaceAt(f.next, site, next, group);
     if (!r) return void this.skipped.push({ shown: f.shown, line: site.line, reason: `no link to ${site.target} there any more (its index is older than the file)` });
@@ -332,7 +348,7 @@ export class Collector {
   /** Rewrite one line of a file by `fn` (null: the line isn't what was expected; skipped, with why). */
   line(abs: string, vault: string | null, line: number, fn: (text: string) => string | null, why: string): void {
     const f = this.file(abs, vault);
-    if (!f) return void this.skipped.push({ shown: shownFor(this.g, abs), line, reason: "can't be read" });
+    if (!f) return void this.skipped.push({ shown: shownFor(this.g, abs), line, reason: this.reason(abs) });
     const lines = f.next.split("\n");
     const before = lines[line - 1];
     const cr = before?.endsWith("\r") ? "\r" : "";
@@ -1068,9 +1084,9 @@ export function planUndo(g: Graph): RenamePlan {
   if (!r) {
     const other = all.at(-1);
     if (other) throw new RenameError(`nothing to undo on ${branch ? `branch ${branch}` : "this checkout"}: the last rename was made on ${other.branch ? `branch ${other.branch}` : "a detached HEAD"}`);
-    throw new RenameError("nothing to undo: no rename, move or relink has been done in this vault");
+    throw new RenameError("nothing to undo: no rename, move, relink or replace has been done in this vault");
   }
-  const what = r.kind === "relink" ? "relink" : r.kind === "convert" ? "conversion to path links" : r.kind === "folder" ? `move of ${r.from}/` : r.kind === "vault" ? `folder's naming as ${r.to}` : `rename of ${r.from}`;
+  const what = r.kind === "relink" ? "relink" : r.kind === "convert" ? "conversion to path links" : r.kind === "replace" ? `replace of ${r.from}` : r.kind === "folder" ? `move of ${r.from}/` : r.kind === "vault" ? `folder's naming as ${r.to}` : `rename of ${r.from}`;
   const files: FileChange[] = [];
   for (const f of r.files) {
     let now: string;
@@ -1104,15 +1120,20 @@ export interface Applied {
  * then the edits, then the move. The vault's index and redirects follow.
  */
 export function applyPlan(g: Graph, plan: RenamePlan): Applied {
+  /** The files that start with a byte order mark: a plan's texts are read without it, and it's written back. */
+  const bom = new Set<string>();
   for (const f of plan.files) {
     let now: string;
     try {
-      now = readText(f.abs).text;
+      const d = readText(f.abs);
+      now = d.text;
+      if (d.bom) bom.add(f.abs);
     } catch {
       throw new RenameError(`${f.shown} can't be read any more; nothing changed`);
     }
     if (contentHash(now) !== contentHash(f.text)) throw new RenameError(`${f.shown} changed since the preview; nothing changed — plan again`);
   }
+  const text = (f: FileChange) => (bom.has(f.abs) ? `\uFEFF${f.next}` : f.next);
   const mv = plan.move;
   if (mv && existsSync(mv.to) && !sameFile(mv.from, mv.to)) throw new RenameError(`${mv.to} exists now; nothing changed`);
   /** Where a file of the plan is written: at its new place when it moves. */
@@ -1141,13 +1162,13 @@ export function applyPlan(g: Graph, plan: RenamePlan): Applied {
   }
   for (const f of plan.files) {
     if (mv && !mv.dir && f.abs === mv.from) continue; // written at its new place, below
-    atomicWrite(dest(f.abs), f.next);
+    atomicWrite(dest(f.abs), text(f));
     written.push(dest(f.abs));
   }
   if (mv && !mv.dir) {
     const own = plan.files.find((f) => f.abs === mv.from);
     if (own) {
-      atomicWrite(mv.to, own.next);
+      atomicWrite(mv.to, text(own));
       if (!oneFile) unlinkSync(mv.from);
     } else renameSync(mv.from, mv.to);
     written.push(mv.to);
@@ -1194,7 +1215,7 @@ export function applyPlan(g: Graph, plan: RenamePlan): Applied {
       }
     }
     if (gone.length) g.dirs = g.dirs.filter((x) => !gone.includes(x));
-  } else if ((plan.files.length || mv) && (plan.kind === "note" || plan.kind === "folder" || plan.kind === "vault" || plan.kind === "relink" || plan.kind === "heading" || plan.kind === "convert")) {
+  } else if ((plan.files.length || mv) && (plan.kind === "note" || plan.kind === "folder" || plan.kind === "vault" || plan.kind === "relink" || plan.kind === "heading" || plan.kind === "convert" || plan.kind === "replace")) {
     // Only one that changed something: an empty one would stand in front of the last real one, and
     // an undo would take back nothing.
     logRename(g.loc, {

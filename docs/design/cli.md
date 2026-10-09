@@ -114,6 +114,7 @@ These churn freely before 1.0:
 | `search <words…>` | `{query, engine, relaxed, hits[{path, line, column, heading, section, score, snippet, …}]}` |
 | `index` | `{path, rebuilt, indexed, removed, files, ms}` |
 | `replace <note> <old> <new>` | `{path, count, dryRun, sha, newSha, changes[{line, before, after}]}` |
+| `replace --all <old> <new>` | as `mv`, kind `replace`: `from` what it finds, `to` what with |
 | `task <note>` | `{path, sha, tasks[{line, checked, text, raw}]}` |
 | `task <note> <line>` | `{path, line, text, checked, changed, sha}` |
 | `read <note>` | `{path, abs, sha, bom, crlf, invalidUtf8, content}` |
@@ -179,6 +180,7 @@ slipbox find Aster                       # every note: path:line:column: the lin
 slipbox find 'O2[0-9]:' handbook --regex --json   # one note; data.matches[{path,line,column,match,text}]
 slipbox replace kenji-mori Aster ASTER --dry-run  # what would change, line by line
 slipbox replace note '(\w+): book' '$1 will book' --regex --lines 10-20
+slipbox replace --all Aster Astra --dry-run    # every note: each line it would change; undo takes it back
 slipbox task 2026-09-14-weekly           # line, [x] or [ ], text
 slipbox task 2026-09-14-weekly 17 --check
 slipbox read note --json                 # data.content, data.sha
@@ -226,6 +228,11 @@ slipbox history --json                   # data.read[{path,at,line}], data.open 
   --regex`), and the replacement takes `$&`, `$1`–`$9` and `$$`. `replace` changes every match
   unless `--first` (the first in the range) or `--first-per-line` (vim's `:s` without `g`);
   `--lines A-B` keeps it to those lines, as `:'<,'>s` does.
+- **`replace --all <old> <new>`** (`25.4`) replaces in every note — with `--files`, every text file too, as `find
+  --files` searches — as a rename is (below): `--dry-run` previews each line it changes, `--plan` saves it for `apply`,
+  and `undo` takes it back. A match may cross lines (`--regex`): its lines are one change. A file with a match that
+  isn't valid UTF-8 is skipped, and said. `--first`, `--first-per-line`, `--lines` and `--if-unchanged` are one note's:
+  with `--all`, a usage error.
 - **`--if-unchanged <sha>`** on `replace`, `task` and `write` refuses (exit 5) when the note's bytes
   no longer have that sha, the one `read` reports: nobody changed it since you read it. An empty
   sha is a usage error (exit 2), never a check that passes.
@@ -476,6 +483,8 @@ grammars are loaded before it plans, so their comments count however fresh the p
   too), a file where its folder would be, a path outside the vault or hidden, a file changed between the plan and
   the writing.
 - **Git** (`7.3`): a root it writes to whose tree already has changes is named in `warnings`; the rename goes ahead.
+- **A file's encoding:** one it rewrites keeps its byte order mark and its line endings; one not valid UTF-8 is
+  skipped, and said — never written back with U+FFFD where its bytes were.
 
 **A folder** (`18.3`): `slipbox mv <folder> <new-path>` moves it with everything in it — what the walk doesn't list
 too — and rewrites every link to anything in it, from where each linking file will be; links between two files that
@@ -538,8 +547,8 @@ the vaults linking into it; the heading's closing `#`s stay.
 Refused (exit 5) when the note has no such heading, has two of its name (a link can't tell them apart), or has a
 heading with the new name already. It takes `--dry-run`, and `undo` takes it back.
 
-**Undo** (`7.4`): `slipbox undo` takes back the root's last `mv`, `name`, `rename-heading`, `relink` or
-`convert-links` — the TUI's or the CLI's alike: every file it rewrote gets back the text it had, byte for byte (a
+**Undo** (`7.4`): `slipbox undo` takes back the root's last `mv`, `name`, `rename-heading`, `relink`, `convert-links`
+or `replace --all` — the TUI's or the CLI's alike: every file it rewrote gets back the text it had, byte for byte (a
 folder's `previous_names`, for a `name` taken back), what moved moves back, and the folders the move made go if
 they're empty. It's a rename like the others — `--dry-run`
 previews it, each changed line the other way; open notes, the index and the redirects follow — and it's refused,

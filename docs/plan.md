@@ -961,7 +961,7 @@ Not wanted: vim's marks, macros, named registers and block selection.*
 | 25.1 | **Prototype.** Indentation per file — `.editorconfig`, else the file's own, else its language's |
 | 25.2 | **Prototype.** Comments toggled: `gc` and a motion, `gcc`, a selection's lines, `ctrl+/`; each language's |
 | 25.3 | **Prototype.** Brackets: `%` to the matching one (a motion too), both marked; pairs closed as typed, opt-in |
-| 25.4 | Replace across files in the TUI: previewed as a rename is, undoable |
+| 25.4 | **Prototype.** Replace across files in the TUI: previewed as a rename is, undoable; `replace --all` |
 | 25.5 | Word completion without a language server: the open files' words, `ctrl+n` / `ctrl+p` |
 | 25.6 | Spelling in notes: misspelt words marked, their suggestions, a word added to your own list |
 | 25.7 | A command run: `:!cmd`, its output in a window; lines filtered through one (`:'<,'>!sort`) |

@@ -1282,6 +1282,9 @@ build (`scripts/build-home.ts`), not kept as they are. Each file's purpose and t
 - find in every note (ctrl+shift+f): text/regex per line, open unsaved notes as they are —
   `notes/meetings/standup-log.md`, `work/kestrel/docs/runbooks/deploy.md` (find.vault; test 'search the vault: every
   note')
+- replace in every note (ctrl+shift+h): what, with what, a rename's preview; space v shift+u undoes it —
+  `notes/meetings/standup-log.md`, `work/kestrel/docs/runbooks/deploy.md` (find.replace_vault; tests 'replace in every
+  note (25.4)')
 
 ### switcher
 
@@ -2717,6 +2720,8 @@ The same notes, one per tab.
   (command-specs.ts)
 - `find.vault` — Find in every note — `notes/meetings/all-hands-archive.md`, `work/kestrel/api/kestrel_api/sync.py`
   (command-specs.ts)
+- `find.replace_vault` — Replace in every note — `notes/meetings/all-hands-archive.md`,
+  `work/kestrel/api/kestrel_api/sync.py` (command-specs.ts)
 - `find.substitute` — Substitute: s/old/new/ — `notes/meetings/all-hands-archive.md`,
   `work/kestrel/api/kestrel_api/sync.py` (command-specs.ts)
 - `find.next` — Next match — `notes/meetings/all-hands-archive.md`, `work/kestrel/api/kestrel_api/sync.py`

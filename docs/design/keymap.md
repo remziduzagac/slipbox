@@ -375,6 +375,8 @@ Below `ui.narrow_width` columns (default 90), the explorer and the outline open 
 | the tags here (`:tags`), then a tag's notes (`:tag name`) | — | `space f t` |
 | heading path: the breadcrumb's headings as a dropdown | — | `space f b` |
 | find in every note and file: each line with the text (open ones as they are) | `ctrl+shift+f` | `space f g` |
+| replace in every note and file, previewed; `space v shift+u` undoes it (`25.4`) | `ctrl+shift+h` | `space f shift+r` |
+| while typing what either finds: the window's regex / whole words | `alt+r` / `alt+w` | — |
 | search here, ranked as you type (`:search`); `ctrl+a` more folders (`20.16`); enter opens | — | `space f s` |
 | go to a line by number (`:42` too) | `ctrl+g` | `space f l` |
 | command palette / command line | `:`, `ctrl+shift+p` | `space f p` |
@@ -694,7 +696,7 @@ mouse off, which gives it back to the terminal.
   which slipbox reads as `ctrl+j`. A shifted space, which the kitty protocol reports apart
   (`shift+space`), types a space wherever text is typed: insert mode, a prompt, a filter, `f`'s
   character.
-- **Older terminals:** `ctrl+shift+f`, `ctrl+shift+p`, `ctrl+shift+n`, `ctrl+shift+tab`, `ctrl+tab`,
+- **Older terminals:** `ctrl+shift+f`, `ctrl+shift+h`, `ctrl+shift+p`, `ctrl+shift+n`, `ctrl+shift+tab`, `ctrl+tab`,
   `ctrl+enter` and `ctrl+backspace` can't be told apart from their plain forms. Each one has a
   fallback that works everywhere.
 - **Multiplexers:** zellij takes `ctrl+t`, `ctrl+p`, `ctrl+o` and `ctrl+q`, and tmux and herdr
