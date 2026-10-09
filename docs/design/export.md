@@ -51,17 +51,21 @@ it, and fetches nothing. Every writer is loaded when it's first used, not at sta
   picked already, each pick shows its number, and picking one again takes it out. The list filters as you type, and
   keeps what's typed and where you were between picks. Its first row, whatever's typed, is "Export these 3 notes…".
 - Then a list of the formats; `:export docx` (or `word`, completed) skips it.
-- Then where (`10.14`), a list: **Beside the note** first (`enter`, as before); **Where you exported last**, kept
-  for the root in its state (`export.json`) and offered while that folder is there; **Downloads**, **Desktop**,
-  **Documents** — where the desktop's `user-dirs.dirs` says, else by those names — and **Home**, those there are; **A
-  folder here…**, the root's folder tree as "Move the note to a folder…" shows it; **Elsewhere…**, folders anywhere:
-  its first row, "Export here", picks the folder shown; `enter` or `→` goes into a folder, `←` or "‥" up; typing
-  filters, a `.` first showing the hidden ones.
-- Then a prompt for the file, filled in with that folder and the note's name: from the root inside it, `~/` under
-  home. `tab` completes what's typed, as a shell does: a folder gets its `/`, several names as far as they agree. `~/`
-  is home, and a folder typed gets the note's name in it.
-- A file there is replaced only after `y` to "rep.docx is there — replace it?"; a note is refused (an earlier
-  Markdown export aside, which is asked about as a file is).
+- Then where (`10.14`), in a Save As window: places down its left, the folder it's in on the right — its folders,
+  then its files with their size and date — and the file's name at the bottom, with Export and Cancel buttons. It
+  opens where you exported last (kept for the root in its state, `export.json`, while that folder is there), else
+  beside the note, the note's name filled in and its focus: `enter` exports there.
+  - **Places:** Beside the note; Last export; Downloads, Desktop and Documents — where the desktop's `user-dirs.dirs`
+    says, else by those names — and Home, those there are; This root. The one the folder is in is marked.
+  - **Keys:** `tab` (`shift+tab` back) moves between the places, the folder and the name. In the folder, `enter` or
+    `→` goes into a folder (a file: its name taken), `←` or "‥" up, back on the folder left; typing jumps to an entry
+    that starts so (the same letter again, the next), a `.` first showing the hidden ones; `~` goes home; `ctrl+n`
+    makes a folder there and goes into it. In the name, `↓` goes to the folder; a name may be a path, from the folder
+    (`~/` home), and a folder named is gone into.
+  - **The mouse:** a place clicked goes there; an entry clicked is picked, clicked again opened; the name clicked
+    takes the focus; the wheel scrolls; a click outside cancels.
+- A file there is replaced only after `y` to "rep.docx is there — replace it?" (`n`: the window again); a note is
+  refused, the window kept (an earlier Markdown export aside, which is asked about as a file is).
 - Unsaved notes are saved first, as every hand-off does (`4.10`), since the export reads the notes from disk. One that
   can't be saved stops it, said as `space s c` says it: `export: x.md changed on disk while unsaved — ␣ n c resolves
   it first`.

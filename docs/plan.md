@@ -549,7 +549,7 @@ common, and the only reason they are step 0.
 | 10.11 | **Prototype.** PDF lines laid out by slipbox: a picture in a sentence, maths on the baseline, code tinted |
 | 10.12 | **Prototype.** Emoji in a PDF in black and white, from a font that draws them so (Noto Emoji, Symbola…) |
 | 10.13 | **Deferred** (2026-10-09). Colour emoji in a PDF: the colour emoji font's own pictures, in a line (`10.11`) |
-| 10.14 | **Prototype.** Where an export goes, picked: beside the note, last, your folders, the root's tree, anywhere |
+| 10.14 | **Prototype.** Where an export goes, in a Save As window: places, the folder's folders and files, the name |
 
 Decided 2026-10-09 with the user: no external tool — every format is TypeScript or JavaScript under a permissive
 licence, and a format that would need a tool isn't offered. Word first, then the rest; an export goes beside its note

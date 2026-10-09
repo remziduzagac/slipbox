@@ -94,6 +94,7 @@ import { afterInsertKey, type CompletionState, completionKey, type SignatureStat
 import { sanitize } from "../core/sanitize.ts";
 import { graphemes, graphemeWidth, stringWidth, truncate, truncateStart } from "../core/width.ts";
 import { registerActions } from "./actions.ts";
+import { openSaveAs, type SaveAsOverlay, saveAsKey, saveAsMouse, type SavePlace } from "./saveas.ts";
 import { newParseCache, parseMarkdown } from "../core/parse.ts";
 import { parseInBackground } from "../core/parse-pool.ts";
 import { BACKGROUND_PARSE, NoteBuffer } from "./buffer.ts";
@@ -378,11 +379,9 @@ export interface PromptOverlay {
   view?: View;
   /** Find's replace field, when open (ctrl+h, space f r; tab from the find field). */
   replace?: ReplaceState;
-  /** What `tab` makes of the text typed (a path completed), or null: nothing to complete. */
-  complete?: (text: string) => string | null;
 }
 
-export type Overlay = ListOverlay | PromptOverlay;
+export type Overlay = ListOverlay | PromptOverlay | SaveAsOverlay;
 
 export interface SidePaneState {
   /** Preference on wide terminals: shown beside the content. */
@@ -6649,6 +6648,13 @@ export class App {
       o.text += line;
       o.change?.(o.text);
       if (o.replace && o.view) R.refresh(this, o, o.view);
+    } else if (o.kind === "saveas") {
+      // Into the name, or the new folder's.
+      if (o.creating !== null) o.creating += line;
+      else {
+        o.name += line;
+        o.focus = "name";
+      }
     } else if (o.filterable) {
       o.input += line;
       refilter(o);
@@ -6930,6 +6936,7 @@ export class App {
   }
 
   private overlayKey(o: Overlay, key: string): void {
+    if (o.kind === "saveas") return saveAsKey(this, o, key);
     // Replacing: closing the rows keeps the search, the cursor and the edits (nothing to cancel).
     if (o.kind === "prompt" && o.replace?.confirm && o.view) return R.confirmKey(this, o, o.view, key);
     if (o.kind === "prompt" && o.replace && (key === "escape" || key === "ctrl+c" || key === "ctrl+g")) {
@@ -6967,11 +6974,6 @@ export class App {
       if (key === "enter") {
         this.overlay = null;
         return o.accept(o.text);
-      }
-      if (key === "tab" && o.complete) {
-        const done = o.complete(o.text);
-        if (done !== null) o.text = done;
-        return;
       }
       if (key === "backspace") o.text = [...o.text].slice(0, -1).join("");
       else if (key === "ctrl+w" || key === "ctrl+backspace") o.text = o.text.replace(/\S*\s*$/, "");
@@ -7105,6 +7107,11 @@ export class App {
 
   private overlayMouse(ev: { type: string; x: number; y: number; scroll?: { direction: string } }, g: Geometry): void {
     const o = this.overlay!;
+    if (o.kind === "saveas") {
+      if (g.saveas) saveAsMouse(this, o, ev, g.saveas, ev.type === "down" ? (g.hot.find((h) => inRect(h, ev.x, ev.y))?.id ?? null) : null);
+      else if (ev.type === "down") this.closeOverlay(true);
+      return;
+    }
     // The find row's own buttons work while typing in it.
     if (o.kind === "prompt" && o.view && ev.type === "down") {
       const hot = g.hot.find((h) => inRect(h, ev.x, ev.y));
@@ -7787,85 +7794,50 @@ export class App {
     if (name) {
       const format = formatFor(name);
       if (!format) return this.message("warn", `export: no format ${name} — ${FORMATS.map((f) => f.name).join(", ")}`);
-      return this.chooseExportPlace(rels, format);
+      return this.exportBrowser(rels, format);
     }
     const what = rels.length === 1 ? rels[0]! : `${rels.length} notes`;
-    this.openList({ title: `Export ${what} as`, items: FORMATS.map((f) => ({ label: f.title, hint: f.name, data: f })), accept: (item) => this.chooseExportPlace(rels, item.data as ExportFormat) });
+    this.openList({ title: `Export ${what} as`, items: FORMATS.map((f) => ({ label: f.title, hint: f.name, data: f })), accept: (item) => this.exportBrowser(rels, item.data as ExportFormat) });
   }
 
   /**
-   * Where an export goes (10.14), picked: beside the note (enter); where you exported last; Downloads, Desktop,
-   * Documents, home; a folder of this root, from its tree; a folder anywhere, browsed. Then its name, asked.
+   * Where an export goes (10.14), in a Save As window: open where you exported last (else beside the note), the note's
+   * name filled in — `enter` exports there — with places down its left, the folder's folders and files, folders made.
    */
-  chooseExportPlace(rels: string[], format: ExportFormat): void {
-    const beside = dirname(defaultTarget(this.graph.abs(rels[0]!), format));
+  exportBrowser(rels: string[], format: ExportFormat): void {
+    const beside = defaultTarget(this.graph.abs(rels[0]!), format);
     const last = this.lastExportDir();
     const what = rels.length === 1 ? rels[0]! : `${rels.length} notes`;
-    const places: ListItem[] = [{ label: "Beside the note", hint: this.shownDir(beside), data: beside }];
-    if (last && last !== beside) places.push({ label: "Where you exported last", hint: this.shownDir(last), data: last });
-    for (const f of userFolders(this.home)) if (f.path !== beside && f.path !== last) places.push({ label: f.name, hint: this.shownDir(f.path), data: f.path });
-    places.push({ label: "A folder here…", hint: "this root's folders", data: { here: true } }, { label: "Elsewhere…", hint: "any folder", data: { browse: true } });
-    this.openList({
-      title: `Export ${what} as ${format.title} to`,
-      items: places,
-      accept: (item) => {
-        const d = item.data as string | { here?: boolean; browse?: boolean };
-        if (typeof d === "string") return this.promptExport(rels, format, d);
-        if (d.here) {
-          const at = relative(this.loc.root, beside).split(sep).join("/");
-          return this.pickFolder({ title: `Export ${what} to a folder here`, current: climbsOut(at) ? "" : at, exclude: () => false, pick: (dir) => this.promptExport(rels, format, join(this.loc.root, dir)) });
-        }
-        this.browseFolders(last && existsSync(last) ? last : this.home, (dir) => this.promptExport(rels, format, dir));
-      },
+    const places: SavePlace[] = [{ label: "Beside the note", path: dirname(beside) }];
+    if (last && last !== dirname(beside)) places.push({ label: "Last export", path: last });
+    for (const f of userFolders(this.home)) places.push({ label: f.name, path: f.path });
+    places.push({ label: "This root", path: this.loc.root });
+    const o: SaveAsOverlay = openSaveAs(this, {
+      title: `Export ${what} as ${format.title}`,
+      dir: last ?? dirname(beside),
+      name: basename(beside),
+      places,
+      accept: (path) => this.exportChosen(rels, format, path, o),
     });
   }
 
-  /**
-   * Folders anywhere (10.14), from `dir`: its first row picks it; enter or → goes into a folder, ← or "‥" up; typing
-   * filters (`.` shows the hidden ones).
-   */
-  browseFolders(dir: string, pick: (dir: string) => void): void {
-    const g = this.glyphs;
-    let at = dir;
-    const rows = (hidden: boolean): ListItem[] => {
-      const out: ListItem[] = [{ label: `${g.dirOpen} Export here`, hint: this.shownDir(at), data: { pick: at } }];
-      if (dirname(at) !== at) out.push({ label: "‥", hint: this.shownDir(dirname(at)), data: { go: dirname(at) } });
-      let names: string[];
-      try {
-        names = readdirSync(at, { withFileTypes: true })
-          .filter((e) => (hidden || !e.name.startsWith(".")) && (e.isDirectory() || (e.isSymbolicLink() && isDir(join(at, e.name)))))
-          .map((e) => e.name)
-          .sort((a, b) => a.localeCompare(b, undefined, { sensitivity: "base" }));
-      } catch {
-        return [...out, { label: "(this folder can't be read)", header: true, data: null }];
-      }
-      return [...out, ...names.map((name) => ({ label: `${g.dirClosed} ${name}`, data: { go: join(at, name) } }))];
-    };
-    const title = () => `Export to — ${this.shownDir(at)}`;
-    this.openList({
-      title: title(),
-      items: [],
-      source: (input) => {
-        const all = rows(input.trim().startsWith("."));
-        // Typed: its folders that match, "Export here" still first.
-        return input.trim() ? [all[0]!, ...rank(input, all.slice(1).filter((i) => i.label !== "‥" && !i.header), (i) => i.label).map((r) => r.item)] : all;
-      },
-      accept: (item) => {
-        const d = item.data as { pick?: string; go?: string } | null;
-        if (d?.pick) return pick(d.pick);
-        if (d?.go) this.browseFolders(d.go, pick);
-      },
-      fold: (item, into) => {
-        const d = item.data as { go?: string } | null;
-        const next = into ? (d?.go ?? null) : dirname(at);
-        if (!next || next === at) return false;
-        at = next;
-        list.title = title();
-        list.input = "";
-        return true;
-      },
-    });
-    const list = this.overlay as ListOverlay;
+  /** The file picked for an export: never a note (said, the window back); a file there replaced once you say so. */
+  private exportChosen(rels: string[], format: ExportFormat, path: string, o: SaveAsOverlay): void {
+    let target: string;
+    try {
+      target = exportTarget(this.graph, rels[0]!, format, path, this.loc.root);
+    } catch (err) {
+      this.message("warn", `export: ${(err as Error).message}`);
+      this.overlay = o;
+      return;
+    }
+    const go = () => void this.writeExport(rels, format, target);
+    if (existsSync(target)) {
+      return this.confirm(`${this.graph.shownPath(target)} is there — replace it?`, go, () => {
+        this.overlay = o;
+      });
+    }
+    go();
   }
 
   /** A folder as an export's places show it: from the root inside it, `~/` under home, else whole. */
@@ -7881,58 +7853,6 @@ export class App {
   lastExportDir(): string | null {
     const dir = readJson<{ dir?: unknown }>(join(stateDir(this.loc), "export.json"), {}).dir;
     return typeof dir === "string" && isDir(dir) ? dir : null;
-  }
-
-  /**
-   * A path typed, completed at `tab` (10.14): the folder it names so far — from the root, `~/` home — and its entries
-   * beginning with what follows the last `/`, as far as they agree; a folder alone gets its `/`. Null: none.
-   */
-  completePath(text: string): string | null {
-    const slash = text.lastIndexOf("/");
-    const head = text.slice(0, slash + 1);
-    const tail = text.slice(slash + 1);
-    const dir = resolve(this.loc.root, head.startsWith("~/") ? join(this.home, head.slice(2)) : head || ".");
-    let names: Dirent[];
-    try {
-      names = readdirSync(dir, { withFileTypes: true }).filter((e) => e.name.startsWith(tail) && (tail.startsWith(".") || !e.name.startsWith(".")));
-    } catch {
-      return null;
-    }
-    if (!names.length) return null;
-    const common = names.map((e) => e.name).reduce((a, b) => {
-      let i = 0;
-      while (i < a.length && a[i] === b[i]) i++;
-      return a.slice(0, i);
-    });
-    const only = names.length === 1 ? names[0]! : null;
-    const folder = only && (only.isDirectory() || (only.isSymbolicLink() && isDir(join(dir, only.name))));
-    return `${head}${common}${folder ? "/" : ""}`;
-  }
-
-  /**
-   * Ask where the export of `rels` goes, its default filled in (beside the first, from the root; `~/` home); a file
-   * there replaced once you say so, a note never (an earlier Markdown export aside).
-   */
-  promptExport(rels: string[], format: ExportFormat, dir?: string): void {
-    const beside = defaultTarget(this.graph.abs(rels[0]!), format);
-    const suggested = dir ? join(dir, basename(beside)) : beside;
-    const what = rels.length === 1 ? rels[0]! : `${rels.length} notes`;
-    this.prompt(`export ${what} as ${format.title} to: `, (text) => {
-      const typed = text.trim();
-      if (!typed) return;
-      let target: string;
-      try {
-        target = exportTarget(this.graph, rels[0]!, format, typed.startsWith("~/") ? join(this.home, typed.slice(2)) : typed, this.loc.root);
-      } catch (err) {
-        return this.message("warn", `export: ${(err as Error).message}`);
-      }
-      const go = () => void this.writeExport(rels, format, target);
-      if (existsSync(target)) return this.confirm(`${this.graph.shownPath(target)} is there — replace it?`, go);
-      go();
-    });
-    const o = this.overlay as PromptOverlay;
-    o.text = this.shownDir(dirname(suggested)).replace(/^\.\/$/, "") + basename(suggested);
-    o.complete = (text) => this.completePath(text);
   }
 
   /** The notes at `rels` exported as one document to `target`, unsaved ones saved first (4.10): what's on screen. */
