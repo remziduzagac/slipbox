@@ -51,8 +51,15 @@ it, and fetches nothing. Every writer is loaded when it's first used, not at sta
   picked already, each pick shows its number, and picking one again takes it out. The list filters as you type, and
   keeps what's typed and where you were between picks. Its first row, whatever's typed, is "Export these 3 notes…".
 - Then a list of the formats; `:export docx` (or `word`, completed) skips it.
-- Then a prompt for where, filled in with the place beside the (first) note, from the root. `~/` is home, and a
-  folder gets the note's name in it.
+- Then where (`10.14`), a list: **Beside the note** first (`enter`, as before); **Where you exported last**, kept
+  for the root in its state (`export.json`) and offered while that folder is there; **Downloads**, **Desktop**,
+  **Documents** — where the desktop's `user-dirs.dirs` says, else by those names — and **Home**, those there are; **A
+  folder here…**, the root's folder tree as "Move the note to a folder…" shows it; **Elsewhere…**, folders anywhere:
+  its first row, "Export here", picks the folder shown; `enter` or `→` goes into a folder, `←` or "‥" up; typing
+  filters, a `.` first showing the hidden ones.
+- Then a prompt for the file, filled in with that folder and the note's name: from the root inside it, `~/` under
+  home. `tab` completes what's typed, as a shell does: a folder gets its `/`, several names as far as they agree. `~/`
+  is home, and a folder typed gets the note's name in it.
 - A file there is replaced only after `y` to "rep.docx is there — replace it?"; a note is refused (an earlier
   Markdown export aside, which is asked about as a file is).
 - Unsaved notes are saved first, as every hand-off does (`4.10`), since the export reads the notes from disk. One that

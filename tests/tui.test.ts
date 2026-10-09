@@ -122,6 +122,8 @@ async function harness(opts: Opts = {}): Promise<Harness> {
   // Never the machine's own nvims.
   app.nvimDiscovery = () => [];
   app.nvimProbe = () => null;
+  // Nor its home: an export's places (Downloads…) are a test's own, where one makes them.
+  app.home = join(sandbox, "no-home");
   const W = opts.width ?? 120;
   const H = opts.height ?? 30;
   const canvas = () => {
@@ -8277,6 +8279,14 @@ describe("vaults in the TUI (17.x)", () => {
     expect(h.app.overlay).toMatchObject({ kind: "list", title: "Export rep.md as" });
     expect((h.app.overlay as ListOverlay).items.map((i) => i.label)).toEqual(["Word (.docx)", "PDF (.pdf)", "Web page (.html)", "E-book (.epub)", "Markdown (.md)"]);
     await h.keys("enter");
+    // Then where: beside the note, first.
+    expect((h.app.overlay as ListOverlay).title).toBe("Export rep.md as Word (.docx) to");
+    expect((h.app.overlay as ListOverlay).items.map((i) => [i.label, i.hint])).toEqual([
+      ["Beside the note", "./"],
+      ["A folder here…", "this root's folders"],
+      ["Elsewhere…", "any folder"],
+    ]);
+    await h.keys("enter");
     expect(h.app.overlay).toMatchObject({ kind: "prompt", label: "export rep.md as Word (.docx) to: ", text: "rep.docx" });
     await h.keys("enter");
     expect(await until(() => h.app.messages.at(-1)!.text.startsWith("exported"))).toBe(true);
@@ -8293,21 +8303,23 @@ describe("vaults in the TUI (17.x)", () => {
     writeFileSync(join(root, "rep.docx"), "an older one");
     mkdirSync(join(root, "out"));
     const h = await harness({ root, open: "rep.md" });
-    await h.keys("space", "n", "o", "enter", "enter");
+    await h.keys("space", "n", "o", "enter", "enter", "enter");
     expect(h.app.overlay).toMatchObject({ kind: "prompt", confirm: true, label: "rep.docx is there — replace it?" });
     await h.keys("n");
     await Bun.sleep(50);
     expect(readFileSync(join(root, "rep.docx"), "utf8")).toBe("an older one");
-    await h.keys("space", "n", "o", "enter", "enter", "y");
+    await h.keys("space", "n", "o", "enter", "enter", "enter", "y");
     expect(await until(() => isDocx(join(root, "rep.docx")))).toBe(true);
     // A note: refused, whatever its name says.
     await h.app.run("note.export docx");
+    await h.keys("enter");
     (h.app.overlay as { text: string }).text = "index.md";
     await h.keys("enter");
     expect(h.app.messages.at(-1)).toMatchObject({ level: "warn", text: "export: index.md is a note — an export doesn't write over it" });
     expect(readFileSync(join(root, "index.md"), "utf8")).not.toStartWith("PK");
     // A folder: the note's name in it.
     await h.app.run("note.export docx");
+    await h.keys("enter");
     (h.app.overlay as { text: string }).text = "out";
     await h.keys("enter");
     expect(await until(() => existsSync(join(root, "out", "rep.docx")))).toBe(true);
@@ -8319,6 +8331,8 @@ describe("vaults in the TUI (17.x)", () => {
     writeFileSync(join(root, "data.json"), "{}\n");
     const h = await harness({ root, open: "rep.md" });
     await h.app.run("note.export word");
+    expect((h.app.overlay as ListOverlay).title).toBe("Export rep.md as Word (.docx) to");
+    await h.keys("enter");
     expect(h.app.overlay).toMatchObject({ kind: "prompt", text: "rep.docx" });
     await h.keys("escape");
     await h.app.run("note.export odt");
@@ -8363,13 +8377,120 @@ describe("vaults in the TUI (17.x)", () => {
     await h.keys("up", "enter");
     expect(list().title).toBe("Export 3 notes as");
     for (const k of ["m", "a", "r", "k"]) await h.keys(k);
-    await h.keys("enter");
+    await h.keys("enter", "enter");
     expect(h.app.overlay).toMatchObject({ kind: "prompt", label: "export 3 notes as Markdown (.md) to: ", text: "one.export.md" });
     await h.keys("enter");
     expect(await until(() => existsSync(join(root, "one.export.md")))).toBe(true);
     expect(h.app.messages.at(-1)!.text).toBe("exported 3 notes to one.export.md (Markdown (.md))");
     const md = readFileSync(join(root, "one.export.md"), "utf8");
     expect([md.indexOf("# One"), md.indexOf("# Three"), md.indexOf("# Two")].every((at, i, all) => at > 0 && (i === 0 || at > all[i - 1]!))).toBe(true);
+  });
+
+  test("an export's places: your folders there are, where you exported last remembered; a place's prompt filled in (10.14)", async () => {
+    const root = makeVault();
+    writeFileSync(join(root, "rep.md"), "# Rep\n");
+    const home = mkdtempSync(join(sandbox, "home-"));
+    for (const d of ["Downloads", "Documents"]) mkdirSync(join(home, d));
+    const h = await harness({ root, open: "rep.md" });
+    h.app.home = home;
+    const list = () => h.app.overlay as ListOverlay;
+    await h.keys("space", "n", "o", "enter");
+    expect(list().items.map((i) => [i.label, i.hint])).toEqual([
+      ["Beside the note", "./"],
+      ["Downloads", "~/Downloads/"],
+      ["Documents", "~/Documents/"],
+      ["Home", "~/"],
+      ["A folder here…", "this root's folders"],
+      ["Elsewhere…", "any folder"],
+    ]);
+    await h.keys("down", "enter");
+    expect(h.app.overlay).toMatchObject({ kind: "prompt", text: "~/Downloads/rep.docx" });
+    await h.keys("enter");
+    expect(await until(() => existsSync(join(home, "Downloads", "rep.docx")))).toBe(true);
+    // Remembered: second, and not twice.
+    await h.keys("space", "n", "o", "enter");
+    expect(list().items.map((i) => i.label)).toEqual(["Beside the note", "Where you exported last", "Documents", "Home", "A folder here…", "Elsewhere…"]);
+    expect(list().items[1]!.hint).toBe("~/Downloads/");
+    await h.keys("escape");
+    // Remembered for the root, not the session: a new app has it too.
+    const again = await harness({ root, open: "rep.md" });
+    again.app.home = home;
+    expect(again.app.lastExportDir()).toBe(join(home, "Downloads"));
+    // Gone since: not offered.
+    rmSync(join(home, "Downloads"), { recursive: true });
+    expect(again.app.lastExportDir()).toBeNull();
+  });
+
+  test("an export to a folder of the root, from its tree; to a folder anywhere, browsed: → in, ← up, enter into it, \"Export here\" picks", async () => {
+    const root = makeVault();
+    writeFileSync(join(root, "rep.md"), "# Rep\n");
+    mkdirSync(join(root, "out"));
+    const home = mkdtempSync(join(sandbox, "home-"));
+    mkdirSync(join(home, "Shared", "Reports"), { recursive: true });
+    mkdirSync(join(home, ".hidden"));
+    const h = await harness({ root, open: "rep.md" });
+    h.app.home = home;
+    const list = () => h.app.overlay as ListOverlay;
+    const pick = async (label: string) => {
+      const at = list().filtered.findIndex((e) => e.item.label === label || e.item.label.endsWith(` ${label}`));
+      expect(at).toBeGreaterThanOrEqual(0);
+      list().selected = at;
+      await h.keys("enter");
+    };
+    // Here: the root's tree.
+    await h.keys("space", "n", "o", "enter");
+    await pick("A folder here…");
+    expect(list().title).toBe("Export rep.md to a folder here");
+    await pick("out");
+    expect(h.app.overlay).toMatchObject({ kind: "prompt", text: "out/rep.docx" });
+    await h.keys("escape");
+    // Elsewhere: home first (nothing exported yet), its folders, hidden ones left out.
+    await h.keys("space", "n", "o", "enter");
+    await pick("Elsewhere…");
+    expect(list().title).toBe("Export to — ~/");
+    expect(list().filtered.map((e) => e.item.label).slice(2)).toEqual([`${h.app.glyphs.dirClosed} Shared`]);
+    list().selected = 2;
+    await h.keys("right");
+    expect(list().title).toBe("Export to — ~/Shared/");
+    await h.keys("left");
+    expect(list().title).toBe("Export to — ~/");
+    await pick("Shared");
+    expect(list().title).toBe("Export to — ~/Shared/");
+    await pick("Reports");
+    expect(list().filtered[0]!.item).toMatchObject({ hint: "~/Shared/Reports/" });
+    list().selected = 0;
+    await h.keys("enter");
+    expect(h.app.overlay).toMatchObject({ kind: "prompt", text: "~/Shared/Reports/rep.docx" });
+    await h.keys("enter");
+    expect(await until(() => existsSync(join(home, "Shared", "Reports", "rep.docx")))).toBe(true);
+  });
+
+  test("tab completes the path typed in an export's prompt: a folder its /, as far as several agree; ~/ home", async () => {
+    const root = makeVault();
+    writeFileSync(join(root, "rep.md"), "# Rep\n");
+    mkdirSync(join(root, "exports"));
+    mkdirSync(join(root, "extras"));
+    mkdirSync(join(root, "zz-alpha"));
+    mkdirSync(join(root, "zz-beta"));
+    writeFileSync(join(root, "exports", "report-1.docx"), "");
+    const home = mkdtempSync(join(sandbox, "home-"));
+    mkdirSync(join(home, "Desktop"));
+    const h = await harness({ root, open: "rep.md" });
+    h.app.home = home;
+    await h.keys("space", "n", "o", "enter", "enter");
+    const prompt = () => h.app.overlay as { text: string };
+    const tab = async (typed: string) => {
+      prompt().text = typed;
+      await h.keys("tab");
+      return prompt().text;
+    };
+    expect(await tab("expo")).toBe("exports/");
+    expect(await tab("ex")).toBe("ex");
+    expect(await tab("z")).toBe("zz-");
+    expect(await tab("exports/rep")).toBe("exports/report-1.docx");
+    expect(await tab("~/Des")).toBe("~/Desktop/");
+    expect(await tab("nothing-like-it")).toBe("nothing-like-it");
+    expect(h.app.overlay).toMatchObject({ kind: "prompt" });
   });
 
   test("an export that can't be written says why; an unsaved note that can't be saved stops it", async () => {
@@ -8380,6 +8501,7 @@ describe("vaults in the TUI (17.x)", () => {
     chmodSync(join(root, "ro"), 0o555);
     try {
       await h.app.run("note.export docx");
+      await h.keys("enter");
       (h.app.overlay as { text: string }).text = "ro/rep.docx";
       await h.keys("enter");
       expect(await until(() => h.app.messages.at(-1)!.level === "error")).toBe(true);
@@ -8391,7 +8513,7 @@ describe("vaults in the TUI (17.x)", () => {
     await h.keys("shift+g", "shift+a", "!", "escape");
     writeFileSync(join(root, "rep.md"), "# Rep, rewritten by an agent\n");
     await h.app.run("note.export docx");
-    await h.keys("enter");
+    await h.keys("enter", "enter");
     expect(h.app.messages.at(-1)).toMatchObject({ level: "warn", text: "export: rep.md changed on disk while unsaved — ␣ n c resolves it first" });
     expect(existsSync(join(root, "rep.docx"))).toBe(false);
   });

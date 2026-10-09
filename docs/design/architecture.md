@@ -251,6 +251,7 @@ where it's told, beside its note by default.
 | reading positions (`21.8`) | `$XDG_STATE_HOME/slipbox/positions.json` (by file, the machine's) |
 | session | `$XDG_STATE_HOME/slipbox/<key>/session.json` |
 | pinned roots (`20.15`, `:pin-root`) | `$XDG_STATE_HOME/slipbox/<key>/roots.json` |
+| where an export went last (`10.14`) | `$XDG_STATE_HOME/slipbox/<key>/export.json` |
 | branch heads seen (`20.21`) | `$XDG_STATE_HOME/slipbox/<key>/heads.json` (each branch's last commit) |
 | clipboard fallback (no OSC 52 or clipboard tool) | `$XDG_STATE_HOME/slipbox/<key>/clipboard.txt` |
 | scratch | `$XDG_STATE_HOME/slipbox/<key>/scratch.md`, or in the vault by config |

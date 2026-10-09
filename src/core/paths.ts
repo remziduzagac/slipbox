@@ -4,9 +4,9 @@
 // real path (21.8); a named folder moved by hand has them carried (vault.ts `recordLocation`).
 
 import { createHash } from "node:crypto";
-import { realpathSync } from "node:fs";
+import { readFileSync, realpathSync, statSync } from "node:fs";
 import { homedir } from "node:os";
-import { basename, join } from "node:path";
+import { basename, join, resolve } from "node:path";
 
 function xdg(varName: string, fallback: string): string {
   const v = process.env[varName];
@@ -63,4 +63,33 @@ export function stateHome(): string {
 /** Kept data that is neither settings nor derived: tools installed for language servers (19.x). */
 export function dataHome(): string {
   return join(xdg("XDG_DATA_HOME", ".local/share"), "slipbox");
+}
+
+/**
+ * The folders a person keeps things in, those there are (10.14): Downloads, Desktop and Documents — where the desktop
+ * says (`user-dirs.dirs`, which may name them in another language), else as they're called in English — then home.
+ */
+export function userFolders(home: string, configHome = xdg("XDG_CONFIG_HOME", ".config")): { name: string; path: string }[] {
+  let said = "";
+  try {
+    said = readFileSync(join(configHome, "user-dirs.dirs"), "utf8");
+  } catch {}
+  const where = (key: string, fallback: string) => {
+    const m = new RegExp(`^XDG_${key}_DIR="([^"]*)"`, "m").exec(said);
+    // Normalised: a folder turned off is `"$HOME/"`, home itself.
+    return m ? resolve(m[1]!.replace(/^\$HOME/, home)) : join(home, fallback);
+  };
+  const isDir = (p: string) => {
+    try {
+      return statSync(p).isDirectory();
+    } catch {
+      return false;
+    }
+  };
+  const out = [
+    { name: "Downloads", path: where("DOWNLOAD", "Downloads") },
+    { name: "Desktop", path: where("DESKTOP", "Desktop") },
+    { name: "Documents", path: where("DOCUMENTS", "Documents") },
+  ].filter((f) => f.path !== home && isDir(f.path));
+  return isDir(home) ? [...out, { name: "Home", path: home }] : out;
 }

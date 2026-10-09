@@ -18,6 +18,7 @@ import { defaultTarget, EXPORT_MARK, exportNotes, exportTarget, FORMATS, formatF
 import { pdfDocument, splitByFont, toPdf, words } from "../src/core/export/pdf.ts";
 import { TINT } from "../src/core/export/style.ts";
 import { slugify } from "../src/core/parse.ts";
+import { userFolders } from "../src/core/paths.ts";
 import { openGraph } from "../src/core/graph.ts";
 import { remoteImageName } from "../src/core/imagecache.ts";
 import { loadRasterizer } from "../src/core/svg.ts";
@@ -931,6 +932,25 @@ describe("export: pictures' sizes, read from their headers", () => {
     // A kind the format doesn't hold, or nothing there: null.
     expect(rasterOf({ file: join(dir, "p.png") }, r, 600, ["jpg"])).toBeNull();
     expect(rasterOf({ file: join(dir, "none.png") }, r, 600, ["png"])).toBeNull();
+  });
+});
+
+describe("export: your folders (10.14)", () => {
+  test("Downloads, Desktop, Documents where the desktop says (in its own words), else in English; those there are; then home", () => {
+    const home = mkdtempSync(join(sandbox, "home-"));
+    const config = mkdtempSync(join(sandbox, "config-"));
+    for (const d of ["İndirilenler", "Documents"]) mkdirSync(join(home, d));
+    expect(userFolders(home, config)).toEqual([
+      { name: "Documents", path: join(home, "Documents") },
+      { name: "Home", path: home },
+    ]);
+    writeFileSync(join(config, "user-dirs.dirs"), '# made by xdg-user-dirs\nXDG_DOWNLOAD_DIR="$HOME/İndirilenler"\nXDG_DESKTOP_DIR="$HOME/"\n');
+    expect(userFolders(home, config).map((f) => [f.name, f.path])).toEqual([
+      ["Downloads", join(home, "İndirilenler")],
+      ["Documents", join(home, "Documents")],
+      ["Home", home],
+    ]);
+    expect(userFolders(join(home, "none"), config)).toEqual([]);
   });
 });
 

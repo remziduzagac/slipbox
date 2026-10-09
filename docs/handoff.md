@@ -101,8 +101,10 @@ first, an export beside its note by default. Built, as prototypes to try: the as
 links inside the document, pictures, diagrams and maths drawn), Word (`10.4`, by `docx`), PDF (`10.5`, by `pdfkit`,
 in the machine's fonts), a web page (`10.2`), an e-book (`10.6`) and portable Markdown (`10.3`):
 `slipbox export <note…> --to …` and `space n o`; several notes as one document, picked in order (`10.9`,
-`space n shift+o`). Left after export: distribution (`14.x`, with the licence to decide: `14.6`), `22.x`, Scout
-(`6.10`).
+`space n shift+o`). Then: what a format can't take made PNG first (`10.10`), the PDF's lines laid out by slipbox
+(`10.11`), emoji in black and white (`10.12`; colour deferred, `10.13`), and where an export goes picked from a list of
+places and folders (`10.14`). Left after export: distribution (`14.x`, with the licence to decide: `14.6`), `22.x`,
+Scout (`6.10`).
 
 ## The documents
 
