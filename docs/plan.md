@@ -730,6 +730,21 @@ packaging lands whenever it first needs to run on a VM.*
 | 14.3 | Homebrew formula |
 | 14.4 | Update path |
 | 14.5 | Alpine (musl): the SQLite loader picks the glibc build there; better-sqlite3 ships musl builds too |
+| 14.6 | **decide** slipbox's licence — MIT, Apache-2.0, or both — then a `LICENSE` file and the notices it ships |
+
+`14.6`, noted 2026-10-09: the user means to open-source slipbox and hopes for contributors; MIT, Apache-2.0 and dual
+"MIT OR Apache-2.0" were weighed and the choice parked (`package.json` says MIT; there's no `LICENSE` file yet).
+Whatever is picked, the compiled binary bundles libraries whose licences ask for something when it's distributed:
+
+- **Weak copyleft**, accepted for use (decided 2026-10-09): `elkjs` (EPL-2.0, under beautiful-mermaid) and
+  `@resvg/resvg-wasm` (MPL-2.0). Shipped, each needs its licence text and where its source is; a change to their own
+  files would have to be shared. Neither reaches slipbox's own code.
+- **unicodeit**'s symbol table is the LaTeX Project Public License's (LPPL), beside its MIT code.
+- **Apache-2.0**, whose licence and NOTICE go along: `mathjax-full`, `typeahead`.
+- `jszip` is "MIT OR GPL-3.0-or-later": taken under MIT.
+
+The rest are permissive (MIT, ISC, BSD, BlueOak, Zlib); the grammars built into `grammars/` are MIT, their licences
+in `grammars/licenses/`. A new dependency's licence, and its own dependencies', is checked before it's added.
 
 ## Performance — `15.x`
 

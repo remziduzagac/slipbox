@@ -184,7 +184,7 @@ package — no build toolchain):
 | `vscode-languageserver-protocol`, `-textdocument` | the client's protocol (19.x), a file's text as a server has it |
 | `better-sqlite3` | the search index's SQLite, its own (3.53.4) bundled; needs Bun 1.4.2, on Linux glibc 2.34 |
 | `web-tree-sitter` 0.25 and a grammar package per language (`tree-sitter-*`) | source files' structure (16.7, 16.18) |
-| `beautiful-mermaid` **1.1.3, pinned exactly** (with `elkjs`) | Mermaid drawn in the terminal's characters (12.10) |
+| `beautiful-mermaid` **1.1.3, pinned exactly** (with `elkjs`, EPL-2.0) | Mermaid drawn in characters (12.10) |
 | `remark-math` 6.0.0 | `$…$` and `$$` blocks read (12.11); KaTeX comes with it, never imported |
 | `unicodeit` 0.7.5 | LaTeX's symbols as Unicode (12.11); its table is the LaTeX Project Public License's too |
 | `@resvg/resvg-wasm` 2.6.2 | SVG rasterised (12.15), as WebAssembly: no native build; MPL-2.0 |
@@ -193,6 +193,9 @@ package — no build toolchain):
 
 The grammars npm ships no WebAssembly for — Swift, SCSS, Vue, Astro, Dockerfile — are built from their sources at
 pinned commits into `grammars/` by `scripts/build-grammars.ts`, committed with their licences (`grammars/README.md`).
+
+Licences: permissive, but for two weak-copyleft libraries accepted for use — `elkjs` (EPL-2.0) and resvg (MPL-2.0).
+What a distributed binary owes them is `14.6` in the plan.
 
 No external binary is required (hard constraint 1). The clipboard tools are used when present
 and never needed.
