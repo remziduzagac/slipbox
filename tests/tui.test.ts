@@ -8275,7 +8275,7 @@ describe("vaults in the TUI (17.x)", () => {
     expect(h.app.view!.buf.dirty).toBe(true);
     await h.keys("space", "n", "o");
     expect(h.app.overlay).toMatchObject({ kind: "list", title: "Export rep.md as" });
-    expect((h.app.overlay as ListOverlay).items.map((i) => i.label)).toEqual(["Word (.docx)"]);
+    expect((h.app.overlay as ListOverlay).items.map((i) => i.label)).toEqual(["Word (.docx)", "PDF (.pdf)", "Web page (.html)", "E-book (.epub)", "Markdown (.md)"]);
     await h.keys("enter");
     expect(h.app.overlay).toMatchObject({ kind: "prompt", label: "export rep.md as Word (.docx) to: ", text: "rep.docx" });
     await h.keys("enter");
@@ -8323,11 +8323,53 @@ describe("vaults in the TUI (17.x)", () => {
     await h.keys("escape");
     await h.app.run("note.export odt");
     expect(h.app.overlay).toBeNull();
-    expect(h.app.messages.at(-1)).toMatchObject({ level: "warn", text: "export: no format odt — docx" });
+    expect(h.app.messages.at(-1)).toMatchObject({ level: "warn", text: "export: no format odt — docx, pdf, html, epub, md" });
     h.app.open("data.json");
     await h.app.run("note.export");
     expect(h.app.overlay).toBeNull();
     expect(h.app.messages.at(-1)!.text).toBe("export: data.json isn't a note — a note is exported");
+  });
+
+  test("space n shift+o exports notes as one document: picked in order, this one first, a pick again out; then the format and where (10.9)", async () => {
+    const root = makeVault();
+    writeFileSync(join(root, "one.md"), "# One\n\nFirst.\n");
+    writeFileSync(join(root, "two.md"), "# Two\n\nSecond.\n");
+    writeFileSync(join(root, "three.md"), "# Three\n\nThird.\n");
+    const h = await harness({ root, open: "one.md" });
+    await h.keys("space", "n", "shift+o");
+    const list = () => h.app.overlay as ListOverlay;
+    const row = (label: string) => list().filtered.find((e) => e.item.label === label)!.item;
+    expect(list().title).toBe("Notes to export, in order — 1 picked");
+    expect(list().filtered[0]!.item.label).toBe("Export one.md…");
+    expect(row("one.md").hint).toBe("1");
+    // Typed: the notes filtered, "Export…" still first; enter picks the note.
+    for (const k of ["t", "h", "r"]) await h.keys(k);
+    expect(list().filtered.map((e) => e.item.label)).toEqual(["Export one.md…", "three.md"]);
+    await h.keys("down", "enter");
+    expect(list().title).toBe("Notes to export, in order — 2 picked");
+    expect(list().input).toBe("thr");
+    expect(list().filtered[list().selected]!.item.label).toBe("three.md");
+    expect(row("three.md").hint).toBe("2");
+    // two picked, then taken out again, then in: third.
+    for (const k of ["backspace", "backspace", "backspace", "t", "w", "o"]) await h.keys(k);
+    await h.keys("down", "enter");
+    expect(row("two.md").hint).toBe("3");
+    await h.keys("enter");
+    expect(list().title).toBe("Notes to export, in order — 2 picked");
+    expect(list().filtered.find((e) => e.item.label === "two.md")!.item.hint).toBe("");
+    await h.keys("enter");
+    expect(row("two.md").hint).toBe("3");
+    // Export: the format, then where — beside the first, by its name.
+    await h.keys("up", "enter");
+    expect(list().title).toBe("Export 3 notes as");
+    for (const k of ["m", "a", "r", "k"]) await h.keys(k);
+    await h.keys("enter");
+    expect(h.app.overlay).toMatchObject({ kind: "prompt", label: "export 3 notes as Markdown (.md) to: ", text: "one.export.md" });
+    await h.keys("enter");
+    expect(await until(() => existsSync(join(root, "one.export.md")))).toBe(true);
+    expect(h.app.messages.at(-1)!.text).toBe("exported 3 notes to one.export.md (Markdown (.md))");
+    const md = readFileSync(join(root, "one.export.md"), "utf8");
+    expect([md.indexOf("# One"), md.indexOf("# Three"), md.indexOf("# Two")].every((at, i, all) => at > 0 && (i === 0 || at > all[i - 1]!))).toBe(true);
   });
 
   test("an export that can't be written says why; an unsaved note that can't be saved stops it", async () => {

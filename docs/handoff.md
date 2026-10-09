@@ -98,9 +98,11 @@ dropped.
 Export (`10.x`, `docs/design/export.md`) began the same day, decided with the user: no external tool — every format
 TypeScript or JavaScript under a permissive licence (the headless browser, `10.7`, and pandoc, `10.8`, dropped) — Word
 first, an export beside its note by default. Built, as prototypes to try: the assembler (`10.1`: embeds drawn in,
-links inside the document, pictures, diagrams and maths drawn) and Word (`10.4`, by `docx`): `slipbox export <note…>`
-and `space n o`. Next: HTML (`10.2`), Markdown (`10.3`), PDF by `pdfkit` (`10.5`), EPUB (`10.6`), and picking notes
-in the TUI (`10.9`).
+links inside the document, pictures, diagrams and maths drawn), Word (`10.4`, by `docx`), PDF (`10.5`, by `pdfkit`,
+in the machine's fonts), a web page (`10.2`), an e-book (`10.6`) and portable Markdown (`10.3`):
+`slipbox export <note…> --to …` and `space n o`; several notes as one document, picked in order (`10.9`,
+`space n shift+o`). Left after export: distribution (`14.x`, with the licence to decide: `14.6`), `22.x`, Scout
+(`6.10`).
 
 ## The documents
 

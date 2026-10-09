@@ -537,14 +537,14 @@ common, and the only reason they are step 0.
 | ID | Item |
 | --- | --- |
 | 10.1 | **Prototype.** Assembler: embeds drawn in, links inside the document or their text, pictures as on screen |
-| 10.2 | HTML writer: one file, its pictures inside it |
-| 10.3 | Markdown writer: portable — embeds drawn in, links relative, pictures copied beside it |
+| 10.2 | **Prototype.** HTML writer: one file, its pictures inside it; print-friendly |
+| 10.3 | **Prototype.** Markdown writer: portable — GitHub's heading ids, pictures copied beside it |
 | 10.4 | **Prototype.** DOCX writer, by `docx` (MIT): `slipbox export`, `space n o` |
-| 10.5 | **Decided** (2026-10-09): `pdfkit` (MIT); then build the PDF writer |
-| 10.6 | EPUB packaging over 10.2, zipped by `fflate` (MIT) |
+| 10.5 | **Prototype.** PDF writer, by `pdfkit` (MIT; decided 2026-10-09): the machine's fonts, embedded |
+| 10.6 | **Prototype.** EPUB packaging over 10.2, zipped by `fflate` (MIT) |
 | 10.7 | **Dropped** (2026-10-09). A headless-browser tier: an external tool |
 | 10.8 | **Dropped** (2026-10-09). A pandoc tier: an external tool |
-| 10.9 | Compose: notes picked and put in order, then exported as one document. The CLI takes several notes already |
+| 10.9 | **Prototype.** Compose: notes picked in order, one document — `space n shift+o`; the CLI takes several |
 
 Decided 2026-10-09 with the user: no external tool — every format is TypeScript or JavaScript under a permissive
 licence, and a format that would need a tool isn't offered. Word first, then the rest; an export goes beside its note
@@ -740,7 +740,7 @@ Whatever is picked, the compiled binary bundles libraries whose licences ask for
   `@resvg/resvg-wasm` (MPL-2.0). Shipped, each needs its licence text and where its source is; a change to their own
   files would have to be shared. Neither reaches slipbox's own code.
 - **unicodeit**'s symbol table is the LaTeX Project Public License's (LPPL), beside its MIT code.
-- **Apache-2.0**, whose licence and NOTICE go along: `mathjax-full`, `typeahead`.
+- **Apache-2.0**, whose licence and NOTICE go along: `mathjax-full`, `typeahead`, `@swc/helpers` (under fontkit).
 - `jszip` is "MIT OR GPL-3.0-or-later": taken under MIT.
 
 The rest are permissive (MIT, ISC, BSD, BlueOak, Zlib); the grammars built into `grammars/` are MIT, their licences

@@ -19,8 +19,8 @@ import { classify, extensionOf, type FileGroup, isKnownExtension } from "../core
 import { appendFileSync, type Dirent, existsSync, mkdirSync, readdirSync, readFileSync, realpathSync, renameSync, statSync, writeFileSync } from "node:fs";
 import { createHash } from "node:crypto";
 import { basename, dirname, isAbsolute, join, posix, relative, resolve, sep } from "node:path";
-import { atomicWrite, climbsOut, ensureDir, landsInside, readJson, readRegular, readText, realTarget, WriteRefused, writeJson, writeNote } from "../core/fsutil.ts";
-import { defaultTarget, type ExportFormat, exportNotes, exportTarget, FORMATS, formatFor } from "../core/export/index.ts";
+import { climbsOut, ensureDir, landsInside, readJson, readRegular, readText, realTarget, WriteRefused, writeJson, writeNote } from "../core/fsutil.ts";
+import { defaultTarget, type ExportFormat, exportNotes, exportTarget, FORMATS, formatFor, writeExport } from "../core/export/index.ts";
 import { listTasks, toggleTask } from "../core/tasks.ts";
 import { merge3, unifiedDiff } from "../core/merge.ts";
 import { compilePattern, findAll } from "../core/replace.ts";
@@ -7738,27 +7738,69 @@ export class App {
     const t = this.noteTarget();
     if (!t) return;
     if (!this.graph.notes.has(t.rel)) return this.message("info", `export: ${t.rel} isn't a note — a note is exported`);
+    this.chooseExportFormat([t.rel], name);
+  }
+
+  /**
+   * Export notes as one document (10.9), a chapter each: picked from the root's notes in the order wanted — the one on
+   * screen (or the explorer's) first — each pick numbered, a pick again taken out; then "Export…", first in the list
+   * whatever's typed, asks the format and where, as `space n o` does.
+   */
+  composeExport(picked?: string[], input = "", selected?: number): void {
+    if (!picked) {
+      const t = this.explorerFocused() ? this.explorerItem() : this.view?.buf.rel ? { rel: this.view.buf.rel, dir: false } : null;
+      picked = t && !t.dir && this.graph.notes.has(t.rel) ? [t.rel] : [];
+    }
+    const chosen = picked;
+    const go: ListItem[] = chosen.length ? [{ label: `Export ${chosen.length === 1 ? chosen[0] : `these ${chosen.length} notes`}…`, hint: "enter", data: null }] : [];
+    const notes: ListItem[] = [...this.graph.notes.keys()].sort().map((rel) => ({ label: rel, hint: chosen.includes(rel) ? String(chosen.indexOf(rel) + 1) : "", data: rel }));
+    this.openList({
+      title: chosen.length ? `Notes to export, in order — ${chosen.length} picked` : "Notes to export, in order: pick the first",
+      items: [...go, ...notes],
+      // The notes filtered by what's typed; "Export…" always first.
+      source: (typed) => (typed.trim() ? [...go, ...rank(typed, notes, (i) => i.label).map((r) => r.item)] : null),
+      input,
+      ...(selected !== undefined ? { selected } : {}),
+      accept: (item) => {
+        if (item.data === null) return this.chooseExportFormat(chosen);
+        const rel = item.data as string;
+        const next = chosen.includes(rel) ? chosen.filter((r) => r !== rel) : [...chosen, rel];
+        // "Export…" comes and goes: the selection stays on the note.
+        const shift = (next.length ? 1 : 0) - (chosen.length ? 1 : 0);
+        this.composeExport(next, list.input, list.selected + shift);
+      },
+    });
+    const list = this.overlay as ListOverlay;
+  }
+
+  /** The format for an export of `rels` picked — or named — then where asked. */
+  chooseExportFormat(rels: string[], name?: string): void {
     if (name) {
       const format = formatFor(name);
       if (!format) return this.message("warn", `export: no format ${name} — ${FORMATS.map((f) => f.name).join(", ")}`);
-      return this.promptExport(t.rel, format);
+      return this.promptExport(rels, format);
     }
-    this.openList({ title: `Export ${t.rel} as`, items: FORMATS.map((f) => ({ label: f.title, hint: f.name, data: f })), accept: (item) => this.promptExport(t.rel, item.data as ExportFormat) });
+    const what = rels.length === 1 ? rels[0]! : `${rels.length} notes`;
+    this.openList({ title: `Export ${what} as`, items: FORMATS.map((f) => ({ label: f.title, hint: f.name, data: f })), accept: (item) => this.promptExport(rels, item.data as ExportFormat) });
   }
 
-  /** Ask where the export goes, its default filled in (from the root; `~/` home); a file there replaced once you say so. */
-  promptExport(rel: string, format: ExportFormat): void {
-    const suggested = defaultTarget(this.graph.abs(rel), format);
-    this.prompt(`export ${rel} as ${format.title} to: `, (text) => {
+  /**
+   * Ask where the export of `rels` goes, its default filled in (beside the first, from the root; `~/` home); a file
+   * there replaced once you say so, a note never (an earlier Markdown export aside).
+   */
+  promptExport(rels: string[], format: ExportFormat): void {
+    const suggested = defaultTarget(this.graph.abs(rels[0]!), format);
+    const what = rels.length === 1 ? rels[0]! : `${rels.length} notes`;
+    this.prompt(`export ${what} as ${format.title} to: `, (text) => {
       const typed = text.trim();
       if (!typed) return;
       let target: string;
       try {
-        target = exportTarget(this.graph, rel, format, typed.startsWith("~/") ? join(homedir(), typed.slice(2)) : typed, this.loc.root);
+        target = exportTarget(this.graph, rels[0]!, format, typed.startsWith("~/") ? join(homedir(), typed.slice(2)) : typed, this.loc.root);
       } catch (err) {
         return this.message("warn", `export: ${(err as Error).message}`);
       }
-      const go = () => void this.writeExport([rel], format, target);
+      const go = () => void this.writeExport(rels, format, target);
       if (existsSync(target)) return this.confirm(`${this.graph.shownPath(target)} is there — replace it?`, go);
       go();
     });
@@ -7771,12 +7813,14 @@ export class App {
     const shown = this.graph.shownPath(target);
     this.message("info", `exporting to ${shown}…`);
     this.host.requestRender();
+    let files: string[];
     try {
-      atomicWrite(target, await exportNotes(this.graph, rels, format));
+      files = writeExport(target, await exportNotes(this.graph, rels, format, target));
     } catch (err) {
       return this.message("error", `export: ${shown} not written — ${(err as Error).message}`);
     }
-    this.message("info", `exported ${rels.join(", ")} to ${shown} (${format.title})`);
+    const beside = files.length ? `, ${files.length} file${files.length === 1 ? "" : "s"} beside it` : "";
+    this.message("info", `exported ${rels.length === 1 ? rels[0] : `${rels.length} notes`} to ${shown} (${format.title})${beside}`);
     this.host.requestRender();
   }
 

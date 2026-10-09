@@ -1116,8 +1116,9 @@ save first** (`4.10`): `space n e`, `space n s` and a capture into an open scrat
 changes before the other side reads the file; `space s c` saves every unsaved note before it gathers the context
 bundle (`9.7`), which it copies: the note, what it links to and what links to it, as `slipbox context` writes it
 (`docs/design/cli.md`), as far as `[context]` says. One that can't be saved (it changed on disk meanwhile) stops it,
-nothing copied: `context: x.md changed on disk while unsaved — ␣ n c resolves it first`. An export (`space n o`,
-`10.x`) saves them the same way before it reads the notes; `docs/design/export.md` has the rest.
+nothing copied: `context: x.md changed on disk while unsaved — ␣ n c resolves it first`. An export (`space n o`, or
+`space n shift+o` for notes picked in order: `10.x`) saves them the same way before it reads the notes;
+`docs/design/export.md` has the rest.
 
 Quitting with unsaved changes is refused (`:q!` quits anyway); a signal still quits.
 

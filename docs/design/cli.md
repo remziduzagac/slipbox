@@ -92,7 +92,7 @@ These churn freely before 1.0:
 | `ls` | `[{path, title, size, mtime, tags, links}]`; `--files` adds `[{path, group, format, size, mtime}]` |
 | `outline <note>` | `{path, headings[{depth, text, slug, line}]}` |
 | `context <note>…` | `{start[], depth, backlinks, limit, files[{path, why, depth, from, lines}], left[], text}` |
-| `export <note…>` | `{path, format, notes[], bytes}` — one document, a chapter a note; exit 5 over a note |
+| `export <note…>` | `{path, format, notes[], bytes, files[]}` — one document, a chapter a note; 5: over a note |
 | `footnotes <note>` | `{path, sha, footnotes[{label, id, text, line, def, references[{line, column, start, end}]}]}` |
 | `footnotes <note> add\|edit\|rm\|rename …` | `{path, sha, footnotes[…]}` after it; `--if-unchanged`; exit 5: refused |
 | `init [dir]` | `{root, created, identified, id, name, excluded}` — id, name with `--name N`; exit 5: name in use |
@@ -620,9 +620,11 @@ The human output is the bundle itself, to pipe into an agent; `--json` has it as
 
 ## Export (plan `10.x`)
 
-`slipbox export <note…> [--to docx] [--out|-o <path>]` writes the notes as one document, a chapter each: Word for now.
-Without `-o` it goes beside the first note, under its name; `--to` names the format, else `-o`'s extension does. It
-never writes over a note (exit 5), and fetches nothing. `docs/design/export.md` has what goes in and how.
+`slipbox export <note…> [--to docx|pdf|html|epub|md] [--out|-o <path>]` writes the notes as one document, a chapter
+each: Word, PDF, a web page, an e-book or Markdown. Without `-o` it goes beside the first note, under its name
+(Markdown's `name.export.md`, its pictures in `name.export.assets/`); `--to` names the format, else `-o`'s extension
+does. It never writes over a note but an earlier Markdown export (exit 5), and fetches nothing.
+`docs/design/export.md` has what goes in and how.
 
 ## `slipbox doctor` (plan `19.7`)
 

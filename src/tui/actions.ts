@@ -1615,6 +1615,7 @@ export function registerActions(app: App): void {
     "note.send": (a) => withView(a, (v) => a.sendToEditor(v)),
     "note.send_pick": (a) => withView(a, (v) => a.sendToEditor(v, true)),
     "note.export": (a, arg) => a.exportNote(arg || undefined),
+    "note.export_many": (a) => a.composeExport(),
     "find.word_next": (a) => findWord(a, 1),
     "find.word_prev": (a) => findWord(a, -1),
     "find.clear": (a) =>

@@ -2,11 +2,18 @@
 // assembled document (`assemble.ts`), every one TypeScript or JavaScript under a permissive licence: no tool is run,
 // nothing is installed. Where one would need one (a headless browser, pandoc: 10.7, 10.8), it isn't a format.
 
-import { statSync } from "node:fs";
+import { readFileSync, statSync } from "node:fs";
 import { basename, dirname, extname, join, relative, resolve, sep } from "node:path";
-import { climbsOut } from "../fsutil.ts";
+import { atomicWrite, climbsOut } from "../fsutil.ts";
 import type { Graph } from "../graph.ts";
 import { assemble, type ExportDoc } from "./assemble.ts";
+
+/** What a writer makes: the document's bytes, and the files beside it (a Markdown export's pictures). */
+export interface ExportOutput {
+  data: Uint8Array;
+  /** Each a path from the document's folder. */
+  files: { path: string; data: Uint8Array }[];
+}
 
 export interface ExportFormat {
   /** Its name, as `--to` takes it. */
@@ -15,14 +22,25 @@ export interface ExportFormat {
   title: string;
   /** Its files' extension. */
   ext: string;
-  write(doc: ExportDoc): Promise<Uint8Array>;
+  /** What's added to the note's name for its default file: `.docx`; Markdown's `.export.md`, apart from the note. */
+  suffix: string;
+  /** The document as this format, to be written to `target`. */
+  write(doc: ExportDoc, target: string): Promise<ExportOutput>;
 }
 
+const only = (data: Uint8Array): ExportOutput => ({ data, files: [] });
+
 // Each writer loaded when it's used: nothing of theirs is paid for at start.
-export const FORMATS: ExportFormat[] = [{ name: "docx", title: "Word (.docx)", ext: "docx", write: async (doc) => (await import("./docx.ts")).toDocx(doc) }];
+export const FORMATS: ExportFormat[] = [
+  { name: "docx", title: "Word (.docx)", ext: "docx", suffix: ".docx", write: async (doc) => only(await (await import("./docx.ts")).toDocx(doc)) },
+  { name: "pdf", title: "PDF (.pdf)", ext: "pdf", suffix: ".pdf", write: async (doc) => only(await (await import("./pdf.ts")).toPdf(doc)) },
+  { name: "html", title: "Web page (.html)", ext: "html", suffix: ".html", write: async (doc) => only(await (await import("./html.ts")).toHtml(doc)) },
+  { name: "epub", title: "E-book (.epub)", ext: "epub", suffix: ".epub", write: async (doc) => only(await (await import("./epub.ts")).toEpub(doc)) },
+  { name: "md", title: "Markdown (.md)", ext: "md", suffix: ".export.md", write: async (doc, target) => (await import("./markdown.ts")).toMarkdown(doc, target) },
+];
 
 /** Other names a format answers to. */
-const ALIASES: Record<string, string> = { word: "docx", doc: "docx" };
+const ALIASES: Record<string, string> = { word: "docx", doc: "docx", htm: "html", web: "html", markdown: "md", ebook: "epub" };
 
 /** A format by its name, an alias, or an extension; null where there's none. */
 export function formatFor(name: string): ExportFormat | null {
@@ -30,14 +48,28 @@ export function formatFor(name: string): ExportFormat | null {
   return FORMATS.find((f) => f.name === (ALIASES[n] ?? n) || f.ext === n) ?? null;
 }
 
-/** Where an export of the note at `abs` goes unless it's said: beside it, its name, the format's extension. */
+/** Where an export of the note at `abs` goes unless it's said: beside it, its name, the format's suffix. */
 export function defaultTarget(abs: string, format: ExportFormat): string {
-  return join(dirname(abs), `${basename(abs, extname(abs))}.${format.ext}`);
+  return join(dirname(abs), `${basename(abs, extname(abs))}${format.suffix}`);
+}
+
+/** The mark a Markdown export carries in its frontmatter: what lets a later export replace it, though it's a note. */
+export const EXPORT_MARK = "generator: slipbox";
+
+/** Whether the file at `abs` is an earlier Markdown export: its frontmatter carries the mark. */
+export function isExport(abs: string): boolean {
+  try {
+    const head = readFileSync(abs, "utf8").slice(0, 2048);
+    const fm = /^---\r?\n([\s\S]*?)\r?\n---/.exec(head)?.[1] ?? "";
+    return fm.split(/\r?\n/).some((line) => line.trim() === EXPORT_MARK);
+  } catch {
+    return false;
+  }
 }
 
 /**
  * Where an export of notes, `first` the first, goes: `typed` (from `base`) — a folder the default's name in it — else
- * beside the first note. Never over a note of the root: an error says so.
+ * beside the first note. Never over a note of the root, but an earlier export: an error says so.
  */
 export function exportTarget(graph: Graph, first: string, format: ExportFormat, typed: string | null, base: string): string {
   const suggested = defaultTarget(graph.abs(first), format);
@@ -46,11 +78,21 @@ export function exportTarget(graph: Graph, first: string, format: ExportFormat, 
     if (statSync(target).isDirectory()) target = join(target, basename(suggested));
   } catch {}
   const rel = relative(graph.root, target).split(sep).join("/");
-  if (!climbsOut(rel) && graph.notes.has(rel)) throw new Error(`${rel} is a note — an export doesn't write over it`);
+  if (!climbsOut(rel) && graph.notes.has(rel) && !isExport(target)) throw new Error(`${rel} is a note — an export doesn't write over it`);
   return target;
 }
 
-/** The notes at `rels` (in this root, in this order) as one document in `format`: its bytes. */
-export async function exportNotes(graph: Graph, rels: string[], format: ExportFormat): Promise<Uint8Array> {
-  return format.write(await assemble(graph, rels));
+/** The notes at `rels` (in this root, in this order) as one document in `format`, for `target`. */
+export async function exportNotes(graph: Graph, rels: string[], format: ExportFormat, target: string): Promise<ExportOutput> {
+  return format.write(await assemble(graph, rels), target);
+}
+
+/** An export written: each file beside the document, then the document (atomically, folders made); their paths. */
+export function writeExport(target: string, out: ExportOutput): string[] {
+  const dir = dirname(target);
+  const files = out.files.map((f) => join(dir, f.path));
+  // The document last: what it refers to is there when it is.
+  out.files.forEach((f, i) => atomicWrite(files[i]!, f.data));
+  atomicWrite(target, out.data);
+  return files;
 }

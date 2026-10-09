@@ -4,6 +4,7 @@
 // copy — nothing is fetched — else its link); its diagrams and display maths are drawn, as SVG in print's colours; its
 // frontmatter's title, author and date are the document's. Its words are as written.
 
+import { createHash } from "node:crypto";
 import { statSync } from "node:fs";
 import { basename } from "node:path";
 import type { Blockquote, Image, Link, PhrasingContent, RootContent, Text } from "mdast";
@@ -16,6 +17,7 @@ import { headingText, noteTitle, parseMarkdown, slugify } from "../parse.ts";
 import { loadRasterizer } from "../svg.ts";
 import { loadTypesetter } from "../typeset.ts";
 import type { WikiLink } from "../wikilink.ts";
+import { PRINT } from "./style.ts";
 
 /** A note exported: a chapter of the document. */
 export interface ExportChapter {
@@ -30,6 +32,8 @@ export interface ExportDoc {
   title: string;
   author: string | null;
   date: string | null;
+  /** Its language, as frontmatter's `lang` (or `language`) says: `en`, `tr`; null where it doesn't. */
+  lang: string | null;
   chapters: ExportChapter[];
 }
 
@@ -39,35 +43,14 @@ export interface ExportDoc {
  */
 export interface ExportPicture {
   file?: string;
+  /** Where it is on the web, for one drawn from its cached copy. */
+  url?: string;
   svg?: string;
   kind?: "diagram" | "math";
+  /** Maths in a line, not a display. */
+  inline?: boolean;
   size?: { width: number; height: number | null } | null;
 }
-
-/** Print's colours for what slipbox draws: dark on white. */
-export const PRINT = { bg: "#ffffff", fg: "#1f2328", line: "#57606a", accent: "#0969da", muted: "#57606a", math: "#1f2328" };
-
-/** A callout's colour on paper (GitHub's), by its kind: note's for a kind not here. */
-export const CALLOUT_COLOURS: Record<string, string> = {
-  note: "#0969da",
-  info: "#0969da",
-  tip: "#1a7f37",
-  hint: "#1a7f37",
-  success: "#1a7f37",
-  check: "#1a7f37",
-  done: "#1a7f37",
-  important: "#8250df",
-  abstract: "#8250df",
-  summary: "#8250df",
-  warning: "#9a6700",
-  attention: "#9a6700",
-  question: "#9a6700",
-  caution: "#cf222e",
-  danger: "#cf222e",
-  error: "#cf222e",
-  failure: "#cf222e",
-  bug: "#cf222e",
-};
 
 /** Embeds inside embeds go this deep, as on screen (1.11). */
 const MAX_DEPTH = 3;
@@ -100,7 +83,7 @@ export function headingAnchor(chapter: string, heading: string): string {
 /** The notes at `rels` (in this root), assembled for a writer. */
 export async function assemble(graph: Graph, rels: string[]): Promise<ExportDoc> {
   const chapters = new Map(rels.map((r) => [r, chapterAnchor(r)]));
-  const doc: ExportDoc = { title: "", author: null, date: null, chapters: [] };
+  const doc: ExportDoc = { title: "", author: null, date: null, lang: null, chapters: [] };
   for (const rel of rels) {
     const abs = graph.abs(rel);
     const parsed = parseMarkdown(readText(abs).text);
@@ -114,6 +97,7 @@ export async function assemble(graph: Graph, rels: string[]): Promise<ExportDoc>
       doc.title = title;
       doc.author = words(fm.author ?? fm.authors);
       doc.date = words(fm.date);
+      doc.lang = words(fm.lang ?? fm.language);
     }
   }
   landLinks(doc);
@@ -167,7 +151,8 @@ async function blocks(nodes: RootContent[], c: Ctx): Promise<RootContent[]> {
     } else if (n.type === "code" && /^mermaid$/i.test(n.lang ?? "")) {
       const svg = await diagram(n.value);
       if (svg) {
-        out.push({ type: "paragraph", children: [{ type: "image", url: "", alt: "diagram", data: { picture: { svg, kind: "diagram" } } } as Image] });
+        // Drawn; its source kept, for a format that keeps it as written (Markdown).
+        out.push({ type: "paragraph", children: [{ type: "image", url: "", alt: "diagram", data: { picture: { svg, kind: "diagram" }, code: n } } as Image] });
         continue;
       }
     } else if (n.type === "math") {
@@ -240,6 +225,13 @@ async function inline(nodes: PhrasingContent[], c: Ctx): Promise<PhrasingContent
       out.push({ ...n, identifier: footnoteId(n.identifier, c) });
       continue;
     }
+    // Maths in a line: typeset too, for a format that shows pictures in a line (HTML, EPUB); the rest write its text.
+    if (n.type === "inlineMath") {
+      const svg = await maths(n.value, true);
+      if (svg) ((n.data ??= {}) as Record<string, unknown>).picture = { svg, kind: "math", inline: true } satisfies ExportPicture;
+      out.push(n);
+      continue;
+    }
     if (n.type === "image") {
       out.push(picture(n, { url: n.url }, c));
       continue;
@@ -258,10 +250,14 @@ async function inline(nodes: PhrasingContent[], c: Ctx): Promise<PhrasingContent
   return out;
 }
 
-/** A footnote's label made the note's own: two notes' `[^1]` are two footnotes. */
+/** A footnote's label made the note's own: two notes' `[^1]` are two footnotes. The note by a hash of its path, which
+ *  an id in a document would otherwise show. */
 function footnoteId(id: string, c: Ctx): string {
-  return `${c.anchor}:${c.abs}:${id}`;
+  return `${c.anchor}-${createHash("sha256").update(c.abs).digest("hex").slice(0, 8)}-${id}`;
 }
+
+/** A link's scheme a document keeps: the web's, mail, a phone. Any other (`javascript:`, `file:`) is its text. */
+const SAFE_SCHEME = /^(https?|mailto|tel|ftp):/i;
 
 const CALLOUT = /^\[!([A-Za-z]+)\]([+-])?[ \t]*/;
 
@@ -282,7 +278,7 @@ function callout(n: Blockquote): void {
   const body: PhrasingContent[] = nl >= 0 ? [{ type: "text", value: rest.slice(nl + 1) }, ...first.children.slice(1)] : titleText ? [] : first.children.slice(1);
   const bodyText = body.some((k) => k.type !== "text" || k.value.trim());
   n.children = [{ type: "paragraph", children: [{ type: "strong", children: title }] }, ...(bodyText ? [{ ...first, children: body }] : []), ...n.children.slice(1)];
-  n.data = { ...(n.data ?? {}), callout: kind } as typeof n.data;
+  n.data = { ...(n.data ?? {}), callout: kind, calloutTitled: !!titleText } as typeof n.data;
 }
 
 /**
@@ -290,7 +286,7 @@ function callout(n: Blockquote): void {
  * (an address on the web, `mailto:`); null where it's its text (a note not exported, a file, nothing).
  */
 function linkTo(url: string, kind: "markdown" | "wiki", c: Ctx, heading: string | null = null): string | null {
-  if (kind === "markdown" && /^[a-z][a-z0-9+.-]*:/i.test(url)) return "";
+  if (kind === "markdown" && /^[a-z][a-z0-9+.-]*:/i.test(url)) return SAFE_SCHEME.test(url) ? "" : null;
   if (!c.rel) return null;
   const [path, frag = heading ?? ""] = kind === "markdown" ? url.split("#") : [url, heading ?? ""];
   const r = c.graph.resolveLink({ kind, target: kind === "markdown" ? (path ?? "") : url }, c.rel);
@@ -323,12 +319,13 @@ function picture(n: Image, from: { url: string } | { name: string; size: ExportP
   const found = pictureLocator(c.rel !== null ? c.graph : null, c.rel, c.abs)("url" in from ? { url: from.url } : { name: from.name, size: from.size ?? null });
   const file = !found || "svg" in found ? null : "file" in found ? found.file : cachedImage(found.url);
   if (!file || !isFile(file)) {
-    // Not here: its words, linked where it's on the web.
+    // Not here: its words, linked where it's on the web (marked a picture's, for a format that keeps it one).
     const text: Text = { type: "text", value: n.alt || n.url };
-    return found && "url" in found ? { type: "link", url: found.url, children: [text] } : text;
+    return found && "url" in found && SAFE_SCHEME.test(found.url) ? { type: "link", url: found.url, children: [text], data: { remoteImage: true } } : text;
   }
   const size = "size" in from ? from.size : null;
-  return { ...n, data: { ...(n.data ?? {}), picture: { file, size } satisfies ExportPicture } } as Image;
+  const picture: ExportPicture = found && "url" in found ? { file, size, url: found.url } : { file, size };
+  return { ...n, data: { ...(n.data ?? {}), picture } } as Image;
 }
 
 function isFile(file: string): boolean {
@@ -345,8 +342,8 @@ async function diagram(source: string): Promise<string | null> {
   return m && r ? mermaidSvg(source, PRINT, r.family) : null;
 }
 
-/** A display's maths as an SVG, print's colour — null where MathJax can't read it. */
-async function maths(tex: string): Promise<string | null> {
+/** Maths as an SVG, print's colour — a display's, or `inline` a line's; null where MathJax can't read it. */
+async function maths(tex: string, inline = false): Promise<string | null> {
   const t = await loadTypesetter();
-  return t ? t(tex, PRINT.math) : null;
+  return t ? t(tex, PRINT.math, inline) : null;
 }

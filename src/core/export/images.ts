@@ -46,12 +46,31 @@ export function rasterInfo(b: Uint8Array): Omit<Raster, "data"> | null {
 /** MathJax's sizes are in `ex`: a display's, in pixels, at this many to the ex (11-point text). */
 const EX_PX = 6.3;
 
+/** A MathJax SVG's size in `ex`, and how far below the line it sits (a line's maths); null where it says none. */
+export function mathSize(svg: string): { width: number; height: number; valign: number } | null {
+  const head = /<svg[^>]*>/.exec(svg)?.[0] ?? "";
+  const ex = (attr: string) => Number(new RegExp(`\\b${attr}="(-?[\\d.]+)ex"`).exec(head)?.[1] ?? Number.NaN);
+  const width = ex("width");
+  const height = ex("height");
+  if (!(width > 0 && height > 0)) return null;
+  return { width, height, valign: Number(/vertical-align:\s*(-?[\d.]+)ex/.exec(head)?.[1] ?? 0) };
+}
+
+/** A picture as it is — its bytes, its kind (`svg` for one), its own size in pixels — with the size it's shown at. */
+export interface PictureData {
+  data: Uint8Array;
+  type: Raster["type"] | "svg";
+  width: number;
+  height: number;
+  shown: { width: number; height: number };
+}
+
 /**
- * A picture as a raster an export can hold — a file as it is, an SVG rasterised at `scale` times its size (sharper
- * where it's shrunk) — with the size it's shown at (its own, or Obsidian's), at most `maxWidth` pixels wide; null where
- * it can't be (no rasteriser, a kind not read). `kinds`: the raster kinds the format holds as they are.
+ * A picture as it is, with the size it's shown at — its own, or Obsidian's (`|300` its width, `|240x180` the box it
+ * fits in) — at most `maxWidth` pixels wide; null where it can't be read (nothing there, not a picture, an SVG with no
+ * size and no rasteriser to ask).
  */
-export function rasterOf(pic: ExportPicture, r: Rasterizer | null, maxWidth: number, kinds: Raster["type"][], scale = 2): (Raster & { shown: { width: number; height: number } }) | null {
+export function pictureData(pic: ExportPicture, r: Rasterizer | null, maxWidth: number): PictureData | null {
   let svg = pic.svg ?? null;
   let raster: Raster | null = null;
   if (!svg && pic.file) {
@@ -62,26 +81,47 @@ export function rasterOf(pic: ExportPicture, r: Rasterizer | null, maxWidth: num
       return null;
     }
     const info = rasterInfo(bytes);
-    if (info && kinds.includes(info.type)) raster = { ...info, data: bytes };
-    else if (!info && looksLikeSvg(new TextDecoder().decode(bytes.subarray(0, 512)))) svg = new TextDecoder().decode(bytes);
+    if (info) raster = { ...info, data: bytes };
+    else if (looksLikeSvg(new TextDecoder().decode(bytes.subarray(0, 512)))) svg = new TextDecoder().decode(bytes);
     else return null;
   }
   let own: { width: number; height: number };
   if (raster) own = { width: raster.width, height: raster.height };
-  else if (svg && r) {
-    const ex = (attr: string) => Number(new RegExp(`<svg[^>]*\\b${attr}="([\\d.]+)ex"`).exec(svg!)?.[1] ?? Number.NaN);
-    const size = pic.kind === "math" ? { width: ex("width") * EX_PX, height: ex("height") * EX_PX } : r.size(svg);
+  else if (svg) {
+    const m = pic.kind === "math" ? mathSize(svg) : null;
+    const size = m ? { width: m.width * EX_PX, height: m.height * EX_PX } : (r?.size(svg) ?? null);
     if (!size || !(size.width > 0 && size.height > 0)) return null;
     own = size;
   } else return null;
-  // Obsidian's `|300` its width, `|240x180` the box it fits in; then the page's width.
   let width = own.width;
   if (pic.size) width = Math.min(pic.size.width, pic.size.height ? (pic.size.height * own.width) / own.height : Number.POSITIVE_INFINITY);
   width = Math.min(width, maxWidth);
   const shown = { width: Math.max(1, Math.round(width)), height: Math.max(1, Math.round((width * own.height) / own.width)) };
-  if (raster) return { ...raster, shown };
-  const png = r!.png(svg!, shown.width * scale);
+  return raster ? { ...raster, shown } : { data: new TextEncoder().encode(svg!), type: "svg", width: own.width, height: own.height, shown };
+}
+
+/**
+ * A picture as a raster an export can hold — a file as it is, an SVG rasterised at `scale` times its size (sharper
+ * where it's shrunk) — with the size it's shown at, at most `maxWidth` pixels wide; null where it can't be (no
+ * rasteriser, a kind not read). `kinds`: the raster kinds the format holds as they are.
+ */
+export function rasterOf(pic: ExportPicture, r: Rasterizer | null, maxWidth: number, kinds: Raster["type"][], scale = 2): (Raster & { shown: { width: number; height: number } }) | null {
+  const p = pictureData(pic, r, maxWidth);
+  if (!p) return null;
+  if (p.type !== "svg" && kinds.includes(p.type)) return { data: p.data, type: p.type, width: p.width, height: p.height, shown: p.shown };
+  // A GIF where it isn't held: drawn by resvg as a PNG, inside an SVG (it reads no WebP or BMP).
+  if (p.type !== "svg" && p.type !== "gif") return null;
+  const svg =
+    p.type === "svg"
+      ? new TextDecoder().decode(p.data)
+      : `<svg xmlns="http://www.w3.org/2000/svg" width="${p.width}" height="${p.height}"><image href="data:image/gif;base64,${Buffer.from(p.data).toString("base64")}" width="${p.width}" height="${p.height}"/></svg>`;
+  const png = r?.png(svg, p.type === "svg" ? p.shown.width * scale : p.width);
   if (!png) return null;
   const info = rasterInfo(png)!;
-  return { data: png, type: "png", width: info.width, height: info.height, shown };
+  return { data: png, type: "png", width: info.width, height: info.height, shown: p.shown };
+}
+
+/** A picture's media type, by its kind. */
+export function mediaType(type: PictureData["type"]): string {
+  return type === "svg" ? "image/svg+xml" : type === "jpg" ? "image/jpeg" : `image/${type}`;
 }

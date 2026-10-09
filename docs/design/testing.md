@@ -22,7 +22,7 @@ through OpenTUI itself, to prove the adapter and real key parsing.
 | `tests/servers.test.ts` | slipbox as a client of language servers, against a fake one (`tests/fixtures/fake-lsp.ts`) |
 | `tests/regressions.test.ts` | one test per bug found in review (later: "review round/cycle N" blocks) |
 | `tests/home.test.ts` | the reference set's build (`scripts/build-home.ts`): histories, extras, the checks |
-| `tests/export.test.ts` | export (`10.x`): the assembler, each writer's file read back (a `.docx` unzipped) |
+| `tests/export.test.ts` | export (`10.x`): the assembler; each format read back (zips unzipped, PDF pages' text) |
 
 Later reviews keep their regression tests in `describe("review round N …")` or `describe("review cycle
 N …")` blocks in the file for the area: `tui.test.ts`, `core.test.ts`, `vault.test.ts`,

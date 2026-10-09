@@ -266,10 +266,24 @@ describe("writing", () => {
     expect([over.code, over.err]).toEqual([5, "slipbox: home.md is a note — an export doesn't write over it\n"]);
     expect(note("home.md")).toStartWith("# Halden Ridge Observatory\n");
     const bad = slipbox(["export", "dome-refit", "--to", "odt"]);
-    expect([bad.code, bad.err]).toEqual([2, "slipbox: --to must be one of: docx\n"]);
+    expect([bad.code, bad.err]).toEqual([2, "slipbox: --to must be one of: docx, pdf, html, epub, md\n"]);
     expect(slipbox(["export", "dome-refit", "-o", "exports/x.odt"]).code).toBe(2);
     expect(existsSync(join(vault, "exports", "x.odt"))).toBe(false);
     expect(slipbox(["export"]).code).toBe(2);
+  });
+  test("export to PDF, a web page, an e-book; Markdown beside it apart from the note, its pictures in a folder, an earlier one replaced", () => {
+    for (const [to, magic] of [["pdf", "%PDF-"], ["html", "<!doctype html>"], ["epub", "PK\x03\x04"]] as const) {
+      const r = slipbox(["export", "dome-refit", "--to", to, "--json"]);
+      expect([r.code, r.json.data.path]).toEqual([0, `projects/dome-refit.${to}`]);
+      expect(readFileSync(join(vault, "projects", `dome-refit.${to}`)).subarray(0, magic.length).toString("latin1")).toBe(magic);
+    }
+    const md = slipbox(["export", "dome-refit", "--to", "markdown"]);
+    expect(md.out).toBe("exported projects/dome-refit.md to projects/dome-refit.export.md (Markdown (.md)), 1 file beside it\n");
+    expect(note("projects/dome-refit.export.md")).toContain("![dome-shutter.png](dome-refit.export.assets/dome-shutter.png)");
+    expect(existsSync(join(vault, "projects", "dome-refit.export.assets", "dome-shutter.png"))).toBe(true);
+    // Indexed now, a note — and still replaced, being an export.
+    const again = slipbox(["export", "dome-refit", "--to", "md", "--json"]);
+    expect([again.code, again.json.data.files]).toEqual([0, ["projects/dome-refit.export.assets/dome-shutter.png"]]);
   });
 });
 

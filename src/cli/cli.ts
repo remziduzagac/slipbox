@@ -42,8 +42,8 @@ import { cacheDir, stateDir, stateHome, userConfigFile } from "../core/paths.ts"
 import { readStale, type StaleEntry } from "../core/stale.ts";
 import { applyColorOverrides, listThemes, loadTheme } from "../core/theme/index.ts";
 import { sanitize, UNSAFE } from "../core/sanitize.ts";
-import { atomicWrite, climbsOut, type DecodedFile, decodeText, ensureDir, landsInside, readJson, readRegular, readText, WriteRefused, writeNote } from "../core/fsutil.ts";
-import { exportNotes, exportTarget, FORMATS, formatFor } from "../core/export/index.ts";
+import { climbsOut, type DecodedFile, decodeText, ensureDir, landsInside, readJson, readRegular, readText, WriteRefused, writeNote } from "../core/fsutil.ts";
+import { exportNotes, exportTarget, FORMATS, formatFor, writeExport } from "../core/export/index.ts";
 import { compilePattern, expandReplacement, findAll, firstPerLine, replaceMatches } from "../core/replace.ts";
 import { listTasks, toggleTask } from "../core/tasks.ts";
 import { editorArgv } from "../core/editor.ts";
@@ -228,7 +228,7 @@ Usage:
   slipbox apply [plan]              write a plan --plan saved (refused if a file changed since); none: those waiting  [--dry-run]
   slipbox send <note>               open it in a running editor   [--line N] [--server <socket>]
   slipbox history                   notes read lately, newest first, and what's open
-  slipbox export <note…>            notes as one document: Word, beside the first by its name  [--to docx] [--out|-o <path>]
+  slipbox export <note…>            notes as one document, beside the first by its name  [--to docx|pdf|html|epub|md] [--out|-o <path>]
   slipbox capture [text]            append to the scratch          [--ref path:L[-M] | path:L:C-D | path:L:C-M:D] [--snippet] [--stdin] [--lang L]
   slipbox scratch show|path|clear|copy                            [--if-unchanged <sha>]
   slipbox init [dir]                give <dir> a .slipbox/: settings, and a name with --name  [--name N] [--private] [--dry-run] [--plan]
@@ -565,7 +565,7 @@ const HANDLERS: Record<string, Handler> = {
    * with its name; in `--to`'s format, else `--out`'s extension's, else Word's.
    */
   async export(s, rest) {
-    if (!rest.length) throw new UsageError("export needs a note: slipbox export <note…> [--to docx] [--out|-o <path>]");
+    if (!rest.length) throw new UsageError("export needs a note: slipbox export <note…> [--to docx|pdf|html|epub|md] [--out|-o <path>]");
     const rels = rest.map((r) => resolveNote(s, r));
     const out = flag(s.args, "out");
     const name = flag(s.args, "to") ?? (out && extname(out) ? extname(out) : "docx");
@@ -577,10 +577,11 @@ const HANDLERS: Record<string, Handler> = {
     } catch (err) {
       throw new CliError((err as Error).message, EXIT.refused);
     }
-    const bytes = await exportNotes(s.graph, rels, format);
-    atomicWrite(target, bytes);
+    const written = await exportNotes(s.graph, rels, format, target);
+    const files = writeExport(target, written).map((f) => s.graph.shownPath(f));
     const shown = s.graph.shownPath(target);
-    return { data: { path: shown, format: format.name, notes: rels, bytes: bytes.length }, human: `exported ${rels.length === 1 ? rels[0] : `${rels.length} notes`} to ${shown} (${format.title})\n` };
+    const beside = files.length ? `, ${files.length} file${files.length === 1 ? "" : "s"} beside it` : "";
+    return { data: { path: shown, format: format.name, notes: rels, bytes: written.data.length, files }, human: `exported ${rels.length === 1 ? rels[0] : `${rels.length} notes`} to ${shown} (${format.title})${beside}\n` };
   },
   async render(s, rest) {
     const rel = resolveNote(s, requireArg(rest, "note"));

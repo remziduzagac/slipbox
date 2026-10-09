@@ -7,7 +7,7 @@ import { lazy, load as loadLazy } from "./lazy.ts";
 /** The name it loads under: what a layout drawn without it waited for. */
 export const MATHJAX = "mathjax";
 
-type Convert = (tex: string) => string;
+type Convert = (tex: string, display: boolean) => string;
 
 async function load(): Promise<Convert> {
   const { mathjax } = await import("mathjax-full/js/mathjax.js");
@@ -27,11 +27,11 @@ async function load(): Promise<Convert> {
     },
   });
   const doc = mathjax.document("", { InputJax: tex, OutputJax: new SVG({ fontCache: "none" }) });
-  return (source) => adaptor.innerHTML(doc.convert(source, { display: true }));
+  return (source, display) => adaptor.innerHTML(doc.convert(source, { display }));
 }
 
-/** What typesets a display's maths as an SVG in `color` (`#rrggbb`), its size in `ex` — null where it can't; or null
- *  itself while MathJax loads (what waited for it is laid out again when it's in). */
+/** What typesets a display's maths (a line's, `inline`) as an SVG in `color` (`#rrggbb`), its size in `ex` — null where
+ *  it can't; or null itself while MathJax loads (what waited for it is laid out again when it's in). */
 export function typesetter(): Typeset | null {
   const convert = lazy(MATHJAX, load);
   return convert ? colored(convert) : null;
@@ -43,12 +43,12 @@ export async function loadTypesetter(): Promise<Typeset | null> {
   return convert ? colored(convert) : null;
 }
 
-type Typeset = (tex: string, color: string) => string | null;
+type Typeset = (tex: string, color: string, inline?: boolean) => string | null;
 
 function colored(convert: Convert): Typeset {
-  return (tex, color) => {
+  return (tex, color, inline = false) => {
     try {
-      return convert(tex).replace(/currentColor/g, color);
+      return convert(tex, !inline).replace(/currentColor/g, color);
     } catch {
       return null;
     }

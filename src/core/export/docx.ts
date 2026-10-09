@@ -32,7 +32,8 @@ import type { PhrasingContent, RootContent, TableRow as MdRow } from "mdast";
 import { highlight } from "../layout/highlight.ts";
 import { mathRows, mathText } from "../math.ts";
 import { loadRasterizer, type Rasterizer } from "../svg.ts";
-import { CALLOUT_COLOURS, type ExportDoc, type ExportPicture } from "./assemble.ts";
+import type { ExportDoc, ExportPicture } from "./assemble.ts";
+import { calloutColour } from "./style.ts";
 import { rasterOf } from "./images.ts";
 
 /** The page's text width, in pixels at 96 to the inch: A4 less an inch each side. */
@@ -129,7 +130,7 @@ function blocks(nodes: RootContent[], w: Writer, quote: number, list?: { level: 
       case "blockquote": {
         // A callout: its bar in its kind's colour.
         const kind = (n.data as { callout?: string } | undefined)?.callout;
-        out.push(...blocks(n.children, w, quote + 1, undefined, kind ? (CALLOUT_COLOURS[kind] ?? CALLOUT_COLOURS.note!).slice(1).toUpperCase() : "D0D7DE"));
+        out.push(...blocks(n.children, w, quote + 1, undefined, kind ? calloutColour(kind).slice(1).toUpperCase() : "D0D7DE"));
         break;
       }
       case "list": {
