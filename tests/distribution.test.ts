@@ -1,9 +1,12 @@
-// Distribution (plan 14.x): the supply chain's gates and the notices a release ships (14.10).
-import { afterAll, describe, expect, test } from "bun:test";
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+// Distribution (plan 14.x): the supply chain's gates and the notices a release ships (14.10); a release built (14.2).
+import { afterAll, beforeAll, describe, expect, test } from "bun:test";
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { bunfigProblems, checkDeps, licenceProblems, licenceTaken, notices, type Package, productionPackages, repoLink, specProblems, workflowProblems } from "../scripts/check-deps.ts";
+import { assetName, buildArgs, buildRelease, finishRelease, hostTarget, releaseVersion, repoOf, sha256sums } from "../scripts/release.ts";
+import { RELEASE } from "../src/core/release.ts";
+import { VERSION } from "../src/version.ts";
 
 const ROOT = resolve(import.meta.dir, "..");
 const sandbox = mkdtempSync(join(tmpdir(), "slipbox-dist-"));
@@ -118,3 +121,89 @@ describe("the supply chain's gates (14.10)", () => {
   });
 });
 
+
+describe("a release (14.2)", () => {
+  test("the platforms released, by name; this machine's when it's one of them", () => {
+    expect(hostTarget("linux", "arm64")).toBe("linux-arm64");
+    expect(hostTarget("darwin", "x64")).toBe("darwin-x64");
+    expect(hostTarget("freebsd", "x64")).toBeNull();
+    expect(hostTarget("win32", "x64")).toBeNull(); // 14.12, when it's done
+  });
+
+  test("the repository released from: owner/name, or a GitHub remote's URL — nothing else", () => {
+    for (const s of ["o/r", "https://github.com/o/r", "https://github.com/o/r.git", "git@github.com:o/r.git", "ssh://git@github.com/o/r.git\n"]) expect(repoOf(s)).toBe("o/r");
+    for (const s of ["https://gitlab.com/o/r", "o", "o/r/x", "", "../r", "o/..", "-o/r", "o/r;x", "o/$(x)"]) expect(repoOf(s)).toBeNull();
+  });
+
+  test("the version: package.json's, the same as src/version.ts's, and the tag's when there is one", () => {
+    expect(releaseVersion(ROOT)).toBe(VERSION);
+    const root = tree({ "package.json": JSON.stringify({ version: "1.2.3" }), "src/version.ts": 'export const VERSION = "1.2.3";\n' });
+    expect(releaseVersion(root, "v1.2.3")).toBe("1.2.3");
+    expect(() => releaseVersion(root, "v1.2.4")).toThrow("the tag is v1.2.4, the version 1.2.3");
+    expect(() => releaseVersion(root, "1.2.3")).toThrow();
+    writeFileSync(join(root, "src/version.ts"), 'export const VERSION = "1.2.2";\n');
+    expect(() => releaseVersion(root)).toThrow("package.json says 1.2.3, src/version.ts 1.2.2");
+  });
+
+  test("built by package.json's own build — its autoload flags kept — for the target, its release defined in it", () => {
+    const script = (JSON.parse(readFileSync(join(ROOT, "package.json"), "utf8")) as { scripts: { build: string } }).scripts.build;
+    const args = buildArgs(script, "/out/slipbox", "linux-x64", "o/r");
+    expect(args[0]).toBe("build");
+    for (const f of ["--compile", "--no-compile-autoload-bunfig", "--no-compile-autoload-dotenv", "--no-compile-autoload-tsconfig", "--no-compile-autoload-package-json"]) expect(args).toContain(f);
+    expect(args[args.indexOf("--outfile") + 1]).toBe("/out/slipbox");
+    expect(args).toContain("--target=bun-linux-x64-baseline");
+    expect(args).toContain('--define=SLIPBOX_RELEASE={"repo":"o/r","target":"linux-x64"}');
+    expect(() => buildArgs("bun build src/main.ts --outfile x", "/o", "linux-x64", "o/r")).toThrow("isn't a `bun build --compile`");
+  });
+
+  test("SHA256SUMS: a line a file, by name, as sha256sum -c reads it", () => {
+    const dir = tree({ "b.tar.gz": "b", "a.tar.gz": "a" });
+    expect(sha256sums([join(dir, "b.tar.gz"), join(dir, "a.tar.gz")])).toBe(
+      "ca978112ca1bbdcafac231b39a23dc4da786eff8147c4e72b9807785afee48bb  a.tar.gz\n3e23e8160039594a33894f6564e1b1348bbd7a0088d42c4acb73eeaed59c009d  b.tar.gz\n",
+    );
+  });
+
+  test("finished only with this version's packs: none, or another version's beside them, is refused", () => {
+    expect(() => finishRelease({ repo: "o/r", out: tree({ "x.txt": "" }) })).toThrow(`no packs of ${VERSION}`);
+    const out = tree({ [assetName(VERSION, "linux-x64")]: "x", [assetName("0.0.1", "linux-x64")]: "old" });
+    expect(() => finishRelease({ repo: "o/r", out })).toThrow("packs of another version");
+  });
+
+  test("run from source, slipbox has no release: upgrade and the update check leave it alone", () => {
+    expect(RELEASE).toBeNull();
+  });
+
+  describe("built for this machine", () => {
+    const host = hostTarget();
+    let out = "";
+    let pack = "";
+    beforeAll(() => {
+      if (!host) return;
+      out = mkdtempSync(join(sandbox, "release-"));
+      pack = buildRelease({ targets: [host], repo: "example/slipbox", tag: `v${VERSION}`, out })[0]!;
+      finishRelease({ repo: "example/slipbox", out });
+    }, 240_000);
+
+    test.if(host !== null)("a pack holding the binary and its notices, in a folder of its name; summed", () => {
+      expect(pack).toBe(join(out, assetName(VERSION, host!)));
+      const listed = Bun.spawnSync(["tar", "-tzf", pack]).stdout.toString().trim().split("\n").sort();
+      const dir = `slipbox-${VERSION}-${host}/`;
+      expect(listed).toEqual([dir, `${dir}NOTICES.txt`, `${dir}slipbox`]);
+      expect(readFileSync(join(out, "SHA256SUMS"), "utf8")).toBe(sha256sums([pack]));
+    });
+
+    test.if(host !== null)("the binary knows its release — its repository and platform — and its notices are there", () => {
+      const x = mkdtempSync(join(sandbox, "unpacked-"));
+      expect(Bun.spawnSync(["tar", "-xzf", pack, "-C", x]).exitCode).toBe(0);
+      const dir = join(x, `slipbox-${VERSION}-${host}`);
+      const notes = join(x, "notes");
+      mkdirSync(notes);
+      writeFileSync(join(notes, "a.md"), "# A\n");
+      const env = { ...process.env, XDG_STATE_HOME: join(x, "state"), XDG_CACHE_HOME: join(x, "cache"), XDG_DATA_HOME: join(x, "data") };
+      const info = Bun.spawnSync([join(dir, "slipbox"), "info", "--json"], { cwd: notes, env, timeout: 30_000 });
+      expect(info.exitCode).toBe(0);
+      expect(JSON.parse(info.stdout.toString()).data.release).toEqual({ repo: "example/slipbox", target: host });
+      expect(readFileSync(join(dir, "NOTICES.txt"), "utf8")).toStartWith(`slipbox ${VERSION}: the third-party software in this program`);
+    });
+  });
+});

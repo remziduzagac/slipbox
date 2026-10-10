@@ -40,6 +40,37 @@ search index, the parse cache or a picture — so backup tools that know the tag
   version, too, is a week old before it's taken. CI runs with `contents: read` and checks out without keeping
   credentials.
 
+## Releases
+
+`scripts/release.ts` (`14.2`), in two steps. `build` compiles each target — this machine's when none is named — with
+package.json's own `build`, so its autoload flags are always on (`14.1`), and defines the release in it
+(`core/release.ts`, `RELEASE`: the repository releases come from and the platform it's for). A target built for this
+machine is run once (`--version`) first. Each is packed, with its notices, as `slipbox-<version>-<target>.tar.gz`, a
+folder of that name inside. `finish` writes `SHA256SUMS` over the packs, refusing another version's beside them.
+
+| Asset | Bun's target |
+| --- | --- |
+| `darwin-arm64` | `bun-darwin-arm64` |
+| `darwin-x64` | `bun-darwin-x64-baseline` |
+| `linux-x64` | `bun-linux-x64-baseline` |
+| `linux-arm64` | `bun-linux-arm64` |
+
+x64 takes Bun's baseline build: it runs on any x64 processor, with no AVX2 asked for, and a terminal program loses
+nothing by it. The version is package.json's, which must be `src/version.ts`'s, and the tag's. The repository is
+`--repo owner/name`, or origin's on GitHub; it's checked strictly, as it goes into addresses and the installer.
+
+Run from source, or built by hand (`bun run build`), slipbox has no `RELEASE`: it has no channel, so `upgrade` and the
+update check leave it alone. A release build says its own in `info` (`release`, and the first line).
+
+CI (`.github/workflows/release.yml`) does it on a tag `v<version>`: each platform built on a runner of its own, after
+the whole check passes there — that platform's OpenTUI package is installed only there, and a Mac's binary is signed
+by Bun on a Mac, its signature checked (`codesign --verify`). Then the packs are summed, attested (who built each, from
+which commit: `gh attestation verify <pack> --repo <owner/name>`), and the release drafted. Nothing is published until
+a person publishes the draft. The workflow can't have run yet: the repository has no remote.
+
+Building another platform here works when its OpenTUI package is installed (`bun install --os <os> --cpu <cpu>`):
+Bun fixes the platform at build time, so only that platform's package is bundled.
+
 ## Notices
 
 `bun scripts/check-deps.ts --notices <file>` writes, from the same walk, the third-party notices a release ships beside

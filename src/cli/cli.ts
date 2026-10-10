@@ -71,6 +71,7 @@ import { findVaultRoot, folderAt, hasMarker, homeFolder, initVault, isListed, is
 import { isTrusted, setTrustedRoots } from "../core/trust.ts";
 import { type Args, flag, has, parseArgs, UsageError, VALUED } from "./args.ts";
 import { VERSION } from "../version.ts";
+import { RELEASE } from "../core/release.ts";
 
 /**
  * JSON with every character `sanitize` would change escaped as \uXXXX. JSON.stringify leaves C1
@@ -1593,6 +1594,8 @@ const HANDLERS: Record<string, Handler> = {
       : null;
     const data = {
       version: VERSION,
+      // A release build's repository and platform (14.2); null: run from source, or built by hand.
+      release: RELEASE,
       // The root (21.10): its path — a plain folder opened, that folder's — and its name, when it has one.
       root: s.loc.root,
       mode: s.loc.mode,
@@ -1616,7 +1619,7 @@ const HANDLERS: Record<string, Handler> = {
       stale: s.stale(),
     };
     const human = [
-      `slipbox   ${VERSION}`,
+      `slipbox   ${VERSION}${RELEASE ? ` (${RELEASE.target}, released from ${RELEASE.repo})` : ""}`,
       `root      ${data.root} (${data.mode}${data.markerVersion ? `, marker v${data.markerVersion}` : ""})`,
       folder
         ? `name      ${folder.pointer}${folder.pointer !== folder.name ? ` (${folder.name} is another's too)` : ""}${folder.private ? ", private: this machine's only" : ""}${folder.copies.length > 1 ? ` — ${folder.copies.length} copies, links open ${tildePath(folder.default ?? "")}` : ""}`

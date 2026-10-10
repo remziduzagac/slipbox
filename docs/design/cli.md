@@ -99,7 +99,7 @@ These churn freely before 1.0:
 | `name <new>` | a `.slipbox/` folder's: as `mv`, kind `vault`; a repository's: `{root, name, id, created}`; 5: taken |
 | `folders` | `[{name, pointer, remote, id, private, aliases, old, default, copies[{path, seen, found, …}]}]` |
 | `init <folder>`, `deinit` | as `mv`: kind `make-vault`, `unmake-vault`; `init` adds `root`, `name` and `id` |
-| `info` | `root`, `mode`, `name`, `key`, `folder{name, pointer, …, copies[]}`, `links`, `index{…, written}`, … |
+| `info` | `release`, `root`, `mode`, `name`, `key`, `folder{name, pointer, …, copies[]}`, `links`, `index{…}`, … |
 | `--plan` (`mv`, `relink`…) | as `--dry-run`, plus `plan{id, made}`: saved for `apply` (`20.18`) |
 | `apply [plan]` | as the command that planned it, applied; no plan: `[{id, made, root, command, kind, files}]` |
 | `mv`, `name`, `rename-heading`, `relink` | `{kind, from, to, dryRun, move, files[], warnings, skipped, …}` |

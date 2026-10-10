@@ -733,7 +733,7 @@ packaging lands whenever it first needs to run on a VM.*
 | ID | Item |
 | --- | --- |
 | 14.1 | `bun build --compile` per target; its autoload flags off — **done** 2026-10-10, in `build`, tested |
-| 14.2 | Release assets: darwin-arm64, darwin-x64, linux-x64, linux-arm64; `SHA256SUMS` and build attestations |
+| 14.2 | **Done.** Release assets: darwin-arm64, darwin-x64, linux-x64, linux-arm64; `SHA256SUMS`, attestations |
 | 14.3 | Homebrew tap, once the installer works |
 | 14.4 | Update path: `slipbox upgrade`; a daily check, on by default, that sends nothing identifying |
 | 14.5 | Alpine (musl): SQLite is Bun's own now (no loader); OpenTUI ships musl builds |
