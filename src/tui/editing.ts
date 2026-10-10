@@ -113,6 +113,7 @@ export function lineOf(view: View, at: number): number {
 
 /** Why a buffer can't be edited, or null when it can. */
 export function cannotEdit(view: Pick<View, "buf">): string | null {
+  if (view.buf.readOnly) return view.buf.readOnly;
   if (view.buf.deleted) return `${view.buf.key} was deleted on disk`;
   if (view.buf.invalidUtf8) return `${view.buf.key} isn't valid UTF-8 — editing would change bytes it doesn't show`;
   return null;

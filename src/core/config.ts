@@ -655,7 +655,8 @@ function merge<T>(base: T, over: Record<string, unknown>, file: string, prefix: 
       const allowed = ENUMS[path];
       const range = RANGES[path];
       if (allowed && !allowed.includes(value as string)) {
-        warnings.push(`config: ${file}: "${path}" must be one of ${allowed.join(", ")} (got "${value}")`);
+        // The value as written in JSON: a control character in it shown as `\u001b`, never stripped to look allowed.
+        warnings.push(`config: ${file}: "${path}" must be one of ${allowed.join(", ")} (got ${JSON.stringify(value)})`);
       } else if (range && (!Number.isFinite(value as number) || (value as number) < range[0] || (value as number) > range[1])) {
         warnings.push(`config: ${file}: "${path}" must be between ${range[0]} and ${range[1]} (got ${value})`);
       } else if (range && !FRACTIONAL.has(path) && !Number.isInteger(value)) {

@@ -4675,6 +4675,9 @@ export class App {
     this.floating = { kind: "commit", amend, from: this.region, view: fv, title: amend ? "Amend the last commit" : "Commit" };
     this.setViewMode(fv, "source");
     this.region = "content";
+    // A new commit's message is the first thing typed: its editor opens typing, on the empty first line. An amend's
+    // has its message to change: it opens as any editor does.
+    if (!amend) startInsert(this, fv, () => 0);
     if (!trusted) this.message("warn", "this root isn't trusted: the commit's hooks don't run, and it isn't signed");
   }
 
@@ -4712,6 +4715,8 @@ export class App {
     const buf = new NoteBuffer(null, `hover:${title}`, `hover:${title}`);
     buf.kind = { group: "note", format: "markdown" };
     buf.virtual = { save: () => true };
+    // Read, selected and copied from — never typed in (a version from git said read-only took typing).
+    buf.readOnly = "the floating window is read-only";
     buf.loadText(markdown.endsWith("\n") ? markdown : `${markdown}\n`);
     const fv = this.makeView(buf, { ...TOP }, { anchor: { ...TOP }, sub: 0, col: 0 });
     this.floating = { kind: "hover", view: fv, title };

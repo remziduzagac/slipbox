@@ -13943,6 +13943,31 @@ describe("source control (26.2)", () => {
     expect(await until(() => (h.frame(), JSON.stringify(labels(h)) === JSON.stringify(want)))).toBe(true);
   };
 
+  test("a file staged or unstaged stays selected where it went, so u or s takes it back; a heading says what acts (regression)", async () => {
+    // Found trying 26.2 live (2026-10-10): after s, the selection kept its row and landed on a heading; u there did nothing,
+    // and said nothing.
+    const root = repo({ ".gitignore": ".slipbox/\n", "a.md": "a\n", "b.md": "b\n" });
+    if (!root) return;
+    writeFileSync(join(root, "a.md"), "A\n");
+    writeFileSync(join(root, "b.md"), "B\n");
+    const h = await opened(root);
+    expect(labels(h)).toEqual(["Changes (2)", "M a.md", "M b.md"]);
+    select(h, "M b.md");
+    await h.keys("s");
+    await settle(h, ["Staged (1)", "M b.md", "Changes (1)", "M a.md"]);
+    expect(await until(() => labels(h)[h.app.sidebar.selected] === "M b.md" && h.app.sidebar.selected === 1)).toBe(true);
+    await h.keys("u");
+    await settle(h, ["Changes (2)", "M a.md", "M b.md"]);
+    expect(git(root, "diff", "--cached", "--name-only")).toBe("");
+    expect(await until(() => labels(h)[h.app.sidebar.selected] === "M b.md")).toBe(true);
+    // A heading: s, u and d say what they act on.
+    h.app.sidebar.selected = 0;
+    for (const key of ["s", "u", "d"]) {
+      await h.keys(key);
+      expect(h.app.messages.at(-1)?.text).toBe("a section's heading: s, u and d act on the file selected — a stages everything, U unstages it");
+    }
+  });
+
   test("its sections; a file opened up into its changes; one staged, one discarded; a file unstaged; all staged, unstaged", async () => {
     const root = repo({ ".gitignore": ".slipbox/\n", "a.md": "one\ntwo\nthree\n", "b.md": "b\n" });
     if (!root) return;
@@ -14092,6 +14117,54 @@ describe("commit (26.3)", () => {
     return h;
   };
 
+  test("the commit editor opens ready to type; ctrl+s while typing commits (regression)", async () => {
+    // Found trying 26.3 live (2026-10-10): it opened in normal mode, so the message's first letter was taken as a
+    // command (`A`), and ctrl+s typed in insert mode committed nothing.
+    const root = repo();
+    if (!root) return;
+    const h = await open(root);
+    writeFileSync(join(root, "a.md"), "A\n");
+    await h.app.refreshGitNow();
+    await h.keys("a", "c");
+    await h.app.refreshGitNow();
+    await h.keys("c");
+    expect(h.app.floating?.kind).toBe("commit");
+    expect(h.app.floating!.view.insert).toBe(true);
+    await h.keys(...type("Add a capital"), "ctrl+s");
+    expect(await until(() => h.app.floating === null)).toBe(true);
+    expect(git(root, "log", "-1", "--format=%s")).toBe("Add a capital\n");
+  });
+
+  test("a commit git refuses is tried again by ctrl+s, the message as it was — no change needed first (regression)", async () => {
+    // Found trying 26.3 live (2026-10-10): git refused (no identity); ctrl+s again said "no changes to save".
+    const root = repo();
+    if (!root) return;
+    const h = await open(root);
+    writeFileSync(join(root, "a.md"), "A\n");
+    await h.app.refreshGitNow();
+    await h.keys("a", "c");
+    await h.app.refreshGitNow();
+    // No identity, and none guessed: git refuses to commit.
+    git(root, "config", "--unset", "user.name");
+    git(root, "config", "--unset", "user.email");
+    git(root, "config", "user.useConfigOnly", "true");
+    const was = { GIT_CONFIG_GLOBAL: process.env.GIT_CONFIG_GLOBAL, GIT_CONFIG_NOSYSTEM: process.env.GIT_CONFIG_NOSYSTEM };
+    process.env.GIT_CONFIG_GLOBAL = "/dev/null";
+    process.env.GIT_CONFIG_NOSYSTEM = "1";
+    try {
+      await h.keys("c", ...type("Try twice"), "ctrl+s");
+      expect(await until(() => h.app.messages.at(-1)?.text.startsWith("git: ") ?? false)).toBe(true);
+      expect(h.app.floating?.kind).toBe("commit");
+      git(root, "config", "user.name", "t");
+      git(root, "config", "user.email", "t@example.invalid");
+      await h.keys("escape", "ctrl+s");
+      expect(await until(() => h.app.floating === null)).toBe(true);
+      expect(git(root, "log", "-1", "--format=%s")).toBe("Try twice\n");
+    } finally {
+      for (const [k, v] of Object.entries(was)) v === undefined ? delete process.env[k] : (process.env[k] = v);
+    }
+  });
+
   test("what's staged committed with the message written in the floating editor; in a root not trusted, no hook runs", async () => {
     const root = repo();
     if (!root) return;
@@ -14115,7 +14188,7 @@ describe("commit (26.3)", () => {
     expect(h.app.floating!.view.buf.source).toContain("# Committing: 1 file staged (a.md).");
     expect(h.app.floating!.view.buf.source).toContain("# This root isn't trusted: its hooks don't run, and the commit isn't signed");
     expect(h.app.messages.at(-1)?.text).toBe("this root isn't trusted: the commit's hooks don't run, and it isn't signed");
-    await h.keys("i", ...type("Capitalise a"), "escape", "ctrl+s");
+    await h.keys(...type("Capitalise a"), "escape", "ctrl+s");
     expect(await until(() => h.app.floating === null)).toBe(true);
     expect(h.app.messages.at(-1)?.text).toMatch(/^committed [0-9a-f]{7,}: Capitalise a$/);
     expect(git(root, "log", "-1", "--format=%s%n%b")).toBe("Capitalise a\n\n");
@@ -14152,7 +14225,7 @@ describe("commit (26.3)", () => {
     await t.app.refreshGitNow();
     await t.keys("c");
     expect(t.app.floating!.view.buf.source).not.toContain("isn't trusted");
-    await t.keys("i", "x", "escape", "ctrl+s");
+    await t.keys("x", "escape", "ctrl+s");
     expect(await until(() => t.app.messages.at(-1)?.text === "git: refused by the hook")).toBe(true);
     expect(t.app.floating?.kind).toBe("commit");
     expect(git(root, "rev-list", "--count", "HEAD")).toBe("1\n");
@@ -14220,6 +14293,29 @@ describe("blame and a file's history (26.4, 22.1)", () => {
     await h.keys("down", "down", "enter", "down", "enter");
     // With the lines around it, as the note's diff has them.
     expect(list().items.map((i) => i.label)).toEqual(["@@ line 3", "  one", "  ", "- two", "+ TWO"]);
+  });
+
+  test("a version read as it was is read-only: typing, deleting, pasting there change nothing, and say so (regression)", async () => {
+    // Found trying 22.1 live (2026-10-10): `A` in the floating window, titled read-only, took typing and was unsaved.
+    const root = repo();
+    if (!root) return;
+    const h = await harness({ root, open: "new.md", width: 120, height: 40 });
+    await h.app.run("git.history");
+    await h.keys("down", "down", "enter", "enter");
+    const fv = h.app.floating!.view;
+    expect(fv.buf.source).toBe("one\n\ntwo\n");
+    // Each refused, so what would be typed after never lands: insert's keys, rendered; then in source mode (ctrl+k)
+    // a delete, a line's delete, a paste too.
+    const refused = async (keys: string[]) => {
+      await h.keys(...keys);
+      expect(h.app.floating?.view).toBe(fv);
+      expect([fv.buf.source, fv.buf.dirty, fv.insert ?? false]).toEqual(["one\n\ntwo\n", false, false]);
+      expect(h.app.messages.at(-1)?.text).toStartWith("the floating window is read-only");
+    };
+    for (const keys of [["A"], ["i"], ["o"]]) await refused(keys);
+    await h.keys("ctrl+k");
+    expect(fv.source).toBe(true);
+    for (const keys of [["A"], ["i"], ["o"], ["x"], ["d", "d"], ["p"]]) await refused(keys);
   });
 });
 

@@ -1642,6 +1642,8 @@ export function registerActions(app: App): void {
     "edit.redo": (a) => withView(a, (v) => undoRedo(a, v, "redo")),
     "note.save": (a) =>
       withView(a, (v) => {
+        // The commit editor's ctrl+s commits, its message changed or not: a commit git refused is tried again (26.3).
+        if (a.floating?.kind === "commit" && a.floating.view === v && v.buf.virtual) return void v.buf.virtual.save(v.buf.source);
         if (!v.buf.dirty && !v.buf.changedOnDisk()) return a.message("info", `${a.displayName(v.buf)} has no changes to save`);
         if (a.saveBuffer(v.buf)) a.message("info", `saved ${a.displayName(v.buf)}`);
       }),

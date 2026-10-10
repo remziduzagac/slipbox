@@ -99,6 +99,8 @@ export class NoteBuffer {
   /** A buffer that isn't a file of its own (3.20): its text given, saved by `save` (into a note's
    *  frontmatter), never read from or compared with the disk. */
   virtual: { save: (text: string) => boolean } | null = null;
+  /** Why it can't be edited, when it can't: the floating window's text — a hover, a file as it was in git. */
+  readOnly: string | null = null;
 
   /** What the file is (16.1): a note, a data file or a text file — which modes and layouts it has. */
   kind: FileKind = { group: "note", format: "markdown" };

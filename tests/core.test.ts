@@ -3202,3 +3202,10 @@ describe("document types (22.2, 22.3)", () => {
     expect(both.config.types.memory).toEqual({ paths: ["memory/*.md"], required: ["name", "description"] });
   });
 });
+
+test("a value not allowed is quoted as JSON in the warning: an escape in it shown, never stripped to look allowed (regression)", () => {
+  // Found trying the reference set live (2026-10-10): glyphs = "\u001b[31mnerd" was said as (got "nerd").
+  const f = join(mkdtempSync(join(sandbox, "esc-")), "c.toml");
+  writeFileSync(f, '[render]\nglyphs = "\\u001b[31mnerd"\n');
+  expect(loadConfig({ configFile: f }).warnings.join("\n")).toContain('(got "\\u001b[31mnerd")');
+});

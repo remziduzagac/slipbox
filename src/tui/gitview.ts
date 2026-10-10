@@ -111,10 +111,18 @@ function relOf(app: App, path: string): string | null {
 }
 
 /** After an operation: git asked again, its answer drawn; a failure said in git's words. */
-function after(app: App, why: GitDone, said: string): void {
+function after(app: App, why: GitDone, said: string, follow?: string): void {
   if (why) return app.message("warn", `git: ${why}`);
   app.message("info", said);
-  void app.refreshGitNow().then(() => app.host.requestRender());
+  void app.refreshGitNow().then(() => {
+    // The file staged or unstaged is selected where it went, so `u` or `s` takes it straight back: its row number
+    // left alone, the list re-sorted under it, the selection landed on whatever came there (found trying 26.2 live).
+    if (follow !== undefined) {
+      const i = gitRows(app).findIndex((r) => r.kind === "file" && r.entry!.path === follow);
+      if (i >= 0) app.sidebar.selected = i;
+    }
+    app.host.requestRender();
+  });
 }
 
 /** An open note's buffer for a file, unsaved: refused (what git would change isn't what's open). */
@@ -139,10 +147,10 @@ function stage(app: App, row: GitRow): void {
     if (row.section !== "unstaged") return app.message("info", "that change is staged already — u unstages it");
     const t = textsOf(app, e.path);
     if (t?.index === undefined) return app.message("info", "git hasn't answered yet");
-    return after(app, stageChange(c, e.path, t.index ?? "", row.change!), `staged a change of ${e.path}`);
+    return after(app, stageChange(c, e.path, t.index ?? "", row.change!), `staged a change of ${e.path}`, e.path);
   }
   if (row.section === "staged") return app.message("info", `${e.path} is staged — u unstages it`);
-  after(app, stageFile(c, e.path), row.section === "conflicted" ? `${e.path} marked resolved` : `staged ${e.path}`);
+  after(app, stageFile(c, e.path), row.section === "conflicted" ? `${e.path} marked resolved` : `staged ${e.path}`, e.path);
 }
 
 /** `u`: the selected file, or change, unstaged. */
@@ -153,9 +161,9 @@ function unstage(app: App, row: GitRow): void {
   if (row.kind === "change") {
     const t = textsOf(app, e.path);
     if (t?.index === undefined) return app.message("info", "git hasn't answered yet");
-    return after(app, unstageChange(c, e.path, t.index ?? "", row.change!), `unstaged a change of ${e.path}`);
+    return after(app, unstageChange(c, e.path, t.index ?? "", row.change!), `unstaged a change of ${e.path}`, e.path);
   }
-  after(app, unstageFile(c, e.path), `unstaged ${e.path}`);
+  after(app, unstageFile(c, e.path), `unstaged ${e.path}`, e.path);
 }
 
 /** `d`: the selected file's changes not staged, or one change, discarded — after asking; an untracked file, to the trash. */
@@ -262,7 +270,11 @@ export function gitViewAction(app: App, action: string): void {
       app.region = "content";
       return;
   }
-  if (!row || row.kind === "heading") return;
+  if (!row || row.kind === "heading") {
+    // A section's heading: what acts on a file said, never nothing.
+    if (row && (action === "open_split" || action === "restore" || action === "delete")) app.message("info", "a section's heading: s, u and d act on the file selected — a stages everything, U unstages it");
+    return;
+  }
   switch (action) {
     case "expand":
       if (row.kind === "file") app.gitOpen.add(`${row.section}:${row.entry!.path}`);
