@@ -110,6 +110,7 @@ These churn freely before 1.0:
 | `trash [restore <item>]` | the items, newest first; `restore`: the item put back (exit 5 over something there) |
 | `themes` | `[{name, source, path?, current}]` |
 | `commands` | `[{id, title, cli, desc}]` — the registry with CLI equivalents |
+| `uninstall` | `{purge, removed, remove[{path, what}], keep[…], notes[], failed[]}`; removes only with `--yes` |
 | `find <query> [note]` | `{query, regex, whole, count, matches[{path, line, column, match, text}]}` |
 | `search <words…>` | `{query, engine, relaxed, hits[{path, line, column, heading, section, score, snippet, …}]}` |
 | `index` | `{path, rebuilt, indexed, removed, files, ms}` |
@@ -687,8 +688,13 @@ exits 2, so an editor still starting it shows why in its log.
 ## Installing for agents
 
 `scripts/install-local.sh` writes a `slipbox` launcher into `~/.local/bin` that runs this
-checkout with bun. `--skill` also links the skill into `~/.claude/skills/slipbox`. Real packaging
-(`bun build --compile`, release assets) is plan `14.x`.
+checkout with bun. `--skill` also links the skill into `~/.claude/skills/slipbox`. Releases — a binary per platform,
+installed by `install.sh` — are plan `14.x` (`docs/design/distribution.md`).
+
+`slipbox uninstall` (`14.8`) lists what the installer put here — the link, `versions/`, `current`, `bin-link` — and
+slipbox's folders it keeps; it removes nothing without `--yes`, so an agent asking only learns. `--purge` takes the
+four folders too: settings, state (the scratch and the trash among it), data, cache. Notes, and the `.slipbox/`
+folders in them, are never touched.
 
 The launcher gives Bun slipbox's own `bunfig.toml` and no `.env` (`--config`, `--no-env-file`). Bun reads both from
 the folder it starts in, which is whatever repository or notes folder you run `slipbox` in: that folder's preload

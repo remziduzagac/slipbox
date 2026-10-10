@@ -6,6 +6,7 @@ import { join, resolve } from "node:path";
 import { bunfigProblems, checkDeps, licenceProblems, licenceTaken, notices, type Package, productionPackages, repoLink, specProblems, workflowProblems } from "../scripts/check-deps.ts";
 import { assetName, buildArgs, buildRelease, finishRelease, hostTarget, installScript, releaseVersion, repoOf, sha256sums } from "../scripts/release.ts";
 import { RELEASE } from "../src/core/release.ts";
+import { installation, removable, type Stores, uninstall, uninstallPlan } from "../src/core/install.ts";
 import { VERSION } from "../src/version.ts";
 
 const ROOT = resolve(import.meta.dir, "..");
@@ -265,6 +266,41 @@ describe("a release (14.2)", () => {
       expect(Bun.spawnSync(["sh", "-c", `ls -d ${home}/slipbox-install.* 2>/dev/null`]).stdout.toString()).toBe("");
     });
 
+    test.if(host !== null)("uninstalled (14.8): listed first, nothing removed without --yes; --purge takes slipbox's folders too", () => {
+      const home = mkdtempSync(join(sandbox, "home-"));
+      expect(install(home).code).toBe(0);
+      // Every folder of slipbox's in this home, said: nothing reaches the real ones.
+      const env = { HOME: home, PATH: "/usr/bin:/bin", TMPDIR: home, XDG_CONFIG_HOME: join(home, ".config"), XDG_STATE_HOME: join(home, ".local", "state"), XDG_DATA_HOME: join(home, ".local", "share"), XDG_CACHE_HOME: join(home, ".cache") };
+      mkdirSync(join(home, ".config", "slipbox"), { recursive: true });
+      writeFileSync(join(home, ".config", "slipbox", "config.toml"), 'theme = "nord"\n');
+      const link = join(home, ".local", "bin", "slipbox");
+      const data = join(home, ".local", "share", "slipbox");
+      const listed = Bun.spawnSync([link, "uninstall", "--json"], { env, cwd: home });
+      expect(listed.exitCode).toBe(0);
+      const plan = JSON.parse(listed.stdout.toString()).data;
+      expect(plan.removed).toBe(false);
+      expect(plan.remove.map((i: { path: string }) => i.path)).toEqual([link, join(data, "versions"), join(data, "current"), join(data, "bin-link")]);
+      // The state folder too: the CLI marks when it was last used (20.9), this run included.
+      expect(plan.keep.map((i: { path: string }) => i.path)).toEqual([join(home, ".config", "slipbox"), join(home, ".local", "state", "slipbox"), data]);
+      expect(existsSync(link)).toBe(true);
+      const human = Bun.spawnSync([link, "uninstall"], { env, cwd: home }).stdout.toString();
+      expect(human).toContain(`~/.local/share/slipbox/versions  slipbox ${VERSION}`);
+      expect(human).toContain("keeps (--purge removes them too):\n  ~/.config/slipbox");
+      expect(human).toContain("nothing removed yet: again with --yes to remove these");
+      // Removed: the running binary's own install, by itself.
+      const done = Bun.spawnSync([link, "uninstall", "--yes"], { env, cwd: home });
+      expect(done.exitCode).toBe(0);
+      expect(done.stdout.toString()).toStartWith("removed:\n");
+      for (const p of [link, join(data, "versions"), join(data, "current"), join(data, "bin-link")]) expect(existsSync(p)).toBe(false);
+      expect(readFileSync(join(home, ".config", "slipbox", "config.toml"), "utf8")).toBe('theme = "nord"\n');
+      // --purge: the folders too, from source now the binary's gone.
+      const purged = Bun.spawnSync([process.execPath, join(ROOT, "src", "main.ts"), "uninstall", "--purge", "--yes"], { env, cwd: home });
+      expect(purged.exitCode).toBe(0);
+      // All gone, and the run that purged them wrote nothing back after.
+      for (const p of [join(home, ".config", "slipbox"), join(home, ".local", "state", "slipbox"), data, join(home, ".cache", "slipbox")]) expect(existsSync(p)).toBe(false);
+      expect(existsSync(join(home, ".config"))).toBe(true);
+    });
+
     test.if(host !== null)("XDG_DATA_HOME and SLIPBOX_BIN_DIR followed when absolute; a relative one, as XDG says, not", () => {
       const home = mkdtempSync(join(sandbox, "home-"));
       const r = install(home, { XDG_DATA_HOME: join(home, "d"), SLIPBOX_BIN_DIR: join(home, "b") });
@@ -352,5 +388,90 @@ describe("a release (14.2)", () => {
       expect(install(home, {}, { fake: { ...mac, sysctl: "echo 0" } }).err).toContain("has no darwin-x64 build");
       expect(existsSync(join(home, ".local"))).toBe(false);
     });
+  });
+});
+
+describe("uninstall's plan (14.8)", () => {
+  /** An install laid out as install.sh leaves it, in slipbox's folders of its own. */
+  function layout(): { dirs: Stores; link: string; base: string } {
+    const base = mkdtempSync(join(sandbox, "inst-"));
+    const dirs: Stores = { config: join(base, "config", "slipbox"), state: join(base, "state", "slipbox"), data: join(base, "data", "slipbox"), cache: join(base, "cache", "slipbox") };
+    for (const v of ["0.1.0", "0.2.0"]) {
+      mkdirSync(join(dirs.data, "versions", v), { recursive: true });
+      writeFileSync(join(dirs.data, "versions", v, "slipbox"), "");
+    }
+    symlinkSync("versions/0.2.0", join(dirs.data, "current"));
+    mkdirSync(join(base, "bin"));
+    const link = join(base, "bin", "slipbox");
+    symlinkSync(join(dirs.data, "current", "slipbox"), link);
+    writeFileSync(join(dirs.data, "bin-link"), `${link}\n`);
+    mkdirSync(join(dirs.data, "spell"));
+    writeFileSync(join(dirs.data, "spell", "words.txt"), "zorvex\n");
+    mkdirSync(dirs.config, { recursive: true });
+    mkdirSync(dirs.state, { recursive: true });
+    return { dirs, link, base };
+  }
+
+  test("the installer's files listed to remove; slipbox's folders kept, unless --purge — those there only", () => {
+    const { dirs, link } = layout();
+    expect(installation(dirs.data)).toEqual({ versions: ["0.1.0", "0.2.0"], current: "0.2.0", link, foreignLink: null });
+    const plan = uninstallPlan(false, dirs);
+    expect(plan.remove).toEqual([
+      { path: link, what: "the link that runs slipbox" },
+      { path: join(dirs.data, "versions"), what: "slipbox 0.1.0, 0.2.0" },
+      { path: join(dirs.data, "current"), what: "which version is in use" },
+      { path: join(dirs.data, "bin-link"), what: "where the link is" },
+    ]);
+    expect(plan.keep.map((i) => i.path)).toEqual([dirs.config, dirs.state, dirs.data]);
+    const purge = uninstallPlan(true, dirs);
+    expect(purge.remove.slice(4).map((i) => i.path)).toEqual([dirs.config, dirs.state, dirs.data]);
+    expect(purge.keep).toEqual([]);
+  });
+
+  test("removed: the installer's files; what's yours in the data folder stays, unless --purge", () => {
+    const { dirs, link } = layout();
+    expect(uninstall(uninstallPlan(false, dirs), dirs)).toEqual([]);
+    for (const p of [link, join(dirs.data, "versions"), join(dirs.data, "current"), join(dirs.data, "bin-link")]) expect(existsSync(p)).toBe(false);
+    expect(readFileSync(join(dirs.data, "spell", "words.txt"), "utf8")).toBe("zorvex\n");
+    expect(uninstallPlan(false, dirs).remove).toEqual([]);
+    expect(uninstall(uninstallPlan(true, dirs), dirs)).toEqual([]);
+    for (const d of [dirs.config, dirs.state, dirs.data]) expect(existsSync(d)).toBe(false);
+  });
+
+  test("a link that isn't the installer's any more is left, and said; a link is removed as itself, never what it's to", () => {
+    const { dirs, link, base } = layout();
+    rmSync(link);
+    writeFileSync(link, "#!/bin/sh\n# someone's own\n");
+    // `current` turned to point outside slipbox's folders: the link goes, what it points at stays.
+    const outside = join(base, "outside");
+    mkdirSync(outside);
+    writeFileSync(join(outside, "keep.txt"), "kept\n");
+    rmSync(join(dirs.data, "current"));
+    symlinkSync(outside, join(dirs.data, "current"));
+    const plan = uninstallPlan(false, dirs);
+    expect(plan.remove.map((i) => i.path)).not.toContain(link);
+    expect(plan.notes).toEqual([`${link} isn't slipbox's link any more: left as it is`]);
+    expect(uninstall(plan, dirs)).toEqual([]);
+    expect(readFileSync(link, "utf8")).toBe("#!/bin/sh\n# someone's own\n");
+    expect(existsSync(join(dirs.data, "current"))).toBe(false);
+    expect(readFileSync(join(outside, "keep.txt"), "utf8")).toBe("kept\n");
+  });
+
+  test("only slipbox's own are removable: the installer's link, or inside a folder named slipbox", () => {
+    const { dirs, link, base } = layout();
+    expect(removable(link, dirs, link)).toBe(true);
+    expect(removable(join(dirs.data, "versions"), dirs, link)).toBe(true);
+    expect(removable(dirs.cache, dirs, link)).toBe(true);
+    expect(removable(join(base, "bin"), dirs, link)).toBe(false);
+    expect(removable(`${dirs.data}-other`, dirs, link)).toBe(false);
+    expect(removable(join(base, "data"), dirs, link)).toBe(false);
+    // A folder not named slipbox, whatever set it: nothing in it.
+    const odd = { ...dirs, config: join(base, "conf") };
+    expect(removable(join(base, "conf", "x"), odd, link)).toBe(false);
+    // A plan naming anything else is refused, item by item.
+    const victim = join(base, "victim.txt");
+    writeFileSync(victim, "here\n");
+    expect(uninstall({ remove: [{ path: victim, what: "x" }], keep: [], notes: [] }, dirs)).toEqual([`${victim}: not slipbox's to remove`]);
+    expect(existsSync(victim)).toBe(true);
   });
 });

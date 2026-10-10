@@ -102,6 +102,20 @@ nothing. In order:
 Nothing runs as root and nothing outside those two places is touched. `SLIPBOX_RELEASES_URL` fetches the packs from
 elsewhere — a mirror, or the tests' folder through `file://` — and their sums are still the release's.
 
+## Uninstalling
+
+`slipbox uninstall` (`14.8`, `core/install.ts`) lists every path first, and removes nothing without `--yes`:
+
+- **The installer's files**: the link `bin-link` names — only while it's still the installer's link to
+  `<data>/current/slipbox`; anything else there is left and said — then `versions/`, `current` and `bin-link`.
+- **With `--purge`**, slipbox's four folders (`14.9`) as well: settings and themes; state — sessions, the scratch, the
+  trash, undo, reading positions, named folders, said so, as they're yours; data — your own words, installed language
+  servers; and the cache. Without it they're listed as kept.
+
+Each path is checked before it goes: the installer's link, or inside a folder named `slipbox` among slipbox's four.
+A link is removed as itself, never what it points at. Notes, and the `.slipbox/` folders in them, are never touched.
+The running binary can remove its own install: on macOS and Linux a running program's file can be unlinked.
+
 ## Notices
 
 `bun scripts/check-deps.ts --notices <file>` writes, from the same walk, the third-party notices a release ships beside

@@ -1,0 +1,122 @@
+// The installer's layout (plans 14.7, 14.8): in slipbox's data folder, `versions/<version>/` — each one installed,
+// the binary and its notices — and `current`, a link to the one in use; `<bin>/slipbox`, a link to
+// `<data>/current/slipbox`; and `bin-link`, where that link is. `install.sh` lays it out, `upgrade` adds a version and
+// moves `current`, and `uninstall` takes it away — with `--purge`, everything slipbox keeps, too.
+
+import { existsSync, lstatSync, readdirSync, readFileSync, readlinkSync, rmSync } from "node:fs";
+import { join, sep } from "node:path";
+import { type StoreKind, storeDir } from "./paths.ts";
+
+export type Stores = Record<StoreKind, string>;
+
+/** slipbox's four folders, where they are here (14.9). */
+export function stores(): Stores {
+  return { config: storeDir("config"), state: storeDir("state"), data: storeDir("data"), cache: storeDir("cache") };
+}
+
+function lexists(p: string): boolean {
+  try {
+    lstatSync(p);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+export interface Installation {
+  /** The versions installed, by folder name. */
+  versions: string[];
+  /** The version `current` points at, or null. */
+  current: string | null;
+  /** The link that runs slipbox, where `bin-link` says — when it's still the installer's link to `current`. */
+  link: string | null;
+  /** Where `bin-link` says the link is, when what's there now isn't the installer's (left alone). */
+  foreignLink: string | null;
+}
+
+/** What the installer has put in a data folder. */
+export function installation(data: string): Installation {
+  const versionsDir = join(data, "versions");
+  const versions = existsSync(versionsDir) ? readdirSync(versionsDir).filter((v) => !v.endsWith(".new")).sort() : [];
+  let current: string | null = null;
+  try {
+    current = /^versions\/([^/]+)$/.exec(readlinkSync(join(data, "current")))?.[1] ?? null;
+  } catch {}
+  let link: string | null = null;
+  let foreignLink: string | null = null;
+  try {
+    const at = readFileSync(join(data, "bin-link"), "utf8").trim();
+    if (at) {
+      let ours = false;
+      try {
+        ours = lstatSync(at).isSymbolicLink() && readlinkSync(at) === join(data, "current", "slipbox");
+      } catch {}
+      if (ours) link = at;
+      else if (lexists(at)) foreignLink = at;
+    }
+  } catch {}
+  return { versions, current, link, foreignLink };
+}
+
+export interface Item {
+  path: string;
+  /** What it holds, said to the person deciding. */
+  what: string;
+}
+
+export interface UninstallPlan {
+  remove: Item[];
+  /** What stays: slipbox's folders, without `--purge`. */
+  keep: Item[];
+  /** Things said: a link that isn't slipbox's any more, left alone. */
+  notes: string[];
+}
+
+const KEPT: Record<StoreKind, string> = {
+  config: "your settings and themes",
+  state: "your sessions, the scratch, the trash, undo, reading positions, named folders",
+  data: "your own words (spelling), language servers installed for you",
+  cache: "indexes and pictures, all made again when missing",
+};
+
+/** What `uninstall` takes away — the installer's files; with `purge`, slipbox's four folders too — and what stays. */
+export function uninstallPlan(purge: boolean, dirs: Stores = stores()): UninstallPlan {
+  const inst = installation(dirs.data);
+  const remove: Item[] = [];
+  const notes: string[] = [];
+  if (inst.link) remove.push({ path: inst.link, what: "the link that runs slipbox" });
+  if (inst.foreignLink) notes.push(`${inst.foreignLink} isn't slipbox's link any more: left as it is`);
+  if (inst.versions.length) remove.push({ path: join(dirs.data, "versions"), what: `slipbox ${inst.versions.join(", ")}` });
+  if (lexists(join(dirs.data, "current"))) remove.push({ path: join(dirs.data, "current"), what: "which version is in use" });
+  if (lexists(join(dirs.data, "bin-link"))) remove.push({ path: join(dirs.data, "bin-link"), what: "where the link is" });
+  const keep: Item[] = [];
+  for (const kind of ["config", "state", "data", "cache"] as const) {
+    if (!existsSync(dirs[kind])) continue;
+    (purge ? remove : keep).push({ path: dirs[kind], what: KEPT[kind] });
+  }
+  return { remove, keep, notes };
+}
+
+/** Whether a path is one `uninstall` may remove: the installer's link, or in one of slipbox's own folders. */
+export function removable(path: string, dirs: Stores, link: string | null): boolean {
+  if (link !== null && path === link) return true;
+  return Object.values(dirs).some((d) => d.split(/[\\/]/).includes("slipbox") && (path === d || path.startsWith(d + sep)));
+}
+
+/** The plan carried out, a link removed as itself (never what it points at); what couldn't be, and why. */
+export function uninstall(plan: UninstallPlan, dirs: Stores = stores()): string[] {
+  const link = plan.remove.find((i) => i.what === "the link that runs slipbox")?.path ?? null;
+  const failed: string[] = [];
+  for (const { path } of plan.remove) {
+    if (!removable(path, dirs, link)) {
+      failed.push(`${path}: not slipbox's to remove`);
+      continue;
+    }
+    try {
+      rmSync(path, { recursive: true, force: true });
+    } catch (err) {
+      failed.push(`${path}: ${(err as Error).message}`);
+    }
+  }
+  return failed;
+}

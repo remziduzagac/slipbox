@@ -739,7 +739,7 @@ packaging lands whenever it first needs to run on a VM.*
 | 14.5 | Alpine (musl): SQLite is Bun's own now (no loader); OpenTUI ships musl builds |
 | 14.6 | **decide** slipbox's licence — MIT, Apache-2.0, or both — then a `LICENSE` file and the notices it ships |
 | 14.7 | **Done.** Installer: `curl … \| sh`, the sums inside; a folder per version, `current`, `~/.local/bin` |
-| 14.8 | `slipbox uninstall`: every path it would remove listed first; `--purge` takes data and state too |
+| 14.8 | **Done.** `slipbox uninstall`: every path listed first, removed only with `--yes`; `--purge` all four |
 | 14.9 | **Done.** Folders: XDG's on Linux and macOS, as now; Windows' own (`%APPDATA%`…); `CACHEDIR.TAG` |
 | 14.10 | **Done.** Supply chain: exact pins, a 7-day cooldown, no install scripts, a licence gate, actions by hash |
 | 14.11 | Language servers (`19.5`) installed from a full lockfile slipbox ships, not only their own version pinned |

@@ -72,6 +72,7 @@ import { isTrusted, setTrustedRoots } from "../core/trust.ts";
 import { type Args, flag, has, parseArgs, UsageError, VALUED } from "./args.ts";
 import { VERSION } from "../version.ts";
 import { RELEASE } from "../core/release.ts";
+import { uninstall, uninstallPlan } from "../core/install.ts";
 
 /**
  * JSON with every character `sanitize` would change escaped as \uXXXX. JSON.stringify leaves C1
@@ -244,6 +245,7 @@ Usage:
   slipbox doctor [file]             language servers and linters: each language's, found where, installed when needed, or missing
   slipbox diagnostics <file>        a file's problems: its servers', its linters', its syntax; a note's links and lint  [--severity S] [--timeout SECS]
   slipbox themes                    list themes
+  slipbox uninstall                 what the installer put here, listed; removed with --yes  [--purge: slipbox's folders too] [--yes]
   slipbox commands                  list named commands and their CLI equivalents
 
 Global options:
@@ -268,6 +270,7 @@ export const CLI_COMMANDS = new Set([
   "render", "resolve", "link", "links", "backlinks", "name", "folders", "ls", "outline", "find", "replace", "task", "read", "stat", "write", "mkdir", "send", "history",
   "mv", "rename-heading", "relink", "convert-links", "undo", "context", "search", "index", "changed", "diff", "merge-review", "worktrees", "cp", "rm", "trash", "deinit", "tags", "footnotes", "problems",
   "capture", "scratch", "init", "info", "apply", "doctor", "diagnostics", "themes", "commands", "help", "export", "spell",
+  "uninstall",
 ]);
 
 /** The command word in raw arguments that failed to parse: skips flags and their values. */
@@ -392,7 +395,7 @@ function within<T>(p: Promise<T>, ms: number, fallback: T): Promise<T> {
 const MAX_ARGS: Record<string, number> = {
   render: 1, resolve: 1, link: 1, links: 1, name: 1, folders: 3, backlinks: 1, ls: 0, outline: 1, find: 2, replace: 3, task: 2, read: 1, stat: 1, send: 1, history: 0,
   scratch: 1, init: 1, info: 0, apply: 1, index: 1, themes: 0, commands: 0, mkdir: 1, mv: 2, "rename-heading": 3, doctor: 1, diagnostics: 1, relink: 1, "convert-links": 1, cp: 2, rm: 1, trash: 2, deinit: 1, tags: 1, footnotes: 4, problems: 0, "merge-review": 1,
-  changed: 0, diff: 1, worktrees: 0, undo: 0, spell: 1,
+  changed: 0, diff: 1, worktrees: 0, undo: 0, spell: 1, uninstall: 0,
 };
 
 /**
@@ -454,6 +457,7 @@ export const FLAGS: Record<string, string[]> = {
   changed: ["base"],
   "merge-review": ["into"],
   diff: ["base"],
+  uninstall: ["purge", "yes"],
 };
 
 /**
@@ -1639,6 +1643,26 @@ const HANDLERS: Record<string, Handler> = {
       "",
     ].join("\n");
     return { data, human };
+  },
+
+  // What the installer put here (14.8) — with --purge, slipbox's four folders too — listed, every path; removed only
+  // with --yes. Notes, and the .slipbox/ folders in them, are never touched.
+  uninstall(s) {
+    const purge = has(s.args, "purge");
+    const yes = has(s.args, "yes");
+    const plan = uninstallPlan(purge);
+    const failed = yes ? uninstall(plan) : [];
+    const width = Math.max(0, ...[...plan.remove, ...plan.keep].map((i) => tildePath(i.path).length));
+    const row = (i: { path: string; what: string }) => `  ${tildePath(i.path).padEnd(width)}  ${i.what}\n`;
+    const human = [
+      plan.remove.length ? `${yes ? "removed" : "removes"}:\n${plan.remove.map(row).join("")}` : "nothing of slipbox's to remove here\n",
+      plan.keep.length ? `keeps${purge ? "" : " (--purge removes them too)"}:\n${plan.keep.map(row).join("")}` : "",
+      ...plan.notes.map((n) => `${n}\n`),
+      "never touches your notes, nor the .slipbox/ folders in them\n",
+      !yes && plan.remove.length ? "nothing removed yet: again with --yes to remove these\n" : "",
+      ...failed.map((f) => `couldn't remove ${f}\n`),
+    ].join("");
+    return { data: { purge, removed: yes && plan.remove.length > 0 && !failed.length, remove: plan.remove, keep: plan.keep, notes: plan.notes, failed }, human, code: failed.length ? EXIT.error : EXIT.ok };
   },
 
   themes(s) {

@@ -23,7 +23,7 @@ through OpenTUI itself, to prove the adapter and real key parsing.
 | `tests/regressions.test.ts` | one test per bug found in review (later: "review round/cycle N" blocks) |
 | `tests/home.test.ts` | the reference set's build (`scripts/build-home.ts`): histories, extras, the checks |
 | `tests/export.test.ts` | export (`10.x`): the assembler; each format read back (zips unzipped, PDF pages' text) |
-| `tests/distribution.test.ts` | distribution (`14.x`): the gates, the notices, a release built, run and installed |
+| `tests/distribution.test.ts` | distribution (`14.x`): the gates, notices; a release built, installed, uninstalled |
 
 Later reviews keep their regression tests in `describe("review round N …")` or `describe("review cycle
 N …")` blocks in the file for the area: `tui.test.ts`, `core.test.ts`, `vault.test.ts`,
