@@ -32,7 +32,8 @@ CLI call never loads OpenTUI's native renderer.
 | `src/core/` | `src/tui/`, `src/cli/`, `@opentui/*` |
 | `src/cli/` | `src/tui/`, `@opentui/*` |
 
-It runs in CI (`.github/workflows/ci.yml`) and in `bun run check`.
+It runs in CI (`.github/workflows/ci.yml`) and in `bun run check`, as does `scripts/check-deps.ts`, the supply chain's
+gates (`14.10`, `docs/design/distribution.md`).
 
 ### Only the final draw step touches OpenTUI
 

@@ -1,7 +1,13 @@
-# The tree-sitter grammar packages have native-binding install scripts; slipbox uses only their
-# wasm, so no install script runs (a failed native build would fail the install).
+# The supply chain's gates (plan 14.10), checked by `bun run check:deps`:
+# - no install script runs. The tree-sitter grammar packages have native-binding ones; slipbox uses only their wasm
+#   (a failed native build would fail the install), and no other package's needs to run either.
+# - a version is taken only once it's been published a week: a package taken over and republished is mostly found
+#   and pulled within days.
+# - `bun add` pins the exact version; bun.lock pins the rest.
 [install]
 ignoreScripts = true
+minimumReleaseAge = 604800
+exact = true
 
 # Each run's temporary files in one folder, removed at its end (tests/setup.ts).
 [test]

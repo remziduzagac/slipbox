@@ -4,15 +4,25 @@ on:
   push:
   pull_request:
 
+# Plan 14.10: read-only by default, and every action pinned by its commit (a tag can be moved); `bun run check:deps`
+# fails on one that isn't. A version is a week old before it's taken, as packages are.
+permissions:
+  contents: read
+
 jobs:
   check:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: oven-sh/setup-bun@v2
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
         with:
           bun-version: 1.4.2
       - run: bun install --frozen-lockfile
+      # Plan 14.10: exact versions, the install gates, licences, pinned actions.
+      - name: dependencies
+        run: bun run check:deps
       - name: typecheck
         run: bun run typecheck
       # Plan 0.3: the core never imports the TUI. This is what keeps the CLI face free of the terminal renderer.
