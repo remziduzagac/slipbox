@@ -72,7 +72,8 @@ import { openVault, Reach } from "../core/reach.ts";
 import { buildContext } from "../core/context.ts";
 import { IndexJob, indexFile, search, type SearchHit, SearchIndex, type SearchResult } from "../core/search.ts";
 import { type Checkout, checkoutOf, headOf } from "../core/git.ts";
-import { baseBranch, branchesOf, changedSince, type GitState, inCheckout, inVault, mergeBaseOf, showAt, statusLater, worktreeList } from "../core/gitops.ts";
+import { baseBranch, branchesOf, changedSince, type GitState, inCheckout, inVault, mergeBaseOf, showAt, showLater, statusLater, worktreeList } from "../core/gitops.ts";
+import { type GitChange, gitChanges } from "../core/gitsigns.ts";
 import { describeBreak, type MergeBreak, type MergeReview, reviewMerge } from "../core/mergereview.ts";
 import { diffLines, diffRows } from "../core/merge.ts";
 import { planConvert } from "../core/convert.ts";
@@ -1846,11 +1847,50 @@ export class App {
         this.gitStates = status ? states : null;
         this.gitFolders = folders;
         this.invalidateTree();
+        // What's staged may have changed with it: the gutter's asked again (26.1).
+        this.stagedGeneration++;
       })
       .finally(() => {
         this.gitAsking = null;
       });
     return this.gitAsking;
+  }
+
+  /** Each open file's text as staged (26.1), by buffer: asked of git in the background, again when git has news. Null:
+   *  a file git hasn't (untracked: every line added); "none": nothing to compare (ignored, outside the checkout). */
+  private readonly staged = new WeakMap<NoteBuffer, { text: string | null | "none"; generation: number }>();
+  private readonly stagedAsking = new WeakSet<NoteBuffer>();
+  private stagedGeneration = 0;
+  private readonly gitChangeMemo = new WeakMap<NoteBuffer, { version: number; generation: number; changes: GitChange[] }>();
+
+  /**
+   * A file's changes against what's staged (26.1) — its text as it is now, unsaved typing included — or null where there's
+   * nothing to compare: signs off, no checkout, a file outside the root, git not answered yet (it's asked now).
+   */
+  gitChangesOf(view: View): GitChange[] | null {
+    const buf = view.buf;
+    const c = this.checkout;
+    // By its path, not the graph's name for it: a file just made is git's before the walk's.
+    if (!this.config.git.signs || !c || buf.virtual || !buf.abs || !isInside(c.root, buf.abs) || !isInside(this.loc.root, buf.abs)) return null;
+    const known = this.staged.get(buf);
+    if (known?.generation !== this.stagedGeneration && !this.stagedAsking.has(buf)) {
+      this.stagedAsking.add(buf);
+      const generation = this.stagedGeneration;
+      const rel = relative(this.loc.root, buf.abs).split(sep).join("/");
+      void showLater(c, "", relative(c.root, buf.abs)).then((text) => {
+        this.stagedAsking.delete(buf);
+        // Not staged: a file git doesn't have is all new; one it ignores, or can't show, has no signs.
+        const untracked = text === null && this.gitStates?.get(rel) === "new";
+        this.staged.set(buf, { text: text ?? (untracked ? null : "none"), generation });
+        this.host.requestRender();
+      });
+    }
+    if (!known || known.text === "none") return null;
+    const memo = this.gitChangeMemo.get(buf);
+    if (memo && memo.version === buf.version && memo.generation === known.generation) return memo.changes;
+    const changes = gitChanges(known.text, buf.source);
+    this.gitChangeMemo.set(buf, { version: buf.version, generation: known.generation, changes });
+    return changes;
   }
 
   /** The base branch here: `[git] base`, else main or master; null (said) when there's none. */
@@ -2699,7 +2739,9 @@ export class App {
    *  and the text (0 when both are off). */
   gutterWidth(view: View): number {
     const w = this.barWidth(view) + (this.ui.line_numbers ? String(view.buf.lineStarts().length).length + 1 : 0);
-    return w ? w + 1 : 0;
+    // Its last column has the git signs (26.1); with nothing else in it, it's theirs alone, once the file has had any.
+    if (!w && this.gitChangesOf(view)?.length) view.buf.gitColumn = true;
+    return w ? w + 1 : view.buf.gitColumn ? 1 : 0;
   }
 
   /** The problems the code view's cells count in their headers (24.13): each by its line and severity. */

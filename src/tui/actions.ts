@@ -44,6 +44,7 @@ import * as R from "./replacing.ts";
 import { spellAdd, spellStep, spellSuggest } from "./spelling.ts";
 import { shellFilter, shellRun, shellStop } from "./shellrun.ts";
 import { endSnippet } from "./snippets.ts";
+import { gitPreview, gitReset, gitStep } from "./gitchanges.ts";
 import { parseBang } from "../core/shell.ts";
 import * as V from "./vim.ts";
 import { rank } from "./match.ts";
@@ -1347,6 +1348,11 @@ export function registerActions(app: App): void {
     "search.open": (a, arg) => a.openSearch(arg ?? ""),
     "git.changes": (a) => a.openChanges(),
     "git.diff": (a) => a.openGitDiff(),
+    // The working tree's changes against what's staged (26.1).
+    "git.change_next": (a) => withView(a, (v) => gitStep(a, v, 1)),
+    "git.change_prev": (a) => withView(a, (v) => gitStep(a, v, -1)),
+    "git.change_preview": (a) => withView(a, (v) => gitPreview(a, v)),
+    "git.change_undo": (a) => withView(a, (v) => gitReset(a, v)),
     "git.worktrees": (a) => a.openWorktrees(),
     "git.merge_review": (a) => a.openMergeReview(),
     "find.vault": (a, arg) => {

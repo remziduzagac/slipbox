@@ -169,9 +169,16 @@ export function branchesOf(c: Pick<Checkout, "root">): string[] | null {
   return out === null ? null : out.split("\n").filter(Boolean).sort();
 }
 
-/** A file as `ref` has it (path from the checkout's top folder); null where it hasn't one. */
+/** A file as `ref` has it (path from the checkout's top folder); null where it hasn't one. `ref` "": as staged. */
 export function showAt(c: Pick<Checkout, "root">, ref: string, path: string): string | null {
   return run(c, ["show", `${ref}:${path.split(sep).join(posix.sep)}`]);
+}
+
+/** The same, not waiting on git (the TUI's gutter, 26.1). */
+export function showLater(c: Pick<Checkout, "root">, ref: string, path: string): Promise<string | null> {
+  return new Promise((done) => {
+    execFile("git", gitArgs(c.root, ["show", `${ref}:${path.split(sep).join(posix.sep)}`]), OPTS, (err, out) => done(err ? null : out));
+  });
 }
 
 export interface WorktreeEntry {

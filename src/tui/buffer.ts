@@ -78,6 +78,8 @@ export class NoteBuffer {
   lint: { version: number; issues: LintIssue[] } | null = null;
   /** Its problems bar is kept (19.9): it has had problems, and the text keeps its place as they go. */
   problemBar = false;
+  /** Its git signs' column is kept (26.1): it has had changes against what's staged, and the text keeps its place. */
+  gitColumn = false;
   /** Its language servers' problems (19.1, 19.8), by server, with the version of the text they were found in. */
   serverProblems = new Map<string, { version: number; list: Problem[]; raw: Diagnostic[] }>();
   /** The version of its text its servers were last told. */

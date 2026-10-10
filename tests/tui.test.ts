@@ -33,7 +33,7 @@ import { Pictures } from "../src/tui/opentui.ts";
 import { OptimizedBuffer } from "@opentui/core";
 import { inflateSync } from "node:zlib";
 import { cells } from "../src/tui/cursor.ts";
-import { offsetOf } from "../src/tui/editing.ts";
+import { lineOf, offsetOf } from "../src/tui/editing.ts";
 import { DEFAULT_KEYS, keyName } from "../src/tui/keys.ts";
 
 const sandbox = mkdtempSync(join(tmpdir(), "slipbox-tui-"));
@@ -13692,5 +13692,137 @@ describe("commands run by your shell (25.7)", () => {
     expect(h.app.messages.at(-1)?.text).toBe("the text changed while sleep 0.3; sort ran — the 2 lines left as they were");
     await h.app.run("shell.stop");
     expect(h.app.messages.at(-1)?.text).toBe("no command running");
+  });
+});
+
+describe("changes against what's staged, in the gutter (26.1)", () => {
+  const git = (cwd: string, ...args: string[]) => Bun.spawnSync(["git", "-c", "user.email=t@example.invalid", "-c", "user.name=t", "-C", cwd, ...args]);
+  const until = async (ok: () => boolean, ms = 8000) => {
+    for (const t = Date.now(); !ok() && Date.now() - t < ms; ) await Bun.sleep(20);
+    return ok();
+  };
+  /** A root and its repository: its files committed. */
+  const repo = (files: Record<string, string>) => {
+    const root = mkdtempSync(join(sandbox, "signs-"));
+    mkdirSync(join(root, ".slipbox"));
+    for (const [rel, text] of Object.entries(files)) writeFileSync(join(root, rel), text);
+    if (git(root, "init", "-q", "-b", "main").exitCode !== 0) return null;
+    git(root, "add", "-A");
+    git(root, "commit", "-q", "-m", "start");
+    return root;
+  };
+  /** The window's changes, once git has answered. */
+  const changes = async (h: Harness) => {
+    expect(await until(() => (h.frame(), h.app.gitChangesOf(h.app.view!) !== null))).toBe(true);
+    return h.app.gitChangesOf(h.app.view!)!;
+  };
+  /** The gutter cell just before a row's text, and its style. */
+  const signAt = (h: Harness, text: string) => {
+    const c = h.canvas();
+    const y = c.rows.findIndex((r) => r.join("").includes(text));
+    const x = c.rows[y]!.join("").indexOf(text) - 1;
+    return { ch: c.rows[y]![x], fg: c.styles[y]![x]!.fg };
+  };
+
+  test("unsaved edits signed — changed, added, deleted below; ] c and [ c go to them; a preview; one undone", async () => {
+    const root = repo({ "g1.md": "one\ntwo\nthree\nfour\nfive\n" });
+    if (!root) return;
+    const h = await harness({ root, open: "g1.md", width: 100, height: 30 });
+    if (!h.app.view!.source) await h.keys("ctrl+k");
+    expect(await changes(h)).toEqual([]);
+    const buf = h.app.view!.buf;
+    buf.edit(0, buf.source.length, "one\nTWO\nthree\nnew\nfour\n");
+    expect((await changes(h)).map((c) => `${c.kind}:${c.from}`)).toEqual(["change:2", "add:4", "delete:6"]);
+    const roles = h.app.theme.roles;
+    expect(signAt(h, "TWO")).toEqual({ ch: "▎", fg: roles.git_modified.fg! });
+    expect(signAt(h, "new")).toEqual({ ch: "▎", fg: roles.git_new.fg! });
+    expect(signAt(h, "four")).toEqual({ ch: "▁", fg: roles.diff_del.fg! });
+    expect(signAt(h, "three").ch).toBe(" ");
+    const line = () => lineOf(h.app.view!, offsetOf(h.app, h.app.view!));
+    await h.keys("g", "g", "]", "c");
+    expect(line()).toBe(2);
+    await h.keys("]", "c");
+    expect(line()).toBe(4);
+    await h.keys("]", "c");
+    expect(line()).toBe(5);
+    await h.keys("]", "c");
+    expect(line()).toBe(2); // around the end
+    await h.keys("[", "c");
+    expect(line()).toBe(5);
+    // The deletion's diff, in the floating window.
+    await h.app.run("git.change_preview");
+    expect(h.app.floating?.kind).toBe("hover");
+    expect(h.app.floating!.view.buf.source).toBe("```diff\n-five\n```\n");
+    expect(h.app.floating!.title).toBe("1 line deleted after line 5, against what's staged");
+    await h.keys("escape");
+    // Undone: the deletion's line back at the end; then the change on line 2.
+    await h.app.run("git.change_undo");
+    expect(buf.source).toBe("one\nTWO\nthree\nnew\nfour\nfive\n");
+    expect(h.app.messages.at(-1)?.text).toBe("the change at line 5 undone, as staged (unsaved)");
+    await h.keys("g", "g", "]", "c");
+    await h.app.run("git.change_undo");
+    expect(buf.source).toBe("one\ntwo\nthree\nnew\nfour\nfive\n");
+    await h.keys("]", "c");
+    await h.app.run("git.change_undo");
+    expect(buf.source).toBe("one\ntwo\nthree\nfour\nfive\n");
+    expect(await changes(h)).toEqual([]);
+    await h.app.run("git.change_next");
+    expect(h.app.messages.at(-1)?.text).toBe("no changes against what's staged here");
+  });
+
+  test("undone in a last line with no break, in CRLF, not in a file it can't edit; a rendered row takes its strongest sign", async () => {
+    const root = repo({ "g3.md": "a\nb\n", "g4.md": "a\r\nb\r\n", "g5.md": "a\nb\n", "g6.md": Buffer.from([0x61, 0xff, 0x0a, 0x62, 0x0a]) as unknown as string });
+    if (!root) return;
+    writeFileSync(join(root, "g5.md"), "new\na\nB\n");
+    writeFileSync(join(root, "g6.md"), Buffer.from([0x61, 0xff, 0x0a, 0x42, 0x0a]));
+    const h = await harness({ root, open: "g3.md", width: 100, height: 30 });
+    if (!h.app.view!.source) await h.keys("ctrl+k");
+    const undo = async (rel: string, edit?: string) => {
+      h.app.open(rel, { heading: null, headingIndex: 0, offset: 0, line: 1 });
+      if (!h.app.view!.source) await h.keys("ctrl+k");
+      if (edit !== undefined) h.app.view!.buf.edit(0, h.app.view!.buf.source.length, edit);
+      expect((await changes(h)).length).toBe(1);
+      await h.keys("g", "g", "]", "c");
+      await h.app.run("git.change_undo");
+      return h.app.view!.buf.source;
+    };
+    expect(await undo("g3.md", "a\nB")).toBe("a\nb");
+    expect(await undo("g4.md", "a\r\nB\r\n")).toBe("a\r\nb\r\n");
+    expect(await undo("g6.md")).toBe("a\uFFFD\nB\n");
+    expect(h.app.messages.at(-1)?.text).toContain("isn't valid UTF-8");
+    // Rendered, a paragraph's row joining an added line and a changed one: changed.
+    h.app.open("g5.md", { heading: null, headingIndex: 0, offset: 0, line: 1 });
+    if (h.app.view!.source) await h.keys("ctrl+k");
+    expect((await changes(h)).map((c) => c.kind)).toEqual(["add", "change"]);
+    expect(signAt(h, "new a B")).toEqual({ ch: "▎", fg: h.app.theme.roles.git_modified.fg! });
+  });
+
+  test("staged changes aren't signed; a file git hasn't is every line added; with no gutter, a column of its own, kept", async () => {
+    const root = repo({ "g2.md": "a\nb\n" });
+    if (!root) return;
+    const h = await harness({ root, open: "g2.md", width: 100, height: 30, config: (c) => ((c.ui.line_numbers = false), (c.diagnostics.bar = "off")) });
+    if (!h.app.view!.source) await h.keys("ctrl+k");
+    const v = h.app.view!;
+    expect(await changes(h)).toEqual([]);
+    expect(h.app.gutterWidth(v)).toBe(0);
+    v.buf.edit(0, 1, "A");
+    expect((await changes(h)).map((c) => c.kind)).toEqual(["change"]);
+    expect(h.app.gutterWidth(v)).toBe(1);
+    expect(signAt(h, "A").ch).toBe("▎");
+    // Saved and staged: nothing against the index; the column kept, so the text doesn't move.
+    await h.keys("ctrl+s");
+    git(root, "add", "g2.md");
+    await h.app.refreshGitNow();
+    expect(await until(() => (h.frame(), h.app.gitChangesOf(v)?.length === 0))).toBe(true);
+    expect(h.app.gutterWidth(v)).toBe(1);
+    // An untracked file: every line added.
+    writeFileSync(join(root, "u.md"), "x\ny\n");
+    await h.app.refreshGitNow();
+    h.app.open("u.md", { heading: null, headingIndex: 0, offset: 0, line: 1 });
+    expect(await until(() => (h.frame(), (h.app.gitChangesOf(h.app.view!) ?? []).length > 0))).toBe(true);
+    expect(h.app.gitChangesOf(h.app.view!)).toEqual([{ kind: "add", from: 1, to: 2, was: [], now: ["x", "y"] }]);
+    // Signs off: none, and nothing to go to.
+    h.app.config.git.signs = false;
+    expect(h.app.gitChangesOf(h.app.view!)).toBeNull();
   });
 });

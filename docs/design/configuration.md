@@ -136,6 +136,7 @@ file = "scratch.md"            # a relative .md path; no "..", no hidden part (e
 
 [git]                          # git (5.11–5.14): space g, slipbox changed / diff
 base = ""                      # the branch changes are measured against; "" = main, else master
+signs = true                   # a file's lines changed against what's staged, in the gutter (26.1)
 
 [search]                       # search (6.x): slipbox search, space f s
 engine = "auto"                # auto: the index once built, else a scan | index (built first) | scan (no index)

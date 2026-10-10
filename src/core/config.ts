@@ -142,6 +142,8 @@ export interface Config {
   /** Git (5.11–5.14). `base`: the branch changes and diffs are measured against; empty: `main`, else `master`. */
   git: {
     base: string;
+    /** A file's lines changed against what's staged, marked in the gutter (26.1). */
+    signs: boolean;
   };
   /** Search (6.x): `auto`, the index when it's built, else a scan of the files; `index`, the index
    *  (built first when there's none); `scan`, the files every time (no index kept). */
@@ -298,7 +300,7 @@ export const DEFAULT_CONFIG: Config = {
   input: { leader: "space", which_key: true, which_key_delay_ms: 500 },
   lint: { enabled: "auto", command: [] },
   capture: { location: "state", file: "scratch.md" },
-  git: { base: "" },
+  git: { base: "", signs: true },
   search: { engine: "auto" },
   index: { background: true, idle_seconds: 30 },
   diagnostics: { bar: "auto", marks: "error", severity: "warning" },

@@ -99,6 +99,11 @@ export interface Glyphs {
   problemWarn: string;
   problemInfo: string;
   problemHint: string;
+  /** A line changed against what's staged (26.1), in the gutter: added, changed, deleted below it, deleted above it. */
+  gitAdd: string;
+  gitChange: string;
+  gitDelete: string;
+  gitTopDelete: string;
   /** The status line's back and forward, around the path; the place you're at, in its history. */
   navBack: string;
   navForward: string;
@@ -187,6 +192,10 @@ const unicode: Glyphs = {
   problemWarn: "⚠",
   problemInfo: "ℹ",
   problemHint: "·",
+  gitAdd: "▎",
+  gitChange: "▎",
+  gitDelete: "▁",
+  gitTopDelete: "▔",
   navBack: "‹",
   navForward: "›",
   historyHere: "●",
@@ -315,6 +324,10 @@ const ascii: Glyphs = {
   problemWarn: "W",
   problemInfo: "I",
   problemHint: ".",
+  gitAdd: "+",
+  gitChange: "~",
+  gitDelete: "_",
+  gitTopDelete: "-",
   navBack: "<",
   navForward: ">",
   historyHere: "*",

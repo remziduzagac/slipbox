@@ -4,6 +4,7 @@
 // Returns the geometry of what was drawn, which the mouse handler hit-tests against.
 
 import type { Glyphs } from "../core/glyphs.ts";
+import { type GitSign, gitSigns } from "../core/gitsigns.ts";
 import { type Layout, type Line, srcAt } from "../core/layout/ir.ts";
 import { LENS_COUNTERS } from "../core/layout/live.ts";
 import { atLeast, type Problem, SEVERITIES, type Severity, worst } from "../core/diagnostics.ts";
@@ -1029,6 +1030,9 @@ function drawPane(app: App, c: Canvas, view: View, rect: Rect, contentFocused: b
   // its last column the page's, between it and the text.
   const gutterBg = (gutter && theme.roles.gutter.bg) || page;
   if (gutter && gutterBg !== page) c.fill(gutterX - 1, body.y, gutter, body.h, gutterBg);
+  // Lines changed against what's staged (26.1), by line.
+  const changes = gutter ? app.gitChangesOf(view) : null;
+  const signs = changes?.length ? gitSigns(changes) : null;
   // The rows shown: an oversized lens hides the ones outside its inner window (4.15).
   const shown = app.screenRows(view, layout);
   const hidden = app.lensHidden(view, layout);
@@ -1056,6 +1060,11 @@ function drawPane(app: App, c: Canvas, view: View, rect: Rect, contentFocused: b
       const role: Role = on ? SEVERITY_ROLE[worst(on)] : line.src === cursorSrc && showCursor ? "line_number_current" : "line_number";
       if (num) drawText(c, gutterX + barW, y, num, { ...roleStyle(theme, role, page), ...(on ? { bold: true } : {}), bg: band ?? gutterBg });
       if (here && !barW) geo.hot.push({ id: clicked(here), x: gutterX, y, w: gutter - 1, h: 1 });
+    }
+    // The git sign (26.1), in the gutter's last column: a rendered row joining several lines takes their strongest.
+    if (signs && !line.decor) {
+      const sign = rowSign(signs, line);
+      if (sign) drawText(c, gutterX + gutter - 1, y, gitGlyph(app.glyphs, sign), { ...roleStyle(theme, SIGN_ROLE[sign], page), bg: band ?? page });
     }
     if (!line.decor) prevSrc = line.src;
     const fill = line.fill ? theme.roles[line.fill].bg : undefined;
@@ -1206,6 +1215,24 @@ function drawSignature(app: App, c: Canvas, at: { x: number; y: number }, top: n
 /** Each severity's sign, in the glyph set in use: beside its line (the problems bar) and on the status line. */
 function severityGlyph(g: Glyphs, s: Severity): string {
   return s === "error" ? g.problemError : s === "warning" ? g.problemWarn : s === "info" ? g.problemInfo : g.problemHint;
+}
+
+/** A git sign's colour (26.1): added as the explorer's new files, changed as its modified ones, deleted as a diff's. */
+const SIGN_ROLE: Record<GitSign, Role> = { add: "git_new", change: "git_modified", delete: "diff_del", topdelete: "diff_del" };
+const SIGN_RANK: Record<GitSign, number> = { change: 3, add: 2, delete: 1, topdelete: 1 };
+
+function gitGlyph(g: Glyphs, s: GitSign): string {
+  return s === "add" ? g.gitAdd : s === "change" ? g.gitChange : s === "delete" ? g.gitDelete : g.gitTopDelete;
+}
+
+/** A row's sign: its line's, or (a rendered row joining several) the strongest of theirs. */
+function rowSign(signs: Map<number, GitSign>, line: Line): GitSign | undefined {
+  let best: GitSign | undefined;
+  for (const src of new Set([line.src, ...line.spans.flatMap((s) => (s.src === undefined ? [] : [s.src]))])) {
+    const s = signs.get(src);
+    if (s && (!best || SIGN_RANK[s] > SIGN_RANK[best])) best = s;
+  }
+  return best;
 }
 
 /** Each severity's colour, in the bar, the line numbers and the status line. */

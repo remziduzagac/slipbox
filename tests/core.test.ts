@@ -2751,3 +2751,27 @@ describe("a server's snippets (25.8)", () => {
     expect(s.stops).toEqual([{ n: 1, ranges: [[4, 5]] }, { n: 0, ranges: [[14, 14]] }]);
   });
 });
+
+describe("changes against what's staged (26.1)", () => {
+  test("added, changed and deleted runs; signs by line, a deletion's on the line before it or the first", async () => {
+    const { gitChanges, gitSigns, changeAt, changeDiff } = await import("../src/core/gitsigns.ts");
+    const staged = "a\nb\nc\nd\ne\n";
+    const changes = gitChanges(staged, "a\nB\nc\nnew\nd\n");
+    expect(changes).toEqual([
+      { kind: "change", from: 2, to: 2, was: ["b"], now: ["B"] },
+      { kind: "add", from: 4, to: 4, was: [], now: ["new"] },
+      { kind: "delete", from: 6, to: 5, was: ["e"], now: [] },
+    ]);
+    expect([...gitSigns(changes)]).toEqual([[2, "change"], [4, "add"], [5, "delete"]]);
+    const top = gitChanges("x\na\n", "a\n");
+    expect([...gitSigns(top)]).toEqual([[1, "topdelete"]]);
+    expect([changeAt(changes, 5)?.kind, changeAt(changes, 4)?.kind, changeAt(changes, 3), changeAt(top, 1)?.kind]).toEqual(["delete", "add", null, "delete"]);
+    expect(changeDiff(changes[0]!)).toBe("-b\n+B");
+    // Line endings aren't changes; the line after a final newline is no line.
+    expect(gitChanges("a\nb\n", "a\r\nb\r\n")).toEqual([]);
+    expect(gitChanges("a\n", "a")).toEqual([]);
+    // A file git doesn't have: every line added; an empty one, nothing.
+    expect(gitChanges(null, "x\ny\n")).toEqual([{ kind: "add", from: 1, to: 2, was: [], now: ["x", "y"] }]);
+    expect(gitChanges(null, "")).toEqual([]);
+  });
+});

@@ -1397,6 +1397,16 @@ files — …"), and each link broken by one says where its file went, in Proble
 A jump to a line inside a rendered paragraph (a diff's line, a conflict, a finding, `:42` and `ctrl+g`) lands on that
 line's text, not the paragraph's first line or its row's end.
 
+**The working tree's changes** (`26.1`; `[git] signs`): a file's lines changed against what's staged — its text as it
+is now, unsaved typing included (`core/gitsigns.ts`) — are signed in the gutter's last column, the one before the text:
+`▎` added (`git_new`), `▎` changed (`git_modified`), `▁` lines deleted below the line (`▔` above the first; `diff_del`).
+A rendered row joining several lines takes their strongest. With no gutter (no line numbers, no problems bar), a file
+that has had a change gets a column of its own and keeps it, so the text doesn't move. What's staged is asked of git
+(`git show :path`, with `23.6`'s guards where the root isn't trusted) in the background, again whenever git has news;
+a file git hasn't is every line added, one it ignores has no signs; line endings don't count. `] c` / `[ c` go to the
+next and previous change (around the ends), `space g p` shows the one on the cursor's line as a diff in the floating
+window, and `space g r` undoes it — its lines as staged put back, one undo step, left unsaved.
+
 ## Modes and dispatch (decision `3.11`)
 
 **Dispatch order:** a paste first, then an overlay, then a pane's filter while typing in it, then insert mode's

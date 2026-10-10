@@ -2740,6 +2740,17 @@ The same notes, one per tab.
 - `find.replace_vault` — Replace in every note — `notes/meetings/all-hands-archive.md`,
   `work/kestrel/api/kestrel_api/sync.py` (command-specs.ts)
 
+### git changes
+
+- `git.change_next` — Next change against what's staged — `notes/index.md`, `work/kestrel/README.md` (command-specs.ts)
+- `git.change_prev` — Previous change against what's staged — `notes/index.md`, `work/kestrel/README.md`
+  (command-specs.ts)
+- `git.change_preview` — Preview the change — `notes/index.md`, `work/kestrel/README.md` (command-specs.ts)
+- `git.change_undo` — Undo the change — `notes/index.md`, `work/kestrel/README.md` (command-specs.ts)
+- signs in the gutter for unsaved edits, ] c, space g p, space g r; an untracked file all added; staged, none —
+  `work/kestrel/README.md`, `notes/index.md` (tui.md The working tree's changes (26.1); tests 'changes against what's
+  staged, in the gutter')
+
 ### shell
 
 - `shell.run` — Run a command — `notes/index.md`, `work/kestrel/README.md` (command-specs.ts)
