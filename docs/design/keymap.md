@@ -374,6 +374,8 @@ Below `ui.narrow_width` columns (default 90), the explorer and the outline open 
 | quick switcher: find a note by name; `#` first, a symbol (a server's, else a heading) | `ctrl+p` | `space f f` |
 | outline picker: find a heading in this note | — | `space f o` |
 | the tags here (`:tags`), then a tag's notes (`:tag name`) | — | `space f t` |
+| the document types here (`:types`), then a type's notes in order (`:type adr`) | — | `space f d` |
+| the next / previous note of this one's document type, in its order (`22.3`) | `] t` / `[ t` | — |
 | heading path: the breadcrumb's headings as a dropdown | — | `space f b` |
 | find in every note and file: each line with the text (open ones as they are) | `ctrl+shift+f` | `space f g` |
 | replace in every note and file, previewed; `space v shift+u` undoes it (`25.4`) | `ctrl+shift+h` | `space f shift+r` |

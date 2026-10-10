@@ -1100,6 +1100,47 @@ describe("the vault and the tool", () => {
     expect(existsSync(join(sandbox, "config", "slipbox", "config.toml"))).toBe(true);
   });
 
+  test("types (22.3): each type with its notes and how many break its rules; a type's notes in order; problems lists them (22.2)", () => {
+    const dir = mkdtempSync(join(sandbox, "types-"));
+    const env = { XDG_STATE_HOME: join(dir, "state"), XDG_CACHE_HOME: join(dir, "cache"), XDG_DATA_HOME: join(dir, "data") };
+    const root = join(dir, "notes");
+    const files: Record<string, string> = {
+      ".slipbox/config.toml": '[types.memory]\npaths = ["memory/*.md"]\nrequired = ["name", "description"]\n',
+      "docs/adr/0002-use-json.md": "# Use JSON\n\nStatus: Superseded by [0003](0003-node-sqlite.md)\n",
+      "docs/adr/0001-use-sqlite.md": "---\nstatus: Accepted\n---\n# Use SQLite\n",
+      "docs/adr/0003-node-sqlite.md": "# node:sqlite\n\n## Status\n\nAccepted\n",
+      "skills/hello/SKILL.md": "---\nname: hello\ndescription: says hello\n---\n# Hello\n",
+      "skills/broken/SKILL.md": "---\nname: 42\n---\n# Broken\n",
+      "memory/a.md": "---\nname: a\n---\n# A\n",
+    };
+    for (const [rel, text] of Object.entries(files)) {
+      mkdirSync(join(root, rel, ".."), { recursive: true });
+      writeFileSync(join(root, rel), text);
+    }
+    const all = slipbox(["types", "--json"], { cwd: root, env }).json.data;
+    expect(all.map((t: { name: string; source: string; notes: number; problems: number }) => [t.name, t.source, t.notes, t.problems])).toEqual([
+      ["adr", "built-in", 3, 0],
+      ["memory", "config", 1, 1],
+      ["skill", "built-in", 2, 1],
+    ]);
+    const adr = slipbox(["types", "adr", "--json"], { cwd: root, env }).json.data;
+    expect(adr.notes.map((n: { path: string; title: string; number: number; status: string; supersededBy: string | null }) => [n.number, n.title, n.status, n.supersededBy])).toEqual([
+      [1, "Use SQLite", "Accepted", null],
+      [2, "Use JSON", "Superseded by [0003](0003-node-sqlite.md)", "docs/adr/0003-node-sqlite.md"],
+      [3, "node:sqlite", "Accepted", null],
+    ]);
+    expect(slipbox(["types", "adr"], { cwd: root, env }).out).toContain("2  docs/adr/0002-use-json.md  Use JSON  (Superseded by [0003](0003-node-sqlite.md) → docs/adr/0003-node-sqlite.md)\n");
+    const none = slipbox(["types", "rfc", "--json"], { cwd: root, env });
+    expect(none.code).toBe(3);
+    expect(none.json.error?.message).toBe('no document type "rfc" here: slipbox types lists them');
+    const problems = slipbox(["problems", "--json"], { cwd: root, env }).json.data;
+    expect(problems.frontmatter).toEqual([
+      { path: "memory/a.md", line: 1, message: 'memory: "description" is missing' },
+      { path: "skills/broken/SKILL.md", line: 1, message: 'skill: "description" is missing' },
+      { path: "skills/broken/SKILL.md", line: 2, message: 'skill: "name" should be a string, not a number' },
+    ]);
+  });
+
   test("upgrade from source (14.4): no releases to follow, said; nothing fetched", () => {
     const r = slipbox(["upgrade", "--json"]);
     expect(r.code).toBe(1);

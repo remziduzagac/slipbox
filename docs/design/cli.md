@@ -78,6 +78,7 @@ Stable from phase 1–2, as the plan requires: changes here bump `schema`.
 | `problems` | `{broken[], ambiguous[], fragile[], orphans[]}`: links `{from, line, column, end, kind, target, …}` |
 | `problems --lint` | adds `lint[{file, line, column, rule, name, description}]`; a warning when lint is off or fails |
 | `problems` (git) | `conflicts[{path, line}]`: during a merge, the unmerged files at their first marker (`5.12`) |
+| `problems` (types) | `frontmatter[{path, line, message}]`: frontmatter breaking its document type's rules (`22.2`) |
 | `changed` | `{base, mergeBase, files[{path, state, from?}]}`: `state` new, modified, renamed, deleted, conflict |
 | `diff <note>` | `{path, base, mergeBase, new, rows[{kind, text, line}]}`: `kind` `@@` ` ` `-` `+`; `line`: now |
 | `merge-review <branch>` | `{into, from, base, tree, conflicts[], breaks[{path, line, target, cause, to, fix, …}]}` |
@@ -110,6 +111,7 @@ These churn freely before 1.0:
 | `trash [restore <item>]` | the items, newest first; `restore`: the item put back (exit 5 over something there) |
 | `themes` | `[{name, source, path?, current}]` |
 | `commands` | `[{id, title, cli, desc}]` — the registry with CLI equivalents |
+| `types [type]` | `[{name, source, paths, notes, problems}]`; a type's `{name, notes[{path, number, status, …}]}` |
 | `upgrade` | `{status, from, latest, removed[]}`: `status` upgraded, current or available (`--check`); 1: refused |
 | `uninstall` | `{purge, removed, remove[{path, what}], keep[…], notes[], failed[]}`; removes only with `--yes` |
 | `find <query> [note]` | `{query, regex, whole, count, matches[{path, line, column, match, text}]}` |

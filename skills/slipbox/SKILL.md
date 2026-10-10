@@ -128,10 +128,12 @@ slipbox resolve 'notes/alpha.md#Section Two' --from index.md --json
 slipbox links <note> --json              # outgoing links, each with status and path
 slipbox backlinks <note> --json          # notes linking here: line, column, how each is written; `shown`: its path
 slipbox links --all --json               # every link here, each with `from`: the broken ones, the fragile ones
-slipbox problems --json                  # broken and ambiguous links (where, why), and orphans: notes nothing links to
+slipbox problems --json                  # broken, ambiguous links (where, why); orphans; frontmatter breaking rules
 slipbox problems --lint --json           # …and the user's markdownlint-cli2 findings: lint[{file, line, rule, …}]
 slipbox tags --json                      # every tag with its count (#a/b counts under #a too)
 slipbox tags '#project' --json           # {tag, notes}: the notes carrying it, nested tags included
+slipbox types --json                     # document types here (skill, adr, the folder's own): notes each, rules broken
+slipbox types adr --json                 # an ADR list in order: number, title, status, supersededBy
 slipbox footnotes <note> --json          # each footnote: label, text, definition line, references
 slipbox footnotes <note> add 12:30 'Source: the dome log'   # [^N] at line 12, column 30; its definition at the end
 slipbox footnotes <note> edit 3 'New text'   # also: rm <label>, rename <label> <new>; --if-unchanged <sha>

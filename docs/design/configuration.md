@@ -156,6 +156,15 @@ auto_install = true            # servers on npm installed into slipbox's own fol
                                # and markdownlint-cli2 for [lint] (19.21) — each from the lockfile slipbox ships,
                                # and installed again when slipbox's lock for it changes (14.11)
 
+[types.memory]                 # a document type (22.2, 22.3) — built in: skill (**/SKILL.md), adr (adr/, decisions/)
+paths = ["memory/*.md"]        # its notes: globs from the root; [types.adr] paths = [] turns a built-in off
+required = ["name", "description", "metadata.type"]   # keys each must have; dotted, a key in a table
+keys = { name = "string", created = "date" }          # a key's kind when there: string, number, boolean, date,
+                                                      # list, table
+values = { "metadata.type" = ["user", "feedback", "project", "reference"] }   # its allowed values
+# number = "^(\\d+)"          # from the file's name: its number, for the order (adr's: "^(?:adr-?)?(\\d+)")
+# status = "status"           # the frontmatter key of its status; else a Status: line, or a ## Status section
+
 [update]                       # a release's update check (14.4): your own config's say only, never a folder's
 check = true                   # the TUI asks once a day whether there's a newer release, and says; DO_NOT_TRACK
                                # set turns it off too. The CLI never asks; `slipbox upgrade` installs one

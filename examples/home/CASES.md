@@ -2991,6 +2991,20 @@ Wide tables and code blocks to edit in place.
 
 - `tag.list` — Tags — `notes/projects/kestrel-v2-3.md`, `notes/projects/brevet-300.md` (command-specs.ts)
 
+### types
+
+- `type.list` — Document types — `work/kestrel/docs/adr/0001-offline-first-sync.md`,
+  `notes/research/agent-skills/route-summary/SKILL.md` (command-specs.ts; 22.3)
+- `type.next` — Next of this type — `work/kestrel/docs/adr/0001-offline-first-sync.md`,
+  `work/kestrel/docs/adr/0002-route-engine-in-rust.md` (command-specs.ts; 22.3)
+- `type.prev` — Previous of this type — `work/kestrel/docs/adr/0003-sharing-links.md`,
+  `work/kestrel/docs/adr/0004-retry-budget.md` (command-specs.ts; 22.3)
+- an ADR's status from a `- Status:` list item, in number order — `work/kestrel/docs/adr/0004-retry-budget.md`
+  (document-types.md; 22.3)
+- a skill whose frontmatter breaks its type's rules: `description` missing —
+  `notes/research/agent-skills/draft-checklist/SKILL.md` (document-types.md; 22.2)
+- a skill keeping them — `notes/research/agent-skills/route-summary/SKILL.md` (document-types.md; 22.2)
+
 ### config
 
 - `config.reload` — Reload configuration — `notes/.slipbox/config.toml` (command-specs.ts)

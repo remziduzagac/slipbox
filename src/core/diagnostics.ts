@@ -10,6 +10,7 @@ import { slugify } from "./parse.ts";
 import type { LintIssue } from "./lint.ts";
 import { unavailable } from "./registry.ts";
 import type { SyntaxError } from "./syntax.ts";
+import { type DocType, docTypes, frontmatterProblems, ofType } from "./doctypes.ts";
 
 /** How bad, worst first. */
 export type Severity = "error" | "warning" | "info" | "hint";
@@ -72,7 +73,8 @@ function onUnplugged(g: Graph, rel: string, target: string): boolean {
 export function noteProblems(g: Graph, rel: string): Problem[] {
   const out: Problem[] = [];
   const add = (l: LinkRef, severity: Severity, code: string, message: string) => out.push({ start: { line: l.line, column: l.column }, end: l.end, severity, source: "slipbox", code, message, target: l.target });
-  const lines = (g.textOf(rel) ?? "").split("\n");
+  const text = g.textOf(rel) ?? "";
+  const lines = text.split("\n");
   for (const l of g.linksOf(rel)) {
     const wiki = l.kind === "wiki" || l.kind === "embed";
     const frag = fragmentOf(l);
@@ -147,8 +149,40 @@ export function noteProblems(g: Graph, rel: string): Problem[] {
       }
     }
   }
-  out.push(...conflictProblems(g.textOf(rel) ?? ""));
+  out.push(...conflictProblems(text));
+  // Its frontmatter, by its document types' rules (22.2).
+  out.push(...frontmatterProblems(text, rootTypes(g).filter((t) => ofType(rel, t))));
   return out;
+}
+
+const typesFor = new WeakMap<object, DocType[]>();
+
+/** A root's document types (22.2, 22.3): the built-in ones and its config's — read once per config. */
+export function rootTypes(g: Pick<Graph, "config">): DocType[] {
+  let t = typesFor.get(g.config.types);
+  if (!t) typesFor.set(g.config.types, (t = docTypes(g.config.types)));
+  return t;
+}
+
+const findings = new WeakMap<Graph, { generation: number; list: { path: string; problems: Problem[] }[] }>();
+
+/** The root's notes whose frontmatter breaks their types' rules (22.2), each with its problems; by path, kept while the
+ *  root is as it was. */
+export function frontmatterFindings(g: Graph): { path: string; problems: Problem[] }[] {
+  const hit = findings.get(g);
+  if (hit?.generation === g.generation) return hit.list;
+  const ruled = rootTypes(g).filter((t) => t.required.length || Object.keys(t.keys).length || Object.keys(t.values).length);
+  const list: { path: string; problems: Problem[] }[] = [];
+  if (ruled.length) {
+    for (const rel of [...g.notes.keys()].sort()) {
+      const mine = ruled.filter((t) => ofType(rel, t));
+      if (!mine.length) continue;
+      const problems = frontmatterProblems(g.textOf(rel) ?? "", mine);
+      if (problems.length) list.push({ path: rel, problems });
+    }
+  }
+  findings.set(g, { generation: g.generation, list });
+  return list;
 }
 
 /** git's conflict markers in a text: each conflict, `<<<<<<<` to `>>>>>>>`, an error. */

@@ -10,6 +10,7 @@ import { readRegular, SMALL_FILE } from "./fsutil.ts";
 import { join } from "node:path";
 import { parse as parseToml } from "smol-toml";
 import { userConfigFile } from "./paths.ts";
+import { KEY_KINDS, type TypeConfig } from "./doctypes.ts";
 
 export type GlyphMode = "auto" | "nerd" | "unicode" | "ascii";
 
@@ -182,6 +183,9 @@ export interface Config {
      *  markdownlint-cli2 for the lint surface (19.21). */
     auto_install: boolean;
   };
+  /** Document types (22.2, 22.3): notes of a kind by where they are, what their frontmatter must have, their
+   *  conventions — each by name, over the built-in `skill` and `adr` (`core/doctypes.ts`). */
+  types: Record<string, TypeConfig>;
   /** Updates (14.4): a release build asks, once a day in the TUI, whether there's a newer one. Read from your own
    *  config only — a folder's can't turn it on — and off with DO_NOT_TRACK set. */
   update: {
@@ -314,6 +318,7 @@ export const DEFAULT_CONFIG: Config = {
   linter: {},
   lsp: { enabled: true, auto_install: true },
   update: { check: true },
+  types: {},
   context: { depth: 1, backlinks: true, limit: 25 },
   editor: { command: "", remote: ["nvim"], autosave_ms: 30000, edit_in: "source", lens_min_rows: 6, lens_max: 0.5, auto_pairs: false },
   spell: { enabled: false, languages: ["en"], dictionaries: {} },
@@ -593,6 +598,16 @@ function merge<T>(base: T, over: Record<string, unknown>, file: string, prefix: 
       }
       continue;
     }
+    // Document types (22.2, 22.3): each by name, the fields given replacing its own — a folder's too: they only read.
+    if (!prefix && key === "types") {
+      if (!isPlainObject(value) || !Object.values(value).every(isPlainObject)) warnings.push(`config: ${file}: [types.<name>] must be tables`);
+      else {
+        const was = out[key] as Record<string, TypeConfig>;
+        const checked = Object.entries(value).map(([name, t]) => [name, checkFields(t as Record<string, unknown>, TYPE_FIELDS, `types.${name}`, file, warnings)] as const);
+        out[key] = { ...was, ...Object.fromEntries(checked.map(([name, t]) => [name, { ...(Object.hasOwn(was, name) ? was[name] : undefined), ...t }])) };
+      }
+      continue;
+    }
     if (!prefix && key === "language") {
       if (!Array.isArray(value) || !value.every((l) => isPlainObject(l) && typeof l.name === "string")) warnings.push(`config: ${file}: [[language]] entries need a name`);
       else {
@@ -692,6 +707,24 @@ const LINTER_FIELDS: Record<string, FieldCheck> = {
   "root-markers": STRINGS,
   "require-marker": [isBoolean, "true or false"],
 };
+
+const TYPE_FIELDS: Record<string, FieldCheck> = {
+  paths: STRINGS,
+  required: STRINGS,
+  keys: [(v) => isPlainObject(v) && Object.values(v).every((k) => (KEY_KINDS as readonly unknown[]).includes(k)), `a table of key = kind (${KEY_KINDS.join(", ")})`],
+  values: [(v) => isPlainObject(v) && Object.values(v).every(Array.isArray), "a table of key = [allowed values]"],
+  number: [(v) => typeof v === "string" && validRegex(v), "a pattern (a regular expression) whose first group is the number"],
+  status: [isString, "a frontmatter key"],
+};
+
+function validRegex(s: string): boolean {
+  try {
+    new RegExp(s);
+    return true;
+  } catch {
+    return false;
+  }
+}
 
 /** A copy of `table` without the fields of the wrong type, or a known one spelled with underscores, each warned of; the rest kept. */
 function checkFields(table: Record<string, unknown>, fields: Record<string, FieldCheck>, where: string, file: string, warnings: string[]): Record<string, unknown> {

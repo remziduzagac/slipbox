@@ -84,6 +84,7 @@ import { addFootnote, deleteFootnote, editFootnote, type Footnote, footnotesOf, 
 import { copyPath, linksInto, listTrash, restorePath, type TrashItem, trashPath } from "../core/files.ts";
 import { readIdentity, vaultConfigFile } from "../core/registry.ts";
 import { activityFile, AutoIndex } from "../core/autoindex.ts";
+import { notesOfType, ofType, type TypedNote } from "../core/doctypes.ts";
 import { type Scope, SCOPES, searchOthers } from "../core/scope.ts";
 import { rootLabel, tildePath } from "../core/names.ts";
 import { copyAvailable, folderIdentity, lookupFolder, type NamedFolder, pointerName, readFolders, setDefaultCopy, suggestFolderName } from "../core/folders.ts";
@@ -91,7 +92,7 @@ import { configFilesFor, findVaultRoot, folderAt, hasMarker, homeFolder, initVau
 import { isTrusted, setTrust, setTrustedRoots, trustOf } from "../core/trust.ts";
 import { type Head, VaultFeed, applyToGraph } from "../core/vault-feed.ts";
 import { VaultWatcher, type WatchBatch } from "../core/watch.ts";
-import { atLeast, lintProblems, noteProblems, type Problem, SEVERITIES, syntaxProblems } from "../core/diagnostics.ts";
+import { atLeast, frontmatterFindings, lintProblems, noteProblems, type Problem, rootTypes, SEVERITIES, syntaxProblems } from "../core/diagnostics.ts";
 import { languageOf, serverTable, type ServerTable } from "../core/servers/languages.ts";
 import { type LinterDef, linterRoot, linterTable, runLinter } from "../core/servers/linters.ts";
 import { rootFor } from "../core/servers/find.ts";
@@ -452,6 +453,8 @@ export interface ProblemRow {
   lint?: LintIssue;
   /** A file in a merge's conflict (5.12), at its first marker. */
   conflict?: { path: string; line: number };
+  /** Frontmatter that breaks its document type's rules (22.2), at its line. */
+  frontmatter?: { path: string; line: number };
 }
 
 export const RIGHT_VIEWS: PanelView<RightView>[] = [
@@ -3816,6 +3819,61 @@ export class App {
     });
   }
 
+  /** The document types here (22.3) — skill, adr, the config's — each with how many notes are of it: pick one for its
+   *  notes. */
+  openTypeList(): void {
+    const types = rootTypes(this.graph);
+    const notes = [...this.graph.notes.keys()];
+    const findings = frontmatterFindings(this.graph);
+    this.openList({
+      title: `Document types (${types.length})`,
+      items: types.map((t) => {
+        const n = notes.filter((rel) => ofType(rel, t)).length;
+        const bad = findings.filter((f) => ofType(f.path, t)).length;
+        return { label: t.name, hint: `${n} note${n === 1 ? "" : "s"}${bad ? `, ${bad} breaking its rules` : ""}${t.source === "config" ? " · yours" : ""}`, data: t.name };
+      }),
+      accept: (it) => this.openTypeNotes(it.data as string),
+    });
+  }
+
+  /** A type's notes (22.3), by number then path, each its status — what supersedes it too: pick one to open. */
+  openTypeNotes(name: string): void {
+    const t = rootTypes(this.graph).find((x) => x.name === name);
+    if (!t) return this.message("info", `no document type "${name}" here: space f d lists them`);
+    const list = this.typedNotes(t.name);
+    if (!list.length) return this.message("info", `no ${t.name} notes here (${t.paths.join(", ")})`);
+    this.openList({
+      title: `${t.name} — ${list.length} note${list.length === 1 ? "" : "s"}`,
+      items: list.map((n) => ({ label: `${n.number === null ? "" : `${n.number}  `}${n.title || n.path}`, hint: `${n.status ? `${n.status}${n.supersededBy ? ` → ${n.supersededBy}` : ""} · ` : ""}${n.path}`, data: n.path })),
+      accept: (it) => {
+        this.region = "content";
+        this.open(it.data as string);
+      },
+    });
+  }
+
+  /** A type's notes, in their order, titles read. */
+  private typedNotes(name: string): TypedNote[] {
+    const t = rootTypes(this.graph).find((x) => x.name === name);
+    if (!t) return [];
+    const notes = [...this.graph.notes.entries()].map(([path, e]) => ({ path, title: e.title ?? "" }));
+    return notesOfType(t, notes, (rel) => this.graph.textOf(rel));
+  }
+
+  /** `] t` / `[ t` (22.3): the next or previous note of this note's document type, in the type's order. */
+  typeStep(dir: 1 | -1): void {
+    const rel = this.view?.buf.rel;
+    if (!rel) return this.message("info", "open a note of a document type: space f d lists them");
+    const t = rootTypes(this.graph).find((x) => ofType(rel, x));
+    if (!t) return this.message("info", `${rel} is of no document type: space f d lists them`);
+    const list = this.typedNotes(t.name);
+    const i = list.findIndex((n) => n.path === rel);
+    const next = list[i + dir];
+    if (!next) return this.message("info", `the ${dir > 0 ? "last" : "first"} ${t.name} (${list.length})`);
+    this.open(next.path);
+    this.message("info", `${t.name} ${i + dir + 1} of ${list.length}${next.status ? ` — ${next.status}` : ""}`);
+  }
+
   /** The notes with a tag (1.6) — its nested tags' too: pick one to open. */
   openTagNotes(tag: string): void {
     const t = this.graph.tagged(tag);
@@ -4844,7 +4902,8 @@ export class App {
   problemCount(): number {
     const p = this.graph.problems();
     const conflicts = [...(this.gitStates ?? [])].filter(([, st]) => st === "conflict").length;
-    return p.broken.length + p.ambiguous.length + p.fragile.length + (this.vaultLint.issues?.length ?? 0) + conflicts;
+    const frontmatter = frontmatterFindings(this.graph).reduce((n, f) => n + f.problems.length, 0);
+    return p.broken.length + p.ambiguous.length + p.fragile.length + frontmatter + (this.vaultLint.issues?.length ?? 0) + conflicts;
   }
 
   /** A click on a row of the panel: This file's selects its problem (the note shows it), a second click goes there;
@@ -4898,6 +4957,23 @@ export class App {
     section("Ambiguous links", p.ambiguous, (l) => `— ${l.candidates.length} notes`);
     // Won by where they're written: a note of the name nearer would take them (code actions name them for sure).
     section("Fragile links", p.fragile, (l) => `— ${l.reason}; [[${l.fix}]] for sure`);
+    // Frontmatter (22.2): notes breaking their document type's rules, by note, each finding at its line.
+    const fm = frontmatterFindings(this.graph);
+    const fmRows = fm.flatMap((f) => f.problems.map((x) => ({ path: f.path, line: x.start.line, label: `L${x.start.line}`, detail: x.message }))).filter((r) => !q || match(q, `${r.path} ${r.label} ${r.detail}`));
+    if (fmRows.length) {
+      const folded = !q && this.problemsFolded.has("Frontmatter");
+      out.push({ section: "Frontmatter", heading: true, label: `Frontmatter (${fm.reduce((n, f) => n + f.problems.length, 0)})`, detail: "", text: "Frontmatter", folded });
+      if (!folded) {
+        let note = "";
+        for (const r of fmRows) {
+          if (r.path !== note) {
+            note = r.path;
+            out.push({ section: "Frontmatter", heading: false, note, label: note, detail: "", text: note, folded: false });
+          }
+          out.push({ section: "Frontmatter", heading: false, label: r.label, detail: r.detail, text: `${r.path} ${r.label} ${r.detail}`, folded: false, frontmatter: { path: r.path, line: r.line } });
+        }
+      }
+    }
     // Lint (3.21): the linter's findings over the vault, by note; while it runs, said so.
     if (this.lintCmd || this.vaultLint.issues) {
       const all = this.vaultLint.issues;
@@ -5016,6 +5092,7 @@ export class App {
    *  note. A heading's does nothing. */
   private openProblemRow(row: ProblemRow, rows: ProblemRow[], where: "here" | "tab" | "split" = "tab"): void {
     if (row.conflict) return this.openAt(row.conflict.path, row.conflict.line, 1, where);
+    if (row.frontmatter) return this.openAt(row.frontmatter.path, row.frontmatter.line, 1, where);
     if (row.link) return this.jumpToProblem(row.link, where);
     if (row.lint) return this.jumpToLint(row.lint, where);
     if (!row.note || row.heading) return;

@@ -55,7 +55,7 @@ import { openVault, Reach } from "../core/reach.ts";
 import { doctor, doctorFile, type LinterReport, type ServerReport } from "../core/servers/doctor.ts";
 import { linterRoot, linterTable, runLinter } from "../core/servers/linters.ts";
 import { ServerManager } from "../core/servers/manager.ts";
-import { atLeast, lintProblems, noteProblems, type Problem, SEVERITIES, type Severity, syntaxProblems } from "../core/diagnostics.ts";
+import { atLeast, frontmatterFindings, lintProblems, noteProblems, type Problem, rootTypes, SEVERITIES, type Severity, syntaxProblems } from "../core/diagnostics.ts";
 import { languageOf, serverTable } from "../core/servers/languages.ts";
 import { rootFor } from "../core/servers/find.ts";
 import { type Applied, applyPlan, loggedRenames, planFolderMove, planHeadingRename, planMakeVault, planNoteRename, planRelink, planUndo, planUnmakeVault, planVaultFolderMove, planVaultRename, RenameError, type RenamePlan } from "../core/rename.ts";
@@ -74,6 +74,7 @@ import { VERSION } from "../version.ts";
 import { RELEASE } from "../core/release.ts";
 import { installedBy, uninstall, uninstallPlan } from "../core/install.ts";
 import { upgrade as upgradeTo, UpgradeError } from "../core/update.ts";
+import { notesOfType, ofType } from "../core/doctypes.ts";
 
 /**
  * JSON with every character `sanitize` would change escaped as \uXXXX. JSON.stringify leaves C1
@@ -246,6 +247,7 @@ Usage:
   slipbox doctor [file]             language servers and linters: each language's, found where, installed when needed, or missing
   slipbox diagnostics <file>        a file's problems: its servers', its linters', its syntax; a note's links and lint  [--severity S] [--timeout SECS]
   slipbox themes                    list themes
+  slipbox types [type]              document types here (skill, adr, your [types]): how many notes each; a type's notes in order
   slipbox upgrade                   the latest release installed, checked before it's used  [--check: only say whether there's one]
   slipbox uninstall                 what the installer put here, listed; removed with --yes  [--purge: slipbox's folders too] [--yes]
   slipbox commands                  list named commands and their CLI equivalents
@@ -272,7 +274,7 @@ export const CLI_COMMANDS = new Set([
   "render", "resolve", "link", "links", "backlinks", "name", "folders", "ls", "outline", "find", "replace", "task", "read", "stat", "write", "mkdir", "send", "history",
   "mv", "rename-heading", "relink", "convert-links", "undo", "context", "search", "index", "changed", "diff", "merge-review", "worktrees", "cp", "rm", "trash", "deinit", "tags", "footnotes", "problems",
   "capture", "scratch", "init", "info", "apply", "doctor", "diagnostics", "themes", "commands", "help", "export", "spell",
-  "upgrade", "uninstall",
+  "upgrade", "uninstall", "types",
 ]);
 
 /** The command word in raw arguments that failed to parse: skips flags and their values. */
@@ -397,7 +399,7 @@ function within<T>(p: Promise<T>, ms: number, fallback: T): Promise<T> {
 const MAX_ARGS: Record<string, number> = {
   render: 1, resolve: 1, link: 1, links: 1, name: 1, folders: 3, backlinks: 1, ls: 0, outline: 1, find: 2, replace: 3, task: 2, read: 1, stat: 1, send: 1, history: 0,
   scratch: 1, init: 1, info: 0, apply: 1, index: 1, themes: 0, commands: 0, mkdir: 1, mv: 2, "rename-heading": 3, doctor: 1, diagnostics: 1, relink: 1, "convert-links": 1, cp: 2, rm: 1, trash: 2, deinit: 1, tags: 1, footnotes: 4, problems: 0, "merge-review": 1,
-  changed: 0, diff: 1, worktrees: 0, undo: 0, spell: 1, upgrade: 0, uninstall: 0,
+  changed: 0, diff: 1, worktrees: 0, undo: 0, spell: 1, upgrade: 0, uninstall: 0, types: 1,
 };
 
 /**
@@ -845,7 +847,10 @@ const HANDLERS: Record<string, Handler> = {
         human.push(`lint (${lint.length})`, ...lint.map((x) => `  ${x.file}:${x.line}${x.column ? `:${x.column}` : ""}  ${x.rule} ${x.name}  ${x.description}`));
       }
     }
-    return { data: { broken: p.broken, ambiguous: p.ambiguous, fragile: p.fragile, orphans: p.orphans, conflicts, ...(lint ? { lint } : {}) }, human: `${human.join("\n")}\n` };
+    // Frontmatter that breaks its document type's rules (22.2): a key missing, of another kind, a value not allowed.
+    const frontmatter = frontmatterFindings(s.graph).flatMap((f) => f.problems.map((x) => ({ path: f.path, line: x.start.line, message: x.message })));
+    if (frontmatter.length) human.push(`frontmatter (${frontmatter.length})`, ...frontmatter.map((x) => `  ${x.path}:${x.line}  ${x.message}`));
+    return { data: { broken: p.broken, ambiguous: p.ambiguous, fragile: p.fragile, orphans: p.orphans, conflicts, frontmatter, ...(lint ? { lint } : {}) }, human: `${human.join("\n")}\n` };
   },
 
   tags(s, rest) {
@@ -1685,6 +1690,27 @@ const HANDLERS: Record<string, Handler> = {
       ...failed.map((f) => `couldn't remove ${f}\n`),
     ].join("");
     return { data: { purge, removed: yes && plan.remove.length > 0 && !failed.length, remove: plan.remove, keep: plan.keep, notes: plan.notes, failed }, human, code: failed.length ? EXIT.error : EXIT.ok };
+  },
+
+  // Document types (22.3): each with how many notes are of it here and how many break its rules (22.2); or a type's
+  // notes, by number then path — each its title, its status, and what supersedes it.
+  types(s, rest) {
+    const types = rootTypes(s.graph);
+    const notes = [...s.graph.notes.entries()].map(([path, e]) => ({ path, title: e.title ?? "" }));
+    const want = rest[0];
+    if (want !== undefined) {
+      const t = types.find((x) => x.name === want);
+      if (!t) throw new CliError(`no document type "${want}" here: slipbox types lists them`, EXIT.notFound);
+      s.graph.ensureAll();
+      const list = notesOfType(t, [...s.graph.notes.entries()].map(([path, e]) => ({ path, title: e.title ?? "" })), (rel) => s.graph.textOf(rel));
+      const width = Math.max(0, ...list.map((n) => (n.number === null ? 0 : String(n.number).length)));
+      const human = list.map((n) => `${n.number === null ? " ".repeat(width) : String(n.number).padStart(width)}${width ? "  " : ""}${n.path}${n.title ? `  ${n.title}` : ""}${n.status ? `  (${n.status}${n.supersededBy ? ` → ${n.supersededBy}` : ""})` : ""}\n`).join("");
+      return { data: { name: t.name, source: t.source, paths: t.paths, notes: list }, human: human || `no ${t.name} notes here (${t.paths.join(", ")})\n` };
+    }
+    const findings = frontmatterFindings(s.graph);
+    const data = types.map((t) => ({ name: t.name, source: t.source, paths: t.paths, notes: notes.filter((n) => ofType(n.path, t)).length, problems: findings.filter((f) => ofType(f.path, t)).length }));
+    const width = Math.max(0, ...data.map((t) => t.name.length));
+    return { data, human: data.map((t) => `${t.name.padEnd(width)}  ${t.notes} note${t.notes === 1 ? "" : "s"}${t.problems ? `, ${t.problems} breaking its rules` : ""}  (${t.source}: ${t.paths.join(", ")})\n`).join("") };
   },
 
   themes(s) {

@@ -88,6 +88,11 @@ severity = "info"
 enabled = true
 auto_install = false            # the laptops have the servers from Homebrew
 
+[types.memory]                  # my agents' memory files: what they must say
+paths = ["**/memory/*.md"]
+required = ["name", "description", "metadata.type"]
+values = { "metadata.type" = ["user", "feedback", "project", "reference"] }
+
 [update]
 check = false                   # the laptops are updated from the fleet's own mirror, not by each one asking
 
@@ -420,6 +425,9 @@ sidebar_vault = { bold = true, underline = true }
 "leader ; X h" = "git.blame"
 "leader ; X i" = "git.history"
 "leader ; X j" = "git.branches"
+"leader ; Y a" = "type.list"
+"leader ; Y b" = "type.next"
+"leader ; Y c" = "type.prev"
 "leader ; p a" = "scratch.open"
 "leader ; p b" = "scratch.add"
 "leader ; p c" = "scratch.copy"
@@ -597,3 +605,4 @@ sc = "scratch.open"
 "leader ; V" = "spelling"
 "leader ; W" = "shell"
 "leader ; X" = "git changes"
+"leader ; Y" = "types"

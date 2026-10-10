@@ -68,6 +68,8 @@ export const DEFAULT_KEYS: Record<string, string> = {
   "shift+tab": "link.prev",
   "] l": "link.next",
   "] s": "spell.next",
+  "] t": "type.next",
+  "[ t": "type.prev",
   "] c": "git.change_next",
   "[ c": "git.change_prev",
   "[ s": "spell.prev",
@@ -219,6 +221,7 @@ export const DEFAULT_KEYS: Record<string, string> = {
   "leader f f": "switcher.open",
   "leader f o": "outline.pick",
   "leader f t": "tag.list",
+  "leader f d": "type.list",
   "leader f b": "breadcrumb.path",
   ":": "palette.open",
   "ctrl+shift+p": "palette.open",
@@ -675,6 +678,8 @@ export function parseGroup(value: string): { name: string; desc: string } {
 /** `:` aliases: alias → command spec. The rest of the typed line becomes the argument. */
 export const DEFAULT_ALIASES: Record<string, string> = {
   tags: "tag.list",
+  types: "type.list",
+  type: "type.list",
   problems: "problems.open",
   footnotes: "footnotes.toggle",
   tag: "tag.list",

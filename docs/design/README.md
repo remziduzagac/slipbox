@@ -17,5 +17,6 @@ behaviour, the matching document changes in the same commit.
 | [export.md](export.md) | `10.x`: notes as a document — the assembler, Word; no tool run, permissive licences only |
 | [lsp.md](lsp.md) | phase 5: slipbox's client of the language servers of code (the LSP face is gone: `20.23`) |
 | [configuration.md](configuration.md) | every config key and environment variable |
+| [document-types.md](document-types.md) | `22.2`, `22.3`: notes of a kind by where they are, their frontmatter's rules, their order |
 | [distribution.md](distribution.md) | `14.x`: folders per platform, the supply chain's gates, releases, their notices |
 | [testing.md](testing.md) | test strategy and the fixture vault |

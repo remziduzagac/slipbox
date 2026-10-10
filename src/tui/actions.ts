@@ -11,7 +11,7 @@ import { dirname, isAbsolute, join, posix, relative } from "node:path";
 import { backgroundStatus, describeBackground } from "../core/autoindex.ts";
 import { rootLabel, tildePath } from "../core/names.ts";
 import { isPointer, parsePointer, resolvePointer } from "../core/pointer.ts";
-import { noteProblems, type Problem } from "../core/diagnostics.ts";
+import { noteProblems, type Problem, rootTypes } from "../core/diagnostics.ts";
 import { copyAvailable, folderIdentity, readFolders, recordFolder } from "../core/folders.ts";
 import { slugName } from "../core/registry.ts";
 import { isNotePath } from "../core/links.ts";
@@ -588,6 +588,8 @@ function argCandidates(a: App, cmd: string): string[] | null {
       return FORMATS.map((f) => f.name);
     case "tag.list":
       return a.graph.tags().map((t) => t.tag);
+    case "type.list":
+      return rootTypes(a.graph).map((t) => t.name);
     default:
       return null;
   }
@@ -1099,6 +1101,9 @@ export function registerActions(app: App): void {
     // links
     "link.insert": (a) => withView(a, (v) => a.insertLink(v)),
     // Spelling (25.6): vim's keys, on the words its marks show.
+    "type.list": (a, arg) => (arg ? a.openTypeNotes(arg) : a.openTypeList()),
+    "type.next": (a) => a.typeStep(1),
+    "type.prev": (a) => a.typeStep(-1),
     "spell.next": (a) => withView(a, (v) => spellStep(a, v, 1)),
     "spell.prev": (a) => withView(a, (v) => spellStep(a, v, -1)),
     "spell.suggest": (a) => withView(a, (v) => spellSuggest(a, v)),
