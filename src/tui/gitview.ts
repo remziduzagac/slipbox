@@ -252,6 +252,10 @@ export function gitViewAction(app: App, action: string): void {
       return after(app, stageAll(app.checkout), "staged everything");
     case "undo_rename":
       return after(app, unstageAll(app.checkout), "unstaged everything");
+    case "commit":
+      return app.openCommitEditor(false);
+    case "amend":
+      return app.openCommitEditor(true);
     case "close":
       return app.showSidebar(false);
     case "leave":

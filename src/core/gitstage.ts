@@ -8,6 +8,7 @@ import { execFile, execFileSync } from "node:child_process";
 import { posix, sep } from "node:path";
 import type { Checkout } from "./git.ts";
 import { gitArgs, STATUS_ARGS } from "./gitops.ts";
+import { isTrusted } from "./trust.ts";
 import type { GitChange } from "./gitsigns.ts";
 
 /** One file of `git status`: its path, its staged letter (`x`) and its working tree's (`y`), where it came from. */
@@ -97,6 +98,45 @@ export function stageAll(c: Pick<Checkout, "root">): GitDone {
 export function unstageAll(c: Pick<Checkout, "root">): GitDone {
   const r = git(c, ["reset", "-q"]);
   return r.ok ? null : done(git(c, ["rm", "-r", "--cached", "-q", "."]));
+}
+
+/** A commit message as git keeps it: its `#` lines and the blank lines around it gone; "" when nothing's left. */
+export function cleanMessage(text: string): string {
+  return text
+    .split(/\r?\n/)
+    .filter((l) => !l.startsWith("#"))
+    .join("\n")
+    .replace(/^\s+|\s+$/g, "")
+    .replace(/\n{3,}/g, "\n\n");
+}
+
+/**
+ * A commit of what's staged (26.3), or the last one amended, with `message` (its `#` lines left out). In a root not
+ * trusted its hooks don't run (`gitArgs`) and it isn't signed: the repository's own config could name the program that
+ * signs. Not waiting on git — a hook can take a while. Its short hash and subject, or why it failed.
+ */
+export function commitLater(c: Pick<Checkout, "root">, message: string, amend: boolean): Promise<{ hash: string; subject: string } | { why: string }> {
+  const body = cleanMessage(message);
+  if (!body) return Promise.resolve({ why: "the message is empty: nothing committed" });
+  const unsigned = isTrusted(c.root) ? [] : ["-c", "commit.gpgSign=false"];
+  const args = [...unsigned, ...gitArgs(c.root, ["commit", "-F", "-", "--cleanup=verbatim", ...(amend ? ["--amend"] : [])])];
+  return new Promise((done) => {
+    const child = execFile("git", args, { encoding: "utf8", timeout: 120_000, maxBuffer: 16 * 1024 * 1024 }, (err, _out, stderr) => {
+      if (err) return done({ why: (stderr || err.message).trim().split("\n")[0] ?? "git commit failed" });
+      const r = git(c, ["log", "-1", "--format=%h%x00%s"]);
+      const [hash = "", subject = ""] = r.ok ? r.out.trim().split("\0") : [];
+      done({ hash, subject });
+    });
+    // A hook that refuses at once: git gone before it reads the message — not an error of ours.
+    child.stdin?.on("error", () => {});
+    child.stdin?.end(`${body}\n`);
+  });
+}
+
+/** The last commit's message, for an amend to start from; null without one. */
+export function lastMessage(c: Pick<Checkout, "root">): string | null {
+  const r = git(c, ["log", "-1", "--format=%B"]);
+  return r.ok ? r.out.replace(/\s+$/, "") : null;
 }
 
 /** `text` with one change made: lines `[at, at + count)` replaced by `put` — the line breaks and the final one its own. */

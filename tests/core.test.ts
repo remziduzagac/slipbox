@@ -2808,6 +2808,13 @@ describe("staging, from the source control view (26.2)", () => {
     expect([s.conflicted, s.staged, s.unstaged, s.untracked].map((l) => l.map((e) => e.path))).toEqual([["c.md"], ["a.md", "b.md", "new.md"], ["a.md", "d.md"], ["u.md"]]);
   });
 
+  test("a commit message as git keeps it: # lines left out, blank lines around trimmed, runs of them one (26.3)", async () => {
+    const { cleanMessage } = await import("../src/core/gitstage.ts");
+    expect(cleanMessage("\nSubject\n\n\n\nbody\n# a guide\n#another\n\n")).toBe("Subject\n\nbody");
+    expect(cleanMessage("# only guides\n\n")).toBe("");
+    expect(cleanMessage("Fix #12 here\n")).toBe("Fix #12 here");
+  });
+
   test("lines replaced in a text: its line breaks kept, its final one as it was, an empty text's lines ended", async () => {
     const { replaceLines } = await import("../src/core/gitstage.ts");
     expect(replaceLines("a\nb\nc\n", 1, 1, ["B", "B2"])).toBe("a\nB\nB2\nc\n");

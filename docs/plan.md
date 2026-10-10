@@ -990,7 +990,7 @@ trusted. It's the TUI's alone, no CLI equivalents: an agent has `git` itself.*
 | --- | --- |
 | 26.1 | **Prototype.** Changed lines in the gutter against what's staged, unsaved text too; `]c` `[c`; preview, undo |
 | 26.2 | **Prototype.** Source control by the explorer: staged, changed, untracked, conflicts; stage, unstage, discard |
-| 26.3 | Commit: its message in a floating editor; amend. In a root not trusted its hooks don't run, and it says so |
+| 26.3 | **Prototype.** Commit: its message in a floating editor; amend. Not trusted: its hooks don't run; it says so |
 | 26.4 | Blame: who changed the cursor's line, when, the commit's message; a file's history with `22.1` |
 | 26.5 | Branches: switched to or made from a picker, unsaved notes saved or kept first |
 | 26.6 | Later, opt-in: stash; fetch, pull, push — asked for, never automatic; a conflict view: ours, theirs, both |

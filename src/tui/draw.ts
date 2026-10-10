@@ -382,7 +382,7 @@ function drawFloating(app: App, c: Canvas, mainY: number, mainH: number, geo: Ge
     drawText(c, x, y + k, b.v, border, 1);
     drawText(c, x + w - 1, y + k, b.v, border, 1);
   }
-  const hint = f.kind === "hover" ? " esc · q closes " : ` esc · q closes, writing back · ctrl+s writes `;
+  const hint = f.kind === "hover" ? " esc · q closes " : f.kind === "commit" ? ` ctrl+s ${f.amend ? "amends" : "commits"} · esc · q leaves it ` : ` esc · q closes, writing back · ctrl+s writes `;
   const bottom = `${b.bl}${b.h.repeat(Math.max(0, w - 2 - stringWidth(hint)))}`;
   drawText(c, x, y + h - 1, bottom, border);
   drawText(c, x + stringWidth(bottom), y + h - 1, truncate(hint, w - stringWidth(bottom) - 1) + b.br, dim);

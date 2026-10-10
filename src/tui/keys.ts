@@ -421,13 +421,16 @@ export const DEFAULT_EXPLORER_KEYS: Record<string, string> = {
   "shift+v": "unmake_vault",
   // The selected row's menu, as its … button opens it.
   ".": "menu",
+  // Source control's (26.3): a commit of what's staged; the last one amended.
+  c: "commit",
+  "shift+c": "amend",
   q: "close",
   escape: "leave",
 };
 
 export const EXPLORER_ACTIONS = [
   "down", "up", "open_tab", "expand", "open", "collapse", "open_split", "top", "bottom", "filter", "all_files",
-  "new_note", "new_folder", "rename", "rename_vault", "move", "delete", "restore", "undo_rename", "copy", "cut", "paste", "make_vault", "unmake_vault", "menu", "close", "leave",
+  "new_note", "new_folder", "rename", "rename_vault", "move", "delete", "restore", "undo_rename", "copy", "cut", "paste", "make_vault", "unmake_vault", "menu", "close", "leave", "commit", "amend",
 ];
 
 /** Moving about a list pane — the outline, the footnotes, Info: key → action. */
@@ -564,6 +567,8 @@ export const GIT_ACTION_INFO: Record<string, { title: string; desc: string; acti
   all_files: { title: "Stage everything", desc: "Stages every change, untracked files too (git add -A)" },
   undo_rename: { title: "Unstage everything", desc: "Unstages every change" },
   menu: { title: "Its diff", desc: "Shows the file's diff, or the change's, in a floating window" },
+  commit: { title: "Commit", desc: "Writes the message for what's staged in a floating editor: ctrl+s commits, esc leaves it" },
+  amend: { title: "Amend", desc: "The last commit's message in the floating editor: ctrl+s amends it with what's staged" },
   filter: { title: "Filter", desc: "Type to narrow the files by path" },
   close: { title: "Close source control", desc: "Closes it; focus returns to the note" },
   leave: { title: "Back to the note", desc: "Focuses the note; the view stays open" },

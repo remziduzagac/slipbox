@@ -560,7 +560,12 @@ keys.
   unstages it; `.` shows the diff in the floating window; `enter` opens the file at the change. A change is staged as
   `git add -p` does: the index given its text with that change made (`hash-object`, `update-index`), so nothing else
   in it moves. A file unsaved here isn't discarded: git works on the file on disk. git's answer comes in the background,
-  again whenever it has news; `23.6`'s guards apply in a root not trusted.
+  again whenever it has news; `23.6`'s guards apply in a root not trusted. **Commit** (`26.3`): `c` writes the message
+  for what's staged in the floating editor, `shift+c` amends the last commit (its message to start from); `#` lines
+  say what's staged and are left out, `ctrl+s` commits (in the background: a hook can take a while), `esc` or `q`
+  leaves it, and the focus goes back where it was. An empty message, or a hook refusing, is said in git's words and
+  the editor stays. In a root not trusted the commit's hooks don't run and it isn't signed — the repository's own config
+  could name what runs — and both the editor and a message say so.
 - **Filter (`/`, in the explorer, the history, the outline, Info and the footnotes; Problems' All tab, below):** a
   `› text` row at
   the top of the list, a rule under it (joined to the pane's border), then the list —

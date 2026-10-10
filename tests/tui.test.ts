@@ -15,6 +15,7 @@ import { locateVault } from "../src/core/vault.ts";
 import { type ListOverlay, App, type Host, PICTURE_ROWS, PICTURES_REST_MS } from "../src/tui/app.ts";
 import { dateText, listFolder, placeOf, type SaveAsOverlay, sizeText } from "../src/tui/saveas.ts";
 import { placeIn } from "../src/tui/shellrun.ts";
+import { setTrust } from "../src/core/trust.ts";
 import { gitRows } from "../src/tui/gitview.ts";
 import type { NvimServer } from "../src/core/nvim.ts";
 import { TextCanvas } from "../src/tui/canvas.ts";
@@ -13979,5 +13980,103 @@ describe("source control (26.2)", () => {
     select(h, "M a.md");
     await h.keys("d");
     expect(h.app.messages.at(-1)?.text).toBe("staged: u unstages it first — discarding is for what isn't staged");
+  });
+});
+
+describe("commit (26.3)", () => {
+  const git = (cwd: string, ...args: string[]) => new TextDecoder().decode(Bun.spawnSync(["git", "-c", "user.email=t@example.invalid", "-c", "user.name=t", "-C", cwd, ...args]).stdout);
+  const until = async (ok: () => boolean, ms = 8000) => {
+    for (const t = Date.now(); !ok() && Date.now() - t < ms; ) await Bun.sleep(20);
+    return ok();
+  };
+  /** A repository with a failing pre-commit hook: a commit that runs hooks can't go through. */
+  const repo = () => {
+    const root = mkdtempSync(join(sandbox, "commit-"));
+    mkdirSync(join(root, ".slipbox"));
+    writeFileSync(join(root, ".gitignore"), ".slipbox/\n");
+    writeFileSync(join(root, "a.md"), "a\n");
+    git(root, "init", "-q", "-b", "main");
+    git(root, "config", "user.email", "t@example.invalid");
+    git(root, "config", "user.name", "t");
+    git(root, "add", "-A");
+    git(root, "commit", "-q", "-m", "start");
+    writeFileSync(join(root, ".git", "hooks", "pre-commit"), "#!/bin/sh\necho refused by the hook >&2\nexit 1\n");
+    chmodSync(join(root, ".git", "hooks", "pre-commit"), 0o755);
+    return git(root, "rev-parse", "HEAD") ? root : null;
+  };
+  const type = (s: string) => [...s].map((ch) => (ch === " " ? "space" : ch));
+  const open = async (root: string, trusted = false) => {
+    setTrust(root, trusted ? "trusted" : null);
+    const h = await harness({ root, open: "a.md", width: 120, height: 40 });
+    await h.app.run("git.view");
+    await h.app.refreshGitNow();
+    return h;
+  };
+
+  test("what's staged committed with the message written in the floating editor; in a root not trusted, no hook runs", async () => {
+    const root = repo();
+    if (!root) return;
+    const h = await open(root);
+    // Nothing staged: said, no editor.
+    await h.keys("c");
+    expect(h.app.floating).toBeNull();
+    expect(h.app.messages.at(-1)?.text).toBe("nothing staged — s stages a file in source control (space g s)");
+    // The repository's own config signs commits with a program of its choosing: not run in a root not trusted.
+    const signer = join(root, ".git", "signer.sh");
+    writeFileSync(signer, `#!/bin/sh\ntouch ${JSON.stringify(join(root, ".git", "SIGNER_RAN"))}\nexit 1\n`);
+    chmodSync(signer, 0o755);
+    git(root, "config", "commit.gpgSign", "true");
+    git(root, "config", "gpg.program", signer);
+    writeFileSync(join(root, "a.md"), "A\n");
+    await h.app.refreshGitNow();
+    await h.keys("a", "c");
+    await h.app.refreshGitNow();
+    await h.keys("c");
+    expect(h.app.floating?.kind).toBe("commit");
+    expect(h.app.floating!.view.buf.source).toContain("# Committing: 1 file staged (a.md).");
+    expect(h.app.floating!.view.buf.source).toContain("# This root isn't trusted: its hooks don't run, and the commit isn't signed");
+    expect(h.app.messages.at(-1)?.text).toBe("this root isn't trusted: the commit's hooks don't run, and it isn't signed");
+    await h.keys("i", ...type("Capitalise a"), "escape", "ctrl+s");
+    expect(await until(() => h.app.floating === null)).toBe(true);
+    expect(h.app.messages.at(-1)?.text).toMatch(/^committed [0-9a-f]{7,}: Capitalise a$/);
+    expect(git(root, "log", "-1", "--format=%s%n%b")).toBe("Capitalise a\n\n");
+    expect(git(root, "status", "--porcelain")).toBe("");
+    expect(existsSync(join(root, ".git", "SIGNER_RAN"))).toBe(false);
+    // The view asked again: nothing left in it.
+    expect(await until(() => gitRows(h.app).length === 0)).toBe(true);
+  });
+
+  test("amended: the last message to start from; an empty message refused; esc leaves it; trusted, a hook refusing it says so", async () => {
+    const root = repo();
+    if (!root) return;
+    const h = await open(root);
+    await h.keys("shift+c");
+    expect(h.app.floating?.kind).toBe("commit");
+    expect(h.app.floating!.view.buf.source.split("\n")[0]).toBe("start");
+    // Emptied: refused, the editor kept.
+    await h.keys("d", "d", "ctrl+s");
+    expect(await until(() => h.app.messages.at(-1)?.text === "git: the message is empty: nothing committed")).toBe(true);
+    expect(h.app.floating?.kind).toBe("commit");
+    await h.keys("shift+o", ...type("Begin"), "escape", "ctrl+s");
+    expect(await until(() => h.app.floating === null)).toBe(true);
+    expect(h.app.messages.at(-1)?.text).toMatch(/^amended [0-9a-f]{7,}: Begin$/);
+    expect(git(root, "rev-list", "--count", "HEAD")).toBe("1\n");
+    // Back in source control: left without committing.
+    expect(h.app.region).toBe("sidebar");
+    await h.keys("shift+c", "q");
+    expect(h.app.floating).toBeNull();
+    expect(h.app.messages.at(-1)?.text).toBe("not amended");
+    // Trusted: its hook runs, and refuses — said in git's words, the editor kept.
+    const t = await open(root, true);
+    writeFileSync(join(root, "a.md"), "changed\n");
+    git(root, "add", "a.md");
+    await t.app.refreshGitNow();
+    await t.keys("c");
+    expect(t.app.floating!.view.buf.source).not.toContain("isn't trusted");
+    await t.keys("i", "x", "escape", "ctrl+s");
+    expect(await until(() => t.app.messages.at(-1)?.text === "git: refused by the hook")).toBe(true);
+    expect(t.app.floating?.kind).toBe("commit");
+    expect(git(root, "rev-list", "--count", "HEAD")).toBe("1\n");
+    setTrust(root, null);
   });
 });

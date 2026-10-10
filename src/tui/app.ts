@@ -73,7 +73,7 @@ import { buildContext } from "../core/context.ts";
 import { IndexJob, indexFile, search, type SearchHit, SearchIndex, type SearchResult } from "../core/search.ts";
 import { type Checkout, checkoutOf, headOf } from "../core/git.ts";
 import { baseBranch, branchesOf, changedSince, type GitState, inCheckout, inVault, mergeBaseOf, showAt, showLater, stateOf, worktreeList } from "../core/gitops.ts";
-import { entriesLater, type StatusEntry } from "../core/gitstage.ts";
+import { commitLater, entriesLater, lastMessage, sections, type StatusEntry } from "../core/gitstage.ts";
 import { type GitRow, gitRows, gitViewAction } from "./gitview.ts";
 import { type GitChange, gitChanges } from "../core/gitsigns.ts";
 import { describeBreak, type MergeBreak, type MergeReview, reviewMerge } from "../core/mergereview.ts";
@@ -4413,7 +4413,7 @@ export class App {
   // note's frontmatter — with every editing key there is; closed (esc, q, :q) or saved (ctrl+s,
   // :w), its text goes back where it came from, as one undo step there.
 
-  floating: ({ kind: "properties"; note: NoteBuffer; format: "yaml" | "toml"; original: string } | { kind: "hover" }) & { view: View; title: string } | null = null;
+  floating: ({ kind: "properties"; note: NoteBuffer; format: "yaml" | "toml"; original: string } | { kind: "hover" } | { kind: "commit"; amend: boolean; from: Region }) & { view: View; title: string } | null = null;
 
   /** The frontmatter's span in a note's text: the fences, and the text between them; null without one. */
   private frontmatterSpan(source: string): { start: number; end: number; innerStart: number; innerEnd: number; bare: boolean; format: "yaml" | "toml" } | null {
@@ -4505,13 +4505,73 @@ export class App {
     else if (f.view.buf.source === text) f.view.buf.markSaved();
   }
 
-  /** Close the floating editor, writing its text back first when it changed; false while that asks. */
+  /** Close the floating editor, writing its text back first when it changed; false while that asks. A commit's: left. */
   closeFloating(): boolean {
     const f = this.floating;
     if (!f) return true;
     if (f.kind === "properties" && f.view.buf.dirty && !this.writeProperties(f.view.buf.source, false, true)) return false;
     this.floating = null;
+    if (f.kind === "commit") {
+      this.message("info", f.amend ? "not amended" : "not committed");
+      this.commitDone(f.from);
+    }
     return true;
+  }
+
+  /**
+   * A commit (26.3): its message in the floating editor — `ctrl+s` (`:w`) commits what's staged, or amends the last
+   * commit with it; closing it (`esc`, `q`) leaves it. Its `#` lines say what's staged and are left out. In a root not
+   * trusted, said: its hooks don't run, and it isn't signed.
+   */
+  openCommitEditor(amend: boolean): void {
+    const c = this.checkout;
+    if (!c) return this.message("info", "not a git checkout");
+    if (this.floating && !this.closeFloating()) return;
+    const staged = sections(this.gitEntries ?? []).staged.map((e) => e.path);
+    if (!amend && !staged.length) return this.message("info", "nothing staged — s stages a file in source control (space g s)");
+    const last = amend ? lastMessage(c) : null;
+    if (amend && last === null) return this.message("info", "no commit to amend yet");
+    const trusted = isTrusted(c.root);
+    const files = staged.length ? ` (${staged.slice(0, 5).join(", ")}${staged.length > 5 ? ", …" : ""})` : "";
+    const guide = [
+      `# ${amend ? "Amending the last commit" : "Committing"}: ${staged.length} file${staged.length === 1 ? "" : "s"} staged${files}.`,
+      "# Lines starting with # are left out. ctrl+s commits; esc leaves it.",
+      ...(trusted ? [] : ["# This root isn't trusted: its hooks don't run, and the commit isn't signed (:trust trusts it)."]),
+    ];
+    const buf = new NoteBuffer(null, `${c.root}#commit`, `commit:${c.root}`);
+    buf.kind = { group: "text", format: "text" };
+    buf.virtual = { save: (text) => (this.commitWith(text, amend), true) };
+    buf.loadText(`${last ?? ""}\n\n${guide.join("\n")}\n`);
+    const fv = this.makeView(buf, { ...TOP }, { anchor: { ...TOP }, sub: 0, col: 0 });
+    this.floating = { kind: "commit", amend, from: this.region, view: fv, title: amend ? "Amend the last commit" : "Commit" };
+    this.setViewMode(fv, "source");
+    this.region = "content";
+    if (!trusted) this.message("warn", "this root isn't trusted: the commit's hooks don't run, and it isn't signed");
+  }
+
+  /** The commit editor gone: back to where it was opened from — source control, when it's still there. */
+  private commitDone(from: Region): void {
+    this.region = from === "sidebar" && !this.sidebarShown ? "content" : from;
+  }
+
+  /** The commit editor's text committed: in the background; the editor closed when it's done, kept (said why) when not. */
+  private commitWith(text: string, amend: boolean): void {
+    const c = this.checkout;
+    if (!c) return;
+    this.message("info", amend ? "amending…" : "committing…");
+    void commitLater(c, text, amend).then((r) => {
+      if ("why" in r) this.message("warn", `git: ${r.why}`);
+      else {
+        const f = this.floating;
+        if (f?.kind === "commit") {
+          this.floating = null;
+          this.commitDone(f.from);
+        }
+        this.message("info", `${amend ? "amended" : "committed"} ${r.hash}: ${r.subject}`);
+        void this.refreshGitNow().then(() => this.host.requestRender());
+      }
+      this.host.requestRender();
+    });
   }
 
   /**

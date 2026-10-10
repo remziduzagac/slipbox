@@ -1352,6 +1352,8 @@ export function registerActions(app: App): void {
     "git.diff": (a) => a.openGitDiff(),
     // The working tree's changes against what's staged (26.1).
     "git.view": (a) => a.openLeftView("git", "cycle"),
+    "git.commit": (a) => a.openCommitEditor(false),
+    "git.amend": (a) => a.openCommitEditor(true),
     "git.change_next": (a) => withView(a, (v) => gitStep(a, v, 1)),
     "git.change_prev": (a) => withView(a, (v) => gitStep(a, v, -1)),
     "git.change_preview": (a) => withView(a, (v) => gitPreview(a, v)),
