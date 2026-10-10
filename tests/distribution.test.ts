@@ -7,6 +7,7 @@ import { bunfigProblems, checkDeps, licenceProblems, licenceTaken, notices, type
 import { assetName, buildArgs, buildRelease, finishRelease, hostTarget, installScript, releaseVersion, repoOf, sha256sums } from "../scripts/release.ts";
 import { RELEASE } from "../src/core/release.ts";
 import { installation, removable, type Stores, uninstall, uninstallPlan } from "../src/core/install.ts";
+import { CHECK_EVERY_MS, dailyUpdateCheck, doNotTrack, fetchLatest, isNewer, latestIn, releasesBase, upgrade, UpgradeError } from "../src/core/update.ts";
 import { VERSION } from "../src/version.ts";
 
 const ROOT = resolve(import.meta.dir, "..");
@@ -21,6 +22,28 @@ function tree(files: Record<string, string>): string {
     writeFileSync(join(dir, rel), text);
   }
   return dir;
+}
+
+/** A release's pack made by hand: a folder `slipbox-<version>-<target>/` holding `slipbox`, a script saying `says`. */
+function fakePack(dir: string, version: string, target: string, says = `slipbox ${version}`): { file: string; sha: string; asset: string } {
+  const name = `slipbox-${version}-${target}`;
+  mkdirSync(join(dir, name), { recursive: true });
+  writeFileSync(join(dir, name, "slipbox"), `#!/bin/sh\necho '${says}'\n`);
+  chmodSync(join(dir, name, "slipbox"), 0o755);
+  const file = join(dir, `${name}.tar.gz`);
+  expect(Bun.spawnSync(["tar", "-czf", file, "-C", dir, name]).exitCode).toBe(0);
+  rmSync(join(dir, name), { recursive: true });
+  return { file, sha: sha256sums([file]).split(" ")[0]!, asset: `${name}.tar.gz` };
+}
+
+/** A folder laid out as GitHub's releases are: `latest/download/SHA256SUMS`, `download/v<version>/<pack>`. */
+function fakeReleases(pack: { file: string; sha: string; asset: string }, version: string, sums = `${pack.sha}  ${pack.asset}\n`): string {
+  const base = mkdtempSync(join(sandbox, "releases-"));
+  mkdirSync(join(base, "latest", "download"), { recursive: true });
+  writeFileSync(join(base, "latest", "download", "SHA256SUMS"), sums);
+  mkdirSync(join(base, "download", `v${version}`), { recursive: true });
+  copyFileSync(pack.file, join(base, "download", `v${version}`, pack.asset));
+  return base;
 }
 
 const pkg = (name: string, licence: string, extra: Partial<Package> = {}): Package => ({ name, version: "1.0.0", licence, dir: sandbox, repository: "", author: "", ...extra });
@@ -192,7 +215,7 @@ describe("a release (14.2)", () => {
     const host = hostTarget();
     let out = "";
     let pack = "";
-    /** Where the installer fetches from: a folder laid out as GitHub's downloads are, `v<version>/<pack>`. */
+    /** Where the installer fetches from: a folder laid out as GitHub's releases are, `download/v<version>/<pack>`. */
     let releases = "";
     beforeAll(() => {
       if (!host) return;
@@ -200,8 +223,8 @@ describe("a release (14.2)", () => {
       pack = buildRelease({ targets: [host], repo: "example/slipbox", tag: `v${VERSION}`, out })[0]!;
       finishRelease({ repo: "example/slipbox", out });
       releases = mkdtempSync(join(sandbox, "releases-"));
-      mkdirSync(join(releases, `v${VERSION}`));
-      symlinkSync(pack, join(releases, `v${VERSION}`, assetName(VERSION, host)));
+      mkdirSync(join(releases, "download", `v${VERSION}`), { recursive: true });
+      symlinkSync(pack, join(releases, "download", `v${VERSION}`, assetName(VERSION, host)));
     }, 240_000);
 
     /** The installer run in a home of its own: an environment made from nothing, so it can't reach the real one. */
@@ -301,6 +324,47 @@ describe("a release (14.2)", () => {
       expect(existsSync(join(home, ".config"))).toBe(true);
     });
 
+    test.if(host !== null)("upgraded (14.4): the installed binary moves itself to the latest release — checked, the old one kept", () => {
+      const home = mkdtempSync(join(sandbox, "home-"));
+      expect(install(home).code).toBe(0);
+      const link = join(home, ".local", "bin", "slipbox");
+      const data = join(home, ".local", "share", "slipbox");
+      const env = (base: string) => ({ HOME: home, PATH: "/usr/bin:/bin", TMPDIR: home, XDG_CONFIG_HOME: join(home, ".config"), XDG_STATE_HOME: join(home, ".local", "state"), XDG_DATA_HOME: join(home, ".local", "share"), XDG_CACHE_HOME: join(home, ".cache"), SLIPBOX_RELEASES_URL: `file://${base}` });
+      const run = (base: string, ...args: string[]) => {
+        const r = Bun.spawnSync([link, "upgrade", ...args, "--json"], { env: env(base), cwd: home, timeout: 60_000 });
+        return { code: r.exitCode, json: JSON.parse(r.stdout.toString()) };
+      };
+      // The latest is this one: nothing to do.
+      const same = fakeReleases(fakePack(mkdtempSync(join(sandbox, "p-")), VERSION, host!), VERSION);
+      expect(run(same).json.data).toEqual({ status: "current", from: VERSION, latest: VERSION, removed: [] });
+      const next = fakeReleases(fakePack(mkdtempSync(join(sandbox, "p-")), "9.9.9", host!), "9.9.9");
+      // --check: said, nothing changed.
+      expect(run(next, "--check").json.data).toEqual({ status: "available", from: VERSION, latest: "9.9.9", removed: [] });
+      expect(readlinkSync(join(data, "current"))).toBe(`versions/${VERSION}`);
+      // A pack whose sum isn't its SHA256SUMS line: refused, nothing changed.
+      const p = fakePack(mkdtempSync(join(sandbox, "p-")), "9.9.9", host!);
+      const lying = fakeReleases(p, "9.9.9", `${"0".repeat(64)}  ${p.asset}\n`);
+      const refused = run(lying);
+      expect(refused.code).toBe(1);
+      expect(refused.json.error.message).toContain("the download's SHA-256 is");
+      expect(readlinkSync(join(data, "current"))).toBe(`versions/${VERSION}`);
+      expect(Bun.spawnSync(["ls", "-A", join(data, "versions")]).stdout.toString()).toBe(`${VERSION}\n`);
+      // Upgraded: current moved, the link runs the new one, the old one kept.
+      const done = run(next);
+      expect(done.code).toBe(0);
+      expect(done.json.data).toEqual({ status: "upgraded", from: VERSION, latest: "9.9.9", removed: [] });
+      expect(readlinkSync(join(data, "current"))).toBe("versions/9.9.9");
+      expect(Bun.spawnSync([link, "--version"]).stdout.toString()).toBe("slipbox 9.9.9\n");
+      expect(existsSync(join(data, "versions", VERSION, "slipbox"))).toBe(true);
+      // A copy not the installer's — the binary unpacked anywhere — isn't upgraded.
+      const loose = mkdtempSync(join(sandbox, "loose-"));
+      copyFileSync(join(data, "versions", VERSION, "slipbox"), join(loose, "slipbox"));
+      chmodSync(join(loose, "slipbox"), 0o755);
+      const r = Bun.spawnSync([join(loose, "slipbox"), "upgrade", "--json"], { env: env(next), cwd: home });
+      expect(r.exitCode).toBe(1);
+      expect(JSON.parse(r.stdout.toString()).error.message).toBe(`this slipbox (${join(loose, "slipbox")}) wasn't installed by its installer: upgrade it the way it was installed`);
+    });
+
     test.if(host !== null)("XDG_DATA_HOME and SLIPBOX_BIN_DIR followed when absolute; a relative one, as XDG says, not", () => {
       const home = mkdtempSync(join(sandbox, "home-"));
       const r = install(home, { XDG_DATA_HOME: join(home, "d"), SLIPBOX_BIN_DIR: join(home, "b") });
@@ -314,8 +378,8 @@ describe("a release (14.2)", () => {
     test.if(host !== null)("a pack that isn't the release's — its SHA-256 another — is refused; nothing installed", () => {
       const home = mkdtempSync(join(sandbox, "home-"));
       const bad = mkdtempSync(join(sandbox, "releases-"));
-      mkdirSync(join(bad, `v${VERSION}`));
-      const tampered = join(bad, `v${VERSION}`, assetName(VERSION, host!));
+      mkdirSync(join(bad, "download", `v${VERSION}`), { recursive: true });
+      const tampered = join(bad, "download", `v${VERSION}`, assetName(VERSION, host!));
       copyFileSync(pack, tampered);
       writeFileSync(tampered, Buffer.concat([readFileSync(tampered), Buffer.from("x")]));
       const r = install(home, {}, { from: bad });
@@ -352,8 +416,8 @@ describe("a release (14.2)", () => {
           writeFileSync(join(dir, name, f), body);
           chmodSync(join(dir, name, f), 0o755);
         }
-        mkdirSync(join(dir, "r", `v${VERSION}`), { recursive: true });
-        const tar = join(dir, "r", `v${VERSION}`, assetName(VERSION, host!));
+        mkdirSync(join(dir, "r", "download", `v${VERSION}`), { recursive: true });
+        const tar = join(dir, "r", "download", `v${VERSION}`, assetName(VERSION, host!));
         expect(Bun.spawnSync(["tar", "-czf", tar, "-C", dir, name]).exitCode).toBe(0);
         const sum = sha256sums([tar]).split(" ")[0]!;
         const script = join(dir, "install.sh");
@@ -473,5 +537,116 @@ describe("uninstall's plan (14.8)", () => {
     writeFileSync(victim, "here\n");
     expect(uninstall({ remove: [{ path: victim, what: "x" }], keep: [], notes: [] }, dirs)).toEqual([`${victim}: not slipbox's to remove`]);
     expect(existsSync(victim)).toBe(true);
+  });
+});
+
+describe("updates (14.4)", () => {
+  const sum = "a".repeat(64);
+  const release = { repo: "o/r", target: "linux-x64" };
+
+  test("the latest release, from its SHA256SUMS: its version in the pack's name, the sum beside it", () => {
+    const sums = `${"b".repeat(64)}  slipbox-1.4.0-darwin-arm64.tar.gz\n${sum}  slipbox-1.4.0-linux-x64.tar.gz\n${"c".repeat(64)} *slipbox-1.4.0-linux-arm64.tar.gz\n`;
+    expect(latestIn(sums, "linux-x64")).toEqual({ version: "1.4.0", asset: "slipbox-1.4.0-linux-x64.tar.gz", sha256: sum });
+    expect(latestIn(sums, "linux-arm64")?.sha256).toBe("c".repeat(64));
+    expect(latestIn(sums, "linux-x64-musl")).toBeNull();
+    expect(latestIn("<html>not found</html>", "linux-x64")).toBeNull();
+    expect(latestIn(`${sum}  slipbox-1.4-linux-x64.tar.gz\n`, "linux-x64")).toBeNull();
+    expect(latestIn(`${sum}  slipbox-2.0.0-rc.1-linux-x64.tar.gz\n`, "linux-x64")?.version).toBe("2.0.0-rc.1");
+  });
+
+  test("newer by semver; DO_NOT_TRACK set unless 0 or false; GitHub's releases unless SLIPBOX_RELEASES_URL says", () => {
+    expect([isNewer("0.10.0", "0.9.0"), isNewer("0.2.0", "0.2.0"), isNewer("0.1.9", "0.2.0"), isNewer("1.0.0", "1.0.0-rc.1")]).toEqual([true, false, false, true]);
+    expect([doNotTrack({}), doNotTrack({ DO_NOT_TRACK: "1" }), doNotTrack({ DO_NOT_TRACK: "true" }), doNotTrack({ DO_NOT_TRACK: "0" }), doNotTrack({ DO_NOT_TRACK: "FALSE" }), doNotTrack({ DO_NOT_TRACK: "" })]).toEqual([false, true, true, false, false, false]);
+    expect(releasesBase("o/r", {})).toBe("https://github.com/o/r/releases");
+    expect(releasesBase("o/r", { SLIPBOX_RELEASES_URL: "file:///m/" })).toBe("file:///m");
+  });
+
+  test("fetchLatest asks for latest/download/SHA256SUMS once; offline, an error page, nothing for it: null", async () => {
+    const asked: string[] = [];
+    const answer = (status: number, body: string) => async (url: string) => (asked.push(url), new Response(body, { status }));
+    expect(await fetchLatest("https://x/o/r/releases", "linux-x64", answer(200, `${sum}  slipbox-3.0.0-linux-x64.tar.gz\n`))).toEqual({ version: "3.0.0", asset: "slipbox-3.0.0-linux-x64.tar.gz", sha256: sum });
+    expect(asked).toEqual(["https://x/o/r/releases/latest/download/SHA256SUMS"]);
+    expect(await fetchLatest("b", "linux-x64", answer(404, `${sum}  slipbox-3.0.0-linux-x64.tar.gz\n`))).toBeNull();
+    expect(await fetchLatest("b", "linux-x64", async () => Promise.reject(new Error("offline")))).toBeNull();
+  });
+
+  test("the daily check: a release build, on, no DO_NOT_TRACK, a day since the last — then said when there's a newer one", async () => {
+    const stateFile = join(mkdtempSync(join(sandbox, "upd-")), "state", "update.json");
+    let asked = 0;
+    const fetcher = async () => (asked++, new Response(`${sum}  slipbox-0.3.0-linux-x64.tar.gz\n`));
+    const base = { release, version: "0.2.0", enabled: true, env: {}, stateFile, fetcher };
+    // Never asked: from source, turned off, DO_NOT_TRACK.
+    expect(await dailyUpdateCheck({ ...base, release: null })).toBeNull();
+    expect(await dailyUpdateCheck({ ...base, enabled: false })).toBeNull();
+    expect(await dailyUpdateCheck({ ...base, env: { DO_NOT_TRACK: "1" } })).toBeNull();
+    expect(asked).toBe(0);
+    expect(existsSync(stateFile)).toBe(false);
+    const now = 1_800_000_000_000;
+    expect(await dailyUpdateCheck({ ...base, now })).toBe("slipbox 0.3.0 is out (this is 0.2.0): slipbox upgrade installs it");
+    expect(JSON.parse(readFileSync(stateFile, "utf8"))).toEqual({ checked: now, latest: "0.3.0" });
+    // Within the day: not asked again.
+    expect(await dailyUpdateCheck({ ...base, now: now + CHECK_EVERY_MS - 1 })).toBeNull();
+    expect(asked).toBe(1);
+    // A day on: asked; the latest is this one, so nothing said.
+    expect(await dailyUpdateCheck({ ...base, version: "0.3.0", now: now + CHECK_EVERY_MS })).toBeNull();
+    expect(asked).toBe(2);
+    // A clock gone back: asked, not waited out.
+    expect(await dailyUpdateCheck({ ...base, now: now - 1000 })).not.toBeNull();
+    // Offline: the time kept all the same — the next try is a day off.
+    const failing = async () => (asked++, Promise.reject(new Error("offline")));
+    const later = now + 10 * CHECK_EVERY_MS;
+    expect(await dailyUpdateCheck({ ...base, fetcher: failing, now: later })).toBeNull();
+    expect(JSON.parse(readFileSync(stateFile, "utf8")).checked).toBe(later);
+    const before = asked;
+    expect(await dailyUpdateCheck({ ...base, now: later + 1 })).toBeNull();
+    expect(asked).toBe(before);
+  });
+
+  test("upgrade, in the installer's layout: the new version added, current moved, the one replaced kept, older removed", async () => {
+    const data = join(mkdtempSync(join(sandbox, "upg-")), "slipbox");
+    for (const v of ["0.8.0", "0.9.0", "1.0.0"]) {
+      mkdirSync(join(data, "versions", v), { recursive: true });
+      writeFileSync(join(data, "versions", v, "slipbox"), "");
+    }
+    symlinkSync("versions/1.0.0", join(data, "current"));
+    const target = "linux-x64";
+    const pack = fakePack(mkdtempSync(join(sandbox, "p-")), "2.0.0", target);
+    const asked: string[] = [];
+    const fetcher = async (url: string) => {
+      asked.push(url);
+      return url.endsWith("SHA256SUMS") ? new Response(`${pack.sha}  ${pack.asset}\n`) : new Response(readFileSync(pack.file));
+    };
+    const opts = { release: { repo: "o/r", target }, version: "1.0.0", data, execPath: join(data, "versions", "1.0.0", "slipbox"), env: {}, fetcher };
+    expect(await upgrade(opts)).toEqual({ status: "upgraded", from: "1.0.0", latest: "2.0.0", removed: ["0.8.0", "0.9.0"] });
+    expect(asked).toEqual(["https://github.com/o/r/releases/latest/download/SHA256SUMS", `https://github.com/o/r/releases/download/v2.0.0/${pack.asset}`]);
+    expect(readlinkSync(join(data, "current"))).toBe("versions/2.0.0");
+    expect(Bun.spawnSync(["ls", "-A", join(data, "versions")]).stdout.toString()).toBe("1.0.0\n2.0.0\n");
+    expect(Bun.spawnSync(["ls", "-A", data]).stdout.toString()).toBe("current\nversions\n");
+    expect(installation(data)).toMatchObject({ versions: ["1.0.0", "2.0.0"], current: "2.0.0" });
+  });
+
+  test("upgrade refuses, changing nothing: a binary that says another version, one that doesn't run, a binary not in the layout", async () => {
+    const data = join(mkdtempSync(join(sandbox, "upg-")), "slipbox");
+    mkdirSync(join(data, "versions", "1.0.0"), { recursive: true });
+    writeFileSync(join(data, "versions", "1.0.0", "slipbox"), "");
+    symlinkSync("versions/1.0.0", join(data, "current"));
+    const target = "linux-x64";
+    const attempt = async (says: string, execPath = join(data, "versions", "1.0.0", "slipbox")) => {
+      const pack = fakePack(mkdtempSync(join(sandbox, "p-")), "2.0.0", target, says);
+      const fetcher = async (url: string) => (url.endsWith("SHA256SUMS") ? new Response(`${pack.sha}  ${pack.asset}\n`) : new Response(readFileSync(pack.file)));
+      try {
+        await upgrade({ release: { repo: "o/r", target }, version: "1.0.0", data, execPath, env: {}, fetcher });
+        return "upgraded";
+      } catch (err) {
+        expect(err).toBeInstanceOf(UpgradeError);
+        return (err as Error).message;
+      }
+    };
+    expect(await attempt("slipbox 1.9.9")).toBe('the new binary says "slipbox 1.9.9", not "slipbox 2.0.0": nothing changed');
+    expect(readlinkSync(join(data, "current"))).toBe("versions/1.0.0");
+    expect(Bun.spawnSync(["ls", "-A", join(data, "versions")]).stdout.toString()).toBe("1.0.0\n");
+    const elsewhere = join(mkdtempSync(join(sandbox, "else-")), "slipbox");
+    writeFileSync(elsewhere, "");
+    expect(await attempt("slipbox 2.0.0", elsewhere)).toBe(`this slipbox (${elsewhere}) wasn't installed by its installer: upgrade it the way it was installed`);
   });
 });

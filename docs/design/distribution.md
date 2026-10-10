@@ -100,7 +100,29 @@ nothing. In order:
 5. **The PATH**: when the link's folder isn't on it, how to add it is said.
 
 Nothing runs as root and nothing outside those two places is touched. `SLIPBOX_RELEASES_URL` fetches the packs from
-elsewhere — a mirror, or the tests' folder through `file://` — and their sums are still the release's.
+elsewhere laid out as GitHub's releases are (`<base>/download/v<version>/<pack>`) — a mirror, or the tests' folder
+through `file://` — and their sums are still the release's.
+
+## Updates
+
+`core/update.ts` (`14.4`). The latest release is found from its `SHA256SUMS`, at
+`<releases>/latest/download/SHA256SUMS` — one small file: its packs' names carry the version, and its lines the sum
+each download is checked against. A plain GET of a public file; nothing identifying is sent. `<releases>` is
+`https://github.com/<repo>/releases`, or `SLIPBOX_RELEASES_URL`: another place laid out the same way (a mirror, the
+tests' folder through `file://`), the installer's too.
+
+**The daily check** is the TUI's, never the CLI's — agents call the CLI. It asks only when this is a release build,
+`[update] check` is on in your own config (a folder's config can't turn it on: a network request is yours to allow),
+`DO_NOT_TRACK` isn't set (anything but `0` or `false`), and a day has passed since the last time
+(`$XDG_STATE_HOME/slipbox/update.json`, kept before asking, so a failure waits a day too). A newer release is said in
+the message line: `slipbox 0.3.0 is out (this is 0.2.0): slipbox upgrade installs it`.
+
+**`slipbox upgrade`** moves the installer's install to the latest release (`--check`: only says whether there is
+one). From source, or a binary the installer didn't put in `versions/`, it says so and does nothing. Otherwise, as the
+installer would: the pack downloaded, its SHA-256 checked against its `SHA256SUMS` line, unpacked beside the others,
+its binary run — it must say its version — and only then `current` moved, in one step (a link made beside it and
+renamed over it). The version replaced is kept, to go back to (`ln -sfn versions/<old> <data>/current`); any older
+one is removed. Any check failing changes nothing.
 
 ## Uninstalling
 

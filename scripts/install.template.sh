@@ -9,7 +9,8 @@
 # nothing outside those two places is touched. `slipbox upgrade` installs a later one the same way; `slipbox
 # uninstall` lists every path before it removes anything.
 #
-# SLIPBOX_RELEASES_URL fetches the packs from elsewhere (a mirror, a test's folder); their sums are still these.
+# SLIPBOX_RELEASES_URL fetches the packs from elsewhere laid out as GitHub's releases are (a mirror, a test's folder):
+# <base>/download/v<version>/<pack>. Their sums are still these.
 
 set -eu
 
@@ -101,7 +102,7 @@ main() {
   fi
 
   name="slipbox-$VERSION-$plat"
-  base="${SLIPBOX_RELEASES_URL:-https://github.com/$REPO/releases/download}"
+  base="${SLIPBOX_RELEASES_URL:-https://github.com/$REPO/releases}/download"
   tmp=$(mktemp -d "${TMPDIR:-/tmp}/slipbox-install.XXXXXX")
   trap cleanup EXIT
   trap 'cleanup; exit 130' INT

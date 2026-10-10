@@ -110,6 +110,7 @@ These churn freely before 1.0:
 | `trash [restore <item>]` | the items, newest first; `restore`: the item put back (exit 5 over something there) |
 | `themes` | `[{name, source, path?, current}]` |
 | `commands` | `[{id, title, cli, desc}]` — the registry with CLI equivalents |
+| `upgrade` | `{status, from, latest, removed[]}`: `status` upgraded, current or available (`--check`); 1: refused |
 | `uninstall` | `{purge, removed, remove[{path, what}], keep[…], notes[], failed[]}`; removes only with `--yes` |
 | `find <query> [note]` | `{query, regex, whole, count, matches[{path, line, column, match, text}]}` |
 | `search <words…>` | `{query, engine, relaxed, hits[{path, line, column, heading, section, score, snippet, …}]}` |
@@ -690,6 +691,10 @@ exits 2, so an editor still starting it shows why in its log.
 `scripts/install-local.sh` writes a `slipbox` launcher into `~/.local/bin` that runs this
 checkout with bun. `--skill` also links the skill into `~/.claude/skills/slipbox`. Releases — a binary per platform,
 installed by `install.sh` — are plan `14.x` (`docs/design/distribution.md`).
+
+`slipbox upgrade` (`14.4`) moves the installer's install to the latest release, checked before it's used; `--check`
+only says whether there's one. Run from source, it says there are no releases to follow (exit 1). The CLI never checks
+for updates by itself: the TUI does, once a day.
 
 `slipbox uninstall` (`14.8`) lists what the installer put here — the link, `versions/`, `current`, `bin-link` — and
 slipbox's folders it keeps; it removes nothing without `--yes`, so an agent asking only learns. `--purge` takes the

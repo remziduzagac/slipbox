@@ -279,6 +279,7 @@ where it's told, beside its note by default.
 | the trash (`18.4`) | `$XDG_STATE_HOME/slipbox/<key>/trash/` (`trash.json`, and an item per folder) |
 | the background index (`20.9`) | `$XDG_STATE_HOME/slipbox/autoindex.json` (its place), `activity` (CLI last used) |
 | saved plans (`20.18`, `--plan`) | `$XDG_STATE_HOME/slipbox/plans/<id>.json` (for `slipbox apply`; gone once applied) |
+| the update check (`14.4`) | `$XDG_STATE_HOME/slipbox/update.json` (when it last asked, what it found) |
 | language servers installed (`19.5`) | `$XDG_DATA_HOME/slipbox/tools/` |
 | your own words, spelling's (`25.6`) | `$XDG_DATA_HOME/slipbox/spell/words.txt` |
 | the cache's tag (`14.9`) | `$XDG_CACHE_HOME/slipbox/CACHEDIR.TAG`: backup tools skip the cache |

@@ -1100,6 +1100,12 @@ describe("the vault and the tool", () => {
     expect(existsSync(join(sandbox, "config", "slipbox", "config.toml"))).toBe(true);
   });
 
+  test("upgrade from source (14.4): no releases to follow, said; nothing fetched", () => {
+    const r = slipbox(["upgrade", "--json"]);
+    expect(r.code).toBe(1);
+    expect(r.json.error?.message).toBe("this slipbox runs from source (or was built by hand): it has no releases to follow — update its checkout");
+  });
+
   test("every CLI command is run by this file", () => {
     const missing = [...CLI_COMMANDS].filter((c) => !ran.has(c));
     expect(missing).toEqual([]);

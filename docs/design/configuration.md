@@ -155,6 +155,10 @@ enabled = true                 # their problems, hover, jumps, renames, completi
 auto_install = true            # servers on npm installed into slipbox's own folder when first needed (19.5),
                                # and markdownlint-cli2 for [lint] (19.21)
 
+[update]                       # a release's update check (14.4): your own config's say only, never a folder's
+check = true                   # the TUI asks once a day whether there's a newer release, and says; DO_NOT_TRACK
+                               # set turns it off too. The CLI never asks; `slipbox upgrade` installs one
+
 [language-server.pyright]      # a language server (19.2), in Helix's languages.toml shape: changed by name
 config = { python = { analysis = { typeCheckingMode = "strict" } } }   # its settings, merged all the way down
 # command = "/opt/bin/pyright-langserver"   # these three only in your own config, never a folder's:
@@ -364,3 +368,6 @@ only while the config value it replaced is unchanged, so editing the config alwa
 | `SLIPBOX_DEBUG` | print stack traces for unexpected CLI errors |
 | `SLIPBOX_CLIPBOARD` | `file`: copies go only to `clipboard.txt` in the state dir, never the clipboard (tests) |
 | `SLIPBOX_TRACE` | TUI: append each command it runs to this file, one id a line (the terminal tests' coverage) |
+| `DO_NOT_TRACK` | set (not `0` or `false`): no update check (`14.4`) |
+| `SLIPBOX_RELEASES_URL` | releases from elsewhere, laid out as GitHub's: install, upgrade, the check (`14.x`) |
+| `SLIPBOX_BIN_DIR` | `install.sh`: where its `slipbox` link goes, not `~/.local/bin` (`14.7`) |

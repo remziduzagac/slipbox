@@ -39,7 +39,7 @@ import { addFootnote, applyEdits, deleteFootnote, editFootnote, type Footnote, f
 import { parseNoteFile } from "../core/readers.ts";
 import { dataOutline, parseData } from "../core/data.ts";
 import { classify, extensionOf, isKnownExtension, noteFormat } from "../core/filetypes.ts";
-import { cacheDir, stateDir, stateHome, userConfigFile } from "../core/paths.ts";
+import { cacheDir, dataHome, stateDir, stateHome, userConfigFile } from "../core/paths.ts";
 import { readStale, type StaleEntry } from "../core/stale.ts";
 import { applyColorOverrides, listThemes, loadTheme } from "../core/theme/index.ts";
 import { sanitize, UNSAFE } from "../core/sanitize.ts";
@@ -73,6 +73,7 @@ import { type Args, flag, has, parseArgs, UsageError, VALUED } from "./args.ts";
 import { VERSION } from "../version.ts";
 import { RELEASE } from "../core/release.ts";
 import { uninstall, uninstallPlan } from "../core/install.ts";
+import { upgrade as upgradeTo, UpgradeError } from "../core/update.ts";
 
 /**
  * JSON with every character `sanitize` would change escaped as \uXXXX. JSON.stringify leaves C1
@@ -245,6 +246,7 @@ Usage:
   slipbox doctor [file]             language servers and linters: each language's, found where, installed when needed, or missing
   slipbox diagnostics <file>        a file's problems: its servers', its linters', its syntax; a note's links and lint  [--severity S] [--timeout SECS]
   slipbox themes                    list themes
+  slipbox upgrade                   the latest release installed, checked before it's used  [--check: only say whether there's one]
   slipbox uninstall                 what the installer put here, listed; removed with --yes  [--purge: slipbox's folders too] [--yes]
   slipbox commands                  list named commands and their CLI equivalents
 
@@ -270,7 +272,7 @@ export const CLI_COMMANDS = new Set([
   "render", "resolve", "link", "links", "backlinks", "name", "folders", "ls", "outline", "find", "replace", "task", "read", "stat", "write", "mkdir", "send", "history",
   "mv", "rename-heading", "relink", "convert-links", "undo", "context", "search", "index", "changed", "diff", "merge-review", "worktrees", "cp", "rm", "trash", "deinit", "tags", "footnotes", "problems",
   "capture", "scratch", "init", "info", "apply", "doctor", "diagnostics", "themes", "commands", "help", "export", "spell",
-  "uninstall",
+  "upgrade", "uninstall",
 ]);
 
 /** The command word in raw arguments that failed to parse: skips flags and their values. */
@@ -395,7 +397,7 @@ function within<T>(p: Promise<T>, ms: number, fallback: T): Promise<T> {
 const MAX_ARGS: Record<string, number> = {
   render: 1, resolve: 1, link: 1, links: 1, name: 1, folders: 3, backlinks: 1, ls: 0, outline: 1, find: 2, replace: 3, task: 2, read: 1, stat: 1, send: 1, history: 0,
   scratch: 1, init: 1, info: 0, apply: 1, index: 1, themes: 0, commands: 0, mkdir: 1, mv: 2, "rename-heading": 3, doctor: 1, diagnostics: 1, relink: 1, "convert-links": 1, cp: 2, rm: 1, trash: 2, deinit: 1, tags: 1, footnotes: 4, problems: 0, "merge-review": 1,
-  changed: 0, diff: 1, worktrees: 0, undo: 0, spell: 1, uninstall: 0,
+  changed: 0, diff: 1, worktrees: 0, undo: 0, spell: 1, upgrade: 0, uninstall: 0,
 };
 
 /**
@@ -457,6 +459,7 @@ export const FLAGS: Record<string, string[]> = {
   changed: ["base"],
   "merge-review": ["into"],
   diff: ["base"],
+  upgrade: ["check"],
   uninstall: ["purge", "yes"],
 };
 
@@ -1643,6 +1646,25 @@ const HANDLERS: Record<string, Handler> = {
       "",
     ].join("\n");
     return { data, human };
+  },
+
+  // A release moved to the latest one (14.4), as the installer would; with --check, only told whether there is one.
+  // The installer's install only: one run from source, or put there another way, is said so.
+  async upgrade(s) {
+    if (!RELEASE) throw new CliError("this slipbox runs from source (or was built by hand): it has no releases to follow — update its checkout", EXIT.error);
+    try {
+      const r = await upgradeTo({ release: RELEASE, version: VERSION, data: dataHome(), execPath: process.execPath, env: s.io.env, check: has(s.args, "check") });
+      const human =
+        r.status === "current"
+          ? `slipbox ${r.from} is the latest\n`
+          : r.status === "available"
+            ? `slipbox ${r.latest} is out (this is ${r.from}): slipbox upgrade installs it\n`
+            : `slipbox ${r.from} → ${r.latest}; ${r.from} is kept, to go back to${r.removed.length ? ` (${r.removed.join(", ")} removed)` : ""}\n`;
+      return { data: r, human };
+    } catch (err) {
+      if (err instanceof UpgradeError) throw new CliError(err.message, EXIT.error);
+      throw err;
+    }
   },
 
   // What the installer put here (14.8) — with --purge, slipbox's four folders too — listed, every path; removed only

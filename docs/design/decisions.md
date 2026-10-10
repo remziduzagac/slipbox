@@ -25,6 +25,7 @@ Four kinds of data, four places. Nothing derived ever lives in the vault. Revise
 | state, the machine's | `$XDG_STATE_HOME/slipbox/folders.json` | named folders, their copies, defaults | no: names |
 | state, the machine's | `$XDG_STATE_HOME/slipbox/autoindex.json`, `activity` | the background index (`20.9`) | yes |
 | state, the machine's | `$XDG_STATE_HOME/slipbox/plans/` | plans saved for `apply` (`20.18`) | yes: planned again |
+| state, the machine's | `$XDG_STATE_HOME/slipbox/update.json` | the update check's last time (`14.4`) | yes |
 | data | `$XDG_DATA_HOME/slipbox/tools/` | language servers installed for you (`19.x`) | yes, reinstalled |
 | data | `$XDG_DATA_HOME/slipbox/spell/words.txt` | your own words, spelling's (`25.6`) | no: yours |
 

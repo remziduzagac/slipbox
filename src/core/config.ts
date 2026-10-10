@@ -182,6 +182,11 @@ export interface Config {
      *  markdownlint-cli2 for the lint surface (19.21). */
     auto_install: boolean;
   };
+  /** Updates (14.4): a release build asks, once a day in the TUI, whether there's a newer one. Read from your own
+   *  config only — a folder's can't turn it on — and off with DO_NOT_TRACK set. */
+  update: {
+    check: boolean;
+  };
   /** The context bundle (9.7): a note with what it links to and what links to it, for an agent. */
   context: {
     /** Links followed out from the note: 1, what it links to; 0, none. */
@@ -308,6 +313,7 @@ export const DEFAULT_CONFIG: Config = {
   language: [],
   linter: {},
   lsp: { enabled: true, auto_install: true },
+  update: { check: true },
   context: { depth: 1, backlinks: true, limit: 25 },
   editor: { command: "", remote: ["nvim"], autosave_ms: 30000, edit_in: "source", lens_min_rows: 6, lens_max: 0.5, auto_pairs: false },
   spell: { enabled: false, languages: ["en"], dictionaries: {} },

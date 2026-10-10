@@ -88,6 +88,9 @@ severity = "info"
 enabled = true
 auto_install = false            # the laptops have the servers from Homebrew
 
+[update]
+check = false                   # the laptops are updated from the fleet's own mirror, not by each one asking
+
 [language-server.pyright]
 command = "/opt/homebrew/bin/pyright-langserver"   # the program is mine to name, never a folder's
 args = ["--stdio"]

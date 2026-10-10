@@ -37,7 +37,7 @@ export interface Installation {
 /** What the installer has put in a data folder. */
 export function installation(data: string): Installation {
   const versionsDir = join(data, "versions");
-  const versions = existsSync(versionsDir) ? readdirSync(versionsDir).filter((v) => !v.endsWith(".new")).sort() : [];
+  const versions = existsSync(versionsDir) ? readdirSync(versionsDir).filter((v) => !v.endsWith(".new") && !v.startsWith(".")).sort() : [];
   let current: string | null = null;
   try {
     current = /^versions\/([^/]+)$/.exec(readlinkSync(join(data, "current")))?.[1] ?? null;
