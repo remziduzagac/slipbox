@@ -892,7 +892,7 @@ rather than an unlink, nvim-tree's keys where they fit. The design is `docs/desi
 
 | ID | Item |
 | --- | --- |
-| 22.1 | A note's history: its commits (`git log --follow`), an older version opened to read, the diff to it |
+| 22.1 | **Prototype.** A note's history: its commits (`git log --follow`), an older version read, the diff to it |
 | 22.2 | Frontmatter checked against a folder's rules (required keys, their types): findings in Problems |
 | 22.3 | Document types by their conventions (ADRs, plans, skills): listed and moved between by type |
 
@@ -991,7 +991,7 @@ trusted. It's the TUI's alone, no CLI equivalents: an agent has `git` itself.*
 | 26.1 | **Prototype.** Changed lines in the gutter against what's staged, unsaved text too; `]c` `[c`; preview, undo |
 | 26.2 | **Prototype.** Source control by the explorer: staged, changed, untracked, conflicts; stage, unstage, discard |
 | 26.3 | **Prototype.** Commit: its message in a floating editor; amend. Not trusted: its hooks don't run; it says so |
-| 26.4 | Blame: who changed the cursor's line, when, the commit's message; a file's history with `22.1` |
+| 26.4 | **Prototype.** Blame: who changed the cursor's line, when, the commit's message; a file's history with `22.1` |
 | 26.5 | Branches: switched to or made from a picker, unsaved notes saved or kept first |
 | 26.6 | Later, opt-in: stash; fetch, pull, push — asked for, never automatic; a conflict view: ours, theirs, both |
 

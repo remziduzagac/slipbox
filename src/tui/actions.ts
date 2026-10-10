@@ -45,6 +45,7 @@ import { spellAdd, spellStep, spellSuggest } from "./spelling.ts";
 import { shellFilter, shellRun, shellStop } from "./shellrun.ts";
 import { endSnippet } from "./snippets.ts";
 import { gitPreview, gitReset, gitStep } from "./gitchanges.ts";
+import { blameHere, historyHere } from "./githistory.ts";
 import { parseBang } from "../core/shell.ts";
 import * as V from "./vim.ts";
 import { rank } from "./match.ts";
@@ -1353,6 +1354,8 @@ export function registerActions(app: App): void {
     // The working tree's changes against what's staged (26.1).
     "git.view": (a) => a.openLeftView("git", "cycle"),
     "git.commit": (a) => a.openCommitEditor(false),
+    "git.blame": (a) => blameHere(a),
+    "git.history": (a) => historyHere(a),
     "git.amend": (a) => a.openCommitEditor(true),
     "git.change_next": (a) => withView(a, (v) => gitStep(a, v, 1)),
     "git.change_prev": (a) => withView(a, (v) => gitStep(a, v, -1)),

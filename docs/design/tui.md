@@ -1412,6 +1412,13 @@ files — …"), and each link broken by one says where its file went, in Proble
 A jump to a line inside a rendered paragraph (a diff's line, a conflict, a finding, `:42` and `ctrl+g`) lands on that
 line's text, not the paragraph's first line or its row's end.
 
+**Blame and a file's history** (`26.4`, `22.1`): `space g b` shows who last changed the cursor's line — the commit, its
+author, its day and its whole message — in the floating window. It blames the last commit, never the working tree
+(whose blame could run a repository's filter): the cursor's line is found there through a line diff, and a line
+changed since is said to be not committed yet. `space g h` lists the file's commits, newest first, followed back
+through its renames (one from before shows the path it had); `enter` on one reads it as it was (read-only, a note
+rendered) or shows its diff to the text as it is now, `enter` on a line going there.
+
 **The working tree's changes** (`26.1`; `[git] signs`): a file's lines changed against what's staged — its text as it
 is now, unsaved typing included (`core/gitsigns.ts`) — are signed in the gutter's last column, the one before the text:
 `▎` added (`git_new`), `▎` changed (`git_modified`), `▁` lines deleted below the line (`▔` above the first; `diff_del`).

@@ -141,6 +141,8 @@ export const COMMAND_SPECS: CommandSpec[] = [
   { id: "find.replace_vault", title: "Replace in every note", cli: "slipbox replace --all <old> <new> [--files]", desc: "Asks what to find and what with, then previews each line it changes in every note and shown file: enter does it, space v shift+u undoes it" },
   { id: "git.changes", title: "Changed on this branch", cli: "slipbox changed [--base <ref>]", desc: "What this branch changed against the base (main), committed or not; enter shows a file's diff" },
   { id: "git.view", title: "Source control: open, focus, close", cli: I, desc: "The changed files — conflicts, staged, changes, untracked — in the left panel: s stages, u unstages, d discards, l opens one up into its changes" },
+  { id: "git.blame", title: "Who changed this line", cli: I, desc: "The cursor's line's last commit — its author, date and message — in a floating window (blame of the last commit)" },
+  { id: "git.history", title: "This file's history", cli: I, desc: "Its commits, newest first, through renames: one read as it was, or its diff to the text now" },
   { id: "git.commit", title: "Commit", cli: I, desc: "What's staged committed: the message in a floating editor, ctrl+s commits; in a root not trusted, no hooks and not signed" },
   { id: "git.amend", title: "Amend the last commit", cli: I, desc: "The last commit's message in a floating editor: ctrl+s amends it with what's staged" },
   { id: "git.change_next", title: "Next change against what's staged", cli: I, desc: "Moves to the next line the gutter marks changed against git's index, around the end (]c)" },

@@ -1955,20 +1955,31 @@ export class App {
     try {
       now = open ? open.source : readText(join(this.loc.root, rel)).text;
     } catch {}
+    this.showLineDiff(before, now, rel, `${rel} against ${base}${back ? " — esc: the changes" : ""}`, `no differences from ${base}`, back);
+  }
+
+  /** A diff, `before` to `now`, a row a line, coloured; enter goes to the line in `rel`; esc: `back`. */
+  showLineDiff(before: string, now: string, rel: string, title: string, none = "no differences", back?: () => void): void {
     const rows = diffRows(before, now);
     const role: Record<string, Role> = { "@@": "diff_head", "+": "diff_add", "-": "diff_del" };
     this.openList({
-      title: `${rel} against ${base}${back ? " — esc: the changes" : ""}`,
+      title,
       filterable: false,
       items: rows.length
         ? rows.map((r) => ({ label: r.kind === "@@" ? `@@ ${r.text}` : `${r.kind} ${sanitize(r.text.replace(/\t/g, "  "))}`, role: role[r.kind], data: r }))
-        : [{ label: `no differences from ${base}`, data: null }],
+        : [{ label: none, data: null }],
       accept: (item) => {
         const r = item.data as { line: number } | null;
         if (r && existsSync(join(this.loc.root, rel))) this.openAt(rel, r.line);
       },
       ...(back ? { cancel: back } : {}),
     });
+  }
+
+  /** A file as it was (26.4, 22.1), read-only in the floating window: a note rendered, any other file as its text. */
+  showVersion(text: string, path: string, title: string): void {
+    const note = /\.(md|markdown)$/i.test(path);
+    this.openHover(note ? text : fence(text, fenceLanguage(path)), title);
   }
 
   /** `space g w` (5.14): the repository's checkouts by branch; enter goes into one, at this note. */
