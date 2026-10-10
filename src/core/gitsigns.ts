@@ -10,6 +10,8 @@ export interface GitChange {
   kind: "add" | "change" | "delete";
   from: number;
   to: number;
+  /** Where its staged lines were: their first's index (from 0). */
+  wasAt: number;
   /** The lines as staged, and as they are now. */
   was: string[];
   now: string[];
@@ -25,12 +27,13 @@ export function gitChanges(staged: string | null, text: string): GitChange[] {
   const now = lines(text);
   // The empty "line" after a final newline is no line of the file.
   const count = (ls: string[]) => (ls.length && ls[ls.length - 1] === "" ? ls.length - 1 : ls.length);
-  if (staged === null) return count(now) ? [{ kind: "add", from: 1, to: count(now), was: [], now: now.slice(0, count(now)) }] : [];
+  if (staged === null) return count(now) ? [{ kind: "add", from: 1, to: count(now), wasAt: 0, was: [], now: now.slice(0, count(now)) }] : [];
   const was = lines(staged);
   return diffLines(was.slice(0, count(was)), now.slice(0, count(now))).map((h) => ({
     kind: h.aLen === 0 ? "add" : h.bLen === 0 ? "delete" : "change",
     from: h.bStart + 1,
     to: h.bStart + h.bLen,
+    wasAt: h.aStart,
     was: was.slice(h.aStart, h.aStart + h.aLen),
     now: now.slice(h.bStart, h.bStart + h.bLen),
   }));

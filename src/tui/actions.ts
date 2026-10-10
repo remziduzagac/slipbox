@@ -48,7 +48,7 @@ import { gitPreview, gitReset, gitStep } from "./gitchanges.ts";
 import { parseBang } from "../core/shell.ts";
 import * as V from "./vim.ts";
 import { rank } from "./match.ts";
-import { EXPLORER_ACTION_INFO, FILTER_KEYS_HELP, FOOTNOTE_ACTION_INFO, HISTORY_ACTION_INFO, INFO_ACTION_INFO, OUTLINE_ACTION_INFO, prettyKey, PROBLEMS_ACTION_INFO, RESIZE_ACTIONS, spellKey } from "./keys.ts";
+import { EXPLORER_ACTION_INFO, FILTER_KEYS_HELP, FOOTNOTE_ACTION_INFO, GIT_ACTION_INFO, HISTORY_ACTION_INFO, INFO_ACTION_INFO, OUTLINE_ACTION_INFO, prettyKey, PROBLEMS_ACTION_INFO, RESIZE_ACTIONS, spellKey } from "./keys.ts";
 
 type Run = Command<App>["run"];
 
@@ -782,6 +782,8 @@ function openHelp(a: App): void {
     ...pane(a.explorerKeys, EXPLORER_ACTION_INFO),
     ...heading("Inside the history", false),
     ...pane(a.explorerKeys, HISTORY_ACTION_INFO),
+    ...heading("Inside source control", false),
+    ...pane(a.explorerKeys, GIT_ACTION_INFO),
     ...heading("Inside Problems", false),
     ...pane(a.problemsKeys, PROBLEMS_ACTION_INFO),
     ...heading("Filtering a panel (/)", false),
@@ -798,7 +800,7 @@ function openHelp(a: App): void {
     ...MOUSE_HELP.map(([label, keys, detail]) => ({ label, ...topKeys(keys, new Set(), detail), data: null })),
   ];
   // Start where the keys are about what you're doing: the focused pane's view's, or visual mode's.
-  const left = { explorer: "Inside the explorer", history: "Inside the history" } as const;
+  const left = { explorer: "Inside the explorer", history: "Inside the history", git: "Inside source control" } as const;
   const right = { outline: "Inside the outline", info: "Inside Info", footnotes: "Inside the footnotes" } as const;
   const section = a.region === "sidebar" ? left[a.leftView] : a.region === "outline" ? right[a.rightView] : a.region === "problems" ? "Inside Problems" : a.view?.visual ? "Selection & copy" : null;
   const at = section ? items.findIndex((i) => i.header && i.label === section) : -1; // the title row
@@ -1349,6 +1351,7 @@ export function registerActions(app: App): void {
     "git.changes": (a) => a.openChanges(),
     "git.diff": (a) => a.openGitDiff(),
     // The working tree's changes against what's staged (26.1).
+    "git.view": (a) => a.openLeftView("git", "cycle"),
     "git.change_next": (a) => withView(a, (v) => gitStep(a, v, 1)),
     "git.change_prev": (a) => withView(a, (v) => gitStep(a, v, -1)),
     "git.change_preview": (a) => withView(a, (v) => gitPreview(a, v)),

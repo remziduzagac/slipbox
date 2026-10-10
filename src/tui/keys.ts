@@ -254,6 +254,7 @@ export const DEFAULT_KEYS: Record<string, string> = {
   "leader s y": "scratch.copy",
   "leader s c": "context.copy",
   "leader g c": "git.changes",
+  "leader g s": "git.view",
   "leader g p": "git.change_preview",
   "leader g r": "git.change_undo",
   "leader g d": "git.diff",
@@ -548,6 +549,24 @@ export const HISTORY_ACTION_INFO: Record<string, { title: string; desc: string; 
   filter: { title: "Filter", desc: "Type to narrow the places by path; enter jumps, esc clears" },
   close: { title: "Close the history", desc: "Closes it; focus returns to the note" },
   leave: { title: "Back to the note", desc: "Focuses the note; the history stays open" },
+};
+
+/** The source control view takes the explorer's keymap (26.2): what its actions do there, for help. */
+export const GIT_ACTION_INFO: Record<string, { title: string; desc: string; actions?: string[] }> = {
+  down: { title: "Move down", desc: "Selects the next file or change (a section's heading is stepped over)" },
+  up: { title: "Move up", desc: "Selects the one before" },
+  open_tab: { title: "Open it", desc: "Opens the file at the change (a file's first)", actions: ["open_tab", "open"] },
+  expand: { title: "Its changes", desc: "Opens up a file into its changes: a staged one's against the last commit, a changed one's against what's staged" },
+  collapse: { title: "Fold", desc: "Folds a file's changes; from a change, back to its file" },
+  open_split: { title: "Stage", desc: "Stages the file, or the one change; a conflict's file, marked resolved" },
+  restore: { title: "Unstage", desc: "Unstages the file, or the one change" },
+  delete: { title: "Discard", desc: "Discards what isn't staged — the file's, or the one change's — after asking; an untracked file goes to the trash" },
+  all_files: { title: "Stage everything", desc: "Stages every change, untracked files too (git add -A)" },
+  undo_rename: { title: "Unstage everything", desc: "Unstages every change" },
+  menu: { title: "Its diff", desc: "Shows the file's diff, or the change's, in a floating window" },
+  filter: { title: "Filter", desc: "Type to narrow the files by path" },
+  close: { title: "Close source control", desc: "Closes it; focus returns to the note" },
+  leave: { title: "Back to the note", desc: "Focuses the note; the view stays open" },
 };
 
 /** The Problems panel takes the explorer's keymap too (1.7), `tab` switching its tabs: what its actions do there, for help. */

@@ -20,6 +20,7 @@ import type { CommentLink } from "../core/syntax.ts";
 import { cells, ordered } from "./cursor.ts";
 import { type Spot, spellSpots } from "./spelling.ts";
 import { snippetMark } from "./snippets.ts";
+import { gitRows } from "./gitview.ts";
 import { match } from "./match.ts";
 import { keyChar, prettyKey, spellKey } from "./keys.ts";
 import { dateText, placeOf, type SaveAsGeometry, type SaveAsOverlay, sizeText } from "./saveas.ts";
@@ -1529,11 +1530,11 @@ function drawSidebar(app: App, c: Canvas, pane: Rect, geo: Geometry): Rect {
   const page = pageBg(theme);
   const base = roleStyle(theme, "sidebar", page);
   c.fill(pane.x, pane.y, pane.w, pane.h, base.bg);
-  const history = app.leftView === "history";
-  const title = LEFT_VIEWS.find((v) => v.id === app.leftView)!.title;
+  const view = app.leftView;
+  const title = LEFT_VIEWS.find((v) => v.id === view)!.title;
   let rect = paneTitle(app, c, pane, title, app.region === "sidebar", base.bg);
   // The explorer's title: a new note and a new folder, at its right end (18.1).
-  if (!history && rect !== pane) {
+  if (view === "explorer" && rect !== pane) {
     const g = app.glyphs;
     const buttons: [string, string][] = [
       [g.newNote, "xnew:note"],
@@ -1549,7 +1550,49 @@ function drawSidebar(app: App, c: Canvas, pane: Rect, geo: Geometry): Rect {
   }
   const s = app.sidebar;
   rect = filterRow(app, c, rect, s, app.region === "sidebar", base.bg, geo);
-  return history ? drawHistoryList(app, c, rect, base.bg, geo) : drawTree(app, c, rect, base.bg, geo);
+  return view === "history" ? drawHistoryList(app, c, rect, base.bg, geo) : view === "git" ? drawGitList(app, c, rect, base.bg, geo) : drawTree(app, c, rect, base.bg, geo);
+}
+
+/** A file's state letter's colour in source control (26.2): as the explorer's marks have it. */
+const LETTER_ROLE: Record<string, Role> = { M: "git_modified", R: "git_modified", C: "git_modified", T: "git_modified", A: "git_new", "?": "git_new", D: "diff_del", U: "git_conflict" };
+
+/** The source control view (26.2): each section's heading, its files — a state letter, the name, the folder dim — and a
+ *  file's changes under it when opened up. */
+function drawGitList(app: App, c: Canvas, list: Rect, bg: Color | null, geo: Geometry): Rect {
+  const theme = app.theme;
+  const rows = gitRows(app);
+  const s = app.sidebar;
+  const sv = sideView(list, rows, () => "", s);
+  const rect = sv.list;
+  followSelection(s, rows.length, rect.h);
+  if (!rows.length) {
+    const why = !app.checkout ? "not a git checkout" : app.gitEntries === null ? "asking git…" : s.filter ? "no matches" : "nothing changed";
+    drawText(c, rect.x + 1, rect.y, why, roleStyle(theme, "dim", bg), rect.w - 1);
+  }
+  for (let i = 0; i < rect.h; i++) {
+    const row = rows[s.scroll + i];
+    if (!row) break;
+    const y = rect.y + i;
+    if (row.kind === "heading") {
+      drawText(c, rect.x, y, sideRow(` ${row.label}`, sv), { ...roleStyle(theme, "dim", bg), bold: true }, rect.w);
+      continue;
+    }
+    const selected = s.scroll + i === s.selected && app.region === "sidebar";
+    const st = roleStyle(theme, selected ? "sidebar_selected" : "sidebar", bg);
+    if (selected) c.fill(rect.x, y, rect.w, 1, st.bg);
+    let x = rect.x + 1;
+    if (row.kind === "file") {
+      // Its letter in its state's colour, then its name.
+      const letter = row.label.slice(0, 1);
+      x += drawText(c, x, y, letter, { ...roleStyle(theme, LETTER_ROLE[letter] ?? "git_modified", st.bg), bg: st.bg, bold: true });
+      x += drawText(c, x, y, truncate(row.label.slice(1), Math.max(1, sv.cols - (x - rect.x) - 1)), st, rect.w - (x - rect.x));
+    } else x += drawText(c, x, y, truncate(row.label, sv.cols - 2), { ...roleStyle(theme, row.change!.kind === "add" ? "git_new" : row.change!.kind === "delete" ? "diff_del" : "git_modified", st.bg), bg: st.bg }, rect.w - 1);
+    // Its folder (a file's) or its first line (a change's), dim, where there's room.
+    const hint = truncate(sanitize(row.hint), Math.max(0, sv.cols - (x - rect.x) - 2));
+    if (hint && x - rect.x + 1 + stringWidth(hint) <= sv.cols - 1) drawText(c, x + 1, y, hint, { ...roleStyle(theme, "dim", st.bg), bg: st.bg });
+  }
+  paneScrollbar(app, c, rect, rows.length, s.scroll, "sidebar", app.region === "sidebar", bg, geo);
+  return rect;
 }
 
 /**

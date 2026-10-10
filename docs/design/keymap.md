@@ -599,6 +599,7 @@ edit the config and the config wins again.
 | `space g d` | this note's diff against the base, as it is now (`:diff`); enter goes to the line |
 | `space g w` | the worktrees by branch (`:worktrees`); enter opens this note in the one picked (`5.14`) |
 | `space g m` | a merge picked: the links it would break, with their fixes (`:merge-review`, `20.21`) |
+| `space g s` | source control: the changed files by section (`26.2`); `s` `u` `d` stage, unstage, discard |
 | `] c` / `[ c` | to the next / previous line changed against what's staged, the gutter's signs (`26.1`) |
 | `space g p` | the change on the cursor's line, as a diff, in a floating window |
 | `space g r` | undo that change: its lines as staged put back (one undo step, unsaved) |

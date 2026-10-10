@@ -72,7 +72,9 @@ import { openVault, Reach } from "../core/reach.ts";
 import { buildContext } from "../core/context.ts";
 import { IndexJob, indexFile, search, type SearchHit, SearchIndex, type SearchResult } from "../core/search.ts";
 import { type Checkout, checkoutOf, headOf } from "../core/git.ts";
-import { baseBranch, branchesOf, changedSince, type GitState, inCheckout, inVault, mergeBaseOf, showAt, showLater, statusLater, worktreeList } from "../core/gitops.ts";
+import { baseBranch, branchesOf, changedSince, type GitState, inCheckout, inVault, mergeBaseOf, showAt, showLater, stateOf, worktreeList } from "../core/gitops.ts";
+import { entriesLater, type StatusEntry } from "../core/gitstage.ts";
+import { type GitRow, gitRows, gitViewAction } from "./gitview.ts";
 import { type GitChange, gitChanges } from "../core/gitsigns.ts";
 import { describeBreak, type MergeBreak, type MergeReview, reviewMerge } from "../core/mergereview.ts";
 import { diffLines, diffRows } from "../core/merge.ts";
@@ -113,6 +115,7 @@ import {
   DEFAULT_EXPLORER_KEYS,
   EXPLORER_ACTION_INFO,
   HISTORY_ACTION_INFO,
+  GIT_ACTION_INFO,
   PROBLEMS_ACTION_INFO,
   OUTLINE_ACTION_INFO,
   FOOTNOTE_ACTION_INFO,
@@ -408,8 +411,8 @@ export interface SidePaneState {
   allFiles?: boolean;
 }
 
-/** What the left panel shows: the file tree or the window's history (more views to come). */
-export type LeftView = "explorer" | "history";
+/** What the left panel shows: the file tree, the window's history, or source control (26.2). */
+export type LeftView = "explorer" | "history" | "git";
 /** What the right panel shows, always of the file on screen: its Info, its outline, its footnotes
  *  (more to come: comments). */
 export type RightView = "info" | "outline" | "footnotes";
@@ -429,6 +432,7 @@ export interface PanelView<Id extends string> {
 export const LEFT_VIEWS: PanelView<LeftView>[] = [
   { id: "explorer", title: "Explorer", glyph: (g) => g.explorerButton },
   { id: "history", title: "History", glyph: (g) => g.historyButton },
+  { id: "git", title: "Source control", glyph: (g) => g.gitButton },
 ];
 
 /** One row of the Problems panel's All tab (1.7): a section's heading, a note with problems under it, or a problem. */
@@ -1830,9 +1834,12 @@ export class App {
       this.gitFolders.clear();
       return Promise.resolve();
     }
-    this.gitAsking = statusLater(c)
-      .then((status) => {
+    this.gitAsking = entriesLater(c)
+      .then((entries) => {
         if (this.loc.root !== root) return;
+        // Each file's two letters for the source control view (26.2); one state each for the explorer's marks.
+        this.gitEntries = entries;
+        const status = entries && new Map(entries.map((e) => [e.path, stateOf(e.x + e.y)] as const));
         const states = new Map<string, GitState>();
         const folders = new Map<string, GitState>();
         for (const [path, st] of status ?? []) {
@@ -1847,8 +1854,8 @@ export class App {
         this.gitStates = status ? states : null;
         this.gitFolders = folders;
         this.invalidateTree();
-        // What's staged may have changed with it: the gutter's asked again (26.1).
-        this.stagedGeneration++;
+        // What's staged may have changed with it: the gutter's asked again (26.1), and the view's texts (26.2).
+        this.gitGeneration++;
       })
       .finally(() => {
         this.gitAsking = null;
@@ -1860,7 +1867,12 @@ export class App {
    *  a file git hasn't (untracked: every line added); "none": nothing to compare (ignored, outside the checkout). */
   private readonly staged = new WeakMap<NoteBuffer, { text: string | null | "none"; generation: number }>();
   private readonly stagedAsking = new WeakSet<NoteBuffer>();
-  private stagedGeneration = 0;
+  /** Bumped each time git has answered: what's staged read again. */
+  gitGeneration = 0;
+  /** The checkout's changed files, each with its two letters (26.2); null until git has answered, or with no git. */
+  gitEntries: StatusEntry[] | null = null;
+  /** The source control view's files opened up into their changes, `section:path`. */
+  readonly gitOpen = new Set<string>();
   private readonly gitChangeMemo = new WeakMap<NoteBuffer, { version: number; generation: number; changes: GitChange[] }>();
 
   /**
@@ -1873,9 +1885,9 @@ export class App {
     // By its path, not the graph's name for it: a file just made is git's before the walk's.
     if (!this.config.git.signs || !c || buf.virtual || !buf.abs || !isInside(c.root, buf.abs) || !isInside(this.loc.root, buf.abs)) return null;
     const known = this.staged.get(buf);
-    if (known?.generation !== this.stagedGeneration && !this.stagedAsking.has(buf)) {
+    if (known?.generation !== this.gitGeneration && !this.stagedAsking.has(buf)) {
       this.stagedAsking.add(buf);
-      const generation = this.stagedGeneration;
+      const generation = this.gitGeneration;
       const rel = relative(this.loc.root, buf.abs).split(sep).join("/");
       void showLater(c, "", relative(c.root, buf.abs)).then((text) => {
         this.stagedAsking.delete(buf);
@@ -5978,7 +5990,10 @@ export class App {
     this.sidebar.filter = "";
     this.sidebar.pinned = false;
     if (view === "explorer") this.revealInSidebar();
-    else this.sidebar.selected = Math.max(0, this.historyRows().findIndex((r) => r.here));
+    else if (view === "git") {
+      this.sidebar.selected = Math.max(0, gitRows(this).findIndex((r) => r.kind !== "heading"));
+      void this.refreshGitNow().then(() => this.host.requestRender());
+    } else this.sidebar.selected = Math.max(0, this.historyRows().findIndex((r) => r.here));
   }
 
   /**
@@ -6081,7 +6096,7 @@ export class App {
   /** Keys while the left panel's filter has them: type, move, open, clear. */
   private filterKey(key: string): void {
     const s = this.sidebar;
-    const rows: unknown[] = this.leftView === "explorer" ? this.explorerRows() : this.historyRows();
+    const rows: unknown[] = this.leftView === "explorer" ? this.explorerRows() : this.leftView === "git" ? gitRows(this) : this.historyRows();
     const typed = keyChar(key);
     const done = () => {
       s.filter = "";
@@ -6097,6 +6112,10 @@ export class App {
       case "enter": {
         const row = rows[s.selected];
         if (!row) return;
+        if (this.leftView === "git") {
+          done();
+          return gitViewAction(this, "open_tab");
+        }
         if (this.leftView === "history") {
           // A note read elsewhere ("recent here") opens here; a place in this window's history is gone back to.
           const h = row as HistoryRow;
@@ -6154,8 +6173,11 @@ export class App {
     const s = this.sidebar;
     s.scroll = 0;
     s.pinned = false;
-    const next: unknown[] = this.leftView === "explorer" ? this.explorerRows() : this.historyRows();
-    s.selected = Math.max(0, this.leftView === "explorer" ? next.findIndex((r) => (r as TreeRow).kind === "note") : next.findIndex((r) => !(r as HistoryRow).heading));
+    const next: unknown[] = this.leftView === "explorer" ? this.explorerRows() : this.leftView === "git" ? gitRows(this) : this.historyRows();
+    s.selected = Math.max(
+      0,
+      this.leftView === "explorer" ? next.findIndex((r) => (r as TreeRow).kind === "note") : this.leftView === "git" ? next.findIndex((r) => (r as GitRow).kind !== "heading") : next.findIndex((r) => !(r as HistoryRow).heading),
+    );
   }
 
   /** The history view's keys (the explorer's keymap): move, jump, filter, close, leave. */
@@ -6245,6 +6267,7 @@ export class App {
   explorerAction(action: string): void {
     this.sidebar.pinned = false;
     if (this.leftView === "history") return this.historyAction(action);
+    if (this.leftView === "git") return gitViewAction(this, action);
     if (action === "filter") {
       this.sidebar.filtering = true; // resumes a filter already there (a view's restored one)
       return;
@@ -6813,7 +6836,7 @@ export class App {
   private maps(): { map: Keymap; run: (spec: string) => Promise<void> | void; info?: Record<string, { title: string; desc: string }> }[] {
     const out: { map: Keymap; run: (spec: string) => Promise<void> | void; info?: Record<string, { title: string; desc: string }> }[] = [];
     // A pane's own actions carry their titles (which-key says "New note here", as help does).
-    if (this.region === "sidebar" && this.sidebarShown) out.push({ map: this.explorerKeys, run: (a) => this.explorerAction(a), info: this.leftView === "history" ? HISTORY_ACTION_INFO : EXPLORER_ACTION_INFO });
+    if (this.region === "sidebar" && this.sidebarShown) out.push({ map: this.explorerKeys, run: (a) => this.explorerAction(a), info: this.leftView === "history" ? HISTORY_ACTION_INFO : this.leftView === "git" ? GIT_ACTION_INFO : EXPLORER_ACTION_INFO });
     if (this.region === "problems" && this.problemsPanel.shown) out.push({ map: this.problemsKeys, run: (a) => this.problemsPanelAction(a), info: PROBLEMS_ACTION_INFO });
     if (this.region === "outline" && this.outlineShown) {
       out.push(
@@ -7403,6 +7426,14 @@ export class App {
       this.region = "sidebar";
       if (!g.sidebar || !inRect(g.sidebar, ev.x, ev.y)) return;
       const idx = ev.y - g.sidebar.y + this.sidebar.scroll;
+      if (this.leftView === "git") {
+        const r = gitRows(this)[idx];
+        if (!r || r.kind === "heading") return;
+        this.sidebar.selected = idx;
+        // One click selects; a double-click opens the file there, as enter does.
+        if (clicks >= 2) gitViewAction(this, "open_tab");
+        return;
+      }
       if (this.leftView === "history") {
         const h = this.historyRows()[idx];
         if (!h || h.heading) return;

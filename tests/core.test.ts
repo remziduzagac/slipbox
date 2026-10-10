@@ -2758,9 +2758,9 @@ describe("changes against what's staged (26.1)", () => {
     const staged = "a\nb\nc\nd\ne\n";
     const changes = gitChanges(staged, "a\nB\nc\nnew\nd\n");
     expect(changes).toEqual([
-      { kind: "change", from: 2, to: 2, was: ["b"], now: ["B"] },
-      { kind: "add", from: 4, to: 4, was: [], now: ["new"] },
-      { kind: "delete", from: 6, to: 5, was: ["e"], now: [] },
+      { kind: "change", from: 2, to: 2, wasAt: 1, was: ["b"], now: ["B"] },
+      { kind: "add", from: 4, to: 4, wasAt: 3, was: [], now: ["new"] },
+      { kind: "delete", from: 6, to: 5, wasAt: 4, was: ["e"], now: [] },
     ]);
     expect([...gitSigns(changes)]).toEqual([[2, "change"], [4, "add"], [5, "delete"]]);
     const top = gitChanges("x\na\n", "a\n");
@@ -2771,7 +2771,98 @@ describe("changes against what's staged (26.1)", () => {
     expect(gitChanges("a\nb\n", "a\r\nb\r\n")).toEqual([]);
     expect(gitChanges("a\n", "a")).toEqual([]);
     // A file git doesn't have: every line added; an empty one, nothing.
-    expect(gitChanges(null, "x\ny\n")).toEqual([{ kind: "add", from: 1, to: 2, was: [], now: ["x", "y"] }]);
+    expect(gitChanges(null, "x\ny\n")).toEqual([{ kind: "add", from: 1, to: 2, wasAt: 0, was: [], now: ["x", "y"] }]);
     expect(gitChanges(null, "")).toEqual([]);
+  });
+});
+
+describe("staging, from the source control view (26.2)", () => {
+  const git = (cwd: string, ...args: string[]) => {
+    const r = Bun.spawnSync(["git", "-c", "user.email=t@example.invalid", "-c", "user.name=t", "-C", cwd, ...args]);
+    return new TextDecoder().decode(r.stdout);
+  };
+  const repo = (files: Record<string, string>) => {
+    const root = mkdtempSync(join(tmpdir(), "slipbox-stage-"));
+    for (const [rel, text] of Object.entries(files)) writeFileSync(join(root, rel), text);
+    git(root, "init", "-q", "-b", "main");
+    git(root, "add", "-A");
+    git(root, "commit", "-q", "-m", "start");
+    return root;
+  };
+
+  test("status entries with both letters; renames with where from; sections: conflicted, staged, unstaged, untracked", async () => {
+    const { parseEntries, sections } = await import("../src/core/gitstage.ts");
+    const entries = parseEntries("MM a.md\0A  b.md\0R  new.md\0old.md\0?? u.md\0UU c.md\0 D d.md\0");
+    // Every pair a merge's conflict has; sorted by path within each section.
+    const s2 = sections(parseEntries("AA x.md\0DU y.md\0UD w.md\0M  z.md\0M  m.md\0"));
+    expect([s2.conflicted.map((e) => e.path), s2.staged.map((e) => e.path)]).toEqual([["w.md", "x.md", "y.md"], ["m.md", "z.md"]]);
+    expect(entries).toEqual([
+      { path: "a.md", x: "M", y: "M" },
+      { path: "b.md", x: "A", y: " " },
+      { path: "new.md", x: "R", y: " ", from: "old.md" },
+      { path: "u.md", x: "?", y: "?" },
+      { path: "c.md", x: "U", y: "U" },
+      { path: "d.md", x: " ", y: "D" },
+    ]);
+    const s = sections(entries);
+    expect([s.conflicted, s.staged, s.unstaged, s.untracked].map((l) => l.map((e) => e.path))).toEqual([["c.md"], ["a.md", "b.md", "new.md"], ["a.md", "d.md"], ["u.md"]]);
+  });
+
+  test("lines replaced in a text: its line breaks kept, its final one as it was, an empty text's lines ended", async () => {
+    const { replaceLines } = await import("../src/core/gitstage.ts");
+    expect(replaceLines("a\nb\nc\n", 1, 1, ["B", "B2"])).toBe("a\nB\nB2\nc\n");
+    expect(replaceLines("a\r\nb\r\n", 2, 0, ["c"])).toBe("a\r\nb\r\nc\r\n");
+    expect(replaceLines("a\nb", 0, 1, [])).toBe("b");
+    expect(replaceLines("", 0, 0, ["x"])).toBe("x\n");
+    expect(replaceLines("x\n", 0, 1, [])).toBe("");
+  });
+
+  test("a file staged, unstaged, discarded; all staged and unstaged; one change staged and unstaged, the others left", async () => {
+    const { discardFile, stageAll, stageChange, stageFile, unstageAll, unstageChange, unstageFile } = await import("../src/core/gitstage.ts");
+    const { gitChanges } = await import("../src/core/gitsigns.ts");
+    const root = repo({ "a.md": "one\ntwo\nthree\nfour\n", "b.md": "b\n" });
+    const c = { root };
+    const staged = (p: string) => git(root, "show", `:${p}`);
+    writeFileSync(join(root, "a.md"), "ONE\ntwo\nthree\nFOUR\n");
+    // One change of two staged: the index has it, the other stays the working tree's alone.
+    const changes = gitChanges(staged("a.md"), readFileSync(join(root, "a.md"), "utf8"));
+    expect(changes.map((x) => x.from)).toEqual([1, 4]);
+    expect(stageChange(c, "a.md", staged("a.md"), changes[1]!)).toBeNull();
+    expect(staged("a.md")).toBe("one\ntwo\nthree\nFOUR\n");
+    expect(git(root, "status", "--porcelain")).toBe("MM a.md\n");
+    // Unstaged again: between the commit and the index, that change put back.
+    const head = git(root, "show", "HEAD:a.md");
+    expect(unstageChange(c, "a.md", staged("a.md"), gitChanges(head, staged("a.md"))[0]!)).toBeNull();
+    expect(staged("a.md")).toBe("one\ntwo\nthree\nfour\n");
+    // Whole files.
+    expect(stageFile(c, "a.md")).toBeNull();
+    expect(git(root, "status", "--porcelain")).toBe("M  a.md\n");
+    expect(unstageFile(c, "a.md")).toBeNull();
+    expect(git(root, "status", "--porcelain")).toBe(" M a.md\n");
+    expect(discardFile(c, "a.md")).toBeNull();
+    expect(readFileSync(join(root, "a.md"), "utf8")).toBe("one\ntwo\nthree\nfour\n");
+    writeFileSync(join(root, "b.md"), "B\n");
+    writeFileSync(join(root, "n.md"), "new\n");
+    expect(stageAll(c)).toBeNull();
+    expect(git(root, "status", "--porcelain")).toBe("M  b.md\nA  n.md\n");
+    expect(unstageAll(c)).toBeNull();
+    expect(git(root, "status", "--porcelain")).toBe(" M b.md\n?? n.md\n");
+    // A failure says git's why.
+    expect(discardFile(c, "nope.md")).toMatch(/nope\.md/);
+    // A change staged in an executable file keeps its mode.
+    writeFileSync(join(root, "run.sh"), "echo a\necho b\n");
+    chmodSync(join(root, "run.sh"), 0o755);
+    git(root, "add", "run.sh");
+    git(root, "commit", "-q", "-m", "run");
+    writeFileSync(join(root, "run.sh"), "echo A\necho b\n");
+    expect(stageChange(c, "run.sh", staged("run.sh"), gitChanges(staged("run.sh"), "echo A\necho b\n")[0]!)).toBeNull();
+    expect(git(root, "ls-files", "-s", "run.sh")).toStartWith("100755 ");
+    // In a repository with no commit yet: unstaged by taking it out of the index.
+    const fresh = mkdtempSync(join(tmpdir(), "slipbox-stage-"));
+    git(fresh, "init", "-q", "-b", "main");
+    writeFileSync(join(fresh, "f.md"), "f\n");
+    git(fresh, "add", "f.md");
+    expect(unstageFile({ root: fresh }, "f.md")).toBeNull();
+    expect(git(fresh, "status", "--porcelain")).toBe("?? f.md\n");
   });
 });

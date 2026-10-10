@@ -71,7 +71,7 @@ export function parseStatus(z: string): Map<string, GitState> {
   return out;
 }
 
-function stateOf(xy: string): GitState {
+export function stateOf(xy: string): GitState {
   if (/^(DD|AU|UD|UA|DU|AA|UU)$/.test(xy)) return "conflict";
   if (xy === "??" || xy.includes("A")) return "new";
   if (xy[0] === "R" || xy[0] === "C") return "renamed";
@@ -79,7 +79,7 @@ function stateOf(xy: string): GitState {
   return "modified";
 }
 
-const STATUS_ARGS = ["status", "--porcelain=v1", "-z", "--untracked-files=all"];
+export const STATUS_ARGS = ["status", "--porcelain=v1", "-z", "--untracked-files=all"];
 
 /** The checkout's status now; null without git. */
 export function statusOf(c: Pick<Checkout, "root">): Map<string, GitState> | null {
@@ -87,12 +87,6 @@ export function statusOf(c: Pick<Checkout, "root">): Map<string, GitState> | nul
   return out === null ? null : parseStatus(out);
 }
 
-/** The same, not waiting on git (the TUI's explorer marks). */
-export function statusLater(c: Pick<Checkout, "root">): Promise<Map<string, GitState> | null> {
-  return new Promise((done) => {
-    execFile("git", gitArgs(c.root, STATUS_ARGS), OPTS, (err, out) => done(err ? null : parseStatus(out)));
-  });
-}
 
 /** Whether a ref names a commit in the repository. */
 function exists(c: Pick<Checkout, "root">, ref: string): boolean {

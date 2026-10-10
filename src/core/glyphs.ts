@@ -84,6 +84,8 @@ export interface Glyphs {
   branch: string;
   /** The left rail's history button. */
   historyButton: string;
+  /** The source control view's rail button (26.2). */
+  gitButton: string;
   close: string;
   /** A pinned tab's mark, before its name. */
   pin: string;
@@ -181,6 +183,7 @@ const unicode: Glyphs = {
   problemsButton: "⚠",
   branch: "⎇",
   historyButton: "◷",
+  gitButton: "±",
   close: "×",
   pin: "⚑",
   crumb: "›",
@@ -313,6 +316,7 @@ const ascii: Glyphs = {
   problemsButton: "!",
   branch: "git:",
   historyButton: "~",
+  gitButton: "+",
   close: "x",
   pin: "^",
   crumb: ">",

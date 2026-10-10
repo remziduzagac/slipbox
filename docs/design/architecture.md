@@ -135,6 +135,7 @@ Everything else is testable headlessly with `TextCanvas` (see [testing.md](testi
 | `core/nvim.ts` | 4.12 | finding and asking the running nvims |
 | `core/replace.ts` | 4.16 | find's patterns (plain, regex, whole words), replacements, vim's `:s` parsed |
 | `core/replace-files.ts` | 25.4 | a find replaced across files, as a rename's plan: previewed, undone |
+| `core/gitstage.ts` | 26.2 | status's two letters; a file or one change staged, unstaged, discarded |
 | `core/gitsigns.ts` | 26.1 | a file's changes against what's staged: runs of lines added, changed, deleted; signs |
 | `core/shell.ts` | 25.7 | a `:!` line parsed; a command run by your shell, its output kept; stopped with its children |
 | `core/snippet.ts` | 25.8 | a server's snippet expanded: its text, its stops and their mirrors, `$0` last |
@@ -169,6 +170,7 @@ Everything else is testable headlessly with `TextCanvas` (see [testing.md](testi
 | `tui/editing.ts` | 4.3 | the cursor as a text offset; insert mode |
 | `tui/vim.ts` | 4.4 | counts, operators and text objects, the register, `.` |
 | `tui/replacing.ts` | 4.16 | the replace row, `:s` and its confirm, `gn`'s matches |
+| `tui/gitview.ts` | 26.2 | source control: its rows by section, a file's changes, its keys |
 | `tui/gitchanges.ts` | 26.1 | `] c`, `[ c` to a change against what's staged; its preview; one undone |
 | `tui/shellrun.ts` | 25.7 | `:!cmd`'s output window, `:{range}!cmd`'s lines replaced, one command at a time |
 | `tui/snippets.ts` | 25.8 | a snippet's stops while typing: `tab` through them, placeholders replaced, mirrors |

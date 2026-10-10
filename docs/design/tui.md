@@ -551,6 +551,16 @@ keys.
   0 lists none): each with when (the time today, else the day), or `tab N` when it's open in
   another tab; `enter` opens one in this window. The heading is stepped over. The history never
   scrolls sideways: a name too long for the pane beside its hint is cut (`…`), the hint kept.
+- **Source control (left, `±`, `space g s`; `26.2`):** the checkout's changed files under their sections — Conflicts,
+  Staged, Changes (not staged), Untracked — each with its state letter in its colour (`M`, `A`, `D`, `R`, `U`, `?`)
+  and its folder dim; the explorer's keymap, read its way. `l` opens a file up into its changes (a staged file's against
+  the last commit, a changed one's against what's staged, as on disk), `h` folds it; `s` stages the file or the change
+  (a conflict's file: marked resolved), `u` unstages it, `d` discards what isn't staged — the file's, or the change's —
+  after asking (an untracked file goes to the trash, as the explorer's `d`); `a` stages everything, `shift+u`
+  unstages it; `.` shows the diff in the floating window; `enter` opens the file at the change. A change is staged as
+  `git add -p` does: the index given its text with that change made (`hash-object`, `update-index`), so nothing else
+  in it moves. A file unsaved here isn't discarded: git works on the file on disk. git's answer comes in the background,
+  again whenever it has news; `23.6`'s guards apply in a root not trusted.
 - **Filter (`/`, in the explorer, the history, the outline, Info and the footnotes; Problems' All tab, below):** a
   `› text` row at
   the top of the list, a rule under it (joined to the pane's border), then the list —
@@ -624,10 +634,10 @@ the page), 3 columns wide, with no border: the frame's rules run over it unbroke
 (NO_COLOR) there's no tint, so a rail is 4 columns with a border on its inner side, joined to the
 rules it meets. Each is generic: a place for buttons, whatever they open.
 
-- **The left rail** runs from under the top bar's rule to the frame's bottom rule, its first button
-  level with the tab strip. It holds the left panel's views, the explorer's `≡` and the history's
-  `◷` (ascii `~`), the panel opening beside it. Without it, `≡` is the top bar's and the history opens with
-  `space h h`. (The Problems panel, at the bottom, opens from the status line.)
+- **The left rail** runs from under the top bar's rule to the frame's bottom rule, its first button level with the tab
+  strip. It holds the left panel's views, the explorer's `≡`, the history's `◷` (ascii `~`) and source control's `±`
+  (ascii `+`), the panel opening beside it. Without it, `≡` is the top bar's and the history opens with `space h h`.
+  (The Problems panel, at the bottom, opens from the status line.)
 - **The right rail** runs from under the tab strip's rule, its first button level with the breadcrumb. It holds the
   right panel's views: the Info's `ℹ` (Nerd: an i in a circle; ascii `i`), under it the outline's `▤`, then the
   footnotes' superscript (Nerd: `x²`; unicode `¹`; ascii `^`); the panel opens beside it. Without it, `▤` sits at the
