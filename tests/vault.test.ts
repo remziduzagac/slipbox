@@ -3012,6 +3012,27 @@ describe("git in a root you don't trust (23.6)", () => {
     expect(marks(top)).toEqual([]);
   });
 
+  test("a git version that can't be read is guarded all the same — never taken, and kept, for one too old (regression)", () => {
+    // Found 2026-10-10: `git --version` failing once (a start that failed on a machine short of memory) left the
+    // attributes unguarded for the rest of the process, and a repository's clean filter ran.
+    const top = hostile();
+    if (!top) return; // no git here
+    const noGit = mkdtempSync(join(tmpdir(), "slipbox-nogit-"));
+    const gitops = join(import.meta.dir, "..", "src", "core", "gitops.ts");
+    const script = `
+      const { gitArgs, statusOf } = await import(${JSON.stringify(gitops)});
+      const real = process.env.PATH;
+      process.env.PATH = ${JSON.stringify(noGit)};
+      const blind = gitArgs(${JSON.stringify(top)}, ["status"]).some((a) => a.startsWith("--attr-source="));
+      process.env.PATH = real;
+      console.log(JSON.stringify({ blind, status: statusOf({ root: ${JSON.stringify(top)} })?.get("a.md") ?? null }));
+    `;
+    const r = Bun.spawnSync([process.execPath, "-e", script], { cwd: tmpdir(), stderr: "pipe" });
+    expect(r.stderr.toString()).toBe("");
+    expect(JSON.parse(r.stdout.toString())).toEqual({ blind: true, status: "modified" });
+    expect(marks(top)).toEqual([]);
+  });
+
   test("in a root you trust, git as the repository has it: its filters and hooks run", async () => {
     const top = hostile();
     if (!top) return;

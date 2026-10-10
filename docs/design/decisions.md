@@ -283,8 +283,10 @@ nothing a folder brings with it:
   index, and that runs `post-index-change`); attributes read from the empty tree (`--attr-source`, git 2.42 and later),
   so no filter, diff or merge driver of the repository's runs — the flags first planned weren't enough: `git diff
   --name-status` still ran a clean filter; `--no-textconv`, `--no-ext-diff`; `--no-optional-locks`, so a read writes no
-  index. In a root you trust, git as the repository has it — without its attributes, Git LFS's files would all look
-  modified.
+  index. Whether git is 2.42 or later is asked once; a version that can't be read is guarded all the same and asked
+  again — found 2026-10-10: one `git --version` that failed to start, on a machine short of memory, had left the
+  attributes unguarded for the rest of the process, and a repository's clean filter ran. In a root you trust, git as
+  the repository has it — without its attributes, Git LFS's files would all look modified.
 - **Bun's own reading:** no `bunfig.toml` and no `.env` from the folder Bun starts in (the launcher, Node servers;
   done 2026-10-07). The compiled binary too: a Bun-compiled executable loads both by default — a cloned repository's
   preload ran when slipbox was started in it (found 2026-10-10, from trailscout's research) — so `bun run build`

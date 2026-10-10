@@ -21,11 +21,16 @@ export function gitGuardsAttributes(): boolean {
   return takesAttrSource();
 }
 
-/** Whether this git takes `--attr-source` (2.42 and later). */
+/**
+ * Whether this git takes `--attr-source` (2.42 and later). A version that can't be read — git's start failed, as one
+ * can on a machine short of memory — is guarded all the same, and asked again next time: never taken, and kept, for a
+ * git too old to guard. One too old for the flag refuses the command, and nothing runs.
+ */
 function takesAttrSource(): boolean {
   if (attrSource === null) {
-    const v = /git version (\d+)\.(\d+)/.exec(spawnSync("git", ["--version"], { encoding: "utf8" }).stdout ?? "");
-    attrSource = !!v && (Number(v[1]) > 2 || (Number(v[1]) === 2 && Number(v[2]) >= 42));
+    const v = /git version (\d+)\.(\d+)/.exec(spawnSync("git", ["--version"], { encoding: "utf8", timeout: 15_000 }).stdout ?? "");
+    if (!v) return true;
+    attrSource = Number(v[1]) > 2 || (Number(v[1]) === 2 && Number(v[2]) >= 42);
   }
   return attrSource;
 }
