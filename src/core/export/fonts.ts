@@ -7,6 +7,7 @@ import { readdirSync, statSync } from "node:fs";
 import { homedir } from "node:os";
 import { basename, join } from "node:path";
 import { type Font, type FontCollection, openSync } from "fontkit";
+import { isWsl, windowsFontsDir } from "../wsl.ts";
 
 /** A face: its file, and its PostScript name inside a collection (`.ttc`). */
 export interface Face {
@@ -87,10 +88,11 @@ const FALLBACKS = [
   "malgun.ttf",
 ];
 
-/** Where fonts are kept: Linux's, macOS's, Windows'. */
-function fontDirs(): string[] {
+/** Where fonts are kept: Linux's, macOS's, Windows' — and in WSL, Windows' on its C: drive (14.12), first. */
+export function fontDirs(windows: string | null = isWsl() ? windowsFontsDir() : null): string[] {
   const home = homedir();
   return [
+    ...(windows ? [windows] : []),
     "/usr/share/fonts",
     "/usr/local/share/fonts",
     join(home, ".local/share/fonts"),

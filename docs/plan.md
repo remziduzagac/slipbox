@@ -743,8 +743,12 @@ packaging lands whenever it first needs to run on a VM.*
 | 14.9 | **Done.** Folders: XDG's on Linux and macOS, as now; Windows' own (`%APPDATA%`…); `CACHEDIR.TAG` |
 | 14.10 | **Done.** Supply chain: exact pins, a 7-day cooldown, no install scripts, a licence gate, actions by hash |
 | 14.11 | **Done.** Language servers (`19.5`) installed from a full lockfile slipbox ships; behind ones reinstalled |
-| 14.12 | Windows (win32-x64), if it isn't difficult: paths, the shell (`25.7`), git, the terminal — after the rest |
+| 14.12 | **Done.** Windows through WSL: the Linux release; Windows' clipboard, fonts; notes on its drives, said |
 | 14.13 | On a real Mac before the first release: Apple's SQLite runs FTS5 and `bm25`; the binaries' signatures |
+| 14.14 | Native Windows, staged: `.zip` packs (x64, arm64), a PowerShell installer; `upgrade`, `uninstall` there |
+| 14.15 | Native Windows: note paths kept with `/` from every `relative()`; path checks by `sep`, not `/` |
+| 14.16 | Native Windows: `:!` through `cmd.exe`, editors, the clipboard, processes and signals |
+| 14.17 | Native Windows: the test suite on a Windows runner; the TUI in Windows Terminal |
 
 Decided 2026-10-10 with the user, after reading trailscout's packaging design (its `design/09-application.md`, the
 same machine) — taken where it fits; slipbox has no daemon, no native npm packages and no models to fetch:

@@ -1,4 +1,5 @@
-// Clipboard (plan 8.5): OSC 52, then pbcopy / wl-copy / xclip, then write a file and print the path.
+// Clipboard (plan 8.5): OSC 52, then pbcopy / clip.exe (WSL, 14.12) / wl-copy / xclip, then write a file and print the
+// path.
 //
 // OSC 52 is required, not optional: over SSH it is the only way to reach the *local* clipboard.
 // It cannot be confirmed — terminals do not acknowledge it — so the result says so honestly.
@@ -6,6 +7,7 @@
 import { closeSync, openSync, readFileSync, writeSync } from "node:fs";
 import { join } from "node:path";
 import { atomicWrite } from "./fsutil.ts";
+import { isWsl } from "./wsl.ts";
 
 /** Some terminals cap the OSC 52 payload; beyond this the file fallback is safer. */
 export const OSC52_MAX_BASE64 = 100_000;
@@ -43,6 +45,8 @@ export function osc52ToTty(text: string): boolean {
 function localTools(): string[][] {
   const tools: string[][] = [];
   if (process.platform === "darwin") tools.push(["pbcopy"]);
+  // WSL (14.12): Windows' own clipboard, reached whatever the Linux side has.
+  if (isWsl()) tools.push(["clip.exe"]);
   if (process.env.WAYLAND_DISPLAY) tools.push(["wl-copy"]);
   if (process.env.DISPLAY) tools.push(["xclip", "-selection", "clipboard"], ["xsel", "--clipboard", "--input"]);
   return tools;
@@ -53,7 +57,9 @@ function runTool(argv: string[], text: string): boolean {
     // PATH as it is now (Bun.which alone reads the start-up one): a test's fake tools, never the real.
     const bin = Bun.which(argv[0]!, { PATH: process.env.PATH ?? "" });
     if (!bin) return false;
-    const r = Bun.spawnSync([bin, ...argv.slice(1)], { stdin: Buffer.from(text), stdout: "ignore", stderr: "ignore" });
+    // clip.exe reads its input in the console's code page, unless it starts with a byte-order mark: UTF-16 with one.
+    const input = argv[0] === "clip.exe" ? Buffer.concat([Buffer.from([0xff, 0xfe]), Buffer.from(text, "utf16le")]) : Buffer.from(text);
+    const r = Bun.spawnSync([bin, ...argv.slice(1)], { stdin: input, stdout: "ignore", stderr: "ignore" });
     return r.exitCode === 0;
   } catch {
     return false;
@@ -100,7 +106,14 @@ function readTools(): string[][] {
   if (process.platform === "darwin") tools.push(["pbpaste"]);
   if (process.env.WAYLAND_DISPLAY) tools.push(["wl-paste", "--no-newline"]);
   if (process.env.DISPLAY) tools.push(["xclip", "-selection", "clipboard", "-o"], ["xsel", "--clipboard", "--output"]);
+  // WSL (14.12): Windows' clipboard, by PowerShell — after the Linux side's, which answer faster where there are any.
+  if (isWsl()) tools.push(["powershell.exe", "-NoProfile", "-NonInteractive", "-Command", "[Console]::OutputEncoding = [System.Text.Encoding]::UTF8; Get-Clipboard -Raw"]);
   return tools;
+}
+
+/** What PowerShell printed of Windows' clipboard, as a note has it: the line it ends its output with gone, `\n` lines. */
+export function fromPowerShell(out: string): string {
+  return out.replace(/\r?\n$/, "").replace(/\r\n/g, "\n");
 }
 
 /**
@@ -120,8 +133,13 @@ export function readClipboard(fallbackDir: string): string | null {
     try {
       const bin = Bun.which(tool[0]!, { PATH: process.env.PATH ?? "" });
       if (!bin) continue;
-      const r = Bun.spawnSync([bin, ...tool.slice(1)], { stdout: "pipe", stderr: "ignore", timeout: 1000 });
-      if (r.exitCode === 0) return new TextDecoder().decode(r.stdout);
+      // PowerShell takes a while to start: given longer.
+      const ps = tool[0] === "powershell.exe";
+      const r = Bun.spawnSync([bin, ...tool.slice(1)], { stdout: "pipe", stderr: "ignore", timeout: ps ? 5000 : 1000 });
+      if (r.exitCode === 0) {
+        const text = new TextDecoder().decode(r.stdout);
+        return ps ? fromPowerShell(text) : text;
+      }
     } catch {}
   }
   return null;

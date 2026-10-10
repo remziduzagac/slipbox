@@ -119,9 +119,10 @@ A reading cursor sits on the rendered text, like vim's normal mode.
 | copy the target of the link under the cursor | `y l` |
 
 Every copy goes to the system clipboard (through the terminal, then `wl-copy`, `xclip` or
-`pbcopy`), and so does every cut (`x`, `d…`, `c…`, as vim with `clipboard=unnamedplus`). `p` puts
-what the system clipboard holds — read with `wl-paste`, `xclip`, `xsel` or `pbpaste` — and falls
-back to slipbox's own register when it can't be read (over SSH, say). The terminal's paste
+`pbcopy` — in WSL, Windows' `clip.exe` first), and so does every cut (`x`, `d…`, `c…`, as vim with
+`clipboard=unnamedplus`). `p` puts what the system clipboard holds — read with `wl-paste`, `xclip`, `xsel` or
+`pbpaste`, and in WSL, when none answers, PowerShell's `Get-Clipboard` (slower to start) — and falls back to slipbox's
+own register when it can't be read (over SSH, say). The terminal's paste
 (`ctrl+shift+v`, `cmd+v`) types the text while typing, and puts it like `p` in normal mode — as `ctrl+v` does,
 reading the clipboard itself: vim's `ctrl+v` and `ctrl+x` (block selection, a number less) are the editors' paste
 and cut here, beside `ctrl+c`. A paste over a selection leaves the clipboard as it was.

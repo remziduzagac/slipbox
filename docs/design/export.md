@@ -129,10 +129,11 @@ Written by `docx` (MIT), whose zip, JSZip, is dual-licensed MIT or GPLv3 and tak
 Laid out by pdfkit (MIT) on A4, 64-point margins, the text 10.5 points.
 
 - **Fonts** are found on the machine (`fonts.ts`), never asked of a tool: its font folders are read (Linux's,
-  macOS's, Windows', the user's own), and the first sans family with all four faces is chosen — DejaVu Sans,
-  Liberation Sans, Noto Sans, Arial, Helvetica, Segoe UI, Open Sans, Roboto, Ubuntu, Lato, Source Sans — else the first
-  with a regular face, a missing face taken from its nearest. Code is in the first monospaced one there (DejaVu Sans
-  Mono, Liberation Mono, Noto Sans Mono, Menlo, Consolas…). They're embedded, only the glyphs used.
+  macOS's, Windows', the user's own; in WSL, Windows' on its C: drive first), and the first sans family with all four
+  faces is chosen — DejaVu Sans, Liberation Sans, Noto Sans, Arial, Helvetica, Segoe UI, Open Sans, Roboto, Ubuntu,
+  Lato, Source Sans — else the first with a regular face, a missing face taken from its nearest. Code is in the first
+  monospaced one there (DejaVu Sans Mono, Liberation Mono, Noto Sans Mono, Menlo, Consolas…). They're embedded, only
+  the glyphs used.
 - **A character a font hasn't got** is taken from the first fallback that has it — DejaVu Sans and Noto for symbols,
   arrows and maths, then emoji, then the CJK fonts there are — a combining mark or a joiner staying with what it joins.
   One no font has is the font's own box. With no font found at all, PDF's own Helvetica and Courier, which hold

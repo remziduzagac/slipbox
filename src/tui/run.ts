@@ -12,6 +12,7 @@ import { dataHome, stateHome } from "../core/paths.ts";
 import { installedBy } from "../core/install.ts";
 import { RELEASE } from "../core/release.ts";
 import { dailyUpdateCheck } from "../core/update.ts";
+import { windowsDriveNote } from "../core/wsl.ts";
 import { VERSION } from "../version.ts";
 import { locateVault, recordLocation, configFilesFor, setRootMarkers, VaultError, type VaultLocation } from "../core/vault.ts";
 import { setTrustedRoots } from "../core/trust.ts";
@@ -50,6 +51,9 @@ export function prepare(argv: string[]): Start | number {
   const recorded = recordLocation(loc);
   const warnings = [...loaded.warnings];
   if (loc.note) warnings.push(loc.note);
+  // In WSL, notes on a Windows drive (14.12): what's noticed there, and what isn't, said once.
+  const onWindows = windowsDriveNote(loc.root);
+  if (onWindows) warnings.push(onWindows);
   return {
     loc,
     config: loaded.config,

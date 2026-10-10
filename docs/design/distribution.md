@@ -168,6 +168,25 @@ Each path is checked before it goes: the installer's link, or inside a folder na
 A link is removed as itself, never what it points at. Notes, and the `.slipbox/` folders in them, are never touched.
 The running binary can remove its own install: on macOS and Linux a running program's file can be unlinked.
 
+## Windows
+
+Through WSL, for now (`14.12`, decided 2026-10-10): WSL is Linux, so the Linux release and `install.sh` run there as
+they are, in a terminal such as Windows Terminal. What differs from other Linux is handled (`core/wsl.ts`), WSL known
+by `WSL_DISTRO_NAME` or its kernel:
+
+- **The clipboard** is Windows': a copy goes to `clip.exe` first, as UTF-16 with a byte-order mark (else it's read in
+  the console's code page); a paste is read from the Linux side's tools when one answers (WSLg's), else PowerShell's
+  `Get-Clipboard`, its CRLF lines made LF.
+- **Windows' drives** (`/mnt/c`…, found in `/proc/mounts`: drvfs, or 9p naming it): a change a Windows program makes
+  there raises no event in WSL, so slipbox notices it only in files it has open (polled), and reading is slower.
+  Opening notes there, the TUI says so once; notes in WSL's own folders are watched in full.
+- **Fonts** for a PDF export: Windows' on its C: drive, first.
+
+Native Windows is staged (`14.14`–`14.17`): packaging (`.zip`, a PowerShell installer, `upgrade` and `uninstall` with
+a running `.exe` that can't be removed), then the port — note paths kept with `/` where `relative()` gives `\`, `:!`
+commands through `cmd.exe`, processes and signals — then the test suite on a Windows runner. Each step waits for a
+Windows CI runner to check it: nothing here can run a Windows binary.
+
 ## Language servers' lockfiles
 
 `scripts/lock-servers.ts` (`14.11`) makes a lockfile for each package slipbox pins — the npm servers in

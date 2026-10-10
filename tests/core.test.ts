@@ -569,14 +569,14 @@ describe("clipboard (8.5): OSC 52, the system's tools, then the file", () => {
    * that pick them and SLIPBOX_CLIPBOARD as given (unset when not). A tool copying writes `board`
    * beside it, a tool pasting prints it; each says in `ran` that it ran, with its arguments.
    */
-  const withTools = async (tools: Record<string, "copy" | "paste" | "fail" | "both">, env: { WAYLAND_DISPLAY?: string; DISPLAY?: string; SLIPBOX_CLIPBOARD?: string }, fn: (dir: string) => void | Promise<void>) => {
+  const withTools = async (tools: Record<string, "copy" | "paste" | "fail" | "both">, env: { WAYLAND_DISPLAY?: string; DISPLAY?: string; SLIPBOX_CLIPBOARD?: string; WSL_DISTRO_NAME?: string }, fn: (dir: string) => void | Promise<void>) => {
     const dir = mkdtempSync(join(tmpdir(), "slipbox-cliptools-"));
     const body = { copy: '/bin/cat > "${0%/*}/board"', paste: '/bin/cat "${0%/*}/board"', fail: "exit 1", both: 'case "$*" in *-o*) /bin/cat "${0%/*}/board" ;; *) /bin/cat > "${0%/*}/board" ;; esac' };
     for (const [name, kind] of Object.entries(tools)) {
       writeFileSync(join(dir, name), `#!/bin/sh\necho "\${0##*/} $*" >> "\${0%/*}/ran"\n${body[kind]}\n`);
       chmodSync(join(dir, name), 0o755);
     }
-    const keys = ["PATH", "WAYLAND_DISPLAY", "DISPLAY", "SLIPBOX_CLIPBOARD"] as const;
+    const keys = ["PATH", "WAYLAND_DISPLAY", "DISPLAY", "SLIPBOX_CLIPBOARD", "WSL_DISTRO_NAME"] as const;
     const was = Object.fromEntries(keys.map((k) => [k, process.env[k]]));
     const set = (k: string, v: string | undefined) => (v === undefined ? delete process.env[k] : (process.env[k] = v));
     process.env.PATH = dir;
@@ -608,6 +608,41 @@ describe("clipboard (8.5): OSC 52, the system's tools, then the file", () => {
       expect(readClipboard(out)).toBe("w");
       expect(ran(dir)).toEqual(["wl-copy ", "wl-paste --no-newline"]);
     });
+    rmSync(out, { recursive: true, force: true });
+  });
+
+  test("in WSL (14.12): a copy reaches Windows by clip.exe, in UTF-16; a paste by PowerShell, when the Linux side's don't answer", async () => {
+    const { copyText, readClipboard, fromPowerShell } = await import("../src/core/clipboard.ts");
+    const out = mkdtempSync(join(tmpdir(), "slipbox-clip-"));
+    // WSLg's X tools there too: clip.exe takes the copy first, Windows' own clipboard whatever the Linux side does.
+    await withTools({ "clip.exe": "copy", xsel: "both" }, { WSL_DISTRO_NAME: "Ubuntu", DISPLAY: ":0" }, (dir) => {
+      expect(copyText("héllo ✓\n", { osc52: () => false, fallbackDir: out })).toEqual({ methods: ["clip.exe"], file: null, confirmed: true });
+      // A byte-order mark, then UTF-16: clip.exe reads it as it is, not in the console's code page.
+      expect(readFileSync(join(dir, "board"))).toEqual(Buffer.concat([Buffer.from([0xff, 0xfe]), Buffer.from("héllo ✓\n", "utf16le")]));
+      expect(ran(dir)).toEqual(["clip.exe"]);
+    });
+    // A paste: PowerShell's Get-Clipboard, only when nothing on the Linux side answers; its CRLF lines made LF.
+    await withTools({}, { WSL_DISTRO_NAME: "Ubuntu" }, (dir) => {
+      writeFileSync(join(dir, "powershell.exe"), `#!/bin/sh\necho "\${0##*/} $*" >> "\${0%/*}/ran"\nprintf 'one\\r\\ntwo\\r\\n\\r\\n'\n`);
+      chmodSync(join(dir, "powershell.exe"), 0o755);
+      expect(readClipboard(out)).toBe("one\ntwo\n");
+      expect(ran(dir)).toEqual(["powershell.exe -NoProfile -NonInteractive -Command [Console]::OutputEncoding = [System.Text.Encoding]::UTF8; Get-Clipboard -Raw"]);
+    });
+    await withTools({ "wl-paste": "paste" }, { WSL_DISTRO_NAME: "Ubuntu", WAYLAND_DISPLAY: "wayland-0" }, (dir) => {
+      writeFileSync(join(dir, "board"), "from wayland");
+      writeFileSync(join(dir, "powershell.exe"), "#!/bin/sh\necho powershell >> \"${0%/*}/ran\"\n");
+      chmodSync(join(dir, "powershell.exe"), 0o755);
+      expect(readClipboard(out)).toBe("from wayland");
+      expect(ran(dir)).toEqual(["wl-paste --no-newline"]);
+    });
+    // Not WSL: neither is asked.
+    await withTools({ "clip.exe": "copy" }, {}, (dir) => {
+      expect(copyText("x", { osc52: () => false, fallbackDir: out }).methods).toEqual(["file"]);
+      expect(ran(dir)).toEqual([]);
+    });
+    expect(fromPowerShell("a\r\nb\r\n")).toBe("a\nb");
+    expect(fromPowerShell("a\r\n\r\n")).toBe("a\n");
+    expect(fromPowerShell("")).toBe("");
     rmSync(out, { recursive: true, force: true });
   });
 
@@ -3004,5 +3039,52 @@ describe("where slipbox keeps things (14.9)", () => {
     writeFileSync(join(other, "CACHEDIR.TAG"), "Signature: 8a477f597d28d172789f06886806bc55\n# someone else's\n");
     ensureCacheHome(other);
     expect(readFileSync(join(other, "CACHEDIR.TAG"), "utf8")).toEndWith("# someone else's\n");
+  });
+});
+
+describe("WSL (14.12)", () => {
+  const MOUNTS = [
+    "none /usr/lib/wsl/drivers 9p ro,nosuid,nodev,noatime,dirsync,aname=drivers;fmask=222;dmask=222 0 0",
+    "C:\\134 /mnt/c 9p rw,noatime,dirsync,aname=drvfs;path=C:\\;uid=1000;gid=1000 0 0",
+    "D:\\134 /mnt/my\\040drive 9p rw,noatime,aname=drvfs;path=D:\\ 0 0",
+    "e: /mnt/e drvfs rw,noatime 0 0",
+    "/dev/sdc / ext4 rw,relatime 0 0",
+  ].join("\n");
+
+  test("WSL known by its environment or its kernel; Windows' drives read from its mounts — drvfs, or 9p naming it", async () => {
+    const { isWsl, windowsDrives } = await import("../src/core/wsl.ts");
+    expect(isWsl({ WSL_DISTRO_NAME: "Ubuntu" }, "6.1.0")).toBe(true);
+    expect(isWsl({}, "5.15.153.1-microsoft-standard-WSL2")).toBe(true);
+    expect(isWsl({}, "4.4.0-19041-Microsoft")).toBe(true);
+    expect(isWsl({}, "7.0.14-orbstack")).toBe(false);
+    expect(windowsDrives(MOUNTS)).toEqual([
+      { drive: "C:", at: "/mnt/c" },
+      { drive: "D:", at: "/mnt/my drive" },
+      { drive: "E:", at: "/mnt/e" },
+    ]);
+    expect(windowsDrives("")).toEqual([]);
+  });
+
+  test("a path on a Windows drive, through a link too; Windows' fonts on C:; what's said opening notes there — in WSL only", async () => {
+    const { windowsDriveNote, windowsDriveOf, windowsFontsDir } = await import("../src/core/wsl.ts");
+    const { fontDirs } = await import("../src/core/export/fonts.ts");
+    const base = mkdtempSync(join(sandbox, "wsl-"));
+    const c = join(base, "mnt", "c");
+    mkdirSync(join(c, "Users", "u", "notes"), { recursive: true });
+    mkdirSync(join(c, "Windows", "Fonts"), { recursive: true });
+    mkdirSync(join(base, "home"));
+    symlinkSync(join(c, "Users", "u", "notes"), join(base, "home", "notes"));
+    const drives = [{ drive: "C:", at: c }];
+    expect(windowsDriveOf(join(c, "Users", "u", "notes"), drives)).toBe("C:");
+    expect(windowsDriveOf(join(base, "home", "notes"), drives)).toBe("C:");
+    expect(windowsDriveOf(join(base, "home"), drives)).toBeNull();
+    expect(windowsDriveOf(`${c}-other`, drives)).toBeNull();
+    expect(windowsFontsDir(drives)).toBe(join(c, "Windows", "Fonts"));
+    expect(windowsFontsDir([{ drive: "D:", at: c }])).toBeNull();
+    expect(fontDirs(join(c, "Windows", "Fonts"))[0]).toBe(join(c, "Windows", "Fonts"));
+    expect(fontDirs(null)).not.toContain(join(c, "Windows", "Fonts"));
+    expect(windowsDriveNote(join(base, "home", "notes"), true, drives)).toStartWith("these notes are on Windows' C: drive: a change a Windows program makes there reaches slipbox only in the files it has open");
+    expect(windowsDriveNote(join(base, "home", "notes"), false, drives)).toBeNull();
+    expect(windowsDriveNote(join(base, "home"), true, drives)).toBeNull();
   });
 });

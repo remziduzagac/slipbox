@@ -24,7 +24,8 @@ scripts/install-local.sh                            # a `slipbox` launcher in ~/
 
 Releases — a binary per platform, macOS and Linux (Alpine's musl too), with no Bun needed — are built and installed by
 `scripts/release.ts` and its `install.sh` (`curl -fsSL …/releases/latest/download/install.sh | sh`), or Homebrew's
-formula, through a tap; none is published yet. How, and what keeps it safe: [docs/design/distribution.md](docs/design/distribution.md).
+formula, through a tap; none is published yet. On Windows, slipbox runs in WSL — the Linux release, with Windows'
+clipboard and fonts; native Windows is to come. How, and what keeps it safe: [docs/design/distribution.md](docs/design/distribution.md).
 
 A file's **root** is the nearest folder above it holding `.git`, `.slipbox/`, `.obsidian/` or `.zk/`: what `/` in a
 link starts from, where a wikilink's names are looked for, whose link convention is followed. A folder without one
