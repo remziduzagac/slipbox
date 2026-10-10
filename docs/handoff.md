@@ -97,7 +97,7 @@ dropped.
 
 Export (`10.x`, `docs/design/export.md`) began the same day, decided with the user: no external tool — every format
 TypeScript or JavaScript under a permissive licence (the headless browser, `10.7`, and pandoc, `10.8`, dropped) — Word
-first, an export beside its note by default. Built, as prototypes to try: the assembler (`10.1`: embeds drawn in, links
+first, an export beside its note by default. Built, and signed off 2026-10-10: the assembler (`10.1`: embeds drawn in, links
 inside the document, pictures, diagrams and maths drawn), Word (`10.4`, by `docx`), PDF (`10.5`, by `pdfkit`, in the
 machine's fonts), a web page (`10.2`), an e-book (`10.6`) and portable Markdown (`10.3`): `slipbox export <note…> --to
 …` and `space n o`; several notes as one document, picked in order (`10.9`, `space n shift+o`). Then: what a format
@@ -107,8 +107,8 @@ distribution (`14.x`, with the licence to decide: `14.6`), `22.x`, Scout (`6.10`
 
 Then, 2026-10-10: editing's fundamentals (`25.1`–`25.8`: indentation per file, comments, brackets, replace across
 files, word completion, spelling, a command run, a server's snippets) and git in the editor (`26.1`–`26.5`: changed
-lines in the gutter, source control by the explorer, commit, blame and a file's history, branches; `26.6` later,
-opt-in), all prototypes to try. The compiled binary no longer loads the `bunfig.toml` or `.env` of the folder it's
+lines in the gutter, source control by the explorer, commit, blame and a file's history, branches; `26.6` deferred),
+all prototypes to try. The compiled binary no longer loads the `bunfig.toml` or `.env` of the folder it's
 started in (`14.1`), and SQLite is the runtime's own, `node:sqlite` (better-sqlite3 dropped: no native package, and
 the glibc Bun needs, not more). Distribution's decisions, after trailscout's packaging design, are in `14.x`: macOS
 and Linux first, Windows if it isn't difficult; no signing at first; a daily update check, on; XDG's folders kept.

@@ -536,26 +536,26 @@ common, and the only reason they are step 0.
 
 | ID | Item |
 | --- | --- |
-| 10.1 | **Prototype.** Assembler: embeds drawn in, links inside the document or their text, pictures as on screen |
-| 10.2 | **Prototype.** HTML writer: one file, its pictures inside it; print-friendly |
-| 10.3 | **Prototype.** Markdown writer: portable — GitHub's heading ids, pictures copied beside it |
-| 10.4 | **Prototype.** DOCX writer, by `docx` (MIT): `slipbox export`, `space n o` |
-| 10.5 | **Prototype.** PDF writer, by `pdfkit` (MIT; decided 2026-10-09): the machine's fonts, embedded |
-| 10.6 | **Prototype.** EPUB packaging over 10.2, zipped by `fflate` (MIT) |
+| 10.1 | **Done.** Assembler: embeds drawn in, links inside the document or their text, pictures as on screen |
+| 10.2 | **Done.** HTML writer: one file, its pictures inside it; print-friendly |
+| 10.3 | **Done.** Markdown writer: portable — GitHub's heading ids, pictures copied beside it |
+| 10.4 | **Done.** DOCX writer, by `docx` (MIT): `slipbox export`, `space n o` |
+| 10.5 | **Done.** PDF writer, by `pdfkit` (MIT; decided 2026-10-09): the machine's fonts, embedded |
+| 10.6 | **Done.** EPUB packaging over 10.2, zipped by `fflate` (MIT) |
 | 10.7 | **Dropped** (2026-10-09). A headless-browser tier: an external tool |
 | 10.8 | **Dropped** (2026-10-09). A pandoc tier: an external tool |
-| 10.9 | **Prototype.** Compose: notes picked in order, one document — `space n shift+o`; the CLI takes several |
-| 10.10 | **Prototype.** A picture a format doesn't hold made PNG first: BMP, GIF, WebP (libwebp as wasm) |
-| 10.11 | **Prototype.** PDF lines laid out by slipbox: a picture in a sentence, maths on the baseline, code tinted |
-| 10.12 | **Prototype.** Emoji in a PDF in black and white, from a font that draws them so (Noto Emoji, Symbola…) |
+| 10.9 | **Done.** Compose: notes picked in order, one document — `space n shift+o`; the CLI takes several |
+| 10.10 | **Done.** A picture a format doesn't hold made PNG first: BMP, GIF, WebP (libwebp as wasm) |
+| 10.11 | **Done.** PDF lines laid out by slipbox: a picture in a sentence, maths on the baseline, code tinted |
+| 10.12 | **Done.** Emoji in a PDF in black and white, from a font that draws them so (Noto Emoji, Symbola…) |
 | 10.13 | **Deferred** (2026-10-09). Colour emoji in a PDF: the colour emoji font's own pictures, in a line (`10.11`) |
-| 10.14 | **Prototype.** Where an export goes, in a Save As window: places, the folder's folders and files, the name |
+| 10.14 | **Done.** Where an export goes, in a Save As window: places, the folder's folders and files, the name |
 
 Decided 2026-10-09 with the user: no external tool — every format is TypeScript or JavaScript under a permissive
 licence, and a format that would need a tool isn't offered. Word first, then the rest; an export goes beside its note
 by default. Later the same day: what a format can't take made PNG first (`10.10`), the PDF's lines laid out by
 slipbox (`10.11`), emoji in black and white for now (`10.12`), colour later (`10.13`). Design:
-`docs/design/export.md`.
+`docs/design/export.md`. Signed off by the user 2026-10-10: the prototypes are done.
 
 ## LSP face — `11.x`
 
@@ -732,7 +732,7 @@ packaging lands whenever it first needs to run on a VM.*
 
 | ID | Item |
 | --- | --- |
-| 14.1 | `bun build --compile` per target; its autoload flags off — **done** 2026-10-10, in `build`, tested |
+| 14.1 | **Done.** `bun build --compile` per target; its autoload flags off (2026-10-10), in `build`, tested |
 | 14.2 | **Done.** Release assets: darwin-arm64, darwin-x64, linux-x64, linux-arm64; `SHA256SUMS`, attestations |
 | 14.3 | **Done.** Homebrew: a formula each release, into a tap once it's published; Homebrew's own left to brew |
 | 14.4 | **Done.** Update path: `slipbox upgrade`; a daily check, on by default, that sends nothing identifying |
@@ -1024,7 +1024,7 @@ trusted. It's the TUI's alone, no CLI equivalents: an agent has `git` itself.*
 | 26.3 | **Prototype.** Commit: its message in a floating editor; amend. Not trusted: its hooks don't run; it says so |
 | 26.4 | **Prototype.** Blame: who changed the cursor's line, when, the commit's message; a file's history with `22.1` |
 | 26.5 | **Prototype.** Branches: switched to or made from a picker, unsaved notes saved or kept first |
-| 26.6 | Later, opt-in: stash; fetch, pull, push — asked for, never automatic; a conflict view: ours, theirs, both |
+| 26.6 | **Deferred** (2026-10-10). Stash; fetch, pull, push — asked for, never automatic; ours, theirs, both |
 
 `26.2` stages, unstages or discards a file or one change, and opens its diff; discarding asks first.
 
