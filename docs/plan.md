@@ -924,8 +924,8 @@ rather than an unlink, nvim-tree's keys where they fit. The design is `docs/desi
 | ID | Item |
 | --- | --- |
 | 22.1 | **Prototype.** A note's history: its commits (`git log --follow`), an older version read, the diff to it |
-| 22.2 | **Prototype.** Frontmatter checked by its document type's rules (required keys, kinds, values): Problems |
-| 22.3 | **Prototype.** Document types by their conventions (ADRs, skills, yours): listed, ordered, `] t` / `[ t` |
+| 22.2 | **Done.** Frontmatter checked by its document type's rules (required keys, kinds, values): Problems |
+| 22.3 | **Done.** Document types by their conventions (ADRs, skills, yours): listed, ordered, `] t` / `[ t` |
 
 ## Running nothing of a folder's own — `23.x`
 

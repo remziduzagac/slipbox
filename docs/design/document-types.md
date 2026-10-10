@@ -4,7 +4,7 @@ Notes of a kind, known by where they are — an agent skill's `SKILL.md`, an arc
 folder — and what that brings: rules their frontmatter must keep, said in Problems (`22.2`), and their conventions
 read — a number from the file's name for their order, a status, what supersedes one — to list them and move between
 them (`22.3`). Like Obsidian's Bases, driven by conventions instead of a database: nothing is written or kept. Built
-2026-10-10, a prototype to try. The code is `core/doctypes.ts`.
+and tried live 2026-10-10, on the reference set's ADRs and skills. The code is `core/doctypes.ts`.
 
 ## Types
 
