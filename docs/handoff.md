@@ -107,11 +107,17 @@ distribution (`14.x`, with the licence to decide: `14.6`), `22.x`, Scout (`6.10`
 
 Then, 2026-10-10: editing's fundamentals (`25.1`–`25.8`: indentation per file, comments, brackets, replace across
 files, word completion, spelling, a command run, a server's snippets) and git in the editor (`26.1`–`26.5`: changed
-lines in the gutter, source control by the explorer, commit, blame and a file's history, branches; `26.6` deferred),
-all prototypes to try. The compiled binary no longer loads the `bunfig.toml` or `.env` of the folder it's
-started in (`14.1`), and SQLite is the runtime's own, `node:sqlite` (better-sqlite3 dropped: no native package, and
-the glibc Bun needs, not more). Distribution's decisions, after trailscout's packaging design, are in `14.x`: macOS
-and Linux first, Windows if it isn't difficult; no signing at first; a daily update check, on; XDG's folders kept.
+lines in the gutter, source control by the explorer, commit, blame and a file's history, branches; `26.6` deferred).
+The compiled binary no longer loads the `bunfig.toml` or `.env` of the folder it's started in (`14.1`), and SQLite is
+the runtime's own, `node:sqlite` (better-sqlite3 dropped: no native package, and the glibc Bun needs, not more).
+Distribution (`14.x`, `docs/design/distribution.md`), after trailscout's packaging design: releases for macOS and
+Linux (Alpine's musl too), an installer, `upgrade`, `uninstall`, a Homebrew formula, the supply chain's gates,
+language servers from lockfiles; Windows through WSL, native staged (`14.14`–`14.17`). Document types (`22.2`, `22.3`).
+
+The same day, every prototype was tried live in a herdr tab of the agent's own, on the reference set, and marked done
+when it worked — the agent tries what it builds, rather than handing it over to try. What that found was fixed, each
+with a regression test: a read-only window that took typing, the commit editor's first letter and its retry, source
+control's selection after staging, a config warning that hid an escape, and git's attribute guard failing open.
 
 ## The documents
 

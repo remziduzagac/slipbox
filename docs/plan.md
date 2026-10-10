@@ -923,7 +923,7 @@ rather than an unlink, nvim-tree's keys where they fit. The design is `docs/desi
 
 | ID | Item |
 | --- | --- |
-| 22.1 | **Prototype.** A note's history: its commits (`git log --follow`), an older version read, the diff to it |
+| 22.1 | **Done.** A note's history: its commits (`git log --follow`), an older version read, the diff to it |
 | 22.2 | **Done.** Frontmatter checked by its document type's rules (required keys, kinds, values): Problems |
 | 22.3 | **Done.** Document types by their conventions (ADRs, skills, yours): listed, ordered, `] t` / `[ t` |
 
@@ -992,14 +992,14 @@ Not wanted: vim's marks, macros, named registers and block selection.*
 
 | ID | Item |
 | --- | --- |
-| 25.1 | **Prototype.** Indentation per file — `.editorconfig`, else the file's own, else its language's |
-| 25.2 | **Prototype.** Comments toggled: `gc` and a motion, `gcc`, a selection's lines, `ctrl+/`; each language's |
-| 25.3 | **Prototype.** Brackets: `%` to the matching one (a motion too), both marked; pairs closed as typed, opt-in |
-| 25.4 | **Prototype.** Replace across files in the TUI: previewed as a rename is, undoable; `replace --all` |
-| 25.5 | **Prototype.** Word completion without a language server: the open files' words, `ctrl+n` / `ctrl+p` |
-| 25.6 | **Prototype.** Spelling in notes: misspelt words marked, their suggestions, a word added to your own list |
-| 25.7 | **Prototype.** A command run: `:!cmd`, its output in a window; lines filtered through one (`:'<,'>!sort`) |
-| 25.8 | **Prototype.** A server's snippets: their tab stops and placeholders filled in turn, `tab` to the next |
+| 25.1 | **Done.** Indentation per file — `.editorconfig`, else the file's own, else its language's |
+| 25.2 | **Done.** Comments toggled: `gc` and a motion, `gcc`, a selection's lines, `ctrl+/`; each language's |
+| 25.3 | **Done.** Brackets: `%` to the matching one (a motion too), both marked; pairs closed as typed, opt-in |
+| 25.4 | **Done.** Replace across files in the TUI: previewed as a rename is, undoable; `replace --all` |
+| 25.5 | **Done.** Word completion without a language server: the open files' words, `ctrl+n` / `ctrl+p` |
+| 25.6 | **Done.** Spelling in notes: misspelt words marked, their suggestions, a word added to your own list |
+| 25.7 | **Done.** A command run: `:!cmd`, its output in a window; lines filtered through one (`:'<,'>!sort`) |
+| 25.8 | **Done.** A server's snippets: their tab stops and placeholders filled in turn, `tab` to the next |
 
 `25.1` covers saving as `.editorconfig` says too: trailing whitespace trimmed, the final newline added, only where it
 asks. `25.7` is the part of `13.1` that runs what you type yourself; the rest of `13.x` stays deferred. `25.8`:
@@ -1019,11 +1019,11 @@ trusted. It's the TUI's alone, no CLI equivalents: an agent has `git` itself.*
 
 | ID | Item |
 | --- | --- |
-| 26.1 | **Prototype.** Changed lines in the gutter against what's staged, unsaved text too; `]c` `[c`; preview, undo |
-| 26.2 | **Prototype.** Source control by the explorer: staged, changed, untracked, conflicts; stage, unstage, discard |
-| 26.3 | **Prototype.** Commit: its message in a floating editor; amend. Not trusted: its hooks don't run; it says so |
-| 26.4 | **Prototype.** Blame: who changed the cursor's line, when, the commit's message; a file's history with `22.1` |
-| 26.5 | **Prototype.** Branches: switched to or made from a picker, unsaved notes saved or kept first |
+| 26.1 | **Done.** Changed lines in the gutter against what's staged, unsaved text too; `]c` `[c`; preview, undo |
+| 26.2 | **Done.** Source control by the explorer: staged, changed, untracked, conflicts; stage, unstage, discard |
+| 26.3 | **Done.** Commit: its message in a floating editor; amend. Not trusted: its hooks don't run; it says so |
+| 26.4 | **Done.** Blame: who changed the cursor's line, when, the commit's message; a file's history with `22.1` |
+| 26.5 | **Done.** Branches: switched to or made from a picker, unsaved notes saved or kept first |
 | 26.6 | **Deferred** (2026-10-10). Stash; fetch, pull, push — asked for, never automatic; ours, theirs, both |
 
 `26.2` stages, unstages or discards a file or one change, and opens its diff; discarding asks first.
