@@ -416,6 +416,7 @@ sidebar_vault = { bold = true, underline = true }
 "leader ; X g" = "git.amend"
 "leader ; X h" = "git.blame"
 "leader ; X i" = "git.history"
+"leader ; X j" = "git.branches"
 "leader ; p a" = "scratch.open"
 "leader ; p b" = "scratch.add"
 "leader ; p c" = "scratch.copy"

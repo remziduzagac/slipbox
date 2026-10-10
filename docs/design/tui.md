@@ -1412,6 +1412,12 @@ files — …"), and each link broken by one says where its file went, in Proble
 A jump to a line inside a rendered paragraph (a diff's line, a conflict, a finding, `:42` and `ctrl+g`) lands on that
 line's text, not the paragraph's first line or its row's end.
 
+**Branches** (`26.5`; `space g o`): the local branches, this one marked `here` and selected; `enter` checks one out,
+and "A new branch from here…" asks its name and makes it where HEAD is (`git switch -c`; a name git won't take is
+said). Unsaved notes first: saved, then the switch; or kept as typed (a file the switch changes is then a conflict to
+settle on saving); or nothing done. git refusing — a change of yours it would overwrite — says why in its words. A
+switch done is git's own (`5.9`, "Each branch's tabs"): each branch keeps its tabs.
+
 **Blame and a file's history** (`26.4`, `22.1`): `space g b` shows who last changed the cursor's line — the commit, its
 author, its day and its whole message — in the floating window. It blames the last commit, never the working tree
 (whose blame could run a repository's filter): the cursor's line is found there through a line diff, and a line

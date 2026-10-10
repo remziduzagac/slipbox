@@ -100,6 +100,18 @@ export function unstageAll(c: Pick<Checkout, "root">): GitDone {
   return r.ok ? null : done(git(c, ["rm", "-r", "--cached", "-q", "."]));
 }
 
+/** Another branch checked out (26.5): git's own refusal — a change it would overwrite — said in its words. */
+export function switchBranch(c: Pick<Checkout, "root">, name: string): GitDone {
+  return done(git(c, ["switch", "--", name]));
+}
+
+/** A new branch made from where HEAD is, and checked out; a name git won't take, said why. */
+export function createBranch(c: Pick<Checkout, "root">, name: string): GitDone {
+  const valid = git(c, ["check-ref-format", "--branch", name]);
+  if (!valid.ok) return `"${name}" isn't a name git takes for a branch`;
+  return done(git(c, ["switch", "-c", name]));
+}
+
 /** A commit message as git keeps it: its `#` lines and the blank lines around it gone; "" when nothing's left. */
 export function cleanMessage(text: string): string {
   return text

@@ -1355,6 +1355,7 @@ export function registerActions(app: App): void {
     "git.view": (a) => a.openLeftView("git", "cycle"),
     "git.commit": (a) => a.openCommitEditor(false),
     "git.blame": (a) => blameHere(a),
+    "git.branches": (a) => a.openBranches(),
     "git.history": (a) => historyHere(a),
     "git.amend": (a) => a.openCommitEditor(true),
     "git.change_next": (a) => withView(a, (v) => gitStep(a, v, 1)),

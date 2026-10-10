@@ -257,6 +257,7 @@ export const DEFAULT_KEYS: Record<string, string> = {
   "leader g s": "git.view",
   "leader g b": "git.blame",
   "leader g h": "git.history",
+  "leader g o": "git.branches",
   "leader g p": "git.change_preview",
   "leader g r": "git.change_undo",
   "leader g d": "git.diff",

@@ -601,6 +601,7 @@ edit the config and the config wins again.
 | `space g m` | a merge picked: the links it would break, with their fixes (`:merge-review`, `20.21`) |
 | `space g s` | source control: the changed files by section (`26.2`); `s` `u` `d` stage, unstage, discard |
 | `c` / `shift+c` in it | commit what's staged / amend the last commit: the message in a floating editor (`26.3`) |
+| `space g o` | the branches: one checked out, unsaved notes saved or kept first; or a new one from here (`26.5`) |
 | `space g b` | who last changed the cursor's line: the commit, its author, day and message (`26.4`) |
 | `space g h` | this file's history: its commits, through renames; one read as it was, or its diff to now (`22.1`) |
 | `] c` / `[ c` | to the next / previous line changed against what's staged, the gutter's signs (`26.1`) |

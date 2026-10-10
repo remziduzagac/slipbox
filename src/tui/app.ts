@@ -73,7 +73,7 @@ import { buildContext } from "../core/context.ts";
 import { IndexJob, indexFile, search, type SearchHit, SearchIndex, type SearchResult } from "../core/search.ts";
 import { type Checkout, checkoutOf, headOf } from "../core/git.ts";
 import { baseBranch, branchesOf, changedSince, type GitState, inCheckout, inVault, mergeBaseOf, showAt, showLater, stateOf, worktreeList } from "../core/gitops.ts";
-import { commitLater, entriesLater, lastMessage, sections, type StatusEntry } from "../core/gitstage.ts";
+import { commitLater, createBranch, entriesLater, type GitDone, lastMessage, sections, type StatusEntry, switchBranch } from "../core/gitstage.ts";
 import { type GitRow, gitRows, gitViewAction } from "./gitview.ts";
 import { type GitChange, gitChanges } from "../core/gitsigns.ts";
 import { describeBreak, type MergeBreak, type MergeReview, reviewMerge } from "../core/mergereview.ts";
@@ -1980,6 +1980,65 @@ export class App {
   showVersion(text: string, path: string, title: string): void {
     const note = /\.(md|markdown)$/i.test(path);
     this.openHover(note ? text : fence(text, fenceLanguage(path)), title);
+  }
+
+  /**
+   * `space g o` (26.5): the branches, this one marked; one picked is checked out — unsaved notes saved, or kept as they
+   * are, first — and "a new branch from here…" makes one there. git's refusal (a change it would overwrite) is said in its
+   * words; a switch done is one event, each branch keeping its tabs (5.9).
+   */
+  openBranches(): void {
+    const c = this.checkout;
+    if (!c) return this.message("info", "not a git checkout");
+    const branches = branchesOf(c);
+    if (!branches) return this.message("warn", "git couldn't list the branches");
+    const current = headOf(c).branch;
+    const NEW = Symbol("new");
+    this.openList({
+      title: `Branches (${branches.length}) — enter: check one out`,
+      items: [
+        ...branches.map((b) => ({ label: sanitize(b), detail: b === current ? "here" : "", data: b })),
+        { label: "A new branch from here…", detail: current ? `from ${sanitize(current)}` : "from this commit", data: NEW },
+      ],
+      selected: Math.max(0, branches.indexOf(current ?? "")),
+      accept: (item) => {
+        if (item.data === NEW) {
+          return this.prompt("new branch: ", (name) => {
+            if (name.trim()) this.beforeCheckout(() => this.checkedOut(createBranch(c, name.trim())));
+          });
+        }
+        const name = item.data as string;
+        if (name === current) return this.message("info", `already on ${name}`);
+        this.beforeCheckout(() => this.checkedOut(switchBranch(c, name)));
+      },
+    });
+  }
+
+  /** Unsaved notes before a checkout changes the files under them: saved, or kept as they are — asked; none, at once. */
+  private beforeCheckout(go: () => void): void {
+    const dirty = this.dirtyBuffers();
+    if (!dirty.length) return go();
+    const names = dirty.map((b) => this.displayName(b)).join(", ");
+    this.openList({
+      title: `Unsaved: ${names}`,
+      items: [
+        { label: "Save them, then switch", data: "save" },
+        { label: "Switch, keeping them unsaved", detail: "their text as typed; a file the switch changes, a conflict to settle on saving", data: "keep" },
+        { label: "Cancel", data: "cancel" },
+      ],
+      accept: (item) => {
+        if (item.data === "cancel") return;
+        if (item.data === "save" && !dirty.every((b) => this.saveBuffer(b, true))) return this.message("warn", "not every note saved — nothing switched");
+        go();
+      },
+    });
+  }
+
+  /** A checkout done — the switch handled as one event (5.9) — or git's refusal said. */
+  private checkedOut(why: GitDone): void {
+    if (why) return this.message("warn", `git: ${why}`);
+    this.checkHead();
+    void this.refreshGitNow().then(() => this.host.requestRender());
   }
 
   /** `space g w` (5.14): the repository's checkouts by branch; enter goes into one, at this note. */

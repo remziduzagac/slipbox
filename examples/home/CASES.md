@@ -2745,6 +2745,9 @@ The same notes, one per tab.
 - `git.view` — Source control: open, focus, close — `notes/index.md`, `work/kestrel/README.md` (command-specs.ts)
 - source control: sections, l on a file, s on a change, d asks, an untracked file to the trash, a, U, . —
   `work/kestrel/README.md`, `notes/index.md` (tui.md Source control (26.2); tests 'source control (26.2)')
+- `git.branches` — Branches — `notes/index.md`, `work/kestrel/README.md` (command-specs.ts)
+- branches (space g o): one checked out, unsaved saved or kept first, a new one; git refusing over a change of yours —
+  `work/kestrel/README.md` (tui.md Branches (26.5); tests 'branches (26.5)')
 - `git.blame` — Who changed this line — `notes/index.md`, `work/kestrel/README.md` (command-specs.ts)
 - `git.history` — This file's history — `notes/index.md`, `work/kestrel/README.md` (command-specs.ts)
 - blame (space g b) a line, and one changed since; history (space g h) through a rename, a version read, its diff —

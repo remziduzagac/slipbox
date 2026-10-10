@@ -992,7 +992,7 @@ trusted. It's the TUI's alone, no CLI equivalents: an agent has `git` itself.*
 | 26.2 | **Prototype.** Source control by the explorer: staged, changed, untracked, conflicts; stage, unstage, discard |
 | 26.3 | **Prototype.** Commit: its message in a floating editor; amend. Not trusted: its hooks don't run; it says so |
 | 26.4 | **Prototype.** Blame: who changed the cursor's line, when, the commit's message; a file's history with `22.1` |
-| 26.5 | Branches: switched to or made from a picker, unsaved notes saved or kept first |
+| 26.5 | **Prototype.** Branches: switched to or made from a picker, unsaved notes saved or kept first |
 | 26.6 | Later, opt-in: stash; fetch, pull, push — asked for, never automatic; a conflict view: ours, theirs, both |
 
 `26.2` stages, unstages or discards a file or one change, and opens its diff; discarding asks first.

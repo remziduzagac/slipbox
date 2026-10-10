@@ -14143,3 +14143,83 @@ describe("blame and a file's history (26.4, 22.1)", () => {
     expect(list().items.map((i) => i.label)).toEqual(["@@ line 3", "  one", "  ", "- two", "+ TWO"]);
   });
 });
+
+describe("branches (26.5)", () => {
+  const git = (cwd: string, ...args: string[]) => new TextDecoder().decode(Bun.spawnSync(["git", "-c", "user.email=t@example.invalid", "-c", "user.name=t", "-C", cwd, ...args]).stdout);
+  /** main and feat: a.md the same on both, b.md not. */
+  const repo = () => {
+    const root = mkdtempSync(join(sandbox, "branches-"));
+    mkdirSync(join(root, ".slipbox"));
+    writeFileSync(join(root, ".gitignore"), ".slipbox/\n");
+    writeFileSync(join(root, "a.md"), "a\n");
+    writeFileSync(join(root, "b.md"), "b on main\n");
+    git(root, "init", "-q", "-b", "main");
+    git(root, "add", "-A");
+    git(root, "commit", "-q", "-m", "start");
+    git(root, "switch", "-q", "-c", "feat");
+    writeFileSync(join(root, "b.md"), "b on feat\n");
+    git(root, "commit", "-q", "-am", "feat's b");
+    git(root, "switch", "-q", "main");
+    return git(root, "rev-parse", "HEAD") ? root : null;
+  };
+  const branch = (root: string) => git(root, "branch", "--show-current").trim();
+  const list = (h: Harness) => h.app.overlay as ListOverlay;
+  const type = (s: string) => [...s].map((ch) => (ch === " " ? "space" : ch));
+
+  test("the branches, this one marked; one checked out; a new one made from here; a name git won't take, said", async () => {
+    const root = repo();
+    if (!root) return;
+    const h = await harness({ root, open: "a.md", width: 120, height: 40 });
+    await h.app.run("git.branches");
+    expect(list(h).items.map((i) => [i.label, i.detail])).toEqual([["feat", ""], ["main", "here"], ["A new branch from here…", "from main"]]);
+    expect(list(h).selected).toBe(1);
+    await h.keys("up", "enter");
+    expect(branch(root)).toBe("feat");
+    expect(h.app.messages.some((m) => m.text.startsWith("switched to branch feat"))).toBe(true);
+    // Already there: said.
+    await h.app.run("git.branches");
+    await h.keys("enter");
+    expect(h.app.messages.at(-1)?.text).toBe("already on feat");
+    // A new one, from here.
+    await h.app.run("git.branches");
+    await h.keys("down", "down", "enter", ...type("topic"), "enter");
+    expect(branch(root)).toBe("topic");
+    await h.app.run("git.branches");
+    // Three branches now, topic selected: the new-branch row is the next.
+    await h.keys("down", "enter", ...type("bad name"), "enter");
+    expect(h.app.messages.at(-1)?.text).toBe(`git: "bad name" isn't a name git takes for a branch`);
+    expect(branch(root)).toBe("topic");
+  });
+
+  test("unsaved notes first: saved, or kept as typed, or nothing done; git refusing a switch says why", async () => {
+    const root = repo();
+    if (!root) return;
+    const h = await harness({ root, open: "a.md", width: 120, height: 40 });
+    const a = h.app.view!.buf;
+    a.edit(0, 0, "edited ");
+    await h.app.run("git.branches");
+    await h.keys("up", "enter");
+    expect(list(h).title).toBe("Unsaved: a.md");
+    expect(list(h).items.map((i) => i.label)).toEqual(["Save them, then switch", "Switch, keeping them unsaved", "Cancel"]);
+    // Cancel: nothing.
+    await h.keys("down", "down", "enter");
+    expect(branch(root)).toBe("main");
+    // Kept: switched, the note as typed.
+    await h.app.run("git.branches");
+    await h.keys("up", "enter", "down", "enter");
+    expect(branch(root)).toBe("feat");
+    expect([a.dirty, a.source]).toEqual([true, "edited a\n"]);
+    // Saved, then switched: the change goes along (git keeps it, b.md not touched).
+    await h.app.run("git.branches");
+    await h.keys("down", "enter", "enter");
+    expect(branch(root)).toBe("main");
+    expect(a.dirty).toBe(false);
+    expect(readFileSync(join(root, "a.md"), "utf8")).toBe("edited a\n");
+    // b.md changed here, and different on feat: git won't switch, and says why.
+    writeFileSync(join(root, "b.md"), "mine\n");
+    await h.app.run("git.branches");
+    await h.keys("up", "enter");
+    expect(h.app.messages.at(-1)?.text).toMatch(/^git: error: Your local changes to the following files would be overwritten/);
+    expect(branch(root)).toBe("main");
+  });
+});
