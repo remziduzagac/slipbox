@@ -1,6 +1,6 @@
 # slipbox — handoff
 
-Written 2026-09-25 for whoever picks this up next, human or agent; updated 2026-10-09. Phases 0–5c
+Written 2026-09-25 for whoever picks this up next, human or agent; updated 2026-10-10. Phases 0–5c
 are built (`docs/plan.md`, "Phases").
 Read this, then `docs/idea.md`, then `docs/plan.md`, then `docs/design/` for how it was built.
 
@@ -104,6 +104,14 @@ machine's fonts), a web page (`10.2`), an e-book (`10.6`) and portable Markdown 
 can't take made PNG first (`10.10`), the PDF's lines laid out by slipbox (`10.11`), emoji in black and white (`10.12`;
 colour deferred, `10.13`), and where an export goes chosen in a Save As window (`10.14`). Left after export:
 distribution (`14.x`, with the licence to decide: `14.6`), `22.x`, Scout (`6.10`).
+
+Then, 2026-10-10: editing's fundamentals (`25.1`–`25.8`: indentation per file, comments, brackets, replace across
+files, word completion, spelling, a command run, a server's snippets) and git in the editor (`26.1`–`26.5`: changed
+lines in the gutter, source control by the explorer, commit, blame and a file's history, branches; `26.6` later,
+opt-in), all prototypes to try. The compiled binary no longer loads the `bunfig.toml` or `.env` of the folder it's
+started in (`14.1`), and SQLite is the runtime's own, `node:sqlite` (better-sqlite3 dropped: no native package, and
+the glibc Bun needs, not more). Distribution's decisions, after trailscout's packaging design, are in `14.x`: macOS
+and Linux first, Windows if it isn't difficult; no signing at first; a daily update check, on; XDG's folders kept.
 
 ## The documents
 

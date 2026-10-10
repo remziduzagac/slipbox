@@ -733,11 +733,38 @@ packaging lands whenever it first needs to run on a VM.*
 | ID | Item |
 | --- | --- |
 | 14.1 | `bun build --compile` per target; its autoload flags off — **done** 2026-10-10, in `build`, tested |
-| 14.2 | Release assets: darwin-arm64, linux-arm64, linux-x64 |
-| 14.3 | Homebrew formula |
-| 14.4 | Update path |
+| 14.2 | Release assets: darwin-arm64, darwin-x64, linux-x64, linux-arm64; `SHA256SUMS` and build attestations |
+| 14.3 | Homebrew tap, once the installer works |
+| 14.4 | Update path: `slipbox upgrade`; a daily check, on by default, that sends nothing identifying |
 | 14.5 | Alpine (musl): SQLite is Bun's own now (no loader); OpenTUI ships musl builds |
 | 14.6 | **decide** slipbox's licence — MIT, Apache-2.0, or both — then a `LICENSE` file and the notices it ships |
+| 14.7 | Installer: `curl … \| sh` with the checksums inside; a folder per version, a `current` link, `~/.local/bin` |
+| 14.8 | `slipbox uninstall`: every path it would remove listed first; `--purge` takes data and state too |
+| 14.9 | Folders: XDG's on Linux and macOS, as now; Windows' own (`%APPDATA%`, `%LOCALAPPDATA%`); `CACHEDIR.TAG` |
+| 14.10 | Supply chain: dependencies pinned, a 7-day cooldown, no install scripts, a licence gate, CI actions by hash |
+| 14.11 | Language servers (`19.5`) installed from a full lockfile slipbox ships, not only their own version pinned |
+| 14.12 | Windows (win32-x64), if it isn't difficult: paths, the shell (`25.7`), git, the terminal — after the rest |
+| 14.13 | On a real Mac before the first release: Apple's SQLite runs FTS5 and `bm25`; the binaries' signatures |
+
+Decided 2026-10-10 with the user, after reading trailscout's packaging design (its `design/09-application.md`, the
+same machine) — taken where it fits; slipbox has no daemon, no native npm packages and no models to fetch:
+
+- **Platforms**: macOS (arm64, x64) and Linux (x64, arm64) first, Windows if it isn't difficult (`14.12`). OpenTUI
+  ships natives for all of them, musl and Windows included; each is built on its own platform in CI, where its
+  native is installed.
+- **No signing or notarization** at first. A binary a browser downloads is stopped by Gatekeeper; the installer's
+  `curl` doesn't mark it. Bun signs a darwin binary ad hoc, and cross-compiling has broken that signature before:
+  built on a Mac, or checked with `codesign --verify` (`14.13`).
+- **The daily update check is on by default** (`14.4`): it asks for the latest release, and sends nothing that
+  identifies you. Only the TUI checks and says — the CLI, which agents call, never does — and `DO_NOT_TRACK=1` or the
+  config turns it off. Bun's own crash reports (sent on macOS and Windows unless `DO_NOT_TRACK` is set) are to be
+  checked in the compiled binary too, and turned off or said.
+- **Folders keep today's convention** (`14.9`): XDG's on Linux and macOS (`~/.config`, `~/.local/state`,
+  `~/.local/share`, `~/.cache`) — the dotfiles people keep and sync are there, not in `~/Library`. On Windows,
+  `%APPDATA%\slipbox` for the config, which may roam, and `%LOCALAPPDATA%\slipbox` for data, state and cache: a
+  database never roams. An `XDG_*` set is respected on every platform. A `CACHEDIR.TAG` in the cache tells backup
+  tools to skip it.
+- **The licence** (`14.6`): later.
 
 `14.6`, noted 2026-10-09: the user means to open-source slipbox and hopes for contributors; MIT, Apache-2.0 and dual
 "MIT OR Apache-2.0" were weighed and the choice parked (`package.json` says MIT; there's no `LICENSE` file yet).
