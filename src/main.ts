@@ -6,12 +6,12 @@
 import { parseArgs } from "./cli/args.ts";
 import { CLI_COMMANDS, defaultIo, EXIT, runCli } from "./cli/cli.ts";
 
-/** The Bun slipbox needs: better-sqlite3 (the search index) panics the process on Bun 1.3. */
+/** The Bun slipbox is built and tested on: older ones lack what it uses (`node:sqlite` for search, the compile flags). */
 const BUN_FLOOR = ">=1.4.2";
 
 async function main(): Promise<number> {
   if (!Bun.semver.satisfies(Bun.version, BUN_FLOOR)) {
-    process.stderr.write(`slipbox: needs Bun 1.4.2 or later (this is ${Bun.version}): SQLite, for search, crashes older ones\n`);
+    process.stderr.write(`slipbox: needs Bun 1.4.2 or later (this is ${Bun.version})\n`);
     return EXIT.error;
   }
   const argv = process.argv.slice(2);

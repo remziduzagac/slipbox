@@ -125,7 +125,7 @@ the herdr config, the workslate theme files — but they are outside this repo.
 ## Environment on this machine
 
 Ubuntu 25.10, aarch64. **mise** manages the toolchain and installs on demand — bun 1.4.2 (slipbox's floor:
-better-sqlite3 panics Bun 1.3), node lts and nvim 0.12.2 are already present, and anything else you need, `mise` will
+what it's built and tested on), node lts and nvim 0.12.2 are already present, and anything else you need, `mise` will
 fetch.
 
 **The trap that will bite you first:** mise puts tools on `PATH` from a *login* shell. A

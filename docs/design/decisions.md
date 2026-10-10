@@ -579,17 +579,18 @@ score while there's none, so a search always answers. It's deliberately small �
 `title:`, tags and folders, ranked by BM25 with the title weighing most — because a fuller engine (Scout: semantic
 search, the graph) will sit behind the same API when it's there; slipbox's is the fallback.
 
-- **SQLite is better-sqlite3** (since 2026-10-01; Bun's own `bun:sqlite` before). It bundles its own SQLite (3.53.4)
-  rather than linking the host's, and works the same under Node and Bun on macOS and Linux with no workaround
-  (`bun:sqlite` uses Apple's system SQLite on macOS and needs `setCustomSQLite()`). It was scout's too, so a process
-  holding both would load one SQLite; since 2026-10-07 trailscout runs as its own daemon, reached over a socket, and
-  its SQLite never loads in slipbox, so the binding is slipbox's own choice — still this one, for the reasons above.
-  Its Linux builds need glibc 2.34 or later. Measured with scout: Bun 1.3 panics on it (exit 133), so slipbox needs
-  Bun 1.4.2 and says so at start. Every JS number binds
-  as a double (`bun:sqlite` narrowed integral ones), so an integer the schema needs is bound `CAST(? AS INTEGER)` —
-  audited: FTS5's rowid and `LIMIT` accept a double in 3.53.4, cast anyway, since vec0's key does not. It loads
-  through its per-platform entry by a literal name (`core/sqlite.ts`): that one's binary `bun build --compile`
-  embeds, where the default entry would look for the build machine's `node_modules` at run time.
+- **SQLite is the runtime's own, through `node:sqlite`** (since 2026-10-10; better-sqlite3 from 2026-10-01, Bun's
+  `bun:sqlite` before). Bun implements `node:sqlite` as Node does — its own SQLite on Linux and Windows (3.53.2 in Bun
+  1.4.2), macOS's system one on macOS — so nothing native is packaged per platform for it. better-sqlite3 was chosen
+  with scout, for a SQLite of its own the same everywhere; trailscout since moved to `node:sqlite` (its research:
+  `node:sqlite` as new as better-sqlite3's on Node, FTS5 as fast), and here better-sqlite3 alone raised the glibc a
+  Linux build needs from Bun's and OpenTUI's 2.17 to 2.34 (measured 2026-10-10), with a 13.x line of early
+  regressions and an install script Bun runs regardless. What it cost: on macOS the SQLite is Apple's, older and of
+  the OS's version — slipbox asks only FTS5 with `unicode61` (3.27 and up), `bm25`, WAL and a busy timeout, loads no
+  extension, and both databases are caches made again when they don't open; checked on a real Mac before a release
+  (14.x). `node:sqlite` over `bun:sqlite`: one API under Node and Bun. `core/sqlite.ts` keeps the calls slipbox made
+  (`get`, `all`, `run`, `pragma`, `transaction` with savepoints inside, `exec`, `close`). Integers the schema needs
+  stay bound `CAST(? AS INTEGER)`, harmless whatever a binding does with a number.
 - **A row per file, not per section.** A search's words are a note's, wherever in it; with a row per section, words
   in two sections of one note found nothing. The hit still opens at the section with most of the words.
 - **Sections are scout's** (since 2026-10-01, scout's Stage 4; before, a data file was cut every 80 lines): a file's

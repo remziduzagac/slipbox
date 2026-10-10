@@ -2675,9 +2675,10 @@ describe("search: the index and the scan (6.x)", () => {
     idx.db.pragma("user_version = 99");
     idx.close();
     const fresh = SearchIndex.open(g.loc)!;
-    expect(fresh.db.pragma("user_version", { simple: true })).toBe(3);
-    // better-sqlite3's own SQLite, bundled, whatever the host has (FTS5 in it).
-    expect(fresh.db.prepare("select sqlite_version() as v").get()).toEqual({ v: "3.53.4" });
+    expect(fresh.db.pragma("user_version")).toBe(3);
+    // The runtime's own SQLite (node:sqlite): FTS5 in it, a version new enough for what the index asks.
+    const v = (fresh.db.prepare("select sqlite_version() as v").get() as { v: string }).v.split(".").map(Number);
+    expect(v[0] === 3 && v[1]! >= 43).toBe(true);
     fresh.close();
   });
 

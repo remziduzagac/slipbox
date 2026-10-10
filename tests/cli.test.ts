@@ -1531,7 +1531,7 @@ describe("the launcher (scripts/install-local.sh)", () => {
 });
 
 describe("the compiled binary", () => {
-  test("runs nothing of the folder it's started in: no bunfig.toml preload, no .env (the build script's flags)", () => {
+  test("runs nothing of the folder it's started in (no bunfig.toml preload, no .env); its SQLite works", () => {
     const dir = mkdtempSync(join(sandbox, "compiled-"));
     const bin = join(dir, "slipbox");
     // Built by package.json's own build script, its output moved here: what a release would ship.
@@ -1554,5 +1554,14 @@ describe("the compiled binary", () => {
     expect(existsSync(mark)).toBe(false);
     const current = (JSON.parse(r.stdout.toString()).data as { name: string; current: boolean }[]).find((t) => t.current);
     expect(current?.name).not.toBe("nord");
+    // Its SQLite the runtime's own, there in the binary: a root indexed and searched.
+    const root = join(dir, "notes");
+    mkdirSync(join(root, ".slipbox"), { recursive: true });
+    writeFileSync(join(root, "a.md"), "# A\n\nThe zorvexian word.\n");
+    const run = (args: string[]) => Bun.spawnSync([bin, ...args, "--json"], { cwd: root, env, timeout: 30_000 });
+    expect(run(["index", "--refresh"]).exitCode).toBe(0);
+    const found = run(["search", "zorvexian"]);
+    expect(found.exitCode).toBe(0);
+    expect(JSON.parse(found.stdout.toString()).data.hits.map((h: { path: string }) => h.path)).toEqual(["a.md"]);
   }, 120_000);
 });

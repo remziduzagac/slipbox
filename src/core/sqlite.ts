@@ -1,32 +1,68 @@
-// SQLite for slipbox (the search index, 6.6): better-sqlite3, which bundles its own SQLite (3.53.4)
-// and works the same under Node and Bun on macOS and Linux, where bun:sqlite takes macOS's own. Bun 1.3
-// panics on it; slipbox needs Bun 1.4.2 or later, and on Linux glibc 2.34.
+// SQLite for slipbox — the search index (6.6) and the parse cache — through `node:sqlite`: the SQLite built into the
+// runtime. Bun implements it (its own SQLite on Linux and Windows; macOS's on macOS), as Node does, so nothing native
+// is packaged per platform and nothing raises the glibc Bun needs (2026-10-10, replacing better-sqlite3, after
+// trailscout's research: docs/plan.md, 14.x). What slipbox asks of SQLite is small — FTS5 with `unicode61` and `bm25`,
+// WAL, a busy timeout — and both databases are caches, made again when they don't open or are of another version.
 //
-// Loaded through its per-platform entry, by a literal name each: those `require` their prebuilt
-// binary by a literal path, which `bun build --compile` embeds. The package's default entry finds it
-// by a path computed at run time — the build machine's — and a compiled binary elsewhere has none.
-//
-// Every JS number is bound as a double (`typeof(?)` is `real`), where bun:sqlite narrowed integral
-// ones: an integer the schema needs (a rowid, a LIMIT) is bound as `CAST(? AS INTEGER)`.
+// The few calls slipbox makes, as it made them on better-sqlite3: a statement's `get`, `all` and `run`; `pragma`, set
+// or read; a `transaction` (nested ones as savepoints); `exec`; `close`.
 
-import type BetterSqlite3 from "better-sqlite3";
+import { DatabaseSync } from "node:sqlite";
 
-export type Database = BetterSqlite3.Database;
-
-async function load(): Promise<typeof BetterSqlite3> {
-  switch (`${process.platform}-${process.arch}`) {
-    case "linux-arm64":
-      return (await import("better-sqlite3/linux-arm64")).default;
-    case "linux-x64":
-      return (await import("better-sqlite3/linux-x64")).default;
-    case "darwin-arm64":
-      return (await import("better-sqlite3/darwin-arm64")).default;
-    case "darwin-x64":
-      return (await import("better-sqlite3/darwin-x64")).default;
-    default:
-      return (await import("better-sqlite3")).default;
-  }
+/** What a statement's `run` says: rows changed, and the last row inserted. */
+export interface RunResult {
+  changes: number | bigint;
+  lastInsertRowid: number | bigint;
 }
 
-/** better-sqlite3's `Database`, for this platform. */
-export const Sqlite: typeof BetterSqlite3 = await load();
+/** A prepared statement: its first row (undefined with none), all of them, or run for what it changes. */
+export interface Statement {
+  get(...params: (string | number | null)[]): unknown;
+  all(...params: (string | number | null)[]): unknown[];
+  run(...params: (string | number | null)[]): RunResult;
+}
+
+export class Database {
+  private readonly db: DatabaseSync;
+  /** How deep the transactions open are: the outermost a transaction, the rest savepoints. */
+  private depth = 0;
+
+  constructor(file: string) {
+    this.db = new DatabaseSync(file);
+  }
+
+  exec(sql: string): void {
+    this.db.exec(sql);
+  }
+
+  prepare(sql: string): Statement {
+    return this.db.prepare(sql) as unknown as Statement;
+  }
+
+  /** A pragma — `name` read, `name = value` set — and its answer's first column (a setting has none, mostly). */
+  pragma(sql: string): unknown {
+    const row = this.db.prepare(`pragma ${sql}`).get() as Record<string, unknown> | undefined;
+    return row ? Object.values(row)[0] : undefined;
+  }
+
+  /** `fn` as one transaction: all of it, or — when it throws — none; inside another, a savepoint of it. */
+  transaction<T>(fn: () => T): T {
+    const savepoint = `sp${this.depth}`;
+    this.db.exec(this.depth ? `savepoint ${savepoint}` : "begin");
+    this.depth++;
+    try {
+      const out = fn();
+      this.depth--;
+      this.db.exec(this.depth ? `release ${savepoint}` : "commit");
+      return out;
+    } catch (err) {
+      this.depth--;
+      this.db.exec(this.depth ? `rollback to ${savepoint}; release ${savepoint}` : "rollback");
+      throw err;
+    }
+  }
+
+  close(): void {
+    this.db.close();
+  }
+}

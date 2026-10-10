@@ -4,7 +4,7 @@
 // BM25, the title weighing most. What each file was when indexed (size, mtime) says what to index
 // again: whoever changed the file, the next catch-up finds it.
 
-import { type Database, Sqlite } from "./sqlite.ts";
+import { Database } from "./sqlite.ts";
 import { existsSync, mkdirSync, rmSync } from "node:fs";
 import { join } from "node:path";
 import { cacheDir, type Keyed } from "./paths.ts";
@@ -56,8 +56,8 @@ export class SearchIndex {
       let db: Database | null = null;
       try {
         mkdirSync(dir, { recursive: true });
-        db = new Sqlite(file);
-        const version = db.pragma("user_version", { simple: true }) as number;
+        db = new Database(file);
+        const version = Number(db.pragma("user_version"));
         if (version !== 0 && version !== SEARCH_VERSION) throw new Error("another version");
         return new SearchIndex(SearchIndex.prepare(db), file);
       } catch {
@@ -134,12 +134,12 @@ export class SearchIndex {
   clear(): void {
     this.db.transaction(() => {
       for (const t of ["fts", "docs", "tags", "meta"]) this.db.exec(`delete from ${t}`);
-    })();
+    });
   }
 
   /** Several changes at once, all or none. */
   batch(fn: () => void): void {
-    this.db.transaction(fn)();
+    this.db.transaction(fn);
   }
 
   /** The folders and tags to keep, as SQL on a path column: a tag counts with the ones nested under it. */

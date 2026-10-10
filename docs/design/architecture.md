@@ -90,7 +90,7 @@ Everything else is testable headlessly with `TextCanvas` (see [testing.md](testi
 | `core/search-index.ts` | 6.6 | the search index: SQLite FTS5 in the cache, a row per file, BM25 |
 | `core/scope.ts` | 20.16, 21.10 | search by root: `here`, then linked roots, then every root known (`--scope`) |
 | `core/autoindex.ts` | 20.9 | the background auto-index: the home folder walked in slices, its roots indexed |
-| `core/sqlite.ts` | 6.6 | better-sqlite3, loaded so a compiled binary embeds its SQLite |
+| `core/sqlite.ts` | 6.6 | the runtime's SQLite (`node:sqlite`): the few calls the index and the parse cache make |
 | `core/trust.ts` | 23.x | the roots whose own code may run: your answers (`trust.json`), your `[trust] roots` |
 | `core/graph.ts` | 1.5–1.9, 6.7, 11.8 | notes, links, backlinks, lazy parsing, the index; change feed; unsaved text |
 | `core/readers.ts` | 16.2 | a reader per note format: its parse into mdast, headings and links off raw lines |
@@ -195,8 +195,8 @@ injected from the graph, so the layout stays pure and knows nothing about the va
 
 ## Dependencies
 
-Runtime dependencies, all pure JavaScript except OpenTUI and better-sqlite3 (native, prebuilt for each platform in the
-package — no build toolchain):
+Runtime dependencies, all pure JavaScript (or WebAssembly) except OpenTUI (native, prebuilt for each platform in the
+package — no build toolchain). SQLite is the runtime's own (`node:sqlite`):
 
 | Package | Used for |
 | --- | --- |
@@ -208,7 +208,6 @@ package — no build toolchain):
 | `ignore` | gitignore semantics for the walk |
 | `smol-toml`, `yaml` | config; frontmatter and base16 schemes |
 | `vscode-languageserver-protocol`, `-textdocument` | the client's protocol (19.x), a file's text as a server has it |
-| `better-sqlite3` | the search index's SQLite, its own (3.53.4) bundled; needs Bun 1.4.2, on Linux glibc 2.34 |
 | `web-tree-sitter` 0.25 and a grammar package per language (`tree-sitter-*`) | source files' structure (16.7, 16.18) |
 | `beautiful-mermaid` **1.1.3, pinned exactly** (with `elkjs`, EPL-2.0) | Mermaid drawn in characters (12.10) |
 | `remark-math` 6.0.0 | `$…$` and `$$` blocks read (12.11); KaTeX comes with it, never imported |
