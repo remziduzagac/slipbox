@@ -280,7 +280,10 @@ nothing a folder brings with it:
   index. In a root you trust, git as the repository has it — without its attributes, Git LFS's files would all look
   modified.
 - **Bun's own reading:** no `bunfig.toml` and no `.env` from the folder Bun starts in (the launcher, Node servers;
-  done 2026-10-07).
+  done 2026-10-07). The compiled binary too: a Bun-compiled executable loads both by default — a cloned repository's
+  preload ran when slipbox was started in it (found 2026-10-10, from trailscout's research) — so `bun run build`
+  turns Bun's autoloading off (`--no-compile-autoload-bunfig`, `-dotenv`, `-tsconfig`, `-package-json`), and a test
+  builds the binary with that script and starts it in a folder holding both.
 
 **Trusting is yours, and takes no editing** (revised the same day with the user: "users should not be editing setting
 files to be able to access a folder; they should just type slipbox and start"). The TUI asks, once per root, the first

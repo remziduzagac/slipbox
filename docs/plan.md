@@ -732,7 +732,7 @@ packaging lands whenever it first needs to run on a VM.*
 
 | ID | Item |
 | --- | --- |
-| 14.1 | `bun build --compile` per target, `--no-compile-autoload-bunfig --no-compile-autoload-dotenv` |
+| 14.1 | `bun build --compile` per target; its autoload flags off — **done** 2026-10-10, in `build`, tested |
 | 14.2 | Release assets: darwin-arm64, linux-arm64, linux-x64 |
 | 14.3 | Homebrew formula |
 | 14.4 | Update path |
@@ -911,7 +911,7 @@ rather than an unlink, nvim-tree's keys where they fit. The design is `docs/desi
 | 23.7 | **Done.** `[trust] roots` (paths, `~`, globs) in your config only, never a root's; the CLI never asks |
 | 23.10 | **Done.** The TUI asks once per root when it matters; answers in `trust.json`; `:trust`, `:untrust` |
 | 23.8 | **Done.** `slipbox doctor` and the TUI say a root isn't trusted, once, and what that limits |
-| 23.9 | **Done** (2026-10-07). Bun reads no `bunfig.toml` or `.env` of the folder it starts in |
+| 23.9 | **Done** (2026-10-07; the compiled binary 2026-10-10). Bun reads no `bunfig.toml` or `.env` of its folder |
 
 ## Code as a notebook — `24.x`
 

@@ -693,3 +693,5 @@ checkout with bun. `--skill` also links the skill into `~/.claude/skills/slipbox
 The launcher gives Bun slipbox's own `bunfig.toml` and no `.env` (`--config`, `--no-env-file`). Bun reads both from
 the folder it starts in, which is whatever repository or notes folder you run `slipbox` in: that folder's preload
 would run, as its code, whenever slipbox did. A launcher written before 2026-10-07 lacks this: run the script again.
+The compiled binary (`bun run build`) is built with Bun's autoloading off — no `bunfig.toml`, `.env`, `tsconfig.json`
+or `package.json` of the folder it starts in — for the same reason; one built before 2026-10-10 lacks it.
