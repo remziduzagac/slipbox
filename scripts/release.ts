@@ -23,17 +23,25 @@ import { checkDeps, notices } from "./check-deps.ts";
 const ROOT = resolve(import.meta.dir, "..");
 
 /** The platforms released, by their assets' names, and Bun's target for each. x64 is Bun's baseline build: it runs on
- *  any x64 processor (no AVX2 asked for), and a terminal program loses nothing by it. */
+ *  any x64 processor (no AVX2 asked for), and a terminal program loses nothing by it. `-musl`: Linux whose C library
+ *  is musl, Alpine's (14.5). */
 export const TARGETS: Record<string, string> = {
   "darwin-arm64": "bun-darwin-arm64",
   "darwin-x64": "bun-darwin-x64-baseline",
   "linux-x64": "bun-linux-x64-baseline",
   "linux-arm64": "bun-linux-arm64",
+  "linux-x64-musl": "bun-linux-x64-baseline-musl",
+  "linux-arm64-musl": "bun-linux-arm64-musl",
 };
 
+/** Whether this Linux's C library is musl: its loader is there. */
+export function onMusl(): boolean {
+  return process.platform === "linux" && ["x86_64", "aarch64"].some((a) => existsSync(`/lib/ld-musl-${a}.so.1`));
+}
+
 /** This machine's target, when it's one released. */
-export function hostTarget(platform: string = process.platform, arch: string = process.arch): string | null {
-  const t = `${platform}-${arch}`;
+export function hostTarget(platform: string = process.platform, arch: string = process.arch, musl = onMusl()): string | null {
+  const t = `${platform}-${arch}${platform === "linux" && musl ? "-musl" : ""}`;
   return t in TARGETS ? t : null;
 }
 
@@ -61,7 +69,9 @@ export function buildArgs(script: string, outfile: string, target: string, repo:
   if (out < 0 || !argv[out + 1]) throw new Error("package.json's build names no --outfile");
   argv[out + 1] = outfile;
   const release = JSON.stringify({ repo, target });
-  return [...argv.slice(1), `--target=${TARGETS[target]}`, `--define=SLIPBOX_RELEASE=${release}`];
+  // OpenTUI picks its musl library only when told at run time (OPENTUI_LIBC): a musl build is told when it's built.
+  const musl = target.endsWith("-musl") ? ['--define=process.env.OPENTUI_LIBC="musl"'] : [];
+  return [...argv.slice(1), `--target=${TARGETS[target]}`, `--define=SLIPBOX_RELEASE=${release}`, ...musl];
 }
 
 /** `SHA256SUMS`'s text for files: `<hash>  <name>` a line, by name — what `sha256sum -c` and `shasum -c` read. */
@@ -94,7 +104,7 @@ export function buildRelease(opts: { targets: string[]; repo: string; tag?: stri
   for (const target of opts.targets) {
     if (!(target in TARGETS)) throw new Error(`no such target: ${target} (${Object.keys(TARGETS).join(", ")})`);
     const native = join(root, "node_modules", "@opentui", `core-${target}`);
-    if (!existsSync(native)) throw new Error(`${target}: OpenTUI's package for it isn't installed — bun install --os ${target.split("-")[0]} --cpu ${target.split("-")[1]}, or build it on that platform`);
+    if (!existsSync(native)) throw new Error(`${target}: OpenTUI's package for it isn't installed — bun install --os ${target.split("-")[0]} --cpu ${target.split("-")[1]}, or build it on its platform`);
     const name = `slipbox-${version}-${target}`;
     const stage = join(opts.out, name);
     rmSync(stage, { recursive: true, force: true });

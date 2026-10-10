@@ -55,17 +55,26 @@ the installer.
 | `darwin-x64` | `bun-darwin-x64-baseline` |
 | `linux-x64` | `bun-linux-x64-baseline` |
 | `linux-arm64` | `bun-linux-arm64` |
+| `linux-x64-musl` | `bun-linux-x64-baseline-musl` |
+| `linux-arm64-musl` | `bun-linux-arm64-musl` |
 
 x64 takes Bun's baseline build: it runs on any x64 processor, with no AVX2 asked for, and a terminal program loses
-nothing by it. The version is package.json's, which must be `src/version.ts`'s, and the tag's. The repository is
-`--repo owner/name`, or origin's on GitHub; it's checked strictly, as it goes into addresses and the installer.
+nothing by it. `-musl` is Linux whose C library is musl — Alpine's (`14.5`). SQLite is Bun's own, so nothing else
+differs, but for OpenTUI: it picks its musl library only when `OPENTUI_LIBC=musl` at run time, so a musl build is
+built with that defined (`--define process.env.OPENTUI_LIBC="musl"`) — fixed, whatever the environment says. Its glibc
+library is bundled too (Bun doesn't drop the branch not taken); only the musl one is loaded.
+
+The version is package.json's, which must be `src/version.ts`'s, and the tag's. The repository is `--repo
+owner/name`, or origin's on GitHub; it's checked strictly, as it goes into addresses and the installer.
 
 Run from source, or built by hand (`bun run build`), slipbox has no `RELEASE`: it has no channel, so `upgrade` and the
 update check leave it alone. A release build says its own in `info` (`release`, and the first line).
 
 CI (`.github/workflows/release.yml`) does it on a tag `v<version>`: each platform built on a runner of its own, after
 the whole check passes there — that platform's OpenTUI package is installed only there, and a Mac's binary is signed
-by Bun on a Mac, its signature checked (`codesign --verify`). Then the packs are summed, attested (who built each, from
+by Bun on a Mac, its signature checked (`codesign --verify`). A musl build is run in Alpine (a container pinned by
+digest): its version, an index and a search, and the TUI started in a terminal and still running five seconds later.
+Then the packs are summed, attested (who built each, from
 which commit: `gh attestation verify <pack> --repo <owner/name>`), and the release drafted. Nothing is published until
 a person publishes the draft. The workflow can't have run yet: the repository has no remote.
 
@@ -86,7 +95,8 @@ POSIX `sh` (dash, bash, macOS's), the whole of it a function called on its last 
 nothing. In order:
 
 1. **The platform**, from `uname`: Linux or macOS, x64 or arm64; a Mac terminal under Rosetta gets the arm64 build;
-   musl (Alpine) is refused until `14.5`, as is any other system (Windows is `14.12`).
+   Linux with musl's loader (or an `ldd` that says musl) gets the `-musl` build. Any other system is refused (Windows
+   is `14.12`). On Alpine, without curl, busybox's `wget -qO- …/install.sh | sh` runs it, and it downloads by wget.
 2. **A slipbox already there** — `~/.local/bin/slipbox`, or `$SLIPBOX_BIN_DIR`'s — that isn't this installer's link
    (a launcher from `scripts/install-local.sh`, another install) is left as it is: the installer stops and says so,
    before downloading anything.

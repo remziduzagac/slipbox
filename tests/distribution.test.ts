@@ -148,8 +148,12 @@ describe("the supply chain's gates (14.10)", () => {
 
 describe("a release (14.2)", () => {
   test("the platforms released, by name; this machine's when it's one of them", () => {
-    expect(hostTarget("linux", "arm64")).toBe("linux-arm64");
-    expect(hostTarget("darwin", "x64")).toBe("darwin-x64");
+    expect(hostTarget("linux", "arm64", false)).toBe("linux-arm64");
+    expect(hostTarget("darwin", "x64", false)).toBe("darwin-x64");
+    // musl's Linux, Alpine's (14.5): its own build; a Mac has no such thing.
+    expect(hostTarget("linux", "x64", true)).toBe("linux-x64-musl");
+    expect(hostTarget("linux", "arm64", true)).toBe("linux-arm64-musl");
+    expect(hostTarget("darwin", "arm64", true)).toBe("darwin-arm64");
     expect(hostTarget("freebsd", "x64")).toBeNull();
     expect(hostTarget("win32", "x64")).toBeNull(); // 14.12, when it's done
   });
@@ -177,6 +181,12 @@ describe("a release (14.2)", () => {
     expect(args[args.indexOf("--outfile") + 1]).toBe("/out/slipbox");
     expect(args).toContain("--target=bun-linux-x64-baseline");
     expect(args).toContain('--define=SLIPBOX_RELEASE={"repo":"o/r","target":"linux-x64"}');
+    expect(args.filter((a) => a.includes("OPENTUI_LIBC"))).toEqual([]);
+    // A musl build: Bun's musl target, and OpenTUI told its library is musl's — which it otherwise reads at run time.
+    const musl = buildArgs(script, "/out/slipbox", "linux-x64-musl", "o/r");
+    expect(musl).toContain("--target=bun-linux-x64-baseline-musl");
+    expect(musl).toContain('--define=process.env.OPENTUI_LIBC="musl"');
+    expect(buildArgs(script, "/o", "linux-arm64-musl", "o/r")).toContain("--target=bun-linux-arm64-musl");
     expect(() => buildArgs("bun build src/main.ts --outfile x", "/o", "linux-x64", "o/r")).toThrow("isn't a `bun build --compile`");
   });
 
@@ -443,7 +453,8 @@ describe("a release (14.2)", () => {
       const glibc = "echo 'ldd (GNU libc) 2.39'";
       expect(install(home, {}, { fake: { uname: uname("FreeBSD", "amd64"), ldd: glibc } }).err).toContain("no release for FreeBSD yet");
       expect(install(home, {}, { fake: { uname: uname("Linux", "riscv64"), ldd: glibc } }).err).toContain("no release for riscv64 processors");
-      expect(install(home, {}, { fake: { uname: uname("Linux", "aarch64"), ldd: "echo 'musl libc (aarch64)'" } }).err).toContain("no release for musl (Alpine) yet");
+      // musl (Alpine): its own build, which this release, built for this machine only, hasn't.
+      expect(install(home, {}, { fake: { uname: uname("Linux", "aarch64"), ldd: "echo 'musl libc (aarch64)'" } }).err).toContain(`this release (${VERSION}) has no linux-arm64-musl build`);
       const other = host === "linux-x64" ? ["aarch64", "linux-arm64"] : ["x86_64", "linux-x64"];
       expect(install(home, {}, { fake: { uname: uname("Linux", other[0]!), ldd: glibc } }).err).toContain(`this release (${VERSION}) has no ${other[1]} build`);
       // A Mac's terminal under Rosetta says x64: the arm64 build is the one it gets.
@@ -549,6 +560,10 @@ describe("updates (14.4)", () => {
     expect(latestIn(sums, "linux-x64")).toEqual({ version: "1.4.0", asset: "slipbox-1.4.0-linux-x64.tar.gz", sha256: sum });
     expect(latestIn(sums, "linux-arm64")?.sha256).toBe("c".repeat(64));
     expect(latestIn(sums, "linux-x64-musl")).toBeNull();
+    // A glibc and a musl pack side by side: each its own.
+    const both = `${"d".repeat(64)}  slipbox-1.4.0-linux-x64-musl.tar.gz\n${sum}  slipbox-1.4.0-linux-x64.tar.gz\n`;
+    expect(latestIn(both, "linux-x64")?.sha256).toBe(sum);
+    expect(latestIn(both, "linux-x64-musl")).toEqual({ version: "1.4.0", asset: "slipbox-1.4.0-linux-x64-musl.tar.gz", sha256: "d".repeat(64) });
     expect(latestIn("<html>not found</html>", "linux-x64")).toBeNull();
     expect(latestIn(`${sum}  slipbox-1.4-linux-x64.tar.gz\n`, "linux-x64")).toBeNull();
     expect(latestIn(`${sum}  slipbox-2.0.0-rc.1-linux-x64.tar.gz\n`, "linux-x64")?.version).toBe("2.0.0-rc.1");

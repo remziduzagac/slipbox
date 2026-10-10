@@ -736,7 +736,7 @@ packaging lands whenever it first needs to run on a VM.*
 | 14.2 | **Done.** Release assets: darwin-arm64, darwin-x64, linux-x64, linux-arm64; `SHA256SUMS`, attestations |
 | 14.3 | Homebrew tap, once the installer works |
 | 14.4 | **Done.** Update path: `slipbox upgrade`; a daily check, on by default, that sends nothing identifying |
-| 14.5 | Alpine (musl): SQLite is Bun's own now (no loader); OpenTUI ships musl builds |
+| 14.5 | **Done.** Alpine (musl): `-musl` packs, OpenTUI's musl library fixed in; run in Alpine by CI |
 | 14.6 | **decide** slipbox's licence — MIT, Apache-2.0, or both — then a `LICENSE` file and the notices it ships |
 | 14.7 | **Done.** Installer: `curl … \| sh`, the sums inside; a folder per version, `current`, `~/.local/bin` |
 | 14.8 | **Done.** `slipbox uninstall`: every path listed first, removed only with `--yes`; `--purge` all four |

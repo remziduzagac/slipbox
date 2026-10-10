@@ -22,7 +22,7 @@ bun src/main.ts render examples/vault/equipment/telescope-comparison.md  # rende
 scripts/install-local.sh                            # a `slipbox` launcher in ~/.local/bin
 ```
 
-Releases — a binary per platform, macOS and Linux, with no Bun needed — are built and installed by
+Releases — a binary per platform, macOS and Linux (Alpine's musl too), with no Bun needed — are built and installed by
 `scripts/release.ts` and its `install.sh` (`curl -fsSL …/releases/latest/download/install.sh | sh`); none is published
 yet. How, and what keeps it safe: [docs/design/distribution.md](docs/design/distribution.md).
 

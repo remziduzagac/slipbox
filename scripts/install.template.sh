@@ -4,6 +4,8 @@
 #
 #   curl -fsSL https://github.com/@REPO@/releases/latest/download/install.sh | sh
 #
+# (On Alpine, without curl: wget -qO- …/install.sh | sh.)
+#
 # It installs into slipbox's data folder — ${XDG_DATA_HOME:-~/.local/share}/slipbox: versions/<version>/, and current,
 # a link to the version in use — and links ${SLIPBOX_BIN_DIR:-~/.local/bin}/slipbox to it. Nothing runs as root, and
 # nothing outside those two places is touched. `slipbox upgrade` installs a later one the same way; `slipbox
@@ -47,10 +49,12 @@ target() {
   if [ "$os" = darwin ] && [ "$arch" = x64 ] && [ "$(sysctl -n sysctl.proc_translated 2>/dev/null || true)" = 1 ]; then
     arch=arm64
   fi
+  # Linux whose C library is musl (Alpine): its own build.
+  libc=""
   if [ "$os" = linux ] && { ls /lib/ld-musl-* >/dev/null 2>&1 || ldd --version 2>&1 | grep -qi musl; }; then
-    fail "no release for musl (Alpine) yet (plan 14.5): build from source, https://github.com/$REPO"
+    libc=-musl
   fi
-  echo "$os-$arch"
+  echo "$os-$arch$libc"
 }
 
 sha256() {
