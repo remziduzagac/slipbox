@@ -5,7 +5,7 @@
 import { closeSync, existsSync, mkdirSync, openSync, readFileSync, readSync, renameSync, statSync, writeFileSync } from "node:fs";
 import { extname, join } from "node:path";
 import { remoteImageName } from "../core/imagecache.ts";
-import { cacheHome } from "../core/paths.ts";
+import { cacheHome, ensureCacheHome } from "../core/paths.ts";
 import { looksLikeSvg } from "../core/svg.ts";
 
 /** An SVG read for drawing is at most this big (12.15). */
@@ -111,6 +111,7 @@ export class RemoteImages {
     if (Number(res.headers.get("content-length") ?? 0) > MAX_BYTES) throw new Error("larger than 20 MB");
     const bytes = new Uint8Array(await res.arrayBuffer());
     if (bytes.byteLength > MAX_BYTES) throw new Error("larger than 20 MB");
+    ensureCacheHome(join(this.dir, ".."));
     mkdirSync(this.dir, { recursive: true });
     const f = this.file(url);
     writeFileSync(`${f}.part`, bytes);

@@ -26,9 +26,14 @@ Four kinds of data, four places. Nothing derived ever lives in the vault. Revise
 | state, the machine's | `$XDG_STATE_HOME/slipbox/autoindex.json`, `activity` | the background index (`20.9`) | yes |
 | state, the machine's | `$XDG_STATE_HOME/slipbox/plans/` | plans saved for `apply` (`20.18`) | yes: planned again |
 | data | `$XDG_DATA_HOME/slipbox/tools/` | language servers installed for you (`19.x`) | yes, reinstalled |
+| data | `$XDG_DATA_HOME/slipbox/spell/words.txt` | your own words, spelling's (`25.6`) | no: yours |
 
 XDG defaults apply when the variables are unset (`~/.config`, `~/.cache`, `~/.local/state`, `~/.local/share`) on
-macOS too — the terminal stack here is XDG-shaped on both machines.
+macOS too — the terminal stack here is XDG-shaped on both machines, and the dotfiles people keep and sync are there,
+not in `~/Library` (kept so for distribution, `14.9`, 2026-10-10). On Windows the config is in `%APPDATA%\slipbox`,
+which may roam, and the rest in `%LOCALAPPDATA%\slipbox\{cache,state,data}`: a database never roams. An `XDG_*` set
+(absolute, as XDG asks) is taken on every platform. The cache carries a `CACHEDIR.TAG`, written when it's first made,
+so backup tools skip it (`core/paths.ts`, `storeDir` and `ensureCacheHome`).
 
 **The key** is the root's path (`21.8`): `<basename>-<hash>`, the hash the first 12 hex characters of SHA-256 over its
 **real path** — a root's, else the plain folder opened (`20.22`). Opening `project/` or `project/docs/` brings back the

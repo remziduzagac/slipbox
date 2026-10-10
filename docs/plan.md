@@ -740,7 +740,7 @@ packaging lands whenever it first needs to run on a VM.*
 | 14.6 | **decide** slipbox's licence — MIT, Apache-2.0, or both — then a `LICENSE` file and the notices it ships |
 | 14.7 | Installer: `curl … \| sh` with the checksums inside; a folder per version, a `current` link, `~/.local/bin` |
 | 14.8 | `slipbox uninstall`: every path it would remove listed first; `--purge` takes data and state too |
-| 14.9 | Folders: XDG's on Linux and macOS, as now; Windows' own (`%APPDATA%`, `%LOCALAPPDATA%`); `CACHEDIR.TAG` |
+| 14.9 | **Done.** Folders: XDG's on Linux and macOS, as now; Windows' own (`%APPDATA%`…); `CACHEDIR.TAG` |
 | 14.10 | Supply chain: dependencies pinned, a 7-day cooldown, no install scripts, a licence gate, CI actions by hash |
 | 14.11 | Language servers (`19.5`) installed from a full lockfile slipbox ships, not only their own version pinned |
 | 14.12 | Windows (win32-x64), if it isn't difficult: paths, the shell (`25.7`), git, the terminal — after the rest |

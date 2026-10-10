@@ -1565,3 +1565,15 @@ describe("the compiled binary", () => {
     expect(JSON.parse(found.stdout.toString()).data.hits.map((h: { path: string }) => h.path)).toEqual(["a.md"]);
   }, 120_000);
 });
+
+describe("distribution (14.x)", () => {
+  test("the cache, once anything's cached in it, carries a CACHEDIR.TAG: backup tools skip it (14.9)", () => {
+    const dir = mkdtempSync(join(sandbox, "tag-"));
+    const env = { XDG_STATE_HOME: join(dir, "state"), XDG_CACHE_HOME: join(dir, "cache"), XDG_DATA_HOME: join(dir, "data") };
+    const root = join(dir, "notes");
+    mkdirSync(join(root, ".slipbox"), { recursive: true });
+    writeFileSync(join(root, "a.md"), "# A\n");
+    expect(slipbox(["index", "--refresh"], { cwd: root, env }).code).toBe(0);
+    expect(readFileSync(join(dir, "cache", "slipbox", "CACHEDIR.TAG"), "utf8")).toStartWith("Signature: 8a477f597d28d172789f06886806bc55\n");
+  });
+});

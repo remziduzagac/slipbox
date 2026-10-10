@@ -20,7 +20,7 @@ import { type AnchorInfo, anchorsOf, type HeadingInfo, headingsOf, noteTitle, ty
 import { parseNoteFile } from "./readers.ts";
 import { tildePath } from "./names.ts";
 import { ParseCache, sharedParseCache } from "./parsecache.ts";
-import { cacheDir, stateDir } from "./paths.ts";
+import { cacheDir, ensureCacheHome, stateDir } from "./paths.ts";
 import { checkoutOf, headCommit, headOf } from "./git.ts";
 import { branchesOf, changedBetween, inVault } from "./gitops.ts";
 import { remotesIn } from "./remotes.ts";
@@ -536,6 +536,7 @@ export class Graph {
     // A read failure is not a fact about the note: never cache it (chmod does not touch mtime).
     for (const [rel, e] of this.notes) if (!this.unparsed.has(rel) && !isUnreadable(e)) entries[rel] = this.overlays.get(rel)?.disk ?? e;
     try {
+      ensureCacheHome();
       ensureDir(cacheDir(this.loc));
       writeJson(this.cachePath, { version: INDEX_VERSION, entries, branch: this.branchNow(), reached: [...this.reached] } satisfies IndexFile);
     } catch (err) {

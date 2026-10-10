@@ -50,7 +50,7 @@ import { type Layout, type LayoutLink, type Picture, posOfSrc, srcAt } from "../
 import type { PictureSource, RenderOptions } from "../core/layout/render.ts";
 import { type Rasterizer, rasterizer } from "../core/svg.ts";
 import { layoutWidth, pictureLocator } from "../core/note.ts";
-import { cacheHome, stateDir, userConfigFile, userFolders } from "../core/paths.ts";
+import { cacheHome, ensureCacheHome, stateDir, userConfigFile, userFolders } from "../core/paths.ts";
 import {
   SESSION_BRANCHES,
   type SessionTab,
@@ -1127,6 +1127,7 @@ export class App {
     const png = r.png(svg, px);
     if (!png) return null;
     try {
+      ensureCacheHome();
       mkdirSync(dir, { recursive: true });
       writeFileSync(`${file}.part`, png);
       renameSync(`${file}.part`, file);

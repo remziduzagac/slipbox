@@ -5,9 +5,8 @@
 // depends on where the file is, so links are resolved and backlinks derived per copy (graph.ts),
 // never here. A cache: deletable, rebuilt as notes are read. `SLIPBOX_PARSE_CACHE=off` goes without.
 
-import { mkdirSync } from "node:fs";
 import { join } from "node:path";
-import { cacheHome } from "./paths.ts";
+import { cacheHome, ensureCacheHome } from "./paths.ts";
 import { Database, type Statement } from "./sqlite.ts";
 
 /** The cache's own shape: bumped with it, the cache starts again. */
@@ -42,7 +41,7 @@ export class ParseCache {
   static open(file = join(cacheHome(), "parsed.db")): ParseCache | null {
     let db: Database | null = null;
     try {
-      mkdirSync(join(file, ".."), { recursive: true });
+      ensureCacheHome(join(file, ".."));
       db = new Database(file);
       db.pragma("journal_mode = wal");
       db.pragma("synchronous = normal");

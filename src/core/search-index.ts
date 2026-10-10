@@ -7,7 +7,7 @@
 import { Database } from "./sqlite.ts";
 import { existsSync, mkdirSync, rmSync } from "node:fs";
 import { join } from "node:path";
-import { cacheDir, type Keyed } from "./paths.ts";
+import { cacheDir, ensureCacheHome, type Keyed } from "./paths.ts";
 
 /** Bumped when the rows or their columns change: an index of another version is made again. */
 const SEARCH_VERSION = 3; // 3: better-sqlite3, and sections by size band
@@ -55,6 +55,7 @@ export class SearchIndex {
     for (let attempt = 0; attempt < 2; attempt++) {
       let db: Database | null = null;
       try {
+        ensureCacheHome();
         mkdirSync(dir, { recursive: true });
         db = new Database(file);
         const version = Number(db.pragma("user_version"));
