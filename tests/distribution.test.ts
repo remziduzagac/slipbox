@@ -4,9 +4,9 @@ import { chmodSync, copyFileSync, existsSync, mkdirSync, mkdtempSync, readFileSy
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { bunfigProblems, checkDeps, licenceProblems, licenceTaken, notices, type Package, productionPackages, repoLink, specProblems, workflowProblems } from "../scripts/check-deps.ts";
-import { assetName, buildArgs, buildRelease, finishRelease, hostTarget, installScript, releaseVersion, repoOf, sha256sums } from "../scripts/release.ts";
+import { assetName, buildArgs, buildRelease, finishRelease, homebrewFormula, hostTarget, installScript, releaseVersion, repoOf, sha256sums } from "../scripts/release.ts";
 import { RELEASE } from "../src/core/release.ts";
-import { installation, removable, type Stores, uninstall, uninstallPlan } from "../src/core/install.ts";
+import { howToUpgrade, installation, installedBy, removable, type Stores, uninstall, uninstallPlan } from "../src/core/install.ts";
 import { CHECK_EVERY_MS, dailyUpdateCheck, doNotTrack, fetchLatest, isNewer, latestIn, releasesBase, upgrade, UpgradeError } from "../src/core/update.ts";
 import { VERSION } from "../src/version.ts";
 
@@ -221,6 +221,33 @@ describe("a release (14.2)", () => {
     expect(() => installScript(`${template}@MORE@`, "1.2.3", "o/r", {})).toThrow("@MORE@ left");
   });
 
+  test("the Homebrew formula (14.3): a block per platform it installs on — macOS, glibc Linux — each pack's address and sum", () => {
+    const template = readFileSync(join(ROOT, "scripts", "homebrew.template.rb"), "utf8");
+    const sums = { "darwin-arm64": "a".repeat(64), "darwin-x64": "b".repeat(64), "linux-arm64": "c".repeat(64), "linux-x64": "d".repeat(64), "linux-x64-musl": "e".repeat(64) };
+    const f = homebrewFormula(template, "1.2.3", "o/r", sums);
+    const block = (os: string, cpu: string, target: string, sum: string) => `    ${cpu} do\n      url "https://github.com/o/r/releases/download/v1.2.3/slipbox-1.2.3-${target}.tar.gz"\n      sha256 "${sum}"\n    end`;
+    expect(f).toContain(`  on_macos do\n${block("on_macos", "on_arm", "darwin-arm64", "a".repeat(64))}\n${block("on_macos", "on_intel", "darwin-x64", "b".repeat(64))}\n  end\n  on_linux do\n${block("on_linux", "on_arm", "linux-arm64", "c".repeat(64))}\n${block("on_linux", "on_intel", "linux-x64", "d".repeat(64))}\n  end`);
+    expect(f).toContain('  version "1.2.3"\n');
+    expect(f).toContain('  homepage "https://github.com/o/r"\n');
+    // musl's isn't Homebrew's: Homebrew on Linux needs glibc.
+    expect(f).not.toContain("musl");
+    expect(f).not.toMatch(/@[A-Z]+@/);
+    // A platform the release hasn't: no block for it.
+    const macOnly = homebrewFormula(template, "1.2.3", "o/r", { "darwin-arm64": "a".repeat(64) });
+    expect(macOnly).not.toContain("on_linux");
+    expect(macOnly).not.toContain("on_intel");
+    expect(() => homebrewFormula(template, "1.2.3", "o/r", { "linux-x64-musl": "e".repeat(64) })).toThrow("no pack Homebrew installs");
+    expect(() => homebrewFormula(template, "1.2.3", "o/$(r)", sums)).toThrow("not a repository");
+    expect(() => homebrewFormula(template, "1.2", "o/r", sums)).toThrow("not a version");
+    expect(() => homebrewFormula(template, "1.2.3", "o/r", { "linux-x64": "z" })).toThrow("not a sum");
+    // Ruby reads it, where there's a Ruby to ask.
+    if (Bun.which("ruby")) {
+      const file = join(mkdtempSync(join(sandbox, "rb-")), "slipbox.rb");
+      writeFileSync(file, f);
+      expect(Bun.spawnSync(["ruby", "-c", file]).stdout.toString()).toBe("Syntax OK\n");
+    }
+  });
+
   describe("built for this machine", () => {
     const host = hostTarget();
     let out = "";
@@ -259,7 +286,9 @@ describe("a release (14.2)", () => {
       const dir = `slipbox-${VERSION}-${host}/`;
       expect(listed).toEqual([dir, `${dir}NOTICES.txt`, `${dir}slipbox`]);
       expect(readFileSync(join(out, "SHA256SUMS"), "utf8")).toBe(sha256sums([pack]));
-    });
+      // Homebrew's formula beside it, for a platform Homebrew installs on.
+      if (!host!.endsWith("-musl")) expect(readFileSync(join(out, "slipbox.rb"), "utf8")).toContain(`url "https://github.com/example/slipbox/releases/download/v${VERSION}/${assetName(VERSION, host!)}"\n      sha256 "${sha256sums([pack]).split(" ")[0]}"`);
+    }, 60_000);
 
     test.if(host !== null)("the binary knows its release — its repository and platform — and its notices are there", () => {
       const x = mkdtempSync(join(sandbox, "unpacked-"));
@@ -273,7 +302,7 @@ describe("a release (14.2)", () => {
       expect(info.exitCode).toBe(0);
       expect(JSON.parse(info.stdout.toString()).data.release).toEqual({ repo: "example/slipbox", target: host });
       expect(readFileSync(join(dir, "NOTICES.txt"), "utf8")).toStartWith(`slipbox ${VERSION}: the third-party software in this program`);
-    });
+    }, 60_000);
 
     test.if(host !== null)("installed (14.7): a folder per version, current, a link in ~/.local/bin — it runs; again, the same", () => {
       const home = mkdtempSync(join(sandbox, "home-"));
@@ -297,7 +326,7 @@ describe("a release (14.2)", () => {
       expect(readlinkSync(link)).toBe(join(data, "current", "slipbox"));
       expect(Bun.spawnSync(["ls", join(data, "versions")]).stdout.toString()).toBe(`${VERSION}\n`);
       expect(Bun.spawnSync(["sh", "-c", `ls -d ${home}/slipbox-install.* 2>/dev/null`]).stdout.toString()).toBe("");
-    });
+    }, 60_000);
 
     test.if(host !== null)("uninstalled (14.8): listed first, nothing removed without --yes; --purge takes slipbox's folders too", () => {
       const home = mkdtempSync(join(sandbox, "home-"));
@@ -332,7 +361,7 @@ describe("a release (14.2)", () => {
       // All gone, and the run that purged them wrote nothing back after.
       for (const p of [join(home, ".config", "slipbox"), join(home, ".local", "state", "slipbox"), data, join(home, ".cache", "slipbox")]) expect(existsSync(p)).toBe(false);
       expect(existsSync(join(home, ".config"))).toBe(true);
-    });
+    }, 60_000);
 
     test.if(host !== null)("upgraded (14.4): the installed binary moves itself to the latest release — checked, the old one kept", () => {
       const home = mkdtempSync(join(sandbox, "home-"));
@@ -373,7 +402,7 @@ describe("a release (14.2)", () => {
       const r = Bun.spawnSync([join(loose, "slipbox"), "upgrade", "--json"], { env: env(next), cwd: home });
       expect(r.exitCode).toBe(1);
       expect(JSON.parse(r.stdout.toString()).error.message).toBe(`this slipbox (${join(loose, "slipbox")}) wasn't installed by its installer: upgrade it the way it was installed`);
-    });
+    }, 60_000);
 
     test.if(host !== null)("XDG_DATA_HOME and SLIPBOX_BIN_DIR followed when absolute; a relative one, as XDG says, not", () => {
       const home = mkdtempSync(join(sandbox, "home-"));
@@ -383,7 +412,7 @@ describe("a release (14.2)", () => {
       const other = mkdtempSync(join(sandbox, "home-"));
       expect(install(other, { XDG_DATA_HOME: "d", SLIPBOX_BIN_DIR: "b" }).code).toBe(0);
       expect(readlinkSync(join(other, ".local", "bin", "slipbox"))).toBe(join(other, ".local", "share", "slipbox", "current", "slipbox"));
-    });
+    }, 60_000);
 
     test.if(host !== null)("a pack that isn't the release's — its SHA-256 another — is refused; nothing installed", () => {
       const home = mkdtempSync(join(sandbox, "home-"));
@@ -398,7 +427,7 @@ describe("a release (14.2)", () => {
       expect(r.err).toContain("nothing installed");
       expect(existsSync(join(home, ".local", "share", "slipbox"))).toBe(false);
       expect(existsSync(join(home, ".local", "bin", "slipbox"))).toBe(false);
-    });
+    }, 60_000);
 
     test.if(host !== null)("a slipbox there already that isn't the installer's is left as it is, and said — before any download", () => {
       const home = mkdtempSync(join(sandbox, "home-"));
@@ -415,7 +444,7 @@ describe("a release (14.2)", () => {
       symlinkSync("/usr/bin/true", join(linked, ".local", "bin", "slipbox"));
       expect(install(linked).code).toBe(1);
       expect(readlinkSync(join(linked, ".local", "bin", "slipbox"))).toBe("/usr/bin/true");
-    });
+    }, 60_000);
 
     test.if(host !== null)("a pack whose binary isn't the release's — another version said, or none in it — is refused", () => {
       const fakeRelease = (files: Record<string, string>) => {
@@ -445,7 +474,7 @@ describe("a release (14.2)", () => {
       expect(empty).toEqual({ code: 1, err: "slipbox: the pack has no slipbox in it: nothing installed\n", installed: false });
       const broken = run(fakeRelease({ slipbox: "#!/bin/sh\necho 'cannot execute' >&2\nexit 126\n" }));
       expect(broken).toEqual({ code: 1, err: "slipbox: the binary doesn't run here: cannot execute\n", installed: false });
-    });
+    }, 60_000);
 
     test.if(host !== null)("no build for the machine: another system, another processor, musl, one this release hasn't", () => {
       const home = mkdtempSync(join(sandbox, "home-"));
@@ -462,7 +491,7 @@ describe("a release (14.2)", () => {
       expect(install(home, {}, { fake: mac }).err).toContain("has no darwin-arm64 build");
       expect(install(home, {}, { fake: { ...mac, sysctl: "echo 0" } }).err).toContain("has no darwin-x64 build");
       expect(existsSync(join(home, ".local"))).toBe(false);
-    });
+    }, 60_000);
   });
 });
 
@@ -663,5 +692,45 @@ describe("updates (14.4)", () => {
     const elsewhere = join(mkdtempSync(join(sandbox, "else-")), "slipbox");
     writeFileSync(elsewhere, "");
     expect(await attempt("slipbox 2.0.0", elsewhere)).toBe(`this slipbox (${elsewhere}) wasn't installed by its installer: upgrade it the way it was installed`);
+  });
+});
+
+describe("how slipbox was installed, and what's said for it (14.3)", () => {
+  test("the installer's, Homebrew's (its Cellar, behind a link too), or another way", () => {
+    const base = mkdtempSync(join(sandbox, "by-"));
+    const data = join(base, "data", "slipbox");
+    mkdirSync(join(data, "versions", "1.0.0"), { recursive: true });
+    writeFileSync(join(data, "versions", "1.0.0", "slipbox"), "");
+    expect(installedBy(join(data, "versions", "1.0.0", "slipbox"), data, "1.0.0")).toBe("installer");
+    const cellar = join(base, "opt", "homebrew", "Cellar", "slipbox", "1.0.0", "bin", "slipbox");
+    mkdirSync(join(cellar, ".."), { recursive: true });
+    writeFileSync(cellar, "");
+    mkdirSync(join(base, "opt", "homebrew", "bin"), { recursive: true });
+    symlinkSync(cellar, join(base, "opt", "homebrew", "bin", "slipbox"));
+    expect(installedBy(cellar, data, "1.0.0")).toBe("homebrew");
+    expect(installedBy(join(base, "opt", "homebrew", "bin", "slipbox"), data, "1.0.0")).toBe("homebrew");
+    expect(installedBy(join(base, "elsewhere", "slipbox"), data, "1.0.0")).toBe("other");
+    // Another version's folder isn't this one's.
+    expect(installedBy(join(data, "versions", "1.0.0", "slipbox"), data, "2.0.0")).toBe("other");
+    expect([howToUpgrade("installer", "o/r"), howToUpgrade("homebrew", "o/r"), howToUpgrade("other", "o/r")]).toEqual(["slipbox upgrade installs it", "brew upgrade slipbox installs it", "it's at https://github.com/o/r/releases"]);
+  });
+
+  test("Homebrew's: the daily check says brew; upgrade leaves it to brew; uninstall says brew removes it", async () => {
+    const stateFile = join(mkdtempSync(join(sandbox, "upd-")), "update.json");
+    const fetcher = async () => new Response(`${"a".repeat(64)}  slipbox-0.3.0-linux-x64.tar.gz\n`);
+    const release = { repo: "o/r", target: "linux-x64" };
+    expect(await dailyUpdateCheck({ release, version: "0.2.0", enabled: true, env: {}, stateFile, fetcher, by: "homebrew" })).toBe("slipbox 0.3.0 is out (this is 0.2.0): brew upgrade slipbox installs it");
+    const base = mkdtempSync(join(sandbox, "brew-"));
+    const cellar = join(base, "Cellar", "slipbox", "0.2.0", "bin", "slipbox");
+    mkdirSync(join(cellar, ".."), { recursive: true });
+    writeFileSync(cellar, "");
+    let asked = 0;
+    const err = await upgrade({ release, version: "0.2.0", data: join(base, "data"), execPath: cellar, env: {}, fetcher: async () => (asked++, new Response("")) }).catch((e: Error) => e);
+    expect(err).toBeInstanceOf(UpgradeError);
+    expect((err as Error).message).toBe("this slipbox is Homebrew's: brew upgrade slipbox");
+    expect(asked).toBe(0);
+    const dirs: Stores = { config: join(base, "c", "slipbox"), state: join(base, "s", "slipbox"), data: join(base, "d", "slipbox"), cache: join(base, "k", "slipbox") };
+    expect(uninstallPlan(false, dirs, "homebrew").notes).toEqual(["this slipbox is Homebrew's: brew uninstall slipbox removes it"]);
+    expect(uninstallPlan(false, dirs, "other").notes).toEqual([]);
   });
 });

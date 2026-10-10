@@ -693,7 +693,8 @@ checkout with bun. `--skill` also links the skill into `~/.claude/skills/slipbox
 installed by `install.sh` — are plan `14.x` (`docs/design/distribution.md`).
 
 `slipbox upgrade` (`14.4`) moves the installer's install to the latest release, checked before it's used; `--check`
-only says whether there's one. Run from source, it says there are no releases to follow (exit 1). The CLI never checks
+only says whether there's one. Run from source, it says there are no releases to follow (exit 1); installed by
+Homebrew, that `brew upgrade slipbox` does it. The CLI never checks
 for updates by itself: the TUI does, once a day.
 
 `slipbox uninstall` (`14.8`) lists what the installer put here — the link, `versions/`, `current`, `bin-link` — and

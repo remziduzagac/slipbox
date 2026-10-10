@@ -113,6 +113,25 @@ Nothing runs as root and nothing outside those two places is touched. `SLIPBOX_R
 elsewhere laid out as GitHub's releases are (`<base>/download/v<version>/<pack>`) — a mirror, or the tests' folder
 through `file://` — and their sums are still the release's.
 
+## Homebrew
+
+`finish` writes `slipbox.rb` too (`14.3`): the formula, from `scripts/homebrew.template.rb`, with a block for each
+platform the release has a pack for that Homebrew installs on — macOS, arm64 and Intel, and Linux's glibc builds
+(Homebrew on Linux needs glibc; musl's packs aren't in it) — each its pack's address and SHA-256. It installs the
+binary and puts its notices in Homebrew's `doc`; its test runs `slipbox --version`. Its licence is left out until
+there is one (`14.6`).
+
+It reaches people through a tap, a repository `<owner>/homebrew-<name>` (`brew install <owner>/<name>/slipbox`):
+`.github/workflows/homebrew.yml` copies the release's formula into the tap's `Formula/` once the release is published
+— never a draft, whose downloads aren't public yet, nor a prerelease. It runs only when the repository's
+`HOMEBREW_TAP` variable names the tap, with a token in the `HOMEBREW_TAP_TOKEN` secret that may write only there.
+Neither is set yet; there's no tap yet.
+
+A slipbox Homebrew installed — its file in a `Cellar/slipbox/<version>/bin/`, through a link or not
+(`core/install.ts`, `installedBy`) — is Homebrew's to change: `slipbox upgrade` says `brew upgrade slipbox`, the
+daily check says so too, and `slipbox uninstall` says `brew uninstall slipbox` removes it (`--purge` still takes
+slipbox's own folders).
+
 ## Updates
 
 `core/update.ts` (`14.4`). The latest release is found from its `SHA256SUMS`, at
@@ -125,7 +144,8 @@ tests' folder through `file://`), the installer's too.
 `[update] check` is on in your own config (a folder's config can't turn it on: a network request is yours to allow),
 `DO_NOT_TRACK` isn't set (anything but `0` or `false`), and a day has passed since the last time
 (`$XDG_STATE_HOME/slipbox/update.json`, kept before asking, so a failure waits a day too). A newer release is said in
-the message line: `slipbox 0.3.0 is out (this is 0.2.0): slipbox upgrade installs it`.
+the message line: `slipbox 0.3.0 is out (this is 0.2.0): slipbox upgrade installs it` — `brew upgrade slipbox` for
+Homebrew's, and the releases' address for a binary put somewhere by hand.
 
 **`slipbox upgrade`** moves the installer's install to the latest release (`--check`: only says whether there is
 one). From source, or a binary the installer didn't put in `versions/`, it says so and does nothing. Otherwise, as the

@@ -11,6 +11,7 @@ import { createHash } from "node:crypto";
 import { existsSync, mkdirSync, readdirSync, readFileSync, realpathSync, renameSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import type { ReleaseBuild } from "./release.ts";
+import { howToUpgrade, type InstalledBy, installedBy } from "./install.ts";
 
 type Fetcher = (url: string, init?: RequestInit) => Promise<Response>;
 
@@ -76,7 +77,7 @@ interface CheckState {
  * since the last — the latest asked for, and what to say when it's newer than this one; null otherwise. The time is
  * kept before asking, so a failure waits a day too.
  */
-export async function dailyUpdateCheck(opts: { release: ReleaseBuild | null; version: string; enabled: boolean; env: Record<string, string | undefined>; stateFile: string; now?: number; fetcher?: Fetcher }): Promise<string | null> {
+export async function dailyUpdateCheck(opts: { release: ReleaseBuild | null; version: string; enabled: boolean; env: Record<string, string | undefined>; stateFile: string; now?: number; fetcher?: Fetcher; by?: InstalledBy }): Promise<string | null> {
   if (!opts.release || !opts.enabled || doNotTrack(opts.env)) return null;
   const now = opts.now ?? Date.now();
   let state: CheckState = {};
@@ -94,7 +95,7 @@ export async function dailyUpdateCheck(opts: { release: ReleaseBuild | null; ver
   const latest = await fetchLatest(releasesBase(opts.release.repo, opts.env), opts.release.target, opts.fetcher);
   if (!latest) return null;
   save({ checked: now, latest: latest.version });
-  return isNewer(latest.version, opts.version) ? `slipbox ${latest.version} is out (this is ${opts.version}): slipbox upgrade installs it` : null;
+  return isNewer(latest.version, opts.version) ? `slipbox ${latest.version} is out (this is ${opts.version}): ${howToUpgrade(opts.by ?? "installer", opts.release.repo)}` : null;
 }
 
 export class UpgradeError extends Error {}
@@ -130,7 +131,10 @@ export async function upgrade(opts: { release: ReleaseBuild; version: string; da
   try {
     installed = realpathSync(opts.execPath) === realpathSync(join(versions, opts.version, "slipbox"));
   } catch {}
-  if (!installed) throw new UpgradeError(`this slipbox (${opts.execPath}) wasn't installed by its installer: upgrade it the way it was installed`);
+  if (!installed) {
+    if (installedBy(opts.execPath, opts.data, opts.version) === "homebrew") throw new UpgradeError("this slipbox is Homebrew's: brew upgrade slipbox");
+    throw new UpgradeError(`this slipbox (${opts.execPath}) wasn't installed by its installer: upgrade it the way it was installed`);
+  }
   const base = releasesBase(opts.release.repo, opts.env);
   const latest = await fetchLatest(base, opts.release.target, fetcher, 30_000);
   if (!latest) throw new UpgradeError(`couldn't find the latest release's ${opts.release.target} build at ${base}`);

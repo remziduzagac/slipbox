@@ -1,0 +1,41 @@
+name: homebrew
+
+# Plan 14.3: once a release is published — never a draft, whose downloads aren't public yet, nor a prerelease — its
+# formula (slipbox.rb, a release asset, attested with the packs) goes into the tap: the repository the HOMEBREW_TAP
+# variable names (owner/homebrew-<name>), with a token that may write only there (the HOMEBREW_TAP_TOKEN secret).
+# Neither set: nothing happens. Every action pinned by its commit (14.10); values reach the shell through env.
+on:
+  release:
+    types: [published]
+
+permissions:
+  contents: read
+
+jobs:
+  tap:
+    if: ${{ vars.HOMEBREW_TAP != '' && !github.event.release.prerelease }}
+    runs-on: ubuntu-24.04
+    steps:
+      - name: formula
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ github.event.release.tag_name }}
+        run: gh release download "$TAG" --repo "$GITHUB_REPOSITORY" --pattern slipbox.rb
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: ${{ vars.HOMEBREW_TAP }}
+          token: ${{ secrets.HOMEBREW_TAP_TOKEN }}
+          path: tap
+      - name: push
+        env:
+          TAG: ${{ github.event.release.tag_name }}
+        run: |
+          mkdir -p tap/Formula
+          cp slipbox.rb tap/Formula/slipbox.rb
+          cd tap
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add Formula/slipbox.rb
+          if git diff --cached --quiet; then exit 0; fi
+          git commit -m "slipbox ${TAG#v}"
+          git push

@@ -8,7 +8,8 @@ import { openGraph } from "../core/graph.ts";
 import { sanitize } from "../core/sanitize.ts";
 import { setWidthMethod } from "../core/width.ts";
 import { join, resolve } from "node:path";
-import { stateHome } from "../core/paths.ts";
+import { dataHome, stateHome } from "../core/paths.ts";
+import { installedBy } from "../core/install.ts";
 import { RELEASE } from "../core/release.ts";
 import { dailyUpdateCheck } from "../core/update.ts";
 import { VERSION } from "../version.ts";
@@ -143,7 +144,8 @@ export async function runTui(argv: string[]): Promise<number> {
   // A release's daily update check (14.4): your own config's say, never a folder's — a network request is yours to
   // allow — and DO_NOT_TRACK's. Said when there's a newer one; the CLI never asks.
   const yours = loadConfig({ configFile: start.configFile }).config;
-  void dailyUpdateCheck({ release: RELEASE, version: VERSION, enabled: yours.update.check, env: process.env, stateFile: join(stateHome(), "update.json") }).then((said) => {
+  const by = installedBy(process.execPath, dataHome(), VERSION);
+  void dailyUpdateCheck({ release: RELEASE, version: VERSION, enabled: yours.update.check, env: process.env, stateFile: join(stateHome(), "update.json"), by }).then((said) => {
     if (said) app.message("info", said);
   });
 

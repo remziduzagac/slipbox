@@ -3,11 +3,31 @@
 // `<data>/current/slipbox`; and `bin-link`, where that link is. `install.sh` lays it out, `upgrade` adds a version and
 // moves `current`, and `uninstall` takes it away — with `--purge`, everything slipbox keeps, too.
 
-import { existsSync, lstatSync, readdirSync, readFileSync, readlinkSync, rmSync } from "node:fs";
+import { existsSync, lstatSync, readdirSync, readFileSync, readlinkSync, realpathSync, rmSync } from "node:fs";
 import { join, sep } from "node:path";
 import { type StoreKind, storeDir } from "./paths.ts";
 
 export type Stores = Record<StoreKind, string>;
+
+/** How this slipbox was put here: by its installer (in `versions/`), by Homebrew (in its Cellar, 14.3), or another
+ *  way — from source, or a binary put somewhere by hand. */
+export type InstalledBy = "installer" | "homebrew" | "other";
+
+export function installedBy(execPath: string, data: string, version: string): InstalledBy {
+  let real = execPath;
+  try {
+    real = realpathSync(execPath);
+  } catch {}
+  try {
+    if (real === realpathSync(join(data, "versions", version, "slipbox"))) return "installer";
+  } catch {}
+  return /\/Cellar\/slipbox\/[^/]+\/bin\/slipbox$/.test(real) ? "homebrew" : "other";
+}
+
+/** How to get a newer one, by how this one was put here. */
+export function howToUpgrade(by: InstalledBy, repo: string): string {
+  return by === "installer" ? "slipbox upgrade installs it" : by === "homebrew" ? "brew upgrade slipbox installs it" : `it's at https://github.com/${repo}/releases`;
+}
 
 /** slipbox's four folders, where they are here (14.9). */
 export function stores(): Stores {
@@ -79,11 +99,13 @@ const KEPT: Record<StoreKind, string> = {
   cache: "indexes and pictures, all made again when missing",
 };
 
-/** What `uninstall` takes away — the installer's files; with `purge`, slipbox's four folders too — and what stays. */
-export function uninstallPlan(purge: boolean, dirs: Stores = stores()): UninstallPlan {
+/** What `uninstall` takes away — the installer's files; with `purge`, slipbox's four folders too — and what stays.
+ *  `by`: how the slipbox running was put here — Homebrew's is Homebrew's to remove, and said so. */
+export function uninstallPlan(purge: boolean, dirs: Stores = stores(), by: InstalledBy = "other"): UninstallPlan {
   const inst = installation(dirs.data);
   const remove: Item[] = [];
   const notes: string[] = [];
+  if (by === "homebrew") notes.push("this slipbox is Homebrew's: brew uninstall slipbox removes it");
   if (inst.link) remove.push({ path: inst.link, what: "the link that runs slipbox" });
   if (inst.foreignLink) notes.push(`${inst.foreignLink} isn't slipbox's link any more: left as it is`);
   if (inst.versions.length) remove.push({ path: join(dirs.data, "versions"), what: `slipbox ${inst.versions.join(", ")}` });

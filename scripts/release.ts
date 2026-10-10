@@ -9,8 +9,9 @@
 // `slipbox-<version>-<target>.tar.gz`. One built for this machine is run (`--version`) before it's packed. Another
 // platform's needs that platform's OpenTUI package installed (`bun install --os <os> --cpu <cpu>`); CI builds each
 // on its own platform instead (`.github/workflows/release.yml`), where it's there.
-// finish: `SHA256SUMS` over the packs in `--out`, and `install.sh` (14.7): `install.template.sh` with the version,
-// the repository and each pack's sum written in.
+// finish: `SHA256SUMS` over the packs in `--out`; `install.sh` (14.7): `install.template.sh` with the version, the
+// repository and each pack's sum written in; and `slipbox.rb` (14.3), the Homebrew formula, from
+// `homebrew.template.rb` — macOS's and glibc Linux's packs, which are Homebrew's.
 //
 // The version is package.json's, which must be `src/version.ts`'s, and the tag's when one is given. `--out` is
 // `dist/release` by default. Nothing is published here: CI drafts the release, and a person publishes it.
@@ -141,7 +142,36 @@ export function installScript(template: string, version: string, repo: string, s
   return out;
 }
 
-/** The release's packs in `out` summed: `SHA256SUMS` and `install.sh` written; their paths. */
+/** The platforms Homebrew installs on, by its own blocks: macOS, and Linux (glibc's: Homebrew's own needs it). */
+const HOMEBREW: Record<string, [string, string]> = {
+  "darwin-arm64": ["on_macos", "on_arm"],
+  "darwin-x64": ["on_macos", "on_intel"],
+  "linux-arm64": ["on_linux", "on_arm"],
+  "linux-x64": ["on_linux", "on_intel"],
+};
+
+/** The Homebrew formula for a release: a block per platform it has a pack for, its address and its sum. */
+export function homebrewFormula(template: string, version: string, repo: string, sums: Record<string, string>): string {
+  if (!/^\d+\.\d+\.\d+(-[0-9A-Za-z.]+)?$/.test(version)) throw new Error(`not a version: ${version}`);
+  if (repoOf(repo) !== repo) throw new Error(`not a repository: ${repo}`);
+  const blocks: string[] = [];
+  for (const os of ["on_macos", "on_linux"]) {
+    const inner = Object.entries(HOMEBREW)
+      .filter(([target, [o]]) => o === os && sums[target] !== undefined)
+      .map(([target, [, cpu]]) => {
+        if (!/^[0-9a-f]{64}$/.test(sums[target]!)) throw new Error(`not a sum: ${sums[target]}`);
+        return `    ${cpu} do\n      url "https://github.com/${repo}/releases/download/v${version}/${assetName(version, target)}"\n      sha256 "${sums[target]}"\n    end`;
+      });
+    if (inner.length) blocks.push(`  ${os} do\n${inner.join("\n")}\n  end`);
+  }
+  if (!blocks.length) throw new Error("no pack Homebrew installs: macOS's or glibc Linux's");
+  const out = template.replaceAll("@VERSION@", version).replaceAll("@REPO@", repo).replace("@PLATFORMS@", blocks.join("\n"));
+  const left = /@[A-Z]+@/.exec(out);
+  if (left) throw new Error(`the formula's template has ${left[0]} left`);
+  return out;
+}
+
+/** The release's packs in `out` summed: `SHA256SUMS`, `install.sh` and `slipbox.rb` written; their paths. */
 export function finishRelease(opts: { repo: string; tag?: string; out: string; root?: string }): string[] {
   const root = opts.root ?? ROOT;
   const version = releaseVersion(root, opts.tag);
@@ -165,7 +195,14 @@ export function finishRelease(opts: { repo: string; tag?: string; out: string; r
   );
   const installer = join(opts.out, "install.sh");
   writeFileSync(installer, installScript(readFileSync(join(root, "scripts", "install.template.sh"), "utf8"), version, opts.repo, byTarget), { mode: 0o755 });
-  return [sums, installer];
+  const out = [sums, installer];
+  // Homebrew's, when the release has a pack it installs (a musl-only one hasn't).
+  if (Object.keys(HOMEBREW).some((t) => byTarget[t] !== undefined)) {
+    const formula = join(opts.out, "slipbox.rb");
+    writeFileSync(formula, homebrewFormula(readFileSync(join(root, "scripts", "homebrew.template.rb"), "utf8"), version, opts.repo, byTarget));
+    out.push(formula);
+  }
+  return out;
 }
 
 /** The repository asked for, or origin's on GitHub. */

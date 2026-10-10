@@ -72,7 +72,7 @@ import { isTrusted, setTrustedRoots } from "../core/trust.ts";
 import { type Args, flag, has, parseArgs, UsageError, VALUED } from "./args.ts";
 import { VERSION } from "../version.ts";
 import { RELEASE } from "../core/release.ts";
-import { uninstall, uninstallPlan } from "../core/install.ts";
+import { installedBy, uninstall, uninstallPlan } from "../core/install.ts";
 import { upgrade as upgradeTo, UpgradeError } from "../core/update.ts";
 
 /**
@@ -1672,7 +1672,7 @@ const HANDLERS: Record<string, Handler> = {
   uninstall(s) {
     const purge = has(s.args, "purge");
     const yes = has(s.args, "yes");
-    const plan = uninstallPlan(purge);
+    const plan = uninstallPlan(purge, undefined, installedBy(process.execPath, dataHome(), VERSION));
     const failed = yes ? uninstall(plan) : [];
     const width = Math.max(0, ...[...plan.remove, ...plan.keep].map((i) => tildePath(i.path).length));
     const row = (i: { path: string; what: string }) => `  ${tildePath(i.path).padEnd(width)}  ${i.what}\n`;
