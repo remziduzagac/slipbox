@@ -12,8 +12,8 @@ its index, roots, named folders and pointers, git and merge review, language ser
 
 ## Try it
 
-Requires [Bun](https://bun.sh) 1.4.2 or later (older ones crash in SQLite, which search uses), and on Linux glibc 2.34
-or later.
+Requires [Bun](https://bun.sh) 1.4.2 or later (older ones lack what slipbox uses: `node:sqlite` for search, the
+compile flags).
 
 ```bash
 bun install
@@ -21,6 +21,10 @@ bun src/main.ts examples/vault                      # the TUI, on the demo folde
 bun src/main.ts render examples/vault/equipment/telescope-comparison.md  # render to stdout
 scripts/install-local.sh                            # a `slipbox` launcher in ~/.local/bin
 ```
+
+Releases — a binary per platform, macOS and Linux, with no Bun needed — are built and installed by
+`scripts/release.ts` and its `install.sh` (`curl -fsSL …/releases/latest/download/install.sh | sh`); none is published
+yet. How, and what keeps it safe: [docs/design/distribution.md](docs/design/distribution.md).
 
 A file's **root** is the nearest folder above it holding `.git`, `.slipbox/`, `.obsidian/` or `.zk/`: what `/` in a
 link starts from, where a wikilink's names are looked for, whose link convention is followed. A folder without one

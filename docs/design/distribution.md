@@ -46,7 +46,8 @@ search index, the parse cache or a picture — so backup tools that know the tag
 package.json's own `build`, so its autoload flags are always on (`14.1`), and defines the release in it
 (`core/release.ts`, `RELEASE`: the repository releases come from and the platform it's for). A target built for this
 machine is run once (`--version`) first. Each is packed, with its notices, as `slipbox-<version>-<target>.tar.gz`, a
-folder of that name inside. `finish` writes `SHA256SUMS` over the packs, refusing another version's beside them.
+folder of that name inside. `finish` writes `SHA256SUMS` over the packs, refusing another version's beside them, and
+the installer.
 
 | Asset | Bun's target |
 | --- | --- |
@@ -70,6 +71,36 @@ a person publishes the draft. The workflow can't have run yet: the repository ha
 
 Building another platform here works when its OpenTUI package is installed (`bun install --os <os> --cpu <cpu>`):
 Bun fixes the platform at build time, so only that platform's package is bundled.
+
+## Installing
+
+`finish` also writes `install.sh` (`14.7`): `scripts/install.template.sh` with the release's version, repository and
+each pack's SHA-256 written in — so a pack that isn't the one released is refused, wherever it came from. It's a
+release asset, run as
+
+```bash
+curl -fsSL https://github.com/<owner>/<name>/releases/latest/download/install.sh | sh
+```
+
+POSIX `sh` (dash, bash, macOS's), the whole of it a function called on its last line, so a download cut short runs
+nothing. In order:
+
+1. **The platform**, from `uname`: Linux or macOS, x64 or arm64; a Mac terminal under Rosetta gets the arm64 build;
+   musl (Alpine) is refused until `14.5`, as is any other system (Windows is `14.12`).
+2. **A slipbox already there** — `~/.local/bin/slipbox`, or `$SLIPBOX_BIN_DIR`'s — that isn't this installer's link
+   (a launcher from `scripts/install-local.sh`, another install) is left as it is: the installer stops and says so,
+   before downloading anything.
+3. **The pack** downloaded (curl, https only, or wget), its SHA-256 checked against the one written in, unpacked in a
+   temporary folder (removed however it ends), and its binary run: it must say `slipbox <version>`. Any of these
+   failing installs nothing.
+4. **Installed** into slipbox's data folder (`$XDG_DATA_HOME/slipbox`, an absolute one, else `~/.local/share/slipbox`):
+   `versions/<version>/` (the binary and its notices), `current` a relative link to it, and the link
+   `~/.local/bin/slipbox` → `<data>/current/slipbox`. Where that link is goes in `<data>/bin-link`, for `uninstall`.
+   Run again, the same version is put back in place.
+5. **The PATH**: when the link's folder isn't on it, how to add it is said.
+
+Nothing runs as root and nothing outside those two places is touched. `SLIPBOX_RELEASES_URL` fetches the packs from
+elsewhere — a mirror, or the tests' folder through `file://` — and their sums are still the release's.
 
 ## Notices
 

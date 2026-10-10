@@ -1,10 +1,10 @@
 // Distribution (plan 14.x): the supply chain's gates and the notices a release ships (14.10); a release built (14.2).
 import { afterAll, beforeAll, describe, expect, test } from "bun:test";
-import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { chmodSync, copyFileSync, existsSync, mkdirSync, mkdtempSync, readFileSync, readlinkSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { bunfigProblems, checkDeps, licenceProblems, licenceTaken, notices, type Package, productionPackages, repoLink, specProblems, workflowProblems } from "../scripts/check-deps.ts";
-import { assetName, buildArgs, buildRelease, finishRelease, hostTarget, releaseVersion, repoOf, sha256sums } from "../scripts/release.ts";
+import { assetName, buildArgs, buildRelease, finishRelease, hostTarget, installScript, releaseVersion, repoOf, sha256sums } from "../scripts/release.ts";
 import { RELEASE } from "../src/core/release.ts";
 import { VERSION } from "../src/version.ts";
 
@@ -173,16 +173,51 @@ describe("a release (14.2)", () => {
     expect(RELEASE).toBeNull();
   });
 
+  test("the installer made for a release: its version, repository and sums written in; anything odd refused", () => {
+    const template = readFileSync(join(ROOT, "scripts", "install.template.sh"), "utf8");
+    const sum = "a".repeat(64);
+    const made = installScript(template, "1.2.3", "o/r", { "linux-x64": sum, "darwin-arm64": "b".repeat(64) });
+    expect(made).toContain('VERSION="1.2.3"\nREPO="o/r"\n');
+    expect(made).toContain(`    darwin-arm64) echo ${"b".repeat(64)} ;;\n    linux-x64) echo ${sum} ;;\n    *) return 1 ;;`);
+    expect(made).not.toMatch(/@[A-Z]+@/);
+    expect(() => installScript(template, "1.2.3;x", "o/r", {})).toThrow("not a version");
+    expect(() => installScript(template, "1.2.3", "o/$(r)", {})).toThrow("not a repository");
+    expect(() => installScript(template, "1.2.3", "o/r", { "linux-x64": "zz" })).toThrow("not a target and its sum");
+    expect(() => installScript(template, "1.2.3", "o/r", { "beos-x64": sum })).toThrow("not a target and its sum");
+    expect(() => installScript(`${template}@MORE@`, "1.2.3", "o/r", {})).toThrow("@MORE@ left");
+  });
+
   describe("built for this machine", () => {
     const host = hostTarget();
     let out = "";
     let pack = "";
+    /** Where the installer fetches from: a folder laid out as GitHub's downloads are, `v<version>/<pack>`. */
+    let releases = "";
     beforeAll(() => {
       if (!host) return;
       out = mkdtempSync(join(sandbox, "release-"));
       pack = buildRelease({ targets: [host], repo: "example/slipbox", tag: `v${VERSION}`, out })[0]!;
       finishRelease({ repo: "example/slipbox", out });
+      releases = mkdtempSync(join(sandbox, "releases-"));
+      mkdirSync(join(releases, `v${VERSION}`));
+      symlinkSync(pack, join(releases, `v${VERSION}`, assetName(VERSION, host)));
     }, 240_000);
+
+    /** The installer run in a home of its own: an environment made from nothing, so it can't reach the real one. */
+    function install(home: string, extra: Record<string, string> = {}, opts: { fake?: Record<string, string>; from?: string } = {}) {
+      let path = "/usr/local/bin:/usr/bin:/bin";
+      if (opts.fake) {
+        const fake = mkdtempSync(join(sandbox, "fakebin-"));
+        for (const [name, body] of Object.entries(opts.fake)) {
+          writeFileSync(join(fake, name), `#!/bin/sh\n${body}\n`);
+          chmodSync(join(fake, name), 0o755);
+        }
+        path = `${fake}:${path}`;
+      }
+      const env = { HOME: home, PATH: path, TMPDIR: home, SLIPBOX_RELEASES_URL: `file://${opts.from ?? releases}`, ...extra };
+      const r = Bun.spawnSync(["sh", join(out, "install.sh")], { env, cwd: home, timeout: 60_000 });
+      return { code: r.exitCode, out: r.stdout.toString(), err: r.stderr.toString() };
+    }
 
     test.if(host !== null)("a pack holding the binary and its notices, in a folder of its name; summed", () => {
       expect(pack).toBe(join(out, assetName(VERSION, host!)));
@@ -204,6 +239,118 @@ describe("a release (14.2)", () => {
       expect(info.exitCode).toBe(0);
       expect(JSON.parse(info.stdout.toString()).data.release).toEqual({ repo: "example/slipbox", target: host });
       expect(readFileSync(join(dir, "NOTICES.txt"), "utf8")).toStartWith(`slipbox ${VERSION}: the third-party software in this program`);
+    });
+
+    test.if(host !== null)("installed (14.7): a folder per version, current, a link in ~/.local/bin — it runs; again, the same", () => {
+      const home = mkdtempSync(join(sandbox, "home-"));
+      const r = install(home);
+      expect(r.err).toBe("");
+      expect(r.code).toBe(0);
+      const data = join(home, ".local", "share", "slipbox");
+      const link = join(home, ".local", "bin", "slipbox");
+      expect(r.out).toContain(`slipbox: ${VERSION} installed: ${link} -> ${data}/versions/${VERSION}`);
+      // Not on this PATH: said, with how.
+      expect(r.out).toContain(`${join(home, ".local", "bin")} isn't on your PATH`);
+      expect(readlinkSync(join(data, "current"))).toBe(`versions/${VERSION}`);
+      expect(readlinkSync(link)).toBe(join(data, "current", "slipbox"));
+      expect(existsSync(join(data, "versions", VERSION, "NOTICES.txt"))).toBe(true);
+      expect(readFileSync(join(data, "bin-link"), "utf8")).toBe(`${link}\n`);
+      expect(Bun.spawnSync([link, "--version"]).stdout.toString()).toBe(`slipbox ${VERSION}\n`);
+      // Run again: the same, and nothing left behind.
+      const again = install(home, { PATH: `${join(home, ".local", "bin")}:/usr/bin:/bin` });
+      expect(again.code).toBe(0);
+      expect(again.out).not.toContain("isn't on your PATH");
+      expect(readlinkSync(link)).toBe(join(data, "current", "slipbox"));
+      expect(Bun.spawnSync(["ls", join(data, "versions")]).stdout.toString()).toBe(`${VERSION}\n`);
+      expect(Bun.spawnSync(["sh", "-c", `ls -d ${home}/slipbox-install.* 2>/dev/null`]).stdout.toString()).toBe("");
+    });
+
+    test.if(host !== null)("XDG_DATA_HOME and SLIPBOX_BIN_DIR followed when absolute; a relative one, as XDG says, not", () => {
+      const home = mkdtempSync(join(sandbox, "home-"));
+      const r = install(home, { XDG_DATA_HOME: join(home, "d"), SLIPBOX_BIN_DIR: join(home, "b") });
+      expect(r.code).toBe(0);
+      expect(readlinkSync(join(home, "b", "slipbox"))).toBe(join(home, "d", "slipbox", "current", "slipbox"));
+      const other = mkdtempSync(join(sandbox, "home-"));
+      expect(install(other, { XDG_DATA_HOME: "d", SLIPBOX_BIN_DIR: "b" }).code).toBe(0);
+      expect(readlinkSync(join(other, ".local", "bin", "slipbox"))).toBe(join(other, ".local", "share", "slipbox", "current", "slipbox"));
+    });
+
+    test.if(host !== null)("a pack that isn't the release's — its SHA-256 another — is refused; nothing installed", () => {
+      const home = mkdtempSync(join(sandbox, "home-"));
+      const bad = mkdtempSync(join(sandbox, "releases-"));
+      mkdirSync(join(bad, `v${VERSION}`));
+      const tampered = join(bad, `v${VERSION}`, assetName(VERSION, host!));
+      copyFileSync(pack, tampered);
+      writeFileSync(tampered, Buffer.concat([readFileSync(tampered), Buffer.from("x")]));
+      const r = install(home, {}, { from: bad });
+      expect(r.code).toBe(1);
+      expect(r.err).toContain("the download's SHA-256 is");
+      expect(r.err).toContain("nothing installed");
+      expect(existsSync(join(home, ".local", "share", "slipbox"))).toBe(false);
+      expect(existsSync(join(home, ".local", "bin", "slipbox"))).toBe(false);
+    });
+
+    test.if(host !== null)("a slipbox there already that isn't the installer's is left as it is, and said — before any download", () => {
+      const home = mkdtempSync(join(sandbox, "home-"));
+      mkdirSync(join(home, ".local", "bin"), { recursive: true });
+      writeFileSync(join(home, ".local", "bin", "slipbox"), "#!/bin/sh\n# a launcher\n");
+      const r = install(home, {}, { from: join(sandbox, "nowhere") });
+      expect(r.code).toBe(1);
+      expect(r.err).toContain("isn't this installer's: remove it (or set SLIPBOX_BIN_DIR)");
+      expect(r.out).not.toContain("downloading");
+      expect(readFileSync(join(home, ".local", "bin", "slipbox"), "utf8")).toBe("#!/bin/sh\n# a launcher\n");
+      // A link of its own, someone else's: the same.
+      const linked = mkdtempSync(join(sandbox, "home-"));
+      mkdirSync(join(linked, ".local", "bin"), { recursive: true });
+      symlinkSync("/usr/bin/true", join(linked, ".local", "bin", "slipbox"));
+      expect(install(linked).code).toBe(1);
+      expect(readlinkSync(join(linked, ".local", "bin", "slipbox"))).toBe("/usr/bin/true");
+    });
+
+    test.if(host !== null)("a pack whose binary isn't the release's — another version said, or none in it — is refused", () => {
+      const fakeRelease = (files: Record<string, string>) => {
+        const dir = mkdtempSync(join(sandbox, "fake-"));
+        const name = `slipbox-${VERSION}-${host}`;
+        for (const [f, body] of Object.entries(files)) {
+          mkdirSync(join(dir, name), { recursive: true });
+          writeFileSync(join(dir, name, f), body);
+          chmodSync(join(dir, name, f), 0o755);
+        }
+        mkdirSync(join(dir, "r", `v${VERSION}`), { recursive: true });
+        const tar = join(dir, "r", `v${VERSION}`, assetName(VERSION, host!));
+        expect(Bun.spawnSync(["tar", "-czf", tar, "-C", dir, name]).exitCode).toBe(0);
+        const sum = sha256sums([tar]).split(" ")[0]!;
+        const script = join(dir, "install.sh");
+        writeFileSync(script, installScript(readFileSync(join(ROOT, "scripts", "install.template.sh"), "utf8"), VERSION, "example/slipbox", { [host!]: sum }));
+        return { from: join(dir, "r"), script };
+      };
+      const run = (f: { from: string; script: string }) => {
+        const home = mkdtempSync(join(sandbox, "home-"));
+        const r = Bun.spawnSync(["sh", f.script], { env: { HOME: home, PATH: "/usr/bin:/bin", TMPDIR: home, SLIPBOX_RELEASES_URL: `file://${f.from}` }, cwd: home });
+        return { code: r.exitCode, err: r.stderr.toString(), installed: existsSync(join(home, ".local", "share", "slipbox")) };
+      };
+      const lying = run(fakeRelease({ slipbox: "#!/bin/sh\necho 'slipbox 0.0.1'\n" }));
+      expect(lying).toEqual({ code: 1, err: `slipbox: the binary says "slipbox 0.0.1", not "slipbox ${VERSION}": nothing installed\n`, installed: false });
+      const empty = run(fakeRelease({ "NOTICES.txt": "" }));
+      expect(empty).toEqual({ code: 1, err: "slipbox: the pack has no slipbox in it: nothing installed\n", installed: false });
+      const broken = run(fakeRelease({ slipbox: "#!/bin/sh\necho 'cannot execute' >&2\nexit 126\n" }));
+      expect(broken).toEqual({ code: 1, err: "slipbox: the binary doesn't run here: cannot execute\n", installed: false });
+    });
+
+    test.if(host !== null)("no build for the machine: another system, another processor, musl, one this release hasn't", () => {
+      const home = mkdtempSync(join(sandbox, "home-"));
+      const uname = (s: string, m: string) => `case "$1" in -s) echo ${s} ;; -m) echo ${m} ;; esac`;
+      const glibc = "echo 'ldd (GNU libc) 2.39'";
+      expect(install(home, {}, { fake: { uname: uname("FreeBSD", "amd64"), ldd: glibc } }).err).toContain("no release for FreeBSD yet");
+      expect(install(home, {}, { fake: { uname: uname("Linux", "riscv64"), ldd: glibc } }).err).toContain("no release for riscv64 processors");
+      expect(install(home, {}, { fake: { uname: uname("Linux", "aarch64"), ldd: "echo 'musl libc (aarch64)'" } }).err).toContain("no release for musl (Alpine) yet");
+      const other = host === "linux-x64" ? ["aarch64", "linux-arm64"] : ["x86_64", "linux-x64"];
+      expect(install(home, {}, { fake: { uname: uname("Linux", other[0]!), ldd: glibc } }).err).toContain(`this release (${VERSION}) has no ${other[1]} build`);
+      // A Mac's terminal under Rosetta says x64: the arm64 build is the one it gets.
+      const mac = { uname: uname("Darwin", "x86_64"), sysctl: "echo 1" };
+      expect(install(home, {}, { fake: mac }).err).toContain("has no darwin-arm64 build");
+      expect(install(home, {}, { fake: { ...mac, sysctl: "echo 0" } }).err).toContain("has no darwin-x64 build");
+      expect(existsSync(join(home, ".local"))).toBe(false);
     });
   });
 });

@@ -9,7 +9,8 @@
 // `slipbox-<version>-<target>.tar.gz`. One built for this machine is run (`--version`) before it's packed. Another
 // platform's needs that platform's OpenTUI package installed (`bun install --os <os> --cpu <cpu>`); CI builds each
 // on its own platform instead (`.github/workflows/release.yml`), where it's there.
-// finish: `SHA256SUMS` over the packs in `--out`.
+// finish: `SHA256SUMS` over the packs in `--out`, and `install.sh` (14.7): `install.template.sh` with the version,
+// the repository and each pack's sum written in.
 //
 // The version is package.json's, which must be `src/version.ts`'s, and the tag's when one is given. `--out` is
 // `dist/release` by default. Nothing is published here: CI drafts the release, and a person publishes it.
@@ -114,9 +115,26 @@ export function buildRelease(opts: { targets: string[]; repo: string; tag?: stri
   return packs;
 }
 
-/** The release's packs in `out` summed: `SHA256SUMS` written; its path. */
-export function finishRelease(opts: { repo: string; tag?: string; out: string; root?: string }): string {
-  const version = releaseVersion(opts.root ?? ROOT, opts.tag);
+/** The installer for a release: the template with its version, repository and each pack's sum written in. */
+export function installScript(template: string, version: string, repo: string, sums: Record<string, string>): string {
+  if (!/^\d+\.\d+\.\d+(-[0-9A-Za-z.]+)?$/.test(version)) throw new Error(`not a version: ${version}`);
+  if (repoOf(repo) !== repo) throw new Error(`not a repository: ${repo}`);
+  const cases = Object.entries(sums)
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(([target, hash]) => {
+      if (!(target in TARGETS) || !/^[0-9a-f]{64}$/.test(hash)) throw new Error(`not a target and its sum: ${target} ${hash}`);
+      return `    ${target}) echo ${hash} ;;`;
+    });
+  const out = template.replaceAll("@VERSION@", version).replaceAll("@REPO@", repo).replace("@SUMS@", cases.join("\n"));
+  const left = /@[A-Z]+@/.exec(out);
+  if (left) throw new Error(`the installer's template has ${left[0]} left`);
+  return out;
+}
+
+/** The release's packs in `out` summed: `SHA256SUMS` and `install.sh` written; their paths. */
+export function finishRelease(opts: { repo: string; tag?: string; out: string; root?: string }): string[] {
+  const root = opts.root ?? ROOT;
+  const version = releaseVersion(root, opts.tag);
   const packs = Object.keys(TARGETS)
     .map((t) => join(opts.out, assetName(version, t)))
     .filter((f) => existsSync(f));
@@ -124,8 +142,20 @@ export function finishRelease(opts: { repo: string; tag?: string; out: string; r
   const stray = readdirSync(opts.out).filter((f) => f.endsWith(".tar.gz") && !packs.some((p) => basename(p) === f));
   if (stray.length) throw new Error(`packs of another version in ${opts.out}: ${stray.join(", ")}`);
   const sums = join(opts.out, "SHA256SUMS");
-  writeFileSync(sums, sha256sums(packs));
-  return sums;
+  const text = sha256sums(packs);
+  writeFileSync(sums, text);
+  const byTarget = Object.fromEntries(
+    text
+      .trim()
+      .split("\n")
+      .map((line) => {
+        const [hash, file] = line.split("  ") as [string, string];
+        return [file.slice(`slipbox-${version}-`.length, -".tar.gz".length), hash];
+      }),
+  );
+  const installer = join(opts.out, "install.sh");
+  writeFileSync(installer, installScript(readFileSync(join(root, "scripts", "install.template.sh"), "utf8"), version, opts.repo, byTarget), { mode: 0o755 });
+  return [sums, installer];
 }
 
 /** The repository asked for, or origin's on GitHub. */
@@ -161,7 +191,7 @@ if (import.meta.main) {
       if (!targets.length) throw new Error(`this machine (${process.platform}-${process.arch}) isn't a platform released: name a --target`);
       for (const p of buildRelease({ targets, repo: repoFrom(one("repo")), tag: one("tag"), out })) process.stdout.write(`${p}\n`);
     } else if (step === "finish") {
-      process.stdout.write(`${finishRelease({ repo: repoFrom(one("repo")), tag: one("tag"), out })}\n`);
+      for (const p of finishRelease({ repo: repoFrom(one("repo")), tag: one("tag"), out })) process.stdout.write(`${p}\n`);
     } else {
       process.stderr.write("release: build [--target <t>]… [--repo owner/name] [--tag v<version>] [--out <dir>] | finish …\n");
       process.exit(2);
