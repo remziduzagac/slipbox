@@ -5,13 +5,16 @@
 import { afterAll, afterEach, describe, expect, setDefaultTimeout, test } from "bun:test";
 import { chmodSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { join, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 import type { Diagnostic } from "vscode-languageserver-protocol";
 import { loadConfig } from "../src/core/config.ts";
 import { LanguageClient, type ServerSpec, settingAt } from "../src/core/servers/client.ts";
-import { chooseServers, findServer, rootFor, toolsDir } from "../src/core/servers/find.ts";
-import { installPackages } from "../src/core/servers/install.ts";
+import { chooseServers, findServer, ownInstall, rootFor, toolsDir } from "../src/core/servers/find.ts";
+import { INSTALL_ARGS, installTool, lockKey, type NpmSpec, toolFolder, toolManifest, toolSlug } from "../src/core/servers/install.ts";
+import { LOCKS } from "../src/core/servers/locks.ts";
+import { lintCommand, MARKDOWNLINT } from "../src/core/lint.ts";
+import { pinned } from "../scripts/lock-servers.ts";
 import { languageOf, projectAsks, SERVERS, type ServerDef, serverTable, type ServerTable } from "../src/core/servers/languages.ts";
 import { commandFor, compileFormat, type Format, type LinterConfig, linterRoot, LINTERS, linterTable, parseFindings, projectPath, runLinter } from "../src/core/servers/linters.ts";
 import { doctor, doctorFile } from "../src/core/servers/doctor.ts";
@@ -26,6 +29,25 @@ const sandbox = mkdtempSync(join(tmpdir(), "slipbox-servers-"));
 process.env.XDG_DATA_HOME = join(sandbox, "data"); // slipbox's installs, and Mason's, are the sandbox's
 delete process.env.SLIPBOX_CONFIG;
 afterAll(() => rmSync(sandbox, { recursive: true, force: true }));
+
+/** A lock for a package on disk (`file:`), made by Bun as scripts/lock-servers.ts makes them — no network. */
+function lockFor(npm: NpmSpec): string {
+  const d = mkdtempSync(join(sandbox, "lock-"));
+  writeFileSync(join(d, "package.json"), toolManifest(npm));
+  const r = Bun.spawnSync([process.execPath, "install", "--lockfile-only", "--ignore-scripts"], { cwd: d, env: { ...process.env, BUN_BE_BUN: "1" } });
+  if (r.exitCode !== 0) throw new Error(r.stderr.toString());
+  // A `file:` package is kept by its path from the lock's folder: made absolute, as the lock is installed elsewhere.
+  // (A registry package, as slipbox's pins are, has no path.)
+  return readFileSync(join(d, "bun.lock"), "utf8").replace(/@file:([^"/][^"]*)"/g, (_, rel: string) => `@file:${resolve(d, rel)}"`);
+}
+
+/** A package of a server, as a folder (`file:` installs it with no network): its version, a postinstall that marks. */
+function serverPackage(name: string, version: string, body = "console.log('ok')"): string {
+  const d = mkdtempSync(join(sandbox, `pkg-${name}-`));
+  writeFileSync(join(d, "package.json"), JSON.stringify({ name, version, bin: { [name]: "bin.js" }, scripts: { postinstall: "touch POSTINSTALL_RAN" } }));
+  writeFileSync(join(d, "bin.js"), `#!/usr/bin/env node\n${body}\n`);
+  return d;
+}
 // A root is trusted only where a test says so (23.x): none by default, as in use.
 afterEach(() => setTrustedRoots([]));
 
@@ -357,8 +379,11 @@ describe("which servers, where (19.2–19.5)", () => {
     const root = dir("found", { ".git/HEAD": "ref: refs/heads/main\n" });
     const def = { name: "x", command: "slipbox-test-ls", args: ["--stdio"], npm: { package: "slipbox-test-ls", version: "1.0.0", bin: "slipbox-test-ls" } };
     expect(findServer(def, root)).toBeNull();
-    exe(join(toolsDir(), "node_modules/.bin/slipbox-test-ls"), "#!/bin/sh\necho hi\n");
-    expect(findServer(def, root)).toMatchObject({ where: "slipbox", argv: [join(toolsDir(), "node_modules/.bin/slipbox-test-ls"), "--stdio"] });
+    LOCKS[lockKey(def.npm)] = "the lock slipbox ships";
+    const own = join(toolFolder(def.npm)!, "node_modules/.bin/slipbox-test-ls");
+    exe(own, "#!/bin/sh\necho hi\n");
+    expect(findServer(def, root)).toMatchObject({ where: "slipbox", argv: [own, "--stdio"] });
+    expect(findServer(def, root)!.behind).toBeUndefined();
     exe(join(root, "node_modules/.bin/slipbox-test-ls"), "#!/usr/bin/env node\nconsole.log(1)\n");
     const f = findServer(def, join(root, "sub"))!;
     expect(f.where).toBe("project");
@@ -436,17 +461,83 @@ describe("which servers, where (19.2–19.5)", () => {
     expect(c).toEqual({ run: [], missing: [native], skipped: [] });
   });
 
-  test("installing: into slipbox's tools folder, pinned, its install script not run", async () => {
-    const pkg = dir("pkg", {
-      "package.json": JSON.stringify({ name: "slipbox-fake-server", version: "1.2.3", bin: { "slipbox-fake-server": "bin.js" }, scripts: { postinstall: "touch POSTINSTALL_RAN" } }),
-      "bin.js": "#!/usr/bin/env node\nconsole.log('ok')\n",
-    });
-    const into = join(sandbox, "tools-test");
-    const r = await installPackages([`file:${pkg}`], into);
+  test("installing (14.11): from the lock slipbox ships, frozen, into a folder of its own; its install script not run", async () => {
+    const npm = { package: "slipbox-fake-server", version: `file:${serverPackage("slipbox-fake-server", "1.2.3")}`, bin: "slipbox-fake-server" };
+    const locks = { [lockKey(npm)]: lockFor(npm) };
+    const base = join(sandbox, "tools-test");
+    const r = await installTool(npm, { base, locks });
     expect(r.ok).toBe(true);
-    expect(existsSync(join(into, "node_modules/.bin/slipbox-fake-server"))).toBe(true);
-    expect(existsSync(join(into, "node_modules/slipbox-fake-server/POSTINSTALL_RAN"))).toBe(false);
-    expect(JSON.parse(readFileSync(join(into, "package.json"), "utf8")).dependencies["slipbox-fake-server"]).toBe(`file:${pkg}`);
+    const at = toolFolder(npm, base, locks)!;
+    expect(at.startsWith(join(base, "slipbox-fake-server") + "/")).toBe(true);
+    expect(existsSync(join(at, "node_modules/.bin/slipbox-fake-server"))).toBe(true);
+    expect(existsSync(join(at, "node_modules/slipbox-fake-server/POSTINSTALL_RAN"))).toBe(false);
+    // Bun skips a local package's scripts by itself; one on its trusted list from npm (Biome) it would run, but for
+    // --ignore-scripts — which no install here can show without the network, so it's checked as said.
+    expect(INSTALL_ARGS).toEqual(["install", "--frozen-lockfile", "--ignore-scripts"]);
+    expect(readFileSync(join(at, "package.json"), "utf8")).toBe(toolManifest(npm));
+    expect(readFileSync(join(at, "bun.lock"), "utf8")).toBe(locks[lockKey(npm)]!);
+    // Done already: nothing run again.
+    expect(await installTool(npm, { base, locks })).toEqual({ ok: true, output: "" });
+    // Its pin moved: a folder of the new lock's, the old one removed.
+    const next = { ...npm, version: `file:${serverPackage("slipbox-fake-server", "1.3.0")}` };
+    const nextLocks = { [lockKey(next)]: lockFor(next) };
+    expect((await installTool(next, { base, locks: nextLocks })).ok).toBe(true);
+    const nextAt = toolFolder(next, base, nextLocks)!;
+    expect(nextAt).not.toBe(at);
+    expect(Bun.spawnSync(["ls", "-A", join(base, "slipbox-fake-server")]).stdout.toString()).toBe(`${nextAt.split("/").at(-1)}\n`);
+  });
+
+  test("installing refuses: a pin slipbox ships no lock for; a lock that isn't the pin's — nothing left behind either way", async () => {
+    const npm = { package: "slipbox-unlocked", version: `file:${serverPackage("slipbox-unlocked", "1.0.0")}`, bin: "slipbox-unlocked" };
+    const base = join(sandbox, "tools-refuse");
+    expect(await installTool(npm, { base, locks: {} })).toEqual({ ok: false, output: `slipbox ships no lockfile for ${lockKey(npm)}, so it doesn't install it` });
+    expect(existsSync(base)).toBe(false);
+    // The lock of another version under this pin's name: Bun's frozen install says no.
+    const other = { ...npm, version: `file:${serverPackage("slipbox-unlocked", "2.0.0")}` };
+    const wrong = { [lockKey(npm)]: lockFor(other) };
+    const r = await installTool(npm, { base, locks: wrong });
+    expect(r.ok).toBe(false);
+    expect(Bun.spawnSync(["ls", "-A", join(base, "slipbox-unlocked")]).stdout.toString()).toBe("");
+  });
+
+  test("slipbox's install found by the lock it ships now; else, behind, the newest under an older one, else the old shared folder", () => {
+    const base = join(sandbox, "tools-find");
+    const npm = { package: "@scope/slipbox-find", version: "2.0.0", bin: "slipbox-find" };
+    LOCKS[lockKey(npm)] = "the lock of 2.0.0";
+    const installAt = (folder: string, version: string) => {
+      exe(join(folder, "node_modules/.bin/slipbox-find"), "#!/bin/sh\n");
+      mkdirSync(join(folder, "node_modules/@scope/slipbox-find"), { recursive: true });
+      writeFileSync(join(folder, "node_modules/@scope/slipbox-find/package.json"), JSON.stringify({ version }));
+    };
+    expect(ownInstall(npm, base)).toBeNull();
+    // The folder is the lock's: the same pin with its lock made again (a dependency moved) is another.
+    expect(toolFolder(npm, base, { [lockKey(npm)]: "one lock" })).not.toBe(toolFolder(npm, base, { [lockKey(npm)]: "another" }));
+    // Before 14.11, one shared folder: behind.
+    installAt(base, "1.0.0");
+    expect(ownInstall(npm, base)).toEqual({ path: join(base, "node_modules/.bin/slipbox-find"), behind: { installed: "1.0.0" } });
+    // Under older locks: the newest of them first; one still being installed never.
+    const parent = join(base, toolSlug(npm.package));
+    expect(parent).toBe(join(base, "scope+slipbox-find"));
+    installAt(join(parent, "aaaaaaaaaaaa"), "1.1.0");
+    Bun.spawnSync(["touch", "-d", "2026-01-01", join(parent, "aaaaaaaaaaaa")]);
+    installAt(join(parent, "bbbbbbbbbbbb"), "1.2.0");
+    installAt(join(parent, `cccccccccccc.new-${process.pid}`), "9.9.9");
+    expect(ownInstall(npm, base)).toEqual({ path: join(parent, "bbbbbbbbbbbb/node_modules/.bin/slipbox-find"), behind: { installed: "1.2.0" } });
+    // The one the lock it ships now names: current.
+    installAt(toolFolder(npm, base)!, "2.0.0");
+    expect(ownInstall(npm, base)).toEqual({ path: join(toolFolder(npm, base)!, "node_modules/.bin/slipbox-find"), behind: null });
+  });
+
+  test("every package slipbox pins has the lock it ships, made for its manifest; no lock for a pin that's gone", () => {
+    const keys = pinned().map(lockKey);
+    expect(keys.length).toBeGreaterThan(8);
+    expect(Object.keys(LOCKS).filter((k) => !k.startsWith("slipbox-") && !k.startsWith("@scope/")).sort()).toEqual([...keys].sort());
+    for (const npm of pinned()) {
+      const lock = JSON.parse(LOCKS[lockKey(npm)]!.replace(/,(\s*[}\]])/g, "$1")) as { workspaces: Record<string, { dependencies: Record<string, string> }>; packages: Record<string, unknown[]> };
+      expect(lock.workspaces[""]!.dependencies).toEqual(JSON.parse(toolManifest(npm)).dependencies);
+      // Each package in it pinned by its content, not only its version.
+      for (const [name, entry] of Object.entries(lock.packages)) expect([name, String(entry.at(-1)).startsWith("sha512-")]).toEqual([name, true]);
+    }
   });
 });
 
@@ -704,6 +795,7 @@ describe("the servers of open files (19.1)", () => {
     writeFileSync(join(pkg, "package.json"), JSON.stringify({ name: "slipbox-fake-ls", version: "1.0.0", bin: { "slipbox-fake-ls": "ls.js" } }));
     writeFileSync(join(pkg, "ls.js"), `#!/usr/bin/env node\nawait import(${JSON.stringify(FAKE)});\n`);
     const npmDef = { name: "fake-npm", command: "slipbox-fake-ls", args: ["--stdio"], npm: { package: "slipbox-fake-ls", version: `file:${pkg}`, bin: "slipbox-fake-ls" } };
+    LOCKS[lockKey(npmDef.npm)] = lockFor(npmDef.npm);
     const noInstall = managed(table({ "fake-npm": npmDef }));
     noInstall.m.open(join(project("pe"), "a.fk"), 1, "");
     expect(noInstall.messages).toEqual(["fake: fake-npm isn't installed — slipbox doctor says more"]);
@@ -712,8 +804,49 @@ describe("the servers of open files (19.1)", () => {
     install.m.open(file, 1, "BAD\n");
     expect(await until(() => install.problems.get(file)?.list.length === 1, 20_000)).toBe(true);
     expect(install.messages).toEqual([`installing fake-npm (slipbox-fake-ls@file:${pkg}) into slipbox's own folder…`, "installed fake-npm"]);
-    expect(existsSync(join(toolsDir(), "node_modules/.bin/slipbox-fake-ls"))).toBe(true);
+    expect(existsSync(join(toolFolder(npmDef.npm)!, "node_modules/.bin/slipbox-fake-ls"))).toBe(true);
     await install.m.stopAll();
+  });
+
+  test("slipbox's install of a server behind its lock (14.11): installed again before it starts — or, installing off, run as it is", async () => {
+    const pkg = join(sandbox, "fake-pkg-behind");
+    mkdirSync(pkg, { recursive: true });
+    writeFileSync(join(pkg, "package.json"), JSON.stringify({ name: "slipbox-behind-ls", version: "1.0.0", bin: { "slipbox-behind-ls": "ls.js" } }));
+    writeFileSync(join(pkg, "ls.js"), `#!/usr/bin/env node\nawait import(${JSON.stringify(FAKE)});\n`);
+    const def = { name: "behind-npm", command: "slipbox-behind-ls", args: ["--stdio"], npm: { package: "slipbox-behind-ls", version: `file:${pkg}`, bin: "slipbox-behind-ls" } };
+    LOCKS[lockKey(def.npm)] = lockFor(def.npm);
+    // What an older slipbox installed: the shared folder of before, the fake server under its name.
+    const old = join(toolsDir(), "node_modules");
+    mkdirSync(join(old, ".bin"), { recursive: true });
+    mkdirSync(join(old, "slipbox-behind-ls"), { recursive: true });
+    writeFileSync(join(old, "slipbox-behind-ls", "package.json"), JSON.stringify({ name: "slipbox-behind-ls", version: "0.9.0" }));
+    writeFileSync(join(old, ".bin", "slipbox-behind-ls"), `#!/usr/bin/env node\nawait import(${JSON.stringify(FAKE)});\n`);
+    chmodSync(join(old, ".bin", "slipbox-behind-ls"), 0o755);
+    // Installing off: the old one runs, nothing installed.
+    const off = managed(table({ "behind-npm": def }));
+    const a = join(project("pbehind-off"), "a.fk");
+    off.m.open(a, 1, "BAD\n");
+    expect(await until(() => off.problems.get(a)?.list.length === 1, 20_000)).toBe(true);
+    expect(off.messages).toEqual([]);
+    expect(existsSync(toolFolder(def.npm)!)).toBe(false);
+    await off.m.stopAll();
+    // Installing on: updated first, then started from the new folder.
+    const on = managed(table({ "behind-npm": def }), true);
+    const b = join(project("pbehind-on"), "b.fk");
+    on.m.open(b, 1, "BAD\n");
+    expect(await until(() => on.problems.get(b)?.list.length === 1, 20_000)).toBe(true);
+    expect(on.messages).toEqual([`updating behind-npm (0.9.0 → file:${pkg}) in slipbox's own folder…`, "updated behind-npm"]);
+    expect(ownInstall(def.npm)).toEqual({ path: join(toolFolder(def.npm)!, "node_modules/.bin/slipbox-behind-ls"), behind: null });
+    await on.m.stopAll();
+    // Installed before at the version pinned, not from the lock: installed again, said so.
+    rmSync(toolFolder(def.npm)!, { recursive: true });
+    writeFileSync(join(old, "slipbox-behind-ls", "package.json"), JSON.stringify({ name: "slipbox-behind-ls", version: `file:${pkg}` }));
+    const same = managed(table({ "behind-npm": def }), true);
+    const c = join(project("pbehind-same"), "c.fk");
+    same.m.open(c, 1, "BAD\n");
+    expect(await until(() => same.problems.get(c)?.list.length === 1, 20_000)).toBe(true);
+    expect(same.messages).toEqual([`installing behind-npm again from slipbox's lockfile (slipbox-behind-ls@file:${pkg})…`, "updated behind-npm"]);
+    await same.m.stopAll();
   });
   test("a file's servers, once each has started: the running ones; a save reaches them; closed, they're told, and it opens afresh", async () => {
     const fakeDef = { name: "fake", command: launcher("fake-started"), args: ["--stdio"] };
@@ -901,5 +1034,35 @@ describe("linters without a server (19.19)", () => {
     const web = doctorFile(serverTable(), linterTable(), join(root, "web/Dockerfile"), false)!;
     expect(web.linters).toEqual([expect.objectContaining({ name: "hadolint", root: null })]);
     expect(web.linters[0]!.where).not.toBe("project");
+  });
+});
+
+describe("slipbox's installs behind their locks, said and acted on (14.11)", () => {
+  test("doctor says a server is behind: the version it has, the one slipbox pins", () => {
+    const npm = { package: "slipbox-doc-ls", version: "2.0.0", bin: "slipbox-doc-ls" };
+    LOCKS[lockKey(npm)] = "the lock of 2.0.0";
+    const old = join(toolsDir(), "slipbox-doc-ls", "000000000000");
+    mkdirSync(join(old, "node_modules/.bin"), { recursive: true });
+    mkdirSync(join(old, "node_modules/slipbox-doc-ls"), { recursive: true });
+    writeFileSync(join(old, "node_modules/slipbox-doc-ls/package.json"), JSON.stringify({ version: "1.5.0" }));
+    writeFileSync(join(old, "node_modules/.bin/slipbox-doc-ls"), "#!/bin/sh\n");
+    chmodSync(join(old, "node_modules/.bin/slipbox-doc-ls"), 0o755);
+    const def: ServerDef = { name: "doc-ls", command: "slipbox-doc-ls", args: [], npm };
+    const t: ServerTable = { servers: { "doc-ls": def }, languages: [{ name: "doc", languageId: "doc", fileTypes: ["doc"], roots: [], servers: ["doc-ls"] }] };
+    const [g] = doctor(t, {}, sandbox, true);
+    expect(g!.servers[0]).toMatchObject({ name: "doc-ls", status: "found", where: "slipbox", behind: "1.5.0", package: "slipbox-doc-ls@2.0.0" });
+  });
+
+  test("lint's markdownlint-cli2 behind: installed again first when installing is on; run as it is when off", () => {
+    const vault = mkdtempSync(join(sandbox, "lintv-"));
+    writeFileSync(join(vault, ".markdownlint-cli2.jsonc"), "{}\n");
+    const parent = join(toolsDir(), toolSlug(MARKDOWNLINT.npm!.package), "000000000000");
+    mkdirSync(join(parent, "node_modules/.bin"), { recursive: true });
+    writeFileSync(join(parent, "node_modules/.bin/markdownlint-cli2"), "#!/bin/sh\n");
+    chmodSync(join(parent, "node_modules/.bin/markdownlint-cli2"), 0o755);
+    const lint = { enabled: "auto" as const, command: [] };
+    const home = mkdtempSync(join(sandbox, "linth-"));
+    expect(lintCommand(lint, vault, home, true)).toEqual({ argv: [], literal: true, install: MARKDOWNLINT.npm });
+    expect(lintCommand(lint, vault, home, false)?.argv).toEqual([join(parent, "node_modules/.bin/markdownlint-cli2")]);
   });
 });

@@ -138,6 +138,15 @@ Each path is checked before it goes: the installer's link, or inside a folder na
 A link is removed as itself, never what it points at. Notes, and the `.slipbox/` folders in them, are never touched.
 The running binary can remove its own install: on macOS and Linux a running program's file can be unlinked.
 
+## Language servers' lockfiles
+
+`scripts/lock-servers.ts` (`14.11`) makes a lockfile for each package slipbox pins — the npm servers in
+`core/servers/languages.ts`, markdownlint-cli2 in `core/lint.ts` — resolved by Bun from npm with the week's wait the
+repository's own dependencies have, and writes them into `src/core/servers/locks.ts`, which the binary carries: a
+line of source per line of each lock, so a change reads as a diff. Run it again when a pin changes. A test holds
+every pin to having its lock, made for its manifest, and every package in it to an integrity hash. How a server is
+installed from it, and kept current, is `docs/design/lsp.md`, "Installing".
+
 ## Notices
 
 `bun scripts/check-deps.ts --notices <file>` writes, from the same walk, the third-party notices a release ships beside

@@ -18,6 +18,9 @@ export interface ServerReport {
   path: string | null;
   /** The npm package slipbox installs, pinned. */
   package: string | null;
+  /** slipbox's own install, behind the lock it ships (14.11): the version it has (null: unread); installed again
+   *  when it's next needed, if installing is on. Undefined: not behind. */
+  behind?: string | null;
   /** How to get a native one. */
   hint: string | null;
   /** An add-on's config files: where it runs. */
@@ -64,6 +67,7 @@ function report(def: ServerDef, root: string, autoInstall: boolean): ServerRepor
     package: def.npm ? `${def.npm.package}@${def.npm.version}` : null,
     hint: def.hint ?? null,
     requires: def.requires ?? null,
+    ...(f?.behind ? { behind: f.behind.installed } : {}),
   };
 }
 

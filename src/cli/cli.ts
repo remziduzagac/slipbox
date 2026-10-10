@@ -1447,7 +1447,7 @@ const HANDLERS: Record<string, Handler> = {
     const line = (r: ServerReport) => {
       const what =
         r.status === "found"
-          ? `${r.where}  ${short(r.path!)}`
+          ? `${r.where}  ${short(r.path!)}${r.behind !== undefined ? ` — not from the lockfile slipbox ships (${r.behind ?? "?"} installed, ${r.package} pinned): ${auto ? "installed again when it's next needed" : "installing is off ([lsp] auto_install)"}` : ""}`
           : r.status === "installable"
             ? `not found: slipbox installs ${r.package} when it's first needed`
             : r.package

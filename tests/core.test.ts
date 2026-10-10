@@ -1,7 +1,7 @@
 import { afterAll, afterEach, describe, expect, test } from "bun:test";
 import { chmodSync, existsSync, mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, statSync, symlinkSync, utimesSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { join, resolve } from "node:path";
 import { formatEntry, formatRef, parseRef, scratchLocation } from "../src/core/capture.ts";
 import { copyText } from "../src/core/clipboard.ts";
 import { readDoc } from "../src/core/docformats.ts";
@@ -14,7 +14,9 @@ import { flattenVars, loadRasterizer, looksLikeSvg } from "../src/core/svg.ts";
 import { loadMermaid, mermaidSvg } from "../src/core/diagrams.ts";
 import { loadTypesetter } from "../src/core/typeset.ts";
 import { extractFromSource } from "../src/core/graph.ts";
-import { lintCommand, lintLoadsCode, parseLint, runLint } from "../src/core/lint.ts";
+import { lintCommand, lintLoadsCode, MARKDOWNLINT, parseLint, runLint } from "../src/core/lint.ts";
+import { lockKey, toolFolder, toolManifest } from "../src/core/servers/install.ts";
+import { LOCKS } from "../src/core/servers/locks.ts";
 import { isTrusted, setTrust, setTrustedRoots, trustFile, trustOf } from "../src/core/trust.ts";
 import { addFootnote, applyEdits, deleteFootnote, editFootnote, footnotesOf, renameFootnote, type TextEdit } from "../src/core/footnotes.ts";
 import { layoutToAnsi } from "../src/core/layout/ansi.ts";
@@ -2166,7 +2168,7 @@ describe("the lint surface (3.21)", () => {
     const home = mkdtempSync(join(sandbox, "home-"));
     const vault = mkdtempSync(join(sandbox, "vault-"));
     const cfg = (enabled: "auto" | "on" | "off", command: string[] = []) => ({ enabled, command });
-    const install = "markdownlint-cli2@0.23.3";
+    const install = MARKDOWNLINT.npm;
     const was = process.env.PATH;
     process.env.PATH = "/usr/bin:/bin"; // never the machine's own
     try {
@@ -2195,21 +2197,28 @@ describe("the lint surface (3.21)", () => {
     const pkg = mkdtempSync(join(sandbox, "fake-mdl-"));
     writeFileSync(join(pkg, "package.json"), JSON.stringify({ name: "fake-mdl", version: "1.0.0", bin: { "markdownlint-cli2": "bin.mjs" } }));
     writeFileSync(join(pkg, "bin.mjs"), "#!/usr/bin/env node\nfor (const f of process.argv.slice(2)) console.log(`${f.slice(1)}:1 error MD001/heading-increment Heard`);\nprocess.exit(1);\n");
+    const npm = { package: "fake-mdl", version: `file:${pkg}`, bin: "markdownlint-cli2" };
+    // Its lock, as scripts/lock-servers.ts makes one (14.11) — a local package's path made absolute: no network.
+    const lockDir = mkdtempSync(join(sandbox, "mdl-lock-"));
+    writeFileSync(join(lockDir, "package.json"), toolManifest(npm));
+    expect(Bun.spawnSync([process.execPath, "install", "--lockfile-only", "--ignore-scripts"], { cwd: lockDir, env: { ...process.env, BUN_BE_BUN: "1" } }).exitCode).toBe(0);
+    LOCKS[lockKey(npm)] = readFileSync(join(lockDir, "bun.lock"), "utf8").replace(/@file:([^"/][^"]*)"/g, (_, rel: string) => `@file:${resolve(lockDir, rel)}"`);
     const v = mkdtempSync(join(sandbox, "lint-"));
     const said: string[] = [];
-    const cmd = { argv: [], literal: true, install: `file:${pkg}` };
+    const cmd = { argv: [], literal: true, install: npm };
     const was = process.env.PATH;
     process.env.PATH = "/usr/bin:/bin";
     try {
       const [a, b] = await Promise.all([runLint(cmd, ["/v/a.md"], v, undefined, (t) => said.push(t)), runLint(cmd, ["/v/b.md"], v, undefined, (t) => said.push(t))]);
       expect(a).toMatchObject([{ file: "/v/a.md", line: 1, rule: "MD001", description: "Heard" }]);
       expect(b).toMatchObject([{ file: "/v/b.md" }]);
-      expect(said).toEqual([`installing file:${pkg} into slipbox's own folder…`]);
-      expect(existsSync(join(process.env.XDG_DATA_HOME!, "slipbox", "tools", "node_modules", ".bin", "markdownlint-cli2"))).toBe(true);
-      // Installed: found there from then on, never installed again.
-      expect(lintCommand({ enabled: "on", command: [] }, v)!.argv).toContain(realpathSync(join(process.env.XDG_DATA_HOME!, "slipbox", "tools", "node_modules", ".bin", "markdownlint-cli2")));
-      // An install that fails: the linter doesn't run, and the next run tries again.
-      const broken = { argv: [], literal: true, install: `file:${join(sandbox, "no-such-package")}` };
+      expect(said).toEqual([`installing fake-mdl@file:${pkg} into slipbox's own folder…`]);
+      expect(existsSync(join(toolFolder(npm)!, "node_modules", ".bin", "markdownlint-cli2"))).toBe(true);
+      // Installed: never installed again.
+      expect(await runLint(cmd, ["/v/c.md"], v, undefined, (t) => said.push(t))).toMatchObject([{ file: "/v/c.md" }]);
+      expect(said).toHaveLength(1);
+      // An install that fails (no lock for it): the linter doesn't run, and the next run tries again.
+      const broken = { argv: [], literal: true, install: { package: "no-such-mdl", version: `file:${join(sandbox, "no-such-package")}`, bin: "markdownlint-cli2" } };
       expect(await runLint(broken, ["/v/a.md"], v, undefined, (t) => said.push(t))).toBeNull();
       expect(await runLint(broken, ["/v/a.md"], v, undefined, (t) => said.push(t))).toBeNull();
       expect(said.filter((t) => t.includes("no-such-package"))).toHaveLength(2);

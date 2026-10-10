@@ -9,7 +9,7 @@ import type { Problem, Severity } from "../diagnostics.ts";
 import { LanguageClient } from "./client.ts";
 import { isTrusted, trustOf } from "../trust.ts";
 import { type Choice, chooseServers, type Found, findServer, rootFor } from "./find.ts";
-import { installPackages } from "./install.ts";
+import { installTool, lockKey } from "./install.ts";
 import { does, type Feature, languageOf, type LanguageDef, projectAsks, type ServerDef, type ServerTable } from "./languages.ts";
 import { mergeSettings, vscodeSettings, vscodeSettingsFile } from "./vscode.ts";
 
@@ -304,8 +304,10 @@ export class ServerManager {
 
   private async start(r: Running, found: Found | null): Promise<LanguageClient | null> {
     let f = found;
+    // slipbox's own install under an older lock (14.11): installed again first, when installing is on.
+    if (f?.behind && r.def.npm && this.o.autoInstall()) f = null;
     if (!f) {
-      if (!(await this.install(r.def))) return null;
+      if (!(await this.install(r.def, found?.behind))) return null;
       f = findServer(r.def, r.root);
       if (!f) return null;
     }
@@ -339,20 +341,28 @@ export class ServerManager {
     return client;
   }
 
-  /** An npm server installed into slipbox's folder, once a session; true when it's there. */
-  private install(def: ServerDef): Promise<boolean> {
+  /** An npm server installed into slipbox's folder from its lock (14.11), once a session — over an older install of
+   *  it, `behind` — true when it's there. */
+  private install(def: ServerDef, behind?: { installed: string | null }): Promise<boolean> {
     const npm = def.npm;
     if (!npm) return Promise.resolve(false); // a native server is never installed
-    const spec = `${npm.package}@${npm.version}`;
-    let done = this.installs.get(spec);
+    const key = lockKey(npm);
+    let done = this.installs.get(key);
     if (!done) {
-      this.o.message("info", `installing ${def.name} (${spec}) into slipbox's own folder…`);
-      done = installPackages([spec, ...(npm.with ?? [])]).then((r) => {
-        if (r.ok) this.o.message("info", `installed ${def.name}`);
-        else this.o.message("error", `couldn't install ${def.name}: ${r.output.split("\n").at(-1) ?? "bun add failed"}`);
+      const spec = `${npm.package}@${npm.version}`;
+      // Behind at the same version (one installed before 14.11): installed again, from the lock, all the same.
+      const said = !behind
+        ? `installing ${def.name} (${spec}) into slipbox's own folder…`
+        : behind.installed !== null && behind.installed !== npm.version
+          ? `updating ${def.name} (${behind.installed} → ${npm.version}) in slipbox's own folder…`
+          : `installing ${def.name} again from slipbox's lockfile (${spec})…`;
+      this.o.message("info", said);
+      done = installTool(npm).then((r) => {
+        if (r.ok) this.o.message("info", `${behind ? "updated" : "installed"} ${def.name}`);
+        else this.o.message("error", `couldn't install ${def.name}: ${r.output.split("\n").at(-1) || "bun install failed"}`);
         return r.ok;
       });
-      this.installs.set(spec, done);
+      this.installs.set(key, done);
     }
     return done;
   }

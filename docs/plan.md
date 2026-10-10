@@ -742,7 +742,7 @@ packaging lands whenever it first needs to run on a VM.*
 | 14.8 | **Done.** `slipbox uninstall`: every path listed first, removed only with `--yes`; `--purge` all four |
 | 14.9 | **Done.** Folders: XDG's on Linux and macOS, as now; Windows' own (`%APPDATA%`…); `CACHEDIR.TAG` |
 | 14.10 | **Done.** Supply chain: exact pins, a 7-day cooldown, no install scripts, a licence gate, actions by hash |
-| 14.11 | Language servers (`19.5`) installed from a full lockfile slipbox ships, not only their own version pinned |
+| 14.11 | **Done.** Language servers (`19.5`) installed from a full lockfile slipbox ships; behind ones reinstalled |
 | 14.12 | Windows (win32-x64), if it isn't difficult: paths, the shell (`25.7`), git, the terminal — after the rest |
 | 14.13 | On a real Mac before the first release: Apple's SQLite runs FTS5 and `bm25`; the binaries' signatures |
 

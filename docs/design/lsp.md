@@ -108,10 +108,19 @@ trust: an agent could be talked into it. In a root you don't trust:
 
 In a root you trust, each runs as it would anywhere else: its own defaults, the folder's settings, its own copy.
 
-**Installing** (`19.5`, `core/servers/install.ts`): a server published on npm and found nowhere is installed when a
-file first needs it — `[lsp] auto_install = false` stops that — into slipbox's own package folder
-(`$XDG_DATA_HOME/slipbox/tools`), at the version slipbox pins, with its install scripts off and nothing global, by
-slipbox's own Bun (the compiled binary is Bun when told to be), one install at a time. A native server is never
+**Installing** (`19.5`, `14.11`, `core/servers/install.ts`): a server published on npm and found nowhere is installed
+when a file first needs it — `[lsp] auto_install = false` stops that — into a folder of its own in slipbox's
+(`$XDG_DATA_HOME/slipbox/tools/<package>/<lock>/`), from the lockfile slipbox ships for its pin (`locks.ts`, made by
+`scripts/lock-servers.ts`): installed frozen, so every package under it is the version and the content (its sha512)
+the lock says; its install scripts off, nothing global, by slipbox's own Bun (the compiled binary is Bun when told to
+be), one install at a time, into a folder beside the final one that's renamed into place when it's done.
+
+**Kept current** (`14.11`): an install of slipbox's is current only under the lock it ships now. One under an older
+lock — a pin moved, a dependency moved, or one installed before lockfiles, in the one shared folder
+(`tools/node_modules`) — is behind: with installing on, it's installed again from the lock before it starts
+(`updating pyright (1.1.400 → 1.1.414)…`), and the package's older folders are removed; with installing off, it runs
+as it is, and `slipbox doctor` says it's not from the lockfile slipbox ships. A server found anywhere else — your
+config's, the project's, on `PATH`, Mason's — is yours to update, never slipbox's. A native server is never
 installed: found, or named in the config — the system is the user's.
 
 **The servers of open files** (`19.1`, `core/servers/manager.ts`): one client per server and project, started when a

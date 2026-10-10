@@ -1,13 +1,13 @@
 // Where a file's project starts, and where a server's program is (plans 19.3, 19.4). A program is
 // found, in order: the path the user's config gives; the project's own (`node_modules/.bin`,
 // `.venv/bin`, `vendor/bin`, up to the checkout's top), in a root you trust (23.2); PATH; places tools
-// are installed by the user (Mason's, cargo's, go's); slipbox's own installs (19.5). A launcher
-// written for Node runs on slipbox's own Bun, so no Node is needed.
+// are installed by the user (Mason's, cargo's, go's); slipbox's own installs (19.5) — the one under the lock slipbox
+// ships now, else, behind, an older one (14.11). A launcher written for Node runs on slipbox's own Bun, so no Node is
+// needed.
 
-import { existsSync, openSync, readSync, closeSync, realpathSync, statSync } from "node:fs";
+import { existsSync, openSync, readdirSync, readFileSync, readSync, closeSync, realpathSync, statSync } from "node:fs";
 import { homedir } from "node:os";
 import { dirname, isAbsolute, join } from "node:path";
-import { dataHome } from "../paths.ts";
 import { checkoutOf } from "../git.ts";
 import { isTrusted } from "../trust.ts";
 import type { LanguageDef, ServerDef } from "./languages.ts";
@@ -37,6 +37,9 @@ export interface Found {
   where: Where;
   /** The program's file. */
   path: string;
+  /** slipbox's own install, under an older lock than the one it ships (14.11): run only until it's installed again —
+   *  at once when installing is on. `installed`: its version, when it can be read. */
+  behind?: { installed: string | null };
 }
 
 /** The folders of a project's own programs, nearest first: from its top folder up to its checkout's. */
@@ -56,9 +59,34 @@ function userInstalls(): string[] {
   return [join(process.env.XDG_DATA_HOME ?? join(home, ".local", "share"), "nvim", "mason", "bin"), join(home, ".cargo", "bin"), join(home, "go", "bin"), join(home, ".local", "bin")];
 }
 
-/** slipbox's own installs (19.5): a package folder of its own, never global. */
-export function toolsDir(): string {
-  return join(dataHome(), "tools");
+import { type NpmSpec, toolFolder, toolSlug, toolsDir } from "./install.ts";
+export { toolsDir } from "./install.ts";
+
+/**
+ * slipbox's install of a package (14.11): the one under the lock it ships now — else, behind, the newest under an
+ * older lock, or in the one folder it installed into before (`tools/node_modules`), with the version it has.
+ */
+export function ownInstall(npm: NpmSpec, base = toolsDir()): { path: string; behind: { installed: string | null } | null } | null {
+  const current = toolFolder(npm, base);
+  const binIn = (dir: string) => join(dir, "node_modules", ".bin", npm.bin);
+  if (current && isFile(binIn(current))) return { path: binIn(current), behind: null };
+  const parent = join(base, toolSlug(npm.package));
+  let older: { dir: string; at: number }[] = [];
+  try {
+    older = readdirSync(parent)
+      .filter((d) => !d.includes(".new-"))
+      .map((d) => ({ dir: join(parent, d), at: statSync(join(parent, d)).mtimeMs }))
+      .sort((a, b) => b.at - a.at);
+  } catch {}
+  for (const dir of [...older.map((o) => o.dir), base]) {
+    if (dir === current || !isFile(binIn(dir))) continue;
+    let installed: string | null = null;
+    try {
+      installed = (JSON.parse(readFileSync(join(dir, "node_modules", npm.package, "package.json"), "utf8")) as { version?: string }).version ?? null;
+    } catch {}
+    return { path: binIn(dir), behind: { installed } };
+  }
+  return null;
 }
 
 function isFile(p: string): boolean {
@@ -113,8 +141,8 @@ export function findServer(def: ServerDef, root: string): Found | null {
     }
   }
   if (def.npm) {
-    const p = join(toolsDir(), "node_modules", ".bin", def.npm.bin);
-    if (isFile(p)) return runnable(p, def.args, "slipbox");
+    const own = ownInstall(def.npm);
+    if (own) return { ...runnable(own.path, def.args, "slipbox"), ...(own.behind ? { behind: own.behind } : {}) };
   }
   return null;
 }

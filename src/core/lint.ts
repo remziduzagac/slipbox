@@ -11,7 +11,7 @@ import { dirname, join, resolve } from "node:path";
 import type { Config } from "./config.ts";
 import { isTrusted } from "./trust.ts";
 import { findServer } from "./servers/find.ts";
-import { installPackages } from "./servers/install.ts";
+import { installTool, lockKey, type NpmSpec } from "./servers/install.ts";
 import type { ServerDef } from "./servers/languages.ts";
 
 export interface LintIssue {
@@ -79,8 +79,8 @@ export interface LintCmd {
   /** markdownlint-cli2's paths taken as they are, never as globs (`:path`). */
   literal: boolean;
   env?: Record<string, string>;
-  /** Not found: installed first (the npm spec), then found again, its arguments after it. */
-  install?: string;
+  /** Not found, or slipbox's own behind its lock: installed first (14.11), then found again, its arguments after it. */
+  install?: NpmSpec;
 }
 
 /**
@@ -99,10 +99,10 @@ export function lintCommand(lint: Config["lint"], vaultRoot: string, home = home
   if (lint.enabled === "auto" && !own && !mine) return null;
   const args = !own && mine ? ["--config", user] : [];
   const found = findServer({ ...MARKDOWNLINT, args }, vaultRoot);
-  if (found) return { argv: found.argv, literal: true, env: found.env };
-  const { package: name, version } = MARKDOWNLINT.npm!;
+  // slipbox's own, under an older lock (14.11): installed again first, when installing is on.
+  if (found && !(found.behind && autoInstall)) return { argv: found.argv, literal: true, env: found.env };
   // Installing off: run by its name, which fails, and the linter is said not to run.
-  return autoInstall ? { argv: args, literal: true, install: `${name}@${version}` } : { argv: [MARKDOWNLINT.command, ...args], literal: true };
+  return autoInstall ? { argv: args, literal: true, install: MARKDOWNLINT.npm! } : { argv: [MARKDOWNLINT.command, ...args], literal: true };
 }
 
 /** What a linter that couldn't run was: yours, or markdownlint-cli2 — not found, or not installed. */
@@ -116,19 +116,20 @@ const installs = new Map<string, Promise<boolean>>();
 
 /** A command ready to run: markdownlint-cli2 installed first, once however many ask; null when that failed. */
 async function ready(cmd: LintCmd, cwd: string, say?: (text: string) => void): Promise<LintCmd | null> {
-  const spec = cmd.install;
-  if (!spec) return cmd;
-  let installing = installs.get(spec);
+  const npm = cmd.install;
+  if (!npm) return cmd;
+  const key = lockKey(npm);
+  let installing = installs.get(key);
   if (!installing) {
-    say?.(`installing ${spec} into slipbox's own folder…`);
-    installing = installPackages([spec]).then((r) => {
-      if (!r.ok) installs.delete(spec); // tried again next time
+    say?.(`installing ${npm.package}@${npm.version} into slipbox's own folder…`);
+    installing = installTool(npm).then((r) => {
+      if (!r.ok) installs.delete(key); // tried again next time
       return r.ok;
     });
-    installs.set(spec, installing);
+    installs.set(key, installing);
   }
   if (!(await installing)) return null;
-  const found = findServer({ ...MARKDOWNLINT, args: cmd.argv }, cwd);
+  const found = findServer({ ...MARKDOWNLINT, npm, args: cmd.argv }, cwd);
   return found ? { argv: found.argv, literal: true, env: found.env } : null;
 }
 

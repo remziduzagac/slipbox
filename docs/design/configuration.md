@@ -153,7 +153,8 @@ severity = "warning"           # the least shown: error | warning | info (a note
 [lsp]                          # language servers for the code slipbox opens (19.x)
 enabled = true                 # their problems, hover, jumps, renames, completion
 auto_install = true            # servers on npm installed into slipbox's own folder when first needed (19.5),
-                               # and markdownlint-cli2 for [lint] (19.21)
+                               # and markdownlint-cli2 for [lint] (19.21) — each from the lockfile slipbox ships,
+                               # and installed again when slipbox's lock for it changes (14.11)
 
 [update]                       # a release's update check (14.4): your own config's say only, never a folder's
 check = true                   # the TUI asks once a day whether there's a newer release, and says; DO_NOT_TRACK
