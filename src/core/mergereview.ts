@@ -4,16 +4,19 @@
 // changes different files, so it merges cleanly. Each link broken in the result that wasn't broken in
 // the branch merged into is said with its cause — the file moved (where to, and the fix), was deleted,
 // isn't on either branch, or the note itself moved — and whose change it was. Every written form: a
-// markdown link's path, a wikilink's path or name (21.3). Committed work only: what isn't committed is
-// in neither branch.
+// markdown link's path, a wikilink's path or name (21.3), a link to this repository's hosting (D87), a
+// pointer naming this folder (21.7). Committed work only: what isn't committed is in neither branch.
 
 import { spawnSync } from "node:child_process";
 import { join, posix, relative, sep } from "node:path";
 import { urlPath } from "./convert.ts";
+import { folderIdentity, lookupFolder, type NamedFolder, readFolders } from "./folders.ts";
 import { type Checkout, headOf } from "./git.ts";
-import { changedBetween, gitArgs, inVault } from "./gitops.ts";
+import { branchesOf, changedBetween, gitArgs, inCheckout, inVault } from "./gitops.ts";
 import { extractText } from "./graph.ts";
+import { checkoutRemotes, parseHosted, splitRef, withHostedPath } from "./hosting.ts";
 import { extensionless, homeDir, wikiPathCandidates } from "./links.ts";
+import { formatPointer, isPointer, type Pointer, parsePointer } from "./pointer.ts";
 
 export interface MergeBreak {
   /** The note linking, in the merged result (vault path). */
@@ -110,12 +113,59 @@ function lookup(files: Map<string, string>): (rel: string) => boolean {
   return (rel) => have.has(rel.toLowerCase());
 }
 
+/** What a link names besides a path: this repository's hosting (D87), a pointer naming this folder (21.7). */
+interface Reading {
+  c: Checkout;
+  root: string;
+  /** This checkout's remotes: a hosting URL naming one is the file in this copy. */
+  remotes: string[];
+  folders: NamedFolder[];
+  /** This root's key as a named folder (21.6): a pointer naming it is a path from the root. */
+  self: string | null;
+  /** The repository's branches, read once when asked (a ref with a `/`). */
+  branches: () => string[];
+  /** Whether `into` has a vault path. */
+  inO: (rel: string) => boolean;
+}
+
 /**
- * The vault path a link names from the note `from`: a relative path, one from the root (`/…`, 21.2), or
- * `~/` that's inside the vault. Null for a URL, an anchor, or a path out of the vault — whether those
- * reach isn't the merge's to say. Written without an extension, it's that path: `reaches` reads it.
+ * A link to this repository's hosting naming a path in it (D87): its vault path, and its path from the
+ * repository's top as the URL has it — a branch with a `/` told by the repository's branches when the
+ * path as first split isn't in `into`, as the graph does. Null for another repository's, a repository's
+ * own page (no path a merge moves), or a path out of the vault.
  */
-function named(target: string, from: string, root: string): string | null {
+function hostedNamed(target: string, r: Reading): { rel: string; path: string } | null {
+  if (!/^https?:\/\//i.test(target)) return null;
+  const h = parseHosted(target);
+  if (!h?.ref || !h.path || !r.remotes.includes(h.remote.toLowerCase())) return null;
+  let path = h.path;
+  const first = inVault(r.c, r.root, path);
+  if (!first || reaches(first, r.inO) === null) path = splitRef(h.ref, path, r.branches).path;
+  const rel = inVault(r.c, r.root, path);
+  return rel ? { rel, path } : null;
+}
+
+/** A pointer naming this folder, at no branch (21.7): its path from the root, a vault path. Null for another folder's, or one at a branch. */
+function pointerNamed(target: string, r: Reading): { rel: string; pointer: Pointer } | null {
+  if (!r.self || !isPointer(target)) return null;
+  const p = parsePointer(target, r.folders);
+  if (!p || p.branch || !p.path) return null;
+  const l = lookupFolder(p.name, r.folders);
+  if ((l.status !== "found" && l.status !== "unavailable") || l.folder.key !== r.self) return null;
+  const rel = posix.normalize(p.path).replace(/\/$/, "");
+  return rel === "." || rel === ".." || rel.startsWith("../") ? null : { rel, pointer: p };
+}
+
+/**
+ * The vault path a link names from the note `from`: a relative path, one from the root (`/…`, 21.2),
+ * `~/` that's inside the vault, a link to this repository's hosting or a pointer naming this folder.
+ * Null for another URL, an anchor, or a path out of the vault — whether those reach isn't the merge's
+ * to say. Written without an extension, it's that path: `reaches` reads it.
+ */
+function named(target: string, from: string, r: Reading): string | null {
+  const root = r.root;
+  const other = hostedNamed(target, r) ?? pointerNamed(target, r);
+  if (other) return other.rel;
   if (/^[a-z][a-z0-9+.-]*:/i.test(target) || target.startsWith("//")) return null;
   const hash = target.indexOf("#");
   let path = hash >= 0 ? target.slice(0, hash) : target;
@@ -179,10 +229,23 @@ function wikiFix(from: string, to: string, written: string): string {
 }
 
 /** The target that reaches `to` from the note at `from`, in the written one's form (21.2: from the
- *  root, without the extension) and with its fragment. */
-function fixFor(from: string, to: string, written: string, root: string): string {
+ *  root, without the extension; a hosting URL with its new path, a pointer by its name) and with its
+ *  fragment. */
+function fixFor(from: string, to: string, written: string, r: Reading): string {
+  const root = r.root;
+  const hosted = hostedNamed(written, r);
+  if (hosted) return withHostedPath(written, hosted.path, inCheckout(r.c, root, to));
   const hash = written.indexOf("#");
   const path = hash >= 0 ? written.slice(0, hash) : written;
+  const pointer = pointerNamed(written, r);
+  if (pointer) {
+    // Its name as written, the path from the root to where the file is: without an extension, a
+    // folder's `/`, encoded, each as written (as a rename writes one).
+    let rel = extensionless(pointer.pointer.path) ? to.replace(NOTE, "") : to;
+    if (pointer.pointer.path.endsWith("/")) rel += "/";
+    const encode = /%[0-9A-Fa-f]{2}/.test(path) || /\s/.test(rel);
+    return formatPointer({ name: pointer.pointer.name, branch: null, path: rel, fragment: null }, encode ? encodeURI : undefined) + (hash >= 0 ? written.slice(hash) : "");
+  }
   let next = path.startsWith(`${root}/`) ? `${root}/${to}` : path.startsWith("/") ? `/${to}` : posix.relative(posix.dirname(from), to) || posix.basename(to);
   if (extensionless(path)) next = next.replace(/\.(md|markdown)$/i, "");
   return urlPath(next) + (hash >= 0 ? written.slice(hash) : "");
@@ -216,6 +279,9 @@ export function reviewMerge(c: Checkout, root: string, from: string, into = "HEA
   const O = filesIn(c, root, ours);
   const inR = lookup(R);
   const inO = lookup(O);
+  // Links to this repository's hosting, and pointers naming this folder, name its paths too.
+  let branches: string[] | null = null;
+  const reading: Reading = { c, root, remotes: checkoutRemotes(c), folders: readFolders(), self: folderIdentity(root)?.key ?? null, branches: () => (branches ??= branchesOf(c) ?? []), inO };
   // What each branch did since they parted, in the vault: its renames and deletions, by old path.
   const moved = new Map<string, { to: string; by: string }>();
   const deleted = new Map<string, string>();
@@ -289,7 +355,7 @@ export function reviewMerge(c: Checkout, root: string, from: string, into = "HEA
         else if (l.target.trim() && !l.target.includes(":")) before.set(keyOf(l), namesO.has(l.target.trim().toLowerCase()));
         continue;
       }
-      const n = named(l.target, was, root);
+      const n = named(l.target, was, reading);
       if (n !== null) before.set(keyOf(l), reaches(n, inO) !== null);
     }
     for (const l of linksOf(p, oid)) {
@@ -298,17 +364,17 @@ export function reviewMerge(c: Checkout, root: string, from: string, into = "HEA
         if (b) breaks.push(b);
         continue;
       }
-      const written = named(l.target, p, root);
+      const written = named(l.target, p, reading);
       if (written === null || reaches(written, inR) !== null || before.get(keyOf(l)) === false) continue;
       // Its path as the base had it (a note without its extension, the note): what moved or went.
       const names = reaches(written, inO) ?? written;
       const site = { path: p, line: l.line, column: l.column, target: l.target, names };
       // The note moved, its link written from where it was: what it named there, still in the result.
-      const wasNamed = was !== p && before.get(keyOf(l)) ? named(l.target, was, root) : null;
+      const wasNamed = was !== p && before.get(keyOf(l)) ? named(l.target, was, reading) : null;
       const there = wasNamed === null ? null : (reaches(wasNamed, inO) ?? wasNamed);
       const m = moved.get(names.toLowerCase());
-      if (there && inR(there)) breaks.push({ ...site, cause: "note-moved", by: notesMoved.get(p)?.by ?? from, to: there, fix: fixFor(p, there, l.target, root) });
-      else if (m && inR(m.to)) breaks.push({ ...site, cause: "moved", by: m.by, to: m.to, fix: fixFor(p, m.to, l.target, root) });
+      if (there && inR(there)) breaks.push({ ...site, cause: "note-moved", by: notesMoved.get(p)?.by ?? from, to: there, fix: fixFor(p, there, l.target, reading) });
+      else if (m && inR(m.to)) breaks.push({ ...site, cause: "moved", by: m.by, to: m.to, fix: fixFor(p, m.to, l.target, reading) });
       else if (deleted.has(names.toLowerCase()) || m) breaks.push({ ...site, cause: "deleted", by: deleted.get(names.toLowerCase()) ?? m!.by, to: null, fix: null });
       // Neither moved nor deleted, yet it reached in `into` or wasn't there: the merged branch's doing.
       else breaks.push({ ...site, cause: "missing", by: from, to: null, fix: null });

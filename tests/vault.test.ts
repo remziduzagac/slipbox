@@ -1413,6 +1413,26 @@ describe("links across vaults: paths; names only for the converter (17.7–17.11
     expect(readFileSync(join(rb, "b.md"), "utf8")).toBe("![x](../ra/img/pic.png) [[../ra/note]] ![[../ra/img/pic.png]]\n");
   });
 
+  test("another root's links to this repository's hosting are backlinks here, as its pointers are (D87, 17.11)", async () => {
+    const { openVault } = await import("../src/core/reach.ts");
+    const top = mkdtempSync(join(tmpdir(), "slipbox-reach-host-"));
+    const tag = basename(top).replace(/[^a-z0-9]/gi, "").toLowerCase();
+    const ra = join(top, "A");
+    const rb = join(top, "B");
+    mkdirSync(join(ra, ".git"), { recursive: true });
+    writeFileSync(join(ra, ".git", "HEAD"), "ref: refs/heads/main\n");
+    writeFileSync(join(ra, ".git", "config"), `[remote "origin"]\n\turl = git@github.com:me/a${tag}.git\n`);
+    writeFileSync(join(ra, "x.md"), "# X\n");
+    mkdirSync(join(rb, ".slipbox"), { recursive: true });
+    const url = `https://github.com/me/a${tag}/blob/main/x.md`;
+    // Another repository's file of the same path: not this one's.
+    writeFileSync(join(rb, "README.md"), `# B\n\n[x](${url}#x) [them](https://github.com/them/a${tag}/blob/main/x.md)\n`);
+    openVault(ra); // A known on this machine, by its remote (21.6)
+    openVault(rb).ensureAll(); // B's index: its links
+    const g = openVault(ra);
+    expect(g.backlinks("x.md").map((b) => [b.from, b.target])).toEqual([[join(rb, "README.md"), `${url}#x`]]);
+  });
+
   test("a file named with # or % in another root: its backlinks found all the same (17.11)", async () => {
     const { openVault } = await import("../src/core/reach.ts");
     const top = mkdtempSync(join(tmpdir(), "slipbox-reach-hash-"));
@@ -4956,6 +4976,33 @@ describe("the merge review (20.21)", () => {
     ]);
   });
 
+  test("the merge review reads links to this repository's hosting and pointers naming this folder: each fix in its form (D87, 21.7)", async () => {
+    const root = mkdtempSync(join(tmpdir(), "slipbox-merge-hosted-"));
+    if (git(root, "init", "-q", "-b", "main").exitCode !== 0) return;
+    const name = `r${basename(root).replace(/[^a-z0-9]/gi, "").toLowerCase()}`;
+    git(root, "remote", "add", "origin", `git@github.com:me/${name}.git`);
+    put(root, "docs/plan.md", "# Plan\n\n## Goals\n\nThe plan, long enough to be known by its text when it moves.\n");
+    git(root, "add", "-A");
+    git(root, "commit", "-q", "-m", "base");
+    git(root, "branch", "feature/x");
+    git(root, "checkout", "-q", "-b", "refactor");
+    mkdirSync(join(root, "docs", "new"));
+    git(root, "mv", "docs/plan.md", "docs/new/plan.md");
+    git(root, "commit", "-q", "-m", "moved");
+    git(root, "checkout", "-q", "main");
+    const base = `https://github.com/me/${name}`;
+    // This repository's file at main, at a branch with a `/`; by its pointer; another repository's; its own page.
+    put(root, "docs/b.md", `# B\n\n[p](${base}/blob/main/docs/plan.md#goals) [x](${base}/blob/feature/x/docs/plan.md) [ptr](slipbox://${name}/docs/plan#goals) [else](https://github.com/them/other/blob/main/docs/plan.md) [page](${base})\n`);
+    git(root, "add", "-A");
+    git(root, "commit", "-q", "-m", "b");
+    const r = await cli(["merge-review", "refactor"], root);
+    expect(brief(r)).toEqual([
+      ["docs/b.md", `${base}/blob/main/docs/plan.md#goals`, "moved", "refactor", "docs/new/plan.md", `${base}/blob/main/docs/new/plan.md#goals`],
+      ["docs/b.md", `${base}/blob/feature/x/docs/plan.md`, "moved", "refactor", "docs/new/plan.md", `${base}/blob/feature/x/docs/new/plan.md`],
+      ["docs/b.md", `slipbox://${name}/docs/plan#goals`, "moved", "refactor", "docs/new/plan.md", `slipbox://${name}/docs/new/plan#goals`],
+    ]);
+  });
+
   test("merging a branch here: each link its result breaks, with the cause and the fix; nothing written", async () => {
     const root = branches();
     if (!root) return;
@@ -6033,9 +6080,39 @@ describe("how every link landed, and fragile links (trailscout's review)", () =>
     expect(how("Pie")).toEqual(["Recipes/Baking/Pie.md", "shortest", "inferred", "the shortest path of 2 named so"]);
     expect(how("Starter", "Recipes/Baking/x.md")).toEqual(["Recipes/Baking/Starter.md", "same-folder", "inferred", "in the same folder, of 2"]);
     expect(how("Starter")).toEqual(["Archive/Starter.md", "shortest", "inferred", "the shortest path of 2 named so"]);
-    expect(how("Recipes/Notes.md", "Home.md", "markdown")[2]).toBe("exact");
+    expect(how("Recipes/Notes.md", "Home.md", "markdown")).toEqual(["Recipes/Notes.md", "path", "exact", null]);
     expect(certainty({ resolvedKind: "ambiguous" })).toBe("ambiguous");
     expect(certainty({ resolvedKind: "unresolved" })).toBe("broken");
+  });
+
+  test("every link says how it landed, not wikilinks only: a markdown link by its path, a pointer by its folder's name, a hosting URL by the remote (D86)", async () => {
+    const { certainty, describeLanding } = await import("../src/core/graph.ts");
+    const dir = mkdtempSync(join(tmpdir(), "slipbox-how-kinds-"));
+    const name = `h${basename(dir).replace(/[^a-z0-9]/gi, "").toLowerCase()}`;
+    mkdirSync(join(dir, ".git"));
+    writeFileSync(join(dir, ".git", "HEAD"), "ref: refs/heads/main\n");
+    writeFileSync(join(dir, ".git", "config"), `[remote "origin"]\n\turl = git@github.com:me/${name}.git\n`);
+    mkdirSync(join(dir, "docs"));
+    writeFileSync(join(dir, "docs", "plan.md"), "# Plan\n");
+    const pointer = `slipbox://${name}/docs/plan.md`;
+    const hosted = `https://github.com/me/${name}/blob/main/docs/plan.md`;
+    writeFileSync(join(dir, "README.md"), `[p](docs/plan.md) [d](docs/) [ptr](${pointer}) [h](${hosted}) [out](../elsewhere.md)\n`);
+    const resolved = async (link: string) => {
+      const r = JSON.parse((await cli(["--root", dir, "resolve", link, "--from", "README.md", "--json"])).out).data;
+      return [r.status, r.path, r.how, r.certainty];
+    };
+    expect(await resolved("docs/plan.md")).toEqual(["resolved", "docs/plan.md", "path", "exact"]);
+    expect(await resolved(pointer)).toEqual(["resolved", "docs/plan.md", "pointer", "exact"]);
+    expect(await resolved(hosted)).toEqual(["resolved", "docs/plan.md", "hosting", "exact"]);
+    // The resolver's own: every link reaching a file or folder; nothing to say in the hover or the link check for an exact one.
+    const g = openGraph(locateVault({ root: dir }), DEFAULT_CONFIG, false);
+    expect(g.linksOf("README.md").map((l) => [l.target, l.how ?? null, certainty(l), describeLanding(l)])).toEqual([
+      ["docs/plan.md", "path", "exact", null],
+      ["docs/", "path", "exact", null],
+      [pointer, "pointer", "exact", null],
+      [hosted, "hosting", "exact", null],
+      ["../elsewhere.md", null, "broken", null],
+    ]);
   });
 
   test("a link won by where it's written is fragile: said, with the path that names it for sure, a fix; problems and the CLI list them", async () => {
@@ -6059,7 +6136,7 @@ describe("how every link landed, and fragile links (trailscout's review)", () =>
       ["Weeknight/Dal", "suffix", "inferred"],
       ["Pie", "shortest", "inferred"],
       ["Starter", "shortest", "inferred"],
-      ["Recipes/Notes.md", null, "exact"],
+      ["Recipes/Notes.md", "path", "exact"],
     ]);
     expect((await cli(["--root", dir, "links", "Home.md"])).out).toContain("[[Pie]] -> Recipes/Baking/Pie.md (the shortest path of 2 named so)");
   });

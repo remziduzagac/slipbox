@@ -9,11 +9,13 @@ import { homedir } from "node:os";
 import { dirname, isAbsolute, join, posix, relative, resolve } from "node:path";
 
 /**
- * How a name or path landed (said for every link, trailscout's review): its path; the end of its path;
- * its name, the only note of it; or a tie broken — the exact spelling, the same folder, the deepest
- * folder shared, the shortest path. The last two are fragile: a note of that name nearer takes it.
+ * How a link landed (said for every link, D86): by its path — a markdown link's, in any of its forms, or
+ * a wikilink's; a pointer by its folder's name (`pointer`); a hosting URL by this repository's remote
+ * (`hosting`); a wikilink by the end of its path, its name (the only note of it), or a tie broken — the
+ * exact spelling, the same folder, the deepest folder shared, the shortest path. The last two are
+ * fragile: a note of that name nearer takes it.
  */
-export type Landed = "path" | "suffix" | "name" | "exact-case" | "same-folder" | "deepest-shared" | "shortest";
+export type Landed = "path" | "pointer" | "hosting" | "suffix" | "name" | "exact-case" | "same-folder" | "deepest-shared" | "shortest";
 
 export type Resolution =
   | { status: "resolved"; path: string; candidates: string[]; how?: Landed }

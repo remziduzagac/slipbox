@@ -8,6 +8,11 @@
 
 import { existsSync, readdirSync, statSync } from "node:fs";
 import { join } from "node:path";
+import { lookupFolder, type NamedFolder } from "./folders.ts";
+import { readRegular, SMALL_FILE } from "./fsutil.ts";
+import { type Checkout, checkoutOf, headOf } from "./git.ts";
+import { branchesOf } from "./gitops.ts";
+import { remotesIn } from "./remotes.ts";
 
 export interface HostedPath {
   /** The repository, as a remote is normalized (`host/owner/repo`, the host lower case). */
@@ -80,4 +85,81 @@ export function readmeAt(top: string): string | null {
 /** Whether a path exists (a file or folder) under the repository's top. */
 export function inRepo(top: string, path: string): boolean {
   return existsSync(join(top, path));
+}
+
+/** A checkout's remotes, as `host/path` in lower case (`remotes.ts`): what a hosting URL to it names. */
+export function checkoutRemotes(c: Pick<Checkout, "root" | "common" | "main">): string[] {
+  let config = "";
+  try {
+    config = readRegular(join(c.common, "config"), SMALL_FILE).toString("utf8");
+  } catch {}
+  return remotesIn(config, c.main ?? c.root).map((r) => r.toLowerCase());
+}
+
+/**
+ * A branch with a `/` (`feature/x`) told from the path after it by the branches the repository has:
+ * the longest that is one; else the ref and path as first split.
+ */
+export function splitRef(ref: string, path: string, branches: () => string[]): { ref: string; path: string } {
+  const have = new Set(branches());
+  const segs = path.split("/");
+  for (let k = segs.length - 1; k >= 1; k--) {
+    const longer = [ref, ...segs.slice(0, k)].join("/");
+    if (have.has(longer)) return { ref: longer, path: segs.slice(k).join("/") };
+  }
+  return { ref, path };
+}
+
+export interface HostedHere {
+  hosted: HostedPath;
+  /** The repository's copy here: its top folder. */
+  top: string;
+  /** The path from its top: a branch with `/` told apart; the repository's own page, its README. */
+  path: string;
+  /** A ref other than the branch checked out: both, to be said (`other-ref`). */
+  other: { ref: string; branch: string | null } | null;
+}
+
+/**
+ * Where a hosting URL leads on this machine, read from a file in `root` (D87): the repository's copy —
+ * the checkout holding `root` when one of its remotes is the URL's, else a named folder's by its remote
+ * (21.6) — and the path in it. Null when it isn't a hosting URL, or names no repository here. `remotes`
+ * and `folders`, when given, stand in for reading them again (a caller asking for many links).
+ */
+export function hostedHere(url: string, root: string, given: { remotes?: string[]; folders?: NamedFolder[] } = {}): HostedHere | null {
+  const h = parseHosted(url);
+  if (!h) return null;
+  const remote = h.remote.toLowerCase();
+  let top: string | null = null;
+  // The checkout holding `root` is looked for only when its remotes, given, name the URL's.
+  if (!given.remotes || given.remotes.includes(remote)) {
+    const own = checkoutOf(root);
+    if (own && (given.remotes ?? checkoutRemotes(own)).includes(remote)) top = own.root;
+  }
+  if (!top) {
+    const l = lookupFolder(h.remote, given.folders);
+    if (l.status === "found") top = checkoutOf(l.path)?.root ?? l.path;
+  }
+  if (!top) return null;
+  const c = checkoutOf(top);
+  let ref = h.ref;
+  let path = h.path;
+  // A branch with a `/` (`feature/x`), when the path as first split isn't there.
+  if (ref && c && path && !existsSync(join(top, path))) ({ ref, path } = splitRef(ref, path, () => branchesOf(c) ?? []));
+  if (!path && !h.folder) path = readmeAt(top) ?? "";
+  const head = c ? headOf(c) : null;
+  const branch = head?.branch ?? null;
+  const other = ref && ref !== "HEAD" && ref !== branch && !(branch === null && head?.commit?.startsWith(ref)) ? { ref, branch } : null;
+  return { hosted: h, top, path, other };
+}
+
+/** A hosting URL with its path (the part after the ref) for another, encoded as a URL's path is; the rest kept. */
+export function withHostedPath(url: string, was: string, now: string): string {
+  const enc = (p: string) => p.split("/").map(encodeURIComponent).join("/");
+  const u = new URL(url);
+  const old = enc(was);
+  if (!u.pathname.endsWith(`/${old}`)) return url;
+  const extless = !/\.[A-Za-z0-9]+$/.test(was);
+  u.pathname = u.pathname.slice(0, u.pathname.length - old.length) + enc(extless ? now.replace(/\.(md|markdown)$/i, "") : now);
+  return u.toString();
 }

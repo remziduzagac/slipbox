@@ -10,7 +10,9 @@ import { loadConfig } from "./config.ts";
 import { readJson } from "./fsutil.ts";
 import { type Backlink, type Graph, type LinkRef, type NoteEntry, openGraph, type Target, type VaultReach } from "./graph.ts";
 import { pathLink, wikiPathCandidates } from "./links.ts";
-import { folderIdentity, lookupFolder } from "./folders.ts";
+import { folderIdentity, lookupFolder, type NamedFolder, readFolders } from "./folders.ts";
+import { checkoutOf } from "./git.ts";
+import { checkoutRemotes, hostedHere } from "./hosting.ts";
 import { cacheDir } from "./paths.ts";
 import { tildePath } from "./names.ts";
 import { type KnownRoot, readRoots } from "./registry.ts";
@@ -53,6 +55,28 @@ export class Reach implements VaultReach {
     const now = Date.now();
     if (!this.knownCache || now - this.knownCache.at > 1000) this.knownCache = { at: now, list: readRoots() };
     return this.knownCache.list;
+  }
+
+  private foldersCache: { at: number; list: NamedFolder[] } | null = null;
+
+  /** The machine's named folders: read again after a second, not once per link. */
+  private folders(): NamedFolder[] {
+    const now = Date.now();
+    if (!this.foldersCache || now - this.foldersCache.at > 1000) this.foldersCache = { at: now, list: readFolders() };
+    return this.foldersCache.list;
+  }
+
+  private remotes = new Map<string, string[]>();
+
+  /** A linking root's checkout's remotes (what its hosting links name), read once per root. */
+  private remotesOf(root: string): string[] {
+    let r = this.remotes.get(root);
+    if (!r) {
+      const c = checkoutOf(root);
+      r = c ? checkoutRemotes(c) : [];
+      this.remotes.set(root, r);
+    }
+    return r;
   }
 
   private names = new Map<string, { at: number; name: string }>();
@@ -210,6 +234,13 @@ export class Reach implements VaultReach {
       const p = parsePointer(l.target);
       const t = p ? resolvePointer(p) : null;
       const hit = t?.status === "found" ? pathLink(t.abs, linking, false) : null;
+      return hit ? inG(hit.abs) : null;
+    }
+    // A link to a repository's hosting (D87), read as the linking root reads it — its own checkout's
+    // remote, else a named folder's by its remote: the file in that copy; here, a backlink.
+    if (/^https?:\/\//i.test(l.target)) {
+      const t = hostedHere(l.target, v.path, { remotes: this.remotesOf(v.path), folders: this.folders() });
+      const hit = t ? pathLink(join(t.top, t.path), linking, false) : null;
       return hit ? inG(hit.abs) : null;
     }
     const fileUrl = /^file:\/\//i.test(l.target);

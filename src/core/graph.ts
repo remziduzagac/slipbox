@@ -9,11 +9,11 @@ import { commentLinks, grammar, grammarFor, grammarNow, linkTokens, parseSyntax,
 import { basename, isAbsolute, join, posix, relative, sep } from "node:path";
 import type { Definition, Nodes } from "mdast";
 import type { Config } from "./config.ts";
-import { climbsOut, ensureDir, landsInside, readJson, readRegular, readText, SMALL_FILE, writeJson } from "./fsutil.ts";
+import { climbsOut, ensureDir, landsInside, readJson, readText, writeJson } from "./fsutil.ts";
 import { parseWikiTarget, type WikiLink } from "./wikilink.ts";
 import { countForms, type FormCounts } from "./convention.ts";
 import { formatPointer, isPointer, parsePointer, resolvePointer } from "./pointer.ts";
-import { parseHosted, readmeAt } from "./hosting.ts";
+import { checkoutRemotes, hostedHere } from "./hosting.ts";
 import { lookupFolder, pointerName } from "./folders.ts";
 import { extensionless, type Landed, LinkIndex, type MdLinkTarget, normKey, pathLink, pickCandidate, type Resolution, resolveAttachment, resolveMarkdownUrl, wikiPathCandidates } from "./links.ts";
 import { type AnchorInfo, anchorsOf, type HeadingInfo, headingsOf, noteTitle, type ParseCache as ChunkCache, visit } from "./parse.ts";
@@ -22,8 +22,7 @@ import { tildePath } from "./names.ts";
 import { ParseCache, sharedParseCache } from "./parsecache.ts";
 import { cacheDir, ensureCacheHome, stateDir } from "./paths.ts";
 import { checkoutOf, headCommit, headOf } from "./git.ts";
-import { branchesOf, changedBetween, inVault } from "./gitops.ts";
-import { remotesIn } from "./remotes.ts";
+import { changedBetween, inVault } from "./gitops.ts";
 import { contentHash, Redirects } from "./redirects.ts";
 import { dataLinks, parseData } from "./data.ts";
 import { classify, extensionOf, noteFormat } from "./filetypes.ts";
@@ -96,7 +95,7 @@ export interface ResolvedLink extends LinkRef {
   reason?: string;
   /** A pointer to a branch not checked out here (21.7): the file as it is there, read from git. */
   gitRef?: { root: string; rel: string; branch: string };
-  /** How it landed (`links.ts` `Landed`): a link's own path, a name, a tie broken. */
+  /** How it landed (`links.ts` `Landed`): its path, a pointer, a hosting URL, a name, a tie broken. Every link reaching a file or folder has one. */
   how?: Landed;
   /** A hosting URL (via "hosting") naming another ref than the branch checked out: both. */
   hosted?: { ref: string; branch: string | null };
@@ -115,15 +114,15 @@ export interface Retarget {
 
 /**
  * How sure a link's target is (trailscout's terms): `exact` — by its path, a unique name, an alias,
- * a pointer; `inferred` — a tie broken, a path's end, a folder's old name or another copy; else
- * `ambiguous`, `broken`.
+ * a pointer, a hosting URL at the branch here; `inferred` — a tie broken, a path's end, a folder's old
+ * name or another copy, a hosting URL at another ref; else `ambiguous`, `broken`.
  */
 export function certainty(t: Pick<Target, "resolvedKind" | "how" | "via" | "hosted">): "exact" | "inferred" | "ambiguous" | "broken" {
   if (t.resolvedKind === "unresolved") return "broken";
   if (t.resolvedKind === "ambiguous") return "ambiguous";
   if (t.via === "hosting") return t.hosted ? "inferred" : "exact";
   if (t.via === "previous-name" || t.via === "redirect" || t.via === "old-name" || t.via === "another-copy") return "inferred";
-  return !t.how || t.how === "path" || t.how === "name" ? "exact" : "inferred";
+  return !t.how || t.how === "path" || t.how === "name" || t.how === "pointer" || t.how === "hosting" ? "exact" : "inferred";
 }
 
 /** A tie broken by where the link is — the deepest folder shared, the shortest path: a note of the name nearer would take it. */
@@ -1034,12 +1033,13 @@ export class Graph {
         return { resolvedKind: "external", path: m.target, candidates: [] };
       case "anchor":
         return { resolvedKind: "anchor", path: fromRel, candidates: [] };
+      // By its path (D86): all a path link has.
       case "note":
-        return { resolvedKind: "note", path: m.target, candidates: [] };
+        return { resolvedKind: "note", path: m.target, candidates: [], how: "path" };
       case "file":
-        return { resolvedKind: "file", path: m.target, candidates: [] };
+        return { resolvedKind: "file", path: m.target, candidates: [], how: "path" };
       case "folder":
-        return { resolvedKind: "folder", path: m.target, candidates: [] };
+        return { resolvedKind: "folder", path: m.target, candidates: [], how: "path" };
       default:
         return { resolvedKind: "unresolved", path: null, candidates: [] };
     }
@@ -1059,12 +1059,12 @@ export class Graph {
     if (!hit) return null;
     const rel = relative(this.root, hit.abs);
     const inside = !rel.startsWith("..") && !isAbsolute(rel);
-    if (hit.folder) return { resolvedKind: "folder", path: inside ? rel || "." : hit.abs, candidates: [], ...(inside ? {} : { vault: this.reach?.vaultOf(hit.abs) ?? null }) };
+    if (hit.folder) return { resolvedKind: "folder", path: inside ? rel || "." : hit.abs, candidates: [], how: "path", ...(inside ? {} : { vault: this.reach?.vaultOf(hit.abs) ?? null }) };
     if (inside) {
-      if (this.notes.has(rel)) return { resolvedKind: "note", path: rel, candidates: [rel] };
-      if (this.known(rel)) return { resolvedKind: "file", path: rel, candidates: [rel] };
+      if (this.notes.has(rel)) return { resolvedKind: "note", path: rel, candidates: [rel], how: "path" };
+      if (this.known(rel)) return { resolvedKind: "file", path: rel, candidates: [rel], how: "path" };
     }
-    return { resolvedKind: classify(hit.abs, this.config.walk.extensions).group === "note" ? "note" : "file", path: hit.abs, candidates: [], vault: this.reach?.vaultOf(hit.abs) ?? null };
+    return { resolvedKind: classify(hit.abs, this.config.walk.extensions).group === "note" ? "note" : "file", path: hit.abs, candidates: [], how: "path", vault: this.reach?.vaultOf(hit.abs) ?? null };
   }
 
   /**
@@ -1080,17 +1080,19 @@ export class Graph {
     if (t.status === "unresolved") return { resolvedKind: "unresolved", path: null, candidates: [], reason: t.reason };
     if (t.status === "branch") {
       const kind = classify(t.rel, this.config.walk.extensions).group === "note" ? "note" : "file";
-      return { resolvedKind: kind, path: join(t.root, t.rel), candidates: [], vault: t.folder.name, gitRef: { root: t.root, rel: t.rel, branch: t.branch } };
+      return { resolvedKind: kind, path: join(t.root, t.rel), candidates: [], how: "pointer", vault: t.folder.name, gitRef: { root: t.root, rel: t.rel, branch: t.branch } };
     }
     const hit = pathLink(t.abs, join(this.root, fromRel || "_"), false, undefined, true);
     const via = t.via ? { via: t.via } : {};
     if (!hit) return { resolvedKind: "unresolved", path: null, candidates: [], reason: `no ${p.path || "folder"} in ${p.name}${p.branch ? `@${p.branch}` : ""}`, ...via };
     const rel = relative(this.root, hit.abs);
     const inside = !rel.startsWith("..") && !isAbsolute(rel);
-    if (hit.folder) return { resolvedKind: "folder", path: inside ? rel || "." : hit.abs, candidates: [], ...(inside ? {} : { vault: t.folder.name }), ...via };
-    if (inside && this.notes.has(rel)) return { resolvedKind: "note", path: rel, candidates: [rel], ...via };
-    if (inside && this.known(rel)) return { resolvedKind: "file", path: rel, candidates: [rel], ...via };
-    return { resolvedKind: classify(hit.abs, this.config.walk.extensions).group === "note" ? "note" : "file", path: hit.abs, candidates: [], vault: t.folder.name, ...via };
+    // By its folder's name (D86); by an old one, or in another copy, said too.
+    const landed = { how: "pointer" as const, ...via };
+    if (hit.folder) return { resolvedKind: "folder", path: inside ? rel || "." : hit.abs, candidates: [], ...(inside ? {} : { vault: t.folder.name }), ...landed };
+    if (inside && this.notes.has(rel)) return { resolvedKind: "note", path: rel, candidates: [rel], ...landed };
+    if (inside && this.known(rel)) return { resolvedKind: "file", path: rel, candidates: [rel], ...landed };
+    return { resolvedKind: classify(hit.abs, this.config.walk.extensions).group === "note" ? "note" : "file", path: hit.abs, candidates: [], vault: t.folder.name, ...landed };
   }
 
   private remotesCache: string[] | null = null;
@@ -1099,11 +1101,7 @@ export class Graph {
   private ownRemotes(): string[] {
     if (this.remotesCache) return this.remotesCache;
     const c = checkoutOf(this.root);
-    let config = "";
-    try {
-      if (c) config = readRegular(join(c.common, "config"), SMALL_FILE).toString("utf8");
-    } catch {}
-    this.remotesCache = c ? remotesIn(config, c.main ?? c.root).map((r) => r.toLowerCase()) : [];
+    this.remotesCache = c ? checkoutRemotes(c) : [];
     return this.remotesCache;
   }
 
@@ -1113,39 +1111,15 @@ export class Graph {
    * ref than the branch checked out is kept, to be said. Null when it isn't one, or names none here.
    */
   private byHosting(url: string, fromRel: string): Target | null {
-    const h = parseHosted(url);
-    if (!h) return null;
-    const own = checkoutOf(this.root);
-    let top: string | null = own && this.ownRemotes().includes(h.remote.toLowerCase()) ? own.root : null;
-    if (!top) {
-      const l = lookupFolder(h.remote);
-      if (l.status === "found") top = checkoutOf(l.path)?.root ?? l.path;
-    }
-    if (!top) return null;
-    const c = checkoutOf(top);
-    let ref = h.ref;
-    let path = h.path;
-    // A branch with a `/` (`feature/x`): the longest the repository has, the rest the path.
-    if (ref && c && path && !existsSync(join(top, path))) {
-      const branches = new Set(branchesOf(c) ?? []);
-      const segs = path.split("/");
-      for (let k = segs.length - 1; k >= 1; k--) {
-        if (branches.has([ref, ...segs.slice(0, k)].join("/"))) {
-          ref = [ref, ...segs.slice(0, k)].join("/");
-          path = segs.slice(k).join("/");
-          break;
-        }
-      }
-    }
-    if (!path && !h.folder) path = readmeAt(top) ?? "";
-    const branch = c ? headOf(c).branch : null;
-    const other = ref && ref !== "HEAD" && ref !== branch && !(branch === null && c && headOf(c).commit?.startsWith(ref)) ? { hosted: { ref, branch } } : {};
-    const abs = join(top, path);
-    const hit = pathLink(abs, join(this.root, fromRel || "_"), false, undefined, true);
-    if (!hit) return { resolvedKind: "unresolved", path: null, candidates: [], reason: `no ${path || "folder"} in this copy of ${h.remote}`, via: "hosting", ...other };
+    const t = hostedHere(url, this.root, { remotes: this.ownRemotes() });
+    if (!t) return null;
+    const other = t.other ? { hosted: t.other } : {};
+    const hit = pathLink(join(t.top, t.path), join(this.root, fromRel || "_"), false, undefined, true);
+    if (!hit) return { resolvedKind: "unresolved", path: null, candidates: [], reason: `no ${t.path || "folder"} in this copy of ${t.hosted.remote}`, via: "hosting", ...other };
     const rel = relative(this.root, hit.abs);
     const inside = !rel.startsWith("..") && !isAbsolute(rel);
-    const at = (kind: "note" | "file" | "folder", p: string): Target => ({ resolvedKind: kind, path: p, candidates: [], via: "hosting", ...other });
+    // By this repository's remote (D86, D87).
+    const at = (kind: "note" | "file" | "folder", p: string): Target => ({ resolvedKind: kind, path: p, candidates: [], how: "hosting", via: "hosting", ...other });
     if (hit.folder) return at("folder", inside ? rel || "." : hit.abs);
     if (inside && this.notes.has(rel)) return at("note", rel);
     if (inside && this.known(rel)) return at("file", rel);
@@ -1174,7 +1148,7 @@ export class Graph {
       }
     });
     if (!hit) return null;
-    return { resolvedKind: classify(hit, this.config.walk.extensions).group === "note" ? "note" : "file", path: hit, candidates: [], vault: this.reach?.vaultOf(hit) ?? null };
+    return { resolvedKind: classify(hit, this.config.walk.extensions).group === "note" ? "note" : "file", path: hit, candidates: [], how: "path", vault: this.reach?.vaultOf(hit) ?? null };
   }
 
   /** Whether `[[name:…]]` names this vault: its name, an alias, or a previous name. */

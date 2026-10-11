@@ -122,17 +122,25 @@ heading's section, the block, the lines ([tui.md](tui.md) § What's under the cu
 
 ## How a link landed
 
-Every resolution says how sure it is, and a wikilink's says how it landed (D86; `Landed` in `core/links.ts`,
-`certainty` in `core/graph.ts`):
+Every link that reaches a file or folder says how it landed, and every resolution how sure it is (D86; `Landed` in
+`core/links.ts`, `certainty` in `core/graph.ts`):
 
-- **How** a wikilink landed: by its path (`path`), the end of its path (`suffix`), its name, the only note of it
-  (`name`), or the tie broken (`exact-case`, `same-folder`, `deepest-shared`, `shortest`). A path link has no `how`:
-  its path is all it has.
+- **How** it landed: a markdown link by its path (`path`), in any of its forms (relative, `/…`, extensionless, a
+  folder, `~/`, absolute, `file://`); a pointer by its folder's name (`pointer`); a link to the repository's own
+  hosting by the remote it names (`hosting`); a wikilink by its path (`path`, a `../` one and an attachment's too),
+  the end of its path (`suffix`), its name, the only note of it (`name`), or the tie broken (`exact-case`,
+  `same-folder`, `deepest-shared`, `shortest`). A link that reaches nothing, a `#heading` within its note and a URL
+  elsewhere have none.
 - **Via** what else it was reached: an alias, a folder's old name (`old-name`), another copy of a named folder
   (`another-copy`), its hosting URL (`hosting`).
 - **Certainty:** `broken` when it reaches nothing, `ambiguous` when a tie stands; `inferred` for the end of a path, a
   tie broken, a folder's old name, another copy, or a hosting URL at another ref; else `exact` (a path, a unique name,
-  a unique alias, a pointer).
+  a unique alias, a pointer, a hosting URL at the branch here).
+
+`slipbox resolve` and `links` give both, `how` being the via when there is one, else how it landed. The hover and
+`links`' words say a landing only when it wasn't by the link's own path, name, pointer or URL at the branch here
+(`describeLanding`: a tie broken, a path's end, an alias, a folder's old name, another copy, another ref); the link
+check flags a fragile tie and another ref.
 
 A link won by where it is written (the deepest shared folder, the shortest path) is **fragile**: a note of the name
 nearer would take it. The link check says so (`fragile`) with the path that names its note for sure (from the root,
@@ -156,10 +164,12 @@ A link to the repository's own hosting is the file in this copy (D87; `core/host
 GitHub's `/blob/<ref>/`, `/tree/<ref>/`, `/raw/<ref>/`; GitLab's `/-/blob/<ref>/`, `/-/tree/<ref>/` and
 `/-/raw/<ref>/` (groups nested); Bitbucket's `/src/<ref>/`, with its `#markdown-header-` headings; a repository's own
 page (`host/owner/repo`), and `#readme` (its README). The shapes are read on any host. It counts when the URL is one of
-this checkout's remotes, or a named folder's by its remote. Such a link resolves (`via: "hosting"`), is a backlink
-within its root, is followed, and a rename rewrites the URL's path after the ref in place, the URL keeping its form.
-A ref other than the branch checked out (`HEAD` is it) is inferred, and the link check says so (`other-ref`); when
-the path as first split isn't there, a branch with `/` is told by the repository's branches, the longest that is.
+this checkout's remotes, or a named folder's by its remote (`hostedHere` in `core/hosting.ts`). Such a link resolves
+(`how` and `via` both `hosting`), is a backlink within its root and from other roots (§ Backlinks), is followed, is
+checked by the merge review (§ The merge review), and a rename rewrites the URL's path after the ref in place, the
+URL keeping its form. A ref other than the branch checked out (`HEAD` is it) is inferred, and the link check says so
+(`other-ref`); when the path as first split isn't there, a branch with `/` is told by the repository's branches, the
+longest that is.
 
 ## Conventions
 
@@ -262,9 +272,12 @@ are resolved, and backlinks derived, per root (D76); names never cross roots.
 - **Within the root,** notes, data files and code files all link: a data file's values and a code comment's paths
   are backlinks of what they name, as links to attachments and folders are.
 - **From other roots,** a note's links into this one by path (relative, `~/`, absolute, `file://`, a wikilink's
-  `../`) or by pointer count, as of that root's last indexing, read from its saved index (D48; `core/reach.ts`). Only
-  roots this machine knows count, and only while their folder is there: an unplugged drive's drop out until it is
-  back. Another root's data and code files, and its hosting URLs, don't count.
+  `../`), by pointer, or by this repository's hosting URL count, as of that root's last indexing, read from its saved
+  index (D48, D87; `core/reach.ts`). Each is read as that root reads it: a pointer by the folder this machine has of
+  that name; a hosting URL by that root's own checkout's remote, else the named folder of that remote, so it counts
+  in the copy its link opens. Only roots this machine knows count, and only while their folder is there: an
+  unplugged drive's drop out until it is back. Another root's data and code files don't count: its saved index holds
+  its notes' links only.
 - **Roots nested in this one, or holding it,** are recorded and indexed when a link or a backlink needs them, so their
   links count without their having been opened on this machine (D48).
 - **A worktree's links don't count:** its notes are copies of the main checkout's (D54).
@@ -329,8 +342,12 @@ Before a merge, git's own tentative result (`git merge-tree --write-tree`, witho
 checked for the links it would break (D66; `core/mergereview.ts`): "`refactor` moves `docs/plan.md`; `main` added a
 link to it in `docs/b.md`", each with its cause (`moved`, `deleted`, `note-moved`, `missing`) and the fix in the
 link's own form, shown, not written; in review for people (`space g m`), from the CLI for agents (`slipbox
-merge-review`). It reads paths (relative, `/…`, `~/`, absolute) and wikilinks by name or path; pointers and hosting
-URLs aren't checked.
+merge-review`). It reads paths (relative, `/…`, `~/`, absolute), wikilinks by name or path, links to this
+repository's own hosting (D87: a URL naming one of this checkout's remotes, its path from the repository's top, a
+branch with `/` told by the repository's branches), and pointers naming this folder at no branch (D75); the fix of a
+URL is the URL with its new path after the ref, of a pointer the pointer by its name as written. Another
+repository's URL, a repository's own page, and a pointer to another folder or at a branch aren't the merge's to
+check.
 
 After `HEAD` moves on within a branch (a merge, a pull, a commit), git's renames between the old and the new commit
 are evidence, kept for that checkout and that change (each branch's last commit seen is kept, `heads.json`), and each
