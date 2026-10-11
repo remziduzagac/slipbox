@@ -243,7 +243,7 @@ export const FIXES_SCENARIOS: Scenario[] = [
   },
 
   {
-    name: "world/links: a clone named its own way — the qualified pointer and the hosting URL open ~/work/kestrel; linked search leaves the worktree out; a missing heading or block opens the note at its top (DF-T5)",
+    name: "world/links: a clone named its own way — the qualified pointer and the hosting URL open ~/work/kestrel; linked search leaves the worktree out; a missing heading or block opens the note at its top, the hover says so (DF-T5, DF-D26)",
     options: {
       home: true,
       startAt: "home/notes/research/link-styles.md",
@@ -282,6 +282,14 @@ export const FIXES_SCENARIOS: Scenario[] = [
       s.expect(!worktreeRows(s).length, `no hit from the worktree:\n${worktreeRows(s).join("\n")}`);
       await s.keys("escape");
       // B2: the PRD read far down, then links to a heading and a block it hasn't: each opens it at its top, said so.
+      // F7 (DF-D26): the hover on such a link says where following it lands.
+      await s.restart({ startAt: "home/notes/meetings/2026-09-05-feedback-synthesis.md" });
+      await s.keys("/");
+      await s.type("the pricing section");
+      await s.keys("enter", "escape", "shift+k");
+      await s.see('No heading "pricing" in', 5000);
+      await s.see("its top."); // the sentence ends so, wrapped in the hover however wide it is
+      await s.keys("escape");
       await s.restart({ startAt: "home/work/product/prd/route-sharing.md" });
       await moveTo(s, ["shift+g"], (l) => l > 50, "the PRD's end");
       for (const [link, said] of [
@@ -346,18 +354,21 @@ export const FIXES_SCENARIOS: Scenario[] = [
   },
 
   {
-    name: "privacy: a root's .slipbox/config.toml sets render.images_remote = show — warned of and ignored; its web picture not fetched, asked about (DF-D1)",
+    name: "privacy: a root's .slipbox/config.toml sets render.images_remote = show and update.check — each warned of and ignored; its web picture not fetched, asked about (DF-D1, DF-D23)",
     options: {
       open: "web.md",
       files: { "web.md": "# A web picture\n\nFrom the car park: ![the dome at dusk](http://127.0.0.1:9/x.png)\n" },
       // Halden's own .slipbox/config.toml, with a key only your own config may set.
-      setup: (s) => appendFileSync(join(s.vault, ".slipbox", "config.toml"), '\n[render]\nimages_remote = "show"\n'),
+      setup: (s) => appendFileSync(join(s.vault, ".slipbox", "config.toml"), '\n[render]\nimages_remote = "show"\n\n[update]\ncheck = true\n'),
     },
     run: async (s) => {
       // The warning, among the messages.
       const warning = `config: ${s.vault}/.slipbox/config.toml sets render.images_remote, which only your own config may set (what reaches the network is yours to allow); ignored`;
       const said = await lastMessage(s, "images_remote");
       s.expect(said === warning, `the warning, whole:\n${said}`);
+      // DF-D23: the folder's update.check too, said the same way.
+      const check = await lastMessage(s, "update.check");
+      s.expect(check === warning.replace("render.images_remote", "update.check"), `update.check's warning, whole:\n${check}`);
       // The folder's "show" ignored: your own (the default, ask) stands — followed, it asks; n, nothing fetched.
       await follow(s, "the dome at dusk");
       await s.see("Fetch this picture from http://127.0.0.1:9?");
