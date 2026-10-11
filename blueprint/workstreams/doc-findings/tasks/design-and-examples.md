@@ -1,6 +1,6 @@
 ---
-status: todo
-assignee:
+status: doing
+assignee: claude
 blocked_by: []
 created: "2026-10-11"
 ---
@@ -30,3 +30,10 @@ The design says what the code does where the user found the code right; the exam
 - Delivers: DF-D11, DF-D12, DF-D13.
 
 ## Log
+
+- 2026-10-11: B4, B5, B6 written in DF's design.md, each read against the code: `restoreSession` runs unless a file was
+  named (`open: loc.file ?? null`, src/tui/run.ts); `detectGlyphMode` reads `SLIPBOX_GLYPHS` first and is used for
+  `auto` only (src/core/glyphs.ts); the table from `LANGUAGES` (src/core/servers/languages.ts) (*read*).
+- 2026-10-11: the examples' stale text waits for DF-T7, which adds Obsidian cases to the reference set and its
+  `CASES.md`, so the two don't collide.
+

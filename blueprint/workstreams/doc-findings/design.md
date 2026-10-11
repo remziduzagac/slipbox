@@ -25,7 +25,29 @@ The source launcher replaces a link at its path, never writes through it.
 
 ## MODIFIED design/lsp.md, design/tui.md § What's under the cursor (DF-D8, DF-D13)
 
-Formatting with the file's own indentation; the servers' table as the code has it.
+Formatting with the file's own indentation (DF-T7 writes it).
+
+The servers' table (DF-D13), its rows as `LANGUAGES` in `src/core/servers/languages.ts` has them:
+
+| Languages | Servers, the main first (npm: installed when missing) |
+| --- | --- |
+| TypeScript, JavaScript, TSX, JSX | TypeScript 7's own (npm), vtsls for an older TypeScript (npm); eslint, biome |
+| Python | pyright (npm); ruff |
+| Rust, Go, Lua | rust-analyzer, gopls, lua-language-server |
+| bash | bash-language-server (npm) |
+| JSON, JSON with comments (`.jsonc`) | vscode-json-language-server (npm), biome |
+| YAML, TOML | yaml-language-server (npm), the linter yamllint; taplo |
+| CSS | vscode-css-language-server (npm), stylelint, biome |
+| SCSS, Less | vscode-css-language-server (npm), stylelint |
+| HTML | vscode-html-language-server (npm) |
+| Dockerfile, PHP | docker-langserver (npm), the linter hadolint; intelephense (npm) |
+| Swift, C, C++, Ruby (`.rb`, `Gemfile`, `Rakefile`) | sourcekit-lsp; clangd; ruby-lsp |
+
+Other languages, Java and Kotlin among them, have no server built in: one is added in your config's
+`[language-server.<name>]` and `[[language]]`.
+
+Previously: one row for JSON, YAML and TOML, and one for CSS, SCSS, Less and HTML with biome for all three styles; no
+`.jsonc`; Ruby by `.rb` alone.
 
 ## MODIFIED design/how-it-works.md, design/roots.md, the CLI's words (DF-D9)
 
@@ -37,11 +59,21 @@ slipbox's syntax errors in the code view too.
 
 ## MODIFIED design/tui.md § Positions (DF-D11)
 
-The session restored whenever no note is named.
+In the Session item: "The tabs and windows are restored when slipbox starts with no note named, no path or a folder
+(`slipbox ~/notes`), if `ui.restore_session` is on; a file named opens that file alone. UI setting overrides and recent
+commands on every start."
+
+Previously: "The tabs and windows are restored when slipbox starts with no path, if `ui.restore_session` is on; UI
+setting overrides and recent commands on every start."
 
 ## MODIFIED design/rendering.md § Glyphs (DF-D12)
 
-`SLIPBOX_GLYPHS` fills in for `auto`; a set named in the config stands.
+"A set named in the config (`render.glyphs`) forces it; where the config says `auto`, `SLIPBOX_GLYPHS` chooses one
+before the detection above; and in the TUI `space u g` picks one with a live preview (`:glyphs <set>` sets it
+directly)."
+
+Previously: "`SLIPBOX_GLYPHS` or the config value forces a set, and in the TUI `space u g` picks one with a live
+preview (`:glyphs <set>` sets it directly)."
 
 ## MODIFIED design/tui.md § Files in the explorer; design/how-it-works.md § Storage (DF-D14)
 
