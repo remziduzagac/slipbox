@@ -5813,7 +5813,7 @@ export class App {
     const named = (abs: string) => this.rootName(abs);
     if (!isListed(this.loc)) {
       for (const s of this.graph.skipped) {
-        if (s.reason !== "nested vault") continue;
+        if (s.reason !== "nested root") continue;
         const abs = join(this.loc.root, s.rel);
         out.set(s.rel, { kind: "vault", abs, name: named(abs) });
       }

@@ -124,7 +124,7 @@ export class Reach implements VaultReach {
   discover(g: Graph): void {
     if (this.discovered) return;
     this.discovered = true;
-    const roots: { root: string; nested: boolean }[] = g.skipped.filter((s) => s.reason === "nested vault").map((s) => ({ root: join(g.root, s.rel), nested: true }));
+    const roots: { root: string; nested: boolean }[] = g.skipped.filter((s) => s.reason === "nested root").map((s) => ({ root: join(g.root, s.rel), nested: true }));
     for (let up = findVaultRoot(dirname(g.root)); up; up = findVaultRoot(dirname(up))) roots.push({ root: up, nested: false });
     for (const { root, nested } of roots) {
       let loc: VaultLocation;

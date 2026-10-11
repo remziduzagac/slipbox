@@ -72,9 +72,26 @@ Other languages, Java and Kotlin among them, have no server built in: one is add
 Previously: one row for JSON, YAML and TOML, and one for CSS, SCSS, Less and HTML with biome for all three styles; no
 `.jsonc`; Ruby by `.rb` alone.
 
-## MODIFIED design/how-it-works.md, design/roots.md, the CLI's words (DF-D9)
+## MODIFIED design/roots.md § How a root is named and shown, design/terms.md § Retired: the CLI's words (DF-D9)
 
-"root" in the CLI's JSON and messages; `built-in`.
+design/roots.md § How a root is named and shown, a paragraph added at its end:
+
+> The CLI says root where the code says vault, in its messages and its JSON, whose `schema` stays 1 (DF-D9): `info`'s
+> `mode` is `root` or `folder`; a change's `kind` is `root` for a root's naming, `make-root` for `init` of a folder
+> inside a root, `unmake-root` for `deinit`; a root nested in another is skipped by the walk as a `nested root`; and
+> nothing to undo is "in this root". The renames log and the saved plans keep the code's words, `vault`, `make-vault`
+> and `unmake-vault`, and the CLI says them as root when it prints them (`kindWord` in `cli/cli.ts`). A theme slipbox
+> ships is `built-in`, as a document type is ([docs/manual/cli.md](../../docs/manual/cli.md) § `info`, § Moving,
+> copying and deleting, § `themes`).
+
+design/terms.md § Retired, the **vault** entry:
+
+> - **vault**: a root, or a named folder (D79). The word stays in code and config (`core/vault.ts`, the `[vault]`
+>   identity table, command ids such as `vault.init`), in the logs and plans slipbox keeps, and in the names of the
+>   fixture and demo vaults; never in what the CLI prints or its JSON (DF-D9).
+
+Previously: "The word stays in code and config (`core/vault.ts`, the `[vault]` identity table, command ids such as
+`vault.init`) and in the names of the fixture and demo vaults." design/how-it-works.md has no CLI words to change.
 
 ## MODIFIED design/code-view.md § How it behaves; design/tui.md § Problems where they are (DF-D10)
 

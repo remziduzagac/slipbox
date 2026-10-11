@@ -808,9 +808,11 @@ export class Graph {
   }
 
   removeFile(rel: string): void {
+    // Its file is gone: never parsed now, when the namesakes' look reads every note (an undone move's
+    // old path warned "unreadable: ENOENT").
+    this.unparsed.delete(rel);
     const watch = this.notes.has(rel) ? this.namesakeLinks(rel) : null;
     this.reached.delete(rel);
-    this.unparsed.delete(rel);
     // A move is known by the file's text, not by what an editor had of it.
     const gone = this.overlays.get(rel)?.disk ?? this.notes.get(rel);
     this.overlays.delete(rel);
@@ -1147,7 +1149,7 @@ export class Graph {
 
   /** The vaults nested in this one: folders the walk leaves to them. */
   nestedRoots(): string[] {
-    return this.skipped.filter((s) => s.reason === "nested vault").map((s) => s.rel);
+    return this.skipped.filter((s) => s.reason === "nested root").map((s) => s.rel);
   }
 
   /**

@@ -141,7 +141,7 @@ describe("links", () => {
     expect(Array.isArray(f.json.data)).toBe(true);
     const n = slipbox(["name", "halden-renamed", "--dry-run", "--json"]);
     expect(n.code).toBe(0);
-    expect(n.json.data).toMatchObject({ kind: "vault", to: "halden-renamed", dryRun: true });
+    expect(n.json.data).toMatchObject({ kind: "root", to: "halden-renamed", dryRun: true });
   });
   test("links and backlinks, with their status", () => {
     const l = slipbox(["links", "partners-and-names", "--json"]).json.data;
@@ -149,6 +149,11 @@ describe("links", () => {
     expect(slipbox(["links", "partners-and-names"]).out).toContain("UNRESOLVED");
     const b = slipbox(["backlinks", "kenji-mori", "--json"]).json.data;
     expect(b.backlinks.map((x: { from: string }) => x.from)).toContain("home.md");
+  });
+  test("links keeps a web address whole: no file to show, no root; printed as written (DF A7)", () => {
+    const web = slipbox(["links", "partners-and-names", "--json"]).json.data.find((x: { target: string }) => x.target === "https://partners.example.invalid/directory");
+    expect(web).toMatchObject({ status: "external", path: "https://partners.example.invalid/directory", shown: null, root: null, name: null });
+    expect(slipbox(["links", "partners-and-names"]).out).toContain(" https://partners.example.invalid/directory -> https://partners.example.invalid/directory\n");
   });
   test("links --json gives each link's end, as backlinks gives the same link's", () => {
     type Pos = { line: number; column: number };
@@ -389,6 +394,32 @@ describe("the vault and the tool", () => {
     expect(slipbox(["help"]).out).toContain("slipbox find <query>");
     expect(slipbox(["--version"]).out).toMatch(/^slipbox \d+\.\d+\.\d+/);
   });
+  test("the CLI says root, never vault (DF-D9): info's mode and what it skipped, a change's kind, nothing to undo; themes are built-in", () => {
+    const i = slipbox(["info", "--json"]).json.data;
+    expect(i.mode).toBe("root");
+    expect(i.skipped).toContainEqual({ rel: "outreach", reason: "nested root" });
+    const human = slipbox(["info"]).out;
+    expect(human).toContain(`root      ${vault} (root`);
+    expect(human).toContain("skipped   outreach — nested root");
+    expect(slipbox(["themes", "--json"]).json.data.find((t: { name: string }) => t.name === "tokyo-night")).toMatchObject({ source: "built-in" });
+    // A folder made a root, and a nested root made a plain folder: previews, nothing written.
+    expect(slipbox(["init", "people", "--name", "cli-words-people", "--dry-run", "--json"]).json.data).toMatchObject({ kind: "make-root", dryRun: true });
+    expect(slipbox(["deinit", "outreach", "--dry-run", "--json"]).json.data).toMatchObject({ kind: "unmake-root", dryRun: true });
+    // A root's naming, planned: the plans waiting say it as `apply` does.
+    const dir = join(sandbox, "cli-words");
+    mkdirSync(dir);
+    writeFileSync(join(dir, "a.md"), "# A\n");
+    expect(slipbox(["init", dir, "--name", "cli-words-a"]).code).toBe(0);
+    const none = slipbox(["undo", "--json"], { cwd: dir });
+    expect(none.code).toBe(3);
+    expect(none.json.error?.message).toBe("nothing to undo: no rename, move, relink or replace has been done in this root");
+    const plan = slipbox(["name", "cli-words-b", "--plan", "--json"], { cwd: dir }).json.data;
+    expect(plan).toMatchObject({ kind: "root", from: "cli-words-a", to: "cli-words-b" });
+    expect(slipbox(["apply", "--json"]).json.data.find((p: { id: string }) => p.id === plan.plan.id)).toMatchObject({ kind: "root" });
+    expect(slipbox(["apply", plan.plan.id, "--json"], { cwd: dir }).json.data).toMatchObject({ kind: "root", dryRun: false });
+    // Applied, the machine's list learns the name, as `name` itself teaches it.
+    expect(slipbox(["folders", "--json"]).json.data.some((f: { name: string; default: string }) => f.name === "cli-words-b" && f.default === dir)).toBe(true);
+  });
   test("mv, name, relink: a preview, then the change (17.15, 21.10)", () => {
     const dir = join(sandbox, "renames");
     mkdirSync(join(dir, "notes"), { recursive: true });
@@ -405,7 +436,7 @@ describe("the vault and the tool", () => {
     expect(readFileSync(join(dir, "index.md"), "utf8")).toBe("[plan](roadmap.md) and [p](roadmap.md)\n");
     expect(slipbox(["mv", "roadmap", "index"], { cwd: dir }).code).toBe(5); // index.md is there
     const vr = slipbox(["name", "cliren2", "--json"], { cwd: dir }).json;
-    expect(vr.data).toMatchObject({ kind: "vault", from: "cliren", to: "cliren2" });
+    expect(vr.data).toMatchObject({ kind: "root", from: "cliren", to: "cliren2" });
     expect(slipbox(["info", "--json"], { cwd: dir }).json.data.name).toBe("cliren2");
     writeFileSync(join(dir, "late.md"), "[plan](notes/plan.md)\n");
     const rl = slipbox(["relink", "late", "--json"], { cwd: dir }).json;
@@ -585,7 +616,7 @@ describe("the vault and the tool", () => {
     expect(slipbox(["mv", "inner", "box", "--json"], { cwd: dir }).json.data).toMatchObject({ kind: "folder", from: "inner", to: "box" });
     expect(readFileSync(join(dir, "to-inner.md"), "utf8")).toBe("[i](box/note.md)\n");
     // deinit: a plain folder of this vault again (18.11); the path link means the same.
-    expect(slipbox(["deinit", "box", "--json"], { cwd: dir }).json.data).toMatchObject({ kind: "unmake-vault", from: "box", to: "fileops" });
+    expect(slipbox(["deinit", "box", "--json"], { cwd: dir }).json.data).toMatchObject({ kind: "unmake-root", from: "box", to: "fileops" });
     expect(existsSync(join(dir, "box", ".slipbox"))).toBe(false);
     expect(readFileSync(join(dir, "to-inner.md"), "utf8")).toBe("[i](box/note.md)\n");
   });
@@ -1072,6 +1103,21 @@ describe("the vault and the tool", () => {
     const sent = slipbox(["send", "home", "--server", join(sandbox, "no-nvim.sock"), "--json"]);
     expect(sent.code).toBe(0);
     expect(sent.json.warnings.join(" ")).toContain("--server has no effect");
+  });
+  test("write --create --allow-empty with no text makes an empty note; no text is refused otherwise, as before (DF-D16)", () => {
+    const made = slipbox(["write", "later/empty-note", "--create", "--allow-empty", "--json"]);
+    expect(made.code).toBe(0);
+    expect(made.json.data).toMatchObject({ path: "later/empty-note.md", created: true, previousSha: null });
+    expect(readFileSync(join(vault, "later", "empty-note.md"), "utf8")).toBe("");
+    // Without --allow-empty, nothing made; on a note that's there, nothing emptied.
+    const bare = slipbox(["write", "later/other", "--create"]);
+    expect(bare.code).toBe(2);
+    expect(bare.err).toContain("--create --allow-empty makes an empty note");
+    expect(existsSync(join(vault, "later", "other.md"))).toBe(false);
+    writeFileSync(join(vault, "later", "kept.md"), "text\n");
+    expect(slipbox(["write", "later/kept", "--allow-empty"]).code).toBe(2);
+    expect(readFileSync(join(vault, "later", "kept.md"), "utf8")).toBe("text\n");
+    rmSync(join(vault, "later"), { recursive: true });
   });
   test("files beyond notes (16.4): read, replace, write and find them; ls --files; binary refused", () => {
     mkdirSync(join(vault, "cfg"), { recursive: true });

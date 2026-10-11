@@ -218,6 +218,7 @@ root, wherever you are in it, unless it starts with `./` or `../`: then it is fr
 | Command | What it does |
 | --- | --- |
 | `slipbox write ideas/tea '# Tea' --create` | makes a note with that text (`.md` added); refused if it exists |
+| `slipbox write ideas/tea --create --allow-empty` | makes an empty note, to fill later |
 | `slipbox mkdir ideas/drafts` | makes a folder, and its parents |
 | `slipbox mv ideas/coffee.md archive/coffee.md` | renames or moves a note, file or folder, links rewritten |
 | `slipbox cp ideas/coffee.md` | copies it beside itself (`coffee-copy.md`), or to a path given after it |

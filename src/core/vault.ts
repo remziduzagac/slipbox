@@ -17,12 +17,13 @@ import { loadConfig, VAULT_CONFIG_TEMPLATE } from "./config.ts";
 import { checkoutOf, inMain, worktreeFingerprint } from "./git.ts";
 import { gitArgs } from "./gitops.ts";
 import { folderIdentity, folderNamed, identityAt, movedFrom, recordFolder, suggestFolderName } from "./folders.ts";
-import { carryPaths, climbsOut, readRegular } from "./fsutil.ts";
+import { carryPaths, climbsOut, readRegular, SMALL_FILE } from "./fsutil.ts";
 import { stateDir, vaultKey } from "./paths.ts";
 import { carryPositions, sessionFile } from "./position.ts";
 import {
   addIdentity,
   IdentityEditError,
+  identityReadsBack,
   adoptStorage,
   forgetRoot,
   MARKER,
@@ -33,6 +34,7 @@ import {
   recordRoot,
   VAULT_NAME,
   vaultConfigFile,
+  withIdentity,
   writeRoots,
   type KnownRoot,
   type RootKind,
@@ -309,6 +311,34 @@ export interface InitResult {
 }
 
 /**
+ * What `initVault` refuses, as a VaultError, before anything is written; `init --dry-run` asks it too, so a preview
+ * refuses as the run would: a home folder or `/`, a name that can't be one or that a different folder has, a folder
+ * called something else already, a `[vault]` table the edit can't follow.
+ */
+export function checkInit(dir: string, name?: string): void {
+  const root = resolve(dir);
+  if (isNeverRoot(root)) throw new VaultError(`${root} can't have a .slipbox/: slipbox never indexes all of ${root === homeFolder() ? "your home folder" : "/"}`);
+  if (name === undefined) return;
+  if (!VAULT_NAME.test(name)) throw new VaultError(`"${name}" can't be a folder's name: letters, digits, ".", "_" and "-" only, no spaces, "/" or ":"`);
+  const other = folderNamed(name, root);
+  if (other.length) throw new VaultError(`a different folder is called "${name}", at ${other[0]!.default ?? other[0]!.copies[0]?.path}; try "${suggestFolderName(root, parentName(root))}"`);
+  if (!hasMarker(root)) return;
+  const cfg = vaultConfigFile(root);
+  const have = readIdentity(cfg);
+  if (have.name) {
+    if (name !== have.name) throw new VaultError(`${root} is already called "${have.name}": slipbox name ${name} renames it`);
+    return;
+  }
+  // The name goes in by a textual edit (addIdentity): a table whose form defeats it writes nothing.
+  let text = "";
+  try {
+    text = readRegular(cfg, SMALL_FILE).toString("utf8");
+  } catch {}
+  const id = have.id ?? newVaultId();
+  if (!identityReadsBack(have, withIdentity(text, have, { id, name }), { id, name })) throw new VaultError(new IdentityEditError().message);
+}
+
+/**
  * Give `dir` a `.slipbox/` (1.10, 17.4, 21.10): settings, and — when `name` is given — a name pointers
  * name it by and an id that tells its copies from a different folder of that name. A name a different
  * folder has on this machine is refused, with one that isn't. `private`: in a repository you don't own,
@@ -317,19 +347,11 @@ export interface InitResult {
  */
 export function initVault(dir: string, name?: string, opts: { private?: boolean } = {}): InitResult {
   const root = resolve(dir);
-  if (isNeverRoot(root)) throw new VaultError(`${root} can't have a .slipbox/: slipbox never indexes all of ${root === homeFolder() ? "your home folder" : "/"}`);
+  checkInit(root, name);
   const marker = join(root, MARKER);
   const exists = hasMarker(root);
   const have = exists ? readIdentity(vaultConfigFile(root)) : null;
-  if (name !== undefined) {
-    if (!VAULT_NAME.test(name)) throw new VaultError(`"${name}" can't be a folder's name: letters, digits, ".", "_" and "-" only, no spaces, "/" or ":"`);
-    const other = folderNamed(name, root);
-    if (other.length) throw new VaultError(`a different folder is called "${name}", at ${other[0]!.default ?? other[0]!.copies[0]?.path}; try "${suggestFolderName(root, parentName(root))}"`);
-  }
-  if (have?.name) {
-    if (name !== undefined && name !== have.name) throw new VaultError(`${root} is already called "${have.name}": slipbox name ${name} renames it`);
-    return { root, created: false, identified: false, id: have.id, name: have.name, excluded: opts.private ? excludeFromGit(root) : null };
-  }
+  if (have?.name) return { root, created: false, identified: false, id: have.id, name: have.name, excluded: opts.private ? excludeFromGit(root) : null };
   if (!exists) {
     mkdirSync(marker, { recursive: true });
     writeFileSync(join(marker, "version"), `${VAULT_FORMAT_VERSION}\n`);

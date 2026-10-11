@@ -13,7 +13,7 @@ export const DEFAULT_THEME = "tokyo-night";
 
 export interface ThemeListing {
   name: string;
-  source: "builtin" | "base16" | "user";
+  source: "built-in" | "base16" | "user";
   path?: string;
 }
 
@@ -22,8 +22,8 @@ export function listThemes(dir = userThemesDir()): ThemeListing[] {
   const user = userThemeFiles(dir);
   const shadowed = new Set(user.map((f) => f.name));
   const out: ThemeListing[] = [];
-  for (const [name] of builtinThemes()) if (!shadowed.has(name)) out.push({ name, source: "builtin" });
-  for (const name of ["terminal", "mono"]) if (!shadowed.has(name)) out.push({ name, source: "builtin" });
+  for (const [name] of builtinThemes()) if (!shadowed.has(name)) out.push({ name, source: "built-in" });
+  for (const name of ["terminal", "mono"]) if (!shadowed.has(name)) out.push({ name, source: "built-in" });
   for (const f of user) out.push({ name: f.name, source: "user", path: f.path });
   return out;
 }

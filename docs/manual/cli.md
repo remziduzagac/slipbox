@@ -485,7 +485,8 @@ The text is the arguments after the note, joined by spaces and ending with a new
 - `--stdin`: read the text from stdin. It must be valid UTF-8 (exit 5 otherwise).
 - `--if-unchanged <sha>`: only if the note still has this sha (exit 5 otherwise).
 - `--allow-empty`: empty the note on purpose. Without it, empty or blank text is refused (exit 2), so a failed
-  program piped into `write` can't empty a note.
+  program piped into `write` can't empty a note. With `--create` and no text at all, it makes an empty note, to fill
+  later: `slipbox write ideas/tea --create --allow-empty`.
 
 A note that doesn't exist is exit 3 (add `--create`). A new name with a control character is refused (exit 5).
 
@@ -697,7 +698,8 @@ comments.
 
 `--json`: `[{from?, kind, target, heading, text, line, column, end, status, path, shown, candidates[], root, name,
 reason, how, certainty}]`. `kind` is how it's written (`markdown`, `wiki`, `embed`, `image`…), `target` its target as
-written, `status` what it reaches, `end` `{line, column}`.
+written, `status` what it reaches, `end` `{line, column}`. An `external` link's `path` is its web address, whole; it
+reaches no file, so its `shown`, `root` and `name` are `null`.
 
 ### `backlinks`
 
@@ -756,8 +758,8 @@ In a git repository, a root with uncommitted changes is named in the warnings; t
 nested folder, `replace --all`, `apply`): `{kind, from, to, dryRun, move, files[], warnings[], skipped[],
 ambiguous[]?, written[], undo?, plan?}`.
 
-- `kind`: `note`, `folder`, `vault` (a root's name), `heading`, `relink`, `convert`, `replace`, `make-vault` (`init`)
-  or `unmake-vault` (`deinit`).
+- `kind`: `note`, `folder`, `root` (a root's name), `heading`, `relink`, `convert`, `replace`, `make-root` (`init`)
+  or `unmake-root` (`deinit`).
 - `move`: `{from, to, dir}`, the absolute paths moved, when something moves.
 - `files[{path, abs, root, name, edits[{line, before, after}]}]`: each file rewritten, and each line in it.
 - `skipped`: links left as they are, and why. `written`: the files written (empty on a dry run).
@@ -937,7 +939,7 @@ slipbox info
 
 ```text
 slipbox   0.2.0
-root      /home/you/notes (vault)
+root      /home/you/notes (root)
 name      notes
 links     markdown links, relative, with .md — style: the notes, 100% of 382 links; …
 ```
@@ -946,7 +948,7 @@ links     markdown links, relative, with .md — style: the notes, 100% of 382 l
 scratch, notes, index{…, written, reached}, background{…}, search{engine, index}, skipped[{rel, reason}], folder,
 links, stale[]}`.
 
-- `mode` is `vault` for a root, `folder` for a plain folder; `release` is `null` when slipbox runs from its source.
+- `mode` is `root` for a root, `folder` for a plain folder; `release` is `null` when slipbox runs from its source.
 - `folder` is the root's name: `{name, pointer, remote, id, private, copies[{path, seen, here, available}],
   default}`, or `null`. `pointer` is the name pointers use; `default`, the copy links open.
 - `links` is the convention: `{style, path, extension}`, each `{value, source, why}`, `source` being `setting`,
@@ -966,7 +968,8 @@ slipbox init ideas --name ideas
 
 - `--name <name>`: name it. A name a different folder already has is refused (exit 5).
 - `--private`: keep `.slipbox/` out of git (listed in the repository's exclude file).
-- `--dry-run`: say what it would do.
+- `--dry-run`: say what it would do, writing nothing. What the run would refuse, a name taken say, it refuses too
+  (exit 5).
 
 On a folder inside a root, it makes that folder a root of its own and rewrites the links that would stop reaching
 across the new boundary (a link from the root, `/…`, and a wikilink by name across it). That's a change like a
@@ -975,7 +978,7 @@ rename: `--plan` works there, and `deinit` takes it back. Making a `.slipbox/` a
 
 `--json`: `{root, created, identified, id, name, excluded}` (`excluded`, the file `--private` listed it in); with
 `--dry-run`, `{root, dryRun}`. On a folder inside a root, [a change](#moving-copying-and-deleting), `kind`
-`make-vault`, with `root`, `name`, `id` and `created`.
+`make-root`, with `root`, `name`, `id` and `created`.
 
 ### `deinit`
 
@@ -990,7 +993,7 @@ slipbox deinit ideas --dry-run
 
 Only a root nested in another, made a root by its `.slipbox/` alone, can be: anything else is refused (exit 5). A git
 repository, say, stays a root with or without `.slipbox/`. `--dry-run`, `--plan`.
-`--json`: [a change](#moving-copying-and-deleting), `kind` `unmake-vault`.
+`--json`: [a change](#moving-copying-and-deleting), `kind` `unmake-root`.
 
 ### `name`
 
@@ -1006,7 +1009,7 @@ slipbox name journal
 A name a different folder has here is refused (exit 5), and so is a plain folder (`init` makes it a root first), or
 a `.slipbox/config.toml` whose `[vault]` table the edit can't follow (edit it by hand). `--dry-run`; `--plan` where a
 `.slipbox/` exists (making one has nothing to plan: exit 2). `--json`: [a change](#moving-copying-and-deleting),
-`kind` `vault`; for a repository given a `.slipbox/`, `{root, name, id, created}`.
+`kind` `root`; for a repository given a `.slipbox/`, `{root, name, id, created}`.
 
 ### `folders`
 
@@ -1270,7 +1273,7 @@ The themes you can use, built in and your own, the one in use marked `*`.
 slipbox themes
 ```
 
-`--json`: `[{name, source, path?, current}]`, `source` being `builtin` or `user` (with its `path`).
+`--json`: `[{name, source, path?, current}]`, `source` being `built-in` or `user` (with its `path`).
 
 ### `commands`
 

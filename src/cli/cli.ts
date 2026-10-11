@@ -67,7 +67,7 @@ import { activityFile, AutoIndex, autoIndexFile, backgroundStatus, describeBackg
 import { forgetPlan, listPlans, loadPlan, type SavedPlan, savePlan } from "../core/plans.ts";
 import { type Scope, SCOPES, searchScoped } from "../core/scope.ts";
 import { rootLabel, tildePath } from "../core/names.ts";
-import { findVaultRoot, folderAt, hasMarker, homeFolder, initVault, isListed, isInside, isVaultRoot, locateVault, markersAt, setRootMarkers, readVaultVersion, recordLocation, rootAt, VaultError, type VaultLocation, configFilesFor } from "../core/vault.ts";
+import { checkInit, findVaultRoot, folderAt, hasMarker, homeFolder, initVault, isListed, isInside, isVaultRoot, locateVault, markersAt, setRootMarkers, readVaultVersion, recordLocation, rootAt, VaultError, type VaultLocation, configFilesFor } from "../core/vault.ts";
 import { isTrusted, setTrustedRoots } from "../core/trust.ts";
 import { type Args, flag, has, parseArgs, UsageError, VALUED } from "./args.ts";
 import { VERSION } from "../version.ts";
@@ -768,8 +768,14 @@ const HANDLERS: Record<string, Handler> = {
     if (all && rest.length) throw new UsageError("links takes a note or --all, not both");
     const notes = all ? (s.graph.ensureAll(), [...s.graph.notes.keys()].sort()) : [resolveNote(s, requireArg(rest, "note"))];
     if (!all) await s.graph.loadGrammars(); // a code file's links are in its comments (16.10)
-    // Each link's file as shown (21.9): its path from this root, else from home, else absolute.
-    const links = notes.flatMap((from) => s.graph.linksOf(from).map((l) => ({ ...l, from, shown: l.path ? s.graph.shownPath(isAbsolute(l.path) ? l.path : s.graph.abs(l.path)) : null })));
+    // Each link's file as shown (21.9): its path from this root, else from home, else absolute. A web
+    // address is no file: its path is the address, whole, and it has no `shown`, as `resolve` says it.
+    const links = notes.flatMap((from) =>
+      s.graph.linksOf(from).map((l) => {
+        const abs = l.path && l.resolvedKind !== "external" ? (isAbsolute(l.path) ? l.path : s.graph.abs(l.path)) : null;
+        return { ...l, from, abs, shown: abs ? s.graph.shownPath(abs) : null };
+      }),
+    );
     const human = links
       .map((l) => {
         const where = `${all ? `${l.from}:` : ""}${l.line}:${l.column}`.padEnd(8);
@@ -778,7 +784,7 @@ const HANDLERS: Record<string, Handler> = {
             ? `UNRESOLVED${l.reason ? ` (${l.reason})` : ""}`
             : l.resolvedKind === "ambiguous"
               ? `AMBIGUOUS (${l.candidates.join(", ")})`
-              : `${l.shown ?? ""}${describeLanding(l) ? ` (${describeLanding(l)})` : ""}`;
+              : `${l.shown ?? l.path ?? ""}${describeLanding(l) ? ` (${describeLanding(l)})` : ""}`;
         const shown = l.kind === "wiki" || l.kind === "embed" ? `[[${l.target}${l.heading ? `#${l.heading}` : ""}]]` : l.target;
         return `${where} ${l.kind.padEnd(8)} ${shown} -> ${dest}\n`;
       })
@@ -798,7 +804,7 @@ const HANDLERS: Record<string, Handler> = {
         shown: l.shown,
         candidates: l.candidates,
         // Another root's file: that root, and its name (21.10).
-        ...s.rootOf(l.path ? (isAbsolute(l.path) ? l.path : s.graph.abs(l.path)) : null),
+        ...s.rootOf(l.abs),
         reason: l.reason ?? null,
         // How it landed, and how sure that is (exact, inferred, ambiguous, broken).
         how: l.via ?? l.how ?? null,
@@ -1243,9 +1249,13 @@ const HANDLERS: Record<string, Handler> = {
     }
     // A .slipbox/ made is no edit a saved plan holds (20.18): refused, nothing written.
     if (has(s.args, "plan")) throw new UsageError("making a .slipbox/ has no edits to plan: --dry-run previews it (--plan is for a folder inside a root)");
-    if (has(s.args, "dry-run")) return { data: { root: abs, dryRun: true }, human: `would give ${abs} a .slipbox/${name ? ` called ${name}` : ""}\n` };
     let r;
     try {
+      // A dry run refuses as the run would (a name taken: exit 5), writing nothing.
+      if (has(s.args, "dry-run")) {
+        checkInit(abs, name);
+        return { data: { root: abs, dryRun: true }, human: `would give ${abs} a .slipbox/${name ? ` called ${name}` : ""}\n` };
+      }
       r = initVault(dir.startsWith("/") ? dir : `${s.io.cwd}/${dir}`, name, { private: has(s.args, "private") });
     } catch (err) {
       if (err instanceof VaultError) throw new CliError(err.message, EXIT.refused);
@@ -1438,7 +1448,7 @@ const HANDLERS: Record<string, Handler> = {
     if (!rest[0]) {
       const waiting = listPlans();
       return {
-        data: waiting.map((p) => ({ id: p.id, made: p.made, root: p.root, command: p.command, kind: p.plan.kind, from: p.plan.from, to: p.plan.to, files: p.plan.files.length })),
+        data: waiting.map((p) => ({ id: p.id, made: p.made, root: p.root, command: p.command, kind: kindWord(p.plan.kind), from: p.plan.from, to: p.plan.to, files: p.plan.files.length })),
         human: waiting.map((p) => `${p.id}  ${p.made.slice(0, 16).replace("T", " ")}  ${p.command} ${p.plan.from}${p.plan.to ? ` → ${p.plan.to}` : ""}  (${p.plan.files.length} file${p.plan.files.length === 1 ? "" : "s"}, ${p.root})\n`).join("") || "no plans waiting\n",
       };
     }
@@ -1631,7 +1641,8 @@ const HANDLERS: Record<string, Handler> = {
       release: RELEASE,
       // The root (21.10): its path — a plain folder opened, that folder's — and its name, when it has one.
       root: s.loc.root,
-      mode: s.loc.mode,
+      // "root" where the code says vault: the word the user meets (DF-D9).
+      mode: s.loc.mode === "vault" ? "root" : s.loc.mode,
       name: s.loc.name,
       // What its cache and state are kept by (21.8): its path's key.
       key: s.loc.key,
@@ -2003,7 +2014,9 @@ const HANDLERS: Record<string, Handler> = {
       const input = await s.io.stdin();
       text = `${text}${input}`;
     }
-    if (!has(s.args, "stdin") && rest.length < 2) throw new UsageError("write needs the text, or --stdin");
+    // No text at all: an empty new note, said on purpose (DF-D16); else refused, as blank text is.
+    const empty = has(s.args, "create") && has(s.args, "allow-empty");
+    if (!has(s.args, "stdin") && rest.length < 2 && !empty) throw new UsageError("write needs the text, or --stdin (--create --allow-empty makes an empty note)");
     let rel: string;
     let created = false;
     let shadows: string[] = [];
@@ -2414,7 +2427,7 @@ async function renameResult(s: Session, plan: () => RenamePlan, g = s.graph): Pr
   ].join("\n");
   return {
     data: {
-      kind: p.kind,
+      kind: kindWord(p.kind),
       from: p.from,
       to: p.to,
       dryRun: !applied,
@@ -2437,8 +2450,16 @@ async function renameResult(s: Session, plan: () => RenamePlan, g = s.graph): Pr
  */
 function relearnRenamedRoots(s: Session, r: Result): Result {
   const d = r.data as { kind: string; dryRun: boolean; files: { abs: string }[] };
-  if (d.kind === "vault" && !d.dryRun) for (const f of d.files) if (f.abs.endsWith(`${sep}.slipbox${sep}config.toml`)) recordLocation(rootAt(dirname(dirname(f.abs))));
+  if (d.kind === "root" && !d.dryRun) for (const f of d.files) if (f.abs.endsWith(`${sep}.slipbox${sep}config.toml`)) recordLocation(rootAt(dirname(dirname(f.abs))));
   return r;
+}
+
+/**
+ * A change's kind as the JSON says it (DF-D9): "root" where the code, and the logs it keeps, say vault —
+ * a root's naming `root`, `init`'s and `deinit`'s `make-root` and `unmake-root`.
+ */
+function kindWord(kind: RenamePlan["kind"]): string {
+  return kind === "vault" ? "root" : kind === "make-vault" ? "make-root" : kind === "unmake-vault" ? "unmake-root" : kind;
 }
 
 export function defaultIo(): Io {

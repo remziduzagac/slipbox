@@ -969,7 +969,7 @@ describe("a root's identity, its state by path, the machine's roots (17.3–17.6
     expect(readFileSync(join(dir, ".slipbox", "config.toml"), "utf8")).toBe(cfg); // its identity untouched
   });
 
-  test("names: one a different folder has is refused, with one that isn't — x-<folder> inside x, -2 when taken (17.5, 21.6)", async () => {
+  test("names: one a different folder has is refused, by a dry run too, with one that isn't — x-<folder> inside x, -2 when taken (17.5, 21.6)", async () => {
     const { suggestFolderName } = await import("../src/core/folders.ts");
     const base = fresh("names");
     const tag = `xn${basename(base).slice(-6).toLowerCase()}`;
@@ -985,6 +985,24 @@ describe("a root's identity, its state by path, the machine's roots (17.3–17.6
     expect(refused.json.error.message).toContain(`a different folder is called "${tag}", at ${top}`);
     expect(refused.json.error.message).toContain('try "y"');
     expect((await cli(["init", other, "--name", "a:b"], other)).code).toBe(5);
+    // A dry run refuses as the run would (DF A9): exit 5, the same message, nothing written.
+    const dry = await cli(["init", other, "--name", tag, "--dry-run", "--json"], other);
+    expect(dry.code).toBe(5);
+    expect(dry.json.error.message).toBe(refused.json.error.message);
+    expect((await cli(["init", other, "--name", "a:b", "--dry-run"], other)).code).toBe(5);
+    expect(existsSync(join(other, ".slipbox"))).toBe(false);
+    expect((await cli(["init", top, "--name", `${tag}-again`, "--dry-run", "--json"], top)).json.error.message).toContain(`slipbox name ${tag}-again`);
+    // …and a [vault] table the edit can't follow, as the run refuses it; the file as it was.
+    const odd = join(base, "z");
+    mkdirSync(join(odd, ".slipbox"), { recursive: true });
+    writeFileSync(join(odd, ".slipbox", "config.toml"), "[ vault ]\naliases = [\"n\"]\n");
+    const oddDry = await cli(["init", odd, "--name", `${tag}-z`, "--dry-run", "--json"], odd);
+    expect(oddDry.code).toBe(5);
+    expect(oddDry.json.error.message).toBe((await cli(["init", odd, "--name", `${tag}-z`, "--json"], odd)).json.error.message);
+    expect(readFileSync(join(odd, ".slipbox", "config.toml"), "utf8")).toBe("[ vault ]\naliases = [\"n\"]\n");
+    // A name nobody has: previewed, nothing written.
+    expect((await cli(["init", other, "--name", `${tag}-y`, "--dry-run", "--json"], other)).json.data).toEqual({ root: other, dryRun: true });
+    expect(existsSync(join(other, ".slipbox"))).toBe(false);
     // The suggestion: prefixed with the root it sits in; a name taken gets -2.
     expect(suggestFolderName(join(top, "notes"), tag)).toBe(`${tag}-notes`);
     const again = join(base, tag);
@@ -1894,6 +1912,20 @@ describe("undoing a rename (7.4)", () => {
     expect(none.json.error.message).toContain("nothing to undo");
   });
 
+  test("an undo of a move, made or applied from a plan, warns of nothing: not of the path it moved from (DF A10)", async () => {
+    const dir = vault({ "notes/plan.md": "# Plan\n", "index.md": "[plan](notes/plan.md)\n", "other.md": "# Other\n" });
+    expect((await cli(["mv", "plan", "archive/plan"], dir)).json.warnings).toEqual([]);
+    const undone = await cli(["undo"], dir);
+    expect(undone.json.data).toMatchObject({ kind: "note", from: "archive/plan.md", to: "notes/plan.md", dryRun: false });
+    expect(undone.json.warnings).toEqual([]);
+    const planned = await cli(["mv", "plan", "archive/plan", "--plan"], dir);
+    expect((await cli(["apply", planned.json.data.plan.id], dir)).json.warnings).toEqual([]);
+    const again = await cli(["undo"], dir);
+    expect(again.json.data).toMatchObject({ kind: "note", from: "archive/plan.md", to: "notes/plan.md", dryRun: false });
+    expect(again.json.warnings).toEqual([]);
+    expect(read(dir, "index.md")).toBe("[plan](notes/plan.md)\n");
+  });
+
   test("newest first: a folder's move, then a note's rename, then the move; a file changed since stops it, and it waits", async () => {
     const dir = vault({ "a/one.md": "# One\n\n[two](two.md)\n", "a/two.md": "# Two\n", "index.md": "[x](a/one.md) [y](a/two.md)\n" });
     const before = snapshot(dir);
@@ -1925,7 +1957,7 @@ describe("undoing a rename (7.4)", () => {
     const cfg = read(one, ".slipbox/config.toml");
     await cli(["name", "undo-uno"], one);
     const r = await cli(["undo"], one);
-    expect(r.json.data).toMatchObject({ kind: "vault", from: "undo-uno", to: "undo-one" });
+    expect(r.json.data).toMatchObject({ kind: "root", from: "undo-uno", to: "undo-one" });
     expect(read(two, "x.md")).toBe(`[n](../${basename(one)}/n.md)\n`);
     expect(read(one, ".slipbox/config.toml")).toBe(cfg);
     // The lookup has its name back at once, as seen from another root (21.6).
@@ -2415,7 +2447,7 @@ describe("a folder made a vault, and a vault made a plain folder again (18.11)",
     const texts = Object.fromEntries(Object.keys(files).map((rel) => [rel, read(rel)]));
     const before = await reached([parent]);
     const dry = (await cli(["init", "proj", "--name", "mkproj", "--dry-run"], parent)).json;
-    expect(dry.data).toMatchObject({ kind: "make-vault", from: "proj", to: "mkproj", dryRun: true });
+    expect(dry.data).toMatchObject({ kind: "make-root", from: "proj", to: "mkproj", dryRun: true });
     expect(existsSync(join(parent, "proj", ".slipbox"))).toBe(false);
     const made = (await cli(["init", "proj", "--name", "mkproj"], parent)).json;
     expect(made.ok).toBe(true);
@@ -2427,7 +2459,7 @@ describe("a folder made a vault, and a vault made a plain folder again (18.11)",
 
     // Back: a plain folder again, nothing to rewrite either.
     const back = (await cli(["deinit", "proj"], parent)).json;
-    expect(back.data).toMatchObject({ kind: "unmake-vault", from: "proj", to: "mkparent", dryRun: false });
+    expect(back.data).toMatchObject({ kind: "unmake-root", from: "proj", to: "mkparent", dryRun: false });
     expect(existsSync(join(parent, "proj", ".slipbox"))).toBe(false);
     for (const rel of Object.keys(files)) expect([rel, read(rel)]).toEqual([rel, texts[rel]!]);
     expect(await reached([parent])).toEqual(before);

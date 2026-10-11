@@ -86,6 +86,7 @@ slipbox write <note> --stdin --if-unchanged <sha>     # replace the text, only i
 slipbox write <note> '<text>' --append   # add a line at the end
 slipbox write <note> --append -- '- item'   # text starting with a dash goes after --
 slipbox write <path> '<text>' --create   # a new note
+slipbox write <path> --create --allow-empty   # a new, empty note, to fill later
 slipbox send <note> --line <n>           # show it to the user in their running nvim
 slipbox history --json                   # what the user has been reading, newest first
 ```
@@ -105,7 +106,8 @@ list is advisory), and the user then gets a conflict prompt, so ask before writi
   change files beyond a note's text — `replace`, `mv`, `rm`, `rename-heading`, `relink`, `convert-links`, `undo`,
   `name`, `init`/`deinit`, `apply` — take `--dry-run`. Those that plan edits take `--plan`: it saves the plan, writing
   nothing, and `slipbox apply <id>` writes it. `write` has neither.
-- **Writing:** empty or blank text is refused (exit 2) so a failed pipe can't empty a note. `--append` adds a
+- **Writing:** empty or blank text is refused (exit 2) so a failed pipe can't empty a note; an empty note is made on
+  purpose with `--create --allow-empty` and no text. `--append` adds a
   line; `--append --paragraph` adds a block of its own (after a table or paragraph, plain `--append`
   would join it). `--create` paths are from the root unless they start with `./` or `../`;
   exit 3 on `write` means the note doesn't exist yet: add `--create`. A `--create` warning with

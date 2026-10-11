@@ -80,7 +80,7 @@ export class AutoIndex {
           if (this.graph && this.graph.parseSome(Math.max(1, end - performance.now()))) return true;
           if (this.graph) {
             p.indexed++;
-            for (const s of this.graph.skipped) if (s.reason === "nested vault") p.queue.unshift(join(p.current, s.rel));
+            for (const s of this.graph.skipped) if (s.reason === "nested root") p.queue.unshift(join(p.current, s.rel));
             this.markIndexed(p.current);
           }
           this.graph = null;
