@@ -341,3 +341,4 @@ dates. Each says what was asked, decided, built and found, and cites the decisio
   notes' links. Counting the others means saving more in the index (D39, D61), and reading code files' links needs
   their grammars at index time (ideas.md § Links).
 
+- The user accepted T1–T9: done, moved to `tasks/archive/`.

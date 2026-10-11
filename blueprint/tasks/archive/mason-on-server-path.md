@@ -1,5 +1,5 @@
 ---
-status: review
+status: done
 assignee: claude-writes
 created: "2026-10-11"
 ---
@@ -44,3 +44,4 @@ keep their own `PATH` handling (`linters.ts`, `projectPath`).
   machine shellcheck is only in Mason's `bin`, not on `PATH`, and bash-language-server is found there too. With the
   change, `shellcheck SC2045: Iterating over ls output is fragile` is reported; with it undone, nothing (*ran*).
 - 2026-10-11: design/lsp.md § The client for code says it.
+- 2026-10-11: accepted by the user; done.

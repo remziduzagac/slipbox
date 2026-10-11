@@ -1,5 +1,5 @@
 ---
-status: review
+status: done
 assignee: claude-moves
 created: "2026-10-11"
 ---
@@ -53,3 +53,4 @@ rewrite them in their own form, previewed with the rest of the move's plan.
   its `schema: config/schema.json` was unresolved before and after. The first try wrote `src/App.tsx:22:9` as
   `../../App.tsx:9` (the path cut at the last `:`): fixed, and the test covers it.
 - 2026-10-11: design/links.md § Renames and moves says it.
+- 2026-10-11: accepted by the user; done.

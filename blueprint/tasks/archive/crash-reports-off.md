@@ -1,5 +1,5 @@
 ---
-status: review
+status: done
 assignee: claude-writes
 created: "2026-10-11"
 ---
@@ -53,3 +53,4 @@ silent: reporting stays as Bun has it.
   macOS here.
 - 2026-10-11: design/distribution.md § Updates and docs/configuration.md § Environment say it. Still to change, outside
   this task's sections: blueprint/README.md lists "Bun's own crash reports (D199)" as open.
+- 2026-10-11: accepted by the user; done.

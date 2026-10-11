@@ -1,5 +1,5 @@
 ---
-status: review
+status: done
 assignee: claude-moves
 created: "2026-10-11"
 ---
@@ -43,3 +43,4 @@ Make the watcher's rule the index's: several candidates with that text, no move.
   with `applyToGraph` as the TUI's feed does): two notes of one text removed and the text written at a new path, no
   redirect; `inbox.md` copied to `inbox-moved.md` and then removed, the redirect recorded.
 - 2026-10-11: design/links.md § Repairs says the rule once, for the index and the watcher alike.
+- 2026-10-11: accepted by the user; done.

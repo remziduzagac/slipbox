@@ -1,5 +1,5 @@
 ---
-status: review
+status: done
 assignee: claude-links
 created: "2026-10-11"
 ---
@@ -52,3 +52,4 @@ count them (their links are in the index).
   `work/kestrel` lists `work/product/README.md:8`; the main checkout's code, on the same state, lists none.
 - 2026-10-11: design/links.md § Backlinks says what counts from other roots and how a hosting URL is read; § Links to
   the repository's own hosting that it is a backlink from other roots too.
+- 2026-10-11: accepted by the user; done.

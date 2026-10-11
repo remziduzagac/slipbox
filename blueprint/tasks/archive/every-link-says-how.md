@@ -1,5 +1,5 @@
 ---
-status: review
+status: done
 assignee: claude-links
 created: "2026-10-11"
 ---
@@ -49,3 +49,4 @@ hover, the link check).
 - 2026-10-11: design/links.md § How a link landed lists every kind, and where each is shown. docs/cli.md § How a link
   landed lists the old values (no `pointer` or `hosting`; a markdown link's `null`): not edited here, as the task
   names no user docs.
+- 2026-10-11: accepted by the user; done.

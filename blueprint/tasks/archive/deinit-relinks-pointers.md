@@ -1,5 +1,5 @@
 ---
-status: review
+status: done
 assignee: claude-moves
 created: "2026-10-11"
 ---
@@ -57,3 +57,4 @@ a relative path where the two travel together, else the path a link between sepa
 - 2026-10-11: design/links.md § Pointers (a paragraph of its own) and design/roots.md § `.slipbox/` say it.
   docs/cli.md (the `deinit` paragraph under § Renames) doesn't mention pointers either way: left, as the task names no
   user docs.
+- 2026-10-11: accepted by the user; done.

@@ -1,5 +1,5 @@
 ---
-status: review
+status: done
 assignee: claude-links
 created: "2026-10-11"
 ---
@@ -49,3 +49,4 @@ itself, if any, likewise.
   `examples/home/.build/kestrel.toml` would let the TUI's review (`space g m`) be tried on one.
 - 2026-10-11: design/links.md § The merge review says which forms it reads, and § Links to the repository's own
   hosting that the review checks them.
+- 2026-10-11: accepted by the user; done.

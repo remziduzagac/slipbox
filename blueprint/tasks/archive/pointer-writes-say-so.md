@@ -1,5 +1,5 @@
 ---
-status: review
+status: done
 assignee: claude-writes
 created: "2026-10-11"
 ---
@@ -63,3 +63,4 @@ write the qualified name; the CLI writes the qualified name and warns.
   warning. The TUI's question was checked by its test only (no terminal tests here).
 - 2026-10-11: design/links.md § Pointers ("Written", an item of its own) and § Links slipbox writes say it.
   docs/cli.md's `slipbox link` paragraph says nothing of pointers yet; not changed here (the task names no user doc).
+- 2026-10-11: accepted by the user; done.
