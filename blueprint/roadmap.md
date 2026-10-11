@@ -1,8 +1,7 @@
 # Roadmap
 
 Status: **initial design settled** (D210, 2026-10-11); phases 0–6+ built. Now: what writing the user documentation
-found in the code ([DOC's notes](workstreams/archive/user-docs/notes.md)); the licence to decide (`14.6`), the
-checks on a real Mac (`14.13`), native Windows (`14.14`–`14.17`).
+found (DF); the licence to decide (`14.6`), the checks on a real Mac (`14.13`), native Windows (`14.14`–`14.17`).
 
 Each step's ID is the plan's stable item ID: cite it (`3.3`, `10.1`) rather than restating the work. Phases and
 clusters differ: a cluster groups related items in dependency order, and its line in italics says which phase it
@@ -590,6 +589,13 @@ was added 2026-10-09 at the user's asking.*
 - [x] **[User documentation](workstreams/archive/user-docs/README.md)** (DOC): guides and a manual in `docs/`, for
   the people who use slipbox; the keymap, configuration and CLI references became the manual's chapters (consolidated
   2026-10-11).
+
+## What the docs found
+
+*Not a phase. Accepted item by item 2026-10-11.*
+
+- [ ] **[What writing the docs found](workstreams/doc-findings/README.md)** (DF): the bugs, the code and the design
+  brought together, the gaps closed, and screenshots in the guides, as the user settled each.
 
 ## Later
 

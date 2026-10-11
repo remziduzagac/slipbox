@@ -53,6 +53,12 @@ idea without an outcome is still open. Nothing here is agreed: the decisions are
 - Expose the link graph over the CLI, so agents do graph-based retrieval (`karpathywiki` runs Personalized PageRank
   over the wiki-link graph) with no LLM work in slipbox: slipbox owns the graph, agents own the reasoning.
   (2026-09-25) Chosen (D27, D32).
+- The skill as a package installable with npx, for the common harnesses (Claude Code, Codex and the like): today it
+  installs only from a source checkout (`scripts/install-local.sh --skill`), so a release install has no way to give
+  an agent the skill. The user's answer when DF settled it (C3). One skill still (D22), packaged per harness, which
+  touches D13's "not chosen as the mechanism". (2026-10-11) Open: a workstream of its own, to scope (the package's name,
+  the harnesses, publishing to npm).
+- How agents and slipbox work together, in more detail. (2026-10-11) Open: the user's note, to discuss later.
 
 ## Capture
 
