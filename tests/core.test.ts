@@ -1111,7 +1111,7 @@ describe("review cycle 3 (config)", () => {
   });
 });
 
-describe("what configuration.md promises", () => {
+describe("what manual/configuration.md promises", () => {
   const file = (text: string) => {
     const f = join(mkdtempSync(join(tmpdir(), "slipbox-cfgdoc-")), "c.toml");
     writeFileSync(f, text);
@@ -1121,7 +1121,7 @@ describe("what configuration.md promises", () => {
 
   test("every key's default is the one its listing gives", async () => {
     const { DEFAULT_CONFIG } = await import("../src/core/config.ts");
-    const doc = readFileSync(join(import.meta.dir, "..", "docs", "configuration.md"), "utf8");
+    const doc = readFileSync(join(import.meta.dir, "..", "docs", "manual", "configuration.md"), "utf8");
     const listed = Bun.TOML.parse(doc.split("## Every key")[1]!.split("```toml")[1]!.split("```")[0]!) as Sections;
     // The tables there are examples, not defaults: servers, languages, linters, keys, aliases, groups, colours.
     const examples = new Set(["language-server", "language", "linter", "keys", "aliases", "groups", "colors", "types"]);

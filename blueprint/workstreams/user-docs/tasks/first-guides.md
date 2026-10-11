@@ -1,6 +1,6 @@
 ---
-status: todo
-assignee:
+status: review
+assignee: claude-guides
 blocked_by: []
 created: "2026-10-11"
 ---
@@ -47,3 +47,31 @@ settings for every folder or for one, your editor, spelling dictionaries, indent
   `scripts/install-local.sh`, `scripts/release.ts`, `src/`.
 
 ## Log
+
+- 2026-10-11: Started (claude-guides). Reading the brief, the sources and the code.
+- 2026-10-11: Tried, with slipbox's state folders in my scratch (`XDG_*`): on the reference set (`build-home.ts`),
+  `info`, `doctor`, `themes`, `commands`, and `write --create` refusing over `notes/inbox.md` (exit 5); from source,
+  `--version`, `-V`, `upgrade` and `upgrade --check` (both: "runs from source … update its checkout", exit 1),
+  `uninstall` (lists the kept folders, removes nothing). In a scratch folder: the guide's two `write --create --stdin`
+  heredocs (they make `ideas/` too), `init` and `init --dry-run`, `search`, `index`, `find`, `links`, `spell`
+  (`--lang en-GB`). `install-local.sh` read, not run.
+- 2026-10-11: The TUI steps driven headlessly (an `App` on a `TextCanvas`, as `tests/tui.test.ts`'s harness does) on the
+  guide's two-note folder, key by key as written: first screen, `space`, `?`, the switcher, the explorer and `q`,
+  `tab` / `enter` / `ctrl+o`, `/` and `space f s`, `o` / type / `esc` / `ctrl+s` / `ctrl+k`, `ctrl+l`, `ctrl+q`
+  refused while unsaved; and making-it-yours' `[keys]`, `leader = '\'`, `[groups]`, `[aliases]`, `alt+z = ""`,
+  `"leader u 1" = "theme.set nord"`. Each did what the guide says. Still to try live: DOC-T12.
+- 2026-10-11: Differences: the README has `ctrl+e` for source mode (the code: `ctrl+k`; `ctrl+e` is end of row) and
+  `alt+left` for back (the code: previous word; back is `ctrl+o`, `space h p`). The guides follow the code.
+- 2026-10-11: Bug, not fixed: `scripts/install-local.sh` writes the launcher with `cat >"$bin_dir/slipbox"`, which
+  follows a symlink; over a release install (`~/.local/bin/slipbox` the installer's link) it would write the launcher
+  script over `<data>/versions/<v>/slipbox`. install.md says to uninstall a release first.
+- 2026-10-11: Found, for the coordinator: the installer's messages show a plan ID to users ("Windows is to come, plan
+  14.12"); `slipbox init`'s template points at `docs/configuration.md` (DOC-T11 moves it); a plain folder opened
+  without a file shows the named folders first ("Folders"), by design, which a newcomer meets once they have any
+  (getting-started says `esc` closes it); in a plain folder the CLI takes a note's own folder as the folder, so
+  `slipbox backlinks ideas/coffee.md` run in `~/notes` finds none while `slipbox backlinks coffee` finds `inbox.md`;
+  two keys bound to one command with different arguments show the same which-key entry; `en-GB` without a system
+  `en_GB` dictionary is checked in American English, silently.
+- 2026-10-11: Done: `docs/guides/install.md`, `getting-started.md`, `making-it-yours.md`, lint clean at 120; every key,
+  setting and command named checked against `DEFAULT_KEYS`, `DEFAULT_SOURCE_KEYS`, `DEFAULT_CONFIG` and
+  `CLI_COMMANDS`. Links into the manual by chapter only, no section anchors. Status: review (claude-guides).

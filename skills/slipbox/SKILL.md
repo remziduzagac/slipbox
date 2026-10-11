@@ -79,7 +79,7 @@ counts without the text.
 slipbox find <text> [<note>] --json      # data.matches[{path,line,column,match,text}]; --regex --whole
 slipbox replace <note> <old> <new> --dry-run --json   # see data.changes first, then run it without
 slipbox replace --all <old> <new> --dry-run --json    # every note (--files: text files too); undo takes it back
-slipbox spell <note> --suggest --json    # data.words[{line,column,word,suggestions}]; its lang:, else English
+slipbox spell <note> --suggest --json    # data.words[{line,column,word,suggestions}]; its lang:, else [spell]
 slipbox task <note> --json               # data.tasks[{line,checked,text}]
 slipbox task <note> <line> --check       # tick one (--uncheck, or neither to toggle)
 slipbox write <note> --stdin --if-unchanged <sha>     # replace the text, only if unchanged since read
@@ -109,10 +109,11 @@ list is advisory), and the user then gets a conflict prompt, so ask before writi
   line; `--append --paragraph` adds a block of its own (after a table or paragraph, plain `--append`
   would join it). `--create` paths are from the root unless they start with `./` or `../`;
   exit 3 on `write` means the note doesn't exist yet: add `--create`. A `--create` warning with
-  `data.shadows` means other notes have that name: naming it by that name may now be exit 4.
-- **Names:** a bare name resolves the same from any folder; if several notes share it you get exit 4
-  and `data.candidates` — pick one by path, or add `--from <note>` for the one nearest it. (For
-  `send`, the candidates are nvims: objects with `socket`, `cwd`, `file`.)
+  `data.shadows` means other notes have that name: naming it by that name may now find another one, so use its path.
+- **Names:** a bare name resolves the same from any folder. If several notes share it, the one in the fewest
+  folders wins; a real tie is exit 4 with `data.candidates` — pick one by path, or add `--from <note>` for the one
+  nearest it. When it matters which note you get, name it by its path. (For `send`, the candidates are nvims:
+  objects with `socket`, `cwd`, `file`.)
 - **Link status:** `links` says `note`, `file`, `folder`, `anchor`, `external`, `ambiguous` or `unresolved`;
   `resolve` says `resolved`, `external`, `ambiguous` or `unresolved`.
 - **What the user sees:** `history --json` gives `current` (the note on screen, saved by the running
@@ -139,12 +140,12 @@ slipbox footnotes <note> add 12:30 'Source: the dome log'   # [^N] at line 12, c
 slipbox footnotes <note> edit 3 'New text'   # also: rm <label>, rename <label> <new>; --if-unchanged <sha>
 slipbox resolve '[text](../home.md)' --from people/x.md   # a markdown link, resolved as one
 slipbox resolve slipbox://research/x.md --from notes/plan.md --json   # data.href: the relative path to a file there
-slipbox link <note> --from <note>        # a link to <note> as this folder writes them (wikilink or markdown, its path form)
+slipbox link <note> --from <note>        # a link to <note> as this folder writes them (wikilink or markdown, path form)
 slipbox resolve slipbox://notes/inbox.md --json   # a pointer into a named folder: where it is on this machine
 slipbox folders --json                   # the named folders pointers use: each name, its copies, the one links open
 slipbox search dome shutter --json       # notes ranked by the words: hits[{path, line, column, heading, snippet}]
 slipbox search dome --scope linked --json   # and the roots linked to or from this one (all: every root known)
-slipbox changed --json                   # what this branch changed against main: files[{path, state, from?}]
+slipbox changed --json                   # what this branch changed against its base (main): files[{path, state, from?}]
 slipbox merge-review feat --json         # before merging feat here: breaks[{path, line, target, cause, by, fix}]
 slipbox diff <note> --json               # the note's diff against where the branch left main: rows[{kind, text, line}]
 slipbox search '"exact phrase" -draft #project path:notes/'   # phrases, -not, a tag, a folder; prefix* too
@@ -163,8 +164,26 @@ is. A link several notes answer to is exit 4 with the candidates; `how` says how
 sure (a tie broken by where the link sits is `inferred`: fragile). **To add a link, ask `slipbox link <note> --from
 <note>`** — it writes it in this folder's convention (a wikilink or a markdown link, its path form), or as a pointer
 into a named folder that doesn't travel with this one. The old `research:x.md` form is no link: exit 3, with the
-pointer that is one in `suggest`. A note name on the command line, shared by several notes, is exit 4 with the
-candidates: pick one, or add `--from` for the nearest.
+pointer that is one in `suggest`. A note name on the command line, shared by several notes, goes to the one in the
+fewest folders; a real tie is exit 4 with the candidates: pick one, or add `--from` for the nearest.
+
+## Moving, renaming and deleting
+
+Every link to what moves is rewritten, in this root and in the roots linking into it, each in its own form. Preview
+first, or plan and apply:
+
+```bash
+slipbox mv <note> <path> --dry-run --json   # rename or move a note, file or folder: data.files[].edits, nothing written
+slipbox mv <note> <path> --plan          # saved, nothing written; slipbox apply <id> writes it (5: a file changed)
+slipbox apply                            # the plans waiting, newest first
+slipbox rename-heading <note> <old> <new> --dry-run   # a heading and every link to it
+slipbox rm <note> --dry-run              # to slipbox's trash; says how many links break (data.breaking)
+slipbox trash                            # what's there; slipbox trash restore <id|path> puts one back
+slipbox undo --dry-run                   # take back the last mv, rename-heading, relink, convert-links, replace --all
+```
+
+The new path is the whole path, from the root (or `./`, `../` from here): naming an existing folder doesn't move the
+note into it. Ask before deleting or moving the user's notes.
 
 ## Exporting for the user
 
@@ -193,7 +212,7 @@ slipbox scratch path                     # where it lives
 slipbox scratch clear --if-unchanged <sha>   # clear only if nobody appended since you read it
 ```
 
-Reference forms follow GitHub: `path:42`, `path:42-50`, `path:42:10-30`, `path:42:10-50:30`.
+Reference forms: `path:42`, `path:42-50`, `path:42:10-30` (line 42, columns 10–30), `path:42:10-50:30`.
 Paths inside the project are stored relative to it.
 
 ## Don'ts
