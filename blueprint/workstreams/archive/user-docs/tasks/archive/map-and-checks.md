@@ -1,5 +1,5 @@
 ---
-status: review
+status: done
 assignee: claude
 blocked_by: [DOC-T1, DOC-T2, DOC-T3, DOC-T4, DOC-T5, DOC-T6, DOC-T7, DOC-T8, DOC-T9, DOC-T10]
 created: "2026-10-11"
@@ -65,4 +65,4 @@ whole.
   UI settings remembered per folder. markdownlint and the docs test clean.
 - 2026-10-11: what the writers found in the code, for the user: bugs, places where the code and the design disagree,
   and gaps, listed in the workstream's notes.
-
+- 2026-10-11: accepted by the user; done.

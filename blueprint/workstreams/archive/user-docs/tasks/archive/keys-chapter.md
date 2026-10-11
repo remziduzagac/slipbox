@@ -1,5 +1,5 @@
 ---
-status: review
+status: done
 assignee: claude-keys
 blocked_by: []
 created: "2026-10-11"
@@ -79,3 +79,4 @@ in the code but not the doc, or the reverse, is fixed in the chapter and noted i
   long prose on those is not in this chapter.
 - 2026-10-11: Done: `docs/manual/keys.md`, markdownlint clean, own anchors resolve, no IDs, no links into the
   blueprint; links to other chapters (no anchors) for DOC-T11. Status review.
+- 2026-10-11: accepted by the user; done.

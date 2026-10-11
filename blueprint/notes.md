@@ -342,3 +342,13 @@ dates. Each says what was asked, decided, built and found, and cites the decisio
   their grammars at index time (ideas.md § Links).
 
 - The user accepted T1–T9: done, moved to `tasks/archive/`.
+
+## User documentation (2026-10-11)
+
+- The user asked for user documentation after the reconciliation; it became the first workstream, DOC: its questions
+  and answers are in [its notes](workstreams/archive/user-docs/notes.md), its decisions DOC-D1–DOC-D4.
+- Written by ten agents in parallel, a task each, read together and the guides tried live; then the user accepted
+  it, "1 is yes", and DOC was consolidated: requirements.md § Documentation added, the folder archived.
+- **Open, for the user:** what the writers found in the code (DOC's notes § What writing the docs found in the code):
+  bugs, places where the code and the design disagree, gaps; and whether the docs get screenshots.
+

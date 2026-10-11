@@ -1,5 +1,5 @@
 ---
-status: review
+status: done
 assignee: claude-editing
 blocked_by: []
 created: "2026-10-11"
@@ -77,3 +77,4 @@ trash and restoring, undoing a file operation; the same from the CLI.
   text, or --stdin", so the CLI can't make an empty note.
 - 2026-10-11: done: `docs/manual/editing.md` (445 lines) and `docs/manual/files.md` (252 lines), lint clean; every key,
   setting, alias and CLI command named checked against the code. Links only to other chapters, no anchors in them.
+- 2026-10-11: accepted by the user; done.

@@ -1,5 +1,5 @@
 ---
-status: review
+status: done
 assignee: claude-guides2
 blocked_by: []
 created: "2026-10-11"
@@ -99,3 +99,4 @@ elsewhere; where each goes; what to check before sending it.
   `work/kestrel` and its `agent/sync-retry` worktree, `refactor/docs-layout` for a review with breaks.
 - 2026-10-11: Done: `docs/guides/agents.md`, `code-and-git.md`, `from-obsidian-or-zk.md`, `exporting.md`, lint clean at
   120 columns; links to manual chapters by file only, no section anchors into other files. Status review.
+- 2026-10-11: accepted by the user; done.

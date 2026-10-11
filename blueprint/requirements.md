@@ -209,6 +209,20 @@ How: docs/manual/keys.md; docs/manual/configuration.md; design/tui.md § Modes a
 
 How: design/distribution.md.
 
+## Documentation
+
+- slipbox ships user documentation in Markdown in `docs/`: guides for the tasks a newcomer meets, and a manual
+  covering every key, setting, command and behaviour, written for users, without the blueprint's IDs and never
+  linking into it; the blueprint links to the docs, not the reverse (DOC-D1, DOC-D2, DOC-D3).
+- A change users will see updates the docs in the same piece of work. `tests/docs.test.ts` keeps them whole: every
+  link and anchor landing, every CLI command and flag and every default key in the manual, no ID; the configuration
+  chapter's defaults are tested against the code's.
+- They're written for a person at a terminal who knows Markdown, not necessarily vim: what slipbox does now, in plain
+  words, each subject explained in one chapter and linked from the rest. The agent skill stays the agents' guide,
+  checked against the CLI chapter (DOC-D4).
+
+How: docs/README.md; workstreams/archive/user-docs/requirements.md § How they are written.
+
 ## Quality goals
 
 - **Rendering at least as good as leaf's** (D4, D25, D88, D89). Checked by slipbox replacing leaf for reading `docs/`,

@@ -1,5 +1,5 @@
 ---
-status: review
+status: done
 assignee: claude-code
 blocked_by: []
 created: "2026-10-11"
@@ -93,3 +93,4 @@ problems among them); trust: a folder's code never runs unless you trust its roo
   `editing.md`, `links-and-roots.md` as they stand now). Program output quoted in code blocks keeps its em dashes
   (merge-review's lines, the trust question). The Problems panel's keys are left to `screen.md`, completion's keys to
   `editing.md`; `lint.command` is in `code.md`, as `editing.md` sends it there. In review.
+- 2026-10-11: accepted by the user; done.

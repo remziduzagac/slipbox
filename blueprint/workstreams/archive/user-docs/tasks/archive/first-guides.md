@@ -1,5 +1,5 @@
 ---
-status: review
+status: done
 assignee: claude-guides
 blocked_by: []
 created: "2026-10-11"
@@ -75,3 +75,4 @@ settings for every folder or for one, your editor, spelling dictionaries, indent
 - 2026-10-11: Done: `docs/guides/install.md`, `getting-started.md`, `making-it-yours.md`, lint clean at 120; every key,
   setting and command named checked against `DEFAULT_KEYS`, `DEFAULT_SOURCE_KEYS`, `DEFAULT_CONFIG` and
   `CLI_COMMANDS`. Links into the manual by chapter only, no section anchors. Status: review (claude-guides).
+- 2026-10-11: accepted by the user; done.

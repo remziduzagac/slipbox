@@ -1,5 +1,5 @@
 ---
-status: review
+status: done
 assignee: claude-links
 blocked_by: []
 created: "2026-10-11"
@@ -86,3 +86,4 @@ a command.
   clean at 120; every key checked against `src/tui/keys.ts` (the find row's `alt` keys against `src/tui/app.ts`),
   every `:` alias against `DEFAULT_ALIASES`, every setting against `DEFAULT_CONFIG`, every command against
   `slipbox help`. Links into other chapters name only the files, no anchors. Status review.
+- 2026-10-11: accepted by the user; done.

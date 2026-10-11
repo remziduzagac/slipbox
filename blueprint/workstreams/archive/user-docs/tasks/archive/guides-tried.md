@@ -1,5 +1,5 @@
 ---
-status: review
+status: done
 assignee: claude
 blocked_by: [DOC-T9, DOC-T10, DOC-T11]
 created: "2026-10-11"
@@ -52,4 +52,4 @@ as written is fixed in the guide; where the code is wrong, it becomes a task, an
   the explorer: the guide's own example, a repository without one, lists its code (*ran*).
 - 2026-10-11: from-obsidian-or-zk.md, on `hobbies/cooking`: `Home.md` drawn with its properties table, wikilinks,
   embedded picture, callout and tags (*ran*). The CLI steps of every guide were run by their writers (their Logs).
-
+- 2026-10-11: accepted by the user; done.

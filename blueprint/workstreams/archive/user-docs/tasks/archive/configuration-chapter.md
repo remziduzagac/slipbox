@@ -1,5 +1,5 @@
 ---
-status: review
+status: done
 assignee: claude-config
 blocked_by: []
 created: "2026-10-11"
@@ -95,3 +95,4 @@ promises" in `tests/core.test.ts` reads `docs/manual/configuration.md` instead, 
   command, alias and CLI command and flag named checked against the code. Links to other chapters are to files only
   (`links-and-roots.md`, `code.md`, `reading.md`, `screen.md`, `editing.md`, `files.md`, `git.md`, `finding.md`,
   `privacy.md`, `cli.md`, `keys.md`, `../guides/install.md`), no anchors in them; `reading.md` doesn't exist yet.
+- 2026-10-11: accepted by the user; done.

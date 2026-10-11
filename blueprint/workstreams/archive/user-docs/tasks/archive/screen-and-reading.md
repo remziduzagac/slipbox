@@ -1,5 +1,5 @@
 ---
-status: review
+status: done
 assignee: claude-reading
 blocked_by: []
 created: "2026-10-11"
@@ -78,3 +78,4 @@ render`.
 - 2026-10-11: Done: both chapters clean under markdownlint at 120 columns, no IDs, no links into blueprint/. Links
   between my two files use anchors (`screen.md#the-status-line`, `screen.md#the-info-view`, `reading.md#glyphs`);
   links to the other chapters name the file only.
+- 2026-10-11: accepted by the user; done.

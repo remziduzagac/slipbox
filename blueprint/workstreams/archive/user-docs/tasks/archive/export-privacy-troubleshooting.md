@@ -1,5 +1,5 @@
 ---
-status: review
+status: done
 assignee: claude-export
 blocked_by: []
 created: "2026-10-11"
@@ -92,3 +92,4 @@ of date, WSL; `SLIPBOX_DEBUG`; what to include when reporting a problem.
 - 2026-10-11: Done (claude-export): `docs/manual/export.md`, `privacy.md`, `troubleshooting.md`, lint clean at 120
   columns; every key, setting and command named checked in `keys.ts`, `config.ts`, `cli.ts`. Links into other
   chapters are to files, but one anchor: `configuration.md#where-slipbox-keeps-things` (there now).
+- 2026-10-11: accepted by the user; done.

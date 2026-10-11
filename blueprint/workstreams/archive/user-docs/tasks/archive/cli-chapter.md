@@ -1,5 +1,5 @@
 ---
-status: review
+status: done
 assignee: claude-cli
 blocked_by: []
 created: "2026-10-11"
@@ -92,3 +92,4 @@ needs, fix the skill (it stays the agents' guide, DOC-D4) and say so in the Log.
   it lacked. Its new lines run on the demo vault with the test's placeholders, none a usage error. Lint clean.
 - 2026-10-11: For DOC-T11: the blueprint points at `docs/cli.md` (D15's § Stability, D16's § Installing for agents,
   D17, `how-it-works.md`); the stable list is now the chapter's "What stays stable". Done: review.
+- 2026-10-11: accepted by the user; done.
