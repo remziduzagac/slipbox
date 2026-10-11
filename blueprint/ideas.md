@@ -194,6 +194,11 @@ idea without an outcome is still open. Nothing here is agreed: the decisions are
   Not chosen (D117).
 - Scout, an outside engine behind the same API (semantic search, the graph), and `@slipbox/links` for it.
   (2026-10-01) Deferred (D124); `@slipbox/links` not chosen (D124).
+- Improving search, cheapest first: partial matches ranked rather than all words or any; links (an in-link boost,
+  one hop out from the top hits); word forms (porter for English, a stemmer or five-letter prefixes for Turkish); did
+  you mean; identifiers split in code; a row per section (against D115); vectors per section, opt-in, fused by RRF
+  (against D124's deferral). Measured first on 30 to 50 real queries, each change kept only if the score rises.
+  (2026-10-11) Open: to look at later ([research/search-improvements.md](research/search-improvements.md)).
 
 ## Embeds
 

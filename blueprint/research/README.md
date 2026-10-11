@@ -12,3 +12,5 @@ obtained. Research informs the decisions but decides nothing; each file's summar
 - [link-conventions.md](link-conventions.md): how other tools give a link its meaning (roots, a leading `/`, names,
   moves), and how Obsidian and zk write one.
 - [keymap-comparison.md](keymap-comparison.md): slipbox's keys beside vim's, VS Code's and Obsidian's.
+- [search-improvements.md](search-improvements.md): where slipbox's search falls short, and what would improve it,
+  cheapest first: partial matches, links, word forms, typos, sections, vectors; and how to know a change helped.
