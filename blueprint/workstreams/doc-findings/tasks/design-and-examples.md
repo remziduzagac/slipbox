@@ -1,5 +1,5 @@
 ---
-status: doing
+status: review
 assignee: claude
 blocked_by: []
 created: "2026-10-11"
@@ -36,4 +36,8 @@ The design says what the code does where the user found the code right; the exam
   `auto` only (src/core/glyphs.ts); the table from `LANGUAGES` (src/core/servers/languages.ts) (*read*).
 - 2026-10-11: the examples' stale text waits for DF-T7, which adds Obsidian cases to the reference set and its
   `CASES.md`, so the two don't collide.
+- 2026-10-11: D, after DF-T7 merged: `link-styles.md` says wikilinks are followed in `notes/` (checked:
+  `slipbox links` there lists `[[kestrel-v2-3]]` resolved by its name, *ran*), its fenced line too;
+  `about-this-vault.md` drops Mermaid and LaTeX from what's missing; `CASES.md` says maths and Mermaid are drawn; the
+  manifest's two wikilink case titles likewise. `tests/home.test.ts` and `tests/docs.test.ts` pass (*ran*).
 

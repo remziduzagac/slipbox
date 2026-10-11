@@ -88,8 +88,8 @@ build (`scripts/build-home.ts`), not kept as they are. Each file's purpose and t
 - Block id ^id at the end of paragraph, list item, and on a lone line after a table/quote/list —
   `hobbies/cooking/Recipes/Weeknight/Dal.md`, `notes/projects/kestrel-v2-3.md`,
   `work/kestrel/docs/adr/0003-sharing-links.md` (rendering.md Embeds block)
-- Math and mermaid shown as code/text: \$x\$, \$\$ block, \`\`\`mermaid — `notes/research/route-cost-models.md`,
-  `work/kestrel/docs/architecture.md` (pipeline-cookbook; About: not rendered)
+- Math and mermaid drawn: \$x\$, \$\$ block, \`\`\`mermaid — `notes/research/route-cost-models.md`,
+  `work/kestrel/docs/architecture.md` (rendering.md Diagrams and maths)
 
 ### lists
 

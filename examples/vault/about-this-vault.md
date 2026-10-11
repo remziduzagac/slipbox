@@ -79,8 +79,6 @@ terminal escapes, symlinks, ignored folders, a nested vault — live in the test
 `tests/fixtures/vault/`, since they don't belong in a demo. Still missing anywhere:
 
 - **A pathological file.** No multi-megabyte note, and no `.md` file that is really a log.
-- **Mermaid and LaTeX, rendered.** `software/pipeline-cookbook.md` now has a mermaid fence and a
-  `$$` block, but slipbox shows both as code; drawing them is a deferred feature.
 
 Some links are unresolved on purpose, so the link index always has failures to report:
 

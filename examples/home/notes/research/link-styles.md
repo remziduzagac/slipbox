@@ -24,7 +24,7 @@ The target is `projects/kestrel-v2-3.md`, a sibling folder of this one. Its abso
 6. A file URL: [file URL](file:///home/sam/notes/projects/kestrel-v2-3.md)
 7. A pointer by this folder's name: [pointer](slipbox://notes/projects/kestrel-v2-3.md)
 8. A pointer by its old name, from before August: [old name](slipbox://inbox/projects/kestrel-v2-3.md)
-9. A wikilink: [[kestrel-v2-3]], which in this vault is text and not a link
+9. A wikilink: [[kestrel-v2-3]], found by its name, as Obsidian finds it
 10. By block id: [the decision](../projects/kestrel-v2-3.md#^ship-decision)
 11. A folder: [the projects](../projects/)
 
@@ -43,7 +43,7 @@ Each of the above, with the name mistyped by one letter, to see every kind of fa
 6. [file URL](file:///home/sam/notes/projects/kestrel-v2-33.md)
 7. [pointer](slipbox://notes/projects/kestrel-v2-33.md)
 8. [old name](slipbox://inbox/projects/kestrel-v2-33.md)
-9. A wikilink, [[kestrel-v2-33]], also broken, also text
+9. A wikilink, [[kestrel-v2-33]], also broken
 10. [the decision](../projects/kestrel-v2-3.md#^no-such-block)
 11. [the folder](../project/)
 
@@ -146,13 +146,13 @@ A pointer names a folder by what travels with it, not by where it sits.
 The text form of the vault names the old tool wrote, for comparison, which is old text now and is flagged:
 [[research:x.md]] and [t](research:x.md).
 
-## Wikilinks are text here
+## Wikilinks here too
 
-Obsidian users read my notes. In this vault a wikilink is plain text: [[note]], [[note|an alias]], ![[an embed]], and
-an escaped one, \[[escaped]]. In a fence: `[[not-a-link]]`, and
+Obsidian users read my notes, and slipbox follows a wikilink here as it does there: [[note]], [[note|an alias]],
+![[an embed]]; an escaped one, \[[escaped]], stays text. In a fence: `[[not-a-link]]`, and
 
 ```text
-[[kestrel-v2-3]] is text in a fence, as it is outside one.
+[[kestrel-v2-3]] is text in a fence, though a link outside one.
 ```
 
 And a name that matches nothing, extensionless and not a wikilink: [typo](../projects/kestrel-v2-3s).
