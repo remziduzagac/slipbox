@@ -107,7 +107,7 @@ These churn freely before 1.0:
 | `convert-links` | as `mv`, kind `convert`, plus `ambiguous[]`: the links several notes answer to |
 | `undo` | as `mv`: the rename taken back (`from` and `to` the other way), plus `undo{id, at}`; exit 3: nothing |
 | `cp <note\|folder> [path]` | `{from, to, dir}` — beside it as `name-copy` without a path; exit 5 onto a file |
-| `rm <note\|folder>` | `{path, dryRun, breaking, trashed{id, abs, shown, dir, at}}` — to the vault's trash |
+| `rm <note\|folder>` | `{path, dryRun, breaking, trashed{id, abs, shown, dir, at}}` — to the root's trash |
 | `trash [restore <item>]` | the items, newest first; `restore`: the item put back (exit 5 over something there) |
 | `themes` | `[{name, source, path?, current}]` |
 | `commands` | `[{id, title, cli, desc}]` — the registry with CLI equivalents |
@@ -125,7 +125,7 @@ These churn freely before 1.0:
 | `read <note>` | `{path, abs, sha, bom, crlf, invalidUtf8, content}` |
 | `stat <note>` | `{path, abs, root, name, properties, size, mtime, title, tags, headings, links, unresolved, …}` |
 | `write <note>` | `{path, created, shadows (with --create), appended, previousSha, sha}` |
-| `mkdir <path>` | `{path, created}`; an existing path or one outside the vault is exit 5 |
+| `mkdir <path>` | `{path, created}`; an existing path or one outside the root is exit 5 |
 | `send <note>` | `{path, line, server, commands[]}` |
 | `history` | `{read[{path, at, line}], open[[path…]…]}` (open: the TUI's tabs, each its windows) |
 
@@ -160,7 +160,7 @@ rewrite them.
 4. A note name: its file name without the extension (or a declared alias). Collisions then go to the shortest path,
    and a real tie exits 4. That's how a command names a note; links in notes are paths (`20.2`).
 5. A data or text file of the root (`16.4`), by its path with its extension (`cfg/app.toml`,
-   `tool.py`), from the current folder or the vault's root. It's read and written as it is, never
+   `tool.py`), from the current folder or the root. It's read and written as it is, never
    parsed as a note. A data file renders (`render`, as in the TUI) and has an outline (its
    sections); one that doesn't parse is exit 1 with its error. A text file has no rendered form:
    `render` is exit 2 (`read` gives its text). Source code in a language with a grammar (`16.8`) has
@@ -177,7 +177,7 @@ searches them as well. `write --create` keeps a name's known extension (`cfg/new
 ## Finding and changing notes
 
 These reach, from the CLI, the state the TUI's find, replace, task and save change. They write the way
-the TUI saves: atomically, through a symlink but never outside the vault (`7.5`), keeping a BOM and
+the TUI saves: atomically, through a symlink but never outside the root (`7.5`), keeping a BOM and
 CRLF line endings. A note that isn't valid UTF-8 is read but never rewritten (exit 5).
 
 ```bash
@@ -191,7 +191,7 @@ slipbox task 2026-09-14-weekly           # line, [x] or [ ], text
 slipbox task 2026-09-14-weekly 17 --check
 slipbox read note --json                 # data.content, data.sha
 slipbox stat note                        # size, dates, title, counts, encoding: the TUI's note info
-slipbox links --all --json               # every link in the vault, each with from: find the broken ones
+slipbox links --all --json               # every link in the root, each with from: find the broken ones
 slipbox write log --append -- '- 22:10 seeing 2"'   # text starting with a dash goes after --
 slipbox write note --stdin --if-unchanged <sha> < new.md
 slipbox write logs/2026-10-01 '# 1 October' --create
@@ -204,7 +204,7 @@ slipbox history --json                   # data.read[{path,at,line}], data.open 
   whether it resolves: `resolved` (a note, a file or a folder), `external`, `ambiguous` or
   `unresolved`. A `links` entry with `note`, `file`, `folder` or `anchor` is one `resolve` calls
   `resolved`.
-- **Paths for `--create`** are from the vault's root, wherever you are in it, unless they start
+- **Paths for `--create`** are from the root, wherever you are in it, unless they start
   with `./` or `../` (then from the current folder). A bare note name never depends on the current
   folder: a name several notes share is exit 4 with the candidates (`--from` picks the nearest).
 - **`write`** refuses empty or blank text, `write note ""` included (exit 2: a producer that failed
@@ -215,7 +215,7 @@ slipbox history --json                   # data.read[{path,at,line}], data.open 
   have warns, and lists them in `shadows`, the name a command's `<note>` now finds two notes by.
 - **`replace`** builds its answer before it writes, from each changed line alone, so it takes time
   in proportion to the note and a note is never changed without an answer.
-- **`find`** across the vault warns about the notes the walk left out for their size (name one to
+- **`find`** across the root warns about the notes the walk left out for their size (name one to
   search it); `capture` warns about a `--ref` to a missing file or past its end, and refuses an
   empty `--stdin`.
 - **`history`** is what the running TUI last saved: it saves the session (open tabs, the note on
@@ -247,11 +247,11 @@ slipbox history --json                   # data.read[{path,at,line}], data.open 
   no longer have that sha, the one `read` reports: nobody changed it since you read it. An empty
   sha is a usage error (exit 2), never a check that passes.
 - **`write`** replaces the note's text; `--append` adds to its end on a new line; `--create`
-  makes a new note: the argument is then a path in the vault (`.md` added), never a name to
+  makes a new note: the argument is then a path in the root (`.md` added), never a name to
   resolve, and a file already there is refused (exit 5), never overwritten. Text given as
   arguments ends with a newline; `--stdin` is written as it comes. No write reaches outside the
-  vault, a symlinked folder on the way included. What counts as a note is the vault's
-  `walk.extensions` (a `.txt` note in a vault that lists `txt`), not the walk's exclusions: a note
+  root, a symlinked folder on the way included. What counts as a note is the root's
+  `walk.extensions` (a `.txt` note in a root that lists `txt`), not the walk's exclusions: a note
   a pattern leaves out of the index is still written. A new name with a control or bidi character
   is refused.
 - **`task`** lists task items from the parsed note, so a `- [ ]` inside a code block isn't one.
@@ -261,8 +261,8 @@ slipbox history --json                   # data.read[{path,at,line}], data.open 
   it, so a note the walk leaves out for its size is still quick to reach. `find` shows a long line
   as a window around the match (`…` where cut), so its output grows with the matches, not with the
   line; a note it can't read is a warning, and the rest are still searched.
-- **What a writer may change.** `write`, `replace` and `task` change a file of the note's root — a
-  vault, or the plain folder a loose file is in (`20.22`) — inside it by its real path, and where the walk
+- **What a writer may change.** `write`, `replace` and `task` change a file of the note's root — its
+  root, or the plain folder a loose file is in (`20.22`) — inside it by its real path, and where the walk
   lists notes (or a note it reached, `20.8`): never `.slipbox/`, `.git/`, a hidden folder or
   `node_modules`, and never a path outside `--root` when that names the root. `replace --dry-run`
   only reads, so it previews any note; its `newSha` is `null`.
@@ -291,7 +291,7 @@ slipbox history --json                   # data.read[{path,at,line}], data.open 
 It uses the same resolver as `links` and the TUI, so it is the CLI equivalent of following a link,
 attachments included: a path, from `--from`'s folder (`[a](../home.md)`, given whole, as markdown), with a heading,
 `line` is that heading's source line. Without `--from`, the note a command would name — a path from here or the
-vault's root, or its name — else a file by its path from the vault's root. External URLs come back as
+root, or its name — else a file by its path from the root. External URLs come back as
 `status: "external"`. `links --all` lists every note's, each with `from`.
 
 **A wikilink resolves within its root** (`21.3`): `[[name]]`, `[[name#heading]]`, `![[dal.png]]` — by its path from
@@ -303,12 +303,14 @@ makes one. Previous names, `[[vault:note]]` and a move remembered aren't read (`
 converter reads them (`20.1`), as the legacy reader it keeps for what it rewrites — `[[name:note]]` by the named
 folders' lookup (`21.6`).
 
-**How a link landed** (trailscout's review): `links` and `resolve` give `how` — `path`, `suffix` (the end of its path),
-`name` (the only note of it), or the tie broken: `exact-case`, `same-folder`, `deepest-shared`, `shortest`; or the
-`via` (`alias`, `old-name`, `another-copy`) — and `certainty`: `exact`, `inferred`, `ambiguous`, `broken`. The last
-two ties make a link **fragile** (a note of the name nearer takes it): `problems` lists them as `fragile[]`, each with
-`fix`, the path that names its note for sure; `diagnostics` too, as `fragile` with `fix{title, text}`. A command that
-makes or removes a note sending links by name elsewhere warns, each: `Home.md:3: [[Pie]] reached X; it reaches Y now`.
+**How a link landed**: `links` and `resolve` give every link that reaches a file its `how` — `path` (a markdown link,
+or a wikilink's path), `pointer` (a `slipbox://` pointer), `hosting` (a link to the repository's own hosting),
+`suffix` (the end of its path), `name` (the only note of it), or the tie broken: `exact-case`, `same-folder`,
+`deepest-shared`, `shortest`; or the `via` (`alias`, `old-name`, `another-copy`) — and `certainty`: `exact`,
+`inferred`, `ambiguous`, `broken`. The last two ties make a link **fragile** (a note of the name nearer takes it):
+`problems` lists them as `fragile[]`, each with `fix`, the path that names its note for sure; `diagnostics` too, as
+`fragile` with `fix{title, text}`. A command that makes or removes a note sending links by name elsewhere warns,
+each: `Home.md:3: [[Pie]] reached X; it reaches Y now`.
 
 **Named folders' words** (`21.10`): a pointer (`slipbox://notes/inbox.md`) names a note wherever a command takes one —
 `read`, `outline`, `--from`, … — the file in its folder's copy here (exit 3 and why when it isn't here, 4 when the name
@@ -384,12 +386,12 @@ with `suggest`, its pointer.
 What changed on this branch, measured against the base branch (`--base <ref>`, else `[git] base`, else `main`, else
 `master`) from where the branch left it — the merge base, as a pull request's diff is:
 
-- **`slipbox changed`**: every file of the vault this branch changed, committed or not, and the untracked ones —
-  `M a.md`, `+ b.md`, `D gone.md`, `R notes/new.md  (from notes/old.md)`; files outside the vault's folder left out.
+- **`slipbox changed`**: every file of the root this branch changed, committed or not, and the untracked ones —
+  `M a.md`, `+ b.md`, `D gone.md`, `R notes/new.md  (from notes/old.md)`; files outside the root's folder left out.
 - **`slipbox diff <note>`**: the note's diff, each group after `@@ line N`, `-` and `+` lines with three lines of
   context; `rows[].line` is the line in the note as it is now. A note the base hasn't is all `+` (`new: true`).
 - **`slipbox worktrees`**: the repository's checkouts, the main one first (a bare repository has none) — branch, path,
-  and the vault's folder there.
+  and the root's folder there.
 - **`slipbox problems`** lists a merge's unmerged files as `conflicts`, each at its first `<<<<<<<` line.
 
 Outside a git repository, or with no base branch, these exit 3.
@@ -406,7 +408,7 @@ that reaches nothing there, and wasn't broken in `--into`, comes with its `cause
 - `moved`: a branch (`by`) renamed the file it names (git pairs renames by similarity) to `to`; `fix` is the target to
   write instead, from the note, its `#fragment` kept and encoded as a link is (a wikilink's in its own form: a name
   stays a name, no `.md` unless written, nothing encoded);
-- `deleted`: a branch deleted it, or moved it out of the vault;
+- `deleted`: a branch deleted it, or moved it out of the root;
 - `note-moved`: the note itself moved without its relative link; `to` is what it named from where it was, and `fix`;
 - `missing`: neither branch had it — the merged branch's link to nothing.
 
@@ -424,7 +426,7 @@ paired: then the link is just broken, the target yours to pick.
 
 ## Search (plans `6.1`–`6.8`)
 
-`slipbox search <words…>` ranks the vault's notes and data files by the words: each one somewhere in the file (else,
+`slipbox search <words…>` ranks the root's notes and data files by the words: each one somewhere in the file (else,
 `relaxed` and a warning, files with some of them), by BM25, a word in the title or an alias counting most, then tags,
 headings and the path, then the text. A hit opens at the section with most of the words — `line` and `column` are its
 first line with one — and `snippet` is that line, cut around the match, `marks` the words' places in it; `more`
@@ -442,7 +444,7 @@ counts the file's other sections with some of the words. `--limit N` (default 20
   alias); `#tag` or `tag:x` (notes carrying the tag, or one nested under it); `path:folder/` (files whose path
   starts so, ASCII letters in either case). Nothing is passed on as FTS5 syntax: every word is quoted. Accents and
   case don't count. Words are whole words: `cat` isn't `catalogue` (`cat*` is).
-- **The index** is SQLite FTS5 in the vault's cache (`search.db`). `slipbox index` builds it, or brings it up to the
+- **The index** is SQLite FTS5 in the root's cache (`search.db`). `slipbox index` builds it, or brings it up to the
   files — `--rebuild` starts it again; the TUI keeps it as it runs. Before each search the index catches up with every
   file whose size or mtime changed since, whoever changed it. Until it's been built, a search scans the files with
   the same query, `engine: "scan"` and a warning — slower, the same notes. An index of another version, or one SQLite
@@ -472,8 +474,8 @@ counts the file's other sections with some of the words. `--limit N` (default 20
 
 Each `files` entry is `{path, abs, root, name, edits[{line, before, after}]}` — `root` and `name` another root's.
 
-`slipbox mv <note> <new-path>` renames or moves a note (or any file of the vault; the extension is kept when the
-new path has none) and rewrites every link to it, in this vault and in every vault whose index links into it
+`slipbox mv <note> <new-path>` renames or moves a note (or any file of the root; the extension is kept when the
+new path has none) and rewrites every link to it, in this root and in every root whose index links into it
 (`17.11`) — a note's, a reached note's (`20.8`), a data file's value, a code comment's path (`20.19`: the code files'
 grammars are loaded before it plans, so their comments count however fresh the process). `--dry-run` is the preview
 (`7.2`): each changed line, before and after, and nothing written.
@@ -485,12 +487,12 @@ grammars are loaded before it plans, so their comments count however fresh the p
   (`17.16`) stays in its form — `~/`, absolute, or a `file://` URL.
 - **Byte ranges, never re-serialised** (`7.6`): each edit replaces the target at the line and column the index
   recorded (of the links there with that target, the nearest — so the same text in code nearby is left). A file
-  whose link isn't there any more (another vault's index older than its file) is skipped, and said so.
+  whose link isn't there any more (another root's index older than its file) is skipped, and said so.
 - **The note itself:** its own relative links follow it to its new folder; nothing else is written into it — no
   `previous_names` (`21.12`; `[rename]` is retired). A redirect is kept (`17.12`): evidence for `relink` to fix a link
   this rename couldn't reach, never a way to resolve it.
 - **Refused, nothing written** (exit 5): a target that exists (a different file whose name differs only in case
-  too), a file where its folder would be, a path outside the vault or hidden, a file changed between the plan and
+  too), a file where its folder would be, a path outside the root or hidden, a file changed between the plan and
   the writing.
 - **Git** (`7.3`): a root it writes to whose tree already has changes is named in `warnings`; the rename goes ahead.
 - **A file's encoding:** one it rewrites keeps its byte order mark and its line endings; one not valid UTF-8 is
@@ -500,12 +502,12 @@ grammars are loaded before it plans, so their comments count however fresh the p
 too — and rewrites every link to anything in it, from where each linking file will be; links between two files that
 move together stay as they are. Its new path is taken as a note's.
 
-**A nested vault's folder** (`18.7`) is a folder of the vault holding it, whichever one the path names: `mv` moves it,
-rewriting the links into it by path — this vault's, and those of the vaults that reach it — and its own relative links
+**A nested root's folder** (`18.7`) is a folder of the root holding it, whichever one the path names: `mv` moves it,
+rewriting the links into it by path — this root's, and those of the roots that reach it — and its own relative links
 out; its id and name go with it, and it's recorded at its new place. `rm` counts the links into it as the ones that
 break.
 
-**Deleting and copying** (`18.4`, `18.5`): `slipbox rm` moves a note, file or folder to the vault's trash — in its
+**Deleting and copying** (`18.4`, `18.5`): `slipbox rm` moves a note, file or folder to the root's trash — in its
 state, never in the folder — and says how many links from other notes break (`breaking`, and a warning); `--dry-run`
 only says. `slipbox trash` lists what's there; `slipbox trash restore <id|path>` puts an item back where it was,
 refused when something is there now. `slipbox cp` copies a note, file or folder, as written, to a path taken as
@@ -546,14 +548,14 @@ means the same after. Spaces, parentheses, `#` and `%` in a path are percent-enc
 the warnings: a link that reaches nothing, a heading or block that isn't there (or a heading no slug can reach,
 `## 🎉`), one not where the index has it; and a link several notes answer to, listed in `ambiguous` (`{key, shown,
 line, written, candidates[]}`) — written as a path by hand, or picked in the TUI. Wikilinks in code and in the
-frontmatter are text, not links, and stay. A vault nested in this one is converted on its own, run there: its notes
-aren't this vault's. `--dry-run` previews it; `undo` takes it back (a run that changed nothing isn't logged, so it
+frontmatter are text, not links, and stay. A root nested in this one is converted on its own, run there: its notes
+aren't this root's. `--dry-run` previews it; `undo` takes it back (a run that changed nothing isn't logged, so it
 can't stand in front of the one that did).
 
 `slipbox rename-heading <note> <heading> <new>` renames a heading (`11.9`) — found by its text in any case, or its
 slug — and every link to it: `[x](note.md#heading)` and `![x](note.md#heading)` in the form each has, the slug
-(`#new-name`) or the text (`#New%20Name`, `<note.md#New Name>`), and the note's own `[x](#heading)`, in this vault and
-the vaults linking into it; the heading's closing `#`s stay.
+(`#new-name`) or the text (`#New%20Name`, `<note.md#New Name>`), and the note's own `[x](#heading)`, in this root and
+the roots linking into it; the heading's closing `#`s stay.
 Refused (exit 5) when the note has no such heading, has two of its name (a link can't tell them apart), or has a
 heading with the new name already. It takes `--dry-run`, and `undo` takes it back.
 
@@ -564,30 +566,30 @@ they're empty. It's a rename like the others — `--dry-run`
 previews it, each changed line the other way; open notes, the index and the redirects follow — and it's refused,
 nothing written (exit 5), when a file the rename wrote has changed since, or what moved isn't where it went; it
 stays next to undo, so putting the file back lets it through. Undone, it's forgotten: the next `undo` takes the one
-before (the vault keeps the last 20, in its state). In a git checkout, each rename is undone only on the branch it was
+before (the root keeps the last 20, in its state). In a git checkout, each rename is undone only on the branch it was
 made on (`5.9`): on another, `nothing to undo on branch main: the last rename was made on branch feat` (exit 3).
-A folder made a vault or a vault made a folder (`18.11`) isn't among them: `deinit` and `init` take each other back.
+A folder made a root of its own, or a nested root made a plain folder again (`18.11`), isn't among them: `deinit` and `init` take each other back.
 
-**A folder made a vault, and back** (`18.11`): `slipbox init <folder>` on a folder inside a vault makes it a vault of
+**A folder made a root, and back** (`18.11`): `slipbox init <folder>` on a folder inside a root makes it a root of
 its own — its `.slipbox/`, named only with `--name` (the TUI's prompt suggests a distinct name). Links are paths
 (`20.2`): relative and filesystem ones reach across the new boundary as they are; one written from the root (`/…`),
 which would now mean the other root, is rewritten to reach what it did, shown in the preview. So is a wikilink that
 wouldn't reach (`21.3`): a name across the boundary, which a root ends, becomes a path (`[[F/plan]]` into it,
 `[[../home]]` out of it); a path from the root is read from the new one (`[[F/x/y]]` inside it is `[[x/y]]`); a name
-within it stays a name. `slipbox deinit <folder>` undoes it for a vault nested in another, rewriting such links the
+within it stays a name. `slipbox deinit <folder>` undoes it for a root nested in another, rewriting such links the
 other way — its paths from its root gain its folder, and a name another note of the parent shares (its own, or a
 parent's) becomes a path, never landing on the other one: its `.slipbox/` goes to the parent's trash (`trash restore`
-makes it a vault again), and the machine forgets it. A git checkout is refused, with `.slipbox/` or without: it's a
-vault by itself (`20.3`). Both take `--dry-run` and answer like `mv`, `init` adding the vault's `root`, `name` and `id`.
-Every plan's writes into another vault's files reach that vault's index at once, as if it had been opened.
+makes it a root again), and the machine forgets it. A git checkout is refused, with `.slipbox/` or without: it's a
+root by itself (`20.3`). Both take `--dry-run` and answer like `mv`, `init` adding the root's `root`, `name` and `id`.
+Every plan's writes into another root's files reach that root's index at once, as if it had been opened.
 
 ## Capture and the scratch (plans `8.1`–`8.4`)
 
 `slipbox capture` **is** the capture path (plan `8.1`). An nvim keybinding, an agent or a shell
 calls it, and the user reads the scratch in the TUI.
 
-- **Where.** In the state dir per vault by default; with `capture.location = "vault"`, in the
-  vault. A plain folder's scratch is its own, always in its state: nothing is written into it.
+- **Where.** In the state dir per root by default; with `capture.location = "vault"`, in the
+  root. A plain folder's scratch is its own, always in its state: nothing is written into it.
 - **Reference forms**, as `prompt-buffer.lua` emits them: `path:42`, `path:42-50`,
   `path:42:10-30`, `path:42:10-50:30`. Paths inside the project are stored relative to it.
   Lines count from 1 and ranges must be in order; `--snippet` past the end of the file exits 3.
@@ -627,8 +629,8 @@ Each file is a `## path` section: its reference (`` `path:1-N` ``) and why it's 
 longer than any inside it). Links are left as written: paths, which an agent reads as they are.
 
 - **What's in it**, breadth first: the notes asked for; what they link to, in the order the links are written (a note,
-  or a file of the vault: code, data); the files linking to them, by path; then, with `--depth N` (0–5; default 1),
-  what those links link to, a level at a time. Another vault's note, linked or linking, is included but not followed.
+  or a file of the root: code, data); the files linking to them, by path; then, with `--depth N` (0–5; default 1),
+  what those links link to, a level at a time. Another root's note, linked or linking, is included but not followed.
   `--no-backlinks` leaves out the files linking in.
 - **What's left out**, named in a last `## Left out` section (and `left[]`): a picture or another binary file, a
   file over 256 KB, and whatever is past `--limit N` (1–500; default 25) — the first 20 named, the rest counted.
@@ -674,7 +676,7 @@ limits[], skipped[{name, why}], run[], missing[], linters[]}`, each linter with 
   `--timeout` seconds (60), a server that said nothing by then named in a warning;
 - its linters without a server (`19.19`), where its project has their config;
 - its syntax errors from tree-sitter, when no server answered (a server has them then);
-- for a vault note, its own (`11.5`: links that reach nothing, headings and blocks its targets haven't, conflict
+- for a note, its own (`11.5`: links that reach nothing, headings and blocks its targets haven't, conflict
   markers) and the lint surface's (`3.21`).
 
 `--severity` (`error`, `warning`, `info`, `hint`; `[diagnostics] severity` by default, `warning`) is the least shown.
