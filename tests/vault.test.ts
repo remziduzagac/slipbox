@@ -4654,7 +4654,8 @@ describe("search by vault (20.16)", () => {
     const old = await cli(["search", "narwhal", "--scope", "vault"], at("a"));
     expect(old.json.data.scope).toBe("here");
     expect(old.json.warnings.join()).toContain("--scope vault is --scope here now");
-    expect(files(await cli(["search", "narwhal", "--scope", "all"], at("a")))).toContain(join(at("d"), "d-note.md"));
+    // Every root this machine knows: the other tests' too, so past the default limit.
+    expect(files(await cli(["search", "narwhal", "--scope", "all", "--limit", "500"], at("a")))).toContain(join(at("d"), "d-note.md"));
     expect((await cli(["search", "narwhal", "--scope", "near"], at("a"))).code).toBe(2);
   });
 });
