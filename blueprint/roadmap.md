@@ -1,7 +1,7 @@
 # Roadmap
 
-Status: **initial design settled** (D210, 2026-10-11); phases 0–6+ built. Now: the licence to decide
-(`14.6`), the checks on a real Mac (`14.13`), native Windows (`14.14`–`14.17`).
+Status: **initial design settled** (D210, 2026-10-11); phases 0–6+ built. Now: the user documentation (DOC); the
+licence to decide (`14.6`), the checks on a real Mac (`14.13`), native Windows (`14.14`–`14.17`).
 
 Each step's ID is the plan's stable item ID: cite it (`3.3`, `10.1`) rather than restating the work. Phases and
 clusters differ: a cluster groups related items in dependency order, and its line in italics says which phase it
@@ -581,6 +581,13 @@ was added 2026-10-09 at the user's asking.*
 - [x] **26.4** Blame: who changed the cursor's line, when, the commit's message; a file's history with `22.1`.
 - [x] **26.5** Branches: switched to or made from a picker, unsaved notes saved or kept first.
 - [ ] **26.6** Deferred, see [Later](#later).
+
+## User documentation
+
+*Not a phase. Accepted 2026-10-11, the first workstream after the initial design.*
+
+- [ ] **[User documentation](workstreams/user-docs/README.md)** (DOC): guides and a manual in `docs/`, for the people
+  who use slipbox; the keymap, configuration and CLI references become the manual's chapters.
 
 ## Later
 

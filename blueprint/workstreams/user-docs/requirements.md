@@ -16,7 +16,7 @@
 
 ## The documents
 
-A proposal, for the user to accept:
+Accepted by the user as proposed (2026-10-11):
 
 ```text
 docs/
@@ -48,6 +48,22 @@ docs/
 
 The project's README stays the front page: what slipbox is, a screenshot's worth of description, install in one line,
 links into `docs/`.
+
+## How they are written
+
+- For a person at a terminal who knows Markdown, not necessarily vim: "you", the present tense, plain words. A term
+  slipbox gives its own meaning (a root, a pointer, the lens, trust) is explained where it first matters, and its
+  chapter linked.
+- What slipbox does now, checked against the code; never how it came to be: no decision dates, no "since" or "no
+  longer", no source paths, no links into `blueprint/` (DOC-D3).
+- British spelling, as the existing docs have it (colour, behaviour, licence); the config's own names as they are
+  (`colors`).
+- Keys as pressed, in backticks, in the keys chapter's notation (`space l f`, `ctrl+w v`, `shift+k`).
+- A guide: its goal, the steps in order, what you see after each, where to go next; short. A chapter: what it covers,
+  in a paragraph, then a section for each thing someone wants to do or know; its keys and settings where they help,
+  the full lists in the keys, configuration and CLI chapters.
+- Linked relatively between the docs (`../manual/keys.md`, `reading.md#tables`), every link and anchor resolving.
+- Colons, commas and semicolons rather than dashes. Markdown wrapped at 120 columns, tables and code included.
 
 ## Builds on
 

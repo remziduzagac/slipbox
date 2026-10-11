@@ -27,8 +27,8 @@ D193), the checks on a real Mac before the first release (`14.13`) and native Wi
 - [design/](design/README.md): how it works now.
 
 - [tasks/](tasks/README.md): small work not worth a workstream; open tasks are its files.
-
-There are no `workstreams/` yet: one appears with the next change to requirements or design.
+- [workstreams/](workstreams/README.md): contained parts of the work; the roadmap gives their order. Active: DOC, the
+  user documentation.
 
 ## How things are recorded
 

@@ -1,5 +1,5 @@
 ---
-status: draft
+status: active
 created: "2026-10-11"
 ---
 
@@ -14,3 +14,4 @@ CLI references become chapters of the manual.
 - [decisions.md](decisions.md): what was decided, and why.
 - [notes.md](notes.md): how it was discussed.
 - [ideas.md](ideas.md): the alternatives weighed.
+- [tasks/](tasks/README.md): the work, a task per file.
