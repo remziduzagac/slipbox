@@ -5,6 +5,8 @@ notebook, document types and search.
 
 ## D88: One width function, in the layout stage (0.7, 2026-09-25)
 
+> **Detailed by D215 (2026-10-06, recorded 2026-10-11):** a character's width is the terminal's.
+
 **Decision:** Grapheme clustering and display width are decided once, in the layout stage, by one function, and
 nothing else measures text. It works per grapheme cluster with `Intl.Segmenter`, built into Bun. The detail is
 design/rendering.md § Wrapping and width.
@@ -131,6 +133,8 @@ raw while reading is worse than not being able to edit in place.
 **Not chosen:** un-rendering the cursor's line, as anti-conceal does (ideas.md § Reading).
 
 ## D98: Reload anchoring: source lines, by heading (3.5, 2026-09-25)
+
+> **Amended by D213 (2026-10-11):** a gone occurrence falls back to the slug's first heading before the line.
 
 **Decision:** A buffer stores source lines, never rendered rows. A view's anchor is
 `{ heading, headingIndex, offset, line }`: the nearest heading above the top of the viewport (its slug and occurrence
@@ -288,6 +292,9 @@ convention, so data files and code comments don't get them.
 
 ## D108: Data files render as documents and are edited as text (16.11–16.15, 2026-09-29)
 
+> **Amended by D212 (2026-09-29, recorded 2026-10-11):** nested YAML and JSON are a tree of rows, not headings;
+> TOML and INI keep theirs.
+
 **Decision:** A config renders like a note: TOML tables and INI sections become headings, as do nested YAML and JSON
 objects down to a depth, then indented key–value rows; scalars are aligned key–value rows, like frontmatter's
 properties; arrays of records become tables through the table allocator; comments show dimmed beside or above their
@@ -377,6 +384,8 @@ to its note.
 
 ## D114: Search is our own, small, in the core (6.1, 2026-10-01)
 
+> **Clarified by D214 (2026-10-11):** search ranks notes and data files; `auto` scans until the index is whole.
+>
 > **Amended by D67 (2026-10-02):** the LSP face is removed; the CLI and the TUI share search.
 >
 > **Amended by D124 (2026-10-07):** Scout is postponed; the fuller engine is trailscout's SDK, once it exists.
@@ -593,3 +602,44 @@ frontmatter. Knowing a type allows type-aware navigation (list all ADRs, show wh
 flagging missing or malformed frontmatter catches real errors (`SKILL.md` requires `name` and `description`).
 
 **Not chosen:** a database, as Obsidian's Bases keeps (ideas.md § Document types).
+
+## D212: YAML and JSON drawn as a tree, every key a row (16.12, 2026-09-29)
+
+**Decision:** Nested YAML and JSON are drawn as a tree rather than as headings: every key a row, guides at every depth
+from the glyph set; branches (objects, lists that aren't plain) with their rows under them, list items numbered and
+opened alike, small plain maps and scalar lists inline, records as tables inside the guides. Branch rows are the
+outline and the breadcrumb; a `$ref`'s JSON pointer goes to the row it names. TOML and INI keep their sections as
+headings. As built: design/rendering.md § Data files. Recorded on 2026-10-11 from the commit that made it (261bb4b).
+
+**Why:** Drawn as headings, a nested object had no end: a parent's later keys read as the child's (features under
+database, top-level ports under staging), and below three levels everything folded into one-line blobs.
+
+**Not chosen:** D108's headings down to a depth (ideas.md § Files beyond markdown).
+
+## D213: Reload anchoring falls back to the slug's first heading (3.5, 2026-10-11)
+
+**Decision:** On reload, a view's heading is found again by its slug and occurrence; when that occurrence is gone, the
+first heading with the slug stands in, and the absolute line, clamped, only when no heading has the slug
+(`core/position.ts`; design/tui.md § Positions). Recorded on 2026-10-11 from the code.
+
+**Why:** Not recorded; the fallback came with the anchoring of repeated headings in the review of 2026-09-29
+(ee3ff77).
+
+## D214: What search covers, and its widest scope (6.1, 20.16, 2026-10-11)
+
+**Decision:** Search ranks notes and data files; text and code are found by `find`, not ranked (design/search.md).
+With `[search] engine = "auto"`, the index answers once it is built whole, and a scan of the files until then. The
+widest scope, `all`, is every root the machine knows, each opened and caught up on demand, ranked with the linked
+roots by score (design/roots.md § Search scope). Recorded on 2026-10-11 from the code.
+
+**Why:** Not recorded where it was built; the reasons are ours, on recording it: a ranked hit cites a section, which
+notes and data files have and code doesn't, and a half-built index would rank only what it had reached.
+
+## D215: A character's width is the terminal's (0.7, 2026-10-06)
+
+**Decision:** How wide a grapheme cluster is follows the terminal, as OpenTUI finds it, rather than a table of
+slipbox's own; the one width function (D88) asks for it. As built: design/rendering.md § Wrapping and width. Recorded
+on 2026-10-11: the design held it, dated, with no decision.
+
+**Why:** slipbox counted widths its own way and OpenTUI the terminal's, and the two parted inside one frame
+(`हिन्दी`: 2 columns to slipbox, 3 to OpenTUI in herdr), shifting rows and borders (e1add82).

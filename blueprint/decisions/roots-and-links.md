@@ -58,6 +58,9 @@ the file's directory.
 
 ## D40: One walk for the index and the watcher (0.11, 2026-09-25)
 
+> **Detailed by D219 (2026-09-29, recorded 2026-10-11):** files a folder controls are read without blocking,
+> regular files only, small ones capped.
+>
 > **Amended by D69 (2026-10-05):** a nested root is any marker's: `.slipbox/`, a git checkout's top, `.obsidian/`,
 > `.zk/` (`walk.root_markers`).
 >
@@ -240,6 +243,9 @@ machine had opened (ideas.md § Links).
 
 ## D48: Links cross vaults by path, in every form other tools write (17.9, 17.11, 17.16, 17.17, 2026-09-30)
 
+> **Amended by D216 (2026-10-11):** in a wikilink, only `./` and `../` paths leave the root; `~/`, absolute
+> and `file://` are markdown links' forms.
+>
 > **Amended by D70 (2026-10-05):** a leading `/` is the nearest root's, then the filesystem's: this entry's reading,
 > back.
 >
@@ -477,6 +483,9 @@ for agents in the CLI.
 
 ## D61: The index is a cache: on demand, in the background, shared by content (20.8–20.11, 2026-10-02)
 
+> **Clarified by D218 (2026-10-11):** the background index has no exclusions of its own and runs from the TUI;
+> the parse cache's key holds no settings.
+>
 > **Verified (2026-10-03):** with the parse cache, a second copy is read about 150 times faster (`20.11`).
 >
 > **Amended by D76 (2026-10-05):** links are resolved, and backlinks derived, per root.
@@ -523,6 +532,8 @@ engine (`7.1`–`7.3`, D49, D52) on paths. Repairs now: design/links.md § Repai
 
 ## D64: Search ranks the current vault, then the linked ones (20.16, 2026-10-02)
 
+> **Clarified by D214 (2026-10-11):** the widest scope is every root the machine knows, caught up on demand.
+>
 > **Amended by D79 (2026-10-05):** the first scope is `here`: the root, else the folder opened (`21.10`).
 
 **Decision:** Search is ranked by how near a vault is, by links: the current vault (or the plain folder opened), then
@@ -781,6 +792,8 @@ next source answers. Two-thirds exactly (6 of 9) is a majority. It details D72.
 
 ## D83: A link slipbox writes never lands elsewhere (21.5, 2026-10-06)
 
+> **Clarified by D217 (2026-10-11):** a renamed name falls back to a path whenever another note has the name.
+
 **Decision:** Completion (`](` and `[[`), the link picker (`space l i`) and `slipbox link`, which prints one for an
 agent, all write links through `core/write-link.ts`. A wikilink is a name only where the name reaches the note from
 the linking file; else its path from the root, a top-level note's path being its name, or a relative path
@@ -832,3 +845,43 @@ rewritten in place by a rename. Another ref than the branch here is inferred, an
 design/links.md § Links to the repository's own hosting.
 
 **Why:** From trailscout's review: a README's link to its own file on GitHub was a URL, never a backlink.
+
+## D216: A wikilink leaves its root only by `./` or `../` (21.3, 2026-10-11)
+
+**Decision:** A wikilink is read within its root (D71); it reaches outside the root only as a relative path starting
+`./` or `../`. `~/`, absolute paths and `file://` URLs are markdown links' forms: written in a wikilink they stay
+unresolved. Only the converter's legacy reader takes every form (D57). As built: design/links.md § Wikilinks.
+Recorded on 2026-10-11 from the code (`graph.ts`, `resolveWiki`).
+
+**Why:** Not recorded where it was built. A wikilink's text is first a name, looked up in its root (D71); `./` and
+`../` are what mark one as a path instead (D83).
+
+## D217: A rename writes a path wherever another note has the name (21.5, 2026-10-11)
+
+**Decision:** A rename keeps each link's form, but a link written as a name becomes a path when any other note in the
+root has the new name, or when the note leaves the root: never a name that only a tie-break would land (D86). As
+built: design/links.md § Renames and moves. Recorded on 2026-10-11 from the code.
+
+**Why:** A name that lands only by where the link is (the deepest shared folder, the shortest path) is fragile, and
+D86 lints it; a rename shouldn't write what the linter then flags.
+
+## D218: The background index skips what the walk skips; the parse cache keys no settings (20.9, 20.11, 2026-10-11)
+
+**Decision:** The background index of the home folder has no list of exclusions of its own: it leaves out what the
+walk leaves out (D40). It runs from the TUI's idle check; a CLI call only marks the activity that pauses it. The
+parse cache is keyed by the text's hash, its format and the parser's version, and nothing else: parsing reads no
+settings. As built: design/roots.md § The index. Recorded on 2026-10-11 from the code (`autoindex.ts`,
+`parsecache.ts`).
+
+**Why:** Not recorded where it was built; D61's "what the user excludes" and "the settings parsing depends on" named
+nothing that exists.
+
+## D219: Files a folder controls are read with care (0.11, 2026-09-29)
+
+**Decision:** Every read of a file a folder controls (a note, `.gitignore`, `.slipbox/config.toml`,
+`.slipbox/version`) opens without blocking and refuses anything but a regular file, and the small files have a size
+cap (1 MB): `readRegular` in `core/fsutil.ts`. As built: design/roots.md § The walk. Recorded on 2026-10-11: the old
+decision record held it under `0.11`, which D40 left out.
+
+**Why:** A cloned or unpacked folder can hold a symlink to `/dev/zero`, or a FIFO, where a note or a config should
+be; a read of it would hang or never end. A hostile folder gets a warning, never a hang (f2c2e3c, 2026-09-29).

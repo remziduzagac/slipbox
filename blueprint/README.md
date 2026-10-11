@@ -27,7 +27,9 @@ crash reports (D199).
 - [requirements.md](requirements.md): what slipbox must do and be.
 - [design/](design/README.md): how it works now.
 
-There are no `tasks/` or `workstreams/` yet: they appear with the next change.
+- [tasks/](tasks/README.md): small work not worth a workstream; open tasks are its files.
+
+There are no `workstreams/` yet: one appears with the next change to requirements or design.
 
 ## How things are recorded
 

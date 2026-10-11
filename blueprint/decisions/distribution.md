@@ -98,6 +98,8 @@ a darwin binary ad hoc, and cross-compiling has broken that signature before.
 
 ## D199: A daily update check, on by default, sending nothing identifying (14.4, 2026-10-10)
 
+> **Detailed by D221 (2026-10-11):** Bun's own crash reports are turned off at start.
+
 **Decision:** The TUI asks once a day for the latest release, on by default, and says when there's a newer one;
 `slipbox upgrade` installs it. Only the TUI checks: the CLI never does. `DO_NOT_TRACK=1` or the config turns it off.
 Detail: design/distribution.md § Updates.
@@ -167,3 +169,19 @@ suite on a Windows runner (`14.17`). Detail: design/distribution.md § Windows.
 **Why:** Windows only if it isn't difficult (D197), and WSL is Linux, so the Linux release runs there as it is. Each
 native step waits for a Windows CI runner to check it: nothing here can run a Windows binary, and there is no Windows
 CI yet.
+
+## D221: Bun's own crash reports are off (14.4, 2026-10-11)
+
+**Decision:** slipbox turns off the crash reports Bun sends by itself: at start, unless you set
+`BUN_ENABLE_CRASH_REPORTING` or `BUN_CRASH_REPORT_URL` yourself, it sets `BUN_ENABLE_CRASH_REPORTING=0` in the
+process's own environment, through libc, where Bun's crash handler reads it. A crash still prints Bun's link, to file
+a report yourself. Said in design/distribution.md § Updates and in the configuration reference's environment.
+
+**Why:** D199's check found it: on macOS and Windows a Bun crash sends a report to `bun.report` unless `DO_NOT_TRACK`
+is set, and a compiled binary is no different. slipbox's one network call is the update check, which sends nothing
+identifying. Bun reads the switch when it crashes, from the C environment (`process.env` doesn't reach it): with it
+set at start, a crash with reporting on sent nothing (*ran*, 2026-10-11, curl's connection watched through a local
+proxy).
+
+**Not chosen:** only saying so, which D199 allowed; re-running the binary with the variable set, which costs a second
+start.

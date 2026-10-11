@@ -116,6 +116,8 @@ premise.
 
 ## D141: Open notes: buffers, tabs and one split (3.3, 3.4, 2026-09-25)
 
+> **Amended by D211 (2026-10-11):** no buffer list; an open note is a tab or a window's view.
+
 **Decision:** Notes open something like vim's tabs. The minimum is a buffer list and a switcher; the likely shape is
 tabs, and one split so a note can be read beside another. The reading position per note (3.4) is exactly the state a
 buffer holds, so the two are one feature. A buffer carries a mode, which ties open notes to the editing model (D136)
@@ -125,6 +127,9 @@ and to session restore (3.15). Detail: design/tui.md § Buffers, views, tabs, wi
 is "something like vim tabs".
 
 ## D142: Notes are written atomically, and never outside the vault root (4.6, 7.5, 2026-09-25)
+
+> **Detailed by D220 (2026-09-28, recorded 2026-10-11):** a symlinked note is written through to its target;
+> a target outside the root is refused.
 
 **Decision:** Every write is atomic: a temp file, then a rename within the same directory. slipbox never writes
 outside the vault root (constraint 7.5), which lives inside the items it constrains; what a symlink pointing out of
@@ -373,3 +378,24 @@ and 250 MB for the same answers. Its licence, MPL-1.1, was accepted for it (D194
 theirs or both. It waits on the roadmap's Later list.
 
 **Why:** it was planned from the start as later and opt-in (D156); 26.1–26.5 cover the working tree without it.
+
+## D211: No buffer list: an open note is a tab or a window's view (3.3, 2026-10-11)
+
+**Decision:** slipbox has no buffers the user meets, and no buffer list. A note open is a tab, or a window's view in a
+tab's split; the quick switcher and the history reach every note, open or not. Buffers are the TUI's internal state for
+a note's text, its undo and its position (design/tui.md § Buffers, views, tabs, windows), never listed.
+
+**Why:** The user (2026-10-11): "we don't have buffers". Tabs, the quick switcher and the history reach every note
+already.
+
+**Not chosen:** D141's minimum of a buffer list beside the switcher (ideas.md § Editing).
+
+## D220: A symlinked note is written through to its target, inside the root (7.5, 2026-09-28)
+
+**Decision:** A write to a note that is a symlink replaces its target, atomically and keeping its permissions; a
+target outside the root is refused, and nothing is made outside the root, through a symlink or otherwise. As built:
+design/tui.md § Writing notes. Recorded on 2026-10-11: `7.5` asked what a symlink out means, and the answer was built
+with the first write (2d64540) without a decision.
+
+**Why:** Ours, on recording it: replacing the link with a file would break whatever the link was for, and following
+it out of the root would write where D142 says slipbox never writes.

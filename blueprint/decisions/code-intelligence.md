@@ -175,6 +175,8 @@ theirs.
 
 ## D170: One protocol library, both ways, under Bun and compiled (11.1, 2026-10-01)
 
+> **Detailed by D222 (2026-10-11):** Mason's `bin` goes on the servers' `PATH`.
+>
 > **Amended by D67 (2026-10-02):** the server's half went with the LSP face; `vscode-languageserver` is a dev
 > dependency, for the tests' fake server only.
 >
@@ -300,3 +302,14 @@ answer, and could be talked into it.
 
 **Not chosen:** `[trust] roots` in your own config as the only way to trust, the first plan that day, because it made
 opening a folder a matter of editing a file; the CLI asking, because an agent can't answer (ideas.md § Trust).
+
+## D222: Mason's `bin` goes on the language servers' `PATH` (19.4, 2026-10-11)
+
+**Decision:** When slipbox finds Mason's `bin` (nvim's installs, under the data folder), a language server it starts
+gets that folder on its `PATH`, after the user's own, so a server finds the helpers Mason installed beside it. As built:
+design/lsp.md § The client for code. Recorded 2026-10-11, from what the check of 2026-10-01 found (D170).
+
+**Why:** A server finds its helpers on `PATH`: bash-language-server runs shellcheck only when it's there, and Mason's
+`bin` is where it often is. The old decision record said so, but the code put Mason's `bin` only where slipbox looks
+for programs, not on the servers' `PATH`. Mason's folder is one of the user's install folders, so it runs nothing a
+folder brings with it (D172).
