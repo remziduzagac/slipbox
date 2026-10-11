@@ -29,6 +29,7 @@ import {
   StreamMessageWriter,
 } from "vscode-languageserver-protocol/node";
 import { VERSION } from "../../version.ts";
+import { serverPath } from "./find.ts";
 
 /** How to start a server, and what to tell it. */
 export interface ServerSpec {
@@ -118,7 +119,10 @@ export class LanguageClient {
   async start(timeoutMs = 20_000): Promise<void> {
     const [cmd, ...args] = this.spec.argv;
     if (!cmd) throw new Error(`${this.spec.name}: no command`);
-    const child = spawn(cmd, args, { cwd: this.spec.root, env: { ...process.env, ...this.spec.env }, stdio: ["pipe", "pipe", "pipe"] });
+    const env = { ...process.env, ...this.spec.env };
+    // Mason's `bin` after yours: a server finds the helpers Mason installed beside it (D222).
+    env.PATH = serverPath(env.PATH);
+    const child = spawn(cmd, args, { cwd: this.spec.root, env, stdio: ["pipe", "pipe", "pipe"] });
     this.child = child;
     const failed = new Promise<never>((_, reject) => {
       child.once("error", (err) => reject(new Error(`${this.spec.name} can't start: ${err.message}`)));

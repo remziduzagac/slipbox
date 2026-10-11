@@ -214,7 +214,8 @@ function linkItems(app: App, view: View, style: LinkStyle): CompletionItem[] {
   const home = homeFolder();
   const tilde = (abs: string) => (abs.startsWith(`${home}/`) ? `~/${relative(home, abs)}` : abs);
   const item = (abs: string, form: string, here: boolean): CompletionItem => {
-    const dest = linkDestination(c, style, linkEnds(g, view.buf.abs, abs));
+    const ends = linkEnds(g, view.buf.abs, abs);
+    const dest = linkDestination(c, style, ends);
     return {
       // A wikilink's shows what it writes (a name, a path); a markdown link's, the file by its path as shown (21.9).
       label: style === "wiki" ? dest : form,
@@ -222,6 +223,8 @@ function linkItems(app: App, view: View, style: LinkStyle): CompletionItem[] {
       filterText: `${form} ${dest} ${abs}`,
       sortText: `${here ? 0 : 1}${form}`,
       insertText: dest,
+      // A pointer's name is settled when it's picked: asked on a clash, said when private (D74, D83).
+      ...(ends.pointer && ends.naming && (ends.naming.clash.length || ends.naming.private) ? { data: { pointerTo: abs, style } } : {}),
     };
   };
   const out: CompletionItem[] = [];
@@ -315,6 +318,8 @@ function snippetContext(app: App, view: View, at: number): SnippetContext {
 /** The chosen item put in: its edit (from where it starts to the cursor), else its text over the word; then its other edits (an import). */
 function accept(app: App, c: CompletionState): void {
   const item = c.shown[c.selected]!;
+  const pointer = c.links ? (item.data as { pointerTo?: string; style?: LinkStyle } | undefined) : undefined;
+  if (pointer?.pointerTo) return acceptPointer(app, c, pointer.pointerTo, pointer.style ?? "markdown");
   const view = c.view;
   const buf = view.buf;
   const at = offsetOf(app, view);
@@ -347,6 +352,36 @@ function accept(app: App, c: CompletionState): void {
   if (snippet) startSnippet(app, view, from, snippet);
   if (item.additionalTextEdits?.length) applyElsewhere(app, view, item.additionalTextEdits);
   app.completion = null;
+}
+
+/**
+ * A pointer picked (21.7): written once its name is settled (`writeLinkAsked`) — a name different folders share asks
+ * first, a private one is said (D74, D83). Asked, it's written when answered, if the note hasn't changed meanwhile,
+ * and isn't repeated by `.`: the keys that answered weren't the note's.
+ */
+function acceptPointer(app: App, c: CompletionState, to: string, style: LinkStyle): void {
+  const view = c.view;
+  const at = offsetOf(app, view);
+  const version = view.buf.version;
+  app.completion = null;
+  let now = true;
+  app.writeLinkAsked(view.buf.abs, to, (ends) => {
+    if (view.buf.version !== version) return app.message("warn", "the note changed while you picked: complete the link again");
+    const text = linkDestination(conventionOf(app.graph, app.config, app.configOrigins, style), style, ends);
+    const s = app.vim;
+    if (s.inInsert && !s.replaying) {
+      if (now) {
+        for (let k = at; k > c.from; k = prevBoundary(view.buf.source, k)) s.seq.push("backspace");
+        s.seq.push(`${PASTE}${text}`);
+      } else {
+        s.inInsert = false;
+        s.lastChange = null;
+      }
+    }
+    view.buf.edit(c.from, at - c.from, text);
+    placeAt(app, view, c.from + text.length, true);
+  });
+  now = false;
 }
 
 /** An item's other edits (an import at the top), the cursor kept on its text. */

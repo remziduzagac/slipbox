@@ -171,6 +171,15 @@ its binary run — it must say its version — and only then `current` moved, in
 renamed over it). The version replaced is kept, to go back to (`ln -sfn versions/<old> <data>/current`); any older
 one is removed. Any check failing changes nothing.
 
+**Bun's own crash reports** are off (D221): on macOS and Windows a crashing Bun sends a report to `bun.report` unless
+told not to, and a compiled binary is no different. Bun's crash handler reads its switch when it crashes, from the C
+environment, which `process.env` doesn't write to; so the first thing `src/main.ts` does, for the TUI and the CLI
+alike, is `core/crash-reports.ts`'s `crashReportsOff`: libc's `setenv`, through `bun:ffi`, puts
+`BUN_ENABLE_CRASH_REPORTING=0` there — libc found as glibc's `libc.so.6`, musl's loader (`/lib/ld-musl-<arch>.so.1`)
+or macOS's `libSystem.B.dylib`. It's left alone when you set `BUN_ENABLE_CRASH_REPORTING` or `BUN_CRASH_REPORT_URL`
+yourself (an empty one counts as unset), and libc not reached changes nothing, silently. A crash still prints Bun's
+link, to file a report yourself.
+
 ## Uninstalling
 
 `slipbox uninstall` (`14.8`, `core/install.ts`) lists every path first, and removes nothing without `--yes`:

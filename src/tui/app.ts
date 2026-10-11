@@ -42,7 +42,7 @@ import { copyText, readClipboard } from "../core/clipboard.ts";
 import { canonKey, canonSeq, CommandRegistry, Keymap, unknownModifiers } from "../core/commands.ts";
 import { type Config, loadConfig } from "../core/config.ts";
 import { type ConventionPart, conventionOf, describeConvention } from "../core/convention.ts";
-import { linkEnds, writeLink } from "../core/write-link.ts";
+import { type LinkEnds, linkEnds, writeLink } from "../core/write-link.ts";
 import { glyphsFor, type Glyphs } from "../core/glyphs.ts";
 import { describeLanding, Graph, type LinkProblem } from "../core/graph.ts";
 import { type LintCmd, type LintIssue, lintCommand, lintFailure, runLint } from "../core/lint.ts";
@@ -82,12 +82,12 @@ import { planConvert } from "../core/convert.ts";
 import { type Ambiguous, type Applied, applyPlan, planFolderMove, planHeadingRename, planMakeVault, planNoteRename, planRelink, planUndo, planUnmakeVault, planVaultFolderMove, planVaultRename, type RenamePlan } from "../core/rename.ts";
 import { addFootnote, deleteFootnote, editFootnote, type Footnote, footnotesOf, renameFootnote, type TextEdit } from "../core/footnotes.ts";
 import { copyPath, linksInto, listTrash, restorePath, type TrashItem, trashPath } from "../core/files.ts";
-import { readIdentity, vaultConfigFile } from "../core/registry.ts";
+import { readIdentity, slugName, vaultConfigFile } from "../core/registry.ts";
 import { activityFile, AutoIndex } from "../core/autoindex.ts";
 import { notesOfType, ofType, type TypedNote } from "../core/doctypes.ts";
 import { type Scope, SCOPES, searchOthers } from "../core/scope.ts";
 import { rootLabel, tildePath } from "../core/names.ts";
-import { copyAvailable, folderIdentity, lookupFolder, type NamedFolder, pointerName, readFolders, setDefaultCopy, suggestFolderName } from "../core/folders.ts";
+import { copyAvailable, folderIdentity, lookupFolder, type NamedFolder, pointerName, privateNameWarning, readFolders, setDefaultCopy, suggestFolderName } from "../core/folders.ts";
 import { configFilesFor, findVaultRoot, folderAt, hasMarker, homeFolder, initVault, isInside, isListed, isVaultRoot, locateVault, recordLocation, rootAt, rootMarkers, setRootMarkers, type VaultLocation } from "../core/vault.ts";
 import { isTrusted, setTrust, setTrustedRoots, trustOf } from "../core/trust.ts";
 import { type Head, VaultFeed, applyToGraph } from "../core/vault-feed.ts";
@@ -5558,18 +5558,70 @@ export class App {
       items: rels.map((r) => ({ label: r, data: r })),
       accept: (item) => {
         if (view.buf.version !== version) return this.message("warn", "the note changed while you picked: insert the link again");
-        const c = conventionOf(g, this.config, this.configOrigins);
-        const ends = linkEnds(g, view.buf.abs, g.abs(item.data as string));
-        const title = ends.to.note ? (g.entry(item.data as string)?.title ?? "") : "";
-        const link = writeLink(c, c.style.value, ends, c.style.value === "wiki" ? "" : title || posix.basename(item.data as string));
-        if (view.insert) {
-          insertText(this, view, link);
-          return this.message("info", `linked ${item.data as string}`);
-        }
-        const at = this.footnoteRefAt(view);
-        const before = view.buf.source[at - 1];
-        const text = `${before && !/\s/.test(before) ? " " : ""}${link}`;
-        this.applyNoteEdits([{ at, length: 0, text }], `linked ${item.data as string}: ${link}`, at + text.length);
+        // A pointer by a name different folders share asks first; a private one is said (D74, D83).
+        this.writeLinkAsked(view.buf.abs, g.abs(item.data as string), (ends) => {
+          if (view.buf.version !== version) return this.message("warn", "the note changed while you picked: insert the link again");
+          const c = conventionOf(g, this.config, this.configOrigins);
+          const title = ends.to.note ? (g.entry(item.data as string)?.title ?? "") : "";
+          const link = writeLink(c, c.style.value, ends, c.style.value === "wiki" ? "" : title || posix.basename(item.data as string));
+          if (view.insert) {
+            insertText(this, view, link);
+            return this.message("info", `linked ${item.data as string}`);
+          }
+          const at = this.footnoteRefAt(view);
+          const before = view.buf.source[at - 1];
+          const text = `${before && !/\s/.test(before) ? " " : ""}${link}`;
+          this.applyNoteEdits([{ at, length: 0, text }], `linked ${item.data as string}: ${link}`, at + text.length);
+        });
+      },
+    });
+  }
+
+  /**
+   * A link about to be written from `fromAbs` to `toAbs` (21.5), its ends worked out now. A pointer by a name different
+   * folders share asks first (D74, D83): rename one of them — `slipbox name`'s rename, the parent folder's name
+   * prefixed as a suggestion, previewed — and the link is written once that's done, by the name it has then; or
+   * write the qualified name, or, with none, the short one, which asks which when followed. Esc writes nothing. A
+   * private name, once written, is said: the pointer works on this machine only.
+   */
+  writeLinkAsked(fromAbs: string, toAbs: string, write: (ends: LinkEnds) => void): void {
+    const ends = linkEnds(this.graph, fromAbs, toAbs);
+    const n = ends.pointer ? ends.naming : null;
+    const done = () => {
+      write(ends);
+      const priv = n ? privateNameWarning(n) : null;
+      if (priv) this.message("warn", priv);
+    };
+    if (!n?.clash.length) return done();
+    const items: ListItem[] = [
+      n.name !== n.short
+        ? { label: `Write it by its qualified name, ${n.name}`, detail: ends.pointer!, data: null }
+        : { label: `Write it by ${n.short} as it is`, detail: "followed, it asks which folder is meant", data: null },
+    ];
+    // Renaming one that has it as its name, a `.slipbox/` one: the folder linked to, or another (an alias stays).
+    const there = findVaultRoot(toAbs);
+    const named = n.clash.filter((f) => f.name.toLowerCase() === n.short.toLowerCase()).map((f) => ({ name: f.name, at: f.default ?? f.copies[0]?.path }));
+    for (const f of [...(there ? [{ name: n.short, at: there }] : []), ...named]) {
+      if (f.at && hasMarker(f.at)) items.push({ label: `Rename ${tildePath(f.at)}'s name first…`, detail: `${f.name} → ${slugName(posix.basename(posix.dirname(f.at)))}-${f.name}`, data: f });
+    }
+    this.openList({
+      title: `${n.short}: ${n.clash.length + 1} different folders have this name — how is the link written?`,
+      items,
+      filterable: false,
+      accept: (item) => {
+        const f = item.data as { name: string; at: string } | null;
+        if (!f) return done();
+        this.prompt(`rename ${f.name} at ${tildePath(f.at)} to: `, (typed) => {
+          if (!typed.trim()) return;
+          this.previewRename(
+            () => planVaultRename(rootAt(f.at), typed.trim()),
+            (plan) => {
+              this.applyRename(plan);
+              this.writeLinkAsked(fromAbs, toAbs, write);
+            },
+          );
+        });
+        if (this.overlay?.kind === "prompt") this.overlay.text = `${slugName(posix.basename(posix.dirname(f.at)))}-${f.name}`;
       },
     });
   }

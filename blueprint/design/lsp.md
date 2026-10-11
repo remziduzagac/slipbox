@@ -78,7 +78,10 @@ A program written for Node (`#!/usr/bin/env node`) runs on slipbox's own Bun —
 and no `.env` (`--config=/dev/null --no-env-file`): it starts in its root, and Bun would otherwise run the root's
 preload and read its `.env`, whichever program it was, slipbox's own install too. A server whose program's name is
 common elsewhere is taken only from the project or slipbox's installs: a `tsc` on `PATH` may be an older TypeScript with
-no server.
+no server. A server starts with your `PATH`, and Mason's `bin` after it when that folder exists and isn't on it already
+(D222, `serverPath`): a server finds its helpers on `PATH` — bash-language-server runs shellcheck only when it's there —
+and Mason installs them beside it. Mason's is one of your install folders, so it runs nothing a folder brings with it
+(D172); linters keep their own `PATH` (below).
 
 **Trust** (`23.x`, D172–D177): what a root you don't trust leaves out, and how a root is trusted, is
 [trust.md](trust.md). For the servers, in a root you don't trust:

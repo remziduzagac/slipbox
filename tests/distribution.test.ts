@@ -7,6 +7,7 @@ import { bunfigProblems, checkDeps, licenceProblems, licenceTaken, notices, type
 import { assetName, buildArgs, buildRelease, finishRelease, homebrewFormula, hostTarget, installScript, releaseVersion, repoOf, sha256sums } from "../scripts/release.ts";
 import { RELEASE } from "../src/core/release.ts";
 import { howToUpgrade, installation, installedBy, removable, type Stores, uninstall, uninstallPlan } from "../src/core/install.ts";
+import { libcCandidates } from "../src/core/crash-reports.ts";
 import { CHECK_EVERY_MS, dailyUpdateCheck, doNotTrack, fetchLatest, isNewer, latestIn, releasesBase, upgrade, UpgradeError } from "../src/core/update.ts";
 import { VERSION } from "../src/version.ts";
 
@@ -603,6 +604,29 @@ describe("updates (14.4)", () => {
     expect([doNotTrack({}), doNotTrack({ DO_NOT_TRACK: "1" }), doNotTrack({ DO_NOT_TRACK: "true" }), doNotTrack({ DO_NOT_TRACK: "0" }), doNotTrack({ DO_NOT_TRACK: "FALSE" }), doNotTrack({ DO_NOT_TRACK: "" })]).toEqual([false, true, true, false, false, false]);
     expect(releasesBase("o/r", {})).toBe("https://github.com/o/r/releases");
     expect(releasesBase("o/r", { SLIPBOX_RELEASES_URL: "file:///m/" })).toBe("file:///m");
+  });
+
+  test("Bun's crash reports off at start, in the C environment, read back through libc: unless you set either switch (D221)", () => {
+    const mod = join(ROOT, "src", "core", "crash-reports.ts");
+    // A process of its own, its environment as given; what libc's getenv says after, on its last line.
+    const after = (env: Record<string, string>, first: string): string | null => {
+      const base = Object.fromEntries(Object.entries(process.env).filter(([k]) => !k.startsWith("BUN_CRASH_REPORT") && !k.startsWith("BUN_ENABLE_CRASH")));
+      const script = `${first}\nconst { libc } = await import(${JSON.stringify(mod)});\nconsole.log(JSON.stringify(libc()?.getenv("BUN_ENABLE_CRASH_REPORTING") ?? null));`;
+      const run = Bun.spawnSync([process.execPath, "-e", script], { env: { ...base, ...env }, cwd: ROOT });
+      expect(run.stderr.toString()).toBe("");
+      return JSON.parse(run.stdout.toString().trim().split("\n").at(-1)!);
+    };
+    const call = `const { crashReportsOff } = await import(${JSON.stringify(mod)}); crashReportsOff();`;
+    expect(after({}, "")).toBeNull(); // libc reached, nothing set by itself
+    expect(after({}, call)).toBe("0");
+    expect(after({ BUN_ENABLE_CRASH_REPORTING: "1" }, call)).toBe("1");
+    expect(after({ BUN_CRASH_REPORT_URL: "http://127.0.0.1:9/" }, call)).toBeNull();
+    // slipbox's own start does it, before any command runs.
+    const start = `process.argv = [process.argv[0], "slipbox", "--version"]; await import(${JSON.stringify(join(ROOT, "src", "main.ts"))});`;
+    expect(after({}, start)).toBe("0");
+    expect(libcCandidates("linux", "x64")).toEqual(["libc.so.6", "/lib/ld-musl-x86_64.so.1", "libc.so"]);
+    expect(libcCandidates("linux", "arm64")[1]).toBe("/lib/ld-musl-aarch64.so.1");
+    expect(libcCandidates("darwin", "arm64")[0]).toBe("/usr/lib/libSystem.B.dylib");
   });
 
   test("fetchLatest asks for latest/download/SHA256SUMS once; offline, an error page, nothing for it: null", async () => {

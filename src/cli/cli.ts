@@ -23,7 +23,7 @@ import { diffRows } from "../core/merge.ts";
 import { COMMAND_SPECS } from "../core/command-specs.ts";
 import { type Config, loadConfig } from "../core/config.ts";
 import { conventionOf, describeConvention, type LinkStyle } from "../core/convention.ts";
-import { linkEnds, writeLink } from "../core/write-link.ts";
+import { linkEnds, linkWarnings, writeLink } from "../core/write-link.ts";
 import { copyAvailable, folderIdentity, lookupFolder, pointerName, readFolders, setDefaultCopy } from "../core/folders.ts";
 import { isPointer, parsePointer, resolvePointer } from "../core/pointer.ts";
 import { pathLink } from "../core/links.ts";
@@ -668,6 +668,8 @@ const HANDLERS: Record<string, Handler> = {
     const title = ends.to.note ? (g.entryAnywhere(ends.to.rel ?? toAbs)?.title ?? "") : "";
     const text = flag(s.args, "text") ?? (c.style.value === "wiki" && !ends.pointer ? "" : title || basename(toAbs).replace(/\.(md|markdown)$/i, ""));
     const link = writeLink(c, c.style.value, ends, text, has(s.args, "embed"));
+    // A pointer by a private name, or by a name different folders share: said (D74, D83).
+    s.warnings.push(...linkWarnings(ends));
     return {
       data: { link, path: ends.to.rel ?? toAbs, from: fromRel, style: c.style.value, pathForm: c.path.value, extension: c.extension.value },
       human: `${link}\n`,

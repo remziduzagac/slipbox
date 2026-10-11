@@ -11,7 +11,7 @@ import { dirname, isAbsolute, posix, relative, sep } from "node:path";
 import type { Convention, LinkStyle } from "./convention.ts";
 import { linkText, urlPath } from "./convert.ts";
 import type { Graph } from "./graph.ts";
-import { folderIdentity, pointerName, travelTogether } from "./folders.ts";
+import { folderIdentity, pointerNaming, type PointerNaming, pointerWarnings, travelTogether } from "./folders.ts";
 import { formatPointer } from "./pointer.ts";
 import { findVaultRoot } from "./vault.ts";
 
@@ -26,6 +26,13 @@ export interface LinkEnds {
   reachesByName: (name: string) => boolean;
   /** Out of the root, in a named folder that doesn't travel with it: the pointer to it (21.7), unencoded. */
   pointer?: string | null;
+  /** The pointer's name, and what writing it means: a private name, a name different folders share (D74). */
+  naming?: PointerNaming | null;
+}
+
+/** What writing these ends' link says (D74, D83): its pointer's private name, or a name different folders share. */
+export function linkWarnings(ends: LinkEnds): string[] {
+  return ends.pointer && ends.naming ? pointerWarnings(ends.naming) : [];
 }
 
 /** The link's target as written — `../plan.md`, `/docs/plan`, `Dal`, `Recipes/Weeknight/Dal` — in `style`. */
@@ -79,15 +86,20 @@ function formatPointerEncoded(pointer: string): string {
 
 /**
  * The pointer to `abs` (21.7) when it's in a named folder (21.6) that doesn't travel with `root`:
- * `slipbox://<name>/<path from its root>` — the name as written for it (qualified on a clash).
+ * `slipbox://<name>/<path from its root>` — the name as written for it (qualified on a clash), and what it means.
  */
-export function pointerTo(root: string, abs: string): string | null {
+export function pointerAt(root: string, abs: string): { pointer: string; naming: PointerNaming } | null {
   const there = findVaultRoot(abs);
   if (!there || travelTogether(root, there)) return null;
   const ident = folderIdentity(there);
   if (!ident) return null;
-  const name = pointerName({ key: ident.key, name: ident.name, remote: ident.remote });
-  return formatPointer({ name, branch: null, path: relative(there, abs).split(sep).join("/"), fragment: null });
+  const naming = pointerNaming(ident);
+  return { pointer: formatPointer({ name: naming.name, branch: null, path: relative(there, abs).split(sep).join("/"), fragment: null }), naming };
+}
+
+/** The pointer to `abs`, as `pointerAt` writes it; null when none is. */
+export function pointerTo(root: string, abs: string): string | null {
+  return pointerAt(root, abs)?.pointer ?? null;
 }
 
 /** A link's ends in a graph: `to` in its root when the root's walk has it (a nested root's file isn't). */
@@ -98,9 +110,11 @@ export function linkEnds(g: Graph, fromAbs: string, toAbs: string): LinkEnds {
   };
   const fromRel = inRoot(fromAbs) ?? relative(g.root, fromAbs).split(sep).join("/");
   const rel = inRoot(toAbs);
+  const at = rel === null ? pointerAt(g.root, toAbs) : null;
   return {
     fromAbs,
-    pointer: rel === null ? pointerTo(g.root, toAbs) : null,
+    pointer: at?.pointer ?? null,
+    naming: at?.naming ?? null,
     to: { abs: toAbs, rel, note: NOTE_EXT.test(toAbs) },
     reachesByName: (name) => {
       const r = g.resolveLink({ kind: NOTE_EXT.test(toAbs) ? "wiki" : "embed", target: name }, fromRel);

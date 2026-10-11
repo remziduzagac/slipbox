@@ -5797,6 +5797,62 @@ describe("slipbox:// pointers (21.7)", () => {
     expect(j.link).toBe(`[Far](slipbox://wb${tag}/far%20note.md)`);
   });
 
+  test("a pointer written says when its name is private; on a name different folders share, the qualified one, said — else ambiguous, said (D74, D83)", async () => {
+    const { linkEnds, linkWarnings, writeLink } = await import("../src/core/write-link.ts");
+    const { recordFolder } = await import("../src/core/folders.ts");
+    const tag = uniq();
+    const parent = mkdtempSync(join(tmpdir(), "slipbox-ptr-say-"));
+    const a = await named(`sa${tag}`, { "a.md": "# A\n" }, parent);
+    const g = openGraph(locateVault({ root: a }), DEFAULT_CONFIG, false);
+    const conv = { path: { value: "relative", source: "ours", why: "" }, extension: { value: "kept", source: "ours", why: "" } } as never;
+    const write = (abs: string) => {
+      const ends = linkEnds(g, join(a, "a.md"), abs);
+      return { link: writeLink(conv, "markdown", ends, "T"), warnings: linkWarnings(ends) };
+    };
+    // A private name (`init --private`: its .slipbox/ kept out of git): the pointer works here only.
+    const priv = join(parent, `priv${tag}`);
+    mkdirSync(priv);
+    expect(git(priv, "init", "-q")).toBe(0);
+    writeFileSync(join(priv, "p.md"), "# P\n");
+    expect((await cli(["init", priv, "--name", `pv${tag}`, "--private"])).code).toBe(0);
+    const privately = `pv${tag} is a private name (its .slipbox/ is kept out of git): the pointer works on this machine only`;
+    expect(write(join(priv, "p.md"))).toEqual({ link: `[T](slipbox://pv${tag}/p.md)`, warnings: [privately] });
+    const j = JSON.parse((await cli(["--root", a, "link", join(priv, "p.md"), "--from", "a.md", "--json"])).out);
+    expect([j.data.link, j.warnings]).toEqual([`[P](slipbox://pv${tag}/p.md)`, [privately]]);
+    // The relink writing one, in its plan.
+    writeFileSync(join(a, "rel.md"), `[p](../priv${tag}/p.md)\n`);
+    const relink = JSON.parse((await cli(["--root", a, "relink", "rel.md", "--dry-run", "--json"])).out);
+    expect([relink.data.files[0].edits[0].after, relink.warnings]).toEqual([`[p](slipbox://pv${tag}/p.md)`, [privately]]);
+    // Repositories of one short name: alone, the short one, nothing said; with another, the qualified one, said.
+    const repo = (remote: string) => {
+      const d = mkdtempSync(join(parent, "repo-"));
+      mkdirSync(join(d, ".git", "info"), { recursive: true });
+      writeFileSync(join(d, ".git", "config"), `[core]\n\tbare = false\n[remote "origin"]\n\turl = ${remote}\n`);
+      writeFileSync(join(d, "r.md"), "# R\n");
+      recordFolder(d);
+      return d;
+    };
+    const mine = repo(`git@github.com:me/rr${tag}.git`);
+    expect(write(join(mine, "r.md"))).toEqual({ link: `[T](slipbox://rr${tag}/r.md)`, warnings: [] });
+    repo(`https://gitlab.com/lab/rr${tag}`);
+    const qualified = `2 different folders are called rr${tag}: written by its qualified name, github.com/me/rr${tag}`;
+    expect(write(join(mine, "r.md"))).toEqual({ link: `[T](slipbox://github.com/me/rr${tag}/r.md)`, warnings: [qualified] });
+    const cliSays = await cli(["--root", a, "link", join(mine, "r.md"), "--from", "a.md"]);
+    expect([cliSays.out, cliSays.err]).toEqual([`[R](slipbox://github.com/me/rr${tag}/r.md)\n`, `slipbox: warning: ${qualified}\n`]);
+    // Two .slipbox/ folders of one name, no qualified name: the short one, said to be ambiguous.
+    const s1 = await named(`ss${tag}`, { "s.md": "# S\n" }, mkdtempSync(join(parent, "s1-")));
+    await named(`ss${tag}`, { "s.md": "# S\n" }, mkdtempSync(join(parent, "s2-")));
+    const ambiguous = (name: string) => `2 different folders are called ${name}: followed, the pointer asks which — rename one (slipbox name <new>, in it)`;
+    expect(write(join(s1, "s.md"))).toEqual({ link: `[T](slipbox://ss${tag}/s.md)`, warnings: [ambiguous(`ss${tag}`)] });
+    // A different folder answering to the name by an alias shares it too, as following reads it.
+    const al = await named(`al${tag}`, { "l.md": "# L\n" }, parent);
+    expect(write(join(al, "l.md")).warnings).toEqual([]);
+    const other = await named(`ot${tag}`, {}, parent);
+    writeFileSync(join(other, ".slipbox", "config.toml"), `[vault]\nid = "${uniq()}"\nname = "ot${tag}"\naliases = ["al${tag}"]\n`);
+    recordFolder(other);
+    expect(write(join(al, "l.md")).warnings).toEqual([ambiguous(`al${tag}`)]);
+  });
+
   test("the relink offers a pointer for a relative link into a named folder — reached, or broken where that folder was", async () => {
     const tag = uniq();
     const parent = mkdtempSync(join(tmpdir(), "slipbox-ptr-r-"));

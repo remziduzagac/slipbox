@@ -588,6 +588,32 @@ describe("the servers of open files (19.1)", () => {
     expect(m.list().map((s) => s.state)).toEqual(["stopped", "stopped"]);
   });
 
+  test("a server gets Mason's bin on its PATH, after yours, when it's there and not on it already (D222)", async () => {
+    const said = join(sandbox, "server-path.txt");
+    const fakeDef = { name: "fake", command: launcher("fake-path", `require("node:fs").writeFileSync(${JSON.stringify(said)}, process.env.PATH ?? "");\n`), args: ["--stdio"] };
+    /** The PATH the server started with, in a project of its own. */
+    const pathOf = async (name: string) => {
+      rmSync(said, { force: true });
+      const { m } = managed(table({ fake: fakeDef }));
+      m.open(join(project(name), "one.fk"), 1, "fine\n");
+      expect(await until(() => existsSync(said) && readFileSync(said, "utf8") !== "")).toBe(true);
+      await m.stopAll();
+      return readFileSync(said, "utf8");
+    };
+    const mason = join(process.env.XDG_DATA_HOME!, "nvim", "mason", "bin");
+    const yours = process.env.PATH!;
+    expect(await pathOf("mason-absent")).toBe(yours);
+    mkdirSync(mason, { recursive: true });
+    try {
+      expect(await pathOf("mason-present")).toBe(`${yours}:${mason}`);
+      process.env.PATH = `${mason}/:${yours}`; // yours has it already, first: left as it is
+      expect(await pathOf("mason-on-path")).toBe(`${mason}/:${yours}`);
+    } finally {
+      process.env.PATH = yours;
+      rmSync(join(process.env.XDG_DATA_HOME!, "nvim"), { recursive: true, force: true });
+    }
+  });
+
   test("a project's .vscode/settings.json answers its servers' settings, over the config's, as VS Code's workspace does (19.20)", async () => {
     setTrustedRoots([sandbox]); // a root you trust (23.x): the project's own programs and settings count
     const fakeDef = { name: "fake", command: launcher("fake-vsc"), args: ["--stdio"], config: { fake: { level: 1, keep: "x", deep: { a: 1, b: 1 } } } };

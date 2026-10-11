@@ -7,7 +7,7 @@
 
 import { existsSync, openSync, readdirSync, readFileSync, readSync, closeSync, realpathSync, statSync } from "node:fs";
 import { homedir } from "node:os";
-import { dirname, isAbsolute, join } from "node:path";
+import { delimiter, dirname, isAbsolute, join } from "node:path";
 import { checkoutOf } from "../git.ts";
 import { isTrusted } from "../trust.ts";
 import type { LanguageDef, ServerDef } from "./languages.ts";
@@ -53,10 +53,32 @@ function projectBins(root: string): string[] {
   return out;
 }
 
+/** Mason's `bin`: where nvim's Mason puts the programs it installs, under the data folder. */
+export function masonBin(): string {
+  return join(process.env.XDG_DATA_HOME ?? join(homedir(), ".local", "share"), "nvim", "mason", "bin");
+}
+
 /** Where the user installs tools themselves, beside PATH. */
 function userInstalls(): string[] {
   const home = homedir();
-  return [join(process.env.XDG_DATA_HOME ?? join(home, ".local", "share"), "nvim", "mason", "bin"), join(home, ".cargo", "bin"), join(home, "go", "bin"), join(home, ".local", "bin")];
+  return [masonBin(), join(home, ".cargo", "bin"), join(home, "go", "bin"), join(home, ".local", "bin")];
+}
+
+/**
+ * A language server's `PATH` (D222): yours, then Mason's `bin` when it's there and not on it already, so a server finds
+ * the helpers Mason installed beside it (bash-language-server runs shellcheck only when it's on `PATH`). Mason's is
+ * one of your install folders, so it runs nothing a folder brings with it (D172). No `PATH` at all is left as it is.
+ */
+export function serverPath(path: string | undefined, mason = masonBin()): string | undefined {
+  if (!path) return path;
+  const bare = (d: string) => (d.length > 1 ? d.replace(/\/+$/, "") : d);
+  if (path.split(delimiter).some((d) => bare(d) === bare(mason))) return path;
+  try {
+    if (!statSync(mason).isDirectory()) return path;
+  } catch {
+    return path;
+  }
+  return `${path}${delimiter}${mason}`;
 }
 
 import { type NpmSpec, toolFolder, toolSlug, toolsDir } from "./install.ts";

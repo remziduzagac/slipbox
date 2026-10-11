@@ -7726,6 +7726,87 @@ describe("vaults in the TUI (17.x)", () => {
     await h.keys("escape");
   });
 
+  test("a pointer completed to a name two folders share asks first (D74, D83): written as it is, or one folder renamed first, previewed, then written; a private name, said", async () => {
+    const { initVault, locateVault: locate } = await import("../src/core/vault.ts");
+    const { recordFolder } = await import("../src/core/folders.ts");
+    const n = ++made;
+    const base = mkdtempSync(join(sandbox, "clash-"));
+    const notes = join(base, "notes");
+    const twin1 = join(base, "one", `tw${n}`);
+    const twin2 = join(base, "two", `tw${n}`);
+    for (const [dir, file] of [[notes, "a.md"], [twin1, "t1.md"], [twin2, "t2.md"]] as const) {
+      mkdirSync(dir, { recursive: true });
+      writeFileSync(join(dir, file), `# ${file}\n`);
+    }
+    initVault(notes, `cnotes${n}`);
+    initVault(twin1, `tw${n}`);
+    // A second folder of the name: made by hand (init refuses a name this machine knows), seen.
+    mkdirSync(join(twin2, ".slipbox"));
+    writeFileSync(join(twin2, ".slipbox", "config.toml"), `[vault]\nid = "two${n}"\nname = "tw${n}"\n`);
+    recordFolder(twin2);
+    openGraph(locate({ root: twin1 }), DEFAULT_CONFIG, true); // its index: completion lists its notes
+    const h = await harness({ root: notes, open: "a.md" });
+    await h.app.run("view.source");
+    const complete = async (typed: string) => {
+      await h.keys("shift+g", "o");
+      for (const k of `[x](one/tw${n}/${typed}`) await h.keys(k);
+      expect(h.app.completion?.shown[0]?.detail).toEndWith(join(twin1, "t1.md"));
+      await h.keys("tab");
+    };
+    const list = () => h.app.overlay as ListOverlay;
+    await complete("t1");
+    // Asked, nothing written yet.
+    expect(list().title).toBe(`tw${n}: 2 different folders have this name — how is the link written?`);
+    const parent = (dir: string) => basename(dirname(dir));
+    expect(list().items.map((i) => [i.label, i.detail])).toEqual([
+      [`Write it by tw${n} as it is`, "followed, it asks which folder is meant"],
+      [`Rename ${twin1}'s name first…`, `tw${n} → ${parent(twin1)}-tw${n}`],
+      [`Rename ${twin2}'s name first…`, `tw${n} → ${parent(twin2)}-tw${n}`],
+    ]);
+    expect(h.app.view!.buf.source).toBe("# a.md\n[x](one/tw" + n + "/t1\n");
+    // As it is: the short name.
+    await h.keys("enter");
+    expect(h.app.overlay).toBeNull();
+    expect(h.app.view!.buf.source).toBe(`# a.md\n[x](slipbox://tw${n}/t1.md\n`);
+    await h.keys(")", "escape");
+    // Again, the other folder renamed first: its name suggested, the rename previewed — then the link, by the name
+    // that's now the linked folder's alone, nothing more asked.
+    await complete("t1");
+    list().selected = 2;
+    await h.keys("enter");
+    expect(h.app.overlay?.kind).toBe("prompt");
+    expect((h.app.overlay as import("../src/tui/app.ts").PromptOverlay).text).toBe(`two-tw${n}`);
+    await h.keys("enter");
+    expect(list().title).toStartWith(`name tw${n} → two-tw${n}: 1 change in 1 file`);
+    await h.keys("enter");
+    expect(readFileSync(join(twin2, ".slipbox", "config.toml"), "utf8")).toContain(`name = "two-tw${n}"`);
+    expect(h.app.overlay).toBeNull();
+    expect(h.app.view!.buf.source).toBe(`# a.md\n[x](slipbox://tw${n}/t1.md)\n[x](slipbox://tw${n}/t1.md\n`);
+    await h.keys(")", "escape");
+    // Esc at the question writes nothing.
+    writeFileSync(join(twin2, ".slipbox", "config.toml"), `[vault]\nid = "two${n}"\nname = "tw${n}"\n`);
+    recordFolder(twin2);
+    await complete("t1");
+    await h.keys("escape");
+    expect(h.app.overlay).toBeNull();
+    expect(h.app.view!.buf.source).toEndWith(`\n[x](one/tw${n}/t1\n`);
+    await h.keys("escape");
+    // A private name (its .slipbox/ kept out of git): written, and said in the message line.
+    const priv = join(base, `pv${n}`);
+    mkdirSync(priv);
+    Bun.spawnSync(["git", "init", "-q"], { cwd: priv });
+    writeFileSync(join(priv, "p.md"), "# p\n");
+    initVault(priv, `pv${n}`, { private: true });
+    openGraph(locate({ root: priv }), DEFAULT_CONFIG, true);
+    await h.keys("shift+g", "o");
+    for (const k of `[p](pv${n}/p.m`) await h.keys(k);
+    expect(h.app.completion?.shown[0]?.detail).toEndWith(join(priv, "p.md"));
+    await h.keys("tab");
+    expect(h.app.view!.buf.source).toEndWith(`\n[p](slipbox://pv${n}/p.md\n`);
+    expect(h.app.messages.at(-1)).toMatchObject({ level: "warn", text: `pv${n} is a private name (its .slipbox/ is kept out of git): the pointer works on this machine only` });
+    await h.keys("escape");
+  });
+
   test("links completed in the root's convention (21.5): after [[ a name where it reaches the note, else its path; after ]( the convention's path and extension", async () => {
     const root = mkdtempSync(join(tmpdir(), "slipbox-complete-conv-"));
     mkdirSync(join(root, ".obsidian"));

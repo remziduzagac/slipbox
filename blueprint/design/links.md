@@ -199,7 +199,9 @@ the note from the linking file; else its path from the root, a top-level note's 
 path (`./plan`, `../plan`): never a name that would land elsewhere. With the path from the root, a markdown link is
 written `/docs/plan.md`. A file outside the root follows § Between folders: its pointer when a named folder holds it
 and the two don't travel together, else a relative path, its extension kept. A pointer is always written as a
-markdown link, in a wikilink root too, since a wikilink reads none (D75).
+markdown link, in a wikilink root too, since a wikilink reads none (D75). Its name is said when it's private or
+different folders share it, and in the TUI a shared one is asked about before anything is written (§ Pointers,
+"Written"; D74, D83).
 
 The scratch's captures are `path:line` references in code spans, as agents read them: not links, so the convention
 leaves them be (D83). The keys: [tui.md](tui.md) § Following links ("Writing a link") and § What's under the cursor;
@@ -232,6 +234,15 @@ when its target is in a named folder (§ Repairs).
   too.
 - **The path** after the name is read as a markdown link's path is (no extension, a folder), and stays in its folder:
   one climbing out of it is unresolved.
+- **Written** (completion, the link picker, `slipbox link`, the relink; `pointerNaming` in `core/folders.ts`): by the
+  folder's short name, unless a different folder this machine knows answers to it too, by its name or an alias, as
+  following reads one (D74, D83). Then a repository's qualified name is written; a folder with none keeps the short
+  one, ambiguous: followed, it asks which. In the TUI such a name asks before anything is written (`writeLinkAsked`):
+  rename one of the folders first — a `.slipbox/` one, by `slipbox name`'s rename, the parent folder's name prefixed
+  as a suggestion, previewed — and the link is written once that's done, by the name it has then; or write the
+  qualified name, or the short one as it is; esc writes nothing. The CLI writes it and says so in its `warnings`, as
+  the relink does in its plan. A private name (a `.slipbox/` kept out of git) is written and said, in the TUI's
+  message line and the CLI's `warnings`: the pointer works on this machine only.
 - **Followed:** an unknown name, or a copy that isn't here, says why ("`notes` isn't on this machine yet: open it, or
   let the index find it"), never offering a note by that name; a name of different folders lists each, and offers
   renaming a `.slipbox/` one (the parent folder's name prefixed, the config edit previewed). A pointer from a file of

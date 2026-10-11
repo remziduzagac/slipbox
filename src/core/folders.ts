@@ -328,12 +328,51 @@ export function lookupFolder(name: string, folders = readFolders()): FolderLooku
   return { status: "unavailable", folder: f, path: def };
 }
 
+/** A folder's name as a pointer is written with it (D74, D75), and what that means: said, or asked first (D83). */
+export interface PointerNaming {
+  /** What's written: the short name, or on a clash the qualified one, when the folder has one. */
+  name: string;
+  /** Its short name. */
+  short: string;
+  /** Its qualified name (a repository's remote), when it has one. */
+  qualified: string | null;
+  /** Its `.slipbox/` is kept out of git (`init --private`): the short name holds on this machine only. */
+  private: boolean;
+  /** The different folders this machine knows by the short name (their name or an alias): by it, a pointer is
+   *  ambiguous — followed, it asks which. */
+  clash: NamedFolder[];
+}
+
 /**
- * The name to write for a folder (a pointer's): its short name, unless a different folder this
- * machine knows has it too — then a repository's qualified name; a `.slipbox/` folder keeps its
- * short one (ambiguous until one is renamed).
+ * The name to write for a folder (a pointer's): its short name, unless a different folder this machine knows answers
+ * to it too, as the lookup reads one (its name or an alias) — then a repository's qualified name; a `.slipbox/`
+ * folder keeps its short one (ambiguous until one is renamed). With what writing it means: a private name, a clash.
  */
+export function pointerNaming(f: Pick<NamedFolder, "key" | "name" | "remote"> & { private?: boolean }, folders = readFolders()): PointerNaming {
+  const n = f.name.toLowerCase();
+  const clash = folders.filter((x) => x.key !== f.key && [x.name, ...x.aliases].some((y) => y.toLowerCase() === n));
+  return { name: clash.length && f.remote ? f.remote : f.name, short: f.name, qualified: f.remote, private: !!f.private, clash };
+}
+
+/** The name to write for a folder (a pointer's): `pointerNaming`'s. */
 export function pointerName(f: Pick<NamedFolder, "key" | "name" | "remote">, folders = readFolders()): string {
-  const clash = folders.some((x) => x.key !== f.key && x.name.toLowerCase() === f.name.toLowerCase());
-  return clash && f.remote ? f.remote : f.name;
+  return pointerNaming(f, folders).name;
+}
+
+/**
+ * What a pointer written by `n` says, for the CLI's warnings and the TUI's message line (D74, D83): a clash, written
+ * by the qualified name or left ambiguous; a private name written, working on this machine only.
+ */
+export function pointerWarnings(n: PointerNaming): string[] {
+  const out: string[] = [];
+  const many = `${n.clash.length + 1} different folders are called ${n.short}`;
+  if (n.clash.length) out.push(n.name !== n.short ? `${many}: written by its qualified name, ${n.name}` : `${many}: followed, the pointer asks which — rename one (slipbox name <new>, in it)`);
+  const priv = privateNameWarning(n);
+  if (priv) out.push(priv);
+  return out;
+}
+
+/** A private name written (D74): the pointer works on this machine only; null for any other. */
+export function privateNameWarning(n: PointerNaming): string | null {
+  return n.private && n.name === n.short ? `${n.short} is a private name (its .slipbox/ is kept out of git): the pointer works on this machine only` : null;
 }

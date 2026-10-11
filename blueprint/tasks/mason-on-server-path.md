@@ -1,6 +1,6 @@
 ---
-status: todo
-assignee:
+status: review
+assignee: claude-writes
 created: "2026-10-11"
 ---
 
@@ -31,3 +31,16 @@ keep their own `PATH` handling (`linters.ts`, `projectPath`).
 - Rests on: D170, D172.
 
 ## Log
+
+- 2026-10-11: `core/servers/find.ts`: `masonBin()` (what `userInstalls` already looked in) and `serverPath(path)`:
+  Mason's `bin` appended when it's a folder and not on `PATH` already (a trailing `/` ignored); no `PATH` is left as
+  it is. `core/servers/client.ts` sets the spawned server's `PATH` to it, after the server's own `environment`, so
+  every server slipbox starts has it; linters are untouched.
+- 2026-10-11: test in tests/servers.test.ts, "the servers of open files (19.1)": the fake server started by the
+  manager through a launcher that writes its `PATH` down: absent, yours as it is; present, yours then Mason's;
+  already on yours, as it is. Mutation-checked: without the line in `client.ts`, without the "already there" check,
+  and without the folder check, it fails.
+- 2026-10-11: live, on the reference set (`bun src/main.ts diagnostics work/kestrel/scripts/drain-queue.sh`): on this
+  machine shellcheck is only in Mason's `bin`, not on `PATH`, and bash-language-server is found there too. With the
+  change, `shellcheck SC2045: Iterating over ls output is fragile` is reported; with it undone, nothing (*ran*).
+- 2026-10-11: design/lsp.md § The client for code says it.

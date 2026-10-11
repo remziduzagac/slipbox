@@ -3,8 +3,12 @@
 // but only when stdout is a terminal (9.3). The TUI is imported lazily so the CLI never loads
 // OpenTUI's native renderer.
 
+import { crashReportsOff } from "./core/crash-reports.ts";
 import { parseArgs } from "./cli/args.ts";
 import { CLI_COMMANDS, defaultIo, EXIT, runCli } from "./cli/cli.ts";
+
+// First: Bun's own crash reports off, in the C environment its crash handler reads (D221).
+crashReportsOff();
 
 /** The Bun slipbox is built and tested on: older ones lack what it uses (`node:sqlite` for search, the compile flags). */
 const BUN_FLOOR = ">=1.4.2";

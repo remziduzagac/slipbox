@@ -18,7 +18,7 @@ import { contentHash } from "./redirects.ts";
 import { changedSpan, forgetRename, type LoggedRename, logRename, readRenames } from "./rename-log.ts";
 import { forgetRoot, IdentityEditError, identityReadsBack, newVaultId, readIdentity, readRoots, VAULT_NAME, vaultConfigFile, withIdentity } from "./registry.ts";
 import { openVault } from "./reach.ts";
-import { copyAvailable, folderIdentity, folderNamed, pointerName, readFolders, recordFolder, travelTogether } from "./folders.ts";
+import { copyAvailable, folderIdentity, folderNamed, pointerName, pointerNaming, pointerWarnings, readFolders, recordFolder, travelTogether } from "./folders.ts";
 import { formatPointer, isPointer, parsePointer, resolvePointer } from "./pointer.ts";
 import { parseHosted } from "./hosting.ts";
 import { checkoutOf } from "./git.ts";
@@ -742,6 +742,8 @@ function renameInConfig(text: string, oldName: string, newName: string): string 
 export function planRelink(g: Graph, rels?: string[], opts: { pointers?: boolean } = {}): RenamePlan {
   g.ensureAll();
   const c = new Collector(g);
+  /** What the pointers it writes say (D74): a private name, a qualified one on a clash. */
+  const said = new Set<string>();
   for (const rel of rels ?? [...g.notes.keys()]) {
     for (const l of g.linksOf(rel)) {
       // A path that reaches nothing, whose file was seen to move (20.2: evidence, not resolution).
@@ -764,7 +766,7 @@ export function planRelink(g: Graph, rels?: string[], opts: { pointers?: boolean
         }
       }
       // A path into a named folder that doesn't travel with this one (21.7): its pointer.
-      const ptr = opts.pointers === false ? null : pointerOffer(g, l, rel);
+      const ptr = opts.pointers === false ? null : pointerOffer(g, l, rel, said);
       if (ptr) c.edit(site, ptr, null);
     }
   }
@@ -772,7 +774,7 @@ export function planRelink(g: Graph, rels?: string[], opts: { pointers?: boolean
   const moved = rels ? null : lastMove(g);
   if (moved) vaultMoveFixes(g, moved, c);
   const files = c.result();
-  return { kind: "relink", from: rels?.join(", ") ?? "every note", to: "", move: null, files, warnings: dirtyTrees(files.map((f) => f.abs)), skipped: c.skipped };
+  return { kind: "relink", from: rels?.join(", ") ?? "every note", to: "", move: null, files, warnings: [...said, ...dirtyTrees(files.map((f) => f.abs))], skipped: c.skipped };
 }
 
 /**
@@ -780,7 +782,7 @@ export function planRelink(g: Graph, rels?: string[], opts: { pointers?: boolean
  * the pointer to write instead — for one that reaches the file, and for one broken where a copy of
  * that folder was (moved by hand). Only one that reaches the file now; the fragment kept.
  */
-function pointerOffer(g: Graph, l: ResolvedLink, fromRel: string): string | null {
+function pointerOffer(g: Graph, l: ResolvedLink, fromRel: string, said: Set<string>): string | null {
   if (l.kind !== "markdown" && l.kind !== "image") return null;
   const hash = l.target.indexOf("#");
   const path = hash >= 0 ? l.target.slice(0, hash) : l.target;
@@ -816,9 +818,12 @@ function pointerOffer(g: Graph, l: ResolvedLink, fromRel: string): string | null
     }
   }
   if (!hit?.f || travelTogether(g.root, hit.root)) return null;
-  const p = { name: pointerName(hit.f, folders), branch: null, path: relative(hit.root, abs).split(sep).join("/"), fragment: null };
+  const naming = pointerNaming(hit.f, folders);
+  const p = { name: naming.name, branch: null, path: relative(hit.root, abs).split(sep).join("/"), fragment: null };
   const t = resolvePointer(p, folders);
   if (t.status !== "found" || !pathLink(t.abs, join(g.root, fromRel), false, undefined, true)) return null;
+  // Its name private, or written qualified on a clash: said in the plan (D74, D83).
+  for (const w of pointerWarnings(naming)) said.add(w);
   return formatPointer(p, /%[0-9A-Fa-f]{2}/.test(path) || /\s/.test(p.path) ? encodeURI : undefined) + frag;
 }
 

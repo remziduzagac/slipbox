@@ -381,6 +381,7 @@ overrides. Each is kept only while the config value it replaced is unchanged, so
 | `SLIPBOX_CLIPBOARD` | `file`: copies go only to `clipboard.txt` in the state dir, never the clipboard (tests) |
 | `SLIPBOX_TRACE` | TUI: append each command it runs to this file, one id a line (the terminal tests' coverage) |
 | `DO_NOT_TRACK` | set (not `0` or `false`): no update check (`14.4`) |
+| `BUN_ENABLE_CRASH_REPORTING` | Bun's crash reports: slipbox sets `0` unless you set it or `BUN_CRASH_REPORT_URL` |
 | `SLIPBOX_RELEASES_URL` | releases from elsewhere, laid out as GitHub's: install, upgrade, the check (`14.x`) |
 | `SLIPBOX_BIN_DIR` | `install.sh`: where its `slipbox` link goes, not `~/.local/bin` (`14.7`) |
 
