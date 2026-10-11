@@ -718,6 +718,37 @@ describe("which-key", () => {
       for (const k of under) expect([prefix, k, named.includes(k)]).toEqual([prefix, k, true]);
     }
   });
+  test("a top-level prefix's popup says its group's explanation in its title, which nothing else shows (DF-D31)", async () => {
+    const h = await harness({
+      width: 200,
+      height: 40,
+      config: (c) => ((c.input.which_key_delay_ms = 10), (c.keys = { "g q a": "note.save" }), (c.groups = { y: "yank: what's copied", "g q": "quick: a group under g" })),
+    });
+    const title = async (...keys: string[]) => {
+      await h.keys(...keys);
+      await new Promise((r) => setTimeout(r, 40));
+      const row = h.frame().split("\n").find((r) => r.includes("┌─ "));
+      await h.keys("escape");
+      return row?.slice(row.indexOf("┌─ ") + 3, row.lastIndexOf(" ─")).trim();
+    };
+    for (const prefix of ["z", "[", "]", "g"]) {
+      const { name, desc } = parseGroup(DEFAULT_GROUPS[prefix]!);
+      expect(await title(prefix)).toBe(`${prefix} › ${name}: ${desc}`); // the box as wide as it, room allowing
+    }
+    expect(await title("y")).toBe("y › yank: what's copied"); // [groups]' too
+    // Under the leader or another prefix, a group's explanation is in the popup above it, beside its name: the title
+    // its name alone.
+    expect(await title("space", "l")).toBe("␣ l › links");
+    expect(await title("g", "q")).toBe("g q › quick");
+    // A narrower screen cuts it, in the popup's width.
+    const narrow = await harness({ width: 90, height: 40, config: (c) => (c.input.which_key_delay_ms = 10) });
+    await narrow.keys("z");
+    await new Promise((r) => setTimeout(r, 40));
+    const row = narrow.frame().split("\n").find((r) => r.includes("┌─ "))!;
+    expect(row).toContain("z › scroll: the cursor's line");
+    expect(row).toContain("…");
+    expect(row.trimEnd().endsWith("┐")).toBe(true);
+  });
   test("other prefixes show it only after the delay", async () => {
     const h = await harness({ config: (c) => (c.input.which_key_delay_ms = 50) });
     await h.keys("y");
@@ -3685,7 +3716,7 @@ describe("review round 3", () => {
   const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
   test("the scratch's own writes never read as external changes (polled directories included)", async () => {
     const root = makeVault();
-    const h = await harness({ root, watch: true, config: (c) => ((c.capture.location = "vault"), (c.watch.debounce_ms = 30), (c.watch.poll_ms = 100)) });
+    const h = await harness({ root, watch: true, config: (c) => ((c.capture.location = "root"), (c.watch.debounce_ms = 30), (c.watch.poll_ms = 100)) });
     try {
       await h.keys("space", "s", "a");
       await sleep(400);
@@ -8364,7 +8395,7 @@ describe("vaults in the TUI (17.x)", () => {
   test("the explorer shows a nested vault with its own icon; enter goes into it (17.13)", async () => {
     const root = makeVault();
     writeFileSync(join(root, "nested-vault", ".slipbox", "config.toml"), '[vault]\nid = "nestedid1"\nname = "inner-notes"\n');
-    const h = await harness({ root, open: "index.md", config: (c) => (c.colors = { sidebar_vault: "#ff00aa" }) });
+    const h = await harness({ root, open: "index.md", config: (c) => (c.colors = { sidebar_root: "#ff00aa" }) });
     h.app.region = "sidebar";
     const rows = h.app.explorerRows();
     const i = rows.findIndex((r) => r.path === "nested-vault");
@@ -8372,11 +8403,11 @@ describe("vaults in the TUI (17.x)", () => {
     const f = h.frame();
     expect(f).toContain("◈ nested-vault inner-notes");
     // A folder's colour by default (its icon tells it apart), from a role of its own: set here.
-    expect(h.app.theme.roles.sidebar_vault.fg).not.toEqual(h.app.theme.roles.sidebar_dir.fg);
+    expect(h.app.theme.roles.sidebar_root.fg).not.toEqual(h.app.theme.roles.sidebar_dir.fg);
     const c = h.canvas();
     const y = c.toString().split("\n").findIndex((r) => r.includes("◈ nested-vault"));
     const x = c.toString().split("\n")[y]!.indexOf("◈");
-    expect(c.styles[y]![x]).toMatchObject({ fg: h.app.theme.roles.sidebar_vault.fg });
+    expect(c.styles[y]![x]).toMatchObject({ fg: h.app.theme.roles.sidebar_root.fg });
     h.app.sidebar.selected = i;
     await h.keys("enter");
     expect(h.app.loc.root).toBe(join(root, "nested-vault"));
@@ -11020,6 +11051,32 @@ describe("git worktrees in the TUI (17.19)", () => {
     expect(h.app.view!.buf.abs).toBe(join(two, "n.md"));
   });
 
+  test(":folders-default offers a repository's every copy, a clone with a .slipbox/ name of its own too (DF-D30)", async () => {
+    const { readFolders, recordFolder } = await import("../src/core/folders.ts");
+    const { tildePath } = await import("../src/core/names.ts");
+    const tag = basename(mkdtempSync(join(sandbox, "dc-"))).replace(/[^a-z0-9]/gi, "").toLowerCase();
+    const mk = (name: string) => {
+      const d = mkdtempSync(join(sandbox, "dc-r-"));
+      mkdirSync(join(d, ".slipbox"));
+      writeFileSync(join(d, ".slipbox", "config.toml"), `[vault]\nid = "${name}"\nname = "${name}"\n`);
+      mkdirSync(join(d, ".git", "info"), { recursive: true });
+      writeFileSync(join(d, ".git", "config"), `[core]\n\tbare = false\n[remote "origin"]\n\turl = https://github.com/labs/r${tag}\n`);
+      writeFileSync(join(d, "n.md"), "# N\n");
+      recordFolder(d);
+      return d;
+    };
+    const repo = mk(`r${tag}`);
+    const clone = mk(`r${tag}-spike`);
+    const h = await harness({ root: repo, open: "n.md" });
+    await h.app.run("folders.default");
+    const list = h.app.overlay as ListOverlay;
+    expect(list.title).toBe(`r${tag}: which copy do links open?`);
+    expect(list.items.map((i) => [i.label, i.hint])).toEqual([[tildePath(repo), "links open it"], [tildePath(clone), undefined]]);
+    await h.keys("down", "enter");
+    expect(readFolders().find((f) => f.name === `r${tag}`)?.default).toBe(clone);
+    expect(h.app.messages.at(-1)!.text).toBe(`links to r${tag} open ${tildePath(clone)}`);
+  });
+
   test("repairs (21.11): a batch of moves made elsewhere offers the relink once; a folder named the old way says so, its pointer written by a code action", async () => {
     const { recordFolder } = await import("../src/core/folders.ts");
     const tag = basename(mkdtempSync(join(sandbox, "rp-"))).replace(/[^a-z0-9]/gi, "").toLowerCase();
@@ -12079,6 +12136,31 @@ describe("language servers in the TUI (19.1, 19.8)", () => {
     const plan = await hoverOn("claims.md#The%20Plan");
     expect(plan.title).toBe("claims.md › The Plan");
     expect(plan.source).toStartWith("## The Plan\n\nShip it.");
+  });
+
+  test("shift+k on a link to a heading or block that isn't there says so, and shows the note's top, where it opens (DF-D26)", async () => {
+    const root = makeVault();
+    writeFileSync(join(root, "my_claims.md"), "---\nk: v\n---\n# Claims\n\nThe first claim holds. ^claim-one\n");
+    writeFileSync(join(root, "cites.md"), "[h](my_claims.md#No%20*Such*%20Plan) [[my_claims#^gone]]\n");
+    const h = await harness({ root, open: "cites.md", width: 140 });
+    const view = h.app.view!;
+    const hoverOn = async (nth: number) => {
+      const link = h.app.currentLayout(view).links[nth]!;
+      h.app.moveCursor(view, { row: link.line, col: link.col });
+      await h.keys("shift+k");
+      expect(h.app.floating?.kind).toBe("hover");
+      const got = { title: h.app.floating!.title, frame: h.frame() };
+      expect(h.app.floating!.view.buf.source).toEndWith("\n\n# Claims\n\nThe first claim holds. ^claim-one\n");
+      await h.keys("escape");
+      return got;
+    };
+    const heading = await hoverOn(0);
+    expect(heading.title).toBe("my_claims.md"); // where it lands: the note, not a heading it hasn't
+    expect(heading.frame).toContain('No heading "No *Such* Plan" in my_claims.md: the link opens the note at its top.');
+    expect(heading.frame).not.toContain("(nothing there)");
+    const block = await hoverOn(1);
+    expect(block.title).toBe("my_claims.md");
+    expect(block.frame).toContain("No block ^gone in my_claims.md: the link opens the note at its top.");
   });
 });
 

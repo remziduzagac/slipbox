@@ -24,7 +24,7 @@ import { COMMAND_SPECS } from "../core/command-specs.ts";
 import { type Config, loadConfig } from "../core/config.ts";
 import { conventionOf, describeConvention, type LinkStyle } from "../core/convention.ts";
 import { linkEnds, linkWarnings, writeLink } from "../core/write-link.ts";
-import { copyAvailable, folderIdentity, lookupFolder, pointerName, readFolders, setDefaultCopy } from "../core/folders.ts";
+import { copyAvailable, folderIdentity, folderNamed, lookupFolder, pointerName, readFolders, repositoryCopies, setDefaultCopy } from "../core/folders.ts";
 import { isPointer, parsePointer, resolvePointer } from "../core/pointer.ts";
 import { pathLink } from "../core/links.ts";
 import { glyphsFor, isGlyphMode } from "../core/glyphs.ts";
@@ -1363,13 +1363,13 @@ const HANDLERS: Record<string, Handler> = {
   /**
    * This root's name (21.10): a `.slipbox/` folder's changed — its old one kept, so pointers by it still
    * find it (the relink rewrites them) — a repository's given a `.slipbox/` to hold one. A name a
-   * different folder has here is refused.
+   * different folder has here is refused; a copy of the same repository is none, so a clone may be named as its
+   * repository is (DF-D30).
    */
   async name(s, rest) {
     const name = requireArg(rest, "the folder's new name");
     if (s.loc.mode === "folder") throw new CliError(`${s.loc.root} has no root to name: slipbox init makes one`, EXIT.refused);
-    const ident = folderIdentity(s.loc.root);
-    const taken = readFolders().find((f) => f.key !== ident?.key && f.name.toLowerCase() === name.toLowerCase());
+    const taken = folderNamed(name, s.loc.root).find((f) => f.name.toLowerCase() === name.toLowerCase());
     if (taken) throw new CliError(`a different folder is called ${name}, at ${taken.default ?? taken.copies[0]?.path}: pick another`, EXIT.refused);
     if (hasMarker(s.loc.root)) {
       const r = await renameResult(s, () => planVaultRename(s.loc, name));
@@ -1397,7 +1397,9 @@ const HANDLERS: Record<string, Handler> = {
       if (l.status === "ambiguous") throw new CliError(`${name}: ${l.reason}`, EXIT.ambiguous, { candidates: l.candidates });
       if (l.status === "unknown") throw new CliError(l.reason, EXIT.notFound);
       const path = resolve(s.io.cwd, at);
-      if (!l.folder.copies.some((c) => c.path === path)) throw new CliError(`${path} isn't a copy of ${l.folder.name}: ${l.folder.copies.map((c) => c.path).join(", ")}`, EXIT.refused);
+      // Any copy of the repository: a clone with a .slipbox/ name of its own is one too (DF-D30).
+      const copies = repositoryCopies(l.folder, list);
+      if (!copies.some((c) => c.path === path)) throw new CliError(`${path} isn't a copy of ${l.folder.name}: ${copies.map((c) => c.path).join(", ")}`, EXIT.refused);
       setDefaultCopy(l.folder.key, path);
       return { data: { name: l.folder.name, default: path }, human: `links to ${l.folder.name} open ${tildePath(path)}\n` };
     }
@@ -1413,8 +1415,15 @@ const HANDLERS: Record<string, Handler> = {
       default: f.default,
       copies: f.copies.map((c) => ({ path: c.path, seen: c.seen, found: !!c.found, available: copyAvailable(c.path) })),
     }));
+    // A default that is another copy of the repository, a clone with a .slipbox/ of its own (DF-D30): listed here too,
+    // its name said where it has another.
+    const clone = (f: (typeof data)[number]) => (f.default && !f.copies.some((c) => c.path === f.default) ? list.find((x) => x.copies.some((c) => c.path === f.default)) : undefined);
     const human = data
-      .map((f) => [`${f.pointer}${f.pointer !== f.name ? ` (${f.name})` : ""}${f.remote && f.pointer !== f.remote ? `  ${f.remote}` : ""}${f.private ? "  private" : ""}`, ...f.copies.map((c) => `  ${c.path === f.default ? "*" : " "} ${tildePath(c.path)}${c.available ? "" : "  (not here)"}${c.found ? "  (found)" : ""}`)].join("\n"))
+      .map((f) => [
+        `${f.pointer}${f.pointer !== f.name ? ` (${f.name})` : ""}${f.remote && f.pointer !== f.remote ? `  ${f.remote}` : ""}${f.private ? "  private" : ""}`,
+        ...f.copies.map((c) => `  ${c.path === f.default ? "*" : " "} ${tildePath(c.path)}${c.available ? "" : "  (not here)"}${c.found ? "  (found)" : ""}`),
+        ...(clone(f) ? [`  * ${tildePath(f.default!)}${clone(f)!.name !== f.name ? `  (named ${clone(f)!.name})` : ""}`] : []),
+      ].join("\n"))
       .join("\n");
     return { data, human: human ? `${human}\n` : "no named folders yet: a .slipbox/ name, or a repository's remote, names one\n" };
   },

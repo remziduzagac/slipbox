@@ -525,6 +525,11 @@ function fragmentAnchor(a: App, path: string, fragment: string, wiki = false): A
   return { ...TOP };
 }
 
+/** Text as Markdown reads it back, its punctuation escaped: a heading's `*` or a path's `_` never formatting. */
+function markdownText(s: string): string {
+  return s.replace(/[!-/:-@[-`{-~]/g, "\\$&");
+}
+
 /** A note's path as a message gives it (21.9): from this root, else from home, else absolute. */
 function shownAt(a: App, path: string): string {
   return isAbsolute(path) ? a.graph.shownPath(path) : path;
@@ -1995,6 +2000,12 @@ export function registerActions(app: App): void {
           const heading = block ? null : (hit?.heading != null ? entry!.headings[hit.heading]!.text : null) || frag;
           // Titled by its path as shown (21.9): from this root, else `~/…`, else absolute.
           const shown = isAbsolute(path) ? a.graph.shownPath(path) : path;
+          // A heading or block that isn't there: said, and where following lands, the note's top (DF-D26).
+          const top = text === null && frag ? landingText(a.graph, path, null, null) : null;
+          if (top !== null) {
+            const what = block ? `block ^${block}` : `heading "${frag}"`;
+            return a.openHover(`*No ${markdownText(what)} in ${markdownText(shown)}: the link opens the note at its top.*\n\n${top}`, shown);
+          }
           return a.openHover(text ?? "(nothing there)", `${shown}${block ? ` ^${block}` : heading ? ` › ${heading}` : ""}`);
         }
         a.syncServers(v.buf);

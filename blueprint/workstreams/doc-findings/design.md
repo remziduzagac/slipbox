@@ -460,9 +460,27 @@ made `ideas.md` beside the folder: a copy's path was always the whole path, read
 **design/tui.md § Files in the explorer**: unchanged. A paste goes into the folder selected, and into the copied
 item's own folder as `name-copy`, already; the TUI has no copy to a typed path.
 
-## MODIFIED design/terms.md § Retired; design/tui.md, design/roots.md where config words appear (DF-D22)
+## MODIFIED design/terms.md § Retired; design/tui.md § Side panes; design/how-it-works.md § Storage (DF-D22)
 
-Your config takes root wherever it takes vault.
+**design/terms.md § Retired**, the **vault** entry, as DF-D9 leaves it (above), becomes:
+
+> - **vault**: a root, or a named folder (D79). The word stays in code (`core/vault.ts`, command ids such as
+>   `vault.init`, which `[keys]` and `[aliases]` name), in the `[vault]` identity table, in the logs and plans slipbox
+>   keeps, and in the names of the fixture and demo vaults; never in what the CLI prints or its JSON (DF-D9). Your
+>   config's other words say root: `capture.location = "root"`, the explorer's actions `rename_root`, `make_root` and
+>   `unmake_root` (`[keys.explorer]`), the colour role `sidebar_root`; the old words, `vault`, `rename_vault`,
+>   `make_vault`, `unmake_vault` and `sidebar_vault`, are read as them, unwarned, and the docs show root (DF-D22;
+>   `OLD_VALUES` in `core/config.ts`, `OLD_ROLES` in `core/theme/theme.ts`).
+
+Previously (DF-D9's): "The word stays in code and config (`core/vault.ts`, the `[vault]` identity table, command ids
+such as `vault.init`), in the logs and plans slipbox keeps, …"; nothing in the config said root. The list of terms in
+decisions/README.md ("Still named "vault" in code and config: …, the colour role `sidebar_vault`") loses the role.
+
+**design/tui.md § Side panes**, the explorer's nested root: "(role `sidebar_vault`, for `[colors]` to set)" becomes
+"(role `sidebar_root`, for `[colors]` to set; `sidebar_vault`, its old name, read as it: DF-D22)".
+
+**design/how-it-works.md § Storage**, the scratch: "`capture.location = "vault"` puts it at `<root>/<capture.file>`"
+becomes "`capture.location = "root"` (`"vault"`, the old word, read as it; DF-D22) puts it at `<root>/<capture.file>`".
 
 ## MODIFIED design/trust.md § What runs; design/distribution.md § Updates (DF-D23)
 
@@ -486,15 +504,57 @@ network request is yours to allow; DF-D23)". The check still reads your own conf
 
 ## MODIFIED design/tui.md § What's under the cursor (DF-D26)
 
-The hover on a link to a missing heading or block says it opens the note at its top.
+Its first sentence becomes:
 
-## MODIFIED design/roots.md § Named folders (DF-D30)
+> `shift+k` shows what's under the cursor in a floating window, rendered — a code file's language server's hover (its
+> type, its docs; D161), or, on a note's link, where it lands (the heading's section, the block, the lines, the note's
+> start); read-only, `esc` or `q` closes it. A heading or block that isn't there is said, as following says it — `No
+> heading "pricing" in prd/route-sharing.md: the link opens the note at its top.` — above the note's start, where
+> following opens it, the window titled with the note's path alone (DF-D26).
 
-A named clone made the default copy, and named as its repository.
+Previously: "… or, on a note's link, where it lands (the heading's section, the note's start); read-only, …": a
+missing heading or block showed "(nothing there)", titled with the path and the heading it lacked.
+
+## MODIFIED design/roots.md § Named folders; design/tui.md § Switching roots (DF-D30)
+
+**design/roots.md § Named folders**, the bullet "**A clone with a `.slipbox/` name of its own**" (added above, for A8)
+gains, at its end:
+
+> Being a copy, it may be made the repository's default copy: `folders default` (and the TUI's `:folders-default`)
+> takes any copy of the repository, under whatever name (`repositoryCopies` in `core/folders.ts`), and the
+> repository's name, its full name and its hosting then open the clone; `slipbox folders` lists it under the
+> repository too, `*`, with its own name. A default that is no copy of the repository any more (its remote changed) is
+> passed over for the repository's first copy. And it may be named as its repository is (`init --name`, `name`): a copy
+> of the same repository is no different folder (`folderNamed`) (DF-D30). Named alike, its copies are called by the
+> remote's name alike, and the first found opens until `folders default` picks one.
+
+**design/roots.md § Named folders**, in "**Different folders of one name:**": "`slipbox init` refuses a name a
+different folder has here (its name, an alias or a name it had; a copy of the same repository is none, DF-D30),
+suggesting one: …".
+
+Previously: the clone could be made no default (`folders default` took only the copies of the folder the name looked
+up, "isn't a copy"), and `init` and `name` refused it the repository's name, "a different folder is called …".
+
+**design/tui.md § Switching roots**, **Which copy**: "this folder's copies — its repository's, a clone with a
+`.slipbox/` name of its own among them (DF-D30) —, else a pick of the folders with two."
+
+Previously: "this folder's copies, else a pick of the folders with two."
 
 ## MODIFIED design/tui.md § Overlays, the which-key popup (DF-D31)
 
-A top-level prefix's popup carries its group's explanation in its title.
+In **The which-key popup**, "with the pending keys as its title (`␣ l › links`)" becomes:
+
+> with the pending keys and the group's name as its title (`␣ l › links`) — a prefix of one key, which no popup above
+> it lists with its explanation (`z`, `[`, `]`, `g`, `y`, `ctrl+w`), its explanation too, after a colon: `z › scroll:
+> the cursor's line to the middle (z), top (t), …` (DF-D31; `groupExplanation` in `tui/app.ts`). The box widens to
+> hold that title, as far as the screen allows (past the entries' 140 columns), and a title still too long is cut
+> with `…`.
+
+and **For a group:** "from `[groups]`: its explanation under its name, or, for a prefix of one key, in the popup's
+own title".
+
+Previously: "with the pending keys as its title (`␣ l › links`)": a top-level prefix's explanation (A16's, naming every
+key under it) was shown nowhere.
 
 ## MODIFIED design/testing.md, the terminal tests' files
 

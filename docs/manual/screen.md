@@ -303,6 +303,10 @@ After `space`, a popup lists every key you can press next, each with a name and 
 it appears if you pause for half a second, so a sequence you know never flashes it. `backspace` goes up a level, `esc`
 cancels, and clicking an entry presses its key.
 
+Its title is the keys pressed and the group's name: `␣ l › links`. A group's explanation is under its name in the
+popup that lists it; one that no popup lists, such as `z` or `[`, has it in its own title:
+`z › scroll: the cursor's line to the middle (z), top (t), …`.
+
 ![The which-key popup after space: the leader's groups, each with what it holds](../images/screen-which-key.png)
 
 `input.which_key = false` turns the popup off (resize mode still shows its own), and `input.which_key_delay_ms` sets

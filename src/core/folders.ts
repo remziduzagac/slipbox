@@ -256,8 +256,9 @@ export function movedFrom(root: string): string | null {
  */
 export function folderNamed(name: string, except?: string, folders = readFolders()): NamedFolder[] {
   const n = name.toLowerCase();
-  const own = except ? folderIdentity(except)?.key : undefined;
-  return folders.filter((f) => f.key !== own && [f.name, ...f.aliases, ...f.old].some((x) => x.toLowerCase() === n));
+  const own = except ? folderIdentity(except) : null;
+  // A copy of the same repository is no different folder: a clone may be named as its repository is (DF-D30).
+  return folders.filter((f) => f.key !== own?.key && !(own && sameRepository(f, own)) && [f.name, ...f.aliases, ...f.old].some((x) => x.toLowerCase() === n));
 }
 
 /**
@@ -272,12 +273,20 @@ export function suggestFolderName(dir: string, parentName: string | null, folder
   return name;
 }
 
-/** The copy links to `key` open, from now on; the question asked, either way. */
+/**
+ * The copies a folder's links may open: its own, then, for a repository, those of its clones with a `.slipbox/` name
+ * of their own, which are copies of it still (DF-D30).
+ */
+export function repositoryCopies(f: NamedFolder, folders = readFolders()): FolderCopy[] {
+  return [...f.copies, ...folders.filter((x) => x.key !== f.key && sameRepository(x, f)).flatMap((x) => x.copies)];
+}
+
+/** The copy links to `key` open, from now on — any copy of its repository; the question asked, either way. */
 export function setDefaultCopy(key: string, path: string | null): void {
   const list = readFolders();
   const f = list.find((x) => x.key === key);
   if (!f) return;
-  const copy = path ? f.copies.find((c) => c.path === path || realPath(c.path) === realPath(path)) : undefined;
+  const copy = path ? repositoryCopies(f, list).find((c) => c.path === path || realPath(c.path) === realPath(path)) : undefined;
   if (copy) f.default = copy.path;
   delete f.ask;
   f.asked = true;
@@ -353,7 +362,8 @@ export function lookupFolder(name: string, folders = readFolders()): FolderLooku
   }
   const group = groups[0]!;
   const f = group[0]!;
-  const def = f.default ?? f.copies[0]!.path;
+  // Its default, a copy of the repository under any name (DF-D30); one that is no copy of it now, its first.
+  const def = f.default && repositoryCopies(f, folders).some((c) => c.path === f.default) ? f.default : f.copies[0]!.path;
   if (copyAvailable(def)) return { status: "found", folder: f, path: def, ...(via ? { via } : {}) };
   // Another copy: of that folder, else of the repository under another name.
   for (const g of group) {

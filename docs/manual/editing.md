@@ -441,7 +441,7 @@ what `space n s` does.
 
 The scratch is a Markdown file where you collect references and snippets to hand to an agent: lines of your notes
 and code, each with its `path:line`, pasted into a prompt when you are ready. Each root has its own, kept in
-slipbox's own state folder, outside your notes and never committed. With `capture.location = "vault"` it is a note in
+slipbox's own state folder, outside your notes and never committed. With `capture.location = "root"` it is a note in
 the root instead (`scratch.md`, or the name in `capture.file`).
 
 | Key | What it does |

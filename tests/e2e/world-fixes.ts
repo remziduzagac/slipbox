@@ -124,7 +124,7 @@ export const FIXES_SCENARIOS: Scenario[] = [
   },
 
   {
-    name: "which-key: z, [ and ] list every key under them — the fold and spelling keys under z; ] s, ] t, ] c (A16)",
+    name: "which-key: z, [ and ] list every key under them — the fold and spelling keys under z; ] s, ] t, ] c (A16); each says what it holds in its title (F12)",
     options: { config: "[input]\nwhich_key_delay_ms = 100\n" },
     run: async (s) => {
       /** The popup's entry for `key`: a row with the key, then its name. */
@@ -136,7 +136,8 @@ export const FIXES_SCENARIOS: Scenario[] = [
         await s.keys("escape");
         await s.notSee(title);
       };
-      await popup("z", "z › scroll", [
+      // The title: the keys, the group's name and its explanation, whose start fits any pane (DF-D31).
+      await popup("z", "z › scroll: the cursor's line to the middle (z), top (t)", [
         ["z", "Cursor's line to the middle"],
         ["t", "Cursor's line to the top"],
         ["b", "Cursor's line to the bottom"],
@@ -144,14 +145,14 @@ export const FIXES_SCENARIOS: Scenario[] = [
         ["g", "Add the word to your words"],
         ["a", "Fold or unfold the cell"],
       ]);
-      await popup("[", "[ › previous", [
+      await popup("[", "[ › previous: heading ([), link (l), misspelt word (s)", [
         ["[", "Previous heading"],
         ["l", "Previous link"],
         ["s", "Previous misspelt word"],
         ["c", "Previous change"],
         ["t", "Previous of this type"],
       ]);
-      await popup("]", "] › next", [
+      await popup("]", "] › next: heading (]), link (l), misspelt word (s)", [
         ["]", "Next heading"],
         ["l", "Next link"],
         ["s", "Next misspelt word"],

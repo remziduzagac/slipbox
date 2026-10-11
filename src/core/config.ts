@@ -136,8 +136,9 @@ export interface Config {
     command: string[];
   };
   capture: {
-    location: "state" | "vault";
-    /** Scratch file name; relative to the vault root when location = "vault". */
+    /** `root`: in the root itself; `vault`, the old word, is read as `root` (DF-D22). */
+    location: "state" | "root";
+    /** Scratch file name; relative to the root when location = "root". */
     file: string;
   };
   /** Git (5.11–5.14). `base`: the branch changes and diffs are measured against; empty: `main`, else `master`. */
@@ -334,6 +335,19 @@ const RETIRED: Record<string, string> = {
   rename: "renames no longer write a note's old name into it; links reach notes by their paths",
 };
 
+/** Values your config may still say vault for, each read as the word that took its place (DF-D22). */
+const OLD_VALUES: Record<string, Record<string, string>> = {
+  "capture.location": { vault: "root" },
+  // The explorer's actions, bound in [keys.explorer].
+  "keys.explorer": { rename_vault: "rename_root", make_vault: "make_root", unmake_vault: "unmake_root" },
+};
+
+/** The word that took an old one's place where `path` takes it, else the value as given. */
+function renewed(path: string, value: string): string {
+  const old = Object.hasOwn(OLD_VALUES, path) ? OLD_VALUES[path]! : {};
+  return Object.hasOwn(old, value) ? old[value]! : value;
+}
+
 /** Keys whose values come from a fixed set. Anything else is a warning and the default stays. */
 const ENUMS: Record<string, readonly string[]> = {
   "render.glyphs": ["auto", "nerd", "unicode", "ascii"],
@@ -344,7 +358,7 @@ const ENUMS: Record<string, readonly string[]> = {
   "render.images_remote": ["ask", "show", "never"],
   "render.mermaid": ["text", "picture"],
   "render.math": ["text", "picture"],
-  "capture.location": ["state", "vault"],
+  "capture.location": ["state", "root"],
   "lint.enabled": ["auto", "on", "off"],
   "search.engine": ["auto", "index", "scan"],
   "diagnostics.bar": ["auto", "on", "off"],
@@ -634,7 +648,7 @@ function merge<T>(base: T, over: Record<string, unknown>, file: string, prefix: 
     if (prefix === "keys" || prefix === "aliases" || prefix === "groups" || prefix === "spell.dictionaries" || /^keys\.(visual|source|explorer|outline|footnotes|info|resize)$/.test(prefix)) {
       const table = prefix === "keys" && ["visual", "source", "explorer", "outline", "footnotes", "info", "resize"].includes(key);
       if (table && !isPlainObject(value)) warnings.push(`config: ${file}: ${path} must be a table of key = "command" (a mode's own keys)`);
-      else if (typeof value === "string") out[key] = value;
+      else if (typeof value === "string") out[key] = renewed(prefix, value);
       else if (table) out[key] = merge((out[key] as Record<string, string> | undefined) ?? {}, value as Record<string, unknown>, file, `keys.${key}`, warnings);
       else warnings.push(`config: ${file}: ${path} must be a string`);
       continue;
@@ -660,6 +674,10 @@ function merge<T>(base: T, over: Record<string, unknown>, file: string, prefix: 
       else if (path === "editor.remote" && typeof value === "string") out[key] = value.trim() ? [value] : []; // one command
       else warnings.push(`config: ${file}: "${path}" must be an array`);
     } else if (typeof current === typeof value) {
+      if (typeof value === "string" && renewed(path, value) !== value) {
+        out[key] = renewed(path, value);
+        continue;
+      }
       const allowed = ENUMS[path];
       const range = RANGES[path];
       if (allowed && !allowed.includes(value as string)) {

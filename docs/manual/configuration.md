@@ -47,7 +47,7 @@ things that make a folder a root: [Links and roots](links-and-roots.md).)
 ```toml
 # ~/notes/.slipbox/config.toml
 [capture]
-location = "vault"             # the scratch in the folder, as ~/notes/inbox.md
+location = "root"              # the scratch in the folder, as ~/notes/inbox.md
 file = "inbox.md"
 
 [walk]
@@ -130,6 +130,10 @@ Some mistakes only show where the setting is used, and are said there: a key bou
 a key with a modifier slipbox doesn't know (`hyper+x`), a role or colour `[colors]` can't use. The TUI says these, and
 `slipbox render` says the colours' too; `slipbox info` doesn't.
 
+An older file may say vault where slipbox now says root: `capture.location = "vault"`, the explorer's actions
+`rename_vault`, `make_vault` and `unmake_vault`, the colour role `sidebar_vault`. Each still works, as the root's word
+does, and isn't warned of.
+
 ## Every key
 
 Every setting, with its default. The tables from `[types.memory]` on are examples: what they hold by default is
@@ -203,7 +207,7 @@ which_key_delay_ms = 500       # 0–10000: its wait (the leader shows it at onc
                                # both a binding and the start of a sequence waits before it runs
 
 [capture]                      # the scratch
-location = "state"             # state (slipbox's state folder, never committed) | vault (in the root)
+location = "state"             # state (slipbox's state folder, never committed) | root (in the root)
 file = "scratch.md"            # a relative .md path, no "..", nothing hidden; in the root, a scratch that is a
                                # symlink, or a path leading out of the root, keeps it in the state folder
 
@@ -360,8 +364,8 @@ The other tables hold the keys of one place, each tried before `[keys]` there:
 - `[keys.visual]`: visual mode's;
 - `[keys.explorer]`: the explorer's (and the Problems panel's), bound to its actions: `down`, `up`, `open_tab`,
   `expand`, `open`, `collapse`, `open_split`, `top`, `bottom`, `filter`, `all_files`, `new_note`, `new_folder`,
-  `rename`, `rename_vault`, `move`, `delete`, `restore`, `undo_rename`, `copy`, `cut`, `paste`, `make_vault`,
-  `unmake_vault`, `menu`, `close`, `leave`, `commit`, `amend`;
+  `rename`, `rename_root`, `move`, `delete`, `restore`, `undo_rename`, `copy`, `cut`, `paste`, `make_root`,
+  `unmake_root`, `menu`, `close`, `leave`, `commit`, `amend`;
 - `[keys.outline]`: the outline's actions: `down`, `up`, `jump`, `fold`, `unfold`, `top`, `bottom`, `filter`,
   `close`, `leave`, `rename`;
 - `[keys.footnotes]`: the footnotes pane's: the outline's moves (all of them but `rename`), and `add`, `edit`,
@@ -371,7 +375,8 @@ The other tables hold the keys of one place, each tried before `[keys]` there:
 
 An action a pane doesn't have is reported. `[aliases]` names commands for `:`: `sc = "scratch.open"` makes `:sc` open
 the scratch, and `""` removes a default alias. `[groups]` names a prefix in the which-key popup, as `"name"` or
-`"name: what's under it"`.
+`"name: what's under it"`; the explanation shows under the name, or, for a prefix of one key such as `z`, in its
+popup's title ([The which-key popup](screen.md#the-which-key-popup)).
 
 ## Commands in settings
 
@@ -482,7 +487,7 @@ The roles of the screen most worth changing:
 | `breadcrumb`, `breadcrumb_current` | the breadcrumb's headings, and the one the cursor is under |
 | `breadcrumb_band`, `breadcrumb_icon`, `breadcrumb_sep` | the breadcrumb's background, icon and separators |
 | `tree_guide` | the explorer's and the outline's tree lines |
-| `sidebar_vault` | in the explorer, a folder that is a root of its own |
+| `sidebar_root` | in the explorer, a folder that is a root of its own |
 | `scrollbar`, `scrollbar_track` | the scrollbar's thumb and track |
 | `cursor`, `cursor_line` | the cursor, and its row |
 | `which_key_key`, `which_key_group` | the which-key popup's keys and group names |
@@ -500,7 +505,7 @@ Every role:
 - **Problems and spelling:** `syntax_error`, `problem_error`, `problem_warn`, `problem_info`, `spell`.
 - **Git:** `git_new`, `git_modified`, `git_conflict`, `diff_add`, `diff_del`, `diff_head`.
 - **The screen:** `border`, `status`, `status_accent`, `status_dim`, `sidebar`, `sidebar_dir`, `sidebar_selected`,
-  `sidebar_active`, `sidebar_vault`, `tab`, `tab_active`, `tab_active_idle`, `pane_title`, `pane_title_active`,
+  `sidebar_active`, `sidebar_root`, `tab`, `tab_active`, `tab_active_idle`, `pane_title`, `pane_title_active`,
   `overlay`, `overlay_border`, `overlay_selected`, `overlay_match`, `overlay_dim`, `overlay_group`, `keycap`,
   `keycap_selected`, `selection`, `bracket_match`, `error`, `warn`, `info`, `scrollbar`, `scrollbar_track`, `cursor`,
   `cursor_line`, `line_number`, `line_number_current`, `gutter`, `cell_line`, `which_key_key`, `which_key_group`,

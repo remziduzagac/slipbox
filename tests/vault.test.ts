@@ -5978,6 +5978,50 @@ describe("named folders (21.6)", () => {
     expect(pointerNaming(readFolders().find((f) => f.copies.some((c) => c.path === twin))!)).toMatchObject({ name: qualified, clash: [expect.objectContaining({ remote: `gitlab.com/else/${short}` })] });
   });
 
+  test("a clone with a .slipbox/ name of its own is still a copy: made its repository's default copy, and named as its repository is (DF-D30)", async () => {
+    const { lookupFolder, readFolders, recordFolder } = await import("../src/core/folders.ts");
+    const { tildePath } = await import("../src/core/names.ts");
+    const short = `c${uniq()}`;
+    const remote = `git@github.com:labs/${short}.git`;
+    const qualified = `github.com/labs/${short}`;
+    const repo = folder({ name: short, id: uniq(), remote });
+    const clone = folder({ name: `${short}-spike`, id: uniq(), remote });
+    recordFolder(repo);
+    recordFolder(clone);
+    expect(lookupFolder(qualified)).toMatchObject({ status: "found", path: repo });
+    // `folders default`, by the repository's full name or its short one: the clone is one of its copies.
+    const set = await cli(["folders", "default", qualified, clone, "--json"]);
+    expect([set.code, JSON.parse(set.out).data]).toEqual([0, { name: short, default: clone }]);
+    for (const name of [qualified, short, `${short}-spike`]) expect([name, lookupFolder(name)]).toEqual([name, expect.objectContaining({ status: "found", path: clone })]);
+    expect((await cli(["folders"])).out).toContain(`${short}  ${qualified}\n    ${tildePath(repo)}\n  * ${tildePath(clone)}  (named ${short}-spike)\n`);
+    expect((await cli(["folders", "default", short, repo])).code).toBe(0);
+    expect(lookupFolder(qualified)).toMatchObject({ status: "found", path: repo });
+    // A folder of another repository is no copy of it: refused, its copies listed.
+    const stranger = folder({ name: `${short}-x`, id: uniq(), remote: `https://gitlab.com/else/${short}` });
+    recordFolder(stranger);
+    const refused = await cli(["folders", "default", short, stranger]);
+    expect([refused.code, refused.err]).toEqual([5, expect.stringContaining(`isn't a copy of ${short}: ${repo}, ${clone}`)]);
+    // The clone made the default, then no copy of the repository (its remote changed): the repository's own again.
+    await cli(["folders", "default", short, clone]);
+    writeFileSync(join(clone, ".git", "config"), `[core]\n\tbare = false\n[remote "origin"]\n\turl = https://gitlab.com/else/${short}-spike\n`);
+    recordFolder(clone);
+    expect(lookupFolder(short)).toMatchObject({ status: "found", path: repo });
+    // `name`: a clone named as its repository is (no different folder), a different folder's name still refused.
+    const twin = folder({ name: `${short}-twin`, id: uniq(), remote });
+    recordFolder(twin);
+    const named = await cli(["--root", twin, "name", short, "--json"]);
+    expect(named.code).toBe(0);
+    expect(readFileSync(join(twin, ".slipbox", "config.toml"), "utf8")).toContain(`name = "${short}"`);
+    expect(readFolders().find((f) => f.copies.some((c) => c.path === twin))?.name).toBe(short);
+    expect(lookupFolder(short)).toMatchObject({ status: "found", path: repo }); // one repository still, not two folders
+    const taken = await cli(["--root", twin, "name", `${short}-x`]);
+    expect([taken.code, taken.err]).toEqual([5, expect.stringContaining(`a different folder is called ${short}-x`)]);
+    // `init --name`: a clone given its .slipbox/ by the repository's name.
+    const plain = folder({ remote });
+    const init = await cli(["init", plain, "--name", short, "--json"]);
+    expect([init.code, JSON.parse(init.out).data.name]).toEqual([0, short]);
+  });
+
   test("opened, a folder is in the lookup; info says its name, copies and the one links open", async () => {
     const name = `i${uniq()}`;
     const id = uniq();

@@ -36,7 +36,7 @@ export const ROLES = [
   "syntax_error", "problem_error", "problem_warn", "problem_info", "spell",
   // chrome
   "border", "status", "status_accent", "status_dim",
-  "sidebar", "sidebar_dir", "sidebar_selected", "sidebar_active", "sidebar_vault",
+  "sidebar", "sidebar_dir", "sidebar_selected", "sidebar_active", "sidebar_root",
   // a file's git state in the explorer (5.11); a diff's added and removed lines (5.13)
   "git_new", "git_modified", "git_conflict", "diff_add", "diff_del", "diff_head",
   "tab", "tab_active", "tab_active_idle", "pane_title", "pane_title_active", "overlay", "overlay_border", "overlay_selected", "overlay_match", "overlay_dim", "overlay_group", "keycap", "keycap_selected",
@@ -48,6 +48,9 @@ export const ROLES = [
 ] as const;
 
 export type Role = (typeof ROLES)[number];
+
+/** Roles your config may still name by an old word, each read as the role that took its place (DF-D22). */
+export const OLD_ROLES: Record<string, Role> = { sidebar_vault: "sidebar_root" };
 
 export interface Theme {
   name: string;
@@ -226,7 +229,7 @@ export function themeFromPalette(
     sidebar_active: { fg: p.cyan },
     // A folder that is a root of its own, nested (17.13): a folder's colour — its icon tells it apart —
     // and a role of its own, for [colors] to set.
-    sidebar_vault: { fg: p.blue },
+    sidebar_root: { fg: p.blue },
     git_new: { fg: p.green },
     git_modified: { fg: p.yellow },
     git_conflict: { fg: p.red, bold: true },

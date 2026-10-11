@@ -1011,7 +1011,7 @@ describe("review cycle 1 (core)", () => {
     writeFileSync(join(root, "secret.txt"), "SECRET");
     symlinkSync(join(root, "secret.txt"), join(root, "scratch.md"));
     const cfg = structuredClone(loadConfig({ vaultRoot: null }).config);
-    cfg.capture.location = "vault";
+    cfg.capture.location = "root";
     const owner = { root, key: "scr", mode: "vault" };
     expect(scratchLocation(owner, cfg).path).not.toBe(join(root, "scratch.md"));
     rmSync(join(root, "scratch.md"));
@@ -1196,7 +1196,7 @@ describe("what manual/configuration.md promises", () => {
     const keys: [string, string, string][] = [
       ["render", "glyphs", "ascii"],
       ["render", "show_urls", "never"],
-      ["capture", "location", "vault"],
+      ["capture", "location", "root"],
       ["ui", "lines", "heavy"],
       ["editor", "edit_in", "live"],
       ["files", "show", "all"],
@@ -1208,6 +1208,31 @@ describe("what manual/configuration.md promises", () => {
       const ok = loadConfig({ configFile: file(`[${section}]\n${key} = "${good}"\n`) });
       expect([key, (ok.config as unknown as Sections)[section]![key], ok.warnings]).toEqual([key, good, []]);
     }
+  });
+
+  test("your config says root where it said vault, and the old words still work, unwarned (DF-D22)", () => {
+    const loaded = (text: string) => loadConfig({ configFile: file(text) });
+    // The scratch's place: root, the old vault read as it.
+    for (const word of ["root", "vault"]) {
+      const r = loaded(`[capture]\nlocation = "${word}"\n`);
+      expect([word, r.config.capture.location, r.warnings]).toEqual([word, "root", []]);
+    }
+    expect(loaded('[capture]\nlocation = "bogus"\n').warnings.join("\n")).toContain('"capture.location" must be one of state, root');
+    // The explorer's actions, bound by either name; other tables' values are left as given.
+    const keys = loaded(
+      '[keys]\nx = "vault.info"\n[keys.explorer]\nR = "rename_vault"\nV = "make_vault"\nU = "unmake_vault"\nr = "rename_root"\nv = "make_root"\n[keys.outline]\nR = "rename_vault"\n',
+    );
+    expect(keys.warnings).toEqual([]);
+    expect(keys.config.keys.explorer).toEqual({ R: "rename_root", V: "make_root", U: "unmake_root", r: "rename_root", v: "make_root" });
+    expect(keys.config.keys.outline).toEqual({ R: "rename_vault" });
+    expect(keys.config.keys.x).toBe("vault.info");
+    // The colour role, at the top and in a theme's own table, a colour or a table.
+    const colors = loaded('[colors]\nsidebar_vault = { fg = "#ff00aa" }\n[colors."tokyo-night"]\nsidebar_vault = { bold = true }\n').config.colors;
+    const { theme, warnings } = applyColorOverrides(loadTheme("tokyo-night").theme, colors);
+    expect(warnings).toEqual([]);
+    expect(theme.roles.sidebar_root).toMatchObject({ fg: "#ff00aa", bold: true });
+    expect(applyColorOverrides(loadTheme("nord").theme, { sidebar_vault: "#00ff00" }).theme.roles.sidebar_root.fg).toBe("#00ff00");
+    expect(applyColorOverrides(loadTheme("nord").theme, { sidebar_root: "#00ff00" }).theme.roles.sidebar_root.fg).toBe("#00ff00");
   });
 
   test("numbers: a range's ends are taken, past them the default; a fraction only for split_ratio and lens_max", async () => {

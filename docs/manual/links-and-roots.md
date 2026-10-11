@@ -158,7 +158,8 @@ While the cursor is on a link in a rendered note, the status line names it and s
 decided where it went, it says that too: `→ [[coffee]] (resolved, the shortest path of 2 named so)`.
 
 `shift+k` on a link opens a small window with what the link lands on: the heading's section, the block, or the top of
-the note, titled with its path. `g d` follows the link, as `enter` does.
+the note, titled with its path. For a heading or block that isn't there, it says so, and that the link opens the note
+at its top, which it shows. `g d` follows the link, as `enter` does.
 
 Links are drawn in the theme's link colour. One that reaches nothing has a colour of its own (red in most themes), and
 so does one that several notes answer to.
@@ -346,7 +347,9 @@ share a name.
 - **A clone given a `.slipbox/` name of its own,** to tell it from the repository it was cloned from, is still a copy of
   that repository. A pointer by the repository's full name (`slipbox://github.com/you/website/…`), and a link to its
   hosting, open the repository's default copy: the one called by the remote's name, not the renamed clone. The clone's
-  own name opens the clone.
+  own name opens the clone. Being a copy, the clone can be made the repository's default copy
+  (`slipbox folders default website ~/src/website-spike`, or `:folders-default`), and named as the repository is
+  (`slipbox name website` in it, or `init --name website`), since it is no different folder.
 - **Different repositories** with one short name are told apart by their full names.
 - **Different `.slipbox/` folders** with one name stay ambiguous until one is renamed: following a pointer by that name
   asks which, and offers the renaming.

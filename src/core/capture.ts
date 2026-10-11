@@ -30,7 +30,7 @@ export function scratchLocation(owner: ScratchOwner, config: Config): ScratchLoc
   const project = owner.root;
   // Config validation already refuses an unsafe name; this holds even if one got through.
   const file = isSafeRelative(config.capture.file) && /\.(md|markdown)$/i.test(config.capture.file) ? config.capture.file : "scratch.md";
-  if (config.capture.location === "vault" && owner.mode === "vault") {
+  if (config.capture.location === "root" && owner.mode === "vault") {
     // In the vault, a committed symlink could make the scratch read a file from anywhere (and copy
     // it into the vault) or write out of it: then it lives in the state dir, as by default.
     const path = join(project, file);

@@ -973,7 +973,8 @@ slipbox init ideas --name ideas --dry-run
 slipbox init ideas --name ideas
 ```
 
-- `--name <name>`: name it. A name a different folder already has is refused (exit 5).
+- `--name <name>`: name it. A name a different folder already has is refused (exit 5); a clone's repository is no
+  different folder, so a clone may take its name.
 - `--private`: keep `.slipbox/` out of git (listed in the repository's exclude file).
 - `--dry-run`: say what it would do, writing nothing. What the run would refuse, a name taken say, it refuses too
   (exit 5).
@@ -1014,9 +1015,11 @@ slipbox name journal
 ```
 
 A name a different folder has here is refused (exit 5), and so is a plain folder (`init` makes it a root first), or
-a `.slipbox/config.toml` whose `[vault]` table the edit can't follow (edit it by hand). `--dry-run`; `--plan` where a
-`.slipbox/` exists (making one has nothing to plan: exit 2). `--json`: [a change](#moving-copying-and-deleting),
-`kind` `root`; for a repository given a `.slipbox/`, `{root, name, id, created}`.
+a `.slipbox/config.toml` whose `[vault]` table the edit can't follow (edit it by hand). A clone may take its
+repository's name, as `init --name` may give it: a copy of the repository is no different folder ([Copies of a
+folder](links-and-roots.md#copies-of-a-folder)). `--dry-run`; `--plan` where a `.slipbox/` exists (making one has
+nothing to plan: exit 2). `--json`: [a change](#moving-copying-and-deleting), `kind` `root`; for a repository given a
+`.slipbox/`, `{root, name, id, created}`.
 
 ### `folders`
 
@@ -1031,11 +1034,12 @@ slipbox folders default notes ~/notes
 
 A copy that's gone is listed as not here, and another copy answers meanwhile. A name two folders share is ambiguous
 (exit 4, each folder's path among the candidates) until one is renamed. A clone with a `.slipbox/` name of its own is
-listed under that name, and is still a copy of its repository: the repository's full name opens its default copy.
+listed under that name, and is still a copy of its repository: the repository's full name opens its default copy, and
+`folders default` can make the clone that copy. The repository then lists it too, marked `*`, with its name.
 
 `--json`: `[{name, pointer, remote, id, private, aliases[], old[], default, copies[{path, seen, found,
 available}]}]`, `old` being the names it had; `default` gives `{name, default}`. A path that isn't a copy of the
-folder is refused (exit 5), and an unknown name is exit 3.
+folder (or of its repository) is refused (exit 5), and an unknown name is exit 3.
 
 ## Git
 
@@ -1111,7 +1115,7 @@ refuses to merge them; a branch that isn't there is exit 3.
 
 The scratch is a Markdown file per root where you, your editor or an agent collect references and notes to hand to
 an agent; you read it in the screen with `space s s` ([The scratch](editing.md#the-scratch)). By default it's kept in
-slipbox's state, not among your notes; [`capture.location`](configuration.md) `= "vault"` keeps it in the root, as
+slipbox's state, not among your notes; [`capture.location`](configuration.md) `= "root"` keeps it in the root, as
 [`capture.file`](configuration.md) names it. A plain folder's scratch is always in slipbox's state.
 [Working with agents](../guides/agents.md) shows it in use, and nvim keybindings that capture.
 

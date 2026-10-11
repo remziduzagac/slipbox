@@ -87,7 +87,7 @@ import { activityFile, AutoIndex } from "../core/autoindex.ts";
 import { notesOfType, ofType, type TypedNote } from "../core/doctypes.ts";
 import { type Scope, SCOPES, searchOthers } from "../core/scope.ts";
 import { rootLabel, tildePath } from "../core/names.ts";
-import { copyAvailable, folderIdentity, lookupFolder, type NamedFolder, pointerName, privateNameWarning, readFolders, setDefaultCopy, suggestFolderName } from "../core/folders.ts";
+import { copyAvailable, folderIdentity, lookupFolder, type NamedFolder, pointerName, privateNameWarning, readFolders, repositoryCopies, setDefaultCopy, suggestFolderName } from "../core/folders.ts";
 import { configFilesFor, findVaultRoot, folderAt, hasMarker, homeFolder, initVault, isInside, isListed, isVaultRoot, locateVault, recordLocation, rootAt, rootMarkers, setRootMarkers, type VaultLocation } from "../core/vault.ts";
 import { isTrusted, setTrust, setTrustedRoots, trustOf } from "../core/trust.ts";
 import { type Head, VaultFeed, applyToGraph } from "../core/vault-feed.ts";
@@ -3763,9 +3763,9 @@ export class App {
     const actions: [string, string][] = [];
     if (item.dir && !item.vault) actions.push(["new_note", "New note here"], ["new_folder", "New folder here"]);
     actions.push(["rename", item.vault ? "Rename the folder" : "Rename"]);
-    if (item.vault) actions.push(["rename_vault", "Name it"]);
+    if (item.vault) actions.push(["rename_root", "Name it"]);
     actions.push(["move", "Move to…"], ["copy", "Copy"], ["cut", "Cut"]);
-    if (item.dir) actions.push(item.vault ? ["unmake_vault", "Make it a plain folder"] : ["make_vault", "Give it .slipbox/"]);
+    if (item.dir) actions.push(item.vault ? ["unmake_root", "Make it a plain folder"] : ["make_root", "Give it .slipbox/"]);
     if (this.fileClip) actions.push(["paste", this.fileClip.mode === "cut" ? `Paste ${posix.basename(this.fileClip.rel)} here (move)` : `Paste a copy of ${posix.basename(this.fileClip.rel)} here`]);
     actions.push(["delete", item.vault ? "Delete the root" : "Delete"]);
     const items: ListItem[] = actions.map(([action, label]) => {
@@ -3796,7 +3796,7 @@ export class App {
     switch (action) {
       case "rename":
         return this.renameItem(item);
-      case "rename_vault":
+      case "rename_root":
         return this.renameVaultItem(item);
       case "move":
         return this.moveItem(item);
@@ -3811,9 +3811,9 @@ export class App {
         return this.promptNewNote(folder);
       case "new_folder":
         return this.promptNewFolder(folder);
-      case "make_vault":
+      case "make_root":
         return item.dir && !item.vault ? this.makeVaultItem(item) : this.message("info", item.vault ? `${item.rel} is a root already — shift+v makes it a plain folder` : "give a folder .slipbox/: select a folder first");
-      case "unmake_vault":
+      case "unmake_root":
         return item.vault ? this.unmakeVaultItem(item) : this.message("info", "make a plain folder: select a nested root (its folder has its own icon)");
     }
   }
@@ -6622,13 +6622,13 @@ export class App {
       case "new_folder":
         return this.promptNewFolder(this.newItemBase());
       case "rename":
-      case "rename_vault":
+      case "rename_root":
       case "move":
       case "delete":
       case "copy":
       case "cut":
-      case "make_vault":
-      case "unmake_vault": {
+      case "make_root":
+      case "unmake_root": {
         // On the selected note, file, folder or vault (18.x).
         const item = this.explorerItem();
         if (!item) return this.message("info", `${action.replace("_", " ")}: select a note, file or folder first`);
@@ -7188,6 +7188,14 @@ export class App {
     const seq = prefix.join(" ");
     if (seq === this.leader) return "leader";
     return this.groups.get(seq)?.name ?? "";
+  }
+
+  /**
+   * A top-level prefix's explanation (`z`, `[`, `]`, `g`…), for its popup's title (DF-D31): no popup above it lists
+   * its group with it, as the leader's lists `+links`. Empty for any other.
+   */
+  groupExplanation(prefix: string[]): string {
+    return prefix.length === 1 ? (this.groups.get(prefix[0]!)?.desc ?? "") : "";
   }
 
   clearPending(): void {
@@ -9455,14 +9463,17 @@ export class App {
 
   /** Which copy a named folder's links open here (`:folders-default`; `slipbox folders default`). */
   chooseDefaultCopy(): void {
-    const list = readFolders().filter((f) => f.copies.length > 1);
+    // A repository's copies, a clone with a .slipbox/ name of its own among them (DF-D30).
+    const all = readFolders();
+    const copiesOf = (f: NamedFolder) => repositoryCopies(f, all);
+    const list = all.filter((f) => copiesOf(f).length > 1);
     if (!list.length) return this.message("info", "no named folder has two copies here: each one's links open the only one");
     const pick = (f: NamedFolder) =>
       this.openList({
         title: `${f.name}: which copy do links open?`,
         filterable: false,
-        selected: Math.max(0, f.copies.findIndex((c) => c.path === f.default)),
-        items: f.copies.map((c) => ({ label: tildePath(c.path), hint: c.path === f.default ? "links open it" : copyAvailable(c.path) ? undefined : "not here", data: c.path })),
+        selected: Math.max(0, copiesOf(f).findIndex((c) => c.path === f.default)),
+        items: copiesOf(f).map((c) => ({ label: tildePath(c.path), hint: c.path === f.default ? "links open it" : copyAvailable(c.path) ? undefined : "not here", data: c.path })),
         accept: (copy) => {
           setDefaultCopy(f.key, copy.data as string);
           this.message("info", `links to ${f.name} open ${tildePath(copy.data as string)}`);
@@ -9471,7 +9482,7 @@ export class App {
     const ident = this.loc.mode === "vault" ? folderIdentity(this.loc.root) : null;
     const mine = list.find((f) => f.key === ident?.key);
     if (mine || list.length === 1) return pick(mine ?? list[0]!);
-    this.openList({ title: "Which folder's copies?", items: list.map((f) => ({ label: pointerName(f, list), hint: `${f.copies.length} copies`, data: f })), accept: (item) => pick(item.data as NamedFolder) });
+    this.openList({ title: "Which folder's copies?", items: list.map((f) => ({ label: pointerName(f, list), hint: `${copiesOf(f).length} copies`, data: f })), accept: (item) => pick(item.data as NamedFolder) });
   }
 }
 

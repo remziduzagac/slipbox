@@ -414,7 +414,7 @@ export const DEFAULT_EXPLORER_KEYS: Record<string, string> = {
   n: "new_note",
   "shift+n": "new_folder",
   r: "rename",
-  "shift+r": "rename_vault",
+  "shift+r": "rename_root",
   m: "move",
   d: "delete",
   u: "restore",
@@ -423,8 +423,8 @@ export const DEFAULT_EXPLORER_KEYS: Record<string, string> = {
   x: "cut",
   p: "paste",
   // A folder given .slipbox/, a root of its own; a root nested here made a plain folder again (18.11).
-  v: "make_vault",
-  "shift+v": "unmake_vault",
+  v: "make_root",
+  "shift+v": "unmake_root",
   // The selected row's menu, as its … button opens it.
   ".": "menu",
   // Source control's (26.3): a commit of what's staged; the last one amended.
@@ -436,7 +436,7 @@ export const DEFAULT_EXPLORER_KEYS: Record<string, string> = {
 
 export const EXPLORER_ACTIONS = [
   "down", "up", "open_tab", "expand", "open", "collapse", "open_split", "top", "bottom", "filter", "all_files",
-  "new_note", "new_folder", "rename", "rename_vault", "move", "delete", "restore", "undo_rename", "copy", "cut", "paste", "make_vault", "unmake_vault", "menu", "close", "leave", "commit", "amend",
+  "new_note", "new_folder", "rename", "rename_root", "move", "delete", "restore", "undo_rename", "copy", "cut", "paste", "make_root", "unmake_root", "menu", "close", "leave", "commit", "amend",
 ];
 
 /** Moving about a list pane — the outline, the footnotes, Info: key → action. */
@@ -532,7 +532,7 @@ export const EXPLORER_ACTION_INFO: Record<string, { title: string; desc: string 
   new_note: { title: "New note here", desc: "Asks for a name and makes the note in the selected folder (or beside the selected file)" },
   new_folder: { title: "New folder here", desc: "Asks for a name and makes the folder in the selected folder (or beside the selected file)" },
   rename: { title: "Rename", desc: "A new name for the selected note, file or folder, in its folder; every link to it fixed after a preview" },
-  rename_vault: { title: "Name it", desc: "On a nested root's row: its name, as pointers name it (r renames its folder); after a preview" },
+  rename_root: { title: "Name it", desc: "On a nested root's row: its name, as pointers name it (r renames its folder); after a preview" },
   move: { title: "Move to…", desc: "Picks a folder for the selected note, file or folder; every link to it fixed after a preview" },
   delete: { title: "Delete", desc: "Moves the selected note, file or folder to the trash (asks first; u restores)" },
   restore: { title: "Restore", desc: "Puts back what was deleted last (the trash, :trash, has the rest)" },
@@ -540,8 +540,8 @@ export const EXPLORER_ACTION_INFO: Record<string, { title: string; desc: string 
   copy: { title: "Copy", desc: "Copies the selected note, file or folder: p pastes a copy in the selected folder" },
   cut: { title: "Cut", desc: "Cuts the selected note, file or folder: p moves it to the selected folder, links fixed" },
   paste: { title: "Paste", desc: "Into the selected folder (or beside the selected file): a copy, or what was cut, moved" },
-  make_vault: { title: "Give it .slipbox/", desc: "The selected folder becomes a root of its own (its .slipbox/, a name if given); links that would stop reaching across fixed after a preview" },
-  unmake_vault: { title: "Make it a plain folder", desc: "The selected root's notes become this one's; links fixed after a preview, its .slipbox/ to the trash" },
+  make_root: { title: "Give it .slipbox/", desc: "The selected folder becomes a root of its own (its .slipbox/, a name if given); links that would stop reaching across fixed after a preview" },
+  unmake_root: { title: "Make it a plain folder", desc: "The selected root's notes become this one's; links fixed after a preview, its .slipbox/ to the trash" },
   menu: { title: "Actions…", desc: "The selected row's menu, as its … button opens it: rename, move, delete, copy…" },
   close: { title: "Close the explorer", desc: "Closes it; focus returns to the note" },
   leave: { title: "Back to the note", desc: "Focuses the note; the explorer stays open" },

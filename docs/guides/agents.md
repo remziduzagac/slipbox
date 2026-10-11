@@ -127,7 +127,7 @@ In a code file's notebook view, `space k s` adds the cell at the cursor, with it
 scratch only with `slipbox scratch clear --if-unchanged <sha>`, so nothing added since it read it is lost.
 
 The scratch lives in slipbox's own state folder, not among your notes (`slipbox scratch path` says where);
-`capture.location = "vault"` keeps it in the root instead (never in a folder that isn't one), as `capture.file` names
+`capture.location = "root"` keeps it in the root instead (never in a folder that isn't one), as `capture.file` names
 it ([Configuration](../manual/configuration.md)).
 
 ### From nvim

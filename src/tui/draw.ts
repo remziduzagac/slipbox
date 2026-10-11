@@ -1668,7 +1668,7 @@ function drawTree(app: App, c: Canvas, list: Rect, bg: Color | null, geo: Geomet
     const selected = s.scroll + i === s.selected && app.region === "sidebar";
     // The root open, in a folder the explorer climbed to: marked, as the note open is.
     let role: Role =
-      row.root?.here ? "sidebar_active" : row.root?.kind === "vault" ? "sidebar_vault" : row.kind !== "note" ? "sidebar_dir" : row.path === current ? "sidebar_active" : "sidebar";
+      row.root?.here ? "sidebar_active" : row.root?.kind === "vault" ? "sidebar_root" : row.kind !== "note" ? "sidebar_dir" : row.path === current ? "sidebar_active" : "sidebar";
     if (selected) role = "sidebar_selected";
     const st = roleStyle(theme, role, bg);
     if (selected) c.fill(rect.x, y, rect.w, 1, st.bg);
@@ -2368,7 +2368,13 @@ function drawWhichKey(app: App, c: Canvas, top: number, bottom: number, geo: Geo
   // back once the explanations are gone.
   const pad = withDesc && rows * 2 + 4 <= room ? 1 : 0;
   const h = Math.max(3, Math.min(room, rows * entryH + 2 + 2 * pad));
-  const w = Math.min(maxW, Math.max(plan.total, 40));
+  // The pending keys and their group's name; a top-level prefix's explanation too, which no popup above it shows
+  // (DF-D31): the box as wide as it needs, as far as the screen allows.
+  const name = app.groupName(app.pending);
+  const said = name ? app.groupExplanation(app.pending) : "";
+  const title = app.pending.length ? ` ${shownKey(app.pending.join(" "))} ›${name ? ` ${name}${said ? `: ${said}` : ""}` : ""} ` : ` ${name} `;
+  const fit = Math.min(maxW, Math.max(plan.total, 40));
+  const w = said ? Math.max(fit, Math.min(c.width - 8, stringWidth(title) + 6)) : fit;
   const x0 = Math.floor((c.width - w) / 2);
   const y0 = bottom - 1 - h;
   const bg = roleStyle(theme, "overlay", null);
@@ -2379,10 +2385,9 @@ function drawWhichKey(app: App, c: Canvas, top: number, bottom: number, geo: Geo
   geo.popup = { x: x0 - 2, y: y0 - 1, w: w + 4, h: h + 2 };
   coverHot(geo, geo.popup);
   const b = app.glyphs.box;
-  const name = app.groupName(app.pending);
-  const title = app.pending.length ? ` ${shownKey(app.pending.join(" "))} ›${name ? ` ${name}` : ""} ` : ` ${name} `;
   drawText(c, x0, y0, `${b.tl}${b.h}`, border);
-  const tw = drawText(c, x0 + 2, y0, truncate(title, w - 6), { ...border, bold: true });
+  // Cut, it keeps the space before the border's rule.
+  const tw = drawText(c, x0 + 2, y0, `${truncate(title.trimEnd(), w - 7)} `, { ...border, bold: true });
   drawText(c, x0 + 2 + tw, y0, b.h.repeat(Math.max(0, w - 3 - tw)) + b.tr, border);
   for (let k = 1; k < h - 1; k++) {
     drawText(c, x0, y0 + k, b.v, border, 1);

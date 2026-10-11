@@ -1389,7 +1389,8 @@ build (`scripts/build-home.ts`), not kept as they are. Each file's purpose and t
   `notes/daily/2026-09-22.md`, `notes/inbox.md` (scratch.\*)
 - scratch show/path/clear/copy with sha and --if-unchanged — `notes/.slipbox/config.toml`, `notes/inbox.md` (cli.md
   scratch; cli.test)
-- capture.location = vault puts scratch in the vault; symlinked scratch falls back to state; file setting validation —
+- capture.location = root (here the old word, vault, still read) puts scratch in the root; symlinked scratch falls
+  back to state; file setting validation —
   `hobbies/photography/.slipbox/config.toml`, `notes/.slipbox/config.toml` (configuration.md \[capture\])
 
 ### context
