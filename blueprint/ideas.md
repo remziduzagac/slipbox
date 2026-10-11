@@ -373,3 +373,8 @@ idea without an outcome is still open. Nothing here is agreed: the decisions are
 - slipbox under MIT. (2026-10-09) Weighed; the choice parked (D193).
 - slipbox under Apache-2.0. (2026-10-09) Weighed; the choice parked (D193).
 - slipbox under both, "MIT OR Apache-2.0". (2026-10-09) Weighed; the choice parked (D193).
+
+## Documentation
+
+- User documentation for people: guides for the tasks a newcomer meets, and a manual covering everything, in
+  `docs/`. (2026-10-11) Taken up in (DOC).
