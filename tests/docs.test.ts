@@ -151,9 +151,10 @@ describe("the user documentation (DOC)", () => {
   });
 
   test("no roadmap step or decision ID in a message slipbox prints, nor in its installers'", async () => {
-    const found = (await messages()).flatMap((m) => idsInMessage(m.text).map((id) => `${m.where}: ${id}`));
+    const all = await messages();
+    const found = all.flatMap((m) => idsInMessage(m.text).map((id) => `${m.where}: ${id}`));
     expect(found).toEqual([]);
-    expect((await messages()).length).toBeGreaterThan(5000); // every source file read, not none
+    expect(all.length).toBeGreaterThan(5000); // every source file read, not none
     // The check catches what it looks for, and leaves versions and the like alone.
     expect(idsInMessage("retired (21.12); a scope (20.16, 21.10), trust (23.x); Windows is to come, plan 14.12; D166, DF-D1, DF-T3")).toEqual([
       "(21.12)",
@@ -165,7 +166,7 @@ describe("the user documentation (DOC)", () => {
       "DF-T3",
     ]);
     expect(idsInMessage("start nvim (0.9 or later); git 2.42; pyright@1.1.414; version 1.0; MPL-2.0; a 3D chart; ${…}")).toEqual([]);
-  });
+  }, 60_000); // every source file parsed: seconds, more on a busy machine
 
   test("no link into the blueprint", () => {
     expect(userDocs().filter((f) => /\]\([^)]*blueprint\//.test(read(f))).map((f) => relative(DOCS, f))).toEqual([]);
