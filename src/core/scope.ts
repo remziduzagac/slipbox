@@ -5,6 +5,7 @@
 // full path.
 
 import { isAbsolute } from "node:path";
+import { checkoutOf } from "./git.ts";
 import type { Graph } from "./graph.ts";
 import { readRoots } from "./registry.ts";
 import { catchUp, search, type SearchHit, type SearchResult } from "./search.ts";
@@ -31,14 +32,15 @@ export interface ScopedResult extends Omit<SearchResult, "hits"> {
 /**
  * The roots a scope covers besides this one, nearest first (20.16). `linked`: those this root's
  * notes link into, and those whose notes link here (as of their index); `all`: those, then every
- * other root this machine knows (not worktrees: their notes are their main checkout's).
+ * other root this machine knows. Never a worktree, even one a note links into by `@branch`: its
+ * notes are its main checkout's.
  */
 export function scopeRoots(g: Graph, scope: Scope): string[] {
   if (scope === "here" || isListed(g.loc)) return [];
   const out = new Set<string>();
   const add = (abs: string) => {
     const root = findVaultRoot(abs);
-    if (root && root !== g.root) out.add(root);
+    if (root && root !== g.root && !checkoutOf(root)?.worktree) out.add(root);
   };
   for (const rel of g.notes.keys()) {
     for (const l of g.entry(rel)?.links ?? []) {

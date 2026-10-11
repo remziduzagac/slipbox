@@ -61,7 +61,7 @@ export function folderIdentity(root: string): FolderIdentity | null {
     return { key, name: ident.name, remote, id: ident.id, aliases, old, private: priv, copy };
   }
   if (!remote) return null;
-  const name = slugName(remote.split("/").pop()!);
+  const name = remoteName(remote);
   if (!name) return null;
   return { key: `remote:${remote}`, name, remote, id: ident?.id ?? null, aliases, old, private: false, copy };
 }
@@ -295,11 +295,40 @@ export type FolderLookup =
   | { status: "unavailable"; folder: NamedFolder; path: string }
   | { status: "unknown"; reason: string };
 
+/** Whether two named folders are one repository: the same remote, whatever their `.slipbox/` calls them. */
+function sameRepository(a: Pick<NamedFolder, "remote">, b: Pick<NamedFolder, "remote">): boolean {
+  return !!a.remote && !!b.remote && a.remote.toLowerCase() === b.remote.toLowerCase();
+}
+
+/** The short name a remote gives its repository: its last part (`research`); "" when that's no name. */
+function remoteName(remote: string): string {
+  return slugName(remote.split("/").pop()!);
+}
+
+/**
+ * Folders grouped as the table in roots.md § Named folders tells them apart: a repository's copies (one remote) are
+ * one, though a clone's `.slipbox/` gives it a name of its own; any other folder is its own. In each, the copies
+ * called by the remote's name come first (the repository as its remote names it, not a clone renamed to be told
+ * from it), then as found.
+ */
+function byRepository(folders: NamedFolder[]): NamedFolder[][] {
+  const groups: NamedFolder[][] = [];
+  for (const f of folders) {
+    const g = groups.find((x) => sameRepository(x[0]!, f));
+    if (g) g.push(f);
+    else groups.push([f]);
+  }
+  const renamed = (f: NamedFolder) => (f.remote && [f.name, ...f.aliases].some((n) => n.toLowerCase() === remoteName(f.remote!).toLowerCase()) ? 0 : 1);
+  return groups.map((g) => g.map((f, i) => ({ f, i })).sort((a, b) => renamed(a.f) - renamed(b.f) || a.i - b.i).map((x) => x.f));
+}
+
 /**
  * Where a folder's name is on this machine: its default copy (another, when that one isn't here);
- * a qualified name (`github.com/me/research`) by its remote. Different folders of one name are
- * ambiguous, never guessed: repositories each by their qualified name, `.slipbox/` folders until one
- * is renamed. An alias finds it as its name does; a name it had still finds it, said so.
+ * a qualified name (`github.com/me/research`) by its remote. A repository's copies are one folder, a
+ * clone with a `.slipbox/` name of its own too: the repository's default copy (`byRepository`).
+ * Different folders of one name are ambiguous, never guessed, each named by its path: repositories
+ * each by their qualified name, `.slipbox/` folders until one is renamed. An alias finds it as its
+ * name does; a name it had still finds it, said so.
  */
 export function lookupFolder(name: string, folders = readFolders()): FolderLookup {
   const want = name.toLowerCase();
@@ -311,20 +340,26 @@ export function lookupFolder(name: string, folders = readFolders()): FolderLooku
     via = "old-name";
   }
   if (!matches.length) return { status: "unknown", reason: `${name} isn't on this machine yet: open it, or let the index find it` };
-  if (matches.length > 1) {
-    const repos = matches.every((f) => f.remote);
+  const groups = byRepository(matches);
+  if (groups.length > 1) {
+    const each = groups.map((g) => g[0]!);
+    const repos = each.every((f) => f.remote);
     return {
       status: "ambiguous",
-      candidates: matches.map((f) => (repos ? f.remote! : `${f.name} (${f.default ?? f.copies[0]?.path})`)).sort(),
-      reason: repos ? `${matches.length} repositories are called ${name}: name one by its remote` : `${matches.length} different folders are called ${name}: rename one (slipbox name <new>, in it)`,
-      folders: matches,
+      candidates: each.flatMap((f) => f.default ?? f.copies[0]?.path ?? []).sort(),
+      reason: repos ? `${each.length} repositories are called ${name}: name one by its remote (${each.map((f) => f.remote).sort().join(", ")})` : `${each.length} different folders are called ${name}: rename one (slipbox name <new>, in it)`,
+      folders: each,
     };
   }
-  const f = matches[0]!;
+  const group = groups[0]!;
+  const f = group[0]!;
   const def = f.default ?? f.copies[0]!.path;
   if (copyAvailable(def)) return { status: "found", folder: f, path: def, ...(via ? { via } : {}) };
-  const other = f.copies.find((c) => c.path !== def && copyAvailable(c.path));
-  if (other) return { status: "found", folder: f, path: other.path, via: via ?? "another-copy" };
+  // Another copy: of that folder, else of the repository under another name.
+  for (const g of group) {
+    const other = g.copies.find((c) => c.path !== def && copyAvailable(c.path));
+    if (other) return { status: "found", folder: g, path: other.path, via: via ?? "another-copy" };
+  }
   return { status: "unavailable", folder: f, path: def };
 }
 
@@ -350,7 +385,8 @@ export interface PointerNaming {
  */
 export function pointerNaming(f: Pick<NamedFolder, "key" | "name" | "remote"> & { private?: boolean }, folders = readFolders()): PointerNaming {
   const n = f.name.toLowerCase();
-  const clash = folders.filter((x) => x.key !== f.key && [x.name, ...x.aliases].some((y) => y.toLowerCase() === n));
+  // A copy of the same repository is no different folder: the lookup reads them as one.
+  const clash = folders.filter((x) => x.key !== f.key && !sameRepository(x, f) && [x.name, ...x.aliases].some((y) => y.toLowerCase() === n));
   return { name: clash.length && f.remote ? f.remote : f.name, short: f.name, qualified: f.remote, private: !!f.private, clash };
 }
 

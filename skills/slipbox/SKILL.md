@@ -146,7 +146,7 @@ slipbox link <note> --from <note>        # a link to <note> as this folder write
 slipbox resolve slipbox://notes/inbox.md --json   # a pointer into a named folder: where it is on this machine
 slipbox folders --json                   # the named folders pointers use: each name, its copies, the one links open
 slipbox search dome shutter --json       # notes ranked by the words: hits[{path, line, column, heading, snippet}]
-slipbox search dome --scope linked --json   # and the roots linked to or from this one (all: every root known)
+slipbox search dome --scope linked --json   # and the roots linked to or from this one (all: every root; no worktree)
 slipbox changed --json                   # what this branch changed against its base (main): files[{path, state, from?}]
 slipbox merge-review feat --json         # before merging feat here: breaks[{path, line, target, cause, by, fix}]
 slipbox diff <note> --json               # the note's diff against where the branch left main: rows[{kind, text, line}]
@@ -163,7 +163,10 @@ wikilink (`[[name]]`, `[[folder/name#Heading]]`, looked up within the root: name
 pointer (`slipbox://research/x.md` — a named folder, wherever it is on this machine). Pass `--from` when you follow a
 link found inside a note: a relative path is from that note's folder, and a wikilink's ties are broken by where it
 is. A link several notes answer to is exit 4 with the candidates; `how` says how each landed, `certainty` whether it's
-sure (a tie broken by where the link sits is `inferred`: fragile). **To add a link, ask `slipbox link <note> --from
+sure (a tie broken by where the link sits is `inferred`: fragile). `line` is where a `#heading`, `#^block` or `#L42`
+lands; one that isn't there still resolves to the note (`line: null`, its top), and a warning names what's missing.
+A pointer by a repository's full name opens its default copy, even where a clone of it has a name of its own; a name
+different folders have is exit 4, each folder's path a candidate. **To add a link, ask `slipbox link <note> --from
 <note>`** — it writes it in this folder's convention (a wikilink or a markdown link, its path form), or as a pointer
 into a named folder that doesn't travel with this one. The old `research:x.md` form is no link: exit 3, with the
 pointer that is one in `suggest`. A note name on the command line, shared by several notes, goes to the one in the

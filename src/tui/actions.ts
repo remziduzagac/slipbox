@@ -30,7 +30,7 @@ import { compilePattern, findAll, parseSubstitute } from "../core/replace.ts";
 import { climbsOut, readText } from "../core/fsutil.ts";
 import { sanitize } from "../core/sanitize.ts";
 import { graphemes } from "../core/width.ts";
-import type { Anchor } from "../core/position.ts";
+import { type Anchor, TOP } from "../core/position.ts";
 import { cacheDir, stateDir } from "../core/paths.ts";
 import { listThemes, loadTheme } from "../core/theme/index.ts";
 import type { App, ListItem, Loc, PromptOverlay, UiState, View } from "./app.ts";
@@ -337,10 +337,7 @@ function followLink(a: App, link: LayoutLink, into: Into): void {
   if (!view) return;
   // A link drawn inside an embed (1.11) is the embedded note's: followed from there.
   const from = link.from ?? view.buf.rel;
-  const go = (path: string, heading: string | null) => {
-    const anchor = heading ? (lineAnchor(heading) ?? headingAnchor(a, path, heading, link.kind === "wiki" || link.kind === "embed")) : undefined;
-    openInto(a, into, path, anchor);
-  };
+  const go = (path: string, heading: string | null) => openInto(a, into, path, heading ? fragmentAnchor(a, path, heading, link.kind === "wiki" || link.kind === "embed") : undefined);
   switch (link.kind) {
     case "tag":
       // A tag (1.6): the notes that carry it.
@@ -366,12 +363,7 @@ function followLink(a: App, link: LayoutLink, into: Into): void {
       const r = a.graph.resolveLink({ kind: link.kind, target: link.target }, from);
       if (r.via) a.message("info", `[[${link.target}]] reached ${r.path} by ${r.via === "alias" ? "an alias" : r.via === "previous-name" ? "a previous name" : "a redirect"}`);
       // `#^id`: the block it marks, by its line (21.3), as a path link's lands.
-      const landing = (path: string) => {
-        if (!link.heading?.startsWith("^")) return link.heading;
-        const at = blockLine(a.graph, path, link.heading.slice(1));
-        return at === null ? null : `L${at}`;
-      };
-      if (r.resolvedKind === "note") return go(r.path!, landing(r.path!));
+      if (r.resolvedKind === "note") return go(r.path!, link.heading);
       if (r.resolvedKind === "file") return fileLink(a, r.path!, link.heading, into);
       if (r.resolvedKind === "ambiguous") {
         // Two notes of a name, or two attachments (`![[dal.png]]`, 21.3): one picked, opened as its link would.
@@ -400,7 +392,7 @@ function followLink(a: App, link: LayoutLink, into: Into): void {
         return a.message("info", `copied: ${link.target}`);
       }
       // The fragment, decoded when it can be (`%zz` can't); a block's `^id` lands on its block, as
-      // the line it marks (a converted `[[note#^id]]`, 20.1), or at the top when it isn't there.
+      // the line it marks (a converted `[[note#^id]]`, 20.1).
       const raw = link.target.includes("#") ? link.target.slice(link.target.indexOf("#") + 1) : "";
       let frag: string | null = null;
       if (raw) {
@@ -410,11 +402,6 @@ function followLink(a: App, link: LayoutLink, into: Into): void {
           frag = raw;
         }
       }
-      const at = (path: string) => {
-        if (!frag?.startsWith("^")) return frag;
-        const line = blockLine(a.graph, path, frag.slice(1));
-        return line === null ? null : `L${line}`;
-      };
       // A pointer (21.7): its folder by a name it had, or another copy than the one links open — said so;
       // a branch not checked out here, the file read from git; a name of different folders, picked.
       if (r.via === "old-name") a.message("info", `${link.target} reached ${r.vault} by a name it had`);
@@ -426,11 +413,11 @@ function followLink(a: App, link: LayoutLink, into: Into): void {
       if (r.resolvedKind === "unresolved" && (isPointer(link.target) || r.suggest)) return a.message("warn", r.suggest ? r.reason! : `${link.target}: ${r.reason ?? "not found"}`);
       if (r.resolvedKind === "anchor") {
         const here = link.from ?? view.buf.rel;
-        if (frag && here && (here !== view.buf.rel || frag.startsWith("^"))) return go(here, at(here));
+        if (frag && here && (here !== view.buf.rel || frag.startsWith("^"))) return go(here, frag);
         if (frag) jumpToHeading(a, view, frag);
         return;
       }
-      if (r.resolvedKind === "note") return go(r.path!, at(r.path!));
+      if (r.resolvedKind === "note") return go(r.path!, frag);
       if (r.resolvedKind === "file") return fileLink(a, r.path!, frag, into);
       if (r.resolvedKind === "folder") return a.revealFolder(r.path!);
       // Its file seen to move (17.12): where, and the fix (20.2: a move never resolves a link).
@@ -474,7 +461,7 @@ function pickPointerFolder(a: App, target: string, frag: string | null, into: In
     filterable: false,
     accept: (item) => {
       const d = item.data as { open?: string; rename?: string; name?: string };
-      if (d.open) return openInto(a, into, d.open, frag ? (lineAnchor(frag) ?? headingAnchor(a, d.open, frag)) : undefined);
+      if (d.open) return openInto(a, into, d.open, frag ? fragmentAnchor(a, d.open, frag) : undefined);
       const root = d.rename!;
       const suggested = `${slugName(posix.basename(posix.dirname(root)))}-${d.name}`;
       a.prompt(`rename ${d.name} at ${tildePath(root)} to: `, (name) => name.trim() && a.previewRename(() => planVaultRename(rootAt(root), name.trim())));
@@ -523,14 +510,34 @@ function lineAnchor(fragment: string): Anchor | undefined {
   return f ? { heading: null, headingIndex: 0, offset: 0, line: f.line } : undefined;
 }
 
-/** Where a fragment lands in a note (landing.ts: an id, a heading by slug or text, a path of headings), as an anchor. */
-function headingAnchor(a: App, path: string, heading: string, wiki = false): Anchor | undefined {
+/**
+ * Where a link's fragment lands in a note, as an anchor: its lines (`L42`), its block (`^id`, the line it
+ * marks, 21.3), else a heading (`headingAnchor`). One that lands nowhere opens the note at its top, and
+ * what isn't there is said, a heading or a block alike (design/links.md § Where a link lands).
+ */
+function fragmentAnchor(a: App, path: string, fragment: string, wiki = false): Anchor {
+  const lines = lineAnchor(fragment);
+  if (lines) return lines;
+  if (!fragment.startsWith("^")) return headingAnchor(a, path, fragment, wiki);
+  const line = blockLine(a.graph, path, fragment.slice(1));
+  if (line !== null) return { ...TOP, line };
+  a.message("warn", `no block ${fragment} in ${shownAt(a, path)}: opened at its top`);
+  return { ...TOP };
+}
+
+/** A note's path as a message gives it (21.9): from this root, else from home, else absolute. */
+function shownAt(a: App, path: string): string {
+  return isAbsolute(path) ? a.graph.shownPath(path) : path;
+}
+
+/** Where a heading lands in a note (landing.ts: an id, a heading by slug or text, a path of headings), as an anchor; nowhere, the note's top, said. */
+function headingAnchor(a: App, path: string, heading: string, wiki = false): Anchor {
   // A note of another vault too (17.10): its heading is found in that vault's index.
   const note = a.graph.entryAnywhere(path);
   const hit = note ? findHeading(note.headings, note.anchors ?? [], heading, wiki) : null;
   if (!hit) {
-    a.message("warn", `no heading "${heading}" in ${path}`);
-    return undefined;
+    a.message("warn", `no heading "${heading}" in ${shownAt(a, path)}: opened at its top`);
+    return { ...TOP };
   }
   if (hit.ambiguous) a.message("info", `${path} has several headings "${heading}": the first`);
   if (hit.heading === null) return { heading: null, headingIndex: 0, offset: 0, line: hit.line };

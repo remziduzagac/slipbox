@@ -280,4 +280,40 @@ copies included, so one beside a note could win over the picture, or tie with it
 
 ## MODIFIED design/roots.md § Search scope, design/links.md § Where a link lands, design/roots.md § Named folders
 
-Not changes: the code brought in line with them (B1, B2, A8).
+The code brought in line with them (B1, B2, A8): no decision, as they said it already. What the sections say more
+exactly now, in their words:
+
+### design/roots.md § Named folders
+
+ADDED, a bullet after "**A copy gone**":
+
+- **A clone with a `.slipbox/` name of its own,** given to tell it from the repository it was cloned from, is still a
+  copy of that repository: the lookup takes a repository's copies, one remote, as one folder, whatever their
+  `.slipbox/` call them (`byRepository` in `core/folders.ts`). By the remote, a qualified pointer and a hosting URL open
+  the repository's default copy: the one called by the remote's name (its last part, as its `.slipbox/` name, an alias
+  or the remote's own), else the first found; that one not here, another copy of the repository, said so. The clone's
+  own name opens the clone, and a pointer written to a copy of the same repository is no clash.
+
+MODIFIED, in "**Different folders of one name:**": "following a pointer by that name lists each folder by its path, a
+repository once whatever its copies, to open what it names there, … the CLI gives the candidates, each folder's path
+(exit 4)."
+
+Previously: "following a pointer by that name lists each folder, to open what it names there, … the CLI gives the
+candidates (exit 4)."
+
+### design/roots.md § Search scope
+
+MODIFIED: "every root leaves out worktrees, whose notes are their main checkout's, even one a note links into (by
+`@branch`, or by path)."
+
+Previously: "every root leaves out worktrees, whose notes are their main checkout's."
+
+### design/links.md § Where a link lands
+
+MODIFIED: "A fragment that lands nowhere opens the note at its top, and which heading or block isn't there is said, in
+the TUI's message line and the CLI's `warnings` (`resolve` gives the note, its `line` null). Where it lands is shown
+by the hover and `shift+k`: the heading's section, the block, the lines ([tui.md](../../design/tui.md) § What's
+under the cursor); `resolve` gives its line, a block's and lines' as a heading's."
+
+Previously: "A fragment that lands nowhere opens the note at its top. Where it lands is shown by the hover and
+`shift+k`: the heading's section, the block, the lines ([tui.md](../../design/tui.md) § What's under the cursor)."

@@ -224,6 +224,28 @@ describe("CLI (9.x)", () => {
     // A path, never a name (20.22): `alpha` from index.md is a file that isn't there.
     expect((await cli(["resolve", "alpha#Section Two", "--from", "index.md", "--json"])).code).toBe(3);
   });
+  test("resolve lands a block and lines as a heading; a heading or block that isn't there: the note, at its top, said", async () => {
+    const dir = mkdtempSync(join(tmpdir(), "slipbox-frag-"));
+    mkdirSync(join(dir, ".slipbox"));
+    writeFileSync(join(dir, "n.md"), "# N\n\n## Setup\n\nthe marked paragraph ^mark\n");
+    writeFileSync(join(dir, "a.md"), "# A\n");
+    const r = async (link: string) => JSON.parse((await cli(["--root", dir, "resolve", link, "--from", "a.md", "--json"])).out);
+    expect((await r("n.md#^mark")).data).toMatchObject({ status: "resolved", path: "n.md", line: 5, href: "n.md#^mark" });
+    expect((await r("[[n#^mark]]")).data).toMatchObject({ status: "resolved", path: "n.md", line: 5 });
+    expect((await r("n.md#L3")).data).toMatchObject({ line: 3, href: "n.md#L3" });
+    expect((await r("n.md#Setup")).warnings).toEqual([]);
+    const heading = await r("n.md#Nowhere");
+    expect(heading.data).toMatchObject({ status: "resolved", path: "n.md", line: null });
+    expect(heading.warnings).toEqual(['no heading "Nowhere" in n.md: the link lands at its top']);
+    const block = await r("n.md#^none");
+    expect(block.data).toMatchObject({ status: "resolved", path: "n.md", line: null, href: "n.md#^none" });
+    expect(block.warnings).toEqual(["no block ^none in n.md: the link lands at its top"]);
+    expect((await r("[[n#^none]]")).warnings).toEqual(["no block ^none in n.md: the link lands at its top"]);
+    // Read by a person: the note's path alone, the warning beside it.
+    const human = await cli(["--root", dir, "resolve", "n.md#Nowhere", "--from", "a.md"]);
+    expect(human.out).toBe(`${join(dir, "n.md")}\n`);
+    expect(human.err).toBe('slipbox: warning: no heading "Nowhere" in n.md: the link lands at its top\n');
+  });
   test("render is plain when piped, and never leaks escapes from the note", async () => {
     const r = await cli(["render", "escapes.md", "--width", "60"]);
     expect(r.code).toBe(0);
@@ -4533,6 +4555,30 @@ describe("search by vault (20.16)", () => {
     expect(all).not.toContain(at("a"));
   });
 
+  test("a scope leaves worktrees out, even one a note links into by @branch or by path: their notes are their main checkout's", async () => {
+    const { scopeRoots } = await import("../src/core/scope.ts");
+    const { openVault } = await import("../src/core/reach.ts");
+    const { at, tag } = await four();
+    const git = (cwd: string, ...args: string[]) => Bun.spawnSync(["git", "-c", "user.email=t@t", "-c", "user.name=t", "-c", "init.defaultBranch=main", ...args], { cwd }).exitCode;
+    const repo = at("repo");
+    mkdirSync(repo);
+    if (git(repo, "init", "-q") !== 0) return; // no git here
+    git(repo, "remote", "add", "origin", `git@github.com:me/repo${tag}.git`);
+    writeFileSync(join(repo, "x.md"), "# X\n\nA narwhal on main.\n");
+    git(repo, "add", ".");
+    git(repo, "commit", "-qm", "main");
+    git(repo, "branch", "feature");
+    const wt = at("repo-feature");
+    git(repo, "worktree", "add", "-q", wt, "feature");
+    for (const r of [repo, wt]) await cli(["ls"], r);
+    writeFileSync(join(at("d"), "out.md"), `[on the branch](slipbox://repo${tag}@feature/x.md) [by path](../repo-feature/x.md) [main](slipbox://repo${tag}/x.md)\n`);
+    const g = openVault(at("d"));
+    g.ensureAll();
+    expect(g.linksOf("out.md").map((l) => l.path)).toEqual([join(wt, "x.md"), join(wt, "x.md"), join(repo, "x.md")]);
+    expect(scopeRoots(g, "linked")).toEqual([repo]);
+    expect(scopeRoots(g, "all")).not.toContain(wt);
+  });
+
   test("another root's index still being built is not used: its files scanned; a built one is caught up first", async () => {
     const { searchOthers } = await import("../src/core/scope.ts");
     const { SearchIndex } = await import("../src/core/search-index.ts");
@@ -5832,7 +5878,8 @@ describe("named folders (21.6)", () => {
     const theirs = folder({ remote: `https://gitlab.com/lab/${short}` });
     recordFolder(mine);
     recordFolder(theirs);
-    expect(lookupFolder(short)).toMatchObject({ status: "ambiguous", candidates: [`github.com/me/${short}`, `gitlab.com/lab/${short}`] });
+    // Each named by its path (the remotes in the reason).
+    expect(lookupFolder(short)).toMatchObject({ status: "ambiguous", candidates: [mine, theirs].sort(), reason: `2 repositories are called ${short}: name one by its remote (github.com/me/${short}, gitlab.com/lab/${short})` });
     expect(lookupFolder(`gitlab.com/lab/${short}`)).toMatchObject({ status: "found", path: theirs });
     const entry = readFolders().find((f) => f.remote === `github.com/me/${short}`)!;
     expect(pointerName(entry)).toBe(`github.com/me/${short}`);
@@ -5858,6 +5905,52 @@ describe("named folders (21.6)", () => {
     rmSync(join(p, ".slipbox"), { recursive: true });
     expect(recordFolder(p)).toBeNull();
     expect(lookupFolder(now)).toMatchObject({ status: "unknown" });
+  });
+
+  test("a repository and a clone of it with a .slipbox/ name of its own are copies of one: by the remote, a pointer and a hosting URL open the default copy", async () => {
+    const { lookupFolder, pointerNaming, readFolders, recordFolder } = await import("../src/core/folders.ts");
+    const { parsePointer, resolvePointer } = await import("../src/core/pointer.ts");
+    // As the reference set has them: the repository named in its .slipbox/ as its remote names it, the clone
+    // (found first) given a name of its own.
+    const short = `k${uniq()}`;
+    const remote = `git@github.com:labs/${short}.git`;
+    const qualified = `github.com/labs/${short}`;
+    const clone = folder({ name: `${short}-spike`, id: uniq(), remote });
+    const repo = folder({ name: short, id: uniq(), remote });
+    writeFileSync(join(repo, "README.md"), "# Repo\n");
+    writeFileSync(join(clone, "README.md"), "# Spike\n");
+    recordFolder(clone);
+    recordFolder(repo);
+    expect(lookupFolder(qualified)).toMatchObject({ status: "found", path: repo });
+    expect(resolvePointer(parsePointer(`slipbox://${qualified}/README.md`)!)).toMatchObject({ status: "found", abs: join(repo, "README.md") });
+    expect(lookupFolder(`${short}-spike`)).toMatchObject({ status: "found", path: clone }); // its own name, itself
+    const a = mkdtempSync(join(tmpdir(), "slipbox-named-a-"));
+    mkdirSync(join(a, ".slipbox"));
+    writeFileSync(join(a, "a.md"), `[r](https://github.com/labs/${short}/blob/main/README.md) [p](https://github.com/labs/${short})\n`);
+    const g = openGraph(locateVault({ root: a }), DEFAULT_CONFIG, false);
+    expect(g.linksOf("a.md").map((l) => [l.resolvedKind, l.path, l.via])).toEqual([
+      ["note", join(repo, "README.md"), "hosting"],
+      ["note", join(repo, "README.md"), "hosting"],
+    ]);
+    // The repository named by its remote alone: the same. Its copy gone, the clone answers, said so.
+    const bare = `b${uniq()}`;
+    const bareClone = folder({ name: `${bare}-spike`, id: uniq(), remote: `https://gitlab.com/lab/${bare}` });
+    const bareRepo = folder({ remote: `https://gitlab.com/lab/${bare}` });
+    recordFolder(bareClone);
+    recordFolder(bareRepo);
+    expect(lookupFolder(`gitlab.com/lab/${bare}`)).toMatchObject({ status: "found", path: bareRepo });
+    rmSync(bareRepo, { recursive: true });
+    expect(lookupFolder(`gitlab.com/lab/${bare}`)).toMatchObject({ status: "found", path: bareClone, via: "another-copy" });
+    // A clone named as the repository is no different folder: its short name is written, and followed it opens the
+    // repository's default copy. With a different repository of the name too, an error names each once, by its path.
+    const twin = folder({ name: short, id: uniq(), remote });
+    recordFolder(twin);
+    expect(lookupFolder(short)).toMatchObject({ status: "found", path: repo });
+    expect(pointerNaming(readFolders().find((f) => f.copies.some((c) => c.path === twin))!)).toMatchObject({ name: short, clash: [] });
+    const other = folder({ remote: `https://gitlab.com/else/${short}` });
+    recordFolder(other);
+    expect(lookupFolder(short)).toMatchObject({ status: "ambiguous", candidates: [repo, other].sort(), reason: `2 repositories are called ${short}: name one by its remote (${qualified}, gitlab.com/else/${short})` });
+    expect(pointerNaming(readFolders().find((f) => f.copies.some((c) => c.path === twin))!)).toMatchObject({ name: qualified, clash: [expect.objectContaining({ remote: `gitlab.com/else/${short}` })] });
   });
 
   test("opened, a folder is in the lookup; info says its name, copies and the one links open", async () => {

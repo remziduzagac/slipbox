@@ -400,6 +400,7 @@ Flags:
 - `--limit <n>`: at most this many hits, from 1 to 500 (20 by default).
 - `--scope here|linked|all`: `here` (the default) searches this root; `linked` adds the roots its notes link to and
   those linking to it; `all` every root this machine knows. This root's hits come first, then the others' by score.
+  Neither takes in a worktree, even one a note links into: its notes are copies of its main checkout's.
 
 Search uses the root's index when it has one ([`index`](#index)), brought up to date with every file changed since,
 whoever changed it. Until the index is built it reads the files instead: the same notes, more slowly, and a warning.
@@ -645,10 +646,13 @@ slipbox resolve slipbox://notes/ideas/coffee.md --json
 
 Without `--from`, the link is taken as a note a command would name ([Naming a note](#naming-a-note)), else a file's
 path from the root. A target with a scheme (`https:`) is external when it has no spaces and no note has that name, so
-`resolve 'Meeting: Q3'` still finds `Meeting: Q3.md`. A link to a heading also gives the heading's line.
+`resolve 'Meeting: Q3'` still finds `Meeting: Q3.md`. A link to a heading, a block (`#^id`) or lines (`#L42`) also
+gives that line. A heading or block that isn't there gives the note without a line (following the link opens it at
+its top), and a warning says which heading or block wasn't found.
 
-The human output is the file's path, and `:line` for a heading. Unresolved is exit 3, ambiguous exit 4 with the
-candidates; external is exit 0, the address printed.
+The human output is the file's path, and `:line` for a heading, a block or lines. Unresolved is exit 3, ambiguous exit
+4 with the candidates (for a pointer whose name different folders have, each folder's path); external is exit 0, the
+address printed.
 
 `--json`: `{link, status, path, abs, shown, href, heading, line, candidates[], root, name, reason, how, certainty,
 git?, suggest?}`.
@@ -1023,7 +1027,8 @@ slipbox folders default notes ~/notes
 ```
 
 A copy that's gone is listed as not here, and another copy answers meanwhile. A name two folders share is ambiguous
-(exit 4) until one is renamed.
+(exit 4, each folder's path among the candidates) until one is renamed. A clone with a `.slipbox/` name of its own is
+listed under that name, and is still a copy of its repository: the repository's full name opens its default copy.
 
 `--json`: `[{name, pointer, remote, id, private, aliases[], old[], default, copies[{path, seen, found,
 available}]}]`, `old` being the names it had; `default` gives `{name, default}`. A path that isn't a copy of the

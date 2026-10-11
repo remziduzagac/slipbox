@@ -11036,6 +11036,30 @@ describe("git worktrees in the TUI (17.19)", () => {
     expect(src()).toBe(7); // the anchor's own line
   });
 
+  test("a heading or block that isn't there opens the note at its top, not where it was left, and says which", async () => {
+    const root = mkdtempSync(join(sandbox, "frag-"));
+    mkdirSync(join(root, ".slipbox"));
+    writeFileSync(join(root, "n.md"), `# N\n\n${"filler\n\n".repeat(40)}## Setup\n\nthe end ^here\n`);
+    writeFileSync(join(root, "a.md"), "# A\n\n[gone](n.md#nowhere) [no](n.md#^none) [[n#Nowhere]] [[n#^none]] [here](n.md#^here)\n");
+    const h = await harness({ root, open: "n.md", height: 20 });
+    const src = () => h.app.currentLayout(h.app.view!).lines[h.app.view!.cur.row]!.src;
+    const follow = async (nth: number) => {
+      // n.md read to its end, and left there.
+      h.app.open("n.md");
+      await h.keys("G");
+      expect(src()).toBeGreaterThan(80);
+      h.app.open("a.md");
+      await h.keys("g", "g", ...Array<string>(nth).fill("tab"), "enter");
+      expect(h.app.view!.buf.rel).toBe("n.md");
+      return { line: src(), said: h.app.messages.at(-1)?.text };
+    };
+    expect(await follow(1)).toEqual({ line: 1, said: 'no heading "nowhere" in n.md: opened at its top' });
+    expect(await follow(2)).toEqual({ line: 1, said: "no block ^none in n.md: opened at its top" });
+    expect(await follow(3)).toEqual({ line: 1, said: 'no heading "Nowhere" in n.md: opened at its top' });
+    expect(await follow(4)).toEqual({ line: 1, said: "no block ^none in n.md: opened at its top" });
+    expect((await follow(5)).line).toBe(85); // a block that is there: its line
+  });
+
   test("a pointer followed (21.7): into another named folder, at its heading; by an old name, said; two folders of the name, picked — or one renamed", async () => {
     const { recordFolder } = await import("../src/core/folders.ts");
     const tag = basename(mkdtempSync(join(sandbox, "pt-"))).replace(/[^a-z0-9]/gi, "").toLowerCase();

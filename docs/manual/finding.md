@@ -74,8 +74,8 @@ A hit opens at the section with the most of the words, on its first line with on
 Search starts with the root you are in. `ctrl+a` in the search list widens it to the folders this root links to, or that
 link to it, their hits under a "linked folders" divider; again, to every root this machine knows; again, back to this
 root. The list's title says which. A hit in another root is shown by its path (`~/code/website/README.md`), and `enter`
-on it switches to that root, at the line. A worktree is left out, as its notes are copies of its main checkout's, unless
-a note links into it.
+on it switches to that root, at the line. A worktree is left out, as its notes are copies of its main checkout's, even
+when a note links into it.
 
 `slipbox search` does the same from the command line: `--scope here` (the default), `linked` or `all`, and `--limit` for
 the number of hits.

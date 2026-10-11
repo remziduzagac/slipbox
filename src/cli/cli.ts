@@ -34,7 +34,7 @@ import { detectColorDepth, layoutToAnsi, type ColorDepth } from "../core/layout/
 import { layoutNote, layoutWidth } from "../core/note.ts";
 import { headingsOf, parseAround, parseMarkdown, type ParsedNote, slugify } from "../core/parse.ts";
 import { addOwnWord, Checker, dictionaryFiles, noteLanguages, openSpeller, ownWordsFile, proseWords, type Speller } from "../core/spell.ts";
-import { findHeading, headingFragment } from "../core/landing.ts";
+import { headingFragment, landing, lineFragment } from "../core/landing.ts";
 import { addFootnote, applyEdits, deleteFootnote, editFootnote, type Footnote, footnotesOf, renameFootnote, type TextEdit } from "../core/footnotes.ts";
 import { parseNoteFile } from "../core/readers.ts";
 import { dataOutline, parseData } from "../core/data.ts";
@@ -746,18 +746,22 @@ const HANDLERS: Record<string, Handler> = {
         found = md;
       }
     }
+    const abs = path && status !== "external" ? (isAbsolute(path) ? path : s.graph.abs(path)) : null;
     let line: number | null = null;
-    // The heading's fragment as a link writes it (its id, or GitHub's numbered slug).
+    // The fragment as a link writes it: a heading's id, or GitHub's numbered slug; a block's and lines' as they are.
+    const asWritten = !!parts.heading && (parts.heading.startsWith("^") || !!lineFragment(parts.heading));
     let fragment: string | null = null;
     const entry = path && parts.heading && status === "resolved" ? s.graph.entryAnywhere(path) : undefined;
     if (entry) {
-      const hit = findHeading(entry.headings, entry.anchors ?? [], parts.heading!, bracketed);
+      // Where it lands, as following it in the TUI finds it (landing.ts): a heading, a block, lines. Nowhere: the
+      // note's top, and what isn't there said.
+      const hit = landing(s.graph, path!, parts.heading, null, bracketed);
       line = hit?.line ?? null;
       if (hit) fragment = hit.anchor ?? (hit.heading !== null ? headingFragment(entry.headings, hit.heading) : null);
+      else s.warnings.push(`${parts.heading!.startsWith("^") ? `no block ${parts.heading}` : `no heading "${parts.heading}"`} in ${s.graph.shownPath(abs!)}: the link lands at its top`);
     }
-    const abs = path && status !== "external" ? (isAbsolute(path) ? path : s.graph.abs(path)) : null;
     // With --from, the link to write there (20.20): the relative path, as a link carries it.
-    const href = abs && from ? `${urlPath(relative(dirname(s.graph.abs(from)), abs).split(sep).join("/"))}${parts.heading ? `#${fragment ?? slugify(parts.heading)}` : ""}` : null;
+    const href = abs && from ? `${urlPath(relative(dirname(s.graph.abs(from)), abs).split(sep).join("/"))}${parts.heading ? `#${fragment ?? (asWritten ? parts.heading : slugify(parts.heading))}` : ""}` : null;
     const data = { link: raw, status, path, abs, shown: abs ? s.graph.shownPath(abs) : null, href, heading: parts.heading, line, candidates, ...s.rootOf(abs), reason: found?.reason ?? null, how: found?.via ?? found?.how ?? null, certainty: found ? certainty(found) : status === "resolved" ? "exact" : status, ...(found?.gitRef ? { git: found.gitRef } : {}), ...(found?.suggest ? { suggest: found.suggest } : {}) };
     if (status === "ambiguous") throw new CliError(`ambiguous link "${raw}"${data.reason ? ` (${data.reason})` : ""}: ${candidates.join(", ")}`, EXIT.ambiguous, data);
     if (status === "unresolved") throw new CliError(`unresolved link "${raw}"${data.reason ? `: ${data.reason}` : ""}`, EXIT.notFound, data);

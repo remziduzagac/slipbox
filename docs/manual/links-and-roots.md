@@ -129,7 +129,7 @@ The part after `#` is a place in the file:
 - **Lines,** as GitHub writes them: `#L42`, `#L42-L50`, `#L42C5-L45C10`.
 
 If two headings have the same text, the first one is used, and slipbox says so. A heading or block that isn't there
-opens the note where you last left it (at its top, the first time), and for a heading slipbox says it isn't there.
+opens the note at its top, and slipbox says which heading or block it didn't find.
 
 ### Links in front matter
 
@@ -326,7 +326,8 @@ slipbox://github.com/you/website/docs/plan.md
 - Following a pointer into another folder switches to it, as following a path does.
 - A name this machine doesn't know, or a folder that isn't here, is said: "`notes` isn't on this machine yet: open it,
   or let the index find it". A pointer never offers to make a note.
-- A name that two different folders have lists both, to open the one meant, and offers to rename one of them.
+- A name that two different folders have lists each by its path, to open the one meant, and offers to rename one of
+  them.
 
 A pointer is always a Markdown link, also in a folder that writes wikilinks: a wikilink reads no pointer. `:e` takes a
 pointer (`:e slipbox://notes/inbox.md`), and so does every `slipbox` command that takes a note.
@@ -342,6 +343,10 @@ share a name.
   `slipbox folders default <name> <path>` changes it later.
 - **A copy that isn't here,** moved or on a drive that is unplugged, is skipped: another copy answers meanwhile, and
   slipbox says so.
+- **A clone given a `.slipbox/` name of its own,** to tell it from the repository it was cloned from, is still a copy of
+  that repository. A pointer by the repository's full name (`slipbox://github.com/you/website/…`), and a link to its
+  hosting, open the repository's default copy: the one called by the remote's name, not the renamed clone. The clone's
+  own name opens the clone.
 - **Different repositories** with one short name are told apart by their full names.
 - **Different `.slipbox/` folders** with one name stay ambiguous until one is renamed: following a pointer by that name
   asks which, and offers the renaming.
