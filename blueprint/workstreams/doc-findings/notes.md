@@ -24,3 +24,15 @@
   name (DF-D18).
 - **D, stale text** in the examples: fixed with the rest, no decision.
 - **E, screenshots:** in the guides and the screen chapter (DF-D19).
+
+## Follow-ups (2026-10-12)
+
+- The fixers' reports raised questions the decisions didn't answer; the user settled each as suggested: F1 `cp` into
+  a folder (DF-D20); F2 a trailing `/` always a folder (DF-D21); F3 your config says root too (DF-D22); F4 a folder's
+  `update.check` warned of (DF-D23); F5 every export embeds the root's pictures only (DF-D24); F6 any Markdown export's
+  pictures out of lookups (DF-D25); F7 the hover on a missing heading (DF-D26); F8 a comment's contents still count
+  (DF-D27); F9 a shift selection outside typing is visual (DF-D28); F10 the Save As window goes in first (DF-D29); F11
+  a named clone a copy (DF-D30); F12, found by the terminal tests, the `z`, `[`, `]` popups' titles (DF-D31).
+- The user said the agents were saturating the CPU: a finished agent's search had run for hours, and several whole
+  suites at once; the fixers then ran only the files they touched, the coordinator the suite once after merging.
+

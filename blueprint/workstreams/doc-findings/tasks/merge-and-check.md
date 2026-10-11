@@ -1,6 +1,6 @@
 ---
-status: todo
-assignee:
+status: doing
+assignee: claude
 blocked_by: [DF-T1, DF-T2, DF-T3, DF-T4, DF-T5, DF-T6, DF-T7]
 created: "2026-10-11"
 ---
@@ -29,3 +29,17 @@ The tasks' branches merged onto main, the terminal tests of what they changed ru
 - Delivers: requirements.md § Acceptance criteria.
 
 ## Log
+
+- 2026-10-12: DF-T1 to DF-T7 cherry-picked onto main: two conflicts, an import line in `tests/cli.test.ts` and
+  `src/core/export/markdown.ts`'s header and imports, merged; DF's design.md's shared DF-D8 entry merged. The worktrees
+  and branches removed.
+- 2026-10-12: `bun run check`: 1786 pass, 4 fail: the about-this-vault snapshot (DF-T8's edit: updated), `search
+  --scope all` past the default limit now that more tests register roots (the test given `--limit 500`), and two known
+  ones (the background index's timing under load; the pipeline-cookbook Mermaid snapshot when export.test.ts runs
+  first, reproduced by DF-T7 on code from before it).
+- 2026-10-12: terminal tests: the 32 existing scenarios covering the fixed parts, in three panes: 29 pass; the other
+  3 fail the same at d5c5dee, stale (`ctrl+e` for source mode; code files open in the code view; an error's line
+  number coloured, not signed): brought up to date, passing. The 7 export scenarios (`world-export.ts`), uncommitted
+  until now, pass. Nine new scenarios (`world-fixes.ts`, claude-e2e) pass three runs in a row each; eight fail on the
+  code from before DF; the ninth (which-key's `z`, `[`, `]`) showed A16's explanations are never drawn: F12, DF-D31.
+

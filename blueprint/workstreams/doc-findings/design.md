@@ -385,3 +385,38 @@ under the cursor); `resolve` gives its line, a block's and lines' as a heading's
 
 Previously: "A fragment that lands nowhere opens the note at its top. Where it lands is shown by the hover and
 `shift+k`: the heading's section, the block, the lines ([tui.md](../../design/tui.md) § What's under the cursor)."
+
+## MODIFIED design/export.md § The assembler, § Known limits (DF-D24, DF-D25)
+
+Every format embeds the root's pictures only; any Markdown export's pictures folder out of lookups by name.
+
+## MODIFIED design/links.md § Renames and moves; design/tui.md § Files in the explorer (DF-D20, DF-D21)
+
+`cp` into a folder as `mv`; a trailing `/` always a folder to go into, made if missing.
+
+## MODIFIED design/terms.md § Retired; design/tui.md, design/roots.md where config words appear (DF-D22)
+
+Your config takes root wherever it takes vault.
+
+## MODIFIED design/trust.md § What runs (DF-D23)
+
+A folder's `update.check` warned of, as DF-D1's settings are.
+
+## MODIFIED design/tui.md § What's under the cursor (DF-D26)
+
+The hover on a link to a missing heading or block says it opens the note at its top.
+
+## MODIFIED design/roots.md § Named folders (DF-D30)
+
+A named clone made the default copy, and named as its repository.
+
+## MODIFIED design/tui.md § Overlays, the which-key popup (DF-D31)
+
+A top-level prefix's popup carries its group's explanation in its title.
+
+## MODIFIED design/testing.md, the terminal tests' files
+
+Rows for `world-export.ts` (the export window: formats, the window's keys, replacing, notes in order, `:export`) and
+`world-fixes.ts` (what writing the docs found, fixed: typing without vim, reload, the trash, moves, clones, the code
+view's links and errors, Obsidian's highlights and comments, a folder's network settings, the Save As window's
+folders).

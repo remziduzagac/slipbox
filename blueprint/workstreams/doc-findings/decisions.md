@@ -159,3 +159,88 @@ colours, drawn to PNG with DejaVu Sans Mono), on the reference set, so they're r
 made by a script.
 
 **Not chosen:** throughout the manual; none.
+
+## DF-D20: A copy into a folder (2026-10-12)
+
+**Decision:** `slipbox cp`, as `mv` (DF-D4): a new path that is an existing folder, or ends in `/`, means into it.
+
+**Why:** It made `ideas.md` beside the folder, as `mv` had. The user's answer (F1).
+
+## DF-D21: A path ending in `/` is always a folder to go into (2026-10-12)
+
+**Decision:** For a move or a copy, a new path ending in `/` is a folder, made if missing: `slipbox mv drafts archive/`
+makes `archive/drafts`, never renaming `drafts` to `archive`, as the shell's `mv` would.
+
+**Why:** One rule, which never renames what was meant to move. The user's answer (F2). Clarifies DF-D4.
+
+## DF-D22: Your config says root too (2026-10-12)
+
+**Decision:** Wherever your config takes the word vault, it takes root too: `capture.location = "root"`, the explorer's
+actions `rename_root` and `make_root`, the colour role `sidebar_root`; the docs show root, and the old words keep
+working.
+
+**Why:** The CLI says root (DF-D9); no config should break. The user's answer (F3).
+
+**Not chosen:** keeping vault; switching with a warning on the old word.
+
+## DF-D23: A folder's `update.check` is warned of too (2026-10-12)
+
+**Decision:** A folder's config setting `update.check` gets the warning DF-D1's settings get, and is ignored as before.
+
+**Why:** One rule, said one way. The user's answer (F4). Amends DF-D1.
+
+## DF-D24: Every export embeds the root's pictures only (2026-10-12)
+
+**Decision:** Word, PDF, the web page and the e-book embed only pictures from inside the note's root, as the Markdown
+export copies (DF-D2); a picture from outside shows as its caption.
+
+**Why:** A picture linked from anywhere on disk went into the document sent. The user's answer (F5). Amends DF-D2.
+
+## DF-D25: Any Markdown export's pictures are left out of lookups by name (2026-10-12)
+
+**Decision:** The pictures folder of any Markdown export, whatever its name (`book.assets/` for `-o book.md`), is
+left out of lookups by name, as `*.export.assets/` is: the folder beside a file slipbox marked as its export.
+
+**Why:** Otherwise `-o book.md` brought the ambiguity back. The user's answer (F6). Amends DF-D18.
+
+## DF-D26: The hover says where a missing heading opens (2026-10-12)
+
+**Decision:** The hover (`shift+k`) on a link to a missing heading or block says so and that it opens the note at its
+top, as following it does (B2).
+
+**Why:** It said "(nothing there)". The user's answer (F7).
+
+## DF-D27: What's in an Obsidian comment still counts (2026-10-12)
+
+**Decision:** A link, tag, task or heading inside `%%…%%` stays part of the note: found by backlinks and search,
+rewritten by renames, listed among tags and tasks; only the drawing hides it (DF-D17).
+
+**Why:** A commented-out link stays right when its target is renamed. The user's answer (F8). Clarifies DF-D17.
+
+## DF-D28: Outside typing, a shift selection is visual mode (2026-10-12)
+
+**Decision:** In source mode and the lens, out of typing, a `shift`+arrow selection is vim's visual selection, as a
+drag's is: a plain arrow extends it, `esc` drops it; while typing, the desktop's way holds (DF-D15).
+
+**Why:** One kind of selection. The user's answer (F9). Clarifies DF-D15.
+
+## DF-D29: The Save As window goes into a folder it makes (2026-10-12)
+
+**Decision:** A name ending in `/` that isn't there makes the folder and goes into it, the note's name given back; a
+second `enter` exports there.
+
+**Why:** You see where it's written before it is. The user's answer (F10). Clarifies DF-D5.
+
+## DF-D30: A named clone is still a copy of its repository (2026-10-12)
+
+**Decision:** A clone with a `.slipbox/` name of its own can be made its repository's default copy (`slipbox folders
+default`), and named as the repository is (`init`, `name`).
+
+**Why:** It is a copy (A8, design/roots.md § Named folders); both refusals said otherwise. The user's answer (F11).
+
+## DF-D31: The `z`, `[` and `]` popups say what they hold (2026-10-12)
+
+**Decision:** The which-key popup of a top-level prefix (`z`, `[`, `]`, and any like them) carries its group's
+explanation in its title: "z › scroll, fold and spelling".
+
+**Why:** The explanations A16 completed were shown nowhere. The user's answer (F12).
