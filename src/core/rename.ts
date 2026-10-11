@@ -10,15 +10,15 @@ import { existsSync, mkdirSync, realpathSync, renameSync, rmdirSync, statSync, u
 import { basename, dirname, isAbsolute, join, posix, relative, sep } from "node:path";
 import { classify } from "./filetypes.ts";
 import { atomicWrite, climbsOut, landsInside, readText } from "./fsutil.ts";
-import type { Backlink, Graph, LinkKind, NoteEntry, ResolvedLink } from "./graph.ts";
+import type { Backlink, Graph, LinkKind, LinkRef, NoteEntry, ResolvedLink } from "./graph.ts";
 import { extensionless, formatPathLink, normKey, pathForm, pathLink, type PathForm, pathNamed, wikiPathCandidates } from "./links.ts";
 import { slugify } from "./parse.ts";
 import { trashVaultMarker } from "./files.ts";
 import { contentHash } from "./redirects.ts";
 import { changedSpan, forgetRename, type LoggedRename, logRename, readRenames } from "./rename-log.ts";
 import { forgetRoot, IdentityEditError, identityReadsBack, newVaultId, readIdentity, readRoots, VAULT_NAME, vaultConfigFile, withIdentity } from "./registry.ts";
-import { openVault } from "./reach.ts";
-import { copyAvailable, folderIdentity, folderNamed, pointerName, pointerNaming, pointerWarnings, readFolders, recordFolder, travelTogether } from "./folders.ts";
+import { openVault, Reach } from "./reach.ts";
+import { copyAvailable, folderIdentity, folderNamed, lookupFolder, pointerName, pointerNaming, pointerWarnings, readFolders, recordFolder, travelTogether } from "./folders.ts";
 import { formatPointer, isPointer, parsePointer, resolvePointer } from "./pointer.ts";
 import { parseHosted, withHostedPath } from "./hosting.ts";
 import { checkoutOf } from "./git.ts";
@@ -491,7 +491,11 @@ function planMove(g: Graph, moves: Map<string, string>, head: Pick<RenamePlan, "
     // Its own relative links to what stays put, from where it will be. Into a root nested here, every
     // link by a name or from the top too: they'd be read from that root (17.17, 21.3) — relative paths.
     const crosses = rootOfPath(abs(toRel)) !== real(g.root);
-    if (!entry || (posix.dirname(fromRel) === posix.dirname(toRel) && !crosses)) continue;
+    if (posix.dirname(fromRel) === posix.dirname(toRel) && !crosses) continue;
+    if (!entry) {
+      ownFileLinks(g, c, fromRel, toRel, crosses, (r) => (!isAbsolute(r) && (moves.has(r) || folders.has(r))) || (isAbsolute(r) && after(r) !== r));
+      continue;
+    }
     for (const l of entry.links) {
       const wikiLink = l.kind === "wiki" || l.kind === "embed";
       if (l.kind !== "markdown" && l.kind !== "image" && !(wikiLink && (crosses || /^\.\.?\//.test(l.target)))) continue;
@@ -525,6 +529,52 @@ function planMove(g: Graph, moves: Map<string, string>, head: Pick<RenamePlan, "
   const files = c.result();
   const warnings = dirtyTrees([head.move!.from, ...files.map((f) => f.abs)]);
   return { ...head, moves: [...moves], ...(vaults.length ? { vaults } : {}), files, warnings, skipped: c.skipped };
+}
+
+/**
+ * A code or data file's own paths, moved from `fromRel` to `toRel` (D63): a comment's (16.10) and a data
+ * file's links (16.15) written relative to the file, rewritten to reach what they reached from where it
+ * will be, each in its own form, as a note's own relative links are. A comment's path the root's
+ * fallback still reaches (`docs/x.md`, read from the root when nothing is there beside the file) and a
+ * `/…` from the root are left, but into a root nested here (`crosses`), where `/` is that root's; a URL
+ * too. `moving`: a target that moves with it (a vault path, or an absolute one), its own backlink's.
+ */
+function ownFileLinks(g: Graph, c: Collector, fromRel: string, toRel: string, crosses: boolean, moving: (path: string) => boolean): void {
+  const data = classify(fromRel, g.config.walk.extensions).group === "data";
+  const toAbs = join(g.root, toRel);
+  for (const l of g.fileLinksOf(fromRel)) {
+    if (/^[a-z][a-z0-9+.-]*:/i.test(l.target) || l.target.startsWith("#")) continue;
+    const r = g.resolveLink(l, fromRel);
+    if ((r.resolvedKind !== "note" && r.resolvedKind !== "file" && r.resolvedKind !== "folder") || !r.path || moving(r.path)) continue;
+    const targetAbs = isAbsolute(r.path) ? r.path : join(g.root, r.path);
+    // As written: a data file's value is its target; a comment's, its text (`util.ts:12:3` its path, the
+    // line and column kept), the index's target being its path from the root.
+    const written = data ? l.target : l.target.includes("#L") ? l.text.slice(0, l.text.indexOf(":")) : l.text;
+    if (!written || (written.startsWith("/") && !crosses)) continue;
+    if (!data && !crosses && !written.startsWith("/")) {
+      // Read beside the file first, else from the root: left where that still lands on it.
+      const beside = posix.normalize(posix.join(posix.dirname(toRel), written));
+      const lands = !beside.startsWith("..") && g.known(beside) ? beside : posix.normalize(written);
+      if (lands === r.path) continue;
+    }
+    c.edit({ abs: join(g.root, fromRel), kind: l.kind, target: written, line: l.line, column: l.column }, relativeAs(written, toAbs, targetAbs), null);
+  }
+}
+
+/**
+ * A path written relative to its file (`../docs/x.md`, `./user.yaml#/defs`), from `fileAbs`, reaching
+ * `targetAbs`: `./` kept, an extension left off where it was, a folder's `/` and the fragment kept;
+ * never encoded, since a comment or a data file's value isn't a URL.
+ */
+function relativeAs(written: string, fileAbs: string, targetAbs: string): string {
+  const hash = written.indexOf("#");
+  const frag = hash >= 0 ? written.slice(hash) : "";
+  const path = hash >= 0 ? written.slice(0, hash) : written;
+  let next = relative(dirname(fileAbs), targetAbs).split(sep).join("/") || ".";
+  if (path.startsWith("./") && !next.startsWith("../")) next = `./${next}`;
+  if (extensionless(path) && NOTE_EXT.test(next)) next = next.replace(NOTE_EXT, "");
+  if (path.endsWith("/") && !next.endsWith("/")) next += "/";
+  return next + frag;
 }
 
 /**
@@ -1043,8 +1093,9 @@ export function planUnmakeVault(parent: Graph, folderRel: string): RenamePlan {
       c.edit({ abs: linkingAbs, kind: l.kind, target: l.target, line: l.line, column: l.column }, wikiTo(l.target, linkingAbs, parent.root, join(parent.root, r.path)), null);
     }
   }
+  const unpointed = pointersByItsName(parent, v, F, c);
   const out = c.result();
-  const warnings = dirtyTrees([Vabs, ...out.map((f) => f.abs)]);
+  const warnings = [...dirtyTrees([Vabs, ...out.map((f) => f.abs)]), ...unpointed];
   // Settings of its own go with its .slipbox/.
   let config = "";
   try {
@@ -1053,6 +1104,64 @@ export function planUnmakeVault(parent: Graph, folderRel: string): RenamePlan {
   const tables = [...config.matchAll(/^\[([^\]]+)\][ \t]*(#.*)?$/gm)].map((m) => m[1]!.trim()).filter((t) => t !== "vault");
   if (tables.length) warnings.push(`${F}/.slipbox/config.toml has settings of its own (${tables.map((t) => `[${t}]`).join(", ")}): they go with its .slipbox/ to the trash`);
   return { kind: "unmake-vault", from: F, to: P, move: null, files: out, warnings, skipped: c.skipped, unmakeVault: { root: Vabs, name: v.loc.name ?? basename(Vabs) } };
+}
+
+/**
+ * The pointers naming the folder `v` (nested at `F` in `parent`) by its name (21.7), into `c`: the name
+ * goes with its `.slipbox/`, and nothing could resolve them after (18.11). From its own notes, the
+ * parent's, and every other root's this machine reaches (as of their last indexing), each becomes the
+ * link a file gets to where its target will be (design/links.md § Between folders): a relative path where
+ * the two travel together, else the parent's pointer when the parent is named, else a relative path. A
+ * pointer opening another copy of the folder still reaches one: left. One at a branch, which no path can
+ * name, becomes the parent's pointer at that branch, or is left and said: the warnings returned.
+ */
+function pointersByItsName(parent: Graph, v: Graph, F: string, c: Collector): string[] {
+  const ident = folderIdentity(v.root);
+  if (!ident) return [];
+  const folders = readFolders();
+  const V = v.root;
+  const P = parent.root;
+  const pIdent = folderIdentity(P);
+  const warnings: string[] = [];
+  const sources: { abs: string; vault: string | null; links: LinkRef[] }[] = [
+    ...[...v.notes].map(([rel, e]) => ({ abs: join(V, rel), vault: null, links: e.links })),
+    ...[...parent.notes].map(([rel, e]) => ({ abs: join(P, rel), vault: null, links: e.links })),
+    // The parent's are read above, as they are now; every other root's from its index.
+    ...new Reach(v.loc).notesElsewhere(v).filter((n) => real(n.root) !== real(P)),
+  ];
+  for (const s of sources) {
+    // Where its file's root will be: the parent's, for the folder's own.
+    const own = findVaultRoot(s.abs);
+    const rootAfter = own && real(own) === real(V) ? P : own;
+    const together = !!rootAfter && (real(rootAfter) === real(P) || travelTogether(rootAfter, P));
+    for (const l of s.links) {
+      if ((l.kind !== "markdown" && l.kind !== "image") || !isPointer(l.target)) continue;
+      const p = parsePointer(l.target, folders);
+      const found = p ? lookupFolder(p.name, folders) : null;
+      if (!p || found?.status !== "found" || found.folder.key !== ident.key || real(found.path) !== real(V)) continue;
+      const targetAbs = join(V, p.path);
+      if (climbsOut(relative(V, targetAbs))) continue; // a pointer's path stays in its folder: it reached nothing
+      const hash = l.target.indexOf("#");
+      const frag = hash >= 0 ? l.target.slice(hash) : "";
+      const written = hash >= 0 ? l.target.slice(0, hash) : l.target;
+      const encode = (path: string) => /%[0-9A-Fa-f]{2}/.test(written) || /\s/.test(path);
+      const site: Site = { abs: s.abs, kind: l.kind, target: l.target, line: l.line, column: l.column };
+      if (pIdent && (p.branch || !together)) {
+        const path = `${F}${p.path ? `/${p.path}` : written.endsWith("/") ? "/" : ""}`;
+        const name = pointerName({ key: pIdent.key, name: pIdent.name, remote: pIdent.remote }, folders);
+        c.edit(site, formatPointer({ name, branch: p.branch, path, fragment: null }, encode(path) ? encodeURI : undefined) + frag, s.vault);
+        continue;
+      }
+      if (p.branch) {
+        warnings.push(`${shownFor(parent, s.abs)}:${l.line}: ${l.target} names ${ident.name} at a branch, which no path can: left as it is`);
+        continue;
+      }
+      let rel = relative(dirname(s.abs), targetAbs).split(sep).join("/") || ".";
+      if (written.endsWith("/") && !rel.endsWith("/")) rel += "/";
+      c.edit(site, (encode(rel) ? encodeURI(rel) : rel) + frag, s.vault);
+    }
+  }
+  return warnings;
 }
 
 // -------------------------------------------------------------------------------------------

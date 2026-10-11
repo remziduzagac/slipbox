@@ -622,8 +622,8 @@ export class Graph {
   }
 
   /** Notes that went (removed) and came (added) lately, by hash: a watcher sees a move as both. */
-  private readonly went = new Map<string, { rel: string; at: number }>();
-  private readonly came = new Map<string, { rel: string; at: number }>();
+  private readonly went = new Map<string, { rel: string; at: number }[]>();
+  private readonly came = new Map<string, { rel: string; at: number }[]>();
 
   /** While a branch switch lands (5.9): files only one branch has come and go, but nothing moved. */
   private movesPaused = 0;
@@ -644,20 +644,39 @@ export class Graph {
     return c ? headOf(c).branch : null;
   }
 
+  /**
+   * A removal and an arrival of the same text within a minute, in either order, are a move — as
+   * when the index is built (`detectMoves`), only when it is the one such pair: two notes with that
+   * text gone (or come) and one come (or gone) are no move, whichever went where. A note back where
+   * it was is no move either: its going and coming cancel.
+   */
   private pairMove(hash: string, rel: string, side: "went" | "came"): void {
     if (!hash || isListed(this.loc) || this.movesPaused) return;
     const now = Date.now();
-    for (const m of [this.went, this.came]) for (const [h, v] of m) if (now - v.at > 60_000) m.delete(h);
+    for (const m of [this.went, this.came])
+      for (const [h, vs] of m) {
+        const kept = vs.filter((v) => now - v.at <= 60_000);
+        if (kept.length) m.set(h, kept);
+        else m.delete(h);
+      }
+    const mine = side === "went" ? this.went : this.came;
     const other = side === "went" ? this.came : this.went;
-    const match = other.get(hash);
-    if (match && match.rel !== rel) {
+    const theirs = other.get(hash) ?? [];
+    const ours = mine.get(hash) ?? [];
+    const others = theirs.filter((v) => v.rel !== rel);
+    if (others.length < theirs.length) {
+      if (others.length) other.set(hash, others);
+      else other.delete(hash);
+      return;
+    }
+    if (others.length === 1 && !ours.length) {
       other.delete(hash);
-      const move: [string, string] = side === "went" ? [rel, match.rel] : [match.rel, rel];
+      const move: [string, string] = side === "went" ? [rel, others[0]!.rel] : [others[0]!.rel, rel];
       this.redirects?.add([move]);
       this.moved([move]);
       return;
     }
-    (side === "went" ? this.went : this.came).set(hash, { rel, at: now });
+    mine.set(hash, [...ours.filter((v) => v.rel !== rel), { rel, at: now }]);
   }
 
   private readonly listeners = new Set<(c: VaultChange) => void>();

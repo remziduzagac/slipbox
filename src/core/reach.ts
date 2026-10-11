@@ -169,12 +169,32 @@ export class Reach implements VaultReach {
     return g?.entry(relative(g.root, abs));
   }
 
-  inbound(g: Graph): Map<string, Backlink[]> {
+  /** The other roots this machine knows, each with its saved index's file — not a worktree's (17.19): its
+   *  notes are copies of the main checkout's, its links counted there. */
+  private indexes(g: Graph): { v: KnownRoot; file: string }[] {
     this.discover(g);
     const here = real(g.root);
-    // Not a worktree's (17.19): its notes are copies of the main checkout's, its links counted there.
     const sources = this.known().filter((v) => v.kind === "vault" && !v.worktree && real(v.path) !== here && existsSync(v.path));
-    const indexes = sources.map((v) => ({ v, file: join(cacheDir(v), "index.json") }));
+    return sources.map((v) => ({ v, file: join(cacheDir(v), "index.json") }));
+  }
+
+  /**
+   * The notes of the other roots this machine knows, with their links, as of each one's last indexing:
+   * for a plan that finds links by what they name rather than where they land — the pointers by a
+   * folder's name, before the name goes with its `.slipbox/` (18.11).
+   */
+  notesElsewhere(g: Graph): { root: string; abs: string; vault: string; links: LinkRef[] }[] {
+    const out: { root: string; abs: string; vault: string; links: LinkRef[] }[] = [];
+    for (const { v, file } of this.indexes(g)) {
+      const index = readJson<{ entries?: Record<string, NoteEntry> } | null>(file, null);
+      if (!index?.entries || typeof index.entries !== "object") continue;
+      for (const [rel, entry] of Object.entries(index.entries)) if (entry?.links?.length) out.push({ root: v.path, abs: join(v.path, rel), vault: this.shown(v.path), links: entry.links });
+    }
+    return out;
+  }
+
+  inbound(g: Graph): Map<string, Backlink[]> {
+    const indexes = this.indexes(g);
     const stamp = indexes.map((x) => `${x.file}:${mtime(x.file)}`).join("|");
     if (this.inboundCache?.stamp === stamp) return this.inboundCache.map;
     const map = new Map<string, Backlink[]>();

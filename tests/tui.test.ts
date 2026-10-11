@@ -9190,6 +9190,26 @@ describe("the explorer's file operations and buttons (18.x)", () => {
     expect(h.app.messages.at(-1)!.text).toContain("select a folder first");
   });
 
+  test("V on a named folder previews the pointers by its name rewritten, another root's too: deinit's plan (18.11, D75)", async () => {
+    const { openVault } = await import("../src/core/reach.ts");
+    const root = makeVault();
+    // Names of their own: every test's copy of the fixture has the same ones.
+    const tag = randomBytes(4).toString("hex");
+    writeFileSync(join(root, ".slipbox", "config.toml"), `[vault]\nid = "${randomBytes(8).toString("hex")}"\nname = "top-${tag}"\n`);
+    writeFileSync(join(root, "nested-vault", ".slipbox", "config.toml"), `[vault]\nid = "${randomBytes(8).toString("hex")}"\nname = "box-${tag}"\n`);
+    const far = mkdtempSync(join(sandbox, "far-"));
+    mkdirSync(join(far, ".slipbox"));
+    writeFileSync(join(far, "links.md"), `[in](slipbox://box-${tag}/inner.md#top)\n`);
+    for (const r of [far, join(root, "nested-vault")]) openVault(r).ensureAll();
+    const h = await at(root, "nested-vault");
+    await h.keys("shift+v");
+    const preview = h.app.overlay as ListOverlay;
+    expect(preview.title).toMatch(new RegExp(`^nested-vault/ → a plain folder of top-${tag}: 1 change in 1 file`));
+    expect(preview.items.map((i) => [i.label, i.detail])).toEqual([[`${join(far, "links.md")}:1`, `[in](slipbox://box-${tag}/inner.md#top)  →  [in](slipbox://top-${tag}/nested-vault/inner.md#top)`]]);
+    await h.keys("enter");
+    expect(readFileSync(join(far, "links.md"), "utf8")).toBe(`[in](slipbox://top-${tag}/nested-vault/inner.md#top)\n`);
+  });
+
   test("space n notes, space d folders, space v vaults: which-key lists them; the explorer's selection, or this note (18.13)", async () => {
     const root = makeVault();
     const h = await harness({ root, open: "notes/alpha.md" });

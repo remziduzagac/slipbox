@@ -73,8 +73,9 @@ folder of the same name (§ Named folders).
   it again; a folder that is a root by another marker (a git checkout) is refused, since it stays one. Either way the
   links that would stop reaching what they did (a `/…` path, a wikilink across the new boundary) are rewritten after a
   preview; relative links reach what they did, so taking `.slipbox/` away changes roots, never what links reach (D79,
-  D149; [tui.md](tui.md) § Files in the explorer; [docs/cli.md](../../docs/cli.md) § Renames). Pointers by the
-  folder's name are not rewritten: the name goes with its `.slipbox/`.
+  D149; [tui.md](tui.md) § Files in the explorer; [docs/cli.md](../../docs/cli.md) § Renames). The name goes with its
+  `.slipbox/`, so the pointers by it, from the files this machine reaches, are rewritten in the same plan, as paths
+  or the parent's pointer (D74, D75; [links.md](links.md) § Pointers).
 
 ## Settings
 

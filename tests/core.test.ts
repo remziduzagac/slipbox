@@ -1857,6 +1857,8 @@ describe("link-like tokens in code (16.10)", () => {
       ["https://x.invalid/y", null, "https://x.invalid/y"],
     ]);
     expect(t("version 1.5, ../up.py:3:7 and ./r.toml")).toEqual([["../up.py", 3, "../up.py:3:7"], ["./r.toml", null, "./r.toml"]]);
+    // Climbing more than once: the whole path, as a moved file's rewritten one is (D63).
+    expect(t("see ../../docs/x.md:2 and .../no.md")).toEqual([["../../docs/x.md", 2, "../../docs/x.md:2"]]);
   });
 });
 

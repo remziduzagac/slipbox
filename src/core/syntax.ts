@@ -930,8 +930,9 @@ export interface CommentLink {
 }
 
 const URL_RE = /\bhttps?:\/\/[^\s<>"'`]+/g;
-/** A path with an extension (a letter first: `1.5` isn't one), maybe `:line` or `:line:col` after. */
-const PATH_RE = /(?<![\w./@~-])(?:\.{1,2}\/|\/)?[\w@~-][\w.@~-]*(?:\/[\w.@~-]+)*\.[A-Za-z][A-Za-z0-9]{0,9}(?::(\d+)(?::\d+)?)?(?![\w/])/g;
+/** A path with an extension (a letter first: `1.5` isn't one), maybe `:line` or `:line:col` after; `../` as
+ *  many times as it climbs. */
+const PATH_RE = /(?<![\w./@~-])(?:\.\/|(?:\.\.\/)+|\/)?[\w@~-][\w.@~-]*(?:\/[\w.@~-]+)*\.[A-Za-z][A-Za-z0-9]{0,9}(?::(\d+)(?::\d+)?)?(?![\w/])/g;
 
 /**
  * Link-like tokens in a text (16.10): URLs, and paths with an extension, `path:42` included. Which

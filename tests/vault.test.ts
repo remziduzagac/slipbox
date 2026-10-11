@@ -792,6 +792,40 @@ describe("links in code comments (16.10)", () => {
     expect(g.backlinks("design.md").map((b) => [b.from, b.line])).toEqual([["src/main.ts", 1]]);
     expect(g.backlinks("src/util.ts").map((b) => b.from)).toEqual(["src/main.ts"]);
   });
+
+  test("a code or data file moved: its own relative paths follow it, each in its form; one the root still reaches stays (D63)", async () => {
+    const { planNoteRename } = await import("../src/core/rename.ts");
+    const dir = mkdtempSync(join(tmpdir(), "slipbox-ownpaths-"));
+    const files: Record<string, string> = {
+      ".slipbox/config.toml": "",
+      "docs/x.md": "# X\n",
+      "schemas/user.yaml": "type: object\n",
+      "src/util.ts": "export const u = 1;\n",
+      "src/a.ts": "// see ../docs/x.md and util.ts:1:2; from the root docs/x.md; https://example.invalid/x\nexport const a = 1;\n",
+      "api/spec.yaml": "user:\n  $ref: ../schemas/user.yaml#/definitions/User\nguide: ../docs/x.md\n",
+    };
+    for (const [rel, text] of Object.entries(files)) {
+      mkdirSync(join(dir, rel, ".."), { recursive: true });
+      writeFileSync(join(dir, rel), text);
+    }
+    const read = (rel: string) => readFileSync(join(dir, rel), "utf8");
+    const g = openGraph(locateVault({ root: dir }), DEFAULT_CONFIG, false);
+    await g.loadGrammars();
+    const reached = (gr: typeof g, rel: string) => gr.linksOf(rel).map((l) => [l.resolvedKind, l.path]);
+    const code = reached(g, "src/a.ts");
+    const data = reached(g, "api/spec.yaml");
+    applyPlan(g, planNoteRename(g, "src/a.ts", "src/sub/a.ts"));
+    expect(read("src/sub/a.ts")).toBe("// see ../../docs/x.md and ../util.ts:1:2; from the root docs/x.md; https://example.invalid/x\nexport const a = 1;\n");
+    applyPlan(g, planNoteRename(g, "api/spec.yaml", "api/v2/spec.yaml"));
+    expect(read("api/v2/spec.yaml")).toBe("user:\n  $ref: ../../schemas/user.yaml#/definitions/User\nguide: ../../docs/x.md\n");
+    // Each reaches what it did.
+    const after = openGraph(locateVault({ root: dir }), DEFAULT_CONFIG, false);
+    await after.loadGrammars();
+    expect(reached(after, "src/sub/a.ts")).toEqual(code);
+    expect(reached(after, "api/v2/spec.yaml")).toEqual(data);
+    expect(code.map(([, p]) => p)).toEqual(["docs/x.md", "src/util.ts", "docs/x.md", "https://example.invalid/x"]);
+    expect(data.map(([, p]) => p)).toEqual(["schemas/user.yaml", "docs/x.md"]);
+  });
 });
 
 describe("links in a component's comments (16.10, 16.22)", () => {
@@ -1574,6 +1608,41 @@ describe("moves: detected by content, kept as redirects (17.12)", () => {
     renameSync(join(dir, "a.md"), join(dir, "c.md"));
     rmSync(join(dir, "b.md"));
     expect((await cli(["resolve", "[a](a.md)", "--from", "index.md"], dir)).code).toBe(3);
+  });
+
+  test("the watcher pairs a move only when one gone note had that text, as the index does (D63)", () => {
+    const dir = vault({ "a.md": "# same\n", "b.md": "# same\n", "e.md": "# same\n", "c.md": "# other\n" });
+    const g = openGraph(locateVault({ root: dir }), DEFAULT_CONFIG, true);
+    const file = (rel: string) => ({ rel, abs: join(dir, rel), size: statSync(join(dir, rel)).size, mtimeMs: statSync(join(dir, rel)).mtimeMs });
+    // Two gone with one text, one back elsewhere: which one moved can't be told — no move.
+    rmSync(join(dir, "a.md"));
+    rmSync(join(dir, "b.md"));
+    g.removeFile("a.md");
+    g.removeFile("b.md");
+    writeFileSync(join(dir, "x.md"), "# same\n");
+    g.updateFile("x.md", file("x.md"));
+    expect(g.redirects!.follow("a.md")).toBeNull();
+    expect(g.redirects!.follow("b.md")).toBeNull();
+    // The other order: two arrived with one text, one gone — no move either.
+    writeFileSync(join(dir, "y.md"), "# other\n");
+    writeFileSync(join(dir, "z.md"), "# other\n");
+    g.updateFile("y.md", file("y.md"));
+    g.updateFile("z.md", file("z.md"));
+    rmSync(join(dir, "c.md"));
+    g.removeFile("c.md");
+    expect(g.redirects!.follow("c.md")).toBeNull();
+    // A third gone after the arrival doesn't make the one arrival its own.
+    rmSync(join(dir, "e.md"));
+    g.removeFile("e.md");
+    expect(g.redirects!.follow("e.md")).toBeNull();
+    // One candidate: the move is recorded as before.
+    const h = vault({ "p.md": "# alone\n" });
+    const hg = openGraph(locateVault({ root: h }), DEFAULT_CONFIG, true);
+    rmSync(join(h, "p.md"));
+    hg.removeFile("p.md");
+    writeFileSync(join(h, "q.md"), "# alone\n");
+    hg.updateFile("q.md", { rel: "q.md", abs: join(h, "q.md"), size: statSync(join(h, "q.md")).size, mtimeMs: statSync(join(h, "q.md")).mtimeMs });
+    expect(hg.redirects!.follow("p.md")).toBe("q.md");
   });
 
   test("a rename keeps each link's form: from the root, without the extension; a folder's links follow it, its / kept (21.2)", async () => {
@@ -2378,6 +2447,64 @@ describe("a folder made a vault, and a vault made a plain folder again (18.11)",
     const both = (await cli(["deinit", "proj"], parent)).json;
     expect(both.error.message).toContain("proj is a root by its .git too: it stays one, with or without .slipbox/");
     expect(existsSync(join(parent, "proj", ".slipbox"))).toBe(true);
+  });
+
+  test("deinit rewrites the pointers by its name, which goes with its .slipbox/: from apart, the parent's pointer, else a path (D74, D75)", async () => {
+    const { openVault } = await import("../src/core/reach.ts");
+    const at = mkdtempSync(join(tmpdir(), "slipbox-deinit-ptr-"));
+    const tree: Record<string, string> = {
+      "named/.slipbox/config.toml": '[vault]\nid = "dpnamed000001"\nname = "dpnamed"\n',
+      "named/home.md": "# Home\n\n[in](slipbox://dpbox/x.md#top) [dir](slipbox://dpbox/)\n",
+      "named/box/.slipbox/config.toml": '[vault]\nid = "dpbox00000001"\nname = "dpbox"\n',
+      "named/box/x.md": "# Top\n\n[self](slipbox://dpbox/sub/my%20y.md)\n",
+      "named/box/sub/my y.md": "# Y\n",
+      "plain/.slipbox/config.toml": "",
+      "plain/pbox/.slipbox/config.toml": '[vault]\nid = "dppbox0000001"\nname = "dppbox"\n',
+      "plain/pbox/z.md": "# Z\n",
+      "far/.slipbox/config.toml": '[vault]\nid = "dpfar00000001"\nname = "dpfar"\n',
+      "far/links.md": "[x](slipbox://dpbox/x.md#top) [y](<slipbox://dpbox/sub/my y.md>) [z](slipbox://dppbox/z.md)\n",
+    };
+    for (const [rel, text] of Object.entries(tree)) {
+      mkdirSync(join(at, rel, ".."), { recursive: true });
+      writeFileSync(join(at, rel), text);
+    }
+    const read = (rel: string) => readFileSync(join(at, rel), "utf8");
+    // This machine has seen them all, with their indexes.
+    for (const r of ["far", "named/box", "named", "plain/pbox", "plain"]) openVault(join(at, r)).ensureAll();
+    const statuses = async () => (await cli(["links", "links"], join(at, "far"))).json.data.map((l: { status: string; path: string | null }) => [l.status, l.path]);
+    expect(await statuses()).toEqual([
+      ["note", join(at, "named", "box", "x.md")],
+      ["note", join(at, "named", "box", "sub", "my y.md")],
+      ["note", join(at, "plain", "pbox", "z.md")],
+    ]);
+    // Previewed: from apart, the named parent's pointer; from the parent and within, a path.
+    const dry = (await cli(["deinit", "box", "--dry-run"], join(at, "named"))).json.data;
+    expect(dry.files.map((f: { abs: string; edits: { after: string }[] }) => [f.abs, f.edits.map((e) => e.after)])).toEqual(
+      expect.arrayContaining([
+        [join(at, "named", "box", "x.md"), ["[self](sub/my%20y.md)"]],
+        [join(at, "named", "home.md"), ["[in](box/x.md#top) [dir](box/)"]],
+        [join(at, "far", "links.md"), ["[x](slipbox://dpnamed/box/x.md#top) [y](<slipbox://dpnamed/box/sub/my y.md>) [z](slipbox://dppbox/z.md)"]],
+      ]),
+    );
+    expect(dry.files).toHaveLength(3);
+    expect((await cli(["deinit", "box"], join(at, "named"))).code).toBe(0);
+    expect(read("far/links.md")).toBe("[x](slipbox://dpnamed/box/x.md#top) [y](<slipbox://dpnamed/box/sub/my y.md>) [z](slipbox://dppbox/z.md)\n");
+    expect(read("named/home.md")).toBe("# Home\n\n[in](box/x.md#top) [dir](box/)\n");
+    expect(read("named/box/x.md")).toBe("# Top\n\n[self](sub/my%20y.md)\n");
+    // A parent with no name: a path, which works while the folders are laid out alike.
+    expect((await cli(["deinit", "pbox"], join(at, "plain"))).code).toBe(0);
+    expect(read("far/links.md")).toBe("[x](slipbox://dpnamed/box/x.md#top) [y](<slipbox://dpnamed/box/sub/my y.md>) [z](../plain/pbox/z.md)\n");
+    // Each reaches what it did.
+    expect(await statuses()).toEqual([
+      ["note", join(at, "named", "box", "x.md")],
+      ["note", join(at, "named", "box", "sub", "my y.md")],
+      ["note", join(at, "plain", "pbox", "z.md")],
+    ]);
+    const home = (await cli(["links", "home"], join(at, "named"))).json.data.map((l: { status: string; path: string | null }) => [l.status, l.path]);
+    expect(home).toEqual([
+      ["note", "box/x.md"],
+      ["folder", "box"],
+    ]);
   });
 });
 

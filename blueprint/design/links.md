@@ -263,6 +263,14 @@ when its target is in a named folder (§ Repairs).
 - **Agents** resolve a pointer as any link (`slipbox resolve slipbox://notes/inbox.md` gives the path), and every note
   argument takes one ([docs/cli.md](../../docs/cli.md) § Naming notes).
 
+A named folder made a plain folder of its parent (`slipbox deinit`, `shift+v` on its row in the explorer) takes its
+name with its `.slipbox/`, so the pointers by it are rewritten in that plan, previewed with the rest (D74, D75, D149):
+in its own notes, the parent's, and every other root's this machine reaches, as of their last indexing (§ Backlinks).
+Each becomes what a link to where its file now is gets (§ Between folders): a relative path where the two travel
+together, else the parent's pointer when the parent is named, else a relative path. One at a branch becomes the
+parent's pointer at that branch, or, the parent unnamed, is left and said; one opening another copy of the folder is
+left, as it still reaches one.
+
 ## Backlinks
 
 Backlinks are derived from the index, never stored in files, and complete for what is indexed: indexing more only
@@ -287,9 +295,9 @@ are resolved, and backlinks derived, per root (D76); names never cross roots.
 ## Renames and moves
 
 A rename or move in slipbox rewrites exactly the files linking in, found by backlinks (another root's links and
-pointers, data files' values and code comments' paths included), and a moved note's own relative links when its
-folder changes: previewed, undoable, a plan in the CLI (D63, D143; `core/rename.ts`). Each link keeps its form (D72,
-D81, D83):
+pointers, data files' values and code comments' paths included), and a moved file's own relative links when its
+folder changes, a code or data file's as a note's: previewed, undoable, a plan in the CLI (D63, D143;
+`core/rename.ts`). Each link keeps its form (D72, D81, D83):
 
 - a wikilink stays a wikilink, a path a path, `./` kept, an extension kept or left off as written, a folder's
   trailing `/` kept, percent-encoding and `<…>` kept, a reference definition rewritten where it is;
@@ -299,7 +307,10 @@ D81, D83):
   named folder, it becomes that folder's pointer, and out of every named folder a path;
 - a hosting URL keeps its form, only its path after the ref replaced;
 - a wikilink by name stays a name while no other note has the new name and the note stays in the root; else it
-  becomes a path.
+  becomes a path;
+- a moved code file's comment path written beside it is rewritten from where it goes, its `:42` kept; one the root
+  still reaches (read from the root when nothing is beside the file), and a `/…`, stays; a data file's value keeps
+  its `./` and its fragment (`#/definitions/User`), and neither is percent-encoded, being no URL.
 
 No old name is written into a note (D79). A heading renamed rewrites the fragments naming it, each by its slug or
 its text as written. A whole named folder moved rewrites no pointer. Links from places not indexed yet show broken
@@ -310,12 +321,13 @@ once indexed, and the repair applies (§ Repairs). Keys and the preview: [tui.md
 
 - **Changes made elsewhere** (an editor, an agent, git, a file manager) the index repairs by itself (D63).
 - **A move made elsewhere** breaks path links, as it should. Evidence finds where the file went (D49, D78): its
-  content hash (when the index is built, a note gone from one path whose text turns up at exactly one new path, and
-  no other gone note had that text; in the watcher, a removal and an arrival of the same text, in either order,
-  within a minute), or git's renames when a branch's head moves on (§ The merge review). A broken path link whose file
-  was seen to move says "moved to …", and slipbox offers the relink once for each batch of moves. Moves seen, slipbox's
-  own included, are kept in the root's state (`redirects.json`, the newest 5,000) as evidence, never to resolve a
-  link (D56). The files of a branch switch aren't paired as moves (D153).
+  content hash, or git's renames when a branch's head moves on (§ The merge review). By its hash, a note gone from one
+  path is moved when its text turns up at exactly one new path and no other gone note had that text (D63): when the
+  index is built, and in the watcher, where a removal and an arrival within a minute, in either order, pair; two of
+  one text gone and one come (or the other way) are no move, and a note back where it was is none either. A broken
+  path link whose file was seen to move says "moved to …", and slipbox offers the relink once for each batch of
+  moves. Moves seen, slipbox's own included, are kept in the root's state (`redirects.json`, the newest 5,000) as
+  evidence, never to resolve a link (D56). The files of a branch switch aren't paired as moves (D153).
 - **The relink** (`slipbox relink`, `space l r`) rewrites, each in its own form: a link broken by a move seen; a
   pointer by a name its folder had, to the name it has; a path into a named folder that doesn't travel with this one,
   to its pointer; and the links the root's own last move broke (D63, D78).
