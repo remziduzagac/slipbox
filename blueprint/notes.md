@@ -315,3 +315,29 @@ dates. Each says what was asked, decided, built and found, and cites the decisio
   of that slug and the absolute line only when none has it (D98 says the line); resize mode is entered by `space w r`
   or `ctrl+w` with `> < + -`, not the `ctrl+alt+w` D99's table gives; search with `[search] engine = auto` scans the
   files until the index is built whole, and searches notes and data files, not text or code (D114).
+
+## Reconciling with the code (2026-10-11)
+
+- The user, on the open items above: "we don't have buffers", and the rest is for the agent to fix; then "do not run
+  full e2e, you can check fixed part".
+- **Where the code was right, a decision:** no buffer list (D211); YAML and JSON as a tree, its reason from the commit
+  that made it (D212); reload anchoring's fallback (D213); what search covers and its widest scope (D214); widths the
+  terminal's (D215); a wikilink leaves its root only by `./` or `../` (D216); a rename's fallback to a path (D217); the
+  background index and the parse cache's key (D218). Built without a decision, now recorded: careful reads (D219),
+  writes through a symlink (D220).
+- **Where the decisions were right, a task (all in `review`, for the user to accept):** Bun's crash reports turned
+  off at start (D221, T1: checked by crashing Bun with curl's connection watched through a local proxy); Mason's `bin`
+  on the servers' `PATH` (D222, T2: shellcheck's findings now reach `slipbox diagnostics`); the watcher's move pairing
+  (T3); `deinit` relinking pointers (T4); a pointer written says a private name, and asks on a clash (T5); the merge
+  review reads hosting links and pointers naming its folder (T6); another root's hosting links are backlinks (T7);
+  a moved code or data file's own paths (T8, which also found comments read only one `../`); every link says how it
+  landed (T9). Each fix has a regression test, mutation-checked.
+- Done in three worktrees by three agents, picked onto `main`; the full check passes but for one timing test (a big
+  note's slices under 250 ms) that fails under load before the fixes as after them (236–310 ms against 240–339 ms).
+  The terminal scenarios for the fixed parts, eight in two sized panes: all pass.
+- Also: docs/cli.md says root, not vault, and lists every `how`; the keymap comparison is current again; the user's
+  slipbox state had entries for the scratch folders left by testing, removed (backed up first).
+- **Open:** T7 counts another root's notes' links, not its data and code files': a root's saved index holds only its
+  notes' links. Counting the others means saving more in the index (D39, D61), and reading code files' links needs
+  their grammars at index time (ideas.md § Links).
+

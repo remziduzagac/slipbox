@@ -126,6 +126,8 @@ idea without an outcome is still open. Nothing here is agreed: the decisions are
 
 ## Links
 
+- Another root's data and code files' links as backlinks here: their links saved in the root's index beside its
+  notes', code files read with their grammars at index time. (2026-10-11)
 - Link resolution (`1.4`): name collisions, case sensitivity across macOS and Linux, and whether to follow Obsidian's
   path conventions so an existing vault opens unchanged. (2026-09-25) Chosen (D41).
 - Links between vaults, left as a separate problem for later. (2026-09-25) Chosen (D47, D48).

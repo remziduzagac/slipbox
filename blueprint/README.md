@@ -8,8 +8,8 @@ slipbox is a terminal markdown notes app: a shared workspace for humans and agen
 the TUI and an agent on the CLI see the same files, the same links and the same answers (D33). It is TypeScript on Bun,
 one core with two faces, compiled into one binary (D5, D8). Every phase on the roadmap is built, extensibility aside,
 deferred (D37), and the initial design was declared settled on 2026-10-11 (D210). Still open: the licence (`14.6`,
-D193), the checks on a real Mac before the first release (`14.13`), native Windows (`14.14`–`14.17`) and Bun's own
-crash reports (D199).
+D193), the checks on a real Mac before the first release (`14.13`), native Windows (`14.14`–`14.17`), and the
+tasks in `tasks/` waiting for review.
 
 ## Where to start
 

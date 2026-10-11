@@ -488,7 +488,9 @@ grammars are loaded before it plans, so their comments count however fresh the p
 - **Byte ranges, never re-serialised** (`7.6`): each edit replaces the target at the line and column the index
   recorded (of the links there with that target, the nearest — so the same text in code nearby is left). A file
   whose link isn't there any more (another root's index older than its file) is skipped, and said so.
-- **The note itself:** its own relative links follow it to its new folder; nothing else is written into it — no
+- **The file itself:** a note's own relative links follow it to its new folder, and so do the relative paths a code
+  file's comments or a data file's values hold (`16.10`, `16.15`), each kept in its own form; nothing else is written
+  into it — no
   `previous_names` (`21.12`; `[rename]` is retired). A redirect is kept (`17.12`): evidence for `relink` to fix a link
   this rename couldn't reach, never a way to resolve it.
 - **Refused, nothing written** (exit 5): a target that exists (a different file whose name differs only in case
@@ -571,18 +573,20 @@ made on (`5.9`): on another, `nothing to undo on branch main: the last rename wa
 A folder made a root of its own, or a nested root made a plain folder again (`18.11`), isn't among them: `deinit`
 and `init` take each other back.
 
-**A folder made a root, and back** (`18.11`): `slipbox init <folder>` on a folder inside a root makes it a root of
-its own — its `.slipbox/`, named only with `--name` (the TUI's prompt suggests a distinct name). Links are paths
-(`20.2`): relative and filesystem ones reach across the new boundary as they are; one written from the root (`/…`),
-which would now mean the other root, is rewritten to reach what it did, shown in the preview. So is a wikilink that
-wouldn't reach (`21.3`): a name across the boundary, which a root ends, becomes a path (`[[F/plan]]` into it,
-`[[../home]]` out of it); a path from the root is read from the new one (`[[F/x/y]]` inside it is `[[x/y]]`); a name
-within it stays a name. `slipbox deinit <folder>` undoes it for a root nested in another, rewriting such links the
-other way — its paths from its root gain its folder, and a name another note of the parent shares (its own, or a
-parent's) becomes a path, never landing on the other one: its `.slipbox/` goes to the parent's trash (`trash restore`
-makes it a root again), and the machine forgets it. A git checkout is refused, with `.slipbox/` or without: it's a
-root by itself (`20.3`). Both take `--dry-run` and answer like `mv`, `init` adding the root's `root`, `name` and `id`.
-Every plan's writes into another root's files reach that root's index at once, as if it had been opened.
+**A folder made a root, and back** (`18.11`): `slipbox init <folder>` on a folder inside a root makes it a root of its
+own — its `.slipbox/`, named only with `--name` (the TUI's prompt suggests a distinct name). Links are paths (`20.2`):
+relative and filesystem ones reach across the new boundary as they are; one written from the root (`/…`), which would
+now mean the other root, is rewritten to reach what it did, shown in the preview. So is a wikilink that wouldn't reach
+(`21.3`): a name across the boundary, which a root ends, becomes a path (`[[F/plan]]` into it, `[[../home]]` out of it);
+a path from the root is read from the new one (`[[F/x/y]]` inside it is `[[x/y]]`); a name within it stays a name.
+`slipbox deinit <folder>` undoes it for a root nested in another, rewriting such links the other way — its paths from
+its root gain its folder, and a name another note of the parent shares (its own, or a parent's) becomes a path, never
+landing on the other one: its `.slipbox/` goes to the parent's trash (`trash restore` makes it a root again), and the
+machine forgets it. Pointers by its name, from its own notes, the parent's and every other root this machine has
+indexed, become what a link to where the file now is gets: a relative path where the two travel together, else the
+parent's pointer, else a relative path. A git checkout is refused, with `.slipbox/` or without: it's a root by itself
+(`20.3`). Both take `--dry-run` and answer like `mv`, `init` adding the root's `root`, `name` and `id`. Every plan's
+writes into another root's files reach that root's index at once, as if it had been opened.
 
 ## Capture and the scratch (plans `8.1`–`8.4`)
 
