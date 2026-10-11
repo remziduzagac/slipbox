@@ -568,7 +568,8 @@ nothing written (exit 5), when a file the rename wrote has changed since, or wha
 stays next to undo, so putting the file back lets it through. Undone, it's forgotten: the next `undo` takes the one
 before (the root keeps the last 20, in its state). In a git checkout, each rename is undone only on the branch it was
 made on (`5.9`): on another, `nothing to undo on branch main: the last rename was made on branch feat` (exit 3).
-A folder made a root of its own, or a nested root made a plain folder again (`18.11`), isn't among them: `deinit` and `init` take each other back.
+A folder made a root of its own, or a nested root made a plain folder again (`18.11`), isn't among them: `deinit`
+and `init` take each other back.
 
 **A folder made a root, and back** (`18.11`): `slipbox init <folder>` on a folder inside a root makes it a root of
 its own — its `.slipbox/`, named only with `--name` (the TUI's prompt suggests a distinct name). Links are paths
