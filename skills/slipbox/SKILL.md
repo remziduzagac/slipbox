@@ -189,8 +189,9 @@ slipbox undo --dry-run                   # take back the last mv, rename-heading
 ```
 
 The new path is from the root (or `./`, `../` from here). A folder that's there, or a path ending in `/`, is moved
-into, the name kept: `mv <note> archive/` makes `archive/<note>`. Any other path is the whole new path. Ask before
-deleting, emptying the trash or moving the user's notes.
+into, the name kept: `mv <note> archive/` makes `archive/<note>`. Any other path is the whole new path.
+`slipbox cp <note> <path>` reads its path the same way (no path, or the note's own folder: a `-copy` beside it);
+links aren't rewritten. Ask before deleting, emptying the trash or moving the user's notes.
 
 ## Exporting for the user
 
@@ -202,9 +203,9 @@ slipbox export <note> -o out/                   # into a folder (made if missing
 ```
 
 Embeds are drawn in, diagrams and display maths drawn as pictures, and links to the notes exported stay links inside
-the document; nothing is fetched (a picture on the web is its cached copy, or its link). A Markdown export copies
-only the root's pictures; anything else stays a link. It never writes over a note, of any root (exit 5; an earlier
-Markdown export aside: `name.export.md`).
+the document; nothing is fetched (a picture on the web is its cached copy, or its link). Only the root's pictures go
+in: one from outside the root is its alt text, or in Markdown a link to it. It never writes over a note, of any root
+(exit 5; an earlier Markdown export aside: `name.export.md`).
 
 Obsidian's `%%comments%%` are left out of every format, as they're hidden while reading; its `==highlights==` stay.
 

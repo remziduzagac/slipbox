@@ -46,6 +46,10 @@ lint-severity = 4
 # servers installed from npm for everyone: the same, each reader's own say (ignored, warned)
 auto_install = true
 
+[update]
+# the team turned the update check off for every clone: also each reader's own say (ignored, warned)
+check = false
+
 [editor]
 autosave_ms = 20000
 # a team-wide editor would be nice; the vault may not choose what runs (ignored, warned)

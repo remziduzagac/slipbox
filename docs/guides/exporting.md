@@ -77,8 +77,9 @@ has every detail.
 - **Pictures.** A missing one becomes its alt text. One from the web goes in only if slipbox has already fetched it to
   show you (follow it with `enter` and say yes); otherwise it's a link.
 - **PDF.** The fonts are your machine's, so a character none of them has is a box, and emoji come out black and white.
-- **Pictures from elsewhere.** A note you didn't write can name a picture outside the root. A Word, PDF, web page or
-  e-book export takes it in; a Markdown export only links to it.
+- **Pictures from elsewhere.** A note can name a picture outside the root. No export takes it in: Word, PDF, a web
+  page and an e-book show its alt text in its place, and a Markdown export links to it. Move the picture into the root
+  if it belongs in the document.
 
 Open the document once yourself before you send it.
 

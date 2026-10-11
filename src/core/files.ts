@@ -11,7 +11,7 @@ import { landsInside, readJson, writeJson } from "./fsutil.ts";
 import type { Backlink, Graph } from "./graph.ts";
 import { type Keyed, stateDir } from "./paths.ts";
 import { openVault } from "./reach.ts";
-import { linksIntoFolder } from "./rename.ts";
+import { fileInTheWay, linksIntoFolder } from "./rename.ts";
 import { isInside } from "./vault.ts";
 
 export class FileOpError extends Error {}
@@ -202,6 +202,7 @@ function copyName(g: Graph, rel: string, dir: boolean): string {
 /**
  * Copy a note, file or folder (18.5): to `toRel`, else beside it as `name-copy`. The copy's links
  * are its original's, as written; nothing links to it yet. Refused onto something that exists.
+ * `toRel` is the copy's whole path: one typed goes through `moveTarget` first, into a folder (DF-D20).
  */
 export function copyPath(g: Graph, rel: string, toRel?: string): { from: string; to: string; dir: boolean } {
   const p = vaultPath(g, rel);
@@ -212,6 +213,8 @@ export function copyPath(g: Graph, rel: string, toRel?: string): { from: string;
   const toAbs = join(g.root, to);
   if (existsSync(toAbs)) throw new FileOpError(`${to} exists; not overwriting it`);
   if (!landsInside(g.root, toAbs)) throw new FileOpError(`${to} would land outside the root`);
+  const where = fileInTheWay(g.root, to);
+  if (where) throw new FileOpError(`${where} is a file: ${to} can't go under it`);
   mkdirSync(dirname(toAbs), { recursive: true });
   cpSync(p.abs, toAbs, { recursive: true, errorOnExist: true, force: false });
   if (p.dir) g.build(true, "lazy");

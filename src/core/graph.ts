@@ -25,6 +25,7 @@ import { checkoutOf, headCommit, headOf } from "./git.ts";
 import { changedBetween, inVault } from "./gitops.ts";
 import { contentHash, Redirects } from "./redirects.ts";
 import { dataLinks, parseData } from "./data.ts";
+import { isExport } from "./export/mark.ts";
 import { classify, extensionOf, noteFormat } from "./filetypes.ts";
 import { findVaultRoot, isListed, type VaultLocation } from "./vault.ts";
 import { listDirectory, type NoteFile, type Skipped, WalkFilter, walkVault } from "./walk.ts";
@@ -223,10 +224,6 @@ export interface Backlink {
 
 const NOTE_EXT_RE = /\.(md|markdown)$/i;
 
-/** Whether a root-relative path is inside a Markdown export's pictures' folder: `notes/report.export.assets/dal.png`. */
-function inExportAssets(rel: string): boolean {
-  return /(?:^|\/)[^/]+\.export\.assets\//i.test(rel);
-}
 
 /** Bumped when what a note's entry holds changes: 5, content hashes (17.12). */
 export const INDEX_VERSION = 12; // 6: inline #tags (1.6); 7: where links end (11.7); 8: no wikilinks (20.22); 9: wikilinks again (21.3); 10: heading ids, anchors; 11: front matter links; 12: worker-parsed heading ids (15.1)
@@ -270,6 +267,8 @@ export class Graph {
   private problemCache: { generation: number; broken: LinkProblem[]; ambiguous: LinkProblem[]; fragile: LinkProblem[]; orphans: string[] } | null = null;
   private formCache: { generation: number; counts: FormCounts } | null = null;
   private readonly dataLinkCache = new Map<string, { stamp: string; links: LinkRef[] }>();
+  /** Whether a note is a Markdown export (its mark), as of its entry's time: what its pictures' folder is (DF-D25). */
+  private readonly exportMarks = new Map<string, { mtimeMs: number; marked: boolean }>();
   /** Aliases and previous names → notes, from the entries parsed so far (null: rebuild). */
   private nameCache: { aliases: Map<string, string[]>; previous: Map<string, string[]> } | null = null;
   /** Other vaults (17.8–17.11); the CLI and the TUI set it, a graph opened alone has none. */
@@ -944,14 +943,48 @@ export class Graph {
 
   /**
    * The attachments a wikilink's name finds anywhere in the root, as Obsidian finds them: by the file's name, or a
-   * path's end aligned on segments. A Markdown export's pictures (`report.export.assets/`) are left out, unless the name
-   * itself goes through such a folder: their copies would answer for the pictures they were copied from.
+   * path's end aligned on segments. A Markdown export's pictures are left out, unless the name itself goes through
+   * their folder: their copies would answer for the pictures they were copied from (DF-D18, DF-D25).
    */
   private byFileName(target: string): string[] {
     const named = this.assets.get(target.split("/").pop()!.normalize("NFC").toLowerCase()) ?? [];
     const suffix = target.normalize("NFC").toLowerCase();
-    const throughExport = inExportAssets(suffix);
-    return named.filter((p) => (p.toLowerCase() === suffix || p.toLowerCase().endsWith(`/${suffix}`)) && (throughExport || !inExportAssets(p)));
+    const depth = suffix.split("/").length;
+    return named.filter((p) => {
+      const lower = p.toLowerCase();
+      if (lower !== suffix && !lower.endsWith(`/${suffix}`)) return false;
+      // The segment the name starts at: at or before the export's folder, it goes through it.
+      const folder = this.exportPicturesFolder(p);
+      return folder < 0 || p.split("/").length - depth <= folder;
+    });
+  }
+
+  /**
+   * Which segment of a root-relative path is a folder holding a Markdown export's pictures, or -1: one named so
+   * (`report.export.assets/`), or any `<name>.assets/` beside a note `<name>.md` marked as an export (`-o book.md`
+   * makes `book.assets/`) (DF-D25).
+   */
+  private exportPicturesFolder(rel: string): number {
+    const parts = rel.split("/");
+    let at = -1;
+    for (let i = 0; i < parts.length - 1; i++) {
+      const seg = parts[i]!;
+      if (!/\.assets$/i.test(seg)) continue;
+      const stem = [...parts.slice(0, i), seg.slice(0, -".assets".length)].join("/");
+      if (/\.export$/i.test(stem) || this.marked(`${stem}.md`) || this.marked(`${stem}.markdown`)) at = i;
+    }
+    return at;
+  }
+
+  /** Whether the note at `rel` is a Markdown export, by its mark; read once for each time its file changes. */
+  private marked(rel: string): boolean {
+    const e = this.notes.get(rel);
+    if (!e) return false;
+    const known = this.exportMarks.get(rel);
+    if (known?.mtimeMs === e.mtimeMs) return known.marked;
+    const marked = isExport(join(this.root, rel));
+    this.exportMarks.set(rel, { mtimeMs: e.mtimeMs, marked });
+    return marked;
   }
 
   /**

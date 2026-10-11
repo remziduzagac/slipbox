@@ -1,9 +1,9 @@
 // Export, the assembler (plan 10.1): the notes to export as one document for a writer (10.2–10.6) — each a chapter, in
 // the order given (10.9). Its embeds are drawn in; its links to the notes exported stay links, inside the document, and
 // the rest are their text (an address on the web stays a link); its pictures are files (one on the internet its cached
-// copy — nothing is fetched — else its link); its diagrams and display maths are drawn, as SVG in print's colours; its
-// frontmatter's title, author and date are the document's. Its words are as written; Obsidian's comments, which a
-// reader of the note never sees, are left out.
+// copy — nothing is fetched — else its link), a file outside the root marked so no format holds it (DF-D24); its
+// diagrams and display maths are drawn, as SVG in print's colours; its frontmatter's title, author and date are the
+// document's. Its words are as written; Obsidian's comments, which a reader of the note never sees, are left out.
 
 import { createHash } from "node:crypto";
 import { statSync } from "node:fs";
@@ -11,7 +11,7 @@ import { basename } from "node:path";
 import type { Blockquote, Image, Link, PhrasingContent, RootContent, Text } from "mdast";
 import { cachedImage } from "../imagecache.ts";
 import { loadMermaid, mermaidSvg } from "../diagrams.ts";
-import { readText } from "../fsutil.ts";
+import { landsInside, readText } from "../fsutil.ts";
 import type { Graph } from "../graph.ts";
 import { embedder, pictureLocator } from "../note.ts";
 import { onlyComments, withoutComments } from "../obsidian.ts";
@@ -36,8 +36,6 @@ export interface ExportDoc {
   date: string | null;
   /** Its language, as frontmatter's `lang` (or `language`) says: `en`, `tr`; null where it doesn't. */
   lang: string | null;
-  /** The folder of the root its notes are in: the only one a Markdown export copies pictures from. */
-  root: string;
   chapters: ExportChapter[];
 }
 
@@ -51,6 +49,11 @@ export interface ExportPicture {
   data?: Uint8Array;
   /** Where it is on the web, for one drawn from its cached copy. */
   url?: string;
+  /**
+   * A file outside the root, by where it really is (DF-D24): no document holds it, nor reads it — Word, PDF, the web
+   * page and the e-book show its words, Markdown links to it (DF-D2).
+   */
+  outside?: boolean;
   svg?: string;
   kind?: "diagram" | "math";
   /** Maths in a line, not a display. */
@@ -89,7 +92,7 @@ export function headingAnchor(chapter: string, heading: string): string {
 /** The notes at `rels` (in this root), assembled for a writer. */
 export async function assemble(graph: Graph, rels: string[]): Promise<ExportDoc> {
   const chapters = new Map(rels.map((r) => [r, chapterAnchor(r)]));
-  const doc: ExportDoc = { title: "", author: null, date: null, lang: null, root: graph.root, chapters: [] };
+  const doc: ExportDoc = { title: "", author: null, date: null, lang: null, chapters: [] };
   for (const rel of rels) {
     const abs = graph.abs(rel);
     const parsed = parseMarkdown(readText(abs).text);
@@ -324,7 +327,7 @@ function wiki(w: WikiLink, c: Ctx): PhrasingContent[] {
 }
 
 /** A picture given its file: as the note's pictures are found (12.13); one on the internet, its cached copy, else its
- *  link — an export fetches nothing. */
+ *  link — an export fetches nothing. A file outside the root is marked so (DF-D24). */
 function picture(n: Image, from: { url: string } | { name: string; size: ExportPicture["size"] }, c: Ctx): PhrasingContent {
   const found = pictureLocator(c.rel !== null ? c.graph : null, c.rel, c.abs)("url" in from ? { url: from.url } : { name: from.name, size: from.size ?? null });
   const file = !found || "svg" in found ? null : "file" in found ? found.file : cachedImage(found.url);
@@ -334,7 +337,7 @@ function picture(n: Image, from: { url: string } | { name: string; size: ExportP
     return found && "url" in found && SAFE_SCHEME.test(found.url) ? { type: "link", url: found.url, children: [text], data: { remoteImage: true } } : text;
   }
   const size = "size" in from ? from.size : null;
-  const picture: ExportPicture = found && "url" in found ? { file, size, url: found.url } : { file, size };
+  const picture: ExportPicture = found && "url" in found ? { file, size, url: found.url } : landsInside(c.graph.root, file) ? { file, size } : { file, size, outside: true };
   return { ...n, data: { ...(n.data ?? {}), picture } } as Image;
 }
 

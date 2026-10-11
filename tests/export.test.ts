@@ -421,6 +421,34 @@ describe("export: what the assembler keeps safe and says (10.1)", () => {
     expect(JSON.stringify(doc)).not.toContain("javascript:");
   });
 
+  test("a picture from outside the root, or a link in it leading out, held by no format: its words (DF-D24)", async () => {
+    const outside = mkdtempSync(join(sandbox, "outside-"));
+    writeFileSync(join(outside, "photo.png"), png);
+    writeFileSync(join(outside, "dot.bmp"), bmpFile(1, 1, 24, [[0, 0, 255]]));
+    const away = relative(sandbox, outside);
+    const r = root({ "a.md": `# A\n\n![far](../${away}/photo.png) ![in](linked.png) ![bmp](../${away}/dot.bmp) ![ok](pic.png)\n`, "pic.png": png });
+    symlinkSync(join(outside, "photo.png"), join(r.dir, "linked.png"));
+    const doc = await assemble(r.graph, ["a.md"]);
+    expect(pictures(doc).map((p) => p.picture?.outside ?? false)).toEqual([true, true, true, false]);
+    // Not read for a format that would make it PNG first.
+    await convertPictures(doc, ["png", "jpg"], await loadRasterizer());
+    expect(pictures(doc).map((p) => p.picture?.data)).toEqual([undefined, undefined, undefined, undefined]);
+    // Each format: the root's picture alone, the others their words.
+    const media = [...unzip((await exportOf(r, ["a.md"], "docx")).data)].filter(([k]) => k.startsWith("word/media/") && !k.endsWith("/"));
+    expect(media.length).toBe(1);
+    const docx = xml(unzip((await exportOf(r, ["a.md"], "docx")).data), "word/document.xml");
+    for (const words of ["far", "in", "bmp"]) expect(docx).toContain(`>${words}</w:t>`);
+    const html = (await exportOf(r, ["a.md"], "html")).text;
+    expect(html.match(/<img /g)).toHaveLength(1);
+    expect(html).toContain('alt="ok"');
+    expect(html).toContain("<em>far</em> <em>in</em> <em>bmp</em>");
+    const epub = unzip((await exportOf(r, ["a.md"], "epub")).data);
+    expect([...epub.keys()].filter((k) => k.startsWith("OEBPS/images/") && !k.endsWith("/"))).toHaveLength(1);
+    const pdf = readPdf((await exportOf(r, ["a.md"], "pdf")).data);
+    expect(pdf.images[0]).toBe(1);
+    expect(pdf.pages.join("\n")).toContain("far\nin\nbmp");
+  });
+
   test("a footnote's id names its note by a hash, never by the path it's at; maths in a line typeset too; the language said", async () => {
     const r = root({ "a.md": "---\nlang: tr\n---\n\n# A\n\nA claim[^1] and $x^2$.\n\n[^1]: Its note.\n" });
     const doc = await assemble(r.graph, ["a.md"]);

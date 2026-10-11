@@ -2,12 +2,15 @@
 // assembled document (`assemble.ts`), every one TypeScript or JavaScript under a permissive licence: no tool is run,
 // nothing is installed. Where one would need one (a headless browser, pandoc: 10.7, 10.8), it isn't a format.
 
-import { readFileSync, statSync } from "node:fs";
+import { statSync } from "node:fs";
 import { basename, dirname, extname, join, relative, resolve, sep } from "node:path";
 import { atomicWrite, climbsOut, realTarget } from "../fsutil.ts";
 import type { Graph } from "../graph.ts";
 import { findVaultRoot } from "../vault.ts";
 import { assemble, type ExportDoc } from "./assemble.ts";
+import { isExport } from "./mark.ts";
+
+export { EXPORT_MARK, isExport } from "./mark.ts";
 
 /** What a writer makes: the document's bytes, and the files beside it (a Markdown export's pictures). */
 export interface ExportOutput {
@@ -52,20 +55,6 @@ export function formatFor(name: string): ExportFormat | null {
 /** Where an export of the note at `abs` goes unless it's said: beside it, its name, the format's suffix. */
 export function defaultTarget(abs: string, format: ExportFormat): string {
   return join(dirname(abs), `${basename(abs, extname(abs))}${format.suffix}`);
-}
-
-/** The mark a Markdown export carries in its frontmatter: what lets a later export replace it, though it's a note. */
-export const EXPORT_MARK = "generator: slipbox";
-
-/** Whether the file at `abs` is an earlier Markdown export: its frontmatter carries the mark. */
-export function isExport(abs: string): boolean {
-  try {
-    const head = readFileSync(abs, "utf8").slice(0, 2048);
-    const fm = /^---\r?\n([\s\S]*?)\r?\n---/.exec(head)?.[1] ?? "";
-    return fm.split(/\r?\n/).some((line) => line.trim() === EXPORT_MARK);
-  } catch {
-    return false;
-  }
 }
 
 /** Whether a path as typed names a folder: it ends in `/` (or the system's own separator). */

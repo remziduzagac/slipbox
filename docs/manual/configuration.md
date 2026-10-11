@@ -76,16 +76,14 @@ warning:
 - the programs slipbox runs for you: `editor.command`, `editor.remote` and `lint.command`;
 - a language server's `command`, `args` and `environment`, and a linter's `lint-command`. A folder's file may tune
   the servers and linters slipbox knows, but never add one: its name would be the program run;
-- what reaches the network: `render.images_remote` and `lsp.auto_install`. A folder can't have slipbox fetch its
-  notes' pictures from the web, which tells their sites who read them, or install from npm; nor turn either off for
-  you: what reaches the network is yours to allow;
+- what reaches the network: `render.images_remote`, `lsp.auto_install` and `update.check`. A folder can't have
+  slipbox fetch its notes' pictures from the web, which tells their sites who read them, install from npm, or ask
+  whether there's a newer release; nor turn any of them off for you: what reaches the network is yours to allow;
 - `[trust]`: a folder can't trust itself;
 - `walk.root_markers`: where roots are is settled before any folder's file is read;
 - a key or alias bound to a command that throws work away or runs a program: `app.quit_force`, `note.revert`,
   `note.save_force`, `scratch.clear`, `shell.run` and `shell.filter`. A clone can't put a quit without saving on
   `ctrl+s`, or a program of its choosing on `:wq`. Your own file may: `"g m" = "shell.run make"`.
-
-`update.check` is read from your file alone as well: a folder's says nothing, and isn't warned of.
 
 What a folder's file may give a language server is its settings (`config`). They reach the server only in a root you
 trust, as a project's `.vscode/settings.json` would, and some servers' settings name programs to run. In a root you

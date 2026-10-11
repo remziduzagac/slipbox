@@ -161,7 +161,7 @@ export async function convertPictures(doc: ExportDoc, kinds: Raster["type"][], r
   const visit = async (nodes: readonly unknown[]) => {
     for (const n of nodes as { type: string; data?: { picture?: ExportPicture }; children?: unknown[] }[]) {
       const pic = n.data?.picture;
-      if (pic?.file && !pic.data) {
+      if (pic?.file && !pic.data && !pic.outside) {
         if (!done.has(pic.file)) {
           let bytes: Uint8Array | null = null;
           try {

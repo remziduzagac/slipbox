@@ -178,8 +178,10 @@ place.
   (`|240`) is kept. A picture on the internet slipbox has no copy of stays a picture at its address, so whatever shows
   the file fetches it.
 - **Its pictures don't answer to their names.** slipbox looks for `![[photo.png]]` everywhere in the root but in a
-  folder ending `.export.assets`, so an export beside your notes never takes the place of the picture it copied. A
-  path through the folder (`![[coffee.export.assets/photo.png]]`) still reaches the copy.
+  Markdown export's pictures folder: one ending `.export.assets`, or any other beside the export it belongs to
+  (`book.assets/` beside `book.md`, for `-o book.md`), which its front matter marks. So an export beside your notes
+  never takes the place of the picture it copied. A path through the folder (`![[coffee.export.assets/photo.png]]`)
+  still reaches the copy.
 - **Kept as written**, since Markdown viewers draw them themselves: a Mermaid diagram as its code, maths as `$…$` and
   `$$`, a callout as `> [!tip] Its title`, a highlight as `==…==`.
 - **Links inside the document** go to the headings as GitHub names them. Footnotes are numbered `[^1]`, `[^2]` in the
@@ -204,8 +206,10 @@ place.
   where that note is. A note already being drawn in is a link instead, so an embed can't loop.
 - **Pictures** are found as on screen ([Reading](reading.md)): a path from the note's folder, or `![[name]]` by name. A
   picture on the internet is included when slipbox has a copy of it, kept when you had it shown on screen; otherwise
-  it's a link to its address. A picture that isn't there, or can't be read, becomes its description (the words in its
-  brackets).
+  it's a link to its address. Only the root's pictures go in: one outside the root, where it really is (a link inside
+  the root leading out counts as out), becomes its description (the words in its brackets) in Word, PDF, a web page
+  or an e-book, and a link to it in Markdown. A picture that isn't there, or can't be read, becomes its description
+  too.
 - **Diagrams and maths.** A Mermaid diagram is drawn as a picture, dark on white; a kind slipbox doesn't draw stays as
   its code. Maths is typeset.
 - **Callouts** (`> [!tip] Try it`) become a quote with its title in bold on a line of its own.
@@ -220,14 +224,13 @@ place.
   its front matter marks.
 - **It never reaches the network.** A picture on the internet comes from slipbox's own copy, or stays a link. See
   [Privacy](privacy.md).
+- **It never takes in a file from outside the root.** A note someone else wrote can name a picture elsewhere on your
+  machine; it stays out of the document, its description in its place, or a link to it in Markdown.
 - **It never runs another program**, and never installs anything: every format is written by slipbox itself.
 - **It never changes your notes.** In slipbox, unsaved notes are saved first, as you'd see them on screen.
 
 ## Limits
 
-- **A picture is read wherever its link points**, outside the root too: a note someone else wrote can name a picture
-  elsewhere on your machine, and a Word, PDF, web page or e-book export would hold it. A Markdown export copies only
-  the root's pictures. Look through an export of a note you didn't write before you send it.
 - **From the command line, a file at `-o` is replaced without asking**, unless it's a note. A folder that isn't there
   yet needs its `/` at the end; without it, `-o` names a file.
 - **A footnote referred to inside an embedded section**, but written outside that section, isn't drawn in.

@@ -386,21 +386,103 @@ under the cursor); `resolve` gives its line, a block's and lines' as a heading's
 Previously: "A fragment that lands nowhere opens the note at its top. Where it lands is shown by the hover and
 `shift+k`: the heading's section, the block, the lines ([tui.md](../../design/tui.md) § What's under the cursor)."
 
-## MODIFIED design/export.md § The assembler, § Known limits (DF-D24, DF-D25)
+## MODIFIED design/export.md § The assembler, § Markdown, § Known limits; design/links.md § Wikilinks (DF-D24, DF-D25)
 
 Every format embeds the root's pictures only; any Markdown export's pictures folder out of lookups by name.
+
+**design/export.md**, the module table gains a row after `index.ts`'s:
+
+| Module | What it does |
+| --- | --- |
+| `mark.ts` | the mark a Markdown export carries, `generator: slipbox`: read by `index.ts` and by the graph's lookups |
+
+**§ The assembler**, its **Pictures** bullet becomes:
+
+- **Pictures** are found as on screen (`12.13`, `12.14`): a path from its note's folder, `![[name]]` by name, and
+  Obsidian's `|300` or `|240x180` kept as the size. One on the web is its cached copy (its address kept), else its
+  words linked to it, marked a picture's for a format that keeps it one. A missing one is its words. Only the root's
+  pictures go into a document (DF-D24): a file outside the root of the notes exported, by where it really is (a link
+  inside the root leading out is out), is marked `outside` on its picture, and no writer reads it — Word, PDF, the web
+  page and the e-book show its words, as they show a picture they can't read (`pictureData` in `images.ts`), nothing
+  is made PNG of it (`convert.ts`), and Markdown links to it (§ Markdown). A web picture's cached copy goes in.
+
+Previously: "… A missing one is its words." Any file a picture link named was read and held by Word, PDF, the web page
+and the e-book, outside the root too; only Markdown checked the root, itself (DF-D2).
+
+**§ Markdown**, the **Pictures** bullet as DF-D2 has it above, but for "from inside the root by where they really are",
+which is now the assembler's mark, and its last sentence, which becomes: "The folder answers no lookup by name,
+whatever its name: `report.export.assets/`, or `book.assets/` for `-o book.md` ([links.md](links.md) § Wikilinks;
+DF-D25)."
+
+**§ Known limits**: the first bullet goes (DF-D24). Previously, as DF-D2 left it: "A picture is read wherever its link
+points, as on screen. A note from elsewhere can name a picture outside the root, and its export as Word, PDF, a web
+page or an e-book would hold that picture; a Markdown export links it (DF-D2)."
+
+**design/links.md § Wikilinks**, the bullet **What it reaches**, as DF-D18 has it above, becomes:
+
+- **What it reaches,** in order: a note by its name (its file's) or by its path; a path out of the root or into a
+  root nested in it; an attachment, relative to the note, then from the root, then by its file name anywhere in the
+  root, as Obsidian finds one (`![[dal.png]]`), but in a Markdown export's pictures, whose copies would answer for the
+  pictures they were copied from: a folder named `*.export.assets/`, or any `<name>.assets/` beside a note
+  `<name>.md` (or `.markdown`) that carries the export's mark, `generator: slipbox`, in its front matter (DF-D18,
+  DF-D25; `exportPicturesFolder` in `core/graph.ts`, the mark read again when the note changes) — unless the name
+  goes through such a folder (`[[report.export.assets/dal.png]]`, `[[book.assets/dal.png]]`); a note by an alias its
+  front matter gives (`aliases` or `alias`), after every file name (D71, D46). The converter's reading of the old
+  wikilinks leaves them out alike.
+
+Previously, as DF-D18 had it: "… but in a Markdown export's pictures (`*.export.assets/`), …": an export written as
+`-o book.md` put its pictures in `book.assets/`, which lookups still saw.
 
 ## MODIFIED design/links.md § Renames and moves; design/tui.md § Files in the explorer (DF-D20, DF-D21)
 
 `cp` into a folder as `mv`; a trailing `/` always a folder to go into, made if missing.
 
+**design/links.md § Renames and moves**, the paragraph DF-D4 adds above becomes:
+
+> **Where a move or a copy lands** (DF-D4, DF-D20). A new path typed for a move — `slipbox mv`, `space n m`, `:mv` —
+> or for a copy — `slipbox cp` — that is a folder already, or ends in `/`, means into it: the note, file or folder
+> keeps its name there (`slipbox mv note.md ideas/` makes `ideas/note.md`). A path ending in `/` is always a folder to
+> go into, made when it isn't there yet: `slipbox mv drafts archive/` makes `archive/drafts`, never renaming `drafts`
+> to `archive`, as the shell's `mv` would (DF-D21). The root itself is such a folder: `/` in the TUI; in the CLI, the
+> root's path, or `.`, `./` at its top. A copy into the folder it is in already goes beside it as `name-copy`, as a
+> paste there does. Any other path is the whole new path, a note's extension added when it has none; anything already
+> there is refused, never overwritten, and so is a path under a file (`slipbox cp a.md b.md/`). In the CLI, `.` and
+> `..` are from the current folder, as `./` and `../` are; a move's plan (`--dry-run`, `--plan`) holds the path it
+> lands on. A rename in place (the explorer's `r`) takes a name, never a folder to go into; the explorer's `m` and a
+> paste pick the folder themselves, and the TUI's copy of a note (`space n shift+y`) goes beside it, no path typed
+> (`core/rename.ts`, `moveTarget`; `copyPath` in `core/files.ts`).
+
+Previously (DF-D4): "**Where a move lands** (DF-D4). A new path typed for a move — `slipbox mv`, `space n m`, `:mv` —
+that is a folder already, or ends in `/`, means into it, as the shell's `mv` does: …". `slipbox cp note.md ideas/`
+made `ideas.md` beside the folder: a copy's path was always the whole path, read from the current folder only for
+`./` and `../`.
+
+**design/tui.md § Files in the explorer**: unchanged. A paste goes into the folder selected, and into the copied
+item's own folder as `name-copy`, already; the TUI has no copy to a typed path.
+
 ## MODIFIED design/terms.md § Retired; design/tui.md, design/roots.md where config words appear (DF-D22)
 
 Your config takes root wherever it takes vault.
 
-## MODIFIED design/trust.md § What runs (DF-D23)
+## MODIFIED design/trust.md § What runs; design/distribution.md § Updates (DF-D23)
 
 A folder's `update.check` warned of, as DF-D1's settings are.
+
+**design/trust.md § What runs**, its second paragraph as DF-D1 has it above, the network's part becomes:
+
+> … so are `render.images_remote`, `lsp.auto_install` and `update.check`, since fetching a note's web pictures tells
+> their sites who read what, installing fetches from npm, and the update check asks slipbox's releases (DF-D1,
+> DF-D23). A folder's file that sets one is ignored, with a warning, whichever way it sets it. Nor may …
+
+Previously, as DF-D1 had it: "… so are `render.images_remote` and `lsp.auto_install`, since … installing fetches from
+npm (DF-D1). A folder's file that sets one is ignored, with a warning, whichever way it sets it. `update.check` is
+read from your own config alone where it's used (§ Updates in distribution.md), and a folder's is not warned of. Nor
+may …"
+
+**design/distribution.md § Updates**, in **The daily check**: "`[update] check` is on in your own config (it is by
+default; a folder's config can't turn it on: a network request is yours to allow)" becomes "`[update] check` is on in
+your own config (it is by default; a folder's config can't turn it on, or off, and is warned of when it tries: a
+network request is yours to allow; DF-D23)". The check still reads your own config alone (`tui/run.ts`), as well.
 
 ## MODIFIED design/tui.md § What's under the cursor (DF-D26)
 

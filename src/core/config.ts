@@ -480,7 +480,7 @@ export function loadConfig(opts: LoadConfigOptions = {}): LoadedConfig {
  * Settings only your own config may set, each with why. A folder's committed config comes with whatever you clone,
  * so it never sets slipbox's own commands (a known server's `config` still reaches the server, trusted as everything
  * is: 19.6, configuration.md), nor what reaches the network: fetching a note's web pictures tells their sites who read
- * what, and installing fetches from npm (DF-D1). `update.check` is read from your config alone where it's used.
+ * what, installing fetches from npm (DF-D1), and the update check asks slipbox's releases (DF-D23).
  */
 export const USER_ONLY: Record<string, string> = {
   "editor.command": "it runs a program",
@@ -488,6 +488,7 @@ export const USER_ONLY: Record<string, string> = {
   "lint.command": "it runs a program",
   "render.images_remote": "what reaches the network is yours to allow",
   "lsp.auto_install": "what reaches the network is yours to allow",
+  "update.check": "what reaches the network is yours to allow",
 };
 
 /**

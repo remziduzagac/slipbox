@@ -12,7 +12,6 @@ import type { Blockquote, Code, Heading, Image, Link, Nodes, Paragraph, Parent, 
 import { gfmToMarkdown } from "mdast-util-gfm";
 import { mathToMarkdown } from "mdast-util-math";
 import { toMarkdown as serialise } from "mdast-util-to-markdown";
-import { landsInside } from "../fsutil.ts";
 import { slugify } from "../parse.ts";
 import { looksLikeSvg } from "../svg.ts";
 import type { ExportDoc, ExportPicture } from "./assemble.ts";
@@ -61,7 +60,7 @@ export async function toMarkdown(doc: ExportDoc, target: string): Promise<Export
     const file = pic.file;
     if (placed.has(file)) return placed.get(file)!;
     let out: Placed;
-    if (!pic.url && !landsInside(doc.root, file)) out = linkTo(pic);
+    if (pic.outside) out = linkTo(pic);
     else {
       let data: Uint8Array | null = null;
       try {

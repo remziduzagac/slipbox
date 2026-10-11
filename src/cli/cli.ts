@@ -224,7 +224,7 @@ Usage:
   slipbox mkdir <path>              make a folder here (and its parents)
   slipbox mv <note|folder> <new-path>  rename or move a note or folder; links fixed wherever they're reached  [--dry-run] [--plan]
                                     <new-path> (and cp's path): from the root, or from here when ./ or ../, or absolute;
-                                    for mv, a folder that's there, or a path ending in /, is moved into (its name kept)
+                                    a folder that's there, or a path ending in /, is moved or copied into (its name kept)
   slipbox cp <note|folder> [path]   copy a note or folder (beside it, as name-copy, when no path)
   slipbox rm <note|folder>          delete to the trash (slipbox trash restore puts it back)  [--dry-run]
   slipbox trash [restore <item>]    what's in the trash, newest first; restore an item (its id or path)
@@ -1299,8 +1299,12 @@ const HANDLERS: Record<string, Handler> = {
   cp(s, rest) {
     const what = requireArg(rest, "note or folder");
     const rel = folderArg(s, what) ?? resolveNote(s, what, false);
+    // Into a folder that's there, or named with a `/`, as mv (DF-D20, DF-D21); into its own, beside it as
+    // name-copy, as a paste there makes one.
+    const dest = destArg(s, rest[1], true);
+    const to = dest === undefined ? undefined : moveTarget(s.graph, rel, dest);
     try {
-      const r = copyPath(s.graph, rel, destArg(s, rest[1]));
+      const r = copyPath(s.graph, rel, to !== dest && to === rel ? undefined : to);
       return { data: r, human: `copied ${r.from} → ${r.to}\n` };
     } catch (err) {
       if (err instanceof FileOpError) throw new CliError(err.message, EXIT.refused);

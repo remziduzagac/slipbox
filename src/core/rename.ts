@@ -414,7 +414,7 @@ export function moveTarget(g: Graph, fromRel: string, input: string): string {
 }
 
 /** A file where a folder of the path `rel` would have to be (`x.md` for `x.md/a.md`), or null. */
-function fileInTheWay(root: string, rel: string): string | null {
+export function fileInTheWay(root: string, rel: string): string | null {
   const parts = rel.split("/");
   for (let i = 1; i < parts.length; i++) {
     const at = parts.slice(0, i).join("/");

@@ -969,18 +969,20 @@ describe("review cycle 1 (core)", () => {
     expect(r.config.editor.autosave_ms).toBe(5000); // the rest of [editor] still applies
     expect(r.warnings.filter((w) => w.includes("only your own config")).length).toBe(2);
   });
-  test("what reaches the network is yours alone: a folder's render.images_remote and lsp.auto_install are ignored, and said (DF-D1)", () => {
+  test("what reaches the network is yours alone: a folder's render.images_remote, lsp.auto_install and update.check are ignored, and said (DF-D1, DF-D23)", () => {
     const dir = tmp("network");
     const user = join(dir, "user.toml");
-    writeFileSync(user, '[render]\nimages_remote = "never"\n[lsp]\nauto_install = false\n');
+    writeFileSync(user, '[render]\nimages_remote = "never"\n[lsp]\nauto_install = false\n[update]\ncheck = false\n');
     mkdirSync(join(dir, "outer", "v", ".slipbox"), { recursive: true });
-    writeFileSync(join(dir, "outer", "v", ".slipbox", "config.toml"), '[render]\nimages_remote = "show"\ninset = 2\n[lsp]\nauto_install = true\n');
+    writeFileSync(join(dir, "outer", "v", ".slipbox", "config.toml"), '[render]\nimages_remote = "show"\ninset = 2\n[lsp]\nauto_install = true\n[update]\ncheck = true\n');
     const r = loadConfig({ configFile: user, vaultRoot: join(dir, "outer", "v") });
     expect(r.config.render.images_remote).toBe("never");
     expect(r.config.lsp.auto_install).toBe(false);
+    expect(r.config.update.check).toBe(false);
     expect(r.config.render.inset).toBe(2); // the rest of [render] still applies
     expect(r.origins["render.images_remote"]).toBe(user);
-    expect(r.warnings.filter((w) => w.includes("which only your own config may set (what reaches the network is yours to allow); ignored"))).toHaveLength(2);
+    expect(r.warnings.filter((w) => w.includes("which only your own config may set (what reaches the network is yours to allow); ignored"))).toHaveLength(3);
+    expect(r.warnings).toContain(`config: ${join(dir, "outer", "v", ".slipbox", "config.toml")} sets update.check, which only your own config may set (what reaches the network is yours to allow); ignored`);
     // An enclosing root's file, and a folder's stricter say alike: the defaults stand where yours says nothing.
     const outer = join(dir, "outer", ".slipbox", "config.toml");
     mkdirSync(join(dir, "outer", ".slipbox"));

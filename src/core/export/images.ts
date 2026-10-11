@@ -68,9 +68,10 @@ export interface PictureData {
 /**
  * A picture as it is, with the size it's shown at — its own, or Obsidian's (`|300` its width, `|240x180` the box it
  * fits in) — at most `maxWidth` pixels wide; null where it can't be read (nothing there, not a picture, an SVG with no
- * size and no rasteriser to ask).
+ * size and no rasteriser to ask) or isn't the root's (DF-D24: never read).
  */
 export function pictureData(pic: ExportPicture, r: Rasterizer | null, maxWidth: number): PictureData | null {
+  if (pic.outside) return null;
   let svg = pic.svg ?? null;
   let raster: Raster | null = null;
   if (!svg && (pic.data || pic.file)) {

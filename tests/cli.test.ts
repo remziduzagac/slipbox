@@ -657,6 +657,31 @@ describe("the vault and the tool", () => {
     // A name with no folder there is still a rename.
     expect(slipbox(["mv", "note.md", "renamed", "--json"], { cwd: dir }).json.data.to).toBe("renamed.md");
   });
+  test("cp into a folder, as mv: one that's there, or a path ending in /, made if missing, keeps the name (DF-D20, DF-D21)", () => {
+    const dir = join(sandbox, "cp-into");
+    mkdirSync(join(dir, "ideas"), { recursive: true });
+    mkdirSync(join(dir, "drafts"), { recursive: true });
+    writeFileSync(join(dir, "note.md"), "# Note\n");
+    writeFileSync(join(dir, "drafts", "d.md"), "# D\n");
+    expect(slipbox(["init", dir, "--name", "cp-into"]).code).toBe(0);
+    const to = (args: string[], cwd = dir) => slipbox(["cp", ...args, "--json"], { cwd }).json.data?.to;
+    expect(to(["note.md", "ideas/"])).toBe("ideas/note.md");
+    expect(existsSync(join(dir, "ideas.md"))).toBe(false);
+    rmSync(join(dir, "ideas", "note.md"));
+    expect(to(["note.md", "ideas"])).toBe("ideas/note.md"); // there already
+    expect(to(["note.md", "later/"])).toBe("later/note.md"); // made
+    expect(to(["drafts", "archive/"])).toBe("archive/drafts"); // a folder too, never a copy named archive
+    expect(readFileSync(join(dir, "archive", "drafts", "d.md"), "utf8")).toBe("# D\n");
+    expect(to(["note.md", "."], join(dir, "drafts"))).toBe("drafts/note.md"); // the folder you're in
+    // Into its own folder: beside it, as name-copy, as a paste there makes one.
+    expect(to(["note.md", "./"])).toBe("note-copy.md");
+    expect(to(["drafts/d.md", "drafts/"])).toBe("drafts/d-copy.md");
+    // Any other path is the whole path; a file where a folder would be, refused.
+    expect(to(["note.md", "tray"])).toBe("tray.md");
+    const under = slipbox(["cp", "note.md", "tray.md/"], { cwd: dir });
+    expect(under.code).toBe(5);
+    expect(under.err).toContain("tray.md is a file: tray.md/note.md can't go under it");
+  });
   test("trash empty: listed first, removed for good only with --yes (DF-D14)", () => {
     const dir = join(sandbox, "trash-empty");
     mkdirSync(join(dir, "box"), { recursive: true });

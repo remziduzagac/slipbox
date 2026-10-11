@@ -798,12 +798,15 @@ Copies a note, file or folder. Without a new path, the copy goes beside it as `n
 
 ```bash
 slipbox cp ideas/coffee.md ideas/tea.md
+slipbox cp ideas/coffee.md archive/
 slipbox cp coffee
 ```
 
-The new path is from the root, or from the current folder when it starts with `./` or `../`, and is the copy's whole
-path: unlike `mv`, `cp` doesn't copy into a folder named as the new path, so give the path inside it. An existing
-file there is refused (exit 5). Links aren't rewritten: the copy says what the original says.
+The new path is read as `mv` reads it: from the root, or from the current folder when it is `.` or `..` or starts
+with `./` or `../`. A folder that's there, or a path ending in `/`, is copied into, keeping the name: `archive/` makes
+`archive/coffee.md`, and the folder if need be. Into the folder it is in already, the copy goes beside it as
+`name-copy`, as without a path. Any other path is the copy's whole path. An existing file there is refused (exit 5).
+Links aren't rewritten: the copy says what the original says.
 
 `--json`: `{from, to, dir}`.
 
@@ -1215,8 +1218,9 @@ slipbox export coffee inbox -o exports/coffee.docx
   there under the first note's name.
 
 Without `-o`, it goes beside the first note under its name (`ideas/coffee.docx`); Markdown's as `coffee.export.md`,
-its pictures in `coffee.export.assets/` (the root's only; anything else stays a link). A file already at the path is
-replaced without asking, but never a note, of this root or another (exit 5), other than an earlier Markdown export
+its pictures in `coffee.export.assets/` (the root's only; anything else stays a link). The other formats hold the
+root's pictures only, too: one from outside it is its alt text. A file already at the path is replaced without
+asking, but never a note, of this root or another (exit 5), other than an earlier Markdown export
 ([Exporting](export.md#from-the-command-line)). It fetches nothing from the network. `--json`:
 `{path, format, notes[], bytes, files[]}`, `files` being the pictures written beside it.
 

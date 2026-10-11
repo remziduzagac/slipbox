@@ -4882,6 +4882,7 @@ describe("renames refused before anything is written (cli.md, Renames)", () => {
     expect(moveTarget(g, "ideas/b.md", "/")).toBe("b.md"); // the root
     expect(moveTarget(g, "ideas/b.md", ".")).toBe("b.md");
     expect(moveTarget(g, "drafts", "ideas")).toBe("ideas/drafts");
+    expect(moveTarget(g, "drafts", "archive/")).toBe("archive/drafts"); // made: never drafts renamed archive (DF-D21)
     expect(moveTarget(g, "drafts", "drafts")).toBe("drafts"); // itself: refused as already there, not into itself
     expect(moveTarget(g, "a.md", "../")).toBe("../a.md"); // out of the root: its plan refuses it
     applyPlan(g, planNoteRename(g, "a.md", moveTarget(g, "a.md", "ideas/")));
@@ -5003,6 +5004,29 @@ describe("links by name, read again within their root (21.3)", () => {
     expect(at("menu.export.assets/dal.png", "x.md")).toMatchObject({ resolvedKind: "file", path: "Recipes/menu.export.assets/dal.png" });
     // The converter's old reading of a wikilink, alike.
     expect(g.resolveLegacyWiki({ kind: "embed", target: "dal.png" }, "Recipes/dal.md")).toMatchObject({ resolvedKind: "file", path: "attachments/dal.png" });
+  });
+
+  test("any Markdown export's pictures, whatever its name: the folder beside a note marked as an export; another .assets folder answers (DF-D25)", () => {
+    const dir = mkdtempSync(join(tmpdir(), "slipbox-wiki-export-any-"));
+    mkdirSync(join(dir, ".obsidian"));
+    for (const d of ["attachments", "Recipes/book.assets", "Recipes/sub/deep.assets", "Recipes/mine.assets"]) mkdirSync(join(dir, d), { recursive: true });
+    for (const f of ["attachments/dal.png", "Recipes/book.assets/dal.png", "Recipes/sub/deep.assets/dal.png", "Recipes/mine.assets/own.png"]) writeFileSync(join(dir, f), "png");
+    const mark = "---\ntitle: \"Book\"\ngenerator: slipbox\n---\n\n# Book\n";
+    writeFileSync(join(dir, "Recipes", "book.md"), mark); // -o book.md: its pictures in book.assets/
+    writeFileSync(join(dir, "Recipes", "sub", "deep.markdown"), mark);
+    writeFileSync(join(dir, "Recipes", "mine.md"), "# Mine\n"); // a note of the name, not an export: its folder is yours
+    writeFileSync(join(dir, "Recipes", "dal.md"), "![[dal.png]] ![[own.png]]\n");
+    const g = openGraph(locateVault({ root: dir }), DEFAULT_CONFIG, true);
+    const at = (target: string, from = "Recipes/dal.md") => g.resolveLink({ kind: "embed", target }, from);
+    expect(at("dal.png")).toMatchObject({ resolvedKind: "file", path: "attachments/dal.png" });
+    expect(at("own.png")).toMatchObject({ resolvedKind: "file", path: "Recipes/mine.assets/own.png" });
+    expect(at("book.assets/dal.png", "x.md")).toMatchObject({ resolvedKind: "file", path: "Recipes/book.assets/dal.png" });
+    expect(g.resolveLegacyWiki({ kind: "embed", target: "dal.png" }, "Recipes/dal.md")).toMatchObject({ resolvedKind: "file", path: "attachments/dal.png" });
+    // The mark taken out (the file no export any more): its folder answers again, the nearer copy now.
+    writeFileSync(join(dir, "Recipes", "book.md"), "# Book\n\nMine now.\n");
+    const st = statSync(join(dir, "Recipes", "book.md"));
+    g.updateFile("Recipes/book.md", { rel: "Recipes/book.md", abs: join(dir, "Recipes", "book.md"), size: st.size, mtimeMs: st.mtimeMs + 1 });
+    expect(at("dal.png")).toMatchObject({ resolvedKind: "file", path: "Recipes/book.assets/dal.png" });
   });
 
   test("renamed, a note's wikilinks follow in their form — a name a name, a path a path, an alias kept; resolve reads them (21.3)", async () => {

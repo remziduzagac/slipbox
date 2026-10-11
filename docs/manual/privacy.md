@@ -36,8 +36,8 @@ slipbox 0.3.0 is out (this is 0.2.0): slipbox upgrade installs it
 - **At most once a day.** slipbox notes when it last asked before it asks (in `update.json`, in its state folder), so
   a check that failed waits a day too.
 - **To turn it off**, set `update.check = false` in your own config file, or set the environment variable
-  `DO_NOT_TRACK` to anything but `0` or `false`. Only your own config counts here: a folder's settings can't turn the
-  check on, or off.
+  `DO_NOT_TRACK` to anything but `0` or `false`. Only your own config counts here: slipbox ignores `update.check` in
+  a folder's own settings, with a warning, so a folder you clone can't turn the check on, or off.
 - **`SLIPBOX_RELEASES_URL`** points the check, and `slipbox upgrade`, at another place laid out as the releases are, a
   mirror of your own.
 

@@ -221,7 +221,7 @@ root, wherever you are in it, unless it starts with `./` or `../`: then it is fr
 | `slipbox write ideas/tea --create --allow-empty` | makes an empty note, to fill later |
 | `slipbox mkdir ideas/drafts` | makes a folder, and its parents |
 | `slipbox mv ideas/coffee.md archive/coffee.md` | renames or moves a note, file or folder, links rewritten |
-| `slipbox cp ideas/coffee.md` | copies it beside itself (`coffee-copy.md`), or to a path given after it |
+| `slipbox cp ideas/coffee.md` | copies it beside itself (`coffee-copy.md`), or to a path, or a folder, given after it |
 | `slipbox rm ideas/coffee.md` | deletes it to the trash, saying how many links break |
 | `slipbox trash` | lists the trash, newest first, each item with its id |
 | `slipbox trash restore ideas/coffee.md` | puts an item back, by its path or its id |
@@ -229,8 +229,9 @@ root, wherever you are in it, unless it starts with `./` or `../`: then it is fr
 | `slipbox undo` | takes back the last rename or move, as `space v shift+u` does |
 
 `mv` takes the new path as `space n m` does: a folder that's there, or a path ending in `/`, is moved into, so
-`slipbox mv inbox.md archive/` makes `archive/inbox.md`. Any other path is the whole new path:
-`slipbox mv inbox.md tray` makes `tray.md`. It never writes over a file.
+`slipbox mv inbox.md archive/` makes `archive/inbox.md`, and `slipbox mv drafts archive/` makes `archive/drafts`. Any
+other path is the whole new path: `slipbox mv inbox.md tray` makes `tray.md`. `cp` reads its path the same way, a copy
+into the folder the file is in already going beside it as `name-copy`. Neither writes over a file.
 
 `mv`, `rm` and `undo` take `--dry-run`, which shows what they would do and does nothing:
 
