@@ -54,7 +54,9 @@ A few things to know about the launcher:
 - `scripts/install-local.sh --skill` also links slipbox's skill for agents into `~/.claude/skills/slipbox`, where
   Claude Code finds it. It leaves a folder already there alone, and says so. [Working with agents](agents.md) says
   what the skill is for.
-- Use it or a release, not both: with a release installed, remove it first (`slipbox uninstall --yes`, below).
+- Use it or a release, not both: with a release installed, remove it first (`slipbox uninstall --yes`, below). Run
+  over a release's `slipbox` link, the launcher replaces the link with its own script, and says so. The release itself
+  is left untouched, and `slipbox uninstall --yes` still removes it, keeping the launcher.
 
 ## Installing a release
 

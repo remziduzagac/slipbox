@@ -5,7 +5,26 @@ the work; the root's files change only when DF is consolidated.
 
 ## MODIFIED design/trust.md § What runs (DF-D1)
 
-`render.images_remote` and `lsp.auto_install` join `update.check` among the settings only your own config sets.
+Its second paragraph becomes:
+
+> Trusted or not, a folder's config never names a program to run, nor lets slipbox reach the network: `editor.command`,
+> `editor.remote`, `lint.command`, a server's `command`, `args` and `environment`, a linter's `lint-command`, and any
+> server or linter slipbox doesn't build in, are your own config's only, and so is `[trust]` (D160, D166, D177); so
+> are `render.images_remote` and `lsp.auto_install`, since fetching a note's web pictures tells their sites who read
+> what, and installing fetches from npm (DF-D1). A folder's file that sets one is ignored, with a warning, whichever
+> way it sets it. `update.check` is read from your own config alone where it's used (§ Updates in distribution.md),
+> and a folder's is not warned of. Nor may a folder's `[keys]` or `[aliases]` name a command that throws work away or
+> runs a program (`shell.run`, `shell.filter`), so a clone can't put one on `ctrl+s` or `:wq` (`USER_ONLY`, each
+> with its reason, and `VAULT_FORBIDDEN_COMMANDS` in `core/config.ts`;
+> [configuration.md](../../docs/manual/configuration.md), "What only your own file can set").
+
+Previously: "Trusted or not, a folder's config never names a program to run: … are your own config's only, and so is
+`[trust]` (D160, D166, D177). Nor may …", nothing on the network.
+
+Beside it, design/rendering.md § Blocks and inlines, on a picture on the internet: "fetched only as `[render]
+images_remote` says" becomes "fetched only as `[render] images_remote` says, in your own config (DF-D1)"; and
+design/lsp.md § The client for code, **Installing**: "`[lsp] auto_install = false` stops that" becomes "`[lsp]
+auto_install = false`, in your own config only (DF-D1), stops that".
 
 ## MODIFIED design/export.md § Markdown, § Asking for one (DF-D2, DF-D3, DF-D5)
 
@@ -52,7 +71,19 @@ Previously: nothing on `space n r`; it opened the conflict prompt whenever the n
 
 ## MODIFIED design/distribution.md § Installing (DF-D7)
 
-The source launcher replaces a link at its path, never writes through it.
+Adds, at the section's end:
+
+> **The source launcher**, `scripts/install-local.sh`, writes a small script at the same path (`~/.local/bin/slipbox`,
+> or `$SLIPBOX_BIN_DIR`'s) that runs the checkout with Bun, given slipbox's own `bunfig.toml` and no `.env` (trust.md
+> § Bun's own reading). A link found there, a release's to `<data>/current/slipbox` or any other, is removed and the
+> script written in its place, never through it: writing through a release's link would overwrite the release's
+> binary with the launcher. It says so: `replaced the link <path> -> <target> (a release's, which stays installed)
+> with this launcher`, or, for a link of another kind, that what it pointed to is left as it is (DF-D7). A release's
+> own files are never written: they stay installed until `slipbox uninstall --yes` removes them, the launcher kept as
+> no longer the installer's link (§ Uninstalling).
+
+Previously: the launcher appeared only in step 2, as what the installer leaves alone; nothing said what the launcher
+does over a release's link.
 
 ## MODIFIED design/lsp.md, design/tui.md § What's under the cursor (DF-D8, DF-D13)
 

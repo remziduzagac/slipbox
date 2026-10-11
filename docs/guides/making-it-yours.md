@@ -154,9 +154,10 @@ that means for its links. A folder inside another root takes the outer one's set
 A git repository has no settings of its own until you `slipbox init` it; `--private` keeps its `.slipbox/` out of git.
 
 A folder's settings come with the folder, synced or cloned from someone else. So they can't choose what runs on your
-machine: the programs slipbox starts (your editor, a linter, a language server), which folders you trust, keys or
-aliases that run a program or throw work away, the update check. Those come only from your own file, and a folder that
-sets them gets a warning instead.
+machine, or what reaches the network: the programs slipbox starts (your editor, a linter, a language server), which
+folders you trust, keys or aliases that run a program or throw work away, fetching pictures from the web, installing
+from npm. Those come only from your own file, and a folder that sets them gets a warning instead. The update check is
+yours alone too: a folder's says nothing.
 
 ## Your editor
 

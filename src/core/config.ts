@@ -331,7 +331,7 @@ export const DEFAULT_CONFIG: Config = {
 
 /** Settings that were, and why they aren't: said once, never an unknown key's warning. */
 const RETIRED: Record<string, string> = {
-  rename: "renames no longer write a note's old name into it (21.12); links reach notes by their paths",
+  rename: "renames no longer write a note's old name into it; links reach notes by their paths",
 };
 
 /** Keys whose values come from a fixed set. Anything else is a warning and the default stays. */
@@ -477,11 +477,18 @@ export function loadConfig(opts: LoadConfigOptions = {}): LoadedConfig {
 }
 
 /**
- * Settings only your own config may set: each names a program slipbox runs. A folder's committed
- * config comes with whatever you clone, so it never sets slipbox's own commands (a known server's
- * `config` still reaches the server, trusted as everything is: 19.6, configuration.md).
+ * Settings only your own config may set, each with why. A folder's committed config comes with whatever you clone,
+ * so it never sets slipbox's own commands (a known server's `config` still reaches the server, trusted as everything
+ * is: 19.6, configuration.md), nor what reaches the network: fetching a note's web pictures tells their sites who read
+ * what, and installing fetches from npm (DF-D1). `update.check` is read from your config alone where it's used.
  */
-export const USER_ONLY = ["editor.command", "editor.remote", "lint.command"];
+export const USER_ONLY: Record<string, string> = {
+  "editor.command": "it runs a program",
+  "editor.remote": "it runs a program",
+  "lint.command": "it runs a program",
+  "render.images_remote": "what reaches the network is yours to allow",
+  "lsp.auto_install": "what reaches the network is yours to allow",
+};
 
 /**
  * Commands a vault's keys and aliases may not name: each throws work away (quit without saving,
@@ -550,12 +557,12 @@ function dropUserOnly(data: Record<string, unknown>, file: string, warnings: str
     delete walk.root_markers;
     warnings.push(`config: ${file} sets walk.root_markers, which only your own config may set (it decides where roots are); ignored`);
   }
-  for (const key of USER_ONLY) {
+  for (const [key, why] of Object.entries(USER_ONLY)) {
     const [table, name] = key.split(".") as [string, string];
     const t = data[table];
     if (!isPlainObject(t) || !(name in t)) continue;
     delete (t as Record<string, unknown>)[name];
-    warnings.push(`config: ${file} sets ${key}, which only your own config may set (it runs a program); ignored`);
+    warnings.push(`config: ${file} sets ${key}, which only your own config may set (${why}); ignored`);
   }
 }
 

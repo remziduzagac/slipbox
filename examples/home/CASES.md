@@ -1877,6 +1877,9 @@ build (`scripts/build-home.ts`), not kept as they are. Each file's purpose and t
   language-server command/args/environment, linter lint-command, unknown servers/linters —
   `work/infra/dotfiles/slipbox/config.toml`, `work/kestrel/.slipbox/config.toml` (configuration.md What only you can
   set; cli.test 'a vault's config can't pick the editor')
+- What reaches the network is yours alone: a vault file's render.images\_remote and lsp.auto\_install ignored with a
+  warning, whichever way they're set — `work/kestrel/.slipbox/config.toml` (configuration.md What only you can set,
+  privacy.md; core.test 'what reaches the network is yours alone')
 - Vault \[keys\]/\[aliases\] naming forbidden commands (app.quit\_force, note.revert, note.save\_force, scratch.clear)
   dropped with a warning; same in user file fine — `work/infra/dotfiles/slipbox/config.toml`,
   `work/kestrel/.slipbox/config.toml` (configuration.md VAULT\_FORBIDDEN\_COMMANDS)

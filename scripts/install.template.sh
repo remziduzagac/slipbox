@@ -38,7 +38,7 @@ target() {
   case "$(uname -s)" in
     Darwin) os=darwin ;;
     Linux) os=linux ;;
-    *) fail "no release for $(uname -s) yet: macOS and Linux (Windows is to come, plan 14.12)" ;;
+    *) fail "no release for $(uname -s) yet: macOS and Linux (Windows is to come)" ;;
   esac
   case "$(uname -m)" in
     x86_64 | amd64) arch=x64 ;;

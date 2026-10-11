@@ -67,8 +67,9 @@ A language server is a program of its own, and once it runs it may reach the net
 fetch a schema a file names, say, or a project's dependencies. slipbox turns off the YAML server's telemetry, and never
 passes on a telemetry event a server sends it.
 
-`lsp.auto_install` is read from a folder's own settings (its `.slipbox/config.toml`) too, and those apply over yours:
-a folder you open can turn installing back on.
+Only your own config counts here: a folder's own settings (its `.slipbox/config.toml`) can't turn installing on, or
+off. slipbox ignores `lsp.auto_install` there, with a warning, so a folder you clone can't install from npm against
+your settings.
 
 ### Pictures on the internet
 
@@ -86,8 +87,8 @@ A picture fetched is kept in slipbox's cache and drawn from there afterwards, wi
 picture is kept: a site's answer that isn't one, or that is larger than 20 MB, is refused. The command line never
 fetches a picture, and an export uses only slipbox's copy ([Exporting](export.md)).
 
-`render.images_remote`, too, is read from a folder's own settings, which apply over yours: a folder you open can set
-it to `show`.
+Only your own config counts here too: slipbox ignores `render.images_remote` in a folder's own settings, with a
+warning, so a folder you clone can't set it to `show` and have its pictures fetched as you read.
 
 ### git and your repositories' remotes
 

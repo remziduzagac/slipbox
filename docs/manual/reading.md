@@ -213,9 +213,9 @@ you expect to draw them doesn't, see [Troubleshooting](troubleshooting.md).
 
 A fetched picture is kept in slipbox's cache, one file per address, and drawn from there, without asking, from then
 on. A fetch gives up after 15 seconds, on anything that isn't a picture, and on anything over 20 MB; it says why, and
-isn't tried again until you press `enter` on it. Like most settings, `render.images_remote` can be set by a folder's
-own `.slipbox/config.toml` as well as yours: see [Configuration](configuration.md), and [Privacy](privacy.md) for
-everything slipbox fetches.
+isn't tried again until you press `enter` on it. Only your own config sets `render.images_remote`: a folder's own
+`.slipbox/config.toml` that sets it is ignored, with a warning, so a folder you clone can't have its pictures fetched
+([Configuration](configuration.md)). [Privacy](privacy.md) lists everything slipbox fetches.
 
 ## Diagrams
 

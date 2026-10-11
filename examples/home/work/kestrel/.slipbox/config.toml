@@ -8,6 +8,9 @@ inset = 4
 max_width = 110
 # a stray paste from Sam's notes, left in: an escape sequence in a value (slipbox keeps the default)
 glyphs = "\u001b[31mnerd"
+# the team wanted the wiki's pictures shown without asking; what reaches the network is each reader's to allow
+# (ignored, warned)
+images_remote = "show"
 
 [walk]
 extensions = ["md", "markdown"]
@@ -38,6 +41,10 @@ lint-command = "grep -nH TODO"
 lint-formats = ["%f:%l:%m"]
 lint-source = "todo"
 lint-severity = 4
+
+[lsp]
+# servers installed from npm for everyone: the same, each reader's own say (ignored, warned)
+auto_install = true
 
 [editor]
 autosave_ms = 20000

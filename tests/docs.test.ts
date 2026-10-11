@@ -7,6 +7,7 @@ import { CLI_COMMANDS, FLAGS } from "../src/cli/cli.ts";
 import { canonSeq } from "../src/core/commands.ts";
 import { extractText } from "../src/core/graph.ts";
 import { githubSlugs } from "../src/core/landing.ts";
+import { type Grammar, grammar } from "../src/core/syntax.ts";
 import {
   DEFAULT_EXPLORER_KEYS,
   DEFAULT_FOOTNOTE_KEYS,
@@ -75,6 +76,42 @@ function blueprintIds(text: string): string[] {
   ].map((m) => m[0]);
 }
 
+/**
+ * What slipbox can print: every string in its source, a template's substitutions left out, and the strings of the
+ * scripts a user runs (the installer, the Homebrew formula, the source launcher). Comments may cite the blueprint.
+ */
+async function messages(): Promise<{ where: string; text: string }[]> {
+  const sources: [string, Grammar][] = [
+    ...readdirSync(join(TOP, "src"), { recursive: true })
+      .map(String)
+      .filter((f) => f.endsWith(".ts"))
+      .map((f): [string, Grammar] => [join(TOP, "src", f), "typescript"]),
+    [join(TOP, "scripts", "install.template.sh"), "bash"],
+    [join(TOP, "scripts", "install-local.sh"), "bash"],
+    [join(TOP, "scripts", "homebrew.template.rb"), "ruby"],
+  ];
+  const out: { where: string; text: string }[] = [];
+  for (const [file, name] of sources) {
+    const g = (await grammar(name))!;
+    const tree = g.parser.parse(read(file))!;
+    for (const { node } of g.strings.captures(tree.rootNode)) {
+      const text = node.type === "template_string" ? node.children.map((c) => (c?.type === "template_substitution" ? "${…}" : (c?.text ?? ""))).join("") : node.text;
+      out.push({ where: `${relative(TOP, file)}:${node.startPosition.row + 1}`, text });
+    }
+  }
+  return out;
+}
+
+/** The blueprint's IDs a message carries: a roadmap step cited (`(21.12)`, `(20.16, 21.10)`, `plan 14.12`), a decision, a task. */
+function idsInMessage(text: string): string[] {
+  const step = String.raw`\d{1,2}\.(?:\d{1,2}|x)`;
+  return [
+    ...text.matchAll(new RegExp(String.raw`\((?:(?:plans?|steps?) )?${step}(?:(?:, |[–-]| and )${step})*\)`, "g")),
+    ...text.matchAll(new RegExp(String.raw`\b(?:plans?|steps?) ${step}\b`, "g")),
+    ...text.matchAll(/\b(?:[A-Z]{2,4}-)?D\d{1,3}\b|\b[A-Z]{2,4}-T\d{1,3}\b/g),
+  ].map((m) => m[0]);
+}
+
 /** A key as the docs write it: canonical (the leader as `space`, `ctrl` before `shift`), `escape` as `esc`. */
 const asWritten = (key: string) => canonSeq(key).split(" ").map((k) => k.replace(/(^|\+)escape$/, "$1esc")).join(" ");
 
@@ -111,6 +148,23 @@ describe("the user documentation (DOC)", () => {
 
   test("no roadmap step or decision ID", () => {
     expect(userDocs().flatMap((f) => blueprintIds(read(f)).map((id) => `${relative(DOCS, f)}: ${id}`))).toEqual([]);
+  });
+
+  test("no roadmap step or decision ID in a message slipbox prints, nor in its installers'", async () => {
+    const found = (await messages()).flatMap((m) => idsInMessage(m.text).map((id) => `${m.where}: ${id}`));
+    expect(found).toEqual([]);
+    expect((await messages()).length).toBeGreaterThan(5000); // every source file read, not none
+    // The check catches what it looks for, and leaves versions and the like alone.
+    expect(idsInMessage("retired (21.12); a scope (20.16, 21.10), trust (23.x); Windows is to come, plan 14.12; D166, DF-D1, DF-T3")).toEqual([
+      "(21.12)",
+      "(20.16, 21.10)",
+      "(23.x)",
+      "plan 14.12",
+      "D166",
+      "DF-D1",
+      "DF-T3",
+    ]);
+    expect(idsInMessage("start nvim (0.9 or later); git 2.42; pyright@1.1.414; version 1.0; MPL-2.0; a 3D chart; ${…}")).toEqual([]);
   });
 
   test("no link into the blueprint", () => {

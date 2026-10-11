@@ -70,11 +70,15 @@ the files that applied, in this order, on its `config` line.
 ### What only your own file can set
 
 A folder's `.slipbox/config.toml` arrives with whatever you clone or download, so it never chooses what runs on your
-machine. These come from your own file only; in a folder's file each is ignored, with a warning:
+machine, or what reaches the network. These come from your own file only; in a folder's file each is ignored, with a
+warning:
 
 - the programs slipbox runs for you: `editor.command`, `editor.remote` and `lint.command`;
 - a language server's `command`, `args` and `environment`, and a linter's `lint-command`. A folder's file may tune
   the servers and linters slipbox knows, but never add one: its name would be the program run;
+- what reaches the network: `render.images_remote` and `lsp.auto_install`. A folder can't have slipbox fetch its
+  notes' pictures from the web, which tells their sites who read them, or install from npm; nor turn either off for
+  you: what reaches the network is yours to allow;
 - `[trust]`: a folder can't trust itself;
 - `walk.root_markers`: where roots are is settled before any folder's file is read;
 - a key or alias bound to a command that throws work away or runs a program: `app.quit_force`, `note.revert`,
@@ -144,8 +148,8 @@ show_urls = "auto"             # a link's address after its text: auto (only wit
 code = "document"              # a code file opens: document (the code view, where its language has one) | source
 code_cells = "box"             # the code view's cells: box (framed) | band (on a tint); space u c switches
 images = "auto"                # a note's pictures: auto (drawn where the terminal can) | never
-images_remote = "ask"          # pictures on the internet: ask (enter fetches one) | show (fetched as the note opens)
-                               # | never (neither fetched nor drawn)
+images_remote = "ask"          # your file only. Pictures on the internet: ask (enter fetches one) | show (fetched as
+                               # the note opens) | never (neither fetched nor drawn)
 mermaid = "text"               # a Mermaid diagram: text (in the terminal's characters) | picture (where pictures
                                # are drawn)
 math = "text"                  # a display's maths: text (Unicode) | picture (typeset, where pictures are drawn)
@@ -225,8 +229,9 @@ severity = "warning"           # the least severe shown: error | warning | info 
 
 [lsp]                          # language servers for code
 enabled = true                 # their problems, hover, definitions, renames, completion
-auto_install = true            # servers published on npm, and markdownlint-cli2 for [lint], installed into
-                               # slipbox's own folder when first needed, each at the version slipbox pins
+auto_install = true            # your file only. Servers published on npm, and markdownlint-cli2 for [lint],
+                               # installed into slipbox's own folder when first needed, each at the version slipbox
+                               # pins
 
 [update]                       # your file only
 check = true                   # a release's TUI asks once a day whether there's a newer release, and says so;

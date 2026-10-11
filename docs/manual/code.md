@@ -254,7 +254,8 @@ installing off, `slipbox doctor` says it's behind). Those are:
 and `intelephense`.
 
 `lsp.auto_install = false` stops installing; a server that's missing is then said once. Installing reaches npm over
-the network ([Privacy](privacy.md)).
+the network, so only your own config sets it: a folder's `.slipbox/config.toml` that does is ignored, with a warning
+([Privacy](privacy.md)).
 
 The others are native programs, never installed by slipbox: `rust-analyzer`, `gopls`, `lua-language-server`, `taplo`,
 `sourcekit-lsp`, `clangd`, `ruby-lsp` and `ruff`. Install them as you would for any editor; a missing one is said once,

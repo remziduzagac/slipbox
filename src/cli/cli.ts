@@ -937,7 +937,7 @@ const HANDLERS: Record<string, Handler> = {
     // By root (20.16, 21.10): here by default, so an agent's results are predictable; linked, all.
     let scope = (flag(s.args, "scope") ?? "here") as Scope;
     if ((scope as string) === "vault") {
-      s.warnings.push("--scope vault is --scope here now (21.10)");
+      s.warnings.push("--scope vault is --scope here now");
       scope = "here";
     }
     if (!SCOPES.includes(scope)) throw new UsageError(`--scope takes ${SCOPES.join(", ")}`);
