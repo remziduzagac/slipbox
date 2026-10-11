@@ -2,15 +2,18 @@
 // Embeds are drawn in, links inside the document go to the heading ids GitHub gives (the rest are their text, as the
 // assembler made them), pictures are copied into a folder beside it, and what Markdown renders itself is kept as written:
 // a Mermaid diagram as its code, maths as `$…$` and `$$`, callouts as `> [!kind]`, footnotes renumbered `[^1]`.
+// Only pictures are copied, and only the root's: anything else a picture link names stays a link, nothing of it copied.
 // Its frontmatter carries the mark that lets a later export replace it, though it's a note.
 
 import { readFileSync } from "node:fs";
-import { basename, extname } from "node:path";
+import { basename, dirname, extname, isAbsolute, relative, sep } from "node:path";
 import type { Blockquote, Code, Heading, Image, Link, Nodes, Paragraph, PhrasingContent, Root, RootContent } from "mdast";
 import { gfmToMarkdown } from "mdast-util-gfm";
 import { mathToMarkdown } from "mdast-util-math";
 import { toMarkdown as serialise } from "mdast-util-to-markdown";
+import { landsInside } from "../fsutil.ts";
 import { slugify } from "../parse.ts";
+import { looksLikeSvg } from "../svg.ts";
 import type { ExportDoc, ExportPicture } from "./assemble.ts";
 import { rasterInfo } from "./images.ts";
 import type { ExportOutput } from "./index.ts";
@@ -27,37 +30,58 @@ function urlName(url: string): string {
 /** A value in YAML, quoted as JSON is (a JSON string is a YAML one). */
 const yaml = (v: string) => JSON.stringify(v);
 
+/** Whether bytes are a picture's, by what they hold: a raster's header, or an SVG's start. */
+function isPicture(data: Uint8Array): boolean {
+  return rasterInfo(data) !== null || looksLikeSvg(new TextDecoder().decode(data.subarray(0, 2048)));
+}
+
+/** Where a picture link of the export goes: a picture copied, `url`; a link to the file left where it is; or null. */
+type Placed = { url: string } | { link: string } | null;
+
 /** The document as Markdown for `target`, its pictures in `<name>.assets/` beside it. */
 export async function toMarkdown(doc: ExportDoc, target: string): Promise<ExportOutput> {
   const assets = `${basename(target, extname(target))}.assets`;
   const files: ExportOutput["files"] = [];
-  const copied = new Map<string, string>();
+  const placed = new Map<string, Placed>();
   const names = new Set<string>();
+  /** A file left where it is, linked from the export (the web's by its address); null on another drive: its words. */
+  const linkTo = (pic: ExportPicture & { file: string }): Placed => {
+    if (pic.url) return { link: pic.url };
+    const rel = relative(dirname(target), pic.file);
+    return isAbsolute(rel) ? null : { link: rel.split(sep).map(encodeURIComponent).join("/") };
+  };
   /**
    * A picture's file copied once into the folder, by its own name — one from the web by its address's — with its kind's
-   * extension where it has none, a second of a name numbered: its address.
+   * extension where it has none, a second of a name numbered: its address. Only a picture, by what the file holds, from
+   * inside the root (by where it really is) or the web's cached copy: anything else a link to it, nothing of it copied;
+   * one that can't be read, null.
    */
-  const copy = (pic: ExportPicture & { file: string }): string | null => {
+  const copy = (pic: ExportPicture & { file: string }): Placed => {
     const file = pic.file;
-    let name = copied.get(file);
-    if (!name) {
-      let data: Uint8Array;
+    if (placed.has(file)) return placed.get(file)!;
+    let out: Placed;
+    if (!pic.url && !landsInside(doc.root, file)) out = linkTo(pic);
+    else {
+      let data: Uint8Array | null = null;
       try {
         data = readFileSync(file);
-      } catch {
-        return null;
+      } catch {}
+      if (!data) out = null;
+      else if (!isPicture(data)) out = linkTo(pic);
+      else {
+        let own = (pic.url ? urlName(pic.url) : basename(file)) || "picture";
+        if (!extname(own)) own += `.${rasterInfo(data)?.type ?? "svg"}`;
+        const ext = extname(own);
+        const stem = basename(own, ext);
+        let name = own;
+        for (let k = 1; names.has(name.toLowerCase()); k++) name = `${stem}-${k}${ext}`;
+        names.add(name.toLowerCase());
+        files.push({ path: `${assets}/${name}`, data });
+        out = { url: `${assets}/${encodeURIComponent(name)}` };
       }
-      let own = (pic.url ? urlName(pic.url) : basename(file)) || "picture";
-      if (!extname(own)) own += `.${rasterInfo(data)?.type ?? "svg"}`;
-      const ext = extname(own);
-      const stem = basename(own, ext);
-      name = own;
-      for (let k = 1; names.has(name.toLowerCase()); k++) name = `${stem}-${k}${ext}`;
-      names.add(name.toLowerCase());
-      copied.set(file, name);
-      files.push({ path: `${assets}/${name}`, data });
     }
-    return `${assets}/${encodeURIComponent(name)}`;
+    placed.set(file, out);
+    return out;
   };
 
   const children: RootContent[] = [];
@@ -134,7 +158,7 @@ function renumberFootnotes(root: Root): void {
 
 interface Ctx {
   ids: Map<string, string>;
-  copy(pic: ExportPicture & { file: string }): string | null;
+  copy(pic: ExportPicture & { file: string }): Placed;
 }
 
 /** The tree made Markdown's, in place. */
@@ -157,12 +181,17 @@ function prepare(nodes: Nodes[], c: Ctx): void {
     }
     if (n.type === "image") {
       const pic = data?.picture as ExportPicture | undefined;
-      const url = pic?.file ? c.copy(pic as ExportPicture & { file: string }) : null;
-      if (!url) {
+      const to = pic?.file ? c.copy(pic as ExportPicture & { file: string }) : null;
+      if (to && "link" in to) {
+        // Not a picture of the root: a link to it, its words or its file's name.
+        nodes[i] = { type: "link", url: to.link, children: [{ type: "text", value: n.alt || basename(pic!.file!) }] } satisfies Link;
+        continue;
+      }
+      if (!to) {
         nodes[i] = { type: "emphasis", children: [{ type: "text", value: n.alt || "picture" }] };
         continue;
       }
-      n.url = url;
+      n.url = to.url;
       // Obsidian's size kept where Obsidian reads it: `![alt|240](…)`.
       if (pic?.size) n.alt = `${n.alt ?? ""}|${pic.size.width}${pic.size.height ? `x${pic.size.height}` : ""}`;
     }

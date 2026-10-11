@@ -34,6 +34,8 @@ export interface ExportDoc {
   date: string | null;
   /** Its language, as frontmatter's `lang` (or `language`) says: `en`, `tr`; null where it doesn't. */
   lang: string | null;
+  /** The folder of the root its notes are in: the only one a Markdown export copies pictures from. */
+  root: string;
   chapters: ExportChapter[];
 }
 
@@ -85,7 +87,7 @@ export function headingAnchor(chapter: string, heading: string): string {
 /** The notes at `rels` (in this root), assembled for a writer. */
 export async function assemble(graph: Graph, rels: string[]): Promise<ExportDoc> {
   const chapters = new Map(rels.map((r) => [r, chapterAnchor(r)]));
-  const doc: ExportDoc = { title: "", author: null, date: null, lang: null, chapters: [] };
+  const doc: ExportDoc = { title: "", author: null, date: null, lang: null, root: graph.root, chapters: [] };
   for (const rel of rels) {
     const abs = graph.abs(rel);
     const parsed = parseMarkdown(readText(abs).text);

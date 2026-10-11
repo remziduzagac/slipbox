@@ -4,8 +4,9 @@
 
 import { readFileSync, statSync } from "node:fs";
 import { basename, dirname, extname, join, relative, resolve, sep } from "node:path";
-import { atomicWrite, climbsOut } from "../fsutil.ts";
+import { atomicWrite, climbsOut, realTarget } from "../fsutil.ts";
 import type { Graph } from "../graph.ts";
+import { findVaultRoot } from "../vault.ts";
 import { assemble, type ExportDoc } from "./assemble.ts";
 
 /** What a writer makes: the document's bytes, and the files beside it (a Markdown export's pictures). */
@@ -67,18 +68,42 @@ export function isExport(abs: string): boolean {
   }
 }
 
+/** Whether a path as typed names a folder: it ends in `/` (or the system's own separator). */
+export function namesFolder(typed: string): boolean {
+  return typed.endsWith("/") || typed.endsWith(sep);
+}
+
 /**
- * Where an export of notes, `first` the first, goes: `typed` (from `base`) — a folder the default's name in it — else
- * beside the first note. Never over a note of the root, but an earlier export: an error says so.
+ * Whether the file at `abs` is a note of a root: this one's, as its index has them; or any other's, a file of a note's
+ * name in a folder that is a root (where it really is, or as it's reached).
+ */
+function noteOfARoot(graph: Graph, abs: string): boolean {
+  const rel = relative(graph.root, abs).split(sep).join("/");
+  if (!climbsOut(rel) && graph.notes.has(rel)) return true;
+  if (!graph.filter.isNoteName(basename(abs))) return false;
+  try {
+    if (!statSync(abs).isFile()) return false;
+  } catch {
+    return false;
+  }
+  return findVaultRoot(abs) !== null || findVaultRoot(realTarget(abs)) !== null;
+}
+
+/**
+ * Where an export of notes, `first` the first, goes: `typed` (from `base`) — a folder, one there or a path ending in
+ * `/` (made when it's written), the default's name in it — else beside the first note. Never over a note of any root,
+ * but an earlier export: an error says so.
  */
 export function exportTarget(graph: Graph, first: string, format: ExportFormat, typed: string | null, base: string): string {
   const suggested = defaultTarget(graph.abs(first), format);
   let target = typed ? resolve(base, typed) : suggested;
-  try {
-    if (statSync(target).isDirectory()) target = join(target, basename(suggested));
-  } catch {}
-  const rel = relative(graph.root, target).split(sep).join("/");
-  if (!climbsOut(rel) && graph.notes.has(rel) && !isExport(target)) throw new Error(`${rel} is a note — an export doesn't write over it`);
+  if (typed && namesFolder(typed)) target = join(target, basename(suggested));
+  else {
+    try {
+      if (statSync(target).isDirectory()) target = join(target, basename(suggested));
+    } catch {}
+  }
+  if (noteOfARoot(graph, target) && !isExport(target)) throw new Error(`${graph.shownPath(target)} is a note — an export doesn't write over it`);
   return target;
 }
 

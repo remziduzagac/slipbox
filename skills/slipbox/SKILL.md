@@ -195,11 +195,13 @@ deleting, emptying the trash or moving the user's notes.
 slipbox export <note> --json             # a Word document beside the note, its name: data.path, where it went
 slipbox export <note> --to pdf           # also html (one file), epub, md (portable; its pictures beside it)
 slipbox export <note> <note> -o out/both.docx   # several notes as one document, a chapter each
+slipbox export <note> -o out/                   # into a folder (made if missing), under the note's name
 ```
 
 Embeds are drawn in, diagrams and display maths drawn as pictures, and links to the notes exported stay links inside
-the document; nothing is fetched (a picture on the web is its cached copy, or its link). It never writes over a note
-(an earlier Markdown export aside: `name.export.md`).
+the document; nothing is fetched (a picture on the web is its cached copy, or its link). A Markdown export copies
+only the root's pictures; anything else stays a link. It never writes over a note, of any root (exit 5; an earlier
+Markdown export aside: `name.export.md`).
 
 ## Capturing for the user — the scratch
 

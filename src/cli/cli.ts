@@ -44,7 +44,7 @@ import { readStale, type StaleEntry } from "../core/stale.ts";
 import { applyColorOverrides, listThemes, loadTheme } from "../core/theme/index.ts";
 import { sanitize, UNSAFE } from "../core/sanitize.ts";
 import { climbsOut, type DecodedFile, decodeText, ensureDir, landsInside, readJson, readRegular, readText, WriteRefused, writeNote } from "../core/fsutil.ts";
-import { exportNotes, exportTarget, FORMATS, formatFor, writeExport } from "../core/export/index.ts";
+import { exportNotes, exportTarget, FORMATS, formatFor, namesFolder, writeExport } from "../core/export/index.ts";
 import { compilePattern, expandReplacement, findAll, firstPerLine, replaceMatches } from "../core/replace.ts";
 import { planReplace } from "../core/replace-files.ts";
 import { listTasks, toggleTask } from "../core/tasks.ts";
@@ -590,7 +590,9 @@ const HANDLERS: Record<string, Handler> = {
     if (!rest.length) throw new UsageError("export needs a note: slipbox export <note…> [--to docx|pdf|html|epub|md] [--out|-o <path>]");
     const rels = rest.map((r) => resolveNote(s, r));
     const out = flag(s.args, "out");
-    const name = flag(s.args, "to") ?? (out && extname(out) ? extname(out) : "docx");
+    // A folder's name (`exports.v2/`, or one there) says no format.
+    const folder = out !== undefined && (namesFolder(out) || statSync(resolve(s.io.cwd, out), { throwIfNoEntry: false })?.isDirectory() === true);
+    const name = flag(s.args, "to") ?? (out && !folder && extname(out) ? extname(out) : "docx");
     const format = formatFor(name);
     if (!format) throw new UsageError(`--to must be one of: ${FORMATS.map((f) => f.name).join(", ")}`);
     let target: string;

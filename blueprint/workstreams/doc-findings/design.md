@@ -26,9 +26,54 @@ images_remote` says" becomes "fetched only as `[render] images_remote` says, in 
 design/lsp.md § The client for code, **Installing**: "`[lsp] auto_install = false` stops that" becomes "`[lsp]
 auto_install = false`, in your own config only (DF-D1), stops that".
 
-## MODIFIED design/export.md § Markdown, § Asking for one (DF-D2, DF-D3, DF-D5)
+## MODIFIED design/export.md § Asking for one, § Markdown, § Known limits (DF-D2, DF-D3, DF-D5)
 
-Pictures of the root only into `.export.assets/`; no export over a note of any root; `-o dir/` makes the folder.
+**§ Asking for one**, the CLI's bullets on where the file goes and what it replaces:
+
+- The file goes to `--out` (or `-o`), from the working folder; a folder, one there or a path ending in `/` (made when
+  the export is written), gets the first note's name in it, and its own name says no format (DF-D5). Without `-o`, it
+  goes beside the first note, under its name (D185): `notes/report.md` gives `notes/report.docx`. Markdown's is
+  `notes/report.export.md`, apart from the note it's of.
+- A file already there is replaced, as `-o` does in any tool. A note never is (exit 5), of this root or any other
+  (DF-D3): this root's as its index has them; another's, a file of a note's name in a folder that is a root, where it
+  is reached or where it really is (a symlinked folder counts). An earlier Markdown export is: its frontmatter's
+  `generator: slipbox` says it is one.
+
+Previously: "a folder gets the first note's name in it" (a path ending in `/` that wasn't there was a file of that
+name, and `-o out.v2/` took `.v2` for a format); "A note of the root never is (exit 5), but for an earlier Markdown
+export" (another root's note was replaced).
+
+**§ Asking for one**, the TUI's Save As keys, the name's sentence, and what's replaced:
+
+- … In the name, `↓` goes to the folder; a name may be a path, from the folder (`~/` home), and a folder named is gone
+  into, one ending in `/` made first where it isn't there (DF-D5), as `ctrl+n` makes one.
+- A file there is replaced only after `y` to "rep.docx is there — replace it?" (`n`: the window again); a note of any
+  root is refused, the window kept (an earlier Markdown export aside, which is asked about as a file is) (DF-D3).
+
+Previously: "a folder named is gone into" (a name ending in `/` that wasn't there was exported to as a file); "a note
+is refused" (this root's only).
+
+**§ Markdown**, the bullet on pictures:
+
+- **Pictures** are copied into a folder beside it, `report.export.assets/`: only files that are pictures by what they
+  hold (a raster's header, an SVG's start), from inside the root by where they really are, or a picture from the web,
+  its cached copy (DF-D2). Each goes by its own name (one from the web by its address's, with its kind's extension
+  where that names none); a second of a name is numbered. Obsidian's size is kept where Obsidian reads it:
+  `![alt|240](…)`. A picture on the web with no copy here stays a picture, its address as it was. Anything else a
+  picture link names — a file that isn't a picture, one outside the root — is a link to it from the export,
+  `[alt](../notes.txt)` (its alt, else its file's name), nothing of it copied; one on another drive is its words. The
+  folder answers no lookup by name ([links.md](links.md) § Wikilinks).
+
+Previously: "Pictures are copied into a folder beside it, `report.export.assets/`, each by its own name …": whatever a
+picture link named, a text file or a file outside the root included.
+
+**§ Known limits**, the first bullet:
+
+- A picture is read wherever its link points, as on screen. A note from elsewhere can name a picture outside the
+  root, and its export as Word, PDF, a web page or an e-book would hold that picture; a Markdown export links it
+  (DF-D2).
+
+Previously: "… and its export would hold that picture."
 
 ## MODIFIED design/links.md § Renames and moves; design/tui.md § Renames, § Files in the explorer (DF-D4)
 
@@ -221,7 +266,17 @@ Obsidian's `==highlight==` and `%%comment%%`.
 
 ## MODIFIED design/links.md § Wikilinks (DF-D18)
 
-An export's pictures left out of lookups by name.
+The bullet **What it reaches**:
+
+- **What it reaches,** in order: a note by its name (its file's) or by its path; a path out of the root or into a
+  root nested in it; an attachment, relative to the note, then from the root, then by its file name anywhere in the
+  root, as Obsidian finds one (`![[dal.png]]`), but in a Markdown export's pictures (`*.export.assets/`), whose copies
+  would answer for the pictures they were copied from, unless the name goes through such a folder
+  (`[[report.export.assets/dal.png]]`) (DF-D18); a note by an alias its front matter gives (`aliases` or `alias`),
+  after every file name (D71, D46). The converter's reading of the old wikilinks leaves them out alike.
+
+Previously: "… then by its file name anywhere in the root, as Obsidian finds one (`![[dal.png]]`); …", an export's
+copies included, so one beside a note could win over the picture, or tie with it.
 
 ## MODIFIED design/roots.md § Search scope, design/links.md § Where a link lands, design/roots.md § Named folders
 

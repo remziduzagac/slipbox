@@ -68,12 +68,13 @@ The keys:
 | `esc` | cancel |
 
 The name may be a path, from the folder shown, or from your home folder with `~/`. A name that is a folder goes into
-it. With the mouse, click a place to go there, an entry to pick it (and again to open it), the name to type in it; the
-wheel scrolls, and a click outside the window cancels.
+it; one ending in `/` is a folder too, made if it isn't there (`drafts/2026/`). With the mouse, click a place to go
+there, an entry to pick it (and again to open it), the name to type in it; the wheel scrolls, and a click outside the
+window cancels.
 
 If a file of that name is there already, slipbox asks `ideas/coffee.docx is there — replace it?`: `y` replaces it, `n`
-takes you back to the window. A note of this root is never replaced: slipbox says so and keeps the window open (the one
-exception is an earlier Markdown export, which slipbox asks about as it does any file).
+takes you back to the window. A note is never replaced, in this root or another: slipbox says so and keeps the window
+open (the one exception is an earlier Markdown export, which slipbox asks about as it does any file).
 
 ## From the command line
 
@@ -85,6 +86,7 @@ slipbox export <note…> [--to <format>] [-o <path>]
 slipbox export ideas/coffee.md                      # ideas/coffee.docx, beside the note
 slipbox export ideas/coffee.md --to pdf             # ideas/coffee.pdf
 slipbox export ideas/coffee.md -o ~/Desktop/        # ~/Desktop/coffee.docx
+slipbox export ideas/coffee.md -o sent/2026/        # sent/2026/coffee.docx, the folder made
 slipbox export inbox.md ideas/coffee.md -o both.epub  # one e-book, two chapters
 ```
 
@@ -93,12 +95,12 @@ slipbox export inbox.md ideas/coffee.md -o both.epub  # one e-book, two chapters
 - **The format** is `--to`'s: a name such as `pdf`, another name for it such as `word`, or an extension such as
   `.docx`. Without `--to`, it's the extension of `-o`'s file; without either, Word. A format slipbox doesn't write is a
   usage error (exit 2).
-- **Where it goes** is `-o` (or `--out`), from the folder you're in. A folder that exists gets the first note's name
-  in it; any other path is the file's name, its folders made as needed. Without `-o`, the document goes beside the
-  first note, under its name.
-- **A file already there is replaced**, without asking, as `-o` does in any tool. A note of the root is never replaced:
-  slipbox says `ideas/coffee.md is a note — an export doesn't write over it` and exits with 5. An earlier Markdown
-  export is the exception, and is replaced.
+- **Where it goes** is `-o` (or `--out`), from the folder you're in. A folder that exists, or a path ending in `/`,
+  gets the first note's name in it, the folder made if it isn't there; any other path is the file's name, its folders
+  made as needed. Without `-o`, the document goes beside the first note, under its name.
+- **A file already there is replaced**, without asking, as `-o` does in any tool. A note is never replaced, of this
+  root or any other: slipbox says `ideas/coffee.md is a note — an export doesn't write over it` and exits with 5. An
+  earlier Markdown export is the exception, and is replaced.
 - **What it says:** `exported ideas/coffee.md to ideas/coffee.docx (Word (.docx))`, with `, 3 files beside it` when it
   wrote some (a Markdown export's pictures). With `--json`, the data is `{path, format, notes, bytes, files}`.
 
@@ -167,9 +169,14 @@ Exporting the same notes again gives the book the same identity, so it is the sa
 A single Markdown file you can take to GitHub or any editor, named `coffee.export.md` so that it never takes a note's
 place.
 
-- **Pictures** are copied into a folder beside it, `coffee.export.assets/`, and linked from there. A picture's size
-  written Obsidian's way (`|240`) is kept. A picture on the internet slipbox has no copy of stays a picture at its
-  address, so whatever shows the file fetches it.
+- **Pictures** are copied into a folder beside it, `coffee.export.assets/`, and linked from there: those from inside
+  the root, and only files that really are pictures. Anything else a picture's link names, a text file or a picture
+  from outside the root, isn't copied: it becomes a link to where it is. A picture's size written Obsidian's way
+  (`|240`) is kept. A picture on the internet slipbox has no copy of stays a picture at its address, so whatever shows
+  the file fetches it.
+- **Its pictures don't answer to their names.** slipbox looks for `![[photo.png]]` everywhere in the root but in a
+  folder ending `.export.assets`, so an export beside your notes never takes the place of the picture it copied. A
+  path through the folder (`![[coffee.export.assets/photo.png]]`) still reaches the copy.
 - **Kept as written**, since Markdown viewers draw them themselves: a Mermaid diagram as its code, maths as `$…$` and
   `$$`, a callout as `> [!tip] Its title`.
 - **Links inside the document** go to the headings as GitHub names them. Footnotes are numbered `[^1]`, `[^2]` in the
@@ -206,8 +213,8 @@ place.
 
 ## What an export never does
 
-- **It never writes over a note of the root.** The one exception is an earlier Markdown export, which its front matter
-  marks.
+- **It never writes over a note**, of this root or any other. The one exception is an earlier Markdown export, which
+  its front matter marks.
 - **It never reaches the network.** A picture on the internet comes from slipbox's own copy, or stays a link. See
   [Privacy](privacy.md).
 - **It never runs another program**, and never installs anything: every format is written by slipbox itself.
@@ -215,11 +222,11 @@ place.
 
 ## Limits
 
-- **A picture is read wherever its link points**, outside the root too: a note someone else wrote can name a file
-  elsewhere on your machine, and the export would hold it. A Markdown export copies the file as it is, even one that
-  isn't a picture. Look through an export of a note you didn't write before you send it.
-- **From the command line, a file at `-o` is replaced without asking** unless it's a note of this root. A note in
-  another folder is replaced like any file. To export into a folder, the folder must exist; otherwise `-o` names a file.
+- **A picture is read wherever its link points**, outside the root too: a note someone else wrote can name a picture
+  elsewhere on your machine, and a Word, PDF, web page or e-book export would hold it. A Markdown export copies only
+  the root's pictures. Look through an export of a note you didn't write before you send it.
+- **From the command line, a file at `-o` is replaced without asking**, unless it's a note. A folder that isn't there
+  yet needs its `/` at the end; without it, `-o` names a file.
 - **A footnote referred to inside an embedded section**, but written outside that section, isn't drawn in.
 - **Some pictures can't be read:** a BMP compressed with run-length encoding, or a damaged file. Each becomes its
   description.

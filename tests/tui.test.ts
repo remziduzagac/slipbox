@@ -8613,6 +8613,28 @@ describe("vaults in the TUI (17.x)", () => {
     expect(await until(() => existsSync(join(root, "out", "rep.docx")))).toBe(true);
   });
 
+  test("a name ending in / is a folder, made where it isn't there and gone into; another root's note refused as this one's are", async () => {
+    const root = makeVault();
+    writeFileSync(join(root, "rep.md"), "# Rep\n");
+    const other = mkdtempSync(join(sandbox, "other-"));
+    mkdirSync(join(other, ".slipbox"));
+    writeFileSync(join(other, "theirs.md"), "# Theirs\n");
+    const h = await harness({ root, open: "rep.md" });
+    await h.keys("space", "n", "o", "enter");
+    saveAs(h).name = "made/v1/";
+    await h.keys("enter");
+    expect([saveAs(h).dir, saveAs(h).name, saveAs(h).error]).toEqual([join(root, "made", "v1"), "rep.docx", null]);
+    // Another root's note: refused, the window kept.
+    saveAs(h).name = join(other, "theirs.md");
+    await h.keys("enter");
+    expect(h.app.messages.at(-1)).toMatchObject({ level: "warn", text: `export: ${join(other, "theirs.md")} is a note — an export doesn't write over it` });
+    expect(saveAs(h).name).toBe(join(other, "theirs.md"));
+    expect(readFileSync(join(other, "theirs.md"), "utf8")).toBe("# Theirs\n");
+    saveAs(h).name = "rep.docx";
+    await h.keys("enter");
+    expect(await until(() => existsSync(join(root, "made", "v1", "rep.docx")))).toBe(true);
+  });
+
   test(":export docx skips the format list; a format it doesn't know, or a file that isn't a note, said", async () => {
     const root = makeVault();
     writeFileSync(join(root, "rep.md"), "# Rep\n");

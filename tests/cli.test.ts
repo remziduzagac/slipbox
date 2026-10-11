@@ -283,6 +283,17 @@ describe("writing", () => {
     expect(existsSync(join(vault, "exports", "x.odt"))).toBe(false);
     expect(slipbox(["export"]).code).toBe(2);
   });
+  test("export: -o ending in / a folder, made, the note's name in it, its own name no format; never over another root's note", () => {
+    const made = slipbox(["export", "dome-refit", "-o", "made/v1.2/", "--json"]);
+    expect([made.code, made.json.data.path]).toEqual([0, "made/v1.2/dome-refit.docx"]);
+    expect(readFileSync(join(vault, "made", "v1.2", "dome-refit.docx")).subarray(0, 4).toString("latin1")).toBe("PK\x03\x04");
+    const other = join(sandbox, "other-root");
+    mkdirSync(join(other, ".slipbox"), { recursive: true });
+    writeFileSync(join(other, "theirs.md"), "# Theirs\n");
+    const over = slipbox(["export", "dome-refit", "-o", join(other, "theirs.md"), "--to", "docx"]);
+    expect([over.code, over.err]).toEqual([5, `slipbox: ${join(other, "theirs.md")} is a note — an export doesn't write over it\n`]);
+    expect(readFileSync(join(other, "theirs.md"), "utf8")).toBe("# Theirs\n");
+  });
   test("export to PDF, a web page, an e-book; Markdown beside it apart from the note, its pictures in a folder, an earlier one replaced", () => {
     for (const [to, magic] of [["pdf", "%PDF-"], ["html", "<!doctype html>"], ["epub", "PK\x03\x04"]] as const) {
       const r = slipbox(["export", "dome-refit", "--to", to, "--json"]);

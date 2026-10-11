@@ -104,8 +104,9 @@ A wikilink is Obsidian's form: double brackets around a note's name.
 
 Names are compared without regard to case: `[[Coffee]]` reaches `coffee.md`. A note also answers to the names its front
 matter gives under `aliases:` (or `alias:`), after every file name. A picture or other file (`![[beans.png]]`) is looked
-for beside the note, then from the root, then by its name anywhere in the root, as Obsidian finds one. In a table cell,
-write the `|` before the shown text as `\|`.
+for beside the note, then from the root, then by its name anywhere in the root, as Obsidian finds one; a Markdown
+export's copies, in a folder ending `.export.assets`, are left out. In a table cell, write the `|` before the shown
+text as `\|`.
 
 When two notes share a name, slipbox takes the one whose name has the same case as the link, then the one in the linking
 note's own folder, then the one in the deepest folder the two share, then the one with the shortest path. That is how

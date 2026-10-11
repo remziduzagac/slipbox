@@ -4942,6 +4942,22 @@ describe("links by name, read again within their root (21.3)", () => {
     expect(at("pic.png", "Home.md")).toMatchObject({ resolvedKind: "ambiguous", candidates: ["x/pic.png", "y/pic.png"] });
   });
 
+  test("a Markdown export's pictures answer no lookup by name: ![[dal.png]] finds the picture, not its copy; a path through it does", () => {
+    const dir = mkdtempSync(join(tmpdir(), "slipbox-wiki-export-"));
+    mkdirSync(join(dir, ".obsidian"));
+    for (const d of ["attachments", "Recipes/dal.export.assets", "Recipes/menu.export.assets", "Recipes/old.export.assets"]) mkdirSync(join(dir, d), { recursive: true });
+    for (const f of ["attachments/dal.png", "Recipes/dal.export.assets/dal.png", "Recipes/menu.export.assets/dal.png", "Recipes/old.export.assets/only.png"]) writeFileSync(join(dir, f), "png");
+    writeFileSync(join(dir, "Recipes", "dal.md"), "![[dal.png]] ![[only.png]]\n");
+    const g = openGraph(locateVault({ root: dir }), DEFAULT_CONFIG, true);
+    const at = (target: string, from: string) => g.resolveLink({ kind: "embed", target }, from);
+    // The copies, nearer and two of them, would have won or tied.
+    expect(at("dal.png", "Recipes/dal.md")).toMatchObject({ resolvedKind: "file", path: "attachments/dal.png" });
+    expect(at("only.png", "Recipes/dal.md")).toMatchObject({ resolvedKind: "unresolved" });
+    expect(at("menu.export.assets/dal.png", "x.md")).toMatchObject({ resolvedKind: "file", path: "Recipes/menu.export.assets/dal.png" });
+    // The converter's old reading of a wikilink, alike.
+    expect(g.resolveLegacyWiki({ kind: "embed", target: "dal.png" }, "Recipes/dal.md")).toMatchObject({ resolvedKind: "file", path: "attachments/dal.png" });
+  });
+
   test("renamed, a note's wikilinks follow in their form — a name a name, a path a path, an alias kept; resolve reads them (21.3)", async () => {
     const dir = mkdtempSync(join(tmpdir(), "slipbox-wiki-mv-"));
     mkdirSync(join(dir, ".slipbox"));

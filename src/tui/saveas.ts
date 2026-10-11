@@ -6,6 +6,7 @@
 
 import { mkdirSync, readdirSync, statSync } from "node:fs";
 import { dirname, isAbsolute, join, resolve } from "node:path";
+import { namesFolder } from "../core/export/index.ts";
 import type { App } from "./app.ts";
 import { keyChar } from "./keys.ts";
 
@@ -147,7 +148,10 @@ export function chosen(app: App, o: SaveAsOverlay): string {
   return n.startsWith("~/") ? join(app.home, n.slice(2)) : isAbsolute(n) ? n : resolve(o.dir, n);
 }
 
-/** Export: the window closed and the file given, or — the name a folder — that folder gone into. */
+/**
+ * Export: the window closed and the file given, or — the name a folder — that folder gone into; one ending in `/` made
+ * first where it isn't there.
+ */
 function finish(app: App, o: SaveAsOverlay): void {
   if (!o.name.trim()) return;
   const path = chosen(app, o);
@@ -155,6 +159,15 @@ function finish(app: App, o: SaveAsOverlay): void {
   try {
     folder = statSync(path).isDirectory();
   } catch {}
+  if (!folder && namesFolder(o.name.trim())) {
+    try {
+      mkdirSync(path, { recursive: true });
+      folder = true;
+    } catch (err) {
+      o.error = `${o.name.trim()} can't be made (${(err as NodeJS.ErrnoException).code ?? "error"})`;
+      return;
+    }
+  }
   if (folder) {
     go(o, path);
     o.name = o.suggested;

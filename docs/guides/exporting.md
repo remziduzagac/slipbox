@@ -18,8 +18,8 @@ needs installing, and nothing is fetched from the network while it does.
 
 To put it elsewhere, `tab` moves between the places, the folder and the name. In the folder, `enter` goes into a folder
 and `left` goes up; or type a path as the name (`~/Desktop/coffee.docx`). The window opens where you exported last the
-next time. A file already there is replaced only after you answer `y`, and a note of this root is never written
-over.
+next time. A name ending in `/` is a folder, made if it isn't there. A file already there is replaced only after you
+answer `y`, and a note is never written over.
 
 Unsaved changes are saved first, since an export reads the notes from disk.
 
@@ -42,6 +42,7 @@ cd ~/notes
 slipbox export ideas/coffee                                   # Word, beside the note: ideas/coffee.docx
 slipbox export ideas/coffee --to pdf                          # or html, epub, md
 slipbox export inbox ideas/coffee -o ~/Desktop/notes.docx     # two notes, one document
+slipbox export ideas/coffee -o ~/Desktop/sent/                # into a folder, made if it isn't there
 ```
 
 `--to` names the format; without it, the extension of `-o`'s file does, else it's Word. Each run prints where the
@@ -57,7 +58,8 @@ document went. An agent can export too ([Working with agents](agents.md)); the s
   printed.
 - **E-book** (`.epub`): a chapter per note and a contents page, for an e-reader.
 - **Markdown** (`.export.md`): one file for GitHub or any editor, its pictures copied into a folder beside it
-  (`coffee.export.assets/`). Diagrams, maths and callouts stay as written, for the next app to draw.
+  (`coffee.export.assets/`): those of the root only, the rest linked where they are. Diagrams, maths and callouts stay
+  as written, for the next app to draw.
 
 In every format, embedded notes (`![[note]]`) are drawn in as they are on screen, and tags are plain text. In all but
 Markdown, Mermaid diagrams and display maths become pictures, and code is coloured. [Exporting](../manual/export.md)
@@ -73,9 +75,8 @@ has every detail.
 - **Pictures.** A missing one becomes its alt text. One from the web goes in only if slipbox has already fetched it to
   show you (follow it with `enter` and say yes); otherwise it's a link.
 - **PDF.** The fonts are your machine's, so a character none of them has is a box, and emoji come out black and white.
-- **A Markdown export inside the folder** holds copies of your pictures under the same names, which can make a
-  picture linked by name, `![[photo.png]]`, match two files. Export it outside the folder with `-o`, or delete it once
-  it's sent.
+- **Pictures from elsewhere.** A note you didn't write can name a picture outside the root. A Word, PDF, web page or
+  e-book export takes it in; a Markdown export only links to it.
 
 Open the document once yourself before you send it.
 

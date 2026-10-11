@@ -3,9 +3,9 @@
 // the formats' names. The CLI's `export` is in cli.test.ts, the TUI's in tui.test.ts.
 
 import { beforeAll, describe, expect, setDefaultTimeout, test } from "bun:test";
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, symlinkSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { join, relative } from "node:path";
 import { crc32, inflateRawSync, inflateSync } from "node:zlib";
 import type { Image, Link, PhrasingContent, RootContent } from "mdast";
 import { DEFAULT_CONFIG } from "../src/core/config.ts";
@@ -616,6 +616,26 @@ describe("export: Markdown (10.3)", () => {
     expect(new TextDecoder().decode(out.files[1]!.data)).toStartWith("<svg");
   });
 
+  test("only pictures of the root copied: a file that isn't one by what it holds, or one outside (a link out too), linked where it is", async () => {
+    const outside = mkdtempSync(join(sandbox, "outside-"));
+    writeFileSync(join(outside, "secret.txt"), "private");
+    writeFileSync(join(outside, "photo.png"), png);
+    const away = relative(sandbox, outside);
+    const r = root({
+      "a.md": `# A\n\n![](notes.txt) ![fake](fake.png) ![[fake.png]] ![ok](pic.png)\n\n![](../${away}/secret.txt) ![far](../${away}/photo.png) ![in](linked.png)\n`,
+      "notes.txt": "plain text",
+      "fake.png": "not a picture",
+      "pic.png": png,
+    });
+    symlinkSync(join(outside, "photo.png"), join(r.dir, "linked.png"));
+    // Exported into a folder: each link from there.
+    const out = await exportOf(r, ["a.md"], "md", "exports/out.md");
+    expect(out.files.map((f) => f.path)).toEqual(["out.assets/pic.png"]);
+    expect(out.text).toContain("[notes.txt](../notes.txt) [fake](../fake.png) [fake.png](../fake.png) ![ok](out.assets/pic.png)");
+    expect(out.text).toContain(`[secret.txt](../../${away}/secret.txt) [far](../../${away}/photo.png) [in](../linked.png)`);
+    expect(out.text).not.toContain("private");
+  });
+
   test("what Markdown writes itself kept as written: a diagram's source, maths, a callout's marker; footnotes renumbered; tasks", async () => {
     const r = root({
       "a.md": "```mermaid\ngraph TD\n  A --> B\n```\n\n$$\nx^2\n$$\n\nInline $y$.\n\n> [!tip] Try it\n> Body.\n\n> [!warning]\n> Careful.\n\nOne[^z] two[^a].\n\n[^a]: Second.\n[^z]: First.\n\n- [ ] open\n- [x] done\n",
@@ -644,6 +664,36 @@ describe("export: Markdown (10.3)", () => {
     expect(exportTarget(again, "a.md", format, null, r.dir)).toBe(target);
     expect(() => exportTarget(again, "a.md", format, "notes.md", r.dir)).toThrow("notes.md is a note — an export doesn't write over it");
     expect(isExport(join(r.dir, "notes.md"))).toBe(false);
+  });
+
+  test("never over a note of any root: another's, a nested one's, one reached through a link; their other files replaced", async () => {
+    const r = root({ "a.md": "# A\n", "inner/.slipbox/version": "1\n", "inner/n.md": "# N\n" });
+    const other = root({ "theirs.md": "# Theirs\n", "sub/deep.md": "# Deep\n", "data.txt": "x" });
+    const plain = mkdtempSync(join(sandbox, "plain-"));
+    symlinkSync(join(other.dir, "sub"), join(plain, "into"));
+    writeFileSync(join(plain, "loose.md"), "# Loose\n");
+    const format = formatFor("md")!;
+    const at = (typed: string) => exportTarget(r.graph, "a.md", format, typed, r.dir);
+    expect(() => at(join(other.dir, "theirs.md"))).toThrow(`${join(other.dir, "theirs.md")} is a note — an export doesn't write over it`);
+    expect(() => at("inner/n.md")).toThrow("inner/n.md is a note — an export doesn't write over it");
+    expect(() => at(join(plain, "into", "deep.md"))).toThrow("deep.md is a note — an export doesn't write over it");
+    // Another root's file that isn't a note, and a note of no root: replaced, as -o does.
+    expect(at(join(other.dir, "data.txt"))).toBe(join(other.dir, "data.txt"));
+    expect(at(join(plain, "loose.md"))).toBe(join(plain, "loose.md"));
+    // Another root's earlier Markdown export: replaced too.
+    writeExport(join(other.dir, "old.md"), await exportNotes(r.graph, ["a.md"], format, join(other.dir, "old.md")));
+    expect(at(join(other.dir, "old.md"))).toBe(join(other.dir, "old.md"));
+  });
+
+  test("a path ending in / names a folder: the note's name in it, the folder made when it's written", async () => {
+    const r = root({ "a.md": "# A\n" });
+    const docx = formatFor("docx")!;
+    const target = exportTarget(r.graph, "a.md", docx, "out/v1.2/", r.dir);
+    expect(target).toBe(join(r.dir, "out", "v1.2", "a.docx"));
+    writeExport(target, await exportNotes(r.graph, ["a.md"], docx, target));
+    expect(existsSync(target)).toBe(true);
+    // Without its `/`, a name that isn't there is the file's.
+    expect(exportTarget(r.graph, "a.md", docx, "out/v2", r.dir)).toBe(join(r.dir, "out", "v2"));
   });
 });
 

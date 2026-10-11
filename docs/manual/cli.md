@@ -1206,13 +1206,14 @@ slipbox export coffee inbox -o exports/coffee.docx
 ```
 
 - `--to docx|pdf|html|epub|md`: the format; else `-o`'s extension says, else Word.
-- `--out <path>` (or `-o`): where to write it. A folder puts it there under the first note's name.
+- `--out <path>` (or `-o`): where to write it. A folder, or a path ending in `/` (made if it isn't there), puts it
+  there under the first note's name.
 
 Without `-o`, it goes beside the first note under its name (`ideas/coffee.docx`); Markdown's as `coffee.export.md`,
-its pictures in `coffee.export.assets/`. A file already at the path is replaced without asking, but never a note of
-this root (exit 5) other than an earlier Markdown export ([Exporting](export.md#from-the-command-line)). It fetches
-nothing from the network. `--json`: `{path, format, notes[], bytes, files[]}`, `files` being the pictures
-written beside it.
+its pictures in `coffee.export.assets/` (the root's only; anything else stays a link). A file already at the path is
+replaced without asking, but never a note, of this root or another (exit 5), other than an earlier Markdown export
+([Exporting](export.md#from-the-command-line)). It fetches nothing from the network. `--json`:
+`{path, format, notes[], bytes, files[]}`, `files` being the pictures written beside it.
 
 ## Code
 

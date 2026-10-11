@@ -223,6 +223,11 @@ export interface Backlink {
 
 const NOTE_EXT_RE = /\.(md|markdown)$/i;
 
+/** Whether a root-relative path is inside a Markdown export's pictures' folder: `notes/report.export.assets/dal.png`. */
+function inExportAssets(rel: string): boolean {
+  return /(?:^|\/)[^/]+\.export\.assets\//i.test(rel);
+}
+
 /** Bumped when what a note's entry holds changes: 5, content hashes (17.12). */
 export const INDEX_VERSION = 12; // 6: inline #tags (1.6); 7: where links end (11.7); 8: no wikilinks (20.22); 9: wikilinks again (21.3); 10: heading ids, anchors; 11: front matter links; 12: worker-parsed heading ids (15.1)
 
@@ -926,9 +931,7 @@ export class Graph {
       const att = resolveAttachment(target, fromRel, this.root);
       if (att) return { resolvedKind: "file", path: att, candidates: [], how: "path" };
       // Obsidian finds attachments anywhere in the vault by name.
-      const named = this.assets.get(target.split("/").pop()!.normalize("NFC").toLowerCase()) ?? [];
-      const suffix = target.normalize("NFC").toLowerCase();
-      const hits = named.filter((p) => p.toLowerCase() === suffix || p.toLowerCase().endsWith(`/${suffix}`));
+      const hits = this.byFileName(target);
       // Two of a name, as two notes are: the nearest, then the shortest; a real tie ambiguous.
       const r = pickCandidate(hits, target.normalize("NFC"), fromRel);
       if (r.status === "resolved") return { resolvedKind: "file", path: r.path, candidates: r.candidates, ...(r.how ? { how: r.how } : {}) };
@@ -937,6 +940,18 @@ export class Graph {
     const aliased = this.byAlias(target, fromRel);
     if (aliased) return aliased;
     return this.oldForm(target) ?? { resolvedKind: "unresolved", path: null, candidates: [] };
+  }
+
+  /**
+   * The attachments a wikilink's name finds anywhere in the root, as Obsidian finds them: by the file's name, or a
+   * path's end aligned on segments. A Markdown export's pictures (`report.export.assets/`) are left out, unless the name
+   * itself goes through such a folder: their copies would answer for the pictures they were copied from.
+   */
+  private byFileName(target: string): string[] {
+    const named = this.assets.get(target.split("/").pop()!.normalize("NFC").toLowerCase()) ?? [];
+    const suffix = target.normalize("NFC").toLowerCase();
+    const throughExport = inExportAssets(suffix);
+    return named.filter((p) => (p.toLowerCase() === suffix || p.toLowerCase().endsWith(`/${suffix}`)) && (throughExport || !inExportAssets(p)));
   }
 
   /**
@@ -1000,9 +1015,7 @@ export class Graph {
       const att = resolveAttachment(link.target, fromRel, this.root);
       if (att) return { resolvedKind: "file", path: att, candidates: [] };
       // Obsidian finds attachments anywhere in the vault by name.
-      const named = this.assets.get(link.target.split("/").pop()!.normalize("NFC").toLowerCase()) ?? [];
-      const suffix = link.target.normalize("NFC").toLowerCase();
-      const hits = named.filter((p) => p.toLowerCase() === suffix || p.toLowerCase().endsWith(`/${suffix}`));
+      const hits = this.byFileName(link.target);
       if (hits.length === 1) return { resolvedKind: "file", path: hits[0]!, candidates: hits };
       if (hits.length > 1) return { resolvedKind: "ambiguous", path: null, candidates: hits.sort() };
     }
