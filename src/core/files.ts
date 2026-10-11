@@ -1,7 +1,7 @@
 // File operations beyond renames (18.2–18.5): a note or folder deleted to the vault's trash and
 // restored from it, and a note or folder copied. Moves and renames, which rewrite links, are
 // core/rename.ts's. The trash is personal — in the vault's state, never in the folder: a delete
-// is undone by restoring, not by git.
+// is undone by restoring, not by git. It is emptied by command, and keeps nothing past 30 days (DF-D14).
 
 import { randomBytes } from "node:crypto";
 import { cpSync, existsSync, mkdirSync, renameSync, rmSync, statSync } from "node:fs";
@@ -39,10 +39,43 @@ function trashIndex(v: Keyed): string {
   return join(trashDir(v), "trash.json");
 }
 
-export function listTrash(v: Keyed): TrashItem[] {
+/** How long the trash keeps a thing (DF-D14): older, it goes for good when the trash is next read or written. */
+export const TRASH_DAYS = 30;
+
+/** What's in the trash, newest first; anything older than {@link TRASH_DAYS} removed for good on the way. */
+export function listTrash(v: Keyed, now = new Date()): TrashItem[] {
   const f = readJson<TrashFile | null>(trashIndex(v), null);
   if (!f || f.version !== 1 || !Array.isArray(f.items)) return [];
-  return f.items.filter((i) => i && typeof i.id === "string" && typeof i.abs === "string");
+  const items = f.items.filter((i) => i && typeof i.id === "string" && typeof i.abs === "string");
+  const since = now.getTime() - TRASH_DAYS * 86_400_000;
+  // A date that doesn't read is kept: only what is surely older goes.
+  const old = new Set(items.filter((i) => Date.parse(i.at) < since).map((i) => i.id));
+  if (!old.size) return items;
+  const kept = items.filter((i) => !old.has(i.id));
+  removeItems(v, kept, old);
+  return kept;
+}
+
+/**
+ * Empty the trash (DF-D14): every item — or those of `ids`, what a preview showed — gone for good. The list
+ * is written first, so a stop halfway leaves bytes in the trash's folder, never an item that can't be restored.
+ */
+export function emptyTrash(v: Keyed, ids?: readonly string[], now = new Date()): TrashItem[] {
+  const items = listTrash(v, now);
+  const want = ids ? new Set(ids) : null;
+  const gone = items.filter((i) => !want || want.has(i.id));
+  if (gone.length) removeItems(v, items.filter((i) => !gone.includes(i)), new Set(gone.map((i) => i.id)));
+  return gone;
+}
+
+/** The trash's list written as `kept`, then the folders of `gone` removed from disk. */
+function removeItems(v: Keyed, kept: TrashItem[], gone: Set<string>): void {
+  saveTrash(v, kept);
+  for (const id of gone) {
+    // An id is the trash's own name for a folder in it; one edited to climb out is never followed.
+    if (!/^[\w-]+$/.test(id)) continue;
+    rmSync(join(trashDir(v), id), { recursive: true, force: true });
+  }
 }
 
 function saveTrash(v: Keyed, items: TrashItem[]): void {
@@ -109,7 +142,7 @@ export function trashPath(g: Graph, v: Keyed, rel: string, now = new Date()): Tr
   const gone = within(g, p.rel);
   move(p.abs, join(trashDir(v), id, basename(p.abs)));
   const item: TrashItem = { id, abs: p.abs, shown: p.rel, dir: p.dir, at: now.toISOString() };
-  saveTrash(v, [item, ...listTrash(v)]);
+  saveTrash(v, [item, ...listTrash(v, now)]);
   for (const f of gone) {
     if (g.notes.has(f)) g.removeFile(f);
     else g.removeAsset(f);
@@ -127,7 +160,7 @@ export function trashVaultMarker(v: Keyed, parentRoot: string, vaultRoot: string
   const id = `${now.toISOString().replace(/[:.]/g, "-")}-${randomBytes(3).toString("hex")}`;
   move(abs, join(trashDir(v), id, ".slipbox"));
   const item: TrashItem = { id, abs, shown: `${relative(parentRoot, vaultRoot)}/.slipbox`, dir: true, at: now.toISOString() };
-  saveTrash(v, [item, ...listTrash(v)]);
+  saveTrash(v, [item, ...listTrash(v, now)]);
   return item;
 }
 
@@ -135,8 +168,8 @@ export function trashVaultMarker(v: Keyed, parentRoot: string, vaultRoot: string
  * Put a deleted note, file or folder back where it was (18.4): `which` is its id, or its path
  * (the latest of that path). Refused when something is there now.
  */
-export function restorePath(g: Graph | null, v: Keyed, which: string): TrashItem {
-  const items = listTrash(v);
+export function restorePath(g: Graph | null, v: Keyed, which: string, now = new Date()): TrashItem {
+  const items = listTrash(v, now);
   const item = items.find((i) => i.id === which) ?? items.find((i) => i.shown === which || i.abs === which);
   if (!item) throw new FileOpError(`nothing in the trash named ${which}`);
   if (existsSync(item.abs)) throw new FileOpError(`${item.shown} exists again; not restoring over it`);

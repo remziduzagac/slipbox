@@ -646,7 +646,7 @@ Deleting, moving, copying, cutting and exporting act on the explorer's selected 
 | Keys | What |
 | --- | --- |
 | `space n n`, `ctrl+n` | a new note beside this one, its name asked (`projects/idea` makes the folder too) |
-| `space n m` | rename or move the note by its path, links fixed after a preview |
+| `space n m` | rename or move the note by its path, or into a folder; links fixed after a preview |
 | `space n shift+m` | move the note to a folder picked from a tree |
 | `space n h` | rename the heading the cursor is in, every link to it fixed after a preview |
 | `space n d` | delete the note to slipbox's trash, after asking |
@@ -686,7 +686,7 @@ A root is the folder slipbox works in; [Links and roots](links-and-roots.md) exp
 | `space v n` | name this root (or the selected one) as pointers name it, after a preview |
 | `space v m` | give this plain folder a `.slipbox/`; in a root, make the selected folder a root of its own |
 | `space v shift+m` | make a nested root a plain folder of the root holding it |
-| `space v t` | slipbox's trash: what was deleted here; `enter` restores it |
+| `space v t` | slipbox's trash: what was deleted here; `enter` restores it, and its last row empties it |
 | `space v u` | restore what was deleted last |
 | `space v shift+u` | undo the last rename, move, relink or replace in every note, after a preview |
 | `space v p` | the Problems panel's All tab: this root's broken links, lint, conflicts |
@@ -749,6 +749,7 @@ lists what it can be (notes, themes, glyph sets, formats, tags, types). Your con
 | `:rename <path>`, `:mv <path>` | rename or move the note, links fixed after a preview |
 | `:delete` | delete the note to slipbox's trash, after asking |
 | `:trash` | slipbox's trash: `enter` restores an item |
+| `:empty-trash` | the trash, on its last row: `enter` asks, then empties it for good |
 | `:undo-rename` | undo the last rename, move or relink, after a preview |
 | `:link` | write a link to a note you pick |
 | `:relink` | point this note's links that a move broke where the files are now |

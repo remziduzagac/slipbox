@@ -656,7 +656,7 @@ For each root, in `<key>/`:
 
 - `session.json`: tabs, splits and panes, the settings changed in the TUI, the notes and commands used lately.
 - `scratch.md`: the scratch, unless `capture.location` puts it in the root.
-- `trash/`: what you deleted, to restore; `trash.json` lists it.
+- `trash/`: what you deleted, to restore, for 30 days; `trash.json` lists it.
 - `renames.json`: the last 20 renames and moves, to undo.
 - `redirects.json`: moves seen, to repair the links that pointed at the old place.
 - `heads.json`: each branch's last commit seen.

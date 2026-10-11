@@ -58,10 +58,10 @@ import { ServerManager } from "../core/servers/manager.ts";
 import { atLeast, frontmatterFindings, lintProblems, noteProblems, type Problem, rootTypes, SEVERITIES, type Severity, syntaxProblems } from "../core/diagnostics.ts";
 import { languageOf, serverTable } from "../core/servers/languages.ts";
 import { rootFor } from "../core/servers/find.ts";
-import { type Applied, applyPlan, loggedRenames, planFolderMove, planHeadingRename, planMakeVault, planNoteRename, planRelink, planUndo, planUnmakeVault, planVaultFolderMove, planVaultRename, RenameError, type RenamePlan } from "../core/rename.ts";
+import { type Applied, applyPlan, loggedRenames, moveTarget, planFolderMove, planHeadingRename, planMakeVault, planNoteRename, planRelink, planUndo, planUnmakeVault, planVaultFolderMove, planVaultRename, RenameError, type RenamePlan } from "../core/rename.ts";
 import { planConvert, urlPath } from "../core/convert.ts";
 import { describeBreak, type MergeReview, MergeReviewError, reviewMerge } from "../core/mergereview.ts";
-import { copyPath, FileOpError, linksInto, listTrash, restorePath, trashPath } from "../core/files.ts";
+import { copyPath, emptyTrash, FileOpError, linksInto, listTrash, restorePath, type TrashItem, trashPath } from "../core/files.ts";
 import { noteIndexed, readIdentity, vaultConfigFile } from "../core/registry.ts";
 import { activityFile, AutoIndex, autoIndexFile, backgroundStatus, describeBackground } from "../core/autoindex.ts";
 import { forgetPlan, listPlans, loadPlan, type SavedPlan, savePlan } from "../core/plans.ts";
@@ -223,10 +223,12 @@ Usage:
   slipbox write <note> [text]       write a note (atomic, in the root)  [--stdin] [--append [--paragraph]] [--create] [--if-unchanged <sha>] [--allow-empty]
   slipbox mkdir <path>              make a folder here (and its parents)
   slipbox mv <note|folder> <new-path>  rename or move a note or folder; links fixed wherever they're reached  [--dry-run] [--plan]
-                                    <new-path> (and cp's path): from the root, or from here when ./ or ../, or absolute
+                                    <new-path> (and cp's path): from the root, or from here when ./ or ../, or absolute;
+                                    for mv, a folder that's there, or a path ending in /, is moved into (its name kept)
   slipbox cp <note|folder> [path]   copy a note or folder (beside it, as name-copy, when no path)
   slipbox rm <note|folder>          delete to the trash (slipbox trash restore puts it back)  [--dry-run]
   slipbox trash [restore <item>]    what's in the trash, newest first; restore an item (its id or path)
+  slipbox trash empty               what's in the trash, listed; removed for good with --yes (it keeps 30 days)  [--yes]
   slipbox name <new>                this folder's name, as a pointer names it: changed, the old kept; a repository given one
                                     [--dry-run] [--plan]
   slipbox folders [default <name> <path>]  the named folders: their copies, the one links open; or make one the one
@@ -450,6 +452,7 @@ export const FLAGS: Record<string, string[]> = {
   apply: ["dry-run"],
   mv: ["dry-run", "plan"],
   rm: ["dry-run"],
+  trash: ["yes"],
   name: ["dry-run", "plan"],
   "rename-heading": ["dry-run", "plan"],
   relink: ["dry-run", "plan"],
@@ -1265,15 +1268,16 @@ const HANDLERS: Record<string, Handler> = {
 
   mv(s, rest) {
     const what = requireArg(rest, "note or folder");
-    const to = destArg(s, rest[1]);
+    const to = destArg(s, rest[1], true);
     if (!to) throw new UsageError("missing the new path (mv <note|folder> <new-path>)");
     // A folder moves with everything in it, every link to any of it fixed (18.3).
     const dir = folderArg(s, what);
     // A vault nested in this one moves as a vault (18.7): links into it by path fixed, its id kept.
-    if (dir !== null && isVaultRoot(join(s.loc.root, dir))) return renameResult(s, () => planVaultFolderMove(s.graph, dir, to));
-    if (dir !== null) return renameResult(s, () => planFolderMove(s.graph, dir, to));
+    // Into a folder that's there, or named with a `/` (DF-D4): the name kept.
+    if (dir !== null && isVaultRoot(join(s.loc.root, dir))) return renameResult(s, () => planVaultFolderMove(s.graph, dir, moveTarget(s.graph, dir, to)));
+    if (dir !== null) return renameResult(s, () => planFolderMove(s.graph, dir, moveTarget(s.graph, dir, to)));
     const rel = resolveNote(s, what, false);
-    return renameResult(s, () => planNoteRename(s.graph, rel, to));
+    return renameResult(s, () => planNoteRename(s.graph, rel, moveTarget(s.graph, rel, to)));
   },
 
   cp(s, rest) {
@@ -1305,11 +1309,26 @@ const HANDLERS: Record<string, Handler> = {
 
   trash(s, rest) {
     const sub = rest[0] ?? "list";
+    const row = (i: TrashItem) => `${i.at.slice(0, 16).replace("T", " ")}  ${i.shown}${i.dir ? "/" : ""}  (${i.id})\n`;
+    const yes = has(s.args, "yes");
+    if (yes && sub !== "empty") throw new UsageError("--yes is for trash empty");
     if (sub === "list") {
       const items = listTrash(s.loc);
-      return { data: items, human: items.length ? items.map((i) => `${i.at.slice(0, 16).replace("T", " ")}  ${i.shown}${i.dir ? "/" : ""}  (${i.id})\n`).join("") : "the trash is empty\n" };
+      return { data: items, human: items.length ? items.map(row).join("") : "the trash is empty\n" };
     }
-    if (sub !== "restore") throw new UsageError(`trash: unknown subcommand ${sub} (list, restore <item>)`);
+    // Emptied for good (DF-D14): listed first, as uninstall lists; removed only with --yes.
+    if (sub === "empty") {
+      if (rest[1] !== undefined) throw new UsageError("trash empty takes no item: it empties the whole trash");
+      const items = yes ? emptyTrash(s.loc) : listTrash(s.loc);
+      const n = `${items.length} item${items.length === 1 ? "" : "s"}`;
+      const human = !items.length
+        ? "the trash is empty\n"
+        : yes
+          ? `removed for good, ${n}:\n${items.map((i) => `  ${row(i)}`).join("")}`
+          : `removes for good, ${n}:\n${items.map((i) => `  ${row(i)}`).join("")}nothing removed yet: again with --yes to remove these\n`;
+      return { data: { removed: yes && items.length > 0, items }, human };
+    }
+    if (sub !== "restore") throw new UsageError(`trash: unknown subcommand ${sub} (list, restore <item>, empty)`);
     const which = rest[1];
     if (!which) throw new UsageError("trash restore needs an item: its id or its path (slipbox trash lists them)");
     try {
@@ -2300,14 +2319,17 @@ function searchIndex(s: Session): SearchIndex | null {
 /**
  * Where a move or copy goes: a path in this root, from it — or from the current folder when it says so
  * (./, ../), or the filesystem's when absolute, as mkdir and write --create take one. A pointer to
- * elsewhere is refused: a file moves within its own root.
+ * elsewhere is refused: a file moves within its own root. `into`, a move's (DF-D4): a folder is a place
+ * to go — `.` and `..` the current folder and its parent, the root itself `/` — not refused.
  */
-function destArg(s: Session, to: string | undefined): string | undefined {
+function destArg(s: Session, to: string | undefined, into = false): string | undefined {
   if (!to) return to;
   if (isPointer(to)) throw new CliError(`${to}: a destination is a path, in the file's own folder — not a pointer`, EXIT.refused);
-  const abs = to.startsWith("/") ? to : /^\.\.?\//.test(to) ? join(s.io.cwd, to) : join(s.loc.root, to);
+  const fromHere = into ? /^\.\.?(\/|$)/ : /^\.\.?\//;
+  const abs = to.startsWith("/") ? to : fromHere.test(to) ? join(s.io.cwd, to) : join(s.loc.root, to);
   const rel = relative(s.loc.root, abs).split(sep).join("/");
-  if (!rel || !isInside(s.loc.root, abs) || !landsInside(s.loc.root, abs)) throw new CliError(`${to} is outside the root (${s.loc.root})`, EXIT.refused);
+  if ((!rel && !into) || !isInside(s.loc.root, abs) || !landsInside(s.loc.root, abs)) throw new CliError(`${to} is outside the root (${s.loc.root})`, EXIT.refused);
+  if (!rel) return "/";
   return to.endsWith("/") ? `${rel}/` : rel;
 }
 

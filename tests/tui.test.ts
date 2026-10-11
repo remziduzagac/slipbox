@@ -8231,6 +8231,25 @@ describe("vaults in the TUI (17.x)", () => {
     expect(h.app.messages.at(-1)!.text).toMatch(/^renamed notes\/alpha.md → notes\/first.md: \d+ changes in \d+ files$/);
   });
 
+  test("space n m into a folder: one that's there, or a path ending in /, keeps the note's name (DF-D4)", async () => {
+    const root = makeVault();
+    const h = await harness({ root, open: "notes/alpha.md" });
+    await h.keys("space", "n", "m");
+    (h.app.overlay as import("../src/tui/app.ts").PromptOverlay).text = "projects";
+    await h.keys("enter");
+    expect((h.app.overlay as ListOverlay).title).toStartWith("notes/alpha.md → projects/alpha.md: ");
+    await h.keys("enter");
+    expect(existsSync(join(root, "projects", "alpha.md"))).toBe(true);
+    expect(existsSync(join(root, "projects.md"))).toBe(false);
+    expect(h.app.view!.buf.rel).toBe("projects/alpha.md");
+    // `:mv` too; a folder named with a `/` is made, the root is `/`.
+    await h.app.run("note.rename later/");
+    expect((h.app.overlay as ListOverlay).title).toStartWith("projects/alpha.md → later/alpha.md: ");
+    await h.keys("escape");
+    await h.app.run("note.rename /");
+    expect((h.app.overlay as ListOverlay).title).toStartWith("projects/alpha.md → alpha.md: ");
+  });
+
   test("space n h renames the cursor's heading, r the outline's: a preview, then its links (11.9)", async () => {
     const root = makeVault();
     const h = await harness({ root, open: "notes/alpha.md" });
@@ -8963,9 +8982,51 @@ describe("the explorer's file operations and buttons (18.x)", () => {
     await h.keys("d", "y");
     expect(existsSync(join(root, "projects"))).toBe(false);
     await h.app.run("trash.open");
-    expect((h.app.overlay as ListOverlay).items.map((it) => it.label)).toEqual(["projects/"]);
+    expect((h.app.overlay as ListOverlay).items.map((it) => it.label)).toEqual(["projects/", "", "Empty the trash…"]);
     await h.keys("enter");
     expect(existsSync(join(root, "projects", "index.md"))).toBe(true);
+  });
+
+  test("the trash's last row empties it after asking, what the list showed going for good; :empty-trash opens on it (DF-D14)", async () => {
+    const root = makeVault();
+    const h = await at(root, "notes/alpha.md");
+    await h.keys("d", "y");
+    h.app.selectInExplorer("notes/beta.md");
+    await h.keys("d", "y");
+    const { listTrash, trashDir, trashPath } = await import("../src/core/files.ts");
+    expect(listTrash(h.app.loc)).toHaveLength(2);
+    // The list's last row, reached by up from the first: it asks; n leaves the trash as it was.
+    await h.app.run("trash.open");
+    const list = () => h.app.overlay as ListOverlay;
+    expect(list().filtered[list().selected]!.item.label).toBe("notes/beta.md"); // enter still restores the newest
+    await h.keys("up");
+    expect(list().filtered[list().selected]!.item.label).toBe("Empty the trash…");
+    await h.keys("enter");
+    expect(prompt(h)).toMatchObject({ confirm: true, label: "Empty the trash? Its 2 items go for good: none can be restored." });
+    await h.keys("n");
+    expect(listTrash(h.app.loc)).toHaveLength(2);
+    // The command (:empty-trash) opens the trash on that row; y empties it, and u has nothing to restore.
+    await h.keys(":");
+    await type(h, "empty-trash");
+    await h.keys("enter");
+    expect(list().title).toBe("Trash (2) — enter restores");
+    expect(list().filtered[list().selected]!.item.label).toBe("Empty the trash…");
+    await h.keys("enter");
+    trashPath(h.app.graph, h.app.loc, "index.md"); // deleted elsewhere while it asks: not what the list showed
+    await h.keys("y");
+    expect(listTrash(h.app.loc).map((i) => i.shown)).toEqual(["index.md"]);
+    expect(h.app.messages.at(-1)!.text).toBe("emptied the trash: 2 items gone for good");
+    expect(existsSync(join(root, "notes", "beta.md"))).toBe(false);
+    // u: what was deleted last is gone, so the trash opens instead.
+    await h.keys("u");
+    expect(list().title).toBe("Trash (1) — enter restores");
+    await h.keys("escape");
+    await h.app.run("trash.empty");
+    await h.keys("enter", "y");
+    expect(readdirSync(trashDir(h.app.loc))).toEqual(["trash.json"]);
+    await h.app.run("trash.empty");
+    expect(h.app.overlay).toBeNull();
+    expect(h.app.messages.at(-1)!.text).toBe("the trash is empty");
   });
 
   test("y and p copy beside it (name-copy) or into the selected folder; x and p move it there", async () => {

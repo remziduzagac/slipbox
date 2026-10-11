@@ -1489,6 +1489,9 @@ build (`scripts/build-home.ts`), not kept as they are. Each file's purpose and t
   `notes/templates/drafts/okr-draft.md` (note.delete, trash.\*)
 - trash lists items newest first; restore by id or path; refused when something is there — `notes/people/contacts.md`,
   `notes/templates/drafts/okr-draft.md` (cli.md trash)
+- trash emptied: `trash empty` lists, `--yes` removes for good; the trash list's last row (or `:empty-trash`) asks,
+  then empties; anything deleted over 30 days ago goes by itself — `notes/people/contacts.md`,
+  `notes/templates/drafts/okr-draft.md` (cli.md trash; files.md Deleting and the trash)
 
 ### copy-move
 
@@ -1799,6 +1802,8 @@ build (`scripts/build-home.ts`), not kept as they are. Each file's purpose and t
   `work/kestrel/docs/architecture.md` (cli.md Renames (17.15); cli.test 'mv, rename-vault, relink')
 - mv of a folder moves everything, including files the walk doesn't list, links rewritten from where each linking file
   will be — `.build/kestrel.toml`, `work/product/README.md` (cli.md A folder (18.3); cli.test cp rm trash mv folder)
+- mv into a folder: a new path that is a folder already, or ends in /, keeps the name — `mv inbox.md archive/` makes
+  `archive/inbox.md`; space n m likewise — `notes/inbox.md`, `notes/projects/` (cli.md mv; files.md)
 - mv a nested vault's folder: links into it by path rewritten across vaults, recorded at new place —
   `notes/research/route-engine-spike/README.md`, `work/product/handbook/how-we-write.md` (cli.md A nested vault's
   folder (18.7))
@@ -2960,6 +2965,7 @@ Wide tables and code blocks to edit in place.
 
 - `trash.restore` — Restore the last deleted — `notes/inbox.md`, `notes/projects/` (command-specs.ts)
 - `trash.open` — The trash — `notes/inbox.md`, `notes/projects/` (command-specs.ts)
+- `trash.empty` — Empty the trash — `notes/inbox.md`, `notes/projects/` (command-specs.ts)
 
 ### heading
 

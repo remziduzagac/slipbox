@@ -138,9 +138,9 @@ they are and lists every file in them.
 Some of it is as personal as your notes:
 
 - **The state folder** holds the scratch, and the trash: a note you delete in slipbox is moved there, so it can be put
-  back, and stays until you restore it. slipbox has no command to empty the trash: to be rid of a deleted note for good,
-  remove it from the `trash` folder inside the folder `slipbox info` names as `state`. The state folder also records
-  which files you read and where you were in them, and the folders slipbox has found.
+  back, and stays for 30 days, unless you restore it. To be rid of a deleted note for good sooner, empty the trash: the
+  last row of its list (`space v t`), or `slipbox trash empty --yes`. The state folder also records which files you
+  read and where you were in them, and the folders slipbox has found.
 - **The cache** holds a search index of each folder of notes, with their words in it. Deleting the cache is always
   safe: slipbox makes it again. It carries a `CACHEDIR.TAG`, so backup tools that know the tag leave it out.
 - **The background index** looks through your home folder, while you aren't working, for folders of notes, and

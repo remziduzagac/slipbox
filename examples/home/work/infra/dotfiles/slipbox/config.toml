@@ -465,6 +465,7 @@ sidebar_vault = { bold = true, underline = true }
 "leader ; z a" = "trash.restore"
 "leader ; i c" = "vault.unmake"
 "leader ; z b" = "trash.open"
+"leader ; z c" = "trash.empty"
 "leader ; d s" = "note.rename"
 "leader ; G a" = "heading.rename"
 "leader ; j h" = "folder.name"

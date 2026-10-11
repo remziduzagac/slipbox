@@ -4792,6 +4792,26 @@ describe("renames refused before anything is written (cli.md, Renames)", () => {
     expect(readFileSync(join(dir, "index.md"), "utf8")).toBe("[a](Notes/a.md)\n");
   });
 
+  test("a move typed as a path: a folder that's there, or a path ending in /, is into it, the name kept (DF-D4)", async () => {
+    const { moveTarget, planFolderMove, planNoteRename } = await import("../src/core/rename.ts");
+    const dir = root({ "a.md": "# A\n", "ideas/b.md": "# B\n", "drafts/c.md": "# C\n", "index.md": "[a](a.md) [c](drafts/c.md)\n" });
+    const g = openGraph(locateVault({ root: dir }), DEFAULT_CONFIG, false);
+    expect(moveTarget(g, "a.md", "ideas/")).toBe("ideas/a.md");
+    expect(moveTarget(g, "a.md", "ideas")).toBe("ideas/a.md"); // there already
+    expect(moveTarget(g, "a.md", "later/")).toBe("later/a.md"); // made by the move
+    expect(moveTarget(g, "a.md", "later")).toBe("later"); // no folder there: a rename, to later.md
+    expect(moveTarget(g, "ideas/b.md", "/")).toBe("b.md"); // the root
+    expect(moveTarget(g, "ideas/b.md", ".")).toBe("b.md");
+    expect(moveTarget(g, "drafts", "ideas")).toBe("ideas/drafts");
+    expect(moveTarget(g, "drafts", "drafts")).toBe("drafts"); // itself: refused as already there, not into itself
+    expect(moveTarget(g, "a.md", "../")).toBe("../a.md"); // out of the root: its plan refuses it
+    applyPlan(g, planNoteRename(g, "a.md", moveTarget(g, "a.md", "ideas/")));
+    expect(existsSync(join(dir, "ideas", "a.md"))).toBe(true);
+    expect(existsSync(join(dir, "ideas.md"))).toBe(false);
+    applyPlan(g, planFolderMove(g, "drafts", moveTarget(g, "drafts", "ideas")));
+    expect(readFileSync(join(dir, "index.md"), "utf8")).toBe("[a](ideas/a.md) [c](ideas/drafts/c.md)\n");
+  });
+
   test("a wikilinked note whose name has a colon: renamed, its links name it, no folder prefix (21.12)", async () => {
     const { planNoteRename } = await import("../src/core/rename.ts");
     const dir = root({ "notes/Meeting: Q3.md": "# Q3\n", "index.md": "See [[Meeting: Q3]].\n" });
@@ -6913,5 +6933,44 @@ describe("deleting and copying: the path checked by the core, whoever asks (18.4
     // The check passes what's there: a.md trashed.
     expect(trashPath(g, loc, "a.md")).toMatchObject({ abs: join(dir, "a.md"), dir: false });
     expect(existsSync(join(dir, "a.md"))).toBe(false);
+  });
+
+  test("the trash emptied: all, or what a preview listed; past 30 days, gone when the trash is next read or written (DF-D14)", async () => {
+    const { emptyTrash, FileOpError, listTrash, restorePath, TRASH_DAYS, trashDir, trashPath } = await import("../src/core/files.ts");
+    const dir = mkdtempSync(join(tmpdir(), "slipbox-trash-"));
+    mkdirSync(join(dir, ".slipbox"));
+    for (const n of ["a", "b", "c", "d"]) writeFileSync(join(dir, `${n}.md`), `# ${n}\n`);
+    const loc = locateVault({ root: dir });
+    const g = openGraph(loc, DEFAULT_CONFIG, false);
+    const now = Date.now();
+    const day = (n: number) => new Date(now + n * 86_400_000);
+    const shown = (at: Date) => listTrash(loc, at).map((i) => i.shown);
+    expect(TRASH_DAYS).toBe(30);
+    const a = trashPath(g, loc, "a.md", day(-45));
+    trashPath(g, loc, "b.md", day(-20));
+    expect(shown(day(-15))).toEqual(["b.md", "a.md"]); // a.md 30 days old: kept
+    expect(existsSync(join(trashDir(loc), a.id, "a.md"))).toBe(true);
+    // Written: a.md, past 30 days, goes as c.md comes — its folder too.
+    trashPath(g, loc, "c.md", day(0));
+    expect(shown(day(0))).toEqual(["c.md", "b.md"]);
+    expect(existsSync(join(trashDir(loc), a.id))).toBe(false);
+    // Read: b.md goes in its turn; gone, it can't be restored.
+    expect(shown(day(11))).toEqual(["c.md"]);
+    expect(() => restorePath(g, loc, "b.md", day(11))).toThrow(FileOpError);
+    // Emptied: what a preview listed (d.md, deleted since, stays), then the rest.
+    const listed = listTrash(loc, day(11)).map((i) => i.id);
+    trashPath(g, loc, "d.md", day(11));
+    expect(emptyTrash(loc, listed, day(11)).map((i) => i.shown)).toEqual(["c.md"]);
+    expect(shown(day(11))).toEqual(["d.md"]);
+    expect(emptyTrash(loc, undefined, day(11)).map((i) => i.shown)).toEqual(["d.md"]);
+    expect(shown(day(11))).toEqual([]);
+    expect(readdirSync(trashDir(loc))).toEqual(["trash.json"]);
+    expect(existsSync(join(dir, "d.md"))).toBe(false); // gone for good, never put back
+    // An id edited to climb out of the trash is never followed: only the list forgets it.
+    const outside = join(dirname(trashDir(loc)), "keep");
+    mkdirSync(outside);
+    writeFileSync(join(trashDir(loc), "trash.json"), JSON.stringify({ version: 1, items: [{ id: "../keep", abs: join(dir, "x.md"), shown: "x.md", dir: false, at: day(-90).toISOString() }] }));
+    expect(shown(day(0))).toEqual([]);
+    expect(existsSync(outside)).toBe(true);
   });
 });

@@ -4,7 +4,7 @@
 // process for the finer cases.)
 
 import { afterAll, beforeAll, describe, expect, setDefaultTimeout, test } from "bun:test";
-import { chmodSync, cpSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
+import { chmodSync, cpSync, existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { basename, join } from "node:path";
 import { CLI_COMMANDS, FLAGS } from "../src/cli/cli.ts";
@@ -588,6 +588,56 @@ describe("the vault and the tool", () => {
     expect(slipbox(["deinit", "box", "--json"], { cwd: dir }).json.data).toMatchObject({ kind: "unmake-vault", from: "box", to: "fileops" });
     expect(existsSync(join(dir, "box", ".slipbox"))).toBe(false);
     expect(readFileSync(join(dir, "to-inner.md"), "utf8")).toBe("[i](box/note.md)\n");
+  });
+  test("mv into a folder: one that's there, or a path ending in /, keeps the name; --dry-run and --plan alike (DF-D4)", () => {
+    const dir = join(sandbox, "mv-into");
+    mkdirSync(join(dir, "ideas"), { recursive: true });
+    mkdirSync(join(dir, "box"), { recursive: true });
+    writeFileSync(join(dir, "note.md"), "# Note\n\n[home](index.md)\n");
+    writeFileSync(join(dir, "index.md"), "[n](note.md)\n");
+    writeFileSync(join(dir, "ideas", "x.md"), "# X\n");
+    expect(slipbox(["init", dir, "--name", "mv-into"]).code).toBe(0);
+    // Previewed and planned where it would go: nothing written.
+    expect(slipbox(["mv", "note.md", "ideas/", "--dry-run", "--json"], { cwd: dir }).json.data).toMatchObject({ kind: "note", from: "note.md", to: "ideas/note.md", dryRun: true });
+    expect(slipbox(["mv", "note.md", "ideas", "--plan", "--json"], { cwd: dir }).json.data).toMatchObject({ to: "ideas/note.md", plan: { id: expect.any(String) } });
+    expect(existsSync(join(dir, "note.md"))).toBe(true);
+    // Moved into it, never renamed beside it; its links, and those to it, fixed.
+    expect(slipbox(["mv", "note.md", "ideas/", "--json"], { cwd: dir }).json.data).toMatchObject({ to: "ideas/note.md", dryRun: false });
+    expect(existsSync(join(dir, "ideas.md"))).toBe(false);
+    expect(readFileSync(join(dir, "index.md"), "utf8")).toBe("[n](ideas/note.md)\n");
+    expect(readFileSync(join(dir, "ideas", "note.md"), "utf8")).toBe("# Note\n\n[home](../index.md)\n");
+    // A folder into a folder; a path ending in / made; `.` the folder you're in, the root a place too.
+    expect(slipbox(["mv", "ideas", "box", "--json"], { cwd: dir }).json.data).toMatchObject({ kind: "folder", from: "ideas", to: "box/ideas" });
+    expect(slipbox(["mv", "box/ideas/x.md", "later/", "--json"], { cwd: dir }).json.data.to).toBe("later/x.md");
+    expect(slipbox(["mv", "ideas/note.md", ".", "--json"], { cwd: join(dir, "box") }).json.data.to).toBe("box/note.md");
+    expect(slipbox(["mv", "later/x.md", "..", "--json"], { cwd: join(dir, "box", "ideas") }).json.data.to).toBe("box/x.md");
+    expect(slipbox(["mv", "box/note.md", "./", "--json"], { cwd: dir }).json.data.to).toBe("note.md");
+    // A name with no folder there is still a rename.
+    expect(slipbox(["mv", "note.md", "renamed", "--json"], { cwd: dir }).json.data.to).toBe("renamed.md");
+  });
+  test("trash empty: listed first, removed for good only with --yes (DF-D14)", () => {
+    const dir = join(sandbox, "trash-empty");
+    mkdirSync(join(dir, "box"), { recursive: true });
+    writeFileSync(join(dir, "a.md"), "# A\n");
+    writeFileSync(join(dir, "box", "b.md"), "# B\n");
+    expect(slipbox(["init", dir, "--name", "trash-empty"]).code).toBe(0);
+    expect(slipbox(["trash", "empty"], { cwd: dir }).out).toBe("the trash is empty\n");
+    slipbox(["rm", "a.md"], { cwd: dir });
+    slipbox(["rm", "box"], { cwd: dir });
+    const preview = slipbox(["trash", "empty"], { cwd: dir });
+    expect(preview.out).toMatch(/^removes for good, 2 items:\n {2}\S+ \S+ {2}box\/ {2}\(\S+\)\n {2}\S+ \S+ {2}a\.md {2}\(\S+\)\nnothing removed yet: again with --yes to remove these\n$/);
+    expect(slipbox(["trash", "empty", "--json"], { cwd: dir }).json.data).toMatchObject({ removed: false, items: [{ shown: "box" }, { shown: "a.md" }] });
+    expect(slipbox(["trash", "--json"], { cwd: dir }).json.data).toHaveLength(2); // nothing removed yet
+    // --yes: gone for good, the trash's folder too; nothing left to restore.
+    const state = slipbox(["info", "--json"], { cwd: dir }).json.data.state as string;
+    expect(slipbox(["trash", "empty", "--yes", "--json"], { cwd: dir }).json.data).toMatchObject({ removed: true, items: [{ shown: "box" }, { shown: "a.md" }] });
+    expect(slipbox(["trash", "--json"], { cwd: dir }).json.data).toEqual([]);
+    expect(readdirSync(join(state, "trash"))).toEqual(["trash.json"]);
+    expect(slipbox(["trash", "restore", "a.md"], { cwd: dir }).code).toBe(3);
+    expect(slipbox(["trash", "empty", "--yes"], { cwd: dir }).out).toBe("the trash is empty\n");
+    // --yes is empty's alone; empty takes no item.
+    expect(slipbox(["trash", "--yes"], { cwd: dir }).code).toBe(2);
+    expect(slipbox(["trash", "empty", "a.md"], { cwd: dir }).code).toBe(2);
   });
   test("tags: the vault's, with counts; a tag's notes (1.6)", () => {
     // The demo's: frontmatter tags, and #tags in the text, nested (#dome/shutter under #dome).

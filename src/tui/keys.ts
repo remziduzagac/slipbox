@@ -743,6 +743,7 @@ export const DEFAULT_ALIASES: Record<string, string> = {
   "undo-rename": "rename.undo",
   delete: "note.delete",
   trash: "trash.open",
+  "empty-trash": "trash.empty",
   config: "config.reload",
 };
 

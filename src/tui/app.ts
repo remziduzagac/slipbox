@@ -79,9 +79,9 @@ import { type GitChange, gitChanges } from "../core/gitsigns.ts";
 import { describeBreak, type MergeBreak, type MergeReview, reviewMerge } from "../core/mergereview.ts";
 import { diffLines, diffRows } from "../core/merge.ts";
 import { planConvert } from "../core/convert.ts";
-import { type Ambiguous, type Applied, applyPlan, planFolderMove, planHeadingRename, planMakeVault, planNoteRename, planRelink, planUndo, planUnmakeVault, planVaultFolderMove, planVaultRename, type RenamePlan } from "../core/rename.ts";
+import { type Ambiguous, type Applied, applyPlan, moveTarget, planFolderMove, planHeadingRename, planMakeVault, planNoteRename, planRelink, planUndo, planUnmakeVault, planVaultFolderMove, planVaultRename, type RenamePlan } from "../core/rename.ts";
 import { addFootnote, deleteFootnote, editFootnote, type Footnote, footnotesOf, renameFootnote, type TextEdit } from "../core/footnotes.ts";
-import { copyPath, linksInto, listTrash, restorePath, type TrashItem, trashPath } from "../core/files.ts";
+import { copyPath, emptyTrash, linksInto, listTrash, restorePath, type TrashItem, trashPath } from "../core/files.ts";
 import { readIdentity, slugName, vaultConfigFile } from "../core/registry.ts";
 import { activityFile, AutoIndex } from "../core/autoindex.ts";
 import { notesOfType, ofType, type TypedNote } from "../core/doctypes.ts";
@@ -4121,14 +4121,34 @@ export class App {
     this.message("info", `restored ${item.shown}`);
   }
 
-  /** The vault's trash (`:trash`): enter restores an item. */
-  openTrash(): void {
+  /**
+   * The vault's trash (`:trash`): enter restores an item; its last row empties it (DF-D14), after asking —
+   * the list being what goes. `empty` (`trash.empty`): opened on that row.
+   */
+  openTrash(empty = false): void {
     const items = listTrash(this.loc);
     if (!items.length) return this.message("info", "the trash is empty");
+    const EMPTY = Symbol("empty");
     this.openList({
       title: `Trash (${items.length}) — enter restores`,
-      items: items.map((i) => ({ label: `${i.shown}${i.dir ? "/" : ""}`, hint: i.at.slice(0, 16).replace("T", " "), data: i.id })),
-      accept: (it) => this.restoreItem(it.data as string),
+      items: [
+        ...items.map((i): ListItem => ({ label: `${i.shown}${i.dir ? "/" : ""}`, hint: i.at.slice(0, 16).replace("T", " "), data: i.id })),
+        { label: "", header: true, data: null },
+        { label: "Empty the trash…", hint: "for good, after asking", data: EMPTY },
+      ],
+      selected: empty ? items.length + 1 : 0,
+      accept: (it) => (it.data === EMPTY ? this.emptyTrashAsk(items) : this.restoreItem(it.data as string)),
+    });
+  }
+
+  /** Empty the trash of `items`, what the list showed, after a yes-or-no question: gone for good. */
+  private emptyTrashAsk(items: TrashItem[]): void {
+    const one = items.length === 1 ? items[0]! : null;
+    const what = one ? `${one.shown}${one.dir ? "/" : ""} goes for good: it can't be restored` : `Its ${items.length} items go for good: none can be restored`;
+    this.confirm(`Empty the trash? ${what}.`, () => {
+      const gone = emptyTrash(this.loc, items.map((i) => i.id));
+      if (gone.some((i) => i.id === this.lastTrashed)) this.lastTrashed = null;
+      this.message("info", `emptied the trash: ${gone.length} item${gone.length === 1 ? "" : "s"} gone for good`);
     });
   }
 
@@ -9330,9 +9350,14 @@ export class App {
   /** Ask for a note's new path, then preview its rename. */
   promptRename(rel: string): void {
     this.prompt(`rename or move ${rel} to: `, (to) => {
-      if (to.trim()) this.previewRename(() => planNoteRename(this.graph, rel, to.trim()));
+      if (to.trim()) this.renameNoteTo(rel, to.trim());
     });
     (this.overlay as PromptOverlay).text = rel.replace(/\.(md|markdown)$/i, "");
+  }
+
+  /** Preview a note's rename or move to a typed path: a folder there, or a path ending in `/`, is into it (DF-D4). */
+  renameNoteTo(rel: string, to: string): void {
+    this.previewRename(() => planNoteRename(this.graph, rel, moveTarget(this.graph, rel, to)));
   }
 
   /** Ask for a heading's new name, then preview its rename (11.9): every link to it fixed. */

@@ -179,11 +179,13 @@ slipbox apply                            # the plans waiting, newest first
 slipbox rename-heading <note> <old> <new> --dry-run   # a heading and every link to it
 slipbox rm <note> --dry-run              # to slipbox's trash; says how many links break (data.breaking)
 slipbox trash                            # what's there; slipbox trash restore <id|path> puts one back
+slipbox trash empty                      # what emptying removes for good; --yes removes it (it keeps 30 days anyway)
 slipbox undo --dry-run                   # take back the last mv, rename-heading, relink, convert-links, replace --all
 ```
 
-The new path is the whole path, from the root (or `./`, `../` from here): naming an existing folder doesn't move the
-note into it. Ask before deleting or moving the user's notes.
+The new path is from the root (or `./`, `../` from here). A folder that's there, or a path ending in `/`, is moved
+into, the name kept: `mv <note> archive/` makes `archive/<note>`. Any other path is the whole new path. Ask before
+deleting, emptying the trash or moving the user's notes.
 
 ## Exporting for the user
 

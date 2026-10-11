@@ -208,7 +208,7 @@ settings files and the environment variables.
 | [`mv`](#mv) | rename or move a note, file or folder, every link to it kept |
 | [`cp`](#cp) | copy a note, file or folder |
 | [`rm`](#rm) | delete to slipbox's trash |
-| [`trash`](#trash) | what's in the trash; put something back |
+| [`trash`](#trash) | what's in the trash; put something back, or empty it |
 | [`rename-heading`](#rename-heading) | rename a heading and every link to it |
 | [`relink`](#relink) | fix links a move broke |
 | [`convert-links`](#convert-links) | turn wikilinks and links from the root into relative paths |
@@ -770,12 +770,14 @@ Renames or moves a note, file or folder, and rewrites every link to it.
 ```bash
 slipbox mv ideas/coffee.md ideas/drinks/coffee.md --dry-run
 slipbox mv ideas/coffee.md ideas/drinks/coffee.md
+slipbox mv ideas/coffee.md archive/
 slipbox mv ideas drafts
 ```
 
-The new path is the file's whole new path, from the root, or from the current folder when it starts with `./` or
-`../`, or absolute; it must stay in the root. A note's extension is kept when the new path has none. Naming an
-existing folder as the new path doesn't move the note into it: give the path inside it.
+The new path is from the root, or from the current folder when it is `.` or `..` or starts with `./` or `../`, or
+absolute; it must stay in the root. A folder that's there, or a path ending in `/`, is moved into, as the shell's `mv`
+does, keeping the name: `archive/` makes `archive/coffee.md`, and the folder if need be; `./` from the top of the root
+moves it there. Any other path is the file's whole new path, and a note's extension is kept when it has none.
 
 A note's own relative links are rewritten to work from its new folder, as are the paths in a code file's comments
 and a data file's values. A folder moves with everything in it, and links between two of its files stay as they are.
@@ -793,8 +795,9 @@ slipbox cp ideas/coffee.md ideas/tea.md
 slipbox cp coffee
 ```
 
-The new path is taken as `mv` takes one. An existing file there is refused (exit 5). Links aren't rewritten: the copy
-says what the original says.
+The new path is from the root, or from the current folder when it starts with `./` or `../`, and is the copy's whole
+path: unlike `mv`, `cp` doesn't copy into a folder named as the new path, so give the path inside it. An existing
+file there is refused (exit 5). Links aren't rewritten: the copy says what the original says.
 
 `--json`: `{from, to, dir}`.
 
@@ -815,17 +818,25 @@ slipbox rm ideas/tea.md
 
 ### `trash`
 
-Lists what's in the root's trash, newest first; `trash restore` puts an item back where it was.
+Lists what's in the root's trash, newest first; `trash restore` puts an item back where it was; `trash empty` empties
+it.
 
 ```bash
 slipbox trash
 slipbox trash restore ideas/tea.md
+slipbox trash empty
+slipbox trash empty --yes
 ```
 
 `restore` takes the item's id or its path. Something now where it was is refused (exit 5); nothing of that name in
 the trash is exit 3.
 
-`--json`: `[{id, abs, shown, dir, at}]`; `restore` gives the item put back.
+`empty` lists what it would remove, and removes nothing until you add `--yes`; then everything in the trash is gone
+for good. The trash keeps an item 30 days in any case: anything deleted longer ago is removed the next time the trash
+is read or written.
+
+`--json`: `[{id, abs, shown, dir, at}]`; `restore` gives the item put back; `empty` gives `{removed, items}`, the items
+removed (or, without `--yes`, that would be) and whether they were.
 
 ### `rename-heading`
 

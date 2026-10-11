@@ -270,6 +270,7 @@ export const COMMAND_SPECS: CommandSpec[] = [
   { id: "trash.restore", title: "Restore the last deleted", cli: "slipbox trash restore <item>", desc: "Puts back what was deleted last (the trash, space v t, has the rest)" },
   { id: "vault.unmake", title: "Take .slipbox/ away", cli: "slipbox deinit <folder>", desc: "The explorer's selected root (or this one, nested in another) a plain folder of the root holding it; links fixed after a preview" },
   { id: "trash.open", title: "The trash", cli: "slipbox trash", desc: "What was deleted here, newest first; enter restores it" },
+  { id: "trash.empty", title: "Empty the trash", cli: "slipbox trash empty --yes", desc: "The trash, on its last row: enter asks, then removes all that was deleted here for good. Nothing stays past 30 days anyway" },
   { id: "note.rename", title: "Rename or move the note", cli: "slipbox mv <note> <new-path>", desc: "Its links rewritten wherever they're reached, after a preview, each in its form" },
   { id: "heading.rename", title: "Rename the heading", cli: "slipbox rename-heading <note> <heading> <new>", desc: "The section the cursor is in: every link to it rewritten wherever it's reached, after a preview" },
   { id: "folders.open", title: "Folders: go into a named one", cli: "slipbox folders", desc: "The named folders this machine knows (21.6), each by the name pointers use; enter goes into the copy its links open (back returns)" },

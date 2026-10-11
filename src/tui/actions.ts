@@ -16,7 +16,7 @@ import { copyAvailable, folderIdentity, readFolders, recordFolder } from "../cor
 import { slugName } from "../core/registry.ts";
 import { isNotePath } from "../core/links.ts";
 import { hasMarker, initVault, isInside, isNeverRoot, rootAt } from "../core/vault.ts";
-import { planHeadingRename, planNoteRename, planRelink, planVaultRename } from "../core/rename.ts";
+import { planHeadingRename, planRelink, planVaultRename } from "../core/rename.ts";
 import { copyPath } from "../core/files.ts";
 import { classify } from "../core/filetypes.ts";
 import { FORMATS } from "../core/export/index.ts";
@@ -1895,6 +1895,7 @@ export function registerActions(app: App): void {
         }
       }),
     "trash.open": (a) => a.openTrash(),
+    "trash.empty": (a) => a.openTrash(true),
     "tag.list": (a, arg) => (arg ? a.openTagNotes(arg) : a.openTagList()),
     // The Problems panel at the bottom (1.7): the root's problems (All), or the file on screen's — made afresh when
     // it opens; open and focused already, closed.
@@ -1910,7 +1911,7 @@ export function registerActions(app: App): void {
     "note.rename": (a, arg) => {
       const t = a.noteTarget();
       if (!t) return;
-      if (arg) return a.previewRename(() => planNoteRename(a.graph, t.rel, arg));
+      if (arg) return a.renameNoteTo(t.rel, arg);
       a.promptRename(t.rel);
     },
     // What's under the cursor (19.12, 19.13): a code file's language server answers; in a note, slipbox does.

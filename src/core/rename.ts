@@ -391,6 +391,28 @@ function cleanTarget(g: Graph, input: string): string {
   return rel;
 }
 
+/**
+ * Where a move typed as a path lands (DF-D4): a new path that is a folder already, or ends in `/`, means
+ * into it, as the shell's `mv` does — `ideas/` (or `ideas`, there) for `note.md` is `ideas/note.md`, and the
+ * root itself (`/`, `.`) takes it to the top. Any other path is the whole new path, as typed. Not for a
+ * rename in place (`r`), whose name is a name: a folder of that name beside it is no place to go into.
+ */
+export function moveTarget(g: Graph, fromRel: string, input: string): string {
+  const typed = input.replace(/\\/g, "/");
+  const rel = posix.normalize(typed.replace(/^\/+/, "").replace(/\/+$/, "") || ".");
+  const name = posix.basename(fromRel);
+  if (rel === ".") return name; // the root, a folder that's always there
+  if (typed.endsWith("/")) return `${rel}/${name}`;
+  if (rel.startsWith("../") || rel === "..") return input; // refused as it is, where its plan checks
+  const abs = join(g.root, rel);
+  let folder = false;
+  try {
+    folder = statSync(abs).isDirectory();
+  } catch {}
+  // A folder's case-only rename on a disk that ignores case: the "folder" there is itself.
+  return folder && !sameFile(join(g.root, fromRel), abs) ? `${rel}/${name}` : input;
+}
+
 /** A file where a folder of the path `rel` would have to be (`x.md` for `x.md/a.md`), or null. */
 function fileInTheWay(root: string, rel: string): string | null {
   const parts = rel.split("/");

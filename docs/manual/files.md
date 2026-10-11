@@ -105,8 +105,10 @@ a new note would be, its parents too, and it is selected in the explorer.
   `left` and `right` fold and unfold; typing filters to the folders that match, under their parents, and `enter`
   takes the first. A folder can't move into itself, so it isn't offered.
 - **`space n m`** asks for the note's new path from the root, its old one typed already (`ideas/coffee`): change the
-  name, the folders, or both. Give the whole path: `archive/coffee` moves it into `archive`, but `archive` alone
-  renames it `archive.md`.
+  name, the folders, or both. A folder that's there, or a path ending in `/`, moves the note into it, keeping its
+  name: `archive/` makes `archive/coffee.md` (the folder is made if need be), as does `archive` when there is such a
+  folder, and `/` takes it to the top of the root. Any other path is the note's new path: `archive/espresso` moves
+  and renames it.
 - **Cut and paste.** `x` on a row cuts it, and `p` on a folder (or on a file in it) moves it there.
 
 ### The preview
@@ -173,9 +175,17 @@ To get something back:
   (or put back already), it opens the trash.
 - `space v t` (or `:trash`) lists the trash, newest first: `enter` puts the selected item back where it was.
 
-A restore is refused when something else is at that place now: move it away first. slipbox never empties the trash
-itself. It is the `trash` folder in the root's state folder, which `slipbox info` names; delete what is in it by hand
-when you want the space.
+A restore is refused when something else is at that place now: move it away first.
+
+The trash keeps what you delete for 30 days. Anything deleted longer ago is removed for good, the next time slipbox
+looks in the trash or puts something in it. To empty it sooner:
+
+- **Empty the trash…** is the last row of the trash's list: `up` from the first row gets there, and `:empty-trash`
+  opens the list on it. `enter` asks first (`Empty the trash? Its 3 items go for good: none can be restored.`), and
+  `y` removes everything the list showed. `n` or `esc` leaves it as it was.
+- `slipbox trash empty` lists what is in the trash, and `slipbox trash empty --yes` removes it.
+
+What goes from the trash can't be restored: it is gone from your disk, not moved to the system's own trash.
 
 ## Undoing a rename
 
@@ -214,10 +224,12 @@ root, wherever you are in it, unless it starts with `./` or `../`: then it is fr
 | `slipbox rm ideas/coffee.md` | deletes it to the trash, saying how many links break |
 | `slipbox trash` | lists the trash, newest first, each item with its id |
 | `slipbox trash restore ideas/coffee.md` | puts an item back, by its path or its id |
+| `slipbox trash empty --yes` | empties the trash for good; without `--yes`, lists what would go |
 | `slipbox undo` | takes back the last rename or move, as `space v shift+u` does |
 
-`mv` takes the whole new path, as `space n m` does: `slipbox mv inbox.md archive` makes `archive.md`, beside the
-folder. It never writes over a file.
+`mv` takes the new path as `space n m` does: a folder that's there, or a path ending in `/`, is moved into, so
+`slipbox mv inbox.md archive/` makes `archive/inbox.md`. Any other path is the whole new path:
+`slipbox mv inbox.md tray` makes `tray.md`. It never writes over a file.
 
 `mv`, `rm` and `undo` take `--dry-run`, which shows what they would do and does nothing:
 
@@ -245,7 +257,7 @@ a file changed in between. [The command line](cli.md) has every command and flag
 | `space d p` | paste into the folder |
 | `space n shift+y` | a copy of the note beside it, opened |
 | `space n d` / `space d d` | delete the note / the folder, to the trash |
-| `space v u` / `space v t` | restore what was deleted last / the trash |
+| `space v u` / `space v t` | restore what was deleted last / the trash, its last row emptying it |
 | `space v shift+u` | undo the last rename or move |
 
 In the explorer: `n` and `shift+n` new, `r` rename, `m` move, `y` `x` `p` copy, cut and paste, `d` delete, `u`
