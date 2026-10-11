@@ -1,11 +1,11 @@
 # The CLI — the agent surface
 
 The CLI is how agents, scripts and editor keybindings drive slipbox from phase 1–2 onward
-(`docs/plan.md`, Principles). The command list is decision `9.1`; this document is its reference.
-Code: `src/cli/`. The agent-facing skill that teaches it (plan `9.8`) is
-[`skills/slipbox/SKILL.md`](../../skills/slipbox/SKILL.md).
+(D16, in [the decisions](../blueprint/decisions/foundations.md)). The command list is D18; this document is its
+reference. Code: `src/cli/`. The agent-facing skill that teaches it (plan `9.8`) is
+[`skills/slipbox/SKILL.md`](../skills/slipbox/SKILL.md).
 
-## Semantics: disk is the contract (decision `9.4`)
+## Semantics: disk is the contract (D17)
 
 A CLI call is a second process. It reads the files and the fresh cache, never a TUI's unsaved
 buffer. It writes atomically, with a temp file plus rename. The TUI treats a CLI write like any
@@ -63,7 +63,7 @@ and an unknown one is a usage error.
 
 ## Stability
 
-Stable from phase 1–2, as the plan requires: changes here bump `schema`.
+Stable from phase 1–2, as D15 requires: changes here bump `schema`.
 
 | Command | `data` in `--json` |
 | --- | --- |
@@ -324,9 +324,9 @@ that names its file, and `diagnostics` gives it as `old-form` with `fix` (that p
 
 **Links to a repository's own hosting** (`core/hosting.ts`): GitHub's `/blob/<ref>/`, `/tree/<ref>/`, `/raw/<ref>/`,
 GitLab's `/-/blob/<ref>/` (groups nested), Bitbucket's `/src/<ref>/` (its `#markdown-header-` headings), a repository's
-own page or `#readme` (its README) — of this checkout's remote, or a named folder's (`21.6`) — are the file in this copy:
-`resolve`, `links` and backlinks read them (`via: "hosting"`), a rename rewrites the URL's path, and another ref than
-the branch checked out is `inferred`, said by `diagnostics` (`other-ref`).
+own page or `#readme` (its README) — of this checkout's remote, or a named folder's (`21.6`) — are the file in this
+copy: `resolve`, `links` and backlinks read them (`via: "hosting"`), a rename rewrites the URL's path, and another ref
+than the branch checked out is `inferred`, said by `diagnostics` (`other-ref`).
 
 **A folder's name** (`21.6`, `core/folders.ts`): what a pointer names it by (`slipbox://<name>/…`, `21.7`) — the name
 in its `.slipbox/` config, else its repository's remote's last part (`research`); never its folder's own name. `info`
@@ -354,7 +354,7 @@ included.
 
 **The links' convention** (`21.4`): `info` says how the links slipbox makes in this root look — `links{style, path,
 extension}`, each `{value, source, why}`, `source` one of `setting`, `tool`, `notes` (with `share`, a percentage),
-`default` (`docs/design/configuration.md`, "The links' convention"). Its line: the parts, then what said each —
+`default` ([configuration.md](configuration.md), "The links' convention"). Its line: the parts, then what said each —
 `links     wikilinks, by name, without .md — Obsidian's .obsidian/app.json`.
 
 **`slipbox link <note>`** (`21.5`) prints a link to a note or file as slipbox writes one where `--from` is (else from
@@ -464,8 +464,8 @@ counts the file's other sections with some of the words. `--limit N` (default 20
 - **`[search] engine`**: `auto` (the index when it's built, else a scan), `index` (built first when there's none),
   `scan` (never an index).
 - **A hit's `section`** is the section it's in, as scout names and bounds it (`{name, line, end}`: `Auth/Setup`,
-  `§:file`, `§:part~2`) — the size band's, not the line's heading (that's `heading`); `docs/design/decisions.md`,
-  `6.1`, says how files are cut.
+  `§:file`, `§:part~2`) — the size band's, not the line's heading (that's `heading`);
+  [search.md](../blueprint/design/search.md), "Sections", says how files are cut.
 - **`find`** is the other tool: every match of a literal or a regex, not ranked.
 
 ## Renames (plans `17.15`, `7.1`–`7.4`)
@@ -643,7 +643,7 @@ The human output is the bundle itself, to pipe into an agent; `--json` has it as
 each: Word, PDF, a web page, an e-book or Markdown. Without `-o` it goes beside the first note, under its name
 (Markdown's `name.export.md`, its pictures in `name.export.assets/`); `--to` names the format, else `-o`'s extension
 does. It never writes over a note but an earlier Markdown export (exit 5), and fetches nothing.
-`docs/design/export.md` has what goes in and how.
+[export.md](../blueprint/design/export.md) has what goes in and how.
 
 ## `slipbox doctor` (plan `19.7`)
 
@@ -665,8 +665,8 @@ limits[], skipped[{name, why}], run[], missing[], linters[]}`, each linter with 
 
 ## `slipbox diagnostics` (plan `19.22`)
 
-`slipbox diagnostics <file>` gives a file's problems from every source, for agents and scripts — one line each, `file:line:column:
-severity source code: message`, sorted by place:
+`slipbox diagnostics <file>` gives a file's problems from every source, for agents and scripts — one line each,
+`file:line:column: severity source code: message`, sorted by place:
 
 - its language servers' (`19.x`): started as the TUI starts them (installed first when on npm), told the file, then
   waited for until each has said what it finds and gone quiet for 750 ms, since a server says it in stages — a server
@@ -692,7 +692,7 @@ exits 2, so an editor still starting it shows why in its log.
 
 `scripts/install-local.sh` writes a `slipbox` launcher into `~/.local/bin` that runs this
 checkout with bun. `--skill` also links the skill into `~/.claude/skills/slipbox`. Releases — a binary per platform,
-installed by `install.sh` — are plan `14.x` (`docs/design/distribution.md`).
+installed by `install.sh` — are plan `14.x` ([distribution.md](../blueprint/design/distribution.md)).
 
 `slipbox upgrade` (`14.4`) moves the installer's install to the latest release, checked before it's used; `--check`
 only says whether there's one. Run from source, it says there are no releases to follow (exit 1); installed by

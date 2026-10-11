@@ -1,6 +1,7 @@
-// How a root is named to the user (21.9; docs/idea.md, "What's shown"): its name if it has one — a
-// `.slipbox/` name, else its repository's remote's (21.6) — else its path (`~/…`); a plain folder
-// opened, its path. A worktree's name carries its branch: `research@refactor`. Never written into a file.
+// How a root is named to the user (21.9; blueprint/design/roots.md § How a root is named and shown):
+// its name if it has one — a `.slipbox/` name, else its repository's remote's (21.6) — else its path
+// (`~/…`); a plain folder opened, its path. A worktree's name carries its branch: `research@refactor`.
+// Never written into a file.
 
 import { checkoutOf, headOf } from "./git.ts";
 import { homeFolder, type VaultLocation } from "./vault.ts";

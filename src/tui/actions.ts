@@ -1,6 +1,6 @@
 // Command implementations for the TUI. Ids and titles come from core/command-specs.ts, so the CLI
 // can list them and the parity test can check them; this is where each one does its work. The
-// keys are in keys.ts and docs/design/keymap.md.
+// keys are in keys.ts and docs/keymap.md.
 
 import { readFileSync, statSync } from "node:fs";
 import { fileURLToPath, pathToFileURL } from "node:url";
@@ -598,7 +598,7 @@ function argCandidates(a: App, cmd: string): string[] | null {
 /** Commands whose argument is free text, with nothing to complete: a new name, a line, a query. */
 const FREE_ARG = new Set(["note.create", "folder.create", "cursor.goto_line", "find.vault", "search.open", "note.rename", "heading.rename", "folder.name", "shell.run", "shell.filter"]);
 
-/** Commands in the order of core/command-specs.ts, which follows docs/design/keymap.md. */
+/** Commands in the order of core/command-specs.ts, which follows docs/keymap.md. */
 const SPEC_ORDER = new Map(COMMAND_SPECS.map((c, i) => [c.id, i]));
 function inSpecOrder<T extends { id: string }>(commands: T[]): T[] {
   return [...commands].sort((x, y) => (SPEC_ORDER.get(x.id) ?? 1e9) - (SPEC_ORDER.get(y.id) ?? 1e9));
@@ -616,7 +616,7 @@ function heading(title: string, first: boolean): ListItem[] {
 }
 
 /**
- * Items under group headings, in the groups' order (docs/design/keymap.md). What no group in the
+ * Items under group headings, in the groups' order (docs/keymap.md). What no group in the
  * order claims goes under "Other", last, so nothing is ever left out.
  */
 function grouped(items: ListItem[], groupOf: (item: ListItem) => string, order: string[], first = true): ListItem[] {

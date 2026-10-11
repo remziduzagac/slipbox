@@ -1,6 +1,6 @@
 // Built-in themes. Tokyo Night is the default and carries the nvim readability adjustments from
-// <dotfiles>/shared/config/nvim/lua/plugins/colorscheme.lua (docs/idea.md, "Carry over the nvim
-// readability settings"). The rest reduce to a Palette, hand-tuned or from base16 data.
+// <dotfiles>/shared/config/nvim/lua/plugins/colorscheme.lua (D96).
+// The rest reduce to a Palette, hand-tuned or from base16 data.
 
 import { base16ToPalette, type Base16Scheme } from "./base16.ts";
 import { type Palette, type RoleOverrides, type Theme, themeFromPalette } from "./theme.ts";

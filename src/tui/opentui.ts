@@ -1,5 +1,5 @@
 // The one file that touches OpenTUI's drawing API: a Canvas over its frame buffer, and the
-// Renderable that hosts the app. Pinned at @opentui/core 0.5.12 (see docs/design/architecture.md
+// Renderable that hosts the app. Pinned at @opentui/core 0.5.12 (see blueprint/design/how-it-works.md
 // for the upgrade policy) — if the API churns, this file and run.ts are what change.
 
 import { readFileSync, statSync } from "node:fs";

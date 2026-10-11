@@ -1,12 +1,11 @@
 # The TUI
 
-The reader of phase 2 — the "beat leaf" target: it browses, renders, selects and copies text,
-holds several notes and follows external changes — and the editor of phase 3: task checkboxes,
-hand-off to `$EDITOR` or a running nvim, source mode with a vim-shaped normal mode, the lens (live
-preview), saving, autosave and the conflict prompt. Every write to a note goes through one path
-("Writing notes"); besides notes it writes its own state and the scratch.
+The reader — it browses, renders, selects and copies text, holds several notes and follows external changes (D26,
+D137) — and the editor: task checkboxes, hand-off to `$EDITOR` or a running nvim, source mode with a vim-shaped normal
+mode, the lens (live preview), saving, autosave and the conflict prompt (D134, D144). Every write to a note goes
+through one path ("Writing notes"); besides notes it writes its own state and the scratch.
 
-**Every key is in [keymap.md](keymap.md).** This document covers how the parts behave.
+**Every key is in [keymap.md](../../docs/keymap.md).** This document covers how the parts behave.
 
 Code, in `src/tui/`:
 
@@ -129,10 +128,10 @@ session keeps them.
   history), `PROBLEMS` (the bottom panel), `OUTLINE`, `FOOTNOTES`, `INFO` (the right panel's views), `RESIZE`, or what's
   pending: keys of a sequence in short form (`␣ l`,
   `C-w`), or an operator, a count, or a key waiting for its character (`2d`, `di`, `dT`, `r`, `2f`);
-- where the file is, and its branch (`20.14`, `21.9`), dimmed: the root's name if it has one, else its path, else the
-  folder opened — `research · main`, `~/src/experiment · main` (no remote), `notes`, `~/scratch` — and the branch
-  checked out now (a detached head: its commit); a named worktree as `research@refactor`. At most 40 columns, a path
-  cut from the front to fit; it's the first to go when the path would be left fewer than 24 columns;
+- where the file is, and its branch (`20.14`, `21.9`; D65, D77), dimmed: the root's name if it has one, else its path,
+  else the folder opened — `research · main`, `~/src/experiment · main` (no remote), `notes`, `~/scratch` — and the
+  branch checked out now (a detached head: its commit); a named worktree as `research@refactor`. At most 40 columns, a
+  path cut from the front to fit; it's the first to go when the path would be left fewer than 24 columns;
 - the note's path between back and forward, as an address bar's: `‹ notes/people/kenji-mori.md ›`. `‹` and `›` go
   back and forward in the focused window's history, each bright when there's somewhere to go, dim when not; hovered,
   one says where, above it (`back: home.md › Start here`; back past the root's first place, the root before). A click
@@ -180,7 +179,7 @@ takes `$&`, `$1`–`$9` and `$$`. Opened on a selection within a line, the selec
 across lines, the replacing stays within the selection's lines. Messages (`replaced 3 matches`) show
 while the rows are open. The text moves down three rows.
 
-Vim's `:s` (`docs/design/keymap.md`) uses the same engine, `core/replace.ts`; with its `c` flag the
+Vim's `:s` ([keymap.md](../../docs/keymap.md)) uses the same engine, `core/replace.ts`; with its `c` flag the
 same two rows ask at each match, `replace? y n a q` where the buttons were.
 
 **Messages and questions never take a row of their own,** so the note never changes height for them.
@@ -251,6 +250,8 @@ follows it once: the second click, landing in the note it opened, is swallowed.
 
 ## Buffers, views, tabs, windows (plan `3.3`)
 
+Notes open as buffers, shown in tabs, with one split (D141):
+
 - **Buffer:** one open file, with its source, parse, and layouts by width. Buffers are
   internal: there is no buffer list. They're keyed by path, so a note deleted on disk keeps
   its buffer.
@@ -267,12 +268,14 @@ follows it once: the second click, landing in the note it opened, is swallowed.
 
 ## Positions (plans `3.4`, `3.5`, `3.15`)
 
-**Views store source anchors, not rows** (decision `3.5`):
+**Views store source anchors, not rows** (D98):
 
 - **Top of the view:** the nearest heading above it, plus an offset and a fallback line, plus which
   row of that source line it is (a wrapped paragraph's, a table row's), so a resize and back
   returns the same top. A table's rules belong to the lines beside them (the header rule to the
-  delimiter line, the bottom rule to the last row), so a cursor on one stays on it.
+  delimiter line, the bottom rule to the last row), so a cursor on one stays on it. On a reload the heading is
+  found again by its slug and its occurrence index (else the first heading of that slug); if no heading has the
+  slug, the absolute line is used, clamped (D98; `core/position.ts`).
 - **Cursor:** the same kind of anchor for its row, plus which wrapped row of that source line
   it's on, plus its column.
 - **Selection:** its fixed end is kept the same way, so a resize or a pane toggle keeps it on the
@@ -284,14 +287,15 @@ heading later falls back to a current line, not a stale one.
 
 **Saved state:**
 
-- **Reading position** per note, cursor included, in `positions.json` in the state dir.
+- **Reading position** per note, cursor included, in `positions.json` in the state dir: one file for the machine,
+  each note by its absolute path and the root it was read from (D76; [roots.md](roots.md) § State by root).
 - **Session:** tabs and the active tab, splits with their orientation and ratio, cursors, each
   window's history (its last 50 places each way), the explorer's and the outline's visibility and
   widths, UI setting overrides, the palette's recent commands and the recent notes, in
   `session.json`. The tabs and windows are restored when slipbox starts with
   no path, if `ui.restore_session` is on; UI setting overrides and recent commands on every start.
-- **Each branch's tabs** (`5.9`): in a git checkout the session keeps the tabs each branch had when it was left (the
-  30 left most recently). Started on a branch, slipbox opens its tabs; a switch to another branch while it runs
+- **Each branch's tabs** (`5.9`; D153): in a git checkout the session keeps the tabs each branch had when it was left
+  (the 30 left most recently). Started on a branch, slipbox opens its tabs; a switch to another branch while it runs
   brings that branch's back — unless a note is unsaved, which stays open (said so). A branch it has none for keeps
   what's open.
 
@@ -306,9 +310,10 @@ forward with the mouse; the path, clicked, lists the window's timeline (see the 
 
 ## Switching roots (plans `17.10`, `17.14`, `21.10`)
 
-The TUI is always in one root: a folder holding a root marker, or a plain folder outside every root — known by its
-path, walked and indexed as a root is, its session its own (`20.22`, `21.8`); `~` and `/` are listed a level at a
-time. **Opening a note of another root switches to it** — following a path out of the root, a pointer, a backlink
+The TUI is always in one root ([roots.md](roots.md)): a folder holding a root marker, or a plain folder outside every
+root — known by its path, walked and indexed as a root is, its session its own (`20.22`, `21.8`; D58, D76); `~` and `/`
+are listed a level at a time. **Opening a note of another root switches to it** (D50) — following a path out of the
+root, a pointer, a backlink
 from another root, a named folder picked from `:folders` or a root from the explorer: the TUI becomes that root's,
 as if started there — its config, its
 index (refreshed), its watcher, its reading positions and its session, whose tabs come back, with
@@ -321,26 +326,27 @@ nothing switches. A loose file opens as it is, beside the current root's notes: 
 the note and place you left; each switch is remembered, so a chain of them unwinds one by one.
 
 **The named folders** (`space v v`, `:folders`, `folders.open`; `slipbox folders`): each by the name pointers give it
-(`21.6`) and the copy its links open here, those seen last first; `enter` goes into that copy. A repository's worktrees
-are its branches, not copies: listed once. **Which copy** a folder's links open (`space v shift+v`, `:folders-default`,
-`folders.default`; `slipbox folders default`): this folder's copies, else a pick of the folders with two. **Names**
-here, in the status line, `space v i`, the Info view and messages are each root's name as pointers give it — its
-`.slipbox/` name, else its repository's remote's — else its path (`~/…`); a named worktree as `name@branch` (`21.9`).
+(`21.6`; D74) and the copy its links open here, those seen last first; `enter` goes into that copy. A repository's
+worktrees are its branches, not copies: listed once. **Which copy** a folder's links open (`space v shift+v`,
+`:folders-default`, `folders.default`; `slipbox folders default`): this folder's copies, else a pick of the folders with
+two. **Names** here, in the status line, `space v i`, the Info view and messages are each root's name as pointers give
+it — its `.slipbox/` name, else its repository's remote's — else its path (`~/…`); a named worktree as `name@branch`
+(`21.9`).
 
-**The background auto-index** (`20.9`): while nobody is working — no key or click for `index.idle_seconds`, no CLI
+**The background auto-index** (`20.9`; D61): while nobody is working — no key or click for `index.idle_seconds`, no CLI
 command from an agent as long, this root's own index done — the TUI walks the home folder for roots a slice at a
 time and indexes each, so backlinks from roots never opened appear by themselves. Its place is kept: it resumes
 where it stopped, and a pass done, the next is a day later. `[index] background = false` turns it off;
 `slipbox index --home` runs it now.
 
-**Moves made elsewhere** (`21.11`): an editor, a file manager or an agent moving notes — seen by their text as they go
-and come in one batch of the watcher's — broke links that pointed where they were: the relink is offered once for the
+**Moves made elsewhere** (`21.11`; D78): an editor, a file manager or an agent moving notes — seen by their text as they
+go and come in one batch of the watcher's — broke links that pointed where they were: the relink is offered once for the
 batch, its preview open (`old/plan.md moved to new/plan.md: 1 line of links broke — the relink, to look over`), nothing
 written unasked; typing, or with something else open, it's a message instead. **A folder named the old way**
 (`[[research:x]]`, `[t](research:x.md)`, when a folder this machine knows has that name) is no link: followed, it says
 so, with the pointer that is one; `space c a` writes it (a markdown link, its heading or block kept).
 
-**A named folder moved by hand** (`21.8`): opened where it went — its id or remote at a new path, the one copy that
+**A named folder moved by hand** (`21.8`; D76): opened where it went — its id or remote at a new path, the one copy that
 was elsewhere gone — its session, scratch, trash and reading positions come along, nothing asked; a message says so
 ("`<name>` moved here from `<path>`: …came along"), and if the move broke links in or out of it, their fix is
 previewed at once (`relink`'s, `20.17`). A worktree `git worktree move` took elsewhere is found by git's name for it.
@@ -349,11 +355,11 @@ Anything less sure — an unnamed root, two copies gone — starts fresh.
 `.slipbox/` id, or one remote — the TUI asks once "`<name>`: 2 copies on this machine — which do links to it open?",
 the first found marked `links open it now`; the answer is remembered, and `esc` keeps the first, not asking again. A
 copy gone (moved here, a drive unplugged) is no choice: not asked.
-**The launcher:** slipbox opened on a plain folder without a file (`slipbox ~`) shows the named folders at once, over
-the folder's explorer, when there are any to go into.
+**The launcher** (D50): slipbox opened on a plain folder without a file (`slipbox ~`) shows the named folders at once,
+over the folder's explorer, when there are any to go into.
 
-**A git repository is a root by itself** (`20.3`), and so are an Obsidian vault and a zk notebook (`21.1`): any folder
-holding a root marker (`walk.root_markers`). Opening a file in a repository opens the repository, from its top —
+**A git repository is a root by itself** (`20.3`), and so are an Obsidian vault and a zk notebook (`21.1`; D69): any
+folder holding a root marker (`walk.root_markers`). Opening a file in a repository opens the repository, from its top —
 nothing asked, nothing written into it; a repository inside a root is a root of its own, its folder marked in the
 explorer. `.slipbox/` gives one settings of its own (`slipbox init`; `--private` keeps it out of git), and a name
 pointers use when asked (`slipbox init --name`, `space v n`, `:name`). `space v m` (`:init`, `vault.init`) in a plain
@@ -368,24 +374,27 @@ root's new name; `space n h` for a new name of the heading the cursor is under (
 heading's; `11.9`); `space l r` (`:relink`) relinks this note's links broken by a move it saw (`20.2`);
 `:convert-links` (`20.1`) makes every note's links plain paths (`:convert-links <note>`, one note's) — each link several
 notes answer to a row of its own at the top, `pick notes/x.md:3`: `enter` lists its notes, and the one picked comes back
-as part of the preview. Each shows its **preview** first: a list of every line it changes, in every root
-(`notes/index.md:3 [plan](plan.md) → [plan](roadmap.md)`), with the git trees that already have changes and the links
-skipped at the top; `enter` carries it out, `esc` leaves everything as it was. What it does is `slipbox mv`'s,
-`name`'s, `rename-heading`'s, `relink`'s and `convert-links`'s (`docs/design/cli.md`, "Renames"). **Refused
+as part of the preview. Each shows its **preview** first (D143, D52, D63): a list of every line it changes, in every
+root (`notes/index.md:3 [plan](plan.md) → [plan](roadmap.md)`), with the git trees that already have changes and the
+links skipped at the top; `enter` carries it out, `esc` leaves everything as it was. What it does is `slipbox mv`'s,
+`name`'s, `rename-heading`'s, `relink`'s and `convert-links`'s ([cli.md](../../docs/cli.md) § Renames). **Refused
 while a file it rewrites or moves is unsaved** (a moved folder's notes included). After it, the open notes it changed
 are reloaded, and a window on a renamed or moved note shows it under its new path, its history following — every note
 of a moved folder alike.
 
-**Undo** (`7.4`): `space v shift+u` (the explorer's `shift+u`, `:undo-rename`) takes back the root's last rename, move,
-naming, heading rename, relink, conversion to path links or replace in every note — made here or by the CLI
-(`slipbox mv`, `name`, `rename-heading`, `relink`, `convert-links`, `replace --all`) — as `slipbox undo` does
-(`docs/design/cli.md`, "Renames"): its preview first (`undo: notes/first.md → notes/alpha.md`, each line the other way),
-then every file as it was and what moved back where it was, open notes following it back. Refused when a file it wrote
-has changed since. `u` puts back a delete; `shift+u` a rename.
+**Undo** (`7.4`; D152): `space v shift+u` (the explorer's `shift+u`, `:undo-rename`) takes back the root's last
+rename, move, naming, heading rename, relink, conversion to path links or replace in every note — made here or by the
+CLI (`slipbox mv`, `name`, `rename-heading`, `relink`, `convert-links`, `replace --all`) — as `slipbox undo` does
+([cli.md](../../docs/cli.md) § Renames): its preview first (`undo: notes/first.md → notes/alpha.md`, each line the
+other way), then every file as it was and what moved back where it was, open notes following it back. Refused when a
+file it wrote has changed since. The renames are a stack in the root's state (the last 20): undo takes the newest, and
+there is no redo; the rename is done again (D152). In a git checkout each rename records its branch and is undone only
+there (`5.9`; D153). `u` puts back a delete; `shift+u` a rename.
 
 ## Files in the explorer (plans `18.1`–`18.10`)
 
-The explorer makes and changes files by keys and by buttons, on the selected row — a note, a file, or a folder:
+The explorer makes and changes files by keys and by buttons, on the selected row — a note, a file, or a folder
+(D149):
 
 - **New:** `n` a note (`space n n` too, as everywhere), `shift+n` a folder, in the selected folder or beside the
   selected file; the title's two buttons do the same (Nerd: a file and a folder with a plus; unicode `+`, `+▸`).
@@ -423,7 +432,7 @@ The explorer makes and changes files by keys and by buttons, on the selected row
   `halden-logs` for `logs/`), then a preview — links are paths (`20.2`): relative and filesystem ones reach across
   the new boundary as they are, and one written from the root (`/…`) that would now mean the other root is rewritten
   to reach what it did, shown there — a wikilink by a name across the boundary, or by a path from the root, too
-  (`21.3`) — as `slipbox init <folder>` does (`docs/design/cli.md`); enter makes it.
+  (`21.3`) — as `slipbox init <folder>` does ([cli.md](../../docs/cli.md)); enter makes it.
   `shift+v` on a nested root's row previews the way back (such links rewritten the other way), and enter puts its
   `.slipbox/` in the trash. The row turns
   into a root's or a folder's, selected. In a plain folder, `v` offers to make the folder a root of its own and goes
@@ -434,11 +443,11 @@ path, move, delete, copy, cut, `shift+y` a copy beside it), `space d` for a fold
 cut, paste), `space v` for a root (make one, make it a plain folder, rename it, the trash, restore). With the explorer
 focused they act on its selected row, elsewhere on the current note, its folder, or this root — made a plain folder,
 it's left for the root holding it, the note still open. What they do is the CLI's `rm`, `mv`, `cp`, `init` and
-`deinit` (`docs/design/cli.md`).
+`deinit` ([cli.md](../../docs/cli.md)).
 
 ## Following links
 
-Each kind of link does something different when followed:
+The forms a link takes, and how each resolves, are [links.md](links.md) (D68); here, what following each does:
 
 | Link | Following it |
 | --- | --- |
@@ -467,16 +476,17 @@ Each kind of link does something different when followed:
 
 **Tags** (`1.6`): `space f t` (`:tags`) lists the root's tags, each with how many notes carry it — a nested tag
 indented under its parent, whose count includes its children's — and picking one lists its notes; `:tag name` goes
-straight there. A note's tags are its frontmatter's `tags:` and the `#tags` in its text (`docs/design/rendering.md`).
+straight there. A note's tags are its frontmatter's `tags:` and the `#tags` in its text ([links.md](links.md) § Tags;
+D53).
 
-**Writing a link** (`21.5`): `space l i` (`:link`) lists this root's notes and files, the note itself not, and
+**Writing a link** (`21.5`; D83): `space l i` (`:link`) lists this root's notes and files, the note itself not, and
 writes a link to the one picked as the root's convention writes one (`21.4`; `slipbox link`) — a markdown link with
 the note's title as its text, or a wikilink by name where the name reaches the note from here, else by its path
 from the root — a top-level note's path being its name, a relative path (`../plan`). Typing, it goes at the cursor;
 reading, after the word under the cursor (out of a link or a code span), a space before it, saved at once. Not in a
 data or text file: links are written in a root's notes.
 
-**How a link landed** (trailscout's review, 2026-10-06): the status line's link under the cursor says it when a tie
+**How a link landed** (D86): the status line's link under the cursor says it when a tie
 decided it — `→ [[Pie]] (resolved, the shortest path of 2 named so)`; and a note coming or going that sends a link by
 name elsewhere (a nearer `Pie.md`, a note named like an alias) is said in a message: `[[Pie]] in Home.md reaches
 Pie.md now, not Recipes/Baking/Pie.md` — never only when a link breaks or heals.
@@ -523,25 +533,26 @@ keys.
   the rows above it. Moving the selection, or a click on a note, only selects. `enter`, `l` and a double-click open the
   note as a tab, or switch to the tab already showing it; `o` replaces the current window's note, and `s` opens it in
   the split's other window. A click on a folder folds or unfolds it. New notes and folders, renames, moves, deletes,
-  copies: "Files in the explorer", below. **A folder that is another root** (`17.13`), nested in this one (`◈`, Nerd: a
-  bookshelf), in a folder's blue (role `sidebar_vault`, for `[colors]` to set), is a row of its own, its icon telling it
-  from a folder, the root's name dimmed after the folder's when they differ (cut short of its git mark) — a worktree's
-  branch instead (`⎇ feat`, `17.19`); `enter` or a double-click goes into it (a switch, below). **In a plain folder**
-  (`20.22`) the explorer is its tree, as a root's is; in `~` or `/`, listed a level at a time, each folder in it is a
-  row to go into — a root or a plain folder. **The explorer's roots** (`20.15`, `21.9`): under the root open, the other
-  roots, each by its name (`◈`), else its path: the root or folder slipbox was opened on, the roots pinned with
-  `:pin-root` (`vault.pin_root`, kept with the opened root's state), and the folder of a file open beside this root — a
-  loose file a link was followed to, its nearest root else its folder — while one of its files is shown (never the
-  scratch's, which lives in slipbox's state folder). A root followed into by a link is the root open while it is, the
-  opened one beside it; left, it goes unless pinned. `enter` on another root unfolds it — its notes and files as its
-  index has them — `h` folds it again, and a file of it opens there (a switch); a plain folder among them (a loose
+  copies: "Files in the explorer", below. **A folder that is another root** (`17.13`; D51), nested in this one (`◈`,
+  Nerd: a bookshelf), in a folder's blue (role `sidebar_vault`, for `[colors]` to set), is a row of its own, its icon
+  telling it from a folder, the root's name dimmed after the folder's when they differ (cut short of its git mark) — a
+  worktree's branch instead (`⎇ feat`, `17.19`); `enter` or a double-click goes into it (a switch, below). **In a plain
+  folder** (`20.22`) the explorer is its tree, as a root's is; in `~` or `/`, listed a level at a time, each folder in
+  it is a row to go into — a root or a plain folder. **The explorer's roots** (`20.15`, `21.9`; D65, D77): under the
+  root open, the other roots, each by its name (`◈`), else its path: the root or folder slipbox was opened on, the roots
+  pinned with `:pin-root` (`vault.pin_root`, kept with the opened root's state), and the folder of a file open beside
+  this root — a loose file a link was followed to, its nearest root else its folder — while one of its files is shown
+  (never the scratch's, which lives in slipbox's state folder). A root followed into by a link is the root open while it
+  is, the opened one beside it; left, it goes unless pinned. `enter` on another root unfolds it — its notes and files as
+  its index has them — `h` folds it again, and a file of it opens there (a switch); a plain folder among them (a loose
   file's) has no index to show, so `enter` goes into it instead (a switch). None of this root's file operations act on
   their rows (a paste, new note or new folder there says `another root's folder: select a folder of this root`). Roots
   never overlap: one inside the root open, or around it, isn't listed apart — its folder is in the tree, or the tree is
-  in it. **Git's marks** (`5.11`): in a git checkout each changed file has its state at its row's end — `M` modified,
-  `+` new (untracked or added), `R` renamed, `!` in a merge's conflict (`git_modified`, `git_new`, `git_conflict`) — and
-  a folder with one in it a `•`. git is asked in the background, a moment after anything changed (a save, the watcher, a
-  file operation, a branch switch, a switch of roots — which drops the old root's marks at once).
+  in it. **Git's marks** (`5.11`; D154): in a git checkout each changed file has its state at its row's end — `M`
+  modified, `+` new (untracked or added), `R` renamed, `!` in a merge's conflict (`git_modified`, `git_new`,
+  `git_conflict`) — and a folder with one in it a `•`. git is asked in the background, a moment after anything changed
+  (a save, the watcher, a file operation, a branch switch, a switch of roots — which drops the old root's marks at
+  once).
 - **History (left, `◷`, `space h h`):** the active window's timeline, newest first: each place's
   note name and line, the current one marked `here` and selected when the view opens. A click
   selects an entry; `enter` or a double-click jumps there, the places before it becoming back and
@@ -551,21 +562,21 @@ keys.
   0 lists none): each with when (the time today, else the day), or `tab N` when it's open in
   another tab; `enter` opens one in this window. The heading is stepped over. The history never
   scrolls sideways: a name too long for the pane beside its hint is cut (`…`), the hint kept.
-- **Source control (left, `±`, `space g s`; `26.2`):** the checkout's changed files under their sections — Conflicts,
-  Staged, Changes (not staged), Untracked — each with its state letter in its colour (`M`, `A`, `D`, `R`, `U`, `?`)
-  and its folder dim; the explorer's keymap, read its way. `l` opens a file up into its changes (a staged file's against
-  the last commit, a changed one's against what's staged, as on disk), `h` folds it; `s` stages the file or the change
-  (a conflict's file: marked resolved), `u` unstages it, `d` discards what isn't staged — the file's, or the change's —
-  after asking (an untracked file goes to the trash, as the explorer's `d`); `a` stages everything, `shift+u`
-  unstages it; `.` shows the diff in the floating window; `enter` opens the file at the change. A change is staged as
-  `git add -p` does: the index given its text with that change made (`hash-object`, `update-index`), so nothing else
-  in it moves. A file unsaved here isn't discarded: git works on the file on disk. git's answer comes in the background,
-  again whenever it has news; `23.6`'s guards apply in a root not trusted. **Commit** (`26.3`): `c` writes the message
-  for what's staged in the floating editor, `shift+c` amends the last commit (its message to start from); `#` lines
-  say what's staged and are left out, `ctrl+s` commits (in the background: a hook can take a while), `esc` or `q`
-  leaves it, and the focus goes back where it was. An empty message, or a hook refusing, is said in git's words and
-  the editor stays. In a root not trusted the commit's hooks don't run and it isn't signed — the repository's own config
-  could name what runs — and both the editor and a message say so.
+- **Source control (left, `±`, `space g s`; `26.2`; D156):** the checkout's changed files under their sections —
+  Conflicts, Staged, Changes (not staged), Untracked — each with its state letter in its colour (`M`, `A`, `D`, `R`,
+  `U`, `?`) and its folder dim; the explorer's keymap, read its way. `l` opens a file up into its changes (a staged
+  file's against the last commit, a changed one's against what's staged, as on disk), `h` folds it; `s` stages the file
+  or the change (a conflict's file: marked resolved), `u` unstages it, `d` discards what isn't staged — the file's, or
+  the change's — after asking (an untracked file goes to the trash, as the explorer's `d`); `a` stages everything,
+  `shift+u` unstages it; `.` shows the diff in the floating window; `enter` opens the file at the change. A change is
+  staged as `git add -p` does: the index given its text with that change made (`hash-object`, `update-index`), so
+  nothing else in it moves. A file unsaved here isn't discarded: git works on the file on disk. git's answer comes in
+  the background, again whenever it has news; `23.6`'s guards apply in a root not trusted (D175). **Commit** (`26.3`):
+  `c` writes the message for what's staged in the floating editor, `shift+c` amends the last commit (its message to
+  start from); `#` lines say what's staged and are left out, `ctrl+s` commits (in the background: a hook can take a
+  while), `esc` or `q` leaves it, and the focus goes back where it was. An empty message, or a hook refusing, is said in
+  git's words and the editor stays. In a root not trusted the commit's hooks don't run and it isn't signed — the
+  repository's own config could name what runs — and both the editor and a message say so.
 - **Filter (`/`, in the explorer, the history, the outline, Info and the footnotes; Problems' All tab, below):** a
   `› text` row at
   the top of the list, a rule under it (joined to the pane's border), then the list —
@@ -593,19 +604,19 @@ keys.
   home folder — is `space v i`'s window: a root isn't a file. Names are a column a third of the pane at most, values
   cut to it (no sideways scrolling). `/` filters (see Filter). `space n i`, the `ℹ` button, `slipbox stat` (its
   `root`, `name` and `properties` too). `e` edits the properties (below).
-- **The properties editor** (`3.20`): `e` in the Info view, or `space n shift+p`, opens the note's frontmatter — YAML
-  or TOML, as the note has it — in a floating window over the others: framed, titled "Properties — note (YAML)", as
-  tall as its text. Inside is a window like any, in source mode, with every editing key there is; the keys and
-  commands act on it while it's open. `esc` (in normal mode), `q` or `:q` close it, writing its text back when it
-  changed, and a click outside its box does too (that click does nothing else: a tab or a pane under it isn't
-  reached); `ctrl+s` (`:w`) writes it back and keeps it open, as does `:wa` (after a yes to a question below too).
-  Quitting (`ctrl+q`, `:qa`, `:x`) closes
-  it first, writing back — `:q!` doesn't. The write is one edit to the note — one undo step there — and the note is
-  saved. A note without a frontmatter gets one first; an emptied one is removed. Text that doesn't parse asks before
-  it's written (no keeps you editing, and the app open), as does a frontmatter changed in the note meanwhile.
-  Following a link from inside it closes it first, as do a split and "in the split": they're of the window under it.
-  A note deleted on disk, or not valid UTF-8, has no properties editor (nor is it written into, gone meanwhile), as
-  typing into it is refused. Never a reading position, nor in the history.
+- **The properties editor** (`3.20`; D151): `e` in the Info view, or `space n shift+p`, opens the note's frontmatter —
+  YAML or TOML, as the note has it — in a floating window over the others: framed, titled "Properties — note (YAML)", as
+  tall as its text. Inside is a window like any — a view of a buffer that isn't a file — in source mode, with every
+  editing key there is; the keys and commands act on it while it's open. `esc` (in normal mode), `q` or `:q` close it,
+  writing its text back when it changed, and a click outside its box does too (that click does nothing else: a tab or a
+  pane under it isn't reached); `ctrl+s` (`:w`) writes it back and keeps it open, as does `:wa` (after a yes to a
+  question below too). Quitting (`ctrl+q`, `:qa`, `:x`) closes it first, writing back — `:q!` doesn't. The write is one
+  edit to the note — its text goes back over the frontmatter's bytes as one splice, never parsed and re-serialised
+  (`7.6`; D148), one undo step there — and the note is saved. A note without a frontmatter gets one first; an emptied
+  one is removed. Text that doesn't parse asks before it's written (no keeps you editing, and the app open), as does a
+  frontmatter changed in the note meanwhile. Following a link from inside it closes it first, as do a split and "in the
+  split": they're of the window under it. A note deleted on disk, or not valid UTF-8, has no properties editor (nor is
+  it written into, gone meanwhile), as typing into it is refused. Never a reading position, nor in the history.
 - **Outline (right):** the current note's headings, indented, foldable (`h`/`l`). While not
   focused it follows the cursor's section, and `enter` jumps to the heading.
 - **Footnotes (right, `3.17`):** the current note's footnotes, in the order the note first refers to them (as GFM
@@ -615,19 +626,21 @@ keys.
   reference — in a rendered window onto the reference or definition as drawn, in source mode to the text. While not
   focused it follows the cursor: the footnote the cursor's line refers to or defines. It never scrolls sideways: a
   long row is cut, so its count stays. `/` filters (see Filter). `space n f`, its button, `:footnotes`;
-  `slipbox footnotes <note>` gives the same (`docs/design/cli.md`).
-- **Adding and changing footnotes** (`3.18`): they're the note's own markdown, GFM's — `[^N]` where it's cited and
-  `[^N]: text` at the end, as Obsidian writes them. `space n shift+f` (or `a` in the footnotes view, or the `+` on
-  its title) asks the text in a question and adds both: `[^N]`, the next free number, after the word the cursor is
-  on — while typing, at the cursor; in a rendered window, that word found in its paragraph's source (never inside a
-  link's or code's syntax: after it); `[^N]: text` after the note's last definition when the note ends with them,
-  else after a blank line. In the view, `e` edits a footnote's text (its definition becomes one line), `r` renames
-  its label in every reference and its definition, `d` deletes both after asking. Each change is one undo step and
-  is saved at once, as a task's tick is; the cursor stays where it was. A CRLF note's new lines are CRLF. A note
+  `slipbox footnotes <note>` gives the same ([cli.md](../../docs/cli.md)).
+- **Adding and changing footnotes** (`3.18`; D150): they're the note's own markdown, GFM's — `[^N]` where it's cited
+  and `[^N]: text` at the end, as Obsidian writes them. `space n shift+f` (or `a` in the footnotes view, or the `+` on
+  its title) asks the text in a question and adds both: `[^N]`, the next free number — one past the highest numeric
+  label — after the word the cursor is on — while typing, at the cursor; in a rendered window, that word found in its
+  paragraph's source by how many times it came before, since a rendered row knows its source only by line (never
+  inside a link's or code's syntax: after it); `[^N]: text` into the block of definitions that ends the note, after
+  its last, else after a blank line. Definitions are never reordered. In the view, `e` edits a footnote's text (its
+  definition becomes one line), `r` renames its label in every reference and its definition, `d` deletes both after
+  asking: each changes the text it names and nothing else. Each change is one undo step and is saved at once, as a
+  task's tick is; the cursor stays where it was. A CRLF note's new lines are CRLF. A note
   deleted on disk, or not valid UTF-8, is refused (`… — not editing`), as typing into it is.
 
-Each pane starts with its view's title ("Explorer", "History", "Info", "Outline", "Footnotes") and a blank row before the
-list; panes under 8 rows skip both. The explorer runs from under the frame's top
+Each pane starts with its view's title ("Explorer", "History", "Info", "Outline", "Footnotes") and a blank row before
+the list; panes under 8 rows skip both. The explorer runs from under the frame's top
 rule, beside the tab strip. The outline starts right under the tab strip too,
 beside the note's windows: their breadcrumbs and rules stop at its border (which meets the
 breadcrumb's rule in `┫`), and its title sits level with the breadcrumb. The outline's button
@@ -667,16 +680,14 @@ focuses it.
 Both are windows for `ctrl+w h` / `ctrl+w l`, and each has its own keymap: `[keys.explorer]` and
 `[keys.outline]`.
 
-**Narrow terminals (plan `3.14`).** Below `ui.narrow_width` (90) columns (and never beside the note
-below 50, the room for both panes and the note's 24), and in zen mode, both panes open over the
-content on demand (6 columns wider than their width, leaving at least 6 of the note) and close after
-a pick. The wide-terminal preferences (`ui.sidebar`, `ui.outline`) are kept separately, so widening
-the terminal brings them back. Tables that cannot fit become records ([rendering.md](rendering.md)).
-Click targets under an overlaid pane (a breadcrumb heading, the `▤` button) are off while it's open,
-and the rules it covers stop at its border, which joins them with `┳`, `┫` and `┻`.
-Over the note, a pane's border and margin belong to it (clicks there focus it); the side panes take
-clicks and the wheel before the note's borders and scrollbars, and the outline, drawn over the
-explorer, before the explorer.
+**Narrow terminals (plan `3.14`).** Below `ui.narrow_width` (90) columns (and never beside the note below 50, the room
+for both panes and the note's 24), and in zen mode, both panes open over the content on demand (6 columns wider than
+their width, leaving at least 6 of the note) and close after a pick. The wide-terminal preferences (`ui.sidebar`,
+`ui.outline`) are kept separately, so widening the terminal brings them back. Tables that cannot fit become records
+([rendering.md](rendering.md) § The table allocator). Click targets under an overlaid pane (a breadcrumb heading, the
+`▤` button) are off while it's open, and the rules it covers stop at its border, which joins them with `┳`, `┫` and `┻`.
+Over the note, a pane's border and margin belong to it (clicks there focus it); the side panes take clicks and the wheel
+before the note's borders and scrollbars, and the outline, drawn over the explorer, before the explorer.
 
 ## Overlays
 
@@ -686,7 +697,7 @@ about twice as tall as it is wide (the explorer and outline over the content get
 past theirs), so the content behind never runs up to the edge.
 
 - **Pickers:** quick switcher, heading picker, links, backlinks, history, tabs, theme and glyph
-  pickers (with live preview; `esc` restores), UI settings, messages, info, and keys. The quick
+  pickers (with live preview, D95; `esc` restores), UI settings, messages, info, and keys. The quick
   switcher lists recent notes and files first (kept in the session), the previous one on top, so
   `ctrl+p enter` goes back. A query starting with `#` (VS Code's) lists the workspace's symbols instead
   (`19.14`): in a code file, its servers' (`workspace/symbol`), asked as it's typed, each with its kind and
@@ -695,31 +706,30 @@ past theirs), so the content behind never runs up to the edge.
   note (`ctrl+shift+f`, `space f g`) lists each line with the text or regex as `path:line` with the
   line, an open note searched as it is now. Its question takes the window's find toggles, said in it: `alt+r` and
   `alt+w` flip them there.
-- **Replace in every note** (`25.4`; `ctrl+shift+h`, `space f shift+r`): what to find — the window's find, or a
+- **Replace in every note** (`25.4`, D155; `ctrl+shift+h`, `space f shift+r`): what to find — the window's find, or a
   selection on one line, typed already — then what with, then the rename's preview of each line it changes in every
   note and every file the explorer shows (`slipbox replace --all`'s, `--files` as the explorer has them). `enter` does
   it, `esc` leaves everything; `space v shift+u` takes it back, as a rename. A match across lines is one row, each
   break a `⏎`. Refused while a file with a match is unsaved: what's open isn't what's on disk.
-- **Search** (`6.5`, `6.9`; `space f s`, `:search words`): the root's notes ranked by the words as they're typed —
-  as `slipbox search` ranks them (`docs/design/cli.md`, "Search") — each a row: `path:line`, the section's heading
-  and the line, its words marked, `+n` for the file's other sections with some of them. `enter` opens it on that
-  line (rendered, at the line's start; in source mode, on the word). The index is the app's to keep: opened (or made)
-  as the root opens and brought up to the files in idle slices — the list says `the folder is being indexed: n of m
-  files…` the first time, and fills when it's done — then each file again as the graph hears it change (a save here,
-  the watcher, a rename, a CLI write). An unsaved note is searched as it's shown, in place of what the index has of
-  it. Without an index (`~` or `/` opened as a plain folder, `[search] engine = "scan"`) the files are scanned, and
-  the title says so.
-  **By root** (`20.16`, `21.10`): `ctrl+a` widens it to the folders linked to or from this one, their hits under a
-  `linked folders` divider as `path:line` (`21.9`: from home, else absolute); again, to every root this machine knows
-  (`other folders`); again, back to this one. The title says which. `enter` on another root's hit goes into it, at
-  that line.
+- **Search** (`6.5`, `6.9`; `space f s`, `:search words`): the root's notes ranked by the words as they're typed — as
+  `slipbox search` ranks them ([search.md](search.md); [cli.md](../../docs/cli.md) § Search) — each a row: `path:line`,
+  the section's heading and the line, its words marked, `+n` for the file's other sections with some of them. `enter`
+  opens it on that line (rendered, at the line's start; in source mode, on the word). The index is the app's to keep:
+  opened (or made) as the root opens and brought up to the files in idle slices — the list says
+  `the folder is being indexed: n of m files…` the first time, and fills when it's done — then each file again as the
+  graph hears it change (a save here, the watcher, a rename, a CLI write). An unsaved note is searched as it's shown, in
+  place of what the index has of it. Without an index (`~` or `/` opened as a plain folder, `[search] engine = "scan"`)
+  the files are scanned, and the title says so. **By root** (`20.16`, `21.10`; D64, D79): `ctrl+a` widens it to the
+  folders linked to or from this one, their hits under a `linked folders` divider as `path:line` (`21.9`: from home,
+  else absolute); again, to every root this machine knows (`other folders`); again, back to this one. The title says
+  which. `enter` on another root's hit goes into it, at that line.
 - **Filtering** (`3.16`): each space-separated word as typed — its letters together, never one by
   one — and every word, in any order (`hand oper` finds `handbook/operations-handbook.md`); smart
   case, word by word. Ranked by where each word lands: in the label over its description, in the
   file name over its folders, at a word start, earlier; the shorter first. The explorer, the history
   and the outline filter the same way. Highlights follow the original text even where lowercasing
   changes its length; the explorer lights the note's name where a word matched it.
-- **Keys:** as in [keymap.md](keymap.md), "In lists and prompts": the arrows, `tab` and
+- **Keys:** as in [keymap.md](../../docs/keymap.md) § In lists and prompts: the arrows, `tab` and
   `ctrl+n`/`ctrl+p` move (wrapping around), `enter` accepts, `esc` cancels. The wheel scrolls the
   list three rows a notch (the selection moves only to stay in view), a click picks, and a click
   outside closes the list. A counter in the bottom border shows `n/m`, and an empty list says "no
@@ -741,9 +751,9 @@ past theirs), so the content behind never runs up to the edge.
   columns have no names: they are simply the first, second and third way to do it.
   Without a keycap background (`NO_COLOR`), the columns are separated by `·`.
 
-Help and the palette list the same commands for different jobs, in the groups of
-[keymap.md](keymap.md) (`COMMAND_GROUPS` in `core/command-specs.ts`), in that document's order. Every command has a
-group (a test checks it); one no group claims would still be listed, under "Other", last:
+Help and the palette list the same commands for different jobs, in the groups of [keymap.md](../../docs/keymap.md)
+(`COMMAND_GROUPS` in `core/command-specs.ts`), in that document's order. Every command has a group (a test checks it);
+one no group claims would still be listed, under "Other", last:
 
 - **Help (`?`, `space ?`, `:help`)** is for learning the keys: every command with all its bindings (source
   mode's own, `[keys.source]`, and visual mode's included), then what
@@ -791,7 +801,7 @@ feedback all go to one place: a floating box briefly, the messages list permanen
 
 ## UI settings
 
-These are the `space u` toggles and pickers (list in [keymap.md](keymap.md)):
+These are the `space u` toggles and pickers (list in [keymap.md](../../docs/keymap.md)):
 
 - theme and glyphs
 - readable width (the text column capped and centred)
@@ -807,26 +817,28 @@ These are the `space u` toggles and pickers (list in [keymap.md](keymap.md)):
 - mouse capture
 - spelling (below)
 
-**Commands run by your shell (`25.7`).** `:!cmd` and `:{range}!cmd` ([keymap.md](keymap.md), "Your shell") run what
-you type, never what a root brings: a folder's config can't bind `shell.run` or `shell.filter`
-([configuration.md](configuration.md)). It runs by `$SHELL -c` in the root's folder, `SLIPBOX_ROOT` and `SLIPBOX_FILE`
-in its environment, in a process group of its own so stopping it stops what it started; the TUI goes on meanwhile,
-`running: cmd` said. What it prints is kept to 2 MB (the window says so when cut short), a filter's output to 32 MB;
-the window is a list — each line sanitized, filtered as typed — whose `enter` on a `path:line` of the root opens it.
+**Commands run by your shell (`25.7`; D155).** `:!cmd` and `:{range}!cmd` ([keymap.md](../../docs/keymap.md), "Your
+shell") run what you type, never what a root brings: a folder's config can't bind `shell.run` or `shell.filter`
+([configuration.md](../../docs/configuration.md), "What only you can set"; D166). It runs by `$SHELL -c` in the root's
+folder, `SLIPBOX_ROOT` and `SLIPBOX_FILE` in its environment, in a process group of its own so stopping it stops what it
+started; the TUI goes on meanwhile, `running: cmd` said. What it prints is kept to 2 MB (the window says so when cut
+short), a filter's output to 32 MB; the window is a list — each line sanitized, filtered as typed — whose `enter` on a
+`path:line` of the root opens it.
 
-**Spelling (`25.6`; `space u s`, `[spell] enabled`).** A note's misspelt words are marked (`spell`: underlined) in every
-view — source, rendered and the lens — as `core/spell.ts` finds them: its prose, word by word — not its front matter,
-code, HTML or maths, a link's address, a wikilink, a tag, a URL or an email, nor an abbreviation (`API`), an identifier
-(`camelCase`, `snake_case`, `x86`), a path or a dotted name (`file.ts`) — checked against its languages' dictionaries,
-a word any of them knows being right. Its languages are its front matter's `lang` (`lang: tr`, `lang: [tr, en]`), else
-`[spell] languages`; English and Turkish come with slipbox, any other is yours or the system's
-([configuration.md](configuration.md), "Spelling"); a language with none is said once. Hunspell, as WebAssembly, and
-each dictionary load in the background the first time; the window is drawn again when they're there. Source rows mark
-a word by its offsets; a rendered row finds it among the prose of its spans (not code, a URL, a tag). A find's match
-or the selection shows over a mark. `] s` / `[ s` go to the next / previous one where the window shows it, `z =` lists
-the one under the cursor's suggestions — each language's best in turn — and puts the one picked in its place (an edit,
-one undo step, left unsaved), `z g` adds it to your words (`~/.local/share/slipbox/spell/words.txt`, one a line,
-what `slipbox spell --add` writes): every dictionary loaded takes it at once. `slipbox spell` is the CLI's.
+**Spelling (`25.6`, D157; `space u s`, `[spell] enabled`).** A note's misspelt words are marked (`spell`: underlined) in
+every view — source, rendered and the lens — as `core/spell.ts` finds them: its prose, word by word — not its front
+matter, code, HTML or maths, a link's address, a wikilink, a tag, a URL or an email, nor an abbreviation (`API`), an
+identifier (`camelCase`, `snake_case`, `x86`), a path or a dotted name (`file.ts`) — checked against its languages'
+dictionaries, a word any of them knows being right. Its languages are its front matter's `lang` (`lang: tr`,
+`lang: [tr, en]`), else `[spell] languages`; English and Turkish come with slipbox, any other is yours or the system's
+([configuration.md](../../docs/configuration.md) § Spelling: the dictionaries); a language with none is said once.
+Hunspell, as WebAssembly, and each dictionary load in the background the first time; the window is drawn again when
+they're there. Source rows mark a word by its offsets; a rendered row finds it among the prose of its spans (not code, a
+URL, a tag). A find's match or the selection shows over a mark. `] s` / `[ s` go to the next / previous one where the
+window shows it, `z =` lists the one under the cursor's suggestions — each language's best in turn — and puts the one
+picked in its place (an edit, one undo step, left unsaved), `z g` adds it to your words
+(`~/.local/share/slipbox/spell/words.txt`, one a line, what `slipbox spell --add` writes): every dictionary loaded takes
+it at once. `slipbox spell` is the CLI's.
 
 **Wrapping off (`space u w`, `alt+z`, `ui.wrap = false`).** Each note is laid out at its natural width:
 first very wide, then at its widest real row (trailing spaces, rules and right-aligned
@@ -850,7 +862,7 @@ wins, and the TUI never writes your config.
 ## Configuration reload
 
 The configuration reloads **by itself** when a config file is saved: the user file, the enclosing
-roots' files (`20.7`) and the root's own are polled every second (or every `watch.poll_ms`, if that is
+roots' files (`20.7`; D12, D62) and the root's own are polled every second (or every `watch.poll_ms`, if that is
 shorter). `space v c` (or `:config`) reloads on demand. A reload applies what changed, live:
 
 - **keys, leader, aliases, groups:** keymaps rebuilt; unknown commands, unknown actions in
@@ -867,9 +879,9 @@ A broken file is reported in the message sink: a wrong value keeps its default a
 file applies; a file that doesn't parse at all keeps what it said before (its last good contents),
 so a typo saved mid-edit changes nothing until it's fixed.
 
-## Writing notes (phase 3)
+## Writing notes
 
-Every write goes one way (`writeBuffer`): the file is replaced atomically (a temp file in the same
+Every write goes one way (`writeBuffer`; D142): the file is replaced atomically (a temp file in the same
 folder, then a rename) keeping its permissions; a symlinked note is written through to its target,
 and a target outside the root is refused (`7.5`); the watcher is told the write is its own; the
 buffer reloads, its windows keeping their anchors, so the cursor stays put.
@@ -881,7 +893,7 @@ If the file changed on disk since it was shown, it is reloaded instead and nothi
 lines may have moved). With unsaved changes it flips the mark in the text on screen instead — an undo
 step, left unsaved ("done ✓ (unsaved)") — never on disk under them.
 
-**Handing off to another editor** (`4.1`, `4.2`, `4.12`) comes in two kinds, both opening the note at
+**Handing off to another editor** (`4.1`, `4.2`, `4.12`; D145) comes in two kinds, both opening the note at
 the cursor's source line. `space n e` steps aside: the renderer suspends, the editor
 (`[editor] command`, else `$VISUAL`, `$EDITOR`, `vi`, given `+line` or `file:line` when it's a
 known editor) runs in this terminal, and when it exits slipbox resumes and reloads the note if it
@@ -898,7 +910,7 @@ working where the note lives first. `space n p` always opens it. The note goes o
 commands, since nvim's `--remote` takes no `+line`: `--remote {file}`, then `--remote-send
 <C-\><C-N>:{line}<CR>` (the line alone, so a file name never becomes keys).
 
-Other editors take templates: `remote` is a list of commands run in order, each waited for before
+Other editors take templates (D159): `remote` is a list of commands run in order, each waited for before
 the next, stopping at the first that fails (`code -g {file}:{line}` is one); `{server}` in one is
 the picked nvim's socket. Every template is split into arguments and `{file}` / `{line}` filled in
 inside them, never through a shell, so a file name can't become a command; a template without
@@ -907,7 +919,7 @@ inside them, never through a shell, so a file name can't become a command; a tem
 ## Source mode (plan `4.13`)
 
 `space n v` (`:source`) shows a window's note as its raw markdown, and again rendered; the status
-chip reads `SOURCE`. It is another layout of the same note (`core/layout/source.ts`), so everything
+chip reads `SOURCE`. It is another layout of the same note (`core/layout/source.ts`; D146), so everything
 built on the layout works the same in both: the cursor keys, find and `*`, visual selection and
 copy, the mouse, wrapping, line numbers, the scrollbars. The cursor stays on its source line across
 the switch, and the outline and breadcrumb keep working. Their headings are the parse's while the
@@ -923,9 +935,9 @@ spaces up to the next stop, all mapping to the tab; a wide character is one cell
 a control character shows as `�` and never reaches the terminal; a CRLF's CR isn't shown — so a
 cursor column maps to an exact place in the text, which editing (next) builds on.
 
-## The lens: live preview (plan `4.14`, phase 3 step 5)
+## The lens: live preview (plan `4.14`)
 
-Editing a rendered note happens in **the lens**: whole blocks around the cursor shown as their
+Editing a rendered note happens in **the lens** (D147): whole blocks around the cursor shown as their
 markdown between two rules, the rest of the note rendered above and below it. Where you're looking
 is source; nothing is half rendered. Its rules are heavy (`━`, ascii `=`) whatever `ui.lines` says,
 in the `lens` role (the accent, bold), so they stand out from the frame and from a note's own rules;
@@ -993,11 +1005,11 @@ the drawing, clicks, drags and scrolling map screen rows around them (`App.scree
 
 **How it's drawn.** It is composed, not re-rendered (`core/layout/live.ts`): the render with the
 lens's rows swapped for source rows (which carry `srcMap`, so everything in
-[Editing](#editing-plans-43-44-45-phase-3-step-3) works in it) and its rules as frame rows
+[Editing](#editing-plans-43-44-45) works in it) and its rules as frame rows
 (`decor`: the cursor steps over them, find ignores them, they map to no text). While it's being
 typed into, the render around it is reused — the rows after it renumbered by the lines added or
 taken away — so a keystroke never re-parses the note (plan `15.1`'s per-block re-layout, for the
-lens). Leaving insert mode, or an edit reaching outside it, lays the note out afresh — re-parsing
+lens; D120). Leaving insert mode, or an edit reaching outside it, lays the note out afresh — re-parsing
 only the chunks the edits touched and re-rendering only their blocks.
 
 **Another note in the window.** Following a link from the lens, or `ctrl+o` / `ctrl+i` to another note, keeps the
@@ -1006,18 +1018,16 @@ lens open on the new note's cursor block: the old note's render, size, place and
 
 ## Files beyond notes (plan `16.x`)
 
-slipbox opens any text file in the root, not only notes (`docs/idea.md`, "Files beyond
-markdown"). `core/filetypes.ts` puts each file in a group by its name: **notes** (the root's
-`walk.extensions`), **data** (JSON, YAML, TOML, INI, CSV/TSV), **text** (everything else: code,
-logs, `.txt`), or **binary** (images, archives…, by extension — and a text-named file holding a NUL
-in its first 8 KB), which never opens. Nor does a path in the root that a symlink leads out of: it isn't a file of
-the root (the walk leaves it out, the CLI refuses it), so nothing outside is read through it.
+slipbox opens any text file in the root, not only notes (D107). `core/filetypes.ts` puts each file in a group by its
+name: **notes** (the root's `walk.extensions`), **data** (JSON, YAML, TOML, INI, CSV/TSV), **text** (everything else:
+code, logs, `.txt`), or **binary** (images, archives…, by extension — and a text-named file holding a NUL in its first 8
+KB), which never opens. Nor does a path in the root that a symlink leads out of: it isn't a file of the root (the walk
+leaves it out, the CLI refuses it), so nothing outside is read through it.
 
-A note is read by its format's reader (`core/readers.ts`, `16.2`): each parses into the same mdast
+A note is read by its format's reader (`core/readers.ts`, `16.2`; D110): each parses into the same mdast
 tree — so the index, the render, the lens and the outline work alike for every format — and says
 what source mode reads off the raw lines: its headings and the link around the cursor. Markdown's is
-the only one: Org and AsciiDoc readers were built and dropped (`16.16`, `16.17`; `docs/idea.md`), and
-their files open as text.
+the only one (`16.16`, `16.17`; D112): Org and AsciiDoc files open as text.
 
 - **Opening.** A data or text file opens from the explorer, `ctrl+p`, `:e path`, or a link to it
   (`[config](cfg/app.toml)`, `[run](run.py)`, `[editor](cfg/app.toml#editor)` at that section; binary links
@@ -1025,7 +1035,7 @@ their files open as text.
   the root learns of it then, as the watcher would have it — if the walk takes it. One git-ignored or under a
   hidden folder is reached (`20.8`): opened, and indexed from then on, as a link to it would; one in
   `node_modules` or `walk.exclude` isn't the root's, and isn't opened.
-- **Data files open rendered** (`16.11`–`16.13`, [rendering.md](rendering.md), "Data files"), with
+- **Data files open rendered** (`16.11`–`16.13`, D108; [rendering.md](rendering.md) § Data files), with
   source mode a key away and the lens editing a card at a time: in YAML and JSON a key with the
   plain values listed right under it (`defaults` and its settings), in TOML and INI one key — never
   padded with pieces of the next card, and moving to the next card rather than gathering them. A
@@ -1037,18 +1047,18 @@ their files open as text.
 - **Text files open in source mode**, highlighted by their language; no markdown headings are looked for in them. They
   have no rendered view: `space n v` and the lens say so and stay in source mode. A window that was in source mode only
   for such a file renders again when it opens a note (a link, `history.back`). **Code in a language the code view maps**
-  (`24.x`: TypeScript, TSX, JavaScript, Python so far) opens as a notebook instead — its comments and documentation as
-  prose, each definition a cell with buttons, its imports folded, every token as written — and `space n v` switches it
-  to source mode and back; editing opens the lens on the cursor's line, doc comment or imports, or source mode
-  (`[editor] edit_in`), as for a note. `[render] code = "source"` opens it in source mode as before.
-  `docs/design/code-view.md` has the view.
-- **Source code through tree-sitter** (`16.6`–`16.9`, `16.18`–`16.23`: TypeScript, TSX, JavaScript, Python, shell,
-  Lua, Go, Rust, Swift, HTML, CSS, SCSS, PHP, Dockerfile, Vue, Svelte, Astro, Ruby, C, C++). Each language's grammar
-  (the wasm from the language's own npm package, built for this runtime — `bunfig.toml` keeps their native install
-  scripts off — or, where npm has none, built from its source into `grammars/`) loads the first time a file of it
-  opens, never at start-up; until it lands, the file shows as any text file, and it draws again
-  when it does. A parse runs at once on open and then 150 ms after typing pauses — never per key
-  (tens of milliseconds for a 4,000-line file) — and the layout uses its last answer:
+  (`24.9`: the 13 grammars with definitions; D125, D130) opens as a notebook instead — its comments and documentation
+  as prose, each definition a cell with buttons, its imports folded, every token as written — and `space n v` switches
+  it to source mode and back; editing opens the lens on the cursor's line, doc comment or imports, or source mode
+  (`[editor] edit_in`), as for a note. `[render] code = "source"` opens it in source mode.
+  [code-view.md](code-view.md) has the view.
+- **Source code through tree-sitter** (`16.6`–`16.9`, `16.18`–`16.23`; D109, D123: TypeScript, TSX, JavaScript,
+  Python, shell, Lua, Go, Rust, Swift, HTML, CSS, SCSS, PHP, Dockerfile, Vue, Svelte, Astro, Ruby, C, C++). A `.h` is
+  C's (D123). Each language's grammar (the wasm from the language's own npm package, built for this runtime —
+  `bunfig.toml` keeps their native install scripts off — or, where npm has none, built from its source into
+  `grammars/`, D121) loads the first time a file of it opens, never at start-up; until it lands, the file shows as
+  any text file, and it draws again when it does. A parse runs at once on open and then 150 ms after typing pauses —
+  never per key (tens of milliseconds for a 4,000-line file) — and the layout uses its last answer:
   - **Highlighting.** highlight.js still colours each line; tree-sitter adds what a line can't
     know alone, that it starts inside a string or comment opened above (a template string's middle
     lines, a docstring, a block comment).
@@ -1058,12 +1068,12 @@ their files open as text.
     methods; Ruby's modules and `self.` methods; PHP's traits; a Dockerfile's stages (`build (node:22)`); a
     stylesheet's rules, `@media` and mixins; a page's headings (by their text) and its ids (`#about`) — as headings
     nested by where they sit, from a query per language. `space o`, `]]` and the breadcrumb use them as a note's.
-  - **A file in several languages** (`16.22`). A page's `<script>` and `<style>`, a Vue, Svelte or Astro component's
-    template, script and style, Astro's frontmatter: each part is parsed with its own grammar — `lang="ts"`, `lang="scss"`,
-    an HTML script's `type` (JSON is highlighted, not parsed); Astro's scripts are TypeScript. Each part is an outline
-    entry (`script setup lang="ts"`, `template`), its definitions under it; its lines are coloured in its language
-    (the lines its tags are on, the page's); its strings, comments, links and syntax errors are where they are in the
-    file. The grammars of a component's parts load with its own. A PHP file's HTML is coloured as HTML.
+  - **A file in several languages** (`16.22`; D122). A page's `<script>` and `<style>`, a Vue, Svelte or Astro
+    component's template, script and style, Astro's frontmatter: each part is parsed with its own grammar — `lang="ts"`,
+    `lang="scss"`, an HTML script's `type` (JSON is highlighted, not parsed); Astro's scripts are TypeScript. Each part
+    is an outline entry (`script setup lang="ts"`, `template`), its definitions under it; its lines are coloured in its
+    language (the lines its tags are on, the page's); its strings, comments, links and syntax errors are where they are
+    in the file. The grammars of a component's parts load with its own. A PHP file's HTML is coloured as HTML.
   - **Syntax errors** (syntax only: no types, no lint). Where the parser found an error or had to
     invent a missing token, the text is underlined (`syntax_error`), counted in the problems bar, and its line
     number is red when numbers show; the status line counts it (`✖ 1`), and the Problems panel's This file says
@@ -1097,17 +1107,17 @@ their files open as text.
   with a distinct one from the new note's folder (`projects-alpha`, then `-2`…), and says where the
   other is; typing the name again makes it anyway — a suggestion, not a rule.
 
-## Editing (plans `4.3`, `4.4`, `4.5`; phase 3 step 3)
+## Editing (plans `4.3`, `4.4`, `4.5`)
 
-Editing is in source mode: `i`, `a`, `o` and their capitals (in [keymap.md](keymap.md)) start typing, switching a
-rendered window to source first. A level of indentation is the file's (`25.1`): its `.editorconfig`, else its own lines,
-else its language ([configuration.md](configuration.md), "Indentation"). `%` goes to the matching bracket
-(`core/brackets.ts`, `25.3`): of its kind, the pairs nested between counted, across lines, by the text alone — a
-bracket in a string or a comment counts too, as in vim. In source mode the bracket at the cursor and its match are
-marked (`bracket_match`); while typing, the one just before the cursor. The buffer's `source` is the truth; every
-change is `NoteBuffer.edit`, one undo step each, except that an insert session (from `i` to `esc`) is one step. The
-cursor is a place in the text found through the source layout's `srcMap` (`editing.ts`), so tabs, wide characters and
-wrapped rows edit exactly where they show.
+Editing is in source mode (D146): `i`, `a`, `o` and their capitals (in [keymap.md](../../docs/keymap.md)) start typing,
+switching a rendered window to source first (D105). A level of indentation is the file's (`25.1`; D155): its
+`.editorconfig`, else its own lines, else its language ([configuration.md](../../docs/configuration.md) § Indentation:
+`.editorconfig`). `%` goes to the matching bracket (`core/brackets.ts`, `25.3`): of its kind, the pairs nested between
+counted, across lines, by the text alone — a bracket in a string or a comment counts too, as in vim. In source mode the
+bracket at the cursor and its match are marked (`bracket_match`); while typing, the one just before the cursor. The
+buffer's `source` is the truth; every change is `NoteBuffer.edit`, one undo step each, except that an insert session
+(from `i` to `esc`) is one step. The cursor is a place in the text found through the source layout's `srcMap`
+(`editing.ts`), so tabs, wide characters and wrapped rows edit exactly where they show.
 
 **Normal mode** in source is vim-shaped (`vim.ts`): counts, operators (`d` `c` `y` `>` `<` `gc`) that wait for a motion
 or a text object, a register, and `.`. Each operator and edit is a named command in `[keys.source]`; what follows an
@@ -1122,7 +1132,7 @@ has nothing to repeat rather than an older change. Keys are handled one at a tim
 them, a paste too), so a burst of typed keys or a paste never interleaves with a command still running; `.`'s own replay
 runs inside its turn.
 
-A changed note is **unsaved** until `:w` / `ctrl+s`: `• unsaved` by its path in the status line,
+A changed note is **unsaved** until `:w` / `ctrl+s` (D138): `• unsaved` by its path in the status line,
 `•` on its tab; undoing back to the saved text makes it clean again. Saving goes through
 `writeBuffer` (atomic, inside the root) and keeps the file's BOM and line endings — a CRLF file
 gets CRLF for new lines too; a file that isn't valid UTF-8 can't be edited or saved over. Parsing
@@ -1132,14 +1142,16 @@ unsaved, source mode's outline comes from a quick scan of the text's headings.
 **Outside changes and conflicts** (`4.5`, `5.5`–`5.7`). A clean note that changes on disk reloads,
 and the reload is one more undo step: `u` brings back what was there before an agent rewrote it (and
 `:e!`, dropping your changes, is undoable the same way). A note with unsaved changes that changes on
-disk opens the **conflict prompt**, which each choice answers with its key. While you're typing (into
+disk opens the **conflict prompt** (D139), which each choice answers with its key. While you're typing (into
 it or any note) it waits: a message says the file changed, and the prompt opens with the first key
 after typing ends — not the `esc` itself, which a second `esc` closing the lens would answer — so
 letters meant for the text never pick a choice.
 
 - **(l) Load theirs** — the file's version; yours is one `u` away.
 - **(k) Keep yours** — the status line says `⚠ differs from disk`; autosave stays off for it, and
-  saving asks first (**y** write over it, **n** not now, **d** see the diff). `esc` does the same.
+  saving asks first (**y** write over it, **n** not now, **d** see the diff). `esc` does the same. Answered, the
+  prompt doesn't nag: after (k) Keep yours, later changes on disk don't open it again, since saving is where it asks;
+  `space n c` reopens it (D139).
 - **(d) Diff** — yours → theirs, `-` and `+` lines with context; closing it returns to the prompt.
 - **(m) Merge** — a three-way merge by lines against the version you started from (`core/merge.ts`):
   what only one side changed is taken, the same change once, and different changes to the same
@@ -1151,27 +1163,27 @@ letters meant for the text never pick a choice.
 `:w` on a note whose file changed since it was loaded opens the prompt rather than writing over it;
 `:w!` writes over it.
 
-**Autosave** (`4.7`, `5.6`, `5.10`): a changed note is saved after `[editor] autosave_ms` (30 s;
-`0` turns it off) without a key pressed — not while you're in insert mode, not after (k) Keep yours
-until a saved, confirmed write, not over a file changed on disk (the conflict prompt comes instead),
-not with a merge's conflict markers in it, and not while git holds its `index.lock` (a commit in
-progress: it tries again later; in a worktree or submodule, the lock in the git directory its
-`.git` file names). **Hand-offs
-save first** (`4.10`): `space n e`, `space n s` and a capture into an open scratch write unsaved
-changes before the other side reads the file; `space s c` saves every unsaved note before it gathers the context
-bundle (`9.7`), which it copies: the note, what it links to and what links to it, as `slipbox context` writes it
-(`docs/design/cli.md`), as far as `[context]` says. One that can't be saved (it changed on disk meanwhile) stops it,
-nothing copied: `context: x.md changed on disk while unsaved — ␣ n c resolves it first`. An export (`space n o`, or
-`space n shift+o` for notes picked in order: `10.x`) saves them the same way before it reads the notes;
-`docs/design/export.md` has the rest.
+**Autosave** (`4.7`, `5.6`, `5.10`; D138, D140, D153): a changed note is saved after `[editor] autosave_ms` (30 s; `0`
+turns it off) without a key pressed — not while you're in insert mode, not after (k) Keep yours until a saved, confirmed
+write, not over a file changed on disk (the conflict prompt comes instead), not with a merge's conflict markers in it,
+and not while git holds its `index.lock` (a commit in progress: it tries again later; in a worktree or submodule, the
+lock in the git directory its `.git` file names). **Hand-offs save first** (`4.10`; D145): `space n e`, `space n s` and
+a capture into an open scratch write unsaved changes before the other side reads the file; `space s c` saves every
+unsaved note before it gathers the context bundle (`9.7`; D32), which it copies: the note, what it links to and what
+links to it, as `slipbox context` writes it ([cli.md](../../docs/cli.md) § The context bundle), as far as `[context]`
+says. One that can't be saved (it changed on disk meanwhile) stops it, nothing copied:
+`context: x.md changed on disk while unsaved — ␣ n c resolves it first`. An export (`space n o`, or `space n shift+o`
+for notes picked in order: `10.x`) saves them the same way before it reads the notes; [export.md](export.md) has the
+rest.
 
 Quitting with unsaved changes is refused (`:q!` quits anyway); a signal still quits.
 
 ## External changes (plans `5.1`–`5.4`)
 
 The watcher subscribes to exactly the directories the walk includes: one non-recursive watch per
-directory, sharing the walk's `WalkFilter` (decision `0.11`). Events are debounced
-(`watch.debounce_ms`) and settled by `stat`.
+directory, sharing the walk's `WalkFilter` (D40). Events are debounced
+(`watch.debounce_ms`) and settled by `stat` (D137). The graph follows the watcher's news, updated from each batch
+rather than rebuilt (`5.8`; D137).
 
 - **Changed:** a note without unsaved changes reloads silently (plan `5.3`), as one more undo
   step. Its anchors keep your place, and the change is surfaced at once with `↻ reloaded` and a
@@ -1183,14 +1195,15 @@ directory, sharing the walk's `WalkFilter` (decision `0.11`). Events are debounc
 - **New directories** are watched through their whole depth. A `.gitignore` change rescans, and
   open notes that changed during the rescan reload.
 - **Files outside the root** (the scratch in the state dir) are polled while open.
-- **What git does lands as one change** (`5.9`, `5.10`): while git holds its index lock (a checkout, a merge, a
+- **What git does lands as one change** (`5.9`, `5.10`; D153): while git holds its index lock (a checkout, a merge, a
   rebase, a commit) the watcher's news waits; when it lets go, everything it changed is applied together. HEAD is
   looked at each second and with each batch: when it moved, `switched to branch feat` — and that branch's tabs back
   (above). Mid-rebase (its `rebase-merge` or `rebase-apply` folder there) HEAD is detached between steps, or while
   stopped on a conflict: not read as moved until the rebase ends, when its branch moved on — no switch away and back.
   The files a branch switch brings and takes for a few seconds after aren't taken for moves (`17.12`): a note only one
-  branch has comes and goes, nothing moved. A pull or merge on the same branch is no switch: a rename it brings is a
-  move.
+  branch has comes and goes, nothing moved. The index records the branch it was written on, so at the next open an
+  index from another branch pairs no vanished notes as moves either. A pull or merge on the same branch is no switch:
+  a rename it brings is a move.
 
 ### Bun's watcher, and what covers its gaps
 
@@ -1221,17 +1234,16 @@ produces one error message, `⚠ not watching` in the status line, and polling o
 ## The lint surface (plan `3.21`)
 
 slipbox runs the linter you already use and shows what it finds where it is; it ships no rules of its own
-(`docs/idea.md`, "Run this repo's linter, don't ship one"). By default that's `markdownlint-cli2`, found as a
-language server is (`19.21`: the root's own `node_modules/.bin` in a root you trust, `PATH`, your installs), else
-installed into slipbox's own folder the first time it's needed, pinned (`[lsp] auto_install`; "installing
-markdownlint-cli2@0.23.3 into slipbox's own folder…"), and run on slipbox's Bun: with the root's own markdownlint
-config when it has one (the linter finds it), else with `~/.markdownlint-cli2.jsonc`. In a root you don't trust
-(`23.5`), a note under a markdownlint config that is code (`.cjs`, `.mjs`) or names code to load (`customRules`…)
-isn't linted, said once.
+(D160). By default that's `markdownlint-cli2`, found as a language server is (`19.21`, D164: the root's own
+`node_modules/.bin` in a root you trust, `PATH`, your installs), else installed into slipbox's own folder the first
+time it's needed, pinned (`[lsp] auto_install`; "installing markdownlint-cli2@0.23.3 into slipbox's own folder…"), and
+run on slipbox's Bun: with the root's own markdownlint config when it has one (the linter finds it), else with
+`~/.markdownlint-cli2.jsonc`. In a root you don't trust (`23.5`; D174), a note under a markdownlint config that is
+code (`.cjs`, `.mjs`) or names code to load (`customRules`…) isn't linted, said once.
 `[lint] enabled = "auto"` lints only where one of those configs is — markdownlint's defaults are no one's rules for
 notes; `"on"` lints anyway, `"off"` never. `[lint] command` runs another linter, the files appended, as long as it
 prints markdownlint-cli2's lines (`path:line[:column] MD013/line-length what's wrong`) — only your own config can
-name it, never a root's.
+name it, never a root's (D166).
 
 - **A note** is linted once its text is the file's: when it opens, and 300 ms after each save — never while it's
   unsaved, since the linter reads the file. Its findings show only for the text they were found in: typing hides
@@ -1247,8 +1259,8 @@ name it, never a root's.
 ## What's under the cursor (plans `19.12`, `19.13`)
 
 `shift+k` shows what's under the cursor in a floating window, rendered — a code file's language server's hover (its
-type, its docs), or, on a note's link, where it lands (the heading's section, the note's start); read-only, `esc` or `q`
-closes it. `g d` goes to the definition — the server's; a single one opens at once, in this root or outside it (a
+type, its docs; D161), or, on a note's link, where it lands (the heading's section, the note's start); read-only, `esc`
+or `q` closes it. `g d` goes to the definition — the server's; a single one opens at once, in this root or outside it (a
 dependency's types open as a loose file), several are a list — and in a note it follows the link. `g r` lists the
 references, each `file:line` with the line's text, to pick from; in a note, its backlinks. `g y` goes to where its type
 is defined, `g shift+i` to what implements it (`19.13`; Helix's `goto-type-definition`, `goto-implementation` features):
@@ -1274,8 +1286,8 @@ one of its servers' trigger characters (`.`), else once a word is begun and typi
 each with its detail dimmed, the best first — by how well the word typed so far matches, then the server's order. Typing
 on narrows the list without asking again, unless the server said its list was partial; a word ended (a space, an
 operator) closes it. `tab` or `enter` puts the chosen item in — its edit if it has one, else its text over the word —
-then its other edits (an import at the top), the cursor staying on its text. **A snippet** (`25.8`; slipbox says it
-takes them) is expanded first (`core/snippet.ts`, LSP's grammar): a choice its first, a variable its value
+then its other edits (an import at the top), the cursor staying on its text. **A snippet** (`25.8`, D155; slipbox says
+it takes them) is expanded first (`core/snippet.ts`, LSP's grammar): a choice its first, a variable its value
 (`TM_FILENAME`…), each new line indented as the line, a tab as the file indents, a stop written again given its
 placeholder's text. The cursor goes to its first stop, the placeholder marked as selected: the first key typed replaces
 it (a backspace takes it), and its mirrors follow what's typed. `tab` goes to the next stop, `shift+tab` back; `$0`
@@ -1312,15 +1324,16 @@ properties a server lists.
 
 ## Problems where they are (plans `19.8`–`19.11`)
 
-A file's problems, from every source alike, show where they are, in source mode, the lens and the rendered view: its
-syntax errors (`16.9`; in source mode, out of insert, for the text as it is), the linter's findings (`3.21`; for the
-text they were found in), a note's own (`11.5`: a link that reaches nothing or several notes, a `#heading` or
+A file's problems, from every source alike (D167), show where they are, in source mode, the lens and the rendered
+view: its syntax errors (`16.9`; in source mode, out of insert, for the text as it is), the linter's findings (`3.21`;
+for the text they were found in), a note's own (`11.5`: a link that reaches nothing or several notes, a `#heading` or
 `#^block` its note hasn't, git's conflict markers; while the note is as saved, since the root's index has the
 file's), its language servers' (`19.1`; for the text they were found in — typing hides them until they answer
 again; once a server has answered, its syntax errors stand for tree-sitter's — in a root you don't trust, each in its
-safe mode until you answer whether you trust it — asked once, the first time it matters, lsp.md's "Trust"), and its linters
-without a server (`19.19`: one reading its input on the text as typed, 500 ms after typing pauses; one reading the
-file after each save, its findings hidden while the text differs). Each has a severity: error, warning, information,
+safe mode until you answer whether you trust it — asked once, the first time it matters: [trust.md](trust.md)
+§ Trusting a root; D174, D177), and its linters without a server (`19.19`, D163: one reading its input on the
+text as typed, 500 ms after typing pauses; one reading the file after each save, its findings hidden while the text
+differs). Each has a severity: error, warning, information,
 hint. `[diagnostics] severity` (`warning`) is the least that shows, so a root's notes not written yet —
 information — don't mark every page; `"info"` shows them too.
 
@@ -1371,25 +1384,24 @@ the status line), `esc` handing them back to the note and `q` closing it.
   set: each link that reaches nothing, and why when there's a reason, such as an unknown folder), **Ambiguous links**
   (each that reaches several notes, and how many), **Fragile links** (each won by where it's written — the nearest or
   the shortest of several of its name — and the path that names its note for sure, `space c a` writing it), **Lint**
-  (`3.21`: the linter's findings, when one runs — see "The lint surface"), **Conflicts** (`5.12`: during a merge, each
-  file git says is unmerged, at its first `<<<<<<<` marker), **Orphans** (`9.5`: the notes no other note links to —
-  another root's links count, a note's own don't — each opened by `enter`). Under the first three, the notes with such
-  links, and under a note its problems: the line and the link as written, in the link's colour (a finding: its line,
-  rule and what's wrong). `enter` or a click opens the note there in a tab of its own — or switches to the tab showing
-  it, a place pushed onto its history — the cursor on the problem's line, on the link as drawn (in source mode, on its
-  text); a note's row (an orphan's too) opens at its first. As in the explorer, `o` opens it in this window instead,
-  `s` in the split's other. It takes the explorer's keys (`l`
-  / `h` unfold and fold a section); `/` filters — its `› text` after the tabs' titles — keeping the problems whose note,
-  line or link matches (a conflict or an orphan by its path) under their headings, unfolded; a note's change shows at
-  once. Each opening lints the root again (`Lint (n) …` while it runs); `slipbox problems` gives the same (`--lint` for
-  the findings).
+  (`3.21`: the linter's findings, when one runs — see "The lint surface"), **Conflicts** (`5.12`, D154: during a merge,
+  each file git says is unmerged, at its first `<<<<<<<` marker), **Orphans** (`9.5`, D27: the notes no other note links
+  to — another root's links count, a note's own don't — each opened by `enter`). Under the first three, the notes with
+  such links, and under a note its problems: the line and the link as written, in the link's colour (a finding: its
+  line, rule and what's wrong). `enter` or a click opens the note there in a tab of its own — or switches to the tab
+  showing it, a place pushed onto its history — the cursor on the problem's line, on the link as drawn (in source mode,
+  on its text); a note's row (an orphan's too) opens at its first. As in the explorer, `o` opens it in this window
+  instead, `s` in the split's other. It takes the explorer's keys (`l` / `h` unfold and fold a section); `/` filters —
+  its `› text` after the tabs' titles — keeping the problems whose note, line or link matches (a conflict or an orphan
+  by its path) under their headings, unfolded; a note's change shows at once. Each opening lints the root again
+  (`Lint (n) …` while it runs); `slipbox problems` gives the same (`--lint` for the findings).
 
 The same key, the panel open there and focused, closes it; open and not focused, it focuses it.
 
 ## Git (plans `5.11`–`5.14`)
 
 `space g` holds what git knows of the root, measured against the base branch (`[git] base`, else `main`, else
-`master`) from where this branch left it (the merge base) — what an agent's worktree changed, ready to review:
+`master`) from where this branch left it (the merge base) — what an agent's worktree changed, ready to review (D154):
 
 - **`space g c`** (`:changes`): the files this branch changed, committed or not, and the new ones — `M a.md`,
   `+ c.md`, `R notes/new.md  from notes/old.md`, coloured by state. `enter` shows a file's diff; `esc` there comes
@@ -1398,19 +1410,27 @@ The same key, the panel open there and focused, closes it; open and not focused,
   removed lines red, added green (`diff_del`, `diff_add`, `diff_head`). `enter` on a line goes there.
 - **`space g w`** (`:worktrees`): the repository's checkouts — the main one first, this one marked `●` — each by its
   branch. `enter` switches into the root there, at the same note when that branch has it.
-- **`space g m`** (`:merge-review`, `20.21`): before a merge, the links it would break. A merge picked — this branch
-  into the base, or another branch into this one — and git's tentative result is checked (`slipbox merge-review`): each
-  broken link by its note and line, what broke it ("`main` moves `a.md` to `docs/a.md` — the fix: `docs/a.md`"),
-  yellow when there's a fix, red when there isn't. `enter` goes to the link (a note only the other branch has, said
-  so); `esc` comes back to the branches. Nothing broken, a message says so.
+- **`space g m`** (`:merge-review`, `20.21`; D66): before a merge, the links it would break. A merge picked — this
+  branch into the base, or another branch into this one — and git's tentative result is checked
+  (`slipbox merge-review`): each broken link by its note and line, what broke it ("`main` moves `a.md` to `docs/a.md` —
+  the fix: `docs/a.md`"), yellow when there's a fix, red when there isn't. `enter` goes to the link (a note only the
+  other branch has, said so); `esc` comes back to the branches. Nothing broken, a message says so.
 
-**After a merge or a pull** (`20.21`): HEAD moving on its branch isn't a switch — the tabs stay. Git's renames between
-the two commits are evidence of moves; when there are some, a message says so ("branch main moved on: git moved 2
-files — …"), and each link broken by one says where its file went, in Problems (`space v p`) and when followed;
+What's on request (the changes, a diff, the worktrees) asks git there and then; only the explorer's marks are kept,
+asked in the background (D154; § Side panes).
+
+**After a merge or a pull** (`20.21`; D66): HEAD moving on its branch isn't a switch — the tabs stay. Git's renames
+between the two commits are evidence of moves; when there are some, a message says so ("branch main moved on: git moved
+2 files — …"), and each link broken by one says where its file went, in Problems (`space v p`) and when followed;
 `space l r` relinks a note's.
 
 A jump to a line inside a rendered paragraph (a diff's line, a conflict, a finding, `:42` and `ctrl+g`) lands on that
 line's text, not the paragraph's first line or its row's end.
+
+**The working tree's git** (`26.x`: the gutter's changes, source control, commit, blame and history, branches) is the
+TUI's alone: none of it has a CLI equivalent, its commands marked as interactions, since an agent runs `git` itself
+(D156). The review above has one (`slipbox changed`, `diff`, `worktrees`, `merge-review`; [cli.md](../../docs/cli.md)
+§ Git). Source control and commits are the left panel's (§ Side panes).
 
 **Branches** (`26.5`; `space g o`): the local branches, this one marked `here` and selected; `enter` checks one out,
 and "A new branch from here…" asks its name and makes it where HEAD is (`git switch -c`; a name git won't take is
@@ -1425,25 +1445,46 @@ changed since is said to be not committed yet. `space g h` lists the file's comm
 through its renames (one from before shows the path it had); `enter` on one reads it as it was (read-only, a note
 rendered) or shows its diff to the text as it is now, `enter` on a line going there.
 
-**The working tree's changes** (`26.1`; `[git] signs`): a file's lines changed against what's staged — its text as it
-is now, unsaved typing included (`core/gitsigns.ts`) — are signed in the gutter's last column, the one before the text:
-`▎` added (`git_new`), `▎` changed (`git_modified`), `▁` lines deleted below the line (`▔` above the first; `diff_del`).
-A rendered row joining several lines takes their strongest. With no gutter (no line numbers, no problems bar), a file
-that has had a change gets a column of its own and keeps it, so the text doesn't move. What's staged is asked of git
-(`git show :path`, with `23.6`'s guards where the root isn't trusted) in the background, again whenever git has news;
-a file git hasn't is every line added, one it ignores has no signs; line endings don't count. `] c` / `[ c` go to the
-next and previous change (around the ends), `space g p` shows the one on the cursor's line as a diff in the floating
+**The working tree's changes** (`26.1`; `[git] signs`): a file's lines changed against what's staged — its text as it is
+now, unsaved typing included (`core/gitsigns.ts`) — are signed in the gutter's last column, the one before the text: `▎`
+added (`git_new`), `▎` changed (`git_modified`), `▁` lines deleted below the line (`▔` above the first; `diff_del`). A
+rendered row joining several lines takes their strongest. With no gutter (no line numbers, no problems bar), a file that
+has had a change gets a column of its own and keeps it, so the text doesn't move. What's staged is asked of git
+(`git show :path`, with `23.6`'s guards where the root isn't trusted, D175) in the background, again whenever git has
+news; a file git hasn't is every line added, one it ignores has no signs; line endings don't count. `] c` / `[ c` go to
+the next and previous change (around the ends), `space g p` shows the one on the cursor's line as a diff in the floating
 window, and `space g r` undoes it — its lines as staged put back, one undo step, left unsaved.
 
-## Modes and dispatch (decision `3.11`)
+## Modes and dispatch
+
+Keys reach layers, each owning some of them (D99, D105):
+
+| Mode | Owns keys | Examples |
+| --- | --- | --- |
+| overlay | every key | switcher, palette, pickers, prompts, the conflict prompt |
+| filter | typed text, and moving through the matches | `/` in the explorer or the history |
+| insert | typed text, and the few keys that edit or move | `i`, `a`, `o` in source or the lens |
+| a character | the next key, as a character | after `f`, `t`, `r` |
+| operator | a count, a motion or a text object | after `d`, `c`, `y`, `>`, `<` |
+| resize | its own keys; any other key leaves it, then runs | `space w r`, then `h j k l` |
+| pending | the next key of a sequence | `space l …`, `ctrl+w …`, `g g` |
+| pane | keys of the focused side pane | explorer, history, outline |
+| visual | selection keys, and movement extends | `v`, `shift+v` |
+| source | source mode's and the lens's own keys, before the reading ones | `x`, `d`, `p`, `.` |
+| normal | everything else | cursor, links, tabs |
+
+Every binding names a registry command (D11), and config remaps all of them. Editing keys work only where the
+text is editable, in the source layer; the keys that start an edit and undo are in the reading layer too, and
+switch the window to source first (D105). The conventions that settle collisions between keys (D99, D106,
+D128) are the user's to read: [keymap.md](../../docs/keymap.md) § Conventions.
 
 **Dispatch order:** a paste first, then an overlay, then a pane's filter while typing in it, then insert mode's
 keys (the completion popup's first), then a key awaited as a character (after `f`, `t`, `r`), then — in source mode
 and the lens — counts and an operator's motion around the rest (`vim.ts`), then resize mode's keys (any other key
 leaves resize mode and runs as usual), then a pending sequence (where `esc` cancels and `backspace` goes up a level),
 then the focused pane's keymap (explorer or outline), then visual mode's, then source mode's own (`[keys.source]`,
-in an editable window outside visual mode), then the normal keymap. Only keymaps at or above the one holding a binding can
-make a key a prefix: visual mode's `y` doesn't wait for the normal keymap's `y y`. When a key is
+in an editable window outside visual mode), then the normal keymap. Only keymaps at or above the one holding a
+binding can make a key a prefix: visual mode's `y` doesn't wait for the normal keymap's `y y`. When a key is
 both a binding and a prefix, slipbox waits `input.which_key_delay_ms` for the next key, then
 runs the binding.
 
@@ -1453,14 +1494,16 @@ runs the binding.
   toggling a pane, zen, wrap or line numbers, a terminal resize — about 4 ms for a thousand-line
   note and 70 ms for twenty thousand. A buffer keeps its last six widths, so going back and forth
   is cached. Edits, reloads and leaving the lens reuse what didn't change (the parse by chunk, the
-  render by block, source mode by line: [architecture.md](architecture.md), "Big notes").
-- **A big note's first open reads for a moment** (plan `15.1`): with 128 KB or more to parse, it parses on other
+  render by block, source mode by line: [how-it-works.md](how-it-works.md) § Performance, measured, "Big notes";
+  D120).
+- **A big note's first open reads for a moment** (plan `15.1`; D120): with 128 KB or more to parse, it parses on other
   threads — the window says `reading big.md — 20,000 lines…` for about a third of a second at twenty thousand
   lines, keys wait for it, a click is dropped — then the note is drawn where it was left.
 
 ## Parity with the CLI
 
-Every command is declared in `core/command-specs.ts` with the CLI invocation that reaches the
-same state change, or marked as an interaction: cursor, scrolling, selection, focus, panes,
-overlays. Tests fail when a command is implemented without a spec or specified without an
-implementation. See [cli.md](cli.md).
+Every command is declared in `core/command-specs.ts` with the CLI invocation that reaches the same state change, or
+marked as an interaction: cursor, scrolling, selection, focus, panes, overlays (D11, D14). Editing keys are interactions
+too: the state they change, a note's text, is reached from the CLI by `write`, `replace` and `task` (D14, D18). Git in
+the editor is marked so too, though it changes state: it is the TUI's alone (§ Git; D156). Tests fail when a command is
+implemented without a spec or specified without an implementation. See [cli.md](../../docs/cli.md).

@@ -1,10 +1,11 @@
-// The merge review (plan 20.21; docs/idea.md, "Git"): before a merge, git's own tentative result —
-// `git merge-tree`, the working tree untouched — checked for the links it would break. Git can't see
-// this itself: "refactor moves docs/plan.md; main added a link to it in docs/b.md" changes different
-// files, so it merges cleanly. Each link broken in the result that wasn't broken in the branch merged
-// into is said with its cause — the file moved (where to, and the fix), was deleted, isn't on either
-// branch, or the note itself moved — and whose change it was. Every written form: a markdown link's
-// path, a wikilink's path or name (21.3). Committed work only: what isn't committed is in neither branch.
+// The merge review (plan 20.21; blueprint/design/links.md § The merge review): before a merge, git's
+// own tentative result — `git merge-tree`, the working tree untouched — checked for the links it would
+// break. Git can't see this itself: "refactor moves docs/plan.md; main added a link to it in docs/b.md"
+// changes different files, so it merges cleanly. Each link broken in the result that wasn't broken in
+// the branch merged into is said with its cause — the file moved (where to, and the fix), was deleted,
+// isn't on either branch, or the note itself moved — and whose change it was. Every written form: a
+// markdown link's path, a wikilink's path or name (21.3). Committed work only: what isn't committed is
+// in neither branch.
 
 import { spawnSync } from "node:child_process";
 import { join, posix, relative, sep } from "node:path";

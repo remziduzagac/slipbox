@@ -1,13 +1,37 @@
-# Keymap compared: vim, VS Code, Obsidian, slipbox
+---
+status: outdated
+created: "2026-09-29"
+---
 
-The key map decided on 2026-09-29, beside vim's, VS Code's and Obsidian's keys for the same
-actions. The rules it follows are in [keymap.md](keymap.md), "Conventions": **vim's keys first**
-where slipbox has the action, **the desktop editors' `ctrl` keys next** where vim's use of them is
-marginal in a notes app, **`ctrl+w` and `ctrl+t` as the window and tab prefixes**, and **`space`
-for the rest**. `keymap.md` is the reference; this page is for comparing.
+# Research: the keymap beside vim, VS Code and Obsidian
+
+slipbox's key map as decided on 2026-09-29, beside vim's, VS Code's and Obsidian's keys for the same actions. The rules
+it follows are in [keymap.md](../../docs/keymap.md), "Conventions": **vim's keys first** where slipbox has the action,
+**the desktop editors' `ctrl` keys next** where vim's use of them is marginal in a notes app, **`ctrl+w` and `ctrl+t` as
+the window and tab prefixes**, and **`space` for the rest**. `keymap.md` is the reference; this page is for comparing.
+
+The slipbox column is slipbox's own map (*ours*). The vim, VS Code and Obsidian columns are each tool's defaults as
+recorded on 2026-09-29, with no source named (*memory*).
 
 Notation: `C-` ctrl, `S-` shift, `A-` alt, `␣` the leader (space); `␣tQ` is `space t shift+q`. VS Code's
 keys are its Linux and Windows defaults. `?` marks an Obsidian default not confirmed; `—` none.
+
+**Outdated:** the slipbox column has fallen behind `keymap.md` in places. There, `ctrl+k` (and `space n v`) switches
+between rendered and source, `ctrl+v` pastes and `ctrl+x` cuts, `ctrl+n` makes a new note, and forward in history is
+`space h n` alone. The other tools' columns are unaffected.
+
+## Summary
+
+- **Most actions have a vim key, and slipbox keeps it;** where VS Code and Obsidian share a `ctrl` key (`C-f`, `C-z`,
+  `C-s`, `C-S-f`, `C-Tab`), slipbox adds it beside vim's (*ours*, *memory*). This informed D99.
+- **Many actions have a key only in vim:** screen-relative moves, half pages, paragraphs and headings, and the window
+  commands have no VS Code or Obsidian default (*memory*).
+- **The tools disagree most over `C-w`, `C-t` and `C-e`:** the desktop editors close a tab with `C-w`, which is vim's
+  window prefix; `C-t` opens a tab in Obsidian, finds a symbol in VS Code and pops vim's tag stack; `C-e` switches to
+  source in Obsidian, scrolls a line in vim and opens a file in VS Code (*memory*). Where slipbox sides with one of
+  them is listed under "Where slipbox differs, on purpose" (*ours*).
+- **Several chords may not reach a terminal program** (`C-S-f`, `C-S-p`, `C-Tab`, `C-Enter`, `A-1…9`), so each has a
+  `␣` or `:` route in slipbox (*memory*, *ours*).
 
 ## Moving around
 
@@ -126,3 +150,13 @@ keys are its Linux and Windows defaults. `?` marks an Obsidian default not confi
   quits on the last window, as vim's does.
 - **Chords a terminal may not pass** — `C-S-f`, `C-S-p`, `C-Tab`, `C-Enter`, `A-1…9` — each have a
   `␣` or `:` route.
+
+## Gaps
+
+- Three Obsidian defaults were not confirmed (`?`): moving the line, a heading in this note, and following the link into
+  the split.
+
+## Sources
+
+- vim's default keys; VS Code's default keybindings on Linux and Windows; Obsidian's default hotkeys (2026-09-29).
+- slipbox's own map: [docs/keymap.md](../../docs/keymap.md).

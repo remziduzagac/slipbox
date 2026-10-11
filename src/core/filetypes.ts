@@ -1,4 +1,4 @@
-// What a file is to slipbox (plan 16.1, docs/idea.md "Files beyond markdown"): three groups.
+// What a file is to slipbox (plan 16.1, D107): three groups.
 //
 // - notes: markdown, the files with an extension in the root's `walk.extensions`. They are the
 //   link graph.

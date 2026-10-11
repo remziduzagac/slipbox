@@ -1,4 +1,4 @@
-// Storage layout (decision 0.10, docs/design/decisions.md; 17.3): config vs cache vs state vs data.
+// Storage layout (D39, blueprint/design/how-it-works.md § Storage; 17.3): config vs cache vs state vs data.
 //
 // A root's cache and state are found by its key (`VaultLocation.key`): `<basename>-<hash12>` of its
 // real path (21.8); a named folder moved by hand has them carried (vault.ts `recordLocation`).

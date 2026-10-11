@@ -1,13 +1,13 @@
 # Distribution
 
-How slipbox gets from this repository to someone's machine, and what keeps that path honest (plan `14.x`). Decided
-with the user on 2026-10-10, after trailscout's packaging design (`docs/plan.md`, "Distribution"): macOS and Linux
-first, Windows if it isn't difficult; no signing at first; a daily update check, on; XDG's folders kept.
+How slipbox gets from this repository to someone's machine, and what keeps that path honest (`14.x`). macOS and Linux
+first, Windows through WSL (D197, D203, D205); no signing at first (D198); a daily update check, on (D199); XDG's
+folders kept (D200).
 
 ## Folders
 
-`core/paths.ts`, `storeDir` (`14.9`). Every file slipbox keeps is one of four kinds — config, cache, state, data —
-and each kind has one folder (decision `0.10`, `docs/design/decisions.md`, which lists what's in each):
+`core/paths.ts`, `storeDir` (`14.9`, D200). Every file slipbox keeps is one of four kinds — config, cache, state,
+data — and each kind has one folder (D39; what's in each: [how-it-works.md](how-it-works.md) § Storage):
 
 | Platform | Config | Cache, state, data |
 | --- | --- | --- |
@@ -22,7 +22,7 @@ search index, the parse cache or a picture — so backup tools that know the tag
 
 ## The supply chain
 
-`scripts/check-deps.ts` (`14.10`) runs in `bun run check` and in CI, and fails on:
+`scripts/check-deps.ts` (`14.10`, D201) runs in `bun run check` and in CI, and fails on:
 
 - **A version not exact** in `package.json`, dependencies and dev dependencies alike. `bun.lock` pins the rest, and
   CI installs with `--frozen-lockfile`.
@@ -31,8 +31,8 @@ search index, the parse cache or a picture — so backup tools that know the tag
   is taken only once it's been published a week: a package taken over and republished is mostly found and pulled by
   then), and `exact = true` (so `bun add` pins).
 - **A licence slipbox doesn't take**, in any package the binary can bundle: `package.json`'s dependencies and theirs,
-  found as Node finds them, optional ones where installed. Taken: permissive licences (MIT, ISC, BSD, Apache-2.0,
-  0BSD, BlueOak, Zlib, CC0, Unlicense), an SPDX expression's `OR` by either side and `AND` by both. Weak copyleft is
+  found as Node finds them, optional ones where installed. Taken: permissive licences (MIT, ISC, BSD, Apache-2.0, 0BSD,
+  BlueOak, Zlib, CC0, Unlicense), an SPDX expression's `OR` by either side and `AND` by both (D192). Weak copyleft is
   taken only by name, each one asked about first (`NAMED`: `elkjs`, EPL-2.0; `@resvg/resvg-wasm`, MPL-2.0; and
   `dictionary-en`'s SCOWL terms). A package naming no licence fails, unless its own `LICENSE` was read and recorded
   (`DECLARED`: `png-js`, `typeahead`).
@@ -42,12 +42,13 @@ search index, the parse cache or a picture — so backup tools that know the tag
 
 ## Releases
 
-`scripts/release.ts` (`14.2`), in two steps. `build` compiles each target — this machine's when none is named — with
-package.json's own `build`, so its autoload flags are always on (`14.1`), and defines the release in it
-(`core/release.ts`, `RELEASE`: the repository releases come from and the platform it's for). A target built for this
-machine is run once (`--version`) first. Each is packed, with its notices, as `slipbox-<version>-<target>.tar.gz`, a
-folder of that name inside. `finish` writes `SHA256SUMS` over the packs, refusing another version's beside them, and
-the installer.
+`scripts/release.ts` (`14.2`, D197), in two steps. `build` compiles each target — this machine's when none is named —
+with package.json's own `build`, so Bun's autoloading is always off: the binary reads no `bunfig.toml`, `.env`,
+`tsconfig.json` or `package.json` of the folder it starts in (`14.1`, D195; [trust.md](trust.md) § Bun's own reading).
+It defines the release in it (`core/release.ts`, `RELEASE`: the repository releases come from and the platform it's
+for). A target built for this machine is run once (`--version`) first. Each is packed, with its notices, as
+`slipbox-<version>-<target>.tar.gz`, a folder of that name inside. `finish` writes `SHA256SUMS` over the packs, refusing
+another version's beside them, and the installer.
 
 | Asset | Bun's target |
 | --- | --- |
@@ -59,10 +60,10 @@ the installer.
 | `linux-arm64-musl` | `bun-linux-arm64-musl` |
 
 x64 takes Bun's baseline build: it runs on any x64 processor, with no AVX2 asked for, and a terminal program loses
-nothing by it. `-musl` is Linux whose C library is musl — Alpine's (`14.5`). SQLite is Bun's own, so nothing else
-differs, but for OpenTUI: it picks its musl library only when `OPENTUI_LIBC=musl` at run time, so a musl build is
-built with that defined (`--define process.env.OPENTUI_LIBC="musl"`) — fixed, whatever the environment says. Its glibc
-library is bundled too (Bun doesn't drop the branch not taken); only the musl one is loaded.
+nothing by it. `-musl` is Linux whose C library is musl — Alpine's (`14.5`, D203). SQLite is the runtime's own (below),
+so nothing else differs, but for OpenTUI: it picks its musl library only when `OPENTUI_LIBC=musl` at run time, so a musl
+build is built with that defined (`--define process.env.OPENTUI_LIBC="musl"`) — fixed, whatever the environment says.
+Its glibc library is bundled too (Bun doesn't drop the branch not taken); only the musl one is loaded.
 
 The version is package.json's, which must be `src/version.ts`'s, and the tag's. The repository is `--repo
 owner/name`, or origin's on GitHub; it's checked strictly, as it goes into addresses and the installer.
@@ -71,20 +72,36 @@ Run from source, or built by hand (`bun run build`), slipbox has no `RELEASE`: i
 update check leave it alone. A release build says its own in `info` (`release`, and the first line).
 
 CI (`.github/workflows/release.yml`) does it on a tag `v<version>`: each platform built on a runner of its own, after
-the whole check passes there — that platform's OpenTUI package is installed only there, and a Mac's binary is signed
-by Bun on a Mac, its signature checked (`codesign --verify`). A musl build is run in Alpine (a container pinned by
-digest): its version, an index and a search, and the TUI started in a terminal and still running five seconds later.
-Then the packs are summed, attested (who built each, from
-which commit: `gh attestation verify <pack> --repo <owner/name>`), and the release drafted. Nothing is published until
-a person publishes the draft. The workflow can't have run yet: the repository has no remote.
+the whole check passes there — that platform's OpenTUI package is installed only there, and a Mac's binary is built on a
+Mac (§ Signing). A musl build is run in Alpine (a container pinned by digest): its version, an index and a search, and
+the TUI started in a terminal and still running five seconds later. Then the packs are summed, attested (who built each,
+from which commit: `gh attestation verify <pack> --repo <owner/name>`), and the release drafted. Nothing is published
+until a person publishes the draft. The workflow can't have run yet: the repository has no remote.
 
 Building another platform here works when its OpenTUI package is installed (`bun install --os <os> --cpu <cpu>`):
 Bun fixes the platform at build time, so only that platform's package is bundled.
 
+## Signing
+
+Releases are neither signed nor notarized (D198). Bun signs a darwin binary ad hoc; a Mac's binary is built on a Mac
+so that signature holds, and CI checks it with `codesign --verify`. Gatekeeper stops a binary a browser downloaded;
+the installer's `curl` doesn't mark what it downloads, so the installer's slipbox isn't stopped.
+
+## SQLite
+
+SQLite is the runtime's own, through `node:sqlite` (D196). Bun implements it as Node does: its own SQLite on Linux
+and Windows (3.53.2 in Bun 1.4.2), macOS's system one on macOS, so nothing native is packaged per platform for it,
+and a Linux build needs only the glibc Bun and OpenTUI need, 2.17. On macOS the SQLite is Apple's, older and of the
+OS's version: slipbox asks only FTS5 with `unicode61` (3.27 and up), `bm25`, WAL and a busy timeout, and loads no
+extension. Both its databases, the search index and the parse cache, are caches, made again when they don't open.
+`core/sqlite.ts` keeps the calls slipbox makes (`get`, `all`, `run`, `pragma`, `transaction` with savepoints
+inside, `exec`, `close`); integers the schema needs are bound `CAST(? AS INTEGER)`, harmless whatever a binding
+does with a number.
+
 ## Installing
 
-`finish` also writes `install.sh` (`14.7`): `scripts/install.template.sh` with the release's version, repository and
-each pack's SHA-256 written in — so a pack that isn't the one released is refused, wherever it came from. It's a
+`finish` also writes `install.sh` (`14.7`, D197): `scripts/install.template.sh` with the release's version, repository
+and each pack's SHA-256 written in — so a pack that isn't the one released is refused, wherever it came from. It's a
 release asset, run as
 
 ```bash
@@ -115,11 +132,11 @@ through `file://` — and their sums are still the release's.
 
 ## Homebrew
 
-`finish` writes `slipbox.rb` too (`14.3`): the formula, from `scripts/homebrew.template.rb`, with a block for each
+`finish` writes `slipbox.rb` too (`14.3`, D204): the formula, from `scripts/homebrew.template.rb`, with a block for each
 platform the release has a pack for that Homebrew installs on — macOS, arm64 and Intel, and Linux's glibc builds
 (Homebrew on Linux needs glibc; musl's packs aren't in it) — each its pack's address and SHA-256. It installs the
 binary and puts its notices in Homebrew's `doc`; its test runs `slipbox --version`. Its licence is left out until
-there is one (`14.6`).
+there is one (`14.6`, D193).
 
 It reaches people through a tap, a repository `<owner>/homebrew-<name>` (`brew install <owner>/<name>/slipbox`):
 `.github/workflows/homebrew.yml` copies the release's formula into the tap's `Formula/` once the release is published
@@ -134,15 +151,15 @@ slipbox's own folders).
 
 ## Updates
 
-`core/update.ts` (`14.4`). The latest release is found from its `SHA256SUMS`, at
+`core/update.ts` (`14.4`, D199). The latest release is found from its `SHA256SUMS`, at
 `<releases>/latest/download/SHA256SUMS` — one small file: its packs' names carry the version, and its lines the sum
 each download is checked against. A plain GET of a public file; nothing identifying is sent. `<releases>` is
 `https://github.com/<repo>/releases`, or `SLIPBOX_RELEASES_URL`: another place laid out the same way (a mirror, the
 tests' folder through `file://`), the installer's too.
 
 **The daily check** is the TUI's, never the CLI's — agents call the CLI. It asks only when this is a release build,
-`[update] check` is on in your own config (a folder's config can't turn it on: a network request is yours to allow),
-`DO_NOT_TRACK` isn't set (anything but `0` or `false`), and a day has passed since the last time
+`[update] check` is on in your own config (it is by default; a folder's config can't turn it on: a network request is
+yours to allow), `DO_NOT_TRACK` isn't set (anything but `0` or `false`), and a day has passed since the last time
 (`$XDG_STATE_HOME/slipbox/update.json`, kept before asking, so a failure waits a day too). A newer release is said in
 the message line: `slipbox 0.3.0 is out (this is 0.2.0): slipbox upgrade installs it` — `brew upgrade slipbox` for
 Homebrew's, and the releases' address for a binary put somewhere by hand.
@@ -170,7 +187,7 @@ The running binary can remove its own install: on macOS and Linux a running prog
 
 ## Windows
 
-Through WSL, for now (`14.12`, decided 2026-10-10): WSL is Linux, so the Linux release and `install.sh` run there as
+Through WSL, for now (`14.12`, D205): WSL is Linux, so the Linux release and `install.sh` run there as
 they are, in a terminal such as Windows Terminal. What differs from other Linux is handled (`core/wsl.ts`), WSL known
 by `WSL_DISTRO_NAME` or its kernel:
 
@@ -189,19 +206,29 @@ Windows CI runner to check it: nothing here can run a Windows binary.
 
 ## Language servers' lockfiles
 
-`scripts/lock-servers.ts` (`14.11`) makes a lockfile for each package slipbox pins — the npm servers in
+`scripts/lock-servers.ts` (`14.11`, D202) makes a lockfile for each package slipbox pins — the npm servers in
 `core/servers/languages.ts`, markdownlint-cli2 in `core/lint.ts` — resolved by Bun from npm with the week's wait the
 repository's own dependencies have, and writes them into `src/core/servers/locks.ts`, which the binary carries: a
 line of source per line of each lock, so a change reads as a diff. Run it again when a pin changes. A test holds
 every pin to having its lock, made for its manifest, and every package in it to an integrity hash. How a server is
-installed from it, and kept current, is `docs/design/lsp.md`, "Installing".
+installed from it, and kept current, is [lsp.md](lsp.md) § The client for code, "Installing" and "Kept current".
 
 ## Notices
 
-`bun scripts/check-deps.ts --notices <file>` writes, from the same walk, the third-party notices a release ships beside
-the binary (`14.2`): every package's own licence and notice files; where a package ships none, the standard text of
-its licence (`notices/licenses/`, from SPDX's list) with its author put in; for a licence that asks for the source
+`bun scripts/check-deps.ts --notices <file>` (D192) writes, from the same walk, the third-party notices a release ships
+beside the binary (`14.2`): every package's own licence and notice files; where a package ships none, the standard text
+of its licence (`notices/licenses/`, from SPDX's list) with its author put in; for a licence that asks for the source
 (MPL, EPL, LGPL), where the source is. Then what's compiled into packages' WebAssembly and has no package of its own —
 Hunspell (taken under MPL-1.1) in `hunspell-asm`, libwebp in `@jsquash/webp` — and Bun's own licence page, since the
-runtime is in the binary: Bun is MIT, and links JavaScriptCore and WebKit (LGPL-2), tinycc (LGPL-2.1) and the
-libraries it lists, the LGPL's text after it. slipbox's own licence is still to decide (`14.6`).
+runtime is in the binary: Bun is MIT, and links JavaScriptCore and WebKit (LGPL-2), tinycc (LGPL-2.1) and the libraries
+it lists, the LGPL's text after it. slipbox's own licence is still to decide (`14.6`, D193).
+
+What the binary bundles, by licence (D192, D194). Weak copyleft, accepted for use: `elkjs` (EPL-2.0, under
+beautiful-mermaid), `@resvg/resvg-wasm` (MPL-2.0), and Hunspell, which `hunspell-asm` (MIT) compiles, taken under
+MPL-1.1; each ships with its licence text and where its source is, and none reaches slipbox's own code.
+`unicodeit`'s symbol table is under the LaTeX Project Public License, beside its MIT code. Apache-2.0, whose licence
+and NOTICE go along: `mathjax-full`, `typeahead`, `@swc/helpers` (under fontkit), `@jsquash/webp` and its
+`wasm-feature-detect`; the libwebp `@jsquash/webp` compiles, and the binary embeds, is BSD-3-Clause, its notice
+too. `jszip`, "MIT OR GPL-3.0-or-later", is taken under MIT. The dictionaries, `dictionary-en` (MIT and BSD, from
+SCOWL) and `dictionary-tr` (MIT), ship with their licence texts. The grammars built into `grammars/` are MIT, their
+licences in `grammars/licenses/`. The rest are permissive: MIT, ISC, BSD, BlueOak, Zlib.

@@ -1,4 +1,4 @@
-// The background auto-index (plan 20.9; docs/idea.md, "The index"): the home folder walked slowly, a
+// The background auto-index (plan 20.9; blueprint/design/roots.md § The index): the home folder walked slowly, a
 // folder at a time, for the roots in it — each recorded in the machine's list and its index built,
 // so links from roots never opened count as backlinks (17.11) by themselves. The work is done in
 // slices, only when asked (the TUI asks while nobody is working), and its place is kept, so it

@@ -1,4 +1,4 @@
-// Redirects (17.12; docs/idea.md, "Moves, renames and backlinks"): where a note went when it
+// Redirects (17.12; D49): where a note went when it
 // moved — by slipbox, `mv`, git or a file manager, detected by its content hash in the index. Kept
 // in the vault's state, not its cache: only seeing the move teaches it, so it can't be rebuilt.
 

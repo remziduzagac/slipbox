@@ -1,4 +1,4 @@
-// The reading cursor's motions (docs/design/keymap.md). Pure functions over the layout IR: a
+// The reading cursor's motions (docs/keymap.md). Pure functions over the layout IR: a
 // position is (row, col) where row indexes Layout.lines and col is a display column, always the
 // start of a grapheme. A wide character is one stop; moving up or down keeps a goal column.
 

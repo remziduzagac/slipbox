@@ -1,4 +1,4 @@
-// Named folders (plan 21.6; docs/idea.md, "Between folders"): what a pointer (`slipbox://<name>/…`,
+// Named folders (plan 21.6; blueprint/design/roots.md § Named folders): what a pointer (`slipbox://<name>/…`,
 // 21.7) names, and where on this machine it is. A name travels with what it names:
 //
 // - a `.slipbox/` folder by the name in its config (`slipbox init --name notes`), its copies told apart
@@ -102,7 +102,7 @@ function excluded(common: string, top: string, root: string): boolean {
 }
 
 /**
- * Whether two roots travel together (docs/idea.md, "Between folders"): one clone, or one folder moved
+ * Whether two roots travel together (blueprint/design/links.md § Between folders): one clone, or one folder moved
  * as a whole, carries both — the same repository, or a repository and a submodule of it; outside
  * git, one folder inside the other. Between them, a relative path; else a pointer (21.7).
  */

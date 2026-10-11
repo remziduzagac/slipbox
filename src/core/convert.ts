@@ -1,4 +1,4 @@
-// The converter (plan 20.1; docs/idea.md, "Plain paths, virtual vaults"): a vault's links made plain
+// The converter (plan 20.1; blueprint/design/links.md § The converter): a vault's links made plain
 // paths, once, by the resolution rules they were written for. The graph reads wikilinks again (21.3),
 // within their root; the converter differs in resolving them as before (`Graph.resolveLegacyWiki`: by
 // name, alias, previous name, other vaults and moves), on its own parse of the note (`parseLegacy`). Each

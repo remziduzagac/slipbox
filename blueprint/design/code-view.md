@@ -1,19 +1,18 @@
 # Code as a notebook (plan `24.x`)
 
-Notes render, and data files render. Code had only its source until now: the text as typed, highlighted. The code view
-renders a source file too — as a notebook: its code in cells, one per definition, each with a header carrying buttons
+Notes render, and data files render; source mode shows a source file as typed, highlighted. The code view renders it
+too (D125) — as a notebook: its code in cells, one per definition, each with a header carrying buttons
 and the definition's documentation in it above its code; the file's other comments as prose in boxes of their own. The
-aim isn't to make code look like markdown, nor to run it (slipbox runs nothing, `23.x`); it's to make it read like a
-document — and alike whatever language wrote it.
+aim isn't to make code look like markdown, nor to run it (slipbox runs nothing, `23.x`; D172); it's to make it read
+like a document — and alike whatever language wrote it.
 
-Status: done (`24.2`–`24.7`, `24.9`–`24.16`, `24.19`, `24.21`, `24.22`, 2026-10-09) for every grammar slipbox parses
-that has definitions: TypeScript, TSX, JavaScript, Python, Go, Rust, Swift, PHP, Ruby, C, C++, Lua and Bash. Markup and
-config (HTML, Vue, Svelte, Astro, CSS, SCSS, Dockerfile) open in source mode, and every file keeps it (`space n v`).
-What's built is described here as it is; what's next is at the end.
+It covers every grammar slipbox parses that has definitions (D130): TypeScript, TSX, JavaScript, Python, Go, Rust,
+Swift, PHP, Ruby, C, C++, Lua and Bash. Markup and config (HTML, Vue, Svelte, Astro, CSS, SCSS, Dockerfile) open in
+source mode, and every file keeps it (`space n v`). What's next is at the end.
 
 ## The rule: code's tokens verbatim, whitespace and decoration ours, comments as prose
 
-Every token of code is drawn as it is written. Nothing is replaced (no `->` drawn as `→`), hidden for good or
+Every token of code is drawn as it is written (D125). Nothing is replaced (no `->` drawn as `→`), hidden for good or
 reordered. What the view may change is everything around the tokens:
 
 - **whitespace**: where a long line breaks, the indentation of a continuation row, how many blank rows separate
@@ -46,17 +45,17 @@ a language hasn't mapped is drawn as it is.
 | brackets, separators, operators | where a long line may break (any language: no mapping needed) |
 | indentation | guides, one per level |
 
-The mapping is generic (`24.9`): `SyntaxTree.codeModel` (`src/core/syntax.ts`) reads each grammar's own queries — the
-definitions its outline uses and the comments its links are found in — so no language is mapped by hand. A
-definition's kind is its node's type: a function or method; a class (what holds definitions: a class, an impl, a
-trait, a module, a namespace, a protocol); a type (an interface, a struct, an enum, an alias). What's written above it
-for it (Rust's `#[derive(…)]`, a decorator) is its cell's. Its documentation is the comment lines right above it, the
-markers gone (`///`, `//!`, `//`, `#`, `--`, `/** */`). Imports are a run of top-level nodes named so (`import`, `use`,
+The mapping is generic (`24.9`, D130): `SyntaxTree.codeModel` (`src/core/syntax.ts`) reads each grammar's own queries —
+the definitions its outline uses and the comments its links are found in — so no language is mapped by hand. A
+definition's kind is its node's type: a function or method; a class (what holds definitions: a class, an impl, a trait,
+a module, a namespace, a protocol); a type (an interface, a struct, an enum, an alias). What's written above it for it
+(Rust's `#[derive(…)]`, a decorator) is its cell's. Its documentation is the comment lines right above it, the markers
+gone (`///`, `//!`, `//`, `#`, `--`, `/** */`). Imports are a run of top-level nodes named so (`import`, `use`,
 `#include`, `using`), what each imports read from its strings, else its words. What a language does its own way is an
 exception, not a mapping: Python's docstrings, below their `def`; TypeScript's, JavaScript's and Python's top-level
 values, cells by their names. A comment that takes its line's end with it (Rust's) ends where its line does. The
-documentation formats are `readDoc` (`src/core/docformats.ts`), and the layout (`layoutCode`,
-`src/core/layout/code.ts`) knows only the categories.
+documentation formats are `readDoc` (`src/core/docformats.ts`), and the layout (`layoutCode`, `src/core/layout/code.ts`)
+knows only the categories.
 
 ## Documentation: one shape from every format
 
@@ -176,25 +175,24 @@ the tokens differ.
   line, PHP's `<?php` — two lines or more, before any code, are one row when they're a licence (`▸ license · MIT`: its
   SPDX id, else MIT, Apache-2.0, GPL, LGPL, AGPL, MPL-2.0 or BSD by its words, else its lines' count) or a generated
   file's banner (`▸ generated · protoc-gen-go`, what generated it). `enter` opens and folds it, as the imports.
-- **Width**: a line too long for its cell breaks at its structure — after an opening bracket, after a comma, before
-  `&&` `||` `??` `?` `and` `or`, or a `.` that chains — at the shallowest bracket depth that fits, the rest continuing
-  four columns further in than the line. A definition's signature that doesn't fit (`24.19`) is a parameter a row:
-  its line to its `(`, each parameter four columns further in, then its `)` and the rest at the line's indentation —
-  a call's arguments are broken as any line is. A line that fits is never broken, and lines are never joined: the author's
-  breaks stay, so line numbers stay the file's. With wrapping off (`space u w`), lines run on and the view scrolls
-  sideways.
+- **Width**: a line too long for its cell breaks at its structure — after an opening bracket, after a comma, before `&&`
+  `||` `??` `?` `and` `or`, or a `.` that chains — at the shallowest bracket depth that fits, the rest continuing four
+  columns further in than the line. A definition's signature that doesn't fit (`24.19`) is a parameter a row: its line
+  to its `(`, each parameter four columns further in, then its `)` and the rest at the line's indentation — a call's
+  arguments are broken as any line is. A line that fits is never broken, and lines are never joined: the author's breaks
+  stay, so line numbers stay the file's. With wrapping off (`space u w`), lines run on and the view scrolls sideways.
 
 ## How it behaves
 
 - **The default view** of a file in a language it maps (`[render] code = "document"`; `"source"` opens code in
-  source mode as before). `space n v` switches it to source mode and back, as for a note.
-- **Editing**: as in a rendered note, the editing keys open the lens (their second press edits) or switch the window to
-  source mode, as `[editor] edit_in` says — the cursor keeping its character, though a cell's columns aren't the file's.
-  The lens (`space n l`) is the cursor's cell as written, highlighted as code, the notebook around it: the cell whole
-  when it fits within `lens_max` of the window — a function with its documentation, a class's head (its doc, its line,
-  its fields), a comment's box, a run of statements — alone, not padded with its neighbours; past its edge the lens
-  moves to the next cell whole. A cell too tall is its lines: a line, a doc comment whole, the run of imports whole,
-  the lens taking in its neighbours up to `lens_min_rows`, as a note's blocks. A cell's `✎` opens it on the whole
+  source mode). `space n v` switches it to source mode and back, as for a note.
+- **Editing** (D131): as in a rendered note, the editing keys open the lens (their second press edits) or switch the
+  window to source mode, as `[editor] edit_in` says — the cursor keeping its character, though a cell's columns aren't
+  the file's. The lens (`space n l`) is the cursor's cell as written, highlighted as code, the notebook around it: the
+  cell whole when it fits within `lens_max` of the window — a function with its documentation, a class's head (its doc,
+  its line, its fields), a comment's box, a run of statements — alone, not padded with its neighbours; past its edge the
+  lens moves to the next cell whole. A cell too tall is its lines: a line, a doc comment whole, the run of imports
+  whole, the lens taking in its neighbours up to `lens_min_rows`, as a note's blocks. A cell's `✎` opens it on the whole
   cell, however tall. `esc esc` closes it, the notebook drawn again on the new parse.
 - **The cursor** is on the text of a cell's rows, never on its border or padding; a header is decoration, a frame
   row the cursor passes over. The rows of code keep a map of each cell to its place in the file, so find, a
@@ -208,8 +206,9 @@ the tokens differ.
 
 ## Next
 
-- Columns where the code is tabular (consecutive assignments, enum members, an object's keys, `24.20`): deferred.
+- Columns where the code is tabular (consecutive assignments, enum members, an object's keys, `24.20`): deferred
+  (D132).
 - The references button with its count, once a server has said it.
 
-Not done (decided 2026-10-08): folding inside a cell — an `if`'s body, a loop's. A cell folds whole. Nor (2026-10-09)
-typing in a row in place, without the lens: the lens is where notes and code are edited (`24.17`).
+Not done: folding inside a cell — an `if`'s body, a loop's. A cell folds whole (`24.18`, D129). Nor typing in a row in
+place, without the lens: the lens is where notes and code are edited (`24.17`, D131).

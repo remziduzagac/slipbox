@@ -8,7 +8,7 @@ rewrites a note. Every state change is also reachable from a CLI that agents dri
 Status: **phases 0–5c** — rendering (leaf parity), a TUI that reads and edits (source mode, vim-shaped
 editing, the lens, autosave and a conflict prompt), and an agent-drivable CLI; then files beyond markdown, search and
 its index, roots, named folders and pointers, git and merge review, language servers, linters and diagnostics. See
-[docs/plan.md](docs/plan.md).
+the [roadmap](blueprint/roadmap.md).
 
 ## Try it
 
@@ -25,7 +25,8 @@ scripts/install-local.sh                            # a `slipbox` launcher in ~/
 Releases — a binary per platform, macOS and Linux (Alpine's musl too), with no Bun needed — are built and installed by
 `scripts/release.ts` and its `install.sh` (`curl -fsSL …/releases/latest/download/install.sh | sh`), or Homebrew's
 formula, through a tap; none is published yet. On Windows, slipbox runs in WSL — the Linux release, with Windows'
-clipboard and fonts; native Windows is to come. How, and what keeps it safe: [docs/design/distribution.md](docs/design/distribution.md).
+clipboard and fonts; native Windows is to come. How, and what keeps it safe:
+[blueprint/design/distribution.md](blueprint/design/distribution.md).
 
 A file's **root** is the nearest folder above it holding `.git`, `.slipbox/`, `.obsidian/` or `.zk/`: what `/` in a
 link starts from, where a wikilink's names are looked for, whose link convention is followed. A folder without one
@@ -53,7 +54,7 @@ listing everything else, and `?` lists every key, so nothing needs memorising:
   running nvim.
 - **Quitting:** `ctrl+q`, and slipbox remembers where you were.
 
-Every key is in [docs/design/keymap.md](docs/design/keymap.md), and all of them are configurable.
+Every key is in [docs/keymap.md](docs/keymap.md), and all of them are configurable.
 The configuration reloads itself when you save it.
 
 ## For agents
@@ -84,10 +85,10 @@ One JSON object per call with `--json`; stable exit codes. The skill in
 
 | Document | What |
 | --- | --- |
-| [docs/handoff.md](docs/handoff.md) | orientation and traps |
-| [docs/idea.md](docs/idea.md) | what and why |
-| [docs/plan.md](docs/plan.md) | work items and phases |
-| [docs/design/](docs/design/README.md) | how it is built — kept true to the code |
+| [docs/keymap.md](docs/keymap.md) | every key |
+| [docs/configuration.md](docs/configuration.md) | every config key and environment variable |
+| [docs/cli.md](docs/cli.md) | the CLI: commands, the JSON contract, exit codes |
+| [blueprint/](blueprint/README.md) | the design: requirements, how it works, the decisions behind it, the roadmap |
 
 ## Development
 
@@ -97,4 +98,4 @@ bun run e2e --tab    # the terminal tests: slipbox itself in a herdr pane (needs
 ```
 
 The test strategy, the demo folder (`examples/vault`) and the terminal tests are in
-[docs/design/testing.md](docs/design/testing.md).
+[blueprint/design/testing.md](blueprint/design/testing.md).

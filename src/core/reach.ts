@@ -1,4 +1,4 @@
-// Other roots, as this one reaches them (17.9, 17.11, 21.6; docs/idea.md, "Between folders"): the root
+// Other roots, as this one reaches them (17.9, 17.11, 21.6; blueprint/design/links.md § Between folders): the root
 // holding a path outside this one, and the links other roots make into this one — read from their
 // indexes, so as fresh as each one's last indexing. A root reached is opened once, with its own
 // config, and its index refreshed then (indexing on demand). The converter's `[[name:note]]` (17.8)

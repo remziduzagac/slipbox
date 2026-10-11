@@ -1,4 +1,4 @@
-// Link resolution (plan 1.4; policy in docs/design/decisions.md).
+// Link resolution (plan 1.4; policy in blueprint/design/links.md).
 //
 // One policy everywhere, never the filesystem's: case-insensitive after NFC, collisions are a
 // candidate list, and disambiguation is exact-case → same directory → deepest shared directory →

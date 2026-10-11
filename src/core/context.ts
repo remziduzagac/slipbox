@@ -1,8 +1,8 @@
 // The context bundle (9.7): "give me this note, plus what it links to, plus what links to it, as
 // one document" — for pasting into an agent or piping to one. The scratch's other half: the
 // scratch is hand-picked, the bundle is gathered from the link graph, and both are written the
-// same way — each file its reference (`path:1-N`) and its text, fenced (docs/idea.md, "Scratch
-// capture"). Deterministic: breadth first, in the order the links are written.
+// same way — each file its reference (`path:1-N`) and its text, fenced (D32).
+// Deterministic: breadth first, in the order the links are written.
 
 import { statSync } from "node:fs";
 import { isAbsolute, relative } from "node:path";

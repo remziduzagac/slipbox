@@ -6,7 +6,7 @@ in a herdr pane (below). A run's temporary files — the tests' vaults, the CLI'
 removed when it ends (`tests/setup.ts`, preloaded by `bunfig.toml`); one that stopped short (`--bail`, a crash) is
 removed by the next run, its process gone.
 
-## Strategy (plan `0.4`)
+## Strategy (`0.4`)
 
 The layout stage is pure, so the renderer is snapshot-tested on its output. The TUI model draws
 through a `Canvas`, so it is driven headlessly: keys in, a character grid out. Only one test goes
@@ -35,7 +35,8 @@ N …")` blocks in the file for the area: `tui.test.ts`, `core.test.ts`, `vault.
   140, in the Unicode and ASCII glyph sets. No row may exceed the layout width.
 - The table allocator gets 5,000 generated inputs. The allocation must never exceed the budget,
   never drop a column below its minimum when the minimums fit, and use the desired widths when
-  they fit. This is the render-markdown bug and its siblings (`docs/idea.md`, Testing).
+  they fit. This is the render-markdown bug and its siblings
+  ([prior-art.md](../research/prior-art.md) § render-markdown.nvim's table allocator; D89).
 
 **Generated inputs use a sound generator.** The seeded generators step with `Math.imul` and draw
 from the high bits: a plain `seed * 1103515245` passes 2^53, loses its low bits, and the "5,000
@@ -53,7 +54,7 @@ win over them), so a developer's config, editor, themes, session or list of root
 a run; copies go to a file, never the clipboard (`SLIPBOX_CLIPBOARD=file`). TUI tests work on a
 temp copy of the fixture vault, so they can write, rename and delete notes.
 
-## The fixture vault (plan `0.5`)
+## The fixture vault (`0.5`)
 
 `tests/fixtures/vault/` has a `.slipbox/` marker and the cases the samples lack:
 
@@ -67,8 +68,8 @@ temp copy of the fixture vault, so they can write, rename and delete notes.
 | `cjk/日本語.md` | a Unicode file name linking out |
 | `attachments/diagram.png` | `![[diagram.png]]` resolved by name from anywhere |
 | `node_modules/`, `ignored/`, `*.skip.md` | always-skipped and `.gitignore`d paths |
-| `.hidden/`, `drafts/` | dot directories; `walk.exclude` from the vault config |
-| `nested-vault/` | a nested `.slipbox/` is a boundary, not part of this vault |
+| `.hidden/`, `drafts/` | dot directories; `walk.exclude` from the root's config |
+| `nested-vault/` | a nested `.slipbox/` is a boundary, not part of this root |
 | `alias-link.md`, `outside-link.md`, `symlinked-dir` | symlinks: a duplicate (skipped), outside, directory |
 
 `tests/fixtures/.gitattributes` sets `-text` so CRLF and BOM bytes survive checkout.
@@ -92,7 +93,7 @@ material for trying nested roots by hand, and the e2e scenario "nested roots".
 `examples/home/` is a developer's home folder — Sam Rivera's notes, work repositories and hobbies — written so that
 every feature is there in realistic use, each case in several variations and combinations. Its `README.md` sets the
 person, the cast, the timeline, the roots and the writing rules; `CASES.md` lists every case (from the commands, the
-tests, the design docs and the plan) and the files that cover it. Halden is its sibling (`../vault`), linked from it.
+tests, the design docs and the roadmap) and the files that cover it. Halden is its sibling (`../vault`), linked from it.
 
 **Built, not used in place.** A `.git` folder can't be committed inside this repository, so the mock repositories
 (`work/kestrel`, `work/product`, `work/infra`) are committed as plain folders, their histories described in
@@ -123,8 +124,8 @@ bun run e2e find replace     # only the scenarios whose names contain these
   home folder as `$HOME` (`home`) — and its own config, state, cache and data directories (its own
   list of roots). Nothing in the repo or in your own setup is touched, and a given pane that is
   running slipbox is refused rather than typed into. A scenario can put files beside the vault
-  (`beside`: another vault, a plain folder), run the CLI before slipbox starts (`setup`: `init` that
-  vault), and start slipbox another way: elsewhere (`startAt`), with no path (`startAt: null`), from
+  (`beside`: another root, a plain folder), run the CLI before slipbox starts (`setup`: `init` that
+  root), and start slipbox another way: elsewhere (`startAt`), with no path (`startAt: null`), from
   a folder (`cwd`), with flags (`args`) or environment (`env`), or expecting it to fail (`noWait`).
 - **Waits, never sleeps.** Every check waits (up to a timeout) for the screen to agree: a row that
   contains something, the status line's mode, a message's floating box, a file on disk. Only a check

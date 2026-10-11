@@ -300,7 +300,7 @@ export function commandSpec(id: string): CommandSpec | undefined {
 
 /**
  * The groups commands are listed under in help and the palette: the sections of
- * docs/design/keymap.md, in its order. The first group whose pattern matches an id wins.
+ * docs/keymap.md, in its order. The first group whose pattern matches an id wins.
  */
 export const COMMAND_GROUPS: { title: string; ids: RegExp }[] = [
   { title: "Cursor", ids: /^(cursor|scroll)\./ },

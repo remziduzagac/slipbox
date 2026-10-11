@@ -1,6 +1,6 @@
 // The drawing surface the TUI paints on. The app draws only through this interface; the OpenTUI
 // implementation (opentui.ts) is the one file that touches the renderer's frame buffer, which is
-// the "only the final draw step touches OpenTUI" rule from docs/idea.md. TextCanvas is an
+// the "only the final draw step touches OpenTUI" rule (blueprint/design/how-it-works.md). TextCanvas is an
 // in-memory implementation for tests.
 
 import type { CellStyle } from "../core/layout/style.ts";

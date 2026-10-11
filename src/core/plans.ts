@@ -1,4 +1,4 @@
-// Generated edits as plans (plan 20.18; docs/idea.md, "Changes and repairs"): a rename's, a move's, a
+// Generated edits as plans (plan 20.18; blueprint/design/links.md § Repairs): a rename's, a move's, a
 // relink's edits saved as a plan in a first step, applied in a second — tied to each file's content
 // as it was when planned, refused when any has changed since: a stale plan is never applied. So an
 // agent reviews before it writes. A plan applies once; applied, it's gone.

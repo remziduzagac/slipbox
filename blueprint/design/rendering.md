@@ -1,12 +1,11 @@
 # Rendering
 
-Phase 1: mdast to a laid-out, themed page. The goal is leaf parity; the bar is "replaces leaf for
-reading `docs/`". Code: `src/core/layout/`, `src/core/theme/`, `src/core/glyphs.ts`,
-`src/core/width.ts`, `src/core/sanitize.ts`.
+mdast to a laid-out, themed page: remark's tree, laid out by slipbox's own code (D7). Code: `src/core/layout/`,
+`src/core/theme/`, `src/core/glyphs.ts`, `src/core/width.ts`, `src/core/sanitize.ts`.
 
 ## The layout IR (plan `2.1`)
 
-Pure data, framework-agnostic, defined in `layout/ir.ts`:
+Pure data, framework-agnostic, defined in `layout/ir.ts` (D6, D8):
 
 ```ts
 Layout { lines: Line[]; links: LayoutLink[]; headings: LayoutHeading[]; width; clipped?; embedded? }
@@ -20,11 +19,11 @@ Span   { text; role; attrs; bg?; link?; src?; task? }
 - **`fill`** extends a role's background to the full layout width. Headings and code blocks
   use it.
 - **`src`** is the 1-based source line of the row's first text. Reading positions and reload
-  anchoring store source lines, never rows (decision `3.5`). Blank separator rows carry the
+  anchoring store source lines, never rows (D98). Blank separator rows carry the
   line of the row above, so anchoring to a block lands on the block, not the gap before it.
 - **`links`** records every link with its kind, target, resolution status and first drawn
   position (row, column). The TUI cycles and follows links from this list.
-- **`embedded`** lists the notes drawn in place (`1.11`), nested ones too, so a change to one lays
+- **`embedded`** lists the notes drawn in place (`1.11`, D113), nested ones too, so a change to one lays
   this note out again.
 
 Both faces draw the same IR: `tui/draw.ts` paints it through a `Canvas`, and `layout/ansi.ts`
@@ -49,7 +48,7 @@ their children out at reduced width and prefix every row, so nesting composes.
 | frontmatter | a "properties" block: aligned rows, a long key cut with `…`; a value's `[[link]]` a link; raw: broken |
 | html block | shown dim, verbatim; comments (each `<!-- -->` on its own) hidden; a lone `<br>` is a blank row |
 | footnote | `[1]` reference; the definition as `1.` with a hanging indent, its paragraphs apart |
-| tag | `#name` in the `tag` role, followable: Obsidian's tags (`1.6`, in `docs/design/decisions.md`) |
+| tag | `#name` in the `tag` role, followable: Obsidian's tags (`1.6`, D53; [links.md](links.md) § Tags) |
 | definition | hidden; reference links resolve through it, the first of a label winning (CommonMark) |
 
 **Headings** are linked to by their text (inline code included; footnote marks and images left out, the spaces around
@@ -58,39 +57,37 @@ graph and source mode's scan, which the outline and breadcrumb draw on one row, 
 GitHub's way — letters, marks, numbers, `_` and `-` kept, so a Devanagari heading keeps its vowel signs — with repeats
 numbered as GitHub numbers them (`#setup-1` is the second "Setup"). A trailing `{#id …}` (Pandoc, MkDocs, Docusaurus) is
 the heading's explicit id, not drawn; `<a id="x">` and `<a name="x">` are anchors too. Where a fragment lands is
-`core/landing.ts`'s one matcher (`docs/design/tui.md`, "Following links"). A no-break space (U+00A0, U+2007, U+202F) is
-never a place to wrap.
+`core/landing.ts`'s one matcher (D84; [links.md](links.md) § Where a link lands; [tui.md](tui.md) § Following links). A
+no-break space (U+00A0, U+2007, U+202F) is never a place to wrap.
 
-**Inline:** `**strong**` gets the `strong` role, which has an explicitly lighter foreground,
-because bold alone does not read as bold in a terminal (plan `2.7`). Also: `*emphasis*`,
-`~~strike~~`, and `` `code` `` in the `code_inline` role with its own background. Links render
-as their text; the URL follows as `<url>` when colour is off or `render.show_urls` asks.
-Images render as `▣ alt`, and alt text plus path stay the floor (12.x): a picture alone in its paragraph, a local
-image file (PNG, JPEG, WebP, GIF), is drawn under its `▣ alt` line where the terminal draws images — Kitty graphics or
-sixel, as OpenTUI finds it asking, never blocks of colour — sized to the text width, its proportions kept, at most 12
-rows, from where its `▣ alt` text starts (past a list's bullet, a quote's bar); scrolled half out of sight, the part
-that shows. One embedded by name, `![[dal.png]]` (12.13), is drawn the same, found as its link is (anywhere in the
-root, the nearest of two; two tied, neither): Obsidian's `|300` its width in pixels, `|240x180` the box it fits in, its
-proportions kept. An SVG (12.15) — by its name, or a picture fetched told by how it starts — is rasterised by resvg
-(WebAssembly) at the size it's drawn, from its own size, into the cache, and drawn as a PNG is; it fetches nothing it
-links to. One in an embedded note (12.14) is found from where that note is — its path from its folder, its name
-from its place in its root — and drawn inside its frame. Beside text, or where the terminal draws none
-(`[render] images = "never"` too): `▣ alt` alone. Where the terminal speaks Kitty graphics, a picture is sent to
-it once (12.7) — compressed, at the pixels it's drawn in, with a virtual placement of its cells — and drawn as Kitty's
+**Inline:** `**strong**` gets the `strong` role, which has an explicitly lighter foreground, because bold alone does not
+read as bold in a terminal (plan `2.7`). Also: `*emphasis*`, `~~strike~~`, and `` `code` `` in the `code_inline` role
+with its own background. Links render as their text; the URL follows as `<url>` when colour is off or `render.show_urls`
+asks. Images render as `▣ alt`, and alt text plus path stay the floor (12.x, D101): a picture alone in its paragraph, a
+local image file (PNG, JPEG, WebP, GIF), is drawn under its `▣ alt` line where the terminal draws images — Kitty
+graphics or sixel, as OpenTUI finds it asking, never blocks of colour (D126) — sized to the text width, its proportions
+kept, at most 12 rows, from where its `▣ alt` text starts (past a list's bullet, a quote's bar); scrolled half out of
+sight, the part that shows. One embedded by name, `![[dal.png]]` (12.13, D103), is drawn the same, found as its link is
+(anywhere in the root, the nearest of two; two tied, neither): Obsidian's `|300` its width in pixels, `|240x180` the box
+it fits in, its proportions kept. An SVG (12.15, D127) — by its name, or a picture fetched told by how it starts — is
+rasterised by resvg (WebAssembly) at the size it's drawn, from its own size, into the cache, and drawn as a PNG is; it
+fetches nothing it links to. One in an embedded note (12.14) is found from where that note is — its path from its
+folder, its name from its place in its root — and drawn inside its frame. Beside text, or where the terminal draws none
+(`[render] images = "never"` too): `▣ alt` alone. Where the terminal speaks Kitty graphics, a picture is sent to it once
+(12.7, D102) — compressed, at the pixels it's drawn in, with a virtual placement of its cells — and drawn as Kitty's
 Unicode placeholders: each cell U+10EEEE in the picture's id's colour, its row and column as combining marks. They're
-text, so scrolling moves them and the terminal the picture with them: nothing is sent again, nothing waits. The last
-48 are kept in the terminal; quitting lets them go. With sixel (OpenTUI's own picture path, which numbers pictures by
-the order they're drawn in and sends them again as that changes), a step of scrolling draws a view's pictures, but
-quick steps after it (a key held: within 120 ms of the last) don't, nor a wheel's from its first tick — their rows
-stay — and they're drawn once it rests. A picture on the internet (12.12) is fetched only as
-`[render] images_remote` says: `ask` (the default) — its link, until `enter` on it asks to fetch it, this once or from
-its site without asking (until slipbox quits); `show` — fetched as the note's laid out; `never` — neither fetched nor
-drawn, `enter` copying its address. Fetched (into the cache, a file per address: an image's content type, at most
-20 MB, within 15 s), it's drawn as a local one, without asking again; a fetch that fails says why and isn't tried again
-until `enter`. Inline
-tags such as `<kbd>` and `<sup>` are dropped and their text kept.
+text, so scrolling moves them and the terminal the picture with them: nothing is sent again, nothing waits. The last 48
+are kept in the terminal; quitting lets them go. With sixel (OpenTUI's own picture path, which numbers pictures by the
+order they're drawn in and sends them again as that changes), a step of scrolling draws a view's pictures, but quick
+steps after it (a key held: within 120 ms of the last) don't, nor a wheel's from its first tick — their rows stay — and
+they're drawn once it rests. A picture on the internet (12.12) is fetched only as `[render] images_remote` says: `ask`
+(the default) — its link, until `enter` on it asks to fetch it, this once or from its site without asking (until slipbox
+quits); `show` — fetched as the note's laid out; `never` — neither fetched nor drawn, `enter` copying its address.
+Fetched (into the cache, a file per address: an image's content type, at most 20 MB, within 15 s), it's drawn as a local
+one, without asking again; a fetch that fails says why and isn't tried again until `enter`. Inline tags such as `<kbd>`
+and `<sup>` are dropped and their text kept.
 
-**Mermaid** (12.10): a ` ```mermaid ` block is drawn in the terminal's own characters — box drawing, arrows, its
+**Mermaid** (12.10, D127): a ` ```mermaid ` block is drawn in the terminal's own characters — box drawing, arrows, its
 words in the text's colour and its lines in the table's border colour; in ASCII where the glyphs are — by
 `beautiful-mermaid`, no browser (flowcharts, state, sequence, class and ER diagrams, XY charts). Too wide at its own
 spacing, it's drawn closer together; still too wide, a kind it doesn't draw (`pie`, `gantt`), or one it can't read:
@@ -103,38 +100,38 @@ through, its words in a sans font found on the machine (DejaVu, Liberation, Noto
 terminal's own, at most the text's width and 60 rows, centred: its first row the indent before it, where the cursor
 stops. No font found, a kind it doesn't draw, or pictures not drawn: in characters, as above.
 
-**Maths** (12.11): `$…$` in text and `$$` blocks, read as Obsidian reads them — not maths where the `$`s hold a space
-just inside them, or a digit follows the closing one (`costs $5 and $10` is money; `$$…$$` in text is maths). Drawn as
-Unicode text in the `math` role: commands as the characters Unicode has (`unicodeit`'s table: `\alpha` α, `\in` ∈,
-`\mathbb{R}` ℝ), sub- and superscripts whole where Unicode has each character (`x^2` x², `\sum_{i=1}^n` ∑ᵢ₌₁ⁿ), else
+**Maths** (12.11, D127): `$…$` in text and `$$` blocks, read as Obsidian reads them — not maths where the `$`s hold a
+space just inside them, or a digit follows the closing one (`costs $5 and $10` is money; `$$…$$` in text is maths).
+Drawn as Unicode text in the `math` role: commands as the characters Unicode has (`unicodeit`'s table: `\alpha` α, `\in`
+∈, `\mathbb{R}` ℝ), sub- and superscripts whole where Unicode has each character (`x^2` x², `\sum_{i=1}^n` ∑ᵢ₌₁ⁿ), else
 bracketed (`e^{i\pi}` e^(iπ)); fractions `a/b` (`(a+b)/c`, `½`), roots `√x` `∛x`, accents over each letter, `\text`'s
 words, functions as their names (`\log`), spacing and sizing done first — a command is given to the table only by its
 exact name. A display's rows are centred together: `aligned` rows lined up at their `&`, `cases` braced (`⎧ ⎩`),
 matrices bracketed (`⎛ ⎝`), what's written around one on its middle row. A formula with a command none of this knows is
-as written — in text `$…$`, a display its LaTeX, highlighted (`math — as written`; one wider than the text, `math — too
-wide to draw`). Where pictures are drawn, `[render] math = "picture"` (12.17) typesets a display as one, by MathJax, in
-the `math` role's colour, as big as the words beside it, centred; one it can't read, or wider than the text, is text as
-above. Inline maths is always text. What's read from a note as text — a heading's (so its slug), a task's, a link's, a
-footnote's — keeps its maths as written.
+as written — in text `$…$`, a display its LaTeX, highlighted (`math — as written`; one wider than the text,
+`math — too wide to draw`). Where pictures are drawn, `[render] math = "picture"` (12.17) typesets a display as one, by
+MathJax, in the `math` role's colour, as big as the words beside it, centred; one it can't read, or wider than the text,
+is text as above. Inline maths is always text. What's read from a note as text — a heading's (so its slug), a task's, a
+link's, a footnote's — keeps its maths as written.
 
-**Wikilinks are links** (`21.3`; `20.2` drew them as text): `[[name]]` shows its name, `[[name|text]]` its text,
+**Wikilinks are links** (`21.3`, D71): `[[name]]` shows its name, `[[name|text]]` its text,
 `[[name#Heading]]` `name › Heading`, `[[name#^id]]` `name ^id` — never inside code, nor after a `\`. A picture
 embedded by name, `![[dal.png]]`, is `▣ dal.png`, as a picture by its path is: Obsidian's size, `|300` or
 `|240x180`, is never its text. A link's colour shows its status: resolved, `link_unresolved` red, or
 `link_ambiguous` when two of a name tie.
 
-**What the file says** (`21.9`, replacing `20.12`'s vault form): a link without text of its own — `[](docs/plan.md)`,
+**What the file says** (`21.9`, D77): a link without text of its own — `[](docs/plan.md)`,
 or text that is just its target — shows its target as written; no form is made up for the screen. Where a file is
 named in a list — backlinks, search results, pickers, hovers, rename previews — it's by its path: from this root (or
 the folder opened), else from home (`~/…`), else absolute (`graph.shownPath`).
 
-**Embeds** (`1.11`): a paragraph of nothing but embeds — each a note by name, `![[note]]` (`21.3`), or by its path,
-`![text](note.md)`, as the converter writes them (`20.1`) and Obsidian does without wikilinks — draws each embedded
-note in place (beside other text, or with no note there, it's a reference, `⧉ text`, as a picture's is `▣ alt`): a
-header with its name (`⧉ inner`, `⧉ note › Heading`, `⧉ note ^id`; a link to it), then its text behind a bar (role
-`embed`). `![x](note.md)` is the whole note but its frontmatter; `![x](note.md#heading)` the heading (by its text or
-slug) and what follows, to the next heading as high; `![x](note.md#^id)` the block whose id that is — a paragraph's or
-a list item's, at the end of its text, or the table, quote or list on the line before a lone `^id`. Read-only:
+**Embeds** (`1.11`, D113): a paragraph of nothing but embeds — each a note by name, `![[note]]` (`21.3`), or by its
+path, `![text](note.md)`, as the converter writes them (`20.1`) and Obsidian does without wikilinks — draws each
+embedded note in place (beside other text, or with no note there, it's a reference, `⧉ text`, as a picture's is
+`▣ alt`): a header with its name (`⧉ inner`, `⧉ note › Heading`, `⧉ note ^id`; a link to it), then its text behind a bar
+(role `embed`). `![x](note.md)` is the whole note but its frontmatter; `![x](note.md#heading)` the heading (by its text
+or slug) and what follows, to the next heading as high; `![x](note.md#^id)` the block whose id that is — a paragraph's
+or a list item's, at the end of its text, or the table, quote or list on the line before a lone `^id`. Read-only:
 
 - **Where it is.** Its rows are all at the embed's line: the note shown has the cursor, anchors and the lens; the
   embedded note's headings stay out of its outline. Its links are its own: their status, and where they lead, are
@@ -146,10 +143,12 @@ a list item's, at the end of its text, or the table, quote or list on the line b
 - **References still.** A picture (`![x](pic.png)`, `![[pic.png]]`) is a picture's `▣ alt` — drawn under it where
   pictures are (12.x), never framed; any other file, an embed that reaches nothing, and an embed with text around it
   render as a reference.
+- **Untouched elsewhere.** Search, backlinks and the context bundle are unchanged by an embed: it is a link, and
+  its text belongs to its note (D113).
 
 ## Data files (plans `16.11`–`16.14`)
 
-A data file is read into the same tree a note is (`core/data.ts`), so the renderer, the outline,
+A data file is read into the same tree a note is (`core/data.ts`; D108), so the renderer, the outline,
 the breadcrumb, `[x](file.toml#section)`, find and the lens work unchanged:
 
 - **TOML and INI sections become headings**: a `[table]` or `[section]`, deeper by its dots — the
@@ -199,15 +198,15 @@ render (`16.14`): its error is shown and source mode opens.
 
 ## The wikilink tokenizer
 
-`core/wikilink.ts` is a micromark extension, not a regex — the reader's again since `21.3` (from `20.2` the
-converter's alone, `20.1`, which reads through `parseLegacy`). That is why `[[links]]` inside code spans and fenced
+`core/wikilink.ts` is a micromark extension, not a regex: the reader's (`21.3`, D71), and the converter's (`20.1`,
+D57), which reads through `parseLegacy`. That is why `[[links]]` inside code spans and fenced
 blocks are never read or converted, and why `\[[escaped]]` stays literal. Every node also carries its source
 position. It parses `![[embeds]]`, which `remark-wiki-link` does not, and treats `\|` as an alias divider, since that
 is how an alias is written inside a table cell.
 
 ## The table allocator (plan `2.3`)
 
-`layout/table.ts`. Tables are re-allocated at every width, so this decides how a table survives
+`layout/table.ts` (D89). Tables are re-allocated at every width, so this decides how a table survives
 a resize. It starts from render-markdown's algorithm, fixes its known flaw, and changes where
 spare width goes.
 
@@ -274,7 +273,7 @@ some row wraps. The header separator is doubled (`╞═╪═╡`).
 
 ## Wrapping and width (plans `0.7`, `2.4`)
 
-`core/width.ts` is the only thing that measures text. It works per grapheme cluster
+`core/width.ts` is the only thing that measures text (D88). It works per grapheme cluster
 (`Intl.Segmenter`):
 
 - ASCII is 1 column, CJK and East Asian Wide are 2, RGI emoji are 2.
@@ -295,7 +294,7 @@ opening punctuation (`（` `「`) never ends one (kinsoku). A token longer than 
 a fresh row and packs its soft segments (split after `/ - _ . ? & = , : ; |`), so paths, URLs and
 identifiers break at a readable point. Only a segment wider than the whole row breaks at the
 grapheme that overflows.
-**Hostile notes.** Containers deeper than 60 (quotes, lists) render as their plain text, so a note
+**Hostile notes** (`15.2`, D111). Containers deeper than 60 (quotes, lists) render as their plain text, so a note
 5,000 levels deep neither overflows the stack nor hides everything. Below 8 columns for its child, a
 container stops indenting (a quote, a callout or an embed drops its bar, a list item's marker takes a
 row of its own), and a data file's tree drops its outer guides, so nothing is cut in a narrow split.
@@ -314,7 +313,7 @@ row was cut (a width check alone could never fail, with the cut in place).
 
 ## Readability defaults (plan `2.7`)
 
-Carried over from the nvim configuration, where they were arrived at by trial:
+Carried over from the nvim configuration, where they were arrived at by trial (D96, D97):
 
 - **Inset.** `render.inset` (default 4) columns are held back from the pane width, so a table's
   right border never sits on the edge. It is capped at 5% of narrow panes and is never below 1.
@@ -322,21 +321,21 @@ Carried over from the nvim configuration, where they were arrived at by trial:
 - **Bold** has an explicit lighter foreground: `#bcc5e6` in Tokyo Night.
 - **Borders** are light (`│`, `─`) by default, heavy (`┃`, `━`) with `ui.lines = "heavy"`, in the
   one `border` colour whatever has focus; focus shows as brightness in titles and tabs
-  ([tui.md](tui.md)). Where two lines meet a rule at one column, the joint is one glyph from all
+  ([tui.md](tui.md) § Side panes). Where two lines meet a rule at one column, the joint is one glyph from all
   their arms (`╋`, not whichever was drawn last).
 - **Code fences** are full width, with no right padding.
 
 ## Themes (plan `2.6`)
 
-`core/theme/theme.ts` defines about 100 semantic roles covering the document, syntax and chrome.
+`core/theme/theme.ts` defines about 100 semantic roles covering the document, syntax and chrome (D93).
 Every theme reduces to an 18-colour `Palette`, and `themeFromPalette` maps it to roles, so there is
 one mapping to get right. Heading bands are the heading colour blended into the background, 14%
 in dark themes and 16% in light ones. Single roles can be overridden from config, for every theme or one
-(`[colors]`, [configuration.md](configuration.md)).
+(`[colors]`, [configuration.md](../../docs/configuration.md) § Colours).
 
 | Kind | Themes |
 | --- | --- |
-| hand-tuned | `tokyo-night` (default, with the nvim adjustments), `tokyo-night-day` |
+| hand-tuned | `tokyo-night` (default, D94, with the nvim adjustments), `tokyo-night-day` |
 | hand-tuned | `catppuccin-mocha`, `catppuccin-latte` |
 | base16 data | `catppuccin-frappe`, `catppuccin-macchiato`, `dracula`, `gruvbox-dark` |
 | base16 data | `gruvbox-light`, `nord`, `solarized-dark`, `solarized-light`, `rose-pine` |
@@ -344,7 +343,8 @@ in dark themes and 16% in light ones. Single roles can be overridden from config
 | special | `terminal` (ANSI indexed colours: the terminal's own theme flows through) |
 | special | `mono` (attributes only: links underlined, unresolved dim too, code bold; used under `NO_COLOR`) |
 
-In the TUI, `NO_COLOR` wins over any theme setting, session or picker choice. Without colour the
+Themes are built in (D91), hand-tuned or from base16 data (D92). In the TUI, `NO_COLOR` wins over any theme setting,
+session or picker choice (D95). Without colour the
 scrollbar's track is blank so the thumb shows, and the current note or section is bold.
 
 **User themes:** any base16 or base24 scheme file (`*.yaml`, either the current `palette:` format
@@ -369,7 +369,7 @@ The Nerd set uses the same heading icons as the render-markdown configuration it
 
 ## Escapes (constraint `2.9`)
 
-`core/sanitize.ts` removes CSI, OSC, DCS/APC and two-byte escape sequences, bare C0 and C1
+`core/sanitize.ts` (D90) removes CSI, OSC, DCS/APC and two-byte escape sequences, bare C0 and C1
 controls, bidi override and isolate characters and the bidi marks (U+200E, U+200F, U+061C), which
 are used for display spoofing, and turns the line and paragraph separators (U+2028, U+2029) into
 spaces. An OSC or DCS string left unterminated (a truncated capture) is removed to the end of its
@@ -391,9 +391,9 @@ auto-detection is slow and often wrong. Scopes map to the `syn_*` roles. It live
 `slipbox render` and the TUI highlight identically.
 
 Source files in source mode use it too, a line at a time, with tree-sitter (`core/syntax.ts`,
-`16.7`) painting over it the parts of lines inside a string or comment that spans lines — which a
+`16.7`, D109) painting over it the parts of lines inside a string or comment that spans lines — which a
 line alone can't know — and, in a file of several languages (`16.22`: a component's script and style), saying which
-language each line is in (`languageAt`). See [tui.md](tui.md), "Files beyond notes".
+language each line is in (`languageAt`; D122). See [tui.md](tui.md) § Files beyond notes.
 
 ## The ANSI writer
 

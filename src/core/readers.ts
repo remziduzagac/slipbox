@@ -1,4 +1,4 @@
-// A reader per note format (plan 16.2, docs/idea.md "Files beyond markdown"): everything slipbox
+// A reader per note format (plan 16.2, D110): everything slipbox
 // asks of a note that depends on how it's written.
 //
 // Each reader parses into the one tree the rest works from — mdast, with source positions: the
@@ -62,7 +62,7 @@ const markdown: NoteReader = {
 const READERS: Record<string, NoteReader> = { markdown };
 
 /** The reader for a note format; markdown is the only one (Org and AsciiDoc were tried in 16.16 and
- *  16.17, and dropped: docs/idea.md). */
+ *  16.17, and dropped: D112). */
 export function readerFor(format: string): NoteReader {
   return READERS[format] ?? markdown;
 }

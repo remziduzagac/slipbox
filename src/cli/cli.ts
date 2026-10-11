@@ -1,4 +1,4 @@
-// The CLI face (plan 9.x; command list decided in docs/design/decisions.md, 9.1).
+// The CLI face (plan 9.x; the command list is D18).
 //
 // Disk is the contract (9.4): every command reads files and the fresh cache, never a TUI's unsaved
 // buffer. Human output goes to stdout, diagnostics to stderr; `--json` prints exactly one object.

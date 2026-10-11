@@ -1,14 +1,16 @@
-# Architecture
+# How it works
 
-How the code is laid out and why, as built in phases 0–5c. The *why* of the product is in `docs/idea.md`; the
-decisions that gated this code are in [decisions.md](decisions.md).
+The walkthrough of the whole system, end to end: one core and its two faces, the parts it is made of, how the CLI and
+the TUI share the disk, the modules, a note's way from its bytes to the screen, what slipbox depends on, where it
+keeps its files, and what it costs. Each part has a design file of its own, linked where the part is described
+below; [terms.md](terms.md) defines the words, and [the decisions](../decisions/) give the reasons.
 
 ## One core, two faces
 
 ```text
                  ┌──────────────────────────────────────────┐
                  │ src/core — pure TypeScript, no terminal   │
-                 │ vault · walk · parse · links · graph      │
+                 │ roots · walk · parse · links · graph      │
                  │ layout IR · themes · capture · watch      │
                  └───────┬──────────────┬───────────────────┘
                          ▼              ▼
@@ -17,15 +19,22 @@ decisions that gated this code are in [decisions.md](decisions.md).
                     reader          scripts
 ```
 
-A third face, `src/lsp` (`slipbox lsp`, serving notes to editors, `11.x`), was removed with plain paths (`20.23`).
+The core's design had a third face, `slipbox lsp`, serving notes to editors; it was removed once links became plain
+paths (D8, D67).
 
 `src/main.ts` picks a face. A known subcommand runs the CLI. Anything else opens the TUI, but only
-when stdin and stdout are terminals (plan `9.3`). The TUI is loaded with a dynamic `import()`, so a
+when stdin and stdout are terminals (`9.3`). The TUI is loaded with a dynamic `import()`, so a
 CLI call never loads OpenTUI's native renderer.
+
+Every user action is a named command (D11). `core/command-specs.ts` gives each command id the CLI invocation that
+reaches the same state change, or marks it an interaction; the TUI implements each one (`tui/actions.ts`) in the
+`CommandRegistry` (`core/commands.ts`), and keys, the palette and the `:` prompt run them by id. A command implemented
+without a spec, or specified without an implementation, fails at start-up and fails a test
+([tui.md](tui.md) § Parity with the CLI).
 
 ### The boundary is enforced, not hoped for
 
-`scripts/check-boundary.ts` (plan `0.3`) fails the build when:
+`scripts/check-boundary.ts` (`0.3`, D8) fails the build when:
 
 | Directory | May not import |
 | --- | --- |
@@ -33,7 +42,7 @@ CLI call never loads OpenTUI's native renderer.
 | `src/cli/` | `src/tui/`, `@opentui/*` |
 
 It runs in CI (`.github/workflows/ci.yml`) and in `bun run check`, as does `scripts/check-deps.ts`, the supply chain's
-gates (`14.10`, `docs/design/distribution.md`).
+gates (`14.10`, [distribution.md](distribution.md) § The supply chain).
 
 ### Only the final draw step touches OpenTUI
 
@@ -48,30 +57,83 @@ OpenTUI:
 
 What comes before the screen is taken is `run.ts`'s `prepare`, which needs no terminal (a test calls it):
 the root found, its config, the root recorded as seen, and the graph. Recording comes before the graph
-opens, so a named folder moved here by hand has its cache adopted first (21.8). The App is told what that
-found, and doesn't record the root a second time, which would find nothing moved.
+opens, so a named folder moved here by hand has its cache adopted first (`21.8`, [roots.md](roots.md) § State by
+root). The App is told what that found, and doesn't record the root a second time, which would find nothing moved.
 
 Shutdown saves positions and the session whatever ends the process: `ctrl+q`, or `SIGTERM`, `SIGHUP`,
 `SIGINT`, `SIGQUIT` or `SIGPIPE`.
 
 Everything else is testable headlessly with `TextCanvas` (see [testing.md](testing.md)).
 
+## The CLI and the TUI: disk is the contract
+
+A CLI call is a second process with a graph of its own. It reads the files, and the persisted cache when it is fresh
+(the link index, `1.9`), never a TUI's unsaved buffers; it writes atomically and returns. The TUI takes a CLI write
+as it takes any other program's: it reloads the note, or raises the conflict prompt when the note has unsaved
+changes. The CLI never raises the prompt and never refuses a write because a note is open (D17). Concurrent CLI
+writes are last-writer-wins and never torn; `--if-unchanged` refuses one when the note changed since it was read
+(`9.10`).
+
+Two things keep the CLI's view honest. Hand-offs save first: a capture into an open scratch, the context bundle and
+handing a note to an editor write unsaved changes before the other side reads ([tui.md](tui.md) § Editing). And the
+TUI lists the notes it holds unsaved in `dirty/<pid>.json` in the root's state (`core/stale.ts`, `9.9`), which every
+CLI call reads, ignoring the files of dead pids, and reports as a warning or a `stale` array: advisory, never a lock
+([cli.md](../../docs/cli.md) § Semantics: disk is the contract).
+
+## The parts
+
+A file opened belongs to a root, which the walk lists; its notes are parsed into the graph, their links resolved;
+a note is laid out and drawn; and around that, search, editing, language servers, export and the rest. Each part, in
+that order:
+
+- **Roots** ([roots.md](roots.md)): a file's root is the nearest folder above it holding a root marker (`.git`,
+  `.slipbox/`, `.obsidian/`, `.zk/`); a folder outside every root is a plain folder (D69). The root says what is
+  indexed and searched first, what a leading `/` means, which link convention is followed, its settings, and where
+  its state is kept. Nothing is written into a folder by opening it (D58). One walk lists its files for the index and
+  the watcher alike (D40). Code: `core/vault.ts`, `core/walk.ts`, `core/registry.ts`, `core/folders.ts`.
+- **Links** ([links.md](links.md)): every link, whatever its written form, is read as a file and a fragment; each
+  tool's forms are read and written at the edges (D68). The graph (`core/graph.ts`) holds the notes, their links and
+  backlinks, parsed lazily; renames, repairs, plans and the merge review work on paths.
+- **Search** ([search.md](search.md)): a root's files ranked by words, in the core so the CLI and the TUI share it:
+  an SQLite FTS5 index in the root's cache, else a scan (D114); `find` beside it, unranked (D119).
+- **Rendering** ([rendering.md](rendering.md)): a note's markdown tree laid out as rows for a width: blocks, tables,
+  wrapping, themes, glyphs; pure, so the CLI's `render` and the TUI draw the same (§ Data flow for one note).
+- **The TUI** ([tui.md](tui.md)): the reader and the editor: panes, buffers and tabs, the explorer, source mode and
+  the lens, saving, autosave and the conflict prompt, external changes, git; files beyond notes too. Its keys are the
+  user's reference, [keymap.md](../../docs/keymap.md).
+- **Code as a notebook** ([code-view.md](code-view.md)): a source file rendered as a document, a cell per
+  definition, its comments as prose, its tokens verbatim (D125).
+- **Document types** ([document-types.md](document-types.md)): notes of a kind, known by where they are: their
+  frontmatter's rules, their order, their status (D133).
+- **Language servers** ([lsp.md](lsp.md)): slipbox is a client of the language servers and linters of the code it
+  opens; their problems are the file's, beside its own (D161, D163, D167).
+- **Trust** ([trust.md](trust.md)): nothing of a folder's own runs unless you trust its root (D172).
+- **Export** ([export.md](export.md)): notes as one document, in Word, PDF, a web page, an e-book or Markdown, every
+  format written by slipbox itself (D184).
+- **Distribution** ([distribution.md](distribution.md)): folders per platform, the supply chain's gates, releases,
+  installing, updates and the notices a release ships.
+- **Testing** ([testing.md](testing.md)): the headless tests, the terminal tests in a herdr pane, the fixture and demo
+  vaults and the reference set.
+
+The CLI's commands are the user's reference, [cli.md](../../docs/cli.md); every setting is
+[configuration.md](../../docs/configuration.md).
+
 ## Module map
 
-| Module | Plan items | Role |
+| Module | Steps | Role |
 | --- | --- | --- |
 | `core/width.ts` | 0.7 | the one width function: graphemes, East Asian width, emoji |
-| `core/fsutil.ts` | 4.6, 7.5 | atomic writes keeping the mode; `writeNote` (never out of the vault); reads |
+| `core/fsutil.ts` | 4.6, 7.5 | atomic writes keeping the mode; `writeNote` (never out of the root); reads |
 | `core/sanitize.ts` | 2.9 | strips terminal escapes on the way into layout |
 | `core/paths.ts` | 0.10, 21.8 | config, cache and state directories; a root's key, by its path |
-| `core/config.ts` | 0.9 | TOML: defaults ← user ← vault; warnings, never crashes |
+| `core/config.ts` | 0.9, 20.7 | TOML: defaults ← yours ← each enclosing root's ← the root's; warnings, never crashes |
 | `core/vault.ts` | 1.1, 1.10, 0.12, 17.1, 20.3, 21.8 | a file's root; recording it, a moved folder's state along |
 | `core/registry.ts` | 17.3–17.6, 21.8 | `[vault]` identity; the machine's roots by path (`roots.json`) |
 | `core/remotes.ts` | 21.6 | a repository's remotes as `host/path`: what names it, what hosting URLs are its |
 | `core/parsecache.ts` | 20.11 | notes' parsed content by content hash, shared by every copy on the machine |
 | `core/names.ts` | 21.9 | a root as it's told: its name, else its path (`~/…`); `name@branch` for a worktree |
-| `core/git.ts` | 17.19 | a vault's git checkout, from `.git`: the main one or a worktree, the branch |
-| `core/gitops.ts` | 5.11–5.14 | git run for what `.git` can't say cheaply: status, changes, a file at a commit |
+| `core/git.ts` | 17.19 | a root's git checkout, from `.git`: the main one or a worktree, the branch |
+| `core/gitops.ts` | 5.11–5.14, 23.6 | git run for what `.git` can't say cheaply: status, changes, a file at a commit |
 | `core/mergereview.ts` | 20.21 | before a merge: the links `git merge-tree`'s result would break, each cause and fix |
 | `core/reach.ts` | 17.9–17.11 | other roots: paths out of the root, their backlinks here; the converter's `[[x:…]]` |
 | `core/redirects.ts` | 17.12 | moves seen, by content hash; where an old path went |
@@ -79,7 +141,7 @@ Everything else is testable headlessly with `TextCanvas` (see [testing.md](testi
 | `core/plans.ts` | 20.18 | edits as plans: saved, tied to file contents, refused once stale, applied once |
 | `core/convert.ts` | 20.1 | the converter: `[[…]]` and `/…` links made relative paths, by their own old rules |
 | `core/rename-log.ts` | 7.4 | each rename's files and moves, as it found them: what an undo gives back |
-| `core/files.ts` | 18.4, 18.5, 18.11 | delete to the vault's trash and restore; copy; an unmade vault's `.slipbox/` |
+| `core/files.ts` | 18.4, 18.5, 18.11 | delete to the root's trash and restore; copy; an unmade root's `.slipbox/` |
 | `core/walk.ts` | 1.2, 0.11 | the walk and `WalkFilter`, shared with the watcher |
 | `core/wikilink.ts` | 1.3 | micromark tokenizer for `[[link]]` and `![[embed]]` |
 | `core/footnotes.ts` | 3.17 | a note's footnotes: labels, definitions, references, in GFM's order |
@@ -96,6 +158,7 @@ Everything else is testable headlessly with `TextCanvas` (see [testing.md](testi
 | `core/graph.ts` | 1.5–1.9, 6.7, 11.8 | notes, links, backlinks, lazy parsing, the index; change feed; unsaved text |
 | `core/readers.ts` | 16.2 | a reader per note format: its parse into mdast, headings and links off raw lines |
 | `core/filetypes.ts` | 16.1 | a file's group (note, data, text, binary) and format, by extension |
+| `core/doctypes.ts` | 22.2, 22.3 | document types: notes of a kind by where they are; their rules, order, status |
 | `core/convention.ts` | 21.4 | a root's links' convention: your setting, its tool's, its notes', ours |
 | `core/write-link.ts` | 21.5 | a link as slipbox writes one: completion, the link picker, `slipbox link` |
 | `core/folders.ts` | 21.6 | named folders: by `.slipbox/` name, else remote; copies, the default; the lookup |
@@ -119,9 +182,10 @@ Everything else is testable headlessly with `TextCanvas` (see [testing.md](testi
 | `core/export/images.ts` | 10.x | a picture's kind and size from its header; an SVG rasterised; its size as shown |
 | `core/export/convert.ts` | 10.10 | a picture a format doesn't hold made PNG first: BMP, GIF, WebP decoded |
 | `core/export/style.ts` | 10.x | the look on paper: print's colours, callouts', code's; the stylesheet |
-| `core/export/index.ts` | 10.x | the formats by name, where an export goes, writing it (`docs/design/export.md`) |
+| `core/export/index.ts` | 10.x | the formats by name, where an export goes, writing it ([export.md](export.md)) |
 | `tui/placeholders.ts` | 12.7 | Kitty's Unicode placeholders: a picture's id, its cells as text, sent once, let go |
 | `core/syntax.ts` | 16.7–16.9, 16.18–16.22 | tree-sitter: spans, outline, errors, comments; parts in other languages |
+| `core/docformats.ts` | 24.4 | a doc comment read into one shape, whatever wrote it: JSDoc, Google, NumPy, Sphinx |
 | `core/landing.ts` | 11.3 | where a link lands in its note — a heading, a block's `^id`, `L42` — and its text there |
 | `core/note.ts` | 2.x, 1.11 | a note rendered for a pane: parse, resolve links, embeds' notes, lay out (CLI and TUI) |
 | `core/layout/*` | 2.1–2.8 | mdast → layout IR; tables; wrap; highlighting; ANSI |
@@ -197,12 +261,13 @@ file bytes ──readText──▶ text (BOM noted, invalid UTF-8 → U+FFFD)
 ```
 
 Link statuses (resolved, unresolved, ambiguous) are decided during layout by a resolver function
-injected from the graph, so the layout stays pure and knows nothing about the vault.
+injected from the graph, so the layout stays pure and knows nothing about the root.
 
 ## Dependencies
 
 Runtime dependencies, all pure JavaScript (or WebAssembly) except OpenTUI (native, prebuilt for each platform in the
-package — no build toolchain). SQLite is the runtime's own (`node:sqlite`):
+package — no build toolchain). SQLite is the runtime's own, `node:sqlite` (D196; [distribution.md](distribution.md)
+§ SQLite):
 
 | Package | Used for |
 | --- | --- |
@@ -227,20 +292,26 @@ package — no build toolchain). SQLite is the runtime's own (`node:sqlite`):
 | `@jsquash/webp` 1.5.0 | a WebP decoded for an export (10.10): libwebp as WebAssembly; Apache-2.0, libwebp BSD-3 |
 | `mdast-util-to-hast` 13.2.1, `hast-util-to-html` 9.0.5 | HTML and EPUB export (10.2, 10.6): markdown's tree as HTML |
 | `mdast-util-to-markdown` 2.1.2, `-gfm` 3.1.0, `-math` 3.0.0 | Markdown export (10.3): the tree written again |
+| `hunspell-asm` 4.0.2 | spelling (25.6): Hunspell as WebAssembly; MIT, Hunspell taken under MPL-1.1 |
+| `dictionary-en` 4.0.0, `dictionary-tr` 2.0.0 | the dictionaries shipped (25.6): MIT and BSD (SCOWL); MIT |
 
 The grammars npm ships no WebAssembly for — Swift, SCSS, Vue, Astro, Dockerfile — are built from their sources at
-pinned commits into `grammars/` by `scripts/build-grammars.ts`, committed with their licences (`grammars/README.md`).
+pinned commits into `grammars/` by `scripts/build-grammars.ts`, committed with their licences (`grammars/README.md`;
+D121).
 
-Licences: permissive, but for two weak-copyleft libraries accepted for use — `elkjs` (EPL-2.0) and resvg (MPL-2.0).
-What a distributed binary owes them is `14.6` in the plan.
+Dev only: `vscode-languageserver` 10.1.2, for the tests' fake language server (`tests/fixtures/fake-lsp.ts`); the
+server's half of the protocol library left the runtime with the LSP face (D170, D67).
 
-No external binary is required (hard constraint 1). The clipboard tools are used when present
-and never needed.
+Licences: permissive, but for three weak-copyleft libraries accepted for use: `elkjs` (EPL-2.0), resvg (MPL-2.0)
+and Hunspell (MPL-1.1, in `hunspell-asm`) (D192, D194). What a distributed binary owes them:
+[distribution.md](distribution.md) § Notices.
 
-### OpenTUI upgrade policy (plan `0.6`)
+No external binary is required (D3). The clipboard tools are used when present and never needed.
+
+### OpenTUI upgrade policy (`0.6`)
 
 OpenTUI is pre-1.0 and moves fast, so it is pinned to an exact version in `package.json`
-(`"0.5.12"`, no caret). To upgrade:
+(`"0.5.12"`, no caret; D6). To upgrade:
 
 1. Read the changelog from the pinned version to the target.
 2. Bump the pin, run `bun run check`. The `OpenTUI end to end` test in `tests/tui.test.ts`
@@ -256,8 +327,10 @@ OpenTUI is pre-1.0 and moves fast, so it is pinned to an exact version in `packa
 
 ## Storage
 
-Decision `0.10`. Nothing derived is ever written into the vault. An export (`10.x`) is asked for, not derived: it goes
-where it's told, beside its note by default.
+Nothing derived or personal is ever written into a root, and nothing at all by opening it (D39, D58, D76). An export
+(`10.x`) is asked for, not derived: it goes where it's told, beside its note by default (D185). Config, cache, state
+and data each have a folder of their own, and a root's cache and state are kept under its key
+([roots.md](roots.md) § State by root):
 
 | What | Where |
 | --- | --- |
@@ -277,7 +350,7 @@ where it's told, beside its note by default.
 | where an export went last (`10.14`) | `$XDG_STATE_HOME/slipbox/<key>/export.json` |
 | branch heads seen (`20.21`) | `$XDG_STATE_HOME/slipbox/<key>/heads.json` (each branch's last commit) |
 | clipboard fallback (no OSC 52 or clipboard tool) | `$XDG_STATE_HOME/slipbox/<key>/clipboard.txt` |
-| scratch | `$XDG_STATE_HOME/slipbox/<key>/scratch.md`, or in the vault by config |
+| scratch | `$XDG_STATE_HOME/slipbox/<key>/scratch.md`, or in the root by config |
 | staleness | `$XDG_STATE_HOME/slipbox/<key>/dirty/<pid>.json` |
 | redirects (moves seen: `17.12`) | `$XDG_STATE_HOME/slipbox/<key>/redirects.json` |
 | renames, to undo (`7.4`) | `$XDG_STATE_HOME/slipbox/<key>/renames.json` (the last 20) |
@@ -289,11 +362,19 @@ where it's told, beside its note by default.
 | your own words, spelling's (`25.6`) | `$XDG_DATA_HOME/slipbox/spell/words.txt` |
 | the cache's tag (`14.9`) | `$XDG_CACHE_HOME/slipbox/CACHEDIR.TAG`: backup tools skip the cache |
 
-On Windows, `%APPDATA%\slipbox` stands for the config's folder and `%LOCALAPPDATA%\slipbox\cache`, `\state` and
-`\data` for the others, unless an `XDG_*` is set (`core/paths.ts`, `storeDir`).
+The four folders are XDG's, their defaults (`~/.config`, `~/.cache`, `~/.local/state`, `~/.local/share`) when the
+variables are unset, on macOS too; on Windows, `%APPDATA%\slipbox` and `%LOCALAPPDATA%\slipbox\cache`, `\state` and
+`\data`. An `XDG_*` that is set, absolute, is taken on every platform (`core/paths.ts`, `storeDir`; D200;
+[distribution.md](distribution.md) § Folders).
 
 `<key>` is the root's path — a plain folder's when there's none: `<basename>-<sha256(realpath)[:12]>` (`21.8`;
-`docs/design/decisions.md`, `0.10`). A named folder moved by hand takes it along.
+[roots.md](roots.md) § Storage keys). What is kept by root and what by file, how a moved folder's state follows it,
+and when a root's identity is written: [roots.md](roots.md) § State by root and § `.slipbox/`. The parse cache,
+shared by every copy on the machine: [roots.md](roots.md) § The index.
+
+The scratch is in the state folder by default, so it is never committed by accident; `slipbox scratch path` and
+`show` keep it visible to agents. `capture.location = "vault"` puts it at `<root>/<capture.file>`, never in a plain
+folder (D20).
 
 ## Performance, measured
 
@@ -301,7 +382,7 @@ Measured on this machine (aarch64 VM) on 2026-09-25:
 
 | Case | Time |
 | --- | --- |
-| `slipbox render` of a note, cold 5,000-note vault | 175 ms end to end, including Bun start-up |
+| `slipbox render` of a note, cold 5,000-note root | 175 ms end to end, including Bun start-up |
 | rebuild of the 5,000-note index from cache | 55 ms |
 | backlinks map over 5,000 cached notes | 23 ms |
 | first full parse of 5,000 notes (≈15 MB) | 11 s, once; the TUI does it in the background |
@@ -309,13 +390,13 @@ Measured on this machine (aarch64 VM) on 2026-09-25:
 | the same, cold process | ≈170 ms |
 
 The graph parses lazily. The walk alone supplies every note name, which is all link resolution
-needs, so `render` and `resolve` never parse the whole vault. `backlinks`, `ls --json` and
+needs, so `render` and `resolve` never parse the whole root. `backlinks`, `ls --json` and
 `outline` parse what they need and persist it. The TUI paints the first note straight away and
 parses the rest in slices of about 12 ms between frames, showing `indexing N…` in the top bar. A
 slice parses at least one whole note, so a big one (128 KB and up) is parsed on the workers first (below), the
 slices passing it by; the main thread only puts its chunks together. Where threads can't start, a slice parses it.
 
-**Big notes (plan `15.1`).** Three things keep a big note's cost in proportion to what changed, and two more keep
+**Big notes (`15.1`, D120).** Three things keep a big note's cost in proportion to what changed, and two more keep
 the whole-note work — the first open, a change of width — short:
 
 - **The parse is in chunks** (`parseMarkdown` in `core/parse.ts`): the note is cut where the result

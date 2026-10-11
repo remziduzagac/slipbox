@@ -1,4 +1,4 @@
-// Which roots may run their own code (plan 23.x, decisions.md): those you trusted when the TUI asked
+// Which roots may run their own code (plan 23.x, blueprint/design/trust.md): those you trusted when the TUI asked
 // (kept in slipbox's state, `trust.json`), and those your config's `[trust] roots` lists. Elsewhere
 // slipbox runs nothing a folder brings — not its programs, not the settings that name one, not the
 // code a server or git would run of it by default. A root's own config can't list itself

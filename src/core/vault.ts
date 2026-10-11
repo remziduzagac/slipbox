@@ -1,12 +1,13 @@
 // Root discovery (plan 1.1, 17.1, 20.3, 21.1), the marker version stamp (0.12) and `init` (1.10, 17.4).
 //
-// A file's root is the nearest folder above it holding a root marker (docs/idea.md, "Roots"): `.git`,
-// `.slipbox/`, `.obsidian/`, `.zk/`. Several in one folder make one root, its name and settings from
-// `.slipbox/`; a root inside another is a root of its own. Nothing is written into a root by opening
-// it: `.slipbox/`'s id and name only by `slipbox init` and `slipbox name` (21.8). A file under none is
-// loose: the plain folder opened stands in, known by its path, walked and indexed as a root is — but
-// `$HOME` and `/`, never a root: that would index everything (the background index walks the home
-// folder, slowly), so those are listed a folder at a time. `--root` names a root outright.
+// A file's root is the nearest folder above it holding a root marker (blueprint/design/roots.md § Roots
+// and markers): `.git`, `.slipbox/`, `.obsidian/`, `.zk/`. Several in one folder make one root, its
+// name and settings from `.slipbox/`; a root inside another is a root of its own. Nothing is written
+// into a root by opening it: `.slipbox/`'s id and name only by `slipbox init` and `slipbox name`
+// (21.8). A file under none is loose: the plain folder opened stands in, known by its path, walked and
+// indexed as a root is — but `$HOME` and `/`, never a root: that would index everything (the background
+// index walks the home folder, slowly), so those are listed a folder at a time. `--root` names a root
+// outright.
 
 import { execFileSync } from "node:child_process";
 import { existsSync, mkdirSync, statSync, writeFileSync } from "node:fs";

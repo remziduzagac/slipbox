@@ -1,4 +1,4 @@
-// Search by root (plan 20.16, 21.10; docs/idea.md, "What's shown"): ranked by how near a root is, by
+// Search by root (plan 20.16, 21.10; blueprint/design/roots.md § Search scope): ranked by how near a root is, by
 // links — the root open first (`here`), then the roots linked to or from it under a divider, then every
 // root this machine knows only when widened. Each is searched with its own index, caught up first (a
 // scan where it has none, or one still being built); a hit of another root carries its name and its

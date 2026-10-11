@@ -33,7 +33,7 @@ Nor may it set `[trust]`: a folder can't trust itself. In a root you trust (`[tr
 server's `config` from a folder reaches the server, as a project's `.vscode/settings.json` does — and some servers'
 settings name programs (rust-analyzer's `check.overrideCommand`, for one). In a root you don't (`23.x`), neither
 does: a server's settings are its defaults and yours, with the ones that keep it from running the project's code
-over them, and nothing of the folder's own runs ([lsp.md](lsp.md), "Trust").
+over them, and nothing of the folder's own runs ([trust.md](../blueprint/design/trust.md)).
 Nor may its `[keys]` or `[aliases]` name a command that throws work away — `app.quit_force`,
 `note.revert`, `note.save_force`, `scratch.clear` — or runs a program, `shell.run` and `shell.filter` (`25.7`; with
 an argument, the folder would choose what runs) (`VAULT_FORBIDDEN_COMMANDS`): so a clone can't put one on `ctrl+s` or
@@ -338,11 +338,12 @@ How a file is indented (`25.1`) — a tab a level or spaces, how many, how wide 
 3. else its language's: Go, Makefiles and TSV tabs; Python, Rust, Java, Kotlin, Swift, PHP, C, C++, C#, Scala and Dart
    four spaces; the rest two.
 
-`tab` and `shift+tab` in insert mode, `>` and `<`, and a new line after an opening bracket use it; the source view
-draws a tab that wide (else four columns). A save does what `.editorconfig` asks, and only then: `trim_trailing_whitespace
-= true` trims every line's trailing spaces and tabs, `insert_final_newline = true` adds the last newline — in the text
-first, as an undo step of its own. The Info view (`space n i`) says how a file is indented and where that came from.
-slipbox has no indentation setting of its own: `.editorconfig` is where a project, or your home folder, says it.
+`tab` and `shift+tab` in insert mode, `>` and `<`, and a new line after an opening bracket use it; the source view draws
+a tab that wide (else four columns). A save does what `.editorconfig` asks, and only then:
+`trim_trailing_whitespace = true` trims every line's trailing spaces and tabs, `insert_final_newline = true` adds the
+last newline — in the text first, as an undo step of its own. The Info view (`space n i`) says how a file is indented
+and where that came from. slipbox has no indentation setting of its own: `.editorconfig` is where a project, or your
+home folder, says it.
 
 ## Spelling: the dictionaries
 
@@ -362,10 +363,10 @@ ISO8859-9`) is read in its own. Your words — `z g`, `slipbox spell --add` — 
 
 ## Reloading
 
-The TUI reloads the configuration **by itself** when your config file or any of the root's `.slipbox/config.toml`
-files (its own or an enclosing one's) is saved, and on demand with `space v c` or `:config`.
-[tui.md](tui.md) lists what a reload applies live. UI settings changed in the TUI are session overrides. Each is kept
-only while the config value it replaced is unchanged, so editing the config always wins.
+The TUI reloads the configuration **by itself** when your config file or any of the root's `.slipbox/config.toml` files
+(its own or an enclosing one's) is saved, and on demand with `space v c` or `:config`.
+[tui.md](../blueprint/design/tui.md) lists what a reload applies live. UI settings changed in the TUI are session
+overrides. Each is kept only while the config value it replaced is unchanged, so editing the config always wins.
 
 ## Environment
 
@@ -374,10 +375,12 @@ only while the config value it replaced is unchanged, so editing the config alwa
 | `SLIPBOX_CONFIG` | user config file |
 | `SLIPBOX_GLYPHS` | force `nerd`, `unicode` or `ascii` when `glyphs = "auto"` |
 | `NO_COLOR` | CLI: no colour; TUI: the `mono` theme |
-| `XDG_CONFIG_HOME`, `XDG_CACHE_HOME`, `XDG_STATE_HOME`, `XDG_DATA_HOME` | storage roots (decision `0.10`) |
+| `XDG_CONFIG_HOME`, `XDG_CACHE_HOME`, `XDG_STATE_HOME`, `XDG_DATA_HOME` | storage roots (below) |
 | `SLIPBOX_DEBUG` | print stack traces for unexpected CLI errors |
 | `SLIPBOX_CLIPBOARD` | `file`: copies go only to `clipboard.txt` in the state dir, never the clipboard (tests) |
 | `SLIPBOX_TRACE` | TUI: append each command it runs to this file, one id a line (the terminal tests' coverage) |
 | `DO_NOT_TRACK` | set (not `0` or `false`): no update check (`14.4`) |
 | `SLIPBOX_RELEASES_URL` | releases from elsewhere, laid out as GitHub's: install, upgrade, the check (`14.x`) |
 | `SLIPBOX_BIN_DIR` | `install.sh`: where its `slipbox` link goes, not `~/.local/bin` (`14.7`) |
+
+What slipbox keeps in each storage root: [how-it-works.md](../blueprint/design/how-it-works.md), "Storage".

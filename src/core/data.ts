@@ -1,4 +1,4 @@
-// Data files as documents (plan 16.11–16.13, docs/idea.md "Files beyond markdown").
+// Data files as documents (plan 16.11–16.13, D108).
 //
 // A data file is read into the same tree a note is: sections become headings (so the outline,
 // the breadcrumb and `[[file.toml#section]]` work unchanged), each key a `dataField` node on its

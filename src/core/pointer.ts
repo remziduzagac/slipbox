@@ -1,4 +1,4 @@
-// `slipbox://` pointers (plan 21.7; docs/idea.md, "Between folders"): a link into a named folder
+// `slipbox://` pointers (plan 21.7; blueprint/design/links.md § Pointers): a link into a named folder
 // (21.6), by its name and the path from its root — `slipbox://research/algorithms/dijkstra.md#Proof`.
 // The name is the folder's short one (`research`) or a repository's qualified one
 // (`slipbox://github.com/me/research/x.md`: the longest leading part this machine knows as a

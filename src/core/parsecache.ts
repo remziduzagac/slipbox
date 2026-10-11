@@ -1,4 +1,4 @@
-// The parse cache by content (plan 20.11; docs/idea.md, "The index"): what a note says once parsed —
+// The parse cache by content (plan 20.11; blueprint/design/roots.md § The index): what a note says once parsed —
 // its links as written, headings, tags, aliases, a title of its own — kept by its text's hash, its
 // format and the parser's version, and shared by every copy on this machine. A worktree, a branch
 // switched to, a second clone: each parses only what no copy has parsed before. Where a link points

@@ -1,4 +1,4 @@
-// Renames and moves (17.15, with 7.1–7.3; docs/idea.md, "Moves, renames and backlinks"): a note or
+// Renames and moves (17.15, with 7.1–7.3; blueprint/design/links.md § Renames and moves): a note or
 // folder renamed or moved, with its links rewritten in every root this machine reaches; a root
 // named — as byte-range edits at the positions the index recorded, never a re-serialised file
 // (7.6). A plan is made first, to preview (7.2); it names the git trees that already have changes

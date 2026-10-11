@@ -1,6 +1,11 @@
 # slipbox — agent conventions
 
-Read `docs/handoff.md` first, then `docs/design/README.md`. The plan's item IDs (`2.3`, `9.1`) are stable; cite them.
+## Blueprint
+
+This project's design lives in `blueprint/`: what it must do, how it works, the decisions behind it, and the work in
+progress. Before planning or changing anything, read its README and roadmap. A change that alters what the blueprint
+describes updates it in the same piece of work. The roadmap's step IDs (`2.3`, `9.1`) and the decisions' (`D39`) are
+stable; cite them. User documentation is `docs/` (keymap, configuration, CLI) and the README.
 
 ## Rules
 
@@ -9,8 +14,9 @@ Read `docs/handoff.md` first, then `docs/design/README.md`. The plan's item IDs 
 - **Every user action is a named command.** Add it to `src/core/command-specs.ts` with its CLI
   equivalent (or `null` for a pure interaction), then implement it in `src/tui/actions.ts`
   (`registerActions`). Registration fails at startup, and a test fails, if the two disagree.
-- **Design docs stay true to the code.** A behaviour change updates the matching file in
-  `docs/design/` in the same change.
+- **The design stays true to the code.** A behaviour change updates the matching file in
+  `blueprint/design/` in the same change; since the initial design was settled (D210), a planned change to
+  requirements or design goes through a workstream.
 - **Nothing measures text except `src/core/width.ts`**, and every string entering the layout
   passes through `sanitize`.
 - Phase 3 (editing) has begun: the TUI writes notes only through `App.writeBuffer` (atomic, inside
@@ -22,7 +28,7 @@ Read `docs/handoff.md` first, then `docs/design/README.md`. The plan's item IDs 
 ## Commands
 
 - `bun run check` — typecheck, boundary, the supply chain's gates (`check:deps`), tests. Run before declaring done.
-- `bun run e2e --tab` — the terminal tests: slipbox driven in a herdr pane (`docs/design/testing.md`).
+- `bun run e2e --tab` — the terminal tests: slipbox driven in a herdr pane (`blueprint/design/testing.md`).
 - `bun test -u` updates snapshots; read the diff before accepting it.
 - `bun src/main.ts <path>` runs the TUI; `bun src/main.ts help` lists CLI commands.
 - Tooling lives on a login-shell PATH (mise): use `zsh -lc '…'` in non-interactive shells.

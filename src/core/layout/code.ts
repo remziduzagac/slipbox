@@ -1,4 +1,4 @@
-// The code view (plan 24.x, docs/design/code-view.md): a source file read as a notebook. Its prose — the file's
+// The code view (plan 24.x, blueprint/design/code-view.md): a source file read as a notebook. Its prose — the file's
 // comments, each definition's documentation (JSDoc, a docstring: Google, NumPy, reST) — at full width; its code in
 // cells, one per definition (a class: its head, then a cell per method), each in a box or on a band with a header —
 // the definition's kind and name, its lines, its problems, and buttons — and the separator comments as section rules.

@@ -1,10 +1,10 @@
-# Export (plan `10.x`)
+# Export (`10.x`)
 
 Notes as a document for people who don't use slipbox, in five formats: Word (`10.4`), PDF (`10.5`), a web page
 (`10.2`), an e-book (`10.6`) and portable Markdown (`10.3`). One note, or several as one document, a chapter each
 (`10.9`). Every format is written by TypeScript or JavaScript under a permissive licence: no tool is run and nothing
-is installed. A format that would need one (a headless browser, `10.7`; pandoc, `10.8`) isn't offered. Decided
-2026-10-09 with the user: Word first, then the rest; an export goes beside its note by default.
+is installed (D180, D184). A format that would need one (a headless browser, `10.7`; pandoc, `10.8`) isn't offered.
+Word comes first, and an export goes beside its note by default (D185).
 
 The code is in `src/core/export/`:
 
@@ -34,7 +34,7 @@ it, and fetches nothing. Every writer is loaded when it's first used, not at sta
   `web`, `ebook`, `markdown`) or an extension (`.docx`). Without `--to`, it's `-o`'s extension; without either, Word.
   A format slipbox doesn't write is a usage error (exit 2).
 - The file goes to `--out` (or `-o`), from the working folder; a folder gets the first note's name in it. Without
-  `-o`, it goes beside the first note, under its name: `notes/report.md` gives `notes/report.docx`. Markdown's is
+  `-o`, it goes beside the first note, under its name (D185): `notes/report.md` gives `notes/report.docx`. Markdown's is
   `notes/report.export.md`, apart from the note it's of.
 - Several notes make one document, a chapter each, in the order given.
 - A file already there is replaced, as `-o` does in any tool. A note of the root never is (exit 5), but for an
@@ -51,7 +51,7 @@ it, and fetches nothing. Every writer is loaded when it's first used, not at sta
   picked already, each pick shows its number, and picking one again takes it out. The list filters as you type, and
   keeps what's typed and where you were between picks. Its first row, whatever's typed, is "Export these 3 notes…".
 - Then a list of the formats; `:export docx` (or `word`, completed) skips it.
-- Then where (`10.14`), in a Save As window: places down its left, the folder it's in on the right — its folders,
+- Then where (`10.14`, D190), in a Save As window: places down its left, the folder it's in on the right — its folders,
   then its files with their size and date — and the file's name at the bottom, with Export and Cancel buttons. It
   opens where you exported last (kept for the root in its state, `export.json`, while that folder is there), else
   beside the note, the note's name filled in and its focus: `enter` exports there.
@@ -73,8 +73,9 @@ it, and fetches nothing. Every writer is loaded when it's first used, not at sta
 
 ## The assembler (`10.1`)
 
-`assemble(graph, rels)` reads each note from disk and returns `{title, author, date, lang, chapters[]}`. Each chapter
-is `{rel, title, anchor, nodes}`: the note's markdown tree, made ready for a writer, which never looks anything up.
+The work is rewriting links, in an assembler of slipbox's own (D179). `assemble(graph, rels)` reads each note from disk
+and returns `{title, author, date, lang, chapters[]}`. Each chapter is `{rel, title, anchor, nodes}`: the note's
+markdown tree, made ready for a writer, which never looks anything up.
 
 - **Chapters.** A chapter a note, in the order given. Its id comes from its path (`notes/report.md` gives
   `notes-report`), and its title is the note's (frontmatter `title`, else its first heading, else its file name).
@@ -106,7 +107,7 @@ gives a token, a callout's bar in its kind's colour, a task's box `☐` or `☑`
 
 ## Word (`10.4`)
 
-Written by `docx` (MIT), whose zip, JSZip, is dual-licensed MIT or GPLv3 and taken under MIT.
+Word comes first (D185). Written by `docx` (MIT), whose zip, JSZip, is dual-licensed MIT or GPLv3 and taken under MIT.
 
 - **The page:** A4 with inch margins, Calibri 11 pt, code in Consolas.
 - **Chapters:** each starts on a new page (but the first) at its bookmark. Its title is a Heading 1: the note's own
@@ -126,7 +127,7 @@ Written by `docx` (MIT), whose zip, JSZip, is dual-licensed MIT or GPLv3 and tak
 
 ## PDF (`10.5`)
 
-Laid out by pdfkit (MIT) on A4, 64-point margins, the text 10.5 points.
+Laid out by pdfkit (MIT, D186) on A4, 64-point margins, the text 10.5 points.
 
 - **Fonts** are found on the machine (`fonts.ts`), never asked of a tool: its font folders are read (Linux's,
   macOS's, Windows', the user's own; in WSL, Windows' on its C: drive first), and the first sans family with all four
@@ -138,10 +139,10 @@ Laid out by pdfkit (MIT) on A4, 64-point margins, the text 10.5 points.
   arrows and maths, then emoji, then the CJK fonts there are — a combining mark or a joiner staying with what it joins.
   One no font has is the font's own box. With no font found at all, PDF's own Helvetica and Courier, which hold
   Latin-1: the rest is `?`.
-- **Emoji** are black and white (`10.12`), from a font that draws them so: Noto Emoji, OpenMoji's black, Symbola,
+- **Emoji** are black and white (`10.12`, D189), from a font that draws them so: Noto Emoji, OpenMoji's black, Symbola,
   Segoe UI Symbol. A colour emoji font (Apple's, Noto Color Emoji) has pictures, not outlines, and a PDF's text can't
-  use it; colour is `10.13`, deferred.
-- **Lines are laid out here** (`10.11`), not by pdfkit, whose lines hold only text: words and pictures together,
+  use it; colour is deferred (`10.13`, D189).
+- **Lines are laid out here** (`10.11`, D188), not by pdfkit, whose lines hold only text: words and pictures together,
   broken where Unicode lets a line break (UAX #14, by `linebreak`, MIT), a word longer than a line cut where it fits,
   each run on one baseline. So a picture in a sentence stays in its line (as high as it needs); maths in a line is
   MathJax's, typeset and drawn at four times its size, set on the baseline as MathJax places it; inline code is on a
@@ -161,9 +162,9 @@ Laid out by pdfkit (MIT) on A4, 64-point margins, the text 10.5 points.
 
 ## A web page (`10.2`)
 
-One HTML file holding everything, so it can be mailed, opened anywhere and printed. Each chapter is a `<section>` with
-its id, its notes at its end; written by `mdast-util-to-hast` and `hast-util-to-html` (both MIT), which escape every
-text and attribute.
+Written by slipbox, as every format is (D181): one HTML file holding everything, so it can be mailed, opened anywhere
+and printed. Each chapter is a `<section>` with its id, its notes at its end; written by `mdast-util-to-hast` and
+`hast-util-to-html` (both MIT), which escape every text and attribute.
 
 - **Pictures** are inside it as `data:` addresses, at their size (`width`, `height`) up to 736 CSS pixels; a diagram
   and maths as SVG. A line's maths sits on its baseline: MathJax's `ex` sizes and `vertical-align` kept.
@@ -174,7 +175,7 @@ text and attribute.
 
 ## An e-book (`10.6`)
 
-EPUB 3, zipped by fflate (MIT): `mimetype` first and stored, as readers require; a chapter a file of XHTML; each
+EPUB 3 (D181), zipped by fflate (MIT): `mimetype` first and stored, as readers require; a chapter a file of XHTML; each
 picture a file of the book, the same picture once (a BMP made PNG first: an e-book holds none); a contents page (the
 chapters and their sections); the stylesheet. XHTML is XML, so no attribute is left without a value and `<` in one is
 escaped. Its id comes from what's in it — the notes, in order — so the same notes exported again are the same book,
@@ -182,7 +183,7 @@ updated.
 
 ## Markdown (`10.3`)
 
-One portable file, for GitHub or any editor:
+One portable file, for GitHub or any editor (D181):
 
 - **Links inside it** go to the heading ids GitHub gives, a name used again numbered across the whole document; a
   chapter's goes to its title (a note opening with no heading gets one, its title).
@@ -200,7 +201,7 @@ One portable file, for GitHub or any editor:
 
 Each format holds some kinds of picture and not others — Word no WebP, PDF only PNG and JPEG, an e-book no BMP — so
 before a writer runs, every picture of a kind it doesn't hold is decoded and written again as a PNG (`convert.ts`),
-and the writers see only what they take. A file is converted once, however often the document shows it. BMP is
+and the writers see only what they take (D187). A file is converted once, however often the document shows it. BMP is
 decoded here (1, 4, 8, 16, 24 and 32 bits, its palette and its masks, either way up; not run-length encoded); a GIF's
 first frame is drawn by resvg; a WebP is decoded by libwebp, compiled to WebAssembly (`@jsquash/webp`), loaded the
 first time a WebP is met and embedded in a compiled slipbox. The PNG is written here: eight bits a channel with alpha,
@@ -213,8 +214,8 @@ fflate, `mdast-util-to-hast`, `hast-util-to-html`, `mdast-util-to-markdown`, `md
 fontkit's helpers (`@swc/helpers`) are Apache-2.0, as are `@jsquash/webp` and its `wasm-feature-detect`; the libwebp it
 compiles is BSD-3-Clause. It also draws with what the TUI draws with (`12.x`): beautiful-mermaid (MIT) and its layout
 engine elkjs (EPL-2.0), MathJax (Apache-2.0), and resvg (MPL-2.0). EPL-2.0 and MPL-2.0 are weak copyleft, accepted for
-use (2026-10-09): a change to those libraries' own files would have to be shared, and nothing of slipbox's is. What a
-distributed binary owes them is `14.6` in the plan.
+use (D184, D192): a change to those libraries' own files would have to be shared, and nothing of slipbox's is. What a
+distributed binary owes them: [distribution.md](distribution.md) § Notices.
 
 ## Known limits
 
@@ -224,5 +225,5 @@ distributed binary owes them is `14.6` in the plan.
 - A run-length-encoded BMP, or a picture otherwise unreadable, is its words. The libwebp in `@jsquash/webp` is 1.0.2,
   old; it decodes inside WebAssembly, where a malformed file can fail but not reach beyond it.
 - PDF: emoji are black and white, and only where a font that draws them is on the machine (none, a box); colour is
-  `10.13`. On a machine with no fonts at all, a compiled slipbox can't make one: PDF's own fonts, which it would fall
-  back on, aren't in the build (it says so).
+  deferred (`10.13`, D189). On a machine with no fonts at all, a compiled slipbox can't make one: PDF's own fonts, which
+  it would fall back on, aren't in the build (it says so).

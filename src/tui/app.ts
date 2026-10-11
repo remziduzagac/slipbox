@@ -1,4 +1,4 @@
-// The TUI app model (plan 3.x; keymap in docs/design/keymap.md): tabs of one or two windows over
+// The TUI app model (plan 3.x; keymap in docs/keymap.md): tabs of one or two windows over
 // shared buffers, a reading cursor with selection, the explorer and outline panes, overlays,
 // history, link-following, find, the which-key popup, UI settings, live reload from the watcher
 // (5.1–5.4), and live reload of the configuration itself.
@@ -567,7 +567,7 @@ export interface PanelList {
   filtering: boolean;
 }
 
-/** Live UI settings (docs/design/keymap.md, `space u`). */
+/** Live UI settings (docs/keymap.md, `space u`). */
 export interface UiState {
   cursorline: boolean;
   line_numbers: boolean;
@@ -7369,7 +7369,7 @@ export class App {
     | { kind: "scrollbar"; bar: import("./draw.ts").ScrollbarGeom }
     | null = null;
 
-  /** Everything visible is clickable (docs/design/keymap.md, "Mouse"). */
+  /** Everything visible is clickable (docs/keymap.md, "Mouse"). */
   handleMouse(ev: { type: string; x: number; y: number; button: number; scroll?: { direction: string; delta: number } }): void {
     if (ev.type !== "move") this.lastInputAt = this.now();
     // A wheel spun (12.7): pictures held back from its first tick until it rests.

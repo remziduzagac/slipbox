@@ -1,6 +1,6 @@
 // The lint surface (3.21): run the linter you already use — markdownlint-cli2, with your own
 // configuration — and show what it finds where it is. slipbox ships no linter of its own: a
-// built-in one would fight the rules you've written (docs/idea.md, "Run this repo's linter").
+// built-in one would fight the rules you've written (D160).
 // markdownlint-cli2 is found as a server is (the vault's own copy, PATH, your installs), else
 // installed into slipbox's own folder when first needed (19.21), and run on slipbox's Bun.
 

@@ -1,7 +1,7 @@
 // SQLite for slipbox — the search index (6.6) and the parse cache — through `node:sqlite`: the SQLite built into the
 // runtime. Bun implements it (its own SQLite on Linux and Windows; macOS's on macOS), as Node does, so nothing native
 // is packaged per platform and nothing raises the glibc Bun needs (2026-10-10, replacing better-sqlite3, after
-// trailscout's research: docs/plan.md, 14.x). What slipbox asks of SQLite is small — FTS5 with `unicode61` and `bm25`,
+// trailscout's research: D196). What slipbox asks of SQLite is small — FTS5 with `unicode61` and `bm25`,
 // WAL, a busy timeout — and both databases are caches, made again when they don't open or are of another version.
 //
 // The few calls slipbox makes, as it made them on better-sqlite3: a statement's `get`, `all` and `run`; `pragma`, set

@@ -1,4 +1,4 @@
-// The roots this machine knows (17.6, 21.8; docs/idea.md, "Personal state and settings"): each folder
+// The roots this machine knows (17.6, 21.8; blueprint/design/roots.md § State by root): each folder
 // opened — a root, or a plain folder — and each root the background index found, by its path. A
 // root's cache and personal state are found by its path's key (`vaultKey`): opening `project/` or
 // `project/docs/` brings back the same session; a worktree, another path, has its own. A named folder
