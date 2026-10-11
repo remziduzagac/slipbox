@@ -1011,7 +1011,7 @@ function drawPane(app: App, c: Canvas, view: View, rect: Rect, contentFocused: b
   // The Problems panel's chosen problem, while it has the keys: marked whatever the level (1.7).
   const chosen = view === app.view ? app.chosenProblem() : undefined;
   const chosenOn = chosen ? problemLines([chosen]) : null;
-  const links = commentLinksShown(view);
+  const links = commentLinksShown(view, app.isCodeDocument(view.buf));
   const brackets = app.bracketMarks(view);
   // A snippet's placeholder, untouched, at the stop the cursor is at (25.8): marked as selected, by its source line.
   const stop = snippetMark(app, view);
@@ -1309,10 +1309,11 @@ function problemMarks(line: Line, layout: Layout, onLine: Map<number, Problem[]>
   return out;
 }
 
-/** A source file's links in comments by line (16.10), for the text as it is now. */
-function commentLinksShown(view: View): Map<number, CommentLink[]> | null {
+/** A source file's links in comments by line (16.10), for the text as it is now: in source mode, and on the code
+ *  view's rows of code (a note beside code, a comment kept as written; its prose has them as links of its own). */
+function commentLinksShown(view: View, code: boolean): Map<number, CommentLink[]> | null {
   const syn = view.buf.syntax;
-  if (!view.source || !syn?.links.length || syn.version !== view.buf.version) return null;
+  if (!(view.source || code) || !syn?.links.length || syn.version !== view.buf.version) return null;
   const out = new Map<number, CommentLink[]>();
   for (const l of syn.links) out.set(l.line, [...(out.get(l.line) ?? []), l]);
   return out;

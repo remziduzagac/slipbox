@@ -39,6 +39,8 @@ interface Style {
   strike?: boolean;
   /** Inline code: on a tint. */
   tint?: boolean;
+  /** Obsidian's `==highlight==`: on a marker's yellow. */
+  mark?: boolean;
   color?: string;
   size?: number;
   link?: string;
@@ -412,6 +414,7 @@ class PdfWriter {
         if ((a.link || a.goTo) && prev && prev.link === a.link && prev.goTo === a.goTo && Math.abs(prev.x + prev.width - x) < 0.01) prev.width += a.width;
         else if (a.link || a.goTo) areas.push({ link: a.link, goTo: a.goTo, x, width: a.width });
         if (a.kind === "text") {
+          if (a.mark) pdf.save().rect(x, baseline - up, a.width, up + down).fill(TINT.mark).restore();
           if (a.tint) pdf.save().roundedRect(x - 1, baseline - up, a.width + 2, up + down, 2).fill(TINT.inline).restore();
           // Spaces drawn too: what a reader copies, or searches, has its words apart.
           pdf
@@ -465,6 +468,9 @@ class PdfWriter {
             break;
           case "delete":
             walk(n.children, { ...s, strike: true });
+            break;
+          case "highlight":
+            walk(n.children, { ...s, mark: true });
             break;
           case "inlineCode":
             out.push({ ...s, text: n.value, mono: true, tint: true, size: (s.size ?? BODY) * 0.9 });

@@ -10,6 +10,7 @@ import { type DrawingColors, drawMermaid, MERMAID, mermaidSvg } from "../diagram
 import { RESVG, rasterizer } from "../svg.ts";
 import { MATHJAX, typesetter } from "../typeset.ts";
 import { mathRows, mathText } from "../math.ts";
+import { onlyComments } from "../obsidian.ts";
 import { headingLabel, ORIGIN, parseMarkdown, type Frontmatter, slugify } from "../parse.ts";
 import { expandTabs, sanitize } from "../sanitize.ts";
 import type { Role } from "../theme/theme.ts";
@@ -309,6 +310,8 @@ function block(node: RootContent, ctx: Ctx, width: number, base: Style, fm?: Fro
     case "heading":
       return heading(node.depth, node.children, srcOf(node), ctx, width, (node.data as { id?: string } | undefined)?.id);
     case "paragraph":
+      // Obsidian's comments alone (DF-D17): nothing to read, no paragraph.
+      if (onlyComments(node.children)) return null;
       return paragraph(node.children, srcOf(node), ctx, width, base);
     case "math": {
       // Typeset as a picture, where that's chosen (12.17).
@@ -391,6 +394,8 @@ function block(node: RootContent, ctx: Ctx, width: number, base: Style, fm?: Fro
       if ((node.type as string) === "toml") return frontmatterBlock(fm ?? null, (node as { value: string }).value, srcOf(node), ctx, width);
       if ((node.type as string) === "dataField") return dataField(node as unknown as DataField, ctx, width);
       if ((node.type as string) === "dataComment") return dataComment(node as unknown as DataComment, width, ctx);
+      // An Obsidian comment over blank lines (DF-D17): hidden while reading.
+      if (node.type === "commentBlock") return null;
       // Unknown block: show its text rather than lose it.
       return paragraph([{ type: "text", value: textOf(node) }], srcOf(node), ctx, width, base);
   }
@@ -440,7 +445,7 @@ function embedsAlone(children: PhrasingContent[], src: number, ctx: Ctx, width: 
       embeds.push({ kind: "embed", target: w.target, heading: w.heading, block: w.block, link: w.target, node: c });
     } else if (c.type === "image" && NOTE_URL.test(c.url.split("#")[0]!)) embeds.push({ kind: "image", ...urlParts(c.url), link: c.url, node: c });
     else if (c.type === "image") embeds.push({ kind: "image", target: "", heading: null, block: null, link: c.url, node: c });
-    else if (!(c.type === "break" || (c.type === "text" && !c.value.trim()))) return null;
+    else if (!(c.type === "break" || c.type === "comment" || (c.type === "text" && !c.value.trim()))) return null;
   }
   const found = embeds.map((r) => ({ r, e: r.target ? ctx.opts.embed!(r.target, r.heading, r.block, r.kind) : null }));
   if (!found.some((f) => f.e)) return null;
@@ -467,7 +472,7 @@ function picturesAlone(children: PhrasingContent[], src: number, ctx: Ctx, width
     const from = pictureSource(c);
     return from ? [{ c, from }] : [];
   });
-  if (!images.length || images.length !== children.filter((c) => !(c.type === "break" || (c.type === "text" && !c.value.trim()))).length) return null;
+  if (!images.length || images.length !== children.filter((c) => !(c.type === "break" || c.type === "comment" || (c.type === "text" && !c.value.trim()))).length) return null;
   const drawn = images.map(({ c, from }) => ({ c, p: askPicture(from, width, ctx) }));
   if (!drawn.some((d) => d.p)) return null;
   return drawn.flatMap(({ c, p }) => pictureRows(c, p, c.position?.start.line ?? src, ctx, width, base));
@@ -1109,17 +1114,35 @@ function tableRecords(node: Table, cells: Span[][][], ctx: Ctx, width: number): 
 
 const DROP_TAGS = /^<\/?(?:kbd|sup|sub|b|i|u|em|strong|mark|span|small|abbr|ins|del|s|q|cite|code|samp|var|a)\b[^>]*>$/i;
 
+/** What closes a sentence or a bracket: no space before it, where a comment was. */
+const CLOSING = /^[.,;:!?)\]}…]/;
+
 function inline(nodes: PhrasingContent[], ctx: Ctx, style: Style, src: number): Span[] {
   const out: Span[] = [];
   let line = src;
+  /** An Obsidian comment just left out (DF-D17): the white space after it goes where there's some before it. */
+  let squeeze = false;
   const push = (text: string, st: Style, extra: Partial<Span> = {}) => {
     if (!text) return;
+    squeeze = false;
     out.push({ text, role: st.role, attrs: st.attrs, src: line, ...extra });
   };
   const text = (value: string, st: Style, extra: Partial<Span> = {}) => {
     // Soft line breaks become spaces; each one advances the source line.
     // A tab in prose or a table cell is whitespace; the width function gives it no columns.
-    const parts = sanitize(value).replace(/\t/g, " ").split("\n");
+    let v = sanitize(value).replace(/\t/g, " ");
+    const before = out[out.length - 1];
+    if (squeeze && (!before || /\s$/.test(before.text))) {
+      const lead = /^\s*/.exec(v)![0];
+      line += lead.split("\n").length - 1;
+      v = v.slice(lead.length);
+      // `oil %%a note%%.`: the space before it goes too, where what follows closes the sentence.
+      if (before && CLOSING.test(v)) {
+        before.text = before.text.replace(/\s+$/, "");
+        if (!before.text) out.pop();
+      }
+    }
+    const parts = v.split("\n");
     parts.forEach((p, i) => {
       if (i > 0) {
         line++;
@@ -1148,6 +1171,14 @@ function inline(nodes: PhrasingContent[], ctx: Ctx, style: Style, src: number): 
         case "delete":
           walk(n.children, { role: st.role === "text" ? "strike" : st.role, attrs: st.attrs | A_STRIKE }, extra);
           break;
+        case "highlight":
+          // Obsidian's `==highlight==` (DF-D17): on its own background, what's inside it (a link, code) too.
+          walk(n.children, { role: "highlight", attrs: st.attrs }, { ...extra, bg: "highlight" });
+          break;
+        case "comment":
+          // Obsidian's `%%comment%%`: hidden while reading (source mode and the lens show the text as typed).
+          squeeze = true;
+          break;
         case "inlineCode":
           push(expandTabs(sanitize(n.value).replace(/\n/g, " "), 2), { role: "code_inline", attrs: 0 }, extra);
           break;
@@ -1159,11 +1190,11 @@ function inline(nodes: PhrasingContent[], ctx: Ctx, style: Style, src: number): 
           push("\n", st);
           break;
         case "link":
-          linkNode(n.url, n.children, st, n.position?.start.line ?? line);
+          linkNode(n.url, n.children, st, n.position?.start.line ?? line, extra);
           break;
         case "linkReference": {
           const url = ctx.definitions.get(n.identifier.toLowerCase());
-          if (url !== undefined) linkNode(url, n.children, st, line);
+          if (url !== undefined) linkNode(url, n.children, st, line, extra);
           else walk(n.children, st, extra);
           break;
         }
@@ -1194,7 +1225,7 @@ function inline(nodes: PhrasingContent[], ctx: Ctx, style: Style, src: number): 
           break;
         }
         default:
-          if ((n.type as string) === "wikiLink") wiki(n as unknown as WikiLink, st);
+          if ((n.type as string) === "wikiLink") wiki(n as unknown as WikiLink, st, extra);
           else if ((n.type as string) === "hashtag") {
             // A tag (1.6): followed, the notes that carry it.
             const name = (n as unknown as Hashtag).value;
@@ -1206,15 +1237,17 @@ function inline(nodes: PhrasingContent[], ctx: Ctx, style: Style, src: number): 
       }
     }
   };
-  const linkNode = (url: string, children: PhrasingContent[], st: Style, at: number) => {
+  const linkNode = (url: string, children: PhrasingContent[], st: Style, at: number, around: Partial<Span> = {}) => {
     const visible = textOf({ type: "paragraph", children });
     const s = status(ctx, "markdown", url);
     const id = addLink(ctx, { kind: "markdown", target: url, heading: null, text: visible || url, status: s, src: at });
     const role: Role = s === "unresolved" ? "link_unresolved" : "link";
     // What the file says (21.9): its text, or, a link without text of its own, its target as written —
     // no form made up for the screen.
-    if (children.length) walk(children, { role, attrs: st.attrs }, { link: id });
-    else push(sanitize(url), { role, attrs: st.attrs }, { link: id });
+    // On a highlight's background, inside one.
+    const bg = around.bg ? { bg: around.bg } : {};
+    if (children.length) walk(children, { role, attrs: st.attrs }, { ...bg, link: id });
+    else push(sanitize(url), { role, attrs: st.attrs }, { ...bg, link: id });
     const external = /^[a-z][a-z0-9+.-]*:/i.test(url);
     // The URL after the text, unless the text already is it (www. autolinks, empty link text).
     const same = url === visible || ["mailto:", "http://", "https://"].some((scheme) => url === `${scheme}${visible}`);
@@ -1222,7 +1255,7 @@ function inline(nodes: PhrasingContent[], ctx: Ctx, style: Style, src: number): 
       push(` <${sanitize(url)}>`, { role: "url", attrs: 0 });
     }
   };
-  const wiki = (w: WikiLink, st: Style) => {
+  const wiki = (w: WikiLink, st: Style, around: Partial<Span> = {}) => {
     const kind = w.embed ? "embed" : "wiki";
     const s = status(ctx, kind, w.target);
     // A picture embedded by name, as Obsidian writes one: `|300` and `|240x180` its size, not words.
@@ -1246,7 +1279,7 @@ function inline(nodes: PhrasingContent[], ctx: Ctx, style: Style, src: number): 
     const id = addLink(ctx, { kind, target: w.target, heading: w.heading ?? (w.block ? `^${w.block}` : null), text: shown, status: s, src: line });
     const role: Role = picture ? "image" : w.embed ? "embed" : s === "unresolved" ? "link_unresolved" : s === "ambiguous" ? "link_ambiguous" : "wikilink";
     const prefix = picture ? `${ctx.opts.glyphs.image} ` : w.embed ? `${ctx.opts.glyphs.embed} ` : "";
-    push(prefix + sanitize(shown), { role, attrs: st.attrs }, { link: id });
+    push(prefix + sanitize(shown), { role, attrs: st.attrs }, { ...(around.bg ? { bg: around.bg } : {}), link: id });
   };
   walk(nodes, style);
   return out;

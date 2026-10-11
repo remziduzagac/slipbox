@@ -6085,6 +6085,78 @@ describe("code as a notebook (24.x, 24.13)", () => {
     expect(marked(sig, pane.textX)).toBe(false); // the border
   });
 
+  test("a path in a comment's prose is a link, as in source mode: drawn as one, enter follows it (to its line); a note beside code too", async () => {
+    const TOOL = "// See notes/alpha.md:7 for the plan.\nexport function plan() {\n  return 1; // and notes/beta.md\n}\n\n// Standing alone, `notes/beta.md` and notes/missing.md; [the docs](https://example.com).\n\nconst x = 1;\n";
+    const h = await open({}, "tool.ts", TOOL);
+    const layout = () => h.app.currentLayout(h.app.view!);
+    /** The cursor on `needle`, in the first row of the code view holding `rowHas`: that row. */
+    const onText = (rowHas: string, needle: string) => {
+      const lines = layout().lines;
+      const row = lines.findIndex((l) => l.spans.map((s) => s.text).join("").includes(rowHas));
+      expect(row).toBeGreaterThanOrEqual(0);
+      const text = lines[row]!.spans.map((s) => s.text).join("");
+      h.app.moveCursor(h.app.view!, { row, col: stringWidth(text.slice(0, text.indexOf(needle))) + 1 });
+      return lines[row]!;
+    };
+    // Drawn as links: the documentation's path, the box of its own's (in backticks too); a path to nothing isn't one.
+    expect(layout().links.filter((l) => l.target.startsWith("/notes/")).map((l) => [l.target, l.text])).toEqual([
+      ["/notes/alpha.md#L7", "notes/alpha.md:7"],
+      ["/notes/beta.md", "notes/beta.md"],
+    ]);
+    // In the order they're drawn, a Markdown link's among them: the next link from the top is the first path.
+    expect(layout().links.map((l) => l.target)).toEqual(["/notes/alpha.md#L7", "/notes/beta.md", "https://example.com"]);
+    h.app.moveCursor(h.app.view!, { row: 0, col: 0 });
+    await h.app.run("link.next");
+    expect(line(h)).toBe(1);
+    const doc = onText("See notes/alpha.md", "notes/alpha.md");
+    expect(doc.srcMap).toBeUndefined(); // a row of prose, not of code
+    expect(doc.spans.find((s) => s.text === "notes/alpha.md:7")!.role).toBe("link");
+    // The note beside the code: its row is code's, drawn as source mode draws a comment's link.
+    expect(onText("and notes/beta.md", "notes/beta.md").srcMap).toBeDefined();
+    const c = h.canvas();
+    const frame = c.toString().split("\n");
+    const y = frame.findIndex((r) => r.includes("and notes/beta.md"));
+    const x = [...frame[y]!.slice(0, frame[y]!.indexOf("notes/beta.md"))].length;
+    expect(c.styles[y]![x]!.fg).toBe(h.app.theme.roles.link.fg!);
+    // enter on the documentation's path: the note, at its line.
+    onText("See notes/alpha.md", "notes/alpha.md");
+    await h.keys("enter");
+    expect(h.app.view!.buf.rel).toBe("notes/alpha.md");
+    expect(line(h)).toBe(7);
+    // The box of its own's, in backticks.
+    await h.app.run("note.open tool.ts");
+    expect(onText("Standing alone", "notes/beta.md").srcMap).toBeUndefined();
+    await h.keys("enter");
+    expect(h.app.view!.buf.rel).toBe("notes/beta.md");
+  });
+
+  test("slipbox's own syntax errors, no server having spoken: marked on the text, the line's number red, counted in the cell's header and the status line", async () => {
+    const h = await open({ config: (c) => (c.ui.line_numbers = true) }, "broken.ts", "export function total(a: number) {\n  return a +;\n}\n\nexport const fine = 1;\n");
+    const v = h.app.view!;
+    expect(v.source).toBeFalsy(); // the code view
+    expect(v.buf.syntax!.errors.length).toBeGreaterThan(0);
+    expect(h.app.problemsShown(v).map((p) => p.source)).toContain("syntax");
+    h.app.dismissToasts();
+    // The cell's header counts them, its ⚠ button the panel's; the other cell has none.
+    expect(hot(h, "cell:problems:1")).toBeDefined();
+    expect(hot(h, "cell:problems:5")).toBeUndefined();
+    // The mark on the line's text, in the syntax error's own role; its number red.
+    const c = h.canvas();
+    const lines = c.toString().split("\n");
+    const at = lines.findIndex((l) => l.includes("return a +;"));
+    const mark = h.app.theme.roles.syntax_error;
+    const cols = [...lines[at]!].map((_, k) => c.styles[at]![k]!);
+    expect(cols.some((st) => st.underline && (mark.fg === undefined || st.fg === mark.fg))).toBe(true);
+    const num = [...lines[at]!].findIndex((ch) => ch === "2");
+    expect(c.styles[at]![num]!.fg).toBe(h.app.theme.roles.error.fg!);
+    expect(statusRow(h.frame())).toMatch(/✖ \d+/);
+    // Once a server has said what it finds, its errors stand in for slipbox's.
+    v.buf.serverProblems.set("fake", { version: v.buf.version, raw: [], list: [] });
+    v.layoutKey = "";
+    expect(h.app.problemsShown(v)).toEqual([]);
+    expect(hot(h, "cell:problems:1")).toBeUndefined();
+  });
+
   test("boxes or bands: space u c; a band's header and code on a tint, no borders", async () => {
     const h = await open();
     await h.keys("space", "u", "c");
@@ -12135,6 +12207,38 @@ describe("what a code file's server changes (19.15)", () => {
     await h.keys("u");
     expect(h.app.view!.buf.source).toBe("a  b   c\nd    e\n");
     await h.app.servers!.stopAll();
+  });
+
+  test("space c f: the server asked to format with the file's own indentation — its .editorconfig, else its lines", async () => {
+    const root = makeVault();
+    writeFileSync(join(root, "four.fk"), "f {\n    a  b\n    c\n}\n");
+    writeFileSync(join(root, "tabs.fk"), "f {\n\ta  b\n\tc\n}\n");
+    mkdirSync(join(root, "said"));
+    writeFileSync(join(root, "said", ".editorconfig"), "[*.fk]\nindent_style = space\nindent_size = 3\n");
+    writeFileSync(join(root, "said", "three.fk"), "f {\n    a  b\n    c\n}\n");
+    const asked: unknown[] = [];
+    const formatted = async (file: string) => {
+      const h = await harness({ root, open: file, config: served });
+      await ready(h);
+      // What the client asks the server, at the request it builds.
+      const s = h.app.servers!;
+      const request = s.request.bind(s);
+      s.request = ((path, method, params, capability, feature) => {
+        if (method === "textDocument/formatting") asked.push((params as { options: unknown }).options);
+        return request(path, method, params, capability, feature);
+      }) as typeof s.request;
+      await h.keys("space", "c", "f");
+      expect(await until(() => !h.app.view!.buf.source.includes("  b"))).toBe(true);
+      await s.stopAll();
+    };
+    await formatted("four.fk");
+    await formatted("tabs.fk");
+    await formatted("said/three.fk");
+    expect(asked).toEqual([
+      { tabSize: 4, insertSpaces: true }, // its lines: four spaces, not a fixed 2
+      { tabSize: 4, insertSpaces: false }, // tabs, as wide as a tab shows
+      { tabSize: 3, insertSpaces: true }, // its .editorconfig, over its lines
+    ]);
   });
 });
 

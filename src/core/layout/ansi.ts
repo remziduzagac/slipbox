@@ -86,6 +86,7 @@ function sgr(s: CellStyle, depth: ColorDepth, withBg: boolean): string {
   if (s.italic) codes.push("3");
   if (s.underline) codes.push("4");
   if (s.strike) codes.push("9");
+  if (s.inverse) codes.push("7");
   return `\x1b[${codes.join(";")}m`;
 }
 

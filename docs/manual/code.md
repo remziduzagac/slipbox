@@ -171,16 +171,17 @@ For a language it parses, slipbox gives the file:
   a page's `<script>`) are each an entry, coloured in their own language. A file slipbox can't outline itself takes its
   language server's outline, when it has a server.
 - **Syntax errors**: where the parser finds an error, the text is underlined and counted among the file's problems,
-  below. They're checked as you pause typing and shown once you leave insert mode, since a half-typed line is always
-  broken. Once a language server has answered, its own errors take their place.
+  below, here and in the code view, where a cell's header counts its own. They're checked as you pause typing and shown
+  once you leave insert mode, since a half-typed line is always broken. Once a language server has answered, its own
+  errors take their place.
 
 ## Links in code
 
 In source mode, a URL in a code file, or a path with an extension that names a file of the root, is a link, and
 `enter` follows it. A path is read from the file's folder, else from the root (a leading `/` is the root), and
 `:42` after it opens that line: `./retry.ts:12`. Paths count in comments and in strings, so an import's path can be
-followed too. In the code view, a comment's URLs and Markdown links are links, but its plain paths aren't: switch to
-source mode (`space n v`) to follow one. Code has no wikilinks.
+followed too. The code view draws a comment's paths as links too, beside its URLs and Markdown links, and `enter`
+follows them as in source mode. Code has no wikilinks.
 
 A path in a comment counts as a backlink of the file it names, and moving or renaming that file rewrites it, as it
 does a note's links ([Links and roots](links-and-roots.md)).
@@ -369,7 +370,8 @@ A file with no server says so; `slipbox doctor` says which it would have.
 - **`space c a`** lists the code actions for the cursor's line: every server's fixes and refactorings, the preferred
   ones first, each with the server it came from. In a note, slipbox's own fixes come first, such as naming a fragile
   link's note for sure.
-- **`space c f`** formats the file as its server does.
+- **`space c f`** formats the file as its server does, asked to indent as the file is indented: its `.editorconfig`,
+  else its own lines, else its language's habit ([Indentation](configuration.md#indentation-editorconfig)).
 
 What a server changes is made in slipbox's buffers, each file's changes one undo step. A file on screen is left
 unsaved for you to save; one that isn't is saved at once, so an agent reading the disk sees the change.
@@ -422,9 +424,9 @@ turns off the note linter and the linters without a server; the linters' servers
 ## Problems
 
 A file's problems come from every source alike: its language servers, its linters, slipbox's own syntax check (in source
-mode), and, for a note, slipbox's checks of its links and the note linter's findings. A note's own problems are a link
-that reaches nothing (a note not written yet is information; a missing file, a warning) or reaches several notes, a
-heading or block a link names that its note hasn't, and git's conflict markers (an error).
+mode and the code view), and, for a note, slipbox's checks of its links and the note linter's findings. A note's own
+problems are a link that reaches nothing (a note not written yet is information; a missing file, a warning) or reaches
+several notes, a heading or block a link names that its note hasn't, and git's conflict markers (an error).
 
 Each problem has a severity: error, warning, information or hint. `diagnostics.severity` is the least that shows:
 `warning` by default, so a note's links to notes not written yet don't mark every page; `info` shows them too.

@@ -1366,9 +1366,13 @@ export class App {
       if (!tree) return;
       const spans = new Map<number, SyntaxSpan[]>();
       for (const s of tree.spans()) spans.set(s.line, [...(spans.get(s.line) ?? []), s]);
-      // Links in its comments (16.10): URLs, and paths that name a file of the vault.
+      // Links in its comments (16.10): URLs, and paths that name a file of the vault — where each goes, for the code view.
       const rel = buf.rel;
-      const links = commentLinks(tree.comments()).filter((l) => l.url || (rel && this.graph.commentPath(l.target, rel)));
+      const links = commentLinks(tree.comments()).flatMap((l) => {
+        if (l.url) return [l];
+        const path = rel ? this.graph.commentPath(l.target, rel) : null;
+        return path ? [{ ...l, href: `/${path}${l.at ? `#L${l.at}` : ""}` }] : [];
+      });
       // A part in another language (16.22): its lines highlighted in it.
       buf.syntax = { version: buf.version, spans, outline: tree.outline(), errors: tree.errors(), links, languages: tree.languages(), code: tree.codeModel() };
       tree.delete();
@@ -2905,7 +2909,7 @@ export class App {
 
   /**
    * A file's problems as they are now (19.8), from every source, at least `[diagnostics] severity`:
-   * its syntax errors (16.9; in source mode, out of insert, for the text as it is), the linter's
+   * its syntax errors (16.9; in source mode and the code view, out of insert, for the text as it is), the linter's
    * findings (3.21; for the text they were found in), and a vault note's links and conflict markers
    * (while it's as saved: the graph has the file's). `any`: whether there are some at all — the syntax
    * errors of the last parse too, insert or not.
@@ -2915,7 +2919,9 @@ export class App {
     const out: Problem[] = [];
     const syn = buf.syntax;
     // A language server, once it's said what it finds, has the file's syntax errors: tree-sitter's are then left out.
-    if (syn?.errors.length && !buf.serverProblems.size && (any || (view.source && !view.insert && syn.version === buf.version))) out.push(...syntaxProblems(syn.errors));
+    // Shown in source mode and the code view alike (DF-D10).
+    const shows = view.source || this.isCodeDocument(buf);
+    if (syn?.errors.length && !buf.serverProblems.size && (any || (shows && !view.insert && syn.version === buf.version))) out.push(...syntaxProblems(syn.errors));
     if (buf.lint?.issues.length && (any || buf.lint.version === buf.version)) out.push(...lintProblems(buf.lint.issues));
     // Its language servers' (19.1), for the text they were found in: typing hides them until they answer again.
     for (const p of buf.serverProblems.values()) if (any || p.version === buf.version) out.push(...p.list);

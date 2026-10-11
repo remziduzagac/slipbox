@@ -31,5 +31,7 @@ export function spanStyle(theme: Theme, span: Span, line: Line, overlayRole?: Ro
     underline: !!(o?.underline || r.underline || a & A_UNDERLINE),
     strike: !!(a & A_STRIKE),
     dim: !!(r.dim || a & A_DIM),
+    // A role drawn in reverse (a highlight without colour, NO_COLOR).
+    ...(r.inverse ? { inverse: true } : {}),
   };
 }

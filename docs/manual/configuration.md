@@ -491,8 +491,8 @@ The roles of the screen most worth changing:
 
 Every role:
 
-- **The text:** `text`, `dim`, `strong`, `emphasis`, `strike`, `h1` to `h6`, `code_inline`, `code_block`,
-  `code_label`, `code_gutter`, `link`, `link_unresolved`, `link_ambiguous`, `wikilink`, `embed`, `url`, `link_focus`,
+- **The text:** `text`, `dim`, `strong`, `emphasis`, `strike`, `highlight`, `h1` to `h6`, `code_inline`,
+  `code_block`, `code_label`, `code_gutter`, `link`, `link_unresolved`, `link_ambiguous`, `wikilink`, `embed`, `url`, `link_focus`,
   `quote`, `quote_bar`, `list_marker`, `check_done`, `check_todo`, `rule`, `table_border`, `table_header`, `fm_key`,
   `fm_value`, `fm_border`, `fm_error`, `callout_note`, `callout_tip`, `callout_important`, `callout_warning`,
   `callout_caution`, `footnote`, `tag`, `html`, `image`, `math`.
@@ -522,8 +522,9 @@ most editors read. How a file is indented (a tab a level or spaces, how many, ho
 3. else its language's habit: tabs for Go, Makefiles and TSV; four spaces for Python, Rust, Java, Kotlin, Swift, PHP,
    C, C++, C#, Scala and Dart; two for the rest.
 
-Editing indents by that step ([Indentation and comments](editing.md#indentation-and-comments)), and a tab is drawn
-that wide (else four columns). A save does what `.editorconfig` asks, and only then: `trim_trailing_whitespace =
+Editing indents by that step ([Indentation and comments](editing.md#indentation-and-comments)), a tab is drawn
+that wide (else four columns), and a language server asked to format the file (`space c f`) is asked to indent it so.
+A save does what `.editorconfig` asks, and only then: `trim_trailing_whitespace =
 true` trims every line's trailing spaces and tabs, and `insert_final_newline = true` ends the file with a newline,
 each in the text first, as an undo step of its own. The Info view (`space n i`) says how a file is indented, and what
 said so.

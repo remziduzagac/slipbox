@@ -51,8 +51,8 @@ export const SYNTAX: Record<string, string> = {
   syn_deletion: "#cf222e",
 };
 
-/** Tints: code's and a table header's background, a rule's and a border's line. */
-export const TINT = { code: "#f6f8fa", inline: "#eff1f3", border: "#d0d7de", link: "#0969da" };
+/** Tints: code's and a table header's background, a rule's and a border's line, a highlight's marker (`==text==`). */
+export const TINT = { code: "#f6f8fa", inline: "#eff1f3", border: "#d0d7de", link: "#0969da", mark: "#fff8c5" };
 
 /** The stylesheet of an HTML export and an EPUB's chapters: print-friendly, a chapter a page when printed. */
 export const CSS = `
@@ -79,6 +79,7 @@ th, td { border: 1px solid ${TINT.border}; padding: 0.375em 0.8em; }
 th { background: ${TINT.code}; }
 hr { border: 0; border-top: 1px solid ${TINT.border}; margin: 1.5em 0; }
 li.task { list-style: none; }
+mark { background: ${TINT.mark}; color: inherit; padding: 0 0.1em; }
 .footnotes { margin-top: 2em; font-size: 0.875em; color: ${PRINT.muted}; border-top: 1px solid ${TINT.border}; }
 .footnotes-label { font-size: 1em; }
 ${Object.entries(SYNTAX)

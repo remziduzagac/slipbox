@@ -2091,7 +2091,9 @@ export function registerActions(app: App): void {
         a.syncServers(v.buf);
         const s = a.servers;
         if (!s?.isOpen(v.buf.abs)) return a.message("info", "formatting is a language server's: none for this file (slipbox doctor)");
-        const options = { tabSize: 2, insertSpaces: !v.buf.source.includes("\n\t") };
+        // The file's own indentation (25.1): its .editorconfig, else its lines, else its language's — never a fixed 2.
+        const indent = v.buf.indent();
+        const options = { tabSize: indent.size, insertSpaces: !indent.tabs };
         const r = await s.request<TextEdit[]>(v.buf.abs, "textDocument/formatting", { textDocument: { uri: pathToFileURL(v.buf.abs).href }, options }, "documentFormattingProvider", "format");
         if (!r) return a.message("info", "the language server doesn't format this");
         if (!r.result.length) return a.message("info", `formatted already (${r.server})`);

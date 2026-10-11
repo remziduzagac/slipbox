@@ -1,13 +1,14 @@
 // Export as Markdown (plan 10.3): one portable file — what others read without slipbox, on GitHub or in any editor.
 // Embeds are drawn in, links inside the document go to the heading ids GitHub gives (the rest are their text, as the
 // assembler made them), pictures are copied into a folder beside it, and what Markdown renders itself is kept as written:
-// a Mermaid diagram as its code, maths as `$…$` and `$$`, callouts as `> [!kind]`, footnotes renumbered `[^1]`.
+// a Mermaid diagram as its code, maths as `$…$` and `$$`, callouts as `> [!kind]`, Obsidian's highlights as `==…==`,
+// footnotes renumbered `[^1]`.
 // Only pictures are copied, and only the root's: anything else a picture link names stays a link, nothing of it copied.
 // Its frontmatter carries the mark that lets a later export replace it, though it's a note.
 
 import { readFileSync } from "node:fs";
 import { basename, dirname, extname, isAbsolute, relative, sep } from "node:path";
-import type { Blockquote, Code, Heading, Image, Link, Nodes, Paragraph, PhrasingContent, Root, RootContent } from "mdast";
+import type { Blockquote, Code, Heading, Image, Link, Nodes, Paragraph, Parent, PhrasingContent, Root, RootContent } from "mdast";
 import { gfmToMarkdown } from "mdast-util-gfm";
 import { mathToMarkdown } from "mdast-util-math";
 import { toMarkdown as serialise } from "mdast-util-to-markdown";
@@ -108,11 +109,26 @@ export async function toMarkdown(doc: ExportDoc, target: string): Promise<Export
     rule: "-",
     listItemIndent: "one",
     extensions: [gfmToMarkdown(), mathToMarkdown()],
-    // A callout's marker as written: `[!tip]`, never escaped into text.
-    handlers: { calloutMarker: (node: { value: string }) => node.value } as never,
+    // A callout's marker as written: `[!tip]`, never escaped into text; a highlight as Obsidian writes it.
+    handlers: { calloutMarker: (node: { value: string }) => node.value, highlight: highlightMarkdown } as never,
   });
   return { data: new TextEncoder().encode(`${fm}\n${body}`), files };
 }
+
+interface Tracker {
+  move(value: string): string;
+  current(): object;
+}
+
+/** Obsidian's `==highlight==`, as written: its text between the marks, read as any text is. */
+function highlightMarkdown(node: Parent, _parent: unknown, state: { createTracker(info: unknown): Tracker; containerPhrasing(node: Parent, info: object): string }, info: unknown): string {
+  const tracker = state.createTracker(info);
+  let value = tracker.move("==");
+  value += tracker.move(state.containerPhrasing(node, { ...tracker.current(), before: value, after: "=" }));
+  return value + tracker.move("==");
+}
+// What it starts with, for the text before it.
+highlightMarkdown.peek = () => "=";
 
 /**
  * Each heading's id as GitHub gives it, in the order they come — a name used again numbered (`-1`) — by the id the

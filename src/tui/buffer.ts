@@ -107,10 +107,11 @@ export class NoteBuffer {
 
   /**
    * What tree-sitter last found in a source file (16.7–16.9), and for which version: spans of lines
-   * inside multi-line strings and comments, the outline, syntax errors. The app refreshes it
+   * inside multi-line strings and comments, the outline, syntax errors, its comments' links (a path's `href` where it
+   * goes: `/notes/plan.md#L12`). The app refreshes it
    * shortly after edits stop; until then the layout uses it as it is.
    */
-  syntax: { version: number; spans: Map<number, SyntaxSpan[]>; outline: OutlineEntry[]; errors: SyntaxError[]; links: CommentLink[]; languages: Map<number, string>; code: CodeModel | null } | null = null;
+  syntax: { version: number; spans: Map<number, SyntaxSpan[]>; outline: OutlineEntry[]; errors: SyntaxError[]; links: (CommentLink & { href?: string })[]; languages: Map<number, string>; code: CodeModel | null } | null = null;
   /** The code view's runs of imports unfolded (24.5), by their first line. */
   readonly codeOpen = new Set<number>();
   /** The code view's cells folded to their header (24.13), by their first line. */
@@ -478,7 +479,10 @@ export class NoteBuffer {
       const base = this.sourceLayout(1, false, glyphs);
       const spans = this.syntax?.spans;
       const fresh = this.syntax?.version === this.version;
-      l = layoutCode(this.source, base, fresh ? (this.syntax?.code ?? null) : null, { width, wrap, glyphs, open: this.codeOpen, folded: this.codeFolded, cells, problems, inside: (line) => !!spans?.get(line)?.length });
+      // Its comments' paths (16.10), drawn as links in their prose.
+      const lines = this.lines();
+      const paths = fresh ? (this.syntax?.links ?? []).flatMap((l) => (l.href ? [{ line: l.line, text: (lines[l.line - 1] ?? "").slice(l.from, l.to), target: l.href }] : [])) : [];
+      l = layoutCode(this.source, base, fresh ? (this.syntax?.code ?? null) : null, { width, wrap, glyphs, open: this.codeOpen, folded: this.codeFolded, cells, problems, inside: (line) => !!spans?.get(line)?.length, paths });
       if (this.layouts.size >= 6) this.layouts.delete(this.layouts.keys().next().value!);
       this.layouts.set(key, l);
     }

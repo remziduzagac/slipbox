@@ -75,6 +75,10 @@ build (`scripts/build-home.ts`), not kept as they are. Each file's purpose and t
   `work/kestrel/docs/qa/theme-showcase.md`, `work/product/releases/2.3-notes.md` (rendering.md Inline)
 - Inline HTML comment in a paragraph and across lines — `notes/daily/2026-08-31.md`,
   `work/kestrel/docs/qa/theme-showcase.md` (render.test review cycle 4 (text between comments))
+- Obsidian's highlights and comments: ==text== highlighted, emphasis inside it, '1 cup == 2 cups' left as text;
+  %%comment%% hidden while reading, shown in source mode and the lens — a paragraph of one, mid-sentence, before a full
+  stop, a block over a blank line holding a list; exports alike — `hobbies/cooking/Pantry.md`,
+  `hobbies/cooking/Recipes/Family/Grandma's flan.md` (rendering.md Blocks and inlines; DF-D17)
 - Tags: #tag, nested #a/b/c, with digits/dashes/underscores, at line start, after punctuation, in headings, in lists,
   in tables; not tags: #1, URL fragment, code, heading hash, 'C#' — `notes/daily/2026-08-21.md`,
   `notes/meetings/2026-09-05-feedback-synthesis.md` (rendering.md tag; decision 1.6; projects tags)

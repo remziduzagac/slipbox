@@ -206,6 +206,8 @@ the document; nothing is fetched (a picture on the web is its cached copy, or it
 only the root's pictures; anything else stays a link. It never writes over a note, of any root (exit 5; an earlier
 Markdown export aside: `name.export.md`).
 
+Obsidian's `%%comments%%` are left out of every format, as they're hidden while reading; its `==highlights==` stay.
+
 ## Capturing for the user — the scratch
 
 The scratch is a markdown file per project. The user reads it in the TUI (`space s s`) and copies

@@ -66,8 +66,9 @@ form it was written: a wikilink stays a wikilink, a name stays a name.
   a Templater tag is text.
 - **The apps' own settings**, but for the link settings above: Obsidian's themes, hotkeys, templates, daily notes and
   attachment folder; zk's templates and its note ids. Make a note with `zk new` in zk.
-- **Obsidian-only marks.** `==highlight==` and `%%comment%%` show as typed, and a folded callout (`> [!note]-`) is
-  drawn open.
+- **Folded callouts.** A folded callout (`> [!note]-`) is drawn open. Obsidian's `==highlight==` and `%%comment%%`
+  are read as Obsidian reads them: a highlight is drawn highlighted, and a comment is hidden while you read
+  ([Reading](../manual/reading.md#emphasis-code-and-links)).
 - **Writing into the folder** of its own accord. slipbox keeps its own state (where you were, the scratch, its trash)
   in its own folders: a note deleted in slipbox goes to slipbox's trash (`space v t`), not Obsidian's `.trash/`.
 

@@ -1,4 +1,5 @@
-// Parse pipeline (plan 1.3): remark + gfm + frontmatter + wikilinks + tags (1.6). Wikilinks are read
+// Parse pipeline (plan 1.3): remark + gfm + frontmatter + wikilinks + tags (1.6) + Obsidian's highlights and comments
+// (DF-D17). Wikilinks are read
 // again (21.3): within their root, by the graph. The converter (20.1) parses the same way
 // (`parseLegacy`); it differs only in resolving them by `Graph.resolveLegacyWiki`.
 // mdast carries source positions, which is why remark was chosen over marked.
@@ -13,6 +14,7 @@ import remarkParse from "remark-parse";
 import { unified } from "unified";
 import { parse as parseToml } from "smol-toml";
 import { parse as parseYaml } from "yaml";
+import { blockComments, markCommentEnds, remarkObsidian } from "./obsidian.ts";
 import { remarkHashtag } from "./tags.ts";
 import { remarkWikiLink, type WikiLink } from "./wikilink.ts";
 
@@ -23,14 +25,16 @@ const processor = unified()
   .use(remarkMath)
   .use(remarkFrontmatter, ["yaml", "toml"])
   .use(remarkWikiLink as never)
-  .use(remarkHashtag as never);
+  .use(remarkHashtag as never)
+  .use(remarkObsidian as never);
 /** For chunks after the first: frontmatter is only ever at the note's start. */
 const bodyProcessor = unified()
   .use(remarkParse)
   .use(remarkGfm)
   .use(remarkMath)
   .use(remarkWikiLink as never)
-  .use(remarkHashtag as never);
+  .use(remarkHashtag as never)
+  .use(remarkObsidian as never);
 /** A note's tree with its wikilinks read (`wikiLink` nodes), in one parse: for the converter (20.1). */
 export function parseLegacy(source: string): Root {
   return processor.parse(source) as Root;
@@ -302,12 +306,13 @@ function shifted<T>(nodes: T[], delta: number): T[] {
   return nodes.map(copy) as T[];
 }
 
-/** What a parsed chunk's nodes get, however it was parsed (here or on another thread, 15.1): quotes
- *  and heading ids marked from `text`, then the offsets dropped. */
+/** What a parsed chunk's nodes get, however it was parsed (here or on another thread, 15.1): quotes, heading ids and
+ *  the paragraphs that open or close a comment over blank lines marked from `text`, then the offsets dropped. */
 function finish(nodes: unknown[], text: string): void {
   dollarsAsText(nodes, text);
   markLiteralQuotes(nodes, text);
   markHeadingIds(nodes);
+  markCommentEnds(nodes, text);
   dropOffsets(nodes);
 }
 
@@ -504,7 +509,8 @@ export function parseMarkdown(source: string, cache?: ParseCache, opts: { whole?
   });
   if (cache) cache.chunks = used;
   mergeLists(children, seams, lines);
-  const tree: Root = { type: "root", children, position: { start: { line: 1, column: 1 }, end: { line: lines.length, column: (lines[lines.length - 1]?.length ?? 0) + 1 } } };
+  // Obsidian's comments over blank lines (DF-D17), once the chunks are one: a comment's blocks may be several chunks'.
+  const tree: Root = { type: "root", children: blockComments(children), position: { start: { line: 1, column: 1 }, end: { line: lines.length, column: (lines[lines.length - 1]?.length ?? 0) + 1 } } };
   let frontmatter: Frontmatter | null = null;
   const first = tree.children[0];
   if (first && (first.type === "yaml" || (first.type as string) === "toml")) {

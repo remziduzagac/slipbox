@@ -118,7 +118,10 @@ The command line exports any text file you name, read as Markdown; slipbox itsel
 
 Word, PDF, the web page and the e-book look alike: dark text on white, in GitHub's light colours, whatever your theme;
 code in colour, its keywords, strings and comments told apart; a callout with a bar in its kind's colour; a task's box
-as `☐` or `☑`.
+as `☐` or `☑`; Obsidian's `==highlight==` on a marker's yellow.
+
+Obsidian's `%%comments%%` are left out of every format, Markdown's too: what you'd never see reading the note isn't in
+what you send.
 
 ### Word
 
@@ -178,7 +181,7 @@ place.
   folder ending `.export.assets`, so an export beside your notes never takes the place of the picture it copied. A
   path through the folder (`![[coffee.export.assets/photo.png]]`) still reaches the copy.
 - **Kept as written**, since Markdown viewers draw them themselves: a Mermaid diagram as its code, maths as `$…$` and
-  `$$`, a callout as `> [!tip] Its title`.
+  `$$`, a callout as `> [!tip] Its title`, a highlight as `==…==`.
 - **Links inside the document** go to the headings as GitHub names them. Footnotes are numbered `[^1]`, `[^2]` in the
   order they're referred to, across the whole document.
 - **Its front matter** has the title, author, date and language, and the line `generator: slipbox`. That line marks it

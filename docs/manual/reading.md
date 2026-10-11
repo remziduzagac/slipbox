@@ -80,6 +80,11 @@ similar mark. A no-break space never breaks.
 
 - `**strong**` text is bold, in a lighter colour so it stands out even where a terminal's bold is faint; `*emphasis*`
   is italic, and `~~struck~~` is struck through.
+- `==highlighted==` text, as Obsidian writes it, is drawn on a marker's yellow (the `highlight` colour), whatever is in
+  it. The marks go on the text itself: `a == b`, with spaces inside them, is text.
+- `%%comments%%`, as Obsidian writes them, are hidden while you read: in a line, a paragraph of nothing else, or a
+  block of several paragraphs, from a line that starts with `%%` to one that ends with it. Source mode and the lens
+  show them as written. A link in a comment still counts as one of the note's links, though it isn't drawn.
 - `` `code` `` has its own background.
 - A link shows its text, coloured by whether it reaches anything: a link that reaches nothing is red, and one whose
   name fits several notes has a colour of its own. A link without text shows its target as written. A `[[wikilink]]`

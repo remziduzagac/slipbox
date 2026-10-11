@@ -599,13 +599,14 @@
   },
   {
    "path": "hobbies/cooking/Pantry.md",
-   "purpose": "Pantry overview: embeds pantry.csv, a Dataview fence, a ==highlight==.",
+   "purpose": "Pantry overview: embeds pantry.csv, a Dataview fence, ==highlights== and a %% comment %% mid-sentence.",
    "cases": [
     "notes: Obsidian and zk conventions render as… — ```dataview fence, ==highlight==",
     "embeds: Missing and unresolvable embeds render as… — embed of a csv: reference",
     "links/wikilinks: Attachment by name (Obsidian style) — attachment by name",
     "links/wikilinks: Wikilink by name — [[Home]]",
-    "links/wikilinks: Wikilink extension handling — [[pantry.csv]]"
+    "links/wikilinks: Wikilink extension handling — [[pantry.csv]]",
+    "inline: Obsidian's highlights and comments:… — ==bold yellow== and ==Rinse it *first*.==, '1 cup == 2 cups' text, a comment before a full stop"
    ],
    "links": [
     "![[pantry.csv]]",
@@ -629,10 +630,11 @@
   },
   {
    "path": "hobbies/cooking/Recipes/Family/Grandma's flan.md",
-   "purpose": "Flan with an apostrophe in the name and a %% Obsidian comment %%.",
+   "purpose": "Flan with an apostrophe in the name and Obsidian %% comments %%: a paragraph of one, one mid-sentence, a block over a blank line.",
    "cases": [
     "notes: Obsidian and zk conventions render as… — %% comments %%, ==highlight==, inline footnote ^[…]",
-    "footnotes: Footnote refs in heading, table cell,… — inline footnote"
+    "footnotes: Footnote refs in heading, table cell,… — inline footnote",
+    "inline: Obsidian's highlights and comments:… — a comment paragraph, one mid-sentence, a block holding a list; ==splash of *real* vanilla=="
    ],
    "links": []
   },

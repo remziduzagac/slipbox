@@ -132,7 +132,16 @@ does over a release's link.
 
 ## MODIFIED design/lsp.md, design/tui.md § What's under the cursor (DF-D8, DF-D13)
 
-Formatting with the file's own indentation (DF-T7 writes it).
+**DF-D8**, design/tui.md § What's under the cursor: its `space c f` item becomes
+
+- **`space c f`** formats the file as its server does (the first that formats), one undo step; left unsaved. The server
+  is asked to indent as slipbox works the file's indentation out (`25.1`, § Editing): its `.editorconfig`, else its
+  own lines, else its language's — `tabSize` that step (a tab's width where it's tabs), `insertSpaces` unless it's
+  tabs; never a fixed 2 (DF-D8).
+
+Previously: "**`space c f`** formats the file as its server does (the first that formats), one undo step; left
+unsaved." The request said `tabSize: 2` whatever the file, so a server that follows it re-indented a 4-space file to 2.
+design/lsp.md says nothing of formatting's options: unchanged by DF-D8.
 
 The servers' table (DF-D13), its rows as `LANGUAGES` in `src/core/servers/languages.ts` has them:
 
@@ -179,7 +188,29 @@ Previously: "The word stays in code and config (`core/vault.ts`, the `[vault]` i
 
 ## MODIFIED design/code-view.md § How it behaves; design/tui.md § Problems where they are (DF-D10)
 
-slipbox's syntax errors in the code view too.
+slipbox's syntax errors in the code view too; and a comment's paths links in its prose there (A13).
+
+design/code-view.md § How it behaves, its **Problems** item becomes
+
+- **Problems** show as in source mode, from every source alike: the bar's signs, the marks, the Problems panel —
+  slipbox's own syntax errors among them, out of insert, until a server has answered (`16.9`, DF-D10) — and a cell's
+  header counts its own. A mark is on a row's text only, never on a cell's header, borders or padding, which carry a
+  line, not its text.
+
+Previously: "**Problems** show as in source mode: the bar's signs, the marks, the Problems panel — and a cell's header
+counts its own. …" — the code left slipbox's own syntax errors out of the code view.
+
+A13 (no decision: the code brought in line with design/tui.md § Files beyond notes, whose links in comments are
+"drawn as links, `enter` follows them"), design/code-view.md § How it behaves, after **The cursor**:
+
+- **Links in comments** (`16.10`): a comment's paths that name a file of the root are links in its prose — a doc's, a
+  comment's box, a comment among code — drawn and followed as a Markdown link in it is (`enter`, `] l`, the links list),
+  to their line where they name one (`path:42`); on a row of code (a note beside code, a comment kept as written) they
+  are drawn as source mode draws them, and `enter` reads them from the text.
+
+design/tui.md § Problems where they are: "its syntax errors (`16.9`; in source mode, out of insert, for the text as it
+is)" becomes "its syntax errors (`16.9`; in source mode and the code view, out of insert, for the text as it is;
+DF-D10)".
 
 ## MODIFIED design/tui.md § Positions (DF-D11)
 
@@ -262,7 +293,44 @@ Previously: "typed text, and the few keys that edit or move".
 
 ## MODIFIED design/rendering.md § Blocks and inlines (DF-D17)
 
-Obsidian's `==highlight==` and `%%comment%%`.
+Obsidian's `==highlight==` and `%%comment%%`; with design/rendering.md § Themes, design/export.md § The assembler,
+§ Markdown, and a section after rendering.md § The wikilink tokenizer.
+
+design/rendering.md § Blocks and inlines: the opening sentence becomes "`layout/render.ts` handles every mdast node
+remark-gfm produces, plus `#tags` and Obsidian's highlights and comments." (previously "… plus `#tags`."), and the
+table gains two rows:
+
+| Node | Rendering |
+| --- | --- |
+| highlight | `==text==` (Obsidian): its text in the `highlight` role, a marker's yellow behind it, what's inside too |
+| comment | `%%text%%` (Obsidian): hidden — in a line, the white space where it was made one; alone, no row |
+
+and **Inline** gains, after `~~strike~~`: "Obsidian's `==highlight==` in the `highlight` role, on its background — a
+link or code inside it too — and its `%%comments%%` hidden while reading, shown as typed in source mode and the lens,
+which draw the file's text (DF-D17): `a %%note%% b` reads `a b`, `oil %%note%%.` reads `oil.`, a paragraph of nothing
+but comments leaves no row, and a comment over blank lines (below) no rows. Rows keep their source lines."
+
+New section, after § The wikilink tokenizer:
+
+**Obsidian's highlights and comments** (DF-D17). `core/obsidian.ts` is a micromark extension too, so neither is read
+inside code, `\==` and `\%%` stay text, and each node has its position. A highlight pairs as GFM's `~~strike~~` does:
+exactly two `=`, flanking as emphasis does, so `a == b` and `===` are text, and what's inside is read as any text
+(`==**bold**==`, a link). A comment pairs any two `%%` of a paragraph, spaces or not, across its lines; what's inside is
+read too, so a link, a tag or a task in a comment is still the note's — counted, renamed with its note — only not drawn.
+A comment over blank lines — from a paragraph that starts with a `%%` pairing with nothing to the next block at its
+level that ends with one (a list or a quote whose last line does: a `%%` right after a list is its last item's lazy
+line) — becomes a block of its own (`commentBlock`) after the parse, once its chunks are one; its blocks are read as any
+are. One never closed is text.
+
+design/rendering.md § Themes: the roles gain `highlight` (a palette's yellow blended into the page, 30% dark, 40%
+light; the terminal's yellow behind black; `mono` reversed, `inverse` now carried to a span's style and the ANSI
+writer).
+
+design/export.md § The assembler: **Dropped** becomes "frontmatter, link definitions, HTML blocks and Obsidian's
+comments (DF-D17: in a line, the white space where one was made one; a paragraph of them; one over blank lines) — what
+a reader of the note never sees isn't in what's sent." (previously "frontmatter, link definitions and HTML blocks.");
+the paragraph on paper gains "an Obsidian highlight on a marker's yellow (`<mark>` in HTML and an EPUB, Word's yellow
+highlight, a PDF's tint)". § Markdown, **Kept as written** gains "a highlight as `==…==`".
 
 ## MODIFIED design/links.md § Wikilinks (DF-D18)
 

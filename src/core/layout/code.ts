@@ -36,6 +36,16 @@ export interface CodeLayoutOptions {
   problems?: readonly { line: number; severity: Severity }[];
   /** Whether a line is inside a string or comment that spans lines (its blank lines are its text: never folded). */
   inside?: (line: number) => boolean;
+  /** The paths in the file's comments that name a file (16.10), by line: as written, and where each goes. In the
+   *  comments' prose they're drawn as links, as source mode draws them. */
+  paths?: readonly CommentPath[];
+}
+
+/** A path in a comment that names a file: its line, its text as written (`notes/plan.md:12`), where it goes. */
+export interface CommentPath {
+  line: number;
+  text: string;
+  target: string;
 }
 
 /** A cell drawn: its grapheme, width, its offset in its line (UTF-16), its role and attributes. */
@@ -443,6 +453,7 @@ export function layoutCode(source: string, base: Layout, model: CodeModel | null
 
   page(1, texts.length, 0);
   if (!lines.length) lines.push({ spans: [], src: 1, srcMap: { cells: [], end: 0 } });
+  if (opts.paths?.length) linkPaths(lines, links, opts.paths);
   // The headings (`]]`, the breadcrumb): the sections, then the cells under them by their depth.
   const under = heads.some((h) => h.section) ? 2 : 1;
   const headings: LayoutHeading[] = [];
@@ -966,6 +977,64 @@ function docRows(texts: string[], doc: CodeDoc, width: number, unit: number, g: 
     });
   }
   return out;
+}
+
+/** A character a path is made of: one before or after a path's text means it's part of a longer word. */
+const PATH_CHAR = /[\w./@~-]/;
+
+/**
+ * The comments' paths (16.10) in their prose — a doc's, a comment's box, a comment among code — as links: the text that
+ * reads as one where its line says so, split out of its span (a row of code, mapped to the file, is source mode's to
+ * draw). Then the links in the order they're drawn, as the keys that go from one to the next expect them.
+ */
+function linkPaths(lines: Line[], links: LayoutLink[], paths: readonly CommentPath[]): void {
+  const byLine = new Map<number, CommentPath[]>();
+  for (const p of paths) byLine.set(p.line, [...(byLine.get(p.line) ?? []), p]);
+  const before = links.length;
+  lines.forEach((line, row) => {
+    if (line.srcMap || line.decor) return;
+    const spans: Span[] = [];
+    let col = 0;
+    let changed = false;
+    for (const s of line.spans) {
+      const here = s.link === undefined && s.button === undefined ? byLine.get(s.src ?? line.src) : undefined;
+      // Where each path is in the span's text, whole (not part of a longer one), the first of any that overlap.
+      const hits: { at: number; p: CommentPath }[] = [];
+      for (const p of here ?? []) {
+        for (let at = s.text.indexOf(p.text); at >= 0; at = s.text.indexOf(p.text, at + 1)) {
+          if (!PATH_CHAR.test(s.text[at - 1] ?? "") && !/[\w/]/.test(s.text[at + p.text.length] ?? "")) hits.push({ at, p });
+        }
+      }
+      hits.sort((a, b) => a.at - b.at);
+      let from = 0;
+      let x = col;
+      for (const { at, p } of hits) {
+        if (at < from) continue;
+        if (at > from) spans.push({ ...s, text: s.text.slice(from, at) });
+        x += stringWidth(s.text.slice(from, at));
+        const id = links.push({ kind: "markdown", target: p.target, heading: null, text: p.text, status: "resolved", line: row, col: x, src: p.line }) - 1;
+        spans.push({ ...s, text: p.text, role: "link", link: id });
+        x += stringWidth(p.text);
+        from = at + p.text.length;
+        changed = true;
+      }
+      if (!from) spans.push(s);
+      else if (from < s.text.length) spans.push({ ...s, text: s.text.slice(from) });
+      col += stringWidth(s.text);
+    }
+    if (changed) lines[row] = { ...line, spans };
+  });
+  if (links.length === before) return;
+  // In the order drawn: by row, then column; links not drawn (a row cut) last.
+  const rowOf = (l: LayoutLink) => (l.line < 0 ? Number.MAX_SAFE_INTEGER : l.line);
+  const order = links.map((_, i) => i).sort((a, b) => rowOf(links[a]!) - rowOf(links[b]!) || links[a]!.col - links[b]!.col || a - b);
+  const to = new Map(order.map((old, i) => [old, i]));
+  const sorted = order.map((i) => links[i]!);
+  sorted.forEach((l, i) => (links[i] = l));
+  for (const [row, line] of lines.entries()) {
+    if (!line.spans.some((s) => s.link !== undefined)) continue;
+    lines[row] = { ...line, spans: line.spans.map((s) => (s.link === undefined ? s : { ...s, link: to.get(s.link)! })) };
+  }
 }
 
 /** Words in rows no wider than `width` (a word longer than that is cut). */

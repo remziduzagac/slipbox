@@ -18,7 +18,7 @@ export interface RoleStyle {
 
 export const ROLES = [
   // document
-  "text", "dim", "strong", "emphasis", "strike",
+  "text", "dim", "strong", "emphasis", "strike", "highlight",
   "h1", "h2", "h3", "h4", "h5", "h6",
   "code_inline", "code_block", "code_label", "code_gutter",
   "link", "link_unresolved", "link_ambiguous", "wikilink", "embed", "url", "link_focus",
@@ -150,6 +150,8 @@ export function themeFromPalette(
     strong: { fg: p.fg_strong, bold: true },
     emphasis: { fg: p.fg, italic: true },
     strike: { fg: p.fg_dim },
+    // Obsidian's `==highlight==` (DF-D17): a marker pen's yellow behind the text.
+    highlight: { fg: p.fg_strong, bg: blend(p.yellow, p.bg, kind === "dark" ? 0.3 : 0.4) },
     h1: heading(p.blue),
     h2: heading(p.yellow),
     h3: heading(p.green),
@@ -334,6 +336,7 @@ export function terminalTheme(): Theme {
     code_label: { fg: a(8), bg: undefined },
     code_gutter: { fg: a(8), bg: undefined },
     code_inline: { fg: a(15), bg: a(8), italic: false },
+    highlight: { fg: a(0), bg: a(3) },
     status: { fg: a(7) },
     link_focus: { fg: a(0), bg: a(6) },
     cursor: { fg: a(0), bg: a(15) },
@@ -394,6 +397,7 @@ export function monoTheme(): Theme {
   roles.link_unresolved = { underline: true, dim: true };
   roles.link_ambiguous = { underline: true, italic: true };
   roles.code_inline = { bold: true };
+  roles.highlight = { inverse: true };
   roles.footnote = { underline: true };
   roles.tag = { bold: true };
   roles.git_conflict = { bold: true };

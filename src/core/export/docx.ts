@@ -69,6 +69,8 @@ interface Style {
   strike?: boolean;
   code?: boolean;
   link?: boolean;
+  /** Obsidian's `==highlight==`: Word's yellow marker. */
+  mark?: boolean;
 }
 
 interface Writer {
@@ -191,6 +193,7 @@ function runs(nodes: PhrasingContent[], s: Style, w: Writer): ParagraphChild[] {
       bold: st.bold,
       italics: st.italics,
       strike: st.strike,
+      ...(st.mark ? { highlight: "yellow" } : {}),
       ...(st.code ? { font: MONO, shading: { type: ShadingType.CLEAR, fill: "EFF1F3", color: "auto" } } : {}),
       ...(st.link ? { color: "0563C1", underline: {} } : {}),
     });
@@ -208,6 +211,9 @@ function runs(nodes: PhrasingContent[], s: Style, w: Writer): ParagraphChild[] {
         break;
       case "delete":
         out.push(...runs(n.children, { ...s, strike: true }, w));
+        break;
+      case "highlight":
+        out.push(...runs(n.children, { ...s, mark: true }, w));
         break;
       case "inlineCode":
         out.push(text(n.value, { code: true }));

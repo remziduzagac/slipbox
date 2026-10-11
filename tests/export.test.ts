@@ -266,6 +266,11 @@ function readPdf(bytes: Uint8Array): PdfRead {
   return { pages, content: contents, dests, links, outline, images, fonts: fontNames };
 }
 
+/** A note with Obsidian's marks: a highlight, comments in a line, a paragraph of one, one over blank lines. */
+const OBSIDIAN = "# Flan\n\n%% Check the amounts with Mum. %%\n\nA ==splash of **vanilla**== %% never more %% here, *always %%said Mum%% fresh* %%twice over%%.\n\n%%\nA block comment:\n\n- over a blank line,\n- closed after a list.\n%%\n\nAfter.\n";
+/** What none of the formats may show of `OBSIDIAN`: its comments' words, their marks. */
+const COMMENTS = /Mum|never more|twice|block comment|blank line|%%/;
+
 describe("export: the assembler (10.1)", () => {
   test("each note a chapter, in the order given, titled; the first note's frontmatter the document's title, author, date", async () => {
     const { graph } = root({
@@ -395,6 +400,16 @@ describe("export: the assembler (10.1)", () => {
     expect(textOf([nodes[1]])).toBe("A's claim, and Ctrl then\nnext.");
     expect(all(nodes).filter((n) => n.type === "html")).toEqual([]);
   });
+
+  test("Obsidian's comments left out — in a line, a paragraph of them, one over blank lines — the space where one was made one; a highlight kept", async () => {
+    const { graph } = root({ "a.md": OBSIDIAN });
+    const nodes = (await assemble(graph, ["a.md"])).chapters[0]!.nodes;
+    expect(nodes.map((n) => n.type)).toEqual(["heading", "paragraph", "paragraph"]);
+    expect(textOf([nodes[1]])).toBe("A splash of vanilla here, always fresh.");
+    expect(all(nodes).filter((n) => n.type === "comment" || n.type === "commentBlock")).toEqual([]);
+    expect(all(nodes).filter((n) => n.type === "highlight").map((n) => textOf([n]))).toEqual(["splash of vanilla"]);
+    expect(JSON.stringify(nodes)).not.toMatch(COMMENTS);
+  });
 });
 
 describe("export: what the assembler keeps safe and says (10.1)", () => {
@@ -512,6 +527,15 @@ describe("export: Word (10.4)", () => {
     expect(xml(z, "word/footnotes.xml")).toContain("The footnote text.");
     expect(body).toMatch(/<w:left w:val="single" w:color="CF222E"/);
   });
+
+  test("Obsidian's highlight in Word's yellow marker; its comments not there", async () => {
+    const { graph } = root({ "a.md": OBSIDIAN });
+    const body = xml(unzip(await toDocx(await assemble(graph, ["a.md"]))), "word/document.xml");
+    expect(body).toMatch(/<w:highlight w:val="yellow"\/>(?:(?!<\/w:r>).)*<w:t[^>]*>splash of </);
+    expect(body).toMatch(/<w:highlight w:val="yellow"\/>(?:(?!<\/w:r>).)*<w:t[^>]*>vanilla</);
+    expect(body).not.toMatch(/<w:highlight[^>]*>(?:(?!<\/w:r>).)*<w:t[^>]*> here/);
+    expect(body).not.toMatch(COMMENTS);
+  });
 });
 
 describe("export: a web page (10.2)", () => {
@@ -565,6 +589,13 @@ describe("export: a web page (10.2)", () => {
     // Each note's mark points to its own chapter's notes.
     expect([...html.matchAll(/aria-describedby="([^"]+)"/g)].map((m) => m[1])).toEqual(["a-footnote-label", "b-footnote-label"]);
     expect(html.indexOf("A's.")).toBeLessThan(html.indexOf('<section id="b"'));
+  });
+
+  test("Obsidian's highlight marked, on paper's yellow; its comments not there", async () => {
+    const { text: html } = await exportOf(root({ "a.md": OBSIDIAN }), ["a.md"], "html");
+    expect(html).toContain("<p>A <mark>splash of <strong>vanilla</strong></mark> here, <em>always fresh</em>.</p>");
+    expect(html).toContain(`mark { background: ${TINT.mark};`);
+    expect(html).not.toMatch(COMMENTS);
   });
 
   test("nothing in a note runs in the page: HTML in it is gone, its text escaped, a javascript: link its words", async () => {
@@ -650,6 +681,13 @@ describe("export: Markdown (10.3)", () => {
     expect(md).toContain("[^2]: Second.");
     expect(md).toContain("[^1]: First.");
     expect(md).toContain("- [ ] open\n- [x] done");
+  });
+
+  test("Obsidian's highlight as written; its comments not there", async () => {
+    const { text: md } = await exportOf(root({ "a.md": OBSIDIAN }), ["a.md"], "md", "out.md");
+    expect(md).toContain("A ==splash of **vanilla**== here, *always fresh*.");
+    expect(md).toContain("After.");
+    expect(md).not.toMatch(COMMENTS);
   });
 
   test("an earlier Markdown export is replaced, though it's a note; any other note never", async () => {
@@ -740,6 +778,13 @@ describe("export: an e-book (10.6)", () => {
     const id = async (rels: string[]) => /urn:uuid:([^<]+)/.exec(xml(unzip((await exportOf(r, rels, "epub")).data), "OEBPS/content.opf"))![1];
     expect(await id(["a.md", "b.md"])).toBe(await id(["a.md", "b.md"]));
     expect(await id(["b.md", "a.md"])).not.toBe(await id(["a.md", "b.md"]));
+  });
+
+  test("Obsidian's highlight marked, the page well-formed; its comments not there", async () => {
+    const page = xml(unzip((await exportOf(root({ "a.md": OBSIDIAN }), ["a.md"], "epub")).data), "OEBPS/chapter-1.xhtml");
+    expect(notWellFormed(page)).toBeNull();
+    expect(page).toContain("<mark>splash of <strong>vanilla</strong></mark>");
+    expect(page).not.toMatch(COMMENTS);
   });
 });
 
@@ -931,6 +976,13 @@ describe("export: a PDF's lines laid out (10.11)", () => {
     expect(pdf.pages[0]!.split("\n")[1]).toBe("Before  after, and  too, with code here.");
     expect(pdf.images[0]).toBe(2);
     expect(pdf.content[0]).toContain(`${tint(TINT.inline)} scn`);
+  });
+
+  test("Obsidian's highlight on a marker's yellow; its comments not there", async () => {
+    const pdf = readPdf((await exportOf(root({ "a.md": OBSIDIAN }), ["a.md"], "pdf")).data);
+    expect(pdf.pages[0]).toContain("A splash of vanilla here, always fresh.");
+    expect(pdf.content[0]).toContain(`${tint(TINT.mark)} scn`);
+    expect(pdf.pages.join("\n")).not.toMatch(COMMENTS);
   });
 
   test("a word longer than a line cut where it fits; a long line wrapped; a newline kept", async () => {

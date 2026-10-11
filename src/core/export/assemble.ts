@@ -2,7 +2,8 @@
 // the order given (10.9). Its embeds are drawn in; its links to the notes exported stay links, inside the document, and
 // the rest are their text (an address on the web stays a link); its pictures are files (one on the internet its cached
 // copy — nothing is fetched — else its link); its diagrams and display maths are drawn, as SVG in print's colours; its
-// frontmatter's title, author and date are the document's. Its words are as written.
+// frontmatter's title, author and date are the document's. Its words are as written; Obsidian's comments, which a
+// reader of the note never sees, are left out.
 
 import { createHash } from "node:crypto";
 import { statSync } from "node:fs";
@@ -13,6 +14,7 @@ import { loadMermaid, mermaidSvg } from "../diagrams.ts";
 import { readText } from "../fsutil.ts";
 import type { Graph } from "../graph.ts";
 import { embedder, pictureLocator } from "../note.ts";
+import { onlyComments, withoutComments } from "../obsidian.ts";
 import { headingText, noteTitle, parseMarkdown, slugify } from "../parse.ts";
 import { loadRasterizer } from "../svg.ts";
 import { loadTypesetter } from "../typeset.ts";
@@ -138,7 +140,10 @@ async function blocks(nodes: RootContent[], c: Ctx): Promise<RootContent[]> {
   const out: RootContent[] = [];
   for (const n of nodes) {
     if (n.type === "yaml" || (n.type as string) === "toml" || n.type === "definition" || n.type === "html") continue;
+    // Obsidian's comments (DF-D17): hidden while reading, so not in what's sent either.
+    if (n.type === "commentBlock" || (n.type === "paragraph" && onlyComments(n.children))) continue;
     if (n.type === "paragraph") {
+      n.children = withoutComments(n.children);
       const drawnIn = await embeds(n.children, c);
       if (drawnIn) {
         out.push(...drawnIn);
@@ -207,10 +212,11 @@ async function embeds(children: PhrasingContent[], c: Ctx): Promise<RootContent[
   return out;
 }
 
-/** Inline content made ready: links resolved against the export, pictures given their files, tags as their text. */
+/** Inline content made ready: links resolved against the export, pictures given their files, tags as their text,
+ *  Obsidian's comments left out. */
 async function inline(nodes: PhrasingContent[], c: Ctx): Promise<PhrasingContent[]> {
   const out: PhrasingContent[] = [];
-  for (const n of nodes) {
+  for (const n of withoutComments(nodes)) {
     const t = n.type as string;
     if (t === "wikiLink") {
       out.push(...wiki(n as unknown as WikiLink, c));

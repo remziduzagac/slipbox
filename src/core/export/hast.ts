@@ -1,7 +1,7 @@
 // A chapter as HTML's tree (hast), for the HTML writer (10.2) and the EPUB's (10.6): headings with their ids, links
 // inside the document to them, pictures where the writer keeps them (a data: address, a file of the book), maths as
 // MathJax's SVG (its Unicode text where it has none), code coloured, callouts in their kind's colour, tasks' boxes,
-// footnotes at the chapter's end. Text is escaped by the serialiser, never written raw.
+// Obsidian's highlights marked (`<mark>`), footnotes at the chapter's end. Text is escaped by the serialiser, never written raw.
 
 import type { Element, ElementContent, Root as HastRoot } from "hast";
 import type { Heading, Nodes, PhrasingContent, RootContent, Text } from "mdast";
@@ -61,6 +61,9 @@ function prepare(nodes: Nodes[], o: HastOptions): void {
     switch (n.type) {
       case "heading":
         if (data.anchor) data.hProperties = { id: data.anchor };
+        break;
+      case "highlight":
+        data.hName = "mark";
         break;
       case "link":
         if (n.url.startsWith("#")) n.url = o.href(n.url.slice(1));

@@ -1526,6 +1526,11 @@ describe("the chunked parse (15.1)", () => {
     same(`# A\n\n${filler(30)}\n\n$$\na = b\n\n# not a heading\n\nc = d\n$$\n\n# B\n\n$$x$$ then\n\n${filler(30)}\n\n# C\n\n$$$ meta\n\n$$\n\n# still maths\n$$$\n\nend\n`);
     // `$$x$$` on its line opens nothing: the note still parses in pieces after it.
     expect(noteChunks(`$$x$$\n\n${filler(60)}\n\n# B\n\n${filler(60)}\n`).length).toBeGreaterThan(1);
+    // Obsidian's comment over blank lines (DF-D17), across chunks' edges: one block, as in the whole note.
+    const comment = `# A\n\n${filler(30)}\n\n%%\nA comment\n\n${filler(30)}\n\n# B in it\n\n- a list, closing it\n%%\n\n# C\n\nend %%inline%% ==mark==\n`;
+    same(comment);
+    expect(noteChunks(comment).length).toBeGreaterThan(1);
+    expect(parseMarkdown(comment).tree.children.map((n) => n.type)).toEqual(["heading", ...Array(30).fill("paragraph"), "commentBlock", "heading", "paragraph"]);
   });
   test("random documents parse in chunks exactly as whole", () => {
     let seed = 99;

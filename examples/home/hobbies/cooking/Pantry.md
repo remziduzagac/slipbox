@@ -8,7 +8,9 @@ What is on the shelves, kept in [[pantry.csv]] and shown here as an embed:
 
 ![[pantry.csv]]
 
-Running low, in ==bold yellow== on my screen: lentils, rice, the good olive oil.
+Running low, in ==bold yellow== on my screen: lentils, rice, the good olive oil %%the Cretan tin, not the bottle%%.
+
+The rice ratio I always forget: 1 cup == 2 cups of water. ==Rinse it *first*.==
 
 ```dataview
 TABLE serves, time

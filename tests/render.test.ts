@@ -6,7 +6,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { glyphsFor } from "../src/core/glyphs.ts";
 import { layoutToAnsi } from "../src/core/layout/ansi.ts";
-import type { Layout } from "../src/core/layout/ir.ts";
+import { A_BOLD, type Layout } from "../src/core/layout/ir.ts";
 import { type PictureSource, renderMarkdown, renderTree } from "../src/core/layout/render.ts";
 import { dataLinks, parseData } from "../src/core/data.ts";
 import { classify } from "../src/core/filetypes.ts";
@@ -158,6 +158,29 @@ describe("blocks and inlines (2.2)", () => {
     expect(layout.lines[0]!.spans.map((s) => s.text).join("")).toBe("a b c x");
     expect(layout.lines[1]!.spans.map((s) => s.text).join("")).toBe("next");
     expect(layout.links.map((l) => [l.line, l.col])).toEqual([[0, 0], [0, 2], [0, 4], [0, 6]]);
+  });
+  test("Obsidian's ==highlight== on a background of its own, a link inside it too; `a == b`, `===x===`, `\\==y==` text; %%comments%% hidden — the space where one was made one, a paragraph of them no row, one over blank lines (a list's last line closing it) no rows", () => {
+    const md = "%% Check with Mum. %%\n\nA ==splash of **vanilla** and [[Dal]]== here; a == b, ===x===, \\==y==.\nText %% a note %% goes on, %%across\nlines%% to the end, %%a last word%%\nthe last line %%really%%.\n\n%%\nA block, [[Dal]] in it:\n\n- over a blank line;\n- a list, the closing marks its last item's.\n%%\n\nAfter.\n";
+    const layout = renderMarkdown(md, { width: 100, glyphs: unicode, showUrls: false, resolveLink: () => "resolved" });
+    expect(text(layout)).toBe("A splash of vanilla and Dal here; a == b, ===x===, ==y==. Text goes on, to the end, the last line.\n\nAfter.");
+    const spans = layout.lines[0]!.spans;
+    expect(spans.filter((s) => s.role === "highlight" || s.bg === "highlight").map((s) => [s.text, s.role])).toEqual([["splash of ", "highlight"], ["vanilla", "highlight"], [" and ", "highlight"], ["Dal", "wikilink"]]);
+    expect(spans.find((s) => s.text === "vanilla")!.attrs & A_BOLD).toBe(A_BOLD);
+    // Rows keep their source lines: after a comment across lines, line 5's words; after one that ends a line, line 6's;
+    // After. is line 15.
+    expect(spans.find((s) => s.text.includes("to the end"))!.src).toBe(5);
+    expect(spans.find((s) => s.text.includes("the last line"))!.src).toBe(6);
+    expect(layout.lines.at(-1)!.src).toBe(15);
+    // A comment over blank lines closes only at a `%%` of its own: an escaped one is text, and so is all of it.
+    expect(text(renderMarkdown("%% opens\n\nends \\%%\n", { width: 60, glyphs: unicode, showUrls: false }))).toBe("%% opens\n\nends %%");
+    // Only the links drawn are the layout's; a comment's are still the note's (what the index reads), only not drawn.
+    expect(layout.links.map((l) => l.target)).toEqual(["Dal"]);
+    expect(JSON.stringify(parseMarkdown(md).tree).match(/"wikiLink"/g)).toHaveLength(2);
+    // Every theme draws it: a background, or reverse where there's no colour.
+    for (const { name } of listThemes()) {
+      const h = loadTheme(name).theme.roles.highlight;
+      expect([name, !!(h.bg || h.inverse)]).toEqual([name, true]);
+    }
   });
   test("a picture embedded by name: its name shown, an image's glyph; `|300`, `|240x180` its size, other words its alt", () => {
     const shown = (md: string) => {

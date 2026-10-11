@@ -7,8 +7,8 @@ tags: [recipe, dessert, family]
 
 %% Check the amounts with Mum before sharing this one. She says "until it looks right". %%
 
-My grandmother made this every Sunday and never wrote it down. This is what Mum and I worked out together on the phone
-last September.
+My grandmother made this every Sunday %%and on birthdays, Mum says%% and never wrote it down. This is what Mum and I
+worked out together on the phone last September.
 
 > [!note] Caramel first
 > Make the caramel before anything else; it hardens quickly.[^callout]
@@ -18,7 +18,7 @@ last September.
 - 5 eggs and 2 extra yolks
 - 1 can condensed milk, 1 can evaporated milk
 - 150 g sugar for the caramel
-- A ==splash of vanilla==, never more ^[Grandma used a vanilla pod split lengthways.]
+- A ==splash of *real* vanilla==, never more ^[Grandma used a vanilla pod split lengthways.]
 
 | Step       | Time               |
 | ---------- | ------------------ |
@@ -32,6 +32,13 @@ last September.
 2. Blend the eggs, milks and vanilla; sieve into the mould. ^[Sieving is the part that makes it smooth.]
 3. Bake in a bain-marie at 160 degrees until it wobbles only in the middle.
 4. Cool, then chill overnight and turn it out on a plate with a rim.
+
+%%
+Still to ask Mum before this goes to the cousins:
+
+- whether Grandma ever used goat's milk;
+- how long she let the caramel cool before the custard went in.
+%%
 
 [^heading]: The apostrophe in the name caused trouble in my first file system. It works now.
 [^callout]: Hot caramel on a finger is a lesson you only need once.
