@@ -194,9 +194,16 @@ footnote the cursor's line refers to or defines.
 - `l` unfolds a footnote into its references, each with its line, and `enter` on one jumps there; `h` folds it again;
 - `/` filters by label and text; `q` closes the view; `esc` goes back to the note.
 
-The view changes footnotes too: `a` adds one at the cursor (`space n shift+f` does anywhere), `e` edits the selected
-one's text, `r` renames its label in every reference, and `d` deletes it after asking. Each change is saved at once, as
-one undo step. `slipbox footnotes <note>` lists them from the command line.
+The view changes footnotes too:
+
+- `a` adds one at the note's cursor, as `space n shift+f` does from anywhere: it asks for the footnote's text, then
+  writes a reference such as `[^1]` after the word the cursor is on, and its definition, `[^1]: text`, at the note's
+  end;
+- `e` edits the selected footnote's text, `r` renames its label in every reference, and `d` deletes it, its references
+  too, after asking.
+
+Each change is saved at once, as one undo step. From the command line, `slipbox footnotes <note>` lists them, and
+`add`, `edit`, `rename` and `rm` after it change them ([The command line](cli.md#footnotes)).
 
 ## History
 
@@ -256,11 +263,8 @@ the keys; a note breaking its type's rules shows it among its problems ([Code](c
 
 ## A command by its name: the palette
 
-`:` opens the command palette (also `ctrl+shift+p`, `space f p`, or a click on the `slipbox` chip in the top bar).
-Empty, it lists the commands you ran last, then every command by group, each with its first key; type part of a
-command's name to narrow it, and `enter` runs it. The palette is also the command line: an exact alias such as `:q` or
-`:tags` always wins, and an alias that takes an argument lists the choices once you type a space after it.
-
-`?` (`space ?`) opens help: every command with all its keys, grouped and searchable, then the keys inside each pane.
-`enter` runs a command from there too. After `space`, the which-key popup lists the keys that can come next, with what
-each does. [The screen](screen.md) describes these, and [Keys](keys.md) lists every key.
+`:` opens the command palette (also `ctrl+shift+p`, `space f p`, or a click on the `slipbox` chip in the top bar): type
+part of a command's name, and `enter` runs it. `?` (`space ?`) opens help, every command with all its keys, and after
+`space` the which-key popup lists the keys that can come next. [The command palette](screen.md#the-command-palette),
+[Help](screen.md#help) and [The which-key popup](screen.md#the-which-key-popup) describe them, and [Keys](keys.md)
+lists every key.

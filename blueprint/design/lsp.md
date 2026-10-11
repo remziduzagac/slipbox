@@ -60,9 +60,9 @@ VS Code would: the nearest one at or above the server's project folder (short of
 as VS Code reads it — comments and trailing commas allowed — its dotted keys nested
 (`"python.analysis.typeCheckingMode"` is `python.analysis.typeCheckingMode`, merged with a nested form beside it). It
 goes over the config's, as VS Code puts a workspace's settings over the user's: the defaults, then your config, then
-each enclosing root's `.slipbox/config.toml` and the root's own ([configuration.md](../../docs/configuration.md)'s
-order), then the project's. VS Code's per-language overrides (`"[python]": {…}`) are left out. Changed, it counts
-from the server's next start.
+each enclosing root's `.slipbox/config.toml` and the root's own
+([configuration.md](../../docs/manual/configuration.md)'s order), then the project's. VS Code's per-language overrides
+(`"[python]": {…}`) are left out. Changed, it counts from the server's next start.
 
 **A tool's own config files** (`eslint.config.js`, `ruff.toml`, `pyrightconfig.json`, `.markdownlint-cli2.jsonc`)
 are its settings: slipbox never restates them, so the editor, CI and slipbox agree (D165).

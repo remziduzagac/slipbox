@@ -510,7 +510,7 @@ never changes where a link points. A folder's own time doesn't change when a fil
 
 **Decision:** Settings apply deeper over broader: the nearest `.slipbox/config.toml`, then outer ones, then
 `~/.config/slipbox/config.toml`. A folder without `.slipbox/` takes the user's. A key that names a program to run (a
-linter, an editor) comes from the user's own config only. The layers and keys: docs/configuration.md.
+linter, an editor) comes from the user's own config only. The layers and keys: docs/manual/configuration.md.
 
 **Why:** Cloning a repository never chooses what runs.
 
@@ -758,7 +758,7 @@ open (D44). The words (`21.10`): `slipbox folders` and `folders default`, `slipb
 `--scope here|linked|all` (amending D64). "Vault" is no longer a word the user meets (D58): a root, or a named
 folder. The launcher lists the named folders (D50). The converter reads `[[name:note]]` through the named folders'
 lookup (D57). Taking `.slipbox/` away changes roots, never links: relative links reach what they did. The commands:
-docs/cli.md.
+docs/manual/cli.md.
 
 **Why:** Open any folder or file and work: no vault to make, name or manage.
 

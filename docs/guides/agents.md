@@ -61,15 +61,9 @@ slipbox write inbox --append --paragraph -- '- [ ] Call the plumber'
 In slipbox the note reloads at once, and a message at the top right says `↻ inbox.md changed on disk — reloaded`. A
 note the agent creates shows up in the explorer the same way.
 
-If you have unsaved changes to that note, slipbox keeps both versions and asks what to do, in a list titled
-`inbox.md changed on disk, and you have unsaved changes`:
-
-- `l` loads theirs; yours is one `u` away.
-- `k` keeps yours; autosave stops for that note, and saving asks first.
-- `d` shows the diff, yours to theirs.
-- `m` merges the two, marking the lines you both changed.
-
-`esc` puts the question off, and `space n c` brings it back ([Editing](../manual/editing.md) has the rest).
+If you have unsaved changes to that note, slipbox keeps both versions and asks what to do: `l` loads theirs, `k`
+keeps yours, `d` shows the differences and `m` merges the two. Each answer is explained in
+[When a file changes on disk](../manual/editing.md#when-a-file-changes-on-disk).
 
 The agent hears about your unsaved changes too: every command it runs while slipbox holds them warns
 `unsaved changes in a running slipbox: inbox.md` (with `--json`, the note is listed in `stale`). The skill tells it to

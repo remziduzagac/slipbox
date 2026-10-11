@@ -14,12 +14,12 @@ The code is `core/doctypes.ts`.
 | `adr` | `**/adr/*.md`, `**/adrs/*.md`, `**/decisions/*.md`, `**/decision-records/*.md` | a number, a status |
 
 Your own, or a folder's for its notes, are `[types.<name>]` in a config
-([configuration.md](../../docs/configuration.md)): `paths` (globs from the root — `**` any folders, `*` any name),
-`required` (keys each note must have; dotted for a key in a table, `metadata.type`), `keys` (a key's kind when it's
-there: string, number, boolean, date, list, table), `values` (its allowed values), `number` (a pattern on the file's
-name whose first group is its number) and `status` (the frontmatter key of its status). One named as a built-in changes
-only the fields it gives; `paths = []` turns a type off. A folder's config may add types: they only read (D133). A field
-of the wrong kind is dropped and said, as any.
+([configuration.md](../../docs/manual/configuration.md)): `paths` (globs from the root — `**` any folders, `*` any
+name), `required` (keys each note must have; dotted for a key in a table, `metadata.type`), `keys` (a key's kind when
+it's there: string, number, boolean, date, list, table), `values` (its allowed values), `number` (a pattern on the
+file's name whose first group is its number) and `status` (the frontmatter key of its status). One named as a built-in
+changes only the fields it gives; `paths = []` turns a type off. A folder's config may add types: they only read (D133).
+A field of the wrong kind is dropped and said, as any.
 
 ## Rules (`22.2`)
 

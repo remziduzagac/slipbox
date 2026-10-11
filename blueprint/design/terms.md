@@ -13,7 +13,7 @@ replaced them.
 - **Buffer**: one open file, with its text, its parse and its layouts by width, shown in views.
   [tui.md](tui.md) § Buffers, views, tabs, windows.
 - **Capture**: text appended to the scratch with its reference, by `slipbox capture` or from the TUI.
-  [cli.md](../../docs/cli.md) § Capture and the scratch.
+  [cli.md](../../docs/manual/cli.md) § The scratch and the context bundle.
 - **Cell**: in the code view, one definition's code under a header holding its buttons and its documentation.
   [code-view.md](code-view.md).
 - **Command**: a user action, named by an id; the **command registry** (`CommandRegistry`) holds them, each with its
@@ -21,7 +21,7 @@ replaced them.
 - **Conflict prompt**: what a note with unsaved changes opens when it changes on disk: Load, Keep, Diff, Merge.
   [tui.md](tui.md) § Editing.
 - **Context bundle**: a note, what it links to and what links to it, as one document for an agent (`slipbox context`,
-  `space s c`). [cli.md](../../docs/cli.md) § The context bundle.
+  `space s c`). [cli.md](../../docs/manual/cli.md) § The scratch and the context bundle.
 - **Convention**: how a root's links are written: their style, path and extension, from your setting, the root's tool,
   its notes, else slipbox's own. [links.md](links.md) § Conventions.
 - **Copy**: one copy of a named folder on this machine (a clone, a synced folder); its **default copy** is the one its
@@ -54,7 +54,7 @@ replaced them.
 - **Layout IR**: the rows, links and headings a note is laid out into for a width, before anything is drawn.
   [rendering.md](rendering.md) § The layout IR.
 - **The leader**: `space`, the key that starts the leader groups (`space n`, `space g`, …).
-  [keymap.md](../../docs/keymap.md) § Notation.
+  [keys.md](../../docs/manual/keys.md) § Notation.
 - **The lens**: live preview: the blocks around the cursor shown as their markdown between two rules, the rest of the
   note rendered. [tui.md](tui.md) § The lens.
 - **The lint surface**: your markdownlint-cli2, run on notes, its findings read as problems.

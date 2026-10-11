@@ -755,7 +755,7 @@ function isPlainObject(v: unknown): v is Record<string, unknown> {
 }
 
 export const VAULT_CONFIG_TEMPLATE = `# slipbox: this folder's settings. They override ~/.config/slipbox/config.toml.
-# See docs/configuration.md for every key.
+# Every key: docs/manual/configuration.md in slipbox's documentation.
 
 # theme = "tokyo-night"
 

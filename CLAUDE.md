@@ -5,7 +5,8 @@
 This project's design lives in `blueprint/`: what it must do, how it works, the decisions behind it, and the work in
 progress. Before planning or changing anything, read its README and roadmap. A change that alters what the blueprint
 describes updates it in the same piece of work. The roadmap's step IDs (`2.3`, `9.1`) and the decisions' (`D39`) are
-stable; cite them. User documentation is `docs/` (keymap, configuration, CLI) and the README.
+stable; cite them. User documentation is `docs/` (guides and a manual, mapped by `docs/README.md`) and the README:
+a change users will see updates it in the same piece of work, without the blueprint's IDs (`tests/docs.test.ts`).
 
 ## Rules
 

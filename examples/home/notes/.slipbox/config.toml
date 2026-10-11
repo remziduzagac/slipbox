@@ -1,5 +1,5 @@
 # Sam's notes. Settings here sit between ~/.config/slipbox/config.toml and nothing: no vault is nested above this one.
-# See docs/configuration.md for every key.
+# See docs/manual/configuration.md for every key.
 
 # The vault's identity, read on its own. The folder was `inbox` until August; old pointers (slipbox://inbox/...) still land
 # here, as a fallback only.

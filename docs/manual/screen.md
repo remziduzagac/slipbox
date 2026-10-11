@@ -148,9 +148,9 @@ Each side of the screen has a panel that shows one view at a time, and a rail of
 | right | the footnotes: the note's footnotes | `¹` | `space n f` | [Finding things](finding.md) |
 
 A view's button is bright while it shows. Clicking it shows the panel on that view and gives it the keys; clicking it
-again hides the panel. A view's key opens it and gives it the keys; pressed while the view is open but the note has
-the keys, it gives them back to the view; pressed while the view has them, it closes it. `space shift+e` selects the
-current note in the explorer.
+again hides the panel. Source control's `±` is the exception: it only lights, and `space g s` opens the view. A view's
+key opens it and gives it the keys; pressed while the view is open but the note has the keys, it gives them back to
+the view; pressed while the view has them, it closes it. `space shift+e` selects the current note in the explorer.
 
 Inside every pane, `j` and `k` move, `enter` opens what is selected or jumps to it, `h` and `l` fold and unfold, `g g`
 and `shift+g` go to the top and bottom, and `/` filters: type to narrow the rows, `esc` to clear. `q` closes the pane
@@ -203,7 +203,8 @@ the rows. It has two tabs:
 - **This file** lists every problem of the file on screen, each with its line. `space n q` opens it, as does a click
   on the problem count in the status line. Moving through the list takes the note to each problem and marks it.
 - **All** lists what's wrong across the folder, under a heading for each kind: broken, ambiguous and fragile links,
-  findings from a linter, files left in a merge conflict, and notes nothing links to. `space v p` or `:problems`
+  notes breaking their document type's rules, findings from a linter, files left in a merge conflict, and notes
+  nothing links to. `space v p` or `:problems`
   opens it, as does the status line's `⚠ 0` when the file has no problems of its own.
 
 `tab` and `shift+tab` switch between the tabs, `j` and `k` move, `enter` goes to the problem, `/` filters, `q` closes
@@ -316,12 +317,13 @@ a pane has the keys, or during a selection, help starts at that part.
 ## The which-key popup
 
 After `space`, a popup lists every key you can press next, each with a name and a short explanation. Groups read
-`+name`: `+links`, `+tabs`. After the other prefixes (`g`, `z`, `y`, `[`, `]`, `ctrl+w`, `ctrl+t`) it appears if you
-pause for half a second. `backspace` goes up a level, `esc` cancels, and clicking an entry presses its key.
+`+name`: `+links`, `+tabs`. After any other key that starts a sequence (`g`, `z`, `y`, `[`, `]`, `ctrl+w`, `ctrl+t`)
+it appears if you pause for half a second, so a sequence you know never flashes it. `backspace` goes up a level, `esc`
+cancels, and clicking an entry presses its key.
 
-`input.which_key = false` turns the popup off (resize mode still shows its own). `input.which_key_delay_ms` sets the
-pause, which is also how long a key that is both a command and the start of a longer one waits before it runs. The
-groups' names come from `[groups]`: see [Configuration](configuration.md).
+`input.which_key = false` turns the popup off (resize mode still shows its own), and `input.which_key_delay_ms` sets
+the pause. The groups' names come from `[groups]`: see [Configuration](configuration.md). The same pause is how long a
+key that is both a command and the start of a longer one waits before it runs ([Keys](keys.md#the-which-key-popup)).
 
 ## Floating windows
 
@@ -405,4 +407,4 @@ slipbox or in another terminal, brings back the new branch's tabs. A note with u
 is, and slipbox says so. This needs `ui.restore_session` on.
 
 The session is the folder's own; another folder has its own. Where slipbox keeps it on your machine is in
-[Configuration](configuration.md).
+[Where slipbox keeps things](configuration.md#where-slipbox-keeps-things).

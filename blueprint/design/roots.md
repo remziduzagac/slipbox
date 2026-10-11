@@ -4,7 +4,8 @@ Which folder a file belongs to, what that folder answers, how it is walked, inde
 is kept. "Root" is the design's word: the user meets folders, and a pointer's word for a root it can name is "named
 folder" (D79). Nothing is ever written into a folder by opening it (D58). Links, which a root scopes, are
 [links.md](links.md); switching roots in the TUI is [tui.md](tui.md) § Switching roots; where each file of state and
-cache lives is [how-it-works.md](how-it-works.md) § Storage; the commands are [docs/cli.md](../../docs/cli.md).
+cache lives is [how-it-works.md](how-it-works.md) § Storage; the commands are
+[docs/manual/cli.md](../../docs/manual/cli.md).
 
 ## Roots and markers
 
@@ -54,9 +55,9 @@ gone a month is forgotten (§ State by root).
 `.slipbox/` is optional (D74, D79). It holds a folder's settings (`config.toml`), its format's version (`version`;
 bumped only with a migration), and, optionally, its identity: the `[vault]` table's `name` and `id`, with `aliases`
 and `previous_names`, read on its own and never merged into the settings (`readIdentity` in `core/registry.ts`;
-[docs/configuration.md](../../docs/configuration.md)). A name is letters, digits, `.`, `_` and `-`: no spaces, `/` or
-`:`. The id is random, written with the name and never changed; it tells a copy of the folder from a different
-folder of the same name (§ Named folders).
+[docs/manual/configuration.md](../../docs/manual/configuration.md)). A name is letters, digits, `.`, `_` and `-`: no
+spaces, `/` or `:`. The id is random, written with the name and never changed; it tells a copy of the folder from a
+different folder of the same name (§ Named folders).
 
 - **Written only when the user asks** (D74): the name and id by `slipbox init --name` and `slipbox name`, which the
   user runs; `slipbox init` without `--name` gives settings only. Nothing is written on its own into a `.slipbox/`
@@ -73,9 +74,9 @@ folder of the same name (§ Named folders).
   it again; a folder that is a root by another marker (a git checkout) is refused, since it stays one. Either way the
   links that would stop reaching what they did (a `/…` path, a wikilink across the new boundary) are rewritten after a
   preview; relative links reach what they did, so taking `.slipbox/` away changes roots, never what links reach (D79,
-  D149; [tui.md](tui.md) § Files in the explorer; [docs/cli.md](../../docs/cli.md) § Renames). The name goes with its
-  `.slipbox/`, so the pointers by it, from the files this machine reaches, are rewritten in the same plan, as paths
-  or the parent's pointer (D74, D75; [links.md](links.md) § Pointers).
+  D149; [tui.md](tui.md) § Files in the explorer; [docs/manual/cli.md](../../docs/manual/cli.md) § Moving, copying and
+  deleting). The name goes with its `.slipbox/`, so the pointers by it, from the files this machine reaches, are
+  rewritten in the same plan, as paths or the parent's pointer (D74, D75; [links.md](links.md) § Pointers).
 
 ## Settings
 
@@ -88,7 +89,7 @@ the files that applied, and a change to any of them reloads the TUI's settings.
 What a folder's config can't set, because whatever is cloned brings it: a key that names a program to run (an
 editor, a linter, a language server's command), `walk.root_markers`, and `[trust]` come from the user's own config
 only; cloning a repository never chooses what runs, nor where roots are (D62, D166, D177). The layers, the keys and
-what only the user can set: [docs/configuration.md](../../docs/configuration.md).
+what only the user can set: [docs/manual/configuration.md](../../docs/manual/configuration.md).
 
 ## The walk
 
@@ -212,9 +213,9 @@ A root is told by the name pointers use (its `.slipbox/` name, else its remote's
 plain folder is; a worktree of a named repository as `name@branch`, a detached head by its short commit
 (D77; `rootLabel` in `core/names.ts`). Never by its folder's own name, and never in a file. The status line, the
 explorer's roots, the named folders list, `slipbox info` and the CLI's `root` and `name` show it so ([tui.md](tui.md)
-§ Screen layout, § Side panes, § Switching roots; [docs/cli.md](../../docs/cli.md) § `resolve`). Files in lists
-(backlinks, search results, pickers, hovers) are shown by path, from the root ([rendering.md](rendering.md) § Blocks
-and inlines).
+§ Screen layout, § Side panes, § Switching roots; [docs/manual/cli.md](../../docs/manual/cli.md) § `resolve`). Files in
+lists (backlinks, search results, pickers, hovers) are shown by path, from the root ([rendering.md](rendering.md) §
+Blocks and inlines).
 
 ## Search scope
 

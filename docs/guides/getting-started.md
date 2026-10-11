@@ -114,8 +114,9 @@ With the note rendered, put the cursor on "Buy filter papers" and press `ctrl+l`
 
 ## Quit
 
-Press `ctrl+q` to quit (`space q q` and `:qa` do too). If a note has unsaved changes, slipbox stays and names it:
-`ctrl+s` saves it, or `:q!` quits without saving. Plain `q` closes a tab or a split, but never quits.
+Press `ctrl+q` to quit (`space q q` and `:qa` do too). If a note has unsaved changes, slipbox stays and names it,
+`unsaved changes in inbox.md`: `ctrl+s` (or `:w`) saves it, or `:q!` quits without saving. Plain `q` closes a tab or
+a split, but never quits.
 
 Next time you run `slipbox ~/notes`, your tabs come back, each note where you left it.
 

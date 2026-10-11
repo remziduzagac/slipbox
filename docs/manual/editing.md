@@ -146,18 +146,31 @@ disk is a step too: when an agent rewrites a note you have open, `u` brings back
 
 `g ;` and `g ,` go back and forth through the places you changed; `g i` starts typing again where you last stopped.
 
+You select and copy the same way in a rendered note, in source mode and in the lens. Cutting and pasting change the
+text, so they work on the Markdown.
+
 **Selecting.** `shift` with an arrow key (or `ctrl+shift` with one, by word or paragraph) extends a selection; so does
 dragging with the mouse. A double click selects a word, a triple click the row. `v` and `shift+v` start selecting by
-character or by whole rows ([The vim keys](#the-vim-keys)).
+character or by whole rows ([The vim keys](#the-vim-keys)). `esc` clears the selection.
 
-**Copying, cutting and pasting.** `ctrl+c` copies the selection; `y y` copies the selection, or the cursor's row when
-nothing is selected. `ctrl+x` cuts the selection, or the cursor's line. `ctrl+v` pastes. Every copy and cut goes to
-your system clipboard, and a paste reads it, so text goes to and from other programs as you expect. Where the
-clipboard can't be read (over SSH, say), slipbox pastes what it last copied or cut itself;
-[Troubleshooting](troubleshooting.md) has the clipboard's problems.
+**Copying.** `ctrl+c` copies the selection; `y y` copies the selection, or the cursor's row when nothing is selected,
+and `y` alone copies it in visual mode. A drag with the mouse, and a double or triple click, copy what they select. In
+a rendered note you copy the text as you see it on the page, not the Markdown under it. Three more copies are about
+the note rather than its text, while you read: `y p` copies its full path, `y r` its path and the cursor's line
+(`ideas/coffee.md:18`), and `y l` the target of the link under the cursor.
 
-In a rendered note you can select and copy, but cutting and pasting change the text, so they need source mode or the
-lens.
+**Cutting and pasting.** `ctrl+x` cuts the selection, or the cursor's line when nothing is selected, and `ctrl+v`
+pastes: after the cursor (a copied line under the cursor's line), or over the selection. On a rendered note, with
+nothing selected, they first switch the window to editing, as `editor.edit_in` says; a selection made on the rendered
+page can be copied, but cutting it or pasting over it needs source mode or the lens. Your terminal's own paste
+(`ctrl+shift+v`, `cmd+v`) types the text while you type, and otherwise puts it as `ctrl+v` does.
+
+**The clipboard.** Every copy and cut goes to your system clipboard, and so does every delete in source mode, as in vim
+with `clipboard=unnamedplus`. slipbox copies two ways at once: through the terminal, which also works over SSH, and
+through your system's tool: `pbcopy` on a Mac, `clip.exe` in WSL, else `wl-copy`, `xclip` or `xsel`. A paste reads the
+clipboard back (`pbpaste`, `wl-paste`, `xclip`, `xsel`, or PowerShell in WSL); where it can't be read (over SSH, say),
+slipbox pastes what it last copied or cut itself. [Troubleshooting](troubleshooting.md#copying-over-ssh) has the
+clipboard's problems.
 
 ## The vim keys
 
@@ -225,8 +238,8 @@ writes over a file that changed on disk (it asks instead, below), and never save
 
 **What a save keeps.** A note is written whole and at once (a new file put in the old one's place), so a reader never
 sees half of it. Its byte order mark and its line endings are kept: a file with Windows line endings gets them on its
-new lines too. A save also does what the file's `.editorconfig` asks: `trim_trailing_whitespace = true` trims the
-spaces at the ends of lines, and `insert_final_newline = true` adds the last line break.
+new lines too. A save also trims the ends of lines and adds the last line break where the file's `.editorconfig` asks
+for them ([Indentation](configuration.md#indentation-editorconfig)).
 
 Before your editor, the context bundle or an export reads a note, slipbox saves it.
 
@@ -305,8 +318,9 @@ front matter aren't checked).
 
 A note is checked in the languages its front matter names (`lang: en-GB`, `lang: [tr, en]`), else in
 `spell.languages` (English by default). slipbox uses Hunspell dictionaries, the ones LibreOffice and most systems
-have, and brings its own for English and Turkish; [Configuration](configuration.md) says where it looks and how to
-add yours. Your words are kept one a line in `~/.local/share/slipbox/spell/words.txt`, the same for every language.
+have, and brings its own for English and Turkish; the words you add count in every language.
+[Spelling dictionaries](configuration.md#spelling-dictionaries) says where slipbox looks for a language's dictionary,
+how to add yours, and where your words are kept.
 
 From the command line, `slipbox spell inbox.md` lists a note's misspelt words, `--suggest` with suggestions, and
 `slipbox spell --add <word>` adds one to your words.
@@ -326,20 +340,17 @@ into its own folder the first time it is needed, unless `lsp.auto_install = fals
 
 ## Indentation and comments
 
-A level of indentation is the file's own: a tab, or so many spaces. slipbox takes it from the file's `.editorconfig`
-when there is one; else from the file's own lines; else from its language (two spaces for Markdown). `tab` and
-`shift+tab` while typing, `>` and `<`, and a new line after an opening bracket all use it. The Info view
-(`space n i`) says how a file is indented and where that came from, and [Configuration](configuration.md) has the
-details.
+A level of indentation is the file's own: a tab, or so many spaces, as its `.editorconfig`, its own lines or its
+language say ([Indentation](configuration.md#indentation-editorconfig) has the order, and how to see what a file
+uses). `tab` and `shift+tab` while typing, `>` and `<`, and a new line after an opening bracket all indent by it.
 
 `ctrl+/` comments out the cursor's line, or the selected lines (`g c` with a motion, in vim's way), or brings them
 back in. A note's comments are HTML's: `<!--` and `-->`. A code file's are its language's.
 
 ## Footnotes and properties
 
-`space n shift+f` adds a footnote after the word the cursor is on: it asks for the footnote's text, then writes
-`[^1]` there and `[^1]: text` at the note's end. The footnotes view (`space n f`) lists them, and edits, renames and
-deletes them ([Finding things](finding.md)).
+`space n shift+f` adds a footnote at the cursor, asking its text, and the footnotes view (`space n f`) edits, renames
+and deletes them: [Footnotes](finding.md#footnotes) has both.
 
 `space n shift+p` opens the note's properties, its front matter (YAML or TOML), in a floating editor where every
 editing key works. `esc` (not typing), `q` or `:q` closes it, and `ctrl+s` or `:w` keeps it open: either way, what

@@ -1,9 +1,9 @@
 # Search
 
 How slipbox ranks a root's notes and data files by words (plans `6.1`–`6.12`): in the core, so the CLI and the TUI
-share it (D114). The query and the results as the user meets them are [cli.md](../../docs/cli.md) § Search; the TUI's
-list is [tui.md](tui.md) § Overlays; which roots a search covers is [roots.md](roots.md) § Search scope (D64, D79).
-Code: `core/search.ts` (the query, a file read for it, the index kept, the index or a scan, hits located),
+share it (D114). The query and the results as the user meets them are [cli.md](../../docs/manual/cli.md) § `search`; the
+TUI's list is [tui.md](tui.md) § Overlays; which roots a search covers is [roots.md](roots.md) § Search scope (D64,
+D79). Code: `core/search.ts` (the query, a file read for it, the index kept, the index or a scan, hits located),
 `core/search-index.ts` (the index), `core/sqlite.ts`, `core/scope.ts` (search by root).
 
 ## The index and the scan

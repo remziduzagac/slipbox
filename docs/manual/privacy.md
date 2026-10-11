@@ -13,7 +13,7 @@ internet.
 | What | When | How to turn it off |
 | --- | --- | --- |
 | The update check | once a day, in a release you installed | `update.check = false`, or `DO_NOT_TRACK` |
-| Language servers | the first time a code file needs one | `lsp.auto_install = false` |
+| Language servers, markdownlint | the first time one is needed | `lsp.auto_install = false` |
 | Pictures on the internet | when you ask for one (by default) | `render.images_remote = "never"` |
 
 The settings are in your config file ([Configuration](configuration.md)). Beyond these, slipbox downloads only when you
@@ -121,8 +121,8 @@ A folder's own settings never name a program to run: only your own config can se
 
 A folder can hold tools of its own (a project's own TypeScript, its linters' settings, git hooks and filters) that
 would run code it holds. In a root you don't trust, none of that runs: servers run in a safe mode, or not at all, and
-git runs none of the repository's hooks or filters. slipbox asks the first time it matters (`Trust ~/notes? …`), and
-keeps your answer on your machine, never in the folder. `:trust` and `:untrust` change it, and `[trust] roots` in your
+git runs none of the repository's hooks or filters. slipbox asks the first time it matters (`Trust ~/code/app? …`), and
+keeps your answer on your machine, never in the folder. `:trust` and `:untrust` change it, and `trust.roots` in your
 config trusts folders ahead of time. The command line never asks, and has no way to trust a folder: only you can, in
 slipbox. [Code](code.md) explains trust in full.
 
@@ -131,18 +131,9 @@ slipbox. [Code](code.md) explains trust in full.
 Opening a folder writes nothing into it. slipbox writes into your folders only what you ask for: notes you save,
 exports, the `.slipbox/` folder `slipbox init` makes, and the scratch, if you set `capture.location = "vault"`.
 
-Everything else it keeps is in four folders of its own:
-
-| Folder | Where | What it holds |
-| --- | --- | --- |
-| Config | `~/.config/slipbox` | your config file and themes |
-| State | `~/.local/state/slipbox` | your sessions, the scratch, the trash, undo, reading positions, folders known |
-| Data | `~/.local/share/slipbox` | your own words for spelling, language servers installed, slipbox itself |
-| Cache | `~/.cache/slipbox` | indexes of your notes, and pictures fetched; all made again when missing |
-
-The variables `XDG_CONFIG_HOME`, `XDG_STATE_HOME`, `XDG_DATA_HOME` and `XDG_CACHE_HOME` move them, on macOS too. In
-WSL, they are inside WSL. [Where slipbox keeps things](configuration.md#where-slipbox-keeps-things) lists every file
-in them.
+Everything else it keeps is in four folders of its own, for your settings, its state, its data and its cache, all on
+your machine (in WSL, inside WSL). [Where slipbox keeps things](configuration.md#where-slipbox-keeps-things) says where
+they are and lists every file in them.
 
 Some of it is as personal as your notes:
 

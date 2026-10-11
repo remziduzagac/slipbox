@@ -127,7 +127,7 @@ pastes in.
 **Decision:** A program to run stays the user's choice: a server's `command`, `args` and `environment`, and a
 linter's `lint-command`, are read from the user's config only, never a vault's, as `lint.command` is (D160). The
 design is [design/lsp.md](../design/lsp.md) § The client for code ("Which servers"), and the user's view is
-`docs/configuration.md`, "What only you can set".
+`docs/manual/configuration.md`, "What only your own file can set".
 
 **Why:** A folder's config comes with whatever is cloned; cloning a repository must never choose what runs.
 

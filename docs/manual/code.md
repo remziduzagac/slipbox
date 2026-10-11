@@ -6,7 +6,7 @@ written, in source mode. Behind both, slipbox talks to the language servers and 
 the file's problems, what's under the cursor, jumps, renames and completion. This chapter covers each of those, the
 problems they find, and trust: a folder's own code never runs unless you say so.
 
-The examples use a project in `~/code/app`.
+The examples use a project in `~/code/app`, a git repository with its code in `src/` and its notes in `docs/`.
 
 ## The code view
 
@@ -15,7 +15,7 @@ Rust, Swift, PHP, Ruby, C, C++, Lua and Bash. Other code (HTML, CSS, SCSS, Docke
 components) opens in source mode. `space n v` switches the file on screen between the code view and source mode, and
 `render.code = "source"` opens all code in source mode ([Configuration](configuration.md)).
 
-This TypeScript file:
+This TypeScript file, `src/shelf.ts`:
 
 ```ts
 import { readFile } from "node:fs/promises";

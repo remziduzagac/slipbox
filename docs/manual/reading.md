@@ -41,19 +41,9 @@ without them. The status line's `L18:1` is the line and column of the text under
 
 ## Selecting and copying
 
-- `v` starts a selection by character and `shift+v` one by whole rows; then move to extend it. `shift` with an arrow,
-  `home` or `end` selects too.
-- `y y` or `ctrl+c` copies the selection, and so does `y` alone in visual mode. With nothing selected, `y y`
-  copies the cursor's row.
-- With the mouse, drag to select and copy, double-click for a word, triple-click for a row.
-- `esc` clears the selection.
-
-What you copy is the text as you see it on the page, not the Markdown under it. Three more copies are about the note
-rather than its text: `y p` copies its full path, `y r` its path and the cursor's line (`ideas/coffee.md:18`), and `y l`
-the target of the link under the cursor.
-
-Copies go to the system clipboard. If yours can't be reached, over SSH for instance, see
-[Troubleshooting](troubleshooting.md).
+You select and copy on the page as you would in the Markdown (`v`, `shift` with an arrow, or a drag, then `y y` or
+`ctrl+c`), and what you copy is the text as you see it, not the Markdown under it:
+[Undo, redo and the clipboard](editing.md#undo-redo-and-the-clipboard) has the keys and the clipboard.
 
 ## How a note is drawn
 
@@ -171,7 +161,8 @@ guessed at. A line too long for the window carries on in the next row, marked `â
 
 A reference to a footnote is drawn as its label in brackets, such as `[1]`, and its definition, where the note writes
 it, as `1.` with the text hanging beside it. `enter` on a reference jumps to its definition, and `ctrl+o` comes back.
-The footnotes view (`space n f`) lists a note's footnotes: see [Finding things](finding.md).
+The footnotes view (`space n f`) lists a note's footnotes, and adds and changes them: see
+[Footnotes](finding.md#footnotes).
 
 ### Front matter
 
@@ -208,7 +199,7 @@ text column, its proportions kept, at most 12 rows tall. A picture beside other 
 - `enter` on a picture in the folder copies its path.
 
 **Which terminals draw them.** slipbox asks the terminal when it starts. Pictures are drawn in a terminal that speaks
-the Kitty graphics protocol, such as kitty, Ghostty or WezTerm, or sixel, such as foot; never as blocks of coloured
+the Kitty graphics protocol or sixel, as kitty, Ghostty, WezTerm and foot do; never as blocks of coloured
 characters. In a terminal that speaks neither, a picture is its `â–£` line alone. With sixel, pictures can disappear
 while you scroll quickly and come back when you stop. `render.images = "never"` turns pictures off. When a terminal
 you expect to draw them doesn't, see [Troubleshooting](troubleshooting.md).

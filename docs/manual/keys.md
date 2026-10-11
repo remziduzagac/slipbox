@@ -34,20 +34,19 @@ Your configuration takes the same notation, and the usual other spellings: `G` f
   is the exception: its chords have plain keys beside them (the arrows, the page keys, `home` and `end`). `ctrl+c`'s
   other way is `y y`.
 - **Plain `q` closes** what has the focus: the explorer, the outline, a panel, resize mode. In a note it closes the
-  window, or the tab when it's the tab's last window, but never the last tab: only `ctrl+q`, `:q` and `:qa` quit. In a
-  list or a prompt, `q` is just typed.
+  window, or the tab when it's the tab's last window, but never the last tab: only `ctrl+q`, `space q q`, `:q` and
+  `:qa` quit. In a list or a prompt, `q` is just typed.
 - **`ctrl+c` copies** what is selected, and in a list or prompt it cancels. It never quits. slipbox reads the terminal
   raw, so `ctrl+c` and `ctrl+z` are keys like any other (copy and undo), never an interrupt or a suspend.
 
 ### The which-key popup
 
-After the leader, a popup lists the keys that can come next, each with its name and a line on what it does. After the
-other prefixes (`y`, `g`, `z`, `[`, `]`, `ctrl+w`, `ctrl+t`) it waits half a second first
-([`input.which_key_delay_ms`](configuration.md)), so a sequence you know never flashes it. `backspace` goes back a
-level, `esc` cancels, and a click on an entry presses its key. [`input.which_key`](configuration.md) `= false` turns the
-popup off.
+After the leader, and after a pause on any other key that starts a sequence, a popup lists the keys that can come
+next: [The screen](screen.md#the-which-key-popup) describes it. In it, `backspace` goes back a level, `esc` cancels,
+and a click on an entry presses its key.
 
-A key that is a binding of its own and also starts a sequence waits that same half second for the next key, then runs.
+A key that is a binding of its own and also starts a sequence waits for the next key, half a second
+([`input.which_key_delay_ms`](configuration.md)), then runs.
 
 ## The cursor
 
@@ -115,16 +114,10 @@ keeping [`ui.scrolloff`](configuration.md) rows (3) between it and the window's 
 | copy `path:line` of the cursor's row | `y r` |
 | copy where the link under the cursor points | `y l`, `space l y` |
 
-A cut and a paste are edits: from the rendered note, the window switches to source mode first. In source mode and the
+A cut and a paste are edits: from the rendered note, the window switches to editing first. In source mode and the
 lens, `y` is vim's yank, so `y y` copies the line and `y p` and `y r` work only while reading (the palette has them
-everywhere).
-
-Copies go to the system clipboard, through the terminal and through your system's tool: `pbcopy` on a Mac, `clip.exe` in
-WSL, else `wl-copy`, `xclip` or `xsel`. So does everything you cut, or delete in source mode, as with vim's
-`clipboard=unnamedplus`. A paste reads the clipboard back (`pbpaste`, `wl-paste`, `xclip`, `xsel`, or PowerShell in
-WSL), and puts slipbox's own last copy where it can't read it (over SSH, say). The terminal's own paste (`ctrl+shift+v`,
-`cmd+v`) types the text while you type, and otherwise puts it as `ctrl+v` does. Vim's `ctrl+v` and `ctrl+x` (block
-selection, and a number less) are paste and cut here.
+everywhere). Vim's `ctrl+v` and `ctrl+x` (block selection, and a number less) are paste and cut here. Where copies go,
+and where a paste comes from, is in [Undo, redo and the clipboard](editing.md#undo-redo-and-the-clipboard).
 
 ## Links and history
 
@@ -574,8 +567,8 @@ With spelling on (`space u s`):
 | `space u c` | the code view's cells: in boxes, or on tinted bands |
 | `space u s` | spelling on or off |
 
-A change applies at once and lasts the session. Your configuration sets where each starts, and wins again once you
-change that setting in the file.
+A change applies at once and is remembered for the folder ([The screen](screen.md#ui-settings)). Your configuration
+sets where each starts, and wins again once you change that setting in the file.
 
 ## Scratch: `space s`
 

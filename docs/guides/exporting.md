@@ -9,15 +9,17 @@ needs installing, and nothing is fetched from the network while it does.
 1. Open the note, say `ideas/coffee.md`, and press `space n o` (or type `:export`).
 2. A list of formats opens: Word (.docx), PDF (.pdf), Web page (.html), E-book (.epub), Markdown (.md). Type to narrow
    it (`pdf`), or move with `down` and `up`, then press `enter`. `:export pdf` skips the list.
-3. A Save As window opens: places down its left (beside the note, your last export's folder, your Downloads, Desktop,
-   Documents and home folders, this root), the folder's contents on the right, and the file's name at the bottom,
-   filled in: `coffee.docx`, in the note's folder the first time. Press `enter` to export there.
+3. A Save As window opens: places down its left (beside the note, your last export's folder, those of your Downloads,
+   Desktop and Documents folders you have, your home folder, this root), the folder's contents on the right, and the
+   file's name at the bottom, filled in: `coffee.docx`, in the note's folder the first time. Press `enter` to export
+   there.
 4. A message says `exporting to ideas/coffee.docx…`, then
    `exported ideas/coffee.md to ideas/coffee.docx (Word (.docx))`.
 
 To put it elsewhere, `tab` moves between the places, the folder and the name. In the folder, `enter` goes into a folder
 and `left` goes up; or type a path as the name (`~/Desktop/coffee.docx`). The window opens where you exported last the
-next time. A file already there is replaced only after you answer `y`, and a note is never written over.
+next time. A file already there is replaced only after you answer `y`, and a note of this root is never written
+over.
 
 Unsaved changes are saved first, since an export reads the notes from disk.
 

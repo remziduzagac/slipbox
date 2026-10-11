@@ -72,8 +72,8 @@ it. With the mouse, click a place to go there, an entry to pick it (and again to
 wheel scrolls, and a click outside the window cancels.
 
 If a file of that name is there already, slipbox asks `ideas/coffee.docx is there — replace it?`: `y` replaces it, `n`
-takes you back to the window. A note is never replaced: slipbox says so and keeps the window open (the one exception is
-an earlier Markdown export, which slipbox asks about as it does any file).
+takes you back to the window. A note of this root is never replaced: slipbox says so and keeps the window open (the one
+exception is an earlier Markdown export, which slipbox asks about as it does any file).
 
 ## From the command line
 

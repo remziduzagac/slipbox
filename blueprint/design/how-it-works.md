@@ -78,7 +78,7 @@ Two things keep the CLI's view honest. Hand-offs save first: a capture into an o
 handing a note to an editor write unsaved changes before the other side reads ([tui.md](tui.md) § Editing). And the
 TUI lists the notes it holds unsaved in `dirty/<pid>.json` in the root's state (`core/stale.ts`, `9.9`), which every
 CLI call reads, ignoring the files of dead pids, and reports as a warning or a `stale` array: advisory, never a lock
-([cli.md](../../docs/cli.md) § Semantics: disk is the contract).
+([cli.md](../../docs/manual/cli.md) § Unsaved changes in a running slipbox).
 
 ## The parts
 
@@ -100,7 +100,7 @@ that order:
   wrapping, themes, glyphs; pure, so the CLI's `render` and the TUI draw the same (§ Data flow for one note).
 - **The TUI** ([tui.md](tui.md)): the reader and the editor: panes, buffers and tabs, the explorer, source mode and
   the lens, saving, autosave and the conflict prompt, external changes, git; files beyond notes too. Its keys are the
-  user's reference, [keymap.md](../../docs/keymap.md).
+  user's reference, [keys.md](../../docs/manual/keys.md).
 - **Code as a notebook** ([code-view.md](code-view.md)): a source file rendered as a document, a cell per
   definition, its comments as prose, its tokens verbatim (D125).
 - **Document types** ([document-types.md](document-types.md)): notes of a kind, known by where they are: their
@@ -115,8 +115,8 @@ that order:
 - **Testing** ([testing.md](testing.md)): the headless tests, the terminal tests in a herdr pane, the fixture and demo
   vaults and the reference set.
 
-The CLI's commands are the user's reference, [cli.md](../../docs/cli.md); every setting is
-[configuration.md](../../docs/configuration.md).
+The CLI's commands are the user's reference, [cli.md](../../docs/manual/cli.md); every setting is
+[configuration.md](../../docs/manual/configuration.md).
 
 ## Module map
 

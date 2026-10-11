@@ -1,4 +1,4 @@
-// Default keymap (3.12), as decided in docs/keymap.md. Every binding names a command id
+// Default keymap (3.12), as decided in docs/manual/keys.md. Every binding names a command id
 // from the registry (0.8), and config overrides any of it: `[keys]`, `[keys.visual]`,
 // `[keys.explorer]`, `[keys.outline]`, the leader, which-key `[groups]` and `:` `[aliases]`.
 // Sequences are written in config notation; `leader` stands for the configured leader key.

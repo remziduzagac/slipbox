@@ -19,6 +19,6 @@ change of behaviour changes the matching file in the same commit (D206). Why eac
 13. [distribution.md](distribution.md): folders per platform, the supply chain's gates, releases, updates, notices.
 14. [testing.md](testing.md): the headless and terminal tests, the fixture and demo vaults, the reference set.
 
-The user's references are outside the blueprint, in [docs/](../../docs/): [keymap.md](../../docs/keymap.md),
-[configuration.md](../../docs/configuration.md) and [cli.md](../../docs/cli.md). The keys beside vim's, VS Code's and
-Obsidian's are research: [keymap-comparison.md](../research/keymap-comparison.md).
+The user's references are outside the blueprint, in [docs/](../../docs/): [keys.md](../../docs/manual/keys.md),
+[configuration.md](../../docs/manual/configuration.md) and [cli.md](../../docs/manual/cli.md). The keys beside vim's, VS
+Code's and Obsidian's are research: [keymap-comparison.md](../research/keymap-comparison.md).

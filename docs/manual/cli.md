@@ -59,8 +59,8 @@ names.
 for there. A file still belongs to its nearest root, so a note in a root nested inside `--root` is that root's.
 
 Running a command writes nothing into your folders. slipbox keeps its index, the scratch, the trash and the rest in
-folders of its own, each root's apart; `slipbox info` says where. Only the commands that change files on purpose
-write, and only inside the note's root.
+folders of its own, each root's apart ([Where slipbox keeps things](configuration.md#where-slipbox-keeps-things));
+`slipbox info` says where. Only the commands that change files on purpose write, and only inside the note's root.
 
 ## Naming a note
 
@@ -385,26 +385,17 @@ cut). A note too large for the index is left out of a search of every note, with
 
 ### `search`
 
-Ranks the root's notes and data files by the words you give, as the screen's search does: a word in the title or an
-alias counts most, then tags, headings and the path, then the text. Each hit is where the note has most of the
-words. [Finding things](finding.md) explains the ranking and where a hit opens.
+Ranks the root's notes and data files by the words you give, as the screen's search does, each hit where the note
+has most of the words. The query is written as in the screen: words, `"a phrase"`, `prefix*`, `-word`, `title:`,
+`#tag` and `path:` ([What you can type](finding.md#what-you-can-type)). [Finding things](finding.md#search) explains
+the ranking and where a hit opens. When no note has every word, those with some are listed, with a warning.
 
 ```bash
 slipbox search grind size
 slipbox search '"cold brew" -decaf path:ideas/'
 ```
 
-The query takes:
-
-- `word`: notes with every word somewhere (if none has them all, those with some, and a warning);
-- `"a phrase"`: the words together, in order;
-- `prefix*`: any word starting so (`cat` is only `cat`, `cat*` is `catalogue` too);
-- `-word`: none of it;
-- `title:word`: in the title or an alias;
-- `#tag` or `tag:tag`: notes carrying the tag, or one nested under it;
-- `path:folder/`: files whose path starts so.
-
-Accents and case don't count. Flags:
+Flags:
 
 - `--limit <n>`: at most this many hits, from 1 to 500 (20 by default).
 - `--scope here|linked|all`: `here` (the default) searches this root; `linked` adds the roots its notes link to and
@@ -1071,17 +1062,17 @@ slipbox worktrees
 ### `merge-review`
 
 Before you merge a branch, the links the merge would break. Git can't see these: a branch that moves
-`docs/sync.md` and another that adds a link to it change different files and merge cleanly, with the link broken.
+`docs/plan.md` and another that adds a link to it change different files and merge cleanly, with the link broken.
 slipbox asks git for the merge's result without touching your working folder or branch (it needs git 2.38 or later)
 and checks every link in its notes.
 
 ```bash
-slipbox merge-review refactor/docs-layout
+slipbox merge-review fix/retry
 ```
 
 ```text
-merging refactor/docs-layout into main: 18 links would break
-  README.md:40:3  docs/sync.md — refactor/docs-layout moves docs/sync.md to docs/architecture/sync.md — the fix: …
+merging fix/retry into main: 1 link would break
+  README.md:12:3  docs/plan.md — fix/retry moves docs/plan.md to docs/design/plan.md — the fix: docs/design/plan.md
 ```
 
 - `--into <ref>`: the branch merged into (by default, the one checked out).
@@ -1097,11 +1088,10 @@ refuses to merge them; a branch that isn't there is exit 3.
 ## The scratch and the context bundle
 
 The scratch is a Markdown file per root where you, your editor or an agent collect references and notes to hand to
-an agent; you read it in the screen with `space s s`. By default it's kept in slipbox's state, not among your notes;
-[`capture.location`](configuration.md) `= "vault"` keeps it in the root, as [`capture.file`](configuration.md) names
-it. A plain folder's
-scratch is always in slipbox's state. [Working with agents](../guides/agents.md) shows it in use, and nvim
-keybindings that capture.
+an agent; you read it in the screen with `space s s` ([The scratch](editing.md#the-scratch)). By default it's kept in
+slipbox's state, not among your notes; [`capture.location`](configuration.md) `= "vault"` keeps it in the root, as
+[`capture.file`](configuration.md) names it. A plain folder's scratch is always in slipbox's state.
+[Working with agents](../guides/agents.md) shows it in use, and nvim keybindings that capture.
 
 ### `capture`
 
@@ -1205,8 +1195,9 @@ slipbox export coffee inbox -o exports/coffee.docx
 - `--out <path>` (or `-o`): where to write it. A folder puts it there under the first note's name.
 
 Without `-o`, it goes beside the first note under its name (`ideas/coffee.docx`); Markdown's as `coffee.export.md`,
-its pictures in `coffee.export.assets/`. It never writes over a note (exit 5), only over an earlier Markdown export,
-and fetches nothing from the network. `--json`: `{path, format, notes[], bytes, files[]}`, `files` being the pictures
+its pictures in `coffee.export.assets/`. A file already at the path is replaced without asking, but never a note of
+this root (exit 5) other than an earlier Markdown export ([Exporting](export.md#from-the-command-line)). It fetches
+nothing from the network. `--json`: `{path, format, notes[], bytes, files[]}`, `files` being the pictures
 written beside it.
 
 ## Code
@@ -1223,7 +1214,7 @@ there and which it would lack. [Troubleshooting](troubleshooting.md) starts here
 
 ```bash
 slipbox doctor
-slipbox doctor src/sync/queue.ts
+slipbox doctor src/shelf.ts
 ```
 
 In a root you don't trust, a warning says what that leaves out. A note is exit 3: slipbox serves notes itself.

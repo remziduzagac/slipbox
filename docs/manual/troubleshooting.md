@@ -92,8 +92,8 @@ keys. `?` lists every key, and the [Keys](keys.md) chapter has them all. Some yo
   mode passes every key through to slipbox.
 - **tmux** takes only its prefix, `ctrl+b`, which slipbox doesn't use. If `esc` seems slow inside tmux, lower its
   `escape-time` setting.
-- **Windows Terminal** keeps `ctrl+shift+p`, `ctrl+shift+f` and `ctrl+tab` for itself: use the other routes, or unbind
-  them in its settings.
+- **Windows Terminal** keeps some keys for itself, among them `ctrl+shift+p`, `ctrl+shift+f`, `ctrl+tab` and
+  `ctrl+shift+tab`: use the other routes, or unbind them in its settings.
 
 You can move any key to one that reaches slipbox, in your config's `[keys]` ([Configuration](configuration.md)).
 
@@ -101,8 +101,8 @@ You can move any key to one that reaches slipbox, in your config's `[keys]` ([Co
 
 slipbox draws a note's pictures only where all of this holds ([Reading](reading.md) has the details):
 
-- **Your terminal draws pictures**: Kitty's graphics protocol (kitty, Ghostty, WezTerm) or sixel (foot and iTerm2,
-  among others). Elsewhere a picture is its line: `▣` and its description.
+- **Your terminal draws pictures**, with the Kitty graphics protocol or sixel, as kitty, Ghostty, WezTerm and foot
+  do. Elsewhere a picture is its line: `▣` and its description.
 - **No multiplexer stands in the way.** tmux, zellij or screen between slipbox and the terminal must pass the picture
   protocol on, and often don't: try slipbox in the terminal itself.
 - **`render.images` isn't `"never"`.**
@@ -190,9 +190,8 @@ writes over their version, or loses yours, without asking:
 ideas/coffee.md changed on disk, and you have unsaved changes
 ```
 
-It offers `l` to load theirs (yours stays one `u` away), `k` to keep yours, `d` to see the differences, and `m` to
-merge the two. `esc` keeps yours for now; `space n c` brings the question back. Until it's settled, autosave leaves
-that note alone. [Editing](editing.md) explains each choice.
+It offers `l` to load theirs, `k` to keep yours, `d` to see the differences and `m` to merge the two, and
+`space n c` asks again. [When a file changes on disk](editing.md#when-a-file-changes-on-disk) explains each answer.
 
 ## Search seems out of date
 

@@ -370,32 +370,35 @@ Each root has one **convention**: how the links slipbox makes there are written.
 
 Each part comes from the first of these that says:
 
-1. your setting, `[links]`, in the root's `.slipbox/config.toml` or else your own config;
-2. the setting of the tool that owns the folder: Obsidian's `.obsidian/app.json` (its `Use [[Wikilinks]]` and
-   `New link format` settings), or zk's `.zk/config.toml` (`link-format` and `link-drop-extension`);
-3. the folder's notes, when one form has two-thirds or more of the links between them;
+1. your setting, `[links]`, in the root's `.slipbox/config.toml` or else your own config
+   ([The links' convention](configuration.md#the-links-convention) has its values);
+2. the settings of the app that owns the folder:
+   - Obsidian's `.obsidian/app.json`: `useMarkdownLinks` (wikilinks unless it is `true`) and `newLinkFormat`
+     (`shortest`, the default, by the note's name; `relative`, from the note; `absolute`, from the vault's top). A
+     Markdown link keeps `.md` and a wikilink drops it. A Markdown link is always a path, so `shortest` says nothing
+     about one;
+   - zk's `.zk/config.toml`: `link-format` (`markdown`, the default, a path from the note; `wiki`, a path from the
+     notebook's top; a template of your own says nothing) and `link-drop-extension` (dropped unless it is `false`);
+3. the folder's notes, when one form has two-thirds or more of their links to the root's own notes;
 4. else slipbox's own: a Markdown link, relative, `.md` kept.
+
+The style is found first, then the path and extension for that style: an app's as it writes that style, the notes'
+counted among their links of that style.
 
 So an Obsidian vault gets wikilinks by name, a zk notebook Markdown links without `.md`, and a repository whatever its
 notes already use. A folder mixing forms, with none at two-thirds, gets slipbox's own unless you set one. A Markdown
 link is never by name: slipbox reads its destination as a path.
 
-| Setting | Values |
-| --- | --- |
-| `links.style` | `auto` (found as above), `markdown`, `wiki` |
-| `links.path` | `auto`, `relative`, `root` (from the root, `/…`), `name` (a wikilink's only) |
-| `links.extension` | `auto`, `keep`, `drop` |
-
-They go in a `[links]` table, in your config or a folder's: see [Configuration](configuration.md).
-
-A plain folder has no root to read names or `/` from, so there `style = "wiki"` writes a Markdown link, and
-`path = "root"` or `"name"` a relative one.
+A plain folder has no root to read names or `/` from. There your setting applies where it can, else slipbox's own:
+`style = "wiki"` writes a Markdown link, and `path = "root"` or `"name"` a relative one (a wikilink you type stays one,
+its path relative); `extension` is as you set it.
 
 `slipbox info` says each part and where it came from: in an Obsidian vault, "wikilinks, by name, without .md", from
 Obsidian's `.obsidian/app.json`; in a repository, which share of its notes' links decided each part. The Info view
 (`space n i`) shows the same in its Links section, and `y` there copies it.
 
-The convention decides only the links slipbox makes. A rename keeps each existing link in the form it was written in.
+The convention decides only the links slipbox makes (the scratch's `path:line` references aren't links). A rename
+keeps each existing link in the form it was written in.
 
 ## Writing links
 

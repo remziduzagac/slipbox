@@ -5,7 +5,7 @@ D137) — and the editor: task checkboxes, hand-off to `$EDITOR` or a running nv
 mode, the lens (live preview), saving, autosave and the conflict prompt (D134, D144). Every write to a note goes
 through one path ("Writing notes"); besides notes it writes its own state and the scratch.
 
-**Every key is in [keymap.md](../../docs/keymap.md).** This document covers how the parts behave.
+**Every key is in [keys.md](../../docs/manual/keys.md).** This document covers how the parts behave.
 
 Code, in `src/tui/`:
 
@@ -179,7 +179,7 @@ takes `$&`, `$1`–`$9` and `$$`. Opened on a selection within a line, the selec
 across lines, the replacing stays within the selection's lines. Messages (`replaced 3 matches`) show
 while the rows are open. The text moves down three rows.
 
-Vim's `:s` ([keymap.md](../../docs/keymap.md)) uses the same engine, `core/replace.ts`; with its `c` flag the
+Vim's `:s` ([keys.md](../../docs/manual/keys.md)) uses the same engine, `core/replace.ts`; with its `c` flag the
 same two rows ask at each match, `replace? y n a q` where the buttons were.
 
 **Messages and questions never take a row of their own,** so the note never changes height for them.
@@ -377,19 +377,20 @@ notes answer to a row of its own at the top, `pick notes/x.md:3`: `enter` lists 
 as part of the preview. Each shows its **preview** first (D143, D52, D63): a list of every line it changes, in every
 root (`notes/index.md:3 [plan](plan.md) → [plan](roadmap.md)`), with the git trees that already have changes and the
 links skipped at the top; `enter` carries it out, `esc` leaves everything as it was. What it does is `slipbox mv`'s,
-`name`'s, `rename-heading`'s, `relink`'s and `convert-links`'s ([cli.md](../../docs/cli.md) § Renames). **Refused
-while a file it rewrites or moves is unsaved** (a moved folder's notes included). After it, the open notes it changed
-are reloaded, and a window on a renamed or moved note shows it under its new path, its history following — every note
-of a moved folder alike.
+`name`'s, `rename-heading`'s, `relink`'s and `convert-links`'s ([cli.md](../../docs/manual/cli.md) § Moving, copying and
+deleting). **Refused while a file it rewrites or moves is unsaved** (a moved folder's notes included). After it, the
+open notes it changed are reloaded, and a window on a renamed or moved note shows it under its new path, its history
+following — every note of a moved folder alike.
 
 **Undo** (`7.4`; D152): `space v shift+u` (the explorer's `shift+u`, `:undo-rename`) takes back the root's last
 rename, move, naming, heading rename, relink, conversion to path links or replace in every note — made here or by the
 CLI (`slipbox mv`, `name`, `rename-heading`, `relink`, `convert-links`, `replace --all`) — as `slipbox undo` does
-([cli.md](../../docs/cli.md) § Renames): its preview first (`undo: notes/first.md → notes/alpha.md`, each line the
-other way), then every file as it was and what moved back where it was, open notes following it back. Refused when a
-file it wrote has changed since. The renames are a stack in the root's state (the last 20): undo takes the newest, and
-there is no redo; the rename is done again (D152). In a git checkout each rename records its branch and is undone only
-there (`5.9`; D153). `u` puts back a delete; `shift+u` a rename.
+([cli.md](../../docs/manual/cli.md) § Moving, copying and deleting): its preview first
+(`undo: notes/first.md → notes/alpha.md`, each line the other way), then every file as it was and what moved back where
+it was, open notes following it back. Refused when a file it wrote has changed since. The renames are a stack in the
+root's state (the last 20): undo takes the newest, and there is no redo; the rename is done again (D152). In a git
+checkout each rename records its branch and is undone only there (`5.9`; D153). `u` puts back a delete; `shift+u` a
+rename.
 
 ## Files in the explorer (plans `18.1`–`18.10`)
 
@@ -432,7 +433,7 @@ The explorer makes and changes files by keys and by buttons, on the selected row
   `halden-logs` for `logs/`), then a preview — links are paths (`20.2`): relative and filesystem ones reach across
   the new boundary as they are, and one written from the root (`/…`) that would now mean the other root is rewritten
   to reach what it did, shown there — a wikilink by a name across the boundary, or by a path from the root, too
-  (`21.3`) — as `slipbox init <folder>` does ([cli.md](../../docs/cli.md)); enter makes it.
+  (`21.3`) — as `slipbox init <folder>` does ([cli.md](../../docs/manual/cli.md)); enter makes it.
   `shift+v` on a nested root's row previews the way back (such links rewritten the other way), and enter puts its
   `.slipbox/` in the trash. The row turns
   into a root's or a folder's, selected. In a plain folder, `v` offers to make the folder a root of its own and goes
@@ -443,7 +444,7 @@ path, move, delete, copy, cut, `shift+y` a copy beside it), `space d` for a fold
 cut, paste), `space v` for a root (make one, make it a plain folder, rename it, the trash, restore). With the explorer
 focused they act on its selected row, elsewhere on the current note, its folder, or this root — made a plain folder,
 it's left for the root holding it, the note still open. What they do is the CLI's `rm`, `mv`, `cp`, `init` and
-`deinit` ([cli.md](../../docs/cli.md)).
+`deinit` ([cli.md](../../docs/manual/cli.md)).
 
 ## Following links
 
@@ -626,7 +627,7 @@ keys.
   reference — in a rendered window onto the reference or definition as drawn, in source mode to the text. While not
   focused it follows the cursor: the footnote the cursor's line refers to or defines. It never scrolls sideways: a
   long row is cut, so its count stays. `/` filters (see Filter). `space n f`, its button, `:footnotes`;
-  `slipbox footnotes <note>` gives the same ([cli.md](../../docs/cli.md)).
+  `slipbox footnotes <note>` gives the same ([cli.md](../../docs/manual/cli.md)).
 - **Adding and changing footnotes** (`3.18`; D150): they're the note's own markdown, GFM's — `[^N]` where it's cited
   and `[^N]: text` at the end, as Obsidian writes them. `space n shift+f` (or `a` in the footnotes view, or the `+` on
   its title) asks the text in a question and adds both: `[^N]`, the next free number — one past the highest numeric
@@ -712,10 +713,10 @@ past theirs), so the content behind never runs up to the edge.
   it, `esc` leaves everything; `space v shift+u` takes it back, as a rename. A match across lines is one row, each
   break a `⏎`. Refused while a file with a match is unsaved: what's open isn't what's on disk.
 - **Search** (`6.5`, `6.9`; `space f s`, `:search words`): the root's notes ranked by the words as they're typed — as
-  `slipbox search` ranks them ([search.md](search.md); [cli.md](../../docs/cli.md) § Search) — each a row: `path:line`,
-  the section's heading and the line, its words marked, `+n` for the file's other sections with some of them. `enter`
-  opens it on that line (rendered, at the line's start; in source mode, on the word). The index is the app's to keep:
-  opened (or made) as the root opens and brought up to the files in idle slices — the list says
+  `slipbox search` ranks them ([search.md](search.md); [cli.md](../../docs/manual/cli.md) § `search`) — each a row:
+  `path:line`, the section's heading and the line, its words marked, `+n` for the file's other sections with some of
+  them. `enter` opens it on that line (rendered, at the line's start; in source mode, on the word). The index is the
+  app's to keep: opened (or made) as the root opens and brought up to the files in idle slices — the list says
   `the folder is being indexed: n of m files…` the first time, and fills when it's done — then each file again as the
   graph hears it change (a save here, the watcher, a rename, a CLI write). An unsaved note is searched as it's shown, in
   place of what the index has of it. Without an index (`~` or `/` opened as a plain folder, `[search] engine = "scan"`)
@@ -729,7 +730,7 @@ past theirs), so the content behind never runs up to the edge.
   file name over its folders, at a word start, earlier; the shorter first. The explorer, the history
   and the outline filter the same way. Highlights follow the original text even where lowercasing
   changes its length; the explorer lights the note's name where a word matched it.
-- **Keys:** as in [keymap.md](../../docs/keymap.md) § In lists and prompts: the arrows, `tab` and
+- **Keys:** as in [keys.md](../../docs/manual/keys.md) § In lists and prompts: the arrows, `tab` and
   `ctrl+n`/`ctrl+p` move (wrapping around), `enter` accepts, `esc` cancels. The wheel scrolls the
   list three rows a notch (the selection moves only to stay in view), a click picks, and a click
   outside closes the list. A counter in the bottom border shows `n/m`, and an empty list says "no
@@ -751,7 +752,7 @@ past theirs), so the content behind never runs up to the edge.
   columns have no names: they are simply the first, second and third way to do it.
   Without a keycap background (`NO_COLOR`), the columns are separated by `·`.
 
-Help and the palette list the same commands for different jobs, in the groups of [keymap.md](../../docs/keymap.md)
+Help and the palette list the same commands for different jobs, in the groups of [keys.md](../../docs/manual/keys.md)
 (`COMMAND_GROUPS` in `core/command-specs.ts`), in that document's order. Every command has a group (a test checks it);
 one no group claims would still be listed, under "Other", last:
 
@@ -801,7 +802,7 @@ feedback all go to one place: a floating box briefly, the messages list permanen
 
 ## UI settings
 
-These are the `space u` toggles and pickers (list in [keymap.md](../../docs/keymap.md)):
+These are the `space u` toggles and pickers (list in [keys.md](../../docs/manual/keys.md)):
 
 - theme and glyphs
 - readable width (the text column capped and centred)
@@ -817,13 +818,13 @@ These are the `space u` toggles and pickers (list in [keymap.md](../../docs/keym
 - mouse capture
 - spelling (below)
 
-**Commands run by your shell (`25.7`; D155).** `:!cmd` and `:{range}!cmd` ([keymap.md](../../docs/keymap.md), "Your
+**Commands run by your shell (`25.7`; D155).** `:!cmd` and `:{range}!cmd` ([keys.md](../../docs/manual/keys.md), "Your
 shell") run what you type, never what a root brings: a folder's config can't bind `shell.run` or `shell.filter`
-([configuration.md](../../docs/configuration.md), "What only you can set"; D166). It runs by `$SHELL -c` in the root's
-folder, `SLIPBOX_ROOT` and `SLIPBOX_FILE` in its environment, in a process group of its own so stopping it stops what it
-started; the TUI goes on meanwhile, `running: cmd` said. What it prints is kept to 2 MB (the window says so when cut
-short), a filter's output to 32 MB; the window is a list — each line sanitized, filtered as typed — whose `enter` on a
-`path:line` of the root opens it.
+([configuration.md](../../docs/manual/configuration.md), "What only your own file can set"; D166). It runs by
+`$SHELL -c` in the root's folder, `SLIPBOX_ROOT` and `SLIPBOX_FILE` in its environment, in a process group of its own so
+stopping it stops what it started; the TUI goes on meanwhile, `running: cmd` said. What it prints is kept to 2 MB (the
+window says so when cut short), a filter's output to 32 MB; the window is a list — each line sanitized, filtered as
+typed — whose `enter` on a `path:line` of the root opens it.
 
 **Spelling (`25.6`, D157; `space u s`, `[spell] enabled`).** A note's misspelt words are marked (`spell`: underlined) in
 every view — source, rendered and the lens — as `core/spell.ts` finds them: its prose, word by word — not its front
@@ -831,7 +832,7 @@ matter, code, HTML or maths, a link's address, a wikilink, a tag, a URL or an em
 identifier (`camelCase`, `snake_case`, `x86`), a path or a dotted name (`file.ts`) — checked against its languages'
 dictionaries, a word any of them knows being right. Its languages are its front matter's `lang` (`lang: tr`,
 `lang: [tr, en]`), else `[spell] languages`; English and Turkish come with slipbox, any other is yours or the system's
-([configuration.md](../../docs/configuration.md) § Spelling: the dictionaries); a language with none is said once.
+([configuration.md](../../docs/manual/configuration.md) § Spelling dictionaries); a language with none is said once.
 Hunspell, as WebAssembly, and each dictionary load in the background the first time; the window is drawn again when
 they're there. Source rows mark a word by its offsets; a rendered row finds it among the prose of its spans (not code, a
 URL, a tag). A find's match or the selection shows over a mark. `] s` / `[ s` go to the next / previous one where the
@@ -1109,14 +1110,14 @@ the only one (`16.16`, `16.17`; D112): Org and AsciiDoc files open as text.
 
 ## Editing (plans `4.3`, `4.4`, `4.5`)
 
-Editing is in source mode (D146): `i`, `a`, `o` and their capitals (in [keymap.md](../../docs/keymap.md)) start typing,
-switching a rendered window to source first (D105). A level of indentation is the file's (`25.1`; D155): its
-`.editorconfig`, else its own lines, else its language ([configuration.md](../../docs/configuration.md) § Indentation:
-`.editorconfig`). `%` goes to the matching bracket (`core/brackets.ts`, `25.3`): of its kind, the pairs nested between
-counted, across lines, by the text alone — a bracket in a string or a comment counts too, as in vim. In source mode the
-bracket at the cursor and its match are marked (`bracket_match`); while typing, the one just before the cursor. The
-buffer's `source` is the truth; every change is `NoteBuffer.edit`, one undo step each, except that an insert session
-(from `i` to `esc`) is one step. The cursor is a place in the text found through the source layout's `srcMap`
+Editing is in source mode (D146): `i`, `a`, `o` and their capitals (in [keys.md](../../docs/manual/keys.md)) start
+typing, switching a rendered window to source first (D105). A level of indentation is the file's (`25.1`; D155): its
+`.editorconfig`, else its own lines, else its language ([configuration.md](../../docs/manual/configuration.md) §
+Indentation: `.editorconfig`). `%` goes to the matching bracket (`core/brackets.ts`, `25.3`): of its kind, the pairs
+nested between counted, across lines, by the text alone — a bracket in a string or a comment counts too, as in vim. In
+source mode the bracket at the cursor and its match are marked (`bracket_match`); while typing, the one just before the
+cursor. The buffer's `source` is the truth; every change is `NoteBuffer.edit`, one undo step each, except that an insert
+session (from `i` to `esc`) is one step. The cursor is a place in the text found through the source layout's `srcMap`
 (`editing.ts`), so tabs, wide characters and wrapped rows edit exactly where they show.
 
 **Normal mode** in source is vim-shaped (`vim.ts`): counts, operators (`d` `c` `y` `>` `<` `gc`) that wait for a motion
@@ -1170,8 +1171,8 @@ and not while git holds its `index.lock` (a commit in progress: it tries again l
 lock in the git directory its `.git` file names). **Hand-offs save first** (`4.10`; D145): `space n e`, `space n s` and
 a capture into an open scratch write unsaved changes before the other side reads the file; `space s c` saves every
 unsaved note before it gathers the context bundle (`9.7`; D32), which it copies: the note, what it links to and what
-links to it, as `slipbox context` writes it ([cli.md](../../docs/cli.md) § The context bundle), as far as `[context]`
-says. One that can't be saved (it changed on disk meanwhile) stops it, nothing copied:
+links to it, as `slipbox context` writes it ([cli.md](../../docs/manual/cli.md) § The scratch and the context bundle),
+as far as `[context]` says. One that can't be saved (it changed on disk meanwhile) stops it, nothing copied:
 `context: x.md changed on disk while unsaved — ␣ n c resolves it first`. An export (`space n o`, or `space n shift+o`
 for notes picked in order: `10.x`) saves them the same way before it reads the notes; [export.md](export.md) has the
 rest.
@@ -1429,8 +1430,8 @@ line's text, not the paragraph's first line or its row's end.
 
 **The working tree's git** (`26.x`: the gutter's changes, source control, commit, blame and history, branches) is the
 TUI's alone: none of it has a CLI equivalent, its commands marked as interactions, since an agent runs `git` itself
-(D156). The review above has one (`slipbox changed`, `diff`, `worktrees`, `merge-review`; [cli.md](../../docs/cli.md)
-§ Git). Source control and commits are the left panel's (§ Side panes).
+(D156). The review above has one (`slipbox changed`, `diff`, `worktrees`, `merge-review`;
+[cli.md](../../docs/manual/cli.md) § Git). Source control and commits are the left panel's (§ Side panes).
 
 **Branches** (`26.5`; `space g o`): the local branches, this one marked `here` and selected; `enter` checks one out,
 and "A new branch from here…" asks its name and makes it where HEAD is (`git switch -c`; a name git won't take is
@@ -1476,7 +1477,7 @@ Keys reach layers, each owning some of them (D99, D105):
 Every binding names a registry command (D11), and config remaps all of them. Editing keys work only where the
 text is editable, in the source layer; the keys that start an edit and undo are in the reading layer too, and
 switch the window to source first (D105). The conventions that settle collisions between keys (D99, D106,
-D128) are the user's to read: [keymap.md](../../docs/keymap.md) § Conventions.
+D128) are the user's to read: [keys.md](../../docs/manual/keys.md) § Conventions.
 
 **Dispatch order:** a paste first, then an overlay, then a pane's filter while typing in it, then insert mode's
 keys (the completion popup's first), then a key awaited as a character (after `f`, `t`, `r`), then — in source mode
@@ -1506,4 +1507,4 @@ Every command is declared in `core/command-specs.ts` with the CLI invocation tha
 marked as an interaction: cursor, scrolling, selection, focus, panes, overlays (D11, D14). Editing keys are interactions
 too: the state they change, a note's text, is reached from the CLI by `write`, `replace` and `task` (D14, D18). Git in
 the editor is marked so too, though it changes state: it is the TUI's alone (§ Git; D156). Tests fail when a command is
-implemented without a spec or specified without an implementation. See [cli.md](../../docs/cli.md).
+implemented without a spec or specified without an implementation. See [cli.md](../../docs/manual/cli.md).

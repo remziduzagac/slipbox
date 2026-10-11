@@ -169,7 +169,7 @@ later.
 plugins and no palette (`src/core/commands.ts`). Each command is declared in `src/core/command-specs.ts` with the CLI
 invocation that reaches the same state change, or marked as an interaction; tests fail when a command is implemented
 without a spec or specified without an implementation. The detail is in design/tui.md § Parity with the CLI and
-docs/keymap.md.
+docs/manual/keys.md.
 
 **Why:** the palette, the keymaps, the modal editing layer and any future plugin tier all consume the registry, so each
 is an addition rather than a refactor. It costs almost nothing up front, and retrofitting it means touching every
@@ -184,7 +184,7 @@ decision seen from two directions. A command's CLI field is how parity (D14) is 
 **Decision:** configuration is TOML at two levels: the user's in `~/.config/slipbox/` and the vault's in `.slipbox/`,
 the vault's overriding the user's. A `--config` flag and a `SLIPBOX_CONFIG` variable name the user's file, and slipbox
 runs correctly with no config at all. Keymaps are rebindable, every action being a named command (D11). The keys are
-in docs/configuration.md.
+in docs/manual/configuration.md.
 
 **Why:** theming and user scripts both need configuration, so it was load-bearing from the start. Without a user level,
 every vault needs its own copy of your keymaps. TOML matches herdr, helix, starship and yazi in this stack and takes
@@ -231,7 +231,7 @@ renderer is snapshot-tested.
 
 **Decision:** the CLI may change at each phase boundary, with pre-1.0 breakage declared up front, except a small subset
 that is stable and versioned from phase 1: `render`, `capture` and a couple of graph queries. The stable commands now
-are in docs/cli.md § Stability.
+are in docs/manual/cli.md § What stays stable.
 
 **Why:** redesign is normal while nothing depends on the surface, and cheaper than guessing it up front; but agents
 depend on it from phases 1 and 2 (D16), and the stable commands are what an agent or an nvim keybinding calls, so
@@ -241,8 +241,8 @@ breaking them breaks a workflow.
 
 **Decision:** the agent surface is incremental, not a later phase: the CLI is the agent mechanism from the start and
 grows with each phase, and slipbox is usable by an agent from phases 1 and 2. Early distribution is deliberately cheap,
-a `bunx`-style invocation or a manual local install (docs/cli.md § Installing for agents); proper packaging (`14.x`)
-comes later.
+a `bunx`-style invocation or a manual local install (docs/manual/cli.md § For agents and scripts); proper packaging
+(`14.x`) comes later.
 
 **Why:** the intended daily mode is the UI and an agent together, not the UI first with agents bolted on afterwards; a
 notes app whose agent story arrives in phase 6 never gets tested the way it is meant to be used. Early on, what matters
@@ -258,7 +258,7 @@ flush unsaved buffers first; and the TUI keeps a small file in the state directo
 paths it holds unsaved, stamped with its pid, which the CLI reports as a warning or a `stale` array (`9.9`): advisory
 only, never a lock. Concurrent CLI writes are last-writer-wins, safe because atomic, and `--if-unchanged` serves
 careful writers (`9.10`). The link index is persisted (`1.9`), so a call reads it rather than rebuilding the graph.
-The detail is in docs/cli.md § Semantics: disk is the contract.
+The detail is in docs/manual/cli.md § Unsaved changes in a running slipbox.
 
 **Why:** writes were already covered (atomic writes, the watcher, the conflict prompt), and two graphs cannot diverge
 over one disk; reads were the gap. An agent acting on a half-written unsaved sentence is worse than one acting on the
@@ -280,7 +280,7 @@ comes forward.
 `--color`. `--json` always prints one object (`schema`, `ok`, `command`, `data`, `warnings`, `stale`), apart from the
 human output; human output goes to stdout and diagnostics to stderr. Exit codes are stable: `0` ok, `1` error, `2`
 usage, `3` not found, `4` ambiguous, `5` refused. `slipbox [path]` never starts the TUI when stdin or stdout is not a
-terminal (`9.3`). The commands as they are now, the JSON contract and the exit codes are in docs/cli.md.
+terminal (`9.3`). The commands as they are now, the JSON contract and the exit codes are in docs/manual/cli.md.
 
 **Why:** the CLI is a public API (D13), so it gets a JSON mode apart from human output, stable exit codes, explicit
 versioning and a deliberately small first surface. zk is automation-first and its CLI the design reference; nb's very
@@ -290,7 +290,7 @@ calls (D15).
 ## D19: The capture path is `slipbox capture` (8.1, 9.6, 2026-09-25)
 
 **Decision:** capture is the CLI's `slipbox capture`: an nvim keybinding, an agent or a shell calls it, and the user
-reads the scratch in the TUI. The capture direction belongs in the CLI, not the TUI. The detail is in docs/cli.md
+reads the scratch in the TUI. The capture direction belongs in the CLI, not the TUI. The detail is in docs/manual/cli.md
 § Capture and the scratch.
 
 **Why:** phase 2's finish line is the scratch replacing `prompt-buffer.lua`, which captures from the code buffer being
@@ -305,7 +305,7 @@ slipbox ever needing to browse code. Capture is CLI-shaped, so it is the first r
 **Decision:** the scratch is per project and lives in the state directory (D39) by default, in the vault on
 request (`capture.location = "vault"`). It is markdown, readable and pasteable as it is, and each entry carries its
 source reference (`path:42-50`, as `prompt-buffer.lua` writes them). It and the context bundle share one writer
-(D32). The detail is in docs/cli.md § Capture and the scratch.
+(D32). The detail is in docs/manual/cli.md § The scratch and the context bundle.
 
 **Why:** scratch capture, the accumulator of `prompt-buffer.lua` (references and excerpts collected per project, then
 handed to an agent), is the closest thing to the product's reason for existing and the feature with no competitor. A
@@ -331,7 +331,7 @@ clipboard on the Mac.
 ## D22: A skill teaches the CLI, kept with every phase (9.8, 2026-09-25)
 
 **Decision:** an agent-facing skill teaches the CLI (`skills/slipbox/SKILL.md`), updated with each phase rather than
-written at the end. How it is installed is in docs/cli.md § Installing for agents.
+written at the end. How it is installed is in docs/manual/cli.md § For agents and scripts.
 
 **Why:** a CLI plus a skill teaching agents to drive it is the `kepano/obsidian-skills` pattern (D13): the skill is
 how the CLI gets discovered, not an alternative to it. A CLI with no skill means every agent rediscovers the surface by
@@ -462,7 +462,7 @@ code as much as notes), needs every text file to open well before the vault grow
 asked for, what they link to and what links to them, each as a reference followed by its text fenced as it is on disk,
 by the scratch's writer (D20). Gathering is deterministic: breadth first, links in the order they are written,
 backlinks by path. The limit is on files, not characters, and what is past it is named. It is read from disk: the TUI
-saves unsaved notes first (D17). The detail is in docs/cli.md § The context bundle.
+saves unsaved notes first (D17). The detail is in docs/manual/cli.md § The scratch and the context bundle.
 
 **Why:** the bundle is the scratch's other half, gathered from the link graph where the scratch is hand-picked, and
 written the same way. It is not the export assembler (`10.1`): an agent reads `[[links]]` as they are, and the

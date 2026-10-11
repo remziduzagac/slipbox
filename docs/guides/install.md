@@ -18,7 +18,7 @@ That is all slipbox needs. These make it better:
   kitty and WezTerm carry these icons themselves, and slipbox uses them there; in other terminals it draws plain
   symbols every font has, until you tell it your font has the icons ([Making it yours](making-it-yours.md)).
 - **Pictures.** A terminal that draws images, with kitty's graphics protocol (kitty, Ghostty) or with sixel, shows the
-  pictures in your notes. In any other, a picture shows as its caption and its path.
+  pictures in your notes. In any other, a picture shows as its caption.
 - **A clipboard tool, on Linux.** slipbox copies through the terminal first. For copies to always arrive, and for
   pasting, install `wl-clipboard` (Wayland), or `xclip` or `xsel` (X11). macOS and WSL need nothing.
 
@@ -81,6 +81,9 @@ there, such as the source launcher. Remove that one first (`rm ~/.local/bin/slip
 Releases aren't signed. On a Mac, Gatekeeper stops a slipbox downloaded with a web browser; the installer's isn't
 stopped.
 
+A release doesn't include the skill for agents, and has no way to install it: take the `skills/slipbox/` folder from
+slipbox's source, as [Working with agents](agents.md#give-the-agent-the-skill) shows.
+
 ## Windows, through WSL
 
 On Windows, slipbox runs inside WSL, the Windows Subsystem for Linux. Install a Linux distribution there (Ubuntu, for
@@ -138,15 +141,10 @@ slipbox uninstall --yes    # removes it
 ```
 
 It removes what the installer put in place: the `slipbox` link in `~/.local/bin` and the versions in
-`~/.local/share/slipbox`. slipbox's own folders stay, listed as kept:
-
-- `~/.config/slipbox`: your settings and themes;
-- `~/.local/state/slipbox`: your sessions, the scratch, the trash, undo, reading positions, the folders it knows;
-- `~/.local/share/slipbox`: your own words for spelling, and language servers it installed for you;
-- `~/.cache/slipbox`: indexes and pictures, all made again when missing.
-
-`--purge` removes these too. Your notes are never touched, nor the `.slipbox/` folders in them. (If you set the
-`XDG_CONFIG_HOME`, `XDG_STATE_HOME`, `XDG_DATA_HOME` or `XDG_CACHE_HOME` variables, the folders are there instead.)
+`~/.local/share/slipbox`. slipbox's own four folders (your settings, its state with the scratch and the trash, its data
+with your words, and its cache) stay, listed as kept; `--purge` removes these too.
+[Where slipbox keeps things](../manual/configuration.md#where-slipbox-keeps-things) says where they are and what each
+holds. Your notes are never touched, nor the `.slipbox/` folders in them.
 
 **Installed with Homebrew:** `slipbox uninstall --purge --yes` first, if you want slipbox's folders gone, then `brew
 uninstall slipbox`.

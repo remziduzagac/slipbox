@@ -6,7 +6,7 @@ created: "2026-09-29"
 # Research: the keymap beside vim, VS Code and Obsidian
 
 slipbox's key map beside vim's, VS Code's and Obsidian's keys for the same actions. The rules it follows are in
-[keymap.md](../../docs/keymap.md), "Conventions": **vim's keys first** where slipbox has the action, **the desktop
+[keys.md](../../docs/manual/keys.md), "Conventions": **vim's keys first** where slipbox has the action, **the desktop
 editors' `ctrl` keys next** where vim's use of them is marginal in a notes app, **`ctrl+w` and `ctrl+t` as the window
 and tab prefixes**, **`space` for the rest**, and **no emacs keys** but what macOS terminals send for a Mac's own
 (`ctrl+a` / `ctrl+e`, `alt+b` / `alt+f`). `keymap.md` is the reference; this page is for comparing.
@@ -18,7 +18,7 @@ Notation: `C-` ctrl, `S-` shift, `A-` alt, `D-` cmd (macOS, where the terminal p
 `␣tQ` is `space t shift+q`. VS Code's keys are its Linux and Windows defaults. `?` marks an Obsidian default not
 confirmed; `—` none.
 
-The slipbox column was brought up to date on 2026-10-11 from [docs/keymap.md](../../docs/keymap.md) (*read*).
+The slipbox column was brought up to date on 2026-10-11 from [docs/manual/keys.md](../../docs/manual/keys.md) (*read*).
 
 ## Summary
 
@@ -162,4 +162,5 @@ The slipbox column was brought up to date on 2026-10-11 from [docs/keymap.md](..
 ## Sources
 
 - vim's default keys; VS Code's default keybindings on Linux and Windows; Obsidian's default hotkeys (2026-09-29).
-- slipbox's own map: [docs/keymap.md](../../docs/keymap.md), read 2026-10-11 and checked against `src/tui/keys.ts`.
+- slipbox's own map: [docs/manual/keys.md](../../docs/manual/keys.md), read 2026-10-11 and checked against
+  `src/tui/keys.ts`.

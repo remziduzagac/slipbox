@@ -9,7 +9,7 @@ This guide opens a repository, reads and checks its code, commits a change, and 
 ## Open the repository
 
 ```bash
-slipbox ~/src/app
+slipbox ~/code/app
 ```
 
 A git repository is a root of its own: slipbox opens it from its top folder, whichever file or subfolder inside it you
@@ -41,7 +41,7 @@ hooks and filters. slipbox runs none of them until you say you trust the folder.
 file's language servers would otherwise leave something out, it asks:
 
 ```text
-Trust ~/src/app? Its own tools would run code it holds — eslint not run (its config is code). Only a folder
+Trust ~/code/app? Its own tools would run code it holds — eslint not run (its config is code). Only a folder
 you know (y trusts it; n keeps it safe)
 ```
 
@@ -49,7 +49,7 @@ you know (y trusts it; n keeps it safe)
 - `n` (or `esc`) keeps it safe: servers run in their safe modes, and git runs no hooks or filters of the repository's.
 
 slipbox remembers the answer, in its own state, never in the folder. `:trust` and `:untrust` change it later, and
-`trust.roots` in your config trusts folders ahead of time (`~/src/*`). The command line never asks and can't trust a
+`trust.roots` in your config trusts folders ahead of time (`~/code/*`). The command line never asks and can't trust a
 folder, so an agent can't be talked into it. [Code](../manual/code.md) says what each answer allows.
 
 ## Language servers and `slipbox doctor`
@@ -59,9 +59,9 @@ the rest. One it can get from npm, it installs into its own folder the first tim
 rust-analyzer, you install yourself. To see what's there:
 
 ```bash
-cd ~/src/app
+cd ~/code/app
 slipbox doctor                   # each language: its servers and linters, where each was found, or how to get it
-slipbox doctor src/server.ts     # one file: the servers that would serve it here, and what trust leaves out
+slipbox doctor src/shelf.ts      # one file: the servers that would serve it here, and what trust leaves out
 ```
 
 Each line names a server and where it was found (on your `PATH`, in the project, in your install folders), or
@@ -79,7 +79,7 @@ worst problem, and the status line counts them.
 - `shift+k` shows what's under the cursor (its type, its documentation), `g d` goes to its definition, and `g r` lists
   where it's used.
 
-An agent gets the same list with `slipbox diagnostics src/server.ts`.
+An agent gets the same list with `slipbox diagnostics src/shelf.ts`.
 
 ## Your changes in the gutter
 

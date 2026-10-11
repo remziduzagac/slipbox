@@ -1,19 +1,17 @@
 # slipbox
 
-A terminal markdown notes app: a shared workspace for humans and agents over plain files. It reads a folder of
-markdown notes — a repository, an Obsidian vault, a zk notebook, or any folder — renders them properly (tables that
-fit, highlighted code, themes), follows links in the folder's own conventions, and reloads the instant an agent
-rewrites a note. Every state change is also reachable from a CLI that agents drive.
+A terminal Markdown notes app: a shared workspace for people and agents over plain files. It reads a folder of
+Markdown notes (a repository, an Obsidian vault, a zk notebook, or any folder), renders them properly (tables that
+fit, highlighted code, pictures, diagrams and maths, themes), follows links in the folder's own conventions, and
+reloads the instant an agent rewrites a note. You read and edit in the TUI; agents and scripts drive the same files
+through the CLI.
 
-Status: **phases 0–5c** — rendering (leaf parity), a TUI that reads and edits (source mode, vim-shaped
-editing, the lens, autosave and a conflict prompt), and an agent-drivable CLI; then files beyond markdown, search and
-its index, roots, named folders and pointers, git and merge review, language servers, linters and diagnostics. See
-the [roadmap](blueprint/roadmap.md).
+Status: every phase on the [roadmap](blueprint/roadmap.md) is built: reading, editing, search, roots and named
+folders, git and merge review, language servers and linters, export. No release is published yet.
 
 ## Try it
 
-Requires [Bun](https://bun.sh) 1.4.2 or later (older ones lack what slipbox uses: `node:sqlite` for search, the
-compile flags).
+From source, with [Bun](https://bun.sh) 1.4.2 or later:
 
 ```bash
 bun install
@@ -22,40 +20,36 @@ bun src/main.ts render examples/vault/equipment/telescope-comparison.md  # rende
 scripts/install-local.sh                            # a `slipbox` launcher in ~/.local/bin
 ```
 
-Releases — a binary per platform, macOS and Linux (Alpine's musl too), with no Bun needed — are built and installed by
-`scripts/release.ts` and its `install.sh` (`curl -fsSL …/releases/latest/download/install.sh | sh`), or Homebrew's
-formula, through a tap; none is published yet. On Windows, slipbox runs in WSL — the Linux release, with Windows'
-clipboard and fonts; native Windows is to come. How, and what keeps it safe:
-[blueprint/design/distribution.md](blueprint/design/distribution.md).
+[Installing slipbox](docs/guides/install.md) has the rest: releases (a binary per platform, for macOS and Linux, with
+no Bun needed) and Homebrew once they are published, Windows through WSL, upgrading and removing it. Then
+[Getting started](docs/guides/getting-started.md) walks through a first session.
 
 A file's **root** is the nearest folder above it holding `.git`, `.slipbox/`, `.obsidian/` or `.zk/`: what `/` in a
 link starts from, where a wikilink's names are looked for, whose link convention is followed. A folder without one
-works too, as the folder opened. `slipbox init --name notes` gives a folder `.slipbox/` and a name that other folders
-link to it by — `slipbox://notes/inbox.md` — wherever it is on each machine; a repository is named by its remote.
+works too, as the folder opened. `slipbox init --name notes` gives a folder a name that other folders link to it by,
+`slipbox://notes/inbox.md`, wherever it is on each machine; a repository is named by its remote.
+[Links and roots](docs/manual/links-and-roots.md) explains it all.
 
 ## In the TUI
 
-A reading cursor moves with vim keys or the usual editor keys. `space` opens a which-key popup
-listing everything else, and `?` lists every key, so nothing needs memorising:
+A reading cursor moves with vim keys or the usual editor keys. `space` opens a which-key popup listing everything
+else, and `?` lists every key, so nothing needs memorising:
 
-- **Moving:** `h` `j` `k` `l` or the arrows; `w`/`b` or `ctrl+right`/`ctrl+left` by word; `[ [` /
-  `] ]` or `alt+up`/`alt+down` by heading.
-- **Links:** `enter` follows the link under the cursor; `ctrl+o` or `alt+left` goes back, `alt+right`
-  forward.
-- **Finding and copying:** `ctrl+p` switches notes, `ctrl+f` finds, `ctrl+h` finds and replaces
-  (or vim's `:%s/old/new/g`), `ctrl+shift+h` in every note, `:` opens the command palette, and `v` selects then `y`
-  copies.
-- **Panes:** `space e` explorer and `space o` outline (each opens, then focuses, then closes;
-  `esc` returns to the note), `ctrl+w v` split, `ctrl+t c` new tab. Everything is clickable too.
-- **Editing:** `i`, `a` or `o` start typing — in the lens (rendered, with the markdown around the
-  cursor between two rules) or in source mode (`space n v` or `ctrl+e`); `esc` twice closes the lens. The
-  vim commands work (`dw`, `ciw`, `p`, `u`, `.`); `ctrl+s` saves, and autosave does after a pause.
-  `ctrl+l` (or `space n t`, or a click) ticks a task; `space n e` hands the note to your editor, `space n s` to a
-  running nvim.
+- **Moving:** `h` `j` `k` `l` or the arrows; `w`/`b` or `ctrl+right`/`ctrl+left` by word; `[ [` / `] ]` or
+  `alt+up`/`alt+down` by heading.
+- **Links:** `enter` follows the link under the cursor; `ctrl+o` (or `space h p`) goes back, `space h n` forward.
+- **Finding and copying:** `ctrl+p` switches notes, `ctrl+f` finds, `ctrl+h` finds and replaces (or vim's
+  `:%s/old/new/g`), `ctrl+shift+h` in every note, `:` opens the command palette, and `v` selects then `y` copies.
+- **Panes:** `space e` explorer and `space o` outline (each opens, then focuses, then closes; `esc` returns to the
+  note), `ctrl+w v` split, `ctrl+t c` new tab. Everything is clickable too.
+- **Editing:** `i`, `a` or `o` start typing, in source mode (`ctrl+k` or `space n v` switches to it and back) or in
+  the lens (`space n l`: the Markdown around the cursor between two rules, the rest left rendered). The vim commands
+  work (`dw`, `ciw`, `p`, `u`, `.`); `ctrl+s` saves, and autosave does after a pause. `ctrl+l` (or `space n t`, or a
+  click) ticks a task; `space n e` hands the note to your editor, `space n s` to a running nvim.
 - **Quitting:** `ctrl+q`, and slipbox remembers where you were.
 
-Every key is in [docs/keymap.md](docs/keymap.md), and all of them are configurable.
-The configuration reloads itself when you save it.
+Every key is in [Keys](docs/manual/keys.md), and all of them are configurable
+([Configuration](docs/manual/configuration.md)). The configuration reloads itself when you save it.
 
 ## For agents
 
@@ -79,16 +73,14 @@ slipbox render home --plain
 ```
 
 One JSON object per call with `--json`; stable exit codes. The skill in
-[skills/slipbox/SKILL.md](skills/slipbox/SKILL.md) teaches the surface.
+[skills/slipbox/SKILL.md](skills/slipbox/SKILL.md) teaches the surface to agents;
+[Working with agents](docs/guides/agents.md) and [The command line](docs/manual/cli.md) are the people's side.
 
-## Documents
+## Documentation
 
-| Document | What |
-| --- | --- |
-| [docs/keymap.md](docs/keymap.md) | every key |
-| [docs/configuration.md](docs/configuration.md) | every config key and environment variable |
-| [docs/cli.md](docs/cli.md) | the CLI: commands, the JSON contract, exit codes |
-| [blueprint/](blueprint/README.md) | the design: requirements, how it works, the decisions behind it, the roadmap |
+- [docs/](docs/README.md): the user documentation: guides to start with, and a manual covering every key, setting
+  and command.
+- [blueprint/](blueprint/README.md): the design: requirements, how it works, the decisions behind it, the roadmap.
 
 ## Development
 

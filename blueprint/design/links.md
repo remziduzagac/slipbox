@@ -3,7 +3,7 @@
 How slipbox reads, resolves, writes and repairs links: one model inside, every tool's forms at the edges (D68). Roots,
 which give links their scope, are [roots.md](roots.md). Following each form in the TUI is [tui.md](tui.md) § Following
 links; how a link is drawn, [rendering.md](rendering.md) § Blocks and inlines; the CLI's words,
-[docs/cli.md](../../docs/cli.md) § `resolve` and § Renames.
+[docs/manual/cli.md](../../docs/manual/cli.md) § `resolve` and § Moving, copying and deleting.
 
 ## One model inside
 
@@ -148,7 +148,7 @@ or `./x`, `../x` for a top-level note), and the fix is a code action. A note com
 name elsewhere (a nearer namesake, a note named like an alias) is said, as a TUI message and the CLI's warning, not
 only when a link breaks or heals; it is checked only when another note or an alias has the new note's name, so a
 unique name costs nothing (`namesakeLinks`). The TUI's words: [tui.md](tui.md) § Following links; the CLI's:
-[docs/cli.md](../../docs/cli.md) § `resolve`.
+[docs/manual/cli.md](../../docs/manual/cli.md) § `resolve`.
 
 ## Links in front matter
 
@@ -198,7 +198,7 @@ setting where it can apply, else ours: it reads no wikilink and no path from a r
 a markdown link and `path = "root"` or `"name"` a relative one, a wikilink typed by hand staying one with its path
 relative; the extension is the user's. `slipbox info` and the Info view say each part and what said it. The
 convention decides only the links slipbox makes; a rename keeps each link's own form (§ Renames and moves). The keys:
-[docs/configuration.md](../../docs/configuration.md) § The links' convention.
+[docs/manual/configuration.md](../../docs/manual/configuration.md) § The links' convention.
 
 ## Links slipbox writes
 
@@ -215,7 +215,7 @@ different folders share it, and in the TUI a shared one is asked about before an
 
 The scratch's captures are `path:line` references in code spans, as agents read them: not links, so the convention
 leaves them be (D83). The keys: [tui.md](tui.md) § Following links ("Writing a link") and § What's under the cursor;
-the CLI: [docs/cli.md](../../docs/cli.md) § `resolve` (`slipbox link`).
+the CLI: [docs/manual/cli.md](../../docs/manual/cli.md) § `resolve` (`slipbox link`).
 
 ## Between folders
 
@@ -261,7 +261,7 @@ when its target is in a named folder (§ Repairs).
   branch and form as written, while the target stays in that folder (§ Renames and moves); an old name stays until
   the relink; a whole named folder moved rewrites no pointer, since the lookup finds it again.
 - **Agents** resolve a pointer as any link (`slipbox resolve slipbox://notes/inbox.md` gives the path), and every note
-  argument takes one ([docs/cli.md](../../docs/cli.md) § Naming notes).
+  argument takes one ([docs/manual/cli.md](../../docs/manual/cli.md) § Naming a note).
 
 A named folder made a plain folder of its parent (`slipbox deinit`, `shift+v` on its row in the explorer) takes its
 name with its `.slipbox/`, so the pointers by it are rewritten in that plan, previewed with the rest (D74, D75, D149):
@@ -315,7 +315,7 @@ folder changes, a code or data file's as a note's: previewed, undoable, a plan i
 No old name is written into a note (D79). A heading renamed rewrites the fragments naming it, each by its slug or
 its text as written. A whole named folder moved rewrites no pointer. Links from places not indexed yet show broken
 once indexed, and the repair applies (§ Repairs). Keys and the preview: [tui.md](tui.md) § Renames; the CLI:
-[docs/cli.md](../../docs/cli.md) § Renames.
+[docs/manual/cli.md](../../docs/manual/cli.md) § Moving, copying and deleting.
 
 ## Repairs
 
@@ -366,7 +366,8 @@ are evidence, kept for that checkout and that change (each branch's last commit 
 link broken by one that points at a renamed file shows as "moved to …" with the fix (§ Repairs). A branch is only
 compared with itself: a switch isn't evidence. Git pairs a move by similarity, so a file also rewritten in the same
 change may not be paired; then the target is the user's to pick. A `post-merge` hook running the fix is the user's to
-install, never slipbox's default (D66). The CLI's words: [docs/cli.md](../../docs/cli.md) § Before and after a merge.
+install, never slipbox's default (D66). The CLI's words: [docs/manual/cli.md](../../docs/manual/cli.md) §
+`merge-review`.
 
 ## The converter
 

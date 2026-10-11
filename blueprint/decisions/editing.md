@@ -148,7 +148,7 @@ truncate a note.
 **Decision:** A rename that fixes links is treated as a bulk mutation of files the user never opened: it shows a
 preview listing every file and every edit, asks for an explicit confirmation, and ideally can be undone in one step.
 When the vault is a git repository the confirmation says so, and it warns when the tree already has changes. Detail:
-design/tui.md § Renames; docs/cli.md § Renames.
+design/tui.md § Moving, copying and deleting; docs/manual/cli.md § Moving, copying and deleting.
 
 **Why:** it is the one feature that can damage a whole vault in one keystroke; the risk is larger than the
 "non-trivial" the PKM design gave it. The vault is usually a repository, so a bulk rewrite is recoverable, except when
@@ -230,7 +230,7 @@ unlinking it. The keys are nvim-tree's where they fit (`n`, `r`, `m`, `d`, `y`, 
 (`cp`, `rm`, `trash`, `mv` of a folder). Added to it since: a nested vault's folder (18.7), the move picker as a tree
 (18.8), the selected row's buttons as one `…` menu (18.9), questions in a floating window (18.10), a folder made a
 vault and back (18.11), and a leader key for every file action (18.13). Detail: design/tui.md § Files in the explorer;
-docs/cli.md § Renames.
+docs/manual/cli.md § Moving, copying and deleting.
 
 **Why:** a move or a rename in the explorer is the rename's bulk mutation, so it gets the rename's link fixing and
 preview; and notes are not regenerable (D142), so a delete can be taken back from the trash.
@@ -267,8 +267,8 @@ back.
 **Decision:** Each rename logs, in the vault's state, every file it wrote with the span of text that was different
 before, and the undo gives exactly that back, as a plan of its own: previewed, guarded, and followed by the index and
 the open notes the way a rename is. It's refused when a file has changed since the rename wrote it. The log is a
-stack, the newest undone first; there's no redo: a rename does it again. Detail: design/tui.md § Renames; docs/cli.md
-§ Renames.
+stack, the newest undone first; there's no redo: a rename does it again. Detail: design/tui.md § Moving, copying and
+deleting; docs/manual/cli.md § Renames.
 
 **Why:** renaming back would plan again from the vault as it is now, and a name only one way round (a link that became
 a path to stay unambiguous, a previous name added) wouldn't come back as it was written. Once a file has changed, the
@@ -308,7 +308,7 @@ measured from the merge base with the base branch, as a pull request's diff is, 
 count. The explorer's marks come from `git status` asked in the background, a moment after anything changed, never on
 the keystroke's path; what's on request (a diff, the changes, the worktrees) asks git there and then. A merge's
 conflicts are listed in Problems (5.12). Staging and committing stay git's: slipbox shows, it doesn't commit. Detail:
-design/tui.md § Git; docs/cli.md § Git.
+design/tui.md § Git; docs/manual/cli.md § Git.
 
 **Why:** worktrees are agents' tasks. Against the base's tip, what `main` did since would show up too, backwards. An
 agent's work isn't always committed.
@@ -365,7 +365,7 @@ trusted.
 English and Turkish come with slipbox; any other language is the user's own Hunspell dictionary (`[spell]
 dictionaries`, else the system's). Hunspell runs as WebAssembly (`hunspell-asm`). Spelling is off by default (`space u
 s`); a note's front matter `lang:` names its languages. Detail: design/tui.md § UI settings ("Spelling");
-docs/configuration.md § Spelling.
+docs/manual/configuration.md § Spelling dictionaries.
 
 **Why:** as WebAssembly, Hunspell opens Turkish in 270 ms and about 20 MB, where nspell, pure JavaScript, took 950 ms
 and 250 MB for the same answers. Its licence, MPL-1.1, was accepted for it (D194).

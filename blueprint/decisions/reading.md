@@ -170,7 +170,7 @@ that settle collisions:
 - plain `q` never quits (`ctrl+q` does), and `ctrl+c` only copies (in a list or prompt it cancels).
 
 The order as built is design/tui.md § Modes and dispatch; the conventions as they stand are
-docs/keymap.md § Conventions.
+docs/manual/keys.md § Conventions.
 
 **Why:** Terminals, multiplexers and browsers can swallow `ctrl+` chords (zellij takes `ctrl+t`, `ctrl+p`, `ctrl+o`
 and `ctrl+q`); nothing takes `space`.
@@ -262,7 +262,7 @@ editable text.
 `:q`), `?` aside, which is help. The `ctrl` keys VS Code and Obsidian share come next (`ctrl+f`, `ctrl+p`, `ctrl+s`,
 `ctrl+z` / `ctrl+y`, `ctrl+←/→` by word, `ctrl+shift+f`, `ctrl+tab`); `ctrl+w` and `ctrl+t` stay the prefixes for
 windows and tabs; everything else is under `space`. This replaces D99's "no `g` keys except `g g`". The keys are
-docs/keymap.md.
+docs/manual/keys.md.
 
 **Why:** `?` is the key most apps give help. The desktop editors' `ctrl` keys take the places where vim's use of them
 is marginal in a notes app (research/keymap-comparison.md, which sets the keys beside vim's, VS Code's and
@@ -440,7 +440,7 @@ feed, an outside engine will hear of the same changes, moves too, which a watche
 
 ## D119: `find` stays beside search (6.2, 6.3, 2026-10-01)
 
-**Decision:** `find` stays: every match of a literal or a regex, unranked (docs/cli.md § Search).
+**Decision:** `find` stays: every match of a literal or a regex, unranked (docs/manual/cli.md § `search`).
 
 **Why:** It answers "where exactly", not "which notes".
 
@@ -549,7 +549,7 @@ that draws images (D126). The way to pictures D104 planned, `mermaid-cli`, runs 
 
 **Decision:** D99's "no emacs keys" holds, but for what macOS terminals send for a Mac's own keys: `alt+b` /
 `alt+f` for option+← / option+→, by words; `ctrl+a` / `ctrl+e` for cmd+← / cmd+→, a line's start and end. The source
-switch they displaced from `ctrl+e` keeps `space n v`. The keys are docs/keymap.md.
+switch they displaced from `ctrl+e` keeps `space n v`. The keys are docs/manual/keys.md.
 
 **Why:** A Mac user's keys do what they do in any Mac app.
 

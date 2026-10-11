@@ -13,7 +13,9 @@ where git itself reaches a remote).
 
 A git repository is a root by itself: open any file in it and slipbox opens the repository from its top folder
 ([Links and roots](links-and-roots.md) explains roots). The status line shows the root and the branch checked out,
-as in `~/notes · main`; a worktree of a named folder shows as its name and branch, as in `notes@tidy`.
+as in `app · main` for a repository named `app` by its remote; a worktree of a named folder shows as its name and
+branch, as in `app@fix/retry`. The examples in this chapter use that repository, `~/code/app`, as
+[Code](code.md) does.
 
 The explorer marks each changed file at the end of its row:
 
@@ -94,8 +96,8 @@ own and keeps it while open, so the text doesn't move as changes come and go.
 
 ## Source control
 
-`space g s`, or `±` on the left rail, opens source control in the left panel: the checkout's changed files under
-their sections.
+`space g s` opens source control in the left panel, and lights `±` on the left rail: the checkout's changed files
+under their sections.
 
 - **Conflicts**: files a merge left unmerged.
 - **Staged**: what the next commit takes.
@@ -258,12 +260,12 @@ roots](links-and-roots.md) explains each); a link to another repository or anoth
 Only committed work is reviewed, since what isn't committed is in neither branch. The review needs git 2.38 or later,
 and refuses two branches with no commit in common, as git refuses to merge them.
 
-For example, if a branch `tidy` moves `ideas/coffee.md` into `ideas/old/`, while `main` added a link to it in
-`inbox.md`, the review of merging `tidy` into `main` says:
+For example, if a branch `fix/retry` moves `docs/plan.md` into `docs/design/`, while `main` added a link to it in
+`README.md`, the review of merging `fix/retry` into `main` says:
 
 ```text
-merging tidy into main: 1 link would break
-  inbox.md:12:3  ideas/coffee.md — tidy moves ideas/coffee.md to ideas/old/coffee.md — the fix: ideas/old/coffee.md
+merging fix/retry into main: 1 link would break
+  README.md:12:3  docs/plan.md — fix/retry moves docs/plan.md to docs/design/plan.md — the fix: docs/design/plan.md
 ```
 
 ## After a merge or a pull
@@ -291,19 +293,19 @@ The review of a branch and a merge has command-line equivalents, for agents and 
 ```bash
 slipbox changed                     # what this branch changed against the base, committed or not
 slipbox changed --base HEAD~3       # …since a commit, or against another branch
-slipbox diff inbox.md               # a note's diff against the base, with three lines of context
+slipbox diff README.md              # a note's diff against the base, with three lines of context
 slipbox worktrees                   # the checkouts: the main one first, then each worktree by branch
-slipbox merge-review tidy           # the links merging tidy into this branch would break
-slipbox merge-review tidy --into main
+slipbox merge-review fix/retry      # the links merging fix/retry into this branch would break
+slipbox merge-review fix/retry --into main
 slipbox problems                    # the root's link problems; during a merge, its conflicts too
 ```
 
 `slipbox changed` prints a line a file, as `space g c` lists them:
 
 ```text
-M inbox.md
-+ ideas/tea.md
-R ideas/old/coffee.md  (from ideas/coffee.md)
+M README.md
++ src/retry.ts
+R docs/design/plan.md  (from docs/plan.md)
 ```
 
 Outside a git repository, with no base branch, or with a branch or commit that isn't there, these exit with code 3.

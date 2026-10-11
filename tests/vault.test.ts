@@ -471,7 +471,7 @@ describe("what cli.md and the skill promise a caller (9.2)", () => {
     expect((await run(["capture", "x", "--json", "--config", cfg], dir)).json.data.scratch).toBe(join(dir, "scratch.md"));
   });
 
-  test("an unexpected error is exit 1 and one line; SLIPBOX_DEBUG adds its stack trace (configuration.md, Environment)", async () => {
+  test("an unexpected error is exit 1 and one line; SLIPBOX_DEBUG adds its stack trace (manual/configuration.md, Environment)", async () => {
     const dir = demo();
     const failing = async (env: Record<string, string>) => {
       let err = "";

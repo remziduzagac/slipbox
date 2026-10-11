@@ -68,8 +68,8 @@ This blueprint is public, so a contributor's agent needs nothing but this README
 - **Markdown** is wrapped at 120 columns, tables and code included. It is checked by markdownlint-cli2 with
   `~/.markdownlint-cli2.jsonc`, given as `--config`, since the tool reads a config from the current directory only and
   doesn't walk up. A clean lint is no proof an edit landed where it was meant to: read the result.
-- **User documentation** lives in `docs/` (the keymap, the configuration, the CLI) and the project's README, written
-  for users and never copied from here; the design may link to it.
+- **User documentation** lives in `docs/` (guides and a manual, mapped by `docs/README.md`) and the project's README,
+  written for users and never copied from here; the design may link to it, never the reverse.
 - **`<dotfiles>`** means `~/Projects/dotfiles` on the user's machine: the nvim render-markdown config, the herdr config
   and the workslate theme files are there.
 - **The toolchain** is mise's, on a login shell's `PATH`: a non-interactive shell finds no `bun`, which looks exactly

@@ -17,7 +17,7 @@ server's `command`, `args` and `environment`, a linter's `lint-command`, and any
 build in, are your own config's only, and so is `[trust]` (D160, D166, D177). Nor may a folder's `[keys]` or
 `[aliases]` name a command that throws work away or runs a program (`shell.run`, `shell.filter`), so a clone can't
 put one on `ctrl+s` or `:wq` (`USER_ONLY`, `VAULT_FORBIDDEN_COMMANDS` in `core/config.ts`;
-[configuration.md](../../docs/configuration.md), "What only you can set").
+[configuration.md](../../docs/manual/configuration.md), "What only your own file can set").
 
 ## Bun's own reading
 

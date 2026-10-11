@@ -141,7 +141,7 @@ How: design/tui.md § Editing, § Source mode, § The lens, § Writing notes, §
 - The agent surface grows with slipbox rather than arriving at the end: agents have used it since the first phases
   (D16).
 
-How: design/tui.md § Parity with the CLI; docs/cli.md.
+How: design/tui.md § Parity with the CLI; docs/manual/cli.md.
 
 ## Capture and the context bundle
 
@@ -153,7 +153,7 @@ How: design/tui.md § Parity with the CLI; docs/cli.md.
 - A context bundle gives an agent notes, what they link to and what links to them, as one markdown document, gathered
   deterministically from disk, with what was left out named (D32).
 
-How: docs/cli.md § Capture and the scratch, § The context bundle.
+How: docs/manual/cli.md § The scratch and the context bundle.
 
 ## Code intelligence
 
@@ -177,7 +177,7 @@ How: design/lsp.md; design/tui.md § The lint surface, § Problems where they ar
   branches. Stash and the remote's commands are deferred (D156, D158).
 - git runs nothing of a repository's own where its root isn't trusted (D175).
 
-How: design/tui.md § Git; docs/cli.md § Git.
+How: design/tui.md § Git; docs/manual/cli.md § Git.
 
 ## Export
 
@@ -198,7 +198,7 @@ How: design/export.md.
 - Configuration is TOML: the user's, then each root's `.slipbox/config.toml`, deeper over broader. slipbox runs
   correctly with no config at all (D12, D62).
 
-How: docs/keymap.md; docs/configuration.md; design/tui.md § Modes and dispatch.
+How: docs/manual/keys.md; docs/manual/configuration.md; design/tui.md § Modes and dispatch.
 
 ## Distribution
 
@@ -218,7 +218,7 @@ How: design/distribution.md.
   without its CLI equivalent declared, or declared and not implemented, fails at start-up and fails a test
   (design/tui.md § Parity with the CLI).
 - **A contract agents can rely on** (D15, D18). The stable commands' `--json` shapes change only with `schema`; checked
-  by `tests/cli.test.ts`, which runs every command as an agent meets it (docs/cli.md § Stability).
+  by `tests/cli.test.ts`, which runs every command as an agent meets it (docs/manual/cli.md § What stays stable).
 - **The CLI never needs a terminal** (D8). The core imports nothing from the TUI or OpenTUI, nor the CLI from the TUI.
   Checked by `bun run check:boundary`, in `bun run check` and in CI (design/how-it-works.md § The boundary is
   enforced, not hoped for).
@@ -226,7 +226,7 @@ How: design/distribution.md.
   autosave never overwrites another writer's change; every generated edit is a plan, shown first and refused when a
   file changed since; CRLF, a BOM, no final newline and invalid UTF-8 survive an edit. Checked by the fixture vault's
   awkward files (design/testing.md § The fixture vault), and by exit 5 for a stale plan or `--if-unchanged`
-  (docs/cli.md § Output contract).
+  (docs/manual/cli.md § What a command prints).
 - **Safe to open anything** (D166, D172–D177, D195). Nothing a folder brings runs unless you trust its root: not its
   programs, nor the code its servers would run, its git config and files, or the `bunfig.toml` and `.env` Bun would
   read. A folder's own config never names a program to run, nor trusts itself; trusting takes no file edited; an agent

@@ -111,7 +111,7 @@ on the command line's standard error, and the rest of the file still applies:
 
 - **A file that isn't valid TOML** is left out whole. While the TUI runs, a file saved half-typed keeps what it said
   before, its last good contents, until it parses again: your theme and keys stay as they were.
-- **An unknown setting** is named and ignored, and so is one slipbox no longer has (`[rename]`), saying why.
+- **An unknown setting** is named and ignored, and so is a retired one (`[rename]`), with the reason.
 - **A value of the wrong type** (text where `true` or `false` goes, a list with something other than text in it),
   **outside its set** (`ui.lines = "thick"`) or **outside its range** (`ui.sidebar_width = 7`) keeps the default.
   Numbers are whole, but for `ui.split_ratio` and `editor.lens_max`.
@@ -183,7 +183,7 @@ left_rail = true               # a column of buttons down the left edge: the exp
 right_rail = true              # a column of buttons down the right edge: the outline's ▤
 mouse = true                   # clicks, the wheel and dragging; space u m
 narrow_width = 90              # 0–1000: on a terminal narrower, the explorer and outline open over the text
-restore_session = true         # started without a path, the tabs and splits you left
+restore_session = true         # started on a folder rather than a note, the tabs and splits you left
 cursorline = true              # a band on the cursor's row; space u l
 line_numbers = true            # each row's line in the file, in a gutter; space u n
 relative_numbers = "lens"      # lens (in the lens, each row's distance from the cursor's) | off
@@ -414,33 +414,19 @@ a type only reads. What types are for, and how they are listed and ordered, is i
 
 ## The links' convention
 
-When slipbox writes a link for you, with completion, the link picker (`space l i`) or `slipbox link`, `[links]`
-decides how it looks: its style (a Markdown link or a wikilink), its path (relative to the note, from the root's top
-with `/`, or for a wikilink, the note's name alone) and whether it keeps `.md`. Renaming or moving a note keeps each
-link to it in the form it already has. The scratch's captures aren't links: they are `path:line` references.
+`[links]` sets how the links slipbox writes for you look: with completion, the link picker (`space l i`) or
+`slipbox link`. It has three settings, one for each part of a link:
 
-Each of the three parts is the first of these that says:
+| Setting | Values |
+| --- | --- |
+| `links.style` | `auto`, `markdown` (`[Coffee](ideas/coffee.md)`), `wiki` (`[[coffee]]`) |
+| `links.path` | `auto`, `relative` (to the note), `root` (from the root's top, `/…`), `name` (a wikilink's only) |
+| `links.extension` | `auto`, `keep`, `drop`: the `.md` |
 
-1. your setting: `[links]`, the root's `.slipbox/config.toml` over your own file;
-2. the settings of the app that owns the root:
-   - Obsidian's `.obsidian/app.json`: `useMarkdownLinks` (wikilinks unless it is `true`) and `newLinkFormat`
-     (`shortest`, the default, by the note's name; `relative`, from the note; `absolute`, from the vault's top). A
-     Markdown link keeps `.md` and a wikilink drops it. A Markdown link is always a path, so `shortest` says nothing
-     about one;
-   - zk's `.zk/config.toml`: `link-format` (`markdown`, the default, a path from the note; `wiki`, a path from the
-     notebook's top; a template of your own says nothing), and `link-drop-extension` (dropped unless it is `false`);
-3. the root's notes: a form that two-thirds or more of their links to the root's own notes have;
-4. else slipbox's own: a Markdown link, relative, keeping `.md`.
-
-The style is found first, and the path and extension then for that style: an app's as it writes that style, the
-notes' counted among their links of that style.
-
-A plain folder outside every root has no root to read a wikilink or a `/` path from. There your setting applies
-where it can, else slipbox's own: `style = "wiki"` writes a Markdown link, and `path = "root"` or `"name"` a relative
-one (a wikilink you type stays one, its path relative); `extension` is as you set it.
-
-`slipbox info` says each part and what decided it. In the TUI, the Info view (`space n i`) shows it under Links, and
-`y` there copies it whole. How slipbox reads links is in [Links and roots](links-and-roots.md).
+`auto`, the default for each, leaves the part to the folder: what the app that owns it says (Obsidian, zk), else what
+its notes already do, else a relative Markdown link with `.md`. A root's `.slipbox/config.toml` may set them, and wins
+over your own file there. [How a folder writes links](links-and-roots.md#how-a-folder-writes-links) says how each part
+is found, what applies in a plain folder, and how to see the convention a folder has.
 
 ## Colours
 
@@ -531,7 +517,7 @@ most editors read. How a file is indented (a tab a level or spaces, how many, ho
 3. else its language's habit: tabs for Go, Makefiles and TSV; four spaces for Python, Rust, Java, Kotlin, Swift, PHP,
    C, C++, C#, Scala and Dart; two for the rest.
 
-`tab` and `shift+tab` in insert mode, `>` and `<`, and a new line after an opening bracket use it, and a tab is drawn
+Editing indents by that step ([Indentation and comments](editing.md#indentation-and-comments)), and a tab is drawn
 that wide (else four columns). A save does what `.editorconfig` asks, and only then: `trim_trailing_whitespace =
 true` trims every line's trailing spaces and tabs, and `insert_final_newline = true` ends the file with a newline,
 each in the text first, as an undo step of its own. The Info view (`space n i`) says how a file is indented, and what
@@ -539,8 +525,8 @@ said so.
 
 ## Spelling dictionaries
 
-With `spell.enabled` on (or `space u s`), a note is checked in the languages its front matter names (`lang: tr`,
-`lang: [tr, en]`, `lang: en-GB`), else in `spell.languages`. Each language's dictionary is the first found of:
+Spelling checks a note in its languages ([Spelling](editing.md#spelling) says which, and how to turn it on). Each
+language's dictionary is the first found of:
 
 1. yours, in `spell.dictionaries`, by the language or its base (`de` for `de-AT`): the path to its `.dic`, with its
    `.aff` beside it;
@@ -554,7 +540,7 @@ With `spell.enabled` on (or `space u s`), a note is checked in the languages its
 Dictionaries are Hunspell's, as LibreOffice and most systems have them; one in an encoding other than UTF-8 (`SET
 ISO8859-9`) is read in its own. Your own words, added with `z g` or `slipbox spell --add`, are kept one a line in
 `~/.local/share/slipbox/spell/words.txt` and count as right in every language; a line starting with `#` is a
-comment. Checking spelling as you write is in [Editing](editing.md).
+comment.
 
 ## Reloading
 
