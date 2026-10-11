@@ -40,7 +40,15 @@ selected folder: both were into a folder already.
 
 ## MODIFIED design/tui.md § External changes (DF-D6)
 
-`space n r` on an unsaved note whose file hasn't changed asks to discard.
+Adds a bullet after **Changed:**
+
+- **Reloaded by hand** (`space n r`, `:reload`; DF-D6): a note without unsaved changes is read from disk again, as a
+  change is. One with unsaved changes whose file is as it was loaded asks `Discard your changes to <note>? It's loaded
+  from disk again: u brings them back.`: `y` loads the file as `:e!` does (one more undo step), `n` or `esc` keeps
+  your text, and autosave is left as it was (the conflict prompt's `esc` would turn it off for the note: (k) Keep
+  yours). A file that did change, or was deleted, goes as before: the conflict prompt.
+
+Previously: nothing on `space n r`; it opened the conflict prompt whenever the note had unsaved changes.
 
 ## MODIFIED design/distribution.md § Installing (DF-D7)
 
@@ -136,9 +144,45 @@ place again." Nothing emptied the trash: it only grew, a note deleted for being 
 
 (one line in the table.) Previously: "(`trash.json`, and an item per folder)".
 
-## MODIFIED design/tui.md § Editing (DF-D15)
+## MODIFIED design/tui.md § Editing, § The cursor, § Modes and dispatch (DF-D15)
 
-Desktop keys while typing.
+**§ Editing** adds a paragraph after the first ("…so tabs, wide characters and wrapped rows edit exactly where they
+show."):
+
+**Desktop keys while typing** (DF-D15). Insert mode keeps vim's keys and adds a desktop editor's, none of them keys
+vim's insert mode uses here (`editing.ts`, `insertKey`). `ctrl+z` and `ctrl+y` undo and redo without leaving it: what
+was typed so far closes as a step of its own, the undo or redo runs, and a new step opens at the cursor, so text typed
+after an undo ends the redo, as in a desktop editor; `.` then repeats what's typed from there, as an `i` would have
+started it. The page keys move the cursor a window's height less two rows, over rows of text only (the lens's rules
+stop them, as they stop the arrows), and in source mode scroll the view as far, as reading's page keys do;
+`ctrl+home` and `ctrl+end` go to the note's start and end, as `cmd+up` and `cmd+down`. `shift` with any of typing's
+moves (the arrows, `home` and `end`, the page keys, the word keys, the `cmd` arrows and `ctrl+a` / `ctrl+e`) selects:
+the window's selection, anchored where the cursor was, its ends between characters as the cursor is while typing, so
+the character after its end is neither drawn in it nor taken (`typedSelection`). With one, a character typed, `enter`
+or a paste (`ctrl+v`, or the terminal's own) replaces it; `backspace`, `delete`, `ctrl+w` and `ctrl+u` delete it;
+what it replaces or deletes isn't copied, so a paste over it puts what was copied before. `ctrl+c` copies it and
+`ctrl+x` cuts it, to the clipboard and the register; `ctrl+c` leaves insert only with nothing selected. `left` and
+`right` go to its start and end; any other key lets it go and does what it does; leaving insert drops it. These keys
+are fixed, as insert mode's others are (`ctrl+s` among them), not a keymap's.
+
+**§ The cursor**, its **Selection** paragraph, becomes:
+
+**Selection.** A selection is an anchor plus the cursor. It's extended by `shift`+movement or by visual mode (`v` by
+character, `shift+v` by whole row); `o` swaps the ends, and `esc` clears it. A mouse drag makes one too, copied on
+release. In source mode or the lens, one made by a drag or by `shift`+movement is a visual selection (as vim's mouse
+makes one; DF-D15), so `d`, `c`, `x`, `>`, `<` and `y` act on it, any movement extends it and `esc` leaves it; an
+operator's shifted motion (`d shift+right`) leaves none behind. While typing, `shift`+movement selects as a desktop
+editor does (§ Editing). Copied text is the rendered text, which is what you saw. A double-click on a link follows it
+once: the second click, landing in the note it opened, is swallowed.
+
+Previously: "…A mouse drag makes one too, copied on release; in source mode or the lens it is a visual selection (as
+vim's mouse makes one), so `d`, `c`, `x`, `>`, `<` and `y` act on it and `esc` leaves it. Copied text is…": a
+`shift` selection in source mode was a plain one, which `d`, `x` and `c` didn't act on.
+
+**§ Modes and dispatch**, the table's insert row: `| insert | typed text, and the few keys that edit, move or select
+| i, a, o in source or the lens |`.
+
+Previously: "typed text, and the few keys that edit or move".
 
 ## MODIFIED design/rendering.md § Blocks and inlines (DF-D17)
 

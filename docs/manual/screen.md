@@ -148,9 +148,9 @@ Each side of the screen has a panel that shows one view at a time, and a rail of
 | right | the footnotes: the note's footnotes | `¹` | `space n f` | [Finding things](finding.md) |
 
 A view's button is bright while it shows. Clicking it shows the panel on that view and gives it the keys; clicking it
-again hides the panel. Source control's `±` is the exception: it only lights, and `space g s` opens the view. A view's
-key opens it and gives it the keys; pressed while the view is open but the note has the keys, it gives them back to
-the view; pressed while the view has them, it closes it. `space shift+e` selects the current note in the explorer.
+again hides the panel. A view's key opens it and gives it the keys; pressed while the view is open but the note has
+the keys, it gives them back to the view; pressed while the view has them, it closes it. `space shift+e` selects the
+current note in the explorer.
 
 Inside every pane, `j` and `k` move, `enter` opens what is selected or jumps to it, `h` and `l` fold and unfold, `g g`
 and `shift+g` go to the top and bottom, and `/` filters: type to narrow the rows, `esc` to clear. `q` closes the pane

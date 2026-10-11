@@ -1079,7 +1079,8 @@ function drawPane(app: App, c: Canvas, view: View, rect: Rect, contentFocused: b
     }
     if (sel && row >= sel.range[0].row && row <= sel.range[1].row) {
       const from = sel.line || row !== sel.range[0].row ? 0 : sel.range[0].col;
-      const to = sel.line || row !== sel.range[1].row ? 1e9 : sel.range[1].col + 1;
+      // While typing the cursor sits between characters: the one after the selection's end isn't in it (DF-D15).
+      const to = sel.line || row !== sel.range[1].row ? 1e9 : sel.range[1].col + (view.insert ? 0 : 1);
       marks.push({ from, to, role: "selection" });
     }
     // Never on decoration (a code cell's header and borders, the lens's rules): they carry a line, not its text. (A

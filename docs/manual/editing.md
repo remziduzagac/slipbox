@@ -26,26 +26,26 @@ the lens.
 | To | Press |
 | --- | --- |
 | start typing at the cursor | `i` (or `a` to type after it, `o` to type on a new line below) |
-| move the cursor | the arrow keys, `home`, `end`, or a click |
+| move the cursor | the arrow keys, `home`, `end`, `pageup`, `pagedown`, or a click |
 | move by word | `ctrl+left` / `ctrl+right` (on a Mac, `alt+left` / `alt+right`: `alt` is option) |
-| delete | `backspace` or `delete`, while typing |
+| delete | `backspace` or `delete` |
 | start a new line | `enter`: a list goes on with its next item |
 | stop typing | `esc` |
 | save | `ctrl+s` |
-| undo / redo | `ctrl+z` / `ctrl+y`, after `esc` |
-| select | `shift` and an arrow key, or drag with the mouse |
+| undo / redo | `ctrl+z` / `ctrl+y` |
+| select | `shift` with a key that moves (`ctrl+shift+left` by word), or drag with the mouse |
+| replace the selection | type, or paste; `backspace` or `delete` deletes it |
 | copy / cut / paste | `ctrl+c` / `ctrl+x` / `ctrl+v` |
 | see the note rendered again | `ctrl+k` |
 
 A few things work differently from a desktop editor:
 
-- **Undo, redo and selecting wait until you stop typing.** While you type, `ctrl+z` and `shift` with an arrow do
-  nothing: press `esc` first.
-- **A click ends typing.** The cursor goes where you clicked; press `i` to type there.
-- **`backspace` and `delete` work while you type.** To delete a selection, cut it with `ctrl+x`. With nothing
-  selected, `ctrl+x` cuts the cursor's line.
-- **`ctrl+v`** pastes at the cursor while you type. When you are not typing, it pastes after the cursor (a copied
-  line goes under the cursor's line), or over the selection.
+- **A click ends typing.** The cursor goes where you clicked; press `i` to type there. A drag selects, and ends
+  typing too: `ctrl+x` cuts what it selected, `ctrl+v` pastes over it, and `c` types in its place.
+- **`ctrl+c` with nothing selected stops typing**, as `esc` does. With a selection, it copies it.
+- **`ctrl+x` with nothing selected** cuts the cursor's line, when you are not typing.
+- **`ctrl+v`** pastes at the cursor while you type, over the selection if there is one. When you are not typing, it
+  pastes after the cursor (a copied line goes under the cursor's line), or over the selection.
 - **Unsaved changes are saved for you** after 30 seconds without a key pressed ([Saving](#saving)).
 
 ## Source mode and the lens
@@ -119,14 +119,17 @@ While you type, the chip reads `INSERT` and most keys put text in. These don't:
 | `ctrl+w` | deletes the word before the cursor |
 | `ctrl+u` | deletes what you typed on this line, then the rest of the line before the cursor |
 | the arrow keys, `home`, `end` | move |
+| `pageup` / `pagedown` | a page up / down, the note scrolling with the cursor; in the lens, as far as its edge |
 | `ctrl+left` / `ctrl+right` | move by word (also `alt+left` / `alt+right`, and `alt+b` / `alt+f`) |
 | `cmd+left` / `cmd+right` | to the line's start / end (also `ctrl+a` / `ctrl+e`, what a Mac terminal sends) |
-| `cmd+up` / `cmd+down` | to the note's start / end, where the terminal passes `cmd` through |
+| `cmd+up` / `cmd+down` | to the note's start / end, where the terminal passes `cmd` (also `ctrl+home` / `ctrl+end`) |
+| `shift` with any of these moves | selects ([below](#selecting-while-you-type)) |
+| `ctrl+z` / `ctrl+y` | undoes / redoes, and you go on typing |
 | `ctrl+v` | pastes the clipboard |
 | `ctrl+/` | comments the line out, or back in |
 | `ctrl+n` / `ctrl+p` | completes the word ([Completion](#completion)) |
 | `ctrl+s` | saves |
-| `esc` or `ctrl+c` | stops typing; the cursor steps back onto the last character typed |
+| `esc`, or `ctrl+c` with nothing selected | stops typing; the cursor steps back onto the last character typed |
 
 Your terminal's own paste (`cmd+v`, `ctrl+shift+v`) types the text it pastes. In code, `enter` after an opening
 bracket, or after Python's or YAML's `:`, goes a level in.
@@ -138,11 +141,26 @@ off by default.
 **Moving lines.** Not typing, `alt+shift+up` / `alt+shift+down` move the cursor's line (or the lines selected with
 `shift+v`) up or down past the next one, as one undo step.
 
+### Selecting while you type
+
+`shift` with a key that moves selects, from where the cursor was, as in a desktop editor: `shift+left` and
+`shift+right` a character, `shift+up` and `shift+down` a row, `ctrl+shift+left` and `ctrl+shift+right` a word,
+`shift+home` and `shift+end` to the line's start and end, `shift+pageup` and `shift+pagedown` a page. Then:
+
+- typing, `enter` or a paste replaces the selection;
+- `backspace` or `delete` deletes it (so do `ctrl+w` and `ctrl+u`);
+- `ctrl+c` copies it, and `ctrl+x` cuts it;
+- `left` and `right` go to its start and end;
+- any other key lets it go, and does what it does. `esc` stops typing, and the selection goes with it.
+
+What a selection replaces or deletes isn't copied, so `ctrl+v` over it puts what you copied before.
+
 ## Undo, redo and the clipboard
 
-Not typing, `u` or `ctrl+z` undoes, and `ctrl+r`, `ctrl+y` or `shift+u` redoes. Everything you type between `i` and
-`esc` is one step. Undo back to the text as it was saved, and the note has no unsaved changes again. A reload from
-disk is a step too: when an agent rewrites a note you have open, `u` brings back what was there before.
+Not typing, `u` or `ctrl+z` undoes, and `ctrl+r`, `ctrl+y` or `shift+u` redoes; while you type, `ctrl+z` and `ctrl+y`
+do, and you go on typing. Everything you type between `i` and `esc` is one step, or up to an undo while you type.
+Undo back to the text as it was saved, and the note has no unsaved changes again. A reload from disk is a step too:
+when an agent rewrites a note you have open, `u` brings back what was there before.
 
 `g ;` and `g ,` go back and forth through the places you changed; `g i` starts typing again where you last stopped.
 
@@ -151,7 +169,10 @@ text, so they work on the Markdown.
 
 **Selecting.** `shift` with an arrow key (or `ctrl+shift` with one, by word or paragraph) extends a selection; so does
 dragging with the mouse. A double click selects a word, a triple click the row. `v` and `shift+v` start selecting by
-character or by whole rows ([The vim keys](#the-vim-keys)). `esc` clears the selection.
+character or by whole rows ([The vim keys](#the-vim-keys)). `esc` clears the selection. In source mode and the lens,
+a selection made with `shift` or a drag is visual mode's: `d` or `x` deletes it, `c` types in its place, and any move
+extends it. While you type, `shift` selects as a desktop editor does ([Selecting while you
+type](#selecting-while-you-type)).
 
 **Copying.** `ctrl+c` copies the selection; `y y` copies the selection, or the cursor's row when nothing is selected,
 and `y` alone copies it in visual mode. A drag with the mouse, and a double or triple click, copy what they select. In
@@ -196,6 +217,7 @@ nothing.
 - **Visual mode**: movement extends the selection; then `d` deletes it, `c` changes it, `y` copies it, `>` and `<`
   indent it, `g c` comments it, `o` jumps to its other end, and `i` or `a` with an object selects that object
   (`v i w`). `:` types `'<,'>` for a command on its lines, and `!` types `:'<,'>!` to filter them through a command.
+  A selection made with `shift` and a move, or with a drag, starts it too.
 
 [Keys](keys.md) lists every key, and they can be changed: source mode's are `[keys.source]` in your configuration,
 visual mode's `[keys.visual]` ([Configuration](configuration.md)).
@@ -267,6 +289,10 @@ The conflict prompt offers four answers, each by its key:
 
 `space n c` opens the prompt again. `:w` on a note whose file changed since you opened it opens the prompt instead of
 writing; `:w!` writes yours over it. `:e!` throws your changes away and loads the file (`u` brings them back).
+
+`space n r` (or `:reload`) reads the note from disk again. On a note with unsaved changes whose file hasn't changed,
+it asks first: `y` throws your changes away and loads the file (`u` brings them back), `n` or `esc` keeps them, and
+autosave goes on as before. When the file has changed too, it opens the conflict prompt.
 
 **Working beside agents.** An agent using slipbox's command line reads the files on disk, never your unsaved text. So
 that it knows, a running slipbox keeps a list of the notes you have unsaved, and every command warns about them:

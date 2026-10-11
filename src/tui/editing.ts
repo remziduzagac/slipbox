@@ -165,10 +165,12 @@ function insertStop(view: View, lineStart: number, at: number): number {
   return lineStart;
 }
 
-/** Leave insert mode: the session is one undo step; the cursor steps back onto a character. */
+/** Leave insert mode: the session is one undo step; the cursor steps back onto a character, and a selection made
+ *  while typing goes. */
 export function stopInsert(app: App, view: View): void {
   if (!view.insert) return;
   view.insert = false;
+  if (!view.visual) view.sel = null;
   // Completion's popup and the signature are typing's (19.16); so is a snippet's stops (25.8).
   app.completion = null;
   app.signature = null;
@@ -364,15 +366,102 @@ export function outdentLength(line: string, size: number): number {
 /** The brackets a line ending in one opens: a new line inside goes a level in (25.1). */
 const OPENS: Record<string, string> = { "{": "}", "[": "]", "(": ")" };
 
-/** Keys in insert mode: text goes in; the arrows and friends move; esc leaves. */
+/**
+ * Keys in insert mode: text goes in; the arrows and friends move; esc leaves. As in a desktop editor (DF-D15), a move
+ * with `shift` selects, and what's typed next replaces the selection (`selectionKey`).
+ */
 export function insertKey(app: App, view: View, key: string): void {
-  insertKeyNow(app, view, key);
+  const move = selectingMove(key);
+  if (move) selectTo(app, view, move);
+  else if (!view.sel || !selectionKey(app, view, key)) insertKeyNow(app, view, key);
   // Moving the cursor starts the insert again there, as vim's does: ctrl+u and ctrl+w stop at it.
-  if (view.insert && (MOVING.has(key) || WORD_KEYS[key])) view.insertFrom = offsetOf(app, view);
+  const moved = move ?? key;
+  if (view.insert && (MOVING.has(moved) || WORD_KEYS[moved])) view.insertFrom = offsetOf(app, view);
 }
 
-/** Typing's moves: the arrows, home and end — and macOS's cmd+arrows, cmd+← / cmd+→ arriving as ctrl+a / ctrl+e. */
-const MOVING = new Set(["left", "right", "up", "down", "home", "end", "cmd+left", "cmd+right", "ctrl+a", "ctrl+e", "cmd+up", "cmd+down"]);
+/** Typing's moves: the arrows, home and end, the page keys — and macOS's cmd+arrows, cmd+← / cmd+→ arriving as ctrl+a
+ *  / ctrl+e — and ctrl+home / ctrl+end to the note's start and end, as cmd+↑ / cmd+↓. */
+const MOVING = new Set(["left", "right", "up", "down", "home", "end", "pageup", "pagedown", "cmd+left", "cmd+right", "ctrl+a", "ctrl+e", "cmd+up", "cmd+down", "ctrl+home", "ctrl+end"]);
+
+/** A key that selects while typing: one of typing's moves with `shift` added (`shift+left`, `ctrl+shift+right`,
+ *  `shift+end`, `shift+pagedown`), as the move without it; null for any other key. */
+function selectingMove(key: string): string | null {
+  if (!/(^|\+)shift\+/.test(key)) return null;
+  const move = key.replace(/(^|\+)shift\+/, "$1");
+  return MOVING.has(move) || WORD_KEYS[move] ? move : null;
+}
+
+/** A shifted move while typing: the selection from where it started (the cursor, the first time) to where it goes. */
+function selectTo(app: App, view: View, move: string): void {
+  if (!view.sel) app.select(view, { ...view.cur }, false);
+  insertKeyNow(app, view, move);
+  // Back where it started, nothing is selected.
+  if (view.sel && view.sel.anchor.row === view.cur.row && view.sel.anchor.col === view.cur.col) view.sel = null;
+}
+
+/**
+ * The text a selection made while typing covers: from one end to the other, the cursor sitting between characters as
+ * it does while typing (so the character after it isn't taken, as a visual selection's last one is). Null without one.
+ */
+export function typedSelection(app: App, view: View): [number, number] | null {
+  if (!view.insert || !view.sel) return null;
+  const at = offsetOf(app, view);
+  const anchor = offsetAtPos(app, view, view.sel.anchor);
+  return [Math.min(at, anchor), Math.max(at, anchor)];
+}
+
+/** The selection made while typing taken out of the text (not copied: a paste over it puts what was copied before),
+ *  the cursor where it was. False when there's none. */
+export function deleteTypedSelection(app: App, view: View): boolean {
+  const r = typedSelection(app, view);
+  view.sel = null;
+  if (!r) return false;
+  if (r[1] > r[0]) view.buf.edit(r[0], r[1] - r[0], "");
+  placeAt(app, view, r[0], true);
+  return true;
+}
+
+/**
+ * A key while typing with a selection (DF-D15), as a desktop editor has it: a character typed, `enter` or a paste
+ * replaces it; `backspace`, `delete` and the other deleting keys delete it; `ctrl+c` copies it and `ctrl+x` cuts it;
+ * `left` and `right` go to its start and end. Any other key lets it go, then does what it does. True when the key is
+ * spent here.
+ */
+function selectionKey(app: App, view: View, key: string): boolean {
+  switch (key) {
+    case "backspace":
+    case "ctrl+h":
+    case "delete":
+    case "ctrl+w":
+    case "ctrl+backspace":
+    case "alt+backspace":
+    case "ctrl+u":
+      deleteTypedSelection(app, view);
+      return true;
+    case "ctrl+c":
+    case "ctrl+x": {
+      const r = typedSelection(app, view);
+      if (r && r[1] > r[0]) {
+        const text = view.buf.source.slice(r[0], r[1]);
+        app.copy(text);
+        // What a paste puts where the clipboard can't be read back, as a yank's is.
+        app.vim.register = { text, linewise: false };
+      }
+      if (key === "ctrl+x") deleteTypedSelection(app, view);
+      return true;
+    }
+    case "left":
+    case "right": {
+      const r = typedSelection(app, view);
+      view.sel = null;
+      if (r) placeAt(app, view, key === "left" ? r[0] : r[1], true);
+      return true;
+    }
+  }
+  if (keyChar(key) !== null || key === "enter" || key === "ctrl+v") deleteTypedSelection(app, view);
+  else view.sel = null;
+  return false;
+}
 
 /** Typing, by words: ctrl+← / ctrl+→, alt+← / alt+→ (macOS's option+arrows), alt+b / alt+f (what its terminals send). */
 const WORD_KEYS: Record<string, -1 | 1> = { "ctrl+left": -1, "alt+left": -1, "alt+b": -1, "ctrl+right": 1, "alt+right": 1, "alt+f": 1 };
@@ -382,6 +471,45 @@ const WORD_KEYS: Record<string, -1 | 1> = { "ctrl+left": -1, "alt+left": -1, "al
 function wordFrom(text: string, at: number, dir: -1 | 1): number {
   if (dir < 0) return at - /(?:[\p{L}\p{N}_]+|[^\s\p{L}\p{N}_]+)?\s*$/u.exec(text.slice(0, at))![0].length;
   return at + /^\s*(?:[\p{L}\p{N}_]+|[^\s\p{L}\p{N}_]+)?/u.exec(text.slice(at))![0].length;
+}
+
+/**
+ * Up to `n` rows up or down while typing (wrapped rows count), at the goal column, past a row's end allowed — only onto
+ * rows of text: the lens's rules and the render beyond them stop it (normal mode moves on). The rows it went.
+ */
+function rowsWhileTyping(app: App, view: View, n: number): number {
+  const layout = app.currentLayout(view);
+  const step = n < 0 ? -1 : 1;
+  let row = view.cur.row;
+  for (let k = 0; k < Math.abs(n) && layout.lines[row + step]?.srcMap; k++) row += step;
+  if (row === view.cur.row) return 0;
+  const cs = cells(layout.lines[row]);
+  const last = cs[cs.length - 1];
+  const endCol = last ? last.x + last.w : 0;
+  const col = Math.min(view.goal, endCol);
+  const goal = view.goal;
+  const went = row - view.cur.row;
+  view.cur = { row, col: cs.find((c) => c.x + c.w > col)?.x ?? endCol };
+  app.setCursorAnchor(view, layout);
+  view.goal = goal;
+  return went;
+}
+
+/**
+ * A page up or down while typing (DF-D15), as reading's page keys: the cursor a window's height less two rows on, and
+ * in source mode the view with it, so the cursor keeps its place on the screen. In the lens it stops at the lens's
+ * rules, as the arrows do.
+ */
+function pageWhileTyping(app: App, view: View, dir: -1 | 1): void {
+  const top = view.top;
+  const went = rowsWhileTyping(app, view, dir * Math.max(1, view.height - 2));
+  if (!went || view.live) return;
+  // The view scrolled by as many rows as the cursor went, from where it was (the cursor's move may have scrolled it).
+  const cur = view.cur;
+  view.top = top;
+  app.scrollBy(view, went, false);
+  view.cur = cur;
+  app.setCursorAnchor(view, app.currentLayout(view));
 }
 
 function insertKeyNow(app: App, view: View, key: string): void {
@@ -435,8 +563,13 @@ function insertKeyNow(app: App, view: View, key: string): void {
       return placeAt(app, view, view.buf.lineStarts()[lineOf(view, at) - 1] ?? 0, true);
     }
     case "cmd+up":
+    case "ctrl+home":
       return placeAt(app, view, 0, true);
-    case "cmd+down": {
+    case "pageup":
+    case "pagedown":
+      return pageWhileTyping(app, view, key === "pageup" ? -1 : 1);
+    case "cmd+down":
+    case "ctrl+end": {
       // The last line's end (a final newline ends it; it starts none).
       const src = view.buf.source;
       return placeAt(app, view, src.endsWith("\n") ? src.length - 1 : src.length, true);
@@ -455,22 +588,8 @@ function insertKeyNow(app: App, view: View, key: string): void {
       return placeAt(app, view, (view.buf.lineStarts()[src - 1] ?? 0) + lineText(view, src).length, true);
     }
     case "up":
-    case "down": {
-      // A row up or down (wrapped rows count), at the goal column, past the end allowed.
-      const layout = app.currentLayout(view);
-      const row = Math.max(0, Math.min(layout.lines.length - 1, view.cur.row + (key === "up" ? -1 : 1)));
-      // Only onto rows of text: the lens's rules and the render beyond them stop it (normal mode moves on).
-      if (!layout.lines[row]?.srcMap) return;
-      const cs = cells(layout.lines[row]);
-      const last = cs[cs.length - 1];
-      const endCol = last ? last.x + last.w : 0;
-      const col = Math.min(view.goal, endCol);
-      const goal = view.goal;
-      view.cur = { row, col: cs.find((c) => c.x + c.w > col)?.x ?? endCol };
-      app.setCursorAnchor(view, layout);
-      view.goal = goal;
-      return;
-    }
+    case "down":
+      return void rowsWhileTyping(app, view, key === "up" ? -1 : 1);
   }
   if (typed !== null && app.config.editor.auto_pairs && typed.length === 1) {
     // A pair closed as it's typed (25.3): its other half after the cursor, or one already there stepped over.

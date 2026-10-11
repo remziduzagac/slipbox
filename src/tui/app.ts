@@ -28,7 +28,7 @@ import { compilePattern, findAll } from "../core/replace.ts";
 import { planReplace } from "../core/replace-files.ts";
 import { writeDirty } from "../core/stale.ts";
 import { editorArgv } from "../core/editor.ts";
-import { cannotEdit, insertKey, insertText, lineOf, offsetOf, placeAt, startInsert, stopInsert } from "./editing.ts";
+import { cannotEdit, deleteTypedSelection, insertKey, insertText, lineOf, offsetOf, placeAt, startInsert, stopInsert, typedSelection } from "./editing.ts";
 import { matchBracket } from "../core/brackets.ts";
 import { insertRecord, newVimState, PASTE, put, vimKey, visualKey } from "./vim.ts";
 import * as R from "./replacing.ts";
@@ -2589,7 +2589,8 @@ export class App {
       view.top = this.clampTop(view, layout, this.rowFromAnchor(layout, view.topAnchor, view.topSub ?? 0));
       this.ensureCursorVisible(view, layout);
       if (view.find) view.find = computeFind(layout, view.find.query, view.find.current, view.find.whole, view.find.regex);
-      if (view.sel) view.sel.anchor = view.sel.src ? this.cursorFromAnchor(layout, view.sel.src) : clampPos(layout, view.sel.anchor);
+      // (While typing, its end may be past a row's last character, as the cursor may.)
+      if (view.sel) view.sel.anchor = view.sel.src ? this.cursorFromAnchor(layout, view.sel.src, view.insert) : clampPos(layout, view.sel.anchor);
     }
     if (view.live && view.liveBase) this.pinLens(view, layout);
     return layout;
@@ -3462,6 +3463,9 @@ export class App {
 
   selectionText(view: View): string {
     if (!view.sel) return "";
+    // Made while typing: the text between its ends, the character after the cursor not taken (DF-D15).
+    const typed = typedSelection(this, view);
+    if (typed) return view.buf.source.slice(typed[0], typed[1]);
     if (this.isCodeDocument(view.buf) && !view.source && !view.live) return this.codeSelectionText(view);
     return selectedText(this.currentLayout(view), view.sel, view.cur);
   }
@@ -6966,7 +6970,8 @@ export class App {
     const o = this.overlay;
     const iv = this.view;
     if (!o && this.region === "content" && iv?.insert) {
-      // Into the text, its line breaks the note's own; part of the change for `.`.
+      // Into the text, its line breaks the note's own (over a selection made while typing); part of the change for `.`.
+      deleteTypedSelection(this, iv);
       insertText(this, iv, text.replace(/\r\n?/g, "\n").replaceAll("\n", iv.buf.eol));
       return insertRecord(this, iv, `${PASTE}${text}`);
     }
@@ -7214,6 +7219,8 @@ export class App {
     const iv = this.view;
     if (this.region === "content" && iv?.insert && !this.pending.length) {
       if (key === "ctrl+s") return void this.run("note.save");
+      // Undo and redo as a desktop editor has them (DF-D15): typing goes on after them.
+      if (key === "ctrl+z" || key === "ctrl+y") return void this.run(key === "ctrl+z" ? "edit.undo" : "edit.redo");
       // The completion popup's keys first (19.16): moving in it, accepting, closing.
       if (completionKey(this, iv, key)) {
         // ctrl+e closing it is part of the change: `.` closes the popup its replay opens again.
@@ -7221,7 +7228,10 @@ export class App {
         return;
       }
       // None showing: a word from the open files' words (25.5). Not a key of the change: the word accepted is.
-      if (key === "ctrl+n" || key === "ctrl+p") return completeWords(this, iv, key === "ctrl+p");
+      if (key === "ctrl+n" || key === "ctrl+p") {
+        iv.sel = null;
+        return completeWords(this, iv, key === "ctrl+p");
+      }
       // A snippet's stops (25.8): tab and shift+tab between them; the first key at one replacing its placeholder.
       if (snippetKey(this, iv, key)) return;
       insertKey(this, iv, key);
@@ -7935,8 +7945,8 @@ export class App {
         this.region = "problems";
         break;
       case "btn":
-        if (arg === "explorer") this.openLeftView("explorer");
-        else if (arg === "history") this.openLeftView("history");
+        // The left rail's: the explorer, the history, source control.
+        if (LEFT_VIEWS.some((v) => v.id === arg)) this.openLeftView(arg as LeftView);
         else if (arg === "outline") void this.run("outline.toggle");
         else if (arg === "footnotes") void this.run("footnotes.toggle");
         else if (arg === "info") void this.run("info.toggle");

@@ -101,10 +101,12 @@ Press `esc` to stop typing: the status line says `SOURCE`, and a dot (`•`) by 
 unsaved changes. Press `ctrl+s` to save: the message is `saved inbox.md`, and the dot goes. Press `ctrl+k` to see the
 note rendered again.
 
-`i` and `a` start typing before and after the cursor, and in source mode the vim keys you may know work (`dd`, `cw`,
-`u` to undo, `.`); `ctrl+k` switches a note to source mode and back. If you forget `ctrl+s`, slipbox saves a changed
-note by itself after half a minute without a key. The [editing chapter](../manual/editing.md) has the rest, the lens
-among it: Markdown shown only around the cursor, the rest of the note left rendered (`space n l`).
+`i` and `a` start typing before and after the cursor. While you type, the keys of any editor work: `shift` with an
+arrow selects, typing replaces the selection, and `ctrl+z` and `ctrl+y` undo and redo. Not typing, in source mode, the
+vim keys you may know work (`dd`, `cw`, `u` to undo, `.`); `ctrl+k` switches a note to source mode and back. If you
+forget `ctrl+s`, slipbox saves a changed note by itself after half a minute without a key. The [editing
+chapter](../manual/editing.md) has the rest, the lens among it: Markdown shown only around the cursor, the rest of the
+note left rendered (`space n l`).
 
 ## Tick a task
 

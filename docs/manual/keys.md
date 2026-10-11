@@ -102,6 +102,10 @@ keeping [`ui.scrolloff`](configuration.md) rows (3) between it and the window's 
 | in visual mode: leave, copying nothing (the same `v` or `shift+v` too) | `esc` |
 | clear the selection; else close the floating editor or the lens, clear find, or go back to the note | `esc` |
 
+In source mode and the lens, a selection made with `shift` or a drag is visual mode's: its keys
+([Visual mode in source](#visual-mode-in-source)) act on it, and any move extends it. While you type, `shift` with a
+move selects as in a desktop editor ([Typing](#typing)).
+
 ### Copy, cut and paste
 
 | What | Keys |
@@ -499,7 +503,7 @@ While you type (the status chip reads `INSERT`), keys are text, except:
 
 | Keys | What |
 | --- | --- |
-| `esc`, `ctrl+c`, `ctrl+[` | stop typing |
+| `esc`, `ctrl+c`, `ctrl+[` | stop typing (`ctrl+c` with a selection copies it) |
 | `enter` | a new line, indented as this one; a list goes on (an empty item ends it) |
 | `backspace`, `ctrl+h` / `delete` | delete the character before / after the cursor |
 | `ctrl+w`, `ctrl+backspace`, `alt+backspace` | delete the word before the cursor |
@@ -507,10 +511,16 @@ While you type (the status chip reads `INSERT`), keys are text, except:
 | `tab` / `shift+tab` | indent / outdent the line a level |
 | `ctrl+/` | comment or uncomment the line |
 | `ctrl+v` | paste the clipboard |
+| `ctrl+z` / `ctrl+y` | undo / redo, and go on typing |
 | `left`, `right`, `up`, `down` | move |
+| `pageup` / `pagedown` | a page up / down, the view with it (in the lens, as far as its edge) |
 | `home` / `end`, `cmd+left` / `cmd+right`, `ctrl+a` / `ctrl+e` | the line's start / end |
-| `cmd+up` / `cmd+down` | the note's start / end |
+| `cmd+up` / `cmd+down`, `ctrl+home` / `ctrl+end` | the note's start / end |
 | `ctrl+left` / `ctrl+right`, `alt+left` / `alt+right`, `alt+b` / `alt+f` | a word back / forward |
+| `shift` with any of the moves above: `shift+left`, `ctrl+shift+right`, `shift+end`… | select |
+| with a selection: typing, `enter`, a paste | replace it |
+| with a selection: `backspace`, `delete` (and `ctrl+w`, `ctrl+u`) / `ctrl+x` | delete it / cut it |
+| with a selection: `left` / `right` | go to its start / end |
 | `ctrl+n` / `ctrl+p` | complete the word from words in the open files |
 | `ctrl+s` | save |
 
@@ -657,7 +667,7 @@ Deleting, moving, copying, cutting and exporting act on the explorer's selected 
 | `space n i` | Info, in the right panel: opens it, focuses it, closes it |
 | `space n shift+p` | edit the note's properties (its front matter) in a floating editor |
 | `space n q` | this file's problems, in the Problems panel |
-| `space n r` | read the note from disk again |
+| `space n r` | read the note from disk again (with unsaved changes, it asks first) |
 | `space n e` | edit the note in your editor, at the cursor's line, in this terminal |
 | `space n s` | send the note to your editor running elsewhere (a running nvim, by default) |
 | `space n p` | choose the running nvim `space n s` sends to |
@@ -840,7 +850,7 @@ gives it back to the terminal.
 | --- | --- |
 | `≡` on the left rail (without the rail, on the top bar) | shows the explorer, focused, or hides it |
 | `◷` on the left rail | shows the history, focused, or hides it |
-| `±` on the left rail | lit while source control shows (`space g s`); a click on it does nothing |
+| `±` on the left rail | shows source control, focused, or hides it |
 | `ℹ` on the right rail | shows Info, focused, or hides it |
 | `▤` on the right rail (without it, on the breadcrumb or the top bar) | shows the outline, focused, or hides it |
 | `¹` on the right rail | shows the footnotes, focused, or hides them |
@@ -870,6 +880,7 @@ gives it back to the terminal.
 | a note | a click moves the cursor, or follows the link under it; a drag selects and copies on release |
 | a note, double / triple click | selects and copies the word / the row |
 | a note, the wheel | scrolls; a sideways wheel scrolls sideways when wrapping is off |
+| the tab strip, the wheel | switches to the next or the previous tab |
 | the explorer | a click selects a note, a double-click opens it as a tab; a click on a folder folds or unfolds it |
 | the history, source control | a click selects, a double-click goes there |
 | the outline | a click goes to the heading; on `▾` / `▸`, folds or unfolds |

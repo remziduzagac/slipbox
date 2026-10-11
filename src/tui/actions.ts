@@ -124,19 +124,56 @@ function workspaceSymbols(a: App, overlay: App["overlay"]): { list: (query: stri
 function motion(target: (a: App, v: View) => C.Pos, opts: { keepGoal?: boolean } = {}): Run {
   return (a, arg) =>
     withView(a, (v) => {
-      a.moveCursor(v, target(a, v), { extend: arg === "extend", keepGoal: opts.keepGoal });
+      extendOrMove(a, v, target(a, v), arg === "extend", opts.keepGoal);
     });
 }
 
-/** u / ctrl+r: the cursor goes back to where the change was. */
+/**
+ * The cursor moved, the selection extended when asked (`shift` with a move). Where the text is editable, a selection
+ * so made is a visual one, as a drag's is (DF-D15): `d`, `x` and `c` act on it, and `esc` leaves it.
+ */
+function extendOrMove(a: App, v: View, to: C.Pos, extend: boolean, keepGoal?: boolean): void {
+  a.moveCursor(v, to, { extend, keepGoal });
+  if (extend && v.sel && !v.visual && !v.insert && editable(v)) v.visual = "char";
+}
+
+/** u / ctrl+r: the cursor goes back to where the change was. While typing (ctrl+z, ctrl+y), typing goes on. */
 function undoRedo(a: App, v: View, which: "undo" | "redo"): void {
-  if (v.insert) E.stopInsert(a, v);
+  const typing = !!v.insert;
+  if (typing) {
+    // As a desktop editor's (DF-D15): what was typed so far becomes a step of its own, and the next keys a new one.
+    v.sel = null;
+    a.completion = null;
+    a.signature = null;
+    endSnippet(a);
+    v.buf.endStep(E.offsetOf(a, v));
+  }
+  const wasUndoing = a.vim.undoing;
   a.vim.undoing = true; // not a change for `.` to repeat
   const at = which === "undo" ? v.buf.undo() : v.buf.redo();
+  if (at !== null) for (const w of a.allViews()) if (w.buf === v.buf) w.layoutKey = "";
+  if (typing) {
+    if (at !== null) E.placeAt(a, v, at, true);
+    const here = E.offsetOf(a, v);
+    v.buf.beginStep(here);
+    v.insertFrom = here;
+    // `.` repeats what's typed from here on, as if typing had started here; with nothing undone, what it had stands.
+    if (at === null) a.vim.undoing = wasUndoing;
+    else if (!a.vim.replaying) Object.assign(a.vim, { seq: ["i"], seqVersion: v.buf.version, undoing: false, inInsert: true });
+  }
   if (at === null) return a.message("info", which === "undo" ? "nothing to undo" : "nothing to redo");
-  for (const w of a.allViews()) if (w.buf === v.buf) w.layoutKey = "";
-  if (editable(v)) E.placeAt(a, v, at);
+  if (!typing && editable(v)) E.placeAt(a, v, at);
   a.message("info", v.buf.dirty ? which === "undo" ? "undone" : "redone" : `${which === "undo" ? "undone" : "redone"} — as saved`);
+}
+
+/** `:e!`, and `space n r`'s discard once asked: the file loaded again over unsaved changes, one `u` away. */
+function revert(a: App, buf: View["buf"]): void {
+  for (const w of a.allViews()) if (w.buf === buf) w.insert = false;
+  // Out of insert so, a snippet being typed in it is over too (25.8).
+  if (a.snippet?.view.buf === buf) endSnippet(a);
+  if (!buf.load()) return a.message("warn", `${buf.key} is gone from disk`);
+  for (const w of a.allViews()) if (w.buf === buf) w.layoutKey = "";
+  a.message("info", `${a.displayName(buf)} reloaded from disk — u brings your changes back`);
 }
 
 const noRange: V.Range = { from: 0, to: 0, linewise: false };
@@ -469,7 +506,7 @@ function lensStep(a: App, step: 1 | -1): void {
 
 function fileLink(a: App, rel: string, heading: string | null = null, into: Into = "here"): void {
   // A data or text file opens (16.4) — at a data file's section when the link names one
-  // (`[[config.toml#editor]]`); a binary one's path is copied (images render later).
+  // (`[[config.toml#editor]]`); a binary one (a picture, a PDF) never opens: its path is copied.
   if (classify(rel, a.config.walk.extensions).group !== "binary") {
     const line = heading ? lineAnchor(heading) : undefined;
     openInto(a, into, rel, line);
@@ -477,7 +514,7 @@ function fileLink(a: App, rel: string, heading: string | null = null, into: Into
     return;
   }
   a.copy(join(a.loc.root, rel), false);
-  a.message("info", `attachment ${rel} — path copied (images render in a later phase)`);
+  a.message("info", `attachment ${rel} — path copied`);
 }
 
 /** A line fragment (GitHub's `L42`, `L42-L50`, `L42C5-L45C10`; a code comment's `path:42`, 16.10): its first line. */
@@ -821,21 +858,34 @@ function openHelp(a: App): void {
   if (at >= 0 && a.overlay?.kind === "list") a.overlay.scroll = at;
 }
 
-/** The mouse, for help: [what, how, detail]. */
+/** The mouse, for help: [what, how, detail] — as the keys chapter's § Mouse has it (docs/manual/keys.md). */
 const MOUSE_HELP: [string, string[], string][] = [
+  // In the notes.
   ["Move the cursor", ["click"], "Moves the cursor to where you click in a note; on a link, follows it"],
-  ["Select and copy", ["drag"], "Selects the text you drag over and copies it on release"],
+  ["Select and copy", ["drag"], "Selects the text you drag over and copies it on release; in source mode or the lens, a selection d, c and x act on"],
   ["Select a word / a row", ["double-click", "triple-click"], "Selects the word or the whole row, and copies it"],
-  ["Scroll", ["wheel"], "Scrolls the note, a pane or a list, or switches tabs"],
-  ["Show a panel's view", ["click"], "On a rail: ≡ the explorer, ◷ the history, ▤ the outline; again hides it"],
-  ["Open a note as a tab", ["click"], "In the explorer: opens the note as a tab; on a folder, folds or unfolds it"],
-  ["Jump to a place", ["click"], "In the history: moves the window back or forward to that place"],
-  ["Jump to a heading", ["click"], "In the outline or a breadcrumb: moves the note there; on ▾ / ▸, folds"],
-  ["Switch, reorder, close tabs", ["click", "drag", "middle-click"], "On the tab strip: switches, drags to reorder, closes (so does ×)"],
-  ["Resize panes and splits", ["drag"], "Drags a border to resize what's beside it"],
-  ["Scroll to a place", ["click", "drag"], "On a scrollbar (either direction): jumps there, or drags the thumb"],
-  ["Open the heading path", ["click"], "On the breadcrumb's …: the whole path as a dropdown"],
-  ["Copy the note's path", ["click"], "On the path in the status line: copies the absolute path"],
+  ["Tick a task", ["click"], "On its box (☐ / ☑): ticks or unticks it"],
+  ["Scroll", ["wheel"], "Scrolls the note (sideways too, when wrapping is off), a panel (its selection stays) or a list (its selection moves only to stay in view); over the tab strip, switches tabs"],
+  // Around them.
+  ["Show a panel's view", ["click"], "On a rail: ≡ the explorer, ◷ the history, ± source control, ℹ Info, ▤ the outline, ¹ the footnotes, focused; again hides it"],
+  ["Open the command palette", ["click"], "On the top bar's slipbox"],
+  ["Jump to a heading", ["click"], "On a heading in a window's breadcrumb: scrolls that window to it and focuses it; the breadcrumb's icon finds a heading, its … lists the ones the cursor is under"],
+  ["Switch, reorder, close tabs", ["click", "drag", "middle-click"], "On the tab strip: switches, drags to reorder, closes (so does ×); its +N lists the tabs that don't fit"],
+  ["Resize panes and splits", ["drag"], "Drags a pane's border, or the Problems panel's rule, to resize what's beside it"],
+  ["Scroll to a place", ["click", "drag"], "On a scrollbar (either direction): jumps there, or drags it"],
+  ["Back / forward", ["click"], "On the status line's ‹ / ›: back and forward in the window's history"],
+  ["The window's history", ["click"], "On the status line's path: the places the window has been, Copy path first"],
+  ["The problems", ["click"], "On the status line's problems: the Problems panel on This file (All when it has none), or closes it; a sign in the problems bar or a coloured line number: on that problem"],
+  ["The messages", ["click"], "On a message's floating box: the messages list"],
+  ["which-key's entries", ["click"], "A group opens it; a command runs"],
+  ["A code cell's buttons", ["click"], "As its keys (space k): fold, edit, copy, references, problems, scratch"],
+  // In the panels and lists.
+  ["Open a note as a tab", ["click", "double-click"], "In the explorer: a click selects a note, a double-click opens it as a tab; a click on a folder folds or unfolds it"],
+  ["Go to a place", ["click", "double-click"], "In the history and source control: a click selects, a double-click goes there"],
+  ["Go to a heading", ["click"], "In the outline: goes to the heading; on ▾ / ▸, folds or unfolds it"],
+  ["Go to a footnote", ["click"], "In the footnotes or Info: goes to the footnote, or opens what the row names"],
+  ["Problems' tabs and rows", ["click"], "A tab's title switches to it; a row: This file shows the problem and goes there on a second click, All opens it"],
+  ["Pick or answer", ["click"], "A list's entry picks it; a question's buttons (OK, Cancel; Yes, No) answer it; outside a list or a question closes it (a question: cancelled)"],
 ];
 
 // ---------------------------------------------------------------------------------------------
@@ -1018,13 +1068,13 @@ export function registerActions(app: App): void {
     "cursor.page_down": (a, arg) =>
       withView(a, (v) => {
         const n = Math.max(1, v.height - 2);
-        if (arg === "extend") a.moveCursor(v, C.vertical(lay(a, v), v.cur, n, v.goal), { extend: true, keepGoal: true });
+        if (arg === "extend") extendOrMove(a, v, C.vertical(lay(a, v), v.cur, n, v.goal), true, true);
         else a.scrollBy(v, n, true);
       }),
     "cursor.page_up": (a, arg) =>
       withView(a, (v) => {
         const n = Math.max(1, v.height - 2);
-        if (arg === "extend") a.moveCursor(v, C.vertical(lay(a, v), v.cur, -n, v.goal), { extend: true, keepGoal: true });
+        if (arg === "extend") extendOrMove(a, v, C.vertical(lay(a, v), v.cur, -n, v.goal), true, true);
         else a.scrollBy(v, -n, true);
       }),
     // selection
@@ -1651,15 +1701,7 @@ export function registerActions(app: App): void {
       withView(a, (v) => {
         if (a.writeBuffer(v.buf, v.buf.contentToSave(), true)) a.message("info", `saved ${a.displayName(v.buf)} over the file on disk`);
       }),
-    "note.revert": (a) =>
-      withView(a, (v) => {
-        for (const w of a.allViews()) if (w.buf === v.buf) w.insert = false;
-        // Out of insert so, a snippet being typed in it is over too (25.8).
-        if (a.snippet?.view.buf === v.buf) endSnippet(a);
-        if (!v.buf.load()) return a.message("warn", `${v.buf.key} is gone from disk`);
-        for (const w of a.allViews()) if (w.buf === v.buf) w.layoutKey = "";
-        a.message("info", `${a.displayName(v.buf)} reloaded from disk — u brings your changes back`);
-      }),
+    "note.revert": (a) => withView(a, (v) => revert(a, v.buf)),
     "note.resolve": (a) =>
       withView(a, (v) => {
         if (!v.buf.dirty || !v.buf.changedOnDisk()) return a.message("info", `${a.displayName(v.buf)} has no conflict with the file on disk`);
@@ -1830,7 +1872,14 @@ export function registerActions(app: App): void {
       });
     },
     // note, vault, app
-    "note.reload": (a) => withView(a, (v) => a.reloadBuffer(v.buf)),
+    // Unsaved changes and the file as it was (DF-D6): yours thrown away only when you say so, autosave as it was; a file
+    // that changed too is the conflict prompt's.
+    "note.reload": (a) =>
+      withView(a, (v) => {
+        const buf = v.buf;
+        if (!buf.dirty || buf.deleted || buf.changedOnDisk()) return a.reloadBuffer(buf);
+        a.confirm(`Discard your changes to ${a.displayName(buf)}? It's loaded from disk again: u brings them back.`, () => revert(a, buf));
+      }),
     // The Info view (3.19), the right panel's first: what the file on screen is; its button above the outline's.
     "note.info": (a) => a.openRightView("info", "cycle"),
     "info.toggle": (a) => a.openRightView("info"),

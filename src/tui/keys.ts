@@ -664,9 +664,9 @@ export const DEFAULT_GROUPS: Record<string, string> = {
   "ctrl+w": "window: split, focus, move, resize",
   "ctrl+t": "tabs: open, switch, reorder, close",
   g: "go: top (g), definition (d), type (y), implementations (I), references (r), link (f x), tabs (t T), changes (; ,), last insert (i)",
-  z: "scroll: the cursor's line to the middle (z), top (t), bottom (b)",
-  "[": "previous: heading ([), link (l)",
-  "]": "next: heading (]), link (l)",
+  z: "scroll: the cursor's line to the middle (z), top (t), bottom (b); spelling's suggestions (=), the word added (g); the code cell folded (a)",
+  "[": "previous: heading ([), link (l), misspelt word (s), change (c), note of this type (t)",
+  "]": "next: heading (]), link (l), misspelt word (s), change (c), note of this type (t)",
 };
 
 /** A group's value is "name" or "name: explanation". */

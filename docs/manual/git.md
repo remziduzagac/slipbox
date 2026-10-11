@@ -96,7 +96,7 @@ own and keeps it while open, so the text doesn't move as changes come and go.
 
 ## Source control
 
-`space g s` opens source control in the left panel, and lights `±` on the left rail: the checkout's changed files
+`space g s`, or a click on `±` on the left rail, opens source control in the left panel: the checkout's changed files
 under their sections.
 
 - **Conflicts**: files a merge left unmerged.

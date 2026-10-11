@@ -36,7 +36,7 @@ import { OptimizedBuffer } from "@opentui/core";
 import { inflateSync } from "node:zlib";
 import { cells } from "../src/tui/cursor.ts";
 import { lineOf, offsetOf } from "../src/tui/editing.ts";
-import { DEFAULT_KEYS, keyName } from "../src/tui/keys.ts";
+import { DEFAULT_GROUPS, DEFAULT_KEYS, keyChar, keyName, parseGroup } from "../src/tui/keys.ts";
 
 const sandbox = mkdtempSync(join(tmpdir(), "slipbox-tui-"));
 process.env.XDG_STATE_HOME = join(sandbox, "state");
@@ -431,6 +431,30 @@ describe("selection", () => {
     await h.keys("escape", "0", "shift+end", "ctrl+c");
     expect(h.copied.at(-1)).toBe("Back to index and on to beta.");
   });
+  test("in source mode a shift selection is a visual one, as a drag's: d, x and c act on it, esc leaves it (DF-D15)", async () => {
+    const root = makeVault();
+    writeFileSync(join(root, "s.md"), "alpha beta gamma delta\n");
+    const h = await harness({ root, open: "s.md" });
+    const v = h.app.view!;
+    await h.keys("space", "n", "v", "w", "shift+right", "shift+right"); // on "beta": b, e and t
+    expect(v.visual).toBe("char");
+    expect(statusRow(h.frame())).toContain("VISUAL");
+    await h.keys("d");
+    expect(v.buf.source).toBe("alpha a gamma delta\n");
+    await h.keys("shift+ctrl+right", "x"); // "a g", its last character included
+    expect(v.buf.source).toBe("alpha amma delta\n");
+    await h.keys("shift+right", "c", "Z", "escape");
+    expect(v.buf.source).toBe("alpha Zma delta\n");
+    await h.keys("shift+left", "escape"); // the cursor on the space before Z
+    expect([v.visual, v.sel]).toEqual([null, null]);
+    // A shifted motion after an operator moves no selection in: d shift+right deletes, and nothing stays selected.
+    await h.keys("d", "shift+right");
+    expect(v.buf.source).toBe("alphaZma delta\n");
+    expect([v.visual, v.sel]).toEqual([null, null]);
+    // Reading, a shift selection stays a plain one: a move without shift clears it.
+    await h.keys("ctrl+k", "shift+right");
+    expect(v.visual).toBeNull();
+  });
   test("v, V, o, y and esc", async () => {
     const h = await harness({ open: "notes/alpha.md" });
     h.app.moveCursor(h.app.view!, { row: rowStarting(h, "Back to"), col: 0 });
@@ -684,6 +708,16 @@ describe("which-key", () => {
     expect(f).toContain("+LINKS");
     expect(f).toContain("everything about links");
   });
+  test("the explanations of g, z, [ and ] name every key under them", () => {
+    for (const prefix of ["g", "z", "[", "]"]) {
+      const { desc } = parseGroup(DEFAULT_GROUPS[prefix]!);
+      const named = [...desc.matchAll(/\(([^)]*)\)/g)].flatMap((m) => m[1]!.split(" "));
+      const under = Object.keys(DEFAULT_KEYS)
+        .filter((k) => k.startsWith(`${prefix} `))
+        .map((k) => keyChar(k.slice(prefix.length + 1)) ?? k);
+      for (const k of under) expect([prefix, k, named.includes(k)]).toEqual([prefix, k, true]);
+    }
+  });
   test("other prefixes show it only after the delay", async () => {
     const h = await harness({ config: (c) => (c.input.which_key_delay_ms = 50) });
     await h.keys("y");
@@ -850,6 +884,21 @@ describe("overlays and the : prompt", () => {
       h.app.region = region;
       expect(await start()).toEqual({ heading, selectedIsEntry: true });
     }
+  });
+  test("help's mouse list has what the keys chapter's § Mouse has: every rail button, the palette, the status line, the popups", async () => {
+    const h = await harness({ width: 140, height: 40 });
+    await h.keys("space", "?");
+    const items = (h.app.overlay as ListOverlay).items;
+    const from = items.findIndex((i) => i.header && i.label === "Mouse");
+    const next = items.findIndex((i, k) => k > from && i.header && i.label);
+    const help = items
+      .slice(from + 1, next < 0 ? undefined : next)
+      .map((i) => [i.label, ...(i.keys ?? []), i.detail].join(" "))
+      .join("\n");
+    const md = readFileSync(join(import.meta.dir, "..", "docs", "manual", "keys.md"), "utf8");
+    const chapter = md.slice(md.indexOf("\n## Mouse"), md.indexOf("\n## ", md.indexOf("\n## Mouse") + 1));
+    const things = ["≡", "◷", "±", "ℹ", "▤", "¹", "slipbox", "palette", "breadcrumb", "+N", "×", "middle-click", "tab strip", "border", "scrollbar", "☐", "‹", "›", "path", "problems bar", "Problems", "message", "which-key", "code cell", "explorer", "history", "source control", "outline", "footnotes", "Info", "double", "triple", "wheel", "question"];
+    for (const t of things) expect([t, help.includes(t), chapter.includes(t)]).toEqual([t, true, true]);
   });
   test("help and the palette list every command under a keymap.md group, none left out", async () => {
     for (const s of COMMAND_SPECS) expect([s.id, commandGroup(s.id)]).not.toEqual([s.id, "Other"]);
@@ -1161,6 +1210,21 @@ describe("the left panel's views and filter", () => {
     click("btn:history");
     await h.keys("space", "e");
     expect(h.app.leftView).toBe("explorer");
+  });
+  test("the rail's ± shows source control, focused, as its other buttons show their views; again hides it", async () => {
+    const h = await harness({ open: "notes/alpha.md", width: 140, height: 30, config: (c) => (c.ui.sidebar = false) });
+    h.frame();
+    const click = (id: string) => {
+      const b = h.app.geometry!.hot.find((r) => r.id === id)!;
+      h.app.handleMouse({ type: "down", x: b.x + 1, y: b.y, button: 0 });
+      h.app.handleMouse({ type: "up", x: b.x + 1, y: b.y, button: 0 });
+      return h.frame();
+    };
+    expect([...h.frame().split("\n")[h.app.geometry!.hot.find((r) => r.id === "btn:git")!.y]!][1]).toBe("±");
+    click("btn:git");
+    expect([h.app.sidebarShown, h.app.leftView, h.app.region]).toEqual([true, "git", "sidebar"]);
+    click("btn:git");
+    expect(h.app.sidebarShown).toBe(false);
   });
   test("each view keeps its position (selection, scroll, filter) while the other shows", async () => {
     const h = await harness({ open: "index.md", width: 140, height: 30 });
@@ -1529,6 +1593,100 @@ describe("editing: insert mode, undo, save (step 3b)", () => {
     await h.keys("escape", "j", "shift+i", "a", "b", "ctrl+e", "x", "ctrl+w"); // on its line too: only the x goes
     expect(v.buf.source).toBe("one two\nabthree four\n");
   });
+  test("a desktop editor's selection while typing (DF-D15): shift with a move selects; typed text, enter or a paste replaces it, backspace and delete delete it; ctrl+c, ctrl+x; left and right to its ends", async () => {
+    const { h, type, v } = await setup("one two three\nfour five\n");
+    await h.keys("space", "n", "v", "g", "g", "i"); // typing at the note's start
+    await h.keys("shift+right", "shift+right", "shift+right");
+    expect(v.insert).toBe(true);
+    expect(h.app.selectionText(v)).toBe("one"); // the cursor sits between characters: the one after it isn't taken
+    expect(h.frame()).toContain("one two three"); // drawn so: the selection role on "one" only
+    const c = h.canvas();
+    const y = c.rows.findIndex((r) => r.join("").includes("one two three"));
+    const x = c.rows[y]!.join("").indexOf("one two three");
+    expect(c.styles[y]![x + 2]!.bg).toBe(h.app.theme.roles.selection.bg!);
+    expect(c.styles[y]![x + 3]!.bg).not.toBe(h.app.theme.roles.selection.bg!);
+    await type("ONE");
+    expect(v.buf.source).toBe("ONE two three\nfour five\n");
+    expect(v.sel).toBeNull();
+    await h.keys("ctrl+shift+right"); // by word: " two"
+    expect(h.app.selectionText(v)).toBe(" two");
+    await h.keys("backspace");
+    expect(v.buf.source).toBe("ONE three\nfour five\n");
+    await h.keys("shift+end", "delete"); // to the line's end
+    expect(v.buf.source).toBe("ONE\nfour five\n");
+    await h.keys("shift+down", "ctrl+c"); // across the line break, kept selected
+    expect(h.copied.at(-1)).toBe("\nfou");
+    expect(v.sel).not.toBeNull();
+    await h.keys("ctrl+x");
+    expect(v.buf.source).toBe("ONEr five\n");
+    expect(h.copied.at(-1)).toBe("\nfou");
+    await h.keys("shift+right", "shift+right", "left", "-"); // left: to the selection's start, not a character back
+    expect(v.buf.source).toBe("ONE-r five\n");
+    await h.keys("shift+left", "shift+left", "right", "+"); // right: to its end
+    expect(v.buf.source).toBe("ONE-+r five\n");
+    await h.keys("shift+right", "enter");
+    expect(v.buf.source).toBe("ONE-+\n five\n");
+    await h.keys("shift+end", "ctrl+v"); // the paste puts what was cut, not the selection it replaces
+    expect(v.buf.source).toBe("ONE-+\n\nfou\n");
+    await h.keys("shift+home"); // from past the line's last character, where the cursor was…
+    v.layoutKey = ""; // …which a re-layout (a resize, a message line) keeps
+    h.frame();
+    expect(h.app.selectionText(v)).toBe("fou");
+    await h.app.paste("NEW"); // the terminal's own paste replaces it too
+    expect(v.buf.source).toBe("ONE-+\n\nNEW\n");
+    await h.keys("shift+left", "escape"); // esc stops typing; the selection goes with it
+    expect(v.insert).toBe(false);
+    expect(v.sel).toBeNull();
+    expect(v.buf.source).toBe("ONE-+\n\nNEW\n");
+  });
+  test("ctrl+z and ctrl+y while typing undo and redo, and typing goes on; what's typed after an undo is a step of its own (DF-D15)", async () => {
+    const { h, type, v } = await setup("alpha\n");
+    await h.keys("space", "n", "v", "shift+a");
+    await type(" beta");
+    await h.keys("ctrl+z");
+    expect(v.buf.source).toBe("alpha\n");
+    expect(v.insert).toBe(true);
+    await h.keys("ctrl+y");
+    expect(v.buf.source).toBe("alpha beta\n");
+    expect(v.insert).toBe(true);
+    await type("!"); // at the redone text's end
+    expect(v.buf.source).toBe("alpha beta!\n");
+    await h.keys("ctrl+z"); // the ! alone: a step of its own
+    expect(v.buf.source).toBe("alpha beta\n");
+    await type("?");
+    await h.keys("ctrl+y"); // typed after an undo: nothing to redo, as in a desktop editor
+    expect(v.buf.source).toBe("alpha beta?\n");
+    expect(h.app.transient!.text).toBe("nothing to redo");
+    await h.keys("escape", "u");
+    expect(v.buf.source).toBe("alpha beta\n");
+    await h.keys("."); // what was typed since the undo, again, as typed from the cursor (on the last a): i ?
+    expect(v.buf.source).toBe("alpha bet?a\n");
+  });
+  test("the page keys while typing move a page, the view with it; with shift they select (DF-D15)", async () => {
+    const { h, v } = await setup(`${Array.from({ length: 90 }, (_, i) => `line ${i + 1}`).join("\n")}\n`);
+    await h.keys("space", "n", "v", "g", "g", "i");
+    for (let k = 0; k < 10; k++) await h.keys("down");
+    const n = v.height - 2;
+    expect(v.cur.row - v.top).toBe(10);
+    await h.keys("pagedown");
+    expect(v.insert).toBe(true);
+    expect(h.app.cursorLine(v)).toBe(11 + n);
+    expect(v.cur.row - v.top).toBe(10); // the page scrolled under the cursor, which kept its place on the screen
+    await h.keys("pagedown", "x", "pageup");
+    expect(h.app.cursorLine(v)).toBe(11 + n);
+    expect(v.cur.row - v.top).toBe(10);
+    expect(v.buf.source.split("\n")[10 + 2 * n]).toBe(`xline ${11 + 2 * n}`);
+    await h.keys("home", "shift+pagedown", "backspace"); // a page of lines selected, then gone
+    expect(v.buf.source.split("\n")[10 + n]).toBe(`xline ${11 + 2 * n}`);
+    expect(v.insert).toBe(true);
+    // In the lens they stop at its rules, as the arrows do.
+    const lens = await setup(`# A\n\n${Array.from({ length: 40 }, (_, i) => `para ${i + 1}`).join("\n\n")}\n`);
+    await lens.h.keys("space", "n", "l", "j", "j", "i", "pagedown");
+    const layout = lens.h.app.currentLayout(lens.v);
+    expect(lens.v.insert).toBe(true);
+    expect(layout.lines[lens.v.cur.row]!.srcMap).toBeDefined();
+    expect(layout.lines[lens.v.cur.row + 1]?.srcMap).toBeUndefined(); // on the lens's last row of text
+  });
   test("i from the render switches to source and types; esc ends; u undoes the session; U redoes", async () => {
     const { h, type, v, file } = await setup("# T\n\nhello world\n");
     h.app.moveCursor(v, { row: rowStarting(h, "hello"), col: 6 }); // on "w"
@@ -1673,6 +1831,26 @@ describe("saving and conflicts (step 4)", () => {
     await h.keys("ctrl+s", "y");
     expect(readFileSync(file, "utf8")).toBe("line!\n");
     expect(v.buf.conflictKept).toBe(false);
+  });
+  test("space n r with unsaved changes, the file as it was: asks to discard them — y reloads, n and esc keep yours, autosave as it was (DF-D6)", async () => {
+    const { h, file, v } = await setup("line\n");
+    await h.keys("shift+a", "!", "escape", "space", "n", "r");
+    expect(h.app.overlay).toMatchObject({ kind: "prompt", confirm: true, label: "Discard your changes to c.md? It's loaded from disk again: u brings them back." });
+    await h.keys("n");
+    expect(v.buf.source).toBe("line!\n");
+    await h.keys("space", "n", "r", "escape");
+    expect(h.app.overlay).toBeNull();
+    expect(v.buf.source).toBe("line!\n");
+    expect(v.buf.conflictKept).toBe(false); // autosave left on, as the conflict prompt's esc wouldn't
+    await h.keys("space", "n", "r", "y");
+    expect(v.buf.source).toBe("line\n");
+    expect(v.buf.dirty).toBe(false);
+    await h.keys("u");
+    expect(v.buf.source).toBe("line!\n");
+    // The file changed too: the conflict prompt, as before.
+    await touch(file, "theirs\n");
+    await h.keys("space", "n", "r");
+    expect((h.app.overlay as ListOverlay).title).toContain("changed on disk");
   });
   test("(d) shows yours → theirs; (m) merges against the version you started from", async () => {
     const { h, file, v } = await setup("one\ntwo\nthree\n");
@@ -4688,7 +4866,7 @@ describe("review cycle 2 (TUI navigation)", () => {
     expect((h.app.overlay as ListOverlay).title).toBe("[[pic.png]] matches 2 files");
     await h.keys("enter");
     expect(h.app.view!.buf.rel).toBe("wiki.md");
-    expect(h.app.messages.at(-1)!.text).toMatch(/^attachment [ab]\/pic\.png — path copied/);
+    expect(h.app.messages.at(-1)!.text).toMatch(/^attachment [ab]\/pic\.png — path copied$/); // nothing after (it said "images render in a later phase")
     // Source mode reads the wikilink around the cursor from the text.
     await h.keys("space", "n", "v", "g", "g", "j", "j", "l", "l", "l", "enter");
     expect(h.app.view!.buf.rel).toBe("target.md");
