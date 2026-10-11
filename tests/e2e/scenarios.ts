@@ -15,6 +15,8 @@ import { CONTENT_SCENARIOS } from "./world-content.ts";
 import { TERMINAL_SCENARIOS } from "./world-terminal.ts";
 import { OUTSIDE_SCENARIOS } from "./world-outside.ts";
 import { LINK_SCENARIOS } from "./world-links.ts";
+import { EXPORT_SCENARIOS } from "./world-export.ts";
+import { FIXES_SCENARIOS } from "./world-fixes.ts";
 
 export type { Scenario };
 
@@ -542,8 +544,8 @@ const CORE: Scenario[] = [
       await s.see(/match(es)? in 1 file/);
       await s.keys("enter");
       await s.status("2026-09-14-weekly.md");
-      // ctrl+z / ctrl+y in source mode.
-      await s.keys("ctrl+e");
+      // ctrl+z / ctrl+y in source mode (ctrl+k: ctrl+e is the line's end, as on a Mac).
+      await s.keys("ctrl+k");
       await s.status("SOURCE");
       await s.keys("A");
       await s.type(" (undo me)");
@@ -551,7 +553,7 @@ const CORE: Scenario[] = [
       await s.notSee("(undo me)");
       await s.keys("ctrl+y");
       await s.see("(undo me)");
-      await s.keys("ctrl+z", "ctrl+e");
+      await s.keys("ctrl+z", "ctrl+k");
       // q closes the split, :q the last window quits.
       await s.keys("ctrl+w", "v");
       await s.until(() => s.text().split("§ ").length - 1 === 2, 3000, "two windows");
@@ -794,7 +796,8 @@ const CORE: Scenario[] = [
   },
   {
     name: "language servers: a TypeScript file's errors from TypeScript's own server, in the bar and the status line",
-    options: { config: `[lsp]\nenabled = true\n\n[language-server.typescript]\ncommand = ${JSON.stringify(TSC)}\n` },
+    // In source mode, where the bar is: code opens in the code view by default.
+    options: { config: `[render]\ncode = "source"\n\n[lsp]\nenabled = true\n\n[language-server.typescript]\ncommand = ${JSON.stringify(TSC)}\n` },
     run: async (s) => {
       s.write("scratch/tool.ts", 'const n: number = "x";\nexport const m = n;\n');
       await s.ex("e scratch/tool.ts");
@@ -802,7 +805,11 @@ const CORE: Scenario[] = [
       // The error, from the server: counted on the status line, said in the Problems panel; the bar beside its line.
       await s.status(signed("{error} 1"), 15000);
       await problemListed(s, signed("{error} 1:\\d+ +Type 'string' is not assignable to type 'number'"));
-      await s.see(signed("│ ?{error} +const n: number")); // the bar: the error's sign beside its line
+      // The bar: the error's line number in the error's colour, its neighbour's not.
+      await s.until(() => {
+        const [bad, good] = [s.styleOf("1  const n: number"), s.styleOf("2  export const m")];
+        return !!bad && !!good && bad.fg !== good.fg;
+      }, 5000, "line 1's number in the error's colour");
       // What's under the cursor (19.12, 19.13): n's type, floating; from its use, its declaration; its uses.
       await s.keys("w");
       await s.keys("shift+k");
@@ -877,7 +884,8 @@ const CORE: Scenario[] = [
   },
   {
     name: "language servers: g y goes to the type's definition, g shift+i lists the implementations to pick from — TypeScript's own server (19.13)",
-    options: { config: `[lsp]\nenabled = true\n\n[language-server.typescript]\ncommand = ${JSON.stringify(TSC)}\n` },
+    // In source mode, where the bar is: code opens in the code view by default.
+    options: { config: `[render]\ncode = "source"\n\n[lsp]\nenabled = true\n\n[language-server.typescript]\ncommand = ${JSON.stringify(TSC)}\n` },
     run: async (s) => {
       s.write(
         "scratch/shapes.ts",
@@ -1312,7 +1320,8 @@ const CORE: Scenario[] = [
   {
     name: "code: tree-sitter's outline and breadcrumb, a comment's path:line followed, syntax errors",
     needs: { cols: 80 },
-    options: { open: "software/halley/reduce.py" },
+    // Source mode's: code opens in the code view by default, which a scenario of its own covers.
+    options: { open: "software/halley/reduce.py", config: '[render]\ncode = "source"\n' },
     run: async (s) => {
       await s.status("SOURCE");
       await s.see("class Night:");
@@ -2051,4 +2060,4 @@ const CORE: Scenario[] = [
 ];
 
 /** Every scenario: the app's own (above), then slipbox in its world (world-*.ts). */
-export const SCENARIOS: Scenario[] = [...CORE, ...GIT_SCENARIOS, ...CONTENT_SCENARIOS, ...TERMINAL_SCENARIOS, ...OUTSIDE_SCENARIOS, ...LINK_SCENARIOS];
+export const SCENARIOS: Scenario[] = [...CORE, ...GIT_SCENARIOS, ...CONTENT_SCENARIOS, ...TERMINAL_SCENARIOS, ...OUTSIDE_SCENARIOS, ...LINK_SCENARIOS, ...EXPORT_SCENARIOS, ...FIXES_SCENARIOS];

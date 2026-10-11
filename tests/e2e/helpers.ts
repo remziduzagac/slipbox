@@ -1,6 +1,7 @@
 // What the scenarios share: the demo vault's notes they use, reading the cursor's place, opening
 // a note, leader keys, picking an explorer row.
 
+import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import type { Session, SessionOptions } from "./session.ts";
 
@@ -76,4 +77,10 @@ export async function explorerRow(s: Session, name: string): Promise<void> {
   const at = s.screen().findIndex((r, i) => i >= first && new RegExp(`\\b${name}\\b`).test(left(r)));
   s.expect(at >= first, `the explorer shows ${name}`);
   for (let i = first; i < at; i++) await s.keys("j");
+}
+
+/** A file an export wrote (in halden's copy, `~/…`, or a whole path), waited for: there, and starting with `magic`. */
+export async function exported(s: Session, rel: string, magic: string, timeout = 15000): Promise<void> {
+  const starts = () => readFileSync(s.path(rel)).subarray(0, magic.length).toString("latin1") === magic;
+  await s.until(() => s.exists(rel) && starts(), timeout, `${rel} written, starting ${JSON.stringify(magic)}`);
 }

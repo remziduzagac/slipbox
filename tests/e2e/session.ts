@@ -38,7 +38,7 @@ export interface SessionOptions {
   cwd?: string;
   /** More arguments, before the path (`--theme`, `nord`). */
   args?: string[];
-  /** More environment (`SLIPBOX_GLYPHS: "ascii"`). */
+  /** More environment (`SLIPBOX_GLYPHS: "ascii"`); `{dir}` is the scenario's folder (`HOME: "{dir}/home"`). */
   env?: Record<string, string>;
   /** Don't wait for the first frame: a start meant to fail, or one the scenario waits for itself. */
   noWait?: boolean;
@@ -162,7 +162,7 @@ export class Session {
       SLIPBOX_CONFIG: `${this.dir}/config/slipbox/config.toml`,
       SLIPBOX_CLIPBOARD: "file", // copies land in the state dir, not on your clipboard
       ...(this.opts.home ? { HOME: this.home } : {}),
-      ...this.opts.env,
+      ...Object.fromEntries(Object.entries(this.opts.env ?? {}).map(([k, v]) => [k, v.replaceAll("{dir}", this.dir)])),
     };
   }
 
