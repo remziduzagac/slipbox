@@ -273,8 +273,9 @@ binding.
 
 ## The links' convention
 
-`[links]` (`21.4`, `core/convention.ts`) says how the links slipbox makes look — completion, the link picker, capture
-(`21.5`); a rename keeps each link's own form. Each part is the first that says: your setting (the root's
+`[links]` (`21.4`, `core/convention.ts`) says how the links slipbox makes look — completion, the link picker,
+`slipbox link` (`21.5`); a rename keeps each link's own form. The scratch's captures aren't links: they're `path:line`
+references, as agents read them. Each part is the first that says: your setting (the root's
 `.slipbox/config.toml` over your own config); the setting of the tool that owns the root (Obsidian's
 `.obsidian/app.json`: `useMarkdownLinks`, `newLinkFormat` — shortest is by name, relative, absolute from the root —
 with `.md` in a markdown link and none in a wikilink; zk's `.zk/config.toml`: `link-format`, a markdown link from the

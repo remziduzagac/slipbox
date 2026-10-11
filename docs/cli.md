@@ -144,9 +144,9 @@ rewrite them.
 
 `<note>` is tried in order:
 
-1. An existing file path, relative to the current directory. That also picks the vault, by
+1. An existing file path, relative to the current directory. That also picks the root, by
    walking up from the file. A file the walk excludes is still read when named explicitly, as in
-   the TUI: one git-ignored or under a hidden folder is reached, and joins the vault's index from
+   the TUI: one git-ignored or under a hidden folder is reached, and joins the root's index from
    then on (`20.8`); one under `node_modules` or `walk.exclude` never joins it.
 2. A pointer (`21.10`): `slipbox://research/algorithms/dijkstra.md`, the file in that named folder's copy here
    (`21.6`), found as a link's path is (no extension, a folder). It's that file's path from then on, so the command
@@ -156,10 +156,10 @@ rewrite them.
    source so, the destination a path in that folder (a pointer there is exit 5). The old form, `research:x.md`
    (`20.20`, gone in `21.12`), is exit 3 with its pointer when a folder has that name; else it stays a name
    (`Meeting: Q3`). An existing file by that very name wins.
-3. A vault-relative path.
+3. A path from the root.
 4. A note name: its file name without the extension (or a declared alias). Collisions then go to the shortest path,
    and a real tie exits 4. That's how a command names a note; links in notes are paths (`20.2`).
-5. A data or text file of the vault (`16.4`), by its path with its extension (`cfg/app.toml`,
+5. A data or text file of the root (`16.4`), by its path with its extension (`cfg/app.toml`,
    `tool.py`), from the current folder or the vault's root. It's read and written as it is, never
    parsed as a note. A data file renders (`render`, as in the TUI) and has an outline (its
    sections); one that doesn't parse is exit 1 with its error. A text file has no rendered form:
@@ -167,7 +167,7 @@ rewrite them.
    an outline: its definitions, each heading with a `kind` (`function`, `class`, `method`…). `task`
    is for notes (exit 2 otherwise). `links` on a data file lists its links (`16.15`: URLs, reference
    keys' values, paths that resolve), on a code file those in its comments (`16.10`: URLs, paths
-   naming vault files as `/path`, `path:42` as `/path#L42`); `backlinks` of any file lists the
+   naming the root's files as `/path`, `path:42` as `/path#L42`); `backlinks` of any file lists the
    notes, data files and code files linking to it. A binary file is never written (exit 5).
 
 `ls --files` lists the data and text files too (each with `group` and `format`); `find --files`
