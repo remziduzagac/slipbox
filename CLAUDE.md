@@ -31,5 +31,6 @@ a change users will see updates it in the same piece of work, without the bluepr
 - `bun run check` — typecheck, boundary, the supply chain's gates (`check:deps`), tests. Run before declaring done.
 - `bun run e2e --tab` — the terminal tests: slipbox driven in a herdr pane (`blueprint/design/testing.md`).
 - `bun test -u` updates snapshots; read the diff before accepting it.
+- `bun tests/e2e/shots.ts --pane <id>` retakes the docs' screenshots (`docs/images/`) in a 120×34 pane: after a UI change.
 - `bun src/main.ts <path>` runs the TUI; `bun src/main.ts help` lists CLI commands.
 - Tooling lives on a login-shell PATH (mise): use `zsh -lc '…'` in non-interactive shells.

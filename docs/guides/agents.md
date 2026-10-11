@@ -65,6 +65,8 @@ If you have unsaved changes to that note, slipbox keeps both versions and asks w
 keeps yours, `d` shows the differences and `m` merges the two. Each answer is explained in
 [When a file changes on disk](../manual/editing.md#when-a-file-changes-on-disk).
 
+![The conflict prompt: inbox.md changed on disk while it had unsaved changes, with its four answers](../images/agents-conflict.png)
+
 The agent hears about your unsaved changes too: every command it runs while slipbox holds them warns
 `unsaved changes in a running slipbox: inbox.md` (with `--json`, the note is listed in `stale`). The skill tells it to
 ask you before writing such a note.

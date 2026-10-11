@@ -420,3 +420,8 @@ Rows for `world-export.ts` (the export window: formats, the window's keys, repla
 `world-fixes.ts` (what writing the docs found, fixed: typing without vim, reload, the trash, moves, clones, the code
 view's links and errors, Obsidian's highlights and comments, a folder's network settings, the Save As window's
 folders).
+
+And the docs' screenshots (DF-D19): `tests/e2e/shots.ts` drives slipbox in a herdr pane sized 120×34, as the
+terminal tests do, on the reference set or the getting-started guide's own folder, and `scripts/screenshot.ts` draws
+each screen, read with its colours, into `docs/images/<name>.png` (DejaVu Sans Mono, DejaVu Sans for the symbols it
+lacks; the Unicode glyph set). Retaken in one run when the UI changes.

@@ -16,6 +16,8 @@ needs installing, and nothing is fetched from the network while it does.
 4. A message says `exporting to ideas/coffee.docx…`, then
    `exported ideas/coffee.md to ideas/coffee.docx (Word (.docx))`.
 
+![The Save As window: places on the left, the folder on the right, the file name filled in](../images/exporting-save-as.png)
+
 To put it elsewhere, `tab` moves between the places, the folder and the name. In the folder, `enter` goes into a folder
 and `left` goes up; or type a path as the name (`~/Desktop/coffee.docx`). The window opens where you exported last the
 next time. A name ending in `/` is a folder, made if it isn't there. A file already there is replaced only after you

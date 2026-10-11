@@ -24,6 +24,8 @@ class, method or type is a cell, its header saying what it is and its name (`fun
 drawn as prose above its code. The code itself is exactly as written; comments between definitions read as prose, and
 the imports are folded into one row (`enter` on it unfolds them).
 
+![A TypeScript file in the code view: its doc comment as prose, the imports folded, each definition a cell](../images/code-and-git-code-view.png)
+
 - `z a` folds the cell at the cursor to its header, and opens it again.
 - `space o` lists the file's definitions in the outline.
 - `space n v` (or `ctrl+k`) shows the file as written, highlighted; press it again for the cells.
@@ -100,6 +102,8 @@ text: `▎` for lines added or changed, each in its colour, `▁` where lines we
 4. `c` opens the commit message in a floating editor, what's staged listed in `#` lines (left out of the message).
    Write the message, then press `ctrl+s`: a message says `committed` with the commit's hash and subject.
 
+![Source control in the left panel: a changed file opened into its change](../images/code-and-git-source-control.png)
+
 `shift+c` amends the last commit instead. In a folder you haven't trusted, the commit runs no hooks and isn't signed,
 and the editor says so. `space g o` lists the branches, to check one out or start a new one. slipbox doesn't push:
 push with git.
@@ -108,6 +112,8 @@ push with git.
 
 The usual case: an agent works on a branch of its own, in a git worktree beside your checkout
 (`git worktree add ../app-fix fix/retry`). Before you merge it:
+
+![The merge review: the links a branch would break, each with its note, line and cause](../images/code-and-git-merge-review.png)
 
 1. Press `space g w`. The repository's checkouts are listed by branch, yours marked `●`. Pick the agent's and press
    `enter`: slipbox goes into that checkout, at the note you were on if the branch has it.

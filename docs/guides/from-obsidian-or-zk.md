@@ -44,6 +44,8 @@ In a zk notebook: `markdown links, relative, without .md — zk's .zk/config.tom
 - **zk's links**: `[text](ideas/202410021000-coffee)`, a path without `.md`, from the note's folder; one starting with
   `/` is from the notebook's top.
 
+![An Obsidian vault's home note: its properties as a table, wikilinks, a callout and tags](../images/obsidian-home.png)
+
 The rest is Markdown: tables, code, maths, diagrams. [Reading](../manual/reading.md) shows how each is drawn, and
 [Links and roots](../manual/links-and-roots.md) every link form.
 

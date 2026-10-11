@@ -5,30 +5,10 @@ resize it. How a note itself is drawn is in [Reading](reading.md), and every key
 
 ## A map of the screen
 
-Here is slipbox with a folder `~/notes` open, two notes in tabs, the explorer on the left and the outline on the right:
+Here is slipbox with a folder of notes open, two notes in tabs, the explorer on the left and the outline on the
+right:
 
-```text
- slipbox
-─────────────────────────────────┬──────────────┬───────────────┬───────────────────────────────────────────────────
- ≡  Explorer              +  +▸  │ 1 inbox.md × │ 2 coffee.md × │
- ◷                               ├──────────────┴───────────────┴───────────────┬───────────────────────────────────
- ±  ▸ ..                         │ § Coffee › Brewing › Grind                   │ Outline                         ℹ
-    ▾ ideas                      ├──────────────────────────────────────────────┤                                 ▤
-    └─  coffee.md                │ 12  A pour-over takes about three minutes.  ▐│ ▾ Coffee                        ¹
-    ▸ journal                    │     Start with 15 g of coffee to 250 g of   ▐│ ├─▾ Brewing
-      inbox.md                   │     water, then adjust one thing at a time. ▐│ │ └─  Grind
-      reading.md                 │                                             ▐│ └─  Beans
-                                 │ 15  ▎ ✦ Water first                         ▐│
-                                 │     ▎ Heat the water to just off the boil,  ▐│
-                                 │     ▎ about 94 °C.                          ▐│
-                                 │                                             ▐│
-                                 │ 18  ▌ Grind                                 ▐│
-                                 │                                             ▐│
-                                 │ 20  Medium-fine, like table salt. Too fine  ▐│
-                                 │     and the water stalls; too coarse and    ▐│
-─────────────────────────────────┴──────────────────────────────────────────────┴───────────────────────────────────
- READ  ~/notes  ‹ ideas/coffee.md ›  ⚠ 0  ● watching                                    97 words  tab 2/2  L18:1 57%
-```
+![slipbox with the explorer, two tabs, a note with its breadcrumb, the outline and the status line](../images/screen-map.png)
 
 From the top:
 
@@ -47,7 +27,7 @@ others dimmer, and the active tab is bright while the note has the keys. The lin
 default; `ui.lines = "heavy"` draws them heavy (`━ ┃`). Tables in a note are always drawn light. The terminal's title
 names slipbox and the file on screen.
 
-The drawings of the screen in this chapter use the Unicode glyph set. With Nerd Font icons, or plain ASCII, the
+The pictures and drawings in this chapter use the Unicode glyph set. With Nerd Font icons, or plain ASCII, the
 buttons and marks look different: see [Glyphs](reading.md#glyphs).
 
 ## The top bar
@@ -200,6 +180,8 @@ its own: `space v i`.
 The Problems panel runs across the bottom of the screen, under the windows and the side panes, and takes a third of
 the rows. It has two tabs:
 
+![The Problems panel under the note: its This file and All tabs, broken links grouped by note](../images/screen-problems.png)
+
 - **This file** lists every problem of the file on screen, each with its line. `space n q` opens it, as does a click
   on the problem count in the status line. Moving through the list takes the note to each problem and marks it.
 - **All** lists what's wrong across the folder, under a heading for each kind: broken, ambiguous and fragile links,
@@ -320,6 +302,8 @@ After `space`, a popup lists every key you can press next, each with a name and 
 `+name`: `+links`, `+tabs`. After any other key that starts a sequence (`g`, `z`, `y`, `[`, `]`, `ctrl+w`, `ctrl+t`)
 it appears if you pause for half a second, so a sequence you know never flashes it. `backspace` goes up a level, `esc`
 cancels, and clicking an entry presses its key.
+
+![The which-key popup after space: the leader's groups, each with what it holds](../images/screen-which-key.png)
 
 `input.which_key = false` turns the popup off (resize mode still shows its own), and `input.which_key_delay_ms` sets
 the pause. The groups' names come from `[groups]`: see [Configuration](configuration.md). The same pause is how long a

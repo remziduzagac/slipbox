@@ -53,6 +53,8 @@ On the left, the explorer lists the folder's notes. On the right is the note, re
 above it a tab, `1 coffee.md`. Along the bottom, the status line shows the mode (`READ`), the note's path, its word
 count and the cursor's place (`L1:1`).
 
+![slipbox open on ~/notes: the explorer on the left, coffee.md rendered in its tab, the status line reading READ](../images/getting-started-first.png)
+
 Two keys help while you learn the rest. Press `space`: a popup lists the keys that can follow it, grouped (`f` for
 find, `n` for note…); `esc` closes it. Press `?`: every key, with a filter to type into; `esc` closes it too. The mouse
 works as well: click a note, a link, a tab. [The screen](../manual/screen.md) describes each part.
@@ -67,6 +69,8 @@ heading. The mouse wheel scrolls.
 
 The switcher finds a note by name. Press `ctrl+p`: a list opens, "Open note (2)". Type `inbox`, and the list narrows
 to `inbox.md`. Press `enter`: inbox.md opens in place of coffee.md.
+
+![The switcher, Open note, with inbox typed and inbox.md listed](../images/getting-started-switcher.png)
 
 The explorer is for browsing. Press `space e`: the explorer takes the keys (the status line says `FILES`), with
 `inbox.md` selected. Press `k` to move up to `coffee.md`, then `enter`: coffee.md opens in a second tab,
@@ -96,6 +100,8 @@ a folder, slipbox builds its search index in the background; in a large folder, 
 Put the cursor on "Try the new grinder setting" (after the search, it's there already) and press `o`. The note now
 shows its Markdown as written, a message says `source — editing the markdown`, and a new task, `- [ ]`, is started on
 the line below; the status line says `INSERT`. Type `Order more beans`.
+
+![inbox.md in source mode, a new task line typed, the status line reading INSERT and unsaved](../images/getting-started-editing.png)
 
 Press `esc` to stop typing: the status line says `SOURCE`, and a dot (`•`) by the tab's name says the note has
 unsaved changes. Press `ctrl+s` to save: the message is `saved inbox.md`, and the dot goes. Press `ctrl+k` to see the

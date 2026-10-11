@@ -26,6 +26,8 @@ Press `space u t`. The theme picker opens, and as you move through the list each
 keeps the one you're on; `esc` goes back to the one you had. A theme picked this way is remembered for this folder.
 For every folder, name it in your settings:
 
+![The theme picker open, a light theme shown on the screen as it is chosen](../images/making-it-yours-theme.png)
+
 ```toml
 theme = "nord"
 ```
@@ -71,6 +73,8 @@ glyphs = "nerd"
 `space u u` lists the settings you can change on the screen, with their values: line numbers, wrapping, a readable
 width, zen (the note alone, without the panes and bars), the mouse, and more. `enter` on one changes it, and it's
 remembered for the folder, as a picked theme is. In your settings file they become the default everywhere:
+
+![The UI settings list, each setting with its value](../images/making-it-yours-settings.png)
 
 ```toml
 [ui]
