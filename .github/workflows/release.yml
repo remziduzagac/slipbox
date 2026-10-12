@@ -1,15 +1,17 @@
 name: release
 
 # Plan 14.2: a tag v<version> pushed builds each platform on a runner of its own — where its OpenTUI package is
-# installed, and a Mac's binary is signed by Bun on a Mac — after the whole check passes there. Then the packs are
-# summed and attested, and the release drafted: nothing is published until a person publishes the draft. Every
-# action pinned by its commit, a week old when taken (14.10); values reach the shell through env, never inline.
+# installed, and a Mac's binary is signed by Bun on a Mac — after the tests pass there (CI ran the whole check on the
+# commit). Each pack's SBOM is attested to it; then the packs are summed and attested, and the release drafted with
+# its notes from CHANGELOG.md: nothing is published until a person publishes the draft. Every action pinned by its
+# commit, a week old when taken (14.10); values reach the shell through env, never inline.
 on:
   push:
     tags: ["v*"]
 
-permissions:
-  contents: read
+# No permission by default; each job grants what it needs, and says why (GR-D9). No concurrency group: a release run
+# is never cancelled. No cache is restored anywhere in it: a cache can be written by a pull request's run.
+permissions: {}
 
 jobs:
   build:
@@ -31,18 +33,31 @@ jobs:
           - target: linux-arm64-musl
             runner: ubuntu-24.04-arm
     runs-on: ${{ matrix.runner }}
+    timeout-minutes: 45
+    permissions:
+      contents: read # to check out the code
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
+      # GR-D11: Bun alone, at mise.toml's version; mise its newest release a week old, checked against its signed
+      # sums. Nothing cached.
+      - uses: jdx/mise-action@2d8d4cafcbd33be2ea37d2b6f5ad595363d1f1ca # v5.1.1
         with:
-          bun-version: 1.4.2
+          install_args: bun
+          cache: false
+          minimum_release_age: 7d
       - run: bun install --frozen-lockfile
-      # Once per runner kind: a musl build's runner is a glibc build's too, which ran it.
-      - name: check
+      # The changelog has this version's section, before anything is built: the draft's notes are made from it.
+      - name: notes
+        env:
+          TAG: ${{ github.ref_name }}
+        run: bun scripts/release.ts notes --tag "$TAG" >/dev/null
+      # Once per runner kind: a musl build's runner is a glibc build's too, which ran them.
+      - name: tests
         if: ${{ !endsWith(matrix.target, '-musl') }}
-        run: bun run check
+        run: bun run test
+      # The pack, and its SBOM beside it, from the walk its notices come from.
       - name: build
         env:
           TARGET: ${{ matrix.target }}
@@ -87,23 +102,56 @@ jobs:
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: pack-${{ matrix.target }}
-          path: dist/release/*.tar.gz
+          path: |
+            dist/release/*.tar.gz
+            dist/release/*.cdx.json
           if-no-files-found: error
 
-  publish:
+  # Each pack's SBOM attested to it, apart from the build — whose tests run every dependency's code — so that no job
+  # holding the signing token runs any: `gh attestation verify <pack> --repo <owner/name> --predicate-type
+  # https://cyclonedx.org/bom`.
+  sbom:
     needs: build
+    strategy:
+      matrix:
+        target: [linux-x64, linux-arm64, darwin-arm64, darwin-x64, linux-x64-musl, linux-arm64-musl]
     runs-on: ubuntu-24.04
+    timeout-minutes: 10
     permissions:
-      contents: write
-      id-token: write
-      attestations: write
+      id-token: write # to sign the attestation, with a certificate for this workflow (Sigstore)
+      attestations: write # to store it with the repository's attestations
+    steps:
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: pack-${{ matrix.target }}
+          path: dist/release
+      - name: version
+        id: version
+        env:
+          TAG: ${{ github.ref_name }}
+        run: echo "version=${TAG#v}" >>"$GITHUB_OUTPUT"
+      - uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6 # v4.2.2
+        with:
+          subject-path: dist/release/slipbox-${{ steps.version.outputs.version }}-${{ matrix.target }}.tar.gz
+          sbom-path: dist/release/slipbox-${{ steps.version.outputs.version }}-${{ matrix.target }}.cdx.json
+
+  publish:
+    needs: [build, sbom]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    permissions:
+      contents: write # to draft the release and upload its assets
+      id-token: write # to sign the attestation, with a certificate for this workflow (Sigstore)
+      attestations: write # to store it with the repository's attestations
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
+      - uses: jdx/mise-action@2d8d4cafcbd33be2ea37d2b6f5ad595363d1f1ca # v5.1.1
         with:
-          bun-version: 1.4.2
+          install_args: bun
+          cache: false
+          minimum_release_age: 7d
       - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
         with:
           pattern: pack-*
@@ -114,13 +162,19 @@ jobs:
           REPO: ${{ github.repository }}
           TAG: ${{ github.ref_name }}
         run: bun scripts/release.ts finish --repo "$REPO" --tag "$TAG"
-      # Who built each pack and the installer, from which commit, by which workflow:
-      # `gh attestation verify <file> --repo <owner/name>`.
-      - uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4.2.2
+      - name: notes
+        env:
+          TAG: ${{ github.ref_name }}
+        run: bun scripts/release.ts notes --tag "$TAG" >"$RUNNER_TEMP/notes.md"
+      # Who built each asset — the packs, their SBOMs, the sums, the installer, the formula — from which commit, by
+      # which workflow: `gh attestation verify <file> --repo <owner/name>`.
+      - uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6 # v4.2.2
         with:
           subject-path: dist/release/*
       - name: draft
         env:
           GH_TOKEN: ${{ github.token }}
           TAG: ${{ github.ref_name }}
-        run: gh release create "$TAG" --draft --verify-tag --title "slipbox ${TAG#v}" dist/release/*
+        run: |
+          gh release create "$TAG" --draft --verify-tag --title "slipbox ${TAG#v}" \
+            --notes-file "$RUNNER_TEMP/notes.md" dist/release/*

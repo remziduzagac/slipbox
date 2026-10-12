@@ -22,21 +22,29 @@ import {
   notices,
   type Package,
   productionPackages,
+  purl,
   repoLink,
+  type Sbom,
+  sbom,
   specProblems,
   workflowProblems,
+  workflowShapeProblems,
 } from "../scripts/check-deps.ts";
 import {
   assetName,
   buildArgs,
   buildRelease,
+  changelogNotes,
   finishRelease,
   homebrewFormula,
   hostTarget,
   installScript,
+  releaseNotes,
   releaseVersion,
   repoOf,
+  sbomName,
   sha256sums,
+  TARGETS,
 } from "../scripts/release.ts";
 import { RELEASE } from "../src/core/release.ts";
 import {
@@ -195,6 +203,120 @@ describe("the supply chain's gates (14.10)", () => {
     expect(workflowProblems("w.yml", yaml).map((p) => p.split(" ")[1])).toEqual(["a/b@v4", "c/d@main", "e/f@3d3c42e"]);
   });
 
+  test("a workflow starts from no permission, and gives every job a timeout (GR-D9)", () => {
+    const job = (extra = "") => `    runs-on: ubuntu-24.04\n${extra}    steps:\n      - run: "true"\n`;
+    const good =
+      `on: push\npermissions: {}\njobs:\n  a:\n${job("    timeout-minutes: 5\n")}` +
+      "  b:\n    uses: ./.github/workflows/x.yml\n";
+    expect(workflowShapeProblems("w.yml", good)).toEqual([]);
+    // Read-only by default is still a default: each job grants its own.
+    expect(workflowShapeProblems("w.yml", good.replace("permissions: {}", "permissions:\n  contents: read"))).toEqual([
+      "w.yml: `permissions: {}` at the top, so a job has only what it grants itself",
+    ]);
+    expect(workflowShapeProblems("w.yml", good.replace("permissions: {}\n", ""))).toHaveLength(1);
+    expect(workflowShapeProblems("w.yml", good.replace("    timeout-minutes: 5\n", ""))).toEqual([
+      "w.yml: job a has no timeout-minutes",
+    ]);
+    expect(workflowShapeProblems("w.yml", "jobs: [\n")[0]).toStartWith("w.yml: not YAML that parses");
+  });
+
+  test("the required check, `ci`, always runs and waits for every other job", () => {
+    const ci = Bun.YAML.parse(readFileSync(join(ROOT, ".github", "workflows", "ci.yml"), "utf8")) as {
+      jobs: Record<string, { needs?: string[]; if?: string }>;
+    };
+    const others = Object.keys(ci.jobs).filter((j) => j !== "ci");
+    expect(others.length).toBeGreaterThan(1);
+    expect([...(ci.jobs.ci?.needs ?? [])].sort()).toEqual(others.sort());
+    expect(ci.jobs.ci?.if).toBe("${{ always() }}");
+  });
+
+  test("a package's Package URL: its scope encoded", () => {
+    expect(purl("@opentui/core", "0.5.12")).toBe("pkg:npm/%40opentui/core@0.5.12");
+    expect(purl("yaml", "2.9.1")).toBe("pkg:npm/yaml@2.9.1");
+    expect(purl("a", "1.0.0+build.1")).toBe("pkg:npm/a@1.0.0%2Bbuild.1");
+  });
+
+  test("the SBOM (CycloneDX): slipbox, each package with its licence and source, Bun, and who depends on whom", () => {
+    const root = tree({ "package.json": JSON.stringify({ license: "Apache-2.0", description: "Notes." }) });
+    const walk = {
+      packages: [
+        pkg("@s/a", "MIT", { repository: "https://github.com/s/a", dependsOn: ["b@1.0.0"] }),
+        pkg("b", "(MIT AND Zlib)", { dependsOn: [] }),
+      ],
+      direct: ["@s/a@1.0.0"],
+    };
+    const bom = sbom(walk, { version: "1.2.3", target: "linux-x64", repo: "o/r" }, root, {
+      serial: "urn:uuid:00000000-0000-4000-8000-000000000000",
+      timestamp: "2026-10-12T00:00:00.000Z",
+    });
+    expect(bom).toMatchObject({
+      bomFormat: "CycloneDX",
+      specVersion: "1.6",
+      serialNumber: "urn:uuid:00000000-0000-4000-8000-000000000000",
+      version: 1,
+      metadata: {
+        timestamp: "2026-10-12T00:00:00.000Z",
+        component: {
+          type: "application",
+          "bom-ref": "slipbox",
+          name: "slipbox",
+          version: "1.2.3",
+          purl: "pkg:github/o/r@v1.2.3",
+          licenses: [{ license: { id: "Apache-2.0" } }],
+          externalReferences: [{ type: "vcs", url: "https://github.com/o/r" }],
+          properties: [{ name: "slipbox:target", value: "linux-x64" }],
+        },
+      },
+    });
+    // A scoped package's scope is its group; a single licence an SPDX id, a compound one its expression.
+    expect(bom.components[0]).toEqual({
+      type: "library",
+      "bom-ref": "pkg:npm/%40s/a@1.0.0",
+      group: "@s",
+      name: "a",
+      version: "1.0.0",
+      purl: "pkg:npm/%40s/a@1.0.0",
+      licenses: [{ license: { id: "MIT" } }],
+      externalReferences: [{ type: "vcs", url: "https://github.com/s/a" }],
+    });
+    expect(bom.components[1]).toMatchObject({ name: "b", licenses: [{ expression: "(MIT AND Zlib)" }] });
+    const bun = bom.components.at(-1)!;
+    expect(bun).toMatchObject({ type: "platform", name: "bun", version: Bun.version });
+    // Nothing compiled in that the walk doesn't bundle: Hunspell comes with hunspell-asm only.
+    expect(bom.components).toHaveLength(3);
+    expect(bom.dependencies).toEqual([
+      { ref: "slipbox", dependsOn: ["pkg:npm/%40s/a@1.0.0", bun["bom-ref"]] },
+      { ref: "pkg:npm/%40s/a@1.0.0", dependsOn: ["pkg:npm/b@1.0.0"] },
+      { ref: "pkg:npm/b@1.0.0", dependsOn: [] },
+      { ref: bun["bom-ref"], dependsOn: [] },
+    ]);
+    // A new one each time: its own serial number and time.
+    const again = sbom(walk, { version: "1.2.3" }, root);
+    expect(again.serialNumber).toMatch(
+      /^urn:uuid:[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/,
+    );
+    expect(again.serialNumber).not.toBe(bom.serialNumber);
+    expect(again.metadata.component.properties).toBeUndefined();
+  });
+
+  test("this repository's SBOM: each package the walk finds, what's compiled in, Bun; every reference resolves", () => {
+    const { packages, direct } = checkDeps(ROOT);
+    const bom: Sbom = sbom({ packages, direct }, { version: VERSION, target: "linux-x64", repo: "o/r" });
+    const refs = new Set(["slipbox", ...bom.components.map((c) => c["bom-ref"])]);
+    expect(refs.size).toBe(bom.components.length + 1);
+    for (const p of packages) expect(refs.has(purl(p.name, p.version))).toBe(true);
+    expect(bom.components.filter((c) => c["bom-ref"].startsWith("embedded:")).map((c) => c.name)).toEqual([
+      "Hunspell",
+      "libwebp",
+    ]);
+    expect(bom.dependencies.find((d) => d.ref.startsWith("pkg:npm/hunspell-asm@"))?.dependsOn).toContain(
+      "embedded:Hunspell",
+    );
+    expect(bom.dependencies.map((d) => d.ref).sort()).toEqual([...refs].sort());
+    for (const d of bom.dependencies) for (const r of d.dependsOn) expect(refs.has(r)).toBe(true);
+    for (const c of bom.components) expect(c.licenses?.length).toBe(1);
+  });
+
   test("the packages bundled: found as Node finds them (a nested copy first), optional ones only where installed", () => {
     const root = tree({
       "package.json": JSON.stringify({ dependencies: { a: "1.0.0", gone: "1.0.0" } }),
@@ -218,7 +340,7 @@ describe("the supply chain's gates (14.10)", () => {
         repository: "git@github.com:x/a-native.git",
       }),
     });
-    const { packages, missing } = productionPackages(root);
+    const { packages, missing, direct } = productionPackages(root);
     expect(packages.map((p) => `${p.name}@${p.version} ${p.licence}`)).toEqual([
       "a@1.0.0 MIT",
       "a-native@1.0.0 MIT",
@@ -226,6 +348,10 @@ describe("the supply chain's gates (14.10)", () => {
     ]);
     expect(packages.find((p) => p.name === "a-native")?.repository).toBe("https://github.com/x/a-native");
     expect(missing).toEqual(["gone (package.json's)"]);
+    // Who depends on whom, as installed: the SBOM's graph.
+    expect(direct).toEqual(["a@1.0.0"]);
+    expect(packages.find((p) => p.name === "a")?.dependsOn).toEqual(["b@2.0.0", "a-native@1.0.0"]);
+    expect(packages.find((p) => p.name === "b")?.dependsOn).toEqual([]);
   });
 
   test("a repository named any of package.json's ways is a link", () => {
@@ -353,6 +479,94 @@ describe("a release (14.2)", () => {
     expect(() => finishRelease({ repo: "o/r", out: tree({ "x.txt": "" }) })).toThrow(`no packs of ${VERSION}`);
     const out = tree({ [assetName(VERSION, "linux-x64")]: "x", [assetName("0.0.1", "linux-x64")]: "old" });
     expect(() => finishRelease({ repo: "o/r", out })).toThrow("packs of another version");
+    // Another version's SBOM too: the release would carry it.
+    const sboms = tree({ [assetName(VERSION, "linux-x64")]: "x", [sbomName("0.0.1", "linux-x64")]: "{}" });
+    expect(() => finishRelease({ repo: "o/r", out: sboms })).toThrow(sbomName("0.0.1", "linux-x64"));
+  });
+
+  test("the release's notes: its version's section of the changelog, without its heading", () => {
+    const changelog = [
+      "# Changelog",
+      "",
+      "## [Unreleased]",
+      "",
+      "### Added",
+      "",
+      "- Not yet.",
+      "",
+      "## [1.2.3] - 2026-10-12",
+      "",
+      "### Added",
+      "",
+      "- A thing.",
+      "",
+      "### Fixed",
+      "",
+      "- Another.",
+      "",
+      "## [1.2.3-rc.1] - 2026-10-01",
+      "",
+      "- The candidate.",
+      "",
+      "## [0.2.3] - 2026-09-01",
+      "",
+      "- The oldest.",
+      "",
+      "[unreleased]: https://github.com/o/r/compare/v1.2.3...HEAD",
+      "[1.2.3]: https://github.com/o/r/compare/v0.2.3...v1.2.3",
+      "",
+    ].join("\r\n");
+    expect(releaseNotes(changelog, "1.2.3")).toBe("### Added\n\n- A thing.\n\n### Fixed\n\n- Another.\n");
+    expect(releaseNotes(changelog, "1.2.3-rc.1")).toBe("- The candidate.\n");
+    // The last section ends where the link definitions begin.
+    expect(releaseNotes(changelog, "0.2.3")).toBe("- The oldest.\n");
+    expect(releaseNotes("## 2.0.0\n\nPlain.\n", "2.0.0")).toBe("Plain.\n");
+    expect(releaseNotes("## [v2.0.0] - 2027-01-01\n\nPrefixed.\n", "2.0.0")).toBe("Prefixed.\n");
+    // None for the version: refused — a version's digits elsewhere aren't its section.
+    expect(() => releaseNotes(changelog, "2.3")).toThrow('no section for 2.3: a "## [2.3] - <date>" heading');
+    expect(() => releaseNotes(changelog, "1.2")).toThrow("no section for 1.2");
+    expect(() => releaseNotes("## [12.2.3]\n\nx\n", "2.2.3")).toThrow("no section for 2.2.3");
+    expect(() => releaseNotes("## [1.0.0] - 2026-10-12\n\n## [0.9.0]\n\n- x\n", "1.0.0")).toThrow(
+      "section for 1.0.0 is empty",
+    );
+  });
+
+  test("the notes made from CHANGELOG.md for the version released; none there, or no changelog, refused", () => {
+    const root = tree({
+      "package.json": JSON.stringify({ version: "1.2.3" }),
+      "src/version.ts": 'export const VERSION = "1.2.3";\n',
+    });
+    expect(() => changelogNotes(root, "v1.2.3")).toThrow("there's no CHANGELOG.md");
+    writeFileSync(join(root, "CHANGELOG.md"), "# Changelog\n\n## [Unreleased]\n\n## [1.2.3] - 2026-10-12\n\n- New.\n");
+    expect(changelogNotes(root, "v1.2.3")).toBe("- New.\n");
+    expect(() => changelogNotes(root, "v1.2.4")).toThrow("the tag is v1.2.4");
+    writeFileSync(join(root, "CHANGELOG.md"), "# Changelog\n\n## [Unreleased]\n\n- New.\n");
+    expect(() => changelogNotes(root)).toThrow("no section for 1.2.3");
+    // The command the release workflow runs: this repository's notes on stdout, or why there are none, failing.
+    let want: { code: number; text: string };
+    try {
+      want = { code: 0, text: changelogNotes(ROOT, `v${VERSION}`) };
+    } catch (err) {
+      want = { code: 1, text: `release: ${(err as Error).message}\n` };
+    }
+    const r = Bun.spawnSync([process.execPath, join(ROOT, "scripts", "release.ts"), "notes", "--tag", `v${VERSION}`]);
+    expect({ code: r.exitCode, text: (r.exitCode === 0 ? r.stdout : r.stderr).toString() }).toEqual(want);
+  });
+
+  test("the release workflow builds every platform released, and attests each one's SBOM to its pack", () => {
+    const wf = Bun.YAML.parse(readFileSync(join(ROOT, ".github", "workflows", "release.yml"), "utf8")) as {
+      jobs: {
+        build: { strategy: { matrix: { include: { target: string }[] } } };
+        sbom: { needs: string; strategy: { matrix: { target: string[] } } };
+        publish: { needs: string[] };
+      };
+    };
+    const released = Object.keys(TARGETS).sort();
+    expect(wf.jobs.build.strategy.matrix.include.map((m) => m.target).sort()).toEqual(released);
+    expect([...wf.jobs.sbom.strategy.matrix.target].sort()).toEqual(released);
+    expect(wf.jobs.sbom.needs).toBe("build");
+    // Nothing is drafted until every SBOM is attested.
+    expect([...wf.jobs.publish.needs].sort()).toEqual(["build", "sbom"]);
   });
 
   test("run from source, slipbox has no release: upgrade and the update check leave it alone", () => {
@@ -464,6 +678,18 @@ describe("a release (14.2)", () => {
         const dir = `slipbox-${VERSION}-${host}/`;
         expect(listed).toEqual([dir, `${dir}LICENSE`, `${dir}NOTICES.txt`, `${dir}slipbox`]);
         expect(readFileSync(join(out, "SHA256SUMS"), "utf8")).toBe(sha256sums([pack]));
+        // Its SBOM beside it, from the walk its notices came from: its version, platform and repository, each package.
+        const bom = JSON.parse(readFileSync(join(out, sbomName(VERSION, host!)), "utf8")) as Sbom;
+        expect(bom.metadata.component).toMatchObject({
+          name: "slipbox",
+          version: VERSION,
+          purl: `pkg:github/example/slipbox@v${VERSION}`,
+          properties: [{ name: "slipbox:target", value: host }],
+        });
+        const { packages } = checkDeps(ROOT);
+        expect(bom.components.filter((c) => c.purl?.startsWith("pkg:npm/")).map((c) => c.purl)).toEqual(
+          packages.map((p) => purl(p.name, p.version)),
+        );
         // Homebrew's formula beside it, for a platform Homebrew installs on.
         if (!host!.endsWith("-musl"))
           expect(readFileSync(join(out, "slipbox.rb"), "utf8")).toContain(

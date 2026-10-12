@@ -83,6 +83,12 @@ there, such as the source launcher. Remove that one first (`rm ~/.local/bin/slip
 Releases aren't signed. On a Mac, Gatekeeper stops a slipbox downloaded with a web browser; the installer's isn't
 stopped.
 
+**Checking a download.** Beside its builds, a release lists `SHA256SUMS`, their checksums, and for each build an
+SBOM, `slipbox-<version>-<platform>.cdx.json`: the software built into it, with their licences, in CycloneDX's
+format. Every file is attested: GitHub's CLI shows that a file was built by slipbox's release workflow, from the
+release's tag, with `gh attestation verify <file> --repo <the repository>`; adding
+`--predicate-type https://cyclonedx.org/bom` checks a build against its SBOM.
+
 A release carries the skill for agents: `slipbox skill --install ~/.claude/skills` installs it for Claude Code, and
 [Working with agents](agents.md#give-the-agent-the-skill) shows the rest.
 

@@ -1,17 +1,21 @@
 #!/usr/bin/env bun
-// A release (plan 14.2), in two steps:
+// A release (plan 14.2), in two steps, and its notes:
 //
 //   bun scripts/release.ts build [--target <t>]… --repo <owner/name> [--tag v<version>] [--out <dir>]
 //   bun scripts/release.ts finish --repo <owner/name> [--tag v<version>] [--out <dir>]
+//   bun scripts/release.ts notes [--tag v<version>]
 //
 // build: each target — this machine's when none is named — compiled by package.json's own `build` (its autoload
-// flags off: 14.1), with its release defined in it (`core/release.ts`), and packed with slipbox's licence and the third-party notices as
-// `slipbox-<version>-<target>.tar.gz`. One built for this machine is run (`--version`) before it's packed. Another
-// platform's needs that platform's OpenTUI package installed (`bun install --os <os> --cpu <cpu>`); CI builds each
-// on its own platform instead (`.github/workflows/release.yml`), where it's there.
+// flags off: 14.1), with its release defined in it (`core/release.ts`), and packed with slipbox's licence and the
+// third-party notices as `slipbox-<version>-<target>.tar.gz`, its SBOM beside it as
+// `slipbox-<version>-<target>.cdx.json`, from the same walk as the notices. One built for this machine is run
+// (`--version`) before it's packed. Another platform's needs that platform's OpenTUI package installed (`bun install
+// --os <os> --cpu <cpu>`); CI builds each on its own platform instead (`.github/workflows/release.yml`), where it's
+// there.
 // finish: `SHA256SUMS` over the packs in `--out`; `install.sh` (14.7): `install.template.sh` with the version, the
 // repository and each pack's sum written in; and `slipbox.rb` (14.3), the Homebrew formula, from
 // `homebrew.template.rb` — macOS's and glibc Linux's packs, which are Homebrew's.
+// notes: the release's notes on stdout, its version's section of CHANGELOG.md; none there fails.
 //
 // The version is package.json's, which must be `src/version.ts`'s, and the tag's when one is given. `--out` is
 // `dist/release` by default. Nothing is published here: CI drafts the release, and a person publishes it.
@@ -19,7 +23,7 @@
 import { createHash } from "node:crypto";
 import { copyFileSync, existsSync, mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { basename, join, resolve } from "node:path";
-import { checkDeps, notices } from "./check-deps.ts";
+import { checkDeps, notices, sbom } from "./check-deps.ts";
 
 const ROOT = resolve(import.meta.dir, "..");
 
@@ -95,6 +99,33 @@ export function sha256sums(files: string[]): string {
 /** A release asset's name. */
 export const assetName = (version: string, target: string) => `slipbox-${version}-${target}.tar.gz`;
 
+/** The name of a pack's SBOM, a release asset beside it. */
+export const sbomName = (version: string, target: string) => `slipbox-${version}-${target}.cdx.json`;
+
+/** A version's release notes: its section of a changelog in Keep a Changelog's shape (`## [<version>] - <date>`),
+ *  without its heading, up to the next version's or the link definitions at the end. None, or an empty one, throws. */
+export function releaseNotes(changelog: string, version: string): string {
+  const lines = changelog.replace(/\r\n?/g, "\n").split("\n");
+  const v = version.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const at = lines.findIndex((l) => new RegExp(`^##\\s+\\[?v?${v}\\]?(\\s|$)`).test(l));
+  if (at < 0) throw new Error(`the changelog has no section for ${version}: a "## [${version}] - <date>" heading`);
+  const end = lines.findIndex((l, i) => i > at && (/^##\s/.test(l) || /^\[[^\]]+\]:\s/.test(l)));
+  const text = lines
+    .slice(at + 1, end < 0 ? undefined : end)
+    .join("\n")
+    .trim();
+  if (!text) throw new Error(`the changelog's section for ${version} is empty`);
+  return `${text}\n`;
+}
+
+/** The notes for the version released from `root`: its section of CHANGELOG.md. */
+export function changelogNotes(root: string, tag?: string): string {
+  const version = releaseVersion(root, tag);
+  const file = join(root, "CHANGELOG.md");
+  if (!existsSync(file)) throw new Error("there's no CHANGELOG.md to take the release's notes from");
+  return releaseNotes(readFileSync(file, "utf8"), version);
+}
+
 function run(argv: string[], cwd = ROOT): string {
   const r = Bun.spawnSync(argv, { cwd, stdout: "pipe", stderr: "pipe" });
   if (r.exitCode !== 0)
@@ -114,7 +145,7 @@ export function buildRelease(opts: {
 }): string[] {
   const root = opts.root ?? ROOT;
   const version = releaseVersion(root, opts.tag);
-  const { problems, packages } = checkDeps(root);
+  const { problems, packages, direct } = checkDeps(root);
   if (problems.length)
     throw new Error(`the supply chain's gates fail (bun run check:deps):\n  ${problems.join("\n  ")}`);
   const script = (JSON.parse(readFileSync(join(root, "package.json"), "utf8")) as { scripts: { build: string } })
@@ -145,6 +176,10 @@ export function buildRelease(opts: {
     rmSync(pack, { force: true });
     run(["tar", "-czf", pack, "-C", opts.out, name]);
     rmSync(stage, { recursive: true, force: true });
+    writeFileSync(
+      join(opts.out, sbomName(version, target)),
+      `${JSON.stringify(sbom({ packages, direct }, { version, target, repo: opts.repo }, root), null, 2)}\n`,
+    );
     packs.push(pack);
   }
   return packs;
@@ -207,7 +242,8 @@ export function finishRelease(opts: { repo: string; tag?: string; out: string; r
     .map((t) => join(opts.out, assetName(version, t)))
     .filter((f) => existsSync(f));
   if (!packs.length) throw new Error(`no packs of ${version} in ${opts.out}: build them first`);
-  const stray = readdirSync(opts.out).filter((f) => f.endsWith(".tar.gz") && !packs.some((p) => basename(p) === f));
+  const ours = new Set(Object.keys(TARGETS).flatMap((t) => [assetName(version, t), sbomName(version, t)]));
+  const stray = readdirSync(opts.out).filter((f) => /\.(tar\.gz|cdx\.json)$/.test(f) && !ours.has(f));
   if (stray.length) throw new Error(`packs of another version in ${opts.out}: ${stray.join(", ")}`);
   const sums = join(opts.out, "SHA256SUMS");
   const text = sha256sums(packs);
@@ -284,9 +320,11 @@ if (import.meta.main) {
     } else if (step === "finish") {
       for (const p of finishRelease({ repo: repoFrom(one("repo")), tag: one("tag"), out }))
         process.stdout.write(`${p}\n`);
+    } else if (step === "notes") {
+      process.stdout.write(changelogNotes(ROOT, one("tag")));
     } else {
       process.stderr.write(
-        "release: build [--target <t>]… [--repo owner/name] [--tag v<version>] [--out <dir>] | finish …\n",
+        "release: build [--target <t>]… [--repo owner/name] [--tag v<version>] [--out <dir>] | finish … | notes …\n",
       );
       process.exit(2);
     }

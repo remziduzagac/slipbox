@@ -46,7 +46,8 @@ a change users will see updates it in the same piece of work, without the bluepr
 
 ## Commands
 
-- `bun run check` — the typecheck, the boundary, the supply chain's gates (`check:deps`), Biome's format and lint, the
+- `bun run check` — the typecheck, the boundary, the supply chain's gates (`check:deps`), Biome's format and lint,
+  zizmor and actionlint over the workflows (`check:actions`; zizmor's online audits only with `GH_TOKEN` set), the
   docs' lint, spelling and links between files (`check:docs`), the tests. Run before proposing a change; CI runs the
   same.
 - `bun run format` — Biome formats the code; `bun run lint` checks it.
