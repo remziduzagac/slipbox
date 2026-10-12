@@ -91,11 +91,16 @@ function xhtml(title: string, lang: string, body: Element[]): string {
 }
 
 /**
- * `<` and `>` in attribute values escaped, as XML needs and HTML doesn't (a formula's words in its picture's `alt`).
- * Text has its `<` escaped already, so a raw one in the output is inside a tag; a value is always in double quotes.
+ * `<` and `>` escaped where XML needs it and HTML doesn't: in attribute values (a formula's words in its picture's
+ * `alt`), and `>` in text (`]]>` is no text of XML's). Text has its `<` escaped already, so a raw one starts a tag, and
+ * a tag's values are in double quotes, which hold none: each tag is read whole, its values found in it — never a
+ * note's own `="` in its text taken for one, which turned the tags after it into text and left the page ill-formed.
  */
 function xmlValues(html: string): string {
-  return html.replace(/="([^"]*)"/g, (_, v: string) => `="${v.replace(/</g, "&#x3C;").replace(/>/g, "&#x3E;")}"`);
+  const entities = (s: string) => s.replace(/</g, "&#x3C;").replace(/>/g, "&#x3E;");
+  return html.replace(/<[^<>"]*(?:"[^"]*"[^<>"]*)*>|>/g, (m) =>
+    m === ">" ? "&#x3E;" : m.replace(/"[^"]*"/g, (v) => `"${entities(v.slice(1, -1))}"`),
+  );
 }
 
 /** An attribute HTML writes bare (`data-footnotes`) given its value: XML has no bare ones. */

@@ -978,6 +978,18 @@ describe("export: an e-book (10.6)", () => {
     expect(await id(["b.md", "a.md"])).not.toBe(await id(["a.md", "b.md"]));
   });
 
+  test("a note's own `=\"` is its text: the tags after it kept, a formula's words escaped in its `alt`, `]]>` escaped", async () => {
+    const r = root({
+      "a.md": '# A\n\nSet a="b *c* d" here, and x=" before $1 < 2$ and **bold**.\n\nA ]]> in text.\n',
+    });
+    const page = xml(unzip((await exportOf(r, ["a.md"], "epub")).data), "OEBPS/chapter-1.xhtml");
+    expect(notWellFormed(page)).toBeNull();
+    expect(page).toContain('Set a="b <em>c</em> d" here, and x=" before <span class="math-inline"><img ');
+    expect(page).toContain('alt="$1 &#x3C; 2$"');
+    expect(page).toContain("<strong>bold</strong>");
+    expect(page).toContain("A ]]&#x3E; in text.");
+  });
+
   test("Obsidian's highlight marked, the page well-formed; its comments not there", async () => {
     const page = xml(
       unzip((await exportOf(root({ "a.md": OBSIDIAN }), ["a.md"], "epub")).data),
