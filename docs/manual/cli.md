@@ -234,6 +234,7 @@ settings files and the environment variables.
 | [`themes`](#themes) | the themes you can use |
 | [`commands`](#commands) | every named command, and its command-line equivalent |
 | [`upgrade`](#upgrade) | install the latest release |
+| [`channel`](#channel) | which releases slipbox follows: stable ones, or previews too |
 | [`uninstall`](#uninstall) | remove what the installer put here |
 | [`skill`](#skill) | the skill for agents: printed, or installed where an agent finds it |
 | [`help`](#help) | this list, in the terminal |
@@ -1305,7 +1306,8 @@ slipbox commands
 ### `upgrade`
 
 Installs the latest release, checked before it's used, when slipbox was put here by its installer; the version it
-replaces is kept. [Installing slipbox](../guides/install.md) covers installing.
+replaces is kept. Following previews ([`channel`](#channel)), it installs the newest of the latest release and the
+newest preview. [Installing slipbox](../guides/install.md) covers installing.
 
 ```bash
 slipbox upgrade --check
@@ -1317,6 +1319,24 @@ slipbox upgrade
 Installed by Homebrew, it says `brew upgrade slipbox` does it; run from source, that there are no releases to follow
 (both exit 1). The command line never checks for updates by itself ([Privacy](privacy.md)). `--json`: `{status,
 from, latest, removed[]}`, `status` being `upgraded`, `current` or `available`.
+
+### `channel`
+
+Which releases slipbox follows, when its installer put it here: `stable`, the releases, or `preview`, the previews as
+well. `slipbox upgrade`, and the daily update check, take the newest the channel offers: on `preview`, the newest of
+the latest release and the newest preview. The installer sets it, `preview` when run with `--preview`; this says it,
+and changes it.
+
+```bash
+slipbox channel
+slipbox channel set preview
+slipbox channel set stable
+```
+
+Back on `stable`, a preview you have stays until a release newer than it is out
+([Previews](../guides/install.md#previews)). Installed by Homebrew, or run from source, slipbox has no channel: the
+command says how that one updates instead, and exits with 5. `--json`: `{channel}`; with `set`, `{channel,
+previous}`.
 
 ### `uninstall`
 

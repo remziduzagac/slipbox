@@ -45,6 +45,7 @@
 import { createHash } from "node:crypto";
 import { copyFileSync, existsSync, mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { basename, join, resolve } from "node:path";
+import { PREVIEW_TAG, PREVIEW_VERSION, pagesBase, tagOf } from "../src/core/release.ts";
 import { checkDeps, notices, sbom } from "./check-deps.ts";
 
 const ROOT = resolve(import.meta.dir, "..");
@@ -86,18 +87,9 @@ export function repoOf(s: string): string | null {
   return m && m[2] !== "." && m[2] !== ".." ? `${m[1]}/${m[2]}` : null;
 }
 
-/** A preview's tag (GR-D13): `preview-<its commit's UTC committer time, YYYYMMDDHHMM>-<the commit's 7 first hex>`. */
-export const PREVIEW_TAG = /^preview-(\d{12})-([0-9a-f]{7})$/;
-
-/** A preview's version: `<the release to come's x.y.z>-preview.<time>.g<hash>`, a pre-release of that version, so it
- *  sorts after the previews before it and before the release. */
-export const PREVIEW_VERSION = /^(\d+\.\d+\.\d+)-preview\.(\d{12})\.g([0-9a-f]{7})$/;
-
-/** The tag a version is published under: a preview's `preview-<time>-<hash>`, else `v<version>`. */
-export function tagOf(version: string): string {
-  const p = PREVIEW_VERSION.exec(version);
-  return p ? `preview-${p[2]}-${p[3]}` : `v${version}`;
-}
+// A preview's tag and version, and the tag a version is published under (GR-D13): the binary's own, which its
+// upgrades follow (`core/release.ts`).
+export { PREVIEW_TAG, PREVIEW_VERSION, tagOf };
 
 /** A time, in seconds since the epoch, as a preview names it: UTC, `YYYYMMDDHHMM`. */
 export function utcMinute(seconds: number): string {
@@ -220,8 +212,7 @@ export function releaseNotes(changelog: string, version: string): string {
  *  are (GR-D14). */
 export function pagesUrl(repo: string): string {
   if (repoOf(repo) !== repo) throw new Error(`not a repository: ${repo}`);
-  const [owner, name] = repo.split("/") as [string, string];
-  return `https://${owner.toLowerCase()}.github.io/${name}`;
+  return pagesBase(repo);
 }
 
 /** A preview's notes: what it is, how to install it, and what's changed so far — the changelog's Unreleased section,

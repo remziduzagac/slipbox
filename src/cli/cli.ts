@@ -190,8 +190,17 @@ import { isTrusted, setTrustedRoots } from "../core/trust.ts";
 import { type Args, flag, has, parseArgs, UsageError, VALUED } from "./args.ts";
 import { VERSION } from "../version.ts";
 import { RELEASE } from "../core/release.ts";
-import { installedBy, uninstall, uninstallPlan } from "../core/install.ts";
-import { upgrade as upgradeTo, UpgradeError } from "../core/update.ts";
+import {
+  type Channel,
+  installedBy,
+  isChannel,
+  noChannel,
+  readChannel,
+  uninstall,
+  uninstallPlan,
+  writeChannel,
+} from "../core/install.ts";
+import { sayOut, upgrade as upgradeTo, UpgradeError } from "../core/update.ts";
 import { installSkill, SKILL, SKILL_NAME, SkillRefused } from "../core/skill.ts";
 import { notesOfType, ofType } from "../core/doctypes.ts";
 
@@ -380,6 +389,7 @@ Usage:
   slipbox themes                    list themes
   slipbox types [type]              document types here (skill, adr, your [types]): how many notes each; a type's notes in order
   slipbox upgrade                   the latest release installed, checked before it's used  [--check: only say whether there's one]
+  slipbox channel [set stable|preview]  which releases the installer's install follows: stable, or previews too
   slipbox uninstall                 what the installer put here, listed; removed with --yes  [--purge: slipbox's folders too] [--yes]
   slipbox skill                     the skill for agents, this slipbox's: printed; written into <dir>/slipbox/ with --install
                                     [--install <dir>] [--force: over a file slipbox didn't write, or a link] [--dry-run]
@@ -454,6 +464,7 @@ export const CLI_COMMANDS = new Set([
   "export",
   "spell",
   "upgrade",
+  "channel",
   "uninstall",
   "skill",
   "types",
@@ -707,6 +718,7 @@ const MAX_ARGS: Record<string, number> = {
   undo: 0,
   spell: 1,
   upgrade: 0,
+  channel: 2,
   uninstall: 0,
   skill: 0,
   types: 1,
@@ -2478,17 +2490,49 @@ const HANDLERS: Record<string, Handler> = {
         env: s.io.env,
         check: has(s.args, "check"),
       });
+      const channel = readChannel(dataHome());
       const human =
         r.status === "current"
-          ? `slipbox ${r.from} is the latest\n`
+          ? r.latest === r.from
+            ? `slipbox ${r.from} is the latest\n`
+            : `slipbox ${r.from} is newer than the latest ${channel === "preview" ? "release or preview" : "release"}, ${r.latest}: it stays until a newer one\n`
           : r.status === "available"
-            ? `slipbox ${r.latest} is out (this is ${r.from}): slipbox upgrade installs it\n`
+            ? `${sayOut(r.latest, r.from, channel, "slipbox upgrade installs it")}\n`
             : `slipbox ${r.from} → ${r.latest}; ${r.from} is kept, to go back to${r.removed.length ? ` (${r.removed.join(", ")} removed)` : ""}\n`;
       return { data: r, human };
     } catch (err) {
       if (err instanceof UpgradeError) throw new CliError(err.message, EXIT.error);
       throw err;
     }
+  },
+
+  // Which releases the installer's install follows (GR-D15): said; `set stable|preview` changes it, kept in
+  // <data>/channel beside `current`. Homebrew's, and slipbox run from source, have none: refused, saying how they
+  // update.
+  channel(_s, rest) {
+    const [sub, value] = rest;
+    if (sub !== undefined && sub !== "set")
+      throw new UsageError(`slipbox channel says the channel; slipbox channel set stable|preview sets it (not ${sub})`);
+    if (sub === "set" && (value === undefined || !isChannel(value)))
+      throw new UsageError(`a channel is stable or preview${value === undefined ? "" : `, not ${value}`}`);
+    const data = dataHome();
+    const refused = noChannel(RELEASE, installedBy(process.execPath, data, VERSION), process.execPath);
+    if (refused) throw new CliError(refused, EXIT.refused);
+    const follows: Record<Channel, string> = {
+      stable: "stable releases",
+      preview: "previews, and the stable release when it's newer",
+    };
+    const was = readChannel(data);
+    if (sub !== "set") return { data: { channel: was }, human: `${was}: this slipbox follows ${follows[was]}\n` };
+    const now = value as Channel;
+    writeChannel(data, now);
+    const human =
+      now === was
+        ? `${now} already: this slipbox follows ${follows[now]}\n`
+        : now === "preview"
+          ? "preview: this slipbox follows previews now, and the stable release when it's newer — slipbox upgrade installs the newest\n"
+          : `stable: this slipbox follows stable releases now${VERSION.includes("-preview.") ? `; ${VERSION}, a preview, stays until a newer release` : ""}\n`;
+    return { data: { channel: now, previous: was }, human };
   },
 
   // What the installer put here (14.8) — with --purge, slipbox's four folders too — listed, every path; removed only

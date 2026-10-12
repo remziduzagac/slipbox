@@ -83,7 +83,8 @@ function blueprintIds(text: string): string[] {
 
 /**
  * What slipbox can print: every string in its source, a template's substitutions left out, and the strings of the
- * scripts a user runs (the installer, the Homebrew formula, the source launcher). Comments may cite the blueprint.
+ * scripts a user runs (the installer and the Pages site's that runs it, the Homebrew formula, the source launcher).
+ * Comments may cite the blueprint.
  */
 async function messages(): Promise<{ where: string; text: string }[]> {
   const sources: [string, Grammar][] = [
@@ -92,6 +93,7 @@ async function messages(): Promise<{ where: string; text: string }[]> {
       .filter((f) => f.endsWith(".ts"))
       .map((f): [string, Grammar] => [join(TOP, "src", f), "typescript"]),
     [join(TOP, "scripts", "install.template.sh"), "bash"],
+    [join(TOP, "scripts", "bootstrap.template.sh"), "bash"],
     [join(TOP, "scripts", "install-local.sh"), "bash"],
     [join(TOP, "scripts", "homebrew.template.rb"), "ruby"],
   ];

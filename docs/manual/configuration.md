@@ -591,6 +591,10 @@ too.
 - `SLIPBOX_PARSE_CACHE`: `off` goes without the shared parse cache; every note is parsed afresh.
 - `SLIPBOX_RELEASES_URL`: releases fetched from another place laid out as GitHub's releases are, such as a mirror:
   for the installer, `slipbox upgrade` and the update check.
+- `SLIPBOX_CHANNELS_URL`: the files naming each channel's newest release read from another place than slipbox's site
+  on GitHub Pages: for the installer, `slipbox upgrade` and the update check.
+- `SLIPBOX_CHANNEL`: `preview` has the installer install the newest preview, and the install follow previews, as
+  `--preview` does; `stable`, the default, releases only.
 - `SLIPBOX_BIN_DIR`: where the installer puts its `slipbox` link, instead of `~/.local/bin`.
 
 ### Variables slipbox reads
@@ -678,7 +682,8 @@ For each root, in `<key>/`:
 
 - `tools/`: language servers and markdownlint-cli2 installed from npm, each at the version slipbox pins.
 - `spell/words.txt`: your own words.
-- `versions/` and `current`: slipbox itself, when its installer installed it.
+- `versions/` and `current`: slipbox itself, when its installer installed it; `channel`, the releases it follows
+  (`slipbox channel`).
 
 The cache can be deleted while slipbox isn't running: all of it is rebuilt. The state folder holds what you would
 miss, the scratch and the trash among it. `slipbox uninstall --purge` removes slipbox with all four folders, listing

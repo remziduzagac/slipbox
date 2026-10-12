@@ -4,8 +4,13 @@
 // it; the version it replaced is kept until the next. The TUI asks once a day, and says when there's a newer one —
 // never the CLI, which agents call; never with DO_NOT_TRACK set, or `[update] check = false` in your own config.
 //
+// An install follows a channel (GR-D15, `<data>/channel`): `stable`, the latest release as above; `preview`, the
+// newest of that and the newest preview, which the Pages site's `preview` file names (`<tag> <sha256 of its
+// install.sh>`), its packs summed in its own `SHA256SUMS` (`<base>/download/<tag>/SHA256SUMS`).
+//
 // Nothing identifying is sent: a plain GET of a public file. `SLIPBOX_RELEASES_URL` names another place laid out as
-// GitHub's releases are (`<base>/latest/download/…`, `<base>/download/v<version>/…`): a mirror, the tests' folder.
+// GitHub's releases are (`<base>/latest/download/…`, `<base>/download/<tag>/…`), and `SLIPBOX_CHANNELS_URL` another
+// for the Pages site's channel files: a mirror, the tests' folder.
 
 import { createHash } from "node:crypto";
 import {
@@ -20,14 +25,19 @@ import {
   writeFileSync,
 } from "node:fs";
 import { dirname, join } from "node:path";
-import type { ReleaseBuild } from "./release.ts";
-import { howToUpgrade, type InstalledBy, installedBy } from "./install.ts";
+import { PREVIEW_TAG, pagesBase, type ReleaseBuild, tagOf } from "./release.ts";
+import { type Channel, howToUpgrade, type InstalledBy, installedBy, readChannel } from "./install.ts";
 
 type Fetcher = (url: string, init?: RequestInit) => Promise<Response>;
 
 /** Where a repository's releases are: GitHub's, or `SLIPBOX_RELEASES_URL`'s. */
 export function releasesBase(repo: string, env: Record<string, string | undefined> = process.env): string {
   return (env.SLIPBOX_RELEASES_URL || `https://github.com/${repo}/releases`).replace(/\/+$/, "");
+}
+
+/** Where a repository's channel files are: its Pages site, or `SLIPBOX_CHANNELS_URL`'s. */
+export function channelsBase(repo: string, env: Record<string, string | undefined> = process.env): string {
+  return (env.SLIPBOX_CHANNELS_URL || pagesBase(repo)).replace(/\/+$/, "");
 }
 
 export interface Latest {
@@ -74,6 +84,65 @@ export async function fetchLatest(
   }
 }
 
+/** A release to install: its pack for this platform, and the tag it's released under. */
+export interface Candidate extends Latest {
+  tag: string;
+}
+
+/** The preview a channel file names — its line `<tag> <sha256 of the release's install.sh>` — or null. */
+export function previewIn(text: string): string | null {
+  const m = /^(\S+) [0-9a-f]{64}$/.exec(text.trim());
+  return m && PREVIEW_TAG.test(m[1]!) ? m[1]! : null;
+}
+
+/** The newest preview's pack for a target: the release the Pages site's `preview` file names, found from its own
+ *  `SHA256SUMS`; null when it can't be said (no preview yet, offline, none for this platform). */
+export async function fetchPreview(
+  channels: string,
+  releases: string,
+  target: string,
+  fetcher: Fetcher = fetch,
+  timeoutMs = 10_000,
+): Promise<Candidate | null> {
+  try {
+    const get = (url: string) => fetcher(url, { signal: AbortSignal.timeout(timeoutMs), redirect: "follow" });
+    const named = await get(`${channels}/preview`);
+    if (!named.ok) return null;
+    const tag = previewIn(await named.text());
+    if (!tag) return null;
+    const sums = await get(`${releases}/download/${tag}/SHA256SUMS`);
+    if (!sums.ok) return null;
+    const found = latestIn(await sums.text(), target);
+    // Its packs are that preview's: the version they carry is the one its tag says.
+    return found && tagOf(found.version) === tag ? { ...found, tag } : null;
+  } catch {
+    return null;
+  }
+}
+
+/** The newest a channel offers for a target: `stable`'s, the latest release; `preview`'s, the newer of that and the
+ *  newest preview, by semver — a preview comes after the previews before it, and before its version's release. Null
+ *  when neither can be said. */
+export async function fetchNewest(opts: {
+  channel: Channel;
+  releases: string;
+  channels: string;
+  target: string;
+  fetcher?: Fetcher;
+  timeoutMs?: number;
+}): Promise<Candidate | null> {
+  const stable = fetchLatest(opts.releases, opts.target, opts.fetcher, opts.timeoutMs).then((l) =>
+    l ? { ...l, tag: tagOf(l.version) } : null,
+  );
+  if (opts.channel !== "preview") return stable;
+  const [s, p] = await Promise.all([
+    stable,
+    fetchPreview(opts.channels, opts.releases, opts.target, opts.fetcher, opts.timeoutMs),
+  ]);
+  if (!s || !p) return s ?? p;
+  return isNewer(p.version, s.version) ? p : s;
+}
+
 /** Whether DO_NOT_TRACK asks for nothing to be sent (consoledonottrack.com): set, and not 0 or false. */
 export function doNotTrack(env: Record<string, string | undefined>): boolean {
   const v = (env.DO_NOT_TRACK ?? "").trim().toLowerCase();
@@ -90,10 +159,16 @@ interface CheckState {
   latest?: string;
 }
 
+/** What's said of a newer one: the channel named when it's `preview`, then how to get it. */
+export function sayOut(newest: string, current: string, channel: Channel, how: string): string {
+  return `slipbox ${newest} is out${channel === "preview" ? " on the preview channel" : ""} (this is ${current}): ${how}`;
+}
+
 /**
  * The TUI's daily check: when it's due — a release build, `[update] check` on in your config, no DO_NOT_TRACK, a day
- * since the last — the latest asked for, and what to say when it's newer than this one; null otherwise. The time is
- * kept before asking, so a failure waits a day too.
+ * since the last — the newest its channel offers asked for, and what to say when it's newer than this one; null
+ * otherwise. The time is kept before asking, so a failure waits a day too. `channel`: the installer's install's;
+ * any other follows stable releases.
  */
 export async function dailyUpdateCheck(opts: {
   release: ReleaseBuild | null;
@@ -104,6 +179,7 @@ export async function dailyUpdateCheck(opts: {
   now?: number;
   fetcher?: Fetcher;
   by?: InstalledBy;
+  channel?: Channel;
 }): Promise<string | null> {
   if (!opts.release || !opts.enabled || doNotTrack(opts.env)) return null;
   const now = opts.now ?? Date.now();
@@ -119,11 +195,18 @@ export async function dailyUpdateCheck(opts: {
     } catch {}
   };
   save({ ...state, checked: now });
-  const latest = await fetchLatest(releasesBase(opts.release.repo, opts.env), opts.release.target, opts.fetcher);
+  const channel = opts.channel ?? "stable";
+  const latest = await fetchNewest({
+    channel,
+    releases: releasesBase(opts.release.repo, opts.env),
+    channels: channelsBase(opts.release.repo, opts.env),
+    target: opts.release.target,
+    fetcher: opts.fetcher,
+  });
   if (!latest) return null;
   save({ checked: now, latest: latest.version });
   return isNewer(latest.version, opts.version)
-    ? `slipbox ${latest.version} is out (this is ${opts.version}): ${howToUpgrade(opts.by ?? "installer", opts.release.repo)}`
+    ? sayOut(latest.version, opts.version, channel, howToUpgrade(opts.by ?? "installer", opts.release.repo))
     : null;
 }
 
@@ -149,7 +232,8 @@ function versionOf(bin: string): string | null {
 }
 
 /**
- * `slipbox upgrade`: this install — the installer's, in `data` — moved to the latest release, or, with `check`, only
+ * `slipbox upgrade`: this install — the installer's, in `data` — moved to the newest its channel offers (`<data>/
+ * channel`: the latest release, or on `preview` the newer of that and the newest preview), or, with `check`, only
  * told of it. The pack's SHA-256 must be its SHA256SUMS line's and its binary must say its version before `current`
  * moves; the version replaced is kept, any older removed.
  */
@@ -176,8 +260,22 @@ export async function upgrade(opts: {
     );
   }
   const base = releasesBase(opts.release.repo, opts.env);
-  const latest = await fetchLatest(base, opts.release.target, fetcher, 30_000);
-  if (!latest) throw new UpgradeError(`couldn't find the latest release's ${opts.release.target} build at ${base}`);
+  const channel = readChannel(opts.data);
+  const channels = channelsBase(opts.release.repo, opts.env);
+  const latest = await fetchNewest({
+    channel,
+    releases: base,
+    channels,
+    target: opts.release.target,
+    fetcher,
+    timeoutMs: 30_000,
+  });
+  if (!latest)
+    throw new UpgradeError(
+      channel === "preview"
+        ? `couldn't find the latest release's ${opts.release.target} build at ${base}, nor the newest preview's (${channels}/preview)`
+        : `couldn't find the latest release's ${opts.release.target} build at ${base}`,
+    );
   const result = { from: opts.version, latest: latest.version, removed: [] as string[] };
   if (!isNewer(latest.version, opts.version)) return { status: "current", ...result };
   if (opts.check) return { status: "available", ...result };
@@ -187,7 +285,7 @@ export async function upgrade(opts: {
   rmSync(work, { recursive: true, force: true });
   mkdirSync(work, { recursive: true });
   try {
-    const url = `${base}/download/v${v}/${latest.asset}`;
+    const url = `${base}/download/${latest.tag}/${latest.asset}`;
     let bytes: Uint8Array;
     try {
       const res = await fetcher(url, { signal: AbortSignal.timeout(300_000), redirect: "follow" });

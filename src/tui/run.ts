@@ -9,7 +9,7 @@ import { sanitize } from "../core/sanitize.ts";
 import { setWidthMethod } from "../core/width.ts";
 import { join, resolve } from "node:path";
 import { dataHome, stateHome } from "../core/paths.ts";
-import { installedBy } from "../core/install.ts";
+import { installedBy, readChannel } from "../core/install.ts";
 import { RELEASE } from "../core/release.ts";
 import { dailyUpdateCheck } from "../core/update.ts";
 import { windowsDriveNote } from "../core/wsl.ts";
@@ -160,7 +160,8 @@ export async function runTui(argv: string[]): Promise<number> {
   });
 
   // A release's daily update check (14.4): your own config's say, never a folder's — a network request is yours to
-  // allow — and DO_NOT_TRACK's. Said when there's a newer one; the CLI never asks.
+  // allow — and DO_NOT_TRACK's. Said when there's a newer one; the CLI never asks. The installer's install follows its
+  // channel (GR-D15); any other, stable releases.
   const yours = loadConfig({ configFile: start.configFile }).config;
   const by = installedBy(process.execPath, dataHome(), VERSION);
   void dailyUpdateCheck({
@@ -170,6 +171,7 @@ export async function runTui(argv: string[]): Promise<number> {
     env: process.env,
     stateFile: join(stateHome(), "update.json"),
     by,
+    channel: by === "installer" ? readChannel(dataHome()) : "stable",
   }).then((said) => {
     if (said) app.message("info", said);
   });
