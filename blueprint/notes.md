@@ -364,3 +364,11 @@ dates. Each says what was asked, decided, built and found, and cites the decisio
 - **Open, for the user:** the skill as an npx package for common harnesses, and how agents and slipbox work together,
   to discuss (ideas.md § Agent surface); search's improvements, later (ideas.md § Search).
 
+
+## A green repository (2026-10-12)
+
+- The user shared greenrepo, their standard for a healthy repository, to adjust slipbox's repository by, create it on
+  GitHub, push it and set up its release flows. Compared against it, slipbox already met much through distribution's
+  work (`14.x`); the gaps and the decisions they needed were laid out with a recommendation each.
+- The user answered "public, apache, blueprint goes the repo, hardened ci, agreed to rest": the workstream GR
+  ([its notes](workstreams/greenrepo/notes.md), its decisions GR-D1–GR-D11), which also settles the licence (`14.6`).

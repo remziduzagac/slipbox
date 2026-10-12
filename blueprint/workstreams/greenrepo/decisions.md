@@ -1,0 +1,120 @@
+# Decisions: a green repository
+
+## GR-D1: slipbox follows greenrepo, scope Shared, Users, Artifacts, UI, Large (2026-10-12)
+
+**Decision:** The repository meets greenrepo (draft 2, 2026-10-10) for the scope
+`Shared, Users, Artifacts, UI, Large; TypeScript (Bun), Bash, Markdown, Command-line distribution`, recorded in
+AGENTS.md's skills block. Not Contrib (GR-D5), not Registry (nothing goes to a registry until the npx package), not
+Deployed, Store or Fork.
+
+**Why:** The user's standard for every repository meant to last. slipbox is to be public (Shared) and released for
+people to run (Users), ships binaries (Artifacts), has a terminal interface (UI), and its source is past 50,000 lines
+(Large).
+
+**Note:** greenrepo's TypeScript profile assumes Node, pnpm and Vitest; slipbox is Bun throughout, so the profile's
+rows are met by Bun's equivalents (notes.md § Where greenrepo doesn't fit), reported back to the user as feedback on
+the draft.
+
+## GR-D2: A public repository on GitHub (2026-10-12)
+
+**Decision:** slipbox is published as a public repository on GitHub, under the user's account.
+
+**Why:** The release flow already assumes it: the installer and Homebrew download release assets without logging in.
+Attestations, code scanning, secret scanning and private vulnerability reporting are free only on public
+repositories, and rulesets on a personal account's private one need a paid plan.
+
+**Not chosen:** private first, made public at the first release.
+
+## GR-D3: slipbox's licence is Apache-2.0 (14.6, 2026-10-12)
+
+**Decision:** slipbox is licensed under Apache-2.0: a `LICENSE` file with its text, `package.json`'s `license`, the
+packs and the Homebrew formula carrying it. Closes `14.6`, parked by D193.
+
+**Why:** The user's choice. Apache-2.0 grants contributors' patent licence explicitly; it is compatible with the weak
+copyleft dependencies accepted for use (D192, D194).
+
+**Not chosen:** MIT, which `package.json` said while the choice was parked; dual "MIT OR Apache-2.0" (ideas.md
+§ Licence).
+
+## GR-D4: The blueprint is published with the code, history included (2026-10-12)
+
+**Decision:** The repository goes public as it is, the blueprint and all its history with it. Before the first push,
+the history is searched for secrets and private text, and the user sees what was found; nothing is rewritten without
+the user.
+
+**Why:** The blueprint is the project's method, written to be public (README: "This blueprint is public"); greenrepo
+lets documents link a public blueprint for depth. A secret once pushed to a public repository has to be treated as
+leaked, whatever is rewritten after.
+
+**Not chosen:** moving the blueprint out, or publishing a squashed history.
+
+## GR-D5: Issues open, pull requests from collaborators only (2026-10-12)
+
+**Decision:** Anyone may open an issue; pull requests are limited to collaborators, with GitHub's pull request
+controls. Until that changes, Contrib is false: no contributing guide, code of conduct, pull request template or AI
+policy.
+
+**Why:** On recommendation. A solo maintainer gets reports without reviewing outside code, and the documents Contrib
+asks for wait until someone asks to contribute.
+
+**Not chosen:** open pull requests with Contrib's documents from the start.
+
+## GR-D6: Every change through a pull request the user merges (2026-10-12)
+
+**Decision:** Once the repository exists, work lands on `main` only through a pull request that passes the required
+check, merged by the user with a squash. Its title is a Conventional Commit (`fix(export): …`), the subject of the
+squashed commit; the workstream or task IDs go in its body. Agents work on branches and open pull requests; they never
+commit to `main`, merge, release or change settings.
+
+**Why:** On recommendation. greenrepo's agents propose, the person approves (AGT-03), and the rulesets require it
+(SET-04). Squashing gives `main` one commit per change, titled for the changelog.
+
+**Not chosen:** commits straight to `main`, with the admin's bypass recorded as a deviation.
+
+## GR-D7: Biome formats and lints the code, at 120 columns (2026-10-12)
+
+**Decision:** Biome 2, pinned, formats and lints TypeScript and JSON at 120 columns, two spaces; `bun run check` runs
+it, and warnings fail. The code is reformatted once, in one commit listed in `.git-blame-ignore-revs`.
+
+**Why:** On recommendation: greenrepo's QA-03 and the TypeScript profile's default; one tool for both.
+
+**Not chosen:** ESLint with Prettier; a linter only.
+
+## GR-D8: A docs site after the first release (2026-10-12)
+
+**Decision:** The user docs stay Markdown in `docs/`, read on GitHub, until after the first release. DOC-06 is an
+accepted deviation until then, with a review date.
+
+**Why:** On recommendation: GitHub renders `docs/` well, and a site is a generator and its upkeep to add.
+
+## GR-D9: Hardened CI, on Linux and macOS (2026-10-12)
+
+**Decision:** CI meets greenrepo's CI rules: no permission by default and each job's grants explained, actions pinned
+by commit, no credentials kept, timeouts, concurrency, the untrusted kept out of `run:`, zizmor and actionlint, one
+aggregator job as the required check, and the tests on Linux and macOS. Dependabot, a scheduled scanner and a weekly
+health check go with it.
+
+**Why:** The user's answer ("hardened ci"). slipbox ships macOS binaries, so it is tested there; a macOS runner also
+answers `14.13`'s questions on every change.
+
+## GR-D10: The skill ships in the binary (2026-10-12)
+
+**Decision:** The skill (`skills/slipbox/SKILL.md`) is built into the binary: `slipbox skill` prints it, and
+`slipbox skill --install <dir>` writes it to `<dir>/slipbox/SKILL.md`, so an agent's skill matches the slipbox it
+drives. A release install gets the skill this way; from source, `scripts/install-local.sh --skill` still links it.
+
+**Why:** On recommendation. greenrepo's AGT-06: a product skill ships with each release. It also gives a release
+install the skill, which today only a source checkout has.
+
+**Not chosen:** a separate download beside the packs. Per-harness defaults wait for the npx workstream.
+
+## GR-D11: The toolchain pinned in mise.toml (2026-10-12)
+
+**Decision:** `mise.toml` pins Bun and the check's tools (zizmor, actionlint, typos, lychee, gitleaks); mise reads it
+locally, and `jdx/mise-action` in CI, so each version is written once. `package.json`'s `engines` stays the floor for
+running from source.
+
+**Why:** On recommendation, within GR-D9: greenrepo's QA-01, one committed file read by local tools and CI alike. The
+CI's three `bun-version: 1.4.2` were three copies.
+
+**Not chosen:** a `.bun-version` read by setup-bun, with the other tools pinned in workflows: two places again.

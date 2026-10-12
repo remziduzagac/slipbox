@@ -7,8 +7,9 @@ synced_with: main@0d2823e
 slipbox is a terminal markdown notes app: a shared workspace for humans and agents over plain files, where a person in
 the TUI and an agent on the CLI see the same files, the same links and the same answers (D33). It is TypeScript on Bun,
 one core with two faces, compiled into one binary (D5, D8). Every phase on the roadmap is built, extensibility aside,
-deferred (D37), and the initial design was declared settled on 2026-10-11 (D210). Still open: the licence (`14.6`,
-D193), the checks on a real Mac before the first release (`14.13`) and native Windows (`14.14`–`14.17`).
+deferred (D37), and the initial design was declared settled on 2026-10-11 (D210). Now: GR, the repository brought to
+the user's greenrepo standard and published, then the first release, which settles the licence (`14.6`) and the Mac's
+checks (`14.13`); native Windows (`14.14`–`14.17`) after.
 
 ## Where to start
 
@@ -27,8 +28,9 @@ D193), the checks on a real Mac before the first release (`14.13`) and native Wi
 - [design/](design/README.md): how it works now.
 
 - [tasks/](tasks/README.md): small work not worth a workstream; open tasks are its files.
-- [workstreams/](workstreams/README.md): contained parts of the work; the roadmap gives their order. None is active;
-  DOC, the user documentation, and DF, what writing it found, are consolidated, in `workstreams/archive/`.
+- [workstreams/](workstreams/README.md): contained parts of the work; the roadmap gives their order. Active:
+  [GR](workstreams/greenrepo/README.md), the repository to greenrepo and published. DOC, the user documentation, and
+  DF, what writing it found, are consolidated, in `workstreams/archive/`.
 
 ## How things are recorded
 
