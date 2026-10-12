@@ -98,6 +98,9 @@ jobs:
           tar -xzf "dist/release/slipbox-$VERSION-$TARGET.tar.gz" -C unpacked
           docker run --rm -v "$PWD/unpacked/slipbox-$VERSION-$TARGET:/w:ro" -e VERSION="$VERSION" \
             alpine:3.24.2@sha256:294b683cb724975bec92580e1e685676bd4b50bda910ddb8c51d4cabeaec77e6 sh -euc '
+              # Without the C++ runtime it says so, and how to add it, as the installer does; with it, it runs.
+              if /w/slipbox --version >/dev/null 2>&1; then echo "ran without libstdc++"; exit 1; fi
+              apk add --no-cache libstdc++ libgcc >/dev/null
               test "$(/w/slipbox --version)" = "slipbox $VERSION"
               mkdir -p /tmp/n/.slipbox
               printf "# A\n\nThe zorvexian word.\n" >/tmp/n/a.md

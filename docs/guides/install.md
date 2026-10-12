@@ -45,7 +45,8 @@ and installs slipbox into `~/.local/share/slipbox`, with a `slipbox` link in `~/
 nothing else is touched. If `~/.local/bin` isn't on your PATH, it says how to add it. `SLIPBOX_BIN_DIR` puts the link
 in another folder.
 
-On Alpine without curl, busybox's wget does the same, `--preview` too:
+On Alpine, slipbox needs the C++ runtime, which a bare Alpine hasn't: `apk add libstdc++ libgcc` first (the
+installer says so if they're missing). Without curl, busybox's wget does the same as curl, `--preview` too:
 
 ```bash
 wget -qO- https://remziduzagac.github.io/slipbox/install.sh | sh
