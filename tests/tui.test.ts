@@ -5789,6 +5789,9 @@ describe("review cycle 4 (TUI)", () => {
     try {
       await h.keys("ctrl+w", "v");
       await h.app.run("note.open notes/beta.md");
+      // The watch live first: macOS's starts a moment after it's asked for, and a write before then isn't seen.
+      writeFileSync(join(root, "notes", "ready.md"), "# Ready\n");
+      await until(() => h.app.graph.notes.has("notes/ready.md"));
       for (let i = 0; i < 30; i++) {
         writeFileSync(join(root, "notes", "alpha.md"), `# Alpha ${i}\n`);
         writeFileSync(join(root, "notes", "beta.md"), `# Beta ${i}\n`);
