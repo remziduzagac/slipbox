@@ -39,3 +39,23 @@ Feedback for the draft, to give the user:
   becomes a preview; `stable` names the highest `v` version, not the latest published; `slipbox channel` on a
   Homebrew or source install exits 5, saying how that one updates; `uninstall` takes the `channel` file with the
   install's links.
+
+## Fixing what was open (2026-10-12 to 13)
+
+- After the first health run, "lets fix open ones". Dependabot's first pull request (#1) failed: it bundled
+  web-tree-sitter 0.27, which OpenTUI's peer (0.25.10) doesn't take yet. Closed for #11: its two safe bumps, OpenTUI in
+  a pull request of its own (its upgrade policy has the TUI tried by hand), web-tree-sitter moving only with it, the
+  example projects (`examples/`) left out; the health issue counts their alerts apart.
+- The 45 Dependabot alerts, all in the reference set's example projects, never installed or run: dismissed as not
+  used. Dependabot's security run had failed on the same fixtures.
+- CodeQL's 14 alerts triaged one by one: the fixes in slipbox and its tests, each with a regression test (#13: how a
+  picture is told to be an SVG, one scan; an e-book's pages well-formed whatever a note says; test helpers' names
+  escaped whole in patterns), the rest dismissed with their reasons (CommonMark's comment end; the user's own
+  find-and-replace pattern, by design; tests only). Two follow-ups found on the way went to the root's ideas.md: a
+  pattern that backtracks badly, a CSS variable that names itself.
+- Discussions on for questions and ideas, the issue chooser and the README pointing there (GR-D17).
+- The first release, as GR-T14's log has it: `v0.2.0` tagged, its build failing twice on the Intel Mac on a watcher
+  test (#16), so 0.2.1, a tag never being moved (GR-D18's note); 0.2.1's build hitting Bun's 5 s default, the bound
+  now `bun test --timeout 30000` (#19); the draft checked and published 2026-10-12 at the user's word; installed by
+  the one line; Homebrew waiting for its tap. Then `main` to 0.3.0 (#18).
+- 2026-10-13: every task done; the user approved consolidating GR into the blueprint's root.

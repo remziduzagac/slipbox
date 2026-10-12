@@ -16,6 +16,8 @@ replaced them.
   [cli.md](../../docs/manual/cli.md) § The scratch and the context bundle.
 - **Cell**: in the code view, one definition's code under a header holding its buttons and its documentation.
   [code-view.md](code-view.md).
+- **Channel**: the releases an install follows, `stable` or `preview`, kept with the install.
+  [distribution.md](distribution.md) § Channels.
 - **Command**: a user action, named by an id; the **command registry** (`CommandRegistry`) holds them, each with its
   CLI equivalent or marked an interaction. [how-it-works.md](how-it-works.md) § One core, two faces.
 - **Conflict prompt**: what a note with unsaved changes opens when it changes on disk: Load, Keep, Diff, Merge.
@@ -72,6 +74,8 @@ replaced them.
   (`--plan`, `slipbox apply`). [links.md](links.md) § Repairs.
 - **Pointer**: a `slipbox://<name>[@branch]/<path>#fragment` link into a named folder.
   [links.md](links.md) § Pointers.
+- **Preview**: `main` built and published as a pre-release before it's released, from the `test` branch.
+  [distribution.md](distribution.md) § Previews.
 - **Problems**: a file's findings from every source (links, conflicts, syntax, lint, servers), in one shape.
   [tui.md](tui.md) § Problems where they are.
 - **Reading position**: where a note was left, its cursor included, kept per file. [tui.md](tui.md) § Positions.

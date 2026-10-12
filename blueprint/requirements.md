@@ -135,13 +135,18 @@ How: design/tui.md § Editing, § Source mode, § The lens, § Writing notes, §
   clobber (`--if-unchanged`). A hand-off (capture, the context bundle, invoking an agent) saves unsaved notes first
   (D17, D145).
 - `--json` prints one object, apart from human output; exit codes are stable; the TUI never starts without a terminal
-  (D18). A small subset of commands is stable and versioned; the rest may change before 1.0 (D15).
+  (D18). A small subset of commands is stable and versioned; the rest may change before 1.0 (D15). What is kept (the
+  commands and flags, `--json` and its `schema`, the exit codes, the settings and the command names keys call, the
+  links slipbox writes and `.slipbox/`), what a minor and a patch release may change before 1.0 and after, and how
+  something is retired (deprecated at least a minor release ahead, in the changelog, and warned of while it works)
+  are the versioning policy, docs/manual/versions.md, its promises kept as written (GR-D16).
 - A generated edit is planned and applied as two explicit steps (D63).
-- A skill teaches agents the CLI, kept current with every change (D22).
+- A skill teaches agents the CLI, kept current with every change (D22); each release carries the one that matches it
+  (GR-D10, § Distribution).
 - The agent surface grows with slipbox rather than arriving at the end: agents have used it since the first phases
   (D16).
 
-How: design/tui.md § Parity with the CLI; docs/manual/cli.md.
+How: design/tui.md § Parity with the CLI; docs/manual/cli.md; docs/manual/versions.md.
 
 ## Capture and the context bundle
 
@@ -203,11 +208,19 @@ How: docs/manual/keys.md; docs/manual/configuration.md; design/tui.md § Modes a
 ## Distribution
 
 - slipbox is one binary, built by `bun build --compile` (D5, D10), released for the platforms in § Constraints, and
-  installed by a script that checks each download against its release's sums (D197).
-- `slipbox upgrade` installs a newer release; the TUI checks for one once a day, on by default (D199). Homebrew gets a
-  formula with each release, and an install brew made is left to brew (D204).
+  installed by a script that checks each download against its release's sums (D197). One line at an address that
+  doesn't change installs it, `curl -fsSL https://remziduzagac.github.io/slipbox/install.sh | sh`: the repository's
+  Pages site, which finds the release and checks its installer's sum (GR-D14).
+- Each release carries the skill for agents that matches its commands: `slipbox skill` prints it, and puts it where an
+  agent reads skills (GR-D10).
+- Previews are what `main` has, built, checked and published as a release is, before it's released: the maintainer
+  makes one by moving the `test` branch (GR-D13). An install follows a channel, the releases or the previews as well,
+  chosen by the installer (`--preview`) or `slipbox channel set` (GR-D15).
+- `slipbox upgrade` installs the newest its channel offers; the TUI checks for it once a day, on by default (D199,
+  GR-D15). Homebrew gets a formula with each release, never a preview, into a tap once there is one, and an install
+  brew made is left to brew (D204, GR-D18).
 
-How: design/distribution.md.
+How: design/distribution.md; the workflows that build and publish: design/repository.md § CI.
 
 ## Documentation
 
@@ -222,9 +235,44 @@ How: design/distribution.md.
   checked against the CLI chapter (DOC-D4).
 - The guides and the screen chapter carry screenshots, made by a script from slipbox itself on the reference set and
   retaken when the UI changes (DF-D19).
+- The manual opens with a how-it-works chapter, the ideas and promises users rely on, linking the chapters rather than
+  repeating them, and has a versions chapter, the versioning policy (GR-D16). Troubleshooting's "Reporting a problem"
+  names the issue tracker and its bug form, sends questions and ideas to Discussions (GR-D17), and security problems
+  to the security policy.
+- Beside `docs/`, the repository's own documents: the changelog, the maintaining procedures, the security policy,
+  accessibility, architecture and the issue forms, each written for its own readers, kept with the code like the rest
+  and free of the blueprint's IDs (GR-D1). The README's first screen says what slipbox is, its status, where to get
+  help and who maintains it.
 
 How: docs/README.md; workstreams/archive/user-docs/requirements.md § How they are written; the screenshots:
-design/testing.md § The terminal tests.
+design/testing.md § The terminal tests; the repository's documents: design/repository.md § The repository's documents.
+
+## The repository
+
+- slipbox's repository is public on GitHub, `remziduzagac/slipbox`, with its blueprint and its history (GR-D2, GR-D4),
+  and meets greenrepo, the maintainer's standard for a repository meant to last, for its scope: Shared, Users,
+  Artifacts, UI and Large, with the profiles TypeScript (on Bun), Bash, Markdown and Command-line distribution (GR-D1).
+  What it doesn't meet is an accepted deviation, with its reason and a date to look again.
+- Anyone may open an issue, and ask or suggest in Discussions; pull requests come from collaborators only (GR-D5,
+  GR-D17).
+- Every change reaches `main` through a pull request that passes CI's one required check, `ci`, merged by the
+  maintainer with a squash, its title a Conventional Commit. Agents work on branches and propose; merging, releasing,
+  tagging and changing the settings are the maintainer's (GR-D6).
+- One command, `bun run check`, runs everything CI runs: the typecheck, the boundary, the supply chain's gates, Biome's
+  format and lint, zizmor and actionlint over the workflows, the docs' lint, spelling and links, and the tests (GR-D7,
+  GR-D9). Its toolchain is pinned once, in `mise.toml` (GR-D11).
+- CI is hardened and runs on Linux and macOS: no permission by default, each job's grants explained, actions pinned by
+  their commit, no credentials kept, timeouts, a pull request's superseded run cancelled, nothing cached (GR-D9).
+- Releases are made by CI from a tag only the maintainer may push, as a draft the maintainer checks and publishes:
+  every asset attested, each pack with its SBOM, the notes from the changelog (GR-D9, GR-D18). Previews are built by
+  the same workflow from `test` (GR-D13); the installer and the channels are served by the repository's Pages site
+  (GR-D14).
+- The repository is kept by a calendar: Dependabot's grouped updates monthly, the dependencies' known vulnerabilities
+  scanned weekly, a weekly health check that writes one issue saying what needs attention, and a monthly comparison
+  of the settings only an admin reads. The expected settings, the renewals and the accepted deviations are committed
+  files; a setting is never applied by automation (GR-D9).
+
+How: design/repository.md; the maintainer's procedures: `MAINTAINING.md`.
 
 ## Quality goals
 
@@ -253,9 +301,10 @@ design/testing.md § The terminal tests.
   while the graph builds in the background or comes from the cache; editing a big note costs what changed. Checked
   by `bun scripts/bench.ts` (design/testing.md § Timings; the measurements in design/how-it-works.md § Performance,
   measured).
-- **Nothing identifying leaves the machine** (D199). The update check asks for the latest release and sends nothing
-  that identifies you; only the TUI checks, never the CLI; `DO_NOT_TRACK` or the config turns it off. Still to check:
-  Bun's own crash reports in the compiled binary, to be turned off or said (D199's Verify).
+- **Nothing identifying leaves the machine** (D199). The update check asks for the newest release its channel offers
+  (on the preview channel, the newest preview as well: GR-D15) and sends nothing that identifies you; only the TUI
+  checks, never the CLI; `DO_NOT_TRACK` or the config turns it off. Bun's own crash reports are turned off at start
+  (D221; design/distribution.md § Updates).
 
 ## Constraints
 
@@ -295,8 +344,8 @@ Each was decided after a wrong turn, and is not re-litigated:
 
 ### Licences
 
-- **slipbox's own:** to be open source; the licence is parked (`14.6`, D193). Until it is chosen there is no `LICENSE`
-  file, and `package.json` says MIT.
+- **slipbox's own:** Apache-2.0 (`14.6`, D193, GR-D3): a `LICENSE` file, `package.json`'s `license`, and the packs and
+  the Homebrew formula carry it.
 - **Dependencies:** permissive (MIT, ISC, BSD, Apache-2.0, BlueOak, Zlib). Weak copyleft is accepted for use, by name:
   `elkjs` (EPL-2.0), `@resvg/resvg-wasm` (MPL-2.0), Hunspell (MPL-1.1). A new dependency's licence, and its own
   dependencies', is checked before it is added (D192, D194, D201). design/distribution.md § Notices.
@@ -307,8 +356,10 @@ Each was decided after a wrong turn, and is not re-litigated:
 
 - macOS (arm64, x64) and Linux (x64, arm64; glibc, and Alpine's musl) are released, each built on its own in CI
   (D197, D203). Windows is reached through WSL; native Windows is staged as `14.14`–`14.17` (D205).
-- Releases are neither signed nor notarized at first; before the first release, a real Mac checks the binaries'
-  signatures and Apple's SQLite (`14.13`, D196, D198).
+- Releases are neither signed nor notarized (D198). The test suite runs on macOS (`macos-15`, arm64) in CI on every
+  change, so Apple's SQLite is tested there — FTS5 with `unicode61`, and `bm25` — and each Mac binary is signed ad hoc
+  again by `codesign` on the Mac runner that built it, its signature then checked (`codesign --verify`) (`14.13`, D196,
+  GR-D9).
 - Folders are XDG's on Linux and macOS, and Windows' own on Windows; an `XDG_*` set is respected everywhere (D39,
   D200).
 - A Linux build needs no newer glibc than Bun's and OpenTUI's, 2.17 (D196).
@@ -316,11 +367,12 @@ Each was decided after a wrong turn, and is not re-litigated:
 ### Dependencies
 
 - Bun and TypeScript, compiled into one binary with its runtime embedded (D5). Bun 1.4.2 is the floor: what slipbox is
-  built and tested on.
+  built and tested on, pinned in `mise.toml` with the check's tools (GR-D11).
 - OpenTUI is pinned exactly, with a written upgrade policy, and only the final draw step touches it (D6).
 - No Node: npm language servers and markdownlint-cli2 run on slipbox's own Bun, installed into its own folder from
   lockfiles it ships, never globally (D162, D164, D170, D202).
 - SQLite is the runtime's own, through `node:sqlite`: nothing native is packaged per platform (D196).
 - The supply chain's gates: exact versions, no install scripts, a version taken only once it is a week old, a licence
-  gate, CI's actions pinned by their commit's full hash; checked by `bun run check:deps` (D201).
+  gate, CI's actions pinned by their commit's full hash, every workflow starting from no permission and every job with
+  a timeout; checked by `bun run check:deps` (D201, GR-D9), the workflows audited by zizmor and actionlint too.
   design/distribution.md § The supply chain.

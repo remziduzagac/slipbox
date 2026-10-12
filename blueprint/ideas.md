@@ -57,7 +57,8 @@ idea without an outcome is still open. Nothing here is agreed: the decisions are
   installs only from a source checkout (`scripts/install-local.sh --skill`), so a release install has no way to give
   an agent the skill. The user's answer when DF settled it (C3). One skill still (D22), packaged per harness, which
   touches D13's "not chosen as the mechanism". (2026-10-11) Open: a workstream of its own, to scope (the package's name,
-  the harnesses, publishing to npm).
+  the harnesses, publishing to npm). (2026-10-12) A release install has the skill now, from the binary (`slipbox skill
+  --install`, GR-D10); the package per harness is still open.
 - How agents and slipbox work together, in more detail. (2026-10-11) Open: the user's note, to discuss later.
 
 ## Capture
@@ -205,6 +206,9 @@ idea without an outcome is still open. Nothing here is agreed: the decisions are
   you mean; identifiers split in code; a row per section (against D115); vectors per section, opt-in, fused by RRF
   (against D124's deferral). Measured first on 30 to 50 real queries, each change kept only if the score rises.
   (2026-10-11) Open: to look at later ([research/search-improvements.md](research/search-improvements.md)).
+- A find-and-replace pattern that backtracks badly: Bun's engine gives up on one run after about a second and says
+  "no match", so `(a+)+$` blocks the TUI a second per file and quietly misses matches there (found triaging CodeQL's
+  #11, workstream GR). Run it in a worker with a time limit, or say a run was cut short. (2026-10-12) Open.
 
 ## Embeds
 
@@ -253,6 +257,9 @@ idea without an outcome is still open. Nothing here is agreed: the decisions are
 - `mermaid-ascii` for diagrams in text: its labelled nodes are broken. (2026-09-25) Not chosen (D127).
 - For `mermaid-ascii`'s broken labels: fix it upstream, or port `AlexanderGrooff/mermaid-ascii` (Go) or `mmdflux`
   (Rust, a crate leaf depends on). (2026-09-25) Not chosen (D127): `beautiful-mermaid` draws Mermaid.
+- Mermaid's CSS variables flattened (`flattenVars`, `core/svg.ts`) loop on a variable whose value names itself after
+  other text (`--a: (var(--a)`); only the library's own variables reach it today, so no note can (found triaging
+  CodeQL, workstream GR). A guard on the depth. (2026-10-12) Open.
 
 ## Performance
 
@@ -292,6 +299,9 @@ idea without an outcome is still open. Nothing here is agreed: the decisions are
 - A short autosave delay, keeping the unsaved window under a second so conflicts are nearly impossible. (2026-09-24)
   Not chosen (D138).
 - Save silently on quit with unsaved notes. (2026-09-24) Not chosen (D138).
+- The watch's first moment on macOS: a watch starts a moment after it's asked for there, so a change made in that
+  instant isn't heard, and nothing sweeps for it unless the watcher degrades (found by CI's Intel Mac, workstream GR).
+  One sweep of the known notes' stats a second after the watch starts would catch it. (2026-10-12) Open.
 
 ## Write safety
 
@@ -381,9 +391,10 @@ idea without an outcome is still open. Nothing here is agreed: the decisions are
 
 ## Licence
 
-- slipbox under MIT. (2026-10-09) Weighed; the choice parked (D193).
-- slipbox under Apache-2.0. (2026-10-09) Weighed; the choice parked (D193).
-- slipbox under both, "MIT OR Apache-2.0". (2026-10-09) Weighed; the choice parked (D193).
+- slipbox under MIT. (2026-10-09) Weighed; the choice parked (D193). (2026-10-12) Not chosen (GR-D3).
+- slipbox under Apache-2.0. (2026-10-09) Weighed; the choice parked (D193). (2026-10-12) Chosen (GR-D3).
+- slipbox under both, "MIT OR Apache-2.0". (2026-10-09) Weighed; the choice parked (D193). (2026-10-12) Not chosen
+  (GR-D3).
 
 ## Documentation
 

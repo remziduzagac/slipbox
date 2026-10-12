@@ -25,7 +25,7 @@ The suite passes on CI runners, every time (greenrepo QA-09).
 
 ### design/testing.md § Strategy
 
-The workstream's MODIFIED entry in [design.md](../design.md). Replaces the paragraph "**Watcher tests wait for a
+The workstream's MODIFIED entry in [design.md](../../design.md). Replaces the paragraph "**Watcher tests wait for a
 condition, not a fixed time.** Events arrive asynchronously and more slowly under a loaded test run, so fixed sleeps
 made them flaky." with these four:
 
