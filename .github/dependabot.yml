@@ -1,0 +1,33 @@
+# GR-D9 (greenrepo DEP-02, UPK-01): the dependencies kept current — Bun's packages and the workflows' actions, each
+# ecosystem's updates grouped into one pull request a month, merged on the upkeep calendar (MAINTAINING.md). A version
+# is proposed only once it's a week old, as bunfig.toml's minimumReleaseAge and the actions' pins have it (14.10).
+# Security updates are Dependabot's alerts', opened at once, apart from these. Titles are Conventional Commits
+# (`build(deps): …`, `ci(deps): …`), as a pull request's must be (GR-D6).
+version: 2
+updates:
+  - package-ecosystem: bun
+    directory: /
+    schedule:
+      interval: monthly
+    cooldown:
+      default-days: 7
+    groups:
+      packages:
+        applies-to: version-updates
+        patterns: ["*"]
+    commit-message:
+      prefix: build
+      include: scope
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: monthly
+    cooldown:
+      default-days: 7
+    groups:
+      actions:
+        applies-to: version-updates
+        patterns: ["*"]
+    commit-message:
+      prefix: ci
+      include: scope

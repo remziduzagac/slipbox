@@ -14,6 +14,7 @@ import {
 } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
+import { ACCEPTED, type Accepted, acceptedProblems, ignoreArgs } from "../scripts/audit.ts";
 import {
   bunfigProblems,
   checkDeps,
@@ -228,6 +229,24 @@ describe("the supply chain's gates (14.10)", () => {
     expect(others.length).toBeGreaterThan(1);
     expect([...(ci.jobs.ci?.needs ?? [])].sort()).toEqual(others.sort());
     expect(ci.jobs.ci?.if).toBe("${{ always() }}");
+  });
+
+  test("Dependabot: Bun's packages and the actions, grouped, monthly, a week's cooldown as bunfig's", () => {
+    const config = Bun.YAML.parse(readFileSync(join(ROOT, ".github", "dependabot.yml"), "utf8")) as {
+      updates: {
+        "package-ecosystem": string;
+        schedule: { interval: string };
+        cooldown: { "default-days": number };
+        groups: Record<string, { patterns: string[] }>;
+      }[];
+    };
+    const age = Number(/minimumReleaseAge\s*=\s*(\d+)/.exec(readFileSync(join(ROOT, "bunfig.toml"), "utf8"))?.[1]);
+    expect(config.updates.map((u) => u["package-ecosystem"]).sort()).toEqual(["bun", "github-actions"]);
+    for (const u of config.updates) {
+      expect(u.schedule.interval).toBe("monthly");
+      expect(u.cooldown["default-days"] * 86400).toBe(age);
+      expect(Object.values(u.groups).flatMap((g) => g.patterns)).toContain("*");
+    }
   });
 
   test("a package's Package URL: its scope encoded", () => {
@@ -1028,6 +1047,39 @@ describe("a release (14.2)", () => {
       },
       60_000,
     );
+  });
+});
+
+describe("the dependencies' advisories (GR-D9)", () => {
+  const entry = (until: string, advisories = ["GHSA-2222-3333-4444"]): Accepted => ({
+    package: "p@1.0.0",
+    advisories,
+    why: "not reached",
+    until,
+  });
+
+  test("an advisory accepted counts again after its date: its --ignore dropped, and said", () => {
+    const list = [entry("2027-01-12"), entry("2026-10-11", ["GHSA-5555-6666-7777", "GHSA-8888-9999-cccc"])];
+    expect(ignoreArgs(list, "2026-10-12")).toEqual({ args: ["--ignore=GHSA-2222-3333-4444"], expired: [list[1]!] });
+    // On its date it still holds.
+    expect(ignoreArgs(list, "2026-10-11").args).toHaveLength(3);
+    expect(ignoreArgs(list, "2027-01-13")).toEqual({ args: [], expired: list });
+  });
+
+  test("the list itself: every entry a reason, a date and GHSA ids, none twice — this repository's included", () => {
+    expect(acceptedProblems(ACCEPTED)).toEqual([]);
+    expect(ACCEPTED.length).toBeGreaterThan(0);
+    expect(
+      acceptedProblems([
+        { ...entry("2027-13-45"), why: " " },
+        entry("2027-01-12", ["CVE-2026-1", "GHSA-2222-3333-4444"]),
+      ]),
+    ).toEqual([
+      'p@1.0.0: "2027-13-45" isn\'t a date (YYYY-MM-DD)',
+      "p@1.0.0: no reason given",
+      "p@1.0.0: CVE-2026-1 isn't a GHSA id",
+      "p@1.0.0: GHSA-2222-3333-4444 is listed twice",
+    ]);
   });
 });
 
