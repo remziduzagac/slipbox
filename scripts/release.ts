@@ -67,6 +67,16 @@ export function onMusl(): boolean {
   return process.platform === "linux" && ["x86_64", "aarch64"].some((a) => existsSync(`/lib/ld-musl-${a}.so.1`));
 }
 
+/**
+ * How a Mac's binary is signed ad hoc again, built on a Mac (14.13, D198): Bun signs what it compiles ad hoc, but the
+ * x64 build's signature came out broken ("code or signature have been modified"), and a Mac may refuse a binary whose
+ * signature doesn't hold. `codesign` signs it again, ad hoc as before, so `codesign --verify` passes. Null elsewhere:
+ * another platform's binary, or a Mac's built on another system, which can't be signed there.
+ */
+export function signArgs(bin: string, target: string, platform: string = process.platform): string[] | null {
+  return target.startsWith("darwin-") && platform === "darwin" ? ["codesign", "--force", "--sign", "-", bin] : null;
+}
+
 /** This machine's target, when it's one released. */
 export function hostTarget(
   platform: string = process.platform,
@@ -294,6 +304,8 @@ export function buildRelease(opts: {
     mkdirSync(stage);
     const bin = join(stage, "slipbox");
     run([process.execPath, ...buildArgs(script, bin, target, opts.repo)], root);
+    const sign = signArgs(bin, target);
+    if (sign) run(sign, root);
     if (target === hostTarget()) {
       const said = run([bin, "--version"], stage).trim();
       if (said !== `slipbox ${version}`)

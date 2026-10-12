@@ -47,3 +47,11 @@ The suite on Linux and macOS in CI; the flaky-test policy; Biome, the Markdown l
 ## MODIFIED the CLI's design, for `slipbox skill`
 
 The section that lists the CLI's commands gains `skill` (GR-D10); GR-T12 names it.
+
+## MODIFIED design/distribution.md § Signing (`14.13`)
+
+A Mac's binary is signed ad hoc again after it's compiled, on the Mac that built it (`codesign --force --sign -`,
+`signArgs` in `scripts/release.ts`): the first previews found the x64 build's own signature broken ("code or signature
+have been modified"), the arm64 one's whole. `codesign --verify` then checks both, as before.
+
+Previously: "keeps the ad hoc signature Bun gives it".

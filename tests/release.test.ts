@@ -24,6 +24,7 @@ import {
   previewPlan,
   releaseVersion,
   sha256sums,
+  signArgs,
   stalePreviews,
   stampVersion,
   TARGETS,
@@ -465,6 +466,28 @@ const workflow = (name: string) =>
   Bun.YAML.parse(readFileSync(join(ROOT, ".github", "workflows", name), "utf8")) as Workflow;
 const needs = (j: Job) => [j.needs ?? []].flat().sort();
 const runs = (j: Job) => (j.steps ?? []).map((s) => s.run ?? "").join("\n");
+
+describe("a Mac's binary signed again (14.13)", () => {
+  test("ad hoc, by codesign, when built on a Mac; never elsewhere, nor another platform's", () => {
+    expect(signArgs("/x/slipbox", "darwin-x64", "darwin")).toEqual([
+      "codesign",
+      "--force",
+      "--sign",
+      "-",
+      "/x/slipbox",
+    ]);
+    expect(signArgs("/x/slipbox", "darwin-arm64", "darwin")).toEqual([
+      "codesign",
+      "--force",
+      "--sign",
+      "-",
+      "/x/slipbox",
+    ]);
+    expect(signArgs("/x/slipbox", "darwin-arm64", "linux")).toBeNull();
+    expect(signArgs("/x/slipbox", "linux-x64", "darwin")).toBeNull();
+    expect(signArgs("/x/slipbox", "linux-arm64-musl", "linux")).toBeNull();
+  });
+});
 
 describe("the workflows: one build for releases and previews, previews from test, Pages deployed", () => {
   test("a job that runs the tests installs the whole toolchain: the docs check's tests run typos and lychee", () => {
