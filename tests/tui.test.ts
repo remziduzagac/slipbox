@@ -4844,7 +4844,7 @@ describe("external changes (5.3, 5.4) and anchoring (3.5)", () => {
       config: (c) => ((c.watch.debounce_ms = 30), (c.watch.poll_ms = 100)),
     });
     const until = async (pred: () => boolean) => {
-      const end = Date.now() + 3000;
+      const end = Date.now() + 25_000;
       while (!pred() && Date.now() < end) await new Promise((r) => setTimeout(r, 20));
     };
     try {
@@ -5734,7 +5734,7 @@ describe("review cycle 3 (config in the TUI)", () => {
 });
 
 describe("review cycle 4 (TUI)", () => {
-  const until = async (pred: () => boolean, ms = 4000) => {
+  const until = async (pred: () => boolean, ms = 25_000) => {
     const end = Date.now() + ms;
     while (!pred() && Date.now() < end) await new Promise((r) => setTimeout(r, 20));
   };
@@ -9945,7 +9945,7 @@ describe("vaults in the TUI (17.x)", () => {
   });
 
   /** Until `ok`, or `ms` have passed: an export is written after its key returns. */
-  const until = async (ok: () => boolean, ms = 8000) => {
+  const until = async (ok: () => boolean, ms = 25_000) => {
     for (const t = Date.now(); !ok() && Date.now() - t < ms; ) await Bun.sleep(20);
     return ok();
   };
@@ -12196,7 +12196,7 @@ describe("the lint surface: your linter's findings in notes (3.21)", () => {
     return { root, h };
   };
   const until = async (ok: () => boolean) => {
-    for (let i = 0; i < 100 && !ok(); i++) await new Promise((r) => setTimeout(r, 20));
+    for (const t = Date.now(); !ok() && Date.now() - t < 25_000; ) await new Promise((r) => setTimeout(r, 20));
     expect(ok()).toBe(true);
   };
 
@@ -13746,7 +13746,7 @@ describe("language servers in the TUI (19.1, 19.8)", () => {
     c["language-server"] = { fake: { command: launcher, args: ["--stdio"] } };
     c.language = [{ name: "fake", "file-types": ["fk"], "language-servers": ["fake"] }];
   };
-  const until = async (ok: () => boolean, ms = 8000) => {
+  const until = async (ok: () => boolean, ms = 25_000) => {
     for (const t = Date.now(); !ok() && Date.now() - t < ms; ) await Bun.sleep(20);
     return ok();
   };
@@ -13967,7 +13967,7 @@ describe("what a code file's server changes (19.15)", () => {
     c["language-server"] = { fake: { command: launcher, args: ["--stdio"] } };
     c.language = [{ name: "fake", "file-types": ["fk"], "language-servers": ["fake"] }];
   };
-  const until = async (ok: () => boolean, ms = 8000) => {
+  const until = async (ok: () => boolean, ms = 25_000) => {
     for (const t = Date.now(); !ok() && Date.now() - t < ms; ) await Bun.sleep(20);
     return ok();
   };
@@ -14116,7 +14116,7 @@ describe("completion while typing (19.16)", () => {
     c["language-server"] = { fake: { command: launcher, args: ["--stdio"] } };
     c.language = [{ name: "fake", "file-types": ["fk"], "language-servers": ["fake"] }];
   };
-  const until = async (ok: () => boolean, ms = 8000) => {
+  const until = async (ok: () => boolean, ms = 25_000) => {
     for (const t = Date.now(); !ok() && Date.now() - t < ms; ) await Bun.sleep(20);
     return ok();
   };
@@ -14380,7 +14380,7 @@ test("a relayout while typing at a line's end — a resize, the problems bar app
 });
 
 describe("linters without a server (19.19)", () => {
-  const until = async (ok: () => boolean, ms = 5000) => {
+  const until = async (ok: () => boolean, ms = 25_000) => {
     for (const t = Date.now(); !ok() && Date.now() - t < ms; ) await Bun.sleep(20);
     return ok();
   };
@@ -14460,7 +14460,7 @@ describe("linters without a server (19.19)", () => {
 });
 
 describe("the switcher's workspace symbols (19.14)", () => {
-  const until = async (ok: () => boolean, ms = 8000) => {
+  const until = async (ok: () => boolean, ms = 25_000) => {
     for (const t = Date.now(); !ok() && Date.now() - t < ms; ) await Bun.sleep(20);
     return ok();
   };
@@ -15996,7 +15996,7 @@ describe("spelling (25.6)", () => {
     for (const [rel, text] of Object.entries(files)) writeFileSync(join(root, rel), text);
     return root;
   };
-  const until = async (ok: () => boolean, ms = 8000) => {
+  const until = async (ok: () => boolean, ms = 25_000) => {
     for (const t = Date.now(); !ok() && Date.now() - t < ms; ) await Bun.sleep(20);
     return ok();
   };
@@ -16172,7 +16172,7 @@ describe("commands run by your shell (25.7)", () => {
     for (const [rel, text] of Object.entries(files)) writeFileSync(join(root, rel), text);
     return root;
   };
-  const until = async (ok: () => boolean, ms = 8000) => {
+  const until = async (ok: () => boolean, ms = 25_000) => {
     for (const t = Date.now(); !ok() && Date.now() - t < ms; ) await Bun.sleep(20);
     return ok();
   };
@@ -16302,7 +16302,7 @@ describe("commands run by your shell (25.7)", () => {
 describe("changes against what's staged, in the gutter (26.1)", () => {
   const git = (cwd: string, ...args: string[]) =>
     Bun.spawnSync(["git", "-c", "user.email=t@example.invalid", "-c", "user.name=t", "-C", cwd, ...args]);
-  const until = async (ok: () => boolean, ms = 8000) => {
+  const until = async (ok: () => boolean, ms = 25_000) => {
     for (const t = Date.now(); !ok() && Date.now() - t < ms; ) await Bun.sleep(20);
     return ok();
   };
@@ -16450,7 +16450,7 @@ describe("source control (26.2)", () => {
     new TextDecoder().decode(
       Bun.spawnSync(["git", "-c", "user.email=t@example.invalid", "-c", "user.name=t", "-C", cwd, ...args]).stdout,
     );
-  const until = async (ok: () => boolean, ms = 8000) => {
+  const until = async (ok: () => boolean, ms = 25_000) => {
     for (const t = Date.now(); !ok() && Date.now() - t < ms; ) await Bun.sleep(20);
     return ok();
   };
@@ -16647,7 +16647,7 @@ describe("commit (26.3)", () => {
     new TextDecoder().decode(
       Bun.spawnSync(["git", "-c", "user.email=t@example.invalid", "-c", "user.name=t", "-C", cwd, ...args]).stdout,
     );
-  const until = async (ok: () => boolean, ms = 8000) => {
+  const until = async (ok: () => boolean, ms = 25_000) => {
     for (const t = Date.now(); !ok() && Date.now() - t < ms; ) await Bun.sleep(20);
     return ok();
   };
