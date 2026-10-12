@@ -74,9 +74,10 @@ A release carries the skill for agents: `slipbox skill --install ~/.claude/skill
 
 ### Previews
 
-Between releases, slipbox publishes previews: builds of what the next release will hold, made and checked as a release
-is, for those who want it before it's released. What a preview adds may still change before the release, and it may
-have bugs the release won't. [Versions](../manual/versions.md#previews) says how they're numbered.
+Between releases, slipbox publishes previews: builds of what the next release will hold, made as a release is from code
+that passed slipbox's checks, for those who want it before it's released. What a preview adds may still change before
+the release, and it may have bugs the release won't. [Versions](../manual/versions.md#previews) says how they're
+numbered.
 
 `--preview` installs the newest preview, and the install then follows previews: `slipbox upgrade` installs the newest
 of the latest release and the newest preview, and the daily update check tells you of either. An install follows one

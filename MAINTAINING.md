@@ -139,8 +139,10 @@ after it, never before. It refuses deleting `test` and pushing anything that isn
 - **Refused** when `package.json`'s version is released already (its `v` tag exists): after a release, bump the version
   to the next one, in `package.json` and `src/version.ts`, through a pull request (`chore: 0.4.0 next`), then push
   `test` again.
-- **What's built** is what a release builds, by the same workflow (`build.yml`): every platform, after the tests, each
-  pack's SBOM, `SHA256SUMS`, the installer, all attested. There's no Homebrew formula: Homebrew never gets a preview.
+- **What's built** is what a release builds, by the same workflow (`build.yml`): every platform, each binary run
+  before it's packed, each pack's SBOM, `SHA256SUMS`, the installer, all attested — without running the whole suite
+  again on each platform, as a release does: the commit passed CI's check, which `test` requires. There's no Homebrew
+  formula: Homebrew never gets a preview.
 - **Published** as a pre-release: drafted, its assets uploaded, then published, all by CI. The newest ten are kept,
   older ones deleted with their tags (an immutable release can be deleted, and its tag never used again).
 - **Who it reaches:** those who installed with `sh -s -- --preview`, or ran `slipbox channel set preview`. Pages is

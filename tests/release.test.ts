@@ -451,7 +451,7 @@ interface Job {
   permissions?: Record<string, string>;
   environment?: { name: string } | string;
   strategy?: { matrix: { include?: { target: string }[]; target?: string[] } };
-  with?: Record<string, string>;
+  with?: Record<string, string | boolean>;
   steps?: Step[];
 }
 interface Workflow {
@@ -498,10 +498,14 @@ describe("the workflows: one build for releases and previews, previews from test
         Math.max(r.indexOf("release.ts build"), r.indexOf("release.ts finish")),
       );
     }
-    // The tests run on the code as committed, before the stamp.
+    // The tests run on the code as committed, before the stamp — a release's: a preview's commit passed CI already.
     const tests = runs(build.jobs.build!).indexOf("bun run test");
     expect(tests).toBeGreaterThanOrEqual(0);
     expect(tests).toBeLessThan(runs(build.jobs.build!).indexOf("release.ts stamp"));
+    expect(build.jobs.build!.steps?.find((s) => s.name === "tests")?.if).toContain("inputs.suite");
+    const suiteOf = (file: string) =>
+      Object.values(workflow(file).jobs).find((j) => j.uses === "./.github/workflows/build.yml")?.with?.suite;
+    expect([suiteOf("release.yml"), suiteOf("preview.yml")]).toEqual([true, false]);
     const upload = build.jobs.finish?.steps?.find((s) => s.uses?.startsWith("actions/upload-artifact@"));
     expect(upload?.with?.name).toBe("release");
     // It can't write to the repository: the callers publish.
@@ -515,7 +519,7 @@ describe("the workflows: one build for releases and previews, previews from test
     ] as const) {
       const build = Object.values(caller.jobs).find((j) => j.uses === "./.github/workflows/build.yml");
       expect(build, file).toBeDefined();
-      expect(Object.keys(build?.with ?? {}).sort()).toEqual(["tag", "version"]);
+      expect(Object.keys(build?.with ?? {}).sort()).toEqual(["suite", "tag", "version"]);
       expect(needs(caller.jobs.publish!), file).toContain("build");
       const download = caller.jobs.publish?.steps?.find((s) => s.uses?.startsWith("actions/download-artifact@"));
       expect(download?.with?.name, file).toBe("release");
@@ -533,6 +537,7 @@ describe("the workflows: one build for releases and previews, previews from test
     expect(preview.jobs.plan?.if).toContain("!github.event.repository.fork");
     expect(runs(preview.jobs.plan!)).toContain("release.ts preview");
     expect(preview.jobs.build?.with).toEqual({
+      suite: false,
       tag: "${{ needs.plan.outputs.tag }}",
       version: "${{ needs.plan.outputs.version }}",
     });
