@@ -33,6 +33,13 @@ delete process.env.SLIPBOX_CONFIG; // it would win over XDG_CONFIG_HOME: never t
 process.env.SLIPBOX_CLIPBOARD = "file"; // copies never reach the developer's clipboard
 afterAll(() => rmSync(sandbox, { recursive: true, force: true }));
 
+// What loads lazily is the process's, shared by the test files run in it (16.6): one run before this, export's, may
+// have loaded the Mermaid library already. Loaded before any render here, the layouts never depend on what ran first:
+// the samples' diagrams are drawn as the TUI draws them once it's in.
+beforeAll(async () => {
+  await loadMermaid();
+});
+
 // The demo vault's notes, by path inside it.
 const SAMPLES = join(import.meta.dir, "..", "examples", "vault");
 const samples = (readdirSync(SAMPLES, { recursive: true }) as string[]).filter((f) => f.endsWith(".md")).sort();

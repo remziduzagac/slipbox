@@ -4108,7 +4108,7 @@ conditions.
 
 One clear night, from the plan to the public site:
 
-                                                                        mermaid
+                                                     mermaid — too wide to draw
  flowchart LR
      plan[nightjar plan] --> ctl[ridge-ctl: expose]
      ctl --> raw[(raw frames)]

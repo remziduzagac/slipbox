@@ -6300,41 +6300,35 @@ describe("files beyond notes (16.3–16.5)", () => {
     expect(v.buf.rel).toBe("links-out.md");
     expect(v.source).toBe(false); // the note renders again
   });
-  test("the background index parses a big note on other threads: no slice of it holds the keys for long (15.1)", async () => {
+  test("the background index parses a big note on other threads: here, its parsed chunks are only put together (15.1)", async () => {
+    const { BACKGROUND_PARSE } = await import("../src/tui/buffer.ts");
+    const { noteChunks } = await import("../src/core/parse.ts");
     const root = makeVault();
     const h = await harness({ root });
-    // Written after the harness's first build, with words of its own: no parse of it is cached anywhere.
+    // Written after the harness's first build, with words of its own: no parse of it is cached anywhere. Twice the
+    // size that goes to the threads, in chunks enough for each.
     const own = randomBytes(6).toString("hex");
-    writeFileSync(
-      join(root, "notes", "big.md"),
-      Array.from({ length: 40_000 }, (_, i) => `Line ${i} ${own} with [a link](alpha.md) and words enough.\n`).join(
-        "\n",
-      ),
-    );
+    const line = (i: number) => `Line ${i} ${own} with [a link](alpha.md) and words enough.\n`;
+    const count = Math.ceil((2 * BACKGROUND_PARSE) / line(0).length);
+    const text = Array.from({ length: count }, (_, i) => line(i)).join("\n");
+    writeFileSync(join(root, "notes", "big.md"), text);
     h.app.graph.build(true, "lazy"); // every note unparsed, as at a cold start
     expect(h.app.graph.pendingCount).toBeGreaterThan(1);
-    // Each piece of the pass the main thread does, timed: the slices, and a big note's chunks put together.
+    // Each parse of the big note on this thread: how many of its chunks it had to parse itself, or "whole". What this
+    // thread does is counted, not timed: a loaded machine stretches every slice (the timings are the benchmark's).
     const g = h.app.graph;
-    const slices: number[] = [];
-    const parseSome = g.parseSome.bind(g);
-    g.parseSome = (ms, skip) => {
-      const t = performance.now();
-      const left = parseSome(ms, skip);
-      slices.push(performance.now() - t);
-      return left;
-    };
+    const big = "notes/big.md";
+    const here: (number | "whole")[] = [];
     const entry = g.entry.bind(g);
     g.entry = (rel, chunks) => {
-      const t = performance.now();
-      const e = entry(rel, chunks);
-      if (chunks) slices.push(performance.now() - t);
-      return e;
+      if (rel === big && g.unparsedOver(0).some((f) => f.rel === big))
+        here.push(chunks ? noteChunks(text).filter((c) => !chunks.chunks.has(c.text)).length : "whole");
+      return entry(rel, chunks);
     };
     h.app.indexInBackground();
-    for (let i = 0; i < 400 && h.app.indexing; i++) await Bun.sleep(50);
-    expect(h.app.indexing).toBe(0);
-    expect(g.backlinks("notes/alpha.md").filter((b) => b.from === "notes/big.md")).toHaveLength(40_000);
-    expect(Math.max(...slices)).toBeLessThan(250); // parsed here whole, the big note alone takes seconds
+    await h.app.whenIndexed(); // however long the threads take
+    expect(g.backlinks("notes/alpha.md").filter((b) => b.from === big)).toHaveLength(count);
+    expect(here).toEqual([0]); // once, every chunk of it parsed on another thread
   });
   test("a data file opens from a link, rendered; edits save; a binary file doesn't open", async () => {
     const root = await setup();

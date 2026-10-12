@@ -203,6 +203,45 @@ for (const note of ["k1.md", "k20.md"]) {
   });
 }
 
+// The background index (15.1): a big note parses on other threads, and the main thread's share of the pass — its
+// slices, and the big note's chunks put together — is timed here: the longest of a pass, three passes. The tests count
+// that work rather than time it.
+await bench("the background index: a big note's longest main-thread slice", async () => {
+  const { app } = await makeApp("small.md");
+  const g = app.graph;
+  const pass = async () => {
+    g.build(true, "lazy"); // every note unparsed, as at a cold start
+    app.indexInBackground();
+    await app.whenIndexed();
+  };
+  await pass(); // not timed: the other notes into the parse cache, so only the big note is new below
+  let slices: number[] = [];
+  const parseSome = g.parseSome.bind(g);
+  g.parseSome = (ms, skip) => {
+    const t = performance.now();
+    const left = parseSome(ms, skip);
+    slices.push(performance.now() - t);
+    return left;
+  };
+  const entry = g.entry.bind(g);
+  g.entry = (rel, chunks) => {
+    const t = performance.now();
+    const e = entry(rel, chunks);
+    if (chunks) slices.push(performance.now() - t);
+    return e;
+  };
+  const xs: number[] = [];
+  for (let k = 0; k < 3; k++) {
+    // Words of its own each time: no parse of it is in the parse cache.
+    writeFileSync(join(vault, "bg.md"), mixed(20000).replaceAll("prose", `prose ${crypto.randomUUID()}`));
+    slices = [];
+    await pass();
+    xs.push(Math.max(...slices));
+  }
+  rmSync(join(vault, "bg.md"));
+  return xs;
+});
+
 const env = { ...process.env, NO_COLOR: "1" };
 const cli = (args: string[]) =>
   time(() => void Bun.spawnSync(["bun", MAIN, "--root", vault, ...args], { env, stdout: "ignore", stderr: "ignore" }));

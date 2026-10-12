@@ -9709,6 +9709,11 @@ export class App {
     setTimeout(tick, 1);
   }
 
+  /** Once the background pass over this vault's notes is done, however long it takes (tests). */
+  async whenIndexed(): Promise<void> {
+    while (this.indexing) await new Promise((r) => setTimeout(r, 5));
+  }
+
   private knownFromGraph(): Map<string, number> {
     return new Map([...this.graph.notes.values()].map((n) => [n.rel, n.mtimeMs] as [string, number]));
   }
