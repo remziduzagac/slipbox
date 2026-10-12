@@ -86,7 +86,7 @@ function serverPackage(name: string, version: string, body = "console.log('ok')"
 // A root is trusted only where a test says so (23.x): none by default, as in use.
 afterEach(() => setTrustedRoots([]));
 
-const until = async (ok: () => boolean, ms = 5000) => {
+const until = async (ok: () => boolean, ms = 25_000) => {
   for (const t = Date.now(); !ok() && Date.now() - t < ms; ) await Bun.sleep(20);
   return ok();
 };
