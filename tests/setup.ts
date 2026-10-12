@@ -1,16 +1,16 @@
 // Preloaded by `bun test` (bunfig.toml): every temporary file a run makes — thousands of vaults, the
 // CLI's too, as it inherits the environment — goes in one folder of the run's own, removed when the
 // run ends. Left behind, they filled /tmp run by run until its inodes ran out (2026-10-02).
-import { afterAll, setDefaultTimeout } from "bun:test";
+import { afterAll } from "bun:test";
 import { mkdtempSync, readdirSync, realpathSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
 const base = tmpdir();
 
-// Every test's bound, a file's own aside: parses, walks and processes started are slow on a loaded or small machine
-// (CI's macOS runners), never stuck. Tests wait on conditions; this is only how long before one is called stuck.
-setDefaultTimeout(30_000);
+// Every test's bound is `bun run test`'s `--timeout 30000` (package.json): a preload's setDefaultTimeout reaches the
+// first file alone. Parses, walks and processes started are slow on a loaded or small machine (CI's macOS runners),
+// never stuck; tests wait on conditions, and the bound only says when one is stuck.
 
 /** A process still running (or one this user can't signal: someone else's, so not ours to judge). */
 function alive(pid: number): boolean {
