@@ -1,0 +1,108 @@
+{
+  "about": [
+    "The repository's expected settings (greenrepo UPK-15), by the field names of GitHub's REST API, grouped by the",
+    "endpoint that reads them. `reader` is whose login can: `workflow`, the health workflow's own token, compared",
+    "weekly into the health issue; `admin`, the maintainer's, compared in the monthly session with",
+    "`bun scripts/health.ts --admin`. Only the fields named are compared; drift is reported, never applied. The",
+    "rulesets are in rulesets/, as GitHub exports them; the secrets and deploy keys are checked against renewals.toml."
+  ],
+  "repository": "remziduzagac/slipbox",
+  "settings": [
+    {
+      "endpoint": "repos/{repo}",
+      "reader": "workflow",
+      "about": "Public; issues open, pull requests from collaborators (GR-D2, GR-D5); no wiki, projects or discussions",
+      "expect": {
+        "visibility": "public",
+        "default_branch": "main",
+        "archived": false,
+        "has_issues": true,
+        "has_pull_requests": true,
+        "pull_request_creation_policy": "collaborators_only",
+        "has_wiki": false,
+        "has_projects": false,
+        "has_discussions": false
+      }
+    },
+    {
+      "endpoint": "repos/{repo}",
+      "reader": "admin",
+      "about": "Squash merges titled by the pull request, branches deleted (GR-D6); secret scanning, security updates",
+      "expect": {
+        "allow_squash_merge": true,
+        "allow_merge_commit": false,
+        "allow_rebase_merge": false,
+        "squash_merge_commit_title": "PR_TITLE",
+        "squash_merge_commit_message": "PR_BODY",
+        "delete_branch_on_merge": true,
+        "allow_update_branch": true,
+        "security_and_analysis": {
+          "secret_scanning": { "status": "enabled" },
+          "secret_scanning_push_protection": { "status": "enabled" },
+          "dependabot_security_updates": { "status": "enabled" }
+        }
+      }
+    },
+    {
+      "endpoint": "repos/{repo}/private-vulnerability-reporting",
+      "reader": "workflow",
+      "about": "Vulnerabilities reported privately, as SECURITY.md says (COM-06)",
+      "expect": { "enabled": true }
+    },
+    {
+      "endpoint": "repos/{repo}/environments/release",
+      "reader": "workflow",
+      "about": "The `release` environment, holding the tap's token, reached only by the refs it names (REL-07)",
+      "expect": { "deployment_branch_policy": { "protected_branches": false, "custom_branch_policies": true } }
+    },
+    {
+      "endpoint": "repos/{repo}/environments/release/deployment-branch-policies",
+      "reader": "workflow",
+      "about": "Only `v*` tags reach the `release` environment (REL-07)",
+      "expect": { "branch_policies": [{ "name": "v*", "type": "tag" }] }
+    },
+    {
+      "endpoint": "repos/{repo}/vulnerability-alerts",
+      "reader": "admin",
+      "about": "Dependabot alerts on (DEP-01); GitHub answers 204 when they are, 404 when not",
+      "answer": "status",
+      "expect": { "enabled": true }
+    },
+    {
+      "endpoint": "repos/{repo}/code-scanning/default-setup",
+      "reader": "admin",
+      "about": "CodeQL's default setup, with the workflows (`actions`) among its languages (CI-12)",
+      "expect": { "state": "configured", "languages": ["actions", "javascript-typescript"] }
+    },
+    {
+      "endpoint": "repos/{repo}/actions/permissions",
+      "reader": "admin",
+      "about": "Actions on, each action pinned by its full commit hash (SET-06)",
+      "expect": { "enabled": true, "sha_pinning_required": true }
+    },
+    {
+      "endpoint": "repos/{repo}/actions/permissions/workflow",
+      "reader": "admin",
+      "about": "The workflow token read-only by default, unable to approve pull requests (SET-02)",
+      "expect": { "default_workflow_permissions": "read", "can_approve_pull_request_reviews": false }
+    },
+    {
+      "endpoint": "repos/{repo}/immutable-releases",
+      "reader": "admin",
+      "about": "A published release's assets and tag locked (REL-05)",
+      "expect": { "enabled": true }
+    },
+    {
+      "endpoint": "repos/{repo}/hooks",
+      "reader": "admin",
+      "about": "No webhooks; one added is listed here, with its secret (SET-07)",
+      "expect": []
+    },
+    {
+      "endpoint": "user",
+      "reader": "admin",
+      "about": "The maintainer signs in with two factors (SET-01); GitHub shows it to its owner, with read:user",
+      "expect": { "two_factor_authentication": true }
+    }
+  ]
+}

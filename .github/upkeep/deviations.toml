@@ -1,0 +1,81 @@
+# The accepted deviations (greenrepo UPK-16): each rule slipbox doesn't meet on purpose, with the reason and a date to
+# look again. The weekly health issue shows them in a section of their own rather than red every week, and lists one
+# whose review date has passed under what needs the maintainer; an audit reports each as accepted, reading this file.
+#
+# An entry: the `rule`'s ID; the `standard` it's from (greenrepo, or an outside one an audit reports against:
+# Scorecard, the OSPS Baseline, the Best Practices badge); `what` the rule asks; the `reason`; what stands in its
+# place (`instead`), where something does; the `decision` behind it, where one was recorded; the `review` date.
+#
+# A solo project's entries: greenrepo § Not applicable lists the outside criteria that need a second person, and
+# what replaces one. They are looked at again in the twice-yearly review, or as soon as a second maintainer joins.
+
+[[deviation]]
+rule = "DOC-06"
+standard = "greenrepo"
+what = "User docs on GitHub Pages, built and deployed by Actions."
+reason = """Until after the first release, the user docs stay Markdown in docs/, which GitHub renders well: a site \
+is a generator and its upkeep to add."""
+instead = "docs/, mapped by docs/README.md and linked from the README, its Markdown checked on every change."
+decision = "GR-D8"
+review = 2027-01-12
+
+[[deviation]]
+rule = "Code-Review"
+standard = "Scorecard"
+what = "Every change approved by someone other than its author; bot and AI reviews don't count."
+reason = "One maintainer: there is no one else to approve."
+instead = """Every change through a pull request that must pass the `ci` check (the `main` ruleset); the workflows \
+checked by zizmor and actionlint; releases made by CI from tags only an admin can push, attested, immutable once \
+published, their token in the `release` environment."""
+review = 2027-04-01
+
+[[deviation]]
+rule = "Contributors"
+standard = "Scorecard"
+what = "Contributors from at least three organisations."
+reason = "One maintainer, and pull requests from collaborators only."
+decision = "GR-D5"
+review = 2027-04-01
+
+[[deviation]]
+rule = "Branch-Protection"
+standard = "Scorecard"
+what = "Tiers above the first: at least one approving review before merging, and the stricter ones after it."
+reason = """One maintainer: a required approval would block their own pull requests. The first tier (no force \
+push, no deletion) is met by the `main` ruleset."""
+instead = "Pull requests required, with zero approvals and the `ci` check (SET-04)."
+decision = "GR-D6"
+review = 2027-04-01
+
+[[deviation]]
+rule = "Gold"
+standard = "Best Practices badge"
+what = "The badge's gold level: two-person review and a bus factor of two."
+reason = "One maintainer."
+review = 2027-04-01
+
+[[deviation]]
+rule = "OSPS-QA-07.01"
+standard = "OSPS Baseline"
+what = "A human other than the author approves every change to the main branch."
+reason = "One maintainer: there is no one else to approve."
+instead = "Pull requests required, with zero approvals and the `ci` check (SET-04)."
+review = 2027-04-01
+
+[[deviation]]
+rule = "OSPS-LE-01.01"
+standard = "OSPS Baseline"
+what = "Every commit's author asserts they may contribute it: a DCO sign-off, or a CLA."
+reason = """greenrepo's sign-off (COM-17) is optional and not taken: pull requests come from collaborators only, \
+and the control's own recommendation allows for a platform's terms of service, as GitHub's license contributions \
+under the repository's licence."""
+decision = "GR-D5"
+review = 2027-04-01
+
+[[deviation]]
+rule = "Maintained"
+standard = "Scorecard"
+what = "Commits every week over the last 90 days, in a repository more than 90 days old."
+reason = """The repository is new on GitHub, though its history is older: Scorecard scores a repository younger than \
+90 days 0 whatever its activity."""
+review = 2027-01-15
