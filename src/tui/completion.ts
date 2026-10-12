@@ -128,7 +128,11 @@ export function completeWords(app: App, view: View, back: boolean): void {
   const c: CompletionState = { view, from, items, shown: [], selected: 0, incomplete: false, words: true };
   app.completion = c;
   narrow(app, c);
-  if (!app.completion) app.message("info", from < at ? `no word in the open files starts with ${src.slice(from, at)}` : "no words in the open files");
+  if (!app.completion)
+    app.message(
+      "info",
+      from < at ? `no word in the open files starts with ${src.slice(from, at)}` : "no words in the open files",
+    );
 }
 
 /** After a key typed in insert mode: the popup narrowed, asked for or closed; signature help on `(` and `,`. */
@@ -138,7 +142,8 @@ export function afterInsertKey(app: App, view: View, key: string): void {
   if (w?.words) {
     const typed = keyChar(key);
     const going = key === "backspace" || (typed !== null && WORD.test(typed));
-    if (w.view === view && view.insert && going && wordStart(view.buf.source, offsetOf(app, view)) === w.from) return narrow(app, w);
+    if (w.view === view && view.insert && going && wordStart(view.buf.source, offsetOf(app, view)) === w.from)
+      return narrow(app, w);
     app.completion = null;
   }
   // A link's target in a note (20.13): from just after `](` or `[[` (21.5), narrowed as it's typed.
@@ -150,7 +155,15 @@ export function afterInsertKey(app: App, view: View, key: string): void {
     const c = app.completion;
     if (from !== null) {
       if (c?.links && c.view === view && c.from === from) return narrow(app, c);
-      app.completion = { view, from, items: linkItems(app, view, md !== null ? "markdown" : "wiki"), shown: [], selected: 0, incomplete: false, links: true };
+      app.completion = {
+        view,
+        from,
+        items: linkItems(app, view, md !== null ? "markdown" : "wiki"),
+        shown: [],
+        selected: 0,
+        incomplete: false,
+        links: true,
+      };
       return narrow(app, app.completion);
     }
     if (c?.links) app.completion = null;
@@ -224,7 +237,9 @@ function linkItems(app: App, view: View, style: LinkStyle): CompletionItem[] {
       sortText: `${here ? 0 : 1}${form}`,
       insertText: dest,
       // A pointer's name is settled when it's picked: asked on a clash, said when private (D74, D83).
-      ...(ends.pointer && ends.naming && (ends.naming.clash.length || ends.naming.private) ? { data: { pointerTo: abs, style } } : {}),
+      ...(ends.pointer && ends.naming && (ends.naming.clash.length || ends.naming.private)
+        ? { data: { pointerTo: abs, style } }
+        : {}),
     };
   };
   const out: CompletionItem[] = [];
@@ -236,7 +251,10 @@ function linkItems(app: App, view: View, style: LinkStyle): CompletionItem[] {
   // Other vaults' notes, as of their last index: what the machine knows, read once per completion.
   for (const v of readRoots()) {
     if (v.kind !== "vault" || v.worktree || v.path === g.root || !existsSync(v.path)) continue;
-    const entries = readJson<{ entries?: Record<string, unknown> } | null>(join(cacheDir(v), "index.json"), null)?.entries;
+    const entries = readJson<{ entries?: Record<string, unknown> } | null>(
+      join(cacheDir(v), "index.json"),
+      null,
+    )?.entries;
     for (const rel of Object.keys(entries ?? {})) {
       const abs = join(v.path, rel);
       out.push(item(abs, g.shownPath(abs), false));
@@ -258,7 +276,13 @@ async function ask(app: App, view: View, trigger: string | null): Promise<void> 
     position: app.lspPosition(view),
     context: trigger ? { triggerKind: 2, triggerCharacter: trigger } : { triggerKind: 1 },
   };
-  const r = await s.request<CompletionItem[] | CompletionList>(view.buf.abs, "textDocument/completion", params, "completionProvider", "completion");
+  const r = await s.request<CompletionItem[] | CompletionList>(
+    view.buf.abs,
+    "textDocument/completion",
+    params,
+    "completionProvider",
+    "completion",
+  );
   if (!view.insert || app.view !== view || mine !== asked) return;
   const list = r ? (Array.isArray(r.result) ? { items: r.result, isIncomplete: false } : r.result) : null;
   if (!list?.items.length) {
@@ -266,7 +290,14 @@ async function ask(app: App, view: View, trigger: string | null): Promise<void> 
     return app.host.requestRender();
   }
   const at = offsetOf(app, view);
-  app.completion = { view, from: wordStart(view.buf.source, at), items: list.items, shown: [], selected: 0, incomplete: list.isIncomplete };
+  app.completion = {
+    view,
+    from: wordStart(view.buf.source, at),
+    items: list.items,
+    shown: [],
+    selected: 0,
+    incomplete: list.isIncomplete,
+  };
   narrow(app, app.completion);
   app.host.requestRender();
 }
@@ -366,7 +397,8 @@ function acceptPointer(app: App, c: CompletionState, to: string, style: LinkStyl
   app.completion = null;
   let now = true;
   app.writeLinkAsked(view.buf.abs, to, (ends) => {
-    if (view.buf.version !== version) return app.message("warn", "the note changed while you picked: complete the link again");
+    if (view.buf.version !== version)
+      return app.message("warn", "the note changed while you picked: complete the link again");
     const text = linkDestination(conventionOf(app.graph, app.config, app.configOrigins, style), style, ends);
     const s = app.vim;
     if (s.inInsert && !s.replaying) {
@@ -399,7 +431,13 @@ function applyElsewhere(app: App, view: View, edits: TextEdit[]): void {
 async function signature(app: App, view: View): Promise<void> {
   const s = app.servers!;
   app.syncServers(view.buf);
-  const r = await s.request<SignatureHelp>(view.buf.abs, "textDocument/signatureHelp", { textDocument: { uri: pathToFileURL(view.buf.abs).href }, position: app.lspPosition(view) }, "signatureHelpProvider", "signature-help");
+  const r = await s.request<SignatureHelp>(
+    view.buf.abs,
+    "textDocument/signatureHelp",
+    { textDocument: { uri: pathToFileURL(view.buf.abs).href }, position: app.lspPosition(view) },
+    "signatureHelpProvider",
+    "signature-help",
+  );
   const help = r?.result;
   const sig = help?.signatures[help.activeSignature ?? 0];
   if (!sig || !view.insert) {

@@ -66,7 +66,9 @@ export function probeNvim(socket: string, timeoutMs = 1000): NvimServer | null {
 }
 
 /** The live nvims, found and probed. */
-export function discoverNvims(opts: { dirs?: string[]; probe?: (socket: string) => NvimServer | null } = {}): NvimServer[] {
+export function discoverNvims(
+  opts: { dirs?: string[]; probe?: (socket: string) => NvimServer | null } = {},
+): NvimServer[] {
   const probe = opts.probe ?? probeNvim;
   return nvimSockets(opts.dirs ?? nvimSocketDirs())
     .map((s) => probe(s))
@@ -75,4 +77,7 @@ export function discoverNvims(opts: { dirs?: string[]; probe?: (socket: string) 
 
 /** The preset for `[editor] remote = "nvim"`: open the file, then go to the line (nvim's
  *  `--remote` takes no `+line`). `{server}` is the chosen socket. */
-export const NVIM_REMOTE = ["nvim --server {server} --remote {file}", "nvim --server {server} --remote-send <C-\\><C-N>:{line}<CR>"];
+export const NVIM_REMOTE = [
+  "nvim --server {server} --remote {file}",
+  "nvim --server {server} --remote-send <C-\\><C-N>:{line}<CR>",
+];

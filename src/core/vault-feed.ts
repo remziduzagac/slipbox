@@ -23,7 +23,11 @@ export const SWITCH_SETTLE_MS = 3000;
  * `structural` when notes came or went — every link's status may have changed — and warnings for
  * what was left out.
  */
-export function applyToGraph(graph: Graph, batch: WatchBatch, maxFileSize: number): { structural: boolean; warnings: string[] } {
+export function applyToGraph(
+  graph: Graph,
+  batch: WatchBatch,
+  maxFileSize: number,
+): { structural: boolean; warnings: string[] } {
   let structural = false;
   const warnings: string[] = [];
   if (batch.rescan) {

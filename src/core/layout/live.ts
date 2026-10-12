@@ -31,7 +31,8 @@ export function blockRanges(tree: Root, lineCount: number): Block[] {
   for (const node of tree.children) {
     if (node.type === "list") for (const item of node.children) add(item as unknown as RootContent);
     // A data file's table: a block per record (a CSV's thousands of rows are never one block).
-    else if (node.type === "table" && (node.data as { rowBlocks?: boolean } | undefined)?.rowBlocks) for (const row of node.children) add(row as unknown as RootContent);
+    else if (node.type === "table" && (node.data as { rowBlocks?: boolean } | undefined)?.rowBlocks)
+      for (const row of node.children) add(row as unknown as RootContent);
     // A data file's tree (16.12): a key and the plain values listed right under it are one block —
     // a card (`defaults` with its three settings, a run of top-level values) — so the lens holds
     // what belongs together and moves a card at a time, not a line.
@@ -49,7 +50,9 @@ export function blockRanges(tree: Root, lineCount: number): Block[] {
  * its level or higher (or the note's end) — a section nested in its parent's.
  */
 export function sectionRanges(tree: Root, lineCount: number): Block[] {
-  const heads = tree.children.flatMap((n) => (n.type === "heading" && n.position ? [{ line: n.position.start.line, depth: n.depth }] : []));
+  const heads = tree.children.flatMap((n) =>
+    n.type === "heading" && n.position ? [{ line: n.position.start.line, depth: n.depth }] : [],
+  );
   return heads.map((h, i) => {
     const next = heads.slice(i + 1).find((k) => k.depth <= h.depth);
     return [h.line, Math.min(lineCount, (next?.line ?? lineCount + 1) - 1)] as Block;
@@ -152,11 +155,19 @@ export function composeLive(rendered: Layout, old: Block, active: Block, lines: 
       if (prev && !blank(prev)) out.push({ spans: [], src: Math.max(0, active[0] - 1), decor: true, lens: "pad" });
       // Its label says the mode — viewing the source, or editing it — in the mode's colour.
       const lines = active[0] === active[1] ? `line ${active[0]}` : `lines ${active[0]}–${active[1]}`;
-      out.push({ ...lensRule(opts.rule, opts.width, active[0] - 1, ` ${opts.editing ? "editing" : "source"} · ${lines} `, rule), lens: "top" });
+      out.push({
+        ...lensRule(opts.rule, opts.width, active[0] - 1, ` ${opts.editing ? "editing" : "source"} · ${lines} `, rule),
+        lens: "top",
+      });
     }
     const band = opts.editing ? ("lens_band_edit" as const) : ("lens_band" as const);
     for (const l of source.lines) {
-      const row: Line = { ...l, src: l.src + active[0] - 1, spans: l.spans.map((s) => ({ ...s, src: (s.src ?? 1) + active[0] - 1 })), ...(opts.rule ? { lens: "source" as const, fill: band } : {}) };
+      const row: Line = {
+        ...l,
+        src: l.src + active[0] - 1,
+        spans: l.spans.map((s) => ({ ...s, src: (s.src ?? 1) + active[0] - 1 })),
+        ...(opts.rule ? { lens: "source" as const, fill: band } : {}),
+      };
       out.push(counters ? countered(row, counters) : row);
     }
     if (opts.rule) {

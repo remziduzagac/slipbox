@@ -94,7 +94,11 @@ export function headOf(c: Pick<Checkout, "gitDir">): { branch: string | null; co
   if (hit && hit.mtimeMs === mtimeMs) return hit;
   const text = (read(file) ?? "").trim();
   const ref = /^ref:\s*refs\/heads\/(.+)$/.exec(text);
-  const head = { mtimeMs, branch: ref ? ref[1]! : null, commit: ref ? null : /^[0-9a-f]{40,64}$/.test(text) ? text : null };
+  const head = {
+    mtimeMs,
+    branch: ref ? ref[1]! : null,
+    commit: ref ? null : /^[0-9a-f]{40,64}$/.test(text) ? text : null,
+  };
   heads.set(file, head);
   return head;
 }

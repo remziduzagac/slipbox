@@ -29,7 +29,12 @@ const XDG: Record<StoreKind, [string, string]> = {
 };
 
 /** slipbox's folder for a kind of thing, on a platform (14.9). */
-export function storeDir(kind: StoreKind, platform: string = process.platform, env: Record<string, string | undefined> = process.env, home = homedir()): string {
+export function storeDir(
+  kind: StoreKind,
+  platform: string = process.platform,
+  env: Record<string, string | undefined> = process.env,
+  home = homedir(),
+): string {
   const path = platform === "win32" ? win32 : posix;
   const [name, fallback] = XDG[kind];
   const set = env[name];
@@ -82,7 +87,8 @@ export function cacheHome(): string {
 }
 
 /** What marks a folder a cache (bford.info/cachedir): backup tools that know it skip the folder. */
-export const CACHEDIR_TAG = "Signature: 8a477f597d28d172789f06886806bc55\n# This file is a cache directory tag created by slipbox.\n# Everything here is rebuilt when it's missing: see https://bford.info/cachedir/\n";
+export const CACHEDIR_TAG =
+  "Signature: 8a477f597d28d172789f06886806bc55\n# This file is a cache directory tag created by slipbox.\n# Everything here is rebuilt when it's missing: see https://bford.info/cachedir/\n";
 
 let tagged = "";
 
@@ -112,7 +118,10 @@ export function dataHome(): string {
  * The folders a person keeps things in, those there are (10.14): Downloads, Desktop and Documents — where the desktop
  * says (`user-dirs.dirs`, which may name them in another language), else as they're called in English — then home.
  */
-export function userFolders(home: string, configHome = xdg("XDG_CONFIG_HOME", ".config")): { name: string; path: string }[] {
+export function userFolders(
+  home: string,
+  configHome = xdg("XDG_CONFIG_HOME", ".config"),
+): { name: string; path: string }[] {
   let said = "";
   try {
     said = readFileSync(join(configHome, "user-dirs.dirs"), "utf8");

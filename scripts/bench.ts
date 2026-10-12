@@ -32,7 +32,10 @@ function mixed(n: number): string {
   const out: string[] = [];
   for (let i = 0; out.length < n; i++) {
     out.push(`## Section ${i}`, "");
-    out.push(`Some prose for section ${i}, with **bold**, a [[link-${i % 50}]] and \`code\`; long enough to wrap at eighty columns once.`, "");
+    out.push(
+      `Some prose for section ${i}, with **bold**, a [[link-${i % 50}]] and \`code\`; long enough to wrap at eighty columns once.`,
+      "",
+    );
     out.push(`- item ${i} one`, `- item ${i} two`, `  - nested ${i}`, `- [ ] task ${i}`, "");
     if (i % 5 === 0) out.push("```ts", `const x${i} = ${i};`, `function f${i}() { return x${i}; }`, "```", "");
     if (i % 7 === 0) out.push("| a | b | c |", "| --- | --- | --- |", `| ${i} | cell ${i} | more text ${i} |`, "");
@@ -66,7 +69,14 @@ async function makeApp(open: string, width = 120, height = 40) {
   config.lsp.enabled = false;
   const loc = locateVault({ root: vault });
   const graph = openGraph(loc, config, false, "lazy");
-  const app = new App({ loc, config, graph, host: { requestRender() {}, osc52: () => true, quit() {} }, open, watch: false });
+  const app = new App({
+    loc,
+    config,
+    graph,
+    host: { requestRender() {}, osc52: () => true, quit() {} },
+    open,
+    watch: false,
+  });
   let w = width;
   let h = height;
   const frame = () => app.draw(new TextCanvas(w, h));
@@ -109,7 +119,14 @@ for (const note of ["k1.md", "k20.md"]) {
       let app: InstanceType<typeof App> | null = null;
       xs.push(
         await time(() => {
-          app = new App({ loc, config, graph, host: { requestRender() {}, osc52: () => true, quit() {} }, open: note, watch: false });
+          app = new App({
+            loc,
+            config,
+            graph,
+            host: { requestRender() {}, osc52: () => true, quit() {} },
+            open: note,
+            watch: false,
+          });
           app.draw(new TextCanvas(120, 40));
         }),
       );
@@ -187,15 +204,22 @@ for (const note of ["k1.md", "k20.md"]) {
 }
 
 const env = { ...process.env, NO_COLOR: "1" };
-const cli = (args: string[]) => time(() => void Bun.spawnSync(["bun", MAIN, "--root", vault, ...args], { env, stdout: "ignore", stderr: "ignore" }));
+const cli = (args: string[]) =>
+  time(() => void Bun.spawnSync(["bun", MAIN, "--root", vault, ...args], { env, stdout: "ignore", stderr: "ignore" }));
 await bench("cli: task tasks20k 10000 (a toggle)", async () => {
   const xs: number[] = [];
   for (let k = 0; k < 3; k++) xs.push(await cli(["task", "tasks20k", "10000"]));
   return xs;
 });
-await bench("cli: task tasks20k (the list)", async () => [await cli(["task", "tasks20k", "--json"]), await cli(["task", "tasks20k", "--json"])]);
+await bench("cli: task tasks20k (the list)", async () => [
+  await cli(["task", "tasks20k", "--json"]),
+  await cli(["task", "tasks20k", "--json"]),
+]);
 await bench("cli: read k20", async () => [await cli(["read", "k20"]), await cli(["read", "k20"])]);
-await bench("cli: render k20 --plain", async () => [await cli(["render", "k20", "--plain"]), await cli(["render", "k20", "--plain"])]);
+await bench("cli: render k20 --plain", async () => [
+  await cli(["render", "k20", "--plain"]),
+  await cli(["render", "k20", "--plain"]),
+]);
 await bench("cli: find link-7 (the vault)", async () => [await cli(["find", "link-7"]), await cli(["find", "link-7"])]);
 await bench("cli: backlinks k1", async () => [await cli(["backlinks", "k1"]), await cli(["backlinks", "k1"])]);
 
@@ -213,12 +237,17 @@ if ([FIRST, FROM_CACHE, NO_CACHE].some(want)) {
   const many = join(dir, "many");
   mkdirSync(join(many, ".slipbox"), { recursive: true });
   // Each note's own text (a shared one would be parsed once, whatever the copy).
-  for (let i = 0; i < 2000; i++) writeFileSync(join(many, `n${i}.md`), `# Note ${i}\n\n${mixed(120).replace(/link-(\d+)/g, `n${i % 97}`)}\nThe end of note ${i}.\n`);
+  for (let i = 0; i < 2000; i++)
+    writeFileSync(
+      join(many, `n${i}.md`),
+      `# Note ${i}\n\n${mixed(120).replace(/link-(\d+)/g, `n${i % 97}`)}\nThe end of note ${i}.\n`,
+    );
   const build = (root: string, cache: import("../src/core/parsecache.ts").ParseCache | null) =>
     time(async () => {
       const loc = rootAt(root);
       const g = new Graph(loc, DEFAULT_CONFIG).build(false, "lazy");
-      for (const rel of g.notes.keys()) (await import("../src/core/graph.ts")).extractNote({ rel, abs: join(root, rel), size: 0, mtimeMs: 0 }, cache);
+      for (const rel of g.notes.keys())
+        (await import("../src/core/graph.ts")).extractNote({ rel, abs: join(root, rel), size: 0, mtimeMs: 0 }, cache);
     });
   const shared = ParseCache.open(join(dir, "cache", "bench-parsed.db"))!;
   // Filled whichever case is wanted: the copies are timed against a full cache.

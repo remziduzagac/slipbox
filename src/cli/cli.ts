@@ -13,29 +13,83 @@ import { execFileSync, spawnSync } from "node:child_process";
 import { existsSync, mkdirSync, rmSync, statSync, writeFileSync } from "node:fs";
 import { homedir } from "node:os";
 import { basename, dirname, extname, isAbsolute, join, relative, resolve, sep } from "node:path";
-import { appendScratch, CaptureError, clearScratch, formatEntry, parseRef, readScratch, scratchLocation } from "../core/capture.ts";
+import {
+  appendScratch,
+  CaptureError,
+  clearScratch,
+  formatEntry,
+  parseRef,
+  readScratch,
+  scratchLocation,
+} from "../core/capture.ts";
 import { copyText } from "../core/clipboard.ts";
 import { buildContext } from "../core/context.ts";
 import { catchUp, search, SearchIndex } from "../core/search.ts";
 import { type Checkout, checkoutOf } from "../core/git.ts";
-import { baseBranch, changedSince, type GitState, gitGuardsAttributes, inCheckout, inVault, mergeBaseOf, showAt, statusOf, worktreeList } from "../core/gitops.ts";
+import {
+  baseBranch,
+  changedSince,
+  type GitState,
+  gitGuardsAttributes,
+  inCheckout,
+  inVault,
+  mergeBaseOf,
+  showAt,
+  statusOf,
+  worktreeList,
+} from "../core/gitops.ts";
 import { diffRows } from "../core/merge.ts";
 import { COMMAND_SPECS } from "../core/command-specs.ts";
 import { type Config, loadConfig } from "../core/config.ts";
 import { conventionOf, describeConvention, type LinkStyle } from "../core/convention.ts";
 import { linkEnds, linkWarnings, writeLink } from "../core/write-link.ts";
-import { copyAvailable, folderIdentity, folderNamed, lookupFolder, pointerName, readFolders, repositoryCopies, setDefaultCopy } from "../core/folders.ts";
+import {
+  copyAvailable,
+  folderIdentity,
+  folderNamed,
+  lookupFolder,
+  pointerName,
+  readFolders,
+  repositoryCopies,
+  setDefaultCopy,
+} from "../core/folders.ts";
 import { isPointer, parsePointer, resolvePointer } from "../core/pointer.ts";
 import { pathLink } from "../core/links.ts";
 import { glyphsFor, isGlyphMode } from "../core/glyphs.ts";
-import { certainty, describeLanding, Graph, type LinkProblem, openGraph, type Retarget, type Target } from "../core/graph.ts";
+import {
+  certainty,
+  describeLanding,
+  Graph,
+  type LinkProblem,
+  openGraph,
+  type Retarget,
+  type Target,
+} from "../core/graph.ts";
 import { type LintIssue, lintCommand, lintFailure, runLint } from "../core/lint.ts";
 import { detectColorDepth, layoutToAnsi, type ColorDepth } from "../core/layout/ansi.ts";
 import { layoutNote, layoutWidth } from "../core/note.ts";
 import { headingsOf, parseAround, parseMarkdown, type ParsedNote, slugify } from "../core/parse.ts";
-import { addOwnWord, Checker, dictionaryFiles, noteLanguages, openSpeller, ownWordsFile, proseWords, type Speller } from "../core/spell.ts";
+import {
+  addOwnWord,
+  Checker,
+  dictionaryFiles,
+  noteLanguages,
+  openSpeller,
+  ownWordsFile,
+  proseWords,
+  type Speller,
+} from "../core/spell.ts";
 import { headingFragment, landing, lineFragment } from "../core/landing.ts";
-import { addFootnote, applyEdits, deleteFootnote, editFootnote, type Footnote, footnotesOf, renameFootnote, type TextEdit } from "../core/footnotes.ts";
+import {
+  addFootnote,
+  applyEdits,
+  deleteFootnote,
+  editFootnote,
+  type Footnote,
+  footnotesOf,
+  renameFootnote,
+  type TextEdit,
+} from "../core/footnotes.ts";
 import { parseNoteFile } from "../core/readers.ts";
 import { dataOutline, parseData } from "../core/data.ts";
 import { classify, extensionOf, isKnownExtension, noteFormat } from "../core/filetypes.ts";
@@ -43,7 +97,18 @@ import { cacheDir, dataHome, stateDir, stateHome, userConfigFile } from "../core
 import { readStale, type StaleEntry } from "../core/stale.ts";
 import { applyColorOverrides, listThemes, loadTheme } from "../core/theme/index.ts";
 import { sanitize, UNSAFE } from "../core/sanitize.ts";
-import { climbsOut, type DecodedFile, decodeText, ensureDir, landsInside, readJson, readRegular, readText, WriteRefused, writeNote } from "../core/fsutil.ts";
+import {
+  climbsOut,
+  type DecodedFile,
+  decodeText,
+  ensureDir,
+  landsInside,
+  readJson,
+  readRegular,
+  readText,
+  WriteRefused,
+  writeNote,
+} from "../core/fsutil.ts";
 import { exportNotes, exportTarget, FORMATS, formatFor, namesFolder, writeExport } from "../core/export/index.ts";
 import { compilePattern, expandReplacement, findAll, firstPerLine, replaceMatches } from "../core/replace.ts";
 import { planReplace } from "../core/replace-files.ts";
@@ -55,19 +120,73 @@ import { openVault, Reach } from "../core/reach.ts";
 import { doctor, doctorFile, type LinterReport, type ServerReport } from "../core/servers/doctor.ts";
 import { linterRoot, linterTable, runLinter } from "../core/servers/linters.ts";
 import { ServerManager } from "../core/servers/manager.ts";
-import { atLeast, frontmatterFindings, lintProblems, noteProblems, type Problem, rootTypes, SEVERITIES, type Severity, syntaxProblems } from "../core/diagnostics.ts";
+import {
+  atLeast,
+  frontmatterFindings,
+  lintProblems,
+  noteProblems,
+  type Problem,
+  rootTypes,
+  SEVERITIES,
+  type Severity,
+  syntaxProblems,
+} from "../core/diagnostics.ts";
 import { languageOf, serverTable } from "../core/servers/languages.ts";
 import { rootFor } from "../core/servers/find.ts";
-import { type Applied, applyPlan, loggedRenames, moveTarget, planFolderMove, planHeadingRename, planMakeVault, planNoteRename, planRelink, planUndo, planUnmakeVault, planVaultFolderMove, planVaultRename, RenameError, type RenamePlan } from "../core/rename.ts";
+import {
+  type Applied,
+  applyPlan,
+  loggedRenames,
+  moveTarget,
+  planFolderMove,
+  planHeadingRename,
+  planMakeVault,
+  planNoteRename,
+  planRelink,
+  planUndo,
+  planUnmakeVault,
+  planVaultFolderMove,
+  planVaultRename,
+  RenameError,
+  type RenamePlan,
+} from "../core/rename.ts";
 import { planConvert, urlPath } from "../core/convert.ts";
 import { describeBreak, type MergeReview, MergeReviewError, reviewMerge } from "../core/mergereview.ts";
-import { copyPath, emptyTrash, FileOpError, linksInto, listTrash, restorePath, type TrashItem, trashPath } from "../core/files.ts";
+import {
+  copyPath,
+  emptyTrash,
+  FileOpError,
+  linksInto,
+  listTrash,
+  restorePath,
+  type TrashItem,
+  trashPath,
+} from "../core/files.ts";
 import { noteIndexed, readIdentity, vaultConfigFile } from "../core/registry.ts";
 import { activityFile, AutoIndex, autoIndexFile, backgroundStatus, describeBackground } from "../core/autoindex.ts";
 import { forgetPlan, listPlans, loadPlan, type SavedPlan, savePlan } from "../core/plans.ts";
 import { type Scope, SCOPES, searchScoped } from "../core/scope.ts";
 import { rootLabel, tildePath } from "../core/names.ts";
-import { checkInit, findVaultRoot, folderAt, hasMarker, homeFolder, initVault, isListed, isInside, isVaultRoot, locateVault, markersAt, setRootMarkers, readVaultVersion, recordLocation, rootAt, VaultError, type VaultLocation, configFilesFor } from "../core/vault.ts";
+import {
+  checkInit,
+  findVaultRoot,
+  folderAt,
+  hasMarker,
+  homeFolder,
+  initVault,
+  isListed,
+  isInside,
+  isVaultRoot,
+  locateVault,
+  markersAt,
+  setRootMarkers,
+  readVaultVersion,
+  recordLocation,
+  rootAt,
+  VaultError,
+  type VaultLocation,
+  configFilesFor,
+} from "../core/vault.ts";
 import { isTrusted, setTrustedRoots } from "../core/trust.ts";
 import { type Args, flag, has, parseArgs, UsageError, VALUED } from "./args.ts";
 import { VERSION } from "../version.ts";
@@ -82,7 +201,10 @@ import { notesOfType, ofType } from "../core/doctypes.ts";
  * JSON value.
  */
 function safeJson(value: unknown): string {
-  return JSON.stringify(value).replace(new RegExp(UNSAFE.source, "g"), (c) => `\\u${c.charCodeAt(0).toString(16).padStart(4, "0")}`);
+  return JSON.stringify(value).replace(
+    new RegExp(UNSAFE.source, "g"),
+    (c) => `\\u${c.charCodeAt(0).toString(16).padStart(4, "0")}`,
+  );
 }
 
 export const JSON_SCHEMA = 1;
@@ -139,9 +261,16 @@ class Session {
     if (carriedFrom) {
       // The links its move broke, in and out of it (20.17): counted, for relink to fix — never the
       // pointers relink offers for links that still reach their file (21.7), as the TUI's offer counts.
-      const broken = planRelink(openVault(loc.root), undefined, { pointers: false }).files.reduce((n, f) => n + f.edits.length, 0);
-      const fix = broken ? ` — its move broke links on ${broken} line${broken === 1 ? "" : "s"}: slipbox relink fixes them (--dry-run shows how)` : "";
-      this.warnings.push(`${rootLabel(loc)} moved here from ${carriedFrom}: its sessions, scratch, trash and reading positions came along${fix}`);
+      const broken = planRelink(openVault(loc.root), undefined, { pointers: false }).files.reduce(
+        (n, f) => n + f.edits.length,
+        0,
+      );
+      const fix = broken
+        ? ` — its move broke links on ${broken} line${broken === 1 ? "" : "s"}: slipbox relink fixes them (--dry-run shows how)`
+        : "";
+      this.warnings.push(
+        `${rootLabel(loc)} moved here from ${carriedFrom}: its sessions, scratch, trash and reading positions came along${fix}`,
+      );
     }
   }
 
@@ -273,10 +402,58 @@ Exit codes: 0 ok, 1 error, 2 usage, 3 not found, 4 ambiguous (a link; several nv
 `;
 
 export const CLI_COMMANDS = new Set([
-  "render", "resolve", "link", "links", "backlinks", "name", "folders", "ls", "outline", "find", "replace", "task", "read", "stat", "write", "mkdir", "send", "history",
-  "mv", "rename-heading", "relink", "convert-links", "undo", "context", "search", "index", "changed", "diff", "merge-review", "worktrees", "cp", "rm", "trash", "deinit", "tags", "footnotes", "problems",
-  "capture", "scratch", "init", "info", "apply", "doctor", "diagnostics", "themes", "commands", "help", "export", "spell",
-  "upgrade", "uninstall", "types",
+  "render",
+  "resolve",
+  "link",
+  "links",
+  "backlinks",
+  "name",
+  "folders",
+  "ls",
+  "outline",
+  "find",
+  "replace",
+  "task",
+  "read",
+  "stat",
+  "write",
+  "mkdir",
+  "send",
+  "history",
+  "mv",
+  "rename-heading",
+  "relink",
+  "convert-links",
+  "undo",
+  "context",
+  "search",
+  "index",
+  "changed",
+  "diff",
+  "merge-review",
+  "worktrees",
+  "cp",
+  "rm",
+  "trash",
+  "deinit",
+  "tags",
+  "footnotes",
+  "problems",
+  "capture",
+  "scratch",
+  "init",
+  "info",
+  "apply",
+  "doctor",
+  "diagnostics",
+  "themes",
+  "commands",
+  "help",
+  "export",
+  "spell",
+  "upgrade",
+  "uninstall",
+  "types",
 ]);
 
 /** The command word in raw arguments that failed to parse: skips flags and their values. */
@@ -296,14 +473,22 @@ function commandIn(argv: string[]): string {
 /** Run a CLI command. Returns the exit code; never calls process.exit itself. */
 export async function runCli(argv: string[], io: Io): Promise<number> {
   // `--json` promises exactly one object on stdout, whatever happens: usage errors included.
-  const envelope = (o: { ok: boolean; command: string; data?: unknown; error?: { code: number; message: string }; warnings?: string[]; stale?: string[] }) =>
+  const envelope = (o: {
+    ok: boolean;
+    command: string;
+    data?: unknown;
+    error?: { code: number; message: string };
+    warnings?: string[];
+    stale?: string[];
+  }) =>
     `${safeJson({ schema: JSON_SCHEMA, ok: o.ok, command: o.command, ...(o.error ? { error: o.error } : {}), data: o.data ?? null, warnings: o.warnings ?? [], stale: o.stale ?? [] })}\n`;
   let args: Args;
   try {
     args = parseArgs(argv);
   } catch (err) {
     const message = (err as Error).message;
-    if (argv.some((a) => a === "--json" || a.startsWith("--json="))) io.out(envelope({ ok: false, command: commandIn(argv), error: { code: EXIT.usage, message } }));
+    if (argv.some((a) => a === "--json" || a.startsWith("--json=")))
+      io.out(envelope({ ok: false, command: commandIn(argv), error: { code: EXIT.usage, message } }));
     else io.err(sanitize(`slipbox: ${message}\n`));
     return EXIT.usage;
   }
@@ -321,7 +506,8 @@ export async function runCli(argv: string[], io: Io): Promise<number> {
   try {
     // Flags every command shares are checked for every command, used or not.
     const color = flag(args, "color");
-    if (color !== undefined && !["auto", "always", "never"].includes(color)) throw new UsageError("--color must be auto, always or never");
+    if (color !== undefined && !["auto", "always", "never"].includes(color))
+      throw new UsageError("--color must be auto, always or never");
     // Where roots are (21.1), and which may run their own code (23.x), are your config's to say,
     // `--config` included: read before finding one.
     const yours = loadConfig({ configFile: flag(args, "config") }).config;
@@ -329,16 +515,57 @@ export async function runCli(argv: string[], io: Io): Promise<number> {
     setTrustedRoots(yours.trust.roots);
     // A file named by its pointer (21.10) is that file: its path from here on, so the command works in
     // its folder as it would with the path.
-    const NOTE_FIRST = ["render", "export", "spell", "links", "backlinks", "outline", "footnotes", "replace", "task", "read", "stat", "write", "send", "mv", "rename-heading", "relink", "convert-links", "cp", "rm", "diff", "context"];
+    const NOTE_FIRST = [
+      "render",
+      "export",
+      "spell",
+      "links",
+      "backlinks",
+      "outline",
+      "footnotes",
+      "replace",
+      "task",
+      "read",
+      "stat",
+      "write",
+      "send",
+      "mv",
+      "rename-heading",
+      "relink",
+      "convert-links",
+      "cp",
+      "rm",
+      "diff",
+      "context",
+    ];
     // `replace --all` names no note: its first argument is what it finds.
     const noNote = command === "replace" && has(args, "all");
-    const named = command === "context" ? rest.map((_, i) => i) : noNote ? [] : NOTE_FIRST.includes(command) || ["diagnostics", "doctor", "deinit", "index", "link"].includes(command) ? [0] : command === "find" ? [1] : [];
+    const named =
+      command === "context"
+        ? rest.map((_, i) => i)
+        : noNote
+          ? []
+          : NOTE_FIRST.includes(command) || ["diagnostics", "doctor", "deinit", "index", "link"].includes(command)
+            ? [0]
+            : command === "find"
+              ? [1]
+              : [];
     for (const i of named) if (rest[i] !== undefined) rest[i] = vaultFormArg(rest[i]!, io.cwd);
     const from = flag(args, "from");
     if (from !== undefined) args.flags.set("from", vaultFormArg(from, io.cwd));
     // The note argument, when it names a file, also says which vault this is (resolve's is --from:
     // where the link is written; diagnostics' its file, whose root's checks it runs).
-    const noteAt = noNote ? undefined : NOTE_FIRST.includes(command) || command === "diagnostics" ? rest[0] : command === "find" ? rest[1] : command === "resolve" ? flag(args, "from") : command === "link" ? (flag(args, "from") ?? rest[0]) : undefined;
+    const noteAt = noNote
+      ? undefined
+      : NOTE_FIRST.includes(command) || command === "diagnostics"
+        ? rest[0]
+        : command === "find"
+          ? rest[1]
+          : command === "resolve"
+            ? flag(args, "from")
+            : command === "link"
+              ? (flag(args, "from") ?? rest[0])
+              : undefined;
     let pathArg = noteArgPath(noteAt, io.cwd, flag(args, "root"));
     // A nested vault's folder, moved, copied or deleted, is a folder of the vault holding it (18.7).
     if (pathArg && ["mv", "cp", "rm"].includes(command)) {
@@ -346,33 +573,52 @@ export async function runCli(argv: string[], io: Io): Promise<number> {
       if (isVaultRoot(abs) && findVaultRoot(dirname(abs))) pathArg = dirname(abs);
     }
     // init makes the vault: opening the folder as one first would name it before --name could.
-    const loc = command === "init" ? folderAt(io.cwd) : locateVault({ root: flag(args, "root"), path: pathArg, cwd: io.cwd });
+    const loc =
+      command === "init" ? folderAt(io.cwd) : locateVault({ root: flag(args, "root"), path: pathArg, cwd: io.cwd });
     session = new Session(args, loc, io);
     const handler = HANDLERS[command];
     if (!handler) throw new UsageError(`unknown command: ${command} (see slipbox help)`);
     // Too many arguments is a mistake to report, not to drop (a dropped one can be a flag after --).
     const most = MAX_ARGS[command];
-    if (most !== undefined && rest.length > most) throw new UsageError(`${command} takes at most ${most} argument${most === 1 ? "" : "s"}; got ${rest.length} (${rest.slice(most).join(" ")} too many)`);
+    if (most !== undefined && rest.length > most)
+      throw new UsageError(
+        `${command} takes at most ${most} argument${most === 1 ? "" : "s"}; got ${rest.length} (${rest.slice(most).join(" ")} too many)`,
+      );
     // A flag the command doesn't take is an error, never ignored: `write --dry-run` would write.
     const own = FLAGS[command] ?? [];
     for (const name of args.flags.keys()) {
-      if (!GLOBAL_FLAGS.has(name) && !own.includes(name)) throw new UsageError(`--${name} isn't an option of ${command}${own.length ? ` (it takes ${own.map((f) => `--${f}`).join(", ")})` : ""}`);
+      if (!GLOBAL_FLAGS.has(name) && !own.includes(name))
+        throw new UsageError(
+          `--${name} isn't an option of ${command}${own.length ? ` (it takes ${own.map((f) => `--${f}`).join(", ")})` : ""}`,
+        );
     }
     const result = await handler(session, rest);
     const stale = command === "init" ? [] : session.stale();
     if (json) {
-      io.out(`${safeJson({ schema: JSON_SCHEMA, ok: true, command, data: result.data, warnings: session.allWarnings(), stale: stale.map((s) => s.path) })}\n`);
+      io.out(
+        `${safeJson({ schema: JSON_SCHEMA, ok: true, command, data: result.data, warnings: session.allWarnings(), stale: stale.map((s) => s.path) })}\n`,
+      );
     } else {
       // Note text reaches the terminal only sanitized (2.9). `render` is the exception: its output
       // is a layout, sanitized when built, plus the colours it adds on purpose.
       if (result.human) io.out(command === "render" ? result.human : sanitize(result.human));
       // Diagnostics quote config values and paths from the vault: sanitized like the output (2.9).
       for (const w of session.allWarnings()) io.err(sanitize(`slipbox: warning: ${w}\n`));
-      if (stale.length) io.err(sanitize(`slipbox: warning: unsaved changes in a running slipbox: ${stale.map((s) => s.path).join(", ")}\n`));
+      if (stale.length)
+        io.err(
+          sanitize(`slipbox: warning: unsaved changes in a running slipbox: ${stale.map((s) => s.path).join(", ")}\n`),
+        );
     }
     return result.code ?? EXIT.ok;
   } catch (err) {
-    const code = err instanceof CliError ? err.code : err instanceof UsageError ? EXIT.usage : err instanceof VaultError ? EXIT.notFound : EXIT.error;
+    const code =
+      err instanceof CliError
+        ? err.code
+        : err instanceof UsageError
+          ? EXIT.usage
+          : err instanceof VaultError
+            ? EXIT.notFound
+            : EXIT.error;
     const message = (err as Error).message;
     if (json) {
       let stale: string[] = [];
@@ -381,10 +627,25 @@ export async function runCli(argv: string[], io: Io): Promise<number> {
       } catch {
         // the error came from the session itself; no stale list then
       }
-      io.out(envelope({ ok: false, command, error: { code, message }, data: err instanceof CliError ? (err.data ?? null) : null, warnings: session?.allWarnings() ?? [], stale }));
+      io.out(
+        envelope({
+          ok: false,
+          command,
+          error: { code, message },
+          data: err instanceof CliError ? (err.data ?? null) : null,
+          warnings: session?.allWarnings() ?? [],
+          stale,
+        }),
+      );
     } else {
       io.err(sanitize(`slipbox: ${message}\n`));
-      if (!(err instanceof CliError) && !(err instanceof UsageError) && !(err instanceof VaultError) && io.env.SLIPBOX_DEBUG) io.err(`${(err as Error).stack}\n`);
+      if (
+        !(err instanceof CliError) &&
+        !(err instanceof UsageError) &&
+        !(err instanceof VaultError) &&
+        io.env.SLIPBOX_DEBUG
+      )
+        io.err(`${(err as Error).stack}\n`);
     }
     return code;
   }
@@ -399,9 +660,52 @@ function within<T>(p: Promise<T>, ms: number, fallback: T): Promise<T> {
 
 /** Arguments each command takes at most (`write` and `capture` take free text: no limit). */
 const MAX_ARGS: Record<string, number> = {
-  render: 1, resolve: 1, link: 1, links: 1, name: 1, folders: 3, backlinks: 1, ls: 0, outline: 1, find: 2, replace: 3, task: 2, read: 1, stat: 1, send: 1, history: 0,
-  scratch: 1, init: 1, info: 0, apply: 1, index: 1, themes: 0, commands: 0, mkdir: 1, mv: 2, "rename-heading": 3, doctor: 1, diagnostics: 1, relink: 1, "convert-links": 1, cp: 2, rm: 1, trash: 2, deinit: 1, tags: 1, footnotes: 4, problems: 0, "merge-review": 1,
-  changed: 0, diff: 1, worktrees: 0, undo: 0, spell: 1, upgrade: 0, uninstall: 0, types: 1,
+  render: 1,
+  resolve: 1,
+  link: 1,
+  links: 1,
+  name: 1,
+  folders: 3,
+  backlinks: 1,
+  ls: 0,
+  outline: 1,
+  find: 2,
+  replace: 3,
+  task: 2,
+  read: 1,
+  stat: 1,
+  send: 1,
+  history: 0,
+  scratch: 1,
+  init: 1,
+  info: 0,
+  apply: 1,
+  index: 1,
+  themes: 0,
+  commands: 0,
+  mkdir: 1,
+  mv: 2,
+  "rename-heading": 3,
+  doctor: 1,
+  diagnostics: 1,
+  relink: 1,
+  "convert-links": 1,
+  cp: 2,
+  rm: 1,
+  trash: 2,
+  deinit: 1,
+  tags: 1,
+  footnotes: 4,
+  problems: 0,
+  "merge-review": 1,
+  changed: 0,
+  diff: 1,
+  worktrees: 0,
+  undo: 0,
+  spell: 1,
+  upgrade: 0,
+  uninstall: 0,
+  types: 1,
 };
 
 /**
@@ -415,7 +719,10 @@ function parseFile(s: Session, rel: string, text: string): ParsedNote {
     if (d.error) throw new CliError(`${rel} doesn't parse — ${d.error}`, EXIT.error);
     return { tree: d.tree, frontmatter: null, source: text };
   }
-  if (kind.group === "text") throw new UsageError(`${rel} is a ${kind.format === "text" ? "text" : kind.format} file, with no rendered form (slipbox read shows its text)`);
+  if (kind.group === "text")
+    throw new UsageError(
+      `${rel} is a ${kind.format === "text" ? "text" : kind.format} file, with no rendered form (slipbox read shows its text)`,
+    );
   return parseNoteFile(rel, text);
 }
 
@@ -437,7 +744,19 @@ export const FLAGS: Record<string, string[]> = {
   link: ["text", "style", "embed"],
   find: ["regex", "whole", "ignore-case", "files"],
   ls: ["files"],
-  replace: ["regex", "whole", "ignore-case", "first", "first-per-line", "lines", "dry-run", "if-unchanged", "all", "files", "plan"],
+  replace: [
+    "regex",
+    "whole",
+    "ignore-case",
+    "first",
+    "first-per-line",
+    "lines",
+    "dry-run",
+    "if-unchanged",
+    "all",
+    "files",
+    "plan",
+  ],
   spell: ["lang", "suggest", "add"],
   task: ["check", "uncheck", "if-unchanged"],
   footnotes: ["if-unchanged"],
@@ -478,14 +797,20 @@ function vaultFormArg(arg: string, cwd: string): string {
     const p = parsePointer(arg);
     const t = p ? resolvePointer(p) : null;
     if (t?.status === "found") return pathLink(t.abs, join(cwd, "_"), false, undefined, true)?.abs ?? t.abs;
-    if (t?.status === "ambiguous") throw new CliError(`${arg}: ${t.reason}`, EXIT.ambiguous, { candidates: t.candidates });
-    if (t?.status === "branch") throw new CliError(`${arg}: ${t.branch} isn't checked out here (slipbox resolve reads it from git)`, EXIT.notFound);
+    if (t?.status === "ambiguous")
+      throw new CliError(`${arg}: ${t.reason}`, EXIT.ambiguous, { candidates: t.candidates });
+    if (t?.status === "branch")
+      throw new CliError(
+        `${arg}: ${t.branch} isn't checked out here (slipbox resolve reads it from git)`,
+        EXIT.notFound,
+      );
     throw new CliError(`${arg}: ${t?.reason ?? "not a pointer"}`, EXIT.notFound);
   }
   if (existsSync(isAbsolute(arg) ? arg : join(cwd, arg))) return arg;
   // `research:x.md` (20.20's form, removed in 21.12): no file — its pointer said, when a folder has that name.
   const m = /^([^:/\s]+):(?!\/\/)(.+)$/.exec(arg);
-  if (m && lookupFolder(m[1]!).status !== "unknown") throw new CliError(`${arg} names a folder the old way: slipbox://${m[1]}/${m[2]} names it`, EXIT.notFound);
+  if (m && lookupFolder(m[1]!).status !== "unknown")
+    throw new CliError(`${arg} names a folder the old way: slipbox://${m[1]}/${m[2]} names it`, EXIT.notFound);
   return arg;
 }
 
@@ -525,7 +850,8 @@ function resolveNote(s: Session, arg: string, parse = true): string {
   const rel = findNoteArg(s, arg, parse);
   // Reading follows the vault's rule too: a symlink pointing out of it is not a note of it (the
   // walk leaves it out), so naming it by path reads nothing from outside.
-  if (!landsInside(s.loc.root, join(s.loc.root, rel))) throw new CliError(`${rel} points outside the root; not reading it`, EXIT.refused);
+  if (!landsInside(s.loc.root, join(s.loc.root, rel)))
+    throw new CliError(`${rel} points outside the root; not reading it`, EXIT.refused);
   return rel;
 }
 
@@ -533,7 +859,11 @@ function findNoteArg(s: Session, arg: string, parse: boolean): string {
   // The file that said which vault this is: only the argument naming it (context takes several).
   const root = flag(s.args, "root");
   // Named from here, or from --root (`noteArgPath`): the file that said which root this is.
-  if (s.loc.file && isInside(s.loc.root, s.loc.file) && (resolve(s.io.cwd, arg) === s.loc.file || (root && resolve(s.io.cwd, root, arg) === s.loc.file))) {
+  if (
+    s.loc.file &&
+    isInside(s.loc.root, s.loc.file) &&
+    (resolve(s.io.cwd, arg) === s.loc.file || (root && resolve(s.io.cwd, root, arg) === s.loc.file))
+  ) {
     const rel = relative(s.loc.root, s.loc.file);
     if (s.graph.notes.has(rel)) return rel;
     // An existing file the walk leaves out: named, it's reached (20.8) — git-ignored or under a
@@ -542,7 +872,8 @@ function findNoteArg(s: Session, arg: string, parse: boolean): string {
     // The argument names s.loc.file (from here or from --root): whether it exists is that file's.
     if (arg && existsSync(s.loc.file)) {
       // A data or text file is itself (16.4): never parsed as a note.
-      if (!s.graph.reachFile(rel, { keep: true }) && parse && classify(rel, s.config.walk.extensions).group === "note") s.graph.adopt(rel);
+      if (!s.graph.reachFile(rel, { keep: true }) && parse && classify(rel, s.config.walk.extensions).group === "note")
+        s.graph.adopt(rel);
       return rel;
     }
   }
@@ -558,7 +889,9 @@ function findNoteArg(s: Session, arg: string, parse: boolean): string {
     }
   }
   if (r.status === "ambiguous") {
-    throw new CliError(`ambiguous note "${arg}": ${r.candidates.join(", ")}`, EXIT.ambiguous, { candidates: r.candidates });
+    throw new CliError(`ambiguous note "${arg}": ${r.candidates.join(", ")}`, EXIT.ambiguous, {
+      candidates: r.candidates,
+    });
   }
   // A data or text file of the vault, named by its path with its extension (16.4): from the
   // current folder, or from the vault's root.
@@ -587,11 +920,16 @@ const HANDLERS: Record<string, Handler> = {
    * with its name; in `--to`'s format, else `--out`'s extension's, else Word's.
    */
   async export(s, rest) {
-    if (!rest.length) throw new UsageError("export needs a note: slipbox export <note…> [--to docx|pdf|html|epub|md] [--out|-o <path>]");
+    if (!rest.length)
+      throw new UsageError(
+        "export needs a note: slipbox export <note…> [--to docx|pdf|html|epub|md] [--out|-o <path>]",
+      );
     const rels = rest.map((r) => resolveNote(s, r));
     const out = flag(s.args, "out");
     // A folder's name (`exports.v2/`, or one there) says no format.
-    const folder = out !== undefined && (namesFolder(out) || statSync(resolve(s.io.cwd, out), { throwIfNoEntry: false })?.isDirectory() === true);
+    const folder =
+      out !== undefined &&
+      (namesFolder(out) || statSync(resolve(s.io.cwd, out), { throwIfNoEntry: false })?.isDirectory() === true);
     const name = flag(s.args, "to") ?? (out && !folder && extname(out) ? extname(out) : "docx");
     const format = formatFor(name);
     if (!format) throw new UsageError(`--to must be one of: ${FORMATS.map((f) => f.name).join(", ")}`);
@@ -605,7 +943,10 @@ const HANDLERS: Record<string, Handler> = {
     const files = writeExport(target, written).map((f) => s.graph.shownPath(f));
     const shown = s.graph.shownPath(target);
     const beside = files.length ? `, ${files.length} file${files.length === 1 ? "" : "s"} beside it` : "";
-    return { data: { path: shown, format: format.name, notes: rels, bytes: written.data.length, files }, human: `exported ${rels.length === 1 ? rels[0] : `${rels.length} notes`} to ${shown} (${format.title})${beside}\n` };
+    return {
+      data: { path: shown, format: format.name, notes: rels, bytes: written.data.length, files },
+      human: `exported ${rels.length === 1 ? rels[0] : `${rels.length} notes`} to ${shown} (${format.title})${beside}\n`,
+    };
   },
   async render(s, rest) {
     const rel = resolveNote(s, requireArg(rest, "note"));
@@ -615,9 +956,11 @@ const HANDLERS: Record<string, Handler> = {
     if (/^ {0,3}(`{3,}|~{3,})\s*mermaid\s*$/im.test(decoded.text)) await loadMermaid();
     const depth = colorDepth(s);
     const widthArg = flag(s.args, "width");
-    if (widthArg !== undefined && !/^\d+$/.test(widthArg)) throw new UsageError("--width must be a whole number from 20 to 1000");
+    if (widthArg !== undefined && !/^\d+$/.test(widthArg))
+      throw new UsageError("--width must be a whole number from 20 to 1000");
     const pane = widthArg !== undefined ? Number(widthArg) : (s.io.columns ?? 100);
-    if (!Number.isInteger(pane) || pane < 20 || pane > 1000) throw new UsageError("--width must be a whole number from 20 to 1000");
+    if (!Number.isInteger(pane) || pane < 20 || pane > 1000)
+      throw new UsageError("--width must be a whole number from 20 to 1000");
     const width = layoutWidth(pane, s.config.render.inset);
     const themeName = flag(s.args, "theme") ?? s.config.theme;
     const loaded = loadTheme(themeName);
@@ -625,16 +968,27 @@ const HANDLERS: Record<string, Handler> = {
     const { theme, warnings: colorWarnings } = applyColorOverrides(loaded.theme, s.config.colors);
     s.warnings.push(...colorWarnings);
     const glyphArg = flag(s.args, "glyphs");
-    if (glyphArg !== undefined && !isGlyphMode(glyphArg)) throw new UsageError("--glyphs must be auto, nerd, unicode or ascii");
+    if (glyphArg !== undefined && !isGlyphMode(glyphArg))
+      throw new UsageError("--glyphs must be auto, nerd, unicode or ascii");
     const glyphMode = (glyphArg as Config["render"]["glyphs"] | undefined) ?? s.config.render.glyphs;
-    const showUrls = s.config.render.show_urls === "always" || (s.config.render.show_urls === "auto" && depth === "none");
-    const layout = layoutNote(parseFile(s, rel, decoded.text), s.graph, rel, { width, glyphs: glyphsFor(glyphMode, s.io.env), showUrls });
+    const showUrls =
+      s.config.render.show_urls === "always" || (s.config.render.show_urls === "auto" && depth === "none");
+    const layout = layoutNote(parseFile(s, rel, decoded.text), s.graph, rel, {
+      width,
+      glyphs: glyphsFor(glyphMode, s.io.env),
+      showUrls,
+    });
     if (decoded.invalidUtf8) s.warnings.push(`${rel}: not valid UTF-8; invalid bytes shown as U+FFFD`);
     return {
       data: {
         path: rel,
         width,
-        lines: layout.lines.map((l) => l.spans.map((sp) => sp.text).join("").replace(/\s+$/, "")),
+        lines: layout.lines.map((l) =>
+          l.spans
+            .map((sp) => sp.text)
+            .join("")
+            .replace(/\s+$/, ""),
+        ),
         headings: layout.headings.map((h) => ({ level: h.level, text: h.text, slug: h.slug, line: h.src })),
       },
       human: layoutToAnsi(layout, theme, { depth }),
@@ -655,7 +1009,11 @@ const HANDLERS: Record<string, Handler> = {
     const isFile = existsSync(file) && statSync(file).isFile();
     // A file by its path — not a note, or one out of this root, a root nested in it included (a
     // pointer, 21.7); a note here as any command takes one (its path, its name).
-    const byPath = isFile && (classify(file, s.config.walk.extensions).group !== "note" || !isInside(s.loc.root, file) || (findVaultRoot(file) ?? s.loc.root) !== s.loc.root);
+    const byPath =
+      isFile &&
+      (classify(file, s.config.walk.extensions).group !== "note" ||
+        !isInside(s.loc.root, file) ||
+        (findVaultRoot(file) ?? s.loc.root) !== s.loc.root);
     // A note here the walk leaves out (git-ignored, under a hidden folder): named, it's reached (20.8),
     // as the note that says which root this is would be — with --from, that's the other note.
     // One the walk never takes (under node_modules, walk.exclude) isn't reached: it goes by its path.
@@ -666,17 +1024,27 @@ const HANDLERS: Record<string, Handler> = {
     }
     const toAbs = byPath || (isFile && !reached) ? file : g.abs(resolveNote(s, arg));
     const style = flag(s.args, "style");
-    if (style !== undefined && style !== "markdown" && style !== "wiki") throw new UsageError(`--style is markdown or wiki (got ${style})`);
+    if (style !== undefined && style !== "markdown" && style !== "wiki")
+      throw new UsageError(`--style is markdown or wiki (got ${style})`);
     const c = conventionOf(g, s.config, s.configOrigins, style as LinkStyle | undefined);
     const ends = linkEnds(g, fromAbs, toAbs);
     // Its title, from its own root's index when it's another's.
     const title = ends.to.note ? (g.entryAnywhere(ends.to.rel ?? toAbs)?.title ?? "") : "";
-    const text = flag(s.args, "text") ?? (c.style.value === "wiki" && !ends.pointer ? "" : title || basename(toAbs).replace(/\.(md|markdown)$/i, ""));
+    const text =
+      flag(s.args, "text") ??
+      (c.style.value === "wiki" && !ends.pointer ? "" : title || basename(toAbs).replace(/\.(md|markdown)$/i, ""));
     const link = writeLink(c, c.style.value, ends, text, has(s.args, "embed"));
     // A pointer by a private name, or by a name different folders share: said (D74, D83).
     s.warnings.push(...linkWarnings(ends));
     return {
-      data: { link, path: ends.to.rel ?? toAbs, from: fromRel, style: c.style.value, pathForm: c.path.value, extension: c.extension.value },
+      data: {
+        link,
+        path: ends.to.rel ?? toAbs,
+        from: fromRel,
+        style: c.style.value,
+        pathForm: c.path.value,
+        extension: c.extension.value,
+      },
       human: `${link}\n`,
     };
   },
@@ -688,7 +1056,10 @@ const HANDLERS: Record<string, Handler> = {
     const inner = mdLink ? mdLink[1]! : raw;
     // A path, `#heading` after it, as in a link.
     const hash = inner.indexOf("#");
-    let parts = { target: decodeURIComponentSafe(hash < 0 ? inner : inner.slice(0, hash)), heading: hash < 0 ? null : decodeURIComponentSafe(inner.slice(hash + 1)) || null };
+    let parts = {
+      target: decodeURIComponentSafe(hash < 0 ? inner : inner.slice(0, hash)),
+      heading: hash < 0 ? null : decodeURIComponentSafe(inner.slice(hash + 1)) || null,
+    };
     const fromArg = flag(s.args, "from");
     const from = fromArg ? resolveNote(s, fromArg) : null;
     let status: string;
@@ -703,15 +1074,29 @@ const HANDLERS: Record<string, Handler> = {
     const fileUrl = /^file:\/\//i.test(inner);
     const pointer = isPointer(inner);
     // This repository's hosting (`https://github.com/me/repo/blob/main/x.md`): the file here, not a URL to copy.
-    const hosted = /^https?:\/\//i.test(inner) && s.graph.resolveLink({ kind: "markdown", target: inner }, fromArg ? resolveNote(s, fromArg) : "").via === "hosting";
+    const hosted =
+      /^https?:\/\//i.test(inner) &&
+      s.graph.resolveLink({ kind: "markdown", target: inner }, fromArg ? resolveNote(s, fromArg) : "").via ===
+        "hosting";
     // A folder named the old way (`research:x.md`, 21.12): no link, its pointer said (21.11).
     const old = bracketed || fileUrl || pointer || hosted ? null : s.graph.oldForm(inner);
     // A scheme makes it external, with no spaces (a URL has none) and when no note is named so:
     // "Meeting: Q3" is a note.
-    const external = /^[a-z][a-z0-9+.-]*:/i.test(inner) && !fileUrl && !pointer && !hosted && !old && (!!mdLink || (/^\S*$/.test(inner) && s.graph.findNote(parts.target, s.io.cwd).status === "unresolved"));
+    const external =
+      /^[a-z][a-z0-9+.-]*:/i.test(inner) &&
+      !fileUrl &&
+      !pointer &&
+      !hosted &&
+      !old &&
+      (!!mdLink || (/^\S*$/.test(inner) && s.graph.findNote(parts.target, s.io.cwd).status === "unresolved"));
     if (bracketed) {
       const w = s.graph.resolveLink({ kind: wiki?.[1] ? "embed" : "wiki", target: parts.target }, from ?? "");
-      status = w.resolvedKind === "note" || w.resolvedKind === "file" || w.resolvedKind === "anchor" ? "resolved" : w.resolvedKind === "ambiguous" ? "ambiguous" : "unresolved";
+      status =
+        w.resolvedKind === "note" || w.resolvedKind === "file" || w.resolvedKind === "anchor"
+          ? "resolved"
+          : w.resolvedKind === "ambiguous"
+            ? "ambiguous"
+            : "unresolved";
       path = status === "resolved" ? w.path : null;
       candidates = w.candidates;
       found = w;
@@ -728,7 +1113,12 @@ const HANDLERS: Record<string, Handler> = {
       // A link written in --from (or at the vault's root): its path — the resolver `links` and the
       // TUI use, so `resolve` is link.follow's CLI equivalent.
       const md = s.graph.resolveLink({ kind: "markdown", target: inner }, from ?? "");
-      status = md.resolvedKind === "note" || md.resolvedKind === "file" || md.resolvedKind === "folder" ? "resolved" : md.resolvedKind === "ambiguous" ? "ambiguous" : "unresolved";
+      status =
+        md.resolvedKind === "note" || md.resolvedKind === "file" || md.resolvedKind === "folder"
+          ? "resolved"
+          : md.resolvedKind === "ambiguous"
+            ? "ambiguous"
+            : "unresolved";
       path = status === "resolved" ? md.path : null;
       candidates = md.candidates;
       found = md;
@@ -741,7 +1131,10 @@ const HANDLERS: Record<string, Handler> = {
         candidates = r.candidates;
       } else {
         const md = s.graph.resolveLink({ kind: "markdown", target: inner }, "");
-        status = md.resolvedKind === "note" || md.resolvedKind === "file" || md.resolvedKind === "folder" ? "resolved" : "unresolved";
+        status =
+          md.resolvedKind === "note" || md.resolvedKind === "file" || md.resolvedKind === "folder"
+            ? "resolved"
+            : "unresolved";
         path = status === "resolved" ? md.path : null;
         found = md;
       }
@@ -758,13 +1151,45 @@ const HANDLERS: Record<string, Handler> = {
       const hit = landing(s.graph, path!, parts.heading, null, bracketed);
       line = hit?.line ?? null;
       if (hit) fragment = hit.anchor ?? (hit.heading !== null ? headingFragment(entry.headings, hit.heading) : null);
-      else s.warnings.push(`${parts.heading!.startsWith("^") ? `no block ${parts.heading}` : `no heading "${parts.heading}"`} in ${s.graph.shownPath(abs!)}: the link lands at its top`);
+      else
+        s.warnings.push(
+          `${parts.heading!.startsWith("^") ? `no block ${parts.heading}` : `no heading "${parts.heading}"`} in ${s.graph.shownPath(abs!)}: the link lands at its top`,
+        );
     }
     // With --from, the link to write there (20.20): the relative path, as a link carries it.
-    const href = abs && from ? `${urlPath(relative(dirname(s.graph.abs(from)), abs).split(sep).join("/"))}${parts.heading ? `#${fragment ?? (asWritten ? parts.heading : slugify(parts.heading))}` : ""}` : null;
-    const data = { link: raw, status, path, abs, shown: abs ? s.graph.shownPath(abs) : null, href, heading: parts.heading, line, candidates, ...s.rootOf(abs), reason: found?.reason ?? null, how: found?.via ?? found?.how ?? null, certainty: found ? certainty(found) : status === "resolved" ? "exact" : status, ...(found?.gitRef ? { git: found.gitRef } : {}), ...(found?.suggest ? { suggest: found.suggest } : {}) };
-    if (status === "ambiguous") throw new CliError(`ambiguous link "${raw}"${data.reason ? ` (${data.reason})` : ""}: ${candidates.join(", ")}`, EXIT.ambiguous, data);
-    if (status === "unresolved") throw new CliError(`unresolved link "${raw}"${data.reason ? `: ${data.reason}` : ""}`, EXIT.notFound, data);
+    const href =
+      abs && from
+        ? `${urlPath(
+            relative(dirname(s.graph.abs(from)), abs)
+              .split(sep)
+              .join("/"),
+          )}${parts.heading ? `#${fragment ?? (asWritten ? parts.heading : slugify(parts.heading))}` : ""}`
+        : null;
+    const data = {
+      link: raw,
+      status,
+      path,
+      abs,
+      shown: abs ? s.graph.shownPath(abs) : null,
+      href,
+      heading: parts.heading,
+      line,
+      candidates,
+      ...s.rootOf(abs),
+      reason: found?.reason ?? null,
+      how: found?.via ?? found?.how ?? null,
+      certainty: found ? certainty(found) : status === "resolved" ? "exact" : status,
+      ...(found?.gitRef ? { git: found.gitRef } : {}),
+      ...(found?.suggest ? { suggest: found.suggest } : {}),
+    };
+    if (status === "ambiguous")
+      throw new CliError(
+        `ambiguous link "${raw}"${data.reason ? ` (${data.reason})` : ""}: ${candidates.join(", ")}`,
+        EXIT.ambiguous,
+        data,
+      );
+    if (status === "unresolved")
+      throw new CliError(`unresolved link "${raw}"${data.reason ? `: ${data.reason}` : ""}`, EXIT.notFound, data);
     return { data, human: `${abs ?? path}${line ? `:${line}` : ""}\n` };
   },
 
@@ -772,13 +1197,16 @@ const HANDLERS: Record<string, Handler> = {
     // --all: every note's links in one call (a vault-wide check for broken ones), each with `from`.
     const all = has(s.args, "all");
     if (all && rest.length) throw new UsageError("links takes a note or --all, not both");
-    const notes = all ? (s.graph.ensureAll(), [...s.graph.notes.keys()].sort()) : [resolveNote(s, requireArg(rest, "note"))];
+    const notes = all
+      ? (s.graph.ensureAll(), [...s.graph.notes.keys()].sort())
+      : [resolveNote(s, requireArg(rest, "note"))];
     if (!all) await s.graph.loadGrammars(); // a code file's links are in its comments (16.10)
     // Each link's file as shown (21.9): its path from this root, else from home, else absolute. A web
     // address is no file: its path is the address, whole, and it has no `shown`, as `resolve` says it.
     const links = notes.flatMap((from) =>
       s.graph.linksOf(from).map((l) => {
-        const abs = l.path && l.resolvedKind !== "external" ? (isAbsolute(l.path) ? l.path : s.graph.abs(l.path)) : null;
+        const abs =
+          l.path && l.resolvedKind !== "external" ? (isAbsolute(l.path) ? l.path : s.graph.abs(l.path)) : null;
         return { ...l, from, abs, shown: abs ? s.graph.shownPath(abs) : null };
       }),
     );
@@ -791,7 +1219,8 @@ const HANDLERS: Record<string, Handler> = {
             : l.resolvedKind === "ambiguous"
               ? `AMBIGUOUS (${l.candidates.join(", ")})`
               : `${l.shown ?? l.path ?? ""}${describeLanding(l) ? ` (${describeLanding(l)})` : ""}`;
-        const shown = l.kind === "wiki" || l.kind === "embed" ? `[[${l.target}${l.heading ? `#${l.heading}` : ""}]]` : l.target;
+        const shown =
+          l.kind === "wiki" || l.kind === "embed" ? `[[${l.target}${l.heading ? `#${l.heading}` : ""}]]` : l.target;
         return `${where} ${l.kind.padEnd(8)} ${shown} -> ${dest}\n`;
       })
       .join("");
@@ -824,7 +1253,8 @@ const HANDLERS: Record<string, Handler> = {
     // What's wrong in the vault (1.7, 9.5): links that reach nothing, or more than one note; notes
     // nothing links to.
     const p = s.graph.problems();
-    const shown = (x: LinkProblem) => `${x.from}:${x.line}:${x.column}  ${x.kind === "wiki" || x.kind === "embed" ? `[[${x.target}]]` : x.target}`;
+    const shown = (x: LinkProblem) =>
+      `${x.from}:${x.line}:${x.column}  ${x.kind === "wiki" || x.kind === "embed" ? `[[${x.target}]]` : x.target}`;
     const human: string[] = [
       `broken links (${p.broken.length})`,
       ...p.broken.map((x) => `  ${shown(x)}${x.reason ? `  — ${x.reason}` : ""}`),
@@ -844,12 +1274,16 @@ const HANDLERS: Record<string, Handler> = {
       .map(([p]) => inVault(c!, s.loc.root, p))
       .filter((p): p is string => p !== null)
       .map((path) => ({ path, line: conflictLine(join(s.loc.root, path)) }));
-    if (conflicts.length) human.push(`conflicts (${conflicts.length})`, ...conflicts.map((x) => `  ${x.path}:${x.line}`));
+    if (conflicts.length)
+      human.push(`conflicts (${conflicts.length})`, ...conflicts.map((x) => `  ${x.path}:${x.line}`));
     // --lint (3.21): your linter's findings too — markdownlint-cli2 with your config, as the TUI runs it.
     let lint: (Omit<LintIssue, "file"> & { file: string })[] | undefined;
     if (has(s.args, "lint")) {
       const cmd = lintCommand(s.config.lint, s.loc.root, undefined, s.config.lsp.auto_install);
-      const files = [...s.graph.notes.keys()].filter((rel) => /\.(md|markdown)$/i.test(rel)).sort().map((rel) => s.graph.abs(rel));
+      const files = [...s.graph.notes.keys()]
+        .filter((rel) => /\.(md|markdown)$/i.test(rel))
+        .sort()
+        .map((rel) => s.graph.abs(rel));
       const found: LintIssue[] = [];
       let ran = !!cmd;
       for (let i = 0; cmd && ran && i < files.length; i += 300) {
@@ -857,17 +1291,44 @@ const HANDLERS: Record<string, Handler> = {
         if (got === null) ran = false;
         else found.push(...got);
       }
-      if (!cmd) s.warnings.push(s.config.lint.enabled === "off" ? 'lint is off: [lint] enabled = "off"' : 'lint is off: no markdownlint config (~/.markdownlint-cli2.jsonc, or the folder\'s) and [lint] enabled isn\'t "on"');
+      if (!cmd)
+        s.warnings.push(
+          s.config.lint.enabled === "off"
+            ? 'lint is off: [lint] enabled = "off"'
+            : "lint is off: no markdownlint config (~/.markdownlint-cli2.jsonc, or the folder's) and [lint] enabled isn't \"on\"",
+        );
       else if (!ran) s.warnings.push(`lint: ${lintFailure(s.config)}`);
       else {
         lint = found.map((x) => ({ ...x, file: relative(s.loc.root, x.file) }));
-        human.push(`lint (${lint.length})`, ...lint.map((x) => `  ${x.file}:${x.line}${x.column ? `:${x.column}` : ""}  ${x.rule} ${x.name}  ${x.description}`));
+        human.push(
+          `lint (${lint.length})`,
+          ...lint.map(
+            (x) => `  ${x.file}:${x.line}${x.column ? `:${x.column}` : ""}  ${x.rule} ${x.name}  ${x.description}`,
+          ),
+        );
       }
     }
     // Frontmatter that breaks its document type's rules (22.2): a key missing, of another kind, a value not allowed.
-    const frontmatter = frontmatterFindings(s.graph).flatMap((f) => f.problems.map((x) => ({ path: f.path, line: x.start.line, message: x.message })));
-    if (frontmatter.length) human.push(`frontmatter (${frontmatter.length})`, ...frontmatter.map((x) => `  ${x.path}:${x.line}  ${x.message}`));
-    return { data: { broken: p.broken, ambiguous: p.ambiguous, fragile: p.fragile, orphans: p.orphans, conflicts, frontmatter, ...(lint ? { lint } : {}) }, human: `${human.join("\n")}\n` };
+    const frontmatter = frontmatterFindings(s.graph).flatMap((f) =>
+      f.problems.map((x) => ({ path: f.path, line: x.start.line, message: x.message })),
+    );
+    if (frontmatter.length)
+      human.push(
+        `frontmatter (${frontmatter.length})`,
+        ...frontmatter.map((x) => `  ${x.path}:${x.line}  ${x.message}`),
+      );
+    return {
+      data: {
+        broken: p.broken,
+        ambiguous: p.ambiguous,
+        fragile: p.fragile,
+        orphans: p.orphans,
+        conflicts,
+        frontmatter,
+        ...(lint ? { lint } : {}),
+      },
+      human: `${human.join("\n")}\n`,
+    };
   },
 
   tags(s, rest) {
@@ -889,9 +1350,15 @@ const HANDLERS: Record<string, Handler> = {
     const r = changedSince(c, base);
     if (!r) throw new CliError("git couldn't say what changed", 1);
     const files = r.files
-      .map((f) => ({ path: inVault(c, s.loc.root, f.path), state: f.state, ...(f.from ? { from: inVault(c, s.loc.root, f.from) ?? f.from } : {}) }))
+      .map((f) => ({
+        path: inVault(c, s.loc.root, f.path),
+        state: f.state,
+        ...(f.from ? { from: inVault(c, s.loc.root, f.from) ?? f.from } : {}),
+      }))
       .filter((f): f is typeof f & { path: string } => f.path !== null);
-    const human = files.map((f) => `${STATE_LETTER[f.state]} ${f.path}${f.from ? `  (from ${f.from})` : ""}\n`).join("");
+    const human = files
+      .map((f) => `${STATE_LETTER[f.state]} ${f.path}${f.from ? `  (from ${f.from})` : ""}\n`)
+      .join("");
     return { data: { base, mergeBase: r.mergeBase, files }, human: human || `nothing changed against ${base}\n` };
   },
 
@@ -903,7 +1370,8 @@ const HANDLERS: Record<string, Handler> = {
     try {
       r = reviewMerge(c, s.loc.root, from, flag(s.args, "into") ?? "HEAD");
     } catch (err) {
-      if (err instanceof MergeReviewError) throw new CliError(err.message, /^no branch or commit/.test(err.message) ? EXIT.notFound : EXIT.error);
+      if (err instanceof MergeReviewError)
+        throw new CliError(err.message, /^no branch or commit/.test(err.message) ? EXIT.notFound : EXIT.error);
       throw err;
     }
     const n = r.breaks.length;
@@ -924,15 +1392,30 @@ const HANDLERS: Record<string, Handler> = {
     const now = readText(s.graph.abs(rel)).text;
     const rows = diffRows(before ?? "", now);
     const human = rows.map((r) => (r.kind === "@@" ? `@@ ${r.text}` : `${r.kind} ${sanitize(r.text)}`)).join("\n");
-    return { data: { path: rel, base, mergeBase, new: before === null, rows }, human: rows.length ? `${human}\n` : `no differences from ${base}\n` };
+    return {
+      data: { path: rel, base, mergeBase, new: before === null, rows },
+      human: rows.length ? `${human}\n` : `no differences from ${base}\n`,
+    };
   },
 
   worktrees(s) {
     const c = checkoutFor(s);
     const list = worktreeList(c);
     if (!list) throw new CliError("git couldn't list the worktrees", 1);
-    const data = list.map((w) => ({ ...w, root: join(w.path, relative(c.root, s.loc.root)), current: w.path === c.root }));
-    return { data, human: data.map((w) => `${w.current ? "*" : " "} ${w.branch ?? `(${w.head?.slice(0, 7) ?? "detached"})`}  ${w.path}${w.main ? "  (main)" : ""}\n`).join("") };
+    const data = list.map((w) => ({
+      ...w,
+      root: join(w.path, relative(c.root, s.loc.root)),
+      current: w.path === c.root,
+    }));
+    return {
+      data,
+      human: data
+        .map(
+          (w) =>
+            `${w.current ? "*" : " "} ${w.branch ?? `(${w.head?.slice(0, 7) ?? "detached"})`}  ${w.path}${w.main ? "  (main)" : ""}\n`,
+        )
+        .join(""),
+    };
   },
 
   // Search (6.x): ranked by the words, from the index (caught up first) or a scan of the files.
@@ -960,7 +1443,12 @@ const HANDLERS: Record<string, Handler> = {
         }
         return sanitize(out + h.snippet.slice(at));
       };
-      const human = r.hits.map((h) => `${h.shown}:${h.line}:${h.column}  ${h.heading ? `${sanitize(h.heading)} — ` : ""}${mark(h)}${h.more ? `  (+${h.more} more)` : ""}\n`).join("");
+      const human = r.hits
+        .map(
+          (h) =>
+            `${h.shown}:${h.line}:${h.column}  ${h.heading ? `${sanitize(h.heading)} — ` : ""}${mark(h)}${h.more ? `  (+${h.more} more)` : ""}\n`,
+        )
+        .join("");
       // Each hit's root: another's by its path and name (21.10).
       const hits = r.hits.map(({ vault: _, ...h }) => ({ ...h, ...s.rootOf(h.abs) }));
       return { data: { query, scope, engine: r.engine, relaxed: r.relaxed, roots: r.vaults, hits }, human };
@@ -978,16 +1466,32 @@ const HANDLERS: Record<string, Handler> = {
       const vault = findVaultRoot(at);
       // Outside every vault: the plain folder it's in, or this one's (20.22) — its own index.
       const loc = vault ? rootAt(vault) : !rest[0] ? s.loc : folderAt(statSync(at).isDirectory() ? at : dirname(at));
-      if (isListed(loc)) throw new CliError(`${loc.root} is listed a folder at a time, never indexed (the background index walks it: slipbox index --home)`, EXIT.refused);
+      if (isListed(loc))
+        throw new CliError(
+          `${loc.root} is listed a folder at a time, never indexed (the background index walks it: slipbox index --home)`,
+          EXIT.refused,
+        );
       const root = loc.root;
       recordLocation(loc); // known on this machine from now on, as reaching it would make it (17.6)
       const t = performance.now();
-      const g = new Graph(loc, loadConfig({ ...configFilesFor(loc), configFile: flag(s.args, "config") }).config).build(true, "all");
+      const g = new Graph(loc, loadConfig({ ...configFilesFor(loc), configFile: flag(s.args, "config") }).config).build(
+        true,
+        "all",
+      );
       noteIndexed(loc.key);
       const ms = Math.round(performance.now() - t);
       const st = g.stats;
       return {
-        data: { root, notes: st.notes, changed: st.parsed, unchanged: st.cached, gone: st.gone, reached: g.reached.size, indexed: g.indexedAt()?.toISOString() ?? null, ms },
+        data: {
+          root,
+          notes: st.notes,
+          changed: st.parsed,
+          unchanged: st.cached,
+          gone: st.gone,
+          reached: g.reached.size,
+          indexed: g.indexedAt()?.toISOString() ?? null,
+          ms,
+        },
         human: `refreshed ${root}: ${st.notes} note${st.notes === 1 ? "" : "s"} — ${st.parsed} read again, ${st.gone} gone (${ms} ms)\n`,
       };
     }
@@ -1002,15 +1506,29 @@ const HANDLERS: Record<string, Handler> = {
       if (has(s.args, "rebuild")) rmSync(autoIndexFile(), { force: true });
       const job = new AutoIndex(homeFolder());
       const t = performance.now();
-      while (job.step(budget ? Math.max(1, budget - (performance.now() - t)) : 200) && (!budget || performance.now() - t < budget)) {}
+      while (
+        job.step(budget ? Math.max(1, budget - (performance.now() - t)) : 200) &&
+        (!budget || performance.now() - t < budget)
+      ) {}
       const p = job.status;
       const done = !!p.passFinished;
       return {
-        data: { root: p.root, found: p.found, indexed: p.indexed, left: p.queue.length + (p.current ? 1 : 0), finished: p.passFinished, started: p.passStarted },
+        data: {
+          root: p.root,
+          found: p.found,
+          indexed: p.indexed,
+          left: p.queue.length + (p.current ? 1 : 0),
+          finished: p.passFinished,
+          started: p.passStarted,
+        },
         human: `home folder ${p.root}: ${p.found} root${p.found === 1 ? "" : "s"} found, ${p.indexed} indexed${done ? ` — pass done ${p.passFinished!.slice(0, 16).replace("T", " ")}` : ` — ${p.queue.length} folder${p.queue.length === 1 ? "" : "s"} left`}\n`,
       };
     }
-    if (isListed(s.loc)) throw new CliError(`${s.loc.root} is listed a folder at a time, never indexed (the background index walks it: slipbox index --home)`, EXIT.refused);
+    if (isListed(s.loc))
+      throw new CliError(
+        `${s.loc.root} is listed a folder at a time, never indexed (the background index walks it: slipbox index --home)`,
+        EXIT.refused,
+      );
     const idx = SearchIndex.open(s.loc);
     if (!idx) throw new CliError("the search index can't be opened", 1);
     try {
@@ -1020,7 +1538,14 @@ const HANDLERS: Record<string, Handler> = {
       const st = idx.stats();
       const ms = Math.round(performance.now() - t);
       return {
-        data: { path: idx.file, rebuilt: has(s.args, "rebuild"), indexed: r.indexed, removed: r.removed, files: st.files, ms },
+        data: {
+          path: idx.file,
+          rebuilt: has(s.args, "rebuild"),
+          indexed: r.indexed,
+          removed: r.removed,
+          files: st.files,
+          ms,
+        },
         human: `search index: ${st.files} files — ${r.indexed} indexed, ${r.removed} removed (${ms} ms)\n`,
       };
     } finally {
@@ -1033,15 +1558,24 @@ const HANDLERS: Record<string, Handler> = {
     if (!rest.length) throw new UsageError("missing a note (context <note>…)");
     const start = [...new Set(rest.map((r) => resolveNote(s, r)))];
     const num = (name: string, fallback: number, lo: number, hi: number) => wholeFlag(s, name, fallback, lo, hi);
-    const opts = { depth: num("depth", s.config.context.depth, 0, 5), backlinks: s.config.context.backlinks && !has(s.args, "no-backlinks"), limit: num("limit", s.config.context.limit, 1, 500) };
+    const opts = {
+      depth: num("depth", s.config.context.depth, 0, 5),
+      backlinks: s.config.context.backlinks && !has(s.args, "no-backlinks"),
+      limit: num("limit", s.config.context.limit, 1, 500),
+    };
     await s.graph.loadGrammars(); // code files link from their comments (16.10): backlinks too
     const b = buildContext(s.graph, start, opts);
     const files = b.items.map(({ text: _, ...i }) => i);
     const data = { start, ...opts, files, left: b.left, chars: b.text.length, text: b.text };
     if (!has(s.args, "copy")) return { data, human: b.text };
     const r = copyText(b.text, { fallbackDir: stateDir(s.loc) });
-    const how = r.file ? `wrote ${r.file}` : `copied via ${r.methods.join(" + ")}${r.confirmed ? "" : " (OSC 52 is unconfirmed)"}`;
-    return { data: { ...data, copied: r }, human: `${how}: ${b.items.length} file${b.items.length === 1 ? "" : "s"}, ${b.text.length} chars\n` };
+    const how = r.file
+      ? `wrote ${r.file}`
+      : `copied via ${r.methods.join(" + ")}${r.confirmed ? "" : " (OSC 52 is unconfirmed)"}`;
+    return {
+      data: { ...data, copied: r },
+      human: `${how}: ${b.items.length} file${b.items.length === 1 ? "" : "s"}, ${b.text.length} chars\n`,
+    };
   },
 
   async backlinks(s, rest) {
@@ -1058,7 +1592,14 @@ const HANDLERS: Record<string, Handler> = {
   ls(s) {
     if (has(s.args, "json")) s.graph.ensureAll();
     const notes = [...s.graph.notes.values()];
-    const data: Record<string, unknown>[] = notes.map((n) => ({ path: n.rel, title: n.title, size: n.size, mtime: new Date(n.mtimeMs).toISOString(), tags: n.tags, links: n.links.length }));
+    const data: Record<string, unknown>[] = notes.map((n) => ({
+      path: n.rel,
+      title: n.title,
+      size: n.size,
+      mtime: new Date(n.mtimeMs).toISOString(),
+      tags: n.tags,
+      links: n.links.length,
+    }));
     const lines = notes.map((n) => n.rel);
     // --files: the vault's data and text files too (16.4), each with its group and format.
     if (has(s.args, "files")) {
@@ -1067,7 +1608,13 @@ const HANDLERS: Record<string, Handler> = {
         try {
           st = statSync(s.graph.abs(f.path));
         } catch {}
-        data.push({ path: f.path, group: f.group, format: f.format, size: st?.size ?? 0, mtime: st ? new Date(st.mtimeMs).toISOString() : null });
+        data.push({
+          path: f.path,
+          group: f.group,
+          format: f.format,
+          size: st?.size ?? 0,
+          mtime: st ? new Date(st.mtimeMs).toISOString() : null,
+        });
         lines.push(f.path);
       }
     }
@@ -1085,8 +1632,13 @@ const HANDLERS: Record<string, Handler> = {
     const text = file.text.replace(/\r\n/g, "\n");
     const list = footnotesOf(parseNoteFile(rel, text));
     const where = (f: Footnote) => (f.line === null ? "no definition" : `L${f.line}`);
-    const refs = (f: Footnote) => (f.references.length ? f.references.map((r) => `L${r.line}:${r.column}`).join(" ") : "unused");
-    if (sub === undefined) return { data: { path: rel, sha: file.sha, footnotes: list }, human: list.map((f) => `[${f.label}]  ${where(f)}  ${f.text ?? ""}  ← ${refs(f)}\n`).join("") };
+    const refs = (f: Footnote) =>
+      f.references.length ? f.references.map((r) => `L${r.line}:${r.column}`).join(" ") : "unused";
+    if (sub === undefined)
+      return {
+        data: { path: rel, sha: file.sha, footnotes: list },
+        human: list.map((f) => `[${f.label}]  ${where(f)}  ${f.text ?? ""}  ← ${refs(f)}\n`).join(""),
+      };
     const named = (label: string | undefined) => {
       if (!label) throw new UsageError(`footnotes ${sub} needs the footnote's label`);
       const f = list.find((x) => x.id === label.replace(/^\[\^|\]$/g, "").toLowerCase());
@@ -1105,7 +1657,9 @@ const HANDLERS: Record<string, Handler> = {
         if (line < 1 || line > starts.length) throw new UsageError(`${rel} has no line ${line}`);
         const lineText = text.slice(starts[line - 1], (starts[line] ?? text.length + 1) - 1);
         // At the column given (1-based), else the line's end (before trailing spaces).
-        const at = starts[line - 1]! + (m[2] ? Math.min(Number(m[2]) - 1, lineText.length) : lineText.replace(/\s+$/, "").length);
+        const at =
+          starts[line - 1]! +
+          (m[2] ? Math.min(Number(m[2]) - 1, lineText.length) : lineText.replace(/\s+$/, "").length);
         const r = addFootnote(text, list, at, rest[3]);
         edits = r.edits;
         done = `added footnote [^${r.label}]`;
@@ -1149,20 +1703,33 @@ const HANDLERS: Record<string, Handler> = {
     if (g) {
       const loaded = await grammar(g);
       const tree = loaded ? parseSyntax(loaded, readText(s.graph.abs(rel)).text) : null;
-      if (!tree) throw new CliError(`couldn't load the ${g} grammar${loadError(`grammar:${g}`) ? ` — ${loadError(`grammar:${g}`)}` : ""}`, EXIT.error);
+      if (!tree)
+        throw new CliError(
+          `couldn't load the ${g} grammar${loadError(`grammar:${g}`) ? ` — ${loadError(`grammar:${g}`)}` : ""}`,
+          EXIT.error,
+        );
       const defs = tree.outline().map((d) => ({ depth: d.depth + 1, text: d.name, kind: d.kind, line: d.line }));
       tree.delete();
       return {
         data: { path: rel, headings: defs },
         // The kind before the name, unless the name says it already (Rust's `impl Trait for T`).
-        human: defs.map((d) => `${String(d.line).padStart(5)}  ${"  ".repeat(d.depth - 1)}${d.text.startsWith(`${d.kind} `) ? "" : `${d.kind} `}${d.text}\n`).join(""),
+        human: defs
+          .map(
+            (d) =>
+              `${String(d.line).padStart(5)}  ${"  ".repeat(d.depth - 1)}${d.text.startsWith(`${d.kind} `) ? "" : `${d.kind} `}${d.text}\n`,
+          )
+          .join(""),
       };
     }
     // A data file's sections are its outline (16.11); other text files have none.
-    const hs = s.graph.entry(rel)?.headings ?? (kind.group === "data" ? dataOutline : headingsOf)(parseFile(s, rel, readText(s.graph.abs(rel)).text).tree);
+    const hs =
+      s.graph.entry(rel)?.headings ??
+      (kind.group === "data" ? dataOutline : headingsOf)(parseFile(s, rel, readText(s.graph.abs(rel)).text).tree);
     return {
       data: { path: rel, headings: hs },
-      human: hs.map((h) => `${String(h.line).padStart(5)}  ${"  ".repeat(h.depth - 1)}${"#".repeat(h.depth)} ${h.text}\n`).join(""),
+      human: hs
+        .map((h) => `${String(h.line).padStart(5)}  ${"  ".repeat(h.depth - 1)}${"#".repeat(h.depth)} ${h.text}\n`)
+        .join(""),
     };
   },
 
@@ -1171,7 +1738,10 @@ const HANDLERS: Record<string, Handler> = {
     const loc = scratchLocation(s.loc, s.config);
     const refArg = flag(s.args, "ref");
     const ref = refArg ? parseRef(refArg) : undefined;
-    if (refArg && !ref) throw new UsageError(`--ref must look like path:42, path:42-50, path:42:10-30 or path:42:10-50:30, with lines from 1 and ranges in order`);
+    if (refArg && !ref)
+      throw new UsageError(
+        `--ref must look like path:42, path:42-50, path:42:10-30 or path:42:10-50:30, with lines from 1 and ranges in order`,
+      );
     let text = rest.join(" ");
     let snippetText: string | undefined;
     if (has(s.args, "stdin")) {
@@ -1183,10 +1753,21 @@ const HANDLERS: Record<string, Handler> = {
       if (ref || flag(s.args, "lang")) snippetText = input;
       else text = text ? `${text}\n\n${input}` : input;
     }
-    if (!text.trim() && !ref && snippetText === undefined) throw new UsageError("nothing to capture: give text, --ref, or --stdin");
+    if (!text.trim() && !ref && snippetText === undefined)
+      throw new UsageError("nothing to capture: give text, --ref, or --stdin");
     let entry: string;
     try {
-      entry = formatEntry({ text, ref: ref ?? undefined, snippet: has(s.args, "snippet"), snippetText, lang: flag(s.args, "lang"), cwd: s.io.cwd }, project);
+      entry = formatEntry(
+        {
+          text,
+          ref: ref ?? undefined,
+          snippet: has(s.args, "snippet"),
+          snippetText,
+          lang: flag(s.args, "lang"),
+          cwd: s.io.cwd,
+        },
+        project,
+      );
     } catch (err) {
       if (err instanceof CaptureError) throw new CliError(err.message, EXIT.notFound);
       throw err;
@@ -1203,7 +1784,8 @@ const HANDLERS: Record<string, Handler> = {
         s.warnings.push(`--ref ${ref.path}: no such file`);
       }
       const last = ref.endLine ?? ref.startLine;
-      if (lines !== null && last > lines) s.warnings.push(`--ref ${ref.path}: line ${last} is past the end (${lines} lines)`);
+      if (lines !== null && last > lines)
+        s.warnings.push(`--ref ${ref.path}: line ${last} is past the end (${lines} lines)`);
     }
     appendScratch(loc, entry);
     return { data: { scratch: loc.path, project, entry }, human: `${loc.path}\n` };
@@ -1222,14 +1804,17 @@ const HANDLERS: Record<string, Handler> = {
       case "clear": {
         const expect = flag(s.args, "if-unchanged");
         if (expect === "") throw new UsageError("--if-unchanged needs a sha (an empty one would check nothing)");
-        if (expect && expect !== sha) throw new CliError(`scratch changed since ${expect} (now ${sha}); not cleared`, EXIT.refused, { sha });
+        if (expect && expect !== sha)
+          throw new CliError(`scratch changed since ${expect} (now ${sha}); not cleared`, EXIT.refused, { sha });
         clearScratch(loc);
         return { data: { path: loc.path, cleared: true, previousSha: sha }, human: "" };
       }
       case "copy": {
         if (!content.trim()) throw new CliError("scratch is empty", EXIT.notFound);
         const r = copyText(content, { fallbackDir: stateDir(s.loc) });
-        const how = r.file ? `wrote ${r.file}` : `copied via ${r.methods.join(" + ")}${r.confirmed ? "" : " (OSC 52 is unconfirmed)"}`;
+        const how = r.file
+          ? `wrote ${r.file}`
+          : `copied via ${r.methods.join(" + ")}${r.confirmed ? "" : " (OSC 52 is unconfirmed)"}`;
         return { data: { path: loc.path, chars: content.length, ...r }, human: `${how} (${content.length} chars)\n` };
       }
       default:
@@ -1248,19 +1833,38 @@ const HANDLERS: Record<string, Handler> = {
     if (holder) {
       const parent = openVault(holder);
       const rel = relative(holder, abs);
-      const res = await renameResult(s, () => planMakeVault(parent, rel, name ?? null, { private: has(s.args, "private") }), parent);
+      const res = await renameResult(
+        s,
+        () => planMakeVault(parent, rel, name ?? null, { private: has(s.args, "private") }),
+        parent,
+      );
       // As init says it of any folder: the root, its name and id when it was given one — and what changed.
       const d = res.data as { dryRun: boolean };
-      return { ...res, data: { ...d, root: abs, name: name ?? null, id: d.dryRun ? null : readIdentity(vaultConfigFile(abs)).id, created: !d.dryRun } };
+      return {
+        ...res,
+        data: {
+          ...d,
+          root: abs,
+          name: name ?? null,
+          id: d.dryRun ? null : readIdentity(vaultConfigFile(abs)).id,
+          created: !d.dryRun,
+        },
+      };
     }
     // A .slipbox/ made is no edit a saved plan holds (20.18): refused, nothing written.
-    if (has(s.args, "plan")) throw new UsageError("making a .slipbox/ has no edits to plan: --dry-run previews it (--plan is for a folder inside a root)");
+    if (has(s.args, "plan"))
+      throw new UsageError(
+        "making a .slipbox/ has no edits to plan: --dry-run previews it (--plan is for a folder inside a root)",
+      );
     let r;
     try {
       // A dry run refuses as the run would (a name taken: exit 5), writing nothing.
       if (has(s.args, "dry-run")) {
         checkInit(abs, name);
-        return { data: { root: abs, dryRun: true }, human: `would give ${abs} a .slipbox/${name ? ` called ${name}` : ""}\n` };
+        return {
+          data: { root: abs, dryRun: true },
+          human: `would give ${abs} a .slipbox/${name ? ` called ${name}` : ""}\n`,
+        };
       }
       r = initVault(dir.startsWith("/") ? dir : `${s.io.cwd}/${dir}`, name, { private: has(s.args, "private") });
     } catch (err) {
@@ -1268,16 +1872,28 @@ const HANDLERS: Record<string, Handler> = {
       throw err;
     }
     const called = r.name ? ` — called ${r.name}: slipbox://${r.name}/… names it` : "";
-    const human = r.created ? `created ${r.root}/.slipbox/${called}\n` : r.identified ? `${r.root} has its .slipbox/; named it${called}\n` : `${r.root} has its .slipbox/ already${called}\n`;
+    const human = r.created
+      ? `created ${r.root}/.slipbox/${called}\n`
+      : r.identified
+        ? `${r.root} has its .slipbox/; named it${called}\n`
+        : `${r.root} has its .slipbox/ already${called}\n`;
     return { data: r, human: r.excluded ? `${human}kept out of git: listed in ${r.excluded}\n` : human };
   },
 
   deinit(s, rest) {
     const dir = requireArg(rest, "folder");
     const abs = dir.startsWith("/") ? dir : join(s.io.cwd, dir);
-    if (!hasMarker(abs)) throw new CliError(`${abs} has no .slipbox/ to take away${markersAt(abs).length ? ` (it's a root by its ${markersAt(abs).join(", ")})` : ""}`, EXIT.refused);
+    if (!hasMarker(abs))
+      throw new CliError(
+        `${abs} has no .slipbox/ to take away${markersAt(abs).length ? ` (it's a root by its ${markersAt(abs).join(", ")})` : ""}`,
+        EXIT.refused,
+      );
     const holder = findVaultRoot(dirname(abs));
-    if (!holder) throw new CliError(`${abs} isn't in another root: only a root nested in another becomes a plain folder (of the root holding it)`, EXIT.refused);
+    if (!holder)
+      throw new CliError(
+        `${abs} isn't in another root: only a root nested in another becomes a plain folder (of the root holding it)`,
+        EXIT.refused,
+      );
     const parent = openVault(holder);
     return renameResult(s, () => planUnmakeVault(parent, relative(holder, abs)), parent);
   },
@@ -1290,7 +1906,8 @@ const HANDLERS: Record<string, Handler> = {
     const dir = folderArg(s, what);
     // A vault nested in this one moves as a vault (18.7): links into it by path fixed, its id kept.
     // Into a folder that's there, or named with a `/` (DF-D4): the name kept.
-    if (dir !== null && isVaultRoot(join(s.loc.root, dir))) return renameResult(s, () => planVaultFolderMove(s.graph, dir, moveTarget(s.graph, dir, to)));
+    if (dir !== null && isVaultRoot(join(s.loc.root, dir)))
+      return renameResult(s, () => planVaultFolderMove(s.graph, dir, moveTarget(s.graph, dir, to)));
     if (dir !== null) return renameResult(s, () => planFolderMove(s.graph, dir, moveTarget(s.graph, dir, to)));
     const rel = resolveNote(s, what, false);
     return renameResult(s, () => planNoteRename(s.graph, rel, moveTarget(s.graph, rel, to)));
@@ -1317,10 +1934,17 @@ const HANDLERS: Record<string, Handler> = {
     const rel = folderArg(s, what) ?? resolveNote(s, what, false);
     const breaking = linksInto(s.graph, rel);
     if (breaking) s.warnings.push(`${breaking} link${breaking === 1 ? "" : "s"} from other notes to ${rel} will break`);
-    if (has(s.args, "dry-run")) return { data: { path: rel, dryRun: true, breaking, trashed: null }, human: `would delete ${rel} to the trash\n` };
+    if (has(s.args, "dry-run"))
+      return {
+        data: { path: rel, dryRun: true, breaking, trashed: null },
+        human: `would delete ${rel} to the trash\n`,
+      };
     try {
       const item = trashPath(s.graph, s.loc, rel);
-      return { data: { path: rel, dryRun: false, breaking, trashed: item }, human: `deleted ${rel} to the trash (slipbox trash restore ${item.id})\n` };
+      return {
+        data: { path: rel, dryRun: false, breaking, trashed: item },
+        human: `deleted ${rel} to the trash (slipbox trash restore ${item.id})\n`,
+      };
     } catch (err) {
       if (err instanceof FileOpError) throw new CliError(err.message, EXIT.refused);
       throw err;
@@ -1355,7 +1979,8 @@ const HANDLERS: Record<string, Handler> = {
       const item = restorePath(s.graph, s.loc, which);
       return { data: item, human: `restored ${item.shown}\n` };
     } catch (err) {
-      if (err instanceof FileOpError) throw new CliError(err.message, err.message.startsWith("nothing") ? EXIT.notFound : EXIT.refused);
+      if (err instanceof FileOpError)
+        throw new CliError(err.message, err.message.startsWith("nothing") ? EXIT.notFound : EXIT.refused);
       throw err;
     }
   },
@@ -1368,20 +1993,33 @@ const HANDLERS: Record<string, Handler> = {
    */
   async name(s, rest) {
     const name = requireArg(rest, "the folder's new name");
-    if (s.loc.mode === "folder") throw new CliError(`${s.loc.root} has no root to name: slipbox init makes one`, EXIT.refused);
+    if (s.loc.mode === "folder")
+      throw new CliError(`${s.loc.root} has no root to name: slipbox init makes one`, EXIT.refused);
     const taken = folderNamed(name, s.loc.root).find((f) => f.name.toLowerCase() === name.toLowerCase());
-    if (taken) throw new CliError(`a different folder is called ${name}, at ${taken.default ?? taken.copies[0]?.path}: pick another`, EXIT.refused);
+    if (taken)
+      throw new CliError(
+        `a different folder is called ${name}, at ${taken.default ?? taken.copies[0]?.path}: pick another`,
+        EXIT.refused,
+      );
     if (hasMarker(s.loc.root)) {
       const r = await renameResult(s, () => planVaultRename(s.loc, name));
       if (!has(s.args, "dry-run") && !has(s.args, "plan")) recordLocation(rootAt(s.loc.root));
       return r;
     }
     // A .slipbox/ made is no edit a saved plan holds (20.18): refused, nothing written.
-    if (has(s.args, "plan")) throw new UsageError(`${s.loc.root} has no .slipbox/: making one has no edits to plan (--dry-run previews it)`);
-    if (has(s.args, "dry-run")) return { data: { root: s.loc.root, name, dryRun: true }, human: `would give ${s.loc.root} a .slipbox/ named ${name}\n` };
+    if (has(s.args, "plan"))
+      throw new UsageError(`${s.loc.root} has no .slipbox/: making one has no edits to plan (--dry-run previews it)`);
+    if (has(s.args, "dry-run"))
+      return {
+        data: { root: s.loc.root, name, dryRun: true },
+        human: `would give ${s.loc.root} a .slipbox/ named ${name}\n`,
+      };
     const r = initVault(s.loc.root, name);
     recordLocation(rootAt(s.loc.root));
-    return { data: { root: r.root, name: r.name, id: r.id, created: r.created }, human: `${r.root} is named ${r.name} (.slipbox/ made to hold it)\n` };
+    return {
+      data: { root: r.root, name: r.name, id: r.id, created: r.created },
+      human: `${r.root} is named ${r.name} (.slipbox/ made to hold it)\n`,
+    };
   },
 
   /**
@@ -1394,14 +2032,22 @@ const HANDLERS: Record<string, Handler> = {
       const [, name, at] = rest;
       if (!name || !at) throw new UsageError("folders default takes a name and the copy's path");
       const l = lookupFolder(name, list);
-      if (l.status === "ambiguous") throw new CliError(`${name}: ${l.reason}`, EXIT.ambiguous, { candidates: l.candidates });
+      if (l.status === "ambiguous")
+        throw new CliError(`${name}: ${l.reason}`, EXIT.ambiguous, { candidates: l.candidates });
       if (l.status === "unknown") throw new CliError(l.reason, EXIT.notFound);
       const path = resolve(s.io.cwd, at);
       // Any copy of the repository: a clone with a .slipbox/ name of its own is one too (DF-D30).
       const copies = repositoryCopies(l.folder, list);
-      if (!copies.some((c) => c.path === path)) throw new CliError(`${path} isn't a copy of ${l.folder.name}: ${copies.map((c) => c.path).join(", ")}`, EXIT.refused);
+      if (!copies.some((c) => c.path === path))
+        throw new CliError(
+          `${path} isn't a copy of ${l.folder.name}: ${copies.map((c) => c.path).join(", ")}`,
+          EXIT.refused,
+        );
       setDefaultCopy(l.folder.key, path);
-      return { data: { name: l.folder.name, default: path }, human: `links to ${l.folder.name} open ${tildePath(path)}\n` };
+      return {
+        data: { name: l.folder.name, default: path },
+        human: `links to ${l.folder.name} open ${tildePath(path)}\n`,
+      };
     }
     if (rest.length) throw new UsageError("folders takes nothing, or default <name> <path>");
     const data = list.map((f) => ({
@@ -1417,21 +2063,35 @@ const HANDLERS: Record<string, Handler> = {
     }));
     // A default that is another copy of the repository, a clone with a .slipbox/ of its own (DF-D30): listed here too,
     // its name said where it has another.
-    const clone = (f: (typeof data)[number]) => (f.default && !f.copies.some((c) => c.path === f.default) ? list.find((x) => x.copies.some((c) => c.path === f.default)) : undefined);
+    const clone = (f: (typeof data)[number]) =>
+      f.default && !f.copies.some((c) => c.path === f.default)
+        ? list.find((x) => x.copies.some((c) => c.path === f.default))
+        : undefined;
     const human = data
-      .map((f) => [
-        `${f.pointer}${f.pointer !== f.name ? ` (${f.name})` : ""}${f.remote && f.pointer !== f.remote ? `  ${f.remote}` : ""}${f.private ? "  private" : ""}`,
-        ...f.copies.map((c) => `  ${c.path === f.default ? "*" : " "} ${tildePath(c.path)}${c.available ? "" : "  (not here)"}${c.found ? "  (found)" : ""}`),
-        ...(clone(f) ? [`  * ${tildePath(f.default!)}${clone(f)!.name !== f.name ? `  (named ${clone(f)!.name})` : ""}`] : []),
-      ].join("\n"))
+      .map((f) =>
+        [
+          `${f.pointer}${f.pointer !== f.name ? ` (${f.name})` : ""}${f.remote && f.pointer !== f.remote ? `  ${f.remote}` : ""}${f.private ? "  private" : ""}`,
+          ...f.copies.map(
+            (c) =>
+              `  ${c.path === f.default ? "*" : " "} ${tildePath(c.path)}${c.available ? "" : "  (not here)"}${c.found ? "  (found)" : ""}`,
+          ),
+          ...(clone(f)
+            ? [`  * ${tildePath(f.default!)}${clone(f)!.name !== f.name ? `  (named ${clone(f)!.name})` : ""}`]
+            : []),
+        ].join("\n"),
+      )
       .join("\n");
-    return { data, human: human ? `${human}\n` : "no named folders yet: a .slipbox/ name, or a repository's remote, names one\n" };
+    return {
+      data,
+      human: human ? `${human}\n` : "no named folders yet: a .slipbox/ name, or a repository's remote, names one\n",
+    };
   },
 
   "rename-heading"(s, rest) {
     const rel = resolveNote(s, requireArg(rest, "note"), false);
     const [, heading, to] = rest;
-    if (heading === undefined || to === undefined) throw new UsageError("rename-heading takes the note, the heading and its new name");
+    if (heading === undefined || to === undefined)
+      throw new UsageError("rename-heading takes the note, the heading and its new name");
     return renameResult(s, () => planHeadingRename(s.graph, rel, heading, to));
   },
 
@@ -1467,8 +2127,23 @@ const HANDLERS: Record<string, Handler> = {
     if (!rest[0]) {
       const waiting = listPlans();
       return {
-        data: waiting.map((p) => ({ id: p.id, made: p.made, root: p.root, command: p.command, kind: kindWord(p.plan.kind), from: p.plan.from, to: p.plan.to, files: p.plan.files.length })),
-        human: waiting.map((p) => `${p.id}  ${p.made.slice(0, 16).replace("T", " ")}  ${p.command} ${p.plan.from}${p.plan.to ? ` → ${p.plan.to}` : ""}  (${p.plan.files.length} file${p.plan.files.length === 1 ? "" : "s"}, ${p.root})\n`).join("") || "no plans waiting\n",
+        data: waiting.map((p) => ({
+          id: p.id,
+          made: p.made,
+          root: p.root,
+          command: p.command,
+          kind: kindWord(p.plan.kind),
+          from: p.plan.from,
+          to: p.plan.to,
+          files: p.plan.files.length,
+        })),
+        human:
+          waiting
+            .map(
+              (p) =>
+                `${p.id}  ${p.made.slice(0, 16).replace("T", " ")}  ${p.command} ${p.plan.from}${p.plan.to ? ` → ${p.plan.to}` : ""}  (${p.plan.files.length} file${p.plan.files.length === 1 ? "" : "s"}, ${p.root})\n`,
+            )
+            .join("") || "no plans waiting\n",
       };
     }
     const saved = loadPlan(rest[0]);
@@ -1482,7 +2157,10 @@ const HANDLERS: Record<string, Handler> = {
       }
     });
     if (has(s.args, "dry-run")) {
-      if (stale.length) s.warnings.push(`stale: ${stale.map((f) => f.shown).join(", ")} changed since it was planned — applying it would be refused`);
+      if (stale.length)
+        s.warnings.push(
+          `stale: ${stale.map((f) => f.shown).join(", ")} changed since it was planned — applying it would be refused`,
+        );
       return renameResult(s, () => saved.plan, g);
     }
     // A saved `name` applied: the machine's list learns the new name, as `name` itself teaches it.
@@ -1512,14 +2190,28 @@ const HANDLERS: Record<string, Handler> = {
       return `  ${r.name.padEnd(28)} ${what}${role}\n`;
     };
     const lintLine = (r: LinterReport) => {
-      const what = r.path ? `${r.where}  ${short(r.path)}` : `not found: ${r.hint ?? `${r.program}, on your PATH or the project's`}`;
-      const at = r.root === undefined ? (r.required ? `  (where the project has ${r.markers.slice(0, 2).join(" or ")}…)` : "") : r.root === null ? "  (not run: the project has no config for it)" : `  (runs in ${short(r.root)})`;
+      const what = r.path
+        ? `${r.where}  ${short(r.path)}`
+        : `not found: ${r.hint ?? `${r.program}, on your PATH or the project's`}`;
+      const at =
+        r.root === undefined
+          ? r.required
+            ? `  (where the project has ${r.markers.slice(0, 2).join(" or ")}…)`
+            : ""
+          : r.root === null
+            ? "  (not run: the project has no config for it)"
+            : `  (runs in ${short(r.root)})`;
       return `  ${`${r.name} (linter)`.padEnd(28)} ${what}${at}\n`;
     };
     // A root you don't trust (23.x): what runs there is yours, never the folder's; said, with what it limits.
     const untrusted = (root: string, limits: string[]) => {
-      s.warnings.push(`${short(root)} isn't a root you trust: nothing of its own runs — not its programs, its settings that name one, or the code its servers and git would run${limits.length ? ` (here: ${limits.join("; ")})` : ""}; slipbox asks whether you trust it when that matters (or :trust there), and [trust] roots in your config can list it`);
-      if (!gitGuardsAttributes()) s.warnings.push("git is older than 2.42: in a root you don't trust, the filters its attributes name can still run — git 2.42 or later stops them");
+      s.warnings.push(
+        `${short(root)} isn't a root you trust: nothing of its own runs — not its programs, its settings that name one, or the code its servers and git would run${limits.length ? ` (here: ${limits.join("; ")})` : ""}; slipbox asks whether you trust it when that matters (or :trust there), and [trust] roots in your config can list it`,
+      );
+      if (!gitGuardsAttributes())
+        s.warnings.push(
+          "git is older than 2.42: in a root you don't trust, the filters its attributes name can still run — git 2.42 or later stops them",
+        );
     };
     if (rest[0]) {
       const abs = isAbsolute(rest[0]) ? rest[0] : join(s.io.cwd, rest[0]);
@@ -1527,13 +2219,24 @@ const HANDLERS: Record<string, Handler> = {
       if (!f) throw new CliError(`${rest[0]}: slipbox serves no language of it`, EXIT.notFound);
       if (!f.trusted) untrusted(f.root, f.limits);
       const skipped = f.skipped.map((k) => `  ${k.name.padEnd(28)} not run here: ${k.why}\n`);
-      const human = [`${rest[0]}: ${f.language}, its project ${short(f.root)}${f.trusted ? " (a root you trust)" : ""}\n`, ...f.run.map(line), ...skipped, ...f.linters.map(lintLine), ...(f.missing.length ? ["missing:\n", ...f.missing.map(line)] : [])].join("");
+      const human = [
+        `${rest[0]}: ${f.language}, its project ${short(f.root)}${f.trusted ? " (a root you trust)" : ""}\n`,
+        ...f.run.map(line),
+        ...skipped,
+        ...f.linters.map(lintLine),
+        ...(f.missing.length ? ["missing:\n", ...f.missing.map(line)] : []),
+      ].join("");
       return { data: f, human };
     }
     const groups = doctor(table, linters, s.io.cwd, auto);
     if (!isTrusted(s.io.cwd)) untrusted(s.io.cwd, []);
     if (!s.config.lsp.enabled) s.warnings.push("language servers are off: [lsp] enabled = false");
-    return { data: groups, human: groups.map((g) => `${g.languages.join(", ")}\n${g.servers.map(line).join("")}${g.linters.map(lintLine).join("")}`).join("") };
+    return {
+      data: groups,
+      human: groups
+        .map((g) => `${g.languages.join(", ")}\n${g.servers.map(line).join("")}${g.linters.map(lintLine).join("")}`)
+        .join(""),
+    };
   },
 
   // A file's problems from every source (19.22), for agents and scripts: its language servers' — started,
@@ -1581,7 +2284,8 @@ const HANDLERS: Record<string, Handler> = {
         if (m.busy(abs)) news = Date.now();
         await Bun.sleep(50);
       }
-      for (const name of running) sources.push({ name, kind: "server", status: heard.has(name) ? "answered" : "silent" });
+      for (const name of running)
+        sources.push({ name, kind: "server", status: heard.has(name) ? "answered" : "silent" });
       for (const [name, list] of heard) problems.push(...list), answered++;
       await within(m.stopAll(), 3000, undefined);
       m.killAll();
@@ -1596,7 +2300,11 @@ const HANDLERS: Record<string, Handler> = {
       }
       const r = s.config.lint.enabled === "off" ? null : await runLinter(def!, abs, text, root);
       if (r && "problems" in r) problems.push(...r.problems);
-      sources.push({ name: def!.name, kind: "linter", status: r === null ? "off" : "problems" in r ? "ran" : r.failed });
+      sources.push({
+        name: def!.name,
+        kind: "linter",
+        status: r === null ? "off" : "problems" in r ? "ran" : r.failed,
+      });
     }
     // Its syntax errors, when no server has spoken for the text (a server has them then).
     const kind = classify(abs, s.config.walk.extensions);
@@ -1613,7 +2321,12 @@ const HANDLERS: Record<string, Handler> = {
     // A vault note: its links and conflicts, and the lint surface's findings. One the walk leaves out
     // (git-ignored, under a hidden folder) is reached, named, as findNoteArg reaches it (20.8).
     const rel = relative(s.loc.root, abs).split(sep).join("/");
-    if (kind.group === "note" && !climbsOut(rel) && (s.graph.notes.has(rel) || s.graph.reachFile(rel, { keep: true })) && s.graph.notes.has(rel)) {
+    if (
+      kind.group === "note" &&
+      !climbsOut(rel) &&
+      (s.graph.notes.has(rel) || s.graph.reachFile(rel, { keep: true })) &&
+      s.graph.notes.has(rel)
+    ) {
       problems.push(...noteProblems(s.graph, rel));
       sources.push({ name: "slipbox", kind: "slipbox", status: "ran" });
       const cmd = lintCommand(s.config.lint, s.loc.root, undefined, s.config.lsp.auto_install);
@@ -1623,14 +2336,42 @@ const HANDLERS: Record<string, Handler> = {
         sources.push({ name: "markdownlint", kind: "lint", status: issues ? "ran" : "failed" });
       }
     }
-    for (const src of sources) if (["silent", "missing", "timeout", "error", "failed"].includes(src.status)) s.warnings.push(`${src.name}: ${src.status === "silent" ? `said nothing in ${seconds} s` : src.status === "missing" ? "not installed" : `couldn't run (${src.status})`}`);
+    for (const src of sources)
+      if (["silent", "missing", "timeout", "error", "failed"].includes(src.status))
+        s.warnings.push(
+          `${src.name}: ${src.status === "silent" ? `said nothing in ${seconds} s` : src.status === "missing" ? "not installed" : `couldn't run (${src.status})`}`,
+        );
     if (!lang && kind.group !== "note") s.warnings.push(`${arg}: slipbox knows no language of it — slipbox doctor`);
     const shown = problems
       .filter((p) => atLeast(p.severity, min))
-      .sort((a, b) => a.start.line - b.start.line || a.start.column - b.start.column || SEVERITIES.indexOf(a.severity) - SEVERITIES.indexOf(b.severity));
-    const human = shown.map((p) => `${arg}:${p.start.line}:${p.start.column}: ${p.severity} ${p.source}${p.code ? ` ${p.code}` : ""}: ${p.message.replace(/\s*\n\s*/g, " ")}\n`).join("");
+      .sort(
+        (a, b) =>
+          a.start.line - b.start.line ||
+          a.start.column - b.start.column ||
+          SEVERITIES.indexOf(a.severity) - SEVERITIES.indexOf(b.severity),
+      );
+    const human = shown
+      .map(
+        (p) =>
+          `${arg}:${p.start.line}:${p.start.column}: ${p.severity} ${p.source}${p.code ? ` ${p.code}` : ""}: ${p.message.replace(/\s*\n\s*/g, " ")}\n`,
+      )
+      .join("");
     return {
-      data: { path: abs, language: lang?.name ?? null, problems: shown.map((p) => ({ line: p.start.line, column: p.start.column, endLine: p.end.line, endColumn: p.end.column, severity: p.severity, source: p.source, code: p.code, message: p.message })), sources },
+      data: {
+        path: abs,
+        language: lang?.name ?? null,
+        problems: shown.map((p) => ({
+          line: p.start.line,
+          column: p.start.column,
+          endLine: p.end.line,
+          endColumn: p.end.column,
+          severity: p.severity,
+          source: p.source,
+          code: p.code,
+          message: p.message,
+        })),
+        sources,
+      },
       human,
       code: shown.some((p) => p.severity === "error") ? EXIT.error : EXIT.ok,
     };
@@ -1650,7 +2391,12 @@ const HANDLERS: Record<string, Handler> = {
           remote: ident.remote,
           id: ident.id,
           private: ident.private,
-          copies: (named?.copies ?? []).map((c) => ({ path: c.path, seen: c.seen, here: c.path === ident.copy, available: copyAvailable(c.path) })),
+          copies: (named?.copies ?? []).map((c) => ({
+            path: c.path,
+            seen: c.seen,
+            here: c.path === ident.copy,
+            available: copyAvailable(c.path),
+          })),
           default: named?.default ?? null,
         }
       : null;
@@ -1666,7 +2412,11 @@ const HANDLERS: Record<string, Handler> = {
       // What its cache and state are kept by (21.8): its path's key.
       key: s.loc.key,
       markerVersion: s.loc.mode === "vault" ? readVaultVersion(s.loc.root) : null,
-      config: { user: flag(s.args, "config") ?? s.io.env.SLIPBOX_CONFIG ?? userConfigFile(), sources: s.configSources, theme: s.config.theme },
+      config: {
+        user: flag(s.args, "config") ?? s.io.env.SLIPBOX_CONFIG ?? userConfigFile(),
+        sources: s.configSources,
+        theme: s.config.theme,
+      },
       cache: cacheDir(s.loc),
       state: stateDir(s.loc),
       scratch: scratch.path,
@@ -1698,7 +2448,9 @@ const HANDLERS: Record<string, Handler> = {
       `state     ${data.state}`,
       `scratch   ${data.scratch}`,
       ...g.skipped.map((x) => `skipped   ${x.rel} — ${x.reason}`),
-      ...(folder?.copies ?? []).filter((c) => !c.here).map((c) => `copy      ${tildePath(c.path)}${c.available ? "" : " (not here)"}`),
+      ...(folder?.copies ?? [])
+        .filter((c) => !c.here)
+        .map((c) => `copy      ${tildePath(c.path)}${c.available ? "" : " (not here)"}`),
       "",
     ].join("\n");
     return { data, human };
@@ -1707,9 +2459,20 @@ const HANDLERS: Record<string, Handler> = {
   // A release moved to the latest one (14.4), as the installer would; with --check, only told whether there is one.
   // The installer's install only: one run from source, or put there another way, is said so.
   async upgrade(s) {
-    if (!RELEASE) throw new CliError("this slipbox runs from source (or was built by hand): it has no releases to follow — update its checkout", EXIT.error);
+    if (!RELEASE)
+      throw new CliError(
+        "this slipbox runs from source (or was built by hand): it has no releases to follow — update its checkout",
+        EXIT.error,
+      );
     try {
-      const r = await upgradeTo({ release: RELEASE, version: VERSION, data: dataHome(), execPath: process.execPath, env: s.io.env, check: has(s.args, "check") });
+      const r = await upgradeTo({
+        release: RELEASE,
+        version: VERSION,
+        data: dataHome(),
+        execPath: process.execPath,
+        env: s.io.env,
+        check: has(s.args, "check"),
+      });
       const human =
         r.status === "current"
           ? `slipbox ${r.from} is the latest\n`
@@ -1733,14 +2496,27 @@ const HANDLERS: Record<string, Handler> = {
     const width = Math.max(0, ...[...plan.remove, ...plan.keep].map((i) => tildePath(i.path).length));
     const row = (i: { path: string; what: string }) => `  ${tildePath(i.path).padEnd(width)}  ${i.what}\n`;
     const human = [
-      plan.remove.length ? `${yes ? "removed" : "removes"}:\n${plan.remove.map(row).join("")}` : "nothing of slipbox's to remove here\n",
+      plan.remove.length
+        ? `${yes ? "removed" : "removes"}:\n${plan.remove.map(row).join("")}`
+        : "nothing of slipbox's to remove here\n",
       plan.keep.length ? `keeps${purge ? "" : " (--purge removes them too)"}:\n${plan.keep.map(row).join("")}` : "",
       ...plan.notes.map((n) => `${n}\n`),
       "never touches your notes, nor the .slipbox/ folders in them\n",
       !yes && plan.remove.length ? "nothing removed yet: again with --yes to remove these\n" : "",
       ...failed.map((f) => `couldn't remove ${f}\n`),
     ].join("");
-    return { data: { purge, removed: yes && plan.remove.length > 0 && !failed.length, remove: plan.remove, keep: plan.keep, notes: plan.notes, failed }, human, code: failed.length ? EXIT.error : EXIT.ok };
+    return {
+      data: {
+        purge,
+        removed: yes && plan.remove.length > 0 && !failed.length,
+        remove: plan.remove,
+        keep: plan.keep,
+        notes: plan.notes,
+        failed,
+      },
+      human,
+      code: failed.length ? EXIT.error : EXIT.ok,
+    };
   },
 
   // Document types (22.3): each with how many notes are of it here and how many break its rules (22.2); or a type's
@@ -1753,22 +2529,50 @@ const HANDLERS: Record<string, Handler> = {
       const t = types.find((x) => x.name === want);
       if (!t) throw new CliError(`no document type "${want}" here: slipbox types lists them`, EXIT.notFound);
       s.graph.ensureAll();
-      const list = notesOfType(t, [...s.graph.notes.entries()].map(([path, e]) => ({ path, title: e.title ?? "" })), (rel) => s.graph.textOf(rel));
+      const list = notesOfType(
+        t,
+        [...s.graph.notes.entries()].map(([path, e]) => ({ path, title: e.title ?? "" })),
+        (rel) => s.graph.textOf(rel),
+      );
       const width = Math.max(0, ...list.map((n) => (n.number === null ? 0 : String(n.number).length)));
-      const human = list.map((n) => `${n.number === null ? " ".repeat(width) : String(n.number).padStart(width)}${width ? "  " : ""}${n.path}${n.title ? `  ${n.title}` : ""}${n.status ? `  (${n.status}${n.supersededBy ? ` → ${n.supersededBy}` : ""})` : ""}\n`).join("");
-      return { data: { name: t.name, source: t.source, paths: t.paths, notes: list }, human: human || `no ${t.name} notes here (${t.paths.join(", ")})\n` };
+      const human = list
+        .map(
+          (n) =>
+            `${n.number === null ? " ".repeat(width) : String(n.number).padStart(width)}${width ? "  " : ""}${n.path}${n.title ? `  ${n.title}` : ""}${n.status ? `  (${n.status}${n.supersededBy ? ` → ${n.supersededBy}` : ""})` : ""}\n`,
+        )
+        .join("");
+      return {
+        data: { name: t.name, source: t.source, paths: t.paths, notes: list },
+        human: human || `no ${t.name} notes here (${t.paths.join(", ")})\n`,
+      };
     }
     const findings = frontmatterFindings(s.graph);
-    const data = types.map((t) => ({ name: t.name, source: t.source, paths: t.paths, notes: notes.filter((n) => ofType(n.path, t)).length, problems: findings.filter((f) => ofType(f.path, t)).length }));
+    const data = types.map((t) => ({
+      name: t.name,
+      source: t.source,
+      paths: t.paths,
+      notes: notes.filter((n) => ofType(n.path, t)).length,
+      problems: findings.filter((f) => ofType(f.path, t)).length,
+    }));
     const width = Math.max(0, ...data.map((t) => t.name.length));
-    return { data, human: data.map((t) => `${t.name.padEnd(width)}  ${t.notes} note${t.notes === 1 ? "" : "s"}${t.problems ? `, ${t.problems} breaking its rules` : ""}  (${t.source}: ${t.paths.join(", ")})\n`).join("") };
+    return {
+      data,
+      human: data
+        .map(
+          (t) =>
+            `${t.name.padEnd(width)}  ${t.notes} note${t.notes === 1 ? "" : "s"}${t.problems ? `, ${t.problems} breaking its rules` : ""}  (${t.source}: ${t.paths.join(", ")})\n`,
+        )
+        .join(""),
+    };
   },
 
   themes(s) {
     const list = listThemes();
     return {
       data: list.map((t) => ({ ...t, current: t.name === s.config.theme })),
-      human: list.map((t) => `${t.name === s.config.theme ? "*" : " "} ${t.name}${t.source === "user" ? `  (${t.path})` : ""}\n`).join(""),
+      human: list
+        .map((t) => `${t.name === s.config.theme ? "*" : " "} ${t.name}${t.source === "user" ? `  (${t.path})` : ""}\n`)
+        .join(""),
     };
   },
 
@@ -1776,7 +2580,9 @@ const HANDLERS: Record<string, Handler> = {
     const query = requireArg(rest, "query");
     const re = pattern(s, query);
     // --files: the vault's data and text files are searched too (16.4).
-    const notes = rest[1] ? [resolveNote(s, rest[1], false)] : [...s.graph.notes.keys(), ...(has(s.args, "files") ? textFiles(s).map((f) => f.path) : [])].sort();
+    const notes = rest[1]
+      ? [resolveNote(s, rest[1], false)]
+      : [...s.graph.notes.keys(), ...(has(s.args, "files") ? textFiles(s).map((f) => f.path) : [])].sort();
     const matches: { path: string; line: number; column: number; match: string; text: string }[] = [];
     for (const rel of notes) {
       let text: string;
@@ -1798,12 +2604,20 @@ const HANDLERS: Record<string, Handler> = {
         if (colLine !== line) [colLine, colAt, col] = [line, lineStart, 0];
         col += [...text.slice(colAt, m.from)].length;
         colAt = m.from;
-        matches.push({ path: rel, line, column: col + 1, match: m.groups[0]!, text: around(text, lineStart, lineEnd, m.from, m.to) });
+        matches.push({
+          path: rel,
+          line,
+          column: col + 1,
+          match: m.groups[0]!,
+          text: around(text, lineStart, lineEnd, m.from, m.to),
+        });
       }
     }
     // The walk leaves out notes over walk.max_file_size: say so, rather than find nothing in them.
     if (!rest[1]) {
-      for (const k of s.graph.skipped) if (/^larger than/.test(k.reason)) s.warnings.push(`${k.rel}: not searched (${k.reason}); name it to search it`);
+      for (const k of s.graph.skipped)
+        if (/^larger than/.test(k.reason))
+          s.warnings.push(`${k.rel}: not searched (${k.reason}); name it to search it`);
     }
     return {
       data: { query, regex: has(s.args, "regex"), whole: has(s.args, "whole"), count: matches.length, matches },
@@ -1816,18 +2630,29 @@ const HANDLERS: Record<string, Handler> = {
   async spell(s, rest) {
     const add = flag(s.args, "add");
     if (add !== undefined) {
-      if (rest.length || has(s.args, "suggest") || flag(s.args, "lang") !== undefined) throw new UsageError("spell --add takes the word alone");
+      if (rest.length || has(s.args, "suggest") || flag(s.args, "lang") !== undefined)
+        throw new UsageError("spell --add takes the word alone");
       const word = add.trim();
       if (!word || /\s/.test(word)) throw new UsageError("--add takes one word");
       addOwnWord(word);
-      return { data: { added: word, file: ownWordsFile() }, human: `"${word}" added to your words (${ownWordsFile()})\n` };
+      return {
+        data: { added: word, file: ownWordsFile() },
+        human: `"${word}" added to your words (${ownWordsFile()})\n`,
+      };
     }
     const rel = resolveNote(s, requireArg(rest, "note"), false);
-    if (classify(rel, s.config.walk.extensions).group !== "note") throw new UsageError(`${rel} isn't a note: spelling checks a note's prose`);
+    if (classify(rel, s.config.walk.extensions).group !== "note")
+      throw new UsageError(`${rel} isn't a note: spelling checks a note's prose`);
     const text = readText(s.graph.abs(rel)).text;
     const parsed = parseMarkdown(text);
     const given = flag(s.args, "lang");
-    const languages = given !== undefined ? given.split(",").map((l) => l.trim()).filter(Boolean) : noteLanguages(parsed.frontmatter?.data, s.config.spell.languages);
+    const languages =
+      given !== undefined
+        ? given
+            .split(",")
+            .map((l) => l.trim())
+            .filter(Boolean)
+        : noteLanguages(parsed.frontmatter?.data, s.config.spell.languages);
     const spellers: Speller[] = [];
     const missing: string[] = [];
     for (const lang of languages) {
@@ -1835,7 +2660,8 @@ const HANDLERS: Record<string, Handler> = {
       if (files) spellers.push(await openSpeller(files));
       else missing.push(lang);
     }
-    if (missing.length) s.warnings.push(`no dictionary for ${missing.join(", ")} — [spell] dictionaries can name yours`);
+    if (missing.length)
+      s.warnings.push(`no dictionary for ${missing.join(", ")} — [spell] dictionaries can name yours`);
     const checker = new Checker(spellers);
     const starts = lineStarts(text);
     const words = checker.misspelt(proseWords(parsed.tree, text)).map((w) => ({
@@ -1846,14 +2672,20 @@ const HANDLERS: Record<string, Handler> = {
     }));
     return {
       data: { path: rel, languages, missing, words },
-      human: words.map((w) => `${rel}:${w.line}:${w.column}: ${w.word}${w.suggestions ? ` → ${w.suggestions.join(", ") || "(none)"}` : ""}\n`).join(""),
+      human: words
+        .map(
+          (w) =>
+            `${rel}:${w.line}:${w.column}: ${w.word}${w.suggestions ? ` → ${w.suggestions.join(", ") || "(none)"}` : ""}\n`,
+        )
+        .join(""),
     };
   },
 
   replace(s, rest) {
     if (has(s.args, "all")) return replaceAll(s, rest);
-    if (has(s.args, "files") || has(s.args, "plan")) throw new UsageError("--files and --plan go with --all: replace in every note");
-    if (rest.length < 3) throw new UsageError("replace needs <note> <old> <new> (the new text may be \"\")");
+    if (has(s.args, "files") || has(s.args, "plan"))
+      throw new UsageError("--files and --plan go with --all: replace in every note");
+    if (rest.length < 3) throw new UsageError('replace needs <note> <old> <new> (the new text may be "")');
     const [noteArg, query, replacement] = rest as [string, string, string];
     if (!query) throw new UsageError("replace needs something to find (an empty pattern matches nothing)");
     const rel = resolveNote(s, noteArg, false);
@@ -1872,11 +2704,13 @@ const HANDLERS: Record<string, Handler> = {
       const b = m ? Number(m[2] ?? m[1]) : 0;
       if (!m || a < 1 || b < a) throw new UsageError("--lines must look like 12 or 12-40, from 1 and in order");
       const count = file.text.endsWith("\n") ? starts.length - 1 : starts.length;
-      if (a > Math.max(1, count)) throw new UsageError(`--lines starts past the end (${rel} has ${count} line${count === 1 ? "" : "s"})`);
+      if (a > Math.max(1, count))
+        throw new UsageError(`--lines starts past the end (${rel} has ${count} line${count === 1 ? "" : "s"})`);
       range = [starts[a - 1] ?? file.text.length, starts[b] ?? file.text.length];
     }
     let ms = findAll(file.text, re, range[0], range[1], has(s.args, "regex")); // ^ and $ insert
-    if (has(s.args, "first") && has(s.args, "first-per-line")) throw new UsageError("--first or --first-per-line, not both");
+    if (has(s.args, "first") && has(s.args, "first-per-line"))
+      throw new UsageError("--first or --first-per-line, not both");
     if (has(s.args, "first")) ms = ms.slice(0, 1);
     if (has(s.args, "first-per-line")) ms = firstPerLine(file.text, ms); // vim's :s without g
     const regex = has(s.args, "regex");
@@ -1907,7 +2741,14 @@ const HANDLERS: Record<string, Handler> = {
     const verb = dry ? "would replace" : "replaced";
     return {
       // newSha: the note's sha after the call; null on a dry run, which wrote nothing to hash.
-      data: { path: rel, count: out.count, dryRun: dry, sha: file.sha, newSha: dry ? null : (written ?? file.sha), changes },
+      data: {
+        path: rel,
+        count: out.count,
+        dryRun: dry,
+        sha: file.sha,
+        newSha: dry ? null : (written ?? file.sha),
+        changes,
+      },
       human: `${verb} ${out.count} in ${rel}\n${dry ? changes.map((c) => `${c.line}:${c.column}: ${c.text}\n${" ".repeat(String(c.line).length + String(c.column).length + 2)}→ ${c.textAfter}\n`).join("") : ""}`,
     };
   },
@@ -1916,24 +2757,35 @@ const HANDLERS: Record<string, Handler> = {
     const rel = resolveNote(s, requireArg(rest, "note"));
     const abs = s.graph.abs(rel);
     // A task is a one-byte edit, so a note that isn't valid UTF-8 can be ticked, as in the TUI.
-    if (classify(rel, s.config.walk.extensions).group !== "note") throw new UsageError(`${rel} isn't a note: tasks are in notes`);
+    if (classify(rel, s.config.walk.extensions).group !== "note")
+      throw new UsageError(`${rel} isn't a note: tasks are in notes`);
     const file = readNoteFile(s, abs, false);
     // Toggling one line needs only the chunk that holds it (a 20,000-task note parses in a blink);
     // the list, the whole note.
     const lineArg = rest[1] === undefined ? undefined : Number(rest[1]);
-    const tasks = listTasks(lineArg !== undefined && Number.isInteger(lineArg) && lineArg >= 1 && noteFormat(rel) === "markdown" ? parseAround(file.text, lineArg) : parseNoteFile(rel, file.text).tree);
+    const tasks = listTasks(
+      lineArg !== undefined && Number.isInteger(lineArg) && lineArg >= 1 && noteFormat(rel) === "markdown"
+        ? parseAround(file.text, lineArg)
+        : parseNoteFile(rel, file.text).tree,
+    );
     // Each task's source line too (its text keeps [[links]]), and the note's sha for a safe tick.
     const lines = file.text.split("\n");
     const withRaw = tasks.map((t) => ({ ...t, raw: (lines[t.line - 1] ?? "").replace(/\r$/, "") }));
     if (rest[1] === undefined) {
-      return { data: { path: rel, sha: file.sha, tasks: withRaw }, human: tasks.map((t) => `${String(t.line).padStart(5)}  [${t.checked ? "x" : " "}] ${t.text}\n`).join("") };
+      return {
+        data: { path: rel, sha: file.sha, tasks: withRaw },
+        human: tasks.map((t) => `${String(t.line).padStart(5)}  [${t.checked ? "x" : " "}] ${t.text}\n`).join(""),
+      };
     }
     const line = Number(rest[1]);
     if (!Number.isInteger(line) || line < 1) throw new UsageError("the task's line must be a whole number from 1");
     const task = tasks.find((t) => t.line === line);
     if (!task) {
       // The whole note's tasks, to choose from (the chunk's alone would mislead).
-      const all = listTasks(parseNoteFile(rel, file.text).tree).map((t) => ({ ...t, raw: (lines[t.line - 1] ?? "").replace(/\r$/, "") }));
+      const all = listTasks(parseNoteFile(rel, file.text).tree).map((t) => ({
+        ...t,
+        raw: (lines[t.line - 1] ?? "").replace(/\r$/, ""),
+      }));
       throw new CliError(`no task on line ${line} of ${rel}`, EXIT.notFound, { path: rel, sha: file.sha, tasks: all });
     }
     const want = has(s.args, "check") ? true : has(s.args, "uncheck") ? false : !task.checked;
@@ -1962,7 +2814,18 @@ const HANDLERS: Record<string, Handler> = {
     const rel = resolveNote(s, requireArg(rest, "note"), false);
     const abs = s.graph.abs(rel);
     const file = readNoteFile(s, abs, false);
-    return { data: { path: rel, abs, sha: file.sha, bom: file.bom, crlf: file.crlf, invalidUtf8: file.invalidUtf8, content: file.text }, human: file.text };
+    return {
+      data: {
+        path: rel,
+        abs,
+        sha: file.sha,
+        bom: file.bom,
+        crlf: file.crlf,
+        invalidUtf8: file.invalidUtf8,
+        content: file.text,
+      },
+      human: file.text,
+    };
   },
 
   // The TUI's note info (space n i), in one call.
@@ -1995,7 +2858,11 @@ const HANDLERS: Record<string, Handler> = {
       crlf: file.crlf,
       invalidUtf8: file.invalidUtf8,
     };
-    const encoding = [file.invalidUtf8 ? "invalid UTF-8" : "UTF-8", ...(file.crlf ? ["crlf"] : []), ...(file.bom ? ["bom"] : [])].join(", ");
+    const encoding = [
+      file.invalidUtf8 ? "invalid UTF-8" : "UTF-8",
+      ...(file.crlf ? ["crlf"] : []),
+      ...(file.bom ? ["bom"] : []),
+    ].join(", ");
     const rows: [string, string][] = [
       ["path", abs],
       ["size", `${data.size} bytes`],
@@ -2003,7 +2870,10 @@ const HANDLERS: Record<string, Handler> = {
       ["root", s.loc.mode === "folder" ? `none (the folder ${tildePath(s.loc.root)})` : rootLabel(s.loc)],
       ["title", data.title ?? "—"],
       ["tags", data.tags.join(", ") || "—"],
-      ...Object.entries(data.properties ?? {}).map(([k, v]): [string, string] => [`  ${k}`, typeof v === "object" ? JSON.stringify(v) : String(v)]),
+      ...Object.entries(data.properties ?? {}).map(([k, v]): [string, string] => [
+        `  ${k}`,
+        typeof v === "object" ? JSON.stringify(v) : String(v),
+      ]),
       ["headings", String(data.headings)],
       ["links", `${data.links}${data.unresolved ? ` (${data.unresolved} unresolved)` : ""}`],
       ["backlinks", String(data.backlinks)],
@@ -2018,7 +2888,8 @@ const HANDLERS: Record<string, Handler> = {
   mkdir(s, rest) {
     const arg = requireArg(rest, "path");
     const abs = arg.startsWith("/") ? arg : /^\.\.?\//.test(arg) ? join(s.io.cwd, arg) : join(s.loc.root, arg);
-    if (!isInside(s.loc.root, abs) || !landsInside(s.loc.root, abs)) throw new CliError(`${arg} is outside the root (${s.loc.root})`, EXIT.refused);
+    if (!isInside(s.loc.root, abs) || !landsInside(s.loc.root, abs))
+      throw new CliError(`${arg} is outside the root (${s.loc.root})`, EXIT.refused);
     const rel = relative(s.loc.root, abs);
     if (existsSync(abs)) throw new CliError(`${rel} already exists`, EXIT.refused, { path: rel });
     mkdirSync(abs, { recursive: true });
@@ -2035,7 +2906,8 @@ const HANDLERS: Record<string, Handler> = {
     }
     // No text at all: an empty new note, said on purpose (DF-D16); else refused, as blank text is.
     const empty = has(s.args, "create") && has(s.args, "allow-empty");
-    if (!has(s.args, "stdin") && rest.length < 2 && !empty) throw new UsageError("write needs the text, or --stdin (--create --allow-empty makes an empty note)");
+    if (!has(s.args, "stdin") && rest.length < 2 && !empty)
+      throw new UsageError("write needs the text, or --stdin (--create --allow-empty makes an empty note)");
     let rel: string;
     let created = false;
     let shadows: string[] = [];
@@ -2043,25 +2915,40 @@ const HANDLERS: Record<string, Handler> = {
       // A new note: the argument is a path in the vault (relative to it, or to cwd when inside
       // it), never a name to resolve — and a file already there is never overwritten.
       // A path in the vault, from its root — or from the current folder when it says so (./, ../).
-      const base = noteArg.startsWith("/") ? noteArg : /^\.\.?\//.test(noteArg) ? join(s.io.cwd, noteArg) : join(s.loc.root, noteArg);
+      const base = noteArg.startsWith("/")
+        ? noteArg
+        : /^\.\.?\//.test(noteArg)
+          ? join(s.io.cwd, noteArg)
+          : join(s.loc.root, noteArg);
       // A note unless the name says otherwise: `config.toml`, `run.py` keep their extension (16.4).
       const abs = isKnownExtension(extensionOf(base)) ? base : `${base}.md`;
       // Outside by its path, or by a symlinked folder on the way: checked before any folder is made.
-      if (!isInside(s.loc.root, abs) || !landsInside(s.loc.root, abs)) throw new CliError(`${noteArg} is outside the root (${s.loc.root})`, EXIT.refused);
+      if (!isInside(s.loc.root, abs) || !landsInside(s.loc.root, abs))
+        throw new CliError(`${noteArg} is outside the root (${s.loc.root})`, EXIT.refused);
       rel = relative(s.loc.root, abs);
       checkWritable(s, abs);
-      if (existsSync(abs)) throw new CliError(`${rel} already exists; not overwriting it (drop --create to write it)`, EXIT.refused, { path: rel });
+      if (existsSync(abs))
+        throw new CliError(`${rel} already exists; not overwriting it (drop --create to write it)`, EXIT.refused, {
+          path: rel,
+        });
       created = true;
       // A name other notes have: a command naming it by that name now needs a path (links are paths, 20.2).
-      const name = rel.replace(/\.(md|markdown)$/i, "").split("/").pop()!;
+      const name = rel
+        .replace(/\.(md|markdown)$/i, "")
+        .split("/")
+        .pop()!;
       const same = s.graph.findNote(name, s.loc.root);
       shadows = same.status === "resolved" ? [same.path] : same.status === "ambiguous" ? same.candidates : [];
-      if (shadows.length) s.warnings.push(`${rel}: other notes are named "${name}" (${shadows.join(", ")}); naming it in a command takes a path now`);
+      if (shadows.length)
+        s.warnings.push(
+          `${rel}: other notes are named "${name}" (${shadows.join(", ")}); naming it in a command takes a path now`,
+        );
     } else {
       try {
         rel = resolveNote(s, noteArg, false);
       } catch (err) {
-        if (err instanceof CliError && err.code === EXIT.notFound) throw new CliError(`${err.message} (--create makes a new note)`, EXIT.notFound);
+        if (err instanceof CliError && err.code === EXIT.notFound)
+          throw new CliError(`${err.message} (--create makes a new note)`, EXIT.notFound);
         throw err;
       }
       checkWritable(s, join(s.loc.root, rel));
@@ -2069,23 +2956,34 @@ const HANDLERS: Record<string, Handler> = {
     const abs = join(s.loc.root, rel);
     let previous: NoteFile | null = null;
     if (!created) previous = readNoteFile(s, abs);
-    else if (flag(s.args, "if-unchanged") !== undefined) throw new CliError(`${rel} doesn't exist; --if-unchanged has nothing to compare`, EXIT.refused);
+    else if (flag(s.args, "if-unchanged") !== undefined)
+      throw new CliError(`${rel} doesn't exist; --if-unchanged has nothing to compare`, EXIT.refused);
     // Nothing to write is almost always a failed producer (gen | slipbox write note --stdin): it
     // would empty the note, and --if-unchanged can't catch it. Said on purpose with --allow-empty.
     // Blank counts as empty: `write note "$(gen)"` gives "\n" when gen fails.
-    if (!text.trim() && !has(s.args, "allow-empty")) throw new UsageError("nothing to write (empty text); --allow-empty empties the note on purpose");
+    if (!text.trim() && !has(s.args, "allow-empty"))
+      throw new UsageError("nothing to write (empty text); --allow-empty empties the note on purpose");
     let content = text;
     if (previous && has(s.args, "append")) {
       // On a new line; with --paragraph after a blank one too, so the text is a block of its own
       // (a line appended right after a table would be its next row, after a paragraph part of it).
       const body = previous.text.replace(/(\r?\n)*$/, "");
       const sep = !body ? "" : has(s.args, "paragraph") ? "\n\n" : "\n";
-      content = has(s.args, "paragraph") ? `${body}${sep}${text}` : `${previous.text}${previous.text && !previous.text.endsWith("\n") ? "\n" : ""}${text}`;
+      content = has(s.args, "paragraph")
+        ? `${body}${sep}${text}`
+        : `${previous.text}${previous.text && !previous.text.endsWith("\n") ? "\n" : ""}${text}`;
     }
     if (created) mkdirSync(dirname(abs), { recursive: true });
     const written = writeNoteText(s, abs, content, previous);
     return {
-      data: { path: rel, created, ...(created ? { shadows } : {}), appended: !!previous && has(s.args, "append"), previousSha: previous?.sha ?? null, sha: written },
+      data: {
+        path: rel,
+        created,
+        ...(created ? { shadows } : {}),
+        appended: !!previous && has(s.args, "append"),
+        previousSha: previous?.sha ?? null,
+        sha: written,
+      },
       human: `${created ? "created" : "wrote"} ${rel}\n`,
     };
   },
@@ -2097,7 +2995,8 @@ const HANDLERS: Record<string, Handler> = {
     if (!/^\d+$/.test(lineArg) || Number(lineArg) < 1) throw new UsageError("--line must be a whole number from 1");
     const line = Number(lineArg);
     const raw = s.config.editor.remote.filter((t) => t.trim());
-    if (!raw.length) throw new CliError("set [editor] remote in the config to send notes to a running editor", EXIT.error);
+    if (!raw.length)
+      throw new CliError("set [editor] remote in the config to send notes to a running editor", EXIT.error);
     const templates = raw.length === 1 && raw[0]!.trim() === "nvim" ? NVIM_REMOTE : raw;
     let server = "";
     if (templates.some((t) => t.includes("{server}"))) server = pickNvim(s, abs);
@@ -2108,7 +3007,10 @@ const HANDLERS: Record<string, Handler> = {
       if (r.error) throw new CliError(`couldn't start ${argv[0]}: ${r.error.message}`);
       if (r.status !== 0) throw new CliError(`${argv.slice(0, 2).join(" ")} exited with ${r.status}`);
     }
-    return { data: { path: rel, line, server: server || null, commands }, human: `sent ${rel}:${line}${server ? ` to ${server}` : ""}\n` };
+    return {
+      data: { path: rel, line, server: server || null, commands },
+      human: `sent ${rel}:${line}${server ? ` to ${server}` : ""}\n`,
+    };
   },
 
   history(s) {
@@ -2116,22 +3018,33 @@ const HANDLERS: Record<string, Handler> = {
     const read = new PositionStore(s.loc)
       .entries()
       .sort((a, b) => (a.at < b.at ? 1 : -1))
-      .map((p) => ({ path: p.key, at: p.at, line: p.line, exists: existsSync(isAbsolute(p.key) ? p.key : join(s.loc.root, p.key)) }));
+      .map((p) => ({
+        path: p.key,
+        at: p.at,
+        line: p.line,
+        exists: existsSync(isAbsolute(p.key) ? p.key : join(s.loc.root, p.key)),
+      }));
     const session = loadSession(s.loc);
     const open = (session?.tabs ?? []).map((t) => t.panes.map((p) => p.path));
     // What the user is looking at: the active tab's active window's note.
     const tab = session?.tabs[session.activeTab];
-    const current = tab ? (tab.panes[tab.active] ?? tab.panes[0])?.path ?? null : null;
+    const current = tab ? ((tab.panes[tab.active] ?? tab.panes[0])?.path ?? null) : null;
     return {
       data: { read, open, activeTab: session?.activeTab ?? null, current },
-      human: read.length ? read.map((r) => `${r.at.slice(0, 16).replace("T", " ")}  ${r.path}:${r.line}${r.exists ? "" : "  (deleted)"}\n`).join("") : "nothing read in the TUI yet\n",
+      human: read.length
+        ? read
+            .map((r) => `${r.at.slice(0, 16).replace("T", " ")}  ${r.path}:${r.line}${r.exists ? "" : "  (deleted)"}\n`)
+            .join("")
+        : "nothing read in the TUI yet\n",
     };
   },
 
   commands() {
     return {
       data: COMMAND_SPECS,
-      human: COMMAND_SPECS.map((c) => `${c.id.padEnd(20)} ${c.title.padEnd(44)} ${c.cli ?? "(interaction)"}\n`).join(""),
+      human: COMMAND_SPECS.map((c) => `${c.id.padEnd(20)} ${c.title.padEnd(44)} ${c.cli ?? "(interaction)"}\n`).join(
+        "",
+      ),
     };
   },
 };
@@ -2160,7 +3073,11 @@ function decodeURIComponentSafe(s: string): string {
 
 /** The query as a pattern, with the shared flags; a bad regex is a usage error. */
 function pattern(s: Session, query: string): RegExp {
-  const re = compilePattern(query, { regex: has(s.args, "regex"), whole: has(s.args, "whole"), ignoreCase: has(s.args, "ignore-case") });
+  const re = compilePattern(query, {
+    regex: has(s.args, "regex"),
+    whole: has(s.args, "whole"),
+    ignoreCase: has(s.args, "ignore-case"),
+  });
   if (typeof re === "string") throw new UsageError(`not a regex: ${re}`);
   return re;
 }
@@ -2197,13 +3114,17 @@ function readNoteFile(s: Session, abs: string, forWriting = true): NoteFile {
   try {
     bytes = readRegular(abs);
   } catch (err) {
-    throw new CliError(`${relative(s.loc.root, abs)}: ${(err as NodeJS.ErrnoException).code === "ENOENT" ? "gone (deleted since it was found)" : (err as Error).message}`, EXIT.notFound);
+    throw new CliError(
+      `${relative(s.loc.root, abs)}: ${(err as NodeJS.ErrnoException).code === "ENOENT" ? "gone (deleted since it was found)" : (err as Error).message}`,
+      EXIT.notFound,
+    );
   }
   const decoded = decodeText(bytes);
   const sha = createHash("sha256").update(bytes).digest("hex").slice(0, 16);
   if (forWriting) {
     checkUnchanged(s, abs, sha);
-    if (decoded.invalidUtf8) throw new CliError(`${relative(s.loc.root, abs)} isn't valid UTF-8; not rewriting it`, EXIT.refused);
+    if (decoded.invalidUtf8)
+      throw new CliError(`${relative(s.loc.root, abs)} isn't valid UTF-8; not rewriting it`, EXIT.refused);
   }
   return { ...decoded, bytes, sha };
 }
@@ -2223,7 +3144,8 @@ function checkWritable(s: Session, abs: string): void {
   if (classify(rel, s.config.walk.extensions).group === "binary") refuse("a binary file");
   // A hidden folder's note the vault has reached (20.8) is the vault's like any other; .git and
   // .slipbox never are, nor node_modules.
-  if (rel.split("/").some((part) => part.startsWith(".") || part === "node_modules") && !s.graph.reached.has(rel)) refuse("in a folder the walk doesn't list");
+  if (rel.split("/").some((part) => part.startsWith(".") || part === "node_modules") && !s.graph.reached.has(rel))
+    refuse("in a folder the walk doesn't list");
   if (UNSAFE.test(rel) || /[\x1b\t\n]/.test(rel)) refuse("a control character in its name");
 }
 
@@ -2232,7 +3154,10 @@ function checkUnchanged(s: Session, abs: string, sha: string): void {
   const expect = flag(s.args, "if-unchanged");
   if (expect === undefined) return;
   if (!expect) throw new UsageError("--if-unchanged needs a sha (an empty one would check nothing)");
-  if (expect !== sha) throw new CliError(`${relative(s.loc.root, abs)} changed since ${expect} (now ${sha}); not written`, EXIT.refused, { sha });
+  if (expect !== sha)
+    throw new CliError(`${relative(s.loc.root, abs)} changed since ${expect} (now ${sha}); not written`, EXIT.refused, {
+      sha,
+    });
 }
 
 /**
@@ -2266,12 +3191,20 @@ function pickNvim(s: Session, abs: string): string {
   const last = loadSession(s.loc)?.remote_server;
   if (last && probeNvim(last)) return last;
   const found = discoverNvims();
-  if (!found.length) throw new CliError("no nvim is running with a server — start nvim (0.9 or later) and try again", EXIT.notFound);
+  if (!found.length)
+    throw new CliError("no nvim is running with a server — start nvim (0.9 or later) and try again", EXIT.notFound);
   if (found.length === 1) return found[0]!.socket;
-  const holding = found.filter((n) => n.cwd && (abs === n.cwd || abs.startsWith(`${n.cwd}/`))).sort((a, b) => b.cwd.length - a.cwd.length);
-  if (holding.length && (holding.length === 1 || holding[0]!.cwd.length > holding[1]!.cwd.length)) return holding[0]!.socket;
+  const holding = found
+    .filter((n) => n.cwd && (abs === n.cwd || abs.startsWith(`${n.cwd}/`)))
+    .sort((a, b) => b.cwd.length - a.cwd.length);
+  if (holding.length && (holding.length === 1 || holding[0]!.cwd.length > holding[1]!.cwd.length))
+    return holding[0]!.socket;
   const candidates = found.map((n) => ({ socket: n.socket, cwd: n.cwd, file: n.file }));
-  throw new CliError(`${found.length} nvims are running; pick one with --server (${found.map((n) => n.socket).join(", ")})`, EXIT.ambiguous, { candidates });
+  throw new CliError(
+    `${found.length} nvims are running; pick one with --server (${found.map((n) => n.socket).join(", ")})`,
+    EXIT.ambiguous,
+    { candidates },
+  );
 }
 
 /** The vault's git checkout, for the git commands (5.11–5.14); refused outside one (exit 3). */
@@ -2285,7 +3218,13 @@ function checkoutFor(s: Session): Checkout {
 function baseFor(s: Session, c: Checkout): string {
   const asked = flag(s.args, "base") ?? s.config.git.base;
   const base = baseBranch(c, asked);
-  if (!base) throw new CliError(asked ? `no branch or commit "${asked}" in the repository` : "no base branch: neither main nor master is there — --base <ref>, or [git] base", EXIT.notFound);
+  if (!base)
+    throw new CliError(
+      asked
+        ? `no branch or commit "${asked}" in the repository`
+        : "no base branch: neither main nor master is there — --base <ref>, or [git] base",
+      EXIT.notFound,
+    );
   return base;
 }
 
@@ -2295,7 +3234,9 @@ const STATE_LETTER: Record<GitState, string> = { new: "+", modified: "M", rename
 /** The first line of a file with a merge's conflict marker, or 0. */
 function conflictLine(abs: string): number {
   try {
-    const i = readText(abs).text.split(/\r?\n/).findIndex((l) => /^<{7}( |$)/.test(l));
+    const i = readText(abs)
+      .text.split(/\r?\n/)
+      .findIndex((l) => /^<{7}( |$)/.test(l));
     return i + 1;
   } catch {
     return 0;
@@ -2304,7 +3245,8 @@ function conflictLine(abs: string): number {
 
 /** Which search engine answers here, and the index's size when there is one (`info`). */
 function searchInfo(s: Session): { engine: string; index: { files: number; complete: boolean } | null } {
-  if (isListed(s.loc) || s.config.search.engine === "scan" || !SearchIndex.exists(s.loc)) return { engine: s.config.search.engine, index: null };
+  if (isListed(s.loc) || s.config.search.engine === "scan" || !SearchIndex.exists(s.loc))
+    return { engine: s.config.search.engine, index: null };
   const idx = SearchIndex.open(s.loc);
   if (!idx) return { engine: s.config.search.engine, index: null };
   try {
@@ -2318,7 +3260,8 @@ function searchInfo(s: Session): { engine: string; index: { files: number; compl
 function wholeFlag(s: Session, name: string, fallback: number, lo: number, hi: number): number {
   const v = flag(s.args, name);
   if (v === undefined) return fallback;
-  if (!/^\d+$/.test(v) || Number(v) < lo || Number(v) > hi) throw new UsageError(`--${name} must be a whole number from ${lo} to ${hi}`);
+  if (!/^\d+$/.test(v) || Number(v) < lo || Number(v) > hi)
+    throw new UsageError(`--${name} must be a whole number from ${lo} to ${hi}`);
   return Number(v);
 }
 
@@ -2356,11 +3299,13 @@ function searchIndex(s: Session): SearchIndex | null {
  */
 function destArg(s: Session, to: string | undefined, into = false): string | undefined {
   if (!to) return to;
-  if (isPointer(to)) throw new CliError(`${to}: a destination is a path, in the file's own folder — not a pointer`, EXIT.refused);
+  if (isPointer(to))
+    throw new CliError(`${to}: a destination is a path, in the file's own folder — not a pointer`, EXIT.refused);
   const fromHere = into ? /^\.\.?(\/|$)/ : /^\.\.?\//;
   const abs = to.startsWith("/") ? to : fromHere.test(to) ? join(s.io.cwd, to) : join(s.loc.root, to);
   const rel = relative(s.loc.root, abs).split(sep).join("/");
-  if ((!rel && !into) || !isInside(s.loc.root, abs) || !landsInside(s.loc.root, abs)) throw new CliError(`${to} is outside the root (${s.loc.root})`, EXIT.refused);
+  if ((!rel && !into) || !isInside(s.loc.root, abs) || !landsInside(s.loc.root, abs))
+    throw new CliError(`${to} is outside the root (${s.loc.root})`, EXIT.refused);
   if (!rel) return "/";
   return to.endsWith("/") ? `${rel}/` : rel;
 }
@@ -2381,13 +3326,15 @@ function folderArg(s: Session, arg: string): string | null {
  * preview, --plan saved for `apply`, logged for `undo`.
  */
 function replaceAll(s: Session, rest: string[]): Promise<Result> {
-  if (rest.length !== 2) throw new UsageError("replace --all needs <old> <new> (the new text may be \"\"), and no note");
+  if (rest.length !== 2) throw new UsageError('replace --all needs <old> <new> (the new text may be ""), and no note');
   const [query, replacement] = rest as [string, string];
   if (!query) throw new UsageError("replace needs something to find (an empty pattern matches nothing)");
-  for (const f of ["first", "first-per-line", "lines", "if-unchanged"]) if (has(s.args, f)) throw new UsageError(`--${f} is for one note's replace, not --all`);
+  for (const f of ["first", "first-per-line", "lines", "if-unchanged"])
+    if (has(s.args, f)) throw new UsageError(`--${f} is for one note's replace, not --all`);
   pattern(s, query); // not a regex: a usage error, before anything is read
   const rels = [...s.graph.notes.keys(), ...(has(s.args, "files") ? textFiles(s).map((f) => f.path) : [])];
-  for (const k of s.graph.skipped) if (/^larger than/.test(k.reason)) s.warnings.push(`${k.rel}: not searched (${k.reason})`);
+  for (const k of s.graph.skipped)
+    if (/^larger than/.test(k.reason)) s.warnings.push(`${k.rel}: not searched (${k.reason})`);
   const opts = { regex: has(s.args, "regex"), whole: has(s.args, "whole"), ignoreCase: has(s.args, "ignore-case") };
   return renameResult(s, () => planReplace(s.graph, query, replacement, rels, opts));
 }
@@ -2414,16 +3361,59 @@ async function renameResult(s: Session, plan: () => RenamePlan, g = s.graph): Pr
   s.warnings.push(
     ...p.warnings,
     ...p.skipped.map((x) => `${x.shown}:${x.line}: ${x.reason}`),
-    ...(p.ambiguous ?? []).map((a) => `${a.shown}:${a.line}: ${a.written} matches ${a.candidates.length} notes (${a.candidates.join(", ")}) — left as it is: write it as a path, or pick one in the TUI`),
+    ...(p.ambiguous ?? []).map(
+      (a) =>
+        `${a.shown}:${a.line}: ${a.written} matches ${a.candidates.length} notes (${a.candidates.join(", ")}) — left as it is: write it as a path, or pick one in the TUI`,
+    ),
   );
   const links = p.files.reduce((n, f) => n + f.edits.length, 0);
   const verb = p.undo
     ? applied
-      ? { note: "renamed", folder: "moved folder", vault: "renamed folder", relink: "undid the relink of", "make-vault": "", "unmake-vault": "", heading: "renamed heading", convert: "undid the conversion of", replace: "undid the replace of" }[p.kind]
-      : { note: "would rename", folder: "would move folder", vault: "would rename folder", relink: "would undo the relink of", "make-vault": "", "unmake-vault": "", heading: "would rename heading", convert: "would undo the conversion of", replace: "would undo the replace of" }[p.kind]
+      ? {
+          note: "renamed",
+          folder: "moved folder",
+          vault: "renamed folder",
+          relink: "undid the relink of",
+          "make-vault": "",
+          "unmake-vault": "",
+          heading: "renamed heading",
+          convert: "undid the conversion of",
+          replace: "undid the replace of",
+        }[p.kind]
+      : {
+          note: "would rename",
+          folder: "would move folder",
+          vault: "would rename folder",
+          relink: "would undo the relink of",
+          "make-vault": "",
+          "unmake-vault": "",
+          heading: "would rename heading",
+          convert: "would undo the conversion of",
+          replace: "would undo the replace of",
+        }[p.kind]
     : applied
-    ? { note: "renamed", folder: "moved folder", vault: "renamed folder", relink: "relinked", "make-vault": "made", "unmake-vault": "made", heading: "renamed heading", convert: "converted", replace: "replaced" }[p.kind]
-    : { note: "would rename", folder: "would move folder", vault: "would rename folder", relink: "would relink", "make-vault": "would make", "unmake-vault": "would make", heading: "would rename heading", convert: "would convert", replace: "would replace" }[p.kind];
+      ? {
+          note: "renamed",
+          folder: "moved folder",
+          vault: "renamed folder",
+          relink: "relinked",
+          "make-vault": "made",
+          "unmake-vault": "made",
+          heading: "renamed heading",
+          convert: "converted",
+          replace: "replaced",
+        }[p.kind]
+      : {
+          note: "would rename",
+          folder: "would move folder",
+          vault: "would rename folder",
+          relink: "would relink",
+          "make-vault": "would make",
+          "unmake-vault": "would make",
+          heading: "would rename heading",
+          convert: "would convert",
+          replace: "would replace",
+        }[p.kind];
   const head = p.undo
     ? p.kind === "relink" || p.kind === "convert"
       ? `${verb} ${p.to}`
@@ -2469,7 +3459,9 @@ async function renameResult(s: Session, plan: () => RenamePlan, g = s.graph): Pr
  */
 function relearnRenamedRoots(s: Session, r: Result): Result {
   const d = r.data as { kind: string; dryRun: boolean; files: { abs: string }[] };
-  if (d.kind === "root" && !d.dryRun) for (const f of d.files) if (f.abs.endsWith(`${sep}.slipbox${sep}config.toml`)) recordLocation(rootAt(dirname(dirname(f.abs))));
+  if (d.kind === "root" && !d.dryRun)
+    for (const f of d.files)
+      if (f.abs.endsWith(`${sep}.slipbox${sep}config.toml`)) recordLocation(rootAt(dirname(dirname(f.abs))));
   return r;
 }
 
@@ -2478,7 +3470,13 @@ function relearnRenamedRoots(s: Session, r: Result): Result {
  * a root's naming `root`, `init`'s and `deinit`'s `make-root` and `unmake-root`.
  */
 function kindWord(kind: RenamePlan["kind"]): string {
-  return kind === "vault" ? "root" : kind === "make-vault" ? "make-root" : kind === "unmake-vault" ? "unmake-root" : kind;
+  return kind === "vault"
+    ? "root"
+    : kind === "make-vault"
+      ? "make-root"
+      : kind === "unmake-vault"
+        ? "unmake-root"
+        : kind;
 }
 
 export function defaultIo(): Io {

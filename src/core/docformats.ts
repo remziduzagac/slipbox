@@ -18,7 +18,8 @@ export interface DocText {
   tags: DocTag[];
 }
 
-const GOOGLE = /^(Args|Arguments|Parameters|Params|Keyword Args|Keyword Arguments|Other Parameters|Attributes|Returns|Return|Yields|Yield|Raises|Raise|Exceptions)\s*:\s*$/;
+const GOOGLE =
+  /^(Args|Arguments|Parameters|Params|Keyword Args|Keyword Arguments|Other Parameters|Attributes|Returns|Return|Yields|Yield|Raises|Raise|Exceptions)\s*:\s*$/;
 const NUMPY = /^(Parameters|Other Parameters|Attributes|Returns|Yields|Raises)$/;
 const lead = (s: string) => s.length - s.trimStart().length;
 
@@ -52,7 +53,14 @@ export function readDoc(lines: string[], style: "jsdoc" | "docstring" | "block" 
       const base = lead(lines[i]!);
       const start = numpy ? i + 2 : i + 1;
       let end = start;
-      while (end < lines.length && (!lines[end]!.trim() || (google ? lead(lines[end]!) > base : !(NUMPY.test(lines[end]!.trim()) && /^\s*-{3,}\s*$/.test(lines[end + 1] ?? ""))))) end++;
+      while (
+        end < lines.length &&
+        (!lines[end]!.trim() ||
+          (google
+            ? lead(lines[end]!) > base
+            : !(NUMPY.test(lines[end]!.trim()) && /^\s*-{3,}\s*$/.test(lines[end + 1] ?? ""))))
+      )
+        end++;
       while (end > start && !lines[end - 1]!.trim()) end--;
       for (let k = i; k < end; k++) taken.add(k);
       readSection(lines.slice(start, end), start, kind, numpy !== null, tags);
@@ -65,7 +73,13 @@ export function readDoc(lines: string[], style: "jsdoc" | "docstring" | "block" 
       const [, f, arg = "", rest = ""] = field;
       const words = arg.trim().split(/\s+/);
       taken.add(i);
-      if (/^(param|parameter|arg|argument|key|keyword)$/.test(f!)) tags.push({ term: words.at(-1)!, type: words.length > 1 ? words.slice(0, -1).join(" ") : "", desc: rest, line: i });
+      if (/^(param|parameter|arg|argument|key|keyword)$/.test(f!))
+        tags.push({
+          term: words.at(-1)!,
+          type: words.length > 1 ? words.slice(0, -1).join(" ") : "",
+          desc: rest,
+          line: i,
+        });
       else if (f === "type") {
         const p = tags.find((x) => x.term === arg.trim());
         if (p) p.type = rest;
@@ -74,10 +88,16 @@ export function readDoc(lines: string[], style: "jsdoc" | "docstring" | "block" 
         const r = tags.find((x) => x.term === "returns");
         if (r) r.type = rest;
         else tags.push({ term: "returns", type: rest, desc: "", line: i });
-      } else if (/^(raises?|except|exception)$/.test(f!)) tags.push({ term: "raises", type: arg.trim(), desc: rest, line: i });
+      } else if (/^(raises?|except|exception)$/.test(f!))
+        tags.push({ term: "raises", type: arg.trim(), desc: rest, line: i });
       else tags.push({ term: f!, type: "", desc: `${arg ? `${arg.trim()} ` : ""}${rest}`.trim(), line: i });
       // Its description going on, indented, on the lines after it.
-      while (i + 1 < lines.length && lines[i + 1]!.trim() && lead(lines[i + 1]!) > lead(lines[i]!) && !lines[i + 1]!.trim().startsWith(":")) {
+      while (
+        i + 1 < lines.length &&
+        lines[i + 1]!.trim() &&
+        lead(lines[i + 1]!) > lead(lines[i]!) &&
+        !lines[i + 1]!.trim().startsWith(":")
+      ) {
         tags[tags.length - 1]!.desc += ` ${lines[++i]!.trim()}`;
         taken.add(i);
       }
@@ -94,7 +114,13 @@ function rest(text: string): string {
 }
 
 /** A Google or NumPy section's entries, as terms. */
-function readSection(lines: string[], first: number, kind: "params" | "returns" | "yields" | "raises", numpy: boolean, out: DocTag[]): void {
+function readSection(
+  lines: string[],
+  first: number,
+  kind: "params" | "returns" | "yields" | "raises",
+  numpy: boolean,
+  out: DocTag[],
+): void {
   const items = lines.filter((l) => l.trim());
   if (!items.length) return;
   const at = Math.min(...items.map(lead));
@@ -109,8 +135,12 @@ function readSection(lines: string[], first: number, kind: "params" | "returns" 
     const line = first + k;
     if (kind === "params") {
       // Google `name (type): what`; NumPy `name : type`, what on the lines under it.
-      const m = numpy ? /^(\*{0,2}[\w.]+)\s*(?::\s*(.*))?$/.exec(t) : /^(\*{0,2}[\w.]+)\s*(?:\(([^)]*)\))?\s*:\s*(.*)$/.exec(t);
-      cur = m ? { term: m[1]!, type: (numpy ? m[2] : m[2]) ?? "", desc: numpy ? "" : (m[3] ?? ""), line } : { term: t, type: "", desc: "", line };
+      const m = numpy
+        ? /^(\*{0,2}[\w.]+)\s*(?::\s*(.*))?$/.exec(t)
+        : /^(\*{0,2}[\w.]+)\s*(?:\(([^)]*)\))?\s*:\s*(.*)$/.exec(t);
+      cur = m
+        ? { term: m[1]!, type: (numpy ? m[2] : m[2]) ?? "", desc: numpy ? "" : (m[3] ?? ""), line }
+        : { term: t, type: "", desc: "", line };
     } else if (kind === "raises") {
       // Google `Error: when`; NumPy `Error`, when under it.
       const m = /^([\w.]+)\s*:?\s*(.*)$/.exec(t);
@@ -118,7 +148,11 @@ function readSection(lines: string[], first: number, kind: "params" | "returns" 
     } else {
       // Google `type: what` (or just what); NumPy `type` (or `name : type`), what under it.
       const m = numpy ? /^(?:[\w]+\s*:\s*)?(.+)$/.exec(t) : /^([\w.[\], |]+):\s+(.*)$/.exec(t);
-      cur = numpy ? { term: kind, type: m?.[1] ?? t, desc: "", line } : m ? { term: kind, type: m[1]!, desc: m[2]!, line } : { term: kind, type: "", desc: t, line };
+      cur = numpy
+        ? { term: kind, type: m?.[1] ?? t, desc: "", line }
+        : m
+          ? { term: kind, type: m[1]!, desc: m[2]!, line }
+          : { term: kind, type: "", desc: t, line };
     }
     out.push(cur);
   });
@@ -142,7 +176,12 @@ function readJsdoc(lines: string[]): DocText {
       const php = param && !type ? /^([^\s$]+)\s+(\$\w+)\s*(?:-\s*)?(.*)$/.exec(rest) : null;
       const p = param && !php ? /^(\[?[\w$.]+(?:=[^\]]*)?\]?)\s*(?:-\s*)?(.*)$/.exec(rest) : null;
       const term = php ? php[2]! : p ? p[1]! : tag === "return" || tag === "returns" ? "returns" : tag!;
-      tags.push({ term, type: php ? php[1]! : type.replace(/^\{|\}$/g, ""), desc: php ? php[3]! : p ? p[2]! : rest, line: k });
+      tags.push({
+        term,
+        type: php ? php[1]! : type.replace(/^\{|\}$/g, ""),
+        desc: php ? php[3]! : p ? p[2]! : rest,
+        line: k,
+      });
     } else if (t && tags.length) tags[tags.length - 1]!.desc += ` ${t}`;
   }
   return { body, tags };

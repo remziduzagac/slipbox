@@ -33,11 +33,21 @@ type Family = [string, string, string, string];
 
 const SANS: Family[] = [
   ["DejaVuSans.ttf", "DejaVuSans-Bold.ttf", "DejaVuSans-Oblique.ttf", "DejaVuSans-BoldOblique.ttf"],
-  ["LiberationSans-Regular.ttf", "LiberationSans-Bold.ttf", "LiberationSans-Italic.ttf", "LiberationSans-BoldItalic.ttf"],
+  [
+    "LiberationSans-Regular.ttf",
+    "LiberationSans-Bold.ttf",
+    "LiberationSans-Italic.ttf",
+    "LiberationSans-BoldItalic.ttf",
+  ],
   ["NotoSans-Regular.ttf", "NotoSans-Bold.ttf", "NotoSans-Italic.ttf", "NotoSans-BoldItalic.ttf"],
   ["Arial.ttf", "Arial Bold.ttf", "Arial Italic.ttf", "Arial Bold Italic.ttf"],
   ["arial.ttf", "arialbd.ttf", "ariali.ttf", "arialbi.ttf"],
-  ["Helvetica.ttc#Helvetica", "Helvetica.ttc#Helvetica-Bold", "Helvetica.ttc#Helvetica-Oblique", "Helvetica.ttc#Helvetica-BoldOblique"],
+  [
+    "Helvetica.ttc#Helvetica",
+    "Helvetica.ttc#Helvetica-Bold",
+    "Helvetica.ttc#Helvetica-Oblique",
+    "Helvetica.ttc#Helvetica-BoldOblique",
+  ],
   ["segoeui.ttf", "segoeuib.ttf", "segoeuii.ttf", "segoeuiz.ttf"],
   ["OpenSans-Regular.ttf", "OpenSans-Bold.ttf", "OpenSans-Italic.ttf", "OpenSans-BoldItalic.ttf"],
   ["Roboto-Regular.ttf", "Roboto-Bold.ttf", "Roboto-Italic.ttf", "Roboto-BoldItalic.ttf"],
@@ -168,7 +178,9 @@ export function findFonts(files = fontFiles()): Fonts {
   if (!some) return BUILTIN;
   const [regular, bold, italic, boldItalic] = some as (Face | null)[];
   const mono = MONO.map(([r, b]) => [face(files, r), face(files, b)] as const).find(([r]) => r);
-  const fallbacks = FALLBACKS.map((spec) => face(files, spec)).filter((f): f is Face => !!f && f.path !== regular!.path);
+  const fallbacks = FALLBACKS.map((spec) => face(files, spec)).filter(
+    (f): f is Face => !!f && f.path !== regular!.path,
+  );
   return {
     regular: regular!,
     bold: bold ?? regular!,

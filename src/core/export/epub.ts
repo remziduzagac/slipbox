@@ -69,11 +69,14 @@ export async function toEpub(doc: ExportDoc): Promise<Uint8Array> {
 /** A chapter's sections, for the contents page: its second-level headings, each with its id and words. */
 function subHeadings(section: Element): { id: string; text: string }[] {
   const out: { id: string; text: string }[] = [];
-  for (const k of section.children) if (k.type === "element" && k.tagName === "h2" && typeof k.properties.id === "string") out.push({ id: k.properties.id, text: words(k) });
+  for (const k of section.children)
+    if (k.type === "element" && k.tagName === "h2" && typeof k.properties.id === "string")
+      out.push({ id: k.properties.id, text: words(k) });
   return out;
 }
 
-const words = (n: ElementContent): string => (n.type === "text" ? n.value : n.type === "element" ? n.children.map(words).join("") : "");
+const words = (n: ElementContent): string =>
+  n.type === "text" ? n.value : n.type === "element" ? n.children.map(words).join("") : "";
 
 /** A page of the book: XHTML, which is XML — every element closed, no attribute without its value. */
 function xhtml(title: string, lang: string, body: Element[]): string {
@@ -103,10 +106,15 @@ function xmlAttributes(n: ElementContent): void {
 }
 
 /** The contents page: each chapter, its sections under it. */
-function nav(chapters: { file: string; title: string; sections: { id: string; text: string }[] }[], lang: string): string {
+function nav(
+  chapters: { file: string; title: string; sections: { id: string; text: string }[] }[],
+  lang: string,
+): string {
   const items = chapters
     .map((c) => {
-      const sub = c.sections.length ? `<ol>${c.sections.map((s) => `<li><a href="${esc(c.file)}#${esc(s.id)}">${esc(s.text)}</a></li>`).join("")}</ol>` : "";
+      const sub = c.sections.length
+        ? `<ol>${c.sections.map((s) => `<li><a href="${esc(c.file)}#${esc(s.id)}">${esc(s.text)}</a></li>`).join("")}</ol>`
+        : "";
       return `<li><a href="${esc(c.file)}">${esc(c.title)}</a>${sub}</li>`;
     })
     .join("\n");
@@ -121,9 +129,16 @@ ${items}
 }
 
 /** The package: what the book is (its title, author, language, id), what's in it, and the order it's read in. */
-function opf(doc: ExportDoc, lang: string, chapters: { file: string }[], images: { path: string; type: string }[]): string {
+function opf(
+  doc: ExportDoc,
+  lang: string,
+  chapters: { file: string }[],
+  images: { path: string; type: string }[],
+): string {
   // An id from what's in it: the same notes exported again are the same book.
-  const h = createHash("sha256").update(doc.chapters.map((c) => c.rel).join("\n")).digest("hex");
+  const h = createHash("sha256")
+    .update(doc.chapters.map((c) => c.rel).join("\n"))
+    .digest("hex");
   const uuid = `${h.slice(0, 8)}-${h.slice(8, 12)}-5${h.slice(13, 16)}-a${h.slice(17, 20)}-${h.slice(20, 32)}`;
   const modified = new Date().toISOString().replace(/\.\d+Z$/, "Z");
   const manifest = [

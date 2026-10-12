@@ -69,7 +69,12 @@ export function placeAt(app: App, view: View, at: number, past = false, again = 
   if (row < 0) row = layout.lines.findLastIndex((l) => l.src <= src && !l.decor);
   if (row < 0) row = Math.max(0, layout.lines.length - 1);
   // Among its wrapped rows, the one that holds it (a row's end belongs to the next row).
-  while (layout.lines[row + 1]?.src === src && layout.lines[row + 1]?.srcMap && within >= (layout.lines[row]!.srcMap?.end ?? 0)) row++;
+  while (
+    layout.lines[row + 1]?.src === src &&
+    layout.lines[row + 1]?.srcMap &&
+    within >= (layout.lines[row]!.srcMap?.end ?? 0)
+  )
+    row++;
   const line = layout.lines[row]!;
   const cs = cells(line);
   const k = line.srcMap ? cs.findIndex((c) => c.at! >= within) : -1;
@@ -350,7 +355,8 @@ export function commentLine(app: App, view: View): void {
   // Where the line's own text starts, before and after: past the marker (and its space) where it's commented.
   const head = /^[ \t]*/.exec(line)![0].length;
   const marker = "line" in style ? style.line : style.open;
-  const after = (text: string) => head + (text.slice(head).startsWith(marker) ? marker.length + (text[head + marker.length] === " " ? 1 : 0) : 0);
+  const after = (text: string) =>
+    head + (text.slice(head).startsWith(marker) ? marker.length + (text[head + marker.length] === " " ? 1 : 0) : 0);
   const [was, now] = [after(line), after(next)];
   const col = at - start;
   view.buf.edit(start, line.length, next);
@@ -381,7 +387,24 @@ export function insertKey(app: App, view: View, key: string): void {
 
 /** Typing's moves: the arrows, home and end, the page keys — and macOS's cmd+arrows, cmd+← / cmd+→ arriving as ctrl+a
  *  / ctrl+e — and ctrl+home / ctrl+end to the note's start and end, as cmd+↑ / cmd+↓. */
-const MOVING = new Set(["left", "right", "up", "down", "home", "end", "pageup", "pagedown", "cmd+left", "cmd+right", "ctrl+a", "ctrl+e", "cmd+up", "cmd+down", "ctrl+home", "ctrl+end"]);
+const MOVING = new Set([
+  "left",
+  "right",
+  "up",
+  "down",
+  "home",
+  "end",
+  "pageup",
+  "pagedown",
+  "cmd+left",
+  "cmd+right",
+  "ctrl+a",
+  "ctrl+e",
+  "cmd+up",
+  "cmd+down",
+  "ctrl+home",
+  "ctrl+end",
+]);
 
 /** A key that selects while typing: one of typing's moves with `shift` added (`shift+left`, `ctrl+shift+right`,
  *  `shift+end`, `shift+pagedown`), as the move without it; null for any other key. */
@@ -464,7 +487,14 @@ function selectionKey(app: App, view: View, key: string): boolean {
 }
 
 /** Typing, by words: ctrl+← / ctrl+→, alt+← / alt+→ (macOS's option+arrows), alt+b / alt+f (what its terminals send). */
-const WORD_KEYS: Record<string, -1 | 1> = { "ctrl+left": -1, "alt+left": -1, "alt+b": -1, "ctrl+right": 1, "alt+right": 1, "alt+f": 1 };
+const WORD_KEYS: Record<string, -1 | 1> = {
+  "ctrl+left": -1,
+  "alt+left": -1,
+  "alt+b": -1,
+  "ctrl+right": 1,
+  "alt+right": 1,
+  "alt+f": 1,
+};
 
 /** A word back (to its start) or forward (to its end) from `at`, across lines: a run of letters and digits, or of
  *  other marks, past the spaces before it. */
@@ -626,7 +656,10 @@ export function moveLines(app: App, view: View, dir: -1 | 1): void {
   // range ends before the last line's break, which stays where it is.
   const bare = (n: number) => lines[n]!.replace(/\r$/, "");
   const eol = buf.eol;
-  const block = lines.slice(a - 1, b).map((_, k) => bare(a - 1 + k)).join(eol);
+  const block = lines
+    .slice(a - 1, b)
+    .map((_, k) => bare(a - 1 + k))
+    .join(eol);
   const other = bare(dir < 0 ? a - 2 : b);
   const from = starts[dir < 0 ? a - 2 : a - 1]!;
   const to = (starts[dir < 0 ? b - 1 : b] ?? src.length) + bare(dir < 0 ? b - 1 : b).length;
@@ -650,4 +683,3 @@ function offsetAt(app: App, view: View, pos: { row: number; col: number }): numb
   view.cur = saved;
   return at;
 }
-

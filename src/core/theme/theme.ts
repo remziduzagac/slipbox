@@ -18,33 +18,138 @@ export interface RoleStyle {
 
 export const ROLES = [
   // document
-  "text", "dim", "strong", "emphasis", "strike", "highlight",
-  "h1", "h2", "h3", "h4", "h5", "h6",
-  "code_inline", "code_block", "code_label", "code_gutter",
-  "link", "link_unresolved", "link_ambiguous", "wikilink", "embed", "url", "link_focus",
-  "quote", "quote_bar", "list_marker", "check_done", "check_todo", "rule",
-  "table_border", "table_header",
-  "fm_key", "fm_value", "fm_border", "fm_error",
-  "callout_note", "callout_tip", "callout_important", "callout_warning", "callout_caution",
-  "footnote", "tag", "html", "image", "math",
+  "text",
+  "dim",
+  "strong",
+  "emphasis",
+  "strike",
+  "highlight",
+  "h1",
+  "h2",
+  "h3",
+  "h4",
+  "h5",
+  "h6",
+  "code_inline",
+  "code_block",
+  "code_label",
+  "code_gutter",
+  "link",
+  "link_unresolved",
+  "link_ambiguous",
+  "wikilink",
+  "embed",
+  "url",
+  "link_focus",
+  "quote",
+  "quote_bar",
+  "list_marker",
+  "check_done",
+  "check_todo",
+  "rule",
+  "table_border",
+  "table_header",
+  "fm_key",
+  "fm_value",
+  "fm_border",
+  "fm_error",
+  "callout_note",
+  "callout_tip",
+  "callout_important",
+  "callout_warning",
+  "callout_caution",
+  "footnote",
+  "tag",
+  "html",
+  "image",
+  "math",
   // syntax inside code blocks
-  "syn_keyword", "syn_function", "syn_string", "syn_number", "syn_comment", "syn_type",
-  "syn_variable", "syn_constant", "syn_operator", "syn_punctuation", "syn_tag", "syn_attr",
-  "syn_builtin", "syn_meta", "syn_regexp", "syn_section", "syn_addition", "syn_deletion",
+  "syn_keyword",
+  "syn_function",
+  "syn_string",
+  "syn_number",
+  "syn_comment",
+  "syn_type",
+  "syn_variable",
+  "syn_constant",
+  "syn_operator",
+  "syn_punctuation",
+  "syn_tag",
+  "syn_attr",
+  "syn_builtin",
+  "syn_meta",
+  "syn_regexp",
+  "syn_section",
+  "syn_addition",
+  "syn_deletion",
   // a source file's syntax error (16.9), drawn over the text in source mode; other problems by
   // severity (19.10), in source mode and the rendered view; a misspelt word (25.6)
-  "syntax_error", "problem_error", "problem_warn", "problem_info", "spell",
+  "syntax_error",
+  "problem_error",
+  "problem_warn",
+  "problem_info",
+  "spell",
   // chrome
-  "border", "status", "status_accent", "status_dim",
-  "sidebar", "sidebar_dir", "sidebar_selected", "sidebar_active", "sidebar_root",
+  "border",
+  "status",
+  "status_accent",
+  "status_dim",
+  "sidebar",
+  "sidebar_dir",
+  "sidebar_selected",
+  "sidebar_active",
+  "sidebar_root",
   // a file's git state in the explorer (5.11); a diff's added and removed lines (5.13)
-  "git_new", "git_modified", "git_conflict", "diff_add", "diff_del", "diff_head",
-  "tab", "tab_active", "tab_active_idle", "pane_title", "pane_title_active", "overlay", "overlay_border", "overlay_selected", "overlay_match", "overlay_dim", "overlay_group", "keycap", "keycap_selected",
-  "selection", "bracket_match", "error", "warn", "info", "scrollbar", "scrollbar_track",
-  "cursor", "cursor_line", "line_number", "line_number_current", "gutter", "cell_line",
-  "which_key_key", "which_key_group",
-  "topbar", "topbar_button", "topbar_button_on", "topbar_chip", "hover",
-  "breadcrumb", "breadcrumb_current", "breadcrumb_sep", "breadcrumb_icon", "breadcrumb_band", "tree_guide", "rail", "lens", "lens_band", "lens_edit", "lens_band_edit",
+  "git_new",
+  "git_modified",
+  "git_conflict",
+  "diff_add",
+  "diff_del",
+  "diff_head",
+  "tab",
+  "tab_active",
+  "tab_active_idle",
+  "pane_title",
+  "pane_title_active",
+  "overlay",
+  "overlay_border",
+  "overlay_selected",
+  "overlay_match",
+  "overlay_dim",
+  "overlay_group",
+  "keycap",
+  "keycap_selected",
+  "selection",
+  "bracket_match",
+  "error",
+  "warn",
+  "info",
+  "scrollbar",
+  "scrollbar_track",
+  "cursor",
+  "cursor_line",
+  "line_number",
+  "line_number_current",
+  "gutter",
+  "cell_line",
+  "which_key_key",
+  "which_key_group",
+  "topbar",
+  "topbar_button",
+  "topbar_button_on",
+  "topbar_chip",
+  "hover",
+  "breadcrumb",
+  "breadcrumb_current",
+  "breadcrumb_sep",
+  "breadcrumb_icon",
+  "breadcrumb_band",
+  "tree_guide",
+  "rail",
+  "lens",
+  "lens_band",
+  "lens_edit",
+  "lens_band_edit",
 ] as const;
 
 export type Role = (typeof ROLES)[number];
@@ -93,12 +198,26 @@ export interface Palette {
 
 export function hexToRgb(hex: string): [number, number, number] {
   const h = hex.replace("#", "");
-  const n = Number.parseInt(h.length === 3 ? h.split("").map((c) => c + c).join("") : h, 16);
+  const n = Number.parseInt(
+    h.length === 3
+      ? h
+          .split("")
+          .map((c) => c + c)
+          .join("")
+      : h,
+    16,
+  );
   return [(n >> 16) & 255, (n >> 8) & 255, n & 255];
 }
 
 function toHex([r, g, b]: [number, number, number]): string {
-  return `#${[r, g, b].map((v) => Math.round(Math.max(0, Math.min(255, v))).toString(16).padStart(2, "0")).join("")}`;
+  return `#${[r, g, b]
+    .map((v) =>
+      Math.round(Math.max(0, Math.min(255, v)))
+        .toString(16)
+        .padStart(2, "0"),
+    )
+    .join("")}`;
 }
 
 /** Mix `a` into `b` by `t` (0 → b, 1 → a). */
@@ -110,7 +229,24 @@ export function blend(a: Color, b: Color, t: number): Color {
 }
 
 /** The 16 colours xterm gives `ansi:0`–`ansi:15` by default. */
-const XTERM16 = ["#000000", "#cd0000", "#00cd00", "#cdcd00", "#0000ee", "#cd00cd", "#00cdcd", "#e5e5e5", "#7f7f7f", "#ff0000", "#00ff00", "#ffff00", "#5c5cff", "#ff00ff", "#00ffff", "#ffffff"];
+const XTERM16 = [
+  "#000000",
+  "#cd0000",
+  "#00cd00",
+  "#cdcd00",
+  "#0000ee",
+  "#cd00cd",
+  "#00cdcd",
+  "#e5e5e5",
+  "#7f7f7f",
+  "#ff0000",
+  "#00ff00",
+  "#ffff00",
+  "#5c5cff",
+  "#ff00ff",
+  "#00ffff",
+  "#ffffff",
+];
 
 /**
  * A colour as `#rrggbb`, for what slipbox draws as a picture (12.16, 12.17): `ansi:N` as xterm has it by default (a

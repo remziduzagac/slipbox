@@ -15,7 +15,11 @@ import { type AnchorInfo, type HeadingInfo, slugify } from "./parse.ts";
 export function lineFragment(fragment: string): { line: number; col: number | null; endLine: number | null } | null {
   const m = /^L(\d+)(?:C(\d+))?(?:-L(\d+)(?:C\d+)?)?$/.exec(fragment);
   if (!m) return null;
-  return { line: Math.max(1, Number(m[1])), col: m[2] ? Math.max(1, Number(m[2])) : null, endLine: m[3] ? Math.max(1, Number(m[3])) : null };
+  return {
+    line: Math.max(1, Number(m[1])),
+    col: m[2] ? Math.max(1, Number(m[2])) : null,
+    endLine: m[3] ? Math.max(1, Number(m[3])) : null,
+  };
 }
 
 /** Each heading's slug as GitHub numbers repeats, in order: `setup`, `setup-1`, `setup-2`. */
@@ -46,12 +50,20 @@ export interface HeadingLanding {
 }
 
 /** Where a fragment lands among a note's headings and anchors (see the top of this file). */
-export function findHeading(headings: Pick<HeadingInfo, "text" | "slug" | "depth" | "line" | "id">[], anchors: AnchorInfo[], fragment: string, wiki = false): HeadingLanding | null {
+export function findHeading(
+  headings: Pick<HeadingInfo, "text" | "slug" | "depth" | "line" | "id">[],
+  anchors: AnchorInfo[],
+  fragment: string,
+  wiki = false,
+): HeadingLanding | null {
   const want = normKey(fragment.trim());
   const slug = normKey(slugify(fragment));
   const at = (i: number, ambiguous = false): HeadingLanding => ({ line: headings[i]!.line, heading: i, ambiguous });
   // An explicit id — a heading's or an HTML anchor's — as written, else case aside.
-  const ids = [...headings.flatMap((h, i) => (h.id ? [{ id: h.id, i, line: h.line }] : [])), ...anchors.map((a) => ({ id: a.id, i: -1, line: a.line }))];
+  const ids = [
+    ...headings.flatMap((h, i) => (h.id ? [{ id: h.id, i, line: h.line }] : [])),
+    ...anchors.map((a) => ({ id: a.id, i: -1, line: a.line })),
+  ];
   const byId = ids.find((x) => x.id === fragment) ?? ids.find((x) => normKey(x.id) === want);
   if (byId) return byId.i >= 0 ? at(byId.i) : { line: byId.line, heading: null, ambiguous: false, anchor: byId.id };
   const numbered = githubSlugs(headings);
@@ -66,7 +78,8 @@ export function findHeading(headings: Pick<HeadingInfo, "text" | "slug" | "depth
   const found = wiki ? (byText() ?? bySlug()) : (bySlug() ?? byText());
   if (found) return found;
   // A hosting's own forms (hosting.ts): Bitbucket's `#markdown-header-x`, GitHub's `#readme` (the top).
-  if (fragment.startsWith("markdown-header-")) return findHeading(headings, anchors, fragment.slice("markdown-header-".length), wiki);
+  if (fragment.startsWith("markdown-header-"))
+    return findHeading(headings, anchors, fragment.slice("markdown-header-".length), wiki);
   if (want === "readme") return { line: 1, heading: null, ambiguous: false };
   // A path of headings (Obsidian's `Install#Linux`): each found inside the one before.
   const parts = fragment.split("#").filter((x) => x.trim());
@@ -93,12 +106,24 @@ export function headingFragment(headings: Pick<HeadingInfo, "slug" | "id">[], i:
 }
 
 /** The line (1-based) a link's `#heading` or `#^block` lands on in `path` (vault-relative, or absolute in another root). */
-export function landingLine(g: Graph, path: string, heading: string | null, block: string | null, wiki = false): number | null {
+export function landingLine(
+  g: Graph,
+  path: string,
+  heading: string | null,
+  block: string | null,
+  wiki = false,
+): number | null {
   return landing(g, path, heading, block, wiki)?.line ?? null;
 }
 
 /** Where a link's fragment lands in `path`, and whether the heading it names is one of several of that text. */
-export function landing(g: Graph, path: string, heading: string | null, block: string | null, wiki = false): HeadingLanding | null {
+export function landing(
+  g: Graph,
+  path: string,
+  heading: string | null,
+  block: string | null,
+  wiki = false,
+): HeadingLanding | null {
   if (block) {
     const line = blockLine(g, path, block);
     return line === null ? null : { line, heading: null, ambiguous: false };
@@ -163,7 +188,14 @@ export const LANDING_LINES = 20;
  * paragraph or item, up to the `^id`), or the note's start without its frontmatter — at most
  * `max` lines, and `…` when there's more. Null when the note can't be read or has no such place.
  */
-export function landingText(g: Graph, path: string, heading: string | null, block: string | null, max = LANDING_LINES, wiki = false): string | null {
+export function landingText(
+  g: Graph,
+  path: string,
+  heading: string | null,
+  block: string | null,
+  max = LANDING_LINES,
+  wiki = false,
+): string | null {
   const text = g.textOf(path);
   if (text === null) return null;
   const lines = text.split("\n").map((l) => l.replace(/\r$/, ""));
@@ -190,7 +222,10 @@ export function landingText(g: Graph, path: string, heading: string | null, bloc
     const hit = findHeading(headings, note?.anchors ?? [], heading, wiki);
     if (!hit) return null;
     from = hit.line - 1;
-    const next = hit.heading === null ? headings.find((h) => h.line > hit.line) : headings.slice(hit.heading + 1).find((h) => h.depth <= headings[hit.heading!]!.depth);
+    const next =
+      hit.heading === null
+        ? headings.find((h) => h.line > hit.line)
+        : headings.slice(hit.heading + 1).find((h) => h.depth <= headings[hit.heading!]!.depth);
     if (next) to = next.line - 1;
   } else if (lines[0] === "---") {
     const close = lines.findIndex((l, i) => i > 0 && (l === "---" || l === "..."));

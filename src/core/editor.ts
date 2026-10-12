@@ -26,7 +26,22 @@ export function splitCommand(template: string): string[] {
 }
 
 /** Editors that take `+LINE FILE`, and those that take `FILE:LINE`. */
-const PLUS_LINE = new Set(["vi", "vim", "nvim", "gvim", "mvim", "view", "nano", "pico", "emacs", "emacsclient", "kak", "mg", "joe", "jed"]);
+const PLUS_LINE = new Set([
+  "vi",
+  "vim",
+  "nvim",
+  "gvim",
+  "mvim",
+  "view",
+  "nano",
+  "pico",
+  "emacs",
+  "emacsclient",
+  "kak",
+  "mg",
+  "joe",
+  "jed",
+]);
 const FILE_COLON_LINE = new Set(["hx", "helix", "micro"]);
 
 /**
@@ -34,7 +49,14 @@ const FILE_COLON_LINE = new Set(["hx", "helix", "micro"]);
  * `$VISUAL`, else `$EDITOR`, else `vi`, with the line passed the way that editor understands (a
  * known editor), or just the file (an unknown one).
  */
-export function editorArgv(template: string, file: string, line: number, env: Record<string, string | undefined> = process.env, appendFile = true, server = ""): string[] {
+export function editorArgv(
+  template: string,
+  file: string,
+  line: number,
+  env: Record<string, string | undefined> = process.env,
+  appendFile = true,
+  server = "",
+): string[] {
   // One pass: a path that itself contains "{line}" or "{server}" stays the path.
   const values: Record<string, string> = { file, line: String(line), server };
   const fill = (arg: string) => arg.replace(/\{(file|line|server)\}/g, (_, k: string) => values[k]!);

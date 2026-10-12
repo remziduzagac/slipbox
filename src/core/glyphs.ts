@@ -17,11 +17,21 @@ export interface Glyphs {
   rule: string;
   /** Box drawing for tables: corners, tees, lines. Header separator uses `hh`/`hx`. */
   box: {
-    tl: string; tm: string; tr: string;
-    ml: string; mm: string; mr: string;
-    bl: string; bm: string; br: string;
-    h: string; v: string;
-    hl: string; hx: string; hr: string; hh: string;
+    tl: string;
+    tm: string;
+    tr: string;
+    ml: string;
+    mm: string;
+    mr: string;
+    bl: string;
+    bm: string;
+    br: string;
+    h: string;
+    v: string;
+    hl: string;
+    hx: string;
+    hr: string;
+    hh: string;
   };
   codeWrap: string;
   embed: string;
@@ -134,11 +144,21 @@ const unicode: Glyphs = {
   quoteBar: "▎",
   rule: "─",
   box: {
-    tl: "┌", tm: "┬", tr: "┐",
-    ml: "├", mm: "┼", mr: "┤",
-    bl: "└", bm: "┴", br: "┘",
-    h: "─", v: "│",
-    hl: "╞", hx: "╪", hr: "╡", hh: "═",
+    tl: "┌",
+    tm: "┬",
+    tr: "┐",
+    ml: "├",
+    mm: "┼",
+    mr: "┤",
+    bl: "└",
+    bm: "┴",
+    br: "┘",
+    h: "─",
+    v: "│",
+    hl: "╞",
+    hx: "╪",
+    hr: "╡",
+    hh: "═",
   },
   codeWrap: "↪",
   embed: "⧉",
@@ -268,17 +288,27 @@ const ascii: Glyphs = {
   quoteBar: "|",
   rule: "-",
   box: {
-    tl: "+", tm: "+", tr: "+",
-    ml: "+", mm: "+", mr: "+",
-    bl: "+", bm: "+", br: "+",
-    h: "-", v: "|",
-    hl: "+", hx: "+", hr: "+", hh: "=",
+    tl: "+",
+    tm: "+",
+    tr: "+",
+    ml: "+",
+    mm: "+",
+    mr: "+",
+    bl: "+",
+    bm: "+",
+    br: "+",
+    h: "-",
+    v: "|",
+    hl: "+",
+    hx: "+",
+    hr: "+",
+    hh: "=",
   },
   codeWrap: ">",
   embed: "=>",
   image: "[img]",
   footnote: "^",
-  callout: { note: "(i)", tip: "(*)", important: "(!)", warning: "(!)", caution: "(x)", quote: "\"" },
+  callout: { note: "(i)", tip: "(*)", important: "(!)", warning: "(!)", caution: "(x)", quote: '"' },
   fmOpen: "---",
   ellipsis: "~",
   vbar: "|",
@@ -363,11 +393,25 @@ export function isGlyphMode(v: string): v is GlyphMode {
 }
 
 /** Unknown modes fall back to detection rather than failing: config validation reports them. */
-export function glyphsFor(mode: GlyphMode | string, env: NodeJS.ProcessEnv = process.env, lines: "light" | "heavy" = "heavy"): Glyphs {
+export function glyphsFor(
+  mode: GlyphMode | string,
+  env: NodeJS.ProcessEnv = process.env,
+  lines: "light" | "heavy" = "heavy",
+): Glyphs {
   const set = SETS[(Object.hasOwn(SETS, mode) ? mode : detectGlyphMode(env)) as keyof typeof SETS];
   // The frame's lines (`ui.lines`): heavy `━ ┃`, or light `─ │`; ascii has only the one kind.
   if (lines === "heavy" || set.mode === "ascii") return set;
   return { ...set, vbar: "│", hbar: "─", joints: LIGHT_JOINTS };
 }
 
-const LIGHT_JOINTS: Record<string, string> = { udlr: "┼", udr: "├", udl: "┤", dlr: "┬", ulr: "┴", dr: "┌", dl: "┐", ur: "└", ul: "┘" };
+const LIGHT_JOINTS: Record<string, string> = {
+  udlr: "┼",
+  udr: "├",
+  udl: "┤",
+  dlr: "┬",
+  ulr: "┴",
+  dr: "┌",
+  dl: "┐",
+  ur: "└",
+  ul: "┘",
+};

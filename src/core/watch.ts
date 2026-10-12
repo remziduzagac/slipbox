@@ -9,7 +9,16 @@
 // If registration fails (inotify limits on the Linux VMs: ENOSPC / EMFILE), the watcher degrades
 // *loudly*: it reports once and falls back to polling the files it was asked to poll.
 
-import { type Dirent, existsSync, type FSWatcher, lstatSync, readdirSync, realpathSync, statSync, watch } from "node:fs";
+import {
+  type Dirent,
+  existsSync,
+  type FSWatcher,
+  lstatSync,
+  readdirSync,
+  realpathSync,
+  statSync,
+  watch,
+} from "node:fs";
 import { join, relative, sep } from "node:path";
 import { symlinkVerdict, type WalkFilter } from "./walk.ts";
 
@@ -203,7 +212,8 @@ export class VaultWatcher {
       this.gitignores.set(dirRel, this.gitignoreStamp(dirRel));
     } catch (err) {
       const code = (err as NodeJS.ErrnoException).code;
-      if (code === "ENOSPC" || code === "EMFILE" || code === "ENFILE") this.degrade(`${code}: the system watch limit is exhausted (${this.watchers.size} directories watched)`);
+      if (code === "ENOSPC" || code === "EMFILE" || code === "ENFILE")
+        this.degrade(`${code}: the system watch limit is exhausted (${this.watchers.size} directories watched)`);
       else if (existsSync(join(this.opts.root, dirRel))) this.pollDir(dirRel, (err as Error).message);
     }
   }
@@ -211,7 +221,9 @@ export class VaultWatcher {
   private pollDir(dirRel: string, reason: string): void {
     if (this.closed || this.polled.has(dirRel)) return;
     this.polled.add(dirRel);
-    this.opts.onWarn?.(`cannot watch ${dirRel || "the root"} (${reason.split("\n")[0]}) — polling it every ${every(this.opts.pollMs ?? 2000)} instead`);
+    this.opts.onWarn?.(
+      `cannot watch ${dirRel || "the root"} (${reason.split("\n")[0]}) — polling it every ${every(this.opts.pollMs ?? 2000)} instead`,
+    );
     this.ensurePollTimer();
   }
 
@@ -235,7 +247,8 @@ export class VaultWatcher {
     if (++this.ticks % 15 === 0) {
       for (const rel of known.keys()) {
         const st = statOrNull(join(root, rel));
-        if (!st || st.mtimeMs !== known.get(rel) || (this.sizes.has(rel) && this.sizes.get(rel) !== st.size)) this.pending.add(rel);
+        if (!st || st.mtimeMs !== known.get(rel) || (this.sizes.has(rel) && this.sizes.get(rel) !== st.size))
+          this.pending.add(rel);
       }
     }
     for (const [dirRel, before] of this.gitignores) {
@@ -367,7 +380,8 @@ export class VaultWatcher {
         continue;
       }
       if (before === undefined) changes.push({ rel, kind: "created", isNote: true });
-      else if (before !== st.mtimeMs || (this.sizes.has(rel) && this.sizes.get(rel) !== st.size)) changes.push({ rel, kind: "changed", isNote: true });
+      else if (before !== st.mtimeMs || (this.sizes.has(rel) && this.sizes.get(rel) !== st.size))
+        changes.push({ rel, kind: "changed", isNote: true });
       else continue;
       known.set(rel, st.mtimeMs);
       this.sizes.set(rel, st.size);
@@ -375,7 +389,9 @@ export class VaultWatcher {
     // A rename reports only the new name; notes that vanished from the directories we heard
     // from, or moved away under the same name, are found here.
     const dirs = new Set(paths.map((p) => (p.includes("/") ? p.slice(0, p.lastIndexOf("/")) : "")));
-    const createdNames = new Set(changes.filter((c) => c.kind === "created").map((c) => c.rel.slice(c.rel.lastIndexOf("/") + 1)));
+    const createdNames = new Set(
+      changes.filter((c) => c.kind === "created").map((c) => c.rel.slice(c.rel.lastIndexOf("/") + 1)),
+    );
     for (const rel of [...known.keys()]) {
       const slash = rel.lastIndexOf("/");
       const dir = slash >= 0 ? rel.slice(0, slash) : "";
@@ -384,7 +400,11 @@ export class VaultWatcher {
       if (!st) {
         known.delete(rel);
         changes.push({ rel, kind: "deleted", isNote: true });
-      } else if (dirs.has(dir) && (st.mtimeMs !== known.get(rel) || (this.sizes.has(rel) && this.sizes.get(rel) !== st.size)) && this.ownWrites.get(rel) !== st.mtimeMs) {
+      } else if (
+        dirs.has(dir) &&
+        (st.mtimeMs !== known.get(rel) || (this.sizes.has(rel) && this.sizes.get(rel) !== st.size)) &&
+        this.ownWrites.get(rel) !== st.mtimeMs
+      ) {
         // A burst of writes in this folder reported as one event: the others changed too.
         known.set(rel, st.mtimeMs);
         this.sizes.set(rel, st.size);

@@ -62,7 +62,28 @@ export type Grammar =
   | "c"
   | "cpp";
 
-const WASM: Record<Grammar, string> = { typescript, tsx, javascript, python, bash, lua, go, rust, swift, html, css, scss, php, dockerfile, vue, svelte, astro, ruby, c, cpp };
+const WASM: Record<Grammar, string> = {
+  typescript,
+  tsx,
+  javascript,
+  python,
+  bash,
+  lua,
+  go,
+  rust,
+  swift,
+  html,
+  css,
+  scss,
+  php,
+  dockerfile,
+  vue,
+  svelte,
+  astro,
+  ruby,
+  c,
+  cpp,
+};
 
 /** Every grammar slipbox parses code with (16.8): what the reference set must have a file of each for. */
 export const GRAMMARS = Object.keys(WASM) as Grammar[];
@@ -121,8 +142,16 @@ const QUERIES: Record<Grammar, { defs: string; comments: string; strings: string
   typescript: { defs: TS_DEFS, comments: "(comment) @c", strings: "[(string) (template_string)] @s" },
   tsx: { defs: TS_DEFS, comments: "(comment) @c", strings: "[(string) (template_string)] @s" },
   javascript: { defs: JS_DEFS, comments: "(comment) @c", strings: "[(string) (template_string)] @s" },
-  python: { defs: "(function_definition name: (identifier) @name) @def (class_definition name: (identifier) @name) @def", comments: "(comment) @c", strings: "(string) @s" },
-  bash: { defs: "(function_definition name: (word) @name) @def", comments: "(comment) @c", strings: "[(string) (raw_string) (heredoc_body)] @s" },
+  python: {
+    defs: "(function_definition name: (identifier) @name) @def (class_definition name: (identifier) @name) @def",
+    comments: "(comment) @c",
+    strings: "(string) @s",
+  },
+  bash: {
+    defs: "(function_definition name: (word) @name) @def",
+    comments: "(comment) @c",
+    strings: "[(string) (raw_string) (heredoc_body)] @s",
+  },
   lua: { defs: "(function_declaration name: (_) @name) @def", comments: "(comment) @c", strings: "(string) @s" },
   go: {
     defs: "(function_declaration name: (identifier) @name) @def (method_declaration name: (field_identifier) @name) @def (type_spec name: (type_identifier) @name) @def",
@@ -169,7 +198,11 @@ const QUERIES: Record<Grammar, { defs: string; comments: string; strings: string
     strings: "[(string) (encapsed_string) (heredoc) (nowdoc)] @s",
   },
   // A Dockerfile's outline is its stages: each FROM, by its name when it has one.
-  dockerfile: { defs: "(from_instruction (image_spec) @name) @def", comments: "(comment) @c", strings: "[(double_quoted_string) (single_quoted_string) (heredoc_block)] @s" },
+  dockerfile: {
+    defs: "(from_instruction (image_spec) @name) @def",
+    comments: "(comment) @c",
+    strings: "[(double_quoted_string) (single_quoted_string) (heredoc_block)] @s",
+  },
   ruby: {
     defs: "(class name: (_) @name) @def (module name: (_) @name) @def (method name: (_) @name) @def (singleton_method name: (_) @name) @def",
     comments: "(comment) @c",
@@ -265,7 +298,13 @@ export function grammarFor(format: string, ext: string): Grammar | null {
 }
 
 /** A grammar's highlight.js name, for the lines of a part in its language. */
-const HIGHLIGHT: Partial<Record<Grammar, string>> = { tsx: "typescript", html: "xml", vue: "xml", svelte: "xml", astro: "xml" };
+const HIGHLIGHT: Partial<Record<Grammar, string>> = {
+  tsx: "typescript",
+  html: "xml",
+  vue: "xml",
+  svelte: "xml",
+  astro: "xml",
+};
 
 interface Loaded {
   grammar: Grammar;
@@ -285,7 +324,14 @@ async function loadGrammar(g: Grammar): Promise<Loaded> {
   const parser = new Parser();
   parser.setLanguage(language);
   const q = QUERIES[g];
-  return { grammar: g, parser, language, defs: q.defs.trim() ? new Query(language, q.defs) : null, comments: new Query(language, q.comments), strings: new Query(language, q.strings) };
+  return {
+    grammar: g,
+    parser,
+    language,
+    defs: q.defs.trim() ? new Query(language, q.defs) : null,
+    comments: new Query(language, q.comments),
+    strings: new Query(language, q.strings),
+  };
 }
 
 const key = (g: Grammar) => `grammar:${g}`;
@@ -303,7 +349,10 @@ export function grammarNow(g: Grammar): Loaded | null {
 
 /** A grammar, and those its files embed, waited for (the CLI). */
 export async function grammar(g: Grammar): Promise<Loaded | null> {
-  const [own] = await Promise.all([load(key(g), () => loadGrammar(g)), ...(EMBEDS[g] ?? []).map((e) => load(key(e), () => loadGrammar(e)))]);
+  const [own] = await Promise.all([
+    load(key(g), () => loadGrammar(g)),
+    ...(EMBEDS[g] ?? []).map((e) => load(key(e), () => loadGrammar(e))),
+  ]);
   return own;
 }
 
@@ -385,7 +434,9 @@ function scriptPart(el: Node, g: Grammar): Pick<Part, "grammar" | "highlight"> {
   if (/json|importmap/.test(type)) return { grammar: null, highlight: "json" };
   if (type && !/^(module|(text|application)\/(java|ecma)script)$/.test(type)) return { grammar: null, highlight: null };
   // Astro's scripts are TypeScript.
-  return g === "astro" ? { grammar: "typescript", highlight: "typescript" } : { grammar: "javascript", highlight: "javascript" };
+  return g === "astro"
+    ? { grammar: "typescript", highlight: "typescript" }
+    : { grammar: "javascript", highlight: "javascript" };
 }
 
 /** A `<style>`'s language: SCSS by `lang`, else CSS; one slipbox has no grammar for, by name only. */
@@ -407,15 +458,25 @@ function tagName(el: Node): string {
  * Astro's frontmatter; a PHP file's HTML (highlighted as HTML, parsed as PHP has it).
  */
 function partsOf(g: Grammar, root: Node): Part[] {
-  if (g === "php") return root.descendantsOfType("text").filter((n): n is Node => !!n).map((text) => ({ text, section: null, grammar: null, highlight: "xml" }));
+  if (g === "php")
+    return root
+      .descendantsOfType("text")
+      .filter((n): n is Node => !!n)
+      .map((text) => ({ text, section: null, grammar: null, highlight: "xml" }));
   if (!EMBEDS[g]) return [];
   const out: Part[] = [];
   for (const el of root.descendantsOfType(["script_element", "style_element", "frontmatter"])) {
     if (!el) continue;
     const text = el.namedChildren.find((n) => n?.type === "raw_text" || n?.type === "frontmatter_js_block");
     if (!text || !text.text.trim()) continue;
-    if (el.type === "frontmatter") out.push({ text, section: { name: "frontmatter", node: el }, grammar: "typescript", highlight: "typescript" });
-    else out.push({ text, section: { name: tagName(el), node: el }, ...(el.type === "script_element" ? scriptPart(el, g) : stylePart(el)) });
+    if (el.type === "frontmatter")
+      out.push({ text, section: { name: "frontmatter", node: el }, grammar: "typescript", highlight: "typescript" });
+    else
+      out.push({
+        text,
+        section: { name: tagName(el), node: el },
+        ...(el.type === "script_element" ? scriptPart(el, g) : stylePart(el)),
+      });
   }
   return out;
 }
@@ -435,7 +496,11 @@ function markupOutline(root: Node): Entry[] {
   const out: Entry[] = [];
   for (const el of root.descendantsOfType("element")) {
     if (!el) continue;
-    const name = el.namedChildren.find((n) => n?.type === "start_tag")?.namedChildren.find((n) => n?.type === "tag_name")?.text.toLowerCase() ?? "";
+    const name =
+      el.namedChildren
+        .find((n) => n?.type === "start_tag")
+        ?.namedChildren.find((n) => n?.type === "tag_name")
+        ?.text.toLowerCase() ?? "";
     const id = attribute(el, "id");
     const heading = /^h[1-6]$/.test(name) ? shownText(el).replace(/\s+/g, " ").trim() : "";
     if (!heading && !id) continue;
@@ -446,7 +511,8 @@ function markupOutline(root: Node): Entry[] {
 
 /** A definition's name, as the outline shows it, from its node and its name's. */
 function label(def: Node, name: Node | undefined): string {
-  if (def.type === "impl_item" && name) return `impl ${def.childForFieldName("trait") ? `${def.childForFieldName("trait")!.text} for ` : ""}${name.text}`;
+  if (def.type === "impl_item" && name)
+    return `impl ${def.childForFieldName("trait") ? `${def.childForFieldName("trait")!.text} for ` : ""}${name.text}`;
   if (def.type === "init_declaration") return "init";
   if (def.type === "singleton_method" && name) return `${def.childForFieldName("object")?.text ?? "self"}.${name.text}`;
   // A Dockerfile's stage: its name, then the image it starts from.
@@ -461,10 +527,15 @@ function label(def: Node, name: Node | undefined): string {
 
 /** A definition's kind: Swift's class, struct, enum, extension and actor are one node, told by a keyword. */
 function kindOf(def: Node): string {
-  if (def.type === "class_declaration" && def.childForFieldName("declaration_kind")) return def.childForFieldName("declaration_kind")!.text;
+  if (def.type === "class_declaration" && def.childForFieldName("declaration_kind"))
+    return def.childForFieldName("declaration_kind")!.text;
   let kind = KIND[def.type] ?? def.type;
   // A function defined in a class (Python), or declared in one (C++: a constructor), reads as a method.
-  if (kind === "function" && (def.parent?.parent?.type === "class_definition" || def.parent?.type === "field_declaration_list")) kind = "method";
+  if (
+    kind === "function" &&
+    (def.parent?.parent?.type === "class_definition" || def.parent?.type === "field_declaration_list")
+  )
+    kind = "method";
   return kind;
 }
 
@@ -502,23 +573,32 @@ export class SyntaxTree {
       const def = m.captures.find((c) => c.name === "def")?.node;
       if (!def) continue;
       const name = m.captures.find((c) => c.name === "name")?.node;
-      out.push({ name: label(def, name).replace(/\s+/g, " "), kind: kindOf(def), start: def.startPosition, end: def.endPosition });
+      out.push({
+        name: label(def, name).replace(/\s+/g, " "),
+        kind: kindOf(def),
+        start: def.startPosition,
+        end: def.endPosition,
+      });
     }
     if (MARKUP.has(this.g.grammar)) out.push(...markupOutline(this.tree.rootNode));
     for (const e of this.embedded) {
       const s = e.part.section;
       if (s) out.push({ name: s.name, kind: "section", start: s.node.startPosition, end: s.node.endPosition });
-      for (const x of e.tree?.entries() ?? []) out.push({ ...x, start: this.place(e.at, x.start), end: this.place(e.at, x.end) });
+      for (const x of e.tree?.entries() ?? [])
+        out.push({ ...x, start: this.place(e.at, x.start), end: this.place(e.at, x.end) });
     }
     // A Vue component's template: its own entry, its headings and ids under it.
-    for (const t of this.tree.rootNode.descendantsOfType("template_element")) if (t) out.push({ name: "template", kind: "section", start: t.startPosition, end: t.endPosition });
+    for (const t of this.tree.rootNode.descendantsOfType("template_element"))
+      if (t) out.push({ name: "template", kind: "section", start: t.startPosition, end: t.endPosition });
     return out;
   }
 
   /** Functions, classes, methods… (a page's headings and ids, a component's parts) in source order,
    *  each nested under the ones it's inside. */
   outline(): OutlineEntry[] {
-    const all = this.entries().sort((a, b) => (before(a.start, b.start) ? -1 : before(b.start, a.start) ? 1 : before(a.end, b.end) ? 1 : -1));
+    const all = this.entries().sort((a, b) =>
+      before(a.start, b.start) ? -1 : before(b.start, a.start) ? 1 : before(a.end, b.end) ? 1 : -1,
+    );
     const out: OutlineEntry[] = [];
     const open: Pos[] = []; // the ends of the entries the next may be inside
     for (const e of all) {
@@ -538,8 +618,16 @@ export class SyntaxTree {
       if (n.isMissing || n.type === "ERROR") {
         const line = n.startPosition.row + 1;
         const text = lines[n.startPosition.row] ?? "";
-        const to = n.endPosition.row === n.startPosition.row ? Math.max(n.endPosition.column, n.startPosition.column + 1) : text.length;
-        out.push({ line, from: n.startPosition.column, to: Math.min(Math.max(to, n.startPosition.column + 1), Math.max(text.length, n.startPosition.column + 1)), message: n.isMissing ? `missing ${n.type}` : "syntax error" });
+        const to =
+          n.endPosition.row === n.startPosition.row
+            ? Math.max(n.endPosition.column, n.startPosition.column + 1)
+            : text.length;
+        out.push({
+          line,
+          from: n.startPosition.column,
+          to: Math.min(Math.max(to, n.startPosition.column + 1), Math.max(text.length, n.startPosition.column + 1)),
+          message: n.isMissing ? `missing ${n.type}` : "syntax error",
+        });
         if (n.type === "ERROR") return; // the first place is enough; its insides are noise
       }
       for (let i = 0; i < n.childCount; i++) visit(n.child(i));
@@ -564,7 +652,13 @@ export class SyntaxTree {
         const s = c.node.startPosition;
         const e = endOf(c.node, lines);
         if (e.row === s.row) continue;
-        for (let r = s.row; r <= e.row; r++) out.push({ line: r + 1, from: r === s.row ? s.column : 0, to: r === e.row ? e.column : Number.POSITIVE_INFINITY, kind });
+        for (let r = s.row; r <= e.row; r++)
+          out.push({
+            line: r + 1,
+            from: r === s.row ? s.column : 0,
+            to: r === e.row ? e.column : Number.POSITIVE_INFINITY,
+            kind,
+          });
       }
     };
     add(this.g.strings, "string");
@@ -572,7 +666,12 @@ export class SyntaxTree {
     for (const e of this.embedded) {
       for (const x of e.tree?.spans() ?? []) {
         const row0 = x.line - 1 === 0;
-        out.push({ ...x, line: x.line + e.at.row, from: row0 ? x.from + e.at.column : x.from, to: row0 && x.to !== Number.POSITIVE_INFINITY ? x.to + e.at.column : x.to });
+        out.push({
+          ...x,
+          line: x.line + e.at.row,
+          from: row0 ? x.from + e.at.column : x.from,
+          to: row0 && x.to !== Number.POSITIVE_INFINITY ? x.to + e.at.column : x.to,
+        });
       }
     }
     return out;
@@ -580,8 +679,16 @@ export class SyntaxTree {
 
   /** Every comment, for the links in it (16.10); its parts' too. */
   comments(): Comment[] {
-    const own = this.g.comments.captures(this.tree.rootNode).map((c) => ({ line: c.node.startPosition.row + 1, column: c.node.startPosition.column, text: c.node.text }));
-    const parts = this.embedded.flatMap((e) => (e.tree?.comments() ?? []).map((x) => ({ ...x, line: x.line + e.at.row, column: x.line === 1 ? x.column + e.at.column : x.column })));
+    const own = this.g.comments
+      .captures(this.tree.rootNode)
+      .map((c) => ({ line: c.node.startPosition.row + 1, column: c.node.startPosition.column, text: c.node.text }));
+    const parts = this.embedded.flatMap((e) =>
+      (e.tree?.comments() ?? []).map((x) => ({
+        ...x,
+        line: x.line + e.at.row,
+        column: x.line === 1 ? x.column + e.at.column : x.column,
+      })),
+    );
     return [...own, ...parts].sort((a, b) => a.line - b.line || a.column - b.column);
   }
 
@@ -609,7 +716,8 @@ export class SyntaxTree {
       if (python) {
         const a = top.type === "expression_statement" ? top.namedChildren[0] : null;
         const name = a?.type === "assignment" ? a.childForFieldName("left") : null;
-        if (name?.type === "identifier") found.push({ kind: "value", start: top.startPosition, end: top.endPosition, name, node: top });
+        if (name?.type === "identifier")
+          found.push({ kind: "value", start: top.startPosition, end: top.endPosition, name, node: top });
         continue;
       }
       const decl = top.type === "export_statement" ? top.childForFieldName("declaration") : top;
@@ -617,7 +725,8 @@ export class SyntaxTree {
       const first = decl.namedChildren.find((n) => n?.type === "variable_declarator");
       const name = first?.childForFieldName("name");
       const value = first?.childForFieldName("value");
-      if (!first || !name || (value && (value.type === "arrow_function" || value.type === "function_expression"))) continue;
+      if (!first || !name || (value && (value.type === "arrow_function" || value.type === "function_expression")))
+        continue;
       found.push({ kind: "value", start: top.startPosition, end: top.endPosition, name, node: top });
     }
     found.sort((a, b) => (before(a.start, b.start) ? -1 : before(b.start, a.start) ? 1 : 0));
@@ -629,7 +738,8 @@ export class SyntaxTree {
     // A docstring: a body's first statement, when it's a string alone.
     const docstring = (body: Node | null | undefined): Node | null => {
       const first = body?.namedChildren[0];
-      const str = first?.type === "expression_statement" && first.namedChildren.length === 1 ? first.namedChildren[0] : null;
+      const str =
+        first?.type === "expression_statement" && first.namedChildren.length === 1 ? first.namedChildren[0] : null;
       return str?.type === "string" ? str : null;
     };
     for (const f of found) {
@@ -642,24 +752,55 @@ export class SyntaxTree {
       const decorated = f.node.parent?.type === "decorated_definition" ? f.node.parent : null;
       // What's written above it for it — Rust's `#[derive(…)]`, an annotation — is its cell's too.
       let first: Node = decorated ?? f.node;
-      for (let p = first.previousNamedSibling; p && ATTRIBUTE.test(p.type) && p.endPosition.row >= first.startPosition.row - 1; p = p.previousNamedSibling) first = p;
+      for (
+        let p = first.previousNamedSibling;
+        p && ATTRIBUTE.test(p.type) && p.endPosition.row >= first.startPosition.row - 1;
+        p = p.previousNamedSibling
+      )
+        first = p;
       const top = first.startPosition.row + 1;
       const at = first.startPosition;
       const holder = holders[holders.length - 1];
       const term = termOf(f.node, !!holder && !/module|namespace/.test(holder));
-      defs.push({ kind: f.kind, line: f.start.row + 1, name: { line: n.startPosition.row + 1, from: n.startPosition.column, to }, depth: open.length, top, end: f.end.row + 1, column: (lines[at.row] ?? "").length - (lines[at.row] ?? "").trimStart().length, term });
+      defs.push({
+        kind: f.kind,
+        line: f.start.row + 1,
+        name: { line: n.startPosition.row + 1, from: n.startPosition.column, to },
+        depth: open.length,
+        top,
+        end: f.end.row + 1,
+        column: (lines[at.row] ?? "").length - (lines[at.row] ?? "").trimStart().length,
+        term,
+      });
       open.push(f.end);
       holders.push(term);
       if (python && f.kind !== "value") {
         const d = docstring(f.node.childForFieldName("body"));
-        if (d) docs.push({ start: d.startPosition.row + 1, end: d.endPosition.row + 1, column: first.startPosition.column, style: "docstring", before: top });
+        if (d)
+          docs.push({
+            start: d.startPosition.row + 1,
+            end: d.endPosition.row + 1,
+            column: first.startPosition.column,
+            style: "docstring",
+            before: top,
+          });
       }
     }
     // A module's docstring: where it is, at the top.
     const moduleDoc = python ? docstring(root) : null;
-    if (moduleDoc) docs.push({ start: moduleDoc.startPosition.row + 1, end: moduleDoc.endPosition.row + 1, column: moduleDoc.startPosition.column, style: "docstring" });
+    if (moduleDoc)
+      docs.push({
+        start: moduleDoc.startPosition.row + 1,
+        end: moduleDoc.endPosition.row + 1,
+        column: moduleDoc.startPosition.column,
+        style: "docstring",
+      });
     // A licence or a "generated" banner heading the file (24.22): folded, not prose.
-    const header = headerOf(this.g.comments.captures(root).map((c) => c.node), root, lines);
+    const header = headerOf(
+      this.g.comments.captures(root).map((c) => c.node),
+      root,
+      lines,
+    );
     // The comments: a `/** */` is documentation, and so is a block comment over several lines; the rest are comments.
     const comments: CodeComment[] = [];
     for (const c of this.g.comments.captures(root)) {
@@ -667,15 +808,23 @@ export class SyntaxTree {
       const e = endOf(c.node, lines);
       const text = c.node.text;
       const trailing = !!(lines[s.row] ?? "").slice(0, s.column).trim();
-      if (text.startsWith("/**") && !text.startsWith("/**/") && !trailing) docs.push({ start: s.row + 1, end: e.row + 1, column: s.column, style: "jsdoc" });
-      else if (text.startsWith("/*") && e.row > s.row && !trailing) docs.push({ start: s.row + 1, end: e.row + 1, column: s.column, style: "block" });
+      if (text.startsWith("/**") && !text.startsWith("/**/") && !trailing)
+        docs.push({ start: s.row + 1, end: e.row + 1, column: s.column, style: "jsdoc" });
+      else if (text.startsWith("/*") && e.row > s.row && !trailing)
+        docs.push({ start: s.row + 1, end: e.row + 1, column: s.column, style: "block" });
       else comments.push({ line: s.row + 1, column: s.column, end: e.column, trailing });
     }
     docs.sort((a, b) => a.start - b.start);
     // Runs of imports: those with only blank lines between them — a node named so, in any grammar (`import`, `use`,
     // `#include`, `using`); what each imports read from its strings, else its words after the keyword.
     const imports: CodeImports[] = [];
-    if (header) imports.push({ start: header.start, end: header.end, modules: header.name ? [header.name] : [], kind: header.kind });
+    if (header)
+      imports.push({
+        start: header.start,
+        end: header.end,
+        modules: header.name ? [header.name] : [],
+        kind: header.kind,
+      });
     for (const n of root.namedChildren) {
       if (!n || !IMPORT.test(n.type)) continue;
       const start = n.startPosition.row + 1;
@@ -715,7 +864,21 @@ export class SyntaxTree {
 }
 
 /** The grammars the code view (24.x) maps: their definitions, doc comments, comments and imports. */
-export const DOCUMENT_GRAMMARS: ReadonlySet<Grammar> = new Set<Grammar>(["typescript", "tsx", "javascript", "python", "go", "rust", "swift", "php", "ruby", "c", "cpp", "lua", "bash"]);
+export const DOCUMENT_GRAMMARS: ReadonlySet<Grammar> = new Set<Grammar>([
+  "typescript",
+  "tsx",
+  "javascript",
+  "python",
+  "go",
+  "rust",
+  "swift",
+  "php",
+  "ruby",
+  "c",
+  "cpp",
+  "lua",
+  "bash",
+]);
 /**
  * Where a node ends — but one that takes its line's end with it (Rust's line comments do), ending at column 0 of the
  * next line, ends at the end of its own: that next line isn't inside it.
@@ -746,7 +909,10 @@ function importedBy(n: Node): string[] {
   };
   visit(n);
   if (out.length) return out;
-  const words = n.text.replace(/^\s*(?:#\s*include|import|use|using|extern\s+crate|from)\b\s*/, "").replace(/;\s*$/, "").trim();
+  const words = n.text
+    .replace(/^\s*(?:#\s*include|import|use|using|extern\s+crate|from)\b\s*/, "")
+    .replace(/;\s*$/, "")
+    .trim();
   return words ? [words] : [];
 }
 
@@ -754,7 +920,11 @@ function importedBy(n: Node): string[] {
  * A licence or a "generated" banner heading a file (24.22): the comment lines it starts with — past a shebang or an
  * encoding line — when they're two lines or more, before any code, and read so. Its name where it says one.
  */
-function headerOf(comments: Node[], root: Node, lines: string[]): { start: number; end: number; kind: "license" | "generated"; name: string | null } | null {
+function headerOf(
+  comments: Node[],
+  root: Node,
+  lines: string[],
+): { start: number; end: number; kind: "license" | "generated"; name: string | null } | null {
   const sorted = [...comments].sort((a, b) => a.startPosition.row - b.startPosition.row);
   let k = 0;
   // Past a shebang, an encoding line, PHP's opening tag.
@@ -768,27 +938,39 @@ function headerOf(comments: Node[], root: Node, lines: string[]): { start: numbe
   const last = endOf(sorted[end]!, lines).row + 1;
   const code = root.namedChildren.find((n) => n && !/comment|php_tag/.test(n.type));
   if (last - start < 1 || (code && code.startPosition.row + 1 <= last)) return null;
-  const text = sorted.slice(k, end + 1).map((n) => n.text).join("\n");
+  const text = sorted
+    .slice(k, end + 1)
+    .map((n) => n.text)
+    .join("\n");
   const spdx = /SPDX-License-Identifier:\s*([^\s*]+)/.exec(text);
   if (spdx) return { start, end: last, kind: "license", name: spdx[1]! };
-  if (/\b(Code generated\b.*\bDO NOT EDIT|auto-?generated|automatically generated|@generated|this file (?:is|was) generated|DO NOT EDIT)\b/i.test(text)) {
+  if (
+    /\b(Code generated\b.*\bDO NOT EDIT|auto-?generated|automatically generated|@generated|this file (?:is|was) generated|DO NOT EDIT)\b/i.test(
+      text,
+    )
+  ) {
     const by = /generated (?:by|with|from) ([\w.@/-]+)/i.exec(text);
     return { start, end: last, kind: "generated", name: by ? by[1]!.replace(/[.,:]+$/, "") : null };
   }
-  if (!/copyright|\(c\)|©/i.test(text) || !/licen[cs]e|permission is hereby granted|all rights reserved|warrant|redistribution/i.test(text)) return null;
-  const name = /Permission is hereby granted, free of charge/i.test(text) || /\bMIT License\b/i.test(text)
-    ? "MIT"
-    : /Apache License,?\s+Version 2\.0/i.test(text)
-      ? "Apache-2.0"
-      : /GNU (?:Affero|Lesser)? ?General Public License/i.test(text)
-        ? `${/Affero/i.test(text) ? "AGPL" : /Lesser/i.test(text) ? "LGPL" : "GPL"}${/version 3/i.test(text) ? "-3.0" : /version 2/i.test(text) ? "-2.0" : ""}`
-        : /Mozilla Public License/i.test(text)
-          ? "MPL-2.0"
-          : /Redistribution and use in source and binary forms/i.test(text)
-            ? "BSD"
-            : /BSD-style license/i.test(text)
+  if (
+    !/copyright|\(c\)|©/i.test(text) ||
+    !/licen[cs]e|permission is hereby granted|all rights reserved|warrant|redistribution/i.test(text)
+  )
+    return null;
+  const name =
+    /Permission is hereby granted, free of charge/i.test(text) || /\bMIT License\b/i.test(text)
+      ? "MIT"
+      : /Apache License,?\s+Version 2\.0/i.test(text)
+        ? "Apache-2.0"
+        : /GNU (?:Affero|Lesser)? ?General Public License/i.test(text)
+          ? `${/Affero/i.test(text) ? "AGPL" : /Lesser/i.test(text) ? "LGPL" : "GPL"}${/version 3/i.test(text) ? "-3.0" : /version 2/i.test(text) ? "-2.0" : ""}`
+          : /Mozilla Public License/i.test(text)
+            ? "MPL-2.0"
+            : /Redistribution and use in source and binary forms/i.test(text)
               ? "BSD"
-              : null;
+              : /BSD-style license/i.test(text)
+                ? "BSD"
+                : null;
   return { start, end: last, kind: "license", name };
 }
 
@@ -812,7 +994,8 @@ const TERMS: Record<string, string> = {
  * struct; a function in a class (an impl, a trait, a struct — not a module or a namespace) a method.
  */
 function termOf(n: Node, inClass: boolean): string {
-  let t = TERMS[n.type] ?? n.type.replace(/_(item|declaration|definition|specifier|statement|spec)$/, "").replace(/_/g, " ");
+  let t =
+    TERMS[n.type] ?? n.type.replace(/_(item|declaration|definition|specifier|statement|spec)$/, "").replace(/_/g, " ");
   const declares = n.childForFieldName("declaration_kind")?.text;
   if (declares) t = declares;
   if (n.type === "type_spec") {
@@ -932,19 +1115,23 @@ export interface CommentLink {
 const URL_RE = /\bhttps?:\/\/[^\s<>"'`]+/g;
 /** A path with an extension (a letter first: `1.5` isn't one), maybe `:line` or `:line:col` after; `../` as
  *  many times as it climbs. */
-const PATH_RE = /(?<![\w./@~-])(?:\.\/|(?:\.\.\/)+|\/)?[\w@~-][\w.@~-]*(?:\/[\w.@~-]+)*\.[A-Za-z][A-Za-z0-9]{0,9}(?::(\d+)(?::\d+)?)?(?![\w/])/g;
+const PATH_RE =
+  /(?<![\w./@~-])(?:\.\/|(?:\.\.\/)+|\/)?[\w@~-][\w.@~-]*(?:\/[\w.@~-]+)*\.[A-Za-z][A-Za-z0-9]{0,9}(?::(\d+)(?::\d+)?)?(?![\w/])/g;
 
 /**
  * Link-like tokens in a text (16.10): URLs, and paths with an extension, `path:42` included. Which
  * paths are links is the caller's to say — the ones that name a file of the root.
  */
-export function linkTokens(text: string): { index: number; length: number; target: string; url: boolean; at: number | null }[] {
+export function linkTokens(
+  text: string,
+): { index: number; length: number; target: string; url: boolean; at: number | null }[] {
   const out: { index: number; length: number; target: string; url: boolean; at: number | null }[] = [];
   let masked = text;
   for (const m of text.matchAll(URL_RE)) {
     // Trailing punctuation is the sentence's; a `)` is the URL's only when it opened one.
     let u = m[0].replace(/[.,;:!?'"]+$/, "");
-    while (u.endsWith(")") && (u.match(/\(/g)?.length ?? 0) < (u.match(/\)/g)?.length ?? 0)) u = u.slice(0, -1).replace(/[.,;:!?]+$/, "");
+    while (u.endsWith(")") && (u.match(/\(/g)?.length ?? 0) < (u.match(/\)/g)?.length ?? 0))
+      u = u.slice(0, -1).replace(/[.,;:!?]+$/, "");
     out.push({ index: m.index, length: u.length, target: u, url: true, at: null });
     masked = masked.slice(0, m.index) + " ".repeat(m[0].length) + masked.slice(m.index + m[0].length);
   }
@@ -962,7 +1149,15 @@ export function commentLinks(comments: Comment[]): CommentLink[] {
   for (const c of comments) {
     c.text.split("\n").forEach((text, i) => {
       const base = i === 0 ? c.column : 0;
-      for (const t of linkTokens(text)) out.push({ line: c.line + i, from: base + t.index, to: base + t.index + t.length, target: t.target, url: t.url, at: t.at });
+      for (const t of linkTokens(text))
+        out.push({
+          line: c.line + i,
+          from: base + t.index,
+          to: base + t.index + t.length,
+          target: t.target,
+          url: t.url,
+          at: t.at,
+        });
     });
   }
   return out;

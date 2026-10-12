@@ -8,7 +8,11 @@ import type { Session } from "./session.ts";
 
 /** git in one of the set's repositories, as its owner runs it (HOME the set's); its stdout, or a failure. */
 function git(s: Session, repo: string, ...args: string[]): { code: number; out: string } {
-  const r = spawnSync("git", ["-c", "user.email=sam@kestrel.dev", "-c", "user.name=Sam Rivera", "-C", s.path(repo), ...args], { encoding: "utf8", env: { ...process.env, HOME: s.home } });
+  const r = spawnSync(
+    "git",
+    ["-c", "user.email=sam@kestrel.dev", "-c", "user.name=Sam Rivera", "-C", s.path(repo), ...args],
+    { encoding: "utf8", env: { ...process.env, HOME: s.home } },
+  );
   return { code: r.status ?? -1, out: `${r.stdout}${r.stderr}` };
 }
 
@@ -78,11 +82,23 @@ export const GIT_SCENARIOS: Scenario[] = [
       await s.status(/ ~ /); // a plain folder: its path where a vault's name would be
       // A level at a time: its folders, not what's in them (cooking is two down, kestrel one).
       for (let i = 0; i < 3 && !s.statusLine().includes("FILES"); i++) await leader(s, "e");
-      await s.until(() => ["..", "Downloads", "hobbies", "notes", "work"].every((n) => explorer(s).some((r) => new RegExp(`\\s${n.replace(/\./g, "\\.")}\\s*$`).test(r.trimEnd()))), 3000, "$HOME's own folders listed");
+      await s.until(
+        () =>
+          ["..", "Downloads", "hobbies", "notes", "work"].every((n) =>
+            explorer(s).some((r) => new RegExp(`\\s${n.replace(/\./g, "\\.")}\\s*$`).test(r.trimEnd())),
+          ),
+        3000,
+        "$HOME's own folders listed",
+      );
       s.expect(!explorer(s).some((r) => /cooking|kestrel|people/.test(r)), "nothing below $HOME's own folders listed");
       // Never walked: a search finds only what lies in $HOME itself, though notes far below say it too.
-      const top = readdirSync(s.home).filter((f) => f.endsWith(".md") && readFileSync(join(s.home, f), "utf8").toLowerCase().includes("maqluba"));
-      s.expect(top.length > 0 && readFileSync(s.path("~/hobbies/cooking/Home.md"), "utf8").toLowerCase().includes("maqluba"), "maqluba both at the top and below");
+      const top = readdirSync(s.home).filter(
+        (f) => f.endsWith(".md") && readFileSync(join(s.home, f), "utf8").toLowerCase().includes("maqluba"),
+      );
+      s.expect(
+        top.length > 0 && readFileSync(s.path("~/hobbies/cooking/Home.md"), "utf8").toLowerCase().includes("maqluba"),
+        "maqluba both at the top and below",
+      );
       await s.keys("escape");
       await leader(s, "f", "s");
       await s.type("maqluba");
@@ -109,7 +125,8 @@ export const GIT_SCENARIOS: Scenario[] = [
       home: true,
       startAt: "home/hobbies/cooking/Home.md",
       setup: (s) => {
-        if (!before.has(s)) before.set(s, { cooking: tree(s.path("~/hobbies/cooking")), cycling: tree(s.path("~/hobbies/cycling")) });
+        if (!before.has(s))
+          before.set(s, { cooking: tree(s.path("~/hobbies/cooking")), cycling: tree(s.path("~/hobbies/cycling")) });
       },
     },
     run: async (s) => {
@@ -118,21 +135,35 @@ export const GIT_SCENARIOS: Scenario[] = [
       await s.status(/ ~\/hobbies\/cooking +‹ Home\.md/);
       for (let i = 0; i < 3 && !s.statusLine().includes("FILES"); i++) await leader(s, "e");
       await s.until(() => explorer(s).some((r) => /\sRecipes\s*$/.test(r.trimEnd())), 3000, "cooking's own tree");
-      s.expect(explorer(s).some((r) => /\s\.\.\s*$/.test(r.trimEnd())), "`..` above the root");
+      s.expect(
+        explorer(s).some((r) => /\s\.\.\s*$/.test(r.trimEnd())),
+        "`..` above the root",
+      );
       // `..`: hobbies a level at a time — cooking marked and unfolded (its Recipes under it), cycling a root beside
       // it; a file of cycling's opened switches into it, the explorer staying in hobbies.
       await s.keys("g", "g"); // `..`, the first row
       await s.keys("enter");
       await s.until(() => explorer(s).some((r) => /\scycling\s*$/.test(r.trimEnd())), 3000, "hobbies listed");
-      s.expect(explorer(s).some((r) => /\sRecipes\s*$/.test(r.trimEnd())), "cooking still unfolded under it");
+      s.expect(
+        explorer(s).some((r) => /\sRecipes\s*$/.test(r.trimEnd())),
+        "cooking still unfolded under it",
+      );
       await explorerRow(s, "cycling");
       await s.keys("enter");
-      await s.until(() => explorer(s).some((r) => /202608151900-index\.md\s*$/.test(r.trimEnd())), 3000, "cycling unfolded");
+      await s.until(
+        () => explorer(s).some((r) => /202608151900-index\.md\s*$/.test(r.trimEnd())),
+        3000,
+        "cycling unfolded",
+      );
       await explorerRow(s, "202608151900-index\\.md");
       await s.keys("enter");
       await s.status(/ ~\/hobbies\/cycling +‹ 202608151900-index\.md/, 5000);
       for (let i = 0; i < 3 && !s.statusLine().includes("FILES"); i++) await leader(s, "e");
-      await s.until(() => explorer(s).some((r) => /\scooking\s*$/.test(r.trimEnd())), 3000, "the explorer still in hobbies");
+      await s.until(
+        () => explorer(s).some((r) => /\scooking\s*$/.test(r.trimEnd())),
+        3000,
+        "the explorer still in hobbies",
+      );
       // .zk/ makes cycling one.
       await s.restart({ startAt: "home/hobbies/cycling/202608151900-index.md" });
       await s.status(/ ~\/hobbies\/cycling +‹ 202608151900-index\.md/);
@@ -147,7 +178,11 @@ export const GIT_SCENARIOS: Scenario[] = [
       await s.restart({ startAt: "home/hobbies/cooking/Home.md" });
       await s.status(/ ~\/hobbies\/cooking +‹ Home\.md/);
       for (let i = 0; i < 3 && !s.statusLine().includes("FILES"); i++) await leader(s, "e");
-      await s.until(() => explorer(s).some((r) => /\s\.\.\s*$/.test(r.trimEnd())), 3000, "a plain folder's .. above it");
+      await s.until(
+        () => explorer(s).some((r) => /\s\.\.\s*$/.test(r.trimEnd())),
+        3000,
+        "a plain folder's .. above it",
+      );
     },
   },
 
@@ -178,7 +213,11 @@ export const GIT_SCENARIOS: Scenario[] = [
       const notes = "~/work/kestrel/docs/release-notes/2.3.md";
       // Jo's branch rewords the lines main changed too.
       s.expect(git(s, repo, "merge", "jo/release-notes-wording").code !== 0, "the merge stops on a conflict");
-      const marker = s.read(notes).split("\n").findIndex((l) => l.startsWith("<<<<<<<")) + 1;
+      const marker =
+        s
+          .read(notes)
+          .split("\n")
+          .findIndex((l) => l.startsWith("<<<<<<<")) + 1;
       s.expect(marker > 0, "the release notes hold git's markers");
       await leader(s, "v", "p");
       // Filtered to the file (the panel is a third of the screen): under Conflicts, at its first marker.
@@ -218,10 +257,14 @@ export const GIT_SCENARIOS: Scenario[] = [
       // Detached: its commit where the branch would be.
       git(s, repo, "checkout", "-q", "--detach", "HEAD~1");
       const sha = git(s, repo, "rev-parse", "HEAD").out.trim();
-      await s.until(() => {
-        const m = / · ([0-9a-f]{7,40}) /.exec(s.statusLine());
-        return !!m && sha.startsWith(m[1]!);
-      }, 5000, `the status line on ${sha.slice(0, 7)}`);
+      await s.until(
+        () => {
+          const m = / · ([0-9a-f]{7,40}) /.exec(s.statusLine());
+          return !!m && sha.startsWith(m[1]!);
+        },
+        5000,
+        `the status line on ${sha.slice(0, 7)}`,
+      );
       git(s, repo, "checkout", "-q", "main");
       await s.status(/kestrel · main /, 5000);
       // refactor/docs-layout has docs/sync.md under architecture/: architecture.md's links to it break, but a
@@ -229,7 +272,11 @@ export const GIT_SCENARIOS: Scenario[] = [
       s.expect(git(s, repo, "checkout", "-q", "refactor/docs-layout").code === 0, "checkout refactor/docs-layout");
       await s.message("switched to branch refactor/docs-layout", 5000);
       await s.status(/ · refactor\/docs-layout +‹ docs\/architecture\.md/);
-      s.expect(s.read("~/work/kestrel/docs/architecture.md").includes("[sync.md](sync.md)") && !s.exists("~/work/kestrel/docs/sync.md"), "a link the switch broke");
+      s.expect(
+        s.read("~/work/kestrel/docs/architecture.md").includes("[sync.md](sync.md)") &&
+          !s.exists("~/work/kestrel/docs/sync.md"),
+        "a link the switch broke",
+      );
       await leader(s, "l", "r");
       await s.see("relink: 0 changes in 0 files", 5000);
       await s.keys("escape");
@@ -243,14 +290,28 @@ export const GIT_SCENARIOS: Scenario[] = [
       // What's said so far (the detach above is said only if a poll saw it before main was back).
       const detachedBefore = await messagesSaying(s, "switched detached", /switched to a detached HEAD/);
       const old = git(s, repo, "rev-parse", "HEAD").out.trim();
-      s.expect(git(s, repo, "rebase", "-q", "--autostash", "--exec", "sleep 1.5", "main").code === 0, "the rebase applies (the local .editorconfig stashed and back)");
-      const renames = git(s, repo, "diff", "-M", "--name-status", old, "HEAD").out.split("\n").filter((l) => l.startsWith("R")).length;
+      s.expect(
+        git(s, repo, "rebase", "-q", "--autostash", "--exec", "sleep 1.5", "main").code === 0,
+        "the rebase applies (the local .editorconfig stashed and back)",
+      );
+      const renames = git(s, repo, "diff", "-M", "--name-status", old, "HEAD")
+        .out.split("\n")
+        .filter((l) => l.startsWith("R")).length;
       s.expect(renames > 0, "the rebase brings renames");
       await s.message("cleanup/remove-legacy moved on", 8000); // the box wraps the rest
       await s.status(/ · cleanup\/remove-legacy +‹ docs\/architecture\.md/); // the tabs stay
-      s.expect((await messagesSaying(s, "moved on", new RegExp(`moved on: git moved ${renames} files`))) === 1, "git's renames said once");
-      s.expect((await messagesSaying(s, "switched cleanup", /switched to branch cleanup\/remove-legacy/)) === 1, "no switch said back to the branch");
-      s.expect((await messagesSaying(s, "switched detached", /switched to a detached HEAD/)) === detachedBefore, "no detach said for the rebase");
+      s.expect(
+        (await messagesSaying(s, "moved on", new RegExp(`moved on: git moved ${renames} files`))) === 1,
+        "git's renames said once",
+      );
+      s.expect(
+        (await messagesSaying(s, "switched cleanup", /switched to branch cleanup\/remove-legacy/)) === 1,
+        "no switch said back to the branch",
+      );
+      s.expect(
+        (await messagesSaying(s, "switched detached", /switched to a detached HEAD/)) === detachedBefore,
+        "no detach said for the rebase",
+      );
     },
   },
 
@@ -312,7 +373,8 @@ export const GIT_SCENARIOS: Scenario[] = [
     run: async (s) => {
       // Hands off (a key would pause it): the roots list fills with roots never opened.
       const registry = join(s.dir, "state", "slipbox", "roots.json");
-      const found = (rel: string) => existsSync(registry) && readFileSync(registry, "utf8").includes(JSON.stringify(s.path(rel)));
+      const found = (rel: string) =>
+        existsSync(registry) && readFileSync(registry, "utf8").includes(JSON.stringify(s.path(rel)));
       const roots = ["~/hobbies/photography", "~/work/product", "~/hobbies/cycling"];
       s.expect(!roots.some(found), "none known before it ran");
       await s.until(() => roots.every(found), 60_000, "the auto-index to find photography, product and cycling");
@@ -343,8 +405,13 @@ export const GIT_SCENARIOS: Scenario[] = [
       await s.quit();
       // Every cache file garbage: started anyway, the note drawn, its backlinks rebuilt.
       const cache = join(s.dir, "cache", "slipbox");
-      const files = (readdirSync(cache, { recursive: true }) as string[]).filter((f) => statSync(join(cache, f)).isFile());
-      s.expect(files.some((f) => f.endsWith("index.json")), "an index in the cache");
+      const files = (readdirSync(cache, { recursive: true }) as string[]).filter((f) =>
+        statSync(join(cache, f)).isFile(),
+      );
+      s.expect(
+        files.some((f) => f.endsWith("index.json")),
+        "an index in the cache",
+      );
       for (const f of files) writeFileSync(join(cache, f), "\x00garbage, not an index\n");
       await s.start();
       await s.see("Priya Nair", 5000);

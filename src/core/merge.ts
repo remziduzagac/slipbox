@@ -193,7 +193,11 @@ export function merge3(base: string, ours: string, theirs: string): MergeResult 
     const group: (Hunk & { side: "o" | "t" })[] = [all[i]!];
     let end = all[i]!.aStart + all[i]!.aLen;
     let j = i + 1;
-    while (j < all.length && (all[j]!.aStart < end || (all[j]!.aStart === end && (all[j]!.aLen === 0 || group.some((g) => g.aLen === 0 && g.aStart === end))))) {
+    while (
+      j < all.length &&
+      (all[j]!.aStart < end ||
+        (all[j]!.aStart === end && (all[j]!.aLen === 0 || group.some((g) => g.aLen === 0 && g.aStart === end))))
+    ) {
       end = Math.max(end, all[j]!.aStart + all[j]!.aLen);
       group.push(all[j]!);
       j++;

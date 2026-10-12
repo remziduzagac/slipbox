@@ -55,7 +55,8 @@ function linterDef(name: string, c: LinterConfig, base?: LinterDef): LinterDef {
     stdin: c["lint-stdin"] ?? base?.stdin ?? true,
     formats: c["lint-formats"] ?? base?.formats ?? ["%f:%l:%c: %m"],
     source: c["lint-source"] ?? base?.source ?? name,
-    severity: c["lint-severity"] !== undefined ? (SEVERITY_OF[c["lint-severity"]] ?? "error") : (base?.severity ?? "error"),
+    severity:
+      c["lint-severity"] !== undefined ? (SEVERITY_OF[c["lint-severity"]] ?? "error") : (base?.severity ?? "error"),
     ignoreExitCode: c["lint-ignore-exit-code"] ?? base?.ignoreExitCode ?? false,
     rootMarkers: c["root-markers"] ?? base?.rootMarkers ?? [],
     requireMarker: c["require-marker"] ?? base?.requireMarker ?? false,
@@ -85,7 +86,8 @@ LINTERS.yamllint!.hint = "uv tool install yamllint, pip install yamllint, or bre
 /** The linters in effect: the built-in ones, each the config names changed (its keys over the defaults) or added. */
 export function linterTable(config: Record<string, LinterConfig> = {}): Record<string, LinterDef> {
   const out: Record<string, LinterDef> = { ...LINTERS };
-  for (const [name, c] of Object.entries(config)) out[name] = linterDef(name, c, Object.hasOwn(out, name) ? out[name] : undefined);
+  for (const [name, c] of Object.entries(config))
+    out[name] = linterDef(name, c, Object.hasOwn(out, name) ? out[name] : undefined);
   return out;
 }
 
@@ -94,9 +96,31 @@ export function linterTable(config: Record<string, LinterConfig> = {}): Record<s
 
 /** What a format captures, by its letter. */
 type Field = "f" | "l" | "c" | "v" | "e" | "k" | "t" | "n" | "m" | "r" | "p" | "s";
-const CAPTURES: Record<Field, string> = { f: "(.+?)", l: "(\\d+)", c: "(\\d+)", v: "(\\d+)", e: "(\\d+)", k: "(\\d+)", t: "(.)", n: "(\\d+)", m: "(.*)", r: "(.*)", p: "([-. \\t]*)", s: "(.+)" };
+const CAPTURES: Record<Field, string> = {
+  f: "(.+?)",
+  l: "(\\d+)",
+  c: "(\\d+)",
+  v: "(\\d+)",
+  e: "(\\d+)",
+  k: "(\\d+)",
+  t: "(.)",
+  n: "(\\d+)",
+  m: "(.*)",
+  r: "(.*)",
+  p: "([-. \\t]*)",
+  s: "(.+)",
+};
 const REGEX_CLASSES = new Set(["s", "S", "d", "D", "w", "W", "a", "A", "x", "X", "l", "L", "u", "U"]);
-const VIM_CLASS: Record<string, string> = { a: "[A-Za-z]", A: "[^A-Za-z]", x: "[0-9A-Fa-f]", X: "[^0-9A-Fa-f]", l: "[a-z]", L: "[^a-z]", u: "[A-Z]", U: "[^A-Z]" };
+const VIM_CLASS: Record<string, string> = {
+  a: "[A-Za-z]",
+  A: "[^A-Za-z]",
+  x: "[0-9A-Fa-f]",
+  X: "[^0-9A-Fa-f]",
+  l: "[a-z]",
+  L: "[^a-z]",
+  u: "[A-Z]",
+  U: "[^A-Z]",
+};
 
 export interface Format {
   re: RegExp;
@@ -155,7 +179,10 @@ export function compileFormat(format: string): Format | string {
     } else if (next === "[") {
       const end = format.indexOf("]", i + 1);
       if (end < 0) return `"${format}": an unclosed %[`;
-      re += `[${format.slice(i, end).replace(/\\/g, "\\\\").replace(/^\\\\\^/, "^")}]`;
+      re += `[${format
+        .slice(i, end)
+        .replace(/\\/g, "\\\\")
+        .replace(/^\\\\\^/, "^")}]`;
       i = end + 1;
     } else if (next === "*") {
       // scanf's `%*\d`, `%*[^:]`: one or more, not captured.
@@ -182,7 +209,13 @@ const STDIN_NAMES = new Set(["", "-", "stdin", "<stdin>", "<text>"]);
  * A linter's findings in `file`, from its output: each line read by the first format matching it
  * whole; a line no format reads, or one about another file, passed over. Lines and columns from 1.
  */
-export function parseFindings(output: string, formats: Format[], def: Pick<LinterDef, "source" | "severity">, file: string, cwd: string): Problem[] {
+export function parseFindings(
+  output: string,
+  formats: Format[],
+  def: Pick<LinterDef, "source" | "severity">,
+  file: string,
+  cwd: string,
+): Problem[] {
   const out: Problem[] = [];
   for (const line of output.split(/\r?\n/)) {
     for (const f of formats) {
@@ -233,7 +266,9 @@ export function linterRoot(def: LinterDef, file: string, projectRoot: string): s
  *  (23.2); elsewhere they're the project's code, and `PATH` alone is searched. */
 export function projectPath(root: string, path = process.env.PATH ?? ""): string {
   if (!isTrusted(root)) return path;
-  const own = ["node_modules/.bin", ".venv/bin", "venv/bin", "vendor/bin"].map((d) => join(root, d)).filter((d) => existsSync(d));
+  const own = ["node_modules/.bin", ".venv/bin", "venv/bin", "vendor/bin"]
+    .map((d) => join(root, d))
+    .filter((d) => existsSync(d));
   return [...own, path].filter(Boolean).join(delimiter);
 }
 
@@ -252,7 +287,13 @@ export type LintRun = { problems: Problem[] } | { failed: "missing" | "timeout" 
  * the shell, output and errors read together; an exit of 0 is nothing found, unless it's told to
  * ignore its exit code. `missing`: the shell couldn't find it (127).
  */
-export function runLinter(def: LinterDef, file: string, text: string, root: string, timeoutMs = 30_000): Promise<LintRun> {
+export function runLinter(
+  def: LinterDef,
+  file: string,
+  text: string,
+  root: string,
+  timeoutMs = 30_000,
+): Promise<LintRun> {
   const formats: Format[] = [];
   for (const f of def.formats) {
     const c = compileFormat(f);
@@ -261,7 +302,11 @@ export function runLinter(def: LinterDef, file: string, text: string, root: stri
   }
   return new Promise((done) => {
     let out = "";
-    const child = spawn("sh", ["-c", commandFor(def, file)], { cwd: root, env: { ...process.env, PATH: projectPath(root) }, stdio: ["pipe", "pipe", "pipe"] });
+    const child = spawn("sh", ["-c", commandFor(def, file)], {
+      cwd: root,
+      env: { ...process.env, PATH: projectPath(root) },
+      stdio: ["pipe", "pipe", "pipe"],
+    });
     const timer = setTimeout(() => {
       child.kill("SIGKILL");
       done({ failed: "timeout", detail: `${def.name} took longer than ${timeoutMs / 1000} s` });

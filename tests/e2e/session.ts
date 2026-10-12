@@ -67,7 +67,8 @@ export function styledRuns(row: string): StyledRun[] {
   };
   const color = (p: number[], i: number): [string, number] => {
     if (p[i + 1] === 5) return [`5;${p[i + 2]}`, i + 2];
-    if (p[i + 1] === 2) return [`#${[p[i + 2], p[i + 3], p[i + 4]].map((n) => (n ?? 0).toString(16).padStart(2, "0")).join("")}`, i + 4];
+    if (p[i + 1] === 2)
+      return [`#${[p[i + 2], p[i + 3], p[i + 4]].map((n) => (n ?? 0).toString(16).padStart(2, "0")).join("")}`, i + 4];
     return ["", i];
   };
   for (let k = 0; k < row.length; k++) {
@@ -140,7 +141,10 @@ export class Session {
     for (const d of ["config/slipbox", "state", "cache"]) mkdirSync(join(this.dir, d), { recursive: true });
     // {vault} in a scenario's config is this scenario's own copy of the vault.
     // The machine's own linter stays out of the scenarios unless one asks for it (3.21).
-    const config = (opts.config ?? "").replaceAll("{vault}", this.vault).replaceAll("{home}", this.home).replaceAll("{dir}", this.dir);
+    const config = (opts.config ?? "")
+      .replaceAll("{vault}", this.vault)
+      .replaceAll("{home}", this.home)
+      .replaceAll("{dir}", this.dir);
     // Lint and language servers off unless a scenario asks: they'd run npx, start servers, install them.
     // The background auto-index too (20.9): it would walk your own home folder.
     const off = `${/^\[lint\]/m.test(config) ? "" : '\n[lint]\nenabled = "off"\n'}${/^\[lsp\]/m.test(config) ? "" : "\n[lsp]\nenabled = false\n"}${/^\[index\]/m.test(config) ? "" : "\n[index]\nbackground = false\n"}`;
@@ -173,15 +177,33 @@ export class Session {
       .join(" ");
     this.opts.setup?.(this);
     const at = this.opts.startAt;
-    const file = at === null ? [] : [at !== undefined ? (isAbsolute(at) ? at : join(this.dir, at)) : join(this.vault, this.opts.open ?? "home.md")];
+    const file =
+      at === null
+        ? []
+        : [
+            at !== undefined
+              ? isAbsolute(at)
+                ? at
+                : join(this.dir, at)
+              : join(this.vault, this.opts.open ?? "home.md"),
+          ];
     const cwd = this.opts.cwd !== undefined ? join(this.dir, this.opts.cwd) : REPO;
     // A marker of this start's own: started again in one scenario, the last exit's is still on screen.
     this.marker = `__slipbox_e2e_exit_${Math.random().toString(36).slice(2, 8)}__`;
     // Bun by its own path: with $HOME the reference set's, nothing may depend on finding it.
-    const argv = [process.execPath, join(REPO, "src", "main.ts"), ...(this.opts.args ?? []), ...file].map(shq).join(" ");
+    const argv = [process.execPath, join(REPO, "src", "main.ts"), ...(this.opts.args ?? []), ...file]
+      .map(shq)
+      .join(" ");
     this.pane.run(`clear; cd ${shq(cwd)} && ${env} ${argv}; echo ${this.marker} $?`);
     if (this.opts.noWait) return;
-    await this.until(() => this.statusLine().includes("READ") || this.statusLine().includes("SOURCE") || this.statusLine().includes("FILES"), 10000, "slipbox to start");
+    await this.until(
+      () =>
+        this.statusLine().includes("READ") ||
+        this.statusLine().includes("SOURCE") ||
+        this.statusLine().includes("FILES"),
+      10000,
+      "slipbox to start",
+    );
     // Its first frame isn't its last at start (a loaded machine is slower to finish): keys sent before
     // it settles can be read as the terminal's answers, and lost.
     await this.settle();
@@ -229,7 +251,9 @@ export class Session {
   /** The pid of slipbox running in the pane, or null. */
   pid(): number | null {
     const info = JSON.parse(herdr("pane", "process-info", "--pane", this.pane.id)).result?.process_info;
-    const p = (info?.foreground_processes ?? []).find((x: { argv: string[] }) => x.argv.some((a) => a.endsWith(join("src", "main.ts"))));
+    const p = (info?.foreground_processes ?? []).find((x: { argv: string[] }) =>
+      x.argv.some((a) => a.endsWith(join("src", "main.ts"))),
+    );
     return p ? (p.pid as number) : null;
   }
 
@@ -436,7 +460,8 @@ export class Session {
       if (Date.now() > end) throw new CheckFailed(`timed out waiting for ${what}\n${this.dump()}`);
       // Exited: what was awaited may have come with it (an exit itself, its last words) — looked at
       // once more, since it may have happened between the two looks.
-      if (this.exited() && !ok()) throw new CheckFailed(`slipbox exited while waiting for ${what}\n${this.pane.recent(40)}`);
+      if (this.exited() && !ok())
+        throw new CheckFailed(`slipbox exited while waiting for ${what}\n${this.pane.recent(40)}`);
       await sleep(50);
     }
   }
@@ -450,7 +475,8 @@ export class Session {
   }
 
   async status(needle: string | RegExp, timeout = 3000): Promise<void> {
-    const has = () => (typeof needle === "string" ? this.statusLine().includes(needle) : needle.test(this.statusLine()));
+    const has = () =>
+      typeof needle === "string" ? this.statusLine().includes(needle) : needle.test(this.statusLine());
     await this.until(has, timeout, `the status line to show ${needle}`);
   }
 

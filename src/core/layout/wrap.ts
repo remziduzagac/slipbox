@@ -44,7 +44,8 @@ function chunkify(spans: Span[]): Chunk[] {
       const w = graphemeWidth(g);
       // ASCII without a regex: whitespace is a space, a tab or a line break's kin (\v \f \r).
       const c = g.length === 1 ? g.charCodeAt(0) : -1;
-      const kind = c >= 0 && c < 0x80 ? (c === 32 || (c >= 9 && c <= 13) ? "space" : "word") : SPACE.test(g) ? "space" : "word";
+      const kind =
+        c >= 0 && c < 0x80 ? (c === 32 || (c >= 9 && c <= 13) ? "space" : "word") : SPACE.test(g) ? "space" : "word";
       // Wide (CJK) graphemes are each their own break opportunity — except that closing
       // punctuation stays with what precedes it and opening punctuation with what follows (kinsoku).
       if (kind === "word" && w === 2) {
@@ -64,7 +65,13 @@ function chunkify(spans: Span[]): Chunk[] {
         // Text right after opening punctuation continues its chunk (no break after （ or 「), and so
         // does ASCII closing punctuation right after a CJK character (no row starts with its comma),
         // and closing punctuation that measures 1 (`…` `‥`, East Asian Ambiguous) likewise.
-        if (kind === "word" && prev?.kind === "word" && (NO_BREAK_AFTER.test(prev.gs.at(-1)!.g) || (c >= 0 && CLOSING.includes(g)) || (prev.gs.at(-1)!.w === 2 && NO_BREAK_BEFORE.test(g))))
+        if (
+          kind === "word" &&
+          prev?.kind === "word" &&
+          (NO_BREAK_AFTER.test(prev.gs.at(-1)!.g) ||
+            (c >= 0 && CLOSING.includes(g)) ||
+            (prev.gs.at(-1)!.w === 2 && NO_BREAK_BEFORE.test(g)))
+        )
           cur = chunks.pop() as { kind: "word" | "space"; gs: G[]; width: number };
         else cur = { kind, gs: [], width: 0 };
       }

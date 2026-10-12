@@ -137,7 +137,12 @@ export function expandSnippet(src: string, ctx: SnippetContext): Snippet {
     const main = ranges.find(([a, b]) => b > a) ?? ranges[0]!;
     stops.set(n, [main, ...ranges.filter((r) => r !== main)]);
   }
-  const fills = [...stops.values()].flatMap((ranges) => ranges.slice(1).filter(([a, b]) => a === b && ranges[0]![1] > ranges[0]![0]).map((r) => ({ r, text: "", of: ranges[0]! })));
+  const fills = [...stops.values()].flatMap((ranges) =>
+    ranges
+      .slice(1)
+      .filter(([a, b]) => a === b && ranges[0]![1] > ranges[0]![0])
+      .map((r) => ({ r, text: "", of: ranges[0]! })),
+  );
   for (const f of fills) f.text = out.slice(f.of[0], f.of[1]);
   for (const f of fills.sort((x, y) => y.r[0] - x.r[0])) {
     const at = f.r[0];

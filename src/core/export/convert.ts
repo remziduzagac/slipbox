@@ -20,7 +20,8 @@ export interface Rgba {
 /** Pixels as a PNG: eight bits a channel, with alpha, each row unfiltered, deflated. */
 export function encodePng(img: Rgba): Uint8Array {
   const rows = new Uint8Array(img.height * (img.width * 4 + 1));
-  for (let y = 0; y < img.height; y++) rows.set(img.data.subarray(y * img.width * 4, (y + 1) * img.width * 4), y * (img.width * 4 + 1) + 1);
+  for (let y = 0; y < img.height; y++)
+    rows.set(img.data.subarray(y * img.width * 4, (y + 1) * img.width * 4), y * (img.width * 4 + 1) + 1);
   const chunk = (type: string, body: Uint8Array) => {
     const out = new Uint8Array(12 + body.length);
     const v = new DataView(out.buffer);
@@ -35,7 +36,12 @@ export function encodePng(img: Rgba): Uint8Array {
   h.setUint32(0, img.width);
   h.setUint32(4, img.height);
   header.set([8, 6, 0, 0, 0], 8);
-  const parts = [new Uint8Array([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]), chunk("IHDR", header), chunk("IDAT", new Uint8Array(deflateSync(rows))), chunk("IEND", new Uint8Array())];
+  const parts = [
+    new Uint8Array([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]),
+    chunk("IHDR", header),
+    chunk("IDAT", new Uint8Array(deflateSync(rows))),
+    chunk("IEND", new Uint8Array()),
+  ];
   const png = new Uint8Array(parts.reduce((n, p) => n + p.length, 0));
   let at = 0;
   for (const p of parts) {
@@ -118,12 +124,18 @@ export async function decodeWebp(bytes: Uint8Array): Promise<Rgba | null> {
   webp ??= (async () => {
     const mod = await import("@jsquash/webp/decode.js");
     // Its WebAssembly given, not fetched: from the file Bun embeds in a compiled slipbox.
-    await (mod.init as unknown as (module: WebAssembly.Module) => Promise<void>)(new WebAssembly.Module(readFileSync(wasm)));
+    await (mod.init as unknown as (module: WebAssembly.Module) => Promise<void>)(
+      new WebAssembly.Module(readFileSync(wasm)),
+    );
     return mod.default as WebpDecode;
   })();
   try {
     const img = await (await webp)(bytes.slice().buffer as ArrayBuffer);
-    return { width: img.width, height: img.height, data: new Uint8Array(img.data.buffer, img.data.byteOffset, img.data.byteLength) };
+    return {
+      width: img.width,
+      height: img.height,
+      data: new Uint8Array(img.data.buffer, img.data.byteOffset, img.data.byteLength),
+    };
   } catch {
     return null;
   }

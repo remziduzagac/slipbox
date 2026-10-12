@@ -57,7 +57,17 @@ export function anchorAt(layout: Layout, top: number): Anchor {
   // same text in every entry) the first row of text after it.
   let probe = top;
   while (probe < layout.lines.length - 1 && (probe === heading.line || !rowTextOf(layout, probe))) probe++;
-  return { heading: heading.slug, headingIndex, offset: src - heading.src, line: src, headingText: heading.text, nth, nthFromEnd: same.length - 1 - nth, rowText: rowTextOf(layout, probe), rowAfter: probe - top };
+  return {
+    heading: heading.slug,
+    headingIndex,
+    offset: src - heading.src,
+    line: src,
+    headingText: heading.text,
+    nth,
+    nthFromEnd: same.length - 1 - nth,
+    rowText: rowTextOf(layout, probe),
+    rowAfter: probe - top,
+  };
 }
 
 function rowTextOf(layout: Layout, row: number): string {
@@ -71,7 +81,9 @@ export function rowFor(layout: Layout, anchor: Anchor): number {
   if (anchor.headingText !== undefined && anchor.nth !== undefined && anchor.nthFromEnd !== undefined) {
     // A repeated heading: counted from the top, or from the bottom — whichever still has the row.
     const same = layout.headings.filter((h) => h.text === anchor.headingText);
-    const tries = [same[anchor.nth], same[same.length - 1 - anchor.nthFromEnd]].filter((h): h is NonNullable<typeof h> => !!h);
+    const tries = [same[anchor.nth], same[same.length - 1 - anchor.nthFromEnd]].filter(
+      (h): h is NonNullable<typeof h> => !!h,
+    );
     for (const h of tries) {
       const row = rowForSource(layout, h.src + anchor.offset);
       if (anchor.rowText && rowTextOf(layout, row + (anchor.rowAfter ?? 0)).startsWith(anchor.rowText)) return row;
@@ -115,7 +127,7 @@ export function isCursorAnchor(v: unknown): v is CursorAnchor {
   return !!c && typeof c === "object" && isAnchor(c.anchor) && Number.isInteger(c.sub) && Number.isInteger(c.col);
 }
 
-type PositionEntry = Anchor & { at: string; cursor?: CursorAnchor; /** The root it was read from. */ root?: string };
+type PositionEntry = Anchor & { at: string; cursor?: CursorAnchor /** The root it was read from. */; root?: string };
 type PositionMap = Record<string, PositionEntry>;
 
 /** The newest kept, across every root. */
@@ -149,7 +161,8 @@ function merged(mine: PositionMap, theirs: PositionMap): PositionMap {
 
 function writePositions(data: PositionMap): void {
   let entries = Object.entries(data);
-  if (entries.length > MAX_POSITIONS) entries = entries.sort((a, b) => (a[1].at < b[1].at ? 1 : -1)).slice(0, MAX_POSITIONS);
+  if (entries.length > MAX_POSITIONS)
+    entries = entries.sort((a, b) => (a[1].at < b[1].at ? 1 : -1)).slice(0, MAX_POSITIONS);
   try {
     ensureDir(stateHome());
     writeJson(positionsFile(), Object.fromEntries(entries));
@@ -188,7 +201,8 @@ export class PositionStore {
     const own = join(stateDir(place), "positions.json");
     if (existsSync(own)) {
       const before: PositionMap = {};
-      for (const [k, v] of Object.entries(readPositions(own))) before[isAbsolute(k) ? k : join(place.root, k)] = { ...v, root: place.root };
+      for (const [k, v] of Object.entries(readPositions(own)))
+        before[isAbsolute(k) ? k : join(place.root, k)] = { ...v, root: place.root };
       this.data = merged(this.data, before);
       writePositions(this.data);
       rmSync(own, { force: true });
@@ -231,7 +245,12 @@ export class PositionStore {
   }
 
   set(rel: string, anchor: Anchor, cursor?: CursorAnchor): void {
-    this.data[this.k(rel)] = { ...anchor, at: new Date().toISOString(), root: this.place.root, ...(cursor ? { cursor } : {}) };
+    this.data[this.k(rel)] = {
+      ...anchor,
+      at: new Date().toISOString(),
+      root: this.place.root,
+      ...(cursor ? { cursor } : {}),
+    };
   }
 
   save(): void {
@@ -310,8 +329,12 @@ export interface SessionState {
 export function isAnchor(v: unknown): v is Anchor {
   const a = v as Anchor;
   return (
-    !!a && typeof a === "object" && (a.heading === null || typeof a.heading === "string") &&
-    Number.isInteger(a.headingIndex) && Number.isInteger(a.offset) && Number.isInteger(a.line)
+    !!a &&
+    typeof a === "object" &&
+    (a.heading === null || typeof a.heading === "string") &&
+    Number.isInteger(a.headingIndex) &&
+    Number.isInteger(a.offset) &&
+    Number.isInteger(a.line)
   );
 }
 
@@ -329,7 +352,11 @@ export function loadSession(place: StatePlace): SessionState | null {
   if (s.branches && typeof s.branches === "object" && !Array.isArray(s.branches)) {
     for (const [b, v] of Object.entries(s.branches)) {
       if (!v || typeof v !== "object" || !Array.isArray(v.tabs)) continue;
-      branches[b] = { tabs: sessionTabs(v.tabs), activeTab: Number.isInteger(v.activeTab) ? v.activeTab : 0, at: typeof v.at === "string" ? v.at : "" };
+      branches[b] = {
+        tabs: sessionTabs(v.tabs),
+        activeTab: Number.isInteger(v.activeTab) ? v.activeTab : 0,
+        at: typeof v.at === "string" ? v.at : "",
+      };
     }
   }
   return {
@@ -341,7 +368,13 @@ export function loadSession(place: StatePlace): SessionState | null {
     outline: typeof s.outline === "boolean" ? s.outline : undefined,
     sidebar_width: validWidth(s.sidebar_width),
     outline_width: validWidth(s.outline_width),
-    problems_height: typeof s.problems_height === "number" && Number.isInteger(s.problems_height) && s.problems_height >= 3 && s.problems_height <= 200 ? s.problems_height : undefined,
+    problems_height:
+      typeof s.problems_height === "number" &&
+      Number.isInteger(s.problems_height) &&
+      s.problems_height >= 3 &&
+      s.problems_height <= 200
+        ? s.problems_height
+        : undefined,
     theme: typeof s.theme === "string" ? s.theme : undefined,
     ui: s.ui && typeof s.ui === "object" && !Array.isArray(s.ui) ? s.ui : {},
     recent_commands: Array.isArray(s.recent_commands) ? s.recent_commands.filter((x) => typeof x === "string") : [],
@@ -357,7 +390,13 @@ function sessionTabs(list: unknown[]): SessionTab[] {
     .map((t) => ({
       panes: t.panes
         .filter((p) => p && typeof p.path === "string" && p.path)
-        .map((p) => ({ path: p.path, anchor: isAnchor(p.anchor) ? p.anchor : { ...TOP }, ...(isCursorAnchor(p.cursor) ? { cursor: p.cursor } : {}), back: places(p.back), fwd: places(p.fwd) }))
+        .map((p) => ({
+          path: p.path,
+          anchor: isAnchor(p.anchor) ? p.anchor : { ...TOP },
+          ...(isCursorAnchor(p.cursor) ? { cursor: p.cursor } : {}),
+          back: places(p.back),
+          fwd: places(p.fwd),
+        }))
         .slice(0, 2),
       active: Number.isInteger(t.active) ? t.active : 0,
       orientation: t.orientation === "stacked" ? ("stacked" as const) : ("side" as const),

@@ -40,7 +40,8 @@ function plain(node: Nodes): string {
       return false;
     }
     if (n.type === "text" || n.type === "inlineCode") parts.push(n.value);
-    else if (n.type === "inlineMath") parts.push(`$${n.value}$`); // as written (12.11)
+    else if (n.type === "inlineMath")
+      parts.push(`$${n.value}$`); // as written (12.11)
     else if (n.type === "break" || n.type === "paragraph") parts.push(" ");
   });
   return parts.join("").replace(/\s+/g, " ").trim();
@@ -60,12 +61,18 @@ export function footnotesOf(parsed: ParsedNote): Footnote[] {
   // Offsets from lines and columns (a note parsed by chunks keeps its lines, not its offsets).
   const starts = [0];
   for (let i = parsed.source.indexOf("\n"); i >= 0; i = parsed.source.indexOf("\n", i + 1)) starts.push(i + 1);
-  const offset = (p: { line: number; column: number } | undefined) => (p ? (starts[p.line - 1] ?? 0) + p.column - 1 : 0);
+  const offset = (p: { line: number; column: number } | undefined) =>
+    p ? (starts[p.line - 1] ?? 0) + p.column - 1 : 0;
   visit(parsed.tree, (n) => {
     const at = n.position?.start;
     if (n.type === "footnoteReference") {
       const r = n as FootnoteReference;
-      get(r.identifier, r.label).references.push({ line: at?.line ?? 1, column: at?.column ?? 1, start: offset(at), end: offset(n.position?.end) });
+      get(r.identifier, r.label).references.push({
+        line: at?.line ?? 1,
+        column: at?.column ?? 1,
+        start: offset(at),
+        end: offset(n.position?.end),
+      });
     } else if (n.type === "footnoteDefinition") {
       const d = n as FootnoteDefinition;
       const f = get(d.identifier, d.label);
@@ -79,7 +86,9 @@ export function footnotesOf(parsed: ParsedNote): Footnote[] {
     }
   });
   const first = (f: Footnote) => f.references[0] ?? { line: Number.POSITIVE_INFINITY, column: 0 };
-  return [...byId.values()].sort((a, b) => first(a).line - first(b).line || first(a).column - first(b).column || (a.line ?? 0) - (b.line ?? 0));
+  return [...byId.values()].sort(
+    (a, b) => first(a).line - first(b).line || first(a).column - first(b).column || (a.line ?? 0) - (b.line ?? 0),
+  );
 }
 
 // -------------------------------------------------------------------------------------------
@@ -117,7 +126,12 @@ function oneLine(body: string): string {
  * Add a footnote (3.18): `[^N]` at `refAt` (the next free number), and `[^N]: text` at the note's
  * end — right after its last definition when the note ends with them, else after a blank line.
  */
-export function addFootnote(source: string, list: Footnote[], refAt: number, body: string): { label: string; edits: TextEdit[] } {
+export function addFootnote(
+  source: string,
+  list: Footnote[],
+  refAt: number,
+  body: string,
+): { label: string; edits: TextEdit[] } {
   const label = nextFootnoteLabel(list);
   const text = oneLine(body);
   const end = source.replace(/\s+$/, "").length;
@@ -125,7 +139,13 @@ export function addFootnote(source: string, list: Footnote[], refAt: number, bod
   const afterDefs = lastDef >= 0 && source.slice(lastDef, end).trim() === "";
   const before = end === 0 ? "" : afterDefs ? "\n" : "\n\n";
   const after = end === source.length ? "\n" : "";
-  return { label, edits: [{ at: Math.min(refAt, end), length: 0, text: `[^${label}]` }, { at: end, length: 0, text: `${before}[^${label}]: ${text}${after}` }] };
+  return {
+    label,
+    edits: [
+      { at: Math.min(refAt, end), length: 0, text: `[^${label}]` },
+      { at: end, length: 0, text: `${before}[^${label}]: ${text}${after}` },
+    ],
+  };
 }
 
 /** A footnote's text replaced (3.18): its definition becomes `[^label]: text`, on one line. */
@@ -141,7 +161,11 @@ export function deleteFootnote(source: string, fn: Footnote): TextEdit[] {
   if (fn.def) {
     const from = source.lastIndexOf("\n", fn.def.start - 1) + 1;
     // Its line's end too (a CRLF note's two characters), so no blank line is left in its place.
-    const to = source.startsWith("\r\n", fn.def.end) ? fn.def.end + 2 : source[fn.def.end] === "\n" ? fn.def.end + 1 : fn.def.end;
+    const to = source.startsWith("\r\n", fn.def.end)
+      ? fn.def.end + 2
+      : source[fn.def.end] === "\n"
+        ? fn.def.end + 1
+        : fn.def.end;
     edits.push({ at: from, length: to - from, text: "" });
   }
   return edits;

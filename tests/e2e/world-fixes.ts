@@ -42,7 +42,9 @@ export const FIXES_SCENARIOS: Scenario[] = [
     name: "typing: as in a desktop editor — shift+arrows select, typing replaces, ctrl+z and ctrl+y while typing, pagedown; shift+right then d in normal mode (DF-D15)",
     options: {
       open: "desk.md",
-      files: { "desk.md": `one two three\nfour five\n${Array.from({ length: 150 }, (_, i) => `line ${i + 3}`).join("\n")}\n` },
+      files: {
+        "desk.md": `one two three\nfour five\n${Array.from({ length: 150 }, (_, i) => `line ${i + 3}`).join("\n")}\n`,
+      },
     },
     run: async (s) => {
       await leader(s, "n", "v");
@@ -77,9 +79,16 @@ export const FIXES_SCENARIOS: Scenario[] = [
       await s.keys("d");
       await s.see("ONE  three");
       await s.keys("ctrl+s");
-      await s.file("desk.md", (t) => t.startsWith("ONE  three\nfour five\n"), "ONE typed over one, two deleted, written");
+      await s.file(
+        "desk.md",
+        (t) => t.startsWith("ONE  three\nfour five\n"),
+        "ONE typed over one, two deleted, written",
+      );
       const lines = s.read("desk.md").split("\n");
-      s.expect(lines[paged - 1]?.startsWith("PAGED line ") === true, `PAGED typed on line ${paged}, where pagedown went:\n${lines.slice(paged - 3, paged + 2).join("\n")}`);
+      s.expect(
+        lines[paged - 1]?.startsWith("PAGED line ") === true,
+        `PAGED typed on line ${paged}, where pagedown went:\n${lines.slice(paged - 3, paged + 2).join("\n")}`,
+      );
       s.expect(lines.filter((l) => l.includes("PAGED")).length === 1, "PAGED typed once");
     },
   },
@@ -102,7 +111,10 @@ export const FIXES_SCENARIOS: Scenario[] = [
       await s.notSee("Discard your changes");
       await s.see("kept after n");
       await s.status("unsaved");
-      s.expect(!s.statusLine().includes("differs from disk"), `kept as an edit, not a conflict kept (autosave off):\n${s.statusLine()}`);
+      s.expect(
+        !s.statusLine().includes("differs from disk"),
+        `kept as an edit, not a conflict kept (autosave off):\n${s.statusLine()}`,
+      );
       // Autosave was left on: with no key pressed, it writes the text kept.
       await s.file(NOTE, (t) => t.includes("kept after n"), "autosave to write the text kept", 15000);
       await s.message("autosaved");
@@ -128,7 +140,8 @@ export const FIXES_SCENARIOS: Scenario[] = [
     options: { config: "[input]\nwhich_key_delay_ms = 100\n" },
     run: async (s) => {
       /** The popup's entry for `key`: a row with the key, then its name. */
-      const entry = (key: string, name: string) => new RegExp(`(^|\\s)${key.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\s+(→\\s+)?${name}`);
+      const entry = (key: string, name: string) =>
+        new RegExp(`(^|\\s)${key.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\s+(→\\s+)?${name}`);
       const popup = async (prefix: string, title: string, entries: [string, string][]) => {
         await s.pane.keys(prefix);
         await s.see(title);
@@ -164,12 +177,21 @@ export const FIXES_SCENARIOS: Scenario[] = [
 
   {
     name: "links: a picture followed, linked or embedded — its path copied, said so, no later phase promised (A17)",
-    options: { open: "pic.md", files: { "pic.md": "# Pictures\n\nThe [shutter drawing](projects/attachments/dome-shutter.png) from the refit.\n" } },
+    options: {
+      open: "pic.md",
+      files: {
+        "pic.md": "# Pictures\n\nThe [shutter drawing](projects/attachments/dome-shutter.png) from the refit.\n",
+      },
+    },
     run: async (s) => {
       const SAID = "attachment projects/attachments/dome-shutter.png — path copied";
       await follow(s, "shutter drawing");
       await s.message("attachment projects/attachments/dome-shutter.png");
-      await s.until(() => s.clipboard().endsWith("/vault/projects/attachments/dome-shutter.png"), 3000, "the picture's path copied");
+      await s.until(
+        () => s.clipboard().endsWith("/vault/projects/attachments/dome-shutter.png"),
+        3000,
+        "the picture's path copied",
+      );
       await opened(s, "pic.md");
       // The message whole: nothing after "path copied" (it promised pictures "in a later phase").
       const said = await lastMessage(s, "attachment");
@@ -202,8 +224,15 @@ export const FIXES_SCENARIOS: Scenario[] = [
       await s.see("Trash (2) — enter restores");
       await s.see("Empty the trash…");
       // Each item's row with when it was deleted (not the boxes saying so, which may still show).
-      const [b, a, empty] = [s.rowOf(/\bold-b\.md +\d{4}-\d\d-\d\d \d\d:\d\d/), s.rowOf(/\bold-a\.md +\d{4}-\d\d-\d\d \d\d:\d\d/), s.rowOf("Empty the trash…")];
-      s.expect(b >= 0 && a > b && empty > a + 1, `old-b, old-a, then Empty the trash… last (rows ${b}, ${a}, ${empty})`);
+      const [b, a, empty] = [
+        s.rowOf(/\bold-b\.md +\d{4}-\d\d-\d\d \d\d:\d\d/),
+        s.rowOf(/\bold-a\.md +\d{4}-\d\d-\d\d \d\d:\d\d/),
+        s.rowOf("Empty the trash…"),
+      ];
+      s.expect(
+        b >= 0 && a > b && empty > a + 1,
+        `old-b, old-a, then Empty the trash… last (rows ${b}, ${a}, ${empty})`,
+      );
       // up from the first row: the last one; enter asks.
       await s.keys("up", "enter");
       await s.see("Empty the trash? Its 2 items go for good");
@@ -211,7 +240,10 @@ export const FIXES_SCENARIOS: Scenario[] = [
       await s.message("emptied the trash: 2 items gone for good");
       const state = join(s.dir, "state");
       const trash = (readdirSync(state, { recursive: true }) as string[]).find((f) => f.endsWith("trash"));
-      s.expect(!!trash && readdirSync(join(state, trash)).join(" ") === "trash.json", `nothing left in the trash but its list: ${trash && readdirSync(join(state, trash))}`);
+      s.expect(
+        !!trash && readdirSync(join(state, trash)).join(" ") === "trash.json",
+        `nothing left in the trash but its list: ${trash && readdirSync(join(state, trash))}`,
+      );
       await leader(s, "v", "t");
       await s.message("the trash is empty");
       s.expect(!s.exists("old-a.md") && !s.exists("old-b.md"), "neither note back");
@@ -226,7 +258,10 @@ export const FIXES_SCENARIOS: Scenario[] = [
       await s.see(/people\/kenji-mori\.md → projects\/kenji-mori\.md: \d+ changes? in \d+ files?/);
       await s.keys("enter");
       await s.file("projects/kenji-mori.md", (t) => t.includes("# Kenji Mori"), "moved into projects/");
-      s.expect(!s.exists("projects.md") && !s.exists("people/kenji-mori.md"), "no projects.md beside the folder; the old path gone");
+      s.expect(
+        !s.exists("projects.md") && !s.exists("people/kenji-mori.md"),
+        "no projects.md beside the folder; the old path gone",
+      );
       await opened(s, "projects/kenji-mori.md");
       s.expect(s.read("home.md").includes("(projects/kenji-mori.md)"), "home's link follows it");
       // A name ending in /, a folder not there yet: made, the note in it.
@@ -302,7 +337,10 @@ export const FIXES_SCENARIOS: Scenario[] = [
         await s.status(/ product[ ·]/);
         await s.status(/L1:/);
         await s.message(said);
-        s.expect((await lastMessage(s, said)).endsWith("prd/route-sharing.md: opened at its top"), `${said} …: opened at its top`);
+        s.expect(
+          (await lastMessage(s, said)).endsWith("prd/route-sharing.md: opened at its top"),
+          `${said} …: opened at its top`,
+        );
         // Far down again, for the next link: only its top can say it landed there.
         await moveTo(s, ["shift+g"], (l) => l > 50, "the PRD's end again");
       }
@@ -314,7 +352,10 @@ export const FIXES_SCENARIOS: Scenario[] = [
     options: {
       home: true,
       startAt: "home/work/kestrel/src/sync/queue.ts",
-      beside: { "home/work/kestrel/src/sync/broken.ts": "export function total(a: number) {\n  return a +;\n}\n\nexport const fine = 1;\n" },
+      beside: {
+        "home/work/kestrel/src/sync/broken.ts":
+          "export function total(a: number) {\n  return a +;\n}\n\nexport const fine = 1;\n",
+      },
     },
     run: async (s) => {
       // The code view (READ, not SOURCE): the first comment is prose, its `../../docs/sync.md` a link enter follows.
@@ -328,9 +369,16 @@ export const FIXES_SCENARIOS: Scenario[] = [
       await s.status(/READ/);
       await s.status(signed("{error} 1"), 8000);
       // Its sign among the cell header's buttons (a count beside it only from two); the other cell's header has none.
-      await s.until(() => s.screen().some((r) => r.includes("function: total") && signed("{error}").test(r)), 5000, "the function's cell header with the error's sign");
+      await s.until(
+        () => s.screen().some((r) => r.includes("function: total") && signed("{error}").test(r)),
+        5000,
+        "the function's cell header with the error's sign",
+      );
       const fine = s.screen().find((r) => /[┌─] .*\bfine\b/.test(r)) ?? "";
-      s.expect(!!fine && !signed("{error}|{warning}").test(fine), `the fine cell's header with no problem's sign: ${fine}`);
+      s.expect(
+        !!fine && !signed("{error}|{warning}").test(fine),
+        `the fine cell's header with no problem's sign: ${fine}`,
+      );
       // Obsidian's: a comment hidden while reading, a highlight in a colour of its own; both as typed in source mode.
       await s.restart({ startAt: "home/hobbies/cooking/Pantry.md" });
       await s.see("the good olive oil.");
@@ -338,7 +386,10 @@ export const FIXES_SCENARIOS: Scenario[] = [
       await s.notSee("==bold yellow==");
       await s.see("1 cup == 2 cups of water"); // a lone == pair with spaces is text
       const [marked, plain] = [s.styleOf("bold yellow"), s.styleOf("Running low")];
-      s.expect(!!marked && !!plain && (marked.bg !== plain.bg || marked.fg !== plain.fg), `the highlight drawn apart: ${JSON.stringify([marked, plain])}`);
+      s.expect(
+        !!marked && !!plain && (marked.bg !== plain.bg || marked.fg !== plain.fg),
+        `the highlight drawn apart: ${JSON.stringify([marked, plain])}`,
+      );
       await leader(s, "n", "v");
       await s.status("SOURCE");
       await s.see("%%the Cretan tin, not the bottle%%");
@@ -359,7 +410,11 @@ export const FIXES_SCENARIOS: Scenario[] = [
       open: "web.md",
       files: { "web.md": "# A web picture\n\nFrom the car park: ![the dome at dusk](http://127.0.0.1:9/x.png)\n" },
       // Halden's own .slipbox/config.toml, with a key only your own config may set.
-      setup: (s) => appendFileSync(join(s.vault, ".slipbox", "config.toml"), '\n[render]\nimages_remote = "show"\n\n[update]\ncheck = true\n'),
+      setup: (s) =>
+        appendFileSync(
+          join(s.vault, ".slipbox", "config.toml"),
+          '\n[render]\nimages_remote = "show"\n\n[update]\ncheck = true\n',
+        ),
     },
     run: async (s) => {
       // The warning, among the messages.
@@ -368,7 +423,10 @@ export const FIXES_SCENARIOS: Scenario[] = [
       s.expect(said === warning, `the warning, whole:\n${said}`);
       // DF-D23: the folder's update.check too, said the same way.
       const check = await lastMessage(s, "update.check");
-      s.expect(check === warning.replace("render.images_remote", "update.check"), `update.check's warning, whole:\n${check}`);
+      s.expect(
+        check === warning.replace("render.images_remote", "update.check"),
+        `update.check's warning, whole:\n${check}`,
+      );
       // The folder's "show" ignored: your own (the default, ask) stands — followed, it asks; n, nothing fetched.
       await follow(s, "the dome at dusk");
       await s.see("Fetch this picture from http://127.0.0.1:9?");
@@ -377,7 +435,11 @@ export const FIXES_SCENARIOS: Scenario[] = [
       await s.notSee("Fetch this picture from");
       await s.see("the dome at dusk");
       s.expect(s.rowOf("fetching") < 0, "nothing fetched after n");
-      s.expect(!existsSync(join(s.dir, "cache", "slipbox", "images")) || !readdirSync(join(s.dir, "cache", "slipbox", "images")).length, "no picture in the cache");
+      s.expect(
+        !existsSync(join(s.dir, "cache", "slipbox", "images")) ||
+          !readdirSync(join(s.dir, "cache", "slipbox", "images")).length,
+        "no picture in the cache",
+      );
     },
   },
 

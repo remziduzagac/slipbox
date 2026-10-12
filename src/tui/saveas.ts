@@ -74,15 +74,30 @@ export function listFolder(dir: string, hidden: boolean): { entries: SaveEntry[]
     if (!hidden && name.startsWith(".")) continue;
     try {
       const st = statSync(join(dir, name));
-      if (st.isDirectory() || st.isFile()) entries.push({ name, dir: st.isDirectory(), size: st.size, mtime: st.mtimeMs });
+      if (st.isDirectory() || st.isFile())
+        entries.push({ name, dir: st.isDirectory(), size: st.size, mtime: st.mtimeMs });
     } catch {}
   }
-  const byName = (a: SaveEntry, b: SaveEntry) => a.name.localeCompare(b.name, undefined, { sensitivity: "base", numeric: true });
-  return { entries: [...up, ...entries.filter((e) => e.dir).sort(byName), ...entries.filter((e) => !e.dir).sort(byName)], error: null };
+  const byName = (a: SaveEntry, b: SaveEntry) =>
+    a.name.localeCompare(b.name, undefined, { sensitivity: "base", numeric: true });
+  return {
+    entries: [...up, ...entries.filter((e) => e.dir).sort(byName), ...entries.filter((e) => !e.dir).sort(byName)],
+    error: null,
+  };
 }
 
 /** The window, opened at `dir` with `name` typed: the name has the focus, so `enter` exports at once. */
-export function openSaveAs(app: App, opts: { title: string; dir: string; name: string; places: SavePlace[]; accept: (path: string) => void; cancel?: () => void }): SaveAsOverlay {
+export function openSaveAs(
+  app: App,
+  opts: {
+    title: string;
+    dir: string;
+    name: string;
+    places: SavePlace[];
+    accept: (path: string) => void;
+    cancel?: () => void;
+  },
+): SaveAsOverlay {
   const o: SaveAsOverlay = {
     kind: "saveas",
     title: opts.title,
@@ -251,8 +266,7 @@ export function saveAsKey(app: App, o: SaveAsOverlay, key: string): void {
   } else if (typed === "~") {
     o.typed = { text: "", at: 0 };
     go(o, app.home);
-  }
-  else if (typed !== null) jump(app, o, typed);
+  } else if (typed !== null) jump(app, o, typed);
 }
 
 /** Typing in the folder: to the next entry whose name starts with what's been typed; a `.` first shows hidden ones. */
@@ -264,7 +278,10 @@ function jump(app: App, o: SaveAsOverlay, ch: string): void {
     o.hidden = true;
     const at = o.entries[o.selected]?.name;
     go(o, o.dir);
-    o.selected = Math.max(0, o.entries.findIndex((e) => e.name === at));
+    o.selected = Math.max(
+      0,
+      o.entries.findIndex((e) => e.name === at),
+    );
   }
   const lower = text.toLowerCase();
   const n = o.entries.length;
@@ -288,14 +305,22 @@ export interface SaveAsGeometry {
   name: { x: number; y: number; w: number; h: number };
 }
 
-const inside = (r: { x: number; y: number; w: number; h: number }, x: number, y: number) => x >= r.x && x < r.x + r.w && y >= r.y && y < r.y + r.h;
+const inside = (r: { x: number; y: number; w: number; h: number }, x: number, y: number) =>
+  x >= r.x && x < r.x + r.w && y >= r.y && y < r.y + r.h;
 
 /** The mouse in the window: a place clicked goes there; an entry clicked is picked, clicked again opened; the name
  *  clicked takes the focus; the wheel scrolls the folder or the places; a click outside cancels. */
-export function saveAsMouse(app: App, o: SaveAsOverlay, ev: { type: string; x: number; y: number; scroll?: { direction: string } }, g: SaveAsGeometry, hot: string | null): void {
+export function saveAsMouse(
+  app: App,
+  o: SaveAsOverlay,
+  ev: { type: string; x: number; y: number; scroll?: { direction: string } },
+  g: SaveAsGeometry,
+  hot: string | null,
+): void {
   if (ev.type === "scroll") {
     const d = ev.scroll?.direction === "up" ? -3 : ev.scroll?.direction === "down" ? 3 : 0;
-    if (inside(g.places, ev.x, ev.y)) o.placeScroll = Math.max(0, Math.min(Math.max(0, o.places.length - g.places.h), o.placeScroll + d));
+    if (inside(g.places, ev.x, ev.y))
+      o.placeScroll = Math.max(0, Math.min(Math.max(0, o.places.length - g.places.h), o.placeScroll + d));
     else {
       o.scroll = Math.max(0, Math.min(Math.max(0, o.entries.length - g.files.h), o.scroll + d));
       o.selected = Math.min(Math.max(o.selected, o.scroll), o.scroll + g.files.h - 1, o.entries.length - 1);
@@ -344,6 +369,7 @@ const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "
 /** A date as a file list shows it: `Sep 30` this year, `2025-09-30` before. */
 export function dateText(ms: number, now: number): string {
   const d = new Date(ms);
-  if (d.getFullYear() === new Date(now).getFullYear()) return `${MONTHS[d.getMonth()]} ${String(d.getDate()).padStart(2, " ")}`;
+  if (d.getFullYear() === new Date(now).getFullYear())
+    return `${MONTHS[d.getMonth()]} ${String(d.getDate()).padStart(2, " ")}`;
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 }

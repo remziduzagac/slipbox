@@ -90,7 +90,11 @@ export function allocate(desired: number[], minimum: number[], width: number, li
   // Greedy can stall on a plateau (a row tall in two columns shrinks only when both widen), so
   // score a few candidates and keep the cheapest. Water-filling is always one of them.
   const greedy = minimiseHeight(base, desired, budget - sum(base), linesAt);
-  const candidates = [waterFill(greedy, desired, budget - sum(greedy)), plain, proportional(base, desired, budget - sum(base))];
+  const candidates = [
+    waterFill(greedy, desired, budget - sum(greedy)),
+    plain,
+    proportional(base, desired, budget - sum(base)),
+  ];
   const score = scorer(linesAt);
   let best = candidates[0]!;
   let bestCost = score(best);

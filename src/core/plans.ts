@@ -28,7 +28,14 @@ export function plansDir(): string {
 
 /** Save `plan`, made by `command` in the vault at `root`: its id, for `slipbox apply`. */
 export function savePlan(root: string, command: string, plan: RenamePlan, now = new Date()): SavedPlan {
-  const saved: SavedPlan = { version: 1, id: randomBytes(4).toString("hex"), made: now.toISOString(), root, command, plan };
+  const saved: SavedPlan = {
+    version: 1,
+    id: randomBytes(4).toString("hex"),
+    made: now.toISOString(),
+    root,
+    command,
+    plan,
+  };
   ensureDir(plansDir());
   writeJson(planFile(saved.id), saved);
   return saved;
@@ -40,7 +47,12 @@ function planFile(id: string): string {
 
 /** A saved plan by its id (or its file's path); null when there's none. */
 export function loadPlan(idOrPath: string): SavedPlan | null {
-  const file = isAbsolute(idOrPath) || idOrPath.endsWith(".json") ? idOrPath : /^[0-9a-f]{8}$/.test(idOrPath) ? planFile(idOrPath) : null;
+  const file =
+    isAbsolute(idOrPath) || idOrPath.endsWith(".json")
+      ? idOrPath
+      : /^[0-9a-f]{8}$/.test(idOrPath)
+        ? planFile(idOrPath)
+        : null;
   if (!file) return null;
   const p = readJson<SavedPlan | null>(file, null);
   return p?.version === 1 && typeof p.root === "string" && p.plan && Array.isArray(p.plan.files) ? p : null;

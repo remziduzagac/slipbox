@@ -88,7 +88,10 @@ export { toolsDir } from "./install.ts";
  * slipbox's install of a package (14.11): the one under the lock it ships now — else, behind, the newest under an
  * older lock, or in the one folder it installed into before (`tools/node_modules`), with the version it has.
  */
-export function ownInstall(npm: NpmSpec, base = toolsDir()): { path: string; behind: { installed: string | null } | null } | null {
+export function ownInstall(
+  npm: NpmSpec,
+  base = toolsDir(),
+): { path: string; behind: { installed: string | null } | null } | null {
   const current = toolFolder(npm, base);
   const binIn = (dir: string) => join(dir, "node_modules", ".bin", npm.bin);
   if (current && isFile(binIn(current))) return { path: binIn(current), behind: null };
@@ -104,7 +107,12 @@ export function ownInstall(npm: NpmSpec, base = toolsDir()): { path: string; beh
     if (dir === current || !isFile(binIn(dir))) continue;
     let installed: string | null = null;
     try {
-      installed = (JSON.parse(readFileSync(join(dir, "node_modules", npm.package, "package.json"), "utf8")) as { version?: string }).version ?? null;
+      installed =
+        (
+          JSON.parse(readFileSync(join(dir, "node_modules", npm.package, "package.json"), "utf8")) as {
+            version?: string;
+          }
+        ).version ?? null;
     } catch {}
     return { path: binIn(dir), behind: { installed } };
   }
@@ -143,7 +151,12 @@ function nodeScript(path: string): boolean {
 export function runnable(path: string, args: string[], where: Where): Found {
   if (!nodeScript(path)) return { argv: [path, ...args], env: {}, where, path };
   // Compiled, slipbox's binary is Bun when told to be (decisions, 11.1).
-  return { argv: [process.execPath, "--config=/dev/null", "--no-env-file", realpathSync(path), ...args], env: { BUN_BE_BUN: "1" }, where, path };
+  return {
+    argv: [process.execPath, "--config=/dev/null", "--no-env-file", realpathSync(path), ...args],
+    env: { BUN_BE_BUN: "1" },
+    where,
+    path,
+  };
 }
 
 /** A server's program, wherever it is; null when it's nowhere (installable or not). A project's own
@@ -183,7 +196,12 @@ export interface Choice {
  * The servers for a language in a project: the first main server that applies and is found — or,
  * when none is, the first that slipbox can install — then each add-on whose config the project has.
  */
-export function chooseServers(lang: LanguageDef, servers: Record<string, ServerDef>, root: string, asks: (requires: string[]) => boolean): Choice {
+export function chooseServers(
+  lang: LanguageDef,
+  servers: Record<string, ServerDef>,
+  root: string,
+  asks: (requires: string[]) => boolean,
+): Choice {
   const skipped: Choice["skipped"] = [];
   const trusted = isTrusted(root);
   // In a root not trusted, a server that would run the project's code isn't run (23.4).
@@ -193,7 +211,9 @@ export function chooseServers(lang: LanguageDef, servers: Record<string, ServerD
     return !why;
   };
   // Its own names only: `toString` is a name slipbox doesn't know, not Object's method.
-  const defs = lang.servers.map((n) => (Object.hasOwn(servers, n) ? servers[n] : undefined)).filter((d): d is ServerDef => !!d);
+  const defs = lang.servers
+    .map((n) => (Object.hasOwn(servers, n) ? servers[n] : undefined))
+    .filter((d): d is ServerDef => !!d);
   const mains = defs.filter((d) => !d.requires && (!d.when || d.when(root)) && runs(d));
   const run: Choice["run"] = [];
   const missing: ServerDef[] = [];

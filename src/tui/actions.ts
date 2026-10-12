@@ -4,7 +4,20 @@
 
 import { readFileSync, statSync } from "node:fs";
 import { fileURLToPath, pathToFileURL } from "node:url";
-import type { CodeAction, Command as LspCommand, Hover, Location, LocationLink, MarkedString, MarkupContent, Range, SymbolInformation, TextEdit, WorkspaceEdit, WorkspaceSymbol } from "vscode-languageserver-protocol";
+import type {
+  CodeAction,
+  Command as LspCommand,
+  Hover,
+  Location,
+  LocationLink,
+  MarkedString,
+  MarkupContent,
+  Range,
+  SymbolInformation,
+  TextEdit,
+  WorkspaceEdit,
+  WorkspaceSymbol,
+} from "vscode-languageserver-protocol";
 import { anchorsOf } from "../core/parse.ts";
 import { blockLine, findHeading, landingText, lineFragment } from "../core/landing.ts";
 import { dirname, isAbsolute, join, posix, relative } from "node:path";
@@ -49,7 +62,19 @@ import { blameHere, historyHere } from "./githistory.ts";
 import { parseBang } from "../core/shell.ts";
 import * as V from "./vim.ts";
 import { rank } from "./match.ts";
-import { EXPLORER_ACTION_INFO, FILTER_KEYS_HELP, FOOTNOTE_ACTION_INFO, GIT_ACTION_INFO, HISTORY_ACTION_INFO, INFO_ACTION_INFO, OUTLINE_ACTION_INFO, prettyKey, PROBLEMS_ACTION_INFO, RESIZE_ACTIONS, spellKey } from "./keys.ts";
+import {
+  EXPLORER_ACTION_INFO,
+  FILTER_KEYS_HELP,
+  FOOTNOTE_ACTION_INFO,
+  GIT_ACTION_INFO,
+  HISTORY_ACTION_INFO,
+  INFO_ACTION_INFO,
+  OUTLINE_ACTION_INFO,
+  prettyKey,
+  PROBLEMS_ACTION_INFO,
+  RESIZE_ACTIONS,
+  spellKey,
+} from "./keys.ts";
 
 type Run = Command<App>["run"];
 
@@ -92,17 +117,30 @@ function workspaceSymbols(a: App, overlay: App["overlay"]): { list: (query: stri
     if (timer) clearTimeout(timer);
     timer = setTimeout(async () => {
       if (a.view) a.syncServers(a.view.buf);
-      const got = await servers!.requestAll<(SymbolInformation | WorkspaceSymbol)[]>(from!, "workspace/symbol", { query }, "workspaceSymbolProvider", "workspace-symbols");
+      const got = await servers!.requestAll<(SymbolInformation | WorkspaceSymbol)[]>(
+        from!,
+        "workspace/symbol",
+        { query },
+        "workspaceSymbolProvider",
+        "workspace-symbols",
+      );
       if (asked !== query) return;
-      answered = got.flatMap((g) => g.result ?? []).map((sym): ListItem => {
-        const abs = fileURLToPath(sym.location.uri);
-        const range = "range" in sym.location ? sym.location.range : null;
-        const line = (range?.start.line ?? 0) + 1;
-        const rel = relative(a.loc.root, abs);
-        const where = climbsOut(rel) ? abs : rel;
-        const data: Spot = { rel: null, abs, line, character: range?.start.character ?? 0 };
-        return { label: sym.name, hint: KIND_NAMES[sym.kind] ?? "", detail: `${sym.containerName ? `${sym.containerName} · ` : ""}${where}:${line}`, data };
-      });
+      answered = got
+        .flatMap((g) => g.result ?? [])
+        .map((sym): ListItem => {
+          const abs = fileURLToPath(sym.location.uri);
+          const range = "range" in sym.location ? sym.location.range : null;
+          const line = (range?.start.line ?? 0) + 1;
+          const rel = relative(a.loc.root, abs);
+          const where = climbsOut(rel) ? abs : rel;
+          const data: Spot = { rel: null, abs, line, character: range?.start.character ?? 0 };
+          return {
+            label: sym.name,
+            hint: KIND_NAMES[sym.kind] ?? "",
+            detail: `${sym.containerName ? `${sym.containerName} · ` : ""}${where}:${line}`,
+            data,
+          };
+        });
       refresh();
     }, 120);
     (timer as { unref?: () => void }).unref?.();
@@ -114,8 +152,21 @@ function workspaceSymbols(a: App, overlay: App["overlay"]): { list: (query: stri
         ask(query);
         return answered;
       }
-      headings ??= [...a.graph.notes.values()].flatMap((n) => n.headings.map((h): ListItem => ({ label: h.text, hint: "#".repeat(h.depth), detail: `${n.rel}:${h.line}`, data: { rel: n.rel, line: h.line } as Spot })));
-      return query.trim() ? rank(query, headings, (i) => [i.label, i.detail ?? ""]).slice(0, 500).map((r) => r.item) : headings.slice(0, 500);
+      headings ??= [...a.graph.notes.values()].flatMap((n) =>
+        n.headings.map(
+          (h): ListItem => ({
+            label: h.text,
+            hint: "#".repeat(h.depth),
+            detail: `${n.rel}:${h.line}`,
+            data: { rel: n.rel, line: h.line } as Spot,
+          }),
+        ),
+      );
+      return query.trim()
+        ? rank(query, headings, (i) => [i.label, i.detail ?? ""])
+            .slice(0, 500)
+            .map((r) => r.item)
+        : headings.slice(0, 500);
     },
   };
 }
@@ -159,11 +210,15 @@ function undoRedo(a: App, v: View, which: "undo" | "redo"): void {
     v.insertFrom = here;
     // `.` repeats what's typed from here on, as if typing had started here; with nothing undone, what it had stands.
     if (at === null) a.vim.undoing = wasUndoing;
-    else if (!a.vim.replaying) Object.assign(a.vim, { seq: ["i"], seqVersion: v.buf.version, undoing: false, inInsert: true });
+    else if (!a.vim.replaying)
+      Object.assign(a.vim, { seq: ["i"], seqVersion: v.buf.version, undoing: false, inInsert: true });
   }
   if (at === null) return a.message("info", which === "undo" ? "nothing to undo" : "nothing to redo");
   if (!typing && editable(v)) E.placeAt(a, v, at);
-  a.message("info", v.buf.dirty ? which === "undo" ? "undone" : "redone" : `${which === "undo" ? "undone" : "redone"} — as saved`);
+  a.message(
+    "info",
+    v.buf.dirty ? (which === "undo" ? "undone" : "redone") : `${which === "undo" ? "undone" : "redone"} — as saved`,
+  );
 }
 
 /** `:e!`, and `space n r`'s discard once asked: the file loaded again over unsaved changes, one `u` away. */
@@ -262,7 +317,10 @@ function selectionRange(a: App, v: View): { range: V.Range; from: number; to: nu
   const [s, e] = C.ordered(v.sel?.anchor ?? v.cur, v.cur);
   const from = E.offsetAtPos(a, v, s);
   const to = E.offsetAtPos(a, v, e);
-  const range = v.visual === "line" ? V.linesRange(v, E.lineOf(v, from), E.lineOf(v, to)) : { from, to: Math.min(E.nextBoundary(v.buf.source, to), Math.max(to, E.lineEnd(v, to))), linewise: false };
+  const range =
+    v.visual === "line"
+      ? V.linesRange(v, E.lineOf(v, from), E.lineOf(v, to))
+      : { from, to: Math.min(E.nextBoundary(v.buf.source, to), Math.max(to, E.lineEnd(v, to))), linewise: false };
   return { range, from, to };
 }
 
@@ -279,7 +337,11 @@ function visualOp(a: App, op: "d" | "c" | ">" | "<" | "gc"): void {
     const lines = E.lineOf(v, to) - E.lineOf(v, from) + 1;
     const chars = graphemes(v.buf.source.slice(r.from, r.to)).length; // as l moves: by character
     const opKeys = op === "gc" ? ["g", "c"] : [op];
-    const keys = line ? ["shift+v", ...Array(lines - 1).fill("j"), ...opKeys] : lines === 1 ? ["v", ...Array(Math.max(0, chars - 1)).fill("l"), ...opKeys] : null;
+    const keys = line
+      ? ["shift+v", ...Array(lines - 1).fill("j"), ...opKeys]
+      : lines === 1
+        ? ["v", ...Array(Math.max(0, chars - 1)).fill("l"), ...opKeys]
+        : null;
     const before = v.buf.version;
     const times = op === ">" || op === "<" ? V.takeCount(a) : 1;
     V.apply(a, v, op, { ...r, times });
@@ -314,7 +376,9 @@ function sourceLinkAt(a: App, v: View): LayoutLink | null {
     if (!t) return null;
     if (t.url) return { ...base, kind: "markdown", target: t.target, heading: null, text: t.target };
     const path = v.buf.rel ? a.graph.commentPath(t.target, v.buf.rel) : null;
-    return path ? { ...base, kind: "markdown", target: `/${path}${t.at ? `#L${t.at}` : ""}`, heading: null, text: t.target } : null;
+    return path
+      ? { ...base, kind: "markdown", target: `/${path}${t.at ? `#L${t.at}` : ""}`, heading: null, text: t.target }
+      : null;
   }
   // A note's: its format's link syntax (16.2).
   if (v.buf.kind.group !== "note") return null;
@@ -337,7 +401,13 @@ function followLink(a: App, link: LayoutLink, into: Into): void {
   if (!view) return;
   // A link drawn inside an embed (1.11) is the embedded note's: followed from there.
   const from = link.from ?? view.buf.rel;
-  const go = (path: string, heading: string | null) => openInto(a, into, path, heading ? fragmentAnchor(a, path, heading, link.kind === "wiki" || link.kind === "embed") : undefined);
+  const go = (path: string, heading: string | null) =>
+    openInto(
+      a,
+      into,
+      path,
+      heading ? fragmentAnchor(a, path, heading, link.kind === "wiki" || link.kind === "embed") : undefined,
+    );
   switch (link.kind) {
     case "tag":
       // A tag (1.6): the notes that carry it.
@@ -345,7 +415,9 @@ function followLink(a: App, link: LayoutLink, into: Into): void {
     case "footnote": {
       const layout = lay(a, view);
       // The definition's first row, by identifier (whatever the label's case, in a quote or a list).
-      const row = layout.lines.findIndex((l) => l.footnoteDef !== undefined && l.footnoteDef.toLowerCase() === link.target.toLowerCase());
+      const row = layout.lines.findIndex(
+        (l) => l.footnoteDef !== undefined && l.footnoteDef.toLowerCase() === link.target.toLowerCase(),
+      );
       if (row < 0) return a.message("warn", `footnote [^${link.target}] has no definition`);
       a.pushHistory(view);
       a.moveCursor(view, { row, col: 0 });
@@ -361,7 +433,11 @@ function followLink(a: App, link: LayoutLink, into: Into): void {
       }
       if (!from) return a.message("warn", `[[${link.target}]]: a wikilink is read within a root — this file has none`);
       const r = a.graph.resolveLink({ kind: link.kind, target: link.target }, from);
-      if (r.via) a.message("info", `[[${link.target}]] reached ${r.path} by ${r.via === "alias" ? "an alias" : r.via === "previous-name" ? "a previous name" : "a redirect"}`);
+      if (r.via)
+        a.message(
+          "info",
+          `[[${link.target}]] reached ${r.path} by ${r.via === "alias" ? "an alias" : r.via === "previous-name" ? "a previous name" : "a redirect"}`,
+        );
       // `#^id`: the block it marks, by its line (21.3), as a path link's lands.
       if (r.resolvedKind === "note") return go(r.path!, link.heading);
       if (r.resolvedKind === "file") return fileLink(a, r.path!, link.heading, into);
@@ -371,7 +447,10 @@ function followLink(a: App, link: LayoutLink, into: Into): void {
         return a.openList({
           title: `[[${link.target}]] matches ${r.candidates.length} ${notes ? "notes" : "files"}`,
           items: r.candidates.map((c) => ({ label: c, data: c })),
-          accept: (item) => (isNotePath(item.data as string) ? go(item.data as string, link.heading) : fileLink(a, item.data as string, link.heading, into)),
+          accept: (item) =>
+            isNotePath(item.data as string)
+              ? go(item.data as string, link.heading)
+              : fileLink(a, item.data as string, link.heading, into),
         });
       }
       // In another vault, or a vault this machine doesn't know: say which (17.8).
@@ -383,10 +462,14 @@ function followLink(a: App, link: LayoutLink, into: Into): void {
     case "image": {
       // A URL — a pointer too (21.7), which names its folder: followed from a file of no root as well.
       const external = /^[a-z][a-z0-9+.-]*:/i.test(link.target);
-      if (!from && !external) return a.message("warn", `${link.target}: this file is outside the root — open its folder to follow its links`);
+      if (!from && !external)
+        return a.message("warn", `${link.target}: this file is outside the root — open its folder to follow its links`);
       // A picture on the internet: fetched, as `[render] images_remote` says (12.12).
       if (link.kind === "image" && external && a.followRemoteImage(link.target)) return;
-      const r = a.graph.resolveLink({ kind: link.kind === "image" ? "image" : "markdown", target: link.target }, from ?? "");
+      const r = a.graph.resolveLink(
+        { kind: link.kind === "image" ? "image" : "markdown", target: link.target },
+        from ?? "",
+      );
       if (r.resolvedKind === "external") {
         a.copy(link.target, false);
         return a.message("info", `copied: ${link.target}`);
@@ -405,12 +488,15 @@ function followLink(a: App, link: LayoutLink, into: Into): void {
       // A pointer (21.7): its folder by a name it had, or another copy than the one links open — said so;
       // a branch not checked out here, the file read from git; a name of different folders, picked.
       if (r.via === "old-name") a.message("info", `${link.target} reached ${r.vault} by a name it had`);
-      if (r.via === "another-copy") a.message("info", `${link.target}: the copy of ${r.vault} links open isn't here — another copy`);
+      if (r.via === "another-copy")
+        a.message("info", `${link.target}: the copy of ${r.vault} links open isn't here — another copy`);
       if (r.gitRef) return a.showFromGit(r.gitRef, link.target);
-      if (r.resolvedKind === "ambiguous" && isPointer(link.target)) return pickPointerFolder(a, link.target, frag, into);
+      if (r.resolvedKind === "ambiguous" && isPointer(link.target))
+        return pickPointerFolder(a, link.target, frag, into);
       // Not on this machine, gone, no such file there: why — never a new note by a pointer's name. A
       // folder named the old way (`research:x.md`, 21.11): why, and its pointer.
-      if (r.resolvedKind === "unresolved" && (isPointer(link.target) || r.suggest)) return a.message("warn", r.suggest ? r.reason! : `${link.target}: ${r.reason ?? "not found"}`);
+      if (r.resolvedKind === "unresolved" && (isPointer(link.target) || r.suggest))
+        return a.message("warn", r.suggest ? r.reason! : `${link.target}: ${r.reason ?? "not found"}`);
       if (r.resolvedKind === "anchor") {
         const here = link.from ?? view.buf.rel;
         if (frag && here && (here !== view.buf.rel || frag.startsWith("^"))) return go(here, frag);
@@ -431,7 +517,10 @@ function followLink(a: App, link: LayoutLink, into: Into): void {
         const name = posix.basename(yet).replace(/\.(md|markdown)$/i, "");
         return a.promptNewNote(dir === "." ? "" : dir, name, name);
       }
-      return a.message("warn", to ? `broken link: ${link.target} — moved to ${to}: space l r relinks it` : `broken link: ${link.target}`);
+      return a.message(
+        "warn",
+        to ? `broken link: ${link.target} — moved to ${to}: space l r relinks it` : `broken link: ${link.target}`,
+      );
     }
   }
 }
@@ -449,11 +538,20 @@ function pickPointerFolder(a: App, target: string, frag: string | null, into: In
   for (const f of t.folders) {
     const at = f.default ?? f.copies[0]?.path;
     if (!at) continue;
-    items.push({ label: tildePath(at), detail: f.remote ?? `.slipbox/ ${f.id ?? ""}`.trim(), data: { open: join(at, p.path) } });
+    items.push({
+      label: tildePath(at),
+      detail: f.remote ?? `.slipbox/ ${f.id ?? ""}`.trim(),
+      data: { open: join(at, p.path) },
+    });
   }
   for (const f of t.folders.filter((x) => !x.remote)) {
     const at = f.default ?? f.copies[0]?.path;
-    if (at) items.push({ label: `Rename ${tildePath(at)}'s name…`, detail: `${f.name} → ${slugName(posix.basename(posix.dirname(at)))}-${f.name}`, data: { rename: at, name: f.name } });
+    if (at)
+      items.push({
+        label: `Rename ${tildePath(at)}'s name…`,
+        detail: `${f.name} → ${slugName(posix.basename(posix.dirname(at)))}-${f.name}`,
+        data: { rename: at, name: f.name },
+      });
   }
   a.openList({
     title: `${p.name}: ${t.folders.length} different folders have this name — which is meant?`,
@@ -464,7 +562,10 @@ function pickPointerFolder(a: App, target: string, frag: string | null, into: In
       if (d.open) return openInto(a, into, d.open, frag ? fragmentAnchor(a, d.open, frag) : undefined);
       const root = d.rename!;
       const suggested = `${slugName(posix.basename(posix.dirname(root)))}-${d.name}`;
-      a.prompt(`rename ${d.name} at ${tildePath(root)} to: `, (name) => name.trim() && a.previewRename(() => planVaultRename(rootAt(root), name.trim())));
+      a.prompt(
+        `rename ${d.name} at ${tildePath(root)} to: `,
+        (name) => name.trim() && a.previewRename(() => planVaultRename(rootAt(root), name.trim())),
+      );
       if (a.overlay?.kind === "prompt") a.overlay.text = suggested;
     },
   });
@@ -557,7 +658,10 @@ function headingAnchor(a: App, path: string, heading: string, wiki = false): Anc
  * the tree's item rows from 1.
  */
 function pointerHeading(headings: { level: number; text: string }[], pointer: string): number {
-  const segs = pointer.slice(1).split("/").map((s) => s.replace(/~1/g, "/").replace(/~0/g, "~"));
+  const segs = pointer
+    .slice(1)
+    .split("/")
+    .map((s) => s.replace(/~1/g, "/").replace(/~0/g, "~"));
   let at = -1;
   let level = 0;
   for (const seg of segs) {
@@ -587,7 +691,8 @@ function jumpToHeading(a: App, view: View, heading: string, wiki = false): void 
   }
   // As a link finds one (landing.ts): its id, an anchor (`<a id>`, from the note's parse), its slug, its text.
   const heads = layout.headings.map((h) => ({ depth: h.level, text: h.text, slug: h.slug, line: h.src, id: h.id }));
-  const anchors = view.buf.kind.group === "note" && view.buf.parsed && !view.buf.parsing ? anchorsOf(view.buf.parsed.tree) : [];
+  const anchors =
+    view.buf.kind.group === "note" && view.buf.parsed && !view.buf.parsing ? anchorsOf(view.buf.parsed.tree) : [];
   const hit = findHeading(heads, anchors, heading, wiki);
   if (!hit) return a.message("warn", `no heading "${heading}" here`);
   if (hit.ambiguous) a.message("info", `several headings "${heading}" here: the first`);
@@ -604,9 +709,11 @@ function cycleLink(a: App, dir: 1 | -1): void {
     if (!links.length) return a.message("info", "no links in this note");
     // Off a link, a link starting right at the cursor counts as the next one.
     const onLink = a.linkUnderCursor(v) >= 0;
-    const after = (x: { l: LayoutLink }) => x.l.line > v.cur.row || (x.l.line === v.cur.row && (onLink ? x.l.col > v.cur.col : x.l.col >= v.cur.col));
+    const after = (x: { l: LayoutLink }) =>
+      x.l.line > v.cur.row || (x.l.line === v.cur.row && (onLink ? x.l.col > v.cur.col : x.l.col >= v.cur.col));
     const before = (x: { l: LayoutLink }) => x.l.line < v.cur.row || (x.l.line === v.cur.row && x.l.col < v.cur.col);
-    const next = dir === 1 ? (links.find(after) ?? links[0]!) : ([...links].reverse().find(before) ?? links[links.length - 1]!);
+    const next =
+      dir === 1 ? (links.find(after) ?? links[0]!) : ([...links].reverse().find(before) ?? links[links.length - 1]!);
     a.moveCursor(v, { row: next.l.line, col: next.l.col });
   });
 }
@@ -628,7 +735,12 @@ function argCandidates(a: App, cmd: string): string[] | null {
     case "window.split_stacked":
     case "tab.new":
     case "link.convert":
-      return cmd === "note.open" ? [...a.graph.notes.keys(), ...a.graph.filePaths().filter((p) => classify(p, a.config.walk.extensions).group !== "binary")] : [...a.graph.notes.keys()];
+      return cmd === "note.open"
+        ? [
+            ...a.graph.notes.keys(),
+            ...a.graph.filePaths().filter((p) => classify(p, a.config.walk.extensions).group !== "binary"),
+          ]
+        : [...a.graph.notes.keys()];
     case "theme.set":
       return listThemes().map((t) => t.name);
     case "glyphs.set":
@@ -645,7 +757,18 @@ function argCandidates(a: App, cmd: string): string[] | null {
 }
 
 /** Commands whose argument is free text, with nothing to complete: a new name, a line, a query. */
-const FREE_ARG = new Set(["note.create", "folder.create", "cursor.goto_line", "find.vault", "search.open", "note.rename", "heading.rename", "folder.name", "shell.run", "shell.filter"]);
+const FREE_ARG = new Set([
+  "note.create",
+  "folder.create",
+  "cursor.goto_line",
+  "find.vault",
+  "search.open",
+  "note.rename",
+  "heading.rename",
+  "folder.name",
+  "shell.run",
+  "shell.filter",
+]);
 
 /** Commands in the order of core/command-specs.ts, which follows docs/manual/keys.md. */
 const SPEC_ORDER = new Map(COMMAND_SPECS.map((c, i) => [c.id, i]));
@@ -661,7 +784,11 @@ function runChosen(a: App, spec: string): void {
 
 /** A group heading: a blank row before it (unless first), the title, a rule under it. */
 function heading(title: string, first: boolean): ListItem[] {
-  return [...(first ? [] : [{ label: "", header: true, data: null }]), { label: title, header: true, data: null }, { label: "", header: true, rule: true, data: null }];
+  return [
+    ...(first ? [] : [{ label: "", header: true, data: null }]),
+    { label: title, header: true, data: null },
+    { label: "", header: true, rule: true, data: null },
+  ];
 }
 
 /**
@@ -683,7 +810,11 @@ function grouped(items: ListItem[], groupOf: (item: ListItem) => string, order: 
  * At most three bindings shown, plain ones first (a variant like "extend the selection" after);
  * the rest go to the footer.
  */
-function topKeys(keys: string[], variants: Set<string>, desc: string): { keys: string[]; more: string[]; detail: string } {
+function topKeys(
+  keys: string[],
+  variants: Set<string>,
+  desc: string,
+): { keys: string[]; more: string[]; detail: string } {
   const ordered = [...keys.filter((k) => !variants.has(k)), ...keys.filter((k) => variants.has(k))];
   return { keys: ordered.slice(0, 3), more: ordered.slice(3), detail: desc };
 }
@@ -709,17 +840,30 @@ function openPalette(a: App, typed = ""): void {
     aliasOf.set(spec, list);
   }
   const commandItems: ListItem[] = commands.map((c) => {
-    const keys = [...new Set([...a.keymap.keysFor(c.id), ...a.sourceKeys.keysFor(c.id), ...a.visualKeys.keysFor(c.id)])].map(spellKey);
+    const keys = [
+      ...new Set([...a.keymap.keysFor(c.id), ...a.sourceKeys.keysFor(c.id), ...a.visualKeys.keysFor(c.id)]),
+    ].map(spellKey);
     const aliases = aliasOf.get(c.id) ?? [];
     // Two fixed columns, the first key and the first alias (empty when there is none); the rest
     // in the footer.
-    return { label: c.title, detail: c.description ?? c.id, keys: [keys[0] ?? "", aliases[0] ?? ""], more: [...keys.slice(1), ...aliases.slice(1)], data: c.id };
+    return {
+      label: c.title,
+      detail: c.description ?? c.id,
+      keys: [keys[0] ?? "", aliases[0] ?? ""],
+      more: [...keys.slice(1), ...aliases.slice(1)],
+      data: c.id,
+    };
   });
   const byId = new Map(commandItems.map((i) => [i.data as string, i]));
   const recent = a.recentCommands.map((id) => byId.get(id)).filter((i): i is ListItem => !!i);
   const browse: ListItem[] = [
     ...(recent.length ? [...heading("Recent", true), ...recent] : []),
-    ...grouped(commandItems, (i) => commandGroup(i.data as string), COMMAND_GROUPS.map((g) => g.title), !recent.length),
+    ...grouped(
+      commandItems,
+      (i) => commandGroup(i.data as string),
+      COMMAND_GROUPS.map((g) => g.title),
+      !recent.length,
+    ),
   ];
   a.openList({
     title: "Commands — type a name, or an alias like :q",
@@ -730,25 +874,53 @@ function openPalette(a: App, typed = ""): void {
     source: (input) => {
       if (!input.trim()) return browse;
       // :42, vim's: that line.
-      if (/^\s*\d+\s*$/.test(input)) return [{ label: `Go to line ${input.trim()}`, detail: "cursor.goto_line", keys: ["", `:${input.trim()}`], data: `cursor.goto_line ${input.trim()}` }];
+      if (/^\s*\d+\s*$/.test(input))
+        return [
+          {
+            label: `Go to line ${input.trim()}`,
+            detail: "cursor.goto_line",
+            keys: ["", `:${input.trim()}`],
+            data: `cursor.goto_line ${input.trim()}`,
+          },
+        ];
       // A substitute (vim's :s): one entry, run by enter.
-      if (parseSubstitute(input)) return [{ label: "Substitute", detail: input.trim(), keys: ["", ":s"], data: `find.substitute ${input.trim()}` }];
+      if (parseSubstitute(input))
+        return [
+          { label: "Substitute", detail: input.trim(), keys: ["", ":s"], data: `find.substitute ${input.trim()}` },
+        ];
       // A command for the shell (25.7): run, or lines filtered through it.
       const bang = parseBang(input);
-      if (bang) return [bang.range ? { label: "Filter the lines through", detail: input.trim(), keys: ["", ":!"], data: `shell.filter ${input.trim()}` } : { label: "Run in the shell", detail: bang.command, keys: ["", ":!"], data: `shell.run ${bang.command}` }];
+      if (bang)
+        return [
+          bang.range
+            ? {
+                label: "Filter the lines through",
+                detail: input.trim(),
+                keys: ["", ":!"],
+                data: `shell.filter ${input.trim()}`,
+              }
+            : { label: "Run in the shell", detail: bang.command, keys: ["", ":!"], data: `shell.run ${bang.command}` },
+        ];
       const m = /^(\S+)\s(.*)$/.exec(input);
       const aliasSpec = m ? a.aliases[m[1]!] : undefined;
       if (aliasSpec) {
         const cands = argCandidates(a, aliasSpec.split(" ")[0]!);
         if (cands) {
-          return rank(m![2]!, cands, (x) => x, 200).map(({ item }) => ({ label: item, detail: `${m![1]} ${item}`, data: `${aliasSpec} ${item}` }));
+          return rank(m![2]!, cands, (x) => x, 200).map(({ item }) => ({
+            label: item,
+            detail: `${m![1]} ${item}`,
+            data: `${aliasSpec} ${item}`,
+          }));
         }
       }
       const exact = a.aliases[input.trim()];
       const ranked = rank(input.trim(), commandItems, (i) => [i.label, i.detail ?? ""]).map((r) => r.item);
       if (exact) {
         const title = a.registry.get(exact.split(" ")[0]!)?.title ?? exact;
-        return [{ label: title, detail: `alias for ${exact}`, keys: ["", `:${input.trim()}`], data: exact }, ...ranked.filter((i) => i.data !== exact)];
+        return [
+          { label: title, detail: `alias for ${exact}`, keys: ["", `:${input.trim()}`], data: exact },
+          ...ranked.filter((i) => i.data !== exact),
+        ];
       }
       return ranked;
     },
@@ -818,18 +990,38 @@ function openPalette(a: App, typed = ""): void {
 function openHelp(a: App): void {
   const commands: ListItem[] = inSpecOrder(a.registry.list()).map((c) => {
     // Every keymap's keys: the reading ones, source mode's own ([keys.source]) and visual mode's.
-    const plain = [...a.keymap.keysFor(c.id), ...a.sourceKeys.keysFor(c.id), ...a.visualKeys.keysFor(c.id)].map(spellKey);
+    const plain = [...a.keymap.keysFor(c.id), ...a.sourceKeys.keysFor(c.id), ...a.visualKeys.keysFor(c.id)].map(
+      spellKey,
+    );
     // Bindings with an argument (e.g. "cursor.down extend") are variants: shown after the plain ones.
-    const variants = a.keymap.entries().filter(([, v]) => v.startsWith(`${c.id} `)).map(([k]) => spellKey(k));
-    return { label: c.title, ...topKeys([...new Set([...plain, ...variants])], new Set(variants), c.description ?? c.id), data: c.id };
+    const variants = a.keymap
+      .entries()
+      .filter(([, v]) => v.startsWith(`${c.id} `))
+      .map(([k]) => spellKey(k));
+    return {
+      label: c.title,
+      ...topKeys([...new Set([...plain, ...variants])], new Set(variants), c.description ?? c.id),
+      data: c.id,
+    };
   });
   // An entry per action with its keys; `actions` gathers several that do the same there.
-  const pane = (keymap: { keysFor(action: string): string[] }, info: Record<string, { title: string; desc: string; actions?: string[] }>): ListItem[] =>
+  const pane = (
+    keymap: { keysFor(action: string): string[] },
+    info: Record<string, { title: string; desc: string; actions?: string[] }>,
+  ): ListItem[] =>
     Object.entries(info)
-      .map(([action, i]) => ({ label: i.title, ...topKeys((i.actions ?? [action]).flatMap((x) => keymap.keysFor(x)).map(spellKey), new Set(), i.desc), data: null }))
+      .map(([action, i]) => ({
+        label: i.title,
+        ...topKeys((i.actions ?? [action]).flatMap((x) => keymap.keysFor(x)).map(spellKey), new Set(), i.desc),
+        data: null,
+      }))
       .filter((i) => i.keys.length);
   const items: ListItem[] = [
-    ...grouped(commands, (i) => commandGroup(i.data as string), COMMAND_GROUPS.map((g) => g.title)),
+    ...grouped(
+      commands,
+      (i) => commandGroup(i.data as string),
+      COMMAND_GROUPS.map((g) => g.title),
+    ),
     ...heading("Inside the explorer", false),
     ...pane(a.explorerKeys, EXPLORER_ACTION_INFO),
     ...heading("Inside the history", false),
@@ -839,7 +1031,15 @@ function openHelp(a: App): void {
     ...heading("Inside Problems", false),
     ...pane(a.problemsKeys, PROBLEMS_ACTION_INFO),
     ...heading("Filtering a panel (/)", false),
-    ...FILTER_KEYS_HELP.map(([label, keys, detail]) => ({ label, ...topKeys(keys.map((k) => (k === "type" ? k : spellKey(k))), new Set(), detail), data: null })),
+    ...FILTER_KEYS_HELP.map(([label, keys, detail]) => ({
+      label,
+      ...topKeys(
+        keys.map((k) => (k === "type" ? k : spellKey(k))),
+        new Set(),
+        detail,
+      ),
+      data: null,
+    })),
     ...heading("Inside the outline", false),
     ...pane(a.outlineKeys, OUTLINE_ACTION_INFO),
     ...heading("Inside Info", false),
@@ -852,9 +1052,22 @@ function openHelp(a: App): void {
     ...MOUSE_HELP.map(([label, keys, detail]) => ({ label, ...topKeys(keys, new Set(), detail), data: null })),
   ];
   // Start where the keys are about what you're doing: the focused pane's view's, or visual mode's.
-  const left = { explorer: "Inside the explorer", history: "Inside the history", git: "Inside source control" } as const;
+  const left = {
+    explorer: "Inside the explorer",
+    history: "Inside the history",
+    git: "Inside source control",
+  } as const;
   const right = { outline: "Inside the outline", info: "Inside Info", footnotes: "Inside the footnotes" } as const;
-  const section = a.region === "sidebar" ? left[a.leftView] : a.region === "outline" ? right[a.rightView] : a.region === "problems" ? "Inside Problems" : a.view?.visual ? "Selection & copy" : null;
+  const section =
+    a.region === "sidebar"
+      ? left[a.leftView]
+      : a.region === "outline"
+        ? right[a.rightView]
+        : a.region === "problems"
+          ? "Inside Problems"
+          : a.view?.visual
+            ? "Selection & copy"
+            : null;
   const at = section ? items.findIndex((i) => i.header && i.label === section) : -1; // the title row
   a.openList({
     title: "Keys — type to filter, enter runs a command",
@@ -874,30 +1087,74 @@ function openHelp(a: App): void {
 const MOUSE_HELP: [string, string[], string][] = [
   // In the notes.
   ["Move the cursor", ["click"], "Moves the cursor to where you click in a note; on a link, follows it"],
-  ["Select and copy", ["drag"], "Selects the text you drag over and copies it on release; in source mode or the lens, a selection d, c and x act on"],
+  [
+    "Select and copy",
+    ["drag"],
+    "Selects the text you drag over and copies it on release; in source mode or the lens, a selection d, c and x act on",
+  ],
   ["Select a word / a row", ["double-click", "triple-click"], "Selects the word or the whole row, and copies it"],
   ["Tick a task", ["click"], "On its box (☐ / ☑): ticks or unticks it"],
-  ["Scroll", ["wheel"], "Scrolls the note (sideways too, when wrapping is off), a panel (its selection stays) or a list (its selection moves only to stay in view); over the tab strip, switches tabs"],
+  [
+    "Scroll",
+    ["wheel"],
+    "Scrolls the note (sideways too, when wrapping is off), a panel (its selection stays) or a list (its selection moves only to stay in view); over the tab strip, switches tabs",
+  ],
   // Around them.
-  ["Show a panel's view", ["click"], "On a rail: ≡ the explorer, ◷ the history, ± source control, ℹ Info, ▤ the outline, ¹ the footnotes, focused; again hides it"],
+  [
+    "Show a panel's view",
+    ["click"],
+    "On a rail: ≡ the explorer, ◷ the history, ± source control, ℹ Info, ▤ the outline, ¹ the footnotes, focused; again hides it",
+  ],
   ["Open the command palette", ["click"], "On the top bar's slipbox"],
-  ["Jump to a heading", ["click"], "On a heading in a window's breadcrumb: scrolls that window to it and focuses it; the breadcrumb's icon finds a heading, its … lists the ones the cursor is under"],
-  ["Switch, reorder, close tabs", ["click", "drag", "middle-click"], "On the tab strip: switches, drags to reorder, closes (so does ×); its +N lists the tabs that don't fit"],
-  ["Resize panes and splits", ["drag"], "Drags a pane's border, or the Problems panel's rule, to resize what's beside it"],
+  [
+    "Jump to a heading",
+    ["click"],
+    "On a heading in a window's breadcrumb: scrolls that window to it and focuses it; the breadcrumb's icon finds a heading, its … lists the ones the cursor is under",
+  ],
+  [
+    "Switch, reorder, close tabs",
+    ["click", "drag", "middle-click"],
+    "On the tab strip: switches, drags to reorder, closes (so does ×); its +N lists the tabs that don't fit",
+  ],
+  [
+    "Resize panes and splits",
+    ["drag"],
+    "Drags a pane's border, or the Problems panel's rule, to resize what's beside it",
+  ],
   ["Scroll to a place", ["click", "drag"], "On a scrollbar (either direction): jumps there, or drags it"],
   ["Back / forward", ["click"], "On the status line's ‹ / ›: back and forward in the window's history"],
   ["The window's history", ["click"], "On the status line's path: the places the window has been, Copy path first"],
-  ["The problems", ["click"], "On the status line's problems: the Problems panel on This file (All when it has none), or closes it; a sign in the problems bar or a coloured line number: on that problem"],
+  [
+    "The problems",
+    ["click"],
+    "On the status line's problems: the Problems panel on This file (All when it has none), or closes it; a sign in the problems bar or a coloured line number: on that problem",
+  ],
   ["The messages", ["click"], "On a message's floating box: the messages list"],
   ["which-key's entries", ["click"], "A group opens it; a command runs"],
   ["A code cell's buttons", ["click"], "As its keys (space k): fold, edit, copy, references, problems, scratch"],
   // In the panels and lists.
-  ["Open a note as a tab", ["click", "double-click"], "In the explorer: a click selects a note, a double-click opens it as a tab; a click on a folder folds or unfolds it"],
-  ["Go to a place", ["click", "double-click"], "In the history and source control: a click selects, a double-click goes there"],
+  [
+    "Open a note as a tab",
+    ["click", "double-click"],
+    "In the explorer: a click selects a note, a double-click opens it as a tab; a click on a folder folds or unfolds it",
+  ],
+  [
+    "Go to a place",
+    ["click", "double-click"],
+    "In the history and source control: a click selects, a double-click goes there",
+  ],
   ["Go to a heading", ["click"], "In the outline: goes to the heading; on ▾ / ▸, folds or unfolds it"],
   ["Go to a footnote", ["click"], "In the footnotes or Info: goes to the footnote, or opens what the row names"],
-  ["Problems' tabs and rows", ["click"], "A tab's title switches to it; a row: This file shows the problem and goes there on a second click, All opens it"],
-  ["Pick or answer", ["click"], "A list's entry picks it; a question's buttons (OK, Cancel; Yes, No) answer it; outside a list or a question closes it (a question: cancelled)"],
+  [
+    "Problems' tabs and rows",
+    ["click"],
+    "A tab's title switches to it; a row: This file shows the problem and goes there on a second click, All opens it",
+  ],
+  [
+    "Pick or answer",
+    ["click"],
+    "A list's entry picks it; a question's buttons (OK, Cancel; Yes, No) answer it; outside a list or a question closes it (a question: cancelled)",
+  ],
 ];
 
 // ---------------------------------------------------------------------------------------------
@@ -997,7 +1254,10 @@ function findStep(a: App, dir: 1 | -1, from?: { row: number; col: number }): voi
   v.find.current = i;
   const m = ms[i]!;
   a.moveCursor(v, { row: m.row, col: m.col });
-  a.message("info", `${i + 1}/${n}  ${v.find.query}${wrapped ? (dir === 1 ? "  (from the top)" : "  (from the bottom)") : ""}`);
+  a.message(
+    "info",
+    `${i + 1}/${n}  ${v.find.query}${wrapped ? (dir === 1 ? "  (from the top)" : "  (from the bottom)") : ""}`,
+  );
 }
 
 /**
@@ -1017,7 +1277,10 @@ function findWord(a: App, dir: 1 | -1): void {
   while (s > 0 && isWord(cs[s - 1]!.g)) s--;
   let e = k;
   while (e < cs.length - 1 && isWord(cs[e + 1]!.g)) e++;
-  const word = cs.slice(s, e + 1).map((c) => c.g).join("");
+  const word = cs
+    .slice(s, e + 1)
+    .map((c) => c.g)
+    .join("");
   v.find = computeFind(layout, word, 0, true);
   // From the word's start: forward skips this one, backward finds the one before it.
   findStep(a, dir, { row: v.cur.row, col: cs[s]!.x });
@@ -1116,7 +1379,8 @@ export function registerActions(app: App): void {
         const text = a.selectionText(v);
         if (text) a.copy(text);
         // In source mode the text is the markdown itself: it's what p puts back, too.
-        if (text && editable(v)) a.vim.register = { text: v.visual === "line" ? `${text}\n` : text, linewise: v.visual === "line" };
+        if (text && editable(v))
+          a.vim.register = { text: v.visual === "line" ? `${text}\n` : text, linewise: v.visual === "line" };
         // The cursor goes to the selection's start, as vim's does: p and P then put where expected.
         const [start] = C.ordered(v.sel?.anchor ?? v.cur, v.cur);
         Object.assign(v, { visual: null, sel: null });
@@ -1131,8 +1395,10 @@ export function registerActions(app: App): void {
       const v = a.view;
       if (!v) return;
       if (v.sel || v.visual) Object.assign(v, { visual: null, sel: null });
-      else if (a.floating && v === a.floating.view && !v.find) a.closeFloating(); // the floating editor: closed, written back (3.20)
-      else if (v.live) a.setViewMode(v, "rendered"); // esc in normal mode closes the lens
+      else if (a.floating && v === a.floating.view && !v.find)
+        a.closeFloating(); // the floating editor: closed, written back (3.20)
+      else if (v.live)
+        a.setViewMode(v, "rendered"); // esc in normal mode closes the lens
       else if (v.find) v.find = null;
       else if (a.region !== "content") a.region = "content";
     },
@@ -1143,7 +1409,10 @@ export function registerActions(app: App): void {
           Object.assign(v, { visual: null, sel: null });
           return;
         }
-        const row = C.cells(lay(a, v).lines[v.cur.row]).map((c) => c.g).join("").trim();
+        const row = C.cells(lay(a, v).lines[v.cur.row])
+          .map((c) => c.g)
+          .join("")
+          .trim();
         if (row) a.copy(row);
         else a.message("info", "nothing on this row to copy");
       }),
@@ -1153,7 +1422,8 @@ export function registerActions(app: App): void {
         a.copy(a.selectionText(v));
       }),
     "copy.path": (a) => withView(a, (v) => void a.copy(v.buf.abs)),
-    "copy.ref": (a) => withView(a, (v) => void a.copy(`${v.buf.rel ?? v.buf.abs}:${lay(a, v).lines[v.cur.row]?.src ?? 1}`)),
+    "copy.ref": (a) =>
+      withView(a, (v) => void a.copy(`${v.buf.rel ?? v.buf.abs}:${lay(a, v).lines[v.cur.row]?.src ?? 1}`)),
     "copy.link": (a) =>
       withView(a, (v) => {
         const i = a.linkUnderCursor(v);
@@ -1182,8 +1452,13 @@ export function registerActions(app: App): void {
           // The keys bound to the next link, as configured: one of its own, and the leader's.
           const keys = a.keymap.keysFor("link.next");
           const lead = canonKey(a.leader);
-          const said = [keys.find((k) => k.split(" ")[0] !== lead), keys.find((k) => k.split(" ")[0] === lead)].filter((k) => k !== undefined).map((k) => prettyKey(k, a.leader));
-          return a.message("info", said.length ? `no link here · ${said.join(" or ")} goes to the next one` : "no link here");
+          const said = [keys.find((k) => k.split(" ")[0] !== lead), keys.find((k) => k.split(" ")[0] === lead)]
+            .filter((k) => k !== undefined)
+            .map((k) => prettyKey(k, a.leader));
+          return a.message(
+            "info",
+            said.length ? `no link here · ${said.join(" or ")} goes to the next one` : "no link here",
+          );
         }
         followLink(a, link, "here");
       }),
@@ -1209,7 +1484,10 @@ export function registerActions(app: App): void {
           title: `Links from ${v.buf.name}`,
           items: layout.links.map((l, i) => ({
             label: l.text,
-            detail: l.kind === "markdown" || l.kind === "image" ? l.target : `[[${l.target}${l.heading ? `#${l.heading}` : ""}]]`,
+            detail:
+              l.kind === "markdown" || l.kind === "image"
+                ? l.target
+                : `[[${l.target}${l.heading ? `#${l.heading}` : ""}]]`,
             hint: l.status,
             data: i,
           })),
@@ -1228,7 +1506,12 @@ export function registerActions(app: App): void {
         a.openList({
           title: `Linking to ${v.buf.name} (${bl.length})`,
           // Another root's link (17.11): by its path, as files are shown (21.9).
-          items: bl.map((b) => ({ label: b.vault ? a.graph.shownPath(b.from) : b.from, detail: b.text, hint: `${b.line}`, data: b })),
+          items: bl.map((b) => ({
+            label: b.vault ? a.graph.shownPath(b.from) : b.from,
+            detail: b.text,
+            hint: `${b.line}`,
+            data: b,
+          })),
           accept: (item) => {
             const b = item.data as { from: string; line: number };
             a.open(b.from, { heading: null, headingIndex: 0, offset: b.line - 1, line: b.line });
@@ -1254,7 +1537,8 @@ export function registerActions(app: App): void {
       withView(a, (v) => {
         // Nothing but this note — no timeline in this window, no note read lately in another.
         const others = a.historyRows().filter((r) => !r.here && !r.heading).length;
-        if (!others && !v.back.length && !v.fwd.length && !(a.sidebarShown && a.leftView === "history")) return a.message("info", "no history yet");
+        if (!others && !v.back.length && !v.fwd.length && !(a.sidebarShown && a.leftView === "history"))
+          return a.message("info", "no history yet");
         a.openLeftView("history", "cycle");
       }),
     // windows
@@ -1322,18 +1606,32 @@ export function registerActions(app: App): void {
           t.views.splice(t.views.indexOf(v), 1);
           t.active = 0;
           v.layoutKey = "";
-          a.tabs.splice(a.activeTab + 1, 0, { views: [v], active: 0, orientation: "side", ratio: a.config.ui.split_ratio });
+          a.tabs.splice(a.activeTab + 1, 0, {
+            views: [v],
+            active: 0,
+            orientation: "side",
+            ratio: a.config.ui.split_ratio,
+          });
           a.activeTab += 1;
           return;
         }
-        a.tabs.splice(a.activeTab + 1, 0, { views: [a.makeView(v.buf, { ...v.topAnchor }, { ...v.curAnchor })], active: 0, orientation: "side", ratio: a.config.ui.split_ratio });
+        a.tabs.splice(a.activeTab + 1, 0, {
+          views: [a.makeView(v.buf, { ...v.topAnchor }, { ...v.curAnchor })],
+          active: 0,
+          orientation: "side",
+          ratio: a.config.ui.split_ratio,
+        });
         a.activeTab += 1;
         if (arg) await a.run(`note.open ${arg}`);
       }),
     "tab.list": (a) =>
       a.openList({
         title: `Tabs (${a.tabs.length})`,
-        items: a.tabs.map((t, i) => ({ label: `${i + 1}  ${a.displayName(t.views[t.active]!.buf)}`, hint: t.views.length > 1 ? "split" : undefined, data: i })),
+        items: a.tabs.map((t, i) => ({
+          label: `${i + 1}  ${a.displayName(t.views[t.active]!.buf)}`,
+          hint: t.views.length > 1 ? "split" : undefined,
+          data: i,
+        })),
         selected: a.activeTab,
         accept: (item) => {
           a.activeTab = item.data as number;
@@ -1397,7 +1695,9 @@ export function registerActions(app: App): void {
           (text) => {
             const o = v.findOpts ?? { regex: false, whole: false };
             v.find = computeFind(lay(a, v), text, 0, o.whole, o.regex);
-            const first = v.find.matches.findIndex((m) => m.row > start.row || (m.row === start.row && m.col >= start.col));
+            const first = v.find.matches.findIndex(
+              (m) => m.row > start.row || (m.row === start.row && m.col >= start.col),
+            );
             const i = first >= 0 ? first : 0;
             const m = v.find.matches[i];
             if (m) {
@@ -1460,7 +1760,11 @@ export function registerActions(app: App): void {
             const start = text.lastIndexOf("\n", m.from - 1) + 1;
             const end = text.indexOf("\n", m.from);
             const row = sanitize(text.slice(start, end < 0 ? text.length : end).replace(/\t/g, " ")).trim();
-            items.push({ label: `${rel}:${line}`, detail: row.length > 160 ? `${row.slice(0, 160)}…` : row, data: { rel, line } });
+            items.push({
+              label: `${rel}:${line}`,
+              detail: row.length > 160 ? `${row.slice(0, 160)}…` : row,
+              data: { rel, line },
+            });
           }
         }
         if (!items.length) return a.message("info", `not found here: ${query}`);
@@ -1489,7 +1793,10 @@ export function registerActions(app: App): void {
         let seed = v.find?.query ?? "";
         let range: [number, number] | undefined;
         if (v.sel) {
-          const [p, q] = v.sel.anchor.row < v.cur.row || (v.sel.anchor.row === v.cur.row && v.sel.anchor.col <= v.cur.col) ? [v.sel.anchor, v.cur] : [v.cur, v.sel.anchor];
+          const [p, q] =
+            v.sel.anchor.row < v.cur.row || (v.sel.anchor.row === v.cur.row && v.sel.anchor.col <= v.cur.col)
+              ? [v.sel.anchor, v.cur]
+              : [v.cur, v.sel.anchor];
           const text = a.selectionText(v);
           if (text && !text.includes("\n") && !v.sel.line) seed = text;
           else {
@@ -1527,7 +1834,14 @@ export function registerActions(app: App): void {
       withView(a, (v) => {
         const f = a.vim.lastFind;
         if (!f) return a.message("info", "no f or t to repeat yet");
-        const to = C.findChar(lay(a, v), v.cur, arg === "back" ? V.reverseFind(f.kind) : f.kind, f.ch, V.takeCount(a), true);
+        const to = C.findChar(
+          lay(a, v),
+          v.cur,
+          arg === "back" ? V.reverseFind(f.kind) : f.kind,
+          f.ch,
+          V.takeCount(a),
+          true,
+        );
         if (to) a.moveCursor(v, to);
       }),
     // n always forward, N always backward (not vim's "the way the search went").
@@ -1541,14 +1855,24 @@ export function registerActions(app: App): void {
         a.setViewMode(v, v.source ? "rendered" : "source");
         if (v.source === was) return; // refused (a file with no render): its own message says why
         const what = v.buf.kind.group === "note" ? "the note's markdown" : "the file as written";
-        a.message("info", v.source ? `source — ${what}` : a.isCodeDocument(v.buf) ? "the code as a document" : "rendered");
+        a.message(
+          "info",
+          v.source ? `source — ${what}` : a.isCodeDocument(v.buf) ? "the code as a document" : "rendered",
+        );
       }),
     "view.live": (a) =>
       withView(a, (v) => {
         const was = v.live;
         a.setViewMode(v, v.live ? "rendered" : "live");
         if (v.live === was) return;
-        a.message("info", v.live ? `the lens: the ${v.buf.kind.group === "text" ? "code" : "markdown"} around the cursor — esc closes it` : a.isCodeDocument(v.buf) ? "the code as a document" : "rendered");
+        a.message(
+          "info",
+          v.live
+            ? `the lens: the ${v.buf.kind.group === "text" ? "code" : "markdown"} around the cursor — esc closes it`
+            : a.isCodeDocument(v.buf)
+              ? "the code as a document"
+              : "rendered",
+        );
       }),
     // The lens's size by hand: a block more or less, kept as it moves; `=` lets it size itself.
     "lens.grow": (a) => lensStep(a, 1),
@@ -1627,7 +1951,15 @@ export function registerActions(app: App): void {
         const r = toLineEnd(a, v, V.takeCount(a));
         if (r) V.apply(a, v, "c", r);
       }),
-    "edit.substitute": (a) => sourceEdit(a, (v) => V.apply(a, v, "c", charsRange(a, v, V.takeCount(a)) ?? { ...noRange, from: E.offsetOf(a, v), to: E.offsetOf(a, v) })),
+    "edit.substitute": (a) =>
+      sourceEdit(a, (v) =>
+        V.apply(
+          a,
+          v,
+          "c",
+          charsRange(a, v, V.takeCount(a)) ?? { ...noRange, from: E.offsetOf(a, v), to: E.offsetOf(a, v) },
+        ),
+      ),
     "edit.substitute_line": (a) =>
       sourceEdit(a, (v) => {
         const first = E.lineOf(v, E.offsetOf(a, v));
@@ -1705,18 +2037,22 @@ export function registerActions(app: App): void {
     "note.save": (a) =>
       withView(a, (v) => {
         // The commit editor's ctrl+s commits, its message changed or not: a commit git refused is tried again (26.3).
-        if (a.floating?.kind === "commit" && a.floating.view === v && v.buf.virtual) return void v.buf.virtual.save(v.buf.source);
-        if (!v.buf.dirty && !v.buf.changedOnDisk()) return a.message("info", `${a.displayName(v.buf)} has no changes to save`);
+        if (a.floating?.kind === "commit" && a.floating.view === v && v.buf.virtual)
+          return void v.buf.virtual.save(v.buf.source);
+        if (!v.buf.dirty && !v.buf.changedOnDisk())
+          return a.message("info", `${a.displayName(v.buf)} has no changes to save`);
         if (a.saveBuffer(v.buf)) a.message("info", `saved ${a.displayName(v.buf)}`);
       }),
     "note.save_force": (a) =>
       withView(a, (v) => {
-        if (a.writeBuffer(v.buf, v.buf.contentToSave(), true)) a.message("info", `saved ${a.displayName(v.buf)} over the file on disk`);
+        if (a.writeBuffer(v.buf, v.buf.contentToSave(), true))
+          a.message("info", `saved ${a.displayName(v.buf)} over the file on disk`);
       }),
     "note.revert": (a) => withView(a, (v) => revert(a, v.buf)),
     "note.resolve": (a) =>
       withView(a, (v) => {
-        if (!v.buf.dirty || !v.buf.changedOnDisk()) return a.message("info", `${a.displayName(v.buf)} has no conflict with the file on disk`);
+        if (!v.buf.dirty || !v.buf.changedOnDisk())
+          return a.message("info", `${a.displayName(v.buf)} has no conflict with the file on disk`);
         a.conflictPrompt(v.buf);
       }),
     "note.save_all": (a) => {
@@ -1755,13 +2091,23 @@ export function registerActions(app: App): void {
       const items: ListItem[] = [
         ...notes.map((n) => ({
           label: n.rel,
-          detail: n.title !== n.rel.replace(/\.(md|markdown)$/i, "").split("/").pop() ? n.title : undefined,
+          detail:
+            n.title !==
+            n.rel
+              .replace(/\.(md|markdown)$/i, "")
+              .split("/")
+              .pop()
+              ? n.title
+              : undefined,
           data: n.rel,
         })),
         ...files.map((f) => ({ label: f.path, hint: f.group === "data" ? "data" : "file", data: f.path })),
       ];
       // Notes and files together: a recent file comes before notes not opened lately.
-      const ordered = items.map((x, i) => ({ x, i, r: rank.get(x.data as string) ?? Number.POSITIVE_INFINITY })).sort((p, q) => p.r - q.r || p.i - q.i).map((e) => e.x);
+      const ordered = items
+        .map((x, i) => ({ x, i, r: rank.get(x.data as string) ?? Number.POSITIVE_INFINITY }))
+        .sort((p, q) => p.r - q.r || p.i - q.i)
+        .map((e) => e.x);
       a.openList({
         title: files.length ? `Open (${notes.length} notes, ${files.length} files)` : `Open note (${notes.length})`,
         items: ordered,
@@ -1782,7 +2128,12 @@ export function registerActions(app: App): void {
         const current = [...layout.headings].reverse().findIndex((h) => h.line <= v.cur.row);
         a.openList({
           title: `Headings — ${v.buf.name}`,
-          items: layout.headings.map((h) => ({ label: h.text.replace(/\s+/g, " "), indent: h.level - 1, hint: `${h.src}`, data: h.line })),
+          items: layout.headings.map((h) => ({
+            label: h.text.replace(/\s+/g, " "),
+            indent: h.level - 1,
+            hint: `${h.src}`,
+            data: h.line,
+          })),
           accept: (item) => {
             a.pushHistory(v);
             a.moveCursor(v, { row: item.data as number, col: 0 });
@@ -1793,7 +2144,8 @@ export function registerActions(app: App): void {
     "palette.open": (a) => openPalette(a),
     // Your shell (25.7): what you type, run; lines filtered through it. Without the command, the `:` line asks it.
     "shell.run": (a, arg) => (arg?.trim() ? shellRun(a, arg) : openPalette(a, "!")),
-    "shell.filter": (a, arg) => (arg?.trim() && parseBang(arg)?.range ? shellFilter(a, arg) : openPalette(a, a.view?.sel ? "!" : ".!")),
+    "shell.filter": (a, arg) =>
+      arg?.trim() && parseBang(arg)?.range ? shellFilter(a, arg) : openPalette(a, a.view?.sel ? "!" : ".!"),
     "shell.stop": (a) => shellStop(a),
     "note.open": (a, arg) => {
       if (!arg) return void a.run("switcher.open");
@@ -1801,7 +2153,10 @@ export function registerActions(app: App): void {
       if (isPointer(arg)) {
         const r = a.graph.resolveLink({ kind: "markdown", target: arg }, a.view?.buf.rel ?? "");
         if ((r.resolvedKind === "note" || r.resolvedKind === "file") && r.path) return a.open(r.path);
-        return a.message("warn", `${arg}: ${r.reason ?? (r.resolvedKind === "ambiguous" ? `matches ${r.candidates.join(", ")}` : "not found")}`);
+        return a.message(
+          "warn",
+          `${arg}: ${r.reason ?? (r.resolvedKind === "ambiguous" ? `matches ${r.candidates.join(", ")}` : "not found")}`,
+        );
       }
       const r = a.graph.findNote(arg, a.loc.root);
       if (r.status === "resolved") return a.open(r.path);
@@ -1818,7 +2173,8 @@ export function registerActions(app: App): void {
         return fileLink(a, rel);
       }
       // Git-ignored, or in a hidden folder: reached by opening it (20.8), it's the vault's from now on.
-      if (rel && isInside(a.loc.root, abs) && a.graph.reachFile(rel, { keep: true })) return a.graph.notes.has(rel) ? a.open(rel) : fileLink(a, rel);
+      if (rel && isInside(a.loc.root, abs) && a.graph.reachFile(rel, { keep: true }))
+        return a.graph.notes.has(rel) ? a.open(rel) : fileLink(a, rel);
       a.message("warn", `no note or file "${arg}"`);
     },
     // ui
@@ -1831,7 +2187,11 @@ export function registerActions(app: App): void {
         { label: "Problems marked in the text", hint: MARKS_SAID[a.ui.problem_marks], data: "ui.problem_marks" },
         { label: "Code cells", hint: a.ui.code_cells === "box" ? "boxes" : "bands", data: "ui.code_cells" },
       ];
-      a.openList({ title: "UI settings — enter changes one", items, accept: (item) => void a.run(item.data as string).then(() => a.host.requestRender()) });
+      a.openList({
+        title: "UI settings — enter changes one",
+        items,
+        accept: (item) => void a.run(item.data as string).then(() => a.host.requestRender()),
+      });
     },
     "theme.pick": (a) => {
       if (process.env.NO_COLOR) a.message("info", "NO_COLOR is set: the theme you pick applies once it's unset");
@@ -1846,13 +2206,15 @@ export function registerActions(app: App): void {
     },
     "glyphs.pick": (a) => pickGlyphs(a),
     "glyphs.set": (a, arg) => {
-      if (!arg || !["nerd", "unicode", "ascii", "auto"].includes(arg)) return a.message("warn", "glyphs: nerd, unicode, ascii or auto");
+      if (!arg || !["nerd", "unicode", "ascii", "auto"].includes(arg))
+        return a.message("warn", "glyphs: nerd, unicode, ascii or auto");
       a.setUi("glyphs", arg);
     },
     // scratch
     "scratch.open": (a) => {
       const loc = a.scratch();
-      if (!readScratch(loc).trim()) return a.message("info", `the scratch is empty · ${prettyKey(`${a.leader} s a`, a.leader)} adds to it`);
+      if (!readScratch(loc).trim())
+        return a.message("info", `the scratch is empty · ${prettyKey(`${a.leader} s a`, a.leader)} adds to it`);
       a.open(loc.path);
     },
     "scratch.add": (a) =>
@@ -1862,7 +2224,12 @@ export function registerActions(app: App): void {
           const [p, q] = C.ordered(v.sel.anchor, v.cur);
           const r1 = layout.lines[p.row]?.src ?? 1;
           const r2 = layout.lines[q.row]?.src ?? r1;
-          a.capture(formatEntry({ ref: { path: v.buf.abs, startLine: r1, endLine: r2 }, snippetText: a.selectionText(v), lang: "" }, a.loc.root));
+          a.capture(
+            formatEntry(
+              { ref: { path: v.buf.abs, startLine: r1, endLine: r2 }, snippetText: a.selectionText(v), lang: "" },
+              a.loc.root,
+            ),
+          );
           Object.assign(v, { visual: null, sel: null });
           return;
         }
@@ -1890,7 +2257,10 @@ export function registerActions(app: App): void {
       withView(a, (v) => {
         const buf = v.buf;
         if (!buf.dirty || buf.deleted || buf.changedOnDisk()) return a.reloadBuffer(buf);
-        a.confirm(`Discard your changes to ${a.displayName(buf)}? It's loaded from disk again: u brings them back.`, () => revert(a, buf));
+        a.confirm(
+          `Discard your changes to ${a.displayName(buf)}? It's loaded from disk again: u brings them back.`,
+          () => revert(a, buf),
+        );
       }),
     // The Info view (3.19), the right panel's first: what the file on screen is; its button above the outline's.
     "note.info": (a) => a.openRightView("info", "cycle"),
@@ -1981,8 +2351,15 @@ export function registerActions(app: App): void {
         if (v.buf.rel && a.graph.notes.has(v.buf.rel)) {
           const link = a.linkUnderCursor(v) >= 0 ? a.currentLayout(v).links[a.linkUnderCursor(v)] : undefined;
           if (!link) return a.message("info", "nothing to show here: on a link, where it lands");
-          const r = a.graph.resolveLink({ kind: link.kind === "embed" ? "embed" : link.kind === "wiki" ? "wiki" : "markdown", target: link.target }, link.from ?? v.buf.rel);
-          if (r.resolvedKind !== "note" && r.resolvedKind !== "anchor") return a.message("info", `${link.target}: ${r.resolvedKind === "ambiguous" ? `matches ${r.candidates.join(", ")}` : r.resolvedKind === "external" ? link.target : r.reason ?? "no such note yet"}`);
+          const r = a.graph.resolveLink(
+            { kind: link.kind === "embed" ? "embed" : link.kind === "wiki" ? "wiki" : "markdown", target: link.target },
+            link.from ?? v.buf.rel,
+          );
+          if (r.resolvedKind !== "note" && r.resolvedKind !== "anchor")
+            return a.message(
+              "info",
+              `${link.target}: ${r.resolvedKind === "ambiguous" ? `matches ${r.candidates.join(", ")}` : r.resolvedKind === "external" ? link.target : (r.reason ?? "no such note yet")}`,
+            );
           const path = r.resolvedKind === "anchor" ? v.buf.rel : r.path!;
           // A path's `#fragment`: a heading (by its slug or text), or a block's `^id` (20.2).
           let frag = link.heading;
@@ -2004,14 +2381,27 @@ export function registerActions(app: App): void {
           const top = text === null && frag ? landingText(a.graph, path, null, null) : null;
           if (top !== null) {
             const what = block ? `block ^${block}` : `heading "${frag}"`;
-            return a.openHover(`*No ${markdownText(what)} in ${markdownText(shown)}: the link opens the note at its top.*\n\n${top}`, shown);
+            return a.openHover(
+              `*No ${markdownText(what)} in ${markdownText(shown)}: the link opens the note at its top.*\n\n${top}`,
+              shown,
+            );
           }
-          return a.openHover(text ?? "(nothing there)", `${shown}${block ? ` ^${block}` : heading ? ` › ${heading}` : ""}`);
+          return a.openHover(
+            text ?? "(nothing there)",
+            `${shown}${block ? ` ^${block}` : heading ? ` › ${heading}` : ""}`,
+          );
         }
         a.syncServers(v.buf);
         const s = a.servers;
-        if (!s?.isOpen(v.buf.abs)) return a.message("info", "no language server for this file (slipbox doctor says which it would have)");
-        const answer = await s.request<Hover>(v.buf.abs, "textDocument/hover", { textDocument: { uri: pathToFileURL(v.buf.abs).href }, position: a.lspPosition(v) }, "hoverProvider", "hover");
+        if (!s?.isOpen(v.buf.abs))
+          return a.message("info", "no language server for this file (slipbox doctor says which it would have)");
+        const answer = await s.request<Hover>(
+          v.buf.abs,
+          "textDocument/hover",
+          { textDocument: { uri: pathToFileURL(v.buf.abs).href }, position: a.lspPosition(v) },
+          "hoverProvider",
+          "hover",
+        );
         const text = answer ? hoverText(answer.result) : "";
         if (!text.trim()) return a.message("info", "the language server has nothing to say here");
         a.openHover(text, `${answer!.server}`);
@@ -2019,41 +2409,84 @@ export function registerActions(app: App): void {
     "lsp.definition": (a) =>
       withView(a, async (v) => {
         if (v.buf.rel && a.graph.notes.has(v.buf.rel)) return void a.run("link.follow");
-        await goTo(a, v, "textDocument/definition", "definitionProvider", "goto-definition", ["definition", "definitions"]);
+        await goTo(a, v, "textDocument/definition", "definitionProvider", "goto-definition", [
+          "definition",
+          "definitions",
+        ]);
       }),
     // Where the type of what's under the cursor is defined, and what implements it (19.13).
-    "lsp.type_definition": (a) => withView(a, (v) => goTo(a, v, "textDocument/typeDefinition", "typeDefinitionProvider", "goto-type-definition", ["type definition", "type definitions"])),
-    "lsp.implementation": (a) => withView(a, (v) => goTo(a, v, "textDocument/implementation", "implementationProvider", "goto-implementation", ["implementation", "implementations"])),
+    "lsp.type_definition": (a) =>
+      withView(a, (v) =>
+        goTo(a, v, "textDocument/typeDefinition", "typeDefinitionProvider", "goto-type-definition", [
+          "type definition",
+          "type definitions",
+        ]),
+      ),
+    "lsp.implementation": (a) =>
+      withView(a, (v) =>
+        goTo(a, v, "textDocument/implementation", "implementationProvider", "goto-implementation", [
+          "implementation",
+          "implementations",
+        ]),
+      ),
     "lsp.references": (a) =>
       withView(a, async (v) => {
         if (v.buf.rel && a.graph.notes.has(v.buf.rel)) return void a.run("backlinks.open");
         a.syncServers(v.buf);
         const s = a.servers;
-        if (!s?.isOpen(v.buf.abs)) return a.message("info", "no language server for this file (slipbox doctor says which it would have)");
+        if (!s?.isOpen(v.buf.abs))
+          return a.message("info", "no language server for this file (slipbox doctor says which it would have)");
         // Every server that finds references has its say, together.
-        const answers = await s.requestAll<Location[]>(v.buf.abs, "textDocument/references", { textDocument: { uri: pathToFileURL(v.buf.abs).href }, position: a.lspPosition(v), context: { includeDeclaration: false } }, "referencesProvider", "goto-reference");
+        const answers = await s.requestAll<Location[]>(
+          v.buf.abs,
+          "textDocument/references",
+          {
+            textDocument: { uri: pathToFileURL(v.buf.abs).href },
+            position: a.lspPosition(v),
+            context: { includeDeclaration: false },
+          },
+          "referencesProvider",
+          "goto-reference",
+        );
         const seen = new Set<string>();
-        const locs = answers.flatMap((x) => locations(x.result)).filter((l) => {
-          const key = `${l.path}:${l.line}:${l.character}`;
-          return !seen.has(key) && !!seen.add(key);
-        });
+        const locs = answers
+          .flatMap((x) => locations(x.result))
+          .filter((l) => {
+            const key = `${l.path}:${l.line}:${l.character}`;
+            return !seen.has(key) && !!seen.add(key);
+          });
         if (!locs.length) return a.message("info", "no references found");
         pickLocation(a, `${locs.length} reference${locs.length === 1 ? "" : "s"}`, locs);
       }),
     // What a code file's language server changes (19.15): a rename, its fixes, its formatting.
     "lsp.rename": (a, arg) =>
       withView(a, async (v) => {
-        if (v.buf.rel && a.graph.notes.has(v.buf.rel)) return void a.run(arg ? `heading.rename ${arg}` : "heading.rename");
+        if (v.buf.rel && a.graph.notes.has(v.buf.rel))
+          return void a.run(arg ? `heading.rename ${arg}` : "heading.rename");
         a.syncServers(v.buf);
         const s = a.servers;
-        if (!s?.isOpen(v.buf.abs)) return a.message("info", "no language server for this file (slipbox doctor says which it would have)");
+        if (!s?.isOpen(v.buf.abs))
+          return a.message("info", "no language server for this file (slipbox doctor says which it would have)");
         const where = { textDocument: { uri: pathToFileURL(v.buf.abs).href }, position: a.lspPosition(v) };
-        const prep = await s.request<Range | { range: Range; placeholder: string } | { defaultBehavior: boolean }>(v.buf.abs, "textDocument/prepareRename", where, "renameProvider", "rename-symbol");
-        const range = prep && "start" in prep.result ? prep.result : prep && "range" in prep.result ? prep.result.range : null;
+        const prep = await s.request<Range | { range: Range; placeholder: string } | { defaultBehavior: boolean }>(
+          v.buf.abs,
+          "textDocument/prepareRename",
+          where,
+          "renameProvider",
+          "rename-symbol",
+        );
+        const range =
+          prep && "start" in prep.result ? prep.result : prep && "range" in prep.result ? prep.result.range : null;
         const word = range ? textIn(v.buf.source, v.buf.lineStarts(), range) : "";
         const name = prep && "placeholder" in prep.result ? prep.result.placeholder : word;
         const go = async (to: string) => {
-          const r = await s.request<WorkspaceEdit>(v.buf.abs, "textDocument/rename", { ...where, newName: to }, "renameProvider", "rename-symbol");
+          const r = await s.request<WorkspaceEdit>(
+            v.buf.abs,
+            "textDocument/rename",
+            { ...where, newName: to },
+            "renameProvider",
+            "rename-symbol",
+          );
           if (!r) return a.message("warn", "the language server can't rename this");
           a.previewWorkspaceEdit(`rename ${name || "it"} → ${to}`, r.result);
           a.host.requestRender();
@@ -2068,7 +2501,10 @@ export function registerActions(app: App): void {
         const s = a.servers;
         // In a note, slipbox's own fixes for the cursor's line too (a fragile link named for sure).
         const line = a.lspPosition(v).line + 1;
-        const own = v.buf.kind.group === "note" && v.buf.rel !== null ? noteProblems(a.graph, v.buf.rel).filter((p) => p.fix && p.start.line <= line && line <= p.end.line) : [];
+        const own =
+          v.buf.kind.group === "note" && v.buf.rel !== null
+            ? noteProblems(a.graph, v.buf.rel).filter((p) => p.fix && p.start.line <= line && line <= p.end.line)
+            : [];
         const fix = (p: Problem) => {
           const starts = v.buf.lineStarts();
           const at = starts[p.start.line - 1]! + p.start.column - 1;
@@ -2076,20 +2512,43 @@ export function registerActions(app: App): void {
           a.applyNoteEdits([{ at, length: to - at, text: p.fix!.text }], p.fix!.title);
         };
         if (!s?.isOpen(v.buf.abs)) {
-          if (!own.length) return a.message("info", "code actions are a language server's: none for this file (slipbox doctor)");
-          return a.openList({ title: "Code actions", items: own.map((p) => ({ label: p.fix!.title, hint: "slipbox", data: p })), accept: (item) => fix(item.data as Problem) });
+          if (!own.length)
+            return a.message("info", "code actions are a language server's: none for this file (slipbox doctor)");
+          return a.openList({
+            title: "Code actions",
+            items: own.map((p) => ({ label: p.fix!.title, hint: "slipbox", data: p })),
+            accept: (item) => fix(item.data as Problem),
+          });
         }
         const position = a.lspPosition(v);
         const range = { start: position, end: position };
         // The problems on this line, as each server gave them: its fixes for them.
-        const diagnostics = [...v.buf.serverProblems.values()].filter((p) => p.version === v.buf.version).flatMap((p) => p.raw).filter((d) => d.range.start.line <= position.line && position.line <= d.range.end.line);
-        const answers = await s.requestAll<(CodeAction | LspCommand)[]>(v.buf.abs, "textDocument/codeAction", { textDocument: { uri: pathToFileURL(v.buf.abs).href }, range, context: { diagnostics } }, "codeActionProvider", "code-action");
-        const actions = answers.flatMap((x) => x.result.map((action) => ({ action, server: x.server }))).filter(({ action }) => !("disabled" in action && action.disabled));
+        const diagnostics = [...v.buf.serverProblems.values()]
+          .filter((p) => p.version === v.buf.version)
+          .flatMap((p) => p.raw)
+          .filter((d) => d.range.start.line <= position.line && position.line <= d.range.end.line);
+        const answers = await s.requestAll<(CodeAction | LspCommand)[]>(
+          v.buf.abs,
+          "textDocument/codeAction",
+          { textDocument: { uri: pathToFileURL(v.buf.abs).href }, range, context: { diagnostics } },
+          "codeActionProvider",
+          "code-action",
+        );
+        const actions = answers
+          .flatMap((x) => x.result.map((action) => ({ action, server: x.server })))
+          .filter(({ action }) => !("disabled" in action && action.disabled));
         if (!actions.length && !own.length) return a.message("info", "no code actions here");
-        actions.sort((x, y) => Number("isPreferred" in y.action && !!y.action.isPreferred) - Number("isPreferred" in x.action && !!x.action.isPreferred));
+        actions.sort(
+          (x, y) =>
+            Number("isPreferred" in y.action && !!y.action.isPreferred) -
+            Number("isPreferred" in x.action && !!x.action.isPreferred),
+        );
         a.openList({
           title: "Code actions",
-          items: [...own.map((p) => ({ label: p.fix!.title, hint: "slipbox", data: { own: p } })), ...actions.map((x) => ({ label: x.action.title, hint: x.server, data: x }))],
+          items: [
+            ...own.map((p) => ({ label: p.fix!.title, hint: "slipbox", data: { own: p } })),
+            ...actions.map((x) => ({ label: x.action.title, hint: x.server, data: x })),
+          ],
           accept: (item) => {
             const d = item.data as { own?: Problem } & { action: CodeAction | LspCommand; server: string };
             if (d.own) return fix(d.own);
@@ -2101,11 +2560,18 @@ export function registerActions(app: App): void {
       withView(a, async (v) => {
         a.syncServers(v.buf);
         const s = a.servers;
-        if (!s?.isOpen(v.buf.abs)) return a.message("info", "formatting is a language server's: none for this file (slipbox doctor)");
+        if (!s?.isOpen(v.buf.abs))
+          return a.message("info", "formatting is a language server's: none for this file (slipbox doctor)");
         // The file's own indentation (25.1): its .editorconfig, else its lines, else its language's — never a fixed 2.
         const indent = v.buf.indent();
         const options = { tabSize: indent.size, insertSpaces: !indent.tabs };
-        const r = await s.request<TextEdit[]>(v.buf.abs, "textDocument/formatting", { textDocument: { uri: pathToFileURL(v.buf.abs).href }, options }, "documentFormattingProvider", "format");
+        const r = await s.request<TextEdit[]>(
+          v.buf.abs,
+          "textDocument/formatting",
+          { textDocument: { uri: pathToFileURL(v.buf.abs).href }, options },
+          "documentFormattingProvider",
+          "format",
+        );
         if (!r) return a.message("info", "the language server doesn't format this");
         if (!r.result.length) return a.message("info", `formatted already (${r.server})`);
         a.applyWorkspaceEdit({ changes: { [pathToFileURL(v.buf.abs).href]: r.result } });
@@ -2114,7 +2580,8 @@ export function registerActions(app: App): void {
     "heading.rename": (a, arg) =>
       withView(a, (v) => {
         const rel = v.buf.rel;
-        if (!rel || !a.graph.notes.has(rel)) return a.message("warn", "only a note of this root has its headings renamed with their links");
+        if (!rel || !a.graph.notes.has(rel))
+          return a.message("warn", "only a note of this root has its headings renamed with their links");
         // The section the cursor is in: the last heading at or above its line.
         const line = a.cursorLine(v);
         const h = [...(a.graph.entry(rel)?.headings ?? [])].reverse().find((x) => x.line <= line);
@@ -2135,7 +2602,11 @@ export function registerActions(app: App): void {
       const go = (name: string) => {
         const ident = folderIdentity(a.loc.root);
         const taken = readFolders().find((f) => f.key !== ident?.key && f.name.toLowerCase() === name.toLowerCase());
-        if (taken) return a.message("warn", `a different folder is called ${name}, at ${tildePath(taken.default ?? taken.copies[0]?.path ?? "")}: pick another`);
+        if (taken)
+          return a.message(
+            "warn",
+            `a different folder is called ${name}, at ${tildePath(taken.default ?? taken.copies[0]?.path ?? "")}: pick another`,
+          );
         // A .slipbox/ folder's: renamed, its old name kept (previewed); a repository's: a .slipbox/ to hold one.
         if (hasMarker(a.loc.root)) return a.previewRename(() => planVaultRename(a.loc, name));
         try {
@@ -2155,7 +2626,11 @@ export function registerActions(app: App): void {
       // A note named: its links; else every note's.
       if (!arg) return a.previewConvert();
       const r = a.graph.findNote(arg, a.loc.root);
-      if (r.status !== "resolved") return a.message("warn", r.status === "ambiguous" ? `"${arg}" matches ${r.candidates.join(", ")}` : `no note "${arg}"`);
+      if (r.status !== "resolved")
+        return a.message(
+          "warn",
+          r.status === "ambiguous" ? `"${arg}" matches ${r.candidates.join(", ")}` : `no note "${arg}"`,
+        );
       a.previewConvert([r.path]);
     },
     "link.relink": (a) =>
@@ -2173,18 +2648,37 @@ export function registerActions(app: App): void {
       infoList(a, "Root", [
         ["root", a.loc.root],
         ["mode", a.loc.mode],
-        ["name", ident ? `${rootLabel(a.loc)}${a.loc.aliases.length ? ` (also ${a.loc.aliases.join(", ")})` : ""}` : `none — ${a.loc.mode === "folder" ? "no root" : "no remote and no .slipbox/ name"}: linked to by relative path`],
+        [
+          "name",
+          ident
+            ? `${rootLabel(a.loc)}${a.loc.aliases.length ? ` (also ${a.loc.aliases.join(", ")})` : ""}`
+            : `none — ${a.loc.mode === "folder" ? "no root" : "no remote and no .slipbox/ name"}: linked to by relative path`,
+        ],
         ["notes", String(g.notes.size)],
         ["indexing", a.indexing ? `${a.indexing} left` : "done"],
         // How fresh, and what else is covered (20.10).
-        ["index", `${g.indexedAt() ? `written ${g.indexedAt()!.toISOString().slice(0, 16).replace("T", " ")}` : "not written yet"}${g.reached.size ? `, ${g.reached.size} reached outside the walk` : ""}`],
+        [
+          "index",
+          `${g.indexedAt() ? `written ${g.indexedAt()!.toISOString().slice(0, 16).replace("T", " ")}` : "not written yet"}${g.reached.size ? `, ${g.reached.size} reached outside the walk` : ""}`,
+        ],
         ["home", describeBackground(backgroundStatus(a.config))],
-        ["watcher", a.watcher ? (a.watcher.degraded ? `degraded: ${a.watcher.degraded}` : `${a.watcher.watchedCount} directories${a.watcher.polledDirs.length ? `, ${a.watcher.polledDirs.length} polled` : ""}`) : "off"],
+        [
+          "watcher",
+          a.watcher
+            ? a.watcher.degraded
+              ? `degraded: ${a.watcher.degraded}`
+              : `${a.watcher.watchedCount} directories${a.watcher.polledDirs.length ? `, ${a.watcher.polledDirs.length} polled` : ""}`
+            : "off",
+        ],
         ["cache", cacheDir(a.loc)],
         ["state", stateDir(a.loc)],
         ["scratch", a.scratch().path],
         ...g.skipped.map((s) => ["skipped", `${s.rel} — ${s.reason}`] as [string, string]),
-        ...(named?.copies ?? []).filter((c) => c.path !== ident?.copy).map((c) => ["copy", `${tildePath(c.path)}${copyAvailable(c.path) ? "" : " (not here)"}`] as [string, string]),
+        ...(named?.copies ?? [])
+          .filter((c) => c.path !== ident?.copy)
+          .map(
+            (c) => ["copy", `${tildePath(c.path)}${copyAvailable(c.path) ? "" : " (not here)"}`] as [string, string],
+          ),
       ]);
     },
     "config.reload": (a) => a.reloadConfig("manual"),
@@ -2192,7 +2686,13 @@ export function registerActions(app: App): void {
       if (!a.messages.length) return a.message("info", "no messages");
       a.openList({
         title: "Messages",
-        items: [...a.messages].reverse().map((m) => ({ label: m.text, hint: `${m.level} ${new Date(m.at).toTimeString().slice(0, 8)}`, data: m.text })),
+        items: [...a.messages]
+          .reverse()
+          .map((m) => ({
+            label: m.text,
+            hint: `${m.level} ${new Date(m.at).toTimeString().slice(0, 8)}`,
+            data: m.text,
+          })),
         accept: (item) => void a.copy(item.data as string),
       });
     },
@@ -2212,14 +2712,22 @@ export function registerActions(app: App): void {
     a.setUi("code_cells", next);
     a.message("info", `Code cells: ${next === "box" ? "boxes" : "bands"}`);
   };
-  for (const action of ["fold", "edit", "copy", "references", "problems", "scratch"]) impl[`cell.${action}`] = (a) => a.cellAction(action);
+  for (const action of ["fold", "edit", "copy", "references", "problems", "scratch"])
+    impl[`cell.${action}`] = (a) => a.cellAction(action);
 
   for (const spec of COMMAND_SPECS) {
     const run = impl[spec.id];
     if (!run) throw new Error(`command ${spec.id} is specified but not implemented`);
-    app.registry.register({ id: spec.id, title: spec.title, description: spec.desc, run, hidden: spec.id === "app.escape" });
+    app.registry.register({
+      id: spec.id,
+      title: spec.title,
+      description: spec.desc,
+      run,
+      hidden: spec.id === "app.escape",
+    });
   }
-  for (const id of Object.keys(impl)) if (!app.registry.get(id)) throw new Error(`command ${id} has no spec in core/command-specs.ts`);
+  for (const id of Object.keys(impl))
+    if (!app.registry.get(id)) throw new Error(`command ${id} has no spec in core/command-specs.ts`);
 }
 
 function isFile(abs: string): boolean {
@@ -2233,12 +2741,15 @@ function isFile(abs: string): boolean {
 /** Whether the vault's walk takes a path: it and each folder above it (a hidden folder, node_modules, an ignored one aren't). */
 function walked(a: App, rel: string): boolean {
   const parts = rel.split("/");
-  return parts.every((_, i) => a.graph.filter.exclusion(parts.slice(0, i + 1).join("/"), i < parts.length - 1) === null);
+  return parts.every(
+    (_, i) => a.graph.filter.exclusion(parts.slice(0, i + 1).join("/"), i < parts.length - 1) === null,
+  );
 }
 
 /** A hover's contents as markdown: markup, a marked string, or several. */
 function hoverText(h: Hover): string {
-  const one = (c: MarkupContent | MarkedString): string => (typeof c === "string" ? c : "kind" in c ? c.value : `\`\`\`${c.language}\n${c.value}\n\`\`\``);
+  const one = (c: MarkupContent | MarkedString): string =>
+    typeof c === "string" ? c : "kind" in c ? c.value : `\`\`\`${c.language}\n${c.value}\n\`\`\``;
   return Array.isArray(h.contents) ? h.contents.map(one).join("\n\n") : one(h.contents);
 }
 
@@ -2247,24 +2758,43 @@ function hoverText(h: Hover): string {
  * A jump the file's language server answers (19.13): one place, gone to; several, a list to pick
  * from. `what`: the answer's name, one and many.
  */
-async function goTo(a: App, v: View, method: string, capability: string, feature: Feature, what: [string, string]): Promise<void> {
+async function goTo(
+  a: App,
+  v: View,
+  method: string,
+  capability: string,
+  feature: Feature,
+  what: [string, string],
+): Promise<void> {
   a.syncServers(v.buf);
   const s = a.servers;
-  if (!s?.isOpen(v.buf.abs)) return a.message("info", "no language server for this file (slipbox doctor says which it would have)");
-  if (!(await s.offers(v.buf.abs, feature, capability))) return a.message("info", `the language server doesn't find ${what[1]}`);
-  const answer = await s.request<Location | Location[] | LocationLink[]>(v.buf.abs, method, { textDocument: { uri: pathToFileURL(v.buf.abs).href }, position: a.lspPosition(v) }, capability, feature);
+  if (!s?.isOpen(v.buf.abs))
+    return a.message("info", "no language server for this file (slipbox doctor says which it would have)");
+  if (!(await s.offers(v.buf.abs, feature, capability)))
+    return a.message("info", `the language server doesn't find ${what[1]}`);
+  const answer = await s.request<Location | Location[] | LocationLink[]>(
+    v.buf.abs,
+    method,
+    { textDocument: { uri: pathToFileURL(v.buf.abs).href }, position: a.lspPosition(v) },
+    capability,
+    feature,
+  );
   const locs = answer ? locations(answer.result) : [];
   if (!locs.length) return a.message("info", `no ${what[0]} found here`);
   if (locs.length === 1) return a.openLocation(locs[0]!.path, locs[0]!.line, locs[0]!.character);
   pickLocation(a, `${locs.length} ${what[1]}`, locs);
 }
 
-function locations(r: Location | Location[] | LocationLink[] | null): { path: string; line: number; character: number }[] {
+function locations(
+  r: Location | Location[] | LocationLink[] | null,
+): { path: string; line: number; character: number }[] {
   const list = r === null ? [] : Array.isArray(r) ? r : [r];
   return list.flatMap((l) => {
     const uri = "targetUri" in l ? l.targetUri : l.uri;
     const range = "targetSelectionRange" in l ? l.targetSelectionRange : l.range;
-    return uri.startsWith("file:") ? [{ path: fileURLToPath(uri), line: range.start.line, character: range.start.character }] : [];
+    return uri.startsWith("file:")
+      ? [{ path: fileURLToPath(uri), line: range.start.line, character: range.start.character }]
+      : [];
   });
 }
 
@@ -2297,21 +2827,31 @@ function textIn(source: string, starts: number[], r: Range): string {
 }
 
 /** A code action carried out: resolved first when it came without its edit, its edit made, then its command run. */
-async function runAction(a: App, path: string, chosen: { action: CodeAction | LspCommand; server: string }): Promise<void> {
+async function runAction(
+  a: App,
+  path: string,
+  chosen: { action: CodeAction | LspCommand; server: string },
+): Promise<void> {
   const s = a.servers!;
   let action = chosen.action;
   if (!("command" in action && typeof action.command === "string")) {
     const ca = action as CodeAction;
-    if (!ca.edit && !ca.command) action = (await s.requestOf<CodeAction>(path, chosen.server, "codeAction/resolve", ca)) ?? ca;
+    if (!ca.edit && !ca.command)
+      action = (await s.requestOf<CodeAction>(path, chosen.server, "codeAction/resolve", ca)) ?? ca;
   }
-  const command = typeof (action as LspCommand).command === "string" ? (action as LspCommand) : (action as CodeAction).command;
+  const command =
+    typeof (action as LspCommand).command === "string" ? (action as LspCommand) : (action as CodeAction).command;
   const edit = "edit" in action ? (action as CodeAction).edit : undefined;
   if (edit) a.applyWorkspaceEdit(edit);
   // The server has the text the edit made before it runs a command on it.
   const buf = a.view?.buf;
   if (buf) a.syncServers(buf);
   // Its command is the server's to run; an edit it asks for then comes back as workspace/applyEdit.
-  if (command) await s.requestOf(path, chosen.server, "workspace/executeCommand", { command: command.command, arguments: command.arguments });
+  if (command)
+    await s.requestOf(path, chosen.server, "workspace/executeCommand", {
+      command: command.command,
+      arguments: command.arguments,
+    });
   a.message("info", action.title);
   a.host.requestRender();
 }

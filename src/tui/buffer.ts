@@ -111,7 +111,15 @@ export class NoteBuffer {
    * goes: `/notes/plan.md#L12`). The app refreshes it
    * shortly after edits stop; until then the layout uses it as it is.
    */
-  syntax: { version: number; spans: Map<number, SyntaxSpan[]>; outline: OutlineEntry[]; errors: SyntaxError[]; links: (CommentLink & { href?: string })[]; languages: Map<number, string>; code: CodeModel | null } | null = null;
+  syntax: {
+    version: number;
+    spans: Map<number, SyntaxSpan[]>;
+    outline: OutlineEntry[];
+    errors: SyntaxError[];
+    links: (CommentLink & { href?: string })[];
+    languages: Map<number, string>;
+    code: CodeModel | null;
+  } | null = null;
   /** The code view's runs of imports unfolded (24.5), by their first line. */
   readonly codeOpen = new Set<number>();
   /** The code view's cells folded to their header (24.13), by their first line. */
@@ -156,7 +164,8 @@ export class NoteBuffer {
         const b = d.text;
         while (head < a.length && head < b.length && a[head] === b[head]) head++;
         let tail = 0;
-        while (tail < a.length - head && tail < b.length - head && a[a.length - 1 - tail] === b[b.length - 1 - tail]) tail++;
+        while (tail < a.length - head && tail < b.length - head && a[a.length - 1 - tail] === b[b.length - 1 - tail])
+          tail++;
         this.edit(head, a.length - head - tail, b.slice(head, b.length - tail), head);
       } else if (!this.loaded) {
         this.source = d.text;
@@ -236,7 +245,8 @@ export class NoteBuffer {
   /** Different from the text on disk (as loaded or saved) — undoing back to it is clean. */
   get dirty(): boolean {
     if (this.version === this.savedVersion) return false;
-    if (this.dirtyMemo.version !== this.version) this.dirtyMemo = { version: this.version, dirty: this.source !== this.savedText };
+    if (this.dirtyMemo.version !== this.version)
+      this.dirtyMemo = { version: this.version, dirty: this.source !== this.savedText };
     return this.dirtyMemo.dirty;
   }
 
@@ -260,7 +270,12 @@ export class NoteBuffer {
     let head = 0;
     while (head < a.length && head < next.length && a[head] === next[head]) head++;
     let tail = 0;
-    while (tail < a.length - head && tail < next.length - head && a[a.length - 1 - tail] === next[next.length - 1 - tail]) tail++;
+    while (
+      tail < a.length - head &&
+      tail < next.length - head &&
+      a[a.length - 1 - tail] === next[next.length - 1 - tail]
+    )
+      tail++;
     this.endStep(head);
     this.edit(head, a.length - head - tail, next.slice(head, next.length - tail), head);
     this.endStep(head);
@@ -321,7 +336,8 @@ export class NoteBuffer {
   private moveMarks(at: number, length: number, text: string): void {
     if (!this.visualMarks) return;
     const d = text.length - length;
-    const move = (o: number) => (o > at ? Math.max(at, o + d) : o === at && !length && text.includes("\n") ? o + text.lastIndexOf("\n") + 1 : o);
+    const move = (o: number) =>
+      o > at ? Math.max(at, o + d) : o === at && !length && text.includes("\n") ? o + text.lastIndexOf("\n") + 1 : o;
     this.visualMarks = [move(this.visualMarks[0]), move(this.visualMarks[1])];
   }
 
@@ -337,7 +353,8 @@ export class NoteBuffer {
     this.moveMarks(at, length, text);
     this.source = this.source.slice(0, at) + text + this.source.slice(at + length);
     const last = this.changes[this.changes.length - 1];
-    if (last !== undefined && !this.source.slice(Math.min(last, at), Math.max(last, at)).includes("\n")) this.changes[this.changes.length - 1] = at;
+    if (last !== undefined && !this.source.slice(Math.min(last, at), Math.max(last, at)).includes("\n"))
+      this.changes[this.changes.length - 1] = at;
     else {
       this.changes.push(at);
       if (this.changes.length > 100) this.changes.shift();
@@ -402,7 +419,8 @@ export class NoteBuffer {
 
   /** Words in the text (a note's frontmatter not counted), counted once per edit. */
   words(): number {
-    if (this.wordMemo.version !== this.version) this.wordMemo = { version: this.version, words: countWords(this.source, this.kind.group === "note") };
+    if (this.wordMemo.version !== this.version)
+      this.wordMemo = { version: this.version, words: countWords(this.source, this.kind.group === "note") };
     return this.wordMemo.words;
   }
 
@@ -441,14 +459,40 @@ export class NoteBuffer {
       const note = this.kind.group === "note" ? readerFor(this.kind.format) : null;
       // Tree-sitter's outline where it has one; else the language server's symbols (19.14).
       const outline = this.syntax?.outline.length ? this.syntax.outline : (this.serverOutline ?? []);
-      const code = outline.map((o) => ({ level: Math.min(6, o.depth + 1), text: o.name, slug: slugify(o.name), src: o.line }));
-      const fromParse = () => headingsOf(this.parsed.tree).map(({ depth, text, slug, line, id }) => ({ level: depth, text, slug, src: line, ...(id ? { id } : {}) }));
-      const headings = !note ? code : parsed ? fromParse() : note.language === null ? "scan" : note.scanHeadings(this.source);
+      const code = outline.map((o) => ({
+        level: Math.min(6, o.depth + 1),
+        text: o.name,
+        slug: slugify(o.name),
+        src: o.line,
+      }));
+      const fromParse = () =>
+        headingsOf(this.parsed.tree).map(({ depth, text, slug, line, id }) => ({
+          level: depth,
+          text,
+          slug,
+          src: line,
+          ...(id ? { id } : {}),
+        }));
+      const headings = !note
+        ? code
+        : parsed
+          ? fromParse()
+          : note.language === null
+            ? "scan"
+            : note.scanHeadings(this.source);
       const spans = this.syntax?.spans;
       const langs = this.syntax?.languages;
       l = layoutSource(
         this.source,
-        { width, wrap, headings, language: note ? note.language : this.kind.format, tabWidth: this.indent().tabWidth, ...(spans ? { spans: (line: number) => spans.get(line) } : {}), ...(langs?.size ? { languageAt: (line: number) => langs.get(line) } : {}) },
+        {
+          width,
+          wrap,
+          headings,
+          language: note ? note.language : this.kind.format,
+          tabWidth: this.indent().tabWidth,
+          ...(spans ? { spans: (line: number) => spans.get(line) } : {}),
+          ...(langs?.size ? { languageAt: (line: number) => langs.get(line) } : {}),
+        },
         this.sourceCache,
       );
       if (this.layouts.size >= 6) this.layouts.delete(this.layouts.keys().next().value!);
@@ -471,7 +515,13 @@ export class NoteBuffer {
    * the parse of this text, or the last one while it's parsed again (its lines may have moved: the view is redrawn
    * when it lands).
    */
-  codeLayout(width: number, wrap: boolean, glyphs: Glyphs, cells: "box" | "band" = "box", problems: readonly { line: number; severity: Problem["severity"] }[] = []): Layout {
+  codeLayout(
+    width: number,
+    wrap: boolean,
+    glyphs: Glyphs,
+    cells: "box" | "band" = "box",
+    problems: readonly { line: number; severity: Problem["severity"] }[] = [],
+  ): Layout {
     const marks = problems.map((p) => `${p.line}${p.severity[0]}`).join(",");
     const key = `code:${width}:${wrap ? 1 : 0}:${glyphs.mode}:${cells}:${[...this.codeOpen].join(",")}:${[...this.codeFolded].join(",")}:${marks}:${this.syntax?.version ?? -1}`;
     let l = this.layouts.get(key);
@@ -481,8 +531,22 @@ export class NoteBuffer {
       const fresh = this.syntax?.version === this.version;
       // Its comments' paths (16.10), drawn as links in their prose.
       const lines = this.lines();
-      const paths = fresh ? (this.syntax?.links ?? []).flatMap((l) => (l.href ? [{ line: l.line, text: (lines[l.line - 1] ?? "").slice(l.from, l.to), target: l.href }] : [])) : [];
-      l = layoutCode(this.source, base, fresh ? (this.syntax?.code ?? null) : null, { width, wrap, glyphs, open: this.codeOpen, folded: this.codeFolded, cells, problems, inside: (line) => !!spans?.get(line)?.length, paths });
+      const paths = fresh
+        ? (this.syntax?.links ?? []).flatMap((l) =>
+            l.href ? [{ line: l.line, text: (lines[l.line - 1] ?? "").slice(l.from, l.to), target: l.href }] : [],
+          )
+        : [];
+      l = layoutCode(this.source, base, fresh ? (this.syntax?.code ?? null) : null, {
+        width,
+        wrap,
+        glyphs,
+        open: this.codeOpen,
+        folded: this.codeFolded,
+        cells,
+        problems,
+        inside: (line) => !!spans?.get(line)?.length,
+        paths,
+      });
       if (this.layouts.size >= 6) this.layouts.delete(this.layouts.keys().next().value!);
       this.layouts.set(key, l);
     }
@@ -493,15 +557,36 @@ export class NoteBuffer {
   codeBlocks(lineCount: number): [number, number][] {
     const fresh = this.syntax?.version === this.version;
     const spans = fresh ? this.syntax?.spans : undefined;
-    return codeBlocks(this.lines(), fresh ? (this.syntax?.code ?? null) : null, lineCount, (line) => !!spans?.get(line)?.some((s) => s.from === 0));
+    return codeBlocks(
+      this.lines(),
+      fresh ? (this.syntax?.code ?? null) : null,
+      lineCount,
+      (line) => !!spans?.get(line)?.some((s) => s.from === 0),
+    );
   }
 
   /** The note laid out; `pictures` (12.x): how its pictures are drawn, and a key that changes when they would. */
-  layout(width: number, glyphs: Glyphs, showUrls: boolean, graph: Graph | null, pictures?: { picture: NonNullable<NoteRenderOptions["picture"]>; key: string; drawings?: NoteRenderOptions["drawings"] }): Layout {
+  layout(
+    width: number,
+    glyphs: Glyphs,
+    showUrls: boolean,
+    graph: Graph | null,
+    pictures?: {
+      picture: NonNullable<NoteRenderOptions["picture"]>;
+      key: string;
+      drawings?: NoteRenderOptions["drawings"];
+    },
+  ): Layout {
     const key = `${width}:${glyphs.mode}:${showUrls ? 1 : 0}:${pictures?.key ?? "-"}`;
     let l = this.layouts.get(key);
     if (!l) {
-      l = layoutNote(this.parsed, graph, this.rel, { width, glyphs, showUrls, ...(pictures ? { picture: pictures.picture, drawings: pictures.drawings } : {}) }, this.renderCache);
+      l = layoutNote(
+        this.parsed,
+        graph,
+        this.rel,
+        { width, glyphs, showUrls, ...(pictures ? { picture: pictures.picture, drawings: pictures.drawings } : {}) },
+        this.renderCache,
+      );
       for (const p of l.embedded ?? []) this.embedded.add(p);
       // Keep the last few widths (a drag back and forth, a toggle and back): evict the oldest.
       if (this.layouts.size >= 6) this.layouts.delete(this.layouts.keys().next().value!);

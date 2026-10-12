@@ -53,16 +53,35 @@ export class CommandRegistry<Ctx> {
 // `G` is `shift+g`; punctuation (`$`, `{`, `?`) names itself, its shift implied.
 
 const MOD_ALIASES: Record<string, string> = {
-  ctrl: "ctrl", control: "ctrl",
-  alt: "alt", option: "alt", opt: "alt", meta: "alt",
+  ctrl: "ctrl",
+  control: "ctrl",
+  alt: "alt",
+  option: "alt",
+  opt: "alt",
+  meta: "alt",
   shift: "shift",
-  cmd: "cmd", command: "cmd", super: "cmd", win: "cmd",
+  cmd: "cmd",
+  command: "cmd",
+  super: "cmd",
+  win: "cmd",
 };
 const MOD_ORDER = ["ctrl", "alt", "shift", "cmd"];
 const KEY_ALIASES: Record<string, string> = {
-  esc: "escape", return: "enter", cr: "enter", ret: "enter",
-  pgdn: "pagedown", pgup: "pageup", "page_down": "pagedown", "page_up": "pageup",
-  del: "delete", bs: "backspace", spc: "space", " ": "space", bar: "|", pipe: "|", minus: "-",
+  esc: "escape",
+  return: "enter",
+  cr: "enter",
+  ret: "enter",
+  pgdn: "pagedown",
+  pgup: "pageup",
+  page_down: "pagedown",
+  page_up: "pageup",
+  del: "delete",
+  bs: "backspace",
+  spc: "space",
+  " ": "space",
+  bar: "|",
+  pipe: "|",
+  minus: "-",
 };
 
 /** Canonical form of one key token (`Shift+Alt+Left` → `alt+shift+left`, `G` → `shift+g`). */

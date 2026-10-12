@@ -65,7 +65,8 @@ export function parsePointer(url: string, folders: NamedFolder[] = readFolders()
   // A short name a known folder answers to, dots and all (`me.github.io`): the first part.
   const [first] = nameAndBranch(segs[0]);
   const want = first.toLowerCase();
-  if (folders.some((f) => [f.name, ...(f.aliases ?? []), ...(f.old ?? [])].some((o) => o.toLowerCase() === want))) return at(1);
+  if (folders.some((f) => [f.name, ...(f.aliases ?? []), ...(f.old ?? [])].some((o) => o.toLowerCase() === want)))
+    return at(1);
   // One this machine doesn't know: host, owner, repository (`github.com/me/x`), by its look.
   if (segs[0].includes(".") && segs.length > 3) return at(3);
   return at(1);
@@ -89,8 +90,13 @@ export type PointerTarget =
 export function resolvePointer(p: Pointer, folders: NamedFolder[] = readFolders()): PointerTarget {
   const l = lookupFolder(p.name, folders);
   if (l.status === "unknown") return { status: "unresolved", reason: l.reason };
-  if (l.status === "ambiguous") return { status: "ambiguous", candidates: l.candidates, reason: l.reason, folders: l.folders };
-  if (l.status === "unavailable") return { status: "unresolved", reason: `${p.name} is at ${tildePath(l.path)}, which isn't here now (a drive unplugged?)` };
+  if (l.status === "ambiguous")
+    return { status: "ambiguous", candidates: l.candidates, reason: l.reason, folders: l.folders };
+  if (l.status === "unavailable")
+    return {
+      status: "unresolved",
+      reason: `${p.name} is at ${tildePath(l.path)}, which isn't here now (a drive unplugged?)`,
+    };
   let root = l.path;
   const via = l.via;
   // The path stays in the folder: as written, and again once a branch has taken its leading parts.
@@ -105,7 +111,11 @@ export function resolvePointer(p: Pointer, folders: NamedFolder[] = readFolders(
     const within = relative(c.root, root);
     const head = headOf(c).branch;
     const worktrees = worktreeList(c) ?? [];
-    const branches = new Set([...(branchesOf(c) ?? []), ...worktrees.map((w) => w.branch).filter((b): b is string => !!b), ...(head ? [head] : [])]);
+    const branches = new Set([
+      ...(branchesOf(c) ?? []),
+      ...worktrees.map((w) => w.branch).filter((b): b is string => !!b),
+      ...(head ? [head] : []),
+    ]);
     // The branch, and where the path starts: the longest branch the repository has.
     let branch = p.branch;
     const segs = p.path.split("/");
@@ -121,7 +131,14 @@ export function resolvePointer(p: Pointer, folders: NamedFolder[] = readFolders(
     if (outside(path)) return climbs;
     if (head !== branch) {
       const wt = worktrees.find((w) => w.branch === branch);
-      if (!wt) return { status: "branch", folder: l.folder, root: c.root, rel: join(within, path).split(sep).join("/"), branch };
+      if (!wt)
+        return {
+          status: "branch",
+          folder: l.folder,
+          root: c.root,
+          rel: join(within, path).split(sep).join("/"),
+          branch,
+        };
       root = join(wt.path, within);
     }
   }

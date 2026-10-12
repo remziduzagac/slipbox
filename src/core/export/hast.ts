@@ -29,12 +29,19 @@ export function chapterHast(ch: ExportChapter, o: HastOptions): Element {
   const nodes = structuredClone(ch.nodes);
   const first = nodes[0];
   const titled = first?.type === "heading" && first.depth === 1;
-  const children: RootContent[] = titled ? nodes : [{ type: "heading", depth: 1, children: [{ type: "text", value: ch.title }] } satisfies Heading, ...nodes];
+  const children: RootContent[] = titled
+    ? nodes
+    : [{ type: "heading", depth: 1, children: [{ type: "text", value: ch.title }] } satisfies Heading, ...nodes];
   prepare(children, o);
   const tree = toHast(
     { type: "root", children },
     // Each chapter's footnotes their own ids, its notes at its end.
-    { clobberPrefix: `${ch.anchor}-`, footnoteLabel: "Notes", footnoteLabelTagName: "h2", footnoteLabelProperties: { className: ["footnotes-label"] } },
+    {
+      clobberPrefix: `${ch.anchor}-`,
+      footnoteLabel: "Notes",
+      footnoteLabelTagName: "h2",
+      footnoteLabelProperties: { className: ["footnotes-label"] },
+    },
   ) as HastRoot;
   // The notes' heading's id is the same in every chapter, prefix or not: made the chapter's, and what points to it.
   const label = `${ch.anchor}-footnote-label`;
@@ -46,10 +53,20 @@ export function chapterHast(ch: ExportChapter, o: HastOptions): Element {
     n.children.forEach(relabel);
   };
   (tree.children as ElementContent[]).forEach(relabel);
-  return { type: "element", tagName: "section", properties: { id: ch.anchor, className: ["chapter"] }, children: tree.children as ElementContent[] };
+  return {
+    type: "element",
+    tagName: "section",
+    properties: { id: ch.anchor, className: ["chapter"] },
+    children: tree.children as ElementContent[],
+  };
 }
 
-const img = (src: string, alt: string, props: Record<string, string | number | string[]>): Element => ({ type: "element", tagName: "img", properties: { src, alt, ...props }, children: [] });
+const img = (src: string, alt: string, props: Record<string, string | number | string[]>): Element => ({
+  type: "element",
+  tagName: "img",
+  properties: { src, alt, ...props },
+  children: [],
+});
 const text = (value: string): Text => ({ type: "text", value });
 
 /** The tree made ready for `toHast`, in place: what each node becomes set on its `data`, or the node replaced. */
@@ -77,7 +94,13 @@ function prepare(nodes: Nodes[], o: HastOptions): void {
         }
         n.url = "";
         data.hName = "img";
-        data.hProperties = { src: o.src(p.data, p.type), alt: n.alt ?? "", width: p.shown.width, height: p.shown.height, className: ["picture"] };
+        data.hProperties = {
+          src: o.src(p.data, p.type),
+          alt: n.alt ?? "",
+          width: p.shown.width,
+          height: p.shown.height,
+          className: ["picture"],
+        };
         break;
       }
       case "math":
@@ -88,9 +111,22 @@ function prepare(nodes: Nodes[], o: HastOptions): void {
         data.hProperties = { className: [inline ? "math-inline" : "math-display"] };
         if (picture?.svg && size) {
           const style = `width:${size.width}ex;height:${size.height}ex${size.valign ? `;vertical-align:${size.valign}ex` : ""}`;
-          data.hChildren = [img(o.src(new TextEncoder().encode(picture.svg), "svg"), inline ? `$${n.value}$` : n.value, { style })];
-        } else if (inline) data.hChildren = [{ type: "element", tagName: "em", properties: {}, children: [text(mathText(n.value) ?? `$${n.value}$`)] }];
-        else data.hChildren = [{ type: "element", tagName: "pre", properties: { className: ["math"] }, children: [text((mathRows(n.value) ?? n.value.split("\n")).join("\n"))] }];
+          data.hChildren = [
+            img(o.src(new TextEncoder().encode(picture.svg), "svg"), inline ? `$${n.value}$` : n.value, { style }),
+          ];
+        } else if (inline)
+          data.hChildren = [
+            { type: "element", tagName: "em", properties: {}, children: [text(mathText(n.value) ?? `$${n.value}$`)] },
+          ];
+        else
+          data.hChildren = [
+            {
+              type: "element",
+              tagName: "pre",
+              properties: { className: ["math"] },
+              children: [text((mathRows(n.value) ?? n.value.split("\n")).join("\n"))],
+            },
+          ];
         break;
       }
       case "code": {
@@ -100,14 +136,23 @@ function prepare(nodes: Nodes[], o: HastOptions): void {
         const out: ElementContent[] = [];
         n.value.split("\n").forEach((line, k) => {
           if (k) out.push(text("\n"));
-          for (const t of tokens[k]?.length ? tokens[k]! : [{ text: line, role: undefined }]) out.push(t.role ? { type: "element", tagName: "span", properties: { className: [t.role] }, children: [text(t.text)] } : text(t.text));
+          for (const t of tokens[k]?.length ? tokens[k]! : [{ text: line, role: undefined }])
+            out.push(
+              t.role
+                ? { type: "element", tagName: "span", properties: { className: [t.role] }, children: [text(t.text)] }
+                : text(t.text),
+            );
         });
         data.hChildren = out;
         break;
       }
       case "blockquote": {
         const kind = data.callout as string | undefined;
-        if (kind) data.hProperties = { className: ["callout", `callout-${kind}`], style: `border-left-color:${calloutColour(kind)}` };
+        if (kind)
+          data.hProperties = {
+            className: ["callout", `callout-${kind}`],
+            style: `border-left-color:${calloutColour(kind)}`,
+          };
         break;
       }
       case "listItem":
@@ -128,5 +173,13 @@ function prepare(nodes: Nodes[], o: HastOptions): void {
 
 /** An inline run's text: what a picture's words or a heading's are. */
 export function plain(nodes: readonly PhrasingContent[]): string {
-  return nodes.map((n) => (n.type === "text" || n.type === "inlineCode" || n.type === "inlineMath" ? n.value : "children" in n ? plain(n.children as PhrasingContent[]) : "")).join("");
+  return nodes
+    .map((n) =>
+      n.type === "text" || n.type === "inlineCode" || n.type === "inlineMath"
+        ? n.value
+        : "children" in n
+          ? plain(n.children as PhrasingContent[])
+          : "",
+    )
+    .join("");
 }

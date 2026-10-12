@@ -178,9 +178,16 @@ export function locateVault(opts: LocateOptions): VaultLocation {
 
   if (opts.root) {
     const root = resolve(cwd, opts.root);
-    if (!existsSync(root) || !statSync(root).isDirectory()) throw new VaultError(`--root is not a directory: ${opts.root}`);
-    if (isNeverRoot(root)) throw new VaultError(`--root ${opts.root}: ${root === homeFolder() ? "your home folder" : "/"} is never a root; open a folder in it`);
-    if (!isVaultRoot(root)) throw new VaultError(`--root ${opts.root} isn't a root (none of ${rootMarkers().join(", ")} in it): slipbox init ${opts.root} makes it one`);
+    if (!existsSync(root) || !statSync(root).isDirectory())
+      throw new VaultError(`--root is not a directory: ${opts.root}`);
+    if (isNeverRoot(root))
+      throw new VaultError(
+        `--root ${opts.root}: ${root === homeFolder() ? "your home folder" : "/"} is never a root; open a folder in it`,
+      );
+    if (!isVaultRoot(root))
+      throw new VaultError(
+        `--root ${opts.root} isn't a root (none of ${rootMarkers().join(", ")} in it): slipbox init ${opts.root} makes it one`,
+      );
     if (file && !isInside(root, file)) throw new VaultError(`${opts.path} is outside --root ${opts.root}`);
     // A file has one root, however it's opened (21.x): its nearest. `--root` says where to start; a
     // root nested in it stays a boundary — its files are its own.
@@ -196,10 +203,28 @@ export function locateVault(opts: LocateOptions): VaultLocation {
 /** The location of a root (21.1): read, never written — its name, id and settings as they are. */
 export function rootAt(root: string, file: string | null = null): VaultLocation {
   const c = checkoutOf(root);
-  const worktree: Worktree | null = c?.worktree ? { name: c.worktree, checkout: c.root, main: c.main, mainVault: inMain(c, root), admin: worktreeFingerprint(c.gitDir) } : null;
+  const worktree: Worktree | null = c?.worktree
+    ? {
+        name: c.worktree,
+        checkout: c.root,
+        main: c.main,
+        mainVault: inMain(c, root),
+        admin: worktreeFingerprint(c.gitDir),
+      }
+    : null;
   // A worktree without an identity of its own reads its main checkout's (17.19), never writing.
   const ident = identityAt(root);
-  return { root, mode: "vault", file, key: vaultKey(root), id: ident?.id ?? null, name: folderIdentity(root)?.name ?? null, aliases: ident?.aliases ?? [], previous_names: ident?.previous_names ?? [], worktree };
+  return {
+    root,
+    mode: "vault",
+    file,
+    key: vaultKey(root),
+    id: ident?.id ?? null,
+    name: folderIdentity(root)?.name ?? null,
+    aliases: ident?.aliases ?? [],
+    previous_names: ident?.previous_names ?? [],
+    worktree,
+  };
 }
 
 /**
@@ -220,10 +245,14 @@ export function isListed(loc: Pick<VaultLocation, "mode" | "root">): boolean {
  * and those of the vaults enclosing it, broadest first — deeper over broader. A plain folder has only
  * yours (20.22).
  */
-export function configFilesFor(loc: Pick<VaultLocation, "mode" | "root">): { vaultFile: string | null; outerFiles: string[] } {
+export function configFilesFor(loc: Pick<VaultLocation, "mode" | "root">): {
+  vaultFile: string | null;
+  outerFiles: string[];
+} {
   const outerFiles: string[] = [];
   if (loc.mode === "vault") {
-    for (let up = findVaultRoot(dirname(loc.root)); up; up = findVaultRoot(dirname(up))) if (hasMarker(up)) outerFiles.unshift(vaultConfigFile(up));
+    for (let up = findVaultRoot(dirname(loc.root)); up; up = findVaultRoot(dirname(up)))
+      if (hasMarker(up)) outerFiles.unshift(vaultConfigFile(up));
   }
   return { vaultFile: vaultConfigPath(loc), outerFiles };
 }
@@ -253,7 +282,18 @@ export function recordLocation(loc: VaultLocation): { carriedFrom: string | null
   // (`git worktree move`) is found by git's name for it and its admin folder's fingerprint (17.19) — a
   // worktree removed and another added under its name is a new one; a named folder, by its name (21.8).
   const wt = loc.worktree;
-  const movedWorktree = () => known.find((v) => v.worktree && wt && v.worktree.name === wt.name && v.worktree.main === wt.mainVault && !!wt.admin && v.worktree.admin === wt.admin && v.path !== loc.root && !isVaultRoot(v.path))?.path ?? null;
+  const movedWorktree = () =>
+    known.find(
+      (v) =>
+        v.worktree &&
+        wt &&
+        v.worktree.name === wt.name &&
+        v.worktree.main === wt.mainVault &&
+        !!wt.admin &&
+        v.worktree.admin === wt.admin &&
+        v.path !== loc.root &&
+        !isVaultRoot(v.path),
+    )?.path ?? null;
   const from = known.some((v) => v.key === loc.key && !v.found) ? null : wt ? movedWorktree() : movedFrom(loc.root);
   let moved = known.find((v) => v.key === loc.key)?.moved;
   if (from) {
@@ -272,11 +312,15 @@ export function recordLocation(loc: VaultLocation): { carriedFrom: string | null
     if (was) writeRoots(known.filter((v) => v !== was));
   }
   recordFolder(loc.root, { replaces: wt ? null : from });
-  recordRoot({ kind: "vault", path: loc.root, ...(loc.worktree ? { worktree: knownWorktree(loc.worktree) } : {}), ...(moved ? { moved } : {}) });
+  recordRoot({
+    kind: "vault",
+    path: loc.root,
+    ...(loc.worktree ? { worktree: knownWorktree(loc.worktree) } : {}),
+    ...(moved ? { moved } : {}),
+  });
   pruneWorktrees(Date.now(), isVaultRoot);
   return { carriedFrom: from };
 }
-
 
 /** A worktree as the machine's list keeps it: git's name, the main checkout's root, its fingerprint. */
 export function knownWorktree(w: Worktree): NonNullable<KnownRoot["worktree"]> {
@@ -290,7 +334,12 @@ export function isInside(root: string, path: string): boolean {
 
 export function readVaultVersion(root: string): number | null {
   try {
-    const n = Number.parseInt(readRegular(join(root, MARKER, "version"), 4096).toString("utf8").trim(), 10);
+    const n = Number.parseInt(
+      readRegular(join(root, MARKER, "version"), 4096)
+        .toString("utf8")
+        .trim(),
+      10,
+    );
     return Number.isFinite(n) ? n : null;
   } catch {
     return null;
@@ -317,16 +366,26 @@ export interface InitResult {
  */
 export function checkInit(dir: string, name?: string): void {
   const root = resolve(dir);
-  if (isNeverRoot(root)) throw new VaultError(`${root} can't have a .slipbox/: slipbox never indexes all of ${root === homeFolder() ? "your home folder" : "/"}`);
+  if (isNeverRoot(root))
+    throw new VaultError(
+      `${root} can't have a .slipbox/: slipbox never indexes all of ${root === homeFolder() ? "your home folder" : "/"}`,
+    );
   if (name === undefined) return;
-  if (!VAULT_NAME.test(name)) throw new VaultError(`"${name}" can't be a folder's name: letters, digits, ".", "_" and "-" only, no spaces, "/" or ":"`);
+  if (!VAULT_NAME.test(name))
+    throw new VaultError(
+      `"${name}" can't be a folder's name: letters, digits, ".", "_" and "-" only, no spaces, "/" or ":"`,
+    );
   const other = folderNamed(name, root);
-  if (other.length) throw new VaultError(`a different folder is called "${name}", at ${other[0]!.default ?? other[0]!.copies[0]?.path}; try "${suggestFolderName(root, parentName(root))}"`);
+  if (other.length)
+    throw new VaultError(
+      `a different folder is called "${name}", at ${other[0]!.default ?? other[0]!.copies[0]?.path}; try "${suggestFolderName(root, parentName(root))}"`,
+    );
   if (!hasMarker(root)) return;
   const cfg = vaultConfigFile(root);
   const have = readIdentity(cfg);
   if (have.name) {
-    if (name !== have.name) throw new VaultError(`${root} is already called "${have.name}": slipbox name ${name} renames it`);
+    if (name !== have.name)
+      throw new VaultError(`${root} is already called "${have.name}": slipbox name ${name} renames it`);
     return;
   }
   // The name goes in by a textual edit (addIdentity): a table whose form defeats it writes nothing.
@@ -335,7 +394,8 @@ export function checkInit(dir: string, name?: string): void {
     text = readRegular(cfg, SMALL_FILE).toString("utf8");
   } catch {}
   const id = have.id ?? newVaultId();
-  if (!identityReadsBack(have, withIdentity(text, have, { id, name }), { id, name })) throw new VaultError(new IdentityEditError().message);
+  if (!identityReadsBack(have, withIdentity(text, have, { id, name }), { id, name }))
+    throw new VaultError(new IdentityEditError().message);
 }
 
 /**
@@ -351,7 +411,15 @@ export function initVault(dir: string, name?: string, opts: { private?: boolean 
   const marker = join(root, MARKER);
   const exists = hasMarker(root);
   const have = exists ? readIdentity(vaultConfigFile(root)) : null;
-  if (have?.name) return { root, created: false, identified: false, id: have.id, name: have.name, excluded: opts.private ? excludeFromGit(root) : null };
+  if (have?.name)
+    return {
+      root,
+      created: false,
+      identified: false,
+      id: have.id,
+      name: have.name,
+      excluded: opts.private ? excludeFromGit(root) : null,
+    };
   if (!exists) {
     mkdirSync(marker, { recursive: true });
     writeFileSync(join(marker, "version"), `${VAULT_FORMAT_VERSION}\n`);
@@ -384,7 +452,13 @@ function excludeFromGit(root: string): string | null {
   if (!repo) return null;
   let file: string;
   try {
-    file = resolve(repo, execFileSync("git", gitArgs(repo, ["rev-parse", "--git-path", "info/exclude"]), { encoding: "utf8", stdio: ["ignore", "pipe", "ignore"] }).trim());
+    file = resolve(
+      repo,
+      execFileSync("git", gitArgs(repo, ["rev-parse", "--git-path", "info/exclude"]), {
+        encoding: "utf8",
+        stdio: ["ignore", "pipe", "ignore"],
+      }).trim(),
+    );
   } catch {
     file = join(repo, ".git", "info", "exclude");
   }

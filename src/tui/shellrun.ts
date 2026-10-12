@@ -26,7 +26,11 @@ function prepared(app: App, command: string): string | null {
 /** Started: the job kept (one at a time), said, and `then` when it ends — the frame drawn again. */
 function launch(app: App, label: string, cmd: string, input: string | undefined, then: (r: ShellResult) => void): void {
   const abs = app.view?.buf.abs;
-  const job = runShell(cmd, { cwd: app.loc.root, input, env: { SLIPBOX_ROOT: app.loc.root, ...(abs ? { SLIPBOX_FILE: abs } : {}) } });
+  const job = runShell(cmd, {
+    cwd: app.loc.root,
+    input,
+    env: { SLIPBOX_ROOT: app.loc.root, ...(abs ? { SLIPBOX_FILE: abs } : {}) },
+  });
   app.shellJob = { command: label, stop: job.stop };
   app.message("info", `running: ${label}`);
   void job.done.then((r) => {
@@ -120,7 +124,8 @@ function filter(app: App, view: View, [a, b]: [number, number], label: string, c
       showOutput(app, label, r);
       return app.message("warn", `${label}: ${ending(r)} — the ${lines} left as they were`);
     }
-    if (buf.version !== version || buf.source.slice(from, to) !== was) return app.message("warn", `the text changed while ${label} ran — the ${lines} left as they were`);
+    if (buf.version !== version || buf.source.slice(from, to) !== was)
+      return app.message("warn", `the text changed while ${label} ran — the ${lines} left as they were`);
     let out = r.stdout.replace(/\r\n/g, "\n");
     if (!was.endsWith("\n")) out = out.replace(/\n$/, "");
     else if (out && !out.endsWith("\n")) out += "\n";

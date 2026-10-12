@@ -18,7 +18,18 @@ import { graphemes, graphemeWidth, padEnd, stringWidth, truncate } from "../widt
 import type { Hashtag } from "../tags.ts";
 import { parseWikiTarget, type WikiLink } from "../wikilink.ts";
 import { highlight } from "./highlight.ts";
-import { A_BOLD, A_ITALIC, A_STRIKE, type Layout, type LayoutHeading, type LayoutLink, type Line, type LinkStatus, type Picture, type Span } from "./ir.ts";
+import {
+  A_BOLD,
+  A_ITALIC,
+  A_STRIKE,
+  type Layout,
+  type LayoutHeading,
+  type LayoutLink,
+  type Line,
+  type LinkStatus,
+  type Picture,
+  type Span,
+} from "./ir.ts";
 import { allocate, PADDING } from "./table.ts";
 import { fit, longestWord, measure, naturalWidth, wrapSpans } from "./wrap.ts";
 
@@ -140,8 +151,22 @@ export function newRenderCache(): RenderCache {
   return { key: "", blocks: new WeakMap() };
 }
 
-export function renderTree(tree: Root, opts: RenderOptions, frontmatter?: Frontmatter | null, cache?: RenderCache): Layout {
-  const ctx: Ctx = { opts, links: [], headings: [], definitions: new Map(), nesting: 0, embedChain: opts.embedFrom ? [opts.embedFrom] : [], embedded: new Set(), pending: new Set() };
+export function renderTree(
+  tree: Root,
+  opts: RenderOptions,
+  frontmatter?: Frontmatter | null,
+  cache?: RenderCache,
+): Layout {
+  const ctx: Ctx = {
+    opts,
+    links: [],
+    headings: [],
+    definitions: new Map(),
+    nesting: 0,
+    embedChain: opts.embedFrom ? [opts.embedFrom] : [],
+    embedded: new Set(),
+    pending: new Set(),
+  };
   collectDefinitions(tree, ctx);
   const width = Math.max(8, opts.width);
   if (!cache) return finish(blocks(tree.children, ctx, width, TEXT, frontmatter), ctx, width);
@@ -196,7 +221,11 @@ function placed(line: Line, delta: number, linkBase: number, headBase: number): 
 
 function finish(lines: Line[], ctx: Ctx, width: number): Layout {
   const out = finishRows(lines, ctx, width);
-  return { ...out, ...(ctx.embedded.size ? { embedded: [...ctx.embedded] } : {}), ...(ctx.pending.size ? { pending: [...ctx.pending] } : {}) };
+  return {
+    ...out,
+    ...(ctx.embedded.size ? { embedded: [...ctx.embedded] } : {}),
+    ...(ctx.pending.size ? { pending: [...ctx.pending] } : {}),
+  };
 }
 
 function finishRows(lines: Line[], ctx: Ctx, width: number): Layout {
@@ -258,7 +287,8 @@ function enforceRow(line: Line, width: number): boolean {
 function collectDefinitions(tree: Root, ctx: Ctx) {
   const walk = (n: Nodes) => {
     // The first definition of a label wins (CommonMark), not the last.
-    if (n.type === "definition" && !ctx.definitions.has(n.identifier.toLowerCase())) ctx.definitions.set(n.identifier.toLowerCase(), n.url);
+    if (n.type === "definition" && !ctx.definitions.has(n.identifier.toLowerCase()))
+      ctx.definitions.set(n.identifier.toLowerCase(), n.url);
     const ch = (n as Parents).children;
     if (ch) for (const c of ch) walk(c);
   };
@@ -282,7 +312,14 @@ function blank(src: number): Line {
   return { spans: [], src };
 }
 
-function blocks(nodes: RootContent[], ctx: Ctx, width: number, base: Style, fm?: Frontmatter | null, tight = false): Line[] {
+function blocks(
+  nodes: RootContent[],
+  ctx: Ctx,
+  width: number,
+  base: Style,
+  fm?: Frontmatter | null,
+  tight = false,
+): Line[] {
   const out: Line[] = [];
   let prev: RootContent | undefined;
   for (const node of nodes) {
@@ -308,7 +345,14 @@ function joined(prev: RootContent | undefined, node: RootContent): boolean {
 function block(node: RootContent, ctx: Ctx, width: number, base: Style, fm?: Frontmatter | null): Line[] | null {
   switch (node.type) {
     case "heading":
-      return heading(node.depth, node.children, srcOf(node), ctx, width, (node.data as { id?: string } | undefined)?.id);
+      return heading(
+        node.depth,
+        node.children,
+        srcOf(node),
+        ctx,
+        width,
+        (node.data as { id?: string } | undefined)?.id,
+      );
     case "paragraph":
       // Obsidian's comments alone (DF-D17): nothing to read, no paragraph.
       if (onlyComments(node.children)) return null;
@@ -327,9 +371,16 @@ function block(node: RootContent, ctx: Ctx, width: number, base: Style, fm?: Fro
       // A display (12.11): its rows in Unicode, centred together; one that can't be, or wider than the text, as written.
       const rows = mathRows(sanitize(node.value));
       const widest = rows ? Math.max(...rows.map(stringWidth)) : 0;
-      if (!rows || widest > width) return codeBlock(node.value, "math", srcOf(node), ctx, width, 1, rows ? "too wide to draw" : "as written");
+      if (!rows || widest > width)
+        return codeBlock(node.value, "math", srcOf(node), ctx, width, 1, rows ? "too wide to draw" : "as written");
       const indent = " ".repeat(Math.floor((width - widest) / 2));
-      return rows.map((r) => ({ spans: [...(indent ? [{ text: indent, role: "text" as Role, attrs: 0 }] : []), { text: r, role: "math" as Role, attrs: 0 }], src: srcOf(node) }));
+      return rows.map((r) => ({
+        spans: [
+          ...(indent ? [{ text: indent, role: "text" as Role, attrs: 0 }] : []),
+          { text: r, role: "math" as Role, attrs: 0 },
+        ],
+        src: srcOf(node),
+      }));
     }
     case "thematicBreak":
       return [{ spans: [{ text: ctx.opts.glyphs.rule.repeat(width), role: "rule", attrs: 0 }], src: srcOf(node) }];
@@ -356,10 +407,19 @@ function block(node: RootContent, ctx: Ctx, width: number, base: Style, fm?: Fro
     }
     case "blockquote":
     case "list": {
-      if (ctx.nesting >= MAX_NESTING) return paragraph([{ type: "text", value: textOf(node) }], srcOf(node), ctx, width, base);
+      if (ctx.nesting >= MAX_NESTING)
+        return paragraph([{ type: "text", value: textOf(node) }], srcOf(node), ctx, width, base);
       ctx.nesting++;
       try {
-        return node.type === "list" ? list(node, ctx, width, base) : blockquote(node.children, srcOf(node), ctx, width, (node.data as { literal?: boolean } | undefined)?.literal);
+        return node.type === "list"
+          ? list(node, ctx, width, base)
+          : blockquote(
+              node.children,
+              srcOf(node),
+              ctx,
+              width,
+              (node.data as { literal?: boolean } | undefined)?.literal,
+            );
       } finally {
         ctx.nesting--;
       }
@@ -391,7 +451,8 @@ function block(node: RootContent, ctx: Ctx, width: number, base: Style, fm?: Fro
       return rows;
     }
     default:
-      if ((node.type as string) === "toml") return frontmatterBlock(fm ?? null, (node as { value: string }).value, srcOf(node), ctx, width);
+      if ((node.type as string) === "toml")
+        return frontmatterBlock(fm ?? null, (node as { value: string }).value, srcOf(node), ctx, width);
       if ((node.type as string) === "dataField") return dataField(node as unknown as DataField, ctx, width);
       if ((node.type as string) === "dataComment") return dataComment(node as unknown as DataComment, width, ctx);
       // An Obsidian comment over blank lines (DF-D17): hidden while reading.
@@ -401,7 +462,14 @@ function block(node: RootContent, ctx: Ctx, width: number, base: Style, fm?: Fro
   }
 }
 
-function heading(depth: number, children: PhrasingContent[], src: number, ctx: Ctx, width: number, id?: string): Line[] {
+function heading(
+  depth: number,
+  children: PhrasingContent[],
+  src: number,
+  ctx: Ctx,
+  width: number,
+  id?: string,
+): Line[] {
   const role = `h${Math.min(6, Math.max(1, depth))}` as Role;
   const g = ctx.opts.glyphs;
   const icon = g.mode === "nerd" ? g.heading[depth - 1]! : `${g.heading[depth - 1]} `;
@@ -443,8 +511,10 @@ function embedsAlone(children: PhrasingContent[], src: number, ctx: Ctx, width: 
     if ((c.type as string) === "wikiLink" && (c as unknown as WikiLink).embed) {
       const w = c as unknown as WikiLink;
       embeds.push({ kind: "embed", target: w.target, heading: w.heading, block: w.block, link: w.target, node: c });
-    } else if (c.type === "image" && NOTE_URL.test(c.url.split("#")[0]!)) embeds.push({ kind: "image", ...urlParts(c.url), link: c.url, node: c });
-    else if (c.type === "image") embeds.push({ kind: "image", target: "", heading: null, block: null, link: c.url, node: c });
+    } else if (c.type === "image" && NOTE_URL.test(c.url.split("#")[0]!))
+      embeds.push({ kind: "image", ...urlParts(c.url), link: c.url, node: c });
+    else if (c.type === "image")
+      embeds.push({ kind: "image", target: "", heading: null, block: null, link: c.url, node: c });
     else if (!(c.type === "break" || c.type === "comment" || (c.type === "text" && !c.value.trim()))) return null;
   }
   const found = embeds.map((r) => ({ r, e: r.target ? ctx.opts.embed!(r.target, r.heading, r.block, r.kind) : null }));
@@ -472,7 +542,13 @@ function picturesAlone(children: PhrasingContent[], src: number, ctx: Ctx, width
     const from = pictureSource(c);
     return from ? [{ c, from }] : [];
   });
-  if (!images.length || images.length !== children.filter((c) => !(c.type === "break" || c.type === "comment" || (c.type === "text" && !c.value.trim()))).length) return null;
+  if (
+    !images.length ||
+    images.length !==
+      children.filter((c) => !(c.type === "break" || c.type === "comment" || (c.type === "text" && !c.value.trim())))
+        .length
+  )
+    return null;
   const drawn = images.map(({ c, from }) => ({ c, p: askPicture(from, width, ctx) }));
   if (!drawn.some((d) => d.p)) return null;
   return drawn.flatMap(({ c, p }) => pictureRows(c, p, c.position?.start.line ?? src, ctx, width, base));
@@ -490,7 +566,8 @@ function askPicture(from: PictureSource, width: number, ctx: Ctx): Picture | nul
  *  blank frame rows, the first carrying the picture. */
 function pictureRows(c: PhrasingContent, p: Picture | null, at: number, ctx: Ctx, width: number, base: Style): Line[] {
   const out: Line[] = wrapSpans(inline([c], ctx, base, at), width).map((row) => ({ spans: row, src: at }));
-  if (p) for (let k = 0; k < p.rows; k++) out.push({ spans: [], src: at, decor: true, ...(k === 0 ? { image: p } : {}) });
+  if (p)
+    for (let k = 0; k < p.rows; k++) out.push({ spans: [], src: at, decor: true, ...(k === 0 ? { image: p } : {}) });
   return out;
 }
 
@@ -531,7 +608,11 @@ function urlParts(url: string): { target: string; heading: string | null; block:
   try {
     frag = decodeURIComponent(frag);
   } catch {}
-  return { target, heading: frag && !frag.startsWith("^") ? frag : null, block: frag.startsWith("^") ? frag.slice(1) : null };
+  return {
+    target,
+    heading: frag && !frag.startsWith("^") ? frag : null,
+    block: frag.startsWith("^") ? frag.slice(1) : null,
+  };
 }
 
 /**
@@ -542,7 +623,13 @@ function urlParts(url: string): { target: string; heading: string | null; block:
 function embedFrame(w: EmbedRef, e: Embedded, src: number, ctx: Ctx, width: number): Line[] {
   const g = ctx.opts.glyphs;
   const id = addLink(ctx, { kind: w.kind, target: w.link, heading: w.heading, text: e.title, status: "resolved", src });
-  const head = wrapSpans([{ text: `${g.embed} `, role: "embed", attrs: 0, link: id }, { text: sanitize(e.title), role: "embed", attrs: A_BOLD, link: id }], width).map((row) => ({ spans: row, src }));
+  const head = wrapSpans(
+    [
+      { text: `${g.embed} `, role: "embed", attrs: 0, link: id },
+      { text: sanitize(e.title), role: "embed", attrs: A_BOLD, link: id },
+    ],
+    width,
+  ).map((row) => ({ spans: row, src }));
   const note = (text: string): Line[] => [{ spans: [{ text, role: "dim", attrs: A_ITALIC }], src }];
   const narrow = width - 2 < MIN_NESTED;
   let body: Line[];
@@ -552,7 +639,12 @@ function embedFrame(w: EmbedRef, e: Embedded, src: number, ctx: Ctx, width: numb
   else {
     ctx.embedded.add(e.path);
     const inner: Ctx = {
-      opts: { ...ctx.opts, resolveLink: e.resolveLink ?? ctx.opts.resolveLink, embed: e.embed, picture: embeddedPictures(ctx.opts.picture, e.locate) },
+      opts: {
+        ...ctx.opts,
+        resolveLink: e.resolveLink ?? ctx.opts.resolveLink,
+        embed: e.embed,
+        picture: embeddedPictures(ctx.opts.picture, e.locate),
+      },
       links: ctx.links,
       headings: [],
       definitions: new Map(),
@@ -568,9 +660,17 @@ function embedFrame(w: EmbedRef, e: Embedded, src: number, ctx: Ctx, width: numb
     if (!body.length) body = note("empty");
   }
   // At the embed's line, its own lines and headings forgotten: they're another note's.
-  const placed = body.map((l) => ({ ...l, src, heading: undefined, spans: l.spans.map((s) => ({ ...s, src: undefined })) }));
+  const placed = body.map((l) => ({
+    ...l,
+    src,
+    heading: undefined,
+    spans: l.spans.map((s) => ({ ...s, src: undefined })),
+  }));
   // Too narrow to indent: no bar, the body keeps the room (the title row still says whose it is).
-  return [...head, ...(narrow ? placed : prefixed(placed, [{ text: `${g.quoteBar} `, role: "embed", attrs: 0 }], src, true))];
+  return [
+    ...head,
+    ...(narrow ? placed : prefixed(placed, [{ text: `${g.quoteBar} `, role: "embed", attrs: 0 }], src, true)),
+  ];
 }
 
 /** An embedded note's pictures (12.14): found from where it is, then drawn as the note showing it draws its own. */
@@ -591,7 +691,13 @@ function drawing(svg: string, kind: "diagram" | "math", src: number, ctx: Ctx, w
   const p = ctx.opts.picture?.({ svg, kind }, width - 1);
   if (!p) return null;
   const indent = Math.max(1, Math.floor((width - p.cols) / 2));
-  return Array.from({ length: p.rows }, (_, k): Line => (k === 0 ? { spans: [{ text: " ".repeat(indent), role: "text", attrs: 0 }], src, image: p } : { spans: [], src, decor: true }));
+  return Array.from(
+    { length: p.rows },
+    (_, k): Line =>
+      k === 0
+        ? { spans: [{ text: " ".repeat(indent), role: "text", attrs: 0 }], src, image: p }
+        : { spans: [], src, decor: true },
+  );
 }
 
 /** A diagram drawn in text (12.10), every row at its block's line: its lines in the table's border colour, its words
@@ -616,7 +722,15 @@ const ASCII_DRAWING = /^[+\-|<>^]$/;
 
 /** `note`: why a block that's drawn elsewhere is its code here (a diagram too wide, a kind not drawn), after its
  *  language in the label. */
-function codeBlock(value: string, lang: string | null, src: number, ctx: Ctx, width: number, firstLine = 1, note?: string): Line[] {
+function codeBlock(
+  value: string,
+  lang: string | null,
+  src: number,
+  ctx: Ctx,
+  width: number,
+  firstLine = 1,
+  note?: string,
+): Line[] {
   const g = ctx.opts.glyphs;
   const code = sanitize(value);
   const sourceLines = code.split("\n").map((l) => expandTabs(l));
@@ -629,7 +743,10 @@ function codeBlock(value: string, lang: string | null, src: number, ctx: Ctx, wi
     // Cut with … when wider than the row, never left to the last defence's clip (lost text).
     const shown = truncate(label, Math.max(1, width - 1));
     const lw = stringWidth(shown) + 1;
-    top.push({ text: " ".repeat(Math.max(0, width - lw)), role: "code_block", attrs: 0 }, { text: `${shown} `, role: "code_label", attrs: 0 });
+    top.push(
+      { text: " ".repeat(Math.max(0, width - lw)), role: "code_block", attrs: 0 },
+      { text: `${shown} `, role: "code_label", attrs: 0 },
+    );
   }
   out.push({ spans: top, src, fill: "code_block" });
   const inner = Math.max(1, width - 2);
@@ -688,13 +805,16 @@ function blockquote(children: RootContent[], src: number, ctx: Ctx, width: numbe
     const bodyFirst: PhrasingContent[] = [];
     if (nl >= 0) bodyFirst.push({ type: "text", value: rest.slice(nl + 1) }, ...first.children.slice(1));
     else if (!titleText) bodyFirst.push(...first.children.slice(1));
-    const titleChildren: PhrasingContent[] = titleText ? [{ type: "text", value: titleText }, ...(nl >= 0 ? [] : first.children.slice(1))] : [];
+    const titleChildren: PhrasingContent[] = titleText
+      ? [{ type: "text", value: titleText }, ...(nl >= 0 ? [] : first.children.slice(1))]
+      : [];
     const icon = g.callout[kind] ?? g.callout.note!;
     const titleSpans: Span[] = [{ text: `${icon} `, role, attrs: 0 }];
     if (titleChildren.length) titleSpans.push(...inline(titleChildren, ctx, { role, attrs: A_BOLD }, src));
     else titleSpans.push({ text: kind[0]!.toUpperCase() + kind.slice(1), role, attrs: A_BOLD });
     const body: RootContent[] = [];
-    if (bodyFirst.length && textOf({ type: "paragraph", children: bodyFirst }).trim()) body.push({ ...first, children: bodyFirst });
+    if (bodyFirst.length && textOf({ type: "paragraph", children: bodyFirst }).trim())
+      body.push({ ...first, children: bodyFirst });
     body.push(...children.slice(1));
     // Too narrow to indent, as a quote: no bar, the title and the text keep the room.
     const narrow = width - 2 < MIN_NESTED;
@@ -757,8 +877,15 @@ function prefixed(lines: Line[], first: Span[], src: number, everyRow = false): 
 }
 
 /** A list inside a list item, counted against the nesting cap like any container. */
-function nestedList(node: Extract<RootContent, { type: "list" }>, ctx: Ctx, width: number, base: Style, depth: number): Line[] {
-  if (ctx.nesting >= MAX_NESTING) return paragraph([{ type: "text", value: textOf(node) }], srcOf(node), ctx, width, base);
+function nestedList(
+  node: Extract<RootContent, { type: "list" }>,
+  ctx: Ctx,
+  width: number,
+  base: Style,
+  depth: number,
+): Line[] {
+  if (ctx.nesting >= MAX_NESTING)
+    return paragraph([{ type: "text", value: textOf(node) }], srcOf(node), ctx, width, base);
   ctx.nesting++;
   try {
     return list(node, ctx, width, base, depth);
@@ -782,7 +909,9 @@ function list(node: Extract<RootContent, { type: "list" }>, ctx: Ctx, width: num
   const out: Line[] = [];
   node.children.forEach((item, i) => {
     const m = markers[i]!;
-    const text = node.ordered ? m.text.padStart(markerW - stringWidth(m.text) + m.text.length) : padEnd(m.text, markerW);
+    const text = node.ordered
+      ? m.text.padStart(markerW - stringWidth(m.text) + m.text.length)
+      : padEnd(m.text, markerW);
     // Too narrow to hang the item beside its marker: the marker on a row of its own, the item
     // below it at the full width (text is never cut to make room for an indent).
     const hang = width - markerW >= MIN_NESTED;
@@ -790,14 +919,19 @@ function list(node: Extract<RootContent, { type: "list" }>, ctx: Ctx, width: num
     const lines: Line[] = [];
     item.children.forEach((child, ci) => {
       const rendered =
-        child.type === "list" ? nestedList(child, ctx, inner, base, depth + 1) : (block(child, ctx, inner, item.checked === true ? { role: "dim", attrs: 0 } : base) ?? []);
+        child.type === "list"
+          ? nestedList(child, ctx, inner, base, depth + 1)
+          : (block(child, ctx, inner, item.checked === true ? { role: "dim", attrs: 0 } : base) ?? []);
       // Nothing drawn (a definition, a comment): no gap for it either.
       if (!rendered.length) return;
       if (ci > 0 && lines.length && (node.spread || child.type !== "list")) lines.push(gapAfter(lines, srcOf(child)));
       lines.push(...rendered);
     });
     if (i > 0 && node.spread) out.push(gapAfter(out, srcOf(item)));
-    const task = typeof item.checked === "boolean" ? { line: srcOf(item), end: item.position?.end.line ?? srcOf(item), checked: item.checked } : undefined;
+    const task =
+      typeof item.checked === "boolean"
+        ? { line: srcOf(item), end: item.position?.end.line ?? srcOf(item), checked: item.checked }
+        : undefined;
     const marker: Span = { text, role: m.role, attrs: 0, ...(task ? { task } : {}) };
     if (hang) out.push(...prefixed(lines, [marker], srcOf(item)));
     else out.push({ spans: [{ ...marker, text: text.trimEnd() }], src: srcOf(item) }, ...lines);
@@ -819,7 +953,8 @@ function htmlBlock(value: string, src: number, width: number): Line[] | null {
     .split("\n")
     .forEach((text, i) => {
       if (!text.trim() && before[i]?.trim()) return;
-      for (const row of breakHard([{ text: expandTabs(text), role: "html", attrs: 0 }], width)) out.push({ spans: row, src: src + i });
+      for (const row of breakHard([{ text: expandTabs(text), role: "html", attrs: 0 }], width))
+        out.push({ spans: row, src: src + i });
     });
   return out;
 }
@@ -846,17 +981,26 @@ function frontmatterBlock(fm: Frontmatter | null, raw: string, src: number, ctx:
       valueRows.forEach((row, i) => {
         // A key longer than the column is cut with an ellipsis, never silently.
         const k = i === 0 ? padEnd(truncate(sanitize(key), keyW), keyW) : " ".repeat(keyW);
-        out.push({ spans: [{ text: ` ${k}`, role: "fm_key", attrs: 0 }, { text: "  ", role: "text", attrs: 0 }, ...row], src: ksrc });
+        out.push({
+          spans: [{ text: ` ${k}`, role: "fm_key", attrs: 0 }, { text: "  ", role: "text", attrs: 0 }, ...row],
+          src: ksrc,
+        });
       });
       line++;
     }
   } else {
     raw.split("\n").forEach((text, i) => {
-      for (const row of breakHard([{ text: ` ${expandTabs(sanitize(text))}`, role: "fm_value", attrs: 0 }], width)) out.push({ spans: row, src: src + 1 + i });
+      for (const row of breakHard([{ text: ` ${expandTabs(sanitize(text))}`, role: "fm_value", attrs: 0 }], width))
+        out.push({ spans: row, src: src + 1 + i });
     });
-    if (fm?.error) for (const row of wrapSpans([{ text: sanitize(fm.error), role: "fm_error", attrs: 0 }], Math.max(1, width - 1))) out.push({ spans: [{ text: " ", role: "fm_error", attrs: 0 }, ...row], src });
+    if (fm?.error)
+      for (const row of wrapSpans([{ text: sanitize(fm.error), role: "fm_error", attrs: 0 }], Math.max(1, width - 1)))
+        out.push({ spans: [{ text: " ", role: "fm_error", attrs: 0 }, ...row], src });
   }
-  out.push({ spans: [{ text: g.rule.repeat(width), role: "fm_border", attrs: 0 }], src: src + raw.split("\n").length + 1 });
+  out.push({
+    spans: [{ text: g.rule.repeat(width), role: "fm_border", attrs: 0 }],
+    src: src + raw.split("\n").length + 1,
+  });
   return out;
 }
 
@@ -872,9 +1016,22 @@ function propertySpans(value: string, src: number, ctx: Ctx): Span[] {
     const w = parseWikiTarget(m[2]!);
     const kind = m[1] ? "embed" : "wiki";
     const s = status(ctx, kind, w.target);
-    const shown = w.alias ?? (w.heading ? `${w.target} › ${w.heading}` : w.block ? `${w.target} ^${w.block}` : w.target);
-    const id = addLink(ctx, { kind, target: w.target, heading: w.heading ?? (w.block ? `^${w.block}` : null), text: shown, status: s, src });
-    out.push({ text: sanitize(shown), role: s === "unresolved" ? "link_unresolved" : s === "ambiguous" ? "link_ambiguous" : "wikilink", attrs: 0, link: id });
+    const shown =
+      w.alias ?? (w.heading ? `${w.target} › ${w.heading}` : w.block ? `${w.target} ^${w.block}` : w.target);
+    const id = addLink(ctx, {
+      kind,
+      target: w.target,
+      heading: w.heading ?? (w.block ? `^${w.block}` : null),
+      text: shown,
+      status: s,
+      src,
+    });
+    out.push({
+      text: sanitize(shown),
+      role: s === "unresolved" ? "link_unresolved" : s === "ambiguous" ? "link_ambiguous" : "wikilink",
+      attrs: 0,
+      link: id,
+    });
     last = m.index! + m[0].length;
   }
   if (last < value.length || !out.length) out.push({ text: value.slice(last), role: "fm_value", attrs: 0 });
@@ -924,22 +1081,41 @@ function dataField(f: DataField, ctx: Ctx, width: number): Line[] {
     const text = sanitize(f.key);
     const idx = ctx.headings.push({ level, text, slug: slugify(text), src }) - 1;
     const spans: Span[] = [{ text: f.key ? text : "·", role: "fm_key", attrs: A_BOLD }];
-    if (f.comment) spans.push({ text: `  # ${expandTabs(sanitize(f.comment).replace(/\s*\n\s*/g, " "))}`, role: "syn_comment", attrs: 0 });
+    if (f.comment)
+      spans.push({
+        text: `  # ${expandTabs(sanitize(f.comment).replace(/\s*\n\s*/g, " "))}`,
+        role: "syn_comment",
+        attrs: 0,
+      });
     const down = guides(place.lasts, "down", ctx, room);
     const rows = wrapSpans(spans, Math.max(4, width - 1 - leadW));
-    return rows.map((row, i) => ({ spans: [{ text: " ", role: "text", attrs: 0 }, ...(i === 0 ? lead : down), ...row], src, heading: i === 0 ? idx : undefined }));
+    return rows.map((row, i) => ({
+      spans: [{ text: " ", role: "text", attrs: 0 }, ...(i === 0 ? lead : down), ...row],
+      src,
+      heading: i === 0 ? idx : undefined,
+    }));
   }
   width -= leadW;
   // The key column leaves the value 4 columns (with the space before the key and the two after it).
   const kw = Math.max(1, Math.min(f.keyWidth || stringWidth(sanitize(f.key)), Math.floor(width / 3), width - 7));
-  let role: Role = f.kind === "number" || f.kind === "date" ? "syn_number" : f.kind === "boolean" || f.kind === "null" ? "syn_constant" : "fm_value";
+  let role: Role =
+    f.kind === "number" || f.kind === "date"
+      ? "syn_number"
+      : f.kind === "boolean" || f.kind === "null"
+        ? "syn_constant"
+        : "fm_value";
   const value = expandTabs(sanitize(f.value)) || (f.kind === "string" ? '""' : "");
   // A value that is a link (16.15): a URL, a reference key's value, or a path that resolves.
   const l = fieldLink(f);
   const dl = l ? dataValueLink(ctx, l, f.value, f.keyLine) : null;
   if (dl) role = dl.role;
   const spans: Span[] = [{ text: value, role, attrs: 0, ...(dl ? { link: dl.link } : {}) }];
-  if (f.comment) spans.push({ text: `${value ? "  " : ""}# ${expandTabs(sanitize(f.comment).replace(/\s*\n\s*/g, " "))}`, role: "syn_comment", attrs: 0 });
+  if (f.comment)
+    spans.push({
+      text: `${value ? "  " : ""}# ${expandTabs(sanitize(f.comment).replace(/\s*\n\s*/g, " "))}`,
+      role: "syn_comment",
+      attrs: 0,
+    });
   const rows = wrapSpans(spans, Math.max(4, width - kw - 3));
   const down = place ? guides(place.lasts, "down", ctx, room) : [];
   return rows.map((row, i) => ({
@@ -959,7 +1135,10 @@ function dataField(f: DataField, ctx: Ctx, width: number): Line[] {
 function dataValueLink(ctx: Ctx, l: CellLink, text: string, src: number): { link: number; role: Role } | null {
   const s = status(ctx, "markdown", l.target);
   if (!l.explicit && s !== "resolved") return null;
-  return { link: addLink(ctx, { kind: "markdown", target: l.target, heading: null, text, status: s, src }), role: s === "unresolved" ? "link_unresolved" : "link" };
+  return {
+    link: addLink(ctx, { kind: "markdown", target: l.target, heading: null, text, status: s, src }),
+    role: s === "unresolved" ? "link_unresolved" : "link",
+  };
 }
 
 /** Comment lines of a data file on their own: dimmed, wrapped. */
@@ -968,9 +1147,13 @@ function dataComment(c: DataComment, width: number, ctx: Ctx): Line[] {
   // In a tree, inside the guides of the key it's above.
   const lead = c.tree ? guides(c.tree.lasts, c.tree.above ? "above" : "down", ctx, width - 5) : [];
   const w = lead.reduce((a, s) => a + stringWidth(s.text), 0);
-  return c.text.split("\n").flatMap((text, i) =>
-    wrapSpans([{ text: expandTabs(sanitize(text)), role: "syn_comment", attrs: 0 }], Math.max(4, width - 1 - w)).map((row) => ({ spans: [{ text: " ", role: "text", attrs: 0 }, ...lead, ...row], src: src + i })),
-  );
+  return c.text
+    .split("\n")
+    .flatMap((text, i) =>
+      wrapSpans([{ text: expandTabs(sanitize(text)), role: "syn_comment", attrs: 0 }], Math.max(4, width - 1 - w)).map(
+        (row) => ({ spans: [{ text: " ", role: "text", attrs: 0 }, ...lead, ...row], src: src + i }),
+      ),
+    );
 }
 
 function findKeyLine(raw: string, key: string): number {
@@ -987,7 +1170,9 @@ function formatValue(v: unknown): string {
       .map(([k, x]) => `${k}: ${formatValue(x)}`)
       .join("; ");
   }
-  return sanitize(String(v)).replace(/\s*\n\s*/g, " ").replace(/\t/g, " ");
+  return sanitize(String(v))
+    .replace(/\s*\n\s*/g, " ")
+    .replace(/\t/g, " ");
 }
 
 // ---------------------------------------------------------------------------------------------
@@ -1008,7 +1193,13 @@ function table(node: Table, ctx: Ctx, width: number): Line[] {
       const l = ri > 0 ? (cell?.data as { link?: CellLink } | undefined)?.link : undefined;
       const value = l ? textOf(cell as unknown as Nodes) : "";
       const dl = l ? dataValueLink(ctx, l, value, srcOf(row)) : null;
-      out.push(dl ? [{ text: expandTabs(sanitize(value)), role: dl.role, attrs: 0, src: srcOf(row), link: dl.link }] : cell ? inline(cell.children, ctx, style, srcOf(row)) : []);
+      out.push(
+        dl
+          ? [{ text: expandTabs(sanitize(value)), role: dl.role, attrs: 0, src: srcOf(row), link: dl.link }]
+          : cell
+            ? inline(cell.children, ctx, style, srcOf(row))
+            : [],
+      );
     }
     return out;
   });
@@ -1077,25 +1268,43 @@ function table(node: Table, ctx: Ctx, width: number): Line[] {
 function tableRecords(node: Table, cells: Span[][][], ctx: Ctx, width: number): Line[] {
   const g = ctx.opts.glyphs;
   const header = cells[0] ?? [];
-  const labels = header.map((h, c) => h.map((s) => s.text).join("").trim() || `#${c + 1}`);
+  const labels = header.map(
+    (h, c) =>
+      h
+        .map((s) => s.text)
+        .join("")
+        .trim() || `#${c + 1}`,
+  );
   // Labels in an aligned column (at most a third of the width), values hanging beside them.
   const labelW = Math.max(1, Math.min(Math.max(...labels.map((l) => stringWidth(l))), Math.floor(width / 3)));
   const valueW = Math.max(1, width - labelW - 2);
   const out: Line[] = [];
-  const rule = (src: number): Line => ({ spans: [{ text: g.rule.repeat(width), role: "table_border", attrs: 0 }], src });
+  const rule = (src: number): Line => ({
+    spans: [{ text: g.rule.repeat(width), role: "table_border", attrs: 0 }],
+    src,
+  });
   cells.slice(1).forEach((row, ri) => {
     const src = srcOf(node.children[ri + 1]!);
     out.push(rule(src));
     row.forEach((spans, c) => {
       // The header's own spans, so a link in it stays a link (placed at its first record).
-      const head = header[c]?.some((sp) => sp.text.trim()) ? header[c]!.map((sp) => ({ ...sp, role: sp.link !== undefined ? sp.role : ("table_header" as Role), attrs: sp.attrs | A_BOLD })) : [{ text: labels[c] ?? `#${c + 1}`, role: "table_header" as Role, attrs: A_BOLD }];
+      const head = header[c]?.some((sp) => sp.text.trim())
+        ? header[c]!.map((sp) => ({
+            ...sp,
+            role: sp.link !== undefined ? sp.role : ("table_header" as Role),
+            attrs: sp.attrs | A_BOLD,
+          }))
+        : [{ text: labels[c] ?? `#${c + 1}`, role: "table_header" as Role, attrs: A_BOLD }];
       const labelRows = wrapSpans(head, labelW);
       const valueRows = wrapSpans(spans, valueW);
       const n = Math.max(labelRows.length, valueRows.length);
       for (let k = 0; k < n; k++) {
         const label = labelRows[k] ?? [];
         const lw = label.reduce((a, sp) => a + stringWidth(sp.text), 0);
-        out.push({ spans: [...label, { text: " ".repeat(labelW - lw + 2), role: "text", attrs: 0 }, ...(valueRows[k] ?? [])], src });
+        out.push({
+          spans: [...label, { text: " ".repeat(labelW - lw + 2), role: "text", attrs: 0 }, ...(valueRows[k] ?? [])],
+          src,
+        });
       }
     });
   });
@@ -1103,7 +1312,9 @@ function tableRecords(node: Table, cells: Span[][][], ctx: Ctx, width: number): 
   if (!out.length && labels.length) {
     const src = srcOf(node);
     out.push(rule(src));
-    for (const l of labels) for (const row of wrapSpans([{ text: l, role: "table_header", attrs: A_BOLD }], width)) out.push({ spans: row, src });
+    for (const l of labels)
+      for (const row of wrapSpans([{ text: l, role: "table_header", attrs: A_BOLD }], width))
+        out.push({ spans: row, src });
   }
   if (out.length) out.push(rule(srcOf(node)));
   return out;
@@ -1112,7 +1323,8 @@ function tableRecords(node: Table, cells: Span[][][], ctx: Ctx, width: number): 
 // ---------------------------------------------------------------------------------------------
 // Inlines
 
-const DROP_TAGS = /^<\/?(?:kbd|sup|sub|b|i|u|em|strong|mark|span|small|abbr|ins|del|s|q|cite|code|samp|var|a)\b[^>]*>$/i;
+const DROP_TAGS =
+  /^<\/?(?:kbd|sup|sub|b|i|u|em|strong|mark|span|small|abbr|ins|del|s|q|cite|code|samp|var|a)\b[^>]*>$/i;
 
 /** What closes a sentence or a bracket: no space before it, where a comment was. */
 const CLOSING = /^[.,;:!?)\]}…]/;
@@ -1163,7 +1375,11 @@ function inline(nodes: PhrasingContent[], ctx: Ctx, style: Style, src: number): 
           text(n.value, st, extra);
           break;
         case "strong":
-          walk(n.children, { role: st.role === "text" || st.role === "quote" ? "strong" : st.role, attrs: st.attrs | A_BOLD }, extra);
+          walk(
+            n.children,
+            { role: st.role === "text" || st.role === "quote" ? "strong" : st.role, attrs: st.attrs | A_BOLD },
+            extra,
+          );
           break;
         case "emphasis":
           walk(n.children, { role: st.role === "text" ? "emphasis" : st.role, attrs: st.attrs | A_ITALIC }, extra);
@@ -1184,7 +1400,11 @@ function inline(nodes: PhrasingContent[], ctx: Ctx, style: Style, src: number): 
           break;
         case "inlineMath":
           // Maths as Unicode text (12.11); one that can't be, as written.
-          push(sanitize(mathText(n.value) ?? `$${n.value}$`).replace(/\n/g, " "), { role: "math", attrs: st.attrs }, extra);
+          push(
+            sanitize(mathText(n.value) ?? `$${n.value}$`).replace(/\n/g, " "),
+            { role: "math", attrs: st.attrs },
+            extra,
+          );
           break;
         case "break":
           push("\n", st);
@@ -1204,16 +1424,36 @@ function inline(nodes: PhrasingContent[], ctx: Ctx, style: Style, src: number): 
           const alt = n.alt || url.split("/").pop() || "image";
           // Inside a link (a badge: [![alt](img)](url)) the image is that link's text: it follows
           // the link, not the image.
-          const id = extra.link ?? addLink(ctx, { kind: "image", target: url, heading: null, text: alt, status: status(ctx, "image", url), src: line });
+          const id =
+            extra.link ??
+            addLink(ctx, {
+              kind: "image",
+              target: url,
+              heading: null,
+              text: alt,
+              status: status(ctx, "image", url),
+              src: line,
+            });
           // A note's (`![x](note.md)`, 20.1) where it isn't drawn in place — beside other text, or not
           // there — is a reference to an embed, as `![[note]]`'s was; a picture's is a picture's.
           const note = NOTE_URL.test(url.split("#")[0]!);
-          push(`${note ? ctx.opts.glyphs.embed : ctx.opts.glyphs.image} ${sanitize(alt)}`, { role: note ? "embed" : "image", attrs: 0 }, { link: id });
+          push(
+            `${note ? ctx.opts.glyphs.embed : ctx.opts.glyphs.image} ${sanitize(alt)}`,
+            { role: note ? "embed" : "image", attrs: 0 },
+            { link: id },
+          );
           if (ctx.opts.showUrls && url) push(` <${sanitize(url)}>`, { role: "url", attrs: 0 });
           break;
         }
         case "footnoteReference": {
-          const id = addLink(ctx, { kind: "footnote", target: n.identifier, heading: null, text: n.identifier, status: "resolved", src: line });
+          const id = addLink(ctx, {
+            kind: "footnote",
+            target: n.identifier,
+            heading: null,
+            text: n.identifier,
+            status: "resolved",
+            src: line,
+          });
           push(`[${sanitize(n.label ?? n.identifier)}]`, { role: "footnote", attrs: 0 }, { link: id });
           break;
         }
@@ -1229,10 +1469,16 @@ function inline(nodes: PhrasingContent[], ctx: Ctx, style: Style, src: number): 
           else if ((n.type as string) === "hashtag") {
             // A tag (1.6): followed, the notes that carry it.
             const name = (n as unknown as Hashtag).value;
-            const id = addLink(ctx, { kind: "tag", target: name, heading: null, text: `#${name}`, status: "resolved", src: line });
+            const id = addLink(ctx, {
+              kind: "tag",
+              target: name,
+              heading: null,
+              text: `#${name}`,
+              status: "resolved",
+              src: line,
+            });
             push(`#${sanitize(name)}`, { role: "tag", attrs: st.attrs }, { link: id });
-          }
-          else if ("children" in n) walk((n as unknown as Parents).children as PhrasingContent[], st, extra);
+          } else if ("children" in n) walk((n as unknown as Parents).children as PhrasingContent[], st, extra);
           else if ("value" in n) text(String((n as { value: unknown }).value), st, extra);
       }
     }
@@ -1276,8 +1522,23 @@ function inline(nodes: PhrasingContent[], ctx: Ctx, style: Style, src: number): 
             ? `${w.target} ^${w.block}`
             : w.target);
     // A block's `^id` rides as the heading does (`#^id`): followed, it lands on its block.
-    const id = addLink(ctx, { kind, target: w.target, heading: w.heading ?? (w.block ? `^${w.block}` : null), text: shown, status: s, src: line });
-    const role: Role = picture ? "image" : w.embed ? "embed" : s === "unresolved" ? "link_unresolved" : s === "ambiguous" ? "link_ambiguous" : "wikilink";
+    const id = addLink(ctx, {
+      kind,
+      target: w.target,
+      heading: w.heading ?? (w.block ? `^${w.block}` : null),
+      text: shown,
+      status: s,
+      src: line,
+    });
+    const role: Role = picture
+      ? "image"
+      : w.embed
+        ? "embed"
+        : s === "unresolved"
+          ? "link_unresolved"
+          : s === "ambiguous"
+            ? "link_ambiguous"
+            : "wikilink";
     const prefix = picture ? `${ctx.opts.glyphs.image} ` : w.embed ? `${ctx.opts.glyphs.embed} ` : "";
     push(prefix + sanitize(shown), { role, attrs: st.attrs }, { ...(around.bg ? { bg: around.bg } : {}), link: id });
   };
@@ -1292,7 +1553,8 @@ function status(ctx: Ctx, kind: "wiki" | "embed" | "markdown" | "image", target:
 
 function addLink(ctx: Ctx, l: Omit<LayoutLink, "line" | "col">): number {
   // Inside an embed: at the embed's line in the note shown, followed from the embedded note.
-  const inEmbed = ctx.linkSrc !== undefined ? { src: ctx.linkSrc, ...(ctx.linkFrom ? { from: ctx.linkFrom } : {}) } : {};
+  const inEmbed =
+    ctx.linkSrc !== undefined ? { src: ctx.linkSrc, ...(ctx.linkFrom ? { from: ctx.linkFrom } : {}) } : {};
   return ctx.links.push({ ...l, ...inEmbed, line: -1, col: 0 }) - 1;
 }
 

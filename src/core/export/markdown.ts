@@ -8,7 +8,19 @@
 
 import { readFileSync } from "node:fs";
 import { basename, dirname, extname, isAbsolute, relative, sep } from "node:path";
-import type { Blockquote, Code, Heading, Image, Link, Nodes, Paragraph, Parent, PhrasingContent, Root, RootContent } from "mdast";
+import type {
+  Blockquote,
+  Code,
+  Heading,
+  Image,
+  Link,
+  Nodes,
+  Paragraph,
+  Parent,
+  PhrasingContent,
+  Root,
+  RootContent,
+} from "mdast";
 import { gfmToMarkdown } from "mdast-util-gfm";
 import { mathToMarkdown } from "mdast-util-math";
 import { toMarkdown as serialise } from "mdast-util-to-markdown";
@@ -91,7 +103,13 @@ export async function toMarkdown(doc: ExportDoc, target: string): Promise<Export
     const titled = first?.type === "heading" && first.depth === 1;
     // The chapter's id on its title: the note's own first heading, else one made of its title.
     if (titled) (first.data ??= {}).chapter = ch.anchor;
-    else nodes.unshift({ type: "heading", depth: 1, children: [{ type: "text", value: ch.title }], data: { chapter: ch.anchor } } satisfies Heading);
+    else
+      nodes.unshift({
+        type: "heading",
+        depth: 1,
+        children: [{ type: "text", value: ch.title }],
+        data: { chapter: ch.anchor },
+      } satisfies Heading);
     children.push(...nodes);
   }
   const root: Root = { type: "root", children };
@@ -99,7 +117,16 @@ export async function toMarkdown(doc: ExportDoc, target: string): Promise<Export
   renumberFootnotes(root);
   prepare(root.children, { ids, copy });
 
-  const fm = ["---", `title: ${yaml(doc.title)}`, ...(doc.author ? [`author: ${yaml(doc.author)}`] : []), ...(doc.date ? [`date: ${yaml(doc.date)}`] : []), ...(doc.lang ? [`lang: ${yaml(doc.lang)}`] : []), "generator: slipbox", "---", ""].join("\n");
+  const fm = [
+    "---",
+    `title: ${yaml(doc.title)}`,
+    ...(doc.author ? [`author: ${yaml(doc.author)}`] : []),
+    ...(doc.date ? [`date: ${yaml(doc.date)}`] : []),
+    ...(doc.lang ? [`lang: ${yaml(doc.lang)}`] : []),
+    "generator: slipbox",
+    "---",
+    "",
+  ].join("\n");
   const body = serialise(root, {
     bullet: "-",
     emphasis: "*",
@@ -120,7 +147,12 @@ interface Tracker {
 }
 
 /** Obsidian's `==highlight==`, as written: its text between the marks, read as any text is. */
-function highlightMarkdown(node: Parent, _parent: unknown, state: { createTracker(info: unknown): Tracker; containerPhrasing(node: Parent, info: object): string }, info: unknown): string {
+function highlightMarkdown(
+  node: Parent,
+  _parent: unknown,
+  state: { createTracker(info: unknown): Tracker; containerPhrasing(node: Parent, info: object): string },
+  info: unknown,
+): string {
   const tracker = state.createTracker(info);
   let value = tracker.move("==");
   value += tracker.move(state.containerPhrasing(node, { ...tracker.current(), before: value, after: "=" }));
@@ -149,7 +181,8 @@ function headingIds(root: Root): Map<string, string> {
   return ids;
 }
 
-const text = (nodes: readonly PhrasingContent[]): string => nodes.map((n) => ("value" in n ? n.value : "children" in n ? text(n.children as PhrasingContent[]) : "")).join("");
+const text = (nodes: readonly PhrasingContent[]): string =>
+  nodes.map((n) => ("value" in n ? n.value : "children" in n ? text(n.children as PhrasingContent[]) : "")).join("");
 
 /** Footnotes numbered in the order they're first referred to: `[^1]`, not the assembler's long labels. */
 function renumberFootnotes(root: Root): void {
@@ -181,7 +214,12 @@ function prepare(nodes: Nodes[], c: Ctx): void {
   for (let i = 0; i < nodes.length; i++) {
     const n = nodes[i]!;
     const data = n.data as Record<string, unknown> | undefined;
-    if (n.type === "paragraph" && n.children.length === 1 && n.children[0]!.type === "image" && (n.children[0]!.data as { code?: Code } | undefined)?.code) {
+    if (
+      n.type === "paragraph" &&
+      n.children.length === 1 &&
+      n.children[0]!.type === "image" &&
+      (n.children[0]!.data as { code?: Code } | undefined)?.code
+    ) {
       // A diagram: its source, as written.
       nodes[i] = (n.children[0]!.data as { code: Code }).code;
       continue;
@@ -199,7 +237,11 @@ function prepare(nodes: Nodes[], c: Ctx): void {
       const to = pic?.file ? c.copy(pic as ExportPicture & { file: string }) : null;
       if (to && "link" in to) {
         // Not a picture of the root: a link to it, its words or its file's name.
-        nodes[i] = { type: "link", url: to.link, children: [{ type: "text", value: n.alt || basename(pic!.file!) }] } satisfies Link;
+        nodes[i] = {
+          type: "link",
+          url: to.link,
+          children: [{ type: "text", value: n.alt || basename(pic!.file!) }],
+        } satisfies Link;
         continue;
       }
       if (!to) {
@@ -210,7 +252,8 @@ function prepare(nodes: Nodes[], c: Ctx): void {
       // Obsidian's size kept where Obsidian reads it: `![alt|240](…)`.
       if (pic?.size) n.alt = `${n.alt ?? ""}|${pic.size.width}${pic.size.height ? `x${pic.size.height}` : ""}`;
     }
-    if (n.type === "blockquote" && typeof data?.callout === "string") callout(n, data.callout, data.calloutTitled !== false);
+    if (n.type === "blockquote" && typeof data?.callout === "string")
+      callout(n, data.callout, data.calloutTitled !== false);
     if ("children" in n) prepare(n.children as Nodes[], c);
   }
 }
@@ -220,5 +263,8 @@ function callout(n: Blockquote, kind: string, titled: boolean): void {
   const head = n.children[0] as Paragraph | undefined;
   const title = titled && head?.children[0]?.type === "strong" ? head.children[0].children : [];
   const marker = { type: "calloutMarker", value: `[!${kind}]` } as unknown as PhrasingContent;
-  n.children[0] = { type: "paragraph", children: [marker, ...(title.length ? [{ type: "text", value: " " } as PhrasingContent, ...title] : [])] };
+  n.children[0] = {
+    type: "paragraph",
+    children: [marker, ...(title.length ? [{ type: "text", value: " " } as PhrasingContent, ...title] : [])],
+  };
 }

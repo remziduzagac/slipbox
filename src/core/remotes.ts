@@ -12,9 +12,16 @@ import { isAbsolute, normalize, resolve } from "node:path";
 export function normalizeRemote(url: string, top: string): string | null {
   const u = url.trim();
   if (!u) return null;
-  const local = (p: string) => `file:${normalize(p).replace(/\/+$/, "").replace(/\/\.git$/i, "").replace(/\.git$/i, "")}`;
+  const local = (p: string) =>
+    `file:${normalize(p)
+      .replace(/\/+$/, "")
+      .replace(/\/\.git$/i, "")
+      .replace(/\.git$/i, "")}`;
   const tidy = (host: string, path: string) => {
-    const p = path.replace(/^\/+/, "").replace(/\/+$/, "").replace(/\.git$/i, "");
+    const p = path
+      .replace(/^\/+/, "")
+      .replace(/\/+$/, "")
+      .replace(/\.git$/i, "");
     return host && p ? `${host.toLowerCase()}/${p}` : null;
   };
   if (/^[a-z][a-z0-9+.-]*:\/\//i.test(u)) {

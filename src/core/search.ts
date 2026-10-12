@@ -158,7 +158,8 @@ function pack(us: DocLine[][]): DocLine[][] {
     cur = [...cur, ...u];
   }
   if (cur.length) {
-    if (pieces.length && tokensOf(text(cur)) < BAND_MIN) pieces[pieces.length - 1] = [...pieces[pieces.length - 1]!, ...cur];
+    if (pieces.length && tokensOf(text(cur)) < BAND_MIN)
+      pieces[pieces.length - 1] = [...pieces[pieces.length - 1]!, ...cur];
     else pieces.push(cur);
   }
   return pieces;
@@ -167,13 +168,23 @@ function pack(us: DocLine[][]): DocLine[][] {
 function section(name: string, heading: string, lines: DocLine[], text: string): DocSection {
   const nums = lines.map((l) => l.line);
   const tokens = tokensOf(text);
-  return { name, heading, line: nums.length ? Math.min(...nums) : 1, end: nums.length ? Math.max(...nums) : 1, lines, tokens, oversized: tokens > BAND_MAX };
+  return {
+    name,
+    heading,
+    line: nums.length ? Math.min(...nums) : 1,
+    end: nums.length ? Math.max(...nums) : 1,
+    lines,
+    tokens,
+    oversized: tokens > BAND_MAX,
+  };
 }
 
 /** Pieces cut from a node over the band: `§:part` (`§:chunk` with no structure), `~2`, `~3` — each kept. */
 function pieces(prefix: string, kind: "part" | "chunk", heading: string, lines: DocLine[]): DocSection[] {
   const cut = pack(units(lines));
-  return cut.map((p, i) => section(`${prefix}§:${kind}${i ? `~${i + 1}` : ""}`, heading, p, p.map((l) => l.text).join("\n")));
+  return cut.map((p, i) =>
+    section(`${prefix}§:${kind}${i ? `~${i + 1}` : ""}`, heading, p, p.map((l) => l.text).join("\n")),
+  );
 }
 
 /**
@@ -191,7 +202,8 @@ function cut(root: Node): DocSection[] {
       if (tokensOf(child.text) < BAND_MIN) {
         node.lines.push(...child.lines);
         node.text = node.text ? `${node.text}\n\n${child.text}` : child.text;
-      } else if (tokensOf(child.text) > BAND_MAX) kept.push(...pieces(`${childName}/`, "part", child.heading, child.lines));
+      } else if (tokensOf(child.text) > BAND_MAX)
+        kept.push(...pieces(`${childName}/`, "part", child.heading, child.lines));
       else kept.push(section(childName, child.heading, child.lines, child.text));
     });
   };
@@ -213,7 +225,10 @@ export function indexDoc(rel: string, text: string, group: "note" | "data" | "te
   const all: DocLine[] = lines.map((t, i) => ({ line: i + 1, text: t }));
   const name = basename(rel).replace(/\.[^.]+$/, "");
   if (group !== "note") {
-    const sections = tokensOf(text) > BAND_MAX ? pieces("", "chunk", "", all) : [section("§:file", "", all, all.map((l) => l.text).join("\n"))];
+    const sections =
+      tokensOf(text) > BAND_MAX
+        ? pieces("", "chunk", "", all)
+        : [section("§:file", "", all, all.map((l) => l.text).join("\n"))];
     return { title: basename(rel), aliases: [], tags: [], headings: [], sections, units: units(all) };
   }
   let fm: Record<string, unknown> | null = null;
@@ -274,7 +289,14 @@ export function indexDoc(rel: string, text: string, group: "note" | "data" | "te
     }
     // A setext underline: the paragraph line above it is the heading.
     const above = top.lines[top.lines.length - 1];
-    if (SETEXT.test(line) && above && above.line === i && i - 1 >= body && !NOT_PARAGRAPH.test(lines[i - 1]!) && !(top !== root && top.lines.length === 1)) {
+    if (
+      SETEXT.test(line) &&
+      above &&
+      above.line === i &&
+      i - 1 >= body &&
+      !NOT_PARAGRAPH.test(lines[i - 1]!) &&
+      !(top !== root && top.lines.length === 1)
+    ) {
       top.lines.pop();
       if (!title && line.trim().startsWith("=")) title = above.text.trim();
       open(above.text.trim(), line.trim().startsWith("=") ? 1 : 2, [above, all[i]!]);
@@ -291,7 +313,14 @@ export function indexDoc(rel: string, text: string, group: "note" | "data" | "te
     n.children.forEach(textOf);
   };
   textOf(root);
-  return { title: title || name, aliases: [...strings(fm?.aliases), ...strings(fm?.alias)], tags: [...tags], headings, sections: cut(root), units: own };
+  return {
+    title: title || name,
+    aliases: [...strings(fm?.aliases), ...strings(fm?.alias)],
+    tags: [...tags],
+    headings,
+    sections: cut(root),
+    units: own,
+  };
 }
 
 /** The files search reads, as the walk last saw them: notes and data files. */
@@ -329,7 +358,18 @@ export function indexFile(g: Graph, idx: SearchIndex, rel: string, group?: "note
   try {
     const text = readText(g.abs(rel)).text;
     const d = indexDoc(rel, text, kind);
-    idx.put(rel, { group: kind, title: d.title, aliases: d.aliases, tags: d.tags, headings: d.headings.map((h) => h.text).filter(Boolean), body: text }, { size: st.size, mtime: st.mtimeMs });
+    idx.put(
+      rel,
+      {
+        group: kind,
+        title: d.title,
+        aliases: d.aliases,
+        tags: d.tags,
+        headings: d.headings.map((h) => h.text).filter(Boolean),
+        body: text,
+      },
+      { size: st.size, mtime: st.mtimeMs },
+    );
   } catch {
     idx.remove(rel);
   }
@@ -512,7 +552,9 @@ function fold(text: string): { folded: string; at: number[] } {
  * its end — as FTS5 matches a phrase, so the scan finds what the index does.
  */
 function occurrences(folded: string, term: QueryTerm): [number, number][] {
-  const words = fold(term.text).folded.split(/[^\p{L}\p{N}]+/u).filter(Boolean);
+  const words = fold(term.text)
+    .folded.split(/[^\p{L}\p{N}]+/u)
+    .filter(Boolean);
   if (!words.length) return [];
   // The bounds in the pattern, not checked after: a match turned down inside a word (`uno` for "no
   // no") would otherwise hide one starting within it.
@@ -566,7 +608,16 @@ function locate(path: string, group: "note" | "data", text: string, score: numbe
   const section = { name: s.name, line: s.line, end: s.end };
   if (!best) return { path, line: 1, column: 1, heading: "", section, score, snippet: "", marks: [], more: 0 };
   const heading = doc.headings.filter((h) => h.line <= best!.line).at(-1)?.text ?? "";
-  return { path, line: best.line, column: best.column, heading, section, score, ...snippetOf(best.raw, pos), more: withWords - 1 };
+  return {
+    path,
+    line: best.line,
+    column: best.column,
+    heading,
+    section,
+    score,
+    ...snippetOf(best.raw, pos),
+    more: withWords - 1,
+  };
 }
 
 /** A line as a snippet: white space run together, cut to about 120 characters around its first match, the words marked. */
@@ -600,7 +651,12 @@ function snippetOf(raw: string, pos: QueryTerm[]): { snippet: string; marks: [nu
  * files. For a scan: `texts`, files' text to use instead of the disk's (the TUI's unsaved notes);
  * `only`, just these files; `relax` false, never some of the words for want of all of them.
  */
-export function search(g: Graph, idx: SearchIndex | null, input: string, opts: { limit?: number; texts?: Map<string, string>; only?: string[]; relax?: boolean } = {}): SearchResult {
+export function search(
+  g: Graph,
+  idx: SearchIndex | null,
+  input: string,
+  opts: { limit?: number; texts?: Map<string, string>; only?: string[]; relax?: boolean } = {},
+): SearchResult {
   const limit = opts.limit ?? 50;
   const q = parseQuery(input);
   const engine = idx ? "index" : "scan";
@@ -609,9 +665,25 @@ export function search(g: Graph, idx: SearchIndex | null, input: string, opts: {
     if (!q.tags.length && !q.paths.length) return { engine, relaxed: false, hits: [] };
     // Less the files with a word they mustn't have (`#project -draft`).
     const not = q.terms.length ? q.terms.map(ftsTerm).join(" OR ") : undefined;
-    const files = idx ? idx.filesWhere({ tags: q.tags, pathPrefix: q.paths, not, limit }) : scanFiles(g, q, opts.texts, opts.only).slice(0, limit);
+    const files = idx
+      ? idx.filesWhere({ tags: q.tags, pathPrefix: q.paths, not, limit })
+      : scanFiles(g, q, opts.texts, opts.only).slice(0, limit);
     // Nothing read: the file's top stands for where it's hit.
-    return { engine, relaxed: false, hits: files.map((path) => ({ path, line: 1, column: 1, heading: "", section: { name: "§:file", line: 1, end: 1 }, score: 0, snippet: "", marks: [], more: 0 })) };
+    return {
+      engine,
+      relaxed: false,
+      hits: files.map((path) => ({
+        path,
+        line: 1,
+        column: 1,
+        heading: "",
+        section: { name: "§:file", line: 1, end: 1 },
+        score: 0,
+        snippet: "",
+        marks: [],
+        more: 0,
+      })),
+    };
   }
   if (!idx) return scanSearch(g, q, limit, opts.texts, opts.only, opts.relax ?? true);
   for (const relaxed of [false, true]) {
@@ -662,7 +734,14 @@ function keeps(f: Scanned, q: SearchQuery): boolean {
 /** A scanned file's fields, folded: title, aliases, tags, path, headings, text (the index's columns). */
 function foldedFields(f: Scanned): string[] {
   const d = f.doc;
-  return [d.title, d.aliases.join("\n"), d.tags.join("\n"), f.path, d.headings.map((h) => h.text).join("\n"), f.text].map((x) => fold(x).folded);
+  return [
+    d.title,
+    d.aliases.join("\n"),
+    d.tags.join("\n"),
+    f.path,
+    d.headings.map((h) => h.text).join("\n"),
+    f.text,
+  ].map((x) => fold(x).folded);
 }
 
 /** How often a term occurs in each field (`title:` in the title and aliases only). */
@@ -680,7 +759,14 @@ function scanFiles(g: Graph, q: SearchQuery, texts?: Map<string, string>, only?:
 }
 
 /** The scan: each file's fields folded; every positive term in it (or some, relaxed), none of the rest; scored as BM25 roughly is. */
-function scanSearch(g: Graph, q: SearchQuery, limit: number, texts?: Map<string, string>, only?: string[], relax = true): SearchResult {
+function scanSearch(
+  g: Graph,
+  q: SearchQuery,
+  limit: number,
+  texts?: Map<string, string>,
+  only?: string[],
+  relax = true,
+): SearchResult {
   const pos = q.terms.filter((t) => !t.not);
   const neg = q.terms.filter((t) => t.not);
   const files = scanned(g, texts, only).filter((f) => keeps(f, q));
@@ -701,7 +787,13 @@ function scanSearch(g: Graph, q: SearchQuery, limit: number, texts?: Map<string,
       return Math.log(1 + (files.length - df + 0.5) / (df + 0.5));
     });
     const hits = kept
-      .map((c) => ({ c, score: pos.reduce((s, _, i) => s + idf[i]! * c.counts[i]!.reduce((a, n, k) => a + (WEIGHTS[k]! * n) / (n + 1.2), 0), 0) }))
+      .map((c) => ({
+        c,
+        score: pos.reduce(
+          (s, _, i) => s + idf[i]! * c.counts[i]!.reduce((a, n, k) => a + (WEIGHTS[k]! * n) / (n + 1.2), 0),
+          0,
+        ),
+      }))
       .sort((a, b) => b.score - a.score || (a.c.f.path < b.c.f.path ? -1 : 1))
       .slice(0, limit)
       .map(({ c, score }) => locate(c.f.path, c.f.group, c.f.text, score, q));

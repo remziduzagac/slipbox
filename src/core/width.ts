@@ -26,7 +26,10 @@ export function graphemes(text: string): string[] {
   const out: string[] = [];
   let island = -1;
   for (let i = 0; i < text.length; i++) {
-    const alone = printable(text.charCodeAt(i)) && (i === 0 || printable(text.charCodeAt(i - 1))) && (i + 1 === text.length || printable(text.charCodeAt(i + 1)));
+    const alone =
+      printable(text.charCodeAt(i)) &&
+      (i === 0 || printable(text.charCodeAt(i - 1))) &&
+      (i + 1 === text.length || printable(text.charCodeAt(i + 1)));
     if (!alone) {
       if (island < 0) island = i;
       continue;

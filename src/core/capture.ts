@@ -29,7 +29,10 @@ export interface ScratchOwner extends Keyed {
 export function scratchLocation(owner: ScratchOwner, config: Config): ScratchLocation {
   const project = owner.root;
   // Config validation already refuses an unsafe name; this holds even if one got through.
-  const file = isSafeRelative(config.capture.file) && /\.(md|markdown)$/i.test(config.capture.file) ? config.capture.file : "scratch.md";
+  const file =
+    isSafeRelative(config.capture.file) && /\.(md|markdown)$/i.test(config.capture.file)
+      ? config.capture.file
+      : "scratch.md";
   if (config.capture.location === "root" && owner.mode === "vault") {
     // In the vault, a committed symlink could make the scratch read a file from anywhere (and copy
     // it into the vault) or write out of it: then it lives in the state dir, as by default.
@@ -60,7 +63,10 @@ export function parseRef(spec: string): Ref | null {
   const m = REF_RE.exec(spec.trim().replace(/^`|`$/g, ""));
   if (!m) return null;
   const valid = (r: Ref) =>
-    r.startLine >= 1 && r.endLine >= r.startLine && (r.startCol === undefined || (r.startCol >= 1 && r.endCol! >= 1 && (r.endLine > r.startLine || r.endCol! >= r.startCol)));
+    r.startLine >= 1 &&
+    r.endLine >= r.startLine &&
+    (r.startCol === undefined ||
+      (r.startCol >= 1 && r.endCol! >= 1 && (r.endLine > r.startLine || r.endCol! >= r.startCol)));
   const startLine = Number(m[2]);
   const a = m[3] ? Number(m[3]) : undefined;
   const b = m[4] ? Number(m[4]) : undefined;
@@ -87,10 +93,32 @@ export function formatRef(r: Ref): string {
 }
 
 const FENCE_LANG: Record<string, string> = {
-  ts: "typescript", tsx: "tsx", js: "javascript", mjs: "javascript", jsx: "jsx", py: "python", rb: "ruby",
-  rs: "rust", go: "go", lua: "lua", sh: "bash", zsh: "zsh", bash: "bash", md: "markdown", json: "json",
-  yml: "yaml", yaml: "yaml", toml: "toml", c: "c", h: "c", cpp: "cpp", java: "java", sql: "sql", css: "css",
-  html: "html", vim: "vim",
+  ts: "typescript",
+  tsx: "tsx",
+  js: "javascript",
+  mjs: "javascript",
+  jsx: "jsx",
+  py: "python",
+  rb: "ruby",
+  rs: "rust",
+  go: "go",
+  lua: "lua",
+  sh: "bash",
+  zsh: "zsh",
+  bash: "bash",
+  md: "markdown",
+  json: "json",
+  yml: "yaml",
+  yaml: "yaml",
+  toml: "toml",
+  c: "c",
+  h: "c",
+  cpp: "cpp",
+  java: "java",
+  sql: "sql",
+  css: "css",
+  html: "html",
+  vim: "vim",
 };
 
 export function fenceLanguage(path: string): string {
@@ -127,7 +155,8 @@ export function formatEntry(input: CaptureInput, project: string): string {
         // A final newline ends the last line; it doesn't start another.
         if (lines.length > 1 && lines[lines.length - 1] === "") lines.pop();
         const last = input.ref.endLine ?? input.ref.startLine;
-        if (last > lines.length) throw new CaptureError(`${input.ref.path} has ${lines.length} lines; ${last} is past the end`);
+        if (last > lines.length)
+          throw new CaptureError(`${input.ref.path} has ${lines.length} lines; ${last} is past the end`);
         body = lines.slice(input.ref.startLine - 1, input.ref.endLine).join("\n");
       }
       if (body !== undefined) parts.push(fence(sanitize(body), input.lang ?? fenceLanguage(abs)));

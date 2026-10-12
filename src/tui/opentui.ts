@@ -3,7 +3,15 @@
 // for the upgrade policy) — if the API churns, this file and run.ts are what change.
 
 import { readFileSync, statSync } from "node:fs";
-import { imageInfo, NativeImage, type OptimizedBuffer, Renderable, type RenderContext, RGBA, TextAttributes } from "@opentui/core";
+import {
+  imageInfo,
+  NativeImage,
+  type OptimizedBuffer,
+  Renderable,
+  type RenderContext,
+  RGBA,
+  TextAttributes,
+} from "@opentui/core";
 import type { CellStyle } from "../core/layout/style.ts";
 import type { Color } from "../core/theme/theme.ts";
 import { type Canvas, glyphCell } from "./canvas.ts";
@@ -48,7 +56,10 @@ export class Pictures {
     readonly protocol: () => "kitty" | "sixel" | null,
     /** Kitty graphics as Unicode placeholders (12.7): what writes to the terminal in step with the frames, and the
      *  cell's size in pixels (a picture is sent that size). Without them, OpenTUI's own picture path. */
-    private readonly placeholders?: { write: (s: string) => void; cell: () => { width: number; height: number } | null },
+    private readonly placeholders?: {
+      write: (s: string) => void;
+      cell: () => { width: number; height: number } | null;
+    },
   ) {}
 
   /** Whether pictures are drawn as Unicode placeholders: text that scrolls, nothing sent again (12.7). */
@@ -71,7 +82,15 @@ export class Pictures {
     return size;
   }
 
-  draw(buf: OptimizedBuffer, x: number, y: number, cols: number, rows: number, src: string, crop: { skip: number; total: number }): void {
+  draw(
+    buf: OptimizedBuffer,
+    x: number,
+    y: number,
+    cols: number,
+    rows: number,
+    src: string,
+    crop: { skip: number; total: number },
+  ): void {
     const protocol = this.protocol();
     const image = protocol ? this.image(src) : null;
     if (!protocol || !image || rows <= 0) return;

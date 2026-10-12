@@ -8,7 +8,17 @@
 // GitHub's releases are (`<base>/latest/download/…`, `<base>/download/v<version>/…`): a mirror, the tests' folder.
 
 import { createHash } from "node:crypto";
-import { existsSync, mkdirSync, readdirSync, readFileSync, realpathSync, renameSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
+import {
+  existsSync,
+  mkdirSync,
+  readdirSync,
+  readFileSync,
+  realpathSync,
+  renameSync,
+  rmSync,
+  symlinkSync,
+  writeFileSync,
+} from "node:fs";
 import { dirname, join } from "node:path";
 import type { ReleaseBuild } from "./release.ts";
 import { howToUpgrade, type InstalledBy, installedBy } from "./install.ts";
@@ -46,9 +56,17 @@ export function isNewer(a: string, b: string): boolean {
 }
 
 /** The latest release's pack for a target, asked for once; null when it can't be said (offline, none for it). */
-export async function fetchLatest(base: string, target: string, fetcher: Fetcher = fetch, timeoutMs = 10_000): Promise<Latest | null> {
+export async function fetchLatest(
+  base: string,
+  target: string,
+  fetcher: Fetcher = fetch,
+  timeoutMs = 10_000,
+): Promise<Latest | null> {
   try {
-    const res = await fetcher(`${base}/latest/download/SHA256SUMS`, { signal: AbortSignal.timeout(timeoutMs), redirect: "follow" });
+    const res = await fetcher(`${base}/latest/download/SHA256SUMS`, {
+      signal: AbortSignal.timeout(timeoutMs),
+      redirect: "follow",
+    });
     if (!res.ok) return null;
     return latestIn(await res.text(), target);
   } catch {
@@ -77,7 +95,16 @@ interface CheckState {
  * since the last — the latest asked for, and what to say when it's newer than this one; null otherwise. The time is
  * kept before asking, so a failure waits a day too.
  */
-export async function dailyUpdateCheck(opts: { release: ReleaseBuild | null; version: string; enabled: boolean; env: Record<string, string | undefined>; stateFile: string; now?: number; fetcher?: Fetcher; by?: InstalledBy }): Promise<string | null> {
+export async function dailyUpdateCheck(opts: {
+  release: ReleaseBuild | null;
+  version: string;
+  enabled: boolean;
+  env: Record<string, string | undefined>;
+  stateFile: string;
+  now?: number;
+  fetcher?: Fetcher;
+  by?: InstalledBy;
+}): Promise<string | null> {
   if (!opts.release || !opts.enabled || doNotTrack(opts.env)) return null;
   const now = opts.now ?? Date.now();
   let state: CheckState = {};
@@ -95,7 +122,9 @@ export async function dailyUpdateCheck(opts: { release: ReleaseBuild | null; ver
   const latest = await fetchLatest(releasesBase(opts.release.repo, opts.env), opts.release.target, opts.fetcher);
   if (!latest) return null;
   save({ checked: now, latest: latest.version });
-  return isNewer(latest.version, opts.version) ? `slipbox ${latest.version} is out (this is ${opts.version}): ${howToUpgrade(opts.by ?? "installer", opts.release.repo)}` : null;
+  return isNewer(latest.version, opts.version)
+    ? `slipbox ${latest.version} is out (this is ${opts.version}): ${howToUpgrade(opts.by ?? "installer", opts.release.repo)}`
+    : null;
 }
 
 export class UpgradeError extends Error {}
@@ -124,7 +153,15 @@ function versionOf(bin: string): string | null {
  * told of it. The pack's SHA-256 must be its SHA256SUMS line's and its binary must say its version before `current`
  * moves; the version replaced is kept, any older removed.
  */
-export async function upgrade(opts: { release: ReleaseBuild; version: string; data: string; execPath: string; env?: Record<string, string | undefined>; check?: boolean; fetcher?: Fetcher }): Promise<UpgradeResult> {
+export async function upgrade(opts: {
+  release: ReleaseBuild;
+  version: string;
+  data: string;
+  execPath: string;
+  env?: Record<string, string | undefined>;
+  check?: boolean;
+  fetcher?: Fetcher;
+}): Promise<UpgradeResult> {
   const fetcher = opts.fetcher ?? fetch;
   const versions = join(opts.data, "versions");
   let installed = false;
@@ -132,8 +169,11 @@ export async function upgrade(opts: { release: ReleaseBuild; version: string; da
     installed = realpathSync(opts.execPath) === realpathSync(join(versions, opts.version, "slipbox"));
   } catch {}
   if (!installed) {
-    if (installedBy(opts.execPath, opts.data, opts.version) === "homebrew") throw new UpgradeError("this slipbox is Homebrew's: brew upgrade slipbox");
-    throw new UpgradeError(`this slipbox (${opts.execPath}) wasn't installed by its installer: upgrade it the way it was installed`);
+    if (installedBy(opts.execPath, opts.data, opts.version) === "homebrew")
+      throw new UpgradeError("this slipbox is Homebrew's: brew upgrade slipbox");
+    throw new UpgradeError(
+      `this slipbox (${opts.execPath}) wasn't installed by its installer: upgrade it the way it was installed`,
+    );
   }
   const base = releasesBase(opts.release.repo, opts.env);
   const latest = await fetchLatest(base, opts.release.target, fetcher, 30_000);
@@ -157,14 +197,20 @@ export async function upgrade(opts: { release: ReleaseBuild; version: string; da
       throw new UpgradeError(`couldn't download ${url}: ${(err as Error).message}`);
     }
     const got = createHash("sha256").update(bytes).digest("hex");
-    if (got !== latest.sha256) throw new UpgradeError(`the download's SHA-256 is ${got}, not the release's ${latest.sha256}: nothing changed`);
+    if (got !== latest.sha256)
+      throw new UpgradeError(`the download's SHA-256 is ${got}, not the release's ${latest.sha256}: nothing changed`);
     const pack = join(work, latest.asset);
     writeFileSync(pack, bytes);
     const tar = Bun.spawnSync(["tar", "-xzf", pack, "-C", work], { stdout: "ignore", stderr: "pipe" });
     if (tar.exitCode !== 0) throw new UpgradeError(`couldn't unpack ${latest.asset}: ${tar.stderr.toString().trim()}`);
     const unpacked = join(work, latest.asset.replace(/\.tar\.gz$/, ""));
     const said = existsSync(join(unpacked, "slipbox")) ? versionOf(join(unpacked, "slipbox")) : null;
-    if (said !== `slipbox ${v}`) throw new UpgradeError(said === null ? "the new binary doesn't run here: nothing changed" : `the new binary says "${said}", not "slipbox ${v}": nothing changed`);
+    if (said !== `slipbox ${v}`)
+      throw new UpgradeError(
+        said === null
+          ? "the new binary doesn't run here: nothing changed"
+          : `the new binary says "${said}", not "slipbox ${v}": nothing changed`,
+      );
     rmSync(join(versions, v), { recursive: true, force: true });
     renameSync(unpacked, join(versions, v));
   } finally {

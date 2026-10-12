@@ -43,7 +43,23 @@ function convert(tex: string, words: string[]): string | null {
 }
 
 /** Environments whose rows align at their `&`, as `aligned` does. */
-const ALIGNED = new Set(["aligned", "align", "align*", "alignat", "alignat*", "gathered", "gather", "gather*", "split", "equation", "equation*", "multline", "multline*", "eqnarray", "eqnarray*"]);
+const ALIGNED = new Set([
+  "aligned",
+  "align",
+  "align*",
+  "alignat",
+  "alignat*",
+  "gathered",
+  "gather",
+  "gather*",
+  "split",
+  "equation",
+  "equation*",
+  "multline",
+  "multline*",
+  "eqnarray",
+  "eqnarray*",
+]);
 /** Matrices' brackets: one row's, then a taller one's top, middle and bottom on each side. */
 const MATRICES: Record<string, { one: [string, string]; tall: [string, string, string, string, string, string] }> = {
   matrix: { one: ["", ""], tall: ["", "", "", "", "", ""] },
@@ -87,7 +103,9 @@ export function mathRows(tex: string): string[] | null {
   if (!pre && !post) return rows;
   const mid = Math.floor((rows.length - 1) / 2);
   const lead = pre ? stringWidth(pre) + 1 : 0;
-  return rows.map((r, i) => (i === mid ? `${pre ? `${pre} ` : ""}${r}${post ? ` ${post}` : ""}` : `${" ".repeat(lead)}${r}`).trimEnd());
+  return rows.map((r, i) =>
+    (i === mid ? `${pre ? `${pre} ` : ""}${r}${post ? ` ${post}` : ""}` : `${" ".repeat(lead)}${r}`).trimEnd(),
+  );
 }
 
 /** A display's cells laid out: as cases, a matrix, or aligned rows. */
@@ -103,7 +121,8 @@ function arrange(cells: string[][], env: string): string[] {
     // A value and, after `&`, when: the values lined up, the brace as tall as the rows.
     const rows = cells.map((r) => [pad(r[0] ?? "", widths[0]!, "left"), ...r.slice(1)].join("  ").trimEnd());
     const mid = Math.floor((rows.length - 1) / 2);
-    const brace = (i: number) => (rows.length === 1 ? "{" : i === 0 ? "⎧" : i === rows.length - 1 ? "⎩" : i === mid ? "⎨" : "⎪");
+    const brace = (i: number) =>
+      rows.length === 1 ? "{" : i === 0 ? "⎧" : i === rows.length - 1 ? "⎩" : i === mid ? "⎨" : "⎪";
     return rows.map((r, i) => `${brace(i)} ${r}`);
   }
   const matrix = MATRICES[env];
@@ -111,25 +130,66 @@ function arrange(cells: string[][], env: string): string[] {
     const rows = cells.map((r) => widths.map((w, c) => pad(r[c] ?? "", w, "center")).join("  "));
     const [l, r] = matrix.one;
     const [lt, lm, lb, rt, rm, rb] = matrix.tall;
-    const side = (i: number, one: string, top: string, middle: string, bottom: string) => (rows.length === 1 ? one : i === 0 ? top : i === rows.length - 1 ? bottom : middle);
+    const side = (i: number, one: string, top: string, middle: string, bottom: string) =>
+      rows.length === 1 ? one : i === 0 ? top : i === rows.length - 1 ? bottom : middle;
     return rows.map((row, i) => `${side(i, l, lt, lm, lb)} ${row} ${side(i, r, rt, rm, rb)}`.trim());
   }
   // Aligned: right of each `&` left-aligned, left of it right-aligned — as TeX's `rl` pairs are.
-  return cells.map((r) => widths.map((w, c) => pad(r[c] ?? "", w, c % 2 === 0 ? "right" : "left")).join(" ").trimEnd());
+  return cells.map((r) =>
+    widths
+      .map((w, c) => pad(r[c] ?? "", w, c % 2 === 0 ? "right" : "left"))
+      .join(" ")
+      .trimEnd(),
+  );
 }
 
 /** Fractions written with one character. */
-const VULGAR: Record<string, string> = { "1/2": "½", "1/3": "⅓", "2/3": "⅔", "1/4": "¼", "3/4": "¾", "1/5": "⅕", "1/6": "⅙", "1/8": "⅛" };
+const VULGAR: Record<string, string> = {
+  "1/2": "½",
+  "1/3": "⅓",
+  "2/3": "⅔",
+  "1/4": "¼",
+  "3/4": "¾",
+  "1/5": "⅕",
+  "1/6": "⅙",
+  "1/8": "⅛",
+};
 /** The commands the table knows, by their exact names: it replaces by prefix, so `\log`, which it doesn't know, would
  *  come out `łog` (its `\l`) — a command it doesn't know is never given to it. */
 const KNOWN = new Set([...replacements.map(([k]) => /^\\(?:[A-Za-z]+|.)/.exec(k!)?.[0]), "\\not"]);
 /** Functions written as their names, upright (`\log x`: log x). */
-const FUNCTIONS = /^(?:arc(?:sin|cos|tan)|sinh?|cosh?|tanh?|coth?|sec|csc|cot|exp|lg|ln|log|lim|liminf|limsup|max|min|sup|inf|det|dim|ker|deg|arg|gcd|hom|Pr|mod|bmod)$/;
+const FUNCTIONS =
+  /^(?:arc(?:sin|cos|tan)|sinh?|cosh?|tanh?|coth?|sec|csc|cot|exp|lg|ln|log|lim|liminf|limsup|max|min|sup|inf|det|dim|ker|deg|arg|gcd|hom|Pr|mod|bmod)$/;
 /** Commands whose argument is words, not maths. */
-const WORDS = new Set(["text", "textrm", "textit", "textbf", "textsf", "texttt", "textnormal", "mathrm", "mathit", "mathsf", "mathtt", "operatorname", "mbox"]);
+const WORDS = new Set([
+  "text",
+  "textrm",
+  "textit",
+  "textbf",
+  "textsf",
+  "texttt",
+  "textnormal",
+  "mathrm",
+  "mathit",
+  "mathsf",
+  "mathtt",
+  "operatorname",
+  "mbox",
+]);
 /** Commands that only size, space or label what follows: dropped. */
-const SIZING = /^(?:left|right|middle|[bB]ig{1,2}[lrm]?|displaystyle|textstyle|scriptstyle|scriptscriptstyle|limits|nolimits|nonumber|notag)$/;
-const SPACES: Record<string, string> = { ",": " ", ":": " ", ";": " ", " ": " ", "!": "", quad: "  ", qquad: "    ", enspace: " ", thinspace: " " };
+const SIZING =
+  /^(?:left|right|middle|[bB]ig{1,2}[lrm]?|displaystyle|textstyle|scriptstyle|scriptscriptstyle|limits|nolimits|nonumber|notag)$/;
+const SPACES: Record<string, string> = {
+  ",": " ",
+  ":": " ",
+  ";": " ",
+  " ": " ",
+  "!": "",
+  quad: "  ",
+  qquad: "    ",
+  enspace: " ",
+  thinspace: " ",
+};
 /** Accents, as combining characters over each letter of what they're over. */
 const MARKS: Record<string, string> = {
   ...Object.fromEntries(combiningmarks.map(([k, v]) => [k!.slice(1), v!])),
@@ -207,7 +267,9 @@ function structure(s: string, words: string[]): string | null {
       const top = a && convert(a.text, words);
       const bottom = b && convert(b.text, words);
       if (!b || top === null || bottom === null) return null;
-      out += VULGAR[`${top.trim()}/${bottom.trim()}`] ?? `${atom(top) ? top : `(${top})`}/${atom(bottom) ? bottom : `(${bottom})`}`;
+      out +=
+        VULGAR[`${top.trim()}/${bottom.trim()}`] ??
+        `${atom(top) ? top : `(${top})`}/${atom(bottom) ? bottom : `(${bottom})`}`;
       i = b.end;
     } else if (name === "sqrt") {
       let index = "";
@@ -251,8 +313,7 @@ function structure(s: string, words: string[]): string | null {
       out += SPACES[name];
       // A space after a word-command ends its name, as in TeX: not one more space.
       if (/^[A-Za-z]/.test(name)) while (s[i] === " ") i++;
-    }
-    else if (name === "{") out += LBRACE;
+    } else if (name === "{") out += LBRACE;
     else if (name === "}") out += RBRACE;
     else if (name === "&") out += AMP;
     else if (name === "_") out += UNDER;

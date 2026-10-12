@@ -30,9 +30,32 @@ export interface Canvas {
  * of the text (CJK, accents) goes as it is: nothing stands in for it.
  */
 const ASCII_LOOKALIKE: Record<string, string> = {
-  "—": "-", "–": "-", "‘": "'", "’": "'", "“": '"', "”": '"', "…": "~", "·": "-", "•": "*", "›": ">", "‹": "<",
-  "→": ">", "←": "<", "↑": "^", "↓": "v", "⇄": "=", "⚠": "!", "✖": "x", "✗": "x", "×": "x", "ℹ": "i", "↻": "~",
-  "●": "*", "○": "o", "✓": "v", "\u00a0": " ",
+  "—": "-",
+  "–": "-",
+  "‘": "'",
+  "’": "'",
+  "“": '"',
+  "”": '"',
+  "…": "~",
+  "·": "-",
+  "•": "*",
+  "›": ">",
+  "‹": "<",
+  "→": ">",
+  "←": "<",
+  "↑": "^",
+  "↓": "v",
+  "⇄": "=",
+  "⚠": "!",
+  "✖": "x",
+  "✗": "x",
+  "×": "x",
+  ℹ: "i",
+  "↻": "~",
+  "●": "*",
+  "○": "o",
+  "✓": "v",
+  "\u00a0": " ",
 };
 const LOOKALIKES = new RegExp(`[${Object.keys(ASCII_LOOKALIKE).join("")}]`, "g");
 
@@ -59,7 +82,14 @@ export function glyphCell(c: Canvas, g: string): string {
 }
 
 /** Draw `text` at (x, y), clipped to `maxW` columns. Returns the columns used. */
-export function drawText(c: Canvas, x: number, y: number, text: string, style: CellStyle, maxW = Number.POSITIVE_INFINITY): number {
+export function drawText(
+  c: Canvas,
+  x: number,
+  y: number,
+  text: string,
+  style: CellStyle,
+  maxW = Number.POSITIVE_INFINITY,
+): number {
   if (y < 0 || y >= c.height || maxW <= 0) return 0;
   const limit = Math.min(maxW, c.width - x);
   if (limit <= 0) return 0;
@@ -84,7 +114,8 @@ export function drawText(c: Canvas, x: number, y: number, text: string, style: C
 export class TextCanvas implements Canvas {
   asciiGlyphs?: boolean;
   /** The pictures drawn, as asked (12.x): the tests read them. */
-  readonly images: { x: number; y: number; cols: number; rows: number; src: string; skip: number; total: number }[] = [];
+  readonly images: { x: number; y: number; cols: number; rows: number; src: string; skip: number; total: number }[] =
+    [];
   readonly rows: string[][];
   readonly styles: (CellStyle | null)[][];
   constructor(
@@ -112,7 +143,9 @@ export class TextCanvas implements Canvas {
       this.splitWide(r, Math.max(0, x), Math.min(this.width, x + w));
       for (let k = Math.max(0, x); k < x + w && k < this.width; k++) {
         this.rows[r]![k] = " ";
-        this.styles[r]![k] = bg ? { fg: "default", bg, bold: false, italic: false, underline: false, strike: false, dim: false } : null;
+        this.styles[r]![k] = bg
+          ? { fg: "default", bg, bold: false, italic: false, underline: false, strike: false, dim: false }
+          : null;
       }
     }
   }

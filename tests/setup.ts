@@ -22,7 +22,8 @@ function alive(pid: number): boolean {
 // its process, which is gone, so it goes now.
 for (const name of readdirSync(base)) {
   const m = /^slipbox-run-(\d+)-/.exec(name);
-  if (m && Number(m[1]) !== process.pid && !alive(Number(m[1]))) rmSync(join(base, name), { recursive: true, force: true });
+  if (m && Number(m[1]) !== process.pid && !alive(Number(m[1])))
+    rmSync(join(base, name), { recursive: true, force: true });
 }
 
 const run = mkdtempSync(join(base, `slipbox-run-${process.pid}-`));
@@ -31,7 +32,10 @@ const remove = () => rmSync(run, { recursive: true, force: true });
 // Preloaded, `afterAll` is the whole run's: after the last file (`bun test` fires no `exit` here).
 afterAll(remove);
 // Interrupted (ctrl+c) or stopped: the folder still goes.
-for (const [signal, code] of [["SIGINT", 130], ["SIGTERM", 143]] as const) {
+for (const [signal, code] of [
+  ["SIGINT", 130],
+  ["SIGTERM", 143],
+] as const) {
   process.on(signal, () => {
     remove();
     process.exit(code);

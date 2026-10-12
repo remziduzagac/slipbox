@@ -68,7 +68,15 @@ interface Box {
 
 /** What a line is made of: text in one font and style, or a picture; each as wide as it's drawn. */
 type Atom =
-  | (Style & { kind: "text"; text: string; font: string; width: number; ascent: number; descent: number; space: boolean })
+  | (Style & {
+      kind: "text";
+      text: string;
+      font: string;
+      width: number;
+      ascent: number;
+      descent: number;
+      space: boolean;
+    })
   | (Style & { kind: "picture"; data: Buffer; width: number; height: number; drop: number; alt: string });
 
 interface Line {
@@ -106,7 +114,13 @@ export function pdfDocument(doc: ExportDoc): PDFKit.PDFDocument {
  * character no font has stays in `key`'s (its box); a combining mark or a joiner stays with what it joins. `known`:
  * each character's fallback found so far.
  */
-export function splitByFont(text: string, key: string, has: (font: string, cp: number) => boolean, fallbacks: string[], known = new Map<number, string>()): { text: string; key: string }[] {
+export function splitByFont(
+  text: string,
+  key: string,
+  has: (font: string, cp: number) => boolean,
+  fallbacks: string[],
+  known = new Map<number, string>(),
+): { text: string; key: string }[] {
   const out: { text: string; key: string }[] = [];
   for (const ch of text) {
     const cp = ch.codePointAt(0)!;
@@ -136,7 +150,8 @@ const OBJECT = "\ufffc";
 export function words(text: string): { end: number; required: boolean }[] {
   const out: { end: number; required: boolean }[] = [];
   const breaker = new LineBreaker(text);
-  for (let b = breaker.nextBreak(); b; b = breaker.nextBreak()) if (b.position > 0) out.push({ end: b.position, required: b.required });
+  for (let b = breaker.nextBreak(); b; b = breaker.nextBreak())
+    if (b.position > 0) out.push({ end: b.position, required: b.required });
   return out;
 }
 
@@ -172,7 +187,11 @@ class PdfWriter {
     ];
     for (const [key, f] of faces) {
       const face = fonts.builtin ? null : openFace(f);
-      this.pdf.registerFont(key, f.path, f.ps ?? (face && f.path.toLowerCase().endsWith(".ttc") ? face.postscriptName : undefined));
+      this.pdf.registerFont(
+        key,
+        f.path,
+        f.ps ?? (face && f.path.toLowerCase().endsWith(".ttc") ? face.postscriptName : undefined),
+      );
       this.faces.set(key, face);
     }
     if (fonts.builtin) {
@@ -187,7 +206,11 @@ class PdfWriter {
       const face = openFace(f);
       if (!face) return;
       const key = `fallback${i}`;
-      this.pdf.registerFont(key, f.path, f.ps ?? (f.path.toLowerCase().endsWith(".ttc") ? face.postscriptName : undefined));
+      this.pdf.registerFont(
+        key,
+        f.path,
+        f.ps ?? (f.path.toLowerCase().endsWith(".ttc") ? face.postscriptName : undefined),
+      );
       this.faces.set(key, face);
       this.fallbacks.push(key);
     });
@@ -230,12 +253,19 @@ class PdfWriter {
     if (this.fonts.builtin) return [{ text: text.replace(/[^\n\x20-\xff‘’“”–—•…]/g, "?"), key }];
     const face = this.faces.get(key);
     if (!face) return [{ text, key }];
-    return splitByFont(text, key, (k, cp) => (k === key ? face : this.faces.get(k))?.hasGlyphForCodePoint(cp) ?? false, this.fallbacks, this.fallbackOf);
+    return splitByFont(
+      text,
+      key,
+      (k, cp) => (k === key ? face : this.faces.get(k))?.hasGlyphForCodePoint(cp) ?? false,
+      this.fallbacks,
+      this.fallbackOf,
+    );
   }
 
   /** A font's metrics at a size: how far it reaches above and below the baseline. */
   private metrics(font: string, size: number): { ascent: number; descent: number } {
-    const f = (this.pdf.font(font).fontSize(size) as unknown as { _font: { ascender: number; descender: number } })._font;
+    const f = (this.pdf.font(font).fontSize(size) as unknown as { _font: { ascender: number; descender: number } })
+      ._font;
     return { ascent: (f.ascender / 1000) * size, descent: (-f.descender / 1000) * size };
   }
 
@@ -243,7 +273,11 @@ class PdfWriter {
   // Lines: laid out here, words and pictures together.
 
   /** A picture in a line as drawn: its PNG or JPEG, its size in points (at most `most` wide), how far below the baseline. */
-  private linePicture(p: InlinePicture, size: number, most: number): { data: Buffer; width: number; height: number; drop: number } | null {
+  private linePicture(
+    p: InlinePicture,
+    size: number,
+    most: number,
+  ): { data: Buffer; width: number; height: number; drop: number } | null {
     if (p.math && p.picture.svg) {
       const m = mathSize(p.picture.svg);
       if (!m) return null;
@@ -270,7 +304,11 @@ class PdfWriter {
   }
 
   /** `lines`, and how wide its widest word is (what a table's column can't be narrower than). */
-  private layout(content: Inline[], width: number, base: { size?: number; color?: string } = {}): { lines: Line[]; longest: number } {
+  private layout(
+    content: Inline[],
+    width: number,
+    base: { size?: number; color?: string } = {},
+  ): { lines: Line[]; longest: number } {
     const size0 = base.size ?? BODY;
     // The text as one string — a picture its object character — and where each inline starts in it.
     let text = "";
@@ -326,7 +364,11 @@ class PdfWriter {
       const atoms = atomsOf(at, w.end).filter((a) => !(a.kind === "text" && a.text === "\n"));
       at = w.end;
       // Its width but for the spaces it ends with.
-      const solid = atoms.reduce((n, a, i) => (a.kind === "text" && a.space && atoms.slice(i).every((x) => x.kind === "text" && x.space) ? n : n + a.width), 0);
+      const solid = atoms.reduce(
+        (n, a, i) =>
+          a.kind === "text" && a.space && atoms.slice(i).every((x) => x.kind === "text" && x.space) ? n : n + a.width,
+        0,
+      );
       longest = Math.max(longest, solid);
       if (line.atoms.length && full + solid > width) end();
       if (solid > width) {
@@ -351,7 +393,17 @@ class PdfWriter {
         const space = /^\s+$/.test(part);
         const m = this.metrics(seg.key, size);
         const shown = part === "\n" ? part : part.replace(/\t/g, "    ");
-        out.push({ ...s, kind: "text", text: shown, font: seg.key, size, width: shown === "\n" ? 0 : this.pdf.widthOfString(shown), ascent: m.ascent, descent: m.descent, space });
+        out.push({
+          ...s,
+          kind: "text",
+          text: shown,
+          font: seg.key,
+          size,
+          width: shown === "\n" ? 0 : this.pdf.widthOfString(shown),
+          ascent: m.ascent,
+          descent: m.descent,
+          space,
+        });
       }
     }
     return out;
@@ -395,14 +447,19 @@ class PdfWriter {
   }
 
   /** Lines set in `box` from the current position, a new page where the next won't fit (unless `keep`). */
-  private draw(lines: Line[], box: Box, o: { align?: "left" | "center" | "right"; gap?: number; keep?: boolean } = {}): void {
+  private draw(
+    lines: Line[],
+    box: Box,
+    o: { align?: "left" | "center" | "right"; gap?: number; keep?: boolean } = {},
+  ): void {
     const pdf = this.pdf;
     const gap = o.gap ?? 2.5;
     for (const l of lines) {
       if (!o.keep) this.ensure(l.ascent + l.descent);
       const top = pdf.y;
       const baseline = top + l.ascent;
-      let x = box.x + (o.align === "center" ? (box.width - l.width) / 2 : o.align === "right" ? box.width - l.width : 0);
+      let x =
+        box.x + (o.align === "center" ? (box.width - l.width) / 2 : o.align === "right" ? box.width - l.width : 0);
       // Its spaces at its end, unseen.
       let last = l.atoms.length;
       while (last > 0 && l.atoms[last - 1]!.kind === "text" && (l.atoms[last - 1] as { space: boolean }).space) last--;
@@ -411,18 +468,43 @@ class PdfWriter {
       for (const a of l.atoms.slice(0, last)) {
         const [up, down] = a.kind === "text" ? [a.ascent, a.descent] : [a.height - a.drop, a.drop];
         const prev = areas.at(-1);
-        if ((a.link || a.goTo) && prev && prev.link === a.link && prev.goTo === a.goTo && Math.abs(prev.x + prev.width - x) < 0.01) prev.width += a.width;
+        if (
+          (a.link || a.goTo) &&
+          prev &&
+          prev.link === a.link &&
+          prev.goTo === a.goTo &&
+          Math.abs(prev.x + prev.width - x) < 0.01
+        )
+          prev.width += a.width;
         else if (a.link || a.goTo) areas.push({ link: a.link, goTo: a.goTo, x, width: a.width });
         if (a.kind === "text") {
-          if (a.mark) pdf.save().rect(x, baseline - up, a.width, up + down).fill(TINT.mark).restore();
-          if (a.tint) pdf.save().roundedRect(x - 1, baseline - up, a.width + 2, up + down, 2).fill(TINT.inline).restore();
+          if (a.mark)
+            pdf
+              .save()
+              .rect(x, baseline - up, a.width, up + down)
+              .fill(TINT.mark)
+              .restore();
+          if (a.tint)
+            pdf
+              .save()
+              .roundedRect(x - 1, baseline - up, a.width + 2, up + down, 2)
+              .fill(TINT.inline)
+              .restore();
           // Spaces drawn too: what a reader copies, or searches, has its words apart.
           pdf
             .font(a.font)
             .fontSize(a.size ?? BODY)
             .fillColor(a.color ?? box.color ?? PRINT.fg);
           pdf.text(a.text, x, baseline, { lineBreak: false, baseline: "alphabetic" } as PDFKit.Mixins.TextOptions);
-          if (a.strike) pdf.save().moveTo(x, baseline - (a.size ?? BODY) * 0.3).lineTo(x + a.width, baseline - (a.size ?? BODY) * 0.3).lineWidth(0.6).strokeColor(a.color ?? box.color ?? PRINT.fg).stroke().restore();
+          if (a.strike)
+            pdf
+              .save()
+              .moveTo(x, baseline - (a.size ?? BODY) * 0.3)
+              .lineTo(x + a.width, baseline - (a.size ?? BODY) * 0.3)
+              .lineWidth(0.6)
+              .strokeColor(a.color ?? box.color ?? PRINT.fg)
+              .stroke()
+              .restore();
         } else pdf.image(a.data, x, baseline - up, { width: a.width, height: a.height });
         x += a.width;
       }
@@ -436,7 +518,11 @@ class PdfWriter {
   }
 
   /** Inline content set as one paragraph in `box`, wrapping, from the current position. */
-  private flow(content: Inline[], box: Box, o: { align?: "left" | "center" | "right"; size?: number; gap?: number; keep?: boolean } = {}): void {
+  private flow(
+    content: Inline[],
+    box: Box,
+    o: { align?: "left" | "center" | "right"; size?: number; gap?: number; keep?: boolean } = {},
+  ): void {
     this.draw(this.lines(content, box.width, { size: o.size, color: box.color }), box, o);
   }
 
@@ -479,7 +565,11 @@ class PdfWriter {
             out.push({ ...s, text: "\n" });
             break;
           case "link":
-            walk(n.children, { ...s, color: TINT.link, ...(n.url.startsWith("#") ? { goTo: n.url.slice(1) } : { link: n.url }) });
+            walk(n.children, {
+              ...s,
+              color: TINT.link,
+              ...(n.url.startsWith("#") ? { goTo: n.url.slice(1) } : { link: n.url }),
+            });
             break;
           case "image": {
             const picture = (n.data as { picture?: ExportPicture } | undefined)?.picture;
@@ -499,7 +589,13 @@ class PdfWriter {
             if (!this.notes.has(n.identifier)) this.notes.set(n.identifier, this.notes.size + 1);
             const k = this.notes.get(n.identifier)!;
             const mark = this.superscripts ? [...String(k)].map((d) => "⁰¹²³⁴⁵⁶⁷⁸⁹"[Number(d)]).join("") : `[${k}]`;
-            out.push({ ...s, text: mark, color: TINT.link, goTo: this.noteId(k), ...(this.superscripts ? {} : { size: (s.size ?? BODY) * 0.8 }) });
+            out.push({
+              ...s,
+              text: mark,
+              color: TINT.link,
+              goTo: this.noteId(k),
+              ...(this.superscripts ? {} : { size: (s.size ?? BODY) * 0.8 }),
+            });
             break;
           }
           default:
@@ -527,13 +623,16 @@ class PdfWriter {
     const pdf = this.pdf;
     this.chapter = ch.anchor;
     this.notes = new Map();
-    this.defs = new Map(ch.nodes.flatMap((n) => (n.type === "footnoteDefinition" ? [[n.identifier, n.children] as const] : [])));
+    this.defs = new Map(
+      ch.nodes.flatMap((n) => (n.type === "footnoteDefinition" ? [[n.identifier, n.children] as const] : [])),
+    );
     pdf.addNamedDestination(ch.anchor, "XYZ", MARGIN.left, pdf.y, null);
     this.outline = pdf.outline.addItem(ch.title);
     const box: Box = { x: MARGIN.left, width: pdf.page.width - MARGIN.left - MARGIN.right };
     const nodes = ch.nodes.filter((n) => n.type !== "footnoteDefinition");
     const first = nodes[0];
-    if (!(first?.type === "heading" && first.depth === 1)) this.heading({ type: "heading", depth: 1, children: [{ type: "text", value: ch.title }] }, box);
+    if (!(first?.type === "heading" && first.depth === 1))
+      this.heading({ type: "heading", depth: 1, children: [{ type: "text", value: ch.title }] }, box);
     this.blocks(nodes, box);
     this.endnotes(box);
   }
@@ -584,7 +683,14 @@ class PdfWriter {
     if (n.depth === 2) this.outline?.addItem(this.text(content));
     if (n.depth <= 2) {
       pdf.y += 3;
-      pdf.save().moveTo(box.x, pdf.y).lineTo(box.x + box.width, pdf.y).lineWidth(0.5).strokeColor(TINT.border).stroke().restore();
+      pdf
+        .save()
+        .moveTo(box.x, pdf.y)
+        .lineTo(box.x + box.width, pdf.y)
+        .lineWidth(0.5)
+        .strokeColor(TINT.border)
+        .stroke()
+        .restore();
     }
     pdf.y += size * 0.4;
   }
@@ -619,7 +725,8 @@ class PdfWriter {
       pdf.switchToPage(p);
       const top = p === startPage ? startY : MARGIN.top;
       const bottom = p === endPage ? endY : pdf.page.height - MARGIN.bottom;
-      if (bottom > top) pdf.save().moveTo(x, top).lineTo(x, bottom).lineWidth(2.5).strokeColor(colour).stroke().restore();
+      if (bottom > top)
+        pdf.save().moveTo(x, top).lineTo(x, bottom).lineWidth(2.5).strokeColor(colour).stroke().restore();
     }
     pdf.switchToPage(endPage);
     pdf.y = endY + 4;
@@ -635,8 +742,23 @@ class PdfWriter {
     const gap = n.spread ? GAP : TIGHT;
     for (const item of n.children) {
       const marker =
-        typeof item.checked === "boolean" ? (this.boxes ? (item.checked ? "☑" : "☐") : item.checked ? "[x]" : "[ ]") : ordered ? `${k++}.` : depth % 2 ? "◦" : "•";
-      const w = typeof item.checked === "boolean" && !this.boxes ? pdf.font("regular").fontSize(BODY).widthOfString("[x] ") : markerW;
+        typeof item.checked === "boolean"
+          ? this.boxes
+            ? item.checked
+              ? "☑"
+              : "☐"
+            : item.checked
+              ? "[x]"
+              : "[ ]"
+          : ordered
+            ? `${k++}.`
+            : depth % 2
+              ? "◦"
+              : "•";
+      const w =
+        typeof item.checked === "boolean" && !this.boxes
+          ? pdf.font("regular").fontSize(BODY).widthOfString("[x] ")
+          : markerW;
       this.ensure(BODY * 2);
       const y = pdf.y;
       this.flow([{ text: marker, color: box.color }], { x: box.x, width: w + 20 });
@@ -654,13 +776,22 @@ class PdfWriter {
     const inner: Box = { x: box.x + pad, width: box.width - 2 * pad };
     pdf.y += 2;
     lines.forEach((line, i) => {
-      const runs: Inline[] = (tokens?.[i]?.length ? tokens[i]! : [{ text: line, role: undefined }]).map((t) => ({ text: t.text, mono: true, size: CODE, color: (t.role && SYNTAX[t.role]) || PRINT.fg }));
+      const runs: Inline[] = (tokens?.[i]?.length ? tokens[i]! : [{ text: line, role: undefined }]).map((t) => ({
+        text: t.text,
+        mono: true,
+        size: CODE,
+        color: (t.role && SYNTAX[t.role]) || PRINT.fg,
+      }));
       const laid = this.lines(line ? runs : [{ text: " ", mono: true, size: CODE }], inner.width, { size: CODE });
       const h = this.height(laid, 1);
       const top = i === 0 ? pad : 0;
       const bottom = i === lines.length - 1 ? pad : 0;
       this.ensure(h + top + bottom);
-      pdf.save().rect(box.x, pdf.y, box.width, h + top + bottom).fill(TINT.code).restore();
+      pdf
+        .save()
+        .rect(box.x, pdf.y, box.width, h + top + bottom)
+        .fill(TINT.code)
+        .restore();
       pdf.y += top;
       this.draw(laid, inner, { gap: 1, keep: true });
       pdf.y += bottom;
@@ -689,7 +820,8 @@ class PdfWriter {
     const pic = (n.data as { picture?: ExportPicture } | undefined)?.picture;
     // Typeset, drawn sharper than a picture: maths is small.
     if (pic) return this.picture(pic, n.value, box, 3);
-    for (const row of mathRows(n.value) ?? n.value.split("\n")) this.flow([{ text: row, mono: true }], box, { align: "center" });
+    for (const row of mathRows(n.value) ?? n.value.split("\n"))
+      this.flow([{ text: row, mono: true }], box, { align: "center" });
     this.pdf.y += GAP;
   }
 
@@ -697,7 +829,14 @@ class PdfWriter {
     const pdf = this.pdf;
     this.ensure(12);
     pdf.y += 4;
-    pdf.save().moveTo(box.x, pdf.y).lineTo(box.x + box.width, pdf.y).lineWidth(0.75).strokeColor(TINT.border).stroke().restore();
+    pdf
+      .save()
+      .moveTo(box.x, pdf.y)
+      .lineTo(box.x + box.width, pdf.y)
+      .lineWidth(0.75)
+      .strokeColor(TINT.border)
+      .stroke()
+      .restore();
     pdf.y += 8;
   }
 
@@ -706,12 +845,21 @@ class PdfWriter {
     const pdf = this.pdf;
     const size = BODY * 0.92;
     const pad = 4;
-    const rows = n.children.map((row, i) => row.children.map((cell) => this.inlines(cell.children, i === 0 ? { bold: true, size } : { size })));
+    const rows = n.children.map((row, i) =>
+      row.children.map((cell) => this.inlines(cell.children, i === 0 ? { bold: true, size } : { size })),
+    );
     const cols = Math.max(...rows.map((r) => r.length));
     // A column's widest: its longest cell on one line; its least: its longest word.
-    const one = rows.map((r) => Array.from({ length: cols }, (_, c) => this.layout(r[c] ?? [], Number.POSITIVE_INFINITY, { size })));
-    const natural = Array.from({ length: cols }, (_, c) => Math.max(...one.map((r) => Math.max(...r[c]!.lines.map((l) => l.width)))) + 2 * pad + 1);
-    const least = Array.from({ length: cols }, (_, c) => Math.min(natural[c]!, Math.max(...one.map((r) => r[c]!.longest)) + 2 * pad + 1));
+    const one = rows.map((r) =>
+      Array.from({ length: cols }, (_, c) => this.layout(r[c] ?? [], Number.POSITIVE_INFINITY, { size })),
+    );
+    const natural = Array.from(
+      { length: cols },
+      (_, c) => Math.max(...one.map((r) => Math.max(...r[c]!.lines.map((l) => l.width)))) + 2 * pad + 1,
+    );
+    const least = Array.from({ length: cols }, (_, c) =>
+      Math.min(natural[c]!, Math.max(...one.map((r) => r[c]!.longest)) + 2 * pad + 1),
+    );
     let widths = natural;
     if (natural.reduce((a, b) => a + b, 0) > box.width) {
       // What's left after each column's longest word, shared by how much more each would take.
@@ -733,7 +881,11 @@ class PdfWriter {
         if (header) pdf.save().rect(x, y, w, h).fill(TINT.code).restore();
         pdf.save().rect(x, y, w, h).lineWidth(0.5).strokeColor(TINT.border).stroke().restore();
         pdf.y = y + pad;
-        this.draw(cells[c]!, { x: x + pad, width: w - 2 * pad }, { gap: 1.5, keep: true, align: ALIGN[n.align?.[c] as keyof typeof ALIGN] ?? "left" });
+        this.draw(
+          cells[c]!,
+          { x: x + pad, width: w - 2 * pad },
+          { gap: 1.5, keep: true, align: ALIGN[n.align?.[c] as keyof typeof ALIGN] ?? "left" },
+        );
         x += w;
       });
       pdf.y = y + h;
@@ -758,7 +910,14 @@ class PdfWriter {
     const pdf = this.pdf;
     this.ensure(BODY * 5);
     pdf.y += GAP;
-    pdf.save().moveTo(box.x, pdf.y).lineTo(box.x + 120, pdf.y).lineWidth(0.5).strokeColor(TINT.border).stroke().restore();
+    pdf
+      .save()
+      .moveTo(box.x, pdf.y)
+      .lineTo(box.x + 120, pdf.y)
+      .lineWidth(0.5)
+      .strokeColor(TINT.border)
+      .stroke()
+      .restore();
     pdf.y += 6;
     this.flow([{ text: "Notes", bold: true, size: BODY * 0.92 }], box);
     pdf.y += 2;
@@ -768,7 +927,13 @@ class PdfWriter {
       const y = pdf.y;
       this.flow([{ text: `${k}.`, color: PRINT.muted }], { x: box.x, width: 24 });
       pdf.y = y;
-      this.blocks(this.defs.get(id) ?? [], { ...box, x: box.x + 22, width: box.width - 22, color: PRINT.muted, gap: TIGHT });
+      this.blocks(this.defs.get(id) ?? [], {
+        ...box,
+        x: box.x + 22,
+        width: box.width - 22,
+        color: PRINT.muted,
+        gap: TIGHT,
+      });
     }
   }
 
@@ -781,7 +946,11 @@ class PdfWriter {
       // Written below the margin: no new page for it.
       pdf.page.margins.bottom = 0;
       pdf.y = pdf.page.height - 44 - 8;
-      this.flow([{ text: String(i + 1), size: 8.5, color: PRINT.muted }], { x: MARGIN.left, width: pdf.page.width - MARGIN.left - MARGIN.right }, { align: "center", size: 8.5, keep: true });
+      this.flow(
+        [{ text: String(i + 1), size: 8.5, color: PRINT.muted }],
+        { x: MARGIN.left, width: pdf.page.width - MARGIN.left - MARGIN.right },
+        { align: "center", size: 8.5, keep: true },
+      );
     }
   }
 }

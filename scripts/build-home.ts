@@ -9,7 +9,18 @@
 // one — come from `.build/extras.toml`.
 
 import { spawnSync } from "node:child_process";
-import { chmodSync, cpSync, existsSync, mkdirSync, readdirSync, readFileSync, renameSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
+import {
+  chmodSync,
+  cpSync,
+  existsSync,
+  mkdirSync,
+  readdirSync,
+  readFileSync,
+  renameSync,
+  rmSync,
+  symlinkSync,
+  writeFileSync,
+} from "node:fs";
 import { dirname, join, relative, resolve } from "node:path";
 import { parse as parseToml } from "smol-toml";
 
@@ -49,7 +60,11 @@ function filesUnder(dir: string, base = dir): string[] {
 }
 
 function git(cwd: string, args: string[], env: Record<string, string> = {}): string {
-  const r = spawnSync("git", ["-c", "commit.gpgsign=false", "-c", "core.hooksPath=/dev/null", ...args], { cwd, encoding: "utf8", env: { ...process.env, ...env } });
+  const r = spawnSync("git", ["-c", "commit.gpgsign=false", "-c", "core.hooksPath=/dev/null", ...args], {
+    cwd,
+    encoding: "utf8",
+    env: { ...process.env, ...env },
+  });
   if (r.status !== 0) throw new BuildError(`git ${args.join(" ")} (in ${cwd}): ${(r.stderr || r.stdout).trim()}`);
   return r.stdout;
 }
@@ -60,7 +75,14 @@ function who(c: Commit): Record<string, string> {
   const name = m?.[1] || "Sam Rivera";
   const email = m?.[2] || "sam@kestrel.dev";
   const date = c.date ?? "2026-08-15T09:00:00+02:00";
-  return { GIT_AUTHOR_NAME: name, GIT_AUTHOR_EMAIL: email, GIT_AUTHOR_DATE: date, GIT_COMMITTER_NAME: name, GIT_COMMITTER_EMAIL: email, GIT_COMMITTER_DATE: date };
+  return {
+    GIT_AUTHOR_NAME: name,
+    GIT_AUTHOR_EMAIL: email,
+    GIT_AUTHOR_DATE: date,
+    GIT_COMMITTER_NAME: name,
+    GIT_COMMITTER_EMAIL: email,
+    GIT_COMMITTER_DATE: date,
+  };
 }
 
 /**
@@ -128,7 +150,8 @@ export function replay(repo: string, final: string, h: History): { commits: numb
     cpSync(join(final, rel), join(repo, rel));
     untracked.push(rel);
   }
-  if (differs.length) throw new BuildError(`main's last commit differs from the committed folder in ${differs.join(", ")}`);
+  if (differs.length)
+    throw new BuildError(`main's last commit differs from the committed folder in ${differs.join(", ")}`);
   for (const w of h.worktree ?? []) git(repo, ["worktree", "add", "-q", w.path, w.branch]);
   return { commits, untracked };
 }
@@ -180,16 +203,25 @@ export function makeExtras(home: string, extras: Extra[]): string[] {
 }
 
 /** Build the set into `out`: `out/home` (with its repositories' histories) and `out/vault` (halden). */
-export function buildHome(out: string, source = SOURCE, halden = HALDEN): { home: string; vault: string; repos: Record<string, { commits: number; untracked: string[] }>; extras: string[] } {
+export function buildHome(
+  out: string,
+  source = SOURCE,
+  halden = HALDEN,
+): { home: string; vault: string; repos: Record<string, { commits: number; untracked: string[] }>; extras: string[] } {
   const home = join(out, "home");
   const vault = join(out, "vault");
-  if (existsSync(home) || existsSync(vault)) throw new BuildError(`${out} already holds home/ or vault/: build into an empty folder`);
+  if (existsSync(home) || existsSync(vault))
+    throw new BuildError(`${out} already holds home/ or vault/: build into an empty folder`);
   mkdirSync(out, { recursive: true });
   cpSync(source, home, { recursive: true, filter: (src) => relative(source, src) !== ".build" });
   cpSync(halden, vault, { recursive: true });
   const repos: Record<string, { commits: number; untracked: string[] }> = {};
   const build = join(source, ".build");
-  for (const name of existsSync(build) ? readdirSync(build).filter((n) => n.endsWith(".toml") && n !== "extras.toml").sort() : []) {
+  for (const name of existsSync(build)
+    ? readdirSync(build)
+        .filter((n) => n.endsWith(".toml") && n !== "extras.toml")
+        .sort()
+    : []) {
     const repoName = name.replace(/\.toml$/, "");
     const repo = join(home, "work", repoName);
     if (!existsSync(repo)) throw new BuildError(`.build/${name}: no work/${repoName} to give a history`);
@@ -203,7 +235,9 @@ export function buildHome(out: string, source = SOURCE, halden = HALDEN): { home
     }
   }
   const extrasFile = join(build, "extras.toml");
-  const extras = existsSync(extrasFile) ? makeExtras(home, ((parseToml(readFileSync(extrasFile, "utf8")) as { file?: Extra[] }).file ?? [])) : [];
+  const extras = existsSync(extrasFile)
+    ? makeExtras(home, (parseToml(readFileSync(extrasFile, "utf8")) as { file?: Extra[] }).file ?? [])
+    : [];
   return { home, vault, repos, extras };
 }
 
@@ -215,7 +249,8 @@ if (import.meta.main) {
   }
   try {
     const r = buildHome(resolve(out));
-    for (const [name, x] of Object.entries(r.repos)) console.log(`work/${name}: ${x.commits} commits${x.untracked.length ? `, ${x.untracked.length} untracked` : ""}`);
+    for (const [name, x] of Object.entries(r.repos))
+      console.log(`work/${name}: ${x.commits} commits${x.untracked.length ? `, ${x.untracked.length} untracked` : ""}`);
     if (r.extras.length) console.log(`extras: ${r.extras.length}`);
     console.log(`built ${r.home} and ${r.vault}`);
   } catch (err) {
@@ -223,4 +258,3 @@ if (import.meta.main) {
     process.exit(1);
   }
 }
-

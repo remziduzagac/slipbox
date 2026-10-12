@@ -19,7 +19,23 @@ export interface Spot {
 }
 
 /** Rendered text that isn't prose: code, an address, a tag, maths, front matter. */
-const NOT_PROSE = new Set<Role>(["code_inline", "code_block", "code_label", "code_gutter", "wikilink", "embed", "url", "tag", "html", "image", "math", "fm_key", "fm_value", "fm_border", "fm_error"]);
+const NOT_PROSE = new Set<Role>([
+  "code_inline",
+  "code_block",
+  "code_label",
+  "code_gutter",
+  "wikilink",
+  "embed",
+  "url",
+  "tag",
+  "html",
+  "image",
+  "math",
+  "fm_key",
+  "fm_value",
+  "fm_border",
+  "fm_error",
+]);
 
 /** A letter, a mark or a digit: a word that goes on. */
 const WORDISH = /[\p{L}\p{M}\p{N}_]/u;
@@ -33,7 +49,8 @@ function rowSpots(line: Line, row: number, byLine: Map<number, SpellWord[]>): Sp
     for (const w of byLine.get(line.src) ?? []) {
       const from = w.column - 1;
       const hit = cs.filter((k) => k.at! >= from && k.at! < from + w.word.length);
-      if (hit.length) out.push({ row, col: hit[0]!.x, width: hit[hit.length - 1]!.x + hit[hit.length - 1]!.w - hit[0]!.x, word: w });
+      if (hit.length)
+        out.push({ row, col: hit[0]!.x, width: hit[hit.length - 1]!.x + hit[hit.length - 1]!.w - hit[0]!.x, word: w });
     }
     return out;
   }
@@ -87,7 +104,8 @@ export function spellStep(app: App, view: View, dir: 1 | -1): void {
   const { row, col } = view.cur;
   const after = (s: Spot) => s.row > row || (s.row === row && s.col > col);
   const before = (s: Spot) => s.row < row || (s.row === row && s.col + s.width <= col);
-  const next = dir === 1 ? (spots.find(after) ?? spots[0]!) : ([...spots].reverse().find(before) ?? spots[spots.length - 1]!);
+  const next =
+    dir === 1 ? (spots.find(after) ?? spots[0]!) : ([...spots].reverse().find(before) ?? spots[spots.length - 1]!);
   app.pushHistory(view);
   app.moveCursor(view, { row: next.row, col: next.col });
 }
@@ -97,7 +115,9 @@ function spotHere(app: App, view: View): Spot | string {
   const spots = spotsOf(app, view);
   if (typeof spots === "string") return spots;
   const { row, col } = view.cur;
-  return spots.find((s) => s.row === row && col >= s.col && col < s.col + s.width) ?? "no misspelt word under the cursor";
+  return (
+    spots.find((s) => s.row === row && col >= s.col && col < s.col + s.width) ?? "no misspelt word under the cursor"
+  );
 }
 
 /**
@@ -120,7 +140,8 @@ export function spellSuggest(app: App, view: View): void {
     accept: (item) => {
       if (item.data === ADD) return app.addSpellWord(w.word);
       // The text as it was asked of: a word changed since isn't this one any more.
-      if (buf.version !== version || buf.source.slice(w.from, w.to) !== w.word) return app.message("warn", `"${w.word}" changed meanwhile — not replaced`);
+      if (buf.version !== version || buf.source.slice(w.from, w.to) !== w.word)
+        return app.message("warn", `"${w.word}" changed meanwhile — not replaced`);
       buf.edit(w.from, w.to - w.from, item.data as string);
     },
   });

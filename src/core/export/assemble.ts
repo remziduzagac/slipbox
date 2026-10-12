@@ -127,8 +127,14 @@ function* walk(nodes: readonly unknown[]): Generator<RootContent | PhrasingConte
  */
 function landLinks(doc: ExportDoc): void {
   const ids = new Set(doc.chapters.map((ch) => ch.anchor));
-  for (const ch of doc.chapters) for (const n of walk(ch.nodes)) if (n.type === "heading" && (n.data as { anchor?: string } | undefined)?.anchor) ids.add((n.data as { anchor: string }).anchor);
-  for (const ch of doc.chapters) for (const n of walk(ch.nodes)) if (n.type === "link" && n.url.startsWith("#") && !ids.has(n.url.slice(1))) n.url = `#${n.url.slice(1).split("--")[0]}`;
+  for (const ch of doc.chapters)
+    for (const n of walk(ch.nodes))
+      if (n.type === "heading" && (n.data as { anchor?: string } | undefined)?.anchor)
+        ids.add((n.data as { anchor: string }).anchor);
+  for (const ch of doc.chapters)
+    for (const n of walk(ch.nodes))
+      if (n.type === "link" && n.url.startsWith("#") && !ids.has(n.url.slice(1)))
+        n.url = `#${n.url.slice(1).split("--")[0]}`;
 }
 
 /** A frontmatter value as words: a list joined, a date as written. */
@@ -164,7 +170,12 @@ async function blocks(nodes: RootContent[], c: Ctx): Promise<RootContent[]> {
       const svg = await diagram(n.value);
       if (svg) {
         // Drawn; its source kept, for a format that keeps it as written (Markdown).
-        out.push({ type: "paragraph", children: [{ type: "image", url: "", alt: "diagram", data: { picture: { svg, kind: "diagram" }, code: n } } as Image] });
+        out.push({
+          type: "paragraph",
+          children: [
+            { type: "image", url: "", alt: "diagram", data: { picture: { svg, kind: "diagram" }, code: n } } as Image,
+          ],
+        });
         continue;
       }
     } else if (n.type === "math") {
@@ -176,9 +187,10 @@ async function blocks(nodes: RootContent[], c: Ctx): Promise<RootContent[]> {
     } else if (n.type === "footnoteDefinition") {
       n.identifier = footnoteId(n.identifier, c);
       n.children = (await blocks(n.children, c)) as typeof n.children;
-    }
-    else if (n.type === "list") for (const item of n.children) item.children = (await blocks(item.children, c)) as typeof item.children;
-    else if (n.type === "table") for (const row of n.children) for (const cell of row.children) cell.children = await inline(cell.children, c);
+    } else if (n.type === "list")
+      for (const item of n.children) item.children = (await blocks(item.children, c)) as typeof item.children;
+    else if (n.type === "table")
+      for (const row of n.children) for (const cell of row.children) cell.children = await inline(cell.children, c);
     out.push(n);
   }
   return out;
@@ -189,14 +201,26 @@ async function blocks(nodes: RootContent[], c: Ctx): Promise<RootContent[]> {
  * (made ready from where that note is), anything else its text. Null for any other paragraph.
  */
 async function embeds(children: PhrasingContent[], c: Ctx): Promise<RootContent[] | null> {
-  const refs: { target: string; heading: string | null; block: string | null; kind: "embed" | "image"; node: PhrasingContent }[] = [];
+  const refs: {
+    target: string;
+    heading: string | null;
+    block: string | null;
+    kind: "embed" | "image";
+    node: PhrasingContent;
+  }[] = [];
   for (const k of children) {
     if ((k.type as string) === "wikiLink" && (k as unknown as WikiLink).embed) {
       const w = k as unknown as WikiLink;
       refs.push({ target: w.target, heading: w.heading, block: w.block, kind: "embed", node: k });
     } else if (k.type === "image" && /\.(md|markdown)(#|$)/i.test(k.url)) {
       const [target, frag = ""] = k.url.split("#");
-      refs.push({ target: target!, heading: frag && !frag.startsWith("^") ? decodeURIComponent(frag) : null, block: frag.startsWith("^") ? frag.slice(1) : null, kind: "image", node: k });
+      refs.push({
+        target: target!,
+        heading: frag && !frag.startsWith("^") ? decodeURIComponent(frag) : null,
+        block: frag.startsWith("^") ? frag.slice(1) : null,
+        kind: "image",
+        node: k,
+      });
     } else if (!(k.type === "break" || (k.type === "text" && !k.value.trim()))) return null;
   }
   if (!refs.length || !c.rel) return null;
@@ -241,7 +265,12 @@ async function inline(nodes: PhrasingContent[], c: Ctx): Promise<PhrasingContent
     // Maths in a line: typeset too, for a format that shows pictures in a line (HTML, EPUB); the rest write its text.
     if (n.type === "inlineMath") {
       const svg = await maths(n.value, true);
-      if (svg) ((n.data ??= {}) as Record<string, unknown>).picture = { svg, kind: "math", inline: true } satisfies ExportPicture;
+      if (svg)
+        ((n.data ??= {}) as Record<string, unknown>).picture = {
+          svg,
+          kind: "math",
+          inline: true,
+        } satisfies ExportPicture;
       out.push(n);
       continue;
     }
@@ -257,7 +286,11 @@ async function inline(nodes: PhrasingContent[], c: Ctx): Promise<PhrasingContent
       else out.push({ ...n, url: to || n.url, children } satisfies Link);
       continue;
     }
-    if ("children" in n) (n as { children: PhrasingContent[] }).children = await inline((n as { children: PhrasingContent[] }).children, c);
+    if ("children" in n)
+      (n as { children: PhrasingContent[] }).children = await inline(
+        (n as { children: PhrasingContent[] }).children,
+        c,
+      );
     out.push(n);
   }
   return out;
@@ -281,16 +314,28 @@ const CALLOUT = /^\[!([A-Za-z]+)\]([+-])?[ \t]*/;
 function callout(n: Blockquote): void {
   const first = n.children[0];
   const lead = first?.type === "paragraph" ? first.children[0] : undefined;
-  const m = lead?.type === "text" && !(n.data as { literal?: boolean } | undefined)?.literal ? CALLOUT.exec(lead.value) : null;
+  const m =
+    lead?.type === "text" && !(n.data as { literal?: boolean } | undefined)?.literal ? CALLOUT.exec(lead.value) : null;
   if (!m || first?.type !== "paragraph" || lead?.type !== "text") return;
   const kind = m[1]!.toLowerCase();
   const rest = lead.value.slice(m[0].length);
   const nl = rest.indexOf("\n");
   const titleText = (nl >= 0 ? rest.slice(0, nl) : rest).trim();
-  const title: PhrasingContent[] = titleText ? [{ type: "text", value: titleText }, ...(nl >= 0 ? [] : first.children.slice(1))] : [{ type: "text", value: kind[0]!.toUpperCase() + kind.slice(1) }];
-  const body: PhrasingContent[] = nl >= 0 ? [{ type: "text", value: rest.slice(nl + 1) }, ...first.children.slice(1)] : titleText ? [] : first.children.slice(1);
+  const title: PhrasingContent[] = titleText
+    ? [{ type: "text", value: titleText }, ...(nl >= 0 ? [] : first.children.slice(1))]
+    : [{ type: "text", value: kind[0]!.toUpperCase() + kind.slice(1) }];
+  const body: PhrasingContent[] =
+    nl >= 0
+      ? [{ type: "text", value: rest.slice(nl + 1) }, ...first.children.slice(1)]
+      : titleText
+        ? []
+        : first.children.slice(1);
   const bodyText = body.some((k) => k.type !== "text" || k.value.trim());
-  n.children = [{ type: "paragraph", children: [{ type: "strong", children: title }] }, ...(bodyText ? [{ ...first, children: body }] : []), ...n.children.slice(1)];
+  n.children = [
+    { type: "paragraph", children: [{ type: "strong", children: title }] },
+    ...(bodyText ? [{ ...first, children: body }] : []),
+    ...n.children.slice(1),
+  ];
   n.data = { ...(n.data ?? {}), callout: kind, calloutTitled: !!titleText } as typeof n.data;
 }
 
@@ -319,7 +364,9 @@ function wiki(w: WikiLink, c: Ctx): PhrasingContent[] {
   if (w.embed && /\.(png|jpe?g|gif|webp|svg|bmp)$/i.test(w.target)) {
     const m = /^(\d+)(?:x(\d+))?$/.exec(w.alias?.trim() ?? "");
     const size = m ? { width: Number(m[1]), height: m[2] ? Number(m[2]) : null } : null;
-    return [picture({ type: "image", url: w.target, alt: shown.split("/").pop() ?? shown }, { name: w.target, size }, c)];
+    return [
+      picture({ type: "image", url: w.target, alt: shown.split("/").pop() ?? shown }, { name: w.target, size }, c),
+    ];
   }
   const to = w.target ? linkTo(w.target, "wiki", c, w.heading) : `#${headingAnchor(c.anchor, w.heading ?? "")}`;
   const text: Text = { type: "text", value: shown };
@@ -328,16 +375,31 @@ function wiki(w: WikiLink, c: Ctx): PhrasingContent[] {
 
 /** A picture given its file: as the note's pictures are found (12.13); one on the internet, its cached copy, else its
  *  link — an export fetches nothing. A file outside the root is marked so (DF-D24). */
-function picture(n: Image, from: { url: string } | { name: string; size: ExportPicture["size"] }, c: Ctx): PhrasingContent {
-  const found = pictureLocator(c.rel !== null ? c.graph : null, c.rel, c.abs)("url" in from ? { url: from.url } : { name: from.name, size: from.size ?? null });
+function picture(
+  n: Image,
+  from: { url: string } | { name: string; size: ExportPicture["size"] },
+  c: Ctx,
+): PhrasingContent {
+  const found = pictureLocator(
+    c.rel !== null ? c.graph : null,
+    c.rel,
+    c.abs,
+  )("url" in from ? { url: from.url } : { name: from.name, size: from.size ?? null });
   const file = !found || "svg" in found ? null : "file" in found ? found.file : cachedImage(found.url);
   if (!file || !isFile(file)) {
     // Not here: its words, linked where it's on the web (marked a picture's, for a format that keeps it one).
     const text: Text = { type: "text", value: n.alt || n.url };
-    return found && "url" in found && SAFE_SCHEME.test(found.url) ? { type: "link", url: found.url, children: [text], data: { remoteImage: true } } : text;
+    return found && "url" in found && SAFE_SCHEME.test(found.url)
+      ? { type: "link", url: found.url, children: [text], data: { remoteImage: true } }
+      : text;
   }
   const size = "size" in from ? from.size : null;
-  const picture: ExportPicture = found && "url" in found ? { file, size, url: found.url } : landsInside(c.graph.root, file) ? { file, size } : { file, size, outside: true };
+  const picture: ExportPicture =
+    found && "url" in found
+      ? { file, size, url: found.url }
+      : landsInside(c.graph.root, file)
+        ? { file, size }
+        : { file, size, outside: true };
   return { ...n, data: { ...(n.data ?? {}), picture } } as Image;
 }
 

@@ -55,7 +55,12 @@ interface Job {
 }
 
 /** The match nearest a column (0-based), among the line's matches of `re` that `keep` accepts. */
-function nearest(line: string, re: RegExp, col: number, keep: (m: RegExpMatchArray) => boolean): RegExpMatchArray | null {
+function nearest(
+  line: string,
+  re: RegExp,
+  col: number,
+  keep: (m: RegExpMatchArray) => boolean,
+): RegExpMatchArray | null {
   const hits = [...line.matchAll(re)].filter(keep);
   hits.sort((a, b) => Math.abs(a.index! - col) - Math.abs(b.index! - col));
   return hits[0] ?? null;
@@ -87,9 +92,11 @@ export function planConvert(g: Graph, rels?: string[], picks: Map<string, string
     // A reference definition several links share is rewritten once.
     const definitions = new Set<number>();
     // Its wikilinks, read as they were, each resolved by name as it was.
-    for (const l of legacyWikiLinks(text)) wikiJob(g, rel, { ...l, ...g.resolveLegacyWiki(l, rel) }, picks, ambiguous, add, skip);
+    for (const l of legacyWikiLinks(text))
+      wikiJob(g, rel, { ...l, ...g.resolveLegacyWiki(l, rel) }, picks, ambiguous, add, skip);
     for (const l of g.linksOf(rel)) {
-      if ((l.kind === "markdown" || l.kind === "image") && l.target.startsWith("/") && !l.target.startsWith("//")) rootJob(g, rel, l, lines, definitions, add, skip);
+      if ((l.kind === "markdown" || l.kind === "image") && l.target.startsWith("/") && !l.target.startsWith("//"))
+        rootJob(g, rel, l, lines, definitions, add, skip);
     }
     for (const [line, list] of jobs) {
       c.line(
@@ -103,11 +110,17 @@ export function planConvert(g: Graph, rels?: string[], picks: Map<string, string
           for (const j of list) {
             const at = j.locate(before);
             // Not there, or where another of the line's links was found (one gone since): left.
-            if (!at || spans.some((s) => at.from < s.to && s.from < at.to)) c.skipped.push({ shown: rel, line, reason: `${j.shown}: not where the index has it (the file changed since)` });
+            if (!at || spans.some((s) => at.from < s.to && s.from < at.to))
+              c.skipped.push({
+                shown: rel,
+                line,
+                reason: `${j.shown}: not where the index has it (the file changed since)`,
+              });
             else spans.push({ ...at, text: j.make(before.slice(at.from, at.to)) });
           }
           let after = before;
-          for (const s of spans.sort((a, b) => b.from - a.from)) after = after.slice(0, s.from) + s.text + after.slice(s.to);
+          for (const s of spans.sort((a, b) => b.from - a.from))
+            after = after.slice(0, s.from) + s.text + after.slice(s.to);
           return after;
         },
         "the line isn't there any more",
@@ -132,17 +145,37 @@ function legacyWikiLinks(text: string): LinkRef[] {
   const out: LinkRef[] = [];
   visit(parseLegacy(text), (n) => {
     if ((n.type as string) !== "wikiLink") return;
-    const w = n as unknown as WikiLink & { position?: { start: { line: number; column: number }; end: { line: number; column: number } } };
+    const w = n as unknown as WikiLink & {
+      position?: { start: { line: number; column: number }; end: { line: number; column: number } };
+    };
     const start = w.position?.start ?? { line: 1, column: 1 };
     const end = w.position?.end ?? start;
-    out.push({ kind: w.embed ? "embed" : "wiki", target: w.target, heading: w.heading, block: w.block, alias: w.alias, text: w.alias ?? w.value, line: start.line, column: start.column, end: { line: end.line, column: end.column } });
+    out.push({
+      kind: w.embed ? "embed" : "wiki",
+      target: w.target,
+      heading: w.heading,
+      block: w.block,
+      alias: w.alias,
+      text: w.alias ?? w.value,
+      line: start.line,
+      column: start.column,
+      end: { line: end.line, column: end.column },
+    });
     return false;
   });
   return out;
 }
 
 /** A wikilink's replacement, when it can be made: its target as a relative path, its text kept, its fragment checked. */
-function wikiJob(g: Graph, rel: string, l: ResolvedLink, picks: Map<string, string>, ambiguous: Ambiguous[], add: (j: Job) => void, skip: (l: ResolvedLink, reason: string) => void): void {
+function wikiJob(
+  g: Graph,
+  rel: string,
+  l: ResolvedLink,
+  picks: Map<string, string>,
+  ambiguous: Ambiguous[],
+  add: (j: Job) => void,
+  skip: (l: ResolvedLink, reason: string) => void,
+): void {
   const embed = l.kind === "embed";
   const written = `${embed ? "!" : ""}[[${l.target}${l.heading ? `#${l.heading}` : ""}${l.block ? `#^${l.block}` : ""}${l.alias ? `|${l.alias}` : ""}]]`;
   const key = `${rel}:${l.line}:${l.column}`;
@@ -164,7 +197,10 @@ function wikiJob(g: Graph, rel: string, l: ResolvedLink, picks: Map<string, stri
       }
       break;
     default:
-      return skip(l, `${written}: ${l.reason ?? (/\.[A-Za-z0-9]+$/.test(l.target) && !/\.(md|markdown)$/i.test(l.target) ? `no file "${l.target}"` : `no note named "${l.target}"`)} — left as it is`);
+      return skip(
+        l,
+        `${written}: ${l.reason ?? (/\.[A-Za-z0-9]+$/.test(l.target) && !/\.(md|markdown)$/i.test(l.target) ? `no file "${l.target}"` : `no note named "${l.target}"`)} — left as it is`,
+      );
   }
   // The fragment: a heading as its slug, checked to be there; a block as `^id`; a line as `L12`.
   let frag = "";
@@ -205,7 +241,13 @@ function wikiJob(g: Graph, rel: string, l: ResolvedLink, picks: Map<string, stri
       // The parser's own reading of each wikilink on the line, matched against the index's.
       const m = nearest(line, WIKI, l.column - 1, (x) => {
         const w = parseWikiTarget(x[2]!);
-        return (x[1] === "!") === embed && w.target === l.target && w.heading === l.heading && w.block === l.block && w.alias === l.alias;
+        return (
+          (x[1] === "!") === embed &&
+          w.target === l.target &&
+          w.heading === l.heading &&
+          w.block === l.block &&
+          w.alias === l.alias
+        );
       });
       return m ? { from: m.index!, to: m.index! + m[0].length } : null;
     },
@@ -243,7 +285,15 @@ const DEFINITION = /^( {0,3}\[[^\]]+\]:[ \t]*)(<[^>\n]*>|\S+)/;
  * the vault's root. One that names the filesystem's own path means the same anywhere; one that
  * reaches nothing is said.
  */
-function rootJob(g: Graph, rel: string, l: ResolvedLink, lines: string[], definitions: Set<number>, add: (j: Job) => void, skip: (l: ResolvedLink, reason: string) => void): void {
+function rootJob(
+  g: Graph,
+  rel: string,
+  l: ResolvedLink,
+  lines: string[],
+  definitions: Set<number>,
+  add: (j: Job) => void,
+  skip: (l: ResolvedLink, reason: string) => void,
+): void {
   const hash = l.target.indexOf("#");
   const path = hash >= 0 ? l.target.slice(0, hash) : l.target;
   const frag = hash >= 0 ? l.target.slice(hash) : "";
@@ -254,7 +304,12 @@ function rootJob(g: Graph, rel: string, l: ResolvedLink, lines: string[], defini
   // What it meant before: the vault's root first — the file there, by the vault's own spelling.
   const was = g.resolveLink({ kind: "markdown", target: l.target.slice(1) }, "");
   // A root nested in this one has its files by their absolute paths (17.17): under the root too.
-  const reached = (was.resolvedKind === "note" || was.resolvedKind === "file") && was.path ? (isAbsolute(was.path) ? was.path : join(g.root, was.path)) : null;
+  const reached =
+    (was.resolvedKind === "note" || was.resolvedKind === "file") && was.path
+      ? isAbsolute(was.path)
+        ? was.path
+        : join(g.root, was.path)
+      : null;
   if (!reached || !isInside(g.root, reached)) {
     // Else the filesystem's own path, which means the same after; else nothing at all.
     if (existsSync(decoded)) return;

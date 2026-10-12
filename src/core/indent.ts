@@ -55,7 +55,26 @@ export function detectIndent(text: string): { tabs: boolean; size: number } | nu
 
 /** Languages indented with tabs, by extension or file name; with four spaces; the rest with two. */
 const TABS = new Set([".go", ".mk", "makefile", "gnumakefile", ".tsv"]);
-const FOUR = new Set([".py", ".pyi", ".rs", ".java", ".kt", ".kts", ".swift", ".php", ".c", ".h", ".cc", ".cpp", ".cxx", ".hpp", ".hh", ".cs", ".scala", ".dart"]);
+const FOUR = new Set([
+  ".py",
+  ".pyi",
+  ".rs",
+  ".java",
+  ".kt",
+  ".kts",
+  ".swift",
+  ".php",
+  ".c",
+  ".h",
+  ".cc",
+  ".cpp",
+  ".cxx",
+  ".hpp",
+  ".hh",
+  ".cs",
+  ".scala",
+  ".dart",
+]);
 
 /** A language's usual indentation, by the file's extension or name. */
 export function languageIndent(abs: string): { tabs: boolean; size: number } {
@@ -103,7 +122,9 @@ export function globRegex(glob: string): RegExp {
       const end = g.indexOf("]", i + 1);
       if (end > i) {
         const body = g.slice(i + 1, end);
-        out += body.startsWith("!") ? `[^/${body.slice(1).replace(/\\/g, "\\\\")}]` : `[${body.replace(/\\/g, "\\\\")}]`;
+        out += body.startsWith("!")
+          ? `[^/${body.slice(1).replace(/\\/g, "\\\\")}]`
+          : `[${body.replace(/\\/g, "\\\\")}]`;
         i = end + 1;
         continue;
       }
@@ -149,7 +170,10 @@ export function globRegex(glob: string): RegExp {
 const escape = (c: string) => c.replace(/[.*+?^${}()|[\]\\/]/g, "\\$&");
 
 /** One `.editorconfig`: whether it's the root, and its sections — each a glob and its properties, lower-cased. */
-export function parseEditorConfig(text: string): { root: boolean; sections: { glob: string; props: Map<string, string> }[] } {
+export function parseEditorConfig(text: string): {
+  root: boolean;
+  sections: { glob: string; props: Map<string, string> }[];
+} {
   let root = false;
   const sections: { glob: string; props: Map<string, string> }[] = [];
   for (const raw of text.split(/\r?\n/)) {

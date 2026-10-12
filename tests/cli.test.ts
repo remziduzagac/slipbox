@@ -4,7 +4,19 @@
 // process for the finer cases.)
 
 import { afterAll, beforeAll, describe, expect, setDefaultTimeout, test } from "bun:test";
-import { chmodSync, cpSync, existsSync, lstatSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
+import {
+  chmodSync,
+  cpSync,
+  existsSync,
+  lstatSync,
+  mkdirSync,
+  mkdtempSync,
+  readdirSync,
+  readFileSync,
+  rmSync,
+  symlinkSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { basename, join } from "node:path";
 import { CLI_COMMANDS, FLAGS } from "../src/cli/cli.ts";
@@ -42,14 +54,27 @@ interface Run {
   out: string;
   err: string;
   /** The --json envelope, when asked for. */
-  json: { schema: number; ok: boolean; command: string; data: any; error?: { code: number; message: string }; warnings: string[]; stale: string[] };
+  json: {
+    schema: number;
+    ok: boolean;
+    command: string;
+    data: any;
+    error?: { code: number; message: string };
+    warnings: string[];
+    stale: string[];
+  };
 }
 
 function slipbox(args: string[], opts: { stdin?: string; cwd?: string; env?: Record<string, string> } = {}): Run {
   const word = args.find((a) => !a.startsWith("-"));
   if (word && CLI_COMMANDS.has(word)) ran.add(word);
   // A timeout, so a hang (a read that never ends) fails the test instead of the run.
-  const r = Bun.spawnSync(["bun", MAIN, ...args], { cwd: opts.cwd ?? vault, env: { ...env, ...opts.env }, stdin: opts.stdin === undefined ? "ignore" : Buffer.from(opts.stdin), timeout: 20_000 });
+  const r = Bun.spawnSync(["bun", MAIN, ...args], {
+    cwd: opts.cwd ?? vault,
+    env: { ...env, ...opts.env },
+    stdin: opts.stdin === undefined ? "ignore" : Buffer.from(opts.stdin),
+    timeout: 20_000,
+  });
   const out = r.stdout.toString();
   let json = null;
   if (args.includes("--json")) json = JSON.parse(out);
@@ -95,7 +120,12 @@ describe("reading", () => {
     () => {
       for (const args of [["/nope/missing.md"], ["--root", sandbox, "x.md"]]) {
         const cmd = ["bun", MAIN, ...args].map((a) => `'${a}'`).join(" ");
-        const r = Bun.spawnSync(["script", "-qec", cmd, "/dev/null"], { cwd: vault, env, stdin: "ignore", timeout: 20_000 });
+        const r = Bun.spawnSync(["script", "-qec", cmd, "/dev/null"], {
+          cwd: vault,
+          env,
+          stdin: "ignore",
+          timeout: 20_000,
+        });
         const out = r.stdout.toString();
         expect(out).toMatch(/^slipbox: (no such file or directory|.* isn't a root)/m);
         expect(out).not.toContain("    at ");
@@ -123,14 +153,22 @@ describe("links", () => {
     expect(h.data).toMatchObject({ status: "resolved", path: "handbook/operations-handbook.md" });
     expect(h.data.line).toBeGreaterThan(1);
     // A wikilink, by its name within the root (21.3).
-    expect(slipbox(["resolve", "[[operations-handbook]]", "--json"]).json.data).toMatchObject({ status: "resolved", path: "handbook/operations-handbook.md" });
+    expect(slipbox(["resolve", "[[operations-handbook]]", "--json"]).json.data).toMatchObject({
+      status: "resolved",
+      path: "handbook/operations-handbook.md",
+    });
     expect(slipbox(["resolve", "visiting-rota", "--from", "partners-and-names"]).code).toBe(3);
     expect(slipbox(["resolve", "https://example.org/x", "--json"]).json.data.status).toBe("external");
   });
   test("link: a link to a note as slipbox writes one where --from is — the demo's convention, the note's title (21.5)", () => {
     const r = slipbox(["link", "operations-handbook", "--from", "kenji-mori", "--json"]);
     expect(r.code).toBe(0);
-    expect(r.json.data).toMatchObject({ path: "handbook/operations-handbook.md", from: "people/kenji-mori.md", style: "markdown", pathForm: "relative" });
+    expect(r.json.data).toMatchObject({
+      path: "handbook/operations-handbook.md",
+      from: "people/kenji-mori.md",
+      style: "markdown",
+      pathForm: "relative",
+    });
     expect(r.json.data.link).toMatch(/^\[[^\]]+\]\(\.\.\/handbook\/operations-handbook\.md\)$/);
     expect(slipbox(["link", "operations-handbook", "--from", "kenji-mori"]).out).toBe(`${r.json.data.link}\n`);
     expect(slipbox(["link", "no-such-note-anywhere"]).code).toBe(3);
@@ -145,22 +183,36 @@ describe("links", () => {
   });
   test("links and backlinks, with their status", () => {
     const l = slipbox(["links", "partners-and-names", "--json"]).json.data;
-    expect(l.some((x: { target: string; status: string }) => x.target === "visiting-rota.md" && x.status === "unresolved")).toBe(true);
+    expect(
+      l.some((x: { target: string; status: string }) => x.target === "visiting-rota.md" && x.status === "unresolved"),
+    ).toBe(true);
     expect(slipbox(["links", "partners-and-names"]).out).toContain("UNRESOLVED");
     const b = slipbox(["backlinks", "kenji-mori", "--json"]).json.data;
     expect(b.backlinks.map((x: { from: string }) => x.from)).toContain("home.md");
   });
   test("links keeps a web address whole: no file to show, no root; printed as written (DF A7)", () => {
-    const web = slipbox(["links", "partners-and-names", "--json"]).json.data.find((x: { target: string }) => x.target === "https://partners.example.invalid/directory");
-    expect(web).toMatchObject({ status: "external", path: "https://partners.example.invalid/directory", shown: null, root: null, name: null });
-    expect(slipbox(["links", "partners-and-names"]).out).toContain(" https://partners.example.invalid/directory -> https://partners.example.invalid/directory\n");
+    const web = slipbox(["links", "partners-and-names", "--json"]).json.data.find(
+      (x: { target: string }) => x.target === "https://partners.example.invalid/directory",
+    );
+    expect(web).toMatchObject({
+      status: "external",
+      path: "https://partners.example.invalid/directory",
+      shown: null,
+      root: null,
+      name: null,
+    });
+    expect(slipbox(["links", "partners-and-names"]).out).toContain(
+      " https://partners.example.invalid/directory -> https://partners.example.invalid/directory\n",
+    );
   });
   test("links --json gives each link's end, as backlinks gives the same link's", () => {
     type Pos = { line: number; column: number };
     const l = slipbox(["links", "home", "--json"]).json.data as (Pos & { path: string | null; end: Pos })[];
     for (const x of l) expect(x.end).toEqual({ line: expect.any(Number), column: expect.any(Number) });
     const to = l.find((x) => x.path === "people/kenji-mori.md")!;
-    const back = slipbox(["backlinks", "kenji-mori", "--json"]).json.data.backlinks.find((x: Pos & { from: string }) => x.from === "home.md" && x.line === to.line && x.column === to.column);
+    const back = slipbox(["backlinks", "kenji-mori", "--json"]).json.data.backlinks.find(
+      (x: Pos & { from: string }) => x.from === "home.md" && x.line === to.line && x.column === to.column,
+    );
     expect(to.end).toEqual(back.end);
   });
 });
@@ -170,7 +222,8 @@ describe("find and replace", () => {
     const r = slipbox(["spell", "kenji-mori", "--json"]);
     expect(r.code).toBe(0);
     expect(r.json.data).toMatchObject({ path: "people/kenji-mori.md", languages: ["en"], missing: [] });
-    for (const w of r.json.data.words) expect(w).toEqual({ line: expect.any(Number), column: expect.any(Number), word: expect.any(String) });
+    for (const w of r.json.data.words)
+      expect(w).toEqual({ line: expect.any(Number), column: expect.any(Number), word: expect.any(String) });
     expect(slipbox(["spell", "kenji-mori"]).out).toMatch(/^(people\/kenji-mori\.md:\d+:\d+: \S+\n)*$/);
   });
   test("find: the vault or one note; plain by default; regex, whole words, smart case", () => {
@@ -178,8 +231,14 @@ describe("find and replace", () => {
     expect(all.count).toBeGreaterThan(10);
     expect(new Set(all.matches.map((m: { path: string }) => m.path)).size).toBeGreaterThan(3);
     const one = slipbox(["find", "O2[0-9]:", "operations-handbook", "--regex", "--json"]).json.data;
-    expect(one.matches.every((m: { path: string; match: string }) => m.path === "handbook/operations-handbook.md" && /^O2\d:$/.test(m.match))).toBe(true);
-    expect(slipbox(["find", "a.b", "--json"]).json.data.matches.every((m: { match: string }) => m.match === "a.b")).toBe(true); // a literal dot
+    expect(
+      one.matches.every(
+        (m: { path: string; match: string }) => m.path === "handbook/operations-handbook.md" && /^O2\d:$/.test(m.match),
+      ),
+    ).toBe(true);
+    expect(
+      slipbox(["find", "a.b", "--json"]).json.data.matches.every((m: { match: string }) => m.match === "a.b"),
+    ).toBe(true); // a literal dot
     expect(slipbox(["find", "ASTER", "--json"]).json.data.count).toBe(0); // a capital: case-sensitive
     expect(slipbox(["find", "ASTER", "--ignore-case", "--json"]).json.data.count).toBeGreaterThan(all.count); // "master" too
     expect(slipbox(["find", "Aster"]).out).toMatch(/^[\w/.-]+\.md:\d+:\d+: /m);
@@ -189,7 +248,11 @@ describe("find and replace", () => {
     const any = slipbox(["find", "aster", "--ignore-case", "--json"]).json.data;
     expect(whole.count).toBeGreaterThan(0);
     expect(whole.count).toBeLessThan(any.count);
-    expect(whole.matches.every((m: { text: string; match: string }) => new RegExp(`(^|[^\\p{L}\\p{N}_])${m.match}([^\\p{L}\\p{N}_]|$)`, "iu").test(m.text))).toBe(true);
+    expect(
+      whole.matches.every((m: { text: string; match: string }) =>
+        new RegExp(`(^|[^\\p{L}\\p{N}_])${m.match}([^\\p{L}\\p{N}_]|$)`, "iu").test(m.text),
+      ),
+    ).toBe(true);
   });
   test("replace: dry run, all, first, a line range, groups; --if-unchanged refuses a stale sha", () => {
     const before = note("people/kenji-mori.md");
@@ -219,7 +282,9 @@ describe("writing", () => {
     const r = slipbox(["task", "2026-09-14-weekly", String(open.line), "--json"]).json.data;
     expect(r).toMatchObject({ checked: true, changed: true });
     expect(note("meetings/2026-09-14-weekly.md").split("\n")[open.line - 1]).toContain("[x]");
-    expect(slipbox(["task", "2026-09-14-weekly", String(open.line), "--check", "--json"]).json.data.changed).toBe(false);
+    expect(slipbox(["task", "2026-09-14-weekly", String(open.line), "--check", "--json"]).json.data.changed).toBe(
+      false,
+    );
     slipbox(["task", "2026-09-14-weekly", String(open.line), "--uncheck"]);
     expect(note("meetings/2026-09-14-weekly.md").split("\n")[open.line - 1]).toContain("[ ]");
     expect(slipbox(["task", "2026-09-14-weekly", "1"]).code).toBe(3); // no task there
@@ -267,9 +332,26 @@ describe("writing", () => {
     const r = slipbox(["export", "dome-refit"]);
     expect(r.code).toBe(0);
     expect(r.out).toBe("exported projects/dome-refit.md to projects/dome-refit.docx (Word (.docx))\n");
-    expect(readFileSync(join(vault, "projects", "dome-refit.docx")).subarray(0, 4).toString("latin1")).toBe("PK\x03\x04");
-    const j = slipbox(["export", "dome-refit", "pipeline-cookbook", "--to", "word", "-o", "exports/both.docx", "--json"]).json;
-    expect(j.data).toMatchObject({ path: "exports/both.docx", format: "docx", notes: ["projects/dome-refit.md", "software/pipeline-cookbook.md"] });
+    expect(
+      readFileSync(join(vault, "projects", "dome-refit.docx"))
+        .subarray(0, 4)
+        .toString("latin1"),
+    ).toBe("PK\x03\x04");
+    const j = slipbox([
+      "export",
+      "dome-refit",
+      "pipeline-cookbook",
+      "--to",
+      "word",
+      "-o",
+      "exports/both.docx",
+      "--json",
+    ]).json;
+    expect(j.data).toMatchObject({
+      path: "exports/both.docx",
+      format: "docx",
+      notes: ["projects/dome-refit.md", "software/pipeline-cookbook.md"],
+    });
     expect(j.data.bytes).toBe(readFileSync(join(vault, "exports", "both.docx")).length);
     // -o's extension says the format; a folder gets the note's name in it.
     expect(slipbox(["export", "dome-refit", "-o", "exports/upper.DOCX"]).code).toBe(0);
@@ -286,23 +368,42 @@ describe("writing", () => {
   test("export: -o ending in / a folder, made, the note's name in it, its own name no format; never over another root's note", () => {
     const made = slipbox(["export", "dome-refit", "-o", "made/v1.2/", "--json"]);
     expect([made.code, made.json.data.path]).toEqual([0, "made/v1.2/dome-refit.docx"]);
-    expect(readFileSync(join(vault, "made", "v1.2", "dome-refit.docx")).subarray(0, 4).toString("latin1")).toBe("PK\x03\x04");
+    expect(
+      readFileSync(join(vault, "made", "v1.2", "dome-refit.docx"))
+        .subarray(0, 4)
+        .toString("latin1"),
+    ).toBe("PK\x03\x04");
     const other = join(sandbox, "other-root");
     mkdirSync(join(other, ".slipbox"), { recursive: true });
     writeFileSync(join(other, "theirs.md"), "# Theirs\n");
     const over = slipbox(["export", "dome-refit", "-o", join(other, "theirs.md"), "--to", "docx"]);
-    expect([over.code, over.err]).toEqual([5, `slipbox: ${join(other, "theirs.md")} is a note — an export doesn't write over it\n`]);
+    expect([over.code, over.err]).toEqual([
+      5,
+      `slipbox: ${join(other, "theirs.md")} is a note — an export doesn't write over it\n`,
+    ]);
     expect(readFileSync(join(other, "theirs.md"), "utf8")).toBe("# Theirs\n");
   });
   test("export to PDF, a web page, an e-book; Markdown beside it apart from the note, its pictures in a folder, an earlier one replaced", () => {
-    for (const [to, magic] of [["pdf", "%PDF-"], ["html", "<!doctype html>"], ["epub", "PK\x03\x04"]] as const) {
+    for (const [to, magic] of [
+      ["pdf", "%PDF-"],
+      ["html", "<!doctype html>"],
+      ["epub", "PK\x03\x04"],
+    ] as const) {
       const r = slipbox(["export", "dome-refit", "--to", to, "--json"]);
       expect([r.code, r.json.data.path]).toEqual([0, `projects/dome-refit.${to}`]);
-      expect(readFileSync(join(vault, "projects", `dome-refit.${to}`)).subarray(0, magic.length).toString("latin1")).toBe(magic);
+      expect(
+        readFileSync(join(vault, "projects", `dome-refit.${to}`))
+          .subarray(0, magic.length)
+          .toString("latin1"),
+      ).toBe(magic);
     }
     const md = slipbox(["export", "dome-refit", "--to", "markdown"]);
-    expect(md.out).toBe("exported projects/dome-refit.md to projects/dome-refit.export.md (Markdown (.md)), 1 file beside it\n");
-    expect(note("projects/dome-refit.export.md")).toContain("![dome-shutter.png](dome-refit.export.assets/dome-shutter.png)");
+    expect(md.out).toBe(
+      "exported projects/dome-refit.md to projects/dome-refit.export.md (Markdown (.md)), 1 file beside it\n",
+    );
+    expect(note("projects/dome-refit.export.md")).toContain(
+      "![dome-shutter.png](dome-refit.export.assets/dome-shutter.png)",
+    );
     expect(existsSync(join(vault, "projects", "dome-refit.export.assets", "dome-shutter.png"))).toBe(true);
     // Indexed now, a note — and still replaced, being an export.
     const again = slipbox(["export", "dome-refit", "--to", "md", "--json"]);
@@ -346,9 +447,15 @@ describe("the vault and the tool", () => {
       expect(r.err).toContain("`slipbox render <note>`");
     }
     // An unknown flag is a usage error, said as one.
-    expect(slipbox(["home.md", "--bogus"])).toMatchObject({ code: 2, err: expect.stringContaining("unknown option: --bogus") });
+    expect(slipbox(["home.md", "--bogus"])).toMatchObject({
+      code: 2,
+      err: expect.stringContaining("unknown option: --bogus"),
+    });
     // These run the CLI instead, whatever the path.
-    expect(slipbox(["home.md", "--help"])).toMatchObject({ code: 0, out: expect.stringContaining("slipbox find <query>") });
+    expect(slipbox(["home.md", "--help"])).toMatchObject({
+      code: 0,
+      out: expect.stringContaining("slipbox find <query>"),
+    });
     expect(slipbox(["home.md", "--version"]).out).toMatch(/^slipbox \d+\.\d+\.\d+\n$/);
     expect(slipbox(["--json"]).json).toMatchObject({ ok: true, command: "help" });
   });
@@ -363,18 +470,37 @@ describe("the vault and the tool", () => {
       .filter((l) => l.startsWith("slipbox "))
       .map((l) => l.replace(/\s{2,}#.*$/, ""));
     expect(lines.length).toBeGreaterThan(30);
-    const fill: Record<string, string> = { "<note>": "operations-handbook", "[<note>]": "operations-handbook", "<text>": "Aster", "'<text>'": "Aster", "<old>": "Brill", "<new>": "BRILL", "<line>": "1", "<n>": "1", "<sha>": "0123456789abcdef", "<path>": "scratch/skill-example.md" };
+    const fill: Record<string, string> = {
+      "<note>": "operations-handbook",
+      "[<note>]": "operations-handbook",
+      "<text>": "Aster",
+      "'<text>'": "Aster",
+      "<old>": "Brill",
+      "<new>": "BRILL",
+      "<line>": "1",
+      "<n>": "1",
+      "<sha>": "0123456789abcdef",
+      "<path>": "scratch/skill-example.md",
+    };
     // A copy of its own, known only to its own state: another halden in the sandbox's state would
     // make the demo's name ambiguous for the tests after.
     const dir = mkdtempSync(join(sandbox, "skill-"));
     cpSync(DEMO, join(dir, "vault"), { recursive: true });
-    const own = { XDG_STATE_HOME: join(dir, "state"), XDG_CACHE_HOME: join(dir, "cache"), XDG_DATA_HOME: join(dir, "data") };
+    const own = {
+      XDG_STATE_HOME: join(dir, "state"),
+      XDG_CACHE_HOME: join(dir, "cache"),
+      XDG_DATA_HOME: join(dir, "data"),
+    };
     for (const line of lines) {
       // Its words as sh would split them: quotes kept together.
       const words = [...line.matchAll(/'([^']*)'|"([^"]*)"|(\S+)/g)].map((m) => m[1] ?? m[2] ?? m[3]!).slice(1);
       const args = words.map((w) => fill[w] ?? w);
       expect(args.join(" ")).not.toMatch(/<\w+>/); // every placeholder known
-      const r = slipbox(args, { cwd: join(dir, "vault"), env: own, stdin: args.includes("--stdin") ? "x\n" : undefined });
+      const r = slipbox(args, {
+        cwd: join(dir, "vault"),
+        env: own,
+        stdin: args.includes("--stdin") ? "x\n" : undefined,
+      });
       if (r.code === 2) throw new Error(`${line}: a usage error\n${r.err || r.out}`);
     }
   });
@@ -391,14 +517,27 @@ describe("the vault and the tool", () => {
     const made = slipbox(["init", fresh, "--json"]).json.data;
     expect(made).toMatchObject({ created: true, name: null, id: null });
     expect(existsSync(join(fresh, ".slipbox"))).toBe(true);
-    expect(slipbox(["info", "--json"], { cwd: fresh }).json.data).toMatchObject({ root: fresh, name: null, folder: null });
+    expect(slipbox(["info", "--json"], { cwd: fresh }).json.data).toMatchObject({
+      root: fresh,
+      name: null,
+      folder: null,
+    });
     const named = slipbox(["init", fresh, "--name", "clifresh", "--json"]).json.data;
-    expect(named).toMatchObject({ created: false, identified: true, name: "clifresh", id: expect.stringMatching(/^[0-9a-f]{16}$/) });
+    expect(named).toMatchObject({
+      created: false,
+      identified: true,
+      name: "clifresh",
+      id: expect.stringMatching(/^[0-9a-f]{16}$/),
+    });
     expect(slipbox(["info"], { cwd: fresh }).out).toContain("name      clifresh");
     // The vault words are gone (21.12): `folders` lists the named ones.
     expect(slipbox(["vaults"]).code).toBe(2);
     expect(slipbox(["vault-moved"]).code).toBe(2);
-    expect(slipbox(["folders", "--json"]).json.data.some((f: { name: string; default: string }) => f.name === "clifresh" && f.default === fresh)).toBe(true);
+    expect(
+      slipbox(["folders", "--json"]).json.data.some(
+        (f: { name: string; default: string }) => f.name === "clifresh" && f.default === fresh,
+      ),
+    ).toBe(true);
     // Plans waiting to be applied (20.18): a list, maybe empty; one that isn't there, not found.
     expect(Array.isArray(slipbox(["apply", "--json"]).json.data)).toBe(true);
     expect(slipbox(["apply", "00000000", "--json"]).code).toBe(3);
@@ -412,10 +551,18 @@ describe("the vault and the tool", () => {
     const human = slipbox(["info"]).out;
     expect(human).toContain(`root      ${vault} (root`);
     expect(human).toContain("skipped   outreach — nested root");
-    expect(slipbox(["themes", "--json"]).json.data.find((t: { name: string }) => t.name === "tokyo-night")).toMatchObject({ source: "built-in" });
+    expect(
+      slipbox(["themes", "--json"]).json.data.find((t: { name: string }) => t.name === "tokyo-night"),
+    ).toMatchObject({ source: "built-in" });
     // A folder made a root, and a nested root made a plain folder: previews, nothing written.
-    expect(slipbox(["init", "people", "--name", "cli-words-people", "--dry-run", "--json"]).json.data).toMatchObject({ kind: "make-root", dryRun: true });
-    expect(slipbox(["deinit", "outreach", "--dry-run", "--json"]).json.data).toMatchObject({ kind: "unmake-root", dryRun: true });
+    expect(slipbox(["init", "people", "--name", "cli-words-people", "--dry-run", "--json"]).json.data).toMatchObject({
+      kind: "make-root",
+      dryRun: true,
+    });
+    expect(slipbox(["deinit", "outreach", "--dry-run", "--json"]).json.data).toMatchObject({
+      kind: "unmake-root",
+      dryRun: true,
+    });
     // A root's naming, planned: the plans waiting say it as `apply` does.
     const dir = join(sandbox, "cli-words");
     mkdirSync(dir);
@@ -423,13 +570,24 @@ describe("the vault and the tool", () => {
     expect(slipbox(["init", dir, "--name", "cli-words-a"]).code).toBe(0);
     const none = slipbox(["undo", "--json"], { cwd: dir });
     expect(none.code).toBe(3);
-    expect(none.json.error?.message).toBe("nothing to undo: no rename, move, relink or replace has been done in this root");
+    expect(none.json.error?.message).toBe(
+      "nothing to undo: no rename, move, relink or replace has been done in this root",
+    );
     const plan = slipbox(["name", "cli-words-b", "--plan", "--json"], { cwd: dir }).json.data;
     expect(plan).toMatchObject({ kind: "root", from: "cli-words-a", to: "cli-words-b" });
-    expect(slipbox(["apply", "--json"]).json.data.find((p: { id: string }) => p.id === plan.plan.id)).toMatchObject({ kind: "root" });
-    expect(slipbox(["apply", plan.plan.id, "--json"], { cwd: dir }).json.data).toMatchObject({ kind: "root", dryRun: false });
+    expect(slipbox(["apply", "--json"]).json.data.find((p: { id: string }) => p.id === plan.plan.id)).toMatchObject({
+      kind: "root",
+    });
+    expect(slipbox(["apply", plan.plan.id, "--json"], { cwd: dir }).json.data).toMatchObject({
+      kind: "root",
+      dryRun: false,
+    });
     // Applied, the machine's list learns the name, as `name` itself teaches it.
-    expect(slipbox(["folders", "--json"]).json.data.some((f: { name: string; default: string }) => f.name === "cli-words-b" && f.default === dir)).toBe(true);
+    expect(
+      slipbox(["folders", "--json"]).json.data.some(
+        (f: { name: string; default: string }) => f.name === "cli-words-b" && f.default === dir,
+      ),
+    ).toBe(true);
   });
   test("mv, name, relink: a preview, then the change (17.15, 21.10)", () => {
     const dir = join(sandbox, "renames");
@@ -453,11 +611,18 @@ describe("the vault and the tool", () => {
     const rl = slipbox(["relink", "late", "--json"], { cwd: dir }).json;
     expect(rl.data.files[0].edits[0]).toMatchObject({ before: "[plan](notes/plan.md)", after: "[plan](roadmap.md)" });
     // undo (7.4): the newest first — the relink, the vault's name, then the move.
-    expect(slipbox(["undo", "--dry-run"], { cwd: dir }).out).toStartWith("would undo the relink of late.md: 1 change in 1 file\n");
+    expect(slipbox(["undo", "--dry-run"], { cwd: dir }).out).toStartWith(
+      "would undo the relink of late.md: 1 change in 1 file\n",
+    );
     expect(slipbox(["undo"], { cwd: dir }).out).toStartWith("undid the relink of late.md: 1 change in 1 file\n");
     expect(readFileSync(join(dir, "late.md"), "utf8")).toBe("[plan](notes/plan.md)\n");
     expect(slipbox(["undo"], { cwd: dir }).out).toStartWith("renamed folder cliren2 back to cliren: ");
-    expect(slipbox(["undo", "--json"], { cwd: dir }).json.data).toMatchObject({ kind: "note", from: "roadmap.md", to: "notes/plan.md", undo: { at: expect.any(String) } });
+    expect(slipbox(["undo", "--json"], { cwd: dir }).json.data).toMatchObject({
+      kind: "note",
+      from: "roadmap.md",
+      to: "notes/plan.md",
+      undo: { at: expect.any(String) },
+    });
     expect(readFileSync(join(dir, "index.md"), "utf8")).toBe("[plan](notes/plan.md) and [p](notes/plan.md)\n");
     expect(slipbox(["undo"], { cwd: dir }).code).toBe(3); // nothing more
   });
@@ -470,14 +635,20 @@ describe("the vault and the tool", () => {
     const dry = slipbox(["rename-heading", "plan", "Goals", "Aims", "--dry-run"], { cwd: dir });
     expect(dry.out).toContain("would rename heading plan.md#Goals → plan.md#Aims: 2 changes in 2 files");
     expect(dry.out).toContain("+ [the goals](plan.md#aims) and [g](plan.md#aims)");
-    expect(slipbox(["rename-heading", "plan", "Goals", "Aims", "--json"], { cwd: dir }).json.data).toMatchObject({ kind: "heading", dryRun: false });
+    expect(slipbox(["rename-heading", "plan", "Goals", "Aims", "--json"], { cwd: dir }).json.data).toMatchObject({
+      kind: "heading",
+      dryRun: false,
+    });
     expect(readFileSync(join(dir, "plan.md"), "utf8")).toBe("# Plan\n\n## Aims\n");
     expect(readFileSync(join(dir, "index.md"), "utf8")).toBe("[the goals](plan.md#aims) and [g](plan.md#aims)\n");
     expect(slipbox(["rename-heading", "plan", "Nope", "X"], { cwd: dir }).code).toBe(5);
     expect(slipbox(["rename-heading", "plan", "Aims"], { cwd: dir }).code).toBe(2);
   });
   test("doctor: each language's servers and where each is; a file's, in its project (19.7)", () => {
-    const groups = slipbox(["doctor", "--json"]).json.data as { languages: string[]; servers: { name: string; role: string; package: string | null; hint: string | null }[] }[];
+    const groups = slipbox(["doctor", "--json"]).json.data as {
+      languages: string[];
+      servers: { name: string; role: string; package: string | null; hint: string | null }[];
+    }[];
     const ts = groups.find((g) => g.languages.includes("typescript"))!;
     expect(ts.languages).toEqual(["typescript", "tsx", "javascript", "jsx"]);
     expect(ts.servers.map((x) => [x.name, x.role])).toEqual([
@@ -487,7 +658,9 @@ describe("the vault and the tool", () => {
       ["biome", "add-on"],
     ]);
     expect(ts.servers[0]!.package).toBe("typescript@7.0.2");
-    expect(groups.find((g) => g.languages.includes("rust"))!.servers[0]!.hint).toBe("rustup component add rust-analyzer");
+    expect(groups.find((g) => g.languages.includes("rust"))!.servers[0]!.hint).toBe(
+      "rustup component add rust-analyzer",
+    );
     expect(slipbox(["doctor"]).out).toMatch(/^rust\n {2}rust-analyzer +/m);
     writeFileSync(join(vault, "tool.ts"), "export const x = 1;\n");
     const file = slipbox(["doctor", "tool.ts", "--json"]).json.data;
@@ -495,24 +668,40 @@ describe("the vault and the tool", () => {
     expect(file.run[0].name).toBe("typescript");
     expect(slipbox(["doctor", "home.md"]).code).toBe(3); // a note: slipbox itself serves it
     // Linters without a server (19.19): a language's, and for a file whether its project asks for one.
-    const yaml = groups.find((g) => g.languages.includes("yaml")) as unknown as { linters: { name: string; required: boolean; markers: string[] }[] };
-    expect(yaml.linters).toMatchObject([{ name: "yamllint", required: true, markers: [".yamllint", ".yamllint.yaml", ".yamllint.yml"] }]);
-    expect(slipbox(["doctor"]).out).toMatch(/^ {2}yamllint \(linter\) +.*\(where the project has \.yamllint or \.yamllint\.yaml…\)$/m);
+    const yaml = groups.find((g) => g.languages.includes("yaml")) as unknown as {
+      linters: { name: string; required: boolean; markers: string[] }[];
+    };
+    expect(yaml.linters).toMatchObject([
+      { name: "yamllint", required: true, markers: [".yamllint", ".yamllint.yaml", ".yamllint.yml"] },
+    ]);
+    expect(slipbox(["doctor"]).out).toMatch(
+      /^ {2}yamllint \(linter\) +.*\(where the project has \.yamllint or \.yamllint\.yaml…\)$/m,
+    );
     mkdirSync(join(vault, "ops"), { recursive: true });
     writeFileSync(join(vault, "ops", "Dockerfile"), "FROM x\n");
-    expect(slipbox(["doctor", "ops/Dockerfile", "--json"]).json.data.linters).toMatchObject([{ name: "hadolint", root: null }]);
+    expect(slipbox(["doctor", "ops/Dockerfile", "--json"]).json.data.linters).toMatchObject([
+      { name: "hadolint", root: null },
+    ]);
     writeFileSync(join(vault, "ops", ".hadolint.yaml"), "ignored: []\n");
-    expect(slipbox(["doctor", "ops/Dockerfile", "--json"]).json.data.linters).toMatchObject([{ name: "hadolint", root: join(vault, "ops") }]);
+    expect(slipbox(["doctor", "ops/Dockerfile", "--json"]).json.data.linters).toMatchObject([
+      { name: "hadolint", root: join(vault, "ops") },
+    ]);
     expect(slipbox(["doctor", "ops/Dockerfile"]).out).toMatch(/hadolint \(linter\) .*\(runs in .*ops\)/);
   });
   test("diagnostics: a server still at its work when it first answers (rust-analyzer loading) is waited for until it says it's done", () => {
     const dir = join(sandbox, "diag-loading");
     mkdirSync(join(dir, ".git"), { recursive: true });
     const launcher = join(dir, "fake-ls");
-    writeFileSync(launcher, `#!/usr/bin/env node\nawait import(${JSON.stringify(join(import.meta.dir, "fixtures", "fake-lsp.ts"))});\n`);
+    writeFileSync(
+      launcher,
+      `#!/usr/bin/env node\nawait import(${JSON.stringify(join(import.meta.dir, "fixtures", "fake-lsp.ts"))});\n`,
+    );
     chmodSync(launcher, 0o755);
     const cfg = join(dir, "config.toml");
-    writeFileSync(cfg, `[language-server.fake]\ncommand = ${JSON.stringify(launcher)}\nargs = ["--stdio"]\nenvironment = { FAKE_PULL = "1" }\n\n[[language]]\nname = "fake"\nfile-types = ["fk"]\nlanguage-servers = ["fake"]\n`);
+    writeFileSync(
+      cfg,
+      `[language-server.fake]\ncommand = ${JSON.stringify(launcher)}\nargs = ["--stdio"]\nenvironment = { FAKE_PULL = "1" }\n\n[[language]]\nname = "fake"\nfile-types = ["fk"]\nlanguage-servers = ["fake"]\n`,
+    );
     // Asked at once, it has nothing; its loading, begun at once, ends after more than a pause in what it says.
     writeFileSync(join(dir, "a.fk"), "LOADING\nBAD here\n");
     const r = slipbox(["diagnostics", "a.fk", "--config", cfg, "--json"], { cwd: dir });
@@ -523,7 +712,10 @@ describe("the vault and the tool", () => {
     const dir = join(sandbox, "diag");
     mkdirSync(join(dir, ".git"), { recursive: true });
     const launcher = join(dir, "fake-ls");
-    writeFileSync(launcher, `#!/usr/bin/env node\nawait import(${JSON.stringify(join(import.meta.dir, "fixtures", "fake-lsp.ts"))});\n`);
+    writeFileSync(
+      launcher,
+      `#!/usr/bin/env node\nawait import(${JSON.stringify(join(import.meta.dir, "fixtures", "fake-lsp.ts"))});\n`,
+    );
     chmodSync(launcher, 0o755);
     const cfg = join(dir, "config.toml");
     writeFileSync(
@@ -539,7 +731,14 @@ describe("the vault and the tool", () => {
     const r = slipbox(["diagnostics", "a.fk", "--config", cfg, "--json"], { cwd: dir });
     expect(r.code).toBe(1); // the linter's error
     expect(r.json.ok).toBe(true); // it ran: the exit says what it found
-    expect(r.json.data.problems.map((p: { line: number; severity: string; source: string; message: string }) => [p.line, p.severity, p.source, p.message.split(",")[0]])).toEqual([
+    expect(
+      r.json.data.problems.map((p: { line: number; severity: string; source: string; message: string }) => [
+        p.line,
+        p.severity,
+        p.source,
+        p.message.split(",")[0],
+      ]),
+    ).toEqual([
       [2, "warning", "fake", "bad"],
       [3, "error", "todo", "a TODO"],
     ]);
@@ -547,9 +746,14 @@ describe("the vault and the tool", () => {
       { name: "fake", kind: "server", status: "answered" },
       { name: "todo", kind: "linter", status: "ran" },
     ]);
-    expect(slipbox(["diagnostics", "a.fk", "--config", cfg], { cwd: dir }).out).toMatch(/^a\.fk:2:1: warning fake: bad.*\na\.fk:3:1: error todo: a TODO\n$/);
+    expect(slipbox(["diagnostics", "a.fk", "--config", cfg], { cwd: dir }).out).toMatch(
+      /^a\.fk:2:1: warning fake: bad.*\na\.fk:3:1: error todo: a TODO\n$/,
+    );
     // The least severity shown; a clean file is exit 0, nothing printed.
-    expect(slipbox(["diagnostics", "a.fk", "--config", cfg, "--severity", "error", "--json"], { cwd: dir }).json.data.problems).toHaveLength(1);
+    expect(
+      slipbox(["diagnostics", "a.fk", "--config", cfg, "--severity", "error", "--json"], { cwd: dir }).json.data
+        .problems,
+    ).toHaveLength(1);
     writeFileSync(join(dir, "b.fk"), "fine\n");
     expect(slipbox(["diagnostics", "b.fk", "--config", cfg], { cwd: dir })).toMatchObject({ code: 0, out: "" });
     expect(slipbox(["diagnostics", "a.fk", "--severity", "bad"], { cwd: dir }).code).toBe(2);
@@ -576,8 +780,13 @@ describe("the vault and the tool", () => {
     const r = slipbox(["convert-links", "--dry-run", "--json"], { cwd: dir });
     expect(r.code).toBe(0);
     expect(r.json.data).toMatchObject({ kind: "convert", dryRun: true });
-    expect(r.json.data.files.find((f: { path: string }) => f.path === "home.md").edits[0]).toMatchObject({ before: expect.stringContaining("[[about-this-vault]]"), after: expect.stringContaining("[about-this-vault](about-this-vault.md)") });
-    expect(r.json.data.ambiguous).toMatchObject([{ shown: "home.md", written: "[[contacts]]", candidates: ["equipment/contacts.md", "people/contacts.md"] }]);
+    expect(r.json.data.files.find((f: { path: string }) => f.path === "home.md").edits[0]).toMatchObject({
+      before: expect.stringContaining("[[about-this-vault]]"),
+      after: expect.stringContaining("[about-this-vault](about-this-vault.md)"),
+    });
+    expect(r.json.data.ambiguous).toMatchObject([
+      { shown: "home.md", written: "[[contacts]]", candidates: ["equipment/contacts.md", "people/contacts.md"] },
+    ]);
     expect(readFileSync(join(dir, "home.md"), "utf8")).toContain("[[about-this-vault]]"); // nothing written
   });
   test("cp, rm, trash, and mv of a folder (18.x)", () => {
@@ -594,7 +803,10 @@ describe("the vault and the tool", () => {
     expect(readFileSync(join(dir, "work", "plan.md"), "utf8")).toBe("# Plan\n\n[deeper](deep/detail.md)\n");
     expect(existsSync(join(dir, "projects"))).toBe(false);
     // cp: beside it as name-copy, or where told.
-    expect(slipbox(["cp", "work/plan.md", "--json"], { cwd: dir }).json.data).toMatchObject({ from: "work/plan.md", to: "work/plan-copy.md" });
+    expect(slipbox(["cp", "work/plan.md", "--json"], { cwd: dir }).json.data).toMatchObject({
+      from: "work/plan.md",
+      to: "work/plan-copy.md",
+    });
     expect(slipbox(["cp", "work/plan.md", "elsewhere", "--json"], { cwd: dir }).json.data.to).toBe("elsewhere.md");
     expect(slipbox(["cp", "work/plan.md", "elsewhere"], { cwd: dir }).code).toBe(5); // there now
     // rm: to the trash, the links it breaks said; trash lists it; restore puts it back.
@@ -624,10 +836,18 @@ describe("the vault and the tool", () => {
     const vrm = slipbox(["rm", "inner", "--dry-run", "--json"], { cwd: dir }).json;
     expect(vrm.data).toMatchObject({ path: "inner", dryRun: true, breaking: 1 });
     // …and moved as a folder of this vault: the path link fixed.
-    expect(slipbox(["mv", "inner", "box", "--json"], { cwd: dir }).json.data).toMatchObject({ kind: "folder", from: "inner", to: "box" });
+    expect(slipbox(["mv", "inner", "box", "--json"], { cwd: dir }).json.data).toMatchObject({
+      kind: "folder",
+      from: "inner",
+      to: "box",
+    });
     expect(readFileSync(join(dir, "to-inner.md"), "utf8")).toBe("[i](box/note.md)\n");
     // deinit: a plain folder of this vault again (18.11); the path link means the same.
-    expect(slipbox(["deinit", "box", "--json"], { cwd: dir }).json.data).toMatchObject({ kind: "unmake-root", from: "box", to: "fileops" });
+    expect(slipbox(["deinit", "box", "--json"], { cwd: dir }).json.data).toMatchObject({
+      kind: "unmake-root",
+      from: "box",
+      to: "fileops",
+    });
     expect(existsSync(join(dir, "box", ".slipbox"))).toBe(false);
     expect(readFileSync(join(dir, "to-inner.md"), "utf8")).toBe("[i](box/note.md)\n");
   });
@@ -640,19 +860,36 @@ describe("the vault and the tool", () => {
     writeFileSync(join(dir, "ideas", "x.md"), "# X\n");
     expect(slipbox(["init", dir, "--name", "mv-into"]).code).toBe(0);
     // Previewed and planned where it would go: nothing written.
-    expect(slipbox(["mv", "note.md", "ideas/", "--dry-run", "--json"], { cwd: dir }).json.data).toMatchObject({ kind: "note", from: "note.md", to: "ideas/note.md", dryRun: true });
-    expect(slipbox(["mv", "note.md", "ideas", "--plan", "--json"], { cwd: dir }).json.data).toMatchObject({ to: "ideas/note.md", plan: { id: expect.any(String) } });
+    expect(slipbox(["mv", "note.md", "ideas/", "--dry-run", "--json"], { cwd: dir }).json.data).toMatchObject({
+      kind: "note",
+      from: "note.md",
+      to: "ideas/note.md",
+      dryRun: true,
+    });
+    expect(slipbox(["mv", "note.md", "ideas", "--plan", "--json"], { cwd: dir }).json.data).toMatchObject({
+      to: "ideas/note.md",
+      plan: { id: expect.any(String) },
+    });
     expect(existsSync(join(dir, "note.md"))).toBe(true);
     // Moved into it, never renamed beside it; its links, and those to it, fixed.
-    expect(slipbox(["mv", "note.md", "ideas/", "--json"], { cwd: dir }).json.data).toMatchObject({ to: "ideas/note.md", dryRun: false });
+    expect(slipbox(["mv", "note.md", "ideas/", "--json"], { cwd: dir }).json.data).toMatchObject({
+      to: "ideas/note.md",
+      dryRun: false,
+    });
     expect(existsSync(join(dir, "ideas.md"))).toBe(false);
     expect(readFileSync(join(dir, "index.md"), "utf8")).toBe("[n](ideas/note.md)\n");
     expect(readFileSync(join(dir, "ideas", "note.md"), "utf8")).toBe("# Note\n\n[home](../index.md)\n");
     // A folder into a folder; a path ending in / made; `.` the folder you're in, the root a place too.
-    expect(slipbox(["mv", "ideas", "box", "--json"], { cwd: dir }).json.data).toMatchObject({ kind: "folder", from: "ideas", to: "box/ideas" });
+    expect(slipbox(["mv", "ideas", "box", "--json"], { cwd: dir }).json.data).toMatchObject({
+      kind: "folder",
+      from: "ideas",
+      to: "box/ideas",
+    });
     expect(slipbox(["mv", "box/ideas/x.md", "later/", "--json"], { cwd: dir }).json.data.to).toBe("later/x.md");
     expect(slipbox(["mv", "ideas/note.md", ".", "--json"], { cwd: join(dir, "box") }).json.data.to).toBe("box/note.md");
-    expect(slipbox(["mv", "later/x.md", "..", "--json"], { cwd: join(dir, "box", "ideas") }).json.data.to).toBe("box/x.md");
+    expect(slipbox(["mv", "later/x.md", "..", "--json"], { cwd: join(dir, "box", "ideas") }).json.data.to).toBe(
+      "box/x.md",
+    );
     expect(slipbox(["mv", "box/note.md", "./", "--json"], { cwd: dir }).json.data.to).toBe("note.md");
     // A name with no folder there is still a rename.
     expect(slipbox(["mv", "note.md", "renamed", "--json"], { cwd: dir }).json.data.to).toBe("renamed.md");
@@ -692,12 +929,20 @@ describe("the vault and the tool", () => {
     slipbox(["rm", "a.md"], { cwd: dir });
     slipbox(["rm", "box"], { cwd: dir });
     const preview = slipbox(["trash", "empty"], { cwd: dir });
-    expect(preview.out).toMatch(/^removes for good, 2 items:\n {2}\S+ \S+ {2}box\/ {2}\(\S+\)\n {2}\S+ \S+ {2}a\.md {2}\(\S+\)\nnothing removed yet: again with --yes to remove these\n$/);
-    expect(slipbox(["trash", "empty", "--json"], { cwd: dir }).json.data).toMatchObject({ removed: false, items: [{ shown: "box" }, { shown: "a.md" }] });
+    expect(preview.out).toMatch(
+      /^removes for good, 2 items:\n {2}\S+ \S+ {2}box\/ {2}\(\S+\)\n {2}\S+ \S+ {2}a\.md {2}\(\S+\)\nnothing removed yet: again with --yes to remove these\n$/,
+    );
+    expect(slipbox(["trash", "empty", "--json"], { cwd: dir }).json.data).toMatchObject({
+      removed: false,
+      items: [{ shown: "box" }, { shown: "a.md" }],
+    });
     expect(slipbox(["trash", "--json"], { cwd: dir }).json.data).toHaveLength(2); // nothing removed yet
     // --yes: gone for good, the trash's folder too; nothing left to restore.
     const state = slipbox(["info", "--json"], { cwd: dir }).json.data.state as string;
-    expect(slipbox(["trash", "empty", "--yes", "--json"], { cwd: dir }).json.data).toMatchObject({ removed: true, items: [{ shown: "box" }, { shown: "a.md" }] });
+    expect(slipbox(["trash", "empty", "--yes", "--json"], { cwd: dir }).json.data).toMatchObject({
+      removed: true,
+      items: [{ shown: "box" }, { shown: "a.md" }],
+    });
     expect(slipbox(["trash", "--json"], { cwd: dir }).json.data).toEqual([]);
     expect(readdirSync(join(state, "trash"))).toEqual(["trash.json"]);
     expect(slipbox(["trash", "restore", "a.md"], { cwd: dir }).code).toBe(3);
@@ -712,14 +957,24 @@ describe("the vault and the tool", () => {
     expect(all).toContainEqual({ tag: "dome", count: 2 });
     expect(all).toContainEqual({ tag: "dome/shutter", count: 2 });
     const notes = ["projects/dome-refit.md", "projects/variable-star-survey.md"];
-    expect(slipbox(["tags", "#dome/shutter", "--json"], { cwd: DEMO }).json.data).toEqual({ tag: "dome/shutter", notes });
+    expect(slipbox(["tags", "#dome/shutter", "--json"], { cwd: DEMO }).json.data).toEqual({
+      tag: "dome/shutter",
+      notes,
+    });
     expect(slipbox(["tags", "dome/shutter"], { cwd: DEMO }).out).toBe(notes.map((n) => `${n}\n`).join(""));
   });
   test("footnotes: each one's label, text and line, and where it's referred to (3.17)", () => {
-    const r = slipbox(["footnotes", "people/partners-and-names.md", "--json"], { cwd: DEMO }).json.data as { path: string; footnotes: { label: string; line: number; references: { line: number }[] }[] };
+    const r = slipbox(["footnotes", "people/partners-and-names.md", "--json"], { cwd: DEMO }).json.data as {
+      path: string;
+      footnotes: { label: string; line: number; references: { line: number }[] }[];
+    };
     expect(r.path).toBe("people/partners-and-names.md");
     expect(r.footnotes.map((f) => f.label)).toEqual(["1", "charter"]);
-    expect(r.footnotes[0]).toMatchObject({ line: 97, text: "Counted at the Visitor Pavilion door, not from ticket sales.", references: [{ line: 95, column: 42 }] });
+    expect(r.footnotes[0]).toMatchObject({
+      line: 97,
+      text: "Counted at the Visitor Pavilion door, not from ticket sales.",
+      references: [{ line: 95, column: 42 }],
+    });
     expect(slipbox(["footnotes", "people/partners-and-names.md"], { cwd: DEMO }).out).toContain("[charter]  L101");
     expect(slipbox(["footnotes", "software/halley/halley.toml"], { cwd: DEMO }).code).toBe(5); // not a note
   });
@@ -733,10 +988,14 @@ describe("the vault and the tool", () => {
     expect(readFileSync(note, "utf8")).toContain("A claim[^1] here.[^2]");
     slipbox(["footnotes", "fn-cli.md", "edit", "1", "Better source"], { cwd: vault });
     slipbox(["footnotes", "fn-cli.md", "rename", "2", "later"], { cwd: vault });
-    expect(readFileSync(note, "utf8")).toBe("# F\r\n\r\nA claim[^1] here.[^later]\r\n\r\n[^1]: Better source\r\n[^later]: Second\r\n");
+    expect(readFileSync(note, "utf8")).toBe(
+      "# F\r\n\r\nA claim[^1] here.[^later]\r\n\r\n[^1]: Better source\r\n[^later]: Second\r\n",
+    );
     expect(slipbox(["footnotes", "fn-cli.md", "rename", "later", "1"], { cwd: vault }).code).toBe(5); // taken
     expect(slipbox(["footnotes", "fn-cli.md", "rm", "nope"], { cwd: vault }).code).toBe(3);
-    expect(slipbox(["footnotes", "fn-cli.md", "rm", "1", "--if-unchanged", "0000000000000000"], { cwd: vault }).code).toBe(5);
+    expect(
+      slipbox(["footnotes", "fn-cli.md", "rm", "1", "--if-unchanged", "0000000000000000"], { cwd: vault }).code,
+    ).toBe(5);
     slipbox(["footnotes", "fn-cli.md", "rm", "1"], { cwd: vault });
     expect(readFileSync(note, "utf8")).toBe("# F\r\n\r\nA claim here.[^later]\r\n\r\n[^later]: Second\r\n");
   });
@@ -758,16 +1017,27 @@ describe("the vault and the tool", () => {
     const fake = `for f; do case "$f" in *home.md) printf '%s:4:2 error MD013/line-length Line length\\n' "$f";; esac; done; exit 1`;
     writeFileSync(cfg, `[lint]\nenabled = "on"\ncommand = ["sh", "-c", ${JSON.stringify(fake)}, "lint"]\n`);
     const r = slipbox(["problems", "--lint", "--json", "--config", cfg]).json;
-    expect(r.data.lint).toEqual([{ file: "home.md", line: 4, column: 2, rule: "MD013", name: "line-length", description: "Line length" }]);
-    expect(slipbox(["problems", "--lint", "--config", cfg]).out).toContain("lint (1)\n  home.md:4:2  MD013 line-length  Line length\n");
+    expect(r.data.lint).toEqual([
+      { file: "home.md", line: 4, column: 2, rule: "MD013", name: "line-length", description: "Line length" },
+    ]);
+    expect(slipbox(["problems", "--lint", "--config", cfg]).out).toContain(
+      "lint (1)\n  home.md:4:2  MD013 line-length  Line length\n",
+    );
     expect(slipbox(["problems", "--json", "--config", cfg]).json.data.lint).toBeUndefined(); // only when asked
     writeFileSync(cfg, `[lint]\nenabled = "on"\ncommand = ["no-such-linter-slipbox-test"]\n`);
-    expect(slipbox(["problems", "--lint", "--json", "--config", cfg]).json.warnings).toContain("lint: [lint] command couldn't run");
+    expect(slipbox(["problems", "--lint", "--json", "--config", cfg]).json.warnings).toContain(
+      "lint: [lint] command couldn't run",
+    );
     writeFileSync(cfg, `[lint]\nenabled = "off"\n`);
-    expect(slipbox(["problems", "--lint", "--json", "--config", cfg]).json.warnings).toContain('lint is off: [lint] enabled = "off"');
+    expect(slipbox(["problems", "--lint", "--json", "--config", cfg]).json.warnings).toContain(
+      'lint is off: [lint] enabled = "off"',
+    );
     // A vault's committed config can't name the program: its [lint] command is dropped, said so.
     mkdirSync(join(vault, ".slipbox"), { recursive: true });
-    writeFileSync(join(vault, ".slipbox", "config.toml"), '[lint]\nenabled = "on"\ncommand = ["touch", "/tmp/slipbox-evil-lint"]\n');
+    writeFileSync(
+      join(vault, ".slipbox", "config.toml"),
+      '[lint]\nenabled = "on"\ncommand = ["touch", "/tmp/slipbox-evil-lint"]\n',
+    );
     writeFileSync(cfg, "");
     const v = slipbox(["problems", "--json", "--config", cfg]).json;
     expect(v.warnings.some((w: string) => w.includes("lint.command") && w.includes("only your own config"))).toBe(true);
@@ -787,7 +1057,9 @@ describe("the vault and the tool", () => {
     expect(r).toMatchObject({ depth: 1, backlinks: true, limit: 25, chars: r.text.length });
     // Human output is the bundle itself, to pipe to an agent.
     const one = slipbox(["context", "people/kenji-mori.md", "--depth", "0", "--no-backlinks"], { cwd: DEMO }).out;
-    expect(one).toStartWith("# Context: people/kenji-mori.md\n\nThe note: each with its path and lines, fenced as it is on disk.\n\n## people/kenji-mori.md\n\n`people/kenji-mori.md:1-21` — asked for\n\n```markdown\n---\ntitle: Kenji Mori\n");
+    expect(one).toStartWith(
+      "# Context: people/kenji-mori.md\n\nThe note: each with its path and lines, fenced as it is on disk.\n\n## people/kenji-mori.md\n\n`people/kenji-mori.md:1-21` — asked for\n\n```markdown\n---\ntitle: Kenji Mori\n",
+    );
     expect(one.match(/^## /gm)).toHaveLength(1);
     expect(slipbox(["context", "home", "--depth", "9"], { cwd: DEMO }).code).toBe(2);
     expect(slipbox(["context"], { cwd: DEMO }).code).toBe(2);
@@ -797,7 +1069,9 @@ describe("the vault and the tool", () => {
     const c = slipbox(["context", "home", "--copy", "--json", "--config", cfg], { cwd: DEMO }).json.data;
     expect(c.files.map((f: { path: string }) => f.path)).toEqual(["home.md"]);
     expect(readFileSync(c.copied.file, "utf8")).toBe(c.text);
-    expect(slipbox(["context", "home", "--copy", "--config", cfg], { cwd: DEMO }).out).toMatch(/^wrote .*clipboard\.txt: 1 file, \d+ chars\n$/);
+    expect(slipbox(["context", "home", "--copy", "--config", cfg], { cwd: DEMO }).out).toMatch(
+      /^wrote .*clipboard\.txt: 1 file, \d+ chars\n$/,
+    );
     rmSync(cfg);
   });
   test("search: ranked by the words, scanned until `index` builds the index (6.x)", () => {
@@ -806,14 +1080,23 @@ describe("the vault and the tool", () => {
     const scan = slipbox(["search", "dome", "shutter", "--json"], { cwd: dir }).json;
     expect(scan.data.engine).toBe("scan");
     expect(scan.warnings.join()).toContain("slipbox index builds it");
-    expect(slipbox(["index"], { cwd: dir }).out).toMatch(/^search index: \d+ files — \d+ indexed, 0 removed \(\d+ ms\)\n$/);
+    expect(slipbox(["index"], { cwd: dir }).out).toMatch(
+      /^search index: \d+ files — \d+ indexed, 0 removed \(\d+ ms\)\n$/,
+    );
     const r = slipbox(["search", "dome", "shutter", "--json"], { cwd: dir }).json.data;
     expect(r.engine).toBe("index");
     const files = (x: { hits: { path: string }[] }) => x.hits.map((h) => h.path).sort();
     expect(files(r)).toEqual(files(scan.data)); // the same notes, either way
-    expect(r.hits[0]).toMatchObject({ path: "projects/dome-refit.md", line: expect.any(Number), column: expect.any(Number), heading: expect.any(String) });
+    expect(r.hits[0]).toMatchObject({
+      path: "projects/dome-refit.md",
+      line: expect.any(Number),
+      column: expect.any(Number),
+      heading: expect.any(String),
+    });
     // Human output: path:line:column, the section, the line with its words marked.
-    expect(slipbox(["search", "木曽原"], { cwd: dir }).out).toBe("people/partners-and-names.md:84:35  Contacts — - Kiso-Hara Astronomical Society ([木曽原])\n");
+    expect(slipbox(["search", "木曽原"], { cwd: dir }).out).toBe(
+      "people/partners-and-names.md:84:35  Contacts — - Kiso-Hara Astronomical Society ([木曽原])\n",
+    );
     expect(slipbox(["info"], { cwd: dir }).out).toMatch(/\nsearch {4}auto — index: \d+ files\n/);
   });
   test("search's human output: words that meet or overlap marked once", () => {
@@ -825,7 +1108,8 @@ describe("the vault and the tool", () => {
   test("changed, diff, worktrees: this branch against main (5.13, 5.14)", () => {
     const dir = join(sandbox, "gitcli");
     mkdirSync(dir, { recursive: true });
-    const git = (...args: string[]) => Bun.spawnSync(["git", "-c", "user.email=t@example.invalid", "-c", "user.name=t", "-C", dir, ...args]);
+    const git = (...args: string[]) =>
+      Bun.spawnSync(["git", "-c", "user.email=t@example.invalid", "-c", "user.name=t", "-C", dir, ...args]);
     writeFileSync(join(dir, "plan.md"), "# Plan\n\nfirst\n");
     expect(slipbox(["init", dir, "--name", "gitcli"]).code).toBe(0);
     if (git("init", "-q", "-b", "main").exitCode !== 0) return;
@@ -835,11 +1119,15 @@ describe("the vault and the tool", () => {
     writeFileSync(join(dir, "plan.md"), "# Plan\n\nsecond\n");
     expect(slipbox(["changed"], { cwd: dir }).out).toBe("M plan.md\n");
     expect(slipbox(["diff", "plan.md"], { cwd: dir }).out).toBe("@@ line 3\n  # Plan\n  \n- first\n+ second\n");
-    expect(slipbox(["worktrees", "--json"], { cwd: dir }).json.data).toMatchObject([{ path: dir, branch: "feat", main: true, current: true }]);
+    expect(slipbox(["worktrees", "--json"], { cwd: dir }).json.data).toMatchObject([
+      { path: dir, branch: "feat", main: true, current: true },
+    ]);
     expect(slipbox(["changed", "--base", "nope"], { cwd: dir }).code).toBe(3);
     // Before a merge (20.21): what merging feat into main would break — committed work only.
     git("commit", "-q", "-am", "second");
-    expect(slipbox(["merge-review", "feat", "--into", "main"], { cwd: dir }).out).toBe("merging feat into main: no link would break\n");
+    expect(slipbox(["merge-review", "feat", "--into", "main"], { cwd: dir }).out).toBe(
+      "merging feat into main: no link would break\n",
+    );
     // Histories with nothing in common: said so, not as an old git.
     git("checkout", "-q", "--orphan", "lone");
     git("commit", "-q", "-am", "lone");
@@ -852,7 +1140,8 @@ describe("the vault and the tool", () => {
     const top = join(sandbox, "gitbare");
     const src = join(top, "src");
     mkdirSync(src, { recursive: true });
-    const git = (cwd: string, ...args: string[]) => Bun.spawnSync(["git", "-c", "user.email=t@example.invalid", "-c", "user.name=t", "-C", cwd, ...args]);
+    const git = (cwd: string, ...args: string[]) =>
+      Bun.spawnSync(["git", "-c", "user.email=t@example.invalid", "-c", "user.name=t", "-C", cwd, ...args]);
     writeFileSync(join(src, "plan.md"), "# Plan\n");
     if (git(src, "init", "-q", "-b", "main").exitCode !== 0) return;
     git(src, "add", "-A");
@@ -861,7 +1150,10 @@ describe("the vault and the tool", () => {
     const bare = join(top, "repo.git");
     git(bare, "worktree", "add", "-q", join(top, "w-main"), "main");
     git(bare, "worktree", "add", "-q", "-b", "feat", join(top, "w-feat"));
-    const list = slipbox(["worktrees", "--json"], { cwd: join(top, "w-feat") }).json.data as { path: string; main: boolean }[];
+    const list = slipbox(["worktrees", "--json"], { cwd: join(top, "w-feat") }).json.data as {
+      path: string;
+      main: boolean;
+    }[];
     expect(list.map((w) => basename(w.path)).sort()).toEqual(["w-feat", "w-main"]);
     expect(list.map((w) => w.main)).toEqual([false, false]);
   });
@@ -914,7 +1206,17 @@ describe("the vault and the tool", () => {
     rmSync(join(vault, ".slipbox", "config.toml"));
     const state = slipbox(["info", "--json"]).json.data.state;
     mkdirSync(state, { recursive: true }); // keyed by path now the config (and its id) is gone
-    writeFileSync(join(state, "session.json"), JSON.stringify({ version: 1, tabs: [{ panes: [{ path: "home.md", anchor: { heading: null, headingIndex: 0, offset: 0, line: 1 } }], active: 0 }], activeTab: 0, sidebar: true }));
+    writeFileSync(
+      join(state, "session.json"),
+      JSON.stringify({
+        version: 1,
+        tabs: [
+          { panes: [{ path: "home.md", anchor: { heading: null, headingIndex: 0, offset: 0, line: 1 } }], active: 0 },
+        ],
+        activeTab: 0,
+        sidebar: true,
+      }),
+    );
     expect(slipbox(["history", "--json"]).json.data.open).toEqual([["home.md"]]);
     mkdirSync(join(vault, ".hidden"), { recursive: true });
     writeFileSync(join(vault, ".hidden", "note.md"), "hidden text\n");
@@ -938,7 +1240,8 @@ describe("the vault and the tool", () => {
     writeFileSync(join(vault, ".slipbox", "config.toml"), cfg);
     expect(slipbox(["write", ".slipbox/config.toml", "x"]).code).toBe(5);
     expect(readFileSync(join(vault, ".slipbox", "config.toml"), "utf8")).toBe(cfg);
-    for (const bad of [".slipbox/evil", ".git/hooks/x", "node_modules/x", "odd/"]) expect(slipbox(["write", bad, "x", "--create"]).code).toBe(5);
+    for (const bad of [".slipbox/evil", ".git/hooks/x", "node_modules/x", "odd/"])
+      expect(slipbox(["write", bad, "x", "--create"]).code).toBe(5);
     // A dry run previews a note that couldn't be written; a bad --lines is a usage error.
     expect(slipbox(["replace", "home", "Halden", "H", "--lines", "999"]).code).toBe(2);
     expect(slipbox(["replace", "home", "", "H"]).code).toBe(2);
@@ -974,7 +1277,10 @@ describe("the vault and the tool", () => {
     mkdirSync(join(state, "dirty"), { recursive: true });
     writeFileSync(join(state, "dirty", "bad.json"), JSON.stringify({ pid: process.pid }));
     expect(slipbox(["ls"]).code).toBe(0);
-    writeFileSync(join(state, "dirty", `${process.pid}.json`), JSON.stringify({ pid: process.pid, paths: ["home.md"] }));
+    writeFileSync(
+      join(state, "dirty", `${process.pid}.json`),
+      JSON.stringify({ pid: process.pid, paths: ["home.md"] }),
+    );
     const r = slipbox(["ls", "--json"]);
     expect(r.json.stale).toEqual(["home.md"]);
     expect(slipbox(["ls"]).err).toContain("unsaved changes in a running slipbox: home.md");
@@ -990,10 +1296,17 @@ describe("the vault and the tool", () => {
     expect(note("people/kenji-mori.md")).toBe(before);
     writeFileSync(join(vault, "table-end.md"), "| a | b |\n| - | - |\n| 1 | 2 |\n");
     slipbox(["write", "table-end", "A new paragraph.", "--append", "--paragraph"]);
-    expect(readFileSync(join(vault, "table-end.md"), "utf8")).toBe("| a | b |\n| - | - |\n| 1 | 2 |\n\nA new paragraph.\n");
+    expect(readFileSync(join(vault, "table-end.md"), "utf8")).toBe(
+      "| a | b |\n| - | - |\n| 1 | 2 |\n\nA new paragraph.\n",
+    );
     writeFileSync(join(vault, "partial.md"), "Asterion and Aster\n");
     const changes = slipbox(["replace", "partial", "Aster", "Vega", "--dry-run", "--json"]).json.data.changes;
-    expect(changes[0]).toMatchObject({ line: 1, column: 1, text: "Asterion and Aster", textAfter: "Vegaion and Aster" });
+    expect(changes[0]).toMatchObject({
+      line: 1,
+      column: 1,
+      text: "Asterion and Aster",
+      textAfter: "Vegaion and Aster",
+    });
     expect(changes[1]).toMatchObject({ column: 14, textAfter: "Asterion and Vega" });
     const tasks = slipbox(["task", "2026-09-14-weekly", "--json"]).json.data;
     expect(tasks.sha).toMatch(/^[0-9a-f]{16}$/);
@@ -1050,8 +1363,12 @@ describe("the vault and the tool", () => {
     expect(slipbox(["write", "kenji-mori", "", "--append"]).code).toBe(2);
     expect(note("people/kenji-mori.md")).toBe(before);
     expect(slipbox(["read", "contacts", "--json"]).code).toBe(4);
-    expect(slipbox(["read", "contacts", "--from", "people/kenji-mori.md", "--json"]).json.data.path).toBe("people/contacts.md");
-    expect(slipbox(["read", "contacts", "--from", "equipment/instrument-inventory.md", "--json"]).json.data.path).toBe("equipment/contacts.md");
+    expect(slipbox(["read", "contacts", "--from", "people/kenji-mori.md", "--json"]).json.data.path).toBe(
+      "people/contacts.md",
+    );
+    expect(slipbox(["read", "contacts", "--from", "equipment/instrument-inventory.md", "--json"]).json.data.path).toBe(
+      "equipment/contacts.md",
+    );
   });
   test("review cycle 5: flags a command doesn't take are refused; dashes after --; strict stdin", () => {
     const before = note("people/kenji-mori.md");
@@ -1066,7 +1383,11 @@ describe("the vault and the tool", () => {
     expect(dash.err).toContain("after --");
     expect(slipbox(["write", "people/kenji-mori.md", "--append", "--", "- item"]).code).toBe(0);
     expect(note("people/kenji-mori.md").endsWith("- item\n")).toBe(true);
-    const r = Bun.spawnSync(["bun", MAIN, "write", "people/kenji-mori.md", "--stdin"], { cwd: vault, env, stdin: Buffer.from([0xff, 0xfe, 0x20, 0x62]) });
+    const r = Bun.spawnSync(["bun", MAIN, "write", "people/kenji-mori.md", "--stdin"], {
+      cwd: vault,
+      env,
+      stdin: Buffer.from([0xff, 0xfe, 0x20, 0x62]),
+    });
     expect(r.exitCode).toBe(5);
     expect(note("people/kenji-mori.md").endsWith("- item\n")).toBe(true);
   });
@@ -1079,13 +1400,19 @@ describe("the vault and the tool", () => {
     expect(Date.now() - t0).toBeLessThan(10_000);
     writeFileSync(join(vault, "people", "probe.md"), "[a](home.md) and [b](../home.md)\n");
     expect(slipbox(["resolve", "[a](home.md)", "--from", "people/probe.md"]).code).toBe(3);
-    expect(slipbox(["resolve", "[b](../home.md)", "--from", "people/probe.md", "--json"]).json.data.path).toBe("home.md");
+    expect(slipbox(["resolve", "[b](../home.md)", "--from", "people/probe.md", "--json"]).json.data.path).toBe(
+      "home.md",
+    );
     const st = slipbox(["stat", "partners-and-names", "--json"]).json.data;
     expect(st).toMatchObject({ path: "people/partners-and-names.md", title: "Partners and names", invalidUtf8: false });
     expect(st.unresolved).toBeGreaterThan(0);
     expect(st.backlinks).toBeGreaterThan(0);
     const all = slipbox(["links", "--all", "--json"]).json.data;
-    expect(all.some((l: { from: string; status: string }) => l.from === "people/partners-and-names.md" && l.status === "unresolved")).toBe(true);
+    expect(
+      all.some(
+        (l: { from: string; status: string }) => l.from === "people/partners-and-names.md" && l.status === "unresolved",
+      ),
+    ).toBe(true);
     const bl = slipbox(["backlinks", "people/kenji-mori.md", "--json"]).json.data.backlinks;
     expect(bl[0]).toHaveProperty("kind");
     expect(bl[0]).toHaveProperty("target");
@@ -1119,7 +1446,9 @@ describe("the vault and the tool", () => {
     const done = list.tasks.find((t: { checked: boolean }) => t.checked);
     const before = note("meetings/2026-09-14-weekly.md");
     // A stale sha is refused even when the toggle would change nothing.
-    expect(slipbox(["task", "2026-09-14-weekly", String(done.line), "--check", "--if-unchanged", "0000000000000000"]).code).toBe(5);
+    expect(
+      slipbox(["task", "2026-09-14-weekly", String(done.line), "--check", "--if-unchanged", "0000000000000000"]).code,
+    ).toBe(5);
     expect(slipbox(["task", "2026-09-14-weekly", String(done.line), "--check", "--uncheck"]).code).toBe(2);
     expect(note("meetings/2026-09-14-weekly.md")).toBe(before);
     writeFileSync(join(vault, "emoji-col.md"), "🛰️ x needle\n");
@@ -1131,8 +1460,14 @@ describe("the vault and the tool", () => {
     expect(slipbox(["write", "to-empty", "", "--allow-empty"]).code).toBe(0);
     expect(readFileSync(join(vault, "to-empty.md"), "utf8").trim()).toBe("");
     rmSync(join(vault, "to-empty.md"));
-    const plain = Bun.spawnSync(["bun", MAIN, "render", "home", "--color", "always", "--theme", "nord"], { cwd: vault, env }).stdout.toString();
-    const other = Bun.spawnSync(["bun", MAIN, "render", "home", "--color", "always", "--theme", "gruvbox-dark"], { cwd: vault, env }).stdout.toString();
+    const plain = Bun.spawnSync(["bun", MAIN, "render", "home", "--color", "always", "--theme", "nord"], {
+      cwd: vault,
+      env,
+    }).stdout.toString();
+    const other = Bun.spawnSync(["bun", MAIN, "render", "home", "--color", "always", "--theme", "gruvbox-dark"], {
+      cwd: vault,
+      env,
+    }).stdout.toString();
     expect(plain).toContain("\x1b[");
     expect(plain).not.toBe(other); // the theme's colours, not the default's
     // This config's command names no {server}: --server can't apply, and says so.
@@ -1170,7 +1505,10 @@ describe("the vault and the tool", () => {
     expect(slipbox(["find", "needle-py", "--json"]).json.data.count).toBe(0); // notes only…
     expect(slipbox(["find", "needle-py", "--files", "--json"]).json.data.matches[0].path).toBe("tool.py"); // …files with --files
     const ls = slipbox(["ls", "--files", "--json"]).json.data;
-    expect(ls.find((f: { path: string }) => f.path === "cfg/site.toml")).toMatchObject({ group: "data", format: "toml" });
+    expect(ls.find((f: { path: string }) => f.path === "cfg/site.toml")).toMatchObject({
+      group: "data",
+      format: "toml",
+    });
     expect(ls.find((f: { path: string }) => f.path === "tool.py")).toMatchObject({ group: "text", format: "python" });
     expect(ls.some((f: { path: string }) => f.path === "pic.png")).toBe(false);
     expect(slipbox(["ls", "--json"]).json.data.some((f: { path: string }) => f.path === "tool.py")).toBe(false);
@@ -1180,7 +1518,9 @@ describe("the vault and the tool", () => {
     const r = slipbox(["render", "cfg/site.toml", "--plain"]);
     expect(r.code).toBe(0);
     expect(r.out).toMatch(/name\s+Halden Ridge\s+# the observatory/);
-    expect(slipbox(["outline", "cfg/site.toml", "--json"]).json.data.headings.map((h: { text: string }) => h.text)).toEqual(["site"]);
+    expect(
+      slipbox(["outline", "cfg/site.toml", "--json"]).json.data.headings.map((h: { text: string }) => h.text),
+    ).toEqual(["site"]);
     expect(slipbox(["render", "tool.py"]).code).toBe(2);
     // Source code's outline is its definitions, from its grammar (16.8).
     writeFileSync(join(vault, "shape.py"), "class Shape:\n    def area(self):\n        return 0\n");
@@ -1196,13 +1536,24 @@ describe("the vault and the tool", () => {
     rmSync(join(vault, "shape.rs"));
     // Its comments' links count as backlinks (16.10).
     writeFileSync(join(vault, "shape.py"), "# the home note: home.md\nx = 1\n");
-    expect(slipbox(["backlinks", "home", "--json"]).json.data.backlinks.some((b: { from: string }) => b.from === "shape.py")).toBe(true);
+    expect(
+      slipbox(["backlinks", "home", "--json"]).json.data.backlinks.some((b: { from: string }) => b.from === "shape.py"),
+    ).toBe(true);
     rmSync(join(vault, "shape.py"));
     expect(slipbox(["task", "tool.py"]).code).toBe(2);
     // Its links (16.15): a path that resolves, and it shows among the target's backlinks.
     writeFileSync(join(vault, "cfg", "links.yaml"), "docs: ../home.md\nnope: home.md\nname: not-a-link\n"); // relative to the file
-    expect(slipbox(["links", "cfg/links.yaml", "--json"]).json.data.map((l: { target: string; status: string }) => [l.target, l.status])).toEqual([["../home.md", "note"]]);
-    expect(slipbox(["backlinks", "home", "--json"]).json.data.backlinks.some((b: { from: string }) => b.from === "cfg/links.yaml")).toBe(true);
+    expect(
+      slipbox(["links", "cfg/links.yaml", "--json"]).json.data.map((l: { target: string; status: string }) => [
+        l.target,
+        l.status,
+      ]),
+    ).toEqual([["../home.md", "note"]]);
+    expect(
+      slipbox(["backlinks", "home", "--json"]).json.data.backlinks.some(
+        (b: { from: string }) => b.from === "cfg/links.yaml",
+      ),
+    ).toBe(true);
     rmSync(join(vault, "cfg", "links.yaml"));
     writeFileSync(join(vault, "cfg", "bad.json"), '{"a": }');
     expect(slipbox(["render", "cfg/bad.json"]).err).toContain("doesn't parse");
@@ -1234,7 +1585,11 @@ describe("the vault and the tool", () => {
 
   test("types (22.3): each type with its notes and how many break its rules; a type's notes in order; problems lists them (22.2)", () => {
     const dir = mkdtempSync(join(sandbox, "types-"));
-    const env = { XDG_STATE_HOME: join(dir, "state"), XDG_CACHE_HOME: join(dir, "cache"), XDG_DATA_HOME: join(dir, "data") };
+    const env = {
+      XDG_STATE_HOME: join(dir, "state"),
+      XDG_CACHE_HOME: join(dir, "cache"),
+      XDG_DATA_HOME: join(dir, "data"),
+    };
     const root = join(dir, "notes");
     const files: Record<string, string> = {
       ".slipbox/config.toml": '[types.memory]\npaths = ["memory/*.md"]\nrequired = ["name", "description"]\n',
@@ -1250,18 +1605,36 @@ describe("the vault and the tool", () => {
       writeFileSync(join(root, rel), text);
     }
     const all = slipbox(["types", "--json"], { cwd: root, env }).json.data;
-    expect(all.map((t: { name: string; source: string; notes: number; problems: number }) => [t.name, t.source, t.notes, t.problems])).toEqual([
+    expect(
+      all.map((t: { name: string; source: string; notes: number; problems: number }) => [
+        t.name,
+        t.source,
+        t.notes,
+        t.problems,
+      ]),
+    ).toEqual([
       ["adr", "built-in", 3, 0],
       ["memory", "config", 1, 1],
       ["skill", "built-in", 2, 1],
     ]);
     const adr = slipbox(["types", "adr", "--json"], { cwd: root, env }).json.data;
-    expect(adr.notes.map((n: { path: string; title: string; number: number; status: string; supersededBy: string | null }) => [n.number, n.title, n.status, n.supersededBy])).toEqual([
+    expect(
+      adr.notes.map(
+        (n: { path: string; title: string; number: number; status: string; supersededBy: string | null }) => [
+          n.number,
+          n.title,
+          n.status,
+          n.supersededBy,
+        ],
+      ),
+    ).toEqual([
       [1, "Use SQLite", "Accepted", null],
       [2, "Use JSON", "Superseded by [0003](0003-node-sqlite.md)", "docs/adr/0003-node-sqlite.md"],
       [3, "node:sqlite", "Accepted", null],
     ]);
-    expect(slipbox(["types", "adr"], { cwd: root, env }).out).toContain("2  docs/adr/0002-use-json.md  Use JSON  (Superseded by [0003](0003-node-sqlite.md) → docs/adr/0003-node-sqlite.md)\n");
+    expect(slipbox(["types", "adr"], { cwd: root, env }).out).toContain(
+      "2  docs/adr/0002-use-json.md  Use JSON  (Superseded by [0003](0003-node-sqlite.md) → docs/adr/0003-node-sqlite.md)\n",
+    );
     const none = slipbox(["types", "rfc", "--json"], { cwd: root, env });
     expect(none.code).toBe(3);
     expect(none.json.error?.message).toBe('no document type "rfc" here: slipbox types lists them');
@@ -1276,7 +1649,9 @@ describe("the vault and the tool", () => {
   test("upgrade from source (14.4): no releases to follow, said; nothing fetched", () => {
     const r = slipbox(["upgrade", "--json"]);
     expect(r.code).toBe(1);
-    expect(r.json.error?.message).toBe("this slipbox runs from source (or was built by hand): it has no releases to follow — update its checkout");
+    expect(r.json.error?.message).toBe(
+      "this slipbox runs from source (or was built by hand): it has no releases to follow — update its checkout",
+    );
   });
 
   test("every CLI command is run by this file", () => {
@@ -1299,7 +1674,10 @@ describe("review cycle 6 (cli)", () => {
   /** A folder of its own and a state only it knows: what one test names, no other sees. */
   function own(prefix: string): { dir: string; env: Record<string, string> } {
     const dir = mkdtempSync(join(sandbox, prefix));
-    return { dir, env: { XDG_STATE_HOME: join(dir, "state"), XDG_CACHE_HOME: join(dir, "cache"), XDG_DATA_HOME: join(dir, "data") } };
+    return {
+      dir,
+      env: { XDG_STATE_HOME: join(dir, "state"), XDG_CACHE_HOME: join(dir, "cache"), XDG_DATA_HOME: join(dir, "data") },
+    };
   }
   test("--plan where no .slipbox/ is made a plan of: init on a plain folder, name on a repository — exit 2, nothing written", () => {
     const { dir, env } = own("plan-");
@@ -1327,7 +1705,9 @@ describe("review cycle 6 (cli)", () => {
     expect(slipbox(["apply", planned], { cwd: root, env }).code).toBe(0);
     const elsewhere = join(dir, "elsewhere");
     mkdirSync(elsewhere);
-    const names = slipbox(["folders", "--json"], { cwd: elsewhere, env }).json.data.map((f: { name: string }) => f.name);
+    const names = slipbox(["folders", "--json"], { cwd: elsewhere, env }).json.data.map(
+      (f: { name: string }) => f.name,
+    );
     expect(names).toContain(now);
     expect(names).not.toContain(old);
     expect(slipbox(["resolve", `slipbox://${now}/a.md`], { cwd: elsewhere, env }).code).toBe(0);
@@ -1370,11 +1750,16 @@ describe("review cycle 6 (cli)", () => {
     writeFileSync(join(root, "d.md"), "[b](sub/nothere.md)\n");
     writeFileSync(join(root, "nest", "n.md"), "[c](gone.md)\n");
     writeFileSync(join(root, ".hidden", "h.md"), "[e](elsewhere.md)\n");
-    const run = (args: string[], cwd: string) => slipbox(["diagnostics", ...args, "--severity", "hint", "--config", cfg, "--json"], { cwd, env });
+    const run = (args: string[], cwd: string) =>
+      slipbox(["diagnostics", ...args, "--severity", "hint", "--config", cfg, "--json"], { cwd, env });
     const said = (r: Run, target: string) => {
       expect(r.code).toBe(0);
       expect(r.json.data.sources).toContainEqual({ name: "slipbox", kind: "slipbox", status: "ran" });
-      expect(r.json.data.problems.some((p: { source: string; message: string }) => p.source === "slipbox" && p.message.includes(target))).toBe(true);
+      expect(
+        r.json.data.problems.some(
+          (p: { source: string; message: string }) => p.source === "slipbox" && p.message.includes(target),
+        ),
+      ).toBe(true);
     };
     said(run(["root/d.md"], dir), "sub/nothere.md");
     said(run(["d.md", "--root", "root"], dir), "sub/nothere.md");
@@ -1390,10 +1775,19 @@ describe("review cycle 6 (cli)", () => {
     writeFileSync(join(root, "c.md"), "# C\n");
     writeFileSync(join(root, "nest", "x.md"), "# X\n");
     writeFileSync(join(root, ".hidden", "h.md"), "# H\n");
-    expect(slipbox(["link", "nest/x.md", "--from", "c.md"], { cwd: root, env })).toMatchObject({ code: 0, out: "[X](nest/x.md)\n" });
-    expect(slipbox(["link", join(root, "nest", "x.md"), "--from", "c.md"], { cwd: root, env })).toMatchObject({ code: 0, out: "[X](nest/x.md)\n" });
+    expect(slipbox(["link", "nest/x.md", "--from", "c.md"], { cwd: root, env })).toMatchObject({
+      code: 0,
+      out: "[X](nest/x.md)\n",
+    });
+    expect(slipbox(["link", join(root, "nest", "x.md"), "--from", "c.md"], { cwd: root, env })).toMatchObject({
+      code: 0,
+      out: "[X](nest/x.md)\n",
+    });
     // Never reached before: --from's note is the one that says which root this is, not the target.
-    expect(slipbox(["link", ".hidden/h.md", "--from", "c.md"], { cwd: root, env })).toMatchObject({ code: 0, out: "[H](.hidden/h.md)\n" });
+    expect(slipbox(["link", ".hidden/h.md", "--from", "c.md"], { cwd: root, env })).toMatchObject({
+      code: 0,
+      out: "[H](.hidden/h.md)\n",
+    });
   });
   test("review cycle 3: link --from takes a target the walk never takes (node_modules, walk.exclude) by its path", () => {
     const { dir, env } = own("link-excluded-");
@@ -1408,7 +1802,10 @@ describe("review cycle 6 (cli)", () => {
     for (const target of ["node_modules/pkg/README.md", "skip/s.md"]) {
       const plain = slipbox(["link", target], { cwd: root, env });
       expect(plain.code).toBe(0);
-      expect(slipbox(["link", target, "--from", "ok.md"], { cwd: root, env })).toMatchObject({ code: 0, out: plain.out });
+      expect(slipbox(["link", target, "--from", "ok.md"], { cwd: root, env })).toMatchObject({
+        code: 0,
+        out: plain.out,
+      });
     }
   });
   test("review cycle 3: diagnostics runs slipbox's checks on a root note whose name starts with ..", () => {
@@ -1418,10 +1815,17 @@ describe("review cycle 6 (cli)", () => {
     const root = join(dir, "root");
     mkdirSync(join(root, ".slipbox"), { recursive: true });
     writeFileSync(join(root, "..draft.md"), "[x](missing.md)\n");
-    const r = slipbox(["diagnostics", "..draft.md", "--severity", "hint", "--config", cfg, "--json"], { cwd: root, env });
+    const r = slipbox(["diagnostics", "..draft.md", "--severity", "hint", "--config", cfg, "--json"], {
+      cwd: root,
+      env,
+    });
     expect(r.code).toBe(0);
     expect(r.json.data.sources).toContainEqual({ name: "slipbox", kind: "slipbox", status: "ran" });
-    expect(r.json.data.problems.some((p: { source: string; message: string }) => p.source === "slipbox" && p.message.includes("missing.md"))).toBe(true);
+    expect(
+      r.json.data.problems.some(
+        (p: { source: string; message: string }) => p.source === "slipbox" && p.message.includes("missing.md"),
+      ),
+    ).toBe(true);
   });
   test("review cycle 3: --not, vault-moved's, is no option any more", () => {
     const r = slipbox(["ls", "--not"], { cwd: DEMO });
@@ -1481,7 +1885,11 @@ describe("review cycle 6 (cli)", () => {
 describe("review cycle 3 (core, cli)", () => {
   test("name on a folder never named, its [vault] table one the edit can't follow: refused, the file as it was", () => {
     const dir = mkdtempSync(join(sandbox, "name-dotted-"));
-    const xdg = { XDG_STATE_HOME: join(dir, "state"), XDG_CACHE_HOME: join(dir, "cache"), XDG_DATA_HOME: join(dir, "data") };
+    const xdg = {
+      XDG_STATE_HOME: join(dir, "state"),
+      XDG_CACHE_HOME: join(dir, "cache"),
+      XDG_DATA_HOME: join(dir, "data"),
+    };
     const root = join(dir, "root");
     mkdirSync(join(root, ".slipbox"), { recursive: true });
     writeFileSync(join(root, "a.md"), "# A\n");
@@ -1501,7 +1909,13 @@ describe("the CLI's edges: help flags, error paths, empty states", () => {
     const dir = mkdtempSync(join(sandbox, prefix));
     const root = join(dir, "root");
     mkdirSync(join(root, ".slipbox"), { recursive: true });
-    const env = { XDG_STATE_HOME: join(dir, "state"), XDG_CACHE_HOME: join(dir, "cache"), XDG_DATA_HOME: join(dir, "data"), XDG_CONFIG_HOME: join(dir, "config"), SLIPBOX_CONFIG: join(dir, "config", "slipbox", "config.toml") };
+    const env = {
+      XDG_STATE_HOME: join(dir, "state"),
+      XDG_CACHE_HOME: join(dir, "cache"),
+      XDG_DATA_HOME: join(dir, "data"),
+      XDG_CONFIG_HOME: join(dir, "config"),
+      SLIPBOX_CONFIG: join(dir, "config", "slipbox", "config.toml"),
+    };
     return { root, dir, env };
   }
   test("-h after any command is the help, -V the version; --json wraps each", () => {
@@ -1513,7 +1927,11 @@ describe("the CLI's edges: help flags, error paths, empty states", () => {
     const v = slipbox(["ls", "-V"]);
     expect(v.code).toBe(0);
     expect(v.out).toMatch(/^slipbox \d+\.\d+\.\d+\n$/);
-    expect(slipbox(["-V", "--json"]).json).toMatchObject({ ok: true, command: "version", data: { version: v.out.trim().slice("slipbox ".length) } });
+    expect(slipbox(["-V", "--json"]).json).toMatchObject({
+      ok: true,
+      command: "version",
+      data: { version: v.out.trim().slice("slipbox ".length) },
+    });
   });
   test("footnotes: an unknown subcommand, a missing label, text or position, a line not there — usage errors, nothing written", () => {
     const { root, env } = fresh("fn-usage-");
@@ -1535,7 +1953,10 @@ describe("the CLI's edges: help flags, error paths, empty states", () => {
       const r = slipbox(["footnotes", "fn.md", ...args], { cwd: root, env });
       expect(`${args.join(" ")}: ${r.code} ${r.err}`).toBe(`${args.join(" ")}: 2 slipbox: ${message}\n`);
     }
-    expect(slipbox(["footnotes", "fn.md", "frob", "--json"], { cwd: root, env }).json).toMatchObject({ ok: false, error: { code: 2 } });
+    expect(slipbox(["footnotes", "fn.md", "frob", "--json"], { cwd: root, env }).json).toMatchObject({
+      ok: false,
+      error: { code: 2 },
+    });
     expect(readFileSync(join(root, "fn.md"), "utf8")).toBe(text);
   });
   test("replace: --lines out of order, --first with --first-per-line — usage errors; a dry run shows each line before and after", () => {
@@ -1554,7 +1975,9 @@ describe("the CLI's edges: help flags, error paths, empty states", () => {
     expect(readFileSync(join(root, "p.md"), "utf8")).toBe("Asterion and Aster\nnone here\n");
     const dry = slipbox(["replace", "p.md", "Aster", "Vega", "--dry-run"], { cwd: root, env });
     expect(dry.code).toBe(0);
-    expect(dry.out).toBe("would replace 2 in p.md\n1:1: Asterion and Aster\n    → Vegaion and Aster\n1:14: Asterion and Aster\n     → Asterion and Vega\n");
+    expect(dry.out).toBe(
+      "would replace 2 in p.md\n1:1: Asterion and Aster\n    → Vegaion and Aster\n1:14: Asterion and Aster\n     → Asterion and Vega\n",
+    );
     expect(readFileSync(join(root, "p.md"), "utf8")).toBe("Asterion and Aster\nnone here\n");
     expect(slipbox(["replace", "p.md", "Aster", "Vega"], { cwd: root, env }).out).toBe("replaced 2 in p.md\n");
   });
@@ -1577,15 +2000,27 @@ describe("the CLI's edges: help flags, error paths, empty states", () => {
       return p;
     };
     const none = slipbox(["send", "n.md", "--config", cfg("none", "[]")], { cwd: root, env });
-    expect(none).toMatchObject({ code: 1, err: "slipbox: set [editor] remote in the config to send notes to a running editor\n" });
-    const gone = slipbox(["send", "n.md", "--config", cfg("gone", '["slipbox-no-such-editor {file}"]')], { cwd: root, env });
+    expect(none).toMatchObject({
+      code: 1,
+      err: "slipbox: set [editor] remote in the config to send notes to a running editor\n",
+    });
+    const gone = slipbox(["send", "n.md", "--config", cfg("gone", '["slipbox-no-such-editor {file}"]')], {
+      cwd: root,
+      env,
+    });
     expect(gone.code).toBe(1);
     expect(gone.err).toStartWith("slipbox: couldn't start slipbox-no-such-editor");
-    const fails = slipbox(["send", "n.md", "--line", "3", "--config", cfg("fail", '["false {file} {line}"]')], { cwd: root, env });
+    const fails = slipbox(["send", "n.md", "--line", "3", "--config", cfg("fail", '["false {file} {line}"]')], {
+      cwd: root,
+      env,
+    });
     expect(fails).toMatchObject({ code: 1, err: `slipbox: false ${join(root, "n.md")} exited with 1\n` });
     // The nvim preset names a {server}: --server must name one that answers.
     const sock = join(dir, "no-nvim.sock");
-    const r = slipbox(["send", "n.md", "--server", sock, "--config", cfg("nvim", '["nvim"]'), "--json"], { cwd: root, env });
+    const r = slipbox(["send", "n.md", "--server", sock, "--config", cfg("nvim", '["nvim"]'), "--json"], {
+      cwd: root,
+      env,
+    });
     expect(r.code).toBe(3);
     expect(r.json).toMatchObject({ ok: false, error: { code: 3, message: `no nvim answers at ${sock}` } });
   });
@@ -1594,7 +2029,12 @@ describe("the CLI's edges: help flags, error paths, empty states", () => {
     writeFileSync(join(root, "a.md"), "# A\n");
     writeFileSync(join(root, "b.md"), "# B\n");
     expect(slipbox(["history"], { cwd: root, env })).toMatchObject({ code: 0, out: "nothing read in the TUI yet\n" });
-    expect(slipbox(["history", "--json"], { cwd: root, env }).json.data).toEqual({ read: [], open: [], activeTab: null, current: null });
+    expect(slipbox(["history", "--json"], { cwd: root, env }).json.data).toEqual({
+      read: [],
+      open: [],
+      activeTab: null,
+      current: null,
+    });
     const state = slipbox(["info", "--json"], { cwd: root, env }).json.data.state as string;
     mkdirSync(state, { recursive: true });
     writeFileSync(
@@ -1607,9 +2047,25 @@ describe("the CLI's edges: help flags, error paths, empty states", () => {
     const anchor = { heading: null, headingIndex: 0, offset: 0, line: 1 };
     writeFileSync(
       join(state, "session.json"),
-      JSON.stringify({ version: 1, tabs: [{ panes: [{ path: "a.md", anchor }], active: 0 }, { panes: [{ path: "a.md", anchor }, { path: "b.md", anchor }], active: 1 }], activeTab: 1, sidebar: true }),
+      JSON.stringify({
+        version: 1,
+        tabs: [
+          { panes: [{ path: "a.md", anchor }], active: 0 },
+          {
+            panes: [
+              { path: "a.md", anchor },
+              { path: "b.md", anchor },
+            ],
+            active: 1,
+          },
+        ],
+        activeTab: 1,
+        sidebar: true,
+      }),
     );
-    expect(slipbox(["history"], { cwd: root, env }).out).toBe("2026-09-02 10:00  gone.md:7  (deleted)\n2026-09-01 10:00  a.md:2\n");
+    expect(slipbox(["history"], { cwd: root, env }).out).toBe(
+      "2026-09-02 10:00  gone.md:7  (deleted)\n2026-09-01 10:00  a.md:2\n",
+    );
     const h = slipbox(["history", "--json"], { cwd: root, env }).json.data;
     expect(h.read.map((r: { path: string; exists: boolean }) => [r.path, r.exists])).toEqual([
       ["gone.md", false],
@@ -1633,17 +2089,36 @@ describe("the CLI's edges: help flags, error paths, empty states", () => {
     expect(out).toContain("* nord\n");
     expect(out).toContain("  tokyo-night\n");
     expect(out).toContain(`  mine  (${join(themes, "mine.yaml")})\n`);
-    const list = slipbox(["themes", "--json"], { cwd: root, env }).json.data as { name: string; source: string; current: boolean; path?: string }[];
+    const list = slipbox(["themes", "--json"], { cwd: root, env }).json.data as {
+      name: string;
+      source: string;
+      current: boolean;
+      path?: string;
+    }[];
     expect(list.filter((t) => t.current).map((t) => t.name)).toEqual(["nord"]);
-    expect(list.find((t) => t.name === "mine")).toEqual({ name: "mine", source: "user", path: join(themes, "mine.yaml"), current: false });
+    expect(list.find((t) => t.name === "mine")).toEqual({
+      name: "mine",
+      source: "user",
+      path: join(themes, "mine.yaml"),
+      current: false,
+    });
   });
   test("doctor in a root you don't trust (23.8): what it leaves out, said; in one your config trusts, nothing to say", () => {
     const { root, dir, env } = fresh("doctor-trust-");
     writeFileSync(join(root, "Gemfile"), "source 'https://rubygems.org'\n");
     writeFileSync(join(root, "app.rb"), "puts 1\n");
     const j = slipbox(["doctor", "app.rb", "--json"], { cwd: root, env }).json;
-    expect(j.data).toMatchObject({ trusted: false, skipped: [{ name: "ruby-lsp", why: "it runs the project's Gemfile (Bundler)" }] });
-    expect(j.warnings.some((w: string) => w.includes("isn't a root you trust") && w.includes("ruby-lsp not run (it runs the project's Gemfile (Bundler))"))).toBe(true);
+    expect(j.data).toMatchObject({
+      trusted: false,
+      skipped: [{ name: "ruby-lsp", why: "it runs the project's Gemfile (Bundler)" }],
+    });
+    expect(
+      j.warnings.some(
+        (w: string) =>
+          w.includes("isn't a root you trust") &&
+          w.includes("ruby-lsp not run (it runs the project's Gemfile (Bundler))"),
+      ),
+    ).toBe(true);
     const human = slipbox(["doctor", "app.rb"], { cwd: root, env });
     expect(human.out).toContain(`  ${"ruby-lsp".padEnd(28)} not run here: it runs the project's Gemfile (Bundler)\n`);
     // Trusted in your config: run as anywhere, nothing said.
@@ -1668,14 +2143,24 @@ describe("the CLI's edges: help flags, error paths, empty states", () => {
     const r = slipbox(["doctor", "--config", cfg], { cwd: root, env });
     expect(r.err).toContain("slipbox: warning: language servers are off: [lsp] enabled = false\n");
     expect(r.out).not.toContain("slipbox installs");
-    for (const s of off) expect(r.out).toContain(`  ${s.name.padEnd(28)} not found, and installing is off ([lsp] auto_install): ${s.package}`);
+    for (const s of off)
+      expect(r.out).toContain(
+        `  ${s.name.padEnd(28)} not found, and installing is off ([lsp] auto_install): ${s.package}`,
+      );
     // On, nothing to warn of here but the root's trust (said for every root you don't trust, 23.8).
-    expect(slipbox(["doctor", "--json"], { cwd: root, env }).json.warnings.filter((w: string) => !w.includes("isn't a root you trust"))).toEqual([]);
+    expect(
+      slipbox(["doctor", "--json"], { cwd: root, env }).json.warnings.filter(
+        (w: string) => !w.includes("isn't a root you trust"),
+      ),
+    ).toEqual([]);
   });
   test("mkdir: no path is a usage error; an absolute path in the root is made, one outside refused", () => {
     const { root, dir, env } = fresh("mkdir-");
     expect(slipbox(["mkdir"], { cwd: root, env })).toMatchObject({ code: 2, err: "slipbox: missing path\n" });
-    expect(slipbox(["mkdir", join(root, "abs", "deep"), "--json"], { cwd: root, env }).json.data).toEqual({ path: "abs/deep", created: true });
+    expect(slipbox(["mkdir", join(root, "abs", "deep"), "--json"], { cwd: root, env }).json.data).toEqual({
+      path: "abs/deep",
+      created: true,
+    });
     expect(existsSync(join(root, "abs", "deep"))).toBe(true);
     const out = slipbox(["mkdir", join(dir, "beside"), "--json"], { cwd: root, env });
     expect(out.code).toBe(5);
@@ -1695,7 +2180,9 @@ describe("the CLI's edges: help flags, error paths, empty states", () => {
     expect(cp.warnings).toContain("Home.md:3: [[Pie]] reached Recipes/Baking/Pie.md; it reaches Pie.md now");
     const rm = slipbox(["rm", "Pie.md"], { cwd: root, env });
     expect(rm.code).toBe(0);
-    expect(rm.err).toContain("slipbox: warning: Home.md:3: [[Pie]] reached Pie.md; it reaches Recipes/Baking/Pie.md now\n");
+    expect(rm.err).toContain(
+      "slipbox: warning: Home.md:3: [[Pie]] reached Pie.md; it reaches Recipes/Baking/Pie.md now\n",
+    );
     const back = slipbox(["trash", "restore", "Pie.md", "--json"], { cwd: root, env }).json;
     expect(back.warnings).toContain("Home.md:3: [[Pie]] reached Recipes/Baking/Pie.md; it reaches Pie.md now");
     // A name no other note has sends nothing elsewhere: nothing said.
@@ -1706,12 +2193,17 @@ describe("the CLI's edges: help flags, error paths, empty states", () => {
 describe("the launcher (scripts/install-local.sh)", () => {
   test("run inside a repository, it never runs the repository's bunfig.toml preload, nor reads its .env", () => {
     const bin = mkdtempSync(join(sandbox, "bin-"));
-    const made = Bun.spawnSync(["bash", join(import.meta.dir, "..", "scripts", "install-local.sh")], { env: { ...process.env, SLIPBOX_BIN_DIR: bin } });
+    const made = Bun.spawnSync(["bash", join(import.meta.dir, "..", "scripts", "install-local.sh")], {
+      env: { ...process.env, SLIPBOX_BIN_DIR: bin },
+    });
     expect(made.exitCode).toBe(0);
     // A cloned repository: Bun, started in it, would run its preload first and load its .env.
     const repo = mkdtempSync(join(sandbox, "hostile-"));
     const ran = join(repo, "preload-ran");
-    writeFileSync(join(repo, "evil.ts"), `require("node:fs").writeFileSync(${JSON.stringify(ran)}, process.env.SLIPBOX_CONFIG ?? "");\n`);
+    writeFileSync(
+      join(repo, "evil.ts"),
+      `require("node:fs").writeFileSync(${JSON.stringify(ran)}, process.env.SLIPBOX_CONFIG ?? "");\n`,
+    );
     writeFileSync(join(repo, "bunfig.toml"), 'preload = ["./evil.ts"]\n');
     writeFileSync(join(repo, ".env"), `SLIPBOX_CONFIG=${join(repo, "planted.toml")}\n`);
     writeFileSync(join(repo, "planted.toml"), "[ui]\ntheme = 7\n"); // a warning, if it were read
@@ -1725,7 +2217,8 @@ describe("the launcher (scripts/install-local.sh)", () => {
   test("over a release's link it writes a file of its own, never through the link: the release's binary stays (DF-D7)", () => {
     const top = mkdtempSync(join(sandbox, "launcher-over-"));
     const script = join(import.meta.dir, "..", "scripts", "install-local.sh");
-    const run = (bin: string) => Bun.spawnSync(["bash", script], { env: { ...process.env, HOME: top, SLIPBOX_BIN_DIR: bin }, stderr: "pipe" });
+    const run = (bin: string) =>
+      Bun.spawnSync(["bash", script], { env: { ...process.env, HOME: top, SLIPBOX_BIN_DIR: bin }, stderr: "pipe" });
     // The installer's layout: <data>/versions/<v>/slipbox, current → versions/<v>, and the link → <data>/current/slipbox.
     const data = join(top, "data", "slipbox");
     mkdirSync(join(data, "versions", "1.0.0"), { recursive: true });
@@ -1739,7 +2232,9 @@ describe("the launcher (scripts/install-local.sh)", () => {
     expect(readFileSync(join(data, "versions", "1.0.0", "slipbox"), "utf8")).toBe("the release's binary\n");
     expect(lstatSync(join(bin, "slipbox")).isSymbolicLink()).toBe(false);
     expect(readFileSync(join(bin, "slipbox"), "utf8")).toContain("Generated by");
-    expect(made.stdout.toString()).toContain(`replaced the link ${join(bin, "slipbox")} -> ${join(data, "current", "slipbox")} (a release's, which stays installed) with this launcher`);
+    expect(made.stdout.toString()).toContain(
+      `replaced the link ${join(bin, "slipbox")} -> ${join(data, "current", "slipbox")} (a release's, which stays installed) with this launcher`,
+    );
     // Run again over its own file: replaced in place, nothing said of a link.
     const again = run(bin);
     expect(again.exitCode).toBe(0);
@@ -1760,10 +2255,14 @@ describe("the compiled binary", () => {
     const dir = mkdtempSync(join(sandbox, "compiled-"));
     const bin = join(dir, "slipbox");
     // Built by package.json's own build script, its output moved here: what a release would ship.
-    const script = JSON.parse(readFileSync(join(import.meta.dir, "..", "package.json"), "utf8")).scripts.build as string;
+    const script = JSON.parse(readFileSync(join(import.meta.dir, "..", "package.json"), "utf8")).scripts
+      .build as string;
     const argv = script.split(" ").map((a) => (a === "dist/slipbox" ? bin : a));
     expect(argv[0]).toBe("bun");
-    const built = Bun.spawnSync([process.execPath, ...argv.slice(1)], { cwd: join(import.meta.dir, ".."), stderr: "pipe" });
+    const built = Bun.spawnSync([process.execPath, ...argv.slice(1)], {
+      cwd: join(import.meta.dir, ".."),
+      stderr: "pipe",
+    });
     expect(built.exitCode).toBe(0);
     // A folder holding a preload that leaves a mark, and a .env naming a config that picks a theme.
     const work = join(dir, "work");
@@ -1777,7 +2276,9 @@ describe("the compiled binary", () => {
     const r = Bun.spawnSync([bin, "themes", "--json"], { cwd: work, env: rest, timeout: 30_000 });
     expect(r.exitCode).toBe(0);
     expect(existsSync(mark)).toBe(false);
-    const current = (JSON.parse(r.stdout.toString()).data as { name: string; current: boolean }[]).find((t) => t.current);
+    const current = (JSON.parse(r.stdout.toString()).data as { name: string; current: boolean }[]).find(
+      (t) => t.current,
+    );
     expect(current?.name).not.toBe("nord");
     // Its SQLite the runtime's own, there in the binary: a root indexed and searched.
     const root = join(dir, "notes");
@@ -1794,11 +2295,17 @@ describe("the compiled binary", () => {
 describe("distribution (14.x)", () => {
   test("the cache, once anything's cached in it, carries a CACHEDIR.TAG: backup tools skip it (14.9)", () => {
     const dir = mkdtempSync(join(sandbox, "tag-"));
-    const env = { XDG_STATE_HOME: join(dir, "state"), XDG_CACHE_HOME: join(dir, "cache"), XDG_DATA_HOME: join(dir, "data") };
+    const env = {
+      XDG_STATE_HOME: join(dir, "state"),
+      XDG_CACHE_HOME: join(dir, "cache"),
+      XDG_DATA_HOME: join(dir, "data"),
+    };
     const root = join(dir, "notes");
     mkdirSync(join(root, ".slipbox"), { recursive: true });
     writeFileSync(join(root, "a.md"), "# A\n");
     expect(slipbox(["index", "--refresh"], { cwd: root, env }).code).toBe(0);
-    expect(readFileSync(join(dir, "cache", "slipbox", "CACHEDIR.TAG"), "utf8")).toStartWith("Signature: 8a477f597d28d172789f06886806bc55\n");
+    expect(readFileSync(join(dir, "cache", "slipbox", "CACHEDIR.TAG"), "utf8")).toStartWith(
+      "Signature: 8a477f597d28d172789f06886806bc55\n",
+    );
   });
 });

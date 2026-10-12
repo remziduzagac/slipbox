@@ -43,7 +43,10 @@ export interface DictionaryFiles {
   from: "yours" | "slipbox" | "system";
 }
 
-const BUNDLED: Record<string, { aff: string; dic: string }> = { en: { aff: enAff, dic: enDic }, tr: { aff: trAff, dic: trDic } };
+const BUNDLED: Record<string, { aff: string; dic: string }> = {
+  en: { aff: enAff, dic: enDic },
+  tr: { aff: trAff, dic: trDic },
+};
 
 /** The languages slipbox brings a dictionary for. */
 export const BUNDLED_LANGUAGES = Object.keys(BUNDLED);
@@ -73,14 +76,20 @@ function langNames(lang: string): { exact: string; base: string } {
  * `.aff` beside it), else the system's for that very language (`tr_TR` for `tr-TR`), else slipbox's (English, Turkish),
  * else the system's first for its base (`de_DE` for `de`). Null where there's none.
  */
-export function dictionaryFiles(lang: string, yours: Record<string, string>, dirs = systemDictionaryDirs(), home = homedir()): DictionaryFiles | null {
+export function dictionaryFiles(
+  lang: string,
+  yours: Record<string, string>,
+  dirs = systemDictionaryDirs(),
+  home = homedir(),
+): DictionaryFiles | null {
   const { exact, base } = langNames(lang);
   for (const key of [lang, exact, base]) {
     const given = Object.hasOwn(yours, key) ? yours[key] : undefined;
     if (!given) continue;
     const path = given.startsWith("~/") ? join(home, given.slice(2)) : given;
     const stem = path.replace(/\.(dic|aff)$/i, "");
-    if (existsSync(`${stem}.aff`) && existsSync(`${stem}.dic`)) return { aff: `${stem}.aff`, dic: `${stem}.dic`, from: "yours" };
+    if (existsSync(`${stem}.aff`) && existsSync(`${stem}.dic`))
+      return { aff: `${stem}.aff`, dic: `${stem}.dic`, from: "yours" };
   }
   const inDirs = (name: (file: string) => boolean): DictionaryFiles | null => {
     for (const dir of dirs) {
@@ -122,7 +131,10 @@ export function asUtf8(aff: Uint8Array, dic: Uint8Array): { aff: Uint8Array; dic
     return { aff, dic };
   }
   const enc = new TextEncoder();
-  return { aff: enc.encode(decoder.decode(aff).replace(/^SET\s+\S+/m, "SET UTF-8")), dic: enc.encode(decoder.decode(dic)) };
+  return {
+    aff: enc.encode(decoder.decode(aff).replace(/^SET\s+\S+/m, "SET UTF-8")),
+    dic: enc.encode(decoder.decode(dic)),
+  };
 }
 
 let factory: Promise<HunspellFactory> | null = null;
@@ -173,7 +185,12 @@ export function addOwnWord(word: string, file = ownWordsFile()): void {
 /** The languages a note asks for: its front matter's `lang` (one, or a list), else `fallback`. */
 export function noteLanguages(frontmatter: Record<string, unknown> | null | undefined, fallback: string[]): string[] {
   const lang = frontmatter?.lang;
-  const given = typeof lang === "string" ? lang.split(/[\s,]+/) : Array.isArray(lang) ? lang.filter((l): l is string => typeof l === "string") : [];
+  const given =
+    typeof lang === "string"
+      ? lang.split(/[\s,]+/)
+      : Array.isArray(lang)
+        ? lang.filter((l): l is string => typeof l === "string")
+        : [];
   const out = given.map((l) => l.trim()).filter(Boolean);
   return out.length ? out : fallback;
 }
@@ -203,7 +220,8 @@ function checkable(text: string, from: number, to: number): boolean {
   const before = text[from - 1] ?? "";
   const after = text[to] ?? "";
   if (/[\p{N}_/\\]/u.test(before) || /[\p{N}_/\\]/u.test(after)) return false;
-  if ((after === "." && /\p{L}/u.test(text[to + 1] ?? "")) || (before === "." && /\p{L}/u.test(text[from - 2] ?? ""))) return false;
+  if ((after === "." && /\p{L}/u.test(text[to + 1] ?? "")) || (before === "." && /\p{L}/u.test(text[from - 2] ?? "")))
+    return false;
   return true;
 }
 
@@ -272,7 +290,8 @@ export class Checker {
   suggest(word: string): string[] {
     const lists = this.spellers.map((s) => s.suggest(asked(word)));
     const out: string[] = [];
-    for (let k = 0; k < Math.max(0, ...lists.map((l) => l.length)); k++) for (const l of lists) if (l[k] !== undefined && !out.includes(l[k]!)) out.push(l[k]!);
+    for (let k = 0; k < Math.max(0, ...lists.map((l) => l.length)); k++)
+      for (const l of lists) if (l[k] !== undefined && !out.includes(l[k]!)) out.push(l[k]!);
     return out.slice(0, 10);
   }
 }

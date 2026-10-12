@@ -10,7 +10,20 @@ import { dirname, join } from "node:path";
  * What a server is used for, by Helix's names (`only-features`, `except-features`): several servers on
  * one file each do what they're for — the main one everything, a linter's its diagnostics and fixes.
  */
-export type Feature = "diagnostics" | "hover" | "goto-definition" | "goto-type-definition" | "goto-implementation" | "goto-reference" | "document-symbols" | "workspace-symbols" | "completion" | "signature-help" | "rename-symbol" | "code-action" | "format";
+export type Feature =
+  | "diagnostics"
+  | "hover"
+  | "goto-definition"
+  | "goto-type-definition"
+  | "goto-implementation"
+  | "goto-reference"
+  | "document-symbols"
+  | "workspace-symbols"
+  | "completion"
+  | "signature-help"
+  | "rename-symbol"
+  | "code-action"
+  | "format";
 
 /** An add-on's features unless the config says: a linter's. */
 export const ADD_ON_FEATURES: Feature[] = ["diagnostics", "code-action", "format"];
@@ -42,7 +55,12 @@ export interface ServerDef {
    * How it runs in a root you don't trust (23.4): settings over its own and an environment, so it runs
    * nothing of the project's — or, `skip`, why it can't run there at all (it would run the project's code).
    */
-  untrusted?: { settings?: (root: string) => Record<string, unknown>; initOptions?: unknown; environment?: Record<string, string>; skip?: (root: string) => string | null };
+  untrusted?: {
+    settings?: (root: string) => Record<string, unknown>;
+    initOptions?: unknown;
+    environment?: Record<string, string>;
+    skip?: (root: string) => string | null;
+  };
 }
 
 /** rust-analyzer without the project's code: no build scripts, no proc macros, no `cargo check` on save. */
@@ -54,7 +72,9 @@ export function venvPackages(root: string): string[] {
   for (const v of [".venv", "venv"]) {
     const lib = join(root, v, "lib");
     try {
-      for (const d of readdirSync(lib)) if (d.startsWith("python") && existsSync(join(lib, d, "site-packages"))) out.push(join(lib, d, "site-packages"));
+      for (const d of readdirSync(lib))
+        if (d.startsWith("python") && existsSync(join(lib, d, "site-packages")))
+          out.push(join(lib, d, "site-packages"));
     } catch {}
   }
   return out;
@@ -99,33 +119,160 @@ export function does(def: ServerDef, lang: LanguageDef, feature: Feature): boole
 }
 
 const ESLINT_CONFIGS = [
-  "eslint.config.js", "eslint.config.mjs", "eslint.config.cjs", "eslint.config.ts", "eslint.config.mts", "eslint.config.cts",
-  ".eslintrc", ".eslintrc.js", ".eslintrc.cjs", ".eslintrc.json", ".eslintrc.yaml", ".eslintrc.yml", "package.json:\"eslintConfig\"",
+  "eslint.config.js",
+  "eslint.config.mjs",
+  "eslint.config.cjs",
+  "eslint.config.ts",
+  "eslint.config.mts",
+  "eslint.config.cts",
+  ".eslintrc",
+  ".eslintrc.js",
+  ".eslintrc.cjs",
+  ".eslintrc.json",
+  ".eslintrc.yaml",
+  ".eslintrc.yml",
+  'package.json:"eslintConfig"',
 ];
-const STYLELINT_CONFIGS = [".stylelintrc", ".stylelintrc.json", ".stylelintrc.yaml", ".stylelintrc.yml", ".stylelintrc.js", ".stylelintrc.cjs", ".stylelintrc.mjs", "stylelint.config.js", "stylelint.config.cjs", "stylelint.config.mjs", "package.json:\"stylelint\""];
+const STYLELINT_CONFIGS = [
+  ".stylelintrc",
+  ".stylelintrc.json",
+  ".stylelintrc.yaml",
+  ".stylelintrc.yml",
+  ".stylelintrc.js",
+  ".stylelintrc.cjs",
+  ".stylelintrc.mjs",
+  "stylelint.config.js",
+  "stylelint.config.cjs",
+  "stylelint.config.mjs",
+  'package.json:"stylelint"',
+];
 const EXTRACTED = { package: "vscode-langservers-extracted", version: "4.10.0" };
 
 export const SERVERS: Record<string, ServerDef> = {
   // TypeScript 7 is native, its server built in: the project's own when it has one (19.4), else installed.
-  typescript: { name: "typescript", command: "tsc", args: ["--lsp", "--stdio"], npm: { package: "typescript", version: "7.0.2", bin: "tsc" }, when: (root) => !olderTypeScript(root), ownOnly: true },
+  typescript: {
+    name: "typescript",
+    command: "tsc",
+    args: ["--lsp", "--stdio"],
+    npm: { package: "typescript", version: "7.0.2", bin: "tsc" },
+    when: (root) => !olderTypeScript(root),
+    ownOnly: true,
+  },
   // A project on TypeScript 6 or older: vtsls, its own TypeScript bundled.
-  vtsls: { name: "vtsls", command: "vtsls", args: ["--stdio"], npm: { package: "@vtsls/language-server", version: "0.3.0", bin: "vtsls" }, untrusted: { settings: () => ({ vtsls: { autoUseWorkspaceTsdk: false } }) } },
-  pyright: { name: "pyright", command: "pyright-langserver", args: ["--stdio"], npm: { package: "pyright", version: "1.1.414", bin: "pyright-langserver" }, config: { python: { analysis: { autoSearchPaths: true, useLibraryCodeForTypes: true, diagnosticMode: "openFilesOnly" } } }, untrusted: { settings: (root) => ({ python: { analysis: { extraPaths: venvPackages(root) } } }) } },
-  "rust-analyzer": { name: "rust-analyzer", command: "rust-analyzer", args: [], hint: "rustup component add rust-analyzer", untrusted: { settings: () => ({ "rust-analyzer": RUST_SAFE }), initOptions: RUST_SAFE } },
+  vtsls: {
+    name: "vtsls",
+    command: "vtsls",
+    args: ["--stdio"],
+    npm: { package: "@vtsls/language-server", version: "0.3.0", bin: "vtsls" },
+    untrusted: { settings: () => ({ vtsls: { autoUseWorkspaceTsdk: false } }) },
+  },
+  pyright: {
+    name: "pyright",
+    command: "pyright-langserver",
+    args: ["--stdio"],
+    npm: { package: "pyright", version: "1.1.414", bin: "pyright-langserver" },
+    config: {
+      python: { analysis: { autoSearchPaths: true, useLibraryCodeForTypes: true, diagnosticMode: "openFilesOnly" } },
+    },
+    untrusted: { settings: (root) => ({ python: { analysis: { extraPaths: venvPackages(root) } } }) },
+  },
+  "rust-analyzer": {
+    name: "rust-analyzer",
+    command: "rust-analyzer",
+    args: [],
+    hint: "rustup component add rust-analyzer",
+    untrusted: { settings: () => ({ "rust-analyzer": RUST_SAFE }), initOptions: RUST_SAFE },
+  },
   // No toolchain a go.mod names downloaded and run, no cgo directives (pkg-config).
-  gopls: { name: "gopls", command: "gopls", args: [], hint: "go install golang.org/x/tools/gopls@latest", untrusted: { environment: { GOTOOLCHAIN: "local", CGO_ENABLED: "0" } } },
-  "lua-language-server": { name: "lua-language-server", command: "lua-language-server", args: [], hint: "your package manager (brew install lua-language-server)", untrusted: { skip: (root) => (luaPlugin(root) ? "its .luarc names a plugin, which runs as code" : null) } },
-  "bash-language-server": { name: "bash-language-server", command: "bash-language-server", args: ["start"], npm: { package: "bash-language-server", version: "5.8.1", bin: "bash-language-server" } },
-  "vscode-json-language-server": { name: "vscode-json-language-server", command: "vscode-json-language-server", args: ["--stdio"], npm: { ...EXTRACTED, bin: "vscode-json-language-server" }, config: { json: { validate: { enable: true } } }, initOptions: { provideFormatter: true } },
-  "yaml-language-server": { name: "yaml-language-server", command: "yaml-language-server", args: ["--stdio"], npm: { package: "yaml-language-server", version: "1.24.0", bin: "yaml-language-server" }, config: { redhat: { telemetry: { enabled: false } }, yaml: { validate: true } } },
-  taplo: { name: "taplo", command: "taplo", args: ["lsp", "stdio"], hint: "cargo install taplo-cli --locked --features lsp, or brew install taplo" },
-  "vscode-css-language-server": { name: "vscode-css-language-server", command: "vscode-css-language-server", args: ["--stdio"], npm: { ...EXTRACTED, bin: "vscode-css-language-server" }, config: { css: { validate: true }, scss: { validate: true }, less: { validate: true } }, initOptions: { provideFormatter: true } },
-  "vscode-html-language-server": { name: "vscode-html-language-server", command: "vscode-html-language-server", args: ["--stdio"], npm: { ...EXTRACTED, bin: "vscode-html-language-server" }, config: { html: { validate: { scripts: true, styles: true } } }, initOptions: { provideFormatter: true, embeddedLanguages: { css: true, javascript: true } } },
-  "docker-langserver": { name: "docker-langserver", command: "docker-langserver", args: ["--stdio"], npm: { package: "dockerfile-language-server-nodejs", version: "0.15.0", bin: "docker-langserver" } },
-  intelephense: { name: "intelephense", command: "intelephense", args: ["--stdio"], npm: { package: "intelephense", version: "1.18.5", bin: "intelephense" } },
-  "sourcekit-lsp": { name: "sourcekit-lsp", command: "sourcekit-lsp", args: [], hint: "it comes with Xcode, or the Swift toolchain", untrusted: { skip: (root) => (existsSync(join(root, "Package.swift")) ? "it builds the package's manifest, Package.swift" : null) } },
+  gopls: {
+    name: "gopls",
+    command: "gopls",
+    args: [],
+    hint: "go install golang.org/x/tools/gopls@latest",
+    untrusted: { environment: { GOTOOLCHAIN: "local", CGO_ENABLED: "0" } },
+  },
+  "lua-language-server": {
+    name: "lua-language-server",
+    command: "lua-language-server",
+    args: [],
+    hint: "your package manager (brew install lua-language-server)",
+    untrusted: { skip: (root) => (luaPlugin(root) ? "its .luarc names a plugin, which runs as code" : null) },
+  },
+  "bash-language-server": {
+    name: "bash-language-server",
+    command: "bash-language-server",
+    args: ["start"],
+    npm: { package: "bash-language-server", version: "5.8.1", bin: "bash-language-server" },
+  },
+  "vscode-json-language-server": {
+    name: "vscode-json-language-server",
+    command: "vscode-json-language-server",
+    args: ["--stdio"],
+    npm: { ...EXTRACTED, bin: "vscode-json-language-server" },
+    config: { json: { validate: { enable: true } } },
+    initOptions: { provideFormatter: true },
+  },
+  "yaml-language-server": {
+    name: "yaml-language-server",
+    command: "yaml-language-server",
+    args: ["--stdio"],
+    npm: { package: "yaml-language-server", version: "1.24.0", bin: "yaml-language-server" },
+    config: { redhat: { telemetry: { enabled: false } }, yaml: { validate: true } },
+  },
+  taplo: {
+    name: "taplo",
+    command: "taplo",
+    args: ["lsp", "stdio"],
+    hint: "cargo install taplo-cli --locked --features lsp, or brew install taplo",
+  },
+  "vscode-css-language-server": {
+    name: "vscode-css-language-server",
+    command: "vscode-css-language-server",
+    args: ["--stdio"],
+    npm: { ...EXTRACTED, bin: "vscode-css-language-server" },
+    config: { css: { validate: true }, scss: { validate: true }, less: { validate: true } },
+    initOptions: { provideFormatter: true },
+  },
+  "vscode-html-language-server": {
+    name: "vscode-html-language-server",
+    command: "vscode-html-language-server",
+    args: ["--stdio"],
+    npm: { ...EXTRACTED, bin: "vscode-html-language-server" },
+    config: { html: { validate: { scripts: true, styles: true } } },
+    initOptions: { provideFormatter: true, embeddedLanguages: { css: true, javascript: true } },
+  },
+  "docker-langserver": {
+    name: "docker-langserver",
+    command: "docker-langserver",
+    args: ["--stdio"],
+    npm: { package: "dockerfile-language-server-nodejs", version: "0.15.0", bin: "docker-langserver" },
+  },
+  intelephense: {
+    name: "intelephense",
+    command: "intelephense",
+    args: ["--stdio"],
+    npm: { package: "intelephense", version: "1.18.5", bin: "intelephense" },
+  },
+  "sourcekit-lsp": {
+    name: "sourcekit-lsp",
+    command: "sourcekit-lsp",
+    args: [],
+    hint: "it comes with Xcode, or the Swift toolchain",
+    untrusted: {
+      skip: (root) =>
+        existsSync(join(root, "Package.swift")) ? "it builds the package's manifest, Package.swift" : null,
+    },
+  },
   clangd: { name: "clangd", command: "clangd", args: [], hint: "your package manager (clangd, or LLVM)" },
-  "ruby-lsp": { name: "ruby-lsp", command: "ruby-lsp", args: [], hint: "gem install ruby-lsp", untrusted: { skip: (root) => (existsSync(join(root, "Gemfile")) ? "it runs the project's Gemfile (Bundler)" : null) } },
+  "ruby-lsp": {
+    name: "ruby-lsp",
+    command: "ruby-lsp",
+    args: [],
+    hint: "gem install ruby-lsp",
+    untrusted: {
+      skip: (root) => (existsSync(join(root, "Gemfile")) ? "it runs the project's Gemfile (Bundler)" : null),
+    },
+  },
   // Linters' servers: add-ons, where the project has their config (19.18). Settings as nvim-lspconfig's.
   eslint: {
     name: "eslint",
@@ -147,12 +294,35 @@ export const SERVERS: Record<string, ServerDef> = {
       problems: { shortenToSingleLine: false },
       nodePath: "",
       workingDirectory: { mode: "location" },
-      codeAction: { disableRuleComment: { enable: true, location: "separateLine" }, showDocumentation: { enable: true } },
+      codeAction: {
+        disableRuleComment: { enable: true, location: "separateLine" },
+        showDocumentation: { enable: true },
+      },
     },
   },
-  biome: { name: "biome", command: "biome", args: ["lsp-proxy"], npm: { package: "@biomejs/biome", version: "2.5.15", bin: "biome" }, requires: ["biome.json", "biome.jsonc"] },
-  stylelint: { name: "stylelint", command: "stylelint-lsp", args: ["--stdio"], npm: { package: "stylelint-lsp", version: "2.0.1", bin: "stylelint-lsp" }, requires: STYLELINT_CONFIGS, config: { stylelintplus: {} }, untrusted: CONFIG_IS_CODE },
-  ruff: { name: "ruff", command: "ruff", args: ["server"], requires: ["ruff.toml", ".ruff.toml", "pyproject.toml:[tool.ruff"], hint: "uv tool install ruff, pip install ruff, or brew install ruff" },
+  biome: {
+    name: "biome",
+    command: "biome",
+    args: ["lsp-proxy"],
+    npm: { package: "@biomejs/biome", version: "2.5.15", bin: "biome" },
+    requires: ["biome.json", "biome.jsonc"],
+  },
+  stylelint: {
+    name: "stylelint",
+    command: "stylelint-lsp",
+    args: ["--stdio"],
+    npm: { package: "stylelint-lsp", version: "2.0.1", bin: "stylelint-lsp" },
+    requires: STYLELINT_CONFIGS,
+    config: { stylelintplus: {} },
+    untrusted: CONFIG_IS_CODE,
+  },
+  ruff: {
+    name: "ruff",
+    command: "ruff",
+    args: ["server"],
+    requires: ["ruff.toml", ".ruff.toml", "pyproject.toml:[tool.ruff"],
+    hint: "uv tool install ruff, pip install ruff, or brew install ruff",
+  },
 };
 
 const JS_ROOTS = ["tsconfig.json", "jsconfig.json", "package.json", ".git"];
@@ -162,7 +332,9 @@ const JS_SERVERS = ["typescript", "vtsls", "eslint", "biome"];
 export function olderTypeScript(root: string): number | null {
   for (let dir = root; ; dir = dirname(dir)) {
     try {
-      const major = Number(JSON.parse(readFileSync(join(dir, "node_modules", "typescript", "package.json"), "utf8")).version.split(".")[0]);
+      const major = Number(
+        JSON.parse(readFileSync(join(dir, "node_modules", "typescript", "package.json"), "utf8")).version.split(".")[0],
+      );
       return major < 7 ? major : null;
     } catch {}
     if (dirname(dir) === dir) return null;
@@ -170,29 +342,133 @@ export function olderTypeScript(root: string): number | null {
 }
 
 export const LANGUAGES: LanguageDef[] = [
-  { name: "typescript", languageId: "typescript", fileTypes: ["ts", "mts", "cts"], roots: JS_ROOTS, servers: JS_SERVERS },
+  {
+    name: "typescript",
+    languageId: "typescript",
+    fileTypes: ["ts", "mts", "cts"],
+    roots: JS_ROOTS,
+    servers: JS_SERVERS,
+  },
   { name: "tsx", languageId: "typescriptreact", fileTypes: ["tsx"], roots: JS_ROOTS, servers: JS_SERVERS },
-  { name: "javascript", languageId: "javascript", fileTypes: ["js", "mjs", "cjs"], roots: JS_ROOTS, servers: JS_SERVERS },
+  {
+    name: "javascript",
+    languageId: "javascript",
+    fileTypes: ["js", "mjs", "cjs"],
+    roots: JS_ROOTS,
+    servers: JS_SERVERS,
+  },
   { name: "jsx", languageId: "javascriptreact", fileTypes: ["jsx"], roots: JS_ROOTS, servers: JS_SERVERS },
-  { name: "python", languageId: "python", fileTypes: ["py", "pyi"], roots: ["pyproject.toml", "setup.py", "setup.cfg", "requirements.txt", "pyrightconfig.json", ".git"], servers: ["pyright", "ruff"] },
+  {
+    name: "python",
+    languageId: "python",
+    fileTypes: ["py", "pyi"],
+    roots: ["pyproject.toml", "setup.py", "setup.cfg", "requirements.txt", "pyrightconfig.json", ".git"],
+    servers: ["pyright", "ruff"],
+  },
   { name: "rust", languageId: "rust", fileTypes: ["rs"], roots: ["Cargo.toml", ".git"], servers: ["rust-analyzer"] },
   { name: "go", languageId: "go", fileTypes: ["go"], roots: ["go.work", "go.mod", ".git"], servers: ["gopls"] },
-  { name: "lua", languageId: "lua", fileTypes: ["lua"], roots: [".luarc.json", ".luarc.jsonc", ".stylua.toml", "stylua.toml", "selene.toml", ".git"], servers: ["lua-language-server"] },
-  { name: "bash", languageId: "shellscript", fileTypes: ["sh", "bash", ".bashrc", ".bash_profile", ".profile"], roots: [".git"], servers: ["bash-language-server"] },
-  { name: "json", languageId: "json", fileTypes: ["json"], roots: [".git"], servers: ["vscode-json-language-server", "biome"] },
-  { name: "jsonc", languageId: "jsonc", fileTypes: ["jsonc"], roots: [".git"], servers: ["vscode-json-language-server", "biome"] },
-  { name: "yaml", languageId: "yaml", fileTypes: ["yaml", "yml"], roots: [".git"], servers: ["yaml-language-server"], linters: ["yamllint"] },
+  {
+    name: "lua",
+    languageId: "lua",
+    fileTypes: ["lua"],
+    roots: [".luarc.json", ".luarc.jsonc", ".stylua.toml", "stylua.toml", "selene.toml", ".git"],
+    servers: ["lua-language-server"],
+  },
+  {
+    name: "bash",
+    languageId: "shellscript",
+    fileTypes: ["sh", "bash", ".bashrc", ".bash_profile", ".profile"],
+    roots: [".git"],
+    servers: ["bash-language-server"],
+  },
+  {
+    name: "json",
+    languageId: "json",
+    fileTypes: ["json"],
+    roots: [".git"],
+    servers: ["vscode-json-language-server", "biome"],
+  },
+  {
+    name: "jsonc",
+    languageId: "jsonc",
+    fileTypes: ["jsonc"],
+    roots: [".git"],
+    servers: ["vscode-json-language-server", "biome"],
+  },
+  {
+    name: "yaml",
+    languageId: "yaml",
+    fileTypes: ["yaml", "yml"],
+    roots: [".git"],
+    servers: ["yaml-language-server"],
+    linters: ["yamllint"],
+  },
   { name: "toml", languageId: "toml", fileTypes: ["toml"], roots: [".git"], servers: ["taplo"] },
-  { name: "css", languageId: "css", fileTypes: ["css"], roots: ["package.json", ".git"], servers: ["vscode-css-language-server", "stylelint", "biome"] },
-  { name: "scss", languageId: "scss", fileTypes: ["scss"], roots: ["package.json", ".git"], servers: ["vscode-css-language-server", "stylelint"] },
-  { name: "less", languageId: "less", fileTypes: ["less"], roots: ["package.json", ".git"], servers: ["vscode-css-language-server", "stylelint"] },
-  { name: "html", languageId: "html", fileTypes: ["html", "htm"], roots: ["package.json", ".git"], servers: ["vscode-html-language-server"] },
-  { name: "dockerfile", languageId: "dockerfile", fileTypes: ["Dockerfile", "Containerfile", "dockerfile"], roots: [".git"], servers: ["docker-langserver"], linters: ["hadolint"] },
+  {
+    name: "css",
+    languageId: "css",
+    fileTypes: ["css"],
+    roots: ["package.json", ".git"],
+    servers: ["vscode-css-language-server", "stylelint", "biome"],
+  },
+  {
+    name: "scss",
+    languageId: "scss",
+    fileTypes: ["scss"],
+    roots: ["package.json", ".git"],
+    servers: ["vscode-css-language-server", "stylelint"],
+  },
+  {
+    name: "less",
+    languageId: "less",
+    fileTypes: ["less"],
+    roots: ["package.json", ".git"],
+    servers: ["vscode-css-language-server", "stylelint"],
+  },
+  {
+    name: "html",
+    languageId: "html",
+    fileTypes: ["html", "htm"],
+    roots: ["package.json", ".git"],
+    servers: ["vscode-html-language-server"],
+  },
+  {
+    name: "dockerfile",
+    languageId: "dockerfile",
+    fileTypes: ["Dockerfile", "Containerfile", "dockerfile"],
+    roots: [".git"],
+    servers: ["docker-langserver"],
+    linters: ["hadolint"],
+  },
   { name: "php", languageId: "php", fileTypes: ["php"], roots: ["composer.json", ".git"], servers: ["intelephense"] },
-  { name: "swift", languageId: "swift", fileTypes: ["swift"], roots: ["Package.swift", ".git"], servers: ["sourcekit-lsp"] },
-  { name: "c", languageId: "c", fileTypes: ["c", "h"], roots: ["compile_commands.json", "compile_flags.txt", ".clangd", ".git"], servers: ["clangd"] },
-  { name: "cpp", languageId: "cpp", fileTypes: ["cc", "cpp", "cxx", "hpp", "hh", "hxx"], roots: ["compile_commands.json", "compile_flags.txt", ".clangd", ".git"], servers: ["clangd"] },
-  { name: "ruby", languageId: "ruby", fileTypes: ["rb", "Gemfile", "Rakefile"], roots: ["Gemfile", ".git"], servers: ["ruby-lsp"] },
+  {
+    name: "swift",
+    languageId: "swift",
+    fileTypes: ["swift"],
+    roots: ["Package.swift", ".git"],
+    servers: ["sourcekit-lsp"],
+  },
+  {
+    name: "c",
+    languageId: "c",
+    fileTypes: ["c", "h"],
+    roots: ["compile_commands.json", "compile_flags.txt", ".clangd", ".git"],
+    servers: ["clangd"],
+  },
+  {
+    name: "cpp",
+    languageId: "cpp",
+    fileTypes: ["cc", "cpp", "cxx", "hpp", "hh", "hxx"],
+    roots: ["compile_commands.json", "compile_flags.txt", ".clangd", ".git"],
+    servers: ["clangd"],
+  },
+  {
+    name: "ruby",
+    languageId: "ruby",
+    fileTypes: ["rb", "Gemfile", "Rakefile"],
+    roots: ["Gemfile", ".git"],
+    servers: ["ruby-lsp"],
+  },
 ];
 
 /** The servers and languages in effect: the built-in ones with the user's config over them. */
@@ -206,7 +482,10 @@ export function languageOf(table: ServerTable, path: string): LanguageDef | null
   const base = path.slice(path.lastIndexOf("/") + 1);
   const dot = base.lastIndexOf(".");
   const ext = dot > 0 ? base.slice(dot + 1).toLowerCase() : "";
-  return table.languages.find((l) => l.fileTypes.includes(base)) ?? (ext ? (table.languages.find((l) => l.fileTypes.includes(ext)) ?? null) : null);
+  return (
+    table.languages.find((l) => l.fileTypes.includes(base)) ??
+    (ext ? (table.languages.find((l) => l.fileTypes.includes(ext)) ?? null) : null)
+  );
 }
 
 /** Whether a project (its top folder) asks for an add-on: one of its files there, holding its text if given. */
@@ -267,11 +546,19 @@ export function serverTable(servers: Record<string, ServerConfig> = {}, language
   const langs = LANGUAGES.map((l) => ({ ...l }));
   for (const c of languages) {
     const known = langs.find((l) => l.name === c.name);
-    const l = known ?? { name: c.name, languageId: c["language-id"] ?? c.name, fileTypes: [], roots: [".git"], servers: [] };
+    const l = known ?? {
+      name: c.name,
+      languageId: c["language-id"] ?? c.name,
+      fileTypes: [],
+      roots: [".git"],
+      servers: [],
+    };
     if (c["language-servers"]) {
       l.servers = c["language-servers"].map((s) => (typeof s === "string" ? s : s.name));
       l.features = Object.fromEntries(
-        c["language-servers"].flatMap((s) => (typeof s === "string" ? [] : [[s.name, { only: s["only-features"], except: s["except-features"] }]])),
+        c["language-servers"].flatMap((s) =>
+          typeof s === "string" ? [] : [[s.name, { only: s["only-features"], except: s["except-features"] }]],
+        ),
       );
     }
     if (c.roots) l.roots = c.roots;
@@ -288,7 +575,10 @@ export function deepMerge(a: Record<string, unknown>, b: Record<string, unknown>
   const out: Record<string, unknown> = { ...a };
   for (const [k, v] of Object.entries(b)) {
     const was = out[k];
-    out[k] = v && typeof v === "object" && !Array.isArray(v) && was && typeof was === "object" && !Array.isArray(was) ? deepMerge(was as Record<string, unknown>, v as Record<string, unknown>) : v;
+    out[k] =
+      v && typeof v === "object" && !Array.isArray(v) && was && typeof was === "object" && !Array.isArray(was)
+        ? deepMerge(was as Record<string, unknown>, v as Record<string, unknown>)
+        : v;
   }
   return out;
 }

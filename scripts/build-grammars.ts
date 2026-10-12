@@ -10,7 +10,16 @@
 // in grammars/README.md.
 
 import { spawnSync } from "node:child_process";
-import { copyFileSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, statSync, writeFileSync } from "node:fs";
+import {
+  copyFileSync,
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  rmSync,
+  statSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
@@ -32,12 +41,34 @@ export const SOURCES: Source[] = [
     repo: "https://github.com/alex-pinkus/tree-sitter-swift",
     rev: "82bb3a533e0801fd2bbaa11dc49676e10bf41948", // its with-generated-files branch: parser.c committed
     // The scanner prints to stderr when it can't allocate its state; the runtime has no stderr.
-    patch: [["src/scanner.c", 'fprintf(stderr, "tree-sitter-swift: out of memory allocating scanner state\\n");', "/* slipbox: no stderr in the wasm runtime */"]],
+    patch: [
+      [
+        "src/scanner.c",
+        'fprintf(stderr, "tree-sitter-swift: out of memory allocating scanner state\\n");',
+        "/* slipbox: no stderr in the wasm runtime */",
+      ],
+    ],
   },
-  { name: "scss", repo: "https://github.com/serenadeai/tree-sitter-scss", rev: "c478c6868648eff49eb04a4df90d703dc45b312a" },
-  { name: "vue", repo: "https://github.com/tree-sitter-grammars/tree-sitter-vue", rev: "ce8011a414fdf8091f4e4071752efc376f4afb08" },
-  { name: "astro", repo: "https://github.com/virchau13/tree-sitter-astro", rev: "213f6e6973d9b456c6e50e86f19f66877e7ef0ee" },
-  { name: "dockerfile", repo: "https://github.com/camdencheek/tree-sitter-dockerfile", rev: "971acdd908568b4531b0ba28a445bf0bb720aba5" },
+  {
+    name: "scss",
+    repo: "https://github.com/serenadeai/tree-sitter-scss",
+    rev: "c478c6868648eff49eb04a4df90d703dc45b312a",
+  },
+  {
+    name: "vue",
+    repo: "https://github.com/tree-sitter-grammars/tree-sitter-vue",
+    rev: "ce8011a414fdf8091f4e4071752efc376f4afb08",
+  },
+  {
+    name: "astro",
+    repo: "https://github.com/virchau13/tree-sitter-astro",
+    rev: "213f6e6973d9b456c6e50e86f19f66877e7ef0ee",
+  },
+  {
+    name: "dockerfile",
+    repo: "https://github.com/camdencheek/tree-sitter-dockerfile",
+    rev: "971acdd908568b4531b0ba28a445bf0bb720aba5",
+  },
 ];
 
 function run(cmd: string, args: string[], cwd: string): void {
@@ -53,13 +84,18 @@ function run(cmd: string, args: string[], cwd: string): void {
  */
 function buildWasm(dir: string, out: string): void {
   const before = Date.now();
-  const r = spawnSync("npx", ["--yes", CLI, "build", "--wasm", "-o", out], { cwd: dir, stdio: ["ignore", "inherit", "pipe"] });
+  const r = spawnSync("npx", ["--yes", CLI, "build", "--wasm", "-o", out], {
+    cwd: dir,
+    stdio: ["ignore", "inherit", "pipe"],
+  });
   const err = r.stderr?.toString() ?? "";
   process.stderr.write(err);
   if (r.status === 0) return;
   const written = existsSync(out) && statSync(out).mtimeMs >= before - 1000;
   if (written && /isn't available to Wasm parsers/.test(err)) {
-    console.warn(`${out}: built; the CLI's runtime lacks a C function its scanner calls — slipbox's tests say whether ours has it`);
+    console.warn(
+      `${out}: built; the CLI's runtime lacks a C function its scanner calls — slipbox's tests say whether ours has it`,
+    );
     return;
   }
   throw new Error(`tree-sitter build --wasm failed in ${dir}`);

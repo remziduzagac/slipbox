@@ -72,7 +72,16 @@ function onUnplugged(g: Graph, rel: string, target: string): boolean {
  */
 export function noteProblems(g: Graph, rel: string): Problem[] {
   const out: Problem[] = [];
-  const add = (l: LinkRef, severity: Severity, code: string, message: string) => out.push({ start: { line: l.line, column: l.column }, end: l.end, severity, source: "slipbox", code, message, target: l.target });
+  const add = (l: LinkRef, severity: Severity, code: string, message: string) =>
+    out.push({
+      start: { line: l.line, column: l.column },
+      end: l.end,
+      severity,
+      source: "slipbox",
+      code,
+      message,
+      target: l.target,
+    });
   const text = g.textOf(rel) ?? "";
   const lines = text.split("\n");
   for (const l of g.linksOf(rel)) {
@@ -80,7 +89,13 @@ export function noteProblems(g: Graph, rel: string): Problem[] {
     const frag = fragmentOf(l);
     // Won by where it's written (the nearest, the shortest of several of its name): a note of that
     // name nearer would take it, silently. Said, with the path that names it for sure.
-    if (wiki && (l.resolvedKind === "note" || l.resolvedKind === "file") && fragile(l) && l.path && !isAbsolute(l.path)) {
+    if (
+      wiki &&
+      (l.resolvedKind === "note" || l.resolvedKind === "file") &&
+      fragile(l) &&
+      l.path &&
+      !isAbsolute(l.path)
+    ) {
       const sure = disambiguated(l, rel);
       const at = lines[l.line - 1] ?? "";
       const written = l.end.line === l.line ? at.slice(l.column - 1, l.end.column - 1) : "";
@@ -99,15 +114,37 @@ export function noteProblems(g: Graph, rel: string): Problem[] {
       });
     }
     // A link to the repository's hosting at another ref than the branch here: what it shows there may differ.
-    if (l.via === "hosting" && l.hosted && l.resolvedKind !== "unresolved") add(l, "info", "other-ref", `${l.target} names ${l.hosted.ref}; this copy is on ${l.hosted.branch ?? "no branch"}`);
+    if (l.via === "hosting" && l.hosted && l.resolvedKind !== "unresolved")
+      add(
+        l,
+        "info",
+        "other-ref",
+        `${l.target} names ${l.hosted.ref}; this copy is on ${l.hosted.branch ?? "no branch"}`,
+      );
     // A folder named the old way (21.11): the fix writes its pointer, a markdown link.
     if (l.resolvedKind === "unresolved" && l.suggest) {
       const at = lines[l.line - 1] ?? "";
       const written = l.end.line === l.line ? at.slice(l.column - 1, l.end.column - 1) : "";
-      const text = l.alias ?? (wiki ? posix.basename(l.target.slice(l.target.indexOf(":") + 1)).replace(/\.(md|markdown)$/i, "") : null);
+      const text =
+        l.alias ??
+        (wiki ? posix.basename(l.target.slice(l.target.indexOf(":") + 1)).replace(/\.(md|markdown)$/i, "") : null);
       const frag = wiki && l.heading ? `#${slugify(l.heading)}` : wiki && l.block ? `#^${l.block}` : "";
-      const fixed = wiki ? `${written.startsWith("!") ? "!" : ""}[${text}](${l.suggest}${frag})` : written.replace(`(${l.target}`, `(${l.suggest}${l.target.includes("#") ? l.target.slice(l.target.indexOf("#")) : ""}`);
-      out.push({ start: { line: l.line, column: l.column }, end: l.end, severity: "warning", source: "slipbox", code: "old-form", message: l.reason!, target: l.target, ...(written ? { fix: { title: `Write its pointer: ${l.suggest}`, text: fixed } } : {}) });
+      const fixed = wiki
+        ? `${written.startsWith("!") ? "!" : ""}[${text}](${l.suggest}${frag})`
+        : written.replace(
+            `(${l.target}`,
+            `(${l.suggest}${l.target.includes("#") ? l.target.slice(l.target.indexOf("#")) : ""}`,
+          );
+      out.push({
+        start: { line: l.line, column: l.column },
+        end: l.end,
+        severity: "warning",
+        source: "slipbox",
+        code: "old-form",
+        message: l.reason!,
+        target: l.target,
+        ...(written ? { fix: { title: `Write its pointer: ${l.suggest}`, text: fixed } } : {}),
+      });
       continue;
     }
     switch (l.resolvedKind) {
@@ -118,18 +155,32 @@ export function noteProblems(g: Graph, rel: string): Problem[] {
           const to = g.movedTarget(l, rel);
           if (to) add(l, "warning", "unresolved", `broken link: ${l.target} — moved to ${to} (relink fixes it)`);
           else add(l, "info", "unresolved", `no note named "${l.target}" yet`);
-        }
-        else {
+        } else {
           // A note not written yet: information, as a wikilink's was. Its file seen to move (17.12):
           // said, with the fix — a move never resolves it (20.2). Else broken.
           const to = g.movedTarget(l, rel);
           const yet = to ? null : g.missingNote(l, rel);
           if (yet) add(l, "info", "unresolved", `no note at ${yet} yet`);
-          else add(l, "warning", "unresolved", to ? `broken link: ${l.target} — moved to ${to} (relink fixes it)` : onUnplugged(g, rel, l.target) ? `broken link: ${l.target} — its drive isn't there` : `broken link: ${l.target}`);
+          else
+            add(
+              l,
+              "warning",
+              "unresolved",
+              to
+                ? `broken link: ${l.target} — moved to ${to} (relink fixes it)`
+                : onUnplugged(g, rel, l.target)
+                  ? `broken link: ${l.target} — its drive isn't there`
+                  : `broken link: ${l.target}`,
+            );
         }
         break;
       case "ambiguous":
-        add(l, "warning", "ambiguous", `"${l.target}" matches ${l.candidates.length} notes: ${l.candidates.join(", ")}`);
+        add(
+          l,
+          "warning",
+          "ambiguous",
+          `"${l.target}" matches ${l.candidates.length} notes: ${l.candidates.join(", ")}`,
+        );
         break;
       case "note":
       case "anchor": {
@@ -140,7 +191,8 @@ export function noteProblems(g: Graph, rel: string): Problem[] {
         const where = l.resolvedKind === "anchor" ? "this note" : isAbsolute(path) ? posix.basename(path) : path;
         const hit = landing(g, path, frag, l.block, wiki);
         // A heading named by its text, several of that text: the first is meant — said, never silent.
-        if (hit?.ambiguous) add(l, "info", "ambiguous-heading", `several headings "${frag}" in ${where}: this link reaches the first`);
+        if (hit?.ambiguous)
+          add(l, "info", "ambiguous-heading", `several headings "${frag}" in ${where}: this link reaches the first`);
         if (hit) break;
         const block = l.block ?? (frag!.startsWith("^") ? frag!.slice(1) : null);
         if (block) add(l, "warning", "no-block", `no block ^${block} in ${where}`);
@@ -151,7 +203,12 @@ export function noteProblems(g: Graph, rel: string): Problem[] {
   }
   out.push(...conflictProblems(text));
   // Its frontmatter, by its document types' rules (22.2).
-  out.push(...frontmatterProblems(text, rootTypes(g).filter((t) => ofType(rel, t))));
+  out.push(
+    ...frontmatterProblems(
+      text,
+      rootTypes(g).filter((t) => ofType(rel, t)),
+    ),
+  );
   return out;
 }
 
@@ -171,7 +228,9 @@ const findings = new WeakMap<Graph, { generation: number; list: { path: string; 
 export function frontmatterFindings(g: Graph): { path: string; problems: Problem[] }[] {
   const hit = findings.get(g);
   if (hit?.generation === g.generation) return hit.list;
-  const ruled = rootTypes(g).filter((t) => t.required.length || Object.keys(t.keys).length || Object.keys(t.values).length);
+  const ruled = rootTypes(g).filter(
+    (t) => t.required.length || Object.keys(t.keys).length || Object.keys(t.values).length,
+  );
   const list: { path: string; problems: Problem[] }[] = [];
   if (ruled.length) {
     for (const rel of [...g.notes.keys()].sort()) {
@@ -207,7 +266,14 @@ export function conflictProblems(text: string): Problem[] {
 
 /** A parser's syntax errors (16.9), as problems. */
 export function syntaxProblems(errors: SyntaxError[]): Problem[] {
-  return errors.map((e) => ({ start: { line: e.line, column: e.from + 1 }, end: { line: e.line, column: e.to + 1 }, severity: "error", source: "syntax", code: null, message: e.message }));
+  return errors.map((e) => ({
+    start: { line: e.line, column: e.from + 1 },
+    end: { line: e.line, column: e.to + 1 },
+    severity: "error",
+    source: "syntax",
+    code: null,
+    message: e.message,
+  }));
 }
 
 /** The linter's findings (3.21), as problems: a warning at its line (and column, when it gives one). */

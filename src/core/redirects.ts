@@ -35,7 +35,13 @@ export class Redirects {
   constructor(private readonly file: string) {
     const f = readJson<RedirectFile | null>(file, null);
     if (f?.version === 1 && f.redirects && typeof f.redirects === "object") {
-      for (const [from, r] of Object.entries(f.redirects)) if (r && typeof r.to === "string") this.data[from] = { to: r.to, at: typeof r.at === "string" ? r.at : "", ...(typeof r.by === "string" ? { by: r.by } : {}) };
+      for (const [from, r] of Object.entries(f.redirects))
+        if (r && typeof r.to === "string")
+          this.data[from] = {
+            to: r.to,
+            at: typeof r.at === "string" ? r.at : "",
+            ...(typeof r.by === "string" ? { by: r.by } : {}),
+          };
     }
   }
 
@@ -47,7 +53,8 @@ export class Redirects {
       delete this.data[to];
     }
     const entries = Object.entries(this.data);
-    if (entries.length > MAX_REDIRECTS) this.data = Object.fromEntries(entries.sort((a, b) => (a[1].at < b[1].at ? 1 : -1)).slice(0, MAX_REDIRECTS));
+    if (entries.length > MAX_REDIRECTS)
+      this.data = Object.fromEntries(entries.sort((a, b) => (a[1].at < b[1].at ? 1 : -1)).slice(0, MAX_REDIRECTS));
     try {
       writeJson(this.file, { version: 1, redirects: this.data } satisfies RedirectFile);
     } catch {}

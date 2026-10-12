@@ -177,7 +177,10 @@ function walkDir(root: string, realRoot: string, dirRel: string, filter: WalkFil
  * directory is never followed; a file is kept only inside the root (`realRoot`, its real path), any
  * file, a note or not; anything else is skipped, with why (`special`: a FIFO, socket or device).
  */
-export function symlinkVerdict(abs: string, realRoot: string): { kept: true; target: string } | { kept: false; reason: string | null; special?: boolean } {
+export function symlinkVerdict(
+  abs: string,
+  realRoot: string,
+): { kept: true; target: string } | { kept: false; reason: string | null; special?: boolean } {
   let target: string;
   try {
     target = realpathSync(abs);
@@ -200,7 +203,8 @@ export function symlinkVerdict(abs: string, realRoot: string): { kept: true; tar
 function handleSymlink(abs: string, rel: string, realRoot: string, filter: WalkFilter, out: WalkResult): void {
   const v = symlinkVerdict(abs, realRoot);
   if (!v.kept) {
-    if (v.reason && (!v.special || filter.isNoteName(rel.slice(rel.lastIndexOf("/") + 1)))) out.skipped.push({ rel, reason: v.reason });
+    if (v.reason && (!v.special || filter.isNoteName(rel.slice(rel.lastIndexOf("/") + 1))))
+      out.skipped.push({ rel, reason: v.reason });
     return;
   }
   const target = v.target;

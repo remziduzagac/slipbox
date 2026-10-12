@@ -10,7 +10,15 @@ import { LanguageClient } from "./client.ts";
 import { isTrusted, trustOf } from "../trust.ts";
 import { type Choice, chooseServers, type Found, findServer, rootFor } from "./find.ts";
 import { installTool, lockKey } from "./install.ts";
-import { does, type Feature, languageOf, type LanguageDef, projectAsks, type ServerDef, type ServerTable } from "./languages.ts";
+import {
+  does,
+  type Feature,
+  languageOf,
+  type LanguageDef,
+  projectAsks,
+  type ServerDef,
+  type ServerTable,
+} from "./languages.ts";
 import { mergeSettings, vscodeSettings, vscodeSettingsFile } from "./vscode.ts";
 
 export interface ManagerOptions {
@@ -94,14 +102,18 @@ export function settingsFor(def: ServerDef, root: string, yours: ServerDef = def
  *  in a root you don't trust (23.4). */
 export function startOf(def: ServerDef, root: string): { environment: Record<string, string>; initOptions: unknown } {
   if (isTrusted(root) || !def.untrusted) return { environment: def.environment ?? {}, initOptions: def.initOptions };
-  return { environment: { ...def.environment, ...def.untrusted.environment }, initOptions: def.untrusted.initOptions ?? def.initOptions };
+  return {
+    environment: { ...def.environment, ...def.untrusted.environment },
+    initOptions: def.untrusted.initOptions ?? def.initOptions,
+  };
 }
 
 /** What a root you don't trust leaves out of a file's servers (23.x), said once: none when nothing is. */
 export function limitsOf(choice: Choice, root: string): string[] {
   if (isTrusted(root)) return [];
   const out = choice.skipped.map((s) => `${s.def.name} not run (${s.why})`);
-  for (const { def } of choice.run) if (def.untrusted && !def.untrusted.skip) out.push(`${def.name} without the project's code`);
+  for (const { def } of choice.run)
+    if (def.untrusted && !def.untrusted.skip) out.push(`${def.name} without the project's code`);
   if (vscodeSettingsFile(root)) out.push(".vscode/settings.json not read");
   return out;
 }
@@ -132,7 +144,11 @@ export class ServerManager {
     if (limits.length && !this.untrustedSaid.has(root)) {
       this.untrustedSaid.add(root);
       // Asked once in the TUI; kept restricted, nothing more said (you chose it); the CLI says it.
-      if (!this.o.ask) this.o.message("info", `${root} isn't a root you trust: ${limits.join("; ")} — trust it in slipbox (it asks), or [trust] roots in your config; slipbox doctor says more`);
+      if (!this.o.ask)
+        this.o.message(
+          "info",
+          `${root} isn't a root you trust: ${limits.join("; ")} — trust it in slipbox (it asks), or [trust] roots in your config; slipbox doctor says more`,
+        );
       else if (trustOf(root) === null) this.o.ask(root, limits);
     }
     const doc: Doc = { path, languageId: lang.languageId, version, text, servers: [], lang };
@@ -144,7 +160,8 @@ export class ServerManager {
       void r.ready.then((client) => {
         // The file as it is when the server is ready: the latest text, if it changed meanwhile.
         const now = this.docs.get(path);
-        if (client && now && !client.isOpen(uriOf(path))) void client.didOpen(uriOf(path), now.languageId, now.version, now.text);
+        if (client && now && !client.isOpen(uriOf(path)))
+          void client.didOpen(uriOf(path), now.languageId, now.version, now.text);
       });
     }
   }
@@ -220,14 +237,25 @@ export class ServerManager {
     for (const key of doc?.servers ?? []) {
       const r = this.running.get(key);
       const client = await r?.ready;
-      if (!client || !does(r!.def, doc!.lang, feature) || !(client.capabilities as Record<string, unknown> | null)?.[capability]) continue;
+      if (
+        !client ||
+        !does(r!.def, doc!.lang, feature) ||
+        !(client.capabilities as Record<string, unknown> | null)?.[capability]
+      )
+        continue;
       out.push(client);
     }
     return out;
   }
 
   /** A request about a file, to its first server that does the feature and answers: its answer, or null. */
-  async request<R>(path: string, method: string, params: unknown, capability: string, feature: Feature): Promise<{ server: string; result: R } | null> {
+  async request<R>(
+    path: string,
+    method: string,
+    params: unknown,
+    capability: string,
+    feature: Feature,
+  ): Promise<{ server: string; result: R } | null> {
     for (const client of await this.serving(path, feature, capability)) {
       const result = await client.request<R>(method, params);
       if (result !== null) return { server: client.spec.name, result };
@@ -242,8 +270,12 @@ export class ServerManager {
 
   /** The characters that ask a file's servers for completion, and for signature help, by their capabilities. */
   async triggers(path: string): Promise<{ completion: string[]; signature: string[] }> {
-    const caps = (await this.serving(path, "completion", "completionProvider")).map((c) => c.capabilities?.completionProvider?.triggerCharacters ?? []);
-    const sig = (await this.serving(path, "signature-help", "signatureHelpProvider")).map((c) => c.capabilities?.signatureHelpProvider?.triggerCharacters ?? []);
+    const caps = (await this.serving(path, "completion", "completionProvider")).map(
+      (c) => c.capabilities?.completionProvider?.triggerCharacters ?? [],
+    );
+    const sig = (await this.serving(path, "signature-help", "signatureHelpProvider")).map(
+      (c) => c.capabilities?.signatureHelpProvider?.triggerCharacters ?? [],
+    );
     return { completion: [...new Set(caps.flat())], signature: [...new Set(sig.flat())] };
   }
 
@@ -255,7 +287,13 @@ export class ServerManager {
   }
 
   /** A request to every server of a file that does the feature (references, code actions): their answers, together. */
-  async requestAll<R>(path: string, method: string, params: unknown, capability: string, feature: Feature): Promise<{ server: string; result: R }[]> {
+  async requestAll<R>(
+    path: string,
+    method: string,
+    params: unknown,
+    capability: string,
+    feature: Feature,
+  ): Promise<{ server: string; result: R }[]> {
     const clients = await this.serving(path, feature, capability);
     const out: { server: string; result: R }[] = [];
     for (const c of clients) {
@@ -314,7 +352,14 @@ export class ServerManager {
     const yours = this.o.userTable?.().servers[r.def.name] ?? r.def;
     const { environment, initOptions } = startOf(r.def, r.root);
     const client = new LanguageClient(
-      { name: r.def.name, argv: f.argv, env: { ...f.env, ...environment }, settings: settingsFor(r.def, r.root, yours), initOptions, root: r.root },
+      {
+        name: r.def.name,
+        argv: f.argv,
+        env: { ...f.env, ...environment },
+        settings: settingsFor(r.def, r.root, yours),
+        initOptions,
+        root: r.root,
+      },
       {
         diagnostics: (uri, diagnostics, version) => {
           if (!uri.startsWith("file:")) return;
@@ -322,7 +367,13 @@ export class ServerManager {
           // A server limited away from diagnostics for this file's language says nothing here.
           const doc = this.docs.get(path);
           if (doc && !does(r.def, doc.lang, "diagnostics")) return;
-          this.o.problems(path, r.def.name, version, diagnostics.map((d) => problemOf(d, r.def.name)), diagnostics);
+          this.o.problems(
+            path,
+            r.def.name,
+            version,
+            diagnostics.map((d) => problemOf(d, r.def.name)),
+            diagnostics,
+          );
         },
         log: (text) => this.o.log?.(text),
         exited: (expected, why) => {
@@ -359,7 +410,11 @@ export class ServerManager {
       this.o.message("info", said);
       done = installTool(npm).then((r) => {
         if (r.ok) this.o.message("info", `${behind ? "updated" : "installed"} ${def.name}`);
-        else this.o.message("error", `couldn't install ${def.name}: ${r.output.split("\n").at(-1) || "bun install failed"}`);
+        else
+          this.o.message(
+            "error",
+            `couldn't install ${def.name}: ${r.output.split("\n").at(-1) || "bun install failed"}`,
+          );
         return r.ok;
       });
       this.installs.set(key, done);
@@ -386,14 +441,18 @@ export class ServerManager {
     r.ready = this.start(r, found);
     void r.ready.then((client) => {
       if (!client) return;
-      for (const d of this.docs.values()) if (d.servers.includes(r.key)) void client.didOpen(uriOf(d.path), d.languageId, d.version, d.text);
+      for (const d of this.docs.values())
+        if (d.servers.includes(r.key)) void client.didOpen(uriOf(d.path), d.languageId, d.version, d.text);
     });
   }
 
   private missing(def: ServerDef, language: string): void {
     if (this.said.has(def.name)) return;
     this.said.add(def.name);
-    this.o.message("warn", `${language}: ${def.name} isn't installed${def.npm ? "" : " (slipbox finds it on PATH; it doesn't install native servers)"} — slipbox doctor says more`);
+    this.o.message(
+      "warn",
+      `${language}: ${def.name} isn't installed${def.npm ? "" : " (slipbox finds it on PATH; it doesn't install native servers)"} — slipbox doctor says more`,
+    );
   }
 }
 

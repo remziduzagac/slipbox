@@ -40,7 +40,9 @@ function dependency(spec: string): [string, string] {
 
 /** The package.json a tool's folder gets — the same here and where its lock is made, so the lock fits it. */
 export function toolManifest(npm: NpmSpec): string {
-  const deps = [[npm.package, npm.version] as [string, string], ...(npm.with ?? []).map(dependency)].sort(([a], [b]) => a.localeCompare(b));
+  const deps = [[npm.package, npm.version] as [string, string], ...(npm.with ?? []).map(dependency)].sort(([a], [b]) =>
+    a.localeCompare(b),
+  );
   return `${JSON.stringify({ name: "slipbox-tool", private: true, dependencies: Object.fromEntries(deps) }, null, 2)}\n`;
 }
 
@@ -50,7 +52,9 @@ export const toolSlug = (pkg: string) => pkg.replace(/^@/, "").replaceAll("/", "
 /** Where a package is installed under the lock slipbox ships for it; null when it ships none. */
 export function toolFolder(npm: NpmSpec, base = toolsDir(), locks: Record<string, string> = LOCKS): string | null {
   const lock = locks[lockKey(npm)];
-  return lock === undefined ? null : join(base, toolSlug(npm.package), createHash("sha256").update(lock).digest("hex").slice(0, 12));
+  return lock === undefined
+    ? null
+    : join(base, toolSlug(npm.package), createHash("sha256").update(lock).digest("hex").slice(0, 12));
 }
 
 /** How a tool's folder is installed: exactly its lock, and no package's install script — Bun runs those of packages on
@@ -63,12 +67,16 @@ let queue: Promise<unknown> = Promise.resolve();
  * A package installed from its lock, one install at a time: into a folder of its own beside the final one, renamed
  * into place once Bun's done — so a half-done install is never found — and the package's older folders removed.
  */
-export function installTool(npm: NpmSpec, opts: { base?: string; locks?: Record<string, string>; timeoutMs?: number } = {}): Promise<InstallResult> {
+export function installTool(
+  npm: NpmSpec,
+  opts: { base?: string; locks?: Record<string, string>; timeoutMs?: number } = {},
+): Promise<InstallResult> {
   const run = async (): Promise<InstallResult> => {
     const base = opts.base ?? toolsDir();
     const locks = opts.locks ?? LOCKS;
     const dir = toolFolder(npm, base, locks);
-    if (dir === null) return { ok: false, output: `slipbox ships no lockfile for ${lockKey(npm)}, so it doesn't install it` };
+    if (dir === null)
+      return { ok: false, output: `slipbox ships no lockfile for ${lockKey(npm)}, so it doesn't install it` };
     if (existsSync(join(dir, "node_modules", ".bin", npm.bin))) return { ok: true, output: "" };
     const work = `${dir}.new-${process.pid}`;
     rmSync(work, { recursive: true, force: true });
@@ -83,7 +91,11 @@ export function installTool(npm: NpmSpec, opts: { base?: string; locks?: Record<
       stderr: "pipe",
     });
     const timer = setTimeout(() => p.kill(), opts.timeoutMs ?? 180_000);
-    const [out, err, code] = await Promise.all([new Response(p.stdout).text(), new Response(p.stderr).text(), p.exited]);
+    const [out, err, code] = await Promise.all([
+      new Response(p.stdout).text(),
+      new Response(p.stderr).text(),
+      p.exited,
+    ]);
     clearTimeout(timer);
     if (code !== 0 || !existsSync(join(work, "node_modules", ".bin", npm.bin))) {
       rmSync(work, { recursive: true, force: true });
@@ -93,7 +105,9 @@ export function installTool(npm: NpmSpec, opts: { base?: string; locks?: Record<
     renameSync(work, dir);
     // What older locks installed of it goes; another install under way (`.new-<pid>`) is left to finish.
     const parent = join(base, toolSlug(npm.package));
-    for (const other of readdirSync(parent)) if (other !== basename(dir) && !other.includes(".new-")) rmSync(join(parent, other), { recursive: true, force: true });
+    for (const other of readdirSync(parent))
+      if (other !== basename(dir) && !other.includes(".new-"))
+        rmSync(join(parent, other), { recursive: true, force: true });
     return { ok: true, output: `${out}${err}`.trim() };
   };
   const next = queue.then(run, run);

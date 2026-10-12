@@ -54,7 +54,8 @@ export function match(query: string, text: string, labelEnd = text.length): Matc
     let bestScore = Number.NEGATIVE_INFINITY;
     for (let i = t.indexOf(w); i >= 0; i = t.indexOf(w, i + 1)) {
       const label = i < labelEnd;
-      const sc = (label ? 100 : 0) + (label && i > slash ? 12 : 0) + (at(i) ? 10 : 0) + (text[i - 1] === "/" ? 4 : 0) - i * 0.01;
+      const sc =
+        (label ? 100 : 0) + (label && i > slash ? 12 : 0) + (at(i) ? 10 : 0) + (text[i - 1] === "/" ? 4 : 0) - i * 0.01;
       if (sc > bestScore) {
         bestScore = sc;
         best = i;
@@ -69,7 +70,12 @@ export function match(query: string, text: string, labelEnd = text.length): Matc
 }
 
 /** The items whose text matches, best first. `key` gives the text, or a label and its description. */
-export function rank<T>(query: string, items: T[], key: (item: T) => string | [string, string], limit = 500): { item: T; match: Match }[] {
+export function rank<T>(
+  query: string,
+  items: T[],
+  key: (item: T) => string | [string, string],
+  limit = 500,
+): { item: T; match: Match }[] {
   const out: { item: T; match: Match }[] = [];
   for (const item of items) {
     const k = key(item);

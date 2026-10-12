@@ -8,7 +8,15 @@ import { existsSync, realpathSync, statSync } from "node:fs";
 import { dirname, isAbsolute, join, posix, relative, resolve } from "node:path";
 import { loadConfig } from "./config.ts";
 import { readJson } from "./fsutil.ts";
-import { type Backlink, type Graph, type LinkRef, type NoteEntry, openGraph, type Target, type VaultReach } from "./graph.ts";
+import {
+  type Backlink,
+  type Graph,
+  type LinkRef,
+  type NoteEntry,
+  openGraph,
+  type Target,
+  type VaultReach,
+} from "./graph.ts";
 import { pathLink, wikiPathCandidates } from "./links.ts";
 import { folderIdentity, lookupFolder, type NamedFolder, readFolders } from "./folders.ts";
 import { checkoutOf } from "./git.ts";
@@ -26,7 +34,6 @@ function real(p: string): string {
     return p;
   }
 }
-
 
 /**
  * A root opened on its own (a rename or move in it, 18.x): its config, its index refreshed, other
@@ -124,8 +131,11 @@ export class Reach implements VaultReach {
   discover(g: Graph): void {
     if (this.discovered) return;
     this.discovered = true;
-    const roots: { root: string; nested: boolean }[] = g.skipped.filter((s) => s.reason === "nested root").map((s) => ({ root: join(g.root, s.rel), nested: true }));
-    for (let up = findVaultRoot(dirname(g.root)); up; up = findVaultRoot(dirname(up))) roots.push({ root: up, nested: false });
+    const roots: { root: string; nested: boolean }[] = g.skipped
+      .filter((s) => s.reason === "nested root")
+      .map((s) => ({ root: join(g.root, s.rel), nested: true }));
+    for (let up = findVaultRoot(dirname(g.root)); up; up = findVaultRoot(dirname(up)))
+      roots.push({ root: up, nested: false });
     for (const { root, nested } of roots) {
       let loc: VaultLocation;
       try {
@@ -144,17 +154,45 @@ export class Reach implements VaultReach {
   wiki(vault: string, target: string, _g: Graph): Target | null {
     const l = lookupFolder(vault);
     if (l.status === "unknown") return null;
-    if (l.status === "ambiguous") return { resolvedKind: "ambiguous", path: null, candidates: l.folders.map((f) => f.default ?? f.copies[0]!.path).sort(), vault, reason: l.reason };
-    if (l.status === "unavailable") return { resolvedKind: "unresolved", path: null, candidates: [], vault, reason: `folder "${vault}" was last seen at ${l.path}` };
+    if (l.status === "ambiguous")
+      return {
+        resolvedKind: "ambiguous",
+        path: null,
+        candidates: l.folders.map((f) => f.default ?? f.copies[0]!.path).sort(),
+        vault,
+        reason: l.reason,
+      };
+    if (l.status === "unavailable")
+      return {
+        resolvedKind: "unresolved",
+        path: null,
+        candidates: [],
+        vault,
+        reason: `folder "${vault}" was last seen at ${l.path}`,
+      };
     const there = this.graphAt(l.path);
-    if (!there) return { resolvedKind: "unresolved", path: null, candidates: [], vault, reason: `folder "${vault}" at ${l.path} can't be read` };
+    if (!there)
+      return {
+        resolvedKind: "unresolved",
+        path: null,
+        candidates: [],
+        vault,
+        reason: `folder "${vault}" at ${l.path} can't be read`,
+      };
     const r = there.resolveLegacyWiki({ kind: "wiki", target }, "");
     const abs = (p: string) => join(there.root, p);
     const name = l.folder.name;
     const via: Target["via"] = l.via === "old-name" ? "previous-name" : r.via;
-    if (r.resolvedKind === "note" || r.resolvedKind === "file") return { ...r, path: abs(r.path!), candidates: r.candidates.map(abs), vault: name, via };
+    if (r.resolvedKind === "note" || r.resolvedKind === "file")
+      return { ...r, path: abs(r.path!), candidates: r.candidates.map(abs), vault: name, via };
     if (r.resolvedKind === "ambiguous") return { ...r, candidates: r.candidates.map(abs), vault: name };
-    return { resolvedKind: "unresolved", path: null, candidates: [], vault: name, reason: `no note "${target}" in folder "${name}"` };
+    return {
+      resolvedKind: "unresolved",
+      path: null,
+      candidates: [],
+      vault: name,
+      reason: `no note "${target}" in folder "${name}"`,
+    };
   }
 
   vaultOf(abs: string): string | null {
@@ -174,7 +212,9 @@ export class Reach implements VaultReach {
   private indexes(g: Graph): { v: KnownRoot; file: string }[] {
     this.discover(g);
     const here = real(g.root);
-    const sources = this.known().filter((v) => v.kind === "vault" && !v.worktree && real(v.path) !== here && existsSync(v.path));
+    const sources = this.known().filter(
+      (v) => v.kind === "vault" && !v.worktree && real(v.path) !== here && existsSync(v.path),
+    );
     return sources.map((v) => ({ v, file: join(cacheDir(v), "index.json") }));
   }
 
@@ -188,7 +228,9 @@ export class Reach implements VaultReach {
     for (const { v, file } of this.indexes(g)) {
       const index = readJson<{ entries?: Record<string, NoteEntry> } | null>(file, null);
       if (!index?.entries || typeof index.entries !== "object") continue;
-      for (const [rel, entry] of Object.entries(index.entries)) if (entry?.links?.length) out.push({ root: v.path, abs: join(v.path, rel), vault: this.shown(v.path), links: entry.links });
+      for (const [rel, entry] of Object.entries(index.entries))
+        if (entry?.links?.length)
+          out.push({ root: v.path, abs: join(v.path, rel), vault: this.shown(v.path), links: entry.links });
     }
     return out;
   }
@@ -207,7 +249,19 @@ export class Reach implements VaultReach {
           if (!to) continue;
           const list = map.get(to) ?? [];
           // Another vault's index may be older than this one's: no ends then, the start stands in.
-          list.push({ from: join(v.path, rel), vault: this.shown(v.path), line: l.line, column: l.column, end: l.end ?? { line: l.line, column: l.column }, text: l.text, kind: l.kind, target: l.target, heading: l.heading, block: l.block, alias: l.alias });
+          list.push({
+            from: join(v.path, rel),
+            vault: this.shown(v.path),
+            line: l.line,
+            column: l.column,
+            end: l.end ?? { line: l.line, column: l.column },
+            text: l.text,
+            kind: l.kind,
+            target: l.target,
+            heading: l.heading,
+            block: l.block,
+            alias: l.alias,
+          });
           map.set(to, list);
         }
       }

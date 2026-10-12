@@ -11,14 +11,44 @@ import { basename, dirname, isAbsolute, join, posix, relative, sep } from "node:
 import { classify } from "./filetypes.ts";
 import { atomicWrite, climbsOut, landsInside, readText } from "./fsutil.ts";
 import type { Backlink, Graph, LinkKind, LinkRef, NoteEntry, ResolvedLink } from "./graph.ts";
-import { extensionless, formatPathLink, normKey, pathForm, pathLink, type PathForm, pathNamed, wikiPathCandidates } from "./links.ts";
+import {
+  extensionless,
+  formatPathLink,
+  normKey,
+  pathForm,
+  pathLink,
+  type PathForm,
+  pathNamed,
+  wikiPathCandidates,
+} from "./links.ts";
 import { slugify } from "./parse.ts";
 import { trashVaultMarker } from "./files.ts";
 import { contentHash } from "./redirects.ts";
 import { changedSpan, forgetRename, type LoggedRename, logRename, readRenames } from "./rename-log.ts";
-import { forgetRoot, IdentityEditError, identityReadsBack, newVaultId, readIdentity, readRoots, VAULT_NAME, vaultConfigFile, withIdentity } from "./registry.ts";
+import {
+  forgetRoot,
+  IdentityEditError,
+  identityReadsBack,
+  newVaultId,
+  readIdentity,
+  readRoots,
+  VAULT_NAME,
+  vaultConfigFile,
+  withIdentity,
+} from "./registry.ts";
 import { openVault, Reach } from "./reach.ts";
-import { copyAvailable, folderIdentity, folderNamed, lookupFolder, pointerName, pointerNaming, pointerWarnings, readFolders, recordFolder, travelTogether } from "./folders.ts";
+import {
+  copyAvailable,
+  folderIdentity,
+  folderNamed,
+  lookupFolder,
+  pointerName,
+  pointerNaming,
+  pointerWarnings,
+  readFolders,
+  recordFolder,
+  travelTogether,
+} from "./folders.ts";
 import { formatPointer, isPointer, parsePointer, resolvePointer } from "./pointer.ts";
 import { parseHosted, withHostedPath } from "./hosting.ts";
 import { checkoutOf } from "./git.ts";
@@ -105,7 +135,14 @@ const NOTE_EXT = /\.(md|markdown)$/i;
  * another root than the link, where a name doesn't reach — 17.17, 21.3), a path a path, a relative
  * path relative, an extension written stays written.
  */
-function wikiTarget(written: string, fromRelDir: string | null, toRel: string, g: Graph, movedFrom: string, apart = false): string {
+function wikiTarget(
+  written: string,
+  fromRelDir: string | null,
+  toRel: string,
+  g: Graph,
+  movedFrom: string,
+  apart = false,
+): string {
   const t = written;
   // A note's `.md` only where it was written; any other file's extension is in its path, once.
   const isNote = NOTE_EXT.test(toRel);
@@ -119,7 +156,9 @@ function wikiTarget(written: string, fromRelDir: string | null, toRel: string, g
   if (t.includes("/")) return (t.startsWith("/") ? "/" : "") + stem(toRel) + ext;
   const name = stem(posix.basename(toRel));
   // Another note with that name: the path, so it can't reach the wrong one.
-  const taken = [...g.notes.keys()].some((p) => p !== movedFrom && p !== toRel && normKey(posix.basename(p).replace(NOTE_EXT, "")) === normKey(name));
+  const taken = [...g.notes.keys()].some(
+    (p) => p !== movedFrom && p !== toRel && normKey(posix.basename(p).replace(NOTE_EXT, "")) === normKey(name),
+  );
   return (taken || apart ? stem(toRel) : name) + ext;
 }
 
@@ -141,7 +180,14 @@ function real(p: string): string {
  * `linkingAbs` (to be at `linkingAfter`), that reaches `fromAbs`: the same form, reaching `toAbs`
  * from where the file will be. Null when it isn't one, or reaches something else.
  */
-function pathRetarget(written: string, linkingAbs: string, linkingAfter: string, fromAbs: string, toAbs: string, wiki: boolean): string | null {
+function pathRetarget(
+  written: string,
+  linkingAbs: string,
+  linkingAfter: string,
+  fromAbs: string,
+  toAbs: string,
+  wiki: boolean,
+): string | null {
   const hash = wiki ? -1 : written.indexOf("#");
   const frag = hash >= 0 ? written.slice(hash) : "";
   const path = hash >= 0 ? written.slice(0, hash) : written;
@@ -168,7 +214,8 @@ function mdTarget(written: string, linkingAbs: string, toAbs: string, g: Graph |
   const hosted = /^https?:\/\//i.test(written) ? parseHosted(written) : null;
   if (hosted?.path) {
     const top = checkoutOf(toAbs)?.root;
-    if (top && isInside(top, toAbs)) return withHostedPath(written, hosted.path, relative(top, toAbs).split("\\").join("/"));
+    if (top && isInside(top, toAbs))
+      return withHostedPath(written, hosted.path, relative(top, toAbs).split("\\").join("/"));
   }
   // A pointer (21.7) stays one: its name and branch, the path from its folder's root to the file now —
   // without an extension, a folder's `/`, encoded, each as written. Out of that folder, into another
@@ -176,22 +223,34 @@ function mdTarget(written: string, linkingAbs: string, toAbs: string, g: Graph |
   const p = isPointer(path) ? parsePointer(path) : null;
   if (p) {
     const t = resolvePointer({ ...p, path: "", fragment: null });
-    let into = t.status === "found" && isInside(t.root, toAbs) ? { name: p.name, branch: p.branch, root: t.root } : null;
+    let into =
+      t.status === "found" && isInside(t.root, toAbs) ? { name: p.name, branch: p.branch, root: t.root } : null;
     if (!into) {
       const there = findVaultRoot(toAbs);
       const ident = there ? folderIdentity(there) : null;
-      if (there && ident) into = { name: pointerName({ key: ident.key, name: ident.name, remote: ident.remote }), branch: null, root: there };
+      if (there && ident)
+        into = {
+          name: pointerName({ key: ident.key, name: ident.name, remote: ident.remote }),
+          branch: null,
+          root: there,
+        };
     }
     if (into) {
       let rel = relative(into.root, toAbs).split("\\").join("/");
       if (extensionless(p.path) && NOTE_EXT.test(rel)) rel = rel.replace(NOTE_EXT, "");
       if (p.path.endsWith("/") && rel && !rel.endsWith("/")) rel += "/";
       const encode = /%[0-9A-Fa-f]{2}/.test(path) || /\s/.test(rel);
-      return formatPointer({ name: into.name, branch: into.branch, path: rel, fragment: null }, encode ? encodeURI : undefined) + frag;
+      return (
+        formatPointer(
+          { name: into.name, branch: into.branch, path: rel, fragment: null },
+          encode ? encodeURI : undefined,
+        ) + frag
+      );
     }
   }
   let next: string;
-  if (path.startsWith("/") && g && g.loc.mode !== "folder" && isInside(g.root, toAbs)) next = `/${relative(g.root, toAbs).split("\\").join("/")}`;
+  if (path.startsWith("/") && g && g.loc.mode !== "folder" && isInside(g.root, toAbs))
+    next = `/${relative(g.root, toAbs).split("\\").join("/")}`;
   else {
     next = relative(dirname(linkingAbs), toAbs).split("\\").join("/");
     if (path.startsWith("./") && !next.startsWith("../")) next = `./${next}`;
@@ -220,7 +279,8 @@ function replaceAt(text: string, site: Site, next: string, group: string): { tex
   };
   // The index's column counts characters its own way (a wide one, a tab): of the links on the
   // line with this target, the one nearest to it.
-  const nearest = <T extends { at: number }>(hits: T[]) => hits.sort((a, b) => Math.abs(a.at - col) - Math.abs(b.at - col))[0];
+  const nearest = <T extends { at: number }>(hits: T[]) =>
+    hits.sort((a, b) => Math.abs(a.at - col) - Math.abs(b.at - col))[0];
   if (group === "note" && (site.kind === "wiki" || site.kind === "embed")) {
     const hits: { at: number; from: number; to: number }[] = [];
     for (let open = line.indexOf("[["); open >= 0; open = line.indexOf("[[", open + 2)) {
@@ -230,7 +290,12 @@ function replaceAt(text: string, site: Site, next: string, group: string): { tex
       const end = inner.search(/\\?\||#|\^/);
       const head = end < 0 ? inner : inner.slice(0, end);
       const lead = head.length - head.trimStart().length;
-      if (head.trim() === site.target) hits.push({ at: open > 0 && line[open - 1] === "!" ? open - 1 : open, from: open + 2 + lead, to: open + 2 + lead + head.trim().length });
+      if (head.trim() === site.target)
+        hits.push({
+          at: open > 0 && line[open - 1] === "!" ? open - 1 : open,
+          from: open + 2 + lead,
+          to: open + 2 + lead + head.trim().length,
+        });
     }
     const hit = nearest(hits);
     return hit ? put(at, hit.from, hit.to, next) : null;
@@ -243,10 +308,15 @@ function replaceAt(text: string, site: Site, next: string, group: string): { tex
       if (url !== site.target && safeDecode(url) !== site.target) continue;
       // The link starts at its `[` (or `![`): the nearest one before its `](`.
       const open = line.lastIndexOf("[", m.index);
-      hits.push({ at: open > 0 && line[open - 1] === "!" ? open - 1 : open, start: m.index + m[0].length - raw.length, raw });
+      hits.push({
+        at: open > 0 && line[open - 1] === "!" ? open - 1 : open,
+        start: m.index + m[0].length - raw.length,
+        raw,
+      });
     }
     const hit = nearest(hits);
-    if (hit) return put(at, hit.start, hit.start + hit.raw.length, hit.raw.startsWith("<") ? `<${safeDecode(next)}>` : next);
+    if (hit)
+      return put(at, hit.start, hit.start + hit.raw.length, hit.raw.startsWith("<") ? `<${safeDecode(next)}>` : next);
     // A reference link: its definition, wherever it is.
     for (let i = 0; i < lines.length; i++) {
       const d = /^( {0,3}\[[^\]]+\]:[ \t]*)(<[^>\n]*>|\S+)/.exec(lines[i]!);
@@ -322,10 +392,20 @@ export class Collector {
   edit(site: Site, next: string, vault: string | null): void {
     if (next === site.target) return;
     const f = this.file(site.abs, vault);
-    if (!f) return void this.skipped.push({ shown: shownFor(this.g, site.abs), line: site.line, reason: this.reason(site.abs) });
+    if (!f)
+      return void this.skipped.push({
+        shown: shownFor(this.g, site.abs),
+        line: site.line,
+        reason: this.reason(site.abs),
+      });
     const group = classify(site.abs, this.g.config.walk.extensions).group;
     const r = replaceAt(f.next, site, next, group);
-    if (!r) return void this.skipped.push({ shown: f.shown, line: site.line, reason: `no link to ${site.target} there any more (its index is older than the file)` });
+    if (!r)
+      return void this.skipped.push({
+        shown: f.shown,
+        line: site.line,
+        reason: `no link to ${site.target} there any more (its index is older than the file)`,
+      });
     const before = f.next.split("\n")[r.line - 1]!;
     f.next = r.text;
     const after = f.next.split("\n")[r.line - 1]!;
@@ -352,7 +432,9 @@ export class Collector {
   }
 
   result(): FileChange[] {
-    return [...this.files.values()].filter((f) => f.next !== f.text).map((f) => ({ ...f, edits: f.edits.sort((a, b) => a.line - b.line) }));
+    return [...this.files.values()]
+      .filter((f) => f.next !== f.text)
+      .map((f) => ({ ...f, edits: f.edits.sort((a, b) => a.line - b.line) }));
   }
 }
 
@@ -366,7 +448,11 @@ export function dirtyTrees(paths: string[]): string[] {
   const out: string[] = [];
   for (const root of roots) {
     try {
-      const status = execFileSync("git", gitArgs(root, ["status", "--porcelain"]), { encoding: "utf8", stdio: ["ignore", "pipe", "ignore"], timeout: 5000 });
+      const status = execFileSync("git", gitArgs(root, ["status", "--porcelain"]), {
+        encoding: "utf8",
+        stdio: ["ignore", "pipe", "ignore"],
+        timeout: 5000,
+      });
       if (status.trim()) out.push(`${root} already has uncommitted changes (git): these edits will mix with them`);
     } catch {
       // not a git repository, or no git: nothing to warn about
@@ -383,7 +469,8 @@ function walkSkips(rel: string): boolean {
 /** A vault path as the user typed it: normalized, inside the vault, and not somewhere hidden. */
 function cleanTarget(g: Graph, input: string): string {
   const rel = posix.normalize(input.replace(/\\/g, "/").replace(/^\/+/, "").replace(/\/+$/, ""));
-  if (rel.startsWith("../") || rel === ".." || rel === "." || isAbsolute(rel)) throw new RenameError(`${input} isn't inside the root`);
+  if (rel.startsWith("../") || rel === ".." || rel === "." || isAbsolute(rel))
+    throw new RenameError(`${input} isn't inside the root`);
   if (walkSkips(rel)) throw new RenameError(`${input}: the walk leaves hidden folders and node_modules out`);
   if (!landsInside(g.root, join(g.root, rel))) throw new RenameError(`${rel} would land outside the root`);
   const where = fileInTheWay(g.root, rel);
@@ -449,8 +536,14 @@ export function planNoteRename(g: Graph, fromRel: string, toInput: string): Rena
   let toRel = cleanTarget(g, toInput);
   if (posix.extname(toRel) === "" || (isNote && !NOTE_EXT.test(toRel))) toRel += posix.extname(fromRel);
   if (toRel === fromRel) throw new RenameError(`${fromRel} is already there`);
-  if (existsSync(join(g.root, toRel)) && !sameFile(join(g.root, fromRel), join(g.root, toRel))) throw new RenameError(`${toRel} exists; not overwriting it`);
-  return planMove(g, new Map([[fromRel, toRel]]), { kind: "note", from: fromRel, to: toRel, move: { from: join(g.root, fromRel), to: join(g.root, toRel), dir: false } });
+  if (existsSync(join(g.root, toRel)) && !sameFile(join(g.root, fromRel), join(g.root, toRel)))
+    throw new RenameError(`${toRel} exists; not overwriting it`);
+  return planMove(g, new Map([[fromRel, toRel]]), {
+    kind: "note",
+    from: fromRel,
+    to: toRel,
+    move: { from: join(g.root, fromRel), to: join(g.root, toRel), dir: false },
+  });
 }
 
 /**
@@ -463,23 +556,34 @@ export function planFolderMove(g: Graph, fromDir: string, toInput: string): Rena
   const to = cleanTarget(g, toInput);
   if (to === from) throw new RenameError(`${from} is already there`);
   if (to.startsWith(`${from}/`)) throw new RenameError(`${from} can't move into itself`);
-  if (existsSync(join(g.root, to)) && !sameFile(join(g.root, from), join(g.root, to))) throw new RenameError(`${to} exists; not overwriting it`);
+  if (existsSync(join(g.root, to)) && !sameFile(join(g.root, from), join(g.root, to)))
+    throw new RenameError(`${to} exists; not overwriting it`);
   const moves = new Map<string, string>();
-  for (const rel of [...g.notes.keys(), ...g.filePaths()]) if (rel.startsWith(`${from}/`)) moves.set(rel, `${to}${rel.slice(from.length)}`);
+  for (const rel of [...g.notes.keys(), ...g.filePaths()])
+    if (rel.startsWith(`${from}/`)) moves.set(rel, `${to}${rel.slice(from.length)}`);
   // A root nested in it moves with it (18.7): the links into it and out of it as its own move's.
   const fromAbs = join(g.root, from);
   const toAbs = join(g.root, to);
   const moving = (abs: string) => abs === fromAbs || abs.startsWith(`${fromAbs}/`);
   const shift = (abs: string) => (moving(abs) ? toAbs + abs.slice(fromAbs.length) : abs);
   const nested = g.nestedRoots().filter((r) => r.startsWith(`${from}/`));
-  const roots = nested.length ? (c: Collector) => nested.flatMap((r) => nestedRootEdits(g, c, join(g.root, r), moving, shift)) : undefined;
-  return planMove(g, moves, { kind: "folder", from, to, move: { from: fromAbs, to: toAbs, dir: true } }, foldersMoving(g, from, to), roots);
+  const roots = nested.length
+    ? (c: Collector) => nested.flatMap((r) => nestedRootEdits(g, c, join(g.root, r), moving, shift))
+    : undefined;
+  return planMove(
+    g,
+    moves,
+    { kind: "folder", from, to, move: { from: fromAbs, to: toAbs, dir: true } },
+    foldersMoving(g, from, to),
+    roots,
+  );
 }
 
 /** The folder `from` and every folder in it, each to where it goes under `to` (links to a folder, 21.2). */
 function foldersMoving(g: Graph, from: string, to: string): Map<string, string> {
   const out = new Map<string, string>();
-  for (const d of [from, ...g.dirs]) if (d === from || d.startsWith(`${from}/`)) out.set(d, `${to}${d.slice(from.length)}`);
+  for (const d of [from, ...g.dirs])
+    if (d === from || d.startsWith(`${from}/`)) out.set(d, `${to}${d.slice(from.length)}`);
   return out;
 }
 
@@ -488,7 +592,13 @@ function foldersMoving(g: Graph, from: string, to: string): Map<string, string> 
  * from where its file will be, each moved note's relative links to what stays put rewritten from
  * where it will be.
  */
-function planMove(g: Graph, moves: Map<string, string>, head: Pick<RenamePlan, "kind" | "from" | "to" | "move">, folders = new Map<string, string>(), roots?: (c: Collector) => [string, string][]): RenamePlan {
+function planMove(
+  g: Graph,
+  moves: Map<string, string>,
+  head: Pick<RenamePlan, "kind" | "from" | "to" | "move">,
+  folders = new Map<string, string>(),
+  roots?: (c: Collector) => [string, string][],
+): RenamePlan {
   const c = new Collector(g);
   const abs = (rel: string) => join(g.root, rel);
   const mv = head.move;
@@ -515,13 +625,27 @@ function planMove(g: Graph, moves: Map<string, string>, head: Pick<RenamePlan, "
     const crosses = rootOfPath(abs(toRel)) !== real(g.root);
     if (posix.dirname(fromRel) === posix.dirname(toRel) && !crosses) continue;
     if (!entry) {
-      ownFileLinks(g, c, fromRel, toRel, crosses, (r) => (!isAbsolute(r) && (moves.has(r) || folders.has(r))) || (isAbsolute(r) && after(r) !== r));
+      ownFileLinks(
+        g,
+        c,
+        fromRel,
+        toRel,
+        crosses,
+        (r) => (!isAbsolute(r) && (moves.has(r) || folders.has(r))) || (isAbsolute(r) && after(r) !== r),
+      );
       continue;
     }
     for (const l of entry.links) {
       const wikiLink = l.kind === "wiki" || l.kind === "embed";
-      if (l.kind !== "markdown" && l.kind !== "image" && !(wikiLink && (crosses || /^\.\.?\//.test(l.target)))) continue;
-      if (/^[a-z][a-z0-9+.-]*:/i.test(l.target) || l.target.startsWith("#") || (l.target.startsWith("/") && !crosses) || l.target.startsWith("~/")) continue;
+      if (l.kind !== "markdown" && l.kind !== "image" && !(wikiLink && (crosses || /^\.\.?\//.test(l.target))))
+        continue;
+      if (
+        /^[a-z][a-z0-9+.-]*:/i.test(l.target) ||
+        l.target.startsWith("#") ||
+        (l.target.startsWith("/") && !crosses) ||
+        l.target.startsWith("~/")
+      )
+        continue;
       const r = g.resolveLink(l, fromRel);
       if ((r.resolvedKind !== "note" && r.resolvedKind !== "file" && r.resolvedKind !== "folder") || !r.path) continue;
       if (!isAbsolute(r.path) && (moves.has(r.path) || folders.has(r.path))) continue; // moving too: rewritten as its backlink
@@ -543,7 +667,9 @@ function planMove(g: Graph, moves: Map<string, string>, head: Pick<RenamePlan, "
     for (const b of g.backlinks(fromDir)) {
       const linking = isAbsolute(b.from) ? b.from : abs(b.from);
       const site: Site = { abs: linking, kind: b.kind, target: b.target, line: b.line, column: b.column };
-      const byPath = pathForm(b.target) ? pathRetarget(b.target, linking, after(linking), abs(fromDir), abs(toDir), false) : null;
+      const byPath = pathForm(b.target)
+        ? pathRetarget(b.target, linking, after(linking), abs(fromDir), abs(toDir), false)
+        : null;
       c.edit(site, byPath ?? mdTarget(b.target, after(linking), abs(toDir), g), null);
     }
   }
@@ -561,13 +687,25 @@ function planMove(g: Graph, moves: Map<string, string>, head: Pick<RenamePlan, "
  * `/…` from the root are left, but into a root nested here (`crosses`), where `/` is that root's; a URL
  * too. `moving`: a target that moves with it (a vault path, or an absolute one), its own backlink's.
  */
-function ownFileLinks(g: Graph, c: Collector, fromRel: string, toRel: string, crosses: boolean, moving: (path: string) => boolean): void {
+function ownFileLinks(
+  g: Graph,
+  c: Collector,
+  fromRel: string,
+  toRel: string,
+  crosses: boolean,
+  moving: (path: string) => boolean,
+): void {
   const data = classify(fromRel, g.config.walk.extensions).group === "data";
   const toAbs = join(g.root, toRel);
   for (const l of g.fileLinksOf(fromRel)) {
     if (/^[a-z][a-z0-9+.-]*:/i.test(l.target) || l.target.startsWith("#")) continue;
     const r = g.resolveLink(l, fromRel);
-    if ((r.resolvedKind !== "note" && r.resolvedKind !== "file" && r.resolvedKind !== "folder") || !r.path || moving(r.path)) continue;
+    if (
+      (r.resolvedKind !== "note" && r.resolvedKind !== "file" && r.resolvedKind !== "folder") ||
+      !r.path ||
+      moving(r.path)
+    )
+      continue;
     const targetAbs = isAbsolute(r.path) ? r.path : join(g.root, r.path);
     // As written: a data file's value is its target; a comment's, its text (`util.ts:12:3` its path, the
     // line and column kept), the index's target being its path from the root.
@@ -579,7 +717,11 @@ function ownFileLinks(g: Graph, c: Collector, fromRel: string, toRel: string, cr
       const lands = !beside.startsWith("..") && g.known(beside) ? beside : posix.normalize(written);
       if (lands === r.path) continue;
     }
-    c.edit({ abs: join(g.root, fromRel), kind: l.kind, target: written, line: l.line, column: l.column }, relativeAs(written, toAbs, targetAbs), null);
+    c.edit(
+      { abs: join(g.root, fromRel), kind: l.kind, target: written, line: l.line, column: l.column },
+      relativeAs(written, toAbs, targetAbs),
+      null,
+    );
   }
 }
 
@@ -611,7 +753,8 @@ export function planVaultFolderMove(parent: Graph, fromRel: string, toInput: str
   const to = cleanTarget(parent, toInput);
   if (to === from) throw new RenameError(`${from} is already there`);
   if (to.startsWith(`${from}/`)) throw new RenameError(`${from} can't move into itself`);
-  if (existsSync(join(parent.root, to)) && !sameFile(join(parent.root, from), join(parent.root, to))) throw new RenameError(`${to} exists; not overwriting it`);
+  if (existsSync(join(parent.root, to)) && !sameFile(join(parent.root, from), join(parent.root, to)))
+    throw new RenameError(`${to} exists; not overwriting it`);
   const fromAbs = join(parent.root, from);
   const toAbs = join(parent.root, to);
   const moving = (abs: string) => abs === fromAbs || abs.startsWith(`${fromAbs}/`);
@@ -639,7 +782,13 @@ export function planVaultFolderMove(parent: Graph, fromRel: string, toInput: str
  * it, each from where its file will be (`shift`); links within what moves (`moving`) stay as they are.
  * The roots that move, it and those nested in it, old → new.
  */
-function nestedRootEdits(parent: Graph, c: Collector, rootAbs: string, moving: (abs: string) => boolean, shift: (abs: string) => string): [string, string][] {
+function nestedRootEdits(
+  parent: Graph,
+  c: Collector,
+  rootAbs: string,
+  moving: (abs: string) => boolean,
+  shift: (abs: string) => string,
+): [string, string][] {
   // Other vaults' links are read from their indexes: the parent's, fresh.
   parent.ensureAll();
   const graphs: Graph[] = [];
@@ -653,7 +802,18 @@ function nestedRootEdits(parent: Graph, c: Collector, rootAbs: string, moving: (
   for (const l of linksIntoFolder(parent, rootAbs)) {
     if (moving(l.backlink.from)) continue;
     const next = retargetInto(l.backlink, l.targetAbs, shift(l.targetAbs));
-    if (next !== null) c.edit({ abs: l.backlink.from, kind: l.backlink.kind, target: l.backlink.target, line: l.backlink.line, column: l.backlink.column }, next, null);
+    if (next !== null)
+      c.edit(
+        {
+          abs: l.backlink.from,
+          kind: l.backlink.kind,
+          target: l.backlink.target,
+          line: l.backlink.line,
+          column: l.backlink.column,
+        },
+        next,
+        null,
+      );
   }
   for (const g of graphs) {
     g.ensureAll();
@@ -662,9 +822,19 @@ function nestedRootEdits(parent: Graph, c: Collector, rootAbs: string, moving: (
       const targetAbs = join(g.root, rel);
       for (const b of g.backlinks(rel)) {
         // The parent's own links are rewritten above; a root nested beside this one has its own.
-        if (!isAbsolute(b.from) || moving(b.from) || (isInside(parent.root, b.from) && real(findVaultRoot(b.from) ?? "") === real(parent.root))) continue;
+        if (
+          !isAbsolute(b.from) ||
+          moving(b.from) ||
+          (isInside(parent.root, b.from) && real(findVaultRoot(b.from) ?? "") === real(parent.root))
+        )
+          continue;
         const next = retargetInto(b, targetAbs, shift(targetAbs));
-        if (next !== null) c.edit({ abs: b.from, kind: b.kind, target: b.target, line: b.line, column: b.column }, next, b.vault ?? null);
+        if (next !== null)
+          c.edit(
+            { abs: b.from, kind: b.kind, target: b.target, line: b.line, column: b.column },
+            next,
+            b.vault ?? null,
+          );
       }
     }
     // Out of it, from where its notes will be.
@@ -672,10 +842,19 @@ function nestedRootEdits(parent: Graph, c: Collector, rootAbs: string, moving: (
       const noteAbs = join(g.root, rel);
       for (const l of entry.links) {
         const wiki = l.kind === "wiki" || l.kind === "embed";
-        if (wiki ? !/^\.\.?\//.test(l.target) : /^[a-z][a-z0-9+.-]*:/i.test(l.target) || /^[#/~]/.test(l.target)) continue;
+        if (wiki ? !/^\.\.?\//.test(l.target) : /^[a-z][a-z0-9+.-]*:/i.test(l.target) || /^[#/~]/.test(l.target))
+          continue;
         const r = g.resolveLink(l, rel);
-        if ((r.resolvedKind !== "note" && r.resolvedKind !== "file") || !r.path || !isAbsolute(r.path) || moving(r.path)) continue;
-        const next = wiki ? formatPathLink("relative", r.path, shift(noteAbs), /\.[A-Za-z0-9]+$/.test(l.target)) : mdTarget(l.target, shift(noteAbs), r.path, null);
+        if (
+          (r.resolvedKind !== "note" && r.resolvedKind !== "file") ||
+          !r.path ||
+          !isAbsolute(r.path) ||
+          moving(r.path)
+        )
+          continue;
+        const next = wiki
+          ? formatPathLink("relative", r.path, shift(noteAbs), /\.[A-Za-z0-9]+$/.test(l.target))
+          : mdTarget(l.target, shift(noteAbs), r.path, null);
         c.edit({ abs: noteAbs, kind: l.kind, target: l.target, line: l.line, column: l.column }, next, null);
       }
     }
@@ -693,7 +872,21 @@ export function linksIntoFolder(g: Graph, folderAbs: string): { backlink: Backli
       const r = g.resolveLink(l, rel);
       if ((r.resolvedKind !== "note" && r.resolvedKind !== "file") || !r.path || !isAbsolute(r.path)) continue;
       if (r.path !== folderAbs && !r.path.startsWith(`${folderAbs}/`)) continue;
-      out.push({ backlink: { from: join(g.root, rel), line: l.line, column: l.column, end: l.end, text: l.text, kind: l.kind, target: l.target, heading: l.heading, block: l.block, alias: l.alias }, targetAbs: r.path });
+      out.push({
+        backlink: {
+          from: join(g.root, rel),
+          line: l.line,
+          column: l.column,
+          end: l.end,
+          text: l.text,
+          kind: l.kind,
+          target: l.target,
+          heading: l.heading,
+          block: l.block,
+          alias: l.alias,
+        },
+        targetAbs: r.path,
+      });
     }
   }
   return out;
@@ -726,9 +919,27 @@ function retargetInto(b: Backlink, oldAbs: string, newAbs: string): string | nul
 }
 
 /** The new target text of a link to a moved file, written in `linking` (which will be at `linkingAfter`). */
-function retargetBacklink(g: Graph, b: Backlink, linking: string, linkingAfter: string, fromRel: string, toRel: string, aliases: Set<string>, oldName: string): string {
+function retargetBacklink(
+  g: Graph,
+  b: Backlink,
+  linking: string,
+  linkingAfter: string,
+  fromRel: string,
+  toRel: string,
+  aliases: Set<string>,
+  oldName: string,
+): string {
   const toAbs = join(g.root, toRel);
-  const byPath = pathForm(b.target) ? pathRetarget(b.target, linking, linkingAfter, join(g.root, fromRel), toAbs, b.kind === "wiki" || b.kind === "embed") : null;
+  const byPath = pathForm(b.target)
+    ? pathRetarget(
+        b.target,
+        linking,
+        linkingAfter,
+        join(g.root, fromRel),
+        toAbs,
+        b.kind === "wiki" || b.kind === "embed",
+      )
+    : null;
   if (byPath) return byPath;
   if (b.kind === "wiki" || b.kind === "embed") {
     const name = posix.basename(b.target).replace(NOTE_EXT, "");
@@ -747,8 +958,12 @@ function retargetBacklink(g: Graph, b: Backlink, linking: string, linkingAfter: 
  * id. Links are paths, or pointers by name (which the relink brings to the new one): nothing else changes.
  */
 export function planVaultRename(loc: VaultLocation, newName: string): RenamePlan {
-  if (loc.mode !== "vault" || !hasMarker(loc.root)) throw new RenameError(`${loc.root} has no .slipbox/ to hold a name: slipbox init --name gives it one`);
-  if (!VAULT_NAME.test(newName)) throw new RenameError(`"${newName}" can't be a folder's name: letters, digits, ".", "_" and "-" only, no spaces, "/" or ":"`);
+  if (loc.mode !== "vault" || !hasMarker(loc.root))
+    throw new RenameError(`${loc.root} has no .slipbox/ to hold a name: slipbox init --name gives it one`);
+  if (!VAULT_NAME.test(newName))
+    throw new RenameError(
+      `"${newName}" can't be a folder's name: letters, digits, ".", "_" and "-" only, no spaces, "/" or ":"`,
+    );
   const cfg = vaultConfigFile(loc.root);
   const have = readIdentity(cfg);
   const oldName = have.name;
@@ -760,10 +975,28 @@ export function planVaultRename(loc: VaultLocation, newName: string): RenamePlan
   const next = oldName ? renameInConfig(text, oldName, newName) : withIdentity(text, have, { id: id!, name: newName });
   // The edit is textual: read back, it must be the same folder by its new name, the old one kept —
   // else (a `[ vault ]` header, dotted `vault.name` keys) nothing is written. Never named too.
-  if (!identityReadsBack(have, next, { id, name: newName, ...(oldName ? { previous: oldName } : {}) })) throw new RenameError(new IdentityEditError().message);
+  if (!identityReadsBack(have, next, { id, name: newName, ...(oldName ? { previous: oldName } : {}) }))
+    throw new RenameError(new IdentityEditError().message);
   const after = oldName ? `name = "${newName}" (previous_names + ${oldName})` : `name = "${newName}"`;
-  const files: FileChange[] = [{ abs: cfg, shown: ".slipbox/config.toml", vault: null, edits: [{ line: 0, before: oldName ? `name = "${oldName}"` : "(no name)", after }], text, next }];
-  return { kind: "vault", from: oldName ?? loc.root, to: newName, move: null, files, warnings: dirtyTrees([cfg]), skipped: [] };
+  const files: FileChange[] = [
+    {
+      abs: cfg,
+      shown: ".slipbox/config.toml",
+      vault: null,
+      edits: [{ line: 0, before: oldName ? `name = "${oldName}"` : "(no name)", after }],
+      text,
+      next,
+    },
+  ];
+  return {
+    kind: "vault",
+    from: oldName ?? loc.root,
+    to: newName,
+    move: null,
+    files,
+    warnings: dirtyTrees([cfg]),
+    skipped: [],
+  };
 }
 
 /** `[vault] name` replaced, and the old name added to `previous_names`, as text. */
@@ -779,17 +1012,28 @@ function renameInConfig(text: string, oldName: string, newName: string): string 
   const end = nextTable ? start + nextTable.index : t.length;
   let table = t.slice(start, end);
   const nameLine = /^name[ \t]*=.*$/m;
-  table = nameLine.test(table) ? table.replace(nameLine, `name = ${JSON.stringify(newName)}`) : `\nname = ${JSON.stringify(newName)}${table}`;
+  table = nameLine.test(table)
+    ? table.replace(nameLine, `name = ${JSON.stringify(newName)}`)
+    : `\nname = ${JSON.stringify(newName)}${table}`;
   // On one line or several (as a formatter writes a long array), a comment after it or in it.
   const prev = /^previous_names[ \t]*=[ \t]*\[([\s\S]*?)\][ \t]*(#.*)?$/m.exec(table);
   if (prev) {
-    const items = prev[1]!.split("\n").map((l) => l.replace(/#.*$/, "")).join(",").split(",").map((x) => x.trim()).filter(Boolean);
+    const items = prev[1]!
+      .split("\n")
+      .map((l) => l.replace(/#.*$/, ""))
+      .join(",")
+      .split(",")
+      .map((x) => x.trim())
+      .filter(Boolean);
     if (!items.map((x) => x.replace(/^["']|["']$/g, "")).includes(oldName)) items.push(JSON.stringify(oldName));
     table = table.replace(prev[0], `previous_names = [${items.join(", ")}]${prev[2] ? ` ${prev[2]}` : ""}`);
   } else {
     const nl = table.endsWith("\n") ? "" : "\n";
     const at = table.search(/\n\s*$/);
-    table = at >= 0 ? `${table.slice(0, at)}\nprevious_names = [${JSON.stringify(oldName)}]${table.slice(at)}` : `${table}${nl}previous_names = [${JSON.stringify(oldName)}]\n`;
+    table =
+      at >= 0
+        ? `${table.slice(0, at)}\nprevious_names = [${JSON.stringify(oldName)}]${table.slice(at)}`
+        : `${table}${nl}previous_names = [${JSON.stringify(oldName)}]\n`;
   }
   return t.slice(0, start) + table + t.slice(end);
 }
@@ -814,7 +1058,11 @@ export function planRelink(g: Graph, rels?: string[], opts: { pointers?: boolean
       if (to) {
         // Each in its own form: a wikilink's path a wikilink's (relative kept, `.md` only if written).
         const wiki = l.kind === "wiki" || l.kind === "embed";
-        c.edit(site, wiki ? wikiTarget(l.target, posix.dirname(rel), to, g, "") : mdTarget(l.target, abs, join(g.root, to), g), null);
+        c.edit(
+          site,
+          wiki ? wikiTarget(l.target, posix.dirname(rel), to, g, "") : mdTarget(l.target, abs, join(g.root, to), g),
+          null,
+        );
         continue;
       }
       // A pointer by a name its folder had (21.10, renamed with `slipbox name`): the name it has now.
@@ -835,7 +1083,15 @@ export function planRelink(g: Graph, rels?: string[], opts: { pointers?: boolean
   const moved = rels ? null : lastMove(g);
   if (moved) vaultMoveFixes(g, moved, c);
   const files = c.result();
-  return { kind: "relink", from: rels?.join(", ") ?? "every note", to: "", move: null, files, warnings: [...said, ...dirtyTrees(files.map((f) => f.abs))], skipped: c.skipped };
+  return {
+    kind: "relink",
+    from: rels?.join(", ") ?? "every note",
+    to: "",
+    move: null,
+    files,
+    warnings: [...said, ...dirtyTrees(files.map((f) => f.abs))],
+    skipped: c.skipped,
+  };
 }
 
 /**
@@ -850,7 +1106,12 @@ function pointerOffer(g: Graph, l: ResolvedLink, fromRel: string, said: Set<stri
   const frag = hash >= 0 ? l.target.slice(hash) : "";
   if (!pathForm(path) || pathForm(path) === "file-url") return null;
   let abs: string | null = null;
-  if ((l.resolvedKind === "note" || l.resolvedKind === "file" || l.resolvedKind === "folder") && l.path && isAbsolute(l.path)) abs = l.path;
+  if (
+    (l.resolvedKind === "note" || l.resolvedKind === "file" || l.resolvedKind === "folder") &&
+    l.path &&
+    isAbsolute(l.path)
+  )
+    abs = l.path;
   else if (l.resolvedKind === "unresolved" && pathForm(path) === "relative") {
     let decoded = path;
     try {
@@ -865,7 +1126,9 @@ function pointerOffer(g: Graph, l: ResolvedLink, fromRel: string, said: Set<stri
   const ident = there ? folderIdentity(there) : null;
   let hit = ident && there ? { f: folders.find((x) => x.key === ident.key), root: there } : null;
   if (!hit?.f) {
-    const was = folders.flatMap((f) => f.copies.filter((c) => !copyAvailable(c.path) && isInside(c.path, abs!)).map((c) => ({ f, root: c.path })))[0];
+    const was = folders.flatMap((f) =>
+      f.copies.filter((c) => !copyAvailable(c.path) && isInside(c.path, abs!)).map((c) => ({ f, root: c.path })),
+    )[0];
     hit = was ?? null;
   }
   // A named folder moved by hand, its state along (21.8): where it was, as its move was kept.
@@ -918,11 +1181,21 @@ function vaultMoveFixes(g: Graph, from: string, c: Collector): void {
   };
   for (const rel of g.notes.keys()) {
     for (const l of g.linksOf(rel)) {
-      if ((l.kind !== "markdown" && l.kind !== "image") || !pathOf(l.target) || l.target.startsWith("/") || l.target.startsWith("~/")) continue;
+      if (
+        (l.kind !== "markdown" && l.kind !== "image") ||
+        !pathOf(l.target) ||
+        l.target.startsWith("/") ||
+        l.target.startsWith("~/")
+      )
+        continue;
       if (g.resolveLink(l, rel).resolvedKind !== "unresolved") continue;
       const was = pathNamed(pathOf(l.target)!, join(from, rel));
       if (!was || isInside(from, was.abs) || !existsSync(was.abs)) continue;
-      c.edit({ abs: join(to, rel), kind: l.kind, target: l.target, line: l.line, column: l.column }, retarget(l.target, was.form, was.abs, join(to, rel)), null);
+      c.edit(
+        { abs: join(to, rel), kind: l.kind, target: l.target, line: l.line, column: l.column },
+        retarget(l.target, was.form, was.abs, join(to, rel)),
+        null,
+      );
     }
   }
   for (const v of readRoots()) {
@@ -937,7 +1210,11 @@ function vaultMoveFixes(g: Graph, from: string, c: Collector): void {
         if (!was || !isInside(from, was.abs) || existsSync(was.abs)) continue;
         const now = join(to, relative(from, was.abs));
         if (!existsSync(now)) continue;
-        c.edit({ abs: linking, kind: l.kind, target: l.target, line: l.line, column: l.column }, retarget(l.target, was.form, now, linking), g.reach?.vaultOf(og.root) ?? null);
+        c.edit(
+          { abs: linking, kind: l.kind, target: l.target, line: l.line, column: l.column },
+          retarget(l.target, was.form, now, linking),
+          g.reach?.vaultOf(og.root) ?? null,
+        );
       }
     }
   }
@@ -961,12 +1238,20 @@ function urlTo(written: string, linkingAbs: string, rootAbs: string, targetAbs: 
   if (!written.startsWith("/") || !isInside(rootAbs, targetAbs)) return mdTarget(written, linkingAbs, targetAbs, null);
   const hash = written.indexOf("#");
   const next = `/${relative(rootAbs, targetAbs).split(sep).join("/")}`;
-  return (/%[0-9A-Fa-f]{2}/.test(written) || /\s/.test(next) ? encodeURI(next) : next) + (hash >= 0 ? written.slice(hash) : "");
+  return (
+    (/%[0-9A-Fa-f]{2}/.test(written) || /\s/.test(next) ? encodeURI(next) : next) +
+    (hash >= 0 ? written.slice(hash) : "")
+  );
 }
 
 /** A markdown link that names a web page, a place in the note, or a file by the filesystem's own path. */
 function notARootPath(url: string): boolean {
-  return (/^[a-z][a-z0-9+.-]*:/i.test(url) && !/^file:/i.test(url)) || /^file:/i.test(url) || url.startsWith("~/") || url.startsWith("#");
+  return (
+    (/^[a-z][a-z0-9+.-]*:/i.test(url) && !/^file:/i.test(url)) ||
+    /^file:/i.test(url) ||
+    url.startsWith("~/") ||
+    url.startsWith("#")
+  );
 }
 
 /**
@@ -976,7 +1261,9 @@ function notARootPath(url: string): boolean {
 function wikiPathReaches(written: string, rootAbs: string, targetAbs: string): boolean {
   const t = written.trim();
   if (!t.includes("/") || /^\.\.?\//.test(t)) return false;
-  return wikiPathCandidates(join(rootAbs, t.replace(/^\/+/, ""))).some((c) => c === targetAbs || (existsSync(c) && real(c) === real(targetAbs)));
+  return wikiPathCandidates(join(rootAbs, t.replace(/^\/+/, ""))).some(
+    (c) => c === targetAbs || (existsSync(c) && real(c) === real(targetAbs)),
+  );
 }
 
 /**
@@ -986,7 +1273,10 @@ function wikiPathReaches(written: string, rootAbs: string, targetAbs: string): b
  */
 function wikiTo(written: string, linkingAbs: string, rootAbs: string, targetAbs: string): string {
   const fromRoot = relative(rootAbs, targetAbs).split(sep).join("/");
-  const next = !climbsOut(fromRoot) && !isAbsolute(fromRoot) && fromRoot.includes("/") ? fromRoot : formatPathLink("relative", targetAbs, linkingAbs, true);
+  const next =
+    !climbsOut(fromRoot) && !isAbsolute(fromRoot) && fromRoot.includes("/")
+      ? fromRoot
+      : formatPathLink("relative", targetAbs, linkingAbs, true);
   return NOTE_EXT.test(written) || !NOTE_EXT.test(targetAbs) ? next : next.replace(NOTE_EXT, "");
 }
 
@@ -999,7 +1289,8 @@ function wikiNameKey(path: string): string {
 /** Normalized folder path as typed, inside the vault. */
 function folderPath(g: Graph, folderRel: string): string {
   const f = posix.normalize(folderRel.replace(/\\/g, "/").replace(/^\/+/, "").replace(/\/+$/, ""));
-  if (!f || f === "." || f === ".." || f.startsWith("../")) throw new RenameError(`${folderRel} isn't a folder inside ${g.root}`);
+  if (!f || f === "." || f === ".." || f.startsWith("../"))
+    throw new RenameError(`${folderRel} isn't a folder inside ${g.root}`);
   return f;
 }
 
@@ -1008,8 +1299,14 @@ function folderPath(g: Graph, folderRel: string): string {
  * one is given (18.11, 21.10). Links are paths (20.2): relative, or the filesystem's own, they reach
  * across the new boundary as they are; one that wouldn't is rewritten to reach what it did.
  */
-export function planMakeVault(parent: Graph, folderRel: string, name: string | null, opts: { private?: boolean } = {}): RenamePlan {
-  if (parent.loc.mode !== "vault") throw new RenameError(`${parent.root} isn't a root: make it one first (slipbox init)`);
+export function planMakeVault(
+  parent: Graph,
+  folderRel: string,
+  name: string | null,
+  opts: { private?: boolean } = {},
+): RenamePlan {
+  if (parent.loc.mode !== "vault")
+    throw new RenameError(`${parent.root} isn't a root: make it one first (slipbox init)`);
   const F = folderPath(parent, folderRel);
   if (parent.nestedRoots().includes(F)) throw new RenameError(`${F} is already a root`);
   if (!parent.dirs.includes(F)) throw new RenameError(`no folder ${F} in ${parent.root}`);
@@ -1043,18 +1340,34 @@ export function planMakeVault(parent: Graph, folderRel: string, name: string | n
         continue;
       }
       if (notARootPath(l.target)) continue;
-      if (!urlReaches(l.target, linkingAbs, rootAfter, targetAbs)) c.edit(site, urlTo(l.target, linkingAbs, rootAfter, targetAbs), null);
+      if (!urlReaches(l.target, linkingAbs, rootAfter, targetAbs))
+        c.edit(site, urlTo(l.target, linkingAbs, rootAfter, targetAbs), null);
     }
   }
   const files = c.result();
-  return { kind: "make-vault", from: F, to: name ?? F, move: null, files, warnings: dirtyTrees([Fabs, ...files.map((f) => f.abs)]), skipped: c.skipped, makeVault: { root: Fabs, name, private: !!opts.private } };
+  return {
+    kind: "make-vault",
+    from: F,
+    to: name ?? F,
+    move: null,
+    files,
+    warnings: dirtyTrees([Fabs, ...files.map((f) => f.abs)]),
+    skipped: c.skipped,
+    makeVault: { root: Fabs, name, private: !!opts.private },
+  };
 }
 
 /** A folder's new name: one a pointer can carry, and no different folder's on this machine (21.6). */
 function checkVaultName(name: string, except?: string): void {
-  if (!VAULT_NAME.test(name)) throw new RenameError(`"${name}" can't be a folder's name: letters, digits, ".", "_" and "-" only, no spaces, "/" or ":"`);
+  if (!VAULT_NAME.test(name))
+    throw new RenameError(
+      `"${name}" can't be a folder's name: letters, digits, ".", "_" and "-" only, no spaces, "/" or ":"`,
+    );
   const other = folderNamed(name, except);
-  if (other.length) throw new RenameError(`a different folder is called "${name}", at ${other[0]!.default ?? other[0]!.copies[0]?.path}`);
+  if (other.length)
+    throw new RenameError(
+      `a different folder is called "${name}", at ${other[0]!.default ?? other[0]!.copies[0]?.path}`,
+    );
 }
 
 /**
@@ -1068,7 +1381,8 @@ export function planUnmakeVault(parent: Graph, folderRel: string): RenamePlan {
   const Vabs = join(parent.root, F);
   // A git checkout is a vault by itself (20.3): without its .slipbox/ it would be one still.
   const others = markersAt(Vabs).filter((m) => m !== ".slipbox");
-  if (others.length) throw new RenameError(`${F} is a root by its ${others.join(", ")} too: it stays one, with or without .slipbox/`);
+  if (others.length)
+    throw new RenameError(`${F} is a root by its ${others.join(", ")} too: it stays one, with or without .slipbox/`);
   const v = openVault(Vabs);
   v.ensureAll();
   parent.ensureAll();
@@ -1076,7 +1390,11 @@ export function planUnmakeVault(parent: Graph, folderRel: string): RenamePlan {
   const c = new Collector(parent);
   // The names a wikilink reaches once its notes are the parent's: how many files answer to each.
   const named = new Map<string, number>();
-  for (const p of [...parent.notes.keys(), ...parent.filePaths(), ...[...v.notes.keys(), ...v.filePaths()].map((x) => `${F}/${x}`)]) {
+  for (const p of [
+    ...parent.notes.keys(),
+    ...parent.filePaths(),
+    ...[...v.notes.keys(), ...v.filePaths()].map((x) => `${F}/${x}`),
+  ]) {
     const k = wikiNameKey(p);
     named.set(k, (named.get(k) ?? 0) + 1);
   }
@@ -1096,11 +1414,14 @@ export function planUnmakeVault(parent: Graph, folderRel: string): RenamePlan {
         // now; a name stays one only while no other file of the parent answers to it.
         const t = l.target.trim();
         if (/^\.\.?\//.test(t)) continue;
-        const reaches = t.includes("/") ? wikiPathReaches(t, parent.root, targetAbs) : r.via === "alias" || (named.get(wikiNameKey(targetAbs)) ?? 0) <= 1;
+        const reaches = t.includes("/")
+          ? wikiPathReaches(t, parent.root, targetAbs)
+          : r.via === "alias" || (named.get(wikiNameKey(targetAbs)) ?? 0) <= 1;
         if (!reaches) c.edit(site, wikiTo(l.target, linkingAbs, parent.root, targetAbs), null);
         continue;
       }
-      if (!urlReaches(l.target, linkingAbs, parent.root, targetAbs)) c.edit(site, urlTo(l.target, linkingAbs, parent.root, targetAbs), null);
+      if (!urlReaches(l.target, linkingAbs, parent.root, targetAbs))
+        c.edit(site, urlTo(l.target, linkingAbs, parent.root, targetAbs), null);
     }
   }
   // The parent's names: one its notes share with a note of the vault would land on either — a path.
@@ -1109,10 +1430,20 @@ export function planUnmakeVault(parent: Graph, folderRel: string): RenamePlan {
     for (const l of e.links) {
       if ((l.kind !== "wiki" && l.kind !== "embed") || l.target.includes("/") || !l.target.trim()) continue;
       const r = parent.resolveLink(l, rel);
-      if ((r.resolvedKind !== "note" && r.resolvedKind !== "file") || !r.path || isAbsolute(r.path) || r.via === "alias") continue;
+      if (
+        (r.resolvedKind !== "note" && r.resolvedKind !== "file") ||
+        !r.path ||
+        isAbsolute(r.path) ||
+        r.via === "alias"
+      )
+        continue;
       if (!vNamed.has(wikiNameKey(r.path))) continue;
       const linkingAbs = join(parent.root, rel);
-      c.edit({ abs: linkingAbs, kind: l.kind, target: l.target, line: l.line, column: l.column }, wikiTo(l.target, linkingAbs, parent.root, join(parent.root, r.path)), null);
+      c.edit(
+        { abs: linkingAbs, kind: l.kind, target: l.target, line: l.line, column: l.column },
+        wikiTo(l.target, linkingAbs, parent.root, join(parent.root, r.path)),
+        null,
+      );
     }
   }
   const unpointed = pointersByItsName(parent, v, F, c);
@@ -1123,9 +1454,23 @@ export function planUnmakeVault(parent: Graph, folderRel: string): RenamePlan {
   try {
     config = readText(vaultConfigFile(Vabs)).text;
   } catch {}
-  const tables = [...config.matchAll(/^\[([^\]]+)\][ \t]*(#.*)?$/gm)].map((m) => m[1]!.trim()).filter((t) => t !== "vault");
-  if (tables.length) warnings.push(`${F}/.slipbox/config.toml has settings of its own (${tables.map((t) => `[${t}]`).join(", ")}): they go with its .slipbox/ to the trash`);
-  return { kind: "unmake-vault", from: F, to: P, move: null, files: out, warnings, skipped: c.skipped, unmakeVault: { root: Vabs, name: v.loc.name ?? basename(Vabs) } };
+  const tables = [...config.matchAll(/^\[([^\]]+)\][ \t]*(#.*)?$/gm)]
+    .map((m) => m[1]!.trim())
+    .filter((t) => t !== "vault");
+  if (tables.length)
+    warnings.push(
+      `${F}/.slipbox/config.toml has settings of its own (${tables.map((t) => `[${t}]`).join(", ")}): they go with its .slipbox/ to the trash`,
+    );
+  return {
+    kind: "unmake-vault",
+    from: F,
+    to: P,
+    move: null,
+    files: out,
+    warnings,
+    skipped: c.skipped,
+    unmakeVault: { root: Vabs, name: v.loc.name ?? basename(Vabs) },
+  };
 }
 
 /**
@@ -1171,11 +1516,17 @@ function pointersByItsName(parent: Graph, v: Graph, F: string, c: Collector): st
       if (pIdent && (p.branch || !together)) {
         const path = `${F}${p.path ? `/${p.path}` : written.endsWith("/") ? "/" : ""}`;
         const name = pointerName({ key: pIdent.key, name: pIdent.name, remote: pIdent.remote }, folders);
-        c.edit(site, formatPointer({ name, branch: p.branch, path, fragment: null }, encode(path) ? encodeURI : undefined) + frag, s.vault);
+        c.edit(
+          site,
+          formatPointer({ name, branch: p.branch, path, fragment: null }, encode(path) ? encodeURI : undefined) + frag,
+          s.vault,
+        );
         continue;
       }
       if (p.branch) {
-        warnings.push(`${shownFor(parent, s.abs)}:${l.line}: ${l.target} names ${ident.name} at a branch, which no path can: left as it is`);
+        warnings.push(
+          `${shownFor(parent, s.abs)}:${l.line}: ${l.target} names ${ident.name} at a branch, which no path can: left as it is`,
+        );
         continue;
       }
       let rel = relative(dirname(s.abs), targetAbs).split(sep).join("/") || ".";
@@ -1208,10 +1559,24 @@ export function planUndo(g: Graph): RenamePlan {
   const r = all.filter((x) => x.branch === undefined || x.branch === branch).at(-1);
   if (!r) {
     const other = all.at(-1);
-    if (other) throw new RenameError(`nothing to undo on ${branch ? `branch ${branch}` : "this checkout"}: the last rename was made on ${other.branch ? `branch ${other.branch}` : "a detached HEAD"}`);
+    if (other)
+      throw new RenameError(
+        `nothing to undo on ${branch ? `branch ${branch}` : "this checkout"}: the last rename was made on ${other.branch ? `branch ${other.branch}` : "a detached HEAD"}`,
+      );
     throw new RenameError("nothing to undo: no rename, move, relink or replace has been done in this root");
   }
-  const what = r.kind === "relink" ? "relink" : r.kind === "convert" ? "conversion to path links" : r.kind === "replace" ? `replace of ${r.from}` : r.kind === "folder" ? `move of ${r.from}/` : r.kind === "vault" ? `folder's naming as ${r.to}` : `rename of ${r.from}`;
+  const what =
+    r.kind === "relink"
+      ? "relink"
+      : r.kind === "convert"
+        ? "conversion to path links"
+        : r.kind === "replace"
+          ? `replace of ${r.from}`
+          : r.kind === "folder"
+            ? `move of ${r.from}/`
+            : r.kind === "vault"
+              ? `folder's naming as ${r.to}`
+              : `rename of ${r.from}`;
   const files: FileChange[] = [];
   for (const f of r.files) {
     let now: string;
@@ -1222,14 +1587,34 @@ export function planUndo(g: Graph): RenamePlan {
     }
     if (contentHash(now) !== f.hash) throw new RenameError(`${f.shown} has changed since: the ${what} can't be undone`);
     const edits = f.edits.map((e) => ({ line: e.line, before: e.after, after: e.before }));
-    files.push({ abs: f.abs, shown: f.shown, vault: f.vault, edits, text: now, next: now.slice(0, f.at) + f.was + now.slice(f.at + f.length) });
+    files.push({
+      abs: f.abs,
+      shown: f.shown,
+      vault: f.vault,
+      edits,
+      text: now,
+      next: now.slice(0, f.at) + f.was + now.slice(f.at + f.length),
+    });
   }
   const move = r.move ? { from: r.move.to, to: r.move.from, dir: r.move.dir } : null;
-  if (move && !existsSync(move.from)) throw new RenameError(`${relative(g.root, move.from)} isn't there any more: the ${what} can't be undone`);
-  if (move && existsSync(move.to) && !sameFile(move.from, move.to)) throw new RenameError(`${relative(g.root, move.to)} exists again: the ${what} can't be undone`);
+  if (move && !existsSync(move.from))
+    throw new RenameError(`${relative(g.root, move.from)} isn't there any more: the ${what} can't be undone`);
+  if (move && existsSync(move.to) && !sameFile(move.from, move.to))
+    throw new RenameError(`${relative(g.root, move.to)} exists again: the ${what} can't be undone`);
   const back = (pairs: [string, string][]) => pairs.map(([a, b]): [string, string] => [b, a]);
   const warnings = dirtyTrees(files.map((f) => f.abs));
-  return { kind: r.kind, from: r.to, to: r.from, move, moves: back(r.moves), vaults: back(r.vaults), files, warnings, skipped: [], undo: { id: r.id, at: r.at, made: r.made ?? null } };
+  return {
+    kind: r.kind,
+    from: r.to,
+    to: r.from,
+    move,
+    moves: back(r.moves),
+    vaults: back(r.vaults),
+    files,
+    warnings,
+    skipped: [],
+    undo: { id: r.id, at: r.at, made: r.made ?? null },
+  };
 }
 
 // -------------------------------------------------------------------------------------------
@@ -1256,11 +1641,13 @@ export function applyPlan(g: Graph, plan: RenamePlan): Applied {
     } catch {
       throw new RenameError(`${f.shown} can't be read any more; nothing changed`);
     }
-    if (contentHash(now) !== contentHash(f.text)) throw new RenameError(`${f.shown} changed since the preview; nothing changed — plan again`);
+    if (contentHash(now) !== contentHash(f.text))
+      throw new RenameError(`${f.shown} changed since the preview; nothing changed — plan again`);
   }
   const text = (f: FileChange) => (bom.has(f.abs) ? `\uFEFF${f.next}` : f.next);
   const mv = plan.move;
-  if (mv && existsSync(mv.to) && !sameFile(mv.from, mv.to)) throw new RenameError(`${mv.to} exists now; nothing changed`);
+  if (mv && existsSync(mv.to) && !sameFile(mv.from, mv.to))
+    throw new RenameError(`${mv.to} exists now; nothing changed`);
   /** Where a file of the plan is written: at its new place when it moves. */
   const dest = (fileAbs: string) => {
     if (!mv) return fileAbs;
@@ -1282,7 +1669,9 @@ export function applyPlan(g: Graph, plan: RenamePlan): Applied {
     try {
       made = mkdirSync(dirname(mv.to), { recursive: true }) ?? null;
     } catch (err) {
-      throw new RenameError(`${dirname(mv.to)} can't be made (${(err as NodeJS.ErrnoException).code ?? err}); nothing changed`);
+      throw new RenameError(
+        `${dirname(mv.to)} can't be made (${(err as NodeJS.ErrnoException).code ?? err}); nothing changed`,
+      );
     }
   }
   for (const f of plan.files) {
@@ -1315,7 +1704,8 @@ export function applyPlan(g: Graph, plan: RenamePlan): Applied {
     }
   };
   if (plan.makeVault || plan.unmakeVault) {
-    if (plan.makeVault) initVault(plan.makeVault.root, plan.makeVault.name ?? undefined, { private: plan.makeVault.private });
+    if (plan.makeVault)
+      initVault(plan.makeVault.root, plan.makeVault.name ?? undefined, { private: plan.makeVault.private });
     else {
       trashVaultMarker(g.loc, g.root, plan.unmakeVault!.root);
       forgetRoot(plan.unmakeVault!.root);
@@ -1340,7 +1730,16 @@ export function applyPlan(g: Graph, plan: RenamePlan): Applied {
       }
     }
     if (gone.length) g.dirs = g.dirs.filter((x) => !gone.includes(x));
-  } else if ((plan.files.length || mv) && (plan.kind === "note" || plan.kind === "folder" || plan.kind === "vault" || plan.kind === "relink" || plan.kind === "heading" || plan.kind === "convert" || plan.kind === "replace")) {
+  } else if (
+    (plan.files.length || mv) &&
+    (plan.kind === "note" ||
+      plan.kind === "folder" ||
+      plan.kind === "vault" ||
+      plan.kind === "relink" ||
+      plan.kind === "heading" ||
+      plan.kind === "convert" ||
+      plan.kind === "replace")
+  ) {
     // Only one that changed something: an empty one would stand in front of the last real one, and
     // an undo would take back nothing.
     logRename(g.loc, {
@@ -1354,7 +1753,14 @@ export function applyPlan(g: Graph, plan: RenamePlan): Applied {
       branch: g.branchNow(),
       moves: plan.moves ?? [],
       vaults: plan.vaults ?? [],
-      files: plan.files.map((f) => ({ abs: dest(f.abs), shown: f.shown, vault: f.vault, edits: f.edits, hash: contentHash(f.next), ...changedSpan(f.text, f.next) })),
+      files: plan.files.map((f) => ({
+        abs: dest(f.abs),
+        shown: f.shown,
+        vault: f.vault,
+        edits: f.edits,
+        hash: contentHash(f.next),
+        ...changedSpan(f.text, f.next),
+      })),
     });
   }
   // Links to the old places still find the new ones (17.12); the vault's index follows.
@@ -1381,7 +1787,8 @@ export function applyPlan(g: Graph, plan: RenamePlan): Applied {
     if (walkSkips(key) && !g.notes.has(key) && !g.reached.has(key)) continue;
     try {
       const st = statSync(abs);
-      if (classify(rel, g.config.walk.extensions).group === "note") g.updateFile(rel, { rel, abs, size: st.size, mtimeMs: st.mtimeMs });
+      if (classify(rel, g.config.walk.extensions).group === "note")
+        g.updateFile(rel, { rel, abs, size: st.size, mtimeMs: st.mtimeMs });
       else g.addAsset(rel);
     } catch {}
   }
@@ -1389,7 +1796,13 @@ export function applyPlan(g: Graph, plan: RenamePlan): Applied {
   if (mv?.dir && !plan.vaults?.some(([from]) => from === mv.from)) {
     const from = relative(g.root, mv.from);
     const to = relative(g.root, mv.to);
-    g.dirs = [...new Set(g.dirs.map((d) => (d === from || d.startsWith(`${from}/`) ? to + d.slice(from.length) : d)).concat(to.split("/").map((_, i, a) => a.slice(0, i + 1).join("/"))))];
+    g.dirs = [
+      ...new Set(
+        g.dirs
+          .map((d) => (d === from || d.startsWith(`${from}/`) ? to + d.slice(from.length) : d))
+          .concat(to.split("/").map((_, i, a) => a.slice(0, i + 1).join("/"))),
+      ),
+    ];
   }
   return { written, moved: mv ? { from: mv.from, to: mv.to } : null };
 }
@@ -1438,7 +1851,12 @@ function retitle(line: string, site: Site, old: string, next: string): string | 
       const end = bar >= 0 ? bar : inner.length;
       const frag = inner.slice(hash + 1, end);
       if (!namesHeading(frag, old)) continue;
-      hits.push({ at: open > 0 && line[open - 1] === "!" ? open - 1 : open, from: open + 3 + hash, to: open + 2 + end, put: next });
+      hits.push({
+        at: open > 0 && line[open - 1] === "!" ? open - 1 : open,
+        from: open + 3 + hash,
+        to: open + 2 + end,
+        put: next,
+      });
     }
   } else {
     for (const m of line.matchAll(/\]\(\s*(<[^>\n]*>|[^)\s]*)/g)) {
@@ -1456,7 +1874,12 @@ function retitle(line: string, site: Site, old: string, next: string): string | 
       const put = asText ? (angled ? next : next.replace(/ /g, "%20")) : slugify(next);
       const start = m.index + m[0].length - raw.length + (angled ? 1 : 0) + hash + 1;
       const open = line.lastIndexOf("[", m.index);
-      hits.push({ at: open > 0 && line[open - 1] === "!" ? open - 1 : open, from: start, to: start + frag.length, put });
+      hits.push({
+        at: open > 0 && line[open - 1] === "!" ? open - 1 : open,
+        from: start,
+        to: start + frag.length,
+        put,
+      });
     }
   }
   const hit = hits.sort((a, b) => Math.abs(a.at - col) - Math.abs(b.at - col))[0];
@@ -1476,36 +1899,68 @@ export function planHeadingRename(g: Graph, rel: string, heading: string, toText
   if (!h) throw new RenameError(`no heading "${heading}" in ${rel}`);
   const next = toText.trim();
   if (!next) throw new RenameError("a heading needs a name");
-  if (entry.headings.some((x) => x !== h && slugify(x.text) === slugify(h.text))) throw new RenameError(`${rel} has two headings "${h.text}": links can't tell them apart`);
+  if (entry.headings.some((x) => x !== h && slugify(x.text) === slugify(h.text)))
+    throw new RenameError(`${rel} has two headings "${h.text}": links can't tell them apart`);
   if (next === h.text) throw new RenameError(`the heading is "${next}" already`);
-  if (entry.headings.some((x) => x !== h && slugify(x.text) === slugify(next))) throw new RenameError(`${rel} has a heading "${next}" already`);
+  if (entry.headings.some((x) => x !== h && slugify(x.text) === slugify(next)))
+    throw new RenameError(`${rel} has a heading "${next}" already`);
   const c = new Collector(g);
   const own = join(g.root, rel);
   // The heading itself first: when it can't be rewritten, nothing is — its links renamed alone would break.
   const text = c.file(own, null)?.text;
   if (text === undefined) throw new RenameError(`${rel} can't be read`);
   const retitled = headingLine(text.split("\n"), h.line, next);
-  if (retitled === null) throw new RenameError(`the heading "${h.text}" isn't on line ${h.line} of ${rel} any more (its index is older than the file): nothing renamed`);
+  if (retitled === null)
+    throw new RenameError(
+      `the heading "${h.text}" isn't on line ${h.line} of ${rel} any more (its index is older than the file): nothing renamed`,
+    );
   c.line(own, null, h.line, () => retitled, "the heading isn't on its line any more");
   const fragment = (l: { kind: LinkKind; target: string; heading: string | null }) => {
     if (l.kind === "wiki" || l.kind === "embed") return l.heading;
     const i = l.target.indexOf("#");
     return i < 0 ? null : safeDecode(l.target.slice(i + 1));
   };
-  const site = (abs: string, l: { kind: LinkKind; target: string; line: number; column: number }) => ({ abs, kind: l.kind, target: l.target, line: l.line, column: l.column });
+  const site = (abs: string, l: { kind: LinkKind; target: string; line: number; column: number }) => ({
+    abs,
+    kind: l.kind,
+    target: l.target,
+    line: l.line,
+    column: l.column,
+  });
   for (const b of g.backlinks(rel)) {
     const f = fragment(b);
     if (f === null || !namesHeading(f, h.text)) continue;
     const abs = isAbsolute(b.from) ? b.from : join(g.root, b.from);
-    c.line(abs, b.vault ?? null, b.line, (line) => retitle(line, site(abs, b), h.text, next), "no link to the heading there any more");
+    c.line(
+      abs,
+      b.vault ?? null,
+      b.line,
+      (line) => retitle(line, site(abs, b), h.text, next),
+      "no link to the heading there any more",
+    );
   }
   // Its own links to it: by an anchor alone, or by its own path or name (backlinks leave a note's links to itself out).
-  const self = (r: Pick<ResolvedLink, "resolvedKind" | "path">) => r.resolvedKind === "anchor" || (r.resolvedKind === "note" && !!r.path && (r.path === rel || r.path === own));
+  const self = (r: Pick<ResolvedLink, "resolvedKind" | "path">) =>
+    r.resolvedKind === "anchor" || (r.resolvedKind === "note" && !!r.path && (r.path === rel || r.path === own));
   for (const l of entry.links) {
     const f = fragment(l);
     if (f === null || !namesHeading(f, h.text) || !self(g.resolveLink(l, rel))) continue;
-    c.line(own, null, l.line, (line) => retitle(line, site(own, l), h.text, next), "no link to the heading there any more");
+    c.line(
+      own,
+      null,
+      l.line,
+      (line) => retitle(line, site(own, l), h.text, next),
+      "no link to the heading there any more",
+    );
   }
   const files = c.result();
-  return { kind: "heading", from: `${rel}#${h.text}`, to: `${rel}#${next}`, move: null, files, warnings: dirtyTrees(files.map((f) => f.abs)), skipped: c.skipped };
+  return {
+    kind: "heading",
+    from: `${rel}#${h.text}`,
+    to: `${rel}#${next}`,
+    move: null,
+    files,
+    warnings: dirtyTrees(files.map((f) => f.abs)),
+    skipped: c.skipped,
+  };
 }

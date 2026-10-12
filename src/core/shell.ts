@@ -66,11 +66,19 @@ export const STDOUT_MAX = 32 * 1024 * 1024;
  * Run a command by your shell (`$SHELL`, else `/bin/sh`) in `cwd`, `input` its standard input (none: nothing to read).
  * `stop` ends it — and, run by a shell, what the shell started — and `done` says how it went.
  */
-export function runShell(command: string, opts: { cwd: string; input?: string; env?: Record<string, string> }): { done: Promise<ShellResult>; stop: () => void } {
+export function runShell(
+  command: string,
+  opts: { cwd: string; input?: string; env?: Record<string, string> },
+): { done: Promise<ShellResult>; stop: () => void } {
   const t0 = performance.now();
   const shell = process.env.SHELL || "/bin/sh";
   // A process group of its own: stopping it stops what it started too.
-  const child = spawn(shell, ["-c", command], { cwd: opts.cwd, env: { ...process.env, ...opts.env }, stdio: [opts.input === undefined ? "ignore" : "pipe", "pipe", "pipe"], detached: true });
+  const child = spawn(shell, ["-c", command], {
+    cwd: opts.cwd,
+    env: { ...process.env, ...opts.env },
+    stdio: [opts.input === undefined ? "ignore" : "pipe", "pipe", "pipe"],
+    detached: true,
+  });
   let output = "";
   let stdout = "";
   let truncated = false;
@@ -98,7 +106,14 @@ export function runShell(command: string, opts: { cwd: string; input?: string; e
   };
   const done = new Promise<ShellResult>((resolve) => {
     const finish = (code: number | null, signal: string | null) =>
-      resolve({ code, signal, output: output.slice(0, OUTPUT_MAX), stdout: stdout.slice(0, STDOUT_MAX), truncated, ms: performance.now() - t0 });
+      resolve({
+        code,
+        signal,
+        output: output.slice(0, OUTPUT_MAX),
+        stdout: stdout.slice(0, STDOUT_MAX),
+        truncated,
+        ms: performance.now() - t0,
+      });
     child.on("error", (err) => {
       output += `${err.message}\n`;
       finish(127, null);

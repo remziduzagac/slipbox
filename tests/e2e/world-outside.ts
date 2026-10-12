@@ -2,10 +2,33 @@
 // autosave, an editor's hand-off, linters and servers as processes.
 
 import { spawnSync } from "node:child_process";
-import { appendFileSync, cpSync, existsSync, mkdirSync, readdirSync, readFileSync, renameSync, rmSync, utimesSync, writeFileSync } from "node:fs";
+import {
+  appendFileSync,
+  cpSync,
+  existsSync,
+  mkdirSync,
+  readdirSync,
+  readFileSync,
+  renameSync,
+  rmSync,
+  utimesSync,
+  writeFileSync,
+} from "node:fs";
 import { join } from "node:path";
 import { loadTheme } from "../../src/core/theme/index.ts";
-import { explorerRow, HANDBOOK, leader, MEETING, moveTo, open, pos, problemListed, type Scenario, signed, TSC } from "./helpers.ts";
+import {
+  explorerRow,
+  HANDBOOK,
+  leader,
+  MEETING,
+  moveTo,
+  open,
+  pos,
+  problemListed,
+  type Scenario,
+  signed,
+  TSC,
+} from "./helpers.ts";
 import { sleep } from "./herdr.ts";
 import type { Session } from "./session.ts";
 
@@ -51,7 +74,8 @@ function childOf(pid: number, match: RegExp): number | null {
 }
 
 /** git in the vault, as a scenario's setup or an agent runs it. */
-const git = (s: Session, ...args: string[]) => spawnSync("git", ["-c", "user.email=t@example.invalid", "-c", "user.name=t", "-C", s.vault, ...args]);
+const git = (s: Session, ...args: string[]) =>
+  spawnSync("git", ["-c", "user.email=t@example.invalid", "-c", "user.name=t", "-C", s.vault, ...args]);
 
 /** The status line's `L12:3`'s line, waited for until `ok`. */
 async function lineIs(s: Session, ok: (line: number) => boolean, what: string): Promise<void> {
@@ -105,7 +129,10 @@ export const OUTSIDE_SCENARIOS: Scenario[] = [
       await inSwitcher(s, "aurora", "field-notes/2026/october/aurora.md");
       await s.keys("enter");
       await s.status("aurora.md");
-      s.write("field-notes/2026/october/aurora.md", "# Aurora over the ridge\n\nFirst seen at 01:40.\n\nSeen again at 02:10.\n");
+      s.write(
+        "field-notes/2026/october/aurora.md",
+        "# Aurora over the ridge\n\nFirst seen at 01:40.\n\nSeen again at 02:10.\n",
+      );
       await s.see("Seen again at 02:10.", 5000);
     },
   },
@@ -143,7 +170,10 @@ export const OUTSIDE_SCENARIOS: Scenario[] = [
       await s.see("aaa-agent-note", 5000);
       await s.keys("enter");
       await s.status("home.md");
-      s.expect(!s.statusLine().includes("aaa-agent-note"), "enter opened the row selected before the note came, not the row now in its place");
+      s.expect(
+        !s.statusLine().includes("aaa-agent-note"),
+        "enter opened the row selected before the note came, not the row now in its place",
+      );
     },
   },
 
@@ -189,7 +219,10 @@ export const OUTSIDE_SCENARIOS: Scenario[] = [
     options: { open: "people/partners-and-names.md" },
     run: async (s) => {
       await s.see("Table A — ordinary prose, no long tokens.");
-      s.write("scratch/wrap-probe.md", s.read("scratch/wrap-probe.md").replace("Table A — ordinary prose", "Table A — rewritten prose"));
+      s.write(
+        "scratch/wrap-probe.md",
+        s.read("scratch/wrap-probe.md").replace("Table A — ordinary prose", "Table A — rewritten prose"),
+      );
       await s.see("Table A — rewritten prose, no long tokens.", 5000);
       await s.notSee("Table A — ordinary prose");
     },
@@ -204,7 +237,10 @@ export const OUTSIDE_SCENARIOS: Scenario[] = [
       s.write(KENJI, s.read(KENJI).replace("second desk by the window", "third desk, by the door"));
       // Nothing reloads it by itself with the watcher off: a while later, the old text still shows.
       await sleep(2000);
-      s.expect(s.text().includes("second desk by the window") && !s.text().includes("third desk"), "the outside write not shown before space n r");
+      s.expect(
+        s.text().includes("second desk by the window") && !s.text().includes("third desk"),
+        "the outside write not shown before space n r",
+      );
       await leader(s, "n", "r");
       await s.see("third desk, by the door");
       await s.status("↻ reloaded");
@@ -227,7 +263,12 @@ export const OUTSIDE_SCENARIOS: Scenario[] = [
       await s.until(
         () => {
           const h = history();
-          return !!h && JSON.stringify(h.open) === JSON.stringify([["home.md"], ["handbook/operations-handbook.md"]]) && h.activeTab === 1 && h.current === "handbook/operations-handbook.md";
+          return (
+            !!h &&
+            JSON.stringify(h.open) === JSON.stringify([["home.md"], ["handbook/operations-handbook.md"]]) &&
+            h.activeTab === 1 &&
+            h.current === "handbook/operations-handbook.md"
+          );
         },
         5000,
         "history --json to list the two tabs, the handbook current",
@@ -260,7 +301,11 @@ export const OUTSIDE_SCENARIOS: Scenario[] = [
     run: async (s) => {
       await s.see("Before the agent");
       // The set's own script (~/work/kestrel/scripts/dev/agent-replay.sh): a pause between steps.
-      const replay = Bun.spawn(["bash", s.path("~/work/kestrel/scripts/dev/agent-replay.sh"), s.path("~/Downloads")], { env: { ...process.env, PAUSE: "2.5" }, stdout: "ignore", stderr: "ignore" });
+      const replay = Bun.spawn(["bash", s.path("~/work/kestrel/scripts/dev/agent-replay.sh"), s.path("~/Downloads")], {
+        env: { ...process.env, PAUSE: "2.5" },
+        stdout: "ignore",
+        stderr: "ignore",
+      });
       try {
         await s.see("agent scratch", 5000); // rewritten by the agent
         await s.notSee("Before the agent");
@@ -328,7 +373,11 @@ export const OUTSIDE_SCENARIOS: Scenario[] = [
       await s.see("Theirs three, at the top.");
       await s.see("mine three");
       await s.ex("w");
-      await s.file(MEETING, (t) => t.startsWith("Theirs three, at the top.") && t.includes("mine three"), "the merge written");
+      await s.file(
+        MEETING,
+        (t) => t.startsWith("Theirs three, at the top.") && t.includes("mine three"),
+        "the merge written",
+      );
       // While typing: said, and the letters typed go into the text; the prompt comes after esc, with the next key.
       await s.keys("G", "o");
       await s.type("typing on ");
@@ -356,7 +405,8 @@ export const OUTSIDE_SCENARIOS: Scenario[] = [
       const h2 = () => s.styleOf("Start here")?.fg?.toLowerCase() ?? "";
       await s.see("Start here");
       await s.until(() => h2() === themeFg("tokyo-night", "h2"), 3000, "the default theme's heading colour");
-      const good = (theme: string) => `theme = "${theme}"\n${base}\n[aliases]\nhop = "tab.new"\n\n[keys]\n"leader y" = "tab.new"\n`;
+      const good = (theme: string) =>
+        `theme = "${theme}"\n${base}\n[aliases]\nhop = "tab.new"\n\n[keys]\n"leader y" = "tab.new"\n`;
       writeFileSync(file, good("dracula"));
       await s.message("config reloaded (file changed)", 5000);
       await s.until(() => h2() === themeFg("dracula", "h2"), 3000, "the heading in dracula's colour");
@@ -393,7 +443,11 @@ export const OUTSIDE_SCENARIOS: Scenario[] = [
     name: "world/outside: a vault's config can't name your editor — warned, never run; yours runs",
     options: {
       config: "[editor]\ncommand = \"sh -c 'echo $0 > $1' {file} {dir}/ran-yours\"\n",
-      setup: (s) => appendFileSync(join(s.vault, ".slipbox", "config.toml"), `\n[editor]\ncommand = "sh -c 'echo $0 > $1' {file} ${s.dir}/ran-theirs"\n`),
+      setup: (s) =>
+        appendFileSync(
+          join(s.vault, ".slipbox", "config.toml"),
+          `\n[editor]\ncommand = "sh -c 'echo $0 > $1' {file} ${s.dir}/ran-theirs"\n`,
+        ),
     },
     run: async (s) => {
       await leader(s, "m");
@@ -417,7 +471,13 @@ export const OUTSIDE_SCENARIOS: Scenario[] = [
         // (markdownlint-cli2, with your own markdownlint config) stood in for by `true`: a scenario runs
         // nothing of yours (and the notes' own config says `auto`, which runs a named command).
         const dot = s.path("~/work/infra/dotfiles/slipbox");
-        writeFileSync(configFile(s), readFileSync(join(dot, "config.toml"), "utf8").replace(/^command = \["markdownlint-cli2".*$/m, 'command = ["true"]'));
+        writeFileSync(
+          configFile(s),
+          readFileSync(join(dot, "config.toml"), "utf8").replace(
+            /^command = \["markdownlint-cli2".*$/m,
+            'command = ["true"]',
+          ),
+        );
         mkdirSync(join(s.dir, "config", "slipbox", "themes"), { recursive: true });
         cpSync(join(dot, "themes"), join(s.dir, "config", "slipbox", "themes"), { recursive: true });
       },
@@ -435,7 +495,10 @@ export const OUTSIDE_SCENARIOS: Scenario[] = [
       await s.notSee("Commands");
       // zen, no top bar, no explorer; line numbers on: the note's first rows numbered 1, 2, 3.
       s.expect(!s.text().includes("Explorer") && !s.topBar().includes("slipbox"), "no explorer, no top bar (zen)");
-      const numbers = s.screen().slice(0, 3).map((r) => /^\s*(\d+)\s/.exec(r)?.[1]);
+      const numbers = s
+        .screen()
+        .slice(0, 3)
+        .map((r) => /^\s*(\d+)\s/.exec(r)?.[1]);
       s.expect(numbers.join(",") === "1,2,3", `line numbers in the gutter (${numbers.join(",")})`);
       // Its leader is backslash: \\ m, the messages — none a warning or an error (each row ends with its level and
       // time), or none at all.
@@ -490,7 +553,10 @@ export const OUTSIDE_SCENARIOS: Scenario[] = [
   {
     name: "world/outside: an editor that changes the note — your unsaved edit saved first, its change shown after, nothing unsaved",
     // Not watching: what shows after is the hand-off's own reload, not the watcher's.
-    options: { open: KENJI, config: `[watch]\nenabled = false\n\n[editor]\ncommand = ${JSON.stringify("sh -c 'echo Added in the editor. >> \"$0\"' {file}")}\n` },
+    options: {
+      open: KENJI,
+      config: `[watch]\nenabled = false\n\n[editor]\ncommand = ${JSON.stringify("sh -c 'echo Added in the editor. >> \"$0\"' {file}")}\n`,
+    },
     run: async (s) => {
       await s.see("second desk by the window");
       await leader(s, "n", "v");
@@ -501,9 +567,16 @@ export const OUTSIDE_SCENARIOS: Scenario[] = [
       await leader(s, "n", "e");
       await s.see("Added in the editor.", 5000);
       const t = s.read(KENJI);
-      s.expect(t.includes("- Typed before the hand-off.\nAdded in the editor."), "the edit saved before the editor appended to it");
+      s.expect(
+        t.includes("- Typed before the hand-off.\nAdded in the editor."),
+        "the edit saved before the editor appended to it",
+      );
       await s.see("Typed before the hand-off.");
-      await s.until(() => !s.statusLine().includes("unsaved"), 3000, "nothing unsaved: the file's text is the buffer's");
+      await s.until(
+        () => !s.statusLine().includes("unsaved"),
+        3000,
+        "nothing unsaved: the file's text is the buffer's",
+      );
     },
   },
 
@@ -537,7 +610,11 @@ export const OUTSIDE_SCENARIOS: Scenario[] = [
       await s.until(counted, 5000, "the finding back once saved");
       // Fixed and saved: gone.
       await s.keys("d", "d", "ctrl+s");
-      await s.until(() => !signed("{warning} (MD|[1-9])").test(s.statusLine()), 5000, "no finding once fixed and saved");
+      await s.until(
+        () => !signed("{warning} (MD|[1-9])").test(s.statusLine()),
+        5000,
+        "no finding once fixed and saved",
+      );
     },
   },
 

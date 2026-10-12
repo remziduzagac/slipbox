@@ -103,7 +103,15 @@ export function layoutSource(source: string, opts: SourceLayoutOptions, cache: S
     // comment opened above — so a line whose text is the same but whose context changed is laid
     // out again.
     if (lang) state = sig(i + 1);
-    const built = layoutLine(texts[i]!, state, i, width, tab, lang ? (opts.languageAt?.(i + 1) ?? lang) : lang, lineSpans);
+    const built = layoutLine(
+      texts[i]!,
+      state,
+      i,
+      width,
+      tab,
+      lang ? (opts.languageAt?.(i + 1) ?? lang) : lang,
+      lineSpans,
+    );
     states.push(state);
     rows.push(built.rows);
     naturals.push(built.natural);
@@ -162,7 +170,15 @@ function nextState(old: SourceCache, i: number, raw: string): string {
 }
 
 /** One source line's rows. */
-function layoutLine(raw: string, state: string, i: number, width: number, tab: number, lang: string | null = null, spans?: SyntaxSpan[]): { rows: Line[]; natural: number; out: string } {
+function layoutLine(
+  raw: string,
+  state: string,
+  i: number,
+  width: number,
+  tab: number,
+  lang: string | null = null,
+  spans?: SyntaxSpan[],
+): { rows: Line[]; natural: number; out: string } {
   const src = i + 1;
   const hl = lang ? codeLine(raw, lang, spans) : highlightLine(raw, state, i);
   const text = raw.endsWith("\r") ? raw.slice(0, -1) : raw; // CRLF: the CR isn't shown
@@ -185,7 +201,11 @@ function layoutLine(raw: string, state: string, i: number, width: number, tab: n
     }
     at += g.length;
   }
-  const rows: Line[] = wrapCells(cells, width).map((row) => ({ spans: toSpans(row.cells, src), src, srcMap: { cells: row.cells.map((c) => c.at), end: row.end ?? text.length } }));
+  const rows: Line[] = wrapCells(cells, width).map((row) => ({
+    spans: toSpans(row.cells, src),
+    src,
+    srcMap: { cells: row.cells.map((c) => c.at), end: row.end ?? text.length },
+  }));
   return { rows, natural: col, out: hl.out };
 }
 
@@ -236,7 +256,9 @@ function codeLine(raw: string, lang: string, spans?: SyntaxSpan[]): { roles: Rol
     if (t.role) for (let k = at; k < at + t.text.length && k < roles.length; k++) roles[k] = t.role;
     at += t.text.length;
   }
-  for (const s of spans ?? []) for (let k = s.from; k < Math.min(s.to, roles.length); k++) roles[k] = s.kind === "string" ? "syn_string" : "syn_comment";
+  for (const s of spans ?? [])
+    for (let k = s.from; k < Math.min(s.to, roles.length); k++)
+      roles[k] = s.kind === "string" ? "syn_string" : "syn_comment";
   return { roles, out: "" };
 }
 
@@ -309,7 +331,8 @@ function highlightLine(raw: string, state: string, i: number): { roles: Role[]; 
       code.push([m.index, m.index + m[0].length]);
     }
     const inCode = (k: number) => code.some(([a, b]) => k >= a && k < b);
-    for (const m of text.matchAll(/!?\[[^\]\n]*\]\([^)\n]*\)/g)) if (!inCode(m.index)) paint(m.index, m.index + m[0].length, "link");
+    for (const m of text.matchAll(/!?\[[^\]\n]*\]\([^)\n]*\)/g))
+      if (!inCode(m.index)) paint(m.index, m.index + m[0].length, "link");
   }
   return { roles, out: "" };
 }
@@ -354,7 +377,8 @@ function headingOfLine(raw: string): LineHeading | null {
   const marks = [...new Set([...body.matchAll(/\[\^([^\]\s]+)\]/g)].map((m) => `[^${m[1]}]`))];
   const labels = [...new Set([...body.matchAll(/\[([^[\]^][^[\]]*)\]/g)].map((m) => `[${m[1]}]`))];
   const defs = [...marks, ...labels];
-  const node = parseMarkdown(defs.length ? `${line}\n\n${defs.map((d) => `${d}: #`).join("\n\n")}\n` : line).tree.children[0];
+  const node = parseMarkdown(defs.length ? `${line}\n\n${defs.map((d) => `${d}: #`).join("\n\n")}\n` : line).tree
+    .children[0];
   if (node?.type !== "heading") return null;
   const id = (node.data as { id?: string } | undefined)?.id;
   return { level: node.depth, ...headingLabel(node), ...(id ? { id } : {}) };

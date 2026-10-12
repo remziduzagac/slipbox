@@ -1,7 +1,21 @@
 // Filesystem helpers shared by every face. Writes are atomic (plan 4.6): temp file plus rename
 // in the same directory, so a crash or a full disk never truncates a note.
 
-import { chmodSync, closeSync, constants, fstatSync, fsyncSync, mkdirSync, openSync, readFileSync, realpathSync, renameSync, statSync, unlinkSync, writeSync } from "node:fs";
+import {
+  chmodSync,
+  closeSync,
+  constants,
+  fstatSync,
+  fsyncSync,
+  mkdirSync,
+  openSync,
+  readFileSync,
+  realpathSync,
+  renameSync,
+  statSync,
+  unlinkSync,
+  writeSync,
+} from "node:fs";
 import { basename, dirname, isAbsolute, join, relative, resolve, sep } from "node:path";
 
 export function ensureDir(dir: string): void {
@@ -59,7 +73,8 @@ export function writeNote(root: string, path: string, content: string | Uint8Arr
     realRoot = realpathSync(root);
   } catch {}
   const rel = relative(realRoot, target);
-  if (rel === ".." || rel.startsWith(`..${sep}`) || isAbsolute(rel)) throw new WriteRefused(`${path} resolves outside the root (${target}) — not writing there`);
+  if (rel === ".." || rel.startsWith(`..${sep}`) || isAbsolute(rel))
+    throw new WriteRefused(`${path} resolves outside the root (${target}) — not writing there`);
   return atomicWrite(target, content);
 }
 
@@ -90,7 +105,13 @@ export function realTarget(path: string): string {
  * first, or another drive's. A name that merely starts with dots ("..notes") stays in.
  */
 export function climbsOut(rel: string): boolean {
-  return rel === ".." || rel.startsWith(`..${sep}`) || rel.startsWith("../") || isAbsolute(rel) || (process.platform === "win32" && /^[A-Za-z]:/.test(rel));
+  return (
+    rel === ".." ||
+    rel.startsWith(`..${sep}`) ||
+    rel.startsWith("../") ||
+    isAbsolute(rel) ||
+    (process.platform === "win32" && /^[A-Za-z]:/.test(rel))
+  );
 }
 
 /** Whether a write to `path` would land inside `root` (both by their real paths). */

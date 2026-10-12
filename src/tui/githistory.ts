@@ -43,7 +43,10 @@ export function blameHere(app: App): void {
   const b = blameLine(c, path, at);
   if (!b) return app.message("warn", `git couldn't blame line ${line}`);
   const message = messageOf(c, b.hash) || b.subject;
-  app.openHover(`**${b.hash.slice(0, 8)}** · ${b.author} · ${day(b.time)}\n\n\`\`\`text\n${message}\n\`\`\`\n\n\`space g h\`: the file's history`, `line ${line}, last changed in ${b.hash.slice(0, 8)}`);
+  app.openHover(
+    `**${b.hash.slice(0, 8)}** · ${b.author} · ${day(b.time)}\n\n\`\`\`text\n${message}\n\`\`\`\n\n\`space g h\`: the file's history`,
+    `line ${line}, last changed in ${b.hash.slice(0, 8)}`,
+  );
 }
 
 /** `space g h`: the file's commits, newest first; one picked, read as it was or diffed to the text now. */
@@ -56,7 +59,11 @@ export function historyHere(app: App): void {
   if (!log.length) return app.message("info", `${path} has no commits yet`);
   app.openList({
     title: `${path} — ${log.length} commit${log.length === 1 ? "" : "s"}: enter, read it or its diff to now`,
-    items: log.map((x) => ({ label: `${x.hash.slice(0, 7)} ${sanitize(x.subject)}`, detail: `${sanitize(x.author)} · ${day(x.time)}${x.path !== path ? ` · as ${sanitize(x.path)}` : ""}`, data: x })),
+    items: log.map((x) => ({
+      label: `${x.hash.slice(0, 7)} ${sanitize(x.subject)}`,
+      detail: `${sanitize(x.author)} · ${day(x.time)}${x.path !== path ? ` · as ${sanitize(x.path)}` : ""}`,
+      data: x,
+    })),
     accept: (item) => pickVersion(app, view!, path, item.data as CommitInfo),
   });
 }
@@ -75,7 +82,12 @@ function pickVersion(app: App, view: View, path: string, x: CommitInfo): void {
     ],
     accept: (item) => {
       if (item.data === "read") return app.showVersion(text, x.path, `${at}, read-only`);
-      app.showLineDiff(text, view.buf.source, relative(app.loc.root, join(c.root, path)), `${path}: ${x.hash.slice(0, 7)} to now`);
+      app.showLineDiff(
+        text,
+        view.buf.source,
+        relative(app.loc.root, join(c.root, path)),
+        `${path}: ${x.hash.slice(0, 7)} to now`,
+      );
     },
   });
 }

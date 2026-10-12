@@ -19,7 +19,15 @@ import { normalizeRemote, remoteUrls } from "./remotes.ts";
 import { climbsOut, ensureDir, readJson, readRegular, SMALL_FILE, writeJson } from "./fsutil.ts";
 import { checkoutOf, inMain } from "./git.ts";
 import { stateHome } from "./paths.ts";
-import { implicitName, MARKER, readIdentity, slugName, unavailable, vaultConfigFile, type VaultIdentity } from "./registry.ts";
+import {
+  implicitName,
+  MARKER,
+  readIdentity,
+  slugName,
+  unavailable,
+  vaultConfigFile,
+  type VaultIdentity,
+} from "./registry.ts";
 
 /** What a folder is, as its name and what tells its copies apart. */
 export interface FolderIdentity {
@@ -77,7 +85,12 @@ export function identityAt(root: string): VaultIdentity | null {
   const mainAt = c?.worktree ? inMain(c, root) : null;
   const main = mainAt && existsSync(join(mainAt, MARKER)) ? readIdentity(vaultConfigFile(mainAt)) : null;
   if (!own || !main) return own ?? main;
-  return { id: own.id ?? main.id, name: own.name ?? main.name, aliases: own.aliases.length ? own.aliases : main.aliases, previous_names: own.previous_names.length ? own.previous_names : main.previous_names };
+  return {
+    id: own.id ?? main.id,
+    name: own.name ?? main.name,
+    aliases: own.aliases.length ? own.aliases : main.aliases,
+    previous_names: own.previous_names.length ? own.previous_names : main.previous_names,
+  };
 }
 
 /** The remote a repository is named by: `origin`'s, else the first one's, as `host/path`. */
@@ -95,7 +108,10 @@ function originRemote(common: string, top: string): string | null {
 function excluded(common: string, top: string, root: string): boolean {
   const line = `/${relative(top, join(root, MARKER)).split(sep).join("/")}/`;
   try {
-    return readRegular(join(common, "info", "exclude"), SMALL_FILE).toString("utf8").split(/\r?\n/).includes(line);
+    return readRegular(join(common, "info", "exclude"), SMALL_FILE)
+      .toString("utf8")
+      .split(/\r?\n/)
+      .includes(line);
   } catch {
     return false;
   }
@@ -163,7 +179,9 @@ export function readFolders(): NamedFolder[] {
   const f = readJson<FoldersFile | null>(foldersFile(), null);
   if (!f || f.version !== 1 || !Array.isArray(f.folders)) return [];
   // An entry from before aliases were kept apart has none: its next sighting brings them.
-  return f.folders.filter((x) => x && typeof x.key === "string" && typeof x.name === "string" && Array.isArray(x.copies)).map((x) => ({ ...x, aliases: Array.isArray(x.aliases) ? x.aliases : [], old: Array.isArray(x.old) ? x.old : [] }));
+  return f.folders
+    .filter((x) => x && typeof x.key === "string" && typeof x.name === "string" && Array.isArray(x.copies))
+    .map((x) => ({ ...x, aliases: Array.isArray(x.aliases) ? x.aliases : [], old: Array.isArray(x.old) ? x.old : [] }));
 }
 
 function writeFolders(folders: NamedFolder[]): void {
@@ -178,7 +196,10 @@ function writeFolders(folders: NamedFolder[]): void {
  * copy brought up to date, the copy moved out of any folder it no longer is. A second copy of one
  * folder asks, once, which one links open. The entry as recorded; null for an unnamed folder.
  */
-export function recordFolder(root: string, opts: { found?: boolean; now?: Date; replaces?: string | null } = {}): NamedFolder | null {
+export function recordFolder(
+  root: string,
+  opts: { found?: boolean; now?: Date; replaces?: string | null } = {},
+): NamedFolder | null {
   const ident = folderIdentity(root);
   const list = readFolders();
   // By its real path: reached through a symlink, it's the same copy, not a second one.
@@ -258,7 +279,12 @@ export function folderNamed(name: string, except?: string, folders = readFolders
   const n = name.toLowerCase();
   const own = except ? folderIdentity(except) : null;
   // A copy of the same repository is no different folder: a clone may be named as its repository is (DF-D30).
-  return folders.filter((f) => f.key !== own?.key && !(own && sameRepository(f, own)) && [f.name, ...f.aliases, ...f.old].some((x) => x.toLowerCase() === n));
+  return folders.filter(
+    (f) =>
+      f.key !== own?.key &&
+      !(own && sameRepository(f, own)) &&
+      [f.name, ...f.aliases, ...f.old].some((x) => x.toLowerCase() === n),
+  );
 }
 
 /**
@@ -286,7 +312,9 @@ export function setDefaultCopy(key: string, path: string | null): void {
   const list = readFolders();
   const f = list.find((x) => x.key === key);
   if (!f) return;
-  const copy = path ? repositoryCopies(f, list).find((c) => c.path === path || realPath(c.path) === realPath(path)) : undefined;
+  const copy = path
+    ? repositoryCopies(f, list).find((c) => c.path === path || realPath(c.path) === realPath(path))
+    : undefined;
   if (copy) f.default = copy.path;
   delete f.ask;
   f.asked = true;
@@ -327,8 +355,14 @@ function byRepository(folders: NamedFolder[]): NamedFolder[][] {
     if (g) g.push(f);
     else groups.push([f]);
   }
-  const renamed = (f: NamedFolder) => (f.remote && [f.name, ...f.aliases].some((n) => n.toLowerCase() === remoteName(f.remote!).toLowerCase()) ? 0 : 1);
-  return groups.map((g) => g.map((f, i) => ({ f, i })).sort((a, b) => renamed(a.f) - renamed(b.f) || a.i - b.i).map((x) => x.f));
+  const renamed = (f: NamedFolder) =>
+    f.remote && [f.name, ...f.aliases].some((n) => n.toLowerCase() === remoteName(f.remote!).toLowerCase()) ? 0 : 1;
+  return groups.map((g) =>
+    g
+      .map((f, i) => ({ f, i }))
+      .sort((a, b) => renamed(a.f) - renamed(b.f) || a.i - b.i)
+      .map((x) => x.f),
+  );
 }
 
 /**
@@ -342,13 +376,16 @@ function byRepository(folders: NamedFolder[]): NamedFolder[][] {
 export function lookupFolder(name: string, folders = readFolders()): FolderLookup {
   const want = name.toLowerCase();
   const qualified = name.includes("/");
-  let matches = folders.filter((f) => (qualified ? f.remote?.toLowerCase() === want : [f.name, ...f.aliases].some((n) => n.toLowerCase() === want)));
+  let matches = folders.filter((f) =>
+    qualified ? f.remote?.toLowerCase() === want : [f.name, ...f.aliases].some((n) => n.toLowerCase() === want),
+  );
   let via: "old-name" | undefined;
   if (!matches.length && !qualified) {
     matches = folders.filter((f) => f.old.some((o) => o.toLowerCase() === want));
     via = "old-name";
   }
-  if (!matches.length) return { status: "unknown", reason: `${name} isn't on this machine yet: open it, or let the index find it` };
+  if (!matches.length)
+    return { status: "unknown", reason: `${name} isn't on this machine yet: open it, or let the index find it` };
   const groups = byRepository(matches);
   if (groups.length > 1) {
     const each = groups.map((g) => g[0]!);
@@ -356,14 +393,20 @@ export function lookupFolder(name: string, folders = readFolders()): FolderLooku
     return {
       status: "ambiguous",
       candidates: each.flatMap((f) => f.default ?? f.copies[0]?.path ?? []).sort(),
-      reason: repos ? `${each.length} repositories are called ${name}: name one by its remote (${each.map((f) => f.remote).sort().join(", ")})` : `${each.length} different folders are called ${name}: rename one (slipbox name <new>, in it)`,
+      reason: repos
+        ? `${each.length} repositories are called ${name}: name one by its remote (${each
+            .map((f) => f.remote)
+            .sort()
+            .join(", ")})`
+        : `${each.length} different folders are called ${name}: rename one (slipbox name <new>, in it)`,
       folders: each,
     };
   }
   const group = groups[0]!;
   const f = group[0]!;
   // Its default, a copy of the repository under any name (DF-D30); one that is no copy of it now, its first.
-  const def = f.default && repositoryCopies(f, folders).some((c) => c.path === f.default) ? f.default : f.copies[0]!.path;
+  const def =
+    f.default && repositoryCopies(f, folders).some((c) => c.path === f.default) ? f.default : f.copies[0]!.path;
   if (copyAvailable(def)) return { status: "found", folder: f, path: def, ...(via ? { via } : {}) };
   // Another copy: of that folder, else of the repository under another name.
   for (const g of group) {
@@ -393,11 +436,22 @@ export interface PointerNaming {
  * to it too, as the lookup reads one (its name or an alias) — then a repository's qualified name; a `.slipbox/`
  * folder keeps its short one (ambiguous until one is renamed). With what writing it means: a private name, a clash.
  */
-export function pointerNaming(f: Pick<NamedFolder, "key" | "name" | "remote"> & { private?: boolean }, folders = readFolders()): PointerNaming {
+export function pointerNaming(
+  f: Pick<NamedFolder, "key" | "name" | "remote"> & { private?: boolean },
+  folders = readFolders(),
+): PointerNaming {
   const n = f.name.toLowerCase();
   // A copy of the same repository is no different folder: the lookup reads them as one.
-  const clash = folders.filter((x) => x.key !== f.key && !sameRepository(x, f) && [x.name, ...x.aliases].some((y) => y.toLowerCase() === n));
-  return { name: clash.length && f.remote ? f.remote : f.name, short: f.name, qualified: f.remote, private: !!f.private, clash };
+  const clash = folders.filter(
+    (x) => x.key !== f.key && !sameRepository(x, f) && [x.name, ...x.aliases].some((y) => y.toLowerCase() === n),
+  );
+  return {
+    name: clash.length && f.remote ? f.remote : f.name,
+    short: f.name,
+    qualified: f.remote,
+    private: !!f.private,
+    clash,
+  };
 }
 
 /** The name to write for a folder (a pointer's): `pointerNaming`'s. */
@@ -412,7 +466,12 @@ export function pointerName(f: Pick<NamedFolder, "key" | "name" | "remote">, fol
 export function pointerWarnings(n: PointerNaming): string[] {
   const out: string[] = [];
   const many = `${n.clash.length + 1} different folders are called ${n.short}`;
-  if (n.clash.length) out.push(n.name !== n.short ? `${many}: written by its qualified name, ${n.name}` : `${many}: followed, the pointer asks which — rename one (slipbox name <new>, in it)`);
+  if (n.clash.length)
+    out.push(
+      n.name !== n.short
+        ? `${many}: written by its qualified name, ${n.name}`
+        : `${many}: followed, the pointer asks which — rename one (slipbox name <new>, in it)`,
+    );
   const priv = privateNameWarning(n);
   if (priv) out.push(priv);
   return out;
@@ -420,5 +479,7 @@ export function pointerWarnings(n: PointerNaming): string[] {
 
 /** A private name written (D74): the pointer works on this machine only; null for any other. */
 export function privateNameWarning(n: PointerNaming): string | null {
-  return n.private && n.name === n.short ? `${n.short} is a private name (its .slipbox/ is kept out of git): the pointer works on this machine only` : null;
+  return n.private && n.name === n.short
+    ? `${n.short} is a private name (its .slipbox/ is kept out of git): the pointer works on this machine only`
+    : null;
 }

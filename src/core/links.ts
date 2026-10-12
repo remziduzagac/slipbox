@@ -15,7 +15,16 @@ import { dirname, isAbsolute, join, posix, relative, resolve } from "node:path";
  * exact spelling, the same folder, the deepest folder shared, the shortest path. The last two are
  * fragile: a note of that name nearer takes it.
  */
-export type Landed = "path" | "pointer" | "hosting" | "suffix" | "name" | "exact-case" | "same-folder" | "deepest-shared" | "shortest";
+export type Landed =
+  | "path"
+  | "pointer"
+  | "hosting"
+  | "suffix"
+  | "name"
+  | "exact-case"
+  | "same-folder"
+  | "deepest-shared"
+  | "shortest";
 
 export type Resolution =
   | { status: "resolved"; path: string; candidates: string[]; how?: Landed }
@@ -30,7 +39,11 @@ const NOTE_EXT = /\.(md|markdown)$/i;
  * still breaks a tie (`pick`).
  */
 export function normKey(s: string): string {
-  return s.normalize("NFC").toLowerCase().replace(/i\u0307/g, "i").replace(/ı/g, "i");
+  return s
+    .normalize("NFC")
+    .toLowerCase()
+    .replace(/i\u0307/g, "i")
+    .replace(/ı/g, "i");
 }
 
 function stripExt(rel: string): string {
@@ -111,7 +124,9 @@ export class LinkIndex {
       // Path suffix aligned on segments.
       const suffix = normKey(stem);
       const exact = this.byPath.get(suffix);
-      candidates = exact ? [...exact] : [...this.byPath.entries()].filter(([k]) => k.endsWith(`/${suffix}`)).flatMap(([, v]) => v);
+      candidates = exact
+        ? [...exact]
+        : [...this.byPath.entries()].filter(([k]) => k.endsWith(`/${suffix}`)).flatMap(([, v]) => v);
       how = exact ? "path" : "suffix";
     } else {
       candidates = [...(this.byName.get(normKey(stem)) ?? [])];
@@ -197,14 +212,22 @@ const SCHEME = /^[a-z][a-z0-9+.-]*:/i;
  * filesystem's path alone, which the graph asks); then `landIn`'s order: a file as written, a note
  * without its extension, a folder.
  */
-export function resolveMarkdownUrl(url: string, fromRel: string, root: string, index: LinkIndex, hasRoot = true): MdLinkTarget {
+export function resolveMarkdownUrl(
+  url: string,
+  fromRel: string,
+  root: string,
+  index: LinkIndex,
+  hasRoot = true,
+): MdLinkTarget {
   if (SCHEME.test(url) || url.startsWith("//")) return { kind: "external", target: url, fragment: null };
   const hash = url.indexOf("#");
   const fragment = hash >= 0 ? decodeSafe(url.slice(hash + 1)) : null;
   const pathPart = decodeSafe(hash >= 0 ? url.slice(0, hash) : url);
   if (!pathPart) return { kind: "anchor", target: fromRel, fragment };
   if (pathPart.startsWith("/") && !hasRoot) return { kind: "missing", target: pathPart, fragment };
-  const rel = pathPart.startsWith("/") ? posix.normalize(pathPart.slice(1) || ".") : posix.normalize(posix.join(posix.dirname(fromRel), pathPart));
+  const rel = pathPart.startsWith("/")
+    ? posix.normalize(pathPart.slice(1) || ".")
+    : posix.normalize(posix.join(posix.dirname(fromRel), pathPart));
   if (rel === ".." || rel.startsWith("../")) return { kind: "missing", target: rel, fragment };
   // Not in the root, a `/…` is the filesystem's path (21.2): the graph asks that of what's missing.
   return { ...landIn(rel, root, index), fragment };
@@ -270,7 +293,11 @@ export function pathNamed(target: string, linkingAbs: string): { form: PathForm;
     }
   }
   const raw = decodeSafe(target);
-  return { form, abs: form === "home" ? join(homeDir(), raw.slice(2)) : form === "absolute" ? raw : resolve(dirname(linkingAbs), raw) };
+  return {
+    form,
+    abs:
+      form === "home" ? join(homeDir(), raw.slice(2)) : form === "absolute" ? raw : resolve(dirname(linkingAbs), raw),
+  };
 }
 
 /**
@@ -278,7 +305,13 @@ export function pathNamed(target: string, linkingAbs: string): { form: PathForm;
  * A markdown link's path is percent-decoded; a wikilink's without an extension names a note
  * (`.md`, `.markdown`). Null when it isn't a path form, or names no file.
  */
-export function pathLink(target: string, linkingAbs: string, wiki: boolean, rebase?: { from: string; to: string }, dirs = false): { form: PathForm; abs: string; folder?: boolean } | null {
+export function pathLink(
+  target: string,
+  linkingAbs: string,
+  wiki: boolean,
+  rebase?: { from: string; to: string },
+  dirs = false,
+): { form: PathForm; abs: string; folder?: boolean } | null {
   const form = pathForm(target);
   if (!form) return null;
   let p: string;

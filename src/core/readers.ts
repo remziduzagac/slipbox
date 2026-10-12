@@ -44,7 +44,12 @@ const markdown: NoteReader = {
     for (const m of text.matchAll(/(!?)\[\[([^[\]\n]+)\]\]/g)) {
       if (col < m.index || col >= m.index + m[0].length) continue;
       const w = parseWikiTarget(m[2]!);
-      return { kind: m[1] ? "embed" : "wiki", target: w.target, heading: w.heading ?? (w.block ? `^${w.block}` : null), text: w.alias ?? w.target };
+      return {
+        kind: m[1] ? "embed" : "wiki",
+        target: w.target,
+        heading: w.heading ?? (w.block ? `^${w.block}` : null),
+        text: w.alias ?? w.target,
+      };
     }
     for (const m of text.matchAll(/!?\[([^\]\n]*)\]\(\s*<?([^)\s>]+)>?(?:\s+"[^"]*")?\s*\)/g)) {
       if (col < m.index || col >= m.index + m[0].length) continue;
@@ -57,7 +62,6 @@ const markdown: NoteReader = {
   },
   language: null,
 };
-
 
 const READERS: Record<string, NoteReader> = { markdown };
 

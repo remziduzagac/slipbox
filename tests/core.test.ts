@@ -1,5 +1,17 @@
 import { afterAll, afterEach, describe, expect, test } from "bun:test";
-import { chmodSync, existsSync, mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, statSync, symlinkSync, utimesSync, writeFileSync } from "node:fs";
+import {
+  chmodSync,
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  realpathSync,
+  rmSync,
+  statSync,
+  symlinkSync,
+  utimesSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { formatEntry, formatRef, parseRef, scratchLocation } from "../src/core/capture.ts";
@@ -8,7 +20,15 @@ import { readDoc } from "../src/core/docformats.ts";
 import { canonKey, Keymap, unknownModifiers } from "../src/core/commands.ts";
 import { loadConfig } from "../src/core/config.ts";
 import { LinkIndex } from "../src/core/links.ts";
-import { headingsOf, newParseCache, noteChunks, parseLegacy, parseMarkdown, slugify, visit } from "../src/core/parse.ts";
+import {
+  headingsOf,
+  newParseCache,
+  noteChunks,
+  parseLegacy,
+  parseMarkdown,
+  slugify,
+  visit,
+} from "../src/core/parse.ts";
 import { mathRows, mathText } from "../src/core/math.ts";
 import { flattenVars, loadRasterizer, looksLikeSvg } from "../src/core/svg.ts";
 import { loadMermaid, mermaidSvg } from "../src/core/diagrams.ts";
@@ -18,7 +38,15 @@ import { lintCommand, lintLoadsCode, MARKDOWNLINT, parseLint, runLint } from "..
 import { lockKey, toolFolder, toolManifest } from "../src/core/servers/install.ts";
 import { LOCKS } from "../src/core/servers/locks.ts";
 import { isTrusted, setTrust, setTrustedRoots, trustFile, trustOf } from "../src/core/trust.ts";
-import { addFootnote, applyEdits, deleteFootnote, editFootnote, footnotesOf, renameFootnote, type TextEdit } from "../src/core/footnotes.ts";
+import {
+  addFootnote,
+  applyEdits,
+  deleteFootnote,
+  editFootnote,
+  footnotesOf,
+  renameFootnote,
+  type TextEdit,
+} from "../src/core/footnotes.ts";
 import { layoutToAnsi } from "../src/core/layout/ansi.ts";
 import { renderMarkdown } from "../src/core/layout/render.ts";
 import { layoutSource } from "../src/core/layout/source.ts";
@@ -30,7 +58,14 @@ import { glyphsFor } from "../src/core/glyphs.ts";
 import { WriteRefused, writeNote } from "../src/core/fsutil.ts";
 import { listTasks, toggleTask } from "../src/core/tasks.ts";
 import { diffLines, merge3, unifiedDiff } from "../src/core/merge.ts";
-import { compilePattern, expandReplacement, findAll, firstPerLine, parseSubstitute, replaceMatches } from "../src/core/replace.ts";
+import {
+  compilePattern,
+  expandReplacement,
+  findAll,
+  firstPerLine,
+  parseSubstitute,
+  replaceMatches,
+} from "../src/core/replace.ts";
 import { editorArgv, splitCommand } from "../src/core/editor.ts";
 import { discoverNvims, nvimSockets } from "../src/core/nvim.ts";
 import { graphemes, stringWidth, truncate } from "../src/core/width.ts";
@@ -48,7 +83,6 @@ process.env.SLIPBOX_CLIPBOARD = "file"; // copies never reach the developer's cl
 afterAll(() => rmSync(sandbox, { recursive: true, force: true }));
 // A root is trusted only where a test says so (23.x): none by default, as in use.
 afterEach(() => setTrustedRoots([]));
-
 
 describe("width (0.7)", () => {
   test("ASCII, CJK, emoji, ZWJ, combining marks", () => {
@@ -81,7 +115,14 @@ describe("sanitize (2.9)", () => {
     expect(sanitizeMap("x\x1b]0;t\ny").text).toBe("x\ny");
   });
   test("sanitizeMap: the same text, and where each raw index went (-1 for one taken out)", () => {
-    for (const raw of ["plain", "bell\x07ring.md", "a\x1b[31mred\x1b[0m b", "x\x1b]0;t\x07y\u2028z", "c1\x9b31mq\u202Er", "e\x1b"]) {
+    for (const raw of [
+      "plain",
+      "bell\x07ring.md",
+      "a\x1b[31mred\x1b[0m b",
+      "x\x1b]0;t\x07y\u2028z",
+      "c1\x9b31mq\u202Er",
+      "e\x1b",
+    ]) {
       const m = sanitizeMap(raw);
       expect(m.text).toBe(sanitize(raw));
       expect(m.at.length).toBe(raw.length);
@@ -118,8 +159,17 @@ describe("wikilink syntax, as the converter reads it", () => {
   });
   test("a block is `#^id`, or a bare `^id` with no heading before it; a caret in a heading is the heading's", async () => {
     const { parseWikiTarget } = await import("../src/core/wikilink.ts");
-    expect(parseWikiTarget("Complexity#O(n^2)")).toMatchObject({ target: "Complexity", heading: "O(n^2)", block: null });
-    expect(parseWikiTarget("f^(n)|deriv")).toMatchObject({ target: "f^(n)", heading: null, block: null, alias: "deriv" });
+    expect(parseWikiTarget("Complexity#O(n^2)")).toMatchObject({
+      target: "Complexity",
+      heading: "O(n^2)",
+      block: null,
+    });
+    expect(parseWikiTarget("f^(n)|deriv")).toMatchObject({
+      target: "f^(n)",
+      heading: null,
+      block: null,
+      alias: "deriv",
+    });
     expect(parseWikiTarget("note^abc")).toMatchObject({ target: "note", block: "abc" });
     expect(parseWikiTarget("note#^abc")).toMatchObject({ target: "note", heading: null, block: "abc" });
     // The documented bare form: `x^2` is note x's block 2 (an id may be digits).
@@ -139,7 +189,15 @@ describe("wikilink syntax, as the converter reads it", () => {
 });
 
 describe("link resolution (1.4)", () => {
-  const idx = new LinkIndex(["index.md", "projects/index.md", "a/deep/index.md", "notes/Readme.md", "notes/alpha.md", "x/dup.md", "y/dup.md"]);
+  const idx = new LinkIndex([
+    "index.md",
+    "projects/index.md",
+    "a/deep/index.md",
+    "notes/Readme.md",
+    "notes/alpha.md",
+    "x/dup.md",
+    "y/dup.md",
+  ]);
   test("case-insensitive everywhere", () => {
     expect(idx.resolveWiki("README", null)).toMatchObject({ status: "resolved", path: "notes/Readme.md" });
     expect(idx.resolveWiki("ALPHA", null).path).toBe("notes/alpha.md");
@@ -253,10 +311,10 @@ describe("config (0.9)", () => {
     expect(r.warnings.join("\n")).toContain("bogus");
     expect(r.warnings.join("\n")).toContain("render.inset");
   });
-  test("a retired section says why, not \"unknown key\" (21.12)", () => {
+  test('a retired section says why, not "unknown key" (21.12)', () => {
     const dir = mkdtempSync(join(tmpdir(), "slipbox-cfg-"));
     const file = join(dir, "c.toml");
-    writeFileSync(file, '[rename]\nprevious_names = true\n');
+    writeFileSync(file, "[rename]\nprevious_names = true\n");
     const w = loadConfig({ configFile: file }).warnings.join("\n");
     expect(w).toContain('"rename" is retired — renames no longer write a note\'s old name into it');
     expect(w).not.toContain("unknown key");
@@ -308,7 +366,10 @@ describe("themes (2.6)", () => {
     expect(r.warning).toContain("unknown theme");
   });
   test("base16 loader accepts both scheme formats", () => {
-    const slots = Array.from({ length: 16 }, (_, i) => `base0${i.toString(16).toUpperCase()}: "${(i * 1111).toString(16).padStart(6, "0")}"`);
+    const slots = Array.from(
+      { length: 16 },
+      (_, i) => `base0${i.toString(16).toUpperCase()}: "${(i * 1111).toString(16).padStart(6, "0")}"`,
+    );
     const legacy = parseBase16(`scheme: "Legacy"\n${slots.join("\n")}\n`, "x");
     const modern = parseBase16(`name: "Modern"\npalette:\n  ${slots.join("\n  ")}\n`, "x");
     expect(legacy.name).toBe("Legacy");
@@ -321,7 +382,10 @@ describe("themes (2.6)", () => {
 describe("themes (2.6): a user's own files", () => {
   test("a user theme loads, shadowing a built-in of its name; a broken one falls back, saying which file and why", () => {
     const dir = mkdtempSync(join(tmpdir(), "slipbox-themes-"));
-    const slots = Array.from({ length: 16 }, (_, i) => `base0${i.toString(16).toUpperCase()}: "${(i * 1111).toString(16).padStart(6, "0")}"`);
+    const slots = Array.from(
+      { length: 16 },
+      (_, i) => `base0${i.toString(16).toUpperCase()}: "${(i * 1111).toString(16).padStart(6, "0")}"`,
+    );
     writeFileSync(join(dir, "terminal.yaml"), `scheme: "Mine"\n${slots.join("\n")}\n`);
     writeFileSync(join(dir, "broken.yml"), "scheme: x\nbase00: '000000'\n");
     const mine = loadTheme("terminal", dir);
@@ -330,7 +394,9 @@ describe("themes (2.6): a user's own files", () => {
     const broken = loadTheme("broken", dir);
     expect(broken.theme.name).toBe("tokyo-night");
     expect(broken.warning).toStartWith(`theme broken: ${join(dir, "broken.yml")}: `);
-    expect(listThemes(dir).filter((t) => t.name === "terminal")).toEqual([{ name: "terminal", source: "user", path: join(dir, "terminal.yaml") }]);
+    expect(listThemes(dir).filter((t) => t.name === "terminal")).toEqual([
+      { name: "terminal", source: "user", path: join(dir, "terminal.yaml") },
+    ]);
     rmSync(dir, { recursive: true, force: true });
   });
 });
@@ -371,7 +437,8 @@ describe("glyph sets", () => {
     expect(auto({ LC_ALL: "en_US.ISO-8859-1", LANG: "en_US.UTF-8" })).toBe("ascii"); // LC_ALL wins over LANG
     expect(auto({ LC_CTYPE: "en_US.UTF-8", LANG: "C" })).toBe("unicode"); // LC_CTYPE before LANG
     expect(auto({ TERM: "linux", LANG: "en_US.UTF-8" })).toBe("ascii");
-    for (const term of [{ TERM: "xterm-ghostty" }, { TERM: "xterm-kitty" }, { TERM_PROGRAM: "WezTerm" }]) expect(auto({ LANG: "en_US.utf8", ...term })).toBe("nerd");
+    for (const term of [{ TERM: "xterm-ghostty" }, { TERM: "xterm-kitty" }, { TERM_PROGRAM: "WezTerm" }])
+      expect(auto({ LANG: "en_US.utf8", ...term })).toBe("nerd");
     expect(auto({ TERM: "xterm-256color", LANG: "en_US.UTF-8" })).toBe("unicode");
     expect(auto({ TERM: "xterm-256color" })).toBe("unicode"); // no locale at all isn't a non-UTF-8 one
     expect(glyphsFor("unicode", { TERM: "linux" }).mode).toBe("unicode"); // a set named in config is never guessed
@@ -380,7 +447,8 @@ describe("glyph sets", () => {
 
 describe("review round 2 (core)", () => {
   const g = glyphsFor("unicode");
-  const text = (l: { lines: { spans: { text: string }[] }[] }) => l.lines.map((x) => x.spans.map((s) => s.text).join("")).join("\n");
+  const text = (l: { lines: { spans: { text: string }[] }[] }) =>
+    l.lines.map((x) => x.spans.map((s) => s.text).join("")).join("\n");
   test("footnote labels and frontmatter keys can't smuggle escapes into the layout", () => {
     const fn = renderMarkdown("x[^a\u001bcb]\n\n[^a\u001bcb]: foot\n", { width: 60, glyphs: g, showUrls: false });
     const fm = renderMarkdown('---\na: {"\u001b[31mRED": 1}\n---\n# T\n', { width: 60, glyphs: g, showUrls: false });
@@ -396,7 +464,10 @@ describe("review round 2 (core)", () => {
   });
   test("capture.file must stay inside the project; ranged numbers must be whole", () => {
     const dir = mkdtempSync(join(tmpdir(), "slipbox-cfg-"));
-    for (const [value, needle] of [['""', "capture.file"], ['"../../escape.md"', "capture.file"]] as const) {
+    for (const [value, needle] of [
+      ['""', "capture.file"],
+      ['"../../escape.md"', "capture.file"],
+    ] as const) {
       const file = join(dir, "c.toml");
       writeFileSync(file, `[capture]\nfile = ${value}\n`);
       const r = loadConfig({ configFile: file });
@@ -457,7 +528,16 @@ describe("task toggle (4.11) and note writes (4.6, 7.5)", () => {
     expect(toggleTask(enc(src), 99)).toBeNull();
   });
   test("any bullet, numbers, quotes, indentation, [X]; CRLF, a BOM and bad bytes are kept", () => {
-    for (const line of ["* [ ] a", "+ [ ] a", "1. [ ] a", "12) [ ] a", "> - [ ] a", ">  > * [ ] a", "    - [ ] a", "\t- [ ] a"]) {
+    for (const line of [
+      "* [ ] a",
+      "+ [ ] a",
+      "1. [ ] a",
+      "12) [ ] a",
+      "> - [ ] a",
+      ">  > * [ ] a",
+      "    - [ ] a",
+      "\t- [ ] a",
+    ]) {
       expect(toggleTask(enc(line), 1)?.checked).toBe(true);
     }
     expect(toggleTask(enc("- [X] a"), 1)?.checked).toBe(false);
@@ -516,17 +596,37 @@ describe("editor hand-off argv (4.1, 4.2, 4.12)", () => {
       writeFileSync(one, '[editor]\nremote = "code -g {file}:{line}"\n');
       expect(loadConfig({ vaultRoot: null, configFile: one }).config.editor.remote).toEqual(["code -g {file}:{line}"]);
       const two = join(dir, "two.toml");
-      writeFileSync(two, '[editor]\nremote = ["nvim --server S --remote {file}", "nvim --server S --remote-send <C-\\\\><C-N>:{line}<CR>"]\n');
+      writeFileSync(
+        two,
+        '[editor]\nremote = ["nvim --server S --remote {file}", "nvim --server S --remote-send <C-\\\\><C-N>:{line}<CR>"]\n',
+      );
       const r = loadConfig({ vaultRoot: null, configFile: two });
       expect(r.warnings).toEqual([]);
-      expect(r.config.editor.remote).toEqual(["nvim --server S --remote {file}", "nvim --server S --remote-send <C-\\><C-N>:{line}<CR>"]);
+      expect(r.config.editor.remote).toEqual([
+        "nvim --server S --remote {file}",
+        "nvim --server S --remote-send <C-\\><C-N>:{line}<CR>",
+      ]);
     } finally {
       rmSync(dir, { recursive: true, force: true });
     }
   });
   test("a template is split without a shell; {file} and {line} fill in inside arguments", () => {
-    expect(splitCommand(`nvim --server '/tmp/my sock' --remote "+{line}" {file}`)).toEqual(["nvim", "--server", "/tmp/my sock", "--remote", "+{line}", "{file}"]);
-    expect(editorArgv("nvim --server /tmp/s --remote +{line} {file}", "/v/a b.md", 12)).toEqual(["nvim", "--server", "/tmp/s", "--remote", "+12", "/v/a b.md"]);
+    expect(splitCommand(`nvim --server '/tmp/my sock' --remote "+{line}" {file}`)).toEqual([
+      "nvim",
+      "--server",
+      "/tmp/my sock",
+      "--remote",
+      "+{line}",
+      "{file}",
+    ]);
+    expect(editorArgv("nvim --server /tmp/s --remote +{line} {file}", "/v/a b.md", 12)).toEqual([
+      "nvim",
+      "--server",
+      "/tmp/s",
+      "--remote",
+      "+12",
+      "/v/a b.md",
+    ]);
     expect(editorArgv("code -g {file}:{line}", "/v/a.md", 3)).toEqual(["code", "-g", "/v/a.md:3"]);
     // A file name is data, never a command: no shell sees it.
     expect(editorArgv("vi {file}", "/v/$(rm -rf ~).md", 1)).toEqual(["vi", "/v/$(rm -rf ~).md"]);
@@ -544,17 +644,24 @@ describe("finding running nvims (4.12)", () => {
   test("sockets named nvim.* only, then only the ones that answer", async () => {
     const dir = mkdtempSync(join(tmpdir(), "slipbox-nv-"));
     const net = await import("node:net");
-    const listen = (p: string) => new Promise<import("node:net").Server>((res) => {
-      const srv = net.createServer();
-      srv.listen(p, () => res(srv));
-    });
+    const listen = (p: string) =>
+      new Promise<import("node:net").Server>((res) => {
+        const srv = net.createServer();
+        srv.listen(p, () => res(srv));
+      });
     const a = await listen(join(dir, "nvim.123.0"));
     const b = await listen(join(dir, "nvim.wt-abc.sock"));
     const c = await listen(join(dir, "other.sock"));
     writeFileSync(join(dir, "nvim.notasocket"), "");
     try {
-      expect(nvimSockets([dir, join(dir, "missing")])).toEqual([join(dir, "nvim.123.0"), join(dir, "nvim.wt-abc.sock")]);
-      const found = discoverNvims({ dirs: [dir], probe: (s) => (s.endsWith(".sock") ? { socket: s, cwd: "/w", file: "" } : null) });
+      expect(nvimSockets([dir, join(dir, "missing")])).toEqual([
+        join(dir, "nvim.123.0"),
+        join(dir, "nvim.wt-abc.sock"),
+      ]);
+      const found = discoverNvims({
+        dirs: [dir],
+        probe: (s) => (s.endsWith(".sock") ? { socket: s, cwd: "/w", file: "" } : null),
+      });
       expect(found.map((f) => f.socket)).toEqual([join(dir, "nvim.wt-abc.sock")]);
     } finally {
       for (const srv of [a, b, c]) srv.close();
@@ -569,9 +676,18 @@ describe("clipboard (8.5): OSC 52, the system's tools, then the file", () => {
    * that pick them and SLIPBOX_CLIPBOARD as given (unset when not). A tool copying writes `board`
    * beside it, a tool pasting prints it; each says in `ran` that it ran, with its arguments.
    */
-  const withTools = async (tools: Record<string, "copy" | "paste" | "fail" | "both">, env: { WAYLAND_DISPLAY?: string; DISPLAY?: string; SLIPBOX_CLIPBOARD?: string; WSL_DISTRO_NAME?: string }, fn: (dir: string) => void | Promise<void>) => {
+  const withTools = async (
+    tools: Record<string, "copy" | "paste" | "fail" | "both">,
+    env: { WAYLAND_DISPLAY?: string; DISPLAY?: string; SLIPBOX_CLIPBOARD?: string; WSL_DISTRO_NAME?: string },
+    fn: (dir: string) => void | Promise<void>,
+  ) => {
     const dir = mkdtempSync(join(tmpdir(), "slipbox-cliptools-"));
-    const body = { copy: '/bin/cat > "${0%/*}/board"', paste: '/bin/cat "${0%/*}/board"', fail: "exit 1", both: 'case "$*" in *-o*) /bin/cat "${0%/*}/board" ;; *) /bin/cat > "${0%/*}/board" ;; esac' };
+    const body = {
+      copy: '/bin/cat > "${0%/*}/board"',
+      paste: '/bin/cat "${0%/*}/board"',
+      fail: "exit 1",
+      both: 'case "$*" in *-o*) /bin/cat "${0%/*}/board" ;; *) /bin/cat > "${0%/*}/board" ;; esac',
+    };
     for (const [name, kind] of Object.entries(tools)) {
       writeFileSync(join(dir, name), `#!/bin/sh\necho "\${0##*/} $*" >> "\${0%/*}/ran"\n${body[kind]}\n`);
       chmodSync(join(dir, name), 0o755);
@@ -588,7 +704,8 @@ describe("clipboard (8.5): OSC 52, the system's tools, then the file", () => {
       rmSync(dir, { recursive: true, force: true });
     }
   };
-  const ran = (dir: string) => (existsSync(join(dir, "ran")) ? readFileSync(join(dir, "ran"), "utf8").trim().split("\n") : []);
+  const ran = (dir: string) =>
+    existsSync(join(dir, "ran")) ? readFileSync(join(dir, "ran"), "utf8").trim().split("\n") : [];
 
   test("a copy goes by OSC 52 and the first tool that takes it, confirmed; a paste reads it back the same way", async () => {
     const { copyText, readClipboard } = await import("../src/core/clipboard.ts");
@@ -600,14 +717,27 @@ describe("clipboard (8.5): OSC 52, the system's tools, then the file", () => {
       expect(readFileSync(join(dir, "board"), "utf8")).toBe("héllo\n");
       expect(existsSync(join(out, "clipboard.txt"))).toBe(false); // no file when something took it
       expect(readClipboard(out)).toBe("héllo\n");
-      expect(ran(dir)).toEqual(["xclip -selection clipboard", "xsel --clipboard --input", "xclip -selection clipboard -o", "xsel --clipboard --output"]);
+      expect(ran(dir)).toEqual([
+        "xclip -selection clipboard",
+        "xsel --clipboard --input",
+        "xclip -selection clipboard -o",
+        "xsel --clipboard --output",
+      ]);
     });
     // Wayland first, when both are there: wl-copy takes it and xsel never runs.
-    await withTools({ "wl-copy": "copy", "wl-paste": "paste", xsel: "both" }, { WAYLAND_DISPLAY: "wayland-0", DISPLAY: ":0" }, (dir) => {
-      expect(copyText("w", { osc52: () => false, fallbackDir: out })).toEqual({ methods: ["wl-copy"], file: null, confirmed: true });
-      expect(readClipboard(out)).toBe("w");
-      expect(ran(dir)).toEqual(["wl-copy ", "wl-paste --no-newline"]);
-    });
+    await withTools(
+      { "wl-copy": "copy", "wl-paste": "paste", xsel: "both" },
+      { WAYLAND_DISPLAY: "wayland-0", DISPLAY: ":0" },
+      (dir) => {
+        expect(copyText("w", { osc52: () => false, fallbackDir: out })).toEqual({
+          methods: ["wl-copy"],
+          file: null,
+          confirmed: true,
+        });
+        expect(readClipboard(out)).toBe("w");
+        expect(ran(dir)).toEqual(["wl-copy ", "wl-paste --no-newline"]);
+      },
+    );
     rmSync(out, { recursive: true, force: true });
   });
 
@@ -616,21 +746,32 @@ describe("clipboard (8.5): OSC 52, the system's tools, then the file", () => {
     const out = mkdtempSync(join(tmpdir(), "slipbox-clip-"));
     // WSLg's X tools there too: clip.exe takes the copy first, Windows' own clipboard whatever the Linux side does.
     await withTools({ "clip.exe": "copy", xsel: "both" }, { WSL_DISTRO_NAME: "Ubuntu", DISPLAY: ":0" }, (dir) => {
-      expect(copyText("héllo ✓\n", { osc52: () => false, fallbackDir: out })).toEqual({ methods: ["clip.exe"], file: null, confirmed: true });
+      expect(copyText("héllo ✓\n", { osc52: () => false, fallbackDir: out })).toEqual({
+        methods: ["clip.exe"],
+        file: null,
+        confirmed: true,
+      });
       // A byte-order mark, then UTF-16: clip.exe reads it as it is, not in the console's code page.
-      expect(readFileSync(join(dir, "board"))).toEqual(Buffer.concat([Buffer.from([0xff, 0xfe]), Buffer.from("héllo ✓\n", "utf16le")]));
+      expect(readFileSync(join(dir, "board"))).toEqual(
+        Buffer.concat([Buffer.from([0xff, 0xfe]), Buffer.from("héllo ✓\n", "utf16le")]),
+      );
       expect(ran(dir)).toEqual(["clip.exe"]);
     });
     // A paste: PowerShell's Get-Clipboard, only when nothing on the Linux side answers; its CRLF lines made LF.
     await withTools({}, { WSL_DISTRO_NAME: "Ubuntu" }, (dir) => {
-      writeFileSync(join(dir, "powershell.exe"), `#!/bin/sh\necho "\${0##*/} $*" >> "\${0%/*}/ran"\nprintf 'one\\r\\ntwo\\r\\n\\r\\n'\n`);
+      writeFileSync(
+        join(dir, "powershell.exe"),
+        `#!/bin/sh\necho "\${0##*/} $*" >> "\${0%/*}/ran"\nprintf 'one\\r\\ntwo\\r\\n\\r\\n'\n`,
+      );
       chmodSync(join(dir, "powershell.exe"), 0o755);
       expect(readClipboard(out)).toBe("one\ntwo\n");
-      expect(ran(dir)).toEqual(["powershell.exe -NoProfile -NonInteractive -Command [Console]::OutputEncoding = [System.Text.Encoding]::UTF8; Get-Clipboard -Raw"]);
+      expect(ran(dir)).toEqual([
+        "powershell.exe -NoProfile -NonInteractive -Command [Console]::OutputEncoding = [System.Text.Encoding]::UTF8; Get-Clipboard -Raw",
+      ]);
     });
     await withTools({ "wl-paste": "paste" }, { WSL_DISTRO_NAME: "Ubuntu", WAYLAND_DISPLAY: "wayland-0" }, (dir) => {
       writeFileSync(join(dir, "board"), "from wayland");
-      writeFileSync(join(dir, "powershell.exe"), "#!/bin/sh\necho powershell >> \"${0%/*}/ran\"\n");
+      writeFileSync(join(dir, "powershell.exe"), '#!/bin/sh\necho powershell >> "${0%/*}/ran"\n');
       chmodSync(join(dir, "powershell.exe"), 0o755);
       expect(readClipboard(out)).toBe("from wayland");
       expect(ran(dir)).toEqual(["wl-paste --no-newline"]);
@@ -650,11 +791,22 @@ describe("clipboard (8.5): OSC 52, the system's tools, then the file", () => {
     const { copyText, readClipboard } = await import("../src/core/clipboard.ts");
     const out = mkdtempSync(join(tmpdir(), "slipbox-clip-"));
     // A display, but none of its tools installed; then no display at all, a tool there unasked.
-    for (const [tools, env] of [[{}, { DISPLAY: ":0", WAYLAND_DISPLAY: "w" }], [{ xclip: "both" as const }, {}]] as const) {
+    for (const [tools, env] of [
+      [{}, { DISPLAY: ":0", WAYLAND_DISPLAY: "w" }],
+      [{ xclip: "both" as const }, {}],
+    ] as const) {
       await withTools(tools, env, (dir) => {
-        expect(copyText("over ssh", { osc52: () => true, fallbackDir: out })).toEqual({ methods: ["osc52"], file: null, confirmed: false });
+        expect(copyText("over ssh", { osc52: () => true, fallbackDir: out })).toEqual({
+          methods: ["osc52"],
+          file: null,
+          confirmed: false,
+        });
         expect(existsSync(join(out, "clipboard.txt"))).toBe(false);
-        expect(copyText("no terminal", { osc52: () => false, fallbackDir: out })).toEqual({ methods: ["file"], file: join(out, "clipboard.txt"), confirmed: false });
+        expect(copyText("no terminal", { osc52: () => false, fallbackDir: out })).toEqual({
+          methods: ["file"],
+          file: join(out, "clipboard.txt"),
+          confirmed: false,
+        });
         expect(readFileSync(join(out, "clipboard.txt"), "utf8")).toBe("no terminal");
         expect(readClipboard(out)).toBeNull(); // the fallback file isn't the clipboard
         expect(ran(dir)).toEqual([]);
@@ -667,12 +819,20 @@ describe("clipboard (8.5): OSC 52, the system's tools, then the file", () => {
   test("SLIPBOX_CLIPBOARD=file: never the terminal's or the system's clipboard, only the file, read back", async () => {
     const { copyText, readClipboard } = await import("../src/core/clipboard.ts");
     const out = mkdtempSync(join(tmpdir(), "slipbox-clip-"));
-    await withTools({ xclip: "both", "wl-copy": "copy", "wl-paste": "paste" }, { DISPLAY: ":0", WAYLAND_DISPLAY: "w", SLIPBOX_CLIPBOARD: "file" }, (dir) => {
-      expect(readClipboard(out)).toBeNull(); // nothing copied yet
-      expect(copyText("only here", { fallbackDir: out })).toEqual({ methods: ["file"], file: join(out, "clipboard.txt"), confirmed: false });
-      expect(readClipboard(out)).toBe("only here");
-      expect(ran(dir)).toEqual([]);
-    });
+    await withTools(
+      { xclip: "both", "wl-copy": "copy", "wl-paste": "paste" },
+      { DISPLAY: ":0", WAYLAND_DISPLAY: "w", SLIPBOX_CLIPBOARD: "file" },
+      (dir) => {
+        expect(readClipboard(out)).toBeNull(); // nothing copied yet
+        expect(copyText("only here", { fallbackDir: out })).toEqual({
+          methods: ["file"],
+          file: join(out, "clipboard.txt"),
+          confirmed: false,
+        });
+        expect(readClipboard(out)).toBe("only here");
+        expect(ran(dir)).toEqual([]);
+      },
+    );
     rmSync(out, { recursive: true, force: true });
   });
 
@@ -719,7 +879,11 @@ describe("finding running nvims (4.12): where, and what each says", () => {
     process.env.PATH = bin;
     try {
       expect(probeNvim("/s/live")).toEqual({ socket: "/s/live", cwd: "/work dir", file: "/work dir/a.md" });
-      expect(readFileSync(join(bin, "args"), "utf8").split("\n").slice(0, 3)).toEqual(["--server", "/s/live", "--remote-expr"]);
+      expect(readFileSync(join(bin, "args"), "utf8").split("\n").slice(0, 3)).toEqual([
+        "--server",
+        "/s/live",
+        "--remote-expr",
+      ]);
       expect(probeNvim("/s/nofile")).toEqual({ socket: "/s/nofile", cwd: "/w", file: "" });
       expect(probeNvim("/s/stale")).toBeNull(); // nothing listening: nvim fails, whatever it printed
       expect(probeNvim("/s/empty")).toBeNull();
@@ -755,7 +919,11 @@ describe("source layout (4.13)", () => {
   });
   test("light highlighting, and headings placed on their rows", () => {
     const src = "---\ntitle: x\n---\n# Head\n\n- [ ] task `code` [link](l.md)\n```ts\nconst a = 1;\n```\n";
-    const L = layoutSource(src, { width: 80, wrap: true, headings: [{ level: 1, text: "Head", slug: "head", src: 4 }] });
+    const L = layoutSource(src, {
+      width: 80,
+      wrap: true,
+      headings: [{ level: 1, text: "Head", slug: "head", src: 4 }],
+    });
     const roleAt = (row: number, col: number) => {
       let x = 0;
       for (const s of L.lines[row]!.spans) {
@@ -793,8 +961,13 @@ describe("diff and three-way merge (5.5)", () => {
     expect(performance.now() - t).toBeLessThan(200);
   });
   test("merge3: one side's changes taken, the same change once, overlapping ones marked", () => {
-    expect(merge3(base, "ONE\ntwo\nthree\nfour\nfive\n", "one\ntwo\nthree\nfour\nFIVE\n")).toEqual({ text: "ONE\ntwo\nthree\nfour\nFIVE\n", conflicts: 0 });
-    expect(merge3(base, "one\ntwo\nadded\nthree\nfour\nfive\n", "one\ntwo\nthree\nfour\nfive\nend\n").text).toBe("one\ntwo\nadded\nthree\nfour\nfive\nend\n");
+    expect(merge3(base, "ONE\ntwo\nthree\nfour\nfive\n", "one\ntwo\nthree\nfour\nFIVE\n")).toEqual({
+      text: "ONE\ntwo\nthree\nfour\nFIVE\n",
+      conflicts: 0,
+    });
+    expect(merge3(base, "one\ntwo\nadded\nthree\nfour\nfive\n", "one\ntwo\nthree\nfour\nfive\nend\n").text).toBe(
+      "one\ntwo\nadded\nthree\nfour\nfive\nend\n",
+    );
     expect(merge3(base, "one\nsame\nthree\nfour\nfive\n", "one\nsame\nthree\nfour\nfive\n").conflicts).toBe(0);
     expect(merge3(base, "one\nTWO\nthree\nfour\nfive\n", "one\ntwo-t\nthree\nfour\nfive\n")).toEqual({
       text: "one\n<<<<<<< yours\nTWO\n=======\ntwo-t\n>>>>>>> theirs\nthree\nfour\nfive\n",
@@ -804,7 +977,14 @@ describe("diff and three-way merge (5.5)", () => {
     expect(merge3(base, "one\ntwo\nA\nthree\nfour\nfive\n", "one\ntwo\nB\nthree\nfour\nfive\n").conflicts).toBe(1);
   });
   test("unifiedDiff: - and + lines with context and @@ markers", () => {
-    expect(unifiedDiff(base, "one\nTWO\nthree\nfour\nfive\n")).toEqual(["@@ line 2", "  one", "- two", "+ TWO", "  three", "  four"]);
+    expect(unifiedDiff(base, "one\nTWO\nthree\nfour\nfive\n")).toEqual([
+      "@@ line 2",
+      "  one",
+      "- two",
+      "+ TWO",
+      "  three",
+      "  four",
+    ]);
   });
 });
 
@@ -836,8 +1016,20 @@ describe("find and replace (core/replace.ts)", () => {
     expect(replaceMatches("a b a", ms, "xy", false)).toEqual({ text: "xy b xy", count: 2 });
   });
   test("vim's substitute: ranges, delimiters, flags, \\1 and & in the replacement", () => {
-    expect(parseSubstitute("s/old/new/")).toEqual({ range: "line", pattern: "old", replacement: "new", global: false, ignoreCase: false, confirm: false });
-    expect(parseSubstitute("%s/a/b/gic")).toMatchObject({ range: "all", global: true, ignoreCase: true, confirm: true });
+    expect(parseSubstitute("s/old/new/")).toEqual({
+      range: "line",
+      pattern: "old",
+      replacement: "new",
+      global: false,
+      ignoreCase: false,
+      confirm: false,
+    });
+    expect(parseSubstitute("%s/a/b/gic")).toMatchObject({
+      range: "all",
+      global: true,
+      ignoreCase: true,
+      confirm: true,
+    });
     expect(parseSubstitute("'<,'>s/a/b")).toMatchObject({ range: "selection", replacement: "b" });
     expect(parseSubstitute("s#a/b#c#")).toMatchObject({ pattern: "a/b", replacement: "c" });
     expect(parseSubstitute("s/a\\/b/c/")).toMatchObject({ pattern: "a/b" });
@@ -940,8 +1132,14 @@ describe("advisory staleness (9.9)", () => {
 describe("links to a repository's own hosting: the edges", () => {
   test("a path that isn't valid percent-encoding is kept as written; a README any case, a file only", async () => {
     const { inRepo, parseHosted, readmeAt } = await import("../src/core/hosting.ts");
-    expect(parseHosted("https://github.com/me/repo/blob/main/100%-done.md")).toMatchObject({ path: "100%-done.md", ref: "main" });
-    expect(parseHosted("https://github.com/me/repo/blob/main/a.md#50%")).toMatchObject({ path: "a.md", fragment: "50%" });
+    expect(parseHosted("https://github.com/me/repo/blob/main/100%-done.md")).toMatchObject({
+      path: "100%-done.md",
+      ref: "main",
+    });
+    expect(parseHosted("https://github.com/me/repo/blob/main/a.md#50%")).toMatchObject({
+      path: "a.md",
+      fragment: "50%",
+    });
     const top = mkdtempSync(join(tmpdir(), "slipbox-hosting-"));
     expect(readmeAt(top)).toBeNull();
     mkdirSync(join(top, "README.md")); // a folder of that name isn't it
@@ -962,7 +1160,10 @@ describe("review cycle 1 (core)", () => {
     const user = join(dir, "user.toml");
     writeFileSync(user, '[editor]\ncommand = "nvim {file}"\n');
     mkdirSync(join(dir, "v", ".slipbox"), { recursive: true });
-    writeFileSync(join(dir, "v", ".slipbox", "config.toml"), '[editor]\ncommand = "evil {file}"\nremote = ["evil {file}"]\nautosave_ms = 5000\n');
+    writeFileSync(
+      join(dir, "v", ".slipbox", "config.toml"),
+      '[editor]\ncommand = "evil {file}"\nremote = ["evil {file}"]\nautosave_ms = 5000\n',
+    );
     const r = loadConfig({ configFile: user, vaultRoot: join(dir, "v") });
     expect(r.config.editor.command).toBe("nvim {file}");
     expect(r.config.editor.remote).toEqual(["nvim"]);
@@ -974,24 +1175,39 @@ describe("review cycle 1 (core)", () => {
     const user = join(dir, "user.toml");
     writeFileSync(user, '[render]\nimages_remote = "never"\n[lsp]\nauto_install = false\n[update]\ncheck = false\n');
     mkdirSync(join(dir, "outer", "v", ".slipbox"), { recursive: true });
-    writeFileSync(join(dir, "outer", "v", ".slipbox", "config.toml"), '[render]\nimages_remote = "show"\ninset = 2\n[lsp]\nauto_install = true\n[update]\ncheck = true\n');
+    writeFileSync(
+      join(dir, "outer", "v", ".slipbox", "config.toml"),
+      '[render]\nimages_remote = "show"\ninset = 2\n[lsp]\nauto_install = true\n[update]\ncheck = true\n',
+    );
     const r = loadConfig({ configFile: user, vaultRoot: join(dir, "outer", "v") });
     expect(r.config.render.images_remote).toBe("never");
     expect(r.config.lsp.auto_install).toBe(false);
     expect(r.config.update.check).toBe(false);
     expect(r.config.render.inset).toBe(2); // the rest of [render] still applies
     expect(r.origins["render.images_remote"]).toBe(user);
-    expect(r.warnings.filter((w) => w.includes("which only your own config may set (what reaches the network is yours to allow); ignored"))).toHaveLength(3);
-    expect(r.warnings).toContain(`config: ${join(dir, "outer", "v", ".slipbox", "config.toml")} sets update.check, which only your own config may set (what reaches the network is yours to allow); ignored`);
+    expect(
+      r.warnings.filter((w) =>
+        w.includes("which only your own config may set (what reaches the network is yours to allow); ignored"),
+      ),
+    ).toHaveLength(3);
+    expect(r.warnings).toContain(
+      `config: ${join(dir, "outer", "v", ".slipbox", "config.toml")} sets update.check, which only your own config may set (what reaches the network is yours to allow); ignored`,
+    );
     // An enclosing root's file, and a folder's stricter say alike: the defaults stand where yours says nothing.
     const outer = join(dir, "outer", ".slipbox", "config.toml");
     mkdirSync(join(dir, "outer", ".slipbox"));
     writeFileSync(outer, '[render]\nimages_remote = "show"\n');
-    writeFileSync(join(dir, "outer", "v", ".slipbox", "config.toml"), '[lsp]\nauto_install = false\n');
-    const d = loadConfig({ configFile: join(dir, "none.toml"), outerFiles: [outer], vaultRoot: join(dir, "outer", "v") });
+    writeFileSync(join(dir, "outer", "v", ".slipbox", "config.toml"), "[lsp]\nauto_install = false\n");
+    const d = loadConfig({
+      configFile: join(dir, "none.toml"),
+      outerFiles: [outer],
+      vaultRoot: join(dir, "outer", "v"),
+    });
     expect(d.config.render.images_remote).toBe("ask");
     expect(d.config.lsp.auto_install).toBe(true);
-    expect(d.warnings.filter((w) => w.includes("sets render.images_remote,") || w.includes("sets lsp.auto_install,"))).toHaveLength(2);
+    expect(
+      d.warnings.filter((w) => w.includes("sets render.images_remote,") || w.includes("sets lsp.auto_install,")),
+    ).toHaveLength(2);
   });
   test("writeNote: a new file through a symlinked folder is refused; a vault reached by a symlink is fine", () => {
     const root = tmp("wroot");
@@ -1043,21 +1259,40 @@ describe("review cycle 1 (core)", () => {
     ]);
   });
   test("CJK wrapping: no row starts with closing punctuation; no space from a soft break between CJK", () => {
-    const text = (md: string, width: number) => renderMarkdown(md, { width, glyphs: glyphsFor("unicode"), showUrls: false }).lines.map((l) => l.spans.map((x) => x.text).join(""));
+    const text = (md: string, width: number) =>
+      renderMarkdown(md, { width, glyphs: glyphsFor("unicode"), showUrls: false }).lines.map((l) =>
+        l.spans.map((x) => x.text).join(""),
+      );
     for (let w = 8; w <= 30; w++) {
-      for (const row of text("今夜は晴れ、シーイングは良好でした。（観測）は続く。", w)) expect(row.trimStart()).not.toMatch(/^[、。）]/);
+      for (const row of text("今夜は晴れ、シーイングは良好でした。（観測）は続く。", w))
+        expect(row.trimStart()).not.toMatch(/^[、。）]/);
     }
     expect(text("今夜は\n晴れ", 40)[0]).toBe("今夜は晴れ");
     expect(text("tonight\nclear", 40)[0]).toBe("tonight clear");
   });
   test("frontmatter: a parse error wraps whole; a long key is cut with an ellipsis; no row is clipped", () => {
-    const render = (md: string, width: number) => renderMarkdown(md, { width, glyphs: glyphsFor("unicode"), showUrls: false });
+    const render = (md: string, width: number) =>
+      renderMarkdown(md, { width, glyphs: glyphsFor("unicode"), showUrls: false });
     const broken = render("---\ntitle: [unclosed\ntags: [a, b\n---\n\nbody\n", 30);
-    const all = broken.lines.map((l) => l.spans.map((x) => x.text).join("").trim()).join(" ");
+    const all = broken.lines
+      .map((l) =>
+        l.spans
+          .map((x) => x.text)
+          .join("")
+          .trim(),
+      )
+      .join(" ");
     expect(all.replace(/\s+/g, " ")).toMatch(/sufficiently indented/);
     expect(broken.clipped).toBe(0);
     const keyed = render("---\nobserving_programme_coordinator_contact: Ada\n---\n", 40);
-    expect(keyed.lines.some((l) => l.spans.map((x) => x.text).join("").includes("…"))).toBe(true);
+    expect(
+      keyed.lines.some((l) =>
+        l.spans
+          .map((x) => x.text)
+          .join("")
+          .includes("…"),
+      ),
+    ).toBe(true);
   });
 });
 
@@ -1081,7 +1316,9 @@ describe("review cycle 2 (core)", () => {
     expect(tamed.tree.children.find((n) => n.type === "heading")?.position?.start.line).toBe(3);
   });
   test("editor templates fill {file} {line} {server} in one pass: a path with braces stays itself", () => {
-    expect(editorArgv("nvim --server {server} --remote {file}", "/v/{line}-{server}.md", 7, {}, false, "/run/n.sock")).toEqual(["nvim", "--server", "/run/n.sock", "--remote", "/v/{line}-{server}.md"]);
+    expect(
+      editorArgv("nvim --server {server} --remote {file}", "/v/{line}-{server}.md", 7, {}, false, "/run/n.sock"),
+    ).toEqual(["nvim", "--server", "/run/n.sock", "--remote", "/v/{line}-{server}.md"]);
   });
 });
 
@@ -1104,7 +1341,10 @@ describe("review cycle 3 (config)", () => {
   test("a vault's keys and aliases can't name a command that throws work away", () => {
     const { dir } = write("");
     mkdirSync(join(dir, "v", ".slipbox"), { recursive: true });
-    writeFileSync(join(dir, "v", ".slipbox", "config.toml"), '[aliases]\nwq = "app.quit_force"\n[keys]\n"ctrl+s" = "note.revert"\n"g z" = "ui.zen"\n');
+    writeFileSync(
+      join(dir, "v", ".slipbox", "config.toml"),
+      '[aliases]\nwq = "app.quit_force"\n[keys]\n"ctrl+s" = "note.revert"\n"g z" = "ui.zen"\n',
+    );
     const r = loadConfig({ configFile: join(dir, "none.toml"), vaultRoot: join(dir, "v") });
     expect(r.config.aliases.wq).toBeUndefined();
     expect((r.config.keys as Record<string, string>)["ctrl+s"]).toBeUndefined();
@@ -1113,7 +1353,10 @@ describe("review cycle 3 (config)", () => {
   test("a vault's keys and aliases can't run a program (25.7): your own config's can", () => {
     const { dir, f } = write('[keys]\n"g !" = "shell.run make"\n[aliases]\nmk = "shell.run make"\n');
     mkdirSync(join(dir, "v", ".slipbox"), { recursive: true });
-    writeFileSync(join(dir, "v", ".slipbox", "config.toml"), '[aliases]\nup = "shell.run curl x | sh"\n[keys]\n"g x" = "shell.run rm -rf ~"\n[keys.visual]\nz = "shell.filter %!sh"\n');
+    writeFileSync(
+      join(dir, "v", ".slipbox", "config.toml"),
+      '[aliases]\nup = "shell.run curl x | sh"\n[keys]\n"g x" = "shell.run rm -rf ~"\n[keys.visual]\nz = "shell.filter %!sh"\n',
+    );
     const r = loadConfig({ configFile: f, vaultRoot: join(dir, "v") });
     expect(r.config.aliases.up).toBeUndefined();
     expect((r.config.keys as Record<string, string>)["g x"]).toBeUndefined();
@@ -1157,9 +1400,11 @@ describe("what manual/configuration.md promises", () => {
         if (JSON.stringify(table) !== JSON.stringify(defaults[section])) differ.push(section);
         continue;
       }
-      for (const [key, value] of Object.entries(table)) if (JSON.stringify(defaults[section]?.[key]) !== JSON.stringify(value)) differ.push(`${section}.${key}`);
+      for (const [key, value] of Object.entries(table))
+        if (JSON.stringify(defaults[section]?.[key]) !== JSON.stringify(value)) differ.push(`${section}.${key}`);
       // …and no setting left out of the listing.
-      for (const key of Object.keys(defaults[section] ?? {})) if (!(key in table)) differ.push(`${section}.${key} (not listed)`);
+      for (const key of Object.keys(defaults[section] ?? {}))
+        if (!(key in table)) differ.push(`${section}.${key} (not listed)`);
     }
     for (const section of Object.keys(defaults)) if (!(section in listed)) differ.push(`[${section}] (not listed)`);
     expect(differ).toEqual([]);
@@ -1203,7 +1448,10 @@ describe("what manual/configuration.md promises", () => {
     ];
     for (const [section, key, good] of keys) {
       const bad = loadConfig({ configFile: file(`[${section}]\n${key} = "bogus"\n`) });
-      expect([key, (bad.config as unknown as Sections)[section]![key]]).toEqual([key, (DEFAULT_CONFIG as unknown as Sections)[section]![key]]);
+      expect([key, (bad.config as unknown as Sections)[section]![key]]).toEqual([
+        key,
+        (DEFAULT_CONFIG as unknown as Sections)[section]![key],
+      ]);
       expect(bad.warnings.join("\n")).toContain(`"${section}.${key}" must be one of`);
       const ok = loadConfig({ configFile: file(`[${section}]\n${key} = "${good}"\n`) });
       expect([key, (ok.config as unknown as Sections)[section]![key], ok.warnings]).toEqual([key, good, []]);
@@ -1217,22 +1465,36 @@ describe("what manual/configuration.md promises", () => {
       const r = loaded(`[capture]\nlocation = "${word}"\n`);
       expect([word, r.config.capture.location, r.warnings]).toEqual([word, "root", []]);
     }
-    expect(loaded('[capture]\nlocation = "bogus"\n').warnings.join("\n")).toContain('"capture.location" must be one of state, root');
+    expect(loaded('[capture]\nlocation = "bogus"\n').warnings.join("\n")).toContain(
+      '"capture.location" must be one of state, root',
+    );
     // The explorer's actions, bound by either name; other tables' values are left as given.
     const keys = loaded(
       '[keys]\nx = "vault.info"\n[keys.explorer]\nR = "rename_vault"\nV = "make_vault"\nU = "unmake_vault"\nr = "rename_root"\nv = "make_root"\n[keys.outline]\nR = "rename_vault"\n',
     );
     expect(keys.warnings).toEqual([]);
-    expect(keys.config.keys.explorer).toEqual({ R: "rename_root", V: "make_root", U: "unmake_root", r: "rename_root", v: "make_root" });
+    expect(keys.config.keys.explorer).toEqual({
+      R: "rename_root",
+      V: "make_root",
+      U: "unmake_root",
+      r: "rename_root",
+      v: "make_root",
+    });
     expect(keys.config.keys.outline).toEqual({ R: "rename_vault" });
     expect(keys.config.keys.x).toBe("vault.info");
     // The colour role, at the top and in a theme's own table, a colour or a table.
-    const colors = loaded('[colors]\nsidebar_vault = { fg = "#ff00aa" }\n[colors."tokyo-night"]\nsidebar_vault = { bold = true }\n').config.colors;
+    const colors = loaded(
+      '[colors]\nsidebar_vault = { fg = "#ff00aa" }\n[colors."tokyo-night"]\nsidebar_vault = { bold = true }\n',
+    ).config.colors;
     const { theme, warnings } = applyColorOverrides(loadTheme("tokyo-night").theme, colors);
     expect(warnings).toEqual([]);
     expect(theme.roles.sidebar_root).toMatchObject({ fg: "#ff00aa", bold: true });
-    expect(applyColorOverrides(loadTheme("nord").theme, { sidebar_vault: "#00ff00" }).theme.roles.sidebar_root.fg).toBe("#00ff00");
-    expect(applyColorOverrides(loadTheme("nord").theme, { sidebar_root: "#00ff00" }).theme.roles.sidebar_root.fg).toBe("#00ff00");
+    expect(applyColorOverrides(loadTheme("nord").theme, { sidebar_vault: "#00ff00" }).theme.roles.sidebar_root.fg).toBe(
+      "#00ff00",
+    );
+    expect(applyColorOverrides(loadTheme("nord").theme, { sidebar_root: "#00ff00" }).theme.roles.sidebar_root.fg).toBe(
+      "#00ff00",
+    );
   });
 
   test("numbers: a range's ends are taken, past them the default; a fraction only for split_ratio and lens_max", async () => {
@@ -1242,26 +1504,41 @@ describe("what manual/configuration.md promises", () => {
       return { v: (r.config as unknown as Sections)[section]![key], warned: r.warnings.length > 0 };
     };
     const ends: [string, string, number][] = [
-      ["render", "inset", 0], ["render", "inset", 40],
-      ["ui", "sidebar_width", 8], ["ui", "sidebar_width", 200],
+      ["render", "inset", 0],
+      ["render", "inset", 40],
+      ["ui", "sidebar_width", 8],
+      ["ui", "sidebar_width", 200],
       ["watch", "poll_ms", 50],
-      ["ui", "split_ratio", 0.2], ["ui", "split_ratio", 0.8], ["ui", "split_ratio", 0.35],
+      ["ui", "split_ratio", 0.2],
+      ["ui", "split_ratio", 0.8],
+      ["ui", "split_ratio", 0.35],
       ["editor", "lens_max", 0.3],
-      ["ui", "history_limit", 0], ["ui", "history_limit", 2000],
-      ["context", "depth", 5], ["context", "limit", 500],
+      ["ui", "history_limit", 0],
+      ["ui", "history_limit", 2000],
+      ["context", "depth", 5],
+      ["context", "limit", 500],
     ];
     for (const [s, k, v] of ends) expect([`${s}.${k}`, value(s, k, v)]).toEqual([`${s}.${k}`, { v, warned: false }]);
     const past: [string, string, number][] = [
       ["render", "inset", 41],
-      ["ui", "sidebar_width", 7], ["ui", "sidebar_width", 201],
+      ["ui", "sidebar_width", 7],
+      ["ui", "sidebar_width", 201],
       ["watch", "poll_ms", 49],
       ["ui", "split_ratio", 0.9],
       ["ui", "history_limit", 2001],
-      ["context", "depth", 6], ["context", "limit", 0],
+      ["context", "depth", 6],
+      ["context", "limit", 0],
       // A fraction where a whole number is meant.
-      ["ui", "sidebar_width", 30.5], ["watch", "poll_ms", 100.5], ["context", "limit", 2.5],
+      ["ui", "sidebar_width", 30.5],
+      ["watch", "poll_ms", 100.5],
+      ["context", "limit", 2.5],
     ];
-    for (const [s, k, v] of past) expect([`${s}.${k}`, v, value(s, k, v)]).toEqual([`${s}.${k}`, v, { v: (DEFAULT_CONFIG as unknown as Sections)[s]![k], warned: true }]);
+    for (const [s, k, v] of past)
+      expect([`${s}.${k}`, v, value(s, k, v)]).toEqual([
+        `${s}.${k}`,
+        v,
+        { v: (DEFAULT_CONFIG as unknown as Sections)[s]![k], warned: true },
+      ]);
   });
 
   test("capture.file: a relative .md path in the project; a hidden part, another extension, absolute or climbing out keeps the default", () => {
@@ -1272,21 +1549,45 @@ describe("what manual/configuration.md promises", () => {
     for (const bad of [".notes/inbox.md", "notes/.inbox.md", "scratch.txt", "/tmp/inbox.md", "notes/../../inbox.md"]) {
       const r = loadConfig({ configFile: file(`[capture]\nfile = "${bad}"\n`) });
       expect([bad, r.config.capture.file]).toEqual([bad, "scratch.md"]);
-      expect(r.warnings.join("\n")).toContain("capture.file must be a relative .md path inside the project, not hidden");
+      expect(r.warnings.join("\n")).toContain(
+        "capture.file must be a relative .md path inside the project, not hidden",
+      );
     }
   });
 
   test("[colors]: a terminal palette number as a string or ansi:N, and default; anything else a warning", () => {
     const tokyo = loadTheme("tokyo-night").theme;
-    const { theme, warnings } = applyColorOverrides(tokyo, { text: "12", h1: "ansi:12", h2: "default", h3: { bg: "255" }, h4: "256", h5: "#abc", h6: "ansi:300" });
-    expect([theme.roles.text.fg, theme.roles.h1.fg, theme.roles.h2.fg, theme.roles.h3.bg]).toEqual(["ansi:12", "ansi:12", "default", "ansi:255"]);
-    expect([theme.roles.h4.fg, theme.roles.h5.fg, theme.roles.h6.fg]).toEqual([tokyo.roles.h4.fg, tokyo.roles.h5.fg, tokyo.roles.h6.fg]);
-    expect(warnings.filter((w) => w.includes("not a colour")).map((w) => w.split(":")[1]!.trim())).toEqual(["colors.h4", "colors.h5", "colors.h6"]);
+    const { theme, warnings } = applyColorOverrides(tokyo, {
+      text: "12",
+      h1: "ansi:12",
+      h2: "default",
+      h3: { bg: "255" },
+      h4: "256",
+      h5: "#abc",
+      h6: "ansi:300",
+    });
+    expect([theme.roles.text.fg, theme.roles.h1.fg, theme.roles.h2.fg, theme.roles.h3.bg]).toEqual([
+      "ansi:12",
+      "ansi:12",
+      "default",
+      "ansi:255",
+    ]);
+    expect([theme.roles.h4.fg, theme.roles.h5.fg, theme.roles.h6.fg]).toEqual([
+      tokyo.roles.h4.fg,
+      tokyo.roles.h5.fg,
+      tokyo.roles.h6.fg,
+    ]);
+    expect(warnings.filter((w) => w.includes("not a colour")).map((w) => w.split(":")[1]!.trim())).toEqual([
+      "colors.h4",
+      "colors.h5",
+      "colors.h6",
+    ]);
   });
 
   test("SLIPBOX_GLYPHS acts only where render.glyphs is auto: never over a set the config names; a value that isn't a set is ignored", () => {
     const env = { TERM: "xterm-kitty", LANG: "en_US.UTF-8" };
-    for (const named of ["unicode", "nerd"] as const) expect(glyphsFor(named, { ...env, SLIPBOX_GLYPHS: "ascii" }).mode).toBe(named);
+    for (const named of ["unicode", "nerd"] as const)
+      expect(glyphsFor(named, { ...env, SLIPBOX_GLYPHS: "ascii" }).mode).toBe(named);
     expect(glyphsFor("auto", { ...env, SLIPBOX_GLYPHS: "ascii" }).mode).toBe("ascii");
     expect(glyphsFor("auto", { ...env, SLIPBOX_GLYPHS: "fancy" }).mode).toBe("nerd"); // not a set: detected
   });
@@ -1300,7 +1601,10 @@ describe("review cycle 4 (core)", () => {
   });
   test("taming never changes an ordinary note: rules, setext, long numbers, code, frontmatter", () => {
     const g = glyphsFor("unicode");
-    const text = (md: string) => renderMarkdown(md, { width: 200, glyphs: g, showUrls: false }).lines.map((l) => l.spans.map((x) => x.text).join("")).join("\n");
+    const text = (md: string) =>
+      renderMarkdown(md, { width: 200, glyphs: g, showUrls: false })
+        .lines.map((l) => l.spans.map((x) => x.text).join(""))
+        .join("\n");
     expect(parseMarkdown(`Section\n${"-".repeat(90)}\n`).tree.children[0]!.type).toBe("heading");
     const pi = "3".repeat(100);
     expect(text(`${pi}\n`)).toContain(pi);
@@ -1325,8 +1629,12 @@ describe("review cycle 5 (core, from mutation testing)", () => {
     expect(expandTabs("abcd\tx")).toBe("abcd    x");
   });
   test("no row ends with opening punctuation (kinsoku)", () => {
-    const text = (md: string, width: number) => renderMarkdown(md, { width, glyphs: glyphsFor("unicode"), showUrls: false }).lines.map((l) => l.spans.map((x) => x.text).join(""));
-    for (let w = 4; w <= 12; w++) for (const row of text("あいう「漢字」です（注）と【記録】", w)) expect(row.trimEnd()).not.toMatch(/[（「『【]$/);
+    const text = (md: string, width: number) =>
+      renderMarkdown(md, { width, glyphs: glyphsFor("unicode"), showUrls: false }).lines.map((l) =>
+        l.spans.map((x) => x.text).join(""),
+      );
+    for (let w = 4; w <= 12; w++)
+      for (const row of text("あいう「漢字」です（注）と【記録】", w)) expect(row.trimEnd()).not.toMatch(/[（「『【]$/);
   });
   test("smart case knows capitals beyond ASCII", () => {
     const re = compilePattern("Ärzte", { regex: false, whole: false, ignoreCase: false }) as RegExp;
@@ -1385,7 +1693,20 @@ describe("the incremental source layout (15.1)", () => {
       seed = (Math.imul(seed, 1103515245) + 12345) & 0x7fffffff;
       return (seed >>> 8) % n;
     };
-    const pieces = ["", "text", "# Heading", "- [ ] task", "```", "~~~", "---", "> quote `code`", "[[link]] and [md](x.md)", "\t tab\there", "漢字の行", "a long line that will wrap at the narrow width we use for this test"];
+    const pieces = [
+      "",
+      "text",
+      "# Heading",
+      "- [ ] task",
+      "```",
+      "~~~",
+      "---",
+      "> quote `code`",
+      "[[link]] and [md](x.md)",
+      "\t tab\there",
+      "漢字の行",
+      "a long line that will wrap at the narrow width we use for this test",
+    ];
     for (const width of [12, 40]) {
       for (const wrap of [true, false]) {
         const cache = newSourceCache();
@@ -1393,9 +1714,12 @@ describe("the incremental source layout (15.1)", () => {
         for (let step = 0; step < 300; step++) {
           const at = rand(lines.length + 1);
           const r = rand(4);
-          if (r === 0) lines.splice(at, 0, pieces[rand(pieces.length)]!); // a line added
-          else if (r === 1 && lines.length > 1) lines.splice(Math.min(at, lines.length - 1), 1); // taken away
-          else if (at < lines.length) lines[at] = `${lines[at]}${pieces[rand(pieces.length)]!.slice(0, 3)}`; // typed into
+          if (r === 0)
+            lines.splice(at, 0, pieces[rand(pieces.length)]!); // a line added
+          else if (r === 1 && lines.length > 1)
+            lines.splice(Math.min(at, lines.length - 1), 1); // taken away
+          else if (at < lines.length)
+            lines[at] = `${lines[at]}${pieces[rand(pieces.length)]!.slice(0, 3)}`; // typed into
           else lines = [pieces[rand(pieces.length)]!, ...lines];
           const text = `${lines.join("\n")}\n`;
           const opts = { width, wrap, headings: scanHeadings(text) };
@@ -1432,34 +1756,55 @@ describe("maths as Unicode text (12.11)", () => {
   test("functions as their names; a command it doesn't know, a row break, a malformed group: null — its source is shown", () => {
     expect(mathText("\\log_{10}(x) + \\sin\\theta + \\max_i a_i")).toBe("log₁₀(x) + sinθ + maxᵢ aᵢ");
     // One the table would take for another by its start (`\\lfoo`: its `\\l`, ł): not drawn, never half.
-    for (const f of ["\\lfoo", "\\unknown x", "a \\\\ b", "\\frac{a}", "x^{y", "\\begin{pmatrix} 1 \\end{pmatrix}"]) expect(mathText(f)).toBeNull();
+    for (const f of ["\\lfoo", "\\unknown x", "a \\\\ b", "\\frac{a}", "x^{y", "\\begin{pmatrix} 1 \\end{pmatrix}"])
+      expect(mathText(f)).toBeNull();
   });
   test("a display's rows: aligned at `&`, cases braced, matrices bracketed; what's around one on its middle row", () => {
-    expect(mathRows("\\begin{aligned} a &= b + c \\\\ d + e &= f \\end{aligned}")).toEqual(["    a = b + c", "d + e = f"]);
-    expect(mathRows("f(x) = \\begin{cases} x & x \\ge 0 \\\\ -x & x < 0 \\end{cases}")).toEqual(["f(x) = ⎧ x   x ≥ 0", "       ⎩ −x  x < 0"]);
+    expect(mathRows("\\begin{aligned} a &= b + c \\\\ d + e &= f \\end{aligned}")).toEqual([
+      "    a = b + c",
+      "d + e = f",
+    ]);
+    expect(mathRows("f(x) = \\begin{cases} x & x \\ge 0 \\\\ -x & x < 0 \\end{cases}")).toEqual([
+      "f(x) = ⎧ x   x ≥ 0",
+      "       ⎩ −x  x < 0",
+    ]);
     expect(mathRows("\\begin{cases} 1 & a \\\\ 2 & b \\\\ 3 & c \\end{cases}")).toEqual(["⎧ 1  a", "⎨ 2  b", "⎩ 3  c"]);
     expect(mathRows("\\begin{cases} 1 \\\\ 2 \\\\ 3 \\\\ 4 \\end{cases}")).toEqual(["⎧ 1", "⎨ 2", "⎪ 3", "⎩ 4"]);
     expect(mathRows("\\begin{pmatrix} 1 \\\\ 2 \\\\ 3 \\end{pmatrix}")).toEqual(["⎛ 1 ⎞", "⎜ 2 ⎟", "⎝ 3 ⎠"]);
     expect(mathRows("\\begin{alignat}{2} a &= b \\end{alignat}")).toEqual(["a = b"]);
-    expect(mathRows("A = \\begin{pmatrix} 1 & 0 \\\\ 0 & 10 \\end{pmatrix} .")).toEqual(["A = ⎛ 1  0  ⎞ .", "    ⎝ 0  10 ⎠"]);
+    expect(mathRows("A = \\begin{pmatrix} 1 & 0 \\\\ 0 & 10 \\end{pmatrix} .")).toEqual([
+      "A = ⎛ 1  0  ⎞ .",
+      "    ⎝ 0  10 ⎠",
+    ]);
     expect(mathRows("\\begin{bmatrix} a & b \\end{bmatrix}")).toEqual(["[ a  b ]"]);
     expect(mathRows("E = mc^2")).toEqual(["E = mc²"]);
     expect(mathRows("\\begin{aligned} x \\\\ y \\\\ \\end{aligned}")).toEqual(["x", "y"]); // a last `\\\\` ends a row
   });
   test("a display it can't draw: an environment it doesn't know, one inside another, a cell it can't", () => {
-    for (const d of ["\\begin{tikzpicture} x \\end{tikzpicture}", "\\begin{aligned} \\begin{matrix} 1 \\end{matrix} \\end{aligned}", "\\begin{cases} \\nope & 1 \\end{cases}", "a \\begin{cases} 1 \\end{cases} \\nope"]) expect(mathRows(d)).toBeNull();
+    for (const d of [
+      "\\begin{tikzpicture} x \\end{tikzpicture}",
+      "\\begin{aligned} \\begin{matrix} 1 \\end{matrix} \\end{aligned}",
+      "\\begin{cases} \\nope & 1 \\end{cases}",
+      "a \\begin{cases} 1 \\end{cases} \\nope",
+    ])
+      expect(mathRows(d)).toBeNull();
   });
   test("text read from a note keeps its maths as written: a heading's (and so its slug), a task's, a footnote's, a link's", () => {
-    const md = "# The $O(n)$ algorithm\n\n- [ ] compute $x^2$\n\nSee [the $n$th](x.md) and[^f].\n\n[^f]: On $\\alpha$.\n";
+    const md =
+      "# The $O(n)$ algorithm\n\n- [ ] compute $x^2$\n\nSee [the $n$th](x.md) and[^f].\n\n[^f]: On $\\alpha$.\n";
     const parsed = parseMarkdown(md);
-    expect(headingsOf(parsed.tree)[0]).toMatchObject({ text: "The $O(n)$ algorithm", slug: slugify("The $O(n)$ algorithm") });
+    expect(headingsOf(parsed.tree)[0]).toMatchObject({
+      text: "The $O(n)$ algorithm",
+      slug: slugify("The $O(n)$ algorithm"),
+    });
     expect(listTasks(parsed.tree)[0]!.text).toBe("compute $x^2$");
     expect(footnotesOf(parsed)[0]!.text).toBe("On $\\alpha$.");
     const entry = extractFromSource({ rel: "n.md", abs: "/n.md", size: md.length, mtimeMs: 0 }, md);
     expect(entry.links.find((l) => l.target === "x.md")!.text).toBe("the $n$th");
   });
   test("`$…$` read as Obsidian reads it: money isn't maths, `$$…$$` in text is", () => {
-    const kinds = (md: string) => parseMarkdown(md).tree.children.flatMap((n) => ("children" in n ? n.children.map((c) => c.type) : [n.type]));
+    const kinds = (md: string) =>
+      parseMarkdown(md).tree.children.flatMap((n) => ("children" in n ? n.children.map((c) => c.type) : [n.type]));
     expect(kinds("$x$ and $y$")).toEqual(["inlineMath", "text", "inlineMath"]);
     expect(kinds("costs $5 and $10")).not.toContain("inlineMath");
     expect(kinds("$ x$ or $x $")).not.toContain("inlineMath");
@@ -1487,16 +1832,27 @@ describe("SVG drawn (12.15), and what slipbox draws as pictures (12.16, 12.17)",
   });
   test("a colour as #rrggbb for a picture: ansi:N as xterm has it, default the fallback", () => {
     expect(colorHex("#abcdef", "#000000")).toBe("#abcdef");
-    expect([colorHex("ansi:1", "x"), colorHex("ansi:21", "x"), colorHex("ansi:16", "x"), colorHex("ansi:244", "x")]).toEqual(["#cd0000", "#0000ff", "#000000", "#808080"]);
+    expect([
+      colorHex("ansi:1", "x"),
+      colorHex("ansi:21", "x"),
+      colorHex("ansi:16", "x"),
+      colorHex("ansi:244", "x"),
+    ]).toEqual(["#cd0000", "#0000ff", "#000000", "#808080"]);
     expect([colorHex("default", "#111111"), colorHex("ansi:300", "#222222")]).toEqual(["#111111", "#222222"]);
   });
   test("an SVG told by how its text starts: a declaration, comments, a doctype before it", () => {
-    for (const head of ['<svg xmlns="x">', '<?xml version="1.0"?>\n<!-- made -->\n<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "x">\n<svg>', "  <SVG>"]) expect(looksLikeSvg(head)).toBe(true);
+    for (const head of [
+      '<svg xmlns="x">',
+      '<?xml version="1.0"?>\n<!-- made -->\n<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "x">\n<svg>',
+      "  <SVG>",
+    ])
+      expect(looksLikeSvg(head)).toBe(true);
     for (const head of ["<html><svg>", "\x89PNG\r\n", "<svgx>"]) expect(looksLikeSvg(head)).toBe(false);
   });
   test("rasterised: its own size, drawn as a PNG the width asked; what isn't an SVG, null", async () => {
     const r = (await loadRasterizer())!;
-    const svg = '<svg xmlns="http://www.w3.org/2000/svg" width="40" height="20"><rect width="40" height="20" fill="#ff0000"/></svg>';
+    const svg =
+      '<svg xmlns="http://www.w3.org/2000/svg" width="40" height="20"><rect width="40" height="20" fill="#ff0000"/></svg>';
     expect(r.size(svg)).toEqual({ width: 40, height: 20 });
     expect(pngWidth(r.png(svg, 80)!)).toBe(80);
     expect(r.size("not an svg")).toBeNull();
@@ -1534,30 +1890,52 @@ describe("the chunked parse (15.1)", () => {
   };
   test("every demo and fixture note parses in chunks exactly as whole", async () => {
     const { readdirSync, statSync } = await import("node:fs");
-    const walk = (d: string): string[] => readdirSync(d).flatMap((f) => (statSync(join(d, f)).isDirectory() ? walk(join(d, f)) : f.endsWith(".md") ? [join(d, f)] : []));
-    const files = [...walk(join(import.meta.dir, "..", "examples", "vault")), ...walk(join(import.meta.dir, "fixtures", "vault"))];
+    const walk = (d: string): string[] =>
+      readdirSync(d).flatMap((f) =>
+        statSync(join(d, f)).isDirectory() ? walk(join(d, f)) : f.endsWith(".md") ? [join(d, f)] : [],
+      );
+    const files = [
+      ...walk(join(import.meta.dir, "..", "examples", "vault")),
+      ...walk(join(import.meta.dir, "fixtures", "vault")),
+    ];
     expect(files.length).toBeGreaterThan(20);
     for (const f of files) same(readFileSync(f, "utf8"));
   });
   test("what crosses a chunk: references, footnotes, HTML comments, fences, frontmatter, lists", () => {
     const filler = (n: number) => Array.from({ length: n }, (_, i) => `line ${i}`).join("\n\n");
-    same(`---\ntitle: T\n---\n\n# A\n\nSee [the ref][r] and [Other] and a note[^n] and [^Two].\n\n${filler(30)}\n\n# B\n\n[r]: https://example.invalid\n[other]: /x\n\n[^n]: The footnote.\n[^two]: Two.\n`);
-    same(`# A\n\n${filler(30)}\n\n<!-- a comment\n\n# not a heading\n\n-->\n\n# C\n\n${filler(30)}\n\n\`\`\`\n${filler(30)}\n\n# in code\n\`\`\`\n\n# D\n\nend\n`);
+    same(
+      `---\ntitle: T\n---\n\n# A\n\nSee [the ref][r] and [Other] and a note[^n] and [^Two].\n\n${filler(30)}\n\n# B\n\n[r]: https://example.invalid\n[other]: /x\n\n[^n]: The footnote.\n[^two]: Two.\n`,
+    );
+    same(
+      `# A\n\n${filler(30)}\n\n<!-- a comment\n\n# not a heading\n\n-->\n\n# C\n\n${filler(30)}\n\n\`\`\`\n${filler(30)}\n\n# in code\n\`\`\`\n\n# D\n\nend\n`,
+    );
     same(`# A\n\n- one\n\n- two\n${filler(30)}\n\n# B\n\n1. x\n\n2. y\n\n> quote\n\n# C\n\n| a |\n| - |\n| 1 |\n`);
     same(`+++\ntitle = "T"\n+++\n\n# A\n\n${filler(40)}\n\n# B\n\ntext\n`);
     same(`# A\n\n${filler(40)}\n# B right after text\n\n${filler(40)}\n\n    # indented: code\n\n# C\n`);
     // Lists cut anywhere: tight, loose, nested, lazy lines, other markers, ordered, tasks.
-    same("- a\n- b\n  - nested\n- c\nlazy line\n- d\n\n- loose e\n\n\n- f\n* star list\n* g\n+ plus\n\n1. one\n2. two\n3) paren\n\n- [ ] task\n- [x] done\n\ntext after\n- list interrupting text\n");
-    same("1. a\n\n   para in item\n2. b\n\n10. c\n- x\n\n> - quoted list\n> - more\n\n- item\n\n      indented code in item\n- after\n");
+    same(
+      "- a\n- b\n  - nested\n- c\nlazy line\n- d\n\n- loose e\n\n\n- f\n* star list\n* g\n+ plus\n\n1. one\n2. two\n3) paren\n\n- [ ] task\n- [x] done\n\ntext after\n- list interrupting text\n",
+    );
+    same(
+      "1. a\n\n   para in item\n2. b\n\n10. c\n- x\n\n> - quoted list\n> - more\n\n- item\n\n      indented code in item\n- after\n",
+    );
     // Maths (12.11): a `$$` block across blank lines and what looks like a heading; `$$x$$` on a line is text.
-    same(`# A\n\n${filler(30)}\n\n$$\na = b\n\n# not a heading\n\nc = d\n$$\n\n# B\n\n$$x$$ then\n\n${filler(30)}\n\n# C\n\n$$$ meta\n\n$$\n\n# still maths\n$$$\n\nend\n`);
+    same(
+      `# A\n\n${filler(30)}\n\n$$\na = b\n\n# not a heading\n\nc = d\n$$\n\n# B\n\n$$x$$ then\n\n${filler(30)}\n\n# C\n\n$$$ meta\n\n$$\n\n# still maths\n$$$\n\nend\n`,
+    );
     // `$$x$$` on its line opens nothing: the note still parses in pieces after it.
     expect(noteChunks(`$$x$$\n\n${filler(60)}\n\n# B\n\n${filler(60)}\n`).length).toBeGreaterThan(1);
     // Obsidian's comment over blank lines (DF-D17), across chunks' edges: one block, as in the whole note.
     const comment = `# A\n\n${filler(30)}\n\n%%\nA comment\n\n${filler(30)}\n\n# B in it\n\n- a list, closing it\n%%\n\n# C\n\nend %%inline%% ==mark==\n`;
     same(comment);
     expect(noteChunks(comment).length).toBeGreaterThan(1);
-    expect(parseMarkdown(comment).tree.children.map((n) => n.type)).toEqual(["heading", ...Array(30).fill("paragraph"), "commentBlock", "heading", "paragraph"]);
+    expect(parseMarkdown(comment).tree.children.map((n) => n.type)).toEqual([
+      "heading",
+      ...Array(30).fill("paragraph"),
+      "commentBlock",
+      "heading",
+      "paragraph",
+    ]);
   });
   test("random documents parse in chunks exactly as whole", () => {
     let seed = 99;
@@ -1565,7 +1943,82 @@ describe("the chunked parse (15.1)", () => {
       seed = (Math.imul(seed, 1103515245) + 12345) & 0x7fffffff;
       return (seed >>> 8) % n;
     };
-    const pieces = ["", "", "", "text", "more text", "# Head", "## Sub", "- item", "- [ ] task", "* star", "+ plus", "1. one", "2) two", "  - nested", "  continued", "    indented", "> quote", "> - quoted item", "```", "~~~", "<!-- c", "-->", "<div>", "</div>", "| a | b |", "| - | - |", "---", "===", "[ref]: /x", "[^n]: note", "see [ref] and [^n]", "\ttab", "- ", "<script>", "</script>", "lazy", "1.", "10. ten", "Title", "-----", "=====", "> > deep", ">", "<p>para</p>", "<span>", "<?php", "?>", "<![CDATA[", "]]>", "    [^n]: indented", "[^m]: m", "  more of note", "***", "- a\r", "text\r", "  | x |", "1) a", "3. c", "- - double", "#", "#notheading", "<!-- one line -->", "<style>", "</style>", "~~~~", "````", "[x]: <y> \"t\"", "[X]", "[^M]", "$$", "$$x$$", "$$$", "$a$ and $5", "  $$"];
+    const pieces = [
+      "",
+      "",
+      "",
+      "text",
+      "more text",
+      "# Head",
+      "## Sub",
+      "- item",
+      "- [ ] task",
+      "* star",
+      "+ plus",
+      "1. one",
+      "2) two",
+      "  - nested",
+      "  continued",
+      "    indented",
+      "> quote",
+      "> - quoted item",
+      "```",
+      "~~~",
+      "<!-- c",
+      "-->",
+      "<div>",
+      "</div>",
+      "| a | b |",
+      "| - | - |",
+      "---",
+      "===",
+      "[ref]: /x",
+      "[^n]: note",
+      "see [ref] and [^n]",
+      "\ttab",
+      "- ",
+      "<script>",
+      "</script>",
+      "lazy",
+      "1.",
+      "10. ten",
+      "Title",
+      "-----",
+      "=====",
+      "> > deep",
+      ">",
+      "<p>para</p>",
+      "<span>",
+      "<?php",
+      "?>",
+      "<![CDATA[",
+      "]]>",
+      "    [^n]: indented",
+      "[^m]: m",
+      "  more of note",
+      "***",
+      "- a\r",
+      "text\r",
+      "  | x |",
+      "1) a",
+      "3. c",
+      "- - double",
+      "#",
+      "#notheading",
+      "<!-- one line -->",
+      "<style>",
+      "</style>",
+      "~~~~",
+      "````",
+      '[x]: <y> "t"',
+      "[X]",
+      "[^M]",
+      "$$",
+      "$$x$$",
+      "$$$",
+      "$a$ and $5",
+      "  $$",
+    ];
     // (40,000 of these, four seeds, ran clean when this was written; a thousand stay in the suite.)
     for (let doc = 0; doc < 1000; doc++) {
       const text = `${Array.from({ length: 5 + rand(60) }, () => pieces[rand(pieces.length)]!).join("\n")}\n`;
@@ -1578,11 +2031,23 @@ describe("the chunked parse (15.1)", () => {
   });
   test("a cache gives the same tree as a fresh parse, edit after edit", () => {
     const cache = newParseCache();
-    let text = Array.from({ length: 12 }, (_, i) => `# Section ${i}\n\n${Array.from({ length: 45 }, (_, k) => `para ${i}.${k} with [[link]] and [ref]`).join("\n\n")}\n`).join("\n") + "\n[ref]: x\n";
+    let text =
+      Array.from(
+        { length: 12 },
+        (_, i) =>
+          `# Section ${i}\n\n${Array.from({ length: 45 }, (_, k) => `para ${i}.${k} with [[link]] and [ref]`).join("\n\n")}\n`,
+      ).join("\n") + "\n[ref]: x\n";
     for (let step = 0; step < 40; step++) {
       const at = (step * 7919) % text.length;
-      text = step % 3 === 0 ? `${text.slice(0, at)}\n\nnew para ${step}\n\n${text.slice(at)}` : step % 3 === 1 ? `${text.slice(0, at)}x${text.slice(at)}` : text.slice(0, at) + text.slice(at + 5);
-      expect(strip(parseMarkdown(text, cache).tree.children)).toBe(strip(parseMarkdown(text, undefined, { whole: true }).tree.children));
+      text =
+        step % 3 === 0
+          ? `${text.slice(0, at)}\n\nnew para ${step}\n\n${text.slice(at)}`
+          : step % 3 === 1
+            ? `${text.slice(0, at)}x${text.slice(at)}`
+            : text.slice(0, at) + text.slice(at + 5);
+      expect(strip(parseMarkdown(text, cache).tree.children)).toBe(
+        strip(parseMarkdown(text, undefined, { whole: true }).tree.children),
+      );
     }
   });
 });
@@ -1593,7 +2058,10 @@ describe("big notes: parsed on other threads, rendered faster (15.1)", () => {
    *  tables, fences, lists across the chunks. */
   const demo = async () => {
     const { readdirSync, statSync } = await import("node:fs");
-    const walk = (d: string): string[] => readdirSync(d).flatMap((f) => (statSync(join(d, f)).isDirectory() ? walk(join(d, f)) : f.endsWith(".md") ? [join(d, f)] : []));
+    const walk = (d: string): string[] =>
+      readdirSync(d).flatMap((f) =>
+        statSync(join(d, f)).isDirectory() ? walk(join(d, f)) : f.endsWith(".md") ? [join(d, f)] : [],
+      );
     return walk(join(import.meta.dir, "..", "examples", "vault"))
       .sort()
       .map((f, i) => {
@@ -1620,7 +2088,8 @@ describe("big notes: parsed on other threads, rendered faster (15.1)", () => {
     // Each block carries its token for the render's cache, as a block parsed here does (a list
     // joined across a seam is a new node: none, either way).
     const { ORIGIN } = await import("../src/core/parse.ts");
-    const tokens = (t: typeof adopted) => t.tree.children.map((n) => (n as unknown as Record<symbol, unknown>)[ORIGIN] !== undefined);
+    const tokens = (t: typeof adopted) =>
+      t.tree.children.map((n) => (n as unknown as Record<symbol, unknown>)[ORIGIN] !== undefined);
     expect(tokens(adopted)).toEqual(tokens(parseMarkdown(text, newParseCache())));
     expect(tokens(adopted).filter(Boolean).length).toBeGreaterThan(100);
     // A chunk the cache has already stays as it is (its blocks' rows stay cached).
@@ -1639,7 +2108,10 @@ describe("big notes: parsed on other threads, rendered faster (15.1)", () => {
     const cache = newParseCache();
     adoptChunks(
       cache,
-      noteChunks(text).map((c) => ({ text: c.text, children: JSON.parse(JSON.stringify(parseChunk(c.text, c.first))) })),
+      noteChunks(text).map((c) => ({
+        text: c.text,
+        children: JSON.parse(JSON.stringify(parseChunk(c.text, c.first))),
+      })),
     );
     const adopted = parseMarkdown(text, cache);
     const plain = parseMarkdown(text);
@@ -1718,7 +2190,28 @@ describe("big notes: parsed on other threads, rendered faster (15.1)", () => {
       seed = (Math.imul(seed, 1103515245) + 12345) & 0x7fffffff;
       return (seed >>> 8) % n;
     };
-    const pieces = ["a", "b", " ", "e\u0301", "\u0301", "\u0600", "1", "•", "│", "漢", "👨‍👩‍👧", "🇯🇵", "\r\n", "\n", "\t", "x", "é", "\u200d", "️", "-"];
+    const pieces = [
+      "a",
+      "b",
+      " ",
+      "e\u0301",
+      "\u0301",
+      "\u0600",
+      "1",
+      "•",
+      "│",
+      "漢",
+      "👨‍👩‍👧",
+      "🇯🇵",
+      "\r\n",
+      "\n",
+      "\t",
+      "x",
+      "é",
+      "\u200d",
+      "️",
+      "-",
+    ];
     for (let k = 0; k < 5000; k++) {
       const text = Array.from({ length: rand(12) }, () => pieces[rand(pieces.length)]!).join("");
       expect(graphemes(text)).toEqual([...seg.segment(text)].map((x) => x.segment));
@@ -1741,7 +2234,9 @@ describe("parseAround (15.1)", () => {
     const text = [
       "# Tasks",
       "",
-      ...Array.from({ length: 300 }, (_, i) => (i % 50 === 7 ? "```\n- [ ] not a task, in code\n```" : `- [${i % 3 ? " " : "x"}] task ${i}`)),
+      ...Array.from({ length: 300 }, (_, i) =>
+        i % 50 === 7 ? "```\n- [ ] not a task, in code\n```" : `- [${i % 3 ? " " : "x"}] task ${i}`,
+      ),
       "",
       "<!--",
       "- [ ] in a comment",
@@ -1778,18 +2273,37 @@ describe("file groups (16.1)", () => {
 });
 
 describe("data files read as documents (16.11–16.13)", () => {
-  const fields = (tree: { children: unknown[] }) => tree.children.filter((n) => (n as { type: string }).type === "dataField") as { key: string; value: string; kind: string; comment: string | null; keyLine: number; position: { start: { line: number }; end: { line: number } } }[];
-  const headings = (tree: { children: unknown[] }) => tree.children.filter((n) => (n as { type: string }).type === "heading").map((n) => (n as { children: { value: string }[] }).children[0]!.value);
+  const fields = (tree: { children: unknown[] }) =>
+    tree.children.filter((n) => (n as { type: string }).type === "dataField") as {
+      key: string;
+      value: string;
+      kind: string;
+      comment: string | null;
+      keyLine: number;
+      position: { start: { line: number }; end: { line: number } };
+    }[];
+  const headings = (tree: { children: unknown[] }) =>
+    tree.children
+      .filter((n) => (n as { type: string }).type === "heading")
+      .map((n) => (n as { children: { value: string }[] }).children[0]!.value);
   test("TOML: sections, keys with their lines and comments, multi-line values, record arrays", async () => {
     const { parseData } = await import("../src/core/data.ts");
-    const d = parseData("toml", '# top\ntitle = "x"\n\n[a.b]\n# above\nlist = [\n  1,\n  2,\n]\ns = """\nlong\n"""\nn = 3 # three\n\n[[s]]\nname = "p"\n[[s]]\nname = "q"\n');
+    const d = parseData(
+      "toml",
+      '# top\ntitle = "x"\n\n[a.b]\n# above\nlist = [\n  1,\n  2,\n]\ns = """\nlong\n"""\nn = 3 # three\n\n[[s]]\nname = "p"\n[[s]]\nname = "q"\n',
+    );
     expect(d.error).toBeNull();
     expect(headings(d.tree)).toEqual(["a.b", "s"]);
     const f = fields(d.tree);
     expect(f.map((x) => x.key)).toEqual(["title", "list", "s", "n"]);
     // The file's opening comment is a block of its own, not the first key's (a key's is one line
     // right above it, as `# above` is list's).
-    expect(f[0]).toMatchObject({ value: "x", kind: "string", comment: null, position: { start: { line: 2 }, end: { line: 2 } } });
+    expect(f[0]).toMatchObject({
+      value: "x",
+      kind: "string",
+      comment: null,
+      position: { start: { line: 2 }, end: { line: 2 } },
+    });
     expect(d.tree.children[0]).toMatchObject({ type: "dataComment", text: "top" });
     expect(f[1]).toMatchObject({ kind: "list", comment: "above", position: { start: { line: 5 }, end: { line: 9 } } });
     expect(f[2]!.value).toBe("long");
@@ -1799,10 +2313,29 @@ describe("data files read as documents (16.11–16.13)", () => {
   });
   test("YAML and JSON as a tree: a row per key with its place, branches, records as tables, positions", async () => {
     const { parseData, dataOutline } = await import("../src/core/data.ts");
-    const y = parseData("yaml", "a: 1\nb:\n  c: true\n  d: [x, y]\n  e:\n    f: 1\n    g: {h: 1, $ref: x.json}\nrows:\n  - k: 1\n  - k: 2\nv:\n  - {n: 1, deep: {z: 1}}\n  - {n: 2}\n");
+    const y = parseData(
+      "yaml",
+      "a: 1\nb:\n  c: true\n  d: [x, y]\n  e:\n    f: 1\n    g: {h: 1, $ref: x.json}\nrows:\n  - k: 1\n  - k: 2\nv:\n  - {n: 1, deep: {z: 1}}\n  - {n: 2}\n",
+    );
     expect(y.error).toBeNull();
-    const rows = (y.tree.children as unknown as { type: string; key?: string; value?: string; keyLine?: number; tree?: { lasts: boolean[]; branch?: boolean } }[]).map((n) =>
-      n.type === "dataField" ? [n.key, n.value, n.tree!.lasts.map((l) => (l ? "L" : "|")).join(""), n.tree!.branch ? "branch" : "", n.keyLine] : [n.type],
+    const rows = (
+      y.tree.children as unknown as {
+        type: string;
+        key?: string;
+        value?: string;
+        keyLine?: number;
+        tree?: { lasts: boolean[]; branch?: boolean };
+      }[]
+    ).map((n) =>
+      n.type === "dataField"
+        ? [
+            n.key,
+            n.value,
+            n.tree!.lasts.map((l) => (l ? "L" : "|")).join(""),
+            n.tree!.branch ? "branch" : "",
+            n.keyLine,
+          ]
+        : [n.type],
     );
     expect(rows).toEqual([
       ["a", "1", "", "", 1],
@@ -1823,10 +2356,25 @@ describe("data files read as documents (16.11–16.13)", () => {
       ["2", "", "L", "branch", 13],
       ["n", "2", "LL", "", 13],
     ]);
-    expect(dataOutline(y.tree).map((h) => [h.depth, h.text])).toEqual([[1, "b"], [2, "e"], [3, "g"], [1, "rows"], [1, "v"], [2, "1"], [2, "2"]]);
+    expect(dataOutline(y.tree).map((h) => [h.depth, h.text])).toEqual([
+      [1, "b"],
+      [2, "e"],
+      [3, "g"],
+      [1, "rows"],
+      [1, "v"],
+      [2, "1"],
+      [2, "2"],
+    ]);
     // A document's opening comment block, on its own lines (the lens edits it, not the first key).
     const c = parseData("yaml", "# one\n# two\n\nk: 1\n---\n\n# three\n\nm: 2\n");
-    expect(c.tree.children.filter((n) => n.type === ("dataComment" as never)).map((n) => [n.position!.start.line, n.position!.end.line])).toEqual([[1, 2], [7, 7]]);
+    expect(
+      c.tree.children
+        .filter((n) => n.type === ("dataComment" as never))
+        .map((n) => [n.position!.start.line, n.position!.end.line]),
+    ).toEqual([
+      [1, 2],
+      [7, 7],
+    ]);
     const j = parseData("json", '{\n  "name": "s",\n  // a comment\n  "deps": {"a": "1"}\n}\n');
     expect(j.error).toBeNull(); // jsonc comments are allowed
     expect((j.tree.children[1] as unknown as { key: string; value: string }).value).toBe("{a: 1}"); // small and plain: inline
@@ -1844,7 +2392,10 @@ describe("data files read as documents (16.11–16.13)", () => {
   });
   test("INI and .env; CSV with quotes, doubled quotes and a newline in a field", async () => {
     const { parseData } = await import("../src/core/data.ts");
-    const ini = parseData("ini", '; c\n[core]\nk = v ; tail\nexport X=1\nURL="https://x.invalid/#top"   # where sync goes\nB=\'one ; two\' ; c\nQ="plain"\n');
+    const ini = parseData(
+      "ini",
+      '; c\n[core]\nk = v ; tail\nexport X=1\nURL="https://x.invalid/#top"   # where sync goes\nB=\'one ; two\' ; c\nQ="plain"\n',
+    );
     expect(headings(ini.tree)).toEqual(["core"]);
     // Quoted, a value ends at its closing quote: a # or ; inside it is its own, one after a comment.
     expect(fields(ini.tree).map((x) => [x.key, x.value, x.comment])).toEqual([
@@ -1856,7 +2407,10 @@ describe("data files read as documents (16.11–16.13)", () => {
     ]);
     // Java's .properties: `!` comments, and a value that goes on, indented, after a backslash; an
     // INI's Windows path ending in one is a value of its own line.
-    const props = parseData("ini", "a = 0\n! where\nsources = /a, \\\n    /b, \\\n    /c\nnext = 1\ndir = C:\\\nlast = 2\n");
+    const props = parseData(
+      "ini",
+      "a = 0\n! where\nsources = /a, \\\n    /b, \\\n    /c\nnext = 1\ndir = C:\\\nlast = 2\n",
+    );
     expect(props.error).toBeNull();
     expect(fields(props.tree).map((x) => [x.key, x.value, x.comment, x.keyLine])).toEqual([
       ["a", "0", null, 1],
@@ -1867,9 +2421,15 @@ describe("data files read as documents (16.11–16.13)", () => {
     ]);
     const csv = parseData("csv", 'a,b\n"1, one","say ""hi"""\n"multi\nline",2\n');
     expect(csv.error).toBeNull();
-    const t = csv.tree.children[0] as { children: { position: { start: { line: number } }; children: { children: { value: string }[] }[] }[] };
+    const t = csv.tree.children[0] as {
+      children: { position: { start: { line: number } }; children: { children: { value: string }[] }[] }[];
+    };
     const cells = t.children.map((r) => r.children.map((c) => c.children[0]?.value ?? ""));
-    expect(cells).toEqual([["a", "b"], ["1, one", 'say "hi"'], ["multi line", "2"]]);
+    expect(cells).toEqual([
+      ["a", "b"],
+      ["1, one", 'say "hi"'],
+      ["multi line", "2"],
+    ]);
     expect(t.children.map((r) => r.position.start.line)).toEqual([1, 2, 3]);
     expect(parseData("csv", 'a\n"open\n').error).toBeTruthy();
   });
@@ -1878,11 +2438,23 @@ describe("data files read as documents (16.11–16.13)", () => {
 describe("links out of data files (16.15)", () => {
   test("URLs and reference keys always; path-like values only when they resolve (the graph's call)", async () => {
     const { fieldLink } = await import("../src/core/data.ts");
-    expect(fieldLink({ key: "home", value: "https://example.invalid/x" })).toEqual({ target: "https://example.invalid/x", explicit: true });
-    expect(fieldLink({ key: "$ref", value: "./user.json#/defs/id" })).toEqual({ target: "./user.json#/defs/id", explicit: true });
+    expect(fieldLink({ key: "home", value: "https://example.invalid/x" })).toEqual({
+      target: "https://example.invalid/x",
+      explicit: true,
+    });
+    expect(fieldLink({ key: "$ref", value: "./user.json#/defs/id" })).toEqual({
+      target: "./user.json#/defs/id",
+      explicit: true,
+    });
     expect(fieldLink({ key: "include", value: "base.toml" })!.explicit).toBe(true);
-    expect(fieldLink({ key: "schema_file", value: "schemas/user.json" })).toEqual({ target: "schemas/user.json", explicit: false });
-    expect(fieldLink({ key: "docs", value: "docs/design/sync" })).toEqual({ target: "docs/design/sync", explicit: false });
+    expect(fieldLink({ key: "schema_file", value: "schemas/user.json" })).toEqual({
+      target: "schemas/user.json",
+      explicit: false,
+    });
+    expect(fieldLink({ key: "docs", value: "docs/design/sync" })).toEqual({
+      target: "docs/design/sync",
+      explicit: false,
+    });
     expect(fieldLink({ key: "out", value: "dist/" })).toBeNull(); // a folder: never a link target
     expect(fieldLink({ key: "name", value: "slipbox" })).toBeNull();
     expect(fieldLink({ key: "version", value: "1.2.3" })).toBeNull();
@@ -1892,12 +2464,23 @@ describe("links out of data files (16.15)", () => {
     const { dataLinks, parseData } = await import("../src/core/data.ts");
     const { renderTree } = await import("../src/core/layout/render.ts");
     const targets = (format: string, src: string) => dataLinks(parseData(format, src).tree).map((l) => l.target);
-    expect(targets("json", '{"includes": ["base.json"], "file": null, "path": 3, "schema": 2, "imports": true, "$ref": "user.json"}')).toEqual(["user.json"]);
+    expect(
+      targets(
+        "json",
+        '{"includes": ["base.json"], "file": null, "path": 3, "schema": 2, "imports": true, "$ref": "user.json"}',
+      ),
+    ).toEqual(["user.json"]);
     expect(targets("toml", 'imports = ["base.toml"]\nschema = 2\ninclude = "base.toml"\n')).toEqual(["base.toml"]);
     expect(targets("yaml", "include:\n  - base.yml\nschema: 2\nincludes: base.yml\n")).toEqual(["base.yml"]);
     expect(targets("ini", "path = 3\nfile = base.ini\n")).toEqual(["base.ini"]);
-    const l = renderTree(parseData("json", '{"schema": 2, "includes": ["base.json"]}').tree, { width: 60, glyphs: glyphsFor("unicode"), showUrls: false });
-    expect(l.lines.flatMap((x) => x.spans).filter((s) => s.role === "link_unresolved" || s.role === "link")).toEqual([]);
+    const l = renderTree(parseData("json", '{"schema": 2, "includes": ["base.json"]}').tree, {
+      width: 60,
+      glyphs: glyphsFor("unicode"),
+      showUrls: false,
+    });
+    expect(l.lines.flatMap((x) => x.spans).filter((s) => s.role === "link_unresolved" || s.role === "link")).toEqual(
+      [],
+    );
   });
 });
 
@@ -1905,12 +2488,18 @@ describe("link-like tokens in code (16.10)", () => {
   test("URLs without the sentence's punctuation; paths with an extension, `:line` apart", async () => {
     const { linkTokens } = await import("../src/core/syntax.ts");
     const t = (s: string) => linkTokens(s).map((k) => [k.target, k.at, s.slice(k.index, k.index + k.length)]);
-    expect(t("see docs/a.md and src/x.ts:42.")).toEqual([["docs/a.md", null, "docs/a.md"], ["src/x.ts", 42, "src/x.ts:42"]]);
+    expect(t("see docs/a.md and src/x.ts:42.")).toEqual([
+      ["docs/a.md", null, "docs/a.md"],
+      ["src/x.ts", 42, "src/x.ts:42"],
+    ]);
     expect(t("(https://example.invalid/a_(b)), https://x.invalid/y.")).toEqual([
       ["https://example.invalid/a_(b)", null, "https://example.invalid/a_(b)"],
       ["https://x.invalid/y", null, "https://x.invalid/y"],
     ]);
-    expect(t("version 1.5, ../up.py:3:7 and ./r.toml")).toEqual([["../up.py", 3, "../up.py:3:7"], ["./r.toml", null, "./r.toml"]]);
+    expect(t("version 1.5, ../up.py:3:7 and ./r.toml")).toEqual([
+      ["../up.py", 3, "../up.py:3:7"],
+      ["./r.toml", null, "./r.toml"],
+    ]);
     // Climbing more than once: the whole path, as a moved file's rewritten one is (D63).
     expect(t("see ../../docs/x.md:2 and .../no.md")).toEqual([["../../docs/x.md", 2, "../../docs/x.md:2"]]);
   });
@@ -1921,34 +2510,85 @@ describe("a reader per note format (16.2)", () => {
     const { readerFor, parseNoteFile } = await import("../src/core/readers.ts");
     const { noteFormat } = await import("../src/core/filetypes.ts");
     // Org and AsciiDoc were readers once (16.16, 16.17, dropped): every note is markdown.
-    expect([noteFormat("a.md"), noteFormat("b.markdown"), noteFormat("c.org"), noteFormat("d.txt")]).toEqual(["markdown", "markdown", "markdown", "markdown"]);
+    expect([noteFormat("a.md"), noteFormat("b.markdown"), noteFormat("c.org"), noteFormat("d.txt")]).toEqual([
+      "markdown",
+      "markdown",
+      "markdown",
+      "markdown",
+    ]);
     const md = readerFor("markdown");
     expect(md.scanHeadings("# One\n\n```\n# not\n```\n## Two\n").map((h) => h.text)).toEqual(["One", "Two"]);
     // The scan (an unsaved note's outline) reads a heading as the render does: `{#id}` the id, not
     // text; footnote marks and HTML tags left out.
     const hs = "# Setup {#install}\n\n## Notes[^1]\n\n## Use `x` <kbd>K</kbd>\n\n[^1]: n\n";
-    const drawn = renderMarkdown(hs, { width: 60, glyphs: glyphsFor("unicode"), showUrls: false }).headings.map(({ text, slug, id }) => ({ text, slug, id }));
-    expect(drawn).toEqual([{ text: "Setup", slug: "setup", id: "install" }, { text: "Notes", slug: "notes", id: undefined }, { text: "Use x K", slug: "use-x-k", id: undefined }]);
+    const drawn = renderMarkdown(hs, { width: 60, glyphs: glyphsFor("unicode"), showUrls: false }).headings.map(
+      ({ text, slug, id }) => ({ text, slug, id }),
+    );
+    expect(drawn).toEqual([
+      { text: "Setup", slug: "setup", id: "install" },
+      { text: "Notes", slug: "notes", id: undefined },
+      { text: "Use x K", slug: "use-x-k", id: undefined },
+    ]);
     expect(md.scanHeadings(hs).map(({ text, slug, id }) => ({ text, slug, id }))).toEqual(drawn);
-    expect(layoutSource(hs, { width: 60, wrap: true, headings: "scan" }).headings[0]).toMatchObject({ text: "Setup", id: "install" });
+    expect(layoutSource(hs, { width: 60, wrap: true, headings: "scan" }).headings[0]).toMatchObject({
+      text: "Setup",
+      id: "install",
+    });
     // `_` inside a word, a code span's markup and an image (left out, its alt too) as the render reads them.
-    const marked = "# The config_file option\n\n## Use `a_b * c` here\n\n## Logo ![logo](logo.png) Title\n\n## *Bold* ~~gone~~ [[a|b]] &amp; \\*\n";
-    const rendered = renderMarkdown(marked, { width: 60, glyphs: glyphsFor("unicode"), showUrls: false }).headings.map(({ text, slug }) => ({ text, slug }));
-    expect(rendered.map((h) => h.text)).toEqual(["The config_file option", "Use a_b * c here", "Logo  Title", "Bold gone b & *"]);
+    const marked =
+      "# The config_file option\n\n## Use `a_b * c` here\n\n## Logo ![logo](logo.png) Title\n\n## *Bold* ~~gone~~ [[a|b]] &amp; \\*\n";
+    const rendered = renderMarkdown(marked, { width: 60, glyphs: glyphsFor("unicode"), showUrls: false }).headings.map(
+      ({ text, slug }) => ({ text, slug }),
+    );
+    expect(rendered.map((h) => h.text)).toEqual([
+      "The config_file option",
+      "Use a_b * c here",
+      "Logo  Title",
+      "Bold gone b & *",
+    ]);
     expect(md.scanHeadings(marked).map(({ text, slug }) => ({ text, slug }))).toEqual(rendered);
-    expect(layoutSource(marked, { width: 60, wrap: true, headings: "scan" }).headings.map(({ text, slug }) => ({ text, slug }))).toEqual(rendered);
+    expect(
+      layoutSource(marked, { width: 60, wrap: true, headings: "scan" }).headings.map(({ text, slug }) => ({
+        text,
+        slug,
+      })),
+    ).toEqual(rendered);
     // Reference links and images, their definitions elsewhere in the note: a README's badge heading.
-    const refs = "# Foo [![Build][ci-badge]][ci-url]\n\n## See [the docs][d]\n\n## Logo ![alt][img] here\n\n## Also [d][] and [d]\n\n" +
+    const refs =
+      "# Foo [![Build][ci-badge]][ci-url]\n\n## See [the docs][d]\n\n## Logo ![alt][img] here\n\n## Also [d][] and [d]\n\n" +
       "[ci-badge]: https://ci/b.svg\n[ci-url]: https://ci\n[d]: docs.md\n[img]: logo.png\n";
     const refsDrawn = headingsOf(parseMarkdown(refs).tree).map(({ text, slug }) => ({ text, slug }));
     expect(refsDrawn.map((h) => h.slug)).toEqual(["foo", "see-the-docs", "logo--here", "also-d-and-d"]);
     expect(md.scanHeadings(refs).map(({ text, slug }) => ({ text, slug }))).toEqual(refsDrawn);
-    expect(md.linkAt("see [the intro](alpha.md#intro) and [x](b.md)", 6)).toEqual({ kind: "markdown", target: "alpha.md#intro", heading: null, text: "the intro" });
-    expect(md.linkAt("see [[alpha#Top|the alpha]] and [x](b.md)", 6)).toMatchObject({ kind: "wiki", target: "alpha", heading: "Top", text: "the alpha" }); // read again (21.3)
-    expect(md.linkAt("see [[alpha#Top|the alpha]] and [x](b.md)", 34)).toMatchObject({ kind: "markdown", target: "b.md" });
+    expect(md.linkAt("see [the intro](alpha.md#intro) and [x](b.md)", 6)).toEqual({
+      kind: "markdown",
+      target: "alpha.md#intro",
+      heading: null,
+      text: "the intro",
+    });
+    expect(md.linkAt("see [[alpha#Top|the alpha]] and [x](b.md)", 6)).toMatchObject({
+      kind: "wiki",
+      target: "alpha",
+      heading: "Top",
+      text: "the alpha",
+    }); // read again (21.3)
+    expect(md.linkAt("see [[alpha#Top|the alpha]] and [x](b.md)", 34)).toMatchObject({
+      kind: "markdown",
+      target: "b.md",
+    });
     // Split as the tokenizer splits it: `\|` is a table cell's alias divider, `#^b1` a block.
-    expect(md.linkAt("| [[alpha\\|the alpha]] | x |", 5)).toEqual({ kind: "wiki", target: "alpha", heading: null, text: "the alpha" });
-    expect(md.linkAt("see ![[alpha#^b1]]", 6)).toEqual({ kind: "embed", target: "alpha", heading: "^b1", text: "alpha" });
+    expect(md.linkAt("| [[alpha\\|the alpha]] | x |", 5)).toEqual({
+      kind: "wiki",
+      target: "alpha",
+      heading: null,
+      text: "the alpha",
+    });
+    expect(md.linkAt("see ![[alpha#^b1]]", 6)).toEqual({
+      kind: "embed",
+      target: "alpha",
+      heading: "^b1",
+      text: "alpha",
+    });
     expect(parseNoteFile("x.md", "# T\n").tree.children[0]!.type).toBe("heading");
     expect(readerFor("no-such-format")).toBe(md);
   });
@@ -1967,17 +2607,17 @@ describe("every grammar runs with this runtime (16.7)", () => {
     rust: ['fn f() -> &\'static str {\n    r#"a\n"b"#\n}\n', "f"],
     lua: ["local function g()\n  return [[a\nb]]\nend\n", "g"],
     swift: ['struct S {\n  let t = """\n  a\n  """\n  func f() {}\n}\n', "S"],
-    html: ["<h1 id=\"t\">Title</h1>\n<script>\nfunction f() {}\n</script>\n", "Title"],
+    html: ['<h1 id="t">Title</h1>\n<script>\nfunction f() {}\n</script>\n', "Title"],
     css: ["/* a\n b */\n.a { color: red; }\n", ".a"],
     scss: ["// c\n@mixin m($x) { color: $x; }\n.a { &:hover { color: red; } }\n", "m"],
     php: ["<?php\nclass P {}\n$s = <<<EOT\nheredoc\nEOT;\n", "P"],
     dockerfile: ["FROM node:22 AS build\nRUN echo a \\\n  && echo b\n", "build (node:22)"],
-    vue: ["<template><h1>{{ t }}</h1></template>\n<script setup lang=\"ts\">\nconst t = `a\nb`\n</script>\n", "template"],
-    svelte: ["<script>\n  let n = 0;\n</script>\n<h1 id=\"x\">{n}</h1>\n", "script"],
-    astro: ["---\nconst t = 1;\n---\n<h1 id=\"top\">{t}</h1>\n", "frontmatter"],
+    vue: ['<template><h1>{{ t }}</h1></template>\n<script setup lang="ts">\nconst t = `a\nb`\n</script>\n', "template"],
+    svelte: ['<script>\n  let n = 0;\n</script>\n<h1 id="x">{n}</h1>\n', "script"],
+    astro: ['---\nconst t = 1;\n---\n<h1 id="top">{t}</h1>\n', "frontmatter"],
     ruby: ["class R\n  X = <<~T\n    a\n  T\nend\n", "R"],
     c: ["int f(void) {\n  return 0;\n}\n", "f"],
-    cpp: ["class K {\n  void m();\n};\nauto s = R\"(a\nb)\";\n", "K"],
+    cpp: ['class K {\n  void m();\n};\nauto s = R"(a\nb)";\n', "K"],
   } as const;
   for (const [g, [src, first]] of Object.entries(SAMPLES)) {
     test(g, async () => {
@@ -1998,38 +2638,123 @@ describe("more languages: Swift, the web's, PHP, Dockerfile, Ruby, C and C++ (16
     const g = grammarFor(classify(name, ["md"]).format, extensionOf(name))!;
     return parseSyntax((await grammar(g))!, src)!;
   };
-  const outline = (t: { outline(): { name: string; kind: string; line: number; depth: number }[] }) => t.outline().map((o) => `${"  ".repeat(o.depth)}${o.kind} ${o.name} @${o.line}`);
+  const outline = (t: { outline(): { name: string; kind: string; line: number; depth: number }[] }) =>
+    t.outline().map((o) => `${"  ".repeat(o.depth)}${o.kind} ${o.name} @${o.line}`);
 
   test("each language by its extension or its file's name; HTML parsed as HTML, XML and SVG not", async () => {
     const { grammarFor } = await import("../src/core/syntax.ts");
     const { classify, extensionOf } = await import("../src/core/filetypes.ts");
     const of = (name: string) => grammarFor(classify(name, ["md"]).format, extensionOf(name));
-    expect(["a.swift", "a.php", "a.scss", "a.css", "a.vue", "a.svelte", "a.astro", "a.rb", "Gemfile", "a.c", "a.h", "a.cpp", "a.hpp", "a.cc"].map(of)).toEqual(["swift", "php", "scss", "css", "vue", "svelte", "astro", "ruby", "ruby", "c", "c", "cpp", "cpp", "cpp"]);
+    expect(
+      [
+        "a.swift",
+        "a.php",
+        "a.scss",
+        "a.css",
+        "a.vue",
+        "a.svelte",
+        "a.astro",
+        "a.rb",
+        "Gemfile",
+        "a.c",
+        "a.h",
+        "a.cpp",
+        "a.hpp",
+        "a.cc",
+      ].map(of),
+    ).toEqual(["swift", "php", "scss", "css", "vue", "svelte", "astro", "ruby", "ruby", "c", "c", "cpp", "cpp", "cpp"]);
     expect(["Dockerfile", "dockerfile", "Dockerfile.dev"].map(of)).toEqual(["dockerfile", "dockerfile", "dockerfile"]);
     expect(["a.html", "a.htm", "a.xml", "a.svg"].map(of)).toEqual(["html", "html", null, null]);
     expect(classify("a.html", ["md"]).format).toBe("xml"); // highlighted as highlight.js has it
   });
 
   test("outlines: Swift's kinds by their keyword, C's prototypes, C++'s methods, Ruby's self., PHP's traits, a Dockerfile's stages, CSS's rules", async () => {
-    expect(outline(await parsed("a.swift", "struct P {}\nclass A: B {\n  init() {}\n  func go(n: Int) -> Int { n }\n}\nextension A { func more() {} }\nprotocol Q { func q() }\nenum E { case a }\nactor C {}\n"))).toEqual([
-      "struct P @1", "class A @2", "  init init @3", "  function go @4", "extension A @6", "  function more @6", "protocol Q @7", "  function q @7", "enum E @8", "actor C @9",
+    expect(
+      outline(
+        await parsed(
+          "a.swift",
+          "struct P {}\nclass A: B {\n  init() {}\n  func go(n: Int) -> Int { n }\n}\nextension A { func more() {} }\nprotocol Q { func q() }\nenum E { case a }\nactor C {}\n",
+        ),
+      ),
+    ).toEqual([
+      "struct P @1",
+      "class A @2",
+      "  init init @3",
+      "  function go @4",
+      "extension A @6",
+      "  function more @6",
+      "protocol Q @7",
+      "  function q @7",
+      "enum E @8",
+      "actor C @9",
     ]);
-    expect(outline(await parsed("k.h", "struct route { int n; };\nint route_len(const struct route *r);\ndouble *coords(void);\ntypedef struct route R;\n"))).toEqual(["struct route @1", "function route_len @2", "function coords @3", "type R @4"]);
-    expect(outline(await parsed("a.cpp", "namespace ns {\nclass A : public B {\n public:\n  void go();\n  ~A();\n};\nvoid A::go() {}\n}\n"))).toEqual(["namespace ns @1", "  class A @2", "    method go @4", "    method ~A @5", "  function A::go @7"]);
-    expect(outline(await parsed("a.rb", "module M\n  class A < B\n    def go; end\n    def self.make; end\n  end\nend\n"))).toEqual(["module M @1", "  class A @2", "    method go @3", "    method self.make @4"]);
-    expect(outline(await parsed("a.php", "<?php\ninterface I {}\ntrait T { function t() {} }\nenum E { case A; }\nfunction f() {}\n"))).toEqual(["interface I @2", "trait T @3", "  method t @3", "enum E @4", "function f @5"]);
-    expect(outline(await parsed("Dockerfile", "FROM node:22 AS build\nRUN x\nFROM nginx:1.27\nCOPY --from=build /a /b\n"))).toEqual(["stage build (node:22) @1", "stage nginx:1.27 @3"]);
-    expect(outline(await parsed("a.scss", "@mixin m($x) { color: $x; }\n.card {\n  .title, .sub { margin: 0; }\n}\n@media (max-width: 600px) { .card { padding: 0; } }\n"))).toEqual([
-      "mixin m @1", "rule .card @2", "  rule .title, .sub @3", "media @media (max-width: 600px) @5", "  rule .card @5",
+    expect(
+      outline(
+        await parsed(
+          "k.h",
+          "struct route { int n; };\nint route_len(const struct route *r);\ndouble *coords(void);\ntypedef struct route R;\n",
+        ),
+      ),
+    ).toEqual(["struct route @1", "function route_len @2", "function coords @3", "type R @4"]);
+    expect(
+      outline(
+        await parsed(
+          "a.cpp",
+          "namespace ns {\nclass A : public B {\n public:\n  void go();\n  ~A();\n};\nvoid A::go() {}\n}\n",
+        ),
+      ),
+    ).toEqual(["namespace ns @1", "  class A @2", "    method go @4", "    method ~A @5", "  function A::go @7"]);
+    expect(
+      outline(await parsed("a.rb", "module M\n  class A < B\n    def go; end\n    def self.make; end\n  end\nend\n")),
+    ).toEqual(["module M @1", "  class A @2", "    method go @3", "    method self.make @4"]);
+    expect(
+      outline(
+        await parsed(
+          "a.php",
+          "<?php\ninterface I {}\ntrait T { function t() {} }\nenum E { case A; }\nfunction f() {}\n",
+        ),
+      ),
+    ).toEqual(["interface I @2", "trait T @3", "  method t @3", "enum E @4", "function f @5"]);
+    expect(
+      outline(await parsed("Dockerfile", "FROM node:22 AS build\nRUN x\nFROM nginx:1.27\nCOPY --from=build /a /b\n")),
+    ).toEqual(["stage build (node:22) @1", "stage nginx:1.27 @3"]);
+    expect(
+      outline(
+        await parsed(
+          "a.scss",
+          "@mixin m($x) { color: $x; }\n.card {\n  .title, .sub { margin: 0; }\n}\n@media (max-width: 600px) { .card { padding: 0; } }\n",
+        ),
+      ),
+    ).toEqual([
+      "mixin m @1",
+      "rule .card @2",
+      "  rule .title, .sub @3",
+      "media @media (max-width: 600px) @5",
+      "  rule .card @5",
     ]);
   });
 
   test("a page (16.19, 16.22): its headings and ids; its script and style parsed as theirs — their definitions under them, their lines highlighted so", async () => {
-    const src = "<html>\n<style>\n  h1 { color: red }\n</style>\n<h1 id=\"top\">Title</h1>\n<section id=\"about\"><h2>About</h2></section>\n<script type=\"module\">\n  // see notes.md\n  function go() {}\n</script>\n<script type=\"application/json\">\n  {\"a\": 1}\n</script>\n</html>\n";
+    const src =
+      '<html>\n<style>\n  h1 { color: red }\n</style>\n<h1 id="top">Title</h1>\n<section id="about"><h2>About</h2></section>\n<script type="module">\n  // see notes.md\n  function go() {}\n</script>\n<script type="application/json">\n  {"a": 1}\n</script>\n</html>\n';
     const t = await parsed("a.html", src);
-    expect(outline(t)).toEqual(["section style @2", "  rule h1 @3", "h1 Title @5", "id #about @6", "  h2 About @6", "section script type=\"module\" @7", "  function go @9", "section script type=\"application/json\" @11"]);
+    expect(outline(t)).toEqual([
+      "section style @2",
+      "  rule h1 @3",
+      "h1 Title @5",
+      "id #about @6",
+      "  h2 About @6",
+      'section script type="module" @7',
+      "  function go @9",
+      'section script type="application/json" @11',
+    ]);
     // Each part's lines in its language; JSON's highlighted, not parsed; the tags' own lines the page's.
-    expect([...t.languages()]).toEqual([[3, "css"], [8, "javascript"], [9, "javascript"], [12, "json"]]);
+    expect([...t.languages()]).toEqual([
+      [3, "css"],
+      [8, "javascript"],
+      [9, "javascript"],
+      [12, "json"],
+    ]);
     // A part's comment, where it is in the file.
     expect(t.comments().map((c) => [c.line, c.column, c.text])).toEqual([[8, 2, "// see notes.md"]]);
     // A part on its tag's own line: its columns from where it starts there.
@@ -2054,31 +2779,89 @@ describe("more languages: Swift, the web's, PHP, Dockerfile, Ruby, C and C++ (16
   });
 
   test("components (16.22): Vue's template, script and style; Svelte's; Astro's frontmatter — each part in its language, placed in the file", async () => {
-    const vue = await parsed("C.vue", "<template>\n  <h2 id=\"card\">{{ title }}</h2>\n</template>\n<script setup lang=\"ts\">\nconst s = `a\nb`;\nfunction go(): void {}\n</script>\n<style lang=\"scss\">\n.a { .b { color: red; } }\n</style>\n");
-    expect(outline(vue)).toEqual(["section template @1", "  h2 {{ title }} @2", "section script setup lang=\"ts\" @4", "  function go @7", "section style lang=\"scss\" @9", "  rule .a @10", "    rule .b @10"]);
-    expect([...vue.languages()]).toEqual([[5, "typescript"], [6, "typescript"], [7, "typescript"], [10, "scss"]]);
+    const vue = await parsed(
+      "C.vue",
+      '<template>\n  <h2 id="card">{{ title }}</h2>\n</template>\n<script setup lang="ts">\nconst s = `a\nb`;\nfunction go(): void {}\n</script>\n<style lang="scss">\n.a { .b { color: red; } }\n</style>\n',
+    );
+    expect(outline(vue)).toEqual([
+      "section template @1",
+      "  h2 {{ title }} @2",
+      'section script setup lang="ts" @4',
+      "  function go @7",
+      'section style lang="scss" @9',
+      "  rule .a @10",
+      "    rule .b @10",
+    ]);
+    expect([...vue.languages()]).toEqual([
+      [5, "typescript"],
+      [6, "typescript"],
+      [7, "typescript"],
+      [10, "scss"],
+    ]);
     // A template string spanning lines, inside the script: a string, at its place in the file.
-    expect(vue.spans()).toEqual([{ line: 5, from: 10, to: Number.POSITIVE_INFINITY, kind: "string" }, { line: 6, from: 0, to: 2, kind: "string" }]);
-    const svelte = await parsed("C.svelte", "<script>\n  export let n = 0;\n  function inc() { n++ }\n</script>\n<h1 id=\"x\">{n}</h1>\n<style>\n  h1 { color: red }\n</style>\n");
-    expect(outline(svelte)).toEqual(["section script @1", "  function inc @3", "h1 {n} @5", "section style @6", "  rule h1 @7"]);
-    expect([...svelte.languages()]).toEqual([[2, "javascript"], [3, "javascript"], [7, "css"]]);
-    const astro = await parsed("P.astro", "---\ninterface Props { title: string }\nconst { title } = Astro.props;\n---\n<h1 id=\"top\">{title}</h1>\n<script>\n  const n: number = 1;\n</script>\n");
-    expect(outline(astro)).toEqual(["section frontmatter @1", "  interface Props @2", "h1 {title} @5", "section script @6"]);
-    expect([...astro.languages()]).toEqual([[2, "typescript"], [3, "typescript"], [7, "typescript"]]); // Astro's scripts are TypeScript
+    expect(vue.spans()).toEqual([
+      { line: 5, from: 10, to: Number.POSITIVE_INFINITY, kind: "string" },
+      { line: 6, from: 0, to: 2, kind: "string" },
+    ]);
+    const svelte = await parsed(
+      "C.svelte",
+      '<script>\n  export let n = 0;\n  function inc() { n++ }\n</script>\n<h1 id="x">{n}</h1>\n<style>\n  h1 { color: red }\n</style>\n',
+    );
+    expect(outline(svelte)).toEqual([
+      "section script @1",
+      "  function inc @3",
+      "h1 {n} @5",
+      "section style @6",
+      "  rule h1 @7",
+    ]);
+    expect([...svelte.languages()]).toEqual([
+      [2, "javascript"],
+      [3, "javascript"],
+      [7, "css"],
+    ]);
+    const astro = await parsed(
+      "P.astro",
+      '---\ninterface Props { title: string }\nconst { title } = Astro.props;\n---\n<h1 id="top">{title}</h1>\n<script>\n  const n: number = 1;\n</script>\n',
+    );
+    expect(outline(astro)).toEqual([
+      "section frontmatter @1",
+      "  interface Props @2",
+      "h1 {title} @5",
+      "section script @6",
+    ]);
+    expect([...astro.languages()]).toEqual([
+      [2, "typescript"],
+      [3, "typescript"],
+      [7, "typescript"],
+    ]); // Astro's scripts are TypeScript
   });
 
   test("a part's syntax error is said where it is in the file; PHP's HTML highlighted as HTML", async () => {
     const vue = await parsed("C.vue", "<template><p>x</p></template>\n<script>\nconst a = ;\n</script>\n");
     expect(vue.errors().map((e) => [e.line, e.message])).toEqual([[3, "syntax error"]]);
-    const php = await parsed("a.php", "<!doctype html>\n<title>T</title>\n<?php echo 1; ?>\n<ul>\n<?php foreach ($a as $x): ?>\n  <li><?= $x ?></li>\n<?php endforeach; ?>\n</ul>\n");
-    expect([...php.languages()]).toEqual([[1, "xml"], [2, "xml"], [4, "xml"], [8, "xml"]]);
+    const php = await parsed(
+      "a.php",
+      "<!doctype html>\n<title>T</title>\n<?php echo 1; ?>\n<ul>\n<?php foreach ($a as $x): ?>\n  <li><?= $x ?></li>\n<?php endforeach; ?>\n</ul>\n",
+    );
+    expect([...php.languages()]).toEqual([
+      [1, "xml"],
+      [2, "xml"],
+      [4, "xml"],
+      [8, "xml"],
+    ]);
   });
 
   test("the source view colours a part's lines in its language: a component's script as TypeScript, its template as markup", async () => {
     const { layoutSource } = await import("../src/core/layout/source.ts");
-    const src = "<template>\n  <p>const</p>\n</template>\n<script setup lang=\"ts\">\nconst a = 1;\n</script>\n";
+    const src = '<template>\n  <p>const</p>\n</template>\n<script setup lang="ts">\nconst a = 1;\n</script>\n';
     const roles = (languageAt?: (line: number) => string | undefined) => {
-      const l = layoutSource(src, { width: 80, wrap: false, headings: [], language: "vue", ...(languageAt ? { languageAt } : {}) });
+      const l = layoutSource(src, {
+        width: 80,
+        wrap: false,
+        headings: [],
+        language: "vue",
+        ...(languageAt ? { languageAt } : {}),
+      });
       const word = (row: number) => l.lines[row]!.spans.find((sp) => sp.text.includes("const"))?.role ?? null;
       return [word(1), word(4)];
     };
@@ -2089,7 +2872,11 @@ describe("more languages: Swift, the web's, PHP, Dockerfile, Ruby, C and C++ (16
     const cache = newSourceCache();
     const opts = { width: 80, wrap: false, headings: [], language: "vue" };
     layoutSource(src, opts, cache);
-    const again = layoutSource(src, { ...opts, languageAt: (line: number) => (line === 5 ? "typescript" : undefined) }, cache);
+    const again = layoutSource(
+      src,
+      { ...opts, languageAt: (line: number) => (line === 5 ? "typescript" : undefined) },
+      cache,
+    );
     expect(again.lines[4]!.spans.find((sp) => sp.text.includes("const"))?.role).toBe("syn_keyword");
   });
 });
@@ -2104,7 +2891,14 @@ describe("tags (1.6)", () => {
   };
 
   test("#tag as Obsidian writes it: after a space or a line's start; not in code, a URL, a wikilink or a heading marker", () => {
-    expect(tagsOf("#start and #mid-dle, #under_score. #nested/deep/er #ünïcode #1a")).toEqual(["start", "mid-dle", "under_score", "nested/deep/er", "ünïcode", "1a"]);
+    expect(tagsOf("#start and #mid-dle, #under_score. #nested/deep/er #ünïcode #1a")).toEqual([
+      "start",
+      "mid-dle",
+      "under_score",
+      "nested/deep/er",
+      "ünïcode",
+      "1a",
+    ]);
     expect(tagsOf("a#glued https://x.com/page#frag [[note#heading]] #123 #/")).toEqual([]);
     expect(tagsOf("`#code` and\n\n```\n#fenced\n```\n")).toEqual([]);
     expect(tagsOf("# Heading\n\n## Heading #inheading\n")).toEqual(["inheading"]);
@@ -2113,7 +2907,11 @@ describe("tags (1.6)", () => {
   });
 
   test("a tag renders as #name in its role, and follows (a link of its own kind)", () => {
-    const layout = renderMarkdown("See #project/alpha here.\n", { width: 60, glyphs: glyphsFor("unicode"), showUrls: false });
+    const layout = renderMarkdown("See #project/alpha here.\n", {
+      width: 60,
+      glyphs: glyphsFor("unicode"),
+      showUrls: false,
+    });
     const span = layout.lines.flatMap((l) => l.spans).find((s) => s.text === "#project/alpha")!;
     expect(span.role).toBe("tag");
     expect(layout.links[span.link!]).toMatchObject({ kind: "tag", target: "project/alpha" });
@@ -2123,19 +2921,33 @@ describe("tags (1.6)", () => {
 describe("footnotes (3.17)", () => {
   test("numbered as GFM numbers them: by first reference, then the ones nothing refers to; the definition's label", () => {
     // A definition before the text: the order is still the references'.
-    const list = footnotesOf(parseMarkdown("[^a]: Alpha *one*\n    and [Two](two.md) #tag.\n\nB[^b] then A[^A] and B[^b] again.\n\n[^spare]: Unused.\n[^b]: Beta.\n"));
-    expect(list.map((f) => [f.label, f.line, f.references.length])).toEqual([["b", 7, 2], ["a", 1, 1], ["spare", 6, 0]]);
+    const list = footnotesOf(
+      parseMarkdown(
+        "[^a]: Alpha *one*\n    and [Two](two.md) #tag.\n\nB[^b] then A[^A] and B[^b] again.\n\n[^spare]: Unused.\n[^b]: Beta.\n",
+      ),
+    );
+    expect(list.map((f) => [f.label, f.line, f.references.length])).toEqual([
+      ["b", 7, 2],
+      ["a", 1, 1],
+      ["spare", 6, 0],
+    ]);
     expect(list[1]!.text).toBe("Alpha one and Two #tag.");
-    expect(list[0]!.references).toMatchObject([{ line: 4, column: 2 }, { line: 4, column: 23 }]);
+    expect(list[0]!.references).toMatchObject([
+      { line: 4, column: 2 },
+      { line: 4, column: 23 },
+    ]);
   });
 
   test("a definition's text as one line: a wikilink by its alias, else its name; an embed by its name; a tag with its #", () => {
-    const list = footnotesOf(parseMarkdown("A[^1]\n\n[^1]: See [[plan|the plan]], [[other]] and ![[pic.png]] #todo.\n"));
+    const list = footnotesOf(
+      parseMarkdown("A[^1]\n\n[^1]: See [[plan|the plan]], [[other]] and ![[pic.png]] #todo.\n"),
+    );
     expect(list.map((f) => f.text)).toEqual(["See the plan, other and pic.png #todo."]);
   });
 
   test("add, edit, delete, rename: each the edits it makes to the note's text (3.18)", () => {
-    const run = (src: string, change: (s: string, list: ReturnType<typeof footnotesOf>) => TextEdit[]) => applyEdits(src, change(src, footnotesOf(parseMarkdown(src))));
+    const run = (src: string, change: (s: string, list: ReturnType<typeof footnotesOf>) => TextEdit[]) =>
+      applyEdits(src, change(src, footnotesOf(parseMarkdown(src))));
     // Added: [^N] where asked, its definition after the note's last one (the note ends with them)…
     const src = "Claim one[^1] and two.\n\n[^1]: First.\n";
     const at = src.indexOf(" and two") + " and two".length;
@@ -2150,11 +2962,17 @@ describe("footnotes (3.17)", () => {
     const two = "A[^n] b.\n\n[^n]: Old,\n    continued.\n[^z]: Zed.\n";
     expect(run(two, (s, l) => editFootnote(s, l[0]!, "New text"))).toBe("A[^n] b.\n\n[^n]: New text\n[^z]: Zed.\n");
     // Deleted: its references and its definition's lines.
-    expect(run("A[^n] b[^n].\n\n[^n]: Old,\n    more.\n[^z]: Zed.\n", (s, l) => deleteFootnote(s, l[0]!))).toBe("A b.\n\n[^z]: Zed.\n");
+    expect(run("A[^n] b[^n].\n\n[^n]: Old,\n    more.\n[^z]: Zed.\n", (s, l) => deleteFootnote(s, l[0]!))).toBe(
+      "A b.\n\n[^z]: Zed.\n",
+    );
     // A CRLF note's: its line's CRLF goes too, never leaving a blank line where it was.
-    expect(run("A[^n] b.\r\n\r\n[^n]: Old.\r\n[^z]: Zed.\r\n", (s, l) => deleteFootnote(s, l[0]!))).toBe("A b.\r\n\r\n[^z]: Zed.\r\n");
+    expect(run("A[^n] b.\r\n\r\n[^n]: Old.\r\n[^z]: Zed.\r\n", (s, l) => deleteFootnote(s, l[0]!))).toBe(
+      "A b.\r\n\r\n[^z]: Zed.\r\n",
+    );
     // Renamed: everywhere; a taken label, or one with a space, refused.
-    expect(run("A[^n] b[^n].\n\n[^n]: Old.\n[^z]: Zed.\n", (s, l) => renameFootnote(s, l[0]!, l, "source"))).toBe("A[^source] b[^source].\n\n[^source]: Old.\n[^z]: Zed.\n");
+    expect(run("A[^n] b[^n].\n\n[^n]: Old.\n[^z]: Zed.\n", (s, l) => renameFootnote(s, l[0]!, l, "source"))).toBe(
+      "A[^source] b[^source].\n\n[^source]: Old.\n[^z]: Zed.\n",
+    );
     const l = footnotesOf(parseMarkdown(two));
     expect(() => renameFootnote(two, l[0]!, l, "Z")).toThrow("taken");
     expect(() => renameFootnote(two, l[0]!, l, "a b")).toThrow("can't be");
@@ -2190,7 +3008,11 @@ describe("trust (23.x)", () => {
     writeFileSync(join(dir, "v", ".slipbox", "config.toml"), '[trust]\nroots = ["/"]\n');
     const r = loadConfig({ configFile: user, vaultRoot: join(dir, "v") });
     expect(r.config.trust.roots).toEqual(["~/Projects/*"]);
-    expect(r.warnings.some((w) => w.includes("sets [trust], which only your own config may set (a folder can't trust itself)"))).toBe(true);
+    expect(
+      r.warnings.some((w) =>
+        w.includes("sets [trust], which only your own config may set (a folder can't trust itself)"),
+      ),
+    ).toBe(true);
     expect(r.warnings.some((w) => w.includes("trust.roots takes paths and globs"))).toBe(true);
   });
 
@@ -2215,7 +3037,13 @@ describe("trust (23.x)", () => {
 
   test("markdownlint-cli2 in a root you don't trust (23.5): a file under a config that is code, or names code, isn't linted — said once", async () => {
     const root = mkdtempSync(join(sandbox, "mdl-trust-"));
-    for (const [rel, text] of Object.entries({ "plain/a.md": "# A\n", "js/.markdownlint.cjs": "module.exports = {};\n", "js/deep/b.md": "# B\n", "rules/.markdownlint-cli2.jsonc": '{ "customRules": ["./rule.js"] }\n', "rules/c.md": "# C\n" })) {
+    for (const [rel, text] of Object.entries({
+      "plain/a.md": "# A\n",
+      "js/.markdownlint.cjs": "module.exports = {};\n",
+      "js/deep/b.md": "# B\n",
+      "rules/.markdownlint-cli2.jsonc": '{ "customRules": ["./rule.js"] }\n',
+      "rules/c.md": "# C\n",
+    })) {
       mkdirSync(join(root, rel, ".."), { recursive: true });
       writeFileSync(join(root, rel), text);
     }
@@ -2224,13 +3052,18 @@ describe("trust (23.x)", () => {
     expect(lintLoadsCode(join(root, "rules/c.md"), root)).toBe(true);
     // A linter that names every file it's given: only the plain one reaches it.
     const fake = join(root, "fake-mdl");
-    writeFileSync(fake, '#!/bin/sh\nfor f in "$@"; do echo "${f#:}:1 error MD041/first-line-heading First line"; done\nexit 1\n');
+    writeFileSync(
+      fake,
+      '#!/bin/sh\nfor f in "$@"; do echo "${f#:}:1 error MD041/first-line-heading First line"; done\nexit 1\n',
+    );
     chmodSync(fake, 0o755);
     const said: string[] = [];
     const files = ["plain/a.md", "js/deep/b.md", "rules/c.md"].map((f) => join(root, f));
     const got = await runLint({ argv: [fake], literal: true }, files, root, undefined, (t) => said.push(t));
     expect(got!.map((i) => i.file)).toEqual([join(root, "plain/a.md")]);
-    expect(said).toEqual([`markdownlint-cli2 not run on 2 file(s): a markdownlint config there is code, or names code to load, and ${root} isn't a root you trust — [trust] roots in your config`]);
+    expect(said).toEqual([
+      `markdownlint-cli2 not run on 2 file(s): a markdownlint config there is code, or names code to load, and ${root} isn't a root you trust — [trust] roots in your config`,
+    ]);
     await runLint({ argv: [fake], literal: true }, files, root, undefined, (t) => said.push(t));
     expect(said.length).toBe(1); // said once
     setTrustedRoots([root]);
@@ -2248,9 +3081,30 @@ describe("the lint surface (3.21)", () => {
       "/abs/b.md:7:1 warning MD029/ol-prefix Ordered list item prefix",
     ].join("\n");
     expect(parseLint(out, "/v")).toEqual([
-      { file: "/abs/b.md", line: 7, column: 1, rule: "MD029", name: "ol-prefix", description: "Ordered list item prefix" },
-      { file: "/v/notes/a.md", line: 3, column: 121, rule: "MD013", name: "line-length", description: "Line length [Expected: 120; Actual: 138]" },
-      { file: "/v/notes/a.md", line: 14, column: null, rule: "MD025", name: "single-title", description: 'Multiple top-level headings [Context: "T"]' },
+      {
+        file: "/abs/b.md",
+        line: 7,
+        column: 1,
+        rule: "MD029",
+        name: "ol-prefix",
+        description: "Ordered list item prefix",
+      },
+      {
+        file: "/v/notes/a.md",
+        line: 3,
+        column: 121,
+        rule: "MD013",
+        name: "line-length",
+        description: "Line length [Expected: 120; Actual: 138]",
+      },
+      {
+        file: "/v/notes/a.md",
+        line: 14,
+        column: null,
+        rule: "MD025",
+        name: "single-title",
+        description: 'Multiple top-level headings [Context: "T"]',
+      },
     ]);
   });
 
@@ -2275,10 +3129,22 @@ describe("the lint surface (3.21)", () => {
       mkdirSync(join(own, ".."), { recursive: true });
       writeFileSync(own, "#!/usr/bin/env node\n");
       chmodSync(own, 0o755);
-      expect(lintCommand(cfg("auto"), vault, home)).toEqual({ argv: [process.execPath, "--config=/dev/null", "--no-env-file", own, "--config", user], literal: true, env: { BUN_BE_BUN: "1" } });
+      expect(lintCommand(cfg("auto"), vault, home)).toEqual({
+        argv: [process.execPath, "--config=/dev/null", "--no-env-file", own, "--config", user],
+        literal: true,
+        env: { BUN_BE_BUN: "1" },
+      });
       writeFileSync(join(vault, ".markdownlint.json"), "{}");
-      expect(lintCommand(cfg("auto"), vault, home)!.argv).toEqual([process.execPath, "--config=/dev/null", "--no-env-file", own]); // the vault's own config
-      expect(lintCommand(cfg("auto", ["mdl", "--config", "~/mdl.json"]), vault, home)).toEqual({ argv: ["mdl", "--config", join(home, "mdl.json")], literal: false });
+      expect(lintCommand(cfg("auto"), vault, home)!.argv).toEqual([
+        process.execPath,
+        "--config=/dev/null",
+        "--no-env-file",
+        own,
+      ]); // the vault's own config
+      expect(lintCommand(cfg("auto", ["mdl", "--config", "~/mdl.json"]), vault, home)).toEqual({
+        argv: ["mdl", "--config", join(home, "mdl.json")],
+        literal: false,
+      });
     } finally {
       process.env.PATH = was;
     }
@@ -2286,21 +3152,38 @@ describe("the lint surface (3.21)", () => {
 
   test("markdownlint-cli2 installed into slipbox's own folder when first needed — once, however many runs ask — then run (19.21)", async () => {
     const pkg = mkdtempSync(join(sandbox, "fake-mdl-"));
-    writeFileSync(join(pkg, "package.json"), JSON.stringify({ name: "fake-mdl", version: "1.0.0", bin: { "markdownlint-cli2": "bin.mjs" } }));
-    writeFileSync(join(pkg, "bin.mjs"), "#!/usr/bin/env node\nfor (const f of process.argv.slice(2)) console.log(`${f.slice(1)}:1 error MD001/heading-increment Heard`);\nprocess.exit(1);\n");
+    writeFileSync(
+      join(pkg, "package.json"),
+      JSON.stringify({ name: "fake-mdl", version: "1.0.0", bin: { "markdownlint-cli2": "bin.mjs" } }),
+    );
+    writeFileSync(
+      join(pkg, "bin.mjs"),
+      "#!/usr/bin/env node\nfor (const f of process.argv.slice(2)) console.log(`${f.slice(1)}:1 error MD001/heading-increment Heard`);\nprocess.exit(1);\n",
+    );
     const npm = { package: "fake-mdl", version: `file:${pkg}`, bin: "markdownlint-cli2" };
     // Its lock, as scripts/lock-servers.ts makes one (14.11) — a local package's path made absolute: no network.
     const lockDir = mkdtempSync(join(sandbox, "mdl-lock-"));
     writeFileSync(join(lockDir, "package.json"), toolManifest(npm));
-    expect(Bun.spawnSync([process.execPath, "install", "--lockfile-only", "--ignore-scripts"], { cwd: lockDir, env: { ...process.env, BUN_BE_BUN: "1" } }).exitCode).toBe(0);
-    LOCKS[lockKey(npm)] = readFileSync(join(lockDir, "bun.lock"), "utf8").replace(/@file:([^"/][^"]*)"/g, (_, rel: string) => `@file:${resolve(lockDir, rel)}"`);
+    expect(
+      Bun.spawnSync([process.execPath, "install", "--lockfile-only", "--ignore-scripts"], {
+        cwd: lockDir,
+        env: { ...process.env, BUN_BE_BUN: "1" },
+      }).exitCode,
+    ).toBe(0);
+    LOCKS[lockKey(npm)] = readFileSync(join(lockDir, "bun.lock"), "utf8").replace(
+      /@file:([^"/][^"]*)"/g,
+      (_, rel: string) => `@file:${resolve(lockDir, rel)}"`,
+    );
     const v = mkdtempSync(join(sandbox, "lint-"));
     const said: string[] = [];
     const cmd = { argv: [], literal: true, install: npm };
     const was = process.env.PATH;
     process.env.PATH = "/usr/bin:/bin";
     try {
-      const [a, b] = await Promise.all([runLint(cmd, ["/v/a.md"], v, undefined, (t) => said.push(t)), runLint(cmd, ["/v/b.md"], v, undefined, (t) => said.push(t))]);
+      const [a, b] = await Promise.all([
+        runLint(cmd, ["/v/a.md"], v, undefined, (t) => said.push(t)),
+        runLint(cmd, ["/v/b.md"], v, undefined, (t) => said.push(t)),
+      ]);
       expect(a).toMatchObject([{ file: "/v/a.md", line: 1, rule: "MD001", description: "Heard" }]);
       expect(b).toMatchObject([{ file: "/v/b.md" }]);
       expect(said).toEqual([`installing fake-mdl@file:${pkg} into slipbox's own folder…`]);
@@ -2309,7 +3192,15 @@ describe("the lint surface (3.21)", () => {
       expect(await runLint(cmd, ["/v/c.md"], v, undefined, (t) => said.push(t))).toMatchObject([{ file: "/v/c.md" }]);
       expect(said).toHaveLength(1);
       // An install that fails (no lock for it): the linter doesn't run, and the next run tries again.
-      const broken = { argv: [], literal: true, install: { package: "no-such-mdl", version: `file:${join(sandbox, "no-such-package")}`, bin: "markdownlint-cli2" } };
+      const broken = {
+        argv: [],
+        literal: true,
+        install: {
+          package: "no-such-mdl",
+          version: `file:${join(sandbox, "no-such-package")}`,
+          bin: "markdownlint-cli2",
+        },
+      };
       expect(await runLint(broken, ["/v/a.md"], v, undefined, (t) => said.push(t))).toBeNull();
       expect(await runLint(broken, ["/v/a.md"], v, undefined, (t) => said.push(t))).toBeNull();
       expect(said.filter((t) => t.includes("no-such-package"))).toHaveLength(2);
@@ -2320,7 +3211,15 @@ describe("the lint surface (3.21)", () => {
 
   test("run: the files given (literal paths for markdownlint-cli2), the findings read; a linter that isn't there, or fails saying nothing, is null", async () => {
     const v = mkdtempSync(join(sandbox, "lint-"));
-    const echo = { argv: ["sh", "-c", 'for f; do printf "%s:2 error MD001/heading-increment Heading levels\\n" "$f"; done; exit 1', "lint"], literal: false };
+    const echo = {
+      argv: [
+        "sh",
+        "-c",
+        'for f; do printf "%s:2 error MD001/heading-increment Heading levels\\n" "$f"; done; exit 1',
+        "lint",
+      ],
+      literal: false,
+    };
     expect(await runLint(echo, ["/v/a.md", "/v/b [x].md"], v)).toMatchObject([
       { file: "/v/a.md", line: 2, rule: "MD001" },
       { file: "/v/b [x].md", line: 2, rule: "MD001" },
@@ -2337,7 +3236,10 @@ describe("the boundary check (0.3, scripts/check-boundary.ts)", () => {
   const check = (files: Record<string, string>) => {
     const top = mkdtempSync(join(sandbox, "boundary-"));
     mkdirSync(join(top, "scripts"));
-    writeFileSync(join(top, "scripts", "check-boundary.ts"), readFileSync(join(import.meta.dir, "..", "scripts", "check-boundary.ts"), "utf8"));
+    writeFileSync(
+      join(top, "scripts", "check-boundary.ts"),
+      readFileSync(join(import.meta.dir, "..", "scripts", "check-boundary.ts"), "utf8"),
+    );
     for (const [rel, text] of Object.entries(files)) {
       mkdirSync(join(top, rel, ".."), { recursive: true });
       writeFileSync(join(top, rel), text);
@@ -2354,7 +3256,13 @@ describe("the boundary check (0.3, scripts/check-boundary.ts)", () => {
       "src/tui/app.ts": 'import "@opentui/core";\nexport const App = 1;\n',
     });
     expect(r.code).toBe(1);
-    expect(r.err.split("\n").filter((l) => l.startsWith("  ")).map((l) => l.trim()).sort()).toEqual([
+    expect(
+      r.err
+        .split("\n")
+        .filter((l) => l.startsWith("  "))
+        .map((l) => l.trim())
+        .sort(),
+    ).toEqual([
       "src/cli/c.ts: imports @opentui/core (src/cli must not import @opentui)",
       "src/core/b.ts: imports ../cli/cli.ts (src/core must not import src/cli)",
       "src/core/deep/a.ts: imports ../../tui/app.ts (src/core must not import src/tui)",
@@ -2379,32 +3287,86 @@ describe("the boundary check (0.3, scripts/check-boundary.ts)", () => {
 describe("documentation formats into one shape (24.4)", () => {
   const terms = (lines: string[], style: "jsdoc" | "docstring" | "block" = "docstring") => {
     const d = readDoc(lines, style);
-    return { body: d.body.map((b) => b.text).join("\n"), tags: d.tags.map((t) => `${t.term}|${t.type}|${t.desc}|${t.line}`) };
+    return {
+      body: d.body.map((b) => b.text).join("\n"),
+      tags: d.tags.map((t) => `${t.term}|${t.type}|${t.desc}|${t.line}`),
+    };
   };
   const SAME = ["from||the note it's written in", "target|str|the link as written", "returns||the link, or None"];
   const same = (got: string[]) => expect(got.map((t) => t.split("|").slice(0, 3).join("|"))).toEqual(SAME);
 
   test("Google: Args, Returns; an entry's lines go on, indented", () => {
-    const t = terms(["Resolves a link.", "", "Args:", "    from: the note it's written in", "    target (str): the link", "        as written", "", "Returns:", "    the link, or None"]);
+    const t = terms([
+      "Resolves a link.",
+      "",
+      "Args:",
+      "    from: the note it's written in",
+      "    target (str): the link",
+      "        as written",
+      "",
+      "Returns:",
+      "    the link, or None",
+    ]);
     expect(t.body).toBe("Resolves a link.");
     same(t.tags);
     expect(t.tags[0]!.endsWith("|3")).toBe(true); // its line, for where it's drawn
   });
 
   test("NumPy: sections over dashes, an entry's name and type, what it is under it", () => {
-    const t = terms(["Resolves a link.", "", "Parameters", "----------", "from", "    the note it's written in", "target : str", "    the link as written", "", "Returns", "-------", "Link", "    the link, or None"]);
+    const t = terms([
+      "Resolves a link.",
+      "",
+      "Parameters",
+      "----------",
+      "from",
+      "    the note it's written in",
+      "target : str",
+      "    the link as written",
+      "",
+      "Returns",
+      "-------",
+      "Link",
+      "    the link, or None",
+    ]);
     expect(t.body).toBe("Resolves a link.");
-    expect(t.tags.map((x) => x.split("|").slice(0, 3).join("|"))).toEqual(["from||the note it's written in", "target|str|the link as written", "returns|Link|the link, or None"]);
+    expect(t.tags.map((x) => x.split("|").slice(0, 3).join("|"))).toEqual([
+      "from||the note it's written in",
+      "target|str|the link as written",
+      "returns|Link|the link, or None",
+    ]);
   });
 
   test("reST: :param:, :type:, :returns:, :rtype:, :raises:; ``code`` and :role:`x` as markdown", () => {
-    const t = terms(["Resolves a ``link`` (see :func:`reach`).", "", ":param from: the note it's written in", ":type from: Note", ":param str target: the link", "    as written", ":returns: the link, or None", ":rtype: Link", ":raises ValueError: when empty"]);
+    const t = terms([
+      "Resolves a ``link`` (see :func:`reach`).",
+      "",
+      ":param from: the note it's written in",
+      ":type from: Note",
+      ":param str target: the link",
+      "    as written",
+      ":returns: the link, or None",
+      ":rtype: Link",
+      ":raises ValueError: when empty",
+    ]);
     expect(t.body).toBe("Resolves a `link` (see `reach`).");
-    expect(t.tags.map((x) => x.split("|").slice(0, 3).join("|"))).toEqual(["from|Note|the note it's written in", "target|str|the link as written", "returns|Link|the link, or None", "raises|ValueError|when empty"]);
+    expect(t.tags.map((x) => x.split("|").slice(0, 3).join("|"))).toEqual([
+      "from|Note|the note it's written in",
+      "target|str|the link as written",
+      "returns|Link|the link, or None",
+      "raises|ValueError|when empty",
+    ]);
   });
 
   test("JSDoc: @param {T} name - what, @returns; a block comment is prose alone", () => {
-    const t = terms(["Resolves a link.", "@param from - the note it's written in", "@param {str} target the link as written", "@returns the link, or None"], "jsdoc");
+    const t = terms(
+      [
+        "Resolves a link.",
+        "@param from - the note it's written in",
+        "@param {str} target the link as written",
+        "@returns the link, or None",
+      ],
+      "jsdoc",
+    );
     expect(t.body).toBe("Resolves a link.");
     same(t.tags);
     expect(terms(["Some words", "@param x not a tag here"], "block").tags).toEqual([]);
@@ -2418,16 +3380,26 @@ describe("indentation (25.1)", () => {
     expect(detectIndent("def f():\n    x = 1\n    if x:\n        y()\n")).toEqual({ tabs: false, size: 4 });
     expect(detectIndent("a:\n  b:\n    c: 1\n  d: 2\n")).toEqual({ tabs: false, size: 2 });
     // A block comment's ` * ` is no step.
-    expect(detectIndent("/**\n * Doc.\n * More.\n */\nfunction f() {\n  return 1;\n}\nif (x) {\n  y();\n}\n")).toEqual({ tabs: false, size: 2 });
+    expect(detectIndent("/**\n * Doc.\n * More.\n */\nfunction f() {\n  return 1;\n}\nif (x) {\n  y();\n}\n")).toEqual({
+      tabs: false,
+      size: 2,
+    });
     // Three doc comments' one-space steps outnumber the code's two: still no indentation.
-    expect(detectIndent("/**\n * a\n */\nf() {\n  x;\n}\n/**\n * b\n */\n/**\n * c\n */\ng() {\n  y;\n}\n")).toEqual({ tabs: false, size: 2 });
+    expect(detectIndent("/**\n * a\n */\nf() {\n  x;\n}\n/**\n * b\n */\n/**\n * c\n */\ng() {\n  y;\n}\n")).toEqual({
+      tabs: false,
+      size: 2,
+    });
     expect(detectIndent("one\ntwo\n")).toBeNull();
     expect(detectIndent("x\n  y\n")).toBeNull();
   });
 
   test("a language's own, by extension or name: Go and Makefiles tabs, Python and Rust four, the rest two", async () => {
     const { languageIndent } = await import("../src/core/indent.ts");
-    expect(["/a/main.go", "/a/Makefile", "/a/rules.mk", "/a/app.py", "/a/lib.rs", "/a/index.ts", "/a/note.md"].map((p) => languageIndent(p))).toEqual([
+    expect(
+      ["/a/main.go", "/a/Makefile", "/a/rules.mk", "/a/app.py", "/a/lib.rs", "/a/index.ts", "/a/note.md"].map((p) =>
+        languageIndent(p),
+      ),
+    ).toEqual([
       { tabs: true, size: 4 },
       { tabs: true, size: 4 },
       { tabs: true, size: 4 },
@@ -2441,18 +3413,43 @@ describe("indentation (25.1)", () => {
   test(".editorconfig's globs as the spec has them: a name alone anywhere, a path from its folder, *, **, ?, [], {a,b}, {1..3}", async () => {
     const { globRegex } = await import("../src/core/indent.ts");
     const m = (glob: string, path: string) => globRegex(glob).test(path);
-    expect([m("*.md", "a.md"), m("*.md", "x/y/a.md"), m("*.md", "a.mdx"), m("*", "x/y")]).toEqual([true, true, false, true]);
-    expect([m("*.{js,py}", "src/a.py"), m("*.{js,py}", "a.ts"), m("v{1..3}.txt", "v2.txt"), m("v{1..3}.txt", "v4.txt")]).toEqual([true, false, true, false]);
-    expect([m("[ab].c", "a.c"), m("[!ab].c", "a.c"), m("[!ab].c", "z.c"), m("?.c", "ab.c"), m("a?b.c", "a/b.c"), m("a?b.c", "axb.c")]).toEqual([true, false, true, false, false, true]);
+    expect([m("*.md", "a.md"), m("*.md", "x/y/a.md"), m("*.md", "a.mdx"), m("*", "x/y")]).toEqual([
+      true,
+      true,
+      false,
+      true,
+    ]);
+    expect([
+      m("*.{js,py}", "src/a.py"),
+      m("*.{js,py}", "a.ts"),
+      m("v{1..3}.txt", "v2.txt"),
+      m("v{1..3}.txt", "v4.txt"),
+    ]).toEqual([true, false, true, false]);
+    expect([
+      m("[ab].c", "a.c"),
+      m("[!ab].c", "a.c"),
+      m("[!ab].c", "z.c"),
+      m("?.c", "ab.c"),
+      m("a?b.c", "a/b.c"),
+      m("a?b.c", "axb.c"),
+    ]).toEqual([true, false, true, false, false, true]);
     // With a `/`: from the file's folder.
-    expect([m("lib/**.js", "lib/x/y.js"), m("lib/**.js", "src/lib/y.js"), m("/top.txt", "top.txt"), m("/top.txt", "x/top.txt"), m("docs/*.md", "docs/a/b.md")]).toEqual([true, false, true, false, false]);
+    expect([
+      m("lib/**.js", "lib/x/y.js"),
+      m("lib/**.js", "src/lib/y.js"),
+      m("/top.txt", "top.txt"),
+      m("/top.txt", "x/top.txt"),
+      m("docs/*.md", "docs/a/b.md"),
+    ]).toEqual([true, false, true, false, false]);
     expect([m("**/test/*.ts", "test/a.ts"), m("**/test/*.ts", "x/test/a.ts")]).toEqual([true, true]);
     expect(m("a\\*b", "a*b")).toBe(true);
   });
 
   test(".editorconfig read from the file's folder up, until root = true: nearer over farther, later sections over earlier", async () => {
     const { editorConfigFor, parseEditorConfig } = await import("../src/core/indent.ts");
-    expect(parseEditorConfig("root = true\n# a comment\n[*]\nIndent_Style = Space ; why\n\n[*.go]\nindent_style=tab\n")).toEqual({
+    expect(
+      parseEditorConfig("root = true\n# a comment\n[*]\nIndent_Style = Space ; why\n\n[*.go]\nindent_style=tab\n"),
+    ).toEqual({
       root: true,
       sections: [
         { glob: "*", props: new Map([["indent_style", "space"]]) },
@@ -2465,24 +3462,54 @@ describe("indentation (25.1)", () => {
       "/home/proj/web/.editorconfig": "[*.ts]\nindent_size = 3\n",
     };
     const read = (p: string) => files[p] ?? null;
-    expect(Object.fromEntries(editorConfigFor("/home/proj/web/a.ts", read))).toEqual({ indent_style: "space", indent_size: "3" });
-    expect(Object.fromEntries(editorConfigFor("/home/proj/notes/a.md", read))).toEqual({ indent_style: "space", indent_size: "2" });
+    expect(Object.fromEntries(editorConfigFor("/home/proj/web/a.ts", read))).toEqual({
+      indent_style: "space",
+      indent_size: "3",
+    });
+    expect(Object.fromEntries(editorConfigFor("/home/proj/notes/a.md", read))).toEqual({
+      indent_style: "space",
+      indent_size: "2",
+    });
     // Outside the root one: home's.
-    expect(Object.fromEntries(editorConfigFor("/home/other/a.ts", read))).toEqual({ indent_size: "8", insert_final_newline: "true" });
+    expect(Object.fromEntries(editorConfigFor("/home/other/a.ts", read))).toEqual({
+      indent_size: "8",
+      insert_final_newline: "true",
+    });
   });
 
   test("a file's indent: .editorconfig's, else its own lines', else its language's; a tab's width; what a save does", async () => {
     const { indentFor, indentUnit, saveRules } = await import("../src/core/indent.ts");
     const none = () => null;
     expect(indentFor("/p/a.go", "x\n", none)).toMatchObject({ tabs: true, size: 4, tabWidth: 4, from: "language" });
-    expect(indentFor("/p/a.ts", "if (x) {\n    y();\n}\nif (z) {\n    w();\n}\n", none)).toMatchObject({ tabs: false, size: 4, from: "file" });
+    expect(indentFor("/p/a.ts", "if (x) {\n    y();\n}\nif (z) {\n    w();\n}\n", none)).toMatchObject({
+      tabs: false,
+      size: 4,
+      from: "file",
+    });
     const ec = (text: string) => (p: string) => (p === "/p/.editorconfig" ? text : null);
-    expect(indentFor("/p/a.ts", "if (x) {\n    y();\n}\nz\n    w\n", ec("[*]\nindent_style = space\nindent_size = 2\n"))).toMatchObject({ tabs: false, size: 2, from: "editorconfig" });
-    expect(indentFor("/p/a.ts", "x\n", ec("[*]\nindent_style = tab\ntab_width = 8\n"))).toMatchObject({ tabs: true, size: 8, tabWidth: 8 });
-    expect(indentFor("/p/a.c", "x\n", ec("[*]\nindent_style = tab\nindent_size = tab\n"))).toMatchObject({ tabs: true, tabWidth: 4 });
+    expect(
+      indentFor("/p/a.ts", "if (x) {\n    y();\n}\nz\n    w\n", ec("[*]\nindent_style = space\nindent_size = 2\n")),
+    ).toMatchObject({ tabs: false, size: 2, from: "editorconfig" });
+    expect(indentFor("/p/a.ts", "x\n", ec("[*]\nindent_style = tab\ntab_width = 8\n"))).toMatchObject({
+      tabs: true,
+      size: 8,
+      tabWidth: 8,
+    });
+    expect(indentFor("/p/a.c", "x\n", ec("[*]\nindent_style = tab\nindent_size = tab\n"))).toMatchObject({
+      tabs: true,
+      tabWidth: 4,
+    });
     // A style said, its size not: the file's, else the language's.
-    expect(indentFor("/p/a.py", "x\n", ec("[*]\nindent_style = space\n"))).toMatchObject({ tabs: false, size: 4, from: "editorconfig" });
-    const saving = indentFor("/p/a.md", "x\n", ec("[*]\ntrim_trailing_whitespace = true\ninsert_final_newline = true\n"));
+    expect(indentFor("/p/a.py", "x\n", ec("[*]\nindent_style = space\n"))).toMatchObject({
+      tabs: false,
+      size: 4,
+      from: "editorconfig",
+    });
+    const saving = indentFor(
+      "/p/a.md",
+      "x\n",
+      ec("[*]\ntrim_trailing_whitespace = true\ninsert_final_newline = true\n"),
+    );
     expect([saving.trimTrailing, saving.finalNewline]).toEqual([true, true]);
     expect(saveRules("a  \nb\t\nc ", saving)).toBe("a\nb\nc\n");
     expect(saveRules("a \r\nb", saving)).toBe("a\r\nb\r\n");
@@ -2496,7 +3523,14 @@ describe("indentation (25.1)", () => {
 describe("comments toggled (25.2)", () => {
   test("a language's markers: a line's in front, a block's around; none for JSON, CSV, a diff", async () => {
     const { commentStyle } = await import("../src/core/comments.ts");
-    expect(["typescript", "python", "lua", "vim", "toml", "makefile"].map((l) => commentStyle(l))).toEqual([{ line: "//" }, { line: "#" }, { line: "--" }, { line: '"' }, { line: "#" }, { line: "#" }]);
+    expect(["typescript", "python", "lua", "vim", "toml", "makefile"].map((l) => commentStyle(l))).toEqual([
+      { line: "//" },
+      { line: "#" },
+      { line: "--" },
+      { line: '"' },
+      { line: "#" },
+      { line: "#" },
+    ]);
     expect([commentStyle("css"), commentStyle("markdown"), commentStyle("xml")]).toEqual([
       { open: "/*", close: "*/" },
       { open: "<!--", close: "-->" },
@@ -2531,7 +3565,13 @@ describe("brackets (25.3)", () => {
   test("the matching one: forward from an opening bracket, back from a closing one, past the nested pairs of its kind", async () => {
     const { matchBracket, bracketFrom } = await import("../src/core/brackets.ts");
     const t = "f(a, [b(c)], {d})";
-    expect([matchBracket(t, 1), matchBracket(t, 16), matchBracket(t, 5), matchBracket(t, 7), matchBracket(t, 13)]).toEqual([16, 1, 10, 9, 15]);
+    expect([
+      matchBracket(t, 1),
+      matchBracket(t, 16),
+      matchBracket(t, 5),
+      matchBracket(t, 7),
+      matchBracket(t, 13),
+    ]).toEqual([16, 1, 10, 9, 15]);
     // Another kind between counts for nothing; unmatched, none; not a bracket, none.
     expect([matchBracket("( ] )", 0), matchBracket("((x)", 0), matchBracket("abc", 1)]).toEqual([4, -1, -1]);
     expect(matchBracket("{\n  x\n}", 0)).toBe(6);
@@ -2548,7 +3588,12 @@ describe("brackets (25.3)", () => {
     expect([autoPair("()", 1, ")"), autoPair('""', 1, '"')]).toEqual(["", ""]);
     // An apostrophe in a word, a quote before one: as typed.
     expect([autoPair("don", 3, "'"), autoPair("x", 0, '"'), autoPair("say ", 4, "`")]).toEqual([null, null, "``"]);
-    expect([emptyPair("()", 1), emptyPair("''", 1), emptyPair("(x)", 1), emptyPair("(]", 1)]).toEqual([true, true, false, false]);
+    expect([emptyPair("()", 1), emptyPair("''", 1), emptyPair("(x)", 1), emptyPair("(]", 1)]).toEqual([
+      true,
+      true,
+      false,
+      false,
+    ]);
   });
 });
 
@@ -2557,7 +3602,12 @@ describe("replace across files: the lines it changes (25.4)", () => {
     const { lineEdits } = await import("../src/core/replace-files.ts");
     const { compilePattern, findAll } = await import("../src/core/replace.ts");
     const edits = (text: string, query: string, replacement: string, regex = false) =>
-      lineEdits(text, findAll(text, compilePattern(query, { regex, whole: false }) as RegExp, 0, text.length, regex), replacement, regex);
+      lineEdits(
+        text,
+        findAll(text, compilePattern(query, { regex, whole: false }) as RegExp, 0, text.length, regex),
+        replacement,
+        regex,
+      );
     expect(edits("a x a\nno\nx a\n", "a", "b")).toEqual([
       { line: 1, before: "a x a", after: "b x b" },
       { line: 3, before: "x a", after: "x b" },
@@ -2663,18 +3713,29 @@ describe("spelling (25.6)", () => {
     const yours = { fr: "~/d/mine.dic", it: join(home, "d", "mine"), es: "~/d/none.dic" };
     const at = (lang: string) => {
       const f = dictionaryFiles(lang, yours, [sys], home);
-      return f && `${f.from}:${f.aff.startsWith(sys) ? f.aff.slice(sys.length + 1) : f.from === "slipbox" ? "bundled" : f.aff.slice(home.length + 1)}`;
+      return (
+        f &&
+        `${f.from}:${f.aff.startsWith(sys) ? f.aff.slice(sys.length + 1) : f.from === "slipbox" ? "bundled" : f.aff.slice(home.length + 1)}`
+      );
     };
     expect([at("fr"), at("it"), at("fr-FR")]).toEqual(["yours:d/mine.aff", "yours:d/mine.aff", "yours:d/mine.aff"]);
     // tr-TR: the system's own; tr and en: slipbox's; en-GB: the system's; de: the system's first de_*.
-    expect([at("tr-TR"), at("tr"), at("en"), at("en-GB"), at("en_US"), at("de")]).toEqual(["system:tr_TR.aff", "slipbox:bundled", "slipbox:bundled", "system:en_GB.aff", "slipbox:bundled", "system:de_AT.aff"]);
+    expect([at("tr-TR"), at("tr"), at("en"), at("en-GB"), at("en_US"), at("de")]).toEqual([
+      "system:tr_TR.aff",
+      "slipbox:bundled",
+      "slipbox:bundled",
+      "system:en_GB.aff",
+      "slipbox:bundled",
+      "system:de_AT.aff",
+    ]);
     // Yours not there: the rest as before; a language nobody has, none.
     expect([at("es"), at("xx"), at("pt-BR"), at("pt")]).toEqual([null, null, null, null]);
   });
 
   test("a dictionary in another encoding is read as UTF-8; one in UTF-8 as it is", async () => {
     const { asUtf8, openSpeller } = await import("../src/core/spell.ts");
-    const latin = (s: string) => Uint8Array.from([...s].map((c) => (c === "ı" ? 0xfd : c === "ş" ? 0xfe : c.charCodeAt(0))));
+    const latin = (s: string) =>
+      Uint8Array.from([...s].map((c) => (c === "ı" ? 0xfd : c === "ş" ? 0xfe : c.charCodeAt(0))));
     const aff = latin("SET ISO8859-9\nTRY abcı\n");
     const dic = latin("2\nkış\nkız\n");
     const out = asUtf8(aff, dic);
@@ -2691,22 +3752,33 @@ describe("spelling (25.6)", () => {
   });
 
   test("slipbox's English and Turkish; your words put in as each opens; the languages a note names", async () => {
-    const { addOwnWord, dictionaryFiles, noteLanguages, openSpeller, ownWords, ownWordsFile } = await import("../src/core/spell.ts");
+    const { addOwnWord, dictionaryFiles, noteLanguages, openSpeller, ownWords, ownWordsFile } = await import(
+      "../src/core/spell.ts"
+    );
     addOwnWord("Zorvexian");
     expect(ownWords()).toContain("Zorvexian");
     expect(ownWordsFile()).toBe(join(process.env.XDG_DATA_HOME!, "slipbox", "spell", "words.txt"));
     const en = await openSpeller(dictionaryFiles("en", {})!);
-    expect([en.correct("receive"), en.correct("recieve"), en.correct("Zorvexian"), en.correct("don't")]).toEqual([true, false, true, true]);
+    expect([en.correct("receive"), en.correct("recieve"), en.correct("Zorvexian"), en.correct("don't")]).toEqual([
+      true,
+      false,
+      true,
+      true,
+    ]);
     expect(en.suggest("recieve")[0]).toBe("receive");
     const tr = await openSpeller(dictionaryFiles("tr", {})!);
-    expect([tr.correct("kitaplarımızdan"), tr.correct("evlerinzde"), tr.correct("Ankara'da")]).toEqual([true, false, true]);
-    expect([noteLanguages({ lang: "tr" }, ["en"]), noteLanguages({ lang: "tr, en" }, ["en"]), noteLanguages({ lang: ["tr-TR", 3] }, ["en"]), noteLanguages({}, ["en"]), noteLanguages(null, ["de"])]).toEqual([
-      ["tr"],
-      ["tr", "en"],
-      ["tr-TR"],
-      ["en"],
-      ["de"],
+    expect([tr.correct("kitaplarımızdan"), tr.correct("evlerinzde"), tr.correct("Ankara'da")]).toEqual([
+      true,
+      false,
+      true,
     ]);
+    expect([
+      noteLanguages({ lang: "tr" }, ["en"]),
+      noteLanguages({ lang: "tr, en" }, ["en"]),
+      noteLanguages({ lang: ["tr-TR", 3] }, ["en"]),
+      noteLanguages({}, ["en"]),
+      noteLanguages(null, ["de"]),
+    ]).toEqual([["tr"], ["tr", "en"], ["tr-TR"], ["en"], ["de"]]);
   });
 
   test("your words: one a line, comments and blank lines left out; added at the end, a line of its own", async () => {
@@ -2723,9 +3795,21 @@ describe("spelling (25.6)", () => {
   test("a checker: any of its dictionaries knowing a word will do; each word asked once; suggestions in turn, ten at most", async () => {
     const { Checker } = await import("../src/core/spell.ts");
     const asked: string[] = [];
-    const speller = (known: string[], sugg: string[]) => ({ correct: (w: string) => (asked.push(w), known.includes(w)), suggest: () => sugg, add: () => {} });
-    const c = new Checker([speller(["bir", "don't"], ["a1", "a2", "x"]), speller(["one"], ["b1", "x", "b2", ...Array.from({ length: 9 }, (_, i) => `c${i}`)])]);
-    expect([c.correct("bir"), c.correct("one"), c.correct("zzz"), c.correct("don’t")]).toEqual([true, true, false, true]);
+    const speller = (known: string[], sugg: string[]) => ({
+      correct: (w: string) => (asked.push(w), known.includes(w)),
+      suggest: () => sugg,
+      add: () => {},
+    });
+    const c = new Checker([
+      speller(["bir", "don't"], ["a1", "a2", "x"]),
+      speller(["one"], ["b1", "x", "b2", ...Array.from({ length: 9 }, (_, i) => `c${i}`)]),
+    ]);
+    expect([c.correct("bir"), c.correct("one"), c.correct("zzz"), c.correct("don’t")]).toEqual([
+      true,
+      true,
+      false,
+      true,
+    ]);
     const before = asked.length;
     expect([c.correct("zzz"), c.correct("one")]).toEqual([false, true]);
     expect(asked.length).toBe(before); // known already
@@ -2746,10 +3830,16 @@ describe("spelling, bundled (25.6)", () => {
       `import { dictionaryFiles, openSpeller } from ${JSON.stringify(join(import.meta.dir, "..", "src", "core", "spell.ts"))};\n` +
         `const s = await openSpeller(dictionaryFiles("en", {})!);\nconsole.log(s.correct("receive"), s.correct("recieve"));\n`,
     );
-    const built = Bun.spawnSync([process.execPath, "build", entry, "--target", "bun", "--outdir", join(dir, "out")], { stderr: "pipe" });
+    const built = Bun.spawnSync([process.execPath, "build", entry, "--target", "bun", "--outdir", join(dir, "out")], {
+      stderr: "pipe",
+    });
     expect(built.exitCode).toBe(0);
     // Run where its files are: a bundle names them from there (a compiled binary has them inside it).
-    const ran = Bun.spawnSync([process.execPath, join(dir, "out", "entry.js")], { cwd: join(dir, "out"), stderr: "pipe", env: { ...process.env } });
+    const ran = Bun.spawnSync([process.execPath, join(dir, "out", "entry.js")], {
+      cwd: join(dir, "out"),
+      stderr: "pipe",
+      env: { ...process.env },
+    });
     expect(new TextDecoder().decode(ran.stderr)).toBe("");
     expect(new TextDecoder().decode(ran.stdout)).toBe("true false\n");
   }, 60000);
@@ -2764,7 +3854,12 @@ describe("commands run by your shell (25.7)", () => {
     expect(parseBang(".!tr a-z A-Z")).toEqual({ range: "line", command: "tr a-z A-Z" });
     expect(parseBang("7!rev")).toEqual({ range: { from: 7, to: 7 }, command: "rev" });
     expect(parseBang("9, 3!sort")).toEqual({ range: { from: 3, to: 9 }, command: "sort" });
-    expect([parseBang("!"), parseBang("%!  "), parseBang("w !sudo tee %"), parseBang("ls")]).toEqual([null, null, null, null]);
+    expect([parseBang("!"), parseBang("%!  "), parseBang("w !sudo tee %"), parseBang("ls")]).toEqual([
+      null,
+      null,
+      null,
+      null,
+    ]);
   });
 
   test("% is the file's path, quoted for the shell; \\% a percent; none without a file", async () => {
@@ -2782,7 +3877,10 @@ describe("commands run by your shell (25.7)", () => {
     try {
       const dir = mkdtempSync(join(tmpdir(), "slipbox-shell-"));
       // Apart in time, so the order they came in is the one written.
-      const r = await runShell("pwd; echo out; sleep 0.1; echo err >&2; sleep 0.1; echo $SLIPBOX_X; exit 3", { cwd: dir, env: { SLIPBOX_X: "x1" } }).done;
+      const r = await runShell("pwd; echo out; sleep 0.1; echo err >&2; sleep 0.1; echo $SLIPBOX_X; exit 3", {
+        cwd: dir,
+        env: { SLIPBOX_X: "x1" },
+      }).done;
       expect(r).toMatchObject({ code: 3, signal: null, truncated: false });
       expect(r.output).toBe(`${realpathSync(dir)}\nout\nerr\nx1\n`);
       expect(r.stdout).toBe(`${realpathSync(dir)}\nout\nx1\n`);
@@ -2823,33 +3921,89 @@ describe("a server's snippets (25.8)", () => {
     // The mirrors given the placeholder's text.
     expect(s.text).toBe("for (i = 0; i < n; i++) {}");
     expect(s.stops).toEqual([
-      { n: 1, ranges: [[5, 6], [12, 13], [19, 20]] },
+      {
+        n: 1,
+        ranges: [
+          [5, 6],
+          [12, 13],
+          [19, 20],
+        ],
+      },
       { n: 2, ranges: [[16, 17]] },
       { n: 0, ranges: [[25, 25]] },
     ]);
     // A mirror inside another stop's placeholder: filled, that placeholder grows around it.
-    expect(expandSnippet("${1:f($2)} ${2:bb}", ctx)).toEqual({ text: "f(bb) bb", stops: [{ n: 1, ranges: [[0, 5]] }, { n: 2, ranges: [[6, 8], [2, 4]] }, { n: 0, ranges: [[8, 8]] }] });
+    expect(expandSnippet("${1:f($2)} ${2:bb}", ctx)).toEqual({
+      text: "f(bb) bb",
+      stops: [
+        { n: 1, ranges: [[0, 5]] },
+        {
+          n: 2,
+          ranges: [
+            [6, 8],
+            [2, 4],
+          ],
+        },
+        { n: 0, ranges: [[8, 8]] },
+      ],
+    });
     // A mirror before its placeholder: the placeholder still first, typed there.
-    expect(expandSnippet("$1-${1:ab}", ctx)).toEqual({ text: "ab-ab", stops: [{ n: 1, ranges: [[3, 5], [0, 2]] }, { n: 0, ranges: [[5, 5]] }] });
+    expect(expandSnippet("$1-${1:ab}", ctx)).toEqual({
+      text: "ab-ab",
+      stops: [
+        {
+          n: 1,
+          ranges: [
+            [3, 5],
+            [0, 2],
+          ],
+        },
+        { n: 0, ranges: [[5, 5]] },
+      ],
+    });
     const nested = expandSnippet("f(${1:a, ${2:b}})", ctx);
-    expect(nested).toEqual({ text: "f(a, b)", stops: [{ n: 1, ranges: [[2, 6]] }, { n: 2, ranges: [[5, 6]] }, { n: 0, ranges: [[7, 7]] }] });
+    expect(nested).toEqual({
+      text: "f(a, b)",
+      stops: [
+        { n: 1, ranges: [[2, 6]] },
+        { n: 2, ranges: [[5, 6]] },
+        { n: 0, ranges: [[7, 7]] },
+      ],
+    });
     // Out of order in the text, in order of their numbers.
     expect(expandSnippet("${2:b}${1:a}", ctx).stops.map((x) => x.n)).toEqual([1, 2, 0]);
   });
 
   test("choices (the first put in), variables (a value, a default, else the name), escapes, transforms left out", async () => {
     const { expandSnippet } = await import("../src/core/snippet.ts");
-    expect(expandSnippet("pick(${1|one,two,thr\\,ee|})", ctx)).toEqual({ text: "pick(one)", stops: [{ n: 1, ranges: [[5, 8]] }, { n: 0, ranges: [[9, 9]] }] });
-    expect(expandSnippet("$TM_FILENAME_BASE ${TM_SELECTED_TEXT:x} ${NOPE:dflt} $NOPE2 ${UNSET}", ctx).text).toBe("main  dflt NOPE2 UNSET");
+    expect(expandSnippet("pick(${1|one,two,thr\\,ee|})", ctx)).toEqual({
+      text: "pick(one)",
+      stops: [
+        { n: 1, ranges: [[5, 8]] },
+        { n: 0, ranges: [[9, 9]] },
+      ],
+    });
+    expect(expandSnippet("$TM_FILENAME_BASE ${TM_SELECTED_TEXT:x} ${NOPE:dflt} $NOPE2 ${UNSET}", ctx).text).toBe(
+      "main  dflt NOPE2 UNSET",
+    );
     expect(expandSnippet("a \\$1 \\} \\\\ $ ${", ctx).text).toBe("a $1 } \\ $ ${");
-    expect(expandSnippet("${1/(.*)/${1:/upcase}/g} x", ctx)).toEqual({ text: " x", stops: [{ n: 1, ranges: [[0, 0]] }, { n: 0, ranges: [[2, 2]] }] });
+    expect(expandSnippet("${1/(.*)/${1:/upcase}/g} x", ctx)).toEqual({
+      text: " x",
+      stops: [
+        { n: 1, ranges: [[0, 0]] },
+        { n: 0, ranges: [[2, 2]] },
+      ],
+    });
   });
 
   test("each new line indented as the first's, a tab as the file indents", async () => {
     const { expandSnippet } = await import("../src/core/snippet.ts");
     const s = expandSnippet("if (${1:x}) {\n\t$0\n}", { ...ctx, indent: "    ", unit: "\t" });
     expect(s.text).toBe("if (x) {\n    \t\n    }");
-    expect(s.stops).toEqual([{ n: 1, ranges: [[4, 5]] }, { n: 0, ranges: [[14, 14]] }]);
+    expect(s.stops).toEqual([
+      { n: 1, ranges: [[4, 5]] },
+      { n: 0, ranges: [[14, 14]] },
+    ]);
   });
 });
 
@@ -2863,10 +4017,19 @@ describe("changes against what's staged (26.1)", () => {
       { kind: "add", from: 4, to: 4, wasAt: 3, was: [], now: ["new"] },
       { kind: "delete", from: 6, to: 5, wasAt: 4, was: ["e"], now: [] },
     ]);
-    expect([...gitSigns(changes)]).toEqual([[2, "change"], [4, "add"], [5, "delete"]]);
+    expect([...gitSigns(changes)]).toEqual([
+      [2, "change"],
+      [4, "add"],
+      [5, "delete"],
+    ]);
     const top = gitChanges("x\na\n", "a\n");
     expect([...gitSigns(top)]).toEqual([[1, "topdelete"]]);
-    expect([changeAt(changes, 5)?.kind, changeAt(changes, 4)?.kind, changeAt(changes, 3), changeAt(top, 1)?.kind]).toEqual(["delete", "add", null, "delete"]);
+    expect([
+      changeAt(changes, 5)?.kind,
+      changeAt(changes, 4)?.kind,
+      changeAt(changes, 3),
+      changeAt(top, 1)?.kind,
+    ]).toEqual(["delete", "add", null, "delete"]);
     expect(changeDiff(changes[0]!)).toBe("-b\n+B");
     // Line endings aren't changes; the line after a final newline is no line.
     expect(gitChanges("a\nb\n", "a\r\nb\r\n")).toEqual([]);
@@ -2896,7 +4059,10 @@ describe("staging, from the source control view (26.2)", () => {
     const entries = parseEntries("MM a.md\0A  b.md\0R  new.md\0old.md\0?? u.md\0UU c.md\0 D d.md\0");
     // Every pair a merge's conflict has; sorted by path within each section.
     const s2 = sections(parseEntries("AA x.md\0DU y.md\0UD w.md\0M  z.md\0M  m.md\0"));
-    expect([s2.conflicted.map((e) => e.path), s2.staged.map((e) => e.path)]).toEqual([["w.md", "x.md", "y.md"], ["m.md", "z.md"]]);
+    expect([s2.conflicted.map((e) => e.path), s2.staged.map((e) => e.path)]).toEqual([
+      ["w.md", "x.md", "y.md"],
+      ["m.md", "z.md"],
+    ]);
     expect(entries).toEqual([
       { path: "a.md", x: "M", y: "M" },
       { path: "b.md", x: "A", y: " " },
@@ -2906,7 +4072,12 @@ describe("staging, from the source control view (26.2)", () => {
       { path: "d.md", x: " ", y: "D" },
     ]);
     const s = sections(entries);
-    expect([s.conflicted, s.staged, s.unstaged, s.untracked].map((l) => l.map((e) => e.path))).toEqual([["c.md"], ["a.md", "b.md", "new.md"], ["a.md", "d.md"], ["u.md"]]);
+    expect([s.conflicted, s.staged, s.unstaged, s.untracked].map((l) => l.map((e) => e.path))).toEqual([
+      ["c.md"],
+      ["a.md", "b.md", "new.md"],
+      ["a.md", "d.md"],
+      ["u.md"],
+    ]);
   });
 
   test("a commit message as git keeps it: # lines left out, blank lines around trimmed, runs of them one (26.3)", async () => {
@@ -2926,7 +4097,9 @@ describe("staging, from the source control view (26.2)", () => {
   });
 
   test("a file staged, unstaged, discarded; all staged and unstaged; one change staged and unstaged, the others left", async () => {
-    const { discardFile, stageAll, stageChange, stageFile, unstageAll, unstageChange, unstageFile } = await import("../src/core/gitstage.ts");
+    const { discardFile, stageAll, stageChange, stageFile, unstageAll, unstageChange, unstageFile } = await import(
+      "../src/core/gitstage.ts"
+    );
     const { gitChanges } = await import("../src/core/gitsigns.ts");
     const root = repo({ "a.md": "one\ntwo\nthree\nfour\n", "b.md": "b\n" });
     const c = { root };
@@ -2976,7 +4149,10 @@ describe("staging, from the source control view (26.2)", () => {
 });
 
 describe("blame and a file's history (26.4, 22.1)", () => {
-  const git = (cwd: string, ...args: string[]) => new TextDecoder().decode(Bun.spawnSync(["git", "-c", "user.email=t@example.invalid", "-c", "user.name=Ann", "-C", cwd, ...args]).stdout);
+  const git = (cwd: string, ...args: string[]) =>
+    new TextDecoder().decode(
+      Bun.spawnSync(["git", "-c", "user.email=t@example.invalid", "-c", "user.name=Ann", "-C", cwd, ...args]).stdout,
+    );
 
   test("a line now, in the last commit: shifted by the changes before it; null where it's changed", async () => {
     const { lineInHead } = await import("../src/core/gitlog.ts");
@@ -3057,7 +4233,13 @@ describe("SQLite, the runtime's own (node:sqlite)", () => {
       db.transaction(() => ins.run("f"));
     });
     db.transaction(() => ins.run("g"));
-    expect(db.prepare("select v from t order by id").all()).toEqual([{ v: "a" }, { v: "c" }, { v: "e" }, { v: "f" }, { v: "g" }]);
+    expect(db.prepare("select v from t order by id").all()).toEqual([
+      { v: "a" },
+      { v: "c" },
+      { v: "e" },
+      { v: "f" },
+      { v: "g" },
+    ]);
     // FTS5 as the index has it, bm25 weighted.
     db.exec("create virtual table f using fts5(a, b, tokenize = 'unicode61 remove_diacritics 2')");
     db.prepare("insert into f values (?, ?)").run("Café crème", "x");
@@ -3070,7 +4252,12 @@ describe("where slipbox keeps things (14.9)", () => {
   test("Linux and macOS: XDG's folders under home, or the XDG_* set — a relative one ignored, as XDG says", () => {
     for (const platform of ["linux", "darwin"]) {
       const at = (kind: StoreKind, env: Record<string, string> = {}) => storeDir(kind, platform, env, "/home/u");
-      expect([at("config"), at("cache"), at("state"), at("data")]).toEqual(["/home/u/.config/slipbox", "/home/u/.cache/slipbox", "/home/u/.local/state/slipbox", "/home/u/.local/share/slipbox"]);
+      expect([at("config"), at("cache"), at("state"), at("data")]).toEqual([
+        "/home/u/.config/slipbox",
+        "/home/u/.cache/slipbox",
+        "/home/u/.local/state/slipbox",
+        "/home/u/.local/share/slipbox",
+      ]);
       expect(at("cache", { XDG_CACHE_HOME: "/var/c" })).toBe("/var/c/slipbox");
       expect(at("data", { XDG_DATA_HOME: "rel/data" })).toBe("/home/u/.local/share/slipbox");
     }
@@ -3079,9 +4266,14 @@ describe("where slipbox keeps things (14.9)", () => {
     const env = { APPDATA: "C:\\Users\\u\\AppData\\Roaming", LOCALAPPDATA: "C:\\Users\\u\\AppData\\Local" };
     const at = (kind: StoreKind, e: Record<string, string> = env) => storeDir(kind, "win32", e, "C:\\Users\\u");
     expect(at("config")).toBe("C:\\Users\\u\\AppData\\Roaming\\slipbox");
-    expect([at("cache"), at("state"), at("data")]).toEqual(["cache", "state", "data"].map((k) => `C:\\Users\\u\\AppData\\Local\\slipbox\\${k}`));
+    expect([at("cache"), at("state"), at("data")]).toEqual(
+      ["cache", "state", "data"].map((k) => `C:\\Users\\u\\AppData\\Local\\slipbox\\${k}`),
+    );
     // Neither set: where Windows keeps them.
-    expect([at("config", {}), at("state", {})]).toEqual(["C:\\Users\\u\\AppData\\Roaming\\slipbox", "C:\\Users\\u\\AppData\\Local\\slipbox\\state"]);
+    expect([at("config", {}), at("state", {})]).toEqual([
+      "C:\\Users\\u\\AppData\\Roaming\\slipbox",
+      "C:\\Users\\u\\AppData\\Local\\slipbox\\state",
+    ]);
     expect(at("cache", { ...env, XDG_CACHE_HOME: "D:\\cache" })).toBe("D:\\cache\\slipbox");
     expect(at("cache", { ...env, XDG_CACHE_HOME: "cache" })).toBe("C:\\Users\\u\\AppData\\Local\\slipbox\\cache");
   });
@@ -3139,7 +4331,9 @@ describe("WSL (14.12)", () => {
     expect(windowsFontsDir([{ drive: "D:", at: c }])).toBeNull();
     expect(fontDirs(join(c, "Windows", "Fonts"))[0]).toBe(join(c, "Windows", "Fonts"));
     expect(fontDirs(null)).not.toContain(join(c, "Windows", "Fonts"));
-    expect(windowsDriveNote(join(base, "home", "notes"), true, drives)).toStartWith("these notes are on Windows' C: drive: a change a Windows program makes there reaches slipbox only in the files it has open");
+    expect(windowsDriveNote(join(base, "home", "notes"), true, drives)).toStartWith(
+      "these notes are on Windows' C: drive: a change a Windows program makes there reaches slipbox only in the files it has open",
+    );
     expect(windowsDriveNote(join(base, "home", "notes"), false, drives)).toBeNull();
     expect(windowsDriveNote(join(base, "home"), true, drives)).toBeNull();
   });
@@ -3149,7 +4343,11 @@ describe("document types (22.2, 22.3)", () => {
   test("built in: skill and adr; the config's change a built-in's keys, add their own, and turn one off with no paths", async () => {
     const { docTypes, ofType } = await import("../src/core/doctypes.ts");
     expect(docTypes().map((t) => t.name)).toEqual(["adr", "skill"]);
-    const t = docTypes({ skill: { required: ["name", "description", "license"] }, adr: { paths: [] }, memory: { paths: ["memory/*.md"], required: ["name"] } });
+    const t = docTypes({
+      skill: { required: ["name", "description", "license"] },
+      adr: { paths: [] },
+      memory: { paths: ["memory/*.md"], required: ["name"] },
+    });
     expect(t.map((x) => [x.name, x.source])).toEqual([
       ["memory", "config"],
       ["skill", "config"],
@@ -3159,16 +4357,34 @@ describe("document types (22.2, 22.3)", () => {
     expect(skill.paths).toEqual(["**/SKILL.md"]);
     expect(skill.required).toEqual(["name", "description", "license"]);
     expect(skill.keys).toEqual({ name: "string", description: "string" });
-    expect([ofType("SKILL.md", skill), ofType("skills/a/SKILL.md", skill), ofType("skills/a/skill.md", skill), ofType("skills/a/SKILL.md.bak", skill)]).toEqual([true, true, false, false]);
+    expect([
+      ofType("SKILL.md", skill),
+      ofType("skills/a/SKILL.md", skill),
+      ofType("skills/a/skill.md", skill),
+      ofType("skills/a/SKILL.md.bak", skill),
+    ]).toEqual([true, true, false, false]);
     const adr = docTypes().find((x) => x.name === "adr")!;
-    expect(["docs/adr/0001-x.md", "adr/0002-y.md", "docs/decisions/0003.md", "docs/adr/sub/0004.md", "docs/adr.md"].map((p) => ofType(p, adr))).toEqual([true, true, true, false, false]);
+    expect(
+      ["docs/adr/0001-x.md", "adr/0002-y.md", "docs/decisions/0003.md", "docs/adr/sub/0004.md", "docs/adr.md"].map(
+        (p) => ofType(p, adr),
+      ),
+    ).toEqual([true, true, true, false, false]);
   });
 
   test("frontmatter checked by a type's rules: missing, of another kind, not an allowed value — each at its key's line", async () => {
     const { docTypes, frontmatterProblems } = await import("../src/core/doctypes.ts");
-    const [memory] = docTypes({ memory: { paths: ["*.md"], required: ["name", "description", "metadata.type"], keys: { name: "string", created: "date", tags: "list", metadata: "table" }, values: { "metadata.type": ["user", "feedback"] } } }).filter((t) => t.name === "memory");
+    const [memory] = docTypes({
+      memory: {
+        paths: ["*.md"],
+        required: ["name", "description", "metadata.type"],
+        keys: { name: "string", created: "date", tags: "list", metadata: "table" },
+        values: { "metadata.type": ["user", "feedback"] },
+      },
+    }).filter((t) => t.name === "memory");
     const at = (text: string) => frontmatterProblems(text, [memory!]).map((p) => `${p.start.line}: ${p.message}`);
-    expect(at("---\nname: a\ndescription: b\ncreated: 2026-10-10\ntags: [x]\nmetadata:\n  type: user\n---\n# A\n")).toEqual([]);
+    expect(
+      at("---\nname: a\ndescription: b\ncreated: 2026-10-10\ntags: [x]\nmetadata:\n  type: user\n---\n# A\n"),
+    ).toEqual([]);
     expect(at("---\nname: 42\ncreated: soon\ntags: x\nmetadata:\n  other: 1\n  type: project\n---\n")).toEqual([
       '1: memory: "description" is missing',
       '2: memory: "name" should be a string, not a number',
@@ -3177,23 +4393,41 @@ describe("document types (22.2, 22.3)", () => {
       '7: memory: "metadata.type" is "project", not one of "user", "feedback"',
     ]);
     // A date is one, not text with one in it; a time after it is still one.
-    expect(at("---\nname: a\ndescription: b\ncreated: due 2026-10-10\nmetadata:\n  type: user\n---\n")).toEqual(['4: memory: "created" should be a date, not text']);
-    expect(at("---\nname: a\ndescription: b\ncreated: 2026-10-10T09:30:00Z\nmetadata:\n  type: user\n---\n")).toEqual([]);
+    expect(at("---\nname: a\ndescription: b\ncreated: due 2026-10-10\nmetadata:\n  type: user\n---\n")).toEqual([
+      '4: memory: "created" should be a date, not text',
+    ]);
+    expect(at("---\nname: a\ndescription: b\ncreated: 2026-10-10T09:30:00Z\nmetadata:\n  type: user\n---\n")).toEqual(
+      [],
+    );
     // Empty counts as missing; a dotted key missing inside its table too.
-    expect(at("---\nname: ''\ndescription: d\nmetadata: {}\n---\n")).toEqual(['1: memory: "name" is missing', '1: memory: "metadata.type" is missing']);
+    expect(at("---\nname: ''\ndescription: d\nmetadata: {}\n---\n")).toEqual([
+      '1: memory: "name" is missing',
+      '1: memory: "metadata.type" is missing',
+    ]);
     // No frontmatter at all; frontmatter that doesn't parse — said, the rules unchecked.
     expect(at("# Just a note\n")).toEqual(["1: a memory note needs frontmatter: name, description, metadata.type"]);
-    expect(at("---\nname: [unclosed\n---\n")[0]).toMatch(/^1: its frontmatter doesn't parse \(.+\): memory's rules unchecked$/);
+    expect(at("---\nname: [unclosed\n---\n")[0]).toMatch(
+      /^1: its frontmatter doesn't parse \(.+\): memory's rules unchecked$/,
+    );
     // TOML's (+++), its tables and dates its own.
-    expect(at('+++\nname = "a"\ndescription = "b"\ncreated = 2026-10-10\n[metadata]\ntype = "nope"\n+++\n')).toEqual(['6: memory: "metadata.type" is "nope", not one of "user", "feedback"']);
+    expect(at('+++\nname = "a"\ndescription = "b"\ncreated = 2026-10-10\n[metadata]\ntype = "nope"\n+++\n')).toEqual([
+      '6: memory: "metadata.type" is "nope", not one of "user", "feedback"',
+    ]);
     // A note of no ruled type: nothing.
-    expect(frontmatterProblems("# x\n", docTypes().filter((t) => t.name === "adr"))).toEqual([]);
+    expect(
+      frontmatterProblems(
+        "# x\n",
+        docTypes().filter((t) => t.name === "adr"),
+      ),
+    ).toEqual([]);
   });
 
   test("a status: the type's key, a Status line (bold or not), or a Status section's first line", async () => {
     const { statusOf } = await import("../src/core/doctypes.ts");
     expect(statusOf("---\nstatus: Accepted\n---\n# A\n\nStatus: Draft\n", "status")).toBe("Accepted");
-    expect(statusOf("# A\n\nStatus: Superseded by [0007](0007-x.md)\n", "status")).toBe("Superseded by [0007](0007-x.md)");
+    expect(statusOf("# A\n\nStatus: Superseded by [0007](0007-x.md)\n", "status")).toBe(
+      "Superseded by [0007](0007-x.md)",
+    );
     expect(statusOf("# A\n\n**Status:** Proposed\n", null)).toBe("Proposed");
     expect(statusOf("# A\n\nStatus: **Accepted**\n", null)).toBe("Accepted");
     expect(statusOf("# A\n\n**Status**: __Deprecated__\n", null)).toBe("Deprecated");
@@ -3210,7 +4444,9 @@ describe("document types (22.2, 22.3)", () => {
       { path: "docs/adr/0007-b.md", number: 7 },
     ];
     expect(supersededBy("Superseded by [0007](0007-b.md)", "docs/adr/0001-a.md", adrs)).toBe("docs/adr/0007-b.md");
-    expect(supersededBy("Superseded by [the new one](./0007-b.md#context)", "docs/adr/0001-a.md", adrs)).toBe("docs/adr/0007-b.md");
+    expect(supersededBy("Superseded by [the new one](./0007-b.md#context)", "docs/adr/0001-a.md", adrs)).toBe(
+      "docs/adr/0007-b.md",
+    );
     expect(supersededBy("superseded by [[0007-b]]", "docs/adr/0001-a.md", adrs)).toBe("docs/adr/0007-b.md");
     expect(supersededBy("Superseded by ADR-0007", "docs/adr/0001-a.md", adrs)).toBe("docs/adr/0007-b.md");
     expect(supersededBy("Superseded by D7", "docs/adr/0001-a.md", adrs)).toBe("docs/adr/0007-b.md");
@@ -3221,7 +4457,9 @@ describe("document types (22.2, 22.3)", () => {
       { path: "rfcs/old-approach.md", number: null },
       { path: "rfcs/new-approach.md", number: null },
     ];
-    expect(supersededBy("Superseded by [the new one](new-approach.md)", "rfcs/old-approach.md", rfcs)).toBe("rfcs/new-approach.md");
+    expect(supersededBy("Superseded by [the new one](new-approach.md)", "rfcs/old-approach.md", rfcs)).toBe(
+      "rfcs/new-approach.md",
+    );
     expect(supersededBy("Superseded by [gone](gone.md)", "rfcs/old-approach.md", rfcs)).toBeNull();
   });
 
@@ -3235,7 +4473,11 @@ describe("document types (22.2, 22.3)", () => {
       "docs/adr/ADR-0001-a.md": "---\nstatus: Accepted\n---\n# A\n",
       "notes/other.md": "# Other\n",
     };
-    const list = notesOfType(adr, Object.keys(files).map((path) => ({ path, title: path })), (rel) => files[rel] ?? null);
+    const list = notesOfType(
+      adr,
+      Object.keys(files).map((path) => ({ path, title: path })),
+      (rel) => files[rel] ?? null,
+    );
     expect(list.map((n) => [n.path, n.number, n.status, n.supersededBy])).toEqual([
       ["docs/adr/ADR-0001-a.md", 1, "Accepted", null],
       ["docs/adr/0002-b.md", 2, "Superseded by [0010](0010-c.md)", "docs/adr/0010-c.md"],
@@ -3247,7 +4489,10 @@ describe("document types (22.2, 22.3)", () => {
   test("[types.<name>] in a config: fields of the wrong kind dropped and said; a folder's types merge over yours by name", () => {
     const dir = mkdtempSync(join(sandbox, "types-cfg-"));
     const user = join(dir, "user.toml");
-    writeFileSync(user, '[types.memory]\npaths = ["memory/*.md"]\nrequired = ["name"]\nkeys = { name = "text" }\nnumber = "("\n');
+    writeFileSync(
+      user,
+      '[types.memory]\npaths = ["memory/*.md"]\nrequired = ["name"]\nkeys = { name = "text" }\nnumber = "("\n',
+    );
     const r = loadConfig({ configFile: user });
     expect(r.config.types.memory).toEqual({ paths: ["memory/*.md"], required: ["name"] });
     expect(r.warnings.filter((w) => w.includes("types.memory"))).toHaveLength(2);

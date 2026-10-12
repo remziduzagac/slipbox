@@ -8,7 +8,19 @@ import { existsSync, readFileSync } from "node:fs";
 import { basename, dirname, join, relative } from "node:path";
 import { changeDiff, type GitChange, gitChanges } from "../core/gitsigns.ts";
 import { showLater } from "../core/gitops.ts";
-import { discardFile, type GitDone, replaceLines, sections, stageAll, stageChange, stageFile, type StatusEntry, unstageAll, unstageChange, unstageFile } from "../core/gitstage.ts";
+import {
+  discardFile,
+  type GitDone,
+  replaceLines,
+  sections,
+  stageAll,
+  stageChange,
+  stageFile,
+  type StatusEntry,
+  unstageAll,
+  unstageChange,
+  unstageFile,
+} from "../core/gitstage.ts";
 import { climbsOut } from "../core/fsutil.ts";
 import { sanitize } from "../core/sanitize.ts";
 import { match } from "./match.ts";
@@ -27,7 +39,12 @@ export interface GitRow {
   change?: GitChange;
 }
 
-const TITLES: Record<GitSection, string> = { conflicted: "Conflicts", staged: "Staged", unstaged: "Changes", untracked: "Untracked" };
+const TITLES: Record<GitSection, string> = {
+  conflicted: "Conflicts",
+  staged: "Staged",
+  unstaged: "Changes",
+  untracked: "Untracked",
+};
 
 /** A file's state as one letter: what's staged in Staged, the working tree's elsewhere. */
 export function stateLetter(e: StatusEntry, section: GitSection): string {
@@ -78,7 +95,9 @@ export function fileChanges(app: App, e: StatusEntry, section: GitSection): GitC
   if (section !== "staged" && section !== "unstaged") return [];
   const t = textsOf(app, e.path);
   if (!t || t.head === undefined || t.index === undefined) return null;
-  return section === "staged" ? gitChanges(t.head ?? "", t.index ?? "") : gitChanges(t.index ?? "", onDisk(app, e.path));
+  return section === "staged"
+    ? gitChanges(t.head ?? "", t.index ?? "")
+    : gitChanges(t.index ?? "", onDisk(app, e.path));
 }
 
 /** The view's rows: each section's heading and files, a file opened up followed by its changes; the filter keeps files by path. */
@@ -93,11 +112,24 @@ export function gitRows(app: App): GitRow[] {
     rows.push({ kind: "heading", section, label: `${TITLES[section]} (${files.length})`, hint: "" });
     for (const e of files) {
       const dir = dirname(e.path);
-      rows.push({ kind: "file", section, entry: e, label: `${stateLetter(e, section)} ${sanitize(basename(e.path))}`, hint: dir === "." ? "" : sanitize(dir) });
+      rows.push({
+        kind: "file",
+        section,
+        entry: e,
+        label: `${stateLetter(e, section)} ${sanitize(basename(e.path))}`,
+        hint: dir === "." ? "" : sanitize(dir),
+      });
       if (!app.gitOpen.has(`${section}:${e.path}`)) continue;
       for (const change of fileChanges(app, e, section) ?? []) {
         const first = sanitize((change.now[0] ?? change.was[0] ?? "").trim());
-        rows.push({ kind: "change", section, entry: e, change, label: `  ${change.kind === "delete" ? `−${change.was.length}` : `${change.from}`} ${change.kind}`, hint: first });
+        rows.push({
+          kind: "change",
+          section,
+          entry: e,
+          change,
+          label: `  ${change.kind === "delete" ? `−${change.was.length}` : `${change.from}`} ${change.kind}`,
+          hint: first,
+        });
       }
     }
   }
@@ -150,7 +182,12 @@ function stage(app: App, row: GitRow): void {
     return after(app, stageChange(c, e.path, t.index ?? "", row.change!), `staged a change of ${e.path}`, e.path);
   }
   if (row.section === "staged") return app.message("info", `${e.path} is staged — u unstages it`);
-  after(app, stageFile(c, e.path), row.section === "conflicted" ? `${e.path} marked resolved` : `staged ${e.path}`, e.path);
+  after(
+    app,
+    stageFile(c, e.path),
+    row.section === "conflicted" ? `${e.path} marked resolved` : `staged ${e.path}`,
+    e.path,
+  );
 }
 
 /** `u`: the selected file, or change, unstaged. */
@@ -170,8 +207,10 @@ function unstage(app: App, row: GitRow): void {
 function discard(app: App, row: GitRow): void {
   const c = app.checkout!;
   const e = row.entry!;
-  if (row.section === "staged") return app.message("info", "staged: u unstages it first — discarding is for what isn't staged");
-  if (row.section === "conflicted") return app.message("info", "a conflict: resolve it in the file, then s marks it resolved");
+  if (row.section === "staged")
+    return app.message("info", "staged: u unstages it first — discarding is for what isn't staged");
+  if (row.section === "conflicted")
+    return app.message("info", "a conflict: resolve it in the file, then s marks it resolved");
   const rel = relOf(app, e.path);
   if (row.section === "untracked") {
     if (rel === null) return app.message("warn", `${e.path} is outside this root`);
@@ -202,9 +241,16 @@ function preview(app: App, row: GitRow): void {
   const changes = row.kind === "change" ? [row.change!] : fileChanges(app, e, row.section);
   // Git still reading the file's texts: shown once it has.
   if (changes === null) return void textsOf(app, e.path)?.ready.then(() => preview(app, row));
-  if (!changes.length) return app.message("info", row.section === "untracked" ? `${e.path} is new: all of it` : `${e.path}: nothing to show`);
+  if (!changes.length)
+    return app.message(
+      "info",
+      row.section === "untracked" ? `${e.path} is new: all of it` : `${e.path}: nothing to show`,
+    );
   const against = row.section === "staged" ? "the last commit" : "what's staged";
-  app.openHover(changes.map((ch) => `\`\`\`diff\n${changeDiff(ch)}\n\`\`\``).join("\n\n"), `${e.path} against ${against}`);
+  app.openHover(
+    changes.map((ch) => `\`\`\`diff\n${changeDiff(ch)}\n\`\`\``).join("\n\n"),
+    `${e.path} against ${against}`,
+  );
 }
 
 /** `enter`: the file opened, at the change (a file's first). */
@@ -212,12 +258,14 @@ function openRow(app: App, row: GitRow): void {
   const e = row.entry!;
   const rel = relOf(app, e.path);
   if (rel === null) return app.message("warn", `${e.path} is outside this root`);
-  if (!existsSync(join(app.checkout!.root, e.path))) return app.message("info", `${e.path} is deleted — . shows what it had`);
+  if (!existsSync(join(app.checkout!.root, e.path)))
+    return app.message("info", `${e.path} is deleted — . shows what it had`);
   app.openOrSwitchTab(rel);
   app.region = "content";
   const v = app.view;
   const place = (change: GitChange | undefined) => {
-    if (v && change && app.view === v) app.placeAtLine(v, Math.max(1, change.kind === "delete" ? change.from - 1 : change.from));
+    if (v && change && app.view === v)
+      app.placeAtLine(v, Math.max(1, change.kind === "delete" ? change.from - 1 : change.from));
   };
   if (row.change) return place(row.change);
   const now = fileChanges(app, e, row.section);
@@ -272,7 +320,11 @@ export function gitViewAction(app: App, action: string): void {
   }
   if (!row || row.kind === "heading") {
     // A section's heading: what acts on a file said, never nothing.
-    if (row && (action === "open_split" || action === "restore" || action === "delete")) app.message("info", "a section's heading: s, u and d act on the file selected — a stages everything, U unstages it");
+    if (row && (action === "open_split" || action === "restore" || action === "delete"))
+      app.message(
+        "info",
+        "a section's heading: s, u and d act on the file selected — a stages everything, U unstages it",
+      );
     return;
   }
   switch (action) {
@@ -281,7 +333,10 @@ export function gitViewAction(app: App, action: string): void {
       return;
     case "collapse": {
       const key = `${row.section}:${row.entry!.path}`;
-      if (row.kind === "change") s.selected = rows.findIndex((r) => r.kind === "file" && r.section === row.section && r.entry!.path === row.entry!.path);
+      if (row.kind === "change")
+        s.selected = rows.findIndex(
+          (r) => r.kind === "file" && r.section === row.section && r.entry!.path === row.entry!.path,
+        );
       app.gitOpen.delete(key);
       return;
     }

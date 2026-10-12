@@ -50,7 +50,11 @@ export function mermaidSvg(source: string, colors: DrawingColors, family: string
 export type Drawn = { rows: string[] } | { why: string };
 
 /** Gaps between boxes tried in turn until the diagram fits: the library's own across, then narrower. */
-const SPACINGS = [{ paddingX: 5, paddingY: 3 }, { paddingX: 3, paddingY: 3 }, { paddingX: 2, paddingY: 3 }];
+const SPACINGS = [
+  { paddingX: 5, paddingY: 3 },
+  { paddingX: 3, paddingY: 3 },
+  { paddingX: 2, paddingY: 3 },
+];
 
 /** Draw a Mermaid diagram at most `width` columns wide — in ASCII where the glyphs are; null while the library loads.
  *  (A drawn block is kept by the render cache, 15.1: drawn again only when it or the width changes.) */

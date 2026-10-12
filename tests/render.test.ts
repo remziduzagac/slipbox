@@ -33,12 +33,19 @@ delete process.env.SLIPBOX_CONFIG; // it would win over XDG_CONFIG_HOME: never t
 process.env.SLIPBOX_CLIPBOARD = "file"; // copies never reach the developer's clipboard
 afterAll(() => rmSync(sandbox, { recursive: true, force: true }));
 
-
 // The demo vault's notes, by path inside it.
 const SAMPLES = join(import.meta.dir, "..", "examples", "vault");
 const samples = (readdirSync(SAMPLES, { recursive: true }) as string[]).filter((f) => f.endsWith(".md")).sort();
 const unicode = glyphsFor("unicode");
-const text = (l: Layout) => l.lines.map((line) => line.spans.map((s) => s.text).join("").replace(/\s+$/, "")).join("\n");
+const text = (l: Layout) =>
+  l.lines
+    .map((line) =>
+      line.spans
+        .map((s) => s.text)
+        .join("")
+        .replace(/\s+$/, ""),
+    )
+    .join("\n");
 
 describe("no rendered row ever exceeds the layout width", () => {
   for (const file of samples) {
@@ -52,7 +59,8 @@ describe("no rendered row ever exceeds the layout width", () => {
           if (layout.clipped) throw new Error(`${file} @${width}: ${layout.clipped} row(s) had to be clipped`);
           for (const [i, line] of layout.lines.entries()) {
             const w = line.spans.reduce((a, s) => a + stringWidth(s.text), 0);
-            if (w > width) throw new Error(`${file} @${width}: row ${i} is ${w} wide: ${line.spans.map((s) => s.text).join("")}`);
+            if (w > width)
+              throw new Error(`${file} @${width}: row ${i} is ${w} wide: ${line.spans.map((s) => s.text).join("")}`);
           }
         }
       }
@@ -69,12 +77,18 @@ describe("no rendered row ever exceeds the layout width: the reference set", () 
   for (const file of notes) {
     test(file, () => {
       const src = readFileSync(join(HOME, file), "utf8");
-      for (const [width, glyphs] of [[24, unicode], [37, glyphsFor("ascii")], [80, unicode], [140, unicode]] as const) {
+      for (const [width, glyphs] of [
+        [24, unicode],
+        [37, glyphsFor("ascii")],
+        [80, unicode],
+        [140, unicode],
+      ] as const) {
         const layout = renderMarkdown(src, { width, glyphs, showUrls: false });
         if (layout.clipped) throw new Error(`${file} @${width}: ${layout.clipped} row(s) had to be clipped`);
         for (const [i, line] of layout.lines.entries()) {
           const w = line.spans.reduce((a, s) => a + stringWidth(s.text), 0);
-          if (w > width) throw new Error(`${file} @${width}: row ${i} is ${w} wide: ${line.spans.map((s) => s.text).join("")}`);
+          if (w > width)
+            throw new Error(`${file} @${width}: row ${i} is ${w} wide: ${line.spans.map((s) => s.text).join("")}`);
         }
       }
     });
@@ -89,7 +103,14 @@ describe("snapshots of the layout IR as text", () => {
     });
   }
   // The samples beyond markdown, each read by its own reader (16.11–16.13, 16.16, 16.17).
-  const others = (readdirSync(SAMPLES, { recursive: true }) as string[]).filter((f) => /\.(toml|ya?ml|json|csv|tsv|ini|cfg|properties|env)$/.test(f) && !/broken|photometry/.test(f) && !f.split("/").includes(".slipbox")).sort(); // a vault's marker, nested ones too
+  const others = (readdirSync(SAMPLES, { recursive: true }) as string[])
+    .filter(
+      (f) =>
+        /\.(toml|ya?ml|json|csv|tsv|ini|cfg|properties|env)$/.test(f) &&
+        !/broken|photometry/.test(f) &&
+        !f.split("/").includes(".slipbox"),
+    )
+    .sort(); // a vault's marker, nested ones too
   test("the samples beyond markdown are there", () => {
     expect(others.length).toBeGreaterThanOrEqual(6);
   });
@@ -106,13 +127,18 @@ describe("snapshots of the layout IR as text", () => {
     const src = readFileSync(join(SAMPLES, "logs", "photometry-2026.csv"), "utf8");
     const parsed = parseData("csv", src);
     expect(parsed.error).toBeNull();
-    const t = parsed.tree.children[0] as unknown as { type: string; children: { position: { start: { line: number } } }[] };
+    const t = parsed.tree.children[0] as unknown as {
+      type: string;
+      children: { position: { start: { line: number } } }[];
+    };
     expect(t.type).toBe("table");
     expect(t.children.length).toBe(2001); // the header and 2,000 rows
     expect(t.children[2000]!.position.start.line).toBe(2001);
     const out = text(renderTree(parsed.tree, { width: 120, glyphs: unicode, showUrls: false }));
     expect(out).toContain("… 600 more rows");
-    const cells = (t.children as unknown as { children: { children: { value?: string }[] }[] }[]).flatMap((r) => r.children.map((c) => c.children[0]?.value ?? ""));
+    const cells = (t.children as unknown as { children: { children: { value?: string }[] }[] }[]).flatMap((r) =>
+      r.children.map((c) => c.children[0]?.value ?? ""),
+    );
     expect(cells).toContain('"comparison star C3, not C2"'); // doubled quotes read as one
   });
   test("wrap-probe @ 44 (narrow)", () => {
@@ -130,14 +156,22 @@ describe("blocks and inlines (2.2)", () => {
     expect(r("> [!warning] Mind the gap\n> Body text here.\n\n> [!NOTE]\n> Plain note.\n")).toMatchSnapshot();
   });
   test("code blocks are full width, labelled, and hard-wrapped", () => {
-    const layout = renderMarkdown("```ts\nconst x = 1; // a comment that is long enough to wrap around\n```\n", { width: 40, glyphs: unicode, showUrls: false });
+    const layout = renderMarkdown("```ts\nconst x = 1; // a comment that is long enough to wrap around\n```\n", {
+      width: 40,
+      glyphs: unicode,
+      showUrls: false,
+    });
     expect(layout.lines.every((l) => l.fill === "code_block")).toBe(true);
     expect(text(layout)).toMatchSnapshot();
     const roles = new Set(layout.lines.flatMap((l) => l.spans.map((s) => s.role)));
     expect(roles.has("syn_keyword")).toBe(true);
     expect(roles.has("syn_comment")).toBe(true);
     // A label wider than the row is cut with …: nothing left for the last defence to clip.
-    const long = renderMarkdown("```a-very-long-language-name-that-is-wider-than-the-row\nx\n```\n", { width: 24, glyphs: unicode, showUrls: false });
+    const long = renderMarkdown("```a-very-long-language-name-that-is-wider-than-the-row\nx\n```\n", {
+      width: 24,
+      glyphs: unicode,
+      showUrls: false,
+    });
     expect(long.clipped ?? 0).toBe(0);
     expect(long.lines[0]!.spans.map((s) => s.text).join("")).toBe("a-very-long-language-n… ");
   });
@@ -157,14 +191,27 @@ describe("blocks and inlines (2.2)", () => {
     expect(roles).toEqual(["link", "link_unresolved", "link_unresolved", "link"]); // [[c]] a link again (21.3)
     expect(layout.lines[0]!.spans.map((s) => s.text).join("")).toBe("a b c x");
     expect(layout.lines[1]!.spans.map((s) => s.text).join("")).toBe("next");
-    expect(layout.links.map((l) => [l.line, l.col])).toEqual([[0, 0], [0, 2], [0, 4], [0, 6]]);
+    expect(layout.links.map((l) => [l.line, l.col])).toEqual([
+      [0, 0],
+      [0, 2],
+      [0, 4],
+      [0, 6],
+    ]);
   });
   test("Obsidian's ==highlight== on a background of its own, a link inside it too; `a == b`, `===x===`, `\\==y==` text; %%comments%% hidden — the space where one was made one, a paragraph of them no row, one over blank lines (a list's last line closing it) no rows", () => {
-    const md = "%% Check with Mum. %%\n\nA ==splash of **vanilla** and [[Dal]]== here; a == b, ===x===, \\==y==.\nText %% a note %% goes on, %%across\nlines%% to the end, %%a last word%%\nthe last line %%really%%.\n\n%%\nA block, [[Dal]] in it:\n\n- over a blank line;\n- a list, the closing marks its last item's.\n%%\n\nAfter.\n";
+    const md =
+      "%% Check with Mum. %%\n\nA ==splash of **vanilla** and [[Dal]]== here; a == b, ===x===, \\==y==.\nText %% a note %% goes on, %%across\nlines%% to the end, %%a last word%%\nthe last line %%really%%.\n\n%%\nA block, [[Dal]] in it:\n\n- over a blank line;\n- a list, the closing marks its last item's.\n%%\n\nAfter.\n";
     const layout = renderMarkdown(md, { width: 100, glyphs: unicode, showUrls: false, resolveLink: () => "resolved" });
-    expect(text(layout)).toBe("A splash of vanilla and Dal here; a == b, ===x===, ==y==. Text goes on, to the end, the last line.\n\nAfter.");
+    expect(text(layout)).toBe(
+      "A splash of vanilla and Dal here; a == b, ===x===, ==y==. Text goes on, to the end, the last line.\n\nAfter.",
+    );
     const spans = layout.lines[0]!.spans;
-    expect(spans.filter((s) => s.role === "highlight" || s.bg === "highlight").map((s) => [s.text, s.role])).toEqual([["splash of ", "highlight"], ["vanilla", "highlight"], [" and ", "highlight"], ["Dal", "wikilink"]]);
+    expect(spans.filter((s) => s.role === "highlight" || s.bg === "highlight").map((s) => [s.text, s.role])).toEqual([
+      ["splash of ", "highlight"],
+      ["vanilla", "highlight"],
+      [" and ", "highlight"],
+      ["Dal", "wikilink"],
+    ]);
     expect(spans.find((s) => s.text === "vanilla")!.attrs & A_BOLD).toBe(A_BOLD);
     // Rows keep their source lines: after a comment across lines, line 5's words; after one that ends a line, line 6's;
     // After. is line 15.
@@ -172,7 +219,9 @@ describe("blocks and inlines (2.2)", () => {
     expect(spans.find((s) => s.text.includes("the last line"))!.src).toBe(6);
     expect(layout.lines.at(-1)!.src).toBe(15);
     // A comment over blank lines closes only at a `%%` of its own: an escaped one is text, and so is all of it.
-    expect(text(renderMarkdown("%% opens\n\nends \\%%\n", { width: 60, glyphs: unicode, showUrls: false }))).toBe("%% opens\n\nends %%");
+    expect(text(renderMarkdown("%% opens\n\nends \\%%\n", { width: 60, glyphs: unicode, showUrls: false }))).toBe(
+      "%% opens\n\nends %%",
+    );
     // Only the links drawn are the layout's; a comment's are still the note's (what the index reads), only not drawn.
     expect(layout.links.map((l) => l.target)).toEqual(["Dal"]);
     expect(JSON.stringify(parseMarkdown(md).tree).match(/"wikiLink"/g)).toHaveLength(2);
@@ -193,12 +242,16 @@ describe("blocks and inlines (2.2)", () => {
     expect(shown("a ![[dal.png|the finished dal]] b")).toEqual([[`${img} the finished dal`, "image"]]);
     expect(shown("a ![[dal.png|dal for 4]] b")).toEqual([[`${img} dal for 4`, "image"]]);
     // Not a picture: a note's or a file's embed, its `|…` its words still.
-    expect(shown("a ![[Dal|300]] ![[pantry.csv]] b")).toEqual([[`${unicode.embed} 300`, "embed"], [`${unicode.embed} pantry.csv`, "embed"]]);
+    expect(shown("a ![[Dal|300]] ![[pantry.csv]] b")).toEqual([
+      [`${unicode.embed} 300`, "embed"],
+      [`${unicode.embed} pantry.csv`, "embed"],
+    ]);
   });
   test("a picture embedded by name, alone in its paragraph, is asked for by its name and Obsidian's size (12.13); a note's embed, one beside text, a link to one, isn't", () => {
     const asked: PictureSource[] = [];
     const picture = (from: PictureSource) => (asked.push(from), { src: "/pictures/p.png", cols: 4, rows: 2 });
-    const md = "![[dal.png]]\n\n![[a/dal.png|300]]\n\n![[flip.JPG|240x180]]\n\n![[dal.png|the finished dal]]\n\n![[Dal|300]]\n\nbeside ![[dal.png]] text\n\n[[dal.png]]\n";
+    const md =
+      "![[dal.png]]\n\n![[a/dal.png|300]]\n\n![[flip.JPG|240x180]]\n\n![[dal.png|the finished dal]]\n\n![[Dal|300]]\n\nbeside ![[dal.png]] text\n\n[[dal.png]]\n";
     const l = renderMarkdown(md, { width: 60, glyphs: unicode, showUrls: false, picture });
     expect(asked).toEqual([
       { name: "dal.png", size: null },
@@ -211,16 +264,37 @@ describe("blocks and inlines (2.2)", () => {
     expect(rows.slice(0, 4)).toEqual([`${unicode.image} dal.png`, "picture", "", ""]);
   });
   test("source lines survive wrapping (3.5 anchors on them)", () => {
-    const layout = renderMarkdown("# H\n\npara one\nline two\n\nsecond para\n", { width: 6, glyphs: unicode, showUrls: false });
+    const layout = renderMarkdown("# H\n\npara one\nline two\n\nsecond para\n", {
+      width: 6,
+      glyphs: unicode,
+      showUrls: false,
+    });
     const srcs = layout.lines.filter((l) => l.spans.length).map((l) => l.src);
     expect(srcs[0]).toBe(1);
     expect(srcs).toContain(4);
     expect(srcs[srcs.length - 1]).toBe(6);
   });
   test("an unterminated escape in a code block keeps the block's lines and their source lines", () => {
-    const layout = renderMarkdown("para\n\n```\nline one \x1b]0;title\nline two\nline three\n```\n\nafter\n", { width: 40, glyphs: unicode, showUrls: false });
-    const rows = layout.lines.map((l) => [l.src, l.spans.map((s) => s.text).join("").trim()] as const);
-    expect(rows.filter(([, t]) => t.startsWith("line"))).toEqual([[4, "line one"], [5, "line two"], [6, "line three"]]);
+    const layout = renderMarkdown("para\n\n```\nline one \x1b]0;title\nline two\nline three\n```\n\nafter\n", {
+      width: 40,
+      glyphs: unicode,
+      showUrls: false,
+    });
+    const rows = layout.lines.map(
+      (l) =>
+        [
+          l.src,
+          l.spans
+            .map((s) => s.text)
+            .join("")
+            .trim(),
+        ] as const,
+    );
+    expect(rows.filter(([, t]) => t.startsWith("line"))).toEqual([
+      [4, "line one"],
+      [5, "line two"],
+      [6, "line three"],
+    ]);
     expect(rows.at(-1)).toEqual([9, "after"]);
   });
   test("frontmatter renders as properties, with the parse error when broken", () => {
@@ -284,7 +358,18 @@ describe("table allocator — height minimisation over generated tables", () => 
   test("same invariants, and never worse than water-filling (height + split words)", async () => {
     const { measure, fit } = await import("../src/core/layout/wrap.ts");
     const { longestWord, naturalWidth } = await import("../src/core/layout/wrap.ts");
-    const words = ["a", "to", "the", "window", "configuration", "pipe_table.wrap", "~/workshop/<project>/", "x", "individual", "日本語"];
+    const words = [
+      "a",
+      "to",
+      "the",
+      "window",
+      "configuration",
+      "pipe_table.wrap",
+      "~/workshop/<project>/",
+      "x",
+      "individual",
+      "日本語",
+    ];
     for (let run = 0; run < 400; run++) {
       const cols = 1 + rand(5);
       const rows = 1 + rand(8);
@@ -422,16 +507,44 @@ describe("the allocator predicts exactly what is drawn (review cycle 2)", () => 
       seed = (Math.imul(seed, 1103515245) + 12345) & 0x7fffffff;
       return (seed >>> 8) % n; // the high bits: an LCG's low ones repeat quickly
     };
-    const pieces = ["a", "word", "漢", "字", "、", "。", "（", "）", "「", "」", "ｱ", "ー", "…", "🎉", "👨‍👩‍👧", "é", " ", "  ", "/", "-", ".", ",", "\n", "longidentifier_with.parts/and-more"];
+    const pieces = [
+      "a",
+      "word",
+      "漢",
+      "字",
+      "、",
+      "。",
+      "（",
+      "）",
+      "「",
+      "」",
+      "ｱ",
+      "ー",
+      "…",
+      "🎉",
+      "👨‍👩‍👧",
+      "é",
+      " ",
+      "  ",
+      "/",
+      "-",
+      ".",
+      ",",
+      "\n",
+      "longidentifier_with.parts/and-more",
+    ];
     for (let k = 0; k < 3000; k++) {
       const parts = Array.from({ length: 1 + rand(14) }, () => pieces[rand(pieces.length)]!);
       const cut = rand(parts.length);
-      const spans: Span[] = [parts.slice(0, cut).join(""), parts.slice(cut).join("")].filter(Boolean).map((text) => ({ text, role: "text", attrs: 0 }));
+      const spans: Span[] = [parts.slice(0, cut).join(""), parts.slice(cut).join("")]
+        .filter(Boolean)
+        .map((text) => ({ text, role: "text", attrs: 0 }));
       if (!spans.length) continue;
       for (let w = 2; w <= 14; w++) {
         const predicted = countLines(measure(spans), w);
         const drawn = wrapSpans(spans, w).length;
-        if (predicted !== drawn) throw new Error(`${JSON.stringify(spans.map((x) => x.text))} @${w}: predicted ${predicted}, drawn ${drawn}`);
+        if (predicted !== drawn)
+          throw new Error(`${JSON.stringify(spans.map((x) => x.text))} @${w}: predicted ${predicted}, drawn ${drawn}`);
       }
     }
   });
@@ -444,13 +557,20 @@ describe("the allocator predicts exactly what is drawn (review cycle 2)", () => 
         expect(countLines(measure(spans), w)).toBe(rows.length);
       }
     }
-    expect(wrapSpans([{ text: "漢字漢字漢字漢字…", role: "text", attrs: 0 }], 16).map((r) => r.map((x) => x.text).join(""))).toEqual(["漢字漢字漢字漢", "字…"]);
+    expect(
+      wrapSpans([{ text: "漢字漢字漢字漢字…", role: "text", attrs: 0 }], 16).map((r) => r.map((x) => x.text).join("")),
+    ).toEqual(["漢字漢字漢字漢", "字…"]);
   });
 });
 
 describe("wrapping ASCII by ranges gives the grapheme wrap's rows, exactly (15.1)", () => {
   test("a long paragraph wraps in linear time: twice the spans, about twice the time (never each row scanning them all)", () => {
-    const spans = (n: number): Span[] => Array.from({ length: n }, (_, i) => ({ text: `lat=54.7425${i % 10} lon=-3.2049 `, role: i % 2 ? "text" : "link", attrs: 0 }));
+    const spans = (n: number): Span[] =>
+      Array.from({ length: n }, (_, i) => ({
+        text: `lat=54.7425${i % 10} lon=-3.2049 `,
+        role: i % 2 ? "text" : "link",
+        attrs: 0,
+      }));
     const time = (n: number) => {
       const s = spans(n);
       const t = performance.now();
@@ -468,7 +588,29 @@ describe("wrapping ASCII by ranges gives the grapheme wrap's rows, exactly (15.1
       seed = (Math.imul(seed, 1103515245) + 12345) & 0x7fffffff;
       return (seed >>> 8) % n;
     };
-    const pieces = ["a", "word", " ", "  ", "   ", "/", "-", ".", ",", "?", "=", "|", "_", "x/y", "a-b-c", "longidentifier_with.parts/and-more", "https://example.org/a?b=c&d", "!", "(", "~", ""];
+    const pieces = [
+      "a",
+      "word",
+      " ",
+      "  ",
+      "   ",
+      "/",
+      "-",
+      ".",
+      ",",
+      "?",
+      "=",
+      "|",
+      "_",
+      "x/y",
+      "a-b-c",
+      "longidentifier_with.parts/and-more",
+      "https://example.org/a?b=c&d",
+      "!",
+      "(",
+      "~",
+      "",
+    ];
     const roles = ["text", "strong", "link"] as const;
     let fast = 0;
     for (let k = 0; k < 4000; k++) {
@@ -480,7 +622,10 @@ describe("wrapping ASCII by ranges gives the grapheme wrap's rows, exactly (15.1
       for (let w = 1; w <= 24; w++) {
         const a = wrapSpans(spans, w);
         const b = wrapGraphemes(spans, w);
-        if (JSON.stringify(a) !== JSON.stringify(b)) throw new Error(`${JSON.stringify(spans.map((x) => x.text))} @${w}:\n${JSON.stringify(a)}\n${JSON.stringify(b)}`);
+        if (JSON.stringify(a) !== JSON.stringify(b))
+          throw new Error(
+            `${JSON.stringify(spans.map((x) => x.text))} @${w}:\n${JSON.stringify(a)}\n${JSON.stringify(b)}`,
+          );
         fast++;
       }
     }
@@ -505,7 +650,10 @@ describe("deep nesting at the narrowest widths loses nothing (review cycle 2)", 
         for (const glyphs of [glyphsFor("unicode"), glyphsFor("ascii")]) {
           const l = renderMarkdown(md, { width, glyphs, showUrls: false });
           expect(l.clipped).toBe(0);
-          const shown = l.lines.map((x) => x.spans.map((sp) => sp.text).join("")).join("").replace(/[\s↪…]/g, "");
+          const shown = l.lines
+            .map((x) => x.spans.map((sp) => sp.text).join(""))
+            .join("")
+            .replace(/[\s↪…]/g, "");
           // A word may wrap across rows (a record's value, a code line), with borders between the
           // pieces: every one of its letters must still be there, in order.
           const inOrder = (word: string) => {
@@ -527,8 +675,15 @@ describe("deep nesting at the narrowest widths loses nothing (review cycle 2)", 
 });
 
 describe("review cycle 2 (rendering)", () => {
-  const lay = (md: string, width = 60, showUrls = false) => renderMarkdown(md, { width, glyphs: glyphsFor("unicode"), showUrls });
-  const rows = (l: Layout) => l.lines.map((x) => x.spans.map((s) => s.text).join("").trimEnd());
+  const lay = (md: string, width = 60, showUrls = false) =>
+    renderMarkdown(md, { width, glyphs: glyphsFor("unicode"), showUrls });
+  const rows = (l: Layout) =>
+    l.lines.map((x) =>
+      x.spans
+        .map((s) => s.text)
+        .join("")
+        .trimEnd(),
+    );
   test("every link drawn is placed: in a record's header, and a badge's outer link", () => {
     const records = lay("| [[Alpha]] | [b](http://b) | c |\n|---|---|---|\n| 1 | 2 | 3 |\n", 12);
     expect(records.links.every((l) => l.line >= 0)).toBe(true);
@@ -559,10 +714,21 @@ describe("review cycle 2 (rendering)", () => {
 
 describe("review cycle 4 (markdown against the specs)", () => {
   const lay = (md: string, width = 60) => renderMarkdown(md, { width, glyphs: glyphsFor("unicode"), showUrls: false });
-  const rows = (l: Layout) => l.lines.map((x) => x.spans.map((s) => s.text).join("").trimEnd());
+  const rows = (l: Layout) =>
+    l.lines.map((x) =>
+      x.spans
+        .map((s) => s.text)
+        .join("")
+        .trimEnd(),
+    );
   test("a heading's text and slug are the outline's: no footnote marks or image glyphs; repeats share a slug", () => {
     const l = lay("# Title[^1]\n\n# ![logo](l.png) Project\n\n# A\n\n# A\n\n[^1]: n\n");
-    expect(l.headings.map((h) => [h.text, h.slug])).toEqual([["Title", "title"], ["Project", "project"], ["A", "a"], ["A", "a"]]);
+    expect(l.headings.map((h) => [h.text, h.slug])).toEqual([
+      ["Title", "title"],
+      ["Project", "project"],
+      ["A", "a"],
+      ["A", "a"],
+    ]);
   });
   test("footnote definitions are marked by identifier, with their paragraphs apart", () => {
     const l = lay("See[^Note].\n\n[^Note]: First.\n\n    Second.\n");
@@ -578,14 +744,24 @@ describe("review cycle 4 (markdown against the specs)", () => {
   test("numbered tasks keep their numbers; indented code reports its own lines", () => {
     expect(rows(lay("1. [ ] a\n2. [x] b\n"))[0]).toMatch(/^1\. /);
     const code = lay("text\n\n    code1\n    code2\n");
-    const c1 = code.lines.find((x) => x.spans.map((s) => s.text).join("").includes("code1"))!;
+    const c1 = code.lines.find((x) =>
+      x.spans
+        .map((s) => s.text)
+        .join("")
+        .includes("code1"),
+    )!;
     expect(c1.src).toBe(3);
   });
 });
 
 describe("review cycle 5 (render, from mutation testing)", () => {
   test("an escape before a tab in a code block doesn't move the tab stop", () => {
-    const rows = (code: string) => renderMarkdown(`\`\`\`\n${code}\n\`\`\`\n`, { width: 60, glyphs: glyphsFor("unicode"), showUrls: false }).lines.map((l) => l.spans.map((s) => s.text).join(""));
+    const rows = (code: string) =>
+      renderMarkdown(`\`\`\`\n${code}\n\`\`\`\n`, {
+        width: 60,
+        glyphs: glyphsFor("unicode"),
+        showUrls: false,
+      }).lines.map((l) => l.spans.map((s) => s.text).join(""));
     expect(rows("ab\x1b[31mcd\x1b[0mef\tgh")).toEqual(rows("abcdef\tgh"));
   });
 });
@@ -593,7 +769,11 @@ describe("review cycle 5 (render, from mutation testing)", () => {
 describe("review cycle 5 (render: what the snapshots can't see)", () => {
   test("each callout kind takes its own role; GitHub's capitals too; TOML frontmatter is a properties block", () => {
     const roleOf = (kind: string) => {
-      const l = renderMarkdown(`> [!${kind}] T\n> body\n`, { width: 60, glyphs: glyphsFor("unicode"), showUrls: false });
+      const l = renderMarkdown(`> [!${kind}] T\n> body\n`, {
+        width: 60,
+        glyphs: glyphsFor("unicode"),
+        showUrls: false,
+      });
       return l.lines[0]!.spans.find((s) => s.role.startsWith("callout_"))?.role;
     };
     expect(roleOf("note")).toBe("callout_note");
@@ -609,7 +789,11 @@ describe("review cycle 5 (render: what the snapshots can't see)", () => {
       expect(l.lines.flatMap((x) => x.spans.map((sp) => sp.role)).some((r) => r.startsWith("callout_"))).toBe(false);
       expect(l.lines.map((x) => x.spans.map((sp) => sp.text).join("")).join("\n")).toContain("[");
     }
-    const fm = renderMarkdown('+++\ntitle = "T"\ntags = ["a"]\n+++\n\nx\n', { width: 60, glyphs: glyphsFor("unicode"), showUrls: false });
+    const fm = renderMarkdown('+++\ntitle = "T"\ntags = ["a"]\n+++\n\nx\n', {
+      width: 60,
+      glyphs: glyphsFor("unicode"),
+      showUrls: false,
+    });
     const rows = fm.lines.map((l) => l.spans.map((s) => s.text).join(""));
     expect(rows[0]).toContain("properties");
     expect(rows.some((r) => /title\s+T/.test(r))).toBe(true);
@@ -626,7 +810,20 @@ describe("the render cache (15.1)", () => {
       seed = (Math.imul(seed, 1103515245) + 12345) & 0x7fffffff;
       return (seed >>> 8) % n;
     };
-    const blocksPool = ["# Heading", "## Sub [[link]]", "Some text with [ref] and [^fn] and **bold**.", "- [ ] task\n- [x] done\n  - nested", "```ts\nconst x = 1;\n```", "| a | b |\n| - | - |\n| 1 | 2 |", "> quote with [[other]]", "[ref]: https://example.invalid", "[^fn]: A footnote.", "1. one\n2. two", "<!-- comment -->", "---"];
+    const blocksPool = [
+      "# Heading",
+      "## Sub [[link]]",
+      "Some text with [ref] and [^fn] and **bold**.",
+      "- [ ] task\n- [x] done\n  - nested",
+      "```ts\nconst x = 1;\n```",
+      "| a | b |\n| - | - |\n| 1 | 2 |",
+      "> quote with [[other]]",
+      "[ref]: https://example.invalid",
+      "[^fn]: A footnote.",
+      "1. one\n2. two",
+      "<!-- comment -->",
+      "---",
+    ];
     const pcache = newParseCache();
     const rcache = newRenderCache();
     let blocks = Array.from({ length: 60 }, () => blocksPool[rand(blocksPool.length)]!);
@@ -638,7 +835,11 @@ describe("the render cache (15.1)", () => {
       else blocks[at] = `${blocks[at]} more`;
       const text = `${blocks.join("\n\n")}\n`;
       // Options change now and then (each change drops the cache), not at every step (then nothing is reused).
-      const opts = { width: [40, 80][Math.floor(step / 20) % 2]!, glyphs: glyphsFor("unicode"), showUrls: Math.floor(step / 30) % 2 === 1 };
+      const opts = {
+        width: [40, 80][Math.floor(step / 20) % 2]!,
+        glyphs: glyphsFor("unicode"),
+        showUrls: Math.floor(step / 30) % 2 === 1,
+      };
       const p = parseMarkdown(text, pcache);
       const cached = renderTree(p.tree, opts, p.frontmatter, rcache);
       const fresh = renderTree(parseMarkdown(text, undefined, { whole: true }).tree, opts, p.frontmatter);
@@ -657,37 +858,61 @@ describe("narrow panes: embeds, callouts and data trees cut nothing (review cycl
     }
   };
   test("an embed of a note with a table and a list, nested or not, at widths 6 to 24", () => {
-    const inner = parseNoteFile("inner.md", "| name | value |\n|---|---|\n| alpha | 1 |\n\n- one\n  - two words here\n").tree.children;
+    const inner = parseNoteFile("inner.md", "| name | value |\n|---|---|\n| alpha | 1 |\n\n- one\n  - two words here\n")
+      .tree.children;
     const embed = () => ({ path: "/v/inner.md", title: "inner", nodes: inner });
     for (const md of ["![[inner]]\n", "- a\n  - ![[inner]]\n", "> > > ![[inner]]\n"]) {
       for (let width = 6; width <= 24; width++) {
-        for (const glyphs of [unicodeG, glyphsFor("ascii")]) fits(renderMarkdown(md, { width, glyphs, showUrls: false, embed }), JSON.stringify(md));
+        for (const glyphs of [unicodeG, glyphsFor("ascii")])
+          fits(renderMarkdown(md, { width, glyphs, showUrls: false, embed }), JSON.stringify(md));
       }
     }
   });
   test("a callout too narrow for its bar keeps its text's room, as a quote does", () => {
-    const l = renderMarkdown("> [!warning] Warning\n> > [!note] Inner\n> > > [!tip] Deep words here\n", { width: 8, glyphs: unicodeG, showUrls: false });
+    const l = renderMarkdown("> [!warning] Warning\n> > [!note] Inner\n> > > [!tip] Deep words here\n", {
+      width: 8,
+      glyphs: unicodeG,
+      showUrls: false,
+    });
     fits(l, "callouts");
-    const shown = l.lines.map((x) => x.spans.map((s) => s.text).join("").trim());
+    const shown = l.lines.map((x) =>
+      x.spans
+        .map((s) => s.text)
+        .join("")
+        .trim(),
+    );
     expect(shown.some((r) => r.includes("Warning"))).toBe(true); // not wrapped two columns wide
     expect(shown.some((r) => r.includes("words"))).toBe(true);
   });
   test("a deep data tree with records, and the reference set's data files, at 8 to 37", () => {
-    const deep = parseData("yaml", "a:\n  b:\n    c:\n      d:\n        e:\n          f:\n            long_key_name: a value of several words\n            records:\n              - name: alpha\n                value: 1\n              - name: beta\n                value: 2\n            # a comment\n            k: v\n");
+    const deep = parseData(
+      "yaml",
+      "a:\n  b:\n    c:\n      d:\n        e:\n          f:\n            long_key_name: a value of several words\n            records:\n              - name: alpha\n                value: 1\n              - name: beta\n                value: 2\n            # a comment\n            k: v\n",
+    );
     expect(deep.error).toBeNull();
     const HOME = join(import.meta.dir, "..", "examples", "home");
     // The trees and key-value files under 64 KB (a CSV is one table, the big ones slow to sweep).
     const files = (readdirSync(HOME, { recursive: true }) as string[])
-      .filter((f) => !f.split("/").includes(".slipbox") && classify(f, ["md"]).group === "data" && !/\.(csv|tsv)$/.test(f) && statSync(join(HOME, f)).size < 65_536)
+      .filter(
+        (f) =>
+          !f.split("/").includes(".slipbox") &&
+          classify(f, ["md"]).group === "data" &&
+          !/\.(csv|tsv)$/.test(f) &&
+          statSync(join(HOME, f)).size < 65_536,
+      )
       .sort();
     expect(files.length).toBeGreaterThan(20);
-    const trees = [["deep.yaml", deep.tree] as const, ...files.flatMap((f) => {
-      const p = parseData(classify(f, ["md"]).format, readFileSync(join(HOME, f), "utf8"));
-      return p.error ? [] : [[f, p.tree] as const];
-    })];
+    const trees = [
+      ["deep.yaml", deep.tree] as const,
+      ...files.flatMap((f) => {
+        const p = parseData(classify(f, ["md"]).format, readFileSync(join(HOME, f), "utf8"));
+        return p.error ? [] : [[f, p.tree] as const];
+      }),
+    ];
     for (const [name, tree] of trees) {
       for (const width of [8, 12, 16, 20, 24, 37]) {
-        for (const glyphs of [unicodeG, glyphsFor("ascii")]) fits(renderTree(tree, { width, glyphs, showUrls: false }), name);
+        for (const glyphs of [unicodeG, glyphsFor("ascii")])
+          fits(renderTree(tree, { width, glyphs, showUrls: false }), name);
       }
     }
   });
@@ -708,26 +933,56 @@ describe("headings: the render, the graph and source mode read one text (review 
 
 describe("an HTML block's comments (review cycle 2, render)", () => {
   test("a comment over several lines keeps the rows after it on their source lines, and leaves no row", () => {
-    const l = renderMarkdown("# T\n\n<div>\n<!-- a note\nspanning lines -->\n<p>x</p>\n<!-- one line -->\n</div>\n", { width: 60, glyphs: unicode, showUrls: false });
-    const rows = l.lines.filter((x) => x.src >= 3).map((x) => [x.src, x.spans.map((s) => s.text).join("").trimEnd()]);
-    expect(rows).toEqual([[3, "<div>"], [6, "<p>x</p>"], [8, "</div>"]]);
+    const l = renderMarkdown("# T\n\n<div>\n<!-- a note\nspanning lines -->\n<p>x</p>\n<!-- one line -->\n</div>\n", {
+      width: 60,
+      glyphs: unicode,
+      showUrls: false,
+    });
+    const rows = l.lines
+      .filter((x) => x.src >= 3)
+      .map((x) => [
+        x.src,
+        x.spans
+          .map((s) => s.text)
+          .join("")
+          .trimEnd(),
+      ]);
+    expect(rows).toEqual([
+      [3, "<div>"],
+      [6, "<p>x</p>"],
+      [8, "</div>"],
+    ]);
   });
 });
 
 describe("links inside a data file's records (review cycle 2, render)", () => {
   const cases: [format: string, text: string, targets: string[], lines: number[]][] = [
-    ["yaml", "schemas:\n  - name: user\n    $ref: schemas/user.json\n  - name: post\n    $ref: schemas/post.json\n", ["schemas/user.json", "schemas/post.json"], [2, 4]],
+    [
+      "yaml",
+      "schemas:\n  - name: user\n    $ref: schemas/user.json\n  - name: post\n    $ref: schemas/post.json\n",
+      ["schemas/user.json", "schemas/post.json"],
+      [2, 4],
+    ],
     ["toml", '[[include]]\npath = "a.toml"\n[[include]]\npath = "b.toml"\n', ["a.toml", "b.toml"], [1, 3]],
-    ["json", '{"servers": [\n  {"name": "a", "url": "https://a.example"},\n  {"name": "b", "url": "https://b.example"}\n]}\n', ["https://a.example", "https://b.example"], [2, 3]],
+    [
+      "json",
+      '{"servers": [\n  {"name": "a", "url": "https://a.example"},\n  {"name": "b", "url": "https://b.example"}\n]}\n',
+      ["https://a.example", "https://b.example"],
+      [2, 3],
+    ],
   ];
   for (const [format, text, targets, lines] of cases) {
     test(`${format}: the graph reads them and the render draws them as links`, () => {
       const { tree, error } = parseData(format, text);
       expect(error).toBeNull();
       expect(tree.children.some((n) => n.type === "table")).toBe(true); // still a table
-      expect(dataLinks(tree).map((l) => [l.target, l.line, l.explicit])).toEqual(targets.map((t, i) => [t, lines[i]!, true]));
+      expect(dataLinks(tree).map((l) => [l.target, l.line, l.explicit])).toEqual(
+        targets.map((t, i) => [t, lines[i]!, true]),
+      );
       const l = renderTree(tree, { width: 80, glyphs: unicode, showUrls: false, resolveLink: () => "unresolved" });
-      expect(l.links.map((x) => [x.target, x.status])).toEqual(targets.map((t) => [t, t.startsWith("https:") ? "external" : "unresolved"]));
+      expect(l.links.map((x) => [x.target, x.status])).toEqual(
+        targets.map((t) => [t, t.startsWith("https:") ? "external" : "unresolved"]),
+      );
       // Each drawn on its record's row, a span carrying the link.
       for (const [i, link] of l.links.entries()) {
         const row = l.lines[link.line]!;
@@ -738,16 +993,28 @@ describe("links inside a data file's records (review cycle 2, render)", () => {
   }
   test("a path-like value in a record is a link only when it resolves, as a field's is", () => {
     const { tree } = parseData("yaml", "files:\n  - name: a\n    doc: docs/a.md\n  - name: b\n    doc: docs/b.md\n");
-    expect(dataLinks(tree).map((l) => [l.target, l.key, l.explicit])).toEqual([["docs/a.md", "doc", false], ["docs/b.md", "doc", false]]);
-    const l = renderTree(tree, { width: 80, glyphs: unicode, showUrls: false, resolveLink: (_k, t) => (t === "docs/a.md" ? "resolved" : "unresolved") });
+    expect(dataLinks(tree).map((l) => [l.target, l.key, l.explicit])).toEqual([
+      ["docs/a.md", "doc", false],
+      ["docs/b.md", "doc", false],
+    ]);
+    const l = renderTree(tree, {
+      width: 80,
+      glyphs: unicode,
+      showUrls: false,
+      resolveLink: (_k, t) => (t === "docs/a.md" ? "resolved" : "unresolved"),
+    });
     expect(l.links.map((x) => x.target)).toEqual(["docs/a.md"]);
   });
 });
 
 describe("what rendering.md promises (review: docs against the tests)", () => {
-  const rows = (md: string, width = 60) => renderMarkdown(md, { width, glyphs: unicode, showUrls: false }).lines.map((l) => l.spans.map((s) => s.text).join(""));
+  const rows = (md: string, width = 60) =>
+    renderMarkdown(md, { width, glyphs: unicode, showUrls: false }).lines.map((l) =>
+      l.spans.map((s) => s.text).join(""),
+    );
   test("records: the labels' column is a third of the width at most, a long label wrapping inside it", () => {
-    const md = "| a rather long column label | two | three | four | five |\n|---|---|---|---|---|\n| a | b | c | d | e |\n";
+    const md =
+      "| a rather long column label | two | three | four | five |\n|---|---|---|---|---|\n| a | b | c | d | e |\n";
     const out = rows(md, 24);
     expect(out.every((r) => stringWidth(r) <= 24)).toBe(true);
     // floor(24 / 3) = 8 columns of label, two of gap: every value starts at column 10.
@@ -779,7 +1046,11 @@ describe("what rendering.md promises (review: docs against the tests)", () => {
       if (!t.bg.startsWith("#")) continue; // the terminal's and mono have no colours to blend
       kinds.add(t.kind);
       for (const h of ["h1", "h2", "h3", "h4", "h5", "h6"] as const) {
-        expect([name, h, t.roles[h].bg]).toEqual([name, h, blend(t.roles[h].fg!, t.bg, t.kind === "dark" ? 0.14 : 0.16)]);
+        expect([name, h, t.roles[h].bg]).toEqual([
+          name,
+          h,
+          blend(t.roles[h].fg!, t.bg, t.kind === "dark" ? 0.14 : 0.16),
+        ]);
       }
     }
     expect([...kinds].sort()).toEqual(["dark", "light"]);
@@ -794,7 +1065,9 @@ describe("Mermaid (12.10)", () => {
   const md = "# D\n\n```mermaid\ngraph TD\n  A[Write] --> B[Disk-cache]\n```\n\nafter\n";
   test("a diagram drawn in box drawing, every row at its block's line: its lines in the border colour, its words text", () => {
     const l = renderMarkdown(md, { width: 60, glyphs: unicode, showUrls: false });
-    const drawn = l.lines.filter((x) => x.spans.some((s) => s.text.includes("┌")) || x.spans.some((s) => s.text.includes("Write")));
+    const drawn = l.lines.filter(
+      (x) => x.spans.some((s) => s.text.includes("┌")) || x.spans.some((s) => s.text.includes("Write")),
+    );
     expect(rows(l).some((r) => /│\s+Write\s+│/.test(r))).toBe(true);
     expect(rows(l).join("\n")).not.toContain("A[Write]");
     expect(drawn.length).toBeGreaterThan(1);
@@ -837,10 +1110,18 @@ describe("Mermaid (12.10)", () => {
     `;
     const r = Bun.spawnSync(["bun", "-e", script], { cwd: join(import.meta.dir, "..") });
     expect(r.stderr.toString()).toBe("");
-    expect(JSON.parse(r.stdout.toString())).toEqual({ pending: [["mermaid"], null, ["mermaid"]], code: true, drawn: true });
+    expect(JSON.parse(r.stdout.toString())).toEqual({
+      pending: [["mermaid"], null, ["mermaid"]],
+      code: true,
+      drawn: true,
+    });
   });
   test("its rows as the text has them: no blank row after, no spaces at their ends", () => {
-    const l = renderMarkdown("```mermaid\nclassDiagram\n  class Graph\n```\n\nafter\n", { width: 60, glyphs: unicode, showUrls: false });
+    const l = renderMarkdown("```mermaid\nclassDiagram\n  class Graph\n```\n\nafter\n", {
+      width: 60,
+      glyphs: unicode,
+      showUrls: false,
+    });
     const drawn = rows(l).slice(0, rows(l).indexOf("after") - 1);
     expect(drawn.at(-1)).toMatch(/└─+┘/);
     expect(drawn.every((r) => r === r.trimEnd())).toBe(true);
@@ -855,11 +1136,19 @@ describe("Mermaid (12.10)", () => {
     }
   });
   test("a kind it doesn't draw, or a diagram wider than the text: its code, the label saying why", () => {
-    const pie = renderMarkdown("```mermaid\npie title X\n  \"a\": 1\n```\n", { width: 60, glyphs: unicode, showUrls: false });
+    const pie = renderMarkdown('```mermaid\npie title X\n  "a": 1\n```\n', {
+      width: 60,
+      glyphs: unicode,
+      showUrls: false,
+    });
     expect(rows(pie)[0]).toMatch(/mermaid — not drawn: pie $/);
     expect(rows(pie)[1]).toContain("pie title X");
     const chain = Array.from({ length: 8 }, (_, i) => `N${i}[Node number ${i}]`).join(" --> ");
-    const wide = renderMarkdown(`\`\`\`mermaid\ngraph LR\n  ${chain}\n\`\`\`\n`, { width: 60, glyphs: unicode, showUrls: false });
+    const wide = renderMarkdown(`\`\`\`mermaid\ngraph LR\n  ${chain}\n\`\`\`\n`, {
+      width: 60,
+      glyphs: unicode,
+      showUrls: false,
+    });
     expect(rows(wide)[0]).toMatch(/mermaid — too wide to draw $/);
     for (const r of rows(wide)) expect(stringWidth(r)).toBeLessThanOrEqual(60);
   });
@@ -880,7 +1169,10 @@ describe("maths (12.11)", () => {
     const l = render("# M\n\n$$\nf(x) = \\begin{cases} x & x \\ge 0 \\\\ -x & x < 0 \\end{cases}\n$$\n\nafter\n", 40);
     const rows = l.lines.filter((x) => x.src === 3 && x.spans.length);
     // 18 columns wide in 40: 11 before.
-    expect(rows.map((x) => x.spans.map((s) => s.text).join(""))).toEqual(["           f(x) = ⎧ x   x ≥ 0", "                  ⎩ −x  x < 0"]);
+    expect(rows.map((x) => x.spans.map((s) => s.text).join(""))).toEqual([
+      "           f(x) = ⎧ x   x ≥ 0",
+      "                  ⎩ −x  x < 0",
+    ]);
     expect(rows.every((x) => x.spans.at(-1)!.role === "math" && !x.fill)).toBe(true);
     expect(text(l).at(-1)).toBe("after");
   });
@@ -900,12 +1192,30 @@ describe("drawn as pictures, by choice (12.16, 12.17)", () => {
   beforeAll(async () => {
     await Promise.all([loadMermaid(), loadRasterizer(), loadTypesetter()]);
   });
-  const colors = { bg: "#101010", fg: "#e0e0e0", line: "#707070", accent: "#3080f0", muted: "#909090", math: "#ff00ff" };
+  const colors = {
+    bg: "#101010",
+    fg: "#e0e0e0",
+    line: "#707070",
+    accent: "#3080f0",
+    muted: "#909090",
+    math: "#ff00ff",
+  };
   const text = (l: Layout) => l.lines.map((x) => x.spans.map((s) => s.text).join(""));
   const draw = (md: string, drawings: { mermaid: boolean; math: boolean }, drawn = true) => {
     const asked: { from: PictureSource; width: number }[] = [];
-    const picture = (from: PictureSource, width: number) => (asked.push({ from, width }), drawn && "svg" in from ? { src: "/drawn.png", cols: 10, rows: 3 } : null);
-    return { l: renderMarkdown(md, { width: 40, glyphs: unicode, showUrls: false, picture, drawings: { ...drawings, colors } }), asked };
+    const picture = (from: PictureSource, width: number) => (
+      asked.push({ from, width }), drawn && "svg" in from ? { src: "/drawn.png", cols: 10, rows: 3 } : null
+    );
+    return {
+      l: renderMarkdown(md, {
+        width: 40,
+        glyphs: unicode,
+        showUrls: false,
+        picture,
+        drawings: { ...drawings, colors },
+      }),
+      asked,
+    };
   };
   const mermaid = "```mermaid\ngraph TD\n  A --> B\n```\n\nafter\n";
   test("a Mermaid diagram as a picture: asked for at a column less, centred — its first row the indent, the cursor's stop", () => {
@@ -913,17 +1223,30 @@ describe("drawn as pictures, by choice (12.16, 12.17)", () => {
     expect(asked).toEqual([{ from: { svg: expect.stringContaining("<svg"), kind: "diagram" }, width: 39 }]);
     expect((asked[0]!.from as { svg: string }).svg).toContain("#e0e0e0"); // the theme's colours
     const rows = l.lines.slice(0, 3);
-    expect(rows[0]).toMatchObject({ src: 1, image: { src: "/drawn.png", cols: 10, rows: 3 }, spans: [{ text: " ".repeat(15), role: "text" }] });
+    expect(rows[0]).toMatchObject({
+      src: 1,
+      image: { src: "/drawn.png", cols: 10, rows: 3 },
+      spans: [{ text: " ".repeat(15), role: "text" }],
+    });
     expect(rows.slice(1).every((x) => x.decor && !x.spans.length && x.src === 1)).toBe(true);
     expect(text(l).at(-1)).toBe("after");
   });
   test("one as wide as it can be still leaves a column before it: the cursor's stop", () => {
     const picture = () => ({ src: "/wide.png", cols: 39, rows: 2 });
-    const l = renderMarkdown(mermaid, { width: 40, glyphs: unicode, showUrls: false, picture, drawings: { mermaid: true, math: false, colors } });
+    const l = renderMarkdown(mermaid, {
+      width: 40,
+      glyphs: unicode,
+      showUrls: false,
+      picture,
+      drawings: { mermaid: true, math: false, colors },
+    });
     expect(l.lines[0]).toMatchObject({ spans: [{ text: " " }], image: { cols: 39 } });
   });
   test("not chosen, or no picture of it (pictures not drawn, too big): drawn in the terminal's characters", () => {
-    for (const { l } of [draw(mermaid, { mermaid: false, math: true }), draw(mermaid, { mermaid: true, math: false }, false)]) {
+    for (const { l } of [
+      draw(mermaid, { mermaid: false, math: true }),
+      draw(mermaid, { mermaid: true, math: false }, false),
+    ]) {
       expect(l.lines.some((x) => x.image)).toBe(false);
       expect(text(l).some((r) => /│\s+A\s+│/.test(r))).toBe(true);
     }

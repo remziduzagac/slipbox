@@ -46,7 +46,9 @@ async function load(): Promise<Rasterizer> {
       break;
     } catch {}
   }
-  const options = font ? { font: { fontBuffers: [font.buffer], defaultFontFamily: font.family, sansSerifFamily: font.family } } : {};
+  const options = font
+    ? { font: { fontBuffers: [font.buffer], defaultFontFamily: font.family, sansSerifFamily: font.family } }
+    : {};
   const open = (svg: string, extra: object = {}) => {
     try {
       return new resvg.Resvg(svg, { ...options, ...extra });
@@ -139,7 +141,8 @@ export function flattenVars(svg: string): string {
   const decl = /(--[\w-]+)\s*:\s*([^;]+)/g;
   const root = /<svg\b[^>]*\bstyle="([^"]*)"/.exec(svg)?.[1] ?? "";
   for (const m of root.matchAll(decl)) vars.set(m[1]!, m[2]!.trim());
-  for (const b of svg.matchAll(/<style[^>]*>([\s\S]*?)<\/style>/g)) for (const m of b[1]!.replace(/\/\*[\s\S]*?\*\//g, "").matchAll(decl)) vars.set(m[1]!, m[2]!.trim());
+  for (const b of svg.matchAll(/<style[^>]*>([\s\S]*?)<\/style>/g))
+    for (const m of b[1]!.replace(/\/\*[\s\S]*?\*\//g, "").matchAll(decl)) vars.set(m[1]!, m[2]!.trim());
   const evaluate = (e: string, depth = 0): string | null => {
     e = e.trim();
     if (depth > 16) return null;
@@ -147,7 +150,11 @@ export function flattenVars(svg: string): string {
       const end = closing(e, 3);
       const [name, ...fallback] = args(e.slice(4, end));
       const v = vars.get(name!);
-      return v !== undefined ? evaluate(v, depth + 1) : fallback.length ? evaluate(fallback.join(","), depth + 1) : null;
+      return v !== undefined
+        ? evaluate(v, depth + 1)
+        : fallback.length
+          ? evaluate(fallback.join(","), depth + 1)
+          : null;
     }
     if (e.startsWith("color-mix(")) {
       const [space, a, b] = args(e.slice(10, closing(e, 9)));
@@ -160,7 +167,13 @@ export function flattenVars(svg: string): string {
       const y = cb && rgb(cb);
       if (!x || !y) return null;
       const t = pa ? Number(pa[1]) / 100 : pb ? 1 - Number(pb[1]) / 100 : 0.5;
-      return `#${x.map((v, i) => Math.round(v * t + y[i]! * (1 - t)).toString(16).padStart(2, "0")).join("")}`;
+      return `#${x
+        .map((v, i) =>
+          Math.round(v * t + y[i]! * (1 - t))
+            .toString(16)
+            .padStart(2, "0"),
+        )
+        .join("")}`;
     }
     return e;
   };

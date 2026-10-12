@@ -10,25 +10,90 @@
 // through `Host`; tui/run.ts binds both to OpenTUI. That keeps the whole model testable.
 
 import { fileURLToPath, pathToFileURL } from "node:url";
-import { commentLinks, DOCUMENT_GRAMMARS, grammarFor, grammarNow, type OutlineEntry, parseSyntax, type Span as SyntaxSpan } from "../core/syntax.ts";
-import { type DocumentSymbol, type SymbolInformation, SymbolKind, type TextEdit as LspTextEdit, type WorkspaceEdit } from "vscode-languageserver-protocol";
+import {
+  commentLinks,
+  DOCUMENT_GRAMMARS,
+  grammarFor,
+  grammarNow,
+  type OutlineEntry,
+  parseSyntax,
+  type Span as SyntaxSpan,
+} from "../core/syntax.ts";
+import {
+  type DocumentSymbol,
+  type SymbolInformation,
+  SymbolKind,
+  type TextEdit as LspTextEdit,
+  type WorkspaceEdit,
+} from "vscode-languageserver-protocol";
 import { TextDocument } from "vscode-languageserver-textdocument";
 import { lazy, loadError, onLoaded } from "../core/lazy.ts";
-import { addOwnWord, Checker, dictionaryFiles, noteLanguages, openSpeller, ownWordsFile, proseWords, type Speller, type SpellWord } from "../core/spell.ts";
+import {
+  addOwnWord,
+  Checker,
+  dictionaryFiles,
+  noteLanguages,
+  openSpeller,
+  ownWordsFile,
+  proseWords,
+  type Speller,
+  type SpellWord,
+} from "../core/spell.ts";
 import ignore from "ignore";
 import { classify, extensionOf, type FileGroup, isKnownExtension } from "../core/filetypes.ts";
-import { appendFileSync, type Dirent, existsSync, mkdirSync, readdirSync, readFileSync, realpathSync, renameSync, statSync, writeFileSync } from "node:fs";
+import {
+  appendFileSync,
+  type Dirent,
+  existsSync,
+  mkdirSync,
+  readdirSync,
+  readFileSync,
+  realpathSync,
+  renameSync,
+  statSync,
+  writeFileSync,
+} from "node:fs";
 import { createHash } from "node:crypto";
 import { basename, dirname, isAbsolute, join, posix, relative, resolve, sep } from "node:path";
-import { climbsOut, ensureDir, landsInside, readJson, readRegular, readText, realTarget, WriteRefused, writeJson, writeNote } from "../core/fsutil.ts";
-import { defaultTarget, type ExportFormat, exportNotes, exportTarget, FORMATS, formatFor, writeExport } from "../core/export/index.ts";
+import {
+  climbsOut,
+  ensureDir,
+  landsInside,
+  readJson,
+  readRegular,
+  readText,
+  realTarget,
+  WriteRefused,
+  writeJson,
+  writeNote,
+} from "../core/fsutil.ts";
+import {
+  defaultTarget,
+  type ExportFormat,
+  exportNotes,
+  exportTarget,
+  FORMATS,
+  formatFor,
+  writeExport,
+} from "../core/export/index.ts";
 import { listTasks, toggleTask } from "../core/tasks.ts";
 import { merge3, unifiedDiff } from "../core/merge.ts";
 import { compilePattern, findAll } from "../core/replace.ts";
 import { planReplace } from "../core/replace-files.ts";
 import { writeDirty } from "../core/stale.ts";
 import { editorArgv } from "../core/editor.ts";
-import { cannotEdit, deleteTypedSelection, insertKey, insertText, lineOf, offsetOf, placeAt, startInsert, stopInsert, typedSelection } from "./editing.ts";
+import {
+  cannotEdit,
+  deleteTypedSelection,
+  insertKey,
+  insertText,
+  lineOf,
+  offsetOf,
+  placeAt,
+  startInsert,
+  stopInsert,
+  typedSelection,
+} from "./editing.ts";
 import { matchBracket } from "../core/brackets.ts";
 import { insertRecord, newVimState, PASTE, put, vimKey, visualKey } from "./vim.ts";
 import * as R from "./replacing.ts";
@@ -72,33 +137,119 @@ import { openVault, Reach } from "../core/reach.ts";
 import { buildContext } from "../core/context.ts";
 import { IndexJob, indexFile, search, type SearchHit, SearchIndex, type SearchResult } from "../core/search.ts";
 import { type Checkout, checkoutOf, headOf } from "../core/git.ts";
-import { baseBranch, branchesOf, changedSince, type GitState, inCheckout, inVault, mergeBaseOf, showAt, showLater, stateOf, worktreeList } from "../core/gitops.ts";
-import { commitLater, createBranch, entriesLater, type GitDone, lastMessage, sections, type StatusEntry, switchBranch } from "../core/gitstage.ts";
+import {
+  baseBranch,
+  branchesOf,
+  changedSince,
+  type GitState,
+  inCheckout,
+  inVault,
+  mergeBaseOf,
+  showAt,
+  showLater,
+  stateOf,
+  worktreeList,
+} from "../core/gitops.ts";
+import {
+  commitLater,
+  createBranch,
+  entriesLater,
+  type GitDone,
+  lastMessage,
+  sections,
+  type StatusEntry,
+  switchBranch,
+} from "../core/gitstage.ts";
 import { type GitRow, gitRows, gitViewAction } from "./gitview.ts";
 import { type GitChange, gitChanges } from "../core/gitsigns.ts";
 import { describeBreak, type MergeBreak, type MergeReview, reviewMerge } from "../core/mergereview.ts";
 import { diffLines, diffRows } from "../core/merge.ts";
 import { planConvert } from "../core/convert.ts";
-import { type Ambiguous, type Applied, applyPlan, moveTarget, planFolderMove, planHeadingRename, planMakeVault, planNoteRename, planRelink, planUndo, planUnmakeVault, planVaultFolderMove, planVaultRename, type RenamePlan } from "../core/rename.ts";
-import { addFootnote, deleteFootnote, editFootnote, type Footnote, footnotesOf, renameFootnote, type TextEdit } from "../core/footnotes.ts";
+import {
+  type Ambiguous,
+  type Applied,
+  applyPlan,
+  moveTarget,
+  planFolderMove,
+  planHeadingRename,
+  planMakeVault,
+  planNoteRename,
+  planRelink,
+  planUndo,
+  planUnmakeVault,
+  planVaultFolderMove,
+  planVaultRename,
+  type RenamePlan,
+} from "../core/rename.ts";
+import {
+  addFootnote,
+  deleteFootnote,
+  editFootnote,
+  type Footnote,
+  footnotesOf,
+  renameFootnote,
+  type TextEdit,
+} from "../core/footnotes.ts";
 import { copyPath, emptyTrash, linksInto, listTrash, restorePath, type TrashItem, trashPath } from "../core/files.ts";
 import { readIdentity, slugName, vaultConfigFile } from "../core/registry.ts";
 import { activityFile, AutoIndex } from "../core/autoindex.ts";
 import { notesOfType, ofType, type TypedNote } from "../core/doctypes.ts";
 import { type Scope, SCOPES, searchOthers } from "../core/scope.ts";
 import { rootLabel, tildePath } from "../core/names.ts";
-import { copyAvailable, folderIdentity, lookupFolder, type NamedFolder, pointerName, privateNameWarning, readFolders, repositoryCopies, setDefaultCopy, suggestFolderName } from "../core/folders.ts";
-import { configFilesFor, findVaultRoot, folderAt, hasMarker, homeFolder, initVault, isInside, isListed, isVaultRoot, locateVault, recordLocation, rootAt, rootMarkers, setRootMarkers, type VaultLocation } from "../core/vault.ts";
+import {
+  copyAvailable,
+  folderIdentity,
+  lookupFolder,
+  type NamedFolder,
+  pointerName,
+  privateNameWarning,
+  readFolders,
+  repositoryCopies,
+  setDefaultCopy,
+  suggestFolderName,
+} from "../core/folders.ts";
+import {
+  configFilesFor,
+  findVaultRoot,
+  folderAt,
+  hasMarker,
+  homeFolder,
+  initVault,
+  isInside,
+  isListed,
+  isVaultRoot,
+  locateVault,
+  recordLocation,
+  rootAt,
+  rootMarkers,
+  setRootMarkers,
+  type VaultLocation,
+} from "../core/vault.ts";
 import { isTrusted, setTrust, setTrustedRoots, trustOf } from "../core/trust.ts";
 import { type Head, VaultFeed, applyToGraph } from "../core/vault-feed.ts";
 import { VaultWatcher, type WatchBatch } from "../core/watch.ts";
-import { atLeast, frontmatterFindings, lintProblems, noteProblems, type Problem, rootTypes, SEVERITIES, syntaxProblems } from "../core/diagnostics.ts";
+import {
+  atLeast,
+  frontmatterFindings,
+  lintProblems,
+  noteProblems,
+  type Problem,
+  rootTypes,
+  SEVERITIES,
+  syntaxProblems,
+} from "../core/diagnostics.ts";
 import { languageOf, serverTable, type ServerTable } from "../core/servers/languages.ts";
 import { type LinterDef, linterRoot, linterTable, runLinter } from "../core/servers/linters.ts";
 import { rootFor } from "../core/servers/find.ts";
 import { ServerManager } from "../core/servers/manager.ts";
 import { afterSnippetKey, type SnippetSession, snippetKey } from "./snippets.ts";
-import { afterInsertKey, completeWords, type CompletionState, completionKey, type SignatureState } from "./completion.ts";
+import {
+  afterInsertKey,
+  completeWords,
+  type CompletionState,
+  completionKey,
+  type SignatureState,
+} from "./completion.ts";
 import { sanitize } from "../core/sanitize.ts";
 import { graphemes, graphemeWidth, stringWidth, truncate, truncateStart } from "../core/width.ts";
 import { registerActions } from "./actions.ts";
@@ -145,7 +296,11 @@ const GIT_RANK: Record<GitState, number> = { deleted: 0, renamed: 1, modified: 2
 /** The first line of a file with a merge's conflict marker, or 0. */
 function conflictLine(abs: string): number {
   try {
-    return readText(abs).text.split(/\r?\n/).findIndex((l) => /^<{7}( |$)/.test(l)) + 1;
+    return (
+      readText(abs)
+        .text.split(/\r?\n/)
+        .findIndex((l) => /^<{7}( |$)/.test(l)) + 1
+    );
   } catch {
     return 0;
   }
@@ -675,12 +830,24 @@ export class App {
   /** The left panel's view; the rail's buttons pick it. */
   leftView: LeftView = "explorer";
   /** Where each left view was when another took the panel: restored when it comes back. */
-  private leftPositions = new Map<LeftView, Pick<SidePaneState, "selected" | "scroll" | "left" | "pinned" | "filter">>();
+  private leftPositions = new Map<
+    LeftView,
+    Pick<SidePaneState, "selected" | "scroll" | "left" | "pinned" | "filter">
+  >();
   /** What the right panel shows (3.17); `outline` is its state, whichever view that is. */
   rightView: RightView = "outline";
-  private rightPositions = new Map<RightView, Pick<SidePaneState, "selected" | "scroll" | "left" | "pinned" | "filter">>();
+  private rightPositions = new Map<
+    RightView,
+    Pick<SidePaneState, "selected" | "scroll" | "left" | "pinned" | "filter">
+  >();
   /** The Problems panel (1.7, at the bottom): shown or not, its tab, each tab's place. */
-  problemsPanel: ProblemsPanel = { shown: false, tab: "file", height: null, file: { selected: 0, scroll: 0, filter: "", filtering: false }, all: { selected: 0, scroll: 0, filter: "", filtering: false } };
+  problemsPanel: ProblemsPanel = {
+    shown: false,
+    tab: "file",
+    height: null,
+    file: { selected: 0, scroll: 0, filter: "", filtering: false },
+    all: { selected: 0, scroll: 0, filter: "", filtering: false },
+  };
   /** The panel's keys: the explorer's (as configured), and tab / shift+tab between its tabs. */
   problemsKeys!: Keymap;
   /** The Problems panel's folded sections (All), by name (1.7). */
@@ -754,7 +921,8 @@ export class App {
   constructor(opts: AppOptions) {
     this.loc = opts.loc;
     this.explorerTop = opts.loc.root;
-    if (opts.folder && opts.folder !== opts.loc.root && isInside(opts.loc.root, opts.folder)) this.setExplorerTop(opts.folder);
+    if (opts.folder && opts.folder !== opts.loc.root && isInside(opts.loc.root, opts.folder))
+      this.setExplorerTop(opts.folder);
     this.mainRoot = opts.loc.root;
     this.mainKey = opts.loc.key;
     this.pinnedRoots = new Set(readJson<string[]>(this.pinnedRootsFile(), []).filter((r) => typeof r === "string"));
@@ -771,7 +939,11 @@ export class App {
     this.followGraph();
     this.explicitTheme = opts.themeName;
     // Each config file's last good contents, so a typo saved mid-edit keeps what it said (reload).
-    this.configOrigins = loadConfig({ ...configFilesFor(opts.loc), configFile: opts.configFile, lastGood: this.configLastGood }).origins;
+    this.configOrigins = loadConfig({
+      ...configFilesFor(opts.loc),
+      configFile: opts.configFile,
+      lastGood: this.configLastGood,
+    }).origins;
     this.now = opts.now ?? Date.now;
     this.feed = new VaultFeed({
       checkout: () => this.checkout,
@@ -791,7 +963,14 @@ export class App {
     this.sidebar = { visible: opts.config.ui.sidebar, overlay: false, selected: 0, scroll: 0 };
     this.sideW = opts.config.ui.sidebar_width;
     this.outW = opts.config.ui.outline_width;
-    this.outline = { visible: opts.config.ui.outline, overlay: false, selected: 0, scroll: 0, folded: new Set(), forKey: "" };
+    this.outline = {
+      visible: opts.config.ui.outline,
+      overlay: false,
+      selected: 0,
+      scroll: 0,
+      folded: new Set(),
+      forKey: "",
+    };
     this.positions = new PositionStore(this.loc);
     registerActions(this);
     this.applyKeys();
@@ -799,7 +978,9 @@ export class App {
     for (const e of this.graph.errors) this.message("warn", e);
     if (carriedFrom) this.message("info", carried(this.loc, carriedFrom));
 
-    this.recentCommands = (loadSession(this.loc)?.recent_commands ?? []).filter((id) => typeof id === "string").slice(0, RECENT_MAX);
+    this.recentCommands = (loadSession(this.loc)?.recent_commands ?? [])
+      .filter((id) => typeof id === "string")
+      .slice(0, RECENT_MAX);
     this.remoteServer = loadSession(this.loc)?.remote_server;
     this.recentNotes = (loadSession(this.loc)?.recent_notes ?? []).slice(0, RECENT_NOTES_MAX);
     this.restoreUiOverrides();
@@ -865,7 +1046,10 @@ export class App {
       this.message("warn", `config: input.leader "${c.input.leader}" isn't a key slipbox knows; using space`);
       leader = "space";
     } else if (leader !== "space" && DEFAULT_KEYS[leader] !== undefined) {
-      this.message("warn", `config: input.leader "${c.input.leader}" is also ${DEFAULT_KEYS[leader]}: that key now waits for more`);
+      this.message(
+        "warn",
+        `config: input.leader "${c.input.leader}" is also ${DEFAULT_KEYS[leader]}: that key now waits for more`,
+      );
     }
     this.leader = leader;
     const { visual, explorer, outline, footnotes, info, resize, source, ...normal } = c.keys;
@@ -873,7 +1057,11 @@ export class App {
     this.visualKeys = new Keymap(DEFAULT_VISUAL_KEYS, visual ?? {}, this.leader);
     this.sourceKeys = new Keymap(DEFAULT_SOURCE_KEYS, source ?? {}, this.leader);
     this.explorerKeys = new Keymap(DEFAULT_EXPLORER_KEYS, explorer ?? {}, this.leader);
-    this.problemsKeys = new Keymap({ ...DEFAULT_EXPLORER_KEYS, tab: "switch", "shift+tab": "switch" }, explorer ?? {}, this.leader);
+    this.problemsKeys = new Keymap(
+      { ...DEFAULT_EXPLORER_KEYS, tab: "switch", "shift+tab": "switch" },
+      explorer ?? {},
+      this.leader,
+    );
     this.outlineKeys = new Keymap(DEFAULT_OUTLINE_KEYS, outline ?? {}, this.leader);
     this.footnoteKeys = new Keymap(DEFAULT_FOOTNOTE_KEYS, footnotes ?? {}, this.leader);
     this.infoKeys = new Keymap(DEFAULT_INFO_KEYS, info ?? {}, this.leader);
@@ -885,11 +1073,15 @@ export class App {
       else this.aliases[k] = v;
     }
     this.groups = new Map();
-    for (const [k, v] of Object.entries({ ...DEFAULT_GROUPS, ...c.groups })) this.groups.set(canonSeq(k, this.leader), parseGroup(v));
+    for (const [k, v] of Object.entries({ ...DEFAULT_GROUPS, ...c.groups }))
+      this.groups.set(canonSeq(k, this.leader), parseGroup(v));
     const ids = new Set(this.registry.list().map((x) => x.id));
-    const bad = [...this.keymap.entries(), ...this.visualKeys.entries(), ...this.sourceKeys.entries()].map(([, v]) => v.split(" ")[0]!).filter((id) => !ids.has(id));
+    const bad = [...this.keymap.entries(), ...this.visualKeys.entries(), ...this.sourceKeys.entries()]
+      .map(([, v]) => v.split(" ")[0]!)
+      .filter((id) => !ids.has(id));
     for (const id of new Set(bad)) this.message("warn", `config: [keys] binds unknown command "${id}"`);
-    for (const [a, v] of Object.entries(this.aliases)) if (!ids.has(v.split(" ")[0]!)) this.message("warn", `config: [aliases] ${a} = unknown command "${v}"`);
+    for (const [a, v] of Object.entries(this.aliases))
+      if (!ids.has(v.split(" ")[0]!)) this.message("warn", `config: [aliases] ${a} = unknown command "${v}"`);
     // Keys with a modifier slipbox doesn't know can never be pressed: say so.
     const tables: [string, Record<string, unknown>][] = [["keys", c.keys as Record<string, unknown>]];
     for (const sub of ["visual", "source", "explorer", "outline", "footnotes", "info", "resize"]) {
@@ -899,7 +1091,11 @@ export class App {
     for (const [table, map] of tables) {
       for (const k of Object.keys(map)) {
         const bad = unknownModifiers(k);
-        if (bad.length) this.message("warn", `config: [${table}] "${k}": unknown modifier ${bad.map((b) => `"${b}"`).join(", ")} (ctrl, alt, shift, cmd)`);
+        if (bad.length)
+          this.message(
+            "warn",
+            `config: [${table}] "${k}": unknown modifier ${bad.map((b) => `"${b}"`).join(", ")} (ctrl, alt, shift, cmd)`,
+          );
       }
     }
     // The in-pane keymaps name actions, not commands: check them against their own lists.
@@ -911,7 +1107,9 @@ export class App {
       ["keys.resize", this.resizeKeys, Object.keys(RESIZE_ACTIONS)],
     ];
     for (const [table, map, actions] of panes) {
-      for (const a of new Set(map.entries().map(([, v]) => v))) if (!actions.includes(a)) this.message("warn", `config: [${table}] binds unknown action "${a}" (${actions.join(", ")})`);
+      for (const a of new Set(map.entries().map(([, v]) => v)))
+        if (!actions.includes(a))
+          this.message("warn", `config: [${table}] binds unknown action "${a}" (${actions.join(", ")})`);
     }
   }
 
@@ -1038,7 +1236,15 @@ export class App {
    * proportions kept, at most PICTURE_ROWS rows; else none, `▣ alt` the floor. And what slipbox draws as pictures, as
    * chosen (12.16, 12.17): `drawings`, in the theme's colours.
    */
-  picturesFor(buf: NoteBuffer): { picture: (from: PictureSource, width: number) => Picture | null; key: string; drawings?: RenderOptions["drawings"] } | undefined {
+  picturesFor(
+    buf: NoteBuffer,
+  ):
+    | {
+        picture: (from: PictureSource, width: number) => Picture | null;
+        key: string;
+        drawings?: RenderOptions["drawings"];
+      }
+    | undefined {
     const images = this.host.images;
     if (this.config.render.images === "never" || !images?.supported()) return undefined;
     const cell = images.cell() ?? { width: 8, height: 16 };
@@ -1073,7 +1279,10 @@ export class App {
         const size = svg ? (r?.size(svg) ?? null) : images.size(path);
         if (!size || size.width <= 0 || size.height <= 0) return null;
         // Obsidian's size, `|300` its width and `|240x180` the box it fits in, in place of its own; proportions kept.
-        const px = "file" in from && from.size ? Math.min(from.size.width, from.size.height ? (from.size.height * size.width) / size.height : Infinity) : size.width;
+        const px =
+          "file" in from && from.size
+            ? Math.min(from.size.width, from.size.height ? (from.size.height * size.width) / size.height : Infinity)
+            : size.width;
         const { cols, rows } = fitPicture(px, (px * size.height) / size.width, width, cell, PICTURE_ROWS);
         if (!svg) return { src: path, cols, rows };
         const png = r && this.rasterized(svg, cols * cell.width, r);
@@ -1092,7 +1301,14 @@ export class App {
     const dark = t.kind === "dark";
     const fg = colorHex(t.roles.text.fg ?? t.fg, dark ? "#d4d4d4" : "#1f1f1f");
     const of = (role: Role) => colorHex(t.roles[role].fg ?? fg, fg);
-    const colors = { bg: colorHex(t.bg, dark ? "#1e1e1e" : "#ffffff"), fg, line: of("table_border"), accent: of("link"), muted: of("dim"), math: of("math") };
+    const colors = {
+      bg: colorHex(t.bg, dark ? "#1e1e1e" : "#ffffff"),
+      fg,
+      line: of("table_border"),
+      accent: of("link"),
+      muted: of("dim"),
+      math: of("math"),
+    };
     return { mermaid: r.mermaid === "picture", math: r.math === "picture", colors };
   }
 
@@ -1101,14 +1317,20 @@ export class App {
    * (its words are 13 pixels; a terminal's, about 0.8 of its cell's height), a display's maths too (MathJax's sizes are
    * in `ex`). A diagram wider than the text is drawn smaller; maths isn't — it's text then. Null while resvg loads.
    */
-  private drawnPicture(svg: string, kind: "diagram" | "math", width: number, cell: { width: number; height: number }): Picture | null {
+  private drawnPicture(
+    svg: string,
+    kind: "diagram" | "math",
+    width: number,
+    cell: { width: number; height: number },
+  ): Picture | null {
     const r = rasterizer();
     if (!r) return null;
     const em = cell.height * TEXT_EM;
     let w: number;
     let h: number;
     if (kind === "math") {
-      const ex = (attr: string) => Number(new RegExp(`<svg[^>]*\\b${attr}="([\\d.]+)ex"`).exec(svg)?.[1] ?? Number.NaN) * em * 0.431;
+      const ex = (attr: string) =>
+        Number(new RegExp(`<svg[^>]*\\b${attr}="([\\d.]+)ex"`).exec(svg)?.[1] ?? Number.NaN) * em * 0.431;
       [w, h] = [ex("width"), ex("height")];
       if (!(w > 0 && h > 0) || w > width * cell.width) return null;
     } else {
@@ -1143,7 +1365,11 @@ export class App {
   private configFiles(): string[] {
     // Yours, the enclosing roots' (20.7) and the root's own: a change to any is a reload.
     const { vaultFile, outerFiles } = configFilesFor(this.loc);
-    return [this.configFile ?? process.env.SLIPBOX_CONFIG ?? userConfigFile(), ...outerFiles, ...(vaultFile ? [vaultFile] : [])];
+    return [
+      this.configFile ?? process.env.SLIPBOX_CONFIG ?? userConfigFile(),
+      ...outerFiles,
+      ...(vaultFile ? [vaultFile] : []),
+    ];
   }
 
   private recordConfigStamps(): void {
@@ -1163,7 +1389,11 @@ export class App {
    */
   reloadConfig(reason: "manual" | "file changed" = "manual"): void {
     this.recordConfigStamps();
-    const loaded = loadConfig({ ...configFilesFor(this.loc), configFile: this.configFile, lastGood: this.configLastGood });
+    const loaded = loadConfig({
+      ...configFilesFor(this.loc),
+      configFile: this.configFile,
+      lastGood: this.configLastGood,
+    });
     this.configOrigins = loaded.origins;
     this.infoCache = null; // the links' convention may say otherwise now
     this.clearPending(); // a sequence begun under the old keys means nothing under the new ones
@@ -1217,7 +1447,10 @@ export class App {
       if (next.watch.enabled) this.startWatcher();
     }
     for (const w of loaded.warnings) this.message("warn", w);
-    this.message("info", `config reloaded (${reason}) — ${changed.length ? `changed: ${changed.join(", ")}` : "no changes"}`);
+    this.message(
+      "info",
+      `config reloaded (${reason}) — ${changed.length ? `changed: ${changed.join(", ")}` : "no changes"}`,
+    );
   }
 
   // -------------------------------------------------------------------------------------------
@@ -1328,7 +1561,11 @@ export class App {
 
   makeView(buf: NoteBuffer, anchor?: Anchor, cursor?: CursorAnchor): View {
     const topAnchor = anchor ?? this.positions.get(buf.key) ?? { ...TOP };
-    const curAnchor = cursor ?? (anchor ? { anchor, sub: 0, col: 0 } : (this.positions.getCursor(buf.key) ?? { anchor: topAnchor, sub: 0, col: 0 }));
+    const curAnchor =
+      cursor ??
+      (anchor
+        ? { anchor, sub: 0, col: 0 }
+        : (this.positions.getCursor(buf.key) ?? { anchor: topAnchor, sub: 0, col: 0 }));
     return {
       buf,
       top: 0,
@@ -1374,7 +1611,15 @@ export class App {
         return path ? [{ ...l, href: `/${path}${l.at ? `#L${l.at}` : ""}` }] : [];
       });
       // A part in another language (16.22): its lines highlighted in it.
-      buf.syntax = { version: buf.version, spans, outline: tree.outline(), errors: tree.errors(), links, languages: tree.languages(), code: tree.codeModel() };
+      buf.syntax = {
+        version: buf.version,
+        spans,
+        outline: tree.outline(),
+        errors: tree.errors(),
+        links,
+        languages: tree.languages(),
+        code: tree.codeModel(),
+      };
       tree.delete();
       buf.invalidateLayouts();
       for (const v of this.allViews()) {
@@ -1437,19 +1682,28 @@ export class App {
     this.pendingTrust = null;
     const at = this.trustTarget(p.root);
     if (trustOf(at) !== null) return;
-    this.confirm(`Trust ${tildePath(at)}? Its own tools would run code it holds — ${p.limits.join("; ")}. Only a folder you know (y trusts it; n keeps it safe)`, () => this.trustRoot(at, true), () => this.trustRoot(at, false));
+    this.confirm(
+      `Trust ${tildePath(at)}? Its own tools would run code it holds — ${p.limits.join("; ")}. Only a folder you know (y trusts it; n keeps it safe)`,
+      () => this.trustRoot(at, true),
+      () => this.trustRoot(at, false),
+    );
   }
 
   /** A root trusted, or kept restricted, remembered (23.x): its servers started again, the way it now runs. */
   trustRoot(at: string, yes: boolean): void {
     const was = isTrusted(at);
     setTrust(at, yes ? "trusted" : "restricted");
-    if (!yes && isTrusted(at)) return this.message("warn", `${tildePath(at)} is still trusted: your config's [trust] roots lists it`);
+    if (!yes && isTrusted(at))
+      return this.message("warn", `${tildePath(at)} is still trusted: your config's [trust] roots lists it`);
     if (was !== yes) {
       this.servers?.restartUnder(at);
       this.refreshGit();
     }
-    if (yes) this.message("info", `trusted ${tildePath(at)}: its own tools run as they would anywhere — :untrust takes it back`);
+    if (yes)
+      this.message(
+        "info",
+        `trusted ${tildePath(at)}: its own tools run as they would anywhere — :untrust takes it back`,
+      );
     else this.message("info", `${tildePath(at)} kept safe: nothing of its own runs — :trust trusts it`);
   }
 
@@ -1494,7 +1748,13 @@ export class App {
     const s = this.servers;
     if (!s || buf.kind.group === "note" || grammarFor(buf.kind.format, extensionOf(buf.name))) return;
     const version = buf.version;
-    const answer = await s.request<DocumentSymbol[] | SymbolInformation[]>(buf.abs, "textDocument/documentSymbol", { textDocument: { uri: pathToFileURL(buf.abs).href } }, "documentSymbolProvider", "document-symbols");
+    const answer = await s.request<DocumentSymbol[] | SymbolInformation[]>(
+      buf.abs,
+      "textDocument/documentSymbol",
+      { textDocument: { uri: pathToFileURL(buf.abs).href } },
+      "documentSymbolProvider",
+      "document-symbols",
+    );
     if (!answer || buf.version !== version) return;
     buf.serverOutline = outlineOf(answer.result);
     buf.invalidateLayouts();
@@ -1511,7 +1771,12 @@ export class App {
       out.set(path, [...(out.get(path) ?? []), ...edits]);
     };
     for (const [uri, edits] of Object.entries(edit.changes ?? {})) add(uri, edits);
-    for (const c of edit.documentChanges ?? []) if ("textDocument" in c) add(c.textDocument.uri, c.edits.filter((e): e is LspTextEdit => "newText" in e));
+    for (const c of edit.documentChanges ?? [])
+      if ("textDocument" in c)
+        add(
+          c.textDocument.uri,
+          c.edits.filter((e): e is LspTextEdit => "newText" in e),
+        );
     return [...out].map(([path, edits]) => ({ path, edits }));
   }
 
@@ -1533,7 +1798,9 @@ export class App {
       const at = (p: { line: number; character: number }) => doc.offsetAt(p);
       // Last first, so each edit's offsets still hold; of inserts at one place, the later one first,
       // so their text reads in the array's order (as LSP has it, and as the preview showed it).
-      const sorted = edits.map((e, i) => ({ from: at(e.range.start), to: at(e.range.end), text: e.newText, i })).sort((a, b) => b.from - a.from || b.i - a.i);
+      const sorted = edits
+        .map((e, i) => ({ from: at(e.range.start), to: at(e.range.end), text: e.newText, i }))
+        .sort((a, b) => b.from - a.from || b.i - a.i);
       buf.beginStep(sorted.at(-1)!.from);
       for (const e of sorted) buf.edit(e.from, e.to - e.from, e.text);
       buf.endStep(sorted.at(-1)!.from);
@@ -1564,7 +1831,11 @@ export class App {
       const shown = path.startsWith(`${this.loc.root}/`) ? path.slice(this.loc.root.length + 1) : path;
       for (const h of diffLines(a, b)) {
         for (let k = 0; k < Math.max(h.aLen, h.bLen); k++) {
-          items.push({ label: `${shown}:${h.aStart + k + 1}`, detail: `${(a[h.aStart + k] ?? "").trim()}  →  ${(b[h.bStart + k] ?? "").trim()}`, data: null });
+          items.push({
+            label: `${shown}:${h.aStart + k + 1}`,
+            detail: `${(a[h.aStart + k] ?? "").trim()}  →  ${(b[h.bStart + k] ?? "").trim()}`,
+            data: null,
+          });
           n++;
         }
       }
@@ -1577,7 +1848,10 @@ export class App {
       filterable: false,
       accept: () => {
         const r = this.applyWorkspaceEdit(edit);
-        this.message("info", `${title}: ${r.edits} change${r.edits === 1 ? "" : "s"} in ${r.files} file${r.files === 1 ? "" : "s"}`);
+        this.message(
+          "info",
+          `${title}: ${r.edits} change${r.edits === 1 ? "" : "s"} in ${r.files} file${r.files === 1 ? "" : "s"}`,
+        );
         done();
       },
     });
@@ -1633,10 +1907,18 @@ export class App {
   }
   /** The languages and linters in effect, as the config has them. */
   private tables(): { servers: ServerTable; linters: Record<string, LinterDef> } {
-    if (this.tablesMemo?.config !== this.config) this.tablesMemo = { config: this.config, servers: serverTable(this.config["language-server"], this.config.language), linters: linterTable(this.config.linter) };
+    if (this.tablesMemo?.config !== this.config)
+      this.tablesMemo = {
+        config: this.config,
+        servers: serverTable(this.config["language-server"], this.config.language),
+        linters: linterTable(this.config.linter),
+      };
     return this.tablesMemo;
   }
-  private readonly linterRuns = new Map<NoteBuffer, { timer: ReturnType<typeof setTimeout>; version: number } | "running">();
+  private readonly linterRuns = new Map<
+    NoteBuffer,
+    { timer: ReturnType<typeof setTimeout>; version: number } | "running"
+  >();
   /** Linters that couldn't run: said once, and not tried again until the config changes. */
   private readonly linterFailed = new Set<string>();
 
@@ -1651,30 +1933,37 @@ export class App {
     if (pending === "running" || pending?.version === buf.version) return;
     const { servers, linters } = this.tables();
     const lang = languageOf(servers, buf.abs);
-    const defs = (lang?.linters ?? []).map((n) => linters[n]).filter((d): d is LinterDef => !!d?.command && !this.linterFailed.has(d.name));
+    const defs = (lang?.linters ?? [])
+      .map((n) => linters[n])
+      .filter((d): d is LinterDef => !!d?.command && !this.linterFailed.has(d.name));
     if (!lang || !defs.some((d) => (d.stdin ? typed : saved))) return;
     if (pending) clearTimeout(pending.timer);
     const project = rootFor(buf.abs, lang.roots);
-    const t = setTimeout(() => {
-      const version = buf.version;
-      const text = buf.source;
-      const due = defs.filter((d) => (d.stdin ? buf.linted.typed !== version : !buf.dirty && buf.linted.saved !== version));
-      buf.linted = { typed: version, saved: buf.dirty ? buf.linted.saved : version };
-      this.linterRuns.set(buf, "running");
-      void Promise.all(
-        due.map(async (d) => {
-          const root = linterRoot(d, buf.abs, project);
-          if (!root) return void buf.linterProblems.delete(d.name); // the project doesn't ask for it
-          const r = await runLinter(d, buf.abs, text, root);
-          if ("problems" in r) buf.linterProblems.set(d.name, { version, list: r.problems });
-          else this.linterCouldNot(d, r.failed, r.detail);
-        }),
-      ).then(() => {
-        this.linterRuns.delete(buf);
-        for (const v of this.allViews()) if (v.buf === buf) v.layoutKey = "";
-        this.host.requestRender();
-      });
-    }, buf.linted.typed >= 0 || buf.linted.saved >= 0 ? 500 : 0);
+    const t = setTimeout(
+      () => {
+        const version = buf.version;
+        const text = buf.source;
+        const due = defs.filter((d) =>
+          d.stdin ? buf.linted.typed !== version : !buf.dirty && buf.linted.saved !== version,
+        );
+        buf.linted = { typed: version, saved: buf.dirty ? buf.linted.saved : version };
+        this.linterRuns.set(buf, "running");
+        void Promise.all(
+          due.map(async (d) => {
+            const root = linterRoot(d, buf.abs, project);
+            if (!root) return void buf.linterProblems.delete(d.name); // the project doesn't ask for it
+            const r = await runLinter(d, buf.abs, text, root);
+            if ("problems" in r) buf.linterProblems.set(d.name, { version, list: r.problems });
+            else this.linterCouldNot(d, r.failed, r.detail);
+          }),
+        ).then(() => {
+          this.linterRuns.delete(buf);
+          for (const v of this.allViews()) if (v.buf === buf) v.layoutKey = "";
+          this.host.requestRender();
+        });
+      },
+      buf.linted.typed >= 0 || buf.linted.saved >= 0 ? 500 : 0,
+    );
     (t as { unref?: () => void }).unref?.();
     this.linterRuns.set(buf, { timer: t, version: buf.version });
   }
@@ -1693,7 +1982,10 @@ export class App {
     if (this.linterFailed.has(def.name)) return;
     this.linterFailed.add(def.name);
     const program = def.command.trim().split(/\s+/)[0];
-    const text = why === "missing" ? `linter ${def.name}: ${program} not found${def.hint ? ` — ${def.hint}` : ""}` : `linter ${def.name} couldn't run: ${detail}`;
+    const text =
+      why === "missing"
+        ? `linter ${def.name}: ${program} not found${def.hint ? ` — ${def.hint}` : ""}`
+        : `linter ${def.name} couldn't run: ${detail}`;
     this.message("warn", text);
   }
 
@@ -1713,18 +2005,25 @@ export class App {
     if (!cmd || buf.kind.group !== "note" || buf.kind.format !== "markdown" || buf.rel === null || buf.virtual) return;
     if (buf.dirty || buf.deleted || buf.lint?.version === buf.version || this.lintRuns.has(buf)) return;
     const version = buf.version;
-    const t = setTimeout(() => {
-      this.lintRuns.set(buf, "running");
-      void runLint(cmd, [buf.abs], this.loc.root, undefined, this.sayInstalling).then((issues) => {
-        this.lintRuns.delete(buf);
-        if (issues === null) return this.lintFailed();
-        buf.lint = { version, issues: issues.filter((i) => i.file === buf.abs) };
-        // The vault's list follows this note's.
-        if (this.vaultLint.issues) this.vaultLint.issues = [...this.vaultLint.issues.filter((i) => i.file !== buf.abs), ...buf.lint.issues].sort((a, b) => (a.file === b.file ? a.line - b.line : a.file < b.file ? -1 : 1));
-        for (const v of this.allViews()) if (v.buf === buf) v.layoutKey = "";
-        this.host.requestRender();
-      });
-    }, buf.lint ? 300 : 0);
+    const t = setTimeout(
+      () => {
+        this.lintRuns.set(buf, "running");
+        void runLint(cmd, [buf.abs], this.loc.root, undefined, this.sayInstalling).then((issues) => {
+          this.lintRuns.delete(buf);
+          if (issues === null) return this.lintFailed();
+          buf.lint = { version, issues: issues.filter((i) => i.file === buf.abs) };
+          // The vault's list follows this note's.
+          if (this.vaultLint.issues)
+            this.vaultLint.issues = [
+              ...this.vaultLint.issues.filter((i) => i.file !== buf.abs),
+              ...buf.lint.issues,
+            ].sort((a, b) => (a.file === b.file ? a.line - b.line : a.file < b.file ? -1 : 1));
+          for (const v of this.allViews()) if (v.buf === buf) v.layoutKey = "";
+          this.host.requestRender();
+        });
+      },
+      buf.lint ? 300 : 0,
+    );
     (t as { unref?: () => void }).unref?.();
     this.lintRuns.set(buf, t);
   }
@@ -1733,7 +2032,10 @@ export class App {
   lintVault(): void {
     const cmd = this.lintCmd;
     if (!cmd || this.vaultLint.running) return;
-    const files = [...this.graph.notes.keys()].filter((rel) => /\.(md|markdown)$/i.test(rel)).sort().map((rel) => join(this.loc.root, rel));
+    const files = [...this.graph.notes.keys()]
+      .filter((rel) => /\.(md|markdown)$/i.test(rel))
+      .sort()
+      .map((rel) => join(this.loc.root, rel));
     this.vaultLint = { running: true, issues: this.vaultLint.issues };
     void (async () => {
       const all: LintIssue[] = [];
@@ -1761,7 +2063,10 @@ export class App {
   private lintFailed(): void {
     if (!this.lintCmd) return;
     this.lintCmd = null;
-    this.message("warn", `lint: ${lintFailure(this.config)} — [lint] command sets another; enabled = "off" stops trying`);
+    this.message(
+      "warn",
+      `lint: ${lintFailure(this.config)} — [lint] command sets another; enabled = "off" stops trying`,
+    );
   }
 
   // -------------------------------------------------------------------------------------------
@@ -1775,7 +2080,12 @@ export class App {
    *  none, again after a second (`git init` may make one). */
   get checkout(): Checkout | null {
     const m = this.checkoutMemo;
-    if (m?.root !== this.loc.root || (!m.c && this.now() - m.at > 1000)) this.checkoutMemo = { root: this.loc.root, c: this.loc.mode === "vault" ? checkoutOf(this.loc.root) : null, at: this.now() };
+    if (m?.root !== this.loc.root || (!m.c && this.now() - m.at > 1000))
+      this.checkoutMemo = {
+        root: this.loc.root,
+        c: this.loc.mode === "vault" ? checkoutOf(this.loc.root) : null,
+        at: this.now(),
+      };
     return this.checkoutMemo!.c;
   }
 
@@ -1881,7 +2191,10 @@ export class App {
   gitEntries: StatusEntry[] | null = null;
   /** The source control view's files opened up into their changes, `section:path`. */
   readonly gitOpen = new Set<string>();
-  private readonly gitChangeMemo = new WeakMap<NoteBuffer, { version: number; generation: number; changes: GitChange[] }>();
+  private readonly gitChangeMemo = new WeakMap<
+    NoteBuffer,
+    { version: number; generation: number; changes: GitChange[] }
+  >();
 
   /**
    * A file's changes against what's staged (26.1) — its text as it is now, unsaved typing included — or null where there's
@@ -1891,7 +2204,15 @@ export class App {
     const buf = view.buf;
     const c = this.checkout;
     // By its path, not the graph's name for it: a file just made is git's before the walk's.
-    if (!this.config.git.signs || !c || buf.virtual || !buf.abs || !isInside(c.root, buf.abs) || !isInside(this.loc.root, buf.abs)) return null;
+    if (
+      !this.config.git.signs ||
+      !c ||
+      buf.virtual ||
+      !buf.abs ||
+      !isInside(c.root, buf.abs) ||
+      !isInside(this.loc.root, buf.abs)
+    )
+      return null;
     const known = this.staged.get(buf);
     if (known?.generation !== this.gitGeneration && !this.stagedAsking.has(buf)) {
       this.stagedAsking.add(buf);
@@ -1916,7 +2237,13 @@ export class App {
   /** The base branch here: `[git] base`, else main or master; null (said) when there's none. */
   private gitBase(c: Checkout): string | null {
     const base = baseBranch(c, this.config.git.base);
-    if (!base) this.message("warn", this.config.git.base ? `no branch or commit "${this.config.git.base}" ([git] base)` : "no base branch: neither main nor master is there — [git] base sets one");
+    if (!base)
+      this.message(
+        "warn",
+        this.config.git.base
+          ? `no branch or commit "${this.config.git.base}" ([git] base)`
+          : "no base branch: neither main nor master is there — [git] base sets one",
+      );
     return base;
   }
 
@@ -1931,10 +2258,21 @@ export class App {
     const files = r.files.map((f) => ({ ...f, rel: inVault(c, this.loc.root, f.path) })).filter((f) => f.rel !== null);
     if (!files.length) return this.message("info", `nothing changed against ${base}`);
     const letter: Record<GitState, string> = { new: "+", modified: "M", renamed: "R", deleted: "D", conflict: "!" };
-    const role: Record<GitState, Role> = { new: "git_new", modified: "git_modified", renamed: "git_modified", deleted: "diff_del", conflict: "git_conflict" };
+    const role: Record<GitState, Role> = {
+      new: "git_new",
+      modified: "git_modified",
+      renamed: "git_modified",
+      deleted: "diff_del",
+      conflict: "git_conflict",
+    };
     this.openList({
       title: `Changed against ${base} (${files.length}) — enter: the diff`,
-      items: files.map((f) => ({ label: `${letter[f.state]} ${f.rel}`, role: role[f.state], detail: f.from ? `from ${inVault(c, this.loc.root, f.from) ?? f.from}` : undefined, data: f })),
+      items: files.map((f) => ({
+        label: `${letter[f.state]} ${f.rel}`,
+        role: role[f.state],
+        detail: f.from ? `from ${inVault(c, this.loc.root, f.from) ?? f.from}` : undefined,
+        data: f,
+      })),
       accept: (item) => {
         const f = item.data as { rel: string; path: string; state: GitState };
         this.showGitDiff(f.rel, () => this.openChanges());
@@ -1963,18 +2301,36 @@ export class App {
     try {
       now = open ? open.source : readText(join(this.loc.root, rel)).text;
     } catch {}
-    this.showLineDiff(before, now, rel, `${rel} against ${base}${back ? " — esc: the changes" : ""}`, `no differences from ${base}`, back);
+    this.showLineDiff(
+      before,
+      now,
+      rel,
+      `${rel} against ${base}${back ? " — esc: the changes" : ""}`,
+      `no differences from ${base}`,
+      back,
+    );
   }
 
   /** A diff, `before` to `now`, a row a line, coloured; enter goes to the line in `rel`; esc: `back`. */
-  showLineDiff(before: string, now: string, rel: string, title: string, none = "no differences", back?: () => void): void {
+  showLineDiff(
+    before: string,
+    now: string,
+    rel: string,
+    title: string,
+    none = "no differences",
+    back?: () => void,
+  ): void {
     const rows = diffRows(before, now);
     const role: Record<string, Role> = { "@@": "diff_head", "+": "diff_add", "-": "diff_del" };
     this.openList({
       title,
       filterable: false,
       items: rows.length
-        ? rows.map((r) => ({ label: r.kind === "@@" ? `@@ ${r.text}` : `${r.kind} ${sanitize(r.text.replace(/\t/g, "  "))}`, role: role[r.kind], data: r }))
+        ? rows.map((r) => ({
+            label: r.kind === "@@" ? `@@ ${r.text}` : `${r.kind} ${sanitize(r.text.replace(/\t/g, "  "))}`,
+            role: role[r.kind],
+            data: r,
+          }))
         : [{ label: none, data: null }],
       accept: (item) => {
         const r = item.data as { line: number } | null;
@@ -2006,7 +2362,11 @@ export class App {
       title: `Branches (${branches.length}) — enter: check one out`,
       items: [
         ...branches.map((b) => ({ label: sanitize(b), detail: b === current ? "here" : "", data: b })),
-        { label: "A new branch from here…", detail: current ? `from ${sanitize(current)}` : "from this commit", data: NEW },
+        {
+          label: "A new branch from here…",
+          detail: current ? `from ${sanitize(current)}` : "from this commit",
+          data: NEW,
+        },
       ],
       selected: Math.max(0, branches.indexOf(current ?? "")),
       accept: (item) => {
@@ -2031,12 +2391,17 @@ export class App {
       title: `Unsaved: ${names}`,
       items: [
         { label: "Save them, then switch", data: "save" },
-        { label: "Switch, keeping them unsaved", detail: "their text as typed; a file the switch changes, a conflict to settle on saving", data: "keep" },
+        {
+          label: "Switch, keeping them unsaved",
+          detail: "their text as typed; a file the switch changes, a conflict to settle on saving",
+          data: "keep",
+        },
         { label: "Cancel", data: "cancel" },
       ],
       accept: (item) => {
         if (item.data === "cancel") return;
-        if (item.data === "save" && !dirty.every((b) => this.saveBuffer(b, true))) return this.message("warn", "not every note saved — nothing switched");
+        if (item.data === "save" && !dirty.every((b) => this.saveBuffer(b, true)))
+          return this.message("warn", "not every note saved — nothing switched");
         go();
       },
     });
@@ -2068,7 +2433,11 @@ export class App {
         const w = item.data as { path: string };
         if (w.path === c.root) return;
         const vault = join(w.path, here);
-        if (!isVaultRoot(vault)) return this.message("warn", `${vault} isn't a root on that branch (none of ${rootMarkers().join(", ")} in it)`);
+        if (!isVaultRoot(vault))
+          return this.message(
+            "warn",
+            `${vault} isn't a root on that branch (none of ${rootMarkers().join(", ")} in it)`,
+          );
         const there = note && existsSync(join(vault, note)) ? join(vault, note) : null;
         const v = this.view;
         this.switchVault(rootAt(vault), there, there && v ? { ...v.topAnchor } : undefined);
@@ -2088,11 +2457,18 @@ export class App {
     if (!here) return this.message("info", "merge review: HEAD is detached — check out the branch to merge into");
     const base = baseBranch(c, this.config.git.base);
     const others = (branchesOf(c) ?? []).filter((b) => b !== here);
-    const choices = [...(base && base !== here ? [{ from: here, into: base }] : []), ...others.map((b) => ({ from: b, into: here }))];
+    const choices = [
+      ...(base && base !== here ? [{ from: here, into: base }] : []),
+      ...others.map((b) => ({ from: b, into: here })),
+    ];
     if (!choices.length) return this.message("info", "merge review: no other branch to merge");
     this.openList({
       title: "Review a merge — enter: the links it would break",
-      items: choices.map((m) => ({ label: `${this.glyphs.branch} ${m.from} → ${m.into}`, detail: m.into === here ? "into this branch" : "this branch into the base", data: m })),
+      items: choices.map((m) => ({
+        label: `${this.glyphs.branch} ${m.from} → ${m.into}`,
+        detail: m.into === here ? "into this branch" : "this branch into the base",
+        data: m,
+      })),
       accept: (item) => this.showMergeReview(item.data as { from: string; into: string }),
     });
   }
@@ -2107,27 +2483,44 @@ export class App {
     } catch (err) {
       return this.message("warn", `merge review: ${(err as Error).message}`);
     }
-    const conflicts = r.conflicts.length ? ` — git can't merge ${r.conflicts.length} file${r.conflicts.length === 1 ? "" : "s"}` : "";
+    const conflicts = r.conflicts.length
+      ? ` — git can't merge ${r.conflicts.length} file${r.conflicts.length === 1 ? "" : "s"}`
+      : "";
     if (!r.breaks.length) return this.message("info", `merging ${r.from} into ${r.into} breaks no link${conflicts}`);
     this.openList({
       title: `Merging ${r.from} into ${r.into}: ${r.breaks.length} link${r.breaks.length === 1 ? "" : "s"} would break${conflicts} — esc: the branches`,
-      items: r.breaks.map((b) => ({ label: `${b.path}:${b.line}  ${sanitize(b.target)}`, role: b.fix ? "git_modified" : "diff_del", detail: sanitize(describeBreak(b)), data: b })),
+      items: r.breaks.map((b) => ({
+        label: `${b.path}:${b.line}  ${sanitize(b.target)}`,
+        role: b.fix ? "git_modified" : "diff_del",
+        detail: sanitize(describeBreak(b)),
+        data: b,
+      })),
       accept: (item) => {
         const b = item.data as MergeBreak;
-        if (!existsSync(join(this.loc.root, b.path))) return this.message("info", `${b.path} isn't here yet: it comes with ${r.from}`);
+        if (!existsSync(join(this.loc.root, b.path)))
+          return this.message("info", `${b.path} isn't here yet: it comes with ${r.from}`);
         this.openAt(b.path, b.line, b.column);
       },
       cancel: () => this.openMergeReview(),
     });
   }
 
-  private headMoved(was: { branch: string | null; commit: string | null }, now: { branch: string | null; commit: string | null }, moves: [string, string][] = []): void {
-    const name = (h: typeof now) => (h.branch ? `branch ${h.branch}` : `a detached HEAD (${h.commit?.slice(0, 7) ?? "?"})`);
+  private headMoved(
+    was: { branch: string | null; commit: string | null },
+    now: { branch: string | null; commit: string | null },
+    moves: [string, string][] = [],
+  ): void {
+    const name = (h: typeof now) =>
+      h.branch ? `branch ${h.branch}` : `a detached HEAD (${h.commit?.slice(0, 7) ?? "?"})`;
     // HEAD moved on its branch — a merge, a pull, a commit — is no switch (20.21): git's renames since
     // (`moves`, taken as evidence) let a link broken by one say where its file went.
     if (was.branch && was.branch === now.branch) {
       const n = moves.length;
-      if (n) this.message("info", `${name(now)} moved on: git moved ${n} file${n === 1 ? "" : "s"} — links to ${n === 1 ? "it" : "them"} say where (space v p); space l r relinks a note's`);
+      if (n)
+        this.message(
+          "info",
+          `${name(now)} moved on: git moved ${n} file${n === 1 ? "" : "s"} — links to ${n === 1 ? "it" : "them"} say where (space v p); space l r relinks a note's`,
+        );
       return;
     }
     // The branch left keeps its tabs; the one switched to has its own back — when it has some, and
@@ -2136,7 +2529,11 @@ export class App {
       this.saveState(was.branch);
       const theirs = now.branch ? loadSession(this.loc)?.branches?.[now.branch] : undefined;
       if (theirs?.tabs.length) {
-        if (this.dirtyBuffers().length) return this.message("info", `switched to ${name(now)} — unsaved notes stay open, so its tabs aren't brought back`);
+        if (this.dirtyBuffers().length)
+          return this.message(
+            "info",
+            `switched to ${name(now)} — unsaved notes stay open, so its tabs aren't brought back`,
+          );
         this.overlay = null;
         this.tabs = [];
         this.openTabs(theirs.tabs, theirs.activeTab);
@@ -2195,7 +2592,10 @@ export class App {
     this.stopRetargetFeed?.();
     this.stopRetargetFeed = this.graph.onRetarget((rs) => {
       const first = rs[0]!;
-      this.message("warn", `${rs.length === 1 ? `[[${first.target}]] in ${first.from}` : `${rs.length} links by name`} reach${rs.length === 1 ? "es" : ""} ${first.now} now, not ${first.was}`);
+      this.message(
+        "warn",
+        `${rs.length === 1 ? `[[${first.target}]] in ${first.from}` : `${rs.length} links by name`} reach${rs.length === 1 ? "es" : ""} ${first.now} now, not ${first.was}`,
+      );
     });
     // A note drawn inside another (1.11) changed: whatever shows it lays out again.
     this.stopEmbedFeed?.();
@@ -2279,11 +2679,17 @@ export class App {
   searchVault(input: string, limit = 50): SearchResult {
     const idx = this.searchIndex && !this.searchJob ? this.searchIndex : null;
     const unsaved = new Map<string, string>();
-    for (const b of this.dirtyBuffers()) if (b.rel !== null && !b.virtual && (this.graph.notes.has(b.rel) || b.kind.group === "data")) unsaved.set(b.rel, b.source);
+    for (const b of this.dirtyBuffers())
+      if (b.rel !== null && !b.virtual && (this.graph.notes.has(b.rel) || b.kind.group === "data"))
+        unsaved.set(b.rel, b.source);
     if (!idx) return search(this.graph, null, input, { limit, texts: unsaved });
     const r = search(this.graph, idx, input, { limit });
     if (!unsaved.size) return r;
-    const mine = new Map(search(this.graph, null, input, { limit, texts: unsaved, only: [...unsaved.keys()], relax: r.relaxed }).hits.map((h) => [h.path, h]));
+    const mine = new Map(
+      search(this.graph, null, input, { limit, texts: unsaved, only: [...unsaved.keys()], relax: r.relaxed }).hits.map(
+        (h) => [h.path, h],
+      ),
+    );
     const hits = r.hits.filter((h) => !unsaved.has(h.path) || mine.has(h.path)).map((h) => mine.get(h.path) ?? h);
     for (const h of mine.values()) if (!hits.includes(h)) hits.unshift(h);
     return { ...r, hits: hits.slice(0, limit) };
@@ -2298,8 +2704,10 @@ export class App {
       if (list) list.title = t;
       return t;
     };
-    const where = () => (scope === "here" ? "" : scope === "linked" ? " — and the folders linked to it" : " — and every folder known");
-    const HELP = 'search here — words, "a phrase", prefix*, -not, title:word, #tag, path:folder/ — ctrl+a: more folders';
+    const where = () =>
+      scope === "here" ? "" : scope === "linked" ? " — and the folders linked to it" : " — and every folder known";
+    const HELP =
+      'search here — words, "a phrase", prefix*, -not, title:word, #tag, path:folder/ — ctrl+a: more folders';
     const item = (h: SearchHit & { shown?: string }): ListItem => {
       const lead = h.heading ? `${h.heading} — ` : "";
       return {
@@ -2311,15 +2719,27 @@ export class App {
       };
     };
     const source = (input: string): ListItem[] => {
-      if (!input.trim()) return (titled(`${HELP}${where()}`), []);
+      if (!input.trim()) return titled(`${HELP}${where()}`), [];
       const job = this.searchJob;
-      if (job && this.searchIndex) return (titled(`search — the folder is being indexed: ${job.indexed.toLocaleString("en")} of ${job.todo.length.toLocaleString("en")} files…`), []);
+      if (job && this.searchIndex)
+        return (
+          titled(
+            `search — the folder is being indexed: ${job.indexed.toLocaleString("en")} of ${job.todo.length.toLocaleString("en")} files…`,
+          ),
+          []
+        );
       const r = this.searchVault(input);
       const others = scope === "here" ? null : searchOthers(this.graph, input, scope);
       const n = r.hits.length + (others?.hits.length ?? 0);
-      titled(`"${input.trim()}" — ${n} ${n === 1 ? "file" : "files"}${r.relaxed ? " with some of the words" : ""}${r.engine === "scan" ? " (scanned: no index here)" : ""}${where()}`);
+      titled(
+        `"${input.trim()}" — ${n} ${n === 1 ? "file" : "files"}${r.relaxed ? " with some of the words" : ""}${r.engine === "scan" ? " (scanned: no index here)" : ""}${where()}`,
+      );
       const items = r.hits.map(item);
-      if (others?.hits.length) items.push({ label: scope === "linked" ? "linked folders" : "other folders", header: true, data: null }, ...others.hits.map(item));
+      if (others?.hits.length)
+        items.push(
+          { label: scope === "linked" ? "linked folders" : "other folders", header: true, data: null },
+          ...others.hits.map(item),
+        );
       return items;
     };
     this.openList({
@@ -2330,7 +2750,8 @@ export class App {
       accept: (item) => {
         const h = item.data as { path: string; line: number; column: number; abs?: string; vault?: string | null };
         // Another root's: into it, at the line (a switch, as a link into it is).
-        if (h.vault !== undefined && h.vault !== null && h.abs) return void this.intoOtherVault(h.abs, { heading: null, headingIndex: 0, offset: 0, line: h.line });
+        if (h.vault !== undefined && h.vault !== null && h.abs)
+          return void this.intoOtherVault(h.abs, { heading: null, headingIndex: 0, offset: 0, line: h.line });
         this.openAt(h.path, h.line, h.column);
       },
       widen: () => {
@@ -2374,7 +2795,12 @@ export class App {
     const buf = this.buffer(path);
     if (!buf) return;
     this.touchRecent(buf.key);
-    this.tabs.push({ views: [this.makeView(buf, anchor)], active: 0, orientation: "side", ratio: this.config.ui.split_ratio });
+    this.tabs.push({
+      views: [this.makeView(buf, anchor)],
+      active: 0,
+      orientation: "side",
+      ratio: this.config.ui.split_ratio,
+    });
     this.activeTab = this.tabs.length - 1;
     this.region = "content";
     this.revealInSidebar();
@@ -2406,7 +2832,8 @@ export class App {
     const buf = this.buffer(path);
     if (!buf) return;
     // A pinned tab keeps its note: another one opens in a new tab.
-    if (buf !== view.buf && this.tabs.find((t) => t.views.includes(view))?.pinned) return this.openInNewTab(path, anchor);
+    if (buf !== view.buf && this.tabs.find((t) => t.views.includes(view))?.pinned)
+      return this.openInNewTab(path, anchor);
     this.touchRecent(buf.key);
     this.pushHistory(view);
     if (buf === view.buf && anchor) {
@@ -2548,7 +2975,8 @@ export class App {
   layoutFor(view: View, paneWidth: number, gutter = 0): Layout {
     // A big note parsing on other threads (15.1): a line saying so, and nothing of the view moved
     // (its reading position stays for the real layout, a moment later).
-    if (!view.source && !view.live && view.buf.parseAhead()) return this.readingLayout(view.buf, this.textWidth(paneWidth, gutter));
+    if (!view.source && !view.live && view.buf.parseAhead())
+      return this.readingLayout(view.buf, this.textWidth(paneWidth, gutter));
     // A data file that stopped parsing (16.14) goes to source mode, the error said — when insert
     // mode ends, never mid-typing (an open quote is normal while a value is typed).
     if (!view.source && !view.insert && !this.canRender(view.buf)) {
@@ -2576,7 +3004,13 @@ export class App {
         ? this.liveLayout(view, width)
         : code
           ? view.buf.codeLayout(width, this.ui.wrap, this.glyphs, this.ui.code_cells, this.cellProblems(view))
-          : view.buf.layout(width, this.glyphs, this.ui.urls, view.buf.rel ? this.graph : null, this.picturesFor(view.buf));
+          : view.buf.layout(
+              width,
+              this.glyphs,
+              this.ui.urls,
+              view.buf.rel ? this.graph : null,
+              this.picturesFor(view.buf),
+            );
     const block = view.live && view.liveBase ? `${view.liveBase.active[0]}-${view.liveBase.active[1]}` : "";
     const key = `${view.source ? "s" : view.live ? "l" : "r"}${block}:${width}:${this.glyphs.mode}:${this.ui.urls}:${layout.lines.length}:${view.buf.version}:${view.height}`;
     if (view.layoutKey !== key) {
@@ -2592,9 +3026,13 @@ export class App {
       }
       view.top = this.clampTop(view, layout, this.rowFromAnchor(layout, view.topAnchor, view.topSub ?? 0));
       this.ensureCursorVisible(view, layout);
-      if (view.find) view.find = computeFind(layout, view.find.query, view.find.current, view.find.whole, view.find.regex);
+      if (view.find)
+        view.find = computeFind(layout, view.find.query, view.find.current, view.find.whole, view.find.regex);
       // (While typing, its end may be past a row's last character, as the cursor may.)
-      if (view.sel) view.sel.anchor = view.sel.src ? this.cursorFromAnchor(layout, view.sel.src, view.insert) : clampPos(layout, view.sel.anchor);
+      if (view.sel)
+        view.sel.anchor = view.sel.src
+          ? this.cursorFromAnchor(layout, view.sel.src, view.insert)
+          : clampPos(layout, view.sel.anchor);
     }
     if (view.live && view.liveBase) this.pinLens(view, layout);
     return layout;
@@ -2611,8 +3049,17 @@ export class App {
         this.host.requestRender();
       });
     }
-    const text = truncate(`reading ${this.displayName(buf)} — ${buf.lineStarts().length.toLocaleString("en")} lines…`, width);
-    return { lines: [{ spans: [{ text, role: "dim", attrs: 0 }], src: 1 }], links: [], headings: [], width, clipped: 0 };
+    const text = truncate(
+      `reading ${this.displayName(buf)} — ${buf.lineStarts().length.toLocaleString("en")} lines…`,
+      width,
+    );
+    return {
+      lines: [{ spans: [{ text, role: "dim", attrs: 0 }], src: 1 }],
+      links: [],
+      headings: [],
+      width,
+      clipped: 0,
+    };
   }
 
   /** Big notes' parses running on other threads: a key waits for them, a click is dropped. */
@@ -2642,7 +3089,13 @@ export class App {
     if (pin.range !== range) {
       pin.range = range;
       // A click: the clicked line stays under the pointer. The keyboard: the lens stays put.
-      view.top = this.clampTop(view, layout, click !== undefined ? this.stepVisible(layout, hidden, view.cur.row, -click) : this.stepVisible(layout, hidden, top, -pin.screen));
+      view.top = this.clampTop(
+        view,
+        layout,
+        click !== undefined
+          ? this.stepVisible(layout, hidden, view.cur.row, -click)
+          : this.stepVisible(layout, hidden, top, -pin.screen),
+      );
       this.anchorTop(view, layout);
       this.ensureCursorVisible(view, layout);
     }
@@ -2668,7 +3121,8 @@ export class App {
     const textWidth = width - (this.config.ui.relative_numbers === "lens" ? LENS_COUNTERS : 0);
     const rowsOf = (s: number, e: number) => {
       let n = 0;
-      for (let k = s; k <= e; k++) n += wrap ? Math.max(1, Math.ceil(stringWidth(texts[k - 1] ?? "") / Math.max(1, textWidth))) : 1;
+      for (let k = s; k <= e; k++)
+        n += wrap ? Math.max(1, Math.ceil(stringWidth(texts[k - 1] ?? "") / Math.max(1, textWidth))) : 1;
       return n;
     };
     // A data file's blocks are cards (a key and its values, 16.12): the lens is the cursor's card,
@@ -2679,7 +3133,10 @@ export class App {
     const cards = buf.kind.group === "data" && !rows;
     // A size set by hand (`+` `-`) is the lens's size wherever it goes, until `=`.
     const minRows = view.lensSize ?? (cards ? 1 : this.config.editor.lens_min_rows);
-    const maxRows = view.lensSize !== undefined || rows ? minRows : Math.max(minRows, Math.floor(Math.max(1, view.height) * this.config.editor.lens_max));
+    const maxRows =
+      view.lensSize !== undefined || rows
+        ? minRows
+        : Math.max(minRows, Math.floor(Math.max(1, view.height) * this.config.editor.lens_max));
     // The lens on the cursor's block, grown by its neighbours (below, then above) to the minimum — or its unit whole (a
     // code cell, a note's section), alone.
     const openOn = (blocks: Block[], at: number, unit?: (line: number) => Block | null): Block => {
@@ -2731,7 +3188,9 @@ export class App {
     const code = this.isCodeDocument(buf);
     const fits = (s: number, e: number) => rowsOf(s, e) <= maxRows;
     const fresh = (prev?: Block): LiveBase => {
-      const rendered = code ? buf.codeLayout(width, wrap, this.glyphs, this.ui.code_cells, this.cellProblems(view)) : buf.layout(width, this.glyphs, this.ui.urls, buf.rel ? this.graph : null, this.picturesFor(buf));
+      const rendered = code
+        ? buf.codeLayout(width, wrap, this.glyphs, this.ui.code_cells, this.cellProblems(view))
+        : buf.layout(width, this.glyphs, this.ui.urls, buf.rel ? this.graph : null, this.picturesFor(buf));
       let blocks = code ? buf.codeBlocks(lineCount) : blockRanges(buf.parsed.tree, lineCount);
       let unit: ((at: number) => Block | null) | undefined;
       if (code) {
@@ -2753,7 +3212,19 @@ export class App {
         const e = blockAt(blocks, Math.min(Math.max(prev[0], prev[1]), lineCount));
         range = follow(blocks, [s[0], e[1]], Math.min(line, lineCount), unit);
       } else range = openOn(blocks, Math.min(line, lineCount), unit);
-      return { rendered, width, wrap, renderedVersion: buf.version, version: buf.version, blocks, unit, old: range, active: range, ...around(range), lineCount };
+      return {
+        rendered,
+        width,
+        wrap,
+        renderedVersion: buf.version,
+        version: buf.version,
+        blocks,
+        unit,
+        old: range,
+        active: range,
+        ...around(range),
+        lineCount,
+      };
     };
     let base = view.liveBase;
     // A cell's ✎ (24.13): the lens on its lines.
@@ -2765,7 +3236,11 @@ export class App {
       // …and the line break that ends the lens survived (a delete at its last line's end joins the
       // line below into it: that's an edit across the edge, not inside).
       const edgeKept = !base.after || buf.source[buf.source.length - base.after.length - 1] === "\n";
-      const untouched = buf.source.startsWith(base.before) && buf.source.endsWith(base.after) && buf.source.length >= base.before.length + base.after.length && edgeKept;
+      const untouched =
+        buf.source.startsWith(base.before) &&
+        buf.source.endsWith(base.after) &&
+        buf.source.length >= base.before.length + base.after.length &&
+        edgeKept;
       const grew = lineCount - base.lineCount;
       const active: Block = [base.active[0], Math.max(base.active[0], base.active[1] + grew)];
       if (view.insert && untouched) base = { ...base, version: buf.version, active, lineCount, composed: undefined };
@@ -2843,7 +3318,9 @@ export class App {
   /** The code view's cell (24.13) holding line `line` — the innermost (a method's, not its class's) — or starting there. */
   cellAt(view: View, line: number): NonNullable<Layout["cells"]>[number] | null {
     const cells = this.currentLayout(view).cells ?? [];
-    return cells.filter((c) => line >= c.from && line <= c.to).sort((a, b) => a.to - a.from - (b.to - b.from))[0] ?? null;
+    return (
+      cells.filter((c) => line >= c.from && line <= c.to).sort((a, b) => a.to - a.from - (b.to - b.from))[0] ?? null
+    );
   }
 
   /**
@@ -2852,11 +3329,18 @@ export class App {
    */
   cellAction(action: string, from?: number): void {
     const v = this.view;
-    if (!v || !this.isCodeDocument(v.buf) || v.source) return this.message("info", "a cell is the code view's: a file of a language it maps, as a document");
+    if (!v || !this.isCodeDocument(v.buf) || v.source)
+      return this.message("info", "a cell is the code view's: a file of a language it maps, as a document");
     const line = from ?? srcAt(this.currentLayout(v).lines[v.cur.row] ?? { src: 1, spans: [] }, v.cur.col);
-    const cell = from !== undefined ? ((this.currentLayout(v).cells ?? []).find((c) => c.from === from) ?? null) : this.cellAt(v, line);
+    const cell =
+      from !== undefined
+        ? ((this.currentLayout(v).cells ?? []).find((c) => c.from === from) ?? null)
+        : this.cellAt(v, line);
     if (!cell) return this.message("info", "no cell here: the cursor's on prose, or between cells");
-    const text = v.buf.lines().slice(cell.from - 1, cell.to).join("\n");
+    const text = v.buf
+      .lines()
+      .slice(cell.from - 1, cell.to)
+      .join("\n");
     const lines = cell.from === cell.to ? `line ${cell.from}` : `lines ${cell.from}–${cell.to}`;
     switch (action) {
       case "fold":
@@ -2889,7 +3373,12 @@ export class App {
         return;
       }
       case "scratch":
-        this.capture(formatEntry({ ref: { path: v.buf.abs, startLine: cell.from, endLine: cell.to }, snippetText: text, lang: "" }, this.loc.root));
+        this.capture(
+          formatEntry(
+            { ref: { path: v.buf.abs, startLine: cell.from, endLine: cell.to }, snippetText: text, lang: "" },
+            this.loc.root,
+          ),
+        );
         return this.message("info", `${cell.title} — ${lines} added to the scratch`);
     }
   }
@@ -2921,8 +3410,14 @@ export class App {
     // A language server, once it's said what it finds, has the file's syntax errors: tree-sitter's are then left out.
     // Shown in source mode and the code view alike (DF-D10).
     const shows = view.source || this.isCodeDocument(buf);
-    if (syn?.errors.length && !buf.serverProblems.size && (any || (shows && !view.insert && syn.version === buf.version))) out.push(...syntaxProblems(syn.errors));
-    if (buf.lint?.issues.length && (any || buf.lint.version === buf.version)) out.push(...lintProblems(buf.lint.issues));
+    if (
+      syn?.errors.length &&
+      !buf.serverProblems.size &&
+      (any || (shows && !view.insert && syn.version === buf.version))
+    )
+      out.push(...syntaxProblems(syn.errors));
+    if (buf.lint?.issues.length && (any || buf.lint.version === buf.version))
+      out.push(...lintProblems(buf.lint.issues));
     // Its language servers' (19.1), for the text they were found in: typing hides them until they answer again.
     for (const p of buf.serverProblems.values()) if (any || p.version === buf.version) out.push(...p.list);
     // Its linters' (19.19), likewise: one reading the file, until it's saved and run again.
@@ -2987,7 +3482,12 @@ export class App {
     const now = view.source ? "source" : view.live ? "live" : "rendered";
     if (now === mode) return;
     if (mode !== "source" && !this.canRender(view.buf)) {
-      const why = view.buf.kind.group === "data" ? `doesn't parse — ${view.buf.parsed.error}` : view.buf.kind.group === "text" ? "has no rendered view" : "has no rendered view yet";
+      const why =
+        view.buf.kind.group === "data"
+          ? `doesn't parse — ${view.buf.parsed.error}`
+          : view.buf.kind.group === "text"
+            ? "has no rendered view"
+            : "has no rendered view yet";
       return this.message(view.buf.kind.group === "data" ? "warn" : "info", `${view.buf.name} ${why}: source mode`);
     }
     if (view.insert) stopInsert(this, view);
@@ -3047,7 +3547,10 @@ export class App {
 
   /** Rows the lens may show at once. */
   lensRows(view: View): number {
-    return Math.max(this.config.editor.lens_min_rows, Math.floor(Math.max(1, view.height) * this.config.editor.lens_max));
+    return Math.max(
+      this.config.editor.lens_min_rows,
+      Math.floor(Math.max(1, view.height) * this.config.editor.lens_max),
+    );
   }
 
   /** The lens's rows left out of the drawing: above its inner window and below it ([a, b) each). */
@@ -3088,7 +3591,8 @@ export class App {
   screenRows(view: View, layout: Layout): number[] {
     const hidden = this.lensHidden(view, layout);
     const out: number[] = [];
-    for (let r = view.top; r < layout.lines.length && out.length < view.height; r++) if (!isHidden(hidden, r)) out.push(r);
+    for (let r = view.top; r < layout.lines.length && out.length < view.height; r++)
+      if (!isHidden(hidden, r)) out.push(r);
     return out;
   }
 
@@ -3123,7 +3627,8 @@ export class App {
     } else {
       const d = this.visibleBetween(layout, hidden, view.top, view.cur.row);
       if (d < so) view.top = this.stepVisible(layout, hidden, view.cur.row, -so);
-      else if (d > view.height - 1 - so) view.top = this.stepVisible(layout, hidden, view.cur.row, -(view.height - 1 - so));
+      else if (d > view.height - 1 - so)
+        view.top = this.stepVisible(layout, hidden, view.cur.row, -(view.height - 1 - so));
     }
     view.top = this.clampTop(view, layout, view.top);
     this.anchorTop(view, layout);
@@ -3212,7 +3717,16 @@ export class App {
     if (!rows.length) return view.cur;
     const so = Math.max(0, Math.min(this.config.ui.scrolloff, Math.floor((rows.length - 1) / 2)));
     const lastShown = rows[rows.length - 1] === layout.lines.length - 1;
-    const i = where === "top" ? (view.top === 0 ? 0 : so) : where === "bottom" ? (lastShown ? rows.length - 1 : rows.length - 1 - so) : Math.floor((rows.length - 1) / 2);
+    const i =
+      where === "top"
+        ? view.top === 0
+          ? 0
+          : so
+        : where === "bottom"
+          ? lastShown
+            ? rows.length - 1
+            : rows.length - 1 - so
+          : Math.floor((rows.length - 1) / 2);
     const row = rows[Math.max(0, Math.min(i, rows.length - 1))]!;
     return { row, col: 0 };
   }
@@ -3265,7 +3779,12 @@ export class App {
     const selected = chain.length - 1;
     this.openList({
       title: "Path",
-      items: chain.map((c, k) => ({ label: c.text, indent: k, hint: k === chain.length - 1 ? "here" : undefined, data: c.line })),
+      items: chain.map((c, k) => ({
+        label: c.text,
+        indent: k,
+        hint: k === chain.length - 1 ? "here" : undefined,
+        data: c.line,
+      })),
       selected,
       anchor: at ? { x: at.x, y: at.y } : undefined,
       accept: (item) => {
@@ -3300,7 +3819,10 @@ export class App {
       // Unsaved changes: toggle in the buffer (an undo step), not on disk under them.
       const r = toggleTask(new TextEncoder().encode(buf.source), task.line);
       if (!r) return this.message("warn", `line ${task.line} has no task marker`);
-      const at = buf.lineStarts()[task.line - 1]! + /\[([ xX])\]/.exec(buf.source.slice(buf.lineStarts()[task.line - 1]!))!.index + 1;
+      const at =
+        buf.lineStarts()[task.line - 1]! +
+        /\[([ xX])\]/.exec(buf.source.slice(buf.lineStarts()[task.line - 1]!))!.index +
+        1;
       buf.edit(at, 1, r.checked ? "x" : " ");
       return this.message("info", r.checked ? "done ✓ (unsaved)" : "not done (unsaved)");
     }
@@ -3328,7 +3850,10 @@ export class App {
     try {
       written = writeNote(root, buf.abs, content);
     } catch (err) {
-      this.message("error", err instanceof WriteRefused ? err.message : `can't write ${buf.key}: ${(err as Error).message}`);
+      this.message(
+        "error",
+        err instanceof WriteRefused ? err.message : `can't write ${buf.key}: ${(err as Error).message}`,
+      );
       return false;
     }
     // Stamped as written: an agent's write landing right after is a change, not ours.
@@ -3337,7 +3862,8 @@ export class App {
     // The index learns what we wrote (the watcher skips our own writes): the note's links, for
     // backlinks, and its stamp — a later watcher resync from the index must not take our own
     // save for someone else's change.
-    if (buf.rel !== null && this.graph.notes.has(buf.rel)) this.graph.updateFile(buf.rel, { rel: buf.rel, abs: buf.abs, size: written.size, mtimeMs: written.mtimeMs });
+    if (buf.rel !== null && this.graph.notes.has(buf.rel))
+      this.graph.updateFile(buf.rel, { rel: buf.rel, abs: buf.abs, size: written.size, mtimeMs: written.mtimeMs });
     else if (buf.rel !== null) this.graph.fileChanged(buf.rel);
     if (saving) {
       // The text on disk is what's in the buffer: keep it, its history and every cursor.
@@ -3377,7 +3903,8 @@ export class App {
     if (!target) return;
     const buf = target.buf;
     // The editor reads the file: unsaved changes go there first (4.10).
-    if (buf.dirty && !this.saveBuffer(buf)) return this.message("warn", `${this.displayName(buf)} isn't saved — not handing it off`);
+    if (buf.dirty && !this.saveBuffer(buf))
+      return this.message("warn", `${this.displayName(buf)} isn't saved — not handing it off`);
     const argv = editorArgv(this.config.editor.command, buf.abs, target.line);
     const r = this.host.runForeground(argv);
     if (typeof r === "string") return this.message("error", `couldn't start ${argv[0]}: ${r}`);
@@ -3402,7 +3929,8 @@ export class App {
     const target = this.handOffTarget(from);
     if (!target) return;
     const view = target;
-    if (view.buf.dirty && !this.saveBuffer(view.buf)) return this.message("warn", `${this.displayName(view.buf)} isn't saved — not sending it`);
+    if (view.buf.dirty && !this.saveBuffer(view.buf))
+      return this.message("warn", `${this.displayName(view.buf)} isn't saved — not sending it`);
     const raw = this.config.editor.remote.filter((t) => t.trim());
     if (!raw.length) return this.message("info", "set [editor] remote in the config to send notes to a running editor");
     const templates = raw.length === 1 && raw[0]!.trim() === "nvim" ? NVIM_REMOTE : raw;
@@ -3412,7 +3940,8 @@ export class App {
       if (known) return this.sendWith(view, templates, known);
     }
     const found = this.nvimDiscovery();
-    if (!found.length) return this.message("info", "no nvim is running with a server — start nvim (0.9 or later) and try again");
+    if (!found.length)
+      return this.message("info", "no nvim is running with a server — start nvim (0.9 or later) and try again");
     const pick = (s: NvimServer) => {
       this.remoteServer = s.socket;
       this.sendWith(view, templates, s);
@@ -3424,10 +3953,16 @@ export class App {
     const ordered = [...found].sort((a, b) => Number(holds(b)) - Number(holds(a)) || b.cwd.length - a.cwd.length);
     const home = homedir();
     const tilde = (p: string) => (p === home || p.startsWith(`${home}/`) ? `~${p.slice(home.length)}` : p);
-    const shown = (s: NvimServer) => (s.file ? (s.cwd && s.file.startsWith(`${s.cwd}/`) ? s.file.slice(s.cwd.length + 1) : tilde(s.file)) : "no file");
+    const shown = (s: NvimServer) =>
+      s.file ? (s.cwd && s.file.startsWith(`${s.cwd}/`) ? s.file.slice(s.cwd.length + 1) : tilde(s.file)) : "no file";
     this.openList({
       title: "Send to which nvim?",
-      items: ordered.map((s) => ({ label: tilde(s.cwd || s.socket), detail: shown(s), hint: s.socket === this.remoteServer ? "last used" : holds(s) ? "holds this note" : undefined, data: s })),
+      items: ordered.map((s) => ({
+        label: tilde(s.cwd || s.socket),
+        detail: shown(s),
+        hint: s.socket === this.remoteServer ? "last used" : holds(s) ? "holds this note" : undefined,
+        data: s,
+      })),
       accept: (item) => pick(item.data as NvimServer),
     });
   }
@@ -3445,7 +3980,10 @@ export class App {
       for (const argv of cmds) {
         const r = await run(argv);
         if (r === 0) continue;
-        this.message("error", typeof r === "string" ? `couldn't start ${argv[0]}: ${r}` : `${argv.slice(0, 2).join(" ")} exited with ${r}`);
+        this.message(
+          "error",
+          typeof r === "string" ? `couldn't start ${argv[0]}: ${r}` : `${argv.slice(0, 2).join(" ")} exited with ${r}`,
+        );
         this.host.requestRender();
         return;
       }
@@ -3613,7 +4151,8 @@ export class App {
         added = true;
       }
     }
-    if (added) this.watcher?.sync(isListed(this.loc) ? [""] : this.graph.dirs, this.knownFromGraph(), this.sizesFromGraph());
+    if (added)
+      this.watcher?.sync(isListed(this.loc) ? [""] : this.graph.dirs, this.knownFromGraph(), this.sizesFromGraph());
   }
 
   /**
@@ -3676,7 +4215,10 @@ export class App {
       // suggested, from the folder; typed again, the name is made anyway (a suggestion, not a rule).
       const clash = text.trim() !== allowed ? this.nameClash(text, base) : null;
       if (clash) {
-        this.message("info", `a note named ${clash.name} is at ${clash.at}: [[${clash.name}]] would reach either — suggested ${clash.suggested} (type ${clash.name} again to keep it)`);
+        this.message(
+          "info",
+          `a note named ${clash.name} is at ${clash.at}: [[${clash.name}]] would reach either — suggested ${clash.suggested} (type ${clash.name} again to keep it)`,
+        );
         return this.promptNewNote(base, clash.suggested, text.trim());
       }
       const r = this.createNote(text, base);
@@ -3707,7 +4249,10 @@ export class App {
     const full = !ext || !isKnownExtension(ext) ? `${rel}.md` : rel;
     if (classify(full, this.config.walk.extensions).group !== "note" || this.graph.notes.has(full)) return null;
     const name = posix.basename(full).replace(/\.(md|markdown)$/i, "");
-    const same = (n: string) => [...this.graph.notes.keys()].find((p) => normKey(posix.basename(p).replace(/\.(md|markdown)$/i, "")) === normKey(n));
+    const same = (n: string) =>
+      [...this.graph.notes.keys()].find(
+        (p) => normKey(posix.basename(p).replace(/\.(md|markdown)$/i, "")) === normKey(n),
+      );
     const at = same(name);
     if (!at) return null;
     const dir = posix.dirname(full);
@@ -3735,13 +4280,19 @@ export class App {
     if (!row) return null;
     // Another root's (20.15), or above the root: its files aren't this one's to rename, move or delete here.
     if (row.under || row.root?.other || row.outside || row.root?.here) return null;
-    if (row.kind === "root") return row.root?.kind === "vault" && this.loc.mode === "vault" ? { rel: row.path, dir: true, vault: true } : null;
+    if (row.kind === "root")
+      return row.root?.kind === "vault" && this.loc.mode === "vault" ? { rel: row.path, dir: true, vault: true } : null;
     return { rel: row.path, dir: row.kind === "dir" };
   }
 
   /** The plan moving an item to `to`: a note's, a folder's, or a nested vault's (18.3, 18.7). */
   private movePlan(item: ExplorerItem, to: string): () => RenamePlan {
-    return () => (item.vault ? planVaultFolderMove(this.graph, item.rel, to) : item.dir ? planFolderMove(this.graph, item.rel, to) : planNoteRename(this.graph, item.rel, to));
+    return () =>
+      item.vault
+        ? planVaultFolderMove(this.graph, item.rel, to)
+        : item.dir
+          ? planFolderMove(this.graph, item.rel, to)
+          : planNoteRename(this.graph, item.rel, to);
   }
 
   /** Select a path in the explorer, unfolding its folders. */
@@ -3765,18 +4316,34 @@ export class App {
     actions.push(["rename", item.vault ? "Rename the folder" : "Rename"]);
     if (item.vault) actions.push(["rename_root", "Name it"]);
     actions.push(["move", "Move to…"], ["copy", "Copy"], ["cut", "Cut"]);
-    if (item.dir) actions.push(item.vault ? ["unmake_root", "Make it a plain folder"] : ["make_root", "Give it .slipbox/"]);
-    if (this.fileClip) actions.push(["paste", this.fileClip.mode === "cut" ? `Paste ${posix.basename(this.fileClip.rel)} here (move)` : `Paste a copy of ${posix.basename(this.fileClip.rel)} here`]);
+    if (item.dir)
+      actions.push(item.vault ? ["unmake_root", "Make it a plain folder"] : ["make_root", "Give it .slipbox/"]);
+    if (this.fileClip)
+      actions.push([
+        "paste",
+        this.fileClip.mode === "cut"
+          ? `Paste ${posix.basename(this.fileClip.rel)} here (move)`
+          : `Paste a copy of ${posix.basename(this.fileClip.rel)} here`,
+      ]);
     actions.push(["delete", item.vault ? "Delete the root" : "Delete"]);
     const items: ListItem[] = actions.map(([action, label]) => {
       const key = this.explorerKeys.keysFor(action)[0];
       const shifted = key ? /^shift\+(.)$/.exec(key) : null;
       const hotkey = shifted ? shifted[1]!.toUpperCase() : key && [...key].length === 1 ? key : undefined;
-      return { label, hint: hotkey ?? (key ? prettyKey(key, this.leader) : undefined), ...(hotkey ? { hotkey } : {}), data: action };
+      return {
+        label,
+        hint: hotkey ?? (key ? prettyKey(key, this.leader) : undefined),
+        ...(hotkey ? { hotkey } : {}),
+        data: action,
+      };
     });
     const g = this.geometry;
     const button = g?.hot.find((h) => h.id === "xrow:menu");
-    const anchor = button ? { x: button.x, y: button.y } : g?.sidebar ? { x: g.sidebar.x + 2, y: g.sidebar.y + this.sidebar.selected - this.sidebar.scroll } : undefined;
+    const anchor = button
+      ? { x: button.x, y: button.y }
+      : g?.sidebar
+        ? { x: g.sidebar.x + 2, y: g.sidebar.y + this.sidebar.selected - this.sidebar.scroll }
+        : undefined;
     this.openList({
       title: `${posix.basename(item.rel)}${item.dir ? "/" : ""}`,
       items,
@@ -3812,9 +4379,18 @@ export class App {
       case "new_folder":
         return this.promptNewFolder(folder);
       case "make_root":
-        return item.dir && !item.vault ? this.makeVaultItem(item) : this.message("info", item.vault ? `${item.rel} is a root already — shift+v makes it a plain folder` : "give a folder .slipbox/: select a folder first");
+        return item.dir && !item.vault
+          ? this.makeVaultItem(item)
+          : this.message(
+              "info",
+              item.vault
+                ? `${item.rel} is a root already — shift+v makes it a plain folder`
+                : "give a folder .slipbox/: select a folder first",
+            );
       case "unmake_root":
-        return item.vault ? this.unmakeVaultItem(item) : this.message("info", "make a plain folder: select a nested root (its folder has its own icon)");
+        return item.vault
+          ? this.unmakeVaultItem(item)
+          : this.message("info", "make a plain folder: select a nested root (its folder has its own icon)");
     }
   }
 
@@ -3824,7 +4400,12 @@ export class App {
     if (!tags.length) return this.message("info", "no tags here: #tag in a note, or tags: in its frontmatter");
     this.openList({
       title: `Tags (${tags.length})`,
-      items: tags.map((t) => ({ label: `#${t.tag}`, hint: `${t.count} note${t.count === 1 ? "" : "s"}`, indent: t.tag.split("/").length - 1, data: t.tag })),
+      items: tags.map((t) => ({
+        label: `#${t.tag}`,
+        hint: `${t.count} note${t.count === 1 ? "" : "s"}`,
+        indent: t.tag.split("/").length - 1,
+        data: t.tag,
+      })),
       accept: (it) => this.openTagNotes(it.data as string),
     });
   }
@@ -3840,7 +4421,11 @@ export class App {
       items: types.map((t) => {
         const n = notes.filter((rel) => ofType(rel, t)).length;
         const bad = findings.filter((f) => ofType(f.path, t)).length;
-        return { label: t.name, hint: `${n} note${n === 1 ? "" : "s"}${bad ? `, ${bad} breaking its rules` : ""}${t.source === "config" ? " · yours" : ""}`, data: t.name };
+        return {
+          label: t.name,
+          hint: `${n} note${n === 1 ? "" : "s"}${bad ? `, ${bad} breaking its rules` : ""}${t.source === "config" ? " · yours" : ""}`,
+          data: t.name,
+        };
       }),
       accept: (it) => this.openTypeNotes(it.data as string),
     });
@@ -3854,7 +4439,11 @@ export class App {
     if (!list.length) return this.message("info", `no ${t.name} notes here (${t.paths.join(", ")})`);
     this.openList({
       title: `${t.name} — ${list.length} note${list.length === 1 ? "" : "s"}`,
-      items: list.map((n) => ({ label: `${n.number === null ? "" : `${n.number}  `}${n.title || n.path}`, hint: `${n.status ? `${n.status}${n.supersededBy ? ` → ${n.supersededBy}` : ""} · ` : ""}${n.path}`, data: n.path })),
+      items: list.map((n) => ({
+        label: `${n.number === null ? "" : `${n.number}  `}${n.title || n.path}`,
+        hint: `${n.status ? `${n.status}${n.supersededBy ? ` → ${n.supersededBy}` : ""} · ` : ""}${n.path}`,
+        data: n.path,
+      })),
       accept: (it) => {
         this.region = "content";
         this.open(it.data as string);
@@ -3920,11 +4509,20 @@ export class App {
   /** What `space d …` acts on (18.13): the explorer's selected folder (or vault, or a file's folder)
    *  when it has focus, else this note's folder; null (and said) at the vault's root. */
   folderTarget(): ExplorerItem | null {
-    const item = this.explorerFocused() ? this.explorerItem() : this.view?.buf.rel ? { rel: this.view.buf.rel, dir: false } : null;
+    const item = this.explorerFocused()
+      ? this.explorerItem()
+      : this.view?.buf.rel
+        ? { rel: this.view.buf.rel, dir: false }
+        : null;
     if (item?.dir) return item;
     const folder = item ? posix.dirname(item.rel) : ".";
     if (folder !== ".") return { rel: folder, dir: true };
-    this.message("info", item ? `${item.rel} is at the root: select a folder in the explorer` : "select a folder in the explorer, or open a note in one");
+    this.message(
+      "info",
+      item
+        ? `${item.rel} is at the root: select a folder in the explorer`
+        : "select a folder in the explorer, or open a note in one",
+    );
     return null;
   }
 
@@ -3950,7 +4548,11 @@ export class App {
    */
   unmakeThisVault(): void {
     const holder = this.loc.mode === "vault" ? findVaultRoot(dirname(this.loc.root)) : null;
-    if (!holder) return this.message("info", `${this.loc.name ?? this.loc.root} isn't inside another root: only a root nested in another becomes a plain folder (of the root holding it)`);
+    if (!holder)
+      return this.message(
+        "info",
+        `${this.loc.name ?? this.loc.root} isn't inside another root: only a root nested in another becomes a plain folder (of the root holding it)`,
+      );
     // Refused before anything changes when the switch into the holder would be: never a root
     // whose .slipbox/ is gone, still open.
     if (!this.canLeave()) return;
@@ -3969,7 +4571,10 @@ export class App {
         }
         const n = plan.files.reduce((k, f) => k + f.edits.length, 0);
         this.switchVault(rootAt(holder), open && existsSync(open) ? open : null);
-        this.message("info", `made ${rel}/ a plain folder of ${plan.to} (its .slipbox/ is in the trash): ${n} change${n === 1 ? "" : "s"} in ${applied.written.length} file${applied.written.length === 1 ? "" : "s"}`);
+        this.message(
+          "info",
+          `made ${rel}/ a plain folder of ${plan.to} (its .slipbox/ is in the trash): ${n} change${n === 1 ? "" : "s"} in ${applied.written.length} file${applied.written.length === 1 ? "" : "s"}`,
+        );
       },
     );
   }
@@ -4028,16 +4633,24 @@ export class App {
    * Pick a folder of the vault (18.8): a tree like the explorer's — its folds to begin with — the
    * root first; ← folds, → unfolds; typing filters to the matching folders under their parents.
    */
-  pickFolder(opts: { title: string; current: string; exclude: (dir: string) => boolean; pick: (dir: string) => void }): void {
+  pickFolder(opts: {
+    title: string;
+    current: string;
+    exclude: (dir: string) => boolean;
+    pick: (dir: string) => void;
+  }): void {
     const g = this.glyphs;
     const open = new Set(this.expanded);
     for (let d = opts.current; d; d = posix.dirname(d) === "." ? "" : posix.dirname(d)) open.add(d); // where it is, unfolded
-    const dirs = [...new Set(this.graph.dirs)].filter((d) => d && !opts.exclude(d)).sort((a, b) => {
-      const pa = a.split("/");
-      const pb = b.split("/");
-      for (let i = 0; i < Math.min(pa.length, pb.length); i++) if (pa[i] !== pb[i]) return pa[i]!.localeCompare(pb[i]!, undefined, { sensitivity: "base" });
-      return pa.length - pb.length;
-    });
+    const dirs = [...new Set(this.graph.dirs)]
+      .filter((d) => d && !opts.exclude(d))
+      .sort((a, b) => {
+        const pa = a.split("/");
+        const pb = b.split("/");
+        for (let i = 0; i < Math.min(pa.length, pb.length); i++)
+          if (pa[i] !== pb[i]) return pa[i]!.localeCompare(pb[i]!, undefined, { sensitivity: "base" });
+        return pa.length - pb.length;
+      });
     const row = (d: string, unfolded: boolean, context = false): ListItem => ({
       label: `${"  ".repeat(d.split("/").length)}${unfolded ? g.dirOpen : g.dirClosed} ${posix.basename(d)}`,
       hint: d === opts.current ? "here" : "",
@@ -4045,7 +4658,9 @@ export class App {
       ...(context ? { context } : {}),
     });
     const source = (input: string): ListItem[] => {
-      const out: ListItem[] = [{ label: `${g.dirOpen} / (the root)`, hint: opts.current === "" ? "here" : "", data: "" }];
+      const out: ListItem[] = [
+        { label: `${g.dirOpen} / (the root)`, hint: opts.current === "" ? "here" : "", data: "" },
+      ];
       const q = input.trim();
       if (q) {
         // The matches, with their parents for where they are; enter takes the first match.
@@ -4062,7 +4677,8 @@ export class App {
       }
       for (const d of dirs) {
         const parts = d.split("/");
-        if (parts.slice(0, -1).every((_, i) => open.has(parts.slice(0, i + 1).join("/")))) out.push(row(d, open.has(d)));
+        if (parts.slice(0, -1).every((_, i) => open.has(parts.slice(0, i + 1).join("/"))))
+          out.push(row(d, open.has(d)));
       }
       return out;
     };
@@ -4071,7 +4687,10 @@ export class App {
       title: opts.title,
       items: [],
       source,
-      selected: Math.max(0, first.findIndex((it) => it.data === opts.current)),
+      selected: Math.max(
+        0,
+        first.findIndex((it) => it.data === opts.current),
+      ),
       accept: (it) => opts.pick(it.data as string),
       fold: (it, unfold) => {
         // As in the explorer, a folder folds whatever it holds; what unfolds under it here is its folders.
@@ -4087,7 +4706,11 @@ export class App {
   /** Delete to the vault's trash, after asking — saying how many links it breaks. */
   deleteItem(item: ExplorerItem): void {
     const unsaved = this.unsavedIn(item.rel);
-    if (unsaved.length) return this.message("warn", `unsaved: ${unsaved.map((b) => this.displayName(b)).join(", ")} — save or revert it first`);
+    if (unsaved.length)
+      return this.message(
+        "warn",
+        `unsaved: ${unsaved.map((b) => this.displayName(b)).join(", ")} — save or revert it first`,
+      );
     const breaking = linksInto(this.graph, item.rel);
     let what = item.dir ? `${item.rel}/ and everything in it` : item.rel;
     if (item.vault) {
@@ -4105,7 +4728,8 @@ export class App {
       }
       this.lastTrashed = t.id;
       // Open notes that went with it show their last text, marked deleted (as when deleted on disk).
-      for (const b of this.buffers.values()) if (b.rel !== null && (b.rel === item.rel || b.rel.startsWith(`${item.rel}/`))) b.deleted = true;
+      for (const b of this.buffers.values())
+        if (b.rel !== null && (b.rel === item.rel || b.rel.startsWith(`${item.rel}/`))) b.deleted = true;
       this.afterFileOp();
       this.message("info", `deleted ${item.rel} to the trash — u in the explorer (or :trash) restores it`);
     });
@@ -4125,7 +4749,8 @@ export class App {
       return this.message("warn", (err as Error).message);
     }
     if (this.lastTrashed === id) this.lastTrashed = null;
-    for (const b of this.buffers.values()) if (b.deleted && (b.abs === item.abs || b.abs.startsWith(`${item.abs}/`))) this.reloadBuffer(b);
+    for (const b of this.buffers.values())
+      if (b.deleted && (b.abs === item.abs || b.abs.startsWith(`${item.abs}/`))) this.reloadBuffer(b);
     this.afterFileOp();
     this.selectInExplorer(item.shown);
     this.message("info", `restored ${item.shown}`);
@@ -4142,7 +4767,13 @@ export class App {
     this.openList({
       title: `Trash (${items.length}) — enter restores`,
       items: [
-        ...items.map((i): ListItem => ({ label: `${i.shown}${i.dir ? "/" : ""}`, hint: i.at.slice(0, 16).replace("T", " "), data: i.id })),
+        ...items.map(
+          (i): ListItem => ({
+            label: `${i.shown}${i.dir ? "/" : ""}`,
+            hint: i.at.slice(0, 16).replace("T", " "),
+            data: i.id,
+          }),
+        ),
         { label: "", header: true, data: null },
         { label: "Empty the trash…", hint: "for good, after asking", data: EMPTY },
       ],
@@ -4154,9 +4785,14 @@ export class App {
   /** Empty the trash of `items`, what the list showed, after a yes-or-no question: gone for good. */
   private emptyTrashAsk(items: TrashItem[]): void {
     const one = items.length === 1 ? items[0]! : null;
-    const what = one ? `${one.shown}${one.dir ? "/" : ""} goes for good: it can't be restored` : `Its ${items.length} items go for good: none can be restored`;
+    const what = one
+      ? `${one.shown}${one.dir ? "/" : ""} goes for good: it can't be restored`
+      : `Its ${items.length} items go for good: none can be restored`;
     this.confirm(`Empty the trash? ${what}.`, () => {
-      const gone = emptyTrash(this.loc, items.map((i) => i.id));
+      const gone = emptyTrash(
+        this.loc,
+        items.map((i) => i.id),
+      );
       if (gone.some((i) => i.id === this.lastTrashed)) this.lastTrashed = null;
       this.message("info", `emptied the trash: ${gone.length} item${gone.length === 1 ? "" : "s"} gone for good`);
     });
@@ -4165,7 +4801,10 @@ export class App {
   /** Copy or cut the selected item, for `p`. */
   clipItem(mode: "copy" | "cut", item: ExplorerItem): void {
     this.fileClip = { mode, ...item };
-    this.message("info", `${mode === "copy" ? "copied" : "cut"} ${item.rel}${item.dir ? "/" : ""} — p in the explorer (space d p) pastes it in a folder`);
+    this.message(
+      "info",
+      `${mode === "copy" ? "copied" : "cut"} ${item.rel}${item.dir ? "/" : ""} — p in the explorer (space d p) pastes it in a folder`,
+    );
   }
 
   /** Paste into the selected folder (or beside the selected file): a copy, or what was cut, moved. */
@@ -4183,7 +4822,8 @@ export class App {
     const to = into ? `${into}/${name}` : name;
     if (clip.mode === "cut") {
       if (into === from) return this.message("info", `${clip.rel} is already in ${into || "the root"}`);
-      if (clip.dir && (into === clip.rel || into.startsWith(`${clip.rel}/`))) return this.message("warn", `${clip.rel} can't move into itself`);
+      if (clip.dir && (into === clip.rel || into.startsWith(`${clip.rel}/`)))
+        return this.message("warn", `${clip.rel} can't move into itself`);
       return this.previewRename(this.movePlan(clip, to));
     }
     let r: ReturnType<typeof copyPath>;
@@ -4370,7 +5010,11 @@ export class App {
   }
 
   contentWidth(): number {
-    return this.usableWidth - (this.sidebarBeside ? this.sidebarWidth() + 1 : 0) - (this.outlineBeside ? this.outlineWidth() + 1 : 0);
+    return (
+      this.usableWidth -
+      (this.sidebarBeside ? this.sidebarWidth() + 1 : 0) -
+      (this.outlineBeside ? this.outlineWidth() + 1 : 0)
+    );
   }
 
   // -------------------------------------------------------------------------------------------
@@ -4449,12 +5093,14 @@ export class App {
       return;
     }
     const t = this.tab;
-    if (!t || t.views.length < 2) return this.message("info", "one window — resize mode sizes a split, or the explorer and outline when focused");
+    if (!t || t.views.length < 2)
+      return this.message("info", "one window — resize mode sizes a split, or the explorer and outline when focused");
     const side = this.effectiveOrientation(t) === "side";
-    if (side !== horizontal) return this.message("info", side ? "side-by-side split: h / l resize it" : "stacked split: j / k resize it");
+    if (side !== horizontal)
+      return this.message("info", side ? "side-by-side split: h / l resize it" : "stacked split: j / k resize it");
     const total = side ? this.contentWidth() : this.height;
     // Growing the first window raises the ratio; growing the second lowers it.
-    const delta = (grow * step) / Math.max(10, total) * (t.active === 0 ? 1 : -1);
+    const delta = ((grow * step) / Math.max(10, total)) * (t.active === 0 ? 1 : -1);
     t.ratio = Math.max(0.15, Math.min(0.85, t.ratio + delta));
   }
 
@@ -4484,14 +5130,23 @@ export class App {
     if (restored) return;
     this.outline.filter = "";
     this.outline.pinned = false;
-    this.outline.selected = Math.max(0, view === "outline" ? this.currentSection() : view === "footnotes" ? this.currentFootnote() : 0);
+    this.outline.selected = Math.max(
+      0,
+      view === "outline" ? this.currentSection() : view === "footnotes" ? this.currentFootnote() : 0,
+    );
   }
 
   /** Put `view` in the right panel: each view keeps its own place, as the left panel's do. */
   switchRightView(view: RightView): boolean {
     if (this.rightView === view) return false;
     const o = this.outline;
-    this.rightPositions.set(this.rightView, { selected: o.selected, scroll: o.scroll, left: o.left, pinned: o.pinned, filter: o.filter });
+    this.rightPositions.set(this.rightView, {
+      selected: o.selected,
+      scroll: o.scroll,
+      left: o.left,
+      pinned: o.pinned,
+      filter: o.filter,
+    });
     this.rightView = view;
     o.filtering = false;
     const saved = this.rightPositions.get(view);
@@ -4536,7 +5191,9 @@ export class App {
     if (!view) return -1;
     const line = this.cursorLine(view);
     const rows = this.footnoteRows();
-    const on = rows.findIndex((r) => (r.ref ? r.ref.line === line : r.fn.line === line || (r.folded && r.fn.references.some((x) => x.line === line))));
+    const on = rows.findIndex((r) =>
+      r.ref ? r.ref.line === line : r.fn.line === line || (r.folded && r.fn.references.some((x) => x.line === line)),
+    );
     if (on >= 0) return on;
     let best = -1;
     rows.forEach((r, i) => {
@@ -4555,12 +5212,16 @@ export class App {
     if (row.ref) {
       const onLine = row.fn.references.filter((r) => r.line === row.ref!.line);
       const nth = onLine.findIndex((r) => r.column === row.ref!.column);
-      const drawn = layout.links.filter((l) => l.kind === "footnote" && l.target.toLowerCase() === row.fn.id && l.src === row.ref!.line)[nth];
+      const drawn = layout.links.filter(
+        (l) => l.kind === "footnote" && l.target.toLowerCase() === row.fn.id && l.src === row.ref!.line,
+      )[nth];
       if (drawn && drawn.line >= 0) this.moveCursor(view, { row: drawn.line, col: drawn.col });
       else placeAt(this, view, (view.buf.lineStarts()[row.ref.line - 1] ?? 0) + row.ref.column - 1);
     } else {
       if (row.fn.line === null) return this.message("warn", `footnote [^${row.fn.label}] has no definition`);
-      const def = layout.lines.findIndex((l) => l.footnoteDef !== undefined && l.footnoteDef.toLowerCase() === row.fn.id);
+      const def = layout.lines.findIndex(
+        (l) => l.footnoteDef !== undefined && l.footnoteDef.toLowerCase() === row.fn.id,
+      );
       if (def >= 0) this.moveCursor(view, { row: def, col: 0 });
       else placeAt(this, view, view.buf.lineStarts()[row.fn.line - 1] ?? 0);
     }
@@ -4572,10 +5233,25 @@ export class App {
   // note's frontmatter — with every editing key there is; closed (esc, q, :q) or saved (ctrl+s,
   // :w), its text goes back where it came from, as one undo step there.
 
-  floating: ({ kind: "properties"; note: NoteBuffer; format: "yaml" | "toml"; original: string } | { kind: "hover" } | { kind: "commit"; amend: boolean; from: Region }) & { view: View; title: string } | null = null;
+  floating:
+    | ((
+        | { kind: "properties"; note: NoteBuffer; format: "yaml" | "toml"; original: string }
+        | { kind: "hover" }
+        | { kind: "commit"; amend: boolean; from: Region }
+      ) & { view: View; title: string })
+    | null = null;
 
   /** The frontmatter's span in a note's text: the fences, and the text between them; null without one. */
-  private frontmatterSpan(source: string): { start: number; end: number; innerStart: number; innerEnd: number; bare: boolean; format: "yaml" | "toml" } | null {
+  private frontmatterSpan(
+    source: string,
+  ): {
+    start: number;
+    end: number;
+    innerStart: number;
+    innerEnd: number;
+    bare: boolean;
+    format: "yaml" | "toml";
+  } | null {
     // CRLF lines too; an empty one (the closing fence right after the opening) is tried first, so
     // it never reaches on to a `---` rule further down.
     const m = /^(---|\+\+\+)[ \t]*\r?\n(?:([\s\S]*?)\r?\n)??(---|\.\.\.|\+\+\+)[ \t]*(?:\r?\n|$)/.exec(source);
@@ -4583,14 +5259,22 @@ export class App {
     const innerStart = /^(---|\+\+\+)[ \t]*\r?\n/.exec(source)![0].length;
     const innerEnd = innerStart + (m[2]?.length ?? 0);
     // bare: no line between the fences, so text put there brings its own line end.
-    return { start: 0, end: m[0].length, innerStart, innerEnd, bare: m[2] === undefined, format: m[1] === "+++" ? "toml" : "yaml" };
+    return {
+      start: 0,
+      end: m[0].length,
+      innerStart,
+      innerEnd,
+      bare: m[2] === undefined,
+      format: m[1] === "+++" ? "toml" : "yaml",
+    };
   }
 
   /** Edit the current note's properties — its frontmatter, YAML or TOML — in a floating editor (3.20). */
   openPropertiesEditor(): void {
     const view = this.view;
     if (this.floating) return;
-    if (!view || view.buf.kind.group !== "note" || view.buf.rel === null) return this.message("info", "properties are a note's: its frontmatter");
+    if (!view || view.buf.kind.group !== "note" || view.buf.rel === null)
+      return this.message("info", "properties are a note's: its frontmatter");
     const why = cannotEdit(view);
     if (why) return this.message("warn", `${why} — not editing`);
     const note = view.buf;
@@ -4602,7 +5286,14 @@ export class App {
     buf.virtual = { save: (text) => this.writeProperties(text) };
     buf.loadText(original ? `${original}\n` : "");
     const fv = this.makeView(buf, { ...TOP }, { anchor: { ...TOP }, sub: 0, col: 0 });
-    this.floating = { kind: "properties", view: fv, note, format, original, title: `Properties — ${this.displayName(note)} (${format === "toml" ? "TOML" : "YAML"})` };
+    this.floating = {
+      kind: "properties",
+      view: fv,
+      note,
+      format,
+      original,
+      title: `Properties — ${this.displayName(note)} (${format === "toml" ? "TOML" : "YAML"})`,
+    };
     this.setViewMode(fv, "source");
     this.region = "content";
   }
@@ -4621,13 +5312,17 @@ export class App {
     const span = this.frontmatterSpan(note.source);
     const now = span ? note.source.slice(span.innerStart, span.innerEnd).replace(/\r\n/g, "\n") : "";
     if (!sure && now !== f.original) {
-      this.confirm(`${this.displayName(note)}'s properties changed while you edited them. Write yours over them?`, () => this.writtenAfterAsking(f, text, close));
+      this.confirm(`${this.displayName(note)}'s properties changed while you edited them. Write yours over them?`, () =>
+        this.writtenAfterAsking(f, text, close),
+      );
       return false;
     }
     if (!sure && body) {
       const probe = parseMarkdown(f.format === "toml" ? `+++\n${body}\n+++\n` : `---\n${body}\n---\n`).frontmatter;
       if (probe?.error) {
-        this.confirm(`The properties don't parse (${probe.error.split("\n")[0]}). Write them anyway?`, () => this.writtenAfterAsking(f, text, close));
+        this.confirm(`The properties don't parse (${probe.error.split("\n")[0]}). Write them anyway?`, () =>
+          this.writtenAfterAsking(f, text, close),
+        );
         return false;
       }
     }
@@ -4651,7 +5346,11 @@ export class App {
       for (const v of this.allViews()) if (v.buf === note) v.layoutKey = "";
       if (this.saveBuffer(note, true)) this.message("info", `properties written to ${this.displayName(note)}`);
       // Any other failure has said why already.
-      else if (note.changedOnDisk() && !note.deleted) this.message("warn", `${this.displayName(note)}'s properties changed — not saved yet (the file changed on disk: space n w decides)`);
+      else if (note.changedOnDisk() && !note.deleted)
+        this.message(
+          "warn",
+          `${this.displayName(note)}'s properties changed — not saved yet (the file changed on disk: space n w decides)`,
+        );
     }
     f.original = body;
     return true;
@@ -4668,7 +5367,8 @@ export class App {
   closeFloating(): boolean {
     const f = this.floating;
     if (!f) return true;
-    if (f.kind === "properties" && f.view.buf.dirty && !this.writeProperties(f.view.buf.source, false, true)) return false;
+    if (f.kind === "properties" && f.view.buf.dirty && !this.writeProperties(f.view.buf.source, false, true))
+      return false;
     this.floating = null;
     if (f.kind === "commit") {
       this.message("info", f.amend ? "not amended" : "not committed");
@@ -4687,7 +5387,8 @@ export class App {
     if (!c) return this.message("info", "not a git checkout");
     if (this.floating && !this.closeFloating()) return;
     const staged = sections(this.gitEntries ?? []).staged.map((e) => e.path);
-    if (!amend && !staged.length) return this.message("info", "nothing staged — s stages a file in source control (space g s)");
+    if (!amend && !staged.length)
+      return this.message("info", "nothing staged — s stages a file in source control (space g s)");
     const last = amend ? lastMessage(c) : null;
     if (amend && last === null) return this.message("info", "no commit to amend yet");
     const trusted = isTrusted(c.root);
@@ -4695,14 +5396,22 @@ export class App {
     const guide = [
       `# ${amend ? "Amending the last commit" : "Committing"}: ${staged.length} file${staged.length === 1 ? "" : "s"} staged${files}.`,
       "# Lines starting with # are left out. ctrl+s commits; esc leaves it.",
-      ...(trusted ? [] : ["# This root isn't trusted: its hooks don't run, and the commit isn't signed (:trust trusts it)."]),
+      ...(trusted
+        ? []
+        : ["# This root isn't trusted: its hooks don't run, and the commit isn't signed (:trust trusts it)."]),
     ];
     const buf = new NoteBuffer(null, `${c.root}#commit`, `commit:${c.root}`);
     buf.kind = { group: "text", format: "text" };
     buf.virtual = { save: (text) => (this.commitWith(text, amend), true) };
     buf.loadText(`${last ?? ""}\n\n${guide.join("\n")}\n`);
     const fv = this.makeView(buf, { ...TOP }, { anchor: { ...TOP }, sub: 0, col: 0 });
-    this.floating = { kind: "commit", amend, from: this.region, view: fv, title: amend ? "Amend the last commit" : "Commit" };
+    this.floating = {
+      kind: "commit",
+      amend,
+      from: this.region,
+      view: fv,
+      title: amend ? "Amend the last commit" : "Commit",
+    };
     this.setViewMode(fv, "source");
     this.region = "content";
     // A new commit's message is the first thing typed: its editor opens typing, on the empty first line. An amend's
@@ -4762,7 +5471,10 @@ export class App {
     const text = c ? showAt(c, ref.branch, ref.rel) : null;
     if (text === null) return this.message("warn", `${link}: no ${ref.rel} on ${ref.branch}`);
     const note = /\.(md|markdown)$/i.test(ref.rel);
-    this.openHover(note ? text : fence(text, fenceLanguage(ref.rel)), `${ref.rel} on ${ref.branch}, read-only from git`);
+    this.openHover(
+      note ? text : fence(text, fenceLanguage(ref.rel)),
+      `${ref.rel} on ${ref.branch}, read-only from git`,
+    );
   }
 
   /** A position in a source-mode view as the protocol counts it: line and UTF-16 character, from 0. */
@@ -4794,7 +5506,12 @@ export class App {
   fileProblems(): Problem[] {
     const v = this.view;
     if (!v) return [];
-    return [...this.problemsShown(v)].sort((a, b) => a.start.line - b.start.line || a.start.column - b.start.column || SEVERITIES.indexOf(a.severity) - SEVERITIES.indexOf(b.severity));
+    return [...this.problemsShown(v)].sort(
+      (a, b) =>
+        a.start.line - b.start.line ||
+        a.start.column - b.start.column ||
+        SEVERITIES.indexOf(a.severity) - SEVERITIES.indexOf(b.severity),
+    );
   }
 
   /** This file's problems as its tab lists them: those its filter matches — the place, the message, who found it, the line. */
@@ -4803,7 +5520,12 @@ export class App {
     const q = this.problemsPanel.file.filter;
     if (!q) return list;
     const lines = this.view?.buf.lines() ?? [];
-    return list.filter((p) => match(q, `${p.start.line}:${p.start.column} ${p.message} ${p.source} ${p.code ?? ""} ${lines[p.start.line - 1] ?? ""}`));
+    return list.filter((p) =>
+      match(
+        q,
+        `${p.start.line}:${p.start.column} ${p.message} ${p.source} ${p.code ?? ""} ${lines[p.start.line - 1] ?? ""}`,
+      ),
+    );
   }
 
   /** The panel's problem chosen in This file, while it has the focus: marked in the text whatever the marks say. */
@@ -4860,7 +5582,7 @@ export class App {
     // This file: the problem at the cursor's line, or the next one after it.
     if (tab === "file" && this.view) {
       const at = this.view.cur.row;
-      const line = srcAt(this.currentLayout(this.view).lines[at] ?? { src: 1 } as never, this.view.cur.col);
+      const line = srcAt(this.currentLayout(this.view).lines[at] ?? ({ src: 1 } as never), this.view.cur.col);
       const list = this.fileRows();
       const i = list.findIndex((x) => x.end.line >= line);
       p.file.selected = Math.max(0, i < 0 ? list.length - 1 : i);
@@ -4938,7 +5660,14 @@ export class App {
     const p = this.graph.problems();
     const conflicts = [...(this.gitStates ?? [])].filter(([, st]) => st === "conflict").length;
     const frontmatter = frontmatterFindings(this.graph).reduce((n, f) => n + f.problems.length, 0);
-    return p.broken.length + p.ambiguous.length + p.fragile.length + frontmatter + (this.vaultLint.issues?.length ?? 0) + conflicts;
+    return (
+      p.broken.length +
+      p.ambiguous.length +
+      p.fragile.length +
+      frontmatter +
+      (this.vaultLint.issues?.length ?? 0) +
+      conflicts
+    );
   }
 
   /** A click on a row of the panel: This file's selects its problem (the note shows it), a second click goes there;
@@ -4985,7 +5714,15 @@ export class App {
           note = r.l.from;
           out.push({ section: name, heading: false, note, label: note, detail: "", text: note, folded: false });
         }
-        out.push({ section: name, heading: false, label: r.label, detail: r.detail, text: `${r.l.from} ${r.label} ${r.detail}`, folded: false, link: r.l });
+        out.push({
+          section: name,
+          heading: false,
+          label: r.label,
+          detail: r.detail,
+          text: `${r.l.from} ${r.label} ${r.detail}`,
+          folded: false,
+          link: r.l,
+        });
       }
     };
     section("Broken links", p.broken, (l) => l.reason ?? "");
@@ -4994,18 +5731,45 @@ export class App {
     section("Fragile links", p.fragile, (l) => `— ${l.reason}; [[${l.fix}]] for sure`);
     // Frontmatter (22.2): notes breaking their document type's rules, by note, each finding at its line.
     const fm = frontmatterFindings(this.graph);
-    const fmRows = fm.flatMap((f) => f.problems.map((x) => ({ path: f.path, line: x.start.line, label: `L${x.start.line}`, detail: x.message }))).filter((r) => !q || match(q, `${r.path} ${r.label} ${r.detail}`));
+    const fmRows = fm
+      .flatMap((f) =>
+        f.problems.map((x) => ({ path: f.path, line: x.start.line, label: `L${x.start.line}`, detail: x.message })),
+      )
+      .filter((r) => !q || match(q, `${r.path} ${r.label} ${r.detail}`));
     if (fmRows.length) {
       const folded = !q && this.problemsFolded.has("Frontmatter");
-      out.push({ section: "Frontmatter", heading: true, label: `Frontmatter (${fm.reduce((n, f) => n + f.problems.length, 0)})`, detail: "", text: "Frontmatter", folded });
+      out.push({
+        section: "Frontmatter",
+        heading: true,
+        label: `Frontmatter (${fm.reduce((n, f) => n + f.problems.length, 0)})`,
+        detail: "",
+        text: "Frontmatter",
+        folded,
+      });
       if (!folded) {
         let note = "";
         for (const r of fmRows) {
           if (r.path !== note) {
             note = r.path;
-            out.push({ section: "Frontmatter", heading: false, note, label: note, detail: "", text: note, folded: false });
+            out.push({
+              section: "Frontmatter",
+              heading: false,
+              note,
+              label: note,
+              detail: "",
+              text: note,
+              folded: false,
+            });
           }
-          out.push({ section: "Frontmatter", heading: false, label: r.label, detail: r.detail, text: `${r.path} ${r.label} ${r.detail}`, folded: false, frontmatter: { path: r.path, line: r.line } });
+          out.push({
+            section: "Frontmatter",
+            heading: false,
+            label: r.label,
+            detail: r.detail,
+            text: `${r.path} ${r.label} ${r.detail}`,
+            folded: false,
+            frontmatter: { path: r.path, line: r.line },
+          });
         }
       }
     }
@@ -5013,11 +5777,23 @@ export class App {
     if (this.lintCmd || this.vaultLint.issues) {
       const all = this.vaultLint.issues;
       const rows = (all ?? [])
-        .map((i) => ({ i, rel: relative(this.loc.root, i.file), label: `L${i.line}`, detail: `${i.rule} ${i.name}  ${i.description}` }))
+        .map((i) => ({
+          i,
+          rel: relative(this.loc.root, i.file),
+          label: `L${i.line}`,
+          detail: `${i.rule} ${i.name}  ${i.description}`,
+        }))
         .filter((r) => !q || match(q, `${r.rel} ${r.label} ${r.detail}`));
       if (!q || rows.length) {
         const folded = !q && this.problemsFolded.has("Lint");
-        out.push({ section: "Lint", heading: true, label: all ? `Lint (${all.length})${this.vaultLint.running ? " …" : ""}` : "Lint — linting…", detail: "", text: "Lint", folded });
+        out.push({
+          section: "Lint",
+          heading: true,
+          label: all ? `Lint (${all.length})${this.vaultLint.running ? " …" : ""}` : "Lint — linting…",
+          detail: "",
+          text: "Lint",
+          folded,
+        });
         if (!folded) {
           let note = "";
           for (const r of rows) {
@@ -5025,21 +5801,47 @@ export class App {
               note = r.rel;
               out.push({ section: "Lint", heading: false, note, label: note, detail: "", text: note, folded: false });
             }
-            out.push({ section: "Lint", heading: false, label: r.label, detail: r.detail, text: `${r.rel} ${r.label} ${r.detail}`, folded: false, lint: r.i });
+            out.push({
+              section: "Lint",
+              heading: false,
+              label: r.label,
+              detail: r.detail,
+              text: `${r.rel} ${r.label} ${r.detail}`,
+              folded: false,
+              lint: r.i,
+            });
           }
         }
       }
     }
     // A merge's conflicts (5.12): the files git says are unmerged, each at its first marker.
-    const conflicts = [...(this.gitStates ?? [])].filter(([, st]) => st === "conflict").map(([path]) => path).sort();
+    const conflicts = [...(this.gitStates ?? [])]
+      .filter(([, st]) => st === "conflict")
+      .map(([path]) => path)
+      .sort();
     const shownConflicts = conflicts.filter((n) => !q || match(q, n));
     if (shownConflicts.length) {
       const folded = !q && this.problemsFolded.has("Conflicts");
-      out.push({ section: "Conflicts", heading: true, label: `Conflicts (${conflicts.length})`, detail: "", text: "Conflicts", folded });
+      out.push({
+        section: "Conflicts",
+        heading: true,
+        label: `Conflicts (${conflicts.length})`,
+        detail: "",
+        text: "Conflicts",
+        folded,
+      });
       if (!folded) {
         for (const path of shownConflicts) {
           const line = conflictLine(join(this.loc.root, path));
-          out.push({ section: "Conflicts", heading: false, label: path, detail: line ? `L${line}` : "", text: path, folded: false, conflict: { path, line: Math.max(1, line) } });
+          out.push({
+            section: "Conflicts",
+            heading: false,
+            label: path,
+            detail: line ? `L${line}` : "",
+            text: path,
+            folded: false,
+            conflict: { path, line: Math.max(1, line) },
+          });
         }
       }
     }
@@ -5047,8 +5849,17 @@ export class App {
     const orphans = p.orphans.filter((n) => !q || match(q, n));
     if (!q || orphans.length) {
       const folded = !q && this.problemsFolded.has("Orphans");
-      out.push({ section: "Orphans", heading: true, label: `Orphans (${p.orphans.length})`, detail: "", text: "Orphans", folded });
-      if (!folded) for (const n of orphans) out.push({ section: "Orphans", heading: false, note: n, label: n, detail: "", text: n, folded: false });
+      out.push({
+        section: "Orphans",
+        heading: true,
+        label: `Orphans (${p.orphans.length})`,
+        detail: "",
+        text: "Orphans",
+        folded,
+      });
+      if (!folded)
+        for (const n of orphans)
+          out.push({ section: "Orphans", heading: false, note: n, label: n, detail: "", text: n, folded: false });
     }
     return out;
   }
@@ -5075,8 +5886,11 @@ export class App {
     if (v && v.buf.rel === l.from) {
       // Rendered, onto the link as drawn (the ones with its target on its line, in order); in source mode, its text.
       const same = this.problemsAt(l.from).filter((x) => x.line === l.line && x.target === l.target);
-      const drawn = this.currentLayout(v).links.filter((x) => x.src === l.line && x.target === l.target)[Math.max(0, same.indexOf(l))];
-      if (drawn && drawn.line >= 0 && !this.currentLayout(v).lines[drawn.line]?.srcMap) this.moveCursor(v, { row: drawn.line, col: drawn.col });
+      const drawn = this.currentLayout(v).links.filter((x) => x.src === l.line && x.target === l.target)[
+        Math.max(0, same.indexOf(l))
+      ];
+      if (drawn && drawn.line >= 0 && !this.currentLayout(v).lines[drawn.line]?.srcMap)
+        this.moveCursor(v, { row: drawn.line, col: drawn.col });
       else placeAt(this, v, (v.buf.lineStarts()[l.line - 1] ?? 0) + l.column - 1);
     }
     this.region = "content";
@@ -5131,7 +5945,11 @@ export class App {
     if (row.link) return this.jumpToProblem(row.link, where);
     if (row.lint) return this.jumpToLint(row.lint, where);
     if (!row.note || row.heading) return;
-    const first = rows.find((r) => r.section === row.section && (r.link?.from === row.note || (r.lint && relative(this.loc.root, r.lint.file) === row.note)));
+    const first = rows.find(
+      (r) =>
+        r.section === row.section &&
+        (r.link?.from === row.note || (r.lint && relative(this.loc.root, r.lint.file) === row.note)),
+    );
     if (first?.link) return this.jumpToProblem(first.link, where);
     if (first?.lint) return this.jumpToLint(first.lint, where);
     this.openWhere(row.note, 1, where);
@@ -5257,7 +6075,13 @@ export class App {
     const p = this.problemsPanel;
     const s = p.tab === "file" ? p.file : p.all;
     s.scroll = 0;
-    s.selected = p.tab === "file" ? 0 : Math.max(0, this.problemRows().findIndex((r) => !r.heading));
+    s.selected =
+      p.tab === "file"
+        ? 0
+        : Math.max(
+            0,
+            this.problemRows().findIndex((r) => !r.heading),
+          );
   }
 
   // The Info view (3.19): what the file on screen is — where, which vault, its size and dates, its
@@ -5291,30 +6115,78 @@ export class App {
     const key = `${b.key}:${b.version}:${this.graph.generation}:${b.dirty}:${b.deleted}:${!!b.parsing}`;
     if (this.infoCache?.key === key) return this.infoCache.rows;
     const rows: Omit<InfoRow, "folded">[] = [];
-    const head = (section: string) => rows.push({ section, heading: true, key: section, value: "", depth: 0, text: section });
-    const row = (section: string, k: string, value: string, act?: InfoRow["act"], depth = 0) => rows.push({ section, heading: false, key: k, value, depth, text: `${k} ${value}`, act: act ?? { copy: value } });
+    const head = (section: string) =>
+      rows.push({ section, heading: true, key: section, value: "", depth: 0, text: section });
+    const row = (section: string, k: string, value: string, act?: InfoRow["act"], depth = 0) =>
+      rows.push({ section, heading: false, key: k, value, depth, text: `${k} ${value}`, act: act ?? { copy: value } });
     const entry = b.rel ? this.graph.entry(b.rel) : undefined;
     const note = b.kind.group === "note";
     // The file.
     head("File");
     row("File", "path", b.rel ?? b.abs, { copy: b.abs });
-    row("File", "root", this.loc.mode === "folder" ? `none — the plain folder ${tildePath(this.loc.root)}` : rootLabel(this.loc), { copy: this.loc.root });
-    row("File", "kind", note ? `note (${b.kind.format})` : `${b.kind.group === "data" ? "data" : "text"} (${b.kind.format})`);
+    row(
+      "File",
+      "root",
+      this.loc.mode === "folder" ? `none — the plain folder ${tildePath(this.loc.root)}` : rootLabel(this.loc),
+      { copy: this.loc.root },
+    );
+    row(
+      "File",
+      "kind",
+      note ? `note (${b.kind.format})` : `${b.kind.group === "data" ? "data" : "text"} (${b.kind.format})`,
+    );
     if (b.stamp) {
       const size = b.stamp.size;
-      row("File", "size", size < 1024 ? `${size} bytes` : size < 1048576 ? `${(size / 1024).toFixed(1)} KB` : `${(size / 1048576).toFixed(1)} MB`);
+      row(
+        "File",
+        "size",
+        size < 1024
+          ? `${size} bytes`
+          : size < 1048576
+            ? `${(size / 1024).toFixed(1)} KB`
+            : `${(size / 1048576).toFixed(1)} MB`,
+      );
       row("File", "modified", new Date(b.stamp.mtimeMs).toLocaleString());
     }
     const words = b.words();
-    row("File", "words", note ? `${words.toLocaleString("en")} (~${Math.max(1, Math.round(words / 230))} min)` : words.toLocaleString("en"));
+    row(
+      "File",
+      "words",
+      note
+        ? `${words.toLocaleString("en")} (~${Math.max(1, Math.round(words / 230))} min)`
+        : words.toLocaleString("en"),
+    );
     row("File", "lines", b.lineStarts().length.toLocaleString("en"));
-    row("File", "encoding", [b.invalidUtf8 ? "invalid UTF-8" : "UTF-8", b.eol === "\r\n" ? "CRLF" : "LF", ...(b.bom ? ["BOM"] : [])].join(", "));
+    row(
+      "File",
+      "encoding",
+      [b.invalidUtf8 ? "invalid UTF-8" : "UTF-8", b.eol === "\r\n" ? "CRLF" : "LF", ...(b.bom ? ["BOM"] : [])].join(
+        ", ",
+      ),
+    );
     // How it's indented (25.1), and where that was found.
     const ind = b.indent();
-    const said = ind.from === "editorconfig" ? ".editorconfig" : ind.from === "file" ? "as the file is" : "its language's";
-    const onSave = [ind.trimTrailing ? "trailing whitespace trimmed" : "", ind.finalNewline ? "a final newline" : ""].filter(Boolean).join(", ");
-    row("File", "indent", `${ind.tabs ? `tabs, ${ind.tabWidth} wide` : `${ind.size} spaces`} (${said})${onSave ? `; on save: ${onSave}` : ""}`);
-    row("File", "state", b.deleted ? "deleted on disk" : b.conflictKept ? "unsaved — differs from disk" : b.dirty ? "unsaved changes" : "saved");
+    const said =
+      ind.from === "editorconfig" ? ".editorconfig" : ind.from === "file" ? "as the file is" : "its language's";
+    const onSave = [ind.trimTrailing ? "trailing whitespace trimmed" : "", ind.finalNewline ? "a final newline" : ""]
+      .filter(Boolean)
+      .join(", ");
+    row(
+      "File",
+      "indent",
+      `${ind.tabs ? `tabs, ${ind.tabWidth} wide` : `${ind.size} spaces`} (${said})${onSave ? `; on save: ${onSave}` : ""}`,
+    );
+    row(
+      "File",
+      "state",
+      b.deleted
+        ? "deleted on disk"
+        : b.conflictKept
+          ? "unsaved — differs from disk"
+          : b.dirty
+            ? "unsaved changes"
+            : "saved",
+    );
     // Its properties: the frontmatter, nested maps under their keys.
     // Parsing on other threads (15.1): the properties and tasks when it's done.
     const parsed = note && !b.parsing ? b.parsed : null;
@@ -5335,7 +6207,11 @@ export class App {
             row("Properties", k, "", act, depth);
             walk(v as Record<string, unknown>, depth + 1, Math.max(from, at));
           } else {
-            const shown = Array.isArray(v) ? v.map((x) => (x && typeof x === "object" ? JSON.stringify(x) : String(x))).join(", ") : v instanceof Date ? v.toISOString().slice(0, 10) : String(v);
+            const shown = Array.isArray(v)
+              ? v.map((x) => (x && typeof x === "object" ? JSON.stringify(x) : String(x))).join(", ")
+              : v instanceof Date
+                ? v.toISOString().slice(0, 10)
+                : String(v);
             row("Properties", k, shown, act, depth);
           }
         }
@@ -5364,11 +6240,26 @@ export class App {
       // backlinks) — short, for a narrow panel: `y` copies it whole, as `slipbox info` says it.
       const c = conventionOf(this.graph, this.config, this.configOrigins);
       const copy = { copy: describeConvention(c) };
-      const by = (p: ConventionPart<string>) => (p.source === "setting" ? "setting" : p.source === "tool" ? (c.tool === "obsidian" ? "Obsidian" : "zk") : p.source === "notes" ? `notes ${p.share}%` : "ours");
+      const by = (p: ConventionPart<string>) =>
+        p.source === "setting"
+          ? "setting"
+          : p.source === "tool"
+            ? c.tool === "obsidian"
+              ? "Obsidian"
+              : "zk"
+            : p.source === "notes"
+              ? `notes ${p.share}%`
+              : "ours";
       const one = new Set([c.style, c.path, c.extension].map(by)).size === 1;
       const shown = (value: string, p: ConventionPart<string>) => (one ? value : `${value} (${by(p)})`);
       row("Links", "writes", shown(c.style.value === "wiki" ? "wikilinks" : "markdown", c.style), copy);
-      row("Links", "path", shown({ relative: "relative", root: "from the root", name: "by name" }[c.path.value], c.path), copy, 1);
+      row(
+        "Links",
+        "path",
+        shown({ relative: "relative", root: "from the root", name: "by name" }[c.path.value], c.path),
+        copy,
+        1,
+      );
       row("Links", ".md", shown(c.extension.value, c.extension), copy, 1);
       if (one) row("Links", "from", by(c.style), copy, 1);
     }
@@ -5381,7 +6272,10 @@ export class App {
     if (row.heading) {
       // This row's section, whatever is selected (from the filter, the rows it's among are gone).
       if (!this.infoFolded.delete(row.section)) this.infoFolded.add(row.section);
-      this.outline.selected = Math.max(0, this.infoRows().findIndex((r) => r.heading && r.section === row.section));
+      this.outline.selected = Math.max(
+        0,
+        this.infoRows().findIndex((r) => r.heading && r.section === row.section),
+      );
       return;
     }
     const act = row.act;
@@ -5490,7 +6384,13 @@ export class App {
     // A rendered row: the paragraph's rows up to the cursor's, and its source lines.
     const rowText = (r: number) => layout.lines[r]?.spans.map((s) => s.text).join("") ?? "";
     let first = view.cur.row;
-    while (first > 0 && rowText(first - 1).trim() && !layout.lines[first - 1]!.srcMap && !layout.lines[first - 1]!.decor) first--;
+    while (
+      first > 0 &&
+      rowText(first - 1).trim() &&
+      !layout.lines[first - 1]!.srcMap &&
+      !layout.lines[first - 1]!.decor
+    )
+      first--;
     const blockStart = starts[(layout.lines[first]?.src ?? line?.src ?? 1) - 1] ?? 0;
     const blank = /\r?\n[ \t]*\r?\n/g;
     blank.lastIndex = blockStart;
@@ -5498,7 +6398,8 @@ export class App {
     const text = rowText(view.cur.row);
     // The cursor's column as an index into the row's text.
     let idx = 0;
-    for (let w = 0; idx < text.length && w + stringWidth(text[idx]!) <= view.cur.col; idx++) w += stringWidth(text[idx]!);
+    for (let w = 0; idx < text.length && w + stringWidth(text[idx]!) <= view.cur.col; idx++)
+      w += stringWidth(text[idx]!);
     if (!word(text[idx])) while (idx > 0 && !word(text[idx])) idx--;
     let ws = idx;
     let we = idx;
@@ -5506,7 +6407,11 @@ export class App {
     while (we < text.length && word(text[we])) we++;
     const w = text.slice(ws, we);
     if (!w || !word(w[0])) return blockEnd;
-    const whole = (s: string) => [...s.matchAll(new RegExp(`(?<![\\p{L}\\p{N}_])${w.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}(?![\\p{L}\\p{N}_])`, "gu"))];
+    const whole = (s: string) => [
+      ...s.matchAll(
+        new RegExp(`(?<![\\p{L}\\p{N}_])${w.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}(?![\\p{L}\\p{N}_])`, "gu"),
+      ),
+    ];
     let k = 0;
     for (let r = first; r < view.cur.row; r++) k += whole(rowText(r)).length;
     k += whole(text.slice(0, ws)).length;
@@ -5531,10 +6436,12 @@ export class App {
     buf.endStep(cursorAfter ?? offsetOf(this, view));
     for (const v of this.allViews()) if (v.buf === buf) v.layoutKey = "";
     // Where the cursor was: in source mode, past what was typed before it; rendered, its row.
-    if (cursorAfter !== undefined && this.currentLayout(view).lines[before.row]?.srcMap) placeAt(this, view, cursorAfter);
+    if (cursorAfter !== undefined && this.currentLayout(view).lines[before.row]?.srcMap)
+      placeAt(this, view, cursorAfter);
     if (this.saveBuffer(buf, true)) this.message("info", done);
     // Any other failure has said why already.
-    else if (buf.changedOnDisk() && !buf.deleted) this.message("warn", `${done} — not saved yet (the file changed on disk: space n w decides)`);
+    else if (buf.changedOnDisk() && !buf.deleted)
+      this.message("warn", `${done} — not saved yet (the file changed on disk: space n w decides)`);
   }
 
   /** Whether the current window's note can have footnotes changed: a markdown note of this vault. */
@@ -5561,8 +6468,15 @@ export class App {
     if (!f?.ask || here.length < 2) return;
     this.openList({
       title: `${f.name}: ${here.length} copies on this machine — which do links to it open?`,
-      items: here.map((c) => ({ label: tildePath(c.path), hint: c.path === f.default ? "links open it now" : undefined, data: c.path })),
-      selected: Math.max(0, here.findIndex((c) => c.path === f.default)),
+      items: here.map((c) => ({
+        label: tildePath(c.path),
+        hint: c.path === f.default ? "links open it now" : undefined,
+        data: c.path,
+      })),
+      selected: Math.max(
+        0,
+        here.findIndex((c) => c.path === f.default),
+      ),
       filterable: false,
       accept: (item) => {
         setDefaultCopy(f.key, item.data as string);
@@ -5578,7 +6492,10 @@ export class App {
    * under it (out of a link or code span), as a footnote's reference goes — then saved.
    */
   insertLink(view: View): void {
-    const why = view.buf.kind.group !== "note" || view.buf.rel === null ? "links are written in this folder's notes" : cannotEdit(view);
+    const why =
+      view.buf.kind.group !== "note" || view.buf.rel === null
+        ? "links are written in this folder's notes"
+        : cannotEdit(view);
     if (why) return this.message("info", why);
     const g = this.graph;
     const version = view.buf.version;
@@ -5587,13 +6504,20 @@ export class App {
       title: "Link to…",
       items: rels.map((r) => ({ label: r, data: r })),
       accept: (item) => {
-        if (view.buf.version !== version) return this.message("warn", "the note changed while you picked: insert the link again");
+        if (view.buf.version !== version)
+          return this.message("warn", "the note changed while you picked: insert the link again");
         // A pointer by a name different folders share asks first; a private one is said (D74, D83).
         this.writeLinkAsked(view.buf.abs, g.abs(item.data as string), (ends) => {
-          if (view.buf.version !== version) return this.message("warn", "the note changed while you picked: insert the link again");
+          if (view.buf.version !== version)
+            return this.message("warn", "the note changed while you picked: insert the link again");
           const c = conventionOf(g, this.config, this.configOrigins);
           const title = ends.to.note ? (g.entry(item.data as string)?.title ?? "") : "";
-          const link = writeLink(c, c.style.value, ends, c.style.value === "wiki" ? "" : title || posix.basename(item.data as string));
+          const link = writeLink(
+            c,
+            c.style.value,
+            ends,
+            c.style.value === "wiki" ? "" : title || posix.basename(item.data as string),
+          );
           if (view.insert) {
             insertText(this, view, link);
             return this.message("info", `linked ${item.data as string}`);
@@ -5630,9 +6554,16 @@ export class App {
     ];
     // Renaming one that has it as its name, a `.slipbox/` one: the folder linked to, or another (an alias stays).
     const there = findVaultRoot(toAbs);
-    const named = n.clash.filter((f) => f.name.toLowerCase() === n.short.toLowerCase()).map((f) => ({ name: f.name, at: f.default ?? f.copies[0]?.path }));
+    const named = n.clash
+      .filter((f) => f.name.toLowerCase() === n.short.toLowerCase())
+      .map((f) => ({ name: f.name, at: f.default ?? f.copies[0]?.path }));
     for (const f of [...(there ? [{ name: n.short, at: there }] : []), ...named]) {
-      if (f.at && hasMarker(f.at)) items.push({ label: `Rename ${tildePath(f.at)}'s name first…`, detail: `${f.name} → ${slugName(posix.basename(posix.dirname(f.at)))}-${f.name}`, data: f });
+      if (f.at && hasMarker(f.at))
+        items.push({
+          label: `Rename ${tildePath(f.at)}'s name first…`,
+          detail: `${f.name} → ${slugName(posix.basename(posix.dirname(f.at)))}-${f.name}`,
+          data: f,
+        });
     }
     this.openList({
       title: `${n.short}: ${n.clash.length + 1} different folders have this name — how is the link written?`,
@@ -5651,7 +6582,8 @@ export class App {
             },
           );
         });
-        if (this.overlay?.kind === "prompt") this.overlay.text = `${slugName(posix.basename(posix.dirname(f.at)))}-${f.name}`;
+        if (this.overlay?.kind === "prompt")
+          this.overlay.text = `${slugName(posix.basename(posix.dirname(f.at)))}-${f.name}`;
       },
     });
   }
@@ -5664,7 +6596,8 @@ export class App {
     const version = view.buf.version;
     this.prompt("Add a footnote — its text:", (text) => {
       if (!text.trim()) return;
-      if (view.buf.version !== version) return this.message("warn", "the note changed while you typed: add the footnote again");
+      if (view.buf.version !== version)
+        return this.message("warn", "the note changed while you typed: add the footnote again");
       const r = addFootnote(view.buf.source, this.footnotes(), at, text);
       this.applyNoteEdits(r.edits, `added footnote [^${r.label}]`, at + `[^${r.label}]`.length);
     });
@@ -5754,7 +6687,11 @@ export class App {
       case "delete":
       case "rename":
         if (!row) return this.message("info", "no footnote selected");
-        return action === "edit" ? this.editFootnoteRow(row) : action === "delete" ? this.deleteFootnoteRow(row) : this.renameFootnoteRow(row);
+        return action === "edit"
+          ? this.editFootnoteRow(row)
+          : action === "delete"
+            ? this.deleteFootnoteRow(row)
+            : this.renameFootnoteRow(row);
       case "close":
         this.showOutline(false);
         break;
@@ -5787,7 +6724,8 @@ export class App {
     for (const path of this.graph.filePaths()) {
       const { group } = classify(path, this.config.walk.extensions);
       if (group === "binary" || excl?.ignores(path)) continue;
-      if (incl?.ignores(path) || mode === "all" || (mode === "renderable" && group === "data")) out.push({ path, group });
+      if (incl?.ignores(path) || mode === "all" || (mode === "renderable" && group === "data"))
+        out.push({ path, group });
     }
     return out;
   }
@@ -5850,7 +6788,8 @@ export class App {
     const T = this.explorerTop;
     const rows: TreeRow[] = [];
     // `..` (17.14): the explorer up a folder — no fence at the root, up to `/`.
-    if (dirname(T) !== T) rows.push({ kind: "root", path: "..", name: "..", depth: 0, root: { kind: "folder", abs: dirname(T) } });
+    if (dirname(T) !== T)
+      rows.push({ kind: "root", path: "..", name: "..", depth: 0, root: { kind: "folder", abs: dirname(T) } });
     if (T === R) rows.push(...this.rootTree());
     else if (isInside(R, T)) {
       // A folder of the root: its rows, from it.
@@ -5864,7 +6803,13 @@ export class App {
       if (!isInside(R, T) && isInside(T, abs)) continue;
       const vault = isVaultRoot(abs);
       const name = vault ? (this.reach?.vaultOf(abs) ?? basename(abs)) : tildePath(abs);
-      rows.push({ kind: "root", path: abs, name, depth: 0, root: { kind: vault ? "vault" : "folder", abs, name, other: true } });
+      rows.push({
+        kind: "root",
+        path: abs,
+        name,
+        depth: 0,
+        root: { kind: vault ? "vault" : "folder", abs, name, other: true },
+      });
       if (vault && this.expanded.has(abs)) this.otherRootRows(abs, rows);
     }
     this.tree = rows;
@@ -5898,11 +6843,25 @@ export class App {
     for (const e of shown.filter(isDir).sort(byName)) {
       const abs = join(dir, e.name);
       if (abs === R) {
-        out.push({ kind: "root", path: R, name: e.name, depth, root: { kind: this.loc.mode, abs: R, name: this.rootName(R), here: true } });
+        out.push({
+          kind: "root",
+          path: R,
+          name: e.name,
+          depth,
+          root: { kind: this.loc.mode, abs: R, name: this.rootName(R), here: true },
+        });
         if (this.expanded.has(R)) for (const r of this.rootTree()) out.push({ ...r, depth: r.depth + depth + 1 });
         continue;
       }
-      if (isVaultRoot(abs)) out.push({ kind: "root", path: abs, name: e.name, depth, root: { kind: "vault", abs, name: this.rootName(abs) }, outside: true });
+      if (isVaultRoot(abs))
+        out.push({
+          kind: "root",
+          path: abs,
+          name: e.name,
+          depth,
+          root: { kind: "vault", abs, name: this.rootName(abs) },
+          outside: true,
+        });
       else out.push({ kind: "dir", path: abs, name: e.name, depth, outside: true });
       if (this.expanded.has(abs)) this.outsideRows(abs, depth + 1, out);
     }
@@ -5913,7 +6872,8 @@ export class App {
     for (const e of shown.filter((e) => !isDir(e) && (e.isFile() || e.isSymbolicLink())).sort(byName)) {
       const abs = join(dir, e.name);
       const { group } = classify(abs, this.config.walk.extensions);
-      if (group === "binary" || (group !== "note" && (mode === "notes" || (mode === "renderable" && group !== "data")))) continue;
+      if (group === "binary" || (group !== "note" && (mode === "notes" || (mode === "renderable" && group !== "data"))))
+        continue;
       out.push({ kind: "note", path: abs, name: e.name, depth, outside: true, ...(group !== "note" ? { group } : {}) });
     }
   }
@@ -5943,7 +6903,10 @@ export class App {
     this.expanded.add(inside ? relative(R, from).split(sep).join("/") : from);
     this.invalidateTree();
     const key = inside ? relative(R, from).split(sep).join("/") : from;
-    this.sidebar.selected = Math.max(0, this.explorerRows().findIndex((r) => r.path === key));
+    this.sidebar.selected = Math.max(
+      0,
+      this.explorerRows().findIndex((r) => r.path === key),
+    );
     this.sidebar.scroll = 0;
   }
 
@@ -5985,8 +6948,22 @@ export class App {
           break;
         }
       }
-      if (visible && roots.has(p)) rows.push({ kind: "root", path: p, name: parts[parts.length - 1]!, depth: parts.length - 1, root: roots.get(p)! });
-      else if (visible && !folders.has(p)) rows.push({ kind: "note", path: p, name: parts[parts.length - 1]!, depth: parts.length - 1, ...(groups.has(p) ? { group: groups.get(p) } : {}) });
+      if (visible && roots.has(p))
+        rows.push({
+          kind: "root",
+          path: p,
+          name: parts[parts.length - 1]!,
+          depth: parts.length - 1,
+          root: roots.get(p)!,
+        });
+      else if (visible && !folders.has(p))
+        rows.push({
+          kind: "note",
+          path: p,
+          name: parts[parts.length - 1]!,
+          depth: parts.length - 1,
+          ...(groups.has(p) ? { group: groups.get(p) } : {}),
+        });
     }
     return rows;
   }
@@ -6058,7 +7035,12 @@ export class App {
     else this.pinnedRoots.add(r);
     this.saveRoots();
     this.invalidateTree();
-    this.message("info", this.pinnedRoots.has(r) ? `${this.vaultLabel(this.loc)}: a root of the explorer from now on` : `${this.vaultLabel(this.loc)}: no longer kept as a root`);
+    this.message(
+      "info",
+      this.pinnedRoots.has(r)
+        ? `${this.vaultLabel(this.loc)}: a root of the explorer from now on`
+        : `${this.vaultLabel(this.loc)}: no longer kept as a root`,
+    );
   }
 
   private saveRoots(): void {
@@ -6072,7 +7054,9 @@ export class App {
   private otherRootRows(abs: string, rows: TreeRow[]): void {
     const g = this.reach?.graphAt(abs) ?? null;
     if (!g) return;
-    const paths = [...g.notes.keys(), ...g.filePaths()].sort((a, b) => a.localeCompare(b, undefined, { sensitivity: "base" }));
+    const paths = [...g.notes.keys(), ...g.filePaths()].sort((a, b) =>
+      a.localeCompare(b, undefined, { sensitivity: "base" }),
+    );
     const seen = new Set<string>();
     for (const p of paths) {
       const parts = p.split("/");
@@ -6088,7 +7072,14 @@ export class App {
           break;
         }
       }
-      if (visible) rows.push({ kind: "note", path: `${abs}/${p}`, name: parts[parts.length - 1]!, depth: parts.length, under: abs });
+      if (visible)
+        rows.push({
+          kind: "note",
+          path: `${abs}/${p}`,
+          name: parts[parts.length - 1]!,
+          depth: parts.length,
+          under: abs,
+        });
     }
   }
 
@@ -6110,7 +7101,13 @@ export class App {
         rows.push({ kind: "dir", path: dir, name: parts[i]!, depth: i });
       }
       const group = this.graph.notes.has(row) ? undefined : classify(row, this.config.walk.extensions).group;
-      rows.push({ kind: "note", path: row, name: parts[parts.length - 1]!, depth: parts.length - 1, ...(group ? { group } : {}) });
+      rows.push({
+        kind: "note",
+        path: row,
+        name: parts[parts.length - 1]!,
+        depth: parts.length - 1,
+        ...(group ? { group } : {}),
+      });
     }
     this.filtered = { query: q, tree: this.treeRows(), rows };
     return rows;
@@ -6160,11 +7157,20 @@ export class App {
     const recent: HistoryRow[] = this.readNotes()
       .filter((r) => !inTimeline.has(r.key))
       .slice(0, this.config.ui.history_limit)
-      .map((r) => ({ label: r.key.split("/").pop()!, path: r.key, hint: r.hint, index: -1, here: false, recent: r.key }));
+      .map((r) => ({
+        label: r.key.split("/").pop()!,
+        path: r.key,
+        hint: r.hint,
+        index: -1,
+        here: false,
+        recent: r.key,
+      }));
     const q = this.sidebar.filter ?? "";
     const mine = q ? rows.filter((r) => match(q, r.path)) : rows;
     const others = q ? recent.filter((r) => match(q, r.path)) : recent;
-    return others.length ? [...mine, { label: "recent here", path: "", hint: "", index: -1, here: false, heading: true }, ...others] : mine;
+    return others.length
+      ? [...mine, { label: "recent here", path: "", hint: "", index: -1, here: false, heading: true }, ...others]
+      : mine;
   }
 
   /**
@@ -6183,7 +7189,10 @@ export class App {
     return [...when]
       .filter(([k]) => existsSync(isAbsolute(k) ? k : join(this.loc.root, k)))
       .sort((a, b) => b[1] - a[1] || (order.get(a[0]) ?? 1e9) - (order.get(b[0]) ?? 1e9) || a[0].localeCompare(b[0]))
-      .map(([key, t]) => ({ key, hint: tabOf.has(key) && tabOf.get(key) !== this.activeTab + 1 ? `tab ${tabOf.get(key)}` : this.whenRead(t) }));
+      .map(([key, t]) => ({
+        key,
+        hint: tabOf.has(key) && tabOf.get(key) !== this.activeTab + 1 ? `tab ${tabOf.get(key)}` : this.whenRead(t),
+      }));
   }
 
   /** When a note was last read, briefly: the time today, else the day; nothing when unknown. */
@@ -6191,7 +7200,8 @@ export class App {
     if (!ms) return "";
     const d = new Date(ms);
     const now = new Date(this.now());
-    if (d.toDateString() === now.toDateString()) return `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
+    if (d.toDateString() === now.toDateString())
+      return `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
     return d.toLocaleDateString("en-GB", { day: "numeric", month: "short" });
   }
 
@@ -6229,10 +7239,17 @@ export class App {
     const cur = v.back.length;
     const g = this.glyphs;
     const places: ListItem[] = timeline
-      .map((l, i) => ({ label: `${i === cur ? g.historyHere : " "} ${sanitize(this.placeName(l))}`, hint: i === cur ? "here" : i > cur ? "forward" : "back", data: i }))
+      .map((l, i) => ({
+        label: `${i === cur ? g.historyHere : " "} ${sanitize(this.placeName(l))}`,
+        hint: i === cur ? "here" : i > cur ? "forward" : "back",
+        data: i,
+      }))
       .reverse();
     const key = this.keymap.keysFor("copy.path")[0];
-    const items: ListItem[] = [{ label: "  Copy path", hint: key ? prettyKey(key, this.leader) : undefined, data: "copy" }, ...places];
+    const items: ListItem[] = [
+      { label: "  Copy path", hint: key ? prettyKey(key, this.leader) : undefined, data: "copy" },
+      ...places,
+    ];
     const hot = this.geometry?.hot.find((h) => h.id === "status:path");
     this.openList({
       title: "History",
@@ -6286,9 +7303,16 @@ export class App {
     this.sidebar.pinned = false;
     if (view === "explorer") this.revealInSidebar();
     else if (view === "git") {
-      this.sidebar.selected = Math.max(0, gitRows(this).findIndex((r) => r.kind !== "heading"));
+      this.sidebar.selected = Math.max(
+        0,
+        gitRows(this).findIndex((r) => r.kind !== "heading"),
+      );
       void this.refreshGitNow().then(() => this.host.requestRender());
-    } else this.sidebar.selected = Math.max(0, this.historyRows().findIndex((r) => r.here));
+    } else
+      this.sidebar.selected = Math.max(
+        0,
+        this.historyRows().findIndex((r) => r.here),
+      );
   }
 
   /**
@@ -6299,7 +7323,13 @@ export class App {
   switchLeftView(view: LeftView): boolean {
     if (this.leftView === view) return false;
     const s = this.sidebar;
-    this.leftPositions.set(this.leftView, { selected: s.selected, scroll: s.scroll, left: s.left, pinned: s.pinned, filter: s.filter });
+    this.leftPositions.set(this.leftView, {
+      selected: s.selected,
+      scroll: s.scroll,
+      left: s.left,
+      pinned: s.pinned,
+      filter: s.filter,
+    });
     this.leftView = view;
     s.filtering = false;
     const saved = this.leftPositions.get(view);
@@ -6313,7 +7343,11 @@ export class App {
     // The footnotes and Info views filter the same way (3.17, 3.19).
     const notes = this.rightView === "footnotes";
     const info = this.rightView === "info";
-    const rows: { text: string; line?: number }[] = notes ? this.footnoteRows() : info ? this.infoRows() : this.outlineRows();
+    const rows: { text: string; line?: number }[] = notes
+      ? this.footnoteRows()
+      : info
+        ? this.infoRows()
+        : this.outlineRows();
     const typed = keyChar(key);
     const done = () => {
       o.filter = "";
@@ -6373,7 +7407,12 @@ export class App {
     o.scroll = 0;
     o.pinned = false;
     const q = o.filter ?? "";
-    const next: { text: string; heading?: boolean }[] = this.rightView === "footnotes" ? this.footnoteRows() : this.rightView === "info" ? this.infoRows() : this.outlineRows();
+    const next: { text: string; heading?: boolean }[] =
+      this.rightView === "footnotes"
+        ? this.footnoteRows()
+        : this.rightView === "info"
+          ? this.infoRows()
+          : this.outlineRows();
     let best = 0;
     let bestScore = Number.NEGATIVE_INFINITY;
     if (q) {
@@ -6391,7 +7430,8 @@ export class App {
   /** Keys while the left panel's filter has them: type, move, open, clear. */
   private filterKey(key: string): void {
     const s = this.sidebar;
-    const rows: unknown[] = this.leftView === "explorer" ? this.explorerRows() : this.leftView === "git" ? gitRows(this) : this.historyRows();
+    const rows: unknown[] =
+      this.leftView === "explorer" ? this.explorerRows() : this.leftView === "git" ? gitRows(this) : this.historyRows();
     const typed = keyChar(key);
     const done = () => {
       s.filter = "";
@@ -6468,10 +7508,15 @@ export class App {
     const s = this.sidebar;
     s.scroll = 0;
     s.pinned = false;
-    const next: unknown[] = this.leftView === "explorer" ? this.explorerRows() : this.leftView === "git" ? gitRows(this) : this.historyRows();
+    const next: unknown[] =
+      this.leftView === "explorer" ? this.explorerRows() : this.leftView === "git" ? gitRows(this) : this.historyRows();
     s.selected = Math.max(
       0,
-      this.leftView === "explorer" ? next.findIndex((r) => (r as TreeRow).kind === "note") : this.leftView === "git" ? next.findIndex((r) => (r as GitRow).kind !== "heading") : next.findIndex((r) => !(r as HistoryRow).heading),
+      this.leftView === "explorer"
+        ? next.findIndex((r) => (r as TreeRow).kind === "note")
+        : this.leftView === "git"
+          ? next.findIndex((r) => (r as GitRow).kind !== "heading")
+          : next.findIndex((r) => !(r as HistoryRow).heading),
     );
   }
 
@@ -6537,7 +7582,13 @@ export class App {
     for (let i = 1; i < parts.length; i++) this.expanded.add(parts.slice(0, i).join("/"));
     if (open && rel !== ".") this.expanded.add(rel);
     this.invalidateTree();
-    const idx = rel === "." ? Math.max(0, this.treeRows().findIndex((r) => r.path !== "..")) : this.treeRows().findIndex((r) => r.path === rel);
+    const idx =
+      rel === "."
+        ? Math.max(
+            0,
+            this.treeRows().findIndex((r) => r.path !== ".."),
+          )
+        : this.treeRows().findIndex((r) => r.path === rel);
     if (idx >= 0) this.sidebar.selected = idx;
   }
 
@@ -6650,7 +7701,12 @@ export class App {
         const again = this.explorerRows().findIndex((r) => r.path === at);
         if (again >= 0) this.sidebar.selected = again;
         const shown = this.filesShown();
-        this.message("info", this.sidebar.allFiles ? "explorer: every text file" : `explorer: ${shown === "notes" ? "notes" : shown === "all" ? "every text file" : "notes and data files"} (files.show)`);
+        this.message(
+          "info",
+          this.sidebar.allFiles
+            ? "explorer: every text file"
+            : `explorer: ${shown === "notes" ? "notes" : shown === "all" ? "every text file" : "notes and data files"} (files.show)`,
+        );
         break;
       }
       case "bottom":
@@ -6687,11 +7743,15 @@ export class App {
           if (this.expanded.delete(row.path)) this.invalidateTree();
           break;
         }
-        const dir = row.kind === "dir" && this.expanded.has(row.path) ? row.path : row.path.split("/").slice(0, -1).join("/");
+        const dir =
+          row.kind === "dir" && this.expanded.has(row.path) ? row.path : row.path.split("/").slice(0, -1).join("/");
         if (dir) {
           this.expanded.delete(dir);
           this.invalidateTree();
-          this.sidebar.selected = Math.max(0, this.treeRows().findIndex((r) => r.path === dir));
+          this.sidebar.selected = Math.max(
+            0,
+            this.treeRows().findIndex((r) => r.path === dir),
+          );
         }
         break;
       }
@@ -6736,7 +7796,15 @@ export class App {
         }
       });
       hs.forEach((h, i) => {
-        if (keep.has(i)) out.push({ index: i, level: h.level, text: h.text.replace(/\s+/g, " "), line: h.line, folded: false, hasChildren: (hs[i + 1]?.level ?? 0) > h.level });
+        if (keep.has(i))
+          out.push({
+            index: i,
+            level: h.level,
+            text: h.text.replace(/\s+/g, " "),
+            line: h.line,
+            folded: false,
+            hasChildren: (hs[i + 1]?.level ?? 0) > h.level,
+          });
       });
       return out;
     }
@@ -6820,7 +7888,8 @@ export class App {
         break;
       case "rename":
         if (!row || !view) break;
-        if (!view.buf.rel || !this.graph.notes.has(view.buf.rel)) this.message("warn", "only a note of this root has its headings renamed with their links");
+        if (!view.buf.rel || !this.graph.notes.has(view.buf.rel))
+          this.message("warn", "only a note of this root has its headings renamed with their links");
         else this.promptHeadingRename(view.buf.rel, row.text);
         break;
       default:
@@ -6874,7 +7943,8 @@ export class App {
       widen: opts.widen,
     };
     refilter(o);
-    if (opts.selected !== undefined) o.selected = selectable(o, Math.max(0, Math.min(opts.selected, o.filtered.length - 1)), 1);
+    if (opts.selected !== undefined)
+      o.selected = selectable(o, Math.max(0, Math.min(opts.selected, o.filtered.length - 1)), 1);
     this.overlay = o;
   }
 
@@ -6932,7 +8002,13 @@ export class App {
     if (typed !== null) r.text += typed;
   }
 
-  prompt(label: string, accept: (text: string) => void, change?: (text: string) => void, cancel?: () => void, view?: View): void {
+  prompt(
+    label: string,
+    accept: (text: string) => void,
+    change?: (text: string) => void,
+    cancel?: () => void,
+    view?: View,
+  ): void {
     this.overlay = { kind: "prompt", label, text: "", accept, change, cancel, view };
   }
 
@@ -7040,7 +8116,12 @@ export class App {
 
   /** Focus never stays on a hidden pane (after zen, a config reload, a resize): back to the note. */
   fixRegion(): void {
-    if ((this.region === "sidebar" && !this.sidebarShown) || (this.region === "outline" && !this.outlineShown) || (this.region === "problems" && !this.problemsPanel.shown)) this.region = "content";
+    if (
+      (this.region === "sidebar" && !this.sidebarShown) ||
+      (this.region === "outline" && !this.outlineShown) ||
+      (this.region === "problems" && !this.problemsPanel.shown)
+    )
+      this.region = "content";
   }
 
   /**
@@ -7093,7 +8174,9 @@ export class App {
    * CLI to warn agents about. Written when the list changes; removed when it's empty, and on quit.
    */
   publishDirty(): void {
-    const paths = this.dirtyBuffers().map((b) => b.key).sort();
+    const paths = this.dirtyBuffers()
+      .map((b) => b.key)
+      .sort();
     const key = paths.join("\n");
     if (key === this.lastDirty) return;
     this.lastDirty = key;
@@ -7111,7 +8194,12 @@ export class App {
    */
   publishState(): void {
     const v = this.view;
-    const sig = [this.activeTab, v ? `${v.buf.key}@${v.cur.row}` : "", this.remoteServer ?? "", ...this.tabs.map((t) => `${t.active}:${t.views.map((x) => x.buf.key).join(",")}`)].join("|");
+    const sig = [
+      this.activeTab,
+      v ? `${v.buf.key}@${v.cur.row}` : "",
+      this.remoteServer ?? "",
+      ...this.tabs.map((t) => `${t.active}:${t.views.map((x) => x.buf.key).join(",")}`),
+    ].join("|");
     if (sig === this.lastState || this.quitting) return;
     this.lastState = sig;
     if (this.stateTimer) clearTimeout(this.stateTimer);
@@ -7129,11 +8217,30 @@ export class App {
   private stateTimer: ReturnType<typeof setTimeout> | null = null;
 
   /** The keymaps consulted in the current state, in priority order, with how to run a hit. */
-  private maps(): { map: Keymap; run: (spec: string) => Promise<void> | void; info?: Record<string, { title: string; desc: string }> }[] {
-    const out: { map: Keymap; run: (spec: string) => Promise<void> | void; info?: Record<string, { title: string; desc: string }> }[] = [];
+  private maps(): {
+    map: Keymap;
+    run: (spec: string) => Promise<void> | void;
+    info?: Record<string, { title: string; desc: string }>;
+  }[] {
+    const out: {
+      map: Keymap;
+      run: (spec: string) => Promise<void> | void;
+      info?: Record<string, { title: string; desc: string }>;
+    }[] = [];
     // A pane's own actions carry their titles (which-key says "New note here", as help does).
-    if (this.region === "sidebar" && this.sidebarShown) out.push({ map: this.explorerKeys, run: (a) => this.explorerAction(a), info: this.leftView === "history" ? HISTORY_ACTION_INFO : this.leftView === "git" ? GIT_ACTION_INFO : EXPLORER_ACTION_INFO });
-    if (this.region === "problems" && this.problemsPanel.shown) out.push({ map: this.problemsKeys, run: (a) => this.problemsPanelAction(a), info: PROBLEMS_ACTION_INFO });
+    if (this.region === "sidebar" && this.sidebarShown)
+      out.push({
+        map: this.explorerKeys,
+        run: (a) => this.explorerAction(a),
+        info:
+          this.leftView === "history"
+            ? HISTORY_ACTION_INFO
+            : this.leftView === "git"
+              ? GIT_ACTION_INFO
+              : EXPLORER_ACTION_INFO,
+      });
+    if (this.region === "problems" && this.problemsPanel.shown)
+      out.push({ map: this.problemsKeys, run: (a) => this.problemsPanelAction(a), info: PROBLEMS_ACTION_INFO });
     if (this.region === "outline" && this.outlineShown) {
       out.push(
         this.rightView === "footnotes"
@@ -7145,7 +8252,8 @@ export class App {
     }
     if (this.view?.visual) out.push({ map: this.visualKeys, run: (s) => this.run(s) });
     // Source mode's own keys (x deletes a character there) before the reading ones.
-    if (this.region === "content" && editable(this.view) && !this.view!.visual) out.push({ map: this.sourceKeys, run: (s) => this.run(s) });
+    if (this.region === "content" && editable(this.view) && !this.view!.visual)
+      out.push({ map: this.sourceKeys, run: (s) => this.run(s) });
     out.push({ map: this.keymap, run: (s) => this.run(s) });
     return out;
   }
@@ -7177,7 +8285,12 @@ export class App {
         const id = c.spec?.split(" ")[0] ?? "";
         const cmd = this.registry.get(id);
         const action = info?.[c.spec ?? ""];
-        seen.set(c.key, { key: c.key, label: action?.title ?? cmd?.title ?? c.spec?.replace(/_/g, " ") ?? "", desc: action?.desc ?? cmd?.description ?? "", group });
+        seen.set(c.key, {
+          key: c.key,
+          label: action?.title ?? cmd?.title ?? c.spec?.replace(/_/g, " ") ?? "",
+          desc: action?.desc ?? cmd?.description ?? "",
+          group,
+        });
       }
     }
     return mergeSameAction([...seen.values()].map((e) => ({ ...e, spec: specs.get(e.key) ?? null })));
@@ -7226,9 +8339,12 @@ export class App {
   private async dispatchKey(key: string): Promise<void> {
     if (key.startsWith(PASTE)) return this.pasteNow(key.slice(PASTE.length));
     if (this.overlay) return this.overlayKey(this.overlay, key);
-    if (this.region === "sidebar" && this.sidebarShown && this.sidebar.filtering && !this.pending.length) return this.filterKey(key);
-    if (this.region === "outline" && this.outlineShown && this.outline.filtering && !this.pending.length) return this.outlineFilterKey(key);
-    if (this.region === "problems" && this.problemsPanel.shown && this.problemsList().filtering && !this.pending.length) return this.problemsFilterKey(key);
+    if (this.region === "sidebar" && this.sidebarShown && this.sidebar.filtering && !this.pending.length)
+      return this.filterKey(key);
+    if (this.region === "outline" && this.outlineShown && this.outline.filtering && !this.pending.length)
+      return this.outlineFilterKey(key);
+    if (this.region === "problems" && this.problemsPanel.shown && this.problemsList().filtering && !this.pending.length)
+      return this.problemsFilterKey(key);
     // Insert mode: keys are text, except the few that edit or move (editing.ts); save still works.
     const iv = this.view;
     if (this.region === "content" && iv?.insert && !this.pending.length) {
@@ -7262,12 +8378,17 @@ export class App {
       return;
     }
     // Source mode's normal mode: counts, operators and `.` around the keymaps (vim.ts).
-    if (this.region === "content" && iv && editable(iv) && !iv.visual && !this.resizeMode) return vimKey(this, iv, key, () => this.dispatchMapped(key));
-    if (this.region === "content" && iv?.visual && !this.resizeMode) return visualKey(this, iv, key, () => this.dispatchMapped(key));
+    if (this.region === "content" && iv && editable(iv) && !iv.visual && !this.resizeMode)
+      return vimKey(this, iv, key, () => this.dispatchMapped(key));
+    if (this.region === "content" && iv?.visual && !this.resizeMode)
+      return visualKey(this, iv, key, () => this.dispatchMapped(key));
     // From the render, a key that starts typing (o, i, a, A, I, O) switches the window to source:
     // the change it starts is recorded for `.` as if made there (insertRecord ends it at esc).
     const s = this.vim;
-    const start = this.region === "content" && iv && !this.resizeMode && !s.replaying ? { keys: [...this.pending, key], version: iv.buf.version } : null;
+    const start =
+      this.region === "content" && iv && !this.resizeMode && !s.replaying
+        ? { keys: [...this.pending, key], version: iv.buf.version }
+        : null;
     await this.dispatchMapped(key);
     const v = this.view;
     if (start && v && v === iv && v.insert && editable(v)) {
@@ -7304,7 +8425,8 @@ export class App {
     const prefixAt = maps.slice(0, at >= 0 ? at + 1 : maps.length).findIndex((m) => m.map.isPrefix(seq));
     // …and a prefix in a keymap above the binding's is that keymap's own: the explorer's `n n`
     // isn't the note's `n` (find next) after a pause.
-    const hit = at >= 0 && !(prefixAt >= 0 && prefixAt < at) ? { ...maps[at]!, spec: maps[at]!.map.lookup(seq) } : undefined;
+    const hit =
+      at >= 0 && !(prefixAt >= 0 && prefixAt < at) ? { ...maps[at]!, spec: maps[at]!.map.lookup(seq) } : undefined;
     if (prefixAt >= 0) {
       this.startPending(key);
       if (hit) {
@@ -7439,7 +8561,10 @@ export class App {
       // An item's own key picks it.
       // Its case first (a menu's `R` isn't its `r`), then either.
       const exact = o.filtered.findIndex((e) => e.item.hotkey && e.item.hotkey === typed);
-      const hot = exact >= 0 ? exact : o.filtered.findIndex((e) => e.item.hotkey && e.item.hotkey === (typed ?? "").toLowerCase());
+      const hot =
+        exact >= 0
+          ? exact
+          : o.filtered.findIndex((e) => e.item.hotkey && e.item.hotkey === (typed ?? "").toLowerCase());
       if (hot >= 0) {
         o.selected = hot;
         return this.overlayKey(o, "enter");
@@ -7466,7 +8591,13 @@ export class App {
     | null = null;
 
   /** Everything visible is clickable (docs/manual/keys.md, "Mouse"). */
-  handleMouse(ev: { type: string; x: number; y: number; button: number; scroll?: { direction: string; delta: number } }): void {
+  handleMouse(ev: {
+    type: string;
+    x: number;
+    y: number;
+    button: number;
+    scroll?: { direction: string; delta: number };
+  }): void {
     if (ev.type !== "move") this.lastInputAt = this.now();
     // A wheel spun (12.7): pictures held back from its first tick until it rests.
     if (ev.type === "scroll") this.wheelAt = this.now();
@@ -7482,7 +8613,13 @@ export class App {
     }
   }
 
-  private handleMouseNow(ev: { type: string; x: number; y: number; button: number; scroll?: { direction: string; delta: number } }): void {
+  private handleMouseNow(ev: {
+    type: string;
+    x: number;
+    y: number;
+    button: number;
+    scroll?: { direction: string; delta: number };
+  }): void {
     const g = this.geometry;
     if (!g) return;
     const hotAt = () => g.hot.find((h) => inRect(h, ev.x, ev.y));
@@ -7507,7 +8644,14 @@ export class App {
   private overlayMouse(ev: { type: string; x: number; y: number; scroll?: { direction: string } }, g: Geometry): void {
     const o = this.overlay!;
     if (o.kind === "saveas") {
-      if (g.saveas) saveAsMouse(this, o, ev, g.saveas, ev.type === "down" ? (g.hot.find((h) => inRect(h, ev.x, ev.y))?.id ?? null) : null);
+      if (g.saveas)
+        saveAsMouse(
+          this,
+          o,
+          ev,
+          g.saveas,
+          ev.type === "down" ? (g.hot.find((h) => inRect(h, ev.x, ev.y))?.id ?? null) : null,
+        );
       else if (ev.type === "down") this.closeOverlay(true);
       return;
     }
@@ -7567,14 +8711,22 @@ export class App {
     const side = ev.scroll?.direction === "left" ? -1 : ev.scroll?.direction === "right" ? 1 : 0;
     if (side) {
       // Side panes first (they lie over the note on narrow screens); drawing clamps the offset.
-      const sidePane = g.outlinePane && inRect(g.outlinePane, ev.x, ev.y) ? this.outline : g.sidebarPane && inRect(g.sidebarPane, ev.x, ev.y) ? this.sidebar : null;
+      const sidePane =
+        g.outlinePane && inRect(g.outlinePane, ev.x, ev.y)
+          ? this.outline
+          : g.sidebarPane && inRect(g.sidebarPane, ev.x, ev.y)
+            ? this.sidebar
+            : null;
       if (sidePane) {
         sidePane.left = Math.max(0, (sidePane.left ?? 0) + side * n * 2);
         return;
       }
       if (pane && !this.ui.wrap) {
         const layout = this.currentLayout(pane.view);
-        pane.view.left = Math.max(0, Math.min(Math.max(0, layout.width - this.textColumns(pane.view)), pane.view.left + side * n * 2));
+        pane.view.left = Math.max(
+          0,
+          Math.min(Math.max(0, layout.width - this.textColumns(pane.view)), pane.view.left + side * n * 2),
+        );
       }
       return;
     }
@@ -7723,7 +8875,8 @@ export class App {
       this.outline.selected = idx;
       // The fold marker sits right after the indent.
       const markerX = g.outline.x + 1 + (row.level - 1) * 2;
-      if (row.hasChildren && ev.x >= markerX - 1 && ev.x <= markerX + 1 && !this.outline.filter) this.outlineAction(row.folded ? "unfold" : "fold");
+      if (row.hasChildren && ev.x >= markerX - 1 && ev.x <= markerX + 1 && !this.outline.filter)
+        this.outlineAction(row.folded ? "unfold" : "fold");
       else {
         this.outlineAction("jump"); // a choice: the note moves there and takes the focus
         this.outline.filter = "";
@@ -7793,7 +8946,9 @@ export class App {
       return;
     }
     // The floating editor (3.20): a click in it is its (one outside closed it, above).
-    const pane = (this.floating ? g.panes.find((p) => p.view === this.floating!.view && inRect(p, ev.x, ev.y)) : undefined) ?? (this.floating ? undefined : g.panes.find((p) => inRect(p, ev.x, ev.y)));
+    const pane =
+      (this.floating ? g.panes.find((p) => p.view === this.floating!.view && inRect(p, ev.x, ev.y)) : undefined) ??
+      (this.floating ? undefined : g.panes.find((p) => inRect(p, ev.x, ev.y)));
     if (!pane) return;
     const t = this.tab!;
     if (!this.floating) t.active = t.views.indexOf(pane.view);
@@ -7801,12 +8956,18 @@ export class App {
     const view = pane.view;
     const layout = this.currentLayout(view);
     const shown = this.screenRows(view, layout);
-    const pos = clampPos(layout, { row: shown[ev.y - pane.y] ?? shown[shown.length - 1] ?? 0, col: Math.max(0, ev.x - pane.textX) + view.left });
+    const pos = clampPos(layout, {
+      row: shown[ev.y - pane.y] ?? shown[shown.length - 1] ?? 0,
+      col: Math.max(0, ev.x - pane.textX) + view.left,
+    });
     // Really on the text, not on blank space the cursor was clamped from (past a row's end, below
     // the note): only there does a click follow a link or tick a task.
     const clickedRow = shown[ev.y - pane.y];
     const clickedCol = ev.x - pane.textX + view.left;
-    const onText = clickedRow !== undefined && clickedCol >= 0 && clickedCol < (layout.lines[clickedRow]?.spans.reduce((a, sp) => a + stringWidth(sp.text), 0) ?? 0);
+    const onText =
+      clickedRow !== undefined &&
+      clickedCol >= 0 &&
+      clickedCol < (layout.lines[clickedRow]?.spans.reduce((a, sp) => a + stringWidth(sp.text), 0) ?? 0);
     view.visual = null;
     if (clicks === 2) {
       // Double-click selects the word, triple-click the row; either is copied, like a terminal.
@@ -7857,10 +9018,18 @@ export class App {
     if (d.kind === "separator") {
       const s = d.sep;
       if (s.kind === "problems" && s.area) return this.resizeProblems(s.area.y + s.area.h - 1 - ev.y);
-      if (s.kind === "sidebar") this.sideW = Math.max(12, Math.min(ev.x - this.leftRailWidth, Math.floor(this.usableWidth * 0.5)));
-      else if (s.kind === "outline") this.outW = Math.max(12, Math.min(this.width - this.rightRailWidth - ev.x - 1, Math.floor(this.usableWidth * 0.5)));
+      if (s.kind === "sidebar")
+        this.sideW = Math.max(12, Math.min(ev.x - this.leftRailWidth, Math.floor(this.usableWidth * 0.5)));
+      else if (s.kind === "outline")
+        this.outW = Math.max(
+          12,
+          Math.min(this.width - this.rightRailWidth - ev.x - 1, Math.floor(this.usableWidth * 0.5)),
+        );
       else if (s.area && this.tab) {
-        const r = s.kind === "split-side" ? (ev.x - s.area.x) / Math.max(1, s.area.w) : (ev.y - s.area.y) / Math.max(1, s.area.h);
+        const r =
+          s.kind === "split-side"
+            ? (ev.x - s.area.x) / Math.max(1, s.area.w)
+            : (ev.y - s.area.y) / Math.max(1, s.area.h);
         this.tab.ratio = Math.max(0.15, Math.min(0.85, r));
       }
       return;
@@ -7872,7 +9041,10 @@ export class App {
     if (ev.y >= pane.y + pane.h) this.scrollBy(pane.view, 1, false);
     const layout = this.currentLayout(d.view);
     const shown = this.screenRows(d.view, layout);
-    const pos = clampPos(layout, { row: shown[Math.max(0, Math.min(shown.length - 1, ev.y - pane.y))] ?? 0, col: Math.max(0, ev.x - pane.textX) + d.view.left });
+    const pos = clampPos(layout, {
+      row: shown[Math.max(0, Math.min(shown.length - 1, ev.y - pane.y))] ?? 0,
+      col: Math.max(0, ev.x - pane.textX) + d.view.left,
+    });
     if (!d.view.sel || d.view.sel.anchor !== d.start) this.select(d.view, d.start, false);
     d.view.cur = pos;
     d.view.goal = pos.col;
@@ -7889,7 +9061,10 @@ export class App {
       const text = this.selectionText(d.view);
       if (text) {
         this.copy(text, false);
-        this.message("info", `copied ${text.length} characters · ${prettyKey(`${this.leader} s a`, this.leader)} adds it to the scratch`);
+        this.message(
+          "info",
+          `copied ${text.length} characters · ${prettyKey(`${this.leader} s a`, this.leader)} adds it to the scratch`,
+        );
       }
       // Where the text is editable, a drag is a visual selection (as vim's mouse makes one): d, c,
       // x, >, < and y act on it, and esc leaves it — an edit never lands beside a highlight.
@@ -8035,7 +9210,9 @@ export class App {
         // The file's problems: the Problems panel on This file (1.7) — on All when it has none; open there, closed.
         else if (arg === "problems") {
           const tab = this.fileProblems().length ? "file" : "all";
-          return this.problemsPanel.shown && this.problemsPanel.tab === tab ? this.closeProblems() : this.openProblems(tab);
+          return this.problemsPanel.shown && this.problemsPanel.tab === tab
+            ? this.closeProblems()
+            : this.openProblems(tab);
         }
         break;
       case "wk":
@@ -8088,7 +9265,15 @@ export class App {
       if (!this.drawFailed) this.message("error", text);
       this.drawFailed = true;
       canvas.fill(0, 0, canvas.width, canvas.height, null);
-      drawText(canvas, 0, 0, truncate(`slipbox: ${text} — resize, or esc`, canvas.width), { fg: "default", bg: null, bold: true, italic: false, underline: false, strike: false, dim: false });
+      drawText(canvas, 0, 0, truncate(`slipbox: ${text} — resize, or esc`, canvas.width), {
+        fg: "default",
+        bg: null,
+        bold: true,
+        italic: false,
+        underline: false,
+        strike: false,
+        dim: false,
+      });
       return;
     }
     this.drawFailed = false;
@@ -8114,7 +9299,15 @@ export class App {
     const r = copyText(text, { osc52: (t) => this.host.osc52(t), fallbackDir: stateDir(this.loc) });
     // SLIPBOX_CLIPBOARD=file sends copies to the file on purpose; otherwise the file means no clipboard answered.
     const onPurpose = process.env.SLIPBOX_CLIPBOARD === "file";
-    if (announce) this.message("info", r.file ? (onPurpose ? `copied ${what} to ${r.file}` : `clipboard unavailable — wrote ${r.file} (${what})`) : `copied ${what}`);
+    if (announce)
+      this.message(
+        "info",
+        r.file
+          ? onPurpose
+            ? `copied ${what} to ${r.file}`
+            : `clipboard unavailable — wrote ${r.file} (${what})`
+          : `copied ${what}`,
+      );
     return !r.file;
   }
 
@@ -8132,7 +9325,11 @@ export class App {
     const links = b.items.filter((i) => i.why === "link").length;
     const backs = b.items.filter((i) => i.why === "backlink").length;
     const out = b.left.filter((l) => l.reason === "limit").length;
-    this.copy(b.text, true, `the context of ${buf.rel}: ${n(b.items.length, "file")} (${links} linked, ${backs} linking to it${out ? `; ${out} past the limit` : ""}), ${b.text.length} characters`);
+    this.copy(
+      b.text,
+      true,
+      `the context of ${buf.rel}: ${n(b.items.length, "file")} (${links} linked, ${backs} linking to it${out ? `; ${out} past the limit` : ""}), ${b.text.length} characters`,
+    );
   }
 
   /**
@@ -8143,10 +9340,14 @@ export class App {
     for (const d of this.dirtyBuffers()) {
       if (d.virtual || this.saveBuffer(d, true)) continue;
       // Changed on disk meanwhile, the resolve's key; otherwise the write failed, and its error above says why.
-      if (!d.changedOnDisk() || d.deleted) this.message("warn", `${what}: ${this.displayName(d)} couldn't be saved — ${not}`);
+      if (!d.changedOnDisk() || d.deleted)
+        this.message("warn", `${what}: ${this.displayName(d)} couldn't be saved — ${not}`);
       else {
         const key = this.keymap.keysFor("note.resolve")[0];
-        this.message("warn", `${what}: ${this.displayName(d)} changed on disk while unsaved — ${key ? prettyKey(key, this.leader) : "note.resolve"} resolves it first`);
+        this.message(
+          "warn",
+          `${what}: ${this.displayName(d)} changed on disk while unsaved — ${key ? prettyKey(key, this.leader) : "note.resolve"} resolves it first`,
+        );
       }
       return false;
     }
@@ -8171,14 +9372,30 @@ export class App {
    */
   composeExport(picked?: string[], input = "", selected?: number): void {
     if (!picked) {
-      const t = this.explorerFocused() ? this.explorerItem() : this.view?.buf.rel ? { rel: this.view.buf.rel, dir: false } : null;
+      const t = this.explorerFocused()
+        ? this.explorerItem()
+        : this.view?.buf.rel
+          ? { rel: this.view.buf.rel, dir: false }
+          : null;
       picked = t && !t.dir && this.graph.notes.has(t.rel) ? [t.rel] : [];
     }
     const chosen = picked;
-    const go: ListItem[] = chosen.length ? [{ label: `Export ${chosen.length === 1 ? chosen[0] : `these ${chosen.length} notes`}…`, hint: "enter", data: null }] : [];
-    const notes: ListItem[] = [...this.graph.notes.keys()].sort().map((rel) => ({ label: rel, hint: chosen.includes(rel) ? String(chosen.indexOf(rel) + 1) : "", data: rel }));
+    const go: ListItem[] = chosen.length
+      ? [
+          {
+            label: `Export ${chosen.length === 1 ? chosen[0] : `these ${chosen.length} notes`}…`,
+            hint: "enter",
+            data: null,
+          },
+        ]
+      : [];
+    const notes: ListItem[] = [...this.graph.notes.keys()]
+      .sort()
+      .map((rel) => ({ label: rel, hint: chosen.includes(rel) ? String(chosen.indexOf(rel) + 1) : "", data: rel }));
     this.openList({
-      title: chosen.length ? `Notes to export, in order — ${chosen.length} picked` : "Notes to export, in order: pick the first",
+      title: chosen.length
+        ? `Notes to export, in order — ${chosen.length} picked`
+        : "Notes to export, in order: pick the first",
       items: [...go, ...notes],
       // The notes filtered by what's typed; "Export…" always first.
       source: (typed) => (typed.trim() ? [...go, ...rank(typed, notes, (i) => i.label).map((r) => r.item)] : null),
@@ -8204,7 +9421,11 @@ export class App {
       return this.exportBrowser(rels, format);
     }
     const what = rels.length === 1 ? rels[0]! : `${rels.length} notes`;
-    this.openList({ title: `Export ${what} as`, items: FORMATS.map((f) => ({ label: f.title, hint: f.name, data: f })), accept: (item) => this.exportBrowser(rels, item.data as ExportFormat) });
+    this.openList({
+      title: `Export ${what} as`,
+      items: FORMATS.map((f) => ({ label: f.title, hint: f.name, data: f })),
+      accept: (item) => this.exportBrowser(rels, item.data as ExportFormat),
+    });
   }
 
   /**
@@ -8247,7 +9468,13 @@ export class App {
     go();
   }
 
-  private bracketMemo: { buf: NoteBuffer; version: number; at: number; insert: boolean; marks: Map<number, { from: number; to: number }[]> | null } | null = null;
+  private bracketMemo: {
+    buf: NoteBuffer;
+    version: number;
+    at: number;
+    insert: boolean;
+    marks: Map<number, { from: number; to: number }[]> | null;
+  } | null = null;
 
   /**
    * The bracket at the cursor and the one matching it (25.3), each by its source line and its place in it, for the view
@@ -8257,7 +9484,8 @@ export class App {
     if (!view.source) return null;
     const at = offsetOf(this, view);
     const m = this.bracketMemo;
-    if (m && m.buf === view.buf && m.version === view.buf.version && m.at === at && m.insert === !!view.insert) return m.marks;
+    if (m && m.buf === view.buf && m.version === view.buf.version && m.at === at && m.insert === !!view.insert)
+      return m.marks;
     const text = view.buf.source;
     let here = matchBracket(text, at) >= 0 ? at : -1;
     if (here < 0 && view.insert && at > 0 && matchBracket(text, at - 1) >= 0) here = at - 1;
@@ -8287,7 +9515,8 @@ export class App {
   private readonly spellSaid = new Set<string>();
   /** Bumped when your words change: the words found misspelt before are found again. */
   private spellGeneration = 0;
-  private spellMemo: { buf: NoteBuffer; version: number; key: string; generation: number; words: SpellWord[] } | null = null;
+  private spellMemo: { buf: NoteBuffer; version: number; key: string; generation: number; words: SpellWord[] } | null =
+    null;
 
   /** A note's languages for spelling: its front matter's `lang`, else `[spell] languages`. */
   private spellLanguages(view: View): string[] {
@@ -8312,7 +9541,12 @@ export class App {
       else if (files && !loadError(name)) waiting = true;
       else if (!this.spellSaid.has(lang)) {
         this.spellSaid.add(lang);
-        this.message("warn", files ? `spelling: ${lang}'s dictionary didn't load (${loadError(name)})` : `spelling: no dictionary for ${lang} — [spell] dictionaries can name yours`);
+        this.message(
+          "warn",
+          files
+            ? `spelling: ${lang}'s dictionary didn't load (${loadError(name)})`
+            : `spelling: no dictionary for ${lang} — [spell] dictionaries can name yours`,
+        );
       }
     }
     if (waiting) return null;
@@ -8333,7 +9567,8 @@ export class App {
     if (!checker) return null;
     const key = langs.join(" ");
     const m = this.spellMemo;
-    if (m && m.buf === buf && m.version === buf.version && m.key === key && m.generation === this.spellGeneration) return m.words;
+    if (m && m.buf === buf && m.version === buf.version && m.key === key && m.generation === this.spellGeneration)
+      return m.words;
     const words = checker.misspelt(proseWords(buf.parsed.tree, buf.source));
     this.spellMemo = { buf, version: buf.version, key, generation: this.spellGeneration, words };
     return words;
@@ -8386,7 +9621,10 @@ export class App {
       return this.message("error", `export: ${shown} not written — ${(err as Error).message}`);
     }
     const beside = files.length ? `, ${files.length} file${files.length === 1 ? "" : "s"} beside it` : "";
-    this.message("info", `exported ${rels.length === 1 ? rels[0] : `${rels.length} notes`} to ${shown} (${format.title})${beside}`);
+    this.message(
+      "info",
+      `exported ${rels.length === 1 ? rels[0] : `${rels.length} notes`} to ${shown} (${format.title})${beside}`,
+    );
     // Where it went, for "Where you exported last".
     try {
       writeJson(join(stateDir(this.loc), "export.json"), { dir: dirname(target) });
@@ -8538,24 +9776,27 @@ export class App {
   /** Poll what the vault watcher cannot see: files open from outside the vault (the scratch)
    *  and the config files, which reload automatically when saved. */
   private startPolling(): void {
-    const t = setInterval(() => {
-      if (this.quitting) return clearInterval(t);
-      let changed = false;
-      for (const buf of this.buffers.values()) {
-        if (buf.rel !== null || buf.key !== buf.abs) continue;
-        if (buf.changedOnDisk()) {
-          this.reloadBuffer(buf);
+    const t = setInterval(
+      () => {
+        if (this.quitting) return clearInterval(t);
+        let changed = false;
+        for (const buf of this.buffers.values()) {
+          if (buf.rel !== null || buf.key !== buf.abs) continue;
+          if (buf.changedOnDisk()) {
+            this.reloadBuffer(buf);
+            changed = true;
+          }
+        }
+        if (this.configChangedOnDisk()) {
+          this.reloadConfig("file changed");
           changed = true;
         }
-      }
-      if (this.configChangedOnDisk()) {
-        this.reloadConfig("file changed");
-        changed = true;
-      }
-      // HEAD moved without a file changing with it (5.9): a switch between branches alike.
-      if (this.checkHead()) changed = true;
-      if (changed) this.host.requestRender();
-    }, Math.min(this.config.watch.poll_ms, 1000));
+        // HEAD moved without a file changing with it (5.9): a switch between branches alike.
+        if (this.checkHead()) changed = true;
+        if (changed) this.host.requestRender();
+      },
+      Math.min(this.config.watch.poll_ms, 1000),
+    );
     (t as { unref?: () => void }).unref?.();
   }
 
@@ -8586,7 +9827,11 @@ export class App {
     if (!plan.files.length) return;
     const what = moves.length === 1 ? `${moves[0]![0]} moved to ${moves[0]![1]}` : `${moves.length} files moved`;
     const links = plan.files.reduce((n, f) => n + f.edits.length, 0);
-    if (this.overlay || this.view?.insert) return this.message("warn", `${what}: ${links} line${links === 1 ? "" : "s"} of links broke — space v p shows them, space l r relinks a note's`);
+    if (this.overlay || this.view?.insert)
+      return this.message(
+        "warn",
+        `${what}: ${links} line${links === 1 ? "" : "s"} of links broke — space v p shows them, space l r relinks a note's`,
+      );
     this.message("info", `${what}: ${links} line${links === 1 ? "" : "s"} of links broke — the relink, to look over`);
     this.previewRename(() => plan);
   }
@@ -8638,7 +9883,8 @@ export class App {
       const changed = new Set(batch.changes.map((c) => c.rel));
       for (const b of this.buffers.values()) {
         if (!b.rel || changed.has(b.rel)) continue;
-        if (this.graph.linksOf(b.rel).some((l) => l.path !== null && l.path !== undefined && changed.has(l.path))) b.invalidateLayouts();
+        if (this.graph.linksOf(b.rel).some((l) => l.path !== null && l.path !== undefined && changed.has(l.path)))
+          b.invalidateLayouts();
       }
     }
   }
@@ -8671,7 +9917,10 @@ export class App {
       // Closed rather than widened: replace-all must never reach text you didn't select.
       o.replace = undefined;
       o.change?.(o.text);
-      this.message("warn", `${this.displayName(buf)} changed on disk — the replace row closed (its selection is gone); select again`);
+      this.message(
+        "warn",
+        `${this.displayName(buf)} changed on disk — the replace row closed (its selection is gone); select again`,
+      );
     }
     // The reload was an undo step of its own: typing going on in it continues as one step again.
     const typing = this.allViews().find((v) => v.buf === buf && v.insert);
@@ -8732,7 +9981,14 @@ export class App {
         view.fwd = [...(p.fwd ?? [])];
         views.push(view);
       }
-      if (views.length) this.tabs.push({ views, active: Math.min(t.active, views.length - 1), orientation: t.orientation ?? "side", ratio: t.ratio ?? this.config.ui.split_ratio, ...(t.pinned ? { pinned: true } : {}) });
+      if (views.length)
+        this.tabs.push({
+          views,
+          active: Math.min(t.active, views.length - 1),
+          orientation: t.orientation ?? "side",
+          ratio: t.ratio ?? this.config.ui.split_ratio,
+          ...(t.pinned ? { pinned: true } : {}),
+        });
     }
     this.activeTab = Math.max(0, Math.min(activeTab, this.tabs.length - 1));
     for (const t of this.tabs) t.active = Math.max(0, Math.min(t.active, t.views.length - 1));
@@ -8745,7 +10001,13 @@ export class App {
     const s: SessionState = {
       version: 1,
       tabs: this.tabs.map((t) => ({
-        panes: t.views.map((v) => ({ path: v.buf.key, anchor: v.topAnchor, cursor: v.curAnchor, back: v.back.slice(-SESSION_HISTORY), fwd: v.fwd.slice(-SESSION_HISTORY) })),
+        panes: t.views.map((v) => ({
+          path: v.buf.key,
+          anchor: v.topAnchor,
+          cursor: v.curAnchor,
+          back: v.back.slice(-SESSION_HISTORY),
+          fwd: v.fwd.slice(-SESSION_HISTORY),
+        })),
         active: t.active,
         orientation: t.orientation,
         ratio: t.ratio,
@@ -8785,7 +10047,10 @@ export class App {
     if (this.floating && !force && !this.closeFloating()) return;
     const dirty = this.dirtyBuffers();
     if (dirty.length && !force) {
-      return this.message("warn", `unsaved changes in ${dirty.map((b) => this.displayName(b)).join(", ")} — :w saves, :q! quits without saving`);
+      return this.message(
+        "warn",
+        `unsaved changes in ${dirty.map((b) => this.displayName(b)).join(", ")} — :w saves, :q! quits without saving`,
+      );
     }
     this.quit();
   }
@@ -8831,7 +10096,8 @@ export class App {
         { label: "(d) Show the differences first", hotkey: "d", data: "d" },
       ],
       accept: (item) => {
-        if (item.data === "y" && this.writeBuffer(buf, buf.contentToSave(), true)) this.message("info", `saved ${this.displayName(buf)} over the file on disk`);
+        if (item.data === "y" && this.writeBuffer(buf, buf.contentToSave(), true))
+          this.message("info", `saved ${this.displayName(buf)} over the file on disk`);
         else if (item.data === "d") this.showDiff(buf, () => this.confirmOverwrite(buf));
       },
     });
@@ -8846,7 +10112,8 @@ export class App {
     // Not while you type, into it or any note: letters meant for the text would pick l, k, d or m.
     // It opens once typing has stopped (processKey).
     if (this.allViews().some((v) => v.insert)) {
-      if (!buf.conflictWaiting) this.message("warn", `${this.displayName(buf)} changed on disk — esc, then choose what to keep`);
+      if (!buf.conflictWaiting)
+        this.message("warn", `${this.displayName(buf)} changed on disk — esc, then choose what to keep`);
       buf.conflictWaiting = true;
       return;
     }
@@ -8854,8 +10121,13 @@ export class App {
     buf.conflictWaiting = false;
     if (this.overlay) {
       // Its own prompt already open: nothing to add. Another list open: said once, not per write.
-      const own = this.overlay.kind === "list" && this.overlay.title.startsWith(`${this.displayName(buf)} changed on disk`);
-      if (!own && !waiting) this.message("warn", `${this.displayName(buf)} changed on disk while you have unsaved changes — space n c resolves it`);
+      const own =
+        this.overlay.kind === "list" && this.overlay.title.startsWith(`${this.displayName(buf)} changed on disk`);
+      if (!own && !waiting)
+        this.message(
+          "warn",
+          `${this.displayName(buf)} changed on disk while you have unsaved changes — space n c resolves it`,
+        );
       buf.conflictWaiting = !own;
       return;
     }
@@ -8903,7 +10175,12 @@ export class App {
     buf.rebase(theirs);
     buf.markers = r.conflicts > 0; // autosave must not put <<<<<<< on disk; :w does, on purpose
     for (const v of views) v.layoutKey = "";
-    this.message(r.conflicts ? "warn" : "info", r.conflicts ? `merged — ${r.conflicts} conflict${r.conflicts === 1 ? "" : "s"} marked <<<<<<< yours … >>>>>>> theirs; unsaved` : "merged cleanly — unsaved; :w writes it");
+    this.message(
+      r.conflicts ? "warn" : "info",
+      r.conflicts
+        ? `merged — ${r.conflicts} conflict${r.conflicts === 1 ? "" : "s"} marked <<<<<<< yours … >>>>>>> theirs; unsaved`
+        : "merged cleanly — unsaved; :w writes it",
+    );
   }
 
   /** Yours → theirs as a read-only list; closing it goes back to where it came from. */
@@ -8920,7 +10197,9 @@ export class App {
     this.openList({
       title: `Diff — yours → theirs (${this.displayName(buf)})`,
       filterable: false,
-      items: lines.length ? lines.map((l) => ({ label: sanitize(l), data: null })) : [{ label: "no differences", data: null }],
+      items: lines.length
+        ? lines.map((l) => ({ label: sanitize(l), data: null }))
+        : [{ label: "no differences", data: null }],
       accept: () => back(),
       cancel: () => back(),
     });
@@ -8994,7 +10273,10 @@ export class App {
     if (this.floating && !this.closeFloating()) return false;
     const dirty = this.dirtyBuffers();
     if (dirty.length) {
-      this.message("warn", `unsaved: ${dirty.map((b) => this.displayName(b)).join(", ")} — save (:wa) or revert before leaving ${this.vaultLabel(this.loc)}`);
+      this.message(
+        "warn",
+        `unsaved: ${dirty.map((b) => this.displayName(b)).join(", ")} — save (:wa) or revert before leaving ${this.vaultLabel(this.loc)}`,
+      );
       return false;
     }
     return true;
@@ -9003,7 +10285,9 @@ export class App {
   switchVault(target: VaultLocation, open: string | null, anchor?: Anchor, how: { back?: boolean } = {}): boolean {
     if (!this.canLeave()) return false;
     const v = this.view;
-    const from = v ? { root: this.loc.root, path: v.buf.abs, anchor: { ...v.topAnchor }, cursor: { ...v.curAnchor } } : null;
+    const from = v
+      ? { root: this.loc.root, path: v.buf.abs, anchor: { ...v.topAnchor }, cursor: { ...v.curAnchor } }
+      : null;
     // Leave, as quitting would.
     this.saveState();
     try {
@@ -9016,7 +10300,11 @@ export class App {
     this.feed.reset();
     const { carriedFrom } = recordLocation(target);
     this.configLastGood.clear();
-    const loaded = loadConfig({ ...configFilesFor(target), configFile: this.configFile, lastGood: this.configLastGood });
+    const loaded = loadConfig({
+      ...configFilesFor(target),
+      configFile: this.configFile,
+      lastGood: this.configLastGood,
+    });
     this.config = loaded.config;
     this.configOrigins = loaded.origins;
     this.lintCmd = lintCommand(this.config.lint, target.root, undefined, this.config.lsp.auto_install);
@@ -9053,7 +10341,14 @@ export class App {
     this.sidebar = { visible: this.config.ui.sidebar, overlay: false, selected: 0, scroll: 0 };
     this.sideW = this.config.ui.sidebar_width;
     this.outW = this.config.ui.outline_width;
-    this.outline = { visible: this.config.ui.outline, overlay: false, selected: 0, scroll: 0, folded: new Set(), forKey: "" };
+    this.outline = {
+      visible: this.config.ui.outline,
+      overlay: false,
+      selected: 0,
+      scroll: 0,
+      folded: new Set(),
+      forKey: "",
+    };
     this.invalidateTree();
     this.ui = uiDefaults(this.config);
     if (process.env.NO_COLOR) this.ui.theme = "mono";
@@ -9096,7 +10391,10 @@ export class App {
       this.indexInBackground();
       this.refreshGit();
     }
-    this.message("info", target.mode === "vault" && target.name ? `${rootLabel(target)} — ${target.root}` : target.root);
+    this.message(
+      "info",
+      target.mode === "vault" && target.name ? `${rootLabel(target)} — ${target.root}` : target.root,
+    );
     this.host.requestRender();
     return true;
   }
@@ -9142,7 +10440,8 @@ export class App {
       this.message("warn", `${t.root} is gone`);
       return true;
     }
-    if (!this.switchVault(target, existsSync(t.path) ? t.path : null, t.anchor, { back: true })) this.vaultTrail.push(t);
+    if (!this.switchVault(target, existsSync(t.path) ? t.path : null, t.anchor, { back: true }))
+      this.vaultTrail.push(t);
     return true;
   }
 
@@ -9166,9 +10465,17 @@ export class App {
       return this.message("warn", (err as Error).message);
     }
     // What it rewrites, and what it moves: a folder's every file (its open buffers are replaced by the moved files').
-    const touched = new Set([...plan.files.map((f) => f.abs), ...(plan.move ? [plan.move.from] : []), ...(plan.moves ?? []).map(([from]) => join(this.loc.root, from))]);
+    const touched = new Set([
+      ...plan.files.map((f) => f.abs),
+      ...(plan.move ? [plan.move.from] : []),
+      ...(plan.moves ?? []).map(([from]) => join(this.loc.root, from)),
+    ]);
     const dirty = this.dirtyBuffers().filter((b) => touched.has(b.abs));
-    if (dirty.length) return this.message("warn", `unsaved: ${dirty.map((b) => this.displayName(b)).join(", ")} — save first: the ${plan.kind === "replace" ? "replace rewrites" : "rename rewrites or moves"} ${dirty.length === 1 ? "it" : "them"}`);
+    if (dirty.length)
+      return this.message(
+        "warn",
+        `unsaved: ${dirty.map((b) => this.displayName(b)).join(", ")} — save first: the ${plan.kind === "replace" ? "replace rewrites" : "rename rewrites or moves"} ${dirty.length === 1 ? "it" : "them"}`,
+      );
     const n = plan.files.reduce((k, f) => k + f.edits.length, 0);
     const more = extra?.(plan);
     const items: ListItem[] = [
@@ -9176,9 +10483,26 @@ export class App {
       ...(more?.items ?? []),
       ...plan.skipped.map((s) => ({ label: `skipped ${s.shown}:${s.line}`, detail: s.reason, data: plan })),
       // A replace's edit can span lines: each break shown.
-      ...plan.files.flatMap((f) => f.edits.map((e) => ({ label: `${f.shown}:${e.line}`, detail: `${e.before.trim().replace(/\n/g, " ⏎ ")}  →  ${e.after.trim().replace(/\n/g, " ⏎ ")}`, data: plan }))),
+      ...plan.files.flatMap((f) =>
+        f.edits.map((e) => ({
+          label: `${f.shown}:${e.line}`,
+          detail: `${e.before.trim().replace(/\n/g, " ⏎ ")}  →  ${e.after.trim().replace(/\n/g, " ⏎ ")}`,
+          data: plan,
+        })),
+      ),
     ];
-    if (!plan.files.length) items.push({ label: plan.kind === "relink" ? "no broken link points where a file moved from" : plan.kind === "convert" ? "nothing left to convert" : plan.kind === "replace" ? "nothing to replace" : "no links to change", data: plan });
+    if (!plan.files.length)
+      items.push({
+        label:
+          plan.kind === "relink"
+            ? "no broken link points where a file moved from"
+            : plan.kind === "convert"
+              ? "nothing left to convert"
+              : plan.kind === "replace"
+                ? "nothing to replace"
+                : "no links to change",
+        data: plan,
+      });
     const what =
       plan.kind === "note" || plan.kind === "heading"
         ? `${plan.from} → ${plan.to}`
@@ -9215,7 +10539,11 @@ export class App {
       () => planConvert(this.graph, rels, picks),
       undefined,
       (plan) => ({
-        items: (plan.ambiguous ?? []).map((a) => ({ label: `pick ${a.shown}:${a.line}`, detail: `${a.written} — ${a.candidates.length} notes answer to it: enter picks one`, data: a })),
+        items: (plan.ambiguous ?? []).map((a) => ({
+          label: `pick ${a.shown}:${a.line}`,
+          detail: `${a.written} — ${a.candidates.length} notes answer to it: enter picks one`,
+          data: a,
+        })),
         pick: (item) => {
           const a = item.data as Ambiguous | undefined;
           if (!a || !("candidates" in a)) return false;
@@ -9267,10 +10595,13 @@ export class App {
     if (plan.move?.dir) {
       // The folder's folds and selection go with it.
       const [from, to] = [relative(this.loc.root, plan.move.from), relative(this.loc.root, plan.move.to)];
-      this.expanded = new Set([...this.expanded].map((d) => (d === from || d.startsWith(`${from}/`) ? to + d.slice(from.length) : d)));
+      this.expanded = new Set(
+        [...this.expanded].map((d) => (d === from || d.startsWith(`${from}/`) ? to + d.slice(from.length) : d)),
+      );
     }
     // A cut that was pasted: done.
-    if (plan.move && this.fileClip?.mode === "cut" && join(this.loc.root, this.fileClip.rel) === plan.move.from) this.fileClip = null;
+    if (plan.move && this.fileClip?.mode === "cut" && join(this.loc.root, this.fileClip.rel) === plan.move.from)
+      this.fileClip = null;
     for (const abs of applied.written) {
       const b = byAbs(abs);
       if (b && !moved.has(b.abs)) this.reloadBuffer(b);
@@ -9289,8 +10620,12 @@ export class App {
       if (this.live) this.indexInBackground();
     }
     // A vault renamed: this one (its name here), or one nested in it (the explorer's dimmed name).
-    const renamedConfig = plan.kind === "vault" ? plan.files.find((f) => f.abs.endsWith(`${sep}.slipbox${sep}config.toml`))?.abs : undefined;
-    if (renamedConfig && renamedConfig !== vaultConfigFile(this.loc.root)) recordLocation(rootAt(dirname(dirname(renamedConfig))));
+    const renamedConfig =
+      plan.kind === "vault"
+        ? plan.files.find((f) => f.abs.endsWith(`${sep}.slipbox${sep}config.toml`))?.abs
+        : undefined;
+    if (renamedConfig && renamedConfig !== vaultConfigFile(this.loc.root))
+      recordLocation(rootAt(dirname(dirname(renamedConfig))));
     if (renamedConfig === vaultConfigFile(this.loc.root)) {
       this.loc = rootAt(this.loc.root);
       recordLocation(this.loc);
@@ -9305,7 +10640,17 @@ export class App {
     if (plan.makeVault || plan.unmakeVault) this.selectInExplorer(plan.from);
     const n = plan.files.reduce((k, f) => k + f.edits.length, 0);
     const what = plan.undo
-      ? { note: `renamed ${plan.from} back to ${plan.to}`, folder: `moved ${plan.from}/ back to ${plan.to}/`, vault: `named the folder ${plan.from} back to ${plan.to}`, relink: "undid the relink", "make-vault": "", "unmake-vault": "", heading: `renamed the heading ${plan.from} back to ${plan.to}`, convert: "undid the conversion to plain paths", replace: `undid the replace of ${JSON.stringify(plan.to)} with ${JSON.stringify(plan.from)}` }[plan.kind]
+      ? {
+          note: `renamed ${plan.from} back to ${plan.to}`,
+          folder: `moved ${plan.from}/ back to ${plan.to}/`,
+          vault: `named the folder ${plan.from} back to ${plan.to}`,
+          relink: "undid the relink",
+          "make-vault": "",
+          "unmake-vault": "",
+          heading: `renamed the heading ${plan.from} back to ${plan.to}`,
+          convert: "undid the conversion to plain paths",
+          replace: `undid the replace of ${JSON.stringify(plan.to)} with ${JSON.stringify(plan.from)}`,
+        }[plan.kind]
       : plan.kind === "note" || plan.kind === "heading"
         ? `renamed ${plan.from} → ${plan.to}`
         : plan.kind === "folder"
@@ -9321,7 +10666,10 @@ export class App {
                   : plan.kind === "replace"
                     ? `replaced ${JSON.stringify(plan.from)} with ${JSON.stringify(plan.to)}`
                     : "relinked";
-    this.message("info", `${what}: ${n} change${n === 1 ? "" : "s"} in ${plan.files.length} file${plan.files.length === 1 ? "" : "s"}`);
+    this.message(
+      "info",
+      `${what}: ${n} change${n === 1 ? "" : "s"} in ${plan.files.length} file${plan.files.length === 1 ? "" : "s"}`,
+    );
   }
 
   /** A find across files' label: what it asks, and which of the window's find toggles are on. */
@@ -9356,8 +10704,14 @@ export class App {
         if (typeof re === "string") return this.message("warn", `not a regex: ${re}`);
         const rels = [...this.graph.notes.keys(), ...this.shownFiles().map((f) => f.path)];
         const abs = new Set(rels.map((r) => this.graph.abs(r)));
-        const dirty = this.dirtyBuffers().filter((b) => abs.has(b.abs) && findAll(b.source, re, 0, b.source.length, o.regex).length);
-        if (dirty.length) return this.message("warn", `unsaved: ${dirty.map((b) => this.displayName(b)).join(", ")} — save first: the replace rewrites ${dirty.length === 1 ? "it" : "them"}`);
+        const dirty = this.dirtyBuffers().filter(
+          (b) => abs.has(b.abs) && findAll(b.source, re, 0, b.source.length, o.regex).length,
+        );
+        if (dirty.length)
+          return this.message(
+            "warn",
+            `unsaved: ${dirty.map((b) => this.displayName(b)).join(", ")} — save first: the replace rewrites ${dirty.length === 1 ? "it" : "them"}`,
+          );
         this.previewRename(() => planReplace(this.graph, query, replacement, rels, o));
       });
       if (view) (this.overlay as PromptOverlay).toggles = { view, label: withLabel };
@@ -9398,7 +10752,11 @@ export class App {
    */
   vaultChoices(dir: string): void {
     const items: ListItem[] = [
-      { label: "Give it .slipbox/", detail: "settings of its own — committed with the folder like any file; :name names it for pointers", data: "vault" },
+      {
+        label: "Give it .slipbox/",
+        detail: "settings of its own — committed with the folder like any file; :name names it for pointers",
+        data: "vault",
+      },
       { label: "Cancel", detail: "", data: "no" },
     ];
     this.openList({
@@ -9428,7 +10786,10 @@ export class App {
       return this.message("warn", (err as Error).message);
     }
     this.switchVault(rootAt(r.root), open && existsSync(open) && open.startsWith(`${r.root}/`) ? open : null);
-    this.message("info", `${tildePath(r.root)} has its .slipbox/ now${r.excluded ? ` (private: in ${r.excluded})` : ""} — :name names it for pointers`);
+    this.message(
+      "info",
+      `${tildePath(r.root)} has its .slipbox/ now${r.excluded ? ` (private: in ${r.excluded})` : ""} — :name names it for pointers`,
+    );
   }
 
   /**
@@ -9451,10 +10812,19 @@ export class App {
   /** The named folders (`:folders`, `space v v`): enter goes into one (17.10). */
   openFolders(): void {
     const choices = this.folderChoices();
-    if (!choices.length) return this.message("info", "no other named folders here yet: a .slipbox/ name (:name), or a repository's remote, names one");
+    if (!choices.length)
+      return this.message(
+        "info",
+        "no other named folders here yet: a .slipbox/ name (:name), or a repository's remote, names one",
+      );
     this.openList({
       title: `Folders (${choices.length}) — enter goes into one`,
-      items: choices.map((c) => ({ label: c.name, detail: tildePath(c.path), hint: c.folder.copies.length > 1 ? `${c.folder.copies.length} copies` : undefined, data: c.path })),
+      items: choices.map((c) => ({
+        label: c.name,
+        detail: tildePath(c.path),
+        hint: c.folder.copies.length > 1 ? `${c.folder.copies.length} copies` : undefined,
+        data: c.path,
+      })),
       accept: (item) => {
         this.switchVault(rootAt(item.data as string), null);
       },
@@ -9467,13 +10837,21 @@ export class App {
     const all = readFolders();
     const copiesOf = (f: NamedFolder) => repositoryCopies(f, all);
     const list = all.filter((f) => copiesOf(f).length > 1);
-    if (!list.length) return this.message("info", "no named folder has two copies here: each one's links open the only one");
+    if (!list.length)
+      return this.message("info", "no named folder has two copies here: each one's links open the only one");
     const pick = (f: NamedFolder) =>
       this.openList({
         title: `${f.name}: which copy do links open?`,
         filterable: false,
-        selected: Math.max(0, copiesOf(f).findIndex((c) => c.path === f.default)),
-        items: copiesOf(f).map((c) => ({ label: tildePath(c.path), hint: c.path === f.default ? "links open it" : copyAvailable(c.path) ? undefined : "not here", data: c.path })),
+        selected: Math.max(
+          0,
+          copiesOf(f).findIndex((c) => c.path === f.default),
+        ),
+        items: copiesOf(f).map((c) => ({
+          label: tildePath(c.path),
+          hint: c.path === f.default ? "links open it" : copyAvailable(c.path) ? undefined : "not here",
+          data: c.path,
+        })),
         accept: (copy) => {
           setDefaultCopy(f.key, copy.data as string);
           this.message("info", `links to ${f.name} open ${tildePath(copy.data as string)}`);
@@ -9482,7 +10860,11 @@ export class App {
     const ident = this.loc.mode === "vault" ? folderIdentity(this.loc.root) : null;
     const mine = list.find((f) => f.key === ident?.key);
     if (mine || list.length === 1) return pick(mine ?? list[0]!);
-    this.openList({ title: "Which folder's copies?", items: list.map((f) => ({ label: pointerName(f, list), hint: `${copiesOf(f).length} copies`, data: f })), accept: (item) => pick(item.data as NamedFolder) });
+    this.openList({
+      title: "Which folder's copies?",
+      items: list.map((f) => ({ label: pointerName(f, list), hint: `${copiesOf(f).length} copies`, data: f })),
+      accept: (item) => pick(item.data as NamedFolder),
+    });
   }
 }
 
@@ -9494,7 +10876,9 @@ function carried(loc: VaultLocation, from: string): string {
 // ---------------------------------------------------------------------------------------------
 
 /** Keys that run the same action share one which-key entry: `h left → Narrower`. */
-function mergeSameAction(entries: { key: string; label: string; desc: string; group: boolean; spec: string | null }[]): { key: string; label: string; desc: string; group: boolean }[] {
+function mergeSameAction(
+  entries: { key: string; label: string; desc: string; group: boolean; spec: string | null }[],
+): { key: string; label: string; desc: string; group: boolean }[] {
   const out: { key: string; label: string; desc: string; group: boolean; spec: string | null }[] = [];
   for (const e of entries.sort((a, b) => Number(b.group) - Number(a.group) || a.key.localeCompare(b.key))) {
     const same = !e.group && e.spec ? out.find((o) => !o.group && o.spec === e.spec) : undefined;
@@ -9573,7 +10957,11 @@ export function refilter(o: ListOverlay): void {
   } else if (o.keepGroups && o.input.trim()) {
     // The matches in their original order, each under its group heading (with its blank row and
     // rule); a group with no match disappears, and the list never starts with a blank row.
-    const ranked = rank(o.input, o.items.filter((i) => !i.header), (i) => [i.label, i.detail ?? ""]);
+    const ranked = rank(
+      o.input,
+      o.items.filter((i) => !i.header),
+      (i) => [i.label, i.detail ?? ""],
+    );
     const hit = new Map(ranked.map((r) => [r.item, r.match.positions]));
     o.filtered = [];
     let heading: ListItem[] = [];
@@ -9587,12 +10975,17 @@ export function refilter(o: ListOverlay): void {
       }
       prevHeader = false;
       if (!hit.has(item)) continue;
-      for (const hd of heading) if (o.filtered.length || hd.label || hd.rule) o.filtered.push({ item: hd, positions: [] });
+      for (const hd of heading)
+        if (o.filtered.length || hd.label || hd.rule) o.filtered.push({ item: hd, positions: [] });
       heading = [];
       o.filtered.push({ item, positions: hit.get(item)! });
     }
   } else if (o.input.trim()) {
-    const ranked = rank(o.input, o.items.filter((i) => !i.header), (i) => [i.label, i.detail ?? ""]);
+    const ranked = rank(
+      o.input,
+      o.items.filter((i) => !i.header),
+      (i) => [i.label, i.detail ?? ""],
+    );
     o.filtered = ranked.map((r) => ({ item: r.item, positions: r.match.positions }));
   } else {
     o.filtered = o.items.map((item) => ({ item, positions: [] }));
@@ -9600,7 +10993,13 @@ export function refilter(o: ListOverlay): void {
   o.scroll = 0;
   o.wheeled = false;
   const hit = o.filtered.findIndex((e) => e.item.context);
-  o.selected = hit >= 0 ? Math.max(0, o.filtered.findIndex((e) => !e.item.context && !e.item.header)) : selectable(o, 0, 1);
+  o.selected =
+    hit >= 0
+      ? Math.max(
+          0,
+          o.filtered.findIndex((e) => !e.item.context && !e.item.header),
+        )
+      : selectable(o, 0, 1);
 }
 
 /** One entry up or down, skipping headings, wrapping around past the first or last entry. */
@@ -9620,7 +11019,11 @@ export function selectable(o: ListOverlay, i: number, dir: number): number {
 }
 
 /** The task whose checkbox glyph is at this cell, if any (its trailing space doesn't count). */
-export function taskMarkAt(layout: Layout, row: number, col: number): { line: number; end: number; checked: boolean } | null {
+export function taskMarkAt(
+  layout: Layout,
+  row: number,
+  col: number,
+): { line: number; end: number; checked: boolean } | null {
   let x = 0;
   for (const s of layout.lines[row]?.spans ?? []) {
     const w = stringWidth(s.text);
@@ -9672,7 +11075,14 @@ export function selectedText(layout: Layout, sel: Selection, cur: Pos): string {
   return out.join("\n");
 }
 
-export function computeFind(layout: Layout, query: string, current = 0, whole = false, regex = false, ignoreCase = false): FindState {
+export function computeFind(
+  layout: Layout,
+  query: string,
+  current = 0,
+  whole = false,
+  regex = false,
+  ignoreCase = false,
+): FindState {
   const matches: FindState["matches"] = [];
   let error: string | undefined;
   if (query) {
@@ -9684,7 +11094,8 @@ export function computeFind(layout: Layout, query: string, current = 0, whole = 
       layout.lines.forEach((line, row) => {
         if (line.decor) return; // the lens's rules aren't the note's text
         const text = line.spans.map((s) => s.text).join("");
-        for (const m of findAll(text, re)) matches.push({ row, col: stringWidth(text.slice(0, m.from)), len: stringWidth(text.slice(m.from, m.to)) });
+        for (const m of findAll(text, re))
+          matches.push({ row, col: stringWidth(text.slice(0, m.from)), len: stringWidth(text.slice(m.from, m.to)) });
       });
     }
   }
@@ -9692,7 +11103,9 @@ export function computeFind(layout: Layout, query: string, current = 0, whole = 
 }
 
 /** A symbol's kind by its number, as the outline names it (`function`, `class`). */
-export const KIND_NAMES: Record<number, string> = Object.fromEntries(Object.entries(SymbolKind).map(([name, n]) => [n, name.toLowerCase()]));
+export const KIND_NAMES: Record<number, string> = Object.fromEntries(
+  Object.entries(SymbolKind).map(([name, n]) => [n, name.toLowerCase()]),
+);
 
 /** A server's symbols as an outline: nested ones (`DocumentSymbol`) by their depth, flat ones in line order. */
 function outlineOf(symbols: DocumentSymbol[] | SymbolInformation[]): OutlineEntry[] {
@@ -9704,7 +11117,11 @@ function outlineOf(symbols: DocumentSymbol[] | SymbolInformation[]): OutlineEntr
     }
   };
   if (symbols.length && "selectionRange" in symbols[0]!) walk(symbols as DocumentSymbol[], 0);
-  else for (const i of [...(symbols as SymbolInformation[])].sort((a, b) => a.location.range.start.line - b.location.range.start.line)) out.push({ name: i.name, kind: KIND_NAMES[i.kind] ?? "symbol", line: i.location.range.start.line + 1, depth: 0 });
+  else
+    for (const i of [...(symbols as SymbolInformation[])].sort(
+      (a, b) => a.location.range.start.line - b.location.range.start.line,
+    ))
+      out.push({ name: i.name, kind: KIND_NAMES[i.kind] ?? "symbol", line: i.location.range.start.line + 1, depth: 0 });
   return out;
 }
 

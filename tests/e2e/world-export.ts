@@ -65,9 +65,19 @@ export const EXPORT_SCENARIOS: Scenario[] = [
       await s.see("Name: dome-refit.export.md");
       await s.keys("enter");
       await exported(s, "projects/dome-refit.export.md", "---\n");
-      s.expect(s.read("projects/dome-refit.export.md").includes("\ngenerator: slipbox\n"), "the Markdown export carries its mark");
-      s.expect(s.read("projects/dome-refit.export.md").includes("](dome-refit.export.assets/dome-shutter.png)"), "the picture's link into the folder beside it");
-      await s.until(() => s.exists("projects/dome-refit.export.assets/dome-shutter.png"), 5000, "the picture copied beside the export");
+      s.expect(
+        s.read("projects/dome-refit.export.md").includes("\ngenerator: slipbox\n"),
+        "the Markdown export carries its mark",
+      );
+      s.expect(
+        s.read("projects/dome-refit.export.md").includes("](dome-refit.export.assets/dome-shutter.png)"),
+        "the picture's link into the folder beside it",
+      );
+      await s.until(
+        () => s.exists("projects/dome-refit.export.assets/dome-shutter.png"),
+        5000,
+        "the picture copied beside the export",
+      );
       // The note itself as it was.
       s.expect(s.read("projects/dome-refit.md") === note, "the note untouched");
     },

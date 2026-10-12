@@ -36,15 +36,52 @@ const only = (data: Uint8Array): ExportOutput => ({ data, files: [] });
 
 // Each writer loaded when it's used: nothing of theirs is paid for at start.
 export const FORMATS: ExportFormat[] = [
-  { name: "docx", title: "Word (.docx)", ext: "docx", suffix: ".docx", write: async (doc) => only(await (await import("./docx.ts")).toDocx(doc)) },
-  { name: "pdf", title: "PDF (.pdf)", ext: "pdf", suffix: ".pdf", write: async (doc) => only(await (await import("./pdf.ts")).toPdf(doc)) },
-  { name: "html", title: "Web page (.html)", ext: "html", suffix: ".html", write: async (doc) => only(await (await import("./html.ts")).toHtml(doc)) },
-  { name: "epub", title: "E-book (.epub)", ext: "epub", suffix: ".epub", write: async (doc) => only(await (await import("./epub.ts")).toEpub(doc)) },
-  { name: "md", title: "Markdown (.md)", ext: "md", suffix: ".export.md", write: async (doc, target) => (await import("./markdown.ts")).toMarkdown(doc, target) },
+  {
+    name: "docx",
+    title: "Word (.docx)",
+    ext: "docx",
+    suffix: ".docx",
+    write: async (doc) => only(await (await import("./docx.ts")).toDocx(doc)),
+  },
+  {
+    name: "pdf",
+    title: "PDF (.pdf)",
+    ext: "pdf",
+    suffix: ".pdf",
+    write: async (doc) => only(await (await import("./pdf.ts")).toPdf(doc)),
+  },
+  {
+    name: "html",
+    title: "Web page (.html)",
+    ext: "html",
+    suffix: ".html",
+    write: async (doc) => only(await (await import("./html.ts")).toHtml(doc)),
+  },
+  {
+    name: "epub",
+    title: "E-book (.epub)",
+    ext: "epub",
+    suffix: ".epub",
+    write: async (doc) => only(await (await import("./epub.ts")).toEpub(doc)),
+  },
+  {
+    name: "md",
+    title: "Markdown (.md)",
+    ext: "md",
+    suffix: ".export.md",
+    write: async (doc, target) => (await import("./markdown.ts")).toMarkdown(doc, target),
+  },
 ];
 
 /** Other names a format answers to. */
-const ALIASES: Record<string, string> = { word: "docx", doc: "docx", htm: "html", web: "html", markdown: "md", ebook: "epub" };
+const ALIASES: Record<string, string> = {
+  word: "docx",
+  doc: "docx",
+  htm: "html",
+  web: "html",
+  markdown: "md",
+  ebook: "epub",
+};
 
 /** A format by its name, an alias, or an extension; null where there's none. */
 export function formatFor(name: string): ExportFormat | null {
@@ -83,7 +120,13 @@ function noteOfARoot(graph: Graph, abs: string): boolean {
  * `/` (made when it's written), the default's name in it — else beside the first note. Never over a note of any root,
  * but an earlier export: an error says so.
  */
-export function exportTarget(graph: Graph, first: string, format: ExportFormat, typed: string | null, base: string): string {
+export function exportTarget(
+  graph: Graph,
+  first: string,
+  format: ExportFormat,
+  typed: string | null,
+  base: string,
+): string {
   const suggested = defaultTarget(graph.abs(first), format);
   let target = typed ? resolve(base, typed) : suggested;
   if (typed && namesFolder(typed)) target = join(target, basename(suggested));
@@ -92,12 +135,18 @@ export function exportTarget(graph: Graph, first: string, format: ExportFormat, 
       if (statSync(target).isDirectory()) target = join(target, basename(suggested));
     } catch {}
   }
-  if (noteOfARoot(graph, target) && !isExport(target)) throw new Error(`${graph.shownPath(target)} is a note — an export doesn't write over it`);
+  if (noteOfARoot(graph, target) && !isExport(target))
+    throw new Error(`${graph.shownPath(target)} is a note — an export doesn't write over it`);
   return target;
 }
 
 /** The notes at `rels` (in this root, in this order) as one document in `format`, for `target`. */
-export async function exportNotes(graph: Graph, rels: string[], format: ExportFormat, target: string): Promise<ExportOutput> {
+export async function exportNotes(
+  graph: Graph,
+  rels: string[],
+  format: ExportFormat,
+  target: string,
+): Promise<ExportOutput> {
   return format.write(await assemble(graph, rels), target);
 }
 

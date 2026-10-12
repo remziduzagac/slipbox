@@ -53,22 +53,32 @@ export function parseHosted(url: string): HostedPath | null {
     // `%2F` outlives the URL's own dot segments: decoded, `..%2F..%2Fx.md` would climb out of the copy.
     const path = decode(rest.slice(1).join("/"));
     if (path.split("/").some((s) => s === ".." || s === ".")) return null;
-    return { remote: `${host}/${[...repo.slice(0, -1), strip(repo[repo.length - 1]!)].join("/")}`, ref: decode(rest[0]!), path, fragment, folder: kind === "tree" };
+    return {
+      remote: `${host}/${[...repo.slice(0, -1), strip(repo[repo.length - 1]!)].join("/")}`,
+      ref: decode(rest[0]!),
+      path,
+      fragment,
+      folder: kind === "tree",
+    };
   };
   // GitLab: `<group…>/<repo>/-/blob|tree|raw/<ref>/<path>`.
   const dash = segs.indexOf("-");
-  if (dash >= 2 && ["blob", "tree", "raw"].includes(segs[dash + 1] ?? "")) return at(segs.slice(0, dash), segs[dash + 1]!, segs.slice(dash + 2));
+  if (dash >= 2 && ["blob", "tree", "raw"].includes(segs[dash + 1] ?? ""))
+    return at(segs.slice(0, dash), segs[dash + 1]!, segs.slice(dash + 2));
   // GitHub (and its kind): `<owner>/<repo>/blob|tree|raw/<ref>/<path>`.
-  if (segs.length >= 4 && ["blob", "tree", "raw"].includes(segs[2]!)) return at(segs.slice(0, 2), segs[2]!, segs.slice(3));
+  if (segs.length >= 4 && ["blob", "tree", "raw"].includes(segs[2]!))
+    return at(segs.slice(0, 2), segs[2]!, segs.slice(3));
   // Bitbucket: `<owner>/<repo>/src/<ref>/<path>`; its headings `#markdown-header-<slug>`.
   if (segs.length >= 4 && segs[2] === "src") {
     const hit = at(segs.slice(0, 2), "src", segs.slice(3));
-    if (hit && fragment?.startsWith("markdown-header-")) hit.fragment = fragment.slice("markdown-header-".length) || null;
+    if (hit && fragment?.startsWith("markdown-header-"))
+      hit.fragment = fragment.slice("markdown-header-".length) || null;
     if (hit && (!hit.path || u.pathname.endsWith("/"))) hit.folder = true;
     return hit;
   }
   // A repository's own page: its README.
-  if (segs.length === 2) return { remote: `${host}/${segs[0]}/${strip(segs[1]!)}`, ref: null, path: "", fragment, folder: false };
+  if (segs.length === 2)
+    return { remote: `${host}/${segs[0]}/${strip(segs[1]!)}`, ref: null, path: "", fragment, folder: false };
   return null;
 }
 
@@ -126,7 +136,11 @@ export interface HostedHere {
  * (21.6) — and the path in it. Null when it isn't a hosting URL, or names no repository here. `remotes`
  * and `folders`, when given, stand in for reading them again (a caller asking for many links).
  */
-export function hostedHere(url: string, root: string, given: { remotes?: string[]; folders?: NamedFolder[] } = {}): HostedHere | null {
+export function hostedHere(
+  url: string,
+  root: string,
+  given: { remotes?: string[]; folders?: NamedFolder[] } = {},
+): HostedHere | null {
   const h = parseHosted(url);
   if (!h) return null;
   const remote = h.remote.toLowerCase();
@@ -145,11 +159,15 @@ export function hostedHere(url: string, root: string, given: { remotes?: string[
   let ref = h.ref;
   let path = h.path;
   // A branch with a `/` (`feature/x`), when the path as first split isn't there.
-  if (ref && c && path && !existsSync(join(top, path))) ({ ref, path } = splitRef(ref, path, () => branchesOf(c) ?? []));
+  if (ref && c && path && !existsSync(join(top, path)))
+    ({ ref, path } = splitRef(ref, path, () => branchesOf(c) ?? []));
   if (!path && !h.folder) path = readmeAt(top) ?? "";
   const head = c ? headOf(c) : null;
   const branch = head?.branch ?? null;
-  const other = ref && ref !== "HEAD" && ref !== branch && !(branch === null && head?.commit?.startsWith(ref)) ? { ref, branch } : null;
+  const other =
+    ref && ref !== "HEAD" && ref !== branch && !(branch === null && head?.commit?.startsWith(ref))
+      ? { ref, branch }
+      : null;
   return { hosted: h, top, path, other };
 }
 
@@ -160,6 +178,7 @@ export function withHostedPath(url: string, was: string, now: string): string {
   const old = enc(was);
   if (!u.pathname.endsWith(`/${old}`)) return url;
   const extless = !/\.[A-Za-z0-9]+$/.test(was);
-  u.pathname = u.pathname.slice(0, u.pathname.length - old.length) + enc(extless ? now.replace(/\.(md|markdown)$/i, "") : now);
+  u.pathname =
+    u.pathname.slice(0, u.pathname.length - old.length) + enc(extless ? now.replace(/\.(md|markdown)$/i, "") : now);
   return u.toString();
 }

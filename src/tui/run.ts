@@ -14,7 +14,14 @@ import { RELEASE } from "../core/release.ts";
 import { dailyUpdateCheck } from "../core/update.ts";
 import { windowsDriveNote } from "../core/wsl.ts";
 import { VERSION } from "../version.ts";
-import { locateVault, recordLocation, configFilesFor, setRootMarkers, VaultError, type VaultLocation } from "../core/vault.ts";
+import {
+  locateVault,
+  recordLocation,
+  configFilesFor,
+  setRootMarkers,
+  VaultError,
+  type VaultLocation,
+} from "../core/vault.ts";
 import { setTrustedRoots } from "../core/trust.ts";
 import { App, type AppOptions } from "./app.ts";
 import { keyName } from "./keys.ts";
@@ -90,7 +97,9 @@ export async function runTui(argv: string[]): Promise<number> {
   const done = new Promise<number>((r) => (resolveDone = r));
   const cell = () => {
     const r = renderer.resolution;
-    return r && renderer.terminalWidth > 0 && renderer.terminalHeight > 0 ? { width: r.width / renderer.terminalWidth, height: r.height / renderer.terminalHeight } : null;
+    return r && renderer.terminalWidth > 0 && renderer.terminalHeight > 0
+      ? { width: r.width / renderer.terminalWidth, height: r.height / renderer.terminalHeight }
+      : null;
   };
   // Pictures (12.x): drawn where the terminal speaks Kitty graphics or sixel, as OpenTUI found it asking. Kitty's as
   // Unicode placeholders (12.7): sent once through OpenTUI's own output — so in step with its frames (a private
@@ -116,7 +125,12 @@ export async function runTui(argv: string[]): Promise<number> {
         resolveDone(0);
       },
       setTitle: (t) => renderer.setTerminalTitle(t),
-      images: { supported: () => pictures.protocol() !== null, size: (path) => pictures.size(path), cell, placeholders: () => pictures.usesPlaceholders() },
+      images: {
+        supported: () => pictures.protocol() !== null,
+        size: (path) => pictures.size(path),
+        cell,
+        placeholders: () => pictures.usesPlaceholders(),
+      },
       setMouse: (on) => {
         renderer.useMouse = on;
       },
@@ -149,7 +163,14 @@ export async function runTui(argv: string[]): Promise<number> {
   // allow — and DO_NOT_TRACK's. Said when there's a newer one; the CLI never asks.
   const yours = loadConfig({ configFile: start.configFile }).config;
   const by = installedBy(process.execPath, dataHome(), VERSION);
-  void dailyUpdateCheck({ release: RELEASE, version: VERSION, enabled: yours.update.check, env: process.env, stateFile: join(stateHome(), "update.json"), by }).then((said) => {
+  void dailyUpdateCheck({
+    release: RELEASE,
+    version: VERSION,
+    enabled: yours.update.check,
+    env: process.env,
+    stateFile: join(stateHome(), "update.json"),
+    by,
+  }).then((said) => {
     if (said) app.message("info", said);
   });
 

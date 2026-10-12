@@ -26,12 +26,21 @@ export function pos(s: Session): { line: number; col: number } {
 }
 
 /** Keys, then wait until the cursor's line satisfies `ok`. */
-export async function moveTo(s: Session, keys: string[], ok: (line: number, col: number) => boolean, what: string): Promise<void> {
+export async function moveTo(
+  s: Session,
+  keys: string[],
+  ok: (line: number, col: number) => boolean,
+  what: string,
+): Promise<void> {
   await s.keys(...keys);
-  await s.until(() => {
-    const p = pos(s);
-    return ok(p.line, p.col);
-  }, 3000, what);
+  await s.until(
+    () => {
+      const p = pos(s);
+      return ok(p.line, p.col);
+    },
+    3000,
+    what,
+  );
 }
 
 /** Open a note with the quick switcher. */
@@ -49,7 +58,8 @@ export async function open(s: Session, name: string): Promise<void> {
  */
 export const SIGN = { error: "[✖\uea87]", warning: "[⚠\uea6c]", info: "[ℹ\uea74]" } as const;
 /** A pattern of `source`, `{error}`, `{warning}` and `{info}` standing for their signs. */
-export const signed = (source: string): RegExp => new RegExp(source.replace(/\{(error|warning|info)\}/g, (_, k: keyof typeof SIGN) => SIGN[k]));
+export const signed = (source: string): RegExp =>
+  new RegExp(source.replace(/\{(error|warning|info)\}/g, (_, k: keyof typeof SIGN) => SIGN[k]));
 
 /**
  * A problem of the file on screen, as the Problems panel's This file lists it (the status line only counts them,

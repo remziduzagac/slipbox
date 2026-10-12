@@ -154,7 +154,12 @@ function resolver(kind: string): Resolver {
           between = c.resolveAll(between, context);
         }
         for (const e of between) next.push(e);
-        next.push(["exit", text, context], ["enter", close[1], context], ["exit", close[1], context], ["exit", whole, context]);
+        next.push(
+          ["exit", text, context],
+          ["enter", close[1], context],
+          ["exit", close[1], context],
+          ["exit", whole, context],
+        );
         splice(events, open - 1, index - open + 3, next);
         index = open + next.length - 2;
         break;
@@ -166,8 +171,16 @@ function resolver(kind: string): Resolver {
   };
 }
 
-const highlightConstruct = { name: "highlight", tokenize: sequence(EQUALS, "highlight", true), resolveAll: resolver("highlight") };
-const commentConstruct = { name: "comment", tokenize: sequence(PERCENT, "comment", false), resolveAll: resolver("comment") };
+const highlightConstruct = {
+  name: "highlight",
+  tokenize: sequence(EQUALS, "highlight", true),
+  resolveAll: resolver("highlight"),
+};
+const commentConstruct = {
+  name: "comment",
+  tokenize: sequence(PERCENT, "comment", false),
+  resolveAll: resolver("comment"),
+};
 
 export const obsidianSyntax = {
   text: { [EQUALS]: highlightConstruct, [PERCENT]: commentConstruct },
@@ -216,7 +229,10 @@ interface Node {
   type: string;
   children?: Node[];
   data?: Record<string, unknown>;
-  position?: { start: { line: number; column: number; offset?: number }; end: { line: number; column: number; offset?: number } };
+  position?: {
+    start: { line: number; column: number; offset?: number };
+    end: { line: number; column: number; offset?: number };
+  };
 }
 
 /** Kinds of block that hold blocks: where a comment over blank lines is looked for too. */
@@ -233,8 +249,17 @@ export function markCommentEnds(nodes: readonly unknown[], text: string): void {
       const last = n.children[n.children.length - 1]!;
       const at = first.position?.start.offset;
       const end = last.position?.end.offset;
-      if (first.type === "text" && at !== undefined && text.startsWith("%%", at) && text[at + 2] !== "%") (n.data ??= {}).commentOpens = true;
-      if (last.type === "text" && end !== undefined && end >= 2 && text.slice(end - 2, end) === "%%" && text[end - 3] !== "%" && text[end - 3] !== "\\") (n.data ??= {}).commentCloses = true;
+      if (first.type === "text" && at !== undefined && text.startsWith("%%", at) && text[at + 2] !== "%")
+        (n.data ??= {}).commentOpens = true;
+      if (
+        last.type === "text" &&
+        end !== undefined &&
+        end >= 2 &&
+        text.slice(end - 2, end) === "%%" &&
+        text[end - 3] !== "%" &&
+        text[end - 3] !== "\\"
+      )
+        (n.data ??= {}).commentCloses = true;
     }
     if (n.children && n.type !== "paragraph") markCommentEnds(n.children, text);
   }
@@ -265,7 +290,11 @@ export function blockComments<T>(nodes: T[]): T[] {
         out ??= list.slice(0, i);
         const start = n.position?.start;
         const end = list[j]!.position?.end;
-        out.push({ type: "commentBlock", children: list.slice(i, j + 1), ...(start && end ? { position: { start, end } } : {}) });
+        out.push({
+          type: "commentBlock",
+          children: list.slice(i, j + 1),
+          ...(start && end ? { position: { start, end } } : {}),
+        });
         i = j;
         continue;
       }
@@ -291,7 +320,10 @@ export function isComment(n: { type: string }): boolean {
 
 /** A paragraph that holds nothing but comments (and the spaces and breaks around them): no paragraph to draw. */
 export function onlyComments(children: readonly PhrasingContent[]): boolean {
-  return children.some((k) => k.type === "comment") && children.every((k) => k.type === "comment" || k.type === "break" || (k.type === "text" && !k.value.trim()));
+  return (
+    children.some((k) => k.type === "comment") &&
+    children.every((k) => k.type === "comment" || k.type === "break" || (k.type === "text" && !k.value.trim()))
+  );
 }
 
 /**
@@ -310,7 +342,8 @@ export function withoutComments(nodes: readonly PhrasingContent[]): PhrasingCont
     let m = n;
     if (dropped && m.type === "text") {
       const prev = out[out.length - 1];
-      if (!prev || prev.type === "break" || (prev.type === "text" && /\s$/.test(prev.value))) m = { ...m, value: m.value.replace(/^\s+/, "") };
+      if (!prev || prev.type === "break" || (prev.type === "text" && /\s$/.test(prev.value)))
+        m = { ...m, value: m.value.replace(/^\s+/, "") };
       if (!m.value) continue;
       // `oil %%a note%%.`: the space before it goes too, where what follows closes the sentence.
       if (prev?.type === "text" && /\s$/.test(prev.value) && /^[.,;:!?)\]}…]/.test(m.value)) {

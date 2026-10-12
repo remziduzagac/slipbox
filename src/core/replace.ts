@@ -108,7 +108,9 @@ export function findAll(text: string, re: RegExp, from = 0, to = text.length, em
  */
 export function expandReplacement(replacement: string, m: TextMatch, regex: boolean): string {
   if (!regex) return replacement;
-  return replacement.replace(/\$(\$|&|[1-9])/g, (_, k: string) => (k === "$" ? "$" : k === "&" ? m.groups[0]! : (m.groups[Number(k)] ?? "")));
+  return replacement.replace(/\$(\$|&|[1-9])/g, (_, k: string) =>
+    k === "$" ? "$" : k === "&" ? m.groups[0]! : (m.groups[Number(k)] ?? ""),
+  );
 }
 
 /** The offset just past the line holding `at` (the end of the text on the last line). */
@@ -130,7 +132,12 @@ export function firstPerLine(text: string, ms: TextMatch[]): TextMatch[] {
 }
 
 /** Replace `matches` in `text` (in order, not overlapping): the new text and how many were replaced. */
-export function replaceMatches(text: string, matches: TextMatch[], replacement: string, regex: boolean): { text: string; count: number } {
+export function replaceMatches(
+  text: string,
+  matches: TextMatch[],
+  replacement: string,
+  regex: boolean,
+): { text: string; count: number } {
   let out = "";
   let at = 0;
   for (const m of matches) {
@@ -186,7 +193,9 @@ export function parseSubstitute(input: string): Substitute | null {
   if (!pattern || !/^[gic]*$/.test(flags.trim())) return null;
   // \r (vim's) and \n are a line break, \t a tab.
   const escapes: Record<string, string> = { "&": "&", "\\": "\\", r: "\n", n: "\n", t: "\t" };
-  const replacement = rawReplacement.replace(/\$/g, "$$$$").replace(/\\([1-9&\\rnt])|&/g, (all: string, k?: string) => (k === undefined ? "$&" : (escapes[k] ?? `$${k}`)));
+  const replacement = rawReplacement
+    .replace(/\$/g, "$$$$")
+    .replace(/\\([1-9&\\rnt])|&/g, (all: string, k?: string) => (k === undefined ? "$&" : (escapes[k] ?? `$${k}`)));
   return {
     range: m[1] === "%" ? "all" : m[1] ? "selection" : "line",
     pattern,

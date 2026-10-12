@@ -57,7 +57,13 @@ export function readStale(v: Keyed): StaleEntry[] {
   for (const name of names) {
     const data = readJson<StaleFile | null>(join(dir, name), null);
     // Advisory only: a file of the wrong shape is ignored, never a failure of every command.
-    if (!data || typeof data.pid !== "number" || !Array.isArray(data.paths) || !data.paths.every((p) => typeof p === "string")) continue;
+    if (
+      !data ||
+      typeof data.pid !== "number" ||
+      !Array.isArray(data.paths) ||
+      !data.paths.every((p) => typeof p === "string")
+    )
+      continue;
     if (!alive(data.pid)) {
       try {
         unlinkSync(join(dir, name));

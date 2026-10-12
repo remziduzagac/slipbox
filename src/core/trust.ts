@@ -43,7 +43,10 @@ function decisions(): Decisions {
 export function setTrust(root: string, answer: "trusted" | "restricted" | null): void {
   const at = real(root);
   const d = decisions();
-  const next: Decisions = { trusted: d.trusted.filter((p) => p !== at), restricted: d.restricted.filter((p) => p !== at) };
+  const next: Decisions = {
+    trusted: d.trusted.filter((p) => p !== at),
+    restricted: d.restricted.filter((p) => p !== at),
+  };
   if (answer) next[answer].push(at);
   ensureDir(stateHome());
   writeJson(trustFile(), next);

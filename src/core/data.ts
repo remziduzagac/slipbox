@@ -11,7 +11,16 @@
 
 import type { Heading, Root, RootContent, Table, TableRow } from "mdast";
 import { parse as parseToml } from "smol-toml";
-import { isMap, isPair, isScalar, isSeq, LineCounter, type Node as YamlNode, parseAllDocuments, type Scalar } from "yaml";
+import {
+  isMap,
+  isPair,
+  isScalar,
+  isSeq,
+  LineCounter,
+  type Node as YamlNode,
+  parseAllDocuments,
+  type Scalar,
+} from "yaml";
 import { type HeadingInfo, slugify } from "./parse.ts";
 import { stringWidth } from "./width.ts";
 
@@ -93,7 +102,12 @@ function firstLine(s: string): string {
 }
 
 function heading(depth: number, text: string, line: number): Heading {
-  return { type: "heading", depth: Math.max(1, Math.min(6, depth)) as Heading["depth"], children: [{ type: "text", value: text }], position: pos(line) };
+  return {
+    type: "heading",
+    depth: Math.max(1, Math.min(6, depth)) as Heading["depth"],
+    children: [{ type: "text", value: text }],
+    position: pos(line),
+  };
 }
 
 /** Line up each run of keys (between headings) on the widest key, up to KEY_MAX. */
@@ -114,7 +128,8 @@ function alignKeys(nodes: RootContent[]): void {
 function kindOf(value: string): DataField["kind"] {
   const v = value.trim();
   if (/^(true|false|yes|no|on|off)$/i.test(v)) return "boolean";
-  if (/^[+-]?(\d[\d_]*)(\.\d+)?([eE][+-]?\d+)?$/.test(v) || /^0x[\da-f_]+$/i.test(v) || /^[+-]?(inf|nan)$/.test(v)) return "number";
+  if (/^[+-]?(\d[\d_]*)(\.\d+)?([eE][+-]?\d+)?$/.test(v) || /^0x[\da-f_]+$/i.test(v) || /^[+-]?(inf|nan)$/.test(v))
+    return "number";
   if (/^\d{4}-\d{2}-\d{2}([T ]\d{2}:\d{2}(:\d{2}(\.\d+)?)?(Z|[+-]\d{2}:\d{2})?)?$/.test(v)) return "date";
   if (/^\[/.test(v)) return "list";
   if (/^\{/.test(v)) return "table";
@@ -166,10 +181,15 @@ function scanValue(lines: string[], i: number, from: number): { end: number; val
 /** A TOML value as it reads: a basic or literal string unquoted, the rest as written. */
 function tomlDisplay(raw: string): { value: string; kind: DataField["kind"] } {
   const m = /^"((?:[^"\\]|\\.)*)"$/.exec(raw);
-  if (m) return { value: m[1]!.replace(/\\(["\\nt])/g, (_, c: string) => (c === "n" ? " " : c === "t" ? " " : c)), kind: "string" };
+  if (m)
+    return {
+      value: m[1]!.replace(/\\(["\\nt])/g, (_, c: string) => (c === "n" ? " " : c === "t" ? " " : c)),
+      kind: "string",
+    };
   const l = /^'([^']*)'$/.exec(raw);
   if (l) return { value: l[1]!, kind: "string" };
-  if (/^("""|''')/.test(raw)) return { value: raw.replace(/^("""|''')\s*|\s*("""|''')$/g, "").replace(/\s+/g, " "), kind: "string" };
+  if (/^("""|''')/.test(raw))
+    return { value: raw.replace(/^("""|''')\s*|\s*("""|''')$/g, "").replace(/\s+/g, " "), kind: "string" };
   return { value: raw.replace(/\s+/g, " "), kind: kindOf(raw) };
 }
 
@@ -184,7 +204,12 @@ function readToml(source: string): ParsedData {
   const out: RootContent[] = [];
   let pending: { text: string[]; line: number } | null = null; // comment lines waiting for a key
   const flushComment = () => {
-    if (pending) out.push({ type: "dataComment", text: pending.text.join("\n"), position: pos(pending.line, pending.line + pending.text.length - 1) } as unknown as RootContent);
+    if (pending)
+      out.push({
+        type: "dataComment",
+        text: pending.text.join("\n"),
+        position: pos(pending.line, pending.line + pending.text.length - 1),
+      } as unknown as RootContent);
     pending = null;
   };
   for (let i = 0; i < lines.length; i++) {
@@ -210,7 +235,10 @@ function readToml(source: string): ParsedData {
       flushComment();
       continue; // not TOML (the error, from the parser, says so)
     }
-    const key = t.slice(0, eq).trim().replace(/^"(.*)"$|^'(.*)'$/, "$1$2");
+    const key = t
+      .slice(0, eq)
+      .trim()
+      .replace(/^"(.*)"$|^'(.*)'$/, "$1$2");
     const start = lines[i]!.indexOf("=", lines[i]!.indexOf(t.slice(0, eq).trim()) + eq - 1);
     const v = scanValue(lines, i, start + 1);
     const shown = tomlDisplay(v.value);
@@ -221,7 +249,16 @@ function readToml(source: string): ParsedData {
     const first = pending ? pending.line : i + 1;
     const comment = v.comment ?? (pending ? pending.text.join(" ") : null);
     pending = null;
-    out.push({ type: "dataField", key, value: shown.value, kind: shown.kind, comment, keyWidth: 0, keyLine: i + 1, position: pos(first, v.end + 1) } as unknown as RootContent);
+    out.push({
+      type: "dataField",
+      key,
+      value: shown.value,
+      kind: shown.kind,
+      comment,
+      keyWidth: 0,
+      keyLine: i + 1,
+      position: pos(first, v.end + 1),
+    } as unknown as RootContent);
     i = v.end;
   }
   flushComment();
@@ -256,14 +293,23 @@ function tomlRecords(nodes: RootContent[]): RootContent[] {
     // An entry: its heading, then its fields; the run goes on while the next heading has the name.
     const entries: { line: number; fields: DataField[] }[] = [];
     let j = i;
-    while (name && nodes[j]?.type === "heading" && (nodes[j] as Heading & { children: { value: string }[] }).children[0]!.value === name) {
+    while (
+      name &&
+      nodes[j]?.type === "heading" &&
+      (nodes[j] as Heading & { children: { value: string }[] }).children[0]!.value === name
+    ) {
       const fields: DataField[] = [];
       let k = j + 1;
       while (isField(nodes[k])) fields.push(nodes[k++] as unknown as DataField);
       entries.push({ line: nodes[j]!.position!.start.line, fields });
       j = k;
     }
-    const plain = entries.length >= 2 && entries.every((e) => e.fields.length && e.fields.every((f) => f.kind !== "table" && f.kind !== "list" && !f.value.includes("\n")));
+    const plain =
+      entries.length >= 2 &&
+      entries.every(
+        (e) =>
+          e.fields.length && e.fields.every((f) => f.kind !== "table" && f.kind !== "list" && !f.value.includes("\n")),
+      );
     if (!plain) {
       out.push(n);
       continue;
@@ -272,7 +318,11 @@ function tomlRecords(nodes: RootContent[]): RootContent[] {
     out.push(heading(n.type === "heading" ? n.depth : 1, name!, entries[0]!.line));
     const rows = entries.map((e) => {
       const fields = cols.map((c) => e.fields.find((f) => f.key === c));
-      return { line: e.line, cells: fields.map((f) => f?.value ?? ""), links: fields.map((f) => (f ? fieldLink(f) : null)) };
+      return {
+        line: e.line,
+        cells: fields.map((f) => f?.value ?? ""),
+        links: fields.map((f) => (f ? fieldLink(f) : null)),
+      };
     });
     out.push(table(cols, rows, entries[0]!.line));
     i = j - 1;
@@ -283,16 +333,31 @@ function tomlRecords(nodes: RootContent[]): RootContent[] {
 /** A records table's cell that is a link (16.15): as `fieldLink` reads its value under its column's key. */
 export type CellLink = NonNullable<ReturnType<typeof fieldLink>>;
 
-function table(header: string[], rows: { line: number; cells: string[]; links?: (CellLink | null)[] }[], line: number): Table {
+function table(
+  header: string[],
+  rows: { line: number; cells: string[]; links?: (CellLink | null)[] }[],
+  line: number,
+): Table {
   const row = (cells: string[], at: number, links?: (CellLink | null)[]): TableRow => ({
     type: "tableRow",
-    children: cells.map((c, i) => ({ type: "tableCell", children: c ? [{ type: "text", value: c }] : [], position: pos(at), ...(links?.[i] ? { data: { link: links[i] } } : {}) })),
+    children: cells.map((c, i) => ({
+      type: "tableCell",
+      children: c ? [{ type: "text", value: c }] : [],
+      position: pos(at),
+      ...(links?.[i] ? { data: { link: links[i] } } : {}),
+    })),
     position: pos(at),
   });
   const last = rows.length ? rows[rows.length - 1]!.line : line;
   // A data file's table is records: each row a block of its own for the lens (16.14), not the
   // whole table at once (a CSV's may be thousands of rows).
-  return { type: "table", align: header.map(() => null), children: [row(header, line), ...rows.map((r) => row(r.cells, r.line, r.links))], position: pos(line, last), data: { rowBlocks: true } };
+  return {
+    type: "table",
+    align: header.map(() => null),
+    children: [row(header, line), ...rows.map((r) => row(r.cells, r.line, r.links))],
+    position: pos(line, last),
+    data: { rowBlocks: true },
+  };
 }
 
 // ---------------------------------------------------------------------------------------------
@@ -308,7 +373,12 @@ function readIni(source: string): ParsedData {
   const out: RootContent[] = [];
   let pending: { text: string[]; line: number } | null = null;
   const flushComment = () => {
-    if (pending) out.push({ type: "dataComment", text: pending.text.join("\n"), position: pos(pending.line, pending.line + pending.text.length - 1) } as unknown as RootContent);
+    if (pending)
+      out.push({
+        type: "dataComment",
+        text: pending.text.join("\n"),
+        position: pos(pending.line, pending.line + pending.text.length - 1),
+      } as unknown as RootContent);
     pending = null;
   };
   let error: string | null = null;
@@ -342,7 +412,8 @@ function readIni(source: string): ParsedData {
     // A value ending in an odd run of backslashes goes on, on the next line when it's indented
     // (.properties): joined, its indent dropped. Not indented, it's a line of its own — an INI's
     // `dir = C:\` is a Windows path.
-    while (/(^|[^\\])(\\\\)*\\$/.test(value) && /^[ \t]+\S/.test(lines[i + 1] ?? "")) value = `${value.slice(0, -1)}${lines[++i]!.replace(/\r$/, "").trim()}`;
+    while (/(^|[^\\])(\\\\)*\\$/.test(value) && /^[ \t]+\S/.test(lines[i + 1] ?? ""))
+      value = `${value.slice(0, -1)}${lines[++i]!.replace(/\r$/, "").trim()}`;
     let comment: string | null = null;
     // Quoted, the value ends at its closing quote: a # or ; inside is its own, one after is a
     // comment (`URL="https://x#top"   # where sync goes`).
@@ -359,7 +430,16 @@ function readIni(source: string): ParsedData {
     const first = pending ? pending.line : keyLine;
     comment ??= pending ? pending.text.join(" ") : null;
     pending = null;
-    out.push({ type: "dataField", key, value: quoted ? (quoted[1] ?? quoted[3])! : value, kind: quoted ? "string" : kindOf(value), comment, keyWidth: 0, keyLine, position: pos(first, i + 1) } as unknown as RootContent);
+    out.push({
+      type: "dataField",
+      key,
+      value: quoted ? (quoted[1] ?? quoted[3])! : value,
+      kind: quoted ? "string" : kindOf(value),
+      comment,
+      keyWidth: 0,
+      keyLine,
+      position: pos(first, i + 1),
+    } as unknown as RootContent);
   }
   flushComment();
   const tree: Root = { type: "root", children: out };
@@ -447,19 +527,39 @@ function readYaml(source: string, json: boolean): ParsedData {
     // A comment block before a document's content (a blank line after it keeps it off the first
     // key): the file's, or the document's, opening prose.
     // (The parser keeps it on the document, or — after a `---` — on its content.)
-    const opening = ((doc as { commentBefore?: string | null }).commentBefore ?? (contents as { commentBefore?: string | null } | null)?.commentBefore)?.trim();
+    const opening = (
+      (doc as { commentBefore?: string | null }).commentBefore ??
+      (contents as { commentBefore?: string | null } | null)?.commentBefore
+    )?.trim();
     if (opening) {
       // Its lines are the first comment lines of the document (the parser keeps no position for
       // them): after the previous document's `---`, blank lines skipped.
       const n = opening.split("\n").length;
       let start = d === 0 ? 1 : docStart;
       while (start <= srcLines.length && !srcLines[start - 1]!.trimStart().startsWith("#")) start++;
-      out.push({ type: "dataComment", text: opening.split("\n").map((l) => l.trim()).join("\n"), position: pos(start, start + n - 1) } as unknown as RootContent);
+      out.push({
+        type: "dataComment",
+        text: opening
+          .split("\n")
+          .map((l) => l.trim())
+          .join("\n"),
+        position: pos(start, start + n - 1),
+      } as unknown as RootContent);
     }
     // Several documents (`---`): each a branch of its own, its keys under it.
     if (list.length > 1) {
       const line = contents?.range ? lineOf(contents.range[0]) : 1;
-      out.push({ type: "dataField", key: `document ${d + 1}`, value: "", kind: "table", comment: null, keyWidth: 0, keyLine: line, position: pos(line), tree: { lasts: [], branch: true } } as unknown as RootContent);
+      out.push({
+        type: "dataField",
+        key: `document ${d + 1}`,
+        value: "",
+        kind: "table",
+        comment: null,
+        keyWidth: 0,
+        keyLine: line,
+        position: pos(line),
+        tree: { lasts: [], branch: true },
+      } as unknown as RootContent);
     }
     if (contents) walkYaml(contents, list.length > 1 ? [] : null, out, lineOf);
   });
@@ -471,7 +571,8 @@ function inline(node: YamlNode | null | undefined): string {
   if (!node) return "";
   if (isScalar(node)) return node.value === null ? "null" : String(node.value);
   if (isSeq(node)) return `[${node.items.map((x) => inline(x as YamlNode)).join(", ")}]`;
-  if (isMap(node)) return `{${node.items.map((p) => `${inline(p.key as YamlNode)}: ${inline(p.value as YamlNode)}`).join(", ")}}`;
+  if (isMap(node))
+    return `{${node.items.map((p) => `${inline(p.key as YamlNode)}: ${inline(p.value as YamlNode)}`).join(", ")}}`;
   return String((node as { toString(): string }).toString()).replace(/\s+/g, " ");
 }
 
@@ -515,15 +616,37 @@ function walkYaml(node: YamlNode, lasts: boolean[] | null, out: RootContent[], l
   type Child = { name: string; key: YamlNode | null; value: YamlNode | null; line: number };
   let children: Child[];
   if (isMap(node)) {
-    children = node.items.filter((p) => isPair(p)).map((p) => ({ name: inline(p.key as YamlNode), key: p.key as YamlNode | null, value: p.value as YamlNode | null, line: lineAt(p.key as YamlNode, lineAt(p.value as YamlNode)) }));
+    children = node.items
+      .filter((p) => isPair(p))
+      .map((p) => ({
+        name: inline(p.key as YamlNode),
+        key: p.key as YamlNode | null,
+        value: p.value as YamlNode | null,
+        line: lineAt(p.key as YamlNode, lineAt(p.value as YamlNode)),
+      }));
   } else if (isSeq(node) && node.items.length) {
     if (records(node)) {
       out.push(treeTable(recordTable(node, lineOf), lasts ? [...lasts, true] : []));
       return;
     }
-    children = node.items.map((it, i) => ({ name: `${i + 1}`, key: null, value: it as YamlNode, line: lineAt(it as YamlNode) }));
+    children = node.items.map((it, i) => ({
+      name: `${i + 1}`,
+      key: null,
+      value: it as YamlNode,
+      line: lineAt(it as YamlNode),
+    }));
   } else {
-    out.push({ type: "dataField", key: "value", value: inline(node), kind: scalarKind(node), comment: null, keyWidth: 0, keyLine: lineAt(node), position: pos(lineAt(node)), tree: { lasts: lasts ?? [] } } as unknown as RootContent);
+    out.push({
+      type: "dataField",
+      key: "value",
+      value: inline(node),
+      kind: scalarKind(node),
+      comment: null,
+      keyWidth: 0,
+      keyLine: lineAt(node),
+      position: pos(lineAt(node)),
+      tree: { lasts: lasts ?? [] },
+    } as unknown as RootContent);
     return;
   }
   // Sibling leaves share one key column. In a list, if one object is a branch, all are (item 1
@@ -534,22 +657,55 @@ function walkYaml(node: YamlNode, lasts: boolean[] | null, out: RootContent[], l
     const place = lasts ? [...lasts, k === children.length - 1] : [];
     // The comment lines above a key are its comment when they're one line; several, or the file's
     // opening ones, or those above a branch, are a block of their own (as in TOML).
-    let before = (c.key as { commentBefore?: string } | null)?.commentBefore?.trim() || (c.value as { commentBefore?: string } | null)?.commentBefore?.trim() || null;
-    const branch = !leaf(c.value) || (openMaps && isMap(c.value) && (c.value as unknown as { items: unknown[] }).items.length > 0);
+    let before =
+      (c.key as { commentBefore?: string } | null)?.commentBefore?.trim() ||
+      (c.value as { commentBefore?: string } | null)?.commentBefore?.trim() ||
+      null;
+    const branch =
+      !leaf(c.value) || (openMaps && isMap(c.value) && (c.value as unknown as { items: unknown[] }).items.length > 0);
     const opening = k === 0 && (lasts === null || lasts.length === 0); // a document's first key
     if (before && (before.includes("\n") || opening || branch)) {
       const n = before.split("\n").length;
-      out.push({ type: "dataComment", text: before.split("\n").map((l) => l.trim()).join("\n"), position: pos(Math.max(1, c.line - n), c.line - 1), tree: { lasts: place, above: true } } as unknown as RootContent);
+      out.push({
+        type: "dataComment",
+        text: before
+          .split("\n")
+          .map((l) => l.trim())
+          .join("\n"),
+        position: pos(Math.max(1, c.line - n), c.line - 1),
+        tree: { lasts: place, above: true },
+      } as unknown as RootContent);
       before = null;
     }
-    const comment = [before, (c.value as { comment?: string } | null)?.comment].filter(Boolean).join(" ").trim() || null;
+    const comment =
+      [before, (c.value as { comment?: string } | null)?.comment].filter(Boolean).join(" ").trim() || null;
     if (branch) {
-      out.push({ type: "dataField", key: c.name, value: "", kind: isSeq(c.value) ? "list" : "table", comment, keyWidth: 0, keyLine: c.line, position: pos(c.line), tree: { lasts: place, branch: true } } as unknown as RootContent);
+      out.push({
+        type: "dataField",
+        key: c.name,
+        value: "",
+        kind: isSeq(c.value) ? "list" : "table",
+        comment,
+        keyWidth: 0,
+        keyLine: c.line,
+        position: pos(c.line),
+        tree: { lasts: place, branch: true },
+      } as unknown as RootContent);
       walkYaml(c.value!, place, out, lineOf);
     } else {
       const end = c.value?.range ? lineOf(Math.max(c.value.range[0], c.value.range[1] - 1)) : c.line;
       const first = before ? Math.max(1, c.line - before.split("\n").length) : c.line;
-      const f = { type: "dataField", key: c.name, value: inline(c.value), kind: scalarKind(c.value), comment, keyWidth: 0, keyLine: c.line, position: pos(first, Math.max(c.line, end)), tree: { lasts: place } } as unknown as DataField;
+      const f = {
+        type: "dataField",
+        key: c.name,
+        value: inline(c.value),
+        kind: scalarKind(c.value),
+        comment,
+        keyWidth: 0,
+        keyLine: c.line,
+        position: pos(first, Math.max(c.line, end)),
+        tree: { lasts: place },
+      } as unknown as DataField;
       leaves.push(f);
       out.push(f as unknown as RootContent);
     }
@@ -567,7 +723,8 @@ export function dataOutline(tree: Root): HeadingInfo[] {
       out.push({ depth: n.depth, text, slug: slugify(text), line: n.position?.start.line ?? 1 });
     }
     const f = n as unknown as DataField;
-    if (f.type === "dataField" && f.tree?.branch) out.push({ depth: Math.min(6, f.tree.lasts.length + 1), text: f.key, slug: slugify(f.key), line: f.keyLine });
+    if (f.type === "dataField" && f.tree?.branch)
+      out.push({ depth: Math.min(6, f.tree.lasts.length + 1), text: f.key, slug: slugify(f.key), line: f.keyLine });
   }
   return out;
 }
@@ -580,16 +737,26 @@ function treeTable(t: Table, lasts: boolean[]): RootContent {
 /** A list of two or more maps whose values are all plain: a table's rows. */
 function records(seq: YamlNode): boolean {
   if (!isSeq(seq) || seq.items.length < 2) return false;
-  return seq.items.every((it) => isMap(it) && (it as { items: { value: unknown }[] }).items.every((p) => !isMap(p.value as YamlNode) && !isSeq(p.value as YamlNode)));
+  return seq.items.every(
+    (it) =>
+      isMap(it) &&
+      (it as { items: { value: unknown }[] }).items.every(
+        (p) => !isMap(p.value as YamlNode) && !isSeq(p.value as YamlNode),
+      ),
+  );
 }
 
 function recordTable(seq: YamlNode, lineOf: (o: number) => number): Table {
   const items = (seq as unknown as { items: YamlNode[] }).items;
-  const cols = [...new Set(items.flatMap((m) => (m as unknown as { items: { key: YamlNode }[] }).items.map((p) => inline(p.key))))];
+  const cols = [
+    ...new Set(items.flatMap((m) => (m as unknown as { items: { key: YamlNode }[] }).items.map((p) => inline(p.key)))),
+  ];
   const rows = items.map((m) => {
     const pairs = (m as unknown as { items: { key: YamlNode; value: YamlNode }[] }).items;
     const values = cols.map((c) => pairs.find((p) => inline(p.key) === c));
-    const links = values.map((p, k) => (p ? fieldLink({ key: cols[k]!, value: inline(p.value), kind: scalarKind(p.value) }) : null));
+    const links = values.map((p, k) =>
+      p ? fieldLink({ key: cols[k]!, value: inline(p.value), kind: scalarKind(p.value) }) : null,
+    );
     return { line: m.range ? lineOf(m.range[0]) : 1, cells: values.map((p) => inline(p?.value)), links };
   });
   return table(cols, rows, rows[0]?.line ?? 1);
@@ -644,8 +811,19 @@ function readDelimited(source: string, sep: string): ParsedData {
     const pad = (c: string[]) => [...c, ...Array(width - c.length).fill("")];
     const [head, ...body] = rows;
     const shown = body.slice(0, CSV_ROWS);
-    out.push(table(pad(head!.cells), shown.map((r) => ({ line: r.line, cells: pad(r.cells) })), head!.line));
-    if (body.length > CSV_ROWS) out.push({ type: "dataComment", text: `… ${body.length - CSV_ROWS} more rows — source mode (space n v) shows them all`, position: pos(shown[shown.length - 1]!.line + 1) } as unknown as RootContent);
+    out.push(
+      table(
+        pad(head!.cells),
+        shown.map((r) => ({ line: r.line, cells: pad(r.cells) })),
+        head!.line,
+      ),
+    );
+    if (body.length > CSV_ROWS)
+      out.push({
+        type: "dataComment",
+        text: `… ${body.length - CSV_ROWS} more rows — source mode (space n v) shows them all`,
+        position: pos(shown[shown.length - 1]!.line + 1),
+      } as unknown as RootContent);
   }
   return { tree: { type: "root", children: out }, error };
 }
@@ -657,7 +835,8 @@ function readDelimited(source: string, sep: string): ParsedData {
 const REFERENCE_KEYS = /^(\$ref|\$schema|schema|include|includes|extends|import|imports|file|path)$/i;
 const URL = /^[a-z][a-z0-9+.-]*:\/\/\S+$/i;
 /** A path-like value: no spaces, a separator or a file extension (`schemas/user.json`, `../base.toml`). */
-const PATHLIKE = /^(?:\.{0,2}\/)?[\w.@~-]+(?:\/[\w.@~-]+)*(?:\.[A-Za-z0-9]{1,10})(?:#\S*)?$|^(?:\.{0,2}\/)?[\w.@~-]+(?:\/[\w.@~-]+)+\/?$/;
+const PATHLIKE =
+  /^(?:\.{0,2}\/)?[\w.@~-]+(?:\/[\w.@~-]+)*(?:\.[A-Za-z0-9]{1,10})(?:#\S*)?$|^(?:\.{0,2}\/)?[\w.@~-]+(?:\/[\w.@~-]+)+\/?$/;
 
 export interface DataLink {
   /** The value as a link target (a path relative to the file, maybe with #fragment, or a URL). */
@@ -671,7 +850,9 @@ export interface DataLink {
 /** The link a key's value is, if any: a URL, a reference key's value, or a path-like string (which
  *  counts only if it resolves — the caller checks). Only a single text value is one: a list, a
  *  number, a boolean, a date or a null under `includes` or `path` is no link. */
-export function fieldLink(f: Pick<DataField, "key" | "value"> & { kind?: DataField["kind"] }): { target: string; explicit: boolean } | null {
+export function fieldLink(
+  f: Pick<DataField, "key" | "value"> & { kind?: DataField["kind"] },
+): { target: string; explicit: boolean } | null {
   if (f.kind && f.kind !== "string" && f.kind !== "other") return null;
   const v = f.value.trim();
   if (!v || v.length > 500) return null;
@@ -687,7 +868,9 @@ export function dataLinks(tree: Root): DataLink[] {
   const out: DataLink[] = [];
   for (const n of tree.children) {
     if (n.type === "table") {
-      const keys = (n.children[0]?.children ?? []).map((c) => (c.children[0] as { value?: string } | undefined)?.value ?? "");
+      const keys = (n.children[0]?.children ?? []).map(
+        (c) => (c.children[0] as { value?: string } | undefined)?.value ?? "",
+      );
       for (const row of n.children.slice(1)) {
         row.children.forEach((c, i) => {
           const l = (c.data as { link?: CellLink } | undefined)?.link;

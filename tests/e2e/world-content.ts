@@ -60,7 +60,10 @@ function tablesAligned(s: Session, where: string): number {
   const rows = s.screen();
   let tables = 0;
   for (const [i, r] of rows.entries()) {
-    s.expect(Bun.stringWidth(r) <= s.pane.cols, `${where}: row ${i} is wider than the pane (${Bun.stringWidth(r)} > ${s.pane.cols})`);
+    s.expect(
+      Bun.stringWidth(r) <= s.pane.cols,
+      `${where}: row ${i} is wider than the pane (${Bun.stringWidth(r)} > ${s.pane.cols})`,
+    );
     const cells = columns(r);
     const top = cells.findIndex((c) => c.g === "┌");
     if (top < 0 || cells[top + 1]?.g !== "─") continue;
@@ -73,7 +76,10 @@ function tablesAligned(s: Session, where: string): number {
       if (!edge || !"│├╞└┃".includes(edge.g)) break; // the table ends (or scrolls) off screen
       if (/\p{Mc}/u.test(rows[j]!)) continue;
       const border = at.find((c) => c.col === right.col);
-      s.expect(!!border && "│┤╡┘┃".includes(border.g), `${where}: row ${j}'s right border isn't at column ${right.col}\n${rows[j]}`);
+      s.expect(
+        !!border && "│┤╡┘┃".includes(border.g),
+        `${where}: row ${j}'s right border isn't at column ${right.col}\n${rows[j]}`,
+      );
       if (edge.g === "└") break;
     }
     tables++;
@@ -98,7 +104,14 @@ export const CONTENT_SCENARIOS: Scenario[] = [
         ["src/legacy/app.js", "compare", 35, /Route\s*›\s*constructor/],
         ["src/App.tsx", "useRoutes", 11, /§ .*useRoutes/],
       ];
-      const crumbAt: Record<string, number> = { "tools/uploader/main.go": 30, "crates/route-engine/src/lib.rs": 45, "scripts/dev/kestrel.lua": 29, "scripts/lib.sh": 16, "src/legacy/app.js": 27, "src/App.tsx": 12 };
+      const crumbAt: Record<string, number> = {
+        "tools/uploader/main.go": 30,
+        "crates/route-engine/src/lib.rs": 45,
+        "scripts/dev/kestrel.lua": 29,
+        "scripts/lib.sh": 16,
+        "src/legacy/app.js": 27,
+        "src/App.tsx": 12,
+      };
       for (const [rel, symbol, defLine, crumbs] of files) {
         await edit(s, rel);
         await s.status("SOURCE");
@@ -152,7 +165,9 @@ export const CONTENT_SCENARIOS: Scenario[] = [
       await edit(s, "config/legacy-archive.properties");
       await parses();
       await s.see(/archive\.target\.bucket\s+kestrel-archive-eu\s+# Where the archive goes/);
-      await s.see(/archive\.sources\s+\/var\/lib\/kestrel\/routes, \/var\/lib\/kestrel\/gpx-uploads, \/var\/lib\/kestrel\/offline-bundles, \/var\/lib\/kestrel\/exports/);
+      await s.see(
+        /archive\.sources\s+\/var\/lib\/kestrel\/routes, \/var\/lib\/kestrel\/gpx-uploads, \/var\/lib\/kestrel\/offline-bundles, \/var\/lib\/kestrel\/exports/,
+      );
       // Several YAML documents: a row each.
       await edit(s, "k8s/api.yaml");
       await parses();
@@ -201,8 +216,14 @@ export const CONTENT_SCENARIOS: Scenario[] = [
           const t = s.text();
           s.expect(!UNSAFE.test(t.replace(/\n/g, "")), `${name}: a control or bidi character on screen`);
           const title = s.title();
-          s.expect(title.startsWith("slipbox — ") && title.endsWith(name), `${name}: the title is still slipbox's (got ${JSON.stringify(title)})`);
-          s.expect(s.topBar().includes("slipbox") && t.includes("Explorer") && s.statusLine().includes(name), `${name}: the frame drawn whole`);
+          s.expect(
+            title.startsWith("slipbox — ") && title.endsWith(name),
+            `${name}: the title is still slipbox's (got ${JSON.stringify(title)})`,
+          );
+          s.expect(
+            s.topBar().includes("slipbox") && t.includes("Explorer") && s.statusLine().includes(name),
+            `${name}: the frame drawn whole`,
+          );
         }
         // It still answers: j moves the cursor.
         const at = pos(s).line;
@@ -247,12 +268,21 @@ export const CONTENT_SCENARIOS: Scenario[] = [
       await moveTo(s, ["0"], (_, c) => c === 1, "0 to the line's start");
       await moveTo(s, ["l", "l", "l"], (_, c) => c === 7, "l three times: three wide characters on");
       const cursor = () => {
-        const row = s.runs().find((r) => r.map((x) => x.text).join("").includes("千本鳥居は"));
+        const row = s.runs().find((r) =>
+          r
+            .map((x) => x.text)
+            .join("")
+            .includes("千本鳥居は"),
+        );
         // The cursor's colour is the one run on its row no other run shares.
         const bgs = (row ?? []).map((r) => r.bg);
         return (row ?? []).find((r) => r.text.trim() && bgs.filter((b) => b === r.bg).length === 1)?.text ?? "";
       };
-      await s.until(() => cursor() === "居", 3000, `the cursor on 居, the fourth character (on ${JSON.stringify(cursor())})`);
+      await s.until(
+        () => cursor() === "居",
+        3000,
+        `the cursor on 居, the fourth character (on ${JSON.stringify(cursor())})`,
+      );
       await moveTo(s, ["h"], (_, c) => c === 5, "h one wide character back");
       await s.until(() => cursor() === "鳥", 3000, `the cursor on 鳥 (on ${JSON.stringify(cursor())})`);
     },
@@ -324,13 +354,24 @@ export const CONTENT_SCENARIOS: Scenario[] = [
       await s.keys("G", "o");
       await s.type("Checked through the symlink.");
       await s.keys("escape", "ctrl+s");
-      await s.file("~/notes/projects/kestrel-v2-3.md", (t) => t.includes("Checked through the symlink."), "the edit in the symlink's target");
+      await s.file(
+        "~/notes/projects/kestrel-v2-3.md",
+        (t) => t.includes("Checked through the symlink."),
+        "the edit in the symlink's target",
+      );
       const link = s.path("~/notes/projects/kestrel-current.md");
-      s.expect(lstatSync(link).isSymbolicLink() && readlinkSync(link) === "kestrel-v2-3.md", "kestrel-current.md still a symlink to kestrel-v2-3.md");
+      s.expect(
+        lstatSync(link).isSymbolicLink() && readlinkSync(link) === "kestrel-v2-3.md",
+        "kestrel-current.md still a symlink to kestrel-v2-3.md",
+      );
       await leader(s, "n", "v");
       // A symlink out of the root: never read, as the walk and the CLI (exit 5) refuse it.
       await ex(s, "e research/outside.md");
-      await s.until(() => s.statusLine().includes("outside.md") || /outside the root|no note or file/.test(s.text()), 3000, "outside.md opened or refused");
+      await s.until(
+        () => s.statusLine().includes("outside.md") || /outside the root|no note or file/.test(s.text()),
+        3000,
+        "outside.md opened or refused",
+      );
       s.expect(!s.statusLine().includes("outside.md"), "a symlink leading out of the root isn't opened");
     },
   },
@@ -340,7 +381,8 @@ export const CONTENT_SCENARIOS: Scenario[] = [
       home: true,
       startAt: "home/notes/daily/2026-09-16.md",
       // The set's Windows note is meant to be CRLF throughout (its manifest says so); made so here.
-      setup: (s) => s.write("~/notes/daily/2026-09-15.md", s.read("~/notes/daily/2026-09-15.md").replace(/\r?\n/g, "\r\n")),
+      setup: (s) =>
+        s.write("~/notes/daily/2026-09-15.md", s.read("~/notes/daily/2026-09-15.md").replace(/\r?\n/g, "\r\n")),
     },
     run: async (s) => {
       // A BOM before the frontmatter: the properties still read, nothing drawn for the BOM.
@@ -359,7 +401,10 @@ export const CONTENT_SCENARIOS: Scenario[] = [
       await edit(s, "daily/2026-09-15.md");
       await s.see("Tuesday 15 September");
       const row = s.screen()[s.rowOf("Written on the Windows laptop")] ?? "";
-      s.expect(row.indexOf("│") >= 0 && row.indexOf("│") < row.indexOf("Written"), "the CRLF note's row drawn in its place, the explorer beside it");
+      s.expect(
+        row.indexOf("│") >= 0 && row.indexOf("│") < row.indexOf("Written"),
+        "the CRLF note's row drawn in its place, the explorer beside it",
+      );
       s.expect(Bun.stringWidth(row) <= s.pane.cols, "the CRLF note's row no wider than the pane");
       await leader(s, "n", "v");
       await s.status("SOURCE");
@@ -368,13 +413,23 @@ export const CONTENT_SCENARIOS: Scenario[] = [
       await s.keys("escape", "ctrl+s");
       await s.file("~/notes/daily/2026-09-15.md", (t) => t.includes("CRLF kept."), "the CRLF note's edit saved");
       const crlf = s.read("~/notes/daily/2026-09-15.md");
-      s.expect(crlf.split("\n").length > 10 && crlf.split("\n").slice(0, -1).every((l) => l.endsWith("\r")), "every line still ends in CRLF");
+      s.expect(
+        crlf.split("\n").length > 10 &&
+          crlf
+            .split("\n")
+            .slice(0, -1)
+            .every((l) => l.endsWith("\r")),
+        "every line still ends in CRLF",
+      );
       // Lone CRs (an old Mac's): lines, never one long line.
       await s.restart({ startAt: "home/Downloads/lone-cr.md" });
       await s.see("Old Mac notes");
       const pan = s.rowOf("panniers");
       const tube = s.rowOf("spare tube");
-      s.expect(pan >= 0 && tube > pan && s.rowOf("Saved by the editor") > s.rowOf("Old Mac notes"), "each CR-ended line a row of its own");
+      s.expect(
+        pan >= 0 && tube > pan && s.rowOf("Saved by the editor") > s.rowOf("Old Mac notes"),
+        "each CR-ended line a row of its own",
+      );
     },
   },
   {
@@ -395,7 +450,11 @@ export const CONTENT_SCENARIOS: Scenario[] = [
       await s.status("INSERT");
       await s.type("鳥居の道");
       await s.keys("escape", "ctrl+s");
-      await s.file("~/hobbies/photography/trips/京都/2026-08-24-伏見稲荷.md", (t) => t.split("\n")[9]!.startsWith("鳥居の道、本当は千本もない。"), "ciw replaced the run, saved");
+      await s.file(
+        "~/hobbies/photography/trips/京都/2026-08-24-伏見稲荷.md",
+        (t) => t.split("\n")[9]!.startsWith("鳥居の道、本当は千本もない。"),
+        "ciw replaced the run, saved",
+      );
       await s.see("鳥居の道、本当は千本もない。");
     },
   },

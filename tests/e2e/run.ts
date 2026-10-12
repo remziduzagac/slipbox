@@ -116,7 +116,9 @@ const missing = all.filter((id) => !ran.has(id));
 if (process.env.SLIPBOX_E2E_RAN) appendFileSync(process.env.SLIPBOX_E2E_RAN, [...ran].map((c) => `${c}\n`).join(""));
 const secs = ((Date.now() - started) / 1000).toFixed(1);
 const done = chosen.length - skipped;
-console.log(`\n${done - failures.length}/${done} scenarios passed in ${secs} s${skipped ? `, ${skipped} skipped (said above why)` : ""}`);
+console.log(
+  `\n${done - failures.length}/${done} scenarios passed in ${secs} s${skipped ? `, ${skipped} skipped (said above why)` : ""}`,
+);
 console.log(`commands run: ${all.length - missing.length}/${all.length}`);
 if (missing.length && !filters.length) console.log(`not run by any scenario:\n  ${missing.join("\n  ")}`);
 process.exit(failures.length ? 1 : 0);

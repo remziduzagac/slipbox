@@ -7,7 +7,20 @@ import { existsSync, readFileSync, realpathSync, renameSync } from "node:fs";
 import { homedir } from "node:os";
 import { join } from "node:path";
 import { UNSAFE } from "../../src/core/sanitize.ts";
-import { explorerRow, HANDBOOK, leader, MEETING, moveTo, open, pos, problemListed, type Scenario, signed, TOML, TSC } from "./helpers.ts";
+import {
+  explorerRow,
+  HANDBOOK,
+  leader,
+  MEETING,
+  moveTo,
+  open,
+  pos,
+  problemListed,
+  type Scenario,
+  signed,
+  TOML,
+  TSC,
+} from "./helpers.ts";
 import { sleep } from "./herdr.ts";
 import { Skipped, type SessionOptions } from "./session.ts";
 import { GIT_SCENARIOS } from "./world-git.ts";
@@ -42,7 +55,10 @@ const CORE: Scenario[] = [
       await s.see("╞");
       // Every table row closes with its right border: nothing ran past the window and got cut.
       const table = s.screen().filter((r) => r.includes("│ ") && (r.match(/│/g) ?? []).length >= 3);
-      s.expect(table.length > 0 && table.every((r) => /│\s*(▐|$)/.test(r.trimEnd())), "a table row without its right border");
+      s.expect(
+        table.length > 0 && table.every((r) => /│\s*(▐|$)/.test(r.trimEnd())),
+        "a table row without its right border",
+      );
       await open(s, "pipeline-cookbook");
       await s.see("properties"); // the frontmatter, rendered
       await s.see(/bash|python/);
@@ -67,7 +83,10 @@ const CORE: Scenario[] = [
     run: async (s) => {
       const clean = () => {
         const t = s.text();
-        s.expect(!UNSAFE.test(t.replace(/\n/g, "")) && !t.includes("PWNED"), "a control character or an OSC's text on screen");
+        s.expect(
+          !UNSAFE.test(t.replace(/\n/g, "")) && !t.includes("PWNED"),
+          "a control character or an OSC's text on screen",
+        );
       };
       for (let i = 0; i < 3 && !s.statusLine().includes("FILES"); i++) await leader(s, "e");
       await s.see("n-");
@@ -86,7 +105,11 @@ const CORE: Scenario[] = [
       for (let i = 0; i < 3 && s.text().includes("Explorer"); i++) await leader(s, "e");
       await leader(s, "l", "b"); // it links to home, so it is in home's list, by name
       await s.see("Linking to");
-      await s.until(() => s.screen().some((r, i) => i > s.rowOf("Linking to") && /n-.*cod/.test(r)), 3000, "the hostile note in home's backlinks");
+      await s.until(
+        () => s.screen().some((r, i) => i > s.rowOf("Linking to") && /n-.*cod/.test(r)),
+        3000,
+        "the hostile note in home's backlinks",
+      );
       clean();
     },
   },
@@ -97,7 +120,11 @@ const CORE: Scenario[] = [
       open: "big.md",
       files: {
         // 16,000 lines, 700 KB: past the 128 KB that sends a parse to the workers.
-        "big.md": Array.from({ length: 8000 }, (_, i) => (i % 40 === 0 ? `## Part ${i}\n` : `Line ${i} of the big note, with [[home]] and enough words to fill a row or so.\n`)).join("\n"),
+        "big.md": Array.from({ length: 8000 }, (_, i) =>
+          i % 40 === 0
+            ? `## Part ${i}\n`
+            : `Line ${i} of the big note, with [[home]] and enough words to fill a row or so.\n`,
+        ).join("\n"),
       },
     },
     run: async (s) => {
@@ -128,7 +155,8 @@ const CORE: Scenario[] = [
     // `[[contacts]]` two notes answer to, so it asks which.
     options: {
       files: {
-        "old-note.md": "# Old note\n\nSee [[about-this-vault]] and [[contacts]]; the first thread is [[variable-star-survey^thread-one]].\n\n![[wrap-probe]]\n",
+        "old-note.md":
+          "# Old note\n\nSee [[about-this-vault]] and [[contacts]]; the first thread is [[variable-star-survey^thread-one]].\n\n![[wrap-probe]]\n",
       },
     },
     run: async (s) => {
@@ -147,7 +175,11 @@ const CORE: Scenario[] = [
       await s.notSee("pick old-note.md:3");
       await s.keys("enter");
       await s.message(/converted links to plain paths: \d+ changes/); // short: the box wraps the rest
-      await s.file("old-note.md", (t) => t.includes("[contacts](people/contacts.md)") && t.includes("[about-this-vault](about-this-vault.md)"), "converted");
+      await s.file(
+        "old-note.md",
+        (t) => t.includes("[contacts](people/contacts.md)") && t.includes("[about-this-vault](about-this-vault.md)"),
+        "converted",
+      );
       // The embed, a path now, still drawn in place.
       await s.see("Table A — ordinary prose, no long tokens."); // wrap-probe's text, embedded
       // The block link, a path now, followed: at the paragraph its ^id closes.
@@ -325,11 +357,22 @@ const CORE: Scenario[] = [
       // below the tab bar and right of the explorer's border, both of which name files too. By code
       // point, not string index: Nerd glyphs outside the BMP (the explorer's buttons, its icons)
       // take two UTF-16 units for one column.
-      const border = () => Math.max(0, [...(s.screen()[2] ?? "")].findIndex((ch) => ch === "│" || ch === "┃"));
+      const border = () =>
+        Math.max(
+          0,
+          [...(s.screen()[2] ?? "")].findIndex((ch) => ch === "│" || ch === "┃"),
+        );
       const NAME = /\b(home|writing-guide)\b(?=\.md\b)/g;
-      const rows = () => s.screen().slice(3, -1).map((r) => [...r].slice(border() + 1).join(""));
+      const rows = () =>
+        s
+          .screen()
+          .slice(3, -1)
+          .map((r) => [...r].slice(border() + 1).join(""));
       const notes = () => rows().join("\n").match(NAME) ?? [];
-      const order = () => notes().map((n) => `${n}.md`).join(" ");
+      const order = () =>
+        notes()
+          .map((n) => `${n}.md`)
+          .join(" ");
       // A tab holds one window, or two in a split: side by side (both names on one row), or
       // stacked (ctrl+w s turns it).
       const sameRow = () => rows().some((r) => (r.match(NAME) ?? []).length === 2);
@@ -346,10 +389,19 @@ const CORE: Scenario[] = [
       const focused = () => /\b(home|writing-guide)\.md\b/.exec(s.statusLine())?.[1] ?? "";
       // Moving a window to an edge turns the split and puts it there, focused: H left, K top, L
       // right, J bottom. Side by side, ctrl+w l and h move the focus right and back.
-      for (const [k, side, first] of [["H", true, true], ["K", false, true], ["L", true, false], ["J", false, false]] as const) {
+      for (const [k, side, first] of [
+        ["H", true, true],
+        ["K", false, true],
+        ["L", true, false],
+        ["J", false, false],
+      ] as const) {
         await s.keys("ctrl+w");
         await s.type(k);
-        await s.until(() => sameRow() === side && notes()[first ? 0 : 1] === focused(), 3000, `ctrl+w ${k}: ${side ? "side by side" : "stacked"}, ${first ? (side ? "left" : "top") : side ? "right" : "bottom"}`);
+        await s.until(
+          () => sameRow() === side && notes()[first ? 0 : 1] === focused(),
+          3000,
+          `ctrl+w ${k}: ${side ? "side by side" : "stacked"}, ${first ? (side ? "left" : "top") : side ? "right" : "bottom"}`,
+        );
         if (k === "H") {
           await s.keys("ctrl+w", "l");
           await s.until(() => focused() === notes()[1], 3000, "ctrl+w l to the right window");
@@ -362,7 +414,9 @@ const CORE: Scenario[] = [
       await s.keys("ctrl+w", "x");
       await s.until(() => order() === before.split(" ").reverse().join(" "), 3000, "ctrl+w x to swap the windows");
       // Focus. Stacked now: k is the top one.
-      const [topNote, bottomNote] = order().split(" ").map((n) => n.replace(/\.md$/, ""));
+      const [topNote, bottomNote] = order()
+        .split(" ")
+        .map((n) => n.replace(/\.md$/, ""));
       await s.keys("ctrl+w", "k");
       await s.until(() => focused() === topNote, 3000, "ctrl+w k to the top window");
       await s.keys("ctrl+w", "j");
@@ -370,7 +424,11 @@ const CORE: Scenario[] = [
       await s.keys("ctrl+w", "w");
       await s.until(() => focused() === topNote, 3000, "ctrl+w w to the other window");
       // Resize, one step at a time: where the lower window's breadcrumb sits moves, = evens it.
-      const split = () => s.screen().slice(0, -1).findLastIndex((r) => /\b(home|writing-guide)\.md\b/.test(r));
+      const split = () =>
+        s
+          .screen()
+          .slice(0, -1)
+          .findLastIndex((r) => /\b(home|writing-guide)\.md\b/.test(r));
       const even = split();
       const step = async (k: string) => {
         await s.keys("ctrl+w");
@@ -483,7 +541,11 @@ const CORE: Scenario[] = [
       await leader(s, "n", "v");
       await s.status("SOURCE");
       await s.keys("g", "g", "alt+shift+down");
-      await s.until(() => s.rowOf(/│ bravo/) >= 0 && s.rowOf(/│ bravo/) < s.rowOf(/│ alpha/), 3000, "alpha moved below bravo");
+      await s.until(
+        () => s.rowOf(/│ bravo/) >= 0 && s.rowOf(/│ bravo/) < s.rowOf(/│ alpha/),
+        3000,
+        "alpha moved below bravo",
+      );
       await s.keys("G", "A");
       await s.type("!");
       await s.keys("escape", "g", "g");
@@ -526,7 +588,11 @@ const CORE: Scenario[] = [
       // zt, zb and zz put the cursor's line where H, L and M land: each pair agrees, so a scroll
       // that went nowhere (or anywhere else) moves the cursor on the second key.
       const here = pos(s).line;
-      for (const [z, key, what] of [["t", "shift+h", "zt then H"], ["b", "shift+l", "zb then L"], ["z", "shift+m", "zz then M"]] as const) {
+      for (const [z, key, what] of [
+        ["t", "shift+h", "zt then H"],
+        ["b", "shift+l", "zb then L"],
+        ["z", "shift+m", "zz then M"],
+      ] as const) {
         await s.keys("z", z);
         s.expect(pos(s).line === here, `z${z} moves the view, never the cursor`);
         await s.keys(key);
@@ -665,7 +731,11 @@ const CORE: Scenario[] = [
       await s.see("Footnotes");
       await s.see(/\[1\] Counted at the/);
       await s.see(/\[charter\]/);
-      await s.until(() => s.screen().some((r) => /▤\s*$/.test(r)) && s.screen().some((r) => /(\u{f0283}|¹|\^)\s*$/u.test(r)), 3000, "the rail's ▤ and † under it");
+      await s.until(
+        () => s.screen().some((r) => /▤\s*$/.test(r)) && s.screen().some((r) => /(\u{f0283}|¹|\^)\s*$/u.test(r)),
+        3000,
+        "the rail's ▤ and † under it",
+      );
       await s.keys("l");
       await s.see("L95");
       await s.keys("j", "enter");
@@ -676,7 +746,11 @@ const CORE: Scenario[] = [
       await s.type("Checked against the ledger");
       await s.keys("enter");
       await s.message("added footnote [^2]");
-      await s.file("people/partners-and-names.md", (t) => t.includes("[^2]: Checked against the ledger\n"), "the definition at the end");
+      await s.file(
+        "people/partners-and-names.md",
+        (t) => t.includes("[^2]: Checked against the ledger\n"),
+        "the definition at the end",
+      );
       await s.see(/\[2\] C/); // the row, beside the message floating over the panel
       // Back to the outline with space o: the panel's other view; :footnotes toggles them back.
       await leader(s, "o");
@@ -741,7 +815,13 @@ const CORE: Scenario[] = [
   },
   {
     name: "problems panel: space n q — this file's problems with their lines, spaced; j shows the next, enter goes there; / filters; ctrl+w + resizes; tab to All, q closes; ⚠ 0 with none",
-    options: { files: { "scratch/two.md": "# Two\n\nSee [a](gone-a.png) first.\n\nThen [b](gone-b.png) too.\n", "scratch/clean.md": "# Clean\n" }, open: "scratch/two.md" },
+    options: {
+      files: {
+        "scratch/two.md": "# Two\n\nSee [a](gone-a.png) first.\n\nThen [b](gone-b.png) too.\n",
+        "scratch/clean.md": "# Clean\n",
+      },
+      open: "scratch/two.md",
+    },
     run: async (s) => {
       await s.status(signed("{warning} 2"), 5000);
       await leader(s, "n", "q");
@@ -797,7 +877,9 @@ const CORE: Scenario[] = [
   {
     name: "language servers: a TypeScript file's errors from TypeScript's own server, in the bar and the status line",
     // In source mode, where the bar is: code opens in the code view by default.
-    options: { config: `[render]\ncode = "source"\n\n[lsp]\nenabled = true\n\n[language-server.typescript]\ncommand = ${JSON.stringify(TSC)}\n` },
+    options: {
+      config: `[render]\ncode = "source"\n\n[lsp]\nenabled = true\n\n[language-server.typescript]\ncommand = ${JSON.stringify(TSC)}\n`,
+    },
     run: async (s) => {
       s.write("scratch/tool.ts", 'const n: number = "x";\nexport const m = n;\n');
       await s.ex("e scratch/tool.ts");
@@ -806,10 +888,14 @@ const CORE: Scenario[] = [
       await s.status(signed("{error} 1"), 15000);
       await problemListed(s, signed("{error} 1:\\d+ +Type 'string' is not assignable to type 'number'"));
       // The bar: the error's line number in the error's colour, its neighbour's not.
-      await s.until(() => {
-        const [bad, good] = [s.styleOf("1  const n: number"), s.styleOf("2  export const m")];
-        return !!bad && !!good && bad.fg !== good.fg;
-      }, 5000, "line 1's number in the error's colour");
+      await s.until(
+        () => {
+          const [bad, good] = [s.styleOf("1  const n: number"), s.styleOf("2  export const m")];
+          return !!bad && !!good && bad.fg !== good.fg;
+        },
+        5000,
+        "line 1's number in the error's colour",
+      );
       // What's under the cursor (19.12, 19.13): n's type, floating; from its use, its declaration; its uses.
       await s.keys("w");
       await s.keys("shift+k");
@@ -832,14 +918,18 @@ const CORE: Scenario[] = [
       await s.see("export const m = count;");
       // Its code actions for the line, and its formatting: each says what it did.
       await leader(s, "c", "a");
-      await s.until(() => /Code actions|no code actions here/.test(s.screen().join("\n")), 10000, "the code actions, or none");
+      await s.until(
+        () => /Code actions|no code actions here/.test(s.screen().join("\n")),
+        10000,
+        "the code actions, or none",
+      );
       await s.keys("escape");
       await leader(s, "c", "f");
       await s.until(() => /formatted|doesn't format/.test(s.screen().join("\n")), 10000, "formatted, or said it can't");
       await s.keys("u"); // whatever it formatted, taken back
       await s.keys("g", "g");
       // Fixed and typed in: gone once it's said so again.
-      await s.keys("f", "\"", "d", "a", "\"", "i");
+      await s.keys("f", '"', "d", "a", '"', "i");
       await s.type("1");
       await s.keys("escape");
       await s.until(() => !signed("{error}").test(s.statusLine()), 10000, "the error gone with the fix");
@@ -860,11 +950,15 @@ const CORE: Scenario[] = [
     name: "trust: a Go file, language servers on — asked once whether you trust the root; y kept across a start; :untrust (23.x)",
     options: {
       config: "[lsp]\nenabled = true\nauto_install = false\n",
-      files: { "code/go.mod": "module probe\n\ngo 1.24\n", "code/main.go": 'package main\n\nfunc main() {\n\tvar x int = "a"\n\t_ = x\n}\n' },
+      files: {
+        "code/go.mod": "module probe\n\ngo 1.24\n",
+        "code/main.go": 'package main\n\nfunc main() {\n\tvar x int = "a"\n\t_ = x\n}\n',
+      },
     },
     run: async (s) => {
       // gopls has a safe mode (no toolchain downloads, no cgo): where it runs, an unanswered root is asked about.
-      if (!Bun.which("gopls") && !existsSync(join(homedir(), "go", "bin", "gopls"))) throw new Skipped("gopls isn't installed here");
+      if (!Bun.which("gopls") && !existsSync(join(homedir(), "go", "bin", "gopls")))
+        throw new Skipped("gopls isn't installed here");
       const answers = () => readFileSync(join(s.dir, "state", "slipbox", "trust.json"), "utf8");
       await s.ex("e code/main.go");
       await s.status("main.go");
@@ -885,7 +979,9 @@ const CORE: Scenario[] = [
   {
     name: "language servers: g y goes to the type's definition, g shift+i lists the implementations to pick from — TypeScript's own server (19.13)",
     // In source mode, where the bar is: code opens in the code view by default.
-    options: { config: `[render]\ncode = "source"\n\n[lsp]\nenabled = true\n\n[language-server.typescript]\ncommand = ${JSON.stringify(TSC)}\n` },
+    options: {
+      config: `[render]\ncode = "source"\n\n[lsp]\nenabled = true\n\n[language-server.typescript]\ncommand = ${JSON.stringify(TSC)}\n`,
+    },
     run: async (s) => {
       s.write(
         "scratch/shapes.ts",
@@ -947,7 +1043,11 @@ const CORE: Scenario[] = [
       await s.status("FILES");
       // Revealed: the note's own row in the explorer, left of the border (its name cut where the
       // selected row's buttons sit).
-      await s.until(() => s.screen().some((r) => /operations-han\S*…?.*[│┃]/.test(r) && !/╞|├─/.test(r.slice(r.search(/[│┃]/)))), 3000, "the note revealed in the explorer");
+      await s.until(
+        () => s.screen().some((r) => /operations-han\S*…?.*[│┃]/.test(r) && !/╞|├─/.test(r.slice(r.search(/[│┃]/)))),
+        3000,
+        "the note revealed in the explorer",
+      );
       await s.keys("escape");
       await focus("o", "OUTLINE");
       await s.see("Outline");
@@ -1071,7 +1171,11 @@ const CORE: Scenario[] = [
       await s.keys("escape");
       await s.status("• unsaved");
       await s.keys("ctrl+s");
-      await s.file(MEETING, (t) => ["[i]", "[a]", "[I]", "[A]", "[o]", "[O]"].every((x) => t.includes(x)), "all six inserts saved");
+      await s.file(
+        MEETING,
+        (t) => ["[i]", "[a]", "[I]", "[A]", "[o]", "[O]"].every((x) => t.includes(x)),
+        "all six inserts saved",
+      );
       // u takes the last insert away, ctrl+r and U bring it back: each seen on the screen.
       await s.keys("u");
       await s.notSee("[O]");
@@ -1114,12 +1218,19 @@ const CORE: Scenario[] = [
       await s.keys("ctrl+s");
       // The exact text the same keys give headlessly (tests/tui.test.ts's harness): the terminal's
       // key encoding changed nothing on the way.
-      await s.file(MEETING, (t) => t.endsWith("for the nights we did get.\nBETA gamma delta\nXTA \n"), "the exact result of those keys");
+      await s.file(
+        MEETING,
+        (t) => t.endsWith("for the nights we did get.\nBETA gamma delta\nXTA \n"),
+        "the exact result of those keys",
+      );
     },
   },
   {
     name: "vim grammar: counts, F, text objects (iW, vi(), *, cgn and ., insert's ctrl+w and ctrl+u",
-    options: { open: "edit-probe.md", files: { "edit-probe.md": "alpha beta gamma\na.b c\nf(ab) x\none two one two\n" } },
+    options: {
+      open: "edit-probe.md",
+      files: { "edit-probe.md": "alpha beta gamma\na.b c\nf(ab) x\none two one two\n" },
+    },
     run: async (s) => {
       await leader(s, "n", "v");
       await s.status("SOURCE");
@@ -1141,12 +1252,19 @@ const CORE: Scenario[] = [
       await s.type("final");
       await s.keys("escape", "0", "3", "x", "ctrl+s"); // al
       // What the same keys give headlessly, and what vim gives.
-      await s.file("edit-probe.md", (t) => t === "alpha eta gamma\n c\nf() x\n1 two 1 two\nal\n", "the exact result of those keys");
+      await s.file(
+        "edit-probe.md",
+        (t) => t === "alpha eta gamma\n c\nf() x\n1 two 1 two\nal\n",
+        "the exact result of those keys",
+      );
     },
   },
   {
     name: "repeat: . after an o begun in the render opens the same line again; . after a terminal's paste in normal mode puts it again, not the x before",
-    options: { open: "o-render.md", files: { "o-render.md": "# J\n\nalpha one\n\nbeta two\n", "paste-dot.md": "abcdef\n" } },
+    options: {
+      open: "o-render.md",
+      files: { "o-render.md": "# J\n\nalpha one\n\nbeta two\n", "paste-dot.md": "abcdef\n" },
+    },
     run: async (s) => {
       await s.status("READ");
       await s.keys("/");
@@ -1157,7 +1275,11 @@ const CORE: Scenario[] = [
       await s.type("xy");
       await s.keys("escape");
       await s.keys("j", "j", ".", "ctrl+s");
-      await s.file("o-render.md", (t) => t === "# J\n\nalpha one\nxy\n\nbeta two\nxy\n", "the o repeated below beta two");
+      await s.file(
+        "o-render.md",
+        (t) => t === "# J\n\nalpha one\nxy\n\nbeta two\nxy\n",
+        "the o repeated below beta two",
+      );
       // A paste as the terminal sends it (bracketed), in normal mode: put after the cursor, like p; . puts it again.
       await open(s, "paste-dot");
       if (!s.statusLine().includes("SOURCE")) await leader(s, "n", "v");
@@ -1178,7 +1300,11 @@ const CORE: Scenario[] = [
       await s.keys("/");
       await s.type("book the courier");
       await s.keys("enter", "ctrl+l");
-      await s.file(MEETING, (t) => t !== before && t.includes("- [x] Tomasz: book the courier"), "the task ticked on disk");
+      await s.file(
+        MEETING,
+        (t) => t !== before && t.includes("- [x] Tomasz: book the courier"),
+        "the task ticked on disk",
+      );
     },
   },
   {
@@ -1191,7 +1317,10 @@ const CORE: Scenario[] = [
       await s.see("source · lines");
       // Its size by hand: + a block more, - one less, = its own size.
       const lines = () => /source · lines? (\d+)(?:–(\d+))?/.exec(s.text())?.slice(1).map(Number) ?? [];
-      const size = () => { const [a, b] = lines(); return (b ?? a!) - a! + 1; };
+      const size = () => {
+        const [a, b] = lines();
+        return (b ?? a!) - a! + 1;
+      };
       const before = size();
       await s.type("+");
       await s.until(() => size() > before, 3000, "+ to grow the lens");
@@ -1214,7 +1343,10 @@ const CORE: Scenario[] = [
     name: "lens: a link followed from it opens the lens on the new note — its text drawn, typing lands there; ctrl+o back to the first",
     options: {
       open: "lens-a.md",
-      files: { "lens-a.md": "# Alpha\n\nSee [b](lens-b.md) here.\n\nAAAA text of alpha.\n", "lens-b.md": "# Beta\n\nBBBB beta.\n\nMore beta.\n" },
+      files: {
+        "lens-a.md": "# Alpha\n\nSee [b](lens-b.md) here.\n\nAAAA text of alpha.\n",
+        "lens-b.md": "# Beta\n\nBBBB beta.\n\nMore beta.\n",
+      },
     },
     run: async (s) => {
       await s.keys("/");
@@ -1238,7 +1370,11 @@ const CORE: Scenario[] = [
       await s.keys("0", "i", "Z");
       await s.keys("escape");
       await s.keys("ctrl+s");
-      await s.file("lens-b.md", (t) => t === "# Beta\n\nBBBB beta.\n\nZMore beta.\n", "Z typed at the start of b's last line");
+      await s.file(
+        "lens-b.md",
+        (t) => t === "# Beta\n\nBBBB beta.\n\nZMore beta.\n",
+        "Z typed at the start of b's last line",
+      );
       s.expect(s.read("lens-a.md") === "# Alpha\n\nSee [b](lens-b.md) here.\n\nAAAA text of alpha.\n", "a untouched");
       // Back: a's own text again.
       await s.keys("ctrl+o");
@@ -1330,7 +1466,11 @@ const CORE: Scenario[] = [
       // The grammar loads lazily: until it has, there are no definitions to pick ("no headings").
       for (let i = 0; i < 20 && s.rowOf("Headings —") < 0; i++) {
         await leader(s, "f", "o");
-        await s.until(() => s.rowOf("Headings —") >= 0 || s.rowOf("no headings") >= 0, 3000, "the picker, or no headings yet");
+        await s.until(
+          () => s.rowOf("Headings —") >= 0 || s.rowOf("no headings") >= 0,
+          3000,
+          "the picker, or no headings yet",
+        );
         if (s.rowOf("Headings —") < 0) await s.notSee("no headings", 6000); // the message gone, asked again
       }
       await s.see(/is_calibration\s+\d+/);
@@ -1423,7 +1563,11 @@ const CORE: Scenario[] = [
       await s.keys("G", "o");
       await s.type("mine");
       await s.keys("escape");
-      await s.until(() => JSON.parse(s.cli("info", "--json").out).stale.length === 1, 3000, "the CLI to see the unsaved note");
+      await s.until(
+        () => JSON.parse(s.cli("info", "--json").out).stale.length === 1,
+        3000,
+        "the CLI to see the unsaved note",
+      );
     },
   },
   {
@@ -1457,7 +1601,10 @@ const CORE: Scenario[] = [
   {
     name: "settings: space u u, every toggle, themes and glyph sets",
     // A long paragraph and an external link: what the toggles change shows on them.
-    options: { open: "settings.md", files: { "settings.md": `# Settings\n\n${"word ".repeat(150)}end.\n\n[the site](https://example.org/x)\n` } },
+    options: {
+      open: "settings.md",
+      files: { "settings.md": `# Settings\n\n${"word ".repeat(150)}end.\n\n[the site](https://example.org/x)\n` },
+    },
     run: async (s) => {
       await leader(s, "u", "u");
       await s.see("UI settings");
@@ -1466,16 +1613,34 @@ const CORE: Scenario[] = [
       // band and the mouse change nothing a text screen shows (the colour scenarios read colours).
       // (The paragraph's rows counted: its end may sit under the messages' boxes, top right.)
       const wordRows = () => s.screen().filter((r) => r.includes("word word")).length;
-      const effect: Record<string, { read: () => number | boolean; ok: (on: number | boolean, off: number | boolean) => boolean }> = {
+      const effect: Record<
+        string,
+        { read: () => number | boolean; ok: (on: number | boolean, off: number | boolean) => boolean }
+      > = {
         "Readable width": { read: wordRows, ok: (on, off) => (on as number) > (off as number) }, // narrower: more rows
         "Wrap long lines": { read: wordRows, ok: (on, off) => (on as number) > 1 && off === 1 },
-        "Line numbers": { read: () => s.rowOf(/[│┃]\s+1\s.*Settings/) >= 0, ok: (on, off) => on === true && off === false },
+        "Line numbers": {
+          read: () => s.rowOf(/[│┃]\s+1\s.*Settings/) >= 0,
+          ok: (on, off) => on === true && off === false,
+        },
         "Zen mode": { read: () => s.text().includes("Explorer"), ok: (on, off) => on === false && off === true },
-        "Show link URLs": { read: () => s.text().includes("https://example.org/x"), ok: (on, off) => on === true && off === false },
+        "Show link URLs": {
+          read: () => s.text().includes("https://example.org/x"),
+          ok: (on, off) => on === true && off === false,
+        },
       };
       // Each toggle says its own name and the new state, then flips back (the message names it,
       // so a stale message from the one before can't pass).
-      const names: Record<string, string> = { "shift+w": "Readable width", d: "Problems bar", z: "Zen mode", l: "Cursor-row highlight", n: "Line numbers", w: "Wrap long lines", r: "Show link URLs", m: "Mouse" };
+      const names: Record<string, string> = {
+        "shift+w": "Readable width",
+        d: "Problems bar",
+        z: "Zen mode",
+        l: "Cursor-row highlight",
+        n: "Line numbers",
+        w: "Wrap long lines",
+        r: "Show link URLs",
+        m: "Mouse",
+      };
       for (const [k, name] of Object.entries(names)) {
         await leader(s, "u", k);
         await s.see(new RegExp(`${name}: (on|off)`)); // on the top bar, or the last row in zen
@@ -1486,7 +1651,10 @@ const CORE: Scenario[] = [
         const e = effect[name];
         if (e) {
           const b = e.read();
-          s.expect(first === "on" ? e.ok(a!, b) : e.ok(b, a!), `${name}: what it changes on screen (${first}: ${a}, then ${b})`);
+          s.expect(
+            first === "on" ? e.ok(a!, b) : e.ok(b, a!),
+            `${name}: what it changes on screen (${first}: ${a}, then ${b})`,
+          );
         }
       }
       // The breadcrumb, from the palette: gone.
@@ -1571,7 +1739,11 @@ const CORE: Scenario[] = [
       await s.type("status: visiting");
       await s.keys("escape", "escape");
       await s.message("properties written");
-      await s.file("people/kenji-mori.md", (t) => t.includes("status: visiting\n---"), "the property in the frontmatter");
+      await s.file(
+        "people/kenji-mori.md",
+        (t) => t.includes("status: visiting\n---"),
+        "the property in the frontmatter",
+      );
       await leader(s, "n", "i");
       await s.see(/status +visiting/);
       // A tag's row: its notes.
@@ -1597,7 +1769,9 @@ const CORE: Scenario[] = [
   {
     name: "hand-off: space n e runs the editor and comes back; send to a remote editor",
     // Each editor leaves a file behind, so the check is that it really ran, with the note's path.
-    options: { config: `[editor]\ncommand = "sh -c 'echo $0 > $1' {file} {vault}/ran-edit"\nremote = ["sh -c 'echo $0 > $1' {file} {vault}/ran-send"]\n` },
+    options: {
+      config: `[editor]\ncommand = "sh -c 'echo $0 > $1' {file} {vault}/ran-edit"\nremote = ["sh -c 'echo $0 > $1' {file} {vault}/ran-send"]\n`,
+    },
     run: async (s) => {
       await leader(s, "n", "e");
       await s.status("home.md", 5000);
@@ -1605,7 +1779,10 @@ const CORE: Scenario[] = [
       s.expect(readFileSync(join(s.vault, "ran-edit"), "utf8").trim().endsWith("home.md"), "the editor got the note");
       await leader(s, "n", "s");
       await s.until(() => existsSync(join(s.vault, "ran-send")), 5000, "the remote editor to run");
-      s.expect(readFileSync(join(s.vault, "ran-send"), "utf8").trim().endsWith("home.md"), "the remote editor got the note");
+      s.expect(
+        readFileSync(join(s.vault, "ran-send"), "utf8").trim().endsWith("home.md"),
+        "the remote editor got the note",
+      );
       await leader(s, "n", "p");
       await s.keys("escape");
     },
@@ -1614,7 +1791,8 @@ const CORE: Scenario[] = [
   {
     name: "git: a branch switch while it runs — the vault and its branch in the status line, said once, each branch's tabs back",
     run: async (s) => {
-      const git = (...args: string[]) => Bun.spawnSync(["git", "-c", "user.email=t@example.invalid", "-c", "user.name=t", "-C", s.vault, ...args]);
+      const git = (...args: string[]) =>
+        Bun.spawnSync(["git", "-c", "user.email=t@example.invalid", "-c", "user.name=t", "-C", s.vault, ...args]);
       if (git("init", "-q", "-b", "main").exitCode !== 0) return; // no git here
       git("add", "-A");
       git("commit", "-q", "-m", "the demo");
@@ -1636,7 +1814,8 @@ const CORE: Scenario[] = [
   {
     name: "git: the explorer's marks; space g c what changed, a file's diff; space g d this note's",
     run: async (s) => {
-      const git = (...args: string[]) => Bun.spawnSync(["git", "-c", "user.email=t@example.invalid", "-c", "user.name=t", "-C", s.vault, ...args]);
+      const git = (...args: string[]) =>
+        Bun.spawnSync(["git", "-c", "user.email=t@example.invalid", "-c", "user.name=t", "-C", s.vault, ...args]);
       if (git("init", "-q", "-b", "main").exitCode !== 0) return; // no git here
       git("add", "-A");
       git("commit", "-q", "-m", "the demo");
@@ -1665,7 +1844,8 @@ const CORE: Scenario[] = [
   {
     name: "git: space g m — a merge's broken links before it, each fix said; after it, git's rename says where a file went (20.21)",
     run: async (s) => {
-      const git = (...args: string[]) => Bun.spawnSync(["git", "-c", "user.email=t@example.invalid", "-c", "user.name=t", "-C", s.vault, ...args]);
+      const git = (...args: string[]) =>
+        Bun.spawnSync(["git", "-c", "user.email=t@example.invalid", "-c", "user.name=t", "-C", s.vault, ...args]);
       if (git("init", "-q", "-b", "main").exitCode !== 0) return; // no git here
       git("add", "-A");
       git("commit", "-q", "-m", "the demo");
@@ -1705,7 +1885,8 @@ const CORE: Scenario[] = [
     options: {
       open: "vault-links.md",
       files: {
-        "vault-links.md": "# Vault links\n\n- [the app's goals](../app/design.md#goals)\n- [somewhere](../nope/somewhere.md)\n",
+        "vault-links.md":
+          "# Vault links\n\n- [the app's goals](../app/design.md#goals)\n- [somewhere](../nope/somewhere.md)\n",
         "inner-vault/.slipbox/config.toml": '[vault]\nid = "e2einner0001"\nname = "inner-name"\n',
         "inner-vault/inside.md": "# Inside the inner vault\n",
       },
@@ -1763,8 +1944,14 @@ const CORE: Scenario[] = [
       await s.see(/name halden → halden2: \d+ changes? in \d+ files?/);
       await s.keys("enter");
       await s.message("named the folder halden → halden2");
-      s.expect(readFileSync(join(s.dir, "app", "links.md"), "utf8").includes("[home](../vault/home.md)"), "the other vault's path as it was");
-      s.expect(s.read("outreach/index.md").includes("[the observatory's home](../home.md)"), "the nested vault's path as it was");
+      s.expect(
+        readFileSync(join(s.dir, "app", "links.md"), "utf8").includes("[home](../vault/home.md)"),
+        "the other vault's path as it was",
+      );
+      s.expect(
+        s.read("outreach/index.md").includes("[the observatory's home](../home.md)"),
+        "the nested vault's path as it was",
+      );
     },
   },
   {
@@ -1806,8 +1993,15 @@ const CORE: Scenario[] = [
       await s.keys("enter");
       await s.see(/outreach\/ → handbook\/outreach\//);
       await s.keys("enter");
-      await s.file("handbook/outreach/index.md", (t) => t.includes("[the operations handbook](../operations-handbook.md)"), "outreach's link out fixed");
-      s.expect(s.read("handbook/outreach/school-visits/index.md").includes("(../../safety-card.adoc)"), "two deep: fixed too");
+      await s.file(
+        "handbook/outreach/index.md",
+        (t) => t.includes("[the operations handbook](../operations-handbook.md)"),
+        "outreach's link out fixed",
+      );
+      s.expect(
+        s.read("handbook/outreach/school-visits/index.md").includes("(../../safety-card.adoc)"),
+        "two deep: fixed too",
+      );
       s.expect(s.read("home.md").includes("[outreach](handbook/outreach/index.md)"), "home's path into it follows");
     },
   },
@@ -1922,7 +2116,11 @@ const CORE: Scenario[] = [
       await s.keys("enter");
       await s.see("people/ → folk/");
       await s.keys("enter");
-      await s.file("folk/contacts.md", (t) => t.includes("Typed before the move"), "the folder renamed, the note in it");
+      await s.file(
+        "folk/contacts.md",
+        (t) => t.includes("Typed before the move"),
+        "the folder renamed, the note in it",
+      );
       s.expect(!s.exists("people"), "people/ gone");
       await s.status("folk/contacts.md");
       await s.see("Typed before the move");
@@ -1943,10 +2141,23 @@ const CORE: Scenario[] = [
       await s.message("renamed people/kenji-mori.md → people/kenji.md");
       await s.status("kenji.md");
       s.expect(!s.exists("people/kenji-mori.md"), "the old file is gone");
-      await s.file("people/kenji.md", (t) => t.includes("# Kenji Mori") && !t.includes("previous_names"), "no old name written into it (21.12)");
-      s.expect(s.read("home.md").includes("- [kenji-mori](people/kenji.md) — our visiting astronomer"), "home's link follows");
-      s.expect(s.read("people/partners-and-names.md").includes("[kenji-mori.md](kenji.md); the names"), "the note beside it too");
-      s.expect(s.read("people/partners-and-names.md").includes("![kenji-mori › Kenji Mori](kenji.md#kenji-mori)"), "the embed follows");
+      await s.file(
+        "people/kenji.md",
+        (t) => t.includes("# Kenji Mori") && !t.includes("previous_names"),
+        "no old name written into it (21.12)",
+      );
+      s.expect(
+        s.read("home.md").includes("- [kenji-mori](people/kenji.md) — our visiting astronomer"),
+        "home's link follows",
+      );
+      s.expect(
+        s.read("people/partners-and-names.md").includes("[kenji-mori.md](kenji.md); the names"),
+        "the note beside it too",
+      );
+      s.expect(
+        s.read("people/partners-and-names.md").includes("![kenji-mori › Kenji Mori](kenji.md#kenji-mori)"),
+        "the embed follows",
+      );
       // A link written later with the old path: broken, its move known — relink rewrites it.
       s.write("late-note.md", "# Late\n\nAsk [Kenji](people/kenji-mori.md) about Aster.\n");
       await s.see("late-note.md"); // the watcher has it: the switcher lists it
@@ -1959,14 +2170,21 @@ const CORE: Scenario[] = [
       await leader(s, "v", "shift+u");
       await s.see("undo: relink: 1 change in 1 file");
       await s.keys("enter");
-      await s.file("late-note.md", (t) => t.includes("Ask [Kenji](people/kenji-mori.md) about Aster."), "the relink undone");
+      await s.file(
+        "late-note.md",
+        (t) => t.includes("Ask [Kenji](people/kenji-mori.md) about Aster."),
+        "the relink undone",
+      );
       await leader(s, "v", "shift+u");
       await s.see(/undo: people\/kenji\.md → people\/kenji-mori\.md: \d+ changes/);
       await s.keys("enter");
       await s.message("renamed people/kenji.md back to"); // the toast wraps the rest
       await s.file("people/kenji-mori.md", (t) => !t.includes("previous_names"), "the note back, as it was");
       s.expect(!s.exists("people/kenji.md"), "the new name is gone");
-      s.expect(s.read("home.md").includes("- [kenji-mori](people/kenji-mori.md) — our visiting astronomer"), "home's link back");
+      s.expect(
+        s.read("home.md").includes("- [kenji-mori](people/kenji-mori.md) — our visiting astronomer"),
+        "home's link back",
+      );
       // A heading renamed (11.9): its line, and the embed of it elsewhere.
       await open(s, "kenji-mori");
       await s.keys(":");
@@ -1980,7 +2198,10 @@ const CORE: Scenario[] = [
       await s.see(/#Kenji Mori → people\/kenji-mori\.md#Kenji Mori, astronomer: \d+ changes/); // the title is cut there
       await s.keys("enter");
       await s.file("people/kenji-mori.md", (t) => t.includes("# Kenji Mori, astronomer\n"), "the heading renamed");
-      s.expect(s.read("people/partners-and-names.md").includes("(kenji-mori.md#kenji-mori-astronomer)"), "the embed follows");
+      s.expect(
+        s.read("people/partners-and-names.md").includes("(kenji-mori.md#kenji-mori-astronomer)"),
+        "the embed follows",
+      );
       // The explorer's r asks for the selected note's new name; esc cancels.
       await leader(s, "e");
       await s.keys("r");
@@ -2060,4 +2281,13 @@ const CORE: Scenario[] = [
 ];
 
 /** Every scenario: the app's own (above), then slipbox in its world (world-*.ts). */
-export const SCENARIOS: Scenario[] = [...CORE, ...GIT_SCENARIOS, ...CONTENT_SCENARIOS, ...TERMINAL_SCENARIOS, ...OUTSIDE_SCENARIOS, ...LINK_SCENARIOS, ...EXPORT_SCENARIOS, ...FIXES_SCENARIOS];
+export const SCENARIOS: Scenario[] = [
+  ...CORE,
+  ...GIT_SCENARIOS,
+  ...CONTENT_SCENARIOS,
+  ...TERMINAL_SCENARIOS,
+  ...OUTSIDE_SCENARIOS,
+  ...LINK_SCENARIOS,
+  ...EXPORT_SCENARIOS,
+  ...FIXES_SCENARIOS,
+];

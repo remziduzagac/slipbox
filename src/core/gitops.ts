@@ -28,7 +28,9 @@ export function gitGuardsAttributes(): boolean {
  */
 function takesAttrSource(): boolean {
   if (attrSource === null) {
-    const v = /git version (\d+)\.(\d+)/.exec(spawnSync("git", ["--version"], { encoding: "utf8", timeout: 15_000 }).stdout ?? "");
+    const v = /git version (\d+)\.(\d+)/.exec(
+      spawnSync("git", ["--version"], { encoding: "utf8", timeout: 15_000 }).stdout ?? "",
+    );
     if (!v) return true;
     attrSource = Number(v[1]) > 2 || (Number(v[1]) === 2 && Number(v[2]) >= 42);
   }
@@ -47,10 +49,29 @@ export function gitArgs(root: string, args: string[]): string[] {
   const [cmd, ...rest] = args;
   const diffs = cmd === "diff" || cmd === "show" ? ["--no-textconv", "--no-ext-diff"] : [];
   const attrs = takesAttrSource() ? [`--attr-source=${EMPTY_TREE}`] : [];
-  return ["-c", "core.fsmonitor=false", "-c", "core.hooksPath=/dev/null", "-c", "log.showSignature=false", ...attrs, "--no-optional-locks", "-C", root, cmd!, ...diffs, ...rest];
+  return [
+    "-c",
+    "core.fsmonitor=false",
+    "-c",
+    "core.hooksPath=/dev/null",
+    "-c",
+    "log.showSignature=false",
+    ...attrs,
+    "--no-optional-locks",
+    "-C",
+    root,
+    cmd!,
+    ...diffs,
+    ...rest,
+  ];
 }
 
-const OPTS = { encoding: "utf8" as const, stdio: ["ignore", "pipe", "ignore"] as ["ignore", "pipe", "ignore"], timeout: 15_000, maxBuffer: 64 * 1024 * 1024 };
+const OPTS = {
+  encoding: "utf8" as const,
+  stdio: ["ignore", "pipe", "ignore"] as ["ignore", "pipe", "ignore"],
+  timeout: 15_000,
+  maxBuffer: 64 * 1024 * 1024,
+};
 
 function run(c: Pick<Checkout, "root">, args: string[]): string | null {
   try {
@@ -91,7 +112,6 @@ export function statusOf(c: Pick<Checkout, "root">): Map<string, GitState> | nul
   const out = run(c, STATUS_ARGS);
   return out === null ? null : parseStatus(out);
 }
-
 
 /** Whether a ref names a commit in the repository. */
 function exists(c: Pick<Checkout, "root">, ref: string): boolean {
@@ -150,7 +170,10 @@ export function parseNameStatus(z: string): Changed[] {
       out.push(code[0] === "R" ? { path: to, state: "renamed", from } : { path: to, state: "new" });
     } else {
       const path = parts[++i]!;
-      out.push({ path, state: code[0] === "A" ? "new" : code[0] === "D" ? "deleted" : code[0] === "U" ? "conflict" : "modified" });
+      out.push({
+        path,
+        state: code[0] === "A" ? "new" : code[0] === "D" ? "deleted" : code[0] === "U" ? "conflict" : "modified",
+      });
     }
   }
   return out;
@@ -176,7 +199,9 @@ export function showAt(c: Pick<Checkout, "root">, ref: string, path: string): st
 /** The same, not waiting on git (the TUI's gutter, 26.1). */
 export function showLater(c: Pick<Checkout, "root">, ref: string, path: string): Promise<string | null> {
   return new Promise((done) => {
-    execFile("git", gitArgs(c.root, ["show", `${ref}:${path.split(sep).join(posix.sep)}`]), OPTS, (err, out) => done(err ? null : out));
+    execFile("git", gitArgs(c.root, ["show", `${ref}:${path.split(sep).join(posix.sep)}`]), OPTS, (err, out) =>
+      done(err ? null : out),
+    );
   });
 }
 

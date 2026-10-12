@@ -17,7 +17,19 @@ import { dirname, join, resolve } from "node:path";
 const ROOT = resolve(import.meta.dir, "..");
 
 /** Licences taken for any package: permissive ones. */
-const PERMISSIVE = new Set(["MIT", "MIT-0", "ISC", "BSD-2-Clause", "BSD-3-Clause", "0BSD", "Apache-2.0", "BlueOak-1.0.0", "Zlib", "CC0-1.0", "Unlicense"]);
+const PERMISSIVE = new Set([
+  "MIT",
+  "MIT-0",
+  "ISC",
+  "BSD-2-Clause",
+  "BSD-3-Clause",
+  "0BSD",
+  "Apache-2.0",
+  "BlueOak-1.0.0",
+  "Zlib",
+  "CC0-1.0",
+  "Unlicense",
+]);
 
 /** Packages taken by name under a licence that isn't in `PERMISSIVE`: each was asked about (plan 14.6). */
 export const NAMED: Record<string, { licence: string; why: string }> = {
@@ -30,23 +42,24 @@ export const NAMED: Record<string, { licence: string; why: string }> = {
 const DECLARED: Record<string, string> = { "png-js": "MIT", typeahead: "Apache-2.0" };
 
 /** Code compiled into a package's WebAssembly, not a package of its own: its notice is owed too. */
-const EMBEDDED: { name: string; inside: string; licence: string; copyright: string; source: string; note?: string }[] = [
-  {
-    name: "Hunspell",
-    inside: "hunspell-asm",
-    licence: "MPL-1.1",
-    copyright: "Copyright (C) 2002-2022 Németh László",
-    source: "https://github.com/hunspell/hunspell",
-    note: "Hunspell is offered under MPL-1.1, GPL-2.0 or LGPL-2.1; slipbox takes it under MPL-1.1 (plan 14.6).",
-  },
-  {
-    name: "libwebp",
-    inside: "@jsquash/webp",
-    licence: "BSD-3-Clause",
-    copyright: "Copyright (c) 2010, Google Inc. All rights reserved.",
-    source: "https://chromium.googlesource.com/webm/libwebp",
-  },
-];
+const EMBEDDED: { name: string; inside: string; licence: string; copyright: string; source: string; note?: string }[] =
+  [
+    {
+      name: "Hunspell",
+      inside: "hunspell-asm",
+      licence: "MPL-1.1",
+      copyright: "Copyright (C) 2002-2022 Németh László",
+      source: "https://github.com/hunspell/hunspell",
+      note: "Hunspell is offered under MPL-1.1, GPL-2.0 or LGPL-2.1; slipbox takes it under MPL-1.1 (plan 14.6).",
+    },
+    {
+      name: "libwebp",
+      inside: "@jsquash/webp",
+      licence: "BSD-3-Clause",
+      copyright: "Copyright (c) 2010, Google Inc. All rights reserved.",
+      source: "https://chromium.googlesource.com/webm/libwebp",
+    },
+  ];
 
 export interface Package {
   name: string;
@@ -72,7 +85,11 @@ function resolveDir(name: string, from: string, root: string): string | null {
 function licenceOf(pkg: Record<string, unknown>): string {
   const l = pkg.license ?? pkg.licenses;
   if (typeof l === "string") return l;
-  if (Array.isArray(l)) return l.map((x) => (x as { type?: string }).type ?? "").filter(Boolean).join(" OR ");
+  if (Array.isArray(l))
+    return l
+      .map((x) => (x as { type?: string }).type ?? "")
+      .filter(Boolean)
+      .join(" OR ");
   if (l && typeof l === "object") return (l as { type?: string }).type ?? "";
   return DECLARED[pkg.name as string] ?? "";
 }
@@ -92,7 +109,8 @@ export function repoLink(repo: string): string {
 
 function text(v: unknown): string {
   if (typeof v === "string") return v;
-  if (v && typeof v === "object") return ((v as { url?: string; name?: string }).url ?? (v as { name?: string }).name ?? "") as string;
+  if (v && typeof v === "object")
+    return ((v as { url?: string; name?: string }).url ?? (v as { name?: string }).name ?? "") as string;
   return "";
 }
 
@@ -104,7 +122,14 @@ export function productionPackages(root = ROOT): { packages: Package[]; missing:
     const pkg = JSON.parse(readFileSync(join(dir, "package.json"), "utf8")) as Record<string, unknown>;
     const key = `${pkg.name}@${pkg.version}`;
     if (seen.has(key)) return;
-    seen.set(key, { name: pkg.name as string, version: pkg.version as string, licence: licenceOf(pkg), dir, repository: repoLink(text(pkg.repository)), author: text(pkg.author) });
+    seen.set(key, {
+      name: pkg.name as string,
+      version: pkg.version as string,
+      licence: licenceOf(pkg),
+      dir,
+      repository: repoLink(text(pkg.repository)),
+      author: text(pkg.author),
+    });
     const deps = Object.keys((pkg.dependencies ?? {}) as object).map((d) => [d, false] as const);
     const optional = Object.keys((pkg.optionalDependencies ?? {}) as object).map((d) => [d, true] as const);
     for (const [dep, opt] of [...deps, ...optional]) {
@@ -119,7 +144,10 @@ export function productionPackages(root = ROOT): { packages: Package[]; missing:
     if (d) visit(d);
     else missing.push(`${dep} (package.json's)`);
   }
-  return { packages: [...seen.values()].sort((a, b) => a.name.localeCompare(b.name) || a.version.localeCompare(b.version)), missing };
+  return {
+    packages: [...seen.values()].sort((a, b) => a.name.localeCompare(b.name) || a.version.localeCompare(b.version)),
+    missing,
+  };
 }
 
 /** Whether an SPDX expression is taken: an OR by either side, an AND by both; `X WITH exception` as X. */
@@ -168,16 +196,25 @@ export function licenceProblems(packages: Package[]): string[] {
     const named = NAMED[p.name];
     if (named && p.licence === named.licence) continue;
     if (!p.licence) out.push(`${p.name}@${p.version}: names no licence`);
-    else if (!licenceTaken(p.licence)) out.push(`${p.name}@${p.version}: ${p.licence} — not a licence slipbox takes (plan 14.6, 14.10)`);
+    else if (!licenceTaken(p.licence))
+      out.push(`${p.name}@${p.version}: ${p.licence} — not a licence slipbox takes (plan 14.6, 14.10)`);
   }
   return out;
 }
 
 /** Dependencies in package.json not at an exact version. */
-export function specProblems(pkg: { dependencies?: Record<string, string>; devDependencies?: Record<string, string> }): string[] {
+export function specProblems(pkg: {
+  dependencies?: Record<string, string>;
+  devDependencies?: Record<string, string>;
+}): string[] {
   const out: string[] = [];
-  for (const [section, deps] of Object.entries({ dependencies: pkg.dependencies ?? {}, devDependencies: pkg.devDependencies ?? {} })) {
-    for (const [name, spec] of Object.entries(deps)) if (!/^\d+\.\d+\.\d+(-[0-9A-Za-z.-]+)?$/.test(spec)) out.push(`${section}: ${name} is "${spec}", not an exact version`);
+  for (const [section, deps] of Object.entries({
+    dependencies: pkg.dependencies ?? {},
+    devDependencies: pkg.devDependencies ?? {},
+  })) {
+    for (const [name, spec] of Object.entries(deps))
+      if (!/^\d+\.\d+\.\d+(-[0-9A-Za-z.-]+)?$/.test(spec))
+        out.push(`${section}: ${name} is "${spec}", not an exact version`);
   }
   return out;
 }
@@ -187,8 +224,10 @@ export function bunfigProblems(toml: string): string[] {
   const install = /^\[install\]\s*$([\s\S]*?)(?=^\[|(?![\s\S]))/m.exec(toml)?.[1] ?? "";
   const value = (key: string) => new RegExp(`^${key}\\s*=\\s*(\\S+)`, "m").exec(install)?.[1];
   const out: string[] = [];
-  if (value("ignoreScripts") !== "true") out.push("bunfig.toml: [install] ignoreScripts = true, so no install script runs");
-  if (!(Number(value("minimumReleaseAge")) >= 604800)) out.push("bunfig.toml: [install] minimumReleaseAge = 604800 or more, a week");
+  if (value("ignoreScripts") !== "true")
+    out.push("bunfig.toml: [install] ignoreScripts = true, so no install script runs");
+  if (!(Number(value("minimumReleaseAge")) >= 604800))
+    out.push("bunfig.toml: [install] minimumReleaseAge = 604800 or more, a week");
   if (value("exact") !== "true") out.push("bunfig.toml: [install] exact = true, so `bun add` pins");
   return out;
 }
@@ -199,7 +238,8 @@ export function workflowProblems(name: string, yaml: string): string[] {
   for (const m of yaml.matchAll(/^\s*(?:-\s*)?uses:\s*["']?([^\s"'#]+)/gm)) {
     const ref = m[1]!;
     if (ref.startsWith("./")) continue;
-    if (!/@[0-9a-f]{40}$/.test(ref)) out.push(`${name}: ${ref} — pin it by its commit's full hash (a tag can be moved)`);
+    if (!/@[0-9a-f]{40}$/.test(ref))
+      out.push(`${name}: ${ref} — pin it by its commit's full hash (a tag can be moved)`);
   }
   return out;
 }
@@ -240,7 +280,10 @@ function standardText(root: string, id: string, holder: string): string | null {
 function idsOf(expr: string): string[] {
   const alternatives = expr.replace(/[()]/g, " ").split(/\s+OR\s+/);
   const pick = alternatives.find((a) => licenceTaken(a)) ?? alternatives[0] ?? "";
-  return pick.split(/\s+AND\s+/).map((s) => s.trim().split(/\s+WITH\s+/)[0]!).filter(Boolean);
+  return pick
+    .split(/\s+AND\s+/)
+    .map((s) => s.trim().split(/\s+WITH\s+/)[0]!)
+    .filter(Boolean);
 }
 
 /** The third-party notices a release ships beside the binary. */
@@ -252,14 +295,19 @@ export function notices(packages: Package[], version: string, root = ROOT): stri
   ];
   const section = (title: string, body: string) => parts.push(`${RULE}\n${title}\n${RULE}\n\n${body.trimEnd()}\n`);
   for (const p of packages) {
-    const files = readdirSync(p.dir).filter((f) => LICENCE_FILE.test(f)).sort();
+    const files = readdirSync(p.dir)
+      .filter((f) => LICENCE_FILE.test(f))
+      .sort();
     const body = files.length
       ? files.map((f) => readFileSync(join(p.dir, f), "utf8").trimEnd()).join("\n\n")
       : idsOf(p.licence)
           .map((id) => standardText(root, id, p.author) ?? `${id}: see https://spdx.org/licenses/${id}.html`)
           .join("\n\n");
     const named = NAMED[p.name];
-    const source = named || /MPL|EPL|LGPL/.test(p.licence) ? `Its source: ${p.repository || `https://www.npmjs.com/package/${p.name}`}\n\n` : "";
+    const source =
+      named || /MPL|EPL|LGPL/.test(p.licence)
+        ? `Its source: ${p.repository || `https://www.npmjs.com/package/${p.name}`}\n\n`
+        : "";
     section(`${p.name} ${p.version} — ${p.licence}${p.repository ? `\n${p.repository}` : ""}`, `${source}${body}`);
   }
   for (const e of EMBEDDED) {
@@ -267,9 +315,14 @@ export function notices(packages: Package[], version: string, root = ROOT): stri
     section(`${e.name}, compiled into ${e.inside} — ${e.licence}`, `${e.copyright}\n\n${body}`);
   }
   const bun = join(root, "node_modules", "bun-types", "docs", "project", "license.mdx");
-  const bunText = existsSync(bun) ? readFileSync(bun, "utf8").replace(/^---[\s\S]*?---\s*/, "") : "Bun is MIT-licensed: https://bun.com/docs/project/license";
+  const bunText = existsSync(bun)
+    ? readFileSync(bun, "utf8").replace(/^---[\s\S]*?---\s*/, "")
+    : "Bun is MIT-licensed: https://bun.com/docs/project/license";
   const lgpl = standardText(root, "LGPL-2.1-only", "") ?? "";
-  section(`Bun ${Bun.version}, the runtime the binary is built on — MIT, with the libraries it links`, `${bunText}\n\n${RULE}\nThe GNU Lesser General Public License, version 2.1 (JavaScriptCore, WebKit, tinycc, above)\n${RULE}\n\n${lgpl}`);
+  section(
+    `Bun ${Bun.version}, the runtime the binary is built on — MIT, with the libraries it links`,
+    `${bunText}\n\n${RULE}\nThe GNU Lesser General Public License, version 2.1 (JavaScriptCore, WebKit, tinycc, above)\n${RULE}\n\n${lgpl}`,
+  );
   return `${parts.join("\n")}\n`;
 }
 
@@ -277,7 +330,9 @@ if (import.meta.main) {
   const args = process.argv.slice(2);
   const { problems, packages } = checkDeps();
   if (problems.length) {
-    process.stderr.write(`check-deps: ${problems.length} problem${problems.length === 1 ? "" : "s"}\n${problems.map((p) => `  ${p}`).join("\n")}\n`);
+    process.stderr.write(
+      `check-deps: ${problems.length} problem${problems.length === 1 ? "" : "s"}\n${problems.map((p) => `  ${p}`).join("\n")}\n`,
+    );
     process.exit(1);
   }
   const at = args.indexOf("--notices");
@@ -290,5 +345,7 @@ if (import.meta.main) {
     const { version } = JSON.parse(readFileSync(join(ROOT, "package.json"), "utf8")) as { version: string };
     writeFileSync(out, notices(packages, version));
   }
-  process.stdout.write(`check-deps: ${packages.length} packages, each under a licence taken; versions exact; install gates on; actions pinned\n`);
+  process.stdout.write(
+    `check-deps: ${packages.length} packages, each under a licence taken; versions exact; install gates on; actions pinned\n`,
+  );
 }

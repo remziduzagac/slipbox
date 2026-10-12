@@ -41,7 +41,11 @@ export function onMusl(): boolean {
 }
 
 /** This machine's target, when it's one released. */
-export function hostTarget(platform: string = process.platform, arch: string = process.arch, musl = onMusl()): string | null {
+export function hostTarget(
+  platform: string = process.platform,
+  arch: string = process.arch,
+  musl = onMusl(),
+): string | null {
   const t = `${platform}-${arch}${platform === "linux" && musl ? "-musl" : ""}`;
   return t in TARGETS ? t : null;
 }
@@ -49,7 +53,10 @@ export function hostTarget(platform: string = process.platform, arch: string = p
 /** `owner/name` for a GitHub repository named as such, or by a remote's URL; null for anything else. Strict: it goes
  *  into addresses, and into the installer's shell script. */
 export function repoOf(s: string): string | null {
-  const m = /^(?:https:\/\/github\.com\/|git@github\.com:|ssh:\/\/git@github\.com\/)?([A-Za-z0-9][A-Za-z0-9-]*)\/([A-Za-z0-9_.-]+?)(?:\.git)?\/?$/.exec(s.trim());
+  const m =
+    /^(?:https:\/\/github\.com\/|git@github\.com:|ssh:\/\/git@github\.com\/)?([A-Za-z0-9][A-Za-z0-9-]*)\/([A-Za-z0-9_.-]+?)(?:\.git)?\/?$/.exec(
+      s.trim(),
+    );
   return m && m[2] !== "." && m[2] !== ".." ? `${m[1]}/${m[2]}` : null;
 }
 
@@ -65,7 +72,8 @@ export function releaseVersion(root: string, tag?: string): string {
 /** package.json's build as arguments to Bun: its output where asked, built for a target, its release defined. */
 export function buildArgs(script: string, outfile: string, target: string, repo: string): string[] {
   const argv = script.trim().split(/\s+/);
-  if (argv[0] !== "bun" || argv[1] !== "build" || !argv.includes("--compile")) throw new Error(`package.json's build isn't a \`bun build --compile\`: ${script}`);
+  if (argv[0] !== "bun" || argv[1] !== "build" || !argv.includes("--compile"))
+    throw new Error(`package.json's build isn't a \`bun build --compile\`: ${script}`);
   const out = argv.indexOf("--outfile");
   if (out < 0 || !argv[out + 1]) throw new Error("package.json's build names no --outfile");
   argv[out + 1] = outfile;
@@ -89,23 +97,37 @@ export const assetName = (version: string, target: string) => `slipbox-${version
 
 function run(argv: string[], cwd = ROOT): string {
   const r = Bun.spawnSync(argv, { cwd, stdout: "pipe", stderr: "pipe" });
-  if (r.exitCode !== 0) throw new Error(`${basename(argv[0]!)} ${argv[1] ?? ""} failed (${r.exitCode}):\n${r.stderr.toString()}${r.stdout.toString()}`);
+  if (r.exitCode !== 0)
+    throw new Error(
+      `${basename(argv[0]!)} ${argv[1] ?? ""} failed (${r.exitCode}):\n${r.stderr.toString()}${r.stdout.toString()}`,
+    );
   return r.stdout.toString();
 }
 
 /** Each target built and packed into `out`; the packs' paths. */
-export function buildRelease(opts: { targets: string[]; repo: string; tag?: string; out: string; root?: string }): string[] {
+export function buildRelease(opts: {
+  targets: string[];
+  repo: string;
+  tag?: string;
+  out: string;
+  root?: string;
+}): string[] {
   const root = opts.root ?? ROOT;
   const version = releaseVersion(root, opts.tag);
   const { problems, packages } = checkDeps(root);
-  if (problems.length) throw new Error(`the supply chain's gates fail (bun run check:deps):\n  ${problems.join("\n  ")}`);
-  const script = (JSON.parse(readFileSync(join(root, "package.json"), "utf8")) as { scripts: { build: string } }).scripts.build;
+  if (problems.length)
+    throw new Error(`the supply chain's gates fail (bun run check:deps):\n  ${problems.join("\n  ")}`);
+  const script = (JSON.parse(readFileSync(join(root, "package.json"), "utf8")) as { scripts: { build: string } })
+    .scripts.build;
   mkdirSync(opts.out, { recursive: true });
   const packs: string[] = [];
   for (const target of opts.targets) {
     if (!(target in TARGETS)) throw new Error(`no such target: ${target} (${Object.keys(TARGETS).join(", ")})`);
     const native = join(root, "node_modules", "@opentui", `core-${target}`);
-    if (!existsSync(native)) throw new Error(`${target}: OpenTUI's package for it isn't installed — bun install --os ${target.split("-")[0]} --cpu ${target.split("-")[1]}, or build it on its platform`);
+    if (!existsSync(native))
+      throw new Error(
+        `${target}: OpenTUI's package for it isn't installed — bun install --os ${target.split("-")[0]} --cpu ${target.split("-")[1]}, or build it on its platform`,
+      );
     const name = `slipbox-${version}-${target}`;
     const stage = join(opts.out, name);
     rmSync(stage, { recursive: true, force: true });
@@ -114,7 +136,8 @@ export function buildRelease(opts: { targets: string[]; repo: string; tag?: stri
     run([process.execPath, ...buildArgs(script, bin, target, opts.repo)], root);
     if (target === hostTarget()) {
       const said = run([bin, "--version"], stage).trim();
-      if (said !== `slipbox ${version}`) throw new Error(`${target}: the binary says "${said}", not "slipbox ${version}"`);
+      if (said !== `slipbox ${version}`)
+        throw new Error(`${target}: the binary says "${said}", not "slipbox ${version}"`);
     }
     writeFileSync(join(stage, "NOTICES.txt"), notices(packages, version, root));
     const pack = join(opts.out, assetName(version, target));
@@ -133,7 +156,8 @@ export function installScript(template: string, version: string, repo: string, s
   const cases = Object.entries(sums)
     .sort(([a], [b]) => a.localeCompare(b))
     .map(([target, hash]) => {
-      if (!(target in TARGETS) || !/^[0-9a-f]{64}$/.test(hash)) throw new Error(`not a target and its sum: ${target} ${hash}`);
+      if (!(target in TARGETS) || !/^[0-9a-f]{64}$/.test(hash))
+        throw new Error(`not a target and its sum: ${target} ${hash}`);
       return `    ${target}) echo ${hash} ;;`;
     });
   const out = template.replaceAll("@VERSION@", version).replaceAll("@REPO@", repo).replace("@SUMS@", cases.join("\n"));
@@ -165,7 +189,10 @@ export function homebrewFormula(template: string, version: string, repo: string,
     if (inner.length) blocks.push(`  ${os} do\n${inner.join("\n")}\n  end`);
   }
   if (!blocks.length) throw new Error("no pack Homebrew installs: macOS's or glibc Linux's");
-  const out = template.replaceAll("@VERSION@", version).replaceAll("@REPO@", repo).replace("@PLATFORMS@", blocks.join("\n"));
+  const out = template
+    .replaceAll("@VERSION@", version)
+    .replaceAll("@REPO@", repo)
+    .replace("@PLATFORMS@", blocks.join("\n"));
   const left = /@[A-Z]+@/.exec(out);
   if (left) throw new Error(`the formula's template has ${left[0]} left`);
   return out;
@@ -194,12 +221,24 @@ export function finishRelease(opts: { repo: string; tag?: string; out: string; r
       }),
   );
   const installer = join(opts.out, "install.sh");
-  writeFileSync(installer, installScript(readFileSync(join(root, "scripts", "install.template.sh"), "utf8"), version, opts.repo, byTarget), { mode: 0o755 });
+  writeFileSync(
+    installer,
+    installScript(readFileSync(join(root, "scripts", "install.template.sh"), "utf8"), version, opts.repo, byTarget),
+    { mode: 0o755 },
+  );
   const out = [sums, installer];
   // Homebrew's, when the release has a pack it installs (a musl-only one hasn't).
   if (Object.keys(HOMEBREW).some((t) => byTarget[t] !== undefined)) {
     const formula = join(opts.out, "slipbox.rb");
-    writeFileSync(formula, homebrewFormula(readFileSync(join(root, "scripts", "homebrew.template.rb"), "utf8"), version, opts.repo, byTarget));
+    writeFileSync(
+      formula,
+      homebrewFormula(
+        readFileSync(join(root, "scripts", "homebrew.template.rb"), "utf8"),
+        version,
+        opts.repo,
+        byTarget,
+      ),
+    );
     out.push(formula);
   }
   return out;
@@ -235,12 +274,19 @@ if (import.meta.main) {
     if (step === "build") {
       const host = hostTarget();
       const targets = flags.get("target") ?? (host ? [host] : []);
-      if (!targets.length) throw new Error(`this machine (${process.platform}-${process.arch}) isn't a platform released: name a --target`);
-      for (const p of buildRelease({ targets, repo: repoFrom(one("repo")), tag: one("tag"), out })) process.stdout.write(`${p}\n`);
+      if (!targets.length)
+        throw new Error(
+          `this machine (${process.platform}-${process.arch}) isn't a platform released: name a --target`,
+        );
+      for (const p of buildRelease({ targets, repo: repoFrom(one("repo")), tag: one("tag"), out }))
+        process.stdout.write(`${p}\n`);
     } else if (step === "finish") {
-      for (const p of finishRelease({ repo: repoFrom(one("repo")), tag: one("tag"), out })) process.stdout.write(`${p}\n`);
+      for (const p of finishRelease({ repo: repoFrom(one("repo")), tag: one("tag"), out }))
+        process.stdout.write(`${p}\n`);
     } else {
-      process.stderr.write("release: build [--target <t>]… [--repo owner/name] [--tag v<version>] [--out <dir>] | finish …\n");
+      process.stderr.write(
+        "release: build [--target <t>]… [--repo owner/name] [--tag v<version>] [--out <dir>] | finish …\n",
+      );
       process.exit(2);
     }
   } catch (err) {

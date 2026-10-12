@@ -73,16 +73,50 @@ export const CLIENT_CAPABILITIES: ClientCapabilities = {
     documentSymbol: { hierarchicalDocumentSymbolSupport: true },
     rename: { prepareSupport: true },
     codeAction: {
-      codeActionLiteralSupport: { codeActionKind: { valueSet: ["", "quickfix", "refactor", "refactor.extract", "refactor.inline", "refactor.rewrite", "source", "source.organizeImports", "source.fixAll"] } },
+      codeActionLiteralSupport: {
+        codeActionKind: {
+          valueSet: [
+            "",
+            "quickfix",
+            "refactor",
+            "refactor.extract",
+            "refactor.inline",
+            "refactor.rewrite",
+            "source",
+            "source.organizeImports",
+            "source.fixAll",
+          ],
+        },
+      },
       isPreferredSupport: true,
       disabledSupport: true,
       resolveSupport: { properties: ["edit"] },
     },
     formatting: {},
-    completion: { completionItem: { snippetSupport: true, documentationFormat: ["markdown", "plaintext"], labelDetailsSupport: true }, contextSupport: true },
-    signatureHelp: { signatureInformation: { documentationFormat: ["markdown", "plaintext"], parameterInformation: { labelOffsetSupport: true }, activeParameterSupport: true } },
+    completion: {
+      completionItem: {
+        snippetSupport: true,
+        documentationFormat: ["markdown", "plaintext"],
+        labelDetailsSupport: true,
+      },
+      contextSupport: true,
+    },
+    signatureHelp: {
+      signatureInformation: {
+        documentationFormat: ["markdown", "plaintext"],
+        parameterInformation: { labelOffsetSupport: true },
+        activeParameterSupport: true,
+      },
+    },
   },
-  workspace: { configuration: true, workspaceFolders: true, didChangeConfiguration: { dynamicRegistration: false }, applyEdit: true, workspaceEdit: { documentChanges: true }, symbol: { resolveSupport: { properties: ["location.range"] } } },
+  workspace: {
+    configuration: true,
+    workspaceFolders: true,
+    didChangeConfiguration: { dynamicRegistration: false },
+    applyEdit: true,
+    workspaceEdit: { documentChanges: true },
+    symbol: { resolveSupport: { properties: ["location.range"] } },
+  },
   window: { workDoneProgress: true },
 };
 
@@ -127,12 +161,19 @@ export class LanguageClient {
     const failed = new Promise<never>((_, reject) => {
       child.once("error", (err) => reject(new Error(`${this.spec.name} can't start: ${err.message}`)));
       // On close, not exit: its last words on stderr have arrived by then.
-      child.once("close", (code, signal) => reject(new Error(`${this.spec.name} exited before it was ready (${signal ?? `code ${code}`})${this.stderrTail()}`)));
+      child.once("close", (code, signal) =>
+        reject(
+          new Error(`${this.spec.name} exited before it was ready (${signal ?? `code ${code}`})${this.stderrTail()}`),
+        ),
+      );
     });
     // Its stderr, kept short: said when it fails, never on the screen.
     child.stderr!.on("data", (d) => (this.stderr = (this.stderr + d).slice(-4000)));
     child.on("close", (code, signal) => this.ended(code, signal));
-    const conn = createProtocolConnection(new StreamMessageReader(child.stdout!), new StreamMessageWriter(child.stdin!));
+    const conn = createProtocolConnection(
+      new StreamMessageReader(child.stdout!),
+      new StreamMessageWriter(child.stdin!),
+    );
     this.conn = conn;
     this.listen(conn);
     conn.listen();
@@ -147,7 +188,10 @@ export class LanguageClient {
     });
     let timer: ReturnType<typeof setTimeout> | undefined;
     const late = new Promise<never>((_, reject) => {
-      timer = setTimeout(() => reject(new Error(`${this.spec.name} didn't answer initialize in ${timeoutMs / 1000} s`)), timeoutMs);
+      timer = setTimeout(
+        () => reject(new Error(`${this.spec.name} didn't answer initialize in ${timeoutMs / 1000} s`)),
+        timeoutMs,
+      );
     });
     try {
       const result = await Promise.race([init, failed, late]);
@@ -162,7 +206,8 @@ export class LanguageClient {
     }
     failed.catch(() => {}); // from here on, an exit is `ended`'s to report
     await conn.sendNotification(InitializedNotification.type, {});
-    if (this.spec.settings) await conn.sendNotification(DidChangeConfigurationNotification.type, { settings: this.spec.settings });
+    if (this.spec.settings)
+      await conn.sendNotification(DidChangeConfigurationNotification.type, { settings: this.spec.settings });
     // It may have gone in the moment after it answered: still a start that failed, not a crash.
     if (this.state === "failed") throw new Error(`${this.spec.name} exited before it was ready${this.stderrTail()}`);
     if (this.state === "starting") this.state = "running";
@@ -178,7 +223,9 @@ export class LanguageClient {
     conn.onNotification(ShowMessageNotification.type, (p) => {
       this.hooks.log?.(`${this.spec.name}: ${p.message}`);
     });
-    conn.onRequest("workspace/configuration", (p: { items: { section?: string }[] }) => p.items.map((i) => settingAt(this.spec.settings, i.section)));
+    conn.onRequest("workspace/configuration", (p: { items: { section?: string }[] }) =>
+      p.items.map((i) => settingAt(this.spec.settings, i.section)),
+    );
     conn.onRequest("workspace/workspaceFolders", () => [{ uri: uriOf(this.spec.root), name: this.spec.root }]);
     conn.onRequest("client/registerCapability", (p: { registrations: { method: string }[] }) => {
       for (const r of p.registrations) this.registered.add(r.method);
@@ -191,10 +238,13 @@ export class LanguageClient {
     conn.onRequest("window/workDoneProgress/create", () => null);
     conn.onRequest("window/showMessageRequest", () => null);
     // An edit it asks to make (a code action's command did): slipbox makes it, through its own writes.
-    conn.onRequest("workspace/applyEdit", (p: { edit: WorkspaceEdit }): { applied: boolean; failureReason?: string } => {
-      const applied = this.hooks.applyEdit?.(p.edit) ?? false;
-      return applied ? { applied } : { applied, failureReason: "slipbox couldn't apply it" };
-    });
+    conn.onRequest(
+      "workspace/applyEdit",
+      (p: { edit: WorkspaceEdit }): { applied: boolean; failureReason?: string } => {
+        const applied = this.hooks.applyEdit?.(p.edit) ?? false;
+        return applied ? { applied } : { applied, failureReason: "slipbox couldn't apply it" };
+      },
+    );
     // Asked to ask again (a pull server's settings or files changed): every open file's diagnostics.
     conn.onRequest("workspace/diagnostic/refresh", () => {
       for (const uri of this.open.keys()) void this.pull(uri);
@@ -250,7 +300,9 @@ export class LanguageClient {
   async didOpen(uri: string, languageId: string, version: number, text: string): Promise<void> {
     if (this.state !== "running") return;
     this.open.set(uri, version);
-    await this.conn!.sendNotification(DidOpenTextDocumentNotification.type, { textDocument: { uri, languageId, version, text } });
+    await this.conn!.sendNotification(DidOpenTextDocumentNotification.type, {
+      textDocument: { uri, languageId, version, text },
+    });
     void this.pull(uri);
   }
 
@@ -258,7 +310,10 @@ export class LanguageClient {
   async didChange(uri: string, version: number, text: string): Promise<void> {
     if (this.state !== "running" || !this.open.has(uri)) return;
     this.open.set(uri, version);
-    await this.conn!.sendNotification(DidChangeTextDocumentNotification.type, { textDocument: { uri, version }, contentChanges: [{ text }] });
+    await this.conn!.sendNotification(DidChangeTextDocumentNotification.type, {
+      textDocument: { uri, version },
+      contentChanges: [{ text }],
+    });
     void this.pull(uri);
   }
 
@@ -266,7 +321,10 @@ export class LanguageClient {
     if (this.state !== "running" || !this.open.has(uri)) return;
     const sync = this.capabilities?.textDocumentSync;
     const withText = typeof sync === "object" && typeof sync.save === "object" && sync.save.includeText;
-    await this.conn!.sendNotification(DidSaveTextDocumentNotification.type, { textDocument: { uri }, ...(withText && text !== undefined ? { text } : {}) });
+    await this.conn!.sendNotification(DidSaveTextDocumentNotification.type, {
+      textDocument: { uri },
+      ...(withText && text !== undefined ? { text } : {}),
+    });
     void this.pull(uri);
   }
 
@@ -342,7 +400,11 @@ export class LanguageClient {
 
   /** Why it ended, from its stderr: its last error line, else its last line. */
   private stderrTail(): string {
-    const lines = this.stderr.trim().split("\n").map((l) => l.trim()).filter(Boolean);
+    const lines = this.stderr
+      .trim()
+      .split("\n")
+      .map((l) => l.trim())
+      .filter(Boolean);
     const last = lines.findLast((l) => /\b(error|panic|exception|fatal)\b/i.test(l)) ?? lines.at(-1);
     return last ? `: ${last.slice(0, 300)}` : "";
   }

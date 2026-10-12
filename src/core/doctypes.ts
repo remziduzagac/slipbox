@@ -45,7 +45,11 @@ export const BUILT_IN_TYPES: Record<string, TypeConfig> = {
   // Agent skills: SKILL.md, with the frontmatter skills are found by.
   skill: { paths: ["**/SKILL.md"], required: ["name", "description"], keys: { name: "string", description: "string" } },
   // Architecture decision records: numbered, one a file, in a folder of their own; a status, often "Superseded by".
-  adr: { paths: ["**/adr/*.md", "**/adrs/*.md", "**/decisions/*.md", "**/decision-records/*.md"], number: "^(?:adr-?)?(\\d+)", status: "status" },
+  adr: {
+    paths: ["**/adr/*.md", "**/adrs/*.md", "**/decisions/*.md", "**/decision-records/*.md"],
+    number: "^(?:adr-?)?(\\d+)",
+    status: "status",
+  },
 };
 
 function regex(pattern: string | undefined): RegExp | null {
@@ -65,7 +69,16 @@ export function docTypes(config: Record<string, TypeConfig> = {}): DocType[] {
     const given = Object.hasOwn(config, name) ? config[name] : undefined;
     const t: TypeConfig = { ...(Object.hasOwn(BUILT_IN_TYPES, name) ? BUILT_IN_TYPES[name] : undefined), ...given };
     if (!t.paths?.length) continue;
-    out.push({ name, source: given ? "config" : "built-in", paths: t.paths, required: t.required ?? [], keys: t.keys ?? {}, values: t.values ?? {}, number: regex(t.number), status: t.status ?? null });
+    out.push({
+      name,
+      source: given ? "config" : "built-in",
+      paths: t.paths,
+      required: t.required ?? [],
+      keys: t.keys ?? {},
+      values: t.values ?? {},
+      number: regex(t.number),
+      status: t.status ?? null,
+    });
   }
   return out.sort((a, b) => a.name.localeCompare(b.name));
 }
@@ -127,7 +140,11 @@ export function isKind(v: unknown, kind: KeyKind): boolean {
     case "boolean":
       return typeof v === "boolean";
     case "date":
-      return v instanceof Date || (typeof v === "string" && /^\d{4}-\d{2}-\d{2}(?:[T ]\d{2}:\d{2}(?::\d{2}(?:\.\d+)?)?(?:Z|[+-]\d{2}:?\d{2})?)?$/.test(v));
+      return (
+        v instanceof Date ||
+        (typeof v === "string" &&
+          /^\d{4}-\d{2}-\d{2}(?:[T ]\d{2}:\d{2}(?::\d{2}(?:\.\d+)?)?(?:Z|[+-]\d{2}:?\d{2})?)?$/.test(v))
+      );
     case "list":
       return Array.isArray(v);
     case "table":
@@ -135,18 +152,35 @@ export function isKind(v: unknown, kind: KeyKind): boolean {
   }
 }
 
-const said = (v: unknown) => (Array.isArray(v) ? "a list" : v instanceof Date ? "a date" : v === null ? "empty" : typeof v === "object" ? "a table" : `${typeof v === "string" ? "text" : `a ${typeof v}`}`);
+const said = (v: unknown) =>
+  Array.isArray(v)
+    ? "a list"
+    : v instanceof Date
+      ? "a date"
+      : v === null
+        ? "empty"
+        : typeof v === "object"
+          ? "a table"
+          : `${typeof v === "string" ? "text" : `a ${typeof v}`}`;
 
 /** What's wrong with a note's frontmatter, by its types' rules (22.2): a key missing, of another kind, a value not allowed. */
 export function frontmatterProblems(text: string, types: DocType[]): Problem[] {
   const ruled = types.filter((t) => t.required.length || Object.keys(t.keys).length || Object.keys(t.values).length);
   if (!ruled.length) return [];
   const fileLines = text.split("\n");
-  const at = (line: number, message: string): Problem => ({ start: { line, column: 1 }, end: { line, column: (fileLines[line - 1]?.replace(/\r$/, "").length ?? 0) + 1 }, severity: "warning", source: "slipbox", code: "frontmatter", message });
+  const at = (line: number, message: string): Problem => ({
+    start: { line, column: 1 },
+    end: { line, column: (fileLines[line - 1]?.replace(/\r$/, "").length ?? 0) + 1 },
+    severity: "warning",
+    source: "slipbox",
+    code: "frontmatter",
+    message,
+  });
   const block = frontmatterBlock(text);
   const out: Problem[] = [];
   if (!block) {
-    for (const t of ruled) if (t.required.length) out.push(at(1, `a ${t.name} note needs frontmatter: ${t.required.join(", ")}`));
+    for (const t of ruled)
+      if (t.required.length) out.push(at(1, `a ${t.name} note needs frontmatter: ${t.required.join(", ")}`));
     return out;
   }
   let data: Record<string, unknown>;
@@ -169,13 +203,20 @@ export function frontmatterProblems(text: string, types: DocType[]): Problem[] {
     }
     for (const [key, kind] of Object.entries(t.keys)) {
       const v = valueAt(data, key);
-      if (v !== undefined && v !== null && !isKind(v, kind)) out.push(at(lineOf(key), `${t.name}: "${key}" should be a ${kind}, not ${said(v)}`));
+      if (v !== undefined && v !== null && !isKind(v, kind))
+        out.push(at(lineOf(key), `${t.name}: "${key}" should be a ${kind}, not ${said(v)}`));
     }
     for (const [key, allowed] of Object.entries(t.values)) {
       const v = valueAt(data, key);
       if (v === undefined || v === null) continue;
       const same = (a: unknown) => a === v || (a instanceof Date && v instanceof Date && a.getTime() === v.getTime());
-      if (!allowed.some(same)) out.push(at(lineOf(key), `${t.name}: "${key}" is ${JSON.stringify(v)}, not one of ${allowed.map((a) => JSON.stringify(a)).join(", ")}`));
+      if (!allowed.some(same))
+        out.push(
+          at(
+            lineOf(key),
+            `${t.name}: "${key}" is ${JSON.stringify(v)}, not one of ${allowed.map((a) => JSON.stringify(a)).join(", ")}`,
+          ),
+        );
     }
   }
   return out;
@@ -199,12 +240,16 @@ export function statusOf(text: string, key: string | null): string | null {
   if (block && key) {
     try {
       const raw = block.lines.join("\n");
-      const data = (block.format === "yaml" ? parseYaml(raw, { logLevel: "error", uniqueKeys: false }) : parseToml(raw)) as Record<string, unknown> | null;
+      const data = (
+        block.format === "yaml" ? parseYaml(raw, { logLevel: "error", uniqueKeys: false }) : parseToml(raw)
+      ) as Record<string, unknown> | null;
       const v = data && typeof data === "object" ? valueAt(data, key) : undefined;
       if (typeof v === "string" && v.trim()) return v.trim();
     } catch {}
   }
-  const body = (block ? text.split("\n").slice(block.lines.length + 2) : text.split("\n")).map((l) => l.replace(/\r$/, ""));
+  const body = (block ? text.split("\n").slice(block.lines.length + 2) : text.split("\n")).map((l) =>
+    l.replace(/\r$/, ""),
+  );
   for (let i = 0; i < body.length; i++) {
     const line = body[i]!;
     // `Status: x`, `**Status:** x`, `**Status**: x`; the value bold, or not.
@@ -220,7 +265,11 @@ export function statusOf(text: string, key: string | null): string | null {
 
 /** What a status says supersedes its note — `Superseded by [0007](0007-x.md)`, `by [[0007-x]]`, `by ADR-0007`, `by D7`:
  *  the note it names, among the type's (a link from where the note is, a name, a number); null when there's none. */
-export function supersededBy(status: string, rel: string, ofTheType: { path: string; number: number | null }[]): string | null {
+export function supersededBy(
+  status: string,
+  rel: string,
+  ofTheType: { path: string; number: number | null }[],
+): string | null {
   const m = /superseded\s+by\s+(.+)/i.exec(status);
   if (!m) return null;
   const rest = m[1]!;
@@ -235,7 +284,9 @@ export function supersededBy(status: string, rel: string, ofTheType: { path: str
   }
   const wiki = /\[\[([^\]|#]+)/.exec(rest)?.[1]?.trim();
   if (wiki) {
-    const hit = ofTheType.find((n) => n.path === wiki || n.path === `${wiki}.md` || basename(n.path, ".md") === basename(wiki, ".md"));
+    const hit = ofTheType.find(
+      (n) => n.path === wiki || n.path === `${wiki}.md` || basename(n.path, ".md") === basename(wiki, ".md"),
+    );
     if (hit) return hit.path;
   }
   const num = /(?:^|[^\w])(?:[a-z]+-?)?0*(\d+)\b/i.exec(rest)?.[1];
@@ -244,13 +295,23 @@ export function supersededBy(status: string, rel: string, ofTheType: { path: str
 }
 
 /** A type's notes among `notes` (paths from the root, and how to read one), by number, then path; each its status. */
-export function notesOfType(type: DocType, notes: { path: string; title: string }[], read: (rel: string) => string | null): TypedNote[] {
+export function notesOfType(
+  type: DocType,
+  notes: { path: string; title: string }[],
+  read: (rel: string) => string | null,
+): TypedNote[] {
   const mine = notes
     .filter((n) => ofType(n.path, type))
     .map((n) => {
       const digits = type.number?.exec(basename(n.path))?.[1];
       const text = read(n.path) ?? "";
-      return { path: n.path, title: n.title, number: digits === undefined ? null : Number(digits), status: statusOf(text, type.status), supersededBy: null as string | null };
+      return {
+        path: n.path,
+        title: n.title,
+        number: digits === undefined ? null : Number(digits),
+        status: statusOf(text, type.status),
+        supersededBy: null as string | null,
+      };
     })
     .sort((a, b) => (a.number ?? Infinity) - (b.number ?? Infinity) || a.path.localeCompare(b.path));
   for (const n of mine) n.supersededBy = n.status ? supersededBy(n.status, n.path, mine) : null;

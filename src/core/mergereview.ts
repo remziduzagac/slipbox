@@ -57,9 +57,17 @@ export class MergeReviewError extends Error {}
 
 const NOTE = /\.(md|markdown)$/i;
 
-function git(c: Pick<Checkout, "root">, args: string[], input?: string): { status: number | null; out: Buffer; err: string } {
+function git(
+  c: Pick<Checkout, "root">,
+  args: string[],
+  input?: string,
+): { status: number | null; out: Buffer; err: string } {
   const r = spawnSync("git", gitArgs(c.root, args), { input, maxBuffer: 512 * 1024 * 1024, timeout: 120_000 });
-  return { status: r.error ? null : r.status, out: r.stdout ?? Buffer.alloc(0), err: r.stderr?.toString("utf8") ?? String(r.error ?? "") };
+  return {
+    status: r.error ? null : r.status,
+    out: r.stdout ?? Buffer.alloc(0),
+    err: r.stderr?.toString("utf8") ?? String(r.error ?? ""),
+  };
 }
 
 function commitOf(c: Pick<Checkout, "root">, ref: string): string | null {
@@ -200,7 +208,9 @@ function reaches(n: string, has: (rel: string) => boolean): string | null {
 function wikiNamed(target: string, from: string): string | null {
   const t = target.trim();
   if (!t.includes("/") || /^[a-z][a-z0-9+.-]*:/i.test(t) || t.startsWith("~/")) return null;
-  const rel = /^\.\.?\//.test(t) ? posix.normalize(posix.join(posix.dirname(from), t)) : posix.normalize(t.replace(/^\/+/, ""));
+  const rel = /^\.\.?\//.test(t)
+    ? posix.normalize(posix.join(posix.dirname(from), t))
+    : posix.normalize(t.replace(/^\/+/, ""));
   return rel === ".." || rel.startsWith("../") ? null : rel;
 }
 
@@ -223,7 +233,11 @@ function byName(files: Map<string, string>): Map<string, string[]> {
  *  from the root or relative as written; `.md` only where it was written; never encoded. */
 function wikiFix(from: string, to: string, written: string): string {
   const t = written.trim();
-  let next = !t.includes("/") ? posix.basename(to) : /^\.\.?\//.test(t) ? posix.relative(posix.dirname(from), to) : `${t.startsWith("/") ? "/" : ""}${to}`;
+  let next = !t.includes("/")
+    ? posix.basename(to)
+    : /^\.\.?\//.test(t)
+      ? posix.relative(posix.dirname(from), to)
+      : `${t.startsWith("/") ? "/" : ""}${to}`;
   if (/^\.\.?\//.test(t) && !next.startsWith("../")) next = `./${next}`;
   return NOTE.test(t) ? next : next.replace(NOTE, "");
 }
@@ -244,9 +258,18 @@ function fixFor(from: string, to: string, written: string, r: Reading): string {
     let rel = extensionless(pointer.pointer.path) ? to.replace(NOTE, "") : to;
     if (pointer.pointer.path.endsWith("/")) rel += "/";
     const encode = /%[0-9A-Fa-f]{2}/.test(path) || /\s/.test(rel);
-    return formatPointer({ name: pointer.pointer.name, branch: null, path: rel, fragment: null }, encode ? encodeURI : undefined) + (hash >= 0 ? written.slice(hash) : "");
+    return (
+      formatPointer(
+        { name: pointer.pointer.name, branch: null, path: rel, fragment: null },
+        encode ? encodeURI : undefined,
+      ) + (hash >= 0 ? written.slice(hash) : "")
+    );
   }
-  let next = path.startsWith(`${root}/`) ? `${root}/${to}` : path.startsWith("/") ? `/${to}` : posix.relative(posix.dirname(from), to) || posix.basename(to);
+  let next = path.startsWith(`${root}/`)
+    ? `${root}/${to}`
+    : path.startsWith("/")
+      ? `/${to}`
+      : posix.relative(posix.dirname(from), to) || posix.basename(to);
   if (extensionless(path)) next = next.replace(/\.(md|markdown)$/i, "");
   return urlPath(next) + (hash >= 0 ? written.slice(hash) : "");
 }
@@ -266,7 +289,8 @@ export function reviewMerge(c: Checkout, root: string, from: string, into = "HEA
   if (mt.status !== 0 && mt.status !== 1) {
     const err = mt.err.trim();
     // Histories with nothing in common: git won't merge them, nor review the merge.
-    if (/unrelated histories/i.test(err)) throw new MergeReviewError(`${from} and ${intoName} have no commit in common: git won't merge them`);
+    if (/unrelated histories/i.test(err))
+      throw new MergeReviewError(`${from} and ${intoName} have no commit in common: git won't merge them`);
     // An older git: no --write-tree.
     const old = /unknown option|usage:/i.test(err) ? " (it needs git 2.38 or newer)" : "";
     throw new MergeReviewError(`git merge-tree: ${err.split("\n")[0] || "failed"}${old}`);
@@ -281,12 +305,25 @@ export function reviewMerge(c: Checkout, root: string, from: string, into = "HEA
   const inO = lookup(O);
   // Links to this repository's hosting, and pointers naming this folder, name its paths too.
   let branches: string[] | null = null;
-  const reading: Reading = { c, root, remotes: checkoutRemotes(c), folders: readFolders(), self: folderIdentity(root)?.key ?? null, branches: () => (branches ??= branchesOf(c) ?? []), inO };
+  const reading: Reading = {
+    c,
+    root,
+    remotes: checkoutRemotes(c),
+    folders: readFolders(),
+    self: folderIdentity(root)?.key ?? null,
+    branches: () => (branches ??= branchesOf(c) ?? []),
+    inO,
+  };
   // What each branch did since they parted, in the vault: its renames and deletions, by old path.
   const moved = new Map<string, { to: string; by: string }>();
   const deleted = new Map<string, string>();
   const notesMoved = new Map<string, { was: string; by: string }>();
-  for (const [ref, by] of base ? ([[theirs, from], [ours, intoName]] as const) : []) {
+  for (const [ref, by] of base
+    ? ([
+        [theirs, from],
+        [ours, intoName],
+      ] as const)
+    : []) {
     for (const f of changedBetween(c, base!, ref) ?? []) {
       const at = inVault(c, root, f.path);
       const was = f.from ? inVault(c, root, f.from) : null;
@@ -303,11 +340,15 @@ export function reviewMerge(c: Checkout, root: string, from: string, into = "HEA
   const gone = [...O.keys()].some((p) => !inR(p));
   const placeInO = (p: string) => (O.has(p) ? p : (notesMoved.get(p)?.was ?? p));
   const notes = [...R].filter(([p, oid]) => NOTE.test(p) && (gone || O.get(placeInO(p)) !== oid));
-  const texts = readBlobs(c, [...new Set(notes.flatMap(([p, oid]) => [oid, O.get(placeInO(p))].filter((x): x is string => !!x)))]);
+  const texts = readBlobs(c, [
+    ...new Set(notes.flatMap(([p, oid]) => [oid, O.get(placeInO(p))].filter((x): x is string => !!x))),
+  ]);
   const linksOf = (rel: string, oid: string | undefined) => {
     const text = oid ? texts.get(oid) : undefined;
     if (text === undefined) return [];
-    return extractText({ rel, abs: "", size: text.length, mtimeMs: 0 }, text).links.filter((l) => l.kind === "markdown" || l.kind === "image" || l.kind === "wiki" || l.kind === "embed");
+    return extractText({ rel, abs: "", size: text.length, mtimeMs: 0 }, text).links.filter(
+      (l) => l.kind === "markdown" || l.kind === "image" || l.kind === "wiki" || l.kind === "embed",
+    );
   };
   const namesR = byName(R);
   const namesO = byName(O);
@@ -317,12 +358,18 @@ export function reviewMerge(c: Checkout, root: string, from: string, into = "HEA
 
   // A wikilink (21.3): by its path, as a markdown link's is checked; by a name alone, broken when no
   // file of the result answers to it, where one in `into` did — renamed or deleted by a branch.
-  const wikiBreak = (p: string, was: string, l: { kind: string; target: string; line: number; column: number }, before: Map<string, boolean>): MergeBreak | null => {
+  const wikiBreak = (
+    p: string,
+    was: string,
+    l: { kind: string; target: string; line: number; column: number },
+    before: Map<string, boolean>,
+  ): MergeBreak | null => {
     const k = keyOf(l);
     const t = l.target.trim();
     const written = wikiNamed(t, p);
     if (written === null) {
-      if (!t || t.includes(":") || t.includes("/") || namesR.has(t.toLowerCase()) || before.get(k) === false) return null;
+      if (!t || t.includes(":") || t.includes("/") || namesR.has(t.toLowerCase()) || before.get(k) === false)
+        return null;
       const had = namesO.get(t.toLowerCase());
       const names = had?.[0] ?? t;
       const site = { path: p, line: l.line, column: l.column, target: l.target, names };
@@ -338,9 +385,17 @@ export function reviewMerge(c: Checkout, root: string, from: string, into = "HEA
     const wasNamed = was !== p && before.get(k) ? wikiNamed(t, was) : null;
     const there = wasNamed === null ? null : (wikiReaches(wasNamed, inO) ?? wasNamed);
     const m = moved.get(names.toLowerCase());
-    if (there && inR(there)) return { ...site, cause: "note-moved", by: notesMoved.get(p)?.by ?? from, to: there, fix: wikiFix(p, there, l.target) };
+    if (there && inR(there))
+      return {
+        ...site,
+        cause: "note-moved",
+        by: notesMoved.get(p)?.by ?? from,
+        to: there,
+        fix: wikiFix(p, there, l.target),
+      };
     if (m && inR(m.to)) return { ...site, cause: "moved", by: m.by, to: m.to, fix: wikiFix(p, m.to, l.target) };
-    if (deleted.has(names.toLowerCase()) || m) return { ...site, cause: "deleted", by: deleted.get(names.toLowerCase()) ?? m!.by, to: null, fix: null };
+    if (deleted.has(names.toLowerCase()) || m)
+      return { ...site, cause: "deleted", by: deleted.get(names.toLowerCase()) ?? m!.by, to: null, fix: null };
     return { ...site, cause: "missing", by: from, to: null, fix: null };
   };
   const breaks: MergeBreak[] = [];
@@ -352,7 +407,8 @@ export function reviewMerge(c: Checkout, root: string, from: string, into = "HEA
       if (isWiki(l)) {
         const n = wikiNamed(l.target, was);
         if (n !== null) before.set(keyOf(l), wikiReaches(n, inO) !== null);
-        else if (l.target.trim() && !l.target.includes(":")) before.set(keyOf(l), namesO.has(l.target.trim().toLowerCase()));
+        else if (l.target.trim() && !l.target.includes(":"))
+          before.set(keyOf(l), namesO.has(l.target.trim().toLowerCase()));
         continue;
       }
       const n = named(l.target, was, reading);
@@ -373,9 +429,18 @@ export function reviewMerge(c: Checkout, root: string, from: string, into = "HEA
       const wasNamed = was !== p && before.get(keyOf(l)) ? named(l.target, was, reading) : null;
       const there = wasNamed === null ? null : (reaches(wasNamed, inO) ?? wasNamed);
       const m = moved.get(names.toLowerCase());
-      if (there && inR(there)) breaks.push({ ...site, cause: "note-moved", by: notesMoved.get(p)?.by ?? from, to: there, fix: fixFor(p, there, l.target, reading) });
-      else if (m && inR(m.to)) breaks.push({ ...site, cause: "moved", by: m.by, to: m.to, fix: fixFor(p, m.to, l.target, reading) });
-      else if (deleted.has(names.toLowerCase()) || m) breaks.push({ ...site, cause: "deleted", by: deleted.get(names.toLowerCase()) ?? m!.by, to: null, fix: null });
+      if (there && inR(there))
+        breaks.push({
+          ...site,
+          cause: "note-moved",
+          by: notesMoved.get(p)?.by ?? from,
+          to: there,
+          fix: fixFor(p, there, l.target, reading),
+        });
+      else if (m && inR(m.to))
+        breaks.push({ ...site, cause: "moved", by: m.by, to: m.to, fix: fixFor(p, m.to, l.target, reading) });
+      else if (deleted.has(names.toLowerCase()) || m)
+        breaks.push({ ...site, cause: "deleted", by: deleted.get(names.toLowerCase()) ?? m!.by, to: null, fix: null });
       // Neither moved nor deleted, yet it reached in `into` or wasn't there: the merged branch's doing.
       else breaks.push({ ...site, cause: "missing", by: from, to: null, fix: null });
     }

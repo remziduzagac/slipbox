@@ -20,7 +20,10 @@ const startOf = (c: GitChange) => (c.kind === "delete" ? Math.max(1, c.from - 1)
 function changesHere(app: App, view: View): GitChange[] | null {
   const changes = app.gitChangesOf(view);
   if (!changes?.length) {
-    app.message("info", app.config.git.signs ? "no changes against what's staged here" : "git signs are off ([git] signs)");
+    app.message(
+      "info",
+      app.config.git.signs ? "no changes against what's staged here" : "git signs are off ([git] signs)",
+    );
     return null;
   }
   return changes;
@@ -31,7 +34,10 @@ export function gitStep(app: App, view: View, dir: 1 | -1): void {
   const changes = changesHere(app, view);
   if (!changes) return;
   const lines = cursorLines(app, view);
-  const next = dir === 1 ? (changes.find((c) => startOf(c) > Math.max(...lines)) ?? changes[0]!) : ([...changes].reverse().find((c) => startOf(c) < Math.min(...lines)) ?? changes[changes.length - 1]!);
+  const next =
+    dir === 1
+      ? (changes.find((c) => startOf(c) > Math.max(...lines)) ?? changes[0]!)
+      : ([...changes].reverse().find((c) => startOf(c) < Math.min(...lines)) ?? changes[changes.length - 1]!);
   app.pushHistory(view);
   app.placeAtLine(view, startOf(next));
 }
@@ -52,7 +58,12 @@ function changeHere(app: App, view: View): GitChange | null {
 export function gitPreview(app: App, view: View): void {
   const c = changeHere(app, view);
   if (!c) return;
-  const where = c.kind === "delete" ? `${c.was.length} line${c.was.length === 1 ? "" : "s"} deleted after line ${c.from - 1}` : c.from === c.to ? `line ${c.from}` : `lines ${c.from}–${c.to}`;
+  const where =
+    c.kind === "delete"
+      ? `${c.was.length} line${c.was.length === 1 ? "" : "s"} deleted after line ${c.from - 1}`
+      : c.from === c.to
+        ? `line ${c.from}`
+        : `lines ${c.from}–${c.to}`;
   app.openHover(`\`\`\`diff\n${changeDiff(c)}\n\`\`\``, `${where}, against what's staged`);
 }
 

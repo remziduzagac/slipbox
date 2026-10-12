@@ -50,7 +50,9 @@ const logFile = (v: Keyed) => join(stateDir(v), "renames.json");
 
 export function readRenames(v: Keyed): LoggedRename[] {
   const f = readJson<LogFile | null>(logFile(v), null);
-  return f?.version === 1 && Array.isArray(f.renames) ? f.renames.filter((r) => r && typeof r.id === "string" && Array.isArray(r.files)) : [];
+  return f?.version === 1 && Array.isArray(f.renames)
+    ? f.renames.filter((r) => r && typeof r.id === "string" && Array.isArray(r.files))
+    : [];
 }
 
 function save(v: Keyed, renames: LoggedRename[]): void {
@@ -65,7 +67,10 @@ export function logRename(v: Keyed, r: LoggedRename): void {
 
 /** A rename undone: out of the log. */
 export function forgetRename(v: Keyed, id: string): void {
-  save(v, readRenames(v).filter((r) => r.id !== id));
+  save(
+    v,
+    readRenames(v).filter((r) => r.id !== id),
+  );
 }
 
 /** Where `next` differs from `text`: `length` characters of it at `at`, which were `was`. */

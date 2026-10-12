@@ -11,12 +11,38 @@ import type { Diagnostic } from "vscode-languageserver-protocol";
 import { loadConfig } from "../src/core/config.ts";
 import { LanguageClient, type ServerSpec, settingAt } from "../src/core/servers/client.ts";
 import { chooseServers, findServer, ownInstall, rootFor, toolsDir } from "../src/core/servers/find.ts";
-import { INSTALL_ARGS, installTool, lockKey, type NpmSpec, toolFolder, toolManifest, toolSlug } from "../src/core/servers/install.ts";
+import {
+  INSTALL_ARGS,
+  installTool,
+  lockKey,
+  type NpmSpec,
+  toolFolder,
+  toolManifest,
+  toolSlug,
+} from "../src/core/servers/install.ts";
 import { LOCKS } from "../src/core/servers/locks.ts";
 import { lintCommand, MARKDOWNLINT } from "../src/core/lint.ts";
 import { pinned } from "../scripts/lock-servers.ts";
-import { languageOf, projectAsks, SERVERS, type ServerDef, serverTable, type ServerTable } from "../src/core/servers/languages.ts";
-import { commandFor, compileFormat, type Format, type LinterConfig, linterRoot, LINTERS, linterTable, parseFindings, projectPath, runLinter } from "../src/core/servers/linters.ts";
+import {
+  languageOf,
+  projectAsks,
+  SERVERS,
+  type ServerDef,
+  serverTable,
+  type ServerTable,
+} from "../src/core/servers/languages.ts";
+import {
+  commandFor,
+  compileFormat,
+  type Format,
+  type LinterConfig,
+  linterRoot,
+  LINTERS,
+  linterTable,
+  parseFindings,
+  projectPath,
+  runLinter,
+} from "../src/core/servers/linters.ts";
 import { doctor, doctorFile } from "../src/core/servers/doctor.ts";
 import { ServerManager, startOf } from "../src/core/servers/manager.ts";
 import { vscodeSettings } from "../src/core/servers/vscode.ts";
@@ -34,17 +60,26 @@ afterAll(() => rmSync(sandbox, { recursive: true, force: true }));
 function lockFor(npm: NpmSpec): string {
   const d = mkdtempSync(join(sandbox, "lock-"));
   writeFileSync(join(d, "package.json"), toolManifest(npm));
-  const r = Bun.spawnSync([process.execPath, "install", "--lockfile-only", "--ignore-scripts"], { cwd: d, env: { ...process.env, BUN_BE_BUN: "1" } });
+  const r = Bun.spawnSync([process.execPath, "install", "--lockfile-only", "--ignore-scripts"], {
+    cwd: d,
+    env: { ...process.env, BUN_BE_BUN: "1" },
+  });
   if (r.exitCode !== 0) throw new Error(r.stderr.toString());
   // A `file:` package is kept by its path from the lock's folder: made absolute, as the lock is installed elsewhere.
   // (A registry package, as slipbox's pins are, has no path.)
-  return readFileSync(join(d, "bun.lock"), "utf8").replace(/@file:([^"/][^"]*)"/g, (_, rel: string) => `@file:${resolve(d, rel)}"`);
+  return readFileSync(join(d, "bun.lock"), "utf8").replace(
+    /@file:([^"/][^"]*)"/g,
+    (_, rel: string) => `@file:${resolve(d, rel)}"`,
+  );
 }
 
 /** A package of a server, as a folder (`file:` installs it with no network): its version, a postinstall that marks. */
 function serverPackage(name: string, version: string, body = "console.log('ok')"): string {
   const d = mkdtempSync(join(sandbox, `pkg-${name}-`));
-  writeFileSync(join(d, "package.json"), JSON.stringify({ name, version, bin: { [name]: "bin.js" }, scripts: { postinstall: "touch POSTINSTALL_RAN" } }));
+  writeFileSync(
+    join(d, "package.json"),
+    JSON.stringify({ name, version, bin: { [name]: "bin.js" }, scripts: { postinstall: "touch POSTINSTALL_RAN" } }),
+  );
   writeFileSync(join(d, "bin.js"), `#!/usr/bin/env node\n${body}\n`);
   return d;
 }
@@ -61,7 +96,13 @@ function fake(opts: { pull?: boolean; settings?: Record<string, unknown> } = {})
   const heard = new Map<string, { diagnostics: Diagnostic[]; version: number | null }>();
   const logs: string[] = [];
   const exits: { expected: boolean; why: string }[] = [];
-  const spec: ServerSpec = { name: "fake", argv: ["bun", FAKE, "--stdio"], env: opts.pull ? { FAKE_PULL: "1" } : {}, settings: opts.settings, root: sandbox };
+  const spec: ServerSpec = {
+    name: "fake",
+    argv: ["bun", FAKE, "--stdio"],
+    env: opts.pull ? { FAKE_PULL: "1" } : {},
+    settings: opts.settings,
+    root: sandbox,
+  };
   const client = new LanguageClient(spec, {
     diagnostics: (uri, diagnostics, version) => heard.set(uri, { diagnostics, version }),
     log: (m) => logs.push(m),
@@ -85,7 +126,10 @@ describe("the client (19.1)", () => {
     await f.client.didChange(uri, 2, "fine\nfine\nBAD BAD\n");
     expect(await until(() => f.heard.get(uri)?.version === 2)).toBe(true);
     expect(f.heard.get(uri)!.diagnostics[0]!.message).toBe('bad, with {"level":2}'); // its section of the settings
-    const hover = await f.client.request<{ contents: { value: string } }>("textDocument/hover", { textDocument: { uri }, position: { line: 2, character: 0 } });
+    const hover = await f.client.request<{ contents: { value: string } }>("textDocument/hover", {
+      textDocument: { uri },
+      position: { line: 2, character: 0 },
+    });
     expect(hover!.contents.value).toBe("line 2: BAD BAD");
     await f.client.stop();
     expect(f.client.state).toBe("stopped");
@@ -132,13 +176,20 @@ describe("the client (19.1)", () => {
     expect(f.client.state).toBe("stopped");
     const missing = new LanguageClient({ name: "nowhere", argv: ["slipbox-no-such-server"], root: sandbox });
     expect(missing.start()).rejects.toThrow("nowhere can't start");
-    const quick = new LanguageClient({ name: "quick", argv: ["sh", "-c", "echo 'no such option' >&2; exit 2"], root: sandbox });
+    const quick = new LanguageClient({
+      name: "quick",
+      argv: ["sh", "-c", "echo 'no such option' >&2; exit 2"],
+      root: sandbox,
+    });
     expect(quick.start()).rejects.toThrow("quick exited before it was ready (code 2): no such option");
   });
 
   test("a server that exits before it is ready: start() rejects, and the exit isn't reported as a crash", async () => {
     const exits: boolean[] = [];
-    const quick = new LanguageClient({ name: "quick", argv: ["sh", "-c", "exit 2"], root: sandbox }, { exited: (expected) => exits.push(expected) });
+    const quick = new LanguageClient(
+      { name: "quick", argv: ["sh", "-c", "exit 2"], root: sandbox },
+      { exited: (expected) => exits.push(expected) },
+    );
     await expect(quick.start()).rejects.toThrow("quick exited before it was ready (code 2)");
     await Bun.sleep(100);
     expect(exits).toEqual([]);
@@ -204,7 +255,9 @@ describe("the client (19.1): what a server says and asks besides diagnostics", (
     await f.client.stop();
     expect(f.client.state).toBe("stopped");
     expect(f.exits.length).toBe(1);
-    expect(await f.client.request("textDocument/hover", { textDocument: { uri }, position: { line: 0, character: 0 } })).toBeNull();
+    expect(
+      await f.client.request("textDocument/hover", { textDocument: { uri }, position: { line: 0, character: 0 } }),
+    ).toBeNull();
   });
 });
 
@@ -230,10 +283,25 @@ describe("which servers, where (19.2–19.5)", () => {
     expect(languageOf(t, "/p/Dockerfile")!.name).toBe("dockerfile");
     expect(languageOf(t, "/p/README")).toBeNull();
     const mine = serverTable(
-      { pyright: { config: { python: { analysis: { typeCheckingMode: "strict" } } } }, mylsp: { command: "/opt/mylsp", args: ["--stdio"] } },
-      [{ name: "python", "language-servers": ["basedpyright", "ruff"] }, { name: "nix", "file-types": ["nix"], "language-servers": ["mylsp"] }],
+      {
+        pyright: { config: { python: { analysis: { typeCheckingMode: "strict" } } } },
+        mylsp: { command: "/opt/mylsp", args: ["--stdio"] },
+      },
+      [
+        { name: "python", "language-servers": ["basedpyright", "ruff"] },
+        { name: "nix", "file-types": ["nix"], "language-servers": ["mylsp"] },
+      ],
     );
-    expect(mine.servers.pyright!.config).toEqual({ python: { analysis: { autoSearchPaths: true, useLibraryCodeForTypes: true, diagnosticMode: "openFilesOnly", typeCheckingMode: "strict" } } });
+    expect(mine.servers.pyright!.config).toEqual({
+      python: {
+        analysis: {
+          autoSearchPaths: true,
+          useLibraryCodeForTypes: true,
+          diagnosticMode: "openFilesOnly",
+          typeCheckingMode: "strict",
+        },
+      },
+    });
     expect(mine.servers.mylsp).toMatchObject({ command: "/opt/mylsp", args: ["--stdio"] });
     expect(languageOf(mine, "/p/a.py")!.servers).toEqual(["basedpyright", "ruff"]);
     expect(languageOf(mine, "/p/flake.nix")!.servers).toEqual(["mylsp"]);
@@ -243,23 +311,41 @@ describe("which servers, where (19.2–19.5)", () => {
 
   test("a vault's config tunes known servers' settings, never names a program", () => {
     const root = dir("cfg", {
-      "user.toml": '[language-server.mylsp]\ncommand = "/opt/mylsp"\n\n[[language]]\nname = "python"\nlanguage-servers = ["pyright"]\n',
-      "vault.toml": '[language-server.pyright]\ncommand = "/tmp/evil"\nconfig = { python = { analysis = { typeCheckingMode = "strict" } } }\n\n[language-server.evil]\nconfig = {}\n',
+      "user.toml":
+        '[language-server.mylsp]\ncommand = "/opt/mylsp"\n\n[[language]]\nname = "python"\nlanguage-servers = ["pyright"]\n',
+      "vault.toml":
+        '[language-server.pyright]\ncommand = "/tmp/evil"\nconfig = { python = { analysis = { typeCheckingMode = "strict" } } }\n\n[language-server.evil]\nconfig = {}\n',
     });
-    const { config, warnings } = loadConfig({ configFile: join(root, "user.toml"), vaultFile: join(root, "vault.toml") });
-    expect(config["language-server"]).toEqual({ mylsp: { command: "/opt/mylsp" }, pyright: { config: { python: { analysis: { typeCheckingMode: "strict" } } } } });
+    const { config, warnings } = loadConfig({
+      configFile: join(root, "user.toml"),
+      vaultFile: join(root, "vault.toml"),
+    });
+    expect(config["language-server"]).toEqual({
+      mylsp: { command: "/opt/mylsp" },
+      pyright: { config: { python: { analysis: { typeCheckingMode: "strict" } } } },
+    });
     expect(config.language).toEqual([{ name: "python", "language-servers": ["pyright"] }]);
-    expect(warnings.some((w) => w.includes("sets language-server.pyright.command, which only your own config may set"))).toBe(true);
-    expect(warnings.some((w) => w.includes("adds the language server evil, which only your own config may"))).toBe(true);
+    expect(
+      warnings.some((w) => w.includes("sets language-server.pyright.command, which only your own config may set")),
+    ).toBe(true);
+    expect(warnings.some((w) => w.includes("adds the language server evil, which only your own config may"))).toBe(
+      true,
+    );
   });
 
   test("a folder's server config merges over yours all the way down: your nested settings stay", () => {
     const root = dir("cfgdeep", {
       "user.toml": '[language-server.pyright]\nconfig = { python = { analysis = { extraPaths = ["src"] } } }\n',
-      "vault.toml": '[language-server.pyright]\nconfig = { python = { analysis = { diagnosticMode = "workspace" } } }\n',
+      "vault.toml":
+        '[language-server.pyright]\nconfig = { python = { analysis = { diagnosticMode = "workspace" } } }\n',
     });
-    const { config, warnings } = loadConfig({ configFile: join(root, "user.toml"), vaultFile: join(root, "vault.toml") });
-    expect(config["language-server"].pyright!.config).toEqual({ python: { analysis: { extraPaths: ["src"], diagnosticMode: "workspace" } } });
+    const { config, warnings } = loadConfig({
+      configFile: join(root, "user.toml"),
+      vaultFile: join(root, "vault.toml"),
+    });
+    expect(config["language-server"].pyright!.config).toEqual({
+      python: { analysis: { extraPaths: ["src"], diagnosticMode: "workspace" } },
+    });
     expect(warnings).toEqual([]);
   });
 
@@ -269,7 +355,7 @@ describe("which servers, where (19.2–19.5)", () => {
         "[language-server.mylsp]",
         'command = "mylsp"',
         'args = "--stdio"',
-        'environment = { DEBUG = 1 }',
+        "environment = { DEBUG = 1 }",
         "",
         "[[language]]",
         'name = "python"',
@@ -277,7 +363,7 @@ describe("which servers, where (19.2–19.5)", () => {
         'roots = "x"',
         'file-types = "py"',
         'linters = "mypy"',
-        'language-id = 3',
+        "language-id = 3",
         "",
         "[[language]]",
         'name = "go"',
@@ -294,7 +380,20 @@ describe("which servers, where (19.2–19.5)", () => {
     });
     const { config, warnings } = loadConfig({ configFile: join(root, "user.toml") });
     const w = warnings.join("\n");
-    for (const field of ["language-server.mylsp.args", "language-server.mylsp.environment", "language.python.language-servers", "language.python.roots", "language.python.file-types", "language.python.linters", "language.python.language-id", "language.go.language-servers", "linter.mine.lint-formats", "linter.mine.root-markers", "linter.mine.lint-stdin", "linter.mine.lint-severity"])
+    for (const field of [
+      "language-server.mylsp.args",
+      "language-server.mylsp.environment",
+      "language.python.language-servers",
+      "language.python.roots",
+      "language.python.file-types",
+      "language.python.linters",
+      "language.python.language-id",
+      "language.go.language-servers",
+      "linter.mine.lint-formats",
+      "linter.mine.root-markers",
+      "linter.mine.lint-stdin",
+      "linter.mine.lint-severity",
+    ])
       expect(w).toContain(`${field} must be`);
     // The rest of each entry stays.
     expect(config["language-server"].mylsp).toEqual({ command: "mylsp" });
@@ -341,15 +440,22 @@ describe("which servers, where (19.2–19.5)", () => {
   test("a server or linter named as Object's own keys (toString, constructor) is an unknown name, never a crash", () => {
     const root = dir("cfgproto", {
       "user.toml": '[language-server.mylsp]\nconstructor = 1\ncommand = "mylsp"\n',
-      "vault.toml": "[language-server.constructor]\nconfig = {}\n\n[linter.toString]\nlint-source = \"x\"\n",
+      "vault.toml": '[language-server.constructor]\nconfig = {}\n\n[linter.toString]\nlint-source = "x"\n',
     });
-    const { config, warnings } = loadConfig({ configFile: join(root, "user.toml"), vaultFile: join(root, "vault.toml") });
+    const { config, warnings } = loadConfig({
+      configFile: join(root, "user.toml"),
+      vaultFile: join(root, "vault.toml"),
+    });
     expect(Object.hasOwn(config["language-server"], "constructor")).toBe(false);
     expect(Object.hasOwn(config.linter, "toString")).toBe(false);
-    expect(warnings.some((w) => w.includes("adds the language server constructor, which only your own config may"))).toBe(true);
+    expect(
+      warnings.some((w) => w.includes("adds the language server constructor, which only your own config may")),
+    ).toBe(true);
     expect(warnings.some((w) => w.includes("adds the linter toString, which only your own config may"))).toBe(true);
     // In a language's lists, and named in your own config: unknown, or a new one of that name.
-    const t = serverTable({ toString: { args: [] } }, [{ name: "python", "language-servers": ["constructor", "toString"], linters: ["constructor"] }]);
+    const t = serverTable({ toString: { args: [] } }, [
+      { name: "python", "language-servers": ["constructor", "toString"], linters: ["constructor"] },
+    ]);
     expect(t.servers.toString).toMatchObject({ name: "toString", command: "toString" });
     expect(linterTable({ toString: {} }).toString).toMatchObject({ name: "toString", command: "" });
     const file = join(dir("proto", { "a.py": "" }), "a.py");
@@ -357,14 +463,24 @@ describe("which servers, where (19.2–19.5)", () => {
     expect(f.run).toEqual([]);
     expect(f.missing.map((d) => d.name)).toEqual(["toString"]);
     expect(f.linters).toEqual([]);
-    expect(doctor(t, linterTable(), join(file, ".."), false).find((g) => g.languages.includes("python"))!.servers.map((s) => s.name)).toEqual(["toString"]);
+    expect(
+      doctor(t, linterTable(), join(file, ".."), false)
+        .find((g) => g.languages.includes("python"))!
+        .servers.map((s) => s.name),
+    ).toEqual(["toString"]);
     const m = new ServerManager({ table: () => t, autoInstall: () => false, problems: () => {}, message: () => {} });
     expect(() => m.open(file, 1, "")).not.toThrow();
     void m.stopAll();
   });
 
   test("a project's root: the first marker's nearest folder, then the next's; never above the home folder", () => {
-    const root = dir("mono", { ".git/HEAD": "ref: refs/heads/main\n", "package.json": "{}", "packages/a/tsconfig.json": "{}", "packages/a/src/x.ts": "", "packages/b/y.ts": "" });
+    const root = dir("mono", {
+      ".git/HEAD": "ref: refs/heads/main\n",
+      "package.json": "{}",
+      "packages/a/tsconfig.json": "{}",
+      "packages/a/src/x.ts": "",
+      "packages/b/y.ts": "",
+    });
     const ts = languageOf(serverTable(), "x.ts")!.roots;
     expect(rootFor(join(root, "packages/a/src/x.ts"), ts)).toBe(join(root, "packages/a"));
     expect(rootFor(join(root, "packages/b/y.ts"), ts)).toBe(root); // no tsconfig: the package.json's
@@ -377,7 +493,12 @@ describe("which servers, where (19.2–19.5)", () => {
   test("a program found in the project first, then PATH, then slipbox's installs; a Node launcher runs on Bun", () => {
     setTrustedRoots([sandbox]); // a root you trust (23.x): the project's own programs and settings count
     const root = dir("found", { ".git/HEAD": "ref: refs/heads/main\n" });
-    const def = { name: "x", command: "slipbox-test-ls", args: ["--stdio"], npm: { package: "slipbox-test-ls", version: "1.0.0", bin: "slipbox-test-ls" } };
+    const def = {
+      name: "x",
+      command: "slipbox-test-ls",
+      args: ["--stdio"],
+      npm: { package: "slipbox-test-ls", version: "1.0.0", bin: "slipbox-test-ls" },
+    };
     expect(findServer(def, root)).toBeNull();
     LOCKS[lockKey(def.npm)] = "the lock slipbox ships";
     const own = join(toolFolder(def.npm)!, "node_modules/.bin/slipbox-test-ls");
@@ -387,7 +508,13 @@ describe("which servers, where (19.2–19.5)", () => {
     exe(join(root, "node_modules/.bin/slipbox-test-ls"), "#!/usr/bin/env node\nconsole.log(1)\n");
     const f = findServer(def, join(root, "sub"))!;
     expect(f.where).toBe("project");
-    expect(f.argv).toEqual([process.execPath, "--config=/dev/null", "--no-env-file", join(root, "node_modules/.bin/slipbox-test-ls"), "--stdio"]);
+    expect(f.argv).toEqual([
+      process.execPath,
+      "--config=/dev/null",
+      "--no-env-file",
+      join(root, "node_modules/.bin/slipbox-test-ls"),
+      "--stdio",
+    ]);
     expect(f.env).toEqual({ BUN_BE_BUN: "1" });
   });
 
@@ -398,7 +525,10 @@ describe("which servers, where (19.2–19.5)", () => {
     const ran = join(root, "preload-ran");
     writeFileSync(join(root, "evil.ts"), `require("node:fs").writeFileSync(${JSON.stringify(ran)}, "yes");\n`);
     writeFileSync(join(root, "bunfig.toml"), 'preload = ["./evil.ts"]\n');
-    exe(join(root, "node_modules/.bin/slipbox-test-env"), "#!/usr/bin/env node\nconsole.log(process.env.SLIPBOX_TEST_DOTENV ?? 'none')\n");
+    exe(
+      join(root, "node_modules/.bin/slipbox-test-env"),
+      "#!/usr/bin/env node\nconsole.log(process.env.SLIPBOX_TEST_DOTENV ?? 'none')\n",
+    );
     const f = findServer({ name: "e", command: "slipbox-test-env", args: [] }, root)!;
     expect(f.where).toBe("project");
     const r = Bun.spawnSync(f.argv, { cwd: root, env: { ...process.env, ...f.env } });
@@ -420,7 +550,9 @@ describe("which servers, where (19.2–19.5)", () => {
     const t = serverTable();
     const skipped = (file: string) => {
       const lang = languageOf(t, join(root, file))!;
-      return chooseServers(lang, t.servers, root, (r) => projectAsks(root, r)).skipped.map((k) => `${k.def.name}: ${k.why}`);
+      return chooseServers(lang, t.servers, root, (r) => projectAsks(root, r)).skipped.map(
+        (k) => `${k.def.name}: ${k.why}`,
+      );
     };
     expect(skipped("a.ts")).toEqual(["eslint: its config is code"]);
     expect(skipped("a.rb")).toEqual(["ruby-lsp: it runs the project's Gemfile (Bundler)"]);
@@ -436,10 +568,18 @@ describe("which servers, where (19.2–19.5)", () => {
   test("the built-in servers' safe modes (23.4): rust-analyzer without build scripts or macros, gopls with no toolchain or cgo, pyright the venv's packages from disk", () => {
     const root = dir("untrusted-modes", { ".venv/lib/python3.12/site-packages/x.py": "" });
     const ra = SERVERS["rust-analyzer"]!.untrusted!;
-    expect(ra.settings!(root)).toEqual({ "rust-analyzer": { cargo: { buildScripts: { enable: false } }, procMacro: { enable: false }, checkOnSave: false } });
-    expect(ra.initOptions).toEqual({ cargo: { buildScripts: { enable: false } }, procMacro: { enable: false }, checkOnSave: false });
+    expect(ra.settings!(root)).toEqual({
+      "rust-analyzer": { cargo: { buildScripts: { enable: false } }, procMacro: { enable: false }, checkOnSave: false },
+    });
+    expect(ra.initOptions).toEqual({
+      cargo: { buildScripts: { enable: false } },
+      procMacro: { enable: false },
+      checkOnSave: false,
+    });
     expect(SERVERS.gopls!.untrusted!.environment).toEqual({ GOTOOLCHAIN: "local", CGO_ENABLED: "0" });
-    expect(SERVERS.pyright!.untrusted!.settings!(root)).toEqual({ python: { analysis: { extraPaths: [join(root, ".venv/lib/python3.12/site-packages")] } } });
+    expect(SERVERS.pyright!.untrusted!.settings!(root)).toEqual({
+      python: { analysis: { extraPaths: [join(root, ".venv/lib/python3.12/site-packages")] } },
+    });
     expect(SERVERS.vtsls!.untrusted!.settings!(root)).toEqual({ vtsls: { autoUseWorkspaceTsdk: false } });
   });
 
@@ -447,9 +587,14 @@ describe("which servers, where (19.2–19.5)", () => {
     setTrustedRoots([sandbox]); // a root you trust (23.x): the project's own programs and settings count
     const t = serverTable();
     const lang = languageOf(t, "a.ts")!;
-    const names = (root: string) => chooseServers(lang, t.servers, root, (r) => projectAsks(root, r)).run.map((r) => r.def.name);
+    const names = (root: string) =>
+      chooseServers(lang, t.servers, root, (r) => projectAsks(root, r)).run.map((r) => r.def.name);
     const old = dir("ts5", { "package.json": "{}", "node_modules/typescript/package.json": '{"version": "5.9.2"}' });
-    const now = dir("ts7", { "package.json": "{}", "node_modules/typescript/package.json": '{"version": "7.0.2"}', "eslint.config.js": "export default [];" });
+    const now = dir("ts7", {
+      "package.json": "{}",
+      "node_modules/typescript/package.json": '{"version": "7.0.2"}',
+      "eslint.config.js": "export default [];",
+    });
     expect(names(old)).toEqual(["vtsls"]);
     expect(names(now)).toEqual(["typescript", "eslint"]);
     const py = dir("py", { "pyproject.toml": "[project]\nname='p'\n\n[tool.ruff]\nline-length = 100\n" });
@@ -457,12 +602,21 @@ describe("which servers, where (19.2–19.5)", () => {
     expect(projectAsks(old, ["ruff.toml", "pyproject.toml:[tool.ruff"])).toBe(false);
     // A native server nowhere to be found: missing, never installed.
     const native = { name: "slipbox-no-native", command: "slipbox-no-native", args: [] };
-    const c = chooseServers({ ...lang, servers: ["slipbox-no-native"] }, { "slipbox-no-native": native }, old, () => false);
+    const c = chooseServers(
+      { ...lang, servers: ["slipbox-no-native"] },
+      { "slipbox-no-native": native },
+      old,
+      () => false,
+    );
     expect(c).toEqual({ run: [], missing: [native], skipped: [] });
   });
 
   test("installing (14.11): from the lock slipbox ships, frozen, into a folder of its own; its install script not run", async () => {
-    const npm = { package: "slipbox-fake-server", version: `file:${serverPackage("slipbox-fake-server", "1.2.3")}`, bin: "slipbox-fake-server" };
+    const npm = {
+      package: "slipbox-fake-server",
+      version: `file:${serverPackage("slipbox-fake-server", "1.2.3")}`,
+      bin: "slipbox-fake-server",
+    };
     const locks = { [lockKey(npm)]: lockFor(npm) };
     const base = join(sandbox, "tools-test");
     const r = await installTool(npm, { base, locks });
@@ -484,13 +638,22 @@ describe("which servers, where (19.2–19.5)", () => {
     expect((await installTool(next, { base, locks: nextLocks })).ok).toBe(true);
     const nextAt = toolFolder(next, base, nextLocks)!;
     expect(nextAt).not.toBe(at);
-    expect(Bun.spawnSync(["ls", "-A", join(base, "slipbox-fake-server")]).stdout.toString()).toBe(`${nextAt.split("/").at(-1)}\n`);
+    expect(Bun.spawnSync(["ls", "-A", join(base, "slipbox-fake-server")]).stdout.toString()).toBe(
+      `${nextAt.split("/").at(-1)}\n`,
+    );
   });
 
   test("installing refuses: a pin slipbox ships no lock for; a lock that isn't the pin's — nothing left behind either way", async () => {
-    const npm = { package: "slipbox-unlocked", version: `file:${serverPackage("slipbox-unlocked", "1.0.0")}`, bin: "slipbox-unlocked" };
+    const npm = {
+      package: "slipbox-unlocked",
+      version: `file:${serverPackage("slipbox-unlocked", "1.0.0")}`,
+      bin: "slipbox-unlocked",
+    };
     const base = join(sandbox, "tools-refuse");
-    expect(await installTool(npm, { base, locks: {} })).toEqual({ ok: false, output: `slipbox ships no lockfile for ${lockKey(npm)}, so it doesn't install it` });
+    expect(await installTool(npm, { base, locks: {} })).toEqual({
+      ok: false,
+      output: `slipbox ships no lockfile for ${lockKey(npm)}, so it doesn't install it`,
+    });
     expect(existsSync(base)).toBe(false);
     // The lock of another version under this pin's name: Bun's frozen install says no.
     const other = { ...npm, version: `file:${serverPackage("slipbox-unlocked", "2.0.0")}` };
@@ -511,10 +674,15 @@ describe("which servers, where (19.2–19.5)", () => {
     };
     expect(ownInstall(npm, base)).toBeNull();
     // The folder is the lock's: the same pin with its lock made again (a dependency moved) is another.
-    expect(toolFolder(npm, base, { [lockKey(npm)]: "one lock" })).not.toBe(toolFolder(npm, base, { [lockKey(npm)]: "another" }));
+    expect(toolFolder(npm, base, { [lockKey(npm)]: "one lock" })).not.toBe(
+      toolFolder(npm, base, { [lockKey(npm)]: "another" }),
+    );
     // Before 14.11, one shared folder: behind.
     installAt(base, "1.0.0");
-    expect(ownInstall(npm, base)).toEqual({ path: join(base, "node_modules/.bin/slipbox-find"), behind: { installed: "1.0.0" } });
+    expect(ownInstall(npm, base)).toEqual({
+      path: join(base, "node_modules/.bin/slipbox-find"),
+      behind: { installed: "1.0.0" },
+    });
     // Under older locks: the newest of them first; one still being installed never.
     const parent = join(base, toolSlug(npm.package));
     expect(parent).toBe(join(base, "scope+slipbox-find"));
@@ -522,21 +690,35 @@ describe("which servers, where (19.2–19.5)", () => {
     Bun.spawnSync(["touch", "-d", "2026-01-01", join(parent, "aaaaaaaaaaaa")]);
     installAt(join(parent, "bbbbbbbbbbbb"), "1.2.0");
     installAt(join(parent, `cccccccccccc.new-${process.pid}`), "9.9.9");
-    expect(ownInstall(npm, base)).toEqual({ path: join(parent, "bbbbbbbbbbbb/node_modules/.bin/slipbox-find"), behind: { installed: "1.2.0" } });
+    expect(ownInstall(npm, base)).toEqual({
+      path: join(parent, "bbbbbbbbbbbb/node_modules/.bin/slipbox-find"),
+      behind: { installed: "1.2.0" },
+    });
     // The one the lock it ships now names: current.
     installAt(toolFolder(npm, base)!, "2.0.0");
-    expect(ownInstall(npm, base)).toEqual({ path: join(toolFolder(npm, base)!, "node_modules/.bin/slipbox-find"), behind: null });
+    expect(ownInstall(npm, base)).toEqual({
+      path: join(toolFolder(npm, base)!, "node_modules/.bin/slipbox-find"),
+      behind: null,
+    });
   });
 
   test("every package slipbox pins has the lock it ships, made for its manifest; no lock for a pin that's gone", () => {
     const keys = pinned().map(lockKey);
     expect(keys.length).toBeGreaterThan(8);
-    expect(Object.keys(LOCKS).filter((k) => !k.startsWith("slipbox-") && !k.startsWith("@scope/")).sort()).toEqual([...keys].sort());
+    expect(
+      Object.keys(LOCKS)
+        .filter((k) => !k.startsWith("slipbox-") && !k.startsWith("@scope/"))
+        .sort(),
+    ).toEqual([...keys].sort());
     for (const npm of pinned()) {
-      const lock = JSON.parse(LOCKS[lockKey(npm)]!.replace(/,(\s*[}\]])/g, "$1")) as { workspaces: Record<string, { dependencies: Record<string, string> }>; packages: Record<string, unknown[]> };
+      const lock = JSON.parse(LOCKS[lockKey(npm)]!.replace(/,(\s*[}\]])/g, "$1")) as {
+        workspaces: Record<string, { dependencies: Record<string, string> }>;
+        packages: Record<string, unknown[]>;
+      };
       expect(lock.workspaces[""]!.dependencies).toEqual(JSON.parse(toolManifest(npm)).dependencies);
       // Each package in it pinned by its content, not only its version.
-      for (const [name, entry] of Object.entries(lock.packages)) expect([name, String(entry.at(-1)).startsWith("sha512-")]).toEqual([name, true]);
+      for (const [name, entry] of Object.entries(lock.packages))
+        expect([name, String(entry.at(-1)).startsWith("sha512-")]).toEqual([name, true]);
     }
   });
 });
@@ -557,7 +739,12 @@ describe("the servers of open files (19.1)", () => {
   const managed = (t: ServerTable, autoInstall = false) => {
     const problems = new Map<string, { version: number | null; list: Problem[] }>();
     const messages: string[] = [];
-    const m = new ServerManager({ table: () => t, autoInstall: () => autoInstall, problems: (path, _s, version, list) => problems.set(path, { version, list }), message: (_l, text) => messages.push(text) });
+    const m = new ServerManager({
+      table: () => t,
+      autoInstall: () => autoInstall,
+      problems: (path, _s, version, list) => problems.set(path, { version, list }),
+      message: (_l, text) => messages.push(text),
+    });
     return { m, problems, messages };
   };
   const project = (name: string) => {
@@ -574,15 +761,36 @@ describe("the servers of open files (19.1)", () => {
     m.open(join(a, "one.fk"), 1, "BAD\n");
     m.open(join(a, "two.fk"), 1, "fine\n");
     m.open(join(b, "three.fk"), 1, "x BAD\n");
-    expect(await until(() => problems.get(join(a, "one.fk"))?.list.length === 1 && problems.get(join(b, "three.fk"))?.list.length === 1)).toBe(true);
-    expect(problems.get(join(a, "one.fk"))!.list[0]).toMatchObject({ start: { line: 1, column: 1 }, end: { line: 1, column: 4 }, severity: "warning", source: "fake" });
-    expect(m.list().map((s) => [s.root, s.files]).sort()).toEqual([
+    expect(
+      await until(
+        () =>
+          problems.get(join(a, "one.fk"))?.list.length === 1 && problems.get(join(b, "three.fk"))?.list.length === 1,
+      ),
+    ).toBe(true);
+    expect(problems.get(join(a, "one.fk"))!.list[0]).toMatchObject({
+      start: { line: 1, column: 1 },
+      end: { line: 1, column: 4 },
+      severity: "warning",
+      source: "fake",
+    });
+    expect(
+      m
+        .list()
+        .map((s) => [s.root, s.files])
+        .sort(),
+    ).toEqual([
       [a, 2],
       [b, 1],
     ]);
     m.change(join(a, "one.fk"), 2, "fine\nBAD BAD\n");
     expect(await until(() => problems.get(join(a, "one.fk"))?.version === 2)).toBe(true);
-    const hover = await m.request<{ contents: { kind: string; value: string } }>(join(a, "one.fk"), "textDocument/hover", { textDocument: { uri: pathToFileURL(join(a, "one.fk")).href }, position: { line: 1, character: 0 } }, "hoverProvider", "hover");
+    const hover = await m.request<{ contents: { kind: string; value: string } }>(
+      join(a, "one.fk"),
+      "textDocument/hover",
+      { textDocument: { uri: pathToFileURL(join(a, "one.fk")).href }, position: { line: 1, character: 0 } },
+      "hoverProvider",
+      "hover",
+    );
     expect(hover).toEqual({ server: "fake", result: { contents: { kind: "markdown", value: "line 1: BAD BAD" } } });
     await m.stopAll();
     expect(m.list().map((s) => s.state)).toEqual(["stopped", "stopped"]);
@@ -590,7 +798,14 @@ describe("the servers of open files (19.1)", () => {
 
   test("a server gets Mason's bin on its PATH, after yours, when it's there and not on it already (D222)", async () => {
     const said = join(sandbox, "server-path.txt");
-    const fakeDef = { name: "fake", command: launcher("fake-path", `require("node:fs").writeFileSync(${JSON.stringify(said)}, process.env.PATH ?? "");\n`), args: ["--stdio"] };
+    const fakeDef = {
+      name: "fake",
+      command: launcher(
+        "fake-path",
+        `require("node:fs").writeFileSync(${JSON.stringify(said)}, process.env.PATH ?? "");\n`,
+      ),
+      args: ["--stdio"],
+    };
     /** The PATH the server started with, in a project of its own. */
     const pathOf = async (name: string) => {
       rmSync(said, { force: true });
@@ -616,7 +831,12 @@ describe("the servers of open files (19.1)", () => {
 
   test("a project's .vscode/settings.json answers its servers' settings, over the config's, as VS Code's workspace does (19.20)", async () => {
     setTrustedRoots([sandbox]); // a root you trust (23.x): the project's own programs and settings count
-    const fakeDef = { name: "fake", command: launcher("fake-vsc"), args: ["--stdio"], config: { fake: { level: 1, keep: "x", deep: { a: 1, b: 1 } } } };
+    const fakeDef = {
+      name: "fake",
+      command: launcher("fake-vsc"),
+      args: ["--stdio"],
+      config: { fake: { level: 1, keep: "x", deep: { a: 1, b: 1 } } },
+    };
     const { m, problems } = managed(table({ fake: fakeDef }));
     const top = project("vsc");
     const pkg = join(top, "packages", "app");
@@ -624,13 +844,20 @@ describe("the servers of open files (19.1)", () => {
     mkdirSync(pkg, { recursive: true });
     writeFileSync(join(pkg, "package.json"), "{}");
     // JSON with comments and trailing commas; dotted keys and nested ones; a language's own left out.
-    writeFileSync(join(top, ".vscode", "settings.json"), '{\n  // the workspace\'s\n  "fake.level": 3,\n  "fake.deep": { "b": 2, },\n  "fake.deep.c": 3,\n  "[fake]": { "fake.level": 9 },\n  "editor.tabSize": 2,\n}\n');
+    writeFileSync(
+      join(top, ".vscode", "settings.json"),
+      '{\n  // the workspace\'s\n  "fake.level": 3,\n  "fake.deep": { "b": 2, },\n  "fake.deep.c": 3,\n  "[fake]": { "fake.level": 9 },\n  "editor.tabSize": 2,\n}\n',
+    );
     const file = join(pkg, "a.fk");
     m.open(file, 1, "BAD\n");
     expect(await until(() => (problems.get(file)?.list.length ?? 0) > 0)).toBe(true);
     m.change(file, 2, "BAD\n"); // told again once it has asked for its settings
     expect(await until(() => problems.get(file)?.version === 2)).toBe(true);
-    expect(JSON.parse(problems.get(file)!.list[0]!.message.replace(/^bad, with /, ""))).toEqual({ level: 3, keep: "x", deep: { a: 1, b: 2, c: 3 } });
+    expect(JSON.parse(problems.get(file)!.list[0]!.message.replace(/^bad, with /, ""))).toEqual({
+      level: 3,
+      keep: "x",
+      deep: { a: 1, b: 2, c: 3 },
+    });
     await m.stopAll();
     expect(vscodeSettings(join(sandbox, "pa"))).toBeNull(); // none
     // Found from a package below; VS Code's per-language overrides left out.
@@ -639,11 +866,23 @@ describe("the servers of open files (19.1)", () => {
 
   test("a root you don't trust (23.3): a server's settings yours and its safe ones — none of the folder's config or .vscode; said once", async () => {
     // As the table in effect has it, the folder's config is in its settings; yours alone has it without.
-    const folder = { name: "fake", command: launcher("fake-untrusted"), args: ["--stdio"], config: { fake: { level: 2, fromFolder: true } }, untrusted: { settings: () => ({ fake: { safe: true } }) } };
+    const folder = {
+      name: "fake",
+      command: launcher("fake-untrusted"),
+      args: ["--stdio"],
+      config: { fake: { level: 2, fromFolder: true } },
+      untrusted: { settings: () => ({ fake: { safe: true } }) },
+    };
     const yours = { ...folder, config: { fake: { level: 1 } } };
     const problems = new Map<string, { version: number | null; list: Problem[] }>();
     const messages: string[] = [];
-    const m = new ServerManager({ table: () => table({ fake: folder }), userTable: () => table({ fake: yours }), autoInstall: () => false, problems: (path, _s, version, list) => problems.set(path, { version, list }), message: (_l, text) => messages.push(text) });
+    const m = new ServerManager({
+      table: () => table({ fake: folder }),
+      userTable: () => table({ fake: yours }),
+      autoInstall: () => false,
+      problems: (path, _s, version, list) => problems.set(path, { version, list }),
+      message: (_l, text) => messages.push(text),
+    });
     const top = project("untrusted-settings");
     mkdirSync(join(top, ".vscode"), { recursive: true });
     writeFileSync(join(top, ".vscode", "settings.json"), '{ "fake.level": 3, "fake.fromVscode": true }');
@@ -652,19 +891,37 @@ describe("the servers of open files (19.1)", () => {
     expect(await until(() => (problems.get(file)?.list.length ?? 0) > 0)).toBe(true);
     m.change(file, 2, "BAD\n"); // told again once it has asked for its settings
     expect(await until(() => problems.get(file)?.version === 2)).toBe(true);
-    expect(JSON.parse(problems.get(file)!.list[0]!.message.replace(/^bad, with /, ""))).toEqual({ level: 1, safe: true });
+    expect(JSON.parse(problems.get(file)!.list[0]!.message.replace(/^bad, with /, ""))).toEqual({
+      level: 1,
+      safe: true,
+    });
     m.open(join(top, "b.fk"), 1, "fine\n");
     await m.stopAll();
     const said = messages.filter((t) => t.includes("isn't a root you trust"));
-    expect(said).toEqual([`${top} isn't a root you trust: fake without the project's code; .vscode/settings.json not read — trust it in slipbox (it asks), or [trust] roots in your config; slipbox doctor says more`]);
+    expect(said).toEqual([
+      `${top} isn't a root you trust: fake without the project's code; .vscode/settings.json not read — trust it in slipbox (it asks), or [trust] roots in your config; slipbox doctor says more`,
+    ]);
   });
 
   test("the TUI's way (23.x): a root not answered for is asked about once, not told; kept restricted, neither; trusted, its servers started again as anywhere", async () => {
-    const folder = { name: "fake", command: launcher("fake-ask"), args: ["--stdio"], config: { fake: { level: 2 } }, untrusted: { settings: () => ({ fake: { safe: true } }) } };
+    const folder = {
+      name: "fake",
+      command: launcher("fake-ask"),
+      args: ["--stdio"],
+      config: { fake: { level: 2 } },
+      untrusted: { settings: () => ({ fake: { safe: true } }) },
+    };
     const problems = new Map<string, { version: number | null; list: Problem[] }>();
     const messages: string[] = [];
     const asked: string[] = [];
-    const m = new ServerManager({ table: () => table({ fake: folder }), userTable: () => table({ fake: { ...folder, config: { fake: { level: 1 } } } }), autoInstall: () => false, problems: (path, _s, version, list) => problems.set(path, { version, list }), message: (_l, text) => messages.push(text), ask: (root, limits) => asked.push(`${root}: ${limits.join("; ")}`) });
+    const m = new ServerManager({
+      table: () => table({ fake: folder }),
+      userTable: () => table({ fake: { ...folder, config: { fake: { level: 1 } } } }),
+      autoInstall: () => false,
+      problems: (path, _s, version, list) => problems.set(path, { version, list }),
+      message: (_l, text) => messages.push(text),
+      ask: (root, limits) => asked.push(`${root}: ${limits.join("; ")}`),
+    });
     const top = project("ask-trust");
     const file = join(top, "a.fk");
     m.open(file, 1, "BAD\n");
@@ -693,7 +950,13 @@ describe("the servers of open files (19.1)", () => {
     // Another root, kept restricted: neither asked nor told.
     const other = project("kept-safe");
     setTrust(other, "restricted");
-    const m2 = new ServerManager({ table: () => table({ fake: folder }), autoInstall: () => false, problems: () => {}, message: (_l, text) => messages.push(text), ask: (root) => asked.push(root) });
+    const m2 = new ServerManager({
+      table: () => table({ fake: folder }),
+      autoInstall: () => false,
+      problems: () => {},
+      message: (_l, text) => messages.push(text),
+      ask: (root) => asked.push(root),
+    });
     m2.open(join(other, "a.fk"), 1, "fine\n");
     expect(asked.length).toBe(1);
     expect(messages.filter((t) => t.includes("trust"))).toEqual([]);
@@ -702,8 +965,18 @@ describe("the servers of open files (19.1)", () => {
 
   test("a server's start in a root you don't trust (23.4): its safe environment and initialize options; in one you trust, its own", () => {
     const top = project("untrusted-start");
-    const def: ServerDef = { name: "g", command: "g", args: [], environment: { KEEP: "1" }, initOptions: { own: true }, untrusted: { environment: { GOTOOLCHAIN: "local" }, initOptions: { safe: true } } };
-    expect(startOf(def, top)).toEqual({ environment: { KEEP: "1", GOTOOLCHAIN: "local" }, initOptions: { safe: true } });
+    const def: ServerDef = {
+      name: "g",
+      command: "g",
+      args: [],
+      environment: { KEEP: "1" },
+      initOptions: { own: true },
+      untrusted: { environment: { GOTOOLCHAIN: "local" }, initOptions: { safe: true } },
+    };
+    expect(startOf(def, top)).toEqual({
+      environment: { KEEP: "1", GOTOOLCHAIN: "local" },
+      initOptions: { safe: true },
+    });
     setTrustedRoots([top]);
     expect(startOf(def, top)).toEqual({ environment: { KEEP: "1" }, initOptions: { own: true } });
   });
@@ -732,31 +1005,70 @@ describe("the servers of open files (19.1)", () => {
     const uri = pathToFileURL(file).href;
     const heard: string[] = [];
     const t = table({ fake: main, "fake-lint": addon });
-    const m = new ServerManager({ table: () => t, autoInstall: () => false, problems: (_p, server, _v, list) => list.length && heard.push(server), message: () => {} });
+    const m = new ServerManager({
+      table: () => t,
+      autoInstall: () => false,
+      problems: (_p, server, _v, list) => list.length && heard.push(server),
+      message: () => {},
+    });
     m.open(file, 1, "BAD\nREF a\n");
     expect(await until(() => heard.includes("fake") && heard.includes("fake-lint"))).toBe(true); // both its diagnostics
-    const hover = await m.requestAll(file, "textDocument/hover", { textDocument: { uri }, position: { line: 0, character: 0 } }, "hoverProvider", "hover");
+    const hover = await m.requestAll(
+      file,
+      "textDocument/hover",
+      { textDocument: { uri }, position: { line: 0, character: 0 } },
+      "hoverProvider",
+      "hover",
+    );
     expect(hover.map((h) => h.server)).toEqual(["fake"]); // an add-on doesn't hover
-    const refs = await m.requestAll(file, "textDocument/references", { textDocument: { uri }, position: { line: 0, character: 0 }, context: { includeDeclaration: false } }, "referencesProvider", "goto-reference");
+    const refs = await m.requestAll(
+      file,
+      "textDocument/references",
+      { textDocument: { uri }, position: { line: 0, character: 0 }, context: { includeDeclaration: false } },
+      "referencesProvider",
+      "goto-reference",
+    );
     expect(refs.map((r) => r.server)).toEqual(["fake"]); // nor find references
     await m.stopAll();
     // The config limits it: the main server for hover only — its diagnostics unheard.
-    const limited: ServerTable = { ...t, languages: [{ ...t.languages[0]!, features: { fake: { only: ["hover"] }, "fake-lint": { except: ["diagnostics"] } } }] };
+    const limited: ServerTable = {
+      ...t,
+      languages: [
+        { ...t.languages[0]!, features: { fake: { only: ["hover"] }, "fake-lint": { except: ["diagnostics"] } } },
+      ],
+    };
     const quiet: string[] = [];
-    const m2 = new ServerManager({ table: () => limited, autoInstall: () => false, problems: (_p, server, _v, list) => list.length && quiet.push(server), message: () => {} });
+    const m2 = new ServerManager({
+      table: () => limited,
+      autoInstall: () => false,
+      problems: (_p, server, _v, list) => list.length && quiet.push(server),
+      message: () => {},
+    });
     m2.open(file, 1, "BAD\n");
-    const h2 = await m2.request(file, "textDocument/hover", { textDocument: { uri }, position: { line: 0, character: 0 } }, "hoverProvider", "hover");
+    const h2 = await m2.request(
+      file,
+      "textDocument/hover",
+      { textDocument: { uri }, position: { line: 0, character: 0 } },
+      "hoverProvider",
+      "hover",
+    );
     expect(h2?.server).toBe("fake");
     await Bun.sleep(400);
     expect(quiet).toEqual([]);
     await m2.stopAll();
     // Helix's shape in the config: an entry with only-features.
-    const helix = serverTable({}, [{ name: "python", "language-servers": ["pyright", { name: "ruff", "only-features": ["diagnostics", "format"] }] }]);
-    expect(languageOf(helix, "a.py")!.features).toEqual({ ruff: { only: ["diagnostics", "format"], except: undefined } });
+    const helix = serverTable({}, [
+      { name: "python", "language-servers": ["pyright", { name: "ruff", "only-features": ["diagnostics", "format"] }] },
+    ]);
+    expect(languageOf(helix, "a.py")!.features).toEqual({
+      ruff: { only: ["diagnostics", "format"], except: undefined },
+    });
   });
 
   test("a crash: started again, its files told again; one that keeps crashing is left stopped", async () => {
-    const { m, problems, messages } = managed(table({ fake: { name: "fake", command: launcher("fake-crash"), args: ["--stdio"] } }));
+    const { m, problems, messages } = managed(
+      table({ fake: { name: "fake", command: launcher("fake-crash"), args: ["--stdio"] } }),
+    );
     const root = project("pc");
     const file = join(root, "a.fk");
     m.open(file, 1, "BAD\n");
@@ -779,8 +1091,18 @@ describe("the servers of open files (19.1)", () => {
     rmSync(program);
     native.m.change(file, 2, "CRASH\n");
     expect(await until(() => native.messages.some((x) => x.includes("program is gone")))).toBe(true);
-    expect(native.messages.filter((x) => x.startsWith("fake crashed"))).toEqual([expect.stringMatching(/^fake crashed \(.*\) and its program is gone; not started again$/)]);
-    expect(await native.m.request(file, "textDocument/hover", { textDocument: { uri: pathToFileURL(file).href }, position: { line: 0, character: 0 } }, "hoverProvider", "hover")).toBeNull();
+    expect(native.messages.filter((x) => x.startsWith("fake crashed"))).toEqual([
+      expect.stringMatching(/^fake crashed \(.*\) and its program is gone; not started again$/),
+    ]);
+    expect(
+      await native.m.request(
+        file,
+        "textDocument/hover",
+        { textDocument: { uri: pathToFileURL(file).href }, position: { line: 0, character: 0 } },
+        "hoverProvider",
+        "hover",
+      ),
+    ).toBeNull();
     await native.m.stopAll(); // resolves: no restart that rejected
     // npm, found in the project, then gone: with auto_install off, not installed.
     const root = project("pgone-npm");
@@ -789,7 +1111,12 @@ describe("the servers of open files (19.1)", () => {
     const local = join(bins, "slipbox-gone-ls");
     writeFileSync(local, `#!/usr/bin/env node\nawait import(${JSON.stringify(FAKE)});\n`);
     chmodSync(local, 0o755);
-    const npmDef = { name: "fake-npm", command: "slipbox-gone-ls", args: ["--stdio"], npm: { package: "slipbox-gone-ls", version: "1.0.0", bin: "slipbox-gone-ls" } };
+    const npmDef = {
+      name: "fake-npm",
+      command: "slipbox-gone-ls",
+      args: ["--stdio"],
+      npm: { package: "slipbox-gone-ls", version: "1.0.0", bin: "slipbox-gone-ls" },
+    };
     const npm = managed(table({ "fake-npm": npmDef }));
     const f2 = join(root, "a.fk");
     npm.m.open(f2, 1, "BAD\n");
@@ -802,7 +1129,9 @@ describe("the servers of open files (19.1)", () => {
   });
 
   test("a server that can't start is said once, not counted as a crash and started again", async () => {
-    const { m, messages } = managed(table({ fake: { name: "fake", command: "sh", args: ["-c", "echo 'fatal: bad flag' >&2; exit 2"] } }));
+    const { m, messages } = managed(
+      table({ fake: { name: "fake", command: "sh", args: ["-c", "echo 'fatal: bad flag' >&2; exit 2"] } }),
+    );
     m.open(join(project("pq"), "a.fk"), 1, "");
     await Bun.sleep(1000);
     expect(messages).toEqual(["fake: fake exited before it was ready (code 2): fatal: bad flag"]);
@@ -814,13 +1143,23 @@ describe("the servers of open files (19.1)", () => {
     const off = managed(table({ "slipbox-native-ls": native }));
     off.m.open(join(project("pd"), "a.fk"), 1, "");
     off.m.open(join(project("pd"), "b.fk"), 1, "");
-    expect(off.messages).toEqual(["fake: slipbox-native-ls isn't installed (slipbox finds it on PATH; it doesn't install native servers) — slipbox doctor says more"]);
+    expect(off.messages).toEqual([
+      "fake: slipbox-native-ls isn't installed (slipbox finds it on PATH; it doesn't install native servers) — slipbox doctor says more",
+    ]);
     // An npm package of the fake server, installed from a folder (no network).
     const pkg = join(sandbox, "fake-pkg");
     mkdirSync(pkg, { recursive: true });
-    writeFileSync(join(pkg, "package.json"), JSON.stringify({ name: "slipbox-fake-ls", version: "1.0.0", bin: { "slipbox-fake-ls": "ls.js" } }));
+    writeFileSync(
+      join(pkg, "package.json"),
+      JSON.stringify({ name: "slipbox-fake-ls", version: "1.0.0", bin: { "slipbox-fake-ls": "ls.js" } }),
+    );
     writeFileSync(join(pkg, "ls.js"), `#!/usr/bin/env node\nawait import(${JSON.stringify(FAKE)});\n`);
-    const npmDef = { name: "fake-npm", command: "slipbox-fake-ls", args: ["--stdio"], npm: { package: "slipbox-fake-ls", version: `file:${pkg}`, bin: "slipbox-fake-ls" } };
+    const npmDef = {
+      name: "fake-npm",
+      command: "slipbox-fake-ls",
+      args: ["--stdio"],
+      npm: { package: "slipbox-fake-ls", version: `file:${pkg}`, bin: "slipbox-fake-ls" },
+    };
     LOCKS[lockKey(npmDef.npm)] = lockFor(npmDef.npm);
     const noInstall = managed(table({ "fake-npm": npmDef }));
     noInstall.m.open(join(project("pe"), "a.fk"), 1, "");
@@ -829,7 +1168,10 @@ describe("the servers of open files (19.1)", () => {
     const file = join(project("pf"), "a.fk");
     install.m.open(file, 1, "BAD\n");
     expect(await until(() => install.problems.get(file)?.list.length === 1, 20_000)).toBe(true);
-    expect(install.messages).toEqual([`installing fake-npm (slipbox-fake-ls@file:${pkg}) into slipbox's own folder…`, "installed fake-npm"]);
+    expect(install.messages).toEqual([
+      `installing fake-npm (slipbox-fake-ls@file:${pkg}) into slipbox's own folder…`,
+      "installed fake-npm",
+    ]);
     expect(existsSync(join(toolFolder(npmDef.npm)!, "node_modules/.bin/slipbox-fake-ls"))).toBe(true);
     await install.m.stopAll();
   });
@@ -837,16 +1179,30 @@ describe("the servers of open files (19.1)", () => {
   test("slipbox's install of a server behind its lock (14.11): installed again before it starts — or, installing off, run as it is", async () => {
     const pkg = join(sandbox, "fake-pkg-behind");
     mkdirSync(pkg, { recursive: true });
-    writeFileSync(join(pkg, "package.json"), JSON.stringify({ name: "slipbox-behind-ls", version: "1.0.0", bin: { "slipbox-behind-ls": "ls.js" } }));
+    writeFileSync(
+      join(pkg, "package.json"),
+      JSON.stringify({ name: "slipbox-behind-ls", version: "1.0.0", bin: { "slipbox-behind-ls": "ls.js" } }),
+    );
     writeFileSync(join(pkg, "ls.js"), `#!/usr/bin/env node\nawait import(${JSON.stringify(FAKE)});\n`);
-    const def = { name: "behind-npm", command: "slipbox-behind-ls", args: ["--stdio"], npm: { package: "slipbox-behind-ls", version: `file:${pkg}`, bin: "slipbox-behind-ls" } };
+    const def = {
+      name: "behind-npm",
+      command: "slipbox-behind-ls",
+      args: ["--stdio"],
+      npm: { package: "slipbox-behind-ls", version: `file:${pkg}`, bin: "slipbox-behind-ls" },
+    };
     LOCKS[lockKey(def.npm)] = lockFor(def.npm);
     // What an older slipbox installed: the shared folder of before, the fake server under its name.
     const old = join(toolsDir(), "node_modules");
     mkdirSync(join(old, ".bin"), { recursive: true });
     mkdirSync(join(old, "slipbox-behind-ls"), { recursive: true });
-    writeFileSync(join(old, "slipbox-behind-ls", "package.json"), JSON.stringify({ name: "slipbox-behind-ls", version: "0.9.0" }));
-    writeFileSync(join(old, ".bin", "slipbox-behind-ls"), `#!/usr/bin/env node\nawait import(${JSON.stringify(FAKE)});\n`);
+    writeFileSync(
+      join(old, "slipbox-behind-ls", "package.json"),
+      JSON.stringify({ name: "slipbox-behind-ls", version: "0.9.0" }),
+    );
+    writeFileSync(
+      join(old, ".bin", "slipbox-behind-ls"),
+      `#!/usr/bin/env node\nawait import(${JSON.stringify(FAKE)});\n`,
+    );
     chmodSync(join(old, ".bin", "slipbox-behind-ls"), 0o755);
     // Installing off: the old one runs, nothing installed.
     const off = managed(table({ "behind-npm": def }));
@@ -861,17 +1217,29 @@ describe("the servers of open files (19.1)", () => {
     const b = join(project("pbehind-on"), "b.fk");
     on.m.open(b, 1, "BAD\n");
     expect(await until(() => on.problems.get(b)?.list.length === 1, 20_000)).toBe(true);
-    expect(on.messages).toEqual([`updating behind-npm (0.9.0 → file:${pkg}) in slipbox's own folder…`, "updated behind-npm"]);
-    expect(ownInstall(def.npm)).toEqual({ path: join(toolFolder(def.npm)!, "node_modules/.bin/slipbox-behind-ls"), behind: null });
+    expect(on.messages).toEqual([
+      `updating behind-npm (0.9.0 → file:${pkg}) in slipbox's own folder…`,
+      "updated behind-npm",
+    ]);
+    expect(ownInstall(def.npm)).toEqual({
+      path: join(toolFolder(def.npm)!, "node_modules/.bin/slipbox-behind-ls"),
+      behind: null,
+    });
     await on.m.stopAll();
     // Installed before at the version pinned, not from the lock: installed again, said so.
     rmSync(toolFolder(def.npm)!, { recursive: true });
-    writeFileSync(join(old, "slipbox-behind-ls", "package.json"), JSON.stringify({ name: "slipbox-behind-ls", version: `file:${pkg}` }));
+    writeFileSync(
+      join(old, "slipbox-behind-ls", "package.json"),
+      JSON.stringify({ name: "slipbox-behind-ls", version: `file:${pkg}` }),
+    );
     const same = managed(table({ "behind-npm": def }), true);
     const c = join(project("pbehind-same"), "c.fk");
     same.m.open(c, 1, "BAD\n");
     expect(await until(() => same.problems.get(c)?.list.length === 1, 20_000)).toBe(true);
-    expect(same.messages).toEqual([`installing behind-npm again from slipbox's lockfile (slipbox-behind-ls@file:${pkg})…`, "updated behind-npm"]);
+    expect(same.messages).toEqual([
+      `installing behind-npm again from slipbox's lockfile (slipbox-behind-ls@file:${pkg})…`,
+      "updated behind-npm",
+    ]);
     await same.m.stopAll();
   });
   test("a file's servers, once each has started: the running ones; a save reaches them; closed, they're told, and it opens afresh", async () => {
@@ -879,7 +1247,13 @@ describe("the servers of open files (19.1)", () => {
     const logs: string[] = [];
     const problems = new Map<string, { version: number | null; list: Problem[] }>();
     const t = table({ fake: fakeDef });
-    const m = new ServerManager({ table: () => t, autoInstall: () => false, problems: (path, _s, version, list) => problems.set(path, { version, list }), message: () => {}, log: (l) => logs.push(l) });
+    const m = new ServerManager({
+      table: () => t,
+      autoInstall: () => false,
+      problems: (path, _s, version, list) => problems.set(path, { version, list }),
+      message: () => {},
+      log: (l) => logs.push(l),
+    });
     const file = join(project("pstarted"), "a.fk");
     const fileUri = pathToFileURL(file).href;
     expect(await m.started(file, "diagnostics")).toEqual([]); // not open
@@ -951,15 +1325,33 @@ describe("linters without a server (19.19)", () => {
   test("findings: severity by %t, else the linter's; this file's only; columns, ends, codes, pointers", () => {
     const file = join(sandbox, "lint", "a.yaml");
     const def = { source: "yl", severity: "warning" as const };
-    const fs = formats("%-G%.%#ignored%.%#", "%f:%l:%c: [%trror] %m", "%f:%l:%c: [%tarning] %m", "%f:%l:%c-%e:%k E%n %m", "%f:%l %m", "%p^ %m");
+    const fs = formats(
+      "%-G%.%#ignored%.%#",
+      "%f:%l:%c: [%trror] %m",
+      "%f:%l:%c: [%tarning] %m",
+      "%f:%l:%c-%e:%k E%n %m",
+      "%f:%l %m",
+      "%p^ %m",
+    );
     const out = parseFindings(
-      ["stdin:1:1: [warning] missing start", "-:2:5: [error] too many spaces", "other.yaml:3:1: [error] not this file", "a.yaml:4:2-5:9 E42 spans", "<stdin>:6 bare", "this is ignored here", "    ^ pointed", "noise"].join("\n"),
+      [
+        "stdin:1:1: [warning] missing start",
+        "-:2:5: [error] too many spaces",
+        "other.yaml:3:1: [error] not this file",
+        "a.yaml:4:2-5:9 E42 spans",
+        "<stdin>:6 bare",
+        "this is ignored here",
+        "    ^ pointed",
+        "noise",
+      ].join("\n"),
       fs,
       def,
       file,
       join(sandbox, "lint"),
     );
-    expect(out.map((p) => [p.start.line, p.start.column, p.end.line, p.end.column, p.severity, p.code, p.message])).toEqual([
+    expect(
+      out.map((p) => [p.start.line, p.start.column, p.end.line, p.end.column, p.severity, p.code, p.message]),
+    ).toEqual([
       [1, 1, 1, 2, "warning", null, "missing start"],
       [2, 5, 2, 6, "error", null, "too many spaces"],
       [4, 2, 5, 9, "warning", "42", "spans"],
@@ -971,29 +1363,76 @@ describe("linters without a server (19.19)", () => {
 
   test("run as efm runs it: its input the text, from its project, the project's own copy first; exit 0 is nothing found", async () => {
     setTrustedRoots([sandbox]); // a root you trust (23.x): the project's own programs and settings count
-    const root = dir("efm", { ".fakelintrc": "", "src/a b's.txt": "on disk\n", "node_modules/.bin/fakelint": "#!/bin/sh\necho \"-:1:2: [error] own copy, in $(basename \"$PWD\")\"\nexit 1\n" });
+    const root = dir("efm", {
+      ".fakelintrc": "",
+      "src/a b's.txt": "on disk\n",
+      "node_modules/.bin/fakelint": '#!/bin/sh\necho "-:1:2: [error] own copy, in $(basename "$PWD")"\nexit 1\n',
+    });
     chmodSync(join(root, "node_modules/.bin/fakelint"), 0o755);
     const file = join(root, "src/a b's.txt");
     // Its input, read: a finding per line holding BAD.
-    const reads = linter({ "lint-command": "grep -n BAD | sed 's/^\\([0-9]*\\):.*/stdin:\\1:1: [error] found BAD/'; exit 1", "lint-formats": ["%f:%l:%c: [%trror] %m"] });
-    expect(await runLinter(reads, file, "ok\nBAD here\n", root)).toEqual({ problems: [{ start: { line: 2, column: 1 }, end: { line: 2, column: 2 }, severity: "error", source: "t", code: null, message: "found BAD" }] });
+    const reads = linter({
+      "lint-command": "grep -n BAD | sed 's/^\\([0-9]*\\):.*/stdin:\\1:1: [error] found BAD/'; exit 1",
+      "lint-formats": ["%f:%l:%c: [%trror] %m"],
+    });
+    expect(await runLinter(reads, file, "ok\nBAD here\n", root)).toEqual({
+      problems: [
+        {
+          start: { line: 2, column: 1 },
+          end: { line: 2, column: 2 },
+          severity: "error",
+          source: "t",
+          code: null,
+          message: "found BAD",
+        },
+      ],
+    });
     // An exit of 0 is efm's "nothing found", whatever it printed — unless told to ignore it.
-    const zero = linter({ "lint-command": "echo 'stdin:1:1: [error] said, but exit 0'", "lint-formats": ["%f:%l:%c: [%trror] %m"] });
+    const zero = linter({
+      "lint-command": "echo 'stdin:1:1: [error] said, but exit 0'",
+      "lint-formats": ["%f:%l:%c: [%trror] %m"],
+    });
     expect(await runLinter(zero, file, "", root)).toEqual({ problems: [] });
-    expect(await runLinter({ ...zero, ignoreExitCode: true }, file, "", root)).toMatchObject({ problems: [{ message: "said, but exit 0" }] });
+    expect(await runLinter({ ...zero, ignoreExitCode: true }, file, "", root)).toMatchObject({
+      problems: [{ message: "said, but exit 0" }],
+    });
     // The file as saved: its path in place of ${INPUT}, quoted; appended when there's none.
-    const onDisk = linter({ "lint-command": "sed -n 's/^\\(.*\\)$/1: \\1/p' ${INPUT}; exit 1", "lint-stdin": false, "lint-formats": ["%l: %m"] });
-    expect(await runLinter(onDisk, file, "typed, unsaved", root)).toMatchObject({ problems: [{ start: { line: 1 }, message: "on disk" }] });
-    expect(commandFor(linter({ "lint-command": "cat", "lint-stdin": false }), file)).toBe(`cat '${root}/src/a b'\\''s.txt'`);
+    const onDisk = linter({
+      "lint-command": "sed -n 's/^\\(.*\\)$/1: \\1/p' ${INPUT}; exit 1",
+      "lint-stdin": false,
+      "lint-formats": ["%l: %m"],
+    });
+    expect(await runLinter(onDisk, file, "typed, unsaved", root)).toMatchObject({
+      problems: [{ start: { line: 1 }, message: "on disk" }],
+    });
+    expect(commandFor(linter({ "lint-command": "cat", "lint-stdin": false }), file)).toBe(
+      `cat '${root}/src/a b'\\''s.txt'`,
+    );
     // The project's copy, before PATH's, run from the project's top folder.
-    expect(await runLinter(linter({ "lint-command": "fakelint", "lint-formats": ["%f:%l:%c: [%trror] %m"] }), file, "", root)).toMatchObject({ problems: [{ message: "own copy, in efm" }] });
+    expect(
+      await runLinter(
+        linter({ "lint-command": "fakelint", "lint-formats": ["%f:%l:%c: [%trror] %m"] }),
+        file,
+        "",
+        root,
+      ),
+    ).toMatchObject({ problems: [{ message: "own copy, in efm" }] });
     // Not there: the shell's 127, said as missing.
-    expect(await runLinter(linter({ "lint-command": "slipbox-no-such-linter" }), file, "", root)).toMatchObject({ failed: "missing" });
-    expect(await runLinter(linter({ "lint-command": "cat", "lint-formats": ["%C%m"] }), file, "", root)).toMatchObject({ failed: "error" });
+    expect(await runLinter(linter({ "lint-command": "slipbox-no-such-linter" }), file, "", root)).toMatchObject({
+      failed: "missing",
+    });
+    expect(await runLinter(linter({ "lint-command": "cat", "lint-formats": ["%C%m"] }), file, "", root)).toMatchObject({
+      failed: "error",
+    });
   });
 
   test("where it runs: the folder with its config; one needing it doesn't run without; built in by language", () => {
-    const root = dir("marks", { ".git/HEAD": "", "svc/.hadolint.yaml": "", "svc/api/Dockerfile": "", "web/Dockerfile": "" });
+    const root = dir("marks", {
+      ".git/HEAD": "",
+      "svc/.hadolint.yaml": "",
+      "svc/api/Dockerfile": "",
+      "web/Dockerfile": "",
+    });
     const hadolint = linterTable().hadolint!;
     expect(linterRoot(hadolint, join(root, "svc/api/Dockerfile"), root)).toBe(join(root, "svc"));
     expect(linterRoot(hadolint, join(root, "web/Dockerfile"), root)).toBeNull(); // the project doesn't ask
@@ -1001,18 +1440,29 @@ describe("linters without a server (19.19)", () => {
     expect(languageOf(serverTable(), "Dockerfile")!.linters).toEqual(["hadolint"]);
     expect(languageOf(serverTable({}, [{ name: "yaml", linters: ["mine"] }]), "a.yml")!.linters).toEqual(["mine"]);
     // A config's keys over the built-in's.
-    expect(linterTable({ yamllint: { "lint-command": "yamllint --strict -f parsable -" } }).yamllint).toMatchObject({ command: "yamllint --strict -f parsable -", formats: LINTERS.yamllint!.formats, requireMarker: true });
+    expect(linterTable({ yamllint: { "lint-command": "yamllint --strict -f parsable -" } }).yamllint).toMatchObject({
+      command: "yamllint --strict -f parsable -",
+      formats: LINTERS.yamllint!.formats,
+      requireMarker: true,
+    });
   });
 
   test("a vault's config tunes known linters, never names a program", () => {
     const root = dir("lintcfg", {
-      "user.toml": '[linter.mine]\nlint-command = "mine -"\n\n[[language]]\nname = "yaml"\nlinters = ["yamllint", "mine"]\n',
-      "vault.toml": '[linter.yamllint]\nlint-command = "/tmp/evil"\nrequire-marker = false\n\n[linter.evil]\nlint-command = "/tmp/evil"\n',
+      "user.toml":
+        '[linter.mine]\nlint-command = "mine -"\n\n[[language]]\nname = "yaml"\nlinters = ["yamllint", "mine"]\n',
+      "vault.toml":
+        '[linter.yamllint]\nlint-command = "/tmp/evil"\nrequire-marker = false\n\n[linter.evil]\nlint-command = "/tmp/evil"\n',
     });
-    const { config, warnings } = loadConfig({ configFile: join(root, "user.toml"), vaultFile: join(root, "vault.toml") });
+    const { config, warnings } = loadConfig({
+      configFile: join(root, "user.toml"),
+      vaultFile: join(root, "vault.toml"),
+    });
     expect(config.linter).toEqual({ mine: { "lint-command": "mine -" }, yamllint: { "require-marker": false } });
     expect(config.language).toEqual([{ name: "yaml", linters: ["yamllint", "mine"] }]);
-    expect(warnings.some((w) => w.includes("sets linter.yamllint.lint-command, which only your own config may set"))).toBe(true);
+    expect(
+      warnings.some((w) => w.includes("sets linter.yamllint.lint-command, which only your own config may set")),
+    ).toBe(true);
     expect(warnings.some((w) => w.includes("adds the linter evil, which only your own config may"))).toBe(true);
   });
   test("errorformat's regex items and ranges: %\\+ %\\? %\\= and a plain backslash; %[…]; what's malformed is said", () => {
@@ -1036,11 +1486,17 @@ describe("linters without a server (19.19)", () => {
   test("a linter that takes too long is stopped, and said so; one that can't start at all says why", async () => {
     const root = dir("slowlint", { "a.txt": "" });
     const t = Date.now();
-    expect(await runLinter(linter({ "lint-command": "sleep 5" }), join(root, "a.txt"), "", root, 200)).toEqual({ failed: "timeout", detail: "t took longer than 0.2 s" });
+    expect(await runLinter(linter({ "lint-command": "sleep 5" }), join(root, "a.txt"), "", root, 200)).toEqual({
+      failed: "timeout",
+      detail: "t took longer than 0.2 s",
+    });
     expect(Date.now() - t).toBeLessThan(3000);
     // Its project's folder gone (deleted while open): the shell itself can't start there.
     const gone = join(sandbox, "slowlint-gone");
-    expect(await runLinter(linter({ "lint-command": "true" }), join(gone, "a.txt"), "", gone)).toMatchObject({ failed: "error", detail: expect.stringMatching(/^t: .*ENOENT/) });
+    expect(await runLinter(linter({ "lint-command": "true" }), join(gone, "a.txt"), "", gone)).toMatchObject({
+      failed: "error",
+      detail: expect.stringMatching(/^t: .*ENOENT/),
+    });
   });
 
   test("a linter in a root you don't trust (23.2): the project's own copy isn't on its PATH; in one you trust, first", () => {
@@ -1052,11 +1508,24 @@ describe("linters without a server (19.19)", () => {
 
   test("doctor for a file: each linter's own folder, its program found from there; null where the project doesn't ask", () => {
     setTrustedRoots([sandbox]); // a root you trust (23.x): the project's own programs and settings count
-    const root = dir("doclint", { ".git/HEAD": "", "svc/.hadolint.yaml": "", "svc/api/Dockerfile": "", "svc/node_modules/.bin/hadolint": "#!/bin/sh\n", "web/Dockerfile": "" });
+    const root = dir("doclint", {
+      ".git/HEAD": "",
+      "svc/.hadolint.yaml": "",
+      "svc/api/Dockerfile": "",
+      "svc/node_modules/.bin/hadolint": "#!/bin/sh\n",
+      "web/Dockerfile": "",
+    });
     chmodSync(join(root, "svc/node_modules/.bin/hadolint"), 0o755);
     const svc = doctorFile(serverTable(), linterTable(), join(root, "svc/api/Dockerfile"), false)!;
     expect(svc.root).toBe(root);
-    expect(svc.linters).toEqual([expect.objectContaining({ name: "hadolint", root: join(root, "svc"), where: "project", path: join(root, "svc/node_modules/.bin/hadolint") })]);
+    expect(svc.linters).toEqual([
+      expect.objectContaining({
+        name: "hadolint",
+        root: join(root, "svc"),
+        where: "project",
+        path: join(root, "svc/node_modules/.bin/hadolint"),
+      }),
+    ]);
     const web = doctorFile(serverTable(), linterTable(), join(root, "web/Dockerfile"), false)!;
     expect(web.linters).toEqual([expect.objectContaining({ name: "hadolint", root: null })]);
     expect(web.linters[0]!.where).not.toBe("project");
@@ -1074,9 +1543,18 @@ describe("slipbox's installs behind their locks, said and acted on (14.11)", () 
     writeFileSync(join(old, "node_modules/.bin/slipbox-doc-ls"), "#!/bin/sh\n");
     chmodSync(join(old, "node_modules/.bin/slipbox-doc-ls"), 0o755);
     const def: ServerDef = { name: "doc-ls", command: "slipbox-doc-ls", args: [], npm };
-    const t: ServerTable = { servers: { "doc-ls": def }, languages: [{ name: "doc", languageId: "doc", fileTypes: ["doc"], roots: [], servers: ["doc-ls"] }] };
+    const t: ServerTable = {
+      servers: { "doc-ls": def },
+      languages: [{ name: "doc", languageId: "doc", fileTypes: ["doc"], roots: [], servers: ["doc-ls"] }],
+    };
     const [g] = doctor(t, {}, sandbox, true);
-    expect(g!.servers[0]).toMatchObject({ name: "doc-ls", status: "found", where: "slipbox", behind: "1.5.0", package: "slipbox-doc-ls@2.0.0" });
+    expect(g!.servers[0]).toMatchObject({
+      name: "doc-ls",
+      status: "found",
+      where: "slipbox",
+      behind: "1.5.0",
+      package: "slipbox-doc-ls@2.0.0",
+    });
   });
 
   test("lint's markdownlint-cli2 behind: installed again first when installing is on; run as it is when off", () => {

@@ -95,19 +95,35 @@ export async function toDocx(doc: ExportDoc): Promise<Uint8Array> {
   await convertPictures(doc, KINDS, r);
   const w: Writer = { r, notes: new Map(), numbering: [] };
   // Footnotes first: their numbers, in the order they're defined.
-  for (const ch of doc.chapters) for (const n of ch.nodes) if (n.type === "footnoteDefinition") w.notes.set(n.identifier, { n: w.notes.size + 1, children: [] });
-  for (const ch of doc.chapters) for (const n of ch.nodes) if (n.type === "footnoteDefinition") w.notes.get(n.identifier)!.children = blocks(n.children, w, 0).filter((c): c is Paragraph => c instanceof Paragraph);
+  for (const ch of doc.chapters)
+    for (const n of ch.nodes)
+      if (n.type === "footnoteDefinition") w.notes.set(n.identifier, { n: w.notes.size + 1, children: [] });
+  for (const ch of doc.chapters)
+    for (const n of ch.nodes)
+      if (n.type === "footnoteDefinition")
+        w.notes.get(n.identifier)!.children = blocks(n.children, w, 0).filter(
+          (c): c is Paragraph => c instanceof Paragraph,
+        );
   const body: FileChild[] = [];
   doc.chapters.forEach((ch, k) => {
     const nodes = ch.nodes.filter((n) => n.type !== "footnoteDefinition");
     const first = nodes[0];
     // Its title a heading — the note's own first one when it opens with one — holding the chapter's bookmark.
     const titled = first?.type === "heading" && first.depth === 1;
-    const head = titled ? blocks([first], w, 0)[0] as Paragraph : new Paragraph({ heading: HeadingLevel.HEADING_1, children: [new TextRun(ch.title)] });
-    body.push(new Paragraph({ children: [...(k > 0 ? [new PageBreak()] : []), new Bookmark({ id: bookmarkName(ch.anchor), children: [] })] }), head);
+    const head = titled
+      ? (blocks([first], w, 0)[0] as Paragraph)
+      : new Paragraph({ heading: HeadingLevel.HEADING_1, children: [new TextRun(ch.title)] });
+    body.push(
+      new Paragraph({
+        children: [...(k > 0 ? [new PageBreak()] : []), new Bookmark({ id: bookmarkName(ch.anchor), children: [] })],
+      }),
+      head,
+    );
     body.push(...blocks(titled ? nodes.slice(1) : nodes, w, 0));
   });
-  const footnotes = Object.fromEntries([...w.notes.values()].map((f) => [f.n, { children: f.children.length ? f.children : [new Paragraph("")] }]));
+  const footnotes = Object.fromEntries(
+    [...w.notes.values()].map((f) => [f.n, { children: f.children.length ? f.children : [new Paragraph("")] }]),
+  );
   const file = new Document({
     title: doc.title,
     ...(doc.author ? { creator: doc.author } : {}),
@@ -124,13 +140,21 @@ function blocks(nodes: RootContent[], w: Writer, quote: number, list?: { level: 
   const out: FileChild[] = [];
   // In a quote: in from a bar; in a list item, at the item's indentation.
   const indent = 567 * quote + (list ? 720 * (list.level + 1) : 0);
-  const quoted = { ...(indent ? { indent: { left: indent } } : {}), ...(quote ? { border: { left: { style: BorderStyle.SINGLE, size: 12, color: bar, space: 8 } } } : {}) };
+  const quoted = {
+    ...(indent ? { indent: { left: indent } } : {}),
+    ...(quote ? { border: { left: { style: BorderStyle.SINGLE, size: 12, color: bar, space: 8 } } } : {}),
+  };
   for (const n of nodes) {
     switch (n.type) {
       case "heading": {
         const anchor = (n.data as { anchor?: string } | undefined)?.anchor;
         const children = runs(n.children, {}, w);
-        out.push(new Paragraph({ heading: HEADINGS[n.depth - 1], children: anchor ? [new Bookmark({ id: bookmarkName(anchor), children })] : children }));
+        out.push(
+          new Paragraph({
+            heading: HEADINGS[n.depth - 1],
+            children: anchor ? [new Bookmark({ id: bookmarkName(anchor), children })] : children,
+          }),
+        );
         break;
       }
       case "paragraph":
@@ -139,7 +163,9 @@ function blocks(nodes: RootContent[], w: Writer, quote: number, list?: { level: 
       case "blockquote": {
         // A callout: its bar in its kind's colour.
         const kind = (n.data as { callout?: string } | undefined)?.callout;
-        out.push(...blocks(n.children, w, quote + 1, undefined, kind ? calloutColour(kind).slice(1).toUpperCase() : "D0D7DE"));
+        out.push(
+          ...blocks(n.children, w, quote + 1, undefined, kind ? calloutColour(kind).slice(1).toUpperCase() : "D0D7DE"),
+        );
         break;
       }
       case "list": {
@@ -151,7 +177,13 @@ function blocks(nodes: RootContent[], w: Writer, quote: number, list?: { level: 
           const box = item.checked === true ? "☑ " : item.checked === false ? "☐ " : "";
           const mark = reference ? { numbering: { reference, level } } : { bullet: { level } };
           const leadRuns = lead?.type === "paragraph" ? runs(lead.children, {}, w) : [];
-          out.push(new Paragraph({ ...mark, ...(quote ? quoted : {}), children: [...(box ? [new TextRun(box)] : []), ...leadRuns] }));
+          out.push(
+            new Paragraph({
+              ...mark,
+              ...(quote ? quoted : {}),
+              children: [...(box ? [new TextRun(box)] : []), ...leadRuns],
+            }),
+          );
           // What else it holds: at its own indentation, a list inside it a level in.
           out.push(...blocks(lead && lead.type !== "paragraph" ? [lead, ...rest] : rest, w, quote, { level }, bar));
         }
@@ -167,7 +199,12 @@ function blocks(nodes: RootContent[], w: Writer, quote: number, list?: { level: 
         out.push(table(n.children, n.align ?? [], w));
         break;
       case "thematicBreak":
-        out.push(new Paragraph({ border: { bottom: { style: BorderStyle.SINGLE, size: 6, color: "D0D7DE", space: 1 } }, children: [] }));
+        out.push(
+          new Paragraph({
+            border: { bottom: { style: BorderStyle.SINGLE, size: 6, color: "D0D7DE", space: 1 } },
+            children: [],
+          }),
+        );
         break;
       default:
         break;
@@ -178,10 +215,24 @@ function blocks(nodes: RootContent[], w: Writer, quote: number, list?: { level: 
 
 /** A numbered list's level: `1.`, from `start`, indented as deep as it's nested. */
 function numberLevel(level: number, start: number): ILevelsOptions {
-  return { level, start, format: LevelFormat.DECIMAL, text: `%${level + 1}.`, alignment: AlignmentType.START, style: { paragraph: { indent: { left: 720 * (level + 1), hanging: 360 } } } };
+  return {
+    level,
+    start,
+    format: LevelFormat.DECIMAL,
+    text: `%${level + 1}.`,
+    alignment: AlignmentType.START,
+    style: { paragraph: { indent: { left: 720 * (level + 1), hanging: 360 } } },
+  };
 }
 
-const HEADINGS = [HeadingLevel.HEADING_1, HeadingLevel.HEADING_2, HeadingLevel.HEADING_3, HeadingLevel.HEADING_4, HeadingLevel.HEADING_5, HeadingLevel.HEADING_6];
+const HEADINGS = [
+  HeadingLevel.HEADING_1,
+  HeadingLevel.HEADING_2,
+  HeadingLevel.HEADING_3,
+  HeadingLevel.HEADING_4,
+  HeadingLevel.HEADING_5,
+  HeadingLevel.HEADING_6,
+];
 
 /** Inline content as runs: text in its style, links, pictures, footnotes' marks, maths as Unicode text. */
 function runs(nodes: PhrasingContent[], s: Style, w: Writer): ParagraphChild[] {
@@ -223,7 +274,11 @@ function runs(nodes: PhrasingContent[], s: Style, w: Writer): ParagraphChild[] {
         break;
       case "link": {
         const children = runs(n.children, { ...s, link: true }, w).filter((c): c is TextRun => c instanceof TextRun);
-        out.push(n.url.startsWith("#") ? new InternalHyperlink({ anchor: bookmarkName(n.url.slice(1)), children }) : new ExternalHyperlink({ link: n.url, children }));
+        out.push(
+          n.url.startsWith("#")
+            ? new InternalHyperlink({ anchor: bookmarkName(n.url.slice(1)), children })
+            : new ExternalHyperlink({ link: n.url, children }),
+        );
         break;
       }
       case "image": {
@@ -252,7 +307,12 @@ function runs(nodes: PhrasingContent[], s: Style, w: Writer): ParagraphChild[] {
 function image(pic: ExportPicture, w: Writer, alt: string): ImageRun | null {
   const r = rasterOf(pic, w.r, PAGE_PX, KINDS);
   if (!r) return null;
-  return new ImageRun({ type: r.type as "png", data: r.data, transformation: { width: r.shown.width, height: r.shown.height }, altText: { name: alt || "picture", description: alt, title: alt } });
+  return new ImageRun({
+    type: r.type as "png",
+    data: r.data,
+    transformation: { width: r.shown.width, height: r.shown.height },
+    altText: { name: alt || "picture", description: alt, title: alt },
+  });
 }
 
 /** Code: a paragraph a line, monospaced on a tint, its syntax coloured as on paper. */
@@ -266,7 +326,14 @@ function code(value: string, lang: string | null, quoted: object): Paragraph[] {
         shading: { type: ShadingType.CLEAR, fill: "F6F8FA", color: "auto" },
         spacing: { before: 0, after: 0 },
         children: (tokens?.[i]?.length ? tokens[i]! : [{ text: line, role: undefined }]).map(
-          (t) => new TextRun({ text: t.text.replace(/\t/g, "    "), font: MONO, size: 20, ...(t.role && SYNTAX[t.role] ? { color: SYNTAX[t.role] } : {}), ...(t.role === "syn_comment" ? { italics: true } : {}) }),
+          (t) =>
+            new TextRun({
+              text: t.text.replace(/\t/g, "    "),
+              font: MONO,
+              size: 20,
+              ...(t.role && SYNTAX[t.role] ? { color: SYNTAX[t.role] } : {}),
+              ...(t.role === "syn_comment" ? { italics: true } : {}),
+            }),
         ),
       }),
   );
@@ -277,7 +344,15 @@ function displayMath(tex: string, pic: ExportPicture | undefined, w: Writer, quo
   const img = pic ? image(pic, w, tex) : null;
   if (img) return [new Paragraph({ ...quoted, alignment: AlignmentType.CENTER, children: [img] })];
   const rows = mathRows(tex) ?? tex.split("\n");
-  return rows.map((row) => new Paragraph({ ...quoted, alignment: AlignmentType.CENTER, spacing: { before: 0, after: 0 }, children: [new TextRun({ text: row, font: MONO })] }));
+  return rows.map(
+    (row) =>
+      new Paragraph({
+        ...quoted,
+        alignment: AlignmentType.CENTER,
+        spacing: { before: 0, after: 0 },
+        children: [new TextRun({ text: row, font: MONO })],
+      }),
+  );
 }
 
 /** A table: its first row its header, bold; its columns as the markdown aligns them. */
@@ -286,7 +361,14 @@ function table(rows: MdRow[], align: (string | null)[], w: Writer): Table {
   const border = { style: BorderStyle.SINGLE, size: 4, color: "D0D7DE" };
   return new Table({
     width: { size: 100, type: WidthType.PERCENTAGE },
-    borders: { top: border, bottom: border, left: border, right: border, insideHorizontal: border, insideVertical: border },
+    borders: {
+      top: border,
+      bottom: border,
+      left: border,
+      right: border,
+      insideHorizontal: border,
+      insideVertical: border,
+    },
     rows: rows.map(
       (row, i) =>
         new TableRow({
@@ -295,7 +377,12 @@ function table(rows: MdRow[], align: (string | null)[], w: Writer): Table {
             (cell, c) =>
               new TableCell({
                 ...(i === 0 ? { shading: { type: ShadingType.CLEAR, fill: "F6F8FA", color: "auto" } } : {}),
-                children: [new Paragraph({ alignment: ALIGN[align[c] as keyof typeof ALIGN] ?? AlignmentType.LEFT, children: runs(cell.children, i === 0 ? { bold: true } : {}, w) })],
+                children: [
+                  new Paragraph({
+                    alignment: ALIGN[align[c] as keyof typeof ALIGN] ?? AlignmentType.LEFT,
+                    children: runs(cell.children, i === 0 ? { bold: true } : {}, w),
+                  }),
+                ],
               }),
           ),
         }),

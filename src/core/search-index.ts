@@ -76,11 +76,15 @@ export class SearchIndex {
     db.pragma("synchronous = normal");
     db.pragma("busy_timeout = 3000");
     db.exec("create table if not exists meta (key text primary key, value text)");
-    db.exec("create table if not exists docs (id integer primary key, path text not null unique, grp text not null, size integer not null, mtime real not null)");
+    db.exec(
+      "create table if not exists docs (id integer primary key, path text not null unique, grp text not null, size integer not null, mtime real not null)",
+    );
     db.exec("create table if not exists tags (path text not null, tag text not null)");
     db.exec("create index if not exists tags_tag on tags(tag)");
     db.exec("create index if not exists tags_path on tags(path)");
-    db.exec("create virtual table if not exists fts using fts5(title, aliases, tags, path, headings, body, tokenize = 'unicode61 remove_diacritics 2')");
+    db.exec(
+      "create virtual table if not exists fts using fts5(title, aliases, tags, path, headings, body, tokenize = 'unicode61 remove_diacritics 2')",
+    );
     db.pragma(`user_version = ${SEARCH_VERSION}`);
     // A file that isn't a database fails here, not at the first search.
     db.prepare("select count(*) from docs").get();
@@ -100,7 +104,10 @@ export class SearchIndex {
 
   /** Built whole at least once: until then a search scans the files instead. */
   get complete(): boolean {
-    return (this.db.prepare("select value from meta where key = 'complete'").get() as { value: string } | undefined)?.value === "1";
+    return (
+      (this.db.prepare("select value from meta where key = 'complete'").get() as { value: string } | undefined)
+        ?.value === "1"
+    );
   }
 
   markComplete(): void {
@@ -110,7 +117,12 @@ export class SearchIndex {
   /** Every file as it was indexed. */
   indexed(): Map<string, { size: number; mtime: number }> {
     const out = new Map<string, { size: number; mtime: number }>();
-    for (const r of this.db.prepare("select path, size, mtime from docs").all() as { path: string; size: number; mtime: number }[]) out.set(r.path, { size: r.size, mtime: r.mtime });
+    for (const r of this.db.prepare("select path, size, mtime from docs").all() as {
+      path: string;
+      size: number;
+      mtime: number;
+    }[])
+      out.set(r.path, { size: r.size, mtime: r.mtime });
     return out;
   }
 
@@ -118,9 +130,17 @@ export class SearchIndex {
   put(path: string, doc: IndexedDoc, stat: { size: number; mtime: number }): void {
     this.remove(path);
     // Integers the schema needs are cast: a JS number binds as a double (see sqlite.ts).
-    const id = Number(this.db.prepare("insert into docs (path, grp, size, mtime) values (?, ?, CAST(? AS INTEGER), ?)").run(path, doc.group, stat.size, stat.mtime).lastInsertRowid);
+    const id = Number(
+      this.db
+        .prepare("insert into docs (path, grp, size, mtime) values (?, ?, CAST(? AS INTEGER), ?)")
+        .run(path, doc.group, stat.size, stat.mtime).lastInsertRowid,
+    );
     const tags = [...new Set(doc.tags.map((t) => t.toLowerCase()))];
-    this.db.prepare("insert into fts (rowid, title, aliases, tags, path, headings, body) values (CAST(? AS INTEGER), ?, ?, ?, ?, ?, ?)").run(id, doc.title, doc.aliases.join("\n"), tags.join("\n"), path, doc.headings.join("\n"), doc.body);
+    this.db
+      .prepare(
+        "insert into fts (rowid, title, aliases, tags, path, headings, body) values (CAST(? AS INTEGER), ?, ?, ?, ?, ?, ?)",
+      )
+      .run(id, doc.title, doc.aliases.join("\n"), tags.join("\n"), path, doc.headings.join("\n"), doc.body);
     const insTag = this.db.prepare("insert into tags (path, tag) values (?, ?)");
     for (const t of tags) insTag.run(path, t);
   }
@@ -144,7 +164,10 @@ export class SearchIndex {
   }
 
   /** The folders and tags to keep, as SQL on a path column: a tag counts with the ones nested under it. */
-  private static filters(opts: { pathPrefix?: string[]; tags?: string[] }, path: string): { where: string[]; args: string[] } {
+  private static filters(
+    opts: { pathPrefix?: string[]; tags?: string[] },
+    path: string,
+  ): { where: string[]; args: string[] } {
     const esc = (x: string) => x.replace(/[\\%_]/g, (c) => `\\${c}`);
     const where: string[] = [];
     const args: string[] = [];
@@ -182,7 +205,13 @@ export class SearchIndex {
       f.where.push("path not in (select docs.path from fts join docs on docs.id = fts.rowid where fts match ?)");
       f.args.push(opts.not);
     }
-    return (this.db.prepare(`select path from docs where ${["1", ...f.where].join(" and ")} order by path limit CAST(? AS INTEGER)`).all(...f.args, opts.limit) as { path: string }[]).map((r) => r.path);
+    return (
+      this.db
+        .prepare(
+          `select path from docs where ${["1", ...f.where].join(" and ")} order by path limit CAST(? AS INTEGER)`,
+        )
+        .all(...f.args, opts.limit) as { path: string }[]
+    ).map((r) => r.path);
   }
 
   /** How many files it holds. */

@@ -72,7 +72,10 @@ export const TERMINAL_SCENARIOS: Scenario[] = [
       // --theme: what's drawn is that theme's — the heading in nord's h2 colour, not tokyo-night's.
       await s.restart({ args: ["--theme", "nord"], startAt: "vault/home.md", cwd: undefined });
       await drawnIn(s, "Start here", NORD.roles.h2.fg!, "a heading in nord's h2 colour");
-      s.expect(!stylesOf(s, "Start here").some((r) => r.fg === TOKYO.roles.h2.fg), "no heading in tokyo-night's colour under --theme nord");
+      s.expect(
+        !stylesOf(s, "Start here").some((r) => r.fg === TOKYO.roles.h2.fg),
+        "no heading in tokyo-night's colour under --theme nord",
+      );
     },
   },
   {
@@ -148,7 +151,10 @@ export const TERMINAL_SCENARIOS: Scenario[] = [
     name: "world/terminal: signals — SIGTERM and SIGHUP save the place and quit cleanly; the shell answers after",
     options: { open: HANDBOOK },
     run: async (s) => {
-      for (const [sig, line] of [["SIGTERM", 250], ["SIGHUP", 400]] as const) {
+      for (const [sig, line] of [
+        ["SIGTERM", 250],
+        ["SIGHUP", 400],
+      ] as const) {
         await s.keys("ctrl+g");
         await s.type(String(line));
         await moveTo(s, ["enter"], (l) => l === line, `line ${line}`);
@@ -184,14 +190,18 @@ export const TERMINAL_SCENARIOS: Scenario[] = [
       // Zoomed and back, the pane takes its tab's layout: with no client attached that isn't the
       // size it has (sized by hand), and the next scenarios here would get the layout's.
       const laid = s.layoutSize();
-      if (Math.abs(laid.cols - s.pane.cols) > 4) throw new Skipped(`the pane is ${s.pane.cols} wide, its layout ${laid.cols}: is a client attached?`);
+      if (Math.abs(laid.cols - s.pane.cols) > 4)
+        throw new Skipped(`the pane is ${s.pane.cols} wide, its layout ${laid.cols}: is a client attached?`);
       let zoomed = 0;
       try {
         await s.zoom(true);
         await s.until(() => rule() > before + 20, 5000, "the frame redrawn wider");
         zoomed = rule();
         await s.until(() => widthOf(s.statusLine()) > before + 20, 3000, "the status line across the new width");
-        s.expect(s.screen().every((r) => widthOf(r) <= zoomed), "no row wider than the window");
+        s.expect(
+          s.screen().every((r) => widthOf(r) <= zoomed),
+          "no row wider than the window",
+        );
         await s.status(/L300:/);
       } finally {
         await s.zoom(false);
@@ -234,7 +244,10 @@ export const TERMINAL_SCENARIOS: Scenario[] = [
       await s.paste("kenji‮\nsecond line");
       await s.see(/› kenji\s/);
       await s.see("people/kenji-mori.md");
-      s.expect(s.rowOf("second line") < 0 && !UNSAFE.test(s.text().replace(/\n/g, "")), "the second line, or the override, on screen");
+      s.expect(
+        s.rowOf("second line") < 0 && !UNSAFE.test(s.text().replace(/\n/g, "")),
+        "the second line, or the override, on screen",
+      );
       s.expect(/Open (note|\()/.test(s.text()), "the switcher still open");
       await s.keys("enter");
       await s.status("kenji-mori.md");
@@ -372,18 +385,27 @@ export const TERMINAL_SCENARIOS: Scenario[] = [
       // tokyo-night: the link and inline code in their roles; the h2 in the override's colour.
       await drawnIn(s, "operations-handbook", TOKYO.roles.link.fg!, "a link in tokyo-night's link colour");
       await drawnIn(s, "people/contacts.md", TOKYO.roles.code_inline.fg!, "inline code in its role's colour");
-      s.expect(stylesOf(s, "people/contacts.md").some((r) => r.bg === TOKYO.roles.code_inline.bg), "inline code on its role's background");
+      s.expect(
+        stylesOf(s, "people/contacts.md").some((r) => r.bg === TOKYO.roles.code_inline.bg),
+        "inline code on its role's background",
+      );
       await drawnIn(s, "Start here", "#ff00aa", "the h2 in [colors]' colour");
       // :theme nord: nord's colours, its own [colors.nord] link, the global h2 still.
       await s.ex("theme nord");
       await drawnIn(s, "operations-handbook", "#00ff00", "the link in [colors.nord]'s colour");
       await drawnIn(s, "people/contacts.md", NORD.roles.code_inline.fg!, "inline code in nord's colour");
       await drawnIn(s, "Start here", "#ff00aa", "the h2 override under nord too");
-      s.expect(!stylesOf(s, "people/contacts.md").some((r) => r.fg === TOKYO.roles.code_inline.fg), "tokyo-night's code colour gone");
+      s.expect(
+        !stylesOf(s, "people/contacts.md").some((r) => r.fg === TOKYO.roles.code_inline.fg),
+        "tokyo-night's code colour gone",
+      );
       // NO_COLOR: nothing with text on it is coloured at all.
       await s.restart({ env: { NO_COLOR: "1" } });
       await s.see("Start here");
-      const coloured = s.runs().flat().filter((r) => r.text.trim() && (r.fg !== null || r.bg !== null));
+      const coloured = s
+        .runs()
+        .flat()
+        .filter((r) => r.text.trim() && (r.fg !== null || r.bg !== null));
       s.expect(!coloured.length, `no colour under NO_COLOR: ${JSON.stringify(coloured.slice(0, 3))}`);
     },
   },
@@ -395,11 +417,21 @@ export const TERMINAL_SCENARIOS: Scenario[] = [
       const rule = () => s.screen()[1] ?? "";
       await s.until(() => /[━─]/.test(rule()), 3000, "the Unicode frame");
       await s.see("≡");
-      const envs: Record<string, string>[] = [{ SLIPBOX_GLYPHS: "ascii" }, { SLIPBOX_GLYPHS: "", LC_ALL: "", LC_CTYPE: "", LANG: "C" }];
+      const envs: Record<string, string>[] = [
+        { SLIPBOX_GLYPHS: "ascii" },
+        { SLIPBOX_GLYPHS: "", LC_ALL: "", LC_CTYPE: "", LANG: "C" },
+      ];
       for (const env of envs) {
         await s.restart({ env });
-        await s.until(() => /^[\x20-\x7e]+$/.test(rule().trimEnd()) && rule().includes("-"), 3000, `an ASCII frame (${JSON.stringify(env)})`);
-        s.expect(s.rowOf("≡") < 0 && s.rowOf("◷") < 0 && s.rowOf("×") < 0, `no Unicode buttons (${JSON.stringify(env)})`);
+        await s.until(
+          () => /^[\x20-\x7e]+$/.test(rule().trimEnd()) && rule().includes("-"),
+          3000,
+          `an ASCII frame (${JSON.stringify(env)})`,
+        );
+        s.expect(
+          s.rowOf("≡") < 0 && s.rowOf("◷") < 0 && s.rowOf("×") < 0,
+          `no Unicode buttons (${JSON.stringify(env)})`,
+        );
         await s.see(/1 home\.md x/); // the tab's close button
       }
     },
@@ -416,7 +448,11 @@ export const TERMINAL_SCENARIOS: Scenario[] = [
       await s.see("Find in every note");
       await s.see("Search here");
       await s.keys("backspace");
-      await s.until(() => s.rowOf("+history") >= 0 && s.rowOf("Find in every note") < 0, 3000, "backspace up to the groups");
+      await s.until(
+        () => s.rowOf("+history") >= 0 && s.rowOf("Find in every note") < 0,
+        3000,
+        "backspace up to the groups",
+      );
       await s.keys("escape");
       await s.until(() => s.rowOf("+history") < 0, 3000, "esc closing the popup");
       // g, another prefix: nothing until its delay (1.5 s here), then its entries.

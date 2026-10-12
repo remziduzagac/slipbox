@@ -76,9 +76,15 @@ export function identityOf(text: string): VaultIdentity {
   if (!v || typeof v !== "object" || Array.isArray(v)) return { ...NO_IDENTITY };
   const t = v as Record<string, unknown>;
   const str = (x: unknown) => (typeof x === "string" && x.trim() ? x.trim() : null);
-  const names = (x: unknown) => (Array.isArray(x) ? x.filter((n): n is string => typeof n === "string" && VAULT_NAME.test(n)) : []);
+  const names = (x: unknown) =>
+    Array.isArray(x) ? x.filter((n): n is string => typeof n === "string" && VAULT_NAME.test(n)) : [];
   const name = str(t.name);
-  return { id: str(t.id), name: name && VAULT_NAME.test(name) ? name : null, aliases: names(t.aliases), previous_names: names(t.previous_names) };
+  return {
+    id: str(t.id),
+    name: name && VAULT_NAME.test(name) ? name : null,
+    aliases: names(t.aliases),
+    previous_names: names(t.previous_names),
+  };
 }
 
 export function vaultConfigFile(root: string): string {
@@ -116,10 +122,20 @@ export class IdentityEditError extends Error {
  * the aliases and previous names it had, `previous` among them too) — not when the text's form
  * defeated the edit: a second `[vault]` table, invalid TOML, the name somewhere else.
  */
-export function identityReadsBack(have: VaultIdentity, next: string, want: { id: string | null; name: string | null; previous?: string }): boolean {
+export function identityReadsBack(
+  have: VaultIdentity,
+  next: string,
+  want: { id: string | null; name: string | null; previous?: string },
+): boolean {
   const got = identityOf(next);
   const kept = (had: string[], now: string[]) => had.every((n) => now.includes(n));
-  return got.id === want.id && got.name === want.name && kept(have.aliases, got.aliases) && kept(have.previous_names, got.previous_names) && (!want.previous || got.previous_names.includes(want.previous));
+  return (
+    got.id === want.id &&
+    got.name === want.name &&
+    kept(have.aliases, got.aliases) &&
+    kept(have.previous_names, got.previous_names) &&
+    (!want.previous || got.previous_names.includes(want.previous))
+  );
 }
 
 /**
@@ -135,7 +151,8 @@ export function addIdentity(configFile: string, fields: { id?: string; name?: st
   const have = readIdentity(configFile);
   const next = withIdentity(text, have, fields);
   if (next === text) return;
-  if (!identityReadsBack(have, next, { id: have.id ?? fields.id ?? null, name: have.name ?? fields.name ?? null })) throw new IdentityEditError();
+  if (!identityReadsBack(have, next, { id: have.id ?? fields.id ?? null, name: have.name ?? fields.name ?? null }))
+    throw new IdentityEditError();
   atomicWrite(configFile, next);
 }
 
@@ -176,7 +193,9 @@ export function readRoots(): KnownRoot[] {
   const f = readJson<RootsFile | null>(rootsFile(), null);
   if (!f) return existsSync(oldListFile()) ? migrate() : [];
   if (f.version !== 1 || !Array.isArray(f.roots)) return [];
-  return f.roots.filter((v) => v && typeof v.key === "string" && typeof v.path === "string" && (v.kind === "vault" || v.kind === "folder"));
+  return f.roots.filter(
+    (v) => v && typeof v.key === "string" && typeof v.path === "string" && (v.kind === "vault" || v.kind === "folder"),
+  );
 }
 
 /**
@@ -188,7 +207,8 @@ function migrate(): KnownRoot[] {
   const out: KnownRoot[] = [];
   for (const raw of Array.isArray(old?.vaults) ? old!.vaults : []) {
     const v = raw as Partial<KnownRoot> & { key?: unknown; path?: unknown };
-    if (!v || typeof v.key !== "string" || typeof v.path !== "string" || (v.kind !== "vault" && v.kind !== "folder")) continue;
+    if (!v || typeof v.key !== "string" || typeof v.path !== "string" || (v.kind !== "vault" && v.kind !== "folder"))
+      continue;
     const key = vaultKey(v.path);
     if (v.key !== key) adoptStorage(v.key, key);
     if (out.some((x) => x.key === key)) continue;
@@ -199,7 +219,9 @@ function migrate(): KnownRoot[] {
       seen: typeof v.seen === "string" ? v.seen : new Date(0).toISOString(),
       ...(v.found ? { found: true } : {}),
       ...(typeof v.indexed === "string" ? { indexed: v.indexed } : {}),
-      ...(v.worktree && typeof v.worktree.name === "string" ? { worktree: { name: v.worktree.name, main: v.worktree.main ?? null } } : {}),
+      ...(v.worktree && typeof v.worktree.name === "string"
+        ? { worktree: { name: v.worktree.name, main: v.worktree.main ?? null } }
+        : {}),
       ...(Array.isArray(v.moved) ? { moved: v.moved } : {}),
     });
   }
@@ -324,13 +346,24 @@ const WORKTREE_STATE_DAYS = 30;
  * A worktree's root is gone when its folder is no longer a root (`isRoot`: any of its markers, 21.1 —
  * `vault.ts` passes `isVaultRoot`; without it, `.git` or `.slipbox/`).
  */
-export function pruneWorktrees(now = Date.now(), isRoot: (path: string) => boolean = (p) => existsSync(join(p, ".git")) || existsSync(join(p, MARKER))): void {
+export function pruneWorktrees(
+  now = Date.now(),
+  isRoot: (path: string) => boolean = (p) => existsSync(join(p, ".git")) || existsSync(join(p, MARKER)),
+): void {
   const list = readRoots();
   // On a drive that isn't there (20.10), nothing is gone: kept as it was until the drive is back.
   const gone = list.filter((v) => v.worktree && !unavailable(v.path) && !isRoot(v.path));
   // A plain folder gone as long: forgotten too, its cache (index, search) and state (session) with it —
   // a folder moved since starts afresh where it is, as a worktree past the month does.
-  const drop = list.filter((v) => v.kind === "folder" && !unavailable(v.path) && !existsSync(v.path) && now - Date.parse(v.seen) > WORKTREE_STATE_DAYS * 86_400_000).map((v) => v.key);
+  const drop = list
+    .filter(
+      (v) =>
+        v.kind === "folder" &&
+        !unavailable(v.path) &&
+        !existsSync(v.path) &&
+        now - Date.parse(v.seen) > WORKTREE_STATE_DAYS * 86_400_000,
+    )
+    .map((v) => v.key);
   if (!gone.length && !drop.length) return;
   for (const key of drop) {
     // Its key another entry's too (a root there once): that one keeps them.

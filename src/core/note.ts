@@ -8,7 +8,13 @@ import { readText } from "./fsutil.ts";
 import type { Glyphs } from "./glyphs.ts";
 import type { Graph } from "./graph.ts";
 import type { Layout, LinkStatus } from "./layout/ir.ts";
-import { type FoundPicture, type PictureSource, type RenderCache, type RenderOptions, renderTree } from "./layout/render.ts";
+import {
+  type FoundPicture,
+  type PictureSource,
+  type RenderCache,
+  type RenderOptions,
+  renderTree,
+} from "./layout/render.ts";
 import { headingLabel, headingText, type ParsedNote, parseMarkdown } from "./parse.ts";
 import { findHeading } from "./landing.ts";
 import { findVaultRoot } from "./vault.ts";
@@ -58,7 +64,11 @@ export function linkResolver(graph: Graph | null, rel: string | null) {
  * 12.13) from where it is in its root (`rel` in `g`; neither, no names) — files; one on the internet as it's written; a
  * file found already as it is. Null where there's none.
  */
-export function pictureLocator(g: Graph | null, rel: string | null, abs: string): (from: PictureSource) => FoundPicture | null {
+export function pictureLocator(
+  g: Graph | null,
+  rel: string | null,
+  abs: string,
+): (from: PictureSource) => FoundPicture | null {
   return (from) => {
     // Found already, or drawn by slipbox (12.16, 12.17).
     if ("file" in from || "svg" in from) return from;
@@ -80,9 +90,20 @@ export function pictureLocator(g: Graph | null, rel: string | null, abs: string)
 }
 
 /** `cache`: the note's blocks from its last render (the TUI's buffers keep one; see renderTree). */
-export function layoutNote(parsed: ParsedNote, graph: Graph | null, rel: string | null, opts: NoteRenderOptions, cache?: RenderCache): Layout {
+export function layoutNote(
+  parsed: ParsedNote,
+  graph: Graph | null,
+  rel: string | null,
+  opts: NoteRenderOptions,
+  cache?: RenderCache,
+): Layout {
   const embeds = graph && rel !== null ? { embed: embedder(graph, rel), embedFrom: graph.abs(rel) } : {};
-  return renderTree(parsed.tree, { ...opts, resolveLink: linkResolver(graph, rel), ...embeds }, parsed.frontmatter, cache);
+  return renderTree(
+    parsed.tree,
+    { ...opts, resolveLink: linkResolver(graph, rel), ...embeds },
+    parsed.frontmatter,
+    cache,
+  );
 }
 
 // -------------------------------------------------------------------------------------------
@@ -115,7 +136,11 @@ function parsedAt(abs: string): ParsedNote | null {
 function sectionOf(tree: Root, heading: string): RootContent[] | null {
   const kids = tree.children;
   // The headings, as a link finds one (landing.ts): by text, slug, id, or a path of them.
-  const heads = kids.flatMap((n, i) => (n.type === "heading" ? [{ i, depth: n.depth, ...headingLabel(n), line: i, id: (n.data as { id?: string } | undefined)?.id }] : []));
+  const heads = kids.flatMap((n, i) =>
+    n.type === "heading"
+      ? [{ i, depth: n.depth, ...headingLabel(n), line: i, id: (n.data as { id?: string } | undefined)?.id }]
+      : [],
+  );
   const hit = findHeading(heads, [], heading, true);
   if (!hit || hit.heading === null) return null;
   const at = heads[hit.heading]!.i;
@@ -147,7 +172,15 @@ function blockOf(tree: Root, id: string): RootContent[] | null {
       if (n.type === "paragraph" && marks(n)) {
         const only = n.children.length === 1 && lastText(n)!.value.trim() === `^${id}`;
         if (only && i > 0) found = [nodes[i - 1]!];
-        else if (inItem) found = [{ type: "list", ordered: false, spread: false, children: [{ ...inItem, children: inItem.children.map((c) => (c === n ? strip(n) : c)) }] }];
+        else if (inItem)
+          found = [
+            {
+              type: "list",
+              ordered: false,
+              spread: false,
+              children: [{ ...inItem, children: inItem.children.map((c) => (c === n ? strip(n) : c)) }],
+            },
+          ];
         else found = [strip(n)];
         return;
       }
@@ -178,7 +211,11 @@ export function embedder(g: Graph, fromRel: string): RenderOptions["embed"] {
     // Another vault's: its own graph, from its own root.
     const there = isAbsolute(r.path) ? (g.reach?.graphAt(findVaultRoot(abs) ?? dirname(abs)) ?? null) : g;
     const rel = there ? relative(there.root, abs) : null;
-    const nodes = heading ? sectionOf(parsed.tree, heading) : block ? blockOf(parsed.tree, block) : parsed.tree.children.filter((n) => n.type !== "yaml" && (n.type as string) !== "toml");
+    const nodes = heading
+      ? sectionOf(parsed.tree, heading)
+      : block
+        ? blockOf(parsed.tree, block)
+        : parsed.tree.children.filter((n) => n.type !== "yaml" && (n.type as string) !== "toml");
     // A heading named by its slug (a path's fragment) is titled as it's written.
     const shown = heading && nodes?.[0]?.type === "heading" ? headingText(nodes[0]) : heading;
     return {

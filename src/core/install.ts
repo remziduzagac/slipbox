@@ -26,7 +26,11 @@ export function installedBy(execPath: string, data: string, version: string): In
 
 /** How to get a newer one, by how this one was put here. */
 export function howToUpgrade(by: InstalledBy, repo: string): string {
-  return by === "installer" ? "slipbox upgrade installs it" : by === "homebrew" ? "brew upgrade slipbox installs it" : `it's at https://github.com/${repo}/releases`;
+  return by === "installer"
+    ? "slipbox upgrade installs it"
+    : by === "homebrew"
+      ? "brew upgrade slipbox installs it"
+      : `it's at https://github.com/${repo}/releases`;
 }
 
 /** slipbox's four folders, where they are here (14.9). */
@@ -57,7 +61,11 @@ export interface Installation {
 /** What the installer has put in a data folder. */
 export function installation(data: string): Installation {
   const versionsDir = join(data, "versions");
-  const versions = existsSync(versionsDir) ? readdirSync(versionsDir).filter((v) => !v.endsWith(".new") && !v.startsWith(".")).sort() : [];
+  const versions = existsSync(versionsDir)
+    ? readdirSync(versionsDir)
+        .filter((v) => !v.endsWith(".new") && !v.startsWith("."))
+        .sort()
+    : [];
   let current: string | null = null;
   try {
     current = /^versions\/([^/]+)$/.exec(readlinkSync(join(data, "current")))?.[1] ?? null;
@@ -108,9 +116,12 @@ export function uninstallPlan(purge: boolean, dirs: Stores = stores(), by: Insta
   if (by === "homebrew") notes.push("this slipbox is Homebrew's: brew uninstall slipbox removes it");
   if (inst.link) remove.push({ path: inst.link, what: "the link that runs slipbox" });
   if (inst.foreignLink) notes.push(`${inst.foreignLink} isn't slipbox's link any more: left as it is`);
-  if (inst.versions.length) remove.push({ path: join(dirs.data, "versions"), what: `slipbox ${inst.versions.join(", ")}` });
-  if (lexists(join(dirs.data, "current"))) remove.push({ path: join(dirs.data, "current"), what: "which version is in use" });
-  if (lexists(join(dirs.data, "bin-link"))) remove.push({ path: join(dirs.data, "bin-link"), what: "where the link is" });
+  if (inst.versions.length)
+    remove.push({ path: join(dirs.data, "versions"), what: `slipbox ${inst.versions.join(", ")}` });
+  if (lexists(join(dirs.data, "current")))
+    remove.push({ path: join(dirs.data, "current"), what: "which version is in use" });
+  if (lexists(join(dirs.data, "bin-link")))
+    remove.push({ path: join(dirs.data, "bin-link"), what: "where the link is" });
   const keep: Item[] = [];
   for (const kind of ["config", "state", "data", "cache"] as const) {
     if (!existsSync(dirs[kind])) continue;
@@ -122,7 +133,9 @@ export function uninstallPlan(purge: boolean, dirs: Stores = stores(), by: Insta
 /** Whether a path is one `uninstall` may remove: the installer's link, or in one of slipbox's own folders. */
 export function removable(path: string, dirs: Stores, link: string | null): boolean {
   if (link !== null && path === link) return true;
-  return Object.values(dirs).some((d) => d.split(/[\\/]/).includes("slipbox") && (path === d || path.startsWith(d + sep)));
+  return Object.values(dirs).some(
+    (d) => d.split(/[\\/]/).includes("slipbox") && (path === d || path.startsWith(d + sep)),
+  );
 }
 
 /** The plan carried out, a link removed as itself (never what it points at); what couldn't be, and why. */

@@ -12,4 +12,5 @@ export interface ReleaseBuild {
   target: string;
 }
 
-export const RELEASE: ReleaseBuild | null = typeof SLIPBOX_RELEASE === "object" && SLIPBOX_RELEASE ? SLIPBOX_RELEASE : null;
+export const RELEASE: ReleaseBuild | null =
+  typeof SLIPBOX_RELEASE === "object" && SLIPBOX_RELEASE ? SLIPBOX_RELEASE : null;

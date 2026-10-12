@@ -16,18 +16,27 @@ export interface Raster {
 /** A raster image's kind and size from its header, or null where it isn't one of these. */
 export function rasterInfo(b: Uint8Array): Omit<Raster, "data"> | null {
   const v = new DataView(b.buffer, b.byteOffset, b.byteLength);
-  if (b.length > 24 && b[0] === 0x89 && b[1] === 0x50 && b[2] === 0x4e && b[3] === 0x47) return { type: "png", width: v.getUint32(16), height: v.getUint32(20) };
-  if (b.length > 10 && b[0] === 0x47 && b[1] === 0x49 && b[2] === 0x46) return { type: "gif", width: v.getUint16(6, true), height: v.getUint16(8, true) };
-  if (b.length > 26 && b[0] === 0x42 && b[1] === 0x4d) return { type: "bmp", width: Math.abs(v.getInt32(18, true)), height: Math.abs(v.getInt32(22, true)) };
+  if (b.length > 24 && b[0] === 0x89 && b[1] === 0x50 && b[2] === 0x4e && b[3] === 0x47)
+    return { type: "png", width: v.getUint32(16), height: v.getUint32(20) };
+  if (b.length > 10 && b[0] === 0x47 && b[1] === 0x49 && b[2] === 0x46)
+    return { type: "gif", width: v.getUint16(6, true), height: v.getUint16(8, true) };
+  if (b.length > 26 && b[0] === 0x42 && b[1] === 0x4d)
+    return { type: "bmp", width: Math.abs(v.getInt32(18, true)), height: Math.abs(v.getInt32(22, true)) };
   if (b.length >= 30 && b[0] === 0x52 && b[1] === 0x49 && b[8] === 0x57 && b[9] === 0x45) {
     // WebP: lossy (VP8), lossless (VP8L) or extended (VP8X).
     const chunk = String.fromCharCode(b[12]!, b[13]!, b[14]!, b[15]!);
-    if (chunk === "VP8 ") return { type: "webp", width: v.getUint16(26, true) & 0x3fff, height: v.getUint16(28, true) & 0x3fff };
+    if (chunk === "VP8 ")
+      return { type: "webp", width: v.getUint16(26, true) & 0x3fff, height: v.getUint16(28, true) & 0x3fff };
     if (chunk === "VP8L") {
       const bits = v.getUint32(21, true);
       return { type: "webp", width: (bits & 0x3fff) + 1, height: ((bits >> 14) & 0x3fff) + 1 };
     }
-    if (chunk === "VP8X") return { type: "webp", width: 1 + (b[24]! | (b[25]! << 8) | (b[26]! << 16)), height: 1 + (b[27]! | (b[28]! << 8) | (b[29]! << 16)) };
+    if (chunk === "VP8X")
+      return {
+        type: "webp",
+        width: 1 + (b[24]! | (b[25]! << 8) | (b[26]! << 16)),
+        height: 1 + (b[27]! | (b[28]! << 8) | (b[29]! << 16)),
+      };
     return null;
   }
   if (b.length > 4 && b[0] === 0xff && b[1] === 0xd8) {
@@ -36,7 +45,8 @@ export function rasterInfo(b: Uint8Array): Omit<Raster, "data"> | null {
       if (b[i] !== 0xff) return null;
       const marker = b[i + 1]!;
       const len = v.getUint16(i + 2);
-      if (marker >= 0xc0 && marker <= 0xcf && marker !== 0xc4 && marker !== 0xc8 && marker !== 0xcc) return { type: "jpg", width: v.getUint16(i + 7), height: v.getUint16(i + 5) };
+      if (marker >= 0xc0 && marker <= 0xcf && marker !== 0xc4 && marker !== 0xc8 && marker !== 0xcc)
+        return { type: "jpg", width: v.getUint16(i + 7), height: v.getUint16(i + 5) };
       i += 2 + len;
     }
   }
@@ -95,10 +105,19 @@ export function pictureData(pic: ExportPicture, r: Rasterizer | null, maxWidth: 
     own = size;
   } else return null;
   let width = own.width;
-  if (pic.size) width = Math.min(pic.size.width, pic.size.height ? (pic.size.height * own.width) / own.height : Number.POSITIVE_INFINITY);
+  if (pic.size)
+    width = Math.min(
+      pic.size.width,
+      pic.size.height ? (pic.size.height * own.width) / own.height : Number.POSITIVE_INFINITY,
+    );
   width = Math.min(width, maxWidth);
-  const shown = { width: Math.max(1, Math.round(width)), height: Math.max(1, Math.round((width * own.height) / own.width)) };
-  return raster ? { ...raster, shown } : { data: new TextEncoder().encode(svg!), type: "svg", width: own.width, height: own.height, shown };
+  const shown = {
+    width: Math.max(1, Math.round(width)),
+    height: Math.max(1, Math.round((width * own.height) / own.width)),
+  };
+  return raster
+    ? { ...raster, shown }
+    : { data: new TextEncoder().encode(svg!), type: "svg", width: own.width, height: own.height, shown };
 }
 
 /**
@@ -106,11 +125,20 @@ export function pictureData(pic: ExportPicture, r: Rasterizer | null, maxWidth: 
  * where it's shrunk) — with the size it's shown at, at most `maxWidth` pixels wide; null where it can't be (no
  * rasteriser, a kind not read). `kinds`: the raster kinds the format holds as they are.
  */
-export function rasterOf(pic: ExportPicture, r: Rasterizer | null, maxWidth: number, kinds: Raster["type"][], scale = 2): (Raster & { shown: { width: number; height: number } }) | null {
+export function rasterOf(
+  pic: ExportPicture,
+  r: Rasterizer | null,
+  maxWidth: number,
+  kinds: Raster["type"][],
+  scale = 2,
+): (Raster & { shown: { width: number; height: number } }) | null {
   const p = pictureData(pic, r, maxWidth);
   if (!p) return null;
   // A kind not held: made a PNG before the export (`convert.ts`), or it's its words.
-  if (p.type !== "svg") return kinds.includes(p.type) ? { data: p.data, type: p.type, width: p.width, height: p.height, shown: p.shown } : null;
+  if (p.type !== "svg")
+    return kinds.includes(p.type)
+      ? { data: p.data, type: p.type, width: p.width, height: p.height, shown: p.shown }
+      : null;
   const png = r?.png(new TextDecoder().decode(p.data), p.shown.width * scale);
   if (!png) return null;
   const info = rasterInfo(png)!;

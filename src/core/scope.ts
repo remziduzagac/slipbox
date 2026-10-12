@@ -52,7 +52,9 @@ export function scopeRoots(g: Graph, scope: Scope): string[] {
   for (const list of g.reach?.inbound(g).values() ?? []) for (const b of list) add(b.from);
   const linked = [...out];
   if (scope === "linked") return linked;
-  const rest = readRoots().filter((v) => v.kind === "vault" && !v.worktree && v.path !== g.root && !out.has(v.path) && isVaultRoot(v.path));
+  const rest = readRoots().filter(
+    (v) => v.kind === "vault" && !v.worktree && v.path !== g.root && !out.has(v.path) && isVaultRoot(v.path),
+  );
   return [...linked, ...rest.map((v) => v.path)];
 }
 
@@ -61,7 +63,13 @@ export function scopeRoots(g: Graph, scope: Scope): string[] {
  * ranks them; then the others', by score, each searched with its own index when it has one.
  * `limit` holds for each: this root's, and the others' together.
  */
-export function searchScoped(g: Graph, idx: SearchIndex | null, input: string, scope: Scope, opts: { limit?: number; texts?: Map<string, string> } = {}): ScopedResult {
+export function searchScoped(
+  g: Graph,
+  idx: SearchIndex | null,
+  input: string,
+  scope: Scope,
+  opts: { limit?: number; texts?: Map<string, string> } = {},
+): ScopedResult {
   const limit = opts.limit ?? 50;
   const mine = search(g, idx, input, { limit, texts: opts.texts });
   const hits: ScopedHit[] = mine.hits.map((h) => ({ ...h, abs: g.abs(h.path), vault: null, shown: h.path }));
@@ -70,7 +78,12 @@ export function searchScoped(g: Graph, idx: SearchIndex | null, input: string, s
 }
 
 /** The other vaults' hits a scope covers (20.16), by score, `limit` at most; and which vaults those were. */
-export function searchOthers(g: Graph, input: string, scope: Scope, limit = 50): { hits: ScopedHit[]; vaults: string[] } {
+export function searchOthers(
+  g: Graph,
+  input: string,
+  scope: Scope,
+  limit = 50,
+): { hits: ScopedHit[]; vaults: string[] } {
   const roots = scopeRoots(g, scope);
   const known = new Set(readRoots().map((v) => v.path));
   const others: ScopedHit[] = [];

@@ -278,8 +278,24 @@ export interface Config {
 
 export const DEFAULT_CONFIG: Config = {
   theme: "tokyo-night",
-  render: { inset: 4, max_width: 0, glyphs: "auto", show_urls: "auto", code: "document", code_cells: "box", images: "auto", images_remote: "ask", mermaid: "text", math: "text" },
-  walk: { extensions: ["md", "markdown"], exclude: [], max_file_size: 4 * 1024 * 1024, root_markers: [".git", ".slipbox", ".obsidian", ".zk"] },
+  render: {
+    inset: 4,
+    max_width: 0,
+    glyphs: "auto",
+    show_urls: "auto",
+    code: "document",
+    code_cells: "box",
+    images: "auto",
+    images_remote: "ask",
+    mermaid: "text",
+    math: "text",
+  },
+  walk: {
+    extensions: ["md", "markdown"],
+    exclude: [],
+    max_file_size: 4 * 1024 * 1024,
+    root_markers: [".git", ".slipbox", ".obsidian", ".zk"],
+  },
   links: { style: "auto", path: "auto", extension: "auto" },
   trust: { roots: [] },
   files: { show: "auto", include: [], exclude: [] },
@@ -321,7 +337,15 @@ export const DEFAULT_CONFIG: Config = {
   update: { check: true },
   types: {},
   context: { depth: 1, backlinks: true, limit: 25 },
-  editor: { command: "", remote: ["nvim"], autosave_ms: 30000, edit_in: "source", lens_min_rows: 6, lens_max: 0.5, auto_pairs: false },
+  editor: {
+    command: "",
+    remote: ["nvim"],
+    autosave_ms: 30000,
+    edit_in: "source",
+    lens_min_rows: 6,
+    lens_max: 0.5,
+    auto_pairs: false,
+  },
   spell: { enabled: false, languages: ["en"], dictionaries: {} },
   watch: { enabled: true, debounce_ms: 120, poll_ms: 2000 },
   keys: {},
@@ -445,13 +469,16 @@ export function loadConfig(opts: LoadConfigOptions = {}): LoadedConfig {
       opts.lastGood?.set(file, structuredClone(data));
     } catch (err) {
       const kept = opts.lastGood?.get(file);
-      warnings.push(`config: ${file}: ${(err as Error).message.split("\n")[0]}${kept ? " — keeping what it said before" : ""}`);
+      warnings.push(
+        `config: ${file}: ${(err as Error).message.split("\n")[0]}${kept ? " — keeping what it said before" : ""}`,
+      );
       if (!kept) continue;
       data = structuredClone(kept);
     }
     // The vault's identity (17.4) isn't a setting: read by core/registry.ts, never merged.
     if ("vault" in data) {
-      if (file === userFile) warnings.push(`config: ${file}: [vault] belongs in a folder's .slipbox/config.toml (its identity); ignored`);
+      if (file === userFile)
+        warnings.push(`config: ${file}: [vault] belongs in a folder's .slipbox/config.toml (its identity); ignored`);
       delete data.vault;
     }
     if (file !== userFile) dropUserOnly(data, file, warnings);
@@ -464,27 +491,36 @@ export function loadConfig(opts: LoadConfigOptions = {}): LoadedConfig {
       if (!isPlainObject(table)) continue;
       const now = (config as unknown as Record<string, unknown>)[section];
       if (!isPlainObject(now)) continue;
-      for (const [key, value] of Object.entries(table)) if (JSON.stringify(now[key]) === JSON.stringify(value)) origins[`${section}.${key}`] = file;
+      for (const [key, value] of Object.entries(table))
+        if (JSON.stringify(now[key]) === JSON.stringify(value)) origins[`${section}.${key}`] = file;
     }
     sources.push(file);
   }
   // Trusted roots (23.x): strings only — a path, `~`, a glob.
   const roots = config.trust.roots.filter((r) => typeof r === "string" && r.trim() !== "");
   if (roots.length !== config.trust.roots.length) {
-    warnings.push(`config: trust.roots takes paths and globs ("~/Projects/*"); ignored ${JSON.stringify(config.trust.roots.filter((r) => !roots.includes(r)))}`);
+    warnings.push(
+      `config: trust.roots takes paths and globs ("~/Projects/*"); ignored ${JSON.stringify(config.trust.roots.filter((r) => !roots.includes(r)))}`,
+    );
     config.trust.roots = roots;
   }
   // Root markers (21.1): plain names, each a file or folder looked for in a folder — never a path.
-  const markers = config.walk.root_markers.filter((m) => typeof m === "string" && m !== "" && m !== "." && m !== ".." && !/[/\\]/.test(m));
+  const markers = config.walk.root_markers.filter(
+    (m) => typeof m === "string" && m !== "" && m !== "." && m !== ".." && !/[/\\]/.test(m),
+  );
   if (markers.length !== config.walk.root_markers.length) {
-    warnings.push(`config: walk.root_markers takes names (".git", ".obsidian"), not paths; ignored ${JSON.stringify(config.walk.root_markers.filter((m) => !markers.includes(m)))}`);
+    warnings.push(
+      `config: walk.root_markers takes names (".git", ".obsidian"), not paths; ignored ${JSON.stringify(config.walk.root_markers.filter((m) => !markers.includes(m)))}`,
+    );
     config.walk.root_markers = markers;
   }
   // The scratch's file name: a plain relative path inside the project, never empty, absolute or
   // climbing out (a cloned vault's config must not aim `slipbox capture` at any file; symlinks on
   // the way are refused where the path is used, in core/capture.ts).
   if (!isSafeRelative(config.capture.file) || !/\.(md|markdown)$/i.test(config.capture.file)) {
-    warnings.push(`config: capture.file must be a relative .md path inside the project, not hidden (got ${JSON.stringify(config.capture.file)}); using "${DEFAULT_CONFIG.capture.file}"`);
+    warnings.push(
+      `config: capture.file must be a relative .md path inside the project, not hidden (got ${JSON.stringify(config.capture.file)}); using "${DEFAULT_CONFIG.capture.file}"`,
+    );
     config.capture.file = DEFAULT_CONFIG.capture.file;
   }
   return { config, sources, warnings, origins };
@@ -509,7 +545,14 @@ export const USER_ONLY: Record<string, string> = {
  * Commands a vault's keys and aliases may not name: each throws work away (quit without saving,
  * revert, overwrite, clear), and a cloned vault could otherwise put one on ctrl+s or :wq.
  */
-export const VAULT_FORBIDDEN_COMMANDS = ["app.quit_force", "note.revert", "note.save_force", "scratch.clear", "shell.run", "shell.filter"];
+export const VAULT_FORBIDDEN_COMMANDS = [
+  "app.quit_force",
+  "note.revert",
+  "note.save_force",
+  "scratch.clear",
+  "shell.run",
+  "shell.filter",
+];
 
 /** Of those, the ones that run a program (25.7): a folder's key would run what the folder chose. */
 const RUNS_A_PROGRAM = new Set(["shell.run", "shell.filter"]);
@@ -522,7 +565,9 @@ function dropUserOnly(data: Record<string, unknown>, file: string, warnings: str
       if (isPlainObject(v)) strip(v, `${where}.${k}`);
       else if (typeof v === "string" && VAULT_FORBIDDEN_COMMANDS.includes(v.split(" ")[0]!)) {
         delete table[k];
-        warnings.push(`config: ${file} binds ${where}.${k} to ${v}, which only your own config may (${RUNS_A_PROGRAM.has(v.split(" ")[0]!) ? "it runs a program" : "it throws work away"}); ignored`);
+        warnings.push(
+          `config: ${file} binds ${where}.${k} to ${v}, which only your own config may (${RUNS_A_PROGRAM.has(v.split(" ")[0]!) ? "it runs a program" : "it throws work away"}); ignored`,
+        );
       }
     }
   };
@@ -536,13 +581,17 @@ function dropUserOnly(data: Record<string, unknown>, file: string, warnings: str
     for (const [name, s] of Object.entries(servers)) {
       if (!Object.hasOwn(SERVERS, name)) {
         delete servers[name];
-        warnings.push(`config: ${file} adds the language server ${name}, which only your own config may (it runs a program); ignored`);
+        warnings.push(
+          `config: ${file} adds the language server ${name}, which only your own config may (it runs a program); ignored`,
+        );
         continue;
       }
       for (const k of ["command", "args", "environment"]) {
         if (!isPlainObject(s) || !(k in s)) continue;
         delete s[k];
-        warnings.push(`config: ${file} sets language-server.${name}.${k}, which only your own config may set (it runs a program); ignored`);
+        warnings.push(
+          `config: ${file} sets language-server.${name}.${k}, which only your own config may set (it runs a program); ignored`,
+        );
       }
     }
   }
@@ -552,25 +601,33 @@ function dropUserOnly(data: Record<string, unknown>, file: string, warnings: str
     for (const [name, l] of Object.entries(linters)) {
       if (!Object.hasOwn(LINTERS, name)) {
         delete linters[name];
-        warnings.push(`config: ${file} adds the linter ${name}, which only your own config may (it runs a program); ignored`);
+        warnings.push(
+          `config: ${file} adds the linter ${name}, which only your own config may (it runs a program); ignored`,
+        );
         continue;
       }
       if (isPlainObject(l) && "lint-command" in l) {
         delete l["lint-command"];
-        warnings.push(`config: ${file} sets linter.${name}.lint-command, which only your own config may set (it runs a program); ignored`);
+        warnings.push(
+          `config: ${file} sets linter.${name}.lint-command, which only your own config may set (it runs a program); ignored`,
+        );
       }
     }
   }
   // Which roots may run their own code (23.x): a folder can't vouch for itself.
   if ("trust" in data) {
     delete data.trust;
-    warnings.push(`config: ${file} sets [trust], which only your own config may set (a folder can't trust itself); ignored`);
+    warnings.push(
+      `config: ${file} sets [trust], which only your own config may set (a folder can't trust itself); ignored`,
+    );
   }
   // Where roots are (21.1) is found before any folder's config is: only yours can say.
   const walk = data.walk;
   if (isPlainObject(walk) && "root_markers" in walk) {
     delete walk.root_markers;
-    warnings.push(`config: ${file} sets walk.root_markers, which only your own config may set (it decides where roots are); ignored`);
+    warnings.push(
+      `config: ${file} sets walk.root_markers, which only your own config may set (it decides where roots are); ignored`,
+    );
   }
   for (const [key, why] of Object.entries(USER_ONLY)) {
     const [table, name] = key.split(".") as [string, string];
@@ -591,20 +648,34 @@ function merge<T>(base: T, over: Record<string, unknown>, file: string, prefix: 
     if (prefix === "colors") {
       const prev = out[key];
       const fields = (p: unknown, v: unknown) => (isPlainObject(p) && isPlainObject(v) ? { ...p, ...v } : v);
-      out[key] = isPlainObject(prev) && isPlainObject(value) ? { ...prev, ...Object.fromEntries(Object.entries(value).map(([r, v]) => [r, fields(prev[r], v)])) } : value;
+      out[key] =
+        isPlainObject(prev) && isPlainObject(value)
+          ? { ...prev, ...Object.fromEntries(Object.entries(value).map(([r, v]) => [r, fields(prev[r], v)])) }
+          : value;
       continue;
     }
     // Language servers (19.2): each by name, its settings merged (all the way down), the rest
     // replaced; languages by name. A field of the wrong type is dropped with a warning.
     if (!prefix && key === "language-server") {
-      if (!isPlainObject(value) || !Object.values(value).every(isPlainObject)) warnings.push(`config: ${file}: [language-server.<name>] must be tables`);
+      if (!isPlainObject(value) || !Object.values(value).every(isPlainObject))
+        warnings.push(`config: ${file}: [language-server.<name>] must be tables`);
       else {
         const was = out[key] as Record<string, ServerConfig>;
         const next: Record<string, ServerConfig> = { ...was };
         for (const [name, given] of Object.entries(value)) {
-          const s = checkFields(given as Record<string, unknown>, SERVER_FIELDS, `language-server.${name}`, file, warnings) as ServerConfig;
+          const s = checkFields(
+            given as Record<string, unknown>,
+            SERVER_FIELDS,
+            `language-server.${name}`,
+            file,
+            warnings,
+          ) as ServerConfig;
           const before = (Object.hasOwn(next, name) ? next[name] : undefined) ?? {};
-          next[name] = { ...before, ...s, ...(before.config && s.config ? { config: deepMerge(before.config, s.config) } : {}) };
+          next[name] = {
+            ...before,
+            ...s,
+            ...(before.config && s.config ? { config: deepMerge(before.config, s.config) } : {}),
+          };
         }
         out[key] = next;
       }
@@ -612,30 +683,55 @@ function merge<T>(base: T, over: Record<string, unknown>, file: string, prefix: 
     }
     // Linters (19.19): each by name, the keys given replacing its own.
     if (!prefix && key === "linter") {
-      if (!isPlainObject(value) || !Object.values(value).every(isPlainObject)) warnings.push(`config: ${file}: [linter.<name>] must be tables`);
+      if (!isPlainObject(value) || !Object.values(value).every(isPlainObject))
+        warnings.push(`config: ${file}: [linter.<name>] must be tables`);
       else {
         const was = out[key] as Record<string, LinterConfig>;
-        const checked = Object.entries(value).map(([name, l]) => [name, checkFields(l as Record<string, unknown>, LINTER_FIELDS, `linter.${name}`, file, warnings)] as const);
-        out[key] = { ...was, ...Object.fromEntries(checked.map(([name, l]) => [name, { ...(Object.hasOwn(was, name) ? was[name] : undefined), ...l }])) };
+        const checked = Object.entries(value).map(
+          ([name, l]) =>
+            [name, checkFields(l as Record<string, unknown>, LINTER_FIELDS, `linter.${name}`, file, warnings)] as const,
+        );
+        out[key] = {
+          ...was,
+          ...Object.fromEntries(
+            checked.map(([name, l]) => [name, { ...(Object.hasOwn(was, name) ? was[name] : undefined), ...l }]),
+          ),
+        };
       }
       continue;
     }
     // Document types (22.2, 22.3): each by name, the fields given replacing its own — a folder's too: they only read.
     if (!prefix && key === "types") {
-      if (!isPlainObject(value) || !Object.values(value).every(isPlainObject)) warnings.push(`config: ${file}: [types.<name>] must be tables`);
+      if (!isPlainObject(value) || !Object.values(value).every(isPlainObject))
+        warnings.push(`config: ${file}: [types.<name>] must be tables`);
       else {
         const was = out[key] as Record<string, TypeConfig>;
-        const checked = Object.entries(value).map(([name, t]) => [name, checkFields(t as Record<string, unknown>, TYPE_FIELDS, `types.${name}`, file, warnings)] as const);
-        out[key] = { ...was, ...Object.fromEntries(checked.map(([name, t]) => [name, { ...(Object.hasOwn(was, name) ? was[name] : undefined), ...t }])) };
+        const checked = Object.entries(value).map(
+          ([name, t]) =>
+            [name, checkFields(t as Record<string, unknown>, TYPE_FIELDS, `types.${name}`, file, warnings)] as const,
+        );
+        out[key] = {
+          ...was,
+          ...Object.fromEntries(
+            checked.map(([name, t]) => [name, { ...(Object.hasOwn(was, name) ? was[name] : undefined), ...t }]),
+          ),
+        };
       }
       continue;
     }
     if (!prefix && key === "language") {
-      if (!Array.isArray(value) || !value.every((l) => isPlainObject(l) && typeof l.name === "string")) warnings.push(`config: ${file}: [[language]] entries need a name`);
+      if (!Array.isArray(value) || !value.every((l) => isPlainObject(l) && typeof l.name === "string"))
+        warnings.push(`config: ${file}: [[language]] entries need a name`);
       else {
         const list = [...(out[key] as LanguageConfig[])];
         for (const given of value as Record<string, unknown>[]) {
-          const l = checkFields(given, LANGUAGE_FIELDS, `language.${given.name}`, file, warnings) as unknown as LanguageConfig;
+          const l = checkFields(
+            given,
+            LANGUAGE_FIELDS,
+            `language.${given.name}`,
+            file,
+            warnings,
+          ) as unknown as LanguageConfig;
           const i = list.findIndex((x) => x.name === l.name);
           if (i >= 0) list[i] = { ...list[i]!, ...l };
           else list.push(l);
@@ -645,11 +741,26 @@ function merge<T>(base: T, over: Record<string, unknown>, file: string, prefix: 
       continue;
     }
     // String maps: key bindings (with context sub-tables), aliases, group names, dictionaries by language.
-    if (prefix === "keys" || prefix === "aliases" || prefix === "groups" || prefix === "spell.dictionaries" || /^keys\.(visual|source|explorer|outline|footnotes|info|resize)$/.test(prefix)) {
-      const table = prefix === "keys" && ["visual", "source", "explorer", "outline", "footnotes", "info", "resize"].includes(key);
-      if (table && !isPlainObject(value)) warnings.push(`config: ${file}: ${path} must be a table of key = "command" (a mode's own keys)`);
+    if (
+      prefix === "keys" ||
+      prefix === "aliases" ||
+      prefix === "groups" ||
+      prefix === "spell.dictionaries" ||
+      /^keys\.(visual|source|explorer|outline|footnotes|info|resize)$/.test(prefix)
+    ) {
+      const table =
+        prefix === "keys" && ["visual", "source", "explorer", "outline", "footnotes", "info", "resize"].includes(key);
+      if (table && !isPlainObject(value))
+        warnings.push(`config: ${file}: ${path} must be a table of key = "command" (a mode's own keys)`);
       else if (typeof value === "string") out[key] = renewed(prefix, value);
-      else if (table) out[key] = merge((out[key] as Record<string, string> | undefined) ?? {}, value as Record<string, unknown>, file, `keys.${key}`, warnings);
+      else if (table)
+        out[key] = merge(
+          (out[key] as Record<string, string> | undefined) ?? {},
+          value as Record<string, unknown>,
+          file,
+          `keys.${key}`,
+          warnings,
+        );
       else warnings.push(`config: ${file}: ${path} must be a string`);
       continue;
     }
@@ -668,10 +779,14 @@ function merge<T>(base: T, over: Record<string, unknown>, file: string, prefix: 
     } else if (Array.isArray(current)) {
       // Strings only: an inline table in the list is a mistake to report, not to crash the file on.
       if (Array.isArray(value) && value.every((v) => typeof v === "string")) {
-        if (path === "walk.extensions" && !value.length) warnings.push(`config: ${file}: "${path}" can't be empty (no note would be found); keeping ${JSON.stringify(current)}`);
+        if (path === "walk.extensions" && !value.length)
+          warnings.push(
+            `config: ${file}: "${path}" can't be empty (no note would be found); keeping ${JSON.stringify(current)}`,
+          );
         else out[key] = value;
       } else if (Array.isArray(value)) warnings.push(`config: ${file}: "${path}" must be a list of strings`);
-      else if (path === "editor.remote" && typeof value === "string") out[key] = value.trim() ? [value] : []; // one command
+      else if (path === "editor.remote" && typeof value === "string")
+        out[key] = value.trim() ? [value] : []; // one command
       else warnings.push(`config: ${file}: "${path}" must be an array`);
     } else if (typeof current === typeof value) {
       if (typeof value === "string" && renewed(path, value) !== value) {
@@ -683,7 +798,10 @@ function merge<T>(base: T, over: Record<string, unknown>, file: string, prefix: 
       if (allowed && !allowed.includes(value as string)) {
         // The value as written in JSON: a control character in it shown as `\u001b`, never stripped to look allowed.
         warnings.push(`config: ${file}: "${path}" must be one of ${allowed.join(", ")} (got ${JSON.stringify(value)})`);
-      } else if (range && (!Number.isFinite(value as number) || (value as number) < range[0] || (value as number) > range[1])) {
+      } else if (
+        range &&
+        (!Number.isFinite(value as number) || (value as number) < range[0] || (value as number) > range[1])
+      ) {
         warnings.push(`config: ${file}: "${path}" must be between ${range[0]} and ${range[1]} (got ${value})`);
       } else if (range && !FRACTIONAL.has(path) && !Number.isInteger(value)) {
         warnings.push(`config: ${file}: "${path}" must be a whole number (got ${value})`);
@@ -701,7 +819,10 @@ const isBoolean = (v: unknown): boolean => typeof v === "boolean";
 /** A language's server: its name, or `{ name, only-features, except-features }` (Helix's). */
 const isServerRef = (v: unknown): boolean =>
   isString(v) ||
-  (isPlainObject(v) && isString(v.name) && (v["only-features"] === undefined || isStrings(v["only-features"])) && (v["except-features"] === undefined || isStrings(v["except-features"])));
+  (isPlainObject(v) &&
+    isString(v.name) &&
+    (v["only-features"] === undefined || isStrings(v["only-features"])) &&
+    (v["except-features"] === undefined || isStrings(v["except-features"])));
 
 /**
  * A field's type check, and how a warning says what it must be. Fields not named here are kept as given,
@@ -718,7 +839,10 @@ const SERVER_FIELDS: Record<string, FieldCheck> = {
   "required-root-patterns": STRINGS,
 };
 const LANGUAGE_FIELDS: Record<string, FieldCheck> = {
-  "language-servers": [(v) => Array.isArray(v) && v.every(isServerRef), "a list of server names, or of { name, only-features, except-features }"],
+  "language-servers": [
+    (v) => Array.isArray(v) && v.every(isServerRef),
+    "a list of server names, or of { name, only-features, except-features }",
+  ],
   roots: STRINGS,
   "file-types": STRINGS,
   "language-id": [isString, "a string"],
@@ -738,9 +862,15 @@ const LINTER_FIELDS: Record<string, FieldCheck> = {
 const TYPE_FIELDS: Record<string, FieldCheck> = {
   paths: STRINGS,
   required: STRINGS,
-  keys: [(v) => isPlainObject(v) && Object.values(v).every((k) => (KEY_KINDS as readonly unknown[]).includes(k)), `a table of key = kind (${KEY_KINDS.join(", ")})`],
+  keys: [
+    (v) => isPlainObject(v) && Object.values(v).every((k) => (KEY_KINDS as readonly unknown[]).includes(k)),
+    `a table of key = kind (${KEY_KINDS.join(", ")})`,
+  ],
   values: [(v) => isPlainObject(v) && Object.values(v).every(Array.isArray), "a table of key = [allowed values]"],
-  number: [(v) => typeof v === "string" && validRegex(v), "a pattern (a regular expression) whose first group is the number"],
+  number: [
+    (v) => typeof v === "string" && validRegex(v),
+    "a pattern (a regular expression) whose first group is the number",
+  ],
   status: [isString, "a frontmatter key"],
 };
 
@@ -754,12 +884,19 @@ function validRegex(s: string): boolean {
 }
 
 /** A copy of `table` without the fields of the wrong type, or a known one spelled with underscores, each warned of; the rest kept. */
-function checkFields(table: Record<string, unknown>, fields: Record<string, FieldCheck>, where: string, file: string, warnings: string[]): Record<string, unknown> {
+function checkFields(
+  table: Record<string, unknown>,
+  fields: Record<string, FieldCheck>,
+  where: string,
+  file: string,
+  warnings: string[],
+): Record<string, unknown> {
   const out: Record<string, unknown> = {};
   for (const [k, v] of Object.entries(table)) {
     const field = Object.hasOwn(fields, k) ? fields[k] : undefined;
     const hyphened = k.replace(/_/g, "-");
-    if (!field && hyphened !== k && Object.hasOwn(fields, hyphened)) warnings.push(`config: ${file}: ${where}.${k} is spelled ${hyphened}; ignored`);
+    if (!field && hyphened !== k && Object.hasOwn(fields, hyphened))
+      warnings.push(`config: ${file}: ${where}.${k} is spelled ${hyphened}; ignored`);
     else if (field && !field[0](v)) warnings.push(`config: ${file}: ${where}.${k} must be ${field[1]}; ignored`);
     else out[k] = v;
   }

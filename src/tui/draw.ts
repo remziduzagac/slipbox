@@ -13,7 +13,20 @@ import type { Color, Role, Theme } from "../core/theme/theme.ts";
 import { graphemeWidth, graphemes, splitAtWidth, stringWidth, truncate, truncateStart } from "../core/width.ts";
 import { sanitize, sanitizeMap } from "../core/sanitize.ts";
 import type { GitState } from "../core/gitops.ts";
-import { type App, DRAWING_ROWS, type HistoryRow, LEFT_VIEWS, type ListItem, type ListOverlay, type PromptOverlay, RIGHT_VIEWS, type SidePaneState, type Tab, type TreeRow, type View } from "./app.ts";
+import {
+  type App,
+  DRAWING_ROWS,
+  type HistoryRow,
+  LEFT_VIEWS,
+  type ListItem,
+  type ListOverlay,
+  type PromptOverlay,
+  RIGHT_VIEWS,
+  type SidePaneState,
+  type Tab,
+  type TreeRow,
+  type View,
+} from "./app.ts";
 import { type Canvas, drawText } from "./canvas.ts";
 import { countWords } from "../core/words.ts";
 import type { CommentLink } from "../core/syntax.ts";
@@ -97,7 +110,16 @@ const CHANGE_MARKER_MS = 3000;
 
 function roleStyle(theme: Theme, role: Role, page: Color | null): CellStyle {
   const r = theme.roles[role];
-  return { fg: r.fg ?? theme.fg, bg: r.bg ?? page, bold: !!r.bold, italic: !!r.italic, underline: !!r.underline, strike: false, dim: !!r.dim, inverse: !!r.inverse };
+  return {
+    fg: r.fg ?? theme.fg,
+    bg: r.bg ?? page,
+    bold: !!r.bold,
+    italic: !!r.italic,
+    underline: !!r.underline,
+    strike: false,
+    dim: !!r.dim,
+    inverse: !!r.inverse,
+  };
 }
 
 function pageBg(theme: Theme): Color | null {
@@ -117,7 +139,22 @@ export function drawApp(app: App, c: Canvas): Geometry {
   const page = pageBg(theme);
   const W = c.width;
   const H = c.height;
-  const geo: Geometry = { panes: [], sidebar: null, outline: null, sidebarPane: null, outlinePane: null, tabs: [], overlay: null, hot: [], separators: [], scrollbars: [], tabStrip: null, popup: null, rules: [], verticals: [] };
+  const geo: Geometry = {
+    panes: [],
+    sidebar: null,
+    outline: null,
+    sidebarPane: null,
+    outlinePane: null,
+    tabs: [],
+    overlay: null,
+    hot: [],
+    separators: [],
+    scrollbars: [],
+    tabStrip: null,
+    popup: null,
+    rules: [],
+    verticals: [],
+  };
   c.fill(0, 0, W, H, page);
   if (W < 10 || H < 4) {
     drawText(c, 0, 0, "slipbox: too small", roleStyle(theme, "warn", page), W);
@@ -164,7 +201,14 @@ export function drawApp(app: App, c: Canvas): Geometry {
   }
   if (panel) {
     rule(bottom + 1, 0, W);
-    geo.separators.push({ kind: "problems", x: 0, y: bottom + 1, w: W, h: 1, area: { x: 0, y: mainY, w: W, h: mainH } });
+    geo.separators.push({
+      kind: "problems",
+      x: 0,
+      y: bottom + 1,
+      w: W,
+      h: 1,
+      area: { x: 0, y: mainY, w: W, h: mainH },
+    });
     geo.problems = drawProblemsPanel(app, c, { x: 0, y: bottom + 2, w: W, h: panel }, geo);
   }
   if (tabBar) {
@@ -210,7 +254,12 @@ export function drawApp(app: App, c: Canvas): Geometry {
     const top = mainY;
     const rect = { x: RW - w, y: top, w, h: bottom + 1 - top };
     if (!app.outlineBeside) clipRules(geo, { x: RW - w - 3, y: top, w: w + 3, h: bottom + 1 - top });
-    geo.outline = app.rightView === "footnotes" ? drawFootnotes(app, c, rect, geo) : app.rightView === "info" ? drawInfo(app, c, rect, geo) : drawOutline(app, c, rect, geo);
+    geo.outline =
+      app.rightView === "footnotes"
+        ? drawFootnotes(app, c, rect, geo)
+        : app.rightView === "info"
+          ? drawInfo(app, c, rect, geo)
+          : drawOutline(app, c, rect, geo);
     geo.outlinePane = rect;
     if (!app.outlineBeside) {
       c.fill(RW - w - 3, top, 2, bottom + 1 - top, roleStyle(theme, "sidebar", page).bg);
@@ -236,19 +285,27 @@ export function drawApp(app: App, c: Canvas): Geometry {
   const prompt = app.overlay?.kind === "prompt" && !(app.overlay.view && geo.findInWindow) ? app.overlay : null;
   const float = W >= TOAST_MIN_W && mainH >= 5;
   const dialog = prompt && W >= DIALOG_MIN_W && mainH >= dialogHeight(prompt, dialogWidth(W)) ? prompt : null;
-  if ((prompt && !dialog) || (app.transient && !float)) drawBottomLine(app, c, H - 1, geo, prompt && !dialog ? prompt : null);
+  if ((prompt && !dialog) || (app.transient && !float))
+    drawBottomLine(app, c, H - 1, geo, prompt && !dialog ? prompt : null);
   else if (status) drawStatus(app, c, { y: H - status, h: 1 }, geo);
   if (float && app.toasts.length) drawToasts(app, c, mainY, mainY + mainH, geo);
-  if (((app.whichKey && app.pending.length) || (app.resizeMode && !app.pending.length)) && !app.overlay) drawWhichKey(app, c, mainY, mainY + mainH, geo);
+  if (((app.whichKey && app.pending.length) || (app.resizeMode && !app.pending.length)) && !app.overlay)
+    drawWhichKey(app, c, mainY, mainY + mainH, geo);
   // Completion's popup and the signature being typed (19.16), from the cursor, over the text.
   if (geo.cursor && app.view?.insert && !app.overlay) {
     if (app.signature?.view === app.view) drawSignature(app, c, geo.cursor, mainY);
-    if (app.completion?.view === app.view && app.completion.shown.length) drawCompletion(app, c, geo.cursor, mainY, mainY + mainH);
+    if (app.completion?.view === app.view && app.completion.shown.length)
+      drawCompletion(app, c, geo.cursor, mainY, mainY + mainH);
   }
   if (app.overlay?.kind === "list") {
     const o = app.overlay;
     // Above the frame's bottom rule, never on the status line.
-    geo.overlay = o.anchor && o.menu ? drawMenu(app, c, o, o.anchor, mainY, mainY + mainH) : o.anchor ? drawDropdown(app, c, o, o.anchor, mainY + mainH) : drawList(app, c, o, mainY, mainH);
+    geo.overlay =
+      o.anchor && o.menu
+        ? drawMenu(app, c, o, o.anchor, mainY, mainY + mainH)
+        : o.anchor
+          ? drawDropdown(app, c, o, o.anchor, mainY + mainH)
+          : drawList(app, c, o, mainY, mainH);
   }
   if (app.overlay?.kind === "saveas") geo.saveas = drawSaveAs(app, c, app.overlay, mainY, mainH, geo);
   if (dialog) geo.dialog = drawDialog(app, c, dialog, mainY, mainH, geo);
@@ -260,7 +317,14 @@ export function drawApp(app: App, c: Canvas): Geometry {
  * down the left, the folder's folders and files on the right (a file's size and date, dim); the name at the bottom, its
  * buttons beside it; how its keys go on the bottom border. What has the focus has its selection lit; the rest, marked.
  */
-function drawSaveAs(app: App, c: Canvas, o: SaveAsOverlay, mainY: number, mainH: number, geo: Geometry): SaveAsGeometry {
+function drawSaveAs(
+  app: App,
+  c: Canvas,
+  o: SaveAsOverlay,
+  mainY: number,
+  mainH: number,
+  geo: Geometry,
+): SaveAsGeometry {
   const theme = app.theme;
   const W = c.width;
   const w = Math.max(30, Math.min(110, W - 8));
@@ -284,7 +348,14 @@ function drawSaveAs(app: App, c: Canvas, o: SaveAsOverlay, mainY: number, mainH:
     drawText(c, x, y + k, b.v, border, 1);
     drawText(c, x + w - 1, y + k, b.v, border, 1);
   }
-  const rule = (ry: number, joint: string) => drawText(c, x, ry, `${b.ml}${b.h.repeat(split - x - 1)}${joint}${b.h.repeat(Math.max(0, x + w - 2 - split))}${b.mr}`, border);
+  const rule = (ry: number, joint: string) =>
+    drawText(
+      c,
+      x,
+      ry,
+      `${b.ml}${b.h.repeat(split - x - 1)}${joint}${b.h.repeat(Math.max(0, x + w - 2 - split))}${b.mr}`,
+      border,
+    );
   rule(y + 2, b.tm);
   rule(y + h - 3, b.bm);
   const top = y + 3;
@@ -292,7 +363,14 @@ function drawSaveAs(app: App, c: Canvas, o: SaveAsOverlay, mainY: number, mainH:
   for (let k = 0; k < rows; k++) drawText(c, split, top + k, b.v, border, 1);
   // The folder, its end kept in view.
   const path = app.shownDir(o.dir);
-  drawText(c, x + 2, y + 1, stringWidth(path) > w - 4 ? truncateStart(path, w - 4) : path, { ...bg, bold: true }, w - 4);
+  drawText(
+    c,
+    x + 2,
+    y + 1,
+    stringWidth(path) > w - 4 ? truncateStart(path, w - 4) : path,
+    { ...bg, bold: true },
+    w - 4,
+  );
   // The places.
   if (o.place < o.placeScroll) o.placeScroll = o.place;
   if (o.place >= o.placeScroll + rows) o.placeScroll = o.place - rows + 1;
@@ -325,26 +403,52 @@ function drawSaveAs(app: App, c: Canvas, o: SaveAsOverlay, mainY: number, mainH:
     const metaW = meta && fw > 40 ? stringWidth(meta) + 2 : 0;
     const icon = e.up ? "  " : e.dir ? `${g.dirClosed} ` : "  ";
     const label = `${selected && o.focus !== "files" ? "›" : " "}${icon}${e.up ? e.name : e.dir ? `${e.name}/` : e.name}`;
-    drawText(c, fx, top + k, truncate(label, fw - metaW - 1), e.dir || selected ? st : { ...dim, bg: st.bg }, fw - metaW - 1);
+    drawText(
+      c,
+      fx,
+      top + k,
+      truncate(label, fw - metaW - 1),
+      e.dir || selected ? st : { ...dim, bg: st.bg },
+      fw - metaW - 1,
+    );
     if (metaW) drawText(c, fx + fw - metaW + 1, top + k, meta, { ...dim, bg: st.bg }, metaW - 1);
   }
   const shownEntries = o.entries.filter((e) => !e.up).length;
-  if (o.error) drawText(c, fx + 1, top + (o.entries.length ? o.entries.length - o.scroll : 0), truncate(o.error, fw - 2), roleStyle(theme, "warn", bg.bg), fw - 2);
-  else if (!shownEntries && rows > 1) drawText(c, fx + 3, top + o.entries.length - o.scroll, "an empty folder", dim, fw - 4);
+  if (o.error)
+    drawText(
+      c,
+      fx + 1,
+      top + (o.entries.length ? o.entries.length - o.scroll : 0),
+      truncate(o.error, fw - 2),
+      roleStyle(theme, "warn", bg.bg),
+      fw - 2,
+    );
+  else if (!shownEntries && rows > 1)
+    drawText(c, fx + 3, top + o.entries.length - o.scroll, "an empty folder", dim, fw - 4);
   // The name, or a new folder's, and the buttons.
   const ny = y + h - 2;
   const label = o.creating !== null ? "New folder: " : "Name: ";
   const text = o.creating ?? o.name;
-  const buttons: [string, string][] = o.creating !== null ? [] : [[" Export  enter ", "sav:ok"], [" Cancel  esc ", "sav:cancel"]];
+  const buttons: [string, string][] =
+    o.creating !== null
+      ? []
+      : [
+          [" Export  enter ", "sav:ok"],
+          [" Cancel  esc ", "sav:cancel"],
+        ];
   const bw = buttons.reduce((n, [t]) => n + stringWidth(t) + 1, 0);
   const lw = drawText(c, x + 2, ny, label, o.focus === "name" || o.creating !== null ? { ...border, bold: true } : dim);
   const room = Math.max(4, w - 4 - lw - bw - 2);
   const tw2 = drawText(c, x + 2 + lw, ny, stringWidth(text) > room ? truncateStart(text, room) : text, bg, room);
-  if (o.focus === "name" || o.creating !== null) drawText(c, x + 2 + lw + tw2, ny, " ", roleStyle(theme, "cursor", null));
+  if (o.focus === "name" || o.creating !== null)
+    drawText(c, x + 2 + lw + tw2, ny, " ", roleStyle(theme, "cursor", null));
   let bx = x + w - 2 - bw + 1;
   for (const [t, id] of buttons) bx += smallButton(app, c, bx, ny, t, id, geo, bg.bg) + 1;
   // How the keys go, on the bottom border.
-  const keys = o.creating !== null ? " enter makes it · esc doesn't " : " tab: places · folder · name   ←: up   ctrl+n: new folder   ~: home ";
+  const keys =
+    o.creating !== null
+      ? " enter makes it · esc doesn't "
+      : " tab: places · folder · name   ←: up   ctrl+n: new folder   ~: home ";
   const bottom = `${b.bl}${b.h}`;
   drawText(c, x, y + h - 1, bottom, border);
   const kw = drawText(c, x + 2, y + h - 1, truncate(keys, w - 4), dim, w - 4);
@@ -382,7 +486,12 @@ function drawFloating(app: App, c: Canvas, mainY: number, mainH: number, geo: Ge
     drawText(c, x, y + k, b.v, border, 1);
     drawText(c, x + w - 1, y + k, b.v, border, 1);
   }
-  const hint = f.kind === "hover" ? " esc · q closes " : f.kind === "commit" ? ` ctrl+s ${f.amend ? "amends" : "commits"} · esc · q leaves it ` : ` esc · q closes, writing back · ctrl+s writes `;
+  const hint =
+    f.kind === "hover"
+      ? " esc · q closes "
+      : f.kind === "commit"
+        ? ` ctrl+s ${f.amend ? "amends" : "commits"} · esc · q leaves it `
+        : ` esc · q closes, writing back · ctrl+s writes `;
   const bottom = `${b.bl}${b.h.repeat(Math.max(0, w - 2 - stringWidth(hint)))}`;
   drawText(c, x, y + h - 1, bottom, border);
   drawText(c, x + stringWidth(bottom), y + h - 1, truncate(hint, w - stringWidth(bottom) - 1) + b.br, dim);
@@ -441,7 +550,15 @@ function drawDialog(app: App, c: Canvas, o: PromptOverlay, mainY: number, mainH:
     row++;
   }
   row++;
-  const buttons: [string, string][] = o.confirm ? [[" Yes  y ", "dlg:ok"], [" No  n ", "dlg:cancel"]] : [[" OK  enter ", "dlg:ok"], [" Cancel  esc ", "dlg:cancel"]];
+  const buttons: [string, string][] = o.confirm
+    ? [
+        [" Yes  y ", "dlg:ok"],
+        [" No  n ", "dlg:cancel"],
+      ]
+    : [
+        [" OK  enter ", "dlg:ok"],
+        [" Cancel  esc ", "dlg:cancel"],
+      ];
   let bx = x + w - 2 - buttons.reduce((n, [t]) => n + stringWidth(t), 0) - (buttons.length - 1);
   for (const [text, id] of buttons) bx += smallButton(app, c, bx, row, text, id, geo, bg.bg) + 1;
   return { x: x - 2, y: y - 1, w: w + 4, h: h + 2 };
@@ -452,7 +569,14 @@ function drawDialog(app: App, c: Canvas, o: PromptOverlay, mainY: number, mainH:
  * as its entries — each a label and, dim at the right, its key — from the anchor's column (moved
  * left to fit), under its row, or over it when there's no room below.
  */
-function drawMenu(app: App, c: Canvas, o: ListOverlay, anchor: { x: number; y: number }, mainY: number, maxY: number): Rect & { listY: number; rows: number } {
+function drawMenu(
+  app: App,
+  c: Canvas,
+  o: ListOverlay,
+  anchor: { x: number; y: number },
+  mainY: number,
+  maxY: number,
+): Rect & { listY: number; rows: number } {
   const theme = app.theme;
   const W = c.width;
   const hintW = (item: ListItem) => (item.hint ? stringWidth(item.hint) + 2 : 0);
@@ -498,7 +622,17 @@ function drawMenu(app: App, c: Canvas, o: ListOverlay, anchor: { x: number; y: n
  * sets it apart, joined to the rules it meets. The left rail runs from under the top bar and
  * holds the left panel's views; the right one from under the tab strip, with the right panel's.
  */
-function drawRail(app: App, c: Canvas, side: "left" | "right", bx: number, y0: number, top: number, bottom: number, borderEnd: number, geo: Geometry): void {
+function drawRail(
+  app: App,
+  c: Canvas,
+  side: "left" | "right",
+  bx: number,
+  y0: number,
+  top: number,
+  bottom: number,
+  borderEnd: number,
+  geo: Geometry,
+): void {
   const theme = app.theme;
   const page = pageBg(theme);
   const tint = theme.roles.rail.bg ?? null;
@@ -518,9 +652,17 @@ function drawRail(app: App, c: Canvas, side: "left" | "right", bx: number, y0: n
   const buttons =
     side === "left"
       ? [
-          ...LEFT_VIEWS.map((v) => ({ glyph: v.glyph(app.glyphs), on: app.sidebarShown && app.leftView === v.id, id: `btn:${v.id}` })),
+          ...LEFT_VIEWS.map((v) => ({
+            glyph: v.glyph(app.glyphs),
+            on: app.sidebarShown && app.leftView === v.id,
+            id: `btn:${v.id}`,
+          })),
         ]
-      : RIGHT_VIEWS.map((v) => ({ glyph: v.glyph(app.glyphs), on: app.outlineShown && app.rightView === v.id, id: `btn:${v.id}` }));
+      : RIGHT_VIEWS.map((v) => ({
+          glyph: v.glyph(app.glyphs),
+          on: app.outlineShown && app.rightView === v.id,
+          id: `btn:${v.id}`,
+        }));
   buttons.forEach((b, k) => {
     const y = top + k;
     if (y > bottom) return;
@@ -540,7 +682,18 @@ const mid = (b: Band) => b.y + Math.floor(b.h / 2);
  * A clickable label filling the bar's full height, drawn with the hover role while the mouse is
  * over it. `role` null draws the text on the bar's own background.
  */
-function button(app: App, c: Canvas, x: number, band: Band, text: string, role: Role, id: string, geo: Geometry, barBg: Color | null, maxW = Number.POSITIVE_INFINITY): number {
+function button(
+  app: App,
+  c: Canvas,
+  x: number,
+  band: Band,
+  text: string,
+  role: Role,
+  id: string,
+  geo: Geometry,
+  barBg: Color | null,
+  maxW = Number.POSITIVE_INFINITY,
+): number {
   const theme = app.theme;
   const st = roleStyle(theme, app.hover === id ? "hover" : role, barBg);
   const w = Math.min(stringWidth(text), maxW);
@@ -563,7 +716,19 @@ function drawTopBar(app: App, c: Canvas, band: Band, geo: Geometry): void {
   const y = mid(band);
   const icon = (glyph: string) => ` ${glyph} `;
   // The explorer's button, unless the left rail has it.
-  let x = app.leftRailWidth ? 0 : button(app, c, 0, band, icon(g.explorerButton), app.sidebarShown ? "topbar_button_on" : "topbar_button", "btn:explorer", geo, bar.bg) + 1;
+  let x = app.leftRailWidth
+    ? 0
+    : button(
+        app,
+        c,
+        0,
+        band,
+        icon(g.explorerButton),
+        app.sidebarShown ? "topbar_button_on" : "topbar_button",
+        "btn:explorer",
+        geo,
+        bar.bg,
+      ) + 1;
   x += button(app, c, x, band, " slipbox ", "topbar_chip", "btn:palette", geo, bar.bg);
 
   // Right side, laid out from the far right inwards. The outline's button is on the breadcrumb,
@@ -572,7 +737,17 @@ function drawTopBar(app: App, c: Canvas, band: Band, geo: Geometry): void {
   if (app.tab && !geo.hot.some((h) => h.id === "btn:outline")) {
     const label = icon(g.outlineButton);
     rx = c.width - stringWidth(label);
-    button(app, c, rx, band, label, app.outlineShown ? "topbar_button_on" : "topbar_button", "btn:outline", geo, bar.bg);
+    button(
+      app,
+      c,
+      rx,
+      band,
+      label,
+      app.outlineShown ? "topbar_button_on" : "topbar_button",
+      "btn:outline",
+      geo,
+      bar.bg,
+    );
     rx -= 1;
   }
   // The root's state; the watcher and reload markers are about the file, so they sit by its path.
@@ -592,7 +767,16 @@ function drawTopBar(app: App, c: Canvas, band: Band, geo: Geometry): void {
  * all fit, the middle collapses into `…` (click: the whole path as a dropdown); then the texts are
  * cut; then the first goes too, then the last, leaving only `…`.
  */
-function drawBreadcrumb(app: App, c: Canvas, view: View, x0: number, x1: number, y: number, bg: Color | null, geo: Geometry): void {
+function drawBreadcrumb(
+  app: App,
+  c: Canvas,
+  view: View,
+  x0: number,
+  x1: number,
+  y: number,
+  bg: Color | null,
+  geo: Geometry,
+): void {
   const theme = app.theme;
   const crumbs = app.breadcrumb(view);
   if (!crumbs.length || x1 - x0 < 4) return;
@@ -600,7 +784,8 @@ function drawBreadcrumb(app: App, c: Canvas, view: View, x0: number, x1: number,
   const sep = ` ${app.glyphs.crumb} `;
   // The icon opens the heading finder.
   const iconId = `crumbicon:${index}`;
-  const iconSt = app.hover === iconId ? roleStyle(theme, "hover", bg) : { ...roleStyle(theme, "breadcrumb_icon", bg), bg };
+  const iconSt =
+    app.hover === iconId ? roleStyle(theme, "hover", bg) : { ...roleStyle(theme, "breadcrumb_icon", bg), bg };
   const iw = drawText(c, x0, y, app.glyphs.crumbIcon, iconSt);
   geo.hot.push({ id: iconId, x: x0, y, w: iw, h: 1 });
   x0 += iw + 1;
@@ -660,7 +845,12 @@ export function crumbLayout(widths: number[], room: number, sepW: number): ({ i:
     if (minW(first.w) + minW(last.w) + fixed <= room) {
       const lastW = Math.min(last.w, room - fixed - minW(first.w));
       const firstW = Math.min(first.w, room - fixed - lastW);
-      return n >= 3 ? [{ i: 0, w: firstW }, "more", { i: n - 1, w: lastW }] : [{ i: 0, w: firstW }, { i: n - 1, w: lastW }];
+      return n >= 3
+        ? [{ i: 0, w: firstW }, "more", { i: n - 1, w: lastW }]
+        : [
+            { i: 0, w: firstW },
+            { i: n - 1, w: lastW },
+          ];
     }
     if (1 + sepW + minW(last.w) <= room) return ["more", { i: n - 1, w: Math.min(last.w, room - 1 - sepW) }];
     return ["more"];
@@ -695,7 +885,8 @@ function drawTabs(app: App, c: Canvas, x0: number, band: Band, geo: Geometry): v
   // What fits: from the first tab, scrolled just enough to show the active one. When some don't
   // fit, a "+N" button at the far right opens the tab list.
   const room = c.width - x0;
-  const fits = (from: number, to: number, reserve: number) => widths.slice(from, to + 1).reduce((a, w) => a + w, 0) <= room - reserve;
+  const fits = (from: number, to: number, reserve: number) =>
+    widths.slice(from, to + 1).reduce((a, w) => a + w, 0) <= room - reserve;
   let from = 0;
   let to = widths.length - 1;
   if (!fits(from, to, 0)) {
@@ -763,7 +954,18 @@ function drawJoints(app: App, c: Canvas, geo: Geometry): void {
   // Every vertical's arms at a crossing first, then one glyph from them all: two lines meeting the
   // same rule at the same column (a tab's separator over a pane's border) make ╋, not whichever
   // was drawn last.
-  const at = new Map<string, { x: number; y: number; u: boolean; d: boolean; l: boolean; r: boolean; style: (typeof geo.verticals)[number]["style"] }>();
+  const at = new Map<
+    string,
+    {
+      x: number;
+      y: number;
+      u: boolean;
+      d: boolean;
+      l: boolean;
+      r: boolean;
+      style: (typeof geo.verticals)[number]["style"];
+    }
+  >();
   for (const v of geo.verticals) {
     for (const r of geo.rules) {
       if (r.y < v.y0 || r.y > v.y1) continue;
@@ -790,7 +992,14 @@ function drawContent(app: App, c: Canvas, area: Rect, ruleAbove: boolean, geo: G
   const page = pageBg(theme);
   if (!tab) {
     const msg = "No note open — ctrl+p opens one, ? lists keys";
-    drawText(c, area.x + Math.max(1, Math.floor((area.w - stringWidth(msg)) / 2)), area.y + Math.floor(area.h / 2), msg, roleStyle(theme, "dim", page), area.w);
+    drawText(
+      c,
+      area.x + Math.max(1, Math.floor((area.w - stringWidth(msg)) / 2)),
+      area.y + Math.floor(area.h / 2),
+      msg,
+      roleStyle(theme, "dim", page),
+      area.w,
+    );
     return;
   }
   const focusContent = app.region === "content";
@@ -811,15 +1020,40 @@ function drawContent(app: App, c: Canvas, area: Rect, ruleAbove: boolean, geo: G
     drawPane(app, c, a, { ...area, w: w1 }, focusContent, true, ruleAbove, false, geo);
     for (let y = area.y; y < area.y + area.h; y++) drawText(c, area.x + w1, y, app.glyphs.vbar, border, 1);
     // With a frame, rules sit right above and below the content area.
-    geo.verticals.push({ x: area.x + w1, y0: area.y - (ruleAbove ? 1 : 0), y1: area.y + area.h - (ruleAbove ? 0 : 1), style: border });
+    geo.verticals.push({
+      x: area.x + w1,
+      y0: area.y - (ruleAbove ? 1 : 0),
+      y1: area.y + area.h - (ruleAbove ? 0 : 1),
+      style: border,
+    });
     geo.separators.push({ kind: "split-side", x: area.x + w1, y: area.y, w: 1, h: area.h, area });
-    drawPane(app, c, b, { x: area.x + w1 + 1, y: area.y, w: area.w - w1 - 1, h: area.h }, focusContent, true, ruleAbove, true, geo);
+    drawPane(
+      app,
+      c,
+      b,
+      { x: area.x + w1 + 1, y: area.y, w: area.w - w1 - 1, h: area.h },
+      focusContent,
+      true,
+      ruleAbove,
+      true,
+      geo,
+    );
   } else {
     const h1 = Math.max(3, Math.min(area.h - 3, Math.round(area.h * tab.ratio)));
     drawPane(app, c, a, { ...area, h: h1 }, focusContent, true, ruleAbove, true, geo);
     // The lower window's title row is the stacked split's handle.
     geo.separators.push({ kind: "split-stacked", x: area.x, y: area.y + h1, w: area.w, h: 1, area });
-    drawPane(app, c, b, { x: area.x, y: area.y + h1, w: area.w, h: area.h - h1 }, focusContent, true, false, false, geo);
+    drawPane(
+      app,
+      c,
+      b,
+      { x: area.x, y: area.y + h1, w: area.w, h: area.h - h1 },
+      focusContent,
+      true,
+      false,
+      false,
+      geo,
+    );
   }
 }
 
@@ -834,7 +1068,17 @@ function paneIsActive(app: App, view: View): boolean {
  * One window. `topRight`: the window at the top right, whose breadcrumb carries the outline's
  * button when there's no right rail.
  */
-function drawPane(app: App, c: Canvas, view: View, rect: Rect, contentFocused: boolean, titled: boolean, ruleAbove: boolean, topRight: boolean, geo: Geometry): void {
+function drawPane(
+  app: App,
+  c: Canvas,
+  view: View,
+  rect: Rect,
+  contentFocused: boolean,
+  titled: boolean,
+  ruleAbove: boolean,
+  topRight: boolean,
+  geo: Geometry,
+): void {
   if (rect.w < 8 || rect.h < 1) return; // too small to draw a window (a tiny terminal)
   const theme = app.theme;
   const page = pageBg(theme);
@@ -877,7 +1121,17 @@ function drawPane(app: App, c: Canvas, view: View, rect: Rect, contentFocused: b
       // The outline's button, at the far right (on the rail instead, when it shows).
       const label = ` ${app.glyphs.outlineButton} `;
       end -= stringWidth(label);
-      button(app, c, end, { y, h: 1 }, label, app.outlineShown ? "topbar_button_on" : "topbar_button", "btn:outline", geo, bg);
+      button(
+        app,
+        c,
+        end,
+        { y, h: 1 },
+        label,
+        app.outlineShown ? "topbar_button_on" : "topbar_button",
+        "btn:outline",
+        geo,
+        bg,
+      );
     }
     drawBreadcrumb(app, c, view, x + 1, end - 1, y, bg, geo);
     rule(y + 1, hw);
@@ -924,17 +1178,34 @@ function drawPane(app: App, c: Canvas, view: View, rect: Rect, contentFocused: b
     const opts = view.findOpts ?? { regex: false, whole: false };
     const index = app.tab?.views.indexOf(view) ?? 0;
     // And ⇄, the replace row open or not. (None for :s…/c, whose pattern is always a regex.)
-    const toggles = [["regex", " .* ", opts.regex], ["whole", " ab ", opts.whole], ["replace", " ⇄ ", !!rep]] as const;
+    const toggles = [
+      ["regex", " .* ", opts.regex],
+      ["whole", " ab ", opts.whole],
+      ["replace", " ⇄ ", !!rep],
+    ] as const;
     for (const [id, label, on] of rep?.confirm ? [] : toggles) {
       if (!fits(rx - stringWidth(label) - 1)) break;
       rx -= stringWidth(label);
-      button(app, c, rx, { y, h: 1 }, label, on ? "topbar_button_on" : "topbar_button", `findopt:${id}:${index}`, geo, bg);
+      button(
+        app,
+        c,
+        rx,
+        { y, h: 1 },
+        label,
+        on ? "topbar_button_on" : "topbar_button",
+        `findopt:${id}:${index}`,
+        geo,
+        bg,
+      );
       rx -= 1;
     }
     // The query in the room left of them.
     const px = drawText(c, body.x + 1, y, "› ", { ...roleStyle(theme, "sidebar_dir", bg), bg });
     // A query longer than its room shows its end, where you type (…cut at the start).
-    const fw = drawText(c, body.x + 1 + px, y, truncateStart(text, Math.max(1, rx - (body.x + 1 + px) - 2)), { ...roleStyle(theme, "text", bg), bg });
+    const fw = drawText(c, body.x + 1 + px, y, truncateStart(text, Math.max(1, rx - (body.x + 1 + px) - 2)), {
+      ...roleStyle(theme, "text", bg),
+      bg,
+    });
     if (typing && !rep?.focus) drawText(c, body.x + 1 + px + fw, y, " ", roleStyle(theme, "cursor", bg));
     let rows = 1;
     // The replace row under it, with its buttons: replace this one, replace all.
@@ -949,14 +1220,20 @@ function drawPane(app: App, c: Canvas, view: View, rect: Rect, contentFocused: b
         drawText(c, bx, ry, ask, { ...roleStyle(theme, "warn", bg), bg });
         bx -= 1;
       } else
-        for (const [id, label] of [["all", " all "], ["one", " replace "]] as const) {
+        for (const [id, label] of [
+          ["all", " all "],
+          ["one", " replace "],
+        ] as const) {
           if (!fits(bx - stringWidth(label) - 1)) break;
           bx -= stringWidth(label);
           button(app, c, bx, { y: ry, h: 1 }, label, "topbar_button", `findrep:${id}:${index}`, geo, bg);
           bx -= 1;
         }
       const qx = drawText(c, body.x + 1, ry, "⇄ ", { ...roleStyle(theme, "sidebar_dir", bg), bg });
-      const rw = drawText(c, body.x + 1 + qx, ry, truncateStart(rep.text, Math.max(1, bx - (body.x + 1 + qx) - 2)), { ...roleStyle(theme, "text", bg), bg });
+      const rw = drawText(c, body.x + 1 + qx, ry, truncateStart(rep.text, Math.max(1, bx - (body.x + 1 + qx) - 2)), {
+        ...roleStyle(theme, "text", bg),
+        bg,
+      });
       if (rep.focus && !rep.confirm) drawText(c, body.x + 1 + qx + rw, ry, " ", roleStyle(theme, "cursor", bg));
       rows = 2;
     }
@@ -1006,7 +1283,8 @@ function drawPane(app: App, c: Canvas, view: View, rect: Rect, contentFocused: b
   };
   // The marks: the problems as bad as the level set, or worse (19.10).
   const level = app.ui.problem_marks;
-  const markedOn = level === "off" ? new Map<number, Problem[]>() : problemLines(problems.filter((p) => atLeast(p.severity, level)));
+  const markedOn =
+    level === "off" ? new Map<number, Problem[]>() : problemLines(problems.filter((p) => atLeast(p.severity, level)));
   const marksOn = markedOn.size > 0;
   // The Problems panel's chosen problem, while it has the keys: marked whatever the level (1.7).
   const chosen = view === app.view ? app.chosenProblem() : undefined;
@@ -1018,14 +1296,19 @@ function drawPane(app: App, c: Canvas, view: View, rect: Rect, contentFocused: b
   const stopLines = new Map<number, { from: number; to: number }[]>();
   if (stop) {
     const starts = view.buf.lineStarts();
-    for (let ln = starts.findLastIndex((s) => s <= stop[0]); ln >= 0 && starts[ln]! < Math.max(stop[1], stop[0] + 1); ln++) {
+    for (
+      let ln = starts.findLastIndex((s) => s <= stop[0]);
+      ln >= 0 && starts[ln]! < Math.max(stop[1], stop[0] + 1);
+      ln++
+    ) {
       stopLines.set(ln + 1, [{ from: Math.max(0, stop[0] - starts[ln]!), to: stop[1] - starts[ln]! }]);
     }
   }
   // Misspelt words (25.6), by the row they show on.
   const misspelt = app.misspelt(view);
   const spelling = new Map<number, Spot[]>();
-  for (const s of misspelt ? spellSpots(layout, misspelt) : []) spelling.set(s.row, [...(spelling.get(s.row) ?? []), s]);
+  for (const s of misspelt ? spellSpots(layout, misspelt) : [])
+    spelling.set(s.row, [...(spelling.get(s.row) ?? []), s]);
   let prevSrc = view.top > 0 ? (layout.lines[view.top - 1]?.src ?? -1) : -1;
   // The gutter (the problems bar, the line numbers) in a shade of its own down the window, a column of it before them;
   // its last column the page's, between it and the text.
@@ -1050,7 +1333,11 @@ function drawPane(app: App, c: Canvas, view: View, rect: Rect, contentFocused: b
     const here = barAt?.get(row);
     if (here && barW) {
       const n = here.length > 9 ? "+" : here.length > 1 ? String(here.length) : "";
-      const w = drawText(c, gutterX, y, `${severityGlyph(app.glyphs, worst(here))}${n}`, { ...roleStyle(theme, SEVERITY_ROLE[worst(here)], page), bold: true, bg: band ?? gutterBg });
+      const w = drawText(c, gutterX, y, `${severityGlyph(app.glyphs, worst(here))}${n}`, {
+        ...roleStyle(theme, SEVERITY_ROLE[worst(here)], page),
+        bold: true,
+        bg: band ?? gutterBg,
+      });
       geo.hot.push({ id: clicked(here), x: gutterX, y, w, h: 1 });
     }
     if (numbers) {
@@ -1058,14 +1345,27 @@ function drawPane(app: App, c: Canvas, view: View, rect: Rect, contentFocused: b
       const num = line.src !== prevSrc && !line.decor ? String(line.src).padStart(gutter - barW - 2) : "";
       // A line with problems: its number in the worst one's colour, bold; where one starts, clicked as a sign is.
       const on = onLine.get(line.src);
-      const role: Role = on ? SEVERITY_ROLE[worst(on)] : line.src === cursorSrc && showCursor ? "line_number_current" : "line_number";
-      if (num) drawText(c, gutterX + barW, y, num, { ...roleStyle(theme, role, page), ...(on ? { bold: true } : {}), bg: band ?? gutterBg });
+      const role: Role = on
+        ? SEVERITY_ROLE[worst(on)]
+        : line.src === cursorSrc && showCursor
+          ? "line_number_current"
+          : "line_number";
+      if (num)
+        drawText(c, gutterX + barW, y, num, {
+          ...roleStyle(theme, role, page),
+          ...(on ? { bold: true } : {}),
+          bg: band ?? gutterBg,
+        });
       if (here && !barW) geo.hot.push({ id: clicked(here), x: gutterX, y, w: gutter - 1, h: 1 });
     }
     // The git sign (26.1), in the gutter's last column: a rendered row joining several lines takes their strongest.
     if (signs && !line.decor) {
       const sign = rowSign(signs, line);
-      if (sign) drawText(c, gutterX + gutter - 1, y, gitGlyph(app.glyphs, sign), { ...roleStyle(theme, SIGN_ROLE[sign], page), bg: band ?? page });
+      if (sign)
+        drawText(c, gutterX + gutter - 1, y, gitGlyph(app.glyphs, sign), {
+          ...roleStyle(theme, SIGN_ROLE[sign], page),
+          bg: band ?? page,
+        });
     }
     if (!line.decor) prevSrc = line.src;
     const fill = line.fill ? theme.roles[line.fill].bg : undefined;
@@ -1074,7 +1374,8 @@ function drawPane(app: App, c: Canvas, view: View, rect: Rect, contentFocused: b
     const marks: { from: number; to: number; role: Role }[] = [];
     if (find) {
       find.matches.forEach((m, k) => {
-        if (m.row === row) marks.push({ from: m.col, to: m.col + m.len, role: k === find.current ? "link_focus" : "selection" });
+        if (m.row === row)
+          marks.push({ from: m.col, to: m.col + m.len, role: k === find.current ? "link_focus" : "selection" });
       });
     }
     if (sel && row >= sel.range[0].row && row <= sel.range[1].row) {
@@ -1085,8 +1386,10 @@ function drawPane(app: App, c: Canvas, view: View, rect: Rect, contentFocused: b
     }
     // Never on decoration (a code cell's header and borders, the lens's rules): they carry a line, not its text. (A
     // cell's padding never: marks go by a row's cells, and its cells are its text's.)
-    if (marksOn && !line.decor) marks.push(...problemMarks(line, layout, markedOn, layout.lines[row + 1]?.src !== line.src));
-    if (chosenOn && !line.decor) marks.push(...problemMarks(line, layout, chosenOn, layout.lines[row + 1]?.src !== line.src, "link_focus"));
+    if (marksOn && !line.decor)
+      marks.push(...problemMarks(line, layout, markedOn, layout.lines[row + 1]?.src !== line.src));
+    if (chosenOn && !line.decor)
+      marks.push(...problemMarks(line, layout, chosenOn, layout.lines[row + 1]?.src !== line.src, "link_focus"));
     if (links) marks.push(...offsetMarks(line, links.get(line.src), false, "link"));
     if (brackets && !line.decor) marks.push(...offsetMarks(line, brackets.get(line.src), false, "bracket_match"));
     if (stop && !line.decor) marks.push(...offsetMarks(line, stopLines.get(line.src), false, "selection"));
@@ -1100,13 +1403,18 @@ function drawPane(app: App, c: Canvas, view: View, rect: Rect, contentFocused: b
       const current = row === view.cur.row;
       const n = String(Math.min(999, Math.abs(row - view.cur.row))).padStart(LENS_COUNTERS - 1);
       const tint = band ?? (line.fill ? theme.roles[line.fill].bg : undefined) ?? page;
-      drawText(c, textX, y, n, { ...roleStyle(theme, current ? "line_number_current" : "lens", page), ...(current ? {} : { bold: false }), bg: tint });
+      drawText(c, textX, y, n, {
+        ...roleStyle(theme, current ? "line_number_current" : "lens", page),
+        ...(current ? {} : { bold: false }),
+        bg: tint,
+      });
     }
     // A code cell's box (24.13): its borders over the row's spaces there; its header's buttons, each clickable.
     if (line.frame) {
       for (const fx of line.frame) {
         const x = textX + fx - view.left;
-        if (x >= textX && x < textX + textW) drawText(c, x, y, app.glyphs.box.v, { ...roleStyle(theme, "cell_line", page), bg: band ?? page }, 1);
+        if (x >= textX && x < textX + textW)
+          drawText(c, x, y, app.glyphs.box.v, { ...roleStyle(theme, "cell_line", page), bg: band ?? page }, 1);
       }
     }
     if (line.spans.some((sp) => sp.button)) {
@@ -1124,7 +1432,9 @@ function drawPane(app: App, c: Canvas, view: View, rect: Rect, contentFocused: b
     // An oversized lens's rules say how much of it is out of sight: ↑ above, ↓ below.
     if ((line.lens === "top" || line.lens === "bottom") && hidden.length) {
       const first = layout.lines.findIndex((l) => l.lens === "source");
-      const n = hidden.filter(([a]) => (line.lens === "top" ? a === first : a !== first)).reduce((k, [a, b]) => k + b - a, 0);
+      const n = hidden
+        .filter(([a]) => (line.lens === "top" ? a === first : a !== first))
+        .reduce((k, [a, b]) => k + b - a, 0);
       if (n) {
         const label = ` ${line.lens === "top" ? "↑" : "↓"} ${n} line${n === 1 ? "" : "s"} `;
         const x = textX + Math.max(0, Math.min(layout.width, textW) - stringWidth(label) - 2);
@@ -1155,7 +1465,17 @@ function drawPane(app: App, c: Canvas, view: View, rect: Rect, contentFocused: b
 }
 
 /** A side pane's scrollbar, in its list's last column, when the list is longer than the pane. */
-function paneScrollbar(app: App, c: Canvas, rect: Rect, total: number, top: number, pane: "sidebar" | "outline", active: boolean, bg: Color | null, geo: Geometry): void {
+function paneScrollbar(
+  app: App,
+  c: Canvas,
+  rect: Rect,
+  total: number,
+  top: number,
+  pane: "sidebar" | "outline",
+  active: boolean,
+  bg: Color | null,
+  geo: Geometry,
+): void {
   if (total <= rect.h || rect.h < 2) return;
   const bar = { x: rect.x + rect.w - 1, y: rect.y, w: 1, h: rect.h };
   drawScrollbar(app, c, bar, total, top, active, bg);
@@ -1163,7 +1483,15 @@ function paneScrollbar(app: App, c: Canvas, rect: Rect, total: number, top: numb
 }
 
 /** The horizontal scrollbar: a `▄` track with a `▄` thumb for `total` columns from `left`. */
-function drawHScrollbar(app: App, c: Canvas, r: Rect, total: number, left: number, active: boolean, bg: Color | null): void {
+function drawHScrollbar(
+  app: App,
+  c: Canvas,
+  r: Rect,
+  total: number,
+  left: number,
+  active: boolean,
+  bg: Color | null,
+): void {
   const theme = app.theme;
   const thumb = Math.max(2, Math.round((r.w * r.w) / total));
   const pos = Math.round((left / Math.max(1, total - r.w)) * (r.w - thumb));
@@ -1180,7 +1508,9 @@ function drawCompletion(app: App, c: Canvas, at: { x: number; y: number }, top: 
   const theme = app.theme;
   const rows = Math.min(10, comp.shown.length);
   const first = Math.max(0, Math.min(comp.selected - rows + 1, comp.shown.length - rows));
-  const items = comp.shown.slice(first, first + rows).map((i) => ({ label: sanitize(i.label), detail: sanitize(i.detail ?? i.labelDetails?.description ?? "") }));
+  const items = comp.shown
+    .slice(first, first + rows)
+    .map((i) => ({ label: sanitize(i.label), detail: sanitize(i.detail ?? i.labelDetails?.description ?? "") }));
   const labelW = Math.min(40, Math.max(...items.map((i) => stringWidth(i.label))));
   const detailW = Math.min(30, Math.max(0, ...items.map((i) => stringWidth(i.detail))));
   const w = Math.min(c.width, labelW + (detailW ? detailW + 2 : 0) + 2);
@@ -1191,7 +1521,15 @@ function drawCompletion(app: App, c: Canvas, at: { x: number; y: number }, top: 
     const st = roleStyle(theme, chosen ? "overlay_selected" : "overlay", null);
     c.fill(x0, y0 + k, w, 1, st.bg);
     drawText(c, x0 + 1, y0 + k, truncate(item.label, labelW), st, labelW);
-    if (detailW && item.detail) drawText(c, x0 + 1 + labelW + 2, y0 + k, truncate(item.detail, detailW), { ...roleStyle(theme, "overlay_dim", st.bg), bg: st.bg }, detailW);
+    if (detailW && item.detail)
+      drawText(
+        c,
+        x0 + 1 + labelW + 2,
+        y0 + k,
+        truncate(item.detail, detailW),
+        { ...roleStyle(theme, "overlay_dim", st.bg), bg: st.bg },
+        detailW,
+      );
   });
 }
 
@@ -1210,17 +1548,32 @@ function drawSignature(app: App, c: Canvas, at: { x: number; y: number }, top: n
   const [a, b] = sig.active;
   let px = x + 1;
   px += drawText(c, px, y, sanitize(sig.label.slice(0, a)), st);
-  px += drawText(c, px, y, sanitize(sig.label.slice(a, b)), { ...roleStyle(theme, "overlay_match", st.bg), bg: st.bg, bold: true });
+  px += drawText(c, px, y, sanitize(sig.label.slice(a, b)), {
+    ...roleStyle(theme, "overlay_match", st.bg),
+    bg: st.bg,
+    bold: true,
+  });
   drawText(c, px, y, sanitize(sig.label.slice(b)), st, Math.max(0, x + w - 1 - px));
 }
 
 /** Each severity's sign, in the glyph set in use: beside its line (the problems bar) and on the status line. */
 function severityGlyph(g: Glyphs, s: Severity): string {
-  return s === "error" ? g.problemError : s === "warning" ? g.problemWarn : s === "info" ? g.problemInfo : g.problemHint;
+  return s === "error"
+    ? g.problemError
+    : s === "warning"
+      ? g.problemWarn
+      : s === "info"
+        ? g.problemInfo
+        : g.problemHint;
 }
 
 /** A git sign's colour (26.1): added as the explorer's new files, changed as its modified ones, deleted as a diff's. */
-const SIGN_ROLE: Record<GitSign, Role> = { add: "git_new", change: "git_modified", delete: "diff_del", topdelete: "diff_del" };
+const SIGN_ROLE: Record<GitSign, Role> = {
+  add: "git_new",
+  change: "git_modified",
+  delete: "diff_del",
+  topdelete: "diff_del",
+};
 const SIGN_RANK: Record<GitSign, number> = { change: 3, add: 2, delete: 1, topdelete: 1 };
 
 function gitGlyph(g: Glyphs, s: GitSign): string {
@@ -1240,13 +1593,19 @@ function rowSign(signs: Map<number, GitSign>, line: Line): GitSign | undefined {
 /** Each severity's colour, in the bar, the line numbers and the status line. */
 const SEVERITY_ROLE: Record<Severity, Role> = { error: "error", warning: "warn", info: "info", hint: "status_dim" };
 /** Each severity's mark over the text (19.10); a syntax error keeps its own role (16.9). */
-const MARK_ROLE: Record<Severity, Role> = { error: "problem_error", warning: "problem_warn", info: "problem_info", hint: "problem_info" };
+const MARK_ROLE: Record<Severity, Role> = {
+  error: "problem_error",
+  warning: "problem_warn",
+  info: "problem_info",
+  hint: "problem_info",
+};
 
 /** Problems by each source line they cover (a long one's first 200). */
 function problemLines(problems: Problem[]): Map<number, Problem[]> {
   const out = new Map<number, Problem[]>();
   for (const p of problems) {
-    for (let l = p.start.line; l <= Math.min(p.end.line, p.start.line + 200); l++) out.set(l, [...(out.get(l) ?? []), p]);
+    for (let l = p.start.line; l <= Math.min(p.end.line, p.start.line + 200); l++)
+      out.set(l, [...(out.get(l) ?? []), p]);
   }
   return out;
 }
@@ -1260,7 +1619,8 @@ function firstRows(layout: Layout): Map<number, number> {
   layout.lines.forEach((line, row) => {
     if (line.decor) return;
     if (!m!.has(line.src)) m!.set(line.src, row);
-    for (const span of line.spans) if (span.src !== undefined && span.text.trim() && !m!.has(span.src)) m!.set(span.src, row);
+    for (const span of line.spans)
+      if (span.src !== undefined && span.text.trim() && !m!.has(span.src)) m!.set(span.src, row);
   });
   firstRowCache.set(layout, m);
   return m;
@@ -1284,7 +1644,13 @@ function barRows(layout: Layout, problems: Problem[]): Map<number, Problem[]> {
  * itself. A rendered one knows each span's line: a link's problem marks the link as drawn, any other
  * the text that came from its lines.
  */
-function problemMarks(line: Line, layout: Layout, onLine: Map<number, Problem[]>, lastRow: boolean, as?: Role): { from: number; to: number; role: Role }[] {
+function problemMarks(
+  line: Line,
+  layout: Layout,
+  onLine: Map<number, Problem[]>,
+  lastRow: boolean,
+  as?: Role,
+): { from: number; to: number; role: Role }[] {
   const out: { from: number; to: number; role: Role }[] = [];
   const role = (p: Problem): Role => as ?? (p.source === "syntax" ? "syntax_error" : MARK_ROLE[p.severity]);
   if (line.srcMap) {
@@ -1301,7 +1667,10 @@ function problemMarks(line: Line, layout: Layout, onLine: Map<number, Problem[]>
     const src = span.src ?? line.src;
     const link = span.link !== undefined ? layout.links[span.link] : undefined;
     for (const p of onLine.get(src) ?? []) {
-      const hit = p.target !== undefined ? link !== undefined && link.src === p.start.line && link.target === p.target : span.text.trim() !== "";
+      const hit =
+        p.target !== undefined
+          ? link !== undefined && link.src === p.start.line && link.target === p.target
+          : span.text.trim() !== "";
       if (hit) out.push({ from: x, to: x + w, role: role(p) });
     }
     x += w;
@@ -1323,14 +1692,20 @@ function commentLinksShown(view: View, code: boolean): Map<number, CommentLink[]
  * The columns of one row that source ranges (UTF-16 offsets in its line) cover. One past the
  * line's end (an error's missing `)`) marks the last cell, on the line's last row.
  */
-function offsetMarks(line: Line, ranges: { from: number; to: number }[] | undefined, lastRow: boolean, role: Role): { from: number; to: number; role: Role }[] {
+function offsetMarks(
+  line: Line,
+  ranges: { from: number; to: number }[] | undefined,
+  lastRow: boolean,
+  role: Role,
+): { from: number; to: number; role: Role }[] {
   if (!ranges || !line.srcMap) return [];
   const cs = cells(line);
   const out: { from: number; to: number; role: Role }[] = [];
   for (const e of ranges) {
     const hit = cs.filter((k) => k.at! >= e.from && k.at! < e.to);
     if (hit.length) out.push({ from: hit[0]!.x, to: hit[hit.length - 1]!.x + hit[hit.length - 1]!.w, role });
-    else if (lastRow && e.from >= line.srcMap.end && cs.length) out.push({ from: cs[cs.length - 1]!.x, to: cs[cs.length - 1]!.x + cs[cs.length - 1]!.w, role });
+    else if (lastRow && e.from >= line.srcMap.end && cs.length)
+      out.push({ from: cs[cs.length - 1]!.x, to: cs[cs.length - 1]!.x + cs[cs.length - 1]!.w, role });
   }
   return out;
 }
@@ -1363,7 +1738,15 @@ function drawPictures(c: Canvas, layout: Layout, shown: number[], top: number, x
 }
 
 /** A scrollbar: a `▐` track with a `▐` thumb sized and placed for `total` rows from `top`. */
-function drawScrollbar(app: App, c: Canvas, r: Rect, total: number, top: number, active: boolean, bg: Color | null): void {
+function drawScrollbar(
+  app: App,
+  c: Canvas,
+  r: Rect,
+  total: number,
+  top: number,
+  active: boolean,
+  bg: Color | null,
+): void {
   const theme = app.theme;
   const thumb = Math.max(1, Math.round((r.h * r.h) / total));
   const pos = Math.round((top / Math.max(1, total - r.h)) * (r.h - thumb));
@@ -1379,7 +1762,15 @@ function drawScrollbar(app: App, c: Canvas, r: Rect, total: number, top: number,
  * The block cursor on its character, drawn with the cursor role (inverse without colour); a wide one
  * at the last column (`end`) shows as one cell.
  */
-function drawCursor(c: Canvas, x: number, y: number, line: Line, col: number, theme: Theme, end = Number.POSITIVE_INFINITY): void {
+function drawCursor(
+  c: Canvas,
+  x: number,
+  y: number,
+  line: Line,
+  col: number,
+  theme: Theme,
+  end = Number.POSITIVE_INFINITY,
+): void {
   const st = roleStyle(theme, "cursor", null);
   const cell = cells(line).find((k) => k.x === col);
   // A tab is one stop several columns wide: the cursor sits on its first column.
@@ -1392,7 +1783,19 @@ function drawCursor(c: Canvas, x: number, y: number, line: Line, col: number, th
  * Draw one layout row from column `left` (wrapping off, scrolled sideways), `maxW` columns of it.
  * `marks` override styles by column range; the link under the cursor too.
  */
-function drawLine(c: Canvas, x: number, y: number, line: Line, maxW: number, theme: Theme, band: Color | null, page: Color | null, focusLink: number, marks: { from: number; to: number; role: Role }[], left = 0): void {
+function drawLine(
+  c: Canvas,
+  x: number,
+  y: number,
+  line: Line,
+  maxW: number,
+  theme: Theme,
+  band: Color | null,
+  page: Color | null,
+  focusLink: number,
+  marks: { from: number; to: number; role: Role }[],
+  left = 0,
+): void {
   let col = 0;
   const end = left + maxW;
   const fillBg = line.fill ? theme.roles[line.fill].bg : undefined;
@@ -1443,7 +1846,14 @@ function markStyle(theme: Theme, role: Role): Partial<CellStyle> {
 function paneTitle(app: App, c: Canvas, rect: Rect, title: string, focused: boolean, bg: Color | null): Rect {
   if (rect.h < 8) return rect;
   // Bright while the pane has focus, dimmer otherwise; bold either way.
-  drawText(c, rect.x + 1, rect.y, title, { ...roleStyle(app.theme, focused ? "pane_title_active" : "pane_title", bg), bg }, rect.w - 1);
+  drawText(
+    c,
+    rect.x + 1,
+    rect.y,
+    title,
+    { ...roleStyle(app.theme, focused ? "pane_title_active" : "pane_title", bg), bg },
+    rect.w - 1,
+  );
   return { ...rect, y: rect.y + 2, h: rect.h - 2 };
 }
 
@@ -1466,7 +1876,16 @@ function treeLines(depths: number[]): { last: boolean; more: boolean[] }[] {
 }
 
 /** Dim tree lines in a row's indentation: │ for ancestors that go on, then ├─ or └─ to the row. */
-function drawGuides(app: App, c: Canvas, rect: Rect, y: number, depth: number, line: { last: boolean; more: boolean[] }, bg: Color | null, left = 0): void {
+function drawGuides(
+  app: App,
+  c: Canvas,
+  rect: Rect,
+  y: number,
+  depth: number,
+  line: { last: boolean; more: boolean[] },
+  bg: Color | null,
+  left = 0,
+): void {
   const g = app.glyphs;
   const st = { ...roleStyle(app.theme, "tree_guide", bg), bg };
   for (let k = 0; k < depth; k++) {
@@ -1494,7 +1913,13 @@ interface SideView {
 
 const naturalWidths = new WeakMap<object, number>();
 
-function sideView<T extends object>(rect: Rect, rows: T[], text: (row: T) => string, state: SidePaneState, least = 0): SideView {
+function sideView<T extends object>(
+  rect: Rect,
+  rows: T[],
+  text: (row: T) => string,
+  state: SidePaneState,
+  least = 0,
+): SideView {
   const cols = Math.max(1, rect.w - 1);
   let cached = naturalWidths.get(rows);
   if (cached === undefined) {
@@ -1520,7 +1945,15 @@ function sideRow(text: string, sv: SideView, reserve = 0): string {
   return splitAtWidth(splitAtWidth(text, sv.left)[1], cols)[0];
 }
 
-function sideHScrollbar(app: App, c: Canvas, sv: SideView, pane: "sidebar" | "outline", active: boolean, bg: Color | null, geo: Geometry): void {
+function sideHScrollbar(
+  app: App,
+  c: Canvas,
+  sv: SideView,
+  pane: "sidebar" | "outline",
+  active: boolean,
+  bg: Color | null,
+  geo: Geometry,
+): void {
   if (!sv.hbar) return;
   drawHScrollbar(app, c, sv.hbar, sv.natural, sv.left, active, bg);
   geo.scrollbars.push({ ...sv.hbar, pane, total: sv.natural, horizontal: true });
@@ -1552,11 +1985,24 @@ function drawSidebar(app: App, c: Canvas, pane: Rect, geo: Geometry): Rect {
   }
   const s = app.sidebar;
   rect = filterRow(app, c, rect, s, app.region === "sidebar", base.bg, geo);
-  return view === "history" ? drawHistoryList(app, c, rect, base.bg, geo) : view === "git" ? drawGitList(app, c, rect, base.bg, geo) : drawTree(app, c, rect, base.bg, geo);
+  return view === "history"
+    ? drawHistoryList(app, c, rect, base.bg, geo)
+    : view === "git"
+      ? drawGitList(app, c, rect, base.bg, geo)
+      : drawTree(app, c, rect, base.bg, geo);
 }
 
 /** A file's state letter's colour in source control (26.2): as the explorer's marks have it. */
-const LETTER_ROLE: Record<string, Role> = { M: "git_modified", R: "git_modified", C: "git_modified", T: "git_modified", A: "git_new", "?": "git_new", D: "diff_del", U: "git_conflict" };
+const LETTER_ROLE: Record<string, Role> = {
+  M: "git_modified",
+  R: "git_modified",
+  C: "git_modified",
+  T: "git_modified",
+  A: "git_new",
+  "?": "git_new",
+  D: "diff_del",
+  U: "git_conflict",
+};
 
 /** The source control view (26.2): each section's heading, its files — a state letter, the name, the folder dim — and a
  *  file's changes under it when opened up. */
@@ -1568,7 +2014,13 @@ function drawGitList(app: App, c: Canvas, list: Rect, bg: Color | null, geo: Geo
   const rect = sv.list;
   followSelection(s, rows.length, rect.h);
   if (!rows.length) {
-    const why = !app.checkout ? "not a git checkout" : app.gitEntries === null ? "asking git…" : s.filter ? "no matches" : "nothing changed";
+    const why = !app.checkout
+      ? "not a git checkout"
+      : app.gitEntries === null
+        ? "asking git…"
+        : s.filter
+          ? "no matches"
+          : "nothing changed";
     drawText(c, rect.x + 1, rect.y, why, roleStyle(theme, "dim", bg), rect.w - 1);
   }
   for (let i = 0; i < rect.h; i++) {
@@ -1586,12 +2038,39 @@ function drawGitList(app: App, c: Canvas, list: Rect, bg: Color | null, geo: Geo
     if (row.kind === "file") {
       // Its letter in its state's colour, then its name.
       const letter = row.label.slice(0, 1);
-      x += drawText(c, x, y, letter, { ...roleStyle(theme, LETTER_ROLE[letter] ?? "git_modified", st.bg), bg: st.bg, bold: true });
-      x += drawText(c, x, y, truncate(row.label.slice(1), Math.max(1, sv.cols - (x - rect.x) - 1)), st, rect.w - (x - rect.x));
-    } else x += drawText(c, x, y, truncate(row.label, sv.cols - 2), { ...roleStyle(theme, row.change!.kind === "add" ? "git_new" : row.change!.kind === "delete" ? "diff_del" : "git_modified", st.bg), bg: st.bg }, rect.w - 1);
+      x += drawText(c, x, y, letter, {
+        ...roleStyle(theme, LETTER_ROLE[letter] ?? "git_modified", st.bg),
+        bg: st.bg,
+        bold: true,
+      });
+      x += drawText(
+        c,
+        x,
+        y,
+        truncate(row.label.slice(1), Math.max(1, sv.cols - (x - rect.x) - 1)),
+        st,
+        rect.w - (x - rect.x),
+      );
+    } else
+      x += drawText(
+        c,
+        x,
+        y,
+        truncate(row.label, sv.cols - 2),
+        {
+          ...roleStyle(
+            theme,
+            row.change!.kind === "add" ? "git_new" : row.change!.kind === "delete" ? "diff_del" : "git_modified",
+            st.bg,
+          ),
+          bg: st.bg,
+        },
+        rect.w - 1,
+      );
     // Its folder (a file's) or its first line (a change's), dim, where there's room.
     const hint = truncate(sanitize(row.hint), Math.max(0, sv.cols - (x - rect.x) - 2));
-    if (hint && x - rect.x + 1 + stringWidth(hint) <= sv.cols - 1) drawText(c, x + 1, y, hint, { ...roleStyle(theme, "dim", st.bg), bg: st.bg });
+    if (hint && x - rect.x + 1 + stringWidth(hint) <= sv.cols - 1)
+      drawText(c, x + 1, y, hint, { ...roleStyle(theme, "dim", st.bg), bg: st.bg });
   }
   paneScrollbar(app, c, rect, rows.length, s.scroll, "sidebar", app.region === "sidebar", bg, geo);
   return rect;
@@ -1602,11 +2081,22 @@ function drawGitList(app: App, c: Canvas, list: Rect, bg: Color | null, geo: Geo
  * and a rule across the pane (joined to its border), then the list. Returns the rect
  * left for the list; a short pane gets only the text row.
  */
-function filterRow(app: App, c: Canvas, rect: Rect, s: SidePaneState, focused: boolean, bg: Color | null, geo: Geometry): Rect {
+function filterRow(
+  app: App,
+  c: Canvas,
+  rect: Rect,
+  s: SidePaneState,
+  focused: boolean,
+  bg: Color | null,
+  geo: Geometry,
+): Rect {
   if (!(s.filtering || s.filter) || rect.h <= 2) return rect;
   const theme = app.theme;
   const px = drawText(c, rect.x + 1, rect.y, "› ", { ...roleStyle(theme, "sidebar_dir", bg), bg });
-  const fw = drawText(c, rect.x + 1 + px, rect.y, truncate(s.filter ?? "", rect.w - 4 - px), { ...roleStyle(theme, "text", bg), bg });
+  const fw = drawText(c, rect.x + 1 + px, rect.y, truncate(s.filter ?? "", rect.w - 4 - px), {
+    ...roleStyle(theme, "text", bg),
+    bg,
+  });
   if (s.filtering && focused) drawText(c, rect.x + 1 + px + fw, rect.y, " ", roleStyle(theme, "cursor", bg));
   if (rect.h <= 6) return { ...rect, y: rect.y + 1, h: rect.h - 1 };
   drawText(c, rect.x, rect.y + 1, app.glyphs.hbar.repeat(rect.w), { ...roleStyle(theme, "border", bg), bg }, rect.w);
@@ -1634,8 +2124,17 @@ function drawTree(app: App, c: Canvas, list: Rect, bg: Color | null, geo: Geomet
   // side by side, and the extension says which.
   const nameOf = (row: TreeRow) => row.name;
   const icon = (row: TreeRow) =>
-    row.root ? (row.root.kind === "vault" ? g.vault : g.dirClosed) : row.group === "data" ? g.dataFile : row.group === "text" ? g.textFile : g.file;
-  const prefix = (row: TreeRow) => `${" ".repeat(1 + row.depth * 2)}${row.kind === "dir" ? (q || app.expanded.has(row.path) ? g.dirOpen : g.dirClosed) : icon(row)} `;
+    row.root
+      ? row.root.kind === "vault"
+        ? g.vault
+        : g.dirClosed
+      : row.group === "data"
+        ? g.dataFile
+        : row.group === "text"
+          ? g.textFile
+          : g.file;
+  const prefix = (row: TreeRow) =>
+    `${" ".repeat(1 + row.depth * 2)}${row.kind === "dir" ? (q || app.expanded.has(row.path) ? g.dirOpen : g.dirClosed) : icon(row)} `;
   const text = (row: TreeRow) => prefix(row) + nameOf(row);
   // Its git state at the row's end (5.11): a file's letter, a folder's dot. Its 2 columns count in
   // the row's width, so a name scrolled to its end ends before the mark, never under it.
@@ -1667,8 +2166,15 @@ function drawTree(app: App, c: Canvas, list: Rect, bg: Color | null, geo: Geomet
     const y = rect.y + i;
     const selected = s.scroll + i === s.selected && app.region === "sidebar";
     // The root open, in a folder the explorer climbed to: marked, as the note open is.
-    let role: Role =
-      row.root?.here ? "sidebar_active" : row.root?.kind === "vault" ? "sidebar_root" : row.kind !== "note" ? "sidebar_dir" : row.path === current ? "sidebar_active" : "sidebar";
+    let role: Role = row.root?.here
+      ? "sidebar_active"
+      : row.root?.kind === "vault"
+        ? "sidebar_root"
+        : row.kind !== "note"
+          ? "sidebar_dir"
+          : row.path === current
+            ? "sidebar_active"
+            : "sidebar";
     if (selected) role = "sidebar_selected";
     const st = roleStyle(theme, role, bg);
     if (selected) c.fill(rect.x, y, rect.w, 1, st.bg);
@@ -1701,7 +2207,15 @@ function drawTree(app: App, c: Canvas, list: Rect, bg: Color | null, geo: Geomet
     const vaultName = row.root?.other ? undefined : row.root?.name;
     // Short of its git mark and the scrollbar's column.
     const nameEnd = withButtons ? room : sv.cols - (gst ? 2 : 0);
-    if (vaultName && !sv.left && w + 1 < nameEnd) drawText(c, rect.x + w + 1, y, truncate(vaultName, nameEnd - w - 1), { ...roleStyle(theme, "dim", st.bg), bg: st.bg }, nameEnd - w - 1);
+    if (vaultName && !sv.left && w + 1 < nameEnd)
+      drawText(
+        c,
+        rect.x + w + 1,
+        y,
+        truncate(vaultName, nameEnd - w - 1),
+        { ...roleStyle(theme, "dim", st.bg), bg: st.bg },
+        nameEnd - w - 1,
+      );
     drawGuides(app, c, rect, y, row.depth, lines[s.scroll + i]!, st.bg, sv.left);
     // What the filter matched in a note's name (it matches the path: a word may be a folder's).
     const m = q && row.kind === "note" && row.path.endsWith(nameOf(row)) ? match(q, row.path) : null;
@@ -1710,12 +2224,16 @@ function drawTree(app: App, c: Canvas, list: Rect, bg: Color | null, geo: Geomet
       const off = stringWidth(prefix(row));
       const base = row.path.length - name.length;
       // Grapheme by grapheme, as the name was drawn: an accent or an emoji whole, a wide one wide.
-      const shown = marked(name, m.positions.filter((x) => x >= base).map((x) => x - base));
+      const shown = marked(
+        name,
+        m.positions.filter((x) => x >= base).map((x) => x - base),
+      );
       let x = rect.x + off - sv.left;
       let ci = 0;
       for (const gr of graphemes(shown.text)) {
         const gw = graphemeWidth(gr);
-        if (shown.pos.has(ci) && gw > 0 && x >= rect.x && x + gw <= markEnd) c.cell(x, y, gr, gw, { ...st, fg: matchSt.fg, bold: true });
+        if (shown.pos.has(ci) && gw > 0 && x >= rect.x && x + gw <= markEnd)
+          c.cell(x, y, gr, gw, { ...st, fg: matchSt.fg, bold: true });
         x += gw;
         ci += gr.length;
       }
@@ -1727,8 +2245,18 @@ function drawTree(app: App, c: Canvas, list: Rect, bg: Color | null, geo: Geomet
 }
 
 /** A one-row button: its text, the hover role under the mouse, a hot region for clicks. */
-function smallButton(app: App, c: Canvas, x: number, y: number, text: string, id: string, geo: Geometry, bg: Color | null): number {
-  const st = app.hover === id ? roleStyle(app.theme, "hover", bg) : { ...roleStyle(app.theme, "topbar_button", bg), bg };
+function smallButton(
+  app: App,
+  c: Canvas,
+  x: number,
+  y: number,
+  text: string,
+  id: string,
+  geo: Geometry,
+  bg: Color | null,
+): number {
+  const st =
+    app.hover === id ? roleStyle(app.theme, "hover", bg) : { ...roleStyle(app.theme, "topbar_button", bg), bg };
   const w = drawText(c, x, y, text, st);
   geo.hot.push({ id, x, y, w, h: 1 });
   return w;
@@ -1744,7 +2272,15 @@ function drawHistoryList(app: App, c: Canvas, list: Rect, bg: Color | null, geo:
   const sv = sideView(list, rows, () => "", s);
   const rect = sv.list;
   followSelection(s, rows.length, rect.h);
-  if (!rows.length) drawText(c, rect.x + 1, rect.y, s.filter ? "no matches" : "no history yet", roleStyle(theme, "dim", bg), rect.w - 1);
+  if (!rows.length)
+    drawText(
+      c,
+      rect.x + 1,
+      rect.y,
+      s.filter ? "no matches" : "no history yet",
+      roleStyle(theme, "dim", bg),
+      rect.w - 1,
+    );
   for (let i = 0; i < rect.h; i++) {
     const row = rows[s.scroll + i];
     if (!row) break;
@@ -1763,7 +2299,8 @@ function drawHistoryList(app: App, c: Canvas, list: Rect, bg: Color | null, geo:
     const room = sv.cols - 1 - (hintW ? hintW + 2 : 0);
     const cut = truncate(text(row), hintW && room >= 10 ? room : sv.cols);
     const w = drawText(c, rect.x, y, cut, st, rect.w);
-    if (w + 2 + hintW <= sv.cols - 1) drawText(c, rect.x + sv.cols - 1 - hintW, y, row.hint, { ...roleStyle(theme, "dim", st.bg), bg: st.bg });
+    if (w + 2 + hintW <= sv.cols - 1)
+      drawText(c, rect.x + sv.cols - 1 - hintW, y, row.hint, { ...roleStyle(theme, "dim", st.bg), bg: st.bg });
   }
   paneScrollbar(app, c, rect, rows.length, s.scroll, "sidebar", app.region === "sidebar", bg, geo);
   sideHScrollbar(app, c, sv, "sidebar", app.region === "sidebar", bg, geo);
@@ -1783,7 +2320,10 @@ function drawProblemsPanel(app: App, c: Canvas, rect: Rect, geo: Geometry): Rect
   const focused = app.region === "problems";
   const file = app.fileProblems();
   let x = rect.x + 1;
-  for (const [tab, title] of [["file", `This file (${file.length})`], ["all", `All (${app.problemCount()})`]] as const) {
+  for (const [tab, title] of [
+    ["file", `This file (${file.length})`],
+    ["all", `All (${app.problemCount()})`],
+  ] as const) {
     const id = `ptab:${tab}`;
     const on = p.tab === tab;
     const role: Role = app.hover === id ? "hover" : on ? (focused ? "sidebar_selected" : "sidebar_active") : "dim";
@@ -1798,7 +2338,10 @@ function drawProblemsPanel(app: App, c: Canvas, rect: Rect, geo: Geometry): Rect
   const s = app.problemsList();
   if (s.filtering || s.filter) {
     const px = drawText(c, x + 1, rect.y, "› ", { ...roleStyle(theme, "sidebar_dir", bg), bg });
-    const fw = drawText(c, x + 1 + px, rect.y, truncate(sanitize(s.filter), Math.max(0, closeX - x - 3 - px)), { ...roleStyle(theme, "text", bg), bg });
+    const fw = drawText(c, x + 1 + px, rect.y, truncate(sanitize(s.filter), Math.max(0, closeX - x - 3 - px)), {
+      ...roleStyle(theme, "text", bg),
+      bg,
+    });
     if (s.filtering && focused) drawText(c, x + 1 + px + fw, rect.y, " ", roleStyle(theme, "cursor", bg));
   }
   // The list, a blank row above and below it when there's room.
@@ -1828,7 +2371,14 @@ function drawFileProblems(app: App, c: Canvas, list: Rect, problems: Problem[], 
   geo.problemsPage = shown;
   panelScroll(s, problems.length, shown);
   if (!problems.length) {
-    drawText(c, list.x + 2, list.y, s.filter ? "no matches" : "no problems in this file", roleStyle(theme, "dim", bg), list.w - 2);
+    drawText(
+      c,
+      list.x + 2,
+      list.y,
+      s.filter ? "no matches" : "no problems in this file",
+      roleStyle(theme, "dim", bg),
+      list.w - 2,
+    );
     return;
   }
   const lines = app.view?.buf.lines() ?? [];
@@ -1839,7 +2389,11 @@ function drawFileProblems(app: App, c: Canvas, list: Rect, problems: Problem[], 
     if (!pr) break;
     const y = list.y + i * 3;
     const selected = at === s.selected;
-    const st = roleStyle(theme, selected && app.region === "problems" ? "sidebar_selected" : selected ? "sidebar_active" : "sidebar", bg);
+    const st = roleStyle(
+      theme,
+      selected && app.region === "problems" ? "sidebar_selected" : selected ? "sidebar_active" : "sidebar",
+      bg,
+    );
     if (selected) c.fill(list.x, y, list.w, 2, st.bg);
     const rowBg = st.bg;
     const sign = severityGlyph(app.glyphs, pr.severity);
@@ -1849,8 +2403,16 @@ function drawFileProblems(app: App, c: Canvas, list: Rect, problems: Problem[], 
     const who = sanitize(`${pr.source}${pr.code ? ` ${pr.code}` : ""}`);
     const whoW = Math.min(stringWidth(who), Math.floor(cols / 3));
     const msgRoom = list.x + 1 + cols - x - (whoW ? whoW + 2 : 0);
-    drawText(c, x, y, truncate(sanitize(pr.message.replace(/\s*\n\s*/g, " ")), Math.max(0, msgRoom)), st, Math.max(0, msgRoom));
-    if (whoW) drawText(c, list.x + 1 + cols - whoW, y, truncate(who, whoW), { ...roleStyle(theme, "dim", rowBg), bg: rowBg });
+    drawText(
+      c,
+      x,
+      y,
+      truncate(sanitize(pr.message.replace(/\s*\n\s*/g, " ")), Math.max(0, msgRoom)),
+      st,
+      Math.max(0, msgRoom),
+    );
+    if (whoW)
+      drawText(c, list.x + 1 + cols - whoW, y, truncate(who, whoW), { ...roleStyle(theme, "dim", rowBg), bg: rowBg });
     drawExcerpt(app, c, list.x + 4, y + 1, cols - 3, lines[pr.start.line - 1] ?? "", pr, rowBg);
     geo.hot.push({ id: `prow:${at}`, x: list.x, y, w: list.w, h: 2 });
   }
@@ -1860,7 +2422,16 @@ function drawFileProblems(app: App, c: Canvas, list: Rect, problems: Problem[], 
  * A problem's line, cut to `w`, its leading blanks dropped: the part the problem covers (to the line's
  * end when it runs on) marked as in the note, the text before it cut from the front to keep it in sight.
  */
-function drawExcerpt(app: App, c: Canvas, x: number, y: number, w: number, raw: string, pr: Problem, bg: Color | null): void {
+function drawExcerpt(
+  app: App,
+  c: Canvas,
+  x: number,
+  y: number,
+  w: number,
+  raw: string,
+  pr: Problem,
+  bg: Color | null,
+): void {
   if (w <= 0) return;
   const theme = app.theme;
   // Tabs as one space each: the columns (UTF-16 units) still count from the line's start.
@@ -1875,7 +2446,11 @@ function drawExcerpt(app: App, c: Canvas, x: number, y: number, w: number, raw: 
   const before = stringWidth(head) > w / 2 ? truncateStart(head, Math.floor(w / 2)) : head;
   let at = x + drawText(c, x, y, before, dim, w);
   const left = () => Math.max(0, x + w - at);
-  const mark = { ...roleStyle(theme, "text", bg), bg, ...markStyle(theme, pr.source === "syntax" ? "syntax_error" : MARK_ROLE[pr.severity]) };
+  const mark = {
+    ...roleStyle(theme, "text", bg),
+    bg,
+    ...markStyle(theme, pr.source === "syntax" ? "syntax_error" : MARK_ROLE[pr.severity]),
+  };
   // An empty part (a problem at the line's end): one cell marked where it is.
   at += drawText(c, at, y, part ? truncate(part, left()) : left() ? " " : "", mark, left());
   if (left()) drawText(c, at, y, truncate(tail, left()), dim, left());
@@ -1893,7 +2468,8 @@ function drawAllProblems(app: App, c: Canvas, rect: Rect, bg: Color | null, geo:
   const g = app.glyphs;
   geo.problemsPage = rect.h;
   panelScroll(s, rows.length, rect.h);
-  if (!rows.length) drawText(c, rect.x + 2, rect.y, s.filter ? "no matches" : "no problems", roleStyle(theme, "dim", bg), rect.w - 2);
+  if (!rows.length)
+    drawText(c, rect.x + 2, rect.y, s.filter ? "no matches" : "no problems", roleStyle(theme, "dim", bg), rect.w - 2);
   const cols = rect.w - 1;
   for (let i = 0; i < rect.h; i++) {
     const at = s.scroll + i;
@@ -1901,21 +2477,48 @@ function drawAllProblems(app: App, c: Canvas, rect: Rect, bg: Color | null, geo:
     if (!row) break;
     const y = rect.y + i;
     const selected = at === s.selected;
-    const st = roleStyle(theme, selected && app.region === "problems" ? "sidebar_selected" : selected ? "sidebar_active" : "sidebar", bg);
+    const st = roleStyle(
+      theme,
+      selected && app.region === "problems" ? "sidebar_selected" : selected ? "sidebar_active" : "sidebar",
+      bg,
+    );
     if (selected) c.fill(rect.x, y, rect.w, 1, st.bg);
     geo.hot.push({ id: `prow:${at}`, x: rect.x, y, w: rect.w, h: 1 });
     if (row.heading) {
-      drawText(c, rect.x + 1, y, truncate(`${row.folded ? g.foldClosed : g.foldOpen} ${row.label}`, cols - 1), { ...st, bold: true }, cols - 1);
+      drawText(
+        c,
+        rect.x + 1,
+        y,
+        truncate(`${row.folded ? g.foldClosed : g.foldOpen} ${row.label}`, cols - 1),
+        { ...st, bold: true },
+        cols - 1,
+      );
       continue;
     }
     if (row.note) {
       drawText(c, rect.x + 4, y, truncate(row.label, cols - 4), st, cols - 4);
       continue;
     }
-    const w = drawText(c, rect.x + 6, y, truncate(row.label, cols - 6), { ...roleStyle(theme, "dim", st.bg), bg: st.bg }, cols - 6);
+    const w = drawText(
+      c,
+      rect.x + 6,
+      y,
+      truncate(row.label, cols - 6),
+      { ...roleStyle(theme, "dim", st.bg), bg: st.bg },
+      cols - 6,
+    );
     const x = rect.x + 6 + w + 2;
-    const role: Role = row.section === "Broken links" ? "link_unresolved" : row.section === "Lint" ? "warn" : "link_ambiguous";
-    if (x < rect.x + cols) drawText(c, x, y, truncate(sanitize(row.detail), rect.x + cols - x), { ...roleStyle(theme, role, st.bg), bg: st.bg }, rect.x + cols - x);
+    const role: Role =
+      row.section === "Broken links" ? "link_unresolved" : row.section === "Lint" ? "warn" : "link_ambiguous";
+    if (x < rect.x + cols)
+      drawText(
+        c,
+        x,
+        y,
+        truncate(sanitize(row.detail), rect.x + cols - x),
+        { ...roleStyle(theme, role, st.bg), bg: st.bg },
+        rect.x + cols - x,
+      );
   }
 }
 
@@ -1929,7 +2532,14 @@ function drawInfo(app: App, c: Canvas, pane: Rect, geo: Geometry): Rect {
   const page = pageBg(theme);
   const base = roleStyle(theme, "sidebar", page);
   c.fill(pane.x, pane.y, pane.w, pane.h, base.bg);
-  let rect = paneTitle(app, c, pane, RIGHT_VIEWS.find((v) => v.id === "info")!.title, app.region === "outline", base.bg);
+  let rect = paneTitle(
+    app,
+    c,
+    pane,
+    RIGHT_VIEWS.find((v) => v.id === "info")!.title,
+    app.region === "outline",
+    base.bg,
+  );
   rect = filterRow(app, c, rect, app.outline, app.region === "outline", base.bg, geo);
   const rows = app.infoRows();
   const o = app.outline;
@@ -1945,7 +2555,10 @@ function drawInfo(app: App, c: Canvas, pane: Rect, geo: Geometry): Rect {
     return rect;
   }
   // Names in a column, as wide as the longest one shown (at most a third of the pane).
-  const keyW = Math.min(Math.floor(sv.cols / 3), Math.max(4, ...rows.filter((r) => !r.heading).map((r) => r.depth * 2 + stringWidth(r.key))));
+  const keyW = Math.min(
+    Math.floor(sv.cols / 3),
+    Math.max(4, ...rows.filter((r) => !r.heading).map((r) => r.depth * 2 + stringWidth(r.key))),
+  );
   for (let i = 0; i < rect.h; i++) {
     const idx = o.scroll + i;
     const row = rows[idx];
@@ -1955,14 +2568,29 @@ function drawInfo(app: App, c: Canvas, pane: Rect, geo: Geometry): Rect {
     const st = roleStyle(theme, selected ? "sidebar_selected" : "sidebar", base.bg);
     if (selected) c.fill(rect.x, y, rect.w, 1, st.bg);
     if (row.heading) {
-      drawText(c, rect.x, y, truncate(` ${row.folded ? g.foldClosed : g.foldOpen} ${row.key}`, sv.cols), { ...st, bold: true }, rect.w);
+      drawText(
+        c,
+        rect.x,
+        y,
+        truncate(` ${row.folded ? g.foldClosed : g.foldOpen} ${row.key}`, sv.cols),
+        { ...st, bold: true },
+        rect.w,
+      );
       continue;
     }
     const name = `${"  ".repeat(row.depth)}${row.key}`;
     const x0 = rect.x + 3;
-    drawText(c, x0, y, truncate(name, keyW), { ...roleStyle(theme, row.section === "Tags" ? "tag" : "dim", st.bg), bg: st.bg }, keyW);
+    drawText(
+      c,
+      x0,
+      y,
+      truncate(name, keyW),
+      { ...roleStyle(theme, row.section === "Tags" ? "tag" : "dim", st.bg), bg: st.bg },
+      keyW,
+    );
     const vx = x0 + keyW + 1;
-    if (vx < rect.x + sv.cols) drawText(c, vx, y, truncate(sanitize(row.value), rect.x + sv.cols - vx), st, rect.x + sv.cols - vx);
+    if (vx < rect.x + sv.cols)
+      drawText(c, vx, y, truncate(sanitize(row.value), rect.x + sv.cols - vx), st, rect.x + sv.cols - vx);
   }
   paneScrollbar(app, c, rect, rows.length, o.scroll, "outline", app.region === "outline", base.bg, geo);
   return rect;
@@ -1984,14 +2612,24 @@ function drawFootnotes(app: App, c: Canvas, pane: Rect, geo: Geometry): Rect {
   // Its title: a new footnote, at its right end (3.18).
   const add = ` ${app.glyphs.newNote} `;
   const ax = pane.x + pane.w - 1 - stringWidth(add);
-  if (rect !== pane && ax >= pane.x + stringWidth(title) + 3) smallButton(app, c, ax, pane.y, add, "fn:add", geo, base.bg);
+  if (rect !== pane && ax >= pane.x + stringWidth(title) + 3)
+    smallButton(app, c, ax, pane.y, add, "fn:add", geo, base.bg);
   rect = filterRow(app, c, rect, app.outline, app.region === "outline", base.bg, geo);
   const rows = app.footnoteRows();
   const o = app.outline;
   const g = app.glyphs;
   const hint = (row: (typeof rows)[number]) =>
-    row.ref ? "" : row.fn.line === null ? "no definition" : row.fn.references.length ? `${row.fn.references.length}×` : "unused";
-  const text = (row: (typeof rows)[number]) => (row.ref ? `   ${g.guideLast}${g.guideDash} ${row.text}` : ` ${row.hasChildren ? (row.folded ? g.foldClosed : g.foldOpen) : " "} ${row.text}`);
+    row.ref
+      ? ""
+      : row.fn.line === null
+        ? "no definition"
+        : row.fn.references.length
+          ? `${row.fn.references.length}×`
+          : "unused";
+  const text = (row: (typeof rows)[number]) =>
+    row.ref
+      ? `   ${g.guideLast}${g.guideDash} ${row.text}`
+      : ` ${row.hasChildren ? (row.folded ? g.foldClosed : g.foldOpen) : " "} ${row.text}`;
   // Never scrolled sideways (as the history): a long row is cut, so its count stays in sight.
   const sv = sideView(rect, rows, () => "", o);
   rect = sv.list;
@@ -2002,7 +2640,14 @@ function drawFootnotes(app: App, c: Canvas, pane: Rect, geo: Geometry): Rect {
   if (!o.pinned && o.selected >= o.scroll + rect.h) o.scroll = o.selected - rect.h + 1;
   o.scroll = Math.max(0, Math.min(o.scroll, Math.max(0, rows.length - rect.h)));
   if (!rows.length) {
-    drawText(c, rect.x + 1, rect.y, o.filter ? "no matches" : "no footnotes", roleStyle(theme, "dim", base.bg), rect.w - 1);
+    drawText(
+      c,
+      rect.x + 1,
+      rect.y,
+      o.filter ? "no matches" : "no footnotes",
+      roleStyle(theme, "dim", base.bg),
+      rect.w - 1,
+    );
     return rect;
   }
   for (let i = 0; i < rect.h; i++) {
@@ -2018,7 +2663,15 @@ function drawFootnotes(app: App, c: Canvas, pane: Rect, geo: Geometry): Rect {
     const h = hint(row);
     const hw = h ? stringWidth(h) + 1 : 0;
     drawText(c, rect.x, y, truncate(sideRow(text(row), sv), Math.max(1, sv.cols - hw)), st, rect.w);
-    if (h) drawText(c, rect.x + sv.cols - hw + 1, y, h, { ...roleStyle(theme, row.fn.line === null ? "warn" : "dim", st.bg), bg: st.bg }, hw);
+    if (h)
+      drawText(
+        c,
+        rect.x + sv.cols - hw + 1,
+        y,
+        h,
+        { ...roleStyle(theme, row.fn.line === null ? "warn" : "dim", st.bg), bg: st.bg },
+        hw,
+      );
   }
   paneScrollbar(app, c, rect, rows.length, o.scroll, "outline", app.region === "outline", base.bg, geo);
   sideHScrollbar(app, c, sv, "outline", app.region === "outline", base.bg, geo);
@@ -2031,7 +2684,14 @@ function drawOutline(app: App, c: Canvas, pane: Rect, geo: Geometry): Rect {
   const page = pageBg(theme);
   const base = roleStyle(theme, "sidebar", page);
   c.fill(pane.x, pane.y, pane.w, pane.h, base.bg);
-  let rect = paneTitle(app, c, pane, RIGHT_VIEWS.find((v) => v.id === "outline")!.title, app.region === "outline", base.bg);
+  let rect = paneTitle(
+    app,
+    c,
+    pane,
+    RIGHT_VIEWS.find((v) => v.id === "outline")!.title,
+    app.region === "outline",
+    base.bg,
+  );
   rect = filterRow(app, c, rect, app.outline, app.region === "outline", base.bg, geo);
   const rows = app.outlineRows();
   const lines = treeLines(rows.map((r) => r.level - 1));
@@ -2087,29 +2747,29 @@ function drawStatus(app: App, c: Canvas, band: Band, geo: Geometry): void {
       ? // An operator (or a count, or r, f, t waiting for a character): what's been typed so far, as
         // in vim's showcmd — `dT`, not `dshift+t`.
         ` ${vim.op ? `${vim.op.count > 1 ? vim.op.count : ""}${vim.op.op}${vim.count}${vim.op.object ?? ""}${vim.op.keys.map((k) => keyChar(k) ?? k).join("")}` : vim.awaitChar ? (vim.awaitKey ?? "r") : vim.count} `
-    : app.resizeMode
-      ? " RESIZE "
-    : view?.visual === "char"
-      ? " VISUAL "
-      : view?.visual === "line"
-        ? " V-LINE "
-        : app.region === "sidebar"
-          ? " FILES "
-          : app.region === "problems"
-          ? " PROBLEMS "
-          : app.region === "outline"
-            ? app.rightView === "footnotes"
-              ? " FOOTNOTES "
-              : app.rightView === "info"
-                ? " INFO "
-                : " OUTLINE "
-            : view?.insert
-              ? " INSERT "
-              : view?.source
-                ? " SOURCE "
-                : view?.live
-                  ? " LENS "
-                  : " READ ";
+      : app.resizeMode
+        ? " RESIZE "
+        : view?.visual === "char"
+          ? " VISUAL "
+          : view?.visual === "line"
+            ? " V-LINE "
+            : app.region === "sidebar"
+              ? " FILES "
+              : app.region === "problems"
+                ? " PROBLEMS "
+                : app.region === "outline"
+                  ? app.rightView === "footnotes"
+                    ? " FOOTNOTES "
+                    : app.rightView === "info"
+                      ? " INFO "
+                      : " OUTLINE "
+                  : view?.insert
+                    ? " INSERT "
+                    : view?.source
+                      ? " SOURCE "
+                      : view?.live
+                        ? " LENS "
+                        : " READ ";
   const chipSt = roleStyle(theme, "status_accent", page);
   c.fill(0, band.y, stringWidth(chip), band.h, chipSt.bg ?? null);
   let x = drawText(c, 0, y, chip, chipSt);
@@ -2118,10 +2778,12 @@ function drawStatus(app: App, c: Canvas, band: Band, geo: Geometry): void {
   const layout = app.currentLayout(view);
   // Where the view is among the rows shown (an oversized lens hides some; they don't count).
   const hidden = view.live ? app.lensHidden(view, layout) : [];
-  const hiddenIn = (a: number, b: number) => hidden.reduce((n, [h0, h1]) => n + Math.max(0, Math.min(h1, b) - Math.max(h0, a)), 0); // ranges are [start, end)
+  const hiddenIn = (a: number, b: number) =>
+    hidden.reduce((n, [h0, h1]) => n + Math.max(0, Math.min(h1, b) - Math.max(h0, a)), 0); // ranges are [start, end)
   const shownTotal = layout.lines.length - hiddenIn(0, layout.lines.length);
   const shownTop = view.top - hiddenIn(0, view.top);
-  const pct = shownTotal <= view.height ? "all" : `${Math.round((shownTop / Math.max(1, shownTotal - view.height)) * 100)}%`;
+  const pct =
+    shownTotal <= view.height ? "all" : `${Math.round((shownTop / Math.max(1, shownTotal - view.height)) * 100)}%`;
   const cursorRow = layout.lines[view.cur.row];
   const src = cursorRow ? srcAt(cursorRow, view.cur.col) : 1;
   // The right side: the position always; the tab count and the link under the cursor only while
@@ -2135,7 +2797,11 @@ function drawStatus(app: App, c: Canvas, band: Band, geo: Geometry): void {
   const link = li >= 0 ? layout.links[li] : null;
   // How it landed, when a tie decided it (the nearest of 2 named so): a weak link shows as one.
   const landed = link && link.kind !== "tag" && link.status === "resolved" ? app.linkLanded(view, link) : null;
-  const linkText = link ? (link.kind === "tag" ? `→ #${link.target}  ` : `→ ${link.kind === "wiki" || link.kind === "embed" ? `[[${link.target}${link.heading ? `#${link.heading}` : ""}]]` : link.target} (${link.status}${landed ? `, ${landed}` : ""})  `) : "";
+  const linkText = link
+    ? link.kind === "tag"
+      ? `→ #${link.target}  `
+      : `→ ${link.kind === "wiki" || link.kind === "embed" ? `[[${link.target}${link.heading ? `#${link.heading}` : ""}]]` : link.target} (${link.status}${landed ? `, ${landed}` : ""})  `
+    : "";
   const markerW = stringWidth(pathMarker(app, view));
   const room = c.width - stringWidth(chip) - 2 - Math.min(16, stringWidth(app.displayName(view.buf))) - markerW;
   let right = `${linkText}${words}${tabs}${pos}`;
@@ -2166,11 +2832,19 @@ function drawStatus(app: App, c: Canvas, band: Band, geo: Geometry): void {
   const arrow = (dir: "back" | "forward", glyph: string) => {
     const id = `status:${dir}`;
     const to = app.historyStep(dir);
-    const style = app.hover === id && to ? roleStyle(theme, "hover", st.bg) : to ? { ...st, bold: true } : { ...roleStyle(theme, "status_dim", st.bg), bg: st.bg };
+    const style =
+      app.hover === id && to
+        ? roleStyle(theme, "hover", st.bg)
+        : to
+          ? { ...st, bold: true }
+          : { ...roleStyle(theme, "status_dim", st.bg), bg: st.bg };
     const w = drawText(c, x, y, glyph, style);
     geo.hot.push({ id, x, y: band.y, w, h: band.h });
     if (app.hover === id && band.y > 0) {
-      const tip = truncate(` ${sanitize(to ? `${dir}: ${to}` : `nowhere ${dir === "back" ? "back" : "forward"}`)} `, c.width - x);
+      const tip = truncate(
+        ` ${sanitize(to ? `${dir}: ${to}` : `nowhere ${dir === "back" ? "back" : "forward"}`)} `,
+        c.width - x,
+      );
       drawText(c, x, band.y - 1, tip, roleStyle(theme, "overlay", null));
     }
     x += w;
@@ -2178,7 +2852,13 @@ function drawStatus(app: App, c: Canvas, band: Band, geo: Geometry): void {
   arrow("back", g.navBack);
   x += drawText(c, x, y, " ", st);
   // Cut from the front: the note's own name is the part worth keeping. Clicked: the window's history.
-  const pw = drawText(c, x, y, truncateStart(full, pathW), app.hover === pathId ? roleStyle(theme, "hover", st.bg) : { ...st, bold: true });
+  const pw = drawText(
+    c,
+    x,
+    y,
+    truncateStart(full, pathW),
+    app.hover === pathId ? roleStyle(theme, "hover", st.bg) : { ...st, bold: true },
+  );
   geo.hot.push({ id: pathId, x, y: band.y, w: pw, h: band.h });
   x += pw;
   x += drawText(c, x, y, " ", st);
@@ -2190,7 +2870,10 @@ function drawStatus(app: App, c: Canvas, band: Band, geo: Geometry): void {
   const watch = w?.degraded
     ? { text: "⚠ not watching", role: "warn" as Role }
     : w
-      ? { text: `● watching${w.polledDirs.length ? ` (${w.polledDirs.length} polled)` : ""}`, role: "check_done" as Role }
+      ? {
+          text: `● watching${w.polledDirs.length ? ` (${w.polledDirs.length} polled)` : ""}`,
+          role: "check_done" as Role,
+        }
       : { text: "○ not watching", role: "status_dim" as Role };
   const rx = c.width - rightW;
   // The file's problems (19.8), from every source: how many of each (what they say is the Problems panel's).
@@ -2199,7 +2882,13 @@ function drawStatus(app: App, c: Canvas, band: Band, geo: Geometry): void {
   if (!problems.length && rx - x - 3 - stringWidth(watch.text) > 8) {
     const id = "status:problems";
     x += drawText(c, x, y, "  ", st);
-    const w = drawText(c, x, y, `${app.glyphs.problemsButton} 0`, app.hover === id ? roleStyle(theme, "hover", st.bg) : { ...roleStyle(theme, "status_dim", st.bg), bg: st.bg });
+    const w = drawText(
+      c,
+      x,
+      y,
+      `${app.glyphs.problemsButton} 0`,
+      app.hover === id ? roleStyle(theme, "hover", st.bg) : { ...roleStyle(theme, "status_dim", st.bg), bg: st.bg },
+    );
     geo.hot.push({ id, x, y: band.y, w, h: band.h });
     x += w;
   }
@@ -2213,12 +2902,16 @@ function drawStatus(app: App, c: Canvas, band: Band, geo: Geometry): void {
     const id = "status:problems";
     if (room > 8) {
       const role: Role = app.hover === id ? "hover" : SEVERITY_ROLE[worst(problems)];
-      const w = drawText(c, x, y, truncate(sanitize(text), room), { ...roleStyle(theme, role, st.bg), bg: app.hover === id ? roleStyle(theme, "hover", st.bg).bg : st.bg });
+      const w = drawText(c, x, y, truncate(sanitize(text), room), {
+        ...roleStyle(theme, role, st.bg),
+        bg: app.hover === id ? roleStyle(theme, "hover", st.bg).bg : st.bg,
+      });
       geo.hot.push({ id, x: x + 2, y: band.y, w: Math.max(0, w - 2), h: band.h });
       x += w;
     }
   }
-  if (x + stringWidth(watch.text) + 3 < rx) x += drawText(c, x, y, `  ${watch.text}`, { ...roleStyle(theme, watch.role, st.bg), bg: st.bg });
+  if (x + stringWidth(watch.text) + 3 < rx)
+    x += drawText(c, x, y, `  ${watch.text}`, { ...roleStyle(theme, watch.role, st.bg), bg: st.bg });
   if (rx > x) drawText(c, rx, y, right, { ...roleStyle(theme, "status_dim", st.bg), bg: st.bg });
 }
 
@@ -2228,7 +2921,15 @@ function pathMarker(app: App, view: View, short = false): string {
   const buf = view.buf;
   const changed = buf.changedAt && app.now() - buf.changedAt < CHANGE_MARKER_MS;
   if (short) return buf.deleted ? " ✖" : buf.conflictKept ? " • ⚠" : buf.dirty ? " •" : changed ? " ↻" : "";
-  return buf.deleted ? " ✖ deleted on disk" : buf.conflictKept ? " • unsaved ⚠ differs from disk" : buf.dirty ? " • unsaved" : changed ? " ↻ reloaded" : "";
+  return buf.deleted
+    ? " ✖ deleted on disk"
+    : buf.conflictKept
+      ? " • unsaved ⚠ differs from disk"
+      : buf.dirty
+        ? " • unsaved"
+        : changed
+          ? " ↻ reloaded"
+          : "";
 }
 
 /** A question with no room to float, or a message with no top bar to sit in, over the status
@@ -2238,7 +2939,8 @@ function drawBottomLine(app: App, c: Canvas, y: number, geo: Geometry, o: Prompt
   const bg = app.ui.zen ? pageBg(theme) : roleStyle(theme, "status", pageBg(theme)).bg;
   c.fill(0, y, c.width, 1, bg);
   if (o) {
-    const x = drawText(c, 1, y, o.confirm ? `${o.label.trim()} y / n` : o.label, { ...roleStyle(theme, "info", bg), bg }) + 1;
+    const x =
+      drawText(c, 1, y, o.confirm ? `${o.label.trim()} y / n` : o.label, { ...roleStyle(theme, "info", bg), bg }) + 1;
     const w = drawText(c, x, y, truncate(o.text, c.width - x - 2), { ...roleStyle(theme, "text", bg), bg });
     drawText(c, x + w, y, " ", roleStyle(theme, "cursor", bg));
     return;
@@ -2269,7 +2971,14 @@ function drawToasts(app: App, c: Canvas, top: number, bottom: number, geo: Geome
   app.toasts.forEach((m, i) => {
     const role: Role = m.level === "error" ? "error" : m.level === "warn" ? "warn" : "info";
     // An info message that starts with its own symbol (`↻ … reloaded`) needs no second one.
-    const mark = m.level === "error" ? g.msgError : m.level === "warn" ? g.msgWarn : /^[\p{L}\p{N}"'`(]/u.test(m.text) ? g.msgInfo : "";
+    const mark =
+      m.level === "error"
+        ? g.msgError
+        : m.level === "warn"
+          ? g.msgWarn
+          : /^[\p{L}\p{N}"'`(]/u.test(m.text)
+            ? g.msgInfo
+            : "";
     const inner = maxW - 4;
     // Wrapped at spaces where it can be, to three rows; what's past them ends in …
     const rows: string[] = [];
@@ -2288,7 +2997,8 @@ function drawToasts(app: App, c: Canvas, top: number, bottom: number, geo: Geome
     const x = right - w;
     const frame = { ...roleStyle(theme, role, bg.bg), bg: bg.bg };
     const id = `toast:${i}`;
-    const text = app.hover === id ? roleStyle(theme, "hover", bg.bg) : { ...roleStyle(theme, "overlay", null), bg: bg.bg };
+    const text =
+      app.hover === id ? roleStyle(theme, "hover", bg.bg) : { ...roleStyle(theme, "overlay", null), bg: bg.bg };
     c.fill(x, y, w, h, bg.bg);
     drawText(c, x, y, `${b.tl}${b.h.repeat(w - 2)}${b.tr}`, frame);
     rows.forEach((r, k) => {
@@ -2312,7 +3022,14 @@ function drawMessage(app: App, c: Canvas, x0: number, x1: number, y: number, bg:
   const g = app.glyphs;
   const role: Role = m.level === "error" ? "error" : m.level === "warn" ? "warn" : "info";
   // An info message that starts with its own symbol (`↻ … reloaded`) needs no second one.
-  const mark = m.level === "error" ? g.msgError : m.level === "warn" ? g.msgWarn : /^[\p{L}\p{N}"'`(]/u.test(m.text) ? g.msgInfo : "";
+  const mark =
+    m.level === "error"
+      ? g.msgError
+      : m.level === "warn"
+        ? g.msgWarn
+        : /^[\p{L}\p{N}"'`(]/u.test(m.text)
+          ? g.msgInfo
+          : "";
   const text = truncate(mark ? `${mark} ${m.text}` : m.text, x1 - x0);
   const w = stringWidth(text);
   const id = "status:message";
@@ -2332,7 +3049,11 @@ function drawWhichKey(app: App, c: Canvas, top: number, bottom: number, geo: Geo
   const theme = app.theme;
   const entries = app.whichKeyEntries();
   if (!entries.length) return;
-  const shownKey = (key: string) => key.split(" ").map((k) => keyText(app, k)).join(" ");
+  const shownKey = (key: string) =>
+    key
+      .split(" ")
+      .map((k) => keyText(app, k))
+      .join(" ");
   const GAP = 4;
   const maxW = Math.min(c.width - 8, 140);
   const layoutFor = (n: number) => {
@@ -2372,7 +3093,9 @@ function drawWhichKey(app: App, c: Canvas, top: number, bottom: number, geo: Geo
   // (DF-D31): the box as wide as it needs, as far as the screen allows.
   const name = app.groupName(app.pending);
   const said = name ? app.groupExplanation(app.pending) : "";
-  const title = app.pending.length ? ` ${shownKey(app.pending.join(" "))} ›${name ? ` ${name}${said ? `: ${said}` : ""}` : ""} ` : ` ${name} `;
+  const title = app.pending.length
+    ? ` ${shownKey(app.pending.join(" "))} ›${name ? ` ${name}${said ? `: ${said}` : ""}` : ""} `
+    : ` ${name} `;
   const fit = Math.min(maxW, Math.max(plan.total, 40));
   const w = said ? Math.max(fit, Math.min(c.width - 8, stringWidth(title) + 6)) : fit;
   const x0 = Math.floor((c.width - w) / 2);
@@ -2400,7 +3123,12 @@ function drawWhichKey(app: App, c: Canvas, top: number, bottom: number, geo: Geo
   const hintText = `${hiddenCount ? `+${hiddenCount} more · ` : ""}${app.pending.length ? "backspace up · esc cancel" : "keys repeat · any other key leaves"}`;
   // Too narrow for the hint: the count alone, which must not be lost with it.
   const countOnly = hiddenCount ? `+${hiddenCount} more` : "";
-  const hint = stringWidth(hintText) + 2 <= w - 4 ? ` ${hintText} ` : countOnly && stringWidth(countOnly) + 2 <= w - 4 ? ` ${countOnly} ` : "";
+  const hint =
+    stringWidth(hintText) + 2 <= w - 4
+      ? ` ${hintText} `
+      : countOnly && stringWidth(countOnly) + 2 <= w - 4
+        ? ` ${countOnly} `
+        : "";
   const bottomRule = `${b.bl}${b.h.repeat(Math.max(0, w - 2 - stringWidth(hint)))}`;
   drawText(c, x0, y0 + h - 1, bottomRule, border);
   drawText(c, x0 + stringWidth(bottomRule), y0 + h - 1, hint, dim);
@@ -2427,12 +3155,25 @@ function drawWhichKey(app: App, c: Canvas, top: number, bottom: number, geo: Geo
     const rowBg = hover ? (theme.roles.hover.bg ?? bg.bg) : bg.bg;
     drawText(c, x, y, truncate(shownKey(e.key), cw.key - 2), { ...keySt, bg: rowBg });
     drawText(c, x + cw.key - 1, y, "→", { ...bg, bg: rowBg });
-    drawText(c, textX, y, truncate(e.label, textW), e.group ? { ...grpSt, bg: rowBg } : { ...bg, bg: rowBg, bold: true });
-    if (withDesc && e.desc && y + 1 < y0 + h - 1 - pad) drawText(c, textX, y + 1, truncate(e.desc, textW), { ...desc, bg: rowBg });
+    drawText(
+      c,
+      textX,
+      y,
+      truncate(e.label, textW),
+      e.group ? { ...grpSt, bg: rowBg } : { ...bg, bg: rowBg, bold: true },
+    );
+    if (withDesc && e.desc && y + 1 < y0 + h - 1 - pad)
+      drawText(c, textX, y + 1, truncate(e.desc, textW), { ...desc, bg: rowBg });
   });
 }
 
-function drawList(app: App, c: Canvas, o: ListOverlay, mainY: number, mainH: number): Rect & { listY: number; rows: number } {
+function drawList(
+  app: App,
+  c: Canvas,
+  o: ListOverlay,
+  mainY: number,
+  mainH: number,
+): Rect & { listY: number; rows: number } {
   const theme = app.theme;
   const W = c.width;
   const w = Math.min(100, W - (W > 60 ? 8 : 0));
@@ -2481,23 +3222,34 @@ function drawList(app: App, c: Canvas, o: ListOverlay, mainY: number, mainH: num
   // row before them) into view above it; not while the wheel is scrolling the view.
   if (o.scroll === o.selected && !o.wheeled) {
     // …as long as the selected entry stays in view.
-    while (o.scroll > 0 && o.selected - (o.scroll - 1) < rows && o.filtered[o.scroll - 1]!.item.header && (o.filtered[o.scroll - 1]!.item.label || o.filtered[o.scroll - 1]!.item.rule)) o.scroll--;
+    while (
+      o.scroll > 0 &&
+      o.selected - (o.scroll - 1) < rows &&
+      o.filtered[o.scroll - 1]!.item.header &&
+      (o.filtered[o.scroll - 1]!.item.label || o.filtered[o.scroll - 1]!.item.rule)
+    )
+      o.scroll--;
   }
   // Key columns: each as wide as its widest binding in the section, so keys line up down it.
   const colWAt: number[][] = new Array(o.filtered.length);
   if (o.alignKeysAcrossList) {
     const colW = [0, 0, 0];
-    for (const e of o.filtered) (e.item.keys ?? []).slice(0, 3).forEach((key, c) => (colW[c] = Math.max(colW[c]!, stringWidth(key))));
+    for (const e of o.filtered)
+      (e.item.keys ?? []).slice(0, 3).forEach((key, c) => (colW[c] = Math.max(colW[c]!, stringWidth(key))));
     colWAt.fill(colW);
-  } else for (let i = 0; i < o.filtered.length; ) {
-    let j = i;
-    while (j < o.filtered.length && o.filtered[j]!.item.header) colWAt[j++] = [0, 0, 0];
-    const colW = [0, 0, 0];
-    let k = j;
-    for (; k < o.filtered.length && !o.filtered[k]!.item.header; k++) (o.filtered[k]!.item.keys ?? []).slice(0, 3).forEach((key, c) => (colW[c] = Math.max(colW[c]!, stringWidth(key))));
-    for (let m = j; m < k; m++) colWAt[m] = colW;
-    i = k;
-  }
+  } else
+    for (let i = 0; i < o.filtered.length; ) {
+      let j = i;
+      while (j < o.filtered.length && o.filtered[j]!.item.header) colWAt[j++] = [0, 0, 0];
+      const colW = [0, 0, 0];
+      let k = j;
+      for (; k < o.filtered.length && !o.filtered[k]!.item.header; k++)
+        (o.filtered[k]!.item.keys ?? [])
+          .slice(0, 3)
+          .forEach((key, c) => (colW[c] = Math.max(colW[c]!, stringWidth(key))));
+      for (let m = j; m < k; m++) colWAt[m] = colW;
+      i = k;
+    }
   const lastEntry = (() => {
     let last = -1;
     for (let i = 0; i < rows; i++) if (o.filtered[o.scroll + i] && !o.filtered[o.scroll + i]!.item.header) last = i;
@@ -2514,7 +3266,8 @@ function drawList(app: App, c: Canvas, o: ListOverlay, mainY: number, mainH: num
       // Never a heading with nothing under it on screen.
       if (i > lastEntry) continue;
       if (item.rule) drawText(c, x + 2, ry, b.h.repeat(w - 4), roleStyle(theme, "overlay_dim", null), w - 4);
-      else if (item.label) drawText(c, x + 2, ry, truncate(item.label.toUpperCase(), w - 4), roleStyle(theme, "overlay_group", null));
+      else if (item.label)
+        drawText(c, x + 2, ry, truncate(item.label.toUpperCase(), w - 4), roleStyle(theme, "overlay_group", null));
       continue;
     }
     const selected = idx === o.selected;
@@ -2524,7 +3277,9 @@ function drawList(app: App, c: Canvas, o: ListOverlay, mainY: number, mainH: num
     // Keys at the right: as many as fit beside the label, then an ellipsis.
     const labelW = Math.min(stringWidth(item.label), Math.max(8, Math.floor((w - 6) / 2)));
     const keysRoom = w - 4 - indent - labelW - 2;
-    const keysW = item.keys?.length ? drawKeys(app, c, x + w - 2, ry, item.keys, keysRoom, selected, st.bg, colWAt[idx]!) : 0;
+    const keysW = item.keys?.length
+      ? drawKeys(app, c, x + w - 2, ry, item.keys, keysRoom, selected, st.bg, colWAt[idx]!)
+      : 0;
     const hint = item.keys ? "" : (item.hint ?? "");
     const hintW = hint ? stringWidth(hint) + 2 : 0;
     const avail = w - 4 - hintW - (keysW ? keysW + 2 : 0);
@@ -2534,7 +3289,14 @@ function drawList(app: App, c: Canvas, o: ListOverlay, mainY: number, mainH: num
     const label = truncate(shown.text, Math.max(4, avail - indent));
     const pos = shown.pos;
     // Its own colour (a diff's line, a change's state), unless selected.
-    const own = item.role && !selected ? { ...st, fg: roleStyle(theme, item.role, null).fg ?? st.fg, bold: roleStyle(theme, item.role, null).bold ?? st.bold } : st;
+    const own =
+      item.role && !selected
+        ? {
+            ...st,
+            fg: roleStyle(theme, item.role, null).fg ?? st.fg,
+            bold: roleStyle(theme, item.role, null).bold ?? st.bold,
+          }
+        : st;
     let ci = 0;
     for (const g of graphemes(label)) {
       const gw = graphemeWidth(g);
@@ -2546,7 +3308,10 @@ function drawList(app: App, c: Canvas, o: ListOverlay, mainY: number, mainH: num
       const room = x + 2 + avail - cx - 2;
       if (room > 4 && item.detailMarks?.length) {
         // A search hit's words, marked in its line.
-        const marks = marked(item.detail, item.detailMarks.flatMap(([a, b]) => Array.from({ length: Math.max(0, b - a) }, (_, k) => a + k)));
+        const marks = marked(
+          item.detail,
+          item.detailMarks.flatMap(([a, b]) => Array.from({ length: Math.max(0, b - a) }, (_, k) => a + k)),
+        );
         const detail = truncate(marks.text, room);
         let dx = cx + 2;
         let di = 0;
@@ -2590,14 +3355,23 @@ const GIT_MARK: Record<GitState, string> = { new: "+", modified: "M", renamed: "
  * popups, as wide as its rows, entries indented as a tree. Keys, clicks and the wheel are the
  * list's. The margin row above it lies on the rule under the breadcrumb, which stays visible.
  */
-function drawDropdown(app: App, c: Canvas, o: ListOverlay, anchor: { x: number; y: number }, maxY: number): Rect & { listY: number; rows: number } {
+function drawDropdown(
+  app: App,
+  c: Canvas,
+  o: ListOverlay,
+  anchor: { x: number; y: number },
+  maxY: number,
+): Rect & { listY: number; rows: number } {
   const theme = app.theme;
   const g = app.glyphs;
   const W = c.width;
   const hintW = (item: ListItem) => (item.hint ? stringWidth(item.hint) + 2 : 0);
   // Three columns a level: `└─` and a space.
   // Sized over every entry, not the matches, so it keeps its width while you type.
-  const content = Math.max(20, ...o.items.map((item) => (item.indent ?? 0) * 3 + stringWidth(item.label) + hintW(item)));
+  const content = Math.max(
+    20,
+    ...o.items.map((item) => (item.indent ?? 0) * 3 + stringWidth(item.label) + hintW(item)),
+  );
   // At least half the screen (60 to 100 columns), centred; it hangs under the anchor's row.
   const w = Math.max(10, Math.min(Math.max(content + 4, 60, Math.floor(W / 2)), 100, W - 8));
   const x = Math.max(2, Math.floor((W - w) / 2));
@@ -2642,7 +3416,15 @@ function drawDropdown(app: App, c: Canvas, o: ListOverlay, anchor: { x: number; 
     const depth = item.indent ?? 0;
     let cx = x + 2 + depth * 3;
     // One heading under the next: each row hangs off the one above with └─.
-    if (depth) drawText(c, cx - 3, ry, `${g.guideLast}${g.guideDash}`, { ...roleStyle(theme, "tree_guide", st.bg), bg: st.bg }, 2);
+    if (depth)
+      drawText(
+        c,
+        cx - 3,
+        ry,
+        `${g.guideLast}${g.guideDash}`,
+        { ...roleStyle(theme, "tree_guide", st.bg), bg: st.bg },
+        2,
+      );
     const hw = hintW(item);
     const shown = marked(item.label, positions);
     const label = truncate(shown.text, Math.max(1, x + w - 2 - hw - cx));
@@ -2674,7 +3456,17 @@ function drawFooter(app: App, c: Canvas, o: ListOverlay, x: number, y: number, w
   const room = w - 4;
   drawText(c, x + 2, y + 1, truncate(item.label, room), { ...text, bold: true });
   const lines = wrapWords(item.detail ?? "", room);
-  lines.slice(0, 2).forEach((l, i) => drawText(c, x + 2, y + 2 + i, i === 1 && lines.length > 2 ? truncate(`${l} ${lines.slice(2).join(" ")}`, room) : l, text));
+  lines
+    .slice(0, 2)
+    .forEach((l, i) =>
+      drawText(
+        c,
+        x + 2,
+        y + 2 + i,
+        i === 1 && lines.length > 2 ? truncate(`${l} ${lines.slice(2).join(" ")}`, room) : l,
+        text,
+      ),
+    );
   if (item.more?.length) {
     const cap = roleStyle(theme, "keycap", text.bg);
     const plain = cap.bg === text.bg;
@@ -2706,7 +3498,17 @@ function wrapWords(text: string, width: number): string[] {
  * in columns `colW` wide so they line up from row to row. Without a keycap background (NO_COLOR)
  * the columns are separated by " · ". Returns the width used; keys that don't fit are dropped.
  */
-function drawKeys(app: App, c: Canvas, right: number, y: number, keys: string[], room: number, selected: boolean, rowBg: Color | null, colW: number[]): number {
+function drawKeys(
+  app: App,
+  c: Canvas,
+  right: number,
+  y: number,
+  keys: string[],
+  room: number,
+  selected: boolean,
+  rowBg: Color | null,
+  colW: number[],
+): number {
   const theme = app.theme;
   const cap = roleStyle(theme, selected ? "keycap_selected" : "keycap", rowBg);
   const plain = cap.bg === rowBg;

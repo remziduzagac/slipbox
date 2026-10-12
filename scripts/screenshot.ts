@@ -12,7 +12,13 @@ import { graphemes, graphemeWidth } from "../src/core/width.ts";
 
 const FONT_DIR = "/usr/share/fonts/truetype/dejavu";
 // DejaVu Sans after the mono faces: resvg falls back to it for a symbol the mono font lacks (ℹ).
-const FACES = ["DejaVuSansMono.ttf", "DejaVuSansMono-Bold.ttf", "DejaVuSansMono-Oblique.ttf", "DejaVuSansMono-BoldOblique.ttf", "DejaVuSans.ttf"];
+const FACES = [
+  "DejaVuSansMono.ttf",
+  "DejaVuSansMono-Bold.ttf",
+  "DejaVuSansMono-Oblique.ttf",
+  "DejaVuSansMono-BoldOblique.ttf",
+  "DejaVuSans.ttf",
+];
 /** DejaVu Sans Mono's advance, ascent and descent, in ems. */
 const ADVANCE = 1233 / 2048;
 const ASCENT = 0.928;
@@ -34,7 +40,16 @@ interface Cell {
   style: Style;
 }
 
-const plain = (): Style => ({ fg: null, bg: null, bold: false, dim: false, italic: false, underline: false, strike: false, reverse: false });
+const plain = (): Style => ({
+  fg: null,
+  bg: null,
+  bold: false,
+  dim: false,
+  italic: false,
+  underline: false,
+  strike: false,
+  reverse: false,
+});
 
 const BASIC = ["#15161e", "#f7768e", "#9ece6a", "#e0af68", "#7aa2f7", "#bb9af7", "#7dcfff", "#a9b1d6"];
 const BRIGHT = ["#414868", "#f7768e", "#9ece6a", "#e0af68", "#7aa2f7", "#bb9af7", "#7dcfff", "#c0caf5"];
@@ -140,16 +155,42 @@ function shape(ch: string, x: number, y: number, w: number, h: number, fill: str
   const cy = y + h / 2;
   const t = Math.max(1, Math.round(w / 8)); // a light line
   const T = t * 2; // a heavy one
-  const rect = (rx: number, ry: number, rw: number, rh: number) => `<rect x="${rx.toFixed(2)}" y="${ry.toFixed(2)}" width="${rw.toFixed(2)}" height="${rh.toFixed(2)}" fill="${fill}"/>`;
+  const rect = (rx: number, ry: number, rw: number, rh: number) =>
+    `<rect x="${rx.toFixed(2)}" y="${ry.toFixed(2)}" width="${rw.toFixed(2)}" height="${rh.toFixed(2)}" fill="${fill}"/>`;
   // Which arms a light or heavy box character has: up, right, down, left; 1 light, 2 heavy, 3 double.
   const arms: Record<string, [number, number, number, number]> = {
-    "─": [0, 1, 0, 1], "━": [0, 2, 0, 2], "│": [1, 0, 1, 0], "┃": [2, 0, 2, 0],
-    "┌": [0, 1, 1, 0], "┐": [0, 0, 1, 1], "└": [1, 1, 0, 0], "┘": [1, 0, 0, 1],
-    "├": [1, 1, 1, 0], "┤": [1, 0, 1, 1], "┬": [0, 1, 1, 1], "┴": [1, 1, 0, 1], "┼": [1, 1, 1, 1],
-    "┏": [0, 2, 2, 0], "┓": [0, 0, 2, 2], "┗": [2, 2, 0, 0], "┛": [2, 0, 0, 2],
-    "┣": [2, 2, 2, 0], "┫": [2, 0, 2, 2], "┳": [0, 2, 2, 2], "┻": [2, 2, 0, 2], "╋": [2, 2, 2, 2],
-    "╴": [0, 0, 0, 1], "╶": [0, 1, 0, 0], "╵": [1, 0, 0, 0], "╷": [0, 0, 1, 0],
-    "═": [0, 3, 0, 3], "║": [3, 0, 3, 0], "╔": [0, 3, 3, 0], "╗": [0, 0, 3, 3], "╚": [3, 3, 0, 0], "╝": [3, 0, 0, 3],
+    "─": [0, 1, 0, 1],
+    "━": [0, 2, 0, 2],
+    "│": [1, 0, 1, 0],
+    "┃": [2, 0, 2, 0],
+    "┌": [0, 1, 1, 0],
+    "┐": [0, 0, 1, 1],
+    "└": [1, 1, 0, 0],
+    "┘": [1, 0, 0, 1],
+    "├": [1, 1, 1, 0],
+    "┤": [1, 0, 1, 1],
+    "┬": [0, 1, 1, 1],
+    "┴": [1, 1, 0, 1],
+    "┼": [1, 1, 1, 1],
+    "┏": [0, 2, 2, 0],
+    "┓": [0, 0, 2, 2],
+    "┗": [2, 2, 0, 0],
+    "┛": [2, 0, 0, 2],
+    "┣": [2, 2, 2, 0],
+    "┫": [2, 0, 2, 2],
+    "┳": [0, 2, 2, 2],
+    "┻": [2, 2, 0, 2],
+    "╋": [2, 2, 2, 2],
+    "╴": [0, 0, 0, 1],
+    "╶": [0, 1, 0, 0],
+    "╵": [1, 0, 0, 0],
+    "╷": [0, 0, 1, 0],
+    "═": [0, 3, 0, 3],
+    "║": [3, 0, 3, 0],
+    "╔": [0, 3, 3, 0],
+    "╗": [0, 0, 3, 3],
+    "╚": [3, 3, 0, 0],
+    "╝": [3, 0, 0, 3],
   };
   const a = arms[ch];
   if (a) {
@@ -234,7 +275,10 @@ export function toSvg(screen: Cell[][], o: Options = {}): string {
       const px = x * w;
       const py = y * h;
       const cw = cell.width * w;
-      if (bg !== dbg) back.push(`<rect x="${px.toFixed(2)}" y="${py.toFixed(2)}" width="${(cw + 0.3).toFixed(2)}" height="${(h + 0.3).toFixed(2)}" fill="${bg}"/>`);
+      if (bg !== dbg)
+        back.push(
+          `<rect x="${px.toFixed(2)}" y="${py.toFixed(2)}" width="${(cw + 0.3).toFixed(2)}" height="${(h + 0.3).toFixed(2)}" fill="${bg}"/>`,
+        );
       if (cell.text.trim() !== "") {
         const drawn = shape(cell.text, px, py, cw, h, fg);
         if (drawn) front.push(drawn);
@@ -244,11 +288,19 @@ export function toSvg(screen: Cell[][], o: Options = {}): string {
           // A wide character is centred in its two cells; the font's own advance decides the rest.
           const tx = cell.width > 1 ? px + cw / 2 : px;
           const anchor = cell.width > 1 ? ` text-anchor="middle"` : "";
-          front.push(`<text x="${tx.toFixed(2)}" y="${(py + size * ASCENT).toFixed(2)}" fill="${fg}"${weight}${italic}${anchor}>${esc(cell.text)}</text>`);
+          front.push(
+            `<text x="${tx.toFixed(2)}" y="${(py + size * ASCENT).toFixed(2)}" fill="${fg}"${weight}${italic}${anchor}>${esc(cell.text)}</text>`,
+          );
         }
       }
-      if (cell.style.underline) front.push(`<rect x="${px.toFixed(2)}" y="${(py + size * (ASCENT + 0.1)).toFixed(2)}" width="${cw.toFixed(2)}" height="${Math.max(1, size / 14).toFixed(2)}" fill="${fg}"/>`);
-      if (cell.style.strike) front.push(`<rect x="${px.toFixed(2)}" y="${(py + h / 2).toFixed(2)}" width="${cw.toFixed(2)}" height="${Math.max(1, size / 14).toFixed(2)}" fill="${fg}"/>`);
+      if (cell.style.underline)
+        front.push(
+          `<rect x="${px.toFixed(2)}" y="${(py + size * (ASCENT + 0.1)).toFixed(2)}" width="${cw.toFixed(2)}" height="${Math.max(1, size / 14).toFixed(2)}" fill="${fg}"/>`,
+        );
+      if (cell.style.strike)
+        front.push(
+          `<rect x="${px.toFixed(2)}" y="${(py + h / 2).toFixed(2)}" width="${cw.toFixed(2)}" height="${Math.max(1, size / 14).toFixed(2)}" fill="${fg}"/>`,
+        );
       x += cell.width;
     }
   }
@@ -270,7 +322,10 @@ export async function toPng(svg: string, scale = 2): Promise<Uint8Array> {
   ready ??= initWasm(readFileSync(wasm));
   await ready;
   const fontBuffers = FACES.map((f) => new Uint8Array(readFileSync(`${FONT_DIR}/${f}`)));
-  const r = new Resvg(svg, { font: { fontBuffers, defaultFontFamily: "DejaVu Sans Mono", monospaceFamily: "DejaVu Sans Mono" }, fitTo: { mode: "zoom", value: scale } });
+  const r = new Resvg(svg, {
+    font: { fontBuffers, defaultFontFamily: "DejaVu Sans Mono", monospaceFamily: "DejaVu Sans Mono" },
+    fitTo: { mode: "zoom", value: scale },
+  });
   const image = r.render();
   const png = image.asPng();
   image.free();
@@ -294,11 +349,18 @@ if (import.meta.main) {
   const bg = flag("bg");
   const [input, output] = args;
   if (!input || !output) {
-    console.error("usage: bun scripts/screenshot.ts <screen.ansi|-> <out.png|out.svg> [--cols N] [--rows N] [--scale N] [--fg #hex] [--bg #hex]");
+    console.error(
+      "usage: bun scripts/screenshot.ts <screen.ansi|-> <out.png|out.svg> [--cols N] [--rows N] [--scale N] [--fg #hex] [--bg #hex]",
+    );
     process.exit(2);
   }
   const text = input === "-" ? await Bun.stdin.text() : readFileSync(input, "utf8");
-  const svg = toSvg(parseAnsi(text), { cols: cols ? Number(cols) : undefined, rows: rows ? Number(rows) : undefined, fg, bg });
+  const svg = toSvg(parseAnsi(text), {
+    cols: cols ? Number(cols) : undefined,
+    rows: rows ? Number(rows) : undefined,
+    fg,
+    bg,
+  });
   if (output.endsWith(".svg")) writeFileSync(output, svg);
   else writeFileSync(output, await toPng(svg, scale));
 }

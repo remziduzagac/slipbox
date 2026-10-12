@@ -123,8 +123,10 @@ export function extensionOf(name: string): string {
 export function classify(name: string, noteExtensions: readonly string[]): FileKind {
   const base = name.slice(name.lastIndexOf("/") + 1).toLowerCase();
   const ext = extensionOf(base);
-  if (ext && noteExtensions.some((e) => e.replace(/^\./, "").toLowerCase() === ext)) return { group: "note", format: NOTE_FORMATS[ext] ?? "markdown" };
-  if (NAMED[base]) return NAMED[base] === "ini" ? { group: "data", format: "ini" } : { group: "text", format: NAMED[base]! };
+  if (ext && noteExtensions.some((e) => e.replace(/^\./, "").toLowerCase() === ext))
+    return { group: "note", format: NOTE_FORMATS[ext] ?? "markdown" };
+  if (NAMED[base])
+    return NAMED[base] === "ini" ? { group: "data", format: "ini" } : { group: "text", format: NAMED[base]! };
   // A Dockerfile for one purpose: `Dockerfile.dev`, `Dockerfile.test`.
   if (base.startsWith("dockerfile.")) return { group: "text", format: "dockerfile" };
   if (DATA_FORMATS[ext]) return { group: "data", format: DATA_FORMATS[ext]! };

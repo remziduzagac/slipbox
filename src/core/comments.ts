@@ -55,7 +55,9 @@ const lead = (line: string) => /^[ \t]*/.exec(line)![0];
 /** Whether a line is commented in a style: its marker after its indentation, or wrapped in the pair. */
 function commented(line: string, s: CommentStyle): boolean {
   const t = line.trim();
-  return "line" in s ? t.startsWith(s.line) : t.startsWith(s.open) && t.endsWith(s.close) && t.length >= s.open.length + s.close.length;
+  return "line" in s
+    ? t.startsWith(s.line)
+    : t.startsWith(s.open) && t.endsWith(s.close) && t.length >= s.open.length + s.close.length;
 }
 
 /**
@@ -71,7 +73,11 @@ export function toggleComments(lines: string[], s: CommentStyle): string[] | nul
       const ind = lead(l);
       let body = l.slice(ind.length);
       if ("line" in s) body = body.slice(s.line.length).replace(/^ /, "");
-      else body = body.slice(s.open.length, body.length - s.close.length).replace(/^ /, "").replace(/ $/, "");
+      else
+        body = body
+          .slice(s.open.length, body.length - s.close.length)
+          .replace(/^ /, "")
+          .replace(/ $/, "");
       return ind + body;
     });
   }

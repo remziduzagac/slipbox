@@ -10,7 +10,12 @@ import { chapterHast } from "./hast.ts";
 import { mediaType } from "./images.ts";
 import { CSS } from "./style.ts";
 
-const el = (tagName: string, properties: Element["properties"], children: Element["children"] = []): Element => ({ type: "element", tagName, properties, children });
+const el = (tagName: string, properties: Element["properties"], children: Element["children"] = []): Element => ({
+  type: "element",
+  tagName,
+  properties,
+  children,
+});
 
 /** The document as one HTML file's bytes. */
 export async function toHtml(doc: ExportDoc): Promise<Uint8Array> {
@@ -31,6 +36,12 @@ export async function toHtml(doc: ExportDoc): Promise<Uint8Array> {
     el("title", {}, [{ type: "text", value: doc.title }]),
     el("style", {}, [{ type: "text", value: CSS }]),
   ]);
-  const tree: HastRoot = { type: "root", children: [{ type: "doctype" }, el("html", doc.lang ? { lang: doc.lang } : {}, [head, el("body", {}, [el("main", {}, sections)])])] };
+  const tree: HastRoot = {
+    type: "root",
+    children: [
+      { type: "doctype" },
+      el("html", doc.lang ? { lang: doc.lang } : {}, [head, el("body", {}, [el("main", {}, sections)])]),
+    ],
+  };
   return new TextEncoder().encode(`${serialise(tree)}\n`);
 }

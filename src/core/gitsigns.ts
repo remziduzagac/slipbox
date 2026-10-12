@@ -27,7 +27,10 @@ export function gitChanges(staged: string | null, text: string): GitChange[] {
   const now = lines(text);
   // The empty "line" after a final newline is no line of the file.
   const count = (ls: string[]) => (ls.length && ls[ls.length - 1] === "" ? ls.length - 1 : ls.length);
-  if (staged === null) return count(now) ? [{ kind: "add", from: 1, to: count(now), wasAt: 0, was: [], now: now.slice(0, count(now)) }] : [];
+  if (staged === null)
+    return count(now)
+      ? [{ kind: "add", from: 1, to: count(now), wasAt: 0, was: [], now: now.slice(0, count(now)) }]
+      : [];
   const was = lines(staged);
   return diffLines(was.slice(0, count(was)), now.slice(0, count(now))).map((h) => ({
     kind: h.aLen === 0 ? "add" : h.bLen === 0 ? "delete" : "change",
@@ -56,7 +59,10 @@ export function gitSigns(changes: GitChange[]): Map<number, GitSign> {
 
 /** The change at line `line`, or holding it — a deletion's being the line its sign is on. */
 export function changeAt(changes: GitChange[], line: number): GitChange | null {
-  return changes.find((c) => (c.kind === "delete" ? line === Math.max(1, c.from - 1) : line >= c.from && line <= c.to)) ?? null;
+  return (
+    changes.find((c) => (c.kind === "delete" ? line === Math.max(1, c.from - 1) : line >= c.from && line <= c.to)) ??
+    null
+  );
 }
 
 /** A change as a diff's text: its lines as staged (`-`), then as they are (`+`). */

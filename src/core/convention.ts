@@ -68,14 +68,20 @@ const NOTE_EXT = /\.(md|markdown)$/i;
 export function emptyCounts(): FormCounts {
   const paths = () => ({ relative: 0, root: 0, name: 0 });
   const exts = () => ({ kept: 0, dropped: 0 });
-  return { style: { markdown: 0, wiki: 0 }, path: { markdown: paths(), wiki: paths() }, extension: { markdown: exts(), wiki: exts() } };
+  return {
+    style: { markdown: 0, wiki: 0 },
+    path: { markdown: paths(), wiki: paths() },
+    extension: { markdown: exts(), wiki: exts() },
+  };
 }
 
 /**
  * Count the links that reach a note inside the root (a link out of it, to a file, or broken says
  * nothing of how the root writes): each by its style, its path's form and whether it has the extension.
  */
-export function countForms(links: Iterable<{ kind: string; target: string; resolvedKind: string; path: string | null }>): FormCounts {
+export function countForms(
+  links: Iterable<{ kind: string; target: string; resolvedKind: string; path: string | null }>,
+): FormCounts {
   const counts = emptyCounts();
   for (const l of links) {
     if (l.resolvedKind !== "note" || !l.path || isAbsolute(l.path) || !l.target) continue;
@@ -86,7 +92,15 @@ export function countForms(links: Iterable<{ kind: string; target: string; resol
       if (/^[a-z][a-z0-9+.-]*:/i.test(target) || target.startsWith("~")) continue;
       target = target.replace(/[#?].*$/, "");
     }
-    const path: LinkPath = /^\.\.?\//.test(target) ? "relative" : target.startsWith("/") ? "root" : style === "markdown" ? "relative" : target.includes("/") ? "root" : "name";
+    const path: LinkPath = /^\.\.?\//.test(target)
+      ? "relative"
+      : target.startsWith("/")
+        ? "root"
+        : style === "markdown"
+          ? "relative"
+          : target.includes("/")
+            ? "root"
+            : "name";
     counts.style[style]++;
     counts.path[style][path]++;
     counts.extension[style][NOTE_EXT.test(target) ? "kept" : "dropped"]++;
@@ -108,7 +122,8 @@ export function toolSays(root: string): ToolSays | null {
       file: app ? file : ".obsidian/",
       style: app?.useMarkdownLinks === true ? "markdown" : "wiki",
       // A markdown link by name is a path to slipbox (21.2): there "shortest" says nothing.
-      path: (style) => (format === "relative" ? "relative" : format === "absolute" ? "root" : style === "wiki" ? "name" : undefined),
+      path: (style) =>
+        format === "relative" ? "relative" : format === "absolute" ? "root" : style === "wiki" ? "name" : undefined,
       extension: (style) => (style === "wiki" ? "dropped" : "kept"),
     };
   }
@@ -136,16 +151,35 @@ export function toolSays(root: string): ToolSays | null {
  * A graph's root's convention: its tool's settings, its notes counted. `style`: the one a link being
  * written already has (`](` typed in a wikilink root) — the path and extension then as that style's.
  */
-export function conventionOf(g: { root: string; loc: { mode: string }; linkForms(): FormCounts }, config: Config, origins: Record<string, string>, style?: LinkStyle): Convention {
+export function conventionOf(
+  g: { root: string; loc: { mode: string }; linkForms(): FormCounts },
+  config: Config,
+  origins: Record<string, string>,
+  style?: LinkStyle,
+): Convention {
   const hasRoot = g.loc.mode !== "folder";
   // A config file as people read it: from the root inside it (`.slipbox/config.toml`), else from home.
   const shown = Object.fromEntries(
     Object.entries(origins).map(([k, f]) => {
       const rel = relative(g.root, f);
-      return [k, rel && !rel.startsWith("..") && !isAbsolute(rel) ? rel : f.startsWith(`${homedir()}/`) ? `~/${relative(homedir(), f)}` : f];
+      return [
+        k,
+        rel && !rel.startsWith("..") && !isAbsolute(rel)
+          ? rel
+          : f.startsWith(`${homedir()}/`)
+            ? `~/${relative(homedir(), f)}`
+            : f,
+      ];
     }),
   );
-  return findConvention({ links: config.links, origins: shown, hasRoot, tool: hasRoot ? toolSays(g.root) : null, counts: hasRoot ? g.linkForms() : null, style });
+  return findConvention({
+    links: config.links,
+    origins: shown,
+    hasRoot,
+    tool: hasRoot ? toolSays(g.root) : null,
+    counts: hasRoot ? g.linkForms() : null,
+    style,
+  });
 }
 
 export interface ConventionInput {
@@ -211,7 +245,13 @@ function dominant<T extends string>(counts: Record<T, number> | undefined): Conv
   if (!total) return null;
   for (const [form, n] of Object.entries(counts) as [T, number][]) {
     const share = Math.round((100 * n) / total);
-    if (n / total >= DOMINANT) return { value: form, source: "notes", why: `the notes, ${share}% of ${total} link${total === 1 ? "" : "s"}`, share };
+    if (n / total >= DOMINANT)
+      return {
+        value: form,
+        source: "notes",
+        why: `the notes, ${share}% of ${total} link${total === 1 ? "" : "s"}`,
+        share,
+      };
   }
   return null;
 }
@@ -231,7 +271,11 @@ function conventionSaid(c: Convention): { what: string; said: { parts: string; w
   const style = c.style.value === "wiki" ? "wikilinks" : "markdown links";
   const path = { relative: "relative", root: "from the root", name: "by name" }[c.path.value];
   const ext = c.extension.value === "kept" ? "with .md" : "without .md";
-  const parts: [string, string][] = [["style", c.style.why], ["path", c.path.why], ["extension", c.extension.why]];
+  const parts: [string, string][] = [
+    ["style", c.style.why],
+    ["path", c.path.why],
+    ["extension", c.extension.why],
+  ];
   const said = [...new Set(parts.map(([, w]) => w))].map((why) => {
     const names = parts.filter(([, x]) => x === why).map(([n]) => n);
     return { parts: names.length > 1 ? `${names.slice(0, -1).join(", ")} and ${names.at(-1)}` : names[0]!, why };

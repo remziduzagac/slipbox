@@ -47,7 +47,19 @@ export interface VimState {
 }
 
 export function newVimState(): VimState {
-  return { count: "", op: null, awaitChar: null, lastFind: null, searchOp: null, register: null, lastChange: null, seq: [], seqVersion: -1, replaying: false, undoing: false };
+  return {
+    count: "",
+    op: null,
+    awaitChar: null,
+    lastFind: null,
+    searchOp: null,
+    register: null,
+    lastChange: null,
+    seq: [],
+    seqVersion: -1,
+    replaying: false,
+    undoing: false,
+  };
 }
 
 /** The count typed before a command (1 without one); reading it clears it. */
@@ -81,7 +93,8 @@ export async function vimKey(app: App, view: View, key: string, dispatch: () => 
   await handle(app, view, key, dispatch);
   if (view.insert) s.inInsert = true;
   // Back to rest: if the text changed (and it wasn't undo), this was a change to repeat.
-  if (idle(app, view) && !app.pending.length && !s.undoing && view.buf.version !== s.seqVersion) s.lastChange = [...s.seq];
+  if (idle(app, view) && !app.pending.length && !s.undoing && view.buf.version !== s.seqVersion)
+    s.lastChange = [...s.seq];
 }
 
 async function handle(app: App, view: View, key: string, dispatch: () => Promise<void>): Promise<void> {
@@ -105,7 +118,13 @@ async function handle(app: App, view: View, key: string, dispatch: () => Promise
     const spec = app.keymap.lookup(key);
     // (f and t read their count themselves.)
     // (G with a count is a line number, not repeated: cursor.bottom reads the count itself.)
-    if (spec?.startsWith("cursor.") && spec !== "cursor.bottom" && !spec.startsWith("cursor.find_") && !app.keymap.isPrefix(key) && !app.sourceKeys.lookup(key)) {
+    if (
+      spec?.startsWith("cursor.") &&
+      spec !== "cursor.bottom" &&
+      !spec.startsWith("cursor.find_") &&
+      !app.keymap.isPrefix(key) &&
+      !app.sourceKeys.lookup(key)
+    ) {
       const n = takeCount(app);
       for (let k = 0; k < n; k++) await app.run(spec);
       return;
@@ -152,7 +171,12 @@ export async function visualKey(app: App, view: View, key: string, dispatch: () 
   }
   if (s.count && !app.pending.length && !app.visualKeys.lookup(key)) {
     const spec = app.keymap.lookup(key);
-    if (spec?.startsWith("cursor.") && spec !== "cursor.bottom" && !spec.startsWith("cursor.find_") && !app.keymap.isPrefix(key)) {
+    if (
+      spec?.startsWith("cursor.") &&
+      spec !== "cursor.bottom" &&
+      !spec.startsWith("cursor.find_") &&
+      !app.keymap.isPrefix(key)
+    ) {
       const n = takeCount(app);
       for (let k = 0; k < n; k++) await app.run(spec);
       return;
@@ -222,9 +246,11 @@ async function operatorKey(app: App, view: View, key: string): Promise<void> {
     const q = f?.query;
     // The search's own flags: after `*`, whole words only, as n has them.
     const ms = q ? textMatches(view, q, undefined, { regex: f?.regex ?? false, whole: f?.whole ?? false }) : [];
-    if (typeof ms === "string" || !ms.length) return app.message("info", q ? `not found: ${q}` : "no search yet for gn");
+    if (typeof ms === "string" || !ms.length)
+      return app.message("info", q ? `not found: ${q}` : "no search yet for gn");
     const at = E.offsetOf(app, view);
-    const m = seq === "g n" ? (ms.find((x) => x.to > at) ?? ms[0]!) : (ms.findLast((x) => x.from <= at) ?? ms[ms.length - 1]!);
+    const m =
+      seq === "g n" ? (ms.find((x) => x.to > at) ?? ms[0]!) : (ms.findLast((x) => x.from <= at) ?? ms[ms.length - 1]!);
     return apply(app, view, o.op, { from: m.from, to: m.to, linewise: false });
   }
   const spec = app.keymap.lookup(seq);
@@ -247,7 +273,8 @@ async function operatorKey(app: App, view: View, key: string): Promise<void> {
     s.searchOp = { op: o.op, from: E.offsetOf(app, view) };
     return app.run(spec);
   }
-  if (!spec?.startsWith("cursor.") && spec !== "find.next" && spec !== "find.prev") return app.message("info", `${o.op} doesn't take ${seq}`);
+  if (!spec?.startsWith("cursor.") && spec !== "find.next" && spec !== "find.prev")
+    return app.message("info", `${o.op} doesn't take ${seq}`);
   // G and gg with a count go to that line (d3G), not that many times to the end.
   if ((spec === "cursor.bottom" || spec === "cursor.top") && given) {
     const at = E.offsetOf(app, view);
@@ -270,13 +297,32 @@ export interface Range {
 
 /** Motions that take whole lines under an operator, and those that include the character they
  *  land on. */
-const LINEWISE = new Set(["cursor.up", "cursor.down", "cursor.top", "cursor.bottom", "cursor.half_down", "cursor.half_up", "cursor.page_down", "cursor.page_up"]);
+const LINEWISE = new Set([
+  "cursor.up",
+  "cursor.down",
+  "cursor.top",
+  "cursor.bottom",
+  "cursor.half_down",
+  "cursor.half_up",
+  "cursor.page_down",
+  "cursor.page_up",
+]);
 const INCLUSIVE = new Set(["cursor.word_end", "cursor.line_end", "cursor.match_bracket"]);
 
 /** Where a motion goes (run `count` times, then the cursor put back), as a text range. */
 async function motionRange(app: App, view: View, spec: string, count: number, op: Op): Promise<Range | null> {
   // (A shifted motion, `d shift+right`, selects as it goes: the selection, none, put back too.)
-  const saved = { cur: view.cur, goal: view.goal, top: view.top, left: view.left, topAnchor: view.topAnchor, topSub: view.topSub, curAnchor: view.curAnchor, sel: view.sel, visual: view.visual };
+  const saved = {
+    cur: view.cur,
+    goal: view.goal,
+    top: view.top,
+    left: view.left,
+    topAnchor: view.topAnchor,
+    topSub: view.topSub,
+    curAnchor: view.curAnchor,
+    sel: view.sel,
+    visual: view.visual,
+  };
   const from = E.offsetOf(app, view);
   let motion = spec;
   // cw on a word changes to its end (as vim does), not to the next word's start — and on a word's
@@ -323,7 +369,8 @@ async function motionRange(app: App, view: View, spec: string, count: number, op
   Object.assign(view, saved);
   // dj on the last line, dk on the first: nowhere to go, so nothing (vim fails, it deletes nothing).
   if ((motion === "cursor.down" || motion === "cursor.up") && E.lineOf(view, to) === E.lineOf(view, from)) return null;
-  if (LINEWISE.has(motion)) return linesRange(view, E.lineOf(view, Math.min(from, to)), E.lineOf(view, Math.max(from, to)));
+  if (LINEWISE.has(motion))
+    return linesRange(view, E.lineOf(view, Math.min(from, to)), E.lineOf(view, Math.max(from, to)));
   let a = Math.min(from, to);
   let b = Math.max(from, to);
   if (INCLUSIVE.has(motion)) b = Math.min(E.nextBoundary(view.buf.source, b), Math.max(b, E.lineEnd(view, b)));
@@ -333,7 +380,8 @@ async function motionRange(app: App, view: View, spec: string, count: number, op
   // } that ran into the note's last paragraph (c2} from the one before) ends at its last
   // character, taken (vim's rule), not at its last line's start.
   // (} otherwise lands on a blank line: landing on text means there was no blank line left.)
-  if (motion === "cursor.paragraph_next" && b > a && E.lineText(view, E.lineOf(view, b)).trim()) b = text.replace(/\s+$/, "").length;
+  if (motion === "cursor.paragraph_next" && b > a && E.lineText(view, E.lineOf(view, b)).trim())
+    b = text.replace(/\s+$/, "").length;
   const bLine = E.lineOf(view, b);
   const aLine = E.lineOf(view, a);
   if (!INCLUSIVE.has(motion) && bLine > aLine && b === (view.buf.lineStarts()[bLine - 1] ?? -1)) {
@@ -350,10 +398,14 @@ async function motionRange(app: App, view: View, spec: string, count: number, op
 /** An operator with f / t: f and t take the character they land on, F and T don't. */
 function findRange(app: App, view: View, op: Op, kind: FindKind, ch: string, count: number, repeat: boolean): void {
   const to = C.findChar(app.currentLayout(view), view.cur, kind, ch, count, repeat);
-  if (!to) return app.message("info", `no ${ch} ${kind === "f" || kind === "t" ? "after" : "before"} the cursor on this line`);
+  if (!to)
+    return app.message("info", `no ${ch} ${kind === "f" || kind === "t" ? "after" : "before"} the cursor on this line`);
   const a = E.offsetOf(app, view);
   const b = E.offsetAtPos(app, view, to);
-  const r = kind === "f" || kind === "t" ? { from: a, to: E.nextBoundary(view.buf.source, b), linewise: false } : { from: b, to: a, linewise: false };
+  const r =
+    kind === "f" || kind === "t"
+      ? { from: a, to: E.nextBoundary(view.buf.source, b), linewise: false }
+      : { from: b, to: a, linewise: false };
   if (r.from < r.to) apply(app, view, op, r);
 }
 
@@ -402,10 +454,21 @@ export function apply(app: App, view: View, op: Op, r: Range): void {
     app.vim.register = { text, linewise: r.linewise };
     app.copy(text, false);
     const lines = text.split("\n").length - (text.endsWith("\n") ? 1 : 0);
-    app.message("info", r.linewise ? `yanked ${lines} line${lines === 1 ? "" : "s"}` : `yanked ${[...text].length} characters`);
+    app.message(
+      "info",
+      r.linewise ? `yanked ${lines} line${lines === 1 ? "" : "s"}` : `yanked ${[...text].length} characters`,
+    );
     return E.placeAt(app, view, r.from);
   }
-  if (op === ">" || op === "<") return indentLines(app, view, E.lineOf(view, r.from), E.lineOf(view, Math.max(r.from, r.to - 1)), op === ">" ? 1 : -1, r.times ?? 1);
+  if (op === ">" || op === "<")
+    return indentLines(
+      app,
+      view,
+      E.lineOf(view, r.from),
+      E.lineOf(view, Math.max(r.from, r.to - 1)),
+      op === ">" ? 1 : -1,
+      r.times ?? 1,
+    );
   if (op === "gc") return commentLines(app, view, E.lineOf(view, r.from), E.lineOf(view, Math.max(r.from, r.to - 1)));
   app.vim.register = { text, linewise: r.linewise };
   // A cut is a copy too: the system clipboard gets it (vim with clipboard=unnamedplus).
@@ -414,11 +477,16 @@ export function apply(app: App, view: View, op: Op, r: Range): void {
   if (op === "d") {
     // A linewise delete of the last line takes the line break before it instead.
     let { from, to } = r;
-    if (r.linewise && to === buf.source.length && !text.endsWith("\n") && from > 0) from -= buf.source[from - 2] === "\r" ? 2 : 1;
+    if (r.linewise && to === buf.source.length && !text.endsWith("\n") && from > 0)
+      from -= buf.source[from - 2] === "\r" ? 2 : 1;
     buf.edit(from, to - from, "", cursor);
     const at = Math.min(from, buf.source.length);
     if (r.linewise) return E.placeAt(app, view, firstNonBlank(view, E.lineOf(view, at)));
-    return E.placeAt(app, view, Math.min(at, Math.max(E.lineStart(view, at), E.lineEnd(view, at) - (at >= E.lineEnd(view, at) ? 1 : 0))));
+    return E.placeAt(
+      app,
+      view,
+      Math.min(at, Math.max(E.lineStart(view, at), E.lineEnd(view, at) - (at >= E.lineEnd(view, at) ? 1 : 0))),
+    );
   }
   // c: take the text out and type in its place — one undo step with the typing.
   buf.beginStep(cursor);
@@ -497,7 +565,8 @@ export function textObject(view: View, at: number, kind: "i" | "a", ch: string, 
     return r;
   }
   if (ch === "w" || ch === "W") {
-    const cls = (c: string | undefined) => (c === undefined ? -1 : /\s/.test(c) ? 0 : ch === "W" || /[\p{L}\p{N}_]/u.test(c) ? 1 : 2);
+    const cls = (c: string | undefined) =>
+      c === undefined ? -1 : /\s/.test(c) ? 0 : ch === "W" || /[\p{L}\p{N}_]/u.test(c) ? 1 : 2;
     const k = cls(text[i]);
     if (k < 0) return null;
     let a = i;
@@ -526,7 +595,18 @@ export function textObject(view: View, at: number, kind: "i" | "a", ch: string, 
     }
     return null;
   }
-  const pairs: Record<string, [string, string]> = { "(": ["(", ")"], ")": ["(", ")"], b: ["(", ")"], "[": ["[", "]"], "]": ["[", "]"], "{": ["{", "}"], "}": ["{", "}"], B: ["{", "}"], "<": ["<", ">"], ">": ["<", ">"] };
+  const pairs: Record<string, [string, string]> = {
+    "(": ["(", ")"],
+    ")": ["(", ")"],
+    b: ["(", ")"],
+    "[": ["[", "]"],
+    "]": ["[", "]"],
+    "{": ["{", "}"],
+    "}": ["{", "}"],
+    B: ["{", "}"],
+    "<": ["<", ">"],
+    ">": ["<", ">"],
+  };
   const pair = pairs[ch];
   if (pair) {
     const [open, close] = pair;
@@ -557,7 +637,8 @@ export function textObject(view: View, at: number, kind: "i" | "a", ch: string, 
           const closeLine = E.lineOf(view, k);
           const afterOpen = src.slice(a + 1, E.lineEnd(view, a));
           const beforeClose = src.slice(view.buf.lineStarts()[closeLine - 1] ?? 0, k);
-          if (closeLine - openLine >= 2 && !afterOpen.trim() && !beforeClose.trim()) return linesRange(view, openLine + 1, closeLine - 1);
+          if (closeLine - openLine >= 2 && !afterOpen.trim() && !beforeClose.trim())
+            return linesRange(view, openLine + 1, closeLine - 1);
           return { from: a + 1, to: k, linewise: false };
         }
         depth--;
@@ -633,7 +714,8 @@ export function recordVisual(app: App, keys: string[] | null, insert: boolean, v
   s.seq = [...keys];
   s.seqVersion = versionBefore;
   s.undoing = false;
-  if (insert) s.inInsert = true; // c: the text typed next is part of it (insertRecord)
+  if (insert)
+    s.inInsert = true; // c: the text typed next is part of it (insertRecord)
   else s.lastChange = [...keys];
 }
 

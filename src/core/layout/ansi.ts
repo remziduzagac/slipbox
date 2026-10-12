@@ -15,7 +15,8 @@ export function detectColorDepth(env: NodeJS.ProcessEnv = process.env, isTTY = !
   const ct = (env.COLORTERM ?? "").toLowerCase();
   if (ct === "truecolor" || ct === "24bit") return "truecolor";
   const term = env.TERM ?? "";
-  if (/-direct|ghostty|kitty|wezterm/.test(term) || /ghostty|iterm|wezterm/i.test(env.TERM_PROGRAM ?? "")) return "truecolor";
+  if (/-direct|ghostty|kitty|wezterm/.test(term) || /ghostty|iterm|wezterm/i.test(env.TERM_PROGRAM ?? ""))
+    return "truecolor";
   if (/256/.test(term)) return "256";
   if (term === "dumb") return "none";
   return "16";
@@ -29,7 +30,10 @@ function rgbTo256(hex: string): number {
   const gi = avg > 238 ? 255 : 232 + Math.round((avg - 8) / 10);
   const dist = (i: number) => {
     const levels = [0, 95, 135, 175, 215, 255];
-    const c = i >= 232 ? [8 + (i - 232) * 10, 8 + (i - 232) * 10, 8 + (i - 232) * 10] : [levels[Math.floor((i - 16) / 36)]!, levels[Math.floor((i - 16) / 6) % 6]!, levels[(i - 16) % 6]!];
+    const c =
+      i >= 232
+        ? [8 + (i - 232) * 10, 8 + (i - 232) * 10, 8 + (i - 232) * 10]
+        : [levels[Math.floor((i - 16) / 36)]!, levels[Math.floor((i - 16) / 6) % 6]!, levels[(i - 16) % 6]!];
     return (c[0]! - r) ** 2 + (c[1]! - g) ** 2 + (c[2]! - b) ** 2;
   };
   return dist(gi) < dist(ci) ? gi : ci;
@@ -110,7 +114,8 @@ export function lineToAnsi(line: Line, width: number, theme: Theme, opts: AnsiOp
   }
   const page = opts.pageBackground && theme.bg.startsWith("#") ? theme.bg : null;
   let out = "";
-  if (margin) out += `${sgr({ fg: theme.fg, bg: page, bold: false, italic: false, underline: false, strike: false, dim: false }, opts.depth, !!page)}${margin}`;
+  if (margin)
+    out += `${sgr({ fg: theme.fg, bg: page, bold: false, italic: false, underline: false, strike: false, dim: false }, opts.depth, !!page)}${margin}`;
   let used = 0;
   for (const span of line.spans) {
     const st = spanStyle(theme, span, line);

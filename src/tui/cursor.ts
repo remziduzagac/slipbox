@@ -298,7 +298,14 @@ export function wordAt(layout: Layout, p: Pos): [number, number] {
  * `f` / `F` / `t` / `T`: the `count`th `ch` after (f, t) or before (F, T) the cursor on its source
  * line — every row of a wrapped line — `t` / `T` stopping one short. Null when there's none.
  */
-export function findChar(layout: Layout, p: Pos, kind: "f" | "F" | "t" | "T", ch: string, count = 1, repeat = false): Pos | null {
+export function findChar(
+  layout: Layout,
+  p: Pos,
+  kind: "f" | "F" | "t" | "T",
+  ch: string,
+  count = 1,
+  repeat = false,
+): Pos | null {
   const src = layout.lines[p.row]?.src;
   let first = p.row;
   while (first > 0 && layout.lines[first - 1]?.src === src) first--;

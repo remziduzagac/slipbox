@@ -17,7 +17,8 @@ const RULES: Record<string, string[]> = {
 };
 
 // `… from "x"`, `import("x")`, `require("x")`, and a side-effect `import "x"`.
-const IMPORT = /(?:import|export)\s[^'"]*?from\s*["']([^"']+)["']|import\s*\(\s*["']([^"']+)["']\s*\)|require\(\s*["']([^"']+)["']\s*\)|import\s*["']([^"']+)["']/g;
+const IMPORT =
+  /(?:import|export)\s[^'"]*?from\s*["']([^"']+)["']|import\s*\(\s*["']([^"']+)["']\s*\)|require\(\s*["']([^"']+)["']\s*\)|import\s*["']([^"']+)["']/g;
 
 /** What a file's text imports, by the specifiers as written. */
 export function importsOf(text: string): string[] {

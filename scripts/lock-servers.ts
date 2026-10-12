@@ -29,7 +29,12 @@ export function pinned(): NpmSpec[] {
 export function locksModule(locks: Record<string, string>): string {
   const entries = Object.keys(locks)
     .sort()
-    .map((k) => `  ${JSON.stringify(k)}: [\n${locks[k]!.split("\n").map((l) => `    ${JSON.stringify(l)},`).join("\n")}\n  ].join("\\n"),\n`)
+    .map(
+      (k) =>
+        `  ${JSON.stringify(k)}: [\n${locks[k]!.split("\n")
+          .map((l) => `    ${JSON.stringify(l)},`)
+          .join("\n")}\n  ].join("\\n"),\n`,
+    )
     .join("");
   return `// The lockfiles slipbox installs language servers from (plan 14.11), by package and pin: made by
 // scripts/lock-servers.ts from npm — don't edit by hand; run it again when a pin changes.
@@ -44,8 +49,12 @@ function resolveLock(npm: NpmSpec): string {
   const dir = mkdtempSync(join(tmpdir(), "slipbox-lock-"));
   try {
     writeFileSync(join(dir, "package.json"), toolManifest(npm));
-    const r = Bun.spawnSync([process.execPath, "install", "--lockfile-only", "--ignore-scripts", "--minimum-release-age=604800"], { cwd: dir, stdout: "pipe", stderr: "pipe", env: { ...process.env, BUN_BE_BUN: "1" } });
-    if (r.exitCode !== 0) throw new Error(`${lockKey(npm)}: ${r.stderr.toString().trim() || r.stdout.toString().trim()}`);
+    const r = Bun.spawnSync(
+      [process.execPath, "install", "--lockfile-only", "--ignore-scripts", "--minimum-release-age=604800"],
+      { cwd: dir, stdout: "pipe", stderr: "pipe", env: { ...process.env, BUN_BE_BUN: "1" } },
+    );
+    if (r.exitCode !== 0)
+      throw new Error(`${lockKey(npm)}: ${r.stderr.toString().trim() || r.stdout.toString().trim()}`);
     return readFileSync(join(dir, "bun.lock"), "utf8");
   } finally {
     rmSync(dir, { recursive: true, force: true });

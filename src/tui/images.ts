@@ -2,7 +2,17 @@
 // yes (this once, or for its site) — into the cache, a file per address, and drawn from there as a local one is. A fetch
 // is an image's or nothing: a timeout, a size cap, an image's content type.
 
-import { closeSync, existsSync, mkdirSync, openSync, readFileSync, readSync, renameSync, statSync, writeFileSync } from "node:fs";
+import {
+  closeSync,
+  existsSync,
+  mkdirSync,
+  openSync,
+  readFileSync,
+  readSync,
+  renameSync,
+  statSync,
+  writeFileSync,
+} from "node:fs";
 import { extname, join } from "node:path";
 import { remoteImageName } from "../core/imagecache.ts";
 import { cacheHome, ensureCacheHome } from "../core/paths.ts";
@@ -15,7 +25,13 @@ const MAX_SVG_BYTES = 8 * 1024 * 1024;
  * A picture's cells at most `width` columns wide: `w` × `h` pixels in cells of the terminal's, proportions kept, at most
  * `maxRows` rows (narrower then).
  */
-export function fitPicture(w: number, h: number, width: number, cell: { width: number; height: number }, maxRows: number): { cols: number; rows: number } {
+export function fitPicture(
+  w: number,
+  h: number,
+  width: number,
+  cell: { width: number; height: number },
+  maxRows: number,
+): { cols: number; rows: number } {
   let cols = Math.max(1, Math.min(width, Math.ceil(w / cell.width)));
   let rows = Math.max(1, Math.ceil((cols * cell.width * h) / w / cell.height));
   if (rows > maxRows) {

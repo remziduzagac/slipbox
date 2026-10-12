@@ -46,7 +46,8 @@ export function linkDestination(c: Pick<Convention, "path" | "extension">, style
   const enc = (p: string) => (style === "markdown" ? urlPath(p) : p);
   // Out of the root: into a named folder that doesn't travel with this one, its pointer (21.7); else
   // a relative path, as the file is named.
-  if (to.rel === null || isAbsolute(to.rel)) return ends.pointer ? (style === "markdown" ? formatPointerEncoded(ends.pointer) : ends.pointer) : enc(rel(to.abs));
+  if (to.rel === null || isAbsolute(to.rel))
+    return ends.pointer ? (style === "markdown" ? formatPointerEncoded(ends.pointer) : ends.pointer) : enc(rel(to.abs));
   // Only a note's extension: a picture keeps its own.
   const bare = (p: string) => (c.extension.value === "dropped" ? p.replace(NOTE_EXT, "") : p);
   // A wikilink's path from the root: a top-level note's is its name, read as one (21.3) — where that
@@ -68,12 +69,19 @@ export function linkDestination(c: Pick<Convention, "path" | "extension">, style
  * The whole link: `[text](destination)`, or `[[destination]]` — `[[destination|text]]` when the text
  * isn't what the link shows by itself. An embed (`![[…]]`, `![…](…)`) when asked.
  */
-export function writeLink(c: Pick<Convention, "path" | "extension">, style: LinkStyle, ends: LinkEnds, text: string, embed = false): string {
+export function writeLink(
+  c: Pick<Convention, "path" | "extension">,
+  style: LinkStyle,
+  ends: LinkEnds,
+  text: string,
+  embed = false,
+): string {
   // A pointer is a URL: a markdown link's, in a wikilink root too (a wikilink reads none, 21.3).
   if (ends.pointer && (ends.to.rel === null || isAbsolute(ends.to.rel))) style = "markdown";
   const dest = linkDestination(c, style, ends);
   const bang = embed ? "!" : "";
-  if (style === "markdown") return `${bang}[${linkText(text || posix.basename(ends.to.abs).replace(NOTE_EXT, ""))}](${dest})`;
+  if (style === "markdown")
+    return `${bang}[${linkText(text || posix.basename(ends.to.abs).replace(NOTE_EXT, ""))}](${dest})`;
   const shown = posix.basename(dest).replace(NOTE_EXT, "");
   return `${bang}[[${dest}${text && text !== dest && text !== shown ? `|${text.replace(/[|\]\n]/g, " ")}` : ""}]]`;
 }
@@ -94,7 +102,15 @@ export function pointerAt(root: string, abs: string): { pointer: string; naming:
   const ident = folderIdentity(there);
   if (!ident) return null;
   const naming = pointerNaming(ident);
-  return { pointer: formatPointer({ name: naming.name, branch: null, path: relative(there, abs).split(sep).join("/"), fragment: null }), naming };
+  return {
+    pointer: formatPointer({
+      name: naming.name,
+      branch: null,
+      path: relative(there, abs).split(sep).join("/"),
+      fragment: null,
+    }),
+    naming,
+  };
 }
 
 /** The pointer to `abs`, as `pointerAt` writes it; null when none is. */

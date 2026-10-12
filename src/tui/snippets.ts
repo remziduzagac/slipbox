@@ -57,7 +57,10 @@ export function endSnippet(app: App): void {
 /** A snippet just put in at `at`: its stops followed; the cursor at the first. Nothing to tab through: no session. */
 export function startSnippet(app: App, view: View, at: number, snippet: Snippet): void {
   endSnippet(app);
-  const stops = snippet.stops.map((x) => ({ n: x.n, ranges: x.ranges.map(([a, b]): [number, number] => [a + at, b + at]) }));
+  const stops = snippet.stops.map((x) => ({
+    n: x.n,
+    ranges: x.ranges.map(([a, b]): [number, number] => [a + at, b + at]),
+  }));
   // Only `$0`: the cursor there, the session over as it starts.
   const s: SnippetSession = { view, stops, at: 0, fresh: false, owner: stops[0]!.ranges[0]!, listener: () => {} };
   s.listener = (a, l, t) => follow(app, s, a, l, t);

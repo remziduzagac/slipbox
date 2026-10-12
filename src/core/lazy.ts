@@ -3,7 +3,10 @@
 // loads — and whoever wants to know (the TUI, to draw again) hears when it arrives. The CLI can
 // wait for it instead.
 
-type State<T> = { status: "loading"; promise: Promise<T | null> } | { status: "ready"; value: T } | { status: "failed"; error: string };
+type State<T> =
+  | { status: "loading"; promise: Promise<T | null> }
+  | { status: "ready"; value: T }
+  | { status: "failed"; error: string };
 
 const states = new Map<string, State<unknown>>();
 const listeners = new Set<(name: string) => void>();

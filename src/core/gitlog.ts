@@ -9,7 +9,12 @@ import type { Checkout } from "./git.ts";
 import { gitArgs } from "./gitops.ts";
 import { diffLines } from "./merge.ts";
 
-const OPTS = { encoding: "utf8" as const, stdio: ["ignore", "pipe", "ignore"] as ["ignore", "pipe", "ignore"], timeout: 15_000, maxBuffer: 64 * 1024 * 1024 };
+const OPTS = {
+  encoding: "utf8" as const,
+  stdio: ["ignore", "pipe", "ignore"] as ["ignore", "pipe", "ignore"],
+  timeout: 15_000,
+  maxBuffer: 64 * 1024 * 1024,
+};
 
 function run(c: Pick<Checkout, "root">, args: string[]): string | null {
   try {
@@ -52,7 +57,13 @@ export function parseBlame(porcelain: string, path: string): CommitInfo | null {
   const hash = /^([0-9a-f]{40}) /.exec(lines[0] ?? "")?.[1];
   if (!hash) return null;
   const field = (k: string) => lines.find((l) => l.startsWith(`${k} `))?.slice(k.length + 1) ?? "";
-  return { hash, author: field("author"), time: Number(field("author-time")) || 0, subject: field("summary"), path: field("filename") || path };
+  return {
+    hash,
+    author: field("author"),
+    time: Number(field("author-time")) || 0,
+    subject: field("summary"),
+    path: field("filename") || path,
+  };
 }
 
 /** Who last changed line `line` of a file as the last commit has it (lines from 1); null where git can't say. */
@@ -81,6 +92,14 @@ export function parseLog(out: string): CommitInfo[] {
 
 /** A file's commits, newest first — up to `max` — following it back through its renames. */
 export function fileLog(c: Pick<Checkout, "root">, path: string, max = 500): CommitInfo[] | null {
-  const out = run(c, ["log", "--follow", `--max-count=${max}`, "--format=%x01%H%x00%an%x00%at%x00%s", "--name-only", "--", posixPath(path)]);
+  const out = run(c, [
+    "log",
+    "--follow",
+    `--max-count=${max}`,
+    "--format=%x01%H%x00%an%x00%at%x00%s",
+    "--name-only",
+    "--",
+    posixPath(path),
+  ]);
   return out === null ? null : parseLog(out);
 }

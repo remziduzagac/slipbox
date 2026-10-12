@@ -21,7 +21,9 @@ async function main(): Promise<number> {
   const argv = process.argv.slice(2);
   // The LSP face is gone (20.23): an editor still starting it is told why, in its log.
   if (argv[0] === "lsp") {
-    process.stderr.write("slipbox lsp was removed: links are plain paths now, which editors' own markdown servers follow\n");
+    process.stderr.write(
+      "slipbox lsp was removed: links are plain paths now, which editors' own markdown servers follow\n",
+    );
     return EXIT.usage;
   }
   let args: ReturnType<typeof parseArgs>;

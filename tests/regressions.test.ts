@@ -42,7 +42,15 @@ function vault(files: Record<string, string>): string {
 async function cli(argv: string[], cwd: string, stdin = "") {
   let out = "";
   let err = "";
-  const code = await runCli(argv, { out: (s) => (out += s), err: (s) => (err += s), stdin: async () => stdin, isTTY: false, columns: undefined, cwd, env: { ...process.env, NO_COLOR: "1" } });
+  const code = await runCli(argv, {
+    out: (s) => (out += s),
+    err: (s) => (err += s),
+    stdin: async () => stdin,
+    isTTY: false,
+    columns: undefined,
+    cwd,
+    env: { ...process.env, NO_COLOR: "1" },
+  });
   return { code, out, err };
 }
 
@@ -53,7 +61,8 @@ async function until(pred: () => boolean, ms = 3000): Promise<void> {
   const end = Date.now() + ms;
   while (!pred() && Date.now() < end) await new Promise((r) => setTimeout(r, 20));
 }
-const rows = (md: string, width = 60) => renderMarkdown(md, { width, glyphs: unicode, showUrls: false }).lines.map((l) => l.spans.map((s) => s.text).join(""));
+const rows = (md: string, width = 60) =>
+  renderMarkdown(md, { width, glyphs: unicode, showUrls: false }).lines.map((l) => l.spans.map((s) => s.text).join(""));
 
 describe("high", () => {
   test("a global flag before the subcommand still routes to the CLI", async () => {
@@ -65,7 +74,10 @@ describe("high", () => {
     expect(proc.stdout.toString()).toContain("notes/alpha.md");
   });
   test("an invalid enum in config is a warning, not a crash", async () => {
-    const dir = vault({ "a.md": "# a\n", ".slipbox/config.toml": '[render]\nglyphs = "bogus"\nshow_urls = "sometimes"\ninset = 999\n' });
+    const dir = vault({
+      "a.md": "# a\n",
+      ".slipbox/config.toml": '[render]\nglyphs = "bogus"\nshow_urls = "sometimes"\ninset = 999\n',
+    });
     const r = await cli(["render", "a.md"], dir);
     expect(r.code).toBe(0);
     expect(r.err).toContain('"render.glyphs" must be one of');
@@ -88,7 +100,14 @@ describe("medium", () => {
     const config = structuredClone(DEFAULT_CONFIG);
     config.ui.restore_session = false;
     const loc = locateVault({ root: dir });
-    const app = new App({ loc, config, graph: openGraph(loc, config, false), host: { requestRender() {}, osc52: () => true, quit() {} }, open: "b.md", watch: false });
+    const app = new App({
+      loc,
+      config,
+      graph: openGraph(loc, config, false),
+      host: { requestRender() {}, osc52: () => true, quit() {} },
+      open: "b.md",
+      watch: false,
+    });
     app.draw(new TextCanvas(80, 20));
     await app.run("note.open a.md");
     rmSync(join(dir, "b.md"));
@@ -105,7 +124,14 @@ describe("medium", () => {
     const config = structuredClone(DEFAULT_CONFIG);
     config.ui.restore_session = false;
     const loc = locateVault({ root: dir });
-    const app = new App({ loc, config, graph: openGraph(loc, config, false), host: { requestRender() {}, osc52: () => true, quit() {} }, open: "a.md", watch: false });
+    const app = new App({
+      loc,
+      config,
+      graph: openGraph(loc, config, false),
+      host: { requestRender() {}, osc52: () => true, quit() {} },
+      open: "a.md",
+      watch: false,
+    });
     app.view!.back.push({ key: "gone.md", anchor: { heading: null, headingIndex: 0, offset: 0, line: 1 } });
     await app.handleKey("ctrl+o");
     expect(app.view!.buf.key).toBe("a.md");
@@ -119,14 +145,24 @@ describe("medium", () => {
     config.watch.debounce_ms = 30;
     config.watch.poll_ms = 80;
     const loc = locateVault({ root: dir });
-    const app = new App({ loc, config, graph: openGraph(loc, config, false), host: { requestRender() {}, osc52: () => true, quit() {} }, open: "a.md" });
+    const app = new App({
+      loc,
+      config,
+      graph: openGraph(loc, config, false),
+      host: { requestRender() {}, osc52: () => true, quit() {} },
+      open: "a.md",
+    });
     const wait = (ms: number) => new Promise((r) => setTimeout(r, ms));
     try {
       app.draw(new TextCanvas(80, 20));
       renameSync(join(dir, "proj"), join(elsewhere, "proj"));
       await until(() => !app.graph.notes.has("proj/p.md"));
       expect(app.graph.notes.has("proj/p.md")).toBe(false);
-      const role = () => app.currentLayout(app.view!).lines.flatMap((l) => l.spans).find((s) => s.text === "p")!.role;
+      const role = () =>
+        app
+          .currentLayout(app.view!)
+          .lines.flatMap((l) => l.spans)
+          .find((s) => s.text === "p")!.role;
       expect(role()).toBe("link_unresolved");
       mkdirSync(join(elsewhere, "incoming", "sub"), { recursive: true });
       writeFileSync(join(elsewhere, "incoming", "sub", "q.md"), "# Q\n");
@@ -156,7 +192,13 @@ describe("medium", () => {
     config.watch.debounce_ms = 30;
     config.watch.poll_ms = 80;
     const loc = locateVault({ root: dir });
-    const app = new App({ loc, config, graph: openGraph(loc, config, false), host: { requestRender() {}, osc52: () => true, quit() {} }, open: "b/keep.md" });
+    const app = new App({
+      loc,
+      config,
+      graph: openGraph(loc, config, false),
+      host: { requestRender() {}, osc52: () => true, quit() {} },
+      open: "b/keep.md",
+    });
     const wait = (ms: number) => new Promise((r) => setTimeout(r, ms));
     try {
       renameSync(join(dir, "g.md"), join(dir, "h.md"));
@@ -173,7 +215,14 @@ describe("medium", () => {
     const config = structuredClone(DEFAULT_CONFIG);
     config.ui.restore_session = false;
     const loc = locateVault({ root: dir });
-    const app = new App({ loc, config, graph: openGraph(loc, config, false), host: { requestRender() {}, osc52: () => true, quit() {} }, open: "a.md", watch: false });
+    const app = new App({
+      loc,
+      config,
+      graph: openGraph(loc, config, false),
+      host: { requestRender() {}, osc52: () => true, quit() {} },
+      open: "a.md",
+      watch: false,
+    });
     writeFileSync(join(dir, "a.md"), "# two, longer\n");
     app.applyChanges({ changes: [], rescan: true });
     expect(app.view!.buf.source).toBe("# two, longer\n");
@@ -197,19 +246,32 @@ describe("medium", () => {
   });
   test("resolve agrees with links about attachments", async () => {
     const fx = join(import.meta.dir, "fixtures", "vault");
-    for (const argv of [["resolve", "attachments/diagram.png", "--from", "index"], ["resolve", "![d](attachments/diagram.png)", "--from", "index"]]) {
+    for (const argv of [
+      ["resolve", "attachments/diagram.png", "--from", "index"],
+      ["resolve", "![d](attachments/diagram.png)", "--from", "index"],
+    ]) {
       const r = await cli([...argv, "--json"], fx);
       expect(r.code).toBe(0);
       expect(JSON.parse(r.out).data.path).toBe("attachments/diagram.png");
     }
     // Without --from: a path from the vault's root, a file as well as a note.
-    expect(JSON.parse((await cli(["resolve", "attachments/diagram.png", "--json"], fx)).out).data.path).toBe("attachments/diagram.png");
+    expect(JSON.parse((await cli(["resolve", "attachments/diagram.png", "--json"], fx)).out).data.path).toBe(
+      "attachments/diagram.png",
+    );
     // By its name alone, a wikilink finds it, as Obsidian does (21.3); a path names it by its path.
-    expect(JSON.parse((await cli(["resolve", "![[diagram.png]]", "--json"], fx)).out).data.path).toBe("attachments/diagram.png");
+    expect(JSON.parse((await cli(["resolve", "![[diagram.png]]", "--json"], fx)).out).data.path).toBe(
+      "attachments/diagram.png",
+    );
     expect((await cli(["resolve", "diagram.png", "--from", "index", "--json"], fx)).code).toBe(3);
   });
   test(".gitignore: deeper negation re-includes; case follows git on this platform", () => {
-    const dir = vault({ ".gitignore": "*.md\n", "sub/.gitignore": "!inner-keep.md\n", "sub/inner-keep.md": "#\n", "sub/other.md": "#\n", "UPPER.MD": "#\n" });
+    const dir = vault({
+      ".gitignore": "*.md\n",
+      "sub/.gitignore": "!inner-keep.md\n",
+      "sub/inner-keep.md": "#\n",
+      "sub/other.md": "#\n",
+      "UPPER.MD": "#\n",
+    });
     const files = walkVault(dir, new WalkFilter(dir, DEFAULT_CONFIG.walk)).files.map((f) => f.rel);
     expect(files).toContain("sub/inner-keep.md");
     expect(files).not.toContain("sub/other.md");
@@ -223,7 +285,14 @@ describe("low", () => {
     const config = structuredClone(DEFAULT_CONFIG);
     config.ui.restore_session = false;
     const loc = locateVault({ root: dir });
-    const app = new App({ loc, config, graph: openGraph(loc, config, false), host: { requestRender() {}, osc52: () => true, quit() {} }, open: "a.md", watch: false });
+    const app = new App({
+      loc,
+      config,
+      graph: openGraph(loc, config, false),
+      host: { requestRender() {}, osc52: () => true, quit() {} },
+      open: "a.md",
+      watch: false,
+    });
     for (const k of ["space", "u", "t", "s", "o", "l", "z", "z", "z", "enter"]) await app.handleKey(k);
     expect(app.messages.some((m) => m.text.includes("not bound"))).toBe(false);
     expect(app.theme.name).toBe("tokyo-night");
@@ -241,7 +310,8 @@ describe("low", () => {
     expect((await cli(["render", "index", "--plian"], fx)).code).toBe(2);
   });
   test("no row exceeds the width even at 10 columns, frontmatter and deep nesting included", () => {
-    const md = "---\ntitle: T\n---\n\n999999999. item\n\n- > - > - > nested quote in list\n\n> [!warning] a long callout title here\n";
+    const md =
+      "---\ntitle: T\n---\n\n999999999. item\n\n- > - > - > nested quote in list\n\n> [!warning] a long callout title here\n";
     for (let w = 8; w <= 20; w++) for (const r of rows(md, w)) expect(stringWidth(r)).toBeLessThanOrEqual(w);
   });
   test("case-variant file names are distinct notes; explicit extensions pick the file", () => {
@@ -255,12 +325,31 @@ describe("low", () => {
   test("a corrupt session or positions file never stops the TUI", () => {
     const dir = vault({ "a.md": "# a\n" });
     const place = locateVault({ root: dir });
-    saveSession(place, { version: 1, tabs: [{ panes: [{ path: null as never, anchor: null as never }, { path: "a.md", anchor: "x" as never }], active: 9 }], activeTab: 5, sidebar: true });
+    saveSession(place, {
+      version: 1,
+      tabs: [
+        {
+          panes: [
+            { path: null as never, anchor: null as never },
+            { path: "a.md", anchor: "x" as never },
+          ],
+          active: 9,
+        },
+      ],
+      activeTab: 5,
+      sidebar: true,
+    });
     const s = loadSession(place)!;
     expect(s.tabs[0]!.panes).toHaveLength(1);
     const config = structuredClone(DEFAULT_CONFIG);
     const loc = locateVault({ root: dir });
-    const app = new App({ loc, config, graph: openGraph(loc, config, false), host: { requestRender() {}, osc52: () => true, quit() {} }, watch: false });
+    const app = new App({
+      loc,
+      config,
+      graph: openGraph(loc, config, false),
+      host: { requestRender() {}, osc52: () => true, quit() {} },
+      watch: false,
+    });
     expect(app.view!.buf.key).toBe("a.md");
     app.draw(new TextCanvas(80, 20));
   });
@@ -289,7 +378,9 @@ describe("low", () => {
   });
   test("a user theme shadowing a built-in is listed once", () => {
     const dir = mkdtempSync(join(sandbox, "themes-"));
-    const slots = Array.from({ length: 16 }, (_, i) => `base0${i.toString(16).toUpperCase()}: "${"123456"}"`).join("\n");
+    const slots = Array.from({ length: 16 }, (_, i) => `base0${i.toString(16).toUpperCase()}: "${"123456"}"`).join(
+      "\n",
+    );
     writeFileSync(join(dir, "nord.yaml"), `scheme: mine\n${slots}\n`);
     const nord = listThemes(dir).filter((t) => t.name === "nord");
     expect(nord).toEqual([{ name: "nord", source: "user", path: join(dir, "nord.yaml") }]);
@@ -300,8 +391,20 @@ describe("low", () => {
     expect(JSON.parse(r.out).data.root).toBe(target);
   });
   test("the boundary check sees a side-effect import, not only from / import() / require", () => {
-    const text = ['import "../tui/app.ts";', "import { App } from '../tui/app.ts';", 'export * from "@opentui/core";', 'await import("../tui/run.ts");', 'require("../tui/x.ts");'].join("\n");
-    expect(importsOf(text).sort()).toEqual(["../tui/app.ts", "../tui/app.ts", "../tui/run.ts", "../tui/x.ts", "@opentui/core"]);
+    const text = [
+      'import "../tui/app.ts";',
+      "import { App } from '../tui/app.ts';",
+      'export * from "@opentui/core";',
+      'await import("../tui/run.ts");',
+      'require("../tui/x.ts");',
+    ].join("\n");
+    expect(importsOf(text).sort()).toEqual([
+      "../tui/app.ts",
+      "../tui/app.ts",
+      "../tui/run.ts",
+      "../tui/x.ts",
+      "@opentui/core",
+    ]);
   });
 });
 
@@ -312,7 +415,14 @@ describe("found in hands-on review", () => {
     const config = structuredClone(DEFAULT_CONFIG);
     config.ui.restore_session = false;
     const loc = locateVault({ root: dir });
-    const app = new App({ loc, config, graph: openGraph(loc, config, false), host: { requestRender() {}, osc52: () => true, quit() {} }, open: "n.md", watch: false });
+    const app = new App({
+      loc,
+      config,
+      graph: openGraph(loc, config, false),
+      host: { requestRender() {}, osc52: () => true, quit() {} },
+      open: "n.md",
+      watch: false,
+    });
     const canvas = () => app.draw(new TextCanvas(100, 20));
     canvas();
     for (let i = 0; i < 20; i++) {
@@ -320,7 +430,11 @@ describe("found in hands-on review", () => {
       await app.handleKey("]");
     }
     canvas();
-    const topText = () => app.currentLayout(app.view!).lines[app.view!.cur.row]!.spans.map((s) => s.text).join("");
+    const topText = () =>
+      app
+        .currentLayout(app.view!)
+        .lines[app.view!.cur.row]!.spans.map((s) => s.text)
+        .join("");
     expect(topText()).toContain("H19");
     const change = (src: string) => {
       writeFileSync(join(dir, "n.md"), src);
@@ -350,7 +464,13 @@ test("the scratch, open in the TUI, follows appends from the CLI", async () => {
   config.ui.restore_session = false;
   config.watch.poll_ms = 100;
   const loc = locateVault({ root: dir });
-  const app = new App({ loc, config, graph: openGraph(loc, config, false), host: { requestRender() {}, osc52: () => true, quit() {} }, open: "a.md" });
+  const app = new App({
+    loc,
+    config,
+    graph: openGraph(loc, config, false),
+    host: { requestRender() {}, osc52: () => true, quit() {} },
+    open: "a.md",
+  });
   try {
     await cli(["capture", "first"], dir);
     await app.run("scratch.open");
@@ -366,7 +486,9 @@ test("the scratch, open in the TUI, follows appends from the CLI", async () => {
 test("a line inside a block that wraps lands on that block, not the next (a converted [[note#^id]] at a paragraph's last line)", () => {
   // Rows by the source line their first text is on: a heading (1), a paragraph of lines 3–5 wrapped
   // into rows starting on lines 3, 3 and 4, then a heading (7).
-  const layout = { lines: [1, 3, 3, 4, 7].map((src) => ({ spans: [], src })) } as unknown as Parameters<typeof rowForSource>[0];
+  const layout = { lines: [1, 3, 3, 4, 7].map((src) => ({ spans: [], src })) } as unknown as Parameters<
+    typeof rowForSource
+  >[0];
   expect(rowForSource(layout, 3)).toBe(1); // a row's own line: its first row
   expect(rowForSource(layout, 5)).toBe(3); // inside the paragraph: its row, not the heading after
   expect(rowForSource(layout, 7)).toBe(4);

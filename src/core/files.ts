@@ -64,7 +64,12 @@ export function emptyTrash(v: Keyed, ids?: readonly string[], now = new Date()):
   const items = listTrash(v, now);
   const want = ids ? new Set(ids) : null;
   const gone = items.filter((i) => !want || want.has(i.id));
-  if (gone.length) removeItems(v, items.filter((i) => !gone.includes(i)), new Set(gone.map((i) => i.id)));
+  if (gone.length)
+    removeItems(
+      v,
+      items.filter((i) => !gone.includes(i)),
+      new Set(gone.map((i) => i.id)),
+    );
   return gone;
 }
 
@@ -97,8 +102,10 @@ function move(from: string, to: string): void {
 /** A vault path of `g` that names a note, a file or a folder of it, checked. */
 function vaultPath(g: Graph, rel: string): { rel: string; abs: string; dir: boolean } {
   const clean = posix.normalize(rel.replace(/\\/g, "/").replace(/^\/+/, "").replace(/\/+$/, ""));
-  if (!clean || clean === "." || clean.startsWith("../") || clean === "..") throw new FileOpError(`${rel} isn't inside the root`);
-  if (clean.split("/").some((s) => s === ".slipbox" || s === ".git")) throw new FileOpError(`${rel}: slipbox's and git's own folders aren't notes`);
+  if (!clean || clean === "." || clean.startsWith("../") || clean === "..")
+    throw new FileOpError(`${rel} isn't inside the root`);
+  if (clean.split("/").some((s) => s === ".slipbox" || s === ".git"))
+    throw new FileOpError(`${rel}: slipbox's and git's own folders aren't notes`);
   const abs = join(g.root, clean);
   if (!landsInside(g.root, abs)) throw new FileOpError(`${rel} resolves outside the root`);
   let dir: boolean;
@@ -124,7 +131,10 @@ export function linksInto(g: Graph, rel: string): number {
     const abs = join(g.root, rel);
     const v = openVault(abs);
     const outside = (b: Backlink) => isAbsolute(b.from) && !isInside(g.root, b.from);
-    return linksIntoFolder(g, abs).length + [...v.notes.keys(), ...v.filePaths()].reduce((n, p) => n + v.backlinks(p).filter(outside).length, 0);
+    return (
+      linksIntoFolder(g, abs).length +
+      [...v.notes.keys(), ...v.filePaths()].reduce((n, p) => n + v.backlinks(p).filter(outside).length, 0)
+    );
   }
   const inside = new Set(within(g, rel));
   let n = 0;
@@ -159,7 +169,13 @@ export function trashVaultMarker(v: Keyed, parentRoot: string, vaultRoot: string
   const abs = join(vaultRoot, ".slipbox");
   const id = `${now.toISOString().replace(/[:.]/g, "-")}-${randomBytes(3).toString("hex")}`;
   move(abs, join(trashDir(v), id, ".slipbox"));
-  const item: TrashItem = { id, abs, shown: `${relative(parentRoot, vaultRoot)}/.slipbox`, dir: true, at: now.toISOString() };
+  const item: TrashItem = {
+    id,
+    abs,
+    shown: `${relative(parentRoot, vaultRoot)}/.slipbox`,
+    dir: true,
+    at: now.toISOString(),
+  };
   saveTrash(v, [item, ...listTrash(v, now)]);
   return item;
 }
@@ -174,16 +190,21 @@ export function restorePath(g: Graph | null, v: Keyed, which: string, now = new 
   if (!item) throw new FileOpError(`nothing in the trash named ${which}`);
   if (existsSync(item.abs)) throw new FileOpError(`${item.shown} exists again; not restoring over it`);
   // Its root moved and the trash wasn't told: never put back outside the root (recreating where it was).
-  if (g && !isInside(g.root, item.abs)) throw new FileOpError(`${item.shown} was at ${item.abs}, outside this root now; not restoring it there`);
+  if (g && !isInside(g.root, item.abs))
+    throw new FileOpError(`${item.shown} was at ${item.abs}, outside this root now; not restoring it there`);
   move(join(trashDir(v), item.id, basename(item.abs)), item.abs);
   rmSync(join(trashDir(v), item.id), { recursive: true, force: true });
-  saveTrash(v, items.filter((i) => i.id !== item.id));
+  saveTrash(
+    v,
+    items.filter((i) => i.id !== item.id),
+  );
   if (g && isInside(g.root, item.abs)) {
     if (item.dir) g.build(true, "lazy");
     else {
       const rel = relative(g.root, item.abs);
       const st = statSync(item.abs);
-      if (classify(rel, g.config.walk.extensions).group === "note") g.updateFile(rel, { rel, abs: item.abs, size: st.size, mtimeMs: st.mtimeMs });
+      if (classify(rel, g.config.walk.extensions).group === "note")
+        g.updateFile(rel, { rel, abs: item.abs, size: st.size, mtimeMs: st.mtimeMs });
       else g.addAsset(rel);
     }
   }
@@ -206,7 +227,9 @@ function copyName(g: Graph, rel: string, dir: boolean): string {
  */
 export function copyPath(g: Graph, rel: string, toRel?: string): { from: string; to: string; dir: boolean } {
   const p = vaultPath(g, rel);
-  let to = toRel ? posix.normalize(toRel.replace(/\\/g, "/").replace(/^\/+/, "").replace(/\/+$/, "")) : copyName(g, p.rel, p.dir);
+  let to = toRel
+    ? posix.normalize(toRel.replace(/\\/g, "/").replace(/^\/+/, "").replace(/\/+$/, ""))
+    : copyName(g, p.rel, p.dir);
   if (toRel && !p.dir && posix.extname(to) === "" && posix.extname(p.rel)) to += posix.extname(p.rel);
   if (!to || to.startsWith("../") || to === "..") throw new FileOpError(`${toRel} isn't inside the root`);
   if (to === p.rel || to.startsWith(`${p.rel}/`)) throw new FileOpError(`${p.rel} can't be copied into itself`);
@@ -220,7 +243,8 @@ export function copyPath(g: Graph, rel: string, toRel?: string): { from: string;
   if (p.dir) g.build(true, "lazy");
   else {
     const st = statSync(toAbs);
-    if (classify(to, g.config.walk.extensions).group === "note") g.updateFile(to, { rel: to, abs: toAbs, size: st.size, mtimeMs: st.mtimeMs });
+    if (classify(to, g.config.walk.extensions).group === "note")
+      g.updateFile(to, { rel: to, abs: toAbs, size: st.size, mtimeMs: st.mtimeMs });
     else g.addAsset(to);
   }
   return { from: p.rel, to, dir: p.dir };

@@ -51,10 +51,21 @@ export interface LanguageReport {
 function linterReport(def: LinterDef, root: string): LinterReport {
   const program = def.command.trim().split(/\s+/)[0] ?? "";
   const path = program ? Bun.which(program, { PATH: projectPath(root) }) : null;
-  return { name: def.name, program, where: path ? (path.startsWith(`${root}/`) ? "project" : "path") : null, path, hint: def.hint ?? null, markers: def.rootMarkers, required: def.requireMarker };
+  return {
+    name: def.name,
+    program,
+    where: path ? (path.startsWith(`${root}/`) ? "project" : "path") : null,
+    path,
+    hint: def.hint ?? null,
+    markers: def.rootMarkers,
+    required: def.requireMarker,
+  };
 }
 
-const lintersOf = (lang: LanguageDef, linters: Record<string, LinterDef>) => (lang.linters ?? []).map((n) => (Object.hasOwn(linters, n) ? linters[n] : undefined)).filter((d): d is LinterDef => !!d?.command);
+const lintersOf = (lang: LanguageDef, linters: Record<string, LinterDef>) =>
+  (lang.linters ?? [])
+    .map((n) => (Object.hasOwn(linters, n) ? linters[n] : undefined))
+    .filter((d): d is LinterDef => !!d?.command);
 
 function report(def: ServerDef, root: string, autoInstall: boolean): ServerReport {
   const f = findServer(def, root);
@@ -72,7 +83,12 @@ function report(def: ServerDef, root: string, autoInstall: boolean): ServerRepor
 }
 
 /** Every language's servers and linters, as found from `root` (a project's own programs count there). */
-export function doctor(table: ServerTable, linters: Record<string, LinterDef>, root: string, autoInstall: boolean): LanguageReport[] {
+export function doctor(
+  table: ServerTable,
+  linters: Record<string, LinterDef>,
+  root: string,
+  autoInstall: boolean,
+): LanguageReport[] {
   const groups = new Map<string, LanguageReport>();
   for (const lang of table.languages) {
     const key = `${lang.servers.join(",")};${(lang.linters ?? []).join(",")}`;
@@ -81,8 +97,14 @@ export function doctor(table: ServerTable, linters: Record<string, LinterDef>, r
       g.languages.push(lang.name);
       continue;
     }
-    const servers = lang.servers.map((n) => (Object.hasOwn(table.servers, n) ? table.servers[n] : undefined)).filter((d): d is ServerDef => !!d);
-    groups.set(key, { languages: [lang.name], servers: servers.map((d) => report(d, root, autoInstall)), linters: lintersOf(lang, linters).map((d) => linterReport(d, root)) });
+    const servers = lang.servers
+      .map((n) => (Object.hasOwn(table.servers, n) ? table.servers[n] : undefined))
+      .filter((d): d is ServerDef => !!d);
+    groups.set(key, {
+      languages: [lang.name],
+      servers: servers.map((d) => report(d, root, autoInstall)),
+      linters: lintersOf(lang, linters).map((d) => linterReport(d, root)),
+    });
   }
   return [...groups.values()];
 }
@@ -105,7 +127,12 @@ export interface FileReport {
 }
 
 /** One file: its language, its project, and its servers there; null when slipbox serves no language of it. */
-export function doctorFile(table: ServerTable, linters: Record<string, LinterDef>, path: string, autoInstall: boolean): FileReport | null {
+export function doctorFile(
+  table: ServerTable,
+  linters: Record<string, LinterDef>,
+  path: string,
+  autoInstall: boolean,
+): FileReport | null {
   const lang = languageOf(table, path);
   if (!lang) return null;
   const root = rootFor(path, lang.roots);

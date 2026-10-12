@@ -58,7 +58,10 @@ function runTool(argv: string[], text: string): boolean {
     const bin = Bun.which(argv[0]!, { PATH: process.env.PATH ?? "" });
     if (!bin) return false;
     // clip.exe reads its input in the console's code page, unless it starts with a byte-order mark: UTF-16 with one.
-    const input = argv[0] === "clip.exe" ? Buffer.concat([Buffer.from([0xff, 0xfe]), Buffer.from(text, "utf16le")]) : Buffer.from(text);
+    const input =
+      argv[0] === "clip.exe"
+        ? Buffer.concat([Buffer.from([0xff, 0xfe]), Buffer.from(text, "utf16le")])
+        : Buffer.from(text);
     const r = Bun.spawnSync([bin, ...argv.slice(1)], { stdin: input, stdout: "ignore", stderr: "ignore" });
     return r.exitCode === 0;
   } catch {
@@ -107,7 +110,14 @@ function readTools(): string[][] {
   if (process.env.WAYLAND_DISPLAY) tools.push(["wl-paste", "--no-newline"]);
   if (process.env.DISPLAY) tools.push(["xclip", "-selection", "clipboard", "-o"], ["xsel", "--clipboard", "--output"]);
   // WSL (14.12): Windows' clipboard, by PowerShell — after the Linux side's, which answer faster where there are any.
-  if (isWsl()) tools.push(["powershell.exe", "-NoProfile", "-NonInteractive", "-Command", "[Console]::OutputEncoding = [System.Text.Encoding]::UTF8; Get-Clipboard -Raw"]);
+  if (isWsl())
+    tools.push([
+      "powershell.exe",
+      "-NoProfile",
+      "-NonInteractive",
+      "-Command",
+      "[Console]::OutputEncoding = [System.Text.Encoding]::UTF8; Get-Clipboard -Raw",
+    ]);
   return tools;
 }
 
@@ -144,4 +154,3 @@ export function readClipboard(fallbackDir: string): string | null {
   }
   return null;
 }
-

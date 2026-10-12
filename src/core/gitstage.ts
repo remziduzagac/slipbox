@@ -37,7 +37,12 @@ export function parseEntries(z: string): StatusEntry[] {
 /** The checkout's status, entry by entry, not waiting on git; null without git. */
 export function entriesLater(c: Pick<Checkout, "root">): Promise<StatusEntry[] | null> {
   return new Promise((done) => {
-    execFile("git", gitArgs(c.root, STATUS_ARGS), { encoding: "utf8", timeout: 15_000, maxBuffer: 64 * 1024 * 1024 }, (err, out) => done(err ? null : parseEntries(out)));
+    execFile(
+      "git",
+      gitArgs(c.root, STATUS_ARGS),
+      { encoding: "utf8", timeout: 15_000, maxBuffer: 64 * 1024 * 1024 },
+      (err, out) => done(err ? null : parseEntries(out)),
+    );
   });
 }
 
@@ -45,7 +50,12 @@ export function entriesLater(c: Pick<Checkout, "root">): Promise<StatusEntry[] |
 export const conflicted = (e: StatusEntry) => /^(DD|AU|UD|UA|DU|AA|UU)$/.test(e.x + e.y);
 
 /** The view's sections, each file in the ones it's in: in conflict; staged; changed, not staged; untracked. */
-export function sections(entries: StatusEntry[]): { conflicted: StatusEntry[]; staged: StatusEntry[]; unstaged: StatusEntry[]; untracked: StatusEntry[] } {
+export function sections(entries: StatusEntry[]): {
+  conflicted: StatusEntry[];
+  staged: StatusEntry[];
+  unstaged: StatusEntry[];
+  untracked: StatusEntry[];
+} {
   const by = (a: StatusEntry, b: StatusEntry) => a.path.localeCompare(b.path);
   const conflicts = entries.filter(conflicted);
   const rest = entries.filter((e) => !conflicted(e));
@@ -57,10 +67,19 @@ export function sections(entries: StatusEntry[]): { conflicted: StatusEntry[]; s
   };
 }
 
-const OPTS = { encoding: "utf8" as const, stdio: ["pipe", "pipe", "pipe"] as ["pipe", "pipe", "pipe"], timeout: 15_000, maxBuffer: 64 * 1024 * 1024 };
+const OPTS = {
+  encoding: "utf8" as const,
+  stdio: ["pipe", "pipe", "pipe"] as ["pipe", "pipe", "pipe"],
+  timeout: 15_000,
+  maxBuffer: 64 * 1024 * 1024,
+};
 
 /** A git command run in the checkout: its output, or why it failed (its own words). */
-function git(c: Pick<Checkout, "root">, args: string[], input?: string): { ok: true; out: string } | { ok: false; why: string } {
+function git(
+  c: Pick<Checkout, "root">,
+  args: string[],
+  input?: string,
+): { ok: true; out: string } | { ok: false; why: string } {
   try {
     return { ok: true, out: execFileSync("git", gitArgs(c.root, args), { ...OPTS, input }) };
   } catch (err) {
@@ -127,18 +146,30 @@ export function cleanMessage(text: string): string {
  * trusted its hooks don't run (`gitArgs`) and it isn't signed: the repository's own config could name the program that
  * signs. Not waiting on git — a hook can take a while. Its short hash and subject, or why it failed.
  */
-export function commitLater(c: Pick<Checkout, "root">, message: string, amend: boolean): Promise<{ hash: string; subject: string } | { why: string }> {
+export function commitLater(
+  c: Pick<Checkout, "root">,
+  message: string,
+  amend: boolean,
+): Promise<{ hash: string; subject: string } | { why: string }> {
   const body = cleanMessage(message);
   if (!body) return Promise.resolve({ why: "the message is empty: nothing committed" });
   const unsigned = isTrusted(c.root) ? [] : ["-c", "commit.gpgSign=false"];
-  const args = [...unsigned, ...gitArgs(c.root, ["commit", "-F", "-", "--cleanup=verbatim", ...(amend ? ["--amend"] : [])])];
+  const args = [
+    ...unsigned,
+    ...gitArgs(c.root, ["commit", "-F", "-", "--cleanup=verbatim", ...(amend ? ["--amend"] : [])]),
+  ];
   return new Promise((done) => {
-    const child = execFile("git", args, { encoding: "utf8", timeout: 120_000, maxBuffer: 16 * 1024 * 1024 }, (err, _out, stderr) => {
-      if (err) return done({ why: (stderr || err.message).trim().split("\n")[0] ?? "git commit failed" });
-      const r = git(c, ["log", "-1", "--format=%h%x00%s"]);
-      const [hash = "", subject = ""] = r.ok ? r.out.trim().split("\0") : [];
-      done({ hash, subject });
-    });
+    const child = execFile(
+      "git",
+      args,
+      { encoding: "utf8", timeout: 120_000, maxBuffer: 16 * 1024 * 1024 },
+      (err, _out, stderr) => {
+        if (err) return done({ why: (stderr || err.message).trim().split("\n")[0] ?? "git commit failed" });
+        const r = git(c, ["log", "-1", "--format=%h%x00%s"]);
+        const [hash = "", subject = ""] = r.ok ? r.out.trim().split("\0") : [];
+        done({ hash, subject });
+      },
+    );
     // A hook that refuses at once: git gone before it reads the message — not an error of ours.
     child.stdin?.on("error", () => {});
     child.stdin?.end(`${body}\n`);

@@ -3,7 +3,14 @@
 // HTML and EPUB carry.
 
 /** Print's colours for what slipbox draws: dark on white. */
-export const PRINT = { bg: "#ffffff", fg: "#1f2328", line: "#57606a", accent: "#0969da", muted: "#57606a", math: "#1f2328" };
+export const PRINT = {
+  bg: "#ffffff",
+  fg: "#1f2328",
+  line: "#57606a",
+  accent: "#0969da",
+  muted: "#57606a",
+  math: "#1f2328",
+};
 
 /** A callout's colour on paper, by its kind: note's for a kind not here. */
 export const CALLOUT_COLOURS: Record<string, string> = {

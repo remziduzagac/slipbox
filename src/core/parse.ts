@@ -69,7 +69,11 @@ export interface ParsedNote {
  * in notes built to be pathological; source mode shows the file's own text.
  */
 function tame(source: string): string {
-  if (!/([*_[\]])\1{63}/.test(source) && !/^(?:[ \t]*(?:>|[-*+]|\d{1,9}[.)])[ \t]+){20}|^[ \t]{96,}(?:[-*+]|\d{1,9}[.)])[ \t]/m.test(source)) return source;
+  if (
+    !/([*_[\]])\1{63}/.test(source) &&
+    !/^(?:[ \t]*(?:>|[-*+]|\d{1,9}[.)])[ \t]+){20}|^[ \t]{96,}(?:[-*+]|\d{1,9}[.)])[ \t]/m.test(source)
+  )
+    return source;
   const like: Record<string, string> = { "*": "∗", _: "‗", "[": "［", "]": "］" };
   const lines = source.split("\n");
   let fence: string | null = null;
@@ -90,11 +94,15 @@ function tame(source: string): string {
       continue;
     }
     let out = line;
-    if (/([*_[\]])\1{63}/.test(out) && !/^\s*[-*_=\s]+$/.test(out)) out = out.replace(/([*_[\]])\1{63,}/g, (run) => like[run[0]!]!.repeat(run.length));
-    const deep = /^(?:[ \t]*(?:>|[-*+]|\d{1,9}[.)])[ \t]+){20}/.exec(out) ?? /^[ \t]{96}/.exec(/^[ \t]{96,}(?:[-*+]|\d{1,9}[.)])[ \t]/.test(out) ? out : "");
+    if (/([*_[\]])\1{63}/.test(out) && !/^\s*[-*_=\s]+$/.test(out))
+      out = out.replace(/([*_[\]])\1{63,}/g, (run) => like[run[0]!]!.repeat(run.length));
+    const deep =
+      /^(?:[ \t]*(?:>|[-*+]|\d{1,9}[.)])[ \t]+){20}/.exec(out) ??
+      /^[ \t]{96}/.exec(/^[ \t]{96,}(?:[-*+]|\d{1,9}[.)])[ \t]/.test(out) ? out : "");
     // One no-break space where the cap falls ends the containers there: what follows is text (its
     // spaces still wrap), not 5,000 more levels.
-    if (deep && deep[0].length < out.length) out = `${out.slice(0, deep[0].length)}\u00a0${out.slice(deep[0].length + 1)}`;
+    if (deep && deep[0].length < out.length)
+      out = `${out.slice(0, deep[0].length)}\u00a0${out.slice(deep[0].length + 1)}`;
     lines[i] = out;
   }
   return lines.join("\n");
@@ -125,11 +133,13 @@ export const ORIGIN = Symbol("origin");
 const CHUNK_LINES = 40;
 
 const LIST_ITEM = /^(?:[-*+]|\d{1,9}[.)])(?:[ \t]|$)/;
-const BLOCK_TAGS = "address|article|aside|base|basefont|blockquote|body|caption|center|col|colgroup|dd|details|dialog|dir|div|dl|dt|fieldset|figcaption|figure|footer|form|frame|frameset|h[1-6]|head|header|hr|html|iframe|legend|li|link|main|menu|menuitem|nav|noframes|ol|optgroup|option|p|param|search|section|summary|table|tbody|td|tfoot|th|thead|title|tr|track|ul";
+const BLOCK_TAGS =
+  "address|article|aside|base|basefont|blockquote|body|caption|center|col|colgroup|dd|details|dialog|dir|div|dl|dt|fieldset|figcaption|figure|footer|form|frame|frameset|h[1-6]|head|header|hr|html|iframe|legend|li|link|main|menu|menuitem|nav|noframes|ol|optgroup|option|p|param|search|section|summary|table|tbody|td|tfoot|th|thead|title|tr|track|ul";
 /** CommonMark's HTML block kind 6: a block-level tag, which may even interrupt a paragraph. */
 const HTML_BLOCK = new RegExp(`^ {0,3}</?(?:${BLOCK_TAGS})(?:[\\s/>]|$)`, "i");
 /** Kind 7: a line that is one whole tag, starting a block (it can't interrupt a paragraph). */
-const HTML_TAG_LINE = /^ {0,3}(?:<[A-Za-z][A-Za-z0-9-]*(?:\s+[A-Za-z_:][\w.:-]*(?:\s*=\s*(?:[^\s"'=<>`]+|'[^']*'|"[^"]*"))?)*\s*\/?>|<\/[A-Za-z][A-Za-z0-9-]*\s*>)\s*$/;
+const HTML_TAG_LINE =
+  /^ {0,3}(?:<[A-Za-z][A-Za-z0-9-]*(?:\s+[A-Za-z_:][\w.:-]*(?:\s*=\s*(?:[^\s"'=<>`]+|'[^']*'|"[^"]*"))?)*\s*\/?>|<\/[A-Za-z][A-Za-z0-9-]*\s*>)\s*$/;
 /** HTML block kinds 1–5, which blank lines don't end, at a line's start. */
 const HTML_OPEN = /^ {0,3}(<!--|<\?|<!\[CDATA\[|<![A-Za-z]|<(?:script|pre|style|textarea)(?=[\s>]|$))/i;
 /** A list item at the first column with something in it (an empty one can't interrupt a paragraph). */
@@ -212,11 +222,17 @@ function chunkStarts(lines: string[], min = CHUNK_LINES): number[] {
     if (startsBlock) inList = FULL_ITEM.test(line) && !/^\d/.test(line.replace(/^0*1(?=[.)])/, ""));
     // Never before an empty item ("1." alone) or, after a blank line, an ordered one not starting
     // at 1: what those are depends on what came before (after indented code, a paragraph).
-    const risky = (LIST_ITEM.test(line) && !FULL_ITEM.test(line)) || (startsBlock && /^\d{1,9}[.)]/.test(line) && !/^0*1[.)]/.test(line));
+    const risky =
+      (LIST_ITEM.test(line) && !FULL_ITEM.test(line)) ||
+      (startsBlock && /^\d{1,9}[.)]/.test(line) && !/^0*1[.)]/.test(line));
     if (i - starts[starts.length - 1]! >= min && /^\S/.test(line) && !risky) {
       const prev = lines[i - 1] ?? "";
       // After a blank line, anything; after text, only the next item of a list at the first column.
-      if (!prev.trim() || (inList && !startsBlock && FULL_ITEM.test(line) && (FULL_ITEM.test(prev) || /^\s/.test(prev)))) starts.push(i);
+      if (
+        !prev.trim() ||
+        (inList && !startsBlock && FULL_ITEM.test(line) && (FULL_ITEM.test(prev) || /^\s/.test(prev)))
+      )
+        starts.push(i);
     }
     if (f) {
       fence = f[1]!;
@@ -246,7 +262,8 @@ function chunkStarts(lines: string[], min = CHUNK_LINES): number[] {
     if (/^ {0,3}#{1,6}(\s|$)/.test(line)) {
       fresh = true;
       inList = false;
-    } else if ((/^\S/.test(line) && !FULL_ITEM.test(line)) || /^\s*(?:[<|=]|[-*_](?:\s*[-*_]){2,}\s*$)/.test(line)) inList = false;
+    } else if ((/^\S/.test(line) && !FULL_ITEM.test(line)) || /^\s*(?:[<|=]|[-*_](?:\s*[-*_]){2,}\s*$)/.test(line))
+      inList = false;
   }
   return starts;
 }
@@ -255,7 +272,15 @@ function chunkStarts(lines: string[], min = CHUNK_LINES): number[] {
  *  <textarea>) ends at the end tag of any of the four. */
 function htmlEnd(tag: string): RegExp {
   const t = tag.toLowerCase();
-  return t === "<!--" ? /-->/ : t === "<?" ? /\?>/ : t.startsWith("<![cdata[") ? /\]\]>/ : t.startsWith("<!") ? />/ : /<\/(?:script|pre|style|textarea)>/i;
+  return t === "<!--"
+    ? /-->/
+    : t === "<?"
+      ? /\?>/
+      : t.startsWith("<![cdata[")
+        ? /\]\]>/
+        : t.startsWith("<!")
+          ? />/
+          : /<\/(?:script|pre|style|textarea)>/i;
 }
 
 /**
@@ -297,9 +322,16 @@ function normalLabel(label: string): string {
 /** A copy of `nodes` with every position moved down `delta` lines (offsets aren't kept). */
 function shifted<T>(nodes: T[], delta: number): T[] {
   const copy = (n: unknown): unknown => {
-    const node = n as { position?: { start: { line: number; column: number }; end: { line: number; column: number } }; children?: unknown[] };
+    const node = n as {
+      position?: { start: { line: number; column: number }; end: { line: number; column: number } };
+      children?: unknown[];
+    };
     const out: Record<string, unknown> = { ...(node as object) };
-    if (node.position) out.position = { start: { line: node.position.start.line + delta, column: node.position.start.column }, end: { line: node.position.end.line + delta, column: node.position.end.column } };
+    if (node.position)
+      out.position = {
+        start: { line: node.position.start.line + delta, column: node.position.start.column },
+        end: { line: node.position.end.line + delta, column: node.position.end.column },
+      };
     if (node.children) out.children = node.children.map(copy);
     return out;
   };
@@ -368,7 +400,8 @@ function markLiteralQuotes(nodes: unknown[], text: string): void {
       const first = node.children[0];
       const lead = first?.type === "paragraph" ? first.children[0] : undefined;
       const at = lead?.position?.start.offset;
-      if (lead?.type === "text" && at !== undefined && text[at] === "\\") ((node.data ??= {}) as { literal?: boolean }).literal = true;
+      if (lead?.type === "text" && at !== undefined && text[at] === "\\")
+        ((node.data ??= {}) as { literal?: boolean }).literal = true;
     }
     if ("children" in node) markLiteralQuotes(node.children, text);
   }
@@ -408,7 +441,10 @@ export function parseAround(source: string, line: number): Root {
 export function noteChunks(source: string): { text: string; first: boolean }[] {
   const lines = tame(source).split("\n");
   const starts = chunkStarts(lines);
-  return starts.map((from, c) => ({ text: lines.slice(from, starts[c + 1] ?? lines.length).join("\n"), first: from === 0 }));
+  return starts.map((from, c) => ({
+    text: lines.slice(from, starts[c + 1] ?? lines.length).join("\n"),
+    first: from === 0,
+  }));
 }
 
 /** A chunk's top-level nodes, as `parseMarkdown` parses it: positions from line 1, no offsets. */
@@ -428,7 +464,11 @@ export function adoptChunks(cache: ParseCache, parsed: { text: string; children:
   }
 }
 
-export function parseMarkdown(source: string, cache?: ParseCache, opts: { whole?: boolean; chunkLines?: number } = {}): ParsedNote {
+export function parseMarkdown(
+  source: string,
+  cache?: ParseCache,
+  opts: { whole?: boolean; chunkLines?: number } = {},
+): ParsedNote {
   const tamed = tame(source);
   const lines = tamed.split("\n");
   // `whole`: one parse of the whole note; `chunkLines`: smaller chunks (tests compare both).
@@ -445,7 +485,8 @@ export function parseMarkdown(source: string, cache?: ParseCache, opts: { whole?
     const text = !stubs.length ? body : before ? `${defsText}\n\n${body}` : `${body}\n\n${defsText}\n`;
     const pre = before ? defsText.split("\n").length + 1 : 0;
     let entry = used.get(text) ?? cache?.chunks.get(text);
-    if (entry && entry.shift !== from) entry = { ...entry, children: shifted(entry.children, from - entry.shift), shift: from };
+    if (entry && entry.shift !== from)
+      entry = { ...entry, children: shifted(entry.children, from - entry.shift), shift: from };
     if (!entry) {
       const root = (from === 0 ? processor : bodyProcessor).parse(text) as Root;
       const own = to - from;
@@ -476,13 +517,27 @@ export function parseMarkdown(source: string, cache?: ParseCache, opts: { whole?
     parts.forEach((p, k) => {
       for (const n of p.children)
         visit(n, (x) => {
-          if (x.type === "definition" || x.type === "footnoteDefinition") defs.push({ label: x.label ?? x.identifier, id: x.identifier.toLowerCase(), footnote: x.type === "footnoteDefinition", part: k });
-          if (x.type === "code" || x.type === "html" || x.type === "paragraph" || x.type === "heading" || x.type === "table") return false;
+          if (x.type === "definition" || x.type === "footnoteDefinition")
+            defs.push({
+              label: x.label ?? x.identifier,
+              id: x.identifier.toLowerCase(),
+              footnote: x.type === "footnoteDefinition",
+              part: k,
+            });
+          if (
+            x.type === "code" ||
+            x.type === "html" ||
+            x.type === "paragraph" ||
+            x.type === "heading" ||
+            x.type === "table"
+          )
+            return false;
         });
     });
     // A link definition whose label starts with ^ can't be stood in for ([^x]: is a footnote's):
     // such a note is parsed whole.
-    if (defs.some((d) => !d.footnote && d.label.startsWith("^"))) return parseMarkdown(source, cache, { ...opts, whole: true });
+    if (defs.some((d) => !d.footnote && d.label.startsWith("^")))
+      return parseMarkdown(source, cache, { ...opts, whole: true });
     if (defs.length) {
       ranges.forEach(([from, to], k) => {
         const lower = lines.slice(from, to).join("\n").toLowerCase();
@@ -490,7 +545,8 @@ export function parseMarkdown(source: string, cache?: ParseCache, opts: { whole?
         const seen = new Set<string>();
         const stubs = defs.filter((d) => {
           const key = `${d.footnote}:${d.id}`;
-          if (d.part === k || own.has(key) || seen.has(key) || !lower.includes(`[${d.footnote ? "^" : ""}${d.id}]`)) return false;
+          if (d.part === k || own.has(key) || seen.has(key) || !lower.includes(`[${d.footnote ? "^" : ""}${d.id}]`))
+            return false;
           seen.add(key);
           return true;
         });
@@ -510,7 +566,14 @@ export function parseMarkdown(source: string, cache?: ParseCache, opts: { whole?
   if (cache) cache.chunks = used;
   mergeLists(children, seams, lines);
   // Obsidian's comments over blank lines (DF-D17), once the chunks are one: a comment's blocks may be several chunks'.
-  const tree: Root = { type: "root", children: blockComments(children), position: { start: { line: 1, column: 1 }, end: { line: lines.length, column: (lines[lines.length - 1]?.length ?? 0) + 1 } } };
+  const tree: Root = {
+    type: "root",
+    children: blockComments(children),
+    position: {
+      start: { line: 1, column: 1 },
+      end: { line: lines.length, column: (lines[lines.length - 1]?.length ?? 0) + 1 },
+    },
+  };
   let frontmatter: Frontmatter | null = null;
   const first = tree.children[0];
   if (first && (first.type === "yaml" || (first.type as string) === "toml")) {
@@ -542,7 +605,11 @@ export function parseMarkdown(source: string, cache?: ParseCache, opts: { whole?
 }
 
 /** Depth-first visit of every node; return false from `fn` to skip a node's children. */
-export function visit(node: Nodes, fn: (node: Nodes, parent: Nodes | null) => boolean | void, parent: Nodes | null = null): void {
+export function visit(
+  node: Nodes,
+  fn: (node: Nodes, parent: Nodes | null) => boolean | void,
+  parent: Nodes | null = null,
+): void {
   if (fn(node, parent) === false) return;
   const children = (node as { children?: Nodes[] }).children;
   if (children) for (const child of children) visit(child, fn, node);
@@ -571,20 +638,23 @@ export function anchorsOf(tree: Root): AnchorInfo[] {
   visit(tree, (node) => {
     if (node.type === "code") return false;
     if (node.type !== "html") return;
-    for (const m of node.value.matchAll(/<a\s[^>]*?\b(?:id|name)\s*=\s*["']([^"']+)["']/gi)) out.push({ id: m[1]!, line: node.position?.start.line ?? 1 });
+    for (const m of node.value.matchAll(/<a\s[^>]*?\b(?:id|name)\s*=\s*["']([^"']+)["']/gi))
+      out.push({ id: m[1]!, line: node.position?.start.line ?? 1 });
   });
   return out;
 }
 
 /** GitHub-style slug; also what `[[note#heading]]` compares against. */
 export function slugify(text: string): string {
-  return text
-    .normalize("NFC")
-    .toLowerCase()
-    .trim()
-    // GitHub's: letters, marks (a Devanagari vowel sign, the dot `İ` lowers to), numbers, `_`, `-`.
-    .replace(/[^\p{L}\p{M}\p{N}\p{Pc}\s-]/gu, "")
-    .replace(/\s/g, "-");
+  return (
+    text
+      .normalize("NFC")
+      .toLowerCase()
+      .trim()
+      // GitHub's: letters, marks (a Devanagari vowel sign, the dot `İ` lowers to), numbers, `_`, `-`.
+      .replace(/[^\p{L}\p{M}\p{N}\p{Pc}\s-]/gu, "")
+      .replace(/\s/g, "-")
+  );
 }
 
 export function headingsOf(tree: Root): HeadingInfo[] {
@@ -592,7 +662,12 @@ export function headingsOf(tree: Root): HeadingInfo[] {
   visit(tree, (node) => {
     if (node.type === "heading") {
       const id = (node.data as { id?: string } | undefined)?.id;
-      out.push({ depth: node.depth, ...headingLabel(node), line: node.position?.start.line ?? 1, ...(id ? { id } : {}) });
+      out.push({
+        depth: node.depth,
+        ...headingLabel(node),
+        line: node.position?.start.line ?? 1,
+        ...(id ? { id } : {}),
+      });
       return false;
     }
     if (node.type === "code" || node.type === "html") return false;

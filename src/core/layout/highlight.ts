@@ -33,8 +33,33 @@ import yaml from "highlight.js/lib/languages/yaml";
 import type { Role } from "../theme/theme.ts";
 
 const LANGS: Record<string, unknown> = {
-  bash, c, cpp, css, diff, dockerfile, go, ini, java, javascript, json, latex, lua, makefile, markdown,
-  php, python, ruby, rust, scss, shell, sql, swift, typescript, vim, xml, yaml,
+  bash,
+  c,
+  cpp,
+  css,
+  diff,
+  dockerfile,
+  go,
+  ini,
+  java,
+  javascript,
+  json,
+  latex,
+  lua,
+  makefile,
+  markdown,
+  php,
+  python,
+  ruby,
+  rust,
+  scss,
+  shell,
+  sql,
+  swift,
+  typescript,
+  vim,
+  xml,
+  yaml,
 };
 for (const [name, lang] of Object.entries(LANGS)) hljs.registerLanguage(name, lang as never);
 hljs.registerAliases(["sh", "zsh", "console"], { languageName: "bash" });
@@ -105,7 +130,14 @@ export function hasLanguage(lang: string): boolean {
   return !!hljs.getLanguage(lang);
 }
 
-const ENTITIES: Record<string, string> = { "&amp;": "&", "&lt;": "<", "&gt;": ">", "&quot;": '"', "&#x27;": "'", "&#39;": "'" };
+const ENTITIES: Record<string, string> = {
+  "&amp;": "&",
+  "&lt;": "<",
+  "&gt;": ">",
+  "&quot;": '"',
+  "&#x27;": "'",
+  "&#39;": "'",
+};
 
 /** Blocks highlighted, by language and text: highlighting doesn't depend on the width, so a re-wrap
  *  (a resize, a pane toggled) reuses it (plan 15.1). The oldest go first past either bound. */

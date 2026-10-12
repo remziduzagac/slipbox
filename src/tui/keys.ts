@@ -336,7 +336,12 @@ export const DEFAULT_KEYS: Record<string, string> = {
 };
 
 for (const prefix of ["ctrl+w", "leader w"]) {
-  for (const [dir, letter] of [["left", "h"], ["down", "j"], ["up", "k"], ["right", "l"]] as const) {
+  for (const [dir, letter] of [
+    ["left", "h"],
+    ["down", "j"],
+    ["up", "k"],
+    ["right", "l"],
+  ] as const) {
     DEFAULT_KEYS[`${prefix} ${letter}`] = `window.focus_${dir}`;
     DEFAULT_KEYS[`${prefix} ${dir}`] = `window.focus_${dir}`;
     DEFAULT_KEYS[`${prefix} shift+${letter}`] = `window.move_${dir}`;
@@ -435,8 +440,35 @@ export const DEFAULT_EXPLORER_KEYS: Record<string, string> = {
 };
 
 export const EXPLORER_ACTIONS = [
-  "down", "up", "open_tab", "expand", "open", "collapse", "open_split", "top", "bottom", "filter", "all_files",
-  "new_note", "new_folder", "rename", "rename_root", "move", "delete", "restore", "undo_rename", "copy", "cut", "paste", "make_root", "unmake_root", "menu", "close", "leave", "commit", "amend",
+  "down",
+  "up",
+  "open_tab",
+  "expand",
+  "open",
+  "collapse",
+  "open_split",
+  "top",
+  "bottom",
+  "filter",
+  "all_files",
+  "new_note",
+  "new_folder",
+  "rename",
+  "rename_root",
+  "move",
+  "delete",
+  "restore",
+  "undo_rename",
+  "copy",
+  "cut",
+  "paste",
+  "make_root",
+  "unmake_root",
+  "menu",
+  "close",
+  "leave",
+  "commit",
+  "amend",
 ];
 
 /** Moving about a list pane — the outline, the footnotes, Info: key → action. */
@@ -484,14 +516,20 @@ export const INFO_ACTIONS = [...PANE_ACTIONS, "copy", "edit"];
 export const INFO_ACTION_INFO: Record<string, { title: string; desc: string }> = {
   down: { title: "Move down", desc: "Selects the next row" },
   up: { title: "Move up", desc: "Selects the previous row" },
-  jump: { title: "Open", desc: "A property: its line in the frontmatter; a tag: its notes; links, backlinks, headings, footnotes: their list or view; else copies the value" },
+  jump: {
+    title: "Open",
+    desc: "A property: its line in the frontmatter; a tag: its notes; links, backlinks, headings, footnotes: their list or view; else copies the value",
+  },
   fold: { title: "Fold", desc: "Folds the section, or goes from a row to its section" },
   unfold: { title: "Unfold", desc: "Unfolds the section" },
   top: { title: "Top", desc: "Selects the first row" },
   bottom: { title: "Bottom", desc: "Selects the last row" },
   filter: { title: "Filter", desc: "Type to narrow the rows by name and value; enter opens, esc clears" },
   copy: { title: "Copy", desc: "Copies the row's value (a path whole)" },
-  edit: { title: "Edit the properties", desc: "The note's frontmatter in a floating editor (every editing key); closed or saved, written back" },
+  edit: {
+    title: "Edit the properties",
+    desc: "The note's frontmatter in a floating editor (every editing key); closed or saved, written back",
+  },
   close: { title: "Close the Info", desc: "Closes the right panel; focus returns to the note" },
   leave: { title: "Back to the note", desc: "Focuses the note; the Info stays open" },
 };
@@ -520,7 +558,10 @@ export const DEFAULT_RESIZE_KEYS: Record<string, string> = {
 export const EXPLORER_ACTION_INFO: Record<string, { title: string; desc: string }> = {
   down: { title: "Move down", desc: "Selects the next row; nothing opens" },
   up: { title: "Move up", desc: "Selects the previous row; nothing opens" },
-  open_tab: { title: "Open as a tab", desc: "Opens the note in a tab (or switches to its tab); folds or unfolds a folder" },
+  open_tab: {
+    title: "Open as a tab",
+    desc: "Opens the note in a tab (or switches to its tab); folds or unfolds a folder",
+  },
   expand: { title: "Open as a tab / unfold", desc: "Opens the note in a tab; unfolds a folder" },
   open: { title: "Open here", desc: "Replaces the current window's note with this one" },
   collapse: { title: "Fold", desc: "Folds the folder, or goes to its parent" },
@@ -528,20 +569,50 @@ export const EXPLORER_ACTION_INFO: Record<string, { title: string; desc: string 
   top: { title: "Top", desc: "Selects the first row" },
   bottom: { title: "Bottom", desc: "Selects the last row" },
   filter: { title: "Filter", desc: "Type to narrow the rows (the tree keeps its folders); enter opens, esc clears" },
-  all_files: { title: "All files", desc: "Shows every text file, or back to what files.show lists (auto: notes and data files in a notes root)" },
-  new_note: { title: "New note here", desc: "Asks for a name and makes the note in the selected folder (or beside the selected file)" },
-  new_folder: { title: "New folder here", desc: "Asks for a name and makes the folder in the selected folder (or beside the selected file)" },
-  rename: { title: "Rename", desc: "A new name for the selected note, file or folder, in its folder; every link to it fixed after a preview" },
-  rename_root: { title: "Name it", desc: "On a nested root's row: its name, as pointers name it (r renames its folder); after a preview" },
-  move: { title: "Move to…", desc: "Picks a folder for the selected note, file or folder; every link to it fixed after a preview" },
+  all_files: {
+    title: "All files",
+    desc: "Shows every text file, or back to what files.show lists (auto: notes and data files in a notes root)",
+  },
+  new_note: {
+    title: "New note here",
+    desc: "Asks for a name and makes the note in the selected folder (or beside the selected file)",
+  },
+  new_folder: {
+    title: "New folder here",
+    desc: "Asks for a name and makes the folder in the selected folder (or beside the selected file)",
+  },
+  rename: {
+    title: "Rename",
+    desc: "A new name for the selected note, file or folder, in its folder; every link to it fixed after a preview",
+  },
+  rename_root: {
+    title: "Name it",
+    desc: "On a nested root's row: its name, as pointers name it (r renames its folder); after a preview",
+  },
+  move: {
+    title: "Move to…",
+    desc: "Picks a folder for the selected note, file or folder; every link to it fixed after a preview",
+  },
   delete: { title: "Delete", desc: "Moves the selected note, file or folder to the trash (asks first; u restores)" },
   restore: { title: "Restore", desc: "Puts back what was deleted last (the trash, :trash, has the rest)" },
-  undo_rename: { title: "Undo the last rename", desc: "Takes back the last rename, move or relink here after a preview (u puts back a delete)" },
+  undo_rename: {
+    title: "Undo the last rename",
+    desc: "Takes back the last rename, move or relink here after a preview (u puts back a delete)",
+  },
   copy: { title: "Copy", desc: "Copies the selected note, file or folder: p pastes a copy in the selected folder" },
   cut: { title: "Cut", desc: "Cuts the selected note, file or folder: p moves it to the selected folder, links fixed" },
-  paste: { title: "Paste", desc: "Into the selected folder (or beside the selected file): a copy, or what was cut, moved" },
-  make_root: { title: "Give it .slipbox/", desc: "The selected folder becomes a root of its own (its .slipbox/, a name if given); links that would stop reaching across fixed after a preview" },
-  unmake_root: { title: "Make it a plain folder", desc: "The selected root's notes become this one's; links fixed after a preview, its .slipbox/ to the trash" },
+  paste: {
+    title: "Paste",
+    desc: "Into the selected folder (or beside the selected file): a copy, or what was cut, moved",
+  },
+  make_root: {
+    title: "Give it .slipbox/",
+    desc: "The selected folder becomes a root of its own (its .slipbox/, a name if given); links that would stop reaching across fixed after a preview",
+  },
+  unmake_root: {
+    title: "Make it a plain folder",
+    desc: "The selected root's notes become this one's; links fixed after a preview, its .slipbox/ to the trash",
+  },
   menu: { title: "Actions…", desc: "The selected row's menu, as its … button opens it: rename, move, delete, copy…" },
   close: { title: "Close the explorer", desc: "Closes it; focus returns to the note" },
   leave: { title: "Back to the note", desc: "Focuses the note; the explorer stays open" },
@@ -552,7 +623,11 @@ export const EXPLORER_ACTION_INFO: Record<string, { title: string; desc: string 
 export const HISTORY_ACTION_INFO: Record<string, { title: string; desc: string; actions?: string[] }> = {
   down: { title: "Move down", desc: "Selects the older place; nothing jumps" },
   up: { title: "Move up", desc: "Selects the newer place; nothing jumps" },
-  jump: { title: "Jump there", desc: "Moves the window there; the places before become back, after it forward", actions: ["open_tab", "expand", "open", "open_split"] },
+  jump: {
+    title: "Jump there",
+    desc: "Moves the window there; the places before become back, after it forward",
+    actions: ["open_tab", "expand", "open", "open_split"],
+  },
   top: { title: "Top", desc: "Selects the newest place" },
   bottom: { title: "Bottom", desc: "Selects the oldest place" },
   filter: { title: "Filter", desc: "Type to narrow the places by path; enter jumps, esc clears" },
@@ -565,16 +640,28 @@ export const GIT_ACTION_INFO: Record<string, { title: string; desc: string; acti
   down: { title: "Move down", desc: "Selects the next file or change (a section's heading is stepped over)" },
   up: { title: "Move up", desc: "Selects the one before" },
   open_tab: { title: "Open it", desc: "Opens the file at the change (a file's first)", actions: ["open_tab", "open"] },
-  expand: { title: "Its changes", desc: "Opens up a file into its changes: a staged one's against the last commit, a changed one's against what's staged" },
+  expand: {
+    title: "Its changes",
+    desc: "Opens up a file into its changes: a staged one's against the last commit, a changed one's against what's staged",
+  },
   collapse: { title: "Fold", desc: "Folds a file's changes; from a change, back to its file" },
   open_split: { title: "Stage", desc: "Stages the file, or the one change; a conflict's file, marked resolved" },
   restore: { title: "Unstage", desc: "Unstages the file, or the one change" },
-  delete: { title: "Discard", desc: "Discards what isn't staged — the file's, or the one change's — after asking; an untracked file goes to the trash" },
+  delete: {
+    title: "Discard",
+    desc: "Discards what isn't staged — the file's, or the one change's — after asking; an untracked file goes to the trash",
+  },
   all_files: { title: "Stage everything", desc: "Stages every change, untracked files too (git add -A)" },
   undo_rename: { title: "Unstage everything", desc: "Unstages every change" },
   menu: { title: "Its diff", desc: "Shows the file's diff, or the change's, in a floating window" },
-  commit: { title: "Commit", desc: "Writes the message for what's staged in a floating editor: ctrl+s commits, esc leaves it" },
-  amend: { title: "Amend", desc: "The last commit's message in the floating editor: ctrl+s amends it with what's staged" },
+  commit: {
+    title: "Commit",
+    desc: "Writes the message for what's staged in a floating editor: ctrl+s commits, esc leaves it",
+  },
+  amend: {
+    title: "Amend",
+    desc: "The last commit's message in the floating editor: ctrl+s amends it with what's staged",
+  },
   filter: { title: "Filter", desc: "Type to narrow the files by path" },
   close: { title: "Close source control", desc: "Closes it; focus returns to the note" },
   leave: { title: "Back to the note", desc: "Focuses the note; the view stays open" },
@@ -584,19 +671,30 @@ export const GIT_ACTION_INFO: Record<string, { title: string; desc: string; acti
 export const PROBLEMS_ACTION_INFO: Record<string, { title: string; desc: string; actions?: string[] }> = {
   down: { title: "Move down", desc: "Selects the next problem (This file: the note shows it, marked)" },
   up: { title: "Move up", desc: "Selects the previous problem" },
-  jump: { title: "Go there", desc: "Opens the note at the problem (a section's heading: folds or unfolds it)", actions: ["open_tab", "expand", "open", "open_split"] },
+  jump: {
+    title: "Go there",
+    desc: "Opens the note at the problem (a section's heading: folds or unfolds it)",
+    actions: ["open_tab", "expand", "open", "open_split"],
+  },
   collapse: { title: "Fold", desc: "All: folds the section, or goes from a problem to its section" },
   top: { title: "Top", desc: "Selects the first row" },
   bottom: { title: "Bottom", desc: "Selects the last row" },
   switch: { title: "Other tab", desc: "Between This file and All" },
-  filter: { title: "Filter", desc: "Type to narrow the problems (This file: by place, message or line; All: by note and link); enter goes there, esc clears" },
+  filter: {
+    title: "Filter",
+    desc: "Type to narrow the problems (This file: by place, message or line; All: by note and link); enter goes there, esc clears",
+  },
   close: { title: "Close the problems", desc: "Closes the bottom panel; focus returns to the note" },
   leave: { title: "Back to the note", desc: "Focuses the note; the problems stay open" },
 };
 
 /** Keys while a left panel's filter (`/`) has them, for help. Fixed, not from a keymap. */
 export const FILTER_KEYS_HELP: [string, string[], string][] = [
-  ["Narrow the rows", ["type"], "Filters the explorer (folders kept), the history by path, or the outline (parents kept)"],
+  [
+    "Narrow the rows",
+    ["type"],
+    "Filters the explorer (folders kept), the history by path, or the outline (parents kept)",
+  ],
   ["Move", ["down", "up", "ctrl+n", "ctrl+p"], "Moves through the matches"],
   ["Open or jump", ["enter"], "Opens the note as a tab, or jumps to the place or heading; the filter clears"],
   ["Clear the filter", ["esc"], "Clears it; the whole tree or history comes back"],
@@ -614,7 +712,10 @@ export const OUTLINE_ACTION_INFO: Record<string, { title: string; desc: string }
   filter: { title: "Filter", desc: "Type to narrow the headings (their parents kept); enter jumps, esc clears" },
   close: { title: "Close the outline", desc: "Closes it; focus returns to the note" },
   leave: { title: "Back to the note", desc: "Focuses the note; the outline stays open" },
-  rename: { title: "Rename the heading", desc: "Every link to it fixed wherever it's reached, after a preview (a note's headings)" },
+  rename: {
+    title: "Rename the heading",
+    desc: "Every link to it fixed wherever it's reached, after a preview (a note's headings)",
+  },
 };
 
 /** The footnotes view takes the outline's keymap (3.17); what its actions do there, for help. */
@@ -627,10 +728,16 @@ export const FOOTNOTE_ACTION_INFO: Record<string, { title: string; desc: string 
   top: { title: "Top", desc: "Selects the first footnote" },
   bottom: { title: "Bottom", desc: "Selects the last row" },
   filter: { title: "Filter", desc: "Type to narrow the footnotes by label and text; enter jumps, esc clears" },
-  add: { title: "Add a footnote", desc: "Asks its text: [^N] after the word the cursor is on in the note, [^N]: text at its end" },
+  add: {
+    title: "Add a footnote",
+    desc: "Asks its text: [^N] after the word the cursor is on in the note, [^N]: text at its end",
+  },
   edit: { title: "Edit its text", desc: "Asks the selected footnote's new text; its definition becomes one line" },
   delete: { title: "Delete it", desc: "The selected footnote's references and definition, after asking" },
-  rename: { title: "Rename its label", desc: "A new label for the selected footnote, in its references and its definition" },
+  rename: {
+    title: "Rename its label",
+    desc: "A new label for the selected footnote, in its references and its definition",
+  },
   close: { title: "Close the footnotes", desc: "Closes the right panel; focus returns to the note" },
   leave: { title: "Back to the note", desc: "Focuses the note; the footnotes stay open" },
 };
@@ -658,7 +765,8 @@ export const DEFAULT_GROUPS: Record<string, string> = {
   "leader c": "code: rename, actions, format — the language server's",
   "leader n": "note: new, rename, move, delete, copy, cut, source, the lens, save, edit elsewhere, reload, info",
   "leader d": "folder: new, rename, move, delete, copy, cut, paste — the explorer's selected one, or this note's",
-  "leader v": "folders: go into one, its copies, name it, .slipbox/ in or out, the trash, restore, reindex, info, reload config",
+  "leader v":
+    "folders: go into one, its copies, name it, .slipbox/ in or out, the trash, restore, reindex, info, reload config",
   "leader q": "session: quit",
   y: "copy: selection, path, reference, link",
   "ctrl+w": "window: split, focus, move, resize",
@@ -808,7 +916,16 @@ export function keyChar(key: string): string | null {
   if ([...key].length === 1) return key;
   const m = /^shift\+(.)$/.exec(key);
   if (!m) return null;
-  const SHIFTED: Record<string, string> = { "9": "(", "0": ")", "[": "{", "]": "}", ",": "<", ".": ">", "'": '"', "`": "~" };
+  const SHIFTED: Record<string, string> = {
+    "9": "(",
+    "0": ")",
+    "[": "{",
+    "]": "}",
+    ",": "<",
+    ".": ">",
+    "'": '"',
+    "`": "~",
+  };
   return SHIFTED[m[1]!] ?? m[1]!.toUpperCase();
 }
 

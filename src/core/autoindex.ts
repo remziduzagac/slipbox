@@ -71,7 +71,8 @@ export class AutoIndex {
     if (this.idle) return false;
     const end = performance.now() + budgetMs;
     const p = this.progress;
-    if (!p.passStarted || p.passFinished) Object.assign(p, fresh(this.root), { queue: [this.root], passStarted: new Date(this.now()).toISOString() });
+    if (!p.passStarted || p.passFinished)
+      Object.assign(p, fresh(this.root), { queue: [this.root], passStarted: new Date(this.now()).toISOString() });
     try {
       while (performance.now() < end) {
         // A vault's index, built a slice at a time; done, the vaults nested in it are next.
@@ -124,7 +125,13 @@ export class AutoIndex {
       const loc = rootAt(root);
       // Listed after those opened, until it's opened itself; its name in the lookup (21.6), as found.
       // By its key (its real path's): reached by another path, it's the root already listed.
-      if (!readRoots().some((v) => v.kind === "vault" && v.key === loc.key)) recordRoot({ kind: "vault", path: root, found: true, ...(loc.worktree ? { worktree: knownWorktree(loc.worktree) } : {}) });
+      if (!readRoots().some((v) => v.kind === "vault" && v.key === loc.key))
+        recordRoot({
+          kind: "vault",
+          path: root,
+          found: true,
+          ...(loc.worktree ? { worktree: knownWorktree(loc.worktree) } : {}),
+        });
       recordFolder(root, { found: true });
       return new Graph(loc, loadConfig({ ...configFilesFor(loc) }).config).build(true, "lazy");
     } catch {
@@ -151,15 +158,37 @@ export function activityFile(): string {
 }
 
 /** The background auto-index of the home folder (20.9), as far as it's got: off, a pass done, or folders left. */
-export function backgroundStatus(config: Pick<Config, "index">): { on: boolean; found: number; indexed: number; left: number; finished: string | null; started: string | null } {
-  const p = readJson<{ queue?: string[]; current?: string | null; found?: number; indexed?: number; passFinished?: string | null; passStarted?: string | null } | null>(autoIndexFile(), null);
-  return { on: config.index.background, found: p?.found ?? 0, indexed: p?.indexed ?? 0, left: (p?.queue?.length ?? 0) + (p?.current ? 1 : 0), finished: p?.passFinished ?? null, started: p?.passStarted ?? null };
+export function backgroundStatus(config: Pick<Config, "index">): {
+  on: boolean;
+  found: number;
+  indexed: number;
+  left: number;
+  finished: string | null;
+  started: string | null;
+} {
+  const p = readJson<{
+    queue?: string[];
+    current?: string | null;
+    found?: number;
+    indexed?: number;
+    passFinished?: string | null;
+    passStarted?: string | null;
+  } | null>(autoIndexFile(), null);
+  return {
+    on: config.index.background,
+    found: p?.found ?? 0,
+    indexed: p?.indexed ?? 0,
+    left: (p?.queue?.length ?? 0) + (p?.current ? 1 : 0),
+    finished: p?.passFinished ?? null,
+    started: p?.passStarted ?? null,
+  };
 }
 
 /** Where the background auto-index is, in words (`info`, `space v i`). */
 export function describeBackground(b: ReturnType<typeof backgroundStatus>): string {
   if (!b.on) return "background index off ([index] background)";
   if (!b.started) return "background index not started yet";
-  if (b.finished) return `background index: pass done ${b.finished.slice(0, 16).replace("T", " ")} — ${b.found} root${b.found === 1 ? "" : "s"} found`;
+  if (b.finished)
+    return `background index: pass done ${b.finished.slice(0, 16).replace("T", " ")} — ${b.found} root${b.found === 1 ? "" : "s"} found`;
   return `background index: ${b.found} root${b.found === 1 ? "" : "s"} found so far, ${b.left} folder${b.left === 1 ? "" : "s"} left`;
 }
