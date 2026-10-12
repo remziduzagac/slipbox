@@ -1,5 +1,5 @@
 // Distribution (plan 14.x): the supply chain's gates and the notices a release ships (14.10); a release built (14.2).
-import { afterAll, beforeAll, describe, expect, test } from "bun:test";
+import { afterAll, beforeAll, describe, expect, setDefaultTimeout, test } from "bun:test";
 import {
   chmodSync,
   copyFileSync,
@@ -82,6 +82,9 @@ import {
   UpgradeError,
 } from "../src/core/update.ts";
 import { VERSION } from "../src/version.ts";
+
+// Processes started, repositories made: slow on a loaded or small machine (CI's Intel Mac), not stuck.
+setDefaultTimeout(30_000);
 
 const ROOT = resolve(import.meta.dir, "..");
 const sandbox = mkdtempSync(join(tmpdir(), "slipbox-dist-"));

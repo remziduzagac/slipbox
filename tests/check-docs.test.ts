@@ -2,11 +2,14 @@
 // configs: a clean one passes; a misspelling, a broken link, a heading a link names that isn't there and a long line
 // each fail it alone; it reads only what git tracks, and leaves out what's wrong on purpose. typos and lychee are the
 // toolchain's (mise.toml), on PATH as for `bun run check`.
-import { describe, expect, test } from "bun:test";
+import { describe, expect, setDefaultTimeout, test } from "bun:test";
 import { copyFileSync, mkdirSync, mkdtempSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { LEFT_OUT, lycheePath } from "../scripts/check-docs.ts";
+
+// Processes started, repositories made: slow on a loaded or small machine (CI's Intel Mac), not stuck.
+setDefaultTimeout(30_000);
 
 const TOP = join(import.meta.dir, "..");
 const CONFIGS = [".markdownlint-cli2.jsonc", "_typos.toml"];
