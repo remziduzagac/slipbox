@@ -31,7 +31,8 @@ jobs:
     timeout-minutes: 10
     permissions:
       contents: read # the checkout: the script and the expected rulesets and settings
-      actions: read # the workflows' states, their last runs on main, the `release` environment
+      actions: read # the workflows' states, their last runs on main, the `release` and `github-pages` environments
+      pages: read # the Pages site's settings: built by a workflow, at its address (GR-D14)
       pull-requests: read # the open pull requests
       security-events: read # the code scanning alerts, counted
       vulnerability-alerts: read # the Dependabot alerts, counted (actionlint doesn't know it yet: actionlint.yaml)
@@ -69,7 +70,8 @@ jobs:
           persist-credentials: false
       - uses: jdx/mise-action@2d8d4cafcbd33be2ea37d2b6f5ad595363d1f1ca # v5.1.1
         with:
-          install_args: lychee
+          # By its name in mise.toml and mise.lock: the short name has no locked download.
+          install_args: aqua:lycheeverse/lychee
           cache: false
           minimum_release_age: 7d
       - id: check

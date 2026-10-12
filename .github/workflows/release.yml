@@ -1,10 +1,10 @@
 name: release
 
-# Plan 14.2: a tag v<version> pushed builds each platform on a runner of its own — where its OpenTUI package is
-# installed, and a Mac's binary is signed by Bun on a Mac — after the tests pass there (CI ran the whole check on the
-# commit). Each pack's SBOM is attested to it; then the packs are summed and attested, and the release drafted with
-# its notes from CHANGELOG.md: nothing is published until a person publishes the draft. Every action pinned by its
-# commit, a week old when taken (14.10); values reach the shell through env, never inline.
+# Plan 14.2: a tag v<version> pushed is built by build.yml — the build a preview shares (GR-D13): each platform on a
+# runner of its own after the tests pass there, each pack's SBOM attested to it, the packs summed and attested — then
+# the release drafted with its notes from CHANGELOG.md: nothing is published until a person publishes the draft.
+# Publishing it runs homebrew.yml and pages.yml. Every action pinned by its commit, a week old when taken (14.10);
+# values reach the shell through env, never inline.
 on:
   push:
     tags: ["v*"]
@@ -14,135 +14,54 @@ on:
 permissions: {}
 
 jobs:
-  build:
-    strategy:
-      fail-fast: true
-      matrix:
-        include:
-          - target: linux-x64
-            runner: ubuntu-24.04
-          - target: linux-arm64
-            runner: ubuntu-24.04-arm
-          - target: darwin-arm64
-            runner: macos-15
-          - target: darwin-x64
-            runner: macos-15-intel
-          # musl, for Alpine (14.5): built on the same runners, their OpenTUI package installed there too.
-          - target: linux-x64-musl
-            runner: ubuntu-24.04
-          - target: linux-arm64-musl
-            runner: ubuntu-24.04-arm
-    runs-on: ${{ matrix.runner }}
-    timeout-minutes: 45
+  # Before anything is built: the tag is the version's (package.json's and src/version.ts's), and the changelog has
+  # its section, which the draft's notes are made from.
+  plan:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
     permissions:
       contents: read # to check out the code
+    outputs:
+      version: ${{ steps.version.outputs.version }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-      # GR-D11: Bun alone, at mise.toml's version; mise its newest release a week old, checked against its signed
-      # sums. Nothing cached.
       - uses: jdx/mise-action@2d8d4cafcbd33be2ea37d2b6f5ad595363d1f1ca # v5.1.1
         with:
           install_args: bun
           cache: false
           minimum_release_age: 7d
-      - run: bun install --frozen-lockfile
-      # The changelog has this version's section, before anything is built: the draft's notes are made from it.
-      - name: notes
+      - id: version
         env:
-          TAG: ${{ github.ref_name }}
-        run: bun scripts/release.ts notes --tag "$TAG" >/dev/null
-      # Once per runner kind: a musl build's runner is a glibc build's too, which ran them.
-      - name: tests
-        if: ${{ !endsWith(matrix.target, '-musl') }}
-        run: bun run test
-      # The pack, and its SBOM beside it, from the walk its notices come from.
-      - name: build
-        env:
-          TARGET: ${{ matrix.target }}
-          REPO: ${{ github.repository }}
-          TAG: ${{ github.ref_name }}
-        run: bun scripts/release.ts build --target "$TARGET" --repo "$REPO" --tag "$TAG"
-      # Bun signs a Mac's binary ad hoc; one whose signature is broken isn't run at all (14.13).
-      - name: signature
-        if: startsWith(matrix.target, 'darwin-')
-        env:
-          TARGET: ${{ matrix.target }}
           TAG: ${{ github.ref_name }}
         run: |
-          mkdir -p unpacked
-          tar -xzf "dist/release/slipbox-${TAG#v}-$TARGET.tar.gz" -C unpacked
-          codesign --verify --verbose "unpacked/slipbox-${TAG#v}-$TARGET/slipbox"
-      # A musl build run where musl is the C library, in Alpine (14.5), pinned by digest: its version, an index and a
-      # search (its SQLite), and the TUI started in a terminal and still running after five seconds (its OpenTUI
-      # library loaded).
-      - name: alpine
-        if: endsWith(matrix.target, '-musl')
-        env:
-          TARGET: ${{ matrix.target }}
-          TAG: ${{ github.ref_name }}
-        run: |
-          mkdir -p unpacked
-          tar -xzf "dist/release/slipbox-${TAG#v}-$TARGET.tar.gz" -C unpacked
-          docker run --rm -v "$PWD/unpacked/slipbox-${TAG#v}-$TARGET:/w:ro" -e VERSION="${TAG#v}" \
-            alpine:3.24.2@sha256:294b683cb724975bec92580e1e685676bd4b50bda910ddb8c51d4cabeaec77e6 sh -euc '
-              test "$(/w/slipbox --version)" = "slipbox $VERSION"
-              mkdir -p /tmp/n/.slipbox
-              printf "# A\n\nThe zorvexian word.\n" >/tmp/n/a.md
-              cd /tmp/n
-              /w/slipbox index --refresh >/dev/null
-              /w/slipbox search zorvexian --json | grep -q "\"a.md\""
-              apk add --no-cache util-linux >/dev/null
-              script -qfc "/w/slipbox /tmp/n" /tmp/tui.log >/dev/null 2>&1 &
-              pid=$!
-              sleep 5
-              if kill -0 "$pid" 2>/dev/null; then kill "$pid"; else cat /tmp/tui.log; exit 1; fi
-            '
-      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
-        with:
-          name: pack-${{ matrix.target }}
-          path: |
-            dist/release/*.tar.gz
-            dist/release/*.cdx.json
-          if-no-files-found: error
+          bun --no-install scripts/release.ts notes --tag "$TAG" >/dev/null
+          echo "version=${TAG#v}" >>"$GITHUB_OUTPUT"
 
-  # Each pack's SBOM attested to it, apart from the build — whose tests run every dependency's code — so that no job
-  # holding the signing token runs any: `gh attestation verify <pack> --repo <owner/name> --predicate-type
-  # https://cyclonedx.org/bom`.
-  sbom:
-    needs: build
-    strategy:
-      matrix:
-        target: [linux-x64, linux-arm64, darwin-arm64, darwin-x64, linux-x64-musl, linux-arm64-musl]
-    runs-on: ubuntu-24.04
-    timeout-minutes: 10
+  # A reusable workflow named `./`, read from this run's own commit, never from the workspace. zizmor asks for GitHub's
+  # newer `$/`, which means the same; actionlint 1.7.12 doesn't read it yet (rhysd/actionlint#711), and checks this
+  # call's inputs and permissions against build.yml only in this form.
+  build:
+    needs: plan
+    uses: ./.github/workflows/build.yml # zizmor: ignore[self-repository]
+    # The most build.yml's jobs may have; each takes only its own share.
     permissions:
-      id-token: write # to sign the attestation, with a certificate for this workflow (Sigstore)
-      attestations: write # to store it with the repository's attestations
-    steps:
-      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
-        with:
-          name: pack-${{ matrix.target }}
-          path: dist/release
-      - name: version
-        id: version
-        env:
-          TAG: ${{ github.ref_name }}
-        run: echo "version=${TAG#v}" >>"$GITHUB_OUTPUT"
-      - uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6 # v4.2.2
-        with:
-          subject-path: dist/release/slipbox-${{ steps.version.outputs.version }}-${{ matrix.target }}.tar.gz
-          sbom-path: dist/release/slipbox-${{ steps.version.outputs.version }}-${{ matrix.target }}.cdx.json
+      contents: read # to check out the code
+      id-token: write # to sign the attestations, with a certificate for the workflow (Sigstore)
+      attestations: write # to store them with the repository's attestations
+    with:
+      tag: ${{ github.ref_name }}
+      version: ${{ needs.plan.outputs.version }}
 
+  # The draft, from build.yml's `release` artifact: the packs, their SBOMs, `SHA256SUMS`, `install.sh` and
+  # `slipbox.rb`, each attested already. Nothing built runs here.
   publish:
-    needs: [build, sbom]
+    needs: build
     runs-on: ubuntu-24.04
     timeout-minutes: 15
     permissions:
       contents: write # to draft the release and upload its assets
-      id-token: write # to sign the attestation, with a certificate for this workflow (Sigstore)
-      attestations: write # to store it with the repository's attestations
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -154,27 +73,16 @@ jobs:
           minimum_release_age: 7d
       - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
         with:
-          pattern: pack-*
+          name: release
           path: dist/release
-          merge-multiple: true
-      - name: finish
-        env:
-          REPO: ${{ github.repository }}
-          TAG: ${{ github.ref_name }}
-        run: bun scripts/release.ts finish --repo "$REPO" --tag "$TAG"
       - name: notes
         env:
           TAG: ${{ github.ref_name }}
-        run: bun scripts/release.ts notes --tag "$TAG" >"$RUNNER_TEMP/notes.md"
-      # Who built each asset — the packs, their SBOMs, the sums, the installer, the formula — from which commit, by
-      # which workflow: `gh attestation verify <file> --repo <owner/name>`.
-      - uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6 # v4.2.2
-        with:
-          subject-path: dist/release/*
+        run: bun --no-install scripts/release.ts notes --tag "$TAG" >"$RUNNER_TEMP/notes.md"
       - name: draft
         env:
           GH_TOKEN: ${{ github.token }}
           TAG: ${{ github.ref_name }}
         run: |
-          gh release create "$TAG" --draft --verify-tag --title "slipbox ${TAG#v}" \
+          gh release create "$TAG" --repo "$GITHUB_REPOSITORY" --draft --verify-tag --title "slipbox ${TAG#v}" \
             --notes-file "$RUNNER_TEMP/notes.md" dist/release/*

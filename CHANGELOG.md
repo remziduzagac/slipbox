@@ -25,7 +25,10 @@ The first release.
 - Exports to Word, PDF, a web page, an e-book or Markdown.
 - A command line for agents and scripts on the same files: every change the TUI makes, one JSON object per call with
   `--json`, stable exit codes, and a skill that teaches it to agents.
-- Builds for macOS and Linux (x64 and ARM, and Alpine's musl), an installer that checks each download, a Homebrew
-  formula, `slipbox upgrade` and `slipbox uninstall`; Windows through WSL.
+- Builds for macOS and Linux (x64 and ARM, and Alpine's musl), installed by one line
+  (`curl -fsSL https://remziduzagac.github.io/slipbox/install.sh | sh`) that checks each download; previews between
+  releases, which `slipbox channel` makes an install follow; a Homebrew formula, `slipbox upgrade` and
+  `slipbox uninstall`; Windows through WSL.
+- `slipbox skill`: the skill for agents carried by the binary, printed or installed where an agent reads skills.
 
 [Unreleased]: https://github.com/remziduzagac/slipbox/commits/main

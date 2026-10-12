@@ -15,13 +15,25 @@ through the CLI.
   [Installing slipbox](docs/guides/install.md) has it on your machine. [The documentation](docs/README.md) has the
   rest.
 - **Status:** every phase on the [roadmap](blueprint/roadmap.md) is built: reading, editing, search, roots and named
-  folders, git and merge review, language servers and linters, export. No release is published yet. slipbox is before
-  1.0: [Versions](docs/manual/versions.md) says what may still change.
+  folders, git and merge review, language servers and linters, export. No stable release is published yet; previews
+  are. slipbox is before 1.0: [Versions](docs/manual/versions.md) says what may still change.
 - **Help:** the documentation, and its [troubleshooting chapter](docs/manual/troubleshooting.md) for the usual
   problems. A bug goes in an [issue](https://github.com/remziduzagac/slipbox/issues/new/choose); a security problem
   goes privately, as [SECURITY.md](SECURITY.md) says, never in an issue.
 - **Maintained by** Remzi Duzagac ([@remziduzagac](https://github.com/remziduzagac)), alone and in their own time:
   [MAINTAINING.md](MAINTAINING.md). Anyone may open an issue; pull requests come from collaborators.
+
+## Install
+
+On macOS and Linux (Windows through WSL), one line, and nothing else needed:
+
+```bash
+curl -fsSL https://remziduzagac.github.io/slipbox/install.sh | sh                   # the latest release
+curl -fsSL https://remziduzagac.github.io/slipbox/install.sh | sh -s -- --preview   # the newest preview
+```
+
+Until the first stable release is out, the second is the one that installs: a preview, a build of what the release
+will hold. `slipbox upgrade` keeps it current, and `slipbox channel` says, and changes, whether it follows previews.
 
 ## Try it
 
@@ -34,9 +46,9 @@ bun src/main.ts render examples/vault/equipment/telescope-comparison.md  # rende
 scripts/install-local.sh                            # a `slipbox` launcher in ~/.local/bin
 ```
 
-[Installing slipbox](docs/guides/install.md) has the rest: releases (a binary per platform, for macOS and Linux, with
-no Bun needed) and Homebrew once they are published, Windows through WSL, upgrading and removing it. Then
-[Getting started](docs/guides/getting-started.md) walks through a first session.
+[Installing slipbox](docs/guides/install.md) has the rest: the installer and previews, Homebrew once there's a tap,
+Windows through WSL, upgrading and removing it. Then [Getting started](docs/guides/getting-started.md) walks through a
+first session.
 
 A file's **root** is the nearest folder above it holding `.git`, `.slipbox/`, `.obsidian/` or `.zk/`: what `/` in a
 link starts from, where a wikilink's names are looked for, whose link convention is followed. A folder without one

@@ -1,8 +1,9 @@
 # Installing slipbox
 
-slipbox runs in a terminal, on macOS and Linux, and on Windows through WSL. Today you install it from its source code.
-Release builds, with an installer and a Homebrew formula, are ready to be made, but none has been published yet. This
-guide covers both ways, then checking that it works, upgrading and removing it.
+slipbox runs in a terminal, on macOS and Linux, and on Windows through WSL. One line installs a release build, which
+needs nothing else on your machine; you can also run it from its source code. No stable release has been published
+yet: until the first one is, a preview is the release build to install. This guide covers both ways, then checking
+that it works, upgrading and removing it.
 
 ## What you need
 
@@ -22,10 +23,76 @@ That is all slipbox needs. These make it better:
 - **A clipboard tool, on Linux.** slipbox copies through the terminal first. For copies to always arrive, and for
   pasting, install `wl-clipboard` (Wayland), or `xclip` or `xsel` (X11). macOS and WSL need nothing.
 
+## Installing a release
+
+One line installs the latest release:
+
+```bash
+curl -fsSL https://remziduzagac.github.io/slipbox/install.sh | sh
+```
+
+No stable release has been published yet, and until one is, that line says so. Install the newest preview instead,
+a build of what the first release will hold ([Previews](#previews), below):
+
+```bash
+curl -fsSL https://remziduzagac.github.io/slipbox/install.sh | sh -s -- --preview
+```
+
+The script at that address installs nothing itself: it looks up which release to install, downloads that release's
+own installer, checks it against the checksum published for it, and runs it. The installer picks the build for your
+machine (macOS or Linux, Intel or ARM, and Alpine's own), checks the download against the checksum written into it,
+and installs slipbox into `~/.local/share/slipbox`, with a `slipbox` link in `~/.local/bin`. Nothing runs as root and
+nothing else is touched. If `~/.local/bin` isn't on your PATH, it says how to add it. `SLIPBOX_BIN_DIR` puts the link
+in another folder.
+
+On Alpine without curl, busybox's wget does the same, `--preview` too:
+
+```bash
+wget -qO- https://remziduzagac.github.io/slipbox/install.sh | sh
+wget -qO- https://remziduzagac.github.io/slipbox/install.sh | sh -s -- --preview
+```
+
+The installer stops, before downloading anything, if there's already a `slipbox` in `~/.local/bin` that it didn't put
+there, such as the source launcher. Remove that one first (`rm ~/.local/bin/slipbox`) and run it again.
+
+**Homebrew**, on macOS and Linux: from slipbox's own tap, once it has one, with `brew install` and the tap's name.
+Homebrew installs releases only, never previews.
+
+Releases aren't signed. On a Mac, Gatekeeper stops a slipbox downloaded with a web browser; the installer's isn't
+stopped.
+
+**Checking a download.** Beside its builds, a release lists `SHA256SUMS`, their checksums, and for each build an
+SBOM, `slipbox-<version>-<platform>.cdx.json`: the software built into it, with their licences, in CycloneDX's
+format. A preview carries the same. Every file is attested: GitHub's CLI shows that a file was built by slipbox's own
+workflows, from which commit, with `gh attestation verify <file> --repo remziduzagac/slipbox`; a release is built from
+its tag, a preview from the `test` branch. Adding `--predicate-type https://cyclonedx.org/bom` checks a build against
+its SBOM.
+
+A release carries the skill for agents: `slipbox skill --install ~/.claude/skills` installs it for Claude Code, and
+[Working with agents](agents.md#give-the-agent-the-skill) shows the rest.
+
+### Previews
+
+Between releases, slipbox publishes previews: builds of what the next release will hold, made and checked as a release
+is, for those who want it before it's released. What a preview adds may still change before the release, and it may
+have bugs the release won't. [Versions](../manual/versions.md#previews) says how they're numbered.
+
+`--preview` installs the newest preview, and the install then follows previews: `slipbox upgrade` installs the newest
+of the latest release and the newest preview, and the daily update check tells you of either. An install follows one
+of two channels, `stable` (the releases) or `preview`. `slipbox channel` says which, and changes it:
+
+```bash
+slipbox channel                  # stable, or preview
+slipbox channel set preview      # follow previews from now on
+slipbox channel set stable       # back to releases only
+```
+
+Back on `stable`, a preview you have stays until a release newer than it is out: that release is the next upgrade.
+
 ## Installing from source
 
-This is how slipbox is installed today. You need Bun and a copy of slipbox's source: it has no public repository
-yet, so this is the copy you were given, a clone or an unpacked archive. In its folder:
+You need Bun and a copy of slipbox's source: clone its repository,
+`git clone https://github.com/remziduzagac/slipbox`, or unpack an archive of it. In its folder:
 
 ```bash
 bun install
@@ -57,40 +124,6 @@ A few things to know about the launcher:
 - Use it or a release, not both: with a release installed, remove it first (`slipbox uninstall --yes`, below). Run
   over a release's `slipbox` link, the launcher replaces the link with its own script, and says so. The release itself
   is left untouched, and `slipbox uninstall --yes` still removes it, keeping the launcher.
-
-## Installing a release
-
-No release has been published yet; until one is, install from source. When there is one, it comes two ways.
-
-**The installer.** Each release carries an installer, `install.sh`, which you run straight from the release's
-downloads (its address will be on the release's page):
-
-```bash
-curl -fsSL <the address of the release's install.sh> | sh
-```
-
-It picks the build for your machine (macOS or Linux, Intel or ARM, and Alpine's own), checks the download against the
-checksum written into the installer, and installs slipbox into `~/.local/share/slipbox`, with a `slipbox` link in
-`~/.local/bin`. Nothing runs as root and nothing else is touched. If `~/.local/bin` isn't on your PATH, it says how to
-add it. On Alpine without curl, `wget -qO- <the same address> | sh` does the same. `SLIPBOX_BIN_DIR` puts the link in
-another folder.
-
-The installer stops, before downloading anything, if there's already a `slipbox` in `~/.local/bin` that it didn't put
-there, such as the source launcher. Remove that one first (`rm ~/.local/bin/slipbox`) and run it again.
-
-**Homebrew**, on macOS and Linux: from slipbox's own tap, once it has one, with `brew install` and the tap's name.
-
-Releases aren't signed. On a Mac, Gatekeeper stops a slipbox downloaded with a web browser; the installer's isn't
-stopped.
-
-**Checking a download.** Beside its builds, a release lists `SHA256SUMS`, their checksums, and for each build an
-SBOM, `slipbox-<version>-<platform>.cdx.json`: the software built into it, with their licences, in CycloneDX's
-format. Every file is attested: GitHub's CLI shows that a file was built by slipbox's release workflow, from the
-release's tag, with `gh attestation verify <file> --repo <the repository>`; adding
-`--predicate-type https://cyclonedx.org/bom` checks a build against its SBOM.
-
-A release carries the skill for agents: `slipbox skill --install ~/.claude/skills` installs it for Claude Code, and
-[Working with agents](agents.md#give-the-agent-the-skill) shows the rest.
 
 ## Windows, through WSL
 
@@ -130,8 +163,8 @@ whatever the folder holds, so there's nothing more to do. slipbox run from sourc
 `slipbox upgrade` tells you to update the folder instead.
 
 **Installed with the installer:** `slipbox upgrade` installs the latest release, checked as the installer checks it;
-`slipbox upgrade --check` only says whether there is one. The version you had stays beside the new one, so you can go
-back to it.
+`slipbox upgrade --check` only says whether there is one. On previews, it installs the newest of the latest release
+and the newest preview ([Previews](#previews)). The version you had stays beside the new one, so you can go back to it.
 
 If you installed the skill for agents with `slipbox skill --install`, run that again after an upgrade, so the skill
 matches the new version.
@@ -142,9 +175,9 @@ What a new version changed is in slipbox's [changelog](../../CHANGELOG.md). Read
 something: before 1.0, one to a new minor version, such as `0.2.1` to `0.3.0`. [Versions](../manual/versions.md)
 says what each kind of release may change.
 
-A release build asks once a day, while you use it, whether a newer release is out, and says so in a message. It sends
-nothing about you, and `update.check = false` in your settings, or `DO_NOT_TRACK` set in your environment, turns it
-off. The [privacy chapter](../manual/privacy.md) has what slipbox sends, and when.
+A release build asks once a day, while you use it, whether a newer release is out (on previews, a newer preview too),
+and says so in a message. It sends nothing about you, and `update.check = false` in your settings, or `DO_NOT_TRACK`
+set in your environment, turns it off. The [privacy chapter](../manual/privacy.md) has what slipbox sends, and when.
 
 ## Uninstalling
 
@@ -155,12 +188,13 @@ slipbox uninstall          # lists what would go
 slipbox uninstall --yes    # removes it
 ```
 
-It removes what the installer put in place: the `slipbox` link in `~/.local/bin` and the versions in
-`~/.local/share/slipbox`. slipbox's own four folders (your settings, its state with the scratch and the trash, its data
-with your words, and its cache) stay, listed as kept; `--purge` removes these too.
-[Where slipbox keeps things](../manual/configuration.md#where-slipbox-keeps-things) says where they are and what each
-holds. Your notes are never touched, nor the `.slipbox/` folders in them. The skill for agents, if you installed it
-with `slipbox skill --install`, stays too: remove its folder yourself (`rm -r ~/.claude/skills/slipbox`).
+It removes what the installer put in place: the `slipbox` link in `~/.local/bin`, and the versions in
+`~/.local/share/slipbox` with which one is in use and which channel it follows. slipbox's own four folders (your
+settings, its state with the scratch and the trash, its data with your words, and its cache) stay, listed as kept;
+`--purge` removes these too. [Where slipbox keeps things](../manual/configuration.md#where-slipbox-keeps-things) says
+where they are and what each holds. Your notes are never touched, nor the `.slipbox/` folders in them. The skill for
+agents, if you installed it with `slipbox skill --install`, stays too: remove its folder yourself
+(`rm -r ~/.claude/skills/slipbox`).
 
 **Installed with Homebrew:** `slipbox uninstall --purge --yes` first, if you want slipbox's folders gone, then `brew
 uninstall slipbox`.

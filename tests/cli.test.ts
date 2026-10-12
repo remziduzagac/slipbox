@@ -1657,6 +1657,28 @@ describe("the vault and the tool", () => {
     );
   });
 
+  test("channel from source (GR-D15): it has none — refused (exit 5), saying how it updates; a channel not one, a usage error", () => {
+    const r = slipbox(["channel", "--json"]);
+    expect(r.code).toBe(5);
+    expect(r.json.error?.message).toBe(
+      "this slipbox runs from source (or was built by hand): it has no channel — update its checkout",
+    );
+    expect(slipbox(["channel", "set", "preview"])).toMatchObject({
+      code: 5,
+      err: "slipbox: this slipbox runs from source (or was built by hand): it has no channel — update its checkout\n",
+    });
+    expect(slipbox(["channel", "set", "beta"])).toMatchObject({
+      code: 2,
+      err: "slipbox: a channel is stable or preview, not beta\n",
+    });
+    expect(slipbox(["channel", "set"])).toMatchObject({ code: 2, err: "slipbox: a channel is stable or preview\n" });
+    expect(slipbox(["channel", "list"])).toMatchObject({
+      code: 2,
+      err: "slipbox: slipbox channel says the channel; slipbox channel set stable|preview sets it (not list)\n",
+    });
+    expect(slipbox(["channel", "set", "preview", "now"]).code).toBe(2);
+  });
+
   // The skill for agents, built in (GR-D10): what a release install has, matching the binary.
   const SKILL_FILE = join(import.meta.dir, "..", "skills", "slipbox", "SKILL.md");
   test("skill prints the skill as this slipbox has it; --install writes it, says where, and again is a no-op", () => {
