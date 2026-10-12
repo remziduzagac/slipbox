@@ -1,6 +1,6 @@
 {
   "name": "slipbox",
-  "version": "0.3.0",
+  "version": "0.2.1",
   "description": "Terminal markdown notes: Obsidian's model without the GUI, agent-drivable from the CLI.",
   "type": "module",
   "private": true,

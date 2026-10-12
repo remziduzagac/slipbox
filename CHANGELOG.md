@@ -6,9 +6,9 @@ The format is [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.1.0/); wh
 
 ## [Unreleased]
 
-## [0.2.0] - 2026-10-12
+## [0.2.1] - 2026-10-12
 
-The first release.
+The first release. 0.2.0 was tagged but never released: its build failed a test on the Intel Mac, fixed since.
 
 ### Added
 
@@ -33,5 +33,5 @@ The first release.
   `slipbox uninstall`; Windows through WSL.
 - `slipbox skill`: the skill for agents carried by the binary, printed or installed where an agent reads skills.
 
-[Unreleased]: https://github.com/remziduzagac/slipbox/compare/v0.2.0...HEAD
-[0.2.0]: https://github.com/remziduzagac/slipbox/releases/tag/v0.2.0
+[Unreleased]: https://github.com/remziduzagac/slipbox/compare/v0.2.1...HEAD
+[0.2.1]: https://github.com/remziduzagac/slipbox/releases/tag/v0.2.1
