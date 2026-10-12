@@ -85,7 +85,9 @@ export const GIT_SCENARIOS: Scenario[] = [
       await s.until(
         () =>
           ["..", "Downloads", "hobbies", "notes", "work"].every((n) =>
-            explorer(s).some((r) => new RegExp(`\\s${n.replace(/\./g, "\\.")}\\s*$`).test(r.trimEnd())),
+            explorer(s).some((r) =>
+              new RegExp(`\\s${n.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\s*$`).test(r.trimEnd()),
+            ),
           ),
         3000,
         "$HOME's own folders listed",

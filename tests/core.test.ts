@@ -1875,6 +1875,21 @@ describe("SVG drawn (12.15), and what slipbox draws as pictures (12.16, 12.17)",
       expect(looksLikeSvg(head)).toBe(true);
     for (const head of ["<html><svg>", "\x89PNG\r\n", "<svgx>"]) expect(looksLikeSvg(head)).toBe(false);
   });
+  test("an SVG told in one pass over its head, whatever a file's comments: `<!--` and `--><!--` over and over returns", () => {
+    // The heads a picture is told by (512 bytes; an export's Markdown, 2048): tried every way to split into comments,
+    // they take time doubling with each `--><!--` (Bun's engine gives up after about a second and says no; V8 never).
+    for (const bytes of [512, 2048]) {
+      const comments = `<!--${"--><!--".repeat(Math.floor((bytes - 4) / 7))}`;
+      expect(comments.length).toBeLessThanOrEqual(bytes);
+      expect(looksLikeSvg(comments)).toBe(false); // the last comment never closed
+      expect(looksLikeSvg(`${comments}<svg>`)).toBe(false); // inside it
+      expect(looksLikeSvg(`${comments}--> <svg>`)).toBe(true);
+    }
+    // A comment ends at its first `-->` past its `<!--` (`<!-->` is no end): what follows it is what's looked at.
+    expect(looksLikeSvg("<!-- a --> b --> <svg>")).toBe(false);
+    expect(looksLikeSvg("<!--><svg>")).toBe(false);
+    expect(looksLikeSvg("﻿<?xml version='1.0'?><!----><!-- x -->\n<!doctype SVG><svg\n>")).toBe(true);
+  });
   test("rasterised: its own size, drawn as a PNG the width asked; what isn't an SVG, null", async () => {
     const r = (await loadRasterizer())!;
     const svg =

@@ -92,9 +92,23 @@ export function loadRasterizer(): Promise<Rasterizer | null> {
   return loadLazy(RESVG, load);
 }
 
-/** Whether a file's text is an SVG's: what a picture fetched without its name (12.12) is told by. */
+/**
+ * Whether a file's text is an SVG's: what a picture fetched without its name (12.12) is told by — `<svg`, after an XML
+ * declaration, comments and a doctype. The comments are skipped one by one, each to its first `-->`: a pattern
+ * repeating `<!--…-->` would try every way to split a head of `<!--` and many `--><!--`, which never ends.
+ */
 export function looksLikeSvg(head: string): boolean {
-  return /^\s*(?:<\?xml[^>]*>\s*)?(?:<!--[\s\S]*?-->\s*)*(?:<!DOCTYPE svg[^>]*>\s*)?<svg[\s>]/i.test(head);
+  let s = head.trimStart();
+  const xml = /^<\?xml[^>]*>/i.exec(s);
+  if (xml) s = s.slice(xml[0].length).trimStart();
+  while (s.startsWith("<!--")) {
+    const end = s.indexOf("-->", 4);
+    if (end < 0) return false;
+    s = s.slice(end + 3).trimStart();
+  }
+  const doctype = /^<!DOCTYPE svg[^>]*>/i.exec(s);
+  if (doctype) s = s.slice(doctype[0].length).trimStart();
+  return /^<svg[\s>]/i.test(s);
 }
 
 /** Where a parenthesised expression starting at `open` (its `(`) ends; -1 where it doesn't. */

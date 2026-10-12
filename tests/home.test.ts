@@ -261,7 +261,7 @@ describe("the reference set is complete (examples/home)", () => {
 
   test("a command's case calls it by its title as the palette shows it", () => {
     const stale = COMMAND_SPECS.flatMap((c) => {
-      const m = new RegExp(`^- \`${c.id.replace(/\./g, "\\.")}\` — (.+?) — \``, "m").exec(cases);
+      const m = new RegExp(`^- \`${c.id.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\` — (.+?) — \``, "m").exec(cases);
       return m && m[1] !== c.title ? [`${c.id}: "${m[1]}", now "${c.title}"`] : [];
     });
     expect(stale).toEqual([]);
