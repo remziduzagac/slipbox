@@ -57,6 +57,15 @@ export const ACCEPTED: Accepted[] = [
       "zero or past 2^31) or a custom or non-secure generator.",
     until: "2027-01-12",
   },
+  {
+    package: "braces@3.0.3",
+    advisories: ["GHSA-vfj7-8cjw-p6xm"],
+    why:
+      "markdownlint-cli2's (through globby, fast-glob and micromatch), a dev tool the docs check runs over the " +
+      "repository's own Markdown: the patterns it expands are ours, and it isn't in the binary. No fixed version " +
+      "is published (3.0.3 is the latest, 2026-10-13).",
+    until: "2027-01-12",
+  },
 ];
 
 /** The `--ignore` arguments for the advisories accepted on `today`; those past their date are `expired`. */
