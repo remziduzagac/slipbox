@@ -303,6 +303,17 @@ describe("the signals, from GitHub's answers", () => {
     ]);
     expect(dependabot).toEqual({ open: 3, bySeverity: { critical: 1, high: 2 }, critical: [3] });
     expect(JSON.stringify(dependabot)).not.toContain("left-pad");
+    // The example projects' manifests: fixtures, counted apart, never a critical of slipbox's.
+    const withFixtures = dependabotCounts([
+      { number: 1, security_advisory: { severity: "high" }, dependency: { manifest_path: "bun.lock" } },
+      {
+        number: 7,
+        security_advisory: { severity: "critical" },
+        dependency: { manifest_path: "examples/a/package-lock.json" },
+      },
+      { number: 8, security_advisory: { severity: "low" }, dependency: { manifest_path: "examples/b/Cargo.lock" } },
+    ]);
+    expect(withFixtures).toEqual({ open: 1, bySeverity: { high: 1 }, critical: [], fixtures: 2 });
     const scanning = codeScanningCounts([
       { number: 9, rule: { severity: "error", security_severity_level: "critical" } },
       { number: 8, rule: { severity: "warning", security_severity_level: null } },
@@ -513,6 +524,14 @@ describe("the issue's body", () => {
     expect(body).toContain(`- The signals weren't collected (the collect job: failure): [the run](${RUN}).`);
     expect(body).toContain(`- The links weren't checked (the links job: failure): [the run](${RUN}).`);
     expect(body).toContain("## Accepted deviations\n\n- Nothing.\n");
+  });
+
+  test("the example projects' Dependabot alerts: a line of their own, to dismiss; never counted as slipbox's", () => {
+    const dependabot = { ok: true as const, value: { open: 0, bySeverity: {}, critical: [], fixtures: 45 } };
+    const { body } = render(report({ signals: signals({ dependabot }) }), null);
+    expect(body).toContain("Dependabot alerts in the example projects (`examples/`): 45 open");
+    expect(body).toContain("dismiss them as not used");
+    expect(body).not.toContain("Dependabot alerts: 0 open");
   });
 
   test("long lists capped, the rest linked", () => {
