@@ -1,10 +1,12 @@
 // The installer's layout (plans 14.7, 14.8): in slipbox's data folder, `versions/<version>/` — each one installed,
 // the binary and its notices — and `current`, a link to the one in use; `<bin>/slipbox`, a link to
-// `<data>/current/slipbox`; and `bin-link`, where that link is. `install.sh` lays it out, `upgrade` adds a version and
-// moves `current`, and `uninstall` takes it away — with `--purge`, everything slipbox keeps, too.
+// `<data>/current/slipbox`; `bin-link`, where that link is; and `channel`, the releases it follows (GR-D15).
+// `install.sh` lays it out, `upgrade` adds a version and moves `current`, `slipbox channel set` changes the channel,
+// and `uninstall` takes it away — with `--purge`, everything slipbox keeps, too.
 
 import { existsSync, lstatSync, readdirSync, readFileSync, readlinkSync, realpathSync, rmSync } from "node:fs";
 import { join, sep } from "node:path";
+import { atomicWrite } from "./fsutil.ts";
 import { type StoreKind, storeDir } from "./paths.ts";
 
 export type Stores = Record<StoreKind, string>;
@@ -31,6 +33,40 @@ export function howToUpgrade(by: InstalledBy, repo: string): string {
     : by === "homebrew"
       ? "brew upgrade slipbox installs it"
       : `it's at https://github.com/${repo}/releases`;
+}
+
+/** Which releases an install follows (GR-D15): `stable`, the releases; `preview`, the newest of the stable release
+ *  and the previews. The installer's install keeps it in `<data>/channel`; Homebrew's, and slipbox run from source,
+ *  have none. */
+export type Channel = "stable" | "preview";
+export const CHANNELS: readonly Channel[] = ["stable", "preview"];
+
+export function isChannel(s: string): s is Channel {
+  return (CHANNELS as readonly string[]).includes(s);
+}
+
+/** The channel an install follows, from `<data>/channel`: stable when there's none, or it says anything else. */
+export function readChannel(data: string): Channel {
+  try {
+    return readFileSync(join(data, "channel"), "utf8").trim() === "preview" ? "preview" : "stable";
+  } catch {
+    return "stable";
+  }
+}
+
+/** The channel kept, in one step: a file written beside it and renamed over it. */
+export function writeChannel(data: string, channel: Channel): void {
+  atomicWrite(join(data, "channel"), `${channel}\n`);
+}
+
+/** Why this slipbox has no channel, with how it updates instead; null when it has one, as the installer's does. */
+export function noChannel(release: { repo: string } | null, by: InstalledBy, execPath: string): string | null {
+  if (!release) return "this slipbox runs from source (or was built by hand): it has no channel — update its checkout";
+  if (by === "homebrew")
+    return "this slipbox is Homebrew's: it has no channel — brew upgrade slipbox updates it, to stable releases";
+  if (by === "other")
+    return `this slipbox (${execPath}) wasn't installed by its installer: it has no channel — releases are at https://github.com/${release.repo}/releases`;
+  return null;
 }
 
 /** slipbox's four folders, where they are here (14.9). */
@@ -122,6 +158,8 @@ export function uninstallPlan(purge: boolean, dirs: Stores = stores(), by: Insta
     remove.push({ path: join(dirs.data, "current"), what: "which version is in use" });
   if (lexists(join(dirs.data, "bin-link")))
     remove.push({ path: join(dirs.data, "bin-link"), what: "where the link is" });
+  if (lexists(join(dirs.data, "channel")))
+    remove.push({ path: join(dirs.data, "channel"), what: "which releases it follows" });
   const keep: Item[] = [];
   for (const kind of ["config", "state", "data", "cache"] as const) {
     if (!existsSync(dirs[kind])) continue;

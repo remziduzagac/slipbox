@@ -1,0 +1,74 @@
+name: pages
+
+# GR-D14: the GitHub Pages site, https://<owner>.github.io/<name>/, which installs slipbox at an address that doesn't
+# change: `install.sh`, the bootstrap (`scripts/bootstrap.ts`), and the channels it reads, `stable` and `preview`, each
+# one line, `<tag> <SHA-256 of that release's install.sh>` — the highest stable release, the newest preview; none for
+# a channel with no release (`scripts/release.ts site`). Deployed when a release is published (by a person: a release
+# CI publishes starts no workflow), by preview.yml once a preview is, when the bootstrap changes on main, and by hand.
+# Every action pinned by its commit, a week old when taken (14.10); values reach the shell through env, never inline.
+on:
+  workflow_call:
+  release:
+    types: [published]
+  push:
+    branches: [main]
+    paths:
+      - "scripts/bootstrap*"
+      - ".github/workflows/pages.yml"
+  workflow_dispatch:
+
+# No permission by default; each job grants what it needs, and says why (GR-D9). No cache is restored anywhere in it.
+permissions: {}
+
+# One deployment at a time, each finishing: the site is made from the releases as they are when it runs, so a newer
+# run waits for the one before it, rather than an older one deploying over it.
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  # The site, from main's bootstrap whichever ref started the run, and the releases as they are now. Only slipbox's
+  # own scripts run here, no dependency's: nothing is installed.
+  site:
+    # Never in a fork: its Pages isn't this one's.
+    if: ${{ !github.event.repository.fork }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      contents: read # to check out main, and list the releases
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: main
+          persist-credentials: false
+      - uses: jdx/mise-action@2d8d4cafcbd33be2ea37d2b6f5ad595363d1f1ca # v5.1.1
+        with:
+          install_args: bun
+          cache: false
+          minimum_release_age: 7d
+      - name: site
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          mkdir -p _site
+          bun --no-install scripts/bootstrap.ts "$GITHUB_REPOSITORY" _site/install.sh
+          bun --no-install scripts/release.ts site --repo "$GITHUB_REPOSITORY" --out _site
+      - uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9 # v5.0.0
+        with:
+          path: _site
+
+  # The deployment alone holds the Pages grants, in the `github-pages` environment, which only the refs it names
+  # reach: main, test and v* tags (.github/upkeep/settings.json).
+  deploy:
+    needs: site
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      pages: write # to deploy the site
+      id-token: write # to prove to Pages which workflow and ref the deployment comes from (OIDC)
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    steps:
+      - id: deploy
+        uses: actions/deploy-pages@368f82528645a54fb793d4d04e342629a3f51346 # v5.0.1

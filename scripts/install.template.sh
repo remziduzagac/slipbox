@@ -1,23 +1,28 @@
 #!/bin/sh
 # slipbox's installer (plan 14.7), made for one release by scripts/release.ts: its version, the repository it's from,
-# and each pack's SHA-256 are written in below, so a pack that isn't the one released is refused.
+# and each pack's SHA-256 are written in below, so a pack that isn't the one released is refused. The Pages site's
+# install.sh (scripts/bootstrap.template.sh) finds the release a channel names, checks this file's sum and runs it;
+# it runs on its own too:
 #
 #   curl -fsSL https://github.com/@REPO@/releases/latest/download/install.sh | sh
 #
 # (On Alpine, without curl: wget -qO- …/install.sh | sh.)
 #
-# It installs into slipbox's data folder — ${XDG_DATA_HOME:-~/.local/share}/slipbox: versions/<version>/, and current,
-# a link to the version in use — and links ${SLIPBOX_BIN_DIR:-~/.local/bin}/slipbox to it. Nothing runs as root, and
-# nothing outside those two places is touched. `slipbox upgrade` installs a later one the same way; `slipbox
-# uninstall` lists every path before it removes anything.
+# It installs into slipbox's data folder — ${XDG_DATA_HOME:-~/.local/share}/slipbox: versions/<version>/, current, a
+# link to the version in use, and channel, the releases it follows (SLIPBOX_CHANNEL: stable, the default, or preview)
+# — and links ${SLIPBOX_BIN_DIR:-~/.local/bin}/slipbox to it. Nothing runs as root, and nothing outside those two
+# places is touched. `slipbox upgrade` installs a later one the same way; `slipbox uninstall` lists every path before
+# it removes anything.
 #
 # SLIPBOX_RELEASES_URL fetches the packs from elsewhere laid out as GitHub's releases are (a mirror, a test's folder):
-# <base>/download/v<version>/<pack>. Their sums are still these.
+# <base>/download/<tag>/<pack>. Their sums are still these.
 
 set -eu
 
 VERSION="@VERSION@"
 REPO="@REPO@"
+# The release's tag, where its packs are: v<version>, or a preview's preview-<time>-<hash>.
+TAG="@TAG@"
 
 # Each pack's SHA-256, by platform.
 sum_of() {
@@ -92,6 +97,11 @@ absolute_or() {
 
 main() {
   [ -n "${HOME:-}" ] || fail "HOME isn't set"
+  channel=${SLIPBOX_CHANNEL:-stable}
+  case "$channel" in
+    stable | preview) ;;
+    *) fail "SLIPBOX_CHANNEL is stable or preview, not $channel" ;;
+  esac
   plat=$(target)
   want=$(sum_of "$plat") || fail "this release ($VERSION) has no $plat build"
   data="$(absolute_or "${XDG_DATA_HOME:-}" "$HOME/.local/share")/slipbox"
@@ -113,7 +123,7 @@ main() {
   trap 'cleanup; exit 143' TERM
 
   say "downloading $name"
-  fetch "$base/v$VERSION/$name.tar.gz" "$tmp/pack.tar.gz" || fail "couldn't download $base/v$VERSION/$name.tar.gz"
+  fetch "$base/$TAG/$name.tar.gz" "$tmp/pack.tar.gz" || fail "couldn't download $base/$TAG/$name.tar.gz"
   got=$(sha256 "$tmp/pack.tar.gz")
   [ "$got" = "$want" ] || fail "the download's SHA-256 is $got, not the release's $want: nothing installed"
   tar -xzf "$tmp/pack.tar.gz" -C "$tmp"
@@ -130,8 +140,14 @@ main() {
   [ -L "$link" ] || ln -s "$data/current/slipbox" "$link"
   # Where the link is, for `slipbox uninstall`.
   printf '%s\n' "$link" >"$data/bin-link"
+  # The releases it follows, for `slipbox upgrade` and `slipbox channel`: written beside, then renamed over.
+  printf '%s\n' "$channel" >"$data/channel.new"
+  mv -f "$data/channel.new" "$data/channel"
 
   say "$VERSION installed: $link -> $data/versions/$VERSION"
+  if [ "$channel" = preview ]; then
+    say "it follows previews: slipbox upgrade installs the newest (slipbox channel set stable: releases only)"
+  fi
   case ":${PATH:-}:" in
     *":$bin_dir:"*) ;;
     *) say "$bin_dir isn't on your PATH: add it in your shell's profile, e.g. export PATH=\"$bin_dir:\$PATH\"" ;;

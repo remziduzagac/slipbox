@@ -31,15 +31,17 @@ slipbox 0.3.0 is out (this is 0.2.0): slipbox upgrade installs it
 - **Only the full-screen slipbox asks**, while it runs; never the command line, which agents and scripts call. A
   slipbox run from its source code never asks.
 - **What is sent:** one request for a small public file, the list of the latest release's files and their checksums,
-  from where slipbox's releases are published (GitHub). The request carries nothing about you, your machine or your
-  notes; like any request, it shows that server your IP address.
+  from where slipbox's releases are published (GitHub). An install that follows previews
+  ([Previews](../guides/install.md#previews)) asks two more: which preview is the newest, from slipbox's site on
+  GitHub Pages, and that preview's list. The requests carry nothing about you, your machine or your notes; like any
+  request, each shows its server your IP address.
 - **At most once a day.** slipbox notes when it last asked before it asks (in `update.json`, in its state folder), so
   a check that failed waits a day too.
 - **To turn it off**, set `update.check = false` in your own config file, or set the environment variable
   `DO_NOT_TRACK` to anything but `0` or `false`. Only your own config counts here: slipbox ignores `update.check` in
   a folder's own settings, with a warning, so a folder you clone can't turn the check on, or off.
 - **`SLIPBOX_RELEASES_URL`** points the check, and `slipbox upgrade`, at another place laid out as the releases are, a
-  mirror of your own.
+  mirror of your own; **`SLIPBOX_CHANNELS_URL`**, at another place for the site's files naming the newest preview.
 
 ### Language servers installed from npm
 

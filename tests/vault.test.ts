@@ -9285,7 +9285,11 @@ describe("review cycle 3 (core)", () => {
       for (const rel of ["linked", "s.md", "twin.md", "pic.png", "moved"]) pending.add(rel);
       w.flush();
       await Bun.sleep(150);
-      expect([...new Set(changes.filter((c) => c.startsWith("created")))].sort()).toEqual(["created pic.png"]);
+      // The names made once the watch began: macOS's events may also tell of a file made just before it
+      // (assets/real.png), which isn't what this asks.
+      const made = new Set(["linked", "s.md", "twin.md", "pic.png", "moved", "moved/x.md"]);
+      const created = changes.filter((c) => c.startsWith("created ") && made.has(c.slice("created ".length)));
+      expect([...new Set(created)].sort()).toEqual(["created pic.png"]);
       expect(w.watchedCount).toBe(3); // the root, assets, the folder moved in — never `linked`
       // The walk agrees.
       const walked = walkVault(dir, filter);

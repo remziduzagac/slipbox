@@ -29,3 +29,13 @@ Feedback for the draft, to give the user:
 - Conventional Commits and a blueprint's IDs fit when the ID moves into the scope or the body.
 - `tests/docs.test.ts` checks that the reference covers every command, flag and key, rather than generating it: it
   meets DOC-03's intent, which the standard could say.
+
+## Previews and the installer (2026-10-12)
+
+- The user runs slipbox on their VMs and asked for a preview channel through the one way slipbox is distributed, and a
+  one-line installer like herdsman's. Answers: previews from a `test` branch (GR-D13), the installer on GitHub Pages
+  (GR-D14), `slipbox channel` (GR-D15), all as herdsman's.
+- Then, "ok lets do your suggestions": `test`'s ruleset requires the `ci` check too, so only a commit that passed it
+  becomes a preview; `stable` names the highest `v` version, not the latest published; `slipbox channel` on a
+  Homebrew or source install exits 5, saying how that one updates; `uninstall` takes the `channel` file with the
+  install's links.

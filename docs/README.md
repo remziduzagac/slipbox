@@ -5,7 +5,8 @@ use its command line; both work on the same plain files, so neither ever sees a 
 
 ## Start here
 
-1. [Installing slipbox](guides/install.md): what you need, installing, upgrading and removing it.
+1. [Installing slipbox](guides/install.md): what you need, installing (a release, a preview, or from source),
+   upgrading and removing it.
 2. [Getting started](guides/getting-started.md): a first session in a folder of your own notes.
 
 ## Guides
@@ -43,6 +44,6 @@ For looking things up:
 And:
 
 - [Privacy](manual/privacy.md): what slipbox sends, what it runs, what it keeps.
-- [Versions](manual/versions.md): what a version number promises, how something is retired, and where to read what
-  changed.
+- [Versions](manual/versions.md): what a version number promises, what previews are, how something is retired, and
+  where to read what changed.
 - [Troubleshooting](manual/troubleshooting.md): `slipbox doctor`, and the usual problems with their fixes.

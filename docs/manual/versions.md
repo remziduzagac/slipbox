@@ -2,7 +2,7 @@
 
 A slipbox version says what changed since the one before, and which changes can break a script, an agent or your
 settings. This chapter covers what slipbox promises to keep, what each part of a version number means before 1.0 and
-after it, how something is retired, and where to read what changed before you upgrade.
+after it, what previews are, how something is retired, and where to read what changed before you upgrade.
 
 ## Which version you have
 
@@ -10,7 +10,8 @@ after it, how something is retired, and where to read what changed before you up
 whether this is a release or slipbox run from its source.
 
 A version is three numbers, major, minor and patch: `0.2.0` is major 0, minor 2, patch 0. Each release has a version of
-its own, never used again, and a release once published is never changed.
+its own, never used again, and a release once published is never changed. A preview's version says more
+([Previews](#previews)).
 
 ## What a version promises
 
@@ -61,6 +62,24 @@ commands' `data` changes only with a new `schema` ([What stays stable](cli.md#wh
 `--json`'s `schema` counts apart from slipbox's version. It starts at 1, and goes up when a stable command's output
 changes: before 1.0 in a minor release, from 1.0 only in a major one. A script that checks it learns that the shape it
 reads has changed, whatever the version says.
+
+## Previews
+
+Between releases, slipbox publishes previews: builds of what the next release will hold, made and checked as a release
+is, for those who want it before it's released. A preview keeps none of the promises above: what it adds may still
+change, or go, before the release, and the changelog speaks of releases only.
+
+- **Who gets them:** only an install that asks. The installer installs the newest preview with `--preview`, and that
+  install follows previews from then on; `slipbox channel set preview` makes an install follow them, and `slipbox
+  channel set stable` goes back to releases only ([Previews](../guides/install.md#previews)). Homebrew installs
+  releases only.
+- **How they're numbered:** the version of the release it leads to, then `-preview.`, when it was made (the date and
+  time in UTC, to the minute) and the commit it was made from. `0.3.0-preview.202610121530.g1a2b3c4` is a preview of
+  0.3.0, made on 12 October 2026 at 15:30 UTC from commit `1a2b3c4`.
+- **How they sort:** a preview comes after the previews before it, and before the release of its version. Following
+  previews, `slipbox upgrade` moves from one preview to the next, and to the release once it's out.
+- **Where they are:** on the releases page, marked as pre-releases, each tagged `preview-<time>-<commit>`
+  (`preview-202610121530-1a2b3c4`).
 
 ## How something is retired
 
