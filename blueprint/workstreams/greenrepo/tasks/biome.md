@@ -27,7 +27,7 @@ Biome formats and lints the code (GR-D7).
   double quotes, trailing commas, the recommended rules with eleven turned off, each with its reason (the code's
   idioms: `!` under `noUncheckedIndexedAccess`, `while ((m = re.exec(s)))`, terminal escapes in regexes, placeholders
   like `${INPUT}`, `return done()` from a void function, a comma in a short arrow, the screen tests' runs of spaces).
-  The code formatted in one commit (0729c62 before the history's rewrite; `.git-blame-ignore-revs`), the full suite
+  The code formatted in one commit (de86bcf, in `.git-blame-ignore-revs`), the full suite
   passing after it (1798). Then the lint's real findings fixed: unused imports, parameters and a dead function, safe
   optional chains (one reverted where a server is `""`), two `let`s typed, and four exceptions kept with a
   `biome-ignore` and its reason. `bun run lint` (`biome ci --error-on-warnings`) is in the check.

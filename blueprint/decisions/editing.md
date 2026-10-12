@@ -395,7 +395,7 @@ already.
 **Decision:** A write to a note that is a symlink replaces its target, atomically and keeping its permissions; a
 target outside the root is refused, and nothing is made outside the root, through a symlink or otherwise. As built:
 design/tui.md § Writing notes. Recorded on 2026-10-11: `7.5` asked what a symlink out means, and the answer was built
-with the first write (2d64540) without a decision.
+with the first write (a4bac42) without a decision.
 
 **Why:** Ours, on recording it: replacing the link with a file would break whatever the link was for, and following
 it out of the root would write where D142 says slipbox never writes.

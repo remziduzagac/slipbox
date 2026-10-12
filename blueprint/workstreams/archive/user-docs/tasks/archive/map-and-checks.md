@@ -55,7 +55,7 @@ whole.
   (two were wrong: `ctrl+e` is not source mode, `ctrl+k` is; `alt+left` is a word back, not back, `ctrl+o` is), and
   the way into `docs/`. CLAUDE.md and the blueprint README's convention say where the user docs are now.
 - 2026-10-11: `bun run check`: 1748 pass, 1 fail, the timing test "the background index parses a big note on other
-  threads" (load average 12, ten agents and the user's others); it fails the same at d5c5dee, before this workstream,
+  threads" (load average 12, ten agents and the user's others); it fails the same at 8de5949, before this workstream,
   under the same load (*ran*).
 - 2026-10-11: the chapters and guides read together (claude-review): each shared subject given one owner and linked
   from the rest (the which-key popup, selecting and copying, the storage folders, the links' convention, indentation

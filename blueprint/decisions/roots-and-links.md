@@ -884,4 +884,4 @@ cap (1 MB): `readRegular` in `core/fsutil.ts`. As built: design/roots.md § The 
 decision record held it under `0.11`, which D40 left out.
 
 **Why:** A cloned or unpacked folder can hold a symlink to `/dev/zero`, or a FIFO, where a note or a config should
-be; a read of it would hang or never end. A hostile folder gets a warning, never a hang (f2c2e3c, 2026-09-29).
+be; a read of it would hang or never end. A hostile folder gets a warning, never a hang (6eb3b31, 2026-09-29).

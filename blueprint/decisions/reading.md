@@ -609,7 +609,7 @@ flagging missing or malformed frontmatter catches real errors (`SKILL.md` requir
 from the glyph set; branches (objects, lists that aren't plain) with their rows under them, list items numbered and
 opened alike, small plain maps and scalar lists inline, records as tables inside the guides. Branch rows are the
 outline and the breadcrumb; a `$ref`'s JSON pointer goes to the row it names. TOML and INI keep their sections as
-headings. As built: design/rendering.md § Data files. Recorded on 2026-10-11 from the commit that made it (261bb4b).
+headings. As built: design/rendering.md § Data files. Recorded on 2026-10-11 from the commit that made it (7176c0d).
 
 **Why:** Drawn as headings, a nested object had no end: a parent's later keys read as the child's (features under
 database, top-level ports under staging), and below three levels everything folded into one-line blobs.
@@ -623,7 +623,7 @@ first heading with the slug stands in, and the absolute line, clamped, only when
 (`core/position.ts`; design/tui.md § Positions). Recorded on 2026-10-11 from the code.
 
 **Why:** Not recorded; the fallback came with the anchoring of repeated headings in the review of 2026-09-29
-(ee3ff77).
+(49c957f).
 
 ## D214: What search covers, and its widest scope (6.1, 20.16, 2026-10-11)
 
@@ -642,4 +642,4 @@ slipbox's own; the one width function (D88) asks for it. As built: design/render
 on 2026-10-11: the design held it, dated, with no decision.
 
 **Why:** slipbox counted widths its own way and OpenTUI the terminal's, and the two parted inside one frame
-(`हिन्दी`: 2 columns to slipbox, 3 to OpenTUI in herdr), shifting rows and borders (e1add82).
+(`हिन्दी`: 2 columns to slipbox, 3 to OpenTUI in herdr), shifting rows and borders (f9e3ebb).

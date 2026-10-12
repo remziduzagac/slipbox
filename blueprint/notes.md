@@ -208,7 +208,7 @@ dates. Each says what was asked, decided, built and found, and cites the decisio
 - The design's deferred list sorted: a note's history, frontmatter rules and document types given IDs (`22.x`).
 - **Built:** `21.x`; the rest of phase 5 (`16.18`–`16.23`), and jumps to type definitions and implementations
   (`19.13`).
-- **Found:** the `21.x` terminal scenarios run in full, 111 in six panes. The 17 that failed were fixed (`d0eff65`):
+- **Found:** the `21.x` terminal scenarios run in full, 111 in six panes. The 17 that failed were fixed (`eefe767`):
   one was slipbox's own (a named folder moved by hand had its state carried, but its move was lost at the start, never
   said nor its relink offered); the rest were scenarios still in the old words.
 - **Left:** Scout (`6.10`), until trailscout has an SDK, and phase 6+.
