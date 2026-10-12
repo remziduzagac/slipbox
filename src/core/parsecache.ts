@@ -90,11 +90,18 @@ export class ParseCache {
   }
 }
 
-let shared: ParseCache | null | undefined;
+let shared: { file: string; cache: ParseCache | null } | undefined;
 
-/** This process's parse cache, opened on first use (`SLIPBOX_PARSE_CACHE=off`: none). */
+/**
+ * This process's parse cache, opened on first use (`SLIPBOX_PARSE_CACHE=off`: none) — in the cache folder as it is now:
+ * moved (`XDG_CACHE_HOME`, as each test file sets it), the old one is let go, and may be gone.
+ */
 export function sharedParseCache(): ParseCache | null {
   if (process.env.SLIPBOX_PARSE_CACHE === "off") return null;
-  if (shared === undefined) shared = ParseCache.open();
-  return shared;
+  const file = join(cacheHome(), "parsed.db");
+  if (shared?.file !== file) {
+    shared?.cache?.close();
+    shared = { file, cache: ParseCache.open(file) };
+  }
+  return shared.cache;
 }

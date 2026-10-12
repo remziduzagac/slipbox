@@ -1039,10 +1039,14 @@ describe("a release (14.2)", () => {
         expect(install(home, {}, { fake: { uname: uname("Linux", other[0]!), ldd: glibc } }).err).toContain(
           `this release (${VERSION}) has no ${other[1]} build`,
         );
-        // A Mac's terminal under Rosetta says x64: the arm64 build is the one it gets.
+        // A Mac's terminal under Rosetta says x64: the arm64 build is the one it gets — installed, on an arm64 Mac,
+        // whose release has it.
         const mac = { uname: uname("Darwin", "x86_64"), sysctl: "echo 1" };
-        expect(install(home, {}, { fake: mac }).err).toContain("has no darwin-arm64 build");
-        expect(install(home, {}, { fake: { ...mac, sysctl: "echo 0" } }).err).toContain("has no darwin-x64 build");
+        if (host === "darwin-arm64")
+          expect(install(mkdtempSync(join(sandbox, "home-")), {}, { fake: mac }).code).toBe(0);
+        else expect(install(home, {}, { fake: mac }).err).toContain("has no darwin-arm64 build");
+        if (host !== "darwin-x64")
+          expect(install(home, {}, { fake: { ...mac, sysctl: "echo 0" } }).err).toContain("has no darwin-x64 build");
         expect(existsSync(join(home, ".local"))).toBe(false);
       },
       60_000,

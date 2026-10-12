@@ -1,6 +1,6 @@
 // The fixture vault (0.5) against the walk (0.11), discovery (1.1), the graph and the CLI (9.x).
 
-import { describe, expect, test } from "bun:test";
+import { describe, expect, setDefaultTimeout, test } from "bun:test";
 import {
   chmodSync,
   cpSync,
@@ -38,6 +38,9 @@ import {
 import { cacheDir, vaultKey } from "../src/core/paths.ts";
 import { renderMarkdown } from "../src/core/layout/render.ts";
 import { glyphsFor } from "../src/core/glyphs.ts";
+
+// Parses, walks and processes started: slow on a loaded or small machine (CI's macOS runner), not stuck.
+setDefaultTimeout(30_000);
 
 const VAULT = join(import.meta.dir, "fixtures", "vault");
 
@@ -5770,6 +5773,26 @@ describe("the parse cache by content (20.11)", () => {
     }
     expect(sharedParseCache()).not.toBeNull();
   });
+
+  test("the shared cache is the cache folder's as it is now: moved, the old one let go (it may be gone)", async () => {
+    const { ParseCache, sharedParseCache } = await import("../src/core/parsecache.ts");
+    const was = process.env.XDG_CACHE_HOME;
+    const base = mkdtempSync(join(tmpdir(), "slipbox-pcmove-"));
+    const key = ParseCache.key(`moved-${basename(base)}`, "md", 1);
+    try {
+      process.env.XDG_CACHE_HOME = join(base, "one");
+      sharedParseCache()!.put(key, { title: "T", links: [], headings: [], tags: [], tasks: [] } as never);
+      expect(sharedParseCache()!.get(key)).not.toBeNull();
+      rmSync(join(base, "one"), { recursive: true, force: true }); // as a test file's sandbox goes when it ends
+      process.env.XDG_CACHE_HOME = join(base, "two");
+      expect(sharedParseCache()!.get(key)).toBeNull(); // the folder's own cache, not the one that went
+      sharedParseCache()!.put(key, { title: "T", links: [], headings: [], tags: [], tasks: [] } as never);
+      expect(sharedParseCache()!.get(key)).not.toBeNull();
+    } finally {
+      if (was === undefined) delete process.env.XDG_CACHE_HOME;
+      else process.env.XDG_CACHE_HOME = was;
+    }
+  });
 });
 
 describe("search by vault (20.16)", () => {
@@ -6186,9 +6209,12 @@ describe("renames refused before anything is written (cli.md, Renames)", () => {
       "index.md": "[s](solo.md)\n",
     });
     const g = openGraph(locateVault({ root: dir }), DEFAULT_CONFIG, false);
-    expect(() => planNoteRename(g, "note.md", "Note")).toThrow("Note.md exists; not overwriting it");
-    expect(readFileSync(join(dir, "note.md"), "utf8")).toBe("# lower\n");
-    expect(readFileSync(join(dir, "Note.md"), "utf8")).toBe("# UPPER\n");
+    // Two files whose names differ only in case: a filesystem that folds case (macOS's) can't hold both.
+    if (readdirSync(dir).includes("note.md") && readdirSync(dir).includes("Note.md")) {
+      expect(() => planNoteRename(g, "note.md", "Note")).toThrow("Note.md exists; not overwriting it");
+      expect(readFileSync(join(dir, "note.md"), "utf8")).toBe("# lower\n");
+      expect(readFileSync(join(dir, "Note.md"), "utf8")).toBe("# UPPER\n");
+    }
     applyPlan(g, planNoteRename(g, "solo.md", "Solo"));
     expect(readdirSync(dir).filter((f) => f.toLowerCase() === "solo.md")).toEqual(["Solo.md"]);
     expect(readFileSync(join(dir, "index.md"), "utf8")).toBe("[s](Solo.md)\n");

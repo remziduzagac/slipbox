@@ -4,7 +4,7 @@
 // candidate list, and disambiguation is exact-case → same directory → deepest shared directory →
 // shortest path. Still tied means ambiguous, and the caller shows a picker.
 
-import { existsSync, statSync } from "node:fs";
+import { existsSync, readdirSync, statSync } from "node:fs";
 import { homedir } from "node:os";
 import { dirname, isAbsolute, join, posix, relative, resolve } from "node:path";
 
@@ -245,12 +245,39 @@ function landIn(rel: string, root: string, index: LinkIndex): Omit<MdLinkTarget,
     // The note's own spelling, not the link's: a path that exists, and the key backlinks use.
     const canon = index.canonical(rel);
     if (canon) return { kind: "note", target: canon };
-    return { kind: fileExists(root, rel) ? "file" : "missing", target: rel };
+    return fileExists(root, rel) ? { kind: "file", target: onDisk(root, rel) } : { kind: "missing", target: rel };
   }
-  if (fileExists(root, rel)) return { kind: "file", target: rel };
+  if (fileExists(root, rel)) return { kind: "file", target: onDisk(root, rel) };
   const note = index.canonical(rel);
   if (note) return { kind: "note", target: note };
-  return { kind: dirExists(root, rel) ? "folder" : "missing", target: rel };
+  return dirExists(root, rel) ? { kind: "folder", target: onDisk(root, rel) } : { kind: "missing", target: rel };
+}
+
+/** Whether names are told apart by case alone: not on macOS's filesystem or Windows', as git assumes too. */
+const CASE_FOLDS = process.platform === "darwin" || process.platform === "win32";
+
+/**
+ * A path that exists, spelled as its folders list it. Where the filesystem folds case, `Note.md` opens
+ * `note.md`, and a link's spelling would name the file differently from the walk (`ls`, backlinks);
+ * elsewhere a path that exists is spelled so already.
+ */
+export function onDisk(root: string, rel: string, folds = CASE_FOLDS): string {
+  if (!folds) return rel;
+  let dir = root;
+  const out: string[] = [];
+  for (const part of rel.split("/")) {
+    let names: string[];
+    try {
+      names = readdirSync(dir);
+    } catch {
+      return rel;
+    }
+    const key = part.normalize("NFC").toLowerCase();
+    const name = names.includes(part) ? part : (names.find((n) => n.normalize("NFC").toLowerCase() === key) ?? part);
+    out.push(name);
+    dir = join(dir, name);
+  }
+  return out.join("/");
 }
 
 /**
@@ -383,9 +410,9 @@ export function formatPathLink(form: PathForm, toAbs: string, linkingAbs: string
 /** Resolve a non-note wikilink target (`![[diagram.png]]`): relative to the note, then the root. */
 export function resolveAttachment(target: string, fromRel: string, root: string): string | null {
   const rel1 = posix.normalize(posix.join(posix.dirname(fromRel), target));
-  if (!rel1.startsWith("..") && fileExists(root, rel1)) return rel1;
+  if (!rel1.startsWith("..") && fileExists(root, rel1)) return onDisk(root, rel1);
   const rel2 = posix.normalize(target.replace(/^\/+/, ""));
-  if (!rel2.startsWith("..") && fileExists(root, rel2)) return rel2;
+  if (!rel2.startsWith("..") && fileExists(root, rel2)) return onDisk(root, rel2);
   return null;
 }
 

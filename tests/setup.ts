@@ -2,7 +2,7 @@
 // CLI's too, as it inherits the environment — goes in one folder of the run's own, removed when the
 // run ends. Left behind, they filled /tmp run by run until its inodes ran out (2026-10-02).
 import { afterAll } from "bun:test";
-import { mkdtempSync, readdirSync, rmSync } from "node:fs";
+import { mkdtempSync, readdirSync, realpathSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
@@ -26,7 +26,9 @@ for (const name of readdirSync(base)) {
     rmSync(join(base, name), { recursive: true, force: true });
 }
 
-const run = mkdtempSync(join(base, `slipbox-run-${process.pid}-`));
+// Its real path: on macOS the temporary folder is reached through a link (/var/folders is /private/var/folders), and
+// slipbox names a file by its real path, as the tests expect it to.
+const run = realpathSync(mkdtempSync(join(base, `slipbox-run-${process.pid}-`)));
 process.env.TMPDIR = run;
 const remove = () => rmSync(run, { recursive: true, force: true });
 // Preloaded, `afterAll` is the whole run's: after the last file (`bun test` fires no `exit` here).

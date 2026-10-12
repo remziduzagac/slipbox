@@ -21,6 +21,7 @@ import {
   LinkIndex,
   type MdLinkTarget,
   normKey,
+  onDisk,
   pathLink,
   pickCandidate,
   type Resolution,
@@ -469,6 +470,10 @@ export class Graph {
    */
   reachFile(rel: string, opts: { keep?: boolean } = {}): boolean {
     if (this.known(rel)) return true;
+    // Where the filesystem folds case (macOS's), `Note.md` opens `note.md`: the file is reached by the name its folder
+    // lists, never a second time by a link's spelling.
+    const real = onDisk(this.root, rel);
+    if (real !== rel) return this.reachFile(real, opts);
     const f = this.reachable(rel);
     if (!f) return false;
     this.reached.add(rel);

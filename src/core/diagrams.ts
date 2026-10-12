@@ -40,9 +40,29 @@ export function mermaidSvg(source: string, colors: DrawingColors, family: string
   const m = mermaid();
   if (!m || !family) return null;
   try {
-    return flattenVars(m.renderMermaidSVG(source, { ...colors, font: family, transparent: true }));
+    return flattenVars(withoutWindow(() => m.renderMermaidSVG(source, { ...colors, font: family, transparent: true })));
   } catch {
     return null;
+  }
+}
+
+/**
+ * `fn` run as the diagram's layout library needs. It sets itself up on its first use, and takes a `window` for a
+ * browser's: OpenTUI's renderer makes one (`{}`, for its animation frames), on which it breaks — so none is there while
+ * it runs. And setting up, it swaps `setTimeout` for its own until it's done: should it throw, the real one is put back
+ * here, or every timer after would wait for ever.
+ */
+export function withoutWindow<T>(fn: () => T): T {
+  const g = globalThis as Record<string, unknown>;
+  const timeout = globalThis.setTimeout;
+  const had = "window" in g;
+  const window = g.window;
+  if (had) delete g.window;
+  try {
+    return fn();
+  } finally {
+    if (had) g.window = window;
+    globalThis.setTimeout = timeout;
   }
 }
 

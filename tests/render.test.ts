@@ -571,7 +571,7 @@ describe("the allocator predicts exactly what is drawn (review cycle 2)", () => 
 });
 
 describe("wrapping ASCII by ranges gives the grapheme wrap's rows, exactly (15.1)", () => {
-  test("a long paragraph wraps in linear time: twice the spans, about twice the time (never each row scanning them all)", () => {
+  test("a long paragraph wraps in linear time: eight times the spans, about eight times the time (never each row scanning them all)", () => {
     const spans = (n: number): Span[] =>
       Array.from({ length: n }, (_, i) => ({
         text: `lat=54.7425${i % 10} lon=-3.2049 `,
@@ -585,9 +585,12 @@ describe("wrapping ASCII by ranges gives the grapheme wrap's rows, exactly (15.1
       return performance.now() - t;
     };
     time(4000); // warmed up
-    const once = Math.min(time(20_000), time(20_000));
-    const twice = Math.min(time(40_000), time(40_000));
-    expect(twice / once).toBeLessThan(3); // quadratic would be about 4
+    // Eight times the spans: about 8 times the time when linear, 64 when quadratic. The bound sits between, far enough
+    // from both that a busy machine's noise (a small CI runner's) doesn't cross it; the best of three runs each.
+    const best = (n: number) => Math.min(time(n), time(n), time(n));
+    const small = best(10_000);
+    const large = best(80_000);
+    expect(large / small).toBeLessThan(24);
   });
   test("random spans of words, runs of spaces, separators, long words, empty spans, at every width", () => {
     let seed = 11;

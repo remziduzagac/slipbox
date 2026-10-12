@@ -1,4 +1,4 @@
-import { afterAll, afterEach, describe, expect, test } from "bun:test";
+import { afterAll, afterEach, describe, expect, setDefaultTimeout, test } from "bun:test";
 import {
   chmodSync,
   existsSync,
@@ -19,7 +19,7 @@ import { copyText } from "../src/core/clipboard.ts";
 import { readDoc } from "../src/core/docformats.ts";
 import { canonKey, Keymap, unknownModifiers } from "../src/core/commands.ts";
 import { loadConfig } from "../src/core/config.ts";
-import { LinkIndex } from "../src/core/links.ts";
+import { LinkIndex, onDisk } from "../src/core/links.ts";
 import {
   headingsOf,
   newParseCache,
@@ -71,6 +71,9 @@ import { discoverNvims, nvimSockets } from "../src/core/nvim.ts";
 import { graphemes, stringWidth, truncate } from "../src/core/width.ts";
 import { ensureCacheHome, type StoreKind, storeDir } from "../src/core/paths.ts";
 import type { WikiLink } from "../src/core/wikilink.ts";
+
+// Parses, walks and processes started: slow on a loaded or small machine (CI's macOS runner), not stuck.
+setDefaultTimeout(30_000);
 
 // Isolation (testing.md): never read or write the real config, cache or state directories.
 const sandbox = mkdtempSync(join(tmpdir(), "slipbox-core-"));
@@ -189,6 +192,15 @@ describe("wikilink syntax, as the converter reads it", () => {
 });
 
 describe("link resolution (1.4)", () => {
+  test("a path spelled as its folders list it, where the filesystem folds case (macOS, Windows); elsewhere as given", () => {
+    const root = mkdtempSync(join(tmpdir(), "slipbox-ondisk-"));
+    mkdirSync(join(root, "Ideas"));
+    writeFileSync(join(root, "Ideas", "coffee.md"), "# Coffee\n");
+    expect(onDisk(root, "ideas/Coffee.md", true)).toBe("Ideas/coffee.md");
+    expect(onDisk(root, "Ideas/coffee.md", true)).toBe("Ideas/coffee.md");
+    expect(onDisk(root, "ideas/missing.md", true)).toBe("Ideas/missing.md");
+    expect(onDisk(root, "ideas/Coffee.md", false)).toBe("ideas/Coffee.md");
+  });
   const idx = new LinkIndex([
     "index.md",
     "projects/index.md",
@@ -1819,6 +1831,20 @@ describe("maths as Unicode text (12.11)", () => {
 });
 
 describe("SVG drawn (12.15), and what slipbox draws as pictures (12.16, 12.17)", () => {
+  test("a diagram drawn after OpenTUI's renderer made its `window`: drawn, and every timer still runs", () => {
+    // In a process of its own: the layout library sets itself up once, on its first diagram.
+    const script = `
+      globalThis.window = {}; // as OpenTUI's renderer leaves it
+      const d = await import(${JSON.stringify(join(import.meta.dir, "../src/core/diagrams.ts"))});
+      await d.loadMermaid();
+      const colors = { bg: "#ffffff", fg: "#000000", line: "#888888", accent: "#0000ff", muted: "#999999" };
+      const svg = d.mermaidSvg("graph TD\\n  A-->B", colors, "DejaVu Sans");
+      const fired = await Promise.race([new Promise((r) => setTimeout(() => r(true), 5)), Bun.sleep(2000).then(() => false)]);
+      console.log(JSON.stringify({ svg: typeof svg === "string" && svg.startsWith("<svg"), fired, window: "window" in globalThis }));
+    `;
+    const r = Bun.spawnSync([process.execPath, "-e", script], { stdout: "pipe", stderr: "pipe", timeout: 30_000 });
+    expect(JSON.parse(r.stdout.toString().trim().split("\n").pop()!)).toEqual({ svg: true, fired: true, window: true });
+  });
   const pngWidth = (png: Uint8Array) => new DataView(png.buffer, png.byteOffset).getUint32(16);
   test("CSS custom properties put in place: the root's and the style's, fallbacks, color-mix — an @import gone", () => {
     const svg = `<svg style="--bg:#000000;--fg:#ffffff;background:var(--bg)"><style>@import url('https://x.invalid/f.css');

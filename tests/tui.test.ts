@@ -9182,7 +9182,9 @@ describe("vaults in the TUI (17.x)", () => {
     const { notes, app, n } = await twoVaults();
     const h = await harness({ root: notes, open: "todo.md" });
     await h.app.run("backlinks.open");
-    expect(h.frame()).toContain(join(app, "links.md"));
+    // The item's own label (the screen cuts a long path short: macOS's temporary folders are long).
+    const labels = (h.app.overlay as ListOverlay).filtered.map((f) => f.item.label);
+    expect(labels).toContain(join(app, "links.md"));
     expect(h.frame()).not.toContain(`tapp${n}:`);
   });
 
