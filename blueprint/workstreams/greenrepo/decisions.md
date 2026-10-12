@@ -130,3 +130,40 @@ remapped from its commit map. Nothing else in the history changes.
 commits already use the noreply one. The secret scan found nothing to remove.
 
 **Not chosen:** publishing the history as it is.
+
+## GR-D13: Previews from a `test` branch, as herdsman's (2026-10-12)
+
+**Decision:** Fast-forwarding `test` from `main` publishes a preview: every platform built as a release is, its
+version `<package.json's>-preview.<UTC commit time>.g<short hash>` (`0.2.0-preview.202610121530.g1a2b3c4`), published
+as the GitHub pre-release `preview-<time>-<hash>` with its packs, sums, SBOMs, installer and attestations. `test` is a
+long-lived branch with a ruleset (no deletion, no force push); stable releases stay `v*` tags.
+
+**Why:** The user's answer: they run slipbox on their VMs and want what's coming before it's released, through the one
+way slipbox is distributed, as herdsman does it. A preview sorts after the previews before it and before the release
+of its version.
+
+**Not chosen:** a preview on every merge to `main`.
+
+## GR-D14: The installer at a fixed address on GitHub Pages (2026-10-12)
+
+**Decision:** `curl -fsSL https://remziduzagac.github.io/slipbox/install.sh | sh` installs slipbox; `sh -s --
+--preview`, the newest preview. The Pages `install.sh` is a bootstrap: it reads the channel's file from Pages (`stable`,
+`preview`: a release's tag and the SHA-256 of its `install.sh`), downloads that release's own installer, checks its
+sum and runs it. Pages is deployed by CI when a release is published, a preview made, or the bootstrap changed.
+
+**Why:** The user's answer, as herdsman's: one line at an address that doesn't change, which works before any stable
+release; the per-release installer, its packs' sums inside, stays the one that installs.
+
+**Not chosen:** the release asset's address alone (`releases/latest/download/install.sh`), which needs a stable
+release and can't install a preview.
+
+## GR-D15: `slipbox channel`, kept with the install (2026-10-12)
+
+**Decision:** `slipbox channel set preview|stable` sets which releases an install follows, kept in its data folder
+beside `current`; `install.sh --preview` sets it for a new machine. `slipbox upgrade` and the daily check then take the
+newest of the stable release and the newest preview. Homebrew installs, and slipbox run from source, have no channel:
+the command says how they update instead. Previews never reach the Homebrew tap.
+
+**Why:** The user's answer, as herdsman's `channel set preview`.
+
+**Not chosen:** an `update.channel` setting in the user's config, which the installer can't set.
