@@ -1,5 +1,5 @@
 ---
-status: review
+status: done
 assignee: claude-tui
 blocked_by: []
 created: "2026-10-11"
@@ -95,3 +95,4 @@ fixed.
   average near 28 (seven agents' runs), all timing; rerun alone all pass but "the background index parses a big note
   on other threads… (15.1)", whose slice timing (333 ms against 250) fails alone too under load: it times the
   graph's parsing, which nothing here touches. The whole suite not run, at the coordinator's word.
+- 2026-10-12: accepted on the coordinator's recommendation, the user having said to take them as answers until done; done.

@@ -1,5 +1,5 @@
 ---
-status: review
+status: done
 assignee: claude-exports2
 blocked_by: []
 created: "2026-10-12"
@@ -122,3 +122,4 @@ The follow-ups F1, F2, F4, F5, F6.
   beside the export, which still holds; no scenario exports a picture from outside the root, copies with `slipbox
   cp` into a folder, looks up a picture beside a `-o book.md` export, or loads a folder's `update.check`
   (world-fixes.ts's privacy scenario sets `render.images_remote` alone).
+- 2026-10-12: accepted on the coordinator's recommendation, the user having said to take them as answers until done; done.

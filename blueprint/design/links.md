@@ -81,8 +81,13 @@ The wikilink tokenizer), and resolved within its root (D71; `resolveWiki` in `co
   `./` or `../` and is a path from the linking note, never a name (D83). An empty one, `[[#Heading]]`, is this note.
 - **What it reaches,** in order: a note by its name (its file's) or by its path; a path out of the root or into a
   root nested in it; an attachment, relative to the note, then from the root, then by its file name anywhere in the
-  root, as Obsidian finds one (`![[dal.png]]`); a note by an alias its front matter gives (`aliases` or `alias`),
-  after every file name (D71, D46).
+  root, as Obsidian finds one (`![[dal.png]]`), but in a Markdown export's pictures, whose copies would answer for the
+  pictures they were copied from: a folder named `*.export.assets/`, or any `<name>.assets/` beside a note
+  `<name>.md` (or `.markdown`) that carries the export's mark, `generator: slipbox`, in its front matter (DF-D18,
+  DF-D25; `exportPicturesFolder` in `core/graph.ts`, the mark read again when the note changes) — unless the name
+  goes through such a folder (`[[report.export.assets/dal.png]]`, `[[book.assets/dal.png]]`); a note by an alias its
+  front matter gives (`aliases` or `alias`), after every file name (D71, D46). The converter's reading of the old
+  wikilinks leaves them out alike.
 - **Case.** Names are compared case aside, after Unicode NFC: `[[Readme]]` reaches `readme.md` on every filesystem.
   The Turkish i's fold too: `İ` lowers to `i` with a combining dot, which goes, and `ı` is `i`, so `[[izmir]]` finds
   `İzmir.md` and `[[ILIK]]` `ılık.md`; the exact spelling still breaks a tie (`normKey`) (D41, D84).
@@ -117,8 +122,10 @@ and the converter (D84):
 - **A hosting's own forms:** Bitbucket's `#markdown-header-…` is the heading after it, and `#readme` the note's top
   (§ Links to the repository's own hosting).
 
-A fragment that lands nowhere opens the note at its top. Where it lands is shown by the hover and `shift+k`: the
-heading's section, the block, the lines ([tui.md](tui.md) § What's under the cursor).
+A fragment that lands nowhere opens the note at its top, and which heading or block isn't there is said, in the
+TUI's message line and the CLI's `warnings` (`resolve` gives the note, its `line` null). Where it lands is shown by
+the hover and `shift+k`: the heading's section, the block, the lines ([tui.md](tui.md) § What's under the cursor);
+`resolve` gives its line, a block's and lines' as a heading's.
 
 ## How a link landed
 
@@ -311,6 +318,19 @@ folder changes, a code or data file's as a note's: previewed, undoable, a plan i
 - a moved code file's comment path written beside it is rewritten from where it goes, its `:42` kept; one the root
   still reaches (read from the root when nothing is beside the file), and a `/…`, stays; a data file's value keeps
   its `./` and its fragment (`#/definitions/User`), and neither is percent-encoded, being no URL.
+
+**Where a move or a copy lands** (DF-D4, DF-D20). A new path typed for a move — `slipbox mv`, `space n m`, `:mv` —
+or for a copy — `slipbox cp` — that is a folder already, or ends in `/`, means into it: the note, file or folder
+keeps its name there (`slipbox mv note.md ideas/` makes `ideas/note.md`). A path ending in `/` is always a folder to
+go into, made when it isn't there yet: `slipbox mv drafts archive/` makes `archive/drafts`, never renaming `drafts`
+to `archive`, as the shell's `mv` would (DF-D21). The root itself is such a folder: `/` in the TUI; in the CLI, the
+root's path, or `.`, `./` at its top. A copy into the folder it is in already goes beside it as `name-copy`, as a
+paste there does. Any other path is the whole new path, a note's extension added when it has none; anything already
+there is refused, never overwritten, and so is a path under a file (`slipbox cp a.md b.md/`). In the CLI, `.` and
+`..` are from the current folder, as `./` and `../` are; a move's plan (`--dry-run`, `--plan`) holds the path it
+lands on. A rename in place (the explorer's `r`) takes a name, never a folder to go into; the explorer's `m` and a
+paste pick the folder themselves, and the TUI's copy of a note (`space n shift+y`) goes beside it, no path typed
+(`core/rename.ts`, `moveTarget`; `copyPath` in `core/files.ts`).
 
 No old name is written into a note (D79). A heading renamed rewrites the fragments naming it, each by its slug or
 its text as written. A whole named folder moved rewrites no pointer. Links from places not indexed yet show broken

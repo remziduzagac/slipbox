@@ -31,8 +31,8 @@ turns it into a string for `slipbox render`.
 
 ## Blocks and inlines (plan `2.2`)
 
-`layout/render.ts` handles every mdast node remark-gfm produces, plus `#tags`. Containers lay
-their children out at reduced width and prefix every row, so nesting composes.
+`layout/render.ts` handles every mdast node remark-gfm produces, plus `#tags` and Obsidian's highlights and comments.
+Containers lay their children out at reduced width and prefix every row, so nesting composes.
 
 | Node | Rendering |
 | --- | --- |
@@ -49,6 +49,8 @@ their children out at reduced width and prefix every row, so nesting composes.
 | html block | shown dim, verbatim; comments (each `<!-- -->` on its own) hidden; a lone `<br>` is a blank row |
 | footnote | `[1]` reference; the definition as `1.` with a hanging indent, its paragraphs apart |
 | tag | `#name` in the `tag` role, followable: Obsidian's tags (`1.6`, D53; [links.md](links.md) § Tags) |
+| highlight | `==text==` (Obsidian): its text in the `highlight` role, a marker's yellow behind it, what's inside too |
+| comment | `%%text%%` (Obsidian): hidden — in a line, the white space where it was made one; alone, no row |
 | definition | hidden; reference links resolve through it, the first of a label winning (CommonMark) |
 
 **Headings** are linked to by their text (inline code included; footnote marks and images left out, the spaces around
@@ -61,31 +63,35 @@ the heading's explicit id, not drawn; `<a id="x">` and `<a name="x">` are anchor
 no-break space (U+00A0, U+2007, U+202F) is never a place to wrap.
 
 **Inline:** `**strong**` gets the `strong` role, which has an explicitly lighter foreground, because bold alone does not
-read as bold in a terminal (plan `2.7`). Also: `*emphasis*`, `~~strike~~`, and `` `code` `` in the `code_inline` role
-with its own background. Links render as their text; the URL follows as `<url>` when colour is off or `render.show_urls`
-asks. Images render as `▣ alt`, and alt text plus path stay the floor (12.x, D101): a picture alone in its paragraph, a
-local image file (PNG, JPEG, WebP, GIF), is drawn under its `▣ alt` line where the terminal draws images — Kitty
-graphics or sixel, as OpenTUI finds it asking, never blocks of colour (D126) — sized to the text width, its proportions
-kept, at most 12 rows, from where its `▣ alt` text starts (past a list's bullet, a quote's bar); scrolled half out of
-sight, the part that shows. One embedded by name, `![[dal.png]]` (12.13, D103), is drawn the same, found as its link is
-(anywhere in the root, the nearest of two; two tied, neither): Obsidian's `|300` its width in pixels, `|240x180` the box
-it fits in, its proportions kept. An SVG (12.15, D127) — by its name, or a picture fetched told by how it starts — is
-rasterised by resvg (WebAssembly) at the size it's drawn, from its own size, into the cache, and drawn as a PNG is; it
-fetches nothing it links to. One in an embedded note (12.14) is found from where that note is — its path from its
-folder, its name from its place in its root — and drawn inside its frame. Beside text, or where the terminal draws none
-(`[render] images = "never"` too): `▣ alt` alone. Where the terminal speaks Kitty graphics, a picture is sent to it once
-(12.7, D102) — compressed, at the pixels it's drawn in, with a virtual placement of its cells — and drawn as Kitty's
-Unicode placeholders: each cell U+10EEEE in the picture's id's colour, its row and column as combining marks. They're
-text, so scrolling moves them and the terminal the picture with them: nothing is sent again, nothing waits. The last 48
-are kept in the terminal; quitting lets them go. With sixel (OpenTUI's own picture path, which numbers pictures by the
-order they're drawn in and sends them again as that changes), a step of scrolling draws a view's pictures, but quick
-steps after it (a key held: within 120 ms of the last) don't, nor a wheel's from its first tick — their rows stay — and
-they're drawn once it rests. A picture on the internet (12.12) is fetched only as `[render] images_remote` says: `ask`
-(the default) — its link, until `enter` on it asks to fetch it, this once or from its site without asking (until slipbox
-quits); `show` — fetched as the note's laid out; `never` — neither fetched nor drawn, `enter` copying its address.
-Fetched (into the cache, a file per address: an image's content type, at most 20 MB, within 15 s), it's drawn as a local
-one, without asking again; a fetch that fails says why and isn't tried again until `enter`. Inline tags such as `<kbd>`
-and `<sup>` are dropped and their text kept.
+read as bold in a terminal (plan `2.7`). Also: `*emphasis*`, `~~strike~~`, Obsidian's `==highlight==` in the `highlight`
+role, on its background — a link or code inside it too —, and `` `code` `` in the `code_inline` role with its own
+background. Obsidian's `%%comments%%` are hidden while reading, shown as typed in source mode and the lens, which draw
+the file's text (DF-D17): `a %%note%% b` reads `a b`, `oil %%note%%.` reads `oil.`, a paragraph of nothing but comments
+leaves no row, and a comment over blank lines (§ Obsidian's highlights and comments) no rows. Rows keep their source
+lines. Links render as their text; the URL follows as `<url>` when colour is off or `render.show_urls` asks. Images
+render as `▣ alt`, and alt text plus path stay the floor (12.x, D101): a picture alone in its paragraph, a local image
+file (PNG, JPEG, WebP, GIF), is drawn under its `▣ alt` line where the terminal draws images — Kitty graphics or sixel,
+as OpenTUI finds it asking, never blocks of colour (D126) — sized to the text width, its proportions kept, at most 12
+rows, from where its `▣ alt` text starts (past a list's bullet, a quote's bar); scrolled half out of sight, the part
+that shows. One embedded by name, `![[dal.png]]` (12.13, D103), is drawn the same, found as its link is (anywhere in the
+root, the nearest of two; two tied, neither): Obsidian's `|300` its width in pixels, `|240x180` the box it fits in, its
+proportions kept. An SVG (12.15, D127) — by its name, or a picture fetched told by how it starts — is rasterised by
+resvg (WebAssembly) at the size it's drawn, from its own size, into the cache, and drawn as a PNG is; it fetches nothing
+it links to. One in an embedded note (12.14) is found from where that note is — its path from its folder, its name from
+its place in its root — and drawn inside its frame. Beside text, or where the terminal draws none (`[render] images =
+"never"` too): `▣ alt` alone. Where the terminal speaks Kitty graphics, a picture is sent to it once (12.7, D102) —
+compressed, at the pixels it's drawn in, with a virtual placement of its cells — and drawn as Kitty's Unicode
+placeholders: each cell U+10EEEE in the picture's id's colour, its row and column as combining marks. They're text, so
+scrolling moves them and the terminal the picture with them: nothing is sent again, nothing waits. The last 48 are kept
+in the terminal; quitting lets them go. With sixel (OpenTUI's own picture path, which numbers pictures by the order
+they're drawn in and sends them again as that changes), a step of scrolling draws a view's pictures, but quick steps
+after it (a key held: within 120 ms of the last) don't, nor a wheel's from its first tick — their rows stay — and
+they're drawn once it rests. A picture on the internet (12.12) is fetched only as `[render] images_remote` says, in your
+own config (DF-D1): `ask` (the default) — its link, until `enter` on it asks to fetch it, this once or from its site
+without asking (until slipbox quits); `show` — fetched as the note's laid out; `never` — neither fetched nor drawn,
+`enter` copying its address. Fetched (into the cache, a file per address: an image's content type, at most 20 MB, within
+15 s), it's drawn as a local one, without asking again; a fetch that fails says why and isn't tried again until `enter`.
+Inline tags such as `<kbd>` and `<sup>` are dropped and their text kept.
 
 **Mermaid** (12.10, D127): a ` ```mermaid ` block is drawn in the terminal's own characters — box drawing, arrows, its
 words in the text's colour and its lines in the table's border colour; in ASCII where the glyphs are — by
@@ -203,6 +209,17 @@ D57), which reads through `parseLegacy`. That is why `[[links]]` inside code spa
 blocks are never read or converted, and why `\[[escaped]]` stays literal. Every node also carries its source
 position. It parses `![[embeds]]`, which `remark-wiki-link` does not, and treats `\|` as an alias divider, since that
 is how an alias is written inside a table cell.
+
+## Obsidian's highlights and comments
+
+`core/obsidian.ts` is a micromark extension too (DF-D17), so neither is read inside code, `\==` and `\%%` stay text, and
+each node has its position. A highlight pairs as GFM's `~~strike~~` does: exactly two `=`, flanking as emphasis does,
+so `a == b` and `===` are text, and what's inside is read as any text (`==**bold**==`, a link). A comment pairs any two
+`%%` of a paragraph, spaces or not, across its lines; what's inside is read too, so a link, a tag or a task in a
+comment is still the note's — counted, renamed with its note — only not drawn (DF-D27). A comment over blank lines —
+from a paragraph that starts with a `%%` pairing with nothing to the next block at its level that ends with one (a list
+or a quote whose last line does: a `%%` right after a list is its last item's lazy line) — becomes a block of its own
+(`commentBlock`) after the parse, once its chunks are one; its blocks are read as any are. One never closed is text.
 
 ## The table allocator (plan `2.3`)
 
@@ -330,8 +347,11 @@ Carried over from the nvim configuration, where they were arrived at by trial (D
 `core/theme/theme.ts` defines about 100 semantic roles covering the document, syntax and chrome (D93).
 Every theme reduces to an 18-colour `Palette`, and `themeFromPalette` maps it to roles, so there is
 one mapping to get right. Heading bands are the heading colour blended into the background, 14%
-in dark themes and 16% in light ones. Single roles can be overridden from config, for every theme or one
-(`[colors]`, [configuration.md](../../docs/manual/configuration.md) § Colours).
+in dark themes and 16% in light ones. A highlight's band (the `highlight` role, Obsidian's `==text==`; DF-D17) is the
+palette's yellow blended into the background, 30% in dark themes and 40% in light ones, under the strong foreground;
+`terminal` puts the terminal's yellow behind black, and `mono` reverses it, `inverse` carried to a span's style and the
+ANSI writer. Single roles can be overridden from config, for every theme or one (`[colors]`,
+[configuration.md](../../docs/manual/configuration.md) § Colours).
 
 | Kind | Themes |
 | --- | --- |
@@ -360,12 +380,12 @@ override:
 2. Nerd glyphs when the terminal bundles the Nerd Font symbols (Ghostty, kitty, WezTerm).
 3. Plain Unicode otherwise.
 
-`SLIPBOX_GLYPHS` or the config value forces a set, and in the TUI `space u g` picks one with a live
-preview (`:glyphs <set>` sets it directly). The chrome has ASCII fallbacks too: `≡`→`=`, `▤`→`#`,
-`×`→`x`, `›`→`>`, `§`→`#`, tree lines `|` `` ` `` `-`, box joints `+`. And what such a console can't draw goes as
-an ASCII look-alike, one column for one, in the chrome and the note alike: the marks (`•` unsaved `*`, `⚠` `!`, `↻`
-`~`, `●` watching `*`), `…` `~`, dashes and curly quotes; the leader key shows as `SPC`.
-The Nerd set uses the same heading icons as the render-markdown configuration it replaces.
+A set named in the config (`render.glyphs`) forces it; where the config says `auto`, `SLIPBOX_GLYPHS` chooses one before
+the detection above (DF-D12); and in the TUI `space u g` picks one with a live preview (`:glyphs <set>` sets it
+directly). The chrome has ASCII fallbacks too: `≡`→`=`, `▤`→`#`, `×`→`x`, `›`→`>`, `§`→`#`, tree lines `|` `` ` `` `-`,
+box joints `+`. And what such a console can't draw goes as an ASCII look-alike, one column for one, in the chrome and
+the note alike: the marks (`•` unsaved `*`, `⚠` `!`, `↻` `~`, `●` watching `*`), `…` `~`, dashes and curly quotes; the
+leader key shows as `SPC`. The Nerd set uses the same heading icons as the render-markdown configuration it replaces.
 
 ## Escapes (constraint `2.9`)
 

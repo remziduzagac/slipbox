@@ -220,8 +220,11 @@ How: design/distribution.md.
 - They're written for a person at a terminal who knows Markdown, not necessarily vim: what slipbox does now, in plain
   words, each subject explained in one chapter and linked from the rest. The agent skill stays the agents' guide,
   checked against the CLI chapter (DOC-D4).
+- The guides and the screen chapter carry screenshots, made by a script from slipbox itself on the reference set and
+  retaken when the UI changes (DF-D19).
 
-How: docs/README.md; workstreams/archive/user-docs/requirements.md § How they are written.
+How: docs/README.md; workstreams/archive/user-docs/requirements.md § How they are written; the screenshots:
+design/testing.md § The terminal tests.
 
 ## Quality goals
 
@@ -284,6 +287,11 @@ Each was decided after a wrong turn, and is not re-litigated:
 - **`13.2`** (D159, D37): values substituted into a command slipbox runs are passed as an argument vector, never
   interpolated into a shell string; a shell, if wanted, is quoted properly and the config says so. The editor's
   hand-off holds to it now, and whatever of `13.x` is built later will.
+- **The network** (DF-D1, DF-D23): what reaches the network — a web picture fetched, a package installed, the update
+  check — is yours alone to allow: a folder's settings never turn any of it on, and one that tries is ignored, with a
+  warning. design/trust.md § What runs.
+- **Exports** (DF-D2, DF-D3, DF-D24): an export holds pictures of the root only, and never writes over a note, of
+  this root or any other. design/export.md § Asking for one, § The assembler.
 
 ### Licences
 

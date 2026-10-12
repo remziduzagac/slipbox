@@ -163,6 +163,20 @@ bun run e2e find replace     # only the scenarios whose names contain these
 | `tests/e2e/world-terminal.ts` | slipbox as a process: start-up forms, signals, restore, keys, pastes, colours |
 | `tests/e2e/world-outside.ts` | the world changing under it: the watcher, the CLI beside it, config, autosave |
 | `tests/e2e/world-links.ts` | links as `21.x` reads them: `/` from a root, no extension, folders, wikilinks |
+| `tests/e2e/world-export.ts` | the export window: formats, the window's keys, replacing, notes in order, `:export` |
+| `tests/e2e/world-fixes.ts` | what writing the docs found, fixed (below) |
+| `tests/e2e/shots.ts` | the docs' screenshots (DF-D19): slipbox in a 120×34 pane, each screen brought about and read |
+| `scripts/screenshot.ts` | a screen read with its colours, drawn as a PNG into `docs/images/` |
+
+`world-fixes.ts` covers what writing the docs found, fixed: typing without vim, reload, the trash, moves, clones, the
+code view's links and errors, Obsidian's highlights and comments, a folder's network settings, the Save As window's
+folders.
+
+**The docs' screenshots** (DF-D19): `tests/e2e/shots.ts` drives slipbox in a herdr pane sized 120×34, as the terminal
+tests do, on the reference set or the getting-started guide's own folder, and `scripts/screenshot.ts` draws each
+screen, read with its colours, into `docs/images/<name>.png` (DejaVu Sans Mono, DejaVu Sans for the symbols it lacks;
+the Unicode glyph set). Retaken in one run when the UI changes: `bun tests/e2e/shots.ts --pane <id>`, the pane at a
+shell prompt; a name filter after it retakes only those.
 
 ## Timings (`bun scripts/bench.ts`)
 

@@ -1,5 +1,5 @@
 ---
-status: review
+status: done
 assignee: claude-code
 blocked_by: []
 created: "2026-10-11"
@@ -88,3 +88,4 @@ Obsidian's highlights and comments are drawn.
   docs pass. Under load, timing tests failed and passed alone (the big note's slices, search, linters). The render
   snapshot of `software/pipeline-cookbook.md` fails when export.test.ts runs before render.test.ts in one process (Mermaid
   already loaded): the same on HEAD, checked on a scratch copy; not this task's.
+- 2026-10-12: accepted on the coordinator's recommendation, the user having said to take them as answers until done; done.

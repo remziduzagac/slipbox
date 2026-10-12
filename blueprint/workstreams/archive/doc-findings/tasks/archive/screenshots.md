@@ -1,5 +1,5 @@
 ---
-status: doing
+status: done
 assignee: claude
 blocked_by: [DF-T6, DF-T7]
 created: "2026-10-11"
@@ -45,3 +45,4 @@ About 10 to 15 screenshots, made by `scripts/screenshot.ts` from slipbox in a he
   reference set (`🚲 ride.md`) draws as a box: no emoji font here.
 - Waiting: the which-key picture retaken once DF-T12 gives the popup its title (DF-D31).
 
+- 2026-10-12: accepted on the coordinator's recommendation, the user having said to take them as answers until done; done.

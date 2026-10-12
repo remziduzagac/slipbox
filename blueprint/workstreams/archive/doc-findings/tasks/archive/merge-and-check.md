@@ -1,5 +1,5 @@
 ---
-status: doing
+status: done
 assignee: claude
 blocked_by: [DF-T1, DF-T2, DF-T3, DF-T4, DF-T5, DF-T6, DF-T7]
 created: "2026-10-11"
@@ -42,4 +42,9 @@ The tasks' branches merged onto main, the terminal tests of what they changed ru
   number coloured, not signed): brought up to date, passing. The 7 export scenarios (`world-export.ts`), uncommitted
   until now, pass. Nine new scenarios (`world-fixes.ts`, claude-e2e) pass three runs in a row each; eight fail on the
   code from before DF; the ninth (which-key's `z`, `[`, `]`) showed A16's explanations are never drawn: F12, DF-D31.
+
+- 2026-10-12: accepted on the coordinator's recommendation, the user having said to take them as answers until done; done.
+- 2026-10-12: after DF-T11 and DF-T12: the fixes' scenarios extended (the hover on a missing heading; a folder's
+  `update.check` warned of); the 41 scenarios covering the fixed parts, in three panes: all pass. `bun run check`:
+  1798 pass, 0 fail (*ran*).
 

@@ -36,3 +36,23 @@
 - The user said the agents were saturating the CPU: a finished agent's search had run for hours, and several whole
   suites at once; the fixers then ran only the files they touched, the coordinator the suite once after merging.
 
+## Choices made on recommendation (2026-10-12)
+
+The user said to take the coordinator's recommendations as the answers until the work was done ("from now on until
+you are done use your recommendations as answers to your guestions"). Taken so, and listed here for the user to
+review: the follow-up questions F9 to F12 above were still asked; these were not.
+
+- **Exports (DF-T3, DF-T11):** a target the Markdown export doesn't copy becomes a link from the export's folder,
+  where the address as written would break; a copy into the folder it is in goes beside it as `name-copy`, as a paste
+  there does; DF-D25 adds to DF-D18: `*.export.assets/` by its name, any other pictures folder beside a note marked as
+  an export.
+- **Typing (DF-T6):** `ctrl+home` and `ctrl+end`, and their `shift` forms, move and select while typing too.
+- **Words (DF-T12):** command ids (`vault.init`) and the `[vault]` identity table keep the word, as terms.md has it; the
+  reference set keeps the old config words, so it exercises them.
+- **Clones (DF-T12):** the TUI's `:folders-default` offers what the CLI accepts; `slipbox folders` lists a clone that is
+  its repository's default under the repository, with its own name.
+- **The hover (DF-T12):** the note's start shown under the sentence, as following the link lands there.
+- **The popups' titles (DF-D31):** the group's own explanation, as A16 completed it, after its name; `z`'s shortened so
+  its title fits a 120-column screen, every key still named.
+- **The tasks:** accepted, and DF consolidated, on the same footing.
+

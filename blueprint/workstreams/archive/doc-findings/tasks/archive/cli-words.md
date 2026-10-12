@@ -1,5 +1,5 @@
 ---
-status: review
+status: done
 assignee: claude-cli
 blocked_by: []
 created: "2026-10-11"
@@ -95,3 +95,4 @@ make an empty note.
   usage error, the new `write <path> --create --allow-empty` among them. A whole-suite run, begun, was stopped at the
   coordinator's word (the machine saturated); what it had reached failed only on timeouts, a Mermaid diagram not
   ready in time, and `servers.test.ts`' lock list seeing another run's `fake-mdl`: none in code this task touches.
+- 2026-10-12: accepted on the coordinator's recommendation, the user having said to take them as answers until done; done.

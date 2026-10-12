@@ -54,4 +54,5 @@ Older entries use the words of their day. Read them as:
 - **the plan**, a **decide item**, a **constraint item** → the roadmap and its step IDs; a decide item's answer is a
   decision here, a constraint item is in requirements.md § Constraints.
 - Still named "vault" in code and config: `core/vault.ts`, the `[vault]` identity table in `.slipbox/config.toml`,
-  command ids such as `vault.init`, the colour role `sidebar_vault`.
+  command ids such as `vault.init`; the colour role `sidebar_vault` is `sidebar_root` now, the old name still read
+  (DF-D22).

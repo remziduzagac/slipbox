@@ -1,5 +1,5 @@
 ---
-status: review
+status: done
 assignee: claude-files
 blocked_by: []
 created: "2026-10-11"
@@ -80,3 +80,4 @@ Moving a note to a folder puts it in the folder; slipbox's trash can be emptied,
   background index, the skill's commands at the CLI's 20 s spawn limit), `stat`'s root shown as
   `halden@worktree-…` (this worktree's demo vault a second halden on the machine), a layout snapshot and the
   servers' lock check: none touches what changed. The coordinator runs the whole suite after merging.
+- 2026-10-12: accepted on the coordinator's recommendation, the user having said to take them as answers until done; done.

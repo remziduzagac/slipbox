@@ -63,4 +63,4 @@ does now. What they found, for the user to place: bugs become root tasks, disagr
   `link-styles.md` say Mermaid and maths show as code, and wikilinks are plain text in `notes/`.
 - **On the user's machine,** from the writers' tries: a `slipbox send` opened a scratch copy of a note in the user's
   nvim, and an export made `~/Desktop/coffee.docx`. Screenshots: offered, the user to say.
-- (2026-10-11) Settled item by item by the user, and taken up in the workstream DF (`workstreams/doc-findings/`).
+- (2026-10-11) Settled item by item by the user, and taken up in the workstream DF (`workstreams/archive/doc-findings/`).

@@ -118,8 +118,13 @@ Older decisions use these; the design doesn't.
 - **scope** (D55, never built): the root (D56, D80).
 - **Scout**: now trailscout, a project of its own; the outside search engine waits for its SDK (D124). Search still
   cuts sections as scout does (D116).
-- **vault**: a root, or a named folder (D79). The word stays in code and config (`core/vault.ts`, the `[vault]`
-  identity table, command ids such as `vault.init`) and in the names of the fixture and demo vaults.
+- **vault**: a root, or a named folder (D79). The word stays in code (`core/vault.ts`, command ids such as
+  `vault.init`, which `[keys]` and `[aliases]` name), in the `[vault]` identity table, in the logs and plans slipbox
+  keeps, and in the names of the fixture and demo vaults; never in what the CLI prints or its JSON (DF-D9). Your
+  config's other words say root: `capture.location = "root"`, the explorer's actions `rename_root`, `make_root` and
+  `unmake_root` (`[keys.explorer]`), the colour role `sidebar_root`; the old words, `vault`, `rename_vault`,
+  `make_vault`, `unmake_vault` and `sidebar_vault`, are read as them, unwarned, and the docs show root (DF-D22;
+  `OLD_VALUES` in `core/config.ts`, `OLD_ROLES` in `core/theme/theme.ts`).
 - **`[[vault:note]]`**, **`vault:path`**: a pointer, `slipbox://name/path`, in files; a path on screen (D60, D75, D79).
 - **`slipbox vaults`**, **`rename-vault`**, **`--scope vault`**: `slipbox folders`, `slipbox name`, `--scope here`
   (D79).

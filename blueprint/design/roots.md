@@ -191,15 +191,29 @@ rewrites the pointer. Names are compared case aside.
   checkout.
 - **A copy gone** (moved, unplugged) stays listed, unavailable, and is no choice; lookups take another copy
   meanwhile, said so (`via: "another-copy"`).
+- **A clone with a `.slipbox/` name of its own,** given to tell it from the repository it was cloned from, is still a
+  copy of that repository: the lookup takes a repository's copies, one remote, as one folder, whatever their
+  `.slipbox/` call them (`byRepository` in `core/folders.ts`). By the remote, a qualified pointer and a hosting URL open
+  the repository's default copy: the one called by the remote's name (its last part, as its `.slipbox/` name, an alias
+  or the remote's own), else the first found; that one not here, another copy of the repository, said so. The clone's
+  own name opens the clone, and a pointer written to a copy of the same repository is no clash. Being a copy, it may be
+  made the repository's default copy: `folders default` (and the TUI's `:folders-default`) takes any copy of the
+  repository, under whatever name (`repositoryCopies` in `core/folders.ts`), and the repository's name, its full name
+  and its hosting then open the clone; `slipbox folders` lists it under the repository too, `*`, with its own name. A
+  default that is no copy of the repository any more (its remote changed) is passed over for the repository's first
+  copy. And it may be named as its repository is (`init --name`, `name`): a copy of the same repository is no
+  different folder (`folderNamed`) (DF-D30). Named alike, its copies are called by the remote's name alike, and the
+  first found opens until `folders default` picks one.
 - **A name for one copy only** is a private `.slipbox/` (`slipbox init --private --name research-review`): its
   pointers work on this machine only; `slipbox info` and `slipbox folders` say it is private.
-- **Different folders of one name:** `slipbox init` refuses a name a different folder has here (its name, an alias or
-  a name it had), suggesting one: the folder's name, prefixed with the enclosing root's (`x-plan` inside `x`), `-2`,
-  `-3` after it while that is taken; `slipbox name` refuses it too. A clash found later (a folder synced or cloned in)
-  isn't raised until it matters: following a pointer by that name lists each folder, to open what it names there, and
-  offers renaming a `.slipbox/` one, the parent folder's name prefixed as a suggestion and the edit to its config
-  shown first, since it may be committed. "Not now" leaves it ambiguous, picked when followed; the CLI gives the
-  candidates (exit 4).
+- **Different folders of one name:** `slipbox init` refuses a name a different folder has here (its name, an alias or a
+  name it had; a copy of the same repository is none, DF-D30), suggesting one: the folder's name, prefixed with the
+  enclosing root's (`x-plan` inside `x`), `-2`, `-3` after it while that is taken; `slipbox name` refuses it too. A
+  clash found later (a folder synced or cloned in) isn't raised until it matters: following a pointer by that name lists
+  each folder by its path, a repository once whatever its copies, to open what it names there, and offers renaming a
+  `.slipbox/` one, the parent folder's name prefixed as a suggestion and the edit to its config shown first, since it
+  may be committed. "Not now" leaves it ambiguous, picked when followed; the CLI gives the candidates, each folder's
+  path (exit 4).
 - **A folder renamed** keeps its old name in its config: a pointer resolves by the current name when the file is
   there, else by an old one, said so, and the relink rewrites it.
 - **The lookup** (`folders.json` in the state folder) is durable: each name, its copies and the default, filled from
@@ -217,15 +231,24 @@ explorer's roots, the named folders list, `slipbox info` and the CLI's `root` an
 lists (backlinks, search results, pickers, hovers) are shown by path, from the root ([rendering.md](rendering.md) §
 Blocks and inlines).
 
+The CLI says root where the code says vault, in its messages and its JSON, whose `schema` stays 1 (DF-D9): `info`'s
+`mode` is `root` or `folder`; a change's `kind` is `root` for a root's naming, `make-root` for `init` of a folder
+inside a root, `unmake-root` for `deinit`; a root nested in another is skipped by the walk as a `nested root`; and
+nothing to undo is "in this root". The renames log and the saved plans keep the code's words, `vault`, `make-vault`
+and `unmake-vault`, and the CLI says them as root when it prints them (`kindWord` in `cli/cli.ts`). A theme slipbox
+ships is `built-in`, as a document type is ([docs/manual/cli.md](../../docs/manual/cli.md) § `info`, § Moving,
+copying and deleting, § `themes`).
+
 ## Search scope
 
 Search ranks this root (else the folder opened) first, then, under a divider, the roots linked to or from it; widened
 to every root this machine knows, those join the linked ones, ranked together by score (D64, D79; `core/scope.ts`).
 Linked means this root's notes link into it by path, or its notes link here, as of its index; every root leaves out
-worktrees, whose notes are their main checkout's. Each root is searched with its own index, caught up first (a scan
-where it has none), and a hit of another root carries its name and its path. `~` or `/` opened searches only itself.
-The CLI takes `--scope here|linked|all`, `here` by default, so an agent's results are predictable; in the TUI,
-`ctrl+a` in search widens it a step at a time ([tui.md](tui.md) § Overlays).
+worktrees, whose notes are their main checkout's, even one a note links into (by `@branch`, or by path). Each root is
+searched with its own index, caught up first (a scan where it has none), and a hit of another root carries its name and
+its path. `~` or `/` opened searches only itself. The CLI takes `--scope here|linked|all`, `here` by default, so an
+agent's results are predictable; in the TUI, `ctrl+a` in search widens it a step at a time ([tui.md](tui.md) §
+Overlays).
 
 ## Worktrees
 

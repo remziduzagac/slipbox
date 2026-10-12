@@ -1,5 +1,5 @@
 ---
-status: review
+status: done
 assignee: claude-privacy
 blocked_by: []
 created: "2026-10-11"
@@ -95,3 +95,4 @@ see slipbox's internal numbers.
   was killed (out of memory, seven agents' runs at once); per the coordinator, no whole suite since.
 - A1 tried again on a fresh build of the reference set: `slipbox info --json` in `work/kestrel` warns of both new
   keys beside the program settings' warnings.
+- 2026-10-12: accepted on the coordinator's recommendation, the user having said to take them as answers until done; done.

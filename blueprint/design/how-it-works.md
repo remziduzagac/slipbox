@@ -147,6 +147,7 @@ The CLI's commands are the user's reference, [cli.md](../../docs/manual/cli.md);
 | `core/footnotes.ts` | 3.17 | a note's footnotes: labels, definitions, references, in GFM's order |
 | `core/tags.ts` | 1.6 | micromark tokenizer for `#tag`; tag names and keys (the graph's tag index) |
 | `core/parse.ts` | 1.3 | remark + gfm + frontmatter + wikilinks; headings, slugs |
+| `core/obsidian.ts` | DF-D17 | Obsidian's `==highlight==` and `%%comment%%`, read into the tree; a block comment too |
 | `core/parse-pool.ts` | 15.1 | a big note's chunks parsed on up to four workers (`parse-worker.ts`), into its cache |
 | `core/links.ts` | 1.4 | `LinkIndex`: case policy, collisions, markdown URLs |
 | `core/search.ts` | 6.x | search: the query, a file read for it, the index kept, the index or a scan, hits located |
@@ -172,6 +173,7 @@ The CLI's commands are the user's reference, [cli.md](../../docs/manual/cli.md);
 | `core/typeset.ts` | 12.17 | a display's maths typeset as an SVG (MathJax, loaded on first use) |
 | `core/imagecache.ts` | 12.12 | where a picture on the web is kept once fetched: a file per address |
 | `core/export/assemble.ts` | 10.1 | notes as one document: chapters, embeds drawn in, links inside it, pictures found |
+| `core/export/mark.ts` | 10.3, DF-D25 | the mark a Markdown export carries, read without loading the writers |
 | `core/export/docx.ts` | 10.4 | the document as Word's `.docx` (`docx`, loaded when exporting) |
 | `core/export/pdf.ts` | 10.5, 10.11 | the document as a PDF: lines laid out here, set by pdfkit; a font a character |
 | `core/export/fonts.ts` | 10.5 | a PDF's fonts, found in the machine's font folders: sans, mono, fallbacks |
@@ -354,7 +356,7 @@ and data each have a folder of their own, and a root's cache and state are kept 
 | staleness | `$XDG_STATE_HOME/slipbox/<key>/dirty/<pid>.json` |
 | redirects (moves seen: `17.12`) | `$XDG_STATE_HOME/slipbox/<key>/redirects.json` |
 | renames, to undo (`7.4`) | `$XDG_STATE_HOME/slipbox/<key>/renames.json` (the last 20) |
-| the trash (`18.4`) | `$XDG_STATE_HOME/slipbox/<key>/trash/` (`trash.json`, and an item per folder) |
+| the trash (`18.4`) | `$XDG_STATE_HOME/slipbox/<key>/trash/` (`trash.json`, an item per folder; kept 30 days: DF-D14) |
 | the background index (`20.9`) | `$XDG_STATE_HOME/slipbox/autoindex.json` (its place), `activity` (CLI last used) |
 | saved plans (`20.18`, `--plan`) | `$XDG_STATE_HOME/slipbox/plans/<id>.json` (for `slipbox apply`; gone once applied) |
 | the update check (`14.4`) | `$XDG_STATE_HOME/slipbox/update.json` (when it last asked, what it found) |
@@ -373,8 +375,8 @@ and when a root's identity is written: [roots.md](roots.md) § State by root and
 shared by every copy on the machine: [roots.md](roots.md) § The index.
 
 The scratch is in the state folder by default, so it is never committed by accident; `slipbox scratch path` and
-`show` keep it visible to agents. `capture.location = "vault"` puts it at `<root>/<capture.file>`, never in a plain
-folder (D20).
+`show` keep it visible to agents. `capture.location = "root"` (`"vault"`, the old word, read as it; DF-D22) puts it at
+`<root>/<capture.file>`, never in a plain folder (D20).
 
 ## Performance, measured
 

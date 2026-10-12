@@ -130,6 +130,15 @@ Nothing runs as root and nothing outside those two places is touched. `SLIPBOX_R
 elsewhere laid out as GitHub's releases are (`<base>/download/v<version>/<pack>`) — a mirror, or the tests' folder
 through `file://` — and their sums are still the release's.
 
+**The source launcher**, `scripts/install-local.sh`, writes a small script at the same path (`~/.local/bin/slipbox`,
+or `$SLIPBOX_BIN_DIR`'s) that runs the checkout with Bun, given slipbox's own `bunfig.toml` and no `.env`
+([trust.md](trust.md) § Bun's own reading). A link found there, a release's to `<data>/current/slipbox` or any other, is
+removed and the script written in its place, never through it: writing through a release's link would overwrite the
+release's binary with the launcher. It says so: `replaced the link <path> -> <target> (a release's, which stays
+installed) with this launcher`, or, for a link of another kind, that what it pointed to is left as it is (DF-D7). A
+release's own files are never written: they stay installed until `slipbox uninstall --yes` removes them, the launcher
+kept, as it is not the installer's link (§ Uninstalling).
+
 ## Homebrew
 
 `finish` writes `slipbox.rb` too (`14.3`, D204): the formula, from `scripts/homebrew.template.rb`, with a block for each
@@ -158,11 +167,11 @@ each download is checked against. A plain GET of a public file; nothing identify
 tests' folder through `file://`), the installer's too.
 
 **The daily check** is the TUI's, never the CLI's — agents call the CLI. It asks only when this is a release build,
-`[update] check` is on in your own config (it is by default; a folder's config can't turn it on: a network request is
-yours to allow), `DO_NOT_TRACK` isn't set (anything but `0` or `false`), and a day has passed since the last time
-(`$XDG_STATE_HOME/slipbox/update.json`, kept before asking, so a failure waits a day too). A newer release is said in
-the message line: `slipbox 0.3.0 is out (this is 0.2.0): slipbox upgrade installs it` — `brew upgrade slipbox` for
-Homebrew's, and the releases' address for a binary put somewhere by hand.
+`[update] check` is on in your own config (it is by default; a folder's config can't turn it on, or off, and is warned
+of when it tries: a network request is yours to allow; DF-D23), `DO_NOT_TRACK` isn't set (anything but `0` or `false`),
+and a day has passed since the last time (`$XDG_STATE_HOME/slipbox/update.json`, kept before asking, so a failure waits
+a day too). A newer release is said in the message line: `slipbox 0.3.0 is out (this is 0.2.0): slipbox upgrade installs
+it` — `brew upgrade slipbox` for Homebrew's, and the releases' address for a binary put somewhere by hand.
 
 **`slipbox upgrade`** moves the installer's install to the latest release (`--check`: only says whether there is
 one). From source, or a binary the installer didn't put in `versions/`, it says so and does nothing. Otherwise, as the

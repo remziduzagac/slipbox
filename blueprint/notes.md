@@ -352,3 +352,15 @@ dates. Each says what was asked, decided, built and found, and cites the decisio
 - **Open, for the user:** what the writers found in the code (DOC's notes § What writing the docs found in the code):
   bugs, places where the code and the design disagree, gaps; and whether the docs get screenshots.
 
+## What writing the docs found (2026-10-11 to 2026-10-12)
+
+- DOC's writers found bugs, places where the code and the design disagreed, and gaps; the user settled them one by
+  one, and they became the workstream DF ([its notes](workstreams/archive/doc-findings/notes.md), its decisions
+  DF-D1–DF-D31): seven fixers in worktrees, then two for the follow-ups; terminal tests for every fixed part, nine
+  new; screenshots in the guides and the screen chapter. Consolidated 2026-10-12: requirements.md § Constraints
+  (Safety) and § Documentation, and the design files it named.
+- The user said the agents were saturating the CPU, and the fixers' whole-suite runs stopped; then, "from now on until
+  you are done use your recommendations as answers to your guestions": the choices so made are in DF's notes.
+- **Open, for the user:** the skill as an npx package for common harnesses, and how agents and slipbox work together,
+  to discuss (ideas.md § Agent surface); search's improvements, later (ideas.md § Search).
+

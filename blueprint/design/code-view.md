@@ -198,11 +198,17 @@ the tokens differ.
   row the cursor passes over. The rows of code keep a map of each cell to its place in the file, so find, a
   selection, problem marks, a language server's hover and jumps all land where they are in the file; documentation's
   and comments' rows are rendered prose, placed by line.
+- **Links in comments** (`16.10`): a comment's paths that name a file of the root are links in its prose — a doc's, a
+  comment's box, a comment among code — drawn and followed as a Markdown link in it is (`enter`, `] l`, the links list),
+  to their line where they name one (`path:42`); on a row of code (a note beside code, a comment kept as written) they
+  are drawn as source mode draws them, and `enter` reads them from the text.
 - **The outline and the breadcrumb** are the definitions, as in source mode; the sections head them for `]]`, `[[`
   and the breadcrumb.
 - **Copying** a selection copies the file's text, never the rows as drawn.
-- **Problems** show as in source mode: the bar's signs, the marks, the Problems panel — and a cell's header counts its
-  own. A mark is on a row's text only, never on a cell's header, borders or padding, which carry a line, not its text.
+- **Problems** show as in source mode, from every source alike: the bar's signs, the marks, the Problems panel —
+  slipbox's own syntax errors among them, out of insert, until a server has answered (`16.9`, DF-D10) — and a cell's
+  header counts its own. A mark is on a row's text only, never on a cell's header, borders or padding, which carry a
+  line, not its text.
 
 ## Next
 

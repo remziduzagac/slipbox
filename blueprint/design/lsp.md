@@ -30,7 +30,7 @@ is its main server, and add-ons, a linter's server each, run beside it where the
 runs the project's linter: eslint's server loads the project's ESLint (8.57 or 9, flat config or `.eslintrc`, as that
 ESLint decides), stylelint's reads the project's config and its plugins, and biome is the project's own
 `node_modules/.bin/biome` when it has one. Their findings, fixes and rule suppressions come as any server's
-(`space c a`). Built in:
+(`space c a`). Built in (`LANGUAGES` in `core/servers/languages.ts`; DF-D13):
 
 | Languages | Servers, the main first (npm: installed when missing) |
 | --- | --- |
@@ -38,10 +38,16 @@ ESLint decides), stylelint's reads the project's config and its plugins, and bio
 | Python | pyright (npm); ruff |
 | Rust, Go, Lua | rust-analyzer, gopls, lua-language-server |
 | bash | bash-language-server (npm) |
-| JSON, YAML, TOML | vscode-json-language-server (npm), biome; yaml-language-server (npm); taplo |
-| CSS, SCSS, Less, HTML | vscode-css-language-server (npm), stylelint, biome; vscode-html-language-server (npm) |
-| Dockerfile, PHP | docker-langserver (npm); intelephense (npm) |
-| Swift, C, C++, Ruby | sourcekit-lsp; clangd; ruby-lsp |
+| JSON, JSON with comments (`.jsonc`) | vscode-json-language-server (npm), biome |
+| YAML, TOML | yaml-language-server (npm), the linter yamllint; taplo |
+| CSS | vscode-css-language-server (npm), stylelint, biome |
+| SCSS, Less | vscode-css-language-server (npm), stylelint |
+| HTML | vscode-html-language-server (npm) |
+| Dockerfile, PHP | docker-langserver (npm), the linter hadolint; intelephense (npm) |
+| Swift, C, C++, Ruby (`.rb`, `Gemfile`, `Rakefile`) | sourcekit-lsp; clangd; ruby-lsp |
+
+Other languages, Java and Kotlin among them, have no server built in: one is added in your config's
+`[language-server.<name>]` and `[[language]]`.
 
 TypeScript 7 is native with its server built in (`tsc --lsp --stdio`): it's used where the project's TypeScript is 7 or
 there is none, and vtsls, its own TypeScript bundled, where the project's is older. Each server's settings by default
@@ -99,11 +105,12 @@ and Mason installs them beside it. Mason's is one of your install folders, so it
 In a root you trust, each runs as it would anywhere else: its own defaults, the folder's settings, its own copy.
 
 **Installing** (`19.5`, `14.11`, `core/servers/install.ts`; D162, D202): a server published on npm and found nowhere is
-installed when a file first needs it — `[lsp] auto_install = false` stops that — into a folder of its own in slipbox's
-(`$XDG_DATA_HOME/slipbox/tools/<package>/<lock>/`), from the lockfile slipbox ships for its pin (`locks.ts`, made by
-`scripts/lock-servers.ts`): installed frozen, so every package under it is the version and the content (its sha512) the
-lock says; its install scripts off, nothing global, by slipbox's own Bun (the compiled binary is Bun when told to be),
-one install at a time, into a folder beside the final one that's renamed into place when it's done.
+installed when a file first needs it — `[lsp] auto_install = false`, in your own config only (DF-D1), stops that — into
+a folder of its own in slipbox's (`$XDG_DATA_HOME/slipbox/tools/<package>/<lock>/`), from the lockfile slipbox ships for
+its pin (`locks.ts`, made by `scripts/lock-servers.ts`): installed frozen, so every package under it is the version and
+the content (its sha512) the lock says; its install scripts off, nothing global, by slipbox's own Bun (the compiled
+binary is Bun when told to be), one install at a time, into a folder beside the final one that's renamed into place when
+it's done.
 
 **Kept current** (`14.11`, D202): an install of slipbox's is current only under the lock it ships now. One under an
 older lock — a pin moved, a dependency moved, or one installed before lockfiles, in the one shared folder

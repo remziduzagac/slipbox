@@ -1,5 +1,5 @@
 ---
-status: review
+status: done
 assignee: claude-words
 blocked_by: []
 created: "2026-10-12"
@@ -99,3 +99,4 @@ The follow-ups F3, F7, F11, F12.
   home.test.ts's CASES test pass; tui.test.ts 651 of 662 under load, the 11 failures (Mermaid pictures, the lint
   surface, search's 30 s timeouts, linters, a component's comments) passing rerun alone, none in what this task
   touched. Not the whole suite (the coordinator's, after merging).
+- 2026-10-12: accepted on the coordinator's recommendation, the user having said to take them as answers until done; done.

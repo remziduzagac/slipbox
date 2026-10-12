@@ -22,6 +22,7 @@ The code is in `src/core/export/`:
 | `convert.ts` | a picture of a kind a format doesn't hold made a PNG first: BMP, GIF and WebP decoded (`10.10`) |
 | `style.ts` | the look on paper: print's colours, a callout's, code's; the stylesheet |
 | `index.ts` | the formats, by name; where an export goes; writing it |
+| `mark.ts` | the mark a Markdown export carries, `generator: slipbox`: read by `index.ts` and by the graph's lookups |
 
 `src/core/imagecache.ts` is where a picture on the web is kept once the TUI has fetched it (`12.12`). An export reads
 it, and fetches nothing. Every writer is loaded when it's first used, not at start.
@@ -33,12 +34,15 @@ it, and fetches nothing. Every writer is loaded when it's first used, not at sta
 - The format is `--to`'s: a name (`docx`, `pdf`, `html`, `epub`, `md`), another name for it (`word`, `doc`, `htm`,
   `web`, `ebook`, `markdown`) or an extension (`.docx`). Without `--to`, it's `-o`'s extension; without either, Word.
   A format slipbox doesn't write is a usage error (exit 2).
-- The file goes to `--out` (or `-o`), from the working folder; a folder gets the first note's name in it. Without
-  `-o`, it goes beside the first note, under its name (D185): `notes/report.md` gives `notes/report.docx`. Markdown's is
+- The file goes to `--out` (or `-o`), from the working folder; a folder, one there or a path ending in `/` (made when
+  the export is written), gets the first note's name in it, and its own name says no format (DF-D5). Without `-o`, it
+  goes beside the first note, under its name (D185): `notes/report.md` gives `notes/report.docx`. Markdown's is
   `notes/report.export.md`, apart from the note it's of.
 - Several notes make one document, a chapter each, in the order given.
-- A file already there is replaced, as `-o` does in any tool. A note of the root never is (exit 5), but for an
-  earlier Markdown export: its frontmatter's `generator: slipbox` says it is one.
+- A file already there is replaced, as `-o` does in any tool. A note never is (exit 5), of this root or any other
+  (DF-D3): this root's as its index has them; another's, a file of a note's name in a folder that is a root, where it
+  is reached or where it really is (a symlinked folder counts). An earlier Markdown export is: its frontmatter's
+  `generator: slipbox` says it is one.
 - `--json`: `{path, format, notes[], bytes, files[]}` — `files`, what was written beside it (Markdown's pictures). The
   human line: `exported notes/report.md to notes/report.docx (Word (.docx))`, with `, 2 files beside it` where there
   are some.
@@ -61,11 +65,12 @@ it, and fetches nothing. Every writer is loaded when it's first used, not at sta
     `→` goes into a folder (a file: its name taken), `←` or "‥" up, back on the folder left; typing jumps to an entry
     that starts so (the same letter again, the next), a `.` first showing the hidden ones; `~` goes home; `ctrl+n`
     makes a folder there and goes into it. In the name, `↓` goes to the folder; a name may be a path, from the folder
-    (`~/` home), and a folder named is gone into.
+    (`~/` home), and a folder named is gone into, the note's name given back for a second `enter` to export there; one
+    ending in `/` is made first where it isn't there (DF-D5, DF-D29), as `ctrl+n` makes one.
   - **The mouse:** a place clicked goes there; an entry clicked is picked, clicked again opened; the name clicked
     takes the focus; the wheel scrolls; a click outside cancels.
-- A file there is replaced only after `y` to "rep.docx is there — replace it?" (`n`: the window again); a note is
-  refused, the window kept (an earlier Markdown export aside, which is asked about as a file is).
+- A file there is replaced only after `y` to "rep.docx is there — replace it?" (`n`: the window again); a note of any
+  root is refused, the window kept (an earlier Markdown export aside, which is asked about as a file is) (DF-D3).
 - Unsaved notes are saved first, as every hand-off does (`4.10`), since the export reads the notes from disk. One that
   can't be saved stops it, said as `space s c` says it: `export: x.md changed on disk while unsaved — ␣ n c resolves
   it first`.
@@ -81,8 +86,10 @@ markdown tree, made ready for a writer, which never looks anything up.
   `notes-report`), and its title is the note's (frontmatter `title`, else its first heading, else its file name).
 - **The document's title, author, date and language** come from the first note: its title, its frontmatter's `author`
   (or `authors`, joined), `date` and `lang` (or `language`).
-- **Dropped:** frontmatter, link definitions and HTML blocks. HTML in a line: `<br>` is a break, any other tag goes,
-  and the words between tags stay. Nothing a note holds runs in a document made of it.
+- **Dropped:** frontmatter, link definitions, HTML blocks and Obsidian's comments (DF-D17: in a line, the white space
+  where one was made one; a paragraph of them; one over blank lines) — what a reader of the note never sees isn't in
+  what's sent. HTML in a line: `<br>` is a break, any other tag goes, and the words between tags stay. Nothing a note
+  holds runs in a document made of it.
 - **Embeds** are drawn in when a paragraph holds only embeds: `![[note]]`, `![[note#Heading]]`, `![[note#^block]]`
   and `![](note.md)`. Each is drawn in as its blocks, made ready from where its note is (its links and pictures read
   from its folder), up to three deep. An embed of a note already being drawn in is its link instead: no loop.
@@ -94,7 +101,11 @@ markdown tree, made ready for a writer, which never looks anything up.
 - **Tags** are their text.
 - **Pictures** are found as on screen (`12.13`, `12.14`): a path from its note's folder, `![[name]]` by name, and
   Obsidian's `|300` or `|240x180` kept as the size. One on the web is its cached copy (its address kept), else its
-  words linked to it, marked a picture's for a format that keeps it one. A missing one is its words.
+  words linked to it, marked a picture's for a format that keeps it one. A missing one is its words. Only the root's
+  pictures go into a document (DF-D24): a file outside the root of the notes exported, by where it really is (a link
+  inside the root leading out is out), is marked `outside` on its picture, and no writer reads it — Word, PDF, the web
+  page and the e-book show its words, as they show a picture they can't read (`pictureData` in `images.ts`), nothing
+  is made PNG of it (`convert.ts`), and Markdown links to it (§ Markdown). A web picture's cached copy goes in.
 - **Diagrams and maths.** A Mermaid block becomes an SVG in print's colours, dark on white, its source kept (a kind
   beautiful-mermaid doesn't draw stays code). Maths becomes MathJax's SVG, a display's and a line's.
 - **Callouts** (`> [!tip] Try it`) become a quote whose title is bold on a line of its own (the kind's name where
@@ -103,7 +114,8 @@ markdown tree, made ready for a writer, which never looks anything up.
   its path, never the path, which an HTML id would otherwise show.
 
 Every format draws on paper the same way (`style.ts`): GitHub's light colours, code coloured by the role highlighting
-gives a token, a callout's bar in its kind's colour, a task's box `☐` or `☑`, a chapter starting a new page.
+gives a token, a callout's bar in its kind's colour, a task's box `☐` or `☑`, an Obsidian highlight on a marker's
+yellow (`<mark>` in HTML and an EPUB, Word's yellow highlight, a PDF's tint; DF-D17), a chapter starting a new page.
 
 ## Word (`10.4`)
 
@@ -187,12 +199,17 @@ One portable file, for GitHub or any editor (D181):
 
 - **Links inside it** go to the heading ids GitHub gives, a name used again numbered across the whole document; a
   chapter's goes to its title (a note opening with no heading gets one, its title).
-- **Pictures** are copied into a folder beside it, `report.export.assets/`, each by its own name (a picture from the web
-  by its address's, with its kind's extension where that names none); a second of a name is numbered. Obsidian's size
-  is kept where Obsidian reads it: `![alt|240](…)`. A picture on the web with no copy here stays a picture, its address
-  as it was.
+- **Pictures** are copied into a folder beside it, `report.export.assets/`: only files that are pictures by what they
+  hold (a raster's header, an SVG's start), of the root (those the assembler hasn't marked `outside`), or a picture
+  from the web, its cached copy (DF-D2, DF-D24). Each goes by its own name (one from the web by its address's, with
+  its kind's extension where that names none); a second of a name is numbered. Obsidian's size is kept where Obsidian
+  reads it: `![alt|240](…)`. A picture on the web with no copy here stays a picture, its address as it was. Anything
+  else a picture link names — a file that isn't a picture, one outside the root — is a link to it from the export,
+  `[alt](../notes.txt)` (its alt, else its file's name), nothing of it copied; one on another drive is its words. The
+  folder answers no lookup by name, whatever its name: `report.export.assets/`, or `book.assets/` for `-o book.md`
+  ([links.md](links.md) § Wikilinks; DF-D25).
 - **Kept as written**, as Markdown renders them itself: a Mermaid diagram as its code, maths as `$…$` and `$$`, a
-  callout as `> [!tip] Its title`.
+  callout as `> [!tip] Its title`, a highlight as `==…==`.
 - **Footnotes** are numbered `[^1]`, `[^2]` in the order they're referred to.
 - **Its frontmatter** has the title, author, date and language, and the mark `generator: slipbox`, which lets a later
   export replace it, though it's a note. Pictures left from an earlier export of other pictures stay in the folder.
@@ -219,8 +236,6 @@ distributed binary owes them: [distribution.md](distribution.md) § Notices.
 
 ## Known limits
 
-- A picture is read wherever its link points, as on screen. A note from elsewhere can name a picture outside the root,
-  and its export would hold that picture.
 - A footnote a section embed refers to, but defined outside the section, isn't drawn in.
 - A run-length-encoded BMP, or a picture otherwise unreadable, is its words. The libwebp in `@jsquash/webp` is 1.0.2,
   old; it decodes inside WebAssembly, where a malformed file can fail but not reach beyond it.

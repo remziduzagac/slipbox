@@ -1,5 +1,5 @@
 ---
-status: review
+status: done
 assignee: claude
 blocked_by: []
 created: "2026-10-11"
@@ -41,3 +41,4 @@ The design says what the code does where the user found the code right; the exam
   `about-this-vault.md` drops Mermaid and LaTeX from what's missing; `CASES.md` says maths and Mermaid are drawn; the
   manifest's two wikilink case titles likewise. `tests/home.test.ts` and `tests/docs.test.ts` pass (*ran*).
 
+- 2026-10-12: accepted on the coordinator's recommendation, the user having said to take them as answers until done; done.

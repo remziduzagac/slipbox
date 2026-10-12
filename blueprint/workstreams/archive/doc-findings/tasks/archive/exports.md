@@ -1,5 +1,5 @@
 ---
-status: review
+status: done
 assignee: claude-export
 blocked_by: []
 created: "2026-10-11"
@@ -92,3 +92,4 @@ makes the folder; an export's pictures don't answer lookups by name.
   coordinator's word (seven agents' runs at once); its failures were timeouts and timings of the same kind, and
   render.test.ts's pipeline-cookbook snapshot (a Mermaid block "too wide to draw") and servers.test.ts's locks (a
   fake lock from another test file's run), neither in what this task touched.
+- 2026-10-12: accepted on the coordinator's recommendation, the user having said to take them as answers until done; done.

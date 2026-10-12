@@ -1,5 +1,5 @@
 ---
-status: review
+status: done
 assignee: claude-links
 blocked_by: []
 created: "2026-10-11"
@@ -87,3 +87,4 @@ The code brought in line with the design in three places.
   but one passing rerun alone; that one, "the background index parses a big note on other threads" (a slice under 250
   ms; 391 and 454 ms here), is a timing test of the parser, which this task doesn't touch. The whole suite is the
   coordinator's, after the merge.
+- 2026-10-12: accepted on the coordinator's recommendation, the user having said to take them as answers until done; done.
