@@ -32,9 +32,11 @@ What slipbox's delivery depends on, and who can recover it:
   Homebrew tap, once there is one. Only the maintainer holds it, and recovers it through GitHub's account recovery.
 - **The tap's token**, the `HOMEBREW_TAP_TOKEN` secret in the `release` environment, can write only to the tap, and
   expires. The account makes a new one when it's lost or due; its date is in `.github/upkeep/renewals.toml`.
+- **The Pages site,** `https://remziduzagac.github.io/slipbox/`, serves the installer and the channels. It is the
+  account's: deployed by this repository's workflows, with no domain of its own to renew.
 - **Nothing else:** releases aren't signed, so there is no signing key; there is no domain, package registry or store
   account.
-- **Installed copies** look for updates in this repository's releases.
+- **Installed copies** look for updates in this repository's releases, and in the Pages site's channels.
 
 Nobody else has admin access today. If the maintainer can't go on, nobody can merge, release or change a setting. The
 code stays available under the Apache License 2.0, and the published releases stay downloadable: anyone may fork it and
@@ -47,7 +49,7 @@ Every change reaches `main` through a pull request: the rules on `main` require 
 runs everything on Linux and macOS, to pass. No approval is required, since there is no second person to give one.
 
 - **Who:** agents and collaborators work on a branch and open the pull request; the maintainer merges it. Agents never
-  merge, release, tag or change settings.
+  merge, release, tag, push `test` or change settings.
 - **How:** squash is the only merge method, so `main` has one commit per change. The branch is deleted once merged.
 - **The title** is a [Conventional Commit](https://www.conventionalcommits.org/en/v1.0.0/), and becomes the squashed
   commit's subject: `fix(export): …`, `feat(cli): …`, `docs: …`, `refactor`, `perf`, `test`, `build`, `ci`, `chore`; a
@@ -61,8 +63,10 @@ runs everything on Linux and macOS, to pass. No approval is required, since ther
 ## Releasing
 
 A release is made by CI from a tag, as a draft the maintainer checks and publishes. `scripts/release.ts` builds and
-packs; `.github/workflows/release.yml` runs it on every platform; `.github/workflows/homebrew.yml` updates the tap. The
-design is `blueprint/design/distribution.md` § Releases.
+packs; `.github/workflows/build.yml` runs it on every platform, for releases and previews alike;
+`.github/workflows/release.yml` drafts the release from what it built; `.github/workflows/homebrew.yml` updates the tap
+and `.github/workflows/pages.yml` the installer's site once it's published. The design is
+`blueprint/design/distribution.md` § Releases.
 
 1. **Choose the version,** as [Versions](docs/manual/versions.md) says: before 1.0, a minor release when something is
    added or something kept changes, a patch for fixes alone.
@@ -72,7 +76,8 @@ design is `blueprint/design/distribution.md` § Releases.
    Fixed and Security; a breaking change marked **Breaking**, with what to do. CI takes the release's notes from this
    entry.
 3. **Bump the version** in `package.json` (`version`) and `src/version.ts` (`VERSION`), the same in both: `release.ts`
-   refuses a release when they differ, or differ from the tag.
+   refuses a release when they differ, or differ from the tag. Where previews were made since the last release, it's
+   bumped already ([Previews](#previews)); check it's the version chosen.
 4. **Check the rest is current:** the docs for what changed, and the skill, `skills/slipbox/SKILL.md`, for the command
    line. The blueprint is synced with the code (its README's `synced_with`).
 5. **Merge it** through a pull request, `chore(release): 0.3.0`, as any change.
@@ -84,9 +89,10 @@ design is `blueprint/design/distribution.md` § Releases.
    git push origin v0.3.0
    ```
 
-7. **CI drafts the release.** On each platform's runner it runs the whole check, then builds and packs that platform; a
-   Mac's binary has its signature checked, and a musl build is run in Alpine. Then it writes `SHA256SUMS`, the installer
-   and the formula, the SBOM, attests them all, and drafts the release with its notes.
+7. **CI drafts the release.** It checks the tag against the version and the changelog's entry first. On each platform's
+   runner it runs the tests, then builds and packs that platform; a Mac's binary has its signature checked, and a musl
+   build is run in Alpine. Then it writes `SHA256SUMS`, the installer and the formula, the SBOM, attests them all, and
+   drafts the release with its notes.
 8. **Check the draft** before anyone can see it: every pack is there (`darwin-arm64`, `darwin-x64`, `linux-x64`,
    `linux-arm64`, `linux-x64-musl`, `linux-arm64-musl`), with `SHA256SUMS`, `install.sh`, `slipbox.rb` and the SBOM; the
    notes read right. Then, in an empty folder:
@@ -104,13 +110,42 @@ design is `blueprint/design/distribution.md` § Releases.
    `LICENSE` and `NOTICES.txt`.
 9. **Publish the draft** on its page, or with `gh release edit v0.3.0 --repo remziduzagac/slipbox --draft=false`. A
    published release can't be changed.
-10. **Homebrew follows:** publishing runs `homebrew.yml`, which copies the release's formula into the tap, through the
-    `release` environment. Check the tap's new commit, then `brew upgrade slipbox` on a machine that has it.
-11. **Try it as a user would:** the installer from the published release on a clean machine, `slipbox upgrade --check`
-    from the version before, and `slipbox --version` after.
+10. **Homebrew and Pages follow:** publishing runs `homebrew.yml`, which copies the release's formula into the tap,
+    through the `release` environment, and `pages.yml`, whose `stable` channel then names the release. Check the tap's
+    new commit, then `brew upgrade slipbox` on a machine that has it; and that
+    `https://remziduzagac.github.io/slipbox/stable` names the new tag.
+11. **Try it as a user would:** `curl -fsSL https://remziduzagac.github.io/slipbox/install.sh | sh` on a clean machine,
+    `slipbox upgrade --check` from the version before, and `slipbox --version` after.
 
 If the draft is wrong, delete it, fix the cause through a pull request, and release the next patch version. A tag is
 never moved, and a version is never used twice.
+
+## Previews
+
+A preview is what `main` has, built and published before it's released, for trying it on a machine as users get it
+(`.github/workflows/preview.yml`). Only the maintainer makes one, by moving the `test` branch to `main`:
+
+```bash
+git switch main && git pull
+git push origin main:test
+```
+
+- **Its version** is the release to come's, with the commit's UTC time and hash after it: `slipbox --version` says
+  `0.3.0-preview.202610121530.g1a2b3c4`, which sorts after the previews before it and before 0.3.0. Its tag is
+  `preview-202610121530-1a2b3c4`. The version is written into CI's checkout only, never committed.
+- **Refused** when `package.json`'s version is released already (its `v` tag exists): after a release, bump the version
+  to the next one, in `package.json` and `src/version.ts`, through a pull request (`chore: 0.4.0 next`), then push
+  `test` again.
+- **What's built** is what a release builds, by the same workflow (`build.yml`): every platform, after the tests, each
+  pack's SBOM, `SHA256SUMS`, the installer, all attested. There's no Homebrew formula: Homebrew never gets a preview.
+- **Published** as a pre-release: drafted, its assets uploaded, then published, all by CI. The newest ten are kept,
+  older ones deleted with their tags (an immutable release can be deleted, and its tag never used again).
+- **Who it reaches:** those who installed with `sh -s -- --preview`, or ran `slipbox channel set preview`. Pages is
+  deployed after each one, and its `preview` channel names it; `slipbox upgrade` there takes the newer of it and the
+  latest release. Stable installs, Homebrew and the `latest` release are untouched.
+
+`test` only moves forward: its ruleset forbids deleting it or forcing it back. A preview that went wrong is followed by
+another, from a fixed `main`.
 
 ## Dependencies
 
@@ -163,16 +198,20 @@ Reviewed twice a year, with the toolchains:
 - The language servers and markdownlint-cli2 slipbox installs: their pins are in `src/core/servers/languages.ts` and
   `src/core/lint.ts`, and `bun scripts/lock-servers.ts` makes their lockfiles again after a pin moves.
 - The grammars built from pinned commits (`scripts/build-grammars.ts`, `grammars/README.md`).
-- The Alpine image the release runs musl builds in, pinned by digest in `release.yml`.
+- The Alpine image the release runs musl builds in, pinned by digest in `build.yml`.
 
 ## Settings
 
 The repository's settings are committed in `.github/upkeep/`: `settings.json` holds them by the field names of GitHub's
-REST API, and `rulesets/main.json` and `rulesets/tags.json` the rules on `main` and on `v*` tags, as GitHub exports
-them. They say what the repository should be.
+REST API, and `rulesets/main.json`, `rulesets/tags.json` and `rulesets/test.json` the rules on `main`, on `v*` tags and
+on `test`, as GitHub exports them. They say what the repository should be.
+
+Pages is among them: its source is GitHub Actions (Settings → Pages), and its environment, `github-pages`, takes
+deployments from `main`, `test` and `v*` tags alone (Settings → Environments), the refs `pages.yml` runs from: by hand,
+after a preview, after a release.
 
 - **Weekly,** the health check compares what its token can read (the rulesets, the workflows' states, private
-  vulnerability reporting) and reports any drift in the health issue.
+  vulnerability reporting, Pages and its environment) and reports any drift in the health issue.
 - **Monthly,** in a session with the maintainer's own login, an agent compares what only an admin can read: the security
   switches, the Actions policy and default token, the merge settings, deploy keys and secrets' ages, and secret
   scanning's alerts, with `bun scripts/health.ts --admin` (it prints the drift and changes nothing; the two-factor check
@@ -202,7 +241,8 @@ switched-off workflow can't report itself.
 - **Agents do alone:** read, run the checks, push branches, open draft pull requests.
 - **Agents propose, and wait for approval:** anything public addressed to people, such as a comment or a label on an
   issue or a pull request.
-- **The maintainer alone:** merging, releasing and tagging, the settings, closing issues, security advisories.
+- **The maintainer alone:** merging, releasing and tagging, previews (pushing `test`), the settings, closing issues,
+  security advisories.
 
 ### The calendar
 

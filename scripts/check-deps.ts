@@ -403,10 +403,11 @@ function cdxLicences(expr: string): CdxLicence[] {
 
 /** The SBOM a release ships beside a pack (CycloneDX 1.6, JSON): what its binary bundles, from the same walk as its
  *  notices — each package with its licence, its source and the packages it depends on — and the code compiled into
- *  packages, and Bun, the runtime. `serial` and `timestamp` are this one's, new each time unless given. */
+ *  packages, and Bun, the runtime. slipbox's Package URL names the release's tag: `v<version>`, or a preview's
+ *  (`tag`). `serial` and `timestamp` are this one's, new each time unless given. */
 export function sbom(
   walk: { packages: Package[]; direct: string[] },
-  release: { version: string; target?: string; repo?: string },
+  release: { version: string; target?: string; repo?: string; tag?: string },
   root = ROOT,
   at: { serial?: string; timestamp?: string } = {},
 ): Sbom {
@@ -421,7 +422,7 @@ export function sbom(
     name: "slipbox",
     version: release.version,
     ...(own.description ? { description: own.description } : {}),
-    ...(release.repo ? { purl: `pkg:github/${release.repo}@v${release.version}` } : {}),
+    ...(release.repo ? { purl: `pkg:github/${release.repo}@${release.tag ?? `v${release.version}`}` } : {}),
     licenses: cdxLicences(own.license ?? ""),
     ...(release.repo ? { externalReferences: [{ type: "vcs", url: `https://github.com/${release.repo}` }] } : {}),
     ...(release.target ? { properties: [{ name: "slipbox:target", value: release.target }] } : {}),

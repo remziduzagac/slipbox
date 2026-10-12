@@ -12,12 +12,14 @@
 # uninstall` lists every path before it removes anything.
 #
 # SLIPBOX_RELEASES_URL fetches the packs from elsewhere laid out as GitHub's releases are (a mirror, a test's folder):
-# <base>/download/v<version>/<pack>. Their sums are still these.
+# <base>/download/<tag>/<pack>. Their sums are still these.
 
 set -eu
 
 VERSION="@VERSION@"
 REPO="@REPO@"
+# The release's tag, where its packs are: v<version>, or a preview's preview-<time>-<hash>.
+TAG="@TAG@"
 
 # Each pack's SHA-256, by platform.
 sum_of() {
@@ -113,7 +115,7 @@ main() {
   trap 'cleanup; exit 143' TERM
 
   say "downloading $name"
-  fetch "$base/v$VERSION/$name.tar.gz" "$tmp/pack.tar.gz" || fail "couldn't download $base/v$VERSION/$name.tar.gz"
+  fetch "$base/$TAG/$name.tar.gz" "$tmp/pack.tar.gz" || fail "couldn't download $base/$TAG/$name.tar.gz"
   got=$(sha256 "$tmp/pack.tar.gz")
   [ "$got" = "$want" ] || fail "the download's SHA-256 is $got, not the release's $want: nothing installed"
   tar -xzf "$tmp/pack.tar.gz" -C "$tmp"

@@ -96,11 +96,40 @@ describe("the committed upkeep files", () => {
       allow_merge_commit: false,
       delete_branch_on_merge: true,
     });
+    // GR-D14: Pages built by its workflow, deployed through `github-pages` from main, test and v* tags only; read
+    // weekly, so the health workflow's token may read Pages.
+    expect(groups.find((g) => g.endpoint === "repos/{repo}/pages")).toMatchObject({
+      reader: "workflow",
+      expect: { build_type: "workflow", html_url: "https://remziduzagac.github.io/slipbox/" },
+    });
+    const policies = groups.find(
+      (g) => g.endpoint === "repos/{repo}/environments/github-pages/deployment-branch-policies",
+    );
+    expect(policies).toMatchObject({
+      reader: "workflow",
+      expect: {
+        branch_policies: [
+          { name: "main", type: "branch" },
+          { name: "test", type: "branch" },
+          { name: "v*", type: "tag" },
+        ],
+      },
+    });
+    const health = Bun.YAML.parse(readFileSync(join(ROOT, ".github", "workflows", "health.yml"), "utf8")) as {
+      jobs: { collect: { permissions: Record<string, string> } };
+    };
+    expect(health.jobs.collect.permissions.pages).toBe("read");
   });
 
-  test("the rulesets, as GitHub exports them: main through a pull request and the ci check; v* tags admins only", () => {
+  test("the rulesets, as GitHub exports them: main through a pull request and the ci check; v* tags admins only; test kept", () => {
     const files = readdirSync(join(UPKEEP, "rulesets")).sort();
-    expect(files).toEqual(["main.json", "tags.json"]);
+    expect(files).toEqual(["main.json", "tags.json", "test.json"]);
+    // GR-D13: `test`, which previews are made from, is never deleted or forced back.
+    const kept = JSON.parse(readFileSync(join(UPKEEP, "rulesets", "test.json"), "utf8")) as Ruleset;
+    expect(kept).toMatchObject({ name: "test", target: "branch", enforcement: "active" });
+    expect(kept.conditions).toEqual({ ref_name: { include: ["refs/heads/test"], exclude: [] } });
+    expect(kept.rules?.map((r) => r.type)).toEqual(["deletion", "non_fast_forward"]);
+    expect(kept.bypass_actors).toEqual([]);
     const main = JSON.parse(readFileSync(join(UPKEEP, "rulesets", "main.json"), "utf8")) as Ruleset;
     expect(main.rules?.map((r) => r.type)).toEqual([
       "deletion",

@@ -45,7 +45,6 @@ import {
   repoOf,
   sbomName,
   sha256sums,
-  TARGETS,
 } from "../scripts/release.ts";
 import { RELEASE } from "../src/core/release.ts";
 import {
@@ -572,21 +571,7 @@ describe("a release (14.2)", () => {
     expect({ code: r.exitCode, text: (r.exitCode === 0 ? r.stdout : r.stderr).toString() }).toEqual(want);
   });
 
-  test("the release workflow builds every platform released, and attests each one's SBOM to its pack", () => {
-    const wf = Bun.YAML.parse(readFileSync(join(ROOT, ".github", "workflows", "release.yml"), "utf8")) as {
-      jobs: {
-        build: { strategy: { matrix: { include: { target: string }[] } } };
-        sbom: { needs: string; strategy: { matrix: { target: string[] } } };
-        publish: { needs: string[] };
-      };
-    };
-    const released = Object.keys(TARGETS).sort();
-    expect(wf.jobs.build.strategy.matrix.include.map((m) => m.target).sort()).toEqual(released);
-    expect([...wf.jobs.sbom.strategy.matrix.target].sort()).toEqual(released);
-    expect(wf.jobs.sbom.needs).toBe("build");
-    // Nothing is drafted until every SBOM is attested.
-    expect([...wf.jobs.publish.needs].sort()).toEqual(["build", "sbom"]);
-  });
+  // The release workflow's build, shared with previews (build.yml): tests/release.test.ts.
 
   test("run from source, slipbox has no release: upgrade and the update check leave it alone", () => {
     expect(RELEASE).toBeNull();

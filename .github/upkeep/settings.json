@@ -62,6 +62,34 @@
       "expect": { "branch_policies": [{ "name": "v*", "type": "tag" }] }
     },
     {
+      "endpoint": "repos/{repo}/pages",
+      "reader": "workflow",
+      "about": "GitHub Pages built by a workflow (pages.yml), at the address the installer is run from (GR-D14)",
+      "expect": {
+        "build_type": "workflow",
+        "html_url": "https://remziduzagac.github.io/slipbox/",
+        "https_enforced": true
+      }
+    },
+    {
+      "endpoint": "repos/{repo}/environments/github-pages",
+      "reader": "workflow",
+      "about": "The `github-pages` environment, which pages.yml deploys through, reached only by the refs it names",
+      "expect": { "deployment_branch_policy": { "protected_branches": false, "custom_branch_policies": true } }
+    },
+    {
+      "endpoint": "repos/{repo}/environments/github-pages/deployment-branch-policies",
+      "reader": "workflow",
+      "about": "Pages deployed from `main` (by hand, the bootstrap changed), `test` (a preview), `v*` tags (a release)",
+      "expect": {
+        "branch_policies": [
+          { "name": "main", "type": "branch" },
+          { "name": "test", "type": "branch" },
+          { "name": "v*", "type": "tag" }
+        ]
+      }
+    },
+    {
       "endpoint": "repos/{repo}/vulnerability-alerts",
       "reader": "admin",
       "about": "Dependabot alerts on (DEP-01); GitHub answers 204 when they are, 404 when not",
