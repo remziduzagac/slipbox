@@ -152,7 +152,8 @@ function keysLeftOut(chapter: string): string[] {
 function commandsLeftOut(chapter: string): string[] {
   const out: string[] = [];
   for (const command of CLI_COMMANDS) {
-    if (!new RegExp("`(?:slipbox )?" + command.replace(/[-]/g, "\\-") + "[ `]").test(chapter)) out.push(command);
+    if (!new RegExp("`(?:slipbox )?" + command.replace(/[.*+?^${}()|[\]\\]/g, "\\$&") + "[ `]").test(chapter))
+      out.push(command);
     for (const flag of FLAGS[command] ?? []) if (!chapter.includes(`--${flag}`)) out.push(`${command} --${flag}`);
   }
   return out;

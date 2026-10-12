@@ -6613,12 +6613,7 @@ describe("code as a notebook (24.x, 24.13)", () => {
     // Statements together: the values' names, no references (they're no definition); a string's blank lines its own.
     const vals = rowIndex(h, "html · min");
     expect(r[vals]).toMatch(/^┌─ • html · min ─+ 27–33 ⧉ ✎ ◎ ▾ ──$/);
-    expect(r.slice(vals + 3, vals + 7).map((x) => x.replace(/$/, "").replace(/^│ ?/, ""))).toEqual([
-      "<p>one</p>",
-      "",
-      "",
-      "<p>two</p>",
-    ]);
+    expect(r.slice(vals + 3, vals + 7).map((x) => x.replace(/^│ ?/, ""))).toEqual(["<p>one</p>", "", "", "<p>two</p>"]);
     // The name bold, what's before it dim, a brace dim; the rows of code the file's, cell by cell.
     const sig = h.app.currentLayout(v).lines.find((l) => l.src === 11 && l.srcMap)!;
     expect(sig.spans.find((sp) => sp.text.includes("resolve"))!.attrs & 1).toBe(1);

@@ -117,7 +117,7 @@ export const CONTENT_SCENARIOS: Scenario[] = [
         await s.status("SOURCE");
         await leader(s, "f", "o");
         await s.see(`Headings — ${rel.split("/").at(-1)}`, 5000);
-        await s.see(new RegExp(`${symbol.replace(/[.:]/g, "\\$&")}\\s+${defLine}\\s*│`));
+        await s.see(new RegExp(`${symbol.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\s+${defLine}\\s*│`));
         await s.keys("escape");
         await line(s, crumbAt[rel]!);
         await s.until(() => crumbs.test(crumb(s)), 5000, `${rel}'s breadcrumb at line ${crumbAt[rel]}: ${crumbs}`);
