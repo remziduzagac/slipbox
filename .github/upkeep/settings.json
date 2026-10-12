@@ -100,7 +100,7 @@
       "endpoint": "repos/{repo}/code-scanning/default-setup",
       "reader": "admin",
       "about": "CodeQL's default setup, with the workflows (`actions`) among its languages (CI-12)",
-      "expect": { "state": "configured", "languages": ["actions", "javascript-typescript"] }
+      "expect": { "state": "configured", "languages": ["actions", "javascript", "javascript-typescript", "typescript"] }
     },
     {
       "endpoint": "repos/{repo}/actions/permissions",
