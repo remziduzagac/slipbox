@@ -130,6 +130,9 @@ git switch main && git pull
 git push origin main:test
 ```
 
+`test`'s ruleset takes only a commit whose `ci` check passed, as every commit on `main` has once its run is done: push
+after it, never before. It refuses deleting `test` and pushing anything that isn't a fast-forward.
+
 - **Its version** is the release to come's, with the commit's UTC time and hash after it: `slipbox --version` says
   `0.3.0-preview.202610121530.g1a2b3c4`, which sorts after the previews before it and before 0.3.0. Its tag is
   `preview-202610121530-1a2b3c4`. The version is written into CI's checkout only, never committed.

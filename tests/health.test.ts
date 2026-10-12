@@ -124,11 +124,13 @@ describe("the committed upkeep files", () => {
   test("the rulesets, as GitHub exports them: main through a pull request and the ci check; v* tags admins only; test kept", () => {
     const files = readdirSync(join(UPKEEP, "rulesets")).sort();
     expect(files).toEqual(["main.json", "tags.json", "test.json"]);
-    // GR-D13: `test`, which previews are made from, is never deleted or forced back.
+    // GR-D13: `test`, which previews are made from, is never deleted or forced back, and takes only a commit whose
+    // ci check passed.
     const kept = JSON.parse(readFileSync(join(UPKEEP, "rulesets", "test.json"), "utf8")) as Ruleset;
     expect(kept).toMatchObject({ name: "test", target: "branch", enforcement: "active" });
     expect(kept.conditions).toEqual({ ref_name: { include: ["refs/heads/test"], exclude: [] } });
-    expect(kept.rules?.map((r) => r.type)).toEqual(["deletion", "non_fast_forward"]);
+    expect(kept.rules?.map((r) => r.type)).toEqual(["deletion", "non_fast_forward", "required_status_checks"]);
+    expect(JSON.stringify(kept)).toContain('"context":"ci","integration_id":15368');
     expect(kept.bypass_actors).toEqual([]);
     const main = JSON.parse(readFileSync(join(UPKEEP, "rulesets", "main.json"), "utf8")) as Ruleset;
     expect(main.rules?.map((r) => r.type)).toEqual([
