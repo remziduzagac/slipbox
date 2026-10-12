@@ -118,3 +118,15 @@ running from source.
 CI's three `bun-version: 1.4.2` were three copies.
 
 **Not chosen:** a `.bun-version` read by setup-bun, with the other tools pinned in workflows: two places again.
+
+## GR-D12: The early commits' address rewritten to the noreply one (2026-10-12)
+
+**Decision:** Before the first push, the 222 commits of 2026-09-25 to 2026-10-01 that carry the maintainer's personal
+email address get their GitHub noreply address instead, as author and committer, with git filter-repo. Every hash
+changes; the hashes the repository's files cite (`synced_with`, decisions, notes, `.git-blame-ignore-revs`) are
+remapped from its commit map. Nothing else in the history changes.
+
+**Why:** The user's answer to the history scan (GR-T2): a pushed address is public in every commit, and the later
+commits already use the noreply one. The secret scan found nothing to remove.
+
+**Not chosen:** publishing the history as it is.
