@@ -1,0 +1,7 @@
+<svg role="img" aria-label="slipbox logo" xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512">
+  <rect width="512" height="512" rx="112" fill="#1b2130"/>
+  <rect x="150" y="96" width="270" height="190" rx="26" fill="none" stroke="#e8e6e1" stroke-width="28" transform="rotate(-8 285 191)"/>
+  <rect x="84" y="200" width="310" height="216" rx="28" fill="#6cc4a1"/>
+  <path d="M138 266 L198 308 L138 350" fill="none" stroke="#1b2130" stroke-width="34" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M238 350 H336" fill="none" stroke="#1b2130" stroke-width="34" stroke-linecap="round"/>
+</svg>
