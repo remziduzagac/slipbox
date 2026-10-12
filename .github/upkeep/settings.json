@@ -11,7 +11,7 @@
     {
       "endpoint": "repos/{repo}",
       "reader": "workflow",
-      "about": "Public; issues open, pull requests from collaborators (GR-D2, GR-D5); no wiki, projects or discussions",
+      "about": "Public; issues open, pull requests from collaborators (GR-D2, GR-D5); Discussions for questions and ideas (GR-D17); no wiki or projects",
       "expect": {
         "visibility": "public",
         "default_branch": "main",
@@ -21,7 +21,7 @@
         "pull_request_creation_policy": "collaborators_only",
         "has_wiki": false,
         "has_projects": false,
-        "has_discussions": false
+        "has_discussions": true
       }
     },
     {

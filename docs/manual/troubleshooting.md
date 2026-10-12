@@ -233,7 +233,8 @@ The error's full trace follows its message. It works for the command line's own 
 
 Report a bug in slipbox's issues on GitHub,
 [github.com/remziduzagac/slipbox/issues](https://github.com/remziduzagac/slipbox/issues), with the bug report form. A
-useful report holds:
+question, or an idea for slipbox, goes in its
+[Discussions](https://github.com/remziduzagac/slipbox/discussions) instead. A useful bug report holds:
 
 - **The version**: `slipbox --version`, and how you installed it (a release, Homebrew, or from source).
 - **Your system and terminal**: the operating system, the terminal and its version, and any multiplexer (tmux, zellij)
