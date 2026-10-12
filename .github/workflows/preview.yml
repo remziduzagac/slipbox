@@ -56,6 +56,8 @@ jobs:
     with:
       tag: ${{ needs.plan.outputs.tag }}
       version: ${{ needs.plan.outputs.version }}
+      # The commit passed CI's check (test's ruleset takes no other): built and run, not tested again.
+      suite: false
 
   # The pre-release, from build.yml's `release` artifact: the packs, their SBOMs, `SHA256SUMS` and `install.sh`, each
   # attested already. Drafted with every asset, then published; a draft left by a step failing is deleted.

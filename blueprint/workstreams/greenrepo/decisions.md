@@ -144,6 +144,11 @@ of its version.
 
 **Not chosen:** a preview on every merge to `main`.
 
+**Note (2026-10-12):** a preview no longer runs the whole suite on each platform before it's built (`build.yml`'s
+`suite: false`); its commit passed CI's check on Linux and macOS, which `test`'s ruleset requires, and each binary is
+still run before it's packed. A release keeps the suite on every platform. The user's answer, once the first previews
+took near half an hour each: "I agree we should not run full suite in previews".
+
 ## GR-D14: The installer at a fixed address on GitHub Pages (2026-10-12)
 
 **Decision:** `curl -fsSL https://remziduzagac.github.io/slipbox/install.sh | sh` installs slipbox; `sh -s --

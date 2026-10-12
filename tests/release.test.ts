@@ -24,6 +24,7 @@ import {
   previewPlan,
   releaseVersion,
   sha256sums,
+  signArgs,
   stalePreviews,
   stampVersion,
   TARGETS,
@@ -451,7 +452,7 @@ interface Job {
   permissions?: Record<string, string>;
   environment?: { name: string } | string;
   strategy?: { matrix: { include?: { target: string }[]; target?: string[] } };
-  with?: Record<string, string>;
+  with?: Record<string, string | boolean>;
   steps?: Step[];
 }
 interface Workflow {
@@ -465,6 +466,28 @@ const workflow = (name: string) =>
   Bun.YAML.parse(readFileSync(join(ROOT, ".github", "workflows", name), "utf8")) as Workflow;
 const needs = (j: Job) => [j.needs ?? []].flat().sort();
 const runs = (j: Job) => (j.steps ?? []).map((s) => s.run ?? "").join("\n");
+
+describe("a Mac's binary signed again (14.13)", () => {
+  test("ad hoc, by codesign, when built on a Mac; never elsewhere, nor another platform's", () => {
+    expect(signArgs("/x/slipbox", "darwin-x64", "darwin")).toEqual([
+      "codesign",
+      "--force",
+      "--sign",
+      "-",
+      "/x/slipbox",
+    ]);
+    expect(signArgs("/x/slipbox", "darwin-arm64", "darwin")).toEqual([
+      "codesign",
+      "--force",
+      "--sign",
+      "-",
+      "/x/slipbox",
+    ]);
+    expect(signArgs("/x/slipbox", "darwin-arm64", "linux")).toBeNull();
+    expect(signArgs("/x/slipbox", "linux-x64", "darwin")).toBeNull();
+    expect(signArgs("/x/slipbox", "linux-arm64-musl", "linux")).toBeNull();
+  });
+});
 
 describe("the workflows: one build for releases and previews, previews from test, Pages deployed", () => {
   test("a job that runs the tests installs the whole toolchain: the docs check's tests run typos and lychee", () => {
@@ -498,10 +521,14 @@ describe("the workflows: one build for releases and previews, previews from test
         Math.max(r.indexOf("release.ts build"), r.indexOf("release.ts finish")),
       );
     }
-    // The tests run on the code as committed, before the stamp.
+    // The tests run on the code as committed, before the stamp — a release's: a preview's commit passed CI already.
     const tests = runs(build.jobs.build!).indexOf("bun run test");
     expect(tests).toBeGreaterThanOrEqual(0);
     expect(tests).toBeLessThan(runs(build.jobs.build!).indexOf("release.ts stamp"));
+    expect(build.jobs.build!.steps?.find((s) => s.name === "tests")?.if).toContain("inputs.suite");
+    const suiteOf = (file: string) =>
+      Object.values(workflow(file).jobs).find((j) => j.uses === "./.github/workflows/build.yml")?.with?.suite;
+    expect([suiteOf("release.yml"), suiteOf("preview.yml")]).toEqual([true, false]);
     const upload = build.jobs.finish?.steps?.find((s) => s.uses?.startsWith("actions/upload-artifact@"));
     expect(upload?.with?.name).toBe("release");
     // It can't write to the repository: the callers publish.
@@ -515,7 +542,7 @@ describe("the workflows: one build for releases and previews, previews from test
     ] as const) {
       const build = Object.values(caller.jobs).find((j) => j.uses === "./.github/workflows/build.yml");
       expect(build, file).toBeDefined();
-      expect(Object.keys(build?.with ?? {}).sort()).toEqual(["tag", "version"]);
+      expect(Object.keys(build?.with ?? {}).sort()).toEqual(["suite", "tag", "version"]);
       expect(needs(caller.jobs.publish!), file).toContain("build");
       const download = caller.jobs.publish?.steps?.find((s) => s.uses?.startsWith("actions/download-artifact@"));
       expect(download?.with?.name, file).toBe("release");
@@ -533,6 +560,7 @@ describe("the workflows: one build for releases and previews, previews from test
     expect(preview.jobs.plan?.if).toContain("!github.event.repository.fork");
     expect(runs(preview.jobs.plan!)).toContain("release.ts preview");
     expect(preview.jobs.build?.with).toEqual({
+      suite: false,
       tag: "${{ needs.plan.outputs.tag }}",
       version: "${{ needs.plan.outputs.version }}",
     });

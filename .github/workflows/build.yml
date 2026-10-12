@@ -3,7 +3,8 @@ name: build
 # The build a release and a preview share (plan 14.2, GR-D13), called by release.yml for a tag v<version> and by
 # preview.yml for a push to `test`, so both are built, checked, packed, summed, attested and given their SBOMs alike.
 # Each platform is built on a runner of its own — where its OpenTUI package is installed, and a Mac's binary is signed
-# by Bun on a Mac — after the tests pass there (CI ran the whole check on the commit). Each pack's SBOM is attested to
+# by Bun on a Mac — a release's after the whole suite passes there; a preview's straight away, its commit having passed
+# CI's check already (`test`'s ruleset takes no other), the binary run before it's packed either way. Each pack's SBOM is attested to
 # it; then the packs are summed, the installer (and a release's Homebrew formula) written, and every asset attested.
 # The whole set is the `release` artifact, which the caller publishes: nothing here can write to the repository.
 # Every action pinned by its commit, a week old when taken (14.10); values reach the shell through env, never inline.
@@ -18,6 +19,11 @@ on:
         description: "The version its binaries say: package.json's for a release; a preview's, stamped in the checkout"
         required: true
         type: string
+      suite:
+        description: "Whether each platform runs the whole test suite before it's built: a release does, a preview not"
+        required: false
+        type: boolean
+        default: true
 
 # No permission by default; each job grants what it needs, and says why (GR-D9). The caller's grants are the most
 # any job here can have. No cache is restored anywhere in it: a cache can be written by a pull request's run.
@@ -58,9 +64,10 @@ jobs:
           cache: false
           minimum_release_age: 7d
       - run: bun install --frozen-lockfile
-      # Once per runner kind: a musl build's runner is a glibc build's too, which ran them. The code as committed.
+      # A release's, once per runner kind (a musl build's runner is a glibc build's too, which ran them), on the code as
+      # committed. A preview skips them: its commit passed CI on Linux and macOS before `test` would take it.
       - name: tests
-        if: ${{ !endsWith(matrix.target, '-musl') }}
+        if: ${{ inputs.suite && !endsWith(matrix.target, '-musl') }}
         run: bun run test
       # A preview's version written into this checkout's package.json and src/version.ts, never committed, so the
       # binary, its pack, notices and SBOM say it (GR-D13); a release's is package.json's already: nothing changes.

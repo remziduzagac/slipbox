@@ -65,9 +65,9 @@ reads has changed, whatever the version says.
 
 ## Previews
 
-Between releases, slipbox publishes previews: builds of what the next release will hold, made and checked as a release
-is, for those who want it before it's released. A preview keeps none of the promises above: what it adds may still
-change, or go, before the release, and the changelog speaks of releases only.
+Between releases, slipbox publishes previews: builds of what the next release will hold, made as a release is from code
+that passed slipbox's checks, for those who want it before it's released. A preview keeps none of the promises above:
+what it adds may still change, or go, before the release, and the changelog speaks of releases only.
 
 - **Who gets them:** only an install that asks. The installer installs the newest preview with `--preview`, and that
   install follows previews from then on; `slipbox channel set preview` makes an install follow them, and `slipbox
