@@ -37,6 +37,7 @@ import {
   buildArgs,
   buildRelease,
   changelogNotes,
+  channelFiles,
   finishRelease,
   homebrewFormula,
   hostTarget,
@@ -47,6 +48,7 @@ import {
   repoOf,
   sbomName,
   sha256sums,
+  writeSite,
 } from "../scripts/release.ts";
 import { bootstrapScript } from "../scripts/bootstrap.ts";
 import { pagesBase, RELEASE, tagOf } from "../src/core/release.ts";
@@ -907,9 +909,9 @@ describe("a release (14.2)", () => {
 
     test.if(host !== null)(
       "installed through the Pages bootstrap: slipbox channel says the channel and sets it; upgrade follows it to a preview",
-      () => {
+      async () => {
         // The releases: this one under its tag, with its installer; a preview after it, its pack a script saying its
-        // version. The site names both.
+        // version. The site names both, as the Pages workflow writes it.
         const releases = mkdtempSync(join(sandbox, "releases-"));
         const tagDir = join(releases, "download", `v${VERSION}`);
         mkdirSync(tagDir, { recursive: true });
@@ -925,11 +927,19 @@ describe("a release (14.2)", () => {
         writeFileSync(join(pvDir, "SHA256SUMS"), `${p.sha}  ${p.asset}\n`);
         const template = readFileSync(join(ROOT, "scripts", "install.template.sh"), "utf8");
         writeFileSync(join(pvDir, "install.sh"), installScript(template, pv, "example/slipbox", { [host!]: p.sha }));
-        const sumOf = (f: string) => sha256sums([f]).split(" ")[0]!;
         const pages = mkdtempSync(join(sandbox, "pages-"));
-        writeFileSync(join(pages, "stable"), `v${VERSION} ${sumOf(join(tagDir, "install.sh"))}\n`);
-        writeFileSync(join(pages, "preview"), `${tagOf(pv)} ${sumOf(join(pvDir, "install.sh"))}\n`);
-        const boot = join(mkdtempSync(join(sandbox, "boot-")), "install.sh");
+        const installer = (tag: string) => [
+          { name: "install.sh", browser_download_url: join(releases, "download", tag, "install.sh") },
+        ];
+        const files = await channelFiles(
+          [
+            { tag_name: `v${VERSION}`, draft: false, prerelease: false, assets: installer(`v${VERSION}`) },
+            { tag_name: tagOf(pv), draft: false, prerelease: true, assets: installer(tagOf(pv)) },
+          ],
+          async (path) => readFileSync(path),
+        );
+        writeSite(pages, "example/slipbox", files);
+        const boot = join(pages, "install.sh");
         writeFileSync(
           boot,
           bootstrapScript(readFileSync(join(ROOT, "scripts", "bootstrap.template.sh"), "utf8"), "example/slipbox"),
