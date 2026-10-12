@@ -995,6 +995,15 @@ describe("a release (14.2)", () => {
         expect(readFileSync(join(data, "channel"), "utf8")).toBe("stable\n");
         expect(run("channel", "set", "beta").code).toBe(2);
         expect(readFileSync(join(data, "channel"), "utf8")).toBe("stable\n");
+        // What's offered older than what's installed (a preview, back on stable): it stays, and said so.
+        const older = fakeReleases(fakePack(mkdtempSync(join(sandbox, "p-")), "0.0.1", host!), "0.0.1");
+        const kept = Bun.spawnSync([link, "upgrade", "--check"], {
+          env: { ...env, SLIPBOX_RELEASES_URL: `file://${older}` },
+          cwd: home,
+        });
+        expect(kept.stdout.toString()).toBe(
+          `slipbox ${VERSION} is newer than the latest release, 0.0.1: it stays until a newer one\n`,
+        );
         // Previews again, and upgraded to the newest.
         expect(run("channel", "set", "preview").code).toBe(0);
         expect(JSON.parse(run("upgrade", "--json").out).data).toEqual({

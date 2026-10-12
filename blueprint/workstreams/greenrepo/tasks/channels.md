@@ -175,7 +175,8 @@ gains `channel` with `upgrade`, `uninstall` and `skill`.
   channel lines of another shape, `SLIPBOX_CHANNEL=beta`; the release's installer alone; the channel file; `noChannel`;
   the newest a channel offers, its four cases and the odd ones; the daily check's message; `upgrade` to a preview and
   back), and in the build for this machine, the bootstrap installing the release built, `slipbox channel` and `set`,
-  `upgrade --check` on each channel, the upgrade to a preview, a loose copy refused; the uninstall test's lists gain
+  `upgrade --check` on each channel and when what's offered is older than what's installed, the upgrade to a
+  preview, a loose copy refused; the uninstall test's lists gain
   `channel`. `tests/cli.test.ts`: `channel` from source (exit 5) and its usage errors. `tests/docs.test.ts` reads the
   bootstrap's strings. 26 mutants (each choice in `fetchNewest`, the tag in the download, the tag/version check, the
   channel in `upgrade` and the daily check, the message, `previewIn`, `readChannel`, the uninstall plan, `noChannel`,
@@ -184,7 +185,9 @@ gains `channel` with `upgrade`, `uninstall` and `skill`.
   fail a test. A test walks the bootstrap script's imports: Node's modules and slipbox's own only, for `bun
   --no-install`. shellcheck clean on a generated bootstrap and preview installer.
 - Ran: `tests/distribution.test.ts` whole (68 pass, the release built for this machine), `tests/release.test.ts`,
-  `tests/docs.test.ts`, `tests/cli.test.ts`, the typecheck, the boundary, Biome on the touched files, `check:docs`.
+  `tests/docs.test.ts`, `tests/cli.test.ts` (106 pass; one fails here and not for this work: `stat`'s human output
+  names the demo vault `halden@<branch>` in a linked worktree), the typecheck, the boundary, Biome on the touched
+  files, `check:docs`.
 - Tried live (D209): a release built for this machine into a scratch folder, a `file://` releases folder with it and
   a preview (`9.9.9-preview.202610121530.g1a2b3c4`), the site's files and bootstrap. In a home of its own: the
   bootstrap installed 0.2.0 and recorded `stable`; `channel`, `upgrade --check` (the latest), `channel set preview`,
