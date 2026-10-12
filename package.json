@@ -28,7 +28,7 @@
   },
   "dependencies": {
     "@jsquash/webp": "1.5.0",
-    "@opentui/core": "0.5.12",
+    "@opentui/core": "0.5.14",
     "@resvg/resvg-wasm": "2.6.2",
     "@tree-sitter-grammars/tree-sitter-lua": "0.4.1",
     "@tree-sitter-grammars/tree-sitter-svelte": "1.0.2",
