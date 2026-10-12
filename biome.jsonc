@@ -1,0 +1,56 @@
+// Biome formats and lints the code (GR-D7): `bun run format` writes, `bun run lint` checks, in `bun run check`.
+{
+  "$schema": "./node_modules/@biomejs/biome/configuration_schema.json",
+  "root": true,
+  "vcs": { "enabled": true, "clientKind": "git", "useIgnoreFile": true },
+  "files": {
+    // The examples are other projects' files, wrong on purpose where they test slipbox; the fixtures too.
+    "includes": ["src/**", "tests/**", "scripts/**", "*.json", "*.jsonc", "!tests/fixtures", "!!examples"]
+  },
+  "formatter": {
+    "enabled": true,
+    "indentStyle": "space",
+    "indentWidth": 2,
+    "lineWidth": 120,
+    "lineEnding": "lf"
+  },
+  "javascript": {
+    "formatter": { "quoteStyle": "double", "semicolons": "always", "trailingCommas": "all", "arrowParentheses": "always" }
+  },
+  "assist": { "enabled": true, "actions": { "source": { "organizeImports": "off" } } },
+  "linter": {
+    "enabled": true,
+    "rules": {
+      "preset": "recommended",
+      // Off: idioms the code uses on purpose.
+      "style": {
+        // With noUncheckedIndexedAccess, `xs[i]!` states an invariant the types can't see; tsc is strict.
+        "noNonNullAssertion": "off",
+        // A string's `+` reads as well as a template where one value is added.
+        "useTemplate": "off"
+      },
+      "suspicious": {
+        // `while ((m = re.exec(s)))` and the like.
+        "noAssignInExpressions": "off",
+        // A terminal's escape sequences are what the regexes match.
+        "noControlCharactersInRegex": "off",
+        // `${INPUT}`, `${file}`: placeholders a linter's or editor's command holds, literal by design.
+        "noTemplateCurlyInString": "off",
+        // `xs.forEach((x) => f(x))` with an `f` that returns something.
+        "useIterableCallbackReturn": "off",
+        // `escape`, `SyntaxError`: a module's own names, the globals unused there.
+        "noShadowRestrictedNames": "off"
+      },
+      "complexity": {
+        // A short arrow's `(a = x), f()`.
+        "noCommaOperator": "off",
+        // The screen tests' regexes match a screen's text, its runs of spaces included.
+        "noAdjacentSpacesInRegex": "off"
+      },
+      "correctness": {
+        // `return done(x)` from a function returning nothing: done's nothing, and the function ends.
+        "noVoidTypeReturn": "off"
+      }
+    }
+  }
+}
