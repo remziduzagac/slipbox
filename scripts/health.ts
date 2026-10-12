@@ -330,6 +330,8 @@ export interface AlertCounts {
   bySeverity: Record<string, number>;
   /** The critical ones' numbers: kept in the issue's hidden state, so a new one is commented on once. */
   critical: number[];
+  /** Dependabot's in the reference set's example projects (`examples/`): fixtures, never slipbox's, counted apart. */
+  fixtures?: number;
 }
 
 export interface Pull {
@@ -382,14 +384,23 @@ function counts(severities: { number: number; severity: string }[]): AlertCounts
   };
 }
 
-/** Open Dependabot alerts, counted by severity: on a public repository the issue names no package. */
+/**
+ * Open Dependabot alerts, counted by severity: on a public repository the issue names no package. Those of a manifest
+ * in `examples/` — the example projects slipbox's tests read, never installed or run — are counted apart.
+ */
 export function dependabotCounts(alerts: unknown[]): AlertCounts {
-  return counts(
-    alerts.map(obj).map((a) => ({
-      number: num(a.number),
-      severity: str(obj(a.security_advisory).severity) || str(obj(a.security_vulnerability).severity) || "unknown",
-    })),
+  const all = alerts.map(obj);
+  const fixture = (a: Record<string, unknown>) => str(obj(a.dependency).manifest_path).startsWith("examples/");
+  const own = counts(
+    all
+      .filter((a) => !fixture(a))
+      .map((a) => ({
+        number: num(a.number),
+        severity: str(obj(a.security_advisory).severity) || str(obj(a.security_vulnerability).severity) || "unknown",
+      })),
   );
+  const fixtures = all.filter(fixture).length;
+  return fixtures ? { ...own, fixtures } : own;
 }
 
 /** Open code scanning alerts, counted by their security severity, else the rule's. */
@@ -681,6 +692,13 @@ export function items(r: Report): { items: Item[]; watch: Watch[] } {
   else {
     if (s.dependabot.ok && s.dependabot.value.open)
       add("agent", "dependabot", alertsText("Dependabot alerts", s.dependabot.value, `${site}/security/dependabot`));
+    if (s.dependabot.ok && s.dependabot.value.fixtures)
+      add(
+        "agent",
+        "dependabot-fixtures",
+        `Dependabot alerts in the example projects (\`examples/\`): ${s.dependabot.value.fixtures} open, fixtures the ` +
+          `tests read, never installed or run: dismiss them as not used ([the Security tab](${site}/security/dependabot)).`,
+      );
     if (s.dependabot.ok)
       for (const n of s.dependabot.value.critical)
         watch.push({
