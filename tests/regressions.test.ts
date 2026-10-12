@@ -306,7 +306,7 @@ describe("low", () => {
     const fx = join(import.meta.dir, "fixtures", "vault");
     expect((await cli(["render", "index", "--width", "1e7"], fx)).code).toBe(2);
     expect((await cli(["render", "index", "--width", "20.5"], fx)).code).toBe(2);
-    expect((await cli(["render", "index", "--plian"], fx)).code).toBe(2);
+    expect((await cli(["render", "index", "--plian"], fx)).code).toBe(2); // typos: ignore-line
   });
   test("no row exceeds the width even at 10 columns, frontmatter and deep nesting included", () => {
     const md =

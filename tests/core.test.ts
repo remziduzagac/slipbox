@@ -3648,6 +3648,7 @@ describe("replace across files: the lines it changes (25.4)", () => {
   });
 });
 
+// typos: off — the spell checker's tests misspell on purpose.
 describe("spelling (25.6)", () => {
   const dir = () => mkdtempSync(join(tmpdir(), "slipbox-spell-"));
 
@@ -3844,6 +3845,7 @@ describe("spelling, bundled (25.6)", () => {
     expect(new TextDecoder().decode(ran.stdout)).toBe("true false\n");
   }, 60000);
 });
+// typos: on
 
 describe("commands run by your shell (25.7)", () => {
   test(":!cmd and its ranges parsed: '<,'>, %, ., a line, two; no command, none", async () => {
@@ -3976,6 +3978,7 @@ describe("a server's snippets (25.8)", () => {
 
   test("choices (the first put in), variables (a value, a default, else the name), escapes, transforms left out", async () => {
     const { expandSnippet } = await import("../src/core/snippet.ts");
+    // typos: off — a choice with an escaped comma, `thr\,ee`.
     expect(expandSnippet("pick(${1|one,two,thr\\,ee|})", ctx)).toEqual({
       text: "pick(one)",
       stops: [
@@ -3983,6 +3986,7 @@ describe("a server's snippets (25.8)", () => {
         { n: 0, ranges: [[9, 9]] },
       ],
     });
+    // typos: on
     expect(expandSnippet("$TM_FILENAME_BASE ${TM_SELECTED_TEXT:x} ${NOPE:dflt} $NOPE2 ${UNSET}", ctx).text).toBe(
       "main  dflt NOPE2 UNSET",
     );

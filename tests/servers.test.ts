@@ -404,6 +404,7 @@ describe("which servers, where (19.2–19.5)", () => {
     expect(t.servers.mylsp!.args).toEqual([]);
   });
 
+  // typos: off — `comand`, a field misspelt on purpose.
   test("a known field spelled with underscores is a warning; a Helix field slipbox doesn't read is kept, unsaid", () => {
     const root = dir("cfgspell", {
       "user.toml": [
@@ -436,6 +437,7 @@ describe("which servers, where (19.2–19.5)", () => {
     expect(config.language).toEqual([{ name: "python", scope: "source.python", "comment-token": "#" }] as never);
     expect(config.linter.mypy).toEqual({});
   });
+  // typos: on
 
   test("a server or linter named as Object's own keys (toString, constructor) is an unknown name, never a crash", () => {
     const root = dir("cfgproto", {
@@ -1566,7 +1568,16 @@ describe("slipbox's installs behind their locks, said and acted on (14.11)", () 
     chmodSync(join(parent, "node_modules/.bin/markdownlint-cli2"), 0o755);
     const lint = { enabled: "auto" as const, command: [] };
     const home = mkdtempSync(join(sandbox, "linth-"));
-    expect(lintCommand(lint, vault, home, true)).toEqual({ argv: [], literal: true, install: MARKDOWNLINT.npm });
-    expect(lintCommand(lint, vault, home, false)?.argv).toEqual([join(parent, "node_modules/.bin/markdownlint-cli2")]);
+    const was = process.env.PATH;
+    // Never the machine's own: one on PATH is found before slipbox's, and `bun run` puts the repository's there.
+    process.env.PATH = "/usr/bin:/bin";
+    try {
+      expect(lintCommand(lint, vault, home, true)).toEqual({ argv: [], literal: true, install: MARKDOWNLINT.npm });
+      expect(lintCommand(lint, vault, home, false)?.argv).toEqual([
+        join(parent, "node_modules/.bin/markdownlint-cli2"),
+      ]);
+    } finally {
+      process.env.PATH = was;
+    }
   });
 });

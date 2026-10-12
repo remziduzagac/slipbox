@@ -24,7 +24,9 @@ a change users will see updates it in the same piece of work, without the bluepr
   the vault, the watcher told) — never with its own `writeFile`. Besides notes, it writes its own
   state and cache, the scratch, and an export where you said (`writeExport`: never over a note, but an
   earlier Markdown export).
-- Markdown is wrapped at 120 columns, tables and code included.
+- Markdown is wrapped at 120 columns, tables and code included (`.markdownlint-cli2.jsonc`). typos spells the code and
+  the docs: a word of the project's own goes in `_typos.toml`'s list, saying where it's from; a misspelling on purpose
+  (a test's input) goes between `// typos: off` and `// typos: on`, or ends its line with `// typos: ignore-line`.
 - **Every bug fixed gets a regression test** that fails without the fix; new behaviour gets a test that exercises it.
 
 ## Working here
@@ -45,7 +47,8 @@ a change users will see updates it in the same piece of work, without the bluepr
 ## Commands
 
 - `bun run check` — the typecheck, the boundary, the supply chain's gates (`check:deps`), Biome's format and lint, the
-  tests. Run before proposing a change; CI runs the same.
+  docs' lint, spelling and links between files (`check:docs`), the tests. Run before proposing a change; CI runs the
+  same.
 - `bun run format` — Biome formats the code; `bun run lint` checks it.
 - `bun run e2e --tab` — the terminal tests: slipbox driven in a herdr pane (`blueprint/design/testing.md`).
 - `bun test -u` updates snapshots; read the diff before accepting it.

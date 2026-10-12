@@ -10093,7 +10093,7 @@ describe("vaults in the TUI (17.x)", () => {
     expect(list().filtered.map((e) => e.item.label)).toEqual(["Export one.md…", "three.md"]);
     await h.keys("down", "enter");
     expect(list().title).toBe("Notes to export, in order — 2 picked");
-    expect(list().input).toBe("thr");
+    expect(list().input).toBe("thr"); // typos: ignore-line
     expect(list().filtered[list().selected]!.item.label).toBe("three.md");
     expect(row("three.md").hint).toBe("2");
     // two picked, then taken out again, then in: third.
@@ -15956,8 +15956,10 @@ describe("word completion without a server (25.5)", () => {
     expect(shown(h)).toEqual(["Alpine"]);
     // Back to the word's start, every word; past it, closed.
     await h.keys("backspace", "backspace");
+    // typos: off — "alph", typed.
     // The "alph" typed before it a word of the file's now; a letter alone (x) is no word to complete.
     expect(shown(h)).toEqual(["alpha", "alphabet", "Alpine", "alph"]);
+    // typos: on
     await h.keys("backspace");
     expect(h.app.completion).toBeNull();
     await h.keys("escape", "a", "space", "q", "q", "ctrl+n");
@@ -15987,6 +15989,7 @@ describe("word completion without a server (25.5)", () => {
   });
 });
 
+// typos: off — the spell checker's tests misspell on purpose.
 describe("spelling (25.6)", () => {
   const vault = (files: Record<string, string>) => {
     const root = makeVault();
@@ -16153,6 +16156,7 @@ describe("spelling (25.6)", () => {
     expect(h.app.messages.at(-1)?.text).toBe("spelling is a note's");
   });
 });
+// typos: on
 
 describe("commands run by your shell (25.7)", () => {
   let shell: string | undefined;

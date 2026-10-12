@@ -2727,6 +2727,7 @@ describe("replace in every note (25.4)", () => {
   });
 });
 
+// typos: off — the spell checker's tests misspell on purpose.
 describe("slipbox spell (25.6)", () => {
   const cli = async (args: string[], cwd: string) => {
     const out: string[] = [];
@@ -2807,6 +2808,7 @@ describe("slipbox spell (25.6)", () => {
     }
   });
 });
+// typos: on
 
 describe("path links, as other tools write them (17.16)", () => {
   const io = (cwd: string) => {
@@ -5655,7 +5657,7 @@ describe("freshness and coverage (20.10)", () => {
 
   test("a drive unplugged: its roots unavailable, not gone — kept, never pruned, and a link into one says why it's broken", async () => {
     const { pruneWorktrees, readRoots, recordRoot, unavailable } = await import("../src/core/registry.ts");
-    const drive = `/media/slipbox-test-nodrive-${basename(mkdtempSync(join(tmpdir(), "slipbox-nd-")))}`;
+    const drive = `/media/slipbox-test-nodrive-${basename(mkdtempSync(join(tmpdir(), "slipbox-nodrive-")))}`;
     expect(unavailable(`${drive}/notes`)).toBe(true);
     expect(unavailable("/tmp/certainly/not/here")).toBe(false);
     expect(unavailable(tmpdir())).toBe(false);
@@ -8332,10 +8334,10 @@ describe("slipbox:// pointers (21.7)", () => {
     // A different folder answering to the name by an alias shares it too, as following reads it.
     const al = await named(`al${tag}`, { "l.md": "# L\n" }, parent);
     expect(write(join(al, "l.md")).warnings).toEqual([]);
-    const other = await named(`ot${tag}`, {}, parent);
+    const other = await named(`ot${tag}`, {}, parent); // typos: ignore-line
     writeFileSync(
       join(other, ".slipbox", "config.toml"),
-      `[vault]\nid = "${uniq()}"\nname = "ot${tag}"\naliases = ["al${tag}"]\n`,
+      `[vault]\nid = "${uniq()}"\nname = "ot${tag}"\naliases = ["al${tag}"]\n`, // typos: ignore-line
     );
     recordFolder(other);
     expect(write(join(al, "l.md")).warnings).toEqual([ambiguous(`al${tag}`)]);

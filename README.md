@@ -98,7 +98,8 @@ One JSON object per call with `--json`; stable exit codes. The skill in
 ## Development
 
 ```bash
-bun run check        # typecheck + the core-never-imports-tui boundary + tests
+bun run check        # typecheck, the core-never-imports-tui boundary, dependencies, lint, the docs' lint, spelling
+                     # and links, tests
 bun run e2e --tab    # the terminal tests: slipbox itself in a herdr pane (needs herdr)
 ```
 

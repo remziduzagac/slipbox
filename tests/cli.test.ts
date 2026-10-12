@@ -1814,8 +1814,8 @@ describe("review cycle 6 (cli)", () => {
     const root = join(dir, "root");
     mkdirSync(root);
     writeFileSync(join(root, "a.md"), "# A\n");
-    const old = `fo${Date.now().toString(36)}`;
-    const now = `ba${Date.now().toString(36)}`;
+    const old = `fo${Date.now().toString(36)}`; // typos: ignore-line
+    const now = `ba${Date.now().toString(36)}`; // typos: ignore-line
     expect(slipbox(["init", root, "--name", old], { env }).code).toBe(0);
     const planned = slipbox(["name", now, "--plan", "--json"], { cwd: root, env }).json.data.plan.id as string;
     expect(slipbox(["apply", planned], { cwd: root, env }).code).toBe(0);
