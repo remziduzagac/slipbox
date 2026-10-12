@@ -1,4 +1,9 @@
-# slipbox
+<p align="center"><img src="assets/logo.svg" alt="" width="96"></p>
+<h1 align="center">slipbox</h1>
+<p align="center">
+  <a href="https://github.com/remziduzagac/slipbox/actions/workflows/ci.yml"><img
+    src="https://github.com/remziduzagac/slipbox/actions/workflows/ci.yml/badge.svg?branch=main" alt="CI status"></a>
+</p>
 
 A terminal Markdown notes app: a shared workspace for people and agents over plain files. It reads a folder of
 Markdown notes (a repository, an Obsidian vault, a zk notebook, or any folder), renders them properly (tables that
