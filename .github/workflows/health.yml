@@ -45,6 +45,7 @@ jobs:
         with:
           install_args: bun
           cache: false
+          minimum_release_age: 7d
       - id: collect
         env:
           GH_TOKEN: ${{ github.token }}
@@ -70,6 +71,7 @@ jobs:
         with:
           install_args: lychee
           cache: false
+          minimum_release_age: 7d
       - id: check
         env:
           # lychee reads github.com's links through the API, within its rate limit for a token.
@@ -109,6 +111,7 @@ jobs:
         with:
           install_args: bun
           cache: false
+          minimum_release_age: 7d
       - env:
           GH_TOKEN: ${{ github.token }}
           SIGNALS: ${{ needs.collect.outputs.signals }}

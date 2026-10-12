@@ -175,7 +175,8 @@ them. They say what the repository should be.
   vulnerability reporting) and reports any drift in the health issue.
 - **Monthly,** in a session with the maintainer's own login, an agent compares what only an admin can read: the security
   switches, the Actions policy and default token, the merge settings, deploy keys and secrets' ages, and secret
-  scanning's alerts. What it finds stays in the session, never in a public issue.
+  scanning's alerts, with `bun scripts/health.ts --admin` (it prints the drift and changes nothing; the two-factor check
+  needs `gh auth refresh -s read:user` once). What it finds stays in the session, never in a public issue.
 - **Never applied by automation.** A setting is changed by the maintainer, by hand. A drift is undone, or, when the new
   setting is right, the file is changed to match through a pull request. A planned change is a pull request to the file
   first; once it's merged, the maintainer applies it.
