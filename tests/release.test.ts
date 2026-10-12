@@ -490,6 +490,16 @@ describe("a Mac's binary signed again (14.13)", () => {
 });
 
 describe("the workflows: one build for releases and previews, previews from test, Pages deployed", () => {
+  test("every test file bounded at 30 s by `bun run test`, which the check and CI run (a preload's bound reaches one)", () => {
+    const scripts = (
+      JSON.parse(readFileSync(join(ROOT, "package.json"), "utf8")) as { scripts: Record<string, string> }
+    ).scripts;
+    expect(scripts.test).toBe("bun test --timeout 30000");
+    expect(scripts.check).toEndWith("&& bun run test");
+    for (const name of ["build.yml", "ci.yml"])
+      for (const job of Object.values(workflow(name).jobs))
+        for (const step of job.steps ?? []) expect(step.run ?? "").not.toMatch(/(^|[^-])\bbun test\b/);
+  });
   test("a job that runs the tests installs the whole toolchain: the docs check's tests run typos and lychee", () => {
     for (const name of ["build.yml", "ci.yml"]) {
       for (const [id, job] of Object.entries(workflow(name).jobs)) {
