@@ -177,7 +177,7 @@ export function foldersFile(): string {
 
 export function readFolders(): NamedFolder[] {
   const f = readJson<FoldersFile | null>(foldersFile(), null);
-  if (!f || f.version !== 1 || !Array.isArray(f.folders)) return [];
+  if (f?.version !== 1 || !Array.isArray(f.folders)) return [];
   // An entry from before aliases were kept apart has none: its next sighting brings them.
   return f.folders
     .filter((x) => x && typeof x.key === "string" && typeof x.name === "string" && Array.isArray(x.copies))

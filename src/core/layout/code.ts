@@ -176,7 +176,7 @@ export function layoutCode(source: string, base: Layout, model: CodeModel | null
   const gap = () => {
     boxEnded = false;
     const last = lines[lines.length - 1];
-    if (last && last.spans.some((s) => s.text.trim())) push({ spans: [], src: last.src, decor: true });
+    if (last?.spans.some((s) => s.text.trim())) push({ spans: [], src: last.src, decor: true });
   };
   const afterBox = () => {
     if (boxEnded) gap();
@@ -1237,8 +1237,8 @@ function docRows(
   let text: string[];
   if (doc.style === "docstring") {
     text = raw.map((l, k) => {
-      let t = k === 0 ? l.trimStart().replace(/^[rRuUbBfF]{0,2}("""|\'\'\'|"|')/, "") : l;
-      if (k === raw.length - 1) t = t.replace(/("""|\'\'\'|"|')\s*$/, "");
+      let t = k === 0 ? l.trimStart().replace(/^[rRuUbBfF]{0,2}("""|'''|"|')/, "") : l;
+      if (k === raw.length - 1) t = t.replace(/("""|'''|"|')\s*$/, "");
       return t;
     });
     // PEP 257: the lines after the first lose their common indentation.

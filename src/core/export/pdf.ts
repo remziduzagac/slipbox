@@ -138,6 +138,7 @@ export function splitByFont(
 }
 
 /** What stays with the character before it: a combining mark, a zero-width joiner, a variation selector. */
+// biome-ignore lint/suspicious/noMisleadingCharacterClass: one character alone, a mark or a joiner: never a sequence
 const JOINS = /^[\p{M}\u200d\ufe0e\ufe0f]$/u;
 
 /** The object replacement character: a picture's place in a line's text, where a line may break either side. */

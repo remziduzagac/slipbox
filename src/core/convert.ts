@@ -13,7 +13,7 @@ import { existsSync } from "node:fs";
 import { dirname, isAbsolute, join, posix, relative, sep } from "node:path";
 import type { Graph, LinkRef, ResolvedLink } from "./graph.ts";
 import { blockLine, findHeading, headingFragment, lineFragment } from "./landing.ts";
-import { parseLegacy, slugify, visit } from "./parse.ts";
+import { parseLegacy, visit } from "./parse.ts";
 import { readText } from "./fsutil.ts";
 import { type Ambiguous, Collector, dirtyTrees, type RenamePlan } from "./rename.ts";
 import { parseWikiTarget, type WikiLink } from "./wikilink.ts";

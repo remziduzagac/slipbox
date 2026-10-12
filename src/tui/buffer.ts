@@ -445,7 +445,7 @@ export class NoteBuffer {
 
   /** The raw markdown as a layout (source mode, 4.13), its headings the render's: the parse's, or
    *  while editing scanned from the text the way the render reads them. */
-  sourceLayout(width: number, wrap: boolean, glyphs: Glyphs): Layout {
+  sourceLayout(width: number, wrap: boolean, _glyphs: Glyphs): Layout {
     const key = `src:${width}:${wrap ? 1 : 0}`;
     let l = this.layouts.get(key);
     if (!l) {

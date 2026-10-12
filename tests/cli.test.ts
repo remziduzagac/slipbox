@@ -58,6 +58,7 @@ interface Run {
     schema: number;
     ok: boolean;
     command: string;
+    // biome-ignore lint/suspicious/noExplicitAny: each command's data has its own shape, read by the test that asks
     data: any;
     error?: { code: number; message: string };
     warnings: string[];

@@ -35,7 +35,6 @@ import {
   recordLocation,
   setRootMarkers,
 } from "../src/core/vault.ts";
-import { implicitName, type KnownRoot } from "../src/core/registry.ts";
 import { cacheDir, vaultKey } from "../src/core/paths.ts";
 import { renderMarkdown } from "../src/core/layout/render.ts";
 import { glyphsFor } from "../src/core/glyphs.ts";

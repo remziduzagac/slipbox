@@ -43,7 +43,6 @@ interface Cell {
   role: Role;
 }
 
-// biome-ignore lint: control characters are the point of this pattern
 const CONTROL = /^[\x00-\x08\x0b-\x1f\x7f-\x9f‪-‮⁦-⁩]/;
 
 /**

@@ -1,7 +1,7 @@
 // The file walk (plan 1.2), implementing decision 0.11. The watcher uses the same `WalkFilter`,
 // so what the walk excludes is exactly what the watcher does not subscribe to (5.2).
 
-import { type Dirent, lstatSync, readdirSync, realpathSync, statSync } from "node:fs";
+import { type Dirent, lstatSync, readdirSync, realpathSync, type Stats, statSync } from "node:fs";
 import { readRegular, SMALL_FILE } from "./fsutil.ts";
 import { join, relative, sep } from "node:path";
 import ignore, { type Ignore } from "ignore";
@@ -187,7 +187,7 @@ export function symlinkVerdict(
   } catch {
     return { kept: false, reason: "broken symlink" };
   }
-  let st;
+  let st: Stats;
   try {
     st = statSync(target);
   } catch {

@@ -9,7 +9,7 @@ import { grammar, grammarFor, parseSyntax } from "../core/syntax.ts";
 import { loadError } from "../core/lazy.ts";
 import { loadMermaid } from "../core/diagrams.ts";
 import { createHash } from "node:crypto";
-import { execFileSync, spawnSync } from "node:child_process";
+import { spawnSync } from "node:child_process";
 import { existsSync, mkdirSync, rmSync, statSync, writeFileSync } from "node:fs";
 import { homedir } from "node:os";
 import { basename, dirname, extname, isAbsolute, join, relative, resolve, sep } from "node:path";
@@ -24,7 +24,7 @@ import {
 } from "../core/capture.ts";
 import { copyText } from "../core/clipboard.ts";
 import { buildContext } from "../core/context.ts";
-import { catchUp, search, SearchIndex } from "../core/search.ts";
+import { catchUp, SearchIndex } from "../core/search.ts";
 import { type Checkout, checkoutOf } from "../core/git.ts";
 import {
   baseBranch,
@@ -103,7 +103,6 @@ import {
   decodeText,
   ensureDir,
   landsInside,
-  readJson,
   readRegular,
   readText,
   WriteRefused,
@@ -1856,7 +1855,7 @@ const HANDLERS: Record<string, Handler> = {
       throw new UsageError(
         "making a .slipbox/ has no edits to plan: --dry-run previews it (--plan is for a folder inside a root)",
       );
-    let r;
+    let r: ReturnType<typeof initVault>;
     try {
       // A dry run refuses as the run would (a name taken: exit 5), writing nothing.
       if (has(s.args, "dry-run")) {
@@ -2117,7 +2116,7 @@ const HANDLERS: Record<string, Handler> = {
       }
     }
     // A folder's rename taken back: the machine's list learns its name again.
-    return relearnRenamedRoots(s, await renameResult(s, () => planUndo(s.graph)));
+    return relearnRenamedRoots(await renameResult(s, () => planUndo(s.graph)));
   },
 
   // A plan saved by --plan (20.18), applied: refused, nothing written, when any of its files changed
@@ -2164,7 +2163,7 @@ const HANDLERS: Record<string, Handler> = {
       return renameResult(s, () => saved.plan, g);
     }
     // A saved `name` applied: the machine's list learns the new name, as `name` itself teaches it.
-    const r = relearnRenamedRoots(s, await renameResult(s, () => saved.plan, g));
+    const r = relearnRenamedRoots(await renameResult(s, () => saved.plan, g));
     forgetPlan(saved.id);
     return r;
   },
@@ -2286,7 +2285,7 @@ const HANDLERS: Record<string, Handler> = {
       }
       for (const name of running)
         sources.push({ name, kind: "server", status: heard.has(name) ? "answered" : "silent" });
-      for (const [name, list] of heard) problems.push(...list), answered++;
+      for (const list of heard.values()) problems.push(...list), answered++;
       await within(m.stopAll(), 3000, undefined);
       m.killAll();
     }
@@ -3457,7 +3456,7 @@ async function renameResult(s: Session, plan: () => RenamePlan, g = s.graph): Pr
  * A folder's rename written (`undo`, `apply`): the machine's list learns the name its `.slipbox/` holds
  * now, as `name` teaches it — else pointers by that name fail elsewhere.
  */
-function relearnRenamedRoots(s: Session, r: Result): Result {
+function relearnRenamedRoots(r: Result): Result {
   const d = r.data as { kind: string; dryRun: boolean; files: { abs: string }[] };
   if (d.kind === "root" && !d.dryRun)
     for (const f of d.files)

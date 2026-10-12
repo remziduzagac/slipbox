@@ -826,7 +826,7 @@ describe("the render cache (15.1)", () => {
     ];
     const pcache = newParseCache();
     const rcache = newRenderCache();
-    let blocks = Array.from({ length: 60 }, () => blocksPool[rand(blocksPool.length)]!);
+    const blocks = Array.from({ length: 60 }, () => blocksPool[rand(blocksPool.length)]!);
     for (let step = 0; step < 120; step++) {
       const at = rand(blocks.length);
       const r = rand(3);

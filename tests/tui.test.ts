@@ -2098,7 +2098,7 @@ describe("saving and conflicts (step 4)", () => {
   });
   test("unsaved notes are listed for the CLI (the staleness file, 9.9) until saved or quit", async () => {
     const { readStale } = await import("../src/core/stale.ts");
-    const { h, root } = await setup("x\n");
+    const { h } = await setup("x\n");
     expect(readStale(h.app.loc)).toEqual([]);
     await h.keys("shift+a", "y", "escape");
     expect(readStale(h.app.loc).map((e) => e.path)).toEqual(["c.md"]);
@@ -5612,7 +5612,7 @@ describe("review cycle 3 (TUI)", () => {
     expect(d.v.buf.source).toBe("one\n\none\ntwo\n"); // x did nothing; the register still had the line
   });
   test("counts: 3gg and 5G go to that line; d} takes a last paragraph whole; J into an empty line", async () => {
-    const { h, v, at } = await src("l1\nl2\nl3\nl4\nl5\nl6\n");
+    const { h, at } = await src("l1\nl2\nl3\nl4\nl5\nl6\n");
     at(0, 0);
     await h.keys("5", "G");
     expect(rowText(h).trim().endsWith("l5")).toBe(true);
@@ -6938,7 +6938,7 @@ describe("code as a notebook (24.x, 24.13)", () => {
     const mark = h.app.theme.roles.syntax_error;
     const cols = [...lines[at]!].map((_, k) => c.styles[at]![k]!);
     expect(cols.some((st) => st.underline && (mark.fg === undefined || st.fg === mark.fg))).toBe(true);
-    const num = [...lines[at]!].findIndex((ch) => ch === "2");
+    const num = [...lines[at]!].indexOf("2");
     expect(c.styles[at]![num]!.fg).toBe(h.app.theme.roles.error.fg!);
     expect(statusRow(h.frame())).toMatch(/✖ \d+/);
     // Once a server has said what it finds, its errors stand in for slipbox's.
@@ -10519,7 +10519,7 @@ describe("questions float in a window of their own", () => {
     await h.keys("ctrl+n");
     const d = h.app.geometry!.dialog!;
     for (const ch of "fresh") await h.keys(ch);
-    let f = h.frame().split("\n");
+    const f = h.frame().split("\n");
     expect(f[d.y + 2]).toContain("new note in notes/");
     expect(f[d.y + 3]).toContain("› fresh");
     expect(f.slice(d.y, d.y + d.h).join("\n")).toMatch(/OK {2}enter.*Cancel {2}esc/);
@@ -12253,7 +12253,7 @@ describe("the lint surface: your linter's findings in notes (3.21)", () => {
     const rows = h.app.problemRows();
     const lint = rows.filter((r) => r.section === "Lint");
     expect(lint[0]!.label).toMatch(/^Lint \(\d+\)$/);
-    const row = lint.findIndex((r) => r.lint && r.lint.file.endsWith("/l.md"));
+    const row = lint.findIndex((r) => r.lint?.file.endsWith("/l.md"));
     expect(lint[row - 1]!.note).toBe("l.md");
     h.app.problemsPanel.all.selected = rows.indexOf(lint[row]!);
     await h.keys("enter");

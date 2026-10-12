@@ -54,7 +54,7 @@ import {
   writeFileSync,
 } from "node:fs";
 import { createHash } from "node:crypto";
-import { basename, dirname, isAbsolute, join, posix, relative, resolve, sep } from "node:path";
+import { basename, dirname, isAbsolute, join, posix, relative, sep } from "node:path";
 import {
   climbsOut,
   ensureDir,
@@ -1236,9 +1236,7 @@ export class App {
    * proportions kept, at most PICTURE_ROWS rows; else none, `▣ alt` the floor. And what slipbox draws as pictures, as
    * chosen (12.16, 12.17): `drawings`, in the theme's colours.
    */
-  picturesFor(
-    buf: NoteBuffer,
-  ):
+  picturesFor(buf: NoteBuffer):
     | {
         picture: (from: PictureSource, width: number) => Picture | null;
         key: string;
@@ -3081,7 +3079,7 @@ export class App {
     const hidden = this.lensHidden(view, layout);
     const pin = view.lensPin;
     if (!pin) {
-      view.lensPin = { range, screen: this.visibleBetween(layout, hidden, view.top, top) };
+      view.lensPin = { range, screen: this.visibleBetween(hidden, view.top, top) };
       return;
     }
     const click = view.lensClick;
@@ -3099,7 +3097,7 @@ export class App {
       this.anchorTop(view, layout);
       this.ensureCursorVisible(view, layout);
     }
-    pin.screen = this.visibleBetween(layout, hidden, view.top, top);
+    pin.screen = this.visibleBetween(hidden, view.top, top);
   }
 
   /**
@@ -3597,7 +3595,7 @@ export class App {
   }
 
   /** How many shown rows lie between `a` and `b` (negative when `b` is before `a`). */
-  private visibleBetween(layout: Layout, hidden: [number, number][], a: number, b: number): number {
+  private visibleBetween(hidden: [number, number][], a: number, b: number): number {
     let n = 0;
     for (let r = Math.min(a, b); r < Math.max(a, b); r++) if (!isHidden(hidden, r)) n++;
     return b >= a ? n : -n;
@@ -3625,7 +3623,7 @@ export class App {
       if (view.cur.row < view.top + so) view.top = view.cur.row - so;
       else if (view.cur.row > view.top + view.height - 1 - so) view.top = view.cur.row - view.height + 1 + so;
     } else {
-      const d = this.visibleBetween(layout, hidden, view.top, view.cur.row);
+      const d = this.visibleBetween(hidden, view.top, view.cur.row);
       if (d < so) view.top = this.stepVisible(layout, hidden, view.cur.row, -so);
       else if (d > view.height - 1 - so)
         view.top = this.stepVisible(layout, hidden, view.cur.row, -(view.height - 1 - so));
@@ -3974,7 +3972,8 @@ export class App {
     // Each command a template of its own; no {file} means none is appended (nvim's --remote-send).
     const socket = server ? server.socket : "";
     const cmds = templates.map((t) => editorArgv(t, view.buf.abs, line, process.env, false, socket));
-    const where = server && server.cwd ? ` (${server.cwd.split("/").pop()})` : "";
+    const cwd = server ? server.cwd : "";
+    const where = cwd ? ` (${cwd.split("/").pop()})` : "";
     this.message("info", `sent to ${cmds[0]![0]}${where} at line ${line}`);
     void (async () => {
       for (const argv of cmds) {
@@ -5157,7 +5156,7 @@ export class App {
   /** The current note's footnotes (3.17), parsed once per version of its text. */
   footnotes(): Footnote[] {
     const buf = this.view?.buf;
-    if (!buf || buf.kind.group !== "note") return [];
+    if (buf?.kind.group !== "note") return [];
     // Parsing on other threads (15.1): none yet, rather than the whole parse here.
     if (buf.parsing) return [];
     const key = `${buf.key}:${buf.version}`;
@@ -5242,9 +5241,7 @@ export class App {
     | null = null;
 
   /** The frontmatter's span in a note's text: the fences, and the text between them; null without one. */
-  private frontmatterSpan(
-    source: string,
-  ): {
+  private frontmatterSpan(source: string): {
     start: number;
     end: number;
     innerStart: number;
@@ -5273,7 +5270,7 @@ export class App {
   openPropertiesEditor(): void {
     const view = this.view;
     if (this.floating) return;
-    if (!view || view.buf.kind.group !== "note" || view.buf.rel === null)
+    if (view?.buf.kind.group !== "note" || view.buf.rel === null)
       return this.message("info", "properties are a note's: its frontmatter");
     const why = cannotEdit(view);
     if (why) return this.message("warn", `${why} — not editing`);
@@ -6447,7 +6444,7 @@ export class App {
   /** Whether the current window's note can have footnotes changed: a markdown note of this vault. */
   private footnoteNote(): boolean {
     const view = this.view;
-    if (!view || view.buf.kind.group !== "note" || view.buf.rel === null) {
+    if (view?.buf.kind.group !== "note" || view.buf.rel === null) {
       this.message("info", "footnotes are in this root's notes");
       return false;
     }

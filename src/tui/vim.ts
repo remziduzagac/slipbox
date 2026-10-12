@@ -324,7 +324,7 @@ async function motionRange(app: App, view: View, spec: string, count: number, op
     visual: view.visual,
   };
   const from = E.offsetOf(app, view);
-  let motion = spec;
+  const motion = spec;
   // cw on a word changes to its end (as vim does), not to the next word's start — and on a word's
   // last character (or a one-letter word) just that character, never through the next word.
   const text = view.buf.source;
@@ -371,7 +371,7 @@ async function motionRange(app: App, view: View, spec: string, count: number, op
   if ((motion === "cursor.down" || motion === "cursor.up") && E.lineOf(view, to) === E.lineOf(view, from)) return null;
   if (LINEWISE.has(motion))
     return linesRange(view, E.lineOf(view, Math.min(from, to)), E.lineOf(view, Math.max(from, to)));
-  let a = Math.min(from, to);
+  const a = Math.min(from, to);
   let b = Math.max(from, to);
   if (INCLUSIVE.has(motion)) b = Math.min(E.nextBoundary(view.buf.source, b), Math.max(b, E.lineEnd(view, b)));
   // dw at a line's last word stops at the line's end, not the next line's first word: when the

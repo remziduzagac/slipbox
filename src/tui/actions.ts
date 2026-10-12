@@ -38,7 +38,6 @@ import { clearScratch, formatEntry, readScratch } from "../core/capture.ts";
 import { COMMAND_GROUPS, COMMAND_SPECS, commandGroup } from "../core/command-specs.ts";
 import { canonKey, type Command } from "../core/commands.ts";
 import type { LayoutLink } from "../core/layout/ir.ts";
-import { slugify } from "../core/parse.ts";
 import { compilePattern, findAll, parseSubstitute } from "../core/replace.ts";
 import { climbsOut, readText } from "../core/fsutil.ts";
 import { sanitize } from "../core/sanitize.ts";
@@ -46,7 +45,7 @@ import { graphemes } from "../core/width.ts";
 import { type Anchor, TOP } from "../core/position.ts";
 import { cacheDir, stateDir } from "../core/paths.ts";
 import { listThemes, loadTheme } from "../core/theme/index.ts";
-import type { App, ListItem, Loc, PromptOverlay, UiState, View } from "./app.ts";
+import type { App, ListItem, PromptOverlay, UiState, View } from "./app.ts";
 import { editable, computeFind, KIND_NAMES, refilter } from "./app.ts";
 import * as C from "./cursor.ts";
 import { linkTokens } from "../core/syntax.ts";
@@ -78,6 +77,7 @@ import {
 
 type Run = Command<App>["run"];
 
+// biome-ignore lint/suspicious/noConfusingVoidType: nothing when no note is open, as an action's run returns
 function withView<T>(a: App, fn: (v: View) => T): T | void {
   const v = a.view;
   if (!v) return a.message("info", "no note open");
@@ -1243,7 +1243,7 @@ function infoList(a: App, title: string, rows: [string, string][]): void {
  */
 function findStep(a: App, dir: 1 | -1, from?: { row: number; col: number }): void {
   const v = a.view;
-  if (!v?.find || !v.find.matches.length) return a.message("info", "no search — ctrl+f or / starts one");
+  if (!v?.find?.matches.length) return a.message("info", "no search — ctrl+f or / starts one");
   const ms = v.find.matches;
   const n = ms.length;
   const at = from ?? v.cur;
@@ -2686,13 +2686,11 @@ export function registerActions(app: App): void {
       if (!a.messages.length) return a.message("info", "no messages");
       a.openList({
         title: "Messages",
-        items: [...a.messages]
-          .reverse()
-          .map((m) => ({
-            label: m.text,
-            hint: `${m.level} ${new Date(m.at).toTimeString().slice(0, 8)}`,
-            data: m.text,
-          })),
+        items: [...a.messages].reverse().map((m) => ({
+          label: m.text,
+          hint: `${m.level} ${new Date(m.at).toTimeString().slice(0, 8)}`,
+          data: m.text,
+        })),
         accept: (item) => void a.copy(item.data as string),
       });
     },

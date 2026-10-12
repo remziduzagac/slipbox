@@ -323,7 +323,7 @@ function narrow(app: App, c: CompletionState): void {
 }
 
 /** What a snippet (25.8) is expanded with here: the line's indentation, the file's unit, the file's variables. */
-function snippetContext(app: App, view: View, at: number): SnippetContext {
+function snippetContext(_app: App, view: View, at: number): SnippetContext {
   const buf = view.buf;
   const lineStart = buf.source.lastIndexOf("\n", at - 1) + 1;
   const lineEnd = buf.source.indexOf("\n", at);

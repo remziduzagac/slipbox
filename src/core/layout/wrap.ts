@@ -28,7 +28,7 @@ function chunkify(spans: Span[]): Chunk[] {
   const chunks: Chunk[] = [];
   let cur: { kind: "word" | "space"; gs: G[]; width: number } | null = null;
   const flush = () => {
-    if (cur && cur.gs.length) chunks.push(cur);
+    if (cur?.gs.length) chunks.push(cur);
     cur = null;
   };
   spans.forEach((span, s) => {

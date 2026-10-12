@@ -379,7 +379,7 @@ describe("a release (14.2)", () => {
       "linux-x64-musl": "e".repeat(64),
     };
     const f = homebrewFormula(template, "1.2.3", "o/r", sums);
-    const block = (os: string, cpu: string, target: string, sum: string) =>
+    const block = (_os: string, cpu: string, target: string, sum: string) =>
       `    ${cpu} do\n      url "https://github.com/o/r/releases/download/v1.2.3/slipbox-1.2.3-${target}.tar.gz"\n      sha256 "${sum}"\n    end`;
     expect(f).toContain(
       `  on_macos do\n${block("on_macos", "on_arm", "darwin-arm64", "a".repeat(64))}\n${block("on_macos", "on_intel", "darwin-x64", "b".repeat(64))}\n  end\n  on_linux do\n${block("on_linux", "on_arm", "linux-arm64", "c".repeat(64))}\n${block("on_linux", "on_intel", "linux-x64", "d".repeat(64))}\n  end`,

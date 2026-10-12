@@ -195,7 +195,7 @@ export function parseSubstitute(input: string): Substitute | null {
   const escapes: Record<string, string> = { "&": "&", "\\": "\\", r: "\n", n: "\n", t: "\t" };
   const replacement = rawReplacement
     .replace(/\$/g, "$$$$")
-    .replace(/\\([1-9&\\rnt])|&/g, (all: string, k?: string) => (k === undefined ? "$&" : (escapes[k] ?? `$${k}`)));
+    .replace(/\\([1-9&\\rnt])|&/g, (_all: string, k?: string) => (k === undefined ? "$&" : (escapes[k] ?? `$${k}`)));
   return {
     range: m[1] === "%" ? "all" : m[1] ? "selection" : "line",
     pattern,

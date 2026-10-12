@@ -78,7 +78,7 @@ export class AutoIndex {
         // A vault's index, built a slice at a time; done, the vaults nested in it are next.
         if (p.current) {
           this.graph ??= this.open(p.current);
-          if (this.graph && this.graph.parseSome(Math.max(1, end - performance.now()))) return true;
+          if (this.graph?.parseSome(Math.max(1, end - performance.now()))) return true;
           if (this.graph) {
             p.indexed++;
             for (const s of this.graph.skipped) if (s.reason === "nested root") p.queue.unshift(join(p.current, s.rel));

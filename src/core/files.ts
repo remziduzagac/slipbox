@@ -45,7 +45,7 @@ export const TRASH_DAYS = 30;
 /** What's in the trash, newest first; anything older than {@link TRASH_DAYS} removed for good on the way. */
 export function listTrash(v: Keyed, now = new Date()): TrashItem[] {
   const f = readJson<TrashFile | null>(trashIndex(v), null);
-  if (!f || f.version !== 1 || !Array.isArray(f.items)) return [];
+  if (f?.version !== 1 || !Array.isArray(f.items)) return [];
   const items = f.items.filter((i) => i && typeof i.id === "string" && typeof i.abs === "string");
   const since = now.getTime() - TRASH_DAYS * 86_400_000;
   // A date that doesn't read is kept: only what is surely older goes.

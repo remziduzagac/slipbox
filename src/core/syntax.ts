@@ -468,7 +468,7 @@ function partsOf(g: Grammar, root: Node): Part[] {
   for (const el of root.descendantsOfType(["script_element", "style_element", "frontmatter"])) {
     if (!el) continue;
     const text = el.namedChildren.find((n) => n?.type === "raw_text" || n?.type === "frontmatter_js_block");
-    if (!text || !text.text.trim()) continue;
+    if (!text?.text.trim()) continue;
     if (el.type === "frontmatter")
       out.push({ text, section: { name: "frontmatter", node: el }, grammar: "typescript", highlight: "typescript" });
     else

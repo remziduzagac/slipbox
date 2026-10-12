@@ -314,11 +314,6 @@ function mergeLists(children: Root["children"], seams: number[], lines: string[]
   }
 }
 
-/** A label as CommonMark matches it: case and runs of white space don't count. */
-function normalLabel(label: string): string {
-  return label.trim().replace(/\s+/g, " ").toLowerCase();
-}
-
 /** A copy of `nodes` with every position moved down `delta` lines (offsets aren't kept). */
 function shifted<T>(nodes: T[], delta: number): T[] {
   const copy = (n: unknown): unknown => {
@@ -607,6 +602,7 @@ export function parseMarkdown(
 /** Depth-first visit of every node; return false from `fn` to skip a node's children. */
 export function visit(
   node: Nodes,
+  // biome-ignore lint/suspicious/noConfusingVoidType: a visitor that returns nothing goes on; `false` stops it
   fn: (node: Nodes, parent: Nodes | null) => boolean | void,
   parent: Nodes | null = null,
 ): void {

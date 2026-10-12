@@ -35,7 +35,7 @@ import { type Spot, spellSpots } from "./spelling.ts";
 import { snippetMark } from "./snippets.ts";
 import { gitRows } from "./gitview.ts";
 import { match } from "./match.ts";
-import { keyChar, prettyKey, spellKey } from "./keys.ts";
+import { keyChar, prettyKey } from "./keys.ts";
 import { dateText, placeOf, type SaveAsGeometry, type SaveAsOverlay, sizeText } from "./saveas.ts";
 
 export interface Rect {
@@ -1159,7 +1159,7 @@ function drawPane(
           ? rep.total
             ? `${rep.current + 1}/${rep.total}`
             : "no matches"
-          : f && f.matches.length
+          : f?.matches.length
             ? `${f.current + 1}/${f.matches.length}`
             : "no matches";
     // What goes right of the query, while at least QUERY_ROOM columns stay for it: the count, then

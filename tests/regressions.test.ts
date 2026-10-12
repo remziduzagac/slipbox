@@ -199,7 +199,6 @@ describe("medium", () => {
       host: { requestRender() {}, osc52: () => true, quit() {} },
       open: "b/keep.md",
     });
-    const wait = (ms: number) => new Promise((r) => setTimeout(r, ms));
     try {
       renameSync(join(dir, "g.md"), join(dir, "h.md"));
       renameSync(join(dir, "a", "x.md"), join(dir, "b", "x.md"));

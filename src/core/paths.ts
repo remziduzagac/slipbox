@@ -15,7 +15,7 @@ import { basename, join, posix, resolve, win32 } from "node:path";
 
 function xdg(varName: string, fallback: string): string {
   const v = process.env[varName];
-  return v && v.startsWith("/") ? v : join(homedir(), fallback);
+  return v?.startsWith("/") ? v : join(homedir(), fallback);
 }
 
 /** The four kinds of thing slipbox keeps (decision 0.10). */
