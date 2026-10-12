@@ -31,8 +31,9 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-      # GR-D11: Bun and the check's tools, at mise.toml's versions. mise itself is its newest release a week old,
-      # checked against its signed sums; nothing cached, so nothing a pull request saved is restored.
+      # GR-D11: Bun and the check's tools, at mise.toml's versions, each download checked against mise.lock's sum.
+      # mise itself is its newest release a week old, checked against its signed sums; nothing cached, so nothing a
+      # pull request saved is restored.
       - uses: jdx/mise-action@2d8d4cafcbd33be2ea37d2b6f5ad595363d1f1ca # v5.1.1
         with:
           cache: false
@@ -47,6 +48,9 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: bun run check:actions
+      # GR-T6: the Markdown's lint, the spelling and the links between files, over what git tracks.
+      - name: docs
+        run: bun run check:docs
 
   test:
     strategy:
@@ -54,17 +58,17 @@ jobs:
       matrix:
         os: [ubuntu-24.04, macos-15]
     runs-on: ${{ matrix.os }}
-    timeout-minutes: 30
+    # The suite takes about ten minutes on a 10-core machine; a runner has 3 or 4.
+    timeout-minutes: 45
     permissions:
       contents: read # to check out the code
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-      # Bun alone: nothing here needs the check's other tools.
+      # Every tool: the docs check's own tests run typos and lychee.
       - uses: jdx/mise-action@2d8d4cafcbd33be2ea37d2b6f5ad595363d1f1ca # v5.1.1
         with:
-          install_args: bun
           cache: false
           minimum_release_age: 7d
       - run: bun install --frozen-lockfile
