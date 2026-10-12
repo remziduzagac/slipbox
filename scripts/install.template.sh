@@ -128,7 +128,13 @@ main() {
   [ "$got" = "$want" ] || fail "the download's SHA-256 is $got, not the release's $want: nothing installed"
   tar -xzf "$tmp/pack.tar.gz" -C "$tmp"
   [ -x "$tmp/$name/slipbox" ] || fail "the pack has no slipbox in it: nothing installed"
-  said=$("$tmp/$name/slipbox" --version 2>&1) || fail "the binary doesn't run here: $said"
+  if ! said=$("$tmp/$name/slipbox" --version 2>&1); then
+    # Alpine's build links the C++ runtime, which a bare Alpine hasn't: said first, the loader's first line after.
+    case "$plat" in
+      *-musl) fail "the binary doesn't run here: on Alpine, slipbox needs libstdc++ and libgcc (apk add libstdc++ libgcc). It said: $(printf '%s\n' "$said" | head -n 1)" ;;
+      *) fail "the binary doesn't run here: $said" ;;
+    esac
+  fi
   [ "$said" = "slipbox $VERSION" ] || fail "the binary says \"$said\", not \"slipbox $VERSION\": nothing installed"
 
   mkdir -p "$data/versions" "$bin_dir"
