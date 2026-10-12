@@ -1,5 +1,5 @@
 ---
-status: doing
+status: done
 assignee: claude-cli
 blocked_by: [GR-T1, GR-T2, GR-T3, GR-T4, GR-T5, GR-T6, GR-T7, GR-T8, GR-T9, GR-T10, GR-T11, GR-T12]
 created: "2026-10-12"
@@ -73,3 +73,16 @@ slipbox public on GitHub, set as greenrepo has it (GR-D2, GR-D5, GR-D6).
   (`examples/home/work/kestrel/package-lock.json` and `Cargo.lock`, `examples/vault/software/nightjar/package.json`),
   none slipbox's; Dependabot's security run fails on the same fixtures. CodeQL's 14 alerts: 6 in `src/`, 8 in tests,
   to triage. Dependabot's first pull request (#1) fails its checks.
+- With the user's leave to merge, #3 to #10 merged. Pages built by Actions (the user had switched it on), the
+  `github-pages` environment for `main`, `test` and `v*`, the `test` ruleset with the `ci` check. Four preview rounds
+  before the first was out, each finding what the release path had never run: Alpine's build needs `libstdc++` and
+  `libgcc` (#7: said by the installer, added in CI's check, in the guide); the build installed Bun alone though its
+  tests run typos and lychee (#8); the Intel Mac runner past Bun's 5 s default and the skill test's 30 s (#9; later
+  every file at 30 s from the preload, #10); the Intel Mac binary's signature broken (#10: signed ad hoc again). Then
+  previews without the whole suite (#10, a note under GR-D13): about four minutes. The first preview,
+  `preview-202610121735-0549bdb`, installed by the one line in a throwaway home: `channel`, `upgrade --check`, `skill`.
+- "lets fix open ones": Dependabot's #1 closed (web-tree-sitter 0.27 against OpenTUI's 0.25.10 peer), replaced by #11
+  (the two safe bumps; OpenTUI in its own group, web-tree-sitter with it, `examples/` excluded; the health issue
+  counting the example projects' alerts apart); the 45 alerts, all the example projects', dismissed as not used.
+  CodeQL's 14 triaged by an agent: three fixed with tests (#13: the SVG check one scan; an e-book's pages well-formed;
+  test helpers' escapes), seven dismissed with their reasons. Discussions on (GR-D17).
