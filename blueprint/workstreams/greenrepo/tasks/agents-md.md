@@ -1,5 +1,5 @@
 ---
-status: todo
+status: done
 assignee: claude-cli
 blocked_by: []
 created: "2026-10-12"
@@ -19,3 +19,9 @@ One file of rules for every agent (greenrepo AGT-01, AGT-02, AGT-08, AGT-10).
 ## Acceptance criteria
 
 - Claude Code loads the rules through the import; nothing in the old CLAUDE.md lost.
+
+## Log
+
+- 2026-10-12: `AGENTS.md` holds CLAUDE.md's rules, with the evidence, no-leak, third-party-text, propose-and-approve,
+  commit and vulnerability rules, the commands with `lint`, `format` and mise, the upkeep pointers and the skills
+  block; `CLAUDE.md` is `@AGENTS.md`. `MAINTAINING.md` and `SECURITY.md`, which it names, come with GR-T7.
