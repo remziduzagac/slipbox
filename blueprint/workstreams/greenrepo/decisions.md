@@ -172,3 +172,29 @@ the command says how they update instead. Previews never reach the Homebrew tap.
 **Why:** The user's answer, as herdsman's `channel set preview`.
 
 **Not chosen:** an `update.channel` setting in the user's config, which the installer can't set.
+
+## GR-D16: The versioning promises kept as written (2026-10-12)
+
+**Decision:** The versions chapter's promises stand: something deprecated keeps working, with a warning, for at least
+one minor release; after 1.0 a new `--json` schema comes only in a major release; the names of the commands keys and
+aliases call are kept as the public surface; a removed command or flag is a usage error naming what to use instead.
+
+**Why:** The user's answer to the question GR-T7 raised: they are what scripts, agents and settings rely on.
+
+## GR-D17: Discussions for questions and ideas (2026-10-12)
+
+**Decision:** GitHub Discussions is on: questions and ideas go there, issues stay for bugs (the bug form, blank issues
+off); the issue chooser and the README point to it.
+
+**Why:** The user's answer: with blank issues off and only the bug form, there was nowhere to ask or suggest
+(greenrepo COM-08).
+
+**Not chosen:** an idea-or-question issue form; bug reports only.
+
+## GR-D18: The first release, 0.2.0; Homebrew after it (2026-10-12)
+
+**Decision:** slipbox 0.2.0 is released from `main` once the CodeQL fixes are in: the changelog's entry dated, the tag
+`v0.2.0`, CI's draft published by the user. Homebrew follows once the tap and its token exist (the token is the
+user's to create). After the tag, `package.json` moves to 0.3.0, so previews go on.
+
+**Why:** The user's answer. The maintainer's time and a successor stay as `MAINTAINING.md` has them, neutral.

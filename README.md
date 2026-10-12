@@ -18,8 +18,9 @@ through the CLI.
   folders, git and merge review, language servers and linters, export. No stable release is published yet; previews
   are. slipbox is before 1.0: [Versions](docs/manual/versions.md) says what may still change.
 - **Help:** the documentation, and its [troubleshooting chapter](docs/manual/troubleshooting.md) for the usual
-  problems. A bug goes in an [issue](https://github.com/remziduzagac/slipbox/issues/new/choose); a security problem
-  goes privately, as [SECURITY.md](SECURITY.md) says, never in an issue.
+  problems. Questions and ideas go in [Discussions](https://github.com/remziduzagac/slipbox/discussions); a bug in an
+  [issue](https://github.com/remziduzagac/slipbox/issues/new/choose); a security problem privately, as
+  [SECURITY.md](SECURITY.md) says, never in an issue.
 - **Maintained by** Remzi Duzagac ([@remziduzagac](https://github.com/remziduzagac)), alone and in their own time:
   [MAINTAINING.md](MAINTAINING.md). Anyone may open an issue; pull requests come from collaborators.
 
