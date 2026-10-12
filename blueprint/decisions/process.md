@@ -49,6 +49,9 @@ open.
 
 ## D210: The blueprint, and the initial design settled (2026-10-11)
 
+> **Amended by D223 (2026-10-13):** a small change goes by an issue and one pull request, which changes the design
+> file it touches; workstreams stay for bigger work.
+
 **Decision:** slipbox's design documents become a blueprint, the user's method for keeping a project's thinking beside
 its code. `docs/idea.md`, `docs/plan.md`, `docs/handoff.md` and `docs/design/decisions.md` were split by strand into
 `blueprint/` in one commit; `docs/design/` moved to `blueprint/design/`, except the keymap, the configuration
@@ -66,3 +69,15 @@ now keep dated notes.
 **Not chosen:** backfilling workstreams for past phases, because the phases are built and the roadmap already records
 them; keeping the plan's item IDs as decision IDs, because one item can need several decisions and a decision can span
 items (ideas.md § Process).
+
+## D223: A small change by an issue and one pull request (2026-10-13)
+
+**Decision:** A small feature or fix (a setting, a key, a window) is a GitHub issue and one pull request that changes the
+code, its tests, the docs and the design file it touches together, with a decision recorded where it settles
+something; a workstream is for work that spans several areas or changes how the project works. The issue says what's
+asked; the pull request's body names it.
+
+**Why:** The user's answer, 2026-10-13, for the gutter's signs (#22) and reporting a problem from inside slipbox (#23):
+a workstream for a setting is mostly ceremony.
+
+**Amends:** D210, whose every change to requirements or design went through a workstream.

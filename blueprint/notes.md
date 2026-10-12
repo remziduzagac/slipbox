@@ -388,3 +388,14 @@ dates. Each says what was asked, decided, built and found, and cites the decisio
 - **Open, for the user:** native Windows (`14.14`–`14.17`); the skill as an npx package and how agents and slipbox work
   together (ideas.md § Agent surface); search's improvements (ideas.md § Search); the Homebrew tap and its token
   (`.github/upkeep/renewals.toml`); a docs site, after the first release (GR-D8).
+
+## Terminal tests and small changes (2026-10-13)
+
+- Upgrading OpenTUI to 0.5.14 (Dependabot's #12), as its policy has it: the changelog read, the full check, then the
+  135 terminal scenarios in five herdr panes on both versions — 129 pass on both, the same six fail on both, stale.
+  The audit failing there, and on `main`, on two advisories under markdownlint-cli2 (#24).
+- The user asked for the gutter's git signs on either side and softer (#22), and for reporting a problem from inside
+  slipbox (#23); a small change goes by an issue and one pull request (D223).
+- Then for the terminal tests: renamed, one check per feature, content from the sample folders only, test-then-fix,
+  parallel, and a headless terminal researched for CI; a prototype on `Bun.Terminal` and `@xterm/headless` drove
+  slipbox. Drafted as the workstream TT ([its notes](workstreams/terminal-tests/notes.md)), for the user to accept.

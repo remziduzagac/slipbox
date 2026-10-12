@@ -29,9 +29,10 @@ npx package, how agents and slipbox work together, search's improvements.
 - [design/](design/README.md): how it works now.
 
 - [tasks/](tasks/README.md): small work not worth a workstream; open tasks are its files.
-- [workstreams/](workstreams/README.md): contained parts of the work; the roadmap gives their order. None is active;
-  DOC, the user documentation, DF, what writing it found, and [GR](workstreams/archive/greenrepo/README.md), the
-  repository to greenrepo, published and released, are consolidated, in `workstreams/archive/`.
+- [workstreams/](workstreams/README.md): contained parts of the work; the roadmap gives their order. Drafted, for the
+  user to accept: [TT](workstreams/terminal-tests/README.md), the terminal tests headless and by feature. DOC, the user
+  documentation, DF, what writing it found, and [GR](workstreams/archive/greenrepo/README.md), the repository to
+  greenrepo, published and released, are consolidated, in `workstreams/archive/`.
 
 ## How things are recorded
 
@@ -45,7 +46,8 @@ This blueprint is public, so a contributor's agent needs nothing but this README
 
 - Read this README and the roadmap's status line first, then only what the job needs: the requirement and design
   sections it touches, and the decisions they cite (`grep -n '^## D39:' decisions/*.md`).
-- The initial design is settled (D210): every change to requirements or design goes through a workstream. That is a
+- The initial design is settled (D210): a change to requirements or design goes through a workstream, unless it's
+  small: then an issue and one pull request that changes the design file with the code (D223). A workstream is a
   folder in `workstreams/` with a short key (`WG`) that prefixes its IDs (`WG-D1`, `WG-T1`): a README with front matter
   (`status: draft`, then `active`, `complete`, `consolidated`; `created`), a `requirements.md` and a `design.md`
   holding its changes to the root's sections as ADDED, MODIFIED (with the text as it was, "Previously: …") or REMOVED,
