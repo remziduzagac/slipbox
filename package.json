@@ -4,7 +4,7 @@
   "description": "Terminal markdown notes: Obsidian's model without the GUI, agent-drivable from the CLI.",
   "type": "module",
   "private": true,
-  "license": "MIT",
+  "license": "Apache-2.0",
   "bin": {
     "slipbox": "src/main.ts"
   },

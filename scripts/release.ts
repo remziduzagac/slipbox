@@ -5,7 +5,7 @@
 //   bun scripts/release.ts finish --repo <owner/name> [--tag v<version>] [--out <dir>]
 //
 // build: each target — this machine's when none is named — compiled by package.json's own `build` (its autoload
-// flags off: 14.1), with its release defined in it (`core/release.ts`), and packed with its third-party notices as
+// flags off: 14.1), with its release defined in it (`core/release.ts`), and packed with slipbox's licence and the third-party notices as
 // `slipbox-<version>-<target>.tar.gz`. One built for this machine is run (`--version`) before it's packed. Another
 // platform's needs that platform's OpenTUI package installed (`bun install --os <os> --cpu <cpu>`); CI builds each
 // on its own platform instead (`.github/workflows/release.yml`), where it's there.
@@ -17,7 +17,7 @@
 // `dist/release` by default. Nothing is published here: CI drafts the release, and a person publishes it.
 
 import { createHash } from "node:crypto";
-import { existsSync, mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { copyFileSync, existsSync, mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { basename, join, resolve } from "node:path";
 import { checkDeps, notices } from "./check-deps.ts";
 
@@ -140,6 +140,7 @@ export function buildRelease(opts: {
         throw new Error(`${target}: the binary says "${said}", not "slipbox ${version}"`);
     }
     writeFileSync(join(stage, "NOTICES.txt"), notices(packages, version, root));
+    copyFileSync(join(root, "LICENSE"), join(stage, "LICENSE"));
     const pack = join(opts.out, assetName(version, target));
     rmSync(pack, { force: true });
     run(["tar", "-czf", pack, "-C", opts.out, name]);

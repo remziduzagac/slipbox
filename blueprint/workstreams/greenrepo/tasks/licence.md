@@ -1,5 +1,5 @@
 ---
-status: todo
+status: done
 assignee: claude-cli
 blocked_by: []
 created: "2026-10-12"
@@ -20,3 +20,9 @@ slipbox is Apache-2.0 (GR-D3, closing `14.6`).
 
 - A test that a pack holds `LICENSE` and the formula names Apache-2.0, failing without the change.
 - The typecheck and the test files touched pass.
+
+## Log
+
+- 2026-10-12: `LICENSE` from apache.org's text; `package.json`, the README's § Licence, the packs (`release.ts`), the
+  formula. Tests: the pack's listing, the formula's licence line, and LICENSE with `package.json` (new); each fails
+  with its change undone (mutation-checked).

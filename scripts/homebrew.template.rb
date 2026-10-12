@@ -4,7 +4,7 @@ class Slipbox < Formula
   desc "Terminal markdown notes for humans and agents"
   homepage "https://github.com/@REPO@"
   version "@VERSION@"
-  # license: to come with the decision (plan 14.6)
+  license "Apache-2.0"
 
 @PLATFORMS@
 

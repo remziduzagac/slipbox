@@ -121,6 +121,12 @@ describe("the supply chain's gates (14.10)", () => {
   test("this repository passes them all: exact versions, the install gates, licences, actions pinned", () => {
     expect(checkDeps(ROOT).problems).toEqual([]);
   });
+  test("slipbox's own licence: LICENSE is Apache-2.0's text, and package.json says so", () => {
+    const text = readFileSync(join(ROOT, "LICENSE"), "utf8");
+    expect(text).toContain("Apache License\n                           Version 2.0, January 2004");
+    expect(text).toContain("END OF TERMS AND CONDITIONS");
+    expect(JSON.parse(readFileSync(join(ROOT, "package.json"), "utf8")).license).toBe("Apache-2.0");
+  });
 
   test("a licence expression is taken when permissive: an OR by either side, an AND by both, WITH as its licence", () => {
     expect(licenceTaken("MIT")).toBe(true);
@@ -385,6 +391,7 @@ describe("a release (14.2)", () => {
       `  on_macos do\n${block("on_macos", "on_arm", "darwin-arm64", "a".repeat(64))}\n${block("on_macos", "on_intel", "darwin-x64", "b".repeat(64))}\n  end\n  on_linux do\n${block("on_linux", "on_arm", "linux-arm64", "c".repeat(64))}\n${block("on_linux", "on_intel", "linux-x64", "d".repeat(64))}\n  end`,
     );
     expect(f).toContain('  version "1.2.3"\n');
+    expect(f).toContain('  license "Apache-2.0"\n');
     expect(f).toContain('  homepage "https://github.com/o/r"\n');
     // musl's isn't Homebrew's: Homebrew on Linux needs glibc.
     expect(f).not.toContain("musl");
@@ -450,12 +457,12 @@ describe("a release (14.2)", () => {
     }
 
     test.if(host !== null)(
-      "a pack holding the binary and its notices, in a folder of its name; summed",
+      "a pack holding the binary, its licence and its notices, in a folder of its name; summed",
       () => {
         expect(pack).toBe(join(out, assetName(VERSION, host!)));
         const listed = Bun.spawnSync(["tar", "-tzf", pack]).stdout.toString().trim().split("\n").sort();
         const dir = `slipbox-${VERSION}-${host}/`;
-        expect(listed).toEqual([dir, `${dir}NOTICES.txt`, `${dir}slipbox`]);
+        expect(listed).toEqual([dir, `${dir}LICENSE`, `${dir}NOTICES.txt`, `${dir}slipbox`]);
         expect(readFileSync(join(out, "SHA256SUMS"), "utf8")).toBe(sha256sums([pack]));
         // Homebrew's formula beside it, for a platform Homebrew installs on.
         if (!host!.endsWith("-musl"))

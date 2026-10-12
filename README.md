@@ -91,3 +91,8 @@ bun run e2e --tab    # the terminal tests: slipbox itself in a herdr pane (needs
 
 The test strategy, the demo folder (`examples/vault`) and the terminal tests are in
 [blueprint/design/testing.md](blueprint/design/testing.md).
+
+## Licence
+
+slipbox is licensed under the [Apache License 2.0](LICENSE). Each release carries the licence and `NOTICES.txt`, the
+third-party software built into the binary and their licences.

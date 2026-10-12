@@ -21,13 +21,23 @@ explained; the toolchain from `mise.toml`; Dependabot and the scanner (GR-T9, GR
 The packs carry slipbox's `LICENSE` (GR-T1); the release holds an SBOM, attested, and its notes come from the
 changelog (GR-T9); "The workflow can't have run yet: the repository has no remote" goes (GR-T14).
 
+GR-T1: in the first paragraph, "Each is packed, with its notices, as `slipbox-<version>-<target>.tar.gz`" becomes
+"Each is packed, with slipbox's `LICENSE` and the third-party notices, as `slipbox-<version>-<target>.tar.gz`".
+
 ## MODIFIED design/distribution.md § Homebrew
 
 The formula names its licence (GR-T1); the tap's token lives in the `release` environment (GR-T9).
 
+GR-T1: "Its licence is left out until there is one (`14.6`, D193)." becomes "Its licence is Apache-2.0 (GR-D3);
+Homebrew installs the pack's `LICENSE` with it."
+
 ## MODIFIED design/distribution.md § Notices
 
 slipbox's own licence, Apache-2.0, beside the third parties' (GR-T1).
+
+GR-T1: "slipbox's own licence is still to decide (`14.6`, D193)." becomes "slipbox's own licence, Apache-2.0
+(GR-D3), is `LICENSE`, in the repository and in each pack beside `NOTICES.txt`; `tests/distribution.test.ts` keeps it
+and `package.json`'s `license` one."
 
 ## MODIFIED design/testing.md § Strategy
 
