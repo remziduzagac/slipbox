@@ -198,3 +198,8 @@ off); the issue chooser and the README point to it.
 user's to create). After the tag, `package.json` moves to 0.3.0, so previews go on.
 
 **Why:** The user's answer. The maintainer's time and a successor stay as `MAINTAINING.md` has them, neutral.
+
+**Note (2026-10-12):** `v0.2.0`'s build failed on the Intel Mac, twice, on a watcher test that missed writes made the
+instant the watch began (macOS's starts a moment late); the test was fixed on `main` (#16), and a tag is never
+moved, so the first release is 0.2.1, as `MAINTAINING.md` has it for a release gone wrong. `v0.2.0` stays, never
+released.
