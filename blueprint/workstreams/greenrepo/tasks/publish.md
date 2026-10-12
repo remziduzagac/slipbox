@@ -61,3 +61,15 @@ slipbox public on GitHub, set as greenrepo has it (GR-D2, GR-D5, GR-D6).
   - CI green on the branch, Linux and macOS (run 38247627154): `14.13`'s SQLite question answered — Apple's SQLite
     runs FTS5 and `bm25` (the search tests pass there); the binaries' signatures are checked by the release workflow.
     Squashed onto `main` as one commit, the probes left out.
+- The rulesets applied once CI passed on `main` (`main`: no deletion or force push, a pull request with no approval,
+  squash only, the `ci` check, no bypass; `v*` tags: admins only). From then, every change by a pull request the
+  user merges (GR-D6): the first, #3, from the health check's first run.
+- The health workflow run by hand: the issue written (#2), labelled and locked by the workflow's token, which reads
+  the Dependabot and code scanning alerts' counts; the rulesets' bypass actors aren't shown to it (said under "not
+  available"). Its link check failed to install lychee: mise's locked mode needs the name mise.toml gives it (#3).
+- `bun scripts/health.ts --admin`: every setting as expected but CodeQL's languages, which GitHub reports with their
+  aliases (#3), and the two-factor check, which needs `gh auth refresh -s read:user` by the user.
+- Found by the first runs, for the user: the 45 Dependabot alerts are all the reference set's example projects'
+  (`examples/home/work/kestrel/package-lock.json` and `Cargo.lock`, `examples/vault/software/nightjar/package.json`),
+  none slipbox's; Dependabot's security run fails on the same fixtures. CodeQL's 14 alerts: 6 in `src/`, 8 in tests,
+  to triage. Dependabot's first pull request (#1) fails its checks.
