@@ -110,8 +110,8 @@ that order:
 - **Trust** ([trust.md](trust.md)): nothing of a folder's own runs unless you trust its root (D172).
 - **Export** ([export.md](export.md)): notes as one document, in Word, PDF, a web page, an e-book or Markdown, every
   format written by slipbox itself (D184).
-- **Distribution** ([distribution.md](distribution.md)): folders per platform, the supply chain's gates, releases,
-  installing, updates and the notices a release ships.
+- **Distribution** ([distribution.md](distribution.md)): folders per platform, the supply chain's gates, releases and
+  previews, installing, channels, updates and the notices a release ships; the skill for agents in the binary.
 - **Testing** ([testing.md](testing.md)): the headless tests, the terminal tests in a herdr pane, the fixture and demo
   vaults and the reference set.
 
@@ -230,9 +230,10 @@ The CLI's commands are the user's reference, [cli.md](../../docs/manual/cli.md);
 | `core/servers/vscode.ts` | 19.20 | a project's `.vscode/settings.json` answering its servers' settings |
 | `core/diagnostics.ts` | 19.8, 11.5 | a file's problems from every source, one shape: links, conflicts, syntax, lint |
 | `core/clipboard.ts` | 8.5 | OSC 52 (up to 100 KB of base64), then pbcopy / clip.exe / wl-copy / xclip, then a file |
-| `core/release.ts` | 14.2 | what a release build was told when built: its repository and platform |
-| `core/install.ts` | 14.8 | the installer's layout read; how this slipbox was installed; `uninstall`'s plan |
-| `core/update.ts` | 14.4 | the latest release from its sums; the daily check; `upgrade` |
+| `core/release.ts` | 14.2 | what a release build was told when built; how a preview is named; the Pages site |
+| `core/install.ts` | 14.8 | the installer's layout read; how slipbox was installed; its channel; `uninstall`'s plan |
+| `core/update.ts` | 14.4 | the newest the channel offers, from its sums; the daily check; `upgrade` |
+| `core/skill.ts` | GR-D10 | the skill for agents, built in: printed; installed, never over another's file or a link |
 | `core/wsl.ts` | 14.12 | WSL known; Windows' drives from its mounts; their fonts; notes on one, said |
 | `core/stale.ts` | 9.9 | advisory list of unsaved paths, pid-stamped: the TUI writes it, the CLI reads it |
 | `cli/cli.ts` | 9.1–9.6 | the CLI face |
@@ -293,7 +294,7 @@ package — no build toolchain). SQLite is the runtime's own, `node:sqlite` (D19
 | `linebreak` 1.1.0 | where a PDF's line may break (10.11): Unicode's UAX #14; MIT |
 | `@jsquash/webp` 1.5.0 | a WebP decoded for an export (10.10): libwebp as WebAssembly; Apache-2.0, libwebp BSD-3 |
 | `mdast-util-to-hast` 13.2.1, `hast-util-to-html` 9.0.5 | HTML and EPUB export (10.2, 10.6): markdown's tree as HTML |
-| `mdast-util-to-markdown` 2.1.2, `-gfm` 3.1.0, `-math` 3.0.0 | Markdown export (10.3): the tree written again |
+| `mdast-util-to-markdown` 2.2.0, `-gfm` 3.1.0, `-math` 3.0.0 | Markdown export (10.3): the tree written again |
 | `hunspell-asm` 4.0.2 | spelling (25.6): Hunspell as WebAssembly; MIT, Hunspell taken under MPL-1.1 |
 | `dictionary-en` 4.0.0, `dictionary-tr` 2.0.0 | the dictionaries shipped (25.6): MIT and BSD (SCOWL); MIT |
 
@@ -302,7 +303,9 @@ pinned commits into `grammars/` by `scripts/build-grammars.ts`, committed with t
 D121).
 
 Dev only: `vscode-languageserver` 10.1.2, for the tests' fake language server (`tests/fixtures/fake-lsp.ts`); the
-server's half of the protocol library left the runtime with the LSP face (D170, D67).
+server's half of the protocol library left the runtime with the LSP face (D170, D67). `@biomejs/biome` 2.5.15 formats
+and lints the code (GR-D7), and `markdownlint-cli2` 0.23.3 lints the repository's Markdown, at the version slipbox
+installs for notes ([repository.md](repository.md) § The check).
 
 Licences: permissive, but for three weak-copyleft libraries accepted for use: `elkjs` (EPL-2.0), resvg (MPL-2.0)
 and Hunspell (MPL-1.1, in `hunspell-asm`) (D192, D194). What a distributed binary owes them:

@@ -14,7 +14,7 @@ slipbox is Apache-2.0 (GR-D3, closing `14.6`).
 - `LICENSE` at the root, Apache-2.0's text; `package.json`'s `license` says `Apache-2.0`; the README says so.
 - The packs carry `LICENSE` beside the binary and its notices (`scripts/release.ts`); the Homebrew formula names its
   licence (`scripts/homebrew.template.rb`).
-- The design text under its entries in [design.md](../design.md).
+- The design text under its entries in [design.md](../../design.md).
 
 ## Acceptance criteria
 

@@ -1,5 +1,5 @@
 ---
-synced_with: main@feaa311
+synced_with: main@8156881
 ---
 
 # slipbox blueprint
@@ -7,9 +7,10 @@ synced_with: main@feaa311
 slipbox is a terminal markdown notes app: a shared workspace for humans and agents over plain files, where a person in
 the TUI and an agent on the CLI see the same files, the same links and the same answers (D33). It is TypeScript on Bun,
 one core with two faces, compiled into one binary (D5, D8). Every phase on the roadmap is built, extensibility aside,
-deferred (D37), and the initial design was declared settled on 2026-10-11 (D210). Now: GR, the repository brought to
-the user's greenrepo standard and published, then the first release, which settles the licence (`14.6`) and the Mac's
-checks (`14.13`); native Windows (`14.14`–`14.17`) after.
+deferred (D37), and the initial design was declared settled on 2026-10-11 (D210). The repository is public on GitHub
+under Apache-2.0, kept to the user's greenrepo standard ([design/repository.md](design/repository.md)), and 0.2.1, the
+first release, is out (2026-10-12). Next: native Windows (`14.14`–`14.17`), and the ideas left open: the skill as an
+npx package, how agents and slipbox work together, search's improvements.
 
 ## Where to start
 
@@ -28,9 +29,9 @@ checks (`14.13`); native Windows (`14.14`–`14.17`) after.
 - [design/](design/README.md): how it works now.
 
 - [tasks/](tasks/README.md): small work not worth a workstream; open tasks are its files.
-- [workstreams/](workstreams/README.md): contained parts of the work; the roadmap gives their order. Active:
-  [GR](workstreams/greenrepo/README.md), the repository to greenrepo and published. DOC, the user documentation, and
-  DF, what writing it found, are consolidated, in `workstreams/archive/`.
+- [workstreams/](workstreams/README.md): contained parts of the work; the roadmap gives their order. None is active;
+  DOC, the user documentation, DF, what writing it found, and [GR](workstreams/archive/greenrepo/README.md), the
+  repository to greenrepo, published and released, are consolidated, in `workstreams/archive/`.
 
 ## How things are recorded
 
@@ -67,19 +68,23 @@ This blueprint is public, so a contributor's agent needs nothing but this README
   restate the work. A decision's title names its items: `grep -n '(0.10[,)]' decisions/*.md`.
 - **History stays in history.** Requirements and design say what holds now, and cite the decisions behind it; how it
   came to be lives in decisions, as dated notes under the entries a change touched (D210), and in ideas and notes.
-- **Markdown** is wrapped at 120 columns, tables and code included. It is checked by markdownlint-cli2 with
-  `~/.markdownlint-cli2.jsonc`, given as `--config`, since the tool reads a config from the current directory only and
-  doesn't walk up. A clean lint is no proof an edit landed where it was meant to: read the result.
+- **Markdown** is wrapped at 120 columns, tables and code included. `bun run check:docs` checks it: markdownlint by
+  the project's `.markdownlint-cli2.jsonc`, spelling by typos, the links between files by lychee. markdownlint-cli2
+  reads its config from the directory it runs in only, so it runs from the repository's top. A clean lint is no proof
+  an edit landed where it was meant to: read the result.
 - **User documentation** lives in `docs/` (guides and a manual, mapped by `docs/README.md`) and the project's README,
   written for users and never copied from here; the design may link to it, never the reverse.
 - **`<dotfiles>`** means `~/Projects/dotfiles` on the user's machine: the nvim render-markdown config, the herdr config
   and the workslate theme files are there.
-- **The toolchain** is mise's, on a login shell's `PATH`: a non-interactive shell finds no `bun`, which looks exactly
-  like bun missing. Use `zsh -lc '…'` before concluding a tool is absent.
-- **Checks.** `bun run check` (the typecheck, the boundary, the supply chain's gates, the tests) runs freely. Terminal
-  tests and live checks against real servers are listed for the person's approval before they run (D207). A feature
-  just built is tried live by the agent, in a herdr tab of its own on the reference set, and marked done once it works
-  (D209).
+- **The toolchain** is mise's, pinned in `mise.toml` (GR-D11), on a login shell's `PATH`: a non-interactive shell
+  finds no `bun`, which looks exactly like bun missing. Use `zsh -lc '…'` before concluding a tool is absent.
+- **Checks.** `bun run check` (the typecheck, the boundary, the supply chain's gates, Biome, zizmor and actionlint, the
+  docs' lint, spelling and links, the tests) runs freely, and CI runs the same on Linux and macOS. Terminal tests and
+  live checks against real servers are listed for the person's approval before they run (D207). A feature just built
+  is tried live by the agent, in a herdr tab of its own on the reference set, and marked done once it works (D209).
+- **Changes land** through a pull request that passes CI's `ci` check, merged by the maintainer, its title a
+  Conventional Commit and the IDs in its body; agents propose, never merge, release or change settings (GR-D6;
+  design/repository.md § How a change lands).
 - **Every bug fixed gets a regression test** that fails without the fix.
 - **The examples.** The reference set, `examples/home/`, holds every case of every feature, listed in its `CASES.md`:
   use it to test a feature. The demo vault, `examples/vault/`, holds the rendering fixtures (its `about-this-vault.md`

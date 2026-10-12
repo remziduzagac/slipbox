@@ -16,8 +16,11 @@ change of behaviour changes the matching file in the same commit (D206). Why eac
 10. [lsp.md](lsp.md): slipbox as a client of the language servers and linters of the code it opens.
 11. [trust.md](trust.md): what slipbox runs, and what a folder may run through it: nothing of its own unless trusted.
 12. [export.md](export.md): notes as a document: the assembler, Word, PDF, a web page, an e-book, Markdown.
-13. [distribution.md](distribution.md): folders per platform, the supply chain's gates, releases, updates, notices.
+13. [distribution.md](distribution.md): folders per platform, the supply chain's gates, releases and previews,
+    installing, channels, updates, notices.
 14. [testing.md](testing.md): the headless and terminal tests, the fixture and demo vaults, the reference set.
+15. [repository.md](repository.md): the repository itself: its documents, the check, CI, the dependencies' upkeep,
+    the settings, the weekly health check.
 
 The user's references are outside the blueprint, in [docs/](../../docs/): [keys.md](../../docs/manual/keys.md),
 [configuration.md](../../docs/manual/configuration.md) and [cli.md](../../docs/manual/cli.md). The keys beside vim's, VS

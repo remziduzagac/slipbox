@@ -25,6 +25,9 @@ and a change to the library's own files would have to be shared. Neither reaches
 
 ## D193: slipbox to be open source; its licence parked (14.6, 2026-10-09)
 
+> **Amended by GR-D3 (2026-10-12):** the licence is decided: Apache-2.0. A `LICENSE` file with its text,
+> `package.json`'s `license`, and the packs and the Homebrew formula carry it; `14.6` is done.
+
 **Decision:** The user means to open-source slipbox and hopes for contributors. Its licence was weighed (MIT,
 Apache-2.0, or dual "MIT OR Apache-2.0", ideas.md § Licence) and the choice parked; it was left for later again when
 distribution was decided, 2026-10-10. Once chosen: a `LICENSE` file, and the notices it ships. Until then
@@ -55,6 +58,10 @@ without them since 2026-10-07 (`23.9`, D176), under D172: run nothing of a folde
 
 ## D196: SQLite is the runtime's own, through node:sqlite (6.11, 2026-10-10)
 
+> **Verified (2026-10-12):** CI runs the suite on macOS (`macos-15`) on every change since the repository went
+> public (GR-D9), and the release's build on both Macs: Apple's SQLite runs FTS5 with `unicode61`, and `bm25`, the
+> search tests passing there (`14.13`).
+
 **Decision:** better-sqlite3 is dropped (D191): SQLite is the runtime's own, through `node:sqlite`. Bun implements it
 as Node does: its own SQLite on Linux and Windows (3.53.2 in Bun 1.4.2), macOS's system one on macOS.
 `core/sqlite.ts` keeps the calls slipbox made.
@@ -74,6 +81,9 @@ they don't open.
 
 ## D197: macOS and Linux first, Windows if it isn't difficult (14.2, 2026-10-10)
 
+> **Detailed by GR-D13 (2026-10-12):** previews from the `test` branch, built by the release's own workflow
+> (`build.yml`) and published as pre-releases. The first release is 0.2.1, published 2026-10-12 (GR-D18).
+
 **Decision:** Decided with the user after reading trailscout's packaging design (its `design/09-application.md`, the
 same machine), taken where it fits: slipbox has no daemon, no native npm packages and no models to fetch. Releases are
 for macOS (arm64, x64) and Linux (x64, arm64) first, and Windows if it isn't difficult (D205). Each platform is built
@@ -83,6 +93,13 @@ on its own in CI, where its native is installed. Detail: design/distribution.md 
 installed only on that platform.
 
 ## D198: No signing or notarization at first (14.13, 2026-10-10)
+
+> **Amended (2026-10-12):** a Mac's binary no longer keeps the signature Bun gives it: the first previews found the
+> x64 build's broken, so each is signed ad hoc again by `codesign` on the Mac that built it (`scripts/release.ts`'
+> `signArgs`), then checked with `codesign --verify`. Still neither signed with an identity nor notarized.
+>
+> **Verified (2026-10-12):** on CI's Macs (`macos-15`, `macos-15-intel`), each Mac binary's signature holds once
+> signed again; 0.2.1's were checked so before it was drafted (`14.13`).
 
 **Decision:** Releases are neither signed nor notarized at first. A Mac's binary keeps the ad hoc signature Bun gives
 it: it is built on a Mac, and its signature checked with `codesign --verify`.
@@ -99,6 +116,10 @@ a darwin binary ad hoc, and cross-compiling has broken that signature before.
 ## D199: A daily update check, on by default, sending nothing identifying (14.4, 2026-10-10)
 
 > **Detailed by D221 (2026-10-11):** Bun's own crash reports are turned off at start.
+>
+> **Amended by GR-D15 (2026-10-12):** the check, and `slipbox upgrade`, follow the install's channel: on `preview`,
+> the newest preview is asked for as well, from the Pages site's `preview` file and that preview's `SHA256SUMS`, and
+> the newer of the two taken. Plain GETs of public files still; nothing identifying is sent.
 
 **Decision:** The TUI asks once a day for the latest release, on by default, and says when there's a newer one;
 `slipbox upgrade` installs it. Only the TUI checks: the CLI never does. `DO_NOT_TRACK=1` or the config turns it off.
@@ -123,6 +144,12 @@ is all rebuilt when it's missing.
 
 ## D201: The supply chain's gates (14.10, 2026-10-10)
 
+> **Amended by GR-D9, GR-D11 (2026-10-12):** every workflow starts from no permission (`permissions: {}`), each job
+> granting its own with a comment, and every job has a timeout: `check-deps.ts` checks both beside the pins. zizmor
+> and actionlint audit the workflows in `bun run check`; the toolchain comes from `mise.toml`, each download checked
+> against `mise.lock`; Dependabot proposes updates monthly with the week's cooldown, and `bun audit` scans `bun.lock`
+> weekly. design/repository.md § Dependencies.
+
 **Decision:** `scripts/check-deps.ts`, run by `bun run check` and in CI, fails on a version not exact; an install gate
 off (no install scripts, a version taken only once it's a week old, `bun add` pinning); a licence slipbox doesn't take
 (D192); and an action not pinned by its commit's full hash. CI installs with `--frozen-lockfile` and runs with
@@ -144,6 +171,10 @@ old, every package held to an integrity hash.
 
 ## D203: Alpine's musl, built and run by CI (14.5, 2026-10-10)
 
+> **Clarified (2026-10-12):** Bun's musl build links the C++ runtime, `libstdc++` and `libgcc`, which a bare Alpine
+> hasn't: the installer says to add them, and CI's check shows the binary doesn't start without them before it adds
+> them.
+
 **Decision:** Linux whose C library is musl, Alpine's, gets packs of its own (`-musl`, x64 and arm64), OpenTUI's musl
 library fixed in at build time; the installer picks them where musl is, and CI runs each in Alpine. Detail:
 design/distribution.md § Releases.
@@ -152,6 +183,10 @@ design/distribution.md § Releases.
 time, so a musl build fixes that in.
 
 ## D204: Homebrew: a formula each release, into a tap (14.3, 2026-10-10)
+
+> **Amended by GR-D3, GR-D9, GR-D15, GR-D18 (2026-10-12):** the formula names its licence, Apache-2.0; the tap's
+> token is a secret of the `release` environment, which only a `v*` tag's run enters; a preview never reaches the
+> tap. There's no tap yet: it and its token follow the first release, and until then `homebrew.yml` is skipped.
 
 **Decision:** Each release writes a Homebrew formula, copied into a tap once the release is published. A slipbox
 Homebrew installed is left to brew: `slipbox upgrade`, the daily check and `slipbox uninstall` say brew's commands.

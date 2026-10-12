@@ -229,6 +229,9 @@ renderer is snapshot-tested.
 
 ## D15: The CLI churns, except a small stable subset (2026-09-25)
 
+> **Detailed by GR-D16 (2026-10-12):** what is kept, what each part of a version may change before 1.0 and after,
+> and how something is retired are the versioning policy, docs/manual/versions.md, its promises kept as written.
+
 **Decision:** the CLI may change at each phase boundary, with pre-1.0 breakage declared up front, except a small subset
 that is stable and versioned from phase 1: `render`, `capture` and a couple of graph queries. The stable commands now
 are in docs/manual/cli.md § What stays stable.
@@ -273,6 +276,10 @@ might then discard; the CLI raising the TUI's prompt; the CLI refusing to write 
 comes forward.
 
 ## D18: The CLI command list: small, read against zk and nb (9.1, 9.2, 9.3, 2026-09-25)
+
+> **Detailed by GR-D10, GR-D15 (2026-10-12):** the commands now include `skill`, the skill built into the binary,
+> and `channel`, the releases an install follows, beside `upgrade` and `uninstall` (D199, `14.8`); docs/manual/cli.md
+> lists them all.
 
 **Decision:** the first command list is small on purpose, read against zk's and nb's. Stable from v1: `render`,
 `capture`, `scratch`, `resolve`, `links`, `backlinks`; free to churn: `ls`, `outline`, `find`, `replace`, `task`,
@@ -329,6 +336,9 @@ clipboard on the Mac.
 `allow-passthrough` that graphics need), and some terminals cap the payload, so a large bundle may need the file.
 
 ## D22: A skill teaches the CLI, kept with every phase (9.8, 2026-09-25)
+
+> **Detailed by GR-D10 (2026-10-12):** the skill is built into the binary: `slipbox skill` prints it and
+> `--install <dir>` writes it, so each release carries the skill that matches its commands.
 
 **Decision:** an agent-facing skill teaches the CLI (`skills/slipbox/SKILL.md`), updated with each phase rather than
 written at the end. How it is installed is in docs/manual/cli.md § For agents and scripts.

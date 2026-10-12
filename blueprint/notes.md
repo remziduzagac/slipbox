@@ -365,10 +365,26 @@ dates. Each says what was asked, decided, built and found, and cites the decisio
   to discuss (ideas.md § Agent surface); search's improvements, later (ideas.md § Search).
 
 
-## A green repository (2026-10-12)
+## A green repository (2026-10-12 to 2026-10-13)
 
 - The user shared greenrepo, their standard for a healthy repository, to adjust slipbox's repository by, create it on
   GitHub, push it and set up its release flows. Compared against it, slipbox already met much through distribution's
   work (`14.x`); the gaps and the decisions they needed were laid out with a recommendation each.
 - The user answered "public, apache, blueprint goes the repo, hardened ci, agreed to rest": the workstream GR
-  ([its notes](workstreams/greenrepo/notes.md), its decisions GR-D1–GR-D11), which also settles the licence (`14.6`).
+  ([its notes](workstreams/archive/greenrepo/notes.md), its decisions GR-D1–GR-D18), which also settles the licence
+  (`14.6`).
+- Built by agents in worktrees, then published: the history searched and its early commits' address rewritten
+  (GR-D12), the repository created and set, CI's first macOS run finding two real bugs (a link's case on a
+  case-folding disk; OpenTUI's global `window` breaking every timer after a Mermaid picture); previews, the installer
+  on Pages and `slipbox channel` asked for on the way (GR-D13–GR-D15); Dependabot's and CodeQL's findings fixed or
+  dismissed; Discussions (GR-D17). Once `main`'s rules were on, every change went through a pull request the user
+  merged (GR-D6).
+- The first release: `v0.2.0`'s build failed on the Intel Mac, so 0.2.1, published 2026-10-12 (GR-D18), installed
+  by the one line; `main` then 0.3.0.
+- Consolidated 2026-10-13, at the user's word: requirements.md § Agents and the CLI, § Distribution, § Documentation,
+  § Quality goals, § Constraints (Licences, Platforms, Dependencies) and the new § The repository; the new
+  design/repository.md, and distribution.md, testing.md, how-it-works.md, terms.md; notes under D15, D18, D22, D193,
+  D196–D199, D201, D203, D204; `14.6` and `14.13` ticked; the folder archived.
+- **Open, for the user:** native Windows (`14.14`–`14.17`); the skill as an npx package and how agents and slipbox work
+  together (ideas.md § Agent surface); search's improvements (ideas.md § Search); the Homebrew tap and its token
+  (`.github/upkeep/renewals.toml`); a docs site, after the first release (GR-D8).

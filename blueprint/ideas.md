@@ -57,7 +57,8 @@ idea without an outcome is still open. Nothing here is agreed: the decisions are
   installs only from a source checkout (`scripts/install-local.sh --skill`), so a release install has no way to give
   an agent the skill. The user's answer when DF settled it (C3). One skill still (D22), packaged per harness, which
   touches D13's "not chosen as the mechanism". (2026-10-11) Open: a workstream of its own, to scope (the package's name,
-  the harnesses, publishing to npm).
+  the harnesses, publishing to npm). (2026-10-12) A release install has the skill now, from the binary (`slipbox skill
+  --install`, GR-D10); the package per harness is still open.
 - How agents and slipbox work together, in more detail. (2026-10-11) Open: the user's note, to discuss later.
 
 ## Capture
@@ -390,9 +391,10 @@ idea without an outcome is still open. Nothing here is agreed: the decisions are
 
 ## Licence
 
-- slipbox under MIT. (2026-10-09) Weighed; the choice parked (D193).
-- slipbox under Apache-2.0. (2026-10-09) Weighed; the choice parked (D193).
-- slipbox under both, "MIT OR Apache-2.0". (2026-10-09) Weighed; the choice parked (D193).
+- slipbox under MIT. (2026-10-09) Weighed; the choice parked (D193). (2026-10-12) Not chosen (GR-D3).
+- slipbox under Apache-2.0. (2026-10-09) Weighed; the choice parked (D193). (2026-10-12) Chosen (GR-D3).
+- slipbox under both, "MIT OR Apache-2.0". (2026-10-09) Weighed; the choice parked (D193). (2026-10-12) Not chosen
+  (GR-D3).
 
 ## Documentation
 

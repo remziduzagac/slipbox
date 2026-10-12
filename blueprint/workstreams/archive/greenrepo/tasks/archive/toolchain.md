@@ -14,7 +14,7 @@ One place pins each version (GR-D11).
 - `mise.toml`: Bun and the check's tools (zizmor, actionlint, typos, lychee, gitleaks), exact versions, each a week
   old at least as the supply chain asks.
 - `.editorconfig`: UTF-8, LF, final newline, two spaces, no trailing whitespace (Markdown's two-space breaks aside).
-- The design text under design/repository.md's entry in [design.md](../design.md).
+- The design text under design/repository.md's entry in [design.md](../../design.md).
 
 ## Acceptance criteria
 

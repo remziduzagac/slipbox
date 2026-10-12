@@ -1,10 +1,11 @@
 # Testing
 
-`bun test` runs the headless tests, and `bun run check` adds the typecheck and the boundary check.
-CI runs all three (`.github/workflows/ci.yml`). `bun run e2e` runs the terminal tests, slipbox itself
-in a herdr pane (below). A run's temporary files — the tests' vaults, the CLI's — go in one folder of its own,
-removed when it ends (`tests/setup.ts`, preloaded by `bunfig.toml`); one that stopped short (`--bail`, a crash) is
-removed by the next run, its process gone.
+`bun run test` runs the headless tests (`bun test --timeout 30000`), and `bun run check` adds the typecheck, the
+boundary, the supply chain's gates, Biome, the workflows' and the docs' checks ([repository.md](repository.md) § The
+check). CI runs them all on Linux and macOS (`.github/workflows/ci.yml`; [repository.md](repository.md) § CI).
+`bun run e2e` runs the terminal tests, slipbox itself in a herdr pane (below). A run's temporary files — the tests'
+vaults, the CLI's — go in one folder of its own, removed when it ends (`tests/setup.ts`, preloaded by `bunfig.toml`);
+one that stopped short (`--bail`, a crash) is removed by the next run, its process gone.
 
 ## Strategy (`0.4`)
 
@@ -23,7 +24,17 @@ through OpenTUI itself, to prove the adapter and real key parsing.
 | `tests/regressions.test.ts` | one test per bug found in review (later: "review round/cycle N" blocks) |
 | `tests/home.test.ts` | the reference set's build (`scripts/build-home.ts`): histories, extras, the checks |
 | `tests/export.test.ts` | export (`10.x`): the assembler; each format read back (zips unzipped, PDF pages' text) |
-| `tests/distribution.test.ts` | distribution (`14.x`): gates, notices; a release built, installed, upgraded, removed |
+| `tests/distribution.test.ts` | distribution (`14.x`): gates, notices, SBOMs, the scanner; a release built, installed |
+| `tests/release.test.ts` | previews and the Pages site: versions, tags, notes, the channel files, the workflows |
+| `tests/health.test.ts` | the health check (`scripts/health.ts`): the upkeep files, signals, the issue, its workflow |
+| `tests/check-docs.test.ts` | the docs' check on a repository of its own: a misspelling, a broken link, a long line |
+| `tests/docs.test.ts` | the user docs: links and anchors, every command, flag and default key, no blueprint ID |
+
+`tests/distribution.test.ts` builds a release for this machine and drives it as a user would: the packed binary
+printing the skill, the release's notes, installed by the release's installer and through the Pages bootstrap,
+`slipbox channel`, upgraded on either channel, removed; the bootstrap and the channel files are tested apart too, with
+fake `uname` and `ldd`, on any machine. `tests/check-docs.test.ts` holds the docs' check (`scripts/check-docs.ts`) to
+failing on a misspelling, a broken link or heading and a long line, and to reading only what git tracks.
 
 Later reviews keep their regression tests in `describe("review round N …")` or `describe("review cycle
 N …")` blocks in the file for the area: `tui.test.ts`, `core.test.ts`, `vault.test.ts`,
@@ -42,17 +53,58 @@ N …")` blocks in the file for the area: `tui.test.ts`, `core.test.ts`, `vault.
 from the high bits: a plain `seed * 1103515245` passes 2^53, loses its low bits, and the "5,000
 inputs" were a few hundred distinct ones (the allocator's floor bug hid behind that).
 
-**Slow is not stuck.** The TUI and CLI test files set a 30 s default timeout: a harness copies and
-indexes a vault, a CLI test starts processes, and a loaded machine makes either take seconds.
+**Slow is not stuck.** Every test is bounded at 30 s by `bun run test`'s `--timeout 30000`, which the check, CI and
+the release's build run: a harness copies and indexes a vault, a CLI test starts processes, and a loaded machine or a
+small runner (CI's Intel Mac) makes either take seconds. A preload's `setDefaultTimeout` reaches the first test file
+alone, so the bound is the runner's flag, and a test holds the script to it; most files set the same bound
+themselves, for a run of one file by `bun test`. A test that needs longer says so itself (every command the skill
+shows, run: 3 minutes).
 
-**Watcher tests wait for a condition, not a fixed time.** Events arrive asynchronously and more
-slowly under a loaded test run, so fixed sleeps made them flaky.
+**A test waits for a condition, never a fixed time, and counts work rather than timing it.** A CI runner, or a machine
+busy with other work, is slower by a different amount each run. A test waits until what it needs has happened (a
+watcher's event, `App.whenIndexed`, `whenParsed`, `whenSearchIndexed`), bounded only by its timeout, which is a
+backstop for a stuck test and not a measure. Where a test guards against work done in the wrong place, it counts that
+work: the background index's test (`15.1`) checks that the main thread parsed none of a big note's chunks, not how
+long its slices took. A test about a time itself, a timeout that must stop something, bounds it with a wide margin
+(stopped at 0.2 s, checked under 3 s). Timings are the benchmark's (§ Timings), read and not asserted.
+
+**Nothing a test file leaves behind changes another's results.** `bun test` runs every file in one process, so what
+loads lazily (`16.6`), Mermaid or MathJax, is loaded by whichever file asked first. A file whose output depends on one
+loads it before it renders: `tests/render.test.ts` loads Mermaid first, so the samples' snapshots show their diagrams
+as the TUI draws them once it's in, whichever file ran before. What's drawn while a library loads is tested in a
+process of its own.
+
+**Flaky tests are fixed, or quarantined by name; never retried.** No test is retried, by the runner or by itself: one
+that fails at random has a cause, in the code or in the test. It is fixed, the failure shown before the fix (in the bad
+order, or on a slowed machine: `taskset -c 0` puts the process and its parse workers on one CPU) and gone after. While
+it can't be, it is quarantined: `test.skip`, with a `// quarantined: <issue>` comment saying how it fails, its
+assertions as they were. `bun test` counts it as skipped, and `grep -rn "quarantined:" tests/` lists them; it comes
+back with its fix. An assertion is never deleted or loosened to make a test pass.
+
+**CI runs the suite on Linux and macOS** (GR-D9), on every change: the scripts `bun run check` runs, split into jobs
+([repository.md](repository.md) § CI). A release runs it again on every platform it builds, the Intel Mac and ARM
+Linux among them, before anything is built ([distribution.md](distribution.md) § Releases).
+
+**Biome formats and lints the code** (`biome.jsonc`: 120 columns, the recommended rules but the code's idioms, each
+turned off with its reason); `bun run lint` fails on a warning, `bun run format` writes (GR-D7).
 
 **Isolation.** Every test file points `XDG_STATE_HOME`, `XDG_CACHE_HOME`, `XDG_CONFIG_HOME` and
 `XDG_DATA_HOME` (tools installed) at its own temp directory and drops `SLIPBOX_CONFIG` (which would
 win over them), so a developer's config, editor, themes, session or list of roots never leak into
 a run; copies go to a file, never the clipboard (`SLIPBOX_CLIPBOARD=file`). TUI tests work on a
-temp copy of the fixture vault, so they can write, rename and delete notes.
+temp copy of the fixture vault, so they can write, rename and delete notes. A test that finds a tool on `PATH` sets its
+own (`/usr/bin:/bin`): `bun run` puts the repository's `node_modules/.bin` first, markdownlint-cli2 among them, which
+slipbox would find before its own.
+
+**The docs are checked too** (`bun run check:docs`, `scripts/check-docs.ts`; greenrepo DOC-05). Over the text files
+git tracks, less what is wrong on purpose (the reference set, the demo vault and the tests' fixtures, `LEFT_OUT`, each
+with its reason): markdownlint-cli2 lints the Markdown by `.markdownlint-cli2.jsonc`, 120 columns everywhere and the
+rules that are only style off; typos spells the code and the docs by `_typos.toml`, its list the project's own words,
+each saying where it's from, the licence texts and snapshots left out; lychee follows the links between files and into
+their headings, offline: the web's links are the weekly health check's ([repository.md](repository.md) § The weekly
+health check). A test's misspelling on purpose sits between `// typos: off` and `// typos: on`, or ends its line with
+`// typos: ignore-line`. Each file is given to the tools as a path, never a glob: markdownlint-cli2 and lychee both
+read `plan (v2).md` or `plan [x].md` as a pattern matching nothing, and passed, silently.
 
 ## The fixture vault (`0.5`)
 
@@ -182,10 +234,16 @@ shell prompt; a name filter after it retakes only those.
 
 `scripts/bench.ts` generates notes of 1,000 and 20,000 lines (and one of 20,000 tasks) in a temporary vault and times
 what grows with a note: opening it, moving, typing in source mode and the lens, leaving the lens, a reload, a width
-change, and the CLI's `task`, `read`, `render`, `find` and `backlinks`. `bun scripts/bench.ts lens k20` runs only the
-cases whose names contain any of those words, and skips the work of the cases it leaves out. It isn't part of
-`bun run check`: timings depend on the machine. The incremental paths it measures are held to their from-scratch
-results by the tests ("the incremental source layout", "the chunked parse", "the render cache", "parseAround").
+change, the CLI's `task`, `read`, `render`, `find` and `backlinks`, and the background index's longest slice on the
+main thread. `bun scripts/bench.ts lens k20` runs only the cases whose names contain any of those words, and skips the
+work of the cases it leaves out. It isn't part of `bun run check`: timings depend on the machine. The incremental
+paths it measures are held to their from-scratch results by the tests ("the incremental source layout", "the chunked
+parse", "the render cache", "parseAround").
+
+**The background index** (`15.1`, `bun scripts/bench.ts "background index"`): a note of 20,000 lines with words of its
+own, parsed on other threads, three passes; the longest main-thread slice of each, the parse slices and the note's
+chunks put together. The test counts that work instead of timing it (§ Strategy). Measured 2026-10-12 on the VM, the
+machine shared: 37 ms median (36 to 41).
 
 **The parse cache by content** (`20.11`, `bun scripts/bench.ts "2,000 notes"`): 2,000 notes of 120 lines each, the
 first copy parsed and the cache filled, then a second copy (a worktree, a clone) read with it and without it.

@@ -1,7 +1,9 @@
 # Roadmap
 
-Status: **initial design settled** (D210, 2026-10-11); phases 0–6+ built. Now: GR, the repository to greenrepo and
-public, then the first release (with `14.6` and `14.13`); native Windows (`14.14`–`14.17`) after.
+Status: **initial design settled** (D210, 2026-10-11); phases 0–6+ built. The repository is public on GitHub and kept
+to greenrepo (GR, consolidated 2026-10-13), and 0.2.1, the first release, is out (2026-10-12). Next: native Windows
+(`14.14`–`14.17`); and, open in ideas.md, the skill as an npx package for common harnesses and how agents and slipbox
+work together (§ Agent surface), and search's improvements (§ Search).
 
 Each step's ID is the plan's stable item ID: cite it (`3.3`, `10.1`) rather than restating the work. Phases and
 clusters differ: a cluster groups related items in dependency order, and its line in italics says which phase it
@@ -389,22 +391,25 @@ Order: `12.7` checked, then `12.10`, `12.11`, `12.15`, `12.16`, `12.17`.
 ## Distribution (`14.x`)
 
 *Not a phase. A cheap local invocation exists from phase 1 so agents can call it; real packaging lands whenever it
-first needs to run on a VM. Decided 2026-10-10 (D197); the licence (`14.6`) parked 2026-10-09 (D193).*
+first needs to run on a VM. Decided 2026-10-10 (D197); the licence (`14.6`) parked 2026-10-09 (D193), decided
+2026-10-12 (GR-D3). The first release, 0.2.1, published 2026-10-12 (GR-D18).*
 
 - [x] **14.1** `bun build --compile` per target; its autoload flags off (2026-10-10), in `build`, tested.
 - [x] **14.2** Release assets: darwin-arm64, darwin-x64, linux-x64, linux-arm64; `SHA256SUMS`, attestations.
 - [x] **14.3** Homebrew: a formula each release, into a tap once it's published; Homebrew's own left to brew.
 - [x] **14.4** Update path: `slipbox upgrade`; a daily check, on by default, that sends nothing identifying.
 - [x] **14.5** Alpine (musl): `-musl` packs, OpenTUI's musl library fixed in; run in Alpine by CI.
-- [ ] **14.6** Decide slipbox's licence: MIT, Apache-2.0, or both; then a `LICENSE` file and the notices it ships
-  (D193).
+- [x] **14.6** Decide slipbox's licence: MIT, Apache-2.0, or both; then a `LICENSE` file and the notices it ships
+  (D193): Apache-2.0, the packs and the formula carrying it (2026-10-12, GR-D3).
 - [x] **14.7** Installer: `curl … | sh`, the sums inside; a folder per version, `current`, `~/.local/bin`.
 - [x] **14.8** `slipbox uninstall`: every path listed first, removed only with `--yes`; `--purge` all four.
 - [x] **14.9** Folders: XDG's on Linux and macOS, as now; Windows' own (`%APPDATA%`…); `CACHEDIR.TAG`.
 - [x] **14.10** Supply chain: exact pins, a 7-day cooldown, no install scripts, a licence gate, actions by hash.
 - [x] **14.11** Language servers (`19.5`) installed from a full lockfile slipbox ships; behind ones reinstalled.
 - [x] **14.12** Windows through WSL: the Linux release; Windows' clipboard, fonts; notes on its drives, said.
-- [ ] **14.13** On a real Mac before the first release: Apple's SQLite runs FTS5 and `bm25`; the binaries' signatures.
+- [x] **14.13** On a real Mac before the first release: Apple's SQLite runs FTS5 and `bm25`; the binaries' signatures.
+  Answered by CI's macOS runs on every change and the release builds: the search tests pass on Apple's SQLite; each
+  Mac binary is signed ad hoc again and verified (2026-10-12, GR-D9).
 - [ ] **14.14** Native Windows, staged: `.zip` packs (x64, arm64), a PowerShell installer; `upgrade`, `uninstall` there.
 - [ ] **14.15** Native Windows: note paths kept with `/` from every `relative()`; path checks by `sep`, not `/`.
 - [ ] **14.16** Native Windows: `:!` through `cmd.exe`, editors, the clipboard, processes and signals.
@@ -602,9 +607,9 @@ was added 2026-10-09 at the user's asking.*
 
 *Not a phase. Accepted 2026-10-12, with the user's choices: public, Apache-2.0, the blueprint published.*
 
-- [ ] **[A green repository](workstreams/greenrepo/README.md)** (GR): the repository to greenrepo, the user's standard:
-  the licence, hardened CI on Linux and macOS, the repository's documents, the upkeep; published on GitHub, then the
-  first release.
+- [x] **[A green repository](workstreams/archive/greenrepo/README.md)** (GR): the repository to greenrepo, the user's
+  standard: the licence, hardened CI on Linux and macOS, the repository's documents, the upkeep; published on GitHub,
+  previews and the one-line installer, then the first release, 0.2.1 (consolidated 2026-10-13).
 
 ## Later
 
