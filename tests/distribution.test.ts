@@ -474,7 +474,7 @@ describe("a release (14.2)", () => {
     );
 
     test.if(host !== null)(
-      "the binary knows its release — its repository and platform — and its notices are there",
+      "the binary knows its release — its repository and platform — its notices are there, and it carries the skill",
       () => {
         const x = mkdtempSync(join(sandbox, "unpacked-"));
         expect(Bun.spawnSync(["tar", "-xzf", pack, "-C", x]).exitCode).toBe(0);
@@ -491,6 +491,10 @@ describe("a release (14.2)", () => {
         const info = Bun.spawnSync([join(dir, "slipbox"), "info", "--json"], { cwd: notes, env, timeout: 30_000 });
         expect(info.exitCode).toBe(0);
         expect(JSON.parse(info.stdout.toString()).data.release).toEqual({ repo: "example/slipbox", target: host });
+        // The skill for agents built in (GR-D10): the binary prints it, away from the source, as the source has it.
+        const skill = Bun.spawnSync([join(dir, "slipbox"), "skill"], { cwd: notes, env, timeout: 30_000 });
+        expect(skill.exitCode).toBe(0);
+        expect(skill.stdout.toString()).toBe(readFileSync(join(ROOT, "skills", "slipbox", "SKILL.md"), "utf8"));
         expect(readFileSync(join(dir, "NOTICES.txt"), "utf8")).toStartWith(
           `slipbox ${VERSION}: the third-party software in this program`,
         );

@@ -32,6 +32,9 @@ and `links` (how this folder writes links, and what said so).
 If `slipbox` is not on `PATH`, run `bun <repo>/src/main.ts` instead. On machines managed by
 mise, run it in a login shell: `zsh -lc 'slipbox …'`.
 
+`slipbox skill` prints this skill as the slipbox you run carries it: the version that matches its commands. If a
+command behaves otherwise than this copy says, read that one.
+
 ## Always use `--json` when you parse output
 
 Every command prints exactly one JSON object with `--json`:

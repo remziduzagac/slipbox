@@ -192,6 +192,7 @@ import { VERSION } from "../version.ts";
 import { RELEASE } from "../core/release.ts";
 import { installedBy, uninstall, uninstallPlan } from "../core/install.ts";
 import { upgrade as upgradeTo, UpgradeError } from "../core/update.ts";
+import { installSkill, SKILL, SKILL_NAME, SkillRefused } from "../core/skill.ts";
 import { notesOfType, ofType } from "../core/doctypes.ts";
 
 /**
@@ -380,6 +381,8 @@ Usage:
   slipbox types [type]              document types here (skill, adr, your [types]): how many notes each; a type's notes in order
   slipbox upgrade                   the latest release installed, checked before it's used  [--check: only say whether there's one]
   slipbox uninstall                 what the installer put here, listed; removed with --yes  [--purge: slipbox's folders too] [--yes]
+  slipbox skill                     the skill for agents, this slipbox's: printed; written into <dir>/slipbox/ with --install
+                                    [--install <dir>] [--force: over a file slipbox didn't write, or a link] [--dry-run]
   slipbox commands                  list named commands and their CLI equivalents
 
 Global options:
@@ -452,6 +455,7 @@ export const CLI_COMMANDS = new Set([
   "spell",
   "upgrade",
   "uninstall",
+  "skill",
   "types",
 ]);
 
@@ -704,6 +708,7 @@ const MAX_ARGS: Record<string, number> = {
   spell: 1,
   upgrade: 0,
   uninstall: 0,
+  skill: 0,
   types: 1,
 };
 
@@ -784,6 +789,7 @@ export const FLAGS: Record<string, string[]> = {
   diff: ["base"],
   upgrade: ["check"],
   uninstall: ["purge", "yes"],
+  skill: ["install", "force", "dry-run"],
 };
 
 /**
@@ -2516,6 +2522,36 @@ const HANDLERS: Record<string, Handler> = {
       human,
       code: failed.length ? EXIT.error : EXIT.ok,
     };
+  },
+
+  // The skill for agents, built in (GR-D10): printed as this slipbox has it; with --install, written to
+  // <dir>/slipbox/SKILL.md — never over a file slipbox didn't write, nor through a link, unless --force.
+  skill(s) {
+    const dir = flag(s.args, "install");
+    if (dir === undefined) {
+      for (const f of ["force", "dry-run"])
+        if (has(s.args, f)) throw new UsageError(`--${f} goes with --install <dir>: slipbox skill only prints it`);
+      return { data: { name: SKILL_NAME, version: VERSION, text: SKILL }, human: SKILL };
+    }
+    try {
+      const r = installSkill(resolve(s.io.cwd, dir), { force: has(s.args, "force"), dryRun: has(s.args, "dry-run") });
+      const would = (done: string, todo: string) => (r.dryRun ? `would ${todo}` : done);
+      const skill = `slipbox ${VERSION}'s skill`;
+      const human =
+        r.status === "unchanged"
+          ? `${r.path} is ${skill} already: nothing written\n`
+          : r.status === "created"
+            ? `${would("wrote", "write")} ${skill} to ${r.path}\n`
+            : r.status === "updated"
+              ? `${would("updated", "update")} ${r.path} to ${skill}\n`
+              : r.link
+                ? `${would("replaced", "replace")} the link ${r.link.path} -> ${r.link.to} (what it leads to left as it is) with ${skill}: ${r.path}\n`
+                : `${would("wrote", "write")} ${skill} over ${r.path}\n`;
+      return { data: { ...r, version: VERSION }, human };
+    } catch (err) {
+      if (err instanceof SkillRefused) throw new CliError(err.message, EXIT.refused);
+      throw err;
+    }
   },
 
   // Document types (22.3): each with how many notes are of it here and how many break its rules (22.2); or a type's

@@ -83,8 +83,8 @@ there, such as the source launcher. Remove that one first (`rm ~/.local/bin/slip
 Releases aren't signed. On a Mac, Gatekeeper stops a slipbox downloaded with a web browser; the installer's isn't
 stopped.
 
-A release doesn't include the skill for agents, and has no way to install it: take the `skills/slipbox/` folder from
-slipbox's source, as [Working with agents](agents.md#give-the-agent-the-skill) shows.
+A release carries the skill for agents: `slipbox skill --install ~/.claude/skills` installs it for Claude Code, and
+[Working with agents](agents.md#give-the-agent-the-skill) shows the rest.
 
 ## Windows, through WSL
 
@@ -127,6 +127,9 @@ whatever the folder holds, so there's nothing more to do. slipbox run from sourc
 `slipbox upgrade --check` only says whether there is one. The version you had stays beside the new one, so you can go
 back to it.
 
+If you installed the skill for agents with `slipbox skill --install`, run that again after an upgrade, so the skill
+matches the new version.
+
 **Installed with Homebrew:** `brew upgrade slipbox`.
 
 A release build asks once a day, while you use it, whether a newer release is out, and says so in a message. It sends
@@ -146,7 +149,8 @@ It removes what the installer put in place: the `slipbox` link in `~/.local/bin`
 `~/.local/share/slipbox`. slipbox's own four folders (your settings, its state with the scratch and the trash, its data
 with your words, and its cache) stay, listed as kept; `--purge` removes these too.
 [Where slipbox keeps things](../manual/configuration.md#where-slipbox-keeps-things) says where they are and what each
-holds. Your notes are never touched, nor the `.slipbox/` folders in them.
+holds. Your notes are never touched, nor the `.slipbox/` folders in them. The skill for agents, if you installed it
+with `slipbox skill --install`, stays too: remove its folder yourself (`rm -r ~/.claude/skills/slipbox`).
 
 **Installed with Homebrew:** `slipbox uninstall --purge --yes` first, if you want slipbox's folders gone, then `brew
 uninstall slipbox`.

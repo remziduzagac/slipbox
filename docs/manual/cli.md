@@ -234,6 +234,7 @@ settings files and the environment variables.
 | [`commands`](#commands) | every named command, and its command-line equivalent |
 | [`upgrade`](#upgrade) | install the latest release |
 | [`uninstall`](#uninstall) | remove what the installer put here |
+| [`skill`](#skill) | the skill for agents: printed, or installed where an agent finds it |
 | [`help`](#help) | this list, in the terminal |
 
 ## Reading
@@ -1333,6 +1334,27 @@ slipbox uninstall --purge --yes
 `--json`: `{purge, removed, remove[{path, what}], keep[{path, what}], notes[], failed[]}`. Exit 1 when something
 couldn't be removed.
 
+### `skill`
+
+The skill for agents ([below](#for-agents-and-scripts)), as this slipbox carries it: the version that matches its
+commands. It prints the skill, or with `--install` writes it where an agent finds skills.
+
+```bash
+slipbox skill
+slipbox skill --install ~/.claude/skills
+```
+
+- `--install <folder>`: write it to `<folder>/slipbox/SKILL.md`, making the folders it needs, and say where. Run
+  again, it writes nothing and says so; over an earlier slipbox's skill, it writes this one.
+- `--force`: write over a file slipbox didn't write (one whose front matter doesn't name it `slipbox`), or in place of
+  a link, such as the one `scripts/install-local.sh --skill` makes to the source's skill. Without it, both are
+  refused, exit 5, and nothing is written. A link is removed, never written through: what it leads to stays as it is.
+- `--dry-run`: say what it would write, writing nothing. It refuses as the run would.
+
+`--json`: `{name, version, text}`; with `--install`, `{path, version, status, link, dryRun}`, `status` being
+`created`, `updated` (an earlier slipbox's skill was there), `replaced` (with `--force`) or `unchanged`, and `link`
+the `{path, to}` it replaced, else `null`.
+
 ### `help`
 
 `slipbox help`, or `--help` anywhere, prints every command with its flags. With `--json`, the text is `data.text`.
@@ -1341,8 +1363,9 @@ reason in its log.
 
 ## For agents and scripts
 
-Agents have a guide of their own, the skill: `skills/slipbox/SKILL.md` in slipbox's source. It tells an agent which
-command to use for what, to parse `--json`, and to write with `--if-unchanged`. [Working with
+Agents have a guide of their own, the skill, built into slipbox: [`slipbox skill`](#skill) prints it, and
+`slipbox skill --install <folder>` installs it (in slipbox's source, it's `skills/slipbox/SKILL.md`). It tells an
+agent which command to use for what, to parse `--json`, and to write with `--if-unchanged`. [Working with
 agents](../guides/agents.md) shows how to install it.
 
 A few habits keep a script or an agent safe:

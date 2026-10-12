@@ -35,6 +35,7 @@ export const VALUED = new Set([
   "to",
   "out",
   "add",
+  "install",
 ]);
 const BOOLEAN = new Set([
   "all",
@@ -69,6 +70,7 @@ const BOOLEAN = new Set([
   "suggest",
   "purge",
   "yes",
+  "force",
 ]);
 
 export class UsageError extends Error {}

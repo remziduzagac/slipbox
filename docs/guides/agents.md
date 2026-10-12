@@ -12,20 +12,30 @@ references and context, and each of you seeing what the other did.
 You need slipbox installed ([Installing slipbox](install.md)) and a folder of notes. This guide uses `~/notes`, with
 the two notes [Getting started](getting-started.md) makes in it: `inbox.md` and `ideas/coffee.md`.
 
-slipbox comes with a skill for agents: a short Markdown file, `skills/slipbox/SKILL.md` in slipbox's source, that
-teaches an agent the command line (which command for what, `--json`, the exit codes, the safe way to write). An agent
-that reads skills, such as Claude Code, loads it when you mention your notes or slipbox.
+slipbox comes with a skill for agents: a short Markdown file, built into slipbox, that teaches an agent the command
+line (which command for what, `--json`, the exit codes, the safe way to write). An agent that reads skills, such as
+Claude Code, loads it when you mention your notes or slipbox. The skill a slipbox carries is the one that matches its
+commands, so install it from the `slipbox` you run:
 
-From a copy of slipbox's source, one script installs the `slipbox` command and the skill together:
+```bash
+slipbox skill --install ~/.claude/skills
+```
+
+It writes the skill to `~/.claude/skills/slipbox/SKILL.md`, where Claude Code finds it, and says where. After an
+upgrade, run it again to bring the skill up to date; when the skill there is already this one, it writes nothing and
+says so. It won't write over a `SKILL.md` that slipbox didn't write, nor through a link, unless you add `--force`. For
+another agent, give `--install` the folder it reads skills from, or have it run `slipbox skill`, which prints the
+skill.
+
+From a copy of slipbox's source, one script installs the `slipbox` command and links the skill instead:
 
 ```bash
 scripts/install-local.sh --skill
 ```
 
-It puts a `slipbox` launcher in `~/.local/bin` (and says so if that folder isn't on your `PATH`), and links the skill
-folder to `~/.claude/skills/slipbox`, where Claude Code finds it. For another agent, copy `skills/slipbox/` to wherever
-it reads skills, or tell it to read `SKILL.md`. A release install doesn't include the skill: take the folder from
-slipbox's source.
+It puts a `slipbox` launcher in `~/.local/bin` (and says so if that folder isn't on your `PATH`), and links the
+source's `skills/slipbox/` folder to `~/.claude/skills/slipbox`, so the skill there follows the source as you update
+it.
 
 To check that slipbox answers in your folder, run (or ask the agent to run):
 

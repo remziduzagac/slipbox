@@ -20,6 +20,8 @@ import {
 import { tmpdir } from "node:os";
 import { basename, join } from "node:path";
 import { CLI_COMMANDS, FLAGS } from "../src/cli/cli.ts";
+import { isSlipboxSkill } from "../src/core/skill.ts";
+import { VERSION } from "../src/version.ts";
 
 // Harnesses copy and index a vault, CLI tests start processes: slow on a loaded machine, not stuck.
 setDefaultTimeout(30_000);
@@ -1653,6 +1655,119 @@ describe("the vault and the tool", () => {
     expect(r.json.error?.message).toBe(
       "this slipbox runs from source (or was built by hand): it has no releases to follow — update its checkout",
     );
+  });
+
+  // The skill for agents, built in (GR-D10): what a release install has, matching the binary.
+  const SKILL_FILE = join(import.meta.dir, "..", "skills", "slipbox", "SKILL.md");
+  test("skill prints the skill as this slipbox has it; --install writes it, says where, and again is a no-op", () => {
+    const skill = readFileSync(SKILL_FILE, "utf8");
+    expect(slipbox(["skill"])).toMatchObject({ code: 0, out: skill });
+    expect(slipbox(["skill", "--json"]).json.data).toEqual({ name: "slipbox", version: VERSION, text: skill });
+    const dir = mkdtempSync(join(sandbox, "skill-install-"));
+    const skills = join(dir, "skills");
+    const path = join(skills, "slipbox", "SKILL.md");
+    // A dry run says where, and writes nothing — not even the folder.
+    const dry = slipbox(["skill", "--install", skills, "--dry-run", "--json"]);
+    expect(dry.json.data).toEqual({ path, status: "created", link: null, dryRun: true, version: VERSION });
+    expect(slipbox(["skill", "--install", skills, "--dry-run"]).out).toBe(
+      `would write slipbox ${VERSION}'s skill to ${path}\n`,
+    );
+    expect(existsSync(skills)).toBe(false);
+    // Installed, the folder named from where it's run: the skill's text, exactly.
+    const made = slipbox(["skill", "--install", "skills"], { cwd: dir });
+    expect(made).toMatchObject({ code: 0, out: `wrote slipbox ${VERSION}'s skill to ${path}\n` });
+    expect(readFileSync(path, "utf8")).toBe(skill);
+    // Again: nothing written, and said.
+    expect(slipbox(["skill", "--install", skills, "--json"]).json.data).toMatchObject({ status: "unchanged" });
+    expect(slipbox(["skill", "--install", skills]).out).toBe(
+      `${path} is slipbox ${VERSION}'s skill already: nothing written\n`,
+    );
+    // Another slipbox's skill: brought to this one's.
+    writeFileSync(path, "---\nname: slipbox\ndescription: an older one\n---\n# slipbox\n");
+    const updated = slipbox(["skill", "--install", skills]);
+    expect(updated).toMatchObject({ code: 0, out: `updated ${path} to slipbox ${VERSION}'s skill\n` });
+    expect(readFileSync(path, "utf8")).toBe(skill);
+    // --force and --dry-run go with --install; skill takes no argument.
+    expect(slipbox(["skill", "--force"]).code).toBe(2);
+    expect(slipbox(["skill", "--dry-run"]).code).toBe(2);
+    expect(slipbox(["skill", skills]).code).toBe(2);
+  });
+
+  test("skill --install refuses (exit 5) to write over a file slipbox didn't write, unless --force", () => {
+    const skill = readFileSync(SKILL_FILE, "utf8");
+    const skills = join(mkdtempSync(join(sandbox, "skill-theirs-")), "skills");
+    const path = join(skills, "slipbox", "SKILL.md");
+    mkdirSync(join(skills, "slipbox"), { recursive: true });
+    const mine = "---\nname: my-slipbox-notes\ndescription: mine\n---\n# Mine\n";
+    writeFileSync(path, mine);
+    const refused = slipbox(["skill", "--install", skills, "--json"]);
+    expect(refused.code).toBe(5);
+    expect(refused.json.error?.message).toBe(
+      `${path} isn't a skill slipbox wrote (its front matter doesn't name it slipbox): not writing over it (--force does)`,
+    );
+    // A dry run refuses as the run would.
+    expect(slipbox(["skill", "--install", skills, "--dry-run"]).code).toBe(5);
+    expect(readFileSync(path, "utf8")).toBe(mine);
+    expect(slipbox(["skill", "--install", skills, "--force", "--dry-run", "--json"]).json.data).toMatchObject({
+      status: "replaced",
+      dryRun: true,
+    });
+    expect(readFileSync(path, "utf8")).toBe(mine);
+    const forced = slipbox(["skill", "--install", skills, "--force"]);
+    expect(forced).toMatchObject({ code: 0, out: `wrote slipbox ${VERSION}'s skill over ${path}\n` });
+    expect(readFileSync(path, "utf8")).toBe(skill);
+    // A folder where the file would go, or a file where the folder would: never, --force or not.
+    rmSync(path);
+    mkdirSync(path);
+    expect(slipbox(["skill", "--install", skills, "--force"]).code).toBe(5);
+    rmSync(join(skills, "slipbox"), { recursive: true });
+    writeFileSync(join(skills, "slipbox"), "a file\n");
+    expect(slipbox(["skill", "--install", skills, "--force"]).code).toBe(5);
+    expect(readFileSync(join(skills, "slipbox"), "utf8")).toBe("a file\n");
+    // Which files slipbox wrote: front matter first, naming it slipbox (quoted or not).
+    expect(isSlipboxSkill(skill)).toBe(true);
+    expect(isSlipboxSkill("---\nname: 'slipbox'\n---\n")).toBe(true);
+    expect(isSlipboxSkill('\uFEFF---\r\ndescription: x\r\nname: "slipbox"\r\n---\r\n')).toBe(true);
+    expect(isSlipboxSkill("---\nname: slipboxes\n---\n")).toBe(false);
+    expect(isSlipboxSkill("---\ndescription: x\n---\nname: slipbox\n")).toBe(false);
+    expect(isSlipboxSkill("# slipbox\n\nname: slipbox\n")).toBe(false);
+  });
+
+  test("skill --install never writes through a link (a checkout's skills/slipbox, linked in): refused; --force replaces the link, never what it leads to", () => {
+    const skill = readFileSync(SKILL_FILE, "utf8");
+    const dir = mkdtempSync(join(sandbox, "skill-link-"));
+    const checkout = join(dir, "checkout", "skills", "slipbox");
+    mkdirSync(checkout, { recursive: true });
+    const theirs = "---\nname: slipbox\ndescription: the checkout's, newer\n---\n# slipbox\n";
+    writeFileSync(join(checkout, "SKILL.md"), theirs);
+    const skills = join(dir, "skills");
+    const folder = join(skills, "slipbox");
+    mkdirSync(skills);
+    symlinkSync(checkout, folder);
+    const refused = slipbox(["skill", "--install", skills, "--json"]);
+    expect(refused.code).toBe(5);
+    expect(refused.json.error?.message).toBe(
+      `${folder} is a link to ${checkout}: not writing through it (--force puts this slipbox's skill in its place, the link removed)`,
+    );
+    expect(readFileSync(join(checkout, "SKILL.md"), "utf8")).toBe(theirs);
+    // The same skill at the link's end: nothing to do, the link kept.
+    writeFileSync(join(checkout, "SKILL.md"), skill);
+    expect(slipbox(["skill", "--install", skills, "--json"]).json.data).toMatchObject({ status: "unchanged" });
+    expect(lstatSync(folder).isSymbolicLink()).toBe(true);
+    writeFileSync(join(checkout, "SKILL.md"), theirs);
+    const forced = slipbox(["skill", "--install", skills, "--force", "--json"]);
+    expect(forced.json.data).toMatchObject({ status: "replaced", link: { path: folder, to: checkout } });
+    expect(lstatSync(folder).isDirectory()).toBe(true);
+    expect(readFileSync(join(folder, "SKILL.md"), "utf8")).toBe(skill);
+    expect(readFileSync(join(checkout, "SKILL.md"), "utf8")).toBe(theirs);
+    // The file itself a link: the same.
+    rmSync(join(folder, "SKILL.md"));
+    symlinkSync(join(checkout, "SKILL.md"), join(folder, "SKILL.md"));
+    expect(slipbox(["skill", "--install", skills]).code).toBe(5);
+    expect(slipbox(["skill", "--install", skills, "--force"]).code).toBe(0);
+    expect(lstatSync(join(folder, "SKILL.md")).isSymbolicLink()).toBe(false);
+    expect(readFileSync(join(folder, "SKILL.md"), "utf8")).toBe(skill);
+    expect(readFileSync(join(checkout, "SKILL.md"), "utf8")).toBe(theirs);
   });
 
   test("every CLI command is run by this file", () => {

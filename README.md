@@ -73,7 +73,8 @@ slipbox render home --plain
 ```
 
 One JSON object per call with `--json`; stable exit codes. The skill in
-[skills/slipbox/SKILL.md](skills/slipbox/SKILL.md) teaches the surface to agents;
+[skills/slipbox/SKILL.md](skills/slipbox/SKILL.md) teaches the surface to agents, and slipbox carries it:
+`slipbox skill --install ~/.claude/skills` installs the one matching the binary;
 [Working with agents](docs/guides/agents.md) and [The command line](docs/manual/cli.md) are the people's side.
 
 ## Documentation
