@@ -132,6 +132,10 @@ matches the new version.
 
 **Installed with Homebrew:** `brew upgrade slipbox`.
 
+What a new version changed is in slipbox's [changelog](../../CHANGELOG.md). Read it before an upgrade that may break
+something: before 1.0, one to a new minor version, such as `0.2.1` to `0.3.0`. [Versions](../manual/versions.md)
+says what each kind of release may change.
+
 A release build asks once a day, while you use it, whether a newer release is out, and says so in a message. It sends
 nothing about you, and `update.check = false` in your settings, or `DO_NOT_TRACK` set in your environment, turns it
 off. The [privacy chapter](../manual/privacy.md) has what slipbox sends, and when.

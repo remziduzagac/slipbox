@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Documentation
+    url: https://github.com/remziduzagac/slipbox/blob/main/docs/README.md
+    about: Installing, a first session, and the manual's every key, setting and command, with troubleshooting.
+  - name: Report a vulnerability
+    url: https://github.com/remziduzagac/slipbox/security/advisories/new
+    about: Privately, as the security policy says. Never in a public issue.

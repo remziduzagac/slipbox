@@ -22,6 +22,8 @@ Each walks through one job from start to end.
 
 Everything slipbox does, a chapter for each part.
 
+- [How slipbox works](manual/how-it-works.md): the ideas the rest rests on: plain files, the TUI and the command line
+  on the same files, roots, the index, and what slipbox promises.
 - [The screen](manual/screen.md): tabs, windows, the side panes, the status line, the mouse.
 - [Reading](manual/reading.md): how notes and other files are drawn, pictures and diagrams among them.
 - [Links and roots](manual/links-and-roots.md): the links slipbox reads and writes, and the folders they reach.
@@ -41,4 +43,6 @@ For looking things up:
 And:
 
 - [Privacy](manual/privacy.md): what slipbox sends, what it runs, what it keeps.
+- [Versions](manual/versions.md): what a version number promises, how something is retired, and where to read what
+  changed.
 - [Troubleshooting](manual/troubleshooting.md): `slipbox doctor`, and the usual problems with their fixes.

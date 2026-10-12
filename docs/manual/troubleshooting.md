@@ -231,7 +231,9 @@ The error's full trace follows its message. It works for the command line's own 
 
 ## Reporting a problem
 
-slipbox has no public repository or issue tracker yet. Wherever you report a problem, a useful report holds:
+Report a bug in slipbox's issues on GitHub,
+[github.com/remziduzagac/slipbox/issues](https://github.com/remziduzagac/slipbox/issues), with the bug report form. A
+useful report holds:
 
 - **The version**: `slipbox --version`, and how you installed it (a release, Homebrew, or from source).
 - **Your system and terminal**: the operating system, the terminal and its version, and any multiplexer (tmux, zellij)
@@ -242,3 +244,6 @@ slipbox has no public repository or issue tracker yet. Wherever you report a pro
 - **For language servers**: `slipbox doctor <file>`'s output.
 - **For a folder's behaviour**: `slipbox info`'s output. It shows your folders' paths: remove what you'd rather not
   share.
+
+A security problem, such as a note or a folder that makes slipbox run something you didn't trust, is never reported in
+an issue, which anyone can read. Report it privately, as [slipbox's security policy](../../SECURITY.md) says.

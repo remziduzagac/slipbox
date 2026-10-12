@@ -161,7 +161,8 @@ with a new `schema`.
 - `resolve`, `links`, `backlinks`, `problems`, `tags`
 - `changed`, `diff`, `merge-review`, `worktrees`
 
-The exit codes and the `--json` envelope are stable for every command.
+The exit codes and the `--json` envelope are stable for every command. [Versions](versions.md) says what each kind
+of release may change, and how a command or a flag is retired.
 
 ## Flags every command takes
 

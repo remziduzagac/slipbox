@@ -6,8 +6,17 @@ fit, highlighted code, pictures, diagrams and maths, themes), follows links in t
 reloads the instant an agent rewrites a note. You read and edit in the TUI; agents and scripts drive the same files
 through the CLI.
 
-Status: every phase on the [roadmap](blueprint/roadmap.md) is built: reading, editing, search, roots and named
-folders, git and merge review, language servers and linters, export. No release is published yet.
+- **Start here:** [Getting started](docs/guides/getting-started.md), a first session of about ten minutes, once
+  [Installing slipbox](docs/guides/install.md) has it on your machine. [The documentation](docs/README.md) has the
+  rest.
+- **Status:** every phase on the [roadmap](blueprint/roadmap.md) is built: reading, editing, search, roots and named
+  folders, git and merge review, language servers and linters, export. No release is published yet. slipbox is before
+  1.0: [Versions](docs/manual/versions.md) says what may still change.
+- **Help:** the documentation, and its [troubleshooting chapter](docs/manual/troubleshooting.md) for the usual
+  problems. A bug goes in an [issue](https://github.com/remziduzagac/slipbox/issues/new/choose); a security problem
+  goes privately, as [SECURITY.md](SECURITY.md) says, never in an issue.
+- **Maintained by** Remzi Duzagac ([@remziduzagac](https://github.com/remziduzagac)), alone and in their own time:
+  [MAINTAINING.md](MAINTAINING.md). Anyone may open an issue; pull requests come from collaborators.
 
 ## Try it
 
@@ -81,6 +90,9 @@ One JSON object per call with `--json`; stable exit codes. The skill in
 
 - [docs/](docs/README.md): the user documentation: guides to start with, and a manual covering every key, setting
   and command.
+- [CHANGELOG.md](CHANGELOG.md): what each release changed.
+- [ARCHITECTURE.md](ARCHITECTURE.md): a map of the code, for whoever changes it.
+- [ACCESSIBILITY.md](ACCESSIBILITY.md): what the TUI does for accessibility, and its limits.
 - [blueprint/](blueprint/README.md): the design: requirements, how it works, the decisions behind it, the roadmap.
 
 ## Development

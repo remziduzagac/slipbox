@@ -1,0 +1,87 @@
+# Versions
+
+A slipbox version says what changed since the one before, and which changes can break a script, an agent or your
+settings. This chapter covers what slipbox promises to keep, what each part of a version number means before 1.0 and
+after it, how something is retired, and where to read what changed before you upgrade.
+
+## Which version you have
+
+`slipbox --version` prints it: `slipbox 0.2.0`. With `--json` it's `data.version`, and `slipbox info` says it too, with
+whether this is a release or slipbox run from its source.
+
+A version is three numbers, major, minor and patch: `0.2.0` is major 0, minor 2, patch 0. Each release has a version of
+its own, never used again, and a release once published is never changed.
+
+## What a version promises
+
+### What is kept
+
+These are what scripts, agents and your own files rely on, so they change only as the next section says:
+
+- **The command line:** each command, its arguments and its flags, and what it does ([The command line](cli.md)).
+- **`--json`:** the object every command prints (`schema`, `ok`, `command`, `error`, `data`, `warnings`, `stale`), and
+  the `data` of the stable commands, whose version is `schema` ([What stays stable](cli.md#what-stays-stable)).
+- **The exit codes**, 0 to 5 ([Exit codes](cli.md#exit-codes)).
+- **The settings:** the keys of your config file and of a folder's `.slipbox/config.toml`, their values and what they
+  do, the names of the commands your keys and aliases call, and slipbox's own environment variables
+  ([Configuration](configuration.md)).
+- **What slipbox writes into your files:** the links it writes (Markdown links, wikilinks and `slipbox://` pointers, in
+  [Links and roots](links-and-roots.md)'s forms), and the `.slipbox/` folder.
+
+### What may change in any release
+
+- **The TUI:** how it looks, its layout, its messages, and its default keys. Your own key bindings stay yours.
+- **The human output of a command**, which is for people. A script reads `--json` instead.
+- **The files in slipbox's own folders,** and how they're laid out ([Where slipbox keeps
+  things](configuration.md#where-slipbox-keeps-things)). A script asks for what's in them through a command, such as
+  `slipbox scratch show` or `slipbox trash`, and never reads or writes them itself.
+- **slipbox's source code**, which isn't a library: nothing in it is meant to be imported by another program.
+
+## What each part of a version means
+
+### Before 1.0
+
+slipbox is before 1.0 now, while its command line settles:
+
+- **A minor release** (`0.2.0` to `0.3.0`) adds and fixes, and may change what is kept: a command, a flag, a setting.
+  Each such change is in the changelog, with what to do.
+- **A patch release** (`0.2.0` to `0.2.1`) fixes what's wrong, and changes nothing that is kept.
+
+Some of it is stable already. The exit codes and the `--json` object are stable for every command, and the stable
+commands' `data` changes only with a new `schema` ([What stays stable](cli.md#what-stays-stable)).
+
+### From 1.0
+
+- **A major release** (`1.4.2` to `2.0.0`) may change what is kept.
+- **A minor release** (`1.4.2` to `1.5.0`) adds to it, and breaks nothing.
+- **A patch release** (`1.4.2` to `1.4.3`) fixes what's wrong, and changes nothing that is kept.
+
+### The `schema` number
+
+`--json`'s `schema` counts apart from slipbox's version. It starts at 1, and goes up when a stable command's output
+changes: before 1.0 in a minor release, from 1.0 only in a major one. A script that checks it learns that the shape it
+reads has changed, whatever the version says.
+
+## How something is retired
+
+A command, a flag or a setting that is to be renamed or removed is deprecated first, before 1.0 and after it:
+
+- **The changelog says so** in its Deprecated section, with what to use instead, at least one minor release before it
+  goes.
+- **It keeps working** while it's deprecated, and slipbox warns when you use it: a setting among the config's warnings
+  ([Mistakes in a file](configuration.md#mistakes-in-a-file)), a command or a flag on stderr, and in `warnings` with
+  `--json`.
+- **Once it's gone,** a setting is named and ignored, with a warning saying what replaced it, as a retired one is now. A
+  command or a flag is a usage error, exit code 2, and its message says what to use instead.
+
+A change that can't keep the old way working beside the new one, such as a command's behaviour, comes in a minor release
+before 1.0 and a major one after, with notes in the changelog.
+
+## What changed, and upgrading
+
+The [changelog](../../CHANGELOG.md) lists every release, newest first: what was added, changed, deprecated, removed and
+fixed, and any security fix. A breaking change is marked, with what to do about it. A release's notes are its entry in
+the changelog.
+
+Read it before an upgrade that crosses a minor release before 1.0, or a major one after. `slipbox upgrade` keeps the
+version it replaces, so you can go back to it ([Upgrading](../guides/install.md#upgrading)).

@@ -136,3 +136,4 @@ Next time you run `slipbox ~/notes`, your tabs come back, each note where you le
 - [Finding things](../manual/finding.md), [Links and roots](../manual/links-and-roots.md) and
   [Editing](../manual/editing.md): the chapters behind this session's steps.
 - [Keys](../manual/keys.md): every key, as `?` lists them.
+- [How slipbox works](../manual/how-it-works.md): the ideas behind what you just did, and what slipbox promises.
