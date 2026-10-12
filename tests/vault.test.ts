@@ -954,6 +954,10 @@ describe("review cycle 5 (the watcher's polling fallbacks)", () => {
       onDegraded: () => {},
     });
     try {
+      // The watch live first: macOS's starts a moment after it's asked for, and a change before then isn't seen.
+      writeFileSync(join(dir, "ready.md"), "# Ready\n");
+      await until(() => changed.some((c) => c.rel === "ready.md"));
+      changed.length = 0;
       renameSync(join(outside, "photos"), join(dir, "photos"));
       await until(() => changed.length >= 3);
       expect(changed.sort((a, b) => a.rel.localeCompare(b.rel))).toEqual([

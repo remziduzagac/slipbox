@@ -1146,6 +1146,47 @@ describe("a release (14.2)", () => {
       60_000,
     );
 
+    test("on Alpine, a binary that won't load says what to add: libstdc++ and libgcc", () => {
+      const dir = mkdtempSync(join(sandbox, "alpine-"));
+      const target = "linux-x64-musl";
+      const name = `slipbox-${VERSION}-${target}`;
+      mkdirSync(join(dir, name));
+      // What a bare Alpine's loader says of Bun's musl build: the C++ runtime missing, then a symbol per line.
+      const loader =
+        "Error loading shared library libstdc++.so.6: No such file or directory (needed by /w/slipbox)\n" +
+        "Error relocating /w/slipbox: __cxa_pure_virtual: symbol not found\n";
+      writeFileSync(join(dir, name, "slipbox"), `#!/bin/sh\nprintf '${loader}' >&2\nexit 127\n`);
+      chmodSync(join(dir, name, "slipbox"), 0o755);
+      mkdirSync(join(dir, "r", "download", `v${VERSION}`), { recursive: true });
+      const tar = join(dir, "r", "download", `v${VERSION}`, assetName(VERSION, target));
+      expect(Bun.spawnSync(["tar", "-czf", tar, "-C", dir, name]).exitCode).toBe(0);
+      const template = readFileSync(join(ROOT, "scripts", "install.template.sh"), "utf8");
+      const sums = { [target]: sha256sums([tar]).split(" ")[0]! };
+      writeFileSync(join(dir, "install.sh"), installScript(template, VERSION, "example/slipbox", sums));
+      // An x64 Linux whose C library is musl's, as Alpine's.
+      const fakes = join(dir, "fakes");
+      mkdirSync(fakes);
+      writeFileSync(join(fakes, "uname"), '#!/bin/sh\ncase "$1" in -s) echo Linux ;; -m) echo x86_64 ;; esac\n');
+      writeFileSync(join(fakes, "ldd"), "#!/bin/sh\necho 'musl libc (x86_64)'\n");
+      for (const f of ["uname", "ldd"]) chmodSync(join(fakes, f), 0o755);
+      const home = mkdtempSync(join(sandbox, "home-"));
+      const r = Bun.spawnSync(["sh", join(dir, "install.sh")], {
+        env: {
+          HOME: home,
+          PATH: `${fakes}:/usr/bin:/bin`,
+          TMPDIR: home,
+          SLIPBOX_RELEASES_URL: `file://${join(dir, "r")}`,
+        },
+        cwd: home,
+      });
+      expect(r.exitCode).toBe(1);
+      expect(r.stderr.toString()).toBe(
+        "slipbox: the binary doesn't run here: on Alpine, slipbox needs libstdc++ and libgcc (apk add libstdc++ libgcc). " +
+          "It said: Error loading shared library libstdc++.so.6: No such file or directory (needed by /w/slipbox)\n",
+      );
+      expect(existsSync(join(home, ".local", "share", "slipbox"))).toBe(false);
+    });
+
     test.if(host !== null)(
       "no build for the machine: another system, another processor, musl, one this release hasn't",
       () => {
