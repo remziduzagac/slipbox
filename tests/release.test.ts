@@ -467,6 +467,16 @@ const needs = (j: Job) => [j.needs ?? []].flat().sort();
 const runs = (j: Job) => (j.steps ?? []).map((s) => s.run ?? "").join("\n");
 
 describe("the workflows: one build for releases and previews, previews from test, Pages deployed", () => {
+  test("a job that runs the tests installs the whole toolchain: the docs check's tests run typos and lychee", () => {
+    for (const name of ["build.yml", "ci.yml"]) {
+      for (const [id, job] of Object.entries(workflow(name).jobs)) {
+        const steps = job.steps ?? [];
+        if (!steps.some((s) => /\bbun (run )?test\b|bun run check\b/.test(s.run ?? ""))) continue;
+        const mise = steps.find((s) => s.uses?.startsWith("jdx/mise-action@"));
+        expect([name, id, mise?.with?.install_args]).toEqual([name, id, undefined]);
+      }
+    }
+  });
   test("build.yml, called with a tag and a version, builds every platform, attests each SBOM, then finishes", () => {
     const build = workflow("build.yml");
     expect(Object.keys(build.on)).toEqual(["workflow_call"]);
