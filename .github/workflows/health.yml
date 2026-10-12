@@ -69,7 +69,8 @@ jobs:
           persist-credentials: false
       - uses: jdx/mise-action@2d8d4cafcbd33be2ea37d2b6f5ad595363d1f1ca # v5.1.1
         with:
-          install_args: lychee
+          # By its name in mise.toml and mise.lock: the short name has no locked download.
+          install_args: aqua:lycheeverse/lychee
           cache: false
           minimum_release_age: 7d
       - id: check
