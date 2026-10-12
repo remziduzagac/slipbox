@@ -82,7 +82,8 @@ jobs:
           REPO: ${{ github.repository }}
           TAG: ${{ inputs.tag }}
         run: bun scripts/release.ts build --target "$TARGET" --repo "$REPO" --tag "$TAG"
-      # Bun signs a Mac's binary ad hoc; one whose signature is broken isn't run at all (14.13).
+      # A Mac's binary was signed ad hoc again by release.ts (codesign, on this Mac); one whose signature is broken isn't
+      # run at all (14.13).
       - name: signature
         if: startsWith(matrix.target, 'darwin-')
         env:
