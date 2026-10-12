@@ -149,7 +149,8 @@ describe("a preview's version and tag (GR-D13)", () => {
         GIT_COMMITTER_NAME: "a",
         GIT_COMMITTER_EMAIL: "a@example.com",
         GIT_COMMITTER_DATE: date,
-        GIT_AUTHOR_DATE: date,
+        // Written years before it was committed: the committer's time is the one a preview takes.
+        GIT_AUTHOR_DATE: "2020-01-01T00:00:00Z",
       };
       const git = (cwd: string, ...args: string[]) => {
         const r = Bun.spawnSync(["git", ...args], { cwd, env, stdout: "pipe", stderr: "pipe" });
@@ -488,9 +489,9 @@ describe("the workflows: one build for releases and previews, previews from test
       );
     }
     // The tests run on the code as committed, before the stamp.
-    expect(runs(build.jobs.build!).indexOf("bun run test")).toBeLessThan(
-      runs(build.jobs.build!).indexOf("release.ts stamp"),
-    );
+    const tests = runs(build.jobs.build!).indexOf("bun run test");
+    expect(tests).toBeGreaterThanOrEqual(0);
+    expect(tests).toBeLessThan(runs(build.jobs.build!).indexOf("release.ts stamp"));
     const upload = build.jobs.finish?.steps?.find((s) => s.uses?.startsWith("actions/upload-artifact@"));
     expect(upload?.with?.name).toBe("release");
     // It can't write to the repository: the callers publish.
