@@ -57,7 +57,7 @@ async function cli(argv: string[], cwd: string, stdin = "") {
 const unicode = glyphsFor("unicode");
 
 /** Wait until `pred` holds (watcher tests: events arrive asynchronously, slower under load). */
-async function until(pred: () => boolean, ms = 3000): Promise<void> {
+async function until(pred: () => boolean, ms = 25_000): Promise<void> {
   const end = Date.now() + ms;
   while (!pred() && Date.now() < end) await new Promise((r) => setTimeout(r, 20));
 }

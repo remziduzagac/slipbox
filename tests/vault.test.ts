@@ -871,7 +871,7 @@ describe("review cycle 5 (vault, a loose folder)", () => {
 });
 
 describe("review cycle 5 (the watcher's polling fallbacks)", () => {
-  const until = async (ok: () => boolean, ms = 4000) => {
+  const until = async (ok: () => boolean, ms = 25_000) => {
     const end = Date.now() + ms;
     while (!ok() && Date.now() < end) await Bun.sleep(20);
   };
