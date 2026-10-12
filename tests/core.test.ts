@@ -3206,6 +3206,8 @@ describe("the lint surface (3.21)", () => {
       expect(said.filter((t) => t.includes("no-such-package"))).toHaveLength(2);
     } finally {
       process.env.PATH = was;
+      // The fake's lock out again: LOCKS is the module's, which a later test file reads whole.
+      delete LOCKS[lockKey(npm)];
     }
   });
 
