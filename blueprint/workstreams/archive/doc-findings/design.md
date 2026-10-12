@@ -16,7 +16,7 @@ Its second paragraph becomes:
 > and a folder's is not warned of. Nor may a folder's `[keys]` or `[aliases]` name a command that throws work away or
 > runs a program (`shell.run`, `shell.filter`), so a clone can't put one on `ctrl+s` or `:wq` (`USER_ONLY`, each
 > with its reason, and `VAULT_FORBIDDEN_COMMANDS` in `core/config.ts`;
-> [configuration.md](../../docs/manual/configuration.md), "What only your own file can set").
+> [configuration.md](../../../../docs/manual/configuration.md), "What only your own file can set").
 
 Previously: "Trusted or not, a folder's config never names a program to run: … are your own config's only, and so is
 `[trust]` (D160, D166, D177). Nor may …", nothing on the network.
@@ -62,7 +62,7 @@ is refused" (this root's only).
   `![alt|240](…)`. A picture on the web with no copy here stays a picture, its address as it was. Anything else a
   picture link names — a file that isn't a picture, one outside the root — is a link to it from the export,
   `[alt](../notes.txt)` (its alt, else its file's name), nothing of it copied; one on another drive is its words. The
-  folder answers no lookup by name ([links.md](links.md) § Wikilinks).
+  folder answers no lookup by name ([links.md](../../../design/links.md) § Wikilinks).
 
 Previously: "Pictures are copied into a folder beside it, `report.export.assets/`, each by its own name …": whatever a
 picture link named, a text file or a file outside the root included.
@@ -94,7 +94,8 @@ Previously: nothing on it. The new path was always the whole path: `slipbox mv n
 **design/tui.md § Renames**, its first sentence:
 
 > `space n m` (`:rename <path>`, `:mv`) asks for the note's new path, the old one typed already — a folder there, or a
-> path ending in `/`, moves it into that folder ([links.md](links.md) § Renames and moves); the explorer's `r` …
+> path ending in `/`, moves it into that folder ([links.md](../../../design/links.md) § Renames and moves); the
+> explorer's `r` …
 
 Previously: "`space n m` (`:rename <path>`, `:mv`) asks for the note's new path, the old one typed already; the
 explorer's `r` …"
@@ -174,7 +175,7 @@ design/roots.md § How a root is named and shown, a paragraph added at its end:
 > inside a root, `unmake-root` for `deinit`; a root nested in another is skipped by the walk as a `nested root`; and
 > nothing to undo is "in this root". The renames log and the saved plans keep the code's words, `vault`, `make-vault`
 > and `unmake-vault`, and the CLI says them as root when it prints them (`kindWord` in `cli/cli.ts`). A theme slipbox
-> ships is `built-in`, as a document type is ([docs/manual/cli.md](../../docs/manual/cli.md) § `info`, § Moving,
+> ships is `built-in`, as a document type is ([docs/manual/cli.md](../../../../docs/manual/cli.md) § `info`, § Moving,
 > copying and deleting, § `themes`).
 
 design/terms.md § Retired, the **vault** entry:
@@ -380,11 +381,11 @@ Previously: "every root leaves out worktrees, whose notes are their main checkou
 
 MODIFIED: "A fragment that lands nowhere opens the note at its top, and which heading or block isn't there is said, in
 the TUI's message line and the CLI's `warnings` (`resolve` gives the note, its `line` null). Where it lands is shown
-by the hover and `shift+k`: the heading's section, the block, the lines ([tui.md](../../design/tui.md) § What's
+by the hover and `shift+k`: the heading's section, the block, the lines ([tui.md](../../../design/tui.md) § What's
 under the cursor); `resolve` gives its line, a block's and lines' as a heading's."
 
 Previously: "A fragment that lands nowhere opens the note at its top. Where it lands is shown by the hover and
-`shift+k`: the heading's section, the block, the lines ([tui.md](../../design/tui.md) § What's under the cursor)."
+`shift+k`: the heading's section, the block, the lines ([tui.md](../../../design/tui.md) § What's under the cursor)."
 
 ## MODIFIED design/export.md § The assembler, § Markdown, § Known limits; design/links.md § Wikilinks (DF-D24, DF-D25)
 
@@ -411,8 +412,8 @@ and the e-book, outside the root too; only Markdown checked the root, itself (DF
 
 **§ Markdown**, the **Pictures** bullet as DF-D2 has it above, but for "from inside the root by where they really are",
 which is now the assembler's mark, and its last sentence, which becomes: "The folder answers no lookup by name,
-whatever its name: `report.export.assets/`, or `book.assets/` for `-o book.md` ([links.md](links.md) § Wikilinks;
-DF-D25)."
+whatever its name: `report.export.assets/`, or `book.assets/` for `-o book.md`
+([links.md](../../../design/links.md) § Wikilinks; DF-D25)."
 
 **§ Known limits**: the first bullet goes (DF-D24). Previously, as DF-D2 left it: "A picture is read wherever its link
 points, as on screen. A note from elsewhere can name a picture outside the root, and its export as Word, PDF, a web

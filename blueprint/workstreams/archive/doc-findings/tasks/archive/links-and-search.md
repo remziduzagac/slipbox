@@ -26,7 +26,7 @@ The code brought in line with the design in three places.
 - Tried on the reference set with the CLI, or headlessly as `tests/tui.test.ts` drives the TUI (D209), in the Log.
 - The user docs that describe it changed in the same task (`docs/manual/`, `docs/guides/`, the skill for the CLI),
   without IDs; `tests/docs.test.ts` passes.
-- The new design text written under its entry in DF's [design.md](../design.md), never in the root's design files.
+- The new design text written under its entry in DF's [design.md](../../design.md), never in the root's design files.
 - The typecheck and the test files touched pass; the whole suite once at the end.
 
 ## References

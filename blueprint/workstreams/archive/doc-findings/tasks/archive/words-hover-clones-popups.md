@@ -28,7 +28,7 @@ The follow-ups F3, F7, F11, F12.
 - Each fix with a regression test beside the related tests, that fails without it (mutation-checked, in the Log).
 - Tried on the reference set with the CLI, or headlessly as `tests/tui.test.ts` drives the TUI (D209), in the Log.
 - The user docs that describe it changed in the same task, without IDs; `tests/docs.test.ts` passes.
-- The new design text under its entry in DF's [design.md](../design.md), never in the root's design files.
+- The new design text under its entry in DF's [design.md](../../design.md), never in the root's design files.
 - The typecheck and the test files touched pass; never the whole suite (the coordinator runs it once, after merging).
 
 ## References
