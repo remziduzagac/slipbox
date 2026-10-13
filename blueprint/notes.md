@@ -401,4 +401,6 @@ dates. Each says what was asked, decided, built and found, and cites the decisio
   slipbox. Drafted as the workstream TT ([its notes](workstreams/terminal-tests/notes.md)), for the user to accept.
 - The user asked for slipbox's description to say what it has become, more than a Markdown reader: the terminal
   companion for coding agents, one wording wherever it describes itself, its editing intuitive yet innovative and the
-  editor necessary and sufficient (D226).
+  editor necessary and sufficient (D226). With it, the README's Try it became opening a folder with an installed
+  slipbox, a screenshot and the keys, running from source moved to Development, and the maintainer is no longer named
+  there (D227).

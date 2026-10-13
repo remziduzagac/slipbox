@@ -244,7 +244,7 @@ How: design/distribution.md; the workflows that build and publish: design/reposi
 - Beside `docs/`, the repository's own documents: the changelog, the maintaining procedures, the security policy,
   accessibility, architecture and the issue forms, each written for its own readers, kept with the code like the rest
   and free of the blueprint's IDs (GR-D1). The README's first screen says what slipbox is, its status, where to get
-  help and who maintains it.
+  help and how it is maintained, without naming the maintainer (D227).
 
 How: docs/README.md; workstreams/archive/user-docs/requirements.md § How they are written; the screenshots:
 design/testing.md § The terminal tests; the repository's documents: design/repository.md § The repository's documents.
