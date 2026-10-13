@@ -1,7 +1,8 @@
 # slipbox documentation
 
-slipbox is a terminal app for reading and writing Markdown notes. You read and edit in its TUI; agents and scripts
-use its command line; both work on the same plain files, so neither ever sees a stale copy.
+**The terminal companion for coding agents.** Read, review and edit what your agent writes, with Markdown and code
+rendered cleanly, an editor that's necessary and sufficient, and agent integration built in. You use its TUI; your
+agent, or a script, uses its command line. Both work on the same plain files, so neither ever sees a stale copy.
 
 ## Start here
 

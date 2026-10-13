@@ -1,9 +1,8 @@
 # Installing slipbox
 
 slipbox runs in a terminal, on macOS and Linux, and on Windows through WSL. One line installs a release build, which
-needs nothing else on your machine; you can also run it from its source code. No stable release has been published
-yet: until the first one is, a preview is the release build to install. This guide covers both ways, then checking
-that it works, upgrading and removing it.
+needs nothing else on your machine; you can also run it from its source code. This guide covers both ways, then
+checking that it works, upgrading and removing it.
 
 ## What you need
 
@@ -31,8 +30,8 @@ One line installs the latest release:
 curl -fsSL https://remziduzagac.github.io/slipbox/install.sh | sh
 ```
 
-No stable release has been published yet, and until one is, that line says so. Install the newest preview instead,
-a build of what the first release will hold ([Previews](#previews), below):
+The newest preview, a build of what the next release will hold ([Previews](#previews), below), installs the same
+way:
 
 ```bash
 curl -fsSL https://remziduzagac.github.io/slipbox/install.sh | sh -s -- --preview

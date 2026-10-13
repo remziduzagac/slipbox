@@ -4,8 +4,9 @@ synced_with: main@dc09fc4
 
 # slipbox blueprint
 
-slipbox is a terminal markdown notes app: a shared workspace for humans and agents over plain files, where a person in
-the TUI and an agent on the CLI see the same files, the same links and the same answers (D33). It is TypeScript on Bun,
+slipbox is the terminal companion for coding agents: a shared workspace for humans and agents over plain files, where a
+person in the TUI reads, reviews and edits what an agent on the CLI writes, both seeing the same files, the same links
+and the same answers (D33, D226). It is TypeScript on Bun,
 one core with two faces, compiled into one binary (D5, D8). Every phase on the roadmap is built, extensibility aside,
 deferred (D37), and the initial design was declared settled on 2026-10-11 (D210). The repository is public on GitHub
 under Apache-2.0, kept to the user's greenrepo standard ([design/repository.md](design/repository.md)), and 0.2.1, the

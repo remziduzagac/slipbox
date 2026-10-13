@@ -5,24 +5,47 @@
     src="https://github.com/remziduzagac/slipbox/actions/workflows/ci.yml/badge.svg?branch=main" alt="CI status"></a>
 </p>
 
-A terminal Markdown notes app: a shared workspace for people and agents over plain files. It reads a folder of
-Markdown notes (a repository, an Obsidian vault, a zk notebook, or any folder), renders them properly (tables that
-fit, highlighted code, pictures, diagrams and maths, themes), follows links in the folder's own conventions, and
-reloads the instant an agent rewrites a note. You read and edit in the TUI; agents and scripts drive the same files
-through the CLI.
+**The terminal companion for coding agents.**
+
+Read, review and edit what your agent writes — with Markdown and code rendered cleanly, an editor that's necessary
+and sufficient, and agent integration built in.
+
+slipbox sits beside Claude Code, Codex, or any agent that runs shell commands. Follow an idea from the first plan to
+the code that implements it. Read comfortably, review what changed, and make edits of your own. Tables fit the window
+and code is highlighted; pictures, diagrams and maths sit alongside your writing; themes, keys and settings make the
+workspace yours.
+
+Editing is **intuitive yet innovative**: the lens opens the Markdown around your cursor for editing while the rest
+stays rendered. Stay where you were reading, keep the surrounding document in view, and focus on the change.
+
+The editor is **necessary and sufficient**: the everyday editing tools, from selections, undo and find-and-replace to
+completion, language servers, linters and spelling. Your own editor is a key away whenever you want more.
+
+Use vim's keys or familiar editor shortcuts, and discover the rest as you go: `space` opens a menu of actions, `?`
+shows every key, and `:` opens the command palette. Everything is clickable too.
+
+The agent works on the same files through slipbox's command line and bundled skill: searching, following links and
+making changes, with guarded writes that refuse to replace a file changed since the agent read it. What the agent
+saves appears at once; if a file changes while you have unsaved edits, slipbox asks what to keep.
+
+Gather references and excerpts in the scratch, each with its file path and line numbers. Build your next prompt while
+keeping your document focused.
+
+Open the folder you already have — a repository, an Obsidian vault, a zk notebook or an ordinary folder. Opening it
+writes nothing there: your notes and code stay in their files, alongside the tools you already use.
 
 - **Start here:** [Getting started](docs/guides/getting-started.md), a first session of about ten minutes, once
   [Installing slipbox](docs/guides/install.md) has it on your machine. [The documentation](docs/README.md) has the
   rest.
 - **Status:** every phase on the [roadmap](blueprint/roadmap.md) is built: reading, editing, search, roots and named
-  folders, git and merge review, language servers and linters, export. No stable release is published yet; previews
-  are. slipbox is before 1.0: [Versions](docs/manual/versions.md) says what may still change.
+  folders, git and merge review, language servers and linters, export. Releases are published, with previews of the
+  next one between them. slipbox is before 1.0: [Versions](docs/manual/versions.md) says what may still change.
 - **Help:** the documentation, and its [troubleshooting chapter](docs/manual/troubleshooting.md) for the usual
   problems. Questions and ideas go in [Discussions](https://github.com/remziduzagac/slipbox/discussions); a bug in an
   [issue](https://github.com/remziduzagac/slipbox/issues/new/choose); a security problem privately, as
   [SECURITY.md](SECURITY.md) says, never in an issue.
-- **Maintained by** Remzi Duzagac ([@remziduzagac](https://github.com/remziduzagac)), alone and in their own time:
-  [MAINTAINING.md](MAINTAINING.md). Anyone may open an issue; pull requests come from collaborators.
+- **Contributing:** anyone may open an issue; pull requests come from collaborators. [MAINTAINING.md](MAINTAINING.md)
+  says how slipbox is maintained.
 
 ## Install
 
@@ -33,34 +56,23 @@ curl -fsSL https://remziduzagac.github.io/slipbox/install.sh | sh               
 curl -fsSL https://remziduzagac.github.io/slipbox/install.sh | sh -s -- --preview   # the newest preview
 ```
 
-Until the first stable release is out, the second is the one that installs: a preview, a build of what the release
-will hold. `slipbox upgrade` keeps it current, and `slipbox channel` says, and changes, whether it follows previews.
+The first installs the latest release; the second, the newest preview, a build of what the next release will hold.
+`slipbox upgrade` keeps it current, and `slipbox channel` says, and changes, whether it follows previews.
+[Installing slipbox](docs/guides/install.md) has the rest: previews, Windows through WSL, upgrading and removing it,
+and running it from source.
 
 ## Try it
 
-From source, with [Bun](https://bun.sh) 1.4.2 or later:
+Open a folder you already have, your notes or a repository your agent works in:
 
 ```bash
-bun install
-bun src/main.ts examples/vault                      # the TUI, on the demo folder
-bun src/main.ts render examples/vault/equipment/telescope-comparison.md  # render to stdout
-scripts/install-local.sh                            # a `slipbox` launcher in ~/.local/bin
+slipbox ~/notes
 ```
 
-[Installing slipbox](docs/guides/install.md) has the rest: the installer and previews, Homebrew once there's a tap,
-Windows through WSL, upgrading and removing it. Then [Getting started](docs/guides/getting-started.md) walks through a
-first session.
+![slipbox with the explorer, a note's properties and headings, and its outline](docs/images/screen-map.png)
 
-A file's **root** is the nearest folder above it holding `.git`, `.slipbox/`, `.obsidian/` or `.zk/`: what `/` in a
-link starts from, where a wikilink's names are looked for, whose link convention is followed. A folder without one
-works too, as the folder opened. `slipbox init --name notes` gives a folder a name that other folders link to it by,
-`slipbox://notes/inbox.md`, wherever it is on each machine; a repository is named by its remote.
-[Links and roots](docs/manual/links-and-roots.md) explains it all.
-
-## In the TUI
-
-A reading cursor moves with vim keys or the usual editor keys. `space` opens a which-key popup listing everything
-else, and `?` lists every key, so nothing needs memorising:
+A reading cursor moves with vim keys or the usual editor keys. `space` opens a menu of everything else, and `?` lists
+every key:
 
 - **Moving:** `h` `j` `k` `l` or the arrows; `w`/`b` or `ctrl+right`/`ctrl+left` by word; `[ [` / `] ]` or
   `alt+up`/`alt+down` by heading.
@@ -78,6 +90,9 @@ else, and `?` lists every key, so nothing needs memorising:
 
 Every key is in [Keys](docs/manual/keys.md), and all of them are configurable
 ([Configuration](docs/manual/configuration.md)). The configuration reloads itself when you save it.
+
+[Getting started](docs/guides/getting-started.md) walks through a first session, and
+[Links and roots](docs/manual/links-and-roots.md) explains how links find their notes, across folders too.
 
 ## For agents
 
@@ -115,6 +130,16 @@ One JSON object per call with `--json`; stable exit codes. The skill in
 - [blueprint/](blueprint/README.md): the design: requirements, how it works, the decisions behind it, the roadmap.
 
 ## Development
+
+From source, with [Bun](https://bun.sh) 1.4.2 or later:
+
+```bash
+bun install
+bun src/main.ts examples/vault   # the TUI, on the demo folder
+scripts/install-local.sh         # a `slipbox` launcher in ~/.local/bin
+```
+
+To check a change:
 
 ```bash
 bun run check          # typecheck, the core-never-imports-tui boundary, dependencies, lint, the docs' lint,

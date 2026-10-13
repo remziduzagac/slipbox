@@ -323,7 +323,7 @@ class Session {
   }
 }
 
-export const HELP = `slipbox ${VERSION} — terminal markdown notes, agent-drivable
+export const HELP = `slipbox ${VERSION} — the terminal companion for coding agents
 
 Usage:
   slipbox [path]                    open the TUI (needs a terminal); also: slipbox open [path]

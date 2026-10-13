@@ -485,6 +485,9 @@ naming what is left out tells the agent to ask.
 
 ## D33: A shared workspace for humans and agents over plain files (2026-10-02)
 
+> **Clarified by D226 (2026-10-13):** slipbox is described as the terminal companion for coding agents; the shared
+> workspace is how it is one.
+
 **Decision:** slipbox is a shared workspace for humans and agents over plain files: a person in the TUI and an agent on
 the CLI see the same files, the same links and the same answers, and a feature earns its place by how well it serves
 that shared work. It is not a markdown previewer with extras, and not Obsidian without the GUI, as D1 had it.
@@ -526,3 +529,25 @@ link is, and the rest of phase 5 depends on none of it.
 argv, stays a constraint on whatever is built. This amends D23 and D24.
 
 **Why:** the user's call while sorting what was left once images (`12.x`) were done: for the future, not planned now.
+
+## D226: slipbox described as the terminal companion for coding agents (2026-10-13)
+
+**Decision:** Wherever slipbox describes itself, it is the terminal companion for coding agents: "Read, review and edit
+what your agent writes, with Markdown and code rendered cleanly, an editor that's necessary and sufficient, and agent
+integration built in." The README opens with that, then a paragraph for each claim: an idea followed from the plan to
+the code, rendered, with themes, keys and settings your own; editing intuitive yet innovative, in the lens; the editor
+necessary and sufficient, your own editor for more; usage discovered as you go (vim's keys or the usual ones, `space`,
+`?`, `:` and the mouse); the command line and the skill, guarded writes, reloads and the conflict prompt; the scratch;
+any folder, opened as it is. `package.json`, the documentation's index and the repository's description take the line
+whole; the Homebrew formula and `slipbox help`, which have room for less, its first sentence. It clarifies D33, which
+says how slipbox works with agents, a shared workspace over plain files; this says who it is for and what it gives them.
+The editor's scope is unchanged (D134): small edits in slipbox, `$EDITOR` a key away, and not an IDE (requirements.md §
+Non-goals).
+
+**Why:** The user's call, 2026-10-13: slipbox is more than a Markdown reader. "A terminal Markdown notes app"
+undersold what was built for working beside an agent (the scratch, the context bundle, a branch's changes reviewed,
+language servers), and the descriptions had drifted into six wordings, `package.json` still with D1's "Obsidian's
+model without the GUI", which D33 had superseded. Decided by an issue (#33) and one pull request (D223).
+
+**Not chosen:** a comprehensive editor, raising its scope in the requirements; "AI companion"; a line saying slipbox
+has no AI of its own; "notes app" as the lead (ideas.md § Product).

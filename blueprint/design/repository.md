@@ -14,7 +14,7 @@ contributors, agents and the maintainer may name the blueprint's files by path.
 
 | Document | For | What it holds |
 | --- | --- | --- |
-| `README.md` | visitors | what slipbox is, getting started first, status, help, the maintainer |
+| `README.md` | visitors | what slipbox is, getting started first, status, help, how it's maintained |
 | `docs/` | users | the guides and the manual, `docs/manual/versions.md` and `how-it-works.md` among them |
 | `CHANGELOG.md` | users | Keep a Changelog 1.1.0: each release's entry, written at release time; the release's notes |
 | `LICENSE` | everyone | Apache-2.0's text (GR-D3); each pack carries it |

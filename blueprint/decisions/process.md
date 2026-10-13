@@ -81,3 +81,11 @@ asked; the pull request's body names it.
 a workstream for a setting is mostly ceremony.
 
 **Amends:** D210, whose every change to requirements or design went through a workstream.
+
+## D227: The README doesn't name the maintainer (2026-10-13)
+
+**Decision:** The README's first screen says who may contribute and points to `MAINTAINING.md` for how slipbox is
+maintained, without naming the maintainer. This amends the requirement, from greenrepo's standard (GR-D1), that it
+say who maintains it.
+
+**Why:** The user's call, 2026-10-13, with the README's opening rewritten (D226): not needed there.
