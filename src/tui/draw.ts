@@ -1248,7 +1248,9 @@ function drawPane(
   if (hbar) body = { ...body, h: body.h - 1 };
   if (body.h <= 0 || body.w <= 6) return;
   view.height = body.h;
-  view.width = body.w - 1;
+  // The last column is the scrollbar's; before it, the git signs' when they sit at the right edge (#22).
+  const signsRight = app.signsRight(view);
+  view.width = body.w - 1 - signsRight;
   const gutter = app.gutterWidth(view);
   const layout = app.layoutFor(view, view.width, gutter);
   // Readable width centres the text column in the pane.
@@ -1263,7 +1265,7 @@ function drawPane(
   const underCursor = showCursor ? app.linkUnderCursor(view) : -1;
   const cursorBg = app.ui.cursorline && showCursor ? (theme.roles.cursor_line.bg ?? null) : null;
   const sel = view.sel ? { range: ordered(view.sel.anchor, view.cur), line: view.sel.line } : null;
-  const textW = Math.max(1, body.x + body.w - 1 - textX);
+  const textW = Math.max(1, body.x + body.w - 1 - signsRight - textX);
   // Wrapping off: never scrolled past what this width can show (after a resize, say).
   view.left = app.ui.wrap ? 0 : Math.max(0, Math.min(view.left, Math.max(0, layout.width - textW)));
   const cursorSrc = layout.lines[view.cur.row]?.src;
@@ -1314,9 +1316,23 @@ function drawPane(
   // its last column the page's, between it and the text.
   const gutterBg = (gutter && theme.roles.gutter.bg) || page;
   if (gutter && gutterBg !== page) c.fill(gutterX - 1, body.y, gutter, body.h, gutterBg);
-  // Lines changed against what's staged (26.1), by line.
-  const changes = gutter ? app.gitChangesOf(view) : null;
+  // Lines changed against what's staged (26.1), by line, signed where `[git] signs_at` puts them (#22): the gutter's
+  // last column, against the text; its first, the window's margin before the problems bar and the line numbers (there
+  // with or without a gutter); or the column kept at the window's right edge, by the scrollbar.
+  const at = app.config.git.signs_at;
+  const signX =
+    at === "gutter_left"
+      ? gutterX - 1
+      : at === "window_right"
+        ? signsRight
+          ? body.x + body.w - 1 - signsRight
+          : null
+        : gutter
+          ? gutterX + gutter - 1
+          : null;
+  const changes = signX === null ? null : app.gitChangesOf(view);
   const signs = changes?.length ? gitSigns(changes) : null;
+  const signBg = at === "gutter_left" ? gutterBg : page;
   // The rows shown: an oversized lens hides the ones outside its inner window (4.15).
   const shown = app.screenRows(view, layout);
   const hidden = app.lensHidden(view, layout);
@@ -1358,13 +1374,13 @@ function drawPane(
         });
       if (here && !barW) geo.hot.push({ id: clicked(here), x: gutterX, y, w: gutter - 1, h: 1 });
     }
-    // The git sign (26.1), in the gutter's last column: a rendered row joining several lines takes their strongest.
-    if (signs && !line.decor) {
+    // The git sign (26.1), in its column: a rendered row joining several lines takes their strongest.
+    if (signs && signX !== null && !line.decor) {
       const sign = rowSign(signs, line);
       if (sign)
-        drawText(c, gutterX + gutter - 1, y, gitGlyph(app.glyphs, sign), {
+        drawText(c, signX, y, gitGlyph(app.glyphs, sign), {
           ...roleStyle(theme, SIGN_ROLE[sign], page),
-          bg: band ?? page,
+          bg: band ?? signBg,
         });
     }
     if (!line.decor) prevSrc = line.src;
@@ -1567,12 +1583,12 @@ function severityGlyph(g: Glyphs, s: Severity): string {
         : g.problemHint;
 }
 
-/** A git sign's colour (26.1): added as the explorer's new files, changed as its modified ones, deleted as a diff's. */
+/** A git sign's colour (26.1): roles of their own (#22), softer than the explorer's new and modified files' colours. */
 const SIGN_ROLE: Record<GitSign, Role> = {
-  add: "git_new",
-  change: "git_modified",
-  delete: "diff_del",
-  topdelete: "diff_del",
+  add: "git_sign_add",
+  change: "git_sign_change",
+  delete: "git_sign_delete",
+  topdelete: "git_sign_delete",
 };
 const SIGN_RANK: Record<GitSign, number> = { change: 3, add: 2, delete: 1, topdelete: 1 };
 

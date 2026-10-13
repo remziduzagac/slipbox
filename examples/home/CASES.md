@@ -2784,6 +2784,10 @@ The same notes, one per tab.
 - signs in the gutter for unsaved edits, ] c, space g p, space g r; an untracked file all added; staged, none —
   `work/kestrel/README.md`, `notes/index.md` (tui.md The working tree's changes (26.1); tests 'changes against what's
   staged, in the gutter')
+- the signs where `[git] signs_at` puts them — the gutter's first column, its last, the window's right edge — with line
+  numbers and without, in softer colours of their own (`git_sign_*`) — `work/kestrel/docs/sync.md` (tui.md The working
+  tree's changes (26.1, D225); tests 'where [git] signs_at puts them'; terminal check 'the gutter's signs where [git]
+  signs_at puts them')
 
 ### shell
 

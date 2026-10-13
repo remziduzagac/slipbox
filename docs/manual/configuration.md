@@ -214,6 +214,8 @@ file = "scratch.md"            # a relative .md path, no "..", nothing hidden; i
 [git]
 base = ""                      # the branch or commit changes are measured against; "": main, else master
 signs = true                   # the lines changed from what's staged, marked in the gutter
+signs_at = "gutter_right"      # where: gutter_right (its last column, against the text) | gutter_left (its first,
+                               # before the line numbers) | window_right (the window's right edge, by the scrollbar)
 
 [search]                       # searching across notes: space f s, slipbox search
 engine = "auto"                # auto (the index once it's built, else a scan) | index (built first) | scan (no index)
@@ -478,6 +480,7 @@ The roles of the screen most worth changing:
 | `topbar_button`, `topbar_button_on` | the rails' and the top bar's buttons, a pane closed and open |
 | `rail` | the rails' tint (its `bg`); with none, as under `NO_COLOR`, a rail is drawn with a border |
 | `gutter` | the shade of the problems bar and the line numbers (its `bg`) |
+| `git_sign_add`, `git_sign_change`, `git_sign_delete` | the gutter's signs for lines added, changed and deleted |
 | `cell_line` | a code cell's lines, and the tree's between a class and its members |
 | `lens` | the lens's rules and label |
 | `lens_band` | the lens's rows (its `bg`) |
@@ -503,7 +506,8 @@ Every role:
   `syn_variable`, `syn_constant`, `syn_operator`, `syn_punctuation`, `syn_tag`, `syn_attr`, `syn_builtin`,
   `syn_meta`, `syn_regexp`, `syn_section`, `syn_addition`, `syn_deletion`.
 - **Problems and spelling:** `syntax_error`, `problem_error`, `problem_warn`, `problem_info`, `spell`.
-- **Git:** `git_new`, `git_modified`, `git_conflict`, `diff_add`, `diff_del`, `diff_head`.
+- **Git:** `git_new`, `git_modified`, `git_conflict`, `diff_add`, `diff_del`, `diff_head`, `git_sign_add`,
+  `git_sign_change`, `git_sign_delete`.
 - **The screen:** `border`, `status`, `status_accent`, `status_dim`, `sidebar`, `sidebar_dir`, `sidebar_selected`,
   `sidebar_active`, `sidebar_root`, `tab`, `tab_active`, `tab_active_idle`, `pane_title`, `pane_title_active`,
   `overlay`, `overlay_border`, `overlay_selected`, `overlay_match`, `overlay_dim`, `overlay_group`, `keycap`,

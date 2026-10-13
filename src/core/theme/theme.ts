@@ -106,6 +106,10 @@ export const ROLES = [
   "diff_add",
   "diff_del",
   "diff_head",
+  // the gutter's signs for lines changed against what's staged (26.1): added, changed, deleted
+  "git_sign_add",
+  "git_sign_change",
+  "git_sign_delete",
   "tab",
   "tab_active",
   "tab_active_idle",
@@ -283,6 +287,7 @@ export function themeFromPalette(
   const kind = luminance(p.bg) > 0.4 ? "light" : "dark";
   const band = (c: Color) => blend(c, p.bg, kind === "dark" ? 0.14 : 0.16);
   const heading = (c: Color): RoleStyle => ({ fg: c, bg: band(c), bold: true });
+  const sign = (c: Color) => blend(c, p.bg, kind === "dark" ? 0.5 : 0.6);
   const roles: Record<Role, RoleStyle> = {
     text: { fg: p.fg },
     dim: { fg: p.fg_dim },
@@ -372,6 +377,11 @@ export function themeFromPalette(
     diff_add: { fg: p.green },
     diff_del: { fg: p.red },
     diff_head: { fg: p.cyan },
+    // The gutter's signs (#22): the explorer's colours for new and modified, a diff's for deleted, each halfway to the
+    // page — beside every changed line, next to the line numbers, full strength draws the eye from the text.
+    git_sign_add: { fg: sign(p.green) },
+    git_sign_change: { fg: sign(p.yellow) },
+    git_sign_delete: { fg: sign(p.red) },
     tab: { fg: p.comment },
     tab_active: { fg: p.fg_strong, bg: p.bg, bold: true },
     // Focus shows as brightness, never as colour: the active tab and the side panes' titles are
@@ -500,6 +510,10 @@ export function terminalTheme(): Theme {
     breadcrumb_sep: { fg: a(8) },
     breadcrumb_icon: { fg: a(4) },
     tree_guide: { fg: a(8) },
+    // A terminal's palette can't be mixed with the page: its colours, dimmed.
+    git_sign_add: { fg: a(2), dim: true },
+    git_sign_change: { fg: a(3), dim: true },
+    git_sign_delete: { fg: a(1), dim: true },
   });
   t.kind = "dark";
   return t;

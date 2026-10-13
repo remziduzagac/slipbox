@@ -3317,8 +3317,21 @@ export class App {
   gutterWidth(view: View): number {
     const w = this.barWidth(view) + (this.ui.line_numbers ? String(view.buf.lineStarts().length).length + 1 : 0);
     // Its last column has the git signs (26.1); with nothing else in it, it's theirs alone, once the file has had any.
-    if (!w && this.gitChangesOf(view)?.length) view.buf.gitColumn = true;
-    return w ? w + 1 : view.buf.gitColumn ? 1 : 0;
+    // Before the gutter (`[git] signs_at`, #22) they take the window's margin, there with or without one.
+    if (w) return w + 1;
+    return this.config.git.signs_at === "gutter_right" && this.signsKept(view) ? 1 : 0;
+  }
+
+  /** The column the git signs take at the window's right edge, by the scrollbar (`[git] signs_at = "window_right"`,
+   *  #22): 1 once the file has had changes, kept as they go so the text doesn't move; else 0. */
+  signsRight(view: View): number {
+    return this.config.git.signs_at === "window_right" && this.signsKept(view) ? 1 : 0;
+  }
+
+  /** Whether a file has had changes against what's staged (26.1): its signs' column, once given, is kept. */
+  private signsKept(view: View): boolean {
+    if (!view.buf.gitColumn && this.gitChangesOf(view)?.length) view.buf.gitColumn = true;
+    return view.buf.gitColumn;
   }
 
   /** The problems the code view's cells count in their headers (24.13): each by its line and severity. */

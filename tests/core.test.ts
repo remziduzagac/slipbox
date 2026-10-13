@@ -367,6 +367,34 @@ describe("themes (2.6)", () => {
       expect([t.name, lo < cell! && cell! < hi]).toEqual([t.name, true]);
     }
   });
+  test("the gutter's git signs in colours of their own, softer than the explorer's: nearer the page in every colour theme, dimmed in the terminal's", () => {
+    const signs = [
+      ["git_sign_add", "git_new"],
+      ["git_sign_change", "git_modified"],
+      ["git_sign_delete", "diff_del"],
+    ] as const;
+    for (const t of listThemes()) {
+      const { theme } = loadTheme(t.name);
+      if (theme.name === "mono") continue; // no colour
+      for (const [sign, explorer] of signs) {
+        const s = theme.roles[sign];
+        if (theme.name === "terminal") {
+          expect([sign, s]).toEqual([sign, { fg: theme.roles[explorer].fg, dim: true }]);
+          continue;
+        }
+        // Between the page and the explorer's colour: further from the page than nothing, nearer than the explorer's.
+        const [page, soft, full] = [theme.bg, s.fg!, theme.roles[explorer].fg!].map(luminance);
+        const far = Math.abs(full! - page!);
+        const near = Math.abs(soft! - page!);
+        expect([t.name, sign, near > 0 && near < far]).toEqual([t.name, sign, true]);
+      }
+    }
+    // [colors] sets them, as any role.
+    const { theme, warnings } = applyColorOverrides(loadTheme("tokyo-night").theme, {
+      git_sign_add: { fg: "#336633" },
+    });
+    expect([theme.roles.git_sign_add.fg, warnings]).toEqual(["#336633", []]);
+  });
   test("the lens while it's typed into is green: its rules and label, a green tint on its rows", () => {
     const { theme } = loadTheme("tokyo-night");
     expect(theme.roles.lens_edit.fg).toBe("#9ece6a"); // the palette's green
@@ -1457,6 +1485,7 @@ describe("what manual/configuration.md promises", () => {
       ["ui", "lines", "heavy"],
       ["editor", "edit_in", "live"],
       ["files", "show", "all"],
+      ["git", "signs_at", "window_right"],
     ];
     for (const [section, key, good] of keys) {
       const bad = loadConfig({ configFile: file(`[${section}]\n${key} = "bogus"\n`) });

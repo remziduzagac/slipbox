@@ -145,7 +145,8 @@ const SHOTS: Shot[] = [
       await s.status("tiles.yaml");
       await leader(s, "g", "s");
       await s.see("Changes");
-      await s.keys("j", "l");
+      // The first file, wherever the selection starts: its changes opened up under it.
+      await s.keys("g", "g", "l");
     },
   },
   {

@@ -17,7 +17,11 @@ import {
   pos,
   problemListed,
 } from "../check.ts";
+import { loadTheme, type Role } from "../../../src/core/theme/index.ts";
 import type { Session } from "../session.ts";
+
+/** A role's foreground in a built-in theme, as the terminal reports it. */
+const themeFg = (name: string, role: Role) => loadTheme(name, "/nonexistent").theme.roles[role].fg!.toLowerCase();
 
 /** git in one of the reference set's repositories, as its owner runs it (HOME the set's); what it said. */
 function git(s: Session, repo: string, ...args: string[]): { code: number; out: string } {
@@ -2031,6 +2035,57 @@ const GIT: Check[] = [
       await s.see("How an edit gets from one device to the others.");
       await s.status("unsaved");
       s.expect(last > first, "two changes");
+    },
+  },
+  {
+    area: "links-and-files",
+    name: "git: the gutter's signs where [git] signs_at puts them — before the line numbers, at the window's right edge, against the text — in softer colours of their own",
+    covers: { cases: ["git", "config"], commands: [] },
+    options: {
+      home: true,
+      startAt: "home/work/kestrel/docs/sync.md",
+      config: '[git]\nsigns_at = "gutter_left"\n',
+    },
+    run: async (s) => {
+      const NOW = "How an edit travels between devices.";
+      s.write(SYNC, s.read(SYNC).replace("How an edit gets from one device to the others.", NOW));
+      await s.status("reloaded", 5000);
+      /** The changed row (line 3): the text before its words, the text after, and its sign's colour. */
+      const row = () => {
+        const y = s.rowOf(NOW);
+        const r = s.screen()[y] ?? "";
+        const at = r.indexOf("▎", r.indexOf("┃") + 1);
+        let n = 0;
+        let fg: string | null = null;
+        for (const run of s.runs()[y] ?? []) {
+          if (at >= n && at < n + run.text.length) fg = run.fg;
+          n += run.text.length;
+        }
+        const t = r.indexOf(NOW);
+        return { before: r.slice(0, t), after: r.slice(t + NOW.length), fg: fg?.toLowerCase() };
+      };
+      const soft = themeFg("tokyo-night", "git_sign_change");
+      s.expect(soft !== themeFg("tokyo-night", "git_modified"), "a colour of their own, not the explorer's");
+      // Before the line numbers, in the gutter's first column.
+      await s.until(() => /▎ *3 +$/.test(row().before), 5000, "the sign before line 3's number");
+      s.expect(row().fg === soft, `the sign in its own colour (${row().fg}, not ${soft})`);
+      // Rewritten while it runs: at the window's right edge, after the text.
+      const file = join(s.dir, "config", "slipbox", "config.toml");
+      writeFileSync(file, readFileSync(file, "utf8").replace('"gutter_left"', '"window_right"'));
+      await s.message("config reloaded (file changed)", 5000);
+      await s.until(
+        () =>
+          !row()
+            .before.slice(row().before.indexOf("┃") + 1)
+            .includes("▎") && row().after.includes("▎"),
+        5000,
+        "the sign after the text, at the window's edge",
+      );
+      // Against the text, after the line number: where they were before the setting.
+      writeFileSync(file, readFileSync(file, "utf8").replace('"window_right"', '"gutter_right"'));
+      await s.message("config reloaded (file changed)", 5000);
+      await s.until(() => / 3 ▎$/.test(row().before), 5000, "the sign between line 3's number and its text");
+      s.expect(row().fg === soft, "still its own colour");
     },
   },
 ];

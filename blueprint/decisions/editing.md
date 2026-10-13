@@ -419,3 +419,25 @@ expected an editing key to open.
 
 **Not chosen:** keeping `"source"` and making its way back clearer (a hint, `esc` leaving source mode), because
 the lens is the editing D147 chose, and source mode stays one key away (`ctrl+k`).
+
+## D225: The gutter's git signs, placed by a setting, in softer colours of their own (26.1, 2026-10-13)
+
+**Decision:** `[git] signs_at` places the signs for lines changed against what's staged: `"gutter_right"` (the default,
+where they were: the gutter's last column, against the text), `"gutter_left"` (the gutter's first column, before the
+problems bar and the line numbers, in the window's margin, so the text never moves for them) or `"window_right"` (a
+column kept at the window's right edge, by the scrollbar, once the file has had a change). They are coloured by roles of
+their own, `git_sign_add`, `git_sign_change` and `git_sign_delete`: the explorer's green and yellow and a diff's red,
+each halfway to the page (dimmed in the terminal's own theme), and `[colors]` sets them as any role. Decided by an issue
+(#22) and one pull request (D223).
+
+**Why:** The user found the signs distracting beside the line numbers: a full-strength bar on every changed row, right
+against the text, drew the eye from it. Where a mark sits is a matter of taste (nvim's gitsigns and VS Code put it in
+different places), so it is a setting; and a mark that is on every changed line is quieter than one that marks a single
+thing, so the explorer's colours, which mark one file each, are too strong for it.
+
+**Cost:** One more setting, three more roles. At the right edge the text is a column narrower once a file has had a
+change.
+
+**Not chosen:** a thinner glyph (`▏`): the colour was what drew the eye, and a sign as wide as the explorer's and the
+quote bar's stays easy to find; marks in the scrollbar's track, as VS Code's overview ruler has them: they show where
+the changes are in the whole file, not which rows changed.
