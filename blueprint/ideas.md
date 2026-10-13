@@ -12,6 +12,9 @@ idea without an outcome is still open. Nothing here is agreed: the decisions are
   can't be wrapped, being a binary-only crate. (2026-09-25) Not chosen (D4).
 - Remote vaults: mounting or syncing a vault across machines, `lazyrsync` the candidate. Out of scope as written: you
   work on the machine that holds the repository, reaching it by SSH and running slipbox there. (2026-09-25)
+- Describing slipbox as an AI companion with a comprehensive editor, its scope raised past small edits in the
+  requirements; saying it has no AI of its own; leading with "notes app". (2026-10-13) Not chosen (D226): the
+  description names the coding agent, and the editor is necessary and sufficient.
 
 ## Stack
 

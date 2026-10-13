@@ -5,11 +5,33 @@
     src="https://github.com/remziduzagac/slipbox/actions/workflows/ci.yml/badge.svg?branch=main" alt="CI status"></a>
 </p>
 
-A terminal Markdown notes app: a shared workspace for people and agents over plain files. It reads a folder of
-Markdown notes (a repository, an Obsidian vault, a zk notebook, or any folder), renders them properly (tables that
-fit, highlighted code, pictures, diagrams and maths, themes), follows links in the folder's own conventions, and
-reloads the instant an agent rewrites a note. You read and edit in the TUI; agents and scripts drive the same files
-through the CLI.
+**The terminal companion for coding agents.**
+
+Read, review and edit what your agent writes, with Markdown and code rendered cleanly, an editor that's necessary and
+sufficient, and agent integration built in.
+
+slipbox sits beside Claude Code, Codex, or any agent that runs shell commands. The agent writes plans, documentation and
+code; you read them as documents, with tables that fit, highlighted code, pictures, diagrams and maths. Review what
+changed and make edits of your own.
+
+Editing is **intuitive yet innovative**: the lens opens the Markdown around your cursor for editing while the rest
+stays rendered. You edit where you were reading, keeping the surrounding document in view and your focus on the
+change.
+
+The editor is **necessary and sufficient**: the editing essentials, including selections, undo and redo, find and
+replace, completion, language servers, linters and spelling. Use vim's keys or familiar editor shortcuts, discover
+actions through menus and the command palette, or click directly. Your usual editor is a key away whenever you prefer
+it.
+
+Collect references and excerpts in the scratch, with their file paths and line numbers, ready for your next prompt.
+Build context for your agent while keeping your document focused.
+
+The agent can use slipbox's command line and bundled skill to search, follow links and write. A guarded write is
+refused if the file changed since the agent read it. What the agent saves appears at once; when a file changes while
+you have unsaved edits, slipbox asks what to keep.
+
+Open the folder you already work in: a repository, an Obsidian vault, a zk notebook or an ordinary folder. Opening it
+writes nothing there, and your notes stay plain files.
 
 - **Start here:** [Getting started](docs/guides/getting-started.md), a first session of about ten minutes, once
   [Installing slipbox](docs/guides/install.md) has it on your machine. [The documentation](docs/README.md) has the

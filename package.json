@@ -1,7 +1,7 @@
 {
   "name": "slipbox",
   "version": "0.3.0",
-  "description": "Terminal markdown notes: Obsidian's model without the GUI, agent-drivable from the CLI.",
+  "description": "The terminal companion for coding agents. Read, review and edit what your agent writes, with Markdown and code rendered cleanly, an editor that's necessary and sufficient, and agent integration built in.",
   "type": "module",
   "private": true,
   "license": "Apache-2.0",

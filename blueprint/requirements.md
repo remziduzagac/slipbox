@@ -1,9 +1,10 @@
 # Requirements
 
-slipbox is for a developer working with AI agents in a terminal, often over SSH on the machine that holds the
-repository, where nothing beyond the terminal can be assumed (D3). It lets them read markdown and any other text file
-well in that terminal, follow and search the links between them, edit them, and hand their notes to agents, while
-agents read and change the same files through a CLI (D33).
+slipbox is the terminal companion for coding agents, for a developer working with them in a terminal, often over SSH
+on the machine that holds the repository, where nothing beyond the terminal can be assumed (D3, D226). It lets them
+read markdown and any other text file well in that terminal, review what an agent changed, follow and search the links
+between them, edit them, and hand their notes to agents, while agents read and change the same files through a CLI
+(D33).
 
 ## Goals
 
@@ -17,7 +18,8 @@ agents read and change the same files through a CLI (D33).
   the UI with agents bolted on (D16, D26).
 - **The scratch replaces `prompt-buffer.lua`:** references and excerpts collected from wherever the work is, per
   project, and handed to an agent (D19, D20, D30).
-- **Small edits stop provoking a reach for `$EDITOR`**, which stays a key away for anything substantial (D134).
+- **An editor that's necessary and sufficient:** small edits stop provoking a reach for `$EDITOR`, which stays a key
+  away for anything substantial (D134, D226).
 - **Open any folder or file and work:** nothing to set up, and no vault to make, name or manage. An Obsidian vault or a
   zk notebook opens unchanged, its links, tags, aliases and link settings read as its own tool reads them (D53, D68,
   D72, D79).

@@ -1,20 +1,21 @@
 ---
 name: slipbox
 description: >-
-  Drive slipbox, a markdown notes app, from the shell: find text across notes, read and safely write
-  notes (atomic, never clobbering a note the user changed), replace text, tick tasks, render a
-  note as readable text, follow links (paths, wikilinks, slipbox:// pointers), write a link in the
-  folder's convention, list links and backlinks, outline a note, see what the user is reading, and
-  append file:line references or text to the per-project scratch the user reads in the slipbox TUI.
-  Use when the user mentions slipbox, their notes, the scratch, or asks to capture a reference for
-  later; or when a directory holds a `.slipbox/` marker and you need to find, read or change its notes.
+  Drive slipbox, the terminal companion the user reads, reviews and edits your work in, from the
+  shell: find text across notes, read and safely write notes (atomic, never clobbering a note the user
+  changed), replace text, tick tasks, render a note as readable text, follow links (paths, wikilinks,
+  slipbox:// pointers), write a link in the folder's convention, list links and backlinks, outline a
+  note, see what the user is reading, and append file:line references or text to the per-project
+  scratch the user reads in the slipbox TUI. Use when the user mentions slipbox, their notes, the
+  scratch, or asks to capture a reference for later; or when a directory holds a `.slipbox/` marker
+  and you need to find, read or change its notes.
 ---
 
 # slipbox
 
-slipbox is a terminal markdown notes app. The user reads notes in its TUI; you use its CLI. Both
-see the same files: **disk is the contract**. You never see the user's unsaved state, and the
-TUI reloads a note the moment you write it.
+slipbox is the user's terminal companion for coding agents: they read, review and edit in its TUI
+what you write; you use its CLI. Both see the same files: **disk is the contract**. You never see
+the user's unsaved state, and the TUI reloads a note the moment you write it.
 
 ## Before anything
 
