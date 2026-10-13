@@ -31,6 +31,43 @@ export interface TerminalOptions {
 /** `#rrggbb` as an OSC colour answer: `rgb:rrrr/gggg/bbbb`. */
 const oscColor = (hex: string) => `rgb:${[1, 3, 5].map((i) => hex.slice(i, i + 2).repeat(2)).join("/")}`;
 
+/**
+ * Widths as a terminal that keeps grapheme clusters whole has them (kitty, libghostty, WezTerm): a ZWJ family, a flag,
+ * an emoji and its selector, a letter and its marks — each one cell or two, as Bun measures the cluster. xterm's own
+ * table is Unicode 6's, where most emoji are one cell: what slipbox drew there would drift past them.
+ */
+function graphemeWidths(): import("@xterm/headless").IUnicodeVersionProvider {
+  const segmenter = new Intl.Segmenter(undefined, { granularity: "grapheme" });
+  const width = (s: string) => Math.min(2, Bun.stringWidth(s)) as 0 | 1 | 2;
+  // xterm's packing of a character's properties: its width, and whether it joins the cell before.
+  const value = (w: number, join: boolean) => (w << 1) | (join ? 1 : 0);
+  // The cluster printed last: a character that continues it joins its cell (xterm resets `preceding` to 0 at
+  // anything not printed, a cursor move or a colour, and a cluster starts again there).
+  let cluster = "";
+  return {
+    version: "graphemes",
+    wcwidth: (cp) => width(String.fromCodePoint(cp)),
+    charProperties(cp, preceding) {
+      const ch = String.fromCodePoint(cp);
+      // Printable ASCII never continues a cluster.
+      if (cp >= 0x20 && cp < 0x7f) {
+        cluster = ch;
+        return value(1, false);
+      }
+      if (preceding !== 0 && cluster) {
+        const joined = cluster + ch;
+        const first = segmenter.segment(joined)[Symbol.iterator]().next().value?.segment;
+        if (first === joined) {
+          cluster = joined;
+          return value(width(joined), true);
+        }
+      }
+      cluster = ch;
+      return value(width(ch), false);
+    },
+  };
+}
+
 /** A palette index as the SGR code that names it: `31`, `91`, or `5;208`. */
 function paletteCode(n: number, bg: boolean): string {
   if (n < 8) return String((bg ? 40 : 30) + n);
@@ -57,6 +94,8 @@ export class HeadlessTerminal {
     const keyboard = opts.keyboard ?? "kitty";
     const colors = opts.colors ?? { fg: "#c0caf5", bg: "#1a1b26" };
     this.xterm = new XTerm({ cols: opts.cols, rows: opts.rows, allowProposedApi: true, scrollback: 1000 });
+    this.xterm.unicode.register(graphemeWidths());
+    this.xterm.unicode.activeVersion = "graphemes";
     this.xterm.onData((reply) => this.pty?.write(reply));
     this.xterm.onTitleChange((t) => (this.title = t));
     const p = this.xterm.parser;

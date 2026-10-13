@@ -70,6 +70,13 @@ describe("the headless terminal", () => {
     expect(row.find((r) => r.text === "o")?.fg).toBe("5;208");
     t.dispose();
   });
+  test("clusters kept whole, as a modern terminal does: an emoji and its selector, a flag, a ZWJ family two cells; a letter and its mark one", async () => {
+    const text = "☄️a🇯🇵b👩‍🔬céd🔭e";
+    const t = await run(`printf '%s' '${text}'`);
+    expect(t.screen()[0]).toBe(text);
+    expect(t.cursor().x).toBe(2 + 1 + 2 + 1 + 2 + 1 + 1 + 1 + 2 + 1);
+    t.dispose();
+  });
   test("the title and every OSC 52 copy kept", async () => {
     // Not String.raw: Bun writes the dash in a raw template's source as \u2014.
     const t = await run("printf '\\033]0;slipbox — home.md\\007\\033]52;c;aGk=\\007\\033]52;c;dGhlcmU=\\033\\\\'");
