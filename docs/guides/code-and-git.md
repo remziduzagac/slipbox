@@ -1,8 +1,11 @@
 # Code and git
 
-slipbox opens a repository the way it opens a folder of notes, and reads its code like a document: each function and
-class a cell, its documentation drawn as prose. Language servers find what's wrong, git's changes show beside the
-lines, and before you merge a branch (yours or an agent's), slipbox tells you which links the merge would break.
+slipbox opens a repository the way it opens a folder of notes. It reads the code like a document: each function and
+class is a cell, with its documentation drawn as prose.
+
+- Language servers find what's wrong.
+- Beside the lines, you see git's changes.
+- Before you merge a branch (yours or an agent's), slipbox tells you which links the merge would break.
 
 This guide opens a repository, reads and checks its code, commits a change, and reviews a branch before merging it.
 
@@ -12,53 +15,81 @@ This guide opens a repository, reads and checks its code, commits a change, and 
 slipbox ~/code/app
 ```
 
-A git repository is a root of its own: slipbox opens it from its top folder, whichever file or subfolder inside it you
-name, and writes nothing into it. The explorer (`space e`) lists every text file in it, code included (in a repository
-holding a `.slipbox/` folder, its notes and data files: `a` there shows the rest). The status line shows the
-repository's name, from its remote (else its path), and the branch: `app · main`.
+A git repository is a root of its own. slipbox opens it from its top folder, whichever file or subfolder inside it you
+name. It writes nothing into it.
+
+The explorer (`space e`) lists every text file in it, code included. In a repository holding a `.slipbox/` folder, it
+lists its notes and data files, and `a` there shows the rest.
+
+The status line shows the repository's name and the branch: `app · main`. The name comes from its remote, or else from
+its path.
 
 ## Read a code file
 
-Open a code file from the explorer (`enter`) or the switcher (`ctrl+p`). It opens in the code view: each function,
-class, method or type is a cell, its header saying what it is and its name (`function: resolve`), its doc comment
-drawn as prose above its code. The code itself is exactly as written; comments between definitions read as prose, and
-the imports are folded into one row (`enter` on it unfolds them).
+Open a code file from the explorer (`enter`) or the switcher (`ctrl+p`). It opens in the code view:
+
+- Each function, class, method or type is a cell.
+- A cell's header says what it is and its name (`function: resolve`).
+- Its doc comment is drawn as prose above its code.
+- The code itself is exactly as written.
+- Comments between definitions read as prose.
+- The imports are folded into one row. `enter` on it unfolds them.
 
 ![A TypeScript file in the code view: its doc comment as prose, the imports folded, each definition a cell](../images/code-and-git-code-view.png)
 
-- `z a` folds the cell at the cursor to its header, and opens it again.
-- `space o` lists the file's definitions in the outline.
-- `space n v` (or `ctrl+k`) shows the file as written, highlighted; press it again for the cells.
-- A cell header's buttons are keys too: `space k y` copies the cell, `space k r` lists where its definition is used,
-  `space k s` adds it to the scratch for an agent ([Working with agents](agents.md)).
+| Press | To |
+| --- | --- |
+| `z a` | Fold the cell at the cursor to its header, and open it again |
+| `space o` | List the file's definitions in the outline |
+| `space n v` (or `ctrl+k`) | Show the file as written, highlighted. Press it again for the cells |
 
-The code view covers TypeScript, TSX, JavaScript, Python, Go, Rust, Swift, PHP, Ruby, C, C++, Lua and Bash; other
+A cell header's buttons are keys too:
+
+| Press | To |
+| --- | --- |
+| `space k y` | Copy the cell |
+| `space k r` | List where its definition is used |
+| `space k s` | Add it to the scratch for an agent ([Working with agents](agents.md)) |
+
+The code view covers TypeScript, TSX, JavaScript, Python, Go, Rust, Swift, PHP, Ruby, C, C++, Lua and Bash. Other
 files open as written. `render.code = "source"` opens every code file as written
 ([Configuration](../manual/configuration.md)).
 
 ## Trust the folder, or not
 
-A repository's own tools can run code it holds: its own copy of TypeScript, an ESLint config that is a program, git
-hooks and filters. slipbox runs none of them until you say you trust the folder. The first time it matters, when a
-file's language servers would otherwise leave something out, it asks:
+A repository's own tools can run code it holds:
+
+- its own copy of TypeScript
+- an ESLint config that is a program
+- git hooks and filters
+
+slipbox runs none of them until you say you trust the folder. It asks the first time it matters, when a file's language
+servers would otherwise leave something out:
 
 ```text
 Trust ~/code/app? Its own tools would run code it holds — eslint not run (its config is code). Only a folder
 you know (y trusts it; n keeps it safe)
 ```
 
-- `y` trusts it: its servers start again and run as they would anywhere, and git runs as the repository has it.
-- `n` (or `esc`) keeps it safe: servers run in their safe modes, and git runs no hooks or filters of the repository's.
+- `y` trusts it. Its servers start again and run as they would anywhere, and git runs as the repository has it.
+- `n` (or `esc`) keeps it safe. Servers run in their safe modes, and git runs none of the repository's hooks or
+  filters.
 
-slipbox remembers the answer, in its own state, never in the folder. `:trust` and `:untrust` change it later, and
-`trust.roots` in your config trusts folders ahead of time (`~/code/*`). The command line never asks and can't trust a
-folder, so an agent can't be talked into it. [Code](../manual/code.md) says what each answer allows.
+slipbox remembers the answer in its own state, never in the folder. `:trust` and `:untrust` change it later.
+`trust.roots` in your config trusts folders ahead of time, such as `~/code/*`.
+
+The command line never asks, and it can't trust a folder. So an agent can't be talked into it.
+[Code](../manual/code.md) says what each answer allows.
 
 ## Language servers and `slipbox doctor`
 
-Open a code file and slipbox starts its language servers: TypeScript's, pyright for Python, rust-analyzer, gopls and
-the rest. One it can get from npm, it installs into its own folder the first time it's needed; a native one, such as
-rust-analyzer, you install yourself. To see what's there:
+When you open a code file, slipbox starts its language servers: TypeScript's, pyright for Python, rust-analyzer, gopls
+and the rest.
+
+- slipbox installs a server it can get from npm into its own folder, the first time it's needed.
+- You install a native one, such as rust-analyzer, yourself.
+
+To see what's there:
 
 ```bash
 cd ~/code/app
@@ -66,72 +97,99 @@ slipbox doctor                   # each language: its servers and linters, where
 slipbox doctor src/shelf.ts      # one file: the servers that would serve it here, and what trust leaves out
 ```
 
-Each line names a server and where it was found (on your `PATH`, in the project, in your install folders), or
-`not found: slipbox installs typescript@… when it's first needed`, or how to install it. `lsp.auto_install = false`
-stops the installs. [Troubleshooting](../manual/troubleshooting.md) covers a server that isn't found.
+Each line names a server and one of these:
+
+- where it was found: on your `PATH`, in the project, or in your install folders
+- `not found: slipbox installs typescript@… when it's first needed`
+- how to install it
+
+`lsp.auto_install = false` stops the installs. [Troubleshooting](../manual/troubleshooting.md) covers a server that
+isn't found.
 
 ## See the problems
 
-What the servers, the linters and slipbox's own checks find shows where it is: a line's number takes the colour of its
+What the servers, the linters and slipbox's own checks find shows where it is. A line's number takes the colour of its
 worst problem, and the status line counts them.
 
-- `space n q` opens the Problems panel on this file, a row per problem with its line. `j` and `k` move, the file
-  following; `enter` goes there; `q` closes it.
-- `space v p` opens its All tab: the whole root's broken links, lint and conflicts.
-- `shift+k` shows what's under the cursor (its type, its documentation), `g d` goes to its definition, and `g r` lists
-  where it's used.
+| Press | To |
+| --- | --- |
+| `space n q` | Open the Problems panel on this file, a row per problem with its line |
+| `space v p` | Open the panel's All tab: the whole root's broken links, lint and conflicts |
+| `shift+k` | Show what's under the cursor: its type, its documentation |
+| `g d` | Go to its definition |
+| `g r` | List where it's used |
+
+In the Problems panel, `j` and `k` move, and the file follows. `enter` goes to the problem, and `q` closes the panel.
 
 An agent gets the same list with `slipbox diagnostics src/shelf.ts`.
 
 ## Your changes in the gutter
 
-The lines you've changed since the last commit (against what's staged, unsaved typing included) are marked beside the
-text: `▎` for lines added or changed, each in a soft colour of its own, `▁` where lines were deleted. If you'd rather
-have them away from the text, `git.signs_at` puts them before the line numbers or at the window's right edge
-([Git](../manual/git.md)).
+The lines you've changed since the last commit are marked beside the text. They're compared against what's staged,
+with unsaved typing included.
 
-- `] c` and `[ c` go to the next and previous change.
-- `space g p` shows the change at the cursor as a diff, in a floating window.
-- `space g r` undoes it: its lines put back as they were, one undo step, not yet saved.
+- `▎` marks lines added or changed, each in a soft colour of its own.
+- `▁` marks where lines were deleted.
+
+If you'd rather have them away from the text, `git.signs_at` puts them before the line numbers or at the window's right
+edge ([Git](../manual/git.md)).
+
+| Press | To |
+| --- | --- |
+| `] c` and `[ c` | Go to the next and previous change |
+| `space g p` | Show the change at the cursor as a diff, in a floating window |
+| `space g r` | Undo it: its lines put back as they were, in one undo step, not yet saved |
 
 ## Commit
 
-1. Press `space g s`. Source control opens in the left panel: the changed files under Conflicts, Staged, Changes and
-   Untracked, each with its letter (`M`, `A`, `D`, `R`, `?`).
-2. Move with `j` and `k`. `.` shows a file's diff; `l` opens it into its changes, each of which you can stage alone.
-3. `s` stages the file or the change, `u` unstages it, and `a` stages everything. `d` discards what isn't staged,
-   after asking.
-4. `c` opens the commit message in a floating editor, what's staged listed in `#` lines (left out of the message).
-   Write the message, then press `ctrl+s`: a message says `committed` with the commit's hash and subject.
+1. Press `space g s`. Source control opens in the left panel. It lists the changed files under Conflicts, Staged,
+   Changes and Untracked, each with its letter (`M`, `A`, `D`, `R`, `?`).
+2. Move with `j` and `k`. Press `.` to see a file's diff. Press `l` to open the file into its changes, each of which
+   you can stage alone.
+3. Press `s` to stage the file or the change. `u` unstages it, and `a` stages everything. `d` discards what isn't
+   staged, after asking.
+4. Press `c`. The commit message opens in a floating editor. What's staged is listed in `#` lines, which are left out
+   of the message.
+5. Write the message, then press `ctrl+s`. A message says `committed`, with the commit's hash and subject.
 
 ![Source control in the left panel: a changed file opened into its change](../images/code-and-git-source-control.png)
 
 `shift+c` amends the last commit instead. In a folder you haven't trusted, the commit runs no hooks and isn't signed,
-and the editor says so. `space g o` lists the branches, to check one out or start a new one. slipbox doesn't push:
-push with git.
+and the editor says so.
+
+`space g o` lists the branches, to check one out or start a new one. slipbox doesn't push. Push with git.
 
 ## Review a branch before you merge it
 
-The usual case: an agent works on a branch of its own, in a git worktree beside your checkout
+Usually, an agent works on a branch of its own, in a git worktree beside your checkout
 (`git worktree add ../app-fix fix/retry`). Before you merge it:
 
-![The merge review: the links a branch would break, each with its note, line and cause](../images/code-and-git-merge-review.png)
+1. Press `space g w`. The repository's checkouts are listed by branch, with yours marked `●`.
+2. Pick the agent's checkout and press `enter`. slipbox goes into that checkout, at the note you were on if the branch
+   has it.
+3. Press `space g c`. You see the files the branch changed against `main`, committed or not: `M` modified, `+` new,
+   `D` deleted, `R` renamed.
+4. Press `enter` on a file to see its diff. Press `esc` to come back to the list.
+5. Press `ctrl+o` to go back to your own checkout.
+6. Press `space g m` and pick `fix/retry → main`. slipbox asks git what the merge would give, without touching your
+   files. It lists each link the merge would break, by note and line, with the cause and the fix when there is one:
+   `fix/retry moves docs/plan.md to docs/design/plan.md — the fix: design/plan.md`.
 
-1. Press `space g w`. The repository's checkouts are listed by branch, yours marked `●`. Pick the agent's and press
-   `enter`: slipbox goes into that checkout, at the note you were on if the branch has it.
-2. Press `space g c`. You see the files the branch changed against `main`, committed or not: `M` modified, `+` new,
-   `D` deleted, `R` renamed. `enter` on one shows its diff; `esc` comes back to the list.
-3. Press `ctrl+o` to go back to your own checkout.
-4. Press `space g m` and pick `fix/retry → main`. slipbox asks git what the merge would give, without touching your
-   files, and lists each link it would break, by note and line, with the cause and the fix when there is one:
-   `fix/retry moves docs/plan.md to docs/design/plan.md — the fix: design/plan.md`. `enter` goes to the link. When
-   nothing breaks, a message says `merging fix/retry into main breaks no link`.
+   ![The merge review: the links a branch would break, each with its note, line and cause](../images/code-and-git-merge-review.png)
 
-Then merge with git, as you always do. If git's renames broke links anyway, after a merge or a pull, each says where
-its file went, in the Problems panel (`space v p`) and when you follow it; `space l r` rewrites a note's links to match.
+7. Press `enter` to go to a link.
 
-The base is `main`, else `master`; `git.base` names another. The same review from the command line, for you or the
-agent:
+When nothing breaks, a message says `merging fix/retry into main breaks no link`.
+
+Then merge with git, as you always do.
+
+After a merge or a pull, git's renames may still break links. If they do, each broken link says where its file went.
+You see this in the Problems panel (`space v p`), and when you follow the link. `space l r` rewrites a note's links to
+match.
+
+The base is `main`, or else `master`. `git.base` names another.
+
+You or the agent can do the same review from the command line:
 
 ```bash
 slipbox changed                   # in the branch's checkout: what it changed against main
