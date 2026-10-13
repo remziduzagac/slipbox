@@ -611,6 +611,14 @@ was added 2026-10-09 at the user's asking.*
   standard: the licence, hardened CI on Linux and macOS, the repository's documents, the upkeep; published on GitHub,
   previews and the one-line installer, then the first release, 0.2.1 (consolidated 2026-10-13).
 
+## The terminal tests
+
+*Not a phase. Accepted 2026-10-13; started once #26, the lens's regression, is fixed.*
+
+- [ ] **[Terminal tests, headless and by feature](workstreams/terminal-tests/README.md)** (TT): the terminal tests on
+  Bun's pseudo-terminal and a headless xterm, in parallel and in CI on Linux and macOS; one check per feature, tied to
+  the reference set's cases, coverage checked; content from the sample folders only.
+
 ## Later
 
 Agreed, but not scheduled.

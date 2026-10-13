@@ -29,8 +29,8 @@ npx package, how agents and slipbox work together, search's improvements.
 - [design/](design/README.md): how it works now.
 
 - [tasks/](tasks/README.md): small work not worth a workstream; open tasks are its files.
-- [workstreams/](workstreams/README.md): contained parts of the work; the roadmap gives their order. Drafted, for the
-  user to accept: [TT](workstreams/terminal-tests/README.md), the terminal tests headless and by feature. DOC, the user
+- [workstreams/](workstreams/README.md): contained parts of the work; the roadmap gives their order. Active:
+  [TT](workstreams/terminal-tests/README.md), the terminal tests headless and by feature. DOC, the user
   documentation, DF, what writing it found, and [GR](workstreams/archive/greenrepo/README.md), the repository to
   greenrepo, published and released, are consolidated, in `workstreams/archive/`.
 
