@@ -69,22 +69,33 @@ large files with Git LFS can show those files as changed until you trust it, sin
 
 ## Changed lines in the gutter
 
-As you read or edit a file, the lines that differ from what's staged are marked in the gutter's last column, just
-before the text. The comparison uses the text as it is now, unsaved typing included:
+As you read or edit a file, the lines that differ from what's staged are marked in the gutter, by default in its last
+column, just before the text. The comparison uses the text as it is now, unsaved typing included:
 
 | Sign | Colour, in most themes | Means |
 | --- | --- | --- |
-| `▎` | green | lines added |
-| `▎` | yellow | lines changed |
-| `▁` | red | lines deleted below this line |
-| `▔` | red | lines deleted above the first line |
+| `▎` | a soft green | lines added |
+| `▎` | a soft yellow | lines changed |
+| `▁` | a soft red | lines deleted below this line |
+| `▔` | a soft red | lines deleted above the first line |
+
+The colours are muted, halfway from the explorer's to the page's, so the signs stay out of the way of the text.
+`[colors]` sets them: `git_sign_add`, `git_sign_change` and `git_sign_delete` ([Configuration](configuration.md)).
 
 With ASCII glyphs the signs are `+`, `~`, `_` and `-` ([Reading](reading.md) covers glyph sets). A file git doesn't
 track yet has every line added; a file git ignores has no signs. Line endings don't count, so a checkout that turns LF
 into CRLF changes nothing. In the rendered view a row drawn from several lines shows the strongest of their signs.
 
-When there's no gutter (line numbers off, and no problems bar), a file that has had a change gets a column of its
-own and keeps it while open, so the text doesn't move as changes come and go.
+`git.signs_at` says where the signs sit:
+
+- `"gutter_right"`, the default: the gutter's last column, against the text.
+- `"gutter_left"`: the gutter's first column, before the problems bar and the line numbers, away from the text.
+  Without a gutter they take the window's margin there, and the text doesn't move.
+- `"window_right"`: the window's right edge, by the scrollbar. A file that has had a change keeps that column while
+  open, so the text wraps one column short of it.
+
+Against the text with no gutter (line numbers off, and no problems bar), a file that has had a change gets a column of
+its own and keeps it while open, so the text doesn't move as changes come and go.
 
 - `] c` and `[ c` go to the next and previous change, going round at the file's ends.
 - `space g p` shows the change on the cursor's line as a diff in a floating window: its lines as staged, then as

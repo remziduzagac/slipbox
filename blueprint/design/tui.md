@@ -1488,14 +1488,18 @@ through its renames (one from before shows the path it had); `enter` on one read
 rendered) or shows its diff to the text as it is now, `enter` on a line going there.
 
 **The working tree's changes** (`26.1`; `[git] signs`): a file's lines changed against what's staged — its text as it is
-now, unsaved typing included (`core/gitsigns.ts`) — are signed in the gutter's last column, the one before the text: `▎`
-added (`git_new`), `▎` changed (`git_modified`), `▁` lines deleted below the line (`▔` above the first; `diff_del`). A
-rendered row joining several lines takes their strongest. With no gutter (no line numbers, no problems bar), a file that
-has had a change gets a column of its own and keeps it, so the text doesn't move. What's staged is asked of git
-(`git show :path`, with `23.6`'s guards where the root isn't trusted, D175) in the background, again whenever git has
-news; a file git hasn't is every line added, one it ignores has no signs; line endings don't count. `] c` / `[ c` go to
-the next and previous change (around the ends), `space g p` shows the one on the cursor's line as a diff in the floating
-window, and `space g r` undoes it — its lines as staged put back, one undo step, left unsaved.
+now, unsaved typing included (`core/gitsigns.ts`) — are signed in the gutter: `▎` added (`git_sign_add`), `▎` changed
+(`git_sign_change`), `▁` lines deleted below the line (`▔` above the first; `git_sign_delete`), each role the explorer's
+or a diff's colour halfway to the page, so the signs don't pull the eye from the text (D225). A rendered row joining
+several lines takes their strongest. `[git] signs_at` places them (D225): `gutter_right`, the default, the gutter's
+last column, the one before the text — with no gutter (no line numbers, no problems bar), a file that has had a change
+gets a column of its own and keeps it, so the text doesn't move; `gutter_left`, the gutter's first column, the window's
+margin before the problems bar and the line numbers, there with or without a gutter; `window_right`, a column kept at
+the window's right edge by the scrollbar once the file has had a change, the text a column narrower. What's staged is
+asked of git (`git show :path`, with `23.6`'s guards where the root isn't trusted, D175) in the background, again
+whenever git has news; a file git hasn't is every line added, one it ignores has no signs; line endings don't count.
+`] c` / `[ c` go to the next and previous change (around the ends), `space g p` shows the one on the cursor's line as a
+diff in the floating window, and `space g r` undoes it — its lines as staged put back, one undo step, left unsaved.
 
 ## Modes and dispatch
 

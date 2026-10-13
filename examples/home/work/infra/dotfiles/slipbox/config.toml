@@ -71,6 +71,7 @@ file = "inbox/scratch.md"
 [git]
 base = "release"
 signs = true                    # changed lines in the gutter, against what's staged
+signs_at = "gutter_left"        # before the line numbers, away from the text
 
 [search]
 engine = "index"

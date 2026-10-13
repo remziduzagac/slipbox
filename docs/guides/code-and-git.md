@@ -86,7 +86,9 @@ An agent gets the same list with `slipbox diagnostics src/shelf.ts`.
 ## Your changes in the gutter
 
 The lines you've changed since the last commit (against what's staged, unsaved typing included) are marked beside the
-text: `▎` for lines added or changed, each in its colour, `▁` where lines were deleted.
+text: `▎` for lines added or changed, each in a soft colour of its own, `▁` where lines were deleted. If you'd rather
+have them away from the text, `git.signs_at` puts them before the line numbers or at the window's right edge
+([Git](../manual/git.md)).
 
 - `] c` and `[ c` go to the next and previous change.
 - `space g p` shows the change at the cursor as a diff, in a floating window.

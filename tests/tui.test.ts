@@ -16518,9 +16518,9 @@ describe("changes against what's staged, in the gutter (26.1)", () => {
     buf.edit(0, buf.source.length, "one\nTWO\nthree\nnew\nfour\n");
     expect((await changes(h)).map((c) => `${c.kind}:${c.from}`)).toEqual(["change:2", "add:4", "delete:6"]);
     const roles = h.app.theme.roles;
-    expect(signAt(h, "TWO")).toEqual({ ch: "▎", fg: roles.git_modified.fg! });
-    expect(signAt(h, "new")).toEqual({ ch: "▎", fg: roles.git_new.fg! });
-    expect(signAt(h, "four")).toEqual({ ch: "▁", fg: roles.diff_del.fg! });
+    expect(signAt(h, "TWO")).toEqual({ ch: "▎", fg: roles.git_sign_change.fg! });
+    expect(signAt(h, "new")).toEqual({ ch: "▎", fg: roles.git_sign_add.fg! });
+    expect(signAt(h, "four")).toEqual({ ch: "▁", fg: roles.git_sign_delete.fg! });
     expect(signAt(h, "three").ch).toBe(" ");
     const line = () => lineOf(h.app.view!, offsetOf(h.app, h.app.view!));
     await h.keys("g", "g", "]", "c");
@@ -16583,7 +16583,7 @@ describe("changes against what's staged, in the gutter (26.1)", () => {
     h.app.open("g5.md", { heading: null, headingIndex: 0, offset: 0, line: 1 });
     if (h.app.view!.source) await h.keys("ctrl+k");
     expect((await changes(h)).map((c) => c.kind)).toEqual(["add", "change"]);
-    expect(signAt(h, "new a B")).toEqual({ ch: "▎", fg: h.app.theme.roles.git_modified.fg! });
+    expect(signAt(h, "new a B")).toEqual({ ch: "▎", fg: h.app.theme.roles.git_sign_change.fg! });
   });
 
   test("staged changes aren't signed; a file git hasn't is every line added; with no gutter, a column of its own, kept", async () => {
@@ -16621,6 +16621,75 @@ describe("changes against what's staged, in the gutter (26.1)", () => {
     // Signs off: none, and nothing to go to.
     h.app.config.git.signs = false;
     expect(h.app.gitChangesOf(h.app.view!)).toBeNull();
+  });
+
+  test("where [git] signs_at puts them — before the gutter, against the text, at the window's right edge — with line numbers and without, in source mode, the rendered view and the code view", async () => {
+    const long = "x".repeat(200);
+    const root = repo({ "g7.md": `one\n\ntwo\n\n${long}\n`, "g8.ts": "const a = 1;\nconst b = 2;\n" });
+    if (!root) return;
+    for (const at of ["gutter_left", "gutter_right", "window_right"] as const)
+      for (const numbers of [true, false]) {
+        const h = await harness({
+          root,
+          open: "g7.md",
+          width: 100,
+          height: 30,
+          config: (c) => ((c.git.signs_at = at), (c.ui.line_numbers = numbers), (c.diagnostics.bar = "off")),
+        });
+        const where = `${at}, numbers ${numbers ? "on" : "off"}`;
+        const pane = () => h.app.geometry!.panes.find((p) => p.view === h.app.view)!;
+        /** The window's sign on the row showing `text`, where `at` says it sits, its colour and its background. */
+        const sign = (text: string) => {
+          const c = h.canvas();
+          const v = h.app.view!;
+          const p = pane();
+          const gutter = h.app.gutterWidth(v);
+          const x = at === "gutter_left" ? p.textX - gutter - 1 : at === "gutter_right" ? p.textX - 1 : p.x + p.w - 2;
+          const y = c.rows.findIndex((r) => r.join("").includes(text));
+          return { ch: c.rows[y]?.[x], fg: c.styles[y]?.[x]?.fg, bg: c.styles[y]?.[x]?.bg, row: c.rows[y]!.join("") };
+        };
+        for (const mode of ["source", "rendered", "code"] as const) {
+          const rel = mode === "code" ? "g8.ts" : "g7.md";
+          h.app.open(rel, { heading: null, headingIndex: 0, offset: 0, line: 1 });
+          // Set, not toggled: ctrl+k's notice of the mode would cover the window's right edge a while.
+          h.app.setViewMode(h.app.view!, mode === "source" ? "source" : "rendered");
+          if (mode === "code") expect(h.app.isCodeDocument(h.app.view!.buf)).toBe(true);
+          expect(await changes(h)).toEqual([]);
+          const textX = pane().textX;
+          const buf = h.app.view!.buf;
+          const [from, to] = mode === "code" ? ["b = 2", "b = 3"] : ["two", "TWO"];
+          const i = buf.source.indexOf(from);
+          buf.edit(i, from.length, to);
+          expect((await changes(h)).map((c) => c.kind)).toEqual(["change"]);
+          const s = sign(to);
+          expect([where, mode, s.ch, s.fg]).toEqual([where, mode, "▎", h.app.theme.roles.git_sign_change.fg]);
+          // Before the gutter, on its shade; its last column, against the text, stays the page's.
+          if (at === "gutter_left" && numbers)
+            expect([where, mode, s.bg]).toEqual([where, mode, h.app.theme.roles.gutter.bg]);
+          // Only against the text with no gutter does the text move (a column of their own), once a file: g7.md's
+          // kept from source mode into the rendered view.
+          expect([where, mode, pane().textX - textX]).toEqual([
+            where,
+            mode,
+            at === "gutter_right" && !numbers && mode !== "rendered" ? 1 : 0,
+          ]);
+          // At the right edge the text wraps short of them: nothing of it in their column.
+          if (at === "window_right" && mode !== "code") {
+            const c = h.canvas();
+            const x = pane().x + pane().w - 2;
+            const rows = c.rows.filter((r) => r.join("").includes("xxxx"));
+            expect([where, mode, rows.length > 1, rows.every((r) => r[x] === " ")]).toEqual([where, mode, true, true]);
+            // Unwrapped in source mode, the long line runs to the window's edge, but stops short of their column.
+            if (mode === "source") {
+              h.app.ui.wrap = false;
+              const unwrapped = h.canvas().rows.find((r) => r.join("").includes("xxxx"))!;
+              h.app.ui.wrap = true;
+              expect([where, unwrapped[x - 1], unwrapped[x]]).toEqual([where, "x", " "]);
+            }
+          }
+          buf.edit(i, to.length, from);
+        }
+      }
   });
 });
 
