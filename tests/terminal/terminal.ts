@@ -136,12 +136,16 @@ export class HeadlessTerminal {
     this.write(encodeKey(name, this.kitty.at(-1) ? "kitty" : "legacy"));
   }
 
-  /** A real resize: the pseudo-terminal's size (the program gets SIGWINCH) and the screen's. */
+  /** A real resize: the pseudo-terminal's size and the screen's, and SIGWINCH to the program. */
   resize(cols: number, rows: number): void {
     this.opts.cols = cols;
     this.opts.rows = rows;
     this.xterm.resize(cols, rows);
     this.pty?.resize(cols, rows);
+    // The kernel signals a terminal's foreground process, but Bun's child has the pseudo-terminal as its files, not
+    // as its controlling terminal (Bun 1.4.2): told here, as the kernel would tell it.
+    const pid = this.pid;
+    if (pid) process.kill(pid, "SIGWINCH");
   }
 
   /** Whether everything written has been drawn into the screen. */
@@ -152,7 +156,11 @@ export class HeadlessTerminal {
   /** The visible screen, one string per row (wide characters once, as they show). */
   screen(): string[] {
     const b = this.xterm.buffer.active;
-    return Array.from({ length: this.opts.rows }, (_, i) => b.getLine(b.viewportY + i)?.translateToString(true) ?? "");
+    // Cut at the width: narrowed, xterm keeps a row's cells past it, which a terminal no longer shows.
+    return Array.from(
+      { length: this.opts.rows },
+      (_, i) => b.getLine(b.viewportY + i)?.translateToString(true, 0, this.opts.cols) ?? "",
+    );
   }
 
   /** The visible screen with its colours: each row as runs of one style. */
