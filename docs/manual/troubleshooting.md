@@ -247,8 +247,8 @@ It offers four answers:
 
 ## Search seems out of date
 
-Before each search, slipbox brings its index up to date with every file whose size or time changed since, whoever
-changed it. If a search still misses something:
+The TUI keeps its index up to date as files change, whoever changes them. The command line brings it up to date
+before each search, with every file whose size or time changed since. If a search still misses something:
 
 - **The file is left out.** `slipbox info` lists files skipped, and why. A file may be over `walk.max_file_size`, say,
   or be a folder of notes inside this one (search it there). Files under `walk.exclude` are left out too.

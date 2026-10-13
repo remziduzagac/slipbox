@@ -25,7 +25,8 @@ says more ([Previews](#previews)).
 
 ### What is kept
 
-Scripts, agents and your own files rely on these. So they change only as the next section says:
+Scripts, agents and your own files rely on these. So they change only as
+[What each part of a version means](#what-each-part-of-a-version-means) says:
 
 - **The command line:** each command, its arguments and its flags, and what it does ([The command line](cli.md)).
 - **`--json`:** the object every command prints (`schema`, `ok`, `command`, `error`, `data`, `warnings`, `stale`).

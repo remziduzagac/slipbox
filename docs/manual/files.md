@@ -269,7 +269,7 @@ move, after the same kind of preview:
 It also takes back the other changes that rewrite links across the root, those made from the command line as well:
 
 - a heading renamed
-- a folder named
+- a root named or renamed (`:name`, `slipbox name`)
 - links relinked or converted
 - a replace in every note ([Finding things](finding.md))
 

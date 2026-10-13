@@ -361,7 +361,7 @@ system clipboard, as in vim with `clipboard=unnamedplus`. `p` puts what the clip
 | `d` | Deletes it |
 | `c` | Changes it |
 | `y` | Copies it |
-| `>` and `<` | Indent it |
+| `>` and `<` | Indent or outdent it |
 | `g c` | Comments it |
 | `o` | Jumps to its other end |
 | `i` or `a` with an object | Selects that object (`v i w`) |

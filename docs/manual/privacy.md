@@ -192,7 +192,7 @@ Opening a folder writes nothing into it. slipbox writes into your folders only w
 - notes you save
 - exports
 - the `.slipbox/` folder `slipbox init` makes
-- the scratch, if you set `capture.location = "vault"`
+- the scratch, if you set `capture.location = "root"`
 
 Everything else it keeps is in four folders of its own, all on your machine (in WSL, inside WSL). They're for your
 settings, its state, its data and its cache. [Where slipbox keeps things](configuration.md#where-slipbox-keeps-things)

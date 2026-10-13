@@ -563,8 +563,8 @@ Two linters without a server are built in. Each runs only where the project has 
 
 | Linter | Checks | Runs where the project has |
 | --- | --- | --- |
-| `hadolint` | Dockerfiles | `.hadolint.yaml` |
-| `yamllint` | YAML | `.yamllint` |
+| `hadolint` | Dockerfiles | `.hadolint.yaml` or `.hadolint.yml` |
+| `yamllint` | YAML | `.yamllint`, `.yamllint.yaml` or `.yamllint.yml` |
 
 Install them yourself. If one is missing, slipbox says so once.
 
