@@ -789,8 +789,9 @@ function cellHeader(
   spans.push({ text: `${lines} `, role: "dim", attrs: 0 });
   spans.push(...buttons);
   spans.push({ text: close, role: edge, attrs: 0 });
-  // Decoration (a frame row): never the cursor's, no line number — its buttons are clicked.
-  return { spans, src: c.from, decor: true, ...(box ? {} : { fill: "breadcrumb_band" as Role }) };
+  // Decoration (a frame row): never the cursor's, no line number — its buttons are clicked. A folded cell's is the cell's
+  // one row: the cursor stops there, so the key that folded it opens it again.
+  return { spans, src: c.from, ...(shut ? {} : { decor: true }), ...(box ? {} : { fill: "breadcrumb_band" as Role }) };
 }
 
 /**

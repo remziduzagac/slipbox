@@ -3344,6 +3344,13 @@ export class App {
       case "fold":
         if (!v.buf.codeFolded.delete(cell.from)) v.buf.codeFolded.add(cell.from);
         for (const x of this.allViews()) if (x.buf === v.buf) x.layoutKey = "";
+        // The cursor stays with the cell: on its header, folded (its one row), or its first row, open.
+        if (from === undefined) {
+          const rows = this.currentLayout(v).lines;
+          const row = rows.findIndex((l) => !l.decor && l.src >= cell.from && l.src <= cell.to);
+          if (row >= 0 && rows[row]!.srcMap) this.placeAtLine(v, rows[row]!.src);
+          else if (row >= 0) this.moveCursor(v, { row, col: 0 });
+        }
         return;
       case "edit":
         this.placeAtLine(v, cell.from);

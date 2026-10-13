@@ -6819,6 +6819,29 @@ describe("code as a notebook (24.x, 24.13)", () => {
     expect(r.slice(0, 2)).toEqual(["▾ imports (3)", 'import { readFileSync } from "node:fs";']);
   });
 
+  test("z a folds the cell at the cursor and z a again opens it: a folded cell's header is the cursor's stop", async () => {
+    const h = await open();
+    const v = h.app.view!;
+    const onRow = () =>
+      h.app
+        .currentLayout(v)
+        .lines[v.cur.row]!.spans.map((s) => s.text)
+        .join("");
+    h.app.placeAtLine(v, 13);
+    await h.keys("z", "a");
+    expect(rowIndex(h, "if (!target)")).toBe(-1);
+    expect(onRow()).toContain("function: resolve"); // on its header, the cell's one row
+    await h.keys("z", "a");
+    expect(rowIndex(h, "if (!target)")).toBeGreaterThan(0);
+    expect(rowIndex(h, "class: Graph")).toBeGreaterThan(0); // the next cell as it was
+    // Folded again: j leaves its header, k comes back to it, as to a line.
+    await h.keys("z", "a");
+    await h.keys("j");
+    expect(onRow()).not.toContain("function: resolve");
+    await h.keys("k");
+    expect(onRow()).toContain("function: resolve");
+  });
+
   test("a cell's buttons: copy its lines, edit it in the lens, add it to the scratch, its problems, where it's used", async () => {
     // The lens's least size one line: ✎'s lens is the cell's own lines, not its neighbours'.
     const h = await open({ config: (c) => ((c.editor.edit_in = "live"), (c.editor.lens_min_rows = 1)) });
