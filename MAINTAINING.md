@@ -29,9 +29,12 @@ schedule. Issues are read and answered as time allows, and no answer time is pro
 What slipbox's delivery depends on, and who can recover it:
 
 - **The GitHub account `remziduzagac`** owns the repository, its settings and its `release` environment, and the
-  Homebrew tap, once there is one. Only the maintainer holds it, and recovers it through GitHub's account recovery.
-- **The tap's token**, the `HOMEBREW_TAP_TOKEN` secret in the `release` environment, can write only to the tap, and
-  expires. The account makes a new one when it's lost or due; its date is in `.github/upkeep/renewals.toml`.
+  Homebrew tap, `remziduzagac/homebrew-tap`, shared with herdsman. Only the maintainer holds it, and recovers it
+  through GitHub's account recovery.
+- **The tap's deploy key**: its private half the `HOMEBREW_TAP_DEPLOY_KEY` secret in the `release` environment, its
+  public half a deploy key on the tap titled "slipbox release workflow", which can write only to the tap. It doesn't
+  expire; it's rotated by the date in `.github/upkeep/renewals.toml`, or at once when it's lost: a new key pair, the
+  deploy key and the secret replaced, the old deploy key deleted.
 - **The Pages site,** `https://remziduzagac.github.io/slipbox/`, serves the installer and the channels. It is the
   account's: deployed by this repository's workflows, with no domain of its own to renew.
 - **Nothing else:** releases aren't signed, so there is no signing key; there is no domain, package registry or store

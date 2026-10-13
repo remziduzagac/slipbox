@@ -404,3 +404,5 @@ dates. Each says what was asked, decided, built and found, and cites the decisio
   editor necessary and sufficient (D226). With it, the README's Try it became opening a folder with an installed
   slipbox, a screenshot and the keys, running from source moved to Development, and the maintainer is no longer named
   there (D227).
+- Homebrew: the tap is the one herdsman uses, `remziduzagac/homebrew-tap`, pushed to with a deploy key of slipbox's
+  own, as herdsman's is; the maintainer made the key, the secret and the variable (D228, #38).

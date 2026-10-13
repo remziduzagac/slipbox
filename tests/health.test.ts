@@ -63,12 +63,14 @@ describe("dates", () => {
 });
 
 describe("the committed upkeep files", () => {
-  test("renewals.toml: clean; the tap's token planned, with no date, in the release environment", () => {
+  test("renewals.toml: clean; the tap's deploy key active, with its rotation date, in the release environment", () => {
     const { renewals, problems } = parseRenewals(upkeep("renewals.toml"));
     expect(problems).toEqual([]);
-    const tap = renewals.find((r) => r.name === "HOMEBREW_TAP_TOKEN");
-    expect(tap).toMatchObject({ kind: "token", status: "planned", secret: { environment: "release" } });
-    expect(tap?.expires).toBeUndefined();
+    const tap = renewals.find((r) => r.name === "HOMEBREW_TAP_DEPLOY_KEY");
+    expect(tap).toMatchObject({ kind: "deploy-key", status: "active", secret: { environment: "release" } });
+    expect(dateOf(tap?.rotate_by ?? null)).toBe(tap?.rotate_by ?? "a date");
+    // On the tap, not this repository: the monthly comparison, which reads this repository's keys, mustn't look for it.
+    expect(tap?.deploy_key).toBeUndefined();
   });
 
   test("deviations.toml: clean, each with a review date; DOC-06 and a solo project's criteria among them", () => {

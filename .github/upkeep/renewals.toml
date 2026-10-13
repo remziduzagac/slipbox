@@ -10,14 +10,15 @@
 # until it's revoked); its date: `expires` for what expires, `rotate_by` for a deploy key; and what's `due` then.
 
 [[renewal]]
-name = "HOMEBREW_TAP_TOKEN"
-kind = "token"
-what = "A fine-grained personal access token of the maintainer's: Contents read and write, on the tap only."
-purpose = "homebrew.yml pushes each published release's formula to the tap, remziduzagac/homebrew-slipbox."
-lives = "The `release` environment's secret, which only `v*` tags reach."
-secret = { name = "HOMEBREW_TAP_TOKEN", environment = "release" }
-status = "planned"
-due = """Not created yet, so no date: the tap doesn't exist. Before the first release, create the tap, then a token \
-for it alone that expires within a year; store it in the `release` environment, and set `expires` and \
-`status = "active"` here. When it nears expiry: a new token, the secret replaced, the old one revoked, the date \
-moved."""
+name = "HOMEBREW_TAP_DEPLOY_KEY"
+kind = "deploy-key"
+what = "An SSH key pair: its public half the tap's deploy key \"slipbox release workflow\", with write access."
+purpose = "homebrew.yml pushes each published release's formula to the tap, remziduzagac/homebrew-tap (D228)."
+lives = """The private half: the `release` environment's secret, which only `v*` tags reach. The public half: a \
+deploy key on remziduzagac/homebrew-tap, beside herdsman's own."""
+secret = { name = "HOMEBREW_TAP_DEPLOY_KEY", environment = "release" }
+status = "active"
+rotate_by = "2027-10-13"
+due = """A new key pair: its public half added to the tap as a deploy key with write access, the secret replaced \
+with its private half, the old deploy key deleted, and `rotate_by` moved a year on. Lost or leaked: the same, at \
+once."""

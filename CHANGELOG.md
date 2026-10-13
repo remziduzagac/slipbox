@@ -6,6 +6,10 @@ The format is [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.1.0/); wh
 
 ## [Unreleased]
 
+### Added
+
+- Homebrew, on macOS and Linux: `brew install remziduzagac/tap/slipbox`, and `brew upgrade` after.
+
 ## [0.2.2] - 2026-10-13
 
 ### Changed
