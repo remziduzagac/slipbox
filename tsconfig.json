@@ -27,6 +27,7 @@
     "noUnusedParameters": false,
     "noPropertyAccessFromIndexSignature": false
   },
-  // The samples' code is the reference set's material, broken on purpose in places: never slipbox's own.
-  "exclude": ["node_modules", "dist", "out", "examples"]
+  // The samples' code is the reference set's material, broken on purpose in places: never slipbox's own. The docs'
+  // site is a project of its own, its packages its own (site/package.json).
+  "exclude": ["node_modules", "dist", "out", "examples", "site"]
 }

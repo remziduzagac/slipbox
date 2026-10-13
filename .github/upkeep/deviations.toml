@@ -10,16 +10,6 @@
 # what replaces one. They are looked at again in the twice-yearly review, or as soon as a second maintainer joins.
 
 [[deviation]]
-rule = "DOC-06"
-standard = "greenrepo"
-what = "User docs on GitHub Pages, built and deployed by Actions."
-reason = """Until after the first release, the user docs stay Markdown in docs/, which GitHub renders well: a site \
-is a generator and its upkeep to add."""
-instead = "docs/, mapped by docs/README.md and linked from the README, its Markdown checked on every change."
-decision = "GR-D8"
-review = 2027-01-12
-
-[[deviation]]
 rule = "Code-Review"
 standard = "Scorecard"
 what = "Every change approved by someone other than its author; bot and AI reviews don't count."

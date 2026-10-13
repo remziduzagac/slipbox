@@ -73,14 +73,15 @@ describe("the committed upkeep files", () => {
     expect(tap?.deploy_key).toBeUndefined();
   });
 
-  test("deviations.toml: clean, each with a review date; DOC-06 and a solo project's criteria among them", () => {
+  test("deviations.toml: clean, each with a review date; a solo project's criteria among them, and DOC-06 met (DS)", () => {
     const { deviations, problems } = parseDeviations(upkeep("deviations.toml"));
     expect(problems).toEqual([]);
     for (const d of deviations) expect(dateOf(d.review)).toBe(d.review);
     const rules = deviations.map((d) => d.rule);
-    for (const r of ["DOC-06", "Code-Review", "Contributors", "Branch-Protection", "Gold", "OSPS-QA-07.01"])
+    for (const r of ["Code-Review", "Contributors", "Branch-Protection", "Gold", "OSPS-QA-07.01"])
       expect(rules).toContain(r);
-    expect(deviations.find((d) => d.rule === "DOC-06")?.decision).toBe("GR-D8");
+    // The docs on GitHub Pages, built and deployed by Actions (site/, pages.yml): no longer a deviation.
+    expect(rules).not.toContain("DOC-06");
   });
 
   test("settings.json: clean; the repository; each group read by the workflow's token or an admin", () => {

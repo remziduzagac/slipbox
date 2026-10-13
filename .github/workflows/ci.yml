@@ -112,11 +112,30 @@ jobs:
           SLIPBOX_TERMINAL_WAIT: "30000"
         run: bun run test:terminal
 
+  # The docs' site (site/), built from docs/ as the pages workflow builds it: every page gathered, every link within it
+  # landing. Its own packages, under its own install gates (site/bunfig.toml).
+  site:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    permissions:
+      contents: read # to check out the code
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: jdx/mise-action@2d8d4cafcbd33be2ea37d2b6f5ad595363d1f1ca # v5.1.1
+        with:
+          install_args: bun
+          cache: false
+          minimum_release_age: 7d
+      - name: site
+        run: bun run site
+
   # The required check (GR-D9): one name, whichever jobs ran. A job skipped by its `if:` counts as passed; one that
   # failed, was cancelled or never started fails this.
   ci:
     if: ${{ always() }}
-    needs: [lint, test, terminal]
+    needs: [lint, test, terminal, site]
     runs-on: ubuntu-24.04
     timeout-minutes: 5
     permissions: {}

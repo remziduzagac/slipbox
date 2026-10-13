@@ -400,7 +400,7 @@ describe("the channels (GR-D14)", () => {
     await expect(channelFiles([rel("v1.0.0", { assets: [] })], download)).rejects.toThrow("v1.0.0 has no install.sh");
   });
 
-  test("the site's files: the channels a release has, and an index sending visitors to the repository", () => {
+  test("the site's files: the channels a release has, and an index sending visitors to the docs", () => {
     const out = mkdtempSync(join(sandbox, "site-"));
     writeFileSync(join(out, "preview"), "stale\n");
     writeFileSync(join(out, "install.sh"), "#!/bin/sh\n");
@@ -410,7 +410,8 @@ describe("the channels (GR-D14)", () => {
     // No preview: its file goes, not left naming an old one. The bootstrap beside them is left alone.
     expect(existsSync(join(out, "preview"))).toBe(false);
     expect(readFileSync(join(out, "install.sh"), "utf8")).toBe("#!/bin/sh\n");
-    expect(readFileSync(join(out, "index.html"), "utf8")).toContain('url=https://github.com/o/r">');
+    expect(readFileSync(join(out, "index.html"), "utf8")).toContain('url=docs/">'); // the docs, beside it
+    expect(readFileSync(join(out, "index.html"), "utf8")).toContain('href="https://github.com/o/r"');
     expect(() => writeSite(out, "o/$(r)", { stable: null, preview: null })).toThrow("not a repository");
   });
 
@@ -592,11 +593,14 @@ describe("the workflows: one build for releases and previews, previews from test
     expect(writers.map(([id]) => id).sort()).toEqual(["prune", "publish"]);
   });
 
-  test("pages.yml: called, on a release published, on the bootstrap changed on main, by hand; Pages' grants only in its deploy", () => {
+  test("pages.yml: called, on a release published, on the bootstrap, the docs or the site changed on main, by hand; Pages' grants only in its deploy", () => {
     const pages = workflow("pages.yml");
     expect(Object.keys(pages.on).sort()).toEqual(["push", "release", "workflow_call", "workflow_dispatch"]);
     expect(pages.on.release).toEqual({ types: ["published"] });
-    expect(pages.on.push).toEqual({ branches: ["main"], paths: ["scripts/bootstrap*", ".github/workflows/pages.yml"] });
+    expect(pages.on.push).toEqual({
+      branches: ["main"],
+      paths: ["scripts/bootstrap*", "docs/**", "site/**", ".github/workflows/pages.yml"],
+    });
     expect(pages.concurrency).toEqual({ group: "pages", "cancel-in-progress": false });
     for (const [id, job] of Object.entries(pages.jobs)) {
       const grants = Object.keys(job.permissions ?? {}).filter((p) => p === "pages" || p === "id-token");
@@ -611,6 +615,9 @@ describe("the workflows: one build for releases and previews, previews from test
     expect(site.steps?.find((s) => s.uses?.startsWith("actions/checkout@"))?.with?.ref).toBe("main");
     expect(runs(site)).toContain('scripts/bootstrap.ts "$GITHUB_REPOSITORY" _site/install.sh');
     expect(runs(site)).toContain('scripts/release.ts site --repo "$GITHUB_REPOSITORY" --out _site');
+    // The docs (DS): the site built from docs/ by package.json's script, at docs/ beside the installer.
+    expect(runs(site)).toContain("bun run site");
+    expect(runs(site)).toContain("cp -R site/dist _site/docs");
     expect(site.steps?.find((s) => s.uses?.startsWith("actions/upload-pages-artifact@"))?.with?.path).toBe("_site");
   });
 

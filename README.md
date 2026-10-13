@@ -34,9 +34,9 @@ keeping your document focused.
 Open the folder you already have — a repository, an Obsidian vault, a zk notebook or an ordinary folder. Opening it
 writes nothing there: your notes and code stay in their files, alongside the tools you already use.
 
-- **Start here:** [Getting started](docs/guides/getting-started.md), a first session of about ten minutes, once
-  [Installing slipbox](docs/guides/install.md) has it on your machine. [The documentation](docs/README.md) has the
-  rest.
+- **Start here:** the [Quick start](docs/guides/quick-start.md), two minutes, once
+  [Installing slipbox](docs/guides/install.md) has it on your machine. The documentation is a website, with search:
+  <https://remziduzagac.github.io/slipbox/docs/>.
 - **Status:** every phase on the [roadmap](blueprint/roadmap.md) is built: reading, editing, search, roots and named
   folders, git and merge review, language servers and linters, export. Releases are published, with previews of the
   next one between them. slipbox is before 1.0: [Versions](docs/manual/versions.md) says what may still change.
@@ -123,8 +123,9 @@ One JSON object per call with `--json`; stable exit codes. The skill in
 
 ## Documentation
 
-- [docs/](docs/README.md): the user documentation: guides to start with, and a manual covering every key, setting
-  and command.
+- [docs/](docs/README.md): the user documentation, also on its website,
+  <https://remziduzagac.github.io/slipbox/docs/>: guides to start with, and a manual covering every key, setting and
+  command.
 - [CHANGELOG.md](CHANGELOG.md): what each release changed.
 - [ARCHITECTURE.md](ARCHITECTURE.md): a map of the code, for whoever changes it.
 - [ACCESSIBILITY.md](ACCESSIBILITY.md): what the TUI does for accessibility, and its limits.

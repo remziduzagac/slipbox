@@ -30,6 +30,20 @@ updates:
     commit-message:
       prefix: build
       include: scope
+  # The docs' site (site/): its own packages, Astro and Starlight, which only build the site.
+  - package-ecosystem: bun
+    directory: /site
+    schedule:
+      interval: monthly
+    cooldown:
+      default-days: 7
+    groups:
+      site:
+        applies-to: version-updates
+        patterns: ["*"]
+    commit-message:
+      prefix: build
+      include: scope
   - package-ecosystem: github-actions
     directory: /
     schedule:

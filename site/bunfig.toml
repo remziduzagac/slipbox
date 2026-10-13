@@ -1,0 +1,6 @@
+# The site's own install, under the gates the root's has (../bunfig.toml): no install script runs, a version is taken
+# only once it's been published a week, `bun add` pins the exact version and bun.lock pins the rest.
+[install]
+ignoreScripts = true
+minimumReleaseAge = 604800
+exact = true

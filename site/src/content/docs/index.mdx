@@ -1,0 +1,66 @@
+---
+title: slipbox documentation
+description: The terminal companion for coding agents. Read, review and edit what your agent writes, with Markdown and code rendered cleanly.
+template: splash
+editUrl: false
+hero:
+  tagline: Read, review and edit what your coding agent writes, in your terminal. Start on the path that fits you; you don't need to know vim.
+  image:
+    html: '<img src="/slipbox/docs/images/screen-map.png" alt="slipbox: the explorer on the left, a note rendered in a tab, its outline on the right" width="867" height="475" style="border-radius: 6px">'
+  actions:
+    - text: Install slipbox
+      link: /slipbox/docs/guides/install/
+    - text: Quick start
+      link: /slipbox/docs/guides/quick-start/
+      variant: secondary
+---
+
+import { Card, CardGrid, LinkCard } from "@astrojs/starlight/components";
+
+## Pick your path
+
+<CardGrid>
+  <Card title="New to slipbox?" icon="rocket">
+    Open a folder of Markdown and use the mouse. Two keys teach you the rest: `space` shows what can follow it, and `?`
+    lists every key.
+
+    [Quick start →](/slipbox/docs/guides/quick-start/)
+  </Card>
+  <Card title="Working beside a coding agent?" icon="seti:terminal">
+    You and your agent work on the same files. It writes; you read, review and edit, and hand it places to look at.
+
+    [Working with agents →](/slipbox/docs/guides/agents/)
+  </Card>
+  <Card title="Coming from Obsidian or zk?" icon="document">
+    Your vault or notebook opens as it is: its links, tags and aliases read the way Obsidian and zk read them.
+
+    [Coming from Obsidian or zk →](/slipbox/docs/guides/from-obsidian-or-zk/)
+  </Card>
+  <Card title="Reviewing code?" icon="github">
+    A repository's code reads like a document, with its problems, its changes and git beside it.
+
+    [Code and git →](/slipbox/docs/guides/code-and-git/)
+  </Card>
+</CardGrid>
+
+## Or let your agent introduce you
+
+If you already use a coding agent, let it walk you through slipbox. Paste this prompt:
+
+```text
+Help me understand and set up slipbox. Read https://remziduzagac.github.io/slipbox/docs/agent-guide.md first, then walk me through it step by step.
+```
+
+The guide gives your agent slipbox's ideas in order, the setup steps and the usual fixes, so it answers from the docs
+instead of guessing.
+
+## Learn more
+
+<CardGrid>
+  <LinkCard title="Concepts" description="The words slipbox uses, each in a few lines." href="/slipbox/docs/manual/concepts/" />
+  <LinkCard title="Getting started" description="A ten-minute first session in a folder of your own notes." href="/slipbox/docs/guides/getting-started/" />
+  <LinkCard title="Making it yours" description="Themes, keys and settings." href="/slipbox/docs/guides/making-it-yours/" />
+  <LinkCard title="Exporting notes" description="Word, PDF, a web page, an e-book or Markdown." href="/slipbox/docs/guides/exporting/" />
+  <LinkCard title="Keys" description="Every key, in one place." href="/slipbox/docs/manual/keys/" />
+  <LinkCard title="The command line" description="Every command, its output and exit codes, for agents and scripts." href="/slipbox/docs/manual/cli/" />
+</CardGrid>

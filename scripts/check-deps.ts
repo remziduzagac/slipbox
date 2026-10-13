@@ -283,6 +283,19 @@ function workflows(root: string): { name: string; text: string }[] {
 }
 
 /** Every gate's problems, for the root; and the walk's packages, slipbox's own dependencies among them `direct`. */
+/** The docs' site (site/), a project of its own whose packages only build the site, never ship: its versions exact and
+ *  its install gated as the root's are. */
+export function siteProblems(root = ROOT): string[] {
+  const dir = join(root, "site");
+  if (!existsSync(join(dir, "package.json"))) return [];
+  const pkg = JSON.parse(readFileSync(join(dir, "package.json"), "utf8"));
+  const bunfig = existsSync(join(dir, "bunfig.toml")) ? readFileSync(join(dir, "bunfig.toml"), "utf8") : "";
+  return [
+    ...specProblems(pkg).map((p) => `site/package.json: ${p}`),
+    ...bunfigProblems(bunfig).map((p) => `site/${p}`),
+  ];
+}
+
 export function checkDeps(root = ROOT): { problems: string[]; packages: Package[]; direct: string[] } {
   const { packages, missing, direct } = productionPackages(root);
   const pkg = JSON.parse(readFileSync(join(root, "package.json"), "utf8"));
@@ -290,6 +303,7 @@ export function checkDeps(root = ROOT): { problems: string[]; packages: Package[
     ...missing.map((m) => `not installed: ${m} — run bun install`),
     ...specProblems(pkg),
     ...bunfigProblems(readFileSync(join(root, "bunfig.toml"), "utf8")),
+    ...siteProblems(root),
     ...licenceProblems(packages),
     ...workflows(root).flatMap((w) => [...workflowProblems(w.name, w.text), ...workflowShapeProblems(w.name, w.text)]),
   ];

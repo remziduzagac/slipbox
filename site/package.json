@@ -1,0 +1,15 @@
+{
+  "name": "slipbox-docs",
+  "private": true,
+  "type": "module",
+  "description": "slipbox's documentation site: Astro Starlight, built from the Markdown in ../docs.",
+  "scripts": {
+    "gather": "bun scripts/gather.ts",
+    "dev": "bun scripts/gather.ts && bun --bun astro dev",
+    "build": "bun scripts/gather.ts && bun --bun astro build && bun scripts/check-links.ts"
+  },
+  "dependencies": {
+    "@astrojs/starlight": "0.42.5",
+    "astro": "7.3.5"
+  }
+}
