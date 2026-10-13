@@ -636,4 +636,12 @@ describe("the workflows: one build for releases and previews, previews from test
   test("Homebrew never gets a pre-release, so never a preview", () => {
     expect(workflow("homebrew.yml").jobs.tap?.if).toContain("!github.event.release.prerelease");
   });
+
+  test("the tap is pushed to with its deploy key, the release environment's secret, never a token", () => {
+    const tap = workflow("homebrew.yml").jobs.tap!;
+    expect(tap.environment).toBe("release");
+    const checkout = tap.steps!.find((s) => s.with?.repository === "${{ vars.HOMEBREW_TAP }}");
+    expect(checkout?.with).toMatchObject({ "ssh-key": "${{ secrets.HOMEBREW_TAP_DEPLOY_KEY }}" });
+    expect(checkout?.with?.token).toBeUndefined();
+  });
 });

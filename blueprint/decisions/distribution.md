@@ -188,6 +188,9 @@ time, so a musl build fixes that in.
 > token is a secret of the `release` environment, which only a `v*` tag's run enters; a preview never reaches the
 > tap. There's no tap yet: it and its token follow the first release, and until then `homebrew.yml` is skipped.
 
+> **Amended by D228 (2026-10-13):** the tap is `remziduzagac/homebrew-tap`, shared with herdsman, pushed to with a
+> deploy key, not a token.
+
 **Decision:** Each release writes a Homebrew formula, copied into a tap once the release is published. A slipbox
 Homebrew installed is left to brew: `slipbox upgrade`, the daily check and `slipbox uninstall` say brew's commands.
 Detail: design/distribution.md § Homebrew.
@@ -220,3 +223,23 @@ proxy).
 
 **Not chosen:** only saying so, which D199 allowed; re-running the binary with the variable set, which costs a second
 start.
+
+## D228: Homebrew through the shared tap, pushed with a deploy key (14.3, 2026-10-13)
+
+**Decision:** slipbox's formula goes into `remziduzagac/homebrew-tap`, the tap herdsman already publishes to (`brew
+install remziduzagac/tap/slipbox`), not a tap of its own. `homebrew.yml` checks the tap out with an SSH deploy key,
+`HOMEBREW_TAP_DEPLOY_KEY`, a secret of the `release` environment, as herdsman's release workflow does. The key is
+slipbox's own, titled "slipbox release workflow" on the tap, beside herdsman's. It has no expiry: `renewals.toml`
+gives it a rotation date, a year on. The key, the secret and the `HOMEBREW_TAP` variable were set by the maintainer
+the same day. Decided by an issue (#38) and one pull request (D223).
+
+**Why:** The user's call: herdsman already works this way, and one tap holds both tools. A deploy key writes to that
+repository only and never expires unnoticed, where a fine-grained token expires and has to be remade. A key of
+slipbox's own, since GitHub never shows a secret again, so herdsman's couldn't be copied, and either can be revoked
+without the other.
+
+**Cost:** The key can write to herdsman's formula too: it's scoped to the tap, not to a file. The tap's first formula
+is 0.3.0's; 0.2.1 and 0.2.2 have none.
+
+**Not chosen:** a tap of slipbox's own, `remziduzagac/homebrew-slipbox`, as planned; the fine-grained token
+`HOMEBREW_TAP_TOKEN`, as planned (GR-D9); herdsman's key, shared.

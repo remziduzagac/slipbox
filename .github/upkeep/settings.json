@@ -52,7 +52,7 @@
     {
       "endpoint": "repos/{repo}/environments/release",
       "reader": "workflow",
-      "about": "The `release` environment, holding the tap's token, reached only by the refs it names (REL-07)",
+      "about": "The `release` environment, holding the tap's deploy key, reached only by the refs it names (REL-07)",
       "expect": { "deployment_branch_policy": { "protected_branches": false, "custom_branch_policies": true } }
     },
     {

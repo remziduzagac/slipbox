@@ -57,7 +57,8 @@ curl -fsSL https://remziduzagac.github.io/slipbox/install.sh | sh -s -- --previe
 ```
 
 The first installs the latest release; the second, the newest preview, a build of what the next release will hold.
-`slipbox upgrade` keeps it current, and `slipbox channel` says, and changes, whether it follows previews.
+`slipbox upgrade` keeps it current, and `slipbox channel` says, and changes, whether it follows previews. With
+Homebrew, from 0.3.0 on: `brew install remziduzagac/tap/slipbox`.
 [Installing slipbox](docs/guides/install.md) has the rest: previews, Windows through WSL, upgrading and removing it,
 and running it from source.
 

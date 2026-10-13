@@ -229,16 +229,17 @@ platform the release has a pack for that Homebrew installs on — macOS, arm64 a
 binary and puts its notices in Homebrew's `doc`; its test runs `slipbox --version`. Its licence is Apache-2.0
 (GR-D3), named in the formula.
 
-It reaches people through a tap, a repository `<owner>/homebrew-<name>` (`brew install <owner>/<name>/slipbox`):
-`.github/workflows/homebrew.yml` copies the release's formula into the tap's `Formula/` once the release is published
-— never a draft, whose downloads aren't public yet, nor a pre-release, so never a preview: `finish` writes a preview
-no formula (§ Previews). It runs only when the repository's `HOMEBREW_TAP` variable names the tap — a repository
-variable, since a job's `if:` is decided before it enters an environment — with a token that may write only there:
-`HOMEBREW_TAP_TOKEN`, a secret of the `release` environment, which only a `v*` tag's run enters (GR-D9). The job reads
-the release's formula with its own token (`contents: read`); the tap's checkout keeps its token to push, zizmor's one
-finding accepted (`artipacked`, ignored inline with its reason). Neither is set yet; there's no tap yet (GR-D18): the
-job is skipped, and the token is listed as planned in the renewals ([repository.md](repository.md) § The upkeep
-files).
+It reaches people through a tap: `remziduzagac/homebrew-tap`, shared with herdsman (`brew install
+remziduzagac/tap/slipbox`, D228). `.github/workflows/homebrew.yml` copies the release's formula into the tap's
+`Formula/` once the release is published — never a draft, whose downloads aren't public yet, nor a pre-release, so
+never a preview: `finish` writes a preview no formula (§ Previews). It runs only when the repository's `HOMEBREW_TAP`
+variable names the tap — a repository variable, since a job's `if:` is decided before it enters an environment — with
+a deploy key that may write only there, slipbox's own beside herdsman's: its private half `HOMEBREW_TAP_DEPLOY_KEY`, a
+secret of the `release` environment, which only a `v*` tag's run enters (GR-D9). The job reads the release's formula
+with its own token (`contents: read`); the tap's checkout keeps its key to push, zizmor's one finding accepted
+(`artipacked`, ignored inline with its reason). The key has no expiry; its rotation date is in the renewals
+([repository.md](repository.md) § The upkeep files). The tap's first formula is 0.3.0's: 0.2.1's and 0.2.2's runs were
+skipped, no tap named then.
 
 A slipbox Homebrew installed — its file in a `Cellar/slipbox/<version>/bin/`, through a link or not
 (`core/install.ts`, `installedBy`) — is Homebrew's to change: `slipbox upgrade` says `brew upgrade slipbox`, the

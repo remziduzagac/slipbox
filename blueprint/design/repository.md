@@ -193,8 +193,8 @@ UPK-03, UPK-04, UPK-15, UPK-16):
   required, no one bypassing (GR-D13).
 - `renewals.toml`: every credential and renewal, with its kind, what it is, what it's for, where it lives, its
   status, its expiry or rotation date and what's due then. GitHub shows no expiry for a personal account's tokens,
-  and deploy keys can't expire, so the dates are kept here. Today it holds the tap's token, `HOMEBREW_TAP_TOKEN`,
-  planned: not created, so no date (GR-D18).
+  and deploy keys can't expire, so the dates are kept here. Today it holds the tap's deploy key,
+  `HOMEBREW_TAP_DEPLOY_KEY`, active, with its rotation date (D228).
 - `deviations.toml`: the accepted deviations, each with its rule and standard, what the rule asks, the reason, what
   stands in its place, the decision behind it and a review date: DOC-06, a docs site, until after the first release
   (GR-D8); the outside criteria a solo project can't meet (Scorecard's Code-Review, Contributors and

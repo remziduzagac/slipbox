@@ -55,8 +55,13 @@ wget -qO- https://remziduzagac.github.io/slipbox/install.sh | sh -s -- --preview
 The installer stops, before downloading anything, if there's already a `slipbox` in `~/.local/bin` that it didn't put
 there, such as the source launcher. Remove that one first (`rm ~/.local/bin/slipbox`) and run it again.
 
-**Homebrew**, on macOS and Linux: from slipbox's own tap, once it has one, with `brew install` and the tap's name.
-Homebrew installs releases only, never previews.
+**Homebrew**, on macOS and Linux, from 0.3.0 on:
+
+```bash
+brew install remziduzagac/tap/slipbox
+```
+
+Homebrew installs releases only, never previews, and upgrades slipbox with `brew upgrade`.
 
 Releases aren't signed. On a Mac, Gatekeeper stops a slipbox downloaded with a web browser; the installer's isn't
 stopped.
