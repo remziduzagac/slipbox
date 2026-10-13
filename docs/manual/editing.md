@@ -454,10 +454,12 @@ the root instead (`scratch.md`, or the name in `capture.file`).
 | `space s c` | copies the note's context for an agent: it, what it links to, what links to it |
 
 The scratch opens in a window floating in the middle of the screen, to jot something down or read what you have
-gathered: every editing key works there, and `q` or `esc` closes it, back where you were, what you typed saved. It
-opens when it's empty too. Each time you add to it, it opens with the cursor on what you added, so you can say a word
-about it. With `capture.open_in = "right"`, or Scratch opens in the [UI settings](screen.md#ui-settings), it opens in
-the window on the right instead, beside your note; there, what you add appears in it while you stay where you were.
+gathered. It's a window like any other: the scratch rendered, the lens to edit it, `ctrl+k` for its Markdown, every key
+you move and edit with. `q` closes it, back where you were, what you typed saved; `esc` stops typing and leaves the
+lens as it always does, then closes the scratch. It opens when it's empty too. Each time you add to it, it opens with
+the cursor on what you added, so you can say a word about it. With `capture.open_in = "right"`, or Scratch opens in the
+[UI settings](screen.md#ui-settings), it opens in the window on the right instead, beside your note; there, what you add
+appears in it while you stay where you were.
 
 Other programs add to it with `slipbox capture`, which is how your editor or an agent puts things there:
 

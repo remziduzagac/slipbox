@@ -14,9 +14,9 @@ The format is [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.1.0/); wh
 
 ### Changed
 
-- The scratch opens in a window floating in the middle of the screen, not as a tab: `q` or `esc` closes it, back where
-  you were, what you typed saved. Adding to it (`space s a`) opens it with the cursor on what you added. It opens when
-  it's empty too.
+- The scratch opens in a window floating in the middle of the screen, not as a tab, rendered and edited as any note is.
+  `q` closes it, back where you were, what you typed saved; `esc` leaves typing and the lens first, then closes it.
+  Adding to it (`space s a`) opens it with the cursor on what you added. It opens when it's empty too.
 
 ## [0.2.2] - 2026-10-13
 

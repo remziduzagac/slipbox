@@ -554,8 +554,9 @@ has no AI of its own; "notes app" as the lead (ideas.md § Product).
 
 ## D229: The scratch floats in the middle for quick capture, or sits on the right by a setting (8.3, 2026-10-13)
 
-**Decision:** `space s s` opens the scratch in a floating window in the middle of the screen, three quarters of it, with
-every editing key; `q` or `esc` closes it, back where you were, what was typed saved. It opens empty too.
+**Decision:** `space s s` opens the scratch in a floating window in the middle of the screen, three quarters of it: a
+window like any inside, the scratch rendered and the lens to edit it, every key. `q` closes it, back where you were,
+what was typed saved; `esc` leaves typing and the lens first, as anywhere, and closes it last. It opens empty too.
 `[capture] open_in = "right"`, or Scratch opens in the UI settings, puts it in the window on the right instead (in a
 split already, its other window), and `space s r` opens it there whatever the setting. A capture in the TUI (`space s
 a`, a code cell's `space k s`) shows the scratch with the cursor on the new entry; with the scratch already beside the

@@ -465,7 +465,7 @@ function drawSaveAs(
  * The floating editor (3.20): a framed window over the others, centred near the top of the content,
  * as tall as its text (at most the content's height); its title says what it edits, its bottom
  * border how it closes. Inside, a window like any, in source mode. The scratch's (#43) is a fixed three quarters of
- * the screen, in the middle of it: room to type in, its size not jumping as entries come.
+ * the screen, in the middle of it: room to type in, its size not jumping as entries come; rendered, as a note is.
  */
 function drawFloating(app: App, c: Canvas, mainY: number, mainH: number, geo: Geometry): Rect {
   const f = app.floating!;

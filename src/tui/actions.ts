@@ -1398,8 +1398,11 @@ export function registerActions(app: App): void {
     "app.escape": (a) => {
       const v = a.view;
       if (!v) return;
+      const floating = a.floating && v === a.floating.view;
       if (v.sel || v.visual) Object.assign(v, { visual: null, sel: null });
-      else if (a.floating && v === a.floating.view && !v.find)
+      // The floating scratch is a window like any (#43): esc leaves its lens first, and closes it last.
+      else if (floating && a.floating?.kind === "scratch" && v.live) a.setViewMode(v, "rendered");
+      else if (floating && !v.find)
         a.closeFloating(); // the floating editor: closed, written back (3.20)
       else if (v.live)
         a.setViewMode(v, "rendered"); // esc in normal mode closes the lens

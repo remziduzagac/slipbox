@@ -628,9 +628,11 @@ keys.
   split": they're of the window under it. A note deleted on disk, or not valid UTF-8, has no properties editor (nor is
   it written into, gone meanwhile), as typing into it is refused. Never a reading position, nor in the history.
 - **The scratch** (`8.3`; D229): `space s s` opens it as `[capture] open_in` says, or the UI settings' Scratch opens.
-  `"float"`, the default: a floating window like the properties editor's, but of the scratch's own file, three
-  quarters of the screen and in the middle of it, its size fixed as entries come; `esc`, `q` or `:q` close it, back
-  where you were, what was typed saved (a save refused, the file changed on disk meanwhile, keeps it open). `"right"`:
+  `"float"`, the default: a floating window framed as the properties editor's, but of the scratch's own file and a
+  window like any inside — rendered, the lens to edit it, `ctrl+k` its markdown — three quarters of the screen and in
+  the middle of it, its size fixed as entries come. `q` or `:q` close it, back where you were, what was typed saved (a
+  save refused, the file changed on disk meanwhile, keeps it open); `esc` ends a selection, a find and the lens first,
+  as in any window, and closes it last. `"right"`:
   the tab's window on the right, side by side — in a split already, its other window takes it — and `q` there closes
   that window, saving it too. `space s r` opens it on the right whatever the setting. The scratch's file is made,
   empty, when it isn't there yet: it opens to be typed in before anything is captured. A capture in the TUI (`space s

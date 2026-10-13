@@ -9705,8 +9705,9 @@ export class App {
 
   /**
    * The scratch (#43): floating over the windows, or in the window on the right (in a split already, its other
-   * window), as `[capture] open_in` or the UI settings say, or `where`. The cursor goes to `at` (a capture's entry),
-   * else where it was left. Empty, it opens too, to be typed in; closed, what was typed is saved.
+   * window), as `[capture] open_in` or the UI settings say, or `where` — either way a window like any, the note
+   * rendered, the lens to edit it. The cursor goes to `at` (a capture's entry), else where it was left. Empty, it opens
+   * too, to be typed in; closed, what was typed is saved.
    */
   openScratch(where: UiState["scratch_in"] = this.ui.scratch_in, at?: number): void {
     const f = this.floating;
@@ -9742,9 +9743,9 @@ export class App {
     }
     const buf = this.buffer(loc.path);
     if (!buf) return;
+    // Shown as any note is, rendered, the lens to edit it; ctrl+k, its markdown.
     const fv = this.makeView(buf);
     this.floating = { kind: "scratch", view: fv, title: "Scratch" };
-    this.setViewMode(fv, "source");
     this.region = "content";
     if (at !== undefined) placeAt(this, fv, at);
   }

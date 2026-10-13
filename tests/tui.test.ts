@@ -4925,6 +4925,42 @@ describe("scratch (space s)", () => {
     expect([h.app.floating, readFileSync(path, "utf8")]).toEqual([null, "idea"]);
   });
 
+  test("the floating scratch is a window like any: rendered, the lens, ctrl+k; esc leaves the lens and a find first, and closes it last (#43)", async () => {
+    // The lens, as slipbox's own default has it (the harness edits in source mode).
+    const h = await harness({
+      open: "notes/alpha.md",
+      width: 120,
+      height: 40,
+      config: (c) => (c.editor.edit_in = "live"),
+    });
+    const path = h.app.scratch().path;
+    mkdirSync(dirname(path), { recursive: true });
+    writeFileSync(path, "# Ideas\n\nfirst idea\n\n- a list item\n");
+    await h.keys("space", "s", "s");
+    const status = () => h.frame().split("\n").at(-1)!;
+    expect([h.app.floating?.kind, status()]).toEqual(["scratch", expect.stringMatching(/^ READ /)]);
+    expect(h.frame()).toContain("▌ Ideas");
+    // The lens, typing in it: esc stops typing, esc again leaves the lens, the scratch still open.
+    await h.keys("j", "j", "i");
+    expect(status()).toMatch(/^ LENS /);
+    await h.keys("i");
+    expect(status()).toMatch(/^ INSERT /);
+    await h.keys("escape");
+    expect([h.app.floating?.kind, status()]).toEqual(["scratch", expect.stringMatching(/^ LENS /)]);
+    await h.keys("escape");
+    expect([h.app.floating?.kind, status()]).toEqual(["scratch", expect.stringMatching(/^ READ /)]);
+    // A find: esc ends it first.
+    await h.keys("/", "i", "d", "e", "a", "enter");
+    expect(h.app.view!.find).not.toBeNull();
+    await h.keys("escape");
+    expect([h.app.floating?.kind, h.app.view!.find]).toEqual(["scratch", null]);
+    // ctrl+k: its markdown, still floating; esc, with nothing else to leave, closes it.
+    await h.keys("ctrl+k");
+    expect([h.app.floating?.kind, status()]).toEqual(["scratch", expect.stringMatching(/^ SOURCE /)]);
+    await h.keys("escape");
+    expect([h.app.floating, h.app.view!.buf.key]).toEqual([null, "notes/alpha.md"]);
+  });
+
   test("[capture] open_in = right: the scratch on the right; a capture with it there scrolls it, the cursor staying; q closes it, saved; space s r; the UI settings switch it, kept (#43)", async () => {
     const root = makeVault();
     const h = await harness({
