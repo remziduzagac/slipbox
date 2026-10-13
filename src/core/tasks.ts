@@ -49,6 +49,22 @@ export interface TaskItem {
 }
 
 /**
+ * The innermost task item holding 1-based `line` — its marker's line, or any line of it, its nested items' included
+ * — from the parsed tree: its first and last line and its state. Null when no task item holds the line.
+ */
+export function taskHolding(tree: Root, line: number): { line: number; end: number; checked: boolean } | null {
+  let found: { line: number; end: number; checked: boolean } | null = null;
+  visit(tree, (node) => {
+    if (node.type !== "listItem" || typeof node.checked !== "boolean" || !node.position) return;
+    const { start, end } = node.position;
+    // Nested items start later: the latest start holding the line is the innermost.
+    if (line < start.line || line > end.line || (found && start.line <= found.line)) return;
+    found = { line: start.line, end: end.line, checked: node.checked };
+  });
+  return found;
+}
+
+/**
  * The note's task items, from the parsed tree (so a `- [ ]` inside a code block isn't one), in
  * order. The CLI's `task` lists them; `toggleTask` changes one by its line.
  */

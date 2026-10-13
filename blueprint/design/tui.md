@@ -899,8 +899,9 @@ and a target outside the root is refused (`7.5`); the watcher is told the write 
 buffer reloads, its windows keeping their anchors, so the cursor stays put.
 
 **Task checkboxes** (`4.11`) are the first write. `ctrl+l` (`space n t`), or a click on the
-checkbox, flips the task item holding the cursor — the innermost, from any of its rows — as a
-one-byte edit to the file's bytes, so a BOM, CRLF endings and even invalid UTF-8 survive untouched.
+checkbox, flips the task item holding the cursor — the innermost, from any of its rows; in source mode and the lens,
+the one holding the cursor's line, found in the parse — as a one-byte edit to the file's bytes, so a BOM, CRLF
+endings and even invalid UTF-8 survive untouched.
 If the file changed on disk since it was shown, it is reloaded instead and nothing is written (its
 lines may have moved). With unsaved changes it flips the mark in the text on screen instead — an undo
 step, left unsaved ("done ✓ (unsaved)") — never on disk under them.
