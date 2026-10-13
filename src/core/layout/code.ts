@@ -15,7 +15,7 @@ import type { Severity } from "../diagnostics.ts";
 import type { Glyphs } from "../glyphs.ts";
 import { slugify } from "../parse.ts";
 import { expandTabs } from "../sanitize.ts";
-import type { CodeComment, CodeDef, CodeDoc, CodeImports, CodeModel } from "../syntax.ts";
+import type { CodeComment, CodeDef, CodeDoc, CodeImports, CodeModel, OutlineEntry } from "../syntax.ts";
 import type { Role } from "../theme/theme.ts";
 import { graphemes, graphemeWidth, stringWidth, truncate } from "../width.ts";
 import {
@@ -48,6 +48,10 @@ export interface CodeLayoutOptions {
   /** The paths in the file's comments that name a file (16.10), by line: as written, and where each goes. In the
    *  comments' prose they're drawn as links, as source mode draws them. */
   paths?: readonly CommentPath[];
+  /** The file's outline (16.8), as source mode heads it: the definitions' headings (the breadcrumb, `]]`) are its
+   *  entries — a function inside a function, an impl by its outline's name — not only the cells. Without it, the
+   *  cells'. */
+  outline?: readonly OutlineEntry[];
 }
 
 /** A path in a comment that names a file: its line, its text as written (`notes/plan.md:12`), where it goes. */
@@ -163,6 +167,8 @@ export function layoutCode(source: string, base: Layout, model: CodeModel | null
   const links: LayoutLink[] = [];
   /** The headings: a section's (level 1), a cell's (its definition's depth under the sections). */
   const heads: { section: boolean; depth: number; text: string; row: number; src: number }[] = [];
+  /** A folded cell's header row, by its definition's line. */
+  const shutAt = new Map<number, number>();
   const cellsOut: NonNullable<Layout["cells"]> = [];
   let natural = 0;
   const push = (l: Line) => {
@@ -302,6 +308,7 @@ export function layoutCode(source: string, base: Layout, model: CodeModel | null
     // Done: its heading, its first row of code (a folded cell's, its header).
     const done = () => {
       boxEnded = style === "box";
+      if (shut && c.def) shutAt.set(c.def.line, header);
       if (!c.def || c.def.kind === "value") return;
       const first = lines.findIndex((l, i) => i > header && l.srcMap);
       heads.push({
@@ -605,7 +612,22 @@ export function layoutCode(source: string, base: Layout, model: CodeModel | null
   page(1, texts.length, 0);
   if (!lines.length) lines.push({ spans: [], src: 1, srcMap: { cells: [], end: 0 } });
   if (opts.paths?.length) linkPaths(lines, links, opts.paths);
-  // The headings (`]]`, the breadcrumb): the sections, then the cells under them by their depth.
+  // The headings (`]]`, the breadcrumb): the sections, then the definitions under them by their depth — the outline's,
+  // as source mode heads them, each at its line's first row of code (a folded cell's at its header; one folded away
+  // has none); without an outline, the cells'.
+  if (model && opts.outline) {
+    const codeRow = new Map<number, number>();
+    lines.forEach((l, i) => {
+      if (l.srcMap && !codeRow.has(l.src)) codeRow.set(l.src, i);
+    });
+    const outlined = opts.outline.flatMap((o) => {
+      const row = shutAt.get(o.line) ?? codeRow.get(o.line);
+      return row === undefined ? [] : [{ section: false, depth: o.depth, text: o.name, row, src: o.line }];
+    });
+    const sections = heads.filter((h) => h.section);
+    heads.length = 0;
+    heads.push(...[...sections, ...outlined].sort((a, b) => a.row - b.row));
+  }
   const under = heads.some((h) => h.section) ? 2 : 1;
   const headings: LayoutHeading[] = [];
   for (const h of heads) {

@@ -7675,6 +7675,43 @@ describe("code as a document: comments, Python beside TypeScript (24.4, 24.9)", 
     expect(layout.lines.find((l) => l.spans.some((s) => s.text.startsWith("from_")))!.src).toBe(11);
   });
 
+  test("the headings are the outline's, as source mode's: a function inside a function, an impl by its name — the breadcrumb the same in both", async () => {
+    const RS = [
+      "pub struct Point {",
+      "    pub lat: f64,",
+      "}",
+      "",
+      "impl Point {",
+      "    pub fn new(lat: f64) -> Point {",
+      "        fn clamp(x: f64) -> f64 {",
+      "            x.max(-90.0).min(90.0)",
+      "        }",
+      "        Point { lat: clamp(lat) }",
+      "    }",
+      "}",
+      "",
+    ].join("\n");
+    const h = await open("point.rs", RS);
+    const v = h.app.view!;
+    expect(v.source).toBeFalsy(); // the code view
+    const crumbAt = (line: number) => {
+      const layout = h.app.currentLayout(v);
+      h.app.moveCursor(v, { row: layout.lines.findIndex((l) => l.src === line && l.srcMap), col: 0 });
+      return h.app.breadcrumb(v).map((c) => c.text);
+    };
+    const inView = crumbAt(8);
+    expect(h.app.currentLayout(v).headings.map((x) => `${x.level} ${x.text}`)).toEqual([
+      "1 Point",
+      "1 impl Point",
+      "2 new",
+      "3 clamp",
+    ]);
+    expect(inView).toEqual(["impl Point", "new", "clamp"]);
+    await h.app.run("view.source");
+    expect(v.source).toBe(true);
+    expect(crumbAt(8)).toEqual(inView);
+  });
+
   test("a comment for tools, and code put aside, stay as written; a note's run lines up; a block of comment lines keeps its lines", async () => {
     const ts = rows(
       await open(
