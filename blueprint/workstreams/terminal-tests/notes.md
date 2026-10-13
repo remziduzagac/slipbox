@@ -273,43 +273,85 @@ expectation read from the file it changes.
 ### The outside, code and export (TT-T7)
 
 - problems: space v p — the bottom panel's All tab lists the vault's broken links by note; enter goes onto one →
-- lint: a stand-in linter's finding on the status line and in Problems; enter goes to its line →
+  problems: space v p — the All tab lists …
+- lint: a stand-in linter's finding on the status line and in Problems; enter goes to its line → lint: a stand-in
+  linter's finding — on the status line, beside its line (its number, or the bar's sign) …. One of the six failing:
+  the check's fault. Line numbers are on by default now, and with them there's no bar: the line's number, in the
+  warning's colour and bold, stands for the sign (design/tui.md § Problems where they are). Checked so, then the bar
+  with line numbers off.
 - problems panel: space n q — this file's problems with their lines, spaced; j shows the next, enter goes there; /
-  filters; ctrl+w + resizes; tab to All, q closes; ⚠ 0 with none →
+  filters; ctrl+w + resizes; tab to All, q closes; ⚠ 0 with none → problems: space n q — this file's problems … (the
+  demo's instrument inventory, three pictures not taken yet, instead of a note written for it)
 - language servers: a TypeScript file's errors from TypeScript's own server, in the bar and the status line →
+  language servers: a TypeScript file's error …; language servers: what's under the cursor …; language servers: the
+  server's changes …; language servers: completion as it's typed … (on the reference set's `work/kestrel`
+  `src/routes/share.ts`, its type error on purpose, instead of a file written for it)
 - language servers: g y goes to the type's definition, g shift+i lists the implementations to pick from — TypeScript's
-  own server (19.13) →
-- watching: an agent's edit to a clean note shows at once →
-- agent: the CLI ticks a task, replaces text and appends while you read →
+  own server (19.13) → language servers: g y goes to the type's definition, g shift+i … (kestrel's
+  `src/routes/expiry.ts`, added to the reference set with its CASES.md entry under lsp)
+- watching: an agent's edit to a clean note shows at once → folded into watching: a clean note changed outside
+  reloads at once …
+- agent: the CLI ticks a task, replaces text and appends while you read → agent: the CLI ticks a task …
 - world/outside: a clean note changed outside reloads, marked ↻; u brings its text back, ctrl+r theirs again →
+  watching: a clean note changed outside reloads at once …
 - world/outside: links turn live and broken as notes come and go; the open note deleted is marked; a new deep folder is
-  watched →
+  watched → watching: links turn live and broken as notes come and go; watching: the open note deleted is marked ….
+  Flaky at first (5 of 8 failed), slipbox's: a note written and removed within one of the watcher's debounces made no
+  batch, while the background index's last relayout had drawn the link resolved from the disk — red never again.
+  Fixed (`core/watch.ts`), its regression test in tests/vault.test.ts.
 - world/outside: an agent's prepend keeps your place; the lens keeps its size; the explorer keeps its selection →
+  watching: an agent's prepend keeps the cursor on its line; watching: an agent's append keeps the lens on its lines;
+  watching: a note an agent adds keeps the explorer on the row it was on
 - world/outside: a note moved by hand — mv, then cp and rm the other way round — the relink offered at once; declined,
-  its links say where, space l r relinks →
-- world/outside: an embedded note changed on disk — the note embedding it draws the new text →
-- world/outside: not watching — an outside write waits for space n r, which reloads it →
+  its links say where, space l r relinks → watching: a note moved by hand … (the meeting note's link to Kenji's, instead
+  of a note written for it)
+- world/outside: an embedded note changed on disk — the note embedding it draws the new text → watching: an embedded
+  note changed on disk …
+- world/outside: not watching — an outside write waits for space n r, which reloads it → reload: not watching — an
+  outside write waits for space n r, or :reload …
 - world/outside: the CLI beside it — history lists its tabs, capture shows in the open scratch, rm marks the open note
-  gone →
+  gone → agent: the CLI's history lists the tabs open here …; agent: the CLI's capture shows in the open scratch …;
+  agent: the CLI's rm of the note on screen …
 - world/outside: an agent's replay against the open note — append, prepend, rename, delete, recreate, an atomic rewrite,
-  a burst →
+  a burst → agent: a replay against the open note … (the note the replay makes opened once it's there, instead of one
+  written first)
 - world/outside: the conflict prompt — l loads theirs (u brings yours), k keeps yours (:w asks, d diffs), m merges;
-  letters typed never pick →
+  letters typed never pick → conflict: l loads theirs …; conflict: k keeps yours …; conflict: m merges …; conflict:
+  while typing, said …
 - world/outside: your config rewritten while it runs — a theme, an alias, a key at once; a typo keeps the last good;
-  space v c reloads what the poll can't see →
-- world/outside: a vault's config can't name your editor — warned, never run; yours runs →
-- world/outside: the set's kitchen-sink config — every key once: no warnings, its leader, its layout →
-- world/outside: autosave writes an idle note — never mid-insert, never while git holds its index lock →
+  space v c reloads what the poll can't see → config: yours rewritten while it runs …
+- world/outside: a vault's config can't name your editor — warned, never run; yours runs → config: a folder's config
+  can't name your editor … (kestrel's own `.slipbox/config.toml`, which names VS Code, instead of a line appended to
+  the demo's)
+- world/outside: the set's kitchen-sink config — every key once: no warnings, its leader, its layout → config: the
+  set's kitchen-sink config …
+- world/outside: autosave writes an idle note — never mid-insert, never while git holds its index lock → autosave: an
+  idle note written … (the reference set's product repository, instead of a repository made of the demo vault)
 - world/outside: an editor that changes the note — your unsaved edit saved first, its change shown after, nothing
-  unsaved →
-- world/outside: lint as it flows — a finding after a save, hidden while unsaved, gone once fixed and saved →
-- world/outside: TypeScript's server killed — said, started again, a new problem found by it →
-- export: space n o, Word, enter — the Save As window beside the note, its name filled in; written →
-- export: PDF, a web page, an e-book, Markdown through the window; Markdown's picture copied beside it →
+  unsaved → hand-off: an editor that changes the note …
+- world/outside: lint as it flows — a finding after a save, hidden while unsaved, gone once fixed and saved → lint: as
+  it flows …
+- world/outside: TypeScript's server killed — said, started again, a new problem found by it → language servers:
+  TypeScript's server killed …
+- export: space n o, Word, enter — the Save As window beside the note, its name filled in; written → export: space n o,
+  Word, enter …
+- export: PDF, a web page, an e-book, Markdown through the window; Markdown's picture copied beside it → export: PDF, a
+  web page, an e-book, Markdown …
 - export: the window's keys — a place, into a folder and up, typing jumps, ~ home, ctrl+n a folder exported into →
-- export: a file there replaced only on y — n brings the window back, the file as it was →
-- export: a note named as the file — refused, said, the window kept; the note untouched →
-- export: space n shift+o — two notes picked in order, this one first; Markdown, both chapters in that order →
-- export: :export pdf at the command line — the window at once, no format list →
+  export: the window's keys … (the reference set's home and its folders, instead of folders made for it)
+- export: a file there replaced only on y — n brings the window back, the file as it was → export: a file there
+  replaced only on y … (the file there an export of its own, instead of one written for it)
+- export: a note named as the file — refused, said, the window kept; the note untouched → export: a note named as the
+  file …
+- export: space n shift+o — two notes picked in order, this one first; Markdown, both chapters in that order → export:
+  space n shift+o …
+- export: :export pdf at the command line — the window at once, no format list → export: :export pdf at the command
+  line …
 - export: the Save As window — a name ending in / that isn't there makes that folder and goes into it, the note's name
-  given back; enter exports there (DF-D5) →
+  given back; enter exports there (DF-D5) → export: the Save As window — a name ending in / …
+
+New, for what no scenario checked: shell: :!cmd runs in the root's folder …; shell: lines filtered through a command
+…; shell: a command still running is stopped by its command …; context: space s c copies the note, its links and its
+backlinks …. Running them found that `:!cmd` and `:N,M!cmd` typed at the `:` line bypassed `App.run`, so the trace of
+commands run never counted them (`:s` and `:42` go through it): fixed (`tui/actions.ts`), its regression test in
+tests/tui.test.ts.

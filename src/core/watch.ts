@@ -373,10 +373,10 @@ export class VaultWatcher {
       }
       const before = known.get(rel);
       if (!st) {
-        if (before !== undefined) {
-          known.delete(rel);
-          changes.push({ rel, kind: "deleted", isNote: true });
-        }
+        // Gone — or, never known, come and gone between two looks (written and removed at once): said all the
+        // same, since what was drawn meanwhile may have read it from the disk (a link to it, resolved by its file).
+        known.delete(rel);
+        changes.push({ rel, kind: "deleted", isNote: true });
         continue;
       }
       if (before === undefined) changes.push({ rel, kind: "created", isNote: true });

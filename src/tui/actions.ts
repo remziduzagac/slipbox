@@ -936,11 +936,13 @@ function openPalette(a: App, typed = ""): void {
         void a.run(`find.substitute ${input.trim()}`).then(() => a.host.requestRender());
         return true;
       }
+      // Run as the commands they are, as :s and :42 are: the trace of commands run counts them.
       const bang = parseBang(input);
       if (bang) {
         a.overlay = null;
-        if (bang.range) shellFilter(a, input);
-        else shellRun(a, bang.command);
+        void a
+          .run(bang.range ? `shell.filter ${input.trim()}` : `shell.run ${bang.command}`)
+          .then(() => a.host.requestRender());
         return true;
       }
       if (/^\s*\d+\s*$/.test(input)) {
