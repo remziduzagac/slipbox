@@ -256,7 +256,7 @@ export const EDITING: Check[] = [
       await copied(["y", "y"], (t) => t.includes("Decision"), "yy to copy the row");
       await s.keys("g", "g");
       await leader(s, "l", "n"); // onto a link (the handbook has one)
-      await copied(["y", "l"], (t) => t.includes("example.org"), "yl to copy the link's target");
+      await copied(["y", "l"], (t) => /^https:\/\/example\.org\//.test(t), "yl to copy the link's target");
     },
   },
   {

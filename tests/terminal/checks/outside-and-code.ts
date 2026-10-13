@@ -1005,7 +1005,9 @@ export const OUTSIDE_AND_CODE: Check[] = [
       const bad = s.screen().filter((r) => /\b(warn|error) \d\d:\d\d:\d\d\b/.test(r));
       s.expect(!bad.length, `no warning among the messages:\n${bad.join("\n")}`);
       await s.keys("escape");
-      s.expect(answered < 2000, `keys answered within 2 s while it indexes (took ${answered} ms)`);
+      // Within three seconds: CI's slowest runner (an Intel Mac) answers in about two; a key waiting for the 6 MB note's
+      // parse on the main thread would wait several.
+      s.expect(answered < 3000, `keys answered within 3 s while it indexes (took ${answered} ms)`);
     },
   },
   {

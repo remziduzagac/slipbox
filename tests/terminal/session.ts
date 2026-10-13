@@ -3,7 +3,17 @@
 // to drive and check it. Every check waits for the screen to agree (up to a timeout) rather than sleeping a fixed time.
 
 import { spawnSync } from "node:child_process";
-import { cpSync, existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import {
+  cpSync,
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readdirSync,
+  readFileSync,
+  realpathSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { isAbsolute, join } from "node:path";
 import { buildHome } from "../../scripts/build-home.ts";
@@ -68,7 +78,9 @@ export class Session {
   readonly term: HeadlessTerminal;
 
   constructor(readonly opts: SessionOptions = {}) {
-    this.dir = mkdtempSync(join(tmpdir(), "slipbox-terminal-"));
+    // Its real path: macOS's temporary folder is a symlink (/var → /private/var), and a home reached through one isn't
+    // a person's — slipbox resolves paths, and `~` would never match.
+    this.dir = realpathSync(mkdtempSync(join(tmpdir(), "slipbox-terminal-")));
     this.vault = join(this.dir, "vault");
     this.home = join(this.dir, "home");
     // The reference set puts halden beside it as vault/ itself.
