@@ -16586,6 +16586,30 @@ describe("source control (26.2)", () => {
     }
   });
 
+  test("a file staged while git's answer to an earlier question is still out: git asked again, the file shown staged (regression)", async () => {
+    // Found carrying the terminal tests over (TT-T6): git asked a moment before a stage (the watcher had news) answered
+    // after it, and that older answer was the stage's — the file left under Changes, nothing asking again.
+    const root = repo({ ".gitignore": ".slipbox/\n", "a.md": "a\n", "b.md": "b\n" });
+    if (!root) return;
+    writeFileSync(join(root, "b.md"), "B\n");
+    const h = await opened(root);
+    expect(labels(h)).toEqual(["Changes (1)", "M b.md"]);
+    // The question out, asked before the stage: its answer, from before it, comes once the stage is done.
+    const app = h.app as unknown as { gitAsking: Promise<void> | null };
+    let answer = () => {};
+    app.gitAsking = new Promise<void>((done) => {
+      answer = done;
+    }).finally(() => {
+      app.gitAsking = null;
+    });
+    select(h, "M b.md");
+    await h.keys("s");
+    expect(h.app.messages.at(-1)?.text).toBe("staged b.md");
+    expect(git(root, "diff", "--cached", "--name-only")).toBe("b.md\n");
+    answer();
+    expect(await until(() => (h.frame(), JSON.stringify(labels(h)) === '["Staged (1)","M b.md"]'), 5000)).toBe(true);
+  });
+
   test("its sections; a file opened up into its changes; one staged, one discarded; a file unstaged; all staged, unstaged", async () => {
     const root = repo({ ".gitignore": ".slipbox/\n", "a.md": "one\ntwo\nthree\n", "b.md": "b\n" });
     if (!root) return;
