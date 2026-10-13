@@ -1,5 +1,5 @@
 ---
-status: todo
+status: done
 assignee: claude-cli
 blocked_by: []
 created: "2026-10-13"

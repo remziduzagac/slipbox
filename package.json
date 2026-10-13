@@ -14,6 +14,7 @@
   "scripts": {
     "start": "bun src/main.ts",
     "test": "bun test --timeout 30000",
+    "test:terminal": "bun tests/terminal/run.ts",
     "typecheck": "tsc --noEmit -p .",
     "check:boundary": "bun scripts/check-boundary.ts",
     "check:deps": "bun scripts/check-deps.ts",
@@ -80,6 +81,7 @@
     "@types/bun": "1.4.2",
     "@types/mdast": "4.0.4",
     "@types/pdfkit": "0.17.6",
+    "@xterm/headless": "6.0.0",
     "markdownlint-cli2": "0.23.3",
     "typescript": "7.0.2",
     "vscode-languageserver": "10.1.2"
