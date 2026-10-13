@@ -1,5 +1,5 @@
-// A herdr pane, driven: keys and text in, the screen out. Only the terminal tests (tests/e2e) use
-// it; slipbox itself never needs herdr.
+// A herdr pane, driven: keys and text in, the screen out. Only what needs a real terminal uses it (tests/terminal/herdr:
+// the docs' screenshots, the real-terminal checks); slipbox itself never needs herdr.
 
 import { spawnSync } from "node:child_process";
 
@@ -63,17 +63,17 @@ export class Pane {
   rows = 0;
 
   /**
-   * The pane given (`--pane`, `SLIPBOX_E2E_PANE`), or one of its own: split off this one, or in a
+   * The pane given (`--pane`, `SLIPBOX_HERDR_PANE`), or one of its own: split off this one, or in a
    * tab of its own (`tab`), which is as big as the whole window.
    */
   static open(given: string | undefined, cwd: string, tab = false): Pane {
-    if (process.env.HERDR_ENV !== "1") throw new HerdrError("not inside herdr: the terminal tests drive a herdr pane");
+    if (process.env.HERDR_ENV !== "1") throw new HerdrError("not inside herdr: these checks drive a herdr pane");
     if (given) {
       herdr("pane", "get", given); // it exists
       return new Pane(given, false);
     }
     if (tab) {
-      const out = JSON.parse(herdr("tab", "create", "--no-focus", "--label", "slipbox e2e", "--cwd", cwd));
+      const out = JSON.parse(herdr("tab", "create", "--no-focus", "--label", "slipbox terminal", "--cwd", cwd));
       const id = out.result?.root_pane?.pane_id as string | undefined;
       const tabId = out.result?.tab?.tab_id as string | undefined;
       if (!id || !tabId) throw new HerdrError("herdr tab create: no pane id in its reply");
@@ -84,7 +84,7 @@ export class Pane {
     const out = JSON.parse(herdr("pane", "split", "--current", "--direction", "right", "--no-focus", "--cwd", cwd));
     const id = out.result?.pane?.pane_id as string | undefined;
     if (!id) throw new HerdrError("herdr pane split: no pane id in its reply");
-    herdr("pane", "rename", id, "slipbox e2e");
+    herdr("pane", "rename", id, "slipbox terminal");
     return new Pane(id, true);
   }
 
@@ -115,7 +115,7 @@ export class Pane {
   }
 
   private async ask(): Promise<string> {
-    const tag = `__slipbox_e2e_size_${Math.random().toString(36).slice(2, 8)}__`;
+    const tag = `__slipbox_herdr_size_${Math.random().toString(36).slice(2, 8)}__`;
     for (let i = 0; i < 60; i++) {
       if (i % 20 === 0) this.run(`echo ${tag} $COLUMNS $LINES`);
       await sleep(100);

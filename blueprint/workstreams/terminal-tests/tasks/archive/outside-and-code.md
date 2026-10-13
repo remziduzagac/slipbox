@@ -1,19 +1,19 @@
 ---
-status: todo
+status: done
 assignee: claude-cli
 blocked_by: []
 created: "2026-10-13"
 ---
 
-# TT-T6: Checks: links, roots, files and git
+# TT-T7: Checks: the outside, code and export
 
 Today's scenarios of this area carried over to the headless harness, split one feature each, their content from the
 sample folders (TT-D3, TT-D5).
 
 ## Description
 
-- The area: links, roots and nested roots, vaults, converting links, rename, the trash, files, git (marks, diffs, source
-  control, branches, merge review).
+- The area: what comes from outside (agents' edits, the watcher, the CLI beside the TUI), language servers, linters, the
+  problems panel, and export.
 - Each of today's scenarios here split into checks of one feature, small related ones grouped; each declares its
   cases and commands; what a scenario wrote for itself (`beside`, `files`) moved into `examples/home` (or the
   demo vault) with its `CASES.md` entries, or made by `scripts/build-home.ts` where git can't hold it.

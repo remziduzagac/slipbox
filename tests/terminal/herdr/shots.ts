@@ -1,7 +1,7 @@
 // The docs' screenshots (docs/images/): slipbox in a herdr pane, driven as the terminal tests drive it, each screen
 // read with its colours and drawn into a PNG by scripts/screenshot.ts. Retake them all when the UI changes:
 //
-//   bun tests/e2e/shots.ts --pane <id> [name filter…]
+//   bun tests/terminal/herdr/shots.ts --pane <id> [name filter…]
 //
 // The pane at a shell prompt, sized as the docs show slipbox: 120×34 (herdr's `terminal session control <pane>
 // --takeover --cols 120 --rows 34`, on a tab nobody views). Plain Unicode glyphs, since the pictures are drawn with
@@ -9,7 +9,7 @@
 
 import { mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
-import { parseAnsi, toPng, toSvg } from "../../scripts/screenshot.ts";
+import { parseAnsi, toPng, toSvg } from "../../../scripts/screenshot.ts";
 import { Pane } from "./herdr.ts";
 import { leader, open } from "./helpers.ts";
 import { REPO, Session, type SessionOptions } from "./session.ts";
@@ -24,16 +24,11 @@ interface Shot {
   take: (s: Session) => Promise<void>;
 }
 
-/** The getting-started guide's own folder: `~/notes`, two notes, made as the guide makes them. */
+/** The getting-started guide's own folder: `~/notes`, two notes, as the guide makes them (examples/guide). */
 const GUIDE: SessionOptions = {
   env: { HOME: "{dir}/home" },
   startAt: "home/notes",
-  beside: {
-    "home/notes/inbox.md":
-      "# Inbox\n\nThings to sort out this week.\n\n- [ ] Buy filter papers\n- [ ] Try the new grinder setting\n\nIdeas so far: [coffee](ideas/coffee.md).\n",
-    "home/notes/ideas/coffee.md":
-      "# Coffee\n\n## Brewing\n\nA ratio of 1 to 16 suits a pour-over.\n\n## Beans\n\nWashed beans taste cleaner than natural ones.\n",
-  },
+  sample: "guide",
 };
 
 /** Kestrel's own config has mistakes on purpose (the reference set's cases): their warnings, gone. */
@@ -191,7 +186,7 @@ const args = process.argv.slice(2);
 const at = args.indexOf("--pane");
 const id = at >= 0 ? args.splice(at, 2)[1] : process.env.SLIPBOX_E2E_PANE;
 if (!id) {
-  console.error("usage: bun tests/e2e/shots.ts --pane <id> [name filter…]");
+  console.error("usage: bun tests/terminal/herdr/shots.ts --pane <id> [name filter…]");
   process.exit(2);
 }
 const pane = Pane.open(id, REPO, false);

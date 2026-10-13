@@ -1,7 +1,7 @@
 // Builds the reference sample set (examples/home) into a folder: bun scripts/build-home.ts <dir>
 //
 // examples/home is committed as plain folders: a `.git` folder can't be committed inside this
-// repository. The build copies it to <dir>/home — the `$HOME` tests and e2e use — and halden, the
+// repository. The build copies it to <dir>/home — the `$HOME` the tests and the terminal tests use — and halden, the
 // demo vault, to <dir>/vault beside it, then gives each mock repository its history: the commits,
 // branches, merges and worktrees `.build/<repo>.toml` describes, replayed with git in order (the
 // format is in examples/home/README.md). Each repository's `main` ends at the folder as committed,

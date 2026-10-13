@@ -1,20 +1,19 @@
 ---
-status: todo
+status: done
 assignee: claude-cli
 blocked_by: []
 created: "2026-10-13"
 ---
 
-# TT-T5: Checks: navigating and the terminal
+# TT-T3: Checks: reading
 
 Today's scenarios of this area carried over to the headless harness, split one feature each, their content from the
 sample folders (TT-D3, TT-D5).
 
 ## Description
 
-- The area: the screen and navigation: panes, tabs, windows, the palette, which-key, find, replace, search, tags, the
-  explorer, settings, and the terminal's own behaviour (keys as sent, pastes, the session, glyphs from the environment,
-  resizes, signals).
+- The area: reading: rendering, content, data files, footnotes, hostile names, the code view, themes, glyphs, pictures
+  (by what's sent), start, info, privacy, trust.
 - Each of today's scenarios here split into checks of one feature, small related ones grouped; each declares its
   cases and commands; what a scenario wrote for itself (`beside`, `files`) moved into `examples/home` (or the
   demo vault) with its `CASES.md` entries, or made by `scripts/build-home.ts` where git can't hold it.

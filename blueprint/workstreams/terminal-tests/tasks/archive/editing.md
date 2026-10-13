@@ -1,19 +1,19 @@
 ---
-status: todo
+status: done
 assignee: claude-cli
 blocked_by: []
 created: "2026-10-13"
 ---
 
-# TT-T7: Checks: the outside, code and export
+# TT-T4: Checks: editing
 
 Today's scenarios of this area carried over to the headless harness, split one feature each, their content from the
 sample folders (TT-D3, TT-D5).
 
 ## Description
 
-- The area: what comes from outside (agents' edits, the watcher, the CLI beside the TUI), language servers, linters, the
-  problems panel, and export.
+- The area: editing: source mode, normal mode, vim's grammar, motions, repeat, visual, typing, the lens, tasks, copy,
+  create, save and quit, pinned tabs, conflicts, reload, autosave, the scratch, the hand-off to an editor.
 - Each of today's scenarios here split into checks of one feature, small related ones grouped; each declares its
   cases and commands; what a scenario wrote for itself (`beside`, `files`) moved into `examples/home` (or the
   demo vault) with its `CASES.md` entries, or made by `scripts/build-home.ts` where git can't hold it.

@@ -1,16 +1,16 @@
-// One scenario's slipbox: a fresh copy of the demo vault (or the reference set built, halden
-// beside it), its own config, state and cache, the app started in the pane, and ways to drive and
-// check it. Every check waits for the screen to agree (up to a timeout) rather than sleeping a
-// fixed time.
+// One real-terminal check's slipbox, in a herdr pane: a fresh copy of the demo vault (or the reference set built, halden
+// beside it; or another sample folder as its home), its own config, state and cache, the app started in the pane, and
+// ways to drive and check it. Every check waits for the screen to agree (up to a timeout) rather than sleeping a fixed
+// time. The headless checks (tests/terminal/session.ts) are the rest; this is what needs a real terminal.
 
 import { cpSync, existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { spawnSync } from "node:child_process";
 import { tmpdir } from "node:os";
 import { isAbsolute, join } from "node:path";
-import { buildHome } from "../../scripts/build-home.ts";
+import { buildHome } from "../../../scripts/build-home.ts";
 import { herdr, type Pane, sleep } from "./herdr.ts";
 
-export const REPO = join(import.meta.dir, "..", "..");
+export const REPO = join(import.meta.dir, "..", "..", "..");
 export const DEMO = join(REPO, "examples", "vault");
 
 export interface SessionOptions {
@@ -18,10 +18,8 @@ export interface SessionOptions {
   open?: string;
   /** Extra user config, as TOML; `{vault}` is the scenario's copy of the vault. */
   config?: string;
-  /** More files in the vault before it starts: path → content. */
-  files?: Record<string, string>;
-  /** Files beside the vault, in the scenario's own folder (another vault, a loose folder). */
-  beside?: Record<string, string>;
+  /** A sample folder of examples/ (`guide`) copied as the check's home, `home/`, beside the demo vault. */
+  sample?: string;
   /** Run before slipbox starts, with the CLI at hand (`s.cli`): `init` another vault, say. */
   setup?: (s: Session) => void;
   /**
@@ -127,17 +125,13 @@ export class Session {
     readonly pane: Pane,
     readonly opts: SessionOptions = {},
   ) {
-    this.dir = mkdtempSync(join(tmpdir(), "slipbox-e2e-"));
+    this.dir = mkdtempSync(join(tmpdir(), "slipbox-herdr-"));
     this.vault = join(this.dir, "vault");
     this.home = join(this.dir, "home");
     // The reference set puts halden beside it as vault/ itself.
     if (opts.home) buildHome(this.dir);
     else cpSync(DEMO, this.vault, { recursive: true });
-    for (const [rel, text] of Object.entries(opts.files ?? {})) this.write(rel, text);
-    for (const [rel, text] of Object.entries(opts.beside ?? {})) {
-      mkdirSync(join(this.dir, rel, ".."), { recursive: true });
-      writeFileSync(join(this.dir, rel), text);
-    }
+    if (opts.sample) cpSync(join(REPO, "examples", opts.sample), this.home, { recursive: true });
     for (const d of ["config/slipbox", "state", "cache"]) mkdirSync(join(this.dir, d), { recursive: true });
     // {vault} in a scenario's config is this scenario's own copy of the vault.
     // The machine's own linter stays out of the scenarios unless one asks for it (3.21).
@@ -151,7 +145,7 @@ export class Session {
     writeFileSync(join(this.dir, "config", "slipbox", "config.toml"), `${config}${off}`);
     this.trace = join(this.dir, "trace");
     writeFileSync(this.trace, "");
-    this.marker = `__slipbox_e2e_exit_${Math.random().toString(36).slice(2, 8)}__`;
+    this.marker = `__slipbox_herdr_exit_${Math.random().toString(36).slice(2, 8)}__`;
   }
 
   /** What slipbox and the CLI run with: this scenario's own folders, never yours. */
@@ -189,7 +183,7 @@ export class Session {
           ];
     const cwd = this.opts.cwd !== undefined ? join(this.dir, this.opts.cwd) : REPO;
     // A marker of this start's own: started again in one scenario, the last exit's is still on screen.
-    this.marker = `__slipbox_e2e_exit_${Math.random().toString(36).slice(2, 8)}__`;
+    this.marker = `__slipbox_herdr_exit_${Math.random().toString(36).slice(2, 8)}__`;
     // Bun by its own path: with $HOME the reference set's, nothing may depend on finding it.
     const argv = [process.execPath, join(REPO, "src", "main.ts"), ...(this.opts.args ?? []), ...file]
       .map(shq)

@@ -11,7 +11,7 @@ feature (TT-D3), and the coverage test (TT-D4); the parallel runner and its repo
 remainder (the screenshots, the real-terminal set). Previously: "a herdr pane … a developer's tool, not part of
 `bun run check` or CI".
 
-The text, as TT-T1 and TT-T2 built it (the rest follows with TT-T8 and TT-T9):
+The text, as TT-T1 to TT-T10 built it:
 
 **The headless terminal** (`tests/terminal/terminal.ts`). A check's slipbox runs in a pseudo-terminal of Bun's own
 (`Bun.Terminal`), its output fed to a headless xterm (`@xterm/headless`), which keeps the screen: each row's text,
@@ -77,3 +77,21 @@ check writes its own (TT-D5).
 ## MODIFIED design/testing.md § Strategy
 
 The terminal tests among the layers, in CI; test, then fix (TT-D6).
+
+**In CI** (`.github/workflows/ci.yml`, job `terminal`): on Ubuntu (x64 and arm64) and macOS (Apple silicon and
+Intel), each runner running a check per core, inside the required `ci` check; a failing check's screen is in the job's
+log. A release's build runs them too, on each platform's runner, before it builds (`build.yml`).
+
+**What needs a real terminal** (`tests/terminal/herdr/`) runs in a herdr pane, as the terminal tests once all did:
+the docs' screenshots (`shots.ts`, in a 120×34 pane; the getting-started guide's `~/notes` is `examples/guide/`), and
+two checks of the emulator's word against a real terminal's (`bun run test:herdr --pane <id>`): the keys a real one
+sends (escape then a key, ctrl, alt, a bracketed paste), and the widths a real one draws (names in their own scripts,
+every row the pane's width, the explorer's border in one column down every page). Pictures drawn by the terminal
+(Kitty's graphics) aren't checked anywhere: the headless checks see what slipbox sends.
+
+## MODIFIED design/testing.md § Strategy (written)
+
+The terminal tests are a layer of their own beside the headless unit tests: `bun run test` drives the model, `bun run
+test:terminal` drives slipbox through a terminal, both in CI. A run of either goes to its end; the failures are fixed
+together, then everything runs again (TT-D6).
+

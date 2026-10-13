@@ -69,6 +69,10 @@ jobs:
       - name: tests
         if: ${{ inputs.suite && !endsWith(matrix.target, '-musl') }}
         run: bun run test
+      # And the terminal tests (TT-D6): slipbox driven in a headless terminal on this runner, as CI's are.
+      - name: terminal tests
+        if: ${{ inputs.suite && !endsWith(matrix.target, '-musl') }}
+        run: bun run test:terminal
       # A preview's version written into this checkout's package.json and src/version.ts, never committed, so the
       # binary, its pack, notices and SBOM say it (GR-D13); a release's is package.json's already: nothing changes.
       - name: version
