@@ -102,44 +102,90 @@ folded into; none is dropped without saying why.
 
 ### Navigating and the terminal (TT-T5)
 
-- windows: split, turn, focus, move, swap, resize, resize mode, close, only →
-- tabs: new, list, next and previous, go to, move, close →
-- tags: space f t lists them with counts, a tag its notes; a #tag in the text followed →
-- panes: the explorer, reveal, the outline, the heading picker, the path dropdown →
-- find: / n N * #, :noh; the find row →
-- replace: ctrl+h, tab, enter one, alt+a all, alt+h, :%s with c →
-- search: space f s ranks the vault's notes as you type, the words marked; enter opens at the match →
-- palette: : runs commands and aliases; :e opens a note →
-- settings: space u u, every toggle, themes and glyph sets →
+- windows: split, turn, focus, move, swap, resize, resize mode, close, only → "windows: split side by side and stacked,
+  focus, move to each edge, swap, close, only"; "windows: resize — ctrl+w + - > < a step each, = evens them; resize
+  mode's keys until esc"
+- tabs: new, list, next and previous, go to, move, close → "tabs: new, the list, next and previous, go to, move, close";
+  "tabs: close the others and close all, a pinned tab kept; a new tab from a split takes its window"; "history: back and
+  forward; the list — this window's places, and recent here from another tab"
+- tags: space f t lists them with counts, a tag its notes; a #tag in the text followed → "tags: space f t lists them
+  with counts, a tag its notes; a #tag in the text followed"
+- panes: the explorer, reveal, the outline, the heading picker, the path dropdown → "explorer: space e opens, focuses
+  and hides it; space shift+e reveals the note"; "outline: space o opens and focuses it; the heading picker jumps; shown
+  and hidden from the palette"; "breadcrumb: space f b opens the heading path as a list; typing filters it, enter jumps
+  to one"
+- find: / n N * #, :noh; the find row → "find: / n N \* #, :noh and esc clear the highlights; the find row"
+- replace: ctrl+h, tab, enter one, alt+a all, alt+h, :%s with c → "replace: ctrl+h, tab to the replacement, enter one,
+  alt+a all, alt+h hides the row"; "replace: :%s with c asks at each match — y replaces, n skips, q stops"
+- search: space f s ranks the vault's notes as you type, the words marked; enter opens at the match → "search: space f s
+  ranks the vault's notes as you type; enter opens at the match; :search takes words"
+- palette: : runs commands and aliases; :e opens a note → "palette: : and space f p list the commands; :e opens a note"
+- settings: space u u, every toggle, themes and glyph sets → "settings: space u u lists every setting with its value;
+  enter changes the one picked"; "settings: readable width, wrapping, line numbers, link URLs and zen — each changes the
+  note, and back"; "settings: the top bar and the breadcrumb hidden and shown again"; "settings: the cursor row's band
+  and the mouse; the problems bar and marks said and listed"; "settings: themes and glyph sets — picked with a live
+  preview, set from the palette"
 - world/terminal: start forms — a folder in a repository opens at its top; `open` spelled out; --root over the folder it
-  starts in; --theme draws its colours →
+  starts in; --theme draws its colours → "start: a folder in a repository opens the repository's top; the explorer at
+  the folder"; "start: `open` spelled out; --root over the folder it starts in"; "colours: --theme draws its colours
+  from the start; NO_COLOR draws none" (the reference set's kestrel for the scenario's own repository)
 - world/terminal: a start that can't open — a path that isn't there, a --root that isn't a root: a line and exit 3,
-  never a stack trace →
+  never a stack trace → "start: a path that isn't there, a --root that isn't a root, a path outside it — a line and exit
+  3"
 - world/terminal: the session — tabs, a split, the explorer hidden and each note's place back after a quit; with
-  restore_session off, the places only →
-- world/terminal: signals — SIGTERM and SIGHUP save the place and quit cleanly; the shell answers after →
+  restore_session off, the places only → "session: tabs, a split, the explorer hidden and each note's place back after a
+  quit"; "session: with restore_session off, the default note alone — each note's place still kept"
+- world/terminal: signals — SIGTERM and SIGHUP save the place and quit cleanly; the shell answers after → "signals:
+  SIGTERM and SIGHUP save the place and quit cleanly, the terminal as it was" (no shell around slipbox to answer: the
+  terminal's modes read instead — the main screen, no mouse reports, the keyboard's flags popped)
 - world/terminal: a resize — zoomed to the whole tab and back, the frame follows the pane's width; the cursor stays on
-  its line →
+  its line → "resize: the frame follows the terminal's width, wider and back; the cursor stays on its line" (a real
+  resize, and narrower too)
 - world/terminal: the terminal's title follows the file on screen, else the vault; a name's control characters never in
-  it →
+  it → "title: the file on screen, else the folder; a name's escape sequence never in it" (the reference set's
+  `Downloads/esc\u001b[31mred.md` (`.build/extras.toml`) for the scenario's own BEL)
 - world/terminal: pastes as terminals send them — a list's filter takes the first line, sanitized; typing, it goes in as
-  it is; in normal mode it's put →
+  it is; in normal mode it's put → "paste: a list's filter takes the first line, sanitized; nothing opened by its line
+  break"; "paste: typing, it goes in as it is; in normal mode it's put after the cursor, one undo" (kenji-mori's list
+  item for the scenario's own note)
 - world/terminal: keys as terminals send them — ctrl+j in a list, shift and shift+ctrl arrows select, home and end,
-  ctrl+enter into a new tab, ctrl+shift+f →
+  ctrl+enter into a new tab, ctrl+shift+f → "keys: ctrl+j moves a list's selection; ctrl+enter follows a link into a new
+  tab"; "keys: shift and shift+ctrl arrows select from the cursor, shift+end to the row's end; home and end move";
+  "keys: ctrl+shift+f finds in every note, an unsaved one as it is" (telescope-comparison's one-line paragraph for the
+  scenario's own note)
 - world/terminal: insert mode's keys — backspace joins lines, tab and shift+tab indent, home, end and the arrows move →
-- world/terminal: find's toggles while typing — alt+r a regex, alt+w whole words →
+  "keys: insert mode's backspace joins lines, tab and shift+tab indent, home, end and the arrows move" (three lines of
+  instrument-inventory's history for the scenario's own note)
+- world/terminal: find's toggles while typing — alt+r a regex, alt+w whole words → "find: alt+r makes it a regex, alt+w
+  whole words, while typing"
 - world/terminal: colours — the theme's roles as the terminal draws them; :theme switches; [colors] overrides, per theme
-  too; NO_COLOR draws none →
+  too; NO_COLOR draws none → "colours: the theme's roles as drawn; :theme switches; [colors] overrides, per theme too";
+  "colours: --theme draws its colours from the start; NO_COLOR draws none"
 - world/terminal: glyphs from the environment — SLIPBOX_GLYPHS=ascii, and a locale that isn't UTF-8, draw the frame in
-  ASCII →
+  ASCII → "glyphs: SLIPBOX_GLYPHS=ascii, and a locale that isn't UTF-8, draw the frame in ASCII"
 - world/terminal: which-key — the leader's groups at once, a prefix's entries after its delay; backspace goes up, esc
-  closes →
+  closes → "which-key: the leader's groups at once, a prefix's entries after its delay; backspace goes up, esc closes"
 - world/terminal: quitting — with a change unsaved, ctrl+q and :q are refused, naming the note; :x writes and quits; :q!
-  quits without →
+  quits without → "quit: a change unsaved refuses ctrl+q and :q, naming the note; :x writes and quits; :q! quits
+  without"
 - world/terminal: quitting with the properties editor open — ctrl+q writes its edits first; :x with text that doesn't
-  parse asks, still running →
+  parse asks, still running → "quit: the properties editor open — ctrl+q writes its edits first; :x with text that
+  doesn't parse asks" (public-nights' properties for the scenario's own note)
 - which-key: z, [ and ] list every key under them — the fold and spelling keys under z; ] s, ] t, ] c (A16); each says
-  what it holds in its title (F12) →
+  what it holds in its title (F12) → "which-key: z, [ and ] list every key under them, each titled with what it holds"
+
+New, for what no scenario checked (TT-T5): "windows: :q closes a window, then the tab, and on the very last one quits";
+"settings: code cells in boxes, or on bands"; "settings: spelling on marks the misspelt — ] s goes to one; off,
+nothing to go to"; "keys: a legacy terminal's — escape before the next key, alt as escape and a key, ctrl+j a line
+feed, ctrl+shift+f"; "lists: moves wrap around the ends, pagedown and ctrl+d by ten; ctrl+w and backspace edit the
+filter"; "switcher: words in any order; # lists the note's headings to jump to"; "questions: enter answers nothing, n
+says no, esc cancels, y says yes"; "mouse: a click follows a link, ‹ goes back, a tab clicked, the wheel scrolls; ≡
+hides the explorer"; "help: ? lists every key by group; typing filters, the groups kept; enter runs the command";
+"config: mistakes are warnings in the messages, the rest applies; space v c reloads; a typo keeps the last good";
+"index: a note saved here is indexed again — its new link in the target's backlinks, its new word found"; "find:
+replace in every note — ctrl+shift+h previews each change, enter makes them; space v shift+u undoes". Nothing of the
+area is left out: what the old scenarios wrote for themselves is the sample folders' own content, each check's
+expectation read from the file it changes.
 
 ### Links, roots, files and git (TT-T6)
 
