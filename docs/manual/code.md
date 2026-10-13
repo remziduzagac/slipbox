@@ -152,10 +152,11 @@ A cell folds whole: there's no folding inside one, of an `if` or a loop.
 The cursor moves over the text of the cells, never their borders. The outline (`space o`) and the breadcrumb list the
 definitions, as in source mode, and `] ]` and `[ [` move from one to the next.
 
-Editing works as in a rendered note ([Editing](editing.md) has the lens and source mode). By default the editing keys
-(`i`, `a`, `o`…) switch the window to source mode and type there; with `editor.edit_in = "live"` they open the lens on
-the cursor's cell instead: its lines as written, highlighted, the code view around it. `space n l` opens the lens too,
-and `space k e` opens it on a whole cell, however tall. `esc esc` closes the lens, and the cell is drawn again.
+Editing works as in a rendered note ([Editing](editing.md) has the lens and source mode). The editing keys (`i`, `a`,
+`o`…) open the lens on the cursor's cell: its lines as written, highlighted, the code view around it, and the key again
+types there. `space n l` opens the lens too, and `space k e` opens it on a whole cell, however tall. `esc esc` closes
+the lens, and the cell is drawn again. With `editor.edit_in = "source"`, the editing keys switch the window to source
+mode and type there instead.
 
 ## Source mode for code
 

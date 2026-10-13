@@ -420,8 +420,8 @@ In the replace row:
 ## Editing
 
 You edit in source mode, the note as Markdown, or in the lens, the block at the cursor as Markdown and the rest
-rendered: [Editing](editing.md) explains both. A key that starts an edit works from the rendered note too, switching the
-window to source mode first.
+rendered: [Editing](editing.md) explains both. A key that starts an edit works from the rendered note too: its first
+press opens the lens, and the second edits (`editor.edit_in = "source"` switches the window to source mode instead).
 
 ### Modes, undo and saving
 

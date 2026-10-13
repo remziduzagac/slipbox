@@ -126,6 +126,9 @@ async function harness(opts: Opts = {}): Promise<Harness> {
   config.ui.lines = "heavy";
   // Laid out without the gutter (on by default): the tests of line numbers, and what's drawn in it, turn it on.
   config.ui.line_numbers = false;
+  // The editing keys type in source mode at once (the lens by default): the editing tests are about what's typed, and
+  // the lens's tests, the default's own among them, turn it back on.
+  config.editor.edit_in = "source";
   config.walk.exclude = ["drafts/"];
   opts.config?.(config);
   const loc = opts.loc ?? locateVault({ root });
@@ -2636,6 +2639,23 @@ describe("the lens (live preview: space n l, i/a/o with edit_in = live)", () => 
     await h.keys("escape");
     expect(v.live).toBe(false);
     expect(lens().top).toBe(-1);
+  });
+  test("by default i, a and o open it, never source mode; the key again edits, and esc esc leaves the render as it was", async () => {
+    for (const key of ["i", "a", "o"]) {
+      const { h, v, goto, lens } = await setup((c) => (c.editor.edit_in = DEFAULT_CONFIG.editor.edit_in));
+      goto("Para 7 with");
+      await h.keys(key);
+      expect(v.live).toBe(true);
+      expect(v.source).toBeFalsy();
+      expect(v.insert).toBeFalsy();
+      expect(lens().source.join("\n")).toContain("Para 7 with **bold**.");
+      await h.keys(key);
+      expect(v.insert).toBe(true);
+      expect(v.source).toBeFalsy();
+      await h.keys("escape", "escape");
+      expect(v.live).toBe(false);
+      expect(v.source).toBeFalsy();
+    }
   });
   test("its counters: each row's distance from the cursor's (0) in a column of its own, the lens's accent; the gutter its lines' numbers; relative_numbers = off: none", async () => {
     for (const relative of ["lens", "off"] as const) {
@@ -9076,20 +9096,23 @@ describe("pictures (12.x)", () => {
 });
 
 describe("creating notes and folders", () => {
-  test("ctrl+n: a name, the note beside this one with its title, opened and typed into", async () => {
-    const root = makeVault();
-    const h = await harness({ root, open: "notes/alpha.md" });
-    await h.keys("ctrl+n");
-    expect(h.frame()).toContain("new note in notes/");
-    for (const c of "idea") await h.keys(c);
-    await h.keys("enter");
-    expect(readFileSync(join(root, "notes", "idea.md"), "utf8")).toBe("# idea\n\n");
-    const v = h.app.view!;
-    expect(v.buf.rel).toBe("notes/idea.md");
-    expect(v.insert).toBe(true);
-    await h.keys("h", "i", "escape", "ctrl+s");
-    expect(readFileSync(join(root, "notes", "idea.md"), "utf8")).toBe("# idea\n\nhi\n");
-    expect(h.app.graph.notes.has("notes/idea.md")).toBe(true);
+  test("ctrl+n: a name, the note beside this one with its title, opened and typed into — in the lens or source mode", async () => {
+    for (const edit_in of ["live", "source"] as const) {
+      const root = makeVault();
+      const h = await harness({ root, open: "notes/alpha.md", config: (c) => (c.editor.edit_in = edit_in) });
+      await h.keys("ctrl+n");
+      expect(h.frame()).toContain("new note in notes/");
+      for (const c of "idea") await h.keys(c);
+      await h.keys("enter");
+      expect(readFileSync(join(root, "notes", "idea.md"), "utf8")).toBe("# idea\n\n");
+      const v = h.app.view!;
+      expect(v.buf.rel).toBe("notes/idea.md");
+      expect(v.insert).toBe(true); // at once: making the note was the editing key's first press
+      expect(edit_in === "live" ? v.live : v.source).toBe(true);
+      await h.keys("h", "i", "escape", "ctrl+s");
+      expect(readFileSync(join(root, "notes", "idea.md"), "utf8")).toBe("# idea\n\nhi\n");
+      expect(h.app.graph.notes.has("notes/idea.md")).toBe(true);
+    }
   });
   test(":new takes folders (made) and other note formats; an existing file opens; outside the vault is refused", async () => {
     const root = makeVault();

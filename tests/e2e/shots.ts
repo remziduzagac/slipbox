@@ -68,6 +68,8 @@ const SHOTS: Shot[] = [
       await s.keys("/");
       await s.type("Try the new");
       await s.keys("enter", "escape", "o");
+      await s.status("LENS");
+      await s.keys("o");
       await s.status("INSERT");
       await s.type("Order more beans");
     },

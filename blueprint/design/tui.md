@@ -957,8 +957,8 @@ the top one is labelled with its lines (`━━ source · lines 12–18 ━━`)
 (a paragraph, a heading, a table, a code block, a quote) or a list's top-level item, each with the
 blank lines after it, so the blocks cover the note.
 
-**The session.** With `[editor] edit_in = "live"`, `i` `a` `o` and the other editing keys open the
-lens in normal mode, the block as written, and edit on their second press — as `esc esc` leaves, typing
+**The session.** `i` `a` `o` and the other editing keys open the lens in normal mode (`[editor] edit_in =
+"live"`, the default: D224), the block as written, and edit on their second press — as `esc esc` leaves, typing
 first, then the lens; `space n l` (`:live`) opens it too. A yank isn't an edit: it goes on at once.
 The chip reads `LENS` (`INSERT` while typing). `esc` from typing goes to normal mode with the lens
 still open — the vim commands work on what's in it — and `esc` in normal mode closes it: everything
@@ -1111,8 +1111,9 @@ the only one (`16.16`, `16.17`; D112): Org and AsciiDoc files open as text.
   the explorer): a name, from the current note's folder — or the explorer's selected folder when it
   has focus, or the root with a leading `/` — and folders on the way are made. `.md` is added
   unless the name has a known extension (`.toml`, `.py`…). A note starts with its title (`# Name`),
-  opens, and is typed into on the line after the blank one; an
-  existing file just opens. Nothing is made outside the root, through a symlink or otherwise. A note in a root
+  opens, and is typed into on the line after the blank one, in the lens or source mode as `edit_in` says (at once:
+  making it was the editing key's first press); an existing file just opens. Nothing is made outside the root, through
+  a symlink or otherwise. A note in a root
   nested in this one is made there and opens in that root; one under a folder the walk leaves out (`walk.exclude`)
   is made and opens, but isn't one of the root's notes (nor its folder one of its folders), as the walk would say.
   **A name another note has** (`17.5`) would make `[[name]]` reach either: the prompt comes back

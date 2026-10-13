@@ -15,9 +15,9 @@ keys are there too, for those who want them: [The vim keys](#the-vim-keys) expla
 While you edit, slipbox is in one of two states: typing, or not typing. While you type, keys put text in. While you
 don't, keys are commands: `j` moves down, `u` undoes, and so on. Three keys are all you need to go between the two:
 
-- `i` starts typing at the cursor. On a rendered note, it first shows the note as its Markdown (source mode), so you
-  type into the text as it is written.
-- `esc` stops typing. Your keys are commands again.
+- `i` starts typing at the cursor. On a rendered note, the first `i` opens the lens: the Markdown around the cursor,
+  as it is written, with the rest of the note still rendered. The second `i` types into it.
+- `esc` stops typing. Your keys are commands again, and a second `esc` closes the lens.
 - `ctrl+s` saves, typing or not.
 
 The status line's chip, at its left, says where you are: `INSERT` while you type, `SOURCE` in source mode, `LENS` in
@@ -36,7 +36,7 @@ the lens.
 | select | `shift` with a key that moves (`ctrl+shift+left` by word), or drag with the mouse |
 | replace the selection | type, or paste; `backspace` or `delete` deletes it |
 | copy / cut / paste | `ctrl+c` / `ctrl+x` / `ctrl+v` |
-| see the note rendered again | `ctrl+k` |
+| see the whole note as Markdown, and back | `ctrl+k` (source mode) |
 
 A few things work differently from a desktop editor:
 
@@ -89,9 +89,9 @@ note you land on.
 On a rendered note, an editing key (`i`, `a`, `o` and their capitals) opens the way `editor.edit_in` says
 ([Configuration](configuration.md)):
 
-- `"source"`, the default: the window switches to source mode, and the key edits at once.
-- `"live"`: the first press opens the lens on the cursor's block, and the second edits. `esc` `esc` leaves the way you
-  came: the first stops typing, the second closes the lens.
+- `"live"`, the default: the first press opens the lens on the cursor's block, and the second edits. `esc` `esc`
+  leaves the way you came: the first stops typing, the second closes the lens.
+- `"source"`: the window switches to source mode, and the key edits at once.
 
 Either way, `ctrl+k` and `space n l` open the other one.
 

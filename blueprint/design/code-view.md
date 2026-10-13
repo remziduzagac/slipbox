@@ -186,14 +186,15 @@ the tokens differ.
 
 - **The default view** of a file in a language it maps (`[render] code = "document"`; `"source"` opens code in
   source mode). `space n v` switches it to source mode and back, as for a note.
-- **Editing** (D131): as in a rendered note, the editing keys open the lens (their second press edits) or switch the
-  window to source mode, as `[editor] edit_in` says — the cursor keeping its character, though a cell's columns aren't
-  the file's. The lens (`space n l`) is the cursor's cell as written, highlighted as code, the notebook around it: the
-  cell whole when it fits within `lens_max` of the window — a function with its documentation, a class's head (its doc,
-  its line, its fields), a comment's box, a run of statements — alone, not padded with its neighbours; past its edge the
-  lens moves to the next cell whole. A cell too tall is its lines: a line, a doc comment whole, the run of imports
-  whole, the lens taking in its neighbours up to `lens_min_rows`, as a note's blocks. A cell's `✎` opens it on the whole
-  cell, however tall. `esc esc` closes it, the notebook drawn again on the new parse.
+- **Editing** (D131): as in a rendered note, the editing keys open the lens (their second press edits), or switch the
+  window to source mode with `[editor] edit_in = "source"` — the cursor keeping its character, though a cell's columns
+  aren't the file's. The lens (`space n l`) is the cursor's cell as written, highlighted as code, the notebook around
+  it: the cell whole when it fits within `lens_max` of the window — a function with its documentation, a class's head
+  (its doc, its line, its fields), a comment's box, a run of statements — alone, not padded with its neighbours; past
+  its edge the lens moves to the next cell whole. A cell too tall is its lines: a line, a doc comment whole, the run of
+  imports whole, the lens taking in its neighbours up to `lens_min_rows`, as a note's blocks. A cell's `✎` opens it on
+  the whole cell, however tall. `esc esc` closes it, the notebook drawn again on the new parse.
+
 - **The cursor** is on the text of a cell's rows, never on its border or padding; a header is decoration, a frame
   row the cursor passes over. The rows of code keep a map of each cell to its place in the file, so find, a
   selection, problem marks, a language server's hover and jumps all land where they are in the file; documentation's

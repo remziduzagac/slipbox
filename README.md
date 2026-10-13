@@ -69,10 +69,11 @@ else, and `?` lists every key, so nothing needs memorising:
   `:%s/old/new/g`), `ctrl+shift+h` in every note, `:` opens the command palette, and `v` selects then `y` copies.
 - **Panes:** `space e` explorer and `space o` outline (each opens, then focuses, then closes; `esc` returns to the
   note), `ctrl+w v` split, `ctrl+t c` new tab. Everything is clickable too.
-- **Editing:** `i`, `a` or `o` start typing, in source mode (`ctrl+k` or `space n v` switches to it and back) or in
-  the lens (`space n l`: the Markdown around the cursor between two rules, the rest left rendered). The vim commands
-  work (`dw`, `ciw`, `p`, `u`, `.`); `ctrl+s` saves, and autosave does after a pause. `ctrl+l` (or `space n t`, or a
-  click) ticks a task; `space n e` hands the note to your editor, `space n s` to a running nvim.
+- **Editing:** `i`, `a` or `o` open the lens, the Markdown around the cursor between two rules with the rest left
+  rendered, and the key again starts typing there; `ctrl+k` (or `space n v`) shows the whole note as Markdown, source
+  mode, and back. The vim commands work (`dw`, `ciw`, `p`, `u`, `.`); `ctrl+s` saves, and autosave does after a pause.
+  `ctrl+l` (or `space n t`, or a click) ticks a task; `space n e` hands the note to your editor, `space n s` to a
+  running nvim.
 - **Quitting:** `ctrl+q`, and slipbox remembers where you were.
 
 Every key is in [Keys](docs/manual/keys.md), and all of them are configurable

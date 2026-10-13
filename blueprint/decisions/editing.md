@@ -198,6 +198,8 @@ Editing).
 
 ## D147: Live preview is the lens (4.14, 2026-09-28)
 
+> **Detailed by D224 (2026-10-13):** the editing keys open it by default; `edit_in = "source"` keeps source mode.
+
 **Decision:** Live preview is chosen, as a lens, reversing D134's "not chosen". Reading, everything is rendered.
 Editing, whole blocks around the cursor are shown as their markdown between two clear rules, the rest rendered above
 and below: the rendered layout with the block under the cursor swapped for its source layout (D146), edited in place.
@@ -399,3 +401,21 @@ with the first write (a4bac42) without a decision.
 
 **Why:** Ours, on recording it: replacing the link with a file would break whatever the link was for, and following
 it out of the root would write where D142 says slipbox never writes.
+
+## D224: The editing keys open the lens by default (4.14, 2026-10-13)
+
+**Decision:** `[editor] edit_in` defaults to `"live"`: on a rendered window, `i`, `a`, `o` and the other editing keys
+open the lens on the cursor's block, and their second press edits, as D147 has it. `"source"` stays the option that
+switches the window to source mode and edits at once. Decided by an issue (#26) and one pull request (D223).
+
+**Why:** The user, 2026-10-13, pressing `a` on a rendered note: "it goes to full source mode and never goes back …
+lens is not working at all". The lens had been built as the way to edit (D147) but shipped behind `edit_in = "live"`,
+so the editing keys swapped the whole note for its Markdown, and nothing on the screen said how to come back
+(`ctrl+k`). The lens keeps the note rendered around the edit, says how to leave (`esc` `esc`), and is what the user
+expected an editing key to open.
+
+**Cost:** A changed default, before 1.0: whoever relied on the editing keys typing at once sets `edit_in = "source"`
+(the changelog says so). The editing keys need a second press on a rendered note.
+
+**Not chosen:** keeping `"source"` and making its way back clearer (a hint, `esc` leaving source mode), because
+the lens is the editing D147 chose, and source mode stays one key away (`ctrl+k`).

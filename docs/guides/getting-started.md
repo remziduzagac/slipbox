@@ -97,22 +97,23 @@ a folder, slipbox builds its search index in the background; in a large folder, 
 
 ## Change a line and save
 
-Put the cursor on "Try the new grinder setting" (after the search, it's there already) and press `o`. The note now
-shows its Markdown as written, a message says `source — editing the markdown`, and a new task, `- [ ]`, is started on
-the line below; the status line says `INSERT`. Type `Order more beans`.
+Put the cursor on "Try the new grinder setting" (after the search, it's there already) and press `o`. The lens opens:
+the part of the note around the cursor shows its Markdown as written, between two rules, with the rest of the note
+still rendered; the status line says `LENS`. Press `o` again: a new task, `- [ ]`, is started on the line below, and
+the status line says `INSERT`. Type `Order more beans`.
 
-![inbox.md in source mode, a new task line typed, the status line reading INSERT and unsaved](../images/getting-started-editing.png)
+![inbox.md with the lens open, a new task line typed in it, the status line reading INSERT and unsaved](../images/getting-started-editing.png)
 
-Press `esc` to stop typing: the status line says `SOURCE`, and a dot (`•`) by the tab's name says the note has
-unsaved changes. Press `ctrl+s` to save: the message is `saved inbox.md`, and the dot goes. Press `ctrl+k` to see the
-note rendered again.
+Press `esc` to stop typing: the status line says `LENS` again, and a dot (`•`) by the tab's name says the note has
+unsaved changes. Press `ctrl+s` to save: the message is `saved inbox.md`, and the dot goes. Press `esc` once more to
+close the lens: the note is all rendered again.
 
-`i` and `a` start typing before and after the cursor. While you type, the keys of any editor work: `shift` with an
-arrow selects, typing replaces the selection, and `ctrl+z` and `ctrl+y` undo and redo. Not typing, in source mode, the
-vim keys you may know work (`dd`, `cw`, `u` to undo, `.`); `ctrl+k` switches a note to source mode and back. If you
-forget `ctrl+s`, slipbox saves a changed note by itself after half a minute without a key. The [editing
-chapter](../manual/editing.md) has the rest, the lens among it: Markdown shown only around the cursor, the rest of the
-note left rendered (`space n l`).
+`i` and `a` start typing before and after the cursor, the same way: the first press opens the lens, the second types.
+While you type, the keys of any editor work: `shift` with an arrow selects, typing replaces the selection, and `ctrl+z`
+and `ctrl+y` undo and redo. Not typing, the vim keys you may know work (`dd`, `cw`, `u` to undo, `.`). If you forget
+`ctrl+s`, slipbox saves a changed note by itself after half a minute without a key. The [editing
+chapter](../manual/editing.md) has the rest, source mode among it: the whole note as Markdown, which `ctrl+k` switches
+to and back.
 
 ## Tick a task
 
