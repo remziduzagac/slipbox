@@ -1374,8 +1374,9 @@ function drawPane(
         });
       if (here && !barW) geo.hot.push({ id: clicked(here), x: gutterX, y, w: gutter - 1, h: 1 });
     }
-    // The git sign (26.1), in its column: a rendered row joining several lines takes their strongest.
-    if (signs && signX !== null && !line.decor) {
+    // The git sign (26.1), in its column: a rendered row joining several lines takes their strongest. None on the blank
+    // row between blocks, which carries the line above it but is no line of the note (#41).
+    if (signs && signX !== null && !line.decor && !line.gap) {
       const sign = rowSign(signs, line);
       if (sign)
         drawText(c, signX, y, gitGlyph(app.glyphs, sign), {
