@@ -1073,7 +1073,7 @@ const NAMED: Check[] = [
     run: async (s) => {
       const outreach = s.read("outreach/index.md");
       await leader(s, "v", "n");
-      await s.see("as pointers name"); // the question wraps after it
+      await s.see("as pointers"); // the question wraps after it, or before "name" where its path is long (macOS's)
       await s.keys("ctrl+u");
       await s.type("halden2");
       await s.keys("enter");

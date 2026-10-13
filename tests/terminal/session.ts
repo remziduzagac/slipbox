@@ -432,8 +432,9 @@ export class Session {
     writeFileSync(p, text);
   }
 
+  /** slipbox has exited, and everything it wrote is on the screen (its last words come after its exit is known). */
   exited(): boolean {
-    return this.exitCode() !== null;
+    return this.exitCode() !== null && this.term.drawn && performance.now() - this.term.lastOutput >= 30;
   }
 
   exitCode(): number | null {
