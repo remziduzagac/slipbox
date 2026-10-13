@@ -149,8 +149,9 @@ A cell folds whole: there's no folding inside one, of an `if` or a loop.
 
 ### Moving and editing
 
-The cursor moves over the text of the cells, never their borders. The outline (`space o`) and the breadcrumb list the
-definitions, as in source mode, and `] ]` and `[ [` move from one to the next.
+The cursor moves over the text of the cells, never their borders — but a folded cell's header, its one row, where
+`z a` opens it again. The outline (`space o`) and the breadcrumb list the definitions, as in source mode, and `] ]` and
+`[ [` move from one to the next.
 
 Editing works as in a rendered note ([Editing](editing.md) has the lens and source mode). The editing keys (`i`, `a`,
 `o`…) open the lens on the cursor's cell: its lines as written, highlighted, the code view around it, and the key again
