@@ -9,9 +9,11 @@ built and deployed by Actions with the installer. Starlight's search, sidebar, t
 83,000 words, but read only as Markdown on GitHub, with no search or navigation beyond the map. herdsman's site is the
 same tool, already run by the same person. Starlight is MIT, as Astro is.
 
-**Cost:** A second set of packages (282, for the site's build only, never in slipbox): two weak-copyleft among them,
-lightningcss (MPL-2.0, CSS at build time) and sharp's libvips (LGPL-3.0-or-later, installed as Astro's optional
-package, never run); a CI job; the Pages job installs packages now. Meets greenrepo's DOC-06, a deviation until now
+**Cost:** A second set of packages (276, for the site's build only, never in slipbox), one weak-copyleft among
+them: lightningcss (MPL-2.0, CSS at build time, as accepted for use). sharp, Astro's optional image processing, and its
+libvips (LGPL-3.0-or-later) aren't installed: the site turns image processing off, and an override puts a placeholder
+in sharp's place (the user's call, 2026-10-14: nothing to distribute, so nothing owed, but native binaries never used
+are surface for nothing). A CI job; the Pages job installs packages now. Meets greenrepo's DOC-06, a deviation until now
 (GR-D8, whose "until after the first release" this ends early).
 
 **Not chosen:** VitePress (as able, but not what herdsman runs); MkDocs Material (Python in the toolchain); GitHub's

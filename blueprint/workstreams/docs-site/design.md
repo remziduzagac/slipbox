@@ -12,7 +12,8 @@ under the root's install gates in `site/bunfig.toml` (no install script, a week'
 `bun run check:deps` (`siteProblems`), updated by Dependabot with the rest. It's served at
 `https://<owner>.github.io/<name>/docs/` (`base: /slipbox/docs`), with Starlight's search (Pagefind, built with the
 site), its sidebar, light and dark themes, and an edit link on each page. Pictures pass through as they are (no image
-processing: sharp, an optional package of Astro's, never runs).
+processing). sharp, Astro's optional package for it, is overridden by a placeholder (`site/stubs/sharp`), so neither it
+nor its libvips (LGPL-3.0) is installed.
 
 **Its pages are gathered from `docs/`** (`site/scripts/gather.ts`, before each build; DS-D2): the docs map's
 (`docs/README.md`) `##` sections are the sidebar's groups and their lists its pages, in order; a page's H1 is its

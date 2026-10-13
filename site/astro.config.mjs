@@ -11,7 +11,8 @@ export default defineConfig({
   site: "https://remziduzagac.github.io",
   base: "/slipbox/docs",
   trailingSlash: "always",
-  // The screenshots as they are: no image processing, so nothing of sharp's runs.
+  // The screenshots as they are: no image processing. sharp, which would do it, isn't even installed: package.json's
+  // override puts a placeholder in its place (stubs/sharp), so libvips (LGPL) is never fetched.
   image: { service: passthroughImageService() },
   integrations: [
     starlight({
