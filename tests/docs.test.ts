@@ -3,6 +3,7 @@
 import { describe, expect, test } from "bun:test";
 import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import { dirname, join, relative, resolve } from "node:path";
+import { parseAnsi, toSvg } from "../scripts/screenshot.ts";
 import { CLI_COMMANDS, FLAGS } from "../src/cli/cli.ts";
 import { canonSeq } from "../src/core/commands.ts";
 import { extractText } from "../src/core/graph.ts";
@@ -18,6 +19,7 @@ import {
   DEFAULT_SOURCE_KEYS,
   DEFAULT_VISUAL_KEYS,
 } from "../src/tui/keys.ts";
+import { placeholderRow } from "../src/tui/placeholders.ts";
 
 const TOP = join(import.meta.dir, "..");
 const DOCS = join(TOP, "docs");
@@ -226,5 +228,43 @@ describe("the user documentation (DOC)", () => {
     expect(blueprintIds("Bun 1.4.2, git 2.42, `ctrl+d`, a 3D chart.\n")).toEqual([]);
     expect(keysLeftOut("")).toContain("DEFAULT_KEYS: space l n");
     expect(commandsLeftOut("`render`")).toContain("render --width");
+  });
+});
+
+describe("the docs' screenshots (scripts/screenshot.ts)", () => {
+  // A picture shows in a pane's text only as Kitty's placeholder cells, coloured with its id.
+  const PICTURE = join(TOP, "examples", "home", "hobbies", "cooking", "attachments", "dal.png");
+  const cells = (rows: number[], cols: number) =>
+    ["a line of text", ...rows.map((r) => `  \x1b[38;2;0;0;42m${placeholderRow(r, cols)}\x1b[0m after`)].join("\n");
+  // DejaVu Sans Mono's cell at 10px, as the script draws it.
+  const W = (10 * 1233) / 2048;
+  const H = 10 * 1.164;
+  const at = (n: number) => n.toFixed(2);
+
+  test("a picture is drawn over its cells, at its own size, clipped to the rows shown, its first rows scrolled off", () => {
+    // Rows 2–4 of a picture 4 columns wide, on screen rows 1–3, two columns in.
+    const svg = toSvg(parseAnsi(cells([2, 3, 4], 4)), { cols: 20, rows: 5, fontSize: 10, pictures: [PICTURE] });
+    expect(svg).not.toContain("\u{10EEEE}");
+    const png = readFileSync(PICTURE).toString("base64");
+    expect(svg).toContain(
+      `<clipPath id="picture-0"><rect x="${at(2 * W)}" y="${at(H)}" width="${at(4 * W)}" height="${at(3 * H)}"/></clipPath>`,
+    );
+    expect(svg).toContain(
+      `<image x="${at(2 * W)}" y="${at(-H)}" width="${at(4 * W)}" height="${at(5 * H)}" href="data:image/png;base64,${png}"`,
+    );
+    // Kept to the rows shown: the rows above, scrolled off, aren't drawn over the line of text.
+    expect(svg).toMatch(/<image [^>]*clip-path="url\(#picture-0\)"\/>/);
+  });
+  test("a picture's box, its bottom off the screen, is as tall as its proportions make it", () => {
+    // 120×90 drawn 30 columns wide: 30 × 6.02 × 0.75 / 11.64, so 12 rows; 2 of them shown.
+    const svg = toSvg(parseAnsi(cells([0, 1], 30)), { cols: 40, rows: 3, fontSize: 10, pictures: [PICTURE] });
+    expect(svg).toContain(`<image x="${at(2 * W)}" y="${at(H)}" width="${at(30 * W)}" height="${at(12 * H)}"`);
+  });
+  test("placeholder cells with no picture named are left blank, never drawn as boxes", () => {
+    const svg = toSvg(parseAnsi(cells([0, 1], 4)), { cols: 20, rows: 3, fontSize: 10 });
+    expect(svg).not.toContain("\u{10EEEE}");
+    expect(svg).not.toContain("<image");
+    // The text after them stays where it was: 2 columns in, 4 of the picture, a space.
+    expect(svg).toContain(`<text x="${at(7 * W)}" y="20.92" fill="#c0caf5">a</text>`);
   });
 });

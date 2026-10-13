@@ -45,7 +45,7 @@ import { loadMermaid, mermaidSvg } from "../src/core/diagrams.ts";
 import { loadTypesetter } from "../src/core/typeset.ts";
 import { colorHex } from "../src/core/theme/theme.ts";
 import { svgText } from "../src/tui/images.ts";
-import { idColor, pictureId, placeholderRow, release, transmit } from "../src/tui/placeholders.ts";
+import { idColor, pictureId, placeholderCell, placeholderRow, release, transmit } from "../src/tui/placeholders.ts";
 import { Pictures } from "../src/tui/opentui.ts";
 import { OptimizedBuffer } from "@opentui/core";
 import { inflateSync } from "node:zlib";
@@ -8808,6 +8808,13 @@ describe("pictures (12.x)", () => {
       ).toBe(4);
       // One whose hash would make it 0 — no id, to Kitty — is 1 (found by searching).
       expect(pictureId("/p14964393.png", 1, 1)).toBe(1);
+    });
+    test("a cell read back: its row and column from its marks; any other text, none", () => {
+      const cells = [...placeholderRow(7, 200)].join("").match(/\u{10EEEE}[^\u{10EEEE}]*/gu)!;
+      expect(cells.map(placeholderCell)).toEqual(Array.from({ length: 200 }, (_, col) => ({ row: 7, col })));
+      expect(placeholderCell("a")).toBeNull();
+      expect(placeholderCell(PH)).toBeNull();
+      expect(placeholderCell(`${PH}\u0305x`)).toBeNull();
     });
     test("sent once, quietly: its pixels compressed in chunks with a virtual placement of its cells; let go by id", () => {
       const parts = (s: string) =>

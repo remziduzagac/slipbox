@@ -58,6 +58,15 @@ export function placeholderRow(row: number, cols: number): string {
   return out;
 }
 
+/** A placeholder cell's row and column, read from its marks; null for any other text. */
+export function placeholderCell(text: string): { row: number; col: number } | null {
+  const [base, row, col] = [...text].map((c) => c.codePointAt(0)!);
+  if (base !== 0x10eeee || row === undefined || col === undefined) return null;
+  const r = DIACRITICS.indexOf(row);
+  const c = DIACRITICS.indexOf(col);
+  return r < 0 || c < 0 ? null : { row: r, col: c };
+}
+
 /**
  * A picture sent: its RGBA pixels, compressed, in chunks, with a virtual placement `cols` by `rows` cells — quietly
  * (`q=2`: the terminal answers nothing, which would read as keys).

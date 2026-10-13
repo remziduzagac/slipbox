@@ -1,14 +1,17 @@
 // A terminal screen as a PNG, for the docs: the cells a herdr pane shows, with their colours
 // (`herdr pane read <pane> --source visible --format ansi`), drawn into an SVG cell by cell and rasterised by resvg
-// with DejaVu Sans Mono. Box-drawing and block characters are drawn as shapes, so borders join across cells.
+// with DejaVu Sans Mono. Box-drawing and block characters are drawn as shapes, so borders join across cells. A picture
+// shows in the pane's text only as Kitty's placeholder cells (src/tui/placeholders.ts): named, it's drawn over them as
+// the terminal draws it; not, they're left blank.
 //
 //   herdr pane read w1:p2H --source visible --format ansi | bun scripts/screenshot.ts - docs/images/screen.png
-//   bun scripts/screenshot.ts screen.ansi screen.png [--cols 120] [--rows 36] [--scale 2]
+//   bun scripts/screenshot.ts screen.ansi screen.png [--cols 120] [--rows 36] [--scale 2] [--picture a.png…]
 
 import { readFileSync, writeFileSync } from "node:fs";
 import { initWasm, Resvg } from "@resvg/resvg-wasm";
 import wasm from "@resvg/resvg-wasm/index_bg.wasm" with { type: "file" };
 import { graphemes, graphemeWidth } from "../src/core/width.ts";
+import { PLACEHOLDER, placeholderCell } from "../src/tui/placeholders.ts";
 
 const FONT_DIR = "/usr/share/fonts/truetype/dejavu";
 // DejaVu Sans after the mono faces: resvg falls back to it for a symbol the mono font lacks (ℹ).
@@ -251,6 +254,48 @@ export interface Options {
   fontSize?: number;
   fg?: string;
   bg?: string;
+  /** The pictures on the screen, PNG files, in the order their first cells come: each drawn over its cells. */
+  pictures?: string[];
+}
+
+/** A picture's cells on the screen: where its first row and column would be, its columns and rows, those shown. */
+interface Placed {
+  x: number;
+  y: number;
+  cols: number;
+  rows: number;
+  top: number;
+  bottom: number;
+}
+
+/** A PNG's size, from its header. */
+function pngSize(png: Uint8Array): { width: number; height: number } {
+  const view = new DataView(png.buffer, png.byteOffset, png.byteLength);
+  if (png.byteLength < 24 || view.getUint32(0) !== 0x89504e47) throw new Error("a screenshot's picture must be a PNG");
+  return { width: view.getUint32(16), height: view.getUint32(20) };
+}
+
+/**
+ * The pictures over their cells, as Kitty draws a placement: fitted to its box, proportions kept, centred, and clipped
+ * to the rows shown. A box partly off the screen is as tall as the cells shown say, or as the picture's proportions do.
+ */
+function pictures(placed: Placed[], files: string[], w: number, h: number): string {
+  return placed
+    .map((p, k) => {
+      const file = files[k];
+      if (!file) return "";
+      const png = new Uint8Array(readFileSync(file));
+      const size = pngSize(png);
+      const rows = Math.max(p.rows, Math.ceil((p.cols * w * size.height) / size.width / h));
+      const box = `x="${p.x.toFixed(2)}" y="${p.y.toFixed(2)}" width="${(p.cols * w).toFixed(2)}" height="${(rows * h).toFixed(2)}"`;
+      const shown = `x="${p.x.toFixed(2)}" y="${p.top.toFixed(2)}" width="${(p.cols * w).toFixed(2)}" height="${(p.bottom - p.top).toFixed(2)}"`;
+      const href = `data:image/png;base64,${Buffer.from(png).toString("base64")}`;
+      return (
+        `<clipPath id="picture-${k}"><rect ${shown}/></clipPath>` +
+        `<image ${box} href="${href}" preserveAspectRatio="xMidYMid meet" clip-path="url(#picture-${k})"/>`
+      );
+    })
+    .join("");
 }
 
 /** The screen as an SVG: each cell's background, then its character, at its own place. */
@@ -264,6 +309,8 @@ export function toSvg(screen: Cell[][], o: Options = {}): string {
   const dbg = o.bg ?? "#1a1b26";
   const back: string[] = [];
   const front: string[] = [];
+  // Each picture's cells, by their colour, which is the picture's id.
+  const placed = new Map<string, Placed>();
   for (let y = 0; y < Math.min(rows, screen.length); y++) {
     let x = 0;
     for (const cell of screen[y]!) {
@@ -279,7 +326,19 @@ export function toSvg(screen: Cell[][], o: Options = {}): string {
         back.push(
           `<rect x="${px.toFixed(2)}" y="${py.toFixed(2)}" width="${(cw + 0.3).toFixed(2)}" height="${(h + 0.3).toFixed(2)}" fill="${bg}"/>`,
         );
-      if (cell.text.trim() !== "") {
+      if (cell.text.startsWith(PLACEHOLDER)) {
+        const at = placeholderCell(cell.text);
+        const id = cell.style.fg ?? "";
+        if (at) {
+          let p = placed.get(id);
+          if (!p)
+            placed.set(id, (p = { x: px - at.col * w, y: py - at.row * h, cols: 0, rows: 0, top: py, bottom: py }));
+          p.cols = Math.max(p.cols, at.col + 1);
+          p.rows = Math.max(p.rows, at.row + 1);
+          p.top = Math.min(p.top, py);
+          p.bottom = Math.max(p.bottom, py + h);
+        }
+      } else if (cell.text.trim() !== "") {
         const drawn = shape(cell.text, px, py, cw, h, fg);
         if (drawn) front.push(drawn);
         else {
@@ -310,6 +369,7 @@ export function toSvg(screen: Cell[][], o: Options = {}): string {
     `<svg xmlns="http://www.w3.org/2000/svg" width="${width.toFixed(0)}" height="${height.toFixed(0)}" viewBox="0 0 ${width.toFixed(2)} ${height.toFixed(2)}">` +
     `<rect width="100%" height="100%" fill="${dbg}"/>` +
     `<g shape-rendering="crispEdges">${back.join("")}</g>` +
+    pictures([...placed.values()], o.pictures ?? [], w, h) +
     `<g font-family="DejaVu Sans Mono" font-size="${size}">${front.join("")}</g></svg>`
   );
 }
@@ -347,10 +407,12 @@ if (import.meta.main) {
   const scale = Number(flag("scale") ?? 2);
   const fg = flag("fg");
   const bg = flag("bg");
+  const shown: string[] = [];
+  for (let file = flag("picture"); file; file = flag("picture")) shown.push(file);
   const [input, output] = args;
   if (!input || !output) {
     console.error(
-      "usage: bun scripts/screenshot.ts <screen.ansi|-> <out.png|out.svg> [--cols N] [--rows N] [--scale N] [--fg #hex] [--bg #hex]",
+      "usage: bun scripts/screenshot.ts <screen.ansi|-> <out.png|out.svg> [--cols N] [--rows N] [--scale N] [--fg #hex] [--bg #hex] [--picture <png>…]",
     );
     process.exit(2);
   }
@@ -360,6 +422,7 @@ if (import.meta.main) {
     rows: rows ? Number(rows) : undefined,
     fg,
     bg,
+    pictures: shown,
   });
   if (output.endsWith(".svg")) writeFileSync(output, svg);
   else writeFileSync(output, await toPng(svg, scale));

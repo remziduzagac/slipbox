@@ -22,6 +22,11 @@ interface Shot {
   options: SessionOptions;
   /** Brings the screen to what the picture shows. */
   take: (s: Session) => Promise<void>;
+  /**
+   * The pictures on that screen, from the session's folder, in the order their first cells come: the pane's text has
+   * only their placeholder cells, which the screenshot draws them over.
+   */
+  pictures?: string[];
 }
 
 /** The getting-started guide's own folder: `~/notes`, two notes, as the guide makes them (examples/guide). */
@@ -164,6 +169,7 @@ const SHOTS: Shot[] = [
   {
     name: "obsidian-home",
     options: HOME("hobbies/cooking/Home.md"),
+    pictures: ["home/hobbies/cooking/attachments/dal.png"],
     take: async (s) => {
       await s.status("Home.md");
       await s.see("properties");
@@ -202,7 +208,8 @@ for (const shot of SHOTS.filter((x) => !args.length || args.some((f) => x.name.i
     // The background index's count in the top bar is a passing state, not part of the picture.
     await s.until(() => !/indexing/.test(s.topBar()), 30000, "indexing to finish");
     await s.settle();
-    const svg = toSvg(parseAnsi(pane.ansi().join("\n")), { cols: pane.cols, rows: pane.rows });
+    const pictures = shot.pictures?.map((p) => join(s.dir, p));
+    const svg = toSvg(parseAnsi(pane.ansi().join("\n")), { cols: pane.cols, rows: pane.rows, pictures });
     writeFileSync(join(OUT, `${shot.name}.png`), await toPng(svg, 1.5));
     console.log(`✓ ${shot.name}`);
   } catch (err) {
