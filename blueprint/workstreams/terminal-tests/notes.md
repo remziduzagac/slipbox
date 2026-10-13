@@ -82,7 +82,9 @@ folded into; none is dropped without saying why.
   now, not SOURCE — the check's; and the code view's breadcrumb wasn't source mode's (`impl Point`, a function in a
   function) — slipbox's, fixed)
 - world/content: a 4,000-line TypeScript file opens, G reaches its end, keys answer at once → code: a 4,000-line
-  TypeScript file — its outline found, G at its end, keys answered at once
+  TypeScript file — its outline found, G at its end, keys answered at once (failing today: code opens in the code view
+  now, whose rows aren't the file's lines and which reads no count, as source mode does — the check's: `:4000`, and k
+  a row up)
 - world/content: data beyond halden's — .properties, a jsonc tsconfig, .env, multi-document YAML, big JSON, a file that
   doesn't parse → data: Java's .properties — ! comments are comments, a value continued after a backslash one value;
   multi-document YAML a row each; data: an .env — export prefixes dropped, a quoted value unquoted, its comment after
