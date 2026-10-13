@@ -76,7 +76,7 @@ import {
   formatFor,
   writeExport,
 } from "../core/export/index.ts";
-import { listTasks, toggleTask } from "../core/tasks.ts";
+import { listTasks, taskHolding, toggleTask } from "../core/tasks.ts";
 import { merge3, unifiedDiff } from "../core/merge.ts";
 import { compilePattern, findAll } from "../core/replace.ts";
 import { planReplace } from "../core/replace-files.ts";
@@ -452,7 +452,8 @@ export interface LiveBase {
   unit?: (line: number) => Block | null;
 }
 
-/** Where to log each command run, for the terminal tests' coverage: `SLIPBOX_TRACE`. */
+/** Where to log each command run, for the terminal tests' coverage: `SLIPBOX_TRACE` (run.ts adds a `key` line for
+ *  each key handled). */
 const TRACE = process.env.SLIPBOX_TRACE;
 
 /** A window whose text can be edited: source mode or live preview. */
@@ -2129,6 +2130,8 @@ export class App {
   gitFolders = new Map<string, GitState>();
   private gitTimer: ReturnType<typeof setTimeout> | null = null;
   private gitAsking: Promise<void> | null = null;
+  /** The question asked again once the one out is answered: what changed since it was asked is in its answer. */
+  private gitAgain: Promise<void> | null = null;
 
   /** Ask git again, a moment from now (many changes, one question). */
   refreshGit(): void {
@@ -2142,7 +2145,17 @@ export class App {
 
   /** Ask git now: each file's state, by vault path, and each folder's. */
   refreshGitNow(): Promise<void> {
-    if (this.gitAsking) return this.gitAsking;
+    // A question already out was asked before whatever changed now (a stage, a commit): its answer may not have it,
+    // so git is asked again once it's in — once, for every call meanwhile.
+    if (this.gitAsking) {
+      this.gitAgain ??= this.gitAsking
+        .catch(() => undefined)
+        .then(() => {
+          this.gitAgain = null;
+          return this.refreshGitNow();
+        });
+      return this.gitAgain;
+    }
     const c = this.checkout;
     const root = this.loc.root;
     if (!c) {
@@ -3344,6 +3357,13 @@ export class App {
       case "fold":
         if (!v.buf.codeFolded.delete(cell.from)) v.buf.codeFolded.add(cell.from);
         for (const x of this.allViews()) if (x.buf === v.buf) x.layoutKey = "";
+        // The cursor stays with the cell: on its header, folded (its one row), or its first row, open.
+        if (from === undefined) {
+          const rows = this.currentLayout(v).lines;
+          const row = rows.findIndex((l) => !l.decor && l.src >= cell.from && l.src <= cell.to);
+          if (row >= 0 && rows[row]!.srcMap) this.placeAtLine(v, rows[row]!.src);
+          else if (row >= 0) this.moveCursor(v, { row, col: 0 });
+        }
         return;
       case "edit":
         this.placeAtLine(v, cell.from);
@@ -3802,6 +3822,8 @@ export class App {
     const layout = this.currentLayout(view);
     const src = layout.lines[view.cur.row]?.src;
     if (src === undefined) return null;
+    // Source mode and the lens draw the Markdown, no boxes: the task item holding the cursor's line, from the parse.
+    if (editable(view)) return view.buf.kind.group === "note" ? taskHolding(view.buf.parsed.tree, src) : null;
     for (let r = view.cur.row; r >= 0; r--) {
       for (const s of layout.lines[r]!.spans) if (s.task && src >= s.task.line && src <= s.task.end) return s.task;
     }
@@ -8444,7 +8466,7 @@ export class App {
   }
 
   async run(spec: string): Promise<void> {
-    // The terminal tests' coverage (tests/e2e): every command run, one id per line.
+    // The terminal tests' coverage (tests/terminal): every command run, one id per line.
     if (TRACE) appendFileSync(TRACE, `${spec.split(" ")[0]}\n`);
     if (!(await this.registry.run(this, spec))) this.message("error", `unknown command: ${spec}`);
   }

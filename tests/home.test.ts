@@ -161,6 +161,19 @@ kind = "unreadable"
     expect(statSync(join(r.home, "notes", "locked.md")).mode & 0o777).toBe(0);
   });
 
+  test("a case twin of a committed file is made only where the filesystem can hold both, never over the other", () => {
+    const extras = `[[file]]
+path = "notes/plan.md"
+content = "# plan\\n"
+`;
+    const s = source("", { "notes/Plan.md": "# Plan\n", "notes/a.md": "# A\n" }, extras);
+    const r = buildHome(s.out, s.home, s.halden);
+    // On a filesystem that folds case (macOS's), plan.md is Plan.md: not made, and Plan.md keeps its own text.
+    expect(readFileSync(join(r.home, "notes", "Plan.md"), "utf8")).toBe("# Plan\n");
+    const both = readdirSync(join(r.home, "notes")).includes("plan.md");
+    expect(r.extras).toEqual(both ? ["notes/plan.md"] : []);
+    if (both) expect(readFileSync(join(r.home, "notes", "plan.md"), "utf8")).toBe("# plan\n");
+  });
   test("a folder that already holds a build is refused", () => {
     const s = source("", { "notes/a.md": "# A\n" });
     buildHome(s.out, s.home, s.halden);

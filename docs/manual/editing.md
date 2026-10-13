@@ -303,7 +303,7 @@ the rest.
 
 `ctrl+l` (or `space n t`, or a click on the box) ticks or unticks the task at the cursor: `- [ ]` becomes `- [x]`,
 and back. In a list of tasks inside tasks, it is the innermost one, from any of its rows. It works in the rendered
-note, with no need to edit.
+note, with no need to edit, and in source mode and the lens, on any line of the task.
 
 On a note without unsaved changes, the tick is written to the file at once, and only that character changes. On a
 note with unsaved changes, it changes the text on screen instead, as an undo step, and the note stays unsaved (the

@@ -1,0 +1,62 @@
+// The terminal checks' coverage (TT-D4): every command and every area of the reference set has a check, or is left
+// out with its reason. It reads the checks' declarations; it runs no terminal (the runner checks a declared command
+// was run).
+
+import { describe, expect, test } from "bun:test";
+import type { Check } from "./terminal/check.ts";
+import { CHECKS, LEFT_OUT } from "./terminal/checks/index.ts";
+import { caseAreas, coverage, ownerOfCase, ownerOfCommand, report } from "./terminal/coverage.ts";
+import { COMMAND_SPECS } from "../src/core/command-specs.ts";
+
+describe("the terminal checks' coverage", () => {
+  test("every command and every area of the reference set has a check, or is left out with its reason", () => {
+    expect(report(coverage())).toBe("");
+  });
+  test("every command and every area has an owner: the area whose task covers it", () => {
+    expect(COMMAND_SPECS.map((c) => c.id).filter((id) => ownerOfCommand(id) === "?")).toEqual([]);
+    expect(caseAreas().filter((a) => ownerOfCase(a) === "?")).toEqual([]);
+  });
+  test("each check is named once, and declares what it covers", () => {
+    const names = CHECKS.map((c) => `${c.area}: ${c.name}`);
+    expect(names.filter((n, i) => names.indexOf(n) !== i)).toEqual([]);
+    expect(CHECKS.filter((c) => !(c.covers.cases?.length || c.covers.commands?.length)).map((c) => c.name)).toEqual([]);
+  });
+  test("each reason says something", () => {
+    const reasons = [...Object.values(LEFT_OUT.commands), ...Object.values(LEFT_OUT.cases)];
+    expect(reasons.filter((r) => r.trim().length < 10)).toEqual([]);
+  });
+
+  // The rule itself, on checks made up for it.
+  const check = (covers: Check["covers"]): Check => ({ area: "reading", name: "made up", covers, run: async () => {} });
+  const empty = { commands: {}, cases: {} };
+  const all = COMMAND_SPECS.map((c) => c.id);
+  test("a command no check runs, nor left out, is uncovered: added without a check, the test fails naming it", () => {
+    const most = check({ commands: all.slice(1), cases: caseAreas() });
+    expect(coverage([most], empty).uncovered).toEqual({ commands: [all[0]!], cases: [] });
+    expect(report(coverage([most], empty))).toContain(`command ${all[0]}`);
+    expect(coverage([most], { commands: { [all[0]!]: "nothing to see" }, cases: {} }).uncovered.commands).toEqual([]);
+  });
+  test("an area of CASES.md no check covers, nor left out, is uncovered", () => {
+    const areas = caseAreas();
+    const most = check({ commands: all, cases: areas.slice(1) });
+    expect(coverage([most], empty).uncovered.cases).toEqual([areas[0]!]);
+  });
+  test("a name that isn't there is said: a check's or a left-out list's", () => {
+    const c = coverage([check({ commands: ["app.no_such"], cases: ["no-such-area"] })], {
+      commands: { "edit.nothing": "a reason of some length" },
+      cases: {},
+    });
+    expect(c.unknown).toEqual([
+      "command app.no_such (a check)",
+      "case area no-such-area (a check)",
+      "command edit.nothing (left out)",
+    ]);
+  });
+  test("left out yet covered: the left-out entry is stale", () => {
+    const c = coverage([check({ commands: ["app.quit"] })], {
+      commands: { "app.quit": "nothing to see here" },
+      cases: {},
+    });
+    expect(c.stale).toEqual(["command app.quit"]);
+  });
+});

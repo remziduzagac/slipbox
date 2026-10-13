@@ -519,6 +519,7 @@ date = "2026-09-04T10:30:00+02:00"
 author = "Sam Rivera <sam@kestrel.dev>"
 message = "Share links: signing and the share endpoint"
 add = [
+  "src/routes/expiry.ts",
   "src/routes/name.ts",
   "src/routes/share.ts",
   "src/routes/sign.ts",

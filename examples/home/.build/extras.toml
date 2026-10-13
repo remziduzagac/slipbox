@@ -151,6 +151,17 @@ it turns the rest of the terminal red.
 why = "an ESC sequence in a file name is shown as visible text, never sent to the terminal"
 
 [[file]]
+path = "Downloads/osc\u001b]0;PWNED\u0007title.md"
+content = """# A title in the name
+
+Saved by a terminal recorder that took the window's title for the file's name, escape and all: ESC ] 0 ; then the
+title, then BEL. Printed raw, the name would retitle the terminal.
+
+[stray note](stray-note.md)
+"""
+why = "an OSC in a file name: neither its sequence nor its text reaches the terminal, the title stays slipbox's"
+
+[[file]]
 path = "Downloads/line\nbreak.md"
 content = """# A name with a newline
 

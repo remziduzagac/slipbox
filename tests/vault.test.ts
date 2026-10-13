@@ -969,6 +969,31 @@ describe("review cycle 5 (the watcher's polling fallbacks)", () => {
       w.close();
     }
   });
+  test("a note written and removed between two looks is said gone: what read it from the disk meanwhile looks again", async () => {
+    const { VaultWatcher } = await import("../src/core/watch.ts");
+    const { WalkFilter } = await import("../src/core/walk.ts");
+    const dir = mkdtempSync(join(tmpdir(), "slipbox-cameandwent-"));
+    const changes: string[] = [];
+    const w = new VaultWatcher({
+      root: dir,
+      filter: new WalkFilter(dir, DEFAULT_CONFIG.walk),
+      dirs: [],
+      debounceMs: 20,
+      known: new Map(),
+      onBatch: (b) => changes.push(...b.changes.map((c) => `${c.kind} ${c.rel}`)),
+      onDegraded: () => {},
+    });
+    try {
+      // Its events (made, then removed) in one debounce: settled once, the file not there and never known.
+      writeFileSync(join(dir, "rota.md"), "# Rota\n");
+      rmSync(join(dir, "rota.md"));
+      (w as unknown as { pending: Set<string> }).pending.add("rota.md");
+      w.flush();
+      expect(changes).toEqual(["deleted rota.md"]);
+    } finally {
+      w.close();
+    }
+  });
 });
 
 describe("links out of data files and to files (16.15)", () => {

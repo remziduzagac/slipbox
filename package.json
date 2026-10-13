@@ -14,6 +14,8 @@
   "scripts": {
     "start": "bun src/main.ts",
     "test": "bun test --timeout 30000",
+    "test:terminal": "bun tests/terminal/run.ts",
+    "test:herdr": "bun tests/terminal/herdr/run.ts",
     "typecheck": "tsc --noEmit -p .",
     "check:boundary": "bun scripts/check-boundary.ts",
     "check:deps": "bun scripts/check-deps.ts",
@@ -23,7 +25,6 @@
     "lint": "biome ci --error-on-warnings .",
     "format": "biome format --write .",
     "check": "bun run typecheck && bun run check:boundary && bun run check:deps && bun run lint && bun run check:actions && bun run check:docs && bun run test",
-    "e2e": "bun tests/e2e/run.ts",
     "build": "bun build --compile --no-compile-autoload-bunfig --no-compile-autoload-dotenv --no-compile-autoload-tsconfig --no-compile-autoload-package-json src/main.ts --outfile dist/slipbox"
   },
   "dependencies": {
@@ -80,6 +81,7 @@
     "@types/bun": "1.4.2",
     "@types/mdast": "4.0.4",
     "@types/pdfkit": "0.17.6",
+    "@xterm/headless": "6.0.0",
     "markdownlint-cli2": "0.23.3",
     "typescript": "7.0.2",
     "vscode-languageserver": "10.1.2"

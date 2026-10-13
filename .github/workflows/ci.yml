@@ -2,7 +2,7 @@ name: ci
 
 # GR-D9: the check on every change — what `bun run check` runs, split into jobs CI can run side by side: the lint
 # (Biome, the workflows), and the code's checks and tests on Linux and on macOS (slipbox ships for both; on macOS
-# its SQLite is Apple's, 14.13). One job, `ci`, is the required check: it always runs and fails unless every job it
+# its SQLite is Apple's, 14.13); and the terminal tests on each system it ships for (TT-D6). One job, `ci`, is the required check: it always runs and fails unless every job it
 # waits for passed or was skipped. Each job calls package.json's scripts, never commands of its own.
 on:
   pull_request:
@@ -84,11 +84,39 @@ jobs:
       - name: tests
         run: bun run test
 
+  # TT-D6: the terminal tests — slipbox driven by keys in a headless terminal, read off the screen — on each system
+  # slipbox ships for, each runner running a check per core. A failing check's screen is in the job's log.
+  terminal:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-24.04, ubuntu-24.04-arm, macos-15, macos-15-intel]
+    runs-on: ${{ matrix.os }}
+    # About five minutes on a 10-core machine, a check per core; a runner has 3 or 4.
+    timeout-minutes: 45
+    permissions:
+      contents: read # to check out the code
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: jdx/mise-action@2d8d4cafcbd33be2ea37d2b6f5ad595363d1f1ca # v5.1.1
+        with:
+          cache: false
+          minimum_release_age: 7d
+      - run: bun install --frozen-lockfile
+      - name: terminal tests
+        # A runner is slower than the machine a check was written on, the Intel Macs most: each wait gets at least 30 s
+        # (a wait that passes returns at once).
+        env:
+          SLIPBOX_TERMINAL_WAIT: "30000"
+        run: bun run test:terminal
+
   # The required check (GR-D9): one name, whichever jobs ran. A job skipped by its `if:` counts as passed; one that
   # failed, was cancelled or never started fails this.
   ci:
     if: ${{ always() }}
-    needs: [lint, test]
+    needs: [lint, test, terminal]
     runs-on: ubuntu-24.04
     timeout-minutes: 5
     permissions: {}

@@ -421,6 +421,9 @@ build (`scripts/build-home.ts`), not kept as they are. Each file's purpose and t
   `work/kestrel/docs/qa/render-torture.md` (rendering.md; regressions 'no row exceeds width at 10 columns')
 - A .md file that is really a log: 100 MB-ish lines, or 20 MB single note; note of thousands of lines —
   `Downloads/chat-export.md`, `Downloads/sync-worker-2026-09-22.log.md` (about-this-vault 'what isn't here'; 15.x)
+- File names carrying a bidi override, bidi isolates, a C1 control, an ESC sequence and an OSC that would retitle the
+  terminal: drawn without them in the explorer, the switcher and the backlinks, the title kept slipbox's —
+  `.build/extras.toml` (rendering.md Escapes 2.9; sanitize.ts)
 
 ### big
 
@@ -1471,6 +1474,8 @@ build (`scripts/build-home.ts`), not kept as they are. Each file's purpose and t
 
 - hover, definition, references, rename symbol preview, code actions, format, completion, signature help in a code file
   — `work/kestrel/src/routes/share.ts`, `work/kestrel/src/routes/sign.ts` (What's under the cursor 19.12-16)
+- a type's definition from a value of it; an interface two classes implement, its implementations a list to pick from
+  — `work/kestrel/src/routes/expiry.ts` (What's under the cursor 19.13; terminal check 'language servers: g y …')
 - files whose outline comes from server symbols (CSS, YAML, PHP, Swift) — `work/kestrel/docker-compose.yml`,
   `work/kestrel/src/styles/app.css` (tui.md 16.8/19.14)
 - `slipbox lsp` says it was removed on stderr and exits 2 — `notes/daily/2026-10-06.md`, `work/kestrel/README.md`
@@ -1525,6 +1530,8 @@ build (`scripts/build-home.ts`), not kept as they are. Each file's purpose and t
   explorer — `hobbies/cooking/Home.md`, `notes/index.md` (tui.md A git repository is a vault 20.3, 21.1)
 - launcher: slipbox on plain folder shows the named folders, seen last first; plain folder explorer with ..; \~ and /
   one level at a time — `Downloads/stray-note.md`, `notes/index.md` (The launcher 17.14, 20.22, 21.10)
+- a plain folder opened is walked as a root is: a note in a folder of it found by search, by its path from the folder
+  — `Downloads/old-blog-export/README.md` (20.22)
 - background auto-index of home folder, idle only, resumable, daily — `Downloads/notes-backup-2026-07/index.md`,
   `notes/index.md` (The background auto-index 20.9)
 - folders list: each named folder once (its worktrees are branches, not copies), the copy its links open, seen last
@@ -2014,10 +2021,10 @@ build (`scripts/build-home.ts`), not kept as they are. Each file's purpose and t
   (21.7; tests 'followed into another folder', '@branch')
 - slipbox:// pointer into a .slipbox/-named folder — `hobbies/cycling/rides/202608301800-kyoto-river-loop.md`,
   `hobbies/photography/.slipbox/config.toml`, `hobbies/photography/gear/lenses.md`,
-  `hobbies/photography/trips/京都/index.md`, `notes/index.md`, `notes/projects/kyoto-trip.md` (21.7; e2e 'slipbox://
+  `hobbies/photography/trips/京都/index.md`, `notes/index.md`, `notes/projects/kyoto-trip.md` (21.7; terminal check 'slipbox://
   pointers')
 - slipbox:// pointer with @branch — `notes/research/link-styles.md`, `notes/weekly/2026-W41.md`, `work/kestrel/docs/sync.md`
-  (21.7; test '@branch'; e2e 'slipbox:// pointers': the agent's worktree)
+  (21.7; test '@branch'; terminal check 'slipbox:// pointers': the agent's worktree)
 - slipbox:// pointer: unnamed root cannot be pointed at — `notes/projects/brevet-300.md`,
   `notes/research/link-styles.md` (21.x 'never a folder's own name')
 - Pointer by old name after a folder was renamed — `notes/.slipbox/config.toml`, `notes/research/link-styles.md` (21.x
@@ -2127,7 +2134,7 @@ build (`scripts/build-home.ts`), not kept as they are. Each file's purpose and t
 - Markdown-convention root (plain git repo): relative paths with extension — `work/kestrel/CONTRIBUTING.md`,
   `work/kestrel/README.md`, `work/product/README.md` (21.x; test 'a git checkout's top is a vault…')
 - Convention from the user's setting beats the root's tool — `work/product/design/.slipbox/config.toml`,
-  `work/product/design/share-flow.md` (21.4 'which convention a file writes in'; e2e 'each root's convention')
+  `work/product/design/share-flow.md` (21.4 'which convention a file writes in'; terminal check 'each root's convention')
 - Convention inferred by two-thirds dominance, in a root with no tool — `work/kestrel/README.md`,
   `work/product/handbook/how-we-write.md` (21.4 'two-thirds or more'; test 'each part the first that says')
 - A root mixing forms with no dominant form — `work/product/design/share-flow.md` (21.x 'A root mixing forms')
@@ -2201,7 +2208,7 @@ build (`scripts/build-home.ts`), not kept as they are. Each file's purpose and t
 ### links/named-folders
 
 - Repo named by remote: short name — `.build/infra.toml`, `.build/kestrel.toml`, `.build/product.toml` (21.6; test 'a
-  name travels with what it names'; e2e 'named folders')
+  name travels with what it names'; terminal check 'named folders')
 - Two different repos sharing a short name: qualified name — `.build/product.toml`, `notes/research/link-styles.md`
   (21.6; test 'different folders of one name: repositories by their qualified names')
 - Copies of one repository: default copy — `.build/kestrel.toml`, `notes/research/route-engine-spike/README.md` (21.6;
@@ -2209,7 +2216,7 @@ build (`scripts/build-home.ts`), not kept as they are. Each file's purpose and t
 - Different repositories with different remotes, same folder name — `.build/product.toml` (21.x copies table)
 - Copies of one .slipbox/ folder vs different .slipbox/ folders of one name —
   `Downloads/notes-backup-2026-07/.slipbox/config.toml`, `Downloads/notes-backup-2026-07/index.md` (21.6; test 'a
-  second copy of a folder opened'; e2e 'named folders')
+  second copy of a folder opened'; terminal check 'named folders')
 - A .slipbox name overrides the repository's remote name — `notes/research/route-engine-spike/.slipbox/config.toml`,
   `notes/research/route-engine-spike/README.md` (21.6; test 'a name travels with what it names')
 - Private .slipbox (--private) names — `.build/infra.toml` (21.6 'A name for one copy only'; tests 'init --private keeps
@@ -2218,7 +2225,7 @@ build (`scripts/build-home.ts`), not kept as they are. Each file's purpose and t
   'different folders of one name… old names still find')
 - slipbox folders listing and default — `.build/product.toml`, `notes/.slipbox/config.toml` (21.x Words and commands)
 - Pointer to a name not on this machine — `notes/index.md`, `notes/research/link-styles.md` (21.7 'isn't on this
-  machine yet'; test 'a pointer followed'; e2e 'slipbox:// pointers')
+  machine yet'; test 'a pointer followed'; terminal check 'slipbox:// pointers')
 - Named folder moved by hand takes its state along — `Downloads/notes-backup-2026-07/index.md` (21.x 'A named folder
   moved by hand')
 - slipbox resolve of a pointer — `notes/index.md`, `notes/research/link-styles.md` (21.7 Agents; test 'the CLI

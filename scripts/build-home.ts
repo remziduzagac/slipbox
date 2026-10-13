@@ -1,7 +1,7 @@
 // Builds the reference sample set (examples/home) into a folder: bun scripts/build-home.ts <dir>
 //
 // examples/home is committed as plain folders: a `.git` folder can't be committed inside this
-// repository. The build copies it to <dir>/home — the `$HOME` tests and e2e use — and halden, the
+// repository. The build copies it to <dir>/home — the `$HOME` the tests and the terminal tests use — and halden, the
 // demo vault, to <dir>/vault beside it, then gives each mock repository its history: the commits,
 // branches, merges and worktrees `.build/<repo>.toml` describes, replayed with git in order (the
 // format is in examples/home/README.md). Each repository's `main` ends at the folder as committed,
@@ -21,7 +21,7 @@ import {
   symlinkSync,
   writeFileSync,
 } from "node:fs";
-import { dirname, join, relative, resolve } from "node:path";
+import { basename, dirname, join, relative, resolve } from "node:path";
 import { parse as parseToml } from "smol-toml";
 
 export const SOURCE = resolve(import.meta.dir, "..", "examples", "home");
@@ -173,6 +173,9 @@ export function makeExtras(home: string, extras: Extra[]): string[] {
   for (const x of extras) {
     const abs = join(home, x.path);
     mkdirSync(dirname(abs), { recursive: true });
+    // A twin by case or by Unicode normalization of a file already there (`Plan.md`, `plan.md`): a filesystem that
+    // folds names (macOS's) can't hold both, and would write this one over the other. Made only where it can be.
+    if (existsSync(abs) && !readdirSync(dirname(abs)).includes(basename(abs))) continue;
     switch (x.kind ?? "file") {
       case "symlink":
         if (!x.target) throw new BuildError(`${x.path}: a symlink needs a target`);

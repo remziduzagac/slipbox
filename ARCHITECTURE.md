@@ -43,7 +43,7 @@ renderer, input, shutdown) touch OpenTUI; everything else is driven in tests thr
 | `src/cli/`, `src/tui/` | the two faces |
 | `src/version.ts` | the version, one source; `package.json`'s must match |
 | `tests/` | the headless tests by area (`core`, `render`, `vault`, `cli`, `tui`, …), their snapshots, fixtures |
-| `tests/e2e/` | the terminal tests: slipbox itself driven in a herdr pane |
+| `tests/terminal/` | the terminal tests: slipbox driven by keys in headless terminals; `herdr/`, a real terminal's |
 | `examples/vault/` | the demo folder, which the render tests draw at several widths |
 | `examples/home/` | the reference set: every case of every feature, listed in its `CASES.md` |
 | `scripts/` | the checks, the release build and its templates, the builders of grammars, locks and the reference set |
@@ -96,7 +96,7 @@ What every change keeps. Each is checked by a test or a script where it can be.
 - `bun run check` runs everything CI runs: the typecheck, the boundary, the supply chain's gates
   (`scripts/check-deps.ts`), Biome, the tests and the rest. `package.json`'s `check` script is the list.
 - `bun test <file>` runs one area's tests; `bun test -u` updates snapshots, to be read before they're accepted.
-- `bun run e2e --tab` runs the terminal tests, slipbox driven in a herdr pane.
+- `bun run test:terminal` runs the terminal tests, slipbox driven in headless terminals, many at once.
 - Every bug fixed gets a regression test that fails without the fix; new behaviour gets a test that exercises it.
 
 ## Going deeper

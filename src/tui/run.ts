@@ -7,6 +7,7 @@ import { loadConfig } from "../core/config.ts";
 import { openGraph } from "../core/graph.ts";
 import { sanitize } from "../core/sanitize.ts";
 import { setWidthMethod } from "../core/width.ts";
+import { appendFileSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { dataHome, stateHome } from "../core/paths.ts";
 import { installedBy, readChannel } from "../core/install.ts";
@@ -187,6 +188,12 @@ export async function runTui(argv: string[]): Promise<number> {
   // again when they do.
   const picturesNow = () => `${pictures.protocol() ?? "-"}:${JSON.stringify(cell())}`;
   let picturesSeen = picturesNow();
+  // The terminal tests (SLIPBOX_TRACE), beside the commands run: a `key` line for every key and paste once handled,
+  // a `frame` line for every frame painted. A test reads the screen once a frame follows its last key: a loaded
+  // machine reads keys late, and draws late.
+  const trace = process.env.SLIPBOX_TRACE;
+  const handled = trace ? () => appendFileSync(trace, "key\n") : () => {};
+  const painted = trace ? () => appendFileSync(trace, "frame\n") : () => {};
   const paint = (canvas: Canvas) => {
     if (renderer.widthMethod !== counted) {
       counted = renderer.widthMethod;
@@ -202,6 +209,7 @@ export async function runTui(argv: string[]): Promise<number> {
       renderer.setBackgroundColor(toRGBA(bg === "default" ? null : bg, false));
     }
     app.draw(canvas);
+    painted();
   };
   const view = new AppRenderable(renderer, paint, pictures);
   renderer.root.add(view);
@@ -211,12 +219,13 @@ export async function runTui(argv: string[]): Promise<number> {
   };
   renderer.keyInput.on("keypress", (k: KeyEvent) => {
     if (k.eventType === "release") return;
-    void app.handleKey(keyName(k));
+    void app.handleKey(keyName(k)).finally(handled);
   });
   // Bracketed paste arrives as one event, not keys: into the list filter or prompt.
   renderer.keyInput.on("paste", (p: { bytes: Uint8Array }) => {
     app.paste(new TextDecoder().decode(p.bytes));
     renderer.requestRender();
+    handled();
   });
   renderer.on("resize", (w: number, h: number) => {
     app.resize(w, h);

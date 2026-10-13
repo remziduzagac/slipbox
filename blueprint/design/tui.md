@@ -561,7 +561,8 @@ keys.
   git checkout each changed file has its state at its row's end — `M` modified, `+` new (untracked or added), `R`
   renamed, `!` in a merge's conflict (`git_modified`, `git_new`, `git_conflict`) — and a folder with one in it a `•`.
   git is asked in the background, a moment after anything changed (a save, the watcher, a file operation, a branch
-  switch, a switch of roots — which drops the old root's marks at once).
+  switch, a switch of roots — which drops the old root's marks at once); asked while a question is still out, it's
+  asked again once that one's answered, so a stage or a commit is never answered by a question from before it.
 - **History (left, `◷`, `space h h`):** the active window's timeline, newest first: each place's
   note name and line, the current one marked `here` and selected when the view opens. A click
   selects an entry; `enter` or a double-click jumps there, the places before it becoming back and
@@ -899,8 +900,9 @@ and a target outside the root is refused (`7.5`); the watcher is told the write 
 buffer reloads, its windows keeping their anchors, so the cursor stays put.
 
 **Task checkboxes** (`4.11`) are the first write. `ctrl+l` (`space n t`), or a click on the
-checkbox, flips the task item holding the cursor — the innermost, from any of its rows — as a
-one-byte edit to the file's bytes, so a BOM, CRLF endings and even invalid UTF-8 survive untouched.
+checkbox, flips the task item holding the cursor — the innermost, from any of its rows; in source mode and the lens,
+the one holding the cursor's line, found in the parse — as a one-byte edit to the file's bytes, so a BOM, CRLF
+endings and even invalid UTF-8 survive untouched.
 If the file changed on disk since it was shown, it is reloaded instead and nothing is written (its
 lines may have moved). With unsaved changes it flips the mark in the text on screen instead — an undo
 step, left unsaved ("done ✓ (unsaved)") — never on disk under them.
@@ -1225,7 +1227,9 @@ rather than rebuilt (`5.8`; D137).
   yours). A file that did change, or was deleted, opens the conflict prompt.
 - **Deleted:** the buffer keeps showing the last version, marked `✖ deleted on disk`.
 - **Created or deleted notes:** these change link statuses, so every layout and the explorer
-  refresh. A red link turns resolved when its note appears.
+  refresh. A red link turns resolved when its note appears. A note written and removed between two of the watcher's
+  looks is said deleted all the same: a layout drawn meanwhile may have found it on the disk (a path link resolves by
+  its file before the index knows it), and draws its link red again.
 - **New directories** are watched through their whole depth. A `.gitignore` change rescans, and
   open notes that changed during the rescan reload.
 - **Files outside the root** (the scratch in the state dir) are polled while open.
