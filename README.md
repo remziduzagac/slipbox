@@ -7,31 +7,32 @@
 
 **The terminal companion for coding agents.**
 
-Read, review and edit what your agent writes, with Markdown and code rendered cleanly, an editor that's necessary and
-sufficient, and agent integration built in.
+Read, review and edit what your agent writes — with Markdown and code rendered cleanly, an editor that's necessary
+and sufficient, and agent integration built in.
 
-slipbox sits beside Claude Code, Codex, or any agent that runs shell commands. The agent writes plans, documentation and
-code; you read them as documents, with tables that fit, highlighted code, pictures, diagrams and maths. Review what
-changed and make edits of your own.
+slipbox sits beside Claude Code, Codex, or any agent that runs shell commands. Follow an idea from the first plan to
+the code that implements it. Read comfortably, review what changed, and make edits of your own. Tables fit the window
+and code is highlighted; pictures, diagrams and maths sit alongside your writing; themes, keys and settings make the
+workspace yours.
 
 Editing is **intuitive yet innovative**: the lens opens the Markdown around your cursor for editing while the rest
-stays rendered. You edit where you were reading, keeping the surrounding document in view and your focus on the
-change.
+stays rendered. Stay where you were reading, keep the surrounding document in view, and focus on the change.
 
-The editor is **necessary and sufficient**: the editing essentials, including selections, undo and redo, find and
-replace, completion, language servers, linters and spelling. Use vim's keys or familiar editor shortcuts, discover
-actions through menus and the command palette, or click directly. Your usual editor is a key away whenever you prefer
-it.
+The editor is **necessary and sufficient**: the everyday editing tools, from selections, undo and find-and-replace to
+completion, language servers, linters and spelling. Your own editor is a key away whenever you want more.
 
-Collect references and excerpts in the scratch, with their file paths and line numbers, ready for your next prompt.
-Build context for your agent while keeping your document focused.
+Use vim's keys or familiar editor shortcuts, and discover the rest as you go: `space` opens a menu of actions, `?`
+shows every key, and `:` opens the command palette. Everything is clickable too.
 
-The agent can use slipbox's command line and bundled skill to search, follow links and write. A guarded write is
-refused if the file changed since the agent read it. What the agent saves appears at once; when a file changes while
-you have unsaved edits, slipbox asks what to keep.
+The agent works on the same files through slipbox's command line and bundled skill: searching, following links and
+making changes, with guarded writes that refuse to replace a file changed since the agent read it. What the agent
+saves appears at once; if a file changes while you have unsaved edits, slipbox asks what to keep.
 
-Open the folder you already work in: a repository, an Obsidian vault, a zk notebook or an ordinary folder. Opening it
-writes nothing there, and your notes stay plain files.
+Gather references and excerpts in the scratch, each with its file path and line numbers. Build your next prompt while
+keeping your document focused.
+
+Open the folder you already have — a repository, an Obsidian vault, a zk notebook or an ordinary folder. Opening it
+writes nothing there: your notes and code stay in their files, alongside the tools you already use.
 
 - **Start here:** [Getting started](docs/guides/getting-started.md), a first session of about ten minutes, once
   [Installing slipbox](docs/guides/install.md) has it on your machine. [The documentation](docs/README.md) has the

@@ -534,14 +534,15 @@ argv, stays a constraint on whatever is built. This amends D23 and D24.
 
 **Decision:** Wherever slipbox describes itself, it is the terminal companion for coding agents: "Read, review and edit
 what your agent writes, with Markdown and code rendered cleanly, an editor that's necessary and sufficient, and agent
-integration built in." The README opens with that, then a paragraph for each claim: reading an agent's work as
-documents; editing intuitive yet innovative, in the lens; the editor necessary and sufficient, the essentials with
-vim's keys or the usual ones, menus, the palette and the mouse; the scratch; the command line and the skill, guarded
-writes, reloads and the conflict prompt; any folder, opened as it is. `package.json`, the documentation's index and the
-repository's description take the line whole; the Homebrew formula and `slipbox help`, which have room for less, its
-first sentence. It clarifies D33, which says how slipbox works with agents, a shared workspace over plain files; this
-says who it is for and what it gives them. The editor's scope is unchanged (D134): small edits in slipbox, `$EDITOR` a
-key away, and not an IDE (requirements.md § Non-goals).
+integration built in." The README opens with that, then a paragraph for each claim: an idea followed from the plan to
+the code, rendered, with themes, keys and settings your own; editing intuitive yet innovative, in the lens; the editor
+necessary and sufficient, your own editor for more; usage discovered as you go (vim's keys or the usual ones, `space`,
+`?`, `:` and the mouse); the command line and the skill, guarded writes, reloads and the conflict prompt; the scratch;
+any folder, opened as it is. `package.json`, the documentation's index and the repository's description take the line
+whole; the Homebrew formula and `slipbox help`, which have room for less, its first sentence. It clarifies D33, which
+says how slipbox works with agents, a shared workspace over plain files; this says who it is for and what it gives them.
+The editor's scope is unchanged (D134): small edits in slipbox, `$EDITOR` a key away, and not an IDE (requirements.md §
+Non-goals).
 
 **Why:** The user's call, 2026-10-13: slipbox is more than a Markdown reader. "A terminal Markdown notes app"
 undersold what was built for working beside an agent (the scratch, the context bundle, a branch's changes reviewed,
