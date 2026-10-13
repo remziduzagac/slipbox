@@ -196,6 +196,13 @@ export function appendScratch(loc: ScratchLocation, entry: string): string {
   return next;
 }
 
+/** The scratch made, empty, where it isn't yet: the TUI opens it to be typed in before anything is captured (#43). */
+export function ensureScratch(loc: ScratchLocation): void {
+  if (existsSync(loc.path)) return;
+  ensureDir(join(loc.path, ".."));
+  atomicWrite(loc.path, "");
+}
+
 export function clearScratch(loc: ScratchLocation): void {
   if (existsSync(loc.path)) atomicWrite(loc.path, "");
 }

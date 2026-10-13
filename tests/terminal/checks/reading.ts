@@ -5,7 +5,19 @@ import { cpSync, existsSync, lstatSync, readdirSync, readFileSync, readlinkSync,
 import { join } from "node:path";
 import { UNSAFE } from "../../../src/core/sanitize.ts";
 import { loadTheme } from "../../../src/core/theme/index.ts";
-import { type Check, type LeftOut, leader, moveTo, open, opened, pos, signed, TOML, TSC } from "../check.ts";
+import {
+  type Check,
+  type LeftOut,
+  leader,
+  moveTo,
+  open,
+  opened,
+  pos,
+  SCRATCH_FLOATING,
+  signed,
+  TOML,
+  TSC,
+} from "../check.ts";
 import type { Session, StyledRun } from "../session.ts";
 
 const KESTREL = "home/work/kestrel/README.md";
@@ -1522,6 +1534,10 @@ export const READING: Check[] = [
       // In the scratch, with its path and lines, for an agent.
       await leader(s, "k", "s");
       await s.message(`badge — lines ${badge}–${end} added to the scratch`);
+      // Shown at once, floating (#43); q, back at the cell.
+      await s.see(SCRATCH_FLOATING);
+      await s.keys("q");
+      await s.notSee(SCRATCH_FLOATING);
       // Its problem (a syntax error slipbox found itself): the Problems panel on it.
       await leader(s, "k", "p");
       await s.status("PROBLEMS");

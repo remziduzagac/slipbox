@@ -586,8 +586,9 @@ The scratch is a note slipbox keeps for collecting references to hand to an agen
 
 | Keys | What |
 | --- | --- |
-| `space s s` | open the scratch; it updates as agents add to it |
-| `space s a` | add the selection with its `path:line-line`, or the cursor's row with its `path:line` |
+| `space s s` | open the scratch, floating or on the right as `capture.open_in` says; it updates as agents add |
+| `space s r` | open the scratch in the window on the right |
+| `space s a` | add the selection with its `path:line-line`, or the cursor's row with its `path:line`, and show it |
 | `space s y` | copy the whole scratch |
 | `space s c` | copy the note's context for an agent: it, what it links to, what links to it |
 | `space s d` | clear the scratch, after asking |

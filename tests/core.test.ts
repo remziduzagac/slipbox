@@ -1486,6 +1486,7 @@ describe("what manual/configuration.md promises", () => {
       ["editor", "edit_in", "live"],
       ["files", "show", "all"],
       ["git", "signs_at", "window_right"],
+      ["capture", "open_in", "right"],
     ];
     for (const [section, key, good] of keys) {
       const bad = loadConfig({ configFile: file(`[${section}]\n${key} = "bogus"\n`) });

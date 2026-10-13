@@ -406,3 +406,5 @@ dates. Each says what was asked, decided, built and found, and cites the decisio
   there (D227).
 - Homebrew: the tap is the one herdsman uses, `remziduzagac/homebrew-tap`, pushed to with a deploy key of slipbox's
   own, as herdsman's is; the maintainer made the key, the secret and the variable (D228, #38).
+- The scratch is for capturing quickly, the user said: it floats in the middle and `q` closes it, a capture shows it,
+  and a setting, or `space s r`, puts it on the right instead (D229, #43).

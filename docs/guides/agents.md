@@ -122,9 +122,11 @@ next prompt. You and the agent both add to it; you read it, and paste it into th
 
 1. In slipbox, open `ideas/coffee.md`, put the cursor on the line `A ratio of 1 to 16 suits a pour-over.`, and press
    `space s a`. The scratch gets that line's place, `path:line`, in a code span: `` `ideas/coffee.md:5` ``. Select
-   lines first (`shift+v`, then `j`) and it gets `path:line-line` and the lines themselves. A message says
-   `added to the scratch · ␣ s s opens it`.
-2. Press `space s s` to open it. It changes as the agent adds to it:
+   lines first (`shift+v`, then `j`) and it gets `path:line-line` and the lines themselves. The scratch opens,
+   floating in the middle of the screen, with the cursor on what you added: type a word about it if you like, then
+   `q` takes you back to the note.
+2. Press `space s s` to open it again, or `space s r` to keep it in the window on the right while you work
+   (`capture.open_in = "right"` makes that the usual place). It changes as the agent adds to it:
 
    ```bash
    slipbox capture "Is 1 to 16 right for the small pot?"

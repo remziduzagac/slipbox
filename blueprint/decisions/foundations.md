@@ -551,3 +551,24 @@ model without the GUI", which D33 had superseded. Decided by an issue (#33) and 
 
 **Not chosen:** a comprehensive editor, raising its scope in the requirements; "AI companion"; a line saying slipbox
 has no AI of its own; "notes app" as the lead (ideas.md § Product).
+
+## D229: The scratch floats in the middle for quick capture, or sits on the right by a setting (8.3, 2026-10-13)
+
+**Decision:** `space s s` opens the scratch in a floating window in the middle of the screen, three quarters of it, with
+every editing key; `q` or `esc` closes it, back where you were, what was typed saved. It opens empty too.
+`[capture] open_in = "right"`, or Scratch opens in the UI settings, puts it in the window on the right instead (in a
+split already, its other window), and `space s r` opens it there whatever the setting. A capture in the TUI (`space s
+a`, a code cell's `space k s`) shows the scratch with the cursor on the new entry; with the scratch already beside the
+window you're in, it scrolls there and the cursor stays yours. What an agent adds opens nothing. Decided by an issue
+(#43) and one pull request (D223).
+
+**Why:** The user's call: the scratch is for capturing a note, an idea or a reference quickly. Opened as a tab, it took
+the place of the note you were in, and a capture never showed what it had added. A floating window over the note is
+there and gone with a key, as the properties and commit editors are; the window on the right is for keeping it in sight
+while you gather.
+
+**Cost:** A capture takes a `q` to get back to the note. One more setting.
+
+**Not chosen:** the tab, as before; asking before a floating scratch closes with unsaved typing (it is slipbox's own
+file, and saving is what you would answer); opening it when an agent adds, which would take the keys from whatever you
+were typing.

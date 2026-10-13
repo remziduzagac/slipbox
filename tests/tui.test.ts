@@ -4883,17 +4883,111 @@ describe("configuration: everything from config, and live reload", () => {
 });
 
 describe("scratch (space s)", () => {
-  test("add the cursor row reference, add a selection, open, copy", async () => {
+  /** The line the window's cursor is on, from 1. */
+  const lineAt = (h: Harness, v = h.app.view!) => lineOf(v, offsetOf(h.app, v));
+
+  test("add the cursor row reference, add a selection: each shown floating, the cursor on it, q or esc back; open, copy (#43)", async () => {
     const h = await harness({ open: "notes/alpha.md" });
     await h.keys("space", "s", "a");
+    expect([h.app.floating?.kind, h.app.displayName(h.app.view!.buf), lineAt(h)]).toEqual(["scratch", "scratch", 1]);
+    await h.keys("q");
+    expect([h.app.floating, h.app.view!.buf.key]).toEqual([null, "notes/alpha.md"]);
     h.app.moveCursor(h.app.view!, { row: rowStarting(h, "Back to"), col: 0 });
     await h.keys("v", "e", "space", "s", "a");
     const text = readFileSync(h.app.scratch().path, "utf8");
     expect(text).toBe("`notes/alpha.md:1`\n\n`notes/alpha.md:9`\n\n```\nBack\n```\n");
+    expect([h.app.floating?.kind, lineAt(h)]).toEqual(["scratch", 3]);
+    await h.keys("escape");
+    expect([h.app.floating, h.app.view!.buf.key]).toEqual([null, "notes/alpha.md"]);
     await h.keys("space", "s", "s");
-    expect(h.app.displayName(h.app.view!.buf)).toBe("scratch");
+    expect([h.app.floating?.kind, h.app.displayName(h.app.view!.buf)]).toEqual(["scratch", "scratch"]);
     await h.keys("space", "s", "y");
     expect(h.copied.at(-1)).toBe(text);
+  });
+
+  test("the floating scratch: empty, it opens too, in the middle, three quarters of the screen; typed in, saved as it closes (#43)", async () => {
+    const h = await harness({ open: "notes/alpha.md", width: 120, height: 40 });
+    const path = h.app.scratch().path;
+    expect(existsSync(path)).toBe(false);
+    await h.keys("space", "s", "s");
+    expect(h.app.floating?.kind).toBe("scratch");
+    h.frame();
+    const box = h.app.geometry!.floating!;
+    const pane = h.app.geometry!.panes.find((p) => p.view === h.app.tabView)!;
+    // Its margin taken off: the box itself.
+    const [y, rows] = [box.y + 1, box.h - 2];
+    expect(Math.abs(y - pane.y - (pane.y + pane.h - (y + rows)))).toBeLessThanOrEqual(3);
+    expect([box.w - 4, rows >= Math.floor((pane.h * 2) / 3)]).toEqual([90, true]);
+    expect(h.frame()).toContain("esc · q closes, saved");
+    await h.keys("i", "i", "d", "e", "a", "escape");
+    expect(h.app.view!.buf.dirty).toBe(true);
+    await h.keys("q");
+    expect([h.app.floating, readFileSync(path, "utf8")]).toEqual([null, "idea"]);
+  });
+
+  test("[capture] open_in = right: the scratch on the right; a capture with it there scrolls it, the cursor staying; q closes it, saved; space s r; the UI settings switch it, kept (#43)", async () => {
+    const root = makeVault();
+    const h = await harness({
+      root,
+      open: "notes/alpha.md",
+      config: (c) => ((c.capture.open_in = "right"), (c.ui.restore_session = true)),
+    });
+    // A long scratch: what's added goes below the window's last row.
+    const path = h.app.scratch().path;
+    mkdirSync(dirname(path), { recursive: true });
+    writeFileSync(path, "x\n\n".repeat(40));
+    // A split stacked once and closed since: the scratch goes on the right all the same.
+    const t = h.app.tab!;
+    Object.assign(t, { orientation: "stacked" });
+    await h.keys("space", "s", "s");
+    expect([h.app.floating, t.views.length, t.orientation, t.active]).toEqual([null, 2, "side", 1]);
+    expect(h.app.displayName(h.app.view!.buf)).toBe("scratch");
+    // From the note beside it: the entry shown on the right, the cursor still in the note.
+    t.active = 0;
+    await h.keys("space", "s", "a");
+    expect([h.app.floating, t.active, h.app.view!.buf.key]).toEqual([null, 0, "notes/alpha.md"]);
+    expect(lineAt(h, t.views[1]!)).toBe(81);
+    expect(h.frame()).toContain("notes/alpha.md:1");
+    await h.keys("j", "space", "s", "a");
+    expect([t.active, lineAt(h, t.views[1]!)]).toEqual([0, 83]);
+    // Closed with q, what was typed in it saved.
+    t.active = 1;
+    const scratch = h.app.view!.buf;
+    scratch.edit(scratch.source.length, 0, "why\n");
+    await h.keys("q");
+    expect([t.views.length, h.app.view!.buf.key]).toEqual([1, "notes/alpha.md"]);
+    expect(readFileSync(path, "utf8")).toEndWith("\nwhy\n");
+    // The UI settings: floating now, kept from one start to the next; space s r, on the right all the same.
+    await h.keys("space", "u", "u");
+    expect(h.frame()).toMatch(/Scratch opens +on the right/);
+    await h.keys("escape");
+    await h.app.run("ui.scratch_in");
+    await h.keys("space", "s", "s");
+    expect(h.app.floating?.kind).toBe("scratch");
+    await h.keys("q", "space", "s", "r");
+    expect([h.app.floating, t.views.length, h.app.displayName(h.app.view!.buf)]).toEqual([null, 2, "scratch"]);
+    // In a split already: its other window takes the scratch.
+    await h.keys("q");
+    h.app.splitWith("side");
+    t.active = 0;
+    await h.keys("space", "s", "r");
+    expect([t.views.length, t.active, t.views[0]!.buf.key, h.app.displayName(t.views[1]!.buf)]).toEqual([
+      2,
+      1,
+      "notes/alpha.md",
+      "scratch",
+    ]);
+    h.app.quit();
+    const config = (c: Config) => ((c.capture.open_in = "right"), (c.ui.restore_session = true));
+    const again = await harness({ root, open: "notes/alpha.md", config });
+    expect(again.app.ui.scratch_in).toBe("float");
+    // A value saved that isn't one: dropped, the config's taken.
+    const { loadSession, saveSession } = await import("../src/core/position.ts");
+    again.app.quit();
+    const s = loadSession(again.app.loc)!;
+    saveSession(again.app.loc, { ...s, ui: { ...s.ui, scratch_in: { value: "bottom", base: "right" } } });
+    const bogus = await harness({ root, open: "notes/alpha.md", config });
+    expect(bogus.app.ui.scratch_in).toBe("right");
   });
   test("the scratch open is never another root in the explorer (21.9): it lives in slipbox's own state folder", async () => {
     const h = await harness();
@@ -6897,6 +6991,12 @@ describe("code as a notebook (24.x, 24.13)", () => {
     click(h, hot(h, "cell:scratch:4")!);
     expect(h.app.messages.at(-1)!.text).toBe("resolve — lines 4–15 added to the scratch");
     expect(readFileSync(h.app.scratch().path, "utf8")).toContain("sample.ts:4-15");
+    // Shown in the scratch, floating, the cursor on it (#43); q, back at the cell.
+    expect([
+      h.app.floating?.kind,
+      h.app.view!.buf.source.split("\n")[lineOf(h.app.view!, offsetOf(h.app, h.app.view!)) - 1],
+    ]).toEqual(["scratch", expect.stringContaining("sample.ts:4-15")]);
+    await h.keys("q");
     // ⚠: a problem in it — counted on its header, the panel on it.
     const warning = (line: number, message: string) => ({
       start: { line, column: 3 },

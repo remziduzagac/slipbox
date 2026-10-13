@@ -1179,6 +1179,8 @@ const UI_TOGGLES: { key: keyof UiState; id: string; title: string }[] = [
 /** The marks' levels in turn (`space u shift+d`), and how each is said. */
 const MARKS_NEXT = { off: "error", error: "warning", warning: "info", info: "off" } as const;
 const MARKS_SAID = { off: "off", error: "errors", warning: "warnings and up", info: "all" } as const;
+/** Where the scratch opens, as the UI settings say it. */
+const SCRATCH_SAID = { float: "floating", right: "on the right" } as const;
 
 function toggle(a: App, key: keyof UiState, title: string): void {
   const next = !a.ui[key];
@@ -2188,6 +2190,7 @@ export function registerActions(app: App): void {
         ...UI_TOGGLES.map((t) => ({ label: t.title, hint: onOff(a.ui[t.key] as boolean), data: t.id })),
         { label: "Problems marked in the text", hint: MARKS_SAID[a.ui.problem_marks], data: "ui.problem_marks" },
         { label: "Code cells", hint: a.ui.code_cells === "box" ? "boxes" : "bands", data: "ui.code_cells" },
+        { label: "Scratch opens", hint: SCRATCH_SAID[a.ui.scratch_in], data: "ui.scratch_in" },
       ];
       a.openList({
         title: "UI settings — enter changes one",
@@ -2213,12 +2216,8 @@ export function registerActions(app: App): void {
       a.setUi("glyphs", arg);
     },
     // scratch
-    "scratch.open": (a) => {
-      const loc = a.scratch();
-      if (!readScratch(loc).trim())
-        return a.message("info", `the scratch is empty · ${prettyKey(`${a.leader} s a`, a.leader)} adds to it`);
-      a.open(loc.path);
-    },
+    "scratch.open": (a) => a.openScratch(),
+    "scratch.open_right": (a) => a.openScratch("right"),
     "scratch.add": (a) =>
       withView(a, (v) => {
         const layout = lay(a, v);
@@ -2711,6 +2710,12 @@ export function registerActions(app: App): void {
     const next = a.ui.code_cells === "box" ? "band" : "box";
     a.setUi("code_cells", next);
     a.message("info", `Code cells: ${next === "box" ? "boxes" : "bands"}`);
+  };
+  // Where the scratch opens (#43): floating, or in the window on the right.
+  impl["ui.scratch_in"] = (a) => {
+    const next = a.ui.scratch_in === "float" ? "right" : "float";
+    a.setUi("scratch_in", next);
+    a.message("info", `Scratch opens: ${SCRATCH_SAID[next]}`);
   };
   for (const action of ["fold", "edit", "copy", "references", "problems", "scratch"])
     impl[`cell.${action}`] = (a) => a.cellAction(action);

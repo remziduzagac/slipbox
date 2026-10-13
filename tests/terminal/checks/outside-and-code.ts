@@ -30,6 +30,7 @@ import {
   opened,
   pos,
   problemListed,
+  SCRATCH_FLOATING,
   signed,
   TSC,
 } from "../check.ts";
@@ -739,7 +740,7 @@ export const OUTSIDE_AND_CODE: Check[] = [
       // pressed: it's outside the vault, polled.
       s.expect(s.cli("capture", "Check the dome heater").code === 0, "slipbox capture ran");
       await leader(s, "s", "s");
-      await s.status(/scratch/);
+      await s.see(SCRATCH_FLOATING);
       await s.see("Check the dome heater");
       s.expect(s.cli("capture", "Ask Lena about the outreach rota").code === 0, "slipbox capture ran again");
       await s.see("Ask Lena about the outreach rota", 5000);

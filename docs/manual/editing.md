@@ -448,9 +448,16 @@ the root instead (`scratch.md`, or the name in `capture.file`).
 | --- | --- |
 | `space s a` | adds the selection with its lines (`ideas/coffee.md:12-18`), or the cursor row's `path:line` |
 | `space s s` | opens the scratch; it updates as things are added |
+| `space s r` | opens the scratch in the window on the right |
 | `space s y` | copies the whole scratch |
 | `space s d` | clears the scratch, after asking |
 | `space s c` | copies the note's context for an agent: it, what it links to, what links to it |
+
+The scratch opens in a window floating in the middle of the screen, to jot something down or read what you have
+gathered: every editing key works there, and `q` or `esc` closes it, back where you were, what you typed saved. It
+opens when it's empty too. Each time you add to it, it opens with the cursor on what you added, so you can say a word
+about it. With `capture.open_in = "right"`, or Scratch opens in the [UI settings](screen.md#ui-settings), it opens in
+the window on the right instead, beside your note; there, what you add appears in it while you stay where you were.
 
 Other programs add to it with `slipbox capture`, which is how your editor or an agent puts things there:
 

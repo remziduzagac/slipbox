@@ -464,16 +464,20 @@ function drawSaveAs(
 /**
  * The floating editor (3.20): a framed window over the others, centred near the top of the content,
  * as tall as its text (at most the content's height); its title says what it edits, its bottom
- * border how it closes. Inside, a window like any, in source mode.
+ * border how it closes. Inside, a window like any, in source mode. The scratch's (#43) is a fixed three quarters of
+ * the screen, in the middle of it: room to type in, its size not jumping as entries come.
  */
 function drawFloating(app: App, c: Canvas, mainY: number, mainH: number, geo: Geometry): Rect {
   const f = app.floating!;
   const theme = app.theme;
   const W = c.width;
-  const w = Math.max(24, Math.min(100, W - 8));
-  const h = Math.max(6, Math.min(mainH - 1, f.view.buf.lineStarts().length + 5));
+  const scratch = f.kind === "scratch";
+  const w = Math.max(24, Math.min(100, scratch ? Math.floor((W * 3) / 4) : W - 8));
+  const h = scratch
+    ? Math.max(6, Math.min(mainH - 1, Math.floor((mainH * 3) / 4)))
+    : Math.max(6, Math.min(mainH - 1, f.view.buf.lineStarts().length + 5));
   const x = Math.floor((W - w) / 2);
-  const y = mainY + Math.max(0, Math.min(1, mainH - h));
+  const y = mainY + (scratch ? Math.floor((mainH - h) / 2) : Math.max(0, Math.min(1, mainH - h)));
   const bg = roleStyle(theme, "overlay", null);
   const border = roleStyle(theme, "overlay_border", null);
   const dim = roleStyle(theme, "overlay_dim", null);
@@ -491,7 +495,9 @@ function drawFloating(app: App, c: Canvas, mainY: number, mainH: number, geo: Ge
       ? " esc · q closes "
       : f.kind === "commit"
         ? ` ctrl+s ${f.amend ? "amends" : "commits"} · esc · q leaves it `
-        : ` esc · q closes, writing back · ctrl+s writes `;
+        : f.kind === "scratch"
+          ? " esc · q closes, saved "
+          : ` esc · q closes, writing back · ctrl+s writes `;
   const bottom = `${b.bl}${b.h.repeat(Math.max(0, w - 2 - stringWidth(hint)))}`;
   drawText(c, x, y + h - 1, bottom, border);
   drawText(c, x + stringWidth(bottom), y + h - 1, truncate(hint, w - stringWidth(bottom) - 1) + b.br, dim);

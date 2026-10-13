@@ -102,7 +102,7 @@ import { cellBlocks } from "../core/layout/code.ts";
 import { type Block, blockAt, blockRanges, composeLive, LENS_COUNTERS, sectionRanges } from "../core/layout/live.ts";
 import { discoverNvims, NVIM_REMOTE, type NvimServer, probeNvim } from "../core/nvim.ts";
 import { homedir } from "node:os";
-import { appendScratch, fence, fenceLanguage, formatEntry, scratchLocation } from "../core/capture.ts";
+import { appendScratch, ensureScratch, fence, fenceLanguage, formatEntry, scratchLocation } from "../core/capture.ts";
 import { copyText, readClipboard } from "../core/clipboard.ts";
 import { canonKey, canonSeq, CommandRegistry, Keymap, unknownModifiers } from "../core/commands.ts";
 import { type Config, loadConfig } from "../core/config.ts";
@@ -742,6 +742,8 @@ export interface UiState {
   code_cells: "box" | "band";
   /** Misspelt words marked in notes (25.6). */
   spell: boolean;
+  /** Where the scratch shows (#43): floating over the windows, or in the window on the right. */
+  scratch_in: "float" | "right";
   theme: string;
   glyphs: string;
 }
@@ -761,6 +763,7 @@ export function uiDefaults(c: Config): UiState {
     problem_marks: c.diagnostics.marks,
     code_cells: c.render.code_cells,
     spell: c.spell.enabled,
+    scratch_in: c.capture.open_in,
     // "auto": URLs where colour can't mark links (NO_COLOR), as in `slipbox render`.
     urls: c.render.show_urls === "always" || (c.render.show_urls === "auto" && !!process.env.NO_COLOR),
     theme: c.theme,
@@ -4112,6 +4115,8 @@ export class App {
     if (!t) return;
     if (t.views.length > 1) {
       const closed = t.views.splice(t.active, 1)[0]!;
+      // The scratch on the right, closed: what was typed in it saved, as when it floats (#43).
+      if (closed.buf.abs === this.scratch().path && closed.buf.dirty) this.saveBuffer(closed.buf);
       this.remember(closed);
       t.active = 0;
       return;
@@ -5274,6 +5279,7 @@ export class App {
         | { kind: "properties"; note: NoteBuffer; format: "yaml" | "toml"; original: string }
         | { kind: "hover" }
         | { kind: "commit"; amend: boolean; from: Region }
+        | { kind: "scratch" }
       ) & { view: View; title: string })
     | null = null;
 
@@ -5403,6 +5409,11 @@ export class App {
     if (!f) return true;
     if (f.kind === "properties" && f.view.buf.dirty && !this.writeProperties(f.view.buf.source, false, true))
       return false;
+    // The scratch's typing saved as it closes (#43); a save refused (changed on disk meanwhile) keeps it open.
+    if (f.kind === "scratch") {
+      if (f.view.buf.dirty && !this.saveBuffer(f.view.buf)) return false;
+      this.remember(f.view);
+    }
     this.floating = null;
     if (f.kind === "commit") {
       this.message("info", f.amend ? "not amended" : "not committed");
@@ -9675,7 +9686,7 @@ export class App {
     // An open, changed scratch is saved first, so the entry goes after what you typed (4.10).
     const scratchBuf = this.buffers.get(loc.path) ?? this.buffers.get(relative(this.loc.root, loc.path));
     if (scratchBuf?.dirty && !this.saveBuffer(scratchBuf)) return;
-    appendScratch(loc, entry);
+    const text = appendScratch(loc, entry);
     const rel = relative(this.loc.root, loc.path);
     if (!climbsOut(rel)) this.watcher?.noteOwnWrite(rel);
     const open = this.buffers.get(loc.path) ?? this.buffers.get(rel);
@@ -9683,7 +9694,59 @@ export class App {
       open.load();
       for (const v of this.allViews()) if (v.buf === open) v.layoutKey = "";
     }
-    this.message("info", `added to the scratch · ${prettyKey(`${this.leader} s s`, this.leader)} opens it`);
+    this.message("info", "added to the scratch");
+    // The entry shown (#43): where the scratch is in sight beside the window you're in, it's scrolled to there, the
+    // cursor staying yours; else the scratch opens, the cursor on it, to add a word to it.
+    const at = text.length - entry.length - 1;
+    const beside = this.floating ? undefined : this.tab?.views.find((v) => v.buf === open && v !== this.tabView);
+    if (beside) placeAt(this, beside, at);
+    else this.openScratch(undefined, at);
+  }
+
+  /**
+   * The scratch (#43): floating over the windows, or in the window on the right (in a split already, its other
+   * window), as `[capture] open_in` or the UI settings say, or `where`. The cursor goes to `at` (a capture's entry),
+   * else where it was left. Empty, it opens too, to be typed in; closed, what was typed is saved.
+   */
+  openScratch(where: UiState["scratch_in"] = this.ui.scratch_in, at?: number): void {
+    const f = this.floating;
+    if (f?.kind === "scratch" && where === "float") {
+      if (at !== undefined) placeAt(this, f.view, at);
+      return;
+    }
+    if (f && !this.closeFloating()) return;
+    const loc = this.scratch();
+    try {
+      ensureScratch(loc);
+    } catch (err) {
+      return this.message("error", `scratch: ${(err as Error).message}`);
+    }
+    if (where === "right") {
+      const t = this.tab;
+      if (!t) return this.openInNewTab(loc.path);
+      const shown = t.views.findIndex((v) => v.buf.abs === loc.path);
+      if (shown >= 0) t.active = shown;
+      else {
+        const here = t.views[0]!;
+        if (t.views.length === 1) {
+          t.orientation = "side";
+          t.views.push(this.makeView(here.buf, { ...here.topAnchor }, { ...here.curAnchor }));
+        }
+        t.active = 1;
+        this.open(loc.path, undefined, t.views[1]);
+      }
+      const v = this.tabView;
+      if (at !== undefined && v?.buf.abs === loc.path) placeAt(this, v, at);
+      this.region = "content";
+      return;
+    }
+    const buf = this.buffer(loc.path);
+    if (!buf) return;
+    const fv = this.makeView(buf);
+    this.floating = { kind: "scratch", view: fv, title: "Scratch" };
+    this.setViewMode(fv, "source");
+    this.region = "content";
+    if (at !== undefined) placeAt(this, fv, at);
   }
 
   allViews(): View[] {
@@ -9986,6 +10049,7 @@ export class App {
       // is dropped, not kept and saved again forever.
       if (k === "glyphs" && !["nerd", "unicode", "ascii", "auto"].includes(o.value as string)) continue;
       if (k === "theme" && !listThemes().some((t) => t.name === o.value)) continue;
+      if (k === "scratch_in" && o.value !== "float" && o.value !== "right") continue;
       (this.ui as unknown as Record<string, unknown>)[k] = o.value;
       this.uiOverrides[k] = o;
     }
