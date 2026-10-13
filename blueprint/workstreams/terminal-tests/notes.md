@@ -34,6 +34,21 @@
   content: code in every grammar…" (no `SOURCE` on the status line); "links: next / previous, follow…"; "lens: a link
   followed from it…"; "world/content: a 4,000-line TypeScript file…". To settle in their areas' tasks.
 
+## Under load (2026-10-13)
+
+- Merged, the five areas' 242 checks ran a check per core (ten here): 236 passed. Failures moved between runs, each
+  a check reading the screen before slipbox had drawn what its keys did: the link under the cursor from the frame
+  before a `tab` (so `enter` followed the next one), a line read before `g g` landed, `space e` pressed again before
+  the first had opened the explorer (a third press closed it). Longer waits, and waiting for any output after a key,
+  only moved them. What fixed them: slipbox tracing each key handled and each frame painted, the session sending on
+  and reading only once a frame follows its last key (design.md). Then 484 of 484, twice through.
+- Under Bun 1.4.2 the child has the pseudo-terminal as its files but not as its controlling terminal: no SIGWINCH on
+  a resize (the harness sends it), no SIGHUP when the terminal closes. And Bun's printer writes a non-ASCII character
+  in a `String.raw` template's source as `\u` and its code: the harness's tests use plain strings there.
+- Seen under load, not changed: a list of a document type (`:type adr`) opened while the index is still being built
+  shows a note not yet read by its file's name (`0003-sharing-links`) rather than its title, and stays so once it's
+  read. The check waits for the index; the list keeping up as titles arrive is an idea for later.
+
 ## Old to new (TT-T3 to TT-T7)
 
 Today's 135 scenarios (`tests/e2e/`), each under the area whose task carries it over. Each task writes after a

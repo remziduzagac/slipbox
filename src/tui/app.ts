@@ -452,7 +452,8 @@ export interface LiveBase {
   unit?: (line: number) => Block | null;
 }
 
-/** Where to log each command run, for the terminal tests' coverage: `SLIPBOX_TRACE`. */
+/** Where to log each command run, for the terminal tests' coverage: `SLIPBOX_TRACE` (run.ts adds a `key` line for
+ *  each key handled). */
 const TRACE = process.env.SLIPBOX_TRACE;
 
 /** A window whose text can be edited: source mode or live preview. */
@@ -8465,7 +8466,7 @@ export class App {
   }
 
   async run(spec: string): Promise<void> {
-    // The terminal tests' coverage (tests/e2e): every command run, one id per line.
+    // The terminal tests' coverage (tests/terminal): every command run, one id per line.
     if (TRACE) appendFileSync(TRACE, `${spec.split(" ")[0]}\n`);
     if (!(await this.registry.run(this, spec))) this.message("error", `unknown command: ${spec}`);
   }

@@ -88,7 +88,8 @@ async function runOne(check: Check, n: number): Promise<Result> {
 }
 
 const started = Date.now();
-const queue = Array.from({ length: repeat }, () => chosen).flat();
+const runs = Array.from({ length: repeat }, () => chosen).flat();
+const queue = runs.filter((c) => !c.alone);
 let n = 0;
 await Promise.all(
   Array.from({ length: Math.min(jobs, queue.length) }, async () => {
@@ -100,6 +101,15 @@ await Promise.all(
     }
   }),
 );
+// What's timed against the clock, by itself once the others are done: among them, it would time the machine.
+for (const c of runs.filter((c) => c.alone)) {
+  const r = await runOne(c, n++);
+  results.push(r);
+  const mark = r.outcome === "pass" ? "✓" : r.outcome === "fail" ? "✗" : "-";
+  console.log(
+    `${mark} ${c.area}: ${c.name} (${r.ms} ms, alone)${r.outcome === "skip" ? ` (skipped: ${r.detail})` : ""}`,
+  );
+}
 rmSync(scratch, { recursive: true, force: true });
 
 const failures = results.filter((r) => r.outcome === "fail");

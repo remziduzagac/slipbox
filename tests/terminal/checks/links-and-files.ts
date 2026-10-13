@@ -5,6 +5,7 @@ import { spawnSync } from "node:child_process";
 import { existsSync, readdirSync, readFileSync, renameSync, rmSync, statSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import {
+  explorerOpen,
   type Check,
   explorerRow,
   follow,
@@ -41,10 +42,6 @@ function explorer(s: Session): string[] {
 const listed = (s: Session, name: RegExp) => explorer(s).some((r) => name.test(r.trimEnd()));
 
 /** The explorer opened (space e toggles it, so up to three tries) with focus. */
-async function explorerOpen(s: Session): Promise<void> {
-  for (let i = 0; i < 3 && !s.statusLine().includes("FILES"); i++) await leader(s, "e");
-  await s.status("FILES");
-}
 
 /** Every file under a folder with its size: what "nothing written into it" compares. */
 function tree(dir: string, base = dir): string[] {
@@ -398,7 +395,7 @@ const LINKS: Check[] = [
       s.write("~/hobbies/cooking/photos/dal.png", "png");
       for (let i = 0; i < 20 && !s.screen().some((r) => r.includes("[[dal.png]] matches 3 files")); i++) {
         await s.keys("enter"); // the link under the cursor, followed again once the watcher has the new file
-        await s.settle(300);
+        await s.settle(undefined, 300);
       }
       await s.see("[[dal.png]] matches 3 files");
       await s.see("photos/dal.png");
@@ -684,6 +681,7 @@ const ROOTS: Check[] = [
       await s.see(/Folders \(\d+\)/);
       await s.see("notes");
       await s.keys("escape");
+      await s.notSee(/Folders \(\d+\)/); // closed, before keys meant for the note go
       await s.status(/ ~\/Downloads\b/); // unnamed: its path where a root's name would be
       await s.see("stray-note.md");
       await s.see(/\.\./);

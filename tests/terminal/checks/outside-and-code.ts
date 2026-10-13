@@ -17,6 +17,7 @@ import {
 import { join } from "node:path";
 import { loadTheme } from "../../../src/core/theme/index.ts";
 import {
+  explorerOpen,
   type Check,
   explorerRow,
   exported,
@@ -209,11 +210,19 @@ export const OUTSIDE_AND_CODE: Check[] = [
       await s.see("This file (3)");
       // A blank row under the tabs, and between the problems.
       await leader(s, "n", "q");
-      const rows = () => s.screen();
-      const tabs = () => rows().findIndex((r) => r.includes("This file (3)"));
-      s.expect(rows()[tabs() + 1]!.trim() === "", "a blank row under the tabs");
-      const second = rows().findIndex((r) => signed("{warning} 143:1").test(r));
-      s.expect(second > 0 && rows()[second - 1]!.trim() === "", "a blank row between the problems");
+      await s.status("PROBLEMS");
+      // Read once the panel is drawn with the keys: what's wrong, or null.
+      const spacing = (): string | null => {
+        const rows = s.screen();
+        const tabs = rows.findIndex((r) => r.includes("This file (3)"));
+        if (tabs < 0 || rows[tabs + 1]?.trim() !== "") return "a blank row under the tabs";
+        const second = rows.findIndex((r) => signed("{warning} 143:1").test(r));
+        if (!(second > 0 && rows[second - 1]!.trim() === "")) return "a blank row between the problems";
+        return null;
+      };
+      await s
+        .until(() => spacing() === null, undefined, "the panel spaced")
+        .catch(() => s.expect(false, spacing() ?? "the panel spaced"));
       // / filters it: by the line's text.
       await s.keys("/");
       await s.type("flat field");
@@ -222,6 +231,7 @@ export const OUTSIDE_AND_CODE: Check[] = [
       await s.see(signed("{warning} 147:1"));
       await s.keys("escape");
       // Resized as a window: ctrl+w + a row taller, then resize mode's j another; esc leaves it.
+      const tabs = () => s.screen().findIndex((r) => r.includes("This file (3)"));
       const was = tabs();
       await s.keys("ctrl+w", "+");
       await s.status("RESIZE");
@@ -573,8 +583,7 @@ export const OUTSIDE_AND_CODE: Check[] = [
     covers: { cases: ["watching", "explorer"] },
     run: async (s) => {
       // The explorer on home.md; a note an agent adds sorts above it: the selection stays on home.md.
-      for (let i = 0; i < 3 && !s.statusLine().includes("FILES"); i++) await leader(s, "e");
-      await s.status("FILES");
+      await explorerOpen(s);
       await explorerRow(s, "home");
       s.write("aaa-agent-note.md", "# An agent's note\n");
       await s.see("aaa-agent-note", 5000);
@@ -948,6 +957,7 @@ export const OUTSIDE_AND_CODE: Check[] = [
   {
     area: "outside-and-code",
     name: "config: the set's kitchen-sink config — every key once: no warnings, its leader, its layout",
+    alone: true,
     covers: { cases: ["config"], commands: ["palette.open"] },
     options: {
       home: true,
@@ -973,8 +983,10 @@ export const OUTSIDE_AND_CODE: Check[] = [
       await s.see("Sam's notes", 10000);
       // Keys answered at once while the notes are indexed in the background — its walk.max_file_size (8 MiB)
       // lets the set's 6 MB gps-traces.md in. Measured once it answers, so a slow answer fails here, last.
+      // The key alone, timed to the screen showing its answer: `keys` would add its own settling, which waits for a
+      // quiet the indexing's progress keeps from coming.
       const asked = Date.now();
-      await s.keys(":");
+      s.term.key(":");
       await s.see("Commands", 30000);
       const answered = Date.now() - asked;
       await s.keys("escape");

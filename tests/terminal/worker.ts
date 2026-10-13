@@ -2,7 +2,7 @@
 // [--keep]`. A process per check, since two of Bun's pseudo-terminals in one process can cross their output (Bun
 // 1.4.2), and so a check that crashes takes only itself down. The result goes to the file as JSON.
 
-import { writeFileSync } from "node:fs";
+import { readFileSync, writeFileSync } from "node:fs";
 import { CHECKS } from "./checks/index.ts";
 import { CheckFailed, Session, Skipped } from "./session.ts";
 
@@ -52,6 +52,16 @@ try {
   else (outcome = "fail"), (detail = err instanceof Error ? (err.stack ?? err.message) : String(err));
 } finally {
   clearTimeout(timer);
+}
+// What slipbox last did, said with a failure: the commands it ran, and how many keys it had handled (the trace).
+if (outcome === "fail") {
+  const trace = readFileSync(s.trace, "utf8").split("\n").filter(Boolean);
+  const keys = trace.filter((l) => l === "key").length;
+  const last = trace
+    .filter((l) => l !== "key" && l !== "frame")
+    .slice(-12)
+    .join(", ");
+  detail = `${detail}\n(the last commands run: ${last || "none"}; ${keys} keys handled)`;
 }
 const clean = await s.quit();
 if (outcome === "pass" && !clean) (outcome = "fail"), (detail = `slipbox did not exit cleanly\n${s.after(30)}`);

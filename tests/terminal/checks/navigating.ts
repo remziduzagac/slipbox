@@ -5,7 +5,19 @@ import { appendFileSync } from "node:fs";
 import { join } from "node:path";
 import { UNSAFE } from "../../../src/core/sanitize.ts";
 import { loadTheme } from "../../../src/core/theme/index.ts";
-import { type Check, HANDBOOK, type LeftOut, leader, MEETING, moveTo, open, pos } from "../check.ts";
+import {
+  type Check,
+  explorerClosed,
+  explorerOpen,
+  HANDBOOK,
+  type LeftOut,
+  leader,
+  MEETING,
+  moveTo,
+  open,
+  panelFocused,
+  pos,
+} from "../check.ts";
 import { type Session, type StyledRun, sleep } from "../session.ts";
 
 /** Every place `needle` starts on screen, with the style its first character is drawn in. */
@@ -395,8 +407,7 @@ export const NAVIGATING: Check[] = [
     options: { open: HANDBOOK, size: { cols: 100, rows: 34 } },
     run: async (s) => {
       // space e cycles: open, focus, close. It may start open (a wide terminal), so press to focus.
-      for (let i = 0; i < 3 && !s.statusLine().includes("FILES"); i++) await leader(s, "e");
-      await s.status("FILES");
+      await explorerOpen(s);
       await s.see("Explorer");
       await leader(s, "e");
       await s.notSee("Explorer");
@@ -418,8 +429,7 @@ export const NAVIGATING: Check[] = [
     covers: { cases: ["outline"], commands: ["outline.cycle", "outline.pick", "outline.toggle"] },
     options: { open: HANDBOOK, size: { cols: 100, rows: 34 } },
     run: async (s) => {
-      for (let i = 0; i < 3 && !s.statusLine().includes("OUTLINE"); i++) await leader(s, "o");
-      await s.status("OUTLINE");
+      await panelFocused(s, "o", "OUTLINE", /Outline/);
       await s.see("Outline");
       await s.keys("escape");
       await leader(s, "f", "o");
@@ -784,12 +794,7 @@ export const NAVIGATING: Check[] = [
       await s.message("Spelling: on");
       // The dictionaries load in the background: ] s from the top, until it lands.
       const there = () => pos(s).line === typo.line && pos(s).col === typo.col;
-      for (const end = Date.now() + 8000; !there(); ) {
-        await s.keys("g", "g", "]", "s");
-        await s.until(there, 1000, "] s on the misspelt word").catch((e) => {
-          if (Date.now() > end) throw e;
-        });
-      }
+      await s.retry(() => s.keys("g", "g", "]", "s"), there, "] s on the misspelt word", 1000, 20000);
       await leader(s, "u", "s");
       await s.message("Spelling: off");
     },
@@ -888,8 +893,7 @@ export const NAVIGATING: Check[] = [
       await s.keys("ctrl+w", "v");
       await s.until(() => windows(s) === 2, 3000, "the split");
       // The explorer hidden (space e cycles: shown, focused, hidden).
-      for (let i = 0; i < 3 && s.rowOf("Explorer") >= 0; i++) await leader(s, "e");
-      await s.notSee("Explorer");
+      await explorerClosed(s);
       await s.keys("ctrl+q");
       await exits(s, "ctrl+q to quit");
       // Started again with no path, in the vault: all of it back.

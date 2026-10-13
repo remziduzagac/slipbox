@@ -748,7 +748,14 @@ export const EDITING: Check[] = [
       await leader(s, "u", "s");
       await s.message("Spelling: on");
       // "Bu hafta iki kitpa okudum": the note's one misspelt word (its code span's isn't).
-      await moveTo(s, ["shift+g", "[", "s"], (l) => l === 8, "[ s back to kitpa");
+      // The dictionaries load in the background: [ s from the end, until it lands.
+      await s.retry(
+        () => s.keys("shift+g", "[", "s"),
+        () => pos(s).line === 8,
+        "[ s back to kitpa",
+        1000,
+        20000,
+      );
       await moveTo(s, ["g", "g", "]", "s"], (l, c) => l === 8 && c === 14, "] s onto kitpa");
       await s.keys("z", "=");
       await s.see("kitap");

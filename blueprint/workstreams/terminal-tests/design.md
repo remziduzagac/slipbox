@@ -20,7 +20,12 @@ slipbox asks a terminal at start as a modern one does: the cursor's place and th
 answers), its colours (OSC 10 and 11, a dark scheme), and the Kitty keyboard protocol, whose flags slipbox pushes (5:
 disambiguate, alternate keys). It keeps the title (OSC 0 and 2) and every OSC 52 copy, and everything slipbox wrote,
 for checks of what's sent (pictures, by their protocol's bytes). Each chunk of output is copied before xterm parses
-it: the pseudo-terminal reads into the same buffer again.
+it: the pseudo-terminal reads into the same buffer again. Its widths are a terminal's that keeps grapheme clusters
+whole (kitty, libghostty, WezTerm: a ZWJ family, a flag, an emoji and its selector are one cluster, measured by Bun),
+not xterm's own Unicode 6 table, where most emoji are one cell and what slipbox drew past them would drift. A resize
+changes both sizes and sends slipbox SIGWINCH itself: Bun's child has the pseudo-terminal as its files but not as its
+controlling terminal (Bun 1.4.2), so the kernel tells it nothing — nor sends a hangup when the terminal closes, which
+a check sends with `signal`. Rows are read up to the width: narrowed, xterm keeps cells past it.
 
 **Keys** (`tests/terminal/keys.ts`) go in by name (`j`, `ctrl+q`, `alt+shift+down`, `escape`) as a terminal encodes
 them: Kitty's way once slipbox has pushed its flags — `escape` is `CSI 27 u`, never the start of `alt+…`, so no key
@@ -34,8 +39,18 @@ lint, language servers and the background index off unless the check's config tu
 Bun's own path in a terminal of 236×85 unless the check asks for another size, with nothing of the environment but
 `PATH`. It drives (`keys`, `type`, `paste`, `ex`, `send`, `resize`, `signal`, `restart`, `quit`) and reads (`screen`,
 `statusLine`, `runs`, `styleOf`, `title`, `osc52`, `after`: what slipbox printed on its way out), and every check
-waits for the screen to agree (`until`, `see`, `status`), never a fixed time. `settle` waits until slipbox has written
-nothing for 40 ms and all of it is drawn.
+waits for the screen to agree (`until`, `see`, `status`), never a fixed time; a wait gets at least ten seconds
+whatever the check asked (`SLIPBOX_TERMINAL_WAIT`), since a machine with a check on every core is slower than the one
+a check was written on, and a wait that passes returns at once. What lands only once slipbox is ready (spelling's
+dictionaries, loading in the background) is tried again until it does (`retry`): a key pressed early does nothing.
+
+**In step with slipbox.** On a loaded machine slipbox reads a key late and draws late: a check that reads the screen
+right after sending keys can read the frame before them, and act on it (the link under the cursor, the line it's
+on). So with `SLIPBOX_TRACE` set, slipbox writes, beside each command run, a `key` line once it has handled a key or
+a paste and a `frame` line for each frame it paints (src/tui/run.ts); `keys`, `type` and `paste` return once every
+key sent is handled and a frame painted after the last (a named key is one key, typed text one per code point, a
+paste one), then once nothing more is written for 40 ms. A check timed against the clock (an answer within two
+seconds while it indexes) says `alone` and runs by itself after the others, where it times slipbox, not the machine.
 
 **The runner** (`tests/terminal/run.ts`, `bun run test:terminal [--jobs N] [--repeat N] [--keep] [--list] [area or
 name…]`) runs the chosen checks concurrently, as many as the machine has cores, each in a worker process of its own

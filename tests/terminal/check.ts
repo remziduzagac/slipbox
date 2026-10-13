@@ -21,6 +21,8 @@ export interface Check {
     commands?: string[];
   };
   options?: SessionOptions;
+  /** Timed against the clock (an answer within so long): run by itself, after the others, not among them. */
+  alone?: boolean;
   run: (s: Session) => Promise<void>;
 }
 
@@ -142,16 +144,57 @@ export async function problemListed(s: Session, needle: string | RegExp, timeout
 /** Leader sequences: space, then the keys. */
 export const leader = (s: Session, ...keys: string[]) => s.keys("space", ...keys);
 
+/**
+ * A panel open and focused: its leader key cycles it (open, focus, close), each press seen taking effect before the
+ * next is decided, since pressed blind, a late first one would make the third close it.
+ */
+export async function panelFocused(s: Session, key: string, mode: string, title: RegExp): Promise<void> {
+  for (let i = 0; i < 2 && !s.statusLine().includes(mode); i++) {
+    const open = s.rowOf(title) >= 0;
+    await leader(s, key);
+    await s.until(
+      () => s.statusLine().includes(mode) || (!open && s.rowOf(title) >= 0),
+      undefined,
+      `space ${key} to open or focus it`,
+    );
+  }
+  await s.status(mode);
+}
+
+/** The explorer open and focused (FILES). */
+export const explorerOpen = (s: Session) => panelFocused(s, "e", "FILES", /Explorer/);
+
+/** The explorer closed: space e until it's gone, each press seen taking effect first. */
+export async function explorerClosed(s: Session): Promise<void> {
+  for (let i = 0; i < 3 && s.rowOf(/Explorer/) >= 0; i++) {
+    const was = s.statusLine().includes("FILES");
+    await leader(s, "e");
+    await s.until(
+      () => s.rowOf(/Explorer/) < 0 || s.statusLine().includes("FILES") !== was,
+      undefined,
+      "space e to focus or close the explorer",
+    );
+  }
+  await s.notSee(/Explorer/);
+}
+
 /** Select the explorer's row named `name` (it has focus, the row on screen): from the top, down to it. */
 export async function explorerRow(s: Session, name: string): Promise<void> {
   await s.keys("g", "g");
-  // Its rows: left of its border (in code points: the Nerd glyphs are two units), past the left rail.
-  const title = s.rowOf(/Explorer/);
-  const border = [...s.screen()[title]!].findIndex((c) => c === "│" || c === "┃");
-  const left = (r: string) => [...r].slice(3, border).join("");
-  const first = s.screen().findIndex((r, i) => i > title && /\S/.test(left(r)));
-  const at = s.screen().findIndex((r, i) => i >= first && new RegExp(`\\b${name}\\b`).test(left(r)));
-  s.expect(at >= first, `the explorer shows ${name}`);
+  // Its rows: left of its border (in code points: the Nerd glyphs are two units), past the left rail. Read once the
+  // explorer shows the row: a busy slipbox draws it late.
+  const find = () => {
+    const screen = s.screen();
+    const title = screen.findIndex((r) => /Explorer/.test(r));
+    if (title < 0) return null;
+    const border = [...screen[title]!].findIndex((c) => c === "│" || c === "┃");
+    const left = (r: string) => [...r].slice(3, border).join("");
+    const first = screen.findIndex((r, i) => i > title && /\S/.test(left(r)));
+    const at = screen.findIndex((r, i) => i >= first && new RegExp(`\\b${name}\\b`).test(left(r)));
+    return first >= 0 && at >= first ? { first, at } : null;
+  };
+  await s.until(() => find() !== null, undefined, `the explorer to show ${name}`);
+  const { first, at } = find()!;
   for (let i = first; i < at; i++) await s.keys("j");
 }
 

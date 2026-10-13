@@ -390,6 +390,8 @@ export const READING: Check[] = [
       // status line gone). Checked at the top, the end, and back.
       const intact = async (name: string) => {
         await s.status(name, 5000);
+        // Where it opened: the top (a data file's first stop may be its second line).
+        const top = pos(s).line;
         for (const keys of [[], ["G"], ["g", "g"]]) {
           await s.keys(...keys);
           const t = s.text();
@@ -404,7 +406,8 @@ export const READING: Check[] = [
             `${name}: the frame drawn whole`,
           );
         }
-        // It still answers: j moves the cursor.
+        // It still answers: j moves the cursor (from the top, once g g has taken it back there).
+        await s.until(() => pos(s).line === top, undefined, `${name}: g g back to line ${top}, where it opened`);
         const at = pos(s).line;
         await moveTo(s, ["j"], (l) => l > at, `${name}: j to move after the escapes`);
       };
@@ -1119,17 +1122,23 @@ export const READING: Check[] = [
       // In the middle of the window, where it stays; the cursor off it (its row has a background of its own).
       await s.keys("z", "z", "k", "k", "k");
       await s.see("anything else anyone wrote on the whiteboard");
-      await s.settle();
-      // One reading of the screen: its text and its colours.
-      const [screen, runs] = [s.screen(), s.runs()];
-      const first = screen.findIndex((r) => r.includes("▌ Mid-year all-hands, extra session"));
-      const last = screen.findIndex((r, i) => i > first && r.includes("whiteboard"));
-      const band = runs[first]!.find((x) => x.text.includes("Mid-year"))?.bg;
-      s.expect(first >= 0 && last > first && !!band, `the long heading wraps (rows ${first} to ${last})`);
-      for (let r = first; r <= last; r++) {
-        const banded = runs[r]!.filter((x) => x.bg === band).reduce((n, x) => n + x.text.length, 0);
-        s.expect(banded > s.cols / 2, `row ${r} of the long heading on its band`);
-      }
+      // Each reading of the screen at once, its text and its colours, until the keys have all taken effect (the
+      // cursor's band, moving up, crosses the heading's rows): what's wrong, or null.
+      const wrong = (): string | null => {
+        const [screen, runs] = [s.screen(), s.runs()];
+        const first = screen.findIndex((r) => r.includes("▌ Mid-year all-hands, extra session"));
+        const last = screen.findIndex((r, i) => i > first && r.includes("whiteboard"));
+        const band = runs[first]?.find((x) => x.text.includes("Mid-year"))?.bg;
+        if (first < 0 || last <= first || !band) return `the long heading wraps (rows ${first} to ${last})`;
+        for (let r = first; r <= last; r++) {
+          const banded = runs[r]!.filter((x) => x.bg === band).reduce((n, x) => n + x.text.length, 0);
+          if (banded <= s.cols / 2) return `row ${r} of the long heading on its band`;
+        }
+        return null;
+      };
+      await s
+        .until(() => wrong() === null, undefined, "every row of the long heading on its band")
+        .catch(() => s.expect(false, wrong() ?? "the long heading on its band"));
     },
   },
   {
@@ -1432,6 +1441,9 @@ export const READING: Check[] = [
     covers: { cases: ["notes"], commands: ["type.list", "type.next", "type.prev"] },
     options: { home: true, startAt: "home/work/kestrel/docs/adr/0002-route-engine-in-rust.md" },
     run: async (s) => {
+      // The lists take each note's title from the index: built first (a loaded machine builds it late), else a note
+      // not yet read is listed by its file's name.
+      await s.until(() => !s.topBar().includes("indexing"), 30000, "the index built");
       await leader(s, "f", "d");
       await s.see("Document types");
       await s.see(/adr\s+4 notes/);

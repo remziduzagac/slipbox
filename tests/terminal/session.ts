@@ -20,6 +20,9 @@ export const SIZE = { cols: 236, rows: 85 };
 
 export const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
+/** The least a check's wait for the screen gets (`SLIPBOX_TERMINAL_WAIT`, ms). */
+export const WAIT = Number(process.env.SLIPBOX_TERMINAL_WAIT ?? 10_000);
+
 export interface SessionOptions {
   /** The note opened, relative to the vault (default: home.md). */
   open?: string;
@@ -202,15 +205,45 @@ export class Session {
     await this.settle();
   }
 
-  /** The commands run so far (SLIPBOX_TRACE). */
+  /** The commands run so far (SLIPBOX_TRACE: its other lines are keys handled and frames painted). */
   commands(): string[] {
-    return readFileSync(this.trace, "utf8").split("\n").filter(Boolean);
+    return readFileSync(this.trace, "utf8")
+      .split("\n")
+      .filter((l) => l && l !== "key" && l !== "frame");
+  }
+
+  /** The trace's lines: commands run, `key` for each key or paste handled, `frame` for each frame painted. */
+  private traced(): string[] {
+    return readFileSync(this.trace, "utf8").split("\n");
+  }
+
+  /** How many keys and pastes slipbox has handled so far. */
+  private handled(): number {
+    return this.traced().filter((l) => l === "key").length;
+  }
+
+  /**
+   * Wait until slipbox has handled `n` more keys than `before`, and painted a frame after the last of them (or WAIT
+   * has gone by, or it has exited): on a loaded machine it reads keys late and draws late, and what a check reads
+   * next must show them.
+   */
+  private async taken(before: number, n: number): Promise<void> {
+    const shown = () => {
+      let keys = 0;
+      let at = -1;
+      const lines = this.traced();
+      for (let i = 0; i < lines.length && at < 0; i++) if (lines[i] === "key" && ++keys === before + n) at = i;
+      return at >= 0 && lines.indexOf("frame", at) > at;
+    };
+    const end = Date.now() + WAIT;
+    while (!shown() && !this.exited() && Date.now() < end) await sleep(5);
   }
 
   // -------------------------------------------------------------------------------------------
   // Driving.
 
   async keys(...keys: string[]): Promise<void> {
+    const before = this.handled();
     for (let i = 0; i < keys.length; i++) {
       const k = keys[i]!;
       this.term.key(k);
@@ -222,24 +255,31 @@ export class Session {
         while (Date.now() < end && this.text() === before) await sleep(10);
       } else await sleep(2);
     }
+    await this.taken(before, keys.length);
     await this.settle();
   }
 
+  /** Text, as typed: a key for each character (each code point, as slipbox reads them). */
   async type(text: string): Promise<void> {
+    const before = this.handled();
     this.term.write(text);
+    await this.taken(before, [...text].length);
     await this.settle();
   }
 
   /** Text pasted, as a terminal sends a paste: bracketed (one event, not keys). */
   async paste(text: string): Promise<void> {
+    const before = this.handled();
     this.term.write(`\x1b[200~${text}\x1b[201~`);
+    await this.taken(before, 1);
     await this.settle();
   }
 
   /** Raw bytes, as a terminal would send them (a key no name covers, a query's answer). */
   async send(bytes: string): Promise<void> {
+    const sent = performance.now();
     this.term.write(bytes);
-    await this.settle();
+    await this.settle(sent);
   }
 
   /** A command line at `:`: typed and entered. */
@@ -250,10 +290,16 @@ export class Session {
   }
 
   /**
-   * Wait until slipbox has been quiet a while (nothing written for `quiet` ms, all of it drawn), or `max` ms. Its
-   * work after a key (a search, a parse) can take longer: a check waits for what it expects with `until`.
+   * Wait until slipbox has been quiet a while (nothing written for `quiet` ms, all of it drawn), or `max` ms. After
+   * input `sent` at a time, first for it to answer — anything written since, up to a second: on a loaded machine
+   * slipbox reads a key late, and quiet before it has is no sign of anything. Its work after a key (a search, a parse)
+   * can take longer still: a check waits for what it expects with `until`.
    */
-  async settle(max = 1500, quiet = 40): Promise<void> {
+  async settle(sent?: number, max = 1500, quiet = 40): Promise<void> {
+    if (sent !== undefined) {
+      const answer = sent + 1000;
+      while (this.term.lastOutput <= sent && performance.now() < answer) await sleep(5);
+    }
     const end = performance.now() + max;
     await sleep(quiet);
     while (performance.now() < end) {
@@ -379,8 +425,10 @@ export class Session {
   // -------------------------------------------------------------------------------------------
   // Checks: each waits up to `timeout` for the screen to agree.
 
-  async until(ok: () => boolean, timeout = 3000, what = "the condition"): Promise<void> {
-    const end = Date.now() + timeout;
+  async until(ok: () => boolean, timeout = WAIT, what = "the condition"): Promise<void> {
+    // At least WAIT, whatever the check asked: a machine with a check on every core (CI's too) is slower than the one
+    // a check was written on, and a wait that passes returns at once — only a failure takes longer to say so.
+    const end = Date.now() + Math.max(timeout, WAIT);
     for (;;) {
       if (ok()) return;
       if (Date.now() > end) throw new CheckFailed(`timed out waiting for ${what}\n${this.dump()}`);
@@ -390,26 +438,42 @@ export class Session {
     }
   }
 
-  async see(needle: string | RegExp, timeout = 3000): Promise<void> {
+  /**
+   * Do `act`, then wait up to `every` ms for `ok`; again, until it holds or `within` ms (at least WAIT) have gone by.
+   * For what lands only once slipbox is ready (the dictionaries loaded): a key pressed early does nothing.
+   */
+  async retry(act: () => Promise<void>, ok: () => boolean, what: string, every = 1000, within = WAIT): Promise<void> {
+    const end = Date.now() + Math.max(within, WAIT);
+    for (;;) {
+      await act();
+      const by = Date.now() + every;
+      while (Date.now() < by && !ok()) await sleep(20);
+      if (ok()) return;
+      if (Date.now() > end) throw new CheckFailed(`timed out waiting for ${what}\n${this.dump()}`);
+      if (this.exited()) throw new CheckFailed(`slipbox exited while waiting for ${what}\n${this.after(40)}`);
+    }
+  }
+
+  async see(needle: string | RegExp, timeout = WAIT): Promise<void> {
     await this.until(() => this.rowOf(needle) >= 0, timeout, `the screen to show ${needle}`);
   }
 
-  async notSee(needle: string | RegExp, timeout = 3000): Promise<void> {
+  async notSee(needle: string | RegExp, timeout = WAIT): Promise<void> {
     await this.until(() => this.rowOf(needle) < 0, timeout, `the screen to stop showing ${needle}`);
   }
 
-  async status(needle: string | RegExp, timeout = 3000): Promise<void> {
+  async status(needle: string | RegExp, timeout = WAIT): Promise<void> {
     const has = () =>
       typeof needle === "string" ? this.statusLine().includes(needle) : needle.test(this.statusLine());
     await this.until(has, timeout, `the status line to show ${needle}`);
   }
 
   /** A message showing: in its floating box (a long one wraps, so the needle is kept short). */
-  async message(needle: string | RegExp, timeout = 3000): Promise<void> {
+  async message(needle: string | RegExp, timeout = WAIT): Promise<void> {
     await this.see(needle, timeout);
   }
 
-  async file(rel: string, check: (text: string) => boolean, what = `${rel} to change`, timeout = 3000): Promise<void> {
+  async file(rel: string, check: (text: string) => boolean, what = `${rel} to change`, timeout = WAIT): Promise<void> {
     await this.until(() => this.exists(rel) && check(this.read(rel)), timeout, what);
   }
 
