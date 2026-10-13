@@ -71,7 +71,7 @@ describe("the headless terminal", () => {
     t.dispose();
   });
   test("clusters kept whole, as a modern terminal does: an emoji and its selector, a flag, a ZWJ family two cells; a letter and its mark one", async () => {
-    const text = "☄️a🇯🇵b👩‍🔬céd🔭e";
+    const text = "☄\ufe0fa🇯🇵b👩\u200d🔬ce\u0301d🔭e";
     const t = await run(`printf '%s' '${text}'`);
     expect(t.screen()[0]).toBe(text);
     expect(t.cursor().x).toBe(2 + 1 + 2 + 1 + 2 + 1 + 1 + 1 + 2 + 1);
