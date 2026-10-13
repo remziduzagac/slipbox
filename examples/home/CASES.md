@@ -1471,6 +1471,8 @@ build (`scripts/build-home.ts`), not kept as they are. Each file's purpose and t
 
 - hover, definition, references, rename symbol preview, code actions, format, completion, signature help in a code file
   — `work/kestrel/src/routes/share.ts`, `work/kestrel/src/routes/sign.ts` (What's under the cursor 19.12-16)
+- a type's definition from a value of it; an interface two classes implement, its implementations a list to pick from
+  — `work/kestrel/src/routes/expiry.ts` (What's under the cursor 19.13; terminal check 'language servers: g y …')
 - files whose outline comes from server symbols (CSS, YAML, PHP, Swift) — `work/kestrel/docker-compose.yml`,
   `work/kestrel/src/styles/app.css` (tui.md 16.8/19.14)
 - `slipbox lsp` says it was removed on stderr and exits 2 — `notes/daily/2026-10-06.md`, `work/kestrel/README.md`

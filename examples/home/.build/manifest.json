@@ -4400,6 +4400,16 @@
    "notes": "Excluded from the slipbox repository's typecheck (root tsconfig.json must exclude examples/home); never name a file *.test.ts / *.spec.ts here (bun test would run it)."
   },
   {
+   "path": "work/kestrel/src/routes/expiry.ts",
+   "purpose": "A share link's lifetime: an interface two classes implement, a constant of its type.",
+   "cases": [
+    "lsp: a type's definition from a value of… — g y from DEFAULT_EXPIRY's use to the interface",
+    "lsp: a type's definition from a value of… — g shift+i on Expiry: two implementations to pick from"
+   ],
+   "links": [],
+   "notes": "Excluded from the slipbox repository's typecheck (root tsconfig.json must exclude examples/home); never name a file *.test.ts / *.spec.ts here (bun test would run it)."
+  },
+  {
    "path": "work/kestrel/src/routes/name.ts",
    "purpose": "Route-name normalisation: Unicode identifiers and strings, an error after astral chars.",
    "cases": [
