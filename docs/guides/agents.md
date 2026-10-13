@@ -178,7 +178,7 @@ where there is no root. You and the agent both add to it. You read it, and paste
 
 `space s d` clears the scratch, after asking.
 
-In a code file's notebook view, `space k s` adds the cell at the cursor, with its path and lines.
+In a code file's code view, `space k s` adds the cell at the cursor, with its path and lines.
 
 An agent clears the scratch only with `slipbox scratch clear --if-unchanged <sha>`. So nothing added since it read the
 scratch is lost.

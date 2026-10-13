@@ -10,7 +10,8 @@ slipbox writes every format itself. Nothing needs installing, and nothing is fet
 1. Open the note, say `ideas/coffee.md`.
 2. Press `space n o`, or type `:export`. A list of formats opens: Word (.docx), PDF (.pdf), Web page (.html), E-book
    (.epub), Markdown (.md).
-3. Type to narrow the list (`pdf`), or move with `down` and `up`. Then press `enter`. A Save As window opens:
+3. Press `enter` to take Word, the first. For another format, type to narrow the list (`pdf`), or move with `down`
+   and `up`, then press `enter`. A Save As window opens:
    - Down its left are places: beside the note, your last export's folder, your Downloads, Desktop and Documents
      folders (those you have), your home folder and this root.
    - On the right are the folder's contents.

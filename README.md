@@ -145,7 +145,8 @@ With `--json`, each call gives one JSON object. The exit codes are stable.
 The skill in [skills/slipbox/SKILL.md](skills/slipbox/SKILL.md) teaches the surface to agents, and slipbox carries
 it. `slipbox skill --install ~/.claude/skills` installs the one matching the binary.
 
-[Working with agents](docs/guides/agents.md) and [The command line](docs/manual/cli.md) are the people's side.
+For you, the same ground is in [Working with agents](docs/guides/agents.md) and
+[The command line](docs/manual/cli.md).
 
 ## Documentation
 
