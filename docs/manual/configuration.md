@@ -248,7 +248,7 @@ limit = 25                     # 1–500: at most this many files; the rest are 
 command = ""                   # space n e: your editor, run here while slipbox waits; "": $VISUAL, else $EDITOR,
                                # else vi; your file only (see Commands in settings)
 autosave_ms = 30000            # 0–3600000: a changed note saved after this long without a key; 0, never
-edit_in = "source"             # where i, a, o… take a rendered window: source | live (the lens)
+edit_in = "live"               # where i, a, o… take a rendered window: live (the lens) | source
 lens_min_rows = 6              # 1–200: the lens takes in the blocks around the cursor up to at least this many rows…
 lens_max = 0.5                 # 0.1–1: …and stops at this share of the window
 auto_pairs = false             # typing ( [ { " ' or ` puts its closing pair after the cursor

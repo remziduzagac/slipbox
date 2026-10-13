@@ -341,7 +341,7 @@ export const DEFAULT_CONFIG: Config = {
     command: "",
     remote: ["nvim"],
     autosave_ms: 30000,
-    edit_in: "source",
+    edit_in: "live",
     lens_min_rows: 6,
     lens_max: 0.5,
     auto_pairs: false,

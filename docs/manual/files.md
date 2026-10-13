@@ -77,7 +77,8 @@ has the keys. The question says where: `new note in ideas/`.
   there. A name starting with `/` is from the root: `/inbox`.
 - **`.md` is added**, unless the name ends in a data or code file's extension slipbox knows (`.toml`, `.json`,
   `.py`…): `tasks.toml` is made as it is written.
-- **A new note starts with its title,** `# coffee`, and opens with you typing on the line after the blank one.
+- **A new note starts with its title,** `# coffee`, and opens with you typing on the line after the blank one, in the
+  lens (or source mode, with `editor.edit_in = "source"`).
 - **A name that is already there** opens that file, and makes nothing.
 - **A name another note has**, in another folder, would make a wikilink by that name (`[[coffee]]`) reach either of
   them. slipbox suggests a distinct name instead, from the new note's folder (`ideas-coffee`), and says where the

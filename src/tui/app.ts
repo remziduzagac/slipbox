@@ -4229,8 +4229,10 @@ export class App {
       // Typing on the line after the title's blank one (as `o` there would): a source view has no
       // row past the file's last line break, so the insert begins with one.
       if (r.created && v?.buf.abs === abs) {
+        // Typed into at once, in the lens or source mode (`edit_in`): making the note was the editing key's first press.
+        if (!editable(v)) this.setViewMode(v, this.editMode(v));
         startInsert(this, v, (w) => w.buf.source.length);
-        insertText(this, v, v.buf.eol);
+        if (v.insert) insertText(this, v, v.buf.eol);
       }
     };
     this.prompt(`new note in ${base ? `${base}/` : "the root"}`, make);

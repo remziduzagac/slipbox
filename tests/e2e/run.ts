@@ -62,6 +62,16 @@ process.on("SIGINT", () => {
   process.exit(130);
 });
 
+/**
+ * A scenario's config with the editing keys typing in source mode at once, as the scenarios were written (the lens is
+ * the default; the screenshots keep it): one that wants the lens sets edit_in itself, or opens it with space n l.
+ */
+function sourceFirst(config: string): string {
+  if (/^edit_in\s*=/m.test(config)) return config;
+  if (/^\[editor\]$/m.test(config)) return config.replace(/^\[editor\]$/m, '[editor]\nedit_in = "source"');
+  return `${config}\n[editor]\nedit_in = "source"\n`;
+}
+
 async function runAll(): Promise<void> {
   await pane.measure();
   console.log(`pane ${pane.id}: ${pane.cols}×${pane.rows}`);
@@ -72,7 +82,7 @@ async function runAll(): Promise<void> {
       console.log(`- ${s.name} (skipped: needs ${need.cols ?? "any"}×${need.rows ?? "any"})`);
       continue;
     }
-    const session = new Session(pane, s.options);
+    const session = new Session(pane, { ...s.options, config: sourceFirst(s.options?.config ?? "") });
     current = session;
     const t0 = Date.now();
     let error: string | null = null;
