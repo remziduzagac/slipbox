@@ -1225,7 +1225,9 @@ rather than rebuilt (`5.8`; D137).
   yours). A file that did change, or was deleted, opens the conflict prompt.
 - **Deleted:** the buffer keeps showing the last version, marked `✖ deleted on disk`.
 - **Created or deleted notes:** these change link statuses, so every layout and the explorer
-  refresh. A red link turns resolved when its note appears.
+  refresh. A red link turns resolved when its note appears. A note written and removed between two of the watcher's
+  looks is said deleted all the same: a layout drawn meanwhile may have found it on the disk (a path link resolves by
+  its file before the index knows it), and draws its link red again.
 - **New directories** are watched through their whole depth. A `.gitignore` change rescans, and
   open notes that changed during the rescan reload.
 - **Files outside the root** (the scratch in the state dir) are polled while open.
