@@ -35,6 +35,7 @@ import type { NvimServer } from "../src/core/nvim.ts";
 import { TextCanvas } from "../src/tui/canvas.ts";
 import { match, rank } from "../src/tui/match.ts";
 import { graphemes, setWidthMethod, stringWidth, type WidthMethod } from "../src/core/width.ts";
+import { glyphsFor } from "../src/core/glyphs.ts";
 import { crumbLayout } from "../src/tui/draw.ts";
 import { A_BOLD, A_DIM, type Layout, type Line, srcAt } from "../src/core/layout/ir.ts";
 import { codeKind } from "../src/core/syntax.ts";
@@ -236,6 +237,13 @@ describe("widths as OpenTUI draws them", () => {
       }
     }
     expect(seen.size).toBeGreaterThan(500);
+    // And what slipbox draws of its own: every glyph of every set (a callout's icon, a bullet, a border).
+    const own = (v: unknown): void => {
+      if (v && typeof v === "object") for (const x of Object.values(v)) own(x);
+      else if (typeof v === "string")
+        for (const g of graphemes(v)) if (g.length > 1 || g.charCodeAt(0) > 0x7e) seen.add(g);
+    };
+    for (const mode of ["unicode", "nerd", "ascii"]) own(glyphsFor(mode));
     // Clusters where the two counts part (a conjunct's parts, a flag's letters), whatever the corpus
     // holds. Not Bengali's reph (র্গা): OpenTUI's table has it 1, Bun's 2 — slipbox counts Bun's.
     for (const t of ["हिन्दी", "नमस्ते", "क्ष", "ஸ்ரீ", "ཀྱི", "각", "1️⃣", "🇩🇪", "✔️"]) for (const g of graphemes(t)) seen.add(g);
@@ -6844,6 +6852,29 @@ describe("code as a notebook (24.x, 24.13)", () => {
     expect(r.slice(0, 2)).toEqual(["▾ imports (3)", 'import { readFileSync } from "node:fs";']);
   });
 
+  test("z a folds the cell at the cursor and z a again opens it: a folded cell's header is the cursor's stop", async () => {
+    const h = await open();
+    const v = h.app.view!;
+    const onRow = () =>
+      h.app
+        .currentLayout(v)
+        .lines[v.cur.row]!.spans.map((s) => s.text)
+        .join("");
+    h.app.placeAtLine(v, 13);
+    await h.keys("z", "a");
+    expect(rowIndex(h, "if (!target)")).toBe(-1);
+    expect(onRow()).toContain("function: resolve"); // on its header, the cell's one row
+    await h.keys("z", "a");
+    expect(rowIndex(h, "if (!target)")).toBeGreaterThan(0);
+    expect(rowIndex(h, "class: Graph")).toBeGreaterThan(0); // the next cell as it was
+    // Folded again: j leaves its header, k comes back to it, as to a line.
+    await h.keys("z", "a");
+    await h.keys("j");
+    expect(onRow()).not.toContain("function: resolve");
+    await h.keys("k");
+    expect(onRow()).toContain("function: resolve");
+  });
+
   test("a cell's buttons: copy its lines, edit it in the lens, add it to the scratch, its problems, where it's used", async () => {
     // The lens's least size one line: ✎'s lens is the cell's own lines, not its neighbours'.
     const h = await open({ config: (c) => ((c.editor.edit_in = "live"), (c.editor.lens_min_rows = 1)) });
@@ -7698,6 +7729,43 @@ describe("code as a document: comments, Python beside TypeScript (24.4, 24.9)", 
       layout.lines.findIndex((l) => l.src === 6 && l.srcMap),
     );
     expect(layout.lines.find((l) => l.spans.some((s) => s.text.startsWith("from_")))!.src).toBe(11);
+  });
+
+  test("the headings are the outline's, as source mode's: a function inside a function, an impl by its name — the breadcrumb the same in both", async () => {
+    const RS = [
+      "pub struct Point {",
+      "    pub lat: f64,",
+      "}",
+      "",
+      "impl Point {",
+      "    pub fn new(lat: f64) -> Point {",
+      "        fn clamp(x: f64) -> f64 {",
+      "            x.max(-90.0).min(90.0)",
+      "        }",
+      "        Point { lat: clamp(lat) }",
+      "    }",
+      "}",
+      "",
+    ].join("\n");
+    const h = await open("point.rs", RS);
+    const v = h.app.view!;
+    expect(v.source).toBeFalsy(); // the code view
+    const crumbAt = (line: number) => {
+      const layout = h.app.currentLayout(v);
+      h.app.moveCursor(v, { row: layout.lines.findIndex((l) => l.src === line && l.srcMap), col: 0 });
+      return h.app.breadcrumb(v).map((c) => c.text);
+    };
+    const inView = crumbAt(8);
+    expect(h.app.currentLayout(v).headings.map((x) => `${x.level} ${x.text}`)).toEqual([
+      "1 Point",
+      "1 impl Point",
+      "2 new",
+      "3 clamp",
+    ]);
+    expect(inView).toEqual(["impl Point", "new", "clamp"]);
+    await h.app.run("view.source");
+    expect(v.source).toBe(true);
+    expect(crumbAt(8)).toEqual(inView);
   });
 
   test("a comment for tools, and code put aside, stay as written; a note's run lines up; a block of comment lines keeps its lines", async () => {

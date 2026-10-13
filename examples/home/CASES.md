@@ -421,6 +421,9 @@ build (`scripts/build-home.ts`), not kept as they are. Each file's purpose and t
   `work/kestrel/docs/qa/render-torture.md` (rendering.md; regressions 'no row exceeds width at 10 columns')
 - A .md file that is really a log: 100 MB-ish lines, or 20 MB single note; note of thousands of lines —
   `Downloads/chat-export.md`, `Downloads/sync-worker-2026-09-22.log.md` (about-this-vault 'what isn't here'; 15.x)
+- File names carrying a bidi override, bidi isolates, a C1 control, an ESC sequence and an OSC that would retitle the
+  terminal: drawn without them in the explorer, the switcher and the backlinks, the title kept slipbox's —
+  `.build/extras.toml` (rendering.md Escapes 2.9; sanitize.ts)
 
 ### big
 

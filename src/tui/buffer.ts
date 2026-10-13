@@ -546,6 +546,8 @@ export class NoteBuffer {
         problems,
         inside: (line) => !!spans?.get(line)?.length,
         paths,
+        // Its headings as source mode's: the outline's definitions, not only its cells.
+        ...(fresh && this.syntax ? { outline: this.syntax.outline } : {}),
       });
       if (this.layouts.size >= 6) this.layouts.delete(this.layouts.keys().next().value!);
       this.layouts.set(key, l);

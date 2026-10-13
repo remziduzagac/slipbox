@@ -97,8 +97,9 @@ function computeWidth(g: string): number {
   if (ZERO_WIDTH.test(g) || MARK_ONLY.test(g)) return 0;
   const cp = g.codePointAt(0) ?? 0;
   // Where OpenTUI's table differs from the others (a test holds slipbox and OpenTUI together on
-  // every grapheme the reference set and halden have): ❤ is wide to it, whatever its selector.
-  if (cp === 0x2764) return 2;
+  // every grapheme the reference set and halden have, and slipbox's own glyphs): the heart and
+  // exclamation ornaments, ❠ to ❧ — ❤, the unicode set's ❢ — are wide to it, whatever their selector.
+  if (cp >= 0x2760 && cp <= 0x2767) return 2;
   // Not clustering, the terminal advances by the first code point (a flag's first letter, a
   // keycap's digit, ✔ before its VS16), as OpenTUI then lays the cluster out.
   if (method === "wcwidth") return eastAsianWidth(cp, { ambiguousAsWide: false });
