@@ -1,8 +1,211 @@
-// Links, roots and nested roots, vaults, converting links, rename, the trash, files, git (TT-T6).
+// Links, roots and nested roots, vaults, converting links, rename, the trash, files, git (TT-T6) — and the note
+// commands this area owns by their group (saving, exporting, the editor hand-off, info, trust), a short check each.
 
-import { type Check, follow, type LeftOut, leader, opened } from "../check.ts";
+import { spawnSync } from "node:child_process";
+import { existsSync, readdirSync, readFileSync, renameSync, rmSync, statSync, writeFileSync } from "node:fs";
+import { join } from "node:path";
+import {
+  type Check,
+  explorerRow,
+  follow,
+  type LeftOut,
+  leader,
+  moveTo,
+  open,
+  opened,
+  pos,
+  problemListed,
+} from "../check.ts";
+import type { Session } from "../session.ts";
 
-export const LINKS_AND_FILES: Check[] = [
+/** git in one of the reference set's repositories, as its owner runs it (HOME the set's); what it said. */
+function git(s: Session, repo: string, ...args: string[]): { code: number; out: string } {
+  const r = spawnSync(
+    "git",
+    ["-c", "user.email=sam@kestrel.dev", "-c", "user.name=Sam Rivera", "-C", s.path(repo), ...args],
+    { encoding: "utf8", env: { ...process.env, HOME: s.home } },
+  );
+  return { code: r.status ?? -1, out: `${r.stdout}${r.stderr}` };
+}
+
+/** What the explorer shows: each row left of its border, from its title down (empty when it's closed). */
+function explorer(s: Session): string[] {
+  const rows = s.screen();
+  const title = rows.findIndex((r) => /Explorer/.test(r));
+  if (title < 0) return [];
+  const border = [...rows[title]!].findIndex((c) => c === "│" || c === "┃");
+  return rows.slice(title + 1, -1).map((r) => [...r].slice(0, border).join(""));
+}
+
+/** The explorer has a row that ends with `name` (a folder's or a file's, after its icon and marks). */
+const listed = (s: Session, name: RegExp) => explorer(s).some((r) => name.test(r.trimEnd()));
+
+/** The explorer opened (space e toggles it, so up to three tries) with focus. */
+async function explorerOpen(s: Session): Promise<void> {
+  for (let i = 0; i < 3 && !s.statusLine().includes("FILES"); i++) await leader(s, "e");
+  await s.status("FILES");
+}
+
+/** Every file under a folder with its size: what "nothing written into it" compares. */
+function tree(dir: string, base = dir): string[] {
+  const out: string[] = [];
+  for (const e of readdirSync(dir, { withFileTypes: true })) {
+    const abs = join(dir, e.name);
+    if (e.isDirectory()) out.push(`${abs.slice(base.length)}/`, ...tree(abs, base));
+    else out.push(`${abs.slice(base.length)} ${e.isFile() ? statSync(abs).size : "link"}`);
+  }
+  return out.sort();
+}
+
+/** How many messages say `needle`: the Messages window filtered by `words` first (it shows only its newest rows). */
+async function messagesSaying(s: Session, words: string, needle: RegExp): Promise<number> {
+  await leader(s, "m");
+  await s.see("Messages");
+  await s.type(words);
+  // The list's own rows: each ends with its level and time. (The boxes floating at the top right say the newest
+  // messages again, on the same rows, without either.)
+  const said = new RegExp(`${needle.source}.*\\b(info|warn|error) \\d\\d:\\d\\d:\\d\\d`);
+  const n = s.screen().filter((r) => said.test(r)).length;
+  await s.keys("escape");
+  return n;
+}
+
+/** The newest message holding `needle`, whole (the list cuts it, its box wraps it): the list filtered, enter copies. */
+async function lastMessage(s: Session, needle: string): Promise<string> {
+  await leader(s, "m");
+  await s.see("Messages");
+  await s.type(needle);
+  await s.keys("enter");
+  await s.notSee("Messages");
+  return s.clipboard();
+}
+
+/** The link under the cursor, as the status line names it (`→ path`). */
+const linkHere = (s: Session) => /→ (\S+)/.exec(s.statusLine())?.[1] ?? "";
+
+/** From the top, tab from link to link until the one under the cursor is `target` (as the status line names it). */
+async function toLink(s: Session, target: string | RegExp): Promise<void> {
+  const is = () => (typeof target === "string" ? linkHere(s) === target : target.test(linkHere(s)));
+  await s.keys("g", "g");
+  for (let i = 0; i < 60 && !is(); i++) await s.keys("tab");
+  await s.until(is, 1000, `the cursor on the link to ${target}`);
+}
+
+/** ~/notes/index.md's link into kestrel, as rendered. */
+const ARCHITECTURE = "architecture. The";
+
+// The trees as they were before slipbox first opened them (setup runs at every start: taken once).
+const before = new WeakMap<Session, Record<string, string[]>>();
+
+const LINKS: Check[] = [
+  {
+    area: "links-and-files",
+    name: "links: next and previous, follow, back and forward; alt+arrows move by word, not through history",
+    covers: {
+      cases: ["links"],
+      commands: ["link.next", "link.prev", "link.follow", "history.back", "history.forward", "history.list"],
+    },
+    run: async (s) => {
+      // tab and shift+tab: from link to link; enter follows the one under the cursor.
+      await s.keys("tab", "tab", "shift+tab");
+      await s.until(() => linkHere(s) === "about-this-vault.md", 3000, "tab, tab, shift+tab: back on the first link");
+      await s.keys("enter");
+      await opened(s, "about-this-vault.md");
+      await s.keys("ctrl+o"); // back
+      await opened(s, "home.md");
+      await leader(s, "h", "n"); // forward
+      await opened(s, "about-this-vault.md");
+      await leader(s, "h", "p");
+      await opened(s, "home.md");
+      await leader(s, "h", "h");
+      await s.see("History");
+      await s.keys("escape");
+      // alt+right and alt+left (a Mac's option+arrows), and alt+f and alt+b (what its terminals send for them): a
+      // word forward and back, on the same note — history is ctrl+o and space h.
+      await s.keys("g", "g");
+      const at = pos(s);
+      await moveTo(s, ["alt+right"], (l, c) => l === at.line && c > at.col, "alt+right: a word on");
+      const word = pos(s).col;
+      await moveTo(s, ["alt+f"], (l, c) => l === at.line && c > word, "alt+f: another word on");
+      await moveTo(s, ["alt+b"], (l, c) => l === at.line && c === word, "alt+b: a word back");
+      await moveTo(s, ["alt+left"], (l, c) => l === at.line && c === at.col, "alt+left: back to the start");
+      await opened(s, "home.md");
+      // space l n and space l p: the next link and back; space l f follows it.
+      await s.keys("tab");
+      await s.until(() => linkHere(s) !== "", 3000, "the cursor on a link");
+      const first = linkHere(s);
+      await leader(s, "l", "n");
+      await s.until(() => linkHere(s) !== "" && linkHere(s) !== first, 3000, "space l n onto the next link");
+      await leader(s, "l", "p");
+      await s.until(() => linkHere(s) === first, 3000, "space l p back onto the first");
+      await leader(s, "l", "f");
+      await opened(s, first);
+    },
+  },
+  {
+    area: "links-and-files",
+    name: "links: the lists — this note's links and its backlinks; enter goes to one",
+    covers: { cases: ["links", "links/backlinks"], commands: ["links.open", "backlinks.open"] },
+    options: { open: "people/kenji-mori.md" },
+    run: async (s) => {
+      await leader(s, "l", "l");
+      await s.see("Links from");
+      await s.keys("escape");
+      await leader(s, "l", "b");
+      await s.see("Linking to");
+      await s.see("partners-and-names.md");
+      await s.type("partners");
+      await s.keys("enter");
+      await opened(s, "people/partners-and-names.md");
+    },
+  },
+  {
+    area: "links-and-files",
+    name: "links: followed into a split, and into a tab of its own — a data file beside a note, by its extension",
+    covers: { cases: ["links", "multiple-roots"], commands: ["link.follow_split", "link.follow_tab"] },
+    run: async (s) => {
+      await s.keys("tab");
+      await leader(s, "l", "s");
+      await s.until(() => s.text().split("§ ").length - 1 === 2, 3000, "the link open in a split");
+      // The split has focus: only it is left.
+      await s.keys("ctrl+w", "o");
+      await opened(s, "about-this-vault.md");
+      // ctrl+enter: a tab of its own, as a browser's ctrl+click; the tabs name each file with its extension.
+      await open(s, "pipeline-cookbook");
+      await toLink(s, "halley/halley.toml");
+      await s.keys("ctrl+enter");
+      await opened(s, "software/halley/halley.toml");
+      await s.see(/ 1 pipeline-cookbook\.md × │ 2 halley\.toml × │/);
+    },
+  },
+  {
+    area: "links-and-files",
+    name: "links: a picture followed, linked or embedded — its path copied, said so, no later phase promised (A17)",
+    covers: { cases: ["links/forms"], commands: ["link.follow"] },
+    options: { home: true, startAt: "home/notes/index.md" },
+    run: async (s) => {
+      const SAID = "attachment attachments/whiteboard-2026-08-26.png — path copied";
+      await follow(s, "whiteboard from the design review");
+      await s.message("attachment attachments/whiteboard-2026-08-26.png");
+      await s.until(
+        () => s.clipboard().endsWith("/notes/attachments/whiteboard-2026-08-26.png"),
+        3000,
+        "the picture's path copied",
+      );
+      await opened(s, "index.md");
+      // The message whole: nothing after "path copied" (it promised pictures "in a later phase").
+      const said = await lastMessage(s, "attachment");
+      s.expect(said === SAID, `the message: ${said}`);
+      // Embedded, in the design review's note: the same (the first box gone, so it's the embed's that says it).
+      await s.notSee("attachment attachments/whiteboard-2026-08-26.png", 8000);
+      await open(s, "2026-08-26-route-sharing-design-review");
+      await follow(s, "Whiteboard with three");
+      await s.message("attachment attachments/whiteboard-2026-08-26.png");
+      await opened(s, "meetings/2026-08-26-route-sharing-design-review.md");
+      const again = await lastMessage(s, "attachment");
+      s.expect(again === SAID, `the embed's message: ${again}`);
+    },
+  },
   {
     area: "links-and-files",
     name: "links: zk's links without an extension followed; a rename keeps them so (21.2)",
@@ -36,6 +239,1960 @@ export const LINKS_AND_FILES: Check[] = [
       await opened(s, "rides/202609131900-brevet-300k.md");
     },
   },
+  {
+    area: "links-and-files",
+    name: "links: / from the nearest root — a repository's, a root nested in it; a folder link revealed; --root starts there (21.2)",
+    covers: { cases: ["links/forms", "links/roots"] },
+    options: { home: true, startAt: "home/work/product/README.md" },
+    run: async (s) => {
+      // The repository's root: `/prd/route-sharing.md` from product's top.
+      await follow(s, "route sharing");
+      await opened(s, "prd/route-sharing.md");
+      // The handbook is a root of its own inside the repository: its `/glossary.md` is its own.
+      await s.restart({ startAt: "home/work/product/handbook/how-we-write.md" });
+      await s.status(/handbook.*how-we-write\.md/);
+      await follow(s, "the glossary");
+      await s.status(/handbook/);
+      await opened(s, "glossary.md");
+      // Started with --root at the repository, a note of the handbook is still the handbook's.
+      await s.restart({
+        args: ["--root", `${s.home}/work/product`],
+        startAt: "home/work/product/handbook/how-we-write.md",
+      });
+      await s.status(/handbook.*how-we-write\.md/);
+      // A link to a folder: the explorer, there, the folder unfolded.
+      await s.restart({ args: [], startAt: "home/notes/research/link-styles.md" });
+      await follow(s, "the projects");
+      await s.status("FILES");
+      await s.until(
+        () => {
+          const rows = s.screen();
+          const at = rows.findIndex((r) => /\bprojects\b/.test(r) && !/the projects/.test(r));
+          return at >= 0 && rows.slice(at + 1, at + 12).some((r) => r.includes("kestrel-v2-3.md"));
+        },
+        3000,
+        "projects/ unfolded in the explorer, its notes under it",
+      );
+    },
+  },
+  {
+    area: "links-and-files",
+    name: "links: one target by every form — relative, from the root, without .md, from ~, by pointer and old name, a wikilink, a block",
+    covers: {
+      cases: ["links/forms", "links/fragments", "links/misc", "links/named-folders"],
+      commands: ["link.follow"],
+    },
+    options: { home: true, startAt: "home/notes/research/link-styles.md" },
+    run: async (s) => {
+      // "The same target by every form": each reaches projects/kestrel-v2-3.md, the block one at its paragraph.
+      for (const [text, more] of [
+        ["relative, the form", null],
+        ["root, the GitHub way: from", null],
+        ["zk writes it: extensionless", null],
+        ["home folder: home-relative", null],
+        ["folder's name: pointer", null],
+        ["before August: old name", null],
+        ["A wikilink: kestrel-v2-3", null],
+        ["id: the decision", /L(?!1:)\d+:/],
+      ] as const) {
+        await s.keys("g", "g");
+        await follow(s, text);
+        await opened(s, "projects/kestrel-v2-3.md");
+        if (more) await s.status(more);
+        await s.keys("ctrl+o");
+        await opened(s, "research/link-styles.md");
+      }
+      // A file URL is followed, not copied as a URL: the file it names opened, outside every root.
+      await toLink(s, "file:///etc/hosts");
+      await s.keys("enter");
+      await s.status(/ ‹ \S*\/etc\/hosts › /);
+      await s.keys("ctrl+o");
+      await opened(s, "research/link-styles.md");
+      // The same, broken: a note that isn't there is offered to be made, its name filled in; esc, nothing written.
+      await toLink(s, "../projects/kestrel-v2-33.md");
+      await s.keys("enter");
+      await s.see("new note in projects/");
+      await s.see("› kestrel-v2-33");
+      await s.keys("escape");
+      await opened(s, "research/link-styles.md");
+      s.expect(!s.exists("~/notes/projects/kestrel-v2-33.md"), "nothing made");
+      // In source mode, each written as the file has it.
+      await leader(s, "n", "v");
+      await s.status("SOURCE");
+      await s.see("[from the root](/projects/kestrel-v2-3.md)");
+      await s.see("[[kestrel-v2-3]]");
+    },
+  },
+  {
+    area: "links-and-files",
+    name: "links: in data and code files — a config's include and $schema followed, a broken one said; a note's link into a code line and a data table",
+    covers: { cases: ["links-data", "mixed-roots", "fragments"], commands: ["link.follow"] },
+    options: { home: true, startAt: "home/work/kestrel/config/app.toml" },
+    run: async (s) => {
+      // A reference key is a link even when it reaches nothing: said so.
+      await toLink(s, "./missing-schema.json");
+      await s.keys("enter");
+      await s.message("broken link");
+      await opened(s, "config/app.toml");
+      // The chain kestrel.toml → app.toml → base.yaml → schema.json, followed by its values.
+      await toLink(s, /^(\.\/)?base\.yaml$/);
+      await s.keys("enter");
+      await opened(s, "config/base.yaml");
+      await toLink(s, /^(\.\/)?schema\.json$/);
+      await s.keys("enter");
+      await opened(s, "config/schema.json");
+      // A value that only looks like a path, reaching nothing, is no link at all.
+      await s.keys("ctrl+o");
+      await opened(s, "config/base.yaml");
+      await s.keys("g", "g");
+      for (let i = 0; i < 12; i++) {
+        await s.keys("tab");
+        s.expect(!linkHere(s).includes("missing.yaml"), "./missing.yaml isn't a link");
+      }
+      // From a note, into a code file's line and a data file's table: each at its place.
+      await s.restart({ startAt: "home/notes/projects/sync-rewrite.md" });
+      await toLink(s, "../../work/kestrel/config/app.toml#sync");
+      await s.keys("enter");
+      await opened(s, "config/app.toml");
+      await s.status(/L11:/);
+      await s.restart({ startAt: "home/notes/daily/2026-09-22.md" });
+      await follow(s, "sync.py line 94");
+      await opened(s, "api/kestrel_api/sync.py");
+      await s.status(/L94:/);
+    },
+  },
+  {
+    area: "links-and-files",
+    name: "links: an Obsidian vault's wikilinks, read within it — names, aliases, headings, blocks, ties; no root, no names (21.3)",
+    covers: { cases: ["links/wikilinks", "links/fragments"] },
+    options: { home: true, startAt: "home/hobbies/cooking/Home.md" },
+    run: async (s) => {
+      // Pictures by name, as Obsidian sizes them (`|300`, `|240x180`): shown by their names.
+      await s.see("maqluba-flip.jpg");
+      s.expect(!s.screen().some((r) => /\b(300|240x180)$/.test(r.trimEnd())), "a picture's size isn't its text");
+      // `[[Meal plan|this week]]`: by its name, shown by its alias (the heading's words come first).
+      await follow(s, "this week. Monday");
+      await opened(s, "Meal plan.md");
+      await s.keys("ctrl+o");
+      await opened(s, "Home.md");
+      // `[[Maqluba]]`: no note by that name; مقلوبة.md's front matter has it as an alias, said so.
+      await follow(s, "Maqluba when");
+      await s.message(/\[\[Maqluba\]\] reached Recipes\/Family/); // "…by an alias", wrapped on
+      await s.see("Malik's family maqluba");
+      await s.keys("ctrl+o");
+      await opened(s, "Home.md");
+      // `[[Notes]]`: two notes of that name — the one in the same folder.
+      await follow(s, "Notes: the one");
+      await opened(s, "Notes.md");
+      s.expect(!/Recipes/.test(s.statusLine()), "the same folder's Notes.md, not Recipes/'s");
+      await s.keys("ctrl+o");
+      await opened(s, "Home.md");
+      // `![[dal.png|300]]`: two pictures of that name — the shorter path's, as Obsidian picks; its path copied.
+      await follow(s, "dal.png");
+      await s.message("attachment attachments/dal.png");
+      s.expect(
+        s.clipboard().endsWith("/cooking/attachments/dal.png"),
+        "attachments/dal.png's path copied, not Archive's",
+      );
+      // A third, in a new folder as near as attachments/, put there while slipbox runs: a real tie, asked which.
+      s.write("~/hobbies/cooking/photos/dal.png", "png");
+      for (let i = 0; i < 20 && !s.screen().some((r) => r.includes("[[dal.png]] matches 3 files")); i++) {
+        await s.keys("enter"); // the link under the cursor, followed again once the watcher has the new file
+        await s.settle(300);
+      }
+      await s.see("[[dal.png]] matches 3 files");
+      await s.see("photos/dal.png");
+      await s.keys("escape");
+      // `[[Home#Pantry]]` from deep in Recipes: the heading, by its name.
+      await s.restart({ startAt: "home/hobbies/cooking/Recipes/Baking/Sourdough/Starter/Feeding log.md" });
+      await follow(s, "Home › Pantry");
+      await opened(s, "Home.md");
+      await s.status(/L36:/);
+      // `[[Dal#^tadka]]`: the step its ^id closes.
+      await s.restart({ startAt: "home/hobbies/cooking/Recipes/Weeknight/Dal.md" });
+      await follow(s, "Dal ^tadka");
+      await s.status(/L3[23]:/);
+      // Downloads has no root: a name finds nothing, and the hint says what makes one.
+      await s.restart({ startAt: "home/Downloads/stray-note.md" });
+      await s.see("See plan for the order of work");
+      await follow(s, "plan for the order");
+      await s.message(/\[\[plan\]\]: names need a root/);
+    },
+  },
+  {
+    area: "links-and-files",
+    name: "links: each root's convention and what said it — Obsidian's, zk's, a folder's own; yours, saved while running (21.4)",
+    covers: { cases: ["links/conventions", "links/state"], commands: ["note.info"] },
+    options: { home: true, startAt: "home/hobbies/cooking/Home.md" },
+    run: async (s) => {
+      // The cooking vault's, in the Info view: Obsidian's settings say all three.
+      await leader(s, "n", "i");
+      await s.see(/writes +wikilinks/);
+      await s.see(/path +by name/);
+      await s.see(/\.md +dropped/);
+      await s.see(/from +Obsidian/);
+      // zk's notebook, and the design folder whose own config says markdown over Obsidian's wikilinks, as an agent asks.
+      const zk = s.cliIn("~/hobbies/cycling", "info");
+      s.expect(
+        zk.out.includes("links     markdown links, relative, without .md — zk's .zk/config.toml"),
+        `zk's convention, from info:\n${zk.out}`,
+      );
+      const design = JSON.parse(s.cliIn("~/work/product/design", "info", "--json").out).data.links;
+      s.expect(
+        design.style.value === "markdown" &&
+          design.style.why === "[links] in .slipbox/config.toml" &&
+          design.extension.why === "Obsidian's .obsidian/app.json",
+        `the design folder's: ${JSON.stringify(design)}`,
+      );
+      // Your own setting, saved while slipbox runs: taken at once, over Obsidian's — a markdown link is a path.
+      const config = `${s.dir}/config/slipbox/config.toml`;
+      s.write(config, `${s.read(config)}\n[links]\nstyle = "markdown"\n`);
+      await s.see(/writes +markdown \(setting\)/, 6000);
+      await s.see(/path +relative \(ours\)/);
+      await s.see(/\.md +kept \(Obsidian\)/);
+      await s.notSee(/writes +wikilinks/);
+    },
+  },
+  {
+    area: "links-and-files",
+    name: "links: written as each root writes them — the picker, [[ completed, slipbox link for an agent (21.5)",
+    covers: { cases: ["links/conventions", "links"], commands: ["link.insert", "view.source", "note.save"] },
+    options: { home: true, startAt: "home/hobbies/cooking/Home.md" },
+    run: async (s) => {
+      // The picker, reading: after the word under the cursor, a wikilink by name — Obsidian's way.
+      await s.keys("/");
+      await s.type("shelves in");
+      await s.keys("enter", "escape");
+      await leader(s, "l", "i");
+      await s.see("Link to…");
+      await s.type("Shaksh");
+      await s.keys("enter");
+      await s.file(
+        "~/hobbies/cooking/Home.md",
+        (t) => t.includes("More on the shelves [[Shakshuka]] in [[Pantry]]."),
+        "the picked link after the word, by name",
+      );
+      await s.message("linked Recipes/Weeknight/Shakshuka.md");
+      // [[ completed in source mode: the other Notes, by its path — the name is this folder's own.
+      await leader(s, "n", "v");
+      await s.keys("shift+g", "o");
+      for (const k of ["[", "[", ..."Recipes/No"]) await s.keys(k);
+      await s.see(/Recipes\/Notes +Recipes\/Notes\.md/);
+      await s.keys("tab", "]", "]", "escape", "ctrl+s");
+      await s.file(
+        "~/hobbies/cooking/Home.md",
+        (t) => t.trimEnd().endsWith("[[Recipes/Notes]]"),
+        "the completed wikilink, by its path",
+      );
+      // An agent asks how to link from zk's notebook: no extension, from the note.
+      const zk = s.cliIn(
+        "~/hobbies/cycling",
+        "link",
+        "gear/202608201000-bike-fit.md",
+        "--from",
+        "rides/202609131900-300k-brevet.md",
+      );
+      s.expect(zk.out === "[Bike fit](../gear/202608201000-bike-fit)\n", `zk's link: ${zk.out}`);
+    },
+  },
 ];
+
+const ROOTS: Check[] = [
+  {
+    area: "links-and-files",
+    name: "roots: a path into another root switches into it and back; a broken one said; a backlink from it, by its path (17.x, 21.9)",
+    covers: { cases: ["links/travel", "links/backlinks", "links/forms", "vault"], commands: ["backlinks.open"] },
+    options: { home: true, startAt: "home/notes/index.md" },
+    run: async (s) => {
+      // This note's backlinks listed: notes is indexed whole, its index on disk for other roots to read (17.11).
+      await leader(s, "l", "b");
+      await s.see("Linking to", 10000);
+      await s.keys("escape");
+      // ../work/kestrel/docs/architecture.md: into kestrel, at its own path; back, at the link.
+      await follow(s, ARCHITECTURE);
+      await s.message(/kestrel — /);
+      await s.status(/kestrel · main +‹ docs\/architecture\.md/, 5000);
+      await s.keys("ctrl+o");
+      await s.status(/ notes .*index\.md/, 5000);
+      // A pointer to a name this machine has never seen: said so, nothing opened.
+      await follow(s, "the secret project");
+      await s.message("isn't on this machine yet");
+      await opened(s, "index.md");
+      // architecture.md's backlinks: notes' index among them, by its path from home (21.9).
+      await follow(s, ARCHITECTURE);
+      await s.status(/kestrel · main +‹ docs\/architecture\.md/, 5000);
+      await leader(s, "l", "b");
+      await s.see("Linking to", 10000);
+      await s.type("notes/index");
+      await s.see("~/notes/index.md");
+    },
+  },
+  {
+    area: "links-and-files",
+    name: "nested roots: the demo's outreach — in by path, back, backlinks, two deep",
+    covers: { cases: ["vault", "links/roots", "links/backlinks"], commands: ["backlinks.open"] },
+    run: async (s) => {
+      // home's last link: outreach/index.md, in a root nested in this one (enter: the row's link).
+      await s.keys("shift+g", "enter");
+      await s.message(" outreach — "); // as the switch says it: name — path
+      await s.status("index.md");
+      await s.see("The observatory's public programme");
+      // Two deep: the school visits.
+      await s.keys("g", "g", "tab", "tab", "enter");
+      await s.message(" outreach-school-visits — ");
+      await s.see("A vault nested two deep");
+      // Back, and back again: to the observatory's home.
+      await s.keys("ctrl+o");
+      await s.status("index.md");
+      await s.keys("ctrl+o");
+      await s.status("home.md");
+      await s.see("Halden Ridge Observatory");
+      // home's backlinks: from both nested roots, each by its path (21.9).
+      await leader(s, "l", "b");
+      await s.see("outreach/index.md");
+      await s.see("outreach/school-visits/index.md");
+      await s.keys("escape");
+    },
+  },
+  {
+    area: "links-and-files",
+    name: "nested roots: the explorer's row — its name asked by shift+r; m moves its folder, its links out following, two deep too",
+    covers: { cases: ["vault", "links/moves"] },
+    run: async (s) => {
+      await explorerOpen(s);
+      await s.see("outreach");
+      await explorerRow(s, "outreach");
+      await s.keys("shift+r");
+      await s.see("name outreach, as pointers name it:");
+      await s.keys("escape");
+      // m: its folder moved, picked from the tree by typing — its links out (two deep too) follow, its name stays.
+      await s.keys("m");
+      await s.see("Move outreach/ to…");
+      await s.see("(the root)");
+      await s.type("handbo");
+      await s.keys("enter");
+      await s.see(/outreach\/ → handbook\/outreach\//);
+      await s.keys("enter");
+      await s.file(
+        "handbook/outreach/index.md",
+        (t) => t.includes("[the operations handbook](../operations-handbook.md)"),
+        "outreach's link out fixed",
+      );
+      s.expect(
+        s.read("handbook/outreach/school-visits/index.md").includes("(../../safety-card.adoc)"),
+        "two deep: fixed too",
+      );
+      s.expect(s.read("home.md").includes("[outreach](handbook/outreach/index.md)"), "home's path into it follows");
+    },
+  },
+  {
+    area: "links-and-files",
+    name: "vaults: v makes a folder a root after a preview, paths across untouched; V makes it a plain folder again",
+    covers: { cases: ["vault", "links/state"] },
+    run: async (s) => {
+      const home = s.read("home.md");
+      await explorerOpen(s);
+      await explorerRow(s, "logs");
+      // Its menu has it; v does it: the name asked, a distinct one offered.
+      await s.keys(".");
+      await s.see(/Give it \.slipbox\/ +v/);
+      await s.keys("v");
+      await s.see("give logs/ its .slipbox/, called (empty: no name):");
+      await s.see("› halden-logs");
+      await s.keys("enter");
+      await s.see(/logs\/ → a root of its own, called halden-logs: \d+ changes? in \d+ files?/);
+      await s.keys("enter");
+      await s.message("made logs/ a root of its own, called"); // the box wraps the rest
+      s.expect(s.exists("logs/.slipbox/config.toml"), "logs/ has its .slipbox/");
+      s.expect(s.read("home.md") === home, "home's path into it, across now, as it was");
+      // V: back, the links as they were.
+      await s.keys("shift+v");
+      await s.see(/logs\/ → a plain folder of halden: \d+ changes? in \d+ files?/);
+      await s.keys("enter");
+      await s.message("made logs/ a plain folder of halden");
+      s.expect(!s.exists("logs/.slipbox"), "its .slipbox/ gone (to the trash)");
+      await s.file("home.md", (t) => t === home, "home as it was");
+      // From anywhere too: which-key lists them under space d (folders) and space v (vaults).
+      await s.keys("escape");
+      await leader(s, "d");
+      await s.see("Rename the folder");
+      await s.keys("escape");
+      await leader(s, "v");
+      await s.see("Give a folder .slipbox/");
+      await s.see("Take .slipbox/ away");
+      await s.keys("escape");
+    },
+  },
+  {
+    area: "links-and-files",
+    name: "vaults: a git repository is a root by itself — opened from its top, nothing asked or written; its links followed",
+    covers: { cases: ["vault", "links/roots", "links/conventions"] },
+    options: {
+      home: true,
+      startAt: "home/work/infra/README.md",
+      setup: (s) => {
+        if (!before.has(s)) before.set(s, { infra: tree(s.path("~/work/infra")) });
+      },
+    },
+    run: async (s) => {
+      // The repository's top is the root (20.3): named by its remote, the note by its path in it.
+      await s.status(/ infra[ ·].*README\.md/);
+      s.expect(!s.text().includes("make it a vault?"), "nothing offered");
+      // Its links followed within it.
+      await toLink(s, "k8s/api.yaml");
+      await s.keys("enter");
+      await opened(s, "k8s/api.yaml");
+      await s.status(/ infra[ ·]/);
+      await s.quit();
+      s.expect(!s.exists("~/work/infra/.slipbox"), "no .slipbox/ made in the repository");
+      s.expect(
+        JSON.stringify(tree(s.path("~/work/infra"))) === JSON.stringify(before.get(s)!.infra),
+        "the repository as it was",
+      );
+    },
+  },
+  {
+    area: "links-and-files",
+    name: "roots: a named folder moved by hand brings its reading places along, nothing asked (21.8)",
+    covers: { cases: ["vault", "links/state", "links/named-folders"] },
+    options: { home: true, startAt: "home/hobbies/photography/index.md" },
+    run: async (s) => {
+      // Read to the end of a note, then quit: the place is kept, by file.
+      await moveTo(s, ["shift+g"], (l) => l > 10, "the end of the note");
+      const left = pos(s).line;
+      await s.quit();
+      // Moved by hand, then opened where it is now: photography, by its .slipbox/ id, its state along.
+      renameSync(s.path("~/hobbies/photography"), s.path("~/hobbies/photography-moved"));
+      await s.restart({ startAt: "home/hobbies/photography-moved/index.md" });
+      await s.message("photography moved here from", 5000); // the box wraps where from
+      await s.notSee("did it move here?");
+      await s.until(() => pos(s).line === left, 5000, `index.md at line ${left} again`);
+    },
+  },
+  {
+    area: "links-and-files",
+    name: "roots: a plain folder opened — the named folders first; its tree, by its path, .. to go up; space v v goes into a named one (20.22)",
+    covers: { cases: ["vault", "links/roots", "links/state"], commands: ["search.open", "folders.open"] },
+    options: {
+      home: true,
+      startAt: "home/Downloads",
+      setup: (s) => {
+        s.cliIn("~/notes", "ls"); // notes: known to this machine
+      },
+    },
+    run: async (s) => {
+      await s.see(/Folders \(\d+\)/);
+      await s.see("notes");
+      await s.keys("escape");
+      await s.status(/ ~\/Downloads\b/); // unnamed: its path where a root's name would be
+      await s.see("stray-note.md");
+      await s.see(/\.\./);
+      await s.see("old-blog-export");
+      // Walked as a root is: a note in a folder of it, found by search.
+      await leader(s, "f", "s");
+      await s.type("export button");
+      await s.see("old-blog-export/README.md", 5000);
+      await s.keys("escape");
+      await leader(s, "v", "v");
+      await s.see("notes");
+      await s.type("notes");
+      await s.keys("enter");
+      await s.message(" notes — ");
+      await s.status(/ notes[ ·]/);
+    },
+  },
+  {
+    area: "links-and-files",
+    name: "roots: $HOME opened — the known roots first, the folder a level at a time, never walked; into notes, across into a repository, and back",
+    covers: { cases: ["vault", "links/roots", "links/travel", "links/index"] },
+    options: {
+      home: true,
+      startAt: "home",
+      // Two roots this machine has seen: the launcher lists them over $HOME's own listing.
+      setup: (s) => {
+        s.cliIn("~/notes", "ls");
+        s.cliIn("~/work/kestrel", "ls");
+      },
+    },
+    run: async (s) => {
+      await s.see(/Folders \(\d+\)/);
+      await s.see(/\bnotes +~\/notes\b/);
+      await s.see(/\bkestrel +~\/work\/kestrel\b/);
+      await s.keys("escape");
+      await s.status(/ ~ /); // a plain folder: its path where a vault's name would be
+      // A level at a time: its folders, not what's in them (cooking is two down, kestrel one).
+      await explorerOpen(s);
+      await s.until(
+        () => [/\s\.\.$/, /\sDownloads$/, /\shobbies$/, /\snotes$/, /\swork$/].every((n) => listed(s, n)),
+        3000,
+        "$HOME's own folders listed",
+      );
+      s.expect(!explorer(s).some((r) => /cooking|kestrel|people/.test(r)), "nothing below $HOME's own folders listed");
+      // Never walked: a search finds only what lies in $HOME itself, though notes far below say it too.
+      const top = readdirSync(s.home).filter(
+        (f) => f.endsWith(".md") && readFileSync(join(s.home, f), "utf8").toLowerCase().includes("maqluba"),
+      );
+      s.expect(
+        top.length > 0 && readFileSync(s.path("~/hobbies/cooking/Home.md"), "utf8").toLowerCase().includes("maqluba"),
+        "maqluba both at the top and below",
+      );
+      await s.keys("escape");
+      await leader(s, "f", "s");
+      await s.type("maqluba");
+      await s.see(`"maqluba" — ${top.length} files (scanned: no index here)`, 5000);
+      s.expect(s.rowOf(/[│┃] hobbies\/\S*:\d+/) < 0, "no result from below $HOME");
+      await s.keys("escape");
+      // notes is a root in it: enter goes into it.
+      await explorerOpen(s);
+      await explorerRow(s, "notes");
+      await s.keys("enter");
+      await s.status(/ notes .*index\.md/, 5000);
+      // Across roots by a relative path: into the kestrel repository, its top the root; back.
+      await s.keys("escape");
+      await follow(s, ARCHITECTURE);
+      await s.status(/kestrel · main +‹ docs\/architecture\.md/, 5000);
+      await s.keys("ctrl+o");
+      await s.status(/ notes .*index\.md/, 5000);
+    },
+  },
+  {
+    area: "links-and-files",
+    name: "roots: from markers — an Obsidian vault and a zk notebook are roots, nothing written into them; root_markers in your config decides",
+    covers: { cases: ["links/roots", "vault"] },
+    options: {
+      home: true,
+      startAt: "home/hobbies/cooking/Home.md",
+      setup: (s) => {
+        if (!before.has(s))
+          before.set(s, { cooking: tree(s.path("~/hobbies/cooking")), cycling: tree(s.path("~/hobbies/cycling")) });
+      },
+    },
+    run: async (s) => {
+      // .obsidian/ makes cooking a root: unnamed, shown by its path (21.9); its own tree at the explorer's top, `..`
+      // above it all the same (17.14: no fence at the root).
+      await s.status(/ ~\/hobbies\/cooking +‹ Home\.md/);
+      await explorerOpen(s);
+      await s.until(() => listed(s, /\sRecipes$/), 3000, "cooking's own tree");
+      s.expect(listed(s, /\s\.\.$/), "`..` above the root");
+      // `..`: hobbies a level at a time — cooking marked and unfolded (its Recipes under it), cycling a root beside
+      // it; a file of cycling's opened switches into it, the explorer staying in hobbies.
+      await s.keys("g", "g"); // `..`, the first row
+      await s.keys("enter");
+      await s.until(() => listed(s, /\scycling$/), 3000, "hobbies listed");
+      s.expect(listed(s, /\sRecipes$/), "cooking still unfolded under it");
+      await explorerRow(s, "cycling");
+      await s.keys("enter");
+      await s.until(() => listed(s, /202608151900-index\.md$/), 3000, "cycling unfolded");
+      await explorerRow(s, "202608151900-index\\.md");
+      await s.keys("enter");
+      await s.status(/ ~\/hobbies\/cycling +‹ 202608151900-index\.md/, 5000);
+      await explorerOpen(s);
+      await s.until(() => listed(s, /\scooking$/), 3000, "the explorer still in hobbies");
+      // .zk/ makes cycling one.
+      await s.restart({ startAt: "home/hobbies/cycling/202608151900-index.md" });
+      await s.status(/ ~\/hobbies\/cycling +‹ 202608151900-index\.md/);
+      await s.quit();
+      // Opened, read, quit: neither has a file more or less, a byte changed in size — no .slipbox/ made.
+      const was = before.get(s)!;
+      s.expect(JSON.stringify(tree(s.path("~/hobbies/cooking"))) === JSON.stringify(was.cooking), "cooking as it was");
+      s.expect(JSON.stringify(tree(s.path("~/hobbies/cycling"))) === JSON.stringify(was.cycling), "cycling as it was");
+      // Your config says what marks a root: without .obsidian it's a plain folder, by its path, `..` above it.
+      const config = join(s.dir, "config", "slipbox", "config.toml");
+      writeFileSync(config, `${readFileSync(config, "utf8")}\n[walk]\nroot_markers = [".git", ".slipbox"]\n`);
+      await s.restart({ startAt: "home/hobbies/cooking/Home.md" });
+      await s.status(/ ~\/hobbies\/cooking +‹ Home\.md/);
+      await explorerOpen(s);
+      await s.until(() => listed(s, /\s\.\.$/), 3000, "a plain folder's .. above it");
+    },
+  },
+  {
+    area: "links-and-files",
+    name: "roots: :pin-root keeps a root among the explorer's after leaving it; again, no longer",
+    covers: { cases: ["vault"], commands: ["vault.pin_root"] },
+    options: { home: true, startAt: "home/notes/index.md" },
+    run: async (s) => {
+      // The explorer open, on notes' tree: a row says kestrel only when it's kept as a root.
+      const showsKestrel = () => explorer(s).some((r) => /kestrel/.test(r));
+      const openExplorer = async () => {
+        await explorerOpen(s);
+        await s.until(() => listed(s, /\speople$/), 3000, "notes' tree");
+      };
+      await follow(s, ARCHITECTURE);
+      await s.status(/kestrel · main +‹ docs\/architecture\.md/, 5000);
+      await s.keys("ctrl+o");
+      await s.status(/ notes .*index\.md/, 5000);
+      await openExplorer();
+      s.expect(!showsKestrel(), "left, a followed vault goes from the roots");
+      await s.keys("escape");
+      await follow(s, ARCHITECTURE);
+      await s.status("docs/architecture.md", 5000);
+      await s.ex("pin-root");
+      await s.message(/kestrel: a root of the explorer/); // the box wraps the rest
+      await s.keys("ctrl+o");
+      await s.status(/ notes .*index\.md/, 5000);
+      await openExplorer();
+      await s.until(showsKestrel, 3000, "kestrel kept among the roots");
+      await s.keys("escape");
+      // Unpinned: gone again once left.
+      await follow(s, ARCHITECTURE);
+      await s.status("docs/architecture.md", 5000);
+      await s.ex("pin-root");
+      await s.message(/kestrel: no longer kept/);
+      await s.keys("ctrl+o");
+      await s.status(/ notes .*index\.md/, 5000);
+      await openExplorer();
+      s.expect(!showsKestrel(), "unpinned, gone");
+    },
+  },
+  {
+    area: "links-and-files",
+    name: "roots: where a file is — a root by its name, an unnamed one by its path; :folders goes into one; a loose file's folder beside (21.9, 21.10)",
+    covers: { cases: ["links/named-folders", "links/roots", "vault"], commands: ["folders.open"] },
+    options: { home: true, startAt: "home/notes/index.md" },
+    run: async (s) => {
+      await s.status(/ notes[ ·]/); // named by its .slipbox/
+      s.cliIn("~/hobbies/photography", "ls"); // known here
+      await leader(s, "v", "v");
+      await s.see(/Folders \(\d+\)/);
+      await s.type("photography");
+      await s.keys("enter");
+      await s.message(" photography — "); // as the switch says it: name — path
+      await s.status(/ photography[ ·]/);
+      // An Obsidian vault with no .slipbox/ name and no remote: its path, from home.
+      await s.restart({ startAt: "home/hobbies/cooking/Home.md" });
+      await s.status(/ ~\/hobbies\/cooking /);
+      // A loose file a link leads to opens beside the root: its folder among the explorer's roots while it's shown.
+      await s.restart({ startAt: "home/notes/daily/2026-09-22.md" });
+      await follow(s, "the worker log");
+      await s.status(/sync-worker-2026-09-22\.log\.md/);
+      await s.see("§ sync-worker log, 2026-09-22", 10000); // read and drawn
+      await s.keys("ctrl+e");
+      await s.see("~/Downloads");
+      await s.keys("escape", "ctrl+o"); // back: the loose file no longer shown
+      await s.keys("ctrl+e");
+      await s.notSee("~/Downloads", 1500);
+    },
+  },
+  {
+    area: "links-and-files",
+    name: "index: the background auto-index finds $HOME's roots while nobody works",
+    covers: { cases: ["links/index", "vault"] },
+    options: { home: true, startAt: "home/notes/index.md", config: "[index]\nbackground = true\nidle_seconds = 1\n" },
+    run: async (s) => {
+      // Hands off (a key would pause it): the roots list fills with roots never opened.
+      const registry = join(s.dir, "state", "slipbox", "roots.json");
+      const found = (rel: string) =>
+        existsSync(registry) && readFileSync(registry, "utf8").includes(JSON.stringify(s.path(rel)));
+      const roots = ["~/hobbies/photography", "~/work/product", "~/hobbies/cycling"];
+      s.expect(!roots.some(found), "none known before it ran");
+      await s.until(() => roots.every(found), 60_000, "the auto-index to find photography, product and cycling");
+      // The named ones among them (21.6): photography by its .slipbox/ name, product by its remote; cycling (.zk/) has none.
+      await leader(s, "v", "v");
+      await s.see(/Folders \(\d+\)/);
+      await s.see(/photography +~\/hobbies\/photography/);
+      await s.see(/product +~\/work\/product/);
+    },
+  },
+  {
+    area: "links-and-files",
+    name: "index: across a quit — an outside edit's backlink at the next start; a damaged cache rebuilt; space v r reindexes",
+    covers: { cases: ["links/index", "links/backlinks"], commands: ["backlinks.open", "vault.reindex"] },
+    options: { home: true, startAt: "home/notes/people/priya-nair.md" },
+    run: async (s) => {
+      const linker = "~/notes/meetings/2026-10-07-outside.md";
+      await leader(s, "l", "b");
+      await s.see("Linking to", 10000); // once every note is read
+      await s.notSee("2026-10-07-outside");
+      await s.keys("escape");
+      await s.quit();
+      // Written while slipbox was closed: no watcher saw it.
+      s.write(linker, "# Outside\n\nAsked [Priya](../people/priya-nair.md) about the hiring plan.\n");
+      await s.start();
+      await leader(s, "l", "b");
+      await s.see("2026-10-07-outside", 5000);
+      await s.keys("escape");
+      await s.quit();
+      // Every cache file garbage: started anyway, the note drawn, its backlinks rebuilt.
+      const cache = join(s.dir, "cache", "slipbox");
+      const files = (readdirSync(cache, { recursive: true }) as string[]).filter((f) =>
+        statSync(join(cache, f)).isFile(),
+      );
+      s.expect(
+        files.some((f) => f.endsWith("index.json")),
+        "an index in the cache",
+      );
+      for (const f of files) writeFileSync(join(cache, f), "\x00garbage, not an index\n");
+      await s.start();
+      await s.see("Priya Nair", 5000);
+      await leader(s, "l", "b");
+      await s.see("2026-10-07-outside", 8000);
+      await s.keys("escape");
+      // Reindexed by hand: the folder walked again, said so.
+      await leader(s, "v", "r");
+      await s.message(/reindex/i, 8000);
+    },
+  },
+];
+
+/** The rows of the list on screen that name the worktree of kestrel's agent branch. */
+const worktreeRows = (s: Session) => s.screen().filter((r) => r.includes("kestrel-agent-sync-retry"));
+
+const NAMED: Check[] = [
+  {
+    area: "links-and-files",
+    name: "named folders: a second copy of notes asks once which links open; a repository named by its remote (21.6)",
+    covers: { cases: ["links/named-folders", "vault"] },
+    options: { home: true, startAt: "home/notes/index.md" },
+    run: async (s) => {
+      // The backup in Downloads is a copy of notes (one .slipbox/ id): opened, it asks which copy links open.
+      await s.restart({ startAt: "home/Downloads/notes-backup-2026-07/index.md" });
+      await s.see("notes: 2 copies on this machine — which do links to it open?");
+      await s.see("links open it now"); // ~/notes: the first found
+      await s.keys("enter");
+      await s.message("links to notes open ~/notes");
+      const info = s.cliIn("~/Downloads/notes-backup-2026-07", "info");
+      s.expect(info.out.includes("name      notes — 2 copies, links open ~/notes"), `info:\n${info.out}`);
+      // Asked once: opened again, not asked.
+      await s.restart({ startAt: "home/Downloads/notes-backup-2026-07/index.md" });
+      await s.notSee("which do links to it open?", 1500);
+      // The product repository, no .slipbox/ name: named by its remote, its qualified name kept.
+      const product = JSON.parse(s.cliIn("~/work/product", "info", "--json").out).data.folder;
+      s.expect(
+        product?.name === "product" && product.remote === "github.com/kestrel-labs/product",
+        `product's name: ${JSON.stringify(product)}`,
+      );
+      // A folder with only Obsidian's marker: unnamed, linked by relative path.
+      const cooking = s.cliIn("~/hobbies/cooking", "info");
+      s.expect(cooking.out.includes("name      none — no remote and no .slipbox/ name"), `cooking:\n${cooking.out}`);
+    },
+  },
+  {
+    area: "links-and-files",
+    name: "named folders: space v shift+v picks which copy a folder's links open, :folders-default again; info says which (21.6)",
+    covers: { cases: ["links/named-folders", "vault"], commands: ["folders.default"] },
+    options: {
+      home: true,
+      startAt: "home/notes/index.md",
+      // Both copies of notes known here (an agent's ls in each), links opening ~/notes: nothing asked at the start.
+      setup: (s) => {
+        s.cliIn("~/notes", "ls");
+        s.cliIn("~/Downloads/notes-backup-2026-07", "ls");
+        const r = s.cliIn("~/notes", "folders", "default", "notes", s.path("~/notes"));
+        if (r.out !== "links to notes open ~/notes\n") throw new Error(`folders default: ${r.code} ${r.out}`);
+      },
+    },
+    run: async (s) => {
+      const marked = () => s.screen().find((r) => r.includes("links open it")) ?? "";
+      const info = () => s.cliIn("~/notes", "info").out;
+      await leader(s, "v", "shift+v");
+      await s.see("notes: which copy do links open?");
+      await s.until(
+        () => marked().includes("~/notes") && !marked().includes("backup"),
+        3000,
+        "~/notes marked as the copy links open",
+      );
+      await s.see("~/Downloads/notes-backup-2026-07");
+      await s.keys("down", "enter");
+      await s.message("links to notes open"); // the path wraps on
+      await s.notSee("which copy do links open?");
+      s.expect(
+        info().includes("name      notes — 2 copies, links open ~/Downloads/notes-backup-2026-07"),
+        `info:\n${info()}`,
+      );
+      // Again by its command: the backup marked now; ~/notes picked back.
+      await s.ex("folders-default");
+      await s.see("notes: which copy do links open?");
+      await s.until(() => marked().includes("notes-backup-2026-07"), 3000, "the backup marked as the copy links open");
+      await s.keys("up", "enter");
+      await s.notSee("which copy do links open?");
+      s.expect(info().includes("name      notes — 2 copies, links open ~/notes\n"), `info:\n${info()}`);
+    },
+  },
+  {
+    area: "links-and-files",
+    name: "pointers: slipbox:// — another named folder's note, once it's on this machine; an agent's branch, its worktree (21.7)",
+    covers: { cases: ["links/named-folders", "links/forms", "links/git"], commands: ["link.follow"] },
+    options: { home: true, startAt: "home/hobbies/cycling/rides/202608301800-kyoto-river-loop.md" },
+    run: async (s) => {
+      // photography hasn't been opened here yet: said so, nothing made.
+      await follow(s, "Kyoto notes");
+      await s.message("photography isn't on this machine yet");
+      // Opened once (an agent's ls): in the lookup, and the pointer leads there.
+      s.cliIn("~/hobbies/photography", "ls");
+      await follow(s, "Kyoto notes");
+      await s.status(/photography/);
+      await s.see("Kyoto"); // the trip's index, in the photography folder
+      // kestrel's sync doc: Sam's notes (the notes folder), and the agent's copy on its branch — its worktree.
+      s.cliIn("~/notes", "ls");
+      await s.restart({ startAt: "home/work/kestrel/docs/sync.md" });
+      await follow(s, "his notes");
+      await s.status(/notes/);
+      await opened(s, "projects/sync-rewrite.md");
+      await s.restart({ startAt: "home/work/kestrel/docs/sync.md" });
+      await s.keys("/");
+      await s.type("is at");
+      await s.keys("enter", "escape", "tab", "enter");
+      await s.status(/sync-retry/);
+      await opened(s, "docs/sync.md");
+    },
+  },
+  {
+    area: "links-and-files",
+    name: "naming: :name gives the cooking vault a name its pointer finds; the vault words are gone (21.10, 21.12)",
+    covers: { cases: ["links/named-folders", "rename", "links/state"], commands: ["folder.name"] },
+    options: { home: true, startAt: "home/hobbies/cooking/Home.md" },
+    run: async (s) => {
+      await s.ex("name cooking");
+      await s.message("is named cooking (.slipbox/"); // the box wraps the rest
+      await s.status(/ cooking /);
+      s.expect(
+        readFileSync(s.path("~/hobbies/cooking/.slipbox/config.toml"), "utf8").includes('name = "cooking"'),
+        "the name written into .slipbox/",
+      );
+      const r = JSON.parse(s.cliIn("~/notes", "resolve", "slipbox://cooking/Home.md", "--json").out).data;
+      s.expect(r.status === "resolved" && r.name === "cooking", `the pointer: ${JSON.stringify(r)}`);
+      s.expect(s.cliIn("~/notes", "vaults").code === 2, "slipbox vaults is gone");
+      s.expect(s.cliIn("~/notes", "vault-moved").code === 2, "slipbox vault-moved is gone");
+      const info = JSON.parse(s.cliIn("~/hobbies/cooking", "info", "--json").out).data;
+      s.expect(
+        info.name === "cooking" && info.vault === undefined && info.instance === undefined,
+        `info: ${JSON.stringify({ name: info.name, vault: info.vault })}`,
+      );
+    },
+  },
+  {
+    area: "links-and-files",
+    name: "naming: space v n names this root anew, after a preview — paths into it and out of it as they were (21.10)",
+    covers: { cases: ["links/named-folders", "rename"], commands: ["folder.name"] },
+    run: async (s) => {
+      const outreach = s.read("outreach/index.md");
+      await leader(s, "v", "n");
+      await s.see("as pointers name"); // the question wraps after it
+      await s.keys("ctrl+u");
+      await s.type("halden2");
+      await s.keys("enter");
+      await s.see(/name halden → halden2: \d+ changes? in \d+ files?/);
+      await s.keys("enter");
+      await s.message("named the folder halden → halden2");
+      await s.status(/ halden2 /);
+      s.expect(s.read(".slipbox/config.toml").includes('name = "halden2"'), "the new name in .slipbox/");
+      s.expect(s.read("outreach/index.md") === outreach, "the nested root's paths out as they were");
+    },
+  },
+  {
+    area: "links-and-files",
+    name: "pointers: a clone named its own way — the qualified pointer and the hosting URL open ~/work/kestrel (DF-T5)",
+    covers: { cases: ["links/named-folders", "links/forms"], commands: ["link.follow"] },
+    options: {
+      home: true,
+      startAt: "home/notes/research/link-styles.md",
+      // Both copies of kestrel's repository known here, the spike (a clone, .slipbox/-named engine-spike) found first.
+      setup: (s) => {
+        s.cliIn("~/notes/research/route-engine-spike", "ls");
+        s.cliIn("~/work/kestrel", "ls");
+      },
+    },
+    run: async (s) => {
+      // `slipbox://github.com/kestrel-labs/kestrel/docs/architecture.md`: the copy called by the remote's name.
+      await follow(s, "qualified.");
+      await s.status(/ kestrel[ ·]/);
+      await opened(s, "docs/architecture.md");
+      s.expect(!/engine-spike/.test(s.statusLine()), `kestrel, not the spike:\n${s.statusLine()}`);
+      // A hosting URL to the repository, from product's README: the same copy, at its top.
+      await s.restart({ startAt: "home/work/product/README.md" });
+      await s.status(/ product[ ·]/);
+      await s.keys("/");
+      await s.type("code is in");
+      await s.keys("enter", "escape", "tab");
+      await s.status(/→ https:\/\/github\.com\/kestrel-labs\/kestrel\b/);
+      await s.keys("enter");
+      await s.status(/ kestrel[ ·]/);
+      await opened(s, "README.md");
+      s.expect(!/engine-spike/.test(s.statusLine()), `kestrel, not the spike:\n${s.statusLine()}`);
+    },
+  },
+  {
+    area: "links-and-files",
+    name: "search: widened to the folders linked to this one — a repository's hits, none from its agent's worktree (DF-T5)",
+    covers: { cases: ["links/search"], commands: ["search.open"] },
+    options: {
+      home: true,
+      startAt: "home/notes/index.md",
+      setup: (s) => {
+        s.cliIn("~/notes/research/route-engine-spike", "ls");
+        s.cliIn("~/work/kestrel", "ls");
+      },
+    },
+    run: async (s) => {
+      // link-styles.md points into the worktree by `@agent/sync-retry` (its runbook says "parks at once"); kestrel's
+      // own sync doc says it too.
+      await leader(s, "f", "s");
+      await s.type("parks");
+      await s.see(/"parks" — \d+ files?/, 15000); // once notes/ is indexed
+      await s.keys("ctrl+a");
+      await s.see("and the folders linked to it");
+      await s.see("~/work/kestrel/docs/sync.md", 10000);
+      s.expect(!worktreeRows(s).length, `no hit from the worktree:\n${worktreeRows(s).join("\n")}`);
+      await s.keys("escape");
+    },
+  },
+  {
+    area: "links-and-files",
+    name: "links: a missing heading or block opens the note at its top, said so; the hover says it first (DF-D26)",
+    covers: { cases: ["links/fragments", "links"], commands: ["link.follow", "lsp.hover"] },
+    options: { home: true, startAt: "home/notes/meetings/2026-09-05-feedback-synthesis.md" },
+    run: async (s) => {
+      // F7 (DF-D26): the hover on such a link says where following it lands.
+      await s.keys("/");
+      await s.type("the pricing section");
+      await s.keys("enter", "escape", "shift+k");
+      await s.see('No heading "pricing" in', 5000);
+      await s.see("its top."); // the sentence ends so, wrapped in the hover however wide it is
+      await s.keys("escape");
+      // The PRD read far down, then links to a heading and a block it hasn't: each opens it at its top, said so.
+      await s.restart({ startAt: "home/work/product/prd/route-sharing.md" });
+      await moveTo(s, ["shift+g"], (l) => l > 50, "the PRD's end");
+      for (const [link, said] of [
+        ["the pricing section", 'no heading "pricing" in'],
+        ["in the third paragraph", "no block ^trim-decision in"],
+      ] as const) {
+        await s.restart({ startAt: "home/notes/meetings/2026-09-05-feedback-synthesis.md" });
+        await follow(s, link);
+        await opened(s, "prd/route-sharing.md");
+        await s.status(/ product[ ·]/);
+        await s.status(/L1:/);
+        await s.message(said);
+        s.expect(
+          (await lastMessage(s, said)).endsWith("prd/route-sharing.md: opened at its top"),
+          `${said} …: opened at its top`,
+        );
+        // Far down again, for the next link: only its top can say it landed there.
+        await moveTo(s, ["shift+g"], (l) => l > 50, "the PRD's end again");
+      }
+    },
+  },
+];
+
+const FILES: Check[] = [
+  {
+    area: "links-and-files",
+    name: "explorer files: r renames, m moves, d deletes and u restores, y p copies — links fixed; a note duplicated and deleted",
+    covers: { cases: ["copy-move", "trash", "rename"], commands: ["note.copy", "note.delete", "trash.open"] },
+    options: { open: "people/contacts.md" },
+    run: async (s) => {
+      // The explorer on contacts.md (space E reveals it).
+      await leader(s, "E");
+      await s.status("FILES");
+      // The row's menu (its … button; . by key): the entries with their keys; r there renames.
+      await s.keys(".");
+      await s.see(/Move to… +m/);
+      await s.see(/Delete +d/);
+      await s.keys("r");
+      await s.see("rename people/contacts.md to:"); // a question in its own window
+      await s.see("OK  enter");
+      await s.keys("ctrl+u");
+      await s.type("people-contacts");
+      await s.keys("enter");
+      await s.see(/people\/contacts\.md → people\/people-contacts\.md: \d+ changes? in \d+ files?/);
+      await s.keys("enter");
+      await s.message("renamed people/contacts.md");
+      s.expect(s.exists("people/people-contacts.md") && !s.exists("people/contacts.md"), "renamed on disk");
+      s.expect(s.read("home.md").includes("(people/people-contacts.md)"), "home's link follows it");
+      // m: to the handbook folder.
+      await s.keys("m");
+      await s.see("Move people/people-contacts.md to…");
+      await s.type("handbook");
+      await s.keys("enter");
+      await s.see(/→ handbook\/people-contacts\.md/);
+      await s.keys("enter");
+      await s.file("handbook/people-contacts.md", (t) => t.length > 0, "moved to the handbook");
+      // d, then u.
+      await s.keys("d");
+      await s.see(/Delete handbook\/people-contacts\.md\?/); // a question in its own window: y answers
+      await s.see("Yes  y");
+      await s.type("y");
+      await s.message("deleted handbook/");
+      s.expect(!s.exists("handbook/people-contacts.md"), "gone from the vault");
+      await s.keys("u");
+      await s.message("restored handbook/");
+      s.expect(s.exists("handbook/people-contacts.md"), "back");
+      // y p: a copy beside it.
+      await s.keys("y", "p");
+      await s.message("copied handbook/");
+      s.expect(s.exists("handbook/people-contacts-copy.md"), "the copy made");
+      // The trash is listed, empty now.
+      await leader(s, "v", "t");
+      await s.message("the trash is empty");
+      // The current note: duplicated (the palette), opened; then that copy deleted (space n d).
+      await s.keys("escape");
+      await s.keys(":");
+      await s.type("Duplicate the note");
+      await s.keys("enter");
+      await s.status("people-contacts-copy-2.md");
+      await leader(s, "n", "d");
+      await s.see(/Delete handbook\/people-contacts-copy-2\.md\?/);
+      await s.type("y");
+      await s.message("deleted handbook/");
+      s.expect(!s.exists("handbook/people-contacts-copy-2.md"), "the copy deleted");
+    },
+  },
+  {
+    area: "links-and-files",
+    name: "files: space n — the note moved to a folder, copied and pasted, cut, deleted and restored, duplicated",
+    covers: {
+      cases: ["copy-move", "trash"],
+      commands: ["note.move", "note.yank", "note.cut", "folder.paste", "note.delete", "trash.restore", "note.copy"],
+    },
+    options: { open: "people/contacts.md" },
+    run: async (s) => {
+      // space n shift+m: a folder picked from the tree; links fixed after a preview.
+      await leader(s, "n", "shift+m");
+      await s.see("Move people/contacts.md to…");
+      await s.type("handbo");
+      await s.keys("enter");
+      await s.see(/people\/contacts\.md → handbook\/contacts\.md: \d+ changes? in \d+ files?/);
+      await s.keys("enter");
+      await s.file("handbook/contacts.md", (t) => t.includes("# Contacts"), "moved into handbook/");
+      await opened(s, "handbook/contacts.md");
+      s.expect(s.read("home.md").includes("(handbook/contacts.md)"), "home's link follows it");
+      // space n y, then space d p: a copy pasted in this note's folder, beside it.
+      await leader(s, "n", "y");
+      await s.message("copied handbook/contacts.md");
+      await leader(s, "d", "p");
+      await s.file("handbook/contacts-copy.md", (t) => t.includes("# Contacts"), "a copy beside it");
+      // space n x, then space d p where it already is: nothing to move.
+      await leader(s, "n", "x");
+      await s.message("cut handbook/contacts.md");
+      await leader(s, "d", "p");
+      await s.message("already in handbook");
+      // space n d: to the trash, asked first; space v u: back.
+      await leader(s, "n", "d");
+      await s.see(/Delete handbook\/contacts\.md\?/);
+      await s.type("y");
+      await s.message("deleted handbook/contacts.md");
+      s.expect(!s.exists("handbook/contacts.md"), "gone to the trash");
+      await leader(s, "v", "u");
+      await s.message("restored handbook/contacts.md");
+      s.expect(s.exists("handbook/contacts.md"), "back");
+      // space n shift+y: duplicated beside it, the copy opened.
+      await leader(s, "n", "shift+y");
+      await opened(s, "handbook/contacts-copy-2.md");
+      s.expect(s.exists("handbook/contacts-copy-2.md"), "the duplicate written");
+    },
+  },
+  {
+    area: "links-and-files",
+    name: "files: space d — this note's folder copied and pasted, renamed, moved, cut, deleted and restored",
+    covers: {
+      cases: ["copy-move", "trash", "rename"],
+      commands: ["folder.yank", "folder.paste", "folder.rename", "folder.move", "folder.cut", "folder.delete"],
+    },
+    options: { open: "people/contacts.md" },
+    run: async (s) => {
+      // Copied, then pasted into itself: refused; pasted at the top (home's folder): a copy beside it.
+      await leader(s, "d", "y");
+      await s.message("copied people/");
+      await leader(s, "d", "p");
+      await s.message("people can't be copied into itself");
+      await open(s, "home");
+      await leader(s, "d", "p");
+      await s.until(() => s.exists("people-copy/contacts.md"), 3000, "people/ copied beside itself");
+      await open(s, "kenji-mori");
+      await opened(s, "people/kenji-mori.md");
+      // Renamed in place, its links fixed after a preview; the note open follows it.
+      await leader(s, "d", "r");
+      await s.see("rename people/ to:");
+      await s.keys("ctrl+u");
+      await s.type("folk");
+      await s.keys("enter");
+      await s.see(/people\/ → folk\/: \d+ changes? in \d+ files?/);
+      await s.keys("enter");
+      await s.message("moved people/ → folk/");
+      await opened(s, "folk/kenji-mori.md");
+      s.expect(s.read("home.md").includes("(folk/kenji-mori.md)"), "home's link into it follows");
+      // Moved into handbook/, picked from the tree.
+      await leader(s, "d", "m");
+      await s.see("Move folk/ to…");
+      await s.type("handbo");
+      await s.keys("enter");
+      await s.see(/folk\/ → handbook\/folk\/: \d+ changes? in \d+ files?/);
+      await s.keys("enter");
+      await s.message("moved folk/ → handbook/folk/");
+      await opened(s, "handbook/folk/kenji-mori.md");
+      // Cut: said, waiting for a paste.
+      await leader(s, "d", "x");
+      await s.message("cut handbook/folk/");
+      // Deleted, asked first with what breaks; restored.
+      await leader(s, "d", "d");
+      await s.see(/Delete handbook\/folk\/ and everything in it\?/);
+      await s.type("y");
+      await s.message("deleted handbook/folk to the trash");
+      s.expect(!s.exists("handbook/folk"), "gone to the trash");
+      await s.status("deleted on disk");
+      await leader(s, "v", "u");
+      await s.message("restored handbook/folk");
+      s.expect(s.exists("handbook/folk/kenji-mori.md"), "back");
+    },
+  },
+  {
+    area: "links-and-files",
+    name: "files: space v m gives this note's folder .slipbox/, a root of its own; space v shift+m makes it plain again",
+    covers: { cases: ["vault", "links/state"], commands: ["vault.init", "vault.unmake"] },
+    options: { open: "people/contacts.md" },
+    run: async (s) => {
+      const home = s.read("home.md");
+      await leader(s, "v", "m");
+      await s.see("give people/ its .slipbox/, called (empty: no name):");
+      await s.keys("enter");
+      await s.see(/people\/ → a root of its own, called .*: \d+ changes? in \d+ files?/);
+      await s.keys("enter");
+      await s.message("made people/ a root of its own");
+      s.expect(s.exists("people/.slipbox/config.toml"), "people/ has its .slipbox/");
+      s.expect(s.read("home.md") === home, "home's paths into it as they were");
+      // At the top of halden, this root isn't nested: nothing to take away.
+      await leader(s, "v", "shift+m");
+      await s.message("halden isn't inside another root");
+      // In a root nested in halden (outreach, by home's link): made a plain folder of halden.
+      await open(s, "home");
+      await s.keys("shift+g", "enter");
+      await s.message(" outreach — ");
+      await leader(s, "v", "shift+m");
+      await s.see(/outreach\/ → a plain folder of halden: \d+ changes? in \d+ files?/);
+      await s.keys("enter");
+      await s.message("made outreach/ a plain folder of halden");
+      s.expect(!s.exists("outreach/.slipbox"), "its .slipbox/ gone (to the trash)");
+    },
+  },
+  {
+    area: "links-and-files",
+    name: "files: a folder with an unsaved note open in it isn't renamed — said, the edit kept; saved, it is, the note open from its new place",
+    covers: { cases: ["copy-move", "rename"], commands: ["folder.rename", "view.source", "note.save"] },
+    options: { open: "people/contacts.md" },
+    run: async (s) => {
+      await leader(s, "n", "v");
+      await s.status("SOURCE");
+      await s.keys("G", "o");
+      await s.type("Typed before the move");
+      await s.keys("escape");
+      await s.status("unsaved");
+      await leader(s, "d", "r");
+      await s.see("rename people/ to:");
+      await s.keys("ctrl+u");
+      await s.type("folk");
+      await s.keys("enter");
+      await s.message("unsaved: people/contacts.md");
+      s.expect(s.exists("people/contacts.md") && !s.exists("folk"), "nothing moved while the note is unsaved");
+      await s.see("Typed before the move");
+      await s.status("unsaved");
+      // Saved, the same rename goes ahead: previewed, carried out, the note open from folk/ with its text.
+      await s.keys("ctrl+s");
+      await s.file("people/contacts.md", (t) => t.includes("Typed before the move"), "the edit saved where it was");
+      await leader(s, "d", "r");
+      await s.see("rename people/ to:");
+      await s.keys("ctrl+u");
+      await s.type("folk");
+      await s.keys("enter");
+      await s.see("people/ → folk/");
+      await s.keys("enter");
+      await s.file(
+        "folk/contacts.md",
+        (t) => t.includes("Typed before the move"),
+        "the folder renamed, the note in it",
+      );
+      s.expect(!s.exists("people"), "people/ gone");
+      await s.status("folk/contacts.md");
+      await s.see("Typed before the move");
+    },
+  },
+  {
+    area: "links-and-files",
+    name: "trash: two notes deleted, space v t lists them and ends with Empty the trash…; enter, y, gone for good (DF-D14)",
+    covers: { cases: ["trash"], commands: ["note.delete", "trash.open", "trash.empty"] },
+    run: async (s) => {
+      for (const [name, path] of [
+        ["wrap-probe", "scratch/wrap-probe.md"],
+        ["broken-frontmatter", "scratch/broken-frontmatter.md"],
+      ] as const) {
+        await open(s, name);
+        await leader(s, "n", "d");
+        await s.see(`Delete ${path}?`);
+        await s.type("y");
+        await s.message(`deleted ${path}`);
+        s.expect(!s.exists(path), `${path} gone to the trash`);
+      }
+      // The trash's list: newest first, a blank row, then the last row, which empties it.
+      await leader(s, "v", "t");
+      await s.see("Trash (2) — enter restores");
+      await s.see("Empty the trash…");
+      // Each item's row with when it was deleted (not the boxes saying so, which may still show).
+      const [b, a, empty] = [
+        s.rowOf(/\bbroken-frontmatter\.md +\d{4}-\d\d-\d\d \d\d:\d\d/),
+        s.rowOf(/\bwrap-probe\.md +\d{4}-\d\d-\d\d \d\d:\d\d/),
+        s.rowOf("Empty the trash…"),
+      ];
+      s.expect(
+        b >= 0 && a > b && empty > a + 1,
+        `broken-frontmatter, wrap-probe, then Empty the trash… last (rows ${b}, ${a}, ${empty})`,
+      );
+      // up from the first row: the last one; enter asks — n keeps them.
+      await s.keys("up", "enter");
+      await s.see("Empty the trash? Its 2 items go for good");
+      await s.keys("n");
+      await s.notSee("Empty the trash? Its 2 items go for good");
+      s.expect(s.cli("trash").out.includes("wrap-probe.md"), "kept");
+      // :empty-trash opens the list on that row: enter asks the same; y empties it.
+      await s.keys("escape");
+      await s.notSee("Trash (2)");
+      await s.ex("empty-trash");
+      await s.see("Trash (2) — enter restores");
+      await s.keys("enter");
+      await s.see("Empty the trash? Its 2 items go for good");
+      await s.keys("y");
+      await s.message("emptied the trash: 2 items gone for good");
+      const state = join(s.dir, "state");
+      const trash = (readdirSync(state, { recursive: true }) as string[]).find((f) => f.endsWith("trash"));
+      s.expect(
+        !!trash && readdirSync(join(state, trash)).join(" ") === "trash.json",
+        `nothing left in the trash but its list: ${trash && readdirSync(join(state, trash))}`,
+      );
+      await leader(s, "v", "t");
+      await s.message("the trash is empty");
+      s.expect(!s.exists("scratch/wrap-probe.md") && !s.exists("scratch/broken-frontmatter.md"), "neither note back");
+    },
+  },
+];
+
+const RENAMES: Check[] = [
+  {
+    area: "links-and-files",
+    name: "rename: space n m previews every change, enter renames; each link follows, nothing else written into the note",
+    covers: { cases: ["rename", "links/conventions", "links/moves"], commands: ["note.rename"] },
+    run: async (s) => {
+      await open(s, "kenji-mori");
+      await leader(s, "n", "m");
+      await s.see("rename or move people/kenji-mori.md to:");
+      await s.keys("ctrl+u");
+      await s.type("people/kenji");
+      await s.keys("enter");
+      await s.see(/people\/kenji-mori\.md → people\/kenji\.md: \d+ changes in \d+ files/);
+      await s.see("home.md:28");
+      await s.keys("enter");
+      await s.message("renamed people/kenji-mori.md → people/kenji.md");
+      await opened(s, "people/kenji.md");
+      s.expect(!s.exists("people/kenji-mori.md"), "the old file is gone");
+      await s.file(
+        "people/kenji.md",
+        (t) => t.includes("# Kenji Mori") && !t.includes("previous_names"),
+        "no old name written into it (21.12)",
+      );
+      s.expect(
+        s.read("home.md").includes("- [kenji-mori](people/kenji.md) — our visiting astronomer"),
+        "home's link follows",
+      );
+      s.expect(
+        s.read("people/partners-and-names.md").includes("[kenji-mori.md](kenji.md); the names"),
+        "the note beside it too",
+      );
+      s.expect(
+        s.read("people/partners-and-names.md").includes("![kenji-mori › Kenji Mori](kenji.md#kenji-mori)"),
+        "the embed follows",
+      );
+      // The explorer's r asks for the selected note's new name; esc cancels.
+      await leader(s, "e");
+      await s.keys("r");
+      await s.see(/rename .* to:/);
+      await s.keys("escape");
+    },
+  },
+  {
+    area: "links-and-files",
+    name: "rename: a link written later to the old path — relinked; then undone, newest first, every file as it was (7.4)",
+    covers: {
+      cases: ["rename", "links/moves", "links"],
+      commands: ["note.rename", "note.open", "link.relink", "rename.undo"],
+    },
+    run: async (s) => {
+      await open(s, "kenji-mori");
+      await leader(s, "n", "m");
+      await s.see("rename or move people/kenji-mori.md to:");
+      await s.keys("ctrl+u");
+      await s.type("people/kenji");
+      await s.keys("enter", "enter");
+      await s.file("people/kenji.md", (t) => t.includes("# Kenji Mori"), "renamed");
+      // An agent's note, written now with the old path: broken, its move known — relink rewrites it.
+      s.write("late-note.md", "# Late\n\nAsk [Kenji](people/kenji-mori.md) about Aster.\n");
+      await s.ex("e late-note.md");
+      await opened(s, "late-note.md");
+      await s.see("Ask Kenji about Aster.");
+      await leader(s, "l", "r");
+      await s.see("relink: 1 change in 1 file");
+      await s.keys("enter");
+      await s.file("late-note.md", (t) => t.includes("Ask [Kenji](people/kenji.md) about Aster."), "the link relinked");
+      // Undo (7.4), newest first, each previewed: the relink, then the rename — every file as it was.
+      await leader(s, "v", "shift+u");
+      await s.see("undo: relink: 1 change in 1 file");
+      await s.keys("enter");
+      await s.file(
+        "late-note.md",
+        (t) => t.includes("Ask [Kenji](people/kenji-mori.md) about Aster."),
+        "the relink undone",
+      );
+      await leader(s, "v", "shift+u");
+      await s.see(/undo: people\/kenji\.md → people\/kenji-mori\.md: \d+ changes/);
+      await s.keys("enter");
+      await s.message("renamed people/kenji.md back to"); // the toast wraps the rest
+      await s.file("people/kenji-mori.md", (t) => !t.includes("previous_names"), "the note back, as it was");
+      s.expect(!s.exists("people/kenji.md"), "the new name is gone");
+      s.expect(
+        s.read("home.md").includes("- [kenji-mori](people/kenji-mori.md) — our visiting astronomer"),
+        "home's link back",
+      );
+    },
+  },
+  {
+    area: "links-and-files",
+    name: "rename: a heading — its line, and the embed of it elsewhere (11.9)",
+    covers: { cases: ["rename", "links/fragments"], commands: ["heading.rename"] },
+    run: async (s) => {
+      await open(s, "kenji-mori");
+      await s.ex("14");
+      await leader(s, "n", "h");
+      await s.see('rename the heading "Kenji Mori" to:');
+      await s.keys("ctrl+u");
+      await s.type("Kenji Mori, astronomer");
+      await s.keys("enter");
+      await s.see(/#Kenji Mori → people\/kenji-mori\.md#Kenji Mori, astronomer: \d+ changes/); // the title is cut there
+      await s.keys("enter");
+      await s.file("people/kenji-mori.md", (t) => t.includes("# Kenji Mori, astronomer\n"), "the heading renamed");
+      s.expect(
+        s.read("people/partners-and-names.md").includes("(kenji-mori.md#kenji-mori-astronomer)"),
+        "the embed follows",
+      );
+    },
+  },
+  {
+    area: "links-and-files",
+    name: "rename: space n m into a folder — named, the note's name kept; or ending in /, the folder made (DF-D4)",
+    covers: { cases: ["rename", "copy-move"], commands: ["note.rename"] },
+    run: async (s) => {
+      // space n m with an existing folder's name: into it, the note's own name kept.
+      await open(s, "kenji-mori");
+      await leader(s, "n", "m");
+      await s.see("rename or move people/kenji-mori.md to:");
+      await s.keys("ctrl+u");
+      await s.type("projects");
+      await s.keys("enter");
+      await s.see(/people\/kenji-mori\.md → projects\/kenji-mori\.md: \d+ changes? in \d+ files?/);
+      await s.keys("enter");
+      await s.file("projects/kenji-mori.md", (t) => t.includes("# Kenji Mori"), "moved into projects/");
+      s.expect(
+        !s.exists("projects.md") && !s.exists("people/kenji-mori.md"),
+        "no projects.md beside the folder; the old path gone",
+      );
+      await opened(s, "projects/kenji-mori.md");
+      s.expect(s.read("home.md").includes("(projects/kenji-mori.md)"), "home's link follows it");
+      // A name ending in /, a folder not there yet: made, the note in it.
+      await leader(s, "n", "m");
+      await s.see("rename or move projects/kenji-mori.md to:");
+      await s.keys("ctrl+u");
+      await s.type("visitors/");
+      await s.keys("enter");
+      await s.see(/projects\/kenji-mori\.md → visitors\/kenji-mori\.md: \d+ changes? in \d+ files?/);
+      await s.keys("enter");
+      await s.file("visitors/kenji-mori.md", (t) => t.includes("# Kenji Mori"), "moved into the new visitors/");
+      await opened(s, "visitors/kenji-mori.md");
+    },
+  },
+  {
+    area: "links-and-files",
+    name: "convert-links: a root's wikilinks made paths after a preview, an ambiguous one picked; an embed still drawn, a block followed, undone",
+    covers: { cases: ["convert-links", "links/wikilinks"], commands: ["link.convert", "rename.undo"] },
+    options: { home: true, startAt: "home/hobbies/cooking/Pantry.md" },
+    run: async (s) => {
+      const HOME = "~/hobbies/cooking/Home.md";
+      const was = s.read(HOME);
+      await s.ex("convert-links");
+      await s.see(/links → plain paths: \d+ changes? in \d+ files?/, 10000);
+      await s.see("pick Home.md:18");
+      await s.see("pick Pantry.md:24");
+      // `![[dal.png|300]]`: two pictures answer to it — its candidates, one picked; the preview again, with it.
+      await s.keys("enter");
+      await s.see("![[dal.png|300]] in Home.md:18 — which note?");
+      await s.see("Archive/attachments/dal.png");
+      await s.keys("down", "enter");
+      await s.see(/links → plain paths: \d+ changes? in \d+ files?/);
+      await s.notSee("pick Home.md:18");
+      // Pantry's `[[dal.png]]` likewise; then nothing left to pick.
+      await s.keys("enter");
+      await s.see("[[dal.png]] in Pantry.md:24 — which note?");
+      await s.keys("down", "enter");
+      await s.see(/links → plain paths: \d+ changes? in \d+ files?/);
+      await s.notSee("pick Pantry.md:24");
+      await s.keys("enter");
+      await s.message(/converted links to plain paths: \d+ changes/); // short: the box wraps the rest
+      await s.file(
+        HOME,
+        (t) =>
+          t.includes("[Pantry](Pantry.md)") &&
+          t.includes("[Shakshuka](Recipes/Weeknight/Shakshuka.md)") &&
+          t.includes("(attachments/dal.png)"),
+        "converted, the picked picture's path among them",
+      );
+      // The embed, a path now, still drawn in place: the pantry's CSV as a table.
+      s.expect(s.read("~/hobbies/cooking/Pantry.md").includes("![pantry.csv](pantry.csv)"), "the embed a path");
+      await s.see(/[│┃].*[│┃].*[│┃]/);
+      // The block link, a path now, followed: at the step its ^id closes.
+      await s.restart({ startAt: "home/hobbies/cooking/Recipes/Weeknight/Dal.md" });
+      await follow(s, "Dal › ^tadka");
+      await s.status(/L3[23]:/);
+      // Undone: every note as it was.
+      await s.ex("undo-rename");
+      await s.see(/undo: links → plain paths/);
+      await s.keys("enter");
+      await s.message(/undid the conversion to plain paths/);
+      await s.file(HOME, (t) => t === was, "Home.md as it was");
+    },
+  },
+];
+
+const KESTREL = "~/work/kestrel";
+const SYNC = "~/work/kestrel/docs/sync.md";
+
+const GIT: Check[] = [
+  {
+    area: "links-and-files",
+    name: "git: a branch switch while it runs — the branch on the status line, said once, each branch's tabs back",
+    covers: { cases: ["git", "links/git"], commands: ["note.open"] },
+    options: { home: true, startAt: "home/work/kestrel/README.md" },
+    run: async (s) => {
+      await s.status(/kestrel · main +‹ README\.md/);
+      s.expect(git(s, KESTREL, "checkout", "-q", "jo/release-notes-wording").code === 0, "checkout from outside");
+      await s.message("switched to branch jo/release-notes-wording", 5000);
+      await s.status(/ · jo\/release-notes-wording /);
+      await s.ex("e docs/architecture.md");
+      await opened(s, "docs/architecture.md");
+      // Back on main: its tabs as they were left there; and again.
+      git(s, KESTREL, "checkout", "-q", "main");
+      await s.message("switched to branch main: its tabs are back", 5000);
+      await opened(s, "README.md");
+      git(s, KESTREL, "checkout", "-q", "jo/release-notes-wording");
+      await s.status(/ · jo\/release-notes-wording /, 5000);
+      await opened(s, "docs/architecture.md");
+      s.expect(
+        (await messagesSaying(s, "switched main", /switched to branch main/)) === 1,
+        "the switch to main said once",
+      );
+    },
+  },
+  {
+    area: "links-and-files",
+    name: "git: what this branch changed — space g c lists it, enter a file's diff; space g d this note's; the explorer's marks",
+    covers: { cases: ["git", "links/git"], commands: ["git.changes", "git.diff"] },
+    options: { home: true, startAt: "home/work/kestrel-agent-sync-retry/docs/sync.md" },
+    run: async (s) => {
+      // The agent's worktree: its branch's commits against main — a rename among them, by git's own evidence.
+      await leader(s, "g", "c");
+      await s.see(/Changed against main \(\d+\) — enter: the diff/, 5000);
+      await s.see("M docs/sync.md");
+      await s.see(/R src\/sync\/backoff\.ts/);
+      await s.type("docs/sync");
+      await s.keys("enter");
+      await s.see("docs/sync.md against main — esc: the changes", 5000);
+      await s.see("+ | spent | out of retry budget; kept in the log, never sent again |");
+      await s.keys("escape");
+      await s.see(/Changed against main \(\d+\)/);
+      await s.keys("escape");
+      // This note's own: the branch's changes to it.
+      await leader(s, "g", "d");
+      await s.see("+ [a] -> [c]            [b] failed five times: spent, and support sees it", 5000);
+      await s.keys("escape");
+      // An agent's edit, not committed: the explorer marks the file.
+      s.write(
+        "~/work/kestrel-agent-sync-retry/README.md",
+        `${s.read("~/work/kestrel-agent-sync-retry/README.md")}\nA line the agent added.\n`,
+      );
+      await explorerOpen(s);
+      await s.see(/README\.md +M/, 6000);
+    },
+  },
+  {
+    area: "links-and-files",
+    name: "git: space g m — a merge's broken links before it, each fix said; after it, git's rename says where a file went (20.21)",
+    covers: { cases: ["git", "links/git"], commands: ["git.merge_review", "link.relink"] },
+    options: { home: true, startAt: "home/work/kestrel/docs/architecture.md" },
+    run: async (s) => {
+      await s.status(/kestrel · main /);
+      await leader(s, "g", "m");
+      await s.see("Review a merge — enter: the links it would break", 5000);
+      await s.type("refactor/docs-layout");
+      await s.keys("enter");
+      await s.see(/Merging refactor\/docs-layout into main: \d+ links would break/, 10000);
+      await s.type("architecture.md:42");
+      await s.see("docs/architecture.md:42");
+      await s.see("refactor/docs-layout moves docs/sync.md to docs/architecture/"); // cut at the list's width
+      await s.keys("enter");
+      await opened(s, "docs/architecture.md");
+      await s.status(/L42:/);
+      // Merged: git's rename is evidence here — the link says where its file went; space l r fixes it.
+      s.expect(git(s, KESTREL, "merge", "-q", "--no-edit", "refactor/docs-layout").code === 0, "the merge");
+      await s.message("branch main moved on: git moved 1 file", 8000);
+      await leader(s, "l", "r");
+      await s.see(/relink: \d+ changes? in 1 file/, 5000);
+      await s.keys("enter");
+      await s.file(
+        "~/work/kestrel/docs/architecture.md",
+        (t) => t.includes("(architecture/sync.md)") && !t.includes("](sync.md)"),
+        "the links relinked",
+      );
+    },
+  },
+  {
+    area: "links-and-files",
+    name: "git: a worktree — name@branch, space g w lists both checkouts, enter opens the note in the other",
+    covers: { cases: ["git", "links/git"], commands: ["git.worktrees"] },
+    options: { home: true, startAt: "home/work/kestrel-agent-sync-retry/README.md" },
+    run: async (s) => {
+      // The build's worktree of kestrel (git worktree add): named for its main checkout and its branch.
+      await s.status(/kestrel@agent\/sync-retry +‹ README\.md/);
+      await leader(s, "g", "w");
+      await s.see("Worktrees (2) — enter: this note there");
+      await s.see(/\smain\s+\/\S+\/work\/kestrel\s/); // the main checkout (after its branch icon)
+      await s.see(/●\s+(\S+\s+)?agent\/sync-retry\s+\/\S+\/work\/kestrel-agent-sync-retry/); // this one, marked
+      await s.type("main");
+      await s.keys("enter");
+      await s.status(/kestrel · main +‹ README\.md/, 5000);
+      // Back: the worktree again, as a vault of its own.
+      await s.keys("ctrl+o");
+      await s.status(/kestrel@agent\/sync-retry +‹ README\.md/, 5000);
+    },
+  },
+  {
+    area: "links-and-files",
+    name: "git: a merge's conflict — Problems at its first marker, the explorer's !, gone with --abort; git mv marked R",
+    covers: { cases: ["git", "links/git"], commands: ["problems.open"] },
+    options: { home: true, startAt: "home/work/kestrel/README.md" },
+    run: async (s) => {
+      const notes = "~/work/kestrel/docs/release-notes/2.3.md";
+      // Jo's branch rewords the lines main changed too.
+      s.expect(git(s, KESTREL, "merge", "jo/release-notes-wording").code !== 0, "the merge stops on a conflict");
+      const marker =
+        s
+          .read(notes)
+          .split("\n")
+          .findIndex((l) => l.startsWith("<<<<<<<")) + 1;
+      s.expect(marker > 0, "the release notes hold git's markers");
+      await leader(s, "v", "p");
+      // Filtered to the file (the panel is a third of the screen): under Conflicts, at its first marker.
+      await s.keys("/");
+      await s.type("release-notes/2.3");
+      await s.see(/Conflicts \(1\)/, 5000);
+      await s.see("docs/release-notes/2.3.");
+      // enter: the note at its first marker, the conflict said.
+      await s.keys("enter");
+      await s.status("docs/release-notes/2.3.md", 5000);
+      await s.status(`L${marker}:1`);
+      await problemListed(s, "a merge conflict: both sides are still here");
+      // The explorer marks it `!` (its row unselected: a selected row shows its buttons there).
+      await leader(s, "E");
+      await s.status("FILES");
+      await s.keys("k");
+      await s.see(/2\.3\.md\s+!\s*[│┃]/, 5000);
+      // Aborted: no mark, no Conflicts.
+      s.expect(git(s, KESTREL, "merge", "--abort").code === 0, "git merge --abort");
+      await s.until(() => s.rowOf(/2\.3\.md\s+[│┃]/) >= 0 && s.rowOf(/2\.3\.md\s+!/) < 0, 6000, "the ! gone");
+      await leader(s, "v", "p");
+      await s.see(/Broken links \(\d+\)/);
+      await s.notSee(/Conflicts/);
+      // A rename git knows of: R at its new name.
+      s.expect(git(s, KESTREL, "mv", "docs/glossary.md", "docs/terms.md").code === 0, "git mv");
+      await leader(s, "E");
+      await s.see(/terms\.md\s+R\s*[│┃]/, 6000);
+    },
+  },
+  {
+    area: "links-and-files",
+    name: "git: a detached HEAD on the status line; a switch bringing a rename isn't a move; a rebase lands as one change",
+    covers: { cases: ["git", "links/git"], commands: ["link.relink"] },
+    options: { home: true, startAt: "home/work/kestrel/docs/architecture.md" },
+    run: async (s) => {
+      await s.status(/kestrel · main +‹ docs\/architecture\.md/);
+      // Detached: its commit where the branch would be.
+      git(s, KESTREL, "checkout", "-q", "--detach", "HEAD~1");
+      const sha = git(s, KESTREL, "rev-parse", "HEAD").out.trim();
+      await s.until(
+        () => {
+          const m = / · ([0-9a-f]{7,40}) /.exec(s.statusLine());
+          return !!m && sha.startsWith(m[1]!);
+        },
+        5000,
+        `the status line on ${sha.slice(0, 7)}`,
+      );
+      git(s, KESTREL, "checkout", "-q", "main");
+      await s.status(/kestrel · main /, 5000);
+      // refactor/docs-layout has docs/sync.md under architecture/: architecture.md's links to it break, but a
+      // switch's files coming and going aren't moves — nothing to relink.
+      s.expect(git(s, KESTREL, "checkout", "-q", "refactor/docs-layout").code === 0, "checkout refactor/docs-layout");
+      await s.message("switched to branch refactor/docs-layout", 5000);
+      await s.status(/ · refactor\/docs-layout +‹ docs\/architecture\.md/);
+      s.expect(
+        s.read("~/work/kestrel/docs/architecture.md").includes("[sync.md](sync.md)") &&
+          !s.exists("~/work/kestrel/docs/sync.md"),
+        "a link the switch broke",
+      );
+      await leader(s, "l", "r");
+      await s.see("relink: 0 changes in 0 files", 5000);
+      await s.keys("escape");
+      git(s, KESTREL, "checkout", "-q", "main");
+      await s.message("switched to branch main", 5000);
+      // A rebase lands as one change: git holds a detached HEAD while it replays (a second and a half here, as
+      // one stopped on a conflict holds it for minutes); then the branch moved on, git's renames said once, and
+      // no switch said — not to the detached HEAD, nor back.
+      git(s, KESTREL, "checkout", "-q", "cleanup/remove-legacy");
+      await s.message("switched to branch cleanup/remove-legacy", 5000);
+      // What's said so far (the detach above is said only if a poll saw it before main was back).
+      const detachedBefore = await messagesSaying(s, "switched detached", /switched to a detached HEAD/);
+      const old = git(s, KESTREL, "rev-parse", "HEAD").out.trim();
+      s.expect(
+        git(s, KESTREL, "rebase", "-q", "--autostash", "--exec", "sleep 1.5", "main").code === 0,
+        "the rebase applies (the local .editorconfig stashed and back)",
+      );
+      const renames = git(s, KESTREL, "diff", "-M", "--name-status", old, "HEAD")
+        .out.split("\n")
+        .filter((l) => l.startsWith("R")).length;
+      s.expect(renames > 0, "the rebase brings renames");
+      await s.message("cleanup/remove-legacy moved on", 8000); // the box wraps the rest
+      await s.status(/ · cleanup\/remove-legacy +‹ docs\/architecture\.md/); // the tabs stay
+      s.expect(
+        (await messagesSaying(s, "moved on", new RegExp(`moved on: git moved ${renames} files`))) === 1,
+        "git's renames said once",
+      );
+      s.expect(
+        (await messagesSaying(s, "switched cleanup", /switched to branch cleanup\/remove-legacy/)) === 1,
+        "no switch said back to the branch",
+      );
+      s.expect(
+        (await messagesSaying(s, "switched detached", /switched to a detached HEAD/)) === detachedBefore,
+        "no detach said for the rebase",
+      );
+    },
+  },
+  {
+    area: "links-and-files",
+    name: "git: source control — a file staged, committed, the commit amended; trusted, then no longer",
+    covers: { cases: ["git"], commands: ["git.view", "git.commit", "git.amend", "root.trust", "root.untrust"] },
+    options: {
+      home: true,
+      startAt: "home/work/kestrel/docs/sync.md",
+      // Who commits: the set's home has no ~/.gitconfig, and git won't commit without a name.
+      env: {
+        GIT_AUTHOR_NAME: "Sam Rivera",
+        GIT_AUTHOR_EMAIL: "sam@kestrel.dev",
+        GIT_COMMITTER_NAME: "Sam Rivera",
+        GIT_COMMITTER_EMAIL: "sam@kestrel.dev",
+      },
+    },
+    run: async (s) => {
+      const count = () => Number(git(s, KESTREL, "rev-list", "--count", "HEAD").out.trim());
+      const commits = count();
+      s.write(SYNC, `${s.read(SYNC)}\nA line the agent added.\n`);
+      await s.status("reloaded", 5000);
+      // A commit with nothing staged: said how to stage.
+      await s.keys(":");
+      await s.type("Commit");
+      await s.keys("enter");
+      await s.message("nothing staged — s stages a file in source control");
+      // space g s: the changed files by section; s stages the one selected.
+      await leader(s, "g", "s");
+      await s.see("Source control");
+      await s.see(/Changes \(\d+\)/, 5000);
+      await s.see(/M sync\.md +docs/);
+      // The first file is the local .editorconfig, then sync.md: selected (its row drawn apart from the heading's).
+      const bgOf = (text: string) => s.runs()[s.rowOf(text)]?.find((r) => r.text.includes(text))?.bg;
+      await s.keys("g", "g", "j");
+      await s.until(() => bgOf("M sync.md") !== bgOf("Changes ("), 3000, "sync.md selected");
+      await s.keys("s");
+      await s.message("staged docs/sync.md", 5000);
+      await s.see("Staged (1)", 5000);
+      // c: the commit's message in a floating editor, typed at once; ctrl+s commits. Not trusted: no hooks run,
+      // nothing signed, said there.
+      await s.keys("c");
+      await s.see("# Committing: 1 file staged (docs/sync.md).");
+      await s.see("# This root isn't trusted: its hooks don't run, and the commit isn't signed");
+      await s.type("Docs: the line the agent added");
+      await s.keys("escape", "ctrl+s");
+      await s.message(/committed [0-9a-f]+: Docs: the line the agent/, 8000);
+      s.expect(count() === commits + 1, "one commit more");
+      s.expect(
+        git(s, KESTREL, "log", "-1", "--format=%s").out.trim() === "Docs: the line the agent added",
+        "its message",
+      );
+      // Trusted: the amend's editor (the palette's, as the view's shift+c) says nothing of hooks; the message
+      // changed, no commit more.
+      await s.ex("trust");
+      await s.message("trusted ~/work/kestrel");
+      await s.keys(":");
+      await s.type("Amend the last commit");
+      await s.keys("enter");
+      await s.see("# Amending the last commit: 0 files staged.");
+      await s.notSee("This root isn't trusted", 500);
+      await s.keys("A");
+      await s.type(", amended");
+      await s.keys("escape", "ctrl+s");
+      await s.message(/amended [0-9a-f]+: Docs: the line the agent/, 8000); // the box wraps the rest
+      s.expect(
+        git(s, KESTREL, "log", "-1", "--format=%s").out.trim() === "Docs: the line the agent added, amended",
+        "its message amended",
+      );
+      s.expect(count() === commits + 1, "amended, no commit more");
+      await s.ex("untrust");
+      await s.message("~/work/kestrel kept safe");
+    },
+  },
+  {
+    area: "links-and-files",
+    name: "git: branches — one checked out, a new one made from here",
+    covers: { cases: ["git"], commands: ["git.branches"] },
+    options: { home: true, startAt: "home/work/kestrel/README.md" },
+    run: async (s) => {
+      await leader(s, "g", "o");
+      await s.see(/Branches \(\d+\) — enter: check one out/);
+      await s.see("A new branch from here…");
+      await s.type("cleanup");
+      await s.keys("enter");
+      await s.status(/ · cleanup\/remove-legacy /, 5000);
+      s.expect(git(s, KESTREL, "branch", "--show-current").out.trim() === "cleanup/remove-legacy", "checked out");
+      await leader(s, "g", "o");
+      await s.type("A new branch");
+      await s.keys("enter");
+      await s.see("new branch:");
+      await s.type("sam/readme-status");
+      await s.keys("enter");
+      await s.status(/ · sam\/readme-status /, 5000);
+      s.expect(git(s, KESTREL, "branch", "--show-current").out.trim() === "sam/readme-status", "made, and on it");
+    },
+  },
+  {
+    area: "links-and-files",
+    name: "git: who changed this line, and this file's history through its rename — a version read as it was",
+    covers: { cases: ["git", "links/git"], commands: ["git.blame", "git.history"] },
+    options: { home: true, startAt: "home/work/kestrel/docs/runbooks/sync-queue.md" },
+    run: async (s) => {
+      await leader(s, "g", "b");
+      await s.see(/line 1, last changed in [0-9a-f]{8}/, 8000);
+      await s.keys("escape");
+      // The history follows the file from before it moved next to the other runbooks.
+      await leader(s, "g", "h");
+      await s.see(/docs\/runbooks\/sync-queue\.md — \d+ commits: enter, read it or its diff to now/, 8000);
+      await s.see("as docs/runbook-sync.md");
+      // up from the newest: the oldest, from before the move.
+      await s.keys("up", "enter");
+      await s.see("Read it as it was");
+      await s.see("Its diff to the text now");
+      await s.keys("enter");
+      await s.see(/docs\/runbook-sync\.md at [0-9a-f]{7} \(\d{4}-\d\d-\d\d\), read-only/, 5000);
+    },
+  },
+  {
+    area: "links-and-files",
+    name: "git: the gutter's changes — ] c and [ c go to them, space g p shows one, space g r undoes it",
+    covers: {
+      cases: ["git"],
+      commands: ["git.change_next", "git.change_prev", "git.change_preview", "git.change_undo"],
+    },
+    options: { home: true, startAt: "home/work/kestrel/docs/sync.md" },
+    run: async (s) => {
+      // An agent's edit: a line changed near the top, one added at the end.
+      const was = s.read(SYNC);
+      s.write(
+        SYNC,
+        `${was.replace("How an edit gets from one device to the others.", "How an edit travels between devices.")}\nA line the agent added.\n`,
+      );
+      await s.status("reloaded", 5000);
+      await s.keys("g", "g");
+      await moveTo(s, ["]", "c"], (l) => l > 1, "] c: the first change");
+      const first = pos(s).line;
+      await moveTo(s, ["]", "c"], (l) => l > first, "] c: the next");
+      const last = pos(s).line;
+      await moveTo(s, ["[", "c"], (l) => l === first, "[ c: back to the first");
+      // Its diff, against what's staged.
+      await leader(s, "g", "p");
+      await s.see(`line ${first}, against what's staged`);
+      await s.see("+How an edit travels between devices.");
+      await s.keys("escape");
+      // Undone: its lines as staged, put back; unsaved, one undo step.
+      await leader(s, "g", "r");
+      await s.message(`the change at line ${first} undone, as staged (unsaved)`);
+      await s.see("How an edit gets from one device to the others.");
+      await s.status("unsaved");
+      s.expect(last > first, "two changes");
+    },
+  },
+];
+
+const NOTES: Check[] = [
+  {
+    area: "links-and-files",
+    name: "notes: :w, :wa, :w! and :e! — saved, all saved, saved over a file changed on disk, reverted; space n c resolves",
+    covers: {
+      cases: ["save", "conflict"],
+      commands: ["note.save", "note.save_all", "note.save_force", "note.revert", "note.resolve", "note.open"],
+    },
+    options: { open: "meetings/2026-09-14-weekly.md" },
+    run: async (s) => {
+      const MEETING = "meetings/2026-09-14-weekly.md";
+      // :w writes this note.
+      await leader(s, "n", "v");
+      await s.keys("G", "o");
+      await s.type("Saved with :w.");
+      await s.keys("escape");
+      await s.ex("w");
+      await s.file(MEETING, (t) => t.includes("Saved with :w."), ":w wrote it");
+      // :wa writes every note changed, open or not.
+      await s.keys("o");
+      await s.type("Saved with :wa, here.");
+      await s.keys("escape");
+      await s.ex("e people/kenji-mori.md");
+      await opened(s, "people/kenji-mori.md");
+      // The window is in source mode still.
+      await s.status("SOURCE");
+      await s.keys("G", "o");
+      await s.type("Saved with :wa, there.");
+      await s.keys("escape");
+      await s.ex("wa");
+      await s.file(MEETING, (t) => t.includes("Saved with :wa, here."), ":wa wrote the first");
+      await s.file("people/kenji-mori.md", (t) => t.includes("Saved with :wa, there."), ":wa wrote the second");
+      // Changed on disk while changed here: the prompt; space n c brings it back; :w! writes over theirs.
+      await s.keys("o");
+      await s.type("mine");
+      await s.keys("escape");
+      s.write("people/kenji-mori.md", `${s.read("people/kenji-mori.md")}\ntheirs\n`);
+      await s.see("(l) Load theirs", 5000);
+      await s.keys("escape");
+      await s.notSee("(l) Load theirs");
+      await leader(s, "n", "c");
+      await s.see("(l) Load theirs");
+      await s.keys("escape");
+      await s.ex("w!");
+      await s.file("people/kenji-mori.md", (t) => t.includes("mine") && !t.includes("theirs"), "yours over theirs");
+      // :e! drops what's typed: the file as it is.
+      await s.keys("o");
+      await s.type("unsaved");
+      await s.keys("escape");
+      await s.ex("e!");
+      await s.until(() => !s.statusLine().includes("unsaved"), 3000, "the changes dropped");
+      s.expect(!s.read("people/kenji-mori.md").includes("unsaved"), "e! wrote nothing");
+    },
+  },
+  {
+    area: "links-and-files",
+    name: "notes: ctrl+n makes a note beside this one, typed into; ctrl+shift+n a folder; space n r reads it again",
+    covers: { cases: ["new-note"], commands: ["note.create", "folder.create", "note.reload"] },
+    options: { open: "people/kenji-mori.md" },
+    run: async (s) => {
+      await s.keys("ctrl+n");
+      await s.see("new note in people/");
+      await s.type("visitors-2026");
+      await s.keys("enter");
+      await opened(s, "people/visitors-2026.md");
+      await s.type("Kenji, and the school in October.");
+      await s.keys("escape", "ctrl+s");
+      await s.file(
+        "people/visitors-2026.md",
+        (t) => t.startsWith("# visitors-2026") && t.includes("Kenji, and the school in October."),
+        "the note made, its title and what was typed",
+      );
+      await s.keys("ctrl+shift+n");
+      await s.see("new folder in people/");
+      await s.type("archive");
+      await s.keys("enter");
+      await s.until(() => s.exists("people/archive"), 3000, "the folder made");
+      // An outside write, read again by hand (the watcher would anyway).
+      s.write("people/visitors-2026.md", "# visitors-2026\n\nRewritten by an agent.\n");
+      await leader(s, "n", "r");
+      await s.see("Rewritten by an agent.", 5000);
+    },
+  },
+  {
+    area: "links-and-files",
+    name: "notes: space n e hands the note to your editor and comes back; space n s sends it to a running one",
+    covers: { cases: ["notes"], commands: ["note.edit", "note.send", "note.send_pick"] },
+    // Each editor leaves a file behind, so the check is that it really ran, with the note's path.
+    options: {
+      config: `[editor]\ncommand = "sh -c 'echo $0 > $1' {file} {vault}/ran-edit"\nremote = ["sh -c 'echo $0 > $1' {file} {vault}/ran-send"]\n`,
+    },
+    run: async (s) => {
+      await leader(s, "n", "e");
+      await opened(s, "home.md");
+      await s.until(() => s.exists("ran-edit"), 5000, "the editor to run");
+      s.expect(s.read("ran-edit").trim().endsWith("home.md"), "the editor got the note");
+      await leader(s, "n", "s");
+      await s.until(() => s.exists("ran-send"), 5000, "the remote editor to run");
+      s.expect(s.read("ran-send").trim().endsWith("home.md"), "the remote editor got the note");
+      // space n p picks which running nvim when the remote names a {server}; this one names none: sent again.
+      rmSync(s.path("ran-send"));
+      await leader(s, "n", "p");
+      await s.until(() => s.exists("ran-send"), 5000, "the remote editor to run again");
+      await s.message("sent to sh at line 1");
+    },
+  },
+  {
+    area: "links-and-files",
+    name: "notes: exported — this note as Markdown beside it; two notes as one, in the order picked",
+    covers: { cases: ["notes"], commands: ["note.export", "note.export_many"] },
+    run: async (s) => {
+      await leader(s, "n", "o");
+      await s.see("Export home.md as");
+      await s.type("markdown");
+      await s.keys("enter");
+      await s.see("Name: home.export.md");
+      await s.keys("enter");
+      await s.until(() => s.exists("home.export.md"), 15000, "home.export.md written");
+      await s.message("exported home.md");
+      // Two notes, this one first.
+      await leader(s, "n", "shift+o");
+      await s.see("Notes to export, in order — 1 picked");
+      await s.type("about-this");
+      await s.see("about-this-vault.md");
+      await s.keys("down", "enter");
+      await s.see("Notes to export, in order — 2 picked");
+      await s.keys("up", "enter");
+      await s.see("Export 2 notes as");
+      await s.type("markdown");
+      await s.keys("enter");
+      await s.see("Name: home.export.md");
+      await s.keys("ctrl+u");
+      await s.type("both.md");
+      await s.keys("enter");
+      await s.until(() => s.exists("both.md"), 15000, "both.md written");
+      const md = s.read("both.md");
+      const [home, about] = [md.indexOf("# Halden Ridge Observatory"), md.indexOf("# About this vault")];
+      s.expect(home > 0 && about > home, "both chapters, home's first");
+    },
+  },
+  {
+    area: "links-and-files",
+    name: "info: the folder's own window; a note's properties edited in theirs, written back",
+    covers: { cases: ["links/state"], commands: ["vault.info", "note.properties"] },
+    options: { open: "people/kenji-mori.md" },
+    run: async (s) => {
+      await leader(s, "v", "i");
+      await s.see(s.vault);
+      await s.keys("escape");
+      await leader(s, "n", "shift+p");
+      await s.see("Properties — people/kenji-mori.md (YAML)");
+      await s.keys("shift+g", "o");
+      await s.type("status: visiting");
+      await s.keys("escape", "escape");
+      await s.message("properties written");
+      await s.file(
+        "people/kenji-mori.md",
+        (t) => t.includes("status: visiting\n---"),
+        "the property in the frontmatter",
+      );
+    },
+  },
+];
+
+export const LINKS_AND_FILES: Check[] = [...LINKS, ...ROOTS, ...NAMED, ...FILES, ...RENAMES, ...GIT, ...NOTES];
 
 export const LEFT_OUT_LINKS_AND_FILES: LeftOut = {};

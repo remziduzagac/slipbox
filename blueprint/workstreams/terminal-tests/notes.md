@@ -144,57 +144,134 @@ folded into; none is dropped without saying why.
 ### Links, roots, files and git (TT-T6)
 
 - convert-links: every note's links made plain paths after a preview, an ambiguous one picked; embeds still drawn, a
-  block followed, undone →
-- links: next / previous, follow, back and forward, the lists, a split →
-- explorer files: r renames, m moves, d deletes and u restores, y p copies — links fixed →
+  block followed, undone → convert-links: a root's wikilinks made paths after a preview, an ambiguous one picked; an
+  embed still drawn, a block followed, undone (in the reference set's Obsidian vault: its `[[dal.png]]` ties are the
+  ambiguous ones)
+- links: next / previous, follow, back and forward, the lists, a split → links: next and previous, follow, back and
+  forward; alt+arrows move by word, not through history; links: the lists — this note's links and its backlinks; enter
+  goes to one; links: followed into a split, and into a tab of its own — a data file beside a note, by its extension.
+  Its failure settled: the check's, not slipbox's — `alt+left` and `alt+right` (and `alt+b`, `alt+f`) move by word, as
+  docs/manual/keys.md says; history is `ctrl+o` and `space h`
+- explorer files: r renames, m moves, d deletes and u restores, y p copies — links fixed → explorer files: r renames, m
+  moves, d deletes and u restores, y p copies — links fixed; a note duplicated and deleted
 - git: a branch switch while it runs — the vault and its branch in the status line, said once, each branch's tabs back →
-- git: the explorer's marks; space g c what changed, a file's diff; space g d this note's →
+  git: a branch switch while it runs — the branch on the status line, said once, each branch's tabs back (in kestrel,
+  the set's repository, no longer a `git init` of the demo vault)
+- git: the explorer's marks; space g c what changed, a file's diff; space g d this note's → git: what this branch
+  changed — space g c lists it, enter a file's diff; space g d this note's; the explorer's marks (the agent's
+  worktree of kestrel); its space g w → git: a worktree
 - git: space g m — a merge's broken links before it, each fix said; after it, git's rename says where a file went
-  (20.21) →
-- roots: a path into another root switches into it and back; a broken one; :folders; a nested root →
-- nested roots: the demo's outreach — in by path, back, backlinks, the explorer, two deep →
-- vaults: v makes a folder a vault after a preview, paths across untouched; V makes it a plain folder again →
+  (20.21) → git: space g m — a merge's broken links before it, each fix said; after it, git's rename says where a file
+  went (20.21) (kestrel's refactor/docs-layout)
+- roots: a path into another root switches into it and back; a broken one; :folders; a nested root → roots: a path into
+  another root switches into it and back; a broken one said; a backlink from it, by its path (17.x, 21.9); its file://
+  link → links: one target by every form; :folders → roots: where a file is; naming the root anew → naming: space v n
+  names this root anew, after a preview — paths into it and out of it as they were (21.10)
+- nested roots: the demo's outreach — in by path, back, backlinks, the explorer, two deep → nested roots: the demo's
+  outreach — in by path, back, backlinks, two deep; nested roots: the explorer's row — its name asked by shift+r; m
+  moves its folder, its links out following, two deep too
+- vaults: v makes a folder a vault after a preview, paths across untouched; V makes it a plain folder again → vaults: v
+  makes a folder a root after a preview, paths across untouched; V makes it a plain folder again
 - files: space n the note, space d its folder, space v the vault — move, copy, cut, paste, delete, restore, vaults →
+  files: space n — the note moved to a folder, copied and pasted, cut, deleted and restored, duplicated; files: space
+  d — this note's folder copied and pasted, renamed, moved, cut, deleted and restored; files: space v m gives this
+  note's folder .slipbox/, a root of its own; space v shift+m makes it plain again (each carried through, not only its
+  question opened)
 - files: a folder with an unsaved note open in it isn't renamed — said, the edit kept; saved, it is, the note open from
-  its new place →
+  its new place → files: a folder with an unsaved note open in it isn't renamed — said, the edit kept; saved, it is,
+  the note open from its new place
 - rename: space n m previews every change, enter renames; each link follows, nothing else written into the note →
+  rename: space n m previews every change, enter renames; each link follows, nothing else written into the note;
+  rename: a link written later to the old path — relinked; then undone, newest first, every file as it was (7.4);
+  rename: a heading — its line, and the embed of it elsewhere (11.9)
 - vaults: a git repository is a vault by itself — opened from its top, nothing asked or written; its links followed →
-- roots: a named folder moved by hand brings its reading places along, nothing asked (21.8) →
-- roots: opened on a plain folder, the named folders first; its tree, by its path, and .. to go up (20.22) →
+  vaults: a git repository is a root by itself — opened from its top, nothing asked or written; its links followed
+  (the set's infra repository)
+- roots: a named folder moved by hand brings its reading places along, nothing asked (21.8) → roots: a named folder
+  moved by hand brings its reading places along, nothing asked (21.8) (photography; world/git's twin folded in)
+- roots: opened on a plain folder, the named folders first; its tree, by its path, and .. to go up (20.22) → roots: a
+  plain folder opened — the named folders first; its tree, by its path, .. to go up; space v v goes into a named one
+  (20.22) (the set's Downloads)
 - world/git: $HOME opened — the known roots first, the folder a level at a time, never walked; into notes, across into a
-  repository, and back →
+  repository, and back → roots: $HOME opened — the known roots first, the folder a level at a time, never walked; into
+  notes, across into a repository, and back
 - world/git: roots from markers — an Obsidian vault and a zk notebook are roots, nothing written into them; root_markers
-  in your config decides →
-- world/git: a worktree — name@branch, space g w lists both checkouts, enter opens the note in the other →
+  in your config decides → roots: from markers — an Obsidian vault and a zk notebook are roots, nothing written into
+  them; root_markers in your config decides
+- world/git: a worktree — name@branch, space g w lists both checkouts, enter opens the note in the other → git: a
+  worktree — name@branch, space g w lists both checkouts, enter opens the note in the other
 - world/git: a merge's conflict — Problems at its first marker, the explorer's !, gone with --abort; git mv marked R →
+  git: a merge's conflict — Problems at its first marker, the explorer's !, gone with --abort; git mv marked R
 - world/git: a detached HEAD in the status line; a switch bringing a rename isn't a move; a rebase lands as one change →
-- world/git: :pin-root keeps a vault among the explorer's roots after leaving it; again, no longer →
-- world/git: a named folder moved by hand brings its places along, nothing asked (21.8) →
-- world/git: the background auto-index finds $HOME's roots while nobody works →
-- world/git: the index across a quit — an outside edit's backlink at the next start; a damaged cache rebuilt →
-- world/links: zk's links without an extension followed; a rename keeps them so (21.2) →
+  git: a detached HEAD on the status line; a switch bringing a rename isn't a move; a rebase lands as one change
+- world/git: :pin-root keeps a vault among the explorer's roots after leaving it; again, no longer → roots: :pin-root
+  keeps a root among the explorer's after leaving it; again, no longer
+- world/git: a named folder moved by hand brings its places along, nothing asked (21.8) → roots: a named folder moved
+  by hand brings its reading places along, nothing asked (21.8)
+- world/git: the background auto-index finds $HOME's roots while nobody works → index: the background auto-index finds
+  $HOME's roots while nobody works
+- world/git: the index across a quit — an outside edit's backlink at the next start; a damaged cache rebuilt → index:
+  across a quit — an outside edit's backlink at the next start; a damaged cache rebuilt; space v r reindexes
+- world/links: zk's links without an extension followed; a rename keeps them so (21.2) → links: zk's links without an
+  extension followed; a rename keeps them so (21.2)
 - world/links: / from the nearest root — a repository's, a folder nested in it; a folder link revealed; --root starts
-  there (21.2) →
+  there (21.2) → links: / from the nearest root — a repository's, a root nested in it; a folder link revealed; --root
+  starts there (21.2)
 - world/links: an Obsidian vault's wikilinks, read within it — names, aliases, headings, blocks, ties; no root, no names
-  (21.3) →
+  (21.3) → links: an Obsidian vault's wikilinks, read within it — names, aliases, headings, blocks, ties; no root, no
+  names (21.3)
 - world/links: each root's convention and what said it — Obsidian's, zk's, a folder's own; yours, saved while running
-  (21.4) →
+  (21.4) → links: each root's convention and what said it — Obsidian's, zk's, a folder's own; yours, saved while
+  running (21.4)
 - world/links: links written as each root writes them — the picker, [[ completed, slipbox link for an agent (21.5) →
+  links: written as each root writes them — the picker, [[ completed, slipbox link for an agent (21.5)
 - world/links: named folders — a second copy of notes asks once which links open; a repository named by its remote
-  (21.6) →
+  (21.6) → named folders: a second copy of notes asks once which links open; a repository named by its remote (21.6)
 - world/links: named folders — space v shift+v picks which copy a folder's links open, :folders-default again; info says
-  which (21.6) →
+  which (21.6) → named folders: space v shift+v picks which copy a folder's links open, :folders-default again; info
+  says which (21.6)
 - world/links: slipbox:// pointers — another named folder's note, once it's on this machine; an agent's branch, its
-  worktree (21.7) →
+  worktree (21.7) → pointers: slipbox:// — another named folder's note, once it's on this machine; an agent's branch,
+  its worktree (21.7)
 - world/links: where a file is — a root by its name, an unnamed one by its path; :folders goes into one; a loose file's
-  folder beside (21.9, 21.10) →
+  folder beside (21.9, 21.10) → roots: where a file is — a root by its name, an unnamed one by its path; :folders goes
+  into one; a loose file's folder beside (21.9, 21.10) (the loose file: a daily note's link into Downloads, no longer
+  a note the check wrote)
 - world/links: naming a folder — :name gives the cooking vault a name its pointer finds; the vault words are gone
-  (21.10, 21.12) →
-- links: a picture followed, linked or embedded — its path copied, said so, no later phase promised (A17) →
+  (21.10, 21.12) → naming: :name gives the cooking vault a name its pointer finds; the vault words are gone (21.10,
+  21.12)
+- links: a picture followed, linked or embedded — its path copied, said so, no later phase promised (A17) → links: a
+  picture followed, linked or embedded — its path copied, said so, no later phase promised (A17) (the set's whiteboard
+  photo, linked from notes' index and embedded in the design review)
 - trash: two notes deleted, space v t lists them and ends with Empty the trash…; enter, y, gone for good — then space n
-  m into a folder, named or ending in / (DF-D14, DF-D4) →
+  m into a folder, named or ending in / (DF-D14, DF-D4) → trash: two notes deleted, space v t lists them and ends with
+  Empty the trash…; enter, y, gone for good (DF-D14); rename: space n m into a folder — named, the note's name kept; or
+  ending in /, the folder made (DF-D4)
 - world/links: a clone named its own way — the qualified pointer and the hosting URL open ~/work/kestrel; linked search
   leaves the worktree out; a missing heading or block opens the note at its top, the hover says so (DF-T5, DF-D26) →
+  pointers: a clone named its own way — the qualified pointer and the hosting URL open ~/work/kestrel (DF-T5); search:
+  widened to the folders linked to this one — a repository's hits, none from its agent's worktree (DF-T5); links: a
+  missing heading or block opens the note at its top, said so; the hover says it first (DF-D26)
+
+New, for what no scenario checked (the coverage test's list for the area): links: one target by every form — relative,
+from the root, without .md, from ~, by pointer and old name, a wikilink, a block (a file:// link too); links: in data
+and code files — a config's include and $schema followed, a broken one said; a note's link into a code line and a data
+table; git: source control — a file staged, committed, the commit amended; trusted, then no longer; git: branches — one
+checked out, a new one made from here; git: who changed this line, and this file's history through its rename — a
+version read as it was; git: the gutter's changes — ] c and [ c go to them, space g p shows one, space g r undoes it;
+notes: :w, :wa, :w! and :e! — saved, all saved, saved over a file changed on disk, reverted; space n c resolves;
+notes: ctrl+n makes a note beside this one, typed into; ctrl+shift+n a folder; space n r reads it again; notes: space n
+e hands the note to your editor and comes back; space n s sends it to a running one; notes: exported — this note as
+Markdown beside it; two notes as one, in the order picked; info: the folder's own window; a note's properties edited in
+theirs, written back. The `note.*`, `vault.*` and `root.*` commands are this area's by their group, though other
+areas' scenarios ran most of them (save, export, info, trust): their checks here are short, one command each run for
+its effect.
+
+Found on the way (2026-10-13): a stage in source control could be answered by git's answer to a question asked before
+it (the watcher's news a moment earlier), the file left under Changes with nothing asking again — `refreshGitNow` now
+asks again once the question out is answered (tests/tui.test.ts, source control (26.2): "a file staged while git's
+answer to an earlier question is still out"). A commit from source control needs git's identity: the set's home has
+no ~/.gitconfig, so that check gives git Sam's name in its environment.
 
 ### The outside, code and export (TT-T7)
 
