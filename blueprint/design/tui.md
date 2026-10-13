@@ -636,9 +636,11 @@ keys.
   the tab's window on the right, side by side — in a split already, its other window takes it — and `q` there closes
   that window, saving it too. `space s r` opens it on the right whatever the setting. The scratch's file is made,
   empty, when it isn't there yet: it opens to be typed in before anything is captured. A capture in the TUI (`space s
-  a`, a code cell's `space k s`) shows it with the cursor on the new entry; with the scratch already in the tab's
-  other window, that window scrolls to it and the cursor stays in yours. What `slipbox capture` adds shows in an open
-  scratch (the file is polled) and opens nothing.
+  a`, a code cell's `space k s`) opens it on the new entry — `**For:**` its reference, its lines fenced, `**Do:**`, a
+  rule (`---`) before it when there's anything above — typing after `**Do:**` in the lens (or the source, as `[editor]
+  edit_in` says); on the right, the cursor goes there. A `**Do:**` left empty is dropped as the scratch closes, as the
+  TUI adds the next entry, and from `space s y`'s copy (`dropEmptyAsks`). What `slipbox capture` adds, the same shape,
+  shows in an open scratch (the file is polled) and opens nothing.
 - **Outline (right):** the current note's headings, indented, foldable (`h`/`l`). While not
   focused it follows the cursor's section, and `enter` jumps to the heading.
 - **Footnotes (right, `3.17`):** the current note's footnotes, in the order the note first refers to them (as GFM

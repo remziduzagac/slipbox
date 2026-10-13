@@ -456,16 +456,39 @@ the root instead (`scratch.md`, or the name in `capture.file`).
 The scratch opens in a window floating in the middle of the screen, to jot something down or read what you have
 gathered. It's a window like any other: the scratch rendered, the lens to edit it, `ctrl+k` for its Markdown, every key
 you move and edit with. `q` closes it, back where you were, what you typed saved; `esc` stops typing and leaves the
-lens as it always does, then closes the scratch. It opens when it's empty too. Each time you add to it, it opens with
-the cursor on what you added, so you can say a word about it. With `capture.open_in = "right"`, or Scratch opens in the
-[UI settings](screen.md#ui-settings), it opens in the window on the right instead, beside your note; there, what you add
-appears in it while you stay where you were.
+lens as it always does, then closes the scratch. It opens when it's empty too. With `capture.open_in = "right"`, or
+Scratch opens in the [UI settings](screen.md#ui-settings), it opens in the window on the right instead, beside your
+note; `ctrl+w w` goes back and forth.
+
+Each time you add to it, it opens on what you added, ready for you to type what to do about it:
+
+````markdown
+**For:** `ideas/coffee.md:5`
+
+**Do:** check the ratio for the small pot
+
+---
+
+**For:** `ideas/coffee.md:3-5`
+
+```markdown
+## Brewing
+
+A ratio of 1 to 16 suits a pour-over.
+```
+
+**Do:** ▌
+````
+
+`esc` then `q` takes you back to the note. Close it without typing and the empty **Do:** goes, so you can add a few
+places quickly and say what to do once, at the last. A line divides each entry from the one before.
 
 Other programs add to it with `slipbox capture`, which is how your editor or an agent puts things there:
 
 ```bash
 slipbox capture 'check the grind size'            # a line of text
 slipbox capture --ref ideas/coffee.md:12-18       # a reference
+slipbox capture --ref ideas/coffee.md:5 'check it'   # a reference, and what to do about it
 slipbox capture --snippet --ref ideas/coffee.md:12-18   # the reference and its lines
 slipbox scratch show                              # what it holds; also: path, copy, clear
 ```

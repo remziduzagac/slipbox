@@ -34,7 +34,7 @@ import { copyPath } from "../core/files.ts";
 import { classify } from "../core/filetypes.ts";
 import { FORMATS } from "../core/export/index.ts";
 import { bracketFrom, matchBracket } from "../core/brackets.ts";
-import { clearScratch, formatEntry, readScratch } from "../core/capture.ts";
+import { clearScratch, dropEmptyAsks, formatEntry, readScratch } from "../core/capture.ts";
 import { COMMAND_GROUPS, COMMAND_SPECS, commandGroup } from "../core/command-specs.ts";
 import { canonKey, type Command } from "../core/commands.ts";
 import type { LayoutLink } from "../core/layout/ir.ts";
@@ -2230,7 +2230,12 @@ export function registerActions(app: App): void {
           const r2 = layout.lines[q.row]?.src ?? r1;
           a.capture(
             formatEntry(
-              { ref: { path: v.buf.abs, startLine: r1, endLine: r2 }, snippetText: a.selectionText(v), lang: "" },
+              {
+                ref: { path: v.buf.abs, startLine: r1, endLine: r2 },
+                snippetText: a.selectionText(v),
+                lang: "",
+                ask: true,
+              },
               a.loc.root,
             ),
           );
@@ -2238,13 +2243,13 @@ export function registerActions(app: App): void {
           return;
         }
         const line = layout.lines[v.cur.row]?.src ?? 1;
-        a.capture(formatEntry({ ref: { path: v.buf.abs, startLine: line, endLine: line } }, a.loc.root));
+        a.capture(formatEntry({ ref: { path: v.buf.abs, startLine: line, endLine: line }, ask: true }, a.loc.root));
       }),
     "context.copy": (a) => a.copyContext(),
     "scratch.copy": (a) => {
       const text = readScratch(a.scratch());
       if (!text.trim()) return a.message("info", "the scratch is empty");
-      a.copy(text);
+      a.copy(dropEmptyAsks(text));
     },
     "scratch.clear": (a) => {
       a.confirm("Clear the scratch?", () => {

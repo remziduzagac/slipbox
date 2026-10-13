@@ -102,7 +102,15 @@ import { cellBlocks } from "../core/layout/code.ts";
 import { type Block, blockAt, blockRanges, composeLive, LENS_COUNTERS, sectionRanges } from "../core/layout/live.ts";
 import { discoverNvims, NVIM_REMOTE, type NvimServer, probeNvim } from "../core/nvim.ts";
 import { homedir } from "node:os";
-import { appendScratch, ensureScratch, fence, fenceLanguage, formatEntry, scratchLocation } from "../core/capture.ts";
+import {
+  appendScratch,
+  dropEmptyAsks,
+  ensureScratch,
+  fence,
+  fenceLanguage,
+  formatEntry,
+  scratchLocation,
+} from "../core/capture.ts";
 import { copyText, readClipboard } from "../core/clipboard.ts";
 import { canonKey, canonSeq, CommandRegistry, Keymap, unknownModifiers } from "../core/commands.ts";
 import { type Config, loadConfig } from "../core/config.ts";
@@ -3409,11 +3417,19 @@ export class App {
       case "scratch":
         this.capture(
           formatEntry(
-            { ref: { path: v.buf.abs, startLine: cell.from, endLine: cell.to }, snippetText: text, lang: "" },
+            {
+              ref: { path: v.buf.abs, startLine: cell.from, endLine: cell.to },
+              snippetText: text,
+              lang: "",
+              ask: true,
+            },
             this.loc.root,
           ),
         );
-        return this.message("info", `${cell.title} — ${lines} added to the scratch`);
+        return this.message(
+          "info",
+          `${cell.title} — ${lines} added to the scratch; say what to do, esc then q closes it`,
+        );
     }
   }
 
@@ -4116,7 +4132,10 @@ export class App {
     if (t.views.length > 1) {
       const closed = t.views.splice(t.active, 1)[0]!;
       // The scratch on the right, closed: what was typed in it saved, as when it floats (#43).
-      if (closed.buf.abs === this.scratch().path && closed.buf.dirty) this.saveBuffer(closed.buf);
+      if (closed.buf.abs === this.scratch().path) {
+        this.tidyScratch(closed.buf);
+        if (closed.buf.dirty) this.saveBuffer(closed.buf);
+      }
       this.remember(closed);
       t.active = 0;
       return;
@@ -5411,6 +5430,7 @@ export class App {
       return false;
     // The scratch's typing saved as it closes (#43); a save refused (changed on disk meanwhile) keeps it open.
     if (f.kind === "scratch") {
+      this.tidyScratch(f.view.buf);
       if (f.view.buf.dirty && !this.saveBuffer(f.view.buf)) return false;
       this.remember(f.view);
     }
@@ -9686,7 +9706,7 @@ export class App {
     // An open, changed scratch is saved first, so the entry goes after what you typed (4.10).
     const scratchBuf = this.buffers.get(loc.path) ?? this.buffers.get(relative(this.loc.root, loc.path));
     if (scratchBuf?.dirty && !this.saveBuffer(scratchBuf)) return;
-    const text = appendScratch(loc, entry);
+    const text = appendScratch(loc, entry, true);
     const rel = relative(this.loc.root, loc.path);
     if (!climbsOut(rel)) this.watcher?.noteOwnWrite(rel);
     const open = this.buffers.get(loc.path) ?? this.buffers.get(rel);
@@ -9694,13 +9714,20 @@ export class App {
       open.load();
       for (const v of this.allViews()) if (v.buf === open) v.layoutKey = "";
     }
-    this.message("info", "added to the scratch");
-    // The entry shown (#43): where the scratch is in sight beside the window you're in, it's scrolled to there, the
-    // cursor staying yours; else the scratch opens, the cursor on it, to add a word to it.
-    const at = text.length - entry.length - 1;
-    const beside = this.floating ? undefined : this.tab?.views.find((v) => v.buf === open && v !== this.tabView);
-    if (beside) placeAt(this, beside, at);
-    else this.openScratch(undefined, at);
+    // The scratch opened on the entry (#43), typing after its ask (D229): what to do about it, said at once.
+    const at = text.length - 1;
+    this.openScratch(undefined, at);
+    const v = this.floating?.kind === "scratch" ? this.floating.view : this.tabView;
+    if (v?.buf.abs !== loc.path) return;
+    if (!editable(v)) this.setViewMode(v, this.editMode(v)); // the lens opened on the entry, or the source
+    startInsert(this, v, () => at);
+    this.message("info", "added to the scratch; say what to do, esc then q closes it");
+  }
+
+  /** The scratch's empty asks dropped as it closes (D229): a capture with nothing said about it is its reference. */
+  tidyScratch(buf: NoteBuffer): void {
+    const next = dropEmptyAsks(buf.source);
+    if (next !== buf.source) buf.edit(0, buf.source.length, next);
   }
 
   /**

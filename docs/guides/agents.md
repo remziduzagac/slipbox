@@ -121,16 +121,17 @@ The scratch is a Markdown file, one per root (or per folder, where there is none
 next prompt. You and the agent both add to it; you read it, and paste it into the agent.
 
 1. In slipbox, open `ideas/coffee.md`, put the cursor on the line `A ratio of 1 to 16 suits a pour-over.`, and press
-   `space s a`. The scratch gets that line's place, `path:line`, in a code span: `` `ideas/coffee.md:5` ``. Select
-   lines first (`shift+v`, then `j`) and it gets `path:line-line` and the lines themselves. The scratch opens,
-   floating in the middle of the screen, with the cursor on what you added: type a word about it if you like, then
-   `q` takes you back to the note.
+   `space s a`. The scratch gets that line's place, `path:line`: `` **For:** `ideas/coffee.md:5` ``. Select lines
+   first (`shift+v`, then `j`) and it gets `path:line-line` and the lines themselves. The scratch opens, floating in
+   the middle of the screen, typing after **Do:**: say what the agent should do there (`check the ratio for the small
+   pot`), then `esc` and `q` take you back to the note. Say nothing and the empty **Do:** goes.
 2. Press `space s s` to open it again, or `space s r` to keep it in the window on the right while you work
    (`capture.open_in = "right"` makes that the usual place). It changes as the agent adds to it:
 
    ```bash
    slipbox capture "Is 1 to 16 right for the small pot?"
    slipbox capture --ref ideas/coffee.md:3-5 --snippet      # the place, and its lines fenced
+   slipbox capture --ref ideas/coffee.md:5 "Check the ratio"   # the place, and what to do there
    ```
 
 3. `space s y` copies the whole scratch, to paste into a prompt. `space s d` clears it, after asking.

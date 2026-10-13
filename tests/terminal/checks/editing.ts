@@ -1166,24 +1166,30 @@ export const EDITING: Check[] = [
   // --- the scratch, the context, the hand-off ---------------------------------------------------
   {
     area: "editing",
-    name: "scratch: add, shown floating at once; open, copy, clear",
+    name: "scratch: add, shown floating at once, typing what to do; esc then q closes it; open, copy, clear",
     covers: { cases: ["scratch"], commands: ["scratch.add", "scratch.open", "scratch.copy", "scratch.clear"] },
     run: async (s) => {
       await ready(s);
       await s.keys("j", "j");
-      // What's added shows at once, the scratch floating over the note; q, back in the note.
+      // What's added shows at once, the scratch floating over the note, typing after its ask (D229); esc then q,
+      // back in the note.
       await leader(s, "s", "a");
       await s.see(SCRATCH_FLOATING);
-      await s.status(/scratch/);
-      await s.keys("q");
+      await s.status(/INSERT .*scratch/);
+      await s.type("check the date");
+      await s.keys("escape", "q");
       await s.notSee(SCRATCH_FLOATING);
       await s.status(/home\.md/);
       await leader(s, "s", "s");
       await s.see(SCRATCH_FLOATING);
       await leader(s, "s", "y");
       await s.message("copied");
-      // What space s a added: home's third row, with its path and line.
-      await s.until(() => /home\.md:\d+/.test(s.clipboard()), 3000, "the scratch holding home.md:line");
+      // What space s a added: home's third row, with its path and line, and what to do about it.
+      await s.until(
+        () => /\*\*For:\*\* `home\.md:\d+`\n\n\*\*Do:\*\* check the date\n/.test(s.clipboard()),
+        3000,
+        "the scratch holding home.md:line and what to do",
+      );
       await s.keys("q");
       await s.notSee(SCRATCH_FLOATING);
       await leader(s, "s", "d");
@@ -1195,7 +1201,7 @@ export const EDITING: Check[] = [
   },
   {
     area: "editing",
-    name: "scratch: on the right — space s r; the UI settings make it where it opens; a capture shows there, the cursor staying in the note",
+    name: "scratch: on the right — space s r; the UI settings make it where it opens; a capture goes there, typing what to do",
     covers: { cases: ["scratch"], commands: ["scratch.open_right", "ui.scratch_in"] },
     run: async (s) => {
       await ready(s);
@@ -1214,14 +1220,18 @@ export const EDITING: Check[] = [
       await leader(s, "s", "s");
       await s.see(/[┃│] scratch\s/);
       s.expect(s.rowOf(SCRATCH_FLOATING) < 0, "not floating");
-      // Back in the note, a capture: shown in the scratch beside it, the cursor still in the note.
+      // Back in the note, a capture: the cursor in the scratch beside it, typing after its ask.
       await s.keys("ctrl+w", "w");
       await s.status(/home\.md/);
       await s.keys("j", "j");
       await leader(s, "s", "a");
       await s.message("added to the scratch");
       await s.see(/home\.md:\d+/);
-      await s.status(/home\.md/);
+      await s.status(/INSERT .*scratch/);
+      await s.type("ask why");
+      await s.keys("escape");
+      await s.see("ask why");
+      s.expect(s.rowOf(SCRATCH_FLOATING) < 0, "on the right, not floating");
     },
   },
   {

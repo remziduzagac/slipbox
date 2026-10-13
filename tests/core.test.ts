@@ -14,7 +14,15 @@ import {
 } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
-import { formatEntry, formatRef, parseRef, scratchLocation } from "../src/core/capture.ts";
+import {
+  appendScratch,
+  dropEmptyAsks,
+  formatEntry,
+  formatRef,
+  parseRef,
+  readScratch,
+  scratchLocation,
+} from "../src/core/capture.ts";
 import { copyText } from "../src/core/clipboard.ts";
 import { readDoc } from "../src/core/docformats.ts";
 import { canonKey, Keymap, unknownModifiers } from "../src/core/commands.ts";
@@ -244,13 +252,44 @@ describe("capture format (8.3, 8.4)", () => {
     const dir = mkdtempSync(join(tmpdir(), "slipbox-cap-"));
     writeFileSync(join(dir, "f.ts"), "one\ntwo\nthree\n");
     const entry = formatEntry({ ref: parseRef("f.ts:2-3")!, snippet: true, cwd: dir }, dir);
-    expect(entry).toBe("`f.ts:2-3`\n\n```typescript\ntwo\nthree\n```");
+    expect(entry).toBe("**For:** `f.ts:2-3`\n\n```typescript\ntwo\nthree\n```");
   });
   test("a name that merely starts with dots (`..notes/`) is in the project: its path from there, not its absolute one", () => {
     const dir = mkdtempSync(join(tmpdir(), "slipbox-cap-"));
     mkdirSync(join(dir, "..notes"));
     writeFileSync(join(dir, "..notes", "a.md"), "one\n");
-    expect(formatEntry({ ref: parseRef("..notes/a.md:1")!, cwd: dir }, dir)).toBe("`..notes/a.md:1`");
+    expect(formatEntry({ ref: parseRef("..notes/a.md:1")!, cwd: dir }, dir)).toBe("**For:** `..notes/a.md:1`");
+  });
+  test("an entry says what it's for and what to do; a rule between entries, never under a line; empty asks dropped (D229)", () => {
+    const dir = mkdtempSync(join(tmpdir(), "slipbox-cap-"));
+    const ref = parseRef("a.md:5")!;
+    // The text with a reference is what to do about it; the TUI's capture, with none, ends on the ask to type after.
+    expect(formatEntry({ ref, text: "check it\n", cwd: dir }, dir)).toBe("**For:** `a.md:5`\n\n**Do:** check it");
+    expect(formatEntry({ ref, ask: true, cwd: dir }, dir)).toBe("**For:** `a.md:5`\n\n**Do:** ");
+    expect(formatEntry({ ref, cwd: dir }, dir)).toBe("**For:** `a.md:5`");
+    expect(formatEntry({ text: "a thought", ask: true, cwd: dir }, dir)).toBe("a thought"); // no reference, no labels
+    const loc = { path: join(dir, "scratch.md"), project: dir };
+    expect(appendScratch(loc, "one")).toBe("one\n"); // the first: nothing to divide it from
+    // Typed right under the last line, the rule still comes after a blank line: not `one` made a heading.
+    writeFileSync(loc.path, "one");
+    expect(appendScratch(loc, "two")).toBe("one\n\n---\n\ntwo\n");
+    // Ending on a rule already (typed, or the user's own), no second one.
+    writeFileSync(loc.path, "one\n\n***\n");
+    expect(appendScratch(loc, "two")).toBe("one\n\n***\n\ntwo\n");
+    // Only blank lines: nothing to divide.
+    writeFileSync(loc.path, "\n\n");
+    expect(appendScratch(loc, "two")).toBe("\n\ntwo\n");
+    // An ask left empty goes, with the blank line before it, when the TUI adds the next (tidy); another program
+    // keeps it, a cursor maybe on it. A said one stays, and so does Do: in the middle of a line.
+    const asked = "**For:** `a.md:5`\n\n**Do:** \n\n---\n\n**For:** `b.md:1`\n\n**Do:** that\n\nnot **Do:**\n";
+    writeFileSync(loc.path, asked);
+    expect(appendScratch(loc, "x")).toBe(`${asked}\n---\n\nx\n`);
+    writeFileSync(loc.path, asked);
+    expect(appendScratch(loc, "x", true)).toBe(
+      "**For:** `a.md:5`\n\n---\n\n**For:** `b.md:1`\n\n**Do:** that\n\nnot **Do:**\n\n---\n\nx\n",
+    );
+    expect(readScratch(loc)).toContain("**Do:** that");
+    expect(dropEmptyAsks("**Do:**\nrest\n**For:** `a.md:1`\n\n**Do:**\t")).toBe("\nrest\n**For:** `a.md:1`");
   });
 });
 

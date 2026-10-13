@@ -559,17 +559,23 @@ window like any inside, the scratch rendered and the lens to edit it, every key.
 what was typed saved; `esc` leaves typing and the lens first, as anywhere, and closes it last. It opens empty too.
 `[capture] open_in = "right"`, or Scratch opens in the UI settings, puts it in the window on the right instead (in a
 split already, its other window), and `space s r` opens it there whatever the setting. A capture in the TUI (`space s
-a`, a code cell's `space k s`) shows the scratch with the cursor on the new entry; with the scratch already beside the
-window you're in, it scrolls there and the cursor stays yours. What an agent adds opens nothing. Decided by an issue
-(#43) and one pull request (D223).
+a`, a code cell's `space k s`) opens the scratch on the new entry, typing: an entry says what it's for and what to do,
+`**For:**` its reference (and its lines, fenced) and `**Do:**` after it, and the cursor waits after `**Do:**`. `esc`
+then `q` takes you back; a `**Do:**` left empty goes as the scratch closes, or as the TUI adds the next. A rule
+(`---`) divides each entry from the one before. `slipbox capture` writes the same shape: `**For:**` on a reference, its
+text after `**Do:**`; text alone is just the text. What an agent adds opens nothing. Decided by an issue (#43) and one
+pull request (D223).
 
 **Why:** The user's call: the scratch is for capturing a note, an idea or a reference quickly. Opened as a tab, it took
 the place of the note you were in, and a capture never showed what it had added. A floating window over the note is
 there and gone with a key, as the properties and commit editors are; the window on the right is for keeping it in sight
-while you gather.
+while you gather. A capture is for asking something about the place it points at, so the scratch reads as a list of
+asks, pasted as they are into an agent's prompt, and typing the ask needs no key first.
 
-**Cost:** A capture takes a `q` to get back to the note. One more setting.
+**Cost:** A capture takes `esc` `q` to get back to the note. One more setting. Entries already in a scratch keep their
+old shape.
 
 **Not chosen:** the tab, as before; asking before a floating scratch closes with unsaved typing (it is slipbox's own
 file, and saving is what you would answer); opening it when an agent adds, which would take the keys from whatever you
-were typing.
+were typing; the labels as plain text (`For:`, which a `---` under it would make a heading), or as a list; dropping
+an empty `**Do:**` when another program adds (the TUI's cursor may be on it).

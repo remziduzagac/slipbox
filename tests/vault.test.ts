@@ -314,9 +314,21 @@ describe("CLI (9.x)", () => {
     await cli(["capture", "first thought"]);
     await cli(["capture", "--ref", "notes/alpha.md:7-9", "--snippet"]);
     await cli(["capture", "--ref", "index.md:3", "--stdin"], "piped selection");
+    await cli(["capture", "--ref", "index.md:1", "say", "more"]); // with a reference, the text is what to do (D229)
     const shown = JSON.parse((await cli(["scratch", "show", "--json"])).out).data;
     expect(shown.content).toBe(
-      "first thought\n\n`notes/alpha.md:7-9`\n\n```markdown\n## Section One\n\nBack to [index](../index.md) and on to [beta](beta.md).\n```\n\n`index.md:3`\n\n```markdown\npiped selection\n```\n",
+      [
+        "first thought",
+        "---",
+        "**For:** `notes/alpha.md:7-9`",
+        "```markdown\n## Section One\n\nBack to [index](../index.md) and on to [beta](beta.md).\n```",
+        "---",
+        "**For:** `index.md:3`",
+        "```markdown\npiped selection\n```",
+        "---",
+        "**For:** `index.md:1`",
+        "**Do:** say more\n",
+      ].join("\n\n"),
     );
     expect((await cli(["scratch", "clear", "--if-unchanged", "0000"])).code).toBe(5);
     expect((await cli(["scratch", "clear", "--if-unchanged", shown.sha])).code).toBe(0);
@@ -673,14 +685,14 @@ describe("what cli.md and the skill promise a caller (9.2)", () => {
   test("the scratch's project is the root, from any folder in it; else the folder you're in — whose scratch stays in its state", async () => {
     const dir = demo();
     const fromSub = (await run(["capture", "--ref", "kenji-mori.md:3", "--json"], join(dir, "people"))).json.data;
-    expect(fromSub).toMatchObject({ project: dir, entry: "`people/kenji-mori.md:3`" });
+    expect(fromSub).toMatchObject({ project: dir, entry: "**For:** `people/kenji-mori.md:3`" });
     expect((await run(["capture", "a thought", "--json"], dir)).json.data.scratch).toBe(fromSub.scratch); // one scratch per project
     const plain = mkdtempSync(join(tmpdir(), "slipbox-plain-scratch-"));
     writeFileSync(join(plain, "loose.md"), "# Loose\n");
     const cfg = join(plain, "..", `${basename(plain)}.toml`);
     writeFileSync(cfg, '[capture]\nlocation = "vault"\n');
     const loose = (await run(["capture", "--ref", "loose.md:1", "--json", "--config", cfg], plain)).json.data;
-    expect(loose).toMatchObject({ project: plain, entry: "`loose.md:1`" });
+    expect(loose).toMatchObject({ project: plain, entry: "**For:** `loose.md:1`" });
     expect(loose.scratch.startsWith(plain)).toBe(false); // nothing written into a plain folder
     expect(existsSync(join(plain, "scratch.md"))).toBe(false);
     // A vault takes location = "vault": its scratch is in it.
