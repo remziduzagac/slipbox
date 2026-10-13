@@ -6,6 +6,22 @@ The format is [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.1.0/); wh
 
 ## [Unreleased]
 
+## [0.2.2] - 2026-10-13
+
+### Changed
+
+- On a rendered note, the editing keys (`i`, `a`, `o` and the others) open the lens: the Markdown around the cursor,
+  with the rest of the note still rendered. The key again types there, and `esc` `esc` leaves. Before, they swapped the
+  whole note for its Markdown (source mode), which `ctrl+k` left. To keep that, set `edit_in = "source"` under
+  `[editor]` in your config.
+- OpenTUI, the library slipbox draws the terminal with, is 0.5.14.
+
+### Fixed
+
+- In the lens, the status line's column (`L18:5`) counted the lens's own counters before the text; it counts the text.
+- With the lens (`edit_in = "live"`), a new note (`ctrl+n`) opened the lens without typing, and a line break went into
+  it anyway. It's typed into at once now, as in source mode.
+
 ## [0.2.1] - 2026-10-12
 
 The first release. 0.2.0 was tagged but never released: its build failed a test on the Intel Mac, fixed since.
@@ -33,5 +49,6 @@ The first release. 0.2.0 was tagged but never released: its build failed a test 
   `slipbox uninstall`; Windows through WSL.
 - `slipbox skill`: the skill for agents carried by the binary, printed or installed where an agent reads skills.
 
-[Unreleased]: https://github.com/remziduzagac/slipbox/compare/v0.2.1...HEAD
+[Unreleased]: https://github.com/remziduzagac/slipbox/compare/v0.2.2...HEAD
+[0.2.2]: https://github.com/remziduzagac/slipbox/compare/v0.2.1...v0.2.2
 [0.2.1]: https://github.com/remziduzagac/slipbox/releases/tag/v0.2.1
