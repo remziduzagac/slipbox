@@ -1,16 +1,29 @@
 # Configuration
 
-slipbox works with no configuration at all: every setting has a default, and you write down only what you change.
-Settings are TOML, in a file of your own and, for a folder that wants its own, in that folder's
-`.slipbox/config.toml`. This chapter covers where those files are and the order they apply in, what a folder's file
-may not set, how mistakes in a file are handled, every setting with its default, colours, indentation, spelling
-dictionaries, reloading, the environment variables slipbox reads, and where slipbox keeps its own files.
+slipbox works with no configuration at all. Every setting has a default, and you write down only what you change.
+
+Settings are TOML. They are in a file of your own. A folder that wants its own settings has them in its
+`.slipbox/config.toml`.
+
+This chapter covers:
+
+- where those files are, and the order they apply in
+- what a folder's file may not set
+- how mistakes in a file are handled
+- every setting, with its default
+- colours
+- indentation
+- spelling dictionaries
+- reloading
+- the environment variables slipbox reads
+- where slipbox keeps its own files
 
 ## Changing a setting
 
-Your settings are in `~/.config/slipbox/config.toml`. slipbox doesn't make the file: create it (and its folder), and
-write in it only what you want different. A setting lives in a table, named in brackets; the few at the top level
-come before any table:
+Your settings are in `~/.config/slipbox/config.toml`. slipbox doesn't make the file. Create it, and its folder,
+yourself. Write in it only what you want different.
+
+A setting lives in a table, named in brackets. The few settings at the top level come before any table:
 
 ```toml
 theme = "nord"
@@ -23,26 +36,33 @@ wrap = false
 autosave_ms = 10000
 ```
 
-Save it, and a running TUI applies the change ([Reloading](#reloading)). This manual writes a setting in dotted form:
-`ui.scrolloff` is `scrolloff` in the `[ui]` table, and a top-level one is bare, `theme`.
+Save the file, and a running TUI applies the change ([Reloading](#reloading)).
+
+This manual writes a setting in dotted form. `ui.scrolloff` is `scrolloff` in the `[ui]` table. A top-level setting is
+bare, such as `theme`.
 
 Your file is the first of these:
 
-1. the file `--config <file>` names, given to the TUI or to any command;
-2. else the file the environment variable `SLIPBOX_CONFIG` names;
-3. else `config.toml` in slipbox's config folder: `$XDG_CONFIG_HOME/slipbox/`, which is `~/.config/slipbox/` when
-   `XDG_CONFIG_HOME` isn't set, on macOS too.
+1. the file `--config <file>` names, given to the TUI or to any command
+2. else the file the environment variable `SLIPBOX_CONFIG` names
+3. else `config.toml` in slipbox's config folder, `$XDG_CONFIG_HOME/slipbox/`. When `XDG_CONFIG_HOME` isn't set, that
+   is `~/.config/slipbox/`, on macOS too.
 
-A `--config` file that doesn't exist is said in a warning, and slipbox runs on the defaults: it never falls back to
-one of the others.
+If the `--config` file doesn't exist, slipbox says so in a warning and runs on the defaults. It never falls back to one
+of the others.
 
 ## A folder's settings
 
-A root can carry settings of its own, for everyone who opens it: a team's notes that keep their scratch in the
-folder, a repository that leaves its generated files out. They go in `.slipbox/config.toml` at the root's top.
-`slipbox init ~/notes` makes `.slipbox/` with a `config.toml` holding a couple of settings commented out, and you can
-make it by hand too. (A root is a folder slipbox treats as one collection of files; a `.slipbox/` folder is one of the
-things that make a folder a root: [Links and roots](links-and-roots.md).)
+A root can carry settings of its own, for everyone who opens it. For example:
+
+- a team's notes that keep their scratch in the folder
+- a repository that leaves its generated files out
+
+These settings go in `.slipbox/config.toml` at the root's top. `slipbox init ~/notes` makes `.slipbox/` with a
+`config.toml` that holds a couple of settings, commented out. You can make it by hand too.
+
+A root is a folder slipbox treats as one collection of files. A `.slipbox/` folder is one of the things that make a
+folder a root ([Links and roots](links-and-roots.md)).
 
 ```toml
 # ~/notes/.slipbox/config.toml
@@ -56,47 +76,60 @@ exclude = ["archive/"]
 
 ### The order they apply in
 
-Each file overrides the ones before it, and a setting no file names keeps its default:
+Each file overrides the ones before it. A setting no file names keeps its default.
 
-1. the built-in defaults;
-2. your own file;
-3. the `.slipbox/config.toml` of each root enclosing this one, the outermost first;
-4. the root's own `.slipbox/config.toml`.
+1. the built-in defaults
+2. your own file
+3. the `.slipbox/config.toml` of each root enclosing this one, the outermost first
+4. the root's own `.slipbox/config.toml`
 
-So a folder's settings reach the roots nested inside it too. A root without `.slipbox/` (a git repository, an
-Obsidian vault) has no file of its own, and a plain folder outside every root takes only yours. `slipbox info` lists
-the files that applied, in this order, on its `config` line.
+So a folder's settings reach the roots nested inside it too.
+
+A root without `.slipbox/` has no file of its own. A git repository or an Obsidian vault is such a root. A plain folder
+outside every root takes only your file.
+
+`slipbox info` lists the files that applied, in this order, on its `config` line.
 
 ### What only your own file can set
 
-A folder's `.slipbox/config.toml` arrives with whatever you clone or download, so it never chooses what runs on your
-machine, or what reaches the network. These come from your own file only; in a folder's file each is ignored, with a
-warning:
+A folder's `.slipbox/config.toml` arrives with whatever you clone or download. So it never chooses what runs on your
+machine, or what reaches the network.
 
-- the programs slipbox runs for you: `editor.command`, `editor.remote` and `lint.command`;
-- a language server's `command`, `args` and `environment`, and a linter's `lint-command`. A folder's file may tune
-  the servers and linters slipbox knows, but never add one: its name would be the program run;
-- what reaches the network: `render.images_remote`, `lsp.auto_install` and `update.check`. A folder can't have
-  slipbox fetch its notes' pictures from the web, which tells their sites who read them, install from npm, or ask
-  whether there's a newer release; nor turn any of them off for you: what reaches the network is yours to allow;
-- `[trust]`: a folder can't trust itself;
-- `walk.root_markers`: where roots are is settled before any folder's file is read;
-- a key or alias bound to a command that throws work away or runs a program: `app.quit_force`, `note.revert`,
+These come from your own file only. In a folder's file, each is ignored, with a warning:
+
+- **The programs slipbox runs for you:** `editor.command`, `editor.remote` and `lint.command`.
+- **A language server's `command`, `args` and `environment`, and a linter's `lint-command`.** A folder's file may tune
+  the servers and linters slipbox knows, but never add one. Its name would be the program run.
+- **What reaches the network:** `render.images_remote`, `lsp.auto_install` and `update.check`. A folder can't have
+  slipbox fetch its notes' pictures from the web, which tells their sites who read them. It can't have slipbox install
+  from npm, or ask whether there's a newer release. Nor can it turn any of them off for you. What reaches the network
+  is yours to allow.
+- **`[trust]`.** A folder can't trust itself.
+- **`walk.root_markers`.** Where roots are is settled before any folder's file is read.
+- **A key or alias bound to a command that throws work away or runs a program:** `app.quit_force`, `note.revert`,
   `note.save_force`, `scratch.clear`, `shell.run` and `shell.filter`. A clone can't put a quit without saving on
   `ctrl+s`, or a program of its choosing on `:wq`. Your own file may: `"g m" = "shell.run make"`.
 
-What a folder's file may give a language server is its settings (`config`). They reach the server only in a root you
-trust, as a project's `.vscode/settings.json` would, and some servers' settings name programs to run. In a root you
-haven't trusted, a server gets its own defaults and your settings, with the ones that keep it from running the
-project's code on top: nothing of the folder's own runs. Trust is explained in [Code](code.md).
+A folder's file may give a language server only its settings (`config`). They reach the server only in a root you
+trust, as a project's `.vscode/settings.json` would. Some servers' settings name programs to run.
+
+In a root you haven't trusted, a server gets its own defaults and your settings. On top of those come the settings that
+keep it from running the project's code. Nothing of the folder's own runs.
+
+Trust is explained in [Code](code.md).
 
 ### A folder's name
 
-The `[vault]` table of a folder's `.slipbox/config.toml` is its identity, not a setting: its `name`, which pointers
-such as `slipbox://notes/inbox.md` find it by; an `id` that tells its copies from another folder of the same name;
-and any `aliases` and `previous_names`. It is read on its own, never merged into the settings, and in your own file
-it is ignored with a warning. Only `slipbox init --name` and `slipbox name` write it, never opening the folder; names
-and pointers are in [Links and roots](links-and-roots.md).
+The `[vault]` table of a folder's `.slipbox/config.toml` is its identity, not a setting. It holds:
+
+- its `name`, which pointers such as `slipbox://notes/inbox.md` find it by
+- an `id` that tells its copies from another folder of the same name
+- any `aliases` and `previous_names`
+
+The table is read on its own, and never merged into the settings. In your own file it is ignored, with a warning.
+
+Only `slipbox init --name` and `slipbox name` write it. Opening the folder never does. Names and pointers are in
+[Links and roots](links-and-roots.md).
 
 ```toml
 [vault]
@@ -108,35 +141,51 @@ previous_names = ["old-notes"] # names it had: a pointer by one still finds it
 
 ## Mistakes in a file
 
-No mistake in a settings file stops slipbox. Each is a warning, in the TUI's messages (`space m` lists them all) or
-on the command line's standard error, and the rest of the file still applies:
+No mistake in a settings file stops slipbox. Each mistake is a warning, and the rest of the file still applies. You see
+the warning in one of two places:
+
+- in the TUI's messages (`space m` lists them all)
+- on the command line's standard error
+
+What each mistake does:
 
 - **A file that isn't valid TOML** is left out whole. While the TUI runs, a file saved half-typed keeps what it said
-  before, its last good contents, until it parses again: your theme and keys stay as they were.
-- **An unknown setting** is named and ignored, and so is a retired one (`[rename]`), with the reason.
-- **A value of the wrong type** (text where `true` or `false` goes, a list with something other than text in it),
-  **outside its set** (`ui.lines = "thick"`) or **outside its range** (`ui.sidebar_width = 7`) keeps the default.
-  Numbers are whole, but for `ui.split_ratio` and `editor.lens_max`.
+  before, its last good contents, until it parses again. Your theme and keys stay as they were.
+- **An unknown setting** is named and ignored. So is a retired one (`[rename]`), with the reason.
+- **A value that doesn't fit** keeps the default. That is a value:
+  - of the wrong type, such as text where `true` or `false` goes, or a list with something other than text in it
+  - outside its set (`ui.lines = "thick"`)
+  - outside its range (`ui.sidebar_width = 7`)
+
+  Numbers are whole, except for `ui.split_ratio` and `editor.lens_max`.
 - **An empty `walk.extensions`** keeps the default, since no note would be found.
-- **A `capture.file`** that isn't a relative `.md` path, or that climbs out with `..` or has a hidden part
-  (`.notes/inbox.md`), keeps `scratch.md`.
+- **A `capture.file` that isn't a relative `.md` path** keeps `scratch.md`. So does one that climbs out with `..`, or
+  has a hidden part (`.notes/inbox.md`).
 - **A mode's key table written as text** (`[keys]` with `source = "…"`) is ignored.
 - **In a language server's, a language's, a linter's or a document type's table,** a field of the wrong type is
-  dropped and the rest of the entry kept. A known field spelled with underscores (`lint_command`, `file_types`) is
-  dropped. Any other field slipbox doesn't read (`scope`, `comment-token`) is kept quietly, so a section of Helix's
-  `languages.toml`, or of efm-langserver's settings, pastes in as it is.
+  dropped. The rest of the entry is kept. A known field spelled with underscores (`lint_command`, `file_types`) is
+  dropped too. Any other field slipbox doesn't read (`scope`, `comment-token`) is kept quietly. So a section of
+  Helix's `languages.toml`, or of efm-langserver's settings, pastes in as it is.
 
-Some mistakes only show where the setting is used, and are said there: a key bound to a command that doesn't exist,
-a key with a modifier slipbox doesn't know (`hyper+x`), a role or colour `[colors]` can't use. The TUI says these, and
-`slipbox render` says the colours' too; `slipbox info` doesn't.
+Some mistakes only show where the setting is used, and are said there:
 
-An older file may say vault where slipbox now says root: `capture.location = "vault"`, the explorer's actions
-`rename_vault`, `make_vault` and `unmake_vault`, the colour role `sidebar_vault`. Each still works, as the root's word
-does, and isn't warned of.
+- a key bound to a command that doesn't exist
+- a key with a modifier slipbox doesn't know (`hyper+x`)
+- a role or colour `[colors]` can't use
+
+The TUI says these. `slipbox render` says the colours' mistakes too. `slipbox info` doesn't.
+
+An older file may say vault where slipbox now says root:
+
+- `capture.location = "vault"`
+- the explorer's actions `rename_vault`, `make_vault` and `unmake_vault`
+- the colour role `sidebar_vault`
+
+Each still works, as the root's word does, and isn't warned of.
 
 ## Every key
 
-Every setting, with its default. The tables from `[types.memory]` on are examples: what they hold by default is
+This is every setting, with its default. The tables from `[types.memory]` on are examples. What they hold by default is
 empty, or built in. Ranges are inclusive.
 
 ```toml
@@ -343,59 +392,88 @@ breadcrumb_band = { bg = "#1d1e2b" }
 rail = { bg = "#0f0f17" }
 ```
 
-What each setting does in use is in its chapter: drawing and pictures in [Reading](reading.md), the panes and bars in
-[The screen](screen.md), the scratch, the lens, autosave, spelling and lint in [Editing](editing.md), `[files]` in
-[Files](files.md), `[git]` in [Git](git.md), servers, linters, problems and trust in [Code](code.md), search, the
-index and document types in [Finding things](finding.md), the update check in [Privacy](privacy.md), and the context
-bundle in [The command line](cli.md).
+What each setting does in use is in its chapter:
+
+| Settings | Chapter |
+| --- | --- |
+| Drawing and pictures | [Reading](reading.md) |
+| The panes and bars | [The screen](screen.md) |
+| The scratch, the lens, autosave, spelling and lint | [Editing](editing.md) |
+| `[files]` | [Files](files.md) |
+| `[git]` | [Git](git.md) |
+| Servers, linters, problems and trust | [Code](code.md) |
+| Search, the index and document types | [Finding things](finding.md) |
+| The update check | [Privacy](privacy.md) |
+| The context bundle | [The command line](cli.md) |
 
 ## Keys, aliases and groups
 
-`[keys]` binds a key sequence to a command, over the defaults; `""` unbinds a default. Keys are written as the
-[Keys](keys.md) chapter writes them: key names separated by spaces, such as `g g`, `ctrl+w shift+h` or `leader l n`.
-`G` means `shift+g`, modifiers may come in any order, and `leader` means the key `input.leader` names. A command is
-its ID, optionally followed by an argument: `"tab.goto 3"`, `"theme.set nord"`. `slipbox commands` lists every
-command's ID, and `?` in the TUI lists every key bound.
+`[keys]` binds a key sequence to a command, over the defaults. `""` unbinds a default.
 
-A key with a modifier slipbox doesn't know (`hyper+x`) is reported and never fires, rather than binding plain `x`.
-A command that doesn't exist is reported too.
+Keys are written as the [Keys](keys.md) chapter writes them. They are key names separated by spaces, such as `g g`,
+`ctrl+w shift+h` or `leader l n`.
 
-The other tables hold the keys of one place, each tried before `[keys]` there:
+- `G` means `shift+g`.
+- Modifiers may come in any order.
+- `leader` means the key `input.leader` names.
 
-- `[keys.source]`: source mode's own keys;
-- `[keys.visual]`: visual mode's;
-- `[keys.explorer]`: the explorer's (and the Problems panel's), bound to its actions: `down`, `up`, `open_tab`,
-  `expand`, `open`, `collapse`, `open_split`, `top`, `bottom`, `filter`, `all_files`, `new_note`, `new_folder`,
-  `rename`, `rename_root`, `move`, `delete`, `restore`, `undo_rename`, `copy`, `cut`, `paste`, `make_root`,
-  `unmake_root`, `menu`, `close`, `leave`, `commit`, `amend`;
-- `[keys.outline]`: the outline's actions: `down`, `up`, `jump`, `fold`, `unfold`, `top`, `bottom`, `filter`,
-  `close`, `leave`, `rename`;
-- `[keys.footnotes]`: the footnotes pane's: the outline's moves (all of them but `rename`), and `add`, `edit`,
-  `delete`, `rename`;
-- `[keys.info]`: the Info view's: the same moves, and `copy`, `edit`;
-- `[keys.resize]`: resize mode's: `narrower`, `wider`, `shorter`, `taller`, `equalize`, `leave`.
+A command is its ID, optionally followed by an argument: `"tab.goto 3"`, `"theme.set nord"`. `slipbox commands` lists
+every command's ID. `?` in the TUI lists every key bound.
 
-An action a pane doesn't have is reported. `[aliases]` names commands for `:`: `sc = "scratch.open"` makes `:sc` open
-the scratch, and `""` removes a default alias. `[groups]` names a prefix in the which-key popup, as `"name"` or
-`"name: what's under it"`; the explanation shows under the name, or, for a prefix of one key such as `z`, in its
-popup's title ([The which-key popup](screen.md#the-which-key-popup)).
+A key with a modifier slipbox doesn't know (`hyper+x`) is reported and never fires. It doesn't bind plain `x` instead. A
+command that doesn't exist is reported too.
+
+Each of the other tables holds the keys of one place, and is tried before `[keys]` there:
+
+- `[keys.source]` holds source mode's own keys.
+- `[keys.visual]` holds visual mode's.
+- `[keys.explorer]` holds the explorer's, and the Problems panel's. They are bound to its actions: `down`, `up`,
+  `open_tab`, `expand`, `open`, `collapse`, `open_split`, `top`, `bottom`, `filter`, `all_files`, `new_note`,
+  `new_folder`, `rename`, `rename_root`, `move`, `delete`, `restore`, `undo_rename`, `copy`, `cut`, `paste`,
+  `make_root`, `unmake_root`, `menu`, `close`, `leave`, `commit`, `amend`.
+- `[keys.outline]` holds the outline's. Its actions are `down`, `up`, `jump`, `fold`, `unfold`, `top`, `bottom`,
+  `filter`, `close`, `leave`, `rename`.
+- `[keys.footnotes]` holds the footnotes pane's. Its actions are the outline's moves (all of them but `rename`), and
+  `add`, `edit`, `delete`, `rename`.
+- `[keys.info]` holds the Info view's. Its actions are the same moves, and `copy`, `edit`.
+- `[keys.resize]` holds resize mode's. Its actions are `narrower`, `wider`, `shorter`, `taller`, `equalize`, `leave`.
+
+An action a pane doesn't have is reported.
+
+`[aliases]` names commands for `:`. For example, `sc = "scratch.open"` makes `:sc` open the scratch. `""` removes a
+default alias.
+
+`[groups]` names a prefix in the which-key popup, as `"name"` or `"name: what's under it"`. The explanation shows under
+the name. For a prefix of one key, such as `z`, it shows in its popup's title instead
+([The which-key popup](screen.md#the-which-key-popup)).
 
 ## Commands in settings
 
-`editor.command` and `editor.remote` are command lines slipbox runs itself, never through a shell, so a file's name
-can't become a command. Each is split into arguments at spaces, `'…'` and `"…"` grouping; in every argument
-`{file}` becomes the file's path, `{line}` the cursor's line, and in `editor.remote` `{server}` the nvim picked.
+`editor.command` and `editor.remote` are command lines that slipbox runs itself, never through a shell. So a file's name
+can't become a command.
+
+Each is split into arguments at spaces, with `'…'` and `"…"` grouping. In every argument, these placeholders are
+replaced:
+
+| Placeholder | Becomes |
+| --- | --- |
+| `{file}` | The file's path |
+| `{line}` | The cursor's line |
+| `{server}` | The nvim picked (in `editor.remote`) |
+
 An `editor.command` without `{file}` gets the path added at the end.
 
-- `editor.command` empty runs `$VISUAL`, else `$EDITOR`, else `vi`, given the line in the way it understands for the
-  editors slipbox knows (vim, nvim, nano, emacs, kak and others: `+12`; helix and micro: `file:12`).
-- `editor.remote` is a list of commands run in order, each waited for before the next: `["code -g {file}:{line}"]`.
-  One command may be written as text. `["nvim"]` finds the nvims running, asks which when there are several (the
-  answer kept for the root while that nvim runs), and opens the note there at the line. `[]` turns it off.
-- `lint.command` is a list of arguments, the files to lint added at the end and a leading `~/` made your home folder:
-  `["markdownlint-cli2", "--config", "~/lint/.markdownlint-cli2.jsonc"]`.
-- A linter's `lint-command` is run by `sh`, in the nearest folder holding one of its `root-markers` (else the file's
-  project); `${INPUT}` becomes the file's path.
+- **An empty `editor.command`** runs `$VISUAL`, else `$EDITOR`, else `vi`. An editor slipbox knows is given the line
+  in the way it understands. That is `+12` for vim, nvim, nano, emacs, kak and others, and `file:12` for helix and
+  micro.
+- **`editor.remote`** is a list of commands, run in order. Each is waited for before the next:
+  `["code -g {file}:{line}"]`. One command may be written as text. `[]` turns it off.
+- **`["nvim"]`** in `editor.remote` finds the nvims running. When there are several, it asks which. The answer is kept
+  for the root while that nvim runs. Then it opens the note there, at the line.
+- **`lint.command`** is a list of arguments. The files to lint are added at the end, and a leading `~/` is made your
+  home folder: `["markdownlint-cli2", "--config", "~/lint/.markdownlint-cli2.jsonc"]`.
+- **A linter's `lint-command`** is run by `sh`, in the nearest folder holding one of its `root-markers`, else in the
+  file's project. `${INPUT}` becomes the file's path.
 
 Handing a note to an editor is in [Editing](editing.md).
 
@@ -403,29 +481,40 @@ Handing a note to an editor is in [Editing](editing.md).
 
 These tables take the shapes other editors use, so a section from one pastes in:
 
-- `[language-server.<name>]`, as in Helix's `languages.toml`: a server's `command`, `args`, `environment`,
-  `required-root-patterns`, and its settings, `config`, merged into the built-in ones all the way down. A name slipbox
-  knows changes that server; a new name adds one.
-- `[[language]]`, also Helix's: a language, found by its `name`, with its `language-servers` (the main one first,
-  add-ons after; each a name, or `{ name, only-features, except-features }`), `roots`, `file-types`, `language-id`,
-  and its `linters`.
-- `[linter.<name>]`, in efm-langserver's keys: a linter that has no server, changed or added by name.
+- **`[language-server.<name>]`**, as in Helix's `languages.toml`, is a language server. It holds the server's
+  `command`, `args`, `environment` and `required-root-patterns`, and its settings, `config`. The settings are merged
+  into the built-in ones all the way down. A name slipbox knows changes that server. A new name adds one.
+- **`[[language]]`**, also Helix's, is a language, found by its `name`. It holds its `language-servers`, `roots`,
+  `file-types`, `language-id`, and its `linters`. The main server comes first, add-ons after. Each server is a name, or
+  `{ name, only-features, except-features }`.
+- **`[linter.<name>]`**, in efm-langserver's keys, is a linter that has no server. It is changed or added by name.
 
-Which servers and linters are built in, how they are found and installed, and `slipbox doctor` are in [Code](code.md).
+[Code](code.md) says which servers and linters are built in, and how they are found and installed. It covers
+`slipbox doctor` too.
 
 ## Document types
 
-A document type is a kind of note known by where it is, such as an agent's skill (`SKILL.md`) or an architecture
-decision record in an `adr/` folder, with the front matter it must have and the order it comes in. slipbox builds in
-`skill` (every `SKILL.md`, which must have a `name` and a `description`) and `adr` (the `.md` files in `adr/`,
-`adrs/`, `decisions/` and `decision-records/` folders, numbered by their names). `[types.<name>]` adds one of your
-own, or changes a built-in one field by field; `paths = []` turns one off. A folder's file may set them too, since
-a type only reads. What types are for, and how they are listed and ordered, is in [Finding things](finding.md).
+A document type is a kind of note known by where it is. An agent's skill (`SKILL.md`) is one. An architecture decision
+record in an `adr/` folder is another. A type says the front matter its notes must have, and the order they come in.
+
+slipbox builds in two types:
+
+| Type | Its notes |
+| --- | --- |
+| `skill` | Every `SKILL.md`, which must have a `name` and a `description` |
+| `adr` | The `.md` files in `adr/`, `adrs/`, `decisions/` and `decision-records/` folders, numbered by their names |
+
+`[types.<name>]` adds one of your own, or changes a built-in one field by field. `paths = []` turns one off. A folder's
+file may set them too, since a type only reads.
+
+What types are for, and how they are listed and ordered, is in [Finding things](finding.md).
 
 ## The links' convention
 
-`[links]` sets how the links slipbox writes for you look: with completion, the link picker (`space l i`) or
-`slipbox link`. It has three settings, one for each part of a link:
+`[links]` sets how the links slipbox writes for you look. slipbox writes them with completion, the link picker
+(`space l i`) or `slipbox link`.
+
+`[links]` has three settings, one for each part of a link:
 
 | Setting | Values |
 | --- | --- |
@@ -433,45 +522,59 @@ a type only reads. What types are for, and how they are listed and ordered, is i
 | `links.path` | `auto`, `relative` (to the note), `root` (from the root's top, `/…`), `name` (a wikilink's only) |
 | `links.extension` | `auto`, `keep`, `drop`: the `.md` |
 
-`auto`, the default for each, leaves the part to the folder: what the app that owns it says (Obsidian, zk), else what
-its notes already do, else a relative Markdown link with `.md`. A root's `.slipbox/config.toml` may set them, and wins
-over your own file there. [How a folder writes links](links-and-roots.md#how-a-folder-writes-links) says how each part
-is found, what applies in a plain folder, and how to see the convention a folder has.
+`auto` is the default for each. It leaves the part to the folder, and takes the first of these:
+
+1. what the app that owns the folder says (Obsidian, zk)
+2. else what its notes already do
+3. else a relative Markdown link with `.md`
+
+A root's `.slipbox/config.toml` may set them, and wins over your own file there.
+
+[How a folder writes links](links-and-roots.md#how-a-folder-writes-links) says:
+
+- how each part is found
+- what applies in a plain folder
+- how to see the convention a folder has
 
 ## Colours
 
 ### Themes
 
-`theme` picks the colours:
+`theme` picks the colours. It is one of these:
 
-- one of slipbox's themes: `slipbox themes` lists them, and `space u t` lets you pick one, previewed as you move;
-- `terminal`: the terminal's own palette, so its theme shows through;
-- `mono`: no colour, only bold, dim, italic and underline;
-- one of yours: a base16 or base24 scheme saved as a `.yaml` file in `~/.config/slipbox/themes/`, named by its file
-  name. Yours wins over a built-in of the same name.
+- **One of slipbox's themes.** `slipbox themes` lists them. `space u t` lets you pick one, previewed as you move.
+- **`terminal`**, the terminal's own palette, so its theme shows through.
+- **`mono`**, no colour, only bold, dim, italic and underline.
+- **One of yours.** That is a base16 or base24 scheme saved as a `.yaml` file in `~/.config/slipbox/themes/`, named by
+  its file name. Yours wins over a built-in of the same name.
 
-An unknown theme is a warning, and `tokyo-night` is used. Starting the TUI with `--theme <name>` uses a theme for
-that run.
+An unknown theme is a warning, and slipbox uses `tokyo-night`.
+
+Start the TUI with `--theme <name>` to use a theme for that run.
 
 ### Changing a colour
 
-A theme gives a palette, and slipbox derives the colour of each of over a hundred roles from it: headings, links,
-borders, the cursor. `[colors]` changes single roles, over whichever theme is in use; `[colors.<theme>]` does so for
-that theme only.
+A theme gives a palette. From it, slipbox derives the colour of each of over a hundred roles, such as headings, links,
+borders and the cursor.
 
-- **Text** sets the role's foreground; **a table** sets any of `fg`, `bg`, `bold`, `italic`, `underline` and `dim`.
+`[colors]` changes single roles, over whichever theme is in use. `[colors.<theme>]` does so for that theme only.
+
+- **Text** sets the role's foreground. **A table** sets any of `fg`, `bg`, `bold`, `italic`, `underline` and `dim`.
   Only the fields given change.
-- **A colour** is `"#rrggbb"`, `"default"` (the terminal's own), or a terminal palette number from 0 to 255, as a
-  number or as text: `12`, `"12"` or `"ansi:12"`.
-- **Under `NO_COLOR`** the theme is `mono`, so of the per-theme tables only `[colors.mono]` applies, and in `mono`
-  only the attributes apply, not the colours.
-- **Mistakes** (an unknown role or field, something that isn't a colour) are warnings, and the rest applies.
-- **They apply wherever a theme does:** the TUI, its theme picker's preview, and `slipbox render`. Saving the file
-  applies them at once.
+- **A colour** is one of these:
+  - `"#rrggbb"`
+  - `"default"`, the terminal's own
+  - a terminal palette number from 0 to 255, as a number or as text: `12`, `"12"` or `"ansi:12"`
+- **Under `NO_COLOR`** the theme is `mono`. So of the per-theme tables, only `[colors.mono]` applies. In `mono`, only
+  the attributes apply, not the colours.
+- **Mistakes** are warnings, and the rest applies. A mistake is an unknown role or field, or something that isn't a
+  colour.
+- **Changed colours apply wherever a theme does:** the TUI, its theme picker's preview, and `slipbox render`. Saving
+  the file applies them at once.
 
 ### The roles
 
-The roles of the screen most worth changing:
+These are the roles of the screen most worth changing:
 
 | Role | What it colours |
 | --- | --- |
@@ -495,13 +598,13 @@ The roles of the screen most worth changing:
 | `cursor`, `cursor_line` | the cursor, and its row |
 | `which_key_key`, `which_key_group` | the which-key popup's keys and group names |
 
-Every role:
+Every role, by what it colours:
 
 - **The text:** `text`, `dim`, `strong`, `emphasis`, `strike`, `highlight`, `h1` to `h6`, `code_inline`,
-  `code_block`, `code_label`, `code_gutter`, `link`, `link_unresolved`, `link_ambiguous`, `wikilink`, `embed`, `url`, `link_focus`,
-  `quote`, `quote_bar`, `list_marker`, `check_done`, `check_todo`, `rule`, `table_border`, `table_header`, `fm_key`,
-  `fm_value`, `fm_border`, `fm_error`, `callout_note`, `callout_tip`, `callout_important`, `callout_warning`,
-  `callout_caution`, `footnote`, `tag`, `html`, `image`, `math`.
+  `code_block`, `code_label`, `code_gutter`, `link`, `link_unresolved`, `link_ambiguous`, `wikilink`, `embed`, `url`,
+  `link_focus`, `quote`, `quote_bar`, `list_marker`, `check_done`, `check_todo`, `rule`, `table_border`,
+  `table_header`, `fm_key`, `fm_value`, `fm_border`, `fm_error`, `callout_note`, `callout_tip`, `callout_important`,
+  `callout_warning`, `callout_caution`, `footnote`, `tag`, `html`, `image`, `math`.
 - **Code's syntax:** `syn_keyword`, `syn_function`, `syn_string`, `syn_number`, `syn_comment`, `syn_type`,
   `syn_variable`, `syn_constant`, `syn_operator`, `syn_punctuation`, `syn_tag`, `syn_attr`, `syn_builtin`,
   `syn_meta`, `syn_regexp`, `syn_section`, `syn_addition`, `syn_deletion`.
@@ -519,118 +622,176 @@ Every role:
 
 ## Indentation: `.editorconfig`
 
-slipbox has no indentation setting of its own: a project, or your home folder, says it in `.editorconfig`, the file
-most editors read. How a file is indented (a tab a level or spaces, how many, how wide a tab shows) is the first of:
+slipbox has no indentation setting of its own. A project, or your home folder, says it in `.editorconfig`, the file most
+editors read.
 
-1. its `.editorconfig` files' `indent_style`, `indent_size` and `tab_width`, read from the file's folder upwards until
-   one says `root = true`, nearer over farther and later sections over earlier, their patterns as the EditorConfig
-   specification has them;
-2. else the file itself: tabs where more of its lines start with one, else the step its lines go in by most often;
-3. else its language's habit: tabs for Go, Makefiles and TSV; four spaces for Python, Rust, Java, Kotlin, Swift, PHP,
-   C, C++, C#, Scala and Dart; two for the rest.
+How a file is indented covers three things:
 
-Editing indents by that step ([Indentation and comments](editing.md#indentation-and-comments)), a tab is drawn
-that wide (else four columns), and a language server asked to format the file (`space c f`) is asked to indent it so.
-A save does what `.editorconfig` asks, and only then: `trim_trailing_whitespace =
-true` trims every line's trailing spaces and tabs, and `insert_final_newline = true` ends the file with a newline,
-each in the text first, as an undo step of its own. The Info view (`space n i`) says how a file is indented, and what
-said so.
+- a tab for each level, or spaces
+- how many
+- how wide a tab shows
+
+slipbox takes it from the first of these:
+
+1. its `.editorconfig` files' `indent_style`, `indent_size` and `tab_width`. They are read from the file's folder
+   upwards, until one says `root = true`. Nearer files win over farther ones, and later sections over earlier ones.
+   Their patterns are as the EditorConfig specification has them.
+2. else the file itself: tabs where more of its lines start with one, else the step its lines go in by most often
+3. else its language's habit:
+   - tabs for Go, Makefiles and TSV
+   - four spaces for Python, Rust, Java, Kotlin, Swift, PHP, C, C++, C#, Scala and Dart
+   - two for the rest
+
+That indentation is used in three places:
+
+- Editing indents by that step ([Indentation and comments](editing.md#indentation-and-comments)).
+- A tab is drawn that wide, else four columns wide.
+- A language server asked to format the file (`space c f`) is asked to indent it so.
+
+A save does what `.editorconfig` asks, and only then:
+
+- `trim_trailing_whitespace = true` trims every line's trailing spaces and tabs.
+- `insert_final_newline = true` ends the file with a newline.
+
+Each is done in the text first, as an undo step of its own.
+
+The Info view (`space n i`) says how a file is indented, and what said so.
 
 ## Spelling dictionaries
 
-Spelling checks a note in its languages ([Spelling](editing.md#spelling) says which, and how to turn it on). Each
-language's dictionary is the first found of:
+Spelling checks a note in its languages. [Spelling](editing.md#spelling) says which, and how to turn it on.
 
-1. yours, in `spell.dictionaries`, by the language or its base (`de` for `de-AT`): the path to its `.dic`, with its
-   `.aff` beside it;
-2. else, for a language with a region, the system's for that very language (`en_GB` for `en-GB`), from
-   `~/.local/share/hunspell`, `/usr/share/hunspell`, `/usr/share/myspell` (and its `dicts`),
-   `/usr/local/share/hunspell`, Homebrew's `/opt/homebrew/share/hunspell`, or macOS's `Library/Spelling` (yours, then
-   the system's);
-3. else slipbox's own, for English (American) and Turkish;
-4. else the system's first for its base (`de_DE` for `de`).
+Each language's dictionary is the first found of these:
 
-Dictionaries are Hunspell's, as LibreOffice and most systems have them; one in an encoding other than UTF-8 (`SET
-ISO8859-9`) is read in its own. Your own words, added with `z g` or `slipbox spell --add`, are kept one a line in
-`~/.local/share/slipbox/spell/words.txt` and count as right in every language; a line starting with `#` is a
-comment.
+1. yours, in `spell.dictionaries`, by the language or its base (`de` for `de-AT`). It is the path to its `.dic`, with
+   its `.aff` beside it.
+2. else, for a language with a region, the system's dictionary for that very language (`en_GB` for `en-GB`), from
+   these folders:
+   - `~/.local/share/hunspell`
+   - `/usr/share/hunspell`
+   - `/usr/share/myspell` (and its `dicts`)
+   - `/usr/local/share/hunspell`
+   - Homebrew's `/opt/homebrew/share/hunspell`
+   - macOS's `Library/Spelling` (yours, then the system's)
+3. else slipbox's own, for English (American) and Turkish
+4. else the system's first for its base (`de_DE` for `de`)
+
+Dictionaries are Hunspell's, as LibreOffice and most systems have them. One in an encoding other than UTF-8
+(`SET ISO8859-9`) is read in its own encoding.
+
+You add your own words with `z g` or `slipbox spell --add`. They are kept one a line in
+`~/.local/share/slipbox/spell/words.txt`, and count as right in every language. A line starting with `#` is a comment.
 
 ## Reloading
 
-The TUI reloads its settings by itself when your file or any of the root's `.slipbox/config.toml` files (its own or
-an enclosing root's) is saved, checking every second (or every `watch.poll_ms`, if that is shorter); `space v c`, or
-`:config`, reloads at once. A reload applies what changed, and says so in a message:
+The TUI reloads its settings by itself when one of these files is saved:
 
-- keys, the leader, aliases and groups: bound afresh;
-- the theme, colours, icons and the `[ui]` settings: shown at once; a changed `ui.sidebar`, `ui.outline`, pane width
-  or `ui.split_ratio` resets what's on the screen;
-- `[render]`: every note drawn again;
-- `[walk]`: the root walked, indexed and watched again;
-- `[watch]`: the watching started again;
-- `[search]`: searching starts again with it;
-- `[lint]`, `[linter.<name>]` and `[[language]]`: every file linted again.
+- your file
+- any of the root's `.slipbox/config.toml` files, its own or an enclosing root's
 
-The rest is read where it's used, so it applies the next time. A language server already running keeps the settings
-it started with until slipbox starts again.
+It checks every second, or every `watch.poll_ms` if that is shorter. `space v c`, or `:config`, reloads at once.
+
+A reload applies what changed, and says so in a message:
+
+| What changed | What happens |
+| --- | --- |
+| Keys, the leader, aliases and groups | Bound afresh |
+| The theme, colours, icons and the `[ui]` settings | Shown at once |
+| `ui.sidebar`, `ui.outline`, a pane's width or `ui.split_ratio` | What's on the screen is reset |
+| `[render]` | Every note is drawn again |
+| `[walk]` | The root is walked, indexed and watched again |
+| `[watch]` | The watching starts again |
+| `[search]` | Searching starts again with it |
+| `[lint]`, `[linter.<name>]` and `[[language]]` | Every file is linted again |
+
+The rest is read where it's used, so it applies the next time. A language server already running keeps the settings it
+started with until slipbox starts again.
 
 ### Settings changed in the TUI
 
-What you change in the TUI (the theme with `space u t`, wrapping, line numbers, zen and the others in `space u u`)
-applies at once and is kept in the root's session, each change with the setting it replaced: another root keeps its
-own. On every start, and at every reload, a change is kept only while that setting in your files still has the value
-it replaced, so editing the setting always wins; the TUI never writes your settings file. With
-`ui.restore_session` on, whether the explorer and the outline are open, and their widths, come back from the session
-too.
+You can change some settings in the TUI: the theme with `space u t`, and wrapping, line numbers, zen and the others in
+`space u u`.
+
+A change applies at once. It is kept in the root's session, with the setting it replaced. Another root keeps its own.
+
+On every start, and at every reload, a change is kept only while that setting in your files still has the value it
+replaced. So editing the setting always wins. The TUI never writes your settings file.
+
+With `ui.restore_session` on, the session also brings back whether the explorer and the outline are open, and their
+widths.
 
 ## Environment
 
 ### slipbox's own variables
 
-- `SLIPBOX_CONFIG`: your settings file, when `--config` doesn't name one.
-- `SLIPBOX_GLYPHS`: `nerd`, `unicode` or `ascii`, the icons used where `render.glyphs` is `auto`. A set
-  `render.glyphs` wins, and any other value is ignored.
-- `SLIPBOX_CLIPBOARD`: `file` keeps copies off the system's clipboard and the terminal's: they go only to
-  `clipboard.txt` in the root's state folder, and pasting reads it back.
-- `SLIPBOX_DEBUG`: set, an unexpected error on the command line prints its stack trace.
-- `SLIPBOX_PARSE_CACHE`: `off` goes without the shared parse cache; every note is parsed afresh.
-- `SLIPBOX_RELEASES_URL`: releases fetched from another place laid out as GitHub's releases are, such as a mirror:
-  for the installer, `slipbox upgrade` and the update check.
-- `SLIPBOX_CHANNELS_URL`: the files naming each channel's newest release read from another place than slipbox's site
-  on GitHub Pages: for the installer, `slipbox upgrade` and the update check.
-- `SLIPBOX_CHANNEL`: `preview` has the installer install the newest preview, and the install follow previews, as
-  `--preview` does; `stable`, the default, releases only.
-- `SLIPBOX_BIN_DIR`: where the installer puts its `slipbox` link, instead of `~/.local/bin`.
+| Variable | What it does |
+| --- | --- |
+| `SLIPBOX_CONFIG` | Names your settings file, when `--config` doesn't name one |
+| `SLIPBOX_GLYPHS` | `nerd`, `unicode` or `ascii`: the icons used where `render.glyphs` is `auto` |
+| `SLIPBOX_CLIPBOARD` | `file` keeps copies off the system's clipboard and the terminal's |
+| `SLIPBOX_DEBUG` | When set, an unexpected error on the command line prints its stack trace |
+| `SLIPBOX_PARSE_CACHE` | `off` goes without the shared parse cache. Every note is parsed afresh |
+| `SLIPBOX_RELEASES_URL` | Releases are fetched from another place laid out as GitHub's releases are, such as a mirror |
+| `SLIPBOX_CHANNELS_URL` | The files naming each channel's newest release are read from another place |
+| `SLIPBOX_CHANNEL` | Which releases the installer installs, and the install follows: `preview` or `stable` |
+| `SLIPBOX_BIN_DIR` | Where the installer puts its `slipbox` link, instead of `~/.local/bin` |
+
+Some of them need a few more words:
+
+- A set `render.glyphs` wins over `SLIPBOX_GLYPHS`. Any other value of `SLIPBOX_GLYPHS` is ignored.
+- With `SLIPBOX_CLIPBOARD` set to `file`, copies go only to `clipboard.txt` in the root's state folder. Pasting reads
+  it back.
+- `SLIPBOX_RELEASES_URL` and `SLIPBOX_CHANNELS_URL` are for the installer, `slipbox upgrade` and the update check.
+- Without `SLIPBOX_CHANNELS_URL`, the channels' files are read from slipbox's site on GitHub Pages.
+- `SLIPBOX_CHANNEL=preview` has the installer install the newest preview, and the install follow previews, as
+  `--preview` does. `stable`, the default, means releases only.
 
 ### Variables slipbox reads
 
-- `NO_COLOR` (set, and not empty): no colour. The TUI uses the `mono` theme; the command line prints plain text
-  unless `--color always`; with `render.show_urls = "auto"`, a link's address shows after its text.
-- `DO_NOT_TRACK` (set, and not `0` or `false`): no update check.
-- `XDG_CONFIG_HOME`, `XDG_CACHE_HOME`, `XDG_STATE_HOME`, `XDG_DATA_HOME`: slipbox's four folders
-  ([below](#where-slipbox-keeps-things)); one that isn't an absolute path is ignored.
-- `VISUAL`, `EDITOR`: your editor, when `editor.command` is empty.
-- `SHELL`: the shell that runs a command given with `:!` (else `/bin/sh`).
-- `TERM`, `COLORTERM`, `TERM_PROGRAM`: how many colours the command line uses, and the icons `render.glyphs = "auto"`
-  picks (Nerd Font icons in Ghostty, kitty and WezTerm).
-- `LC_ALL`, `LC_CTYPE`, `LANG`: a locale that isn't UTF-8 (or `TERM=linux`) makes `render.glyphs = "auto"` plain
-  ASCII.
-- `WAYLAND_DISPLAY`, `DISPLAY`: the clipboard tools tried on Linux (`wl-copy`, `xclip`, `xsel`).
-- `WSL_DISTRO_NAME`: slipbox is in WSL, and uses Windows' clipboard.
-- `XDG_RUNTIME_DIR`, `TMPDIR`, `USER`: where the running nvims are looked for.
-- `HOME` and `PATH`: your home folder, and where programs are found: language servers, linters, git, the clipboard's
-  tools.
-- `BUN_ENABLE_CRASH_REPORTING`, `BUN_CRASH_REPORT_URL`: slipbox sets the first to `0`, so a crash sends no report,
-  unless you have set either.
+| Variable | What slipbox reads it for |
+| --- | --- |
+| `NO_COLOR` | When set, and not empty: no colour |
+| `DO_NOT_TRACK` | When set, and not `0` or `false`: no update check |
+| `XDG_CONFIG_HOME` | slipbox's config folder |
+| `XDG_CACHE_HOME` | slipbox's cache folder |
+| `XDG_STATE_HOME` | slipbox's state folder |
+| `XDG_DATA_HOME` | slipbox's data folder |
+| `VISUAL`, `EDITOR` | Your editor, when `editor.command` is empty |
+| `SHELL` | The shell that runs a command given with `:!` (else `/bin/sh`) |
+| `TERM`, `COLORTERM`, `TERM_PROGRAM` | How many colours the command line uses, and the icons (below) |
+| `LC_ALL`, `LC_CTYPE`, `LANG` | A locale that isn't UTF-8 makes `render.glyphs = "auto"` plain ASCII |
+| `WAYLAND_DISPLAY`, `DISPLAY` | The clipboard tools tried on Linux (`wl-copy`, `xclip`, `xsel`) |
+| `WSL_DISTRO_NAME` | slipbox is in WSL, and uses Windows' clipboard |
+| `XDG_RUNTIME_DIR`, `TMPDIR`, `USER` | Where the running nvims are looked for |
+| `HOME` and `PATH` | Your home folder, and where programs are found (below) |
+| `BUN_ENABLE_CRASH_REPORTING`, `BUN_CRASH_REPORT_URL` | slipbox sets the first to `0`, unless you have set either |
+
+What some of them do in more detail:
+
+- **`NO_COLOR`.** The TUI uses the `mono` theme. The command line prints plain text unless `--color always`. With
+  `render.show_urls = "auto"`, a link's address shows after its text.
+- **`XDG_CONFIG_HOME`, `XDG_CACHE_HOME`, `XDG_STATE_HOME` and `XDG_DATA_HOME`** set slipbox's four folders, described
+  [below](#where-slipbox-keeps-things). One that isn't an absolute path is ignored.
+- **`TERM`, `COLORTERM` and `TERM_PROGRAM`** also say which icons `render.glyphs = "auto"` picks. It picks Nerd Font
+  icons in Ghostty, kitty and WezTerm.
+- **`TERM=linux`** makes `render.glyphs = "auto"` plain ASCII too.
+- **`PATH`** is where slipbox finds programs: language servers, linters, git, the clipboard's tools.
+- **`BUN_ENABLE_CRASH_REPORTING` at `0`** means a crash sends no report.
 
 ### Variables slipbox sets
 
-A command run with `:!` gets `SLIPBOX_ROOT`, the root's folder, and `SLIPBOX_FILE`, the path of the file in the
-window.
+A command run with `:!` gets two variables:
+
+| Variable | Its value |
+| --- | --- |
+| `SLIPBOX_ROOT` | The root's folder |
+| `SLIPBOX_FILE` | The path of the file in the window |
 
 ## Where slipbox keeps things
 
-slipbox writes nothing derived or personal into your folders, and nothing at all by opening one. What it keeps, it
-keeps in four folders of its own, XDG's, on macOS too:
+slipbox writes nothing derived or personal into your folders. It writes nothing at all by opening one.
+
+What it keeps, it keeps in four folders of its own, XDG's, on macOS too:
 
 | Folder | Where | What it holds |
 | --- | --- | --- |
@@ -639,56 +800,75 @@ keeps in four folders of its own, XDG's, on macOS too:
 | state | `$XDG_STATE_HOME/slipbox`, else `~/.local/state/slipbox` | sessions, the scratch, the trash, your answers |
 | data | `$XDG_DATA_HOME/slipbox`, else `~/.local/share/slipbox` | tools installed, your words, slipbox itself |
 
-A root's cache and state have a folder of their own in each, named by the root's key: its folder's name and twelve
-characters of a hash of its path, such as `notes-84ec07632af6`. A plain folder opened gets one the same way.
-`slipbox info` prints the root's two folders. In a root itself there is only `.slipbox/`, where a root has one:
-its `config.toml`, and `version`, the version of its format.
+A root has a folder of its own in the cache folder, and another in the state folder. Both are named by the root's key.
+The key is the root folder's name and twelve characters of a hash of its path, such as `notes-84ec07632af6`.
+
+A plain folder you open gets its folders the same way. `slipbox info` prints the root's two folders.
+
+In a root itself there is only `.slipbox/`, where a root has one. It holds:
+
+- `config.toml`
+- `version`, the version of its format
 
 ### Config
 
-- `config.toml`: your settings.
-- `themes/`: your themes, each a `.yaml` file.
+| File | What it holds |
+| --- | --- |
+| `config.toml` | Your settings |
+| `themes/` | Your themes, each a `.yaml` file |
 
 ### Cache
 
-- `CACHEDIR.TAG`: tells backup tools to skip the folder.
-- `parsed.db`: notes as parsed, by their content, shared by every copy of a folder on the machine.
-- `images/`: pictures fetched from the internet, a file each, and SVG pictures, diagrams and maths as drawn.
-- `<key>/index.json`: the root's links.
-- `<key>/search.db`: the root's search index.
+| File | What it holds |
+| --- | --- |
+| `CACHEDIR.TAG` | It tells backup tools to skip the folder |
+| `parsed.db` | Notes as parsed, by their content, shared by every copy of a folder on the machine |
+| `images/` | Pictures fetched from the internet, a file each, and SVG pictures, diagrams and maths as drawn |
+| `<key>/index.json` | The root's links |
+| `<key>/search.db` | The root's search index |
 
 ### State
 
 For the machine:
 
-- `roots.json`: every root and plain folder seen, and the moves of those that moved.
-- `folders.json`: named folders: their names, copies and defaults.
-- `trust.json`: your answers when asked whether to trust a root.
-- `positions.json`: where you were in each note, the newest 5,000.
-- `autoindex.json` and `activity`: how far the background index has got, and when the command line last ran.
-- `plans/`: plans saved with `--plan`, for `slipbox apply`; each removed once applied.
-- `update.json`: when the update check last asked, and what it found.
+| File | What it holds |
+| --- | --- |
+| `roots.json` | Every root and plain folder seen, and the moves of those that moved |
+| `folders.json` | Named folders: their names, copies and defaults |
+| `trust.json` | Your answers when asked whether to trust a root |
+| `positions.json` | Where you were in each note, the newest 5,000 |
+| `autoindex.json` | How far the background index has got |
+| `activity` | When the command line last ran |
+| `plans/` | Plans saved with `--plan`, for `slipbox apply`. Each is removed once applied |
+| `update.json` | When the update check last asked, and what it found |
 
 For each root, in `<key>/`:
 
-- `session.json`: tabs, splits and panes, the settings changed in the TUI, the notes and commands used lately.
-- `scratch.md`: the scratch, unless `capture.location` puts it in the root.
-- `trash/`: what you deleted, to restore, for 30 days; `trash.json` lists it.
-- `renames.json`: the last 20 renames and moves, to undo.
-- `redirects.json`: moves seen, to repair the links that pointed at the old place.
-- `heads.json`: each branch's last commit seen.
-- `export.json`: where an export last went.
-- `roots.json`: the roots pinned in the explorer (`:pin-root`).
-- `clipboard.txt`: a copy no clipboard could take.
-- `dirty/`: the notes with unsaved changes in a running TUI, so the command line can say a file is out of date.
+| File | What it holds |
+| --- | --- |
+| `session.json` | Tabs, splits and panes, the settings changed in the TUI, the notes and commands used lately |
+| `scratch.md` | The scratch, unless `capture.location` puts it in the root |
+| `trash/` | What you deleted, to restore, for 30 days. `trash.json` lists it |
+| `renames.json` | The last 20 renames and moves, to undo |
+| `redirects.json` | Moves seen, to repair the links that pointed at the old place |
+| `heads.json` | Each branch's last commit seen |
+| `export.json` | Where an export last went |
+| `roots.json` | The roots pinned in the explorer (`:pin-root`) |
+| `clipboard.txt` | A copy no clipboard could take |
+| `dirty/` | The notes with unsaved changes in a running TUI, so the command line can say a file is out of date |
 
 ### Data
 
-- `tools/`: language servers and markdownlint-cli2 installed from npm, each at the version slipbox pins.
-- `spell/words.txt`: your own words.
-- `versions/` and `current`: slipbox itself, when its installer installed it; `channel`, the releases it follows
-  (`slipbox channel`).
+| File | What it holds |
+| --- | --- |
+| `tools/` | Language servers and markdownlint-cli2 installed from npm, each at the version slipbox pins |
+| `spell/words.txt` | Your own words |
+| `versions/`, `current` | slipbox itself, when its installer installed it |
+| `channel` | The releases it follows (`slipbox channel`) |
 
-The cache can be deleted while slipbox isn't running: all of it is rebuilt. The state folder holds what you would
-miss, the scratch and the trash among it. `slipbox uninstall --purge` removes slipbox with all four folders, listing
-every path first ([Installing slipbox](../guides/install.md)).
+The cache can be deleted while slipbox isn't running. All of it is rebuilt.
+
+The state folder holds what you would miss, the scratch and the trash among it.
+
+`slipbox uninstall --purge` removes slipbox with all four folders. It lists every path first
+([Installing slipbox](../guides/install.md)).
