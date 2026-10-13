@@ -16371,6 +16371,18 @@ describe("commands run by your shell (25.7)", () => {
     await h.app.run("shell.stop");
     expect(h.app.messages.at(-1)?.text).toBe("no command running");
   });
+
+  test("typed at the `:` line, :!cmd and :N,M!cmd run as the commands shell.run and shell.filter, as :s and :42 do: the trace of commands run counts them", async () => {
+    const root = vault({ "c6.md": "b\na\n" });
+    const h = await harness({ root, open: "c6.md", width: 120, height: 30 });
+    const ran: string[] = [];
+    const run = h.app.run.bind(h.app);
+    h.app.run = (spec: string) => (ran.push(spec), run(spec));
+    await ex(h, "!true");
+    await ex(h, "1,2!sort");
+    expect(ran.filter((spec) => spec.startsWith("shell."))).toEqual(["shell.run true", "shell.filter 1,2!sort"]);
+    expect(h.app.view!.buf.source).toBe("a\nb\n");
+  });
 });
 
 describe("changes against what's staged, in the gutter (26.1)", () => {
