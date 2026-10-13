@@ -168,6 +168,9 @@ export class VaultFeed {
     const moves = now ? this.o.graph().catchUpWithGit() : [];
     if (!now || !was) return true;
     this.switchedAt = this.o.now();
+    // git's renames are said once the graph has the files they moved: the watcher may be behind (a dropped event,
+    // a slow machine), and what's said invites a relink at once (#40).
+    if (moves.length && was.branch === now.branch) this.o.apply({ changes: [], rescan: true });
     this.o.headMoved?.(was, now, moves);
     return true;
   }

@@ -4,7 +4,8 @@
 // Never written into a file.
 
 import { checkoutOf, headOf } from "./git.ts";
-import { homeFolder, type VaultLocation } from "./vault.ts";
+import { tildePath } from "./paths.ts";
+import type { VaultLocation } from "./vault.ts";
 
 /** The branch checked out at `path` now (a detached head: its commit, short); null outside git. */
 export function branchAt(path: string): string | null {
@@ -24,8 +25,4 @@ export function rootLabel(loc: Pick<VaultLocation, "mode" | "name" | "root" | "w
   return b ? `${loc.name}@${b}` : loc.name;
 }
 
-/** A path as it's shown: `~/…` in the home folder. */
-export function tildePath(abs: string): string {
-  const home = homeFolder();
-  return abs === home ? "~" : abs.startsWith(`${home}/`) ? `~/${abs.slice(home.length + 1)}` : abs;
-}
+export { tildePath };

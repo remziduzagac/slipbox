@@ -189,7 +189,8 @@ the top of the window under them (its breadcrumb, find and replace rows, which s
 newest on top and stacked down, four at most:
 each framed in its level's colour with its glyph first — `✗` error, `!` warning, `·` info (ascii
 `x`, `!`, `-`; an info message that starts with its own symbol, such as `↻`, keeps just that) —
-and wrapped to three rows. Each shows 4 s (8 s an error); the same message again refreshes its box
+and wrapped to three rows. Each shows 4 s (8 s an error) from the frame that first draws it — one said while slipbox
+was busy, a start indexing, isn't gone before it's seen (#40); the same message again refreshes its box
 rather than stacking a second. Clicking one opens the messages list and clears the boxes. Popups
 and questions draw over them. On a screen too small for a box (under 30 columns), a message takes
 over the status line while it shows.
@@ -1476,9 +1477,10 @@ What's on request (the changes, a diff, the worktrees) asks git there and then; 
 asked in the background (D154; § Side panes).
 
 **After a merge or a pull** (`20.21`; D66): HEAD moving on its branch isn't a switch — the tabs stay. Git's renames
-between the two commits are evidence of moves; when there are some, a message says so ("branch main moved on: git moved
-2 files — …"), and each link broken by one says where its file went, in Problems (`space v p`) and when followed;
-`space l r` relinks a note's.
+between the two commits are evidence of moves; when there are some, the folder is read again (the watcher may not have
+brought the merge's files yet, #40) and a message says so ("branch main moved on: git moved 2 files — …"), and each
+link broken by one says where its file went, in Problems (`space v p`) and when followed; `space l r` relinks a
+note's.
 
 A jump to a line inside a rendered paragraph (a diff's line, a conflict, a finding, `:42` and `ctrl+g`) lands on that
 line's text, not the paragraph's first line or its row's end.
