@@ -3134,6 +3134,31 @@ describe("task toggle (ctrl+l, a click on [ ])", () => {
     expect(readFileSync(file, "utf8")).toBe(before);
     expect(h.app.transient!.text).toContain("no task here");
   });
+  test("in source mode and the lens, ctrl+l ticks the task item holding the cursor's line, the innermost", async () => {
+    const { h, file } = await setup();
+    const v = h.app.view!;
+    await h.app.run("view.source");
+    await h.keys("g", "g", "j", "j", "j", "j"); // line 5: the child's second line
+    await h.keys("ctrl+l");
+    expect(readFileSync(file, "utf8")).toBe(note.replace("[x] child", "[ ] child"));
+    expect(h.app.transient!.text).toBe("not done");
+    await h.keys("k", "k"); // line 3: the parent's marker
+    await h.keys("ctrl+l");
+    expect(readFileSync(file, "utf8")).toBe(note.replace("[x] child", "[ ] child").replace("[ ] parent", "[x] parent"));
+    await h.keys("shift+g"); // the plain item: none
+    const before = readFileSync(file, "utf8");
+    await h.keys("ctrl+l");
+    expect(readFileSync(file, "utf8")).toBe(before);
+    expect(h.app.transient!.text).toContain("no task here");
+    // The lens, with unsaved changes: in the text, the file left alone.
+    await h.app.run("view.source");
+    await h.keys("space", "n", "l", "g", "g", "j", "j");
+    expect(v.live).toBe(true);
+    await h.keys("shift+a", "!", "escape", "ctrl+l");
+    expect(v.buf.source).toBe(before.replace("- [x] parent task", "- [ ] parent task!"));
+    expect(h.app.transient!.text).toBe("not done (unsaved)");
+    expect(readFileSync(file, "utf8")).toBe(before);
+  });
   test("a click on the checkbox toggles it; a changed file is reloaded first, not toggled", async () => {
     const { h, file } = await setup();
     const v = h.app.view!;

@@ -76,7 +76,7 @@ import {
   formatFor,
   writeExport,
 } from "../core/export/index.ts";
-import { listTasks, toggleTask } from "../core/tasks.ts";
+import { listTasks, taskHolding, toggleTask } from "../core/tasks.ts";
 import { merge3, unifiedDiff } from "../core/merge.ts";
 import { compilePattern, findAll } from "../core/replace.ts";
 import { planReplace } from "../core/replace-files.ts";
@@ -3802,6 +3802,8 @@ export class App {
     const layout = this.currentLayout(view);
     const src = layout.lines[view.cur.row]?.src;
     if (src === undefined) return null;
+    // Source mode and the lens draw the Markdown, no boxes: the task item holding the cursor's line, from the parse.
+    if (editable(view)) return view.buf.kind.group === "note" ? taskHolding(view.buf.parsed.tree, src) : null;
     for (let r = view.cur.row; r >= 0; r--) {
       for (const s of layout.lines[r]!.spans) if (s.task && src >= s.task.line && src <= s.task.end) return s.task;
     }
