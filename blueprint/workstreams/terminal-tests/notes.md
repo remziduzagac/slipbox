@@ -42,36 +42,96 @@ folded into; none is dropped without saying why.
 
 ### Reading (TT-T3)
 
-- start: home renders; ctrl+q quits cleanly →
-- render: wide tables fit, code blocks, names in their own scripts →
-- hostile names: a bidi override, C1 and an OSC in a file name never reach the terminal →
-- render: a big note parses on other threads, then is drawn; its end, its width changed (15.1) →
-- render: embeds drawn in place — a whole note, a heading's section — their links followed from where they are →
+- start: home renders; ctrl+q quits cleanly → start: the demo vault's home renders; ctrl+q quits cleanly
+- render: wide tables fit, code blocks, names in their own scripts → tables: a wide table fits the window, every row
+  closed by its right border; code blocks and properties: the frontmatter drawn as properties, a fence labelled with its
+  language; width: names in their own scripts — Japanese, Arabic, an emoji — in a table below the embeds
+- hostile names: a bidi override, C1 and an OSC in a file name never reach the terminal → hostile names: a bidi
+  override, C1, ESC and an OSC in file names never reach the terminal (Downloads' hostile names, an OSC one added to the
+  build)
+- render: a big note parses on other threads, then is drawn; its end, its width changed (15.1) → big notes: a 2 MB note
+  parsed on other threads, then drawn; its end and back at once; re-wrapped at another width, still at its end (15.1)
+  (its big note is Downloads/huge-note.md now, no note written)
+- render: embeds drawn in place — a whole note, a heading's section — their links followed from where they are → embeds:
+  a whole note and a heading's section drawn in place; a link in one followed from where it is
 - footnotes: the right panel's second view — space n f, its superscript button under ▤; unfold, jump to a reference →
+  footnotes: space n f opens the right panel's second view, its button under ▤; enter jumps to a reference; space n
+  shift+f adds one; :footnotes toggles
 - trust: a Go file, language servers on — asked once whether you trust the root; y kept across a start; :untrust (23.x)
-  →
-- data files: TOML renders, a value's link followed, the lens edits a key, source mode →
-- data files: CSV and YAML as tables; a JSON file that doesn't parse opens in source mode →
-- code: tree-sitter's outline and breadcrumb, a comment's path:line followed, syntax errors →
-- info: the Info view (the file's), vault info (its own window), reindex, config reload, messages, help →
+  → trust: a project whose own code its tools would run — asked once; y kept across a start; :untrust takes it back
+  (23.x) (kestrel's ESLint config and .vscode/settings.json ask, no gopls needed)
+- data files: TOML renders, a value's link followed, the lens edits a key, source mode → data: TOML — keys lined up, a
+  comment after its value, records as a table; a value's path followed and back; data: the lens edits one key of a TOML
+  file on its own line; space n v shows the source
+- data files: CSV and YAML as tables; a JSON file that doesn't parse opens in source mode → data: CSV as a table — a
+  quoted field with doubled quotes; past 2,000 rows counted, source mode has every line; data: YAML — records as a
+  table; nested maps a tree with guides at every depth, the breadcrumb following; data: JSON — a $ref's pointer followed
+  to the row it names; INI keys lined up, a comment after its value; data: a file that doesn't parse opens in source
+  mode, said why — JSON and TOML alike
+- code: tree-sitter's outline and breadcrumb, a comment's path:line followed, syntax errors → code: Python's outline
+  from its grammar, the breadcrumb inside a method; a comment's path:line followed and back; code: TypeScript's
+  breadcrumb from its grammar; a comment's relative path followed; code: a syntax error counted on the status line,
+  hidden while typing, back after
+- info: the Info view (the file's), vault info (its own window), reindex, config reload, messages, help → info: the Info
+  view — the file's root, properties, backlinks and tags; toggled from the palette; properties: space n shift+p edits
+  the frontmatter's YAML in a floating editor, written back, the Info view updated; info: the vault's info in its own
+  window; reindex said; the config reloaded; messages; help
 - world/content: code in every grammar — Go, Rust, Lua, shell, JavaScript, TSX: outlines, breadcrumbs, a syntax error →
-- world/content: a 4,000-line TypeScript file opens, G reaches its end, keys answer at once →
+  code: Go, Rust, Lua, shell, JavaScript and TSX — each outline from its grammar, the breadcrumb two levels in; code:
+  syntax errors in TypeScript and Go counted on the status line, no server (failing today: code opens in the code view
+  now, not SOURCE — the check's; and the code view's breadcrumb wasn't source mode's (`impl Point`, a function in a
+  function) — slipbox's, fixed)
+- world/content: a 4,000-line TypeScript file opens, G reaches its end, keys answer at once → code: a 4,000-line
+  TypeScript file — its outline found, G at its end, keys answered at once
 - world/content: data beyond halden's — .properties, a jsonc tsconfig, .env, multi-document YAML, big JSON, a file that
-  doesn't parse →
+  doesn't parse → data: Java's .properties — ! comments are comments, a value continued after a backslash one value;
+  multi-document YAML a row each; data: an .env — export prefixes dropped, a quoted value unquoted, its comment after
+  it; data: JSON with comments and trailing commas renders; a 3,000-line lock file's end at once; 290 KB on one line a
+  tree to its last entry; data: a file that doesn't parse opens in source mode, said why — JSON and TOML alike
 - world/content: hostile text in note bodies, a log, data values never reaches the terminal: no title set, no screen
-  cleared →
+  cleared → hostile text: escapes in a note, a log, JSON values and a fixture never reach the terminal — no title set,
+  no screen cleared
 - world/content: wide characters line up — CJK, fullwidth, emoji, flags, combining, Thai, Devanagari, Arabic: tables'
-  borders in one column; l steps a character →
+  borders in one column; l steps a character → width: wide characters line up — CJK, fullwidth, emoji, flags, combining,
+  Thai, Devanagari, Arabic: tables' borders in one column; l steps a character
 - world/content: big content stays responsive — a 2 MB note, the cap's skipped file never searched, a table torture
-  note, a training log →
+  note, a training log → big notes: a 2 MB note parsed on other threads, then drawn; its end and back at once;
+  re-wrapped at another width, still at its end (15.1); big notes: a file over walk.max_file_size listed as skipped in
+  the vault's info, never searched; tables: kestrel's torture note and a training log — every table lines up, page after
+  page, to the end
 - world/content: odd files never hang it — /dev/zero by symlink, an unreadable note; a symlinked note saved through; one
-  out of the root never read →
-- world/content: line endings and a BOM — drawn without stray cells, kept by a save: BOM, CRLF, lone CR →
-- world/content: Japanese edited in source mode — w b e a character each, ciw the run, typed and saved →
+  out of the root never read → odd files: /dev/zero by a symlink and an unreadable note refused, said; a symlink out of
+  the root never opened; the vault's info says why each was left out; odd files: a symlinked note edited and saved —
+  written through to its target, still a symlink
+- world/content: line endings and a BOM — drawn without stray cells, kept by a save: BOM, CRLF, lone CR → line endings:
+  a BOM before the frontmatter, CRLF and lone CRs drawn without stray cells; a save keeps the BOM and every CRLF
+- world/content: Japanese edited in source mode — w b e a character each, ciw the run, typed and saved → unicode:
+  Japanese in source mode — w, b and e a character each, ciw the whole run, typed and saved
 - world/code: the code view — enter on a path in a comment's prose; slipbox's own syntax error on its cell, no server;
-  Obsidian's ==highlight== and %%comment%% (DF-T7) →
+  Obsidian's ==highlight== and %%comment%% (DF-T7) → code view: a comment's prose drawn as text, its path a link enter
+  follows; code view: a syntax error slipbox finds itself, no server — counted, and on its cell's header alone;
+  obsidian: a ==highlight== drawn in its own colour, %%comments%% hidden while reading; both as typed in source mode
 - privacy: a root's .slipbox/config.toml sets render.images_remote = show and update.check — each warned of and ignored;
-  its web picture not fetched, asked about (DF-D1, DF-D23) →
+  its web picture not fetched, asked about (DF-D1, DF-D23) → privacy: a root's config can't set images_remote or
+  update.check — each warned of, ignored; its web picture asked about, not fetched (DF-D1, DF-D23)
+- New, for what no scenario checked (TT-D4): headings: six levels, each its colour and band; setext's two as ATX's; a
+  heading longer than its row wraps, its band on every row; lists: bullets by depth, numbers lined up past 9, tasks
+  ticked or not; an item's code, table and quote hang under it; quotes and callouts: a quote's bar, nested deeper; each
+  callout its icon and title, its list and code inside; lookalikes stay quotes; paragraphs, rules and HTML: soft breaks
+  join, each kind of hard break breaks; --- a rule; HTML blocks as written, dim; each comment hidden, inline HTML's text
+  kept; wrapping: a narrow terminal wraps prose at its spaces, no row past its edge; a no-break space keeps a number
+  with its unit; themes: space u t lists the built-ins and your own, each previewed as the list moves; esc goes back,
+  enter keeps one; :theme names one; colors: [colors] overrides a role in every theme, [colors.nord] under nord alone;
+  glyphs: space u g previews each set; :glyphs ascii draws bullets, boxes, bars, headings and tables in ASCII; unicode
+  again; status line: the mode, the root, the file, its problems, words, the cursor's line and column and how far down;
+  unsaved said; a selection's words; headings: space n h renames the heading the cursor is in — a preview of each link
+  to it, enter, every link rewritten; document types: space f d lists them with their notes; :type adr the ADRs in
+  order, each its status; ] t and [ t step through them; code: beyond the grammars — Java in source mode, no outline; a
+  Dockerfile's stages its outline; a Vue component's parts, each with its definitions; code cells: z a folds one to its
+  header and opens it again; space k y copies its lines, space k s adds it to the scratch, space k e edits it in the
+  lens, space k p its problems; code cells: space k r — where the cell's definition is used, from TypeScript's own
+  server; samples: the agent replay script edits Downloads while it's shown — its note comes and goes in the explorer,
+  the plan beside it untouched
 
 ### Editing (TT-T4)
 
