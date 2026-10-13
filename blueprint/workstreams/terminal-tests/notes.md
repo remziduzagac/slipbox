@@ -75,30 +75,58 @@ folded into; none is dropped without saying why.
 
 ### Editing (TT-T4)
 
-- motions: j k h l, words, row ends, top and bottom, headings, paragraphs, pages →
-- motions: f t ; , on the line →
-- visual: v and V select, o swaps ends, y copies, esc leaves →
-- copy: yy the row, yp the path, yr a reference, yl a link →
-- pinned tabs, save all, the change list, moving lines, the word count →
-- vim's keys and the desktop's: H M L, zz zt zb, ctrl+g and :42, vault search, q and :q, ctrl+z ctrl+y →
-- create: ctrl+n a note, typed and saved; the explorer's N a folder and n a note in it →
-- source mode: i a I A o O type; esc; u, ctrl+r, U; ctrl+s writes →
-- normal mode: x d c y > < D C s S r J p P ~ . and visual d c > < →
-- vim grammar: counts, F, text objects (iW, vi(), *, cgn and ., insert's ctrl+w and ctrl+u →
+Each check named in quotes; "the same" is a check of the scenario's own name. The scenarios' own notes (`m.md`,
+`edit-probe.md`, `desk.md`, `lens-a.md` and the like) gave way to the reference set's: the daily notes of 1 September
+(its "Order of the day"), 17 August, 21 August (nested tasks), 5 October (the vim grammar, the repeat, the lens's
+link), `kestrel-v2-3.md`, `okuma-notlari.md` (its typo), `base.yaml`, `terminal-escapes-in-logs.md`; the demo vault's
+handbook and weekly meeting stayed.
+
+- motions: j k h l, words, row ends, top and bottom, headings, paragraphs, pages → the same
+- motions: f t ; , on the line → "motions: f F t T ; , on the line; % to the matching bracket, in source mode"
+- visual: v and V select, o swaps ends, y copies, esc leaves → the same
+- copy: yy the row, yp the path, yr a reference, yl a link → the same
+- pinned tabs, save all, the change list, moving lines, the word count → "pinned tabs: a link from a pinned tab opens
+  in a new one; close all keeps the pinned", "save all: :wa writes every changed note, on screen or not; the word
+  count follows the typing", "the change list: g ; and g , walk the places changed; g i types where it last stopped",
+  "moving lines: alt+shift+down and up, from the render; V's lines together, one undo step". Its failure (alpha never
+  moved below bravo) was the check's: the line had moved, but line numbers are in the gutter by default now, so
+  `│ bravo` matched no row.
+- vim's keys and the desktop's: H M L, zz zt zb, ctrl+g and :42, vault search, q and :q, ctrl+z ctrl+y → "screen and
+  lines: ctrl+g and :120 go to a line; H M L; zz zt zb move the view, never the cursor", "find: N from the bottom
+  finds the match above; space f g opens a note at a match in the vault", "quitting: q closes a split; on the last
+  window it says ctrl+q, and :q quits"; ctrl+z and ctrl+y folded into "source mode"
+- create: ctrl+n a note, typed and saved; the explorer's N a folder and n a note in it → "create: ctrl+n a note, typed
+  and saved; the explorer's N a folder and n a note in it; :mkdir"
+- source mode: i a I A o O type; esc; u, ctrl+r, U; ctrl+s writes → "source mode: i a I A o O type; esc; u, ctrl+r, U;
+  ctrl+z, ctrl+y; ctrl+s writes"
+- normal mode: x d c y > < D C s S r J p P ~ . and visual d c > < → "normal mode: x d c y > < D C s S r ~ J p P, as vim
+  leaves the text" (its J now joins two lines; the old one ran on the last line, and did nothing), "visual mode in
+  source: V > and V < indent and outdent, V d deletes, v c changes"; `.` is the repeat's and the vim grammar's
+- vim grammar: counts, F, text objects (iW, vi(), *, cgn and ., insert's ctrl+w and ctrl+u → the same, on 5 October's
+  note (what `cgn` types isn't a match itself: a search is case-blind, and `gn` takes the match under the cursor)
 - repeat: . after an o begun in the render opens the same line again; . after a terminal's paste in normal mode puts it
-  again, not the x before →
-- task: ctrl+l ticks a checkbox in the render and writes it →
-- lens: space n l edits in place; esc esc closes it →
+  again, not the x before → the same, its `o` opening the lens first (`edit_in`'s default)
+- task: ctrl+l ticks a checkbox in the render and writes it → "tasks: ctrl+l ticks a checkbox in the render and writes
+  it — the innermost of nested ones; in source mode with unsaved changes, in the text", "tasks: none in a data file —
+  ctrl+l on a `- [ ]` in a YAML string changes nothing". In source mode and the lens, `ctrl+l` said "no task here" on
+  a task's own line: fixed (`taskHolding`, tests/tui.test.ts "in source mode and the lens, ctrl+l ticks…").
+- lens: space n l edits in place; esc esc closes it → "lens: space n l edits in place; + - = its size; esc esc closes
+  it"
 - lens: a link followed from it opens the lens on the new note — its text drawn, typing lands there; ctrl+o back to the
-  first →
-- conflict: an agent writes while you have changes; the prompt; :w! and :e! →
-- save and quit: :wq writes and exits →
-- scratch: add, open, copy, clear; a note's context copied for an agent →
-- hand-off: space n e runs the editor and comes back; send to a remote editor →
+  first → the same, from 5 October's note to the week's review
+- conflict: an agent writes while you have changes; the prompt; :w! and :e! → the same
+- save and quit: :wq writes and exits → the same
+- scratch: add, open, copy, clear; a note's context copied for an agent → "scratch: add, open, copy, clear", "context:
+  a note's context copied for an agent — what it links to, what links to it"
+- hand-off: space n e runs the editor and comes back; send to a remote editor → the same
 - typing: as in a desktop editor — shift+arrows select, typing replaces, ctrl+z and ctrl+y while typing, pagedown;
-  shift+right then d in normal mode (DF-D15) →
+  shift+right then d in normal mode (DF-D15) → the same, on `kestrel-v2-3.md`
 - reload: space n r on a note with unsaved changes, the file as it was — asks to discard; n keeps them, autosave still
-  on; y reloads, u brings them back (DF-D6) →
+  on; y reloads, u brings them back (DF-D6) → the same
+- New, for what no scenario checked: "cut and paste: ctrl+x cuts the cursor's line, ctrl+v puts it under the line
+  the cursor is on", "comments: ctrl+/ comments a line out and back in; g c with a motion; V's lines with g c",
+  "spelling: ] s and [ s go to a misspelt word, z = puts a suggestion in, z g adds it to your words", "safety: a
+  note's control sequences, read, in source mode and edited in the lens, never reach the terminal".
 
 ### Navigating and the terminal (TT-T5)
 
