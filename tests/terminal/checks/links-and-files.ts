@@ -29,6 +29,14 @@ function git(s: Session, repo: string, ...args: string[]): { code: number; out: 
   return { code: r.status ?? -1, out: `${r.stdout}${r.stderr}` };
 }
 
+/** git run as a check expects it to end (`ok`: with 0, else not), git's own words in the failure when it doesn't. */
+function gitOk(s: Session, what: string, ok: boolean, repo: string, ...args: string[]): void {
+  const r = git(s, repo, ...args);
+  if ((r.code === 0) === ok) return;
+  const status = git(s, repo, "status", "--porcelain").out.trim();
+  s.expect(false, `${what} (git ${args.join(" ")}: exit ${r.code})\n${r.out.trim()}\ngit status:\n${status}`);
+}
+
 /** What the explorer shows: each row left of its border, from its title down (empty when it's closed). */
 function explorer(s: Session): string[] {
   const rows = s.screen();
@@ -1664,7 +1672,7 @@ const GIT: Check[] = [
     options: { home: true, startAt: "home/work/kestrel/README.md" },
     run: async (s) => {
       await s.status(/kestrel · main +‹ README\.md/);
-      s.expect(git(s, KESTREL, "checkout", "-q", "jo/release-notes-wording").code === 0, "checkout from outside");
+      gitOk(s, "checkout from outside", true, KESTREL, "checkout", "-q", "jo/release-notes-wording");
       await s.message("switched to branch jo/release-notes-wording", 5000);
       await s.status(/ · jo\/release-notes-wording /);
       await s.ex("e docs/architecture.md");
@@ -1732,7 +1740,7 @@ const GIT: Check[] = [
       await opened(s, "docs/architecture.md");
       await s.status(/L42:/);
       // Merged: git's rename is evidence here — the link says where its file went; space l r fixes it.
-      s.expect(git(s, KESTREL, "merge", "-q", "--no-edit", "refactor/docs-layout").code === 0, "the merge");
+      gitOk(s, "the merge", true, KESTREL, "merge", "-q", "--no-edit", "refactor/docs-layout");
       await s.message("branch main moved on: git moved 1 file", 8000);
       await leader(s, "l", "r");
       await s.see(/relink: \d+ changes? in 1 file/, 5000);
@@ -1772,7 +1780,7 @@ const GIT: Check[] = [
     run: async (s) => {
       const notes = "~/work/kestrel/docs/release-notes/2.3.md";
       // Jo's branch rewords the lines main changed too.
-      s.expect(git(s, KESTREL, "merge", "jo/release-notes-wording").code !== 0, "the merge stops on a conflict");
+      gitOk(s, "the merge stops on a conflict", false, KESTREL, "merge", "jo/release-notes-wording");
       const marker =
         s
           .read(notes)
@@ -1796,13 +1804,13 @@ const GIT: Check[] = [
       await s.keys("k");
       await s.see(/2\.3\.md\s+!\s*[│┃]/, 5000);
       // Aborted: no mark, no Conflicts.
-      s.expect(git(s, KESTREL, "merge", "--abort").code === 0, "git merge --abort");
+      gitOk(s, "git merge --abort", true, KESTREL, "merge", "--abort");
       await s.until(() => s.rowOf(/2\.3\.md\s+[│┃]/) >= 0 && s.rowOf(/2\.3\.md\s+!/) < 0, 6000, "the ! gone");
       await leader(s, "v", "p");
       await s.see(/Broken links \(\d+\)/);
       await s.notSee(/Conflicts/);
       // A rename git knows of: R at its new name.
-      s.expect(git(s, KESTREL, "mv", "docs/glossary.md", "docs/terms.md").code === 0, "git mv");
+      gitOk(s, "git mv", true, KESTREL, "mv", "docs/glossary.md", "docs/terms.md");
       await leader(s, "E");
       await s.see(/terms\.md\s+R\s*[│┃]/, 6000);
     },
@@ -1829,7 +1837,7 @@ const GIT: Check[] = [
       await s.status(/kestrel · main /, 5000);
       // refactor/docs-layout has docs/sync.md under architecture/: architecture.md's links to it break, but a
       // switch's files coming and going aren't moves — nothing to relink.
-      s.expect(git(s, KESTREL, "checkout", "-q", "refactor/docs-layout").code === 0, "checkout refactor/docs-layout");
+      gitOk(s, "checkout refactor/docs-layout", true, KESTREL, "checkout", "-q", "refactor/docs-layout");
       await s.message("switched to branch refactor/docs-layout", 5000);
       await s.status(/ · refactor\/docs-layout +‹ docs\/architecture\.md/);
       s.expect(

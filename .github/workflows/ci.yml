@@ -106,6 +106,10 @@ jobs:
           minimum_release_age: 7d
       - run: bun install --frozen-lockfile
       - name: terminal tests
+        # A runner is slower than the machine a check was written on, the Intel Macs most: each wait gets at least 30 s
+        # (a wait that passes returns at once).
+        env:
+          SLIPBOX_TERMINAL_WAIT: "30000"
         run: bun run test:terminal
 
   # The required check (GR-D9): one name, whichever jobs ran. A job skipped by its `if:` counts as passed; one that

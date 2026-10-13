@@ -25,6 +25,14 @@ export type { StyledRun } from "./terminal.ts";
 export const REPO = join(import.meta.dir, "..", "..");
 export const DEMO = join(REPO, "examples", "vault");
 
+/**
+ * Where a check's folder goes, by its real path: a home reached through a symlink isn't a person's (slipbox resolves
+ * paths, and `~` would never match it). On macOS, /tmp (/private/tmp) rather than the per-user temporary folder
+ * (/private/var/folders/…/T/), a path long enough that messages and lists naming files in it wrap and cut differently
+ * from Linux's.
+ */
+const BASE = realpathSync(process.platform === "darwin" ? "/tmp" : tmpdir());
+
 /** The size a check's terminal has unless it asks for another: the size today's scenarios were written at. */
 export const SIZE = { cols: 236, rows: 85 };
 
@@ -78,9 +86,7 @@ export class Session {
   readonly term: HeadlessTerminal;
 
   constructor(readonly opts: SessionOptions = {}) {
-    // Its real path: macOS's temporary folder is a symlink (/var → /private/var), and a home reached through one isn't
-    // a person's — slipbox resolves paths, and `~` would never match.
-    this.dir = realpathSync(mkdtempSync(join(tmpdir(), "slipbox-terminal-")));
+    this.dir = realpathSync(mkdtempSync(join(BASE, "slipbox-terminal-")));
     this.vault = join(this.dir, "vault");
     this.home = join(this.dir, "home");
     // The reference set puts halden beside it as vault/ itself.
