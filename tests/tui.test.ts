@@ -35,6 +35,7 @@ import type { NvimServer } from "../src/core/nvim.ts";
 import { TextCanvas } from "../src/tui/canvas.ts";
 import { match, rank } from "../src/tui/match.ts";
 import { graphemes, setWidthMethod, stringWidth, type WidthMethod } from "../src/core/width.ts";
+import { glyphsFor } from "../src/core/glyphs.ts";
 import { crumbLayout } from "../src/tui/draw.ts";
 import { A_BOLD, A_DIM, type Layout, type Line, srcAt } from "../src/core/layout/ir.ts";
 import { codeKind } from "../src/core/syntax.ts";
@@ -236,6 +237,13 @@ describe("widths as OpenTUI draws them", () => {
       }
     }
     expect(seen.size).toBeGreaterThan(500);
+    // And what slipbox draws of its own: every glyph of every set (a callout's icon, a bullet, a border).
+    const own = (v: unknown): void => {
+      if (v && typeof v === "object") for (const x of Object.values(v)) own(x);
+      else if (typeof v === "string")
+        for (const g of graphemes(v)) if (g.length > 1 || g.charCodeAt(0) > 0x7e) seen.add(g);
+    };
+    for (const mode of ["unicode", "nerd", "ascii"]) own(glyphsFor(mode));
     // Clusters where the two counts part (a conjunct's parts, a flag's letters), whatever the corpus
     // holds. Not Bengali's reph (র্গা): OpenTUI's table has it 1, Bun's 2 — slipbox counts Bun's.
     for (const t of ["हिन्दी", "नमस्ते", "क्ष", "ஸ்ரீ", "ཀྱི", "각", "1️⃣", "🇩🇪", "✔️"]) for (const g of graphemes(t)) seen.add(g);
