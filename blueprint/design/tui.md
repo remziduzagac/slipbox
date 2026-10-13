@@ -155,7 +155,8 @@ the note's words (`1,234 words`; the selection's in visual mode, `12 words selec
 not counted, each Han or kana character a word; dropped first when short of room), then
 `tab N/M` when there are two or more tabs, then `L<source line>:<column>` and the percentage (`all`
 when the note fits), which always shows — the source line of the text under the cursor (a rendered paragraph's row
-holds several). Find's progress is in its window's find row, not here.
+holds several), and its column in the row's own text: the lens's counters and a code cell's border and padding before
+it aren't text, so they aren't counted. Find's progress is in its window's find row, not here.
 
 **Find** (`/`, `ctrl+f`) belongs to a window, so it's typed there: a row of its own under the
 breadcrumb (or at the window's top when there's none), `› query` with the match count at its right

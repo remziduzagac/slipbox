@@ -2929,6 +2929,54 @@ describe("the lens (live preview: space n l, i/a/o with edit_in = live)", () => 
     expect(rows().join("\n")).not.toContain("beta");
     expect(rows().join("\n")).toContain("AAAA text of alpha.");
   });
+  test("a in the render, edit_in = live from a config file: the lens, a again types after the cursor, esc esc back to the render; space n l; the status line's column the text's, not counting the counters (#26)", async () => {
+    const { loadConfig } = await import("../src/core/config.ts");
+    const root = makeVault();
+    writeFileSync(join(root, "a.md"), "# Alpha\n\nSee [b](b.md) here.\n\nAAAA text of alpha.\n");
+    // The setting as a user's own file says it, read as the app reads it.
+    const file = join(root, "user.toml");
+    writeFileSync(file, '[editor]\n# i, a, o… from a rendered window: the lens\nedit_in = "live"\n');
+    const loaded = loadConfig({ configFile: file });
+    expect(loaded.warnings).toEqual([]);
+    const open = (config?: (c: Config) => void) => harness({ root, open: "a.md", width: 100, height: 30, config });
+    const h = await open((c) => Object.assign(c.editor, loaded.config.editor));
+    const v = h.app.view!;
+    const rows = () => h.app.currentLayout(v).lines.map((l) => lineText(l).trimEnd());
+    const status = () => statusRow(h.frame());
+    h.app.moveCursor(v, { row: rows().findIndex((t) => t.startsWith("See b here.")), col: 0 });
+    expect(status()).toMatch(/ READ .* L3:1 /);
+    // a: the lens on the cursor's block, not source mode; the cursor on the same character, the column the text's.
+    await h.keys("a");
+    expect([v.live, v.source, !!v.insert]).toEqual([true, false, false]);
+    expect(status()).toMatch(/ LENS .* L3:1 /);
+    await h.keys("f", "b");
+    expect(status()).toMatch(/ L3:6 /); // the b of [b]: its sixth column, the counters' four not counted
+    // a again types after the cursor, in the note.
+    await h.keys("a", "X");
+    expect(v.insert).toBe(true);
+    expect(status()).toMatch(/ INSERT .* L3:8 /); // after the X typed after the b
+    expect(v.buf.source).toBe("# Alpha\n\nSee [bX](b.md) here.\n\nAAAA text of alpha.\n");
+    expect(rows()).toContain("See [bX](b.md) here."); // drawn as typed, in the lens
+    // esc leaves typing, the lens still open; esc again: the render.
+    await h.keys("escape");
+    expect([v.live, !!v.insert]).toEqual([true, false]);
+    expect(status()).toMatch(/ LENS .* L3:7 /); // back onto the X
+    await h.keys("escape");
+    expect([v.live, v.source]).toEqual([false, false]);
+    expect(status()).toContain(" READ ");
+    expect(rows()).toContain("See bX here.");
+    // space n l opens it too, on the same line.
+    await h.keys("space", "n", "l");
+    expect(v.live).toBe(true);
+    expect(status()).toMatch(/ LENS .* L3:\d+ /);
+    // Without the setting, the default ("source", as the manual says): a switches to source mode and types at once.
+    const d = await open();
+    const dv = d.app.view!;
+    const see = d.app.currentLayout(dv).lines.findIndex((l) => lineText(l).startsWith("See"));
+    d.app.moveCursor(dv, { row: see, col: 0 });
+    await d.keys("a");
+    expect([dv.source, dv.live, dv.insert]).toEqual([true, false, true]);
+  });
 });
 
 describe("source mode (space n v)", () => {
@@ -6980,6 +7028,9 @@ describe("code as a notebook (24.x, 24.13)", () => {
     expect(r[i]).toMatch(/^│ {3}const hit = byName\.get\(normKey\(target\)\)$/);
     expect(r[i + 1]).toMatch(/^│ {7}\?\? byPath\.get\(join\(from, target\)\)$/);
     const layout = h.app.currentLayout(v);
+    // The status line's column is the file's: on `const`, its column in its line, the cell's border and padding not counted.
+    h.app.moveCursor(v, { row: i, col: r[i]!.indexOf("const") });
+    expect(statusRow(h.frame())).toContain(` L13:${v.buf.lines()[12]!.indexOf("const") + 1} `);
     const row = layout.lines.findIndex((l) => l.src === 13) + 1;
     const line13 = v.buf.lines()[12]!;
     const col = [...layout.lines[row]!.spans.map((sp) => sp.text).join("")].join("").indexOf("??");

@@ -2786,9 +2786,11 @@ function drawStatus(app: App, c: Canvas, band: Band, geo: Geometry): void {
     shownTotal <= view.height ? "all" : `${Math.round((shownTop / Math.max(1, shownTotal - view.height)) * 100)}%`;
   const cursorRow = layout.lines[view.cur.row];
   const src = cursorRow ? srcAt(cursorRow, view.cur.col) : 1;
+  // The column in the row's own text: the lens's counters before it, or a code cell's border and padding, aren't text.
+  const col = Math.max(0, view.cur.col - (cursorRow?.text?.[0] ?? 0)) + 1;
   // The right side: the position always; the tab count and the link under the cursor only while
   // the path keeps a readable width (the link goes first, then the tab count).
-  const pos = `L${src}:${view.cur.col + 1} ${pct}`;
+  const pos = `L${src}:${col} ${pct}`;
   // Words: the note's, or the selection's in visual mode; dropped first when room is short.
   const n = view.visual ? countWords(app.selectionText(view)) : buf.words();
   const words = `${n.toLocaleString("en")} word${n === 1 ? "" : "s"}${view.visual ? " selected" : ""}  `;
