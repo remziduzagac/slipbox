@@ -227,8 +227,10 @@ folders.
 **The docs' screenshots** (DF-D19): `tests/e2e/shots.ts` drives slipbox in a herdr pane sized 120×34, as the terminal
 tests do, on the reference set or the getting-started guide's own folder, and `scripts/screenshot.ts` draws each
 screen, read with its colours, into `docs/images/<name>.png` (DejaVu Sans Mono, DejaVu Sans for the symbols it lacks;
-the Unicode glyph set). Retaken in one run when the UI changes: `bun tests/e2e/shots.ts --pane <id>`, the pane at a
-shell prompt; a name filter after it retakes only those.
+the Unicode glyph set). A picture is in the pane's text only as Kitty's placeholder cells: a shot names the pictures on
+its screen, and each is drawn over its cells as the terminal draws it, fitted to its box and clipped to the rows shown;
+placeholders with no picture named are left blank. Retaken in one run when the UI changes: `bun tests/e2e/shots.ts
+--pane <id>`, the pane at a shell prompt; a name filter after it retakes only those.
 
 ## Timings (`bun scripts/bench.ts`)
 
