@@ -1534,7 +1534,7 @@ export const READING: Check[] = [
       // In the scratch, with its path and lines, for an agent.
       await leader(s, "k", "s");
       await s.message(`badge — lines ${badge}–${end} added to the scratch`);
-      // Shown at once, floating (#43), typing what to do (D229); esc then q, back at the cell.
+      // Shown at once, floating (#43), typing a note (D229); esc then q, back at the cell.
       await s.see(SCRATCH_FLOATING);
       await s.keys("escape", "q");
       await s.notSee(SCRATCH_FLOATING);

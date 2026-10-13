@@ -1,11 +1,11 @@
 // Scratch capture (plan 8.x) — the accumulator from prompt-buffer.lua, CLI-shaped so nvim, agents
 // and scripts share one entry point (8.1). Markdown in, markdown out: each entry carries its
-// source reference, and the file is readable and pasteable as-is (8.4). An entry says what it's for
-// and what to do about it, a rule between it and the one before (D229):
+// source reference, and the file is readable and pasteable as-is (8.4). An entry says the place it's
+// at and your note on it, a rule between it and the one before (D229):
 //
-//   **For:** `notes/coffee.md:5`
+//   **At:** `notes/coffee.md:5`
 //
-//   **Do:** check the ratio
+//   **Note:** check the ratio for the small pot
 //
 //   ---
 //
@@ -143,13 +143,13 @@ export interface CaptureInput {
   /** Fence language override; default from the file extension. */
   lang?: string;
   cwd?: string;
-  /** An entry with a reference and no text ends with its ask, empty, for the TUI's cursor to type what to do (D229). */
+  /** An entry with a reference and no text ends on its note, empty: the TUI's cursor types it (D229). */
   ask?: boolean;
 }
 
-/** What an entry is about, and what's to be done about it: the labels of its reference and its text (D229). */
-export const FOR = "**For:**";
-export const ASK = "**Do:**";
+/** The labels of an entry's reference and its text: the place it's at, and your note on it (D229). */
+export const AT = "**At:**";
+export const NOTE = "**Note:**";
 
 /** Build the markdown block for one entry. Pure apart from reading the snippet file. */
 export function formatEntry(input: CaptureInput, project: string): string {
@@ -159,7 +159,7 @@ export function formatEntry(input: CaptureInput, project: string): string {
     const abs = isAbsolute(input.ref.path) ? input.ref.path : resolve(cwd, input.ref.path);
     const rel = relative(project, abs);
     const shown = rel && !climbsOut(rel) ? rel : abs;
-    parts.push(`${FOR} ${formatRef({ ...input.ref, path: shown })}`);
+    parts.push(`${AT} ${formatRef({ ...input.ref, path: shown })}`);
     if (input.snippet || input.snippetText !== undefined) {
       let body = input.snippetText;
       if (body === undefined) {
@@ -177,11 +177,11 @@ export function formatEntry(input: CaptureInput, project: string): string {
   }
   if (input.text?.trim()) {
     const text = sanitize(input.text).replace(/\s+$/, "");
-    parts.push(input.ref ? `${ASK} ${text}` : text);
+    parts.push(input.ref ? `${NOTE} ${text}` : text);
   } else if (!input.ref && input.snippetText) {
     parts.push(fence(sanitize(input.snippetText), input.lang ?? ""));
   } else if (input.ref && input.ask) {
-    parts.push(`${ASK} `);
+    parts.push(`${NOTE} `);
   }
   return parts.join("\n\n");
 }
@@ -205,17 +205,17 @@ export function readScratch(loc: ScratchLocation): string {
 /** The scratch ends on a rule already: none goes before the next entry. */
 const ENDS_ON_RULE = /(?:^|\n) {0,3}(?:-{3,}|\*{3,}|_{3,})\s*$/;
 
-/** An ask left empty, and the blank line before it: a capture closed with nothing said about it (D229). */
-const EMPTY_ASK = /\n*(?:^|\n)\*\*Do:\*\*[ \t]*(?=\n|$)/g;
+/** A note left empty, and the blank line before it: a capture closed with nothing said about it (D229). */
+const EMPTY_ASK = /\n*(?:^|\n)\*\*Note:\*\*[ \t]*(?=\n|$)/g;
 
-/** The scratch without its empty asks. */
+/** The scratch without its empty notes (each an ask: the slot for yours). */
 export function dropEmptyAsks(text: string): string {
   return text.replace(EMPTY_ASK, "");
 }
 
 /**
  * Append an entry atomically: after a blank line, and a rule when there's something before it (D229) — never right
- * under a line of text, where `---` would make that line a heading. `tidy` drops the empty asks before it: the TUI's,
+ * under a line of text, where `---` would make that line a heading. `tidy` drops the empty notes before it: the TUI's,
  * never another program's (its cursor may be on one). Returns the new content.
  */
 export function appendScratch(loc: ScratchLocation, entry: string, tidy = false): string {

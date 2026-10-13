@@ -4886,7 +4886,7 @@ describe("scratch (space s)", () => {
   /** The line the window's cursor is on, from 1. */
   const lineAt = (h: Harness, v = h.app.view!) => lineOf(v, offsetOf(h.app, v));
 
-  test("add the cursor row reference, add a selection: each shown floating, typing after its ask; esc then q back, an ask left empty dropped; open, copy (#43, D229)", async () => {
+  test("add the cursor row reference, add a selection: each shown floating, typing its note; esc then q back, a note left empty dropped; open, copy (#43, D229)", async () => {
     const h = await harness({ open: "notes/alpha.md" });
     const path = h.app.scratch().path;
     await h.keys("space", "s", "a");
@@ -4894,22 +4894,22 @@ describe("scratch (space s)", () => {
     expect(at()).toEqual(["scratch", "scratch", 3, true]);
     await h.keys("f", "i", "x", "escape", "q");
     expect([h.app.floating, h.app.view!.buf.key]).toEqual([null, "notes/alpha.md"]);
-    expect(readFileSync(path, "utf8")).toBe("**For:** `notes/alpha.md:1`\n\n**Do:** fix\n");
+    expect(readFileSync(path, "utf8")).toBe("**At:** `notes/alpha.md:1`\n\n**Note:** fix\n");
     h.app.moveCursor(h.app.view!, { row: rowStarting(h, "Back to"), col: 0 });
     await h.keys("v", "e", "space", "s", "a");
     expect(readFileSync(path, "utf8")).toEndWith(
-      "\n\n---\n\n**For:** `notes/alpha.md:9`\n\n```\nBack\n```\n\n**Do:** \n",
+      "\n\n---\n\n**At:** `notes/alpha.md:9`\n\n```\nBack\n```\n\n**Note:** \n",
     );
     expect(at()).toEqual(["scratch", "scratch", 13, true]);
-    // Copied with nothing said yet: the empty ask isn't in it.
+    // Copied with nothing said yet: the empty note isn't in it.
     await h.keys("escape", "space", "s", "y");
     expect(h.copied.at(-1)).toEndWith("```\nBack\n```\n");
-    // Nothing said: esc (out of typing, then the scratch), and the ask goes.
+    // Nothing said: esc (out of typing, then the scratch), and the empty note goes.
     await h.keys("escape");
     expect([h.app.floating, h.app.view!.buf.key]).toEqual([null, "notes/alpha.md"]);
     const text = readFileSync(path, "utf8");
     expect(text).toBe(
-      "**For:** `notes/alpha.md:1`\n\n**Do:** fix\n\n---\n\n**For:** `notes/alpha.md:9`\n\n```\nBack\n```\n",
+      "**At:** `notes/alpha.md:1`\n\n**Note:** fix\n\n---\n\n**At:** `notes/alpha.md:9`\n\n```\nBack\n```\n",
     );
     await h.keys("space", "s", "s");
     expect([h.app.floating?.kind, h.app.displayName(h.app.view!.buf)]).toEqual(["scratch", "scratch"]);
@@ -4979,17 +4979,17 @@ describe("scratch (space s)", () => {
     await h.keys("space", "s", "a");
     expect([h.app.floating?.kind, status()]).toEqual(["scratch", expect.stringMatching(/^ INSERT /)]);
     // One message, saying how to go on: not the lens's own.
-    expect(h.app.toasts.map((m) => m.text)).toEqual(["added to the scratch; say what to do, esc then q closes it"]);
+    expect(h.app.toasts.map((m) => m.text)).toEqual(["added to the scratch; add a note, esc then q closes it"]);
     await h.keys("d", "o", "escape");
     expect([h.app.floating?.kind, status()]).toEqual(["scratch", expect.stringMatching(/^ LENS /)]);
     await h.keys("q");
     expect([h.app.floating, readFileSync(h.app.scratch().path, "utf8")]).toEqual([
       null,
-      "**For:** `notes/alpha.md:1`\n\n**Do:** do\n",
+      "**At:** `notes/alpha.md:1`\n\n**Note:** do\n",
     ]);
   });
 
-  test("[capture] open_in = right: the scratch on the right; a capture goes to it, typing after its ask; q closes it, saved, an empty ask dropped; space s r; the UI settings switch it, kept (#43, D229)", async () => {
+  test("[capture] open_in = right: the scratch on the right; a capture goes to it, typing its note; q closes it, saved, an empty note dropped; space s r; the UI settings switch it, kept (#43, D229)", async () => {
     const root = makeVault();
     const h = await harness({
       root,
@@ -5006,7 +5006,7 @@ describe("scratch (space s)", () => {
     await h.keys("space", "s", "s");
     expect([h.app.floating, t.views.length, t.orientation, t.active]).toEqual([null, 2, "side", 1]);
     expect(h.app.displayName(h.app.view!.buf)).toBe("scratch");
-    // From the note beside it: the cursor goes to the entry on the right, typing after its ask, in sight.
+    // From the note beside it: the cursor goes to the entry on the right, typing its note, in sight.
     t.active = 0;
     await h.keys("space", "s", "a");
     expect([h.app.floating, t.active, lineAt(h), h.app.view!.insert]).toEqual([null, 1, 85, true]);
@@ -5016,17 +5016,17 @@ describe("scratch (space s)", () => {
     t.active = 0;
     await h.keys("j", "space", "s", "a");
     expect([t.active, lineAt(h)]).toEqual([1, 91]);
-    // Nothing said, and another: the ask left empty goes as it's added.
+    // Nothing said, and another: the note left empty goes as it's added.
     await h.keys("escape");
     t.active = 0;
     await h.keys("space", "s", "a");
-    expect(readFileSync(path, "utf8").match(/\*\*Do:\*\*.*/g)).toEqual(["**Do:** why", "**Do:** "]);
-    // Closed with q, nothing said this time either: that ask goes too, the rest saved.
+    expect(readFileSync(path, "utf8").match(/\*\*Note:\*\*.*/g)).toEqual(["**Note:** why", "**Note:** "]);
+    // Closed with q, nothing said this time either: that note goes too, the rest saved.
     await h.keys("escape", "q");
     expect([t.views.length, h.app.view!.buf.key]).toEqual([1, "notes/alpha.md"]);
-    const entry = "\\*\\*For:\\*\\* `notes\\/alpha\\.md:\\d+`\\n";
+    const entry = "\\*\\*At:\\*\\* `notes\\/alpha\\.md:\\d+`\\n";
     expect(readFileSync(path, "utf8")).toMatch(
-      new RegExp(`\\n\\*\\*Do:\\*\\* why\\n\\n---\\n\\n${entry}\\n---\\n\\n${entry}$`),
+      new RegExp(`\\n\\*\\*Note:\\*\\* why\\n\\n---\\n\\n${entry}\\n---\\n\\n${entry}$`),
     );
     // The UI settings: floating now, kept from one start to the next; space s r, on the right all the same.
     await h.keys("space", "u", "u");
@@ -7061,15 +7061,15 @@ describe("code as a notebook (24.x, 24.13)", () => {
     // ◎: the scratch, with its path and lines.
     click(h, hot(h, "cell:scratch:4")!);
     expect(h.app.messages.at(-1)!.text).toBe(
-      "resolve — lines 4–15 added to the scratch; say what to do, esc then q closes it",
+      "resolve — lines 4–15 added to the scratch; add a note, esc then q closes it",
     );
     expect(readFileSync(h.app.scratch().path, "utf8")).toContain("sample.ts:4-15");
-    // Shown in the scratch, floating, typing after its ask (#43, D229); esc then q, back at the cell.
+    // Shown in the scratch, floating, typing its note (#43, D229); esc then q, back at the cell.
     expect([
       h.app.floating?.kind,
       h.app.view!.insert,
       h.app.view!.buf.source.split("\n")[lineOf(h.app.view!, offsetOf(h.app, h.app.view!)) - 1],
-    ]).toEqual(["scratch", true, "**Do:** "]);
+    ]).toEqual(["scratch", true, "**Note:** "]);
     await h.keys("escape", "q");
     expect(h.app.floating).toBeNull();
     // ⚠: a problem in it — counted on its header, the panel on it.

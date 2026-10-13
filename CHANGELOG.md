@@ -17,9 +17,9 @@ The format is [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.1.0/); wh
 - The scratch opens in a window floating in the middle of the screen, not as a tab, rendered and edited as any note is.
   `q` closes it, back where you were, what you typed saved; `esc` leaves typing and the lens first, then closes it.
   It opens when it's empty too.
-- Adding to the scratch (`space s a`) opens it ready to type what to do about it: each entry is `**For:**` the place,
-  then `**Do:**` with the cursor after it, and a rule between entries. `esc` then `q` takes you back; a `**Do:**` left
-  empty is dropped. `slipbox capture` with `--ref` writes the same shape, its text after `**Do:**`.
+- Adding to the scratch (`space s a`) opens it ready to type a note about what you added: each entry is `**At:**`
+  the place, then `**Note:**` with the cursor after it, and a rule between entries. `esc` then `q` takes you back; a
+  `**Note:**` left empty is dropped. `slipbox capture` with `--ref` writes the same shape, its text after `**Note:**`.
 
 ## [0.2.2] - 2026-10-13
 

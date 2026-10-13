@@ -3426,10 +3426,7 @@ export class App {
             this.loc.root,
           ),
         );
-        return this.message(
-          "info",
-          `${cell.title} — ${lines} added to the scratch; say what to do, esc then q closes it`,
-        );
+        return this.message("info", `${cell.title} — ${lines} added to the scratch; add a note, esc then q closes it`);
     }
   }
 
@@ -9714,17 +9711,17 @@ export class App {
       open.load();
       for (const v of this.allViews()) if (v.buf === open) v.layoutKey = "";
     }
-    // The scratch opened on the entry (#43), typing after its ask (D229): what to do about it, said at once.
+    // The scratch opened on the entry (#43), typing after its **Note:** (D229): a word about it said at once.
     const at = text.length - 1;
     this.openScratch(undefined, at);
     const v = this.floating?.kind === "scratch" ? this.floating.view : this.tabView;
     if (v?.buf.abs !== loc.path) return;
     if (!editable(v)) this.setViewMode(v, this.editMode(v)); // the lens opened on the entry, or the source
     startInsert(this, v, () => at);
-    this.message("info", "added to the scratch; say what to do, esc then q closes it");
+    this.message("info", "added to the scratch; add a note, esc then q closes it");
   }
 
-  /** The scratch's empty asks dropped as it closes (D229): a capture with nothing said about it is its reference. */
+  /** The scratch's empty notes dropped as it closes (D229): a capture with nothing said about it is its reference. */
   tidyScratch(buf: NoteBuffer): void {
     const next = dropEmptyAsks(buf.source);
     if (next !== buf.source) buf.edit(0, buf.source.length, next);

@@ -460,16 +460,16 @@ lens as it always does, then closes the scratch. It opens when it's empty too. W
 Scratch opens in the [UI settings](screen.md#ui-settings), it opens in the window on the right instead, beside your
 note; `ctrl+w w` goes back and forth.
 
-Each time you add to it, it opens on what you added, ready for you to type what to do about it:
+Each time you add to it, it opens on what you added, ready for you to type a note about it:
 
 ````markdown
-**For:** `ideas/coffee.md:5`
+**At:** `ideas/coffee.md:5`
 
-**Do:** check the ratio for the small pot
+**Note:** check the ratio for the small pot
 
 ---
 
-**For:** `ideas/coffee.md:3-5`
+**At:** `ideas/coffee.md:3-5`
 
 ```markdown
 ## Brewing
@@ -477,18 +477,18 @@ Each time you add to it, it opens on what you added, ready for you to type what 
 A ratio of 1 to 16 suits a pour-over.
 ```
 
-**Do:** ▌
+**Note:** ▌
 ````
 
-`esc` then `q` takes you back to the note. Close it without typing and the empty **Do:** goes, so you can add a few
-places quickly and say what to do once, at the last. A line divides each entry from the one before.
+`esc` then `q` takes you back to the note. Close it without typing and the empty **Note:** goes, so you can add a few
+places quickly and write one note, at the last. A line divides each entry from the one before.
 
 Other programs add to it with `slipbox capture`, which is how your editor or an agent puts things there:
 
 ```bash
 slipbox capture 'check the grind size'            # a line of text
 slipbox capture --ref ideas/coffee.md:12-18       # a reference
-slipbox capture --ref ideas/coffee.md:5 'check it'   # a reference, and what to do about it
+slipbox capture --ref ideas/coffee.md:5 'check it'   # a reference, and a note on it
 slipbox capture --snippet --ref ideas/coffee.md:12-18   # the reference and its lines
 slipbox scratch show                              # what it holds; also: path, copy, clear
 ```
