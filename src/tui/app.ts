@@ -2129,6 +2129,8 @@ export class App {
   gitFolders = new Map<string, GitState>();
   private gitTimer: ReturnType<typeof setTimeout> | null = null;
   private gitAsking: Promise<void> | null = null;
+  /** The question asked again once the one out is answered: what changed since it was asked is in its answer. */
+  private gitAgain: Promise<void> | null = null;
 
   /** Ask git again, a moment from now (many changes, one question). */
   refreshGit(): void {
@@ -2142,7 +2144,17 @@ export class App {
 
   /** Ask git now: each file's state, by vault path, and each folder's. */
   refreshGitNow(): Promise<void> {
-    if (this.gitAsking) return this.gitAsking;
+    // A question already out was asked before whatever changed now (a stage, a commit): its answer may not have it,
+    // so git is asked again once it's in — once, for every call meanwhile.
+    if (this.gitAsking) {
+      this.gitAgain ??= this.gitAsking
+        .catch(() => undefined)
+        .then(() => {
+          this.gitAgain = null;
+          return this.refreshGitNow();
+        });
+      return this.gitAgain;
+    }
     const c = this.checkout;
     const root = this.loc.root;
     if (!c) {

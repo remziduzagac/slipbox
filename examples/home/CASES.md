@@ -1527,6 +1527,8 @@ build (`scripts/build-home.ts`), not kept as they are. Each file's purpose and t
   explorer — `hobbies/cooking/Home.md`, `notes/index.md` (tui.md A git repository is a vault 20.3, 21.1)
 - launcher: slipbox on plain folder shows the named folders, seen last first; plain folder explorer with ..; \~ and /
   one level at a time — `Downloads/stray-note.md`, `notes/index.md` (The launcher 17.14, 20.22, 21.10)
+- a plain folder opened is walked as a root is: a note in a folder of it found by search, by its path from the folder
+  — `Downloads/old-blog-export/README.md` (20.22)
 - background auto-index of home folder, idle only, resumable, daily — `Downloads/notes-backup-2026-07/index.md`,
   `notes/index.md` (The background auto-index 20.9)
 - folders list: each named folder once (its worktrees are branches, not copies), the copy its links open, seen last

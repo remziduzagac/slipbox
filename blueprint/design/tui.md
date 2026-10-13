@@ -561,7 +561,8 @@ keys.
   git checkout each changed file has its state at its row's end — `M` modified, `+` new (untracked or added), `R`
   renamed, `!` in a merge's conflict (`git_modified`, `git_new`, `git_conflict`) — and a folder with one in it a `•`.
   git is asked in the background, a moment after anything changed (a save, the watcher, a file operation, a branch
-  switch, a switch of roots — which drops the old root's marks at once).
+  switch, a switch of roots — which drops the old root's marks at once); asked while a question is still out, it's
+  asked again once that one's answered, so a stage or a commit is never answered by a question from before it.
 - **History (left, `◷`, `space h h`):** the active window's timeline, newest first: each place's
   note name and line, the current one marked `here` and selected when the view opens. A click
   selects an entry; `enter` or a double-click jumps there, the places before it becoming back and
