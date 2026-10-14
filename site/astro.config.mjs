@@ -17,8 +17,9 @@ export default defineConfig({
   integrations: [
     starlight({
       title: "slipbox",
-      logo: { src: "./public/favicon.svg" },
-      favicon: "/favicon.svg",
+      // The README's logo, which the gathering copies here.
+      logo: { src: "./public/logo.svg" },
+      favicon: "/logo.svg",
       description: "The terminal companion for coding agents: read, review and edit what your agent writes.",
       social: [{ icon: "github", label: "GitHub", href: "https://github.com/remziduzagac/slipbox" }],
       // Each gathered page carries its own edit link, to its file in docs/ (its frontmatter's editUrl).
