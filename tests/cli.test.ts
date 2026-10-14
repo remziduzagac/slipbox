@@ -2390,7 +2390,7 @@ describe("the launcher (scripts/install-local.sh)", () => {
 });
 
 describe("the compiled binary", () => {
-  test("runs nothing of the folder it's started in (no bunfig.toml preload, no .env); its SQLite works", () => {
+  test("runs nothing of the folder it's started in (no bunfig.toml preload, no .env); its SQLite works; its workers start", () => {
     const dir = mkdtempSync(join(sandbox, "compiled-"));
     const bin = join(dir, "slipbox");
     // Built by package.json's own build script, its output moved here: what a release would ship.
@@ -2428,6 +2428,14 @@ describe("the compiled binary", () => {
     const found = run(["search", "zorvexian"]);
     expect(found.exitCode).toBe(0);
     expect(JSON.parse(found.stdout.toString()).data.hits.map((h: { path: string }) => h.path)).toEqual(["a.md"]);
+    // Its spell checker's thread (D232): a worker's script the binary has as an entry point of its own — the dictionary
+    // embedded in it built there, a word checked and its suggestions asked.
+    writeFileSync(join(root, "b.md"), "We recieve it.\n"); // typos: ignore-line
+    const spelt = run(["spell", "b.md", "--suggest"]);
+    expect(new TextDecoder().decode(spelt.stderr)).toBe("");
+    expect(JSON.parse(spelt.stdout.toString())).toMatchObject({
+      data: { words: [{ word: "recieve", suggestions: expect.arrayContaining(["receive"]) }] }, // typos: ignore-line
+    });
   }, 120_000);
 });
 

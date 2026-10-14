@@ -528,6 +528,9 @@ checked in `spell.languages` (English by default).
 slipbox uses Hunspell dictionaries, the ones LibreOffice and most systems have. It brings its own for English and
 Turkish. The words you add count in every language.
 
+The dictionaries load in the background the first time a note needs them, and slipbox answers your keys meanwhile.
+The marks come once they're loaded, and a word you've just typed is marked a moment after you type it.
+
 [Spelling dictionaries](configuration.md#spelling-dictionaries) says:
 
 - where slipbox looks for a language's dictionary

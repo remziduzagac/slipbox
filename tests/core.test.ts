@@ -1149,7 +1149,6 @@ describe("lazy loading (16.6)", () => {
     let calls = 0;
     const loader = async () => {
       calls++;
-      await Bun.sleep(10);
       return { answer: 42 };
     };
     expect(lazy(name, loader)).toBeNull();
@@ -3844,7 +3843,7 @@ describe("spelling (25.6)", () => {
   });
 
   test("a dictionary in another encoding is read as UTF-8; one in UTF-8 as it is", async () => {
-    const { asUtf8, openSpeller } = await import("../src/core/spell.ts");
+    const { asUtf8, openSpeller } = await import("../src/core/hunspell.ts");
     const latin = (s: string) =>
       Uint8Array.from([...s].map((c) => (c === "ı" ? 0xfd : c === "ş" ? 0xfe : c.charCodeAt(0))));
     const aff = latin("SET ISO8859-9\nTRY abcı\n");
@@ -3863,9 +3862,8 @@ describe("spelling (25.6)", () => {
   });
 
   test("slipbox's English and Turkish; your words put in as each opens; the languages a note names", async () => {
-    const { addOwnWord, dictionaryFiles, noteLanguages, openSpeller, ownWords, ownWordsFile } = await import(
-      "../src/core/spell.ts"
-    );
+    const { openSpeller } = await import("../src/core/hunspell.ts");
+    const { addOwnWord, dictionaryFiles, noteLanguages, ownWords, ownWordsFile } = await import("../src/core/spell.ts");
     addOwnWord("Zorvexian");
     expect(ownWords()).toContain("Zorvexian");
     expect(ownWordsFile()).toBe(join(process.env.XDG_DATA_HOME!, "slipbox", "spell", "words.txt"));
@@ -3903,32 +3901,130 @@ describe("spelling (25.6)", () => {
     expect(ownWords(f)).toEqual(["one", "two", "three"]);
   });
 
-  test("a checker: any of its dictionaries knowing a word will do; each word asked once; suggestions in turn, ten at most", async () => {
+  test("a checker: its dictionaries answer later, each word asked once; a word added re-asks the misspelt; suggestions in turn, ten at most", async () => {
     const { Checker } = await import("../src/core/spell.ts");
-    const asked: string[] = [];
-    const speller = (known: string[], sugg: string[]) => ({
-      correct: (w: string) => (asked.push(w), known.includes(w)),
-      suggest: () => sugg,
-      add: () => {},
-    });
-    const c = new Checker([
-      speller(["bir", "don't"], ["a1", "a2", "x"]),
-      speller(["one"], ["b1", "x", "b2", ...Array.from({ length: 9 }, (_, i) => `c${i}`)]),
-    ]);
-    expect([c.correct("bir"), c.correct("one"), c.correct("zzz"), c.correct("don’t")]).toEqual([
-      true,
-      true,
-      false,
-      true,
-    ]);
-    const before = asked.length;
-    expect([c.correct("zzz"), c.correct("one")]).toEqual([false, true]);
-    expect(asked.length).toBe(before); // known already
-    expect(c.suggest("zzz")).toEqual(["a1", "b1", "a2", "x", "b2", "c0", "c1", "c2", "c3", "c4"]);
+    let known = ["bir", "don't", "one"];
+    const asked: string[][] = [];
+    let heard = 0;
+    const c = new Checker(
+      {
+        check: async (words) => (asked.push(words), words.map((x) => known.includes(x))),
+        suggest: async () => [
+          ["a1", "a2", "x"],
+          ["b1", "x", "b2", ...Array.from({ length: 9 }, (_, i) => `c${i}`)],
+        ],
+      },
+      () => heard++,
+    );
     const w = (word: string) => ({ word, line: 1, column: 1, from: 0, to: word.length });
-    expect(c.misspelt([w("bir"), w("zzz"), w("one")]).map((x) => x.word)).toEqual(["zzz"]);
+    const words = ["bir", "zzz", "one", "don’t", "qqq", "zzz"].map(w);
+    // Not answered yet: none marked, and asked once — each word once, a typographic apostrophe as a plain one.
+    expect(c.misspelt(words)).toEqual([]);
+    expect(c.pending).toBe(true);
+    expect(c.misspelt(words)).toEqual([]);
+    expect(asked).toEqual([["bir", "zzz", "one", "don't", "qqq"]]);
+    await c.settled();
+    expect([c.pending, heard]).toEqual([false, 1]);
+    expect(c.misspelt(words).map((x) => x.word)).toEqual(["zzz", "qqq", "zzz"]);
+    expect([c.correct("bir"), c.correct("zzz"), c.correct("never-asked")]).toEqual([true, false, undefined]);
+    expect(asked.length).toBe(1); // answered already
+    // A word added: right at once; the other misspelt ones asked again, still marked until their answer comes.
+    known = [...known, "zzz", "qqq"];
+    c.added("zzz");
+    expect(asked.at(-1)).toEqual(["qqq"]);
+    expect(c.misspelt(words).map((x) => x.word)).toEqual(["qqq"]);
+    await c.settled();
+    expect(c.misspelt(words)).toEqual([]);
+    expect(await c.suggest("zzz")).toEqual(["a1", "b1", "a2", "x", "b2", "c0", "c1", "c2", "c3", "c4"]);
+    // The CLI's: every answer waited for.
+    expect((await c.misspeltAll([w("one"), w("www")])).map((x) => x.word)).toEqual(["www"]);
     // No dictionary: nothing is misspelt.
-    expect(new Checker([]).correct("zzz")).toBe(true);
+    expect(await new Checker(null).misspeltAll([w("zzz")])).toEqual([]);
+    // Dictionaries that fail: why kept, the words taken as right — not asked again at every frame.
+    let tries = 0;
+    const failing = new Checker({
+      check: async () => (tries++, Promise.reject(new Error("the thread stopped"))),
+      suggest: async () => [],
+    });
+    expect(await failing.misspeltAll([w("zzz")])).toEqual([]);
+    expect(failing.misspelt([w("zzz")])).toEqual([]);
+    expect([failing.error, tries]).toEqual(["the thread stopped", 1]);
+  });
+
+  test("the spell checker's thread: dictionaries built there and asked; your word put in; stopped or failed, the next request starts it again", async () => {
+    const { addOwnWord, dictionaryFiles } = await import("../src/core/spell.ts");
+    const { dictionariesBuilt } = await import("../src/core/hunspell.ts");
+    const { addToDictionaries, openDictionary, stopSpellThread, threadDictionaries } = await import(
+      "../src/core/spell-thread.ts"
+    );
+    const built = dictionariesBuilt();
+    const en = dictionaryFiles("en", {})!;
+    const tr = dictionaryFiles("tr", {})!;
+    await openDictionary(en);
+    const both = threadDictionaries([en, tr]); // tr's built as it's first asked
+    expect(await both.check(["receive", "recieve", "kitaplarımızdan", "Glorbex"])).toEqual([true, false, true, false]);
+    expect((await both.suggest("recieve")).map((l) => l[0])).toContain("receive");
+    expect(dictionariesBuilt()).toBe(built); // there, not here
+    // Your word: in each dictionary built; a request after it knows it.
+    addOwnWord("Glorbex");
+    addToDictionaries("Glorbex");
+    expect(await both.check(["Glorbex"])).toEqual([true]);
+    // Stopped: the next request starts another, which builds what it's asked about again — your words from your file.
+    stopSpellThread();
+    expect(await both.check(["Glorbex", "recieve"])).toEqual([true, false]);
+    // A dictionary that can't be built: why, as the request's rejection.
+    const gone = { aff: join(dir(), "gone.aff"), dic: join(dir(), "gone.dic"), from: "yours" as const };
+    expect(
+      await openDictionary(gone).then(
+        () => "built",
+        (err: Error) => err.message,
+      ),
+    ).toContain("gone.aff");
+    // A thread that fails: what's waiting ends with its error, and the next request starts a real one again.
+    const real = globalThis.Worker;
+    class Failing {
+      onmessage: unknown = null;
+      onerror: ((e: unknown) => void) | null = null;
+      unref() {}
+      ref() {}
+      postMessage() {
+        setTimeout(() => this.onerror?.({ message: "crashed" }), 1);
+      }
+      terminate() {}
+    }
+    stopSpellThread();
+    try {
+      (globalThis as { Worker: unknown }).Worker = Failing;
+      expect(await both.check(["receive"]).then(String, (err: Error) => err.message)).toBe(
+        "the spell checker's thread stopped: crashed",
+      );
+    } finally {
+      (globalThis as { Worker: unknown }).Worker = real;
+    }
+    expect(await both.check(["receive"])).toEqual([true]);
+    stopSpellThread();
+  });
+
+  test("Hunspell is loaded by the spell checker's thread alone: nothing else imports it (#40)", async () => {
+    const { importsOf } = await import("../scripts/check-boundary.ts");
+    const root = join(import.meta.dir, "..");
+    const importers: string[] = [];
+    for (const f of new Bun.Glob("src/**/*.ts").scanSync(root)) {
+      if (f.endsWith(".d.ts") || f === "src/core/hunspell.ts") continue;
+      for (const spec of importsOf(readFileSync(join(root, f), "utf8")))
+        if (/(^|\/)hunspell\.ts$|^hunspell-asm/.test(spec)) importers.push(`${f} ${spec}`);
+    }
+    expect(importers).toEqual(["src/core/spell-worker.ts ./hunspell.ts"]);
+  });
+
+  test("a worker's script: beside its module from the source; in the compiled binary, under core/ beside the entry point", async () => {
+    const { workerUrl } = await import("../src/core/workers.ts");
+    expect(workerUrl("spell-worker.ts")).toBe(
+      Bun.pathToFileURL(join(import.meta.dir, "../src/core/spell-worker.ts")).href,
+    );
+    expect(workerUrl("spell-worker.ts", "file:///$bunfs/root/slipbox")).toBe(
+      "file:///$bunfs/root/core/spell-worker.ts",
+    );
   });
 });
 
@@ -3938,7 +4034,8 @@ describe("spelling, bundled (25.6)", () => {
     const entry = join(dir, "entry.ts");
     writeFileSync(
       entry,
-      `import { dictionaryFiles, openSpeller } from ${JSON.stringify(join(import.meta.dir, "..", "src", "core", "spell.ts"))};\n` +
+      `import { dictionaryFiles } from ${JSON.stringify(join(import.meta.dir, "..", "src", "core", "spell.ts"))};\n` +
+        `import { openSpeller } from ${JSON.stringify(join(import.meta.dir, "..", "src", "core", "hunspell.ts"))};\n` +
         `const s = await openSpeller(dictionaryFiles("en", {})!);\nconsole.log(s.correct("receive"), s.correct("recieve"));\n`,
     );
     const built = Bun.spawnSync([process.execPath, "build", entry, "--target", "bun", "--outdir", join(dir, "out")], {

@@ -861,13 +861,15 @@ identifier (`camelCase`, `snake_case`, `x86`), a path or a dotted name (`file.ts
 dictionaries, a word any of them knows being right. Its languages are its front matter's `lang` (`lang: tr`,
 `lang: [tr, en]`), else `[spell] languages`; English and Turkish come with slipbox, any other is yours or the system's
 ([configuration.md](../../docs/manual/configuration.md) § Spelling dictionaries); a language with none is said once.
-Hunspell, as WebAssembly, and each dictionary load in the background the first time; the window is drawn again when
-they're there. Source rows mark a word by its offsets; a rendered row finds it among the prose of its spans (not code, a
-URL, a tag). A find's match or the selection shows over a mark. `] s` / `[ s` go to the next / previous one where the
-window shows it, `z =` lists the one under the cursor's suggestions — each language's best in turn — and puts the one
-picked in its place (an edit, one undo step, left unsaved), `z g` adds it to your words
-(`~/.local/share/slipbox/spell/words.txt`, one a line, what `slipbox spell --add` writes): every dictionary loaded takes
-it at once. `slipbox spell` is the CLI's.
+Hunspell, as WebAssembly, runs on a thread of its own (`core/spell-thread.ts`, D232): it builds each dictionary there
+the first time, and checks there the words a note's checker has no answer for yet; the window is drawn again when the
+dictionaries are there, and again as answers come. A word not answered yet isn't marked: one just typed is marked a
+moment later, and the marks already shown stay meanwhile. Source rows mark a word by its offsets; a rendered row finds
+it among the prose of its spans (not code, a URL, a tag). A find's match or the selection shows over a mark. `] s` /
+`[ s` go to the next / previous one where the window shows it, `z =` lists the one under the cursor's suggestions — each
+language's best in turn, asked of the thread, the keys after waiting for them — and puts the one picked in its place (an
+edit, one undo step, left unsaved), `z g` adds it to your words (`~/.local/share/slipbox/spell/words.txt`, one a line,
+what `slipbox spell --add` writes): every dictionary loaded takes it at once. `slipbox spell` is the CLI's.
 
 **Wrapping off (`space u w`, `alt+z`, `ui.wrap = false`).** Each note is laid out at its natural width:
 first very wide, then at its widest real row (trailing spaces, rules and right-aligned

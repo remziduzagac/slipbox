@@ -122,9 +122,10 @@ function spotHere(app: App, view: View): Spot | string {
 
 /**
  * `z =` (vim's): the misspelt word under the cursor's suggestions, its dictionaries' in turn, and your words to add it
- * to; the one picked put in its place — one undo step, left unsaved.
+ * to; the one picked put in its place — one undo step, left unsaved. The suggestions come from the spell checker's
+ * thread; the keys after wait for them, as for any command that waits.
  */
-export function spellSuggest(app: App, view: View): void {
+export async function spellSuggest(app: App, view: View): Promise<void> {
   const here = spotHere(app, view);
   if (typeof here === "string") return app.message("info", here);
   const why = cannotEdit(view);
@@ -132,7 +133,13 @@ export function spellSuggest(app: App, view: View): void {
   const w = here.word;
   const buf = view.buf;
   const version = buf.version;
-  const suggestions = app.spellSuggestions(view, w.word);
+  let suggestions: string[];
+  try {
+    suggestions = await app.spellSuggestions(view, w.word);
+  } catch (err) {
+    return app.message("warn", `spelling: no suggestions for "${w.word}" — ${(err as Error).message}`);
+  }
+  if (app.view !== view) return; // its window closed meanwhile
   const ADD = Symbol("add");
   app.openList({
     title: `"${w.word}" — ${suggestions.length ? "enter puts one in" : "no suggestions"}`,

@@ -72,13 +72,13 @@ import { headingsOf, parseAround, parseMarkdown, type ParsedNote, slugify } from
 import {
   addOwnWord,
   Checker,
+  type DictionaryFiles,
   dictionaryFiles,
   noteLanguages,
-  openSpeller,
   ownWordsFile,
   proseWords,
-  type Speller,
 } from "../core/spell.ts";
+import { addToDictionaries, openDictionary, threadDictionaries } from "../core/spell-thread.ts";
 import { headingFragment, landing, lineFragment } from "../core/landing.ts";
 import {
   addFootnote,
@@ -2714,6 +2714,7 @@ const HANDLERS: Record<string, Handler> = {
       const word = add.trim();
       if (!word || /\s/.test(word)) throw new UsageError("--add takes one word");
       addOwnWord(word);
+      addToDictionaries(word); // those this process has built already: run in one, a check after knows it
       return {
         data: { added: word, file: ownWordsFile() },
         human: `"${word}" added to your words (${ownWordsFile()})\n`,
@@ -2732,23 +2733,30 @@ const HANDLERS: Record<string, Handler> = {
             .map((l) => l.trim())
             .filter(Boolean)
         : noteLanguages(parsed.frontmatter?.data, s.config.spell.languages);
-    const spellers: Speller[] = [];
+    // Built and asked on the spell checker's thread, as the TUI's are: the CLI waits for them.
+    const dictionaries: DictionaryFiles[] = [];
     const missing: string[] = [];
     for (const lang of languages) {
       const files = dictionaryFiles(lang, s.config.spell.dictionaries);
-      if (files) spellers.push(await openSpeller(files));
-      else missing.push(lang);
+      if (files) {
+        await openDictionary(files);
+        dictionaries.push(files);
+      } else missing.push(lang);
     }
     if (missing.length)
       s.warnings.push(`no dictionary for ${missing.join(", ")} — [spell] dictionaries can name yours`);
-    const checker = new Checker(spellers);
+    const checker = new Checker(dictionaries.length ? threadDictionaries(dictionaries) : null);
     const starts = lineStarts(text);
-    const words = checker.misspelt(proseWords(parsed.tree, text)).map((w) => ({
-      line: w.line,
-      column: [...text.slice(starts[w.line - 1]!, w.from)].length + 1,
-      word: w.word,
-      ...(has(s.args, "suggest") ? { suggestions: checker.suggest(w.word) } : {}),
-    }));
+    const found = await checker.misspeltAll(proseWords(parsed.tree, text));
+    if (checker.error) throw new Error(`spelling: ${checker.error}`);
+    const words = await Promise.all(
+      found.map(async (w) => ({
+        line: w.line,
+        column: [...text.slice(starts[w.line - 1]!, w.from)].length + 1,
+        word: w.word,
+        ...(has(s.args, "suggest") ? { suggestions: await checker.suggest(w.word) } : {}),
+      })),
+    );
     return {
       data: { path: rel, languages, missing, words },
       human: words
