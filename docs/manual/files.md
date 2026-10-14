@@ -37,9 +37,11 @@ While it has the keys:
 | --- | --- |
 | `j` / `k`, `down` / `up` | Move the selection (nothing opens) |
 | `g g` / `shift+g` | To the top / bottom |
-| `enter` | Open the note in a tab of its own (or the tab showing it). On a folder, fold or unfold it |
-| `l`, `right` | Open the note in a tab. Unfold a folder |
+| `enter` | Open the note in a tab (or the tab showing it). Fold or unfold a folder. Go into another vault |
+| `l`, `right` | Open the note in a tab. Unfold a folder or a vault |
 | `h`, `left` | Fold a folder, or go to the folder holding the selection |
+| `z` | Zoom in: the view shows the selected folder (on a file, its folder) |
+| `-` | Zoom out: the view shows the folder holding this one |
 | `o` | Open the note in this window, in place of the one it shows |
 | `s` | Open it in the other window of a split, splitting first |
 | `/` | Filter: type to narrow the tree, the folders kept. `enter` opens, `esc` clears |
@@ -52,14 +54,52 @@ With the mouse:
 
 - A click on a folder folds or unfolds it.
 - A click on a note selects it, and a double click opens it in a tab.
+- A click on a folder in the breadcrumb zooms the view to it (below).
 - The explorer's title has two buttons: a new note and a new folder.
 - While the explorer has the keys, the selected row has a button at its end, `…`. It opens the same menu as `.`, with
   every action this chapter describes, each with its key.
 
-The row `..` at the top goes up to the folder holding this one. [Links and vaults](links-and-vaults.md) has what that
-means when the folder is a vault.
-
 A file git sees as changed is marked at the end of its row ([Git](git.md)).
+
+### The view
+
+The explorer shows your files as one tree, from `/` down. What you see of it is the view: one folder and what's in it.
+
+The view starts at the folder you opened. `slipbox ~/work/kestrel/docs` shows `docs`, in the vault `kestrel`. Opened on
+a note, it starts at the note's vault.
+
+Above the tree, a breadcrumb says where the view is:
+
+```text
+~ › work › ◈ kestrel › docs ›
+```
+
+- `~` is your home folder. Outside it, the breadcrumb starts at `/`.
+- A vault has its icon. The vault you are in is highlighted.
+- A click on a folder in it zooms the view to that folder.
+
+You zoom in and out yourself:
+
+- `z` zooms in on the selected folder. On a file, it zooms in on the file's folder.
+- `-` zooms out a level. The folder you were in stays unfolded and selected.
+- After zooming out, the breadcrumb keeps the folders you came from, dimmed after the view. A click on one zooms back
+  in.
+
+The view also zooms out by itself when you go somewhere outside it: you open a note there, you follow a link to a file
+there, or you go into another vault. It becomes the folder holding both places, with only the paths to the two
+unfolded, and the breadcrumb leads on to where you went. It never zooms in by itself.
+
+Zoomed out past the vault you are in, the explorer lists folders one level at a time:
+
+- The vault you are in is highlighted, with its tree under it.
+- Another vault has its icon. `l` unfolds it in place. `enter`, or opening one of its files, goes into it
+  ([Links and vaults](links-and-vaults.md#switching-vaults)).
+- Nothing outside the vault you are in can be renamed, moved or deleted from there.
+
+You can open any folder you may read, inside your home folder or not:
+
+- A file you may not write opens read-only, and slipbox says so.
+- A folder you may not read says why when you open it, unfold it or zoom into it.
 
 ## What the explorer lists
 

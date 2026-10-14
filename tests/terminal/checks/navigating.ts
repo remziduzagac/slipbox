@@ -825,16 +825,18 @@ export const NAVIGATING: Check[] = [
   // --- starting -------------------------------------------------------------------------------
   {
     area: "navigating",
-    name: "start: a folder in a repository opens the repository's top; the explorer at the folder",
+    name: "start: a folder in a repository opens the repository's top; the explorer's view at the folder, the vault named",
     covers: { cases: ["opening", "explorer"] },
     options: { home: true, startAt: "home/work/kestrel/docs" },
     run: async (s) => {
-      // The repository's top is the root, so its README opens, by the repository's own path.
+      // The repository's top is the vault, so its README opens, by the repository's own path.
       await s.status(/ README\.md/);
       await s.see("Kestrel");
-      // The explorer starts at the folder opened on (`..` climbs to the top): its notes, not the README's folder.
+      // The explorer's view starts at the folder opened on (VV-D5): its notes, not the README's folder; above the
+      // tree, the breadcrumb names the vault it's in, kestrel, by its icon.
       await s.see(/\barchitecture\.md\b/);
       await s.see(/\bglossary\.md\b/);
+      await s.see(/~ › work › \S+ kestrel › docs ›/);
     },
   },
   {

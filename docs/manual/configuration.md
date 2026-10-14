@@ -859,7 +859,6 @@ For each vault, in `<key>/`:
 | `redirects.json` | Moves seen, to repair the links that pointed at the old place |
 | `heads.json` | Each branch's last commit seen |
 | `export.json` | Where an export last went |
-| `roots.json` | The vaults pinned in the explorer (`:pin-root`) |
 | `clipboard.txt` | A copy no clipboard could take |
 | `dirty/` | The notes with unsaved changes in a running TUI, so the command line can say a file is out of date |
 

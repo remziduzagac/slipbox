@@ -348,7 +348,8 @@ The TUI is always in one vault. Going into another vault switches to it. You go 
 
 - `o` in a peek at one of its notes ([A peek at another vault](#a-peek-at-another-vault))
 - `ctrl+click` on a link into it
-- a vault picked in the explorer or from `space v v`
+- a vault, or a file of one, picked in the explorer
+- a named folder picked from `space v v`
 - `:e` with the path of one of its notes
 
 Following a link, a pointer, a backlink or a search hit into another vault only peeks at the note. Nothing switches
@@ -367,10 +368,9 @@ A message names the vault you are now in.
   at the note and place you left. A chain of switches unwinds one at a time.
 - **Unsaved notes stop a switch.** slipbox refuses to leave a vault while a note in it is unsaved, and names the note.
   Save it (`:wa` saves them all) or revert it first.
-- **The explorer lists other vaults** below the one you are in. These are the one you started in, and the folder of a
-  file open beside this vault. `:pin-root` keeps the current vault in that list after you leave it.
-- **Starting in a folder outside every vault,** such as `slipbox ~`, shows the named folders first when there are any.
-  So you can go into one.
+- **The explorer shows where you went.** It's one tree: going into a vault outside its view zooms the view out to the
+  folder holding both, the two unfolded and the vault you are in now highlighted ([Files](files.md#the-view)).
+- **The named folders** are a key away: `space v v` lists them, wherever you started, and `enter` goes into one.
 
 ### Worktrees
 

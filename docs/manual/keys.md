@@ -344,8 +344,10 @@ Moving selects a row and opens nothing. [Files](files.md) explains what each of 
 | Keys | What |
 | --- | --- |
 | `j` / `k`, `down` / `up` | select the next / previous row |
-| `enter` | open the note as a tab (or go to its tab), fold or unfold a folder, or go up a folder from `..` |
-| `l`, `right` | open the note as a tab (or go to its tab), or unfold a folder |
+| `enter` | open the note as a tab (or go to its tab), fold or unfold a folder, or go into another vault |
+| `l`, `right` | open the note as a tab (or go to its tab), or unfold a folder or a vault |
+| `z` | zoom in: the view shows the selected folder, or a selected file's folder ([Files](files.md#the-view)) |
+| `-` | zoom out: the view shows the folder holding it |
 | `o` | open the note in this window, in place of what it shows |
 | `h`, `left` | fold the folder, or go to the folder holding the row |
 | `s` | open the note in the split's other window, splitting first |
@@ -913,7 +915,6 @@ Your configuration's [`[aliases]`](configuration.md) adds more commands, or rena
 | `:folders-default` | which copy a named folder's links open |
 | `:name [new]` | name this folder, as pointers name it |
 | `:init` | give this folder, outside every vault, a `.slipbox/` |
-| `:pin-root` | keep this vault among the explorer's vaults after you leave it, or no longer |
 | `:trust`, `:untrust` | trust this vault, so its own tools run, or stop trusting it ([Code](code.md)) |
 | `:theme <name>` | set the theme |
 | `:glyphs <set>` | set the glyphs: `nerd`, `unicode`, `ascii` or `auto` |

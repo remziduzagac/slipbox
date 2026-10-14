@@ -487,7 +487,6 @@ sidebar_vault = { bold = true, underline = true }
 "leader ; k f" = "link.convert"
 "leader ; N a" = "rename.undo"
 "leader ; i e" = "vault.init"
-"leader ; i f" = "vault.pin_root"
 "leader ; M a" = "problems.open"
 "leader ; M b" = "problems.file"
 "leader ; Q a" = "tag.list"

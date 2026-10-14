@@ -2104,6 +2104,8 @@ function drawSidebar(app: App, c: Canvas, pane: Rect, geo: Geometry): Rect {
       if (x < pane.x + stringWidth(title) + 3) break;
       smallButton(app, c, x, pane.y, ` ${glyph} `, id, geo, base.bg);
     }
+    // Under the title, the breadcrumb: what's above the view (VV-D5).
+    drawCrumbs(app, c, pane.x + 1, pane.y + 1, pane.w - 1, base.bg, geo);
   }
   const s = app.sidebar;
   rect = filterRow(app, c, rect, s, app.region === "sidebar", base.bg, geo);
@@ -2112,6 +2114,57 @@ function drawSidebar(app: App, c: Canvas, pane: Rect, geo: Geometry): Rect {
     : view === "git"
       ? drawGitList(app, c, rect, base.bg, geo)
       : drawTree(app, c, rect, base.bg, geo);
+}
+
+/**
+ * The breadcrumb over the explorer (VV-D5): the folders down to the view, `~` for home, each a click away — the
+ * vault open highlighted, a vault by its icon, the view bold — then, dimmed, those past the view it can zoom back
+ * into. Too long, the folders at its start give way to `…`.
+ */
+function drawCrumbs(app: App, c: Canvas, x: number, y: number, w: number, bg: Color | null, geo: Geometry): void {
+  if (w < 4) return;
+  const theme = app.theme;
+  const g = app.glyphs;
+  const crumbs = app.explorerCrumbs();
+  const between = ` ${g.crumb} `;
+  const view = crumbs.findLastIndex((cr) => !cr.past);
+  type Part = { cr: (typeof crumbs)[number]; text: string };
+  const width = (list: Part[], lead: boolean) =>
+    list.reduce((n, p, i) => n + (i ? stringWidth(between) : 0) + stringWidth(p.text), 0) +
+    (list.at(-1)?.cr.past ? 0 : stringWidth(` ${g.crumb}`)) +
+    (lead ? stringWidth(g.ellipsis + between) : 0);
+  let list: Part[] = crumbs.map((cr) => ({ cr, text: `${cr.vault ? `${g.vault} ` : ""}${sanitize(cr.label)}` }));
+  // Too long: the view stays, and the first folder past it, the way back in (cut short if it must be); the others
+  // past it give way first, from the end, then those above it, from the start, to `…`.
+  const fits = (from: number) => width(list.slice(from), from > 0) <= w;
+  while (list.length - 1 > view + 1 && !fits(view)) list = list.slice(0, -1);
+  if (list.length - 1 > view && !fits(view)) {
+    const last = list.at(-1)!;
+    const room = w - (width(list.slice(view), view > 0) - stringWidth(last.text));
+    list = room >= 4 ? [...list.slice(0, -1), { cr: last.cr, text: truncate(last.text, room) }] : list.slice(0, -1);
+  }
+  let from = 0;
+  while (from < view && !fits(from)) from++;
+  const end = x + w;
+  let cx = x;
+  const dim = { ...roleStyle(theme, "dim", bg), bg };
+  const put = (s: string, st: ReturnType<typeof roleStyle>) => {
+    const n = cx < end ? drawText(c, cx, y, s, st, end - cx) : 0;
+    cx += n;
+    return n;
+  };
+  if (from) put(g.ellipsis + between, dim);
+  list.slice(from).forEach(({ cr, text }, i) => {
+    if (i) put(between, dim);
+    const id = `xcrumb:${cr.abs}`;
+    const role: Role = cr.current ? "sidebar_active" : cr.past ? "dim" : cr.vault ? "sidebar_root" : "sidebar_dir";
+    const st =
+      app.hover === id ? roleStyle(theme, "hover", bg) : { ...roleStyle(theme, role, bg), bg, bold: i + from === view };
+    const at = cx;
+    const n = put(text, st);
+    if (n > 0 && i + from !== view) geo.hot.push({ id, x: at, y, w: n, h: 1 });
+  });
+  if (!list.at(-1)?.cr.past) put(` ${g.crumb}`, dim);
 }
 
 /** A file's state letter's colour in source control (26.2): as the explorer's marks have it. */
@@ -2265,9 +2318,8 @@ function drawTree(app: App, c: Canvas, list: Rect, bg: Color | null, geo: Geomet
   // The selected note, file, folder or nested vault: a button at the row's end opening its menu
   // (18.1) — rename, move, delete… — its right edge under the title's buttons'.
   const buttonsOf = (row: TreeRow) => {
-    // Another root's rows (20.15) are its own, not this one's to act on, nor those above the root: no
-    // menu, as explorerItem has it.
-    if (row.under || row.root?.other || row.outside || row.root?.here) return null;
+    // The rows outside the vault's own tree (VV-D5) aren't this vault's to act on: no menu, as explorerItem has it.
+    if (row.outside || row.root?.here) return null;
     if (row.kind === "root" && !(row.root?.kind === "vault" && app.loc.mode === "vault")) return null;
     const bs: (readonly [string, string])[] = [[g.itemMenu, "xrow:menu"]];
     return { bs, w: bs.reduce((n, [glyph]) => n + stringWidth(glyph) + 2, 0) };
@@ -2287,7 +2339,7 @@ function drawTree(app: App, c: Canvas, list: Rect, bg: Color | null, geo: Geomet
     if (!row) break;
     const y = rect.y + i;
     const selected = s.scroll + i === s.selected && app.region === "sidebar";
-    // The root open, in a folder the explorer climbed to: marked, as the note open is.
+    // The vault open, in a view above it (VV-D5): highlighted, as the note open is.
     let role: Role = row.root?.here
       ? "sidebar_active"
       : row.root?.kind === "vault"
@@ -2325,8 +2377,8 @@ function drawTree(app: App, c: Canvas, list: Rect, bg: Color | null, geo: Geomet
       }
     }
     // A vault named otherwise than its folder: the name, dimmed, after it (17.13) — up to its
-    // buttons, when it has them. Another root's row is its name already.
-    const vaultName = row.root?.other ? undefined : row.root?.name;
+    // buttons, when it has them.
+    const vaultName = row.root?.name;
     // Short of its git mark and the scrollbar's column.
     const nameEnd = withButtons ? room : sv.cols - (gst ? 2 : 0);
     if (vaultName && !sv.left && w + 1 < nameEnd)

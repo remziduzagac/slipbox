@@ -14,8 +14,9 @@ consolidation, when each says vault where it means one.
 
 The names that keep the word, since agents, scripts and configs depend on them: the `--root` flag; `SLIPBOX_ROOT`; the
 settings `[trust] roots`, `walk.root_markers`, `capture.location = "root"` and `links.path = "root"`; the explorer's
-actions `rename_root`, `make_root` and `unmake_root`; the colour role `sidebar_root`; the command ids `root.trust`,
-`root.untrust` and `vault.pin_root`, and `:pin-root`; the state file `roots.json`; the CLI's JSON fields (`root`).
+actions `rename_root`, `make_root` and `unmake_root`; the colour role `sidebar_root`; the command ids `root.trust` and
+`root.untrust`; the state file `roots.json`; the CLI's JSON fields (`root`). (`vault.pin_root` and `:pin-root` went
+with VV-T4.)
 
 ## MODIFIED design/roots.md § How a root is named and shown
 
@@ -47,12 +48,59 @@ Becomes § Going into a vault: what chooses another vault (the explorer, a peek'
 becoming its own, `ctrl+o` back; refused while a note is unsaved, as now. Following a link into another vault peeks
 (VV-D7) instead of switching. The named folders' list at the start in a plain folder goes; `space v v` stays.
 
+Done for the explorer and the start in VV-T4. **Choosing in the explorer** (VV-D4): `enter` (or a double-click) on a
+vault's row other than the current one goes into it, and so does a file of another vault opened from the explorer;
+`l` unfolds a vault's row in place instead, its folder listed a level at a time, its rows not this vault's to change
+(no menu; a paste or a new note there refused). **The launcher goes:** started in a folder outside every vault
+(`slipbox ~`), nothing opens over the explorer (`prepare` no longer passes `launcher`, the App has no such option);
+`space v v` (`:folders`, `folders.open`) lists the named folders from anywhere, as before. **The view follows a
+switch** (`switchVault`): the explorer's unfolded folders are kept by their absolute paths, then given the new vault's
+keys; a view holding the new vault stays, the folders down to the vault unfolded; one not holding it zooms out to the
+common parent (§ Side panes, below); where the tree can't show the vault (its path has a hidden folder: a worktree
+in `.claude/worktrees/`), the view moves to the vault, as it did before.
+
 ## MODIFIED design/tui.md § Side panes ("Explorer")
 
 The explorer as one tree and the view (VV-D5): starting at what's opened, the breadcrumb, zooming out to the common
 parent, `z` and the breadcrumb zooming in; vaults marked, the current one highlighted; the busy folders listed
 (VV-D8); a row's marks in their columns (VV-D9). Goes: `..` above the root as a mode of its own (the breadcrumb and
 zooming out replace it), the roots beside the tree, `:pin-root`.
+
+Done in VV-T4 but the busy folders and the marks (VV-T5). The explorer bullet becomes:
+
+- **Explorer (left, `≡`): one tree, the view a part of it** (VV-D5). The view (`explorerTop`, absolute) is a folder:
+  its rows are what's in it. In the vault open, the vault's own tree from there (`rootTree(sub)`, its notes and files
+  as `files.show` lists them, the walk's folders, nested vaults by their rows); anywhere else — above the vault,
+  beside it, in another vault, a nested one's folder — the folder listed a level at a time, never walked
+  (`outsideRows`): its folders, then its files as their vault's `files.show` would list them, hidden ones and
+  `node_modules` left out. There the vault open is a row, highlighted (`sidebar_active`), its tree under it while
+  unfolded; another vault is a row with the vault's icon in a folder's blue (`sidebar_root`), its name dimmed after
+  the folder's when they differ, a worktree's branch (`⎇ feat`). A row's path is its path in the vault for what the
+  vault's own tree holds, else absolute (`outside`), and so is a folder's key in `expanded`; none of this vault's file
+  operations act on an `outside` row. **It starts** at the folder opened (`slipbox x/y`: y, in vault x; `prepare`'s
+  `folder`), set once the notes are open, so the note shown outside it leaves it be; opened on a note, at its vault.
+  **The breadcrumb**, on the row under the pane's title (where a blank row was), says where the view is: `~` for home
+  (else `/`), then each folder down to the view and a `›`; a vault with its icon, the vault open highlighted, the view
+  bold. Past the view, dimmed, the trail (`explorerTrail`): the folders it can zoom back into — the view zoomed out
+  from, or where you went when it zoomed out by itself — kept while the view is on their way. Too long for the pane,
+  the trail gives way first (from its end, its first folder cut short, kept), then the folders above the view, from
+  the start, to `…`. A click on a folder of it zooms the view there (`xcrumb:<path>`). **Zooming** on purpose
+  (`zoomTo`): `z` (`zoom_in`) on a folder or vault, a file's folder on a file; `-` (`zoom_out`, nvim-tree's and oil's
+  key for the parent) a folder up, the folder left unfolded and selected; nothing above `/`, said. **By itself**
+  (`zoomToHold`), only outward: going somewhere outside the view — a note opened, followed to, gone back or forward
+  to, revealed (`space shift+e`), a folder link followed, a vault gone into — zooms the view out to the common parent
+  of the view and the place, only their two paths unfolded (what was unfolded in the old view kept, every other
+  folder folded), the trail at the place. Not for what the tree doesn't list (a hidden folder's file, `node_modules`),
+  nor the scratch; the explorer's first showing, a session's tabs restored, and the filter's `esc` reveal the note
+  only inside the view. **Keys on a row:** `enter` folds or unfolds a folder and the vault open's row, opens a note,
+  goes into another vault (VV-D4); `l` unfolds any folder or vault in place; `h` folds an unfolded folder or vault,
+  else the folder holding the row (when it's a row of the view). **Any folder you may read:** a folder you may not
+  read (`access`: read and search) says why when it's opened on, unfolded or zoomed into (`can't read ~/x: you may not
+  read it (no permission)`), nothing unfolded; a file you may not write — it, or its folder, for the save's rename —
+  opens read-only (`buf.readOnly`), said at once and when typing is refused (`notes/a.md is read-only: you may not
+  write it (no permission)`). Gone with VV-T4: `..` and climbing above the root (`explorerUp`), the roots beside the
+  tree (`otherRoots`: the one opened, those pinned, a loose file's folder — the view holds them now), `:pin-root`
+  (`vault.pin_root`, its `roots.json` in the vault's state no longer read).
 
 ## ADDED design/tui.md § The peek
 

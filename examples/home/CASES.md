@@ -593,8 +593,11 @@ build (`scripts/build-home.ts`), not kept as they are. Each file's purpose and t
   `work/kestrel/README.md` (Filtering 3.16)
 - file ops: n, N, r, m (tree picker), d, u, y/x/p, v/V, . menu — `notes/templates/daily.md`, `work/kestrel/README.md`
   (Files in the explorer 18.x; tests 'r renames in place...' etc.)
-- roots: opened vault, pinned vaults, vault followed into, nested vault row, ‘..’ in plain folder, \~ and / listing —
-  `Downloads/stray-note.md`, `notes/index.md` (tui.md Explorer roots 20.15; tests on roots)
+- the view: it starts at the folder opened, the breadcrumb above it (`~ › work › ◈ kestrel › docs ›`), `z`, `-` and a
+  breadcrumb click zooming, the view zoomed out to the common parent when a worktree kept beside its checkout is gone
+  into, another vault unfolded in place, a nested vault's row, \~ and / listed a level at a time —
+  `Downloads/stray-note.md`, `notes/index.md`, `work/kestrel/docs/`, `.build/kestrel.toml` (its worktree) (VV-D5;
+  checks 'view: …', 'start: a folder in a repository…')
 - explorer selection stays on note/heading when an agent adds or removes notes — `Downloads/plan.md`,
   `work/kestrel/scripts/dev/agent-replay.sh` (test 'the explorer and outline keep their selection')
 - narrow terminal overlays explorer/outline, closing after pick; tiny terminals — `notes/meetings/standup-log.md`,
@@ -3008,8 +3011,6 @@ Wide tables and code blocks to edit in place.
   (command-specs.ts)
 - `vault.init` — Give a folder .slipbox/ — `notes/index.md`, `hobbies/cooking/Home.md`, `hobbies/photography/index.md`
   (command-specs.ts)
-- `vault.pin_root` — Pin this vault in the explorer — `notes/index.md`, `hobbies/cooking/Home.md`,
-  `hobbies/photography/index.md` (command-specs.ts)
 
 ### trash
 

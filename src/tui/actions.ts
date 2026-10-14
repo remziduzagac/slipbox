@@ -1665,7 +1665,7 @@ export function registerActions(app: App): void {
       a.sidebar.filter = "";
       a.sidebar.filtering = false;
       a.showSidebar(true);
-      a.revealInSidebar();
+      a.revealInSidebar(undefined, false, true); // asked for: outside the view, it zooms out to hold it (VV-D5)
       a.region = "sidebar";
     },
     // Like the explorer: closed → open and focus; open elsewhere → focus; focused → close.
@@ -2652,7 +2652,6 @@ export function registerActions(app: App): void {
         const rel = v.buf.rel;
         a.previewRename(() => planRelink(a.graph, [rel]));
       }),
-    "vault.pin_root": (a) => a.togglePinnedRoot(),
     "vault.info": (a) => {
       const g = a.graph;
       // Its name and copies, as pointers find it (21.6).
