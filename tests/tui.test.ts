@@ -16698,6 +16698,37 @@ describe("changes against what's staged, in the gutter (26.1)", () => {
         }
       }
   });
+
+  test("rendered, a changed block is signed beside its rows, never on the blank row after it; a code block's blank line is (#41)", async () => {
+    const root = repo({ "g9.md": "# Head\n\nOne line.\n\n- item a\n- item b\n\nLast.\n\n```text\naaa\n\nbbb\n```\n" });
+    if (!root) return;
+    const h = await harness({ root, open: "g9.md", width: 100, height: 30 });
+    h.app.setViewMode(h.app.view!, "rendered");
+    expect(await changes(h)).toEqual([]);
+    const buf = h.app.view!.buf;
+    buf.edit(
+      0,
+      buf.source.length,
+      "# HEAD\n\nOne LINE.\n\n- item a\n- item B\n\nLast.\n\n```text\naaa\n\n\nbbb\n```\n",
+    );
+    expect((await changes(h)).map((c) => `${c.kind}:${c.from}`)).toEqual([
+      "change:1",
+      "change:3",
+      "change:6",
+      "add:12",
+    ]);
+    const c = h.canvas();
+    const rows = c.rows.map((r) => r.join(""));
+    // The window's row with `text` (the last: the breadcrumb above has the heading too), and the signs' column.
+    const at = (text: string) => rows.findLastIndex((r) => r.includes(text));
+    const x = rows[at("One LINE.")]!.indexOf("One LINE.") - 1;
+    /** The signs' column on `n` rows from `text`'s. */
+    const signs = (text: string, n: number) => c.rows.slice(at(text), at(text) + n).map((r) => r[x]);
+    for (const text of ["HEAD", "One LINE.", "item B"]) expect([text, ...signs(text, 2)]).toEqual([text, "▎", " "]);
+    // The code block's rows: the blank line added is signed, the one it had isn't.
+    expect(signs("aaa", 4)).toEqual([" ", "▎", " ", " "]);
+    expect(c.styles[at("aaa") + 1]![x]!.fg).toBe(h.app.theme.roles.git_sign_add.fg!);
+  });
 });
 
 describe("source control (26.2)", () => {

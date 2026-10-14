@@ -1491,7 +1491,8 @@ rendered) or shows its diff to the text as it is now, `enter` on a line going th
 now, unsaved typing included (`core/gitsigns.ts`) — are signed in the gutter: `▎` added (`git_sign_add`), `▎` changed
 (`git_sign_change`), `▁` lines deleted below the line (`▔` above the first; `git_sign_delete`), each role the explorer's
 or a diff's colour halfway to the page, so the signs don't pull the eye from the text (D225). A rendered row joining
-several lines takes their strongest. `[git] signs_at` places them (D225): `gutter_right`, the default, the gutter's
+several lines takes their strongest; the blank row between two blocks, no line of the file, has none (#41).
+`[git] signs_at` places them (D225): `gutter_right`, the default, the gutter's
 last column, the one before the text — with no gutter (no line numbers, no problems bar), a file that has had a change
 gets a column of its own and keeps it, so the text doesn't move; `gutter_left`, the gutter's first column, the window's
 margin before the problems bar and the line numbers, there with or without a gutter; `window_right`, a column kept at

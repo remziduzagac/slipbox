@@ -44,6 +44,8 @@ export interface Line {
   srcMap?: { cells: number[]; end: number };
   /** A frame row drawn in the layout (the lens's rules): no text of the note, never the cursor's. */
   decor?: boolean;
+  /** The blank row between two blocks: no line of the note, though it carries the line of the row above (3.5). */
+  gap?: boolean;
   /** The lens's rows: its rules, the air outside them, and its rows of markdown. */
   lens?: "top" | "bottom" | "pad" | "source";
   /** The first row of a footnote's definition: its identifier (what a `[^ref]` link targets). */

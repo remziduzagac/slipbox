@@ -10,6 +10,11 @@ The format is [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.1.0/); wh
 
 - Homebrew, on macOS and Linux: `brew install remziduzagac/tap/slipbox`, and `brew upgrade` after.
 
+### Fixed
+
+- In a rendered note, the blank row after a changed paragraph, list item or heading repeated its git sign in the
+  gutter. Only the changed rows are signed now.
+
 ## [0.2.2] - 2026-10-13
 
 ### Changed
