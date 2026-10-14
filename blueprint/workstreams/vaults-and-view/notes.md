@@ -158,6 +158,33 @@ This changes D50: a link into another vault peeks instead of switching.
       README.md                      M
 ```
 
+## The git panel, following the vault (2026-10-14)
+
+The git panel shows the current vault's repository in full, when it is one; under it, folded, the other repositories
+in the view (inside the folder the explorer shows). Looking never moves: a repository opened up shows its worktrees
+and changes, a file's diff in a peek; `o` (or its Open) goes into it.
+
+```text
+ ± Source control
+ home · not a repository
+ ▾ Repositories in ~/projects (3)
+   ▾ kestrel              main   ↓2  ✎1  ◆
+       ⎇ agent/sync-retry   ↑5 on main ✎2 ◆
+       ⎇ agent/route-cache  ↑3 on dev     ◆
+       M docs/sync.md
+       [Open kestrel]
+   ▸ product              main        ✎1
+   ▸ infra                main            ✓
+ ▸ 9 more repositories in home
+```
+
+- Ordered: something to review, uncommitted changes, ahead or behind, then clean.
+- The current vault a repository: GIT's panel (message, buttons, changes, branches with `⎇`), and at its end
+  `▸ Other repositories in ~/projects (2)`. Not a repository (a vault without git, home, Elsewhere): the overview above.
+  Home a repository itself (dotfiles kept with git): its own panel; the repositories inside it under "Other".
+- git is asked about a repository only while its row is shown or opened, in the background, its answer kept and asked
+  again when the watcher sees a change or slipbox gets the focus back; a folded "9 more" costs nothing until opened.
+
 ## Goes away
 
 The plain folder and the loose file; the three places other roots appear (`..` above, rows inside, the list under the
@@ -165,4 +192,5 @@ tree); the named folders' list opening when started in a plain folder; `:pin-roo
 
 ## Open
 
-- How the git panel (GIT) shows a vault holding other vaults, such as home, once this is settled.
+- The two symlink refinements above, and drawing indexed folders' `●` dimmed: the user's to confirm.
+- GIT (`workstreams/git-review/`) is rebased on this once it's accepted: its panel in the vault's terms.

@@ -628,6 +628,15 @@ was added 2026-10-09 at the user's asking.*
   start, the concepts and an agent guide; every page's prose in plain sentences, the reference chapters' too; the
   familiar keys first (consolidated 2026-10-14).
 
+## Vaults and the explorer's view
+
+*Not a phase. Proposed 2026-10-15, settled in conversation the day before; the git workstream waits for it.*
+
+- [ ] **[Vaults and the explorer's view](workstreams/vaults-and-view/README.md)** (VV): "vault" for every folder with a
+  marker, home a vault without one, Elsewhere for the rest; the explorer as one tree, its view zoomed, a breadcrumb;
+  links followed only when allowed; another vault's file in a peek; busy folders listed, a row's marks at its right;
+  the git panel following the vault.
+
 ## Later
 
 Agreed, but not scheduled.

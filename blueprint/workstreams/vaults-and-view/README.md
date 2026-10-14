@@ -1,5 +1,5 @@
 ---
-status: drafting
+status: proposed
 created: "2026-10-14"
 ---
 
@@ -11,5 +11,11 @@ shows the root instead. The user found the explorer's roots confusing while look
 this), and worked the model out in conversation on 2026-10-14: vaults, home among them, a no-vault for the rest of the
 file system, and the explorer as one view of the whole tree, zoomed.
 
-Still being talked through: [notes.md](notes.md) holds what is settled so far, what is proposed, and what is open
-(symlinks next). Requirements, design, decisions and tasks follow once the model is agreed.
+Settled in conversation, to be accepted as a whole before the work starts; GIT (`../git-review/`) is rebased on it
+once it is.
+
+- [requirements.md](requirements.md): its goals, acceptance criteria and its changes to the root's requirements.
+- [design.md](design.md): its changes to the root's design.
+- [decisions.md](decisions.md): what was settled, and why.
+- [notes.md](notes.md): how it was talked through, the drawings, and what's left for the user to confirm.
+- [tasks/](tasks/README.md): the work, a task per file.
