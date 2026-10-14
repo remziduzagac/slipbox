@@ -87,6 +87,9 @@ accepted deviation until then, with a review date.
 
 **Why:** On recommendation: GitHub renders `docs/` well, and a site is a generator and its upkeep to add.
 
+> **Superseded by DS-D1 (2026-10-14):** the docs are also a website on GitHub Pages, built and deployed by Actions;
+> DOC-06's deviation is gone from `.github/upkeep/deviations.toml`.
+
 ## GR-D9: Hardened CI, on Linux and macOS (2026-10-12)
 
 **Decision:** CI meets greenrepo's CI rules: no permission by default and each job's grants explained, actions pinned

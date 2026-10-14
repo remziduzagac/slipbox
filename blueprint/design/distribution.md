@@ -283,12 +283,37 @@ channels it reads, `stable` and `preview`, each one line, `<tag> <SHA-256 of tha
 published release tagged `v<x.y.z>` of the highest version (the newest, unless an older line's fix is published after
 it), `preview` the newest published preview; a draft is neither, and a channel with no release has no file
 (`release.ts site`: the releases from `gh api`, each installer downloaded and hashed, refused when GitHub's own digest
-of the asset differs). An `index.html` sends a visitor to the repository. It's deployed when a release is published (a
-person publishes it), by `preview.yml` once a preview is, when the bootstrap or the workflow changes on `main`, and by
+of the asset differs). The site also holds the docs, at `docs/` (§ The documentation site), and its `index.html`
+sends a visitor there, with a link to the repository. It's deployed when a release is published (a person publishes
+it), by `preview.yml` once a preview is, when the bootstrap, the workflow, `docs/` or `site/` change on `main`, and by
 hand; the site is always made from `main`'s scripts, whichever ref started the run, and from the releases as they are
 then, one deployment at a time, never cancelled, so an older run never deploys over a newer one. Its build job only
 reads; the Pages grants (`pages: write`, `id-token: write`) are its deploy job's alone, in the `github-pages`
 environment, which takes deployments from `main`, `test` and `v*` tags only.
+
+## The documentation site
+
+**The site** (`site/`, DS-D1) is an Astro Starlight project of its own: its packages in `site/package.json`, exact,
+under the root's install gates in `site/bunfig.toml` (no install script, a week's age), checked by
+`bun run check:deps` (`siteProblems`), updated by Dependabot with the rest. It's served at
+`https://<owner>.github.io/<name>/docs/` (`base: /slipbox/docs`), with Starlight's search (Pagefind, built with the
+site), its sidebar, light and dark themes, and an edit link on each page. Pictures pass through as they are (no image
+processing). sharp, Astro's optional package for it, is overridden by a placeholder (`site/stubs/sharp`), so neither it
+nor its libvips (LGPL-3.0) is installed.
+
+**Its pages are gathered from `docs/`** (`site/scripts/gather.ts`, before each build; DS-D2): the docs map's
+(`docs/README.md`) `##` sections are the sidebar's groups and their lists its pages, in order; a page's H1 is its
+title and its first paragraph its description; the links between the docs become the site's addresses
+(`../manual/keys.md#leader` → `/slipbox/docs/manual/keys/#leader`), a link to a repository file outside `docs/` goes to
+it on GitHub, code is left as it is; each page's edit link opens its file in `docs/`. The screenshots are copied in, and
+the agent guide is also served as its Markdown (`/slipbox/docs/agent-guide.md`), for an agent to read. What's
+gathered isn't committed. The home (`site/src/content/docs/index.mdx`) is the site's own: the paths, the buttons, the
+agent prompt, the cards (DS-D3).
+
+**Built** by `bun run site` (the site's install, then `gather`, `astro build` under Bun, and
+`site/scripts/check-links.ts`, which fails on a link within the site to a page or heading that isn't there, or to a
+path on the domain outside it but the installer's files). CI's `site` job runs it on every change, inside the
+required `ci` check; `pages.yml` runs it and puts the site at `_site/docs/`.
 
 ## Channels
 

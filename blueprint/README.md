@@ -31,10 +31,10 @@ ideas left open: the skill as an npx package, how agents and slipbox work togeth
 
 - [tasks/](tasks/README.md): small work not worth a workstream; open tasks are its files.
 - [workstreams/](workstreams/README.md): contained parts of the work; the roadmap gives their order. Active:
-  [TT](workstreams/terminal-tests/README.md), the terminal tests headless and by feature, and
-  [DS](workstreams/docs-site/README.md), the documentation site and docs a newcomer can follow. DOC, the user
-  documentation, DF, what writing it found, and [GR](workstreams/archive/greenrepo/README.md), the repository to
-  greenrepo, published and released, are consolidated, in `workstreams/archive/`.
+  [TT](workstreams/terminal-tests/README.md), the terminal tests headless and by feature. DOC, the user
+  documentation, DF, what writing it found, [GR](workstreams/archive/greenrepo/README.md), the repository to
+  greenrepo, published and released, and [DS](workstreams/archive/docs-site/README.md), the documentation site and docs
+  a newcomer can follow, are consolidated, in `workstreams/archive/`.
 
 ## How things are recorded
 

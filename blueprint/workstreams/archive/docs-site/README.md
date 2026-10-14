@@ -1,9 +1,11 @@
 ---
-status: active
+status: consolidated
 created: "2026-10-14"
 ---
 
 # DS: The documentation site, and docs a newcomer can follow
+
+> Consolidated into its parent on 2026-10-14.
 
 slipbox's user documentation made as easy to follow as herdsman's: a website on GitHub Pages, built with Starlight
 from `docs/` as it is; a front door that starts each reader on their own path, with a quick start, the concepts on one

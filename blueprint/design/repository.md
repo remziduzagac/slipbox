@@ -130,7 +130,7 @@ The other workflows keep the same rules:
 | `build.yml` | called | every platform built, packed, given its SBOM, summed, attested |
 | `release.yml` | a `v*` tag | the tag and changelog checked, `build.yml`, the draft |
 | `preview.yml` | a push to `test` | the preview planned, `build.yml`, the pre-release, the pruning, `pages.yml` |
-| `pages.yml` | called; a release published; the bootstrap changed on `main`; by hand | the Pages site |
+| `pages.yml` | called; a release published; the bootstrap, `docs/`, `site/` on `main`; by hand | the Pages site |
 | `homebrew.yml` | a release published | the formula into the tap, through the `release` environment |
 | `audit.yml` | weekly; `bun.lock` or the accepted list changed; by hand | `bun run audit` |
 | `health.yml` | weekly; by hand | the health issue (§ The weekly health check) |
@@ -205,10 +205,10 @@ UPK-03, UPK-04, UPK-15, UPK-16):
   and deploy keys can't expire, so the dates are kept here. Today it holds the tap's deploy key,
   `HOMEBREW_TAP_DEPLOY_KEY`, active, with its rotation date (D228).
 - `deviations.toml`: the accepted deviations, each with its rule and standard, what the rule asks, the reason, what
-  stands in its place, the decision behind it and a review date: DOC-06, a docs site, until after the first release
-  (GR-D8); the outside criteria a solo project can't meet (Scorecard's Code-Review, Contributors and
-  Branch-Protection past its first tier, the Best Practices badge's gold level, OSPS QA-07.01); OSPS LE-01.01, since
-  the DCO sign-off is optional and not taken; Scorecard's Maintained, which scores a repository younger than 90 days 0.
+  stands in its place, the decision behind it and a review date: the outside criteria a solo project can't meet
+  (Scorecard's Code-Review, Contributors and Branch-Protection past its first tier, the Best Practices badge's gold
+  level, OSPS QA-07.01); OSPS LE-01.01, since the DCO sign-off is optional and not taken; Scorecard's Maintained, which
+  scores a repository younger than 90 days 0.
 
 A setting is never applied by automation: the maintainer changes it by hand. A drift is undone, or, when the new
 setting is right, the file is changed to match through a pull request; a planned change is a pull request to the file
