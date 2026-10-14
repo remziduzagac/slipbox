@@ -28,14 +28,14 @@ The cursor moves by the rows you see:
 
 | To move | Press |
 | --- | --- |
-| a character, or a row | `h` `j` `k` `l`, or the arrows |
-| to the next or previous word's start | `w` and `b` |
+| a character, or a row | the arrows, or `h` `j` `k` `l` |
+| to the next or previous word's start | `ctrl+right` and `ctrl+left`, or `w` and `b` |
 | to a word's end | `e` |
-| to the row's start or end | `0` and `$`, or `home` and `end` |
+| to the row's start or end | `home` and `end`, or `0` and `$` |
 | to the row's first non-blank | `^` |
-| to the top or bottom of the note | `g g` and `shift+g` |
-| to the next or previous heading | `] ]` and `[ [`, or `alt+down` and `alt+up` |
-| to the next or previous paragraph | `}` and `{` |
+| to the top or bottom of the note | `ctrl+home` and `ctrl+end`, or `g g` and `shift+g` |
+| to the next or previous heading | `alt+down` and `alt+up`, or `] ]` and `[ [` |
+| to the next or previous paragraph | `ctrl+down` and `ctrl+up`, or `}` and `{` |
 | to the top, middle or bottom of the window | `shift+h`, `shift+m`, `shift+l` |
 | half a page | `ctrl+d` and `ctrl+u` |
 | a page | `pagedown` and `pageup` |

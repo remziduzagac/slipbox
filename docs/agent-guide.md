@@ -21,7 +21,9 @@ files, so neither ever sees a stale copy.
    into it.
 2. **The screen.** The explorer is on the left, the note on the right, the status line at the bottom. The mouse works
    everywhere: click a note, a link, a tab.
-3. **Two keys teach the rest.** `space` shows the keys that can follow it. `?` lists every key, with a filter.
+3. **Two keys teach the rest.** `space` shows the keys that can follow it. `?` lists every key, with a filter. The
+   person doesn't need vim: the arrows and the shortcuts of other editors work
+   ([Keys you already know](https://remziduzagac.github.io/slipbox/docs/guides/keys-you-know/)).
 4. **Moving and finding.** `ctrl+p` opens a note by name, `enter` follows a link, `ctrl+o` goes back, `space f s`
    searches every note.
 5. **Editing.** `i` opens the lens (the Markdown around the cursor), `i` again types, `esc` steps back out, `ctrl+s`

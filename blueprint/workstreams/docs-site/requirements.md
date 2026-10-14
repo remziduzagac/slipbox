@@ -11,6 +11,8 @@
 - The docs read easily: short sentences, one idea each, steps as steps, keys and settings in tables (DS-D4).
 - The reference chapters (keys, configuration, the command line) read as plainly, their lists kept whole by the
   tests (DS-D5).
+- A reader who doesn't use vim finds the keys they know: the newcomers' pages give them first, and a page lists them
+  (DS-D6).
 
 ## Non-goals
 
@@ -35,6 +37,8 @@
 - Every page follows the writing rules of DS-D4.
 - The keys, configuration and command-line chapters' prose follows DS-D4; their tables and the configuration's
   TOML listing stay, every key, default, command and flag in them as the tests check.
+- The README, the quick start, getting started and the docs' home give a familiar key before vim's; Keys you already
+  know lists the familiar keys; `tests/docs.test.ts` holds the newcomers' pages to keys slipbox has.
 - greenrepo's DOC-06 is met: its deviation is gone from `.github/upkeep/deviations.toml`.
 - `bun run check` passes.
 
@@ -44,7 +48,8 @@
 
 Adds: the docs are also a website on GitHub Pages, built from `docs/` by Starlight, searchable, deployed with the
 installer (DS-D1, DS-D2); a home with a path for each reader, a quick start, a concepts page and an agent guide
-(DS-D3); the reference chapters written by hand, held whole by the tests (DS-D5). The writing rules (How) become
+(DS-D3); the reference chapters written by hand, held whole by the tests (DS-D5); the familiar keys first for a
+newcomer, on a page of their own (DS-D6). The writing rules (How) become
 DS-D4's.
 
 Previously: "slipbox ships user documentation in Markdown in `docs/`" (read on GitHub only; greenrepo's DOC-06 a

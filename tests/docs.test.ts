@@ -131,23 +131,40 @@ const asWritten = (key: string) =>
     .map((k) => k.replace(/(^|\+)escape$/, "$1esc"))
     .join(" ");
 
+/** Every mode's default keys, by the table's name. */
+const KEY_TABLES = {
+  DEFAULT_KEYS,
+  DEFAULT_SOURCE_KEYS,
+  DEFAULT_VISUAL_KEYS,
+  DEFAULT_EXPLORER_KEYS,
+  DEFAULT_OUTLINE_KEYS,
+  DEFAULT_FOOTNOTE_KEYS,
+  DEFAULT_INFO_KEYS,
+  DEFAULT_RESIZE_KEYS,
+};
+
 /** The default keys, every mode's, that the keys chapter doesn't show in backticks. */
 function keysLeftOut(chapter: string): string[] {
   const shown = new Set([...chapter.matchAll(/`([^`\n]+)`/g)].map((m) => m[1]!));
-  const tables = {
-    DEFAULT_KEYS,
-    DEFAULT_SOURCE_KEYS,
-    DEFAULT_VISUAL_KEYS,
-    DEFAULT_EXPLORER_KEYS,
-    DEFAULT_OUTLINE_KEYS,
-    DEFAULT_FOOTNOTE_KEYS,
-    DEFAULT_INFO_KEYS,
-    DEFAULT_RESIZE_KEYS,
-  };
   const out: string[] = [];
-  for (const [name, table] of Object.entries(tables))
+  for (const [name, table] of Object.entries(KEY_TABLES))
     for (const key of Object.keys(table)) if (!shown.has(asWritten(key))) out.push(`${name}: ${asWritten(key)}`);
   return out;
+}
+
+/** Keys only typing has (editing.ts's insertKeyNow), in no keymap. */
+const TYPING_KEYS = new Set(["backspace", "delete", "ctrl+w"]);
+/** One key as the docs write it: modifiers, then a character or a named key. */
+const KEY =
+  /^(?:(?:ctrl|alt|shift|cmd)\+)*(?:[a-z0-9/\\?]|left|right|up|down|home|end|page(?:up|down)|tab|enter|esc|backspace|delete)$/;
+
+/** The keys a doc shows in backticks that slipbox hasn't: bound in no mode, and not a key of typing. */
+function keysUnbound(text: string): string[] {
+  const bound = new Set(Object.values(KEY_TABLES).flatMap((table) => Object.keys(table).map(asWritten)));
+  return [...prose(text).matchAll(/`([^`\n]+)`/g)]
+    .map((m) => m[1]!)
+    .filter((k) => k !== "space" && k.split(" ").every((t) => t === "space" || KEY.test(t)))
+    .filter((k) => !bound.has(k) && !TYPING_KEYS.has(k));
 }
 
 /** The CLI's commands, and their flags, that the CLI chapter doesn't name. */
@@ -209,6 +226,11 @@ describe("the user documentation (DOC)", () => {
     expect(keysLeftOut(read(join(DOCS, "manual", "keys.md")))).toEqual([]);
   });
 
+  test("the pages for newcomers name only keys slipbox has", () => {
+    const pages = ["keys-you-know.md", "quick-start.md", "getting-started.md"];
+    expect(pages.flatMap((f) => keysUnbound(read(join(DOCS, "guides", f))).map((k) => `${f}: ${k}`))).toEqual([]);
+  });
+
   test("the checks catch what they look for", () => {
     const at = join(DOCS, "manual", "keys.md");
     expect(
@@ -227,6 +249,9 @@ describe("the user documentation (DOC)", () => {
     ]);
     expect(blueprintIds("Bun 1.4.2, git 2.42, `ctrl+d`, a 3D chart.\n")).toEqual([]);
     expect(keysLeftOut("")).toContain("DEFAULT_KEYS: space l n");
+    expect(keysUnbound('`ctrl+shift+k` `ctrl+f` `space f f` `backspace` `INSERT` `editor.edit_in = "x"`')).toEqual([
+      "ctrl+shift+k",
+    ]);
     expect(commandsLeftOut("`render`")).toContain("render --width");
   });
 });

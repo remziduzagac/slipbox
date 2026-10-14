@@ -11,6 +11,9 @@ You can change every binding. You can also change:
 
 [Configuration](configuration.md) says how. A change applies as soon as you save the file.
 
+You don't need vim's keys. The arrows, `home`, `end`, the page keys and the `ctrl` shortcuts of other editors stand
+beside them. [Keys you already know](../guides/keys-you-know.md) lists those on one page.
+
 ## Notation
 
 Keys are written as you press them.

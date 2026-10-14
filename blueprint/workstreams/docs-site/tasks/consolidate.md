@@ -1,7 +1,7 @@
 ---
 status: todo
 assignee: claude-cli
-blocked_by: [DS-T1, DS-T2, DS-T3]
+blocked_by: [DS-T1, DS-T2, DS-T3, DS-T5]
 created: "2026-10-14"
 ---
 

@@ -59,6 +59,9 @@ If you've used slipbox in other folders, a list of them may open first, called "
 
 ![slipbox open on ~/notes: the explorer on the left, coffee.md rendered in its tab, the status line reading READ](../images/getting-started-first.png)
 
+The arrow keys move, and the shortcuts of other editors work: `ctrl+f` finds, `ctrl+s` saves, `ctrl+z` undoes. vim's
+keys work too. This tour gives the familiar key first, and [Keys you already know](keys-you-know.md) lists them all.
+
 Two keys help while you learn the rest:
 
 - Press `space`. A popup lists the keys that can follow it, in groups: `f` for find, `n` for note, and so on. `esc`
@@ -73,10 +76,10 @@ A cursor sits on the text, at the top of the note.
 
 | To move | Press |
 | --- | --- |
-| Down or up a row | `j` and `k`, or the arrow keys |
-| Half a page down or up | `ctrl+d` and `ctrl+u` |
-| To the top or the bottom | `g g` and `shift+g` |
-| To the next or previous heading | `] ]` and `[ [` |
+| Down or up a row | `down` and `up`, or `j` and `k` |
+| A page down or up | `pagedown` and `pageup`, or `ctrl+d` and `ctrl+u` for half a page |
+| To the top or the bottom | `ctrl+home` and `ctrl+end`, or `g g` and `shift+g` |
+| To the next or previous heading | `alt+down` and `alt+up`, or `] ]` and `[ [` |
 
 The mouse wheel scrolls.
 
@@ -93,7 +96,7 @@ The switcher finds a note by its name.
 The explorer is for browsing.
 
 1. Press `space e`. The explorer takes the keys: the status line says `FILES`, and `inbox.md` is selected.
-2. Press `k` to move up to `coffee.md`, then `enter`. coffee.md opens in a second tab, `2 coffee.md`, and the keys go
+2. Press `up` to move to `coffee.md`, then `enter`. coffee.md opens in a second tab, `2 coffee.md`, and the keys go
    back to the note.
 3. Press `q` to close that tab. You're back in inbox.md.
 
@@ -114,8 +117,8 @@ A click on a link follows it too. `space h p` goes back, like `ctrl+o`.
 
 To find something in this note:
 
-1. Press `/` and type `grinder`. The cursor moves to the match as you type, and a find row above the note counts the
-   matches, `1/1`.
+1. Press `ctrl+f` and type `grinder`. The cursor moves to the match as you type, and a find row above the note counts
+   the matches, `1/1`.
 2. Press `enter` to keep the search. `n` and `shift+n` then go to the next and previous match.
 3. Press `esc` to close the row.
 

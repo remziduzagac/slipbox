@@ -22,8 +22,8 @@ The editor is **necessary and sufficient**. It has the everyday editing tools, f
 find-and-replace to completion, language servers, linters and spelling. Your own editor is a key away whenever you
 want more.
 
-Use vim's keys or familiar editor shortcuts, and discover the rest as you go. `space` opens a menu of actions, `?`
-shows every key, and `:` opens the command palette. Everything is clickable too.
+Use the arrow keys and the shortcuts you know from other editors, or vim's keys, and discover the rest as you go.
+`space` opens a menu of actions, `?` shows every key, and `:` opens the command palette. Everything is clickable too.
 
 The agent works on the same files, through slipbox's command line and bundled skill. It searches, follows links and
 makes changes. Its writes are guarded: they refuse to replace a file changed since the agent read it. What the agent
@@ -77,14 +77,14 @@ slipbox ~/notes
 
 ![slipbox with the explorer, a note's properties and headings, and its outline](docs/images/screen-map.png)
 
-A reading cursor moves with vim keys or the usual editor keys. `space` opens a menu of everything else, and `?` lists
-every key. These are the keys to start with:
+A reading cursor moves with the arrow keys and the usual editor shortcuts, or with vim's keys. `space` opens a menu of
+everything else, and `?` lists every key. These are the keys to start with:
 
 | To | Press |
 | --- | --- |
-| Move | `h` `j` `k` `l` or the arrows |
-| Move by word | `w`/`b` or `ctrl+right`/`ctrl+left` |
-| Move by heading | `[ [` / `] ]` or `alt+up`/`alt+down` |
+| Move | the arrows or `h` `j` `k` `l` |
+| Move by word | `ctrl+right`/`ctrl+left` or `w`/`b` |
+| Move by heading | `alt+up`/`alt+down` or `[ [` / `] ]` |
 | Follow the link under the cursor | `enter` |
 | Go back | `ctrl+o` (or `space h p`) |
 | Go forward | `space h n` |
@@ -93,7 +93,7 @@ every key. These are the keys to start with:
 | Find and replace | `ctrl+h` (or vim's `:%s/old/new/g`) |
 | Find and replace in every note | `ctrl+shift+h` |
 | Open the command palette | `:` |
-| Select, then copy | `v`, then `y` |
+| Select, then copy | `shift` with an arrow, then `ctrl+c` (or `v`, then `y`) |
 | Open, then focus, then close the explorer | `space e` |
 | Open, then focus, then close the outline | `space o` |
 | Return to the note from the explorer or the outline | `esc` |
@@ -112,7 +112,8 @@ Everything is clickable too.
 The lens shows the Markdown around the cursor between two rules, with the rest left rendered. The vim commands work
 (`dw`, `ciw`, `p`, `u`, `.`), and autosave saves after a pause. When you quit, slipbox remembers where you were.
 
-Every key is in [Keys](docs/manual/keys.md), and all of them are configurable
+[Keys you already know](docs/guides/keys-you-know.md) lists the shortcuts from other editors. Every key is in
+[Keys](docs/manual/keys.md), and all of them are configurable
 ([Configuration](docs/manual/configuration.md)). The configuration reloads itself when you save it.
 
 [Getting started](docs/guides/getting-started.md) walks through a first session.
