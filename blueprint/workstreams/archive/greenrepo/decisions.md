@@ -59,6 +59,9 @@ asks for wait until someone asks to contribute.
 
 **Not chosen:** open pull requests with Contrib's documents from the start.
 
+> **Partly superseded by D234 (2026-10-14):** the contributing guide, the code of conduct and the pull request template
+> are there while pull requests still come from collaborators only.
+
 ## GR-D6: Every change through a pull request the user merges (2026-10-12)
 
 **Decision:** Once the repository exists, work lands on `main` only through a pull request that passes the required

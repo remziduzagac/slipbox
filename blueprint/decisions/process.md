@@ -111,3 +111,25 @@ joined with `docs`, `blueprint`, `site` or a top-level Markdown file.
 **Not chosen:** `paths-ignore` on the workflow: a required check that never starts blocks the merge. A list of test
 files kept by hand in the workflow: the test on `test:docs` keeps it in one place, and true.
 
+## D234: A contributing guide, a code of conduct and a pull request template, before contributions open (2026-10-14)
+
+**Decision:** The repository has `CONTRIBUTING.md`, `CODE_OF_CONDUCT.md` and `.github/pull_request_template.md`, while
+pull requests still come from collaborators only (GR-D5). The guide says where each thing goes (bugs to the issue form,
+questions and ideas to Discussions, a vulnerability to private reporting), that pull requests are collaborators' for
+now, and what one needs: a Conventional Commit title, one change, docs and blueprint kept true, a test, `bun run check`,
+an agent named in a `Co-Authored-By:` trailer. The code of conduct is the Contributor Covenant 2.1 as written, its
+contact this repository's private reporting form, a report saying it's about conduct; an abusive comment can go to
+GitHub with Report content. The template is that checklist. This supersedes GR-D5's "no contributing guide, code of
+conduct or pull request template"; an AI policy beyond the trailer still waits.
+
+**Why:** The user's call, 2026-10-14, when GitHub's community profile listed the three as missing. The guide is useful
+to a reporter now, and the template to collaborators and agents; the code of conduct is the house rules for issues and
+Discussions, which are open to anyone.
+
+**Cost:** The private reporting form is made for vulnerabilities: a conduct report there is the one private channel a
+repository under a personal account has (reports to a repository's own maintainers are an organisation's feature), and
+the maintainer has no email address for it.
+
+**Not chosen:** a code of conduct of the project's own, shorter: the Covenant is the one people know, and GitHub's
+profile recognises it. Waiting until pull requests open, as GR-D5 had it.
+
