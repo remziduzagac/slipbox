@@ -105,13 +105,55 @@ only inside the root → inside kept, out asked; writes through a link only insi
 vaults, home may write through links it trusted; the CLI refuses reads through a link out of the root → refuses any
 link not trusted.
 
-## Proposed, not yet agreed
+## The peek, and the rest settled 2026-10-14
 
-- **Looking never switches.** Following a link to a file of another vault, or of no-vault, opens a peek (a floating
-  window, as a file's history shows an old version), `o` there going into it. The same rule as the git panel's: a
-  worktree reviewed without switching. It changes how links into other vaults are followed today (D50: a switch).
-- **No-vault shown as "Elsewhere"** on screen: the status line `Elsewhere  ‹ /etc/nginx/nginx.conf ›`.
-- **`Downloads`** in home's skip list?
+- **Looking never moves you; only choosing to go does.** Following a link that leads out of the current vault opens a
+  peek: a large floating window (as an old version from a file's history shows), the note rendered, read-only; `/`
+  finds in it, copying works. `esc` closes it, where you were; `o` goes there (into its vault, the tabs changing); `t`
+  keeps it as a tab here, read-only, marked with its vault's name. Most of the screen by default, `z` all of it.
+- **Links inside a peek:** one to the peeked note's vault moves the peek (`ctrl+o` back, inside it); one to the current
+  vault closes the peek and opens it in the tabs, as usual; one to a third vault moves the peek there.
+- **The same peek everywhere** a file of another vault is looked at: a backlink from another vault, another vault's
+  search result, a worktree's file from the git panel, a file in no-vault. It shows the note's backlinks when its vault
+  has an index (the background index has most), else says to open it to see them.
+- **Mouse:** a click on a link to another vault peeks; `ctrl+click` goes there at once.
+- **Read-only:** editing another vault's file needs its index and watcher, which is going there (`o`); a peek that edits
+  would be a half-switch.
+- **No-vault is shown as "Elsewhere":** the status line `Elsewhere  ‹ /etc/nginx/nginx.conf ›`, the explorer's mark,
+  the messages. "no-vault" stays the design's word.
+- **`Downloads` is in home's skip list.**
+
+This changes D50: a link into another vault peeks instead of switching.
+
+## Busy folders, and the tree's marks (2026-10-14)
+
+- **Busy folders are in the tree, not in the index.** By default: `node_modules`, `.venv` and `venv`, `__pycache__`,
+  `target`, `build`, `dist`, `.next`, `vendor`, `Pods`, `DerivedData`, `.gradle`, `.tox`, caches; in a vault, what its
+  `.gitignore` leaves out, as today; in home, its skip list. They're listed, opened and browsed like any folder; nothing
+  in them is indexed, searched or linked to by name. Today the walk leaves them out of the explorer too.
+- **A row can carry several marks**, one per thing it tells, so a folder's state reads at a glance. Proposed set (each
+  in the nerd, unicode and ascii glyphs, as every mark is):
+
+| Mark | Says |
+| --- | --- |
+| `◈` | a vault; highlighted, the current vault |
+| `⎇ branch` | a worktree, and its branch |
+| `→ target` | a link, where it points; `not followed` until allowed |
+| `⊘` | not indexed: a busy folder, the skip list, `.gitignore` |
+| `◌` | being indexed now |
+| `🔒` | can't be read |
+| `⚠` | a broken link, or a disk that doesn't answer |
+
+```text
+ ~ › projects › kestrel ›
+ ≡  ◈ kestrel                    main
+    ▸ docs/
+    ▸ src/
+    ▸ node_modules/              ⊘
+    ▸ target/                    ⊘
+    ▸ shared/                    → /srv/team/shared   not followed
+    ▸ archive/                   ◌
+```
 
 ## Goes away
 
