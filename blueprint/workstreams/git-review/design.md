@@ -7,9 +7,9 @@ the work; the root's files change only when GIT is consolidated.
 
 Adds, after "The working tree's changes":
 
-- **The diff** (GIT-D2): how a diff is found (lines, then words inside paired lines) and drawn, as source or before and after;
-  the folded unchanged stretches; `tab` between the two; which windows use it (the panel's, the changes' list, a history
-  entry, the conflict prompt's (D)iff, the review, the merge screen).
+- **The diff** (GIT-D2): how a diff is found (lines, then words inside paired lines) and drawn, as source or before and
+  after; the folded unchanged stretches; `tab` between the two; which windows use it (the panel's, the changes' list, a
+  history entry, the conflict prompt's (D)iff, the review, the merge screen).
 - **Reviewing a change** (GIT-D3): `v` in the git panel, its hunks across files, its keys, the notes to the scratch,
   what it says at the end.
 - **The remote and stash** (GIT-D4): the commands and their keys, git without a terminal, the pre-push hook's trust,
