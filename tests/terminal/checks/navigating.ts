@@ -1459,11 +1459,11 @@ export const NAVIGATING: Check[] = [
     },
     run: async (s) => {
       /** One message in the list says all these words (the rows are cut, the file's path first: the count tells). */
-      const said = async (words: string) => {
+      const said = async (words: string, count = / 1\/1 ┘/) => {
         await leader(s, "m");
         await s.see("Messages");
         await s.type(words);
-        await s.see(/ 1\/1 ┘/);
+        await s.see(count);
         await s.keys("escape");
         await s.notSee("Messages");
       };
@@ -1485,7 +1485,9 @@ export const NAVIGATING: Check[] = [
       // A typo saved mid-edit (line numbers off in it too): said, and the last good settings kept.
       s.write(configFile(s), `${fixed.replace("line_numbers = true", "line_numbers = false")}\n[ui\n`);
       await leader(s, "v", "c");
-      await said("Invalid TOML keeping what it said before");
+      // Saved, the file is read again on its own too (polled): before space v c did, on a slow machine, and said by
+      // each (#40).
+      await said("Invalid TOML keeping what it said before", / 1\/[12] ┘/);
       s.expect(numbered(), "line numbers still on: the last good settings");
     },
   },

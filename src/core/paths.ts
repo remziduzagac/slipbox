@@ -28,6 +28,11 @@ const XDG: Record<StoreKind, [string, string]> = {
   data: ["XDG_DATA_HOME", ".local/share"],
 };
 
+/** A path as it's shown: `~/…` in the home folder. */
+export function tildePath(abs: string, home = process.env.HOME || homedir()): string {
+  return abs === home ? "~" : abs.startsWith(`${home}/`) ? `~/${abs.slice(home.length + 1)}` : abs;
+}
+
 /** slipbox's folder for a kind of thing, on a platform (14.9). */
 export function storeDir(
   kind: StoreKind,

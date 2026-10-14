@@ -9,7 +9,7 @@ import { existsSync } from "node:fs";
 import { readRegular, SMALL_FILE } from "./fsutil.ts";
 import { join } from "node:path";
 import { parse as parseToml } from "smol-toml";
-import { userConfigFile } from "./paths.ts";
+import { tildePath, userConfigFile } from "./paths.ts";
 import { KEY_KINDS, type TypeConfig } from "./doctypes.ts";
 
 export type GlyphMode = "auto" | "nerd" | "unicode" | "ascii";
@@ -466,8 +466,10 @@ export function loadConfig(opts: LoadConfigOptions = {}): LoadedConfig {
   else if (opts.vaultRoot) files.push(join(opts.vaultRoot, ".slipbox", "config.toml"));
 
   for (const file of files) {
+    // Named in its warnings as it's read best, `~/…`: a row of the messages list is cut where the window ends (#40).
+    const shown = tildePath(file);
     if (!existsSync(file)) {
-      if (file === opts.configFile) warnings.push(`config: ${file} does not exist`);
+      if (file === opts.configFile) warnings.push(`config: ${shown} does not exist`);
       continue;
     }
     let data: Record<string, unknown>;
@@ -477,7 +479,7 @@ export function loadConfig(opts: LoadConfigOptions = {}): LoadedConfig {
     } catch (err) {
       const kept = opts.lastGood?.get(file);
       warnings.push(
-        `config: ${file}: ${(err as Error).message.split("\n")[0]}${kept ? " — keeping what it said before" : ""}`,
+        `config: ${shown}: ${(err as Error).message.split("\n")[0]}${kept ? " — keeping what it said before" : ""}`,
       );
       if (!kept) continue;
       data = structuredClone(kept);
@@ -485,14 +487,14 @@ export function loadConfig(opts: LoadConfigOptions = {}): LoadedConfig {
     // The vault's identity (17.4) isn't a setting: read by core/registry.ts, never merged.
     if ("vault" in data) {
       if (file === userFile)
-        warnings.push(`config: ${file}: [vault] belongs in a folder's .slipbox/config.toml (its identity); ignored`);
+        warnings.push(`config: ${shown}: [vault] belongs in a folder's .slipbox/config.toml (its identity); ignored`);
       delete data.vault;
     }
-    if (file !== userFile) dropUserOnly(data, file, warnings);
+    if (file !== userFile) dropUserOnly(data, shown, warnings);
     // `marks` was on or off before it was a severity: on marked every problem shown, off none.
     const diag = data.diagnostics;
     if (isPlainObject(diag) && typeof diag.marks === "boolean") diag.marks = diag.marks ? "info" : "off";
-    config = merge(config, data, file, "", warnings);
+    config = merge(config, data, shown, "", warnings);
     // A key this file set, and the merge took (a bad value is warned of and left as it was).
     for (const [section, table] of Object.entries(data)) {
       if (!isPlainObject(table)) continue;

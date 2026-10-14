@@ -257,9 +257,10 @@ When the line is short, the word count goes first, then the link, then the tab c
 ## Messages and questions
 
 Messages float at the top right of the window, framed and marked by level: `✗` an error, `!` a warning, `·`
-information. Up to four stack up, the newest on top; each stays four seconds, an error eight. They never push the note
-down. Click one to see every message; `space m` or `:messages` lists everything slipbox has said, newest first, and
-`enter` copies one. On a screen under 30 columns wide, a message takes over the status line while it shows.
+information. Up to four stack up, the newest on top; each stays four seconds once it's on screen, an error eight. They
+never push the note down. Click one to see every message; `space m` or `:messages` lists everything slipbox has said,
+newest first, and `enter` copies one. On a screen under 30 columns wide, a message takes over the status line while it
+shows.
 
 Questions, such as a name for a new note or "delete it?", float in a window near the top of the content. Type the
 answer after `›` and press `enter`, or `esc` to cancel; the `OK` and `Cancel` buttons click. A yes-or-no question

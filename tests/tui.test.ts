@@ -3209,6 +3209,29 @@ describe("breadcrumb collapse (…) and the path dropdown", () => {
     expect(shape(crumbLayout([30], 12, 3))).toBe("0:12");
     expect(shape(crumbLayout([30], 5, 3))).toBe("…");
   });
+  test("space f b with the which-key popup drawn over the breadcrumb after space f: the dropdown under it all the same (#40)", async () => {
+    const h = await harness({
+      open: "samples/handbook/operations-handbook.md",
+      width: 100,
+      height: 34,
+      config: (c) => (c.ui.outline = false),
+    });
+    const v = h.app.view!;
+    const target = h.app.currentLayout(v).headings.find((x) => x.text.startsWith("Swapping a filter"))!;
+    h.app.moveCursor(v, { row: target.line + 1, col: 0 });
+    h.frame();
+    const hot = h.app.geometry!.hot;
+    const crumb = hot.find((r) => r.id === "crumbmore:0") ?? hot.find((r) => r.id === "crumbicon:0")!; // its …, else its icon
+    // A frame between the keys, as a slow machine draws one: the popup over the breadcrumb takes its clicks.
+    await h.keys("space", "f");
+    h.frame();
+    const popup = h.app.geometry!.popup!;
+    expect(crumb.y >= popup.y && crumb.y < popup.y + popup.h && crumb.x < popup.x + popup.w).toBe(true);
+    expect(h.app.geometry!.hot.some((r) => r.id === crumb.id)).toBe(false);
+    await h.keys("b");
+    expect((h.app.overlay as ListOverlay).anchor).toEqual({ x: crumb.x, y: crumb.y });
+    expect(h.frame()).toContain("└─");
+  });
   test("… opens the whole path as a dropdown under it; enter jumps; space f b opens it too", async () => {
     const h = await harness({
       open: "samples/handbook/operations-handbook.md",
@@ -13504,7 +13527,8 @@ describe("a branch switch as one event (5.9)", () => {
       "branch main moved on: git moved 1 file — links to it say where (space v p); space l r relinks a note's",
     );
     expect(shown(h)).toEqual(["b.md"]);
-    h.app.graph.build(true, "lazy"); // the watcher's news, as it would come
+    // Said with the graph caught up, the watcher's news not come yet (#40): space l r at once finds the link.
+    expect(h.app.graph.notes.has("docs/a.md")).toBe(true);
     expect(h.app.graph.problems().broken).toContainEqual(
       expect.objectContaining({ from: "b.md", target: "a.md", moved: "docs/a.md" }),
     );
@@ -14716,6 +14740,34 @@ describe("completion while typing (19.16)", () => {
     expect(await until(() => h.app.signature === null)).toBe(true);
     await h.app.servers!.stopAll();
   });
+
+  test("`(` ends the word: signature help slow to answer, the pause after `fn` asks for no completion (#37)", async () => {
+    const root = makeVault();
+    writeFileSync(join(root, "a.fk"), "LATESIG start\n");
+    const h = await harness({ root, open: "a.fk", config: served });
+    await ready(h);
+    await h.keys("o", "f", "n", "(");
+    expect(await until(() => h.app.signature !== null)).toBe(true); // 300 ms: the word's pause (100 ms) long past
+    expect(h.app.completion).toBeNull();
+    // enter a new line, not a word picked from a popup.
+    await h.keys("enter", ",");
+    expect(h.app.view!.buf.source).toMatch(/^LATESIG start\nfn\(\n *,\n$/); // indented as after a `(`
+    expect(await until(() => h.app.signature === null)).toBe(true);
+    await h.app.servers!.stopAll();
+  });
+
+  test("`(` ends the word: the word's items asked for before it, answered late, open no popup after it (#37)", async () => {
+    const root = makeVault();
+    writeFileSync(join(root, "a.fk"), "SLOW start\n"); // SLOW: a word's items answered 300 ms late
+    const h = await harness({ root, open: "a.fk", config: served });
+    await ready(h);
+    await h.keys("o", "f", "n");
+    await new Promise((r) => setTimeout(r, 150)); // the pause passed: asked for `fn`'s items
+    await h.keys("(");
+    await new Promise((r) => setTimeout(r, 450)); // their answer come
+    expect(h.app.completion).toBeNull();
+    await h.app.servers!.stopAll();
+  });
 });
 
 test("a relayout while typing at a line's end — a resize, the problems bar appearing — keeps the cursor after it", async () => {
@@ -15762,10 +15814,11 @@ describe("what keymap.md and tui.md promise (review: docs against the tests)", (
     expect(boxes()).toHaveLength(4);
     expect(h.app.toasts.map((t) => t.text)).toEqual(["a fifth", "a fourth", "↻ notes/alpha.md reloaded", "plain info"]);
     expect(h.app.messages.some((m) => m.text === "first, an error")).toBe(true); // in the list still
-    // Times: an info message goes after 4 s, an error stays 8 s.
+    // Times: an info message goes after 4 s, an error stays 8 s — from when they're drawn.
     h.app.dismissToasts();
     h.app.message("error", "broke");
     h.app.message("info", "fyi");
+    h.frame();
     now += 4_001;
     h.app.message("info", "later");
     expect(h.app.toasts.map((t) => t.text)).toEqual(["later", "broke"]); // the info gone after 4 s
@@ -15775,6 +15828,19 @@ describe("what keymap.md and tui.md promise (review: docs against the tests)", (
     now += 999;
     h.app.message("info", "at 8 s");
     expect(h.app.toasts.map((t) => t.text)).toEqual(["at 8 s", "at 7 s", "later"]); // gone after 8 s
+    // Said while slipbox was busy, no frame drawn for longer than it shows (#40): still there to be seen, then its 4 s.
+    h.app.dismissToasts();
+    h.app.message("warn", "said while busy");
+    now += 10_000;
+    h.app.message("info", "next");
+    expect(h.app.toasts.map((t) => t.text)).toEqual(["next", "said while busy"]);
+    expect(h.frame()).toContain("said while busy");
+    now += 3_999;
+    h.frame(); // drawn again: its time still counts from the first
+    expect(h.app.toasts.map((t) => t.text)).toContain("said while busy");
+    now += 1;
+    h.app.message("info", "then gone");
+    expect(h.app.toasts.map((t) => t.text)).toEqual(["then gone"]);
   });
 
   test("selection keys: shift+ctrl+end / home to the note's ends, shift+ctrl+down by paragraph, shift+pagedown by page", async () => {

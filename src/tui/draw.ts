@@ -87,6 +87,9 @@ export interface Geometry {
   tabStrip: Rect | null;
   /** The which-key popup, with its margin: clicks there never reach what's under it. */
   popup: Rect | null;
+  /** Where each window's breadcrumb hangs its path from (its `…`, else its icon), by the window's index: kept when a
+   *  popup over it takes its clicks — `space f b` with the which-key popup drawn after `space f` (#40). */
+  crumbAnchors: Record<number, { x: number; y: number }>;
   /** Horizontal rules (row `y`, columns [x0, x1)) and the vertical borders they may meet. */
   rules: { y: number; x0: number; x1: number }[];
   verticals: { x: number; y0: number; y1: number; style: CellStyle }[];
@@ -152,6 +155,7 @@ export function drawApp(app: App, c: Canvas): Geometry {
     scrollbars: [],
     tabStrip: null,
     popup: null,
+    crumbAnchors: {},
     rules: [],
     verticals: [],
   };
@@ -289,6 +293,8 @@ export function drawApp(app: App, c: Canvas): Geometry {
     drawBottomLine(app, c, H - 1, geo, prompt && !dialog ? prompt : null);
   else if (status) drawStatus(app, c, { y: H - status, h: 1 }, geo);
   if (float && app.toasts.length) drawToasts(app, c, mainY, mainY + mainH, geo);
+  // What was drawn of them begins its time (#40): the boxes, or the newest over the status line.
+  app.toastsDrawn(float ? app.toasts : !(prompt && !dialog) && app.transient ? [app.transient] : []);
   if (((app.whichKey && app.pending.length) || (app.resizeMode && !app.pending.length)) && !app.overlay)
     drawWhichKey(app, c, mainY, mainY + mainH, geo);
   // Completion's popup and the signature being typed (19.16), from the cursor, over the text.
@@ -794,6 +800,7 @@ function drawBreadcrumb(
     app.hover === iconId ? roleStyle(theme, "hover", bg) : { ...roleStyle(theme, "breadcrumb_icon", bg), bg };
   const iw = drawText(c, x0, y, app.glyphs.crumbIcon, iconSt);
   geo.hot.push({ id: iconId, x: x0, y, w: iw, h: 1 });
+  geo.crumbAnchors[index] = { x: x0, y };
   x0 += iw + 1;
   const plan = crumbLayout(
     crumbs.map((p) => Math.min(CRUMB_MAX, stringWidth(p.text))),
@@ -808,6 +815,7 @@ function drawBreadcrumb(
       const st = app.hover === id ? roleStyle(theme, "hover", bg) : { ...roleStyle(theme, "breadcrumb", bg), bg };
       const w = drawText(c, cx, y, "…", st);
       geo.hot.push({ id, x: cx, y, w, h: 1 });
+      geo.crumbAnchors[index] = { x: cx, y };
       cx += w;
       return;
     }

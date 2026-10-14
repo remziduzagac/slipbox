@@ -25,6 +25,16 @@ The format is [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.1.0/); wh
 
 - In a rendered note, the blank row after a changed paragraph, list item or heading repeated its git sign in the
   gutter. Only the changed rows are signed now.
+- A message said while slipbox was busy, as when it starts indexing a big folder, could be gone before it was ever
+  drawn. Its four seconds now start once it's on screen.
+- `space f b` opened the heading path as a plain list in the middle of the screen, not the dropdown under the
+  breadcrumb, when `space f`'s key hints had shown before the `b`.
+- Typing a word and then `(` could open the completion popup after the `(` if the language server was slow with its
+  signature help; `enter` then picked a word instead of starting a new line.
+- Right after a merge or a pull that moved files, `space l r` could find nothing to relink until the file watcher
+  caught up. The folder is now read again before the message says files moved.
+- A config warning names a file in your home folder as `~/…`, so its row in the messages list (`space m`) shows what
+  it says instead of a long path cut short.
 
 ## [0.2.2] - 2026-10-13
 

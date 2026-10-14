@@ -357,6 +357,8 @@ export interface Message {
   level: Level;
   text: string;
   at: number;
+  /** When its box was first drawn: its time to show counts from then (#40). */
+  shown?: number;
 }
 
 export interface Loc {
@@ -884,7 +886,7 @@ export class App {
   whichKey = false;
   private whichKeyTimer: ReturnType<typeof setTimeout> | null = null;
   messages: Message[] = [];
-  /** The messages showing as floating boxes, newest first (each for 4 s, 8 s an error). */
+  /** The messages showing as floating boxes, newest first (each for 4 s, 8 s an error, from when it's first drawn). */
   toasts: Message[] = [];
   private toastTimer: ReturnType<typeof setTimeout> | null = null;
   private picturesTimer: ReturnType<typeof setTimeout> | null = null;
@@ -1480,14 +1482,17 @@ export class App {
     return m.level === "error" ? 8000 : 4000;
   }
 
-  /** Drop the messages whose time is up, and wake again when the next one's is. */
+  /** Drop the messages whose time is up, and wake again when the next one's is. One not drawn yet keeps its time:
+   *  said while slipbox was busy (a start indexing, a slow machine), it isn't gone before it's seen (#40). */
   private scheduleToasts(): void {
     if (this.toastTimer) clearTimeout(this.toastTimer);
     this.toastTimer = null;
     const now = this.now();
-    this.toasts = this.toasts.filter((t) => t.at + this.toastMs(t) > now);
-    if (!this.toasts.length) return;
-    const next = Math.min(...this.toasts.map((t) => t.at + this.toastMs(t))) - now;
+    const ends = (t: Message) => (t.shown ?? now) + this.toastMs(t);
+    this.toasts = this.toasts.filter((t) => ends(t) > now);
+    const drawn = this.toasts.filter((t) => t.shown !== undefined);
+    if (!drawn.length) return;
+    const next = Math.min(...drawn.map(ends)) - now;
     this.toastTimer = setTimeout(
       () => {
         this.scheduleToasts();
@@ -1496,6 +1501,14 @@ export class App {
       Math.max(10, next),
     );
     (this.toastTimer as { unref?: () => void }).unref?.();
+  }
+
+  /** The messages a frame has just drawn: their time begins, those not drawn before. */
+  toastsDrawn(drawn: Message[]): void {
+    const now = this.now();
+    let fresh = false;
+    for (const t of drawn) if (t.shown === undefined) (t.shown = now), (fresh = true);
+    if (fresh) this.scheduleToasts();
   }
 
   /** Clear the floating messages (a click on one opens the messages list; they're all there). */
@@ -3820,8 +3833,7 @@ export class App {
     const chain = this.breadcrumb(view);
     if (!chain.length) return this.message("info", "no heading above the cursor");
     const w = t.active;
-    const hot = this.geometry?.hot ?? [];
-    const at = hot.find((h) => h.id === `crumbmore:${w}`) ?? hot.find((h) => h.id === `crumbicon:${w}`);
+    const at = this.geometry?.crumbAnchors[w];
     // The selection starts on the current heading (the last), marked `here`.
     const selected = chain.length - 1;
     this.openList({
@@ -3833,7 +3845,7 @@ export class App {
         data: c.line,
       })),
       selected,
-      anchor: at ? { x: at.x, y: at.y } : undefined,
+      anchor: at,
       accept: (item) => {
         t.active = w;
         this.region = "content";

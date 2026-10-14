@@ -13,7 +13,7 @@ import {
   writeFileSync,
 } from "node:fs";
 import { tmpdir } from "node:os";
-import { join, resolve } from "node:path";
+import { dirname, join, resolve } from "node:path";
 import {
   appendScratch,
   dropEmptyAsks,
@@ -1248,6 +1248,29 @@ describe("review cycle 1 (core)", () => {
     expect(r.config.editor.remote).toEqual(["nvim"]);
     expect(r.config.editor.autosave_ms).toBe(5000); // the rest of [editor] still applies
     expect(r.warnings.filter((w) => w.includes("only your own config")).length).toBe(2);
+  });
+  test("a config file in your home folder is named ~/… in its warnings, so a row of the messages shows what it says (#40)", () => {
+    const dir = tmp("tilde");
+    const was = process.env.HOME;
+    process.env.HOME = dir;
+    try {
+      const user = join(dir, "user.toml");
+      writeFileSync(user, "[ui]\nnosuch = 1\n");
+      const folder = join(dir, "work", "kestrel", ".slipbox", "config.toml");
+      mkdirSync(dirname(folder), { recursive: true });
+      writeFileSync(folder, "[update]\ncheck = true\n[render]\ninset = 2\n");
+      const r = loadConfig({ configFile: user, vaultRoot: join(dir, "work", "kestrel") });
+      expect(r.warnings).toContain('config: ~/user.toml: unknown key "ui.nosuch"');
+      expect(r.warnings).toContain(
+        "config: ~/work/kestrel/.slipbox/config.toml sets update.check, which only your own config may set (what reaches the network is yours to allow); ignored",
+      );
+      expect(r.origins["render.inset"]).toBe(folder); // where a setting came from: the file itself
+      // Outside the home folder, the path as it is.
+      process.env.HOME = join(dir, "elsewhere");
+      expect(loadConfig({ configFile: user }).warnings).toContain(`config: ${user}: unknown key "ui.nosuch"`);
+    } finally {
+      process.env.HOME = was;
+    }
   });
   test("what reaches the network is yours alone: a folder's render.images_remote, lsp.auto_install and update.check are ignored, and said (DF-D1, DF-D23)", () => {
     const dir = tmp("network");
