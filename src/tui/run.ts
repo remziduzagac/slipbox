@@ -214,7 +214,15 @@ export async function runTui(argv: string[]): Promise<number> {
   const view = new AppRenderable(renderer, paint, pictures);
   renderer.root.add(view);
   view.onMouse = (e) => {
-    app.handleMouse({ type: e.type, x: e.x, y: e.y, button: e.button, scroll: e.scroll, shift: e.modifiers?.shift });
+    app.handleMouse({
+      type: e.type,
+      x: e.x,
+      y: e.y,
+      button: e.button,
+      scroll: e.scroll,
+      shift: e.modifiers?.shift,
+      ctrl: e.modifiers?.ctrl,
+    });
     renderer.requestRender();
   };
   renderer.keyInput.on("keypress", (k: KeyEvent) => {

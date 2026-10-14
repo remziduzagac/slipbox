@@ -104,6 +104,12 @@ export class NoteBuffer {
   /** A layout of its own, not one of its text (a diff, GIT-D2): drawn whatever the window's mode, at its width. Its
    *  text is a line for each of its rows: what the window's height and the cursor's lines count. */
   drawn: ((width: number, how: { glyphs: Glyphs; wrap: boolean; codeScroll: boolean }) => Layout) | null = null;
+  /**
+   * A file of another vault read here (VV-D7): a peek's, or one kept as a tab from a peek. `vault` is how that vault is
+   * named, the tab's mark; `graph` and `rel`, its vault's graph and its path there, which its links are read in (null
+   * outside every vault).
+   */
+  elsewhere: { vault: string; graph: Graph | null; rel: string | null } | null = null;
 
   /** What the file is (16.1): a note, a data file or a text file — which modes and layouts it has. */
   kind: FileKind = { group: "note", format: "markdown" };
@@ -587,10 +593,12 @@ export class NoteBuffer {
     const key = `${width}:${glyphs.mode}:${showUrls ? 1 : 0}:${codeScroll ? 1 : 0}:${pictures?.key ?? "-"}`;
     let l = this.layouts.get(key);
     if (!l) {
+      // Another vault's file: its links and embeds read in its own vault.
+      const there = this.elsewhere?.graph && this.elsewhere.rel !== null ? this.elsewhere : null;
       l = layoutNote(
         this.parsed,
-        graph,
-        this.rel,
+        there ? there.graph : graph,
+        there ? there.rel : this.rel,
         {
           width,
           glyphs,

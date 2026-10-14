@@ -37,9 +37,17 @@ The format is [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.1.0/); wh
   changed: the `--root` flag, `SLIPBOX_ROOT`, the settings that say root (`[trust] roots`, `walk.root_markers`,
   `capture.location = "root"`, `links.path = "root"`), the `:pin-root` command, and the `--json` output's fields and
   values (`root`, `mode`, a change's `kind`) are as they were. Only the reasons the JSON gives in words say vault.
+- Following a link into another vault no longer switches to it. The note opens in a peek, a large floating window over
+  the vault you are in: read-only, `/` finds in it, and your tabs stay as they were. `o` goes there, `t` keeps it as a
+  read-only tab marked with its vault's name, `z` fills the screen and `esc` closes it. A backlink from another vault,
+  another vault's search hit and a file outside every vault open in the same peek, which lists the note's backlinks
+  when its vault has an index. A click on such a link peeks, and `ctrl+click` goes there at once. See
+  [A peek at another vault](docs/manual/links-and-vaults.md#a-peek-at-another-vault).
 
 ### Fixed
 
+- Following a link to a picture in another vault copied a wrong path, the current vault's folder before the picture's
+  own. It copies the picture's path.
 - A file created, renamed or moved while slipbox started watching its folder could stay missing until a reindex: on
   macOS, at startup or whenever a folder was added, and on any system between the first scan and the watch. A folder
   that changed without word from the watcher is now looked at again.

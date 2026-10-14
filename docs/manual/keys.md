@@ -187,6 +187,22 @@ from.
 
 [Links and vaults](links-and-vaults.md) explains where a link lands.
 
+### Inside a peek
+
+A link into another vault, or to a file outside every vault, opens a peek: the file read in a floating window, the
+vault you are in left as it was ([A peek at another vault](links-and-vaults.md#a-peek-at-another-vault)).
+
+| Keys | What |
+| --- | --- |
+| `o` | go there: into its vault, with its own tabs (outside every vault, opened beside this vault's notes) |
+| `t` | keep it as a tab here, read-only, marked with its vault's name |
+| `z` | fill the screen, or most of it again |
+| `ctrl+o`, `space h n` | back and forward through the files its links moved it to |
+| `esc` | close it: you are where you were |
+
+`/` finds in it, and selecting and copying work as in any note. Its links work too: one to the vault you are in
+closes the peek and opens there.
+
 ### What's under the cursor
 
 In a code file, these keys ask its language server ([Code](code.md)). In a note, slipbox answers.
@@ -1015,6 +1031,7 @@ it back to the terminal.
 | Where | What the mouse does |
 | --- | --- |
 | a note | a click moves the cursor, or follows the link under it, and a drag selects and copies on release |
+| a link out of the vault | a click peeks at the file, and `ctrl+click` goes there at once |
 | a note, double / triple click | selects and copies the word / the row |
 | a note, the wheel | scrolls (a sideways wheel scrolls sideways when wrapping is off) |
 | a code block too wide, a sideways wheel, or the wheel with `shift` | scrolls the block sideways |

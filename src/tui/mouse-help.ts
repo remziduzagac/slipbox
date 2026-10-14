@@ -9,6 +9,11 @@ export const MOUSE_HELP: [string, string[], string][] = [
     ["drag"],
     "Selects the text you drag over and copies it on release; in source mode or the lens, a selection d, c and x act on",
   ],
+  [
+    "Peek, or go there",
+    ["click", "ctrl+click"],
+    "On a link out of the vault: a click peeks at the file, ctrl+click goes there at once",
+  ],
   ["Select a word / a row", ["double-click", "triple-click"], "Selects the word or the whole row, and copies it"],
   ["Tick a task", ["click"], "On its box (☐ / ☑): ticks or unticks it"],
   [

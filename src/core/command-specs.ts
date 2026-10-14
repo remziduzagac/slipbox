@@ -186,6 +186,30 @@ export const COMMAND_SPECS: CommandSpec[] = [
     desc: "Opens the link under the cursor in the split",
   },
   {
+    id: "link.go",
+    title: "Go where the link leads",
+    cli: "slipbox resolve <link> --from <note>",
+    desc: "Follows the link under the cursor, into another vault at once, without a peek (ctrl+click)",
+  },
+  {
+    id: "peek.go",
+    title: "Go there",
+    cli: I,
+    desc: "In a peek: into its file's vault, the tabs becoming its own (ctrl+o comes back); outside every vault, opened beside",
+  },
+  {
+    id: "peek.tab",
+    title: "Keep the peek as a tab",
+    cli: I,
+    desc: "In a peek: its file in a tab here, read-only, marked with its vault's name",
+  },
+  {
+    id: "peek.fill",
+    title: "Peek: fill the screen",
+    cli: I,
+    desc: "In a peek: the whole screen, or most of it again",
+  },
+  {
     id: "link.insert",
     title: "Insert a link to a note…",
     cli: "slipbox link <note> --from <note>",
@@ -1273,7 +1297,7 @@ export function commandSpec(id: string): CommandSpec | undefined {
 export const COMMAND_GROUPS: { title: string; ids: RegExp }[] = [
   { title: "Cursor", ids: /^(cursor|scroll)\./ },
   { title: "Selection & copy", ids: /^(visual\.(char|line|swap|yank|exit)$|copy\.|app\.escape$)/ },
-  { title: "Links & history", ids: /^(link\.|links\.|backlinks\.|history\.|change\.|lsp\.)/ },
+  { title: "Links & history", ids: /^(link\.|links\.|backlinks\.|peek\.|history\.|change\.|lsp\.)/ },
   { title: "Windows", ids: /^window\./ },
   { title: "Tabs", ids: /^tab\./ },
   { title: "Explorer", ids: /^explorer\./ },

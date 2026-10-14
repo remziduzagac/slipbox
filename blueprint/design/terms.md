@@ -69,6 +69,9 @@ what replaced them.
   code.
 - **Named folder**: a vault a pointer can name, by its `.slipbox/` name, else its repository's remote.
   [roots.md](roots.md) § Named folders.
+- **Peek**: another vault's file, or one outside every vault, read in a large floating window, read-only, where a link,
+  a backlink or a search hit led; going there a choice (`o`, VV-D7). [VV's design](../workstreams/vaults-and-view/design.md)
+  § The peek, in tui.md once VV is consolidated.
 - **Plain folder**: a folder outside every vault, opened by its path, standing in for a vault; what users read says "a
   folder outside every vault", and home and no-vault replace it (VV-D2, VV-D3, to come). [roots.md](roots.md) § Plain
   folders and loose files.

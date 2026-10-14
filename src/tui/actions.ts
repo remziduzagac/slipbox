@@ -27,7 +27,7 @@ import { isPointer, parsePointer, resolvePointer } from "../core/pointer.ts";
 import { noteProblems, type Problem, rootTypes } from "../core/diagnostics.ts";
 import { copyAvailable, folderIdentity, readFolders, recordFolder } from "../core/folders.ts";
 import { slugName } from "../core/registry.ts";
-import { isNotePath } from "../core/links.ts";
+import { isNotePath, pathForm, pathLink } from "../core/links.ts";
 import { hasMarker, initVault, isInside, isNeverRoot, rootAt } from "../core/vault.ts";
 import { planHeadingRename, planRelink, planVaultRename } from "../core/rename.ts";
 import { copyPath } from "../core/files.ts";
@@ -60,6 +60,7 @@ import { diffEnter } from "./diffview.ts";
 import { gitPreview, gitReset, gitStep } from "./gitchanges.ts";
 import { blameHere, historyHere } from "./githistory.ts";
 import { gitFetch, gitPull, gitPush, gitStash } from "./gitremote.ts";
+import { ownPath, peekFill, peekGo, peekInstead, peekKeep } from "./peek.ts";
 import { parseBang } from "../core/shell.ts";
 import * as V from "./vim.ts";
 import { rank } from "./match.ts";
@@ -398,25 +399,38 @@ function sourceLinkAt(a: App, v: View): LayoutLink | null {
 /** Where a followed link opens: this window, the split's other one, or a new tab. */
 type Into = "here" | "split" | "tab";
 
-/** A note or file opened where a link goes: here, in the split's other window, or a tab of its own. */
-function openInto(a: App, into: Into, path: string, anchor?: Anchor): void {
+/**
+ * A note or file opened where a link goes: here, in the split's other window, or a tab of its own. Out of this vault —
+ * another vault's, or outside every vault — read in a peek instead, or, `go`, gone into at once (VV-D7).
+ */
+function openInto(a: App, into: Into, path: string, anchor?: Anchor, go = false): void {
+  if (peekInstead(a, path, anchor, go)) return;
   if (into === "tab") return a.openInNewTab(path, anchor);
   if (into === "split") a.otherWindow();
   a.open(path, anchor);
 }
 
-function followLink(a: App, link: LayoutLink, into: Into): void {
+function followLink(a: App, link: LayoutLink, into: Into, goOut = false): void {
   const view = a.view;
   if (!view) return;
+  // Another vault's file read here — a peek, a tab kept from one: its links read in its own vault (VV-D7), its paths
+  // there reached by their absolute paths; outside every vault, from where it is.
+  const there = view.buf.elsewhere;
+  const graph = there ? there.graph : a.graph;
+  const own = there ? there.rel : view.buf.rel;
   // A link drawn inside an embed (1.11) is the embedded note's: followed from there.
-  const from = link.from ?? view.buf.rel;
-  const go = (path: string, heading: string | null) =>
+  const from = link.from ?? own;
+  const reach = (path: string) => (there?.graph && !isAbsolute(path) ? join(there.graph.root, path) : path);
+  const go = (path: string, heading: string | null) => {
+    const to = ownPath(a, reach(path));
     openInto(
       a,
       into,
-      path,
-      heading ? fragmentAnchor(a, path, heading, link.kind === "wiki" || link.kind === "embed") : undefined,
+      to,
+      heading ? fragmentAnchor(a, to, heading, link.kind === "wiki" || link.kind === "embed") : undefined,
+      goOut,
     );
+  };
   switch (link.kind) {
     case "tag":
       // A tag (1.6): the notes that carry it.
@@ -436,13 +450,13 @@ function followLink(a: App, link: LayoutLink, into: Into): void {
     case "embed": {
       if (!link.target) {
         // `[[#Heading]]` inside an embed: the embedded note's heading, in it.
-        if (link.heading && link.from && link.from !== view.buf.rel) return go(link.from, link.heading);
+        if (link.heading && link.from && link.from !== own) return go(link.from, link.heading);
         if (link.heading) jumpToHeading(a, view, link.heading, true);
         return;
       }
-      if (!from)
+      if (!from || !graph)
         return a.message("warn", `[[${link.target}]]: a wikilink is read within a vault — this file is in none`);
-      const r = a.graph.resolveLink({ kind: link.kind, target: link.target }, from);
+      const r = graph.resolveLink({ kind: link.kind, target: link.target }, from);
       if (r.via)
         a.message(
           "info",
@@ -450,7 +464,7 @@ function followLink(a: App, link: LayoutLink, into: Into): void {
         );
       // `#^id`: the block it marks, by its line (21.3), as a path link's lands.
       if (r.resolvedKind === "note") return go(r.path!, link.heading);
-      if (r.resolvedKind === "file") return fileLink(a, r.path!, link.heading, into);
+      if (r.resolvedKind === "file") return fileLink(a, reach(r.path!), link.heading, into, goOut);
       if (r.resolvedKind === "ambiguous") {
         // Two notes of a name, or two attachments (`![[dal.png]]`, 21.3): one picked, opened as its link would.
         const notes = r.candidates.every(isNotePath);
@@ -460,11 +474,13 @@ function followLink(a: App, link: LayoutLink, into: Into): void {
           accept: (item) =>
             isNotePath(item.data as string)
               ? go(item.data as string, link.heading)
-              : fileLink(a, item.data as string, link.heading, into),
+              : fileLink(a, reach(item.data as string), link.heading, into, goOut),
         });
       }
       // In another vault, or a vault this machine doesn't know: say which (17.8).
       if (r.reason) return a.message("warn", `[[${link.target}]]: ${r.reason}`);
+      // Another vault's file, read here: a note is written there, never from here.
+      if (there) return a.message("warn", `[[${link.target}]]: no note by that name in ${there.vault}`);
       // No note by that name yet: make it (beside the note linking to it), the name typed already.
       return a.promptNewNote(posix.dirname(from) === "." ? "" : posix.dirname(from), link.target);
     }
@@ -472,21 +488,6 @@ function followLink(a: App, link: LayoutLink, into: Into): void {
     case "image": {
       // A URL — a pointer too (21.7), which names its folder: followed from a file of no root as well.
       const external = /^[a-z][a-z0-9+.-]*:/i.test(link.target);
-      if (!from && !external)
-        return a.message(
-          "warn",
-          `${link.target}: this file is outside the vault — open its folder to follow its links`,
-        );
-      // A picture on the internet: fetched, as `[render] images_remote` says (12.12).
-      if (link.kind === "image" && external && a.followRemoteImage(link.target)) return;
-      const r = a.graph.resolveLink(
-        { kind: link.kind === "image" ? "image" : "markdown", target: link.target },
-        from ?? "",
-      );
-      if (r.resolvedKind === "external") {
-        a.copy(link.target, false);
-        return a.message("info", `copied: ${link.target}`);
-      }
       // The fragment, decoded when it can be (`%zz` can't); a block's `^id` lands on its block, as
       // the line it marks (a converted `[[note#^id]]`, 20.1).
       const raw = link.target.includes("#") ? link.target.slice(link.target.indexOf("#") + 1) : "";
@@ -497,6 +498,31 @@ function followLink(a: App, link: LayoutLink, into: Into): void {
         } catch {
           frag = raw;
         }
+      }
+      if ((!from || !graph) && !external) {
+        // A file outside every vault, read in a peek: its paths read from where it is (VV-D7).
+        const path = link.target.split("#")[0]!;
+        if (there && !there.graph) {
+          if (!path && frag) return jumpToHeading(a, view, frag);
+          // A plain `b.md` is from its folder too: no vault's top to start from.
+          const hit = path ? pathLink(pathForm(path) ? path : `./${path}`, view.buf.abs, false) : null;
+          if (hit && isFile(hit.abs)) return go(hit.abs, frag);
+          return a.message("warn", `broken link: ${link.target}`);
+        }
+        return a.message(
+          "warn",
+          `${link.target}: this file is outside the vault — open its folder to follow its links`,
+        );
+      }
+      // A picture on the internet: fetched, as `[render] images_remote` says (12.12).
+      if (link.kind === "image" && external && a.followRemoteImage(link.target)) return;
+      const r = (graph ?? a.graph).resolveLink(
+        { kind: link.kind === "image" ? "image" : "markdown", target: link.target },
+        from ?? "",
+      );
+      if (r.resolvedKind === "external") {
+        a.copy(link.target, false);
+        return a.message("info", `copied: ${link.target}`);
       }
       // A pointer (21.7): its folder by a name it had, or another copy than the one links open — said so;
       // a branch not checked out here, the file read from git; a name of different folders, picked.
@@ -511,20 +537,22 @@ function followLink(a: App, link: LayoutLink, into: Into): void {
       if (r.resolvedKind === "unresolved" && (isPointer(link.target) || r.suggest))
         return a.message("warn", r.suggest ? r.reason! : `${link.target}: ${r.reason ?? "not found"}`);
       if (r.resolvedKind === "anchor") {
-        const here = link.from ?? view.buf.rel;
-        if (frag && here && (here !== view.buf.rel || frag.startsWith("^"))) return go(here, frag);
+        const here = link.from ?? own;
+        if (frag && here && (here !== own || frag.startsWith("^"))) return go(here, frag);
         if (frag) jumpToHeading(a, view, frag);
         return;
       }
       if (r.resolvedKind === "note") return go(r.path!, frag);
-      if (r.resolvedKind === "file") return fileLink(a, r.path!, frag, into);
-      if (r.resolvedKind === "folder") return a.revealFolder(r.path!);
+      if (r.resolvedKind === "file") return fileLink(a, reach(r.path!), frag, into, goOut);
+      if (r.resolvedKind === "folder") return a.revealFolder(reach(r.path!));
       // Its file seen to move (17.12): where, and the fix (20.2: a move never resolves a link).
       const as = { kind: link.kind === "image" ? ("image" as const) : ("markdown" as const), target: link.target };
-      const to = from ? a.graph.movedTarget(as, from) : null;
+      const to = from && graph ? graph.movedTarget(as, from) : null;
       // A note not written yet: made where the link names it, its name typed already (a wikilink's
-      // was offered so; a path names its place, so no other note's name stands in the way).
-      const yet = from && !to ? a.graph.missingNote(as, from) : null;
+      // was offered so; a path names its place, so no other note's name stands in the way). Another vault's file,
+      // read here: written there, never from here.
+      const yet = from && graph && !to ? graph.missingNote(as, from) : null;
+      if (yet && there) return a.message("warn", `${link.target}: not written yet, in ${there.vault}`);
       if (yet) {
         const dir = posix.dirname(yet);
         const name = posix.basename(yet).replace(/\.(md|markdown)$/i, "");
@@ -605,16 +633,19 @@ function lensStep(a: App, step: 1 | -1): void {
   });
 }
 
-function fileLink(a: App, rel: string, heading: string | null = null, into: Into = "here"): void {
+function fileLink(a: App, path: string, heading: string | null = null, into: Into = "here", go = false): void {
+  // This vault's file by its path in it; another's absolute.
+  const rel = ownPath(a, path);
   // A data or text file opens (16.4) — at a data file's section when the link names one
   // (`[[config.toml#editor]]`); a binary one (a picture, a PDF) never opens: its path is copied.
   if (classify(rel, a.config.walk.extensions).group !== "binary") {
     const line = heading ? lineAnchor(heading) : undefined;
-    openInto(a, into, rel, line);
+    openInto(a, into, rel, line, go);
     if (heading && !line && a.view) jumpToHeading(a, a.view, heading);
     return;
   }
-  a.copy(join(a.loc.root, rel), false);
+  // Another vault's attachment by its own absolute path, never this vault's root before it.
+  a.copy(isAbsolute(rel) ? rel : join(a.loc.root, rel), false);
   a.message("info", `attachment ${rel} — path copied`);
 }
 
@@ -1004,10 +1035,13 @@ function openPalette(a: App, typed = ""): void {
  */
 function openHelp(a: App): void {
   const commands: ListItem[] = inSpecOrder(a.registry.list()).map((c) => {
-    // Every keymap's keys: the reading ones, source mode's own ([keys.source]) and visual mode's.
-    const plain = [...a.keymap.keysFor(c.id), ...a.sourceKeys.keysFor(c.id), ...a.visualKeys.keysFor(c.id)].map(
-      spellKey,
-    );
+    // Every keymap's keys: the reading ones, source mode's own ([keys.source]), visual mode's and a peek's.
+    const plain = [
+      ...a.keymap.keysFor(c.id),
+      ...a.sourceKeys.keysFor(c.id),
+      ...a.visualKeys.keysFor(c.id),
+      ...a.peekKeys.keysFor(c.id),
+    ].map(spellKey);
     // Bindings with an argument (e.g. "cursor.down extend") are variants: shown after the plain ones.
     const variants = a.keymap
       .entries()
@@ -1432,6 +1466,18 @@ export function registerActions(app: App): void {
         if (!link) return a.message("info", "no link here");
         followLink(a, link, "tab");
       }),
+    // ctrl+click (VV-D7): out of this vault, gone into at once, without a peek; within it, as a click.
+    "link.go": (a) =>
+      withView(a, (v) => {
+        const i = a.linkForFollow(v);
+        const link = i >= 0 ? lay(a, v).links[i]! : sourceLinkAt(a, v);
+        if (!link) return a.message("info", "no link here");
+        followLink(a, link, "here", true);
+      }),
+    // The peek (VV-D7): o goes there, t keeps it as a tab, z fills the screen.
+    "peek.go": (a) => peekGo(a),
+    "peek.tab": (a) => peekKeep(a),
+    "peek.fill": (a) => peekFill(a),
     "links.open": (a) =>
       withView(a, (v) => {
         const layout = lay(a, v);
@@ -1470,7 +1516,10 @@ export function registerActions(app: App): void {
           })),
           accept: (item) => {
             const b = item.data as { from: string; line: number };
-            a.open(b.from, { heading: null, headingIndex: 0, offset: b.line - 1, line: b.line });
+            const at = { heading: null, headingIndex: 0, offset: b.line - 1, line: b.line };
+            // From another vault: read in a peek, at the link (VV-D7), going there a choice.
+            if (peekInstead(a, b.from, at)) return;
+            a.open(b.from, at);
           },
         });
       }),

@@ -170,6 +170,7 @@ import {
 } from "../core/gitstage.ts";
 import { type Track, trackText } from "../core/gitremote.ts";
 import { type GitRow, gitRows, gitViewAction } from "./gitview.ts";
+import { leadsOut, type Peek, peekAt, peekStep, vaultGraph } from "./peek.ts";
 import { type GitChange, gitChanges } from "../core/gitsigns.ts";
 import { describeBreak, type MergeBreak, type MergeReview, reviewMerge } from "../core/mergereview.ts";
 import { diffLines } from "../core/merge.ts";
@@ -289,6 +290,7 @@ import {
   DEFAULT_INFO_KEYS,
   INFO_ACTIONS,
   INFO_ACTION_INFO,
+  DEFAULT_PEEK_KEYS,
   DEFAULT_RESIZE_KEYS,
   DEFAULT_VISUAL_KEYS,
   DEFAULT_SOURCE_KEYS,
@@ -839,6 +841,8 @@ export class App {
   footnoteKeys!: Keymap;
   infoKeys!: Keymap;
   resizeKeys!: Keymap;
+  /** The peek's own keys (VV-D7), over the note's while one is open: o, t, z. */
+  peekKeys!: Keymap;
   /** Resize mode: h j k l / arrows resize until esc (ctrl+alt+w, space w r). */
   resizeMode = false;
   /** Live side pane widths; start from config, changed in resize mode, kept in the session. */
@@ -1093,6 +1097,7 @@ export class App {
     this.footnoteKeys = new Keymap(DEFAULT_FOOTNOTE_KEYS, footnotes ?? {}, this.leader);
     this.infoKeys = new Keymap(DEFAULT_INFO_KEYS, info ?? {}, this.leader);
     this.resizeKeys = new Keymap(DEFAULT_RESIZE_KEYS, resize ?? {}, this.leader);
+    this.peekKeys = new Keymap(DEFAULT_PEEK_KEYS, {}, this.leader);
     // No prototype: a typed :toString or :constructor is an unknown alias, not Object's.
     this.aliases = Object.assign(Object.create(null) as Record<string, string>, DEFAULT_ALIASES);
     for (const [k, v] of Object.entries(c.aliases)) {
@@ -1580,6 +1585,7 @@ export class App {
       }
       buf = new NoteBuffer(rel, abs, key);
       buf.kind = kind;
+      if (!inside) this.markElsewhere(buf);
       if (!buf.load()) {
         this.message("error", `cannot read ${pathOrRel}`);
         return null;
@@ -1593,6 +1599,20 @@ export class App {
       this.buffers.set(key, buf);
     }
     return buf;
+  }
+
+  /**
+   * Another vault's file opened here — a tab kept from a peek (VV-D7), back with the session: read-only, editing it
+   * being going there, marked with its vault's name, its links read in its vault. The scratch is slipbox's own.
+   */
+  private markElsewhere(buf: NoteBuffer): void {
+    if (buf.abs === this.scratch().path) return;
+    const root = findVaultRoot(buf.abs);
+    if (!root || root === this.loc.root) return;
+    const label = rootLabel(rootAt(root));
+    const graph = vaultGraph(this, root);
+    buf.elsewhere = { vault: label, graph, rel: graph ? relative(root, buf.abs) : null };
+    buf.readOnly = `read-only here: ${label}'s — go into ${label} to edit it`;
   }
 
   makeView(buf: NoteBuffer, anchor?: Anchor, cursor?: CursorAnchor): View {
@@ -2802,9 +2822,9 @@ export class App {
       input: seed,
       accept: (item) => {
         const h = item.data as { path: string; line: number; column: number; abs?: string; vault?: string | null };
-        // Another root's: into it, at the line (a switch, as a link into it is).
-        if (h.vault !== undefined && h.vault !== null && h.abs)
-          return void this.intoOtherVault(h.abs, { heading: null, headingIndex: 0, offset: 0, line: h.line });
+        // Another vault's: read in a peek, at the line (VV-D7), going there a choice.
+        const out = h.abs ? leadsOut(this, h.abs) : null;
+        if (out) return peekAt(this, out.abs, out.loc, { heading: null, headingIndex: 0, offset: 0, line: h.line });
         this.openAt(h.path, h.line, h.column);
       },
       widen: () => {
@@ -2928,6 +2948,8 @@ export class App {
   history(dir: "back" | "forward"): void {
     const view = this.view;
     if (!view) return;
+    // Inside a peek (VV-D7): the files its links moved it to, never the window under it.
+    if (this.floating?.kind === "peek" && view === this.floating.view) return peekStep(this, dir);
     const from = dir === "back" ? view.back : view.fwd;
     const to = dir === "back" ? view.fwd : view.back;
     const loc = from.pop();
@@ -5436,6 +5458,7 @@ export class App {
         | { kind: "commit"; amend: boolean; from: Region }
         | { kind: "scratch" }
         | { kind: "diff"; diff: DiffWindow }
+        | { kind: "peek"; peek: Peek }
       ) & { view: View; title: string })
     | null = null;
 
@@ -8460,6 +8483,9 @@ export class App {
       );
     }
     if (this.view?.visual) out.push({ map: this.visualKeys, run: (s) => this.run(s) });
+    // A peek's own keys (VV-D7) over the note's: o goes there, t keeps it as a tab, z fills the screen.
+    else if (this.region === "content" && this.floating?.kind === "peek")
+      out.push({ map: this.peekKeys, run: (s) => this.run(s) });
     // Source mode's own keys (x deletes a character there) before the reading ones.
     if (this.region === "content" && editable(this.view) && !this.view!.visual)
       out.push({ map: this.sourceKeys, run: (s) => this.run(s) });
@@ -8793,7 +8819,7 @@ export class App {
 
   private lastClick: { x: number; y: number; at: number; count: number } | null = null;
   private drag:
-    | { kind: "select"; view: View; start: Pos; moved: boolean; onText: boolean }
+    | { kind: "select"; view: View; start: Pos; moved: boolean; onText: boolean; ctrl?: boolean }
     | { kind: "tab"; index: number }
     | { kind: "separator"; sep: import("./draw.ts").Separator }
     | { kind: "scrollbar"; bar: import("./draw.ts").ScrollbarGeom }
@@ -8808,6 +8834,8 @@ export class App {
     scroll?: { direction: string; delta: number };
     /** `shift` held: the wheel over a code block that scrolls sideways scrolls it. */
     shift?: boolean;
+    /** `ctrl` held: a click on a link out of the vault goes there at once, no peek (VV-D7). */
+    ctrl?: boolean;
   }): void {
     if (ev.type !== "move") this.lastInputAt = this.now();
     // A wheel spun (12.7): pictures held back from its first tick until it rests.
@@ -8831,6 +8859,7 @@ export class App {
     button: number;
     scroll?: { direction: string; delta: number };
     shift?: boolean;
+    ctrl?: boolean;
   }): void {
     const g = this.geometry;
     if (!g) return;
@@ -9018,7 +9047,11 @@ export class App {
     return count;
   }
 
-  private mouseDown(ev: { x: number; y: number; button: number }, g: Geometry, hot: string | null): void {
+  private mouseDown(
+    ev: { x: number; y: number; button: number; ctrl?: boolean },
+    g: Geometry,
+    hot: string | null,
+  ): void {
     // Middle-click closes a tab.
     if (ev.button === 1) {
       const tab = g.tabs.find((t) => inRect(t, ev.x, ev.y));
@@ -9225,7 +9258,7 @@ export class App {
     // Where the cursor really is now (the lens may have moved): a drag starts from there.
     this.currentLayout(view);
     view.lensClick = undefined;
-    this.drag = { kind: "select", view, start: { ...view.cur }, moved: false, onText };
+    this.drag = { kind: "select", view, start: { ...view.cur }, moved: false, onText, ctrl: !!ev.ctrl };
   }
 
   private copySelectionQuietly(view: View): void {
@@ -9313,7 +9346,8 @@ export class App {
       // A double-click's second click lands in the note the first opened: it's swallowed, never a
       // click (or a double-click, copying a word) on text the user hasn't seen yet.
       if (this.lastClick) this.lastClick.count = 0;
-      return void this.run("link.follow").then(() => this.host.requestRender());
+      // A click on a link out of the vault peeks; with ctrl, goes there at once (VV-D7).
+      return void this.run(d.ctrl ? "link.go" : "link.follow").then(() => this.host.requestRender());
     }
     const task = taskMarkAt(layout, d.start.row, d.start.col);
     if (task) this.toggleTaskAt(d.view, task);
@@ -9986,6 +10020,9 @@ export class App {
   }
 
   displayName(buf: NoteBuffer): string {
+    // Another vault's file read here (VV-D7): by that vault's name and its path there; outside every vault, its path.
+    const e = buf.elsewhere;
+    if (e) return e.rel !== null ? `${e.vault}: ${e.rel}` : buf.abs;
     return buf.abs === this.scratch().path ? "scratch" : buf.key;
   }
 
@@ -10748,9 +10785,10 @@ export class App {
   }
 
   /**
-   * An absolute path that belongs to another vault or repository (a link into it, a backlink from
-   * it): switch there and open it (17.10); true when it was (or the switch was refused). A loose
-   * file opens as it is, beside this vault's notes: it has no vault to switch into.
+   * An absolute path that belongs to another vault or repository, opened by choice (`:e`, the explorer,
+   * a peek's `o`; a link, a backlink or a search hit only peeks, VV-D7): switch there and open it
+   * (17.10); true when it was (or the switch was refused). A loose file opens as it is, beside this
+   * vault's notes: it has no vault to switch into.
    */
   private intoOtherVault(path: string, anchor?: Anchor): boolean {
     if (!isAbsolute(path) || !existsSync(path)) return false;
@@ -10770,14 +10808,18 @@ export class App {
     const t = this.vaultTrail.pop();
     if (!t) return false;
     let target: VaultLocation;
+    let open: string | null = null;
     try {
-      target = existsSync(t.path) ? locateVault({ path: t.path }) : locateVault({ path: t.root });
+      const file = existsSync(t.path) ? locateVault({ path: t.path }) : null;
+      // A file of another vault read there, kept from a peek (VV-D7), is no way back into it: its vault, its tabs.
+      const kept = file?.mode === "vault" && file.root !== t.root;
+      target = file && !kept ? file : locateVault({ path: t.root });
+      if (file && !kept) open = t.path;
     } catch {
       this.message("warn", `${t.root} is gone`);
       return true;
     }
-    if (!this.switchVault(target, existsSync(t.path) ? t.path : null, t.anchor, { back: true }))
-      this.vaultTrail.push(t);
+    if (!this.switchVault(target, open, t.anchor, { back: true })) this.vaultTrail.push(t);
     return true;
   }
 
