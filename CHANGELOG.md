@@ -22,6 +22,11 @@ The format is [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.1.0/); wh
 - A file created, renamed or moved while slipbox started watching its folder could stay missing until a reindex: on
   macOS, at startup or whenever a folder was added, and on any system between the first scan and the watch. A folder
   that changed without word from the watcher is now looked at again.
+- With spelling on, slipbox no longer stops answering keys while it loads its dictionaries: a quarter of a second for
+  English and Turkish on a fast machine, several seconds on a slow one. They load in the background now, and the marks
+  come once they're there.
+- A slipbox installed from a release parses a big note on background threads, as one run from source does. The release
+  build had left those threads out, so a big note was parsed while keys waited.
 
 ## [0.3.0] - 2026-10-14
 

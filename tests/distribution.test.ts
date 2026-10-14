@@ -582,6 +582,22 @@ describe("a release (14.2)", () => {
     );
   });
 
+  test("each worker's script is an entry point of the build, so the compiled binary has it; each started by workerUrl (D232)", () => {
+    const script = (JSON.parse(readFileSync(join(ROOT, "package.json"), "utf8")) as { scripts: { build: string } })
+      .scripts.build;
+    const entries = script.split(/\s+/).filter((a) => a.startsWith("src/"));
+    const started = new Set<string>();
+    for (const f of new Bun.Glob("src/**/*.ts").scanSync(ROOT)) {
+      const text = readFileSync(join(ROOT, f), "utf8");
+      // A worker started otherwise would be looked for where a compiled binary hasn't got it.
+      for (const m of text.matchAll(/new Worker\(([^)]*)/g)) expect(`${f}: ${m[1]}`).toMatch(/: workerUrl\("/);
+      for (const m of text.matchAll(/workerUrl\("([^"]+)"\)/g)) started.add(`src/core/${m[1]}`);
+    }
+    expect(started.size).toBeGreaterThan(0);
+    expect(entries).toEqual(["src/main.ts", ...[...started].sort()]);
+    for (const e of entries) expect(existsSync(join(ROOT, e))).toBe(true);
+  });
+
   test("SHA256SUMS: a line a file, by name, as sha256sum -c reads it", () => {
     const dir = tree({ "b.tar.gz": "b", "a.tar.gz": "a" });
     expect(sha256sums([join(dir, "b.tar.gz"), join(dir, "a.tar.gz")])).toBe(

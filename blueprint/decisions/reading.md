@@ -446,6 +446,9 @@ feed, an outside engine will hear of the same changes, moves too, which a watche
 
 ## D120: A big note costs what changes; its first parse runs on threads (15.1, 2026-10-01)
 
+> **Detailed by D232 (2026-10-14):** the workers' scripts are entry points of the build. Until then the compiled binary
+> had none, so a released slipbox parsed big notes on the main thread.
+
 **Decision:** Edits, reloads and leaving the lens cost what they change: the parse by chunk, the render by block,
 source mode by line. A note with 128 KB or more left to parse is parsed on four workers, each taking a run of chunks
 and sending its nodes back as JSON into the buffer's parse cache, so the main thread's parse stays the only parse

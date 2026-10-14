@@ -3,15 +3,13 @@
 // in the languages its front matter names (`lang: tr`), else `[spell] languages`. Its prose is its text: not its code,
 // front matter, HTML or maths, nor a link's address, a wikilink, a tag, a URL, a path or an identifier. A word any of
 // its languages knows is spelt right, and so is one of your own words (`z g` adds one, to slipbox's data folder).
-// Hunspell runs as WebAssembly (hunspell-asm, MIT; Hunspell itself MPL-1.1, plan 14.6), loaded the first time a
-// dictionary is, and each dictionary once.
+// Hunspell (`hunspell.ts`) builds each dictionary once, on the spell checker's thread (`spell-thread.ts`, D232): building
+// Turkish's takes a few tenths of a second, which keys would wait for on the main thread. A checker here asks it, and the
+// answers come later.
 
 import { appendFileSync, existsSync, mkdirSync, readdirSync, readFileSync } from "node:fs";
 import { homedir } from "node:os";
 import { dirname, join } from "node:path";
-import type { HunspellFactory } from "hunspell-asm";
-// Its CommonJS build: the ES one imports Hunspell's runtime as a namespace, which a compiled binary can't call.
-import { loadModule } from "hunspell-asm/dist/cjs/index.js";
 import type { Nodes, Root } from "mdast";
 // The package exports only its index.js: its files by their path, so a compiled binary embeds them.
 import enAff from "../../node_modules/dictionary-en/index.aff" with { type: "file" };
@@ -114,45 +112,6 @@ export function dictionaryFiles(
   const bundled = BUNDLED[base];
   if (bundled) return { ...bundled, from: "slipbox" };
   return inDirs((n) => n.toLowerCase() === base || n.toLowerCase().startsWith(`${base}_`));
-}
-
-/**
- * A dictionary's text as UTF-8, as Hunspell is given it here: one in another encoding (`SET ISO8859-9`, as older
- * system dictionaries are) decoded, and said to be UTF-8.
- */
-export function asUtf8(aff: Uint8Array, dic: Uint8Array): { aff: Uint8Array; dic: Uint8Array } {
-  const head = new TextDecoder("latin1").decode(aff);
-  const set = /^SET\s+(\S+)/m.exec(head)?.[1];
-  if (!set || /^utf-?8$/i.test(set)) return { aff, dic };
-  let decoder: TextDecoder;
-  try {
-    decoder = new TextDecoder(set.replace(/^ISO(\d)/i, "ISO-$1").replace(/^microsoft-cp/i, "windows-"));
-  } catch {
-    return { aff, dic };
-  }
-  const enc = new TextEncoder();
-  return {
-    aff: enc.encode(decoder.decode(aff).replace(/^SET\s+\S+/m, "SET UTF-8")),
-    dic: enc.encode(decoder.decode(dic)),
-  };
-}
-
-let factory: Promise<HunspellFactory> | null = null;
-let mounted = 0;
-
-/** A dictionary opened: Hunspell loaded the first time, its files mounted, read, and let go; your words put in. */
-export async function openSpeller(files: DictionaryFiles): Promise<Speller> {
-  const f = await (factory ??= loadModule());
-  const text = asUtf8(readFileSync(files.aff), readFileSync(files.dic));
-  const n = ++mounted;
-  const aff = f.mountBuffer(text.aff, `d${n}.aff`);
-  const dic = f.mountBuffer(text.dic, `d${n}.dic`);
-  const h = f.create(aff, dic);
-  f.unmount(aff);
-  f.unmount(dic);
-  const s: Speller = { correct: (w) => h.spell(w), suggest: (w) => h.suggest(w), add: (w) => h.addWord(w) };
-  for (const w of ownWords()) s.add(w);
-  return s;
 }
 
 /** Your own words: one a line, in slipbox's data folder. */
@@ -262,33 +221,103 @@ export function proseWords(tree: Root, source: string): SpellWord[] {
 /** A word as a dictionary takes it: a typographic apostrophe a plain one. */
 const asked = (word: string) => word.replace(/’/g, "'");
 
-/** Words checked against a note's dictionaries: each word's answer kept, as notes repeat their words. */
+/**
+ * A note's dictionaries as a checker asks them, answering later: for each word, whether any of them knows it; for one,
+ * each dictionary's suggestions. The spell checker's thread's (`spell-thread.ts`), or a test's.
+ */
+export interface Dictionaries {
+  check(words: string[]): Promise<boolean[]>;
+  suggest(word: string): Promise<string[][]>;
+}
+
+/**
+ * Words checked against a note's dictionaries (none: every word is right), which answer later: each word's answer kept,
+ * as notes repeat their words, and each word asked once. A word not answered yet isn't misspelt until it is; whoever
+ * draws hears of each answer (`onAnswer`) and asks again.
+ */
 export class Checker {
   private readonly known = new Map<string, boolean>();
+  private readonly asking = new Set<string>();
+  private readonly inFlight = new Set<Promise<void>>();
+  /** Answers had so far: a list made before the last came may be out of date. */
+  answers = 0;
+  /** Why the dictionaries didn't answer, the last time they didn't (the words asked then taken as right). */
+  error: string | null = null;
 
-  constructor(readonly spellers: Speller[]) {}
+  constructor(
+    readonly dictionaries: Dictionaries | null,
+    private readonly onAnswer: () => void = () => {},
+  ) {}
 
-  correct(word: string): boolean {
-    let ok = this.known.get(word);
-    if (ok === undefined) {
-      const w = asked(word);
-      ok = !this.spellers.length || this.spellers.some((s) => s.correct(w));
-      this.known.set(word, ok);
-    }
-    return ok;
+  /** Whether a word is spelt right; undefined until its answer has come. */
+  correct(word: string): boolean | undefined {
+    return this.known.get(word);
   }
 
-  /** The words none of its dictionaries knows. */
+  /** The words none of its dictionaries knows, of those answered; the rest asked. */
   misspelt(words: SpellWord[]): SpellWord[] {
-    return words.filter((w) => !this.correct(w.word));
+    this.ask([...new Set(words.map((w) => w.word))].filter((w) => !this.known.has(w) && !this.asking.has(w)));
+    return words.filter((w) => this.known.get(w.word) === false);
+  }
+
+  /** Whether words are still waiting for their answers. */
+  get pending(): boolean {
+    return this.asking.size > 0;
+  }
+
+  /** Every answer asked for so far, come. */
+  async settled(): Promise<void> {
+    while (this.inFlight.size) await Promise.all(this.inFlight);
+  }
+
+  /** The words none of its dictionaries knows, once each is answered (the CLI's, which can wait). */
+  async misspeltAll(words: SpellWord[]): Promise<SpellWord[]> {
+    this.misspelt(words);
+    await this.settled();
+    return words.filter((w) => this.known.get(w.word) === false);
+  }
+
+  /**
+   * A word added to the dictionaries: right from now on, and the others found misspelt asked again (adding `zorvex`
+   * makes `Zorvex` right too) — each keeping its answer until the new one comes, so no mark goes and comes back.
+   */
+  added(word: string): void {
+    this.known.set(word, true);
+    this.ask([...this.known].filter(([w, ok]) => !ok && !this.asking.has(w)).map(([w]) => w));
+  }
+
+  private ask(words: string[]): void {
+    if (!words.length) return;
+    for (const w of words) this.asking.add(w);
+    const answer = this.dictionaries
+      ? this.dictionaries.check(words.map(asked))
+      : Promise.resolve(words.map(() => true));
+    const done: Promise<void> = answer
+      .then(
+        (oks) => {
+          for (const [i, w] of words.entries()) this.known.set(w, oks[i] ?? true);
+        },
+        (err: unknown) => {
+          // Taken as right, not asked again: a thread that keeps failing isn't asked at every frame.
+          this.error = (err as Error)?.message ?? String(err);
+          for (const w of words) this.known.set(w, true);
+        },
+      )
+      .finally(() => {
+        for (const w of words) this.asking.delete(w);
+        this.inFlight.delete(done);
+        this.answers++;
+        this.onAnswer();
+      });
+    this.inFlight.add(done);
   }
 
   /**
    * What a word might be instead: its dictionaries' suggestions in turn — each one's best, then each one's next — so
    * one language's many don't hide another's few; each once, ten at most.
    */
-  suggest(word: string): string[] {
-    const lists = this.spellers.map((s) => s.suggest(asked(word)));
+  async suggest(word: string): Promise<string[]> {
+    const lists = this.dictionaries ? await this.dictionaries.suggest(asked(word)) : [];
     const out: string[] = [];
     for (let k = 0; k < Math.max(0, ...lists.map((l) => l.length)); k++)
       for (const l of lists) if (l[k] !== undefined && !out.includes(l[k]!)) out.push(l[k]!);

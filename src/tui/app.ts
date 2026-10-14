@@ -31,14 +31,14 @@ import { lazy, loadError, onLoaded } from "../core/lazy.ts";
 import {
   addOwnWord,
   Checker,
+  type DictionaryFiles,
   dictionaryFiles,
   noteLanguages,
-  openSpeller,
   ownWordsFile,
   proseWords,
-  type Speller,
   type SpellWord,
 } from "../core/spell.ts";
+import { addToDictionaries, openDictionary, threadDictionaries } from "../core/spell-thread.ts";
 import ignore from "ignore";
 import { classify, extensionOf, type FileGroup, isKnownExtension } from "../core/filetypes.ts";
 import {
@@ -9589,8 +9589,15 @@ export class App {
   private readonly spellSaid = new Set<string>();
   /** Bumped when your words change: the words found misspelt before are found again. */
   private spellGeneration = 0;
-  private spellMemo: { buf: NoteBuffer; version: number; key: string; generation: number; words: SpellWord[] } | null =
-    null;
+  private spellMemo: {
+    buf: NoteBuffer;
+    version: number;
+    key: string;
+    generation: number;
+    answers: number;
+    prose: SpellWord[];
+    words: SpellWord[];
+  } | null = null;
 
   /** A note's languages for spelling: its front matter's `lang`, else `[spell] languages`. */
   private spellLanguages(view: View): string[] {
@@ -9598,20 +9605,22 @@ export class App {
   }
 
   /**
-   * A checker for some languages (25.6): their dictionaries, once all have loaded — each in the background the first
-   * time, the window drawn again when it's there; null until then. A language with no dictionary is said once.
+   * A checker for some languages (25.6): their dictionaries, once all have loaded — each built on the spell checker's
+   * thread the first time (D232), the window drawn again when it's there; null until then. A language with no
+   * dictionary is said once. The checker asks the thread about the words it hasn't had answered, and each answer draws
+   * the window again.
    */
   private spellChecker(langs: string[]): Checker | null {
     const key = langs.join(" ");
     const hit = this.checkers.get(key);
     if (hit) return hit;
-    const spellers: Speller[] = [];
+    const dictionaries: DictionaryFiles[] = [];
     let waiting = false;
     for (const lang of langs) {
       const files = dictionaryFiles(lang, this.config.spell.dictionaries);
       const name = files ? `spell:${files.aff}` : "";
-      const s = files ? lazy(name, () => openSpeller(files)) : null;
-      if (s) spellers.push(s);
+      const s = files ? lazy(name, () => openDictionary(files).then(() => files)) : null;
+      if (s) dictionaries.push(s);
       else if (files && !loadError(name)) waiting = true;
       else if (!this.spellSaid.has(lang)) {
         this.spellSaid.add(lang);
@@ -9624,7 +9633,13 @@ export class App {
       }
     }
     if (waiting) return null;
-    const c = new Checker(spellers);
+    const c = new Checker(dictionaries.length ? threadDictionaries(dictionaries) : null, () => {
+      if (c.error && !this.spellSaid.has(c.error)) {
+        this.spellSaid.add(c.error);
+        this.message("warn", `spelling: ${c.error}`);
+      }
+      this.host.requestRender();
+    });
     this.checkers.set(key, c);
     return c;
   }
@@ -9641,16 +9656,31 @@ export class App {
     if (!checker) return null;
     const key = langs.join(" ");
     const m = this.spellMemo;
-    if (m && m.buf === buf && m.version === buf.version && m.key === key && m.generation === this.spellGeneration)
-      return m.words;
-    const words = checker.misspelt(proseWords(buf.parsed.tree, buf.source));
-    this.spellMemo = { buf, version: buf.version, key, generation: this.spellGeneration, words };
+    const same = m?.buf === buf && m.version === buf.version;
+    if (same && m.key === key && m.generation === this.spellGeneration && m.answers === checker.answers) return m.words;
+    const prose = same ? m.prose : proseWords(buf.parsed.tree, buf.source);
+    // The words answered so far: one the thread hasn't answered yet is marked when its answer comes.
+    const words = checker.misspelt(prose);
+    this.spellMemo = {
+      buf,
+      version: buf.version,
+      key,
+      generation: this.spellGeneration,
+      answers: checker.answers,
+      prose,
+      words,
+    };
     return words;
   }
 
-  /** What a word of the note might be instead: its languages' dictionaries' suggestions. */
-  spellSuggestions(view: View, word: string): string[] {
-    return this.spellChecker(this.spellLanguages(view))?.suggest(word) ?? [];
+  /** Whether a note's words are still being checked (25.6): some not answered yet, so not marked yet. */
+  spellPending(view: View): boolean {
+    return !!this.checkers.get(this.spellLanguages(view).join(" "))?.pending;
+  }
+
+  /** What a word of the note might be instead: its languages' dictionaries' suggestions, asked of their thread. */
+  async spellSuggestions(view: View, word: string): Promise<string[]> {
+    return (await this.spellChecker(this.spellLanguages(view))?.suggest(word)) ?? [];
   }
 
   /** One of your words added (25.6): to your list, and to every dictionary loaded — marked no more anywhere. */
@@ -9660,9 +9690,9 @@ export class App {
     } catch (err) {
       return this.message("error", `couldn't add "${word}" to your words: ${(err as Error).message}`);
     }
-    for (const c of this.checkers.values()) for (const s of c.spellers) s.add(word);
-    // Their answers so far are thrown away; the dictionaries, with the word in them now, stay.
-    this.checkers.clear();
+    addToDictionaries(word);
+    // Right from now on; the others found misspelt asked again, keeping their marks until they're answered.
+    for (const c of this.checkers.values()) c.added(word);
     this.spellGeneration++;
     this.message("info", `"${word}" added to your words (${this.graph.shownPath(ownWordsFile())})`);
   }

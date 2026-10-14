@@ -363,6 +363,9 @@ trusted.
 
 ## D157: Spelling by Hunspell as WebAssembly, English and Turkish bundled (25.6, 2026-10-10)
 
+> **Detailed by D232 (2026-10-14):** Hunspell runs on a thread of its own, which builds the dictionaries and checks the
+> words; the main thread never loads it.
+
 **Decision:** Misspelt words in notes are marked, with their suggestions, and a word can be added to your own list.
 English and Turkish come with slipbox; any other language is the user's own Hunspell dictionary (`[spell]
 dictionaries`, else the system's). Hunspell runs as WebAssembly (`hunspell-asm`). Spelling is off by default (`space u
@@ -457,3 +460,28 @@ still called the lens "live preview".
 
 **Not chosen:** `backspace` and `delete` while reading, on a rendered note: there a selection is a plain one, and
 deleting is an edit, made in the lens or source mode.
+
+## D232: Spelling on a thread of its own; each worker an entry point of the build (25.6, 15.1, 2026-10-14)
+
+**Decision:** Hunspell runs on a worker thread, the spell checker's (`core/spell-thread.ts`, `core/spell-worker.ts`): it
+builds each dictionary there and checks words there, and `z =` asks it for suggestions. The main thread never loads
+Hunspell: a checker asks the thread about the words it has no answer for, marks the misspelt among those answered, and
+draws the window again when more answers come. A word just typed is marked a moment later, and the marks already shown
+stay meanwhile. The CLI's `slipbox spell` asks the same thread and waits for it. Every worker's script is an entry point
+of package.json's `build` (`core/parse-worker.ts`, `core/spell-worker.ts`), found by `core/workers.ts` from the source
+or in the compiled binary; a test holds the list to the workers started, and another runs the compiled binary's
+spelling. Decided by an issue (#64, from #40) and one pull request (D223).
+
+**Why:** Building a dictionary is one synchronous WebAssembly call. With spelling on in English and Turkish, the main
+thread was blocked for about a quarter of a second on a fast machine (Turkish's 9 MB about 190 ms, English's about 70
+ms) and several times that on CI's slowest runner, where a key waited past the kitchen-sink check's three seconds.
+Checking a word costs microseconds, but it can't be done where the dictionary isn't, and a suggestion costs a tenth of
+a second or more. Bun bundles a worker into a compiled binary only when it is named as an entry point, and finds it
+there under the path it had beneath `src/`, not beside the module that starts it: the parse workers (D120) had never
+started in a released binary, which parsed big notes on the main thread instead.
+
+**Cost:** A thread and its memory while spelling is on; marks a moment late; `z =`'s list waits for the thread, and
+the keys after it wait with it. The binary is about 0.7 MB bigger: the parse worker's script is bundled on its own.
+
+**Not chosen:** building the dictionaries in slices between frames: Hunspell builds one in a single call that can't be
+split; checking only in the visible rows: it is the build, not the checking, that blocks.

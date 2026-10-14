@@ -5,6 +5,7 @@
 import { availableParallelism } from "node:os";
 import type { Root } from "mdast";
 import { adoptChunks, noteChunks, type ParseCache } from "./parse.ts";
+import { workerUrl } from "./workers.ts";
 
 let workers: Worker[] | null = null;
 let nextId = 0;
@@ -27,7 +28,7 @@ function pool(): Worker[] | null {
 }
 
 function start(): Worker {
-  const w = new Worker(new URL("./parse-worker.ts", import.meta.url).href);
+  const w = new Worker(workerUrl("parse-worker.ts"));
   w.onmessage = (e: MessageEvent<{ id: number; json?: string; error?: string }>) => {
     const done = waiting.get(e.data.id);
     waiting.delete(e.data.id);
