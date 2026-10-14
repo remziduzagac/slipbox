@@ -6,7 +6,7 @@ and GIT-T6; GIT-T7 any time after GIT-T1; GIT-T8 last.
 
 - [GIT-T1](archive/diff-foundation.md): The diff's foundation: changed words, and the source diff. Done.
 - [GIT-T2](review.md): Reviewing a change, a hunk at a time.
-- [GIT-T3](remote.md): The remote's commands and stash.
+- [GIT-T3](archive/remote.md): The remote's commands and stash. Done.
 - [GIT-T4](blocks-diff.md): A note's diff before and after.
 - [GIT-T5](merge-screen.md): The merge screen.
 - [GIT-T6](pull-rebase.md): Pulling where both sides moved, and rebasing onto the base.

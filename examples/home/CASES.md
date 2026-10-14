@@ -2795,6 +2795,16 @@ The same notes, one per tab.
   numbers and without, in softer colours of their own (`git_sign_*`) — `work/kestrel/docs/sync.md` (tui.md The working
   tree's changes (26.1, D225); tests 'where [git] signs_at puts them'; terminal check 'the gutter's signs where [git]
   signs_at puts them')
+- `git.fetch` — Fetch — `work/kestrel/README.md`, `notes/index.md` (command-specs.ts)
+- `git.pull` — Pull (fast-forward) — `work/kestrel/README.md`, `notes/index.md` (command-specs.ts)
+- `git.push` — Push — `work/kestrel/README.md`, `notes/index.md` (command-specs.ts)
+- `git.stash` — Stashes — `work/kestrel/docs/sync.md`, `notes/index.md` (command-specs.ts)
+- kestrel's origin a bare repository in the check's folder: main pushed after the upstream's question, fetched (`↓1`),
+  pulled fast-forward, an agent's commit (`↑1`) pushed, the pre-push hook not run while not trusted; a pull where both
+  sides moved refused; an edit stashed with a message and popped; a remote answering 401 failing at once, "terminal
+  prompts disabled" — `work/kestrel/README.md`, `work/kestrel/docs/sync.md` (GIT's design.md The remote and stash
+  (26.6); tests 'the remote's commands and stash (26.6)'; terminal checks 'push, fetch and pull against a bare
+  repository', 'a pull where both sides moved', 'stash', 'a remote that asks for a password')
 
 ### shell
 

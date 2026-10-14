@@ -8,6 +8,7 @@ import { execFile, execFileSync } from "node:child_process";
 import { posix, sep } from "node:path";
 import type { Checkout } from "./git.ts";
 import { gitArgs, STATUS_ARGS } from "./gitops.ts";
+import { parseTrack, type Track } from "./gitremote.ts";
 import { isTrusted } from "./trust.ts";
 import type { GitChange } from "./gitsigns.ts";
 
@@ -19,13 +20,13 @@ export interface StatusEntry {
   from?: string;
 }
 
-/** git's porcelain status (v1, `-z`), entry by entry, both letters kept. */
+/** git's porcelain status (v1, `-z`), entry by entry, both letters kept; the branch's line (`--branch`) left out. */
 export function parseEntries(z: string): StatusEntry[] {
   const out: StatusEntry[] = [];
   const parts = z.split("\0");
   for (let i = 0; i < parts.length; i++) {
     const e = parts[i]!;
-    if (e.length < 4) continue;
+    if (e.length < 4 || e.startsWith("## ")) continue;
     const entry: StatusEntry = { path: e.slice(3), x: e[0]!, y: e[1]! };
     // A rename or copy names where it came from next.
     if (entry.x === "R" || entry.x === "C") entry.from = parts[++i];
@@ -34,14 +35,19 @@ export function parseEntries(z: string): StatusEntry[] {
   return out;
 }
 
-/** The checkout's status, entry by entry, not waiting on git; null without git. */
-export function entriesLater(c: Pick<Checkout, "root">): Promise<StatusEntry[] | null> {
+/**
+ * The checkout's status, entry by entry, and where its branch stands against its upstream (26.6, as of the last
+ * fetch), not waiting on git; null without git.
+ */
+export function statusLater(
+  c: Pick<Checkout, "root">,
+): Promise<{ entries: StatusEntry[]; track: Track | null } | null> {
   return new Promise((done) => {
     execFile(
       "git",
-      gitArgs(c.root, STATUS_ARGS),
+      gitArgs(c.root, [...STATUS_ARGS, "--branch"]),
       { encoding: "utf8", timeout: 15_000, maxBuffer: 64 * 1024 * 1024 },
-      (err, out) => done(err ? null : parseEntries(out)),
+      (err, out) => done(err ? null : { entries: parseEntries(out), track: parseTrack(out) }),
     );
   });
 }

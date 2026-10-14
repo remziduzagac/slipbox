@@ -379,6 +379,9 @@ and 250 MB for the same answers. Its licence, MPL-1.1, was accepted for it (D194
 
 ## D158: Stash and the remote's commands deferred (26.6, 2026-10-10)
 
+> **Taken up by GIT (2026-10-15):** stash, fetch, pull and push built as GIT-D4 has them (GIT-T3); a conflict's ours,
+> theirs or both is GIT's merge screen (GIT-D5).
+
 **Decision:** `26.6` is deferred: stash; fetch, pull and push, asked for and never automatic; a conflict's ours,
 theirs or both. It waits on the roadmap's Later list.
 

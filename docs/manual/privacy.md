@@ -127,8 +127,9 @@ warning. So a folder you clone can't set it to `show` and have its pictures fetc
 
 ### git and your repositories' remotes
 
-slipbox reads a repository's remote addresses from its git config, to name the repository. It never contacts them. It
-never fetches, pulls or pushes.
+slipbox reads a repository's remote addresses from its git config, to name the repository. It contacts a remote only
+when you fetch, pull or push ([Git](git.md#fetching-pulling-and-pushing)). It never does so on its own, and nothing runs
+on a timer.
 
 A repository set up to download on demand can still reach its remote while slipbox asks git something. It would do the
 same from your shell. For example:

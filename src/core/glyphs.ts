@@ -120,6 +120,9 @@ export interface Glyphs {
   gitChange: string;
   gitDelete: string;
   gitTopDelete: string;
+  /** The status line's branch, ahead of its upstream and behind it (26.6): `main ↑2 ↓1`. */
+  gitAhead: string;
+  gitBehind: string;
   /** The status line's back and forward, around the path; the place you're at, in its history. */
   navBack: string;
   navForward: string;
@@ -225,6 +228,8 @@ const unicode: Glyphs = {
   gitChange: "▎",
   gitDelete: "▁",
   gitTopDelete: "▔",
+  gitAhead: "↑",
+  gitBehind: "↓",
   navBack: "‹",
   navForward: "›",
   historyHere: "●",
@@ -370,6 +375,8 @@ const ascii: Glyphs = {
   gitChange: "~",
   gitDelete: "_",
   gitTopDelete: "-",
+  gitAhead: "+",
+  gitBehind: "-",
   navBack: "<",
   navForward: ">",
   historyHere: "*",

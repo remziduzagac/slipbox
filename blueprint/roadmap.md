@@ -585,7 +585,9 @@ was added 2026-10-09 at the user's asking.*
 - [x] **26.3** Commit: its message in a floating editor; amend. Not trusted: its hooks don't run; it says so.
 - [x] **26.4** Blame: who changed the cursor's line, when, the commit's message; a file's history with `22.1`.
 - [x] **26.5** Branches: switched to or made from a picker, unsaved notes saved or kept first.
-- [ ] **26.6** Deferred, see [Later](#later).
+- [x] **26.6** Stash; fetch, pull (fast-forward), push: asked for, never automatic; ahead and behind on the status
+  line. Deferred 2026-10-10 (D158), taken up by GIT (GIT-D4, GIT-T3); a conflict's ours, theirs or both is GIT's merge
+  screen (GIT-D5).
 
 ## User documentation
 
@@ -675,8 +677,6 @@ Agreed, but not scheduled.
   (defaults, allowed values, unknown keys) (`16.x`, D107).
 - [ ] **24.20** Tabular code in columns: assignments, enum members, keys; columns inside rows (deferred 2026-10-09,
   D132).
-- [ ] **26.6** Stash; fetch, pull, push: asked for, never automatic; ours, theirs, both (deferred 2026-10-10,
-  D158).
 
 The design's deferred list was sorted 2026-10-07, and most of it now has IDs: Mermaid and LaTeX are `12.10`–`12.11` and
 `12.15`–`12.17`; composing notes, `10.9`; a note's history, frontmatter rules and document types, `22.x`; the live

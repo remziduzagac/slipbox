@@ -2,7 +2,7 @@
 // commands this area owns by their group (saving, exporting, the editor hand-off, info, trust), a short check each.
 
 import { spawnSync } from "node:child_process";
-import { existsSync, readdirSync, readFileSync, renameSync, rmSync, statSync, writeFileSync } from "node:fs";
+import { chmodSync, existsSync, readdirSync, readFileSync, renameSync, rmSync, statSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import {
   explorerOpen,
@@ -1668,6 +1668,29 @@ const RENAMES: Check[] = [
 const KESTREL = "~/work/kestrel";
 const SYNC = "~/work/kestrel/docs/sync.md";
 
+/** kestrel's origin made a bare repository in the check's folder (no network) — main pushed there and tracked, if
+ *  asked. Its path. */
+function bareOrigin(s: Session, track: boolean): string {
+  const bare = join(s.dir, "remote", "kestrel.git");
+  const made = spawnSync("git", ["init", "-q", "--bare", "-b", "main", bare], {
+    env: { ...process.env, HOME: s.home },
+  });
+  s.expect(made.status === 0, `a bare repository made: ${made.stderr}`);
+  gitOk(s, "origin set to it", true, KESTREL, "remote", "set-url", "origin", bare);
+  if (track) gitOk(s, "main pushed there, tracked", true, KESTREL, "push", "-q", "-u", "origin", "main");
+  return bare;
+}
+
+/** Someone else's commit on origin's main: a clone of it (made once), a line added to a file, pushed. */
+function pushedElsewhere(s: Session, file: string, line: string): void {
+  const other = join(s.dir, "other");
+  if (!existsSync(other)) gitOk(s, "a clone", true, s.dir, "clone", "-q", join(s.dir, "remote", "kestrel.git"), other);
+  else gitOk(s, "the clone brought up to date", true, other, "pull", "-q", "--ff-only");
+  writeFileSync(join(other, file), `${readFileSync(join(other, file), "utf8")}\n${line}`);
+  gitOk(s, "their commit", true, other, "commit", "-qam", "Theirs");
+  gitOk(s, "their push", true, other, "push", "-q");
+}
+
 const GIT: Check[] = [
   {
     area: "links-and-files",
@@ -2016,6 +2039,138 @@ const GIT: Check[] = [
       await s.keys("enter");
       await s.status(/ · sam\/readme-status /, 5000);
       s.expect(git(s, KESTREL, "branch", "--show-current").out.trim() === "sam/readme-status", "made, and on it");
+    },
+  },
+  {
+    area: "links-and-files",
+    name: "git: push, fetch and pull against a bare repository — the upstream asked for, the status line's ↓ and ↑, no hook in a vault not trusted",
+    covers: { cases: ["git"], commands: ["git.push", "git.fetch", "git.pull"] },
+    options: { home: true, startAt: "home/work/kestrel/README.md", setup: (s) => void bareOrigin(s, false) },
+    run: async (s) => {
+      // kestrel's own pre-push hook, the folder's code: in a vault not trusted, it never runs.
+      const mark = join(s.dir, "pre-push-ran");
+      const hook = s.path("~/work/kestrel/.git/hooks/pre-push");
+      writeFileSync(hook, `#!/bin/sh\ntouch '${mark}'\n`);
+      chmodSync(hook, 0o755);
+      await s.status(/ · main {2}/);
+      // Source control's keys: shift+p pushes, f fetches, p pulls.
+      await leader(s, "g", "s");
+      await s.see("Source control");
+      // main has no upstream: asked to push it to origin/main and track it there.
+      await s.keys("shift+p");
+      await s.see("main has no upstream. Push it to origin/main, and track it"); // the dialog wraps the rest
+      await s.keys("y");
+      await s.message("pushed main to origin/main", 8000);
+      const bare = join(s.dir, "remote", "kestrel.git");
+      s.expect(git(s, bare, "rev-parse", "main").out === git(s, KESTREL, "rev-parse", "HEAD").out, "main pushed");
+      // Someone else pushes: fetched, the status line says main is one behind.
+      pushedElsewhere(s, "README.md", "A line from another clone.\n");
+      await s.keys("f");
+      await s.message("fetched: main is 1 commit behind", 8000);
+      await s.status(/ · main ↓1 {2}/, 5000);
+      // Pulled, fast-forward: the file has their line, nothing behind.
+      await s.keys("p");
+      await s.message(/pulled: main fast-forwarded to [0-9a-f]+/, 8000);
+      await s.file("~/work/kestrel/README.md", (t) => t.includes("A line from another clone."), "pulled");
+      await s.status(/ · main {2}/, 5000);
+      // An agent commits here: one ahead; pushed, in step again — the hook never ran.
+      s.write(SYNC, `${s.read(SYNC)}\nA line the agent committed.\n`);
+      gitOk(s, "the agent's commit", true, KESTREL, "commit", "-qam", "Docs: the agent's line");
+      await s.status(/ · main ↑1 {2}/, 8000);
+      await s.keys("shift+p");
+      await s.message("pushed main to origin/main", 8000);
+      await s.status(/ · main {2}/, 5000);
+      s.expect(git(s, bare, "rev-parse", "main").out === git(s, KESTREL, "rev-parse", "HEAD").out, "pushed again");
+      s.expect(!existsSync(mark), "no pre-push hook ran in a vault not trusted");
+      s.expect((await lastMessage(s, "pushed main")).includes("this vault isn't trusted, so no hook ran"), "said so");
+    },
+  },
+  {
+    area: "links-and-files",
+    name: "git: a pull where both sides moved — ↑1 ↓1, refused in git's words, nothing moved",
+    covers: { cases: ["git"], commands: ["git.fetch", "git.pull"] },
+    options: { home: true, startAt: "home/work/kestrel/README.md", setup: (s) => void bareOrigin(s, true) },
+    run: async (s) => {
+      pushedElsewhere(s, "README.md", "A line from another clone.\n");
+      s.write(SYNC, `${s.read(SYNC)}\nA line the agent committed.\n`);
+      gitOk(s, "the agent's commit", true, KESTREL, "commit", "-qam", "Docs: the agent's line");
+      const head = git(s, KESTREL, "rev-parse", "HEAD").out;
+      // The palette's: :fetch, :pull.
+      await s.ex("fetch");
+      await s.status(/ · main ↑1 ↓1 {2}/, 8000);
+      await s.ex("pull");
+      await s.message("Not possible to fast-forward", 8000);
+      s.expect(git(s, KESTREL, "rev-parse", "HEAD").out === head, "HEAD where it was");
+      s.expect(!s.read("~/work/kestrel/README.md").includes("A line from another clone."), "their line not here");
+      await s.status(/ · main ↑1 ↓1 {2}/);
+    },
+  },
+  {
+    area: "links-and-files",
+    name: "git: stash — an agent's edit stashed with a message, listed, popped",
+    covers: { cases: ["git"], commands: ["git.stash"] },
+    options: { home: true, startAt: "home/work/kestrel/docs/sync.md" },
+    run: async (s) => {
+      const LINE = "A line the agent added.";
+      s.write(SYNC, `${s.read(SYNC)}\n${LINE}\n`);
+      await s.status("reloaded", 5000);
+      // Source control's z; then the palette's :stash.
+      await leader(s, "g", "s");
+      await s.see("Source control");
+      await s.keys("z");
+      await s.see("Stashes (0) — enter: pop, apply or drop one");
+      await s.see("Stash the changes, untracked files too…");
+      await s.keys("enter");
+      await s.see("stash message:");
+      await s.type("wip: the agent's line");
+      await s.keys("enter");
+      await s.message("stashed: wip: the agent's line", 8000);
+      await s.file(SYNC, (t) => !t.includes(LINE), "the file back as committed");
+      // Listed after the ways to stash; enter on it, then pop: the line back.
+      await s.ex("stash");
+      await s.see("stash@{0}  On main: wip: the agent's line");
+      await s.keys("down", "down", "enter");
+      await s.see("Pop it");
+      await s.see("Drop it…");
+      await s.keys("enter");
+      await s.message("popped stash@{0}", 8000);
+      await s.file(SYNC, (t) => t.includes(LINE), "the line back");
+      s.expect(git(s, KESTREL, "stash", "list").out.trim() === "", "the stash gone from the list");
+    },
+  },
+  {
+    area: "links-and-files",
+    name: "git: a remote that asks for a password fails at once, in git's words, never waiting for one",
+    covers: { cases: ["git"], commands: ["git.fetch"] },
+    // No system config's credential helper: the remote's question goes to git's own prompt, which never comes.
+    options: { home: true, startAt: "home/work/kestrel/README.md", env: { GIT_CONFIG_NOSYSTEM: "1" } },
+    run: async (s) => {
+      // A remote that wants a login, on this machine: every request answered 401.
+      const server = Bun.serve({
+        port: 0,
+        hostname: "127.0.0.1",
+        fetch: () => new Response("log in", { status: 401, headers: { "WWW-Authenticate": 'Basic realm="kestrel"' } }),
+      });
+      try {
+        gitOk(
+          s,
+          "origin over http",
+          true,
+          KESTREL,
+          "remote",
+          "set-url",
+          "origin",
+          `http://127.0.0.1:${server.port}/k.git`,
+        );
+        await s.ex("fetch");
+        await s.message("could not read Username", 8000);
+        // git's own prompt never asked: it says so (in a terminal, without it, git would wait at its question).
+        const said = await lastMessage(s, "could not read Username");
+        s.expect(said.includes("terminal prompts disabled"), `git told not to prompt: ${said}`);
+        s.expect(said.includes("git in a terminal can log in (git fetch)"), "the hint: git in a terminal can log in");
+      } finally {
+        server.stop(true);
+      }
     },
   },
   {
