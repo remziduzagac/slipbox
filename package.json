@@ -14,11 +14,13 @@
   "scripts": {
     "start": "bun src/main.ts",
     "test": "bun test --timeout 30000",
+    "test:docs": "bun test --timeout 30000 ./tests/docs.test.ts ./tests/site.test.ts",
     "test:terminal": "bun tests/terminal/run.ts",
     "test:herdr": "bun tests/terminal/herdr/run.ts",
     "typecheck": "tsc --noEmit -p .",
     "check:boundary": "bun scripts/check-boundary.ts",
     "check:deps": "bun scripts/check-deps.ts",
+    "ci:scope": "bun scripts/ci-scope.ts",
     "check:docs": "bun scripts/check-docs.ts",
     "check:actions": "zizmor .github && actionlint",
     "audit": "bun scripts/audit.ts",

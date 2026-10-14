@@ -52,6 +52,7 @@ import { inflateSync } from "node:zlib";
 import { cells } from "../src/tui/cursor.ts";
 import { lineOf, offsetOf } from "../src/tui/editing.ts";
 import { DEFAULT_GROUPS, DEFAULT_KEYS, keyChar, keyName, parseGroup } from "../src/tui/keys.ts";
+import { MOUSE_HELP } from "../src/tui/mouse-help.ts";
 
 const sandbox = mkdtempSync(join(tmpdir(), "slipbox-tui-"));
 process.env.XDG_STATE_HOME = join(sandbox, "state");
@@ -1023,55 +1024,15 @@ describe("overlays and the : prompt", () => {
       expect(await start()).toEqual({ heading, selectedIsEntry: true });
     }
   });
-  test("help's mouse list has what the keys chapter's § Mouse has: every rail button, the palette, the status line, the popups", async () => {
+  test("help's mouse list is MOUSE_HELP, every row of it (what the keys chapter has: docs.test.ts)", async () => {
     const h = await harness({ width: 140, height: 40 });
     await h.keys("space", "?");
     const items = (h.app.overlay as ListOverlay).items;
     const from = items.findIndex((i) => i.header && i.label === "Mouse");
     const next = items.findIndex((i, k) => k > from && i.header && i.label);
-    const help = items
-      .slice(from + 1, next < 0 ? undefined : next)
-      .map((i) => [i.label, ...(i.keys ?? []), i.detail].join(" "))
-      .join("\n");
-    const md = readFileSync(join(import.meta.dir, "..", "docs", "manual", "keys.md"), "utf8");
-    const chapter = md.slice(md.indexOf("\n## Mouse"), md.indexOf("\n## ", md.indexOf("\n## Mouse") + 1));
-    const things = [
-      "≡",
-      "◷",
-      "±",
-      "ℹ",
-      "▤",
-      "¹",
-      "slipbox",
-      "palette",
-      "breadcrumb",
-      "+N",
-      "×",
-      "middle-click",
-      "tab strip",
-      "border",
-      "scrollbar",
-      "☐",
-      "‹",
-      "›",
-      "path",
-      "problems bar",
-      "Problems",
-      "message",
-      "which-key",
-      "code cell",
-      "explorer",
-      "history",
-      "source control",
-      "outline",
-      "footnotes",
-      "Info",
-      "double",
-      "triple",
-      "wheel",
-      "question",
-    ];
-    for (const t of things) expect([t, help.includes(t), chapter.includes(t)]).toEqual([t, true, true]);
+    const rows = items.slice(from + 1, next < 0 ? undefined : next).filter((i) => i.label); // not its spacer
+    const row = (i: (typeof rows)[number]) => [i.label, [...(i.keys ?? []), ...(i.more ?? [])], i.detail];
+    expect(rows.map(row)).toEqual(MOUSE_HELP);
   });
   test("help and the palette list every command under a keymap.md group, none left out", async () => {
     for (const s of COMMAND_SPECS) expect([s.id, commandGroup(s.id)]).not.toEqual([s.id, "Other"]);

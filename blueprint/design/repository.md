@@ -97,11 +97,20 @@ a merge queue needs an organisation's repository) and by hand (GR-D9). Its jobs 
 step a package.json script, never a command of its own:
 
 - **`lint`**, on `ubuntu-24.04`: Biome (`bun run lint`), the workflows (`bun run check:actions`, zizmor online with
-  the job's token) and the docs (`bun run check:docs`).
+  the job's token), the docs (`bun run check:docs`) and the tests that read the docs (`bun run test:docs`: the docs'
+  and the site's tests, D230).
+- **`changes`**, on `ubuntu-24.04`: what a pull request changed (`bun run ci:scope`, its merge commit against its
+  base). When every file is the docs' (`docs/`, `blueprint/`, `site/src/`, a Markdown file at the top), `test` and
+  `terminal` are skipped: no test reads those files but the docs' own, which `lint` runs. A push to `main`, a merge
+  group, a run by hand and a diff that can't be read run everything (D230). A test holds every test that reads the
+  docs to `test:docs`'s list, so a new one can't be skipped with them.
 - **`test`**, on `ubuntu-24.04` and `macos-15` (arm64), neither stopping the other: the typecheck, the boundary, the
   supply chain's gates (this platform's OpenTUI package's licence among them) and the tests. On macOS the SQLite is
   Apple's, so the index's FTS5 (`unicode61`, `remove_diacritics 2`) and its `bm25` ranking are tested there on every
   change (`tests/core.test.ts`, `tests/vault.test.ts`, `tests/cli.test.ts`; `14.13`).
+- **`terminal`**, on `ubuntu-24.04`, `ubuntu-24.04-arm`, `macos-15` and `macos-15-intel`: the terminal tests
+  (`bun run test:terminal`, TT-D6).
+- **`site`**, on `ubuntu-24.04`: the docs' site built (`bun run site`), every link within it landing (DS).
 - **`ci`**, the aggregator and the one required check: it always runs, waits for every other job, and fails unless
   each passed or was skipped. A job skipped by its `if:` counts as passed; one that failed, was cancelled or never
   started doesn't. A test holds it to waiting for every job, so a job added can't be left out of the required check.

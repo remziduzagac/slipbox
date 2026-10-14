@@ -19,6 +19,7 @@ import {
   DEFAULT_SOURCE_KEYS,
   DEFAULT_VISUAL_KEYS,
 } from "../src/tui/keys.ts";
+import { MOUSE_HELP } from "../src/tui/mouse-help.ts";
 import { placeholderRow } from "../src/tui/placeholders.ts";
 
 const TOP = join(import.meta.dir, "..");
@@ -167,6 +168,18 @@ function keysUnbound(text: string): string[] {
     .filter((k) => !bound.has(k) && !TYPING_KEYS.has(k));
 }
 
+/** The test files that read the docs, the blueprint or the site: the ones `bun run test:docs` runs, as package.json says. */
+function docsTestFiles(): string[] {
+  const scripts = (JSON.parse(read(join(TOP, "package.json"))) as { scripts: Record<string, string> }).scripts;
+  return [...(scripts["test:docs"] ?? "").matchAll(/\.\/(tests\/\S+\.test\.ts)/g)].map((m) => m[1]!);
+}
+
+/** Whether a test's source reads the repository's docs, blueprint, site or top-level Markdown (D230). */
+const readsDocs = (source: string) =>
+  /"\.\.",\s*"(?:docs|blueprint|site|[A-Z_]+\.md)"|\b(?:TOP|ROOT),\s*"(?:docs|blueprint|site|[A-Z_]+\.md)"/.test(
+    source,
+  );
+
 /** The CLI's commands, and their flags, that the CLI chapter doesn't name. */
 function commandsLeftOut(chapter: string): string[] {
   const out: string[] = [];
@@ -253,6 +266,94 @@ describe("the user documentation (DOC)", () => {
       "ctrl+shift+k",
     ]);
     expect(commandsLeftOut("`render`")).toContain("render --width");
+  });
+});
+
+describe("what the manual promises of the code (DOC)", () => {
+  type Sections = Record<string, Record<string, unknown>>;
+
+  test("every key's default is the one its listing gives", async () => {
+    const { DEFAULT_CONFIG } = await import("../src/core/config.ts");
+    const doc = read(join(DOCS, "manual", "configuration.md"));
+    const listed = Bun.TOML.parse(doc.split("## Every key")[1]!.split("```toml")[1]!.split("```")[0]!) as Sections;
+    // The tables there are examples, not defaults: servers, languages, linters, keys, aliases, groups, colours.
+    const examples = new Set(["language-server", "language", "linter", "keys", "aliases", "groups", "colors", "types"]);
+    const defaults = DEFAULT_CONFIG as unknown as Sections;
+    const differ: string[] = [];
+    for (const [section, table] of Object.entries(listed)) {
+      if (examples.has(section)) continue;
+      if (typeof table !== "object") {
+        if (JSON.stringify(table) !== JSON.stringify(defaults[section])) differ.push(section);
+        continue;
+      }
+      for (const [key, value] of Object.entries(table))
+        if (JSON.stringify(defaults[section]?.[key]) !== JSON.stringify(value)) differ.push(`${section}.${key}`);
+      // …and no setting left out of the listing.
+      for (const key of Object.keys(defaults[section] ?? {}))
+        if (!(key in table)) differ.push(`${section}.${key} (not listed)`);
+    }
+    for (const section of Object.keys(defaults)) if (!(section in listed)) differ.push(`[${section}] (not listed)`);
+    expect(differ).toEqual([]);
+    expect(Object.keys(listed).length).toBeGreaterThan(15);
+  });
+
+  test("MOUSE_HELP, help's mouse list, has what the keys chapter's § Mouse has: the rail, the palette, the popups", () => {
+    const help = MOUSE_HELP.map(([label, keys, detail]) => [label, ...keys, detail].join(" ")).join("\n");
+    const md = read(join(DOCS, "manual", "keys.md"));
+    const chapter = md.slice(md.indexOf("\n## Mouse"), md.indexOf("\n## ", md.indexOf("\n## Mouse") + 1));
+    const things = [
+      "≡",
+      "◷",
+      "±",
+      "ℹ",
+      "▤",
+      "¹",
+      "slipbox",
+      "palette",
+      "breadcrumb",
+      "+N",
+      "×",
+      "middle-click",
+      "tab strip",
+      "border",
+      "scrollbar",
+      "☐",
+      "‹",
+      "›",
+      "path",
+      "problems bar",
+      "Problems",
+      "message",
+      "which-key",
+      "code cell",
+      "explorer",
+      "history",
+      "source control",
+      "outline",
+      "footnotes",
+      "Info",
+      "double",
+      "triple",
+      "wheel",
+      "question",
+    ];
+    for (const t of things) expect([t, help.includes(t), chapter.includes(t)]).toEqual([t, true, true]);
+  });
+});
+
+describe("the docs' tests (D230)", () => {
+  test("every test that reads the docs is one `bun run test:docs` runs, which CI runs on a change of the docs alone", () => {
+    const files = readdirSync(join(TOP, "tests"), { recursive: true, encoding: "utf8" })
+      .filter((f) => f.endsWith(".ts") && !f.includes("node_modules"))
+      .map((f) => `tests/${f}`);
+    const reading = files.filter((f) => readsDocs(read(join(TOP, f)))).sort();
+    expect(reading).toEqual([...docsTestFiles()].sort());
+    // The check catches what it looks for, and leaves a test's own folders alone.
+    expect(readsDocs('join(import.meta.dir, "..", "docs", "manual", "keys.md")')).toBe(true);
+    expect(readsDocs('join(TOP, "README.md")')).toBe(true);
+    expect(readsDocs('join(ROOT, "blueprint")')).toBe(true);
+    expect(readsDocs('mkdirSync(join(dir, "docs"))')).toBe(false);
+    expect(readsDocs('join(ROOT, ".github", "workflows", "ci.yml")')).toBe(false);
   });
 });
 

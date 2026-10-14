@@ -53,6 +53,8 @@ a change users will see updates it in the same piece of work, without the bluepr
 - `bun run format` — Biome formats the code; `bun run lint` checks it.
 - `bun run audit` — the dependencies' known vulnerabilities (`bun audit`); an advisory accepted is listed in
   `scripts/audit.ts` with why and the date to look again. CI runs it weekly and when `bun.lock` changes.
+- `bun run test:docs` — the tests that read the docs; CI runs only these (and the lint) for a pull request of the docs
+  alone.
 - `bun run test:terminal [area or name…]` — the terminal tests: slipbox driven by keys in headless terminals, a
   check per feature, many at once (`blueprint/design/testing.md`); CI runs them on Linux and macOS. `bun run
   test:herdr --pane <id>` runs the few that need a real terminal, in a herdr pane.

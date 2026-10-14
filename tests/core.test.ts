@@ -1488,31 +1488,6 @@ describe("what manual/configuration.md promises", () => {
   };
   type Sections = Record<string, Record<string, unknown>>;
 
-  test("every key's default is the one its listing gives", async () => {
-    const { DEFAULT_CONFIG } = await import("../src/core/config.ts");
-    const doc = readFileSync(join(import.meta.dir, "..", "docs", "manual", "configuration.md"), "utf8");
-    const listed = Bun.TOML.parse(doc.split("## Every key")[1]!.split("```toml")[1]!.split("```")[0]!) as Sections;
-    // The tables there are examples, not defaults: servers, languages, linters, keys, aliases, groups, colours.
-    const examples = new Set(["language-server", "language", "linter", "keys", "aliases", "groups", "colors", "types"]);
-    const defaults = DEFAULT_CONFIG as unknown as Sections;
-    const differ: string[] = [];
-    for (const [section, table] of Object.entries(listed)) {
-      if (examples.has(section)) continue;
-      if (typeof table !== "object") {
-        if (JSON.stringify(table) !== JSON.stringify(defaults[section])) differ.push(section);
-        continue;
-      }
-      for (const [key, value] of Object.entries(table))
-        if (JSON.stringify(defaults[section]?.[key]) !== JSON.stringify(value)) differ.push(`${section}.${key}`);
-      // …and no setting left out of the listing.
-      for (const key of Object.keys(defaults[section] ?? {}))
-        if (!(key in table)) differ.push(`${section}.${key} (not listed)`);
-    }
-    for (const section of Object.keys(defaults)) if (!(section in listed)) differ.push(`[${section}] (not listed)`);
-    expect(differ).toEqual([]);
-    expect(Object.keys(listed).length).toBeGreaterThan(15);
-  });
-
   test("the user file: --config, else $SLIPBOX_CONFIG, else $XDG_CONFIG_HOME/slipbox/config.toml; a --config that isn't there is said", () => {
     const xdg = mkdtempSync(join(tmpdir(), "slipbox-xdg-"));
     mkdirSync(join(xdg, "slipbox"));
