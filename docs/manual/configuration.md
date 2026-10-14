@@ -588,6 +588,8 @@ These are the roles of the screen most worth changing:
 | `rail` | the rails' tint (its `bg`); with none, as under `NO_COLOR`, a rail is drawn with a border |
 | `gutter` | the shade of the problems bar and the line numbers (its `bg`) |
 | `git_sign_add`, `git_sign_change`, `git_sign_delete` | the gutter's signs for lines added, changed and deleted |
+| `diff_add`, `diff_del` | a diff's added and removed lines: the sign's colour, the row's tint (its `bg`) |
+| `diff_add_word`, `diff_del_word` | the words that changed in a changed line, on a stronger tint (its `bg`) |
 | `cell_line` | a code cell's lines, and the tree's between a class and its members |
 | `lens` | the lens's rules and label |
 | `lens_band` | the lens's rows (its `bg`) |
@@ -613,8 +615,8 @@ Every role, by what it colours:
   `syn_variable`, `syn_constant`, `syn_operator`, `syn_punctuation`, `syn_tag`, `syn_attr`, `syn_builtin`,
   `syn_meta`, `syn_regexp`, `syn_section`, `syn_addition`, `syn_deletion`.
 - **Problems and spelling:** `syntax_error`, `problem_error`, `problem_warn`, `problem_info`, `spell`.
-- **Git:** `git_new`, `git_modified`, `git_conflict`, `diff_add`, `diff_del`, `diff_head`, `git_sign_add`,
-  `git_sign_change`, `git_sign_delete`.
+- **Git:** `git_new`, `git_modified`, `git_conflict`, `diff_add`, `diff_del`, `diff_head`, `diff_add_word`,
+  `diff_del_word`, `git_sign_add`, `git_sign_change`, `git_sign_delete`.
 - **The screen:** `border`, `status`, `status_accent`, `status_dim`, `sidebar`, `sidebar_dir`, `sidebar_selected`,
   `sidebar_active`, `sidebar_root`, `tab`, `tab_active`, `tab_active_idle`, `pane_title`, `pane_title_active`,
   `overlay`, `overlay_border`, `overlay_selected`, `overlay_match`, `overlay_dim`, `overlay_group`, `keycap`,

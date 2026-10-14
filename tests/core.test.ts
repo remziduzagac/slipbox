@@ -61,11 +61,11 @@ import { layoutSource } from "../src/core/layout/source.ts";
 import { expandTabs, sanitize, sanitizeMap } from "../src/core/sanitize.ts";
 import { base16ToPalette, parseBase16 } from "../src/core/theme/base16.ts";
 import { applyColorOverrides, listThemes, loadTheme, ROLES } from "../src/core/theme/index.ts";
-import { blend, colorHex, luminance } from "../src/core/theme/theme.ts";
+import { blend, colorHex, hexToRgb, luminance } from "../src/core/theme/theme.ts";
 import { glyphsFor } from "../src/core/glyphs.ts";
 import { WriteRefused, writeNote } from "../src/core/fsutil.ts";
 import { listTasks, toggleTask } from "../src/core/tasks.ts";
-import { diffLines, merge3, unifiedDiff } from "../src/core/merge.ts";
+import { diffLines, diffView, diffWords, merge3, pairLines } from "../src/core/merge.ts";
 import {
   compilePattern,
   expandReplacement,
@@ -433,6 +433,41 @@ describe("themes (2.6)", () => {
       git_sign_add: { fg: "#336633" },
     });
     expect([theme.roles.git_sign_add.fg, warnings]).toEqual(["#336633", []]);
+  });
+  test("a diff's line on a tint of its sign's colour, its changed words on a stronger one, in every colour theme; bold and underlined in the terminal's and without colour", () => {
+    const far = (a: string, b: string) => {
+      const [x, y] = [hexToRgb(a), hexToRgb(b)];
+      return Math.hypot(x[0] - y[0], x[1] - y[1], x[2] - y[2]);
+    };
+    for (const t of listThemes()) {
+      const { theme } = loadTheme(t.name);
+      for (const [line, word] of [
+        ["diff_add", "diff_add_word"],
+        ["diff_del", "diff_del_word"],
+      ] as const) {
+        const [l, w] = [theme.roles[line], theme.roles[word]];
+        if (theme.name === "terminal" || theme.name === "mono") {
+          // Sixteen colours can't be mixed with the page, and none can't tint: the words weighted instead.
+          expect([t.name, word, l.bg, w.bg, !!w.bold, !!w.underline]).toEqual([
+            t.name,
+            word,
+            undefined,
+            undefined,
+            true,
+            true,
+          ]);
+          continue;
+        }
+        // On the way from the page to the sign's colour: the line a little of it, the words more.
+        const [lineAway, wordAway] = [far(l.bg!, theme.bg), far(w.bg!, theme.bg)];
+        expect([t.name, word, lineAway > 0 && wordAway > lineAway, wordAway < far(l.fg!, theme.bg)]).toEqual([
+          t.name,
+          word,
+          true,
+          true,
+        ]);
+      }
+    }
   });
   test("the lens while it's typed into is green: its rules and label, a green tint on its rows", () => {
     const { theme } = loadTheme("tokyo-night");
@@ -1055,15 +1090,144 @@ describe("diff and three-way merge (5.5)", () => {
     // Both inserting at the same place differently: a conflict too.
     expect(merge3(base, "one\ntwo\nA\nthree\nfour\nfive\n", "one\ntwo\nB\nthree\nfour\nfive\n").conflicts).toBe(1);
   });
-  test("unifiedDiff: - and + lines with context and @@ markers", () => {
-    expect(unifiedDiff(base, "one\nTWO\nthree\nfour\nfive\n")).toEqual([
-      "@@ line 2",
-      "  one",
-      "- two",
-      "+ TWO",
-      "  three",
-      "  four",
+});
+
+describe("changed words inside changed lines (GIT-D2)", () => {
+  /** The text of each range. */
+  const words = (text: string, ranges: [number, number][] | undefined) =>
+    (ranges ?? []).map(([s, e]) => text.slice(s, e));
+
+  test("prose: a word changed in a long line is that word; runs with only spaces between them are one", () => {
+    const a =
+      "An op the server rejects with a 5xx or a network error is retried with exponential backoff, up to a minute.";
+    const b =
+      "An op the server rejects with a 5xx or a network error is retried with decorrelated backoff, up to a minute.";
+    const w = diffWords(a, b);
+    expect([words(a, w.del), words(b, w.add)]).toEqual([["exponential"], ["decorrelated"]]);
+    expect(w.alike).toBeGreaterThan(0.9);
+    // Two words, a space between them: one run, the space in it; the word kept between two changes: not.
+    const two = diffWords("the quick brown fox jumps", "the slow red fox jumps");
+    expect(words("the quick brown fox jumps", two.del)).toEqual(["quick brown"]);
+    expect(words("the slow red fox jumps", two.add)).toEqual(["slow red"]);
+    const apart = diffWords("lines 17 to 21 of retry.ts", "lines 12 to 15 of retry.ts");
+    expect(words("lines 17 to 21 of retry.ts", apart.del)).toEqual(["17", "21"]);
+    // Chinese or Japanese has no spaces between its words: a character at a time.
+    const cjk = diffWords("漢字かな交じり文です", "漢字カナ交じり文です");
+    expect(words("漢字かな交じり文です", cjk.del)).toEqual(["かな"]);
+    // An indent changed, nothing else: the white space is what changed.
+    expect(words("    x = 1", diffWords("    x = 1", "  x = 1").del)).toEqual(["    "]);
+    // A word put in: the word, not the space that came with it.
+    expect(words("one more two", diffWords("one two", "one more two").add)).toEqual(["more"]);
+  });
+
+  test("code: an identifier whole, never part of one; punctuation marked, not counted in how alike", () => {
+    const a = "  const retryCount = budget(op, now);";
+    const b = "  const retryLimit = budget(op, now, jitter);";
+    const w = diffWords(a, b);
+    expect(words(a, w.del)).toEqual(["retryCount"]);
+    expect(words(b, w.add)).toEqual(["retryLimit", ", jitter"]);
+    // Words: const retryCount budget op now (5) and const retryLimit budget op now jitter (6), four kept.
+    expect(w.alike).toBeCloseTo(8 / 11);
+    // Punctuation alone, on both: alike.
+    expect(diffWords("}", "});").alike).toBe(1);
+  });
+
+  test("a hunk's lines paired, each removed with the added line most like it, in order; under half alike, none", () => {
+    // docs/sync.md on the example set's agent/sync-retry: a sentence rewritten over two lines, and a line whose
+    // numbers changed.
+    const removed = [
+      "so on up to a minute. Until the retry budget of [ADR 4](adr/0004-retry-budget.md) is on, an op is retried forever.",
+      "The numbers are `DEFAULT_POLICY` in [lines 17 to 21 of retry.ts](../src/sync/retry.ts#L17-L21).",
+    ];
+    const added = [
+      "so on up to a minute. Each op has a retry budget of five attempts",
+      "([ADR 4](adr/0004-retry-budget.md)); the sixth failure parks it, so one bad op can no longer hold the whole queue.",
+      "The numbers are `DEFAULT_POLICY` in [lines 12 to 15 of retry.ts](../src/sync/retry.ts#L12-L15).",
+    ];
+    const pairs = pairLines(removed, added);
+    expect(pairs.map((p) => [p.del, p.add])).toEqual([[1, 2]]);
+    expect(words(removed[1]!, pairs[0]!.delWords)).toEqual(["17", "21", "L17", "L21"]);
+    expect(words(added[2]!, pairs[0]!.addWords)).toEqual(["12", "15", "L12", "L15"]);
+    // Code: each with its own, past a line added between; the order kept.
+    const code = pairLines(
+      ["let wait = p.base;", "return verdict(attempt, status);"],
+      ["let wait = p.jitter.base;", "attempt++;", "return verdict(attempt, status, p);"],
+    );
+    expect(code.map((p) => [p.del, p.add])).toEqual([
+      [0, 0],
+      [1, 2],
     ]);
+    // Most alike: the removed line more like the added one takes it, before it or after it.
+    const one = ["alpha beta gamma delta epsilon"];
+    expect(pairLines(["alpha beta gamma", "alpha beta gamma delta"], one)).toMatchObject([{ del: 1, add: 0 }]);
+    expect(pairLines(["alpha beta gamma delta", "alpha beta gamma"], one)).toMatchObject([{ del: 0, add: 0 }]);
+    expect(pairLines(["one"], [])).toEqual([]);
+  });
+
+  test("the diff's rows: a head before each group, the context, the unchanged stretches folded — or opened", () => {
+    const from = `${Array.from({ length: 20 }, (_, i) => `line ${i + 1}`).join("\n")}\n`;
+    const to = from.replace("line 2\n", "line two\n").replace("line 18\n", "line 18\nline 18 and a half\n");
+    const rows = diffView(from, to);
+    expect(rows.map((r) => `${r.kind}|${r.text}|${r.line}|${r.own}`)).toEqual([
+      "@@|line 2|2|2",
+      " |line 1|1|1",
+      "-|line 2|2|2",
+      "+|line two|2|2",
+      " |line 3|3|3",
+      " |line 4|4|4",
+      " |line 5|5|5",
+      "fold|10 unchanged lines|6|6",
+      "@@|line 19|19|19",
+      " |line 16|16|16",
+      " |line 17|17|17",
+      " |line 18|18|18",
+      "+|line 18 and a half|19|19",
+      " |line 19|20|19",
+      " |line 20|21|20",
+    ]);
+    // The pair's changed words, on both rows.
+    expect(rows[2]!.words).toEqual([[5, 6]]);
+    expect(rows[3]!.words).toEqual([[5, 8]]);
+    expect(rows[7]!.count).toBe(10);
+    // Opened: its lines in its place, each at its line in `to`.
+    const open = diffView(from, to, new Set([6]));
+    expect(open.filter((r) => r.kind === "fold")).toEqual([]);
+    expect(open.slice(7, 17).map((r) => `${r.text}|${r.line}`)).toEqual(
+      [6, 7, 8, 9, 10, 11, 12, 13, 14, 15].map((n) => `line ${n}|${n}`),
+    );
+    // A stretch of one line is shown, never folded: before the first group, after the last, and between two changes,
+    // which are then one group.
+    const near = diffView("a\nb\nc\nd\ne\nf\ng\nh\ni\n", "a\nb\nc\nd\nE\nf\ng\nh\ni\n");
+    expect(near.map((r) => r.kind).join("")).toBe("@@    -+    ");
+    const two = diffView(from, from.replace("line 2\n", "line two\n").replace("line 10\n", "line ten\n"));
+    expect(two.filter((r) => r.kind === "@@").length).toBe(1);
+    expect(two.map((r) => r.text).slice(0, 15)).toEqual([
+      "line 2",
+      "line 1",
+      "line 2",
+      "line two",
+      ...[3, 4, 5, 6, 7, 8, 9].map((n) => `line ${n}`),
+      "line 10",
+      "line ten",
+      "line 11",
+      "line 12",
+    ]);
+    // Folded before the first group, and after the last.
+    const far = diffView(from, from.replace("line 10\n", "line ten\n"));
+    expect(far.map((r) => (r.kind === "fold" ? r.count : r.kind))).toEqual([
+      6,
+      "@@",
+      " ",
+      " ",
+      " ",
+      "-",
+      "+",
+      " ",
+      " ",
+      " ",
+      7,
+    ]);
+    expect(diffView("same\n", "same\n")).toEqual([]);
   });
 });
 

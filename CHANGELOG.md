@@ -11,6 +11,11 @@ The format is [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.1.0/); wh
 - Keys you already know, a page for those who don't use vim: the arrows and the shortcuts of other editors that slipbox
   has, the four keys that are new, and where slipbox's keys differ. The README, the quick start and getting started
   give the familiar key first.
+- Diffs mark the words that changed inside a changed line. A diff (`space g d`, a file's from `space g c`, a commit's
+  to now, the conflict prompt's) opens in a floating window, its lines highlighted by the file's language, removed and
+  added lines tinted and the changed words more strongly. The unchanged lines between changes fold to a row saying how
+  many, which `enter` opens. A line too long scrolls sideways as a code block does, never cut with `…`. Two new
+  colours, `diff_add_word` and `diff_del_word`, mark the words.
 
 ### Changed
 

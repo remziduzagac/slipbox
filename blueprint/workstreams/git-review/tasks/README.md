@@ -4,7 +4,7 @@ The workstream's work, one file per task, its ID in its H1; finished ones move t
 GIT-T9 and GIT-T1 first, in parallel, then GIT-T10; GIT-T2 and GIT-T3 after GIT-T1, in parallel; GIT-T4, then GIT-T5
 and GIT-T6; GIT-T7 any time after GIT-T1; GIT-T8 last.
 
-- [GIT-T1](diff-foundation.md): The diff's foundation: changed words, and the source diff.
+- [GIT-T1](archive/diff-foundation.md): The diff's foundation: changed words, and the source diff. Done.
 - [GIT-T2](review.md): Reviewing a change, a hunk at a time.
 - [GIT-T3](remote.md): The remote's commands and stash.
 - [GIT-T4](blocks-diff.md): A note's diff before and after.

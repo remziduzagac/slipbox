@@ -2044,10 +2044,14 @@ describe("saving and conflicts (step 4)", () => {
     await touch(file, "one\ntwo\nTHREE\n"); // theirs: THREE
     h.app.reloadBuffer(v.buf);
     await h.keys("d");
-    const d = h.app.overlay as ListOverlay;
-    expect(d.title).toContain("Diff");
-    expect(d.items.map((i) => i.label)).toContain("- THREE".replace("- ", "+ "));
+    const d = h.app.floating!;
+    expect([d.kind, d.title]).toEqual(["diff", "Diff — yours → theirs (c.md)"]);
+    expect(d.view.buf.source.split("\n")).toContain("+ THREE");
     await h.keys("escape"); // back to the prompt
+    expect(h.app.floating).toBeNull();
+    expect((h.app.overlay as ListOverlay).title).toContain("changed on disk");
+    // enter goes back to it too: the prompt is still to answer.
+    await h.keys("d", "enter");
     expect((h.app.overlay as ListOverlay).title).toContain("changed on disk");
     await h.keys("m");
     expect(v.buf.source).toBe("one!\ntwo\nTHREE\n"); // both changes, no conflict
@@ -14086,27 +14090,37 @@ describe("git in the TUI: marks, what changed, a note's diff, worktrees, conflic
     if (!root) return;
     const h = await harness({ root, open: "c.md" });
     await h.keys("space", "g", "c");
-    let list = h.app.overlay as ListOverlay;
+    const list = h.app.overlay as ListOverlay;
     expect(list.title).toBe("Changed against main (3) — enter: the diff");
     expect(list.items.map((i) => [i.label, i.role])).toEqual([
       ["M a.md", "git_modified"],
       ["+ c.md", "git_new"],
       ["M notes/b.md", "git_modified"],
     ]);
-    await h.keys("enter"); // a.md's diff
-    list = h.app.overlay as ListOverlay;
-    expect(list.title).toBe("a.md against main — esc: the changes");
-    expect(list.items.filter((i) => i.role).map((i) => [i.label, i.role])).toEqual([
+    await h.keys("enter"); // a.md's diff, in the diff window (GIT-D2)
+    const f = h.app.floating!;
+    expect([f.kind, f.title]).toEqual(["diff", "a.md against main — esc: the changes"]);
+    const rows = h.app.currentLayout(f.view).lines.map((l) => [l.spans.map((s) => s.text).join(""), l.spans[0]?.role]);
+    expect(rows).toEqual([
       ["@@ line 4", "diff_head"],
+      ["  # A", "text"],
+      ["  ", "text"],
+      ["  one", "text"],
       ["- two", "diff_del"],
       ["+ TWO", "diff_add"],
+      ["  three", "text"],
     ]);
     await h.keys("escape");
+    expect(h.app.floating).toBeNull();
+    expect((h.app.overlay as ListOverlay).title).toStartWith("Changed against main");
+    // `q` goes back too.
+    await h.keys("enter", "q");
     expect((h.app.overlay as ListOverlay).title).toStartWith("Changed against main");
     await h.keys("enter");
-    list = h.app.overlay as ListOverlay;
-    list.selected = list.items.findIndex((i) => i.label === "+ TWO");
+    await h.keys("j", "j", "j", "j", "j"); // on + TWO
     await h.keys("enter");
+    expect(h.app.floating).toBeNull();
+    expect(h.app.overlay).toBeNull();
     expect(h.app.view!.buf.rel).toBe("a.md");
     expect(statusRow(h.frame())).toMatch(/ L4:\d+ /); // on that line, inside its paragraph
   });
@@ -14159,10 +14173,11 @@ describe("git in the TUI: marks, what changed, a note's diff, worktrees, conflic
     const h = await harness({ root, open: "a.md" });
     await h.keys("space", "n", "v", "shift+g", "o", ...[..."four"], "escape");
     await h.keys("space", "g", "d");
-    const labels = (h.app.overlay as ListOverlay).items.map((i) => i.label);
+    const labels = h.app.floating!.view.buf.source.split("\n");
     expect(labels).toContain("+ four");
     expect(labels).toContain("+ TWO");
     await h.keys("escape", "u");
+    expect(h.app.floating).toBeNull();
     git(root, "checkout", "-q", "--", "a.md");
     await h.app.run("note.open notes/../c.md");
     git(root, "add", "c.md");
@@ -14170,7 +14185,11 @@ describe("git in the TUI: marks, what changed, a note's diff, worktrees, conflic
     git(root, "checkout", "-q", "main");
     git(root, "merge", "-q", "feat");
     await h.keys("space", "g", "d");
-    expect((h.app.overlay as ListOverlay).items.map((i) => i.label)).toEqual(["no differences from main"]);
+    expect([h.app.floating, h.app.overlay, h.app.messages.at(-1)?.text]).toEqual([
+      null,
+      null,
+      "no differences from main",
+    ]);
   });
 
   test("space g w: the worktrees by branch; enter opens this note in the one picked", async () => {
@@ -14224,6 +14243,150 @@ describe("git in the TUI: marks, what changed, a note's diff, worktrees, conflic
     await h.keys("enter");
     expect(h.app.view!.buf.rel).toBe("a.md");
     expect(h.app.cursorLine(h.app.view!)).toBe(4);
+  });
+});
+
+describe("the diff window (GIT-D2)", () => {
+  const code = `${Array.from({ length: 20 }, (_, i) => `const line${i + 1} = ${i + 1}; // line ${i + 1}`).join("\n")}\n`;
+  /** The screen's rows. */
+  const screen = (h: Harness) => h.frame().split("\n");
+  /** The style of the first cell of `piece` on the screen row holding `holding` (ASCII rows). */
+  const styleAt = (h: Harness, holding: string, piece: string) => {
+    const c = h.canvas();
+    const y = c.rows.findIndex((r) => r.join("").includes(holding));
+    const at = c.rows[y]!.join("").indexOf(holding);
+    return c.styles[y]![c.rows[y]!.join("").indexOf(piece, at)]!;
+  };
+  const opened = async (now: string, width = 100) => {
+    const root = makeVault();
+    writeFileSync(join(root, "x.ts"), now);
+    const h = await harness({ root, open: "index.md", width, height: 40 });
+    h.app.showLineDiff(code, now, "x.ts", "x.ts: its change");
+    return h;
+  };
+
+  test("in the floating window: highlighted, a changed line tinted and its changed words more; a fold opened by enter, a line gone to", async () => {
+    const now = code.replace("const line2 = 2;", "const line2 = 22;");
+    const h = await opened(now);
+    expect(h.app.floating).toMatchObject({ kind: "diff", title: "x.ts: its change" });
+    const roles = h.app.theme.roles;
+    // The words that changed, on the stronger tint; the rest of the line on its own; both highlighted.
+    expect(styleAt(h, "+ const line2 = 22", "22")).toMatchObject({
+      bg: roles.diff_add_word.bg,
+      fg: roles.syn_number.fg,
+    });
+    expect(styleAt(h, "+ const line2 = 22", "line2")).toMatchObject({ bg: roles.diff_add.bg });
+    expect(styleAt(h, "+ const line2 = 22", "const")).toMatchObject({
+      bg: roles.diff_add.bg,
+      fg: roles.syn_keyword.fg,
+    });
+    expect(styleAt(h, "- const line2 = 2;", "2;")).toMatchObject({ bg: roles.diff_del_word.bg });
+    expect(styleAt(h, "- const line2 = 2;", "-")).toMatchObject({ fg: roles.diff_del.fg, bg: roles.diff_del.bg });
+    // A line both have: highlighted, never tinted.
+    const same = styleAt(h, "  const line1 = 1", "const");
+    expect(same.fg).toBe(roles.syn_keyword.fg!);
+    expect([roles.diff_add.bg, roles.diff_del.bg]).not.toContain(same.bg ?? undefined);
+    // No gutter of its own, line numbers on or not: its rows aren't a file's lines.
+    h.app.ui.line_numbers = true;
+    expect(screen(h).find((r) => r.includes("const line1 = 1"))).toMatch(/│ {3}const line1 = 1;/);
+    // The unchanged lines after: a row saying how many. enter opens it, the cursor staying on its row.
+    expect(screen(h).some((r) => r.includes("▸ 15 unchanged lines"))).toBe(true);
+    await h.keys("j", "j", "j", "j", "j", "j", "j", "enter");
+    expect(screen(h).some((r) => r.includes("unchanged lines"))).toBe(false);
+    expect(screen(h).some((r) => r.includes("  const line20 = 20;"))).toBe(true);
+    expect(statusRow(h.frame())).toMatch(/ L8:1 /);
+    // enter on a line: the window closes, and the file opens at it.
+    await h.keys("k", "k", "k", "k", "enter");
+    expect(h.app.floating).toBeNull();
+    expect(h.app.view!.buf.rel).toBe("x.ts");
+    expect(statusRow(h.frame())).toMatch(/ L2:\d+ /);
+  });
+
+  test("a line too long scrolls sideways, never cut with …: the cursor, a sideways wheel, shift with the wheel", async () => {
+    const tail = ", then a tail long enough to go well past the right edge of the window, to its end";
+    const h = await opened(code.replace("// line 18\n", `// line 18${tail}\n`), 80);
+    const y = screen(h).findIndex((r) => r.includes("+ const line18 = 18;"));
+    expect(screen(h)[y]).not.toContain("…");
+    expect(screen(h)[y]).not.toContain("to its end");
+    expect(screen(h)[y]).toMatch(/›\s*│/); // more to the right
+    // The cursor on it, to its end: the rows scroll to it; to its start, back.
+    await h.keys("j", "j", "j", "j", "j", "j", "$");
+    expect(screen(h)[y]).toMatch(/to its end\s*│/);
+    expect(screen(h)[y]).toMatch(/│ \+‹/);
+    expect(screen(h).find((r) => r.includes("@@ line 18"))).toBeDefined(); // the head stays
+    await h.keys("0");
+    expect(screen(h)[y]).toContain("+ const line18 = 18;");
+    // The wheel: sideways, or shift with it, over the rows.
+    const pane = h.app.geometry!.panes.find((p) => p.view === h.app.floating!.view)!;
+    const wheel = (direction: string, shift = false) =>
+      h.app.handleMouse({ type: "scroll", x: pane.textX + 10, y, button: 0, scroll: { direction, delta: 3 }, shift });
+    wheel("right");
+    expect(screen(h)[y]).not.toContain("+ const line18");
+    expect(screen(h)[y]).toContain("‹");
+    wheel("up", true);
+    expect(screen(h)[y]).toContain("+ const line18 = 18;");
+    wheel("down", true);
+    expect(screen(h)[y]).not.toContain("+ const line18");
+  });
+
+  test("the wheel over the floating window scrolls it, not the explorer or the window under it (regression)", async () => {
+    // Found building the diff window: the wheel went to the explorer under the pointer, or to the note's pane, which
+    // came first among the panes under it.
+    const many = code.replace(/= (\d+);/g, "= $1$1;");
+    const h = await opened(many, 100);
+    const under = h.app.tabView!;
+    const f = h.app.floating!.view;
+    h.frame();
+    const pane = h.app.geometry!.panes.find((p) => p.view === f)!;
+    const wheel = (x: number) =>
+      h.app.handleMouse({ type: "scroll", x, y: pane.y + 2, button: 0, scroll: { direction: "down", delta: 1 } });
+    // Where the explorer is under it.
+    const explorer = h.app.geometry!.sidebarPane!;
+    expect(pane.textX + 4 < explorer.x + explorer.w && pane.y + 2 < explorer.y + explorer.h).toBe(true);
+    wheel(pane.textX + 4);
+    h.frame();
+    const once = f.top;
+    expect(once).toBeGreaterThan(0);
+    // Where the note's window is under it.
+    wheel(pane.x + pane.w - 10);
+    h.frame();
+    expect(f.top).toBeGreaterThan(once);
+    expect([under.top, h.app.sidebar.scroll]).toEqual([0, 0]);
+  });
+
+  test("the terminal's theme: a changed word bold and underlined, a theme without tints to give", async () => {
+    const root = makeVault();
+    const h = await harness({ root, open: "index.md", width: 100, height: 40, themeName: "terminal" });
+    h.app.showLineDiff(code, code.replace("const line2 = 2;", "const line2 = 22;"), "x.ts", "x.ts: its change");
+    expect(styleAt(h, "+ const line2 = 22", "22")).toMatchObject({ bold: true, underline: true });
+    expect(styleAt(h, "+ const line2 = 22", "line2")).toMatchObject({ bold: false, underline: false });
+  });
+
+  test("two texts the same: said, and back where it came from; no window", async () => {
+    const root = makeVault();
+    const h = await harness({ root, open: "index.md" });
+    let back = 0;
+    h.app.showLineDiff(code, code, "x.ts", "x.ts: none", "no differences from main", () => back++);
+    expect([h.app.floating, h.app.messages.at(-1)?.text, back]).toEqual([null, "no differences from main", 1]);
+  });
+
+  test("the window is read-only, drawn one way: typing refused, no source mode; as wide as the screen less its margins", async () => {
+    const h = await opened(code.replace("const line2 = 2;", "const line2 = 22;"), 140);
+    const top = screen(h).find((r) => r.includes("x.ts: its change"))!;
+    expect(top.lastIndexOf("┐") - top.indexOf("┌") + 1).toBe(132);
+    const f = h.app.floating!.view;
+    const text = f.buf.source;
+    await h.keys("i");
+    expect(h.app.messages.at(-1)?.text).toStartWith("the floating window is read-only");
+    await h.keys("ctrl+k");
+    expect([f.source ?? false, f.buf.source, h.app.messages.at(-1)?.text]).toEqual([
+      false,
+      text,
+      "a diff is drawn one way",
+    ]);
+    // esc closes it: opened from nowhere, it has nowhere to go back to.
+    await h.keys("escape");
+    expect(h.app.floating).toBeNull();
   });
 });
 
@@ -17821,8 +17984,9 @@ describe("blame and a file's history (26.4, 22.1)", () => {
     await h.keys("escape");
     await h.app.run("git.history");
     await h.keys("down", "down", "enter", "down", "enter");
-    // With the lines around it, as the note's diff has them.
-    expect(list().items.map((i) => i.label)).toEqual(["@@ line 3", "  one", "  ", "- two", "+ TWO"]);
+    // With the lines around it, as the note's diff has them, in the diff window (GIT-D2).
+    expect(h.app.floating?.kind).toBe("diff");
+    expect(h.app.floating!.view.buf.source.split("\n")).toEqual(["@@ line 3", "  one", "  ", "- two", "+ TWO"]);
   });
 
   test("a version read as it was is read-only: typing, deleting, pasting there change nothing, and say so (regression)", async () => {

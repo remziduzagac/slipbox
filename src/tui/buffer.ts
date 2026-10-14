@@ -101,6 +101,9 @@ export class NoteBuffer {
   virtual: { save: (text: string) => boolean } | null = null;
   /** Why it can't be edited, when it can't: the floating window's text — a hover, a file as it was in git. */
   readOnly: string | null = null;
+  /** A layout of its own, not one of its text (a diff, GIT-D2): drawn whatever the window's mode, at its width. Its
+   *  text is a line for each of its rows: what the window's height and the cursor's lines count. */
+  drawn: ((width: number, how: { glyphs: Glyphs; wrap: boolean; codeScroll: boolean }) => Layout) | null = null;
 
   /** What the file is (16.1): a note, a data file or a text file — which modes and layouts it has. */
   kind: FileKind = { group: "note", format: "markdown" };

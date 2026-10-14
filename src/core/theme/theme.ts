@@ -99,13 +99,16 @@ export const ROLES = [
   "sidebar_selected",
   "sidebar_active",
   "sidebar_root",
-  // a file's git state in the explorer (5.11); a diff's added and removed lines (5.13)
+  // a file's git state in the explorer (5.11); a diff's added and removed lines (5.13), and a changed line's changed
+  // words, tinted more strongly than their line (GIT-D2)
   "git_new",
   "git_modified",
   "git_conflict",
   "diff_add",
   "diff_del",
   "diff_head",
+  "diff_add_word",
+  "diff_del_word",
   // the gutter's signs for lines changed against what's staged (26.1): added, changed, deleted
   "git_sign_add",
   "git_sign_change",
@@ -374,9 +377,13 @@ export function themeFromPalette(
     git_new: { fg: p.green },
     git_modified: { fg: p.yellow },
     git_conflict: { fg: p.red, bold: true },
-    diff_add: { fg: p.green },
-    diff_del: { fg: p.red },
+    // A diff's lines (GIT-D2): the sign in the colour, the row on a tint of it; a changed line's changed words on a
+    // stronger tint, their text keeping its highlighting.
+    diff_add: { fg: p.green, bg: blend(p.green, p.bg, kind === "dark" ? 0.12 : 0.14) },
+    diff_del: { fg: p.red, bg: blend(p.red, p.bg, kind === "dark" ? 0.12 : 0.14) },
     diff_head: { fg: p.cyan },
+    diff_add_word: { bg: blend(p.green, p.bg, kind === "dark" ? 0.32 : 0.34) },
+    diff_del_word: { bg: blend(p.red, p.bg, kind === "dark" ? 0.32 : 0.34) },
     // The gutter's signs (#22): the explorer's colours for new and modified, a diff's for deleted, each halfway to the
     // page — beside every changed line, next to the line numbers, full strength draws the eye from the text.
     git_sign_add: { fg: sign(p.green) },
@@ -514,6 +521,11 @@ export function terminalTheme(): Theme {
     git_sign_add: { fg: a(2), dim: true },
     git_sign_change: { fg: a(3), dim: true },
     git_sign_delete: { fg: a(1), dim: true },
+    // Nor tinted: a diff's lines by their sign's colour alone, a changed line's changed words bold and underlined.
+    diff_add: { fg: a(2), bg: undefined },
+    diff_del: { fg: a(1), bg: undefined },
+    diff_add_word: { bg: undefined, bold: true, underline: true },
+    diff_del_word: { bg: undefined, bold: true, underline: true },
   });
   t.kind = "dark";
   return t;

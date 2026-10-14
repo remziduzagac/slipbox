@@ -23,6 +23,40 @@ Adds, after "The working tree's changes":
 Previously: `space g d` "removed lines red, added green", a row a line, long lines cut; stash and the remote's commands
 deferred (`26.6`).
 
+### The diff, as built (GIT-T1)
+
+The text for tui.md § Git, after "The working tree's changes"; a note's before and after, and `tab`, come with
+GIT-T4.
+
+**The diff** (GIT-D2; `core/merge.ts` `diffView`, `core/layout/diff.ts`, `tui/diffview.ts`): `space g d`, a file's diff
+from `space g c`'s list, a history entry's diff to now and the conflict prompt's (D)iff draw one way, in the floating
+window, as wide as the screen less its margins.
+
+- **Found:** hunks of lines by the Myers diff, as before. Inside a hunk, the removed lines are paired with the added
+  ones, in order: the pairs that make the hunk most alike, none less than half alike. How alike two lines are is twice
+  the words kept over the words of both; punctuation is diffed but not counted, and two lines of punctuation alone are
+  alike. A hunk past 2,500 removed lines times added ones pairs in place, the first with the first. A pair is diffed
+  again by word: a word is letters, marks, digits and `_` (a Chinese or Japanese character on its own), and white space
+  and every other character are tokens of their own. A changed run loses the white space at its ends, unless that's all
+  it is, and runs with only white space between them are one.
+- **Drawn** (`layoutDiff`): a row a line, its sign and a space before it (`-` in `diff_del`, `+` in `diff_add`), its
+  text highlighted as source mode highlights it — a note's Markdown over the whole text, so a fence's or the front
+  matter's lines read as theirs; code a line at a time, only the lines shown. A changed row is on its sign's tint (the
+  row's `fill`, each span's `bg`), its changed words on `diff_del_word` or `diff_add_word`; an unchanged row isn't
+  tinted. Each group is under `@@ line N` (`diff_head`), with up to three unchanged lines around it. The unchanged
+  stretches between groups, before the first and after the last fold to `▸ N unchanged lines` (`dim`); a stretch of
+  one line is shown instead. `enter` on a fold opens it, the cursor staying on its row.
+- **Long lines** scroll sideways as a code block does (D233). With wrapping on and `[render] code_wrap = "scroll"`,
+  the rows are one block, their text from the gutter's end; the heads and folds stay put (`part: "top"`), and a last
+  row holds the scrollbar. The cursor, a sideways wheel and `shift` with the wheel scroll it. `code_wrap = "wrap"`
+  wraps a long line, `↪` in the gutter of its rows after the first; wrapping off, the rows are whole and the window
+  scrolls.
+- **The window:** a read-only buffer with a layout of its own (`NoteBuffer.drawn`), its text a line a row. It has no
+  gutter, line numbers on or not, and no source mode or lens: switching says "a diff is drawn one way". `enter` on a
+  line closes it and opens the file there; the conflict prompt's goes back to the prompt. `esc`, `q` and `:q` go back
+  to what opened it: the changes' list, the prompt. Two texts the same are said ("no differences from main"), and go
+  back. The wheel over the floating window scrolls it, never the window or the side pane under it.
+
 ## MODIFIED design/tui.md § Side panes ("Source control")
 
 Adds (GIT-D8, GIT-D9): the message box, the buttons and their keys, the sections' and the rows' actions, the right
@@ -44,6 +78,12 @@ Adds the roles `diff_add_word` and `diff_del_word`, a changed word inside a chan
 `diff_del`, which the before-and-after blocks' marked words use too; and the settings `[git] diff = "blocks" | "source"`
 (a note's diff, GIT-D2), `[git] worktrees` (where a new worktree goes, GIT-D13) and `[git] diff_layout = "auto" |
 "unified" | "split"` (a code file's, GIT-D7). The manual's configuration chapter lists them with the rest.
+
+Built (GIT-T1): `diff_add` and `diff_del` gain a `bg`, the line's tint: their colour 12% of the way from the page in a
+dark theme, 14% in a light one. `diff_add_word` and `diff_del_word` are the same colours 32% and 34% of the way. The
+terminal's theme can't mix its sixteen colours with the page: a diff's lines have their sign's colour alone, and the
+changed words are bold and underlined, as without colour (`NO_COLOR`). A span's background role (`Span.bg`) gives its
+bold and underline as well as its colour (`layout/style.ts`), so the words are marked where there's no tint to give.
 
 ## MODIFIED design/tui.md § Keys
 

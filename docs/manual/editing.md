@@ -448,7 +448,8 @@ The conflict prompt offers four answers, each by its key:
   - `y` writes yours over theirs
   - `n` leaves both as they are
   - `d` shows the differences
-- **(d) Diff:** the changes from yours to theirs, line by line. Closing it goes back to the prompt.
+- **(d) Diff:** the changes from yours to theirs, line by line, the changed words marked
+  ([Git](git.md#how-a-diff-is-drawn)). Closing it, or `enter`, goes back to the prompt.
 - **(m) Merge:** both, against the version you started from. What only one side changed is taken. Where both changed
   the same lines, both are kept between `<<<<<<< yours`, `=======` and `>>>>>>> theirs`. The result is unsaved, and
   `:w` writes it. Autosave never saves conflict markers.
