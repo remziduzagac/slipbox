@@ -191,6 +191,8 @@ The allocator as built, the flaw fixed: [design/rendering.md](../design/renderin
 
 - `basalt-core` supplies no table allocator, link graph, search or export.
 - The Apache-2.0 relicence of `basalt-core` and `basalt-widgets` was not on crates.io on 2026-09-25.
+- [`eugenioenko/ttt`](https://github.com/eugenioenko/ttt), noted by the user on 2026-10-14 as a competitor or
+  alternative: not read yet. To check, then compare with slipbox here, as the tools above are.
 
 ## Sources
 
