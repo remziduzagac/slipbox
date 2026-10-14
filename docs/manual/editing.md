@@ -16,10 +16,10 @@ This chapter covers:
 
 Making, renaming, moving and deleting files is in [Files](files.md).
 
-You don't need to know vim. Everything in the first section works with the arrow keys, `ctrl+s` and the mouse. vim's
-keys are there too, for those who want them. [The vim keys](#the-vim-keys) explains them.
+You don't need any prior knowledge. Everything in the first section works with the arrow keys, `ctrl+s` and the
+mouse. vim's keys are there too, for those who want them. [The vim keys](#the-vim-keys) explains them.
 
-## Editing without vim
+## The basics
 
 While you edit, slipbox is in one of two states: typing, or not typing.
 

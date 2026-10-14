@@ -10,7 +10,7 @@ These pages are also a website, with search: <https://remziduzagac.github.io/sli
 
 - [Installing slipbox](guides/install.md): what you need, how to install it, and how to upgrade or remove it.
 - [Quick start](guides/quick-start.md): open a folder, find your way, edit a note. Two minutes.
-- [Keys you already know](guides/keys-you-know.md): the arrows and the shortcuts from other editors. No vim needed.
+- [Keys you already know](guides/keys-you-know.md): the arrows and other editors' shortcuts. Nothing to learn first.
 - [Concepts](manual/concepts.md): the words slipbox uses, each in a few lines.
 - [Getting started](guides/getting-started.md): a ten-minute first session in a folder of your own notes.
 
