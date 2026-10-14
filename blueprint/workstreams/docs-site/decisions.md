@@ -62,3 +62,18 @@ fall behind the code, the tests already hold: every default key, every setting's
 
 **Not chosen:** the lists generated from the code between markers, a test failing when they differ (first proposed,
 after herdsman's generated configuration reference).
+
+## DS-D6: The keys a newcomer knows, first (2026-10-14)
+
+**Decision:** Where a key has a twin from desktop editors (the arrows, `home` and `end`, the page keys, `ctrl+f`), the
+pages a newcomer reads first give that key first, and vim's beside it: the README, the quick start, getting started,
+the docs' home, and reading's table of moves. A guide, Keys you already know, lists those keys on one page, with the
+four that are new (`i`, `esc`, `space`, `?`) and the keys that do something else than in a desktop editor (`ctrl+a`,
+`ctrl+w`). A test holds the newcomers' pages to keys slipbox has.
+
+**Why:** The user's observation: a reader who doesn't use vim takes vim's keys for a barrier. The familiar keys were
+there (the keys chapter's "Other keys" column, editing's "Editing without vim"), but the front door led with `j`, `k`
+and `/`.
+
+**Not chosen:** the keys chapter's columns swapped. It's the reference, and its order follows its conventions (vim's
+keys first, as bindings); a sentence at its top points to the new guide.

@@ -1,5 +1,5 @@
 ---
-status: review
+status: done
 assignee: claude-cli
 blocked_by: [DS-T1]
 created: "2026-10-14"
