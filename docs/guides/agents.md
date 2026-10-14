@@ -163,18 +163,22 @@ where there is no root. You and the agent both add to it. You read it, and paste
 
 1. In slipbox, open `ideas/coffee.md`.
 2. Put the cursor on the line `A ratio of 1 to 16 suits a pour-over.`, and press `space s a`. The scratch gets that
-   line's place, `path:line`, in a code span: `` `ideas/coffee.md:5` ``. A message says
-   `added to the scratch · ␣ s s opens it`.
+   line's place, `path:line`: `` **At:** `ideas/coffee.md:5` ``.
 
    If you select lines first (`shift+v`, then `j`), the scratch gets `path:line-line` and the lines themselves.
-3. Press `space s s` to open the scratch. It changes as the agent adds to it:
+3. The scratch opens, floating in the middle of the screen, ready to type after **Note:**. Say what you want about the
+   place: an idea, a question, or what the agent should do there (`check the ratio for the small pot`). Then press
+   `esc` and `q` to go back to the note. If you say nothing, the empty **Note:** goes.
+4. Press `space s s` to open the scratch again, or `space s r` to keep it in the window on the right while you work.
+   `capture.open_in = "right"` makes the right its usual place. It changes as the agent adds to it:
 
    ```bash
    slipbox capture "Is 1 to 16 right for the small pot?"
    slipbox capture --ref ideas/coffee.md:3-5 --snippet      # the place, and its lines fenced
+   slipbox capture --ref ideas/coffee.md:5 "Check the ratio"   # the place, and a note on it
    ```
 
-4. Press `space s y` to copy the whole scratch, to paste into a prompt.
+5. Press `space s y` to copy the whole scratch, to paste into a prompt.
 
 `space s d` clears the scratch, after asking.
 

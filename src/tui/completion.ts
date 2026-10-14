@@ -197,7 +197,11 @@ export function afterInsertKey(app: App, view: View, key: string): void {
     (timer as { unref?: () => void }).unref?.();
     return;
   }
-  // Anything else typed — a space, an operator — ends the word.
+  // Anything else typed — a space, an operator — ends the word, and the ask its pause was to make, or made (#37):
+  // else a slow answer (signature help's, at `(`) lets the pause pass, and the popup opens after the `(`.
+  if (timer) clearTimeout(timer);
+  timer = null;
+  asked++;
   app.completion = null;
 }
 

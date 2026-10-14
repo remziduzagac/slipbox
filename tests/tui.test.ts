@@ -3209,6 +3209,29 @@ describe("breadcrumb collapse (…) and the path dropdown", () => {
     expect(shape(crumbLayout([30], 12, 3))).toBe("0:12");
     expect(shape(crumbLayout([30], 5, 3))).toBe("…");
   });
+  test("space f b with the which-key popup drawn over the breadcrumb after space f: the dropdown under it all the same (#40)", async () => {
+    const h = await harness({
+      open: "samples/handbook/operations-handbook.md",
+      width: 100,
+      height: 34,
+      config: (c) => (c.ui.outline = false),
+    });
+    const v = h.app.view!;
+    const target = h.app.currentLayout(v).headings.find((x) => x.text.startsWith("Swapping a filter"))!;
+    h.app.moveCursor(v, { row: target.line + 1, col: 0 });
+    h.frame();
+    const hot = h.app.geometry!.hot;
+    const crumb = hot.find((r) => r.id === "crumbmore:0") ?? hot.find((r) => r.id === "crumbicon:0")!; // its …, else its icon
+    // A frame between the keys, as a slow machine draws one: the popup over the breadcrumb takes its clicks.
+    await h.keys("space", "f");
+    h.frame();
+    const popup = h.app.geometry!.popup!;
+    expect(crumb.y >= popup.y && crumb.y < popup.y + popup.h && crumb.x < popup.x + popup.w).toBe(true);
+    expect(h.app.geometry!.hot.some((r) => r.id === crumb.id)).toBe(false);
+    await h.keys("b");
+    expect((h.app.overlay as ListOverlay).anchor).toEqual({ x: crumb.x, y: crumb.y });
+    expect(h.frame()).toContain("└─");
+  });
   test("… opens the whole path as a dropdown under it; enter jumps; space f b opens it too", async () => {
     const h = await harness({
       open: "samples/handbook/operations-handbook.md",
@@ -4883,17 +4906,182 @@ describe("configuration: everything from config, and live reload", () => {
 });
 
 describe("scratch (space s)", () => {
-  test("add the cursor row reference, add a selection, open, copy", async () => {
+  /** The line the window's cursor is on, from 1. */
+  const lineAt = (h: Harness, v = h.app.view!) => lineOf(v, offsetOf(h.app, v));
+
+  test("add the cursor row reference, add a selection: each shown floating, typing its note; esc then q back, a note left empty dropped; open, copy (#43, D229)", async () => {
     const h = await harness({ open: "notes/alpha.md" });
+    const path = h.app.scratch().path;
     await h.keys("space", "s", "a");
+    const at = () => [h.app.floating?.kind, h.app.displayName(h.app.view!.buf), lineAt(h), h.app.view!.insert];
+    expect(at()).toEqual(["scratch", "scratch", 3, true]);
+    await h.keys("f", "i", "x", "escape", "q");
+    expect([h.app.floating, h.app.view!.buf.key]).toEqual([null, "notes/alpha.md"]);
+    expect(readFileSync(path, "utf8")).toBe("**At:** `notes/alpha.md:1`\n\n**Note:** fix\n");
     h.app.moveCursor(h.app.view!, { row: rowStarting(h, "Back to"), col: 0 });
     await h.keys("v", "e", "space", "s", "a");
-    const text = readFileSync(h.app.scratch().path, "utf8");
-    expect(text).toBe("`notes/alpha.md:1`\n\n`notes/alpha.md:9`\n\n```\nBack\n```\n");
+    expect(readFileSync(path, "utf8")).toEndWith(
+      "\n\n---\n\n**At:** `notes/alpha.md:9`\n\n```\nBack\n```\n\n**Note:** \n",
+    );
+    expect(at()).toEqual(["scratch", "scratch", 13, true]);
+    // Copied with nothing said yet: the empty note isn't in it.
+    await h.keys("escape", "space", "s", "y");
+    expect(h.copied.at(-1)).toEndWith("```\nBack\n```\n");
+    // Nothing said: esc (out of typing, then the scratch), and the empty note goes.
+    await h.keys("escape");
+    expect([h.app.floating, h.app.view!.buf.key]).toEqual([null, "notes/alpha.md"]);
+    const text = readFileSync(path, "utf8");
+    expect(text).toBe(
+      "**At:** `notes/alpha.md:1`\n\n**Note:** fix\n\n---\n\n**At:** `notes/alpha.md:9`\n\n```\nBack\n```\n",
+    );
     await h.keys("space", "s", "s");
-    expect(h.app.displayName(h.app.view!.buf)).toBe("scratch");
+    expect([h.app.floating?.kind, h.app.displayName(h.app.view!.buf)]).toEqual(["scratch", "scratch"]);
     await h.keys("space", "s", "y");
     expect(h.copied.at(-1)).toBe(text);
+  });
+
+  test("the floating scratch: empty, it opens too, in the middle, three quarters of the screen; typed in, saved as it closes (#43)", async () => {
+    const h = await harness({ open: "notes/alpha.md", width: 120, height: 40 });
+    const path = h.app.scratch().path;
+    expect(existsSync(path)).toBe(false);
+    await h.keys("space", "s", "s");
+    expect(h.app.floating?.kind).toBe("scratch");
+    h.frame();
+    const box = h.app.geometry!.floating!;
+    const pane = h.app.geometry!.panes.find((p) => p.view === h.app.tabView)!;
+    // Its margin taken off: the box itself.
+    const [y, rows] = [box.y + 1, box.h - 2];
+    expect(Math.abs(y - pane.y - (pane.y + pane.h - (y + rows)))).toBeLessThanOrEqual(3);
+    expect([box.w - 4, rows >= Math.floor((pane.h * 2) / 3)]).toEqual([90, true]);
+    expect(h.frame()).toContain("esc · q closes, saved");
+    await h.keys("i", "i", "d", "e", "a", "escape");
+    expect(h.app.view!.buf.dirty).toBe(true);
+    await h.keys("q");
+    expect([h.app.floating, readFileSync(path, "utf8")]).toEqual([null, "idea"]);
+  });
+
+  test("the floating scratch is a window like any: rendered, the lens, ctrl+k; esc leaves the lens and a find first, and closes it last (#43)", async () => {
+    // The lens, as slipbox's own default has it (the harness edits in source mode).
+    const h = await harness({
+      open: "notes/alpha.md",
+      width: 120,
+      height: 40,
+      config: (c) => (c.editor.edit_in = "live"),
+    });
+    const path = h.app.scratch().path;
+    mkdirSync(dirname(path), { recursive: true });
+    writeFileSync(path, "# Ideas\n\nfirst idea\n\n- a list item\n");
+    await h.keys("space", "s", "s");
+    const status = () => h.frame().split("\n").at(-1)!;
+    expect([h.app.floating?.kind, status()]).toEqual(["scratch", expect.stringMatching(/^ READ /)]);
+    expect(h.frame()).toContain("▌ Ideas");
+    // The lens, typing in it: esc stops typing, esc again leaves the lens, the scratch still open.
+    await h.keys("j", "j", "i");
+    expect(status()).toMatch(/^ LENS /);
+    await h.keys("i");
+    expect(status()).toMatch(/^ INSERT /);
+    await h.keys("escape");
+    expect([h.app.floating?.kind, status()]).toEqual(["scratch", expect.stringMatching(/^ LENS /)]);
+    await h.keys("escape");
+    expect([h.app.floating?.kind, status()]).toEqual(["scratch", expect.stringMatching(/^ READ /)]);
+    // A find: esc ends it first.
+    await h.keys("/", "i", "d", "e", "a", "enter");
+    expect(h.app.view!.find).not.toBeNull();
+    await h.keys("escape");
+    expect([h.app.floating?.kind, h.app.view!.find]).toEqual(["scratch", null]);
+    // ctrl+k: its markdown, still floating; esc, with nothing else to leave, closes it.
+    await h.keys("ctrl+k");
+    expect([h.app.floating?.kind, status()]).toEqual(["scratch", expect.stringMatching(/^ SOURCE /)]);
+    await h.keys("escape");
+    expect([h.app.floating, h.app.view!.buf.key]).toEqual([null, "notes/alpha.md"]);
+  });
+
+  test("a capture in the lens: typing in it at once; esc leaves the typing, q closes the scratch, saved (D229)", async () => {
+    const h = await harness({ open: "notes/alpha.md", width: 120, config: (c) => (c.editor.edit_in = "live") });
+    const status = () => h.frame().split("\n").at(-1)!;
+    await h.keys("space", "s", "a");
+    expect([h.app.floating?.kind, status()]).toEqual(["scratch", expect.stringMatching(/^ INSERT /)]);
+    // One message, saying how to go on: not the lens's own.
+    expect(h.app.toasts.map((m) => m.text)).toEqual(["added to the scratch; add a note, esc then q closes it"]);
+    await h.keys("d", "o", "escape");
+    expect([h.app.floating?.kind, status()]).toEqual(["scratch", expect.stringMatching(/^ LENS /)]);
+    await h.keys("q");
+    expect([h.app.floating, readFileSync(h.app.scratch().path, "utf8")]).toEqual([
+      null,
+      "**At:** `notes/alpha.md:1`\n\n**Note:** do\n",
+    ]);
+  });
+
+  test("[capture] open_in = right: the scratch on the right; a capture goes to it, typing its note; q closes it, saved, an empty note dropped; space s r; the UI settings switch it, kept (#43, D229)", async () => {
+    const root = makeVault();
+    const h = await harness({
+      root,
+      open: "notes/alpha.md",
+      config: (c) => ((c.capture.open_in = "right"), (c.ui.restore_session = true)),
+    });
+    // A long scratch: what's added goes below the window's last row.
+    const path = h.app.scratch().path;
+    mkdirSync(dirname(path), { recursive: true });
+    writeFileSync(path, "x\n\n".repeat(40));
+    // A split stacked once and closed since: the scratch goes on the right all the same.
+    const t = h.app.tab!;
+    Object.assign(t, { orientation: "stacked" });
+    await h.keys("space", "s", "s");
+    expect([h.app.floating, t.views.length, t.orientation, t.active]).toEqual([null, 2, "side", 1]);
+    expect(h.app.displayName(h.app.view!.buf)).toBe("scratch");
+    // From the note beside it: the cursor goes to the entry on the right, typing its note, in sight.
+    t.active = 0;
+    await h.keys("space", "s", "a");
+    expect([h.app.floating, t.active, lineAt(h), h.app.view!.insert]).toEqual([null, 1, 85, true]);
+    expect(h.frame()).toContain("notes/alpha.md:1");
+    await h.keys("w", "h", "y", "escape");
+    // The next, from the note: what was typed saved first, the entry after it.
+    t.active = 0;
+    await h.keys("j", "space", "s", "a");
+    expect([t.active, lineAt(h)]).toEqual([1, 91]);
+    // Nothing said, and another: the note left empty goes as it's added.
+    await h.keys("escape");
+    t.active = 0;
+    await h.keys("space", "s", "a");
+    expect(readFileSync(path, "utf8").match(/\*\*Note:\*\*.*/g)).toEqual(["**Note:** why", "**Note:** "]);
+    // Closed with q, nothing said this time either: that note goes too, the rest saved.
+    await h.keys("escape", "q");
+    expect([t.views.length, h.app.view!.buf.key]).toEqual([1, "notes/alpha.md"]);
+    const entry = "\\*\\*At:\\*\\* `notes\\/alpha\\.md:\\d+`\\n";
+    expect(readFileSync(path, "utf8")).toMatch(
+      new RegExp(`\\n\\*\\*Note:\\*\\* why\\n\\n---\\n\\n${entry}\\n---\\n\\n${entry}$`),
+    );
+    // The UI settings: floating now, kept from one start to the next; space s r, on the right all the same.
+    await h.keys("space", "u", "u");
+    expect(h.frame()).toMatch(/Scratch opens +on the right/);
+    await h.keys("escape");
+    await h.app.run("ui.scratch_in");
+    await h.keys("space", "s", "s");
+    expect(h.app.floating?.kind).toBe("scratch");
+    await h.keys("q", "space", "s", "r");
+    expect([h.app.floating, t.views.length, h.app.displayName(h.app.view!.buf)]).toEqual([null, 2, "scratch"]);
+    // In a split already: its other window takes the scratch.
+    await h.keys("q");
+    h.app.splitWith("side");
+    t.active = 0;
+    await h.keys("space", "s", "r");
+    expect([t.views.length, t.active, t.views[0]!.buf.key, h.app.displayName(t.views[1]!.buf)]).toEqual([
+      2,
+      1,
+      "notes/alpha.md",
+      "scratch",
+    ]);
+    h.app.quit();
+    const config = (c: Config) => ((c.capture.open_in = "right"), (c.ui.restore_session = true));
+    const again = await harness({ root, open: "notes/alpha.md", config });
+    expect(again.app.ui.scratch_in).toBe("float");
+    // A value saved that isn't one: dropped, the config's taken.
+    const { loadSession, saveSession } = await import("../src/core/position.ts");
+    again.app.quit();
+    const s = loadSession(again.app.loc)!;
+    saveSession(again.app.loc, { ...s, ui: { ...s.ui, scratch_in: { value: "bottom", base: "right" } } });
+    const bogus = await harness({ root, open: "notes/alpha.md", config });
+    expect(bogus.app.ui.scratch_in).toBe("right");
   });
   test("the scratch open is never another root in the explorer (21.9): it lives in slipbox's own state folder", async () => {
     const h = await harness();
@@ -6895,8 +7083,18 @@ describe("code as a notebook (24.x, 24.13)", () => {
     await h.keys("escape", "escape");
     // ◎: the scratch, with its path and lines.
     click(h, hot(h, "cell:scratch:4")!);
-    expect(h.app.messages.at(-1)!.text).toBe("resolve — lines 4–15 added to the scratch");
+    expect(h.app.messages.at(-1)!.text).toBe(
+      "resolve — lines 4–15 added to the scratch; add a note, esc then q closes it",
+    );
     expect(readFileSync(h.app.scratch().path, "utf8")).toContain("sample.ts:4-15");
+    // Shown in the scratch, floating, typing its note (#43, D229); esc then q, back at the cell.
+    expect([
+      h.app.floating?.kind,
+      h.app.view!.insert,
+      h.app.view!.buf.source.split("\n")[lineOf(h.app.view!, offsetOf(h.app, h.app.view!)) - 1],
+    ]).toEqual(["scratch", true, "**Note:** "]);
+    await h.keys("escape", "q");
+    expect(h.app.floating).toBeNull();
     // ⚠: a problem in it — counted on its header, the panel on it.
     const warning = (line: number, message: string) => ({
       start: { line, column: 3 },
@@ -13329,7 +13527,8 @@ describe("a branch switch as one event (5.9)", () => {
       "branch main moved on: git moved 1 file — links to it say where (space v p); space l r relinks a note's",
     );
     expect(shown(h)).toEqual(["b.md"]);
-    h.app.graph.build(true, "lazy"); // the watcher's news, as it would come
+    // Said with the graph caught up, the watcher's news not come yet (#40): space l r at once finds the link.
+    expect(h.app.graph.notes.has("docs/a.md")).toBe(true);
     expect(h.app.graph.problems().broken).toContainEqual(
       expect.objectContaining({ from: "b.md", target: "a.md", moved: "docs/a.md" }),
     );
@@ -14541,6 +14740,34 @@ describe("completion while typing (19.16)", () => {
     expect(await until(() => h.app.signature === null)).toBe(true);
     await h.app.servers!.stopAll();
   });
+
+  test("`(` ends the word: signature help slow to answer, the pause after `fn` asks for no completion (#37)", async () => {
+    const root = makeVault();
+    writeFileSync(join(root, "a.fk"), "LATESIG start\n");
+    const h = await harness({ root, open: "a.fk", config: served });
+    await ready(h);
+    await h.keys("o", "f", "n", "(");
+    expect(await until(() => h.app.signature !== null)).toBe(true); // 300 ms: the word's pause (100 ms) long past
+    expect(h.app.completion).toBeNull();
+    // enter a new line, not a word picked from a popup.
+    await h.keys("enter", ",");
+    expect(h.app.view!.buf.source).toMatch(/^LATESIG start\nfn\(\n *,\n$/); // indented as after a `(`
+    expect(await until(() => h.app.signature === null)).toBe(true);
+    await h.app.servers!.stopAll();
+  });
+
+  test("`(` ends the word: the word's items asked for before it, answered late, open no popup after it (#37)", async () => {
+    const root = makeVault();
+    writeFileSync(join(root, "a.fk"), "SLOW start\n"); // SLOW: a word's items answered 300 ms late
+    const h = await harness({ root, open: "a.fk", config: served });
+    await ready(h);
+    await h.keys("o", "f", "n");
+    await new Promise((r) => setTimeout(r, 150)); // the pause passed: asked for `fn`'s items
+    await h.keys("(");
+    await new Promise((r) => setTimeout(r, 450)); // their answer come
+    expect(h.app.completion).toBeNull();
+    await h.app.servers!.stopAll();
+  });
 });
 
 test("a relayout while typing at a line's end — a resize, the problems bar appearing — keeps the cursor after it", async () => {
@@ -15587,10 +15814,11 @@ describe("what keymap.md and tui.md promise (review: docs against the tests)", (
     expect(boxes()).toHaveLength(4);
     expect(h.app.toasts.map((t) => t.text)).toEqual(["a fifth", "a fourth", "↻ notes/alpha.md reloaded", "plain info"]);
     expect(h.app.messages.some((m) => m.text === "first, an error")).toBe(true); // in the list still
-    // Times: an info message goes after 4 s, an error stays 8 s.
+    // Times: an info message goes after 4 s, an error stays 8 s — from when they're drawn.
     h.app.dismissToasts();
     h.app.message("error", "broke");
     h.app.message("info", "fyi");
+    h.frame();
     now += 4_001;
     h.app.message("info", "later");
     expect(h.app.toasts.map((t) => t.text)).toEqual(["later", "broke"]); // the info gone after 4 s
@@ -15600,6 +15828,19 @@ describe("what keymap.md and tui.md promise (review: docs against the tests)", (
     now += 999;
     h.app.message("info", "at 8 s");
     expect(h.app.toasts.map((t) => t.text)).toEqual(["at 8 s", "at 7 s", "later"]); // gone after 8 s
+    // Said while slipbox was busy, no frame drawn for longer than it shows (#40): still there to be seen, then its 4 s.
+    h.app.dismissToasts();
+    h.app.message("warn", "said while busy");
+    now += 10_000;
+    h.app.message("info", "next");
+    expect(h.app.toasts.map((t) => t.text)).toEqual(["next", "said while busy"]);
+    expect(h.frame()).toContain("said while busy");
+    now += 3_999;
+    h.frame(); // drawn again: its time still counts from the first
+    expect(h.app.toasts.map((t) => t.text)).toContain("said while busy");
+    now += 1;
+    h.app.message("info", "then gone");
+    expect(h.app.toasts.map((t) => t.text)).toEqual(["then gone"]);
   });
 
   test("selection keys: shift+ctrl+end / home to the note's ends, shift+ctrl+down by paragraph, shift+pagedown by page", async () => {
@@ -16697,6 +16938,37 @@ describe("changes against what's staged, in the gutter (26.1)", () => {
           buf.edit(i, to.length, from);
         }
       }
+  });
+
+  test("rendered, a changed block is signed beside its rows, never on the blank row after it; a code block's blank line is (#41)", async () => {
+    const root = repo({ "g9.md": "# Head\n\nOne line.\n\n- item a\n- item b\n\nLast.\n\n```text\naaa\n\nbbb\n```\n" });
+    if (!root) return;
+    const h = await harness({ root, open: "g9.md", width: 100, height: 30 });
+    h.app.setViewMode(h.app.view!, "rendered");
+    expect(await changes(h)).toEqual([]);
+    const buf = h.app.view!.buf;
+    buf.edit(
+      0,
+      buf.source.length,
+      "# HEAD\n\nOne LINE.\n\n- item a\n- item B\n\nLast.\n\n```text\naaa\n\n\nbbb\n```\n",
+    );
+    expect((await changes(h)).map((c) => `${c.kind}:${c.from}`)).toEqual([
+      "change:1",
+      "change:3",
+      "change:6",
+      "add:12",
+    ]);
+    const c = h.canvas();
+    const rows = c.rows.map((r) => r.join(""));
+    // The window's row with `text` (the last: the breadcrumb above has the heading too), and the signs' column.
+    const at = (text: string) => rows.findLastIndex((r) => r.includes(text));
+    const x = rows[at("One LINE.")]!.indexOf("One LINE.") - 1;
+    /** The signs' column on `n` rows from `text`'s. */
+    const signs = (text: string, n: number) => c.rows.slice(at(text), at(text) + n).map((r) => r[x]);
+    for (const text of ["HEAD", "One LINE.", "item B"]) expect([text, ...signs(text, 2)]).toEqual([text, "▎", " "]);
+    // The code block's rows: the blank line added is signed, the one it had isn't.
+    expect(signs("aaa", 4)).toEqual([" ", "▎", " ", " "]);
+    expect(c.styles[at("aaa") + 1]![x]!.fg).toBe(h.app.theme.roles.git_sign_add.fg!);
   });
 });
 

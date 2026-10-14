@@ -1,6 +1,13 @@
 // Scratch capture (plan 8.x) — the accumulator from prompt-buffer.lua, CLI-shaped so nvim, agents
 // and scripts share one entry point (8.1). Markdown in, markdown out: each entry carries its
-// source reference, and the file is readable and pasteable as-is (8.4).
+// source reference, and the file is readable and pasteable as-is (8.4). An entry says the place it's
+// at and your note on it, a rule between it and the one before (D229):
+//
+//   **At:** `notes/coffee.md:5`
+//
+//   **Note:** check the ratio for the small pot
+//
+//   ---
 //
 // Reference format, GitHub-style, as prompt-buffer.lua emits it:
 //   `path:42`  `path:42-50`  `path:42:10-30`  `path:42:10-50:30`
@@ -136,7 +143,13 @@ export interface CaptureInput {
   /** Fence language override; default from the file extension. */
   lang?: string;
   cwd?: string;
+  /** An entry with a reference and no text ends on its note, empty: the TUI's cursor types it (D229). */
+  ask?: boolean;
 }
+
+/** The labels of an entry's reference and its text: the place it's at, and your note on it (D229). */
+export const AT = "**At:**";
+export const NOTE = "**Note:**";
 
 /** Build the markdown block for one entry. Pure apart from reading the snippet file. */
 export function formatEntry(input: CaptureInput, project: string): string {
@@ -146,7 +159,7 @@ export function formatEntry(input: CaptureInput, project: string): string {
     const abs = isAbsolute(input.ref.path) ? input.ref.path : resolve(cwd, input.ref.path);
     const rel = relative(project, abs);
     const shown = rel && !climbsOut(rel) ? rel : abs;
-    parts.push(formatRef({ ...input.ref, path: shown }));
+    parts.push(`${AT} ${formatRef({ ...input.ref, path: shown })}`);
     if (input.snippet || input.snippetText !== undefined) {
       let body = input.snippetText;
       if (body === undefined) {
@@ -163,9 +176,12 @@ export function formatEntry(input: CaptureInput, project: string): string {
     }
   }
   if (input.text?.trim()) {
-    parts.push(sanitize(input.text).replace(/\s+$/, ""));
+    const text = sanitize(input.text).replace(/\s+$/, "");
+    parts.push(input.ref ? `${NOTE} ${text}` : text);
   } else if (!input.ref && input.snippetText) {
     parts.push(fence(sanitize(input.snippetText), input.lang ?? ""));
+  } else if (input.ref && input.ask) {
+    parts.push(`${NOTE} `);
   }
   return parts.join("\n\n");
 }
@@ -186,14 +202,37 @@ export function readScratch(loc: ScratchLocation): string {
   }
 }
 
-/** Append an entry, separated by a blank line, atomically. Returns the new content. */
-export function appendScratch(loc: ScratchLocation, entry: string): string {
+/** The scratch ends on a rule already: none goes before the next entry. */
+const ENDS_ON_RULE = /(?:^|\n) {0,3}(?:-{3,}|\*{3,}|_{3,})\s*$/;
+
+/** A note left empty, and the blank line before it: a capture closed with nothing said about it (D229). */
+const EMPTY_ASK = /\n*(?:^|\n)\*\*Note:\*\*[ \t]*(?=\n|$)/g;
+
+/** The scratch without its empty notes (each an ask: the slot for yours). */
+export function dropEmptyAsks(text: string): string {
+  return text.replace(EMPTY_ASK, "");
+}
+
+/**
+ * Append an entry atomically: after a blank line, and a rule when there's something before it (D229) — never right
+ * under a line of text, where `---` would make that line a heading. `tidy` drops the empty notes before it: the TUI's,
+ * never another program's (its cursor may be on one). Returns the new content.
+ */
+export function appendScratch(loc: ScratchLocation, entry: string, tidy = false): string {
   ensureDir(join(loc.path, ".."));
-  const current = readScratch(loc);
+  const current = tidy ? dropEmptyAsks(readScratch(loc)) : readScratch(loc);
   const sep = current === "" ? "" : current.endsWith("\n\n") ? "" : current.endsWith("\n") ? "\n" : "\n\n";
-  const next = `${current}${sep}${entry}\n`;
+  const rule = current.trim() && !ENDS_ON_RULE.test(current) ? "---\n\n" : "";
+  const next = `${current}${sep}${rule}${entry}\n`;
   atomicWrite(loc.path, next);
   return next;
+}
+
+/** The scratch made, empty, where it isn't yet: the TUI opens it to be typed in before anything is captured (#43). */
+export function ensureScratch(loc: ScratchLocation): void {
+  if (existsSync(loc.path)) return;
+  ensureDir(join(loc.path, ".."));
+  atomicWrite(loc.path, "");
 }
 
 export function clearScratch(loc: ScratchLocation): void {

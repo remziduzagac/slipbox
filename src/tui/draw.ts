@@ -87,6 +87,9 @@ export interface Geometry {
   tabStrip: Rect | null;
   /** The which-key popup, with its margin: clicks there never reach what's under it. */
   popup: Rect | null;
+  /** Where each window's breadcrumb hangs its path from (its `…`, else its icon), by the window's index: kept when a
+   *  popup over it takes its clicks — `space f b` with the which-key popup drawn after `space f` (#40). */
+  crumbAnchors: Record<number, { x: number; y: number }>;
   /** Horizontal rules (row `y`, columns [x0, x1)) and the vertical borders they may meet. */
   rules: { y: number; x0: number; x1: number }[];
   verticals: { x: number; y0: number; y1: number; style: CellStyle }[];
@@ -152,6 +155,7 @@ export function drawApp(app: App, c: Canvas): Geometry {
     scrollbars: [],
     tabStrip: null,
     popup: null,
+    crumbAnchors: {},
     rules: [],
     verticals: [],
   };
@@ -289,6 +293,8 @@ export function drawApp(app: App, c: Canvas): Geometry {
     drawBottomLine(app, c, H - 1, geo, prompt && !dialog ? prompt : null);
   else if (status) drawStatus(app, c, { y: H - status, h: 1 }, geo);
   if (float && app.toasts.length) drawToasts(app, c, mainY, mainY + mainH, geo);
+  // What was drawn of them begins its time (#40): the boxes, or the newest over the status line.
+  app.toastsDrawn(float ? app.toasts : !(prompt && !dialog) && app.transient ? [app.transient] : []);
   if (((app.whichKey && app.pending.length) || (app.resizeMode && !app.pending.length)) && !app.overlay)
     drawWhichKey(app, c, mainY, mainY + mainH, geo);
   // Completion's popup and the signature being typed (19.16), from the cursor, over the text.
@@ -464,16 +470,20 @@ function drawSaveAs(
 /**
  * The floating editor (3.20): a framed window over the others, centred near the top of the content,
  * as tall as its text (at most the content's height); its title says what it edits, its bottom
- * border how it closes. Inside, a window like any, in source mode.
+ * border how it closes. Inside, a window like any, in source mode. The scratch's (#43) is a fixed three quarters of
+ * the screen, in the middle of it: room to type in, its size not jumping as entries come; rendered, as a note is.
  */
 function drawFloating(app: App, c: Canvas, mainY: number, mainH: number, geo: Geometry): Rect {
   const f = app.floating!;
   const theme = app.theme;
   const W = c.width;
-  const w = Math.max(24, Math.min(100, W - 8));
-  const h = Math.max(6, Math.min(mainH - 1, f.view.buf.lineStarts().length + 5));
+  const scratch = f.kind === "scratch";
+  const w = Math.max(24, Math.min(100, scratch ? Math.floor((W * 3) / 4) : W - 8));
+  const h = scratch
+    ? Math.max(6, Math.min(mainH - 1, Math.floor((mainH * 3) / 4)))
+    : Math.max(6, Math.min(mainH - 1, f.view.buf.lineStarts().length + 5));
   const x = Math.floor((W - w) / 2);
-  const y = mainY + Math.max(0, Math.min(1, mainH - h));
+  const y = mainY + (scratch ? Math.floor((mainH - h) / 2) : Math.max(0, Math.min(1, mainH - h)));
   const bg = roleStyle(theme, "overlay", null);
   const border = roleStyle(theme, "overlay_border", null);
   const dim = roleStyle(theme, "overlay_dim", null);
@@ -491,7 +501,9 @@ function drawFloating(app: App, c: Canvas, mainY: number, mainH: number, geo: Ge
       ? " esc · q closes "
       : f.kind === "commit"
         ? ` ctrl+s ${f.amend ? "amends" : "commits"} · esc · q leaves it `
-        : ` esc · q closes, writing back · ctrl+s writes `;
+        : f.kind === "scratch"
+          ? " esc · q closes, saved "
+          : ` esc · q closes, writing back · ctrl+s writes `;
   const bottom = `${b.bl}${b.h.repeat(Math.max(0, w - 2 - stringWidth(hint)))}`;
   drawText(c, x, y + h - 1, bottom, border);
   drawText(c, x + stringWidth(bottom), y + h - 1, truncate(hint, w - stringWidth(bottom) - 1) + b.br, dim);
@@ -788,6 +800,7 @@ function drawBreadcrumb(
     app.hover === iconId ? roleStyle(theme, "hover", bg) : { ...roleStyle(theme, "breadcrumb_icon", bg), bg };
   const iw = drawText(c, x0, y, app.glyphs.crumbIcon, iconSt);
   geo.hot.push({ id: iconId, x: x0, y, w: iw, h: 1 });
+  geo.crumbAnchors[index] = { x: x0, y };
   x0 += iw + 1;
   const plan = crumbLayout(
     crumbs.map((p) => Math.min(CRUMB_MAX, stringWidth(p.text))),
@@ -802,6 +815,7 @@ function drawBreadcrumb(
       const st = app.hover === id ? roleStyle(theme, "hover", bg) : { ...roleStyle(theme, "breadcrumb", bg), bg };
       const w = drawText(c, cx, y, "…", st);
       geo.hot.push({ id, x: cx, y, w, h: 1 });
+      geo.crumbAnchors[index] = { x: cx, y };
       cx += w;
       return;
     }
@@ -1374,8 +1388,9 @@ function drawPane(
         });
       if (here && !barW) geo.hot.push({ id: clicked(here), x: gutterX, y, w: gutter - 1, h: 1 });
     }
-    // The git sign (26.1), in its column: a rendered row joining several lines takes their strongest.
-    if (signs && signX !== null && !line.decor) {
+    // The git sign (26.1), in its column: a rendered row joining several lines takes their strongest. None on the blank
+    // row between blocks, which carries the line above it but is no line of the note (#41).
+    if (signs && signX !== null && !line.decor && !line.gap) {
       const sign = rowSign(signs, line);
       if (sign)
         drawText(c, signX, y, gitGlyph(app.glyphs, sign), {

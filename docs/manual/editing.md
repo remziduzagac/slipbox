@@ -686,15 +686,54 @@ Each root has its own scratch, kept in slipbox's own state folder. It is outside
 | --- | --- |
 | `space s a` | Adds the selection with its lines (`ideas/coffee.md:12-18`), or the cursor row's `path:line` |
 | `space s s` | Opens the scratch. It updates as things are added |
+| `space s r` | Opens the scratch in the window on the right |
 | `space s y` | Copies the whole scratch |
 | `space s d` | Clears the scratch, after asking |
 | `space s c` | Copies the note's context for an agent: the note, what it links to, what links to it |
+
+The scratch opens in a window floating in the middle of the screen. Use it to jot something down, or to read what
+you have gathered.
+
+It's a window like any other. The scratch is rendered, the lens edits it, and `ctrl+k` shows its Markdown. Every key
+you move and edit with works there.
+
+- `q` closes it and takes you back where you were. What you typed is saved.
+- `esc` stops typing and leaves the lens, as it always does. Then it closes the scratch.
+
+It opens when it's empty too.
+
+With `capture.open_in = "right"`, or Scratch opens in the [UI settings](screen.md#ui-settings), it opens in the window
+on the right instead, beside your note. `ctrl+w w` goes back and forth.
+
+Each time you add to it, it opens on what you added, ready for you to type a note about it:
+
+````markdown
+**At:** `ideas/coffee.md:5`
+
+**Note:** check the ratio for the small pot
+
+---
+
+**At:** `ideas/coffee.md:3-5`
+
+```markdown
+## Brewing
+
+A ratio of 1 to 16 suits a pour-over.
+```
+
+**Note:** ▌
+````
+
+`esc` then `q` takes you back to the note. If you close it without typing, the empty **Note:** goes. So you can add a
+few places quickly and write one note at the last. A line divides each entry from the one before.
 
 Other programs add to the scratch with `slipbox capture`. That is how your editor or an agent puts things there:
 
 ```bash
 slipbox capture 'check the grind size'            # a line of text
 slipbox capture --ref ideas/coffee.md:12-18       # a reference
+slipbox capture --ref ideas/coffee.md:5 'check it'   # a reference, and a note on it
 slipbox capture --snippet --ref ideas/coffee.md:12-18   # the reference and its lines
 slipbox scratch show                              # what it holds; also: path, copy, clear
 ```

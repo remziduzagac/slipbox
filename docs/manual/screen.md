@@ -372,8 +372,8 @@ Messages float at the top right of the window, framed and marked by level:
 | `!` | a warning |
 | `·` | information |
 
-Up to four stack up, the newest on top. Each stays four seconds, and an error stays eight. Messages never push the note
-down.
+Up to four stack up, the newest on top. Each stays four seconds once it's on screen, and an error stays eight. Messages
+never push the note down.
 
 Click a message to see every message. `space m` or `:messages` lists everything slipbox has said, newest first. In that
 list, `enter` copies one.
@@ -526,8 +526,9 @@ change it.
 | Spelling | `space u s` | misspelt words marked |
 | Problems marked in the text | `space u shift+d` | none, errors, warnings and up, or all |
 | Code cells | `space u c` | the code view's cells in boxes, or on tinted bands |
+| Scratch opens | (only in the list) | floating in the middle, or in the window on the right |
 
-How the theme, glyphs, wrapping and URLs change a note is in [Reading](reading.md). Spelling is in
+How the theme, glyphs, wrapping and URLs change a note is in [Reading](reading.md). Spelling and the scratch are in
 [Editing](editing.md). Problems and code cells are in [Code](code.md).
 
 **Zen mode** takes away:

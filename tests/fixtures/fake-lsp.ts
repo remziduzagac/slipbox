@@ -193,8 +193,11 @@ conn.onCompletion(async (p) => {
   return [...new Set(text.match(/\w{3,}/g) ?? [])].map((w) => ({ label: w }));
 });
 // Signature help: fn(a: number, b: string), its parameter by the commas typed since the `(`.
-conn.onSignatureHelp((p) => {
-  const line = docs.get(p.textDocument.uri)!.getText().split("\n")[p.position.line]!.slice(0, p.position.character);
+conn.onSignatureHelp(async (p) => {
+  const text = docs.get(p.textDocument.uri)!.getText();
+  // LATESIG: answered late, after a word's pause would have asked for completion (#37).
+  if (text.includes("LATESIG")) await new Promise((r) => setTimeout(r, 300));
+  const line = text.split("\n")[p.position.line]!.slice(0, p.position.character);
   const open = line.lastIndexOf("(");
   if (open < 0) return null;
   return { signatures: [{ label: "fn(a: number, b: string)", parameters: [{ label: "a: number" }, { label: "b: string" }] }], activeSignature: 0, activeParameter: line.slice(open).split(",").length - 1 };

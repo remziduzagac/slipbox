@@ -11,6 +11,32 @@ The format is [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.1.0/); wh
 - Homebrew, on macOS and Linux: `brew install remziduzagac/tap/slipbox`, and `brew upgrade` after.
 - The documentation is a website, with search: <https://remziduzagac.github.io/slipbox/docs/>. It has a quick start, a
   page of concepts, and a guide your coding agent can read to walk you through slipbox.
+- `space s r` opens the scratch in the window on the right, and `capture.open_in = "right"` (or Scratch opens in the
+  UI settings) makes that where it always opens.
+
+### Changed
+
+- The scratch opens in a window floating in the middle of the screen, not as a tab, rendered and edited as any note is.
+  `q` closes it, back where you were, what you typed saved; `esc` leaves typing and the lens first, then closes it.
+  It opens when it's empty too.
+- Adding to the scratch (`space s a`) opens it ready to type a note about what you added: each entry is `**At:**`
+  the place, then `**Note:**` with the cursor after it, and a rule between entries. `esc` then `q` takes you back; a
+  `**Note:**` left empty is dropped. `slipbox capture` with `--ref` writes the same shape, its text after `**Note:**`.
+
+### Fixed
+
+- In a rendered note, the blank row after a changed paragraph, list item or heading repeated its git sign in the
+  gutter. Only the changed rows are signed now.
+- A message said while slipbox was busy, as when it starts indexing a big folder, could be gone before it was ever
+  drawn. Its four seconds now start once it's on screen.
+- `space f b` opened the heading path as a plain list in the middle of the screen, not the dropdown under the
+  breadcrumb, when `space f`'s key hints had shown before the `b`.
+- Typing a word and then `(` could open the completion popup after the `(` if the language server was slow with its
+  signature help; `enter` then picked a word instead of starting a new line.
+- Right after a merge or a pull that moved files, `space l r` could find nothing to relink until the file watcher
+  caught up. The folder is now read again before the message says files moved.
+- A config warning names a file in your home folder as `~/…`, so its row in the messages list (`space m`) shows what
+  it says instead of a long path cut short.
 
 ## [0.2.2] - 2026-10-13
 

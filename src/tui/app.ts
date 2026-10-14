@@ -102,7 +102,15 @@ import { cellBlocks } from "../core/layout/code.ts";
 import { type Block, blockAt, blockRanges, composeLive, LENS_COUNTERS, sectionRanges } from "../core/layout/live.ts";
 import { discoverNvims, NVIM_REMOTE, type NvimServer, probeNvim } from "../core/nvim.ts";
 import { homedir } from "node:os";
-import { appendScratch, fence, fenceLanguage, formatEntry, scratchLocation } from "../core/capture.ts";
+import {
+  appendScratch,
+  dropEmptyAsks,
+  ensureScratch,
+  fence,
+  fenceLanguage,
+  formatEntry,
+  scratchLocation,
+} from "../core/capture.ts";
 import { copyText, readClipboard } from "../core/clipboard.ts";
 import { canonKey, canonSeq, CommandRegistry, Keymap, unknownModifiers } from "../core/commands.ts";
 import { type Config, loadConfig } from "../core/config.ts";
@@ -349,6 +357,8 @@ export interface Message {
   level: Level;
   text: string;
   at: number;
+  /** When its box was first drawn: its time to show counts from then (#40). */
+  shown?: number;
 }
 
 export interface Loc {
@@ -742,6 +752,8 @@ export interface UiState {
   code_cells: "box" | "band";
   /** Misspelt words marked in notes (25.6). */
   spell: boolean;
+  /** Where the scratch shows (#43): floating over the windows, or in the window on the right. */
+  scratch_in: "float" | "right";
   theme: string;
   glyphs: string;
 }
@@ -761,6 +773,7 @@ export function uiDefaults(c: Config): UiState {
     problem_marks: c.diagnostics.marks,
     code_cells: c.render.code_cells,
     spell: c.spell.enabled,
+    scratch_in: c.capture.open_in,
     // "auto": URLs where colour can't mark links (NO_COLOR), as in `slipbox render`.
     urls: c.render.show_urls === "always" || (c.render.show_urls === "auto" && !!process.env.NO_COLOR),
     theme: c.theme,
@@ -873,7 +886,7 @@ export class App {
   whichKey = false;
   private whichKeyTimer: ReturnType<typeof setTimeout> | null = null;
   messages: Message[] = [];
-  /** The messages showing as floating boxes, newest first (each for 4 s, 8 s an error). */
+  /** The messages showing as floating boxes, newest first (each for 4 s, 8 s an error, from when it's first drawn). */
   toasts: Message[] = [];
   private toastTimer: ReturnType<typeof setTimeout> | null = null;
   private picturesTimer: ReturnType<typeof setTimeout> | null = null;
@@ -1469,14 +1482,17 @@ export class App {
     return m.level === "error" ? 8000 : 4000;
   }
 
-  /** Drop the messages whose time is up, and wake again when the next one's is. */
+  /** Drop the messages whose time is up, and wake again when the next one's is. One not drawn yet keeps its time:
+   *  said while slipbox was busy (a start indexing, a slow machine), it isn't gone before it's seen (#40). */
   private scheduleToasts(): void {
     if (this.toastTimer) clearTimeout(this.toastTimer);
     this.toastTimer = null;
     const now = this.now();
-    this.toasts = this.toasts.filter((t) => t.at + this.toastMs(t) > now);
-    if (!this.toasts.length) return;
-    const next = Math.min(...this.toasts.map((t) => t.at + this.toastMs(t))) - now;
+    const ends = (t: Message) => (t.shown ?? now) + this.toastMs(t);
+    this.toasts = this.toasts.filter((t) => ends(t) > now);
+    const drawn = this.toasts.filter((t) => t.shown !== undefined);
+    if (!drawn.length) return;
+    const next = Math.min(...drawn.map(ends)) - now;
     this.toastTimer = setTimeout(
       () => {
         this.scheduleToasts();
@@ -1485,6 +1501,14 @@ export class App {
       Math.max(10, next),
     );
     (this.toastTimer as { unref?: () => void }).unref?.();
+  }
+
+  /** The messages a frame has just drawn: their time begins, those not drawn before. */
+  toastsDrawn(drawn: Message[]): void {
+    const now = this.now();
+    let fresh = false;
+    for (const t of drawn) if (t.shown === undefined) (t.shown = now), (fresh = true);
+    if (fresh) this.scheduleToasts();
   }
 
   /** Clear the floating messages (a click on one opens the messages list; they're all there). */
@@ -3406,11 +3430,16 @@ export class App {
       case "scratch":
         this.capture(
           formatEntry(
-            { ref: { path: v.buf.abs, startLine: cell.from, endLine: cell.to }, snippetText: text, lang: "" },
+            {
+              ref: { path: v.buf.abs, startLine: cell.from, endLine: cell.to },
+              snippetText: text,
+              lang: "",
+              ask: true,
+            },
             this.loc.root,
           ),
         );
-        return this.message("info", `${cell.title} — ${lines} added to the scratch`);
+        return this.message("info", `${cell.title} — ${lines} added to the scratch; add a note, esc then q closes it`);
     }
   }
 
@@ -3804,8 +3833,7 @@ export class App {
     const chain = this.breadcrumb(view);
     if (!chain.length) return this.message("info", "no heading above the cursor");
     const w = t.active;
-    const hot = this.geometry?.hot ?? [];
-    const at = hot.find((h) => h.id === `crumbmore:${w}`) ?? hot.find((h) => h.id === `crumbicon:${w}`);
+    const at = this.geometry?.crumbAnchors[w];
     // The selection starts on the current heading (the last), marked `here`.
     const selected = chain.length - 1;
     this.openList({
@@ -3817,7 +3845,7 @@ export class App {
         data: c.line,
       })),
       selected,
-      anchor: at ? { x: at.x, y: at.y } : undefined,
+      anchor: at,
       accept: (item) => {
         t.active = w;
         this.region = "content";
@@ -4112,6 +4140,11 @@ export class App {
     if (!t) return;
     if (t.views.length > 1) {
       const closed = t.views.splice(t.active, 1)[0]!;
+      // The scratch on the right, closed: what was typed in it saved, as when it floats (#43).
+      if (closed.buf.abs === this.scratch().path) {
+        this.tidyScratch(closed.buf);
+        if (closed.buf.dirty) this.saveBuffer(closed.buf);
+      }
       this.remember(closed);
       t.active = 0;
       return;
@@ -5274,6 +5307,7 @@ export class App {
         | { kind: "properties"; note: NoteBuffer; format: "yaml" | "toml"; original: string }
         | { kind: "hover" }
         | { kind: "commit"; amend: boolean; from: Region }
+        | { kind: "scratch" }
       ) & { view: View; title: string })
     | null = null;
 
@@ -5403,6 +5437,12 @@ export class App {
     if (!f) return true;
     if (f.kind === "properties" && f.view.buf.dirty && !this.writeProperties(f.view.buf.source, false, true))
       return false;
+    // The scratch's typing saved as it closes (#43); a save refused (changed on disk meanwhile) keeps it open.
+    if (f.kind === "scratch") {
+      this.tidyScratch(f.view.buf);
+      if (f.view.buf.dirty && !this.saveBuffer(f.view.buf)) return false;
+      this.remember(f.view);
+    }
     this.floating = null;
     if (f.kind === "commit") {
       this.message("info", f.amend ? "not amended" : "not committed");
@@ -9675,7 +9715,7 @@ export class App {
     // An open, changed scratch is saved first, so the entry goes after what you typed (4.10).
     const scratchBuf = this.buffers.get(loc.path) ?? this.buffers.get(relative(this.loc.root, loc.path));
     if (scratchBuf?.dirty && !this.saveBuffer(scratchBuf)) return;
-    appendScratch(loc, entry);
+    const text = appendScratch(loc, entry, true);
     const rel = relative(this.loc.root, loc.path);
     if (!climbsOut(rel)) this.watcher?.noteOwnWrite(rel);
     const open = this.buffers.get(loc.path) ?? this.buffers.get(rel);
@@ -9683,7 +9723,67 @@ export class App {
       open.load();
       for (const v of this.allViews()) if (v.buf === open) v.layoutKey = "";
     }
-    this.message("info", `added to the scratch · ${prettyKey(`${this.leader} s s`, this.leader)} opens it`);
+    // The scratch opened on the entry (#43), typing after its **Note:** (D229): a word about it said at once.
+    const at = text.length - 1;
+    this.openScratch(undefined, at);
+    const v = this.floating?.kind === "scratch" ? this.floating.view : this.tabView;
+    if (v?.buf.abs !== loc.path) return;
+    if (!editable(v)) this.setViewMode(v, this.editMode(v)); // the lens opened on the entry, or the source
+    startInsert(this, v, () => at);
+    this.message("info", "added to the scratch; add a note, esc then q closes it");
+  }
+
+  /** The scratch's empty notes dropped as it closes (D229): a capture with nothing said about it is its reference. */
+  tidyScratch(buf: NoteBuffer): void {
+    const next = dropEmptyAsks(buf.source);
+    if (next !== buf.source) buf.edit(0, buf.source.length, next);
+  }
+
+  /**
+   * The scratch (#43): floating over the windows, or in the window on the right (in a split already, its other
+   * window), as `[capture] open_in` or the UI settings say, or `where` — either way a window like any, the note
+   * rendered, the lens to edit it. The cursor goes to `at` (a capture's entry), else where it was left. Empty, it opens
+   * too, to be typed in; closed, what was typed is saved.
+   */
+  openScratch(where: UiState["scratch_in"] = this.ui.scratch_in, at?: number): void {
+    const f = this.floating;
+    if (f?.kind === "scratch" && where === "float") {
+      if (at !== undefined) placeAt(this, f.view, at);
+      return;
+    }
+    if (f && !this.closeFloating()) return;
+    const loc = this.scratch();
+    try {
+      ensureScratch(loc);
+    } catch (err) {
+      return this.message("error", `scratch: ${(err as Error).message}`);
+    }
+    if (where === "right") {
+      const t = this.tab;
+      if (!t) return this.openInNewTab(loc.path);
+      const shown = t.views.findIndex((v) => v.buf.abs === loc.path);
+      if (shown >= 0) t.active = shown;
+      else {
+        const here = t.views[0]!;
+        if (t.views.length === 1) {
+          t.orientation = "side";
+          t.views.push(this.makeView(here.buf, { ...here.topAnchor }, { ...here.curAnchor }));
+        }
+        t.active = 1;
+        this.open(loc.path, undefined, t.views[1]);
+      }
+      const v = this.tabView;
+      if (at !== undefined && v?.buf.abs === loc.path) placeAt(this, v, at);
+      this.region = "content";
+      return;
+    }
+    const buf = this.buffer(loc.path);
+    if (!buf) return;
+    // Shown as any note is, rendered, the lens to edit it; ctrl+k, its markdown.
+    const fv = this.makeView(buf);
+    this.floating = { kind: "scratch", view: fv, title: "Scratch" };
+    this.region = "content";
+    if (at !== undefined) placeAt(this, fv, at);
   }
 
   allViews(): View[] {
@@ -9986,6 +10086,7 @@ export class App {
       // is dropped, not kept and saved again forever.
       if (k === "glyphs" && !["nerd", "unicode", "ascii", "auto"].includes(o.value as string)) continue;
       if (k === "theme" && !listThemes().some((t) => t.name === o.value)) continue;
+      if (k === "scratch_in" && o.value !== "float" && o.value !== "right") continue;
       (this.ui as unknown as Record<string, unknown>)[k] = o.value;
       this.uiOverrides[k] = o;
     }

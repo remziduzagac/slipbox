@@ -220,8 +220,9 @@ it into their next prompt. Append to it; never rewrite it.
 
 ```bash
 slipbox capture "Why does the walk skip nested roots?"   # free text
-slipbox capture --ref src/core/walk.ts:42-50              # a reference: `src/core/walk.ts:42-50`
+slipbox capture --ref src/core/walk.ts:42-50              # **At:** `src/core/walk.ts:42-50`
 slipbox capture --ref src/core/walk.ts:42-50 --snippet    # plus the lines, fenced
+slipbox capture --ref src/core/walk.ts:42 "check the bound"   # plus **Note:** check the bound
 printf '%s' "$text" | slipbox capture --ref notes/a.md:7 --stdin   # stdin becomes the snippet
 slipbox scratch show --json              # data.content, data.sha
 slipbox scratch path                     # where it lives
@@ -229,7 +230,8 @@ slipbox scratch clear --if-unchanged <sha>   # clear only if nobody appended sin
 ```
 
 Reference forms: `path:42`, `path:42-50`, `path:42:10-30` (line 42, columns 10–30), `path:42:10-50:30`.
-Paths inside the project are stored relative to it.
+Paths inside the project are stored relative to it. Each entry follows a `---` rule; with a reference, the text is
+the note on it (`**Note:**`): say what it's for.
 
 ## Don'ts
 

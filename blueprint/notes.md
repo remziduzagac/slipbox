@@ -406,6 +406,9 @@ dates. Each says what was asked, decided, built and found, and cites the decisio
   there (D227).
 - Homebrew: the tap is the one herdsman uses, `remziduzagac/homebrew-tap`, pushed to with a deploy key of slipbox's
   own, as herdsman's is; the maintainer made the key, the secret and the variable (D228, #38).
+- The scratch is for capturing quickly, the user said: it floats in the middle and `q` closes it, a capture shows it,
+  and a setting, or `space s r`, puts it on the right instead (D229, #43).
 - The docs compared with herdsman's: the content was there, the site, the front door and the plain prose weren't. The
   user: "fix everything and have documentation website as herdsman on githubpages". Workstream DS: a Starlight site
-  from `docs/`, a front door, plain sentences, generated reference lists; greenrepo's DOC-06 met on the way.
+  from `docs/`, a front door, every page in plain sentences (the reference chapters still by hand); greenrepo's DOC-06
+  met on the way.

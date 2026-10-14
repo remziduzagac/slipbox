@@ -1406,7 +1406,9 @@ slipbox's state.
 
 ### `capture`
 
-Appends some text, a reference to lines of a file, or both, to the scratch. Each entry goes after a blank line.
+Appends some text, a reference to lines of a file, or both, to the scratch. Each entry goes after a rule (`---`).
+A reference is written `` **At:** `path:line` ``. Text given with a reference is written `**Note:** text`: the note on
+that place.
 
 ```bash
 slipbox capture "Ask about the grinder"

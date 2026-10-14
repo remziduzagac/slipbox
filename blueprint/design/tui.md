@@ -189,7 +189,8 @@ the top of the window under them (its breadcrumb, find and replace rows, which s
 newest on top and stacked down, four at most:
 each framed in its level's colour with its glyph first — `✗` error, `!` warning, `·` info (ascii
 `x`, `!`, `-`; an info message that starts with its own symbol, such as `↻`, keeps just that) —
-and wrapped to three rows. Each shows 4 s (8 s an error); the same message again refreshes its box
+and wrapped to three rows. Each shows 4 s (8 s an error) from the frame that first draws it — one said while slipbox
+was busy, a start indexing, isn't gone before it's seen (#40); the same message again refreshes its box
 rather than stacking a second. Clicking one opens the messages list and clears the boxes. Popups
 and questions draw over them. On a screen too small for a box (under 30 columns), a message takes
 over the status line while it shows.
@@ -627,6 +628,20 @@ keys.
   frontmatter changed in the note meanwhile. Following a link from inside it closes it first, as do a split and "in the
   split": they're of the window under it. A note deleted on disk, or not valid UTF-8, has no properties editor (nor is
   it written into, gone meanwhile), as typing into it is refused. Never a reading position, nor in the history.
+- **The scratch** (`8.3`; D229): `space s s` opens it as `[capture] open_in` says, or the UI settings' Scratch opens.
+  `"float"`, the default: a floating window framed as the properties editor's, but of the scratch's own file and a
+  window like any inside — rendered, the lens to edit it, `ctrl+k` its markdown — three quarters of the screen and in
+  the middle of it, its size fixed as entries come. `q` or `:q` close it, back where you were, what was typed saved (a
+  save refused, the file changed on disk meanwhile, keeps it open); `esc` ends a selection, a find and the lens first,
+  as in any window, and closes it last. `"right"`:
+  the tab's window on the right, side by side — in a split already, its other window takes it — and `q` there closes
+  that window, saving it too. `space s r` opens it on the right whatever the setting. The scratch's file is made,
+  empty, when it isn't there yet: it opens to be typed in before anything is captured. A capture in the TUI (`space s
+  a`, a code cell's `space k s`) opens it on the new entry — `**At:**` its reference, its lines fenced, `**Note:**`, a
+  rule (`---`) before it when there's anything above — typing after `**Note:**` in the lens (or the source, as `[editor]
+  edit_in` says); on the right, the cursor goes there. A `**Note:**` left empty is dropped as the scratch closes, as the
+  TUI adds the next entry, and from `space s y`'s copy (`dropEmptyAsks`). What `slipbox capture` adds, the same shape,
+  shows in an open scratch (the file is polled) and opens nothing.
 - **Outline (right):** the current note's headings, indented, foldable (`h`/`l`). While not
   focused it follows the cursor's section, and `enter` jumps to the heading.
 - **Footnotes (right, `3.17`):** the current note's footnotes, in the order the note first refers to them (as GFM
@@ -1462,9 +1477,10 @@ What's on request (the changes, a diff, the worktrees) asks git there and then; 
 asked in the background (D154; § Side panes).
 
 **After a merge or a pull** (`20.21`; D66): HEAD moving on its branch isn't a switch — the tabs stay. Git's renames
-between the two commits are evidence of moves; when there are some, a message says so ("branch main moved on: git moved
-2 files — …"), and each link broken by one says where its file went, in Problems (`space v p`) and when followed;
-`space l r` relinks a note's.
+between the two commits are evidence of moves; when there are some, the folder is read again (the watcher may not have
+brought the merge's files yet, #40) and a message says so ("branch main moved on: git moved 2 files — …"), and each
+link broken by one says where its file went, in Problems (`space v p`) and when followed; `space l r` relinks a
+note's.
 
 A jump to a line inside a rendered paragraph (a diff's line, a conflict, a finding, `:42` and `ctrl+g`) lands on that
 line's text, not the paragraph's first line or its row's end.
@@ -1491,7 +1507,8 @@ rendered) or shows its diff to the text as it is now, `enter` on a line going th
 now, unsaved typing included (`core/gitsigns.ts`) — are signed in the gutter: `▎` added (`git_sign_add`), `▎` changed
 (`git_sign_change`), `▁` lines deleted below the line (`▔` above the first; `git_sign_delete`), each role the explorer's
 or a diff's colour halfway to the page, so the signs don't pull the eye from the text (D225). A rendered row joining
-several lines takes their strongest. `[git] signs_at` places them (D225): `gutter_right`, the default, the gutter's
+several lines takes their strongest; the blank row between two blocks, no line of the file, has none (#41).
+`[git] signs_at` places them (D225): `gutter_right`, the default, the gutter's
 last column, the one before the text — with no gutter (no line numbers, no problems bar), a file that has had a change
 gets a column of its own and keeps it, so the text doesn't move; `gutter_left`, the gutter's first column, the window's
 margin before the problems bar and the line numbers, there with or without a gutter; `window_right`, a column kept at

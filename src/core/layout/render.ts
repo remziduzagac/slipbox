@@ -305,7 +305,7 @@ function srcOf(n: Nodes): number {
 /** Separator rows carry the source line of the row above, so anchoring to a block's first line
  *  lands on the block, never on the gap before it (3.5). */
 function gapAfter(rows: Line[], fallback: number): Line {
-  return blank(rows[rows.length - 1]?.src ?? fallback);
+  return { ...blank(rows[rows.length - 1]?.src ?? fallback), gap: true };
 }
 
 function blank(src: number): Line {

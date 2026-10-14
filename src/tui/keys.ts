@@ -253,6 +253,7 @@ export const DEFAULT_KEYS: Record<string, string> = {
   "leader k s": "cell.scratch",
   // scratch
   "leader s s": "scratch.open",
+  "leader s r": "scratch.open_right",
   "leader s a": "scratch.add",
   "leader s y": "scratch.copy",
   "leader s c": "context.copy",
