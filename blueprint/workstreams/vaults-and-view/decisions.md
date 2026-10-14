@@ -73,23 +73,26 @@ is in the file system.
 
 **Decision:** A symlinked folder or file leading out of its vault, or out of home, is shown as a link
 (`→ /mnt/disk/data`, `not followed`) and not opened until the user answers, the first time it's opened: follow it (read
-and indexed as part of where it is), just look (read-only, this once), or no. The answer is kept for that link and that
-target, in slipbox's state, never in the vault (a cloned repository can't bring its links trusted), and asked again
-when the target changes. What a yes allows: in home, reading, the index and writing through it; in a vault, reading
-and the index, never a write to a target outside the vault. The CLI refuses any link not trusted, and the prompt says
-agents will see what's followed when the target is hidden or outside home. A followed target on a slow disk is read in
-the background, given up on when it doesn't answer. Unchanged: a vault is known by its real path; a file reached by
-two names is one tab, indexed once; loops, broken links, devices and pipes are skipped; the view uses the path as
-reached, belonging the real path.
+and indexed as part of where it is), just look (read-only, this once), or no. A link within its own vault or within
+home (the ones `stow` makes, `~/.zshrc → ~/dotfiles/zsh/.zshrc`) is a second name for what's there: shown once, never
+asked about, never indexed twice. In Elsewhere, with no vault to stay inside, every link asks. The answer is kept for
+that link and that target, in slipbox's state, never in the vault (a cloned repository can't bring its links trusted),
+and asked again when the target changes. What a yes allows: in home, reading, the index and writing through it; in a
+vault, reading and the index, never a write to a target outside the vault; in Elsewhere, reading and writing as the
+file system allows. The CLI refuses any link not trusted, and the prompt says agents will see what's followed when the
+target is hidden or outside home. A followed target on a slow disk is read in the background, given up on when it
+doesn't answer. Unchanged: a vault is known by its real path; a file reached by two names is one tab, indexed once;
+loops, broken links, devices and pipes are skipped; the view uses the path as reached, belonging the real path.
 
-**Why:** The user's: not followed by default, asked explicitly. A link a pull can change could lead a save to
-`~/.bashrc`, and what's followed reaches agents through search, the context bundle and the CLI.
+**Why:** The user's: not followed by default, asked explicitly, a link being the rule's subject wherever it is. A link a
+pull can change could lead a save to `~/.bashrc`, and what's followed reaches agents through search, the context bundle
+and the CLI.
 
 **Supersedes:** the walk's "a symlinked folder is never followed" and "a symlinked file only inside the root"; the
 CLI's refusal of reads through a link out of the root. **Details:** D220, kept for vaults.
 
-Two refinements, the assistant's, for the user to confirm: only links leading out ask (a link within the vault or
-home, such as the ones `stow` makes, is a second name, shown once, no question); no-vault doesn't ask (reading only).
+Confirmed by the user on 2026-10-15: only links leading out of a vault or home ask; in Elsewhere every link asks,
+the same rule for any link that leads somewhere unasked.
 
 ## VV-D7: Looking never moves you: the peek (2026-10-14)
 

@@ -16,7 +16,8 @@ The trust prompt, its store, and the walk's, the watcher's, the writes' and the 
 - The answers kept by link and target in the state folder; asked again when the target changes.
 - The walk and the watcher following a trusted link (a slow target in the background, given up on); writes through a
   link out of a vault refused even trusted; home's trusted links written through; the CLI refusing untrusted links.
-- The two refinements, if the user confirms them: only links leading out ask; no-vault doesn't ask.
+- Only links leading out of a vault or home ask; one within it is a second name, never asked about; in Elsewhere every
+  link asks.
 
 ## Acceptance criteria
 

@@ -94,11 +94,13 @@ an agent what wasn't allowed, or to lead somewhere other than what was allowed.
   (`~/projects/kestrel`), with the target dimmed beside a link (`→ /mnt/disk/kestrel`); belonging and identity use the
   real path.
 
-Two refinements of the assistant's, for the user to confirm:
+Confirmed on 2026-10-15:
 
 - **Only links leading out ask.** A link to elsewhere in the same vault, or within home (the links `stow` makes,
   `~/.zshrc → ~/dotfiles/zsh/.zshrc`), is a second name for what's there: shown once, no question, never indexed twice.
-- **No-vault doesn't ask.** With no index and nothing exposed, browsing `/etc` follows its links for reading.
+- **Elsewhere asks too** (the user's, over the assistant's "no-vault doesn't ask"): a link is asked about wherever it
+  is; in Elsewhere, with no vault to stay inside, every link asks.
+- **Indexed folders' `●` is dimmed.**
 
 Today's rules, as they change: a symlinked folder is never followed → not until allowed; a symlinked file is kept
 only inside the root → inside kept, out asked; writes through a link only inside the root (D220) → the same for
@@ -192,5 +194,4 @@ tree); the named folders' list opening when started in a plain folder; `:pin-roo
 
 ## Open
 
-- The two symlink refinements above, and drawing indexed folders' `●` dimmed: the user's to confirm.
 - GIT (`workstreams/git-review/`) is rebased on this once it's accepted: its panel in the vault's terms.
