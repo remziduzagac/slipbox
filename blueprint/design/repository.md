@@ -23,12 +23,15 @@ contributors, agents and the maintainer may name the blueprint's files by path.
 | `ARCHITECTURE.md` | contributors | the layers and the boundary, where things live, the invariants, the check |
 | `AGENTS.md` | agents | the rules, the commands, the upkeep pointers, the skills block; `CLAUDE.md` imports it |
 | `MAINTAINING.md` | the maintainer, agents | governance, access continuity, merging, releasing, dependencies, upkeep |
+| `CONTRIBUTING.md` | reporters, contributors | where each report goes; what a pull request needs |
+| `CODE_OF_CONDUCT.md` | everyone | the Contributor Covenant 2.1; reports through private reporting (D234) |
 | `.github/ISSUE_TEMPLATE/` | reporters | the bug form (all fields required but the output); blank issues off |
+| `.github/pull_request_template.md` | contributors, agents | a pull request's checklist, as CONTRIBUTING.md has it |
 
 The issue chooser's links send questions and ideas to Discussions (GR-D17), the rest to the docs, and a vulnerability
-to private reporting. Issues are for bugs; pull requests come from collaborators only, so the documents greenrepo asks
-of a project open to contributions (a contributing guide, a code of conduct, a pull request template, an AI policy)
-wait until that changes (GR-D5).
+to private reporting. Issues are for bugs; pull requests come from collaborators only (GR-D5). The contributing guide,
+the code of conduct and the pull request template are there all the same (D234); an AI policy beyond the guide's
+`Co-Authored-By:` rule waits until pull requests open.
 
 `MAINTAINING.md` holds the procedures greenrepo asks to be written (DOC-04, UPK-05, UPK-08, UPK-11, COM-13,
 COM-14): the release steps ([distribution.md](distribution.md) § Releases), squash merging with Conventional Commit

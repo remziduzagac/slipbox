@@ -159,6 +159,8 @@ For you, the same ground is in [Working with agents](docs/guides/agents.md) and
 - [CHANGELOG.md](CHANGELOG.md): what each release changed.
 - [ARCHITECTURE.md](ARCHITECTURE.md): a map of the code, for whoever changes it.
 - [ACCESSIBILITY.md](ACCESSIBILITY.md): what the TUI does for accessibility, and its limits.
+- [CONTRIBUTING.md](CONTRIBUTING.md): how to report a bug, ask a question or suggest an idea, and the [code of
+  conduct](CODE_OF_CONDUCT.md).
 - [blueprint/](blueprint/README.md): the design, with its requirements, how it works, the decisions behind it and the
   roadmap.
 

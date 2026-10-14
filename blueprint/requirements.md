@@ -266,7 +266,7 @@ repository's documents: design/repository.md § The repository's documents.
   Artifacts, UI and Large, with the profiles TypeScript (on Bun), Bash, Markdown and Command-line distribution (GR-D1).
   What it doesn't meet is an accepted deviation, with its reason and a date to look again.
 - Anyone may open an issue, and ask or suggest in Discussions; pull requests come from collaborators only (GR-D5,
-  GR-D17).
+  GR-D17). A contributing guide, a code of conduct and a pull request template say so, and say how (D234).
 - Every change reaches `main` through a pull request that passes CI's one required check, `ci`, merged by the
   maintainer with a squash, its title a Conventional Commit. Agents work on branches and propose; merging, releasing,
   tagging and changing the settings are the maintainer's (GR-D6).
