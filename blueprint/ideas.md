@@ -105,6 +105,9 @@ idea without an outcome is still open. Nothing here is agreed: the decisions are
 
 ## Configuration
 
+- A setup screen on the first run, choosing the options people most often change: the theme, the glyphs, the keys'
+  leader, where new worktrees go (`[git] worktrees`). The user's, while answering the git workstream's questions.
+  (2026-10-15)
 - A JSON config. (2026-09-25) Not chosen (D12).
 - A TypeScript config. (2026-09-25) Not chosen (D12).
 

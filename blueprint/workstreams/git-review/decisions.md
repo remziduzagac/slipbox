@@ -37,29 +37,44 @@ the agent runs `git` for it (D156).
 - **Source:** a row a line, `-` or `+` in the gutter, the line highlighted by its file's language, the changed words
   tinted more strongly than their line (`diff_del_word`, `diff_add_word`). A long line scrolls sideways, as a code
   block does (D233), never cut with `…`. Each hunk under its `@@ line N`, as now.
-- **Rendered**, a note's: the note as reading lays it out, the version after the change, with what changed marked in
-  place: deleted words struck through in the removed colour, inserted ones tinted; a block deleted whole (a paragraph,
-  a list item, a table's row) drawn struck where it was; a table's changed cell tinted; a picture or a diagram that
-  changed marked so, the old one a key away; front matter as its properties, a changed value marked. Unchanged
-  stretches fold to a line saying how many lines they hold.
+- **Before and after**, a note's (the user's, 2026-10-15, over the note's reading view, which would confuse a diff
+  with the note): each changed block shown twice, a `before` block and an `after` block, lightly formatted (headings,
+  emphasis, links, a table's cells), the removed words marked in the first and the added in the second; a block added
+  or removed whole shown once, marked; unchanged stretches folded to a line saying how many lines they hold.
 
-A note's diff opens rendered, a code file's as source (`[git] diff = "rendered" | "source"`, for notes); `tab` switches.
-The same drawing serves `space g d`, a file's diff from the changes' list, a history entry's diff to now, the conflict
-prompt's (D)iff, the review (GIT-D3) and the merge screen (GIT-D5).
+  ```text
+    @@ ## Retry  (line 17)
+    ┌ before ───────────────────────────┐
+    │ …up to a minute. Until the retry  │
+    │ budget of ADR 4 is on, an op is   │
+    │ ░retried forever░.                │
+    └───────────────────────────────────┘
+    ┌ after ────────────────────────────┐
+    │ …up to a minute. Each op has a    │
+    │ ▓retry budget of five attempts▓;  │
+    │ the sixth failure ▓parks it▓.     │
+    └───────────────────────────────────┘
+    ⋯ 14 unchanged lines
+  ```
 
-**Why:** An agent rewrites prose a sentence at a time, and a line diff of a paragraph shows all of it removed and all
-of it added, the one changed word nowhere marked. Read rendered, a change reads as the note will, with the change where
-it is; read as source, a line's change is its words, and a long line isn't cut where the change might be.
+A note's diff opens before and after, a code file's as source (`[git] diff = "blocks" | "source"`, for notes); `tab`
+switches. The same drawing serves the panel's diffs, a history entry's diff to now, the conflict prompt's (D)iff, the
+review (GIT-D3) and the merge screen (GIT-D5).
 
-**Not chosen:** OpenTUI's `Diff` component (ideas.md § Git): slipbox draws its own rows (`draw.ts`), and the rendered
-diff needs the layout's spans, which only slipbox's renderer has. A character-level diff: words read better in prose,
-and characters mark noise in code's identifiers.
+**Why:** An agent rewrites prose a sentence at a time, and a line diff of a paragraph shows all of it removed and all of
+it added, the one changed word nowhere marked. Before and after, a paragraph's change reads as prose, its words marked,
+without being mistaken for the note itself; read as source, a line's change is its words, and a long line isn't cut
+where the change might be.
+
+**Not chosen:** the note drawn as reading lays it out, its changes marked in place (the first draft): the user found it
+would be confused with the note. OpenTUI's `Diff` component (ideas.md § Git): slipbox draws its own rows (`draw.ts`). A
+character-level diff: words read better in prose, and characters mark noise in code's identifiers.
 
 ## GIT-D3: Reviewing a change, a hunk at a time (2026-10-14)
 
-**Decision:** `space g v` opens a review of the working tree's changes against what's staged — the gutter's own hunks
-(`26.1`) — across every changed file, untracked ones as wholly added: a hunk at a time, drawn as GIT-D2 draws it, in
-the window, with the file, the hunk's place among all of them and the keys above it.
+**Decision:** `v` in the git panel opens a review of the working tree's changes against what's staged — the gutter's own
+hunks (`26.1`) — across every changed file, untracked ones as wholly added: a hunk at a time, drawn as GIT-D2 draws it,
+in the window, with the file, the hunk's place among all of them and the keys above it.
 
 - `y` keeps it: stages it, as source control's `s` stages a change.
 - `x` reverts it: its lines put back as staged, in the file, saved, one undo step. A file with unsaved typing is said
@@ -79,11 +94,11 @@ a review crosses files, and unsaved reverts in each would be easy to lose.
 
 ## GIT-D4: The remote's commands and stash, asked for (2026-10-14)
 
-**Decision:** `26.6`, as D156 planned it, from source control and `space g`:
+**Decision:** `26.6`, as D156 planned it, from the git panel (GIT-D12):
 
-- **fetch** (`space g f`), **pull** (`space g l`), fast-forward only (GIT-D6 for the rest), **push**
-  (`space g shift+p`), to the branch's upstream; a branch with none is asked to set it to `origin/<branch>`;
-- **stash** (`space g z`): the stashes listed; one saved with a message, or applied, popped or dropped, dropping after
+- **fetch** (`f` in the git panel), **pull** (`p`), fast-forward only (GIT-D6 for the rest), **push** (`shift+p`),
+  to the branch's upstream; a branch with none is asked to set it to `origin/<branch>`;
+- **stash** (`z`): the stashes listed; one saved with a message, or applied, popped or dropped, dropping after
   asking.
 
 None runs unasked; nothing is on a timer. git runs without a terminal: `GIT_TERMINAL_PROMPT=0`, and ssh in batch mode
@@ -100,10 +115,10 @@ modes are covered: a password prompt that would hang, a hook that is the folder'
 
 ## GIT-D5: A merge screen, a card a conflict (2026-10-14)
 
-**Decision:** A file with git's conflicts — listed in Problems (`5.12`) and in source control — opens, on `enter` or
-`space g x`, in a merge screen: each conflict a card with its three versions, the common base, yours and theirs (git's
-index stages 1, 2 and 3; the file's markers where the stages are gone), yours and theirs each drawn as a diff against
-the base (GIT-D2), rendered for a note, as source for code.
+**Decision:** A file with git's conflicts — listed in Problems (`5.12`) and in source control — opens, on `enter` or `x`
+in the git panel, in a merge screen: each conflict a card with its three versions, the common base, yours and theirs
+(git's index stages 1, 2 and 3; the file's markers where the stages are gone), yours and theirs each drawn as a diff
+against the base (GIT-D2), rendered for a note, as source for code.
 
 - `o` takes yours, `t` theirs, `b` both, yours first, `shift+b` both, theirs first;
 - `e` puts the result in the lens, to settle by hand;
@@ -123,9 +138,10 @@ beside an agent; the cards hold the same, a conflict at a time.
 ## GIT-D6: Pulling where both sides moved, and rebasing onto the base (2026-10-14)
 
 **Decision:** A pull that can't fast-forward asks: merge, rebase, or nothing; the default is git's `pull.rebase`.
-"Rebase onto the base" (`space g shift+r`) rebases this branch onto the base's tip, an agent's branch brought up to
-date. A conflict on the way opens the merge screen (GIT-D5). While a merge or a rebase is under way, the status line
-says so ("rebasing 2/5"), and `space g` offers continue, skip and abort; a rebase's hooks run only in a trusted vault.
+"Rebase onto the base" (`shift+r` in the git panel) rebases this branch onto the base's tip, an agent's branch brought
+up to date. A conflict on the way opens the merge screen (GIT-D5). While a merge or a rebase is under way, the status
+line says so ("rebasing 2/5"), and the git panel offers continue, skip and abort; a rebase's hooks run only in a trusted
+vault.
 
 **Why:** An agent's branch falls behind the base while it works, and bringing it up to date is where conflicts come
 from; with the merge screen, slipbox can see that through rather than leave the repository mid-rebase.
@@ -196,8 +212,8 @@ worktree, and the person watches over them: which has something to review, which
 
 **Decision:** What a branch changed is measured against its own base, not one base for the repository: the branch it
 was made from when slipbox made it (the New form's `From`, kept in slipbox's state); else the nearest, by merge base,
-of `[git] bases` (default `["main"]`); else `[git] base`, as now. "Compare against…" on a branch changes it. `space g
-c`, `space g d`, the review, the merge review and the panel's "This branch against …" use it; a merge goes into it
+of `[git] bases` (default `["main"]`); else `[git] base`, as now. "Compare against…" on a branch changes it. The
+panel's diffs, the review, the merge review and the panel's "This branch against …" use it; a merge goes into it
 unless another is picked. The panel shows it: `↑3 on dev`.
 
 **Why:** A worktree's branch can start from `dev` or `test`; measured against `main`, every commit `dev` has would
@@ -211,3 +227,28 @@ Elsewhere — those repositories are the panel. A worktree is a vault of its own
 
 **Why:** VV settled what the explorer shows and what a vault is; the panel follows it rather than keeping a model of
 its own.
+
+## GIT-D12: `space g` is the git panel; its keys act there (2026-10-15)
+
+**Decision:** `space g` opens the git panel and focuses it, as `space e` does the explorer (open, focus, close, in
+turn), rather than a menu of keys that open floating windows. In the panel, single keys act on what's selected, shown
+in its footer and on its buttons (GIT-D8): `s` stage, `u` unstage, `d` discard, `a` and `shift+u` all; `c` commit,
+`shift+c` amend; `f` fetch, `p` pull, `shift+p` push, `z` stash; `v` review; `x` the merge screen on a conflicted file;
+`m` merge; `shift+r` rebase onto the base; `enter` a diff in a peek; `o` into a worktree or repository; `/` filter.
+What's about the cursor's line stays out of the panel: `] c` and `[ c`; a click on a change's sign in the gutter shows
+it with Revert and Stage. The note's diff, its file's history and blame are in the panel's "This file" section, and,
+as every command, in the palette.
+
+**Why:** The user's: most of what `space g` does is the panel's work, and its floating windows are what left the panel
+looking empty. The panel's buttons and footer show the keys `space g`'s list used to.
+
+**Supersedes:** `space g c`, `space g d`, `space g h`, `space g b`, `space g w`, `space g m`, `space g p`, `space g r`
+as keys of their own (their commands stay).
+
+## GIT-D13: Where a new worktree goes (2026-10-15)
+
+**Decision:** `[git] worktrees` is a path template for a worktree slipbox makes: by default beside the repository,
+`"{parent}/{repo}-{branch}"`; the user's own, for instance `"~/Projects/worktrees/{repo}/{branch}"`, as herdsman's
+`[worktrees] directory` sets one folder for all. `{branch}` is made safe for a folder's name.
+
+**Why:** The user keeps worktrees in one folder of their own; others keep them beside the repository, or inside it.
