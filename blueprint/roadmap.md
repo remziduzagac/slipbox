@@ -651,6 +651,12 @@ was added 2026-10-09 at the user's asking.*
 
 Agreed, but not scheduled.
 
+- [ ] **The big files split**, after VV and GIT land: `src/tui/app.ts` (11,500 lines, 436 methods) by concern — the
+  explorer, the git panel, the lens, views and scrolling, the mouse, overlays and the peek, vaults and sessions,
+  indexing and the watcher, find, conflicts — `App` keeping the shared state and the wiring, each part working on it as
+  `actions.ts` does; `cli.ts`, `draw.ts` and `actions.ts` likewise. No behaviour changes; the terminal tests are its
+  net. A check fails on a source file over about 1,500 lines, today's listed and only shrinking. (The user's,
+  2026-10-15: parallel agents conflicting in one file slowed VV.)
 - [ ] **10.13** Colour emoji in a PDF: the colour emoji font's own pictures, in a line (`10.11`; deferred 2026-10-09,
   D189).
 - [ ] **13.1** Tier 0: commands shelling out with context substitution; `25.7` built the part that runs what you type
