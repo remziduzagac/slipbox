@@ -551,3 +551,34 @@ model without the GUI", which D33 had superseded. Decided by an issue (#33) and 
 
 **Not chosen:** a comprehensive editor, raising its scope in the requirements; "AI companion"; a line saying slipbox
 has no AI of its own; "notes app" as the lead (ideas.md § Product).
+
+## D229: The scratch floats in the middle for quick capture, or sits on the right by a setting (8.3, 2026-10-13)
+
+**Decision:** `space s s` opens the scratch in a floating window in the middle of the screen, three quarters of it: a
+window like any inside, the scratch rendered and the lens to edit it, every key. `q` closes it, back where you were,
+what was typed saved; `esc` leaves typing and the lens first, as anywhere, and closes it last. It opens empty too.
+`[capture] open_in = "right"`, or Scratch opens in the UI settings, puts it in the window on the right instead (in a
+split already, its other window), and `space s r` opens it there whatever the setting. A capture in the TUI (`space s
+a`, a code cell's `space k s`) opens the scratch on the new entry, typing: an entry says where it's at and your note on
+it, `**At:**` its reference (and its lines, fenced) and `**Note:**` after it, and the cursor waits after `**Note:**`. `esc`
+then `q` takes you back; a `**Note:**` left empty goes as the scratch closes, or as the TUI adds the next. A rule
+(`---`) divides each entry from the one before. `slipbox capture` writes the same shape: `**At:**` on a reference, its
+text after `**Note:**`; text alone is just the text. What an agent adds opens nothing. Decided by an issue (#43) and one
+pull request (D223).
+
+**Why:** The user's call: the scratch is for capturing a note, an idea or a reference quickly. Opened as a tab, it took
+the place of the note you were in, and a capture never showed what it had added. A floating window over the note is
+there and gone with a key, as the properties and commit editors are; the window on the right is for keeping it in sight
+while you gather. A capture is for saying something about the place it points at — an idea, a question, a thing for
+an agent to do — so the scratch reads as places with a note on each, pasted as they are into an agent's prompt, and
+typing the note needs no key first. `Note`, as general as what you'd say, was the user's pick.
+
+**Cost:** A capture takes `esc` `q` to get back to the note. One more setting. Entries already in a scratch keep their
+old shape.
+
+**Not chosen:** the tab, as before; asking before a floating scratch closes with unsaved typing (it is slipbox's own
+file, and saving is what you would answer); opening it when an agent adds, which would take the keys from whatever you
+were typing; `**For:**` and `**Do:**`, tried first, `Do` fitting only what an agent should do; `Comment`; no label
+for your text, or the reference and your text on one line (no room for a snippet between); the labels as plain text
+(`Note:`, which a `---` under it would make a heading), or as a list; dropping an empty `**Note:**` when another
+program adds (the TUI's cursor may be on it).

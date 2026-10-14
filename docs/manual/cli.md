@@ -1124,7 +1124,8 @@ slipbox's state, not among your notes; [`capture.location`](configuration.md) `=
 
 ### `capture`
 
-Appends to the scratch: some text, a reference to lines of a file, or both, each entry after a blank line.
+Appends to the scratch: some text, a reference to lines of a file, or both, each entry after a rule (`---`). A
+reference is written `` **At:** `path:line` ``, and text given with it `**Note:** text`, the note on that place.
 
 ```bash
 slipbox capture "Ask about the grinder"

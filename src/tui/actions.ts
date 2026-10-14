@@ -34,7 +34,7 @@ import { copyPath } from "../core/files.ts";
 import { classify } from "../core/filetypes.ts";
 import { FORMATS } from "../core/export/index.ts";
 import { bracketFrom, matchBracket } from "../core/brackets.ts";
-import { clearScratch, formatEntry, readScratch } from "../core/capture.ts";
+import { clearScratch, dropEmptyAsks, formatEntry, readScratch } from "../core/capture.ts";
 import { COMMAND_GROUPS, COMMAND_SPECS, commandGroup } from "../core/command-specs.ts";
 import { canonKey, type Command } from "../core/commands.ts";
 import type { LayoutLink } from "../core/layout/ir.ts";
@@ -1179,6 +1179,8 @@ const UI_TOGGLES: { key: keyof UiState; id: string; title: string }[] = [
 /** The marks' levels in turn (`space u shift+d`), and how each is said. */
 const MARKS_NEXT = { off: "error", error: "warning", warning: "info", info: "off" } as const;
 const MARKS_SAID = { off: "off", error: "errors", warning: "warnings and up", info: "all" } as const;
+/** Where the scratch opens, as the UI settings say it. */
+const SCRATCH_SAID = { float: "floating", right: "on the right" } as const;
 
 function toggle(a: App, key: keyof UiState, title: string): void {
   const next = !a.ui[key];
@@ -1396,8 +1398,11 @@ export function registerActions(app: App): void {
     "app.escape": (a) => {
       const v = a.view;
       if (!v) return;
+      const floating = a.floating && v === a.floating.view;
       if (v.sel || v.visual) Object.assign(v, { visual: null, sel: null });
-      else if (a.floating && v === a.floating.view && !v.find)
+      // The floating scratch is a window like any (#43): esc leaves its lens first, and closes it last.
+      else if (floating && a.floating?.kind === "scratch" && v.live) a.setViewMode(v, "rendered");
+      else if (floating && !v.find)
         a.closeFloating(); // the floating editor: closed, written back (3.20)
       else if (v.live)
         a.setViewMode(v, "rendered"); // esc in normal mode closes the lens
@@ -2188,6 +2193,7 @@ export function registerActions(app: App): void {
         ...UI_TOGGLES.map((t) => ({ label: t.title, hint: onOff(a.ui[t.key] as boolean), data: t.id })),
         { label: "Problems marked in the text", hint: MARKS_SAID[a.ui.problem_marks], data: "ui.problem_marks" },
         { label: "Code cells", hint: a.ui.code_cells === "box" ? "boxes" : "bands", data: "ui.code_cells" },
+        { label: "Scratch opens", hint: SCRATCH_SAID[a.ui.scratch_in], data: "ui.scratch_in" },
       ];
       a.openList({
         title: "UI settings — enter changes one",
@@ -2213,12 +2219,8 @@ export function registerActions(app: App): void {
       a.setUi("glyphs", arg);
     },
     // scratch
-    "scratch.open": (a) => {
-      const loc = a.scratch();
-      if (!readScratch(loc).trim())
-        return a.message("info", `the scratch is empty · ${prettyKey(`${a.leader} s a`, a.leader)} adds to it`);
-      a.open(loc.path);
-    },
+    "scratch.open": (a) => a.openScratch(),
+    "scratch.open_right": (a) => a.openScratch("right"),
     "scratch.add": (a) =>
       withView(a, (v) => {
         const layout = lay(a, v);
@@ -2228,7 +2230,12 @@ export function registerActions(app: App): void {
           const r2 = layout.lines[q.row]?.src ?? r1;
           a.capture(
             formatEntry(
-              { ref: { path: v.buf.abs, startLine: r1, endLine: r2 }, snippetText: a.selectionText(v), lang: "" },
+              {
+                ref: { path: v.buf.abs, startLine: r1, endLine: r2 },
+                snippetText: a.selectionText(v),
+                lang: "",
+                ask: true,
+              },
               a.loc.root,
             ),
           );
@@ -2236,13 +2243,13 @@ export function registerActions(app: App): void {
           return;
         }
         const line = layout.lines[v.cur.row]?.src ?? 1;
-        a.capture(formatEntry({ ref: { path: v.buf.abs, startLine: line, endLine: line } }, a.loc.root));
+        a.capture(formatEntry({ ref: { path: v.buf.abs, startLine: line, endLine: line }, ask: true }, a.loc.root));
       }),
     "context.copy": (a) => a.copyContext(),
     "scratch.copy": (a) => {
       const text = readScratch(a.scratch());
       if (!text.trim()) return a.message("info", "the scratch is empty");
-      a.copy(text);
+      a.copy(dropEmptyAsks(text));
     },
     "scratch.clear": (a) => {
       a.confirm("Clear the scratch?", () => {
@@ -2711,6 +2718,12 @@ export function registerActions(app: App): void {
     const next = a.ui.code_cells === "box" ? "band" : "box";
     a.setUi("code_cells", next);
     a.message("info", `Code cells: ${next === "box" ? "boxes" : "bands"}`);
+  };
+  // Where the scratch opens (#43): floating, or in the window on the right.
+  impl["ui.scratch_in"] = (a) => {
+    const next = a.ui.scratch_in === "float" ? "right" : "float";
+    a.setUi("scratch_in", next);
+    a.message("info", `Scratch opens: ${SCRATCH_SAID[next]}`);
   };
   for (const action of ["fold", "edit", "copy", "references", "problems", "scratch"])
     impl[`cell.${action}`] = (a) => a.cellAction(action);

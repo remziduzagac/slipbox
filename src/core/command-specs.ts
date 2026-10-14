@@ -837,6 +837,12 @@ export const COMMAND_SPECS: CommandSpec[] = [
     cli: I,
     desc: "How the code view draws its cells: each in a box, or on a tinted band",
   },
+  {
+    id: "ui.scratch_in",
+    title: "Scratch: floating or on the right",
+    cli: I,
+    desc: "Where the scratch opens: floating over the windows, or in the window on the right",
+  },
   // the code view's cells (24.13): the one at the cursor, as its header's buttons do
   {
     id: "cell.fold",
@@ -881,7 +887,13 @@ export const COMMAND_SPECS: CommandSpec[] = [
     id: "scratch.open",
     title: "Open the scratch",
     cli: "slipbox scratch show",
-    desc: "Opens the scratch; it updates as agents add",
+    desc: "Opens the scratch, floating or on the right as [capture] open_in says; it updates as agents add",
+  },
+  {
+    id: "scratch.open_right",
+    title: "Open the scratch on the right",
+    cli: I,
+    desc: "Opens the scratch in the window on the right, whatever [capture] open_in says",
   },
   {
     id: "scratch.add",

@@ -144,6 +144,9 @@ export async function problemListed(s: Session, needle: string | RegExp, timeout
 /** Leader sequences: space, then the keys. */
 export const leader = (s: Session, ...keys: string[]) => s.keys("space", ...keys);
 
+/** The floating scratch's bottom border, how it closes (#43): on screen while it's open. */
+export const SCRATCH_FLOATING = "esc · q closes, saved";
+
 /**
  * A panel open and focused: its leader key cycles it (open, focus, close), each press seen taking effect before the
  * next is decided, since pressed blind, a late first one would make the third close it.

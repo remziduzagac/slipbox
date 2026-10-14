@@ -3,7 +3,19 @@
 
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
-import { type Check, follow, HANDBOOK, type LeftOut, leader, MEETING, moveTo, open, opened, pos } from "../check.ts";
+import {
+  type Check,
+  follow,
+  HANDBOOK,
+  type LeftOut,
+  leader,
+  MEETING,
+  moveTo,
+  open,
+  opened,
+  pos,
+  SCRATCH_FLOATING,
+} from "../check.ts";
 import type { Session, SessionOptions } from "../session.ts";
 
 /** The reference set, slipbox started on one of its files (`~/notes/…`, as the checks name it). */
@@ -1154,23 +1166,72 @@ export const EDITING: Check[] = [
   // --- the scratch, the context, the hand-off ---------------------------------------------------
   {
     area: "editing",
-    name: "scratch: add, open, copy, clear",
+    name: "scratch: add, shown floating at once, typing a note; esc then q closes it; open, copy, clear",
     covers: { cases: ["scratch"], commands: ["scratch.add", "scratch.open", "scratch.copy", "scratch.clear"] },
     run: async (s) => {
       await ready(s);
       await s.keys("j", "j");
+      // What's added shows at once, the scratch floating over the note, typing a note after it (D229); esc then q,
+      // back in the note.
       await leader(s, "s", "a");
+      await s.see(SCRATCH_FLOATING);
+      await s.status(/INSERT .*scratch/);
+      await s.type("check the date");
+      await s.keys("escape", "q");
+      await s.notSee(SCRATCH_FLOATING);
+      await s.status(/home\.md/);
       await leader(s, "s", "s");
-      await s.status(/scratch/);
+      await s.see(SCRATCH_FLOATING);
       await leader(s, "s", "y");
       await s.message("copied");
-      // What space s a added: home's third row, with its path and line.
-      await s.until(() => /home\.md:\d+/.test(s.clipboard()), 3000, "the scratch holding home.md:line");
+      // What space s a added: home's third row, with its path and line, and the note on it.
+      await s.until(
+        () => /\*\*At:\*\* `home\.md:\d+`\n\n\*\*Note:\*\* check the date\n/.test(s.clipboard()),
+        3000,
+        "the scratch holding home.md:line and its note",
+      );
+      await s.keys("q");
+      await s.notSee(SCRATCH_FLOATING);
       await leader(s, "s", "d");
       await s.see("Clear the scratch?"); // a question: its own window
       await s.type("y");
       await leader(s, "s", "y");
       await s.message("the scratch is empty");
+    },
+  },
+  {
+    area: "editing",
+    name: "scratch: on the right — space s r; the UI settings make it where it opens; a capture goes there, typing a note",
+    covers: { cases: ["scratch"], commands: ["scratch.open_right", "ui.scratch_in"] },
+    run: async (s) => {
+      await ready(s);
+      await leader(s, "s", "r");
+      await s.status(/scratch/);
+      await s.see(/[┃│] scratch\s/); // the window on the right, its title
+      await s.keys("q");
+      await s.notSee(/[┃│] scratch\s/);
+      await s.status(/home\.md/);
+      // On the right from now on: picked in the UI settings.
+      await leader(s, "u", "u");
+      await s.see("UI settings");
+      await s.type("Scratch opens");
+      await s.keys("enter");
+      await s.message("Scratch opens: on the right");
+      await leader(s, "s", "s");
+      await s.see(/[┃│] scratch\s/);
+      s.expect(s.rowOf(SCRATCH_FLOATING) < 0, "not floating");
+      // Back in the note, a capture: the cursor in the scratch beside it, typing its note.
+      await s.keys("ctrl+w", "w");
+      await s.status(/home\.md/);
+      await s.keys("j", "j");
+      await leader(s, "s", "a");
+      await s.message("added to the scratch");
+      await s.see(/home\.md:\d+/);
+      await s.status(/INSERT .*scratch/);
+      await s.type("ask why");
+      await s.keys("escape");
+      await s.see("ask why");
+      s.expect(s.rowOf(SCRATCH_FLOATING) < 0, "on the right, not floating");
     },
   },
   {

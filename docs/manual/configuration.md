@@ -210,6 +210,8 @@ which_key_delay_ms = 500       # 0–10000: its wait (the leader shows it at onc
 location = "state"             # state (slipbox's state folder, never committed) | root (in the root)
 file = "scratch.md"            # a relative .md path, no "..", nothing hidden; in the root, a scratch that is a
                                # symlink, or a path leading out of the root, keeps it in the state folder
+open_in = "float"              # where it opens: float (in the middle, over the windows) | right (the window on
+                               # the right); space u u switches
 
 [git]
 base = ""                      # the branch or commit changes are measured against; "": main, else master

@@ -448,15 +448,47 @@ the root instead (`scratch.md`, or the name in `capture.file`).
 | --- | --- |
 | `space s a` | adds the selection with its lines (`ideas/coffee.md:12-18`), or the cursor row's `path:line` |
 | `space s s` | opens the scratch; it updates as things are added |
+| `space s r` | opens the scratch in the window on the right |
 | `space s y` | copies the whole scratch |
 | `space s d` | clears the scratch, after asking |
 | `space s c` | copies the note's context for an agent: it, what it links to, what links to it |
+
+The scratch opens in a window floating in the middle of the screen, to jot something down or read what you have
+gathered. It's a window like any other: the scratch rendered, the lens to edit it, `ctrl+k` for its Markdown, every key
+you move and edit with. `q` closes it, back where you were, what you typed saved; `esc` stops typing and leaves the
+lens as it always does, then closes the scratch. It opens when it's empty too. With `capture.open_in = "right"`, or
+Scratch opens in the [UI settings](screen.md#ui-settings), it opens in the window on the right instead, beside your
+note; `ctrl+w w` goes back and forth.
+
+Each time you add to it, it opens on what you added, ready for you to type a note about it:
+
+````markdown
+**At:** `ideas/coffee.md:5`
+
+**Note:** check the ratio for the small pot
+
+---
+
+**At:** `ideas/coffee.md:3-5`
+
+```markdown
+## Brewing
+
+A ratio of 1 to 16 suits a pour-over.
+```
+
+**Note:** ▌
+````
+
+`esc` then `q` takes you back to the note. Close it without typing and the empty **Note:** goes, so you can add a few
+places quickly and write one note, at the last. A line divides each entry from the one before.
 
 Other programs add to it with `slipbox capture`, which is how your editor or an agent puts things there:
 
 ```bash
 slipbox capture 'check the grind size'            # a line of text
 slipbox capture --ref ideas/coffee.md:12-18       # a reference
+slipbox capture --ref ideas/coffee.md:5 'check it'   # a reference, and a note on it
 slipbox capture --snippet --ref ideas/coffee.md:12-18   # the reference and its lines
 slipbox scratch show                              # what it holds; also: path, copy, clear
 ```

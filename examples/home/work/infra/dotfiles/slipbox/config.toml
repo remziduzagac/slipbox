@@ -67,6 +67,7 @@ roots = ["~/work/kestrel", "~/work/infra"]   # the team's own repositories: thei
 [capture]
 location = "vault"
 file = "inbox/scratch.md"
+open_in = "right"                # beside the note, not floating over it
 
 [git]
 base = "release"
@@ -409,6 +410,7 @@ sidebar_vault = { bold = true, underline = true }
 "leader ; e l" = "ui.mouse"
 "leader ; e m" = "ui.code_cells"
 "leader ; e n" = "ui.spell"
+"leader ; e o" = "ui.scratch_in"
 "leader ; V a" = "spell.next"
 "leader ; V b" = "spell.prev"
 "leader ; V c" = "spell.suggest"
@@ -434,6 +436,7 @@ sidebar_vault = { bold = true, underline = true }
 "leader ; p c" = "scratch.copy"
 "leader ; E a" = "context.copy"
 "leader ; p d" = "scratch.clear"
+"leader ; p e" = "scratch.open_right"
 "leader ; d g" = "note.create"
 "leader ; j a" = "folder.create"
 "leader ; d h" = "note.reload"

@@ -9,6 +9,17 @@ The format is [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.1.0/); wh
 ### Added
 
 - Homebrew, on macOS and Linux: `brew install remziduzagac/tap/slipbox`, and `brew upgrade` after.
+- `space s r` opens the scratch in the window on the right, and `capture.open_in = "right"` (or Scratch opens in the
+  UI settings) makes that where it always opens.
+
+### Changed
+
+- The scratch opens in a window floating in the middle of the screen, not as a tab, rendered and edited as any note is.
+  `q` closes it, back where you were, what you typed saved; `esc` leaves typing and the lens first, then closes it.
+  It opens when it's empty too.
+- Adding to the scratch (`space s a`) opens it ready to type a note about what you added: each entry is `**At:**`
+  the place, then `**Note:**` with the cursor after it, and a rule between entries. `esc` then `q` takes you back; a
+  `**Note:**` left empty is dropped. `slipbox capture` with `--ref` writes the same shape, its text after `**Note:**`.
 
 ### Fixed
 

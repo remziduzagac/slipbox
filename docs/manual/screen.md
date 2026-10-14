@@ -360,9 +360,10 @@ change it.
 | Spelling | `space u s` | misspelt words marked |
 | Problems marked in the text | `space u shift+d` | none, errors, warnings and up, or all |
 | Code cells | `space u c` | the code view's cells in boxes, or on tinted bands |
+| Scratch opens | (only in the list) | floating in the middle, or in the window on the right |
 
 How the theme, glyphs, wrapping and URLs change a note is in [Reading](reading.md); spelling is in
-[Editing](editing.md); problems and code cells are in [Code](code.md).
+[Editing](editing.md), and the scratch too; problems and code cells are in [Code](code.md).
 
 **Zen mode** takes away the top bar, the tabs, the rails, the breadcrumb, the status line and the lines between them,
 and turns readable width on. The side panes still open on demand, over the note. Press `space u z` again, or type

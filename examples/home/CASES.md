@@ -1392,6 +1392,9 @@ build (`scripts/build-home.ts`), not kept as they are. Each file's purpose and t
   `notes/daily/2026-09-22.md`, `notes/inbox.md` (scratch.\*)
 - scratch show/path/clear/copy with sha and --if-unchanged — `notes/.slipbox/config.toml`, `notes/inbox.md` (cli.md
   scratch; cli.test)
+- scratch floating in the middle, `q`/`esc` closing it saved, empty it opens too; a capture shows it, the cursor on the
+  entry; `capture.open_in = "right"`, the UI settings or `space s r`: the window on the right, a capture scrolling it
+  while the cursor stays in the note — `notes/daily/2026-09-22.md`, `work/infra/dotfiles/slipbox/config.toml` (D229)
 - capture.location = root (here the old word, vault, still read) puts scratch in the root; symlinked scratch falls
   back to state; file setting validation —
   `hobbies/photography/.slipbox/config.toml`, `notes/.slipbox/config.toml` (configuration.md \[capture\])
@@ -2928,6 +2931,9 @@ The same notes, one per tab.
 - `scratch.copy` — Copy the scratch — `notes/daily/2026-09-22.md`, `work/kestrel/api/kestrel_api/sync.py`
   (command-specs.ts)
 - `scratch.clear` — Clear the scratch — `notes/daily/2026-09-22.md`, `work/kestrel/api/kestrel_api/sync.py`
+  (command-specs.ts)
+- `scratch.open_right` — Open the scratch on the right — `notes/daily/2026-09-22.md` (command-specs.ts)
+- `ui.scratch_in` — Scratch: floating or on the right — `notes/daily/2026-09-22.md`, `notes/index.md`
   (command-specs.ts)
 
 ### context

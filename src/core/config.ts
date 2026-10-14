@@ -140,6 +140,8 @@ export interface Config {
     location: "state" | "root";
     /** Scratch file name; relative to the root when location = "root". */
     file: string;
+    /** Where the TUI shows the scratch: floating over the windows, or in the window on the right (#43). */
+    open_in: "float" | "right";
   };
   /** Git (5.11–5.14). `base`: the branch changes and diffs are measured against; empty: `main`, else `master`. */
   git: {
@@ -328,7 +330,7 @@ export const DEFAULT_CONFIG: Config = {
   },
   input: { leader: "space", which_key: true, which_key_delay_ms: 500 },
   lint: { enabled: "auto", command: [] },
-  capture: { location: "state", file: "scratch.md" },
+  capture: { location: "state", file: "scratch.md", open_in: "float" },
   git: { base: "", signs: true, signs_at: "gutter_right" },
   search: { engine: "auto" },
   index: { background: true, idle_seconds: 30 },
@@ -386,6 +388,7 @@ const ENUMS: Record<string, readonly string[]> = {
   "render.mermaid": ["text", "picture"],
   "render.math": ["text", "picture"],
   "capture.location": ["state", "root"],
+  "capture.open_in": ["float", "right"],
   "git.signs_at": ["gutter_left", "gutter_right", "window_right"],
   "lint.enabled": ["auto", "on", "off"],
   "search.engine": ["auto", "index", "scan"],
