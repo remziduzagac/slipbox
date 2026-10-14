@@ -268,7 +268,7 @@ text, so they work on the Markdown.
 
 In source mode and the lens, a selection made with `shift` or a drag is visual mode's. Then:
 
-- `d` or `x` deletes it
+- `backspace`, `delete`, `d` or `x` deletes it
 - `c` types in its place
 - any move extends it
 

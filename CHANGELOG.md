@@ -6,6 +6,11 @@ The format is [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.1.0/); wh
 
 ## [Unreleased]
 
+### Changed
+
+- In source mode and the lens, `backspace` and `delete` delete a selection, as `d` and `x` do, without typing first.
+- Where a selection can't be edited, the message names the lens (`space n l`) and source mode (`ctrl+k`).
+
 ## [0.3.0] - 2026-10-14
 
 ### Added
