@@ -308,10 +308,10 @@ export class Session {
   }
 
   /**
-   * Wait until slipbox has been quiet a while (nothing written for `quiet` ms, all of it drawn), or `max` ms. After
-   * input `sent` at a time, first for it to answer — anything written since, up to a second: on a loaded machine
-   * slipbox reads a key late, and quiet before it has is no sign of anything. Its work after a key (a search, a parse)
-   * can take longer still: a check waits for what it expects with `until`.
+   * Wait until slipbox has been quiet a while (nothing written for `quiet` ms, all of it drawn, no frame half drawn),
+   * or `max` ms. After input `sent` at a time, first for it to answer — anything written since, up to a second: on a
+   * loaded machine slipbox reads a key late, and quiet before it has is no sign of anything. Its work after a key (a
+   * search, a parse) can take longer still: a check waits for what it expects with `until`.
    */
   async settle(sent?: number, max = 1500, quiet = 40): Promise<void> {
     if (sent !== undefined) {
@@ -321,7 +321,7 @@ export class Session {
     const end = performance.now() + max;
     await sleep(quiet);
     while (performance.now() < end) {
-      if (this.term.drawn && performance.now() - this.term.lastOutput >= quiet) return;
+      if (this.term.drawn && !this.term.midFrame && performance.now() - this.term.lastOutput >= quiet) return;
       await sleep(10);
     }
   }
@@ -449,7 +449,8 @@ export class Session {
     // a check was written on, and a wait that passes returns at once — only a failure takes longer to say so.
     const end = Date.now() + Math.max(timeout, WAIT);
     for (;;) {
-      if (ok()) return;
+      // Only between frames: in one, the screen is part the last frame, part the next.
+      if (!this.term.midFrame && ok()) return;
       if (Date.now() > end) throw new CheckFailed(`timed out waiting for ${what}\n${this.dump()}`);
       // Exited: what was awaited may have come with it (an exit itself, its last words) — looked at once more.
       if (this.exited() && !ok()) throw new CheckFailed(`slipbox exited while waiting for ${what}\n${this.after(40)}`);

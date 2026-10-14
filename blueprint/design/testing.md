@@ -184,7 +184,9 @@ bun run e2e find replace     # only the scenarios whose names contain these
 - **Waits, never sleeps.** Every check waits (up to a timeout) for the screen to agree: a row that
   contains something, the status line's mode, a message's floating box, a file on disk. Only a check
   that something *doesn't* happen — no autosave mid-insert, no popup before its delay — waits out a
-  stated while.
+  stated while. A wait, and the quiet after a key, hold only between frames: slipbox marks each frame
+  with synchronized output (mode 2026), and a screen read before a frame ends is part the last one,
+  part the next (#73). A frame not ended within a second is read as it is.
 - **The terminal itself.** A scenario reads what the terminal draws with its colours (`styleOf`,
   `runs`), its title, the pid of slipbox in it (`signal` sends it SIGTERM or SIGHUP), pastes as a
   terminal does (bracketed), quits and starts again on the same state (`restart`), and resizes the
