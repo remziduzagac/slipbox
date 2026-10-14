@@ -28,7 +28,8 @@ through OpenTUI itself, to prove the adapter and real key parsing.
 | `tests/release.test.ts` | previews and the Pages site: versions, tags, notes, the channel files, the workflows |
 | `tests/health.test.ts` | the health check (`scripts/health.ts`): the upkeep files, signals, the issue, its workflow |
 | `tests/check-docs.test.ts` | the docs' check on a repository of its own: a misspelling, a broken link, a long line |
-| `tests/docs.test.ts` | the user docs: links and anchors, every command, flag and default key, no blueprint ID |
+| `tests/docs.test.ts` | the user docs and the agent guide: links, anchors, every command, flag and key, no ID |
+| `tests/site.test.ts` | the docs' site: pages gathered from the docs map, links rewritten, the home's cards (DS) |
 
 `tests/distribution.test.ts` builds a release for this machine and drives it as a user would: the packed binary
 printing the skill, the release's notes, installed by the release's installer and through the Pages bootstrap,

@@ -229,6 +229,14 @@ How: design/distribution.md; the workflows that build and publish: design/reposi
 - slipbox ships user documentation in Markdown in `docs/`: guides for the tasks a newcomer meets, and a manual
   covering every key, setting, command and behaviour, written for users, without the blueprint's IDs and never
   linking into it; the blueprint links to the docs, not the reverse (DOC-D1, DOC-D2, DOC-D3).
+- The docs are also a website on GitHub Pages, `https://<owner>.github.io/<name>/docs/`: built from `docs/`, their one
+  source, by Starlight, with search, deployed with the installer (DS-D1, DS-D2). Its home starts each kind of reader
+  on their own path; a quick start, a concepts page and an agent guide, which a person's own agent reads to walk them
+  through slipbox, are pages of their own (DS-D3). The pages a newcomer reads first give a familiar key before vim's,
+  and a page lists those keys (DS-D6).
+- They read easily: short sentences, one idea each, steps as numbered steps, tables for what is looked up (DS-D4). The
+  reference chapters (keys, configuration, the command line) stay written by hand, their lists held whole by the tests
+  (DS-D5).
 - A change users will see updates the docs in the same piece of work. `tests/docs.test.ts` keeps them whole: every
   link and anchor landing, every CLI command and flag and every default key in the manual, no ID; the configuration
   chapter's defaults are tested against the code's.
@@ -246,8 +254,10 @@ How: design/distribution.md; the workflows that build and publish: design/reposi
   and free of the blueprint's IDs (GR-D1). The README's first screen says what slipbox is, its status, where to get
   help and how it is maintained, without naming the maintainer (D227).
 
-How: docs/README.md; workstreams/archive/user-docs/requirements.md § How they are written; the screenshots:
-design/testing.md § The terminal tests; the repository's documents: design/repository.md § The repository's documents.
+How: docs/README.md; workstreams/archive/docs-site/requirements.md § How they are written (DS-D4, replacing DOC's
+rules where they differ: workstreams/archive/user-docs/requirements.md § How they are written); the site:
+design/distribution.md § The documentation site; the screenshots: design/testing.md § The terminal tests; the
+repository's documents: design/repository.md § The repository's documents.
 
 ## The repository
 
