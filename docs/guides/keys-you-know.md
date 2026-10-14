@@ -1,7 +1,8 @@
 # Keys you already know
 
-You don't need vim to use slipbox. The arrow keys move, `shift` with an arrow selects, and `ctrl+s` saves. Many
-shortcuts from VS Code and Obsidian do what you expect. This page lists them, and the few keys that are new.
+You can use slipbox without learning anything first. The arrow keys move, `shift` with an arrow selects, and `ctrl+s`
+saves. Many shortcuts from VS Code and Obsidian do what you expect. This page lists them, and the few keys that are
+new.
 
 vim's keys work too, beside these. Use either, or mix them.
 
