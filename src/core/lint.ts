@@ -189,7 +189,7 @@ export async function runLint(
     if (kept.length < files.length && !codeSaid.has(cwd)) {
       codeSaid.add(cwd);
       say?.(
-        `markdownlint-cli2 not run on ${files.length - kept.length} file(s): a markdownlint config there is code, or names code to load, and ${cwd} isn't a root you trust — [trust] roots in your config`,
+        `markdownlint-cli2 not run on ${files.length - kept.length} file(s): a markdownlint config there is code, or names code to load, and ${cwd} isn't a vault you trust — [trust] roots in your config`,
       );
     }
     if (!kept.length) return [];

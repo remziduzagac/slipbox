@@ -1007,7 +1007,7 @@ export class Graph {
         resolvedKind: "unresolved",
         path: null,
         candidates: [],
-        reason: "names need a root, and this folder has none: .git, .slipbox/, .obsidian/ or .zk/ makes one",
+        reason: "names need a vault, and this folder is in none: .git, .slipbox/, .obsidian/ or .zk/ makes one",
       };
     const r = this.index.resolveWiki(target, fromRel);
     if (r.status === "resolved")
@@ -1380,7 +1380,7 @@ export class Graph {
 
   /** The vaults nested in this one: folders the walk leaves to them. */
   nestedRoots(): string[] {
-    return this.skipped.filter((s) => s.reason === "nested root").map((s) => s.rel);
+    return this.skipped.filter((s) => s.reason === "nested vault").map((s) => s.rel);
   }
 
   /**

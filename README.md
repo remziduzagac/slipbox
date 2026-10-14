@@ -41,7 +41,7 @@ writes nothing there. Your notes and code stay in their files, alongside the too
 - **Start here:** get slipbox on your machine with [Installing slipbox](docs/guides/install.md). Then the
   [Quick start](docs/guides/quick-start.md) takes two minutes. The documentation is a website, with search:
   <https://remziduzagac.github.io/slipbox/docs/>.
-- **Status:** every phase on the [roadmap](blueprint/roadmap.md) is built: reading, editing, search, roots and named
+- **Status:** every phase on the [roadmap](blueprint/roadmap.md) is built: reading, editing, search, vaults and named
   folders, git and merge review, language servers and linters, and export. Releases are published, with previews of
   the next one between them. slipbox is before 1.0. [Versions](docs/manual/versions.md) says what may still change.
 - **Help:** the documentation, and its [troubleshooting chapter](docs/manual/troubleshooting.md) for the usual
@@ -120,7 +120,7 @@ The lens shows the Markdown around the cursor between two rules, with the rest l
 ([Configuration](docs/manual/configuration.md)). The configuration reloads itself when you save it.
 
 [Getting started](docs/guides/getting-started.md) walks through a first session.
-[Links and roots](docs/manual/links-and-roots.md) explains how links find their notes, across folders too.
+[Links and vaults](docs/manual/links-and-vaults.md) explains how links find their notes, across folders too.
 
 ## For agents
 

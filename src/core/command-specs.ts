@@ -424,7 +424,7 @@ export const COMMAND_SPECS: CommandSpec[] = [
     id: "shell.run",
     title: "Run a command",
     cli: I,
-    desc: ":!cmd — your shell runs it in the root's folder, % the file's path; its output in a window, enter on a path:line opens it",
+    desc: ":!cmd — your shell runs it in the vault's top folder, % the file's path; its output in a window, enter on a path:line opens it",
   },
   {
     id: "shell.filter",
@@ -478,7 +478,7 @@ export const COMMAND_SPECS: CommandSpec[] = [
     id: "git.commit",
     title: "Commit",
     cli: I,
-    desc: "What's staged committed: the message in a floating editor, ctrl+s commits; in a root not trusted, no hooks and not signed",
+    desc: "What's staged committed: the message in a floating editor, ctrl+s commits; in a vault not trusted, no hooks and not signed",
   },
   {
     id: "git.amend",
@@ -998,7 +998,7 @@ export const COMMAND_SPECS: CommandSpec[] = [
     id: "note.info",
     title: "Info: open, focus, close",
     cli: "slipbox stat <note>",
-    desc: "The Info view in the right panel: the file's path, root, size, dates, counts, state, properties, tags, links",
+    desc: "The Info view in the right panel: the file's path, vault, size, dates, counts, state, properties, tags, links",
   },
   {
     id: "note.properties",
@@ -1010,19 +1010,19 @@ export const COMMAND_SPECS: CommandSpec[] = [
     id: "info.toggle",
     title: "Show or hide the Info",
     cli: "slipbox stat <note>",
-    desc: "The file on screen: where, which root, its properties (frontmatter), tags, links and backlinks",
+    desc: "The file on screen: where, which vault, its properties (frontmatter), tags, links and backlinks",
   },
   {
     id: "vault.reindex",
     title: "Reindex the folder",
     cli: "slipbox index --refresh",
-    desc: "Re-walks and re-reads every note of the root (or the folder opened)",
+    desc: "Re-walks and re-reads every note of the vault (or the folder opened)",
   },
   {
     id: "vault.info",
     title: "Folder info",
     cli: "slipbox info",
-    desc: "Shows the root, its name and copies, notes, watcher, cache and state",
+    desc: "Shows the vault, its name and copies, notes, watcher, cache and state",
   },
   {
     id: "note.delete",
@@ -1100,7 +1100,7 @@ export const COMMAND_SPECS: CommandSpec[] = [
     id: "vault.unmake",
     title: "Take .slipbox/ away",
     cli: "slipbox deinit <folder>",
-    desc: "The explorer's selected root (or this one, nested in another) a plain folder of the root holding it; links fixed after a preview",
+    desc: "The explorer's selected vault (or this one, nested in another) made part of the vault holding it; links fixed after a preview",
   },
   {
     id: "trash.open",
@@ -1134,13 +1134,13 @@ export const COMMAND_SPECS: CommandSpec[] = [
   },
   {
     id: "root.trust",
-    title: "Trust this root",
+    title: "Trust this vault",
     cli: null,
     desc: "Its own tools run as they would anywhere — its programs, its settings, the code its servers and git run; asked the first time it matters. In slipbox only: an agent can't be talked into it",
   },
   {
     id: "root.untrust",
-    title: "Stop trusting this root",
+    title: "Stop trusting this vault",
     cli: null,
     desc: "Nothing of its own runs from now on: its servers in their safe modes, git with its guards",
   },
@@ -1154,7 +1154,7 @@ export const COMMAND_SPECS: CommandSpec[] = [
     id: "folder.name",
     title: "Name this folder, as pointers name it",
     cli: "slipbox name <new>",
-    desc: "This root, or the explorer's selected one: a .slipbox/ folder's name changed (the old one kept, pointers by it still found), after a preview; a repository given one",
+    desc: "This vault, or the explorer's selected one: a .slipbox/ folder's name changed (the old one kept, pointers by it still found), after a preview; a repository given one",
   },
   {
     id: "link.relink",
@@ -1166,7 +1166,7 @@ export const COMMAND_SPECS: CommandSpec[] = [
     id: "link.convert",
     title: "Convert links to plain paths",
     cli: "slipbox convert-links [note]",
-    desc: "Rewrites wikilinks, and links from the root, as relative path links after a preview (a note's, or every note's); a link several notes answer to is picked",
+    desc: "Rewrites wikilinks, and links from the vault's top, as relative path links after a preview (a note's, or every note's); a link several notes answer to is picked",
   },
   {
     id: "rename.undo",
@@ -1178,13 +1178,13 @@ export const COMMAND_SPECS: CommandSpec[] = [
     id: "vault.init",
     title: "Give a folder .slipbox/",
     cli: "slipbox init [dir] [--name N] [--private]",
-    desc: "This loose folder gets its .slipbox/ (settings; a name with :name); in a root, the explorer's selected folder (or this note's) becomes a root of its own, links fixed after a preview",
+    desc: "This folder, outside every vault, gets its .slipbox/ (settings; a name with :name); in a vault, the explorer's selected folder (or this note's) becomes a vault of its own, links fixed after a preview",
   },
   {
     id: "vault.pin_root",
-    title: "Pin this root in the explorer",
+    title: "Pin this vault in the explorer",
     cli: null,
-    desc: "Keeps the root open among the explorer's roots after leaving it, or no longer",
+    desc: "Keeps the vault open among the explorer's vaults after leaving it, or no longer",
   },
   {
     id: "problems.open",

@@ -257,7 +257,7 @@ export class VaultWatcher {
     if (this.closed || this.polled.has(dirRel)) return;
     this.polled.add(dirRel);
     this.opts.onWarn?.(
-      `cannot watch ${dirRel || "the root"} (${reason.split("\n")[0]}) — polling it every ${every(this.opts.pollMs ?? 2000)} instead`,
+      `cannot watch ${dirRel || "the vault's top folder"} (${reason.split("\n")[0]}) — polling it every ${every(this.opts.pollMs ?? 2000)} instead`,
     );
     this.ensurePollTimer();
   }

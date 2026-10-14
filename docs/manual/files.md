@@ -56,8 +56,8 @@ With the mouse:
 - While the explorer has the keys, the selected row has a button at its end, `…`. It opens the same menu as `.`, with
   every action this chapter describes, each with its key.
 
-The row `..` at the top goes up to the folder holding this one. [Links and roots](links-and-roots.md) has what that
-means when the folder is a root.
+The row `..` at the top goes up to the folder holding this one. [Links and vaults](links-and-vaults.md) has what that
+means when the folder is a vault.
 
 A file git sees as changed is marked at the end of its row ([Git](git.md)).
 
@@ -94,8 +94,8 @@ Some files are never listed:
 You can still open a hidden or git-ignored file by its path (`:e .drafts/plan.md`), or by following a link to it. It
 opens, and its links count from then on. A file under `node_modules` or `walk.exclude` doesn't open.
 
-A folder that is a root of its own is listed with its own icon, and its files are its own.
-[Links and roots](links-and-roots.md) has what that means.
+A folder that is a vault of its own is listed with its own icon, and its files are its own.
+[Links and vaults](links-and-vaults.md) has what that means.
 
 ## Making notes and folders
 
@@ -107,7 +107,7 @@ It makes the note in the folder of the note you are reading. When the explorer h
 explorer's selected folder instead, or beside the selected file. The question says where: `new note in ideas/`.
 
 - **The name can be a path.** `coffee` makes `coffee.md`. `ideas/coffee` makes the folder `ideas` too, if it isn't
-  there. A name starting with `/` is from the root: `/inbox`.
+  there. A name starting with `/` is from the vault's top: `/inbox`.
 - **`.md` is added**, unless the name ends in a data or code file's extension slipbox knows (`.toml`, `.json`,
   `.py`…). So `tasks.toml` is made as it is written.
 - **A new note starts with its title,** `# coffee`. It opens with you typing on the line after the blank one, in the
@@ -117,7 +117,7 @@ explorer's selected folder instead, or beside the selected file. The question sa
   them. So slipbox suggests a distinct name instead, from the new note's folder (`ideas-coffee`). It says where the
   other one is. Type the name again to keep it anyway.
 
-Nothing is ever made outside the root, through a symbolic link or otherwise.
+Nothing is ever made outside the vault, through a symbolic link or otherwise.
 
 ### A new folder
 
@@ -139,16 +139,16 @@ selected row.
 
 - **`r`** asks for the new name, with the old one typed already. A note's `.md` is kept for you. Type `espresso`, and
   `coffee.md` becomes `espresso.md`. A name with a `/` is refused, because `m` is what moves.
-- **`m`** shows the root's folders as a tree. The root comes first, and the folder the file is in is unfolded and
+- **`m`** shows the vault's folders as a tree. Its top comes first, and the folder the file is in is unfolded and
   marked `here`.
   - `left` and `right` fold and unfold.
   - Typing filters to the folders that match, under their parents. `enter` takes the first.
   - A folder can't move into itself, so it isn't offered.
-- **`space n m`** asks for the note's new path from the root, with its old one typed already (`ideas/coffee`). Change
-  the name, the folders, or both.
+- **`space n m`** asks for the note's new path from the vault's top, with its old one typed already (`ideas/coffee`).
+  Change the name, the folders, or both.
   - A folder that's there, or a path ending in `/`, moves the note into it, keeping its name. `archive/` makes
     `archive/coffee.md`, and the folder is made if need be. `archive` does the same when there is such a folder.
-  - `/` takes the note to the top of the root.
+  - `/` takes the note to the top of the vault.
   - Any other path is the note's new path. `archive/espresso` moves and renames it.
 - **Cut and paste.** `x` on a row cuts it. `p` on a folder, or on a file in it, moves it there.
 
@@ -172,11 +172,11 @@ A row starting with `skipped` is a file slipbox won't rewrite, and says why.
 
 ### What changes
 
-- **Every link to it** changes, in this root and in every other root whose notes link into it. That covers links in
+- **Every link to it** changes, in this vault and in every other vault whose notes link into it. That covers links in
   notes, paths in data files, and paths in code comments.
 - **Each link keeps its form.**
   - A relative path stays relative, worked out again from where the link is.
-  - A link from the root stays one.
+  - A link from the vault's top stays one.
   - A `#heading` stays on the end.
   - A reference link is changed where its address is defined.
   - A wikilink by name takes the new name: `[[coffee]]` becomes `[[espresso]]`. It is left as it is when only the
@@ -191,10 +191,10 @@ A row starting with `skipped` is a file slipbox won't rewrite, and says why.
 A rename is refused, with nothing changed, when:
 
 - the new name is taken, even by a name differing only in case
-- it would leave the root or go into a hidden folder
+- it would leave the vault or go into a hidden folder
 - a file it would rewrite or move has unsaved changes. Save first.
 
-Renaming a heading and the links to it is in [Links and roots](links-and-roots.md).
+Renaming a heading and the links to it is in [Links and vaults](links-and-vaults.md).
 
 ## Copying
 
@@ -215,7 +215,7 @@ From anywhere:
 A copy is the file as it is, links and all. Nothing links to it yet, and nothing is rewritten. So a relative link in a
 copy pasted into another folder may no longer reach its note.
 
-What you copied or cut is forgotten when you go into another root.
+What you copied or cut is forgotten when you go into another vault.
 
 ## Deleting and the trash
 
@@ -226,7 +226,7 @@ What you copied or cut is forgotten when you go into another root.
 
 A folder goes with everything in it.
 
-Nothing is deleted outright. The file goes to this root's trash, in slipbox's own state folder, never in your notes.
+Nothing is deleted outright. The file goes to this vault's trash, in slipbox's own state folder, never in your notes.
 So git doesn't see it, and it isn't synced with the folder.
 
 A note you had open keeps showing its last text, marked `✖ deleted on disk`.
@@ -259,21 +259,21 @@ What goes from the trash can't be restored. It is gone from your disk, not moved
 
 ## Undoing a rename
 
-Press `space v shift+u`, or `shift+u` in the explorer, or type `:undo-rename`. It takes back the root's last rename or
+Press `space v shift+u`, or `shift+u` in the explorer, or type `:undo-rename`. It takes back the vault's last rename or
 move, after the same kind of preview:
 
 - Every file it rewrote gets back its text as it was.
 - What moved goes back where it was.
 - Open notes follow it back.
 
-It also takes back the other changes that rewrite links across the root, those made from the command line as well:
+It also takes back the other changes that rewrite links across the vault, those made from the command line as well:
 
 - a heading renamed
-- a root named or renamed (`:name`, `slipbox name`)
+- a vault named or renamed (`:name`, `slipbox name`)
 - links relinked or converted
 - a replace in every note ([Finding things](finding.md))
 
-The root keeps the last 20, and each undo takes the newest. There is no redo. Do the rename again.
+The vault keeps the last 20, and each undo takes the newest. There is no redo. Do the rename again.
 
 An undo is refused when a file it wrote has changed since. Put the file back as it was, and the undo goes through.
 
@@ -284,14 +284,14 @@ never to files.
 
 ## A folder of its own
 
-A folder can become a root of its own, with its own `.slipbox/`.
+A folder can become a vault of its own, with its own `.slipbox/`.
 
 | Key | What it does |
 | --- | --- |
-| `v` on the folder in the explorer, or `space v m` | Makes it a root of its own |
-| `shift+v` (or `space v shift+m`) on such a folder | Makes it a plain folder again |
+| `v` on the folder in the explorer, or `space v m` | Makes it a vault of its own |
+| `shift+v` (or `space v shift+m`) on such a folder | Makes it part of the vault holding it again |
 
-Both show a preview of the links they fix. [Links and roots](links-and-roots.md) says what a root is, and what this
+Both show a preview of the links they fix. [Links and vaults](links-and-vaults.md) says what a vault is, and what this
 changes.
 
 ## From the command line
@@ -300,8 +300,8 @@ The same operations work from the command line, for scripts and agents.
 
 A note or folder you name is found by its path, and a note also by its name, as [The command line](cli.md) says.
 
-A new path, for `write --create`, `mkdir`, `mv` and `cp`, is from the root, wherever you are in it. A path that starts
-with `./` or `../` is from the folder you are in instead.
+A new path, for `write --create`, `mkdir`, `mv` and `cp`, is from the vault's top, wherever you are in it. A path that
+starts with `./` or `../` is from the folder you are in instead.
 
 | Command | What it does |
 | --- | --- |

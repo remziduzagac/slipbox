@@ -2534,9 +2534,9 @@ A long note: headings, paragraphs, pages to move through; the daily note has the
   `Downloads/notes-backup-2026-07/.slipbox/config.toml` (command-specs.ts; 21.10)
 - `folder.name` — Name this folder, as pointers name it — `hobbies/photography/.slipbox/config.toml`,
   `work/product/README.md` (command-specs.ts; 21.10)
-- `root.trust` — Trust this root — `work/kestrel/eslint.config.js`, `work/kestrel/.vscode/settings.json`
+- `root.trust` — Trust this vault — `work/kestrel/eslint.config.js`, `work/kestrel/.vscode/settings.json`
   (kestrel's ESLint and its .vscode settings run only once it's trusted; command-specs.ts, 23.x)
-- `root.untrust` — Stop trusting this root — `work/kestrel/src/sync/retry.ts`,
+- `root.untrust` — Stop trusting this vault — `work/kestrel/src/sync/retry.ts`,
   `work/infra/dotfiles/slipbox/config.toml` (its [trust] roots, which a config's trust wins over; 23.x)
 - `link.relink` — Relink after moves and renamed folders — `notes/research/link-styles.md`,
   `notes/projects/route-sharing.md` (command-specs.ts)
@@ -2985,7 +2985,7 @@ Wide tables and code blocks to edit in place.
   (command-specs.ts)
 - `vault.init` — Give a folder .slipbox/ — `notes/index.md`, `hobbies/cooking/Home.md`, `hobbies/photography/index.md`
   (command-specs.ts)
-- `vault.pin_root` — Pin this root in the explorer — `notes/index.md`, `hobbies/cooking/Home.md`,
+- `vault.pin_root` — Pin this vault in the explorer — `notes/index.md`, `hobbies/cooking/Home.md`,
   `hobbies/photography/index.md` (command-specs.ts)
 
 ### trash

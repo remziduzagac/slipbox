@@ -62,43 +62,44 @@ screen. It prints a hint to use a command instead, and exits with 2. It never pa
 
 ## Where a command works
 
-Each command works in a root. The root is the folder:
+Each command works in a vault. The vault is the folder:
 
 - whose notes the command reads
 - where `/` in a link starts
 - where a wikilink's names are looked up
 - whose settings and link convention apply
 
-A file's root is the nearest folder above it that holds a root marker. The root markers are `.git`, `.slipbox/`,
-`.obsidian/` and `.zk/` (the setting [`walk.root_markers`](configuration.md)). A command finds the root from the note
-you name, or else from the folder you run it in.
+A file's vault is the nearest folder above it that holds a marker. The markers are `.git`, `.slipbox/`, `.obsidian/`
+and `.zk/` (the setting [`walk.root_markers`](configuration.md)). A command finds the vault from the note you name, or
+else from the folder you run it in.
 
-A folder with no marker above it works too, as a plain folder of its own. Your home folder and `/` are never roots.
-Opened as plain folders, they're listed a level at a time, never walked or indexed. [Links and
-roots](links-and-roots.md) explains roots, plain folders and names.
+A folder outside every vault works too: it stands in for one of its own. Your home folder and `/` are never vaults.
+Opened as folders, they're listed a level at a time, never walked or indexed. [Links and vaults](links-and-vaults.md)
+explains vaults, folders outside them and names.
 
-`--root <folder>` says where to start instead. It must name a root (exit 3 otherwise). A note you name is looked for
-there. A file still belongs to its nearest root. So a note in a root nested inside `--root` belongs to that nested root.
+`--root <folder>` says which vault to work in instead. It must name a vault (exit 3 otherwise). A note you name is
+looked for there. A file still belongs to its nearest vault. So a note in a vault nested inside `--root` belongs to that
+nested vault.
 
 Running a command writes nothing into your folders. slipbox keeps its index, the scratch, the trash and the rest in
-folders of its own, each root's apart ([Where slipbox keeps things](configuration.md#where-slipbox-keeps-things)).
-`slipbox info` says where. Only the commands that change files on purpose write, and only inside the note's root.
+folders of its own, each vault's apart ([Where slipbox keeps things](configuration.md#where-slipbox-keeps-things)).
+`slipbox info` says where. Only the commands that change files on purpose write, and only inside the note's vault.
 
 ## Naming a note
 
 Where a command takes `<note>`, you can name it in any of these ways, tried in this order:
 
-1. **A path from the current folder**, such as `ideas/coffee.md` or `../notes/inbox.md`. A file the root's walk leaves
+1. **A path from the current folder**, such as `ideas/coffee.md` or `../notes/inbox.md`. A file the vault's walk leaves
    out (git-ignored, or in a hidden folder) is still read when you name it by its path.
 2. **A pointer** to a named folder's file, wherever that folder is on this machine, such as
    `slipbox://notes/ideas/coffee.md`. The command then works in that folder, as it would with the file's path. A folder
    that isn't on this machine is exit 3, and so is a branch that isn't checked out. A name two folders share is exit 4.
-3. **A path from the root**, whichever folder you're in.
+3. **A path from the vault's top**, whichever folder you're in.
 4. **A note's name**: its file name without the extension, or an alias from its front matter. `coffee` is
    `ideas/coffee.md`. When several notes share the name, the one written in the same case wins. Next, the one in the
    fewest folders wins. A real tie is exit 4, with the candidates. `--from <note>` then picks the one nearest that note.
    A name never depends on the folder you're in.
-5. **A data or text file** of the root, by its path with the extension, such as `config/app.toml` or `tools/sync.py`.
+5. **A data or text file** of the vault, by its path with the extension, such as `config/app.toml` or `tools/sync.py`.
    It's read and written as it is, never as a note.
 
 A pointer is also accepted wherever a command takes a note or `--from`. A folder's name and a path joined by a colon,
@@ -157,12 +158,12 @@ The shapes below use a short notation:
 | 2 | A usage error: an unknown flag, a missing argument, a bad value. Nothing was done. |
 | 3 | Not found: a note, a link's target, a task's line, the `--root` folder, a pointer's folder |
 | 4 | Ambiguous: a name or a link several notes answer to, or several running nvims for `send` |
-| 5 | Refused: a stale `--if-unchanged`, a write outside the root, over an existing file, or to a binary file |
+| 5 | Refused: a stale `--if-unchanged`, a write outside the vault, over an existing file, or to a binary file |
 
 Exit code 5 also covers:
 
 - a note or stdin that isn't valid UTF-8 (never rewritten, so no byte is lost)
-- a read of a symlink leading out of the root
+- a read of a symlink leading out of the vault
 
 `diagnostics` exits with 1 when it shows an error. `uninstall` exits with 1 when it couldn't remove something.
 
@@ -202,7 +203,7 @@ release may change, and how a command or a flag is retired.
 
 | Flag | What it does |
 | --- | --- |
-| `--root <folder>` | Where to start: a root ([Where a command works](#where-a-command-works)) |
+| `--root <folder>` | The vault to work in ([Where a command works](#where-a-command-works)) |
 | `--config <file>` | Your settings from this file, instead of `$SLIPBOX_CONFIG` or `~/.config/slipbox/config.toml` |
 | `--json` | One JSON object on stdout ([For programs](#for-programs---json)) |
 | `--color <when>` | Whether `render` colours its output: `auto` (the default), `always` or `never` |
@@ -222,7 +223,7 @@ files and the environment variables.
 | [`read`](#read) | A note's text exactly, and its `sha` |
 | [`stat`](#stat) | A note's size, dates, title, counts and front matter |
 | [`outline`](#outline) | A note's headings with their lines |
-| [`ls`](#ls) | The notes of the root |
+| [`ls`](#ls) | The notes of the vault |
 | [`tags`](#tags) | The tags and how many notes carry each; a tag's notes |
 | [`types`](#types) | Document types (ADRs and the like) and their notes |
 | [`history`](#history) | The notes you read in the screen, and what's open there |
@@ -246,13 +247,13 @@ files and the environment variables.
 | [`trash`](#trash) | What's in the trash; put something back, or empty it |
 | [`rename-heading`](#rename-heading) | Rename a heading and every link to it |
 | [`relink`](#relink) | Fix links a move broke |
-| [`convert-links`](#convert-links) | Turn wikilinks and links from the root into relative paths |
+| [`convert-links`](#convert-links) | Turn wikilinks and links from the vault's top into relative paths |
 | [`undo`](#undo) | Take back the last rename, move, relink, conversion or replace |
 | [`apply`](#apply) | Write a plan saved with `--plan` |
-| [`info`](#info) | The root, its name, its link convention, where its state is |
+| [`info`](#info) | The vault, its name, its link convention, where its state is |
 | [`init`](#init) | Give a folder a `.slipbox/` folder, and a name |
-| [`deinit`](#deinit) | Make a root nested in another a plain folder again |
-| [`name`](#name) | Name this root, as pointers name it |
+| [`deinit`](#deinit) | Make a nested vault part of the vault holding it again |
+| [`name`](#name) | Name this vault, as pointers name it |
 | [`folders`](#folders) | The named folders this machine knows, and their copies |
 | [`changed`](#changed) | What this branch changed against its base |
 | [`diff`](#diff) | A note's changes on this branch |
@@ -333,7 +334,7 @@ With `--json`, the data is `{path, abs, sha, bom, crlf, invalidUtf8, content}`:
 
 Gives a note's facts in one call, as the screen's Info view (`space n i`) shows them:
 
-- its path and root
+- its path and vault
 - its size and last change
 - its title, tags and front matter
 - how many headings, links and backlinks it has
@@ -347,8 +348,8 @@ backlinks, sha, bom, crlf, invalidUtf8}`:
 
 - `properties` is the front matter, or `null`.
 - `headings`, `links`, `unresolved` and `backlinks` are counts. `unresolved` counts the links that reach nothing.
-- `root` is `null` in a plain folder.
-- `name` is the root's name.
+- `root` is the vault's path, `null` in a folder outside every vault.
+- `name` is the vault's name.
 
 ### `outline`
 
@@ -365,7 +366,7 @@ With `--json`, the data is `{path, headings[{depth, text, slug, line}]}`. A code
 
 ### `ls`
 
-Lists the notes of the root, by path.
+Lists the notes of the vault, by path.
 
 ```bash
 slipbox ls
@@ -382,7 +383,7 @@ other files follow as `{path, group, format, size, mtime}`:
 
 ### `tags`
 
-Lists the tags in the root's notes, each with how many notes carry it. Given a tag, it lists the notes that carry it. A
+Lists the tags in the vault's notes, each with how many notes carry it. Given a tag, it lists the notes that carry it. A
 nested tag counts under its parent. A note tagged `#coffee/espresso` is one of `#coffee`'s.
 
 ```bash
@@ -436,7 +437,7 @@ With `--json`, the data is `{read[{path, at, line, exists}], open[], activeTab, 
 
 ### `find`
 
-Lists every match of some text, in one note or in every note of the root, each on its line. The matches aren't ranked.
+Lists every match of some text, in one note or in every note of the vault, each on its line. The matches aren't ranked.
 For a ranking, use `search`.
 
 ```bash
@@ -459,7 +460,7 @@ matched, and `text` is its line.
 
 ### `search`
 
-Ranks the root's notes and data files by the words you give, as the screen's search does. Each hit is where the note has
+Ranks the vault's notes and data files by the words you give, as the screen's search does. Each hit is where the note has
 most of the words.
 
 You write the query as in the screen ([What you can type](finding.md#what-you-can-type)). It can hold:
@@ -483,15 +484,15 @@ slipbox search '"cold brew" -decaf path:ideas/'
 Flags:
 
 - `--limit <n>`: at most this many hits, from 1 to 500 (20 by default).
-- `--scope here|linked|all`: which roots to search.
-  - `here` (the default) searches this root.
-  - `linked` adds the roots its notes link to, and the roots linking to it.
-  - `all` searches every root this machine knows.
+- `--scope here|linked|all`: which vaults to search.
+  - `here` (the default) searches this vault.
+  - `linked` adds the vaults its notes link to, and the vaults linking to it.
+  - `all` searches every vault this machine knows.
 
-This root's hits come first, then the others' by score. Neither `linked` nor `all` takes in a worktree, even one a note
+This vault's hits come first, then the others' by score. Neither `linked` nor `all` takes in a worktree, even one a note
 links into. A worktree's notes are copies of its main checkout's.
 
-Search uses the root's index when it has one ([`index`](#index)). The index is brought up to date with every file
+Search uses the vault's index when it has one ([`index`](#index)). The index is brought up to date with every file
 changed since, whoever changed it. Until the index is built, search reads the files instead. It finds the same notes,
 more slowly, with a warning. The setting [`search.engine`](configuration.md) can make it always use the index, or never.
 
@@ -499,7 +500,7 @@ With `--json`, the data is `{query, scope, engine, relaxed, roots[], hits[]}`:
 
 - `engine` is `index` or `scan`.
 - `relaxed` is true when not every word was found.
-- `roots` are the other roots searched.
+- `roots` are the other vaults searched.
 
 Each hit is
 `{path, abs, shown, line, column, heading, section{name, line, end}, score, snippet, marks[], more, root, name}`:
@@ -508,11 +509,11 @@ Each hit is
 - `marks` are the words' places in it, as `[start, end]` pairs.
 - `heading` is the heading above it, and `section` the section it's in.
 - `more` is the note's other sections with some of the words.
-- `root` and `name` are another root's, else `null`.
+- `root` and `name` are another vault's path and name, else `null`.
 
 ### `index`
 
-slipbox keeps two indexes for each root:
+slipbox keeps two indexes for each vault:
 
 - The link index holds each note's title, tags, headings and links. Every command reads it.
 - The search index holds the words, for `search`.
@@ -527,11 +528,11 @@ slipbox index --refresh
 ```
 
 - `--rebuild`: start again from nothing.
-- `--refresh [path]`: bring a root's link index up to date now. Every file's size and time is checked, and every folder
-  listed again. Without `path`, it's this root's index. With `path`, it's the index of the root holding `path`, opened
-  before or not. A path outside every root means the plain folder it's in.
-- `--home`: run the background index of your home folder now, in the foreground. It finds the roots under your home
-  folder and indexes each, so their links count as backlinks of the roots they reach. With `--budget <ms>`, it stops
+- `--refresh [path]`: bring a vault's link index up to date now. Every file's size and time is checked, and every
+  folder listed again. Without `path`, it's this vault's index. With `path`, it's the index of the vault holding `path`,
+  opened before or not. A path outside every vault means the folder it's in, standing in for one.
+- `--home`: run the background index of your home folder now, in the foreground. It finds the vaults under your home
+  folder and indexes each, so their links count as backlinks of the vaults they reach. With `--budget <ms>`, it stops
   after that long, and carries on from there next time. The default, 0, is the whole pass. `--rebuild` starts a new
   pass.
 
@@ -539,7 +540,7 @@ With `--json`, the data is `{path, rebuilt, indexed, removed, files, ms}`. With 
 `{root, notes, changed, unchanged, gone, reached, indexed, ms}`. With `--home`, it's
 `{root, found, indexed, left, started, finished}`.
 
-A plain folder listed a level at a time (your home folder, `/`) has no index. `index` there is exit 5.
+A folder listed a level at a time (your home folder, `/`) has no index. `index` there is exit 5.
 
 ## Changing notes
 
@@ -547,13 +548,13 @@ A plain folder listed a level at a time (your home folder, `/`) has no index. `i
 
 - atomically, never half-written
 - keeping its byte order mark and its line endings
-- only inside the note's root, by its real path (a symlinked folder leading out is refused)
-- only where the root's notes are, never in `.slipbox/`, `.git/`, `node_modules` or a hidden folder (unless you named a
+- only inside the note's vault, by its real path (a symlinked folder leading out is refused)
+- only where the vault's notes are, never in `.slipbox/`, `.git/`, `node_modules` or a hidden folder (unless you named a
   note there)
 - never a binary file
 - never a note that isn't valid UTF-8, since its bytes would be lost (a task can still be ticked)
 
-A write any of these refuses is exit 5, with nothing written. Data and text files of the root are written as they are,
+A write any of these refuses is exit 5, with nothing written. Data and text files of the vault are written as they are,
 never parsed as notes.
 
 **The safe way to change a note someone else may be editing** is to read its `sha`, then write with `--if-unchanged`. If
@@ -582,10 +583,10 @@ printf '# Coffee\n\nNotes on brewing.\n' | slipbox write coffee --stdin
 The text is the arguments after the note, joined by spaces and ending with a newline. With `--stdin`, it's stdin as it
 comes.
 
-- `--create`: make a new note. The argument is then a path, never a name. The path is from the root, or from the current
-  folder when it starts with `./` or `../`. `.md` is added unless the name has an extension slipbox knows (`config.toml`
-  stays as it is). An existing file is refused (exit 5), never overwritten. A name other notes already have is written,
-  with a warning. Naming the note by that name now takes a path.
+- `--create`: make a new note. The argument is then a path, never a name. The path is from the vault's top, or from the
+  current folder when it starts with `./` or `../`. `.md` is added unless the name has an extension slipbox knows
+  (`config.toml` stays as it is). An existing file is refused (exit 5), never overwritten. A name other notes already
+  have is written, with a warning. Naming the note by that name now takes a path.
 - `--append`: add the text at the end, on a new line.
 - `--paragraph`: with `--append`, add the text after a blank line, so it's a block of its own. A line appended right
   after a table would become its next row.
@@ -719,27 +720,27 @@ lists the languages with no dictionary. With `--add`, the data is `{added, file}
 
 ### `mkdir`
 
-Makes a folder in the root, and its parents. The path is from the root, or from the current folder when it starts with
-`./` or `../`. It can also be absolute.
+Makes a folder in the vault, and its parents. The path is from the vault's top, or from the current folder when it
+starts with `./` or `../`. It can also be absolute.
 
 ```bash
 slipbox mkdir ideas/drinks
 ```
 
-An existing path, or one outside the root, is refused (exit 5). With `--json`, the data is `{path, created}`.
+An existing path, or one outside the vault, is refused (exit 5). With `--json`, the data is `{path, created}`.
 
 ## Links
 
 These commands read links as the screen does, with the same rules. A link can be:
 
 - a path relative to the note
-- `/…`, from the root
+- `/…`, from the vault's top
 - `~/…`
 - an absolute path or `file://` URL
-- a wikilink, looked up within the root
+- a wikilink, looked up within the vault
 - a pointer to a named folder's file
 
-[Links and roots](links-and-roots.md) explains every form, and how slipbox picks among notes a wikilink's name could
+[Links and vaults](links-and-vaults.md) explains every form, and how slipbox picks among notes a wikilink's name could
 mean.
 
 **What a link reaches.** `links` reports it as one of these:
@@ -776,9 +777,9 @@ mean.
 A tie broken by `deepest-shared` or `shortest` is **fragile**. A new note of the name, nearer the link, would take it.
 `problems` lists those.
 
-**Paths shown.** `shown` is a file's path as you'd want to read it. It's from this root, or else from your home folder
-(`~/…`), or else absolute. A file in another root also has that root's path and name, as `root` and `name`. For this
-root's files, both are `null`.
+**Paths shown.** `shown` is a file's path as you'd want to read it. It's from this vault, or else from your home folder
+(`~/…`), or else absolute. A file in another vault also has that vault's path and name, as `root` and `name`. For this
+vault's files, both are `null`.
 
 ### `resolve`
 
@@ -795,7 +796,7 @@ slipbox resolve slipbox://notes/ideas/coffee.md --json
 ```
 
 Without `--from`, the link is taken as a note a command would name ([Naming a note](#naming-a-note)). Failing that, it's
-a file's path from the root.
+a file's path from the vault's top.
 
 A target with a scheme (`https:`) is external when it has no spaces and no note has that name. So
 `resolve 'Meeting: Q3'` still finds `Meeting: Q3.md`.
@@ -813,7 +814,8 @@ certainty, git?, suggest?}`:
 - `href`, with `--from`, is the relative path a link in that note would carry, encoded as a link is
   (`../inbox.md#today`). Without `--from`, it's `null`.
 - `reason` says why the link didn't resolve, when there's more to say (a named folder that isn't on this machine).
-- `git` is for a pointer to a branch not checked out here. It's `{root, rel, branch}`, the file as it is on that branch.
+- `git` is for a pointer to a branch not checked out here. It's `{root, rel, branch}`: the file as it is on that branch,
+  `root` the vault it's in.
 - `suggest` is for a link written as a folder's name, a colon and a path (`notes:ideas/coffee.md`). It's the pointer to
   write instead.
 
@@ -825,8 +827,8 @@ Prints a link to a note or file, written as slipbox would write it in a note. It
 - its path form
 - with or without `.md`
 
-The link is written from where `--from` is, or else from the root. This is how the screen's link picker and completion
-write links, and how an agent should write one. [Links and roots](links-and-roots.md) explains the convention.
+The link is written from where `--from` is, or else from the vault's top. This is how the screen's link picker and completion
+write links, and how an agent should write one. [Links and vaults](links-and-vaults.md) explains the convention.
 `slipbox info` says what it is here, and why.
 
 ```bash
@@ -848,7 +850,7 @@ followed.
 
 ### `links`
 
-Lists a note's links, each with what it reaches. `--all` lists every note's links in the root at once, each with `from`.
+Lists a note's links, each with what it reaches. `--all` lists every note's links in the vault at once, each with `from`.
 It's a way to find the broken ones.
 
 ```bash
@@ -872,7 +874,7 @@ An `external` link's `path` is its web address, whole. It reaches no file, so it
 ### `backlinks`
 
 Lists the notes, data files and code files linking to a note (or to any file). Each comes with where the link is and how
-it's written. A note's links to itself aren't counted. Links from another root are counted, as of that root's index.
+it's written. A note's links to itself aren't counted. Links from another vault are counted, as of that vault's index.
 
 ```bash
 slipbox backlinks coffee
@@ -884,7 +886,7 @@ backlink says how the link is written, so it can be rewritten.
 
 ### `problems`
 
-Lists what's wrong in the root:
+Lists what's wrong in the vault:
 
 - links that reach nothing
 - links several notes answer to
@@ -913,7 +915,8 @@ A conflict's `line` is its first `<<<<<<<`.
 
 ## Moving, copying and deleting
 
-These commands change files and the links to them. They do it in this root, and in every root whose index links into it.
+These commands change files and the links to them. They do it in this vault, and in every vault whose index links into
+it.
 Every link keeps its form:
 
 - A relative path stays relative.
@@ -924,7 +927,7 @@ Every link keeps its form:
 [Files](files.md) explains what changes, and what the screen shows.
 
 **Preview first.** Each of `mv`, `rename-heading`, `relink`, `convert-links`, `undo`, `name`, `init` (on a folder in a
-root), `deinit` and `replace --all` takes:
+vault), `deinit` and `replace --all` takes:
 
 - `--dry-run`: the preview, every line it would change, before and after. Nothing is written.
 - `--plan`: the preview, saved as a plan with an id. Nothing is written. `slipbox apply <id>` writes it later, and is
@@ -936,12 +939,12 @@ Without either flag, the command writes at once. A rename that can't be done who
 written. It can't be done whole when there is:
 
 - a target that exists (or differs only in case)
-- a path outside the root
+- a path outside the vault
 - a file changed between planning and writing
 
 A file that isn't valid UTF-8 is skipped and said, never rewritten.
 
-In a git repository, a root with uncommitted changes is named in the warnings. The change goes ahead.
+In a git repository, a vault with uncommitted changes is named in the warnings. The change goes ahead.
 
 **`--json` of a change.** These commands give a change as their data:
 
@@ -952,7 +955,7 @@ In a git repository, a root with uncommitted changes is named in the warnings. T
 
 A change is `{kind, from, to, dryRun, move, files[], warnings[], skipped[], ambiguous[]?, written[], undo?, plan?}`:
 
-- `kind` is `note`, `folder`, `root` (a root's name), `heading`, `relink`, `convert`, `replace`, `make-root` (`init`) or
+- `kind` is `note`, `folder`, `root` (a vault's name), `heading`, `relink`, `convert`, `replace`, `make-root` (`init`) or
   `unmake-root` (`deinit`).
 - `move` is `{from, to, dir}`, the absolute paths moved, when something moves.
 - `files[{path, abs, root, name, edits[{line, before, after}]}]` lists each file rewritten, and each line in it.
@@ -972,15 +975,15 @@ slipbox mv ideas/coffee.md archive/
 slipbox mv ideas drafts
 ```
 
-The new path is from the root, or from the current folder when it is `.` or `..` or starts with `./` or `../`. It can
-also be absolute. It must stay in the root.
+The new path is from the vault's top, or from the current folder when it is `.` or `..` or starts with `./` or `../`.
+It can also be absolute. It must stay in the vault.
 
 A folder that's there, or a path ending in `/`, is moved into, as the shell's `mv` does, keeping the name. So `archive/`
-makes `archive/coffee.md`, and makes the folder if need be. `./` from the top of the root moves it there. Any other path
+makes `archive/coffee.md`, and makes the folder if need be. `./` from the top of the vault moves it there. Any other path
 is the file's whole new path. A note's extension is kept when the new path has none.
 
 A note's own relative links are rewritten to work from its new folder. So are the paths in a code file's comments and a
-data file's values. A folder moves with everything in it, and links between two of its files stay as they are. A root
+data file's values. A folder moves with everything in it, and links between two of its files stay as they are. A vault
 nested in this one moves as a folder, keeping its name. A pointer as the new path is refused (exit 5). A pointer as what
 to move is fine.
 
@@ -997,8 +1000,8 @@ slipbox cp ideas/coffee.md archive/
 slipbox cp coffee
 ```
 
-The new path is read as `mv` reads it. It's from the root, or from the current folder when it is `.` or `..` or starts
-with `./` or `../`.
+The new path is read as `mv` reads it. It's from the vault's top, or from the current folder when it is `.` or `..` or
+starts with `./` or `../`.
 
 A folder that's there, or a path ending in `/`, is copied into, keeping the name. So `archive/` makes
 `archive/coffee.md`, and makes the folder if need be. Into the folder it is in already, the copy goes beside it as
@@ -1025,7 +1028,7 @@ trash item `{id, abs, shown, dir, at}` (`null` on a dry run).
 
 ### `trash`
 
-Lists what's in the root's trash, newest first. `trash restore` puts an item back where it was. `trash empty` empties
+Lists what's in the vault's trash, newest first. `trash restore` puts an item back where it was. `trash empty` empties
 the trash.
 
 ```bash
@@ -1048,7 +1051,7 @@ With `--json`, the data is `[{id, abs, shown, dir, at}]`. `restore` gives the it
 ### `rename-heading`
 
 Renames a heading, and rewrites every link to it. It finds the heading by its text, in any case, or by its slug. In this
-root and the roots linking into it, it rewrites:
+vault and the vaults linking into it, it rewrites:
 
 - `[x](note.md#old)`, in whichever form each has (the slug, or the text encoded)
 - the note's own `[x](#old)`
@@ -1071,8 +1074,8 @@ change](#moving-copying-and-deleting), with `kind` `heading`.
 Fixes links a move broke. These are links that reach nothing, whose file slipbox saw move. `relink` rewrites them to
 where the file is now.
 
-Given no note, it does every note. It also fixes what a move of the whole root by hand broke: its links out, and other
-roots' links into it. And it offers a pointer for a relative link into a named folder that doesn't travel with this one.
+Given no note, it does every note. It also fixes what a move of the whole vault by hand broke: its links out, and other
+vaults' links into it. And it offers a pointer for a relative link into a named folder that doesn't travel with this one.
 
 ```bash
 slipbox relink --dry-run
@@ -1080,7 +1083,7 @@ slipbox relink inbox
 ```
 
 A move slipbox saw is one it made, or one git recorded between two commits of the same branch (after a pull or a merge).
-[Links and roots](links-and-roots.md) covers repairs.
+[Links and vaults](links-and-vaults.md) covers repairs.
 
 `relink` takes `--dry-run` and `--plan`, and `undo` takes it back. With `--json`, the data is [a
 change](#moving-copying-and-deleting), with `kind` `relink`.
@@ -1090,7 +1093,7 @@ change](#moving-copying-and-deleting), with `kind` `relink`.
 Rewrites a note's links (or every note's) as plain relative paths, once:
 
 - Each wikilink becomes a markdown link. An embed becomes an image-syntax one.
-- Each link written from the root (`/ideas/coffee.md`) becomes relative, so it reads the same in any tool.
+- Each link written from the vault's top (`/ideas/coffee.md`) becomes relative, so it reads the same in any tool.
 - A heading becomes its slug.
 - A wikilink's alias becomes the link's text.
 
@@ -1108,21 +1111,21 @@ What it can't decide is left as written, and said in the warnings:
 A link several notes answer to is listed in `ambiguous` as `{key, shown, line, written, candidates[]}`. You write it as
 a path, or pick in the screen.
 
-Wikilinks in code and in front matter are text, and stay. A root nested in this one is converted on its own.
+Wikilinks in code and in front matter are text, and stay. A vault nested in this one is converted on its own.
 
 `convert-links` takes `--dry-run` and `--plan`, and `undo` takes it back. With `--json`, the data is [a
 change](#moving-copying-and-deleting), with `kind` `convert`.
 
 ### `undo`
 
-Takes back the root's last `mv`, `name`, `rename-heading`, `relink`, `convert-links` or `replace --all`. It takes back a
-change made in the screen or by a command alike.
+Takes back the vault's last `mv`, `name`, `rename-heading`, `relink`, `convert-links` or `replace --all`. It takes back
+a change made in the screen or by a command alike.
 
 - Every file it rewrote gets its text back exactly.
 - What moved moves back.
 - Folders it made go, if empty.
 
-The next `undo` takes back the one before. The root keeps the last 20.
+The next `undo` takes back the one before. The vault keeps the last 20.
 
 ```bash
 slipbox undo --dry-run
@@ -1156,20 +1159,20 @@ plan that isn't there is exit 3.
 With `--json`, the data is the plan's [change](#moving-copying-and-deleting). A listing gives
 `[{id, made, root, command, kind, from, to, files}]`, where `files` is a count.
 
-## Roots and named folders
+## Vaults and named folders
 
-A root can have a name. Other folders' links use it to reach the root, wherever the root is on each machine, as in
+A vault can have a name. Other folders' links use it to reach the vault, wherever the vault is on each machine, as in
 `slipbox://notes/ideas/coffee.md`.
 
 The name is its `.slipbox/` folder's. Failing that, it's its git remote's last part: a repository cloned from
-`github.com/me/research` is `research`. It's never the folder's own name. [Links and roots](links-and-roots.md) explains
-names and pointers.
+`github.com/me/research` is `research`. It's never the folder's own name. [Links and vaults](links-and-vaults.md)
+explains names and pointers.
 
 ### `info`
 
 Says how slipbox sees the folder you're in:
 
-- the root, its name and its copies
+- the vault, its name and its copies
 - how links are written here, and what said so
 - the index
 - the settings files read
@@ -1183,7 +1186,7 @@ slipbox info
 
 ```text
 slipbox   0.2.0
-root      /home/you/notes (root)
+vault     /home/you/notes
 name      notes
 links     markdown links, relative, with .md — style: the notes, 100% of 382 links; …
 ```
@@ -1192,17 +1195,18 @@ With `--json`, the data is `{version, release, root, mode, name, key, markerVers
 cache, state, scratch, notes, index{…, written, reached}, background{…}, search{engine, index}, skipped[{rel, reason}],
 folder, links, stale[]}`:
 
-- `mode` is `root` for a root, and `folder` for a plain folder.
+- `mode` is `root` for a vault, and `folder` for a folder outside every vault, standing in for one.
 - `release` is `null` when slipbox runs from its source.
-- `folder` is the root's name, `{name, pointer, remote, id, private, copies[{path, seen, here, available}], default}`,
+- `folder` is the vault's name, `{name, pointer, remote, id, private, copies[{path, seen, here, available}], default}`,
   or `null`. `pointer` is the name pointers use. `default` is the copy links open.
 - `links` is the convention, `{style, path, extension}`. Each of these is `{value, source, why}`. `source` is `setting`,
   `tool`, `notes` (with `share`, a percentage) or `default`.
-- `skipped` lists what the walk left out, and why (too large, a symlink out of the root, a nested root).
+- `root` is the vault's path.
+- `skipped` lists what the walk left out, and why (too large, a symlink out of the vault, a nested vault).
 
 ### `init`
 
-Gives a folder a `.slipbox/` folder, which makes it a root and holds its own settings. With `--name`, `init` gives it a
+Gives a folder a `.slipbox/` folder, which makes it a vault and holds its own settings. With `--name`, `init` gives it a
 name too. Without a folder, it works on the current one.
 
 ```bash
@@ -1217,42 +1221,43 @@ slipbox init ideas --name ideas
 - `--dry-run`: say what it would do, writing nothing. It refuses what the run would refuse, such as a name taken
   (exit 5).
 
-On a folder inside a root, `init` makes that folder a root of its own. It rewrites the links that would stop reaching
-across the new boundary:
+On a folder inside a vault, `init` makes that folder a vault of its own. It rewrites the links that would stop
+reaching across the new boundary:
 
-- a link from the root, `/…`
+- a link from the vault's top, `/…`
 - a wikilink by name across it
 
 That's a change like a rename. `--plan` works there, and `deinit` takes it back. Making a `.slipbox/` anywhere else has
 no edits to plan, so `--plan` is a usage error there. `--dry-run` previews it.
 
 With `--json`, the data is `{root, created, identified, id, name, excluded}`. `excluded` is the file `--private` listed
-it in. With `--dry-run`, the data is `{root, dryRun}`. On a folder inside a root, the data is [a
-change](#moving-copying-and-deleting), with `kind` `make-root`, and with `root`, `name`, `id` and `created`.
+it in. With `--dry-run`, the data is `{root, dryRun}`. On a folder inside a vault, the data is [a
+change](#moving-copying-and-deleting), with `kind` `make-root`, and with `root`, `name`, `id` and `created`. `root` is
+the vault's path.
 
 ### `deinit`
 
-Makes a root nested inside another a plain folder of it again. It rewrites links the other way:
+Makes a nested vault part of the vault holding it again. It rewrites links the other way:
 
-- Its paths from its root gain its folder.
+- Its paths from its own top gain its folder.
 - A name the parent's notes share becomes a path.
-- Its pointers, in every root this machine has indexed, become relative paths or the parent's pointer.
+- Its pointers, in every vault this machine has indexed, become relative paths or the parent's pointer.
 
-Its `.slipbox/` goes to the parent's trash. `trash restore` makes it a root again.
+Its `.slipbox/` goes to the parent's trash. `trash restore` makes it a vault again.
 
 ```bash
 slipbox deinit ideas --dry-run
 ```
 
-Only a root nested in another, made a root by its `.slipbox/` alone, can be made a plain folder. Anything else is
-refused (exit 5). A git repository, for example, stays a root with or without `.slipbox/`.
+Only a vault nested in another, made a vault by its `.slipbox/` alone, can be made part of the vault holding it.
+Anything else is refused (exit 5). A git repository, for example, stays a vault with or without `.slipbox/`.
 
 `deinit` takes `--dry-run` and `--plan`. With `--json`, the data is [a change](#moving-copying-and-deleting), with
 `kind` `unmake-root`.
 
 ### `name`
 
-Names this root, as pointers name it. A root with a `.slipbox/` has its name changed, and the old one is kept. So
+Names this vault, as pointers name it. A vault with a `.slipbox/` has its name changed, and the old one is kept. So
 pointers by the old name still find it, and `relink` rewrites them. A repository without a `.slipbox/` is given one to
 hold the name.
 
@@ -1264,17 +1269,17 @@ slipbox name journal
 These are refused (exit 5):
 
 - a name a different folder has here
-- a plain folder (`init` makes it a root first)
+- a folder outside every vault (`init` makes it a vault first)
 - a `.slipbox/config.toml` whose `[vault]` table the edit can't follow (edit it by hand)
 
 A clone may take its repository's name, as `init --name` may give it. A copy of the repository is no different folder
-([Copies of a folder](links-and-roots.md#copies-of-a-folder)).
+([Copies of a folder](links-and-vaults.md#copies-of-a-folder)).
 
 `name` takes `--dry-run`. It takes `--plan` where a `.slipbox/` exists. Making one has nothing to plan, so `--plan`
 there is exit 2.
 
 With `--json`, the data is [a change](#moving-copying-and-deleting), with `kind` `root`. For a repository given a
-`.slipbox/`, it's `{root, name, id, created}`.
+`.slipbox/`, it's `{root, name, id, created}`, `root` the vault's path.
 
 ### `folders`
 
@@ -1310,7 +1315,7 @@ or with no base, these commands are exit 3. [Git](git.md) covers git in the scre
 
 ### `changed`
 
-Lists every file of the root this branch changed, untracked ones included. A mark says how each changed:
+Lists every file of the vault this branch changed, untracked ones included. A mark says how each changed:
 
 | Mark | Meaning |
 | --- | --- |
@@ -1347,14 +1352,14 @@ With `--json`, the data is `{path, base, mergeBase, new, rows[{kind, text, line}
 
 ### `worktrees`
 
-Lists the repository's checkouts, the main one first. Each has its branch and folder, and this root's folder in it. `*`
+Lists the repository's checkouts, the main one first. Each has its branch and folder, and this vault's folder in it. `*`
 marks the one you're in.
 
 ```bash
 slipbox worktrees
 ```
 
-With `--json`, the data is `[{path, branch, head, main, root, current}]`. `root` is this root's folder in that checkout.
+With `--json`, the data is `[{path, branch, head, main, root, current}]`. `root` is this vault's folder in that checkout.
 
 ### `merge-review`
 
@@ -1382,7 +1387,7 @@ Each break says why:
 | Why | What happened |
 | --- | --- |
 | `moved` | A branch moved the file. `to` says where, and `fix` is the link to write instead. |
-| `deleted` | A branch deleted it, or moved it out of the root. |
+| `deleted` | A branch deleted it, or moved it out of the vault. |
 | `note-moved` | The linking note moved without its relative link. |
 | `missing` | Neither branch had it. |
 
@@ -1395,12 +1400,12 @@ lists the files git couldn't merge.
 
 ## The scratch and the context bundle
 
-The scratch is a Markdown file per root. You, your editor or an agent collect references and notes in it, to hand to an
+The scratch is a Markdown file per vault. You, your editor or an agent collect references and notes in it, to hand to an
 agent. You read it in the screen with `space s s` ([The scratch](editing.md#the-scratch)).
 
 By default, the scratch is kept in slipbox's state, not among your notes. [`capture.location`](configuration.md)
-`= "root"` keeps it in the root, as [`capture.file`](configuration.md) names it. A plain folder's scratch is always in
-slipbox's state.
+`= "root"` keeps it in the vault, as [`capture.file`](configuration.md) names it. A folder outside every vault always
+has its scratch in slipbox's state.
 
 [Working with agents](../guides/agents.md) shows the scratch in use, and nvim keybindings that capture.
 
@@ -1416,8 +1421,8 @@ slipbox capture --ref ideas/coffee.md:5-6 --snippet
 printf 'brew ratio 1:16\n' | slipbox capture --stdin --lang text
 ```
 
-- `--ref <reference>`: lines of a file. Lines count from 1, in order. A path inside the root is stored relative to it. A
-  file that isn't there, or a line past its end, is kept with a warning. The reference is one of these:
+- `--ref <reference>`: lines of a file. Lines count from 1, in order. A path inside the vault is stored relative to it.
+  A file that isn't there, or a line past its end, is kept with a warning. The reference is one of these:
   - `path:42`
   - `path:42-50`
   - `path:42:10-30`, columns 10 to 30 of line 42
@@ -1428,7 +1433,7 @@ printf 'brew ratio 1:16\n' | slipbox capture --stdin --lang text
   it's the text. Empty stdin is refused (exit 2).
 - `--lang <language>`: fence stdin as code in this language.
 
-The human output is the scratch's path. With `--json`, the data is `{scratch, project, entry}`. `project` is the root,
+The human output is the scratch's path. With `--json`, the data is `{scratch, project, entry}`. `project` is the vault,
 and `entry` is what was added.
 
 ### `scratch`
@@ -1470,7 +1475,7 @@ slipbox context coffee --copy
 ```
 
 Each file is a `## path` section, with its reference (`` `path:1-N` ``) and why it's included (`asked for`,
-`linked from …`, `links to …`). Another root's note is included but not followed.
+`linked from …`, `links to …`). Another vault's note is included but not followed.
 
 These are left out, and named in a last `## Left out` section:
 
@@ -1543,11 +1548,11 @@ slipbox export coffee inbox -o exports/coffee.docx
   name. The folder is made if it isn't there.
 
 Without `-o`, the document goes beside the first note, under its name (`ideas/coffee.docx`). A Markdown export goes
-there as `coffee.export.md`, with its pictures in `coffee.export.assets/`. Those are the root's pictures only. Anything
-else stays a link. The other formats also hold only the root's pictures. A picture from outside the root is its alt
+there as `coffee.export.md`, with its pictures in `coffee.export.assets/`. Those are the vault's pictures only. Anything
+else stays a link. The other formats also hold only the vault's pictures. A picture from outside the vault is its alt
 text.
 
-A file already at the path is replaced without asking. A note is never replaced, of this root or another (exit 5). The
+A file already at the path is replaced without asking. A note is never replaced, of this vault or another (exit 5). The
 one exception is an earlier Markdown export ([Exporting](export.md#from-the-command-line)).
 
 `export` fetches nothing from the network. With `--json`, the data is `{path, format, notes[], bytes, files[]}`. `files`
@@ -1580,13 +1585,14 @@ slipbox doctor
 slipbox doctor src/shelf.ts
 ```
 
-In a root you don't trust, a warning says what that leaves out. A note is exit 3, since slipbox serves notes itself.
+In a vault you don't trust, a warning says what that leaves out. A note is exit 3, since slipbox serves notes itself.
 `doctor` only looks. It installs nothing.
 
 With `--json`, the data is `[{languages[], servers[{name, role, status, where, path, package, hint, requires}],
 linters[{name, program, where, path, hint, markers, required}]}]`. For a file, it's
-`{language, languageId, root, trusted, limits[], skipped[{name, why}], run[], missing[], linters[]}`. There, each linter
-has its `root`, which is `null` when it wasn't run.
+`{language, languageId, root, trusted, limits[], skipped[{name, why}], run[], missing[], linters[]}`, where `root` is
+the file's project, the folder its servers start in. There, each linter has its `root`, which is `null` when it wasn't
+run.
 
 ### `diagnostics`
 

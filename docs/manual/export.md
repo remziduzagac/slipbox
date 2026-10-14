@@ -47,13 +47,13 @@ Settle the change with `space n c` (see [Editing](editing.md)), then export agai
 
 ## Several notes as one document
 
-1. Press `space n shift+o`, or type `:export-notes`. A list of the root's notes opens. The note on screen, or the one
+1. Press `space n shift+o`, or type `:export-notes`. A list of the vault's notes opens. The note on screen, or the one
    selected in the explorer, is picked already.
 2. Pick the notes in the order you want them. Each pick shows its number. Picking a note again takes it out.
 3. Press `enter` on the first row, "Export these 3 notes…". slipbox asks for the format and where the document goes,
    as for one note.
 
-The root is the folder slipbox treats as the top of your notes ([Links and roots](links-and-roots.md)).
+The vault is the folder slipbox treats as the top of your notes ([Links and vaults](links-and-vaults.md)).
 
 Type to filter the list. What you typed, and where you were, stay between picks. The first row is "Export these 3
 notes…", whatever you've typed.
@@ -72,11 +72,11 @@ The Save As window has three parts:
 The places are:
 
 - **Beside the note**: the folder the (first) note is in.
-- **Last export**: the folder you exported to last from this root, while it's still there. The window opens there
+- **Last export**: the folder you exported to last from this vault, while it's still there. The window opens there
   when there is one.
 - **Downloads**, **Desktop**, **Documents** and **Home**: those you have. On Linux, your desktop's own names for them
   are used.
-- **This root**: the top of your notes.
+- **This vault**: the top of your notes.
 
 The keys:
 
@@ -110,7 +110,7 @@ If a file of that name is there already, slipbox asks:
 
 `y` replaces it, and `n` takes you back to the window.
 
-A note is never replaced, in this root or another. slipbox says so and keeps the window open. The one exception is an
+A note is never replaced, in this vault or another. slipbox says so and keeps the window open. The one exception is an
 earlier Markdown export, which slipbox asks about as it does any file.
 
 ## From the command line
@@ -138,7 +138,7 @@ slipbox export inbox.md ideas/coffee.md -o both.epub  # one e-book, two chapters
   - Any other path is the file's name. Its folders are made as needed.
   - Without `-o`, the document goes beside the first note, under its name.
 - **A file already there is replaced**, without asking, as `-o` does in any tool. A note is never replaced, of this
-  root or any other. slipbox says `ideas/coffee.md is a note — an export doesn't write over it` and exits with 5. An
+  vault or any other. slipbox says `ideas/coffee.md is a note — an export doesn't write over it` and exits with 5. An
   earlier Markdown export is the exception, and is replaced.
 - **What it says** is `exported ideas/coffee.md to ideas/coffee.docx (Word (.docx))`. It adds `, 3 files beside it`
   when it wrote some (a Markdown export's pictures). With `--json`, the data is `{path, format, notes, bytes, files}`.
@@ -225,13 +225,13 @@ A single Markdown file you can take to GitHub or any editor. It is named `coffee
 note's place.
 
 - **Pictures** are copied into a folder beside it, `coffee.export.assets/`, and linked from there. Only those from
-  inside the root are copied, and only files that really are pictures.
-  - Anything else a picture's link names (a text file, or a picture from outside the root) isn't copied. It becomes a
+  inside the vault are copied, and only files that really are pictures.
+  - Anything else a picture's link names (a text file, or a picture from outside the vault) isn't copied. It becomes a
     link to where it is.
   - A picture's size written Obsidian's way (`|240`) is kept.
   - A picture on the internet that slipbox has no copy of stays a picture at its address. So whatever shows the file
     fetches it.
-- **Its pictures don't answer to their names.** slipbox looks for `![[photo.png]]` everywhere in the root but in a
+- **Its pictures don't answer to their names.** slipbox looks for `![[photo.png]]` everywhere in the vault but in a
   Markdown export's pictures folder. That is a folder ending `.export.assets`, or any other beside the export it
   belongs to, which the export's front matter marks (`book.assets/` beside `book.md`, for `-o book.md`). So an export
   beside your notes never takes the place of the picture it copied. A path through the folder
@@ -275,9 +275,9 @@ What becomes of each part of a note:
 - **Pictures** are found as on screen ([Reading](reading.md)): a path from the note's folder, or `![[name]]` by name.
   - A picture on the internet is included when slipbox has a copy of it, kept when you had it shown on screen.
     Otherwise it's a link to its address.
-  - Only the root's pictures go in. A picture outside the root, where it really is, becomes its description (the
+  - Only the vault's pictures go in. A picture outside the vault, where it really is, becomes its description (the
     words in its brackets) in Word, PDF, a web page or an e-book. In Markdown, it becomes a link to it. A link inside
-    the root leading out counts as out.
+    the vault leading out counts as out.
   - A picture that isn't there, or can't be read, becomes its description too.
 - **Diagrams and maths.** A Mermaid diagram is drawn as a picture, dark on white. A kind slipbox doesn't draw stays as
   its code. Maths is typeset.
@@ -289,11 +289,11 @@ What becomes of each part of a note:
 
 ## What an export never does
 
-- **It never writes over a note**, of this root or any other. The one exception is an earlier Markdown export, which
+- **It never writes over a note**, of this vault or any other. The one exception is an earlier Markdown export, which
   its front matter marks.
 - **It never reaches the network.** A picture on the internet comes from slipbox's own copy, or stays a link. See
   [Privacy](privacy.md).
-- **It never takes in a file from outside the root.** A note someone else wrote can name a picture elsewhere on your
+- **It never takes in a file from outside the vault.** A note someone else wrote can name a picture elsewhere on your
   machine. That picture stays out of the document, its description in its place, or a link to it in Markdown.
 - **It never runs another program**, and never installs anything. Every format is written by slipbox itself.
 - **It never changes your notes.** In slipbox, unsaved notes are saved first, as you'd see them on screen.

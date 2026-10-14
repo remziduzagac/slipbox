@@ -222,7 +222,7 @@ The Info view tells you what the file on screen is. It follows you to the next f
 
 - **File**:
   - its path
-  - the root it belongs to
+  - the vault it belongs to
   - what kind of file it is
   - its size
   - when it was changed
@@ -294,7 +294,7 @@ Pressing the panel's key again while it has the keys closes it.
 To make it taller or shorter, drag its top rule. Or give it the keys and use resize mode's `j` and `k`.
 
 What the problems are and where they come from is in [Code](code.md). Broken links, and how to repair them, are in
-[Links and roots](links-and-roots.md).
+[Links and vaults](links-and-vaults.md).
 
 ## The breadcrumb
 
@@ -331,7 +331,7 @@ The status line describes the file in the focused window. From the left:
   While you're in the middle of a key sequence, the chip shows what you've pressed so far instead: `␣ l` after
   `space l`, `C-w` after `ctrl+w`, `2d` after `2 d`.
 - **The folder**, dimmed. It's the folder's name if it has one, or else its path (`~/notes`). In a git repository, the
-  branch checked out comes after it (`~/notes · main`). [Links and roots](links-and-roots.md) explains names.
+  branch checked out comes after it (`~/notes · main`). [Links and vaults](links-and-vaults.md) explains names.
 - **The file's path**, between `‹` and `›`. These two go back and forward in the window's history, as a browser's
   arrows do. Each is bright when there's somewhere to go. Hovering over one says where. Clicking the path lists the
   window's history above it, with **Copy path** first.

@@ -17,8 +17,8 @@ you report a problem.
 
 Run it in your notes folder, or name a folder with `--root ~/notes`. It shows slipbox's version, then:
 
-- **root** and **name**: the folder slipbox takes as the top of your notes, and its name
-  ([Links and roots](links-and-roots.md)).
+- **vault** and **name**: the folder slipbox takes as the top of your notes, and its name
+  ([Links and vaults](links-and-vaults.md)).
 - **notes**: how many notes it found, and how long that took.
 - **index**: whether the search index has been built, and when.
 - **links**: how the folder writes links, as slipbox has worked it out.

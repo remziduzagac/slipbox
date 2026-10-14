@@ -868,7 +868,7 @@ export const NAVIGATING: Check[] = [
       await failed("a missing path", /slipbox: no such file or directory: .*nope\/missing\.md/);
       // The check's own folder holds no marker: not a root.
       await s.restart({ args: ["--root", s.dir], startAt: "vault/home.md", noWait: true });
-      await failed("a --root that isn't a root", /slipbox: --root .* isn't a root/);
+      await failed("a --root that isn't a root", /slipbox: --root .* isn't a vault/);
       // A file outside the --root it's given (the check's trace file, beside the vault): refused too.
       await s.restart({ args: ["--root", s.vault], startAt: "trace", noWait: true });
       await failed("a path outside --root", /slipbox: .*trace is outside --root/);

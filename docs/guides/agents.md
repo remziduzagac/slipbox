@@ -74,9 +74,9 @@ other, both in `~/notes`.
 slipbox ~/notes
 ```
 
-The agent's commands find the same folder by themselves. It's the nearest folder above where they run that holds
-`.git`, `.slipbox/`, `.obsidian/` or `.zk/`. If there's none, it's the folder they run in. slipbox calls this folder
-the root ([Links and roots](../manual/links-and-roots.md)).
+The agent's commands find the same folder by themselves. It's the nearest folder above where they run that holds `.git`,
+`.slipbox/`, `.obsidian/` or `.zk/`, which slipbox calls a vault ([Links and vaults](../manual/links-and-vaults.md)). If
+there's none, it's the folder they run in, standing in for one.
 
 ## Watch the agent write
 
@@ -121,7 +121,7 @@ If you saved the note meanwhile, the write is refused with exit code 5, and noth
 
 The agent then reads the note again and makes its change on your version.
 
-Every write is atomic and stays inside the root.
+Every write is atomic and stays inside the vault.
 
 Some commands change many files at once: `mv`, `convert-links` and `replace --all`. For those:
 
@@ -158,8 +158,8 @@ slipbox link ideas/coffee --from inbox      # a link to write, the way this fold
 
 ## Hand the agent references: the scratch
 
-The scratch is a Markdown file where references collect for your next prompt. There's one per root, or one per folder
-where there is no root. You and the agent both add to it. You read it, and paste it into the agent.
+The scratch is a Markdown file where references collect for your next prompt. There's one per vault, or one per folder
+outside every vault. You and the agent both add to it. You read it, and paste it into the agent.
 
 1. In slipbox, open `ideas/coffee.md`.
 2. Put the cursor on the line `A ratio of 1 to 16 suits a pour-over.`, and press `space s a`. The scratch gets that
@@ -188,8 +188,8 @@ An agent clears the scratch only with `slipbox scratch clear --if-unchanged <sha
 scratch is lost.
 
 The scratch lives in slipbox's own state folder, not among your notes. `slipbox scratch path` says where.
-`capture.location = "root"` keeps it in the root instead, as `capture.file` names it. That setting never puts it in a
-folder that isn't a root ([Configuration](../manual/configuration.md)).
+`capture.location = "root"` keeps it in the vault instead, as `capture.file` names it. That setting never puts it in
+a folder outside every vault ([Configuration](../manual/configuration.md)).
 
 ### From nvim
 

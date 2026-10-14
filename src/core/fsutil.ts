@@ -74,7 +74,7 @@ export function writeNote(root: string, path: string, content: string | Uint8Arr
   } catch {}
   const rel = relative(realRoot, target);
   if (rel === ".." || rel.startsWith(`..${sep}`) || isAbsolute(rel))
-    throw new WriteRefused(`${path} resolves outside the root (${target}) — not writing there`);
+    throw new WriteRefused(`${path} resolves outside the vault (${target}) — not writing there`);
   return atomicWrite(target, content);
 }
 

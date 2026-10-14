@@ -134,7 +134,7 @@ A repository set up to download on demand can still reach its remote while slipb
 same from your shell. For example:
 
 - a partial clone fetching an object it lacks
-- in a root you trust, Git LFS fetching a file when you switch branches or throw away a change
+- in a vault you trust, Git LFS fetching a file when you switch branches or throw away a change
 
 ## What slipbox never sends
 
@@ -176,7 +176,7 @@ A folder can hold tools of its own that would run code it holds:
 - its linters' settings
 - git hooks and filters
 
-In a root you don't trust, none of that runs. Servers run in a safe mode, or not at all. git runs none of the
+In a vault you don't trust, none of that runs. Servers run in a safe mode, or not at all. git runs none of the
 repository's hooks or filters.
 
 slipbox asks the first time it matters (`Trust ~/code/app? …`). It keeps your answer on your machine, never in the

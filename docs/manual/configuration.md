@@ -53,16 +53,16 @@ of the others.
 
 ## A folder's settings
 
-A root can carry settings of its own, for everyone who opens it. For example:
+A vault can carry settings of its own, for everyone who opens it. For example:
 
 - a team's notes that keep their scratch in the folder
 - a repository that leaves its generated files out
 
-These settings go in `.slipbox/config.toml` at the root's top. `slipbox init ~/notes` makes `.slipbox/` with a
+These settings go in `.slipbox/config.toml` at the vault's top. `slipbox init ~/notes` makes `.slipbox/` with a
 `config.toml` that holds a couple of settings, commented out. You can make it by hand too.
 
-A root is a folder slipbox treats as one collection of files. A `.slipbox/` folder is one of the things that make a
-folder a root ([Links and roots](links-and-roots.md)).
+A vault is a folder slipbox treats as one collection of files. A `.slipbox/` folder is one of the things that make a
+folder a vault ([Links and vaults](links-and-vaults.md)).
 
 ```toml
 # ~/notes/.slipbox/config.toml
@@ -80,13 +80,13 @@ Each file overrides the ones before it. A setting no file names keeps its defaul
 
 1. the built-in defaults
 2. your own file
-3. the `.slipbox/config.toml` of each root enclosing this one, the outermost first
-4. the root's own `.slipbox/config.toml`
+3. the `.slipbox/config.toml` of each vault enclosing this one, the outermost first
+4. the vault's own `.slipbox/config.toml`
 
-So a folder's settings reach the roots nested inside it too.
+So a folder's settings reach the vaults nested inside it too.
 
-A root without `.slipbox/` has no file of its own. A git repository or an Obsidian vault is such a root. A plain folder
-outside every root takes only your file.
+A vault without `.slipbox/`, such as a git repository or an Obsidian vault, has no file of its own. A folder outside
+every vault takes only your file.
 
 `slipbox info` lists the files that applied, in this order, on its `config` line.
 
@@ -105,15 +105,15 @@ These come from your own file only. In a folder's file, each is ignored, with a 
   from npm, or ask whether there's a newer release. Nor can it turn any of them off for you. What reaches the network
   is yours to allow.
 - **`[trust]`.** A folder can't trust itself.
-- **`walk.root_markers`.** Where roots are is settled before any folder's file is read.
+- **`walk.root_markers`.** Where vaults are is settled before any folder's file is read.
 - **A key or alias bound to a command that throws work away or runs a program:** `app.quit_force`, `note.revert`,
   `note.save_force`, `scratch.clear`, `shell.run` and `shell.filter`. A clone can't put a quit without saving on
   `ctrl+s`, or a program of its choosing on `:wq`. Your own file may: `"g m" = "shell.run make"`.
 
-A folder's file may give a language server only its settings (`config`). They reach the server only in a root you
+A folder's file may give a language server only its settings (`config`). They reach the server only in a vault you
 trust, as a project's `.vscode/settings.json` would. Some servers' settings name programs to run.
 
-In a root you haven't trusted, a server gets its own defaults and your settings. On top of those come the settings that
+In a vault you haven't trusted, a server gets its own defaults and your settings. On top of those come the settings that
 keep it from running the project's code. Nothing of the folder's own runs.
 
 Trust is explained in [Code](code.md).
@@ -129,7 +129,7 @@ The `[vault]` table of a folder's `.slipbox/config.toml` is its identity, not a 
 The table is read on its own, and never merged into the settings. In your own file it is ignored, with a warning.
 
 Only `slipbox init --name` and `slipbox name` write it. Opening the folder never does. Names and pointers are in
-[Links and roots](links-and-roots.md).
+[Links and vaults](links-and-vaults.md).
 
 ```toml
 [vault]
@@ -175,13 +175,14 @@ Some mistakes only show where the setting is used, and are said there:
 
 The TUI says these. `slipbox render` says the colours' mistakes too. `slipbox info` doesn't.
 
-An older file may say vault where slipbox now says root:
+An older file may use the names some settings had before:
 
-- `capture.location = "vault"`
-- the explorer's actions `rename_vault`, `make_vault` and `unmake_vault`
-- the colour role `sidebar_vault`
+- `capture.location = "vault"`, now `"root"`
+- the explorer's actions `rename_vault`, `make_vault` and `unmake_vault`, now `rename_root`, `make_root` and
+  `unmake_root`
+- the colour role `sidebar_vault`, now `sidebar_root`
 
-Each still works, as the root's word does, and isn't warned of.
+Each still works, as its name now does, and isn't warned of.
 
 ## Every key
 
@@ -206,22 +207,22 @@ mermaid = "text"               # a Mermaid diagram: text (in the terminal's char
                                # are drawn)
 math = "text"                  # a display's maths: text (Unicode) | picture (typeset, where pictures are drawn)
 
-[walk]                         # which files a root holds
+[walk]                         # which files a vault holds
 extensions = ["md", "markdown"] # a note's extensions; never empty
 exclude = []                   # left out, in .gitignore's syntax, besides what .gitignore leaves out
 max_file_size = 4194304        # bytes (4 MiB), 1 to 1 GiB: a larger note is listed as skipped, not read
-root_markers = [".git", ".slipbox", ".obsidian", ".zk"]   # a folder holding one is a root; your file only
+root_markers = [".git", ".slipbox", ".obsidian", ".zk"]   # a folder holding one is a vault; your file only
 
 [links]                        # how the links slipbox writes look (see The links' convention)
 style = "auto"                 # auto | markdown | wiki
-path = "auto"                  # auto | relative | root (from the root's top: /…) | name (a wikilink's only)
+path = "auto"                  # auto | relative | root (from the vault's top: /…) | name (a wikilink's only)
 extension = "auto"             # auto | keep | drop: the .md
 
-[trust]                        # roots whose own tools may run; your file only
+[trust]                        # vaults whose own tools may run; your file only
 roots = []                     # paths and globs, each with what's inside it: ["~/Projects/*", "~/notes"]
 
 [files]                        # files besides notes, in the explorer and the switcher
-show = "auto"                  # auto (renderable in a root with .slipbox/, all elsewhere) | notes
+show = "auto"                  # auto (renderable in a vault with .slipbox/, all elsewhere) | notes
                                # | renderable (notes and data files) | all (every text file)
 include = []                   # always listed, in .gitignore's syntax: ["*.ts", "scripts/"]
 exclude = []                   # never listed, in .gitignore's syntax
@@ -232,7 +233,7 @@ sidebar_width = 30             # 8–200; drawn from 12 to half the terminal, le
 outline = false                # the outline open on the right on a wide terminal
 outline_width = 32             # 8–200; drawn as the explorer is
 split_ratio = 0.5              # 0.2–0.8: the first window's share of a split
-top_bar = true                 # the bar along the top: the slipbox chip, the root's state; space u b
+top_bar = true                 # the bar along the top: the slipbox chip, the vault's state; space u b
 lines = "light"                # the frame's lines: light (─ │) | heavy (━ ┃)
 breadcrumb = true              # the headings the cursor is under, atop each window
 left_rail = true               # a column of buttons down the left edge: the explorer's ≡
@@ -257,9 +258,9 @@ which_key_delay_ms = 500       # 0–10000: its wait (the leader shows it at onc
                                # both a binding and the start of a sequence waits before it runs
 
 [capture]                      # the scratch
-location = "state"             # state (slipbox's state folder, never committed) | root (in the root)
-file = "scratch.md"            # a relative .md path, no "..", nothing hidden; in the root, a scratch that is a
-                               # symlink, or a path leading out of the root, keeps it in the state folder
+location = "state"             # state (slipbox's state folder, never committed) | root (in the vault)
+file = "scratch.md"            # a relative .md path, no "..", nothing hidden; in the vault, a scratch that is a
+                               # symlink, or a path leading out of the vault, keeps it in the state folder
 open_in = "float"              # where it opens: float (in the middle, over the windows) | right (the window on
                                # the right); space u u switches
 
@@ -273,7 +274,7 @@ signs_at = "gutter_right"      # where: gutter_right (its last column, against t
 engine = "auto"                # auto (the index once it's built, else a scan) | index (built first) | scan (no index)
 
 [index]                        # the background index of your home folder, in the TUI
-background = true              # roots found under ~ slowly and indexed: their links become backlinks
+background = true              # vaults found under ~ slowly and indexed: their links become backlinks
 idle_seconds = 30              # 1–86400: it works only once nobody has pressed a key or run a command this long
 
 [diagnostics]                  # a file's problems, where they are
@@ -315,7 +316,7 @@ languages = ["en"]             # a note's languages when its front matter names 
 dictionaries = {}              # your own, by language: { de = "~/dicts/de_DE.dic" }, its .aff beside it
 
 [lint]                         # your markdownlint's findings in notes
-enabled = "auto"               # auto (markdownlint-cli2 where there's a markdownlint config, the root's or
+enabled = "auto"               # auto (markdownlint-cli2 where there's a markdownlint config, the vault's or
                                # ~/.markdownlint-cli2.jsonc; your command always) | on | off (nor any [linter])
 command = []                   # []: markdownlint-cli2, found or installed; else your linter's arguments, the
                                # files added at the end; your file only
@@ -326,7 +327,7 @@ debounce_ms = 120              # 0–10000: changes gathered this long before th
 poll_ms = 2000                 # 50–600000: how often folders are checked for what watching missed
 
 [types.memory]                 # a document type of your own; skill and adr are built in
-paths = ["memory/*.md"]        # its notes: globs from the root's top; paths = [] turns a type off
+paths = ["memory/*.md"]        # its notes: globs from the vault's top; paths = [] turns a type off
 required = ["name", "description", "metadata.type"]   # keys each must have; dotted: a key inside a table
 keys = { name = "string", created = "date" }          # a key's kind, when it's there: string, number, boolean,
                                                       # date, list, table
@@ -472,7 +473,7 @@ An `editor.command` without `{file}` gets the path added at the end.
 - **`editor.remote`** is a list of commands, run in order. Each is waited for before the next:
   `["code -g {file}:{line}"]`. One command may be written as text. `[]` turns it off.
 - **`["nvim"]`** in `editor.remote` finds the nvims running. When there are several, it asks which. The answer is kept
-  for the root while that nvim runs. Then it opens the note there, at the line.
+  for the vault while that nvim runs. Then it opens the note there, at the line.
 - **`lint.command`** is a list of arguments. The files to lint are added at the end, and a leading `~/` is made your
   home folder: `["markdownlint-cli2", "--config", "~/lint/.markdownlint-cli2.jsonc"]`.
 - **A linter's `lint-command`** is run by `sh`, in the nearest folder holding one of its `root-markers`, else in the
@@ -522,7 +523,7 @@ What types are for, and how they are listed and ordered, is in [Finding things](
 | Setting | Values |
 | --- | --- |
 | `links.style` | `auto`, `markdown` (`[Coffee](ideas/coffee.md)`), `wiki` (`[[coffee]]`) |
-| `links.path` | `auto`, `relative` (to the note), `root` (from the root's top, `/…`), `name` (a wikilink's only) |
+| `links.path` | `auto`, `relative` (to the note), `root` (from the vault's top, `/…`), `name` (a wikilink's only) |
 | `links.extension` | `auto`, `keep`, `drop`: the `.md` |
 
 `auto` is the default for each. It leaves the part to the folder, and takes the first of these:
@@ -531,12 +532,12 @@ What types are for, and how they are listed and ordered, is in [Finding things](
 2. else what its notes already do
 3. else a relative Markdown link with `.md`
 
-A root's `.slipbox/config.toml` may set them, and wins over your own file there.
+A vault's `.slipbox/config.toml` may set them, and wins over your own file there.
 
-[How a folder writes links](links-and-roots.md#how-a-folder-writes-links) says:
+[How a folder writes links](links-and-vaults.md#how-a-folder-writes-links) says:
 
 - how each part is found
-- what applies in a plain folder
+- what applies in a folder outside every vault
 - how to see the convention a folder has
 
 ## Colours
@@ -596,7 +597,7 @@ These are the roles of the screen most worth changing:
 | `breadcrumb`, `breadcrumb_current` | the breadcrumb's headings, and the one the cursor is under |
 | `breadcrumb_band`, `breadcrumb_icon`, `breadcrumb_sep` | the breadcrumb's background, icon and separators |
 | `tree_guide` | the explorer's and the outline's tree lines |
-| `sidebar_root` | in the explorer, a folder that is a root of its own |
+| `sidebar_root` | in the explorer, a folder that is a vault of its own |
 | `scrollbar`, `scrollbar_track` | the scrollbar's thumb and track |
 | `cursor`, `cursor_line` | the cursor, and its row |
 | `which_key_key`, `which_key_group` | the which-key popup's keys and group names |
@@ -690,7 +691,7 @@ You add your own words with `z g` or `slipbox spell --add`. They are kept one a 
 The TUI reloads its settings by itself when one of these files is saved:
 
 - your file
-- any of the root's `.slipbox/config.toml` files, its own or an enclosing root's
+- any of the vault's `.slipbox/config.toml` files, its own or an enclosing vault's
 
 It checks every second, or every `watch.poll_ms` if that is shorter. `space v c`, or `:config`, reloads at once.
 
@@ -702,7 +703,7 @@ A reload applies what changed, and says so in a message:
 | The theme, colours, icons and the `[ui]` settings | Shown at once |
 | `ui.sidebar`, `ui.outline`, a pane's width or `ui.split_ratio` | What's on the screen is reset |
 | `[render]` | Every note is drawn again |
-| `[walk]` | The root is walked, indexed and watched again |
+| `[walk]` | The vault is walked, indexed and watched again |
 | `[watch]` | The watching starts again |
 | `[search]` | Searching starts again with it |
 | `[lint]`, `[linter.<name>]` and `[[language]]` | Every file is linted again |
@@ -715,7 +716,7 @@ started with until slipbox starts again.
 You can change some settings in the TUI: the theme with `space u t`, and wrapping, line numbers, zen and the others in
 `space u u`.
 
-A change applies at once. It is kept in the root's session, with the setting it replaced. Another root keeps its own.
+A change applies at once. It is kept in the vault's session, with the setting it replaced. Another vault keeps its own.
 
 On every start, and at every reload, a change is kept only while that setting in your files still has the value it
 replaced. So editing the setting always wins. The TUI never writes your settings file.
@@ -742,7 +743,7 @@ widths.
 Some of them need a few more words:
 
 - A set `render.glyphs` wins over `SLIPBOX_GLYPHS`. Any other value of `SLIPBOX_GLYPHS` is ignored.
-- With `SLIPBOX_CLIPBOARD` set to `file`, copies go only to `clipboard.txt` in the root's state folder. Pasting reads
+- With `SLIPBOX_CLIPBOARD` set to `file`, copies go only to `clipboard.txt` in the vault's state folder. Pasting reads
   it back.
 - `SLIPBOX_RELEASES_URL` and `SLIPBOX_CHANNELS_URL` are for the installer, `slipbox upgrade` and the update check.
 - Without `SLIPBOX_CHANNELS_URL`, the channels' files are read from slipbox's site on GitHub Pages.
@@ -787,7 +788,7 @@ A command run with `:!` gets two variables:
 
 | Variable | Its value |
 | --- | --- |
-| `SLIPBOX_ROOT` | The root's folder |
+| `SLIPBOX_ROOT` | The vault's top folder |
 | `SLIPBOX_FILE` | The path of the file in the window |
 
 ## Where slipbox keeps things
@@ -803,12 +804,12 @@ What it keeps, it keeps in four folders of its own, XDG's, on macOS too:
 | state | `$XDG_STATE_HOME/slipbox`, else `~/.local/state/slipbox` | sessions, the scratch, the trash, your answers |
 | data | `$XDG_DATA_HOME/slipbox`, else `~/.local/share/slipbox` | tools installed, your words, slipbox itself |
 
-A root has a folder of its own in the cache folder, and another in the state folder. Both are named by the root's key.
-The key is the root folder's name and twelve characters of a hash of its path, such as `notes-84ec07632af6`.
+A vault has a folder of its own in the cache folder, and another in the state folder. Both are named by the vault's
+key. The key is the vault's folder name and twelve characters of a hash of its path, such as `notes-84ec07632af6`.
 
-A plain folder you open gets its folders the same way. `slipbox info` prints the root's two folders.
+A folder outside every vault, opened by its path, gets its folders the same way. `slipbox info` prints the two folders.
 
-In a root itself there is only `.slipbox/`, where a root has one. It holds:
+In a vault itself there is only `.slipbox/`, where a vault has one. It holds:
 
 - `config.toml`
 - `version`, the version of its format
@@ -827,8 +828,8 @@ In a root itself there is only `.slipbox/`, where a root has one. It holds:
 | `CACHEDIR.TAG` | It tells backup tools to skip the folder |
 | `parsed.db` | Notes as parsed, by their content, shared by every copy of a folder on the machine |
 | `images/` | Pictures fetched from the internet, a file each, and SVG pictures, diagrams and maths as drawn |
-| `<key>/index.json` | The root's links |
-| `<key>/search.db` | The root's search index |
+| `<key>/index.json` | The vault's links |
+| `<key>/search.db` | The vault's search index |
 
 ### State
 
@@ -836,27 +837,27 @@ For the machine:
 
 | File | What it holds |
 | --- | --- |
-| `roots.json` | Every root and plain folder seen, and the moves of those that moved |
+| `roots.json` | Every vault seen, and every folder outside one opened; the moves of those that moved |
 | `folders.json` | Named folders: their names, copies and defaults |
-| `trust.json` | Your answers when asked whether to trust a root |
+| `trust.json` | Your answers when asked whether to trust a vault |
 | `positions.json` | Where you were in each note, the newest 5,000 |
 | `autoindex.json` | How far the background index has got |
 | `activity` | When the command line last ran |
 | `plans/` | Plans saved with `--plan`, for `slipbox apply`. Each is removed once applied |
 | `update.json` | When the update check last asked, and what it found |
 
-For each root, in `<key>/`:
+For each vault, in `<key>/`:
 
 | File | What it holds |
 | --- | --- |
 | `session.json` | Tabs, splits and panes, the settings changed in the TUI, the notes and commands used lately |
-| `scratch.md` | The scratch, unless `capture.location` puts it in the root |
+| `scratch.md` | The scratch, unless `capture.location` puts it in the vault |
 | `trash/` | What you deleted, to restore, for 30 days. `trash.json` lists it |
 | `renames.json` | The last 20 renames and moves, to undo |
 | `redirects.json` | Moves seen, to repair the links that pointed at the old place |
 | `heads.json` | Each branch's last commit seen |
 | `export.json` | Where an export last went |
-| `roots.json` | The roots pinned in the explorer (`:pin-root`) |
+| `roots.json` | The vaults pinned in the explorer (`:pin-root`) |
 | `clipboard.txt` | A copy no clipboard could take |
 | `dirty/` | The notes with unsaved changes in a running TUI, so the command line can say a file is out of date |
 

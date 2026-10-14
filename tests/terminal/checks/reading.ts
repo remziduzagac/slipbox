@@ -578,12 +578,12 @@ export const READING: Check[] = [
       // The vault's info says why each was left out of the walk.
       await leader(s, "v", "i");
       await s.see(/research\/zero\.md — symlink to something that isn't a file/);
-      await s.see(/research\/outside\.md — symlink points outside the root/);
+      await s.see(/research\/outside\.md — symlink points outside the vault/);
       await s.keys("escape");
       // A symlink out of the root: never read, as the walk and the CLI (exit 5) refuse it.
       await ex(s, "e research/outside.md");
       await s.until(
-        () => s.statusLine().includes("outside.md") || /outside the root|no note or file/.test(s.text()),
+        () => s.statusLine().includes("outside.md") || /outside the vault|no note or file/.test(s.text()),
         3000,
         "outside.md opened or refused",
       );
@@ -1022,7 +1022,7 @@ export const READING: Check[] = [
       await open(s, "kenji-mori");
       await leader(s, "n", "i");
       await s.status("INFO");
-      await s.see(/root +halden/);
+      await s.see(/vault +halden/);
       await s.see("Properties");
       await s.see(/building +Workshop/);
       await s.see(/backlinks +\d+/);

@@ -1,7 +1,7 @@
 # Finding things
 
 This chapter covers every way to find something in slipbox, from a note by its name to a command by its name.
-Following links and backlinks, the other way to get around, is in [Links and roots](links-and-roots.md).
+Following links and backlinks, the other way to get around, is in [Links and vaults](links-and-vaults.md).
 
 | To find | Keys |
 | --- | --- |
@@ -18,7 +18,7 @@ Following links and backlinks, the other way to get around, is in [Links and roo
 
 ## A note by its name: the switcher
 
-Press `ctrl+p` (or `space f f`) to open the quick switcher. It lists every note of the root, and the other files the
+Press `ctrl+p` (or `space f f`) to open the quick switcher. It lists every note of the vault, and the other files the
 explorer shows. The ones you opened lately come first.
 
 The note you were on before this one is at the top. So `ctrl+p` then `enter` takes you back to it.
@@ -40,7 +40,7 @@ Every list and every pane's filter in slipbox matches the same way.
 
 Start with `#` to find a symbol instead:
 
-- In a note, the symbols are the root's headings.
+- In a note, the symbols are the vault's headings.
 - In a code file, they're its language server's symbols (functions, classes), as the server answers.
 
 `enter` opens the file there.
@@ -51,7 +51,7 @@ From the command line, `slipbox ls` lists the notes.
 
 ## Search
 
-Press `space f s` and type some words. Search ranks the root's notes and data files by those words, as you type them.
+Press `space f s` and type some words. Search ranks the vault's notes and data files by those words, as you type them.
 You can also type `:search`, or `:search coffee grinder` to start with words.
 
 Each row shows:
@@ -102,17 +102,17 @@ filters alone, such as a tag or a path, opens at its top.
 
 A note with unsaved changes is searched as you see it, not as it is on disk.
 
-### Across roots
+### Across vaults
 
-Search starts with the root you are in. Press `ctrl+a` in the search list to widen it. Each press moves on:
+Search starts with the vault you are in. Press `ctrl+a` in the search list to widen it. Each press moves on:
 
-1. to the folders this root links to, or that link to it, their hits under a "linked folders" divider
-2. to every root this machine knows
-3. back to this root
+1. to the folders this vault links to, or that link to it, their hits under a "linked folders" divider
+2. to every vault this machine knows
+3. back to this vault
 
 The list's title says which.
 
-A hit in another root is shown by its path (`~/code/website/README.md`). `enter` on it switches to that root, at the
+A hit in another vault is shown by its path (`~/code/website/README.md`). `enter` on it switches to that vault, at the
 line.
 
 A worktree is left out, even when a note links into it. Its notes are copies of its main checkout's.
@@ -126,7 +126,7 @@ A worktree is left out, even when a note links into it. Its notes are copies of 
 
 Search reads an index that slipbox keeps in its cache, outside your folder.
 
-- The TUI builds the index in the background when it opens a root. The first time, the list says "the folder is being
+- The TUI builds the index in the background when it opens a vault. The first time, the list says "the folder is being
   indexed" and how far it has got. Then the TUI keeps the index up to date as files change, whoever changes them.
 - The command line brings the index up to date before each search.
 - `slipbox index` builds the index on demand. `--rebuild` starts it again.
@@ -359,8 +359,8 @@ Following a link, jumping to a heading or opening a note each leaves a place to 
 
 Vim's forward key, `ctrl+i`, reaches slipbox as `tab`, which moves to the next link.
 
-Each window has its own history, kept between sessions. Going back from the first place you visited in a root returns
-to the root before.
+Each window has its own history, kept between sessions. Going back from the first place you visited in a vault returns
+to the vault before.
 
 The status line works like a browser's address bar:
 
@@ -396,7 +396,7 @@ From the command line, `slipbox history` lists the notes read lately and what is
 
 ## Tags
 
-Press `space f t` (or type `:tags`) to list the root's tags. Each shows how many notes carry it, and a nested tag is
+Press `space f t` (or type `:tags`) to list the vault's tags. Each shows how many notes carry it, and a nested tag is
 indented under its parent.
 
 Pick a tag to list its notes. A parent's list includes the notes of the tags under it. `enter` opens a note.
@@ -404,7 +404,7 @@ Pick a tag to list its notes. A parent's list includes the notes of the tags und
 `:tag coffee` goes straight to a tag's notes.
 
 To find notes by a tag and words at once, search for both, such as `#coffee grinder`. Following a tag in a note lists
-its notes too. What counts as a tag is in [Links and roots](links-and-roots.md#tags).
+its notes too. What counts as a tag is in [Links and vaults](links-and-vaults.md#tags).
 
 From the command line, `slipbox tags` lists the tags, and `slipbox tags coffee` lists a tag's notes.
 
@@ -417,7 +417,7 @@ Some notes are of a kind, known by where they are. slipbox can list them in orde
 | `adr` | a note in a folder named `adr`, `adrs`, `decisions` or `decision-records` | the number in its file's name |
 | `skill` | an agent skill's `SKILL.md` | the path |
 
-Press `space f d` (or type `:types`) to list the types the root has. Each shows how many notes are of it.
+Press `space f d` (or type `:types`) to list the types the vault has. Each shows how many notes are of it.
 
 Pick a type, or type `:type adr`, to list its notes in order. Each note shows:
 

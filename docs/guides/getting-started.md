@@ -182,7 +182,7 @@ Next time you run `slipbox ~/notes`, your tabs come back, each note where you le
 - [Making it yours](making-it-yours.md): a theme, your own keys, your editor, settings for a folder.
 - [Working with agents](agents.md): slipbox beside a coding agent, both on the same files.
 - [Coming from Obsidian or zk](from-obsidian-or-zk.md): opening a vault or a notebook as it is.
-- [Finding things](../manual/finding.md), [Links and roots](../manual/links-and-roots.md) and
+- [Finding things](../manual/finding.md), [Links and vaults](../manual/links-and-vaults.md) and
   [Editing](../manual/editing.md): the chapters behind this session's steps.
 - [Keys](../manual/keys.md): every key, as `?` lists them.
 - [How slipbox works](../manual/how-it-works.md): the ideas behind what you just did, and what slipbox promises.

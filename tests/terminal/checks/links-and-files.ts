@@ -257,7 +257,7 @@ const LINKS: Check[] = [
       // The repository's root: `/prd/route-sharing.md` from product's top.
       await follow(s, "route sharing");
       await opened(s, "prd/route-sharing.md");
-      // The handbook is a root of its own inside the repository: its `/glossary.md` is its own.
+      // The handbook is a vault of its own inside the repository: its `/glossary.md` is its own.
       await s.restart({ startAt: "home/work/product/handbook/how-we-write.md" });
       await s.status(/handbook.*how-we-write\.md/);
       await follow(s, "the glossary");
@@ -425,7 +425,7 @@ const LINKS: Check[] = [
       await s.restart({ startAt: "home/Downloads/stray-note.md" });
       await s.see("See plan for the order of work");
       await follow(s, "plan for the order");
-      await s.message(/\[\[plan\]\]: names need a root/);
+      await s.message(/\[\[plan\]\]: names need a vault/);
     },
   },
   {
@@ -577,7 +577,7 @@ const ROOTS: Check[] = [
       // m: its folder moved, picked from the tree by typing — its links out (two deep too) follow, its name stays.
       await s.keys("m");
       await s.see("Move outreach/ to…");
-      await s.see("(the root)");
+      await s.see("(the vault's top)");
       await s.type("handbo");
       await s.keys("enter");
       await s.see(/outreach\/ → handbook\/outreach\//);
@@ -609,16 +609,16 @@ const ROOTS: Check[] = [
       await s.see("give logs/ its .slipbox/, called (empty: no name):");
       await s.see("› halden-logs");
       await s.keys("enter");
-      await s.see(/logs\/ → a root of its own, called halden-logs: \d+ changes? in \d+ files?/);
+      await s.see(/logs\/ → a vault of its own, called halden-logs: \d+ changes? in \d+ files?/);
       await s.keys("enter");
-      await s.message("made logs/ a root of its own, called"); // the box wraps the rest
+      await s.message("made logs/ a vault of its own, called"); // the box wraps the rest
       s.expect(s.exists("logs/.slipbox/config.toml"), "logs/ has its .slipbox/");
       s.expect(s.read("home.md") === home, "home's path into it, across now, as it was");
       // V: back, the links as they were.
       await s.keys("shift+v");
-      await s.see(/logs\/ → a plain folder of halden: \d+ changes? in \d+ files?/);
+      await s.see(/logs\/ → part of halden: \d+ changes? in \d+ files?/);
       await s.keys("enter");
-      await s.message("made logs/ a plain folder of halden");
+      await s.message("made logs/ part of halden");
       s.expect(!s.exists("logs/.slipbox"), "its .slipbox/ gone (to the trash)");
       await s.file("home.md", (t) => t === home, "home as it was");
       // From anywhere too: which-key lists them under space d (folders) and space v (vaults).
@@ -837,7 +837,7 @@ const ROOTS: Check[] = [
       await follow(s, ARCHITECTURE);
       await s.status("docs/architecture.md", 5000);
       await s.ex("pin-root");
-      await s.message(/kestrel: a root of the explorer/); // the box wraps the rest
+      await s.message(/kestrel: kept in the explorer/); // the box wraps the rest
       await s.keys("ctrl+o");
       await s.status(/ notes .*index\.md/, 5000);
       await openExplorer();
@@ -1354,22 +1354,22 @@ const FILES: Check[] = [
       await leader(s, "v", "m");
       await s.see("give people/ its .slipbox/, called (empty: no name):");
       await s.keys("enter");
-      await s.see(/people\/ → a root of its own, called .*: \d+ changes? in \d+ files?/);
+      await s.see(/people\/ → a vault of its own, called .*: \d+ changes? in \d+ files?/);
       await s.keys("enter");
-      await s.message("made people/ a root of its own");
+      await s.message("made people/ a vault of its own");
       s.expect(s.exists("people/.slipbox/config.toml"), "people/ has its .slipbox/");
       s.expect(s.read("home.md") === home, "home's paths into it as they were");
       // At the top of halden, this root isn't nested: nothing to take away.
       await leader(s, "v", "shift+m");
-      await s.message("halden isn't inside another root");
-      // In a root nested in halden (outreach, by home's link): made a plain folder of halden.
+      await s.message("halden isn't inside another vault");
+      // In a root nested in halden (outreach, by home's link): made part of halden.
       await open(s, "home");
       await s.keys("shift+g", "enter");
       await s.message(" outreach — ");
       await leader(s, "v", "shift+m");
-      await s.see(/outreach\/ → a plain folder of halden: \d+ changes? in \d+ files?/);
+      await s.see(/outreach\/ → part of halden: \d+ changes? in \d+ files?/);
       await s.keys("enter");
-      await s.message("made outreach/ a plain folder of halden");
+      await s.message("made outreach/ part of halden");
       s.expect(!s.exists("outreach/.slipbox"), "its .slipbox/ gone (to the trash)");
     },
   },
@@ -1927,7 +1927,7 @@ const GIT: Check[] = [
       // nothing signed, said there.
       await s.keys("c");
       await s.see("# Committing: 1 file staged (docs/sync.md).");
-      await s.see("# This root isn't trusted: its hooks don't run, and the commit isn't signed");
+      await s.see("# This vault isn't trusted: its hooks don't run, and the commit isn't signed");
       await s.type("Docs: the line the agent added");
       await s.keys("escape", "ctrl+s");
       await s.message(/committed [0-9a-f]+: Docs: the line the agent/, 8000);

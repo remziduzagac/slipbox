@@ -56,7 +56,7 @@ where you click. A click on a link follows it.
 Every movement key, with the editors' alternatives, is in [Keys](keys.md).
 
 `enter` follows the link under the cursor. When the cursor isn't on a link, `enter` follows the row's first link.
-Following links, and coming back with `ctrl+o`, is in [Links and roots](links-and-roots.md).
+Following links, and coming back with `ctrl+o`, is in [Links and vaults](links-and-vaults.md).
 
 The numbers down the left side are the note's line numbers in its Markdown. Each one sits on the row where its line
 starts, so a long line wrapped over several rows has one number. `space u n` hides them, and
@@ -158,7 +158,7 @@ web address in the text is a link too.
 A web link's address can follow its text. `space u r` shows the addresses, and `render.show_urls = "always"` always
 does. By default they show only where there's no colour to mark links.
 
-How links resolve, and what each kind does when followed, is [Links and roots](links-and-roots.md).
+How links resolve, and what each kind does when followed, is [Links and vaults](links-and-vaults.md).
 
 ### Lists and tasks
 
@@ -408,7 +408,7 @@ slipbox draws maths as text. It reads maths written as Obsidian writes it: `$…
 | `\sum_{i=1}^n` | `∑ᵢ₌₁ⁿ` |
 | `\mathbb{R}` | `ℝ` |
 
-Fractions and roots are written out (`(a+b)/c`, `√x`).
+Fractions and square roots are written out (`(a+b)/c`, `√x`).
 
 A block is centred. `aligned` rows line up at their `&`, and `cases` and matrices get tall brackets.
 
@@ -485,7 +485,7 @@ were ([Editing](editing.md)).
 
 A value that is a web address is a link, and so is a path that names a file in the folder. Keys that name another
 file, such as `$ref`, `$schema`, `extends`, `include` and `import`, are links too. They're shown as broken when they
-reach nothing. [Links and roots](links-and-roots.md) has how such links count.
+reach nothing. [Links and vaults](links-and-vaults.md) has how such links count.
 
 A data file that doesn't parse can't be drawn. It opens as text, with the error in a message. Once it parses again,
 `ctrl+k` draws it.

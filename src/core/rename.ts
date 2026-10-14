@@ -470,9 +470,9 @@ function walkSkips(rel: string): boolean {
 function cleanTarget(g: Graph, input: string): string {
   const rel = posix.normalize(input.replace(/\\/g, "/").replace(/^\/+/, "").replace(/\/+$/, ""));
   if (rel.startsWith("../") || rel === ".." || rel === "." || isAbsolute(rel))
-    throw new RenameError(`${input} isn't inside the root`);
+    throw new RenameError(`${input} isn't inside the vault`);
   if (walkSkips(rel)) throw new RenameError(`${input}: the walk leaves hidden folders and node_modules out`);
-  if (!landsInside(g.root, join(g.root, rel))) throw new RenameError(`${rel} would land outside the root`);
+  if (!landsInside(g.root, join(g.root, rel))) throw new RenameError(`${rel} would land outside the vault`);
   const where = fileInTheWay(g.root, rel);
   if (where) throw new RenameError(`${where} is a file: ${rel} can't go under it`);
   return rel;
@@ -749,7 +749,7 @@ function relativeAs(written: string, fileAbs: string, targetAbs: string): string
  */
 export function planVaultFolderMove(parent: Graph, fromRel: string, toInput: string): RenamePlan {
   const from = posix.normalize(fromRel.replace(/\/+$/, ""));
-  if (!parent.nestedRoots().includes(from)) throw new RenameError(`no root nested at ${fromRel} in ${parent.root}`);
+  if (!parent.nestedRoots().includes(from)) throw new RenameError(`no vault nested at ${fromRel} in ${parent.root}`);
   const to = cleanTarget(parent, toInput);
   if (to === from) throw new RenameError(`${from} is already there`);
   if (to.startsWith(`${from}/`)) throw new RenameError(`${from} can't move into itself`);
@@ -1306,11 +1306,11 @@ export function planMakeVault(
   opts: { private?: boolean } = {},
 ): RenamePlan {
   if (parent.loc.mode !== "vault")
-    throw new RenameError(`${parent.root} isn't a root: make it one first (slipbox init)`);
+    throw new RenameError(`${parent.root} isn't a vault: make it one first (slipbox init)`);
   const F = folderPath(parent, folderRel);
-  if (parent.nestedRoots().includes(F)) throw new RenameError(`${F} is already a root`);
+  if (parent.nestedRoots().includes(F)) throw new RenameError(`${F} is already a vault`);
   if (!parent.dirs.includes(F)) throw new RenameError(`no folder ${F} in ${parent.root}`);
-  if (F.split("/").some((s) => s.startsWith("."))) throw new RenameError(`${F}: hidden folders aren't the root's`);
+  if (F.split("/").some((s) => s.startsWith("."))) throw new RenameError(`${F}: hidden folders aren't the vault's`);
   if (name !== null) checkVaultName(name);
   const Fabs = join(parent.root, F);
   const inF = (rel: string) => rel.startsWith(`${F}/`);
@@ -1377,12 +1377,12 @@ function checkVaultName(name: string, except?: string): void {
  */
 export function planUnmakeVault(parent: Graph, folderRel: string): RenamePlan {
   const F = folderPath(parent, folderRel);
-  if (!parent.nestedRoots().includes(F)) throw new RenameError(`no root nested at ${F} in ${parent.root}`);
+  if (!parent.nestedRoots().includes(F)) throw new RenameError(`no vault nested at ${F} in ${parent.root}`);
   const Vabs = join(parent.root, F);
   // A git checkout is a vault by itself (20.3): without its .slipbox/ it would be one still.
   const others = markersAt(Vabs).filter((m) => m !== ".slipbox");
   if (others.length)
-    throw new RenameError(`${F} is a root by its ${others.join(", ")} too: it stays one, with or without .slipbox/`);
+    throw new RenameError(`${F} is a vault by its ${others.join(", ")} too: it stays one, with or without .slipbox/`);
   const v = openVault(Vabs);
   v.ensureAll();
   parent.ensureAll();
@@ -1563,7 +1563,7 @@ export function planUndo(g: Graph): RenamePlan {
       throw new RenameError(
         `nothing to undo on ${branch ? `branch ${branch}` : "this checkout"}: the last rename was made on ${other.branch ? `branch ${other.branch}` : "a detached HEAD"}`,
       );
-    throw new RenameError("nothing to undo: no rename, move, relink or replace has been done in this root");
+    throw new RenameError("nothing to undo: no rename, move, relink or replace has been done in this vault");
   }
   const what =
     r.kind === "relink"

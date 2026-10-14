@@ -1,4 +1,4 @@
-// Export (plan 10.x): the assembler against a root of its own, each writer's file opened and read back — a .docx or an
+// Export (plan 10.x): the assembler against a vault of its own, each writer's file opened and read back — a .docx or an
 // EPUB unzipped here and its XML read, a PDF's pages read back to their text, the HTML and Markdown as they are — and
 // the formats' names. The CLI's `export` is in cli.test.ts, the TUI's in tui.test.ts.
 

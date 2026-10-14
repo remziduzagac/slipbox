@@ -1,6 +1,6 @@
 ---
-status: proposed
-assignee: null
+status: done
+assignee: claude-cli
 blocked_by: []
 created: "2026-10-15"
 ---
@@ -20,3 +20,10 @@ The words of VV-D1 to VV-D3 in the docs, the help, the messages and the status l
 ## Acceptance criteria
 
 - `tests/docs.test.ts` fails on "root" meaning a vault in the docs; `bun run check` passes.
+
+## Done (2026-10-15)
+
+Words only. Vault in everything users read; a folder and a file outside every vault said so, as they still are,
+until VV-T2 and VV-T3 make home and Elsewhere, and put them on the status line. The names agents, scripts and configs
+depend on keep root (the workstream's design.md lists them). `tests/docs.test.ts` holds the docs, the README, the skill
+and the messages to it.

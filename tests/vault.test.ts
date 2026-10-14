@@ -137,9 +137,9 @@ describe("vault discovery (1.1)", () => {
       expect(() => initVault(home)).toThrow(/never indexes/);
       // --root at it: said so, not a `slipbox init` that would refuse it.
       expect(() => locateVault({ root: home })).toThrow(
-        `--root ${home}: your home folder is never a root; open a folder in it`,
+        `--root ${home}: your home folder is never a vault; open a folder in it`,
       );
-      expect(() => locateVault({ root: "/" })).toThrow("--root /: / is never a root; open a folder in it");
+      expect(() => locateVault({ root: "/" })).toThrow("--root /: / is never a vault; open a folder in it");
     } finally {
       process.env.HOME = before;
     }
@@ -149,7 +149,7 @@ describe("vault discovery (1.1)", () => {
       join(VAULT, "nested-vault"),
     );
     expect(() => locateVault({ root: join(VAULT, "notes") })).toThrow(
-      /isn't a root \(none of \.git, \.slipbox, \.obsidian, \.zk in it\): slipbox init/,
+      /isn't a vault \(none of \.git, \.slipbox, \.obsidian, \.zk in it\): slipbox init/,
     );
     const repo = mkdtempSync(join(tmpdir(), "slipbox-repo-"));
     mkdirSync(join(repo, ".git"));
@@ -200,7 +200,7 @@ describe("the walk (0.11)", () => {
     writeFileSync(join(dir, "a.md"), "![[brand.png]]\n");
     const walk = walkVault(dir, new WalkFilter(dir, DEFAULT_CONFIG.walk));
     expect(walk.assets.sort()).toEqual(["img/brand.png", "shared/logo.png"]);
-    expect(walk.skipped).toContainEqual({ rel: "out.png", reason: "symlink points outside the root" });
+    expect(walk.skipped).toContainEqual({ rel: "out.png", reason: "symlink points outside the vault" });
     const g = openGraph(locateVault({ root: dir }), DEFAULT_CONFIG, false);
     expect(g.resolveLink({ kind: "embed", target: "brand.png" }, "a.md")).toMatchObject({
       resolvedKind: "file",
@@ -677,7 +677,7 @@ describe("what cli.md and the skill promise a caller (9.2)", () => {
     const notRoot = await run(["ls", "--root", plain], dir);
     expect(notRoot.code).toBe(3);
     expect(notRoot.err).toContain(
-      `isn't a root (none of .git, .slipbox, .obsidian, .zk in it): slipbox init ${plain} makes it one`,
+      `isn't a vault (none of .git, .slipbox, .obsidian, .zk in it): slipbox init ${plain} makes it one`,
     );
     expect((await run(["ls", "--root", join(dir, "people")], dir)).code).toBe(3); // a folder of a root isn't one
     expect((await run(["ls", "--root", dir], join(dir, "people"))).code).toBe(0);
@@ -3387,10 +3387,10 @@ describe("a folder made a vault, and a vault made a plain folder again (18.11)",
     // And a git checkout (20.3): a vault by itself, with .slipbox/ or without — nothing changes.
     mkdirSync(join(parent, "proj", ".git"));
     const repo = (await cli(["deinit", "proj"], parent)).json;
-    expect(repo.error.message).toContain("has no .slipbox/ to take away (it's a root by its .git)");
+    expect(repo.error.message).toContain("has no .slipbox/ to take away (it's a vault by its .git)");
     await cli(["init", "proj", "--name", "mkrepo"], parent);
     const both = (await cli(["deinit", "proj"], parent)).json;
-    expect(both.error.message).toContain("proj is a root by its .git too: it stays one, with or without .slipbox/");
+    expect(both.error.message).toContain("proj is a vault by its .git too: it stays one, with or without .slipbox/");
     expect(existsSync(join(parent, "proj", ".slipbox"))).toBe(true);
   });
 
@@ -5811,7 +5811,7 @@ describe("freshness and coverage (20.10)", () => {
       "background index off ([index] background)",
     );
     expect(describeBackground({ on: true, found: 2, indexed: 1, left: 7, finished: null, started: "x" })).toBe(
-      "background index: 2 roots found so far, 7 folders left",
+      "background index: 2 vaults found so far, 7 folders left",
     );
   });
 
@@ -6501,7 +6501,7 @@ describe("links by name, read again within their root (21.3)", () => {
     const lg = openGraph(folderAt(loose), DEFAULT_CONFIG, true);
     expect(lg.resolveLink({ kind: "wiki", target: "y" }, "x.md")).toMatchObject({
       resolvedKind: "unresolved",
-      reason: "names need a root, and this folder has none: .git, .slipbox/, .obsidian/ or .zk/ makes one",
+      reason: "names need a vault, and this folder is in none: .git, .slipbox/, .obsidian/ or .zk/ makes one",
     });
   });
 
@@ -7388,7 +7388,7 @@ describe("roots from markers (21.1)", () => {
     const vaultSays = loadConfig({ vaultFile: join(dir, ".slipbox", "config.toml") });
     expect(vaultSays.config.walk.root_markers).toEqual(DEFAULT_CONFIG.walk.root_markers);
     expect(vaultSays.warnings.join()).toContain(
-      "sets walk.root_markers, which only your own config may set (it decides where roots are)",
+      "sets walk.root_markers, which only your own config may set (it decides where vaults are)",
     );
     const user = join(dir, "user.toml");
     writeFileSync(user, '[walk]\nroot_markers = [".git", "a/b", "..", ""]\n');
@@ -7410,7 +7410,7 @@ describe("roots from markers (21.1)", () => {
     const r = await cli(["deinit", join(dir, "obs"), "--dry-run"], dir);
     expect(r.code).toBe(5);
     expect(r.json.error.message).toContain(
-      "obs is a root by its .obsidian too: it stays one, with or without .slipbox/",
+      "obs is a vault by its .obsidian too: it stays one, with or without .slipbox/",
     );
     const plain = await cli(["deinit", join(dir, "nope")], dir);
     expect(plain.code).toBe(5);
@@ -7660,8 +7660,8 @@ describe("the links' convention, found (21.4)", () => {
     });
     expect(parts(plain)).toEqual(["markdown:default", "relative:default", "dropped:setting"]);
     expect([plain.style.why, plain.path.why]).toEqual([
-      "no root: a wikilink needs one",
-      "no root: `/` and names need one",
+      "no vault: a wikilink needs one",
+      "no vault: `/` and names need one",
     ]);
     expect(
       parts(
@@ -9431,7 +9431,7 @@ describe("review cycle 3 (core)", () => {
     try {
       symlinkSync(join(outside), join(dir, "linked")); // a folder, outside
       symlinkSync(join(outside, "secret.md"), join(dir, "s.md")); // a note, outside
-      symlinkSync(join(dir, "a.md"), join(dir, "twin.md")); // a note already in the root
+      symlinkSync(join(dir, "a.md"), join(dir, "twin.md")); // a note already in the vault
       symlinkSync(join(dir, "assets", "real.png"), join(dir, "pic.png")); // a file inside: kept, as the walk keeps it
       // A folder moved in, holding a link out.
       mkdirSync(join(top, "moving"));
@@ -9641,8 +9641,8 @@ describe("deleting and copying: the path checked by the core, whoever asks (18.4
     };
     expect(refused(() => trashPath(g, loc, "gone.md"))).toBe(`no note, file or folder gone.md in ${dir}`);
     expect(refused(() => copyPath(g, "/gone.md/"))).toBe(`no note, file or folder gone.md in ${dir}`);
-    expect(refused(() => trashPath(g, loc, "../a.md"))).toBe("../a.md isn't inside the root");
-    expect(refused(() => copyPath(g, "docs/../.."))).toBe("docs/../.. isn't inside the root");
+    expect(refused(() => trashPath(g, loc, "../a.md"))).toBe("../a.md isn't inside the vault");
+    expect(refused(() => copyPath(g, "docs/../.."))).toBe("docs/../.. isn't inside the vault");
     expect(refused(() => trashPath(g, loc, ".slipbox/config.toml"))).toBe(
       ".slipbox/config.toml: slipbox's and git's own folders aren't notes",
     );

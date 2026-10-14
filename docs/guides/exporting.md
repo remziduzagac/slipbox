@@ -13,7 +13,7 @@ slipbox writes every format itself. Nothing needs installing, and nothing is fet
 3. Press `enter` to take Word, the first. For another format, type to narrow the list (`pdf`), or move with `down`
    and `up`, then press `enter`. A Save As window opens:
    - Down its left are places: beside the note, your last export's folder, your Downloads, Desktop and Documents
-     folders (those you have), your home folder and this root.
+     folders (those you have), your home folder and this vault.
    - On the right are the folder's contents.
    - At the bottom is the file's name, filled in. The first time, it's `coffee.docx`, in the note's folder.
 
@@ -37,7 +37,7 @@ An export reads the notes from disk, so unsaved changes are saved first.
 
 ## Several notes as one document
 
-1. Press `space n shift+o`, or type `:export-notes`. The root's notes are listed. The one on screen is already picked,
+1. Press `space n shift+o`, or type `:export-notes`. The vault's notes are listed. The one on screen is already picked,
    numbered `1`.
 2. Type to find a note, and press `enter` to add it. Its number says its place. What you typed stays, and `backspace`
    clears it for the next. `enter` on a picked note takes it out.
@@ -72,7 +72,7 @@ An agent can export too ([Working with agents](agents.md)). The skill tells it t
   printed.
 - **E-book** (`.epub`): a chapter per note and a contents page, for an e-reader.
 - **Markdown** (`.export.md`): one file for GitHub or any editor. Its pictures are copied into a folder beside it
-  (`coffee.export.assets/`), but only those of the root. The rest are linked where they are. Diagrams, maths and
+  (`coffee.export.assets/`), but only those of the vault. The rest are linked where they are. Diagrams, maths and
   callouts stay as written, for the next app to draw.
 
 In every format, embedded notes (`![[note]]`) are drawn in as they are on screen. Tags are plain text.
@@ -91,9 +91,9 @@ In every format but Markdown, Mermaid diagrams and display maths become pictures
 - **Pictures.** A missing one becomes its alt text. One from the web goes in only if slipbox has already fetched it to
   show you. To fetch it, follow it with `enter` and say yes. Otherwise it's a link.
 - **PDF.** The fonts are your machine's. A character none of them has is a box, and emoji come out black and white.
-- **Pictures from elsewhere.** A note can name a picture outside the root. No export takes it in. Word, PDF, a web
+- **Pictures from elsewhere.** A note can name a picture outside the vault. No export takes it in. Word, PDF, a web
   page and an e-book show its alt text in its place. A Markdown export links to it. If the picture belongs in the
-  document, move it into the root.
+  document, move it into the vault.
 
 Open the document once yourself before you send it.
 

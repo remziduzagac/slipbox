@@ -205,7 +205,7 @@ export function findConvention(input: ConventionInput): Convention {
   const style: ConventionPart<LinkStyle> = input.style
     ? { value: input.style, source: "typed", why: "as typed" }
     : links.style === "wiki" && !hasRoot
-      ? { value: "markdown", source: "default", why: "no root: a wikilink needs one" }
+      ? { value: "markdown", source: "default", why: "no vault: a wikilink needs one" }
       : links.style !== "auto"
         ? { value: links.style, source: "setting", why: setting("style") }
         : tool?.style
@@ -220,7 +220,7 @@ export function findConvention(input: ConventionInput): Convention {
   // No root reads a path from one, nor a name: your `root` or `name` is a relative path there.
   const path: ConventionPart<LinkPath> =
     !hasRoot && (setPath === "root" || setPath === "name")
-      ? { value: "relative", source: "default", why: "no root: `/` and names need one" }
+      ? { value: "relative", source: "default", why: "no vault: `/` and names need one" }
       : fits(setPath)
         ? { value: setPath!, source: "setting", why: setting("path") }
         : fits(toolPath)
@@ -269,7 +269,7 @@ export function describeConvention(c: Convention): string {
 /** What the convention is, and what said which of its parts (those one source said, together). */
 function conventionSaid(c: Convention): { what: string; said: { parts: string; why: string }[] } {
   const style = c.style.value === "wiki" ? "wikilinks" : "markdown links";
-  const path = { relative: "relative", root: "from the root", name: "by name" }[c.path.value];
+  const path = { relative: "relative", root: "from the vault's top", name: "by name" }[c.path.value];
   const ext = c.extension.value === "kept" ? "with .md" : "without .md";
   const parts: [string, string][] = [
     ["style", c.style.why],

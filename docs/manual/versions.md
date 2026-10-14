@@ -37,7 +37,7 @@ Scripts, agents and your own files rely on these. So they change only as
   - the names of the commands your keys and aliases call
   - slipbox's own environment variables
 - **What slipbox writes into your files:** the links it writes, and the `.slipbox/` folder. The links are Markdown
-  links, wikilinks and `slipbox://` pointers, in [Links and roots](links-and-roots.md)'s forms.
+  links, wikilinks and `slipbox://` pointers, in [Links and vaults](links-and-vaults.md)'s forms.
 
 ### What may change in any release
 

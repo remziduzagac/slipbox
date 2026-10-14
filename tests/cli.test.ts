@@ -548,13 +548,13 @@ describe("the vault and the tool", () => {
     expect(slipbox(["help"]).out).toContain("slipbox find <query>");
     expect(slipbox(["--version"]).out).toMatch(/^slipbox \d+\.\d+\.\d+/);
   });
-  test("the CLI says root, never vault (DF-D9): info's mode and what it skipped, a change's kind, nothing to undo; themes are built-in", () => {
+  test("the CLI's JSON keeps root in its values (DF-D9): info's mode, a change's kind; what it prints says vault (VV-D1): what was skipped, nothing to undo; themes are built-in", () => {
     const i = slipbox(["info", "--json"]).json.data;
     expect(i.mode).toBe("root");
-    expect(i.skipped).toContainEqual({ rel: "outreach", reason: "nested root" });
+    expect(i.skipped).toContainEqual({ rel: "outreach", reason: "nested vault" });
     const human = slipbox(["info"]).out;
-    expect(human).toContain(`root      ${vault} (root`);
-    expect(human).toContain("skipped   outreach — nested root");
+    expect(human).toContain(`vault     ${vault}`);
+    expect(human).toContain("skipped   outreach — nested vault");
     expect(
       slipbox(["themes", "--json"]).json.data.find((t: { name: string }) => t.name === "tokyo-night"),
     ).toMatchObject({ source: "built-in" });
@@ -575,7 +575,7 @@ describe("the vault and the tool", () => {
     const none = slipbox(["undo", "--json"], { cwd: dir });
     expect(none.code).toBe(3);
     expect(none.json.error?.message).toBe(
-      "nothing to undo: no rename, move, relink or replace has been done in this root",
+      "nothing to undo: no rename, move, relink or replace has been done in this vault",
     );
     const plan = slipbox(["name", "cli-words-b", "--plan", "--json"], { cwd: dir }).json.data;
     expect(plan).toMatchObject({ kind: "root", from: "cli-words-a", to: "cli-words-b" });
@@ -846,7 +846,7 @@ describe("the vault and the tool", () => {
       to: "box",
     });
     expect(readFileSync(join(dir, "to-inner.md"), "utf8")).toBe("[i](box/note.md)\n");
-    // deinit: a plain folder of this vault again (18.11); the path link means the same.
+    // deinit: part of this vault again (18.11); the path link means the same.
     expect(slipbox(["deinit", "box", "--json"], { cwd: dir }).json.data).toMatchObject({
       kind: "unmake-root",
       from: "box",
@@ -1008,7 +1008,7 @@ describe("the vault and the tool", () => {
     expect(r).toMatchObject({ root: DEMO, name: "halden" }); // its path, and the name pointers give it
     expect(r.vault).toBeUndefined();
     expect(r.properties).toMatchObject({ title: "Kenji Mori", office: { building: "Workshop", desk: 2 } });
-    expect(slipbox(["stat", "people/kenji-mori.md"], { cwd: DEMO }).out).toMatch(/root\s+halden\n/);
+    expect(slipbox(["stat", "people/kenji-mori.md"], { cwd: DEMO }).out).toMatch(/vault\s+halden\n/);
   });
   test("problems: the demo's broken links; a path is never ambiguous (1.7)", () => {
     const p = slipbox(["problems", "--json"], { cwd: DEMO }).json.data;
@@ -2254,7 +2254,7 @@ describe("the CLI's edges: help flags, error paths, empty states", () => {
     expect(
       j.warnings.some(
         (w: string) =>
-          w.includes("isn't a root you trust") &&
+          w.includes("isn't a vault you trust") &&
           w.includes("ruby-lsp not run (it runs the project's Gemfile (Bundler))"),
       ),
     ).toBe(true);
@@ -2265,7 +2265,7 @@ describe("the CLI's edges: help flags, error paths, empty states", () => {
     writeFileSync(cfg, `[trust]\nroots = [${JSON.stringify(root)}]\n`);
     const t = slipbox(["doctor", "app.rb", "--config", cfg, "--json"], { cwd: root, env }).json;
     expect(t.data).toMatchObject({ trusted: true, skipped: [], limits: [] });
-    expect(t.warnings.filter((w: string) => w.includes("isn't a root you trust"))).toEqual([]);
+    expect(t.warnings.filter((w: string) => w.includes("isn't a vault you trust"))).toEqual([]);
   });
 
   test("doctor: language servers off is a warning; with installing off, a server not found says so, never 'installs when needed'", () => {
@@ -2289,7 +2289,7 @@ describe("the CLI's edges: help flags, error paths, empty states", () => {
     // On, nothing to warn of here but the root's trust (said for every root you don't trust, 23.8).
     expect(
       slipbox(["doctor", "--json"], { cwd: root, env }).json.warnings.filter(
-        (w: string) => !w.includes("isn't a root you trust"),
+        (w: string) => !w.includes("isn't a vault you trust"),
       ),
     ).toEqual([]);
   });
@@ -2303,7 +2303,7 @@ describe("the CLI's edges: help flags, error paths, empty states", () => {
     expect(existsSync(join(root, "abs", "deep"))).toBe(true);
     const out = slipbox(["mkdir", join(dir, "beside"), "--json"], { cwd: root, env });
     expect(out.code).toBe(5);
-    expect(out.json.error!.message).toBe(`${join(dir, "beside")} is outside the root (${root})`);
+    expect(out.json.error!.message).toBe(`${join(dir, "beside")} is outside the vault (${root})`);
     expect(existsSync(join(dir, "beside"))).toBe(false);
   });
   test("cp, rm and trash restore of a namesake: each link by name it sends elsewhere is warned (21.3)", () => {

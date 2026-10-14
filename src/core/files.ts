@@ -103,11 +103,11 @@ function move(from: string, to: string): void {
 function vaultPath(g: Graph, rel: string): { rel: string; abs: string; dir: boolean } {
   const clean = posix.normalize(rel.replace(/\\/g, "/").replace(/^\/+/, "").replace(/\/+$/, ""));
   if (!clean || clean === "." || clean.startsWith("../") || clean === "..")
-    throw new FileOpError(`${rel} isn't inside the root`);
+    throw new FileOpError(`${rel} isn't inside the vault`);
   if (clean.split("/").some((s) => s === ".slipbox" || s === ".git"))
     throw new FileOpError(`${rel}: slipbox's and git's own folders aren't notes`);
   const abs = join(g.root, clean);
-  if (!landsInside(g.root, abs)) throw new FileOpError(`${rel} resolves outside the root`);
+  if (!landsInside(g.root, abs)) throw new FileOpError(`${rel} resolves outside the vault`);
   let dir: boolean;
   try {
     dir = statSync(abs).isDirectory();
@@ -191,7 +191,7 @@ export function restorePath(g: Graph | null, v: Keyed, which: string, now = new 
   if (existsSync(item.abs)) throw new FileOpError(`${item.shown} exists again; not restoring over it`);
   // Its root moved and the trash wasn't told: never put back outside the root (recreating where it was).
   if (g && !isInside(g.root, item.abs))
-    throw new FileOpError(`${item.shown} was at ${item.abs}, outside this root now; not restoring it there`);
+    throw new FileOpError(`${item.shown} was at ${item.abs}, outside this vault now; not restoring it there`);
   move(join(trashDir(v), item.id, basename(item.abs)), item.abs);
   rmSync(join(trashDir(v), item.id), { recursive: true, force: true });
   saveTrash(
@@ -231,11 +231,11 @@ export function copyPath(g: Graph, rel: string, toRel?: string): { from: string;
     ? posix.normalize(toRel.replace(/\\/g, "/").replace(/^\/+/, "").replace(/\/+$/, ""))
     : copyName(g, p.rel, p.dir);
   if (toRel && !p.dir && posix.extname(to) === "" && posix.extname(p.rel)) to += posix.extname(p.rel);
-  if (!to || to.startsWith("../") || to === "..") throw new FileOpError(`${toRel} isn't inside the root`);
+  if (!to || to.startsWith("../") || to === "..") throw new FileOpError(`${toRel} isn't inside the vault`);
   if (to === p.rel || to.startsWith(`${p.rel}/`)) throw new FileOpError(`${p.rel} can't be copied into itself`);
   const toAbs = join(g.root, to);
   if (existsSync(toAbs)) throw new FileOpError(`${to} exists; not overwriting it`);
-  if (!landsInside(g.root, toAbs)) throw new FileOpError(`${to} would land outside the root`);
+  if (!landsInside(g.root, toAbs)) throw new FileOpError(`${to} would land outside the vault`);
   const where = fileInTheWay(g.root, to);
   if (where) throw new FileOpError(`${where} is a file: ${to} can't go under it`);
   mkdirSync(dirname(toAbs), { recursive: true });

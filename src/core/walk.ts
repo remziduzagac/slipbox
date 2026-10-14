@@ -101,7 +101,7 @@ export class WalkFilter {
     if (ignored) return ".gitignore";
     // A folder holding a root marker (`walk.root_markers`, 21.1: `.git`, `.slipbox/`, `.obsidian/`, `.zk/`…)
     // inside: a root of its own (20.3).
-    if (isDir && isVaultRoot(join(this.root, rel))) return "nested root";
+    if (isDir && isVaultRoot(join(this.root, rel))) return "nested vault";
     return null;
   }
 
@@ -135,7 +135,7 @@ export function walkVault(root: string, filter: WalkFilter): WalkResult {
   result.files = result.files.filter((f) => {
     const target = symlinkTargets.get(f);
     if (target === undefined || !walked.has(target)) return true;
-    result.skipped.push({ rel: f.rel, reason: `symlink to ${target}, already in the root` });
+    result.skipped.push({ rel: f.rel, reason: `symlink to ${target}, already in the vault` });
     return false;
   });
   symlinkTargets.clear();
@@ -158,7 +158,7 @@ function walkDir(root: string, realRoot: string, dirRel: string, filter: WalkFil
     if (entry.isDirectory()) {
       const why = filter.exclusion(rel, true);
       if (why === null) walkDir(root, realRoot, rel, filter, out);
-      else if (why === "nested root") out.skipped.push({ rel, reason: why });
+      else if (why === "nested vault") out.skipped.push({ rel, reason: why });
       continue;
     }
     if (entry.isSymbolicLink()) {
@@ -196,7 +196,7 @@ export function symlinkVerdict(
   if (st.isDirectory()) return { kept: false, reason: "symlinked directory (not followed)" };
   // A FIFO, socket or device: reading one would hang.
   if (!st.isFile()) return { kept: false, reason: "symlink to something that isn't a file", special: true };
-  if (!isInside(realRoot, target)) return { kept: false, reason: "symlink points outside the root" };
+  if (!isInside(realRoot, target)) return { kept: false, reason: "symlink points outside the vault" };
   return { kept: true, target };
 }
 

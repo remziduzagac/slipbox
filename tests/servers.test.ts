@@ -899,9 +899,9 @@ describe("the servers of open files (19.1)", () => {
     });
     m.open(join(top, "b.fk"), 1, "fine\n");
     await m.stopAll();
-    const said = messages.filter((t) => t.includes("isn't a root you trust"));
+    const said = messages.filter((t) => t.includes("isn't a vault you trust"));
     expect(said).toEqual([
-      `${top} isn't a root you trust: fake without the project's code; .vscode/settings.json not read — trust it in slipbox (it asks), or [trust] roots in your config; slipbox doctor says more`,
+      `${top} isn't a vault you trust: fake without the project's code; .vscode/settings.json not read — trust it in slipbox (it asks), or [trust] roots in your config; slipbox doctor says more`,
     ]);
   });
 

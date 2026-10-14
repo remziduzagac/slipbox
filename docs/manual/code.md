@@ -254,10 +254,10 @@ broken. Once a language server has answered, its own errors take their place.
 In source mode, these are links in a code file, and `enter` follows them:
 
 - a URL
-- a path with an extension that names a file of the root
+- a path with an extension that names a file of the vault
 
-A path is read from the file's folder, else from the root. A leading `/` is the root. `:42` after a path opens that
-line, as in `./retry.ts:12`.
+A path is read from the file's folder, else from the vault's top. A leading `/` is the vault's top. `:42` after a path
+opens that line, as in `./retry.ts:12`.
 
 Paths count in comments and in strings, so you can follow an import's path too.
 
@@ -267,7 +267,7 @@ source mode.
 Code has no wikilinks.
 
 A path in a comment counts as a backlink of the file it names. Moving or renaming that file rewrites the path, as it
-does a note's links ([Links and roots](links-and-roots.md)).
+does a note's links ([Links and vaults](links-and-vaults.md)).
 
 ## Language servers
 
@@ -334,14 +334,14 @@ A language with no server built in, such as Java, Kotlin or Zig, gets one when y
 
 ### Where slipbox finds them
 
-A server runs in its project's top folder. That's the nearest folder above the file holding the language's first root
-marker, but never `~` or `/`. If there's none, it's the file's own folder. For TypeScript, the root markers are
-`tsconfig.json`, then `package.json`, then `.git`.
+A server runs in its project's top folder. That's the nearest folder above the file holding the language's first
+project marker (its `roots`), but never `~` or `/`. If there's none, it's the file's own folder. For TypeScript, the
+markers are `tsconfig.json`, then `package.json`, then `.git`.
 
 slipbox looks for the server's program in this order:
 
 1. the path your config gives it, when its `command` is a full path
-2. the project's own copy, in `node_modules/.bin`, `.venv/bin`, `venv/bin` or `vendor/bin`, but only in a root you
+2. the project's own copy, in `node_modules/.bin`, `.venv/bin`, `venv/bin` or `vendor/bin`, but only in a vault you
    trust
 3. your `PATH`
 4. the folders you install tools into: Mason's `bin` (Neovim's installer), `~/.cargo/bin`, `~/go/bin`, `~/.local/bin`
@@ -421,7 +421,7 @@ yaml
 - its linters
 - what it would have had but can't find
 
-In a root you don't trust, a warning says so, and what that leaves out. Each server left out is listed as
+In a vault you don't trust, a warning says so, and what that leaves out. Each server left out is listed as
 `not run here`, with why.
 
 Given a note, `slipbox doctor` says slipbox serves no language of it. Notes are slipbox's own.
@@ -472,7 +472,7 @@ Only your own config can set `command`, `args` and `environment`, or name any se
 folder's `.slipbox/config.toml` comes with whatever you clone. So it may tune a known server's `config`, but it never
 names a program to run. [Configuration](configuration.md) explains the files and their order.
 
-In a root you trust, a project's `.vscode/settings.json` sets its servers' settings too, as VS Code would read it:
+In a vault you trust, a project's `.vscode/settings.json` sets its servers' settings too, as VS Code would read it:
 
 - over your config's settings
 - comments allowed
@@ -506,11 +506,11 @@ These keys ask about what's under the cursor:
 
 One place opens at once. Several places are a list to pick from, each `file:line` with its line's text.
 
-A definition outside the root, in a dependency's types for instance, opens as a file of its own.
+A definition outside the vault, in a dependency's types for instance, opens as a file of its own.
 
 `esc` or `q` closes the floating window.
 
-In a note, these keys work on links ([Links and roots](links-and-roots.md)):
+In a note, these keys work on links ([Links and vaults](links-and-vaults.md)):
 
 - `shift+k` shows where the link under the cursor lands.
 - `g d` follows it.
@@ -591,7 +591,7 @@ When a linter checks depends on what it reads:
 - A linter that reads the file (`lint-stdin = false`) checks it after each save.
 
 A linter runs from the nearest folder holding one of its `root-markers`. With `require-marker`, it runs only where
-there is one. In a root you trust, the project's own copy comes first.
+there is one. In a vault you trust, the project's own copy comes first.
 
 `lint-formats` are vim's errorformat. [Configuration](configuration.md) has every key.
 
@@ -672,7 +672,7 @@ With `diagnostics.bar = "auto"`, the text doesn't move as problems come and go. 
 A link that reaches nothing, or several notes, keeps its own colour whatever the setting.
 
 A click on a sign or a coloured line number opens the Problems panel at that problem. A click on the status line's
-count opens it on the file's problems, or on the root's when the file has none.
+count opens it on the file's problems, or on the vault's when the file has none.
 
 ### The Problems panel
 
@@ -692,7 +692,7 @@ It has two tabs, **This file** and **All**.
 The tab opens on the problem at or after the cursor. Moving through the list takes the note there and highlights the
 problem. `enter` goes to it and gives the note the keys.
 
-**All** (`space v p`, `:problems`) shows what's wrong across the root, in sections that fold:
+**All** (`space v p`, `:problems`) shows what's wrong across the vault, in sections that fold:
 
 - Broken links
 - Ambiguous links
@@ -702,7 +702,7 @@ problem. `enter` goes to it and gives the note the keys.
 - Conflicts: during a merge
 - Orphans: notes nothing links to
 
-Each time the All tab opens, it checks the root again. In the All tab:
+Each time the All tab opens, it checks the vault again. In the All tab:
 
 | Key | What it does |
 | --- | --- |
@@ -712,7 +712,7 @@ Each time the All tab opens, it checks the root again. In the All tab:
 | `l` and `h` | Unfold and fold a section |
 | `/` | Keeps the problems whose note, line or link matches what you type |
 
-[Links and roots](links-and-roots.md) explains broken, ambiguous and fragile links. [Git](git.md#merge-conflicts)
+[Links and vaults](links-and-vaults.md) explains broken, ambiguous and fragile links. [Git](git.md#merge-conflicts)
 explains conflicts.
 
 ### From the command line
@@ -739,7 +739,7 @@ linter's are included.
 
 It exits 1 when an error is shown, so a script can stop on one.
 
-`slipbox problems` lists the root's link problems, its orphans and a merge's conflicts, as the All tab does. `--lint`
+`slipbox problems` lists the vault's link problems, its orphans and a merge's conflicts, as the All tab does. `--lint`
 adds the note linter's findings. [The command line](cli.md) has both commands in full.
 
 ## Trust
@@ -751,10 +751,10 @@ Opening a folder never runs code it brings with it, unless you trust it. A repos
 - build scripts a server would run
 - git hooks
 
-In a root you don't trust, slipbox runs none of them.
+In a vault you don't trust, slipbox runs none of them.
 
-You trust a root, such as a git repository, and everything in it. [Links and roots](links-and-roots.md) explains
-roots.
+You trust a vault, such as a git repository, and everything in it. [Links and vaults](links-and-vaults.md) explains
+vaults.
 
 ### What runs anyway
 
@@ -779,7 +779,7 @@ Trusted or not, a folder's own config never names a program for slipbox to run. 
 Nor can a folder bind a key or alias to a command that runs a program or throws work away
 ([Configuration](configuration.md) lists them).
 
-### What a root you don't trust leaves out
+### What a vault you don't trust leaves out
 
 - **Its programs**: the project's own copies in `node_modules/.bin`, `.venv/bin`, `venv/bin` and `vendor/bin` aren't
   used, for servers and linters alike. Nor is a program its settings name.
@@ -798,16 +798,16 @@ Nor can a folder bind a key or alias to a command that runs a program or throws 
 - **The note linter** skips a note under a markdownlint config that is code (`.cjs`, `.mjs`) or loads code.
 - **git** runs none of the repository's hooks, filters or other programs ([Git](git.md#what-slipbox-runs)).
 
-This has a cost. In a root you don't trust:
+This has a cost. In a vault you don't trust:
 
 - a Rust project's macros show errors
 - ESLint finds nothing
 - the project's own TypeScript isn't used
 - a Ruby or Swift package gets no server
 
-### Trusting a root
+### Trusting a vault
 
-You never edit a file to trust a root. slipbox asks the first time it matters, when a file's servers there would run
+You never edit a file to trust a vault. slipbox asks the first time it matters, when a file's servers there would run
 with something left out:
 
 ```text
@@ -820,13 +820,13 @@ know (y trusts it; n keeps it safe)
 
 Either answer is kept in slipbox's own state, never in the folder, so it isn't asked again.
 
-slipbox asks about the root you opened, with one answer for every project in it. Else it asks about the file's
+slipbox asks about the vault you opened, with one answer for every project in it. Else it asks about the file's
 project. It never asks while you're typing, but after your next key. A folder of notes alone is never asked.
 
 | Command | In the palette | What it does |
 | --- | --- | --- |
-| `:trust` | "Trust this root" | Trusts the root of the file on screen |
-| `:untrust` | "Stop trusting this root" | Stops trusting it |
+| `:trust` | "Trust this vault" | Trusts the vault of the file on screen |
+| `:untrust` | "Stop trusting this vault" | Stops trusting it |
 
 An answer holds for the folders under it. The nearest answer counts.
 
@@ -837,9 +837,9 @@ To trust folders ahead of time, list them in your own config's `trust.roots`:
 roots = ["~/code/*", "~/notes"]   # paths, ~, globs; each with what's inside it
 ```
 
-A root listed there is trusted whatever you answered. A folder's own `[trust]` is ignored, since a folder can't trust
+A vault listed there is trusted whatever you answered. A folder's own `[trust]` is ignored, since a folder can't trust
 itself.
 
-The command line never asks, and has no way to trust a root, since an agent could be talked into it. In a root you
-don't trust, its commands say on standard error what they left out. `slipbox doctor` says whether a root is trusted,
+The command line never asks, and has no way to trust a vault, since an agent could be talked into it. In a vault you
+don't trust, its commands say on standard error what they left out. `slipbox doctor` says whether a vault is trusted,
 and what that limits.
