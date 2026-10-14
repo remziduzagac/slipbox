@@ -1025,7 +1025,9 @@ they never reach slipbox. `cmd` keys arrive only if the terminal passes them on.
 
 **Same key, two names.**
 
-- Many terminals send `ctrl+h` as `ctrl+backspace`, so both open find and replace.
+- Many terminals send `ctrl+h` as `ctrl+backspace`, so both open find and replace. In such a terminal, `ctrl+h` also
+  does what `ctrl+backspace` does elsewhere: while you type, and in the find row, it deletes the word before the
+  cursor.
 - `ctrl+/` arrives as `ctrl+_`, so both comment a line.
 - `ctrl+i` arrives as `tab`.
 - A terminal without the kitty keyboard protocol sends `ctrl+j` as a line feed, which slipbox reads as `ctrl+j`.
