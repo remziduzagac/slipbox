@@ -101,17 +101,30 @@ export function right(layout: Layout, p: Pos): Pos {
   return { row: p.row, col: i + 1 < cs.length ? cs[i + 1]!.x : (cs[i]?.x ?? 0) };
 }
 
-export function vertical(layout: Layout, p: Pos, delta: number, goal: number): Pos {
+/** `goal` is a column on screen; `at` gives the layout column drawn there on a row (a code block scrolled sideways
+ *  draws its code to the left of where it's laid out), else it's the row's own. */
+export function vertical(
+  layout: Layout,
+  p: Pos,
+  delta: number,
+  goal: number,
+  at?: (row: number, col: number) => number,
+): Pos {
   let row = Math.max(0, Math.min(p.row + delta, lastRow(layout)));
   // Frame rows (the lens's rules) are stepped over, in the direction of travel.
   const dir = delta < 0 ? -1 : 1;
   while (layout.lines[row]?.decor && row + dir >= 0 && row + dir <= lastRow(layout)) row += dir;
   if (layout.lines[row]?.decor) row = p.row;
-  return { row, col: snap(layout, row, goal) };
+  return { row, col: snap(layout, row, at ? at(row, goal) : goal) };
 }
 
+/** A code block's row that scrolls sideways goes to its code's start (past its gutter), which the block scrolls to. */
 export function lineStart(layout: Layout, p: Pos): Pos {
-  return { row: p.row, col: cells(layout.lines[p.row])[0]?.x ?? 0 };
+  const line = layout.lines[p.row];
+  const cs = cells(line);
+  const s = line?.scroll;
+  const code = s && !s.part ? cs.find((c) => c.x >= s.x) : undefined;
+  return { row: p.row, col: code?.x ?? cs[0]?.x ?? 0 };
 }
 
 export function lineEnd(layout: Layout, p: Pos): Pos {

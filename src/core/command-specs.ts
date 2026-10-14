@@ -838,6 +838,12 @@ export const COMMAND_SPECS: CommandSpec[] = [
     desc: "How the code view draws its cells: each in a box, or on a tinted band",
   },
   {
+    id: "ui.code_wrap",
+    title: "Code blocks: scroll or wrap",
+    cli: I,
+    desc: "A code block too wide for the window: scrolled sideways on its own, or its long lines wrapped",
+  },
+  {
     id: "ui.scratch_in",
     title: "Scratch: floating or on the right",
     cli: I,

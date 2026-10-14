@@ -173,6 +173,12 @@ function workspaceSymbols(a: App, overlay: App["overlay"]): { list: (query: stri
 }
 
 /** A cursor command: compute the target from the layout, then move (extending when asked). */
+/** Where a vertical move lands on a row: the layout column drawn at the goal's screen column (App.layoutCol). */
+function goalAt(a: App, v: View): (row: number, col: number) => number {
+  const layout = lay(a, v);
+  return (row, col) => a.layoutCol(v, layout, row, col);
+}
+
 function motion(target: (a: App, v: View) => C.Pos, opts: { keepGoal?: boolean } = {}): Run {
   return (a, arg) =>
     withView(a, (v) => {
@@ -1108,6 +1114,8 @@ const MARKS_NEXT = { off: "error", error: "warning", warning: "info", info: "off
 const MARKS_SAID = { off: "off", error: "errors", warning: "warnings and up", info: "all" } as const;
 /** Where the scratch opens, as the UI settings say it. */
 const SCRATCH_SAID = { float: "floating", right: "on the right" } as const;
+/** A code block too wide, as the UI settings say it. */
+const CODE_WRAP_SAID = { scroll: "scroll sideways", wrap: "wrap" } as const;
 
 function toggle(a: App, key: keyof UiState, title: string): void {
   const next = !a.ui[key];
@@ -1172,6 +1180,12 @@ function infoList(a: App, title: string, rows: [string, string][]): void {
  * `n` / `shift+n`, as in vim: the next match after the cursor (or before it), wrapping around the
  * note, wherever the cursor has moved since the last one.
  */
+/** The cursor to a find's match; in a code block that scrolls sideways, the match in sight whole where it fits. */
+function toMatch(a: App, v: View, m: { row: number; col: number; len: number }): void {
+  a.moveCursor(v, { row: m.row, col: m.col });
+  a.revealInCode(v, lay(a, v), m.row, m.col, m.col + m.len);
+}
+
 function findStep(a: App, dir: 1 | -1, from?: { row: number; col: number }): void {
   const v = a.view;
   if (!v?.find?.matches.length) return a.message("info", "no search — ctrl+f or / starts one");
@@ -1184,7 +1198,7 @@ function findStep(a: App, dir: 1 | -1, from?: { row: number; col: number }): voi
   if (wrapped) i = dir === 1 ? 0 : n - 1;
   v.find.current = i;
   const m = ms[i]!;
-  a.moveCursor(v, { row: m.row, col: m.col });
+  toMatch(a, v, m);
   a.message(
     "info",
     `${i + 1}/${n}  ${v.find.query}${wrapped ? (dir === 1 ? "  (from the top)" : "  (from the bottom)") : ""}`,
@@ -1225,8 +1239,8 @@ export function registerActions(app: App): void {
     // cursor
     "cursor.left": motion((a, v) => C.left(lay(a, v), v.cur)),
     "cursor.right": motion((a, v) => C.right(lay(a, v), v.cur)),
-    "cursor.up": motion((a, v) => C.vertical(lay(a, v), v.cur, -1, v.goal), { keepGoal: true }),
-    "cursor.down": motion((a, v) => C.vertical(lay(a, v), v.cur, 1, v.goal), { keepGoal: true }),
+    "cursor.up": motion((a, v) => C.vertical(lay(a, v), v.cur, -1, v.goal, goalAt(a, v)), { keepGoal: true }),
+    "cursor.down": motion((a, v) => C.vertical(lay(a, v), v.cur, 1, v.goal, goalAt(a, v)), { keepGoal: true }),
     "cursor.word_prev": motion((a, v) => C.wordPrev(lay(a, v), v.cur)),
     "cursor.word_next": motion((a, v) => C.wordNext(lay(a, v), v.cur)),
     "cursor.word_end": motion((a, v) => C.wordEnd(lay(a, v), v.cur)),
@@ -1274,13 +1288,13 @@ export function registerActions(app: App): void {
     "cursor.page_down": (a, arg) =>
       withView(a, (v) => {
         const n = Math.max(1, v.height - 2);
-        if (arg === "extend") extendOrMove(a, v, C.vertical(lay(a, v), v.cur, n, v.goal), true, true);
+        if (arg === "extend") extendOrMove(a, v, C.vertical(lay(a, v), v.cur, n, v.goal, goalAt(a, v)), true, true);
         else a.scrollBy(v, n, true);
       }),
     "cursor.page_up": (a, arg) =>
       withView(a, (v) => {
         const n = Math.max(1, v.height - 2);
-        if (arg === "extend") extendOrMove(a, v, C.vertical(lay(a, v), v.cur, -n, v.goal), true, true);
+        if (arg === "extend") extendOrMove(a, v, C.vertical(lay(a, v), v.cur, -n, v.goal, goalAt(a, v)), true, true);
         else a.scrollBy(v, -n, true);
       }),
     // selection
@@ -1636,7 +1650,7 @@ export function registerActions(app: App): void {
             const m = v.find.matches[i];
             if (m) {
               v.find.current = i;
-              a.moveCursor(v, { row: m.row, col: m.col });
+              toMatch(a, v, m);
             } else a.moveCursor(v, start); // nothing matches (yet): back where the search began, as vim
           },
           () => {
@@ -2120,6 +2134,7 @@ export function registerActions(app: App): void {
         ...UI_TOGGLES.map((t) => ({ label: t.title, hint: onOff(a.ui[t.key] as boolean), data: t.id })),
         { label: "Problems marked in the text", hint: MARKS_SAID[a.ui.problem_marks], data: "ui.problem_marks" },
         { label: "Code cells", hint: a.ui.code_cells === "box" ? "boxes" : "bands", data: "ui.code_cells" },
+        { label: "Code blocks", hint: CODE_WRAP_SAID[a.ui.code_wrap], data: "ui.code_wrap" },
         { label: "Scratch opens", hint: SCRATCH_SAID[a.ui.scratch_in], data: "ui.scratch_in" },
       ];
       a.openList({
@@ -2645,6 +2660,12 @@ export function registerActions(app: App): void {
     const next = a.ui.code_cells === "box" ? "band" : "box";
     a.setUi("code_cells", next);
     a.message("info", `Code cells: ${next === "box" ? "boxes" : "bands"}`);
+  };
+  // A code block too wide for the window: scrolled sideways on its own, or wrapped.
+  impl["ui.code_wrap"] = (a) => {
+    const next = a.ui.code_wrap === "scroll" ? "wrap" : "scroll";
+    a.setUi("code_wrap", next);
+    a.message("info", `Code blocks: ${CODE_WRAP_SAID[next]}`);
   };
   // Where the scratch opens (#43): floating, or in the window on the right.
   impl["ui.scratch_in"] = (a) => {

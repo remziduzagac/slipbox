@@ -14,6 +14,10 @@ The format is [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.1.0/); wh
 
 ### Changed
 
+- A code block too wide for the window scrolls sideways on its own instead of wrapping its lines, so trees, diagrams
+  and aligned output keep their columns. The cursor, a sideways wheel (or `shift` with the wheel), the block's
+  scrollbar and find scroll it, and a Mermaid diagram too wide is drawn and scrolls too. `render.code_wrap = "wrap"`,
+  or Code blocks in `space u u`, wraps them as before.
 - In source mode and the lens, `backspace` and `delete` delete a selection, as `d` and `x` do, without typing first.
 - Where a selection can't be edited, the message names the lens (`space n l`) and source mode (`ctrl+k`).
 

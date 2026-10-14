@@ -496,7 +496,8 @@ Under the pointer, small targets light up.
 In a note, a click moves the cursor, and a click on a link follows it. Drag to select. The selection is copied when
 you let go. A double-click selects and copies a word, and a triple-click the row.
 
-The wheel scrolls the note, a pane or a list. Drag a border to resize what's beside it. Drag a scrollbar's thumb to
+The wheel scrolls the note, a pane or a list. Over a code block too wide for the window, a sideways wheel scrolls the
+block, and so does the wheel with `shift`. Drag a border to resize what's beside it. Drag a scrollbar's thumb to
 scroll.
 
 `space u m` turns the mouse off. That hands it back to the terminal, so you can select text the terminal's own way.
@@ -526,10 +527,11 @@ change it.
 | Spelling | `space u s` | misspelt words marked |
 | Problems marked in the text | `space u shift+d` | none, errors, warnings and up, or all |
 | Code cells | `space u c` | the code view's cells in boxes, or on tinted bands |
+| Code blocks | (only in the list) | a code block too wide scrolls sideways, or wraps |
 | Scratch opens | (only in the list) | floating in the middle, or in the window on the right |
 
-How the theme, glyphs, wrapping and URLs change a note is in [Reading](reading.md). Spelling and the scratch are in
-[Editing](editing.md). Problems and code cells are in [Code](code.md).
+How the theme, glyphs, wrapping, code blocks and URLs change a note is in [Reading](reading.md). Spelling and the
+scratch are in [Editing](editing.md). Problems and code cells are in [Code](code.md).
 
 **Zen mode** takes away:
 

@@ -9,7 +9,7 @@ Pure data, framework-agnostic, defined in `layout/ir.ts` (D6, D8):
 
 ```ts
 Layout { lines: Line[]; links: LayoutLink[]; headings: LayoutHeading[]; width; clipped?; embedded? }
-Line   { spans: Span[]; src; fill?; heading?; srcMap?; decor?; lens?; footnoteDef? }
+Line   { spans: Span[]; src; fill?; heading?; srcMap?; decor?; lens?; footnoteDef?; scroll? }
 Span   { text; role; attrs; bg?; link?; src?; task? }
 ```
 
@@ -25,6 +25,10 @@ Span   { text; role; attrs; bg?; link?; src?; task? }
   position (row, column). The TUI cycles and follows links from this list.
 - **`embedded`** lists the notes drawn in place (`1.11`, D113), nested ones too, so a change to one lays
   this note out again.
+- **`scroll`** marks a row of a code block too wide that scrolls sideways (`codeScroll`, the TUI's `[render] code_wrap
+  = "scroll"`; D233): where its code starts (`x`, moved over by a container that indents the block), how many columns
+  of it show (`w`), the block's widest line (`total`), and the block's label row and last row (`part`), which don't
+  move. Such a row holds its line whole, wider than the layout.
 
 Both faces draw the same IR: `tui/draw.ts` paints it through a `Canvas`, and `layout/ansi.ts`
 turns it into a string for `slipbox render`.
@@ -42,7 +46,7 @@ Containers lay their children out at reduced width and prefix every row, so nest
 | task item | checkbox glyph (after the number in an ordered list); a checked item's text is dimmed |
 | blockquote | `▎` bar per row, italic dim text |
 | callout | `> [!note] Title` (Obsidian and GitHub): icon, title, bar in the kind's colour; `> \[!note]` stays a quote |
-| code | full width, background fill, language label at top right, highlighted, hard-wrapped |
+| code | full width, background fill, language label at top right, highlighted; too wide, kept whole (below) |
 | table | the allocator below |
 | thematic break | a rule across the width |
 | frontmatter | a "properties" block: aligned rows, a long key cut with `…`; a value's `[[link]]` a link; raw: broken |
@@ -96,8 +100,10 @@ Inline tags such as `<kbd>` and `<sup>` are dropped and their text kept.
 **Mermaid** (12.10, D127): a ` ```mermaid ` block is drawn in the terminal's own characters — box drawing, arrows, its
 words in the text's colour and its lines in the table's border colour; in ASCII where the glyphs are — by
 `beautiful-mermaid`, no browser (flowcharts, state, sequence, class and ER diagrams, XY charts). Too wide at its own
-spacing, it's drawn closer together; still too wide, a kind it doesn't draw (`pie`, `gantt`), or one it can't read:
-its code, the label saying why (`mermaid — too wide to draw`, `mermaid — not drawn: pie`). Every row is at the
+spacing, it's drawn closer together; still too wide, with `codeScroll`, drawn at its closest and scrolling sideways
+as code too wide does (D233), a column of margin either side for its marks and a row under it for its scrollbar; too
+wide without it, a kind it doesn't draw (`pie`, `gantt`), or one it can't read: its code, the label saying why
+(`mermaid — too wide to draw`, `mermaid — not drawn: pie`). Every row is at the
 block's line, so the lens opens on its source. The library loads the first time a note holds a diagram; until it's in
 (a moment), the block is its code, then drawn — and `slipbox render` waits for it. Where pictures are drawn,
 `[render] mermaid = "picture"` (12.16) draws it as one instead: `beautiful-mermaid`'s SVG in the theme's colours (its
@@ -119,6 +125,13 @@ as written — in text `$…$`, a display its LaTeX, highlighted (`math — as w
 MathJax, in the `math` role's colour, as big as the words beside it, centred; one it can't read, or wider than the text,
 is text as above. Inline maths is always text. What's read from a note as text — a heading's (so its slug), a task's, a
 link's, a footnote's — keeps its maths as written.
+
+**Code too wide** for its room (D233): with `codeScroll` — the TUI's, with `[render] code_wrap = "scroll"` and
+wrapping on — each line is one row, whole, after the block's one-column gutter, and the block scrolls sideways in the
+window (tui.md § Code blocks that scroll); its last row, the padding under its code, holds its scrollbar. A block
+that fits is laid out as it always was. Without it — `slipbox render`, a doc comment's example in the code view,
+`code_wrap = "wrap"`, wrapping off at the natural width — a long line breaks at the block's width, its rows after the
+first marked `↪` in the gutter. The code a diagram or maths falls back to is a code block, and does the same.
 
 **Wikilinks are links** (`21.3`, D71): `[[name]]` shows its name, `[[name|text]]` its text,
 `[[name#Heading]]` `name › Heading`, `[[name#^id]]` `name ^id` — never inside code, nor after a `\`. A picture
@@ -324,10 +337,12 @@ markers, or 96 columns of indentation before a list marker, get one no-break spa
 ends the nesting there.
 Frontmatter over 64 KB shows as text; YAML is parsed without the (quadratic) duplicate-key check.
 
-Nothing ever overflows the layout width. As a last defence the renderer cuts any row still too wide
-(`enforceRow`) and counts it in `Layout.clipped`, since a cut row is a block's bug and lost text:
+Nothing ever overflows the layout width but a code block's rows that scroll sideways (`scroll`), whose code is
+whole by design: what's before their code, and their window on it, fit. As a last defence the renderer cuts any other
+row still too wide (`enforceRow`) and counts it in `Layout.clipped`, since a cut row is a block's bug and lost text:
 `tests/render.test.ts` renders every demo note at six widths in two glyph sets and asserts that no
-row was cut (a width check alone could never fail, with the cut in place).
+row was cut (a width check alone could never fail, with the cut in place), and every note of the demo vault and the
+reference set with `codeScroll` too.
 
 ## Readability defaults (plan `2.7`)
 

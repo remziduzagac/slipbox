@@ -567,7 +567,8 @@ export class NoteBuffer {
     );
   }
 
-  /** The note laid out; `pictures` (12.x): how its pictures are drawn, and a key that changes when they would. */
+  /** The note laid out; `pictures` (12.x): how its pictures are drawn, and a key that changes when they would;
+   *  `codeScroll`: a code block too wide kept whole, to scroll sideways (`[render] code_wrap`). */
   layout(
     width: number,
     glyphs: Glyphs,
@@ -578,15 +579,22 @@ export class NoteBuffer {
       key: string;
       drawings?: NoteRenderOptions["drawings"];
     },
+    codeScroll = false,
   ): Layout {
-    const key = `${width}:${glyphs.mode}:${showUrls ? 1 : 0}:${pictures?.key ?? "-"}`;
+    const key = `${width}:${glyphs.mode}:${showUrls ? 1 : 0}:${codeScroll ? 1 : 0}:${pictures?.key ?? "-"}`;
     let l = this.layouts.get(key);
     if (!l) {
       l = layoutNote(
         this.parsed,
         graph,
         this.rel,
-        { width, glyphs, showUrls, ...(pictures ? { picture: pictures.picture, drawings: pictures.drawings } : {}) },
+        {
+          width,
+          glyphs,
+          showUrls,
+          codeScroll,
+          ...(pictures ? { picture: pictures.picture, drawings: pictures.drawings } : {}),
+        },
         this.renderCache,
       );
       for (const p of l.embedded ?? []) this.embedded.add(p);

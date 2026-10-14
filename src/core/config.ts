@@ -28,6 +28,9 @@ export interface Config {
     code: "document" | "source";
     /** How the code view draws a cell (24.13): in a box, or on a band. */
     code_cells: "box" | "band";
+    /** A code block too wide for the window, in a rendered note in the TUI: `scroll`, its lines whole, the block
+     *  scrolling sideways on its own; or `wrap`, each long line carried on in the next row. */
+    code_wrap: "scroll" | "wrap";
     /** A note's pictures (12.x): drawn under their `▣ alt` line where the terminal draws images (Kitty graphics, sixel)
      *  — `auto` — or never; `▣ alt` and its path are the floor either way. */
     images: "auto" | "never";
@@ -290,6 +293,7 @@ export const DEFAULT_CONFIG: Config = {
     show_urls: "auto",
     code: "document",
     code_cells: "box",
+    code_wrap: "scroll",
     images: "auto",
     images_remote: "ask",
     mermaid: "text",
@@ -383,6 +387,7 @@ const ENUMS: Record<string, readonly string[]> = {
   "render.show_urls": ["auto", "always", "never"],
   "render.code": ["document", "source"],
   "render.code_cells": ["box", "band"],
+  "render.code_wrap": ["scroll", "wrap"],
   "render.images": ["auto", "never"],
   "render.images_remote": ["ask", "show", "never"],
   "render.mermaid": ["text", "picture"],

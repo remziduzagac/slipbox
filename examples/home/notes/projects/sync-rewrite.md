@@ -26,6 +26,17 @@ The code is mostly [queue.ts](../../work/kestrel/src/sync/queue.ts) on the clien
 `backoff_max_ms`; the budget itself, `sync.retry_budget`, is in `kestrel.toml`. The same file,
 from a note one folder deeper, is `../../../work/kestrel/config/app.toml`, which is why I keep this note where it is.
 
+Where Bramble lives, file by file, for whoever reviews it after me:
+
+```text
+kestrel/
+├── src/sync/queue.ts           the client's queue: each change an operation, ordered by a per-device counter
+├── src/sync/retry.ts           the backoff: 500 ms doubling to 60 s, jitter up to a base, then parked after five
+├── api/kestrel_api/sync.py     the server's half: a batch replayed in order, a replayed operation a success
+├── config/app.toml             [sync]: interval_seconds, max_batch, backoff_base_ms, backoff_max_ms, park_on_conflict
+└── docs/adr/0004-retry-budget.md
+```
+
 ## The `RetryPolicy` and **why** ([ADR-0004](slipbox://kestrel/docs/adr/0004-retry-budget.md))
 
 A retry that never gives up is a stall. A retry that gives up too soon is a lost edit. The compromise is a budget: five

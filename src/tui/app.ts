@@ -414,6 +414,12 @@ export interface View {
   width: number;
   /** First column on screen when wrapping is off (horizontal scroll). */
   left: number;
+  /** How far each code block that scrolls sideways is scrolled (`[render] code_wrap`), by its key (codeBlocks), while
+   *  the window shows `buf`: another note shown, they start from the left again. */
+  codeLeft?: { buf: NoteBuffer; at: Map<string, number> };
+  /** A code block scrolled by the mouse (its wheel, its scrollbar): it stays where the mouse left it, the cursor in it
+   *  out of sight or not, until the cursor next moves. */
+  codeWheeled?: boolean;
   /** Showing the note's raw markdown (source mode, 4.13) instead of its render. */
   source?: boolean;
   /** Live preview (4.14): rendered, with the cursor's block as its markdown, editable in place. */
@@ -445,6 +451,8 @@ export interface LiveBase {
   rendered: Layout;
   width: number;
   wrap: boolean;
+  /** Its code blocks too wide kept whole, to scroll sideways (`[render] code_wrap`). */
+  codeScroll: boolean;
   /** The buffer version the render was made from, and the one the block was last matched to. */
   renderedVersion: number;
   version: number;
@@ -750,6 +758,8 @@ export interface UiState {
   problem_marks: "off" | "error" | "warning" | "info";
   /** How the code view draws a cell (24.13): in a box, or on a band. */
   code_cells: "box" | "band";
+  /** A code block too wide for the window (`[render] code_wrap`): scrolled sideways on its own, or wrapped. */
+  code_wrap: "scroll" | "wrap";
   /** Misspelt words marked in notes (25.6). */
   spell: boolean;
   /** Where the scratch shows (#43): floating over the windows, or in the window on the right. */
@@ -772,6 +782,7 @@ export function uiDefaults(c: Config): UiState {
     problems_bar: c.diagnostics.bar !== "off",
     problem_marks: c.diagnostics.marks,
     code_cells: c.render.code_cells,
+    code_wrap: c.render.code_wrap,
     spell: c.spell.enabled,
     scratch_in: c.capture.open_in,
     // "auto": URLs where colour can't mark links (NO_COLOR), as in `slipbox render`.
@@ -2948,10 +2959,11 @@ export class App {
 
   /**
    * A window now showing another buffer: the old one's lens and rows go (its render, size, place and
-   * inner scroll), so a lens left open opens again on the new note's cursor block.
+   * inner scroll), so a lens left open opens again on the new note's cursor block; its code blocks' offsets too.
    */
   resetForBuffer(view: View): void {
     Object.assign(view, {
+      codeLeft: undefined,
       liveBase: undefined,
       lensSize: undefined,
       lensPin: undefined,
@@ -3007,6 +3019,73 @@ export class App {
     return Math.max(1, view.width - 1 - this.gutterWidth(view));
   }
 
+  /** Whether a code block too wide keeps its lines whole, to scroll sideways on its own (`[render] code_wrap`): never
+   *  with wrapping off, where the whole window scrolls and a block only follows it. */
+  codeScroll(): boolean {
+    return this.ui.wrap && this.ui.code_wrap === "scroll";
+  }
+
+  /** How far the code block holding `row` is scrolled sideways in a window: 0 for a row of none. */
+  codeOffset(view: View, layout: Layout, row: number): number {
+    const b = codeBlocks(layout).byRow.get(row);
+    if (!b) return 0;
+    const at = view.codeLeft?.buf === view.buf ? view.codeLeft.at.get(b.key) : undefined;
+    return Math.max(0, Math.min(at ?? 0, b.total - b.w));
+  }
+
+  /** Scroll the code block holding `row` sideways to `off` (kept within it). */
+  setCodeOffset(view: View, layout: Layout, row: number, off: number): void {
+    const b = codeBlocks(layout).byRow.get(row);
+    if (b) this.setCodeOffsetOf(view, b.key, Math.max(0, Math.min(Math.round(off), b.total - b.w)));
+  }
+
+  /** A code block's offset, by its key (its scrollbar's drag). */
+  setCodeOffsetOf(view: View, key: string, off: number): void {
+    if (view.codeLeft?.buf !== view.buf) view.codeLeft = { buf: view.buf, at: new Map() };
+    view.codeLeft.at.set(key, Math.max(0, off));
+  }
+
+  /**
+   * Where layout column `col` of `row` is drawn, from the text's left edge: past the start of a scrolled code block's
+   * code (`x`), less the block's offset. What a vertical move keeps (the goal), so it goes straight up or down the
+   * screen, into and out of a scrolled block alike.
+   */
+  screenCol(view: View, layout: Layout, row: number, col: number): number {
+    const s = layout.lines[row]?.scroll;
+    return s && !s.part && col >= s.x ? col - this.codeOffset(view, layout, row) : col;
+  }
+
+  /** The layout column drawn at screen column `col` of `row` (screenCol's inverse): a click's, a vertical move's. */
+  layoutCol(view: View, layout: Layout, row: number, col: number): number {
+    const s = layout.lines[row]?.scroll;
+    return s && !s.part && col >= s.x ? col + this.codeOffset(view, layout, row) : col;
+  }
+
+  /**
+   * The cursor in a code block that scrolls sideways: the block scrolls to keep it 4 columns from either edge (a
+   * quarter of a narrow block), as the window does with wrapping off. On the block's fixed part (its gutter, a list's
+   * indent) nothing is hidden: it stays.
+   */
+  private followInCode(view: View, layout: Layout): void {
+    if (view.codeWheeled) return;
+    const w = cells(layout.lines[view.cur.row]).find((c) => c.x === view.cur.col)?.w ?? 1;
+    this.revealInCode(view, layout, view.cur.row, view.cur.col, view.cur.col + w);
+  }
+
+  /** Columns `from` to `to` of a row of a code block that scrolls sideways, brought into sight, 4 columns from its
+   *  edges: all of them where they fit, else from `from` (a find's match, the cursor's character). */
+  revealInCode(view: View, layout: Layout, row: number, from: number, to: number): void {
+    const s = layout.lines[row]?.scroll;
+    if (!s || s.part || from < s.x) return;
+    const [a, b] = [from - s.x, Math.max(from + 1, to) - s.x];
+    const margin = Math.min(4, Math.floor(s.w / 4));
+    const was = this.codeOffset(view, layout, row);
+    let off = was;
+    if (a < off + margin) off = a - margin;
+    else if (b > off + s.w - margin) off = Math.min(a - margin, b - s.w + margin);
+    if (off !== was) this.setCodeOffset(view, layout, row, off);
+  }
+
   layoutFor(view: View, paneWidth: number, gutter = 0): Layout {
     // A big note parsing on other threads (15.1): a line saying so, and nothing of the view moved
     // (its reading position stays for the real layout, a moment later).
@@ -3045,6 +3124,7 @@ export class App {
               this.ui.urls,
               view.buf.rel ? this.graph : null,
               this.picturesFor(view.buf),
+              this.codeScroll(),
             );
     const block = view.live && view.liveBase ? `${view.liveBase.active[0]}-${view.liveBase.active[1]}` : "";
     const key = `${view.source ? "s" : view.live ? "l" : "r"}${block}:${width}:${this.glyphs.mode}:${this.ui.urls}:${layout.lines.length}:${view.buf.version}:${view.height}`;
@@ -3225,7 +3305,14 @@ export class App {
     const fresh = (prev?: Block): LiveBase => {
       const rendered = code
         ? buf.codeLayout(width, wrap, this.glyphs, this.ui.code_cells, this.cellProblems(view))
-        : buf.layout(width, this.glyphs, this.ui.urls, buf.rel ? this.graph : null, this.picturesFor(buf));
+        : buf.layout(
+            width,
+            this.glyphs,
+            this.ui.urls,
+            buf.rel ? this.graph : null,
+            this.picturesFor(buf),
+            this.codeScroll(),
+          );
       let blocks = code ? buf.codeBlocks(lineCount) : blockRanges(buf.parsed.tree, lineCount);
       let unit: ((at: number) => Block | null) | undefined;
       if (code) {
@@ -3251,6 +3338,7 @@ export class App {
         rendered,
         width,
         wrap,
+        codeScroll: this.codeScroll(),
         renderedVersion: buf.version,
         version: buf.version,
         blocks,
@@ -3265,7 +3353,8 @@ export class App {
     // A cell's ✎ (24.13): the lens on its lines.
     const asked = view.lensRange;
     view.lensRange = undefined;
-    if (!base || base.width !== width || base.wrap !== wrap || asked) base = fresh(asked);
+    if (!base || base.width !== width || base.wrap !== wrap || base.codeScroll !== this.codeScroll() || asked)
+      base = fresh(asked);
     else if (buf.version !== base.version) {
       // Typed into the lens, the rest untouched: the same render, the lens longer or shorter.
       // …and the line break that ends the lens survived (a delete at its last line's end joins the
@@ -3692,9 +3781,12 @@ export class App {
     }
     view.top = this.clampTop(view, layout, view.top);
     this.anchorTop(view, layout);
-    // Sideways, when wrapping is off: keep the cursor a few columns from either edge.
-    if (this.ui.wrap) view.left = 0;
-    else {
+    // Sideways, when wrapping is off: keep the cursor a few columns from either edge. With it on, a code block that
+    // scrolls on its own does that for a cursor in it.
+    if (this.ui.wrap) {
+      view.left = 0;
+      this.followInCode(view, layout);
+    } else {
       const w = this.textColumns(view);
       const margin = Math.min(4, Math.floor(w / 4));
       if (view.cur.col < view.left + margin) view.left = view.cur.col - margin;
@@ -3725,11 +3817,13 @@ export class App {
     if (extend && !view.sel) this.select(view, { ...view.cur }, view.visual === "line");
     if (!extend && view.sel && !view.visual) view.sel = null;
     view.cur = clampPos(layout, to);
-    if (!opts.keepGoal) view.goal = view.cur.col;
+    view.codeWheeled = false;
     view.curAnchor = this.cursorAnchorFor(layout, view.cur);
     // The selection's lines, kept after it ends: `:'<,'>s` works on the last one, as vim's marks.
     if (view.sel) this.markSelection(view, layout);
     this.ensureCursorVisible(view, layout);
+    // The column on screen, once a code block the cursor is in has scrolled to it.
+    if (!opts.keepGoal) view.goal = this.screenCol(view, layout, view.cur.row, view.cur.col);
   }
 
   /** Scroll by rows; the cursor moves with the view (ctrl+d/u, pages) or only as needed (wheel). */
@@ -3752,7 +3846,7 @@ export class App {
       else if (view.cur.row > hi) row = hi;
     }
     if (row !== view.cur.row) {
-      view.cur = { row, col: snap(layout, row, view.goal) };
+      view.cur = { row, col: snap(layout, row, this.layoutCol(view, layout, row, view.goal)) };
       view.curAnchor = this.cursorAnchorFor(layout, view.cur);
     }
     if (moveCursor) this.ensureCursorVisible(view, layout);
@@ -8671,6 +8765,8 @@ export class App {
     y: number;
     button: number;
     scroll?: { direction: string; delta: number };
+    /** `shift` held: the wheel over a code block that scrolls sideways scrolls it. */
+    shift?: boolean;
   }): void {
     if (ev.type !== "move") this.lastInputAt = this.now();
     // A wheel spun (12.7): pictures held back from its first tick until it rests.
@@ -8693,6 +8789,7 @@ export class App {
     y: number;
     button: number;
     scroll?: { direction: string; delta: number };
+    shift?: boolean;
   }): void {
     const g = this.geometry;
     if (!g) return;
@@ -8772,7 +8869,10 @@ export class App {
     if (!inRect(r, ev.x, ev.y)) this.closeOverlay(true);
   }
 
-  private wheel(ev: { x: number; y: number; scroll?: { direction: string; delta: number } }, g: Geometry): void {
+  private wheel(
+    ev: { x: number; y: number; scroll?: { direction: string; delta: number }; shift?: boolean },
+    g: Geometry,
+  ): void {
     const n = Math.max(1, ev.scroll?.delta ?? 1) * 3;
     const dir = ev.scroll?.direction === "up" ? -1 : 1;
     const sideways = ev.scroll?.direction === "left" || ev.scroll?.direction === "right";
@@ -8783,6 +8883,18 @@ export class App {
     const pane = g.panes.find((p) => inRect(p, ev.x, ev.y));
     // Sideways (a horizontal wheel or trackpad), when wrapping is off: the view moves, not the cursor.
     const side = ev.scroll?.direction === "left" ? -1 : ev.scroll?.direction === "right" ? 1 : 0;
+    // Over a code block that scrolls on its own, sideways — or shift with the wheel, up for left — the block moves, 6
+    // columns a notch as the window does, the cursor staying.
+    if (pane && (side || ev.shift)) {
+      const layout = this.currentLayout(pane.view);
+      const row = this.screenRows(pane.view, layout)[ev.y - pane.y];
+      if (row !== undefined && codeBlocks(layout).byRow.has(row)) {
+        const by = (side || dir) * n * 2;
+        this.setCodeOffset(pane.view, layout, row, this.codeOffset(pane.view, layout, row) + by);
+        pane.view.codeWheeled = true;
+        return;
+      }
+    }
     if (side) {
       // Side panes first (they lie over the note on narrow screens); drawing clamps the offset.
       const sidePane =
@@ -8837,7 +8949,7 @@ export class App {
             const shown = this.screenRows(v, layout).filter((r) => layout.lines[r]?.lens === "source");
             if (shown.length && !shown.includes(v.cur.row)) {
               const to = v.cur.row < shown[0]! ? shown[0]! : shown[shown.length - 1]!;
-              this.moveCursor(v, { row: to, col: v.goal }, { keepGoal: true });
+              this.moveCursor(v, { row: to, col: this.layoutCol(v, layout, to, v.goal) }, { keepGoal: true });
             }
             return;
           }
@@ -9030,14 +9142,16 @@ export class App {
     const view = pane.view;
     const layout = this.currentLayout(view);
     const shown = this.screenRows(view, layout);
+    const atRow = shown[ev.y - pane.y] ?? shown[shown.length - 1] ?? 0;
+    // In a code block scrolled sideways, the character drawn under the pointer.
     const pos = clampPos(layout, {
-      row: shown[ev.y - pane.y] ?? shown[shown.length - 1] ?? 0,
-      col: Math.max(0, ev.x - pane.textX) + view.left,
+      row: atRow,
+      col: this.layoutCol(view, layout, atRow, Math.max(0, ev.x - pane.textX) + view.left),
     });
     // Really on the text, not on blank space the cursor was clamped from (past a row's end, below
     // the note): only there does a click follow a link or tick a task.
     const clickedRow = shown[ev.y - pane.y];
-    const clickedCol = ev.x - pane.textX + view.left;
+    const clickedCol = this.layoutCol(view, layout, atRow, ev.x - pane.textX + view.left);
     const onText =
       clickedRow !== undefined &&
       clickedCol >= 0 &&
@@ -9115,13 +9229,14 @@ export class App {
     if (ev.y >= pane.y + pane.h) this.scrollBy(pane.view, 1, false);
     const layout = this.currentLayout(d.view);
     const shown = this.screenRows(d.view, layout);
+    const atRow = shown[Math.max(0, Math.min(shown.length - 1, ev.y - pane.y))] ?? 0;
     const pos = clampPos(layout, {
-      row: shown[Math.max(0, Math.min(shown.length - 1, ev.y - pane.y))] ?? 0,
-      col: Math.max(0, ev.x - pane.textX) + d.view.left,
+      row: atRow,
+      col: this.layoutCol(d.view, layout, atRow, Math.max(0, ev.x - pane.textX) + d.view.left),
     });
     if (!d.view.sel || d.view.sel.anchor !== d.start) this.select(d.view, d.start, false);
     d.view.cur = pos;
-    d.view.goal = pos.col;
+    d.view.goal = this.screenCol(d.view, layout, pos.row, pos.col);
     // The anchor too, so a re-layout (a message line appearing, a resize) keeps the cursor here.
     d.view.curAnchor = this.cursorAnchorFor(layout, pos);
     d.moved = true;
@@ -9176,6 +9291,11 @@ export class App {
     if (!bar.view) return;
     if (bar.horizontal) {
       const fx = Math.max(0, Math.min(1, (x - bar.x) / Math.max(1, bar.w - 1)));
+      // A code block's own (on its last row): it moves, the window stays.
+      if (bar.block !== undefined) {
+        bar.view.codeWheeled = true;
+        return this.setCodeOffsetOf(bar.view, bar.block, Math.round(fx * Math.max(0, bar.total - bar.w)));
+      }
       bar.view.left = Math.round(fx * Math.max(0, bar.total - bar.w));
       return;
     }
@@ -10120,6 +10240,7 @@ export class App {
       if (k === "glyphs" && !["nerd", "unicode", "ascii", "auto"].includes(o.value as string)) continue;
       if (k === "theme" && !listThemes().some((t) => t.name === o.value)) continue;
       if (k === "scratch_in" && o.value !== "float" && o.value !== "right") continue;
+      if (k === "code_wrap" && o.value !== "scroll" && o.value !== "wrap") continue;
       (this.ui as unknown as Record<string, unknown>)[k] = o.value;
       this.uiOverrides[k] = o;
     }
@@ -11088,6 +11209,49 @@ export const RAIL_WIDTH = 4;
 /** Wrapping off: how wide a note is laid out first, to find its natural width. */
 const NOWRAP_PROBE = 2000;
 const naturalWidths = new WeakMap<Layout, number>();
+
+/** A code block that scrolls sideways on its own (`[render] code_wrap`; ir.ts CodeScroll): its rows, where its code
+ *  is and how wide, and its key — the line of its first row, with how many blocks before it start there (an embed's
+ *  rows are all at one line). */
+export interface ScrollBlock {
+  key: string;
+  first: number;
+  last: number;
+  x: number;
+  w: number;
+  total: number;
+}
+
+const scrollBlocks = new WeakMap<Layout, { blocks: ScrollBlock[]; byRow: Map<number, ScrollBlock> }>();
+
+/** A layout's code blocks that scroll sideways, by row: found once per layout. A block's rows run from one with
+ *  `scroll` to the next with none, or to its `bar` row. */
+export function codeBlocks(layout: Layout): { blocks: ScrollBlock[]; byRow: Map<number, ScrollBlock> } {
+  let found = scrollBlocks.get(layout);
+  if (found) return found;
+  found = { blocks: [], byRow: new Map() };
+  const starts = new Map<number, number>();
+  let cur: ScrollBlock | null = null;
+  for (let row = 0; row < layout.lines.length; row++) {
+    const line = layout.lines[row]!;
+    const s = line.scroll;
+    if (!s) {
+      cur = null;
+      continue;
+    }
+    if (!cur) {
+      const n = starts.get(line.src) ?? 0;
+      starts.set(line.src, n + 1);
+      cur = { key: n ? `${line.src}#${n}` : String(line.src), first: row, last: row, x: s.x, w: s.w, total: s.total };
+      found.blocks.push(cur);
+    }
+    cur.last = row;
+    found.byRow.set(row, cur);
+    if (s.part === "bar") cur = null;
+  }
+  scrollBlocks.set(layout, found);
+  return found;
+}
 
 /**
  * The widest real row of a very wide layout: trailing spaces don't count, nor does a trailing run

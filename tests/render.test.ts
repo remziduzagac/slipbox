@@ -102,6 +102,37 @@ describe("no rendered row ever exceeds the layout width: the reference set", () 
   }
 });
 
+// With codeScroll (the TUI's `[render] code_wrap = "scroll"`) a code block's rows are as wide as its lines: what's
+// before its code, and its window on it, still fit the width, and its code is whole.
+describe("no rendered row exceeds the layout width but a scrolling code block's code, kept whole", () => {
+  const HOME = join(import.meta.dir, "..", "examples", "home");
+  const all = [
+    ...samples.map((f) => join("vault", f)),
+    ...(readdirSync(HOME, { recursive: true }) as string[])
+      .filter((f) => f.endsWith(".md"))
+      .map((f) => join("home", f)),
+  ].sort();
+  /** How many rows scrolled, in a note at a width. */
+  const check = (file: string, width: number): number => {
+    const src = readFileSync(join(import.meta.dir, "..", "examples", file), "utf8");
+    const layout = renderMarkdown(src, { width, glyphs: unicode, showUrls: false, codeScroll: true });
+    if (layout.clipped) throw new Error(`${file} @${width}: ${layout.clipped} row(s) had to be clipped`);
+    let scrolled = 0;
+    for (const [i, line] of layout.lines.entries()) {
+      const row = line.spans.map((s) => s.text).join("");
+      const s = line.scroll;
+      if (s && !s.part) {
+        scrolled++;
+        if (s.x + s.w + 1 > width) throw new Error(`${file} @${width}: row ${i}'s code window ends past the width`);
+        if (row.includes("↪")) throw new Error(`${file} @${width}: row ${i} wrapped`);
+      } else if (stringWidth(row) > width) throw new Error(`${file} @${width}: row ${i} is too wide: ${row}`);
+    }
+    return scrolled;
+  };
+  for (const file of all) test(file, () => void [24, 60, 101].forEach((w) => check(file, w)));
+  test("some scroll", () => expect(check("vault/handbook/writing-guide.md", 60)).toBeGreaterThan(5));
+});
+
 describe("snapshots of the layout IR as text", () => {
   for (const file of samples) {
     test(`${file} @ 80`, () => {
@@ -181,6 +212,43 @@ describe("blocks and inlines (2.2)", () => {
     });
     expect(long.clipped ?? 0).toBe(0);
     expect(long.lines[0]!.spans.map((s) => s.text).join("")).toBe("a-very-long-language-n… ");
+  });
+  test("with codeScroll, a block too wide keeps each line whole on one row, to scroll sideways; in a list or a quote, from past its indent; one that fits, or printed, as before", () => {
+    const long = "find . -name '*.md' -newer index.md | xargs grep -l 'TODO' | sort | uniq -c";
+    const md = `\`\`\`sh\n${long}\nls\n\`\`\`\n`;
+    const opts = { width: 40, glyphs: unicode, showUrls: false, codeScroll: true };
+    const l = renderMarkdown(md, opts);
+    expect(l.clipped).toBe(0);
+    expect(l.lines.length).toBe(4); // the label, a row per line, the last row
+    const scroll = { x: 1, w: 38, total: stringWidth(long) };
+    expect(l.lines.map((x) => x.scroll)).toEqual([
+      { ...scroll, part: "top" },
+      scroll,
+      scroll,
+      { ...scroll, part: "bar" },
+    ]);
+    expect(l.lines[1]!.spans.map((x) => x.text).join("")).toBe(` ${long}`);
+    expect(l.lines[1]!.spans.slice(1).every((x) => x.src === 2)).toBe(true);
+    expect(text(l)).not.toContain("↪");
+    expect(l.lines.every((x) => x.fill === "code_block")).toBe(true);
+    // Inside a list item and a quote: where its code starts moves past what's before it.
+    const inList = renderMarkdown(`- item\n\n  \`\`\`sh\n  ${long}\n  \`\`\`\n`, opts);
+    const row = inList.lines.find((x) => x.scroll && !x.scroll.part)!;
+    expect(row.scroll!.x).toBe(3);
+    expect([...row.spans.map((x) => x.text).join("")].slice(3).join("")).toBe(long);
+    const inQuote = renderMarkdown(`> \`\`\`sh\n> ${long}\n> \`\`\`\n`, opts);
+    expect(inQuote.lines.find((x) => x.scroll && !x.scroll.part)!.scroll!.x).toBe(3);
+    // Room for every line: no scroll, as before.
+    expect(renderMarkdown("```sh\nls\n```\n", opts).lines.some((x) => x.scroll)).toBe(false);
+    // Without it (what's printed; [render] code_wrap = "wrap"): wrapped, the rows after the first marked ↪.
+    const wrapped = renderMarkdown(md, { ...opts, codeScroll: false });
+    expect(wrapped.lines.some((x) => x.scroll)).toBe(false);
+    expect(wrapped.lines.length).toBeGreaterThan(4);
+    expect(wrapped.lines[2]!.spans[0]!.text).toBe("↪");
+    // A display's maths too wide falls back to its code, which scrolls too.
+    const maths = renderMarkdown(`$$\n${"x + ".repeat(30)}y\n$$\n`, opts);
+    expect(text(maths)).toContain("math — too wide to draw");
+    expect(maths.lines.some((x) => x.scroll && !x.scroll.part)).toBe(true);
   });
   test("escapes never reach the IR (2.9)", () => {
     const out = r("red \x1b[31mtext\x1b[0m and `\x1b]52;c;aGk=\x07code`");
@@ -826,6 +894,7 @@ describe("the render cache (15.1)", () => {
       "Some text with [ref] and [^fn] and **bold**.",
       "- [ ] task\n- [x] done\n  - nested",
       "```ts\nconst x = 1;\n```",
+      `\`\`\`sh\necho ${"a long argument ".repeat(6)}\n\`\`\``,
       "| a | b |\n| - | - |\n| 1 | 2 |",
       "> quote with [[other]]",
       "[ref]: https://example.invalid",
@@ -849,11 +918,25 @@ describe("the render cache (15.1)", () => {
         width: [40, 80][Math.floor(step / 20) % 2]!,
         glyphs: glyphsFor("unicode"),
         showUrls: Math.floor(step / 30) % 2 === 1,
+        codeScroll: Math.floor(step / 10) % 2 === 1,
       };
       const p = parseMarkdown(text, pcache);
       const cached = renderTree(p.tree, opts, p.frontmatter, rcache);
       const fresh = renderTree(parseMarkdown(text, undefined, { whole: true }).tree, opts, p.frontmatter);
       expect(JSON.stringify(cached)).toBe(JSON.stringify(fresh));
+    }
+  });
+  test("a code block too wide, cached wrapped, is laid out again to scroll sideways, and back", async () => {
+    const { newParseCache, parseMarkdown } = await import("../src/core/parse.ts");
+    const { newRenderCache, renderTree } = await import("../src/core/layout/render.ts");
+    const text = `# Code\n\n\`\`\`sh\necho ${"a long argument ".repeat(6)}\n\`\`\`\n`;
+    const pcache = newParseCache();
+    const rcache = newRenderCache();
+    for (const codeScroll of [false, true, false]) {
+      const opts = { width: 40, glyphs: glyphsFor("unicode"), showUrls: false, codeScroll };
+      const cached = renderTree(parseMarkdown(text, pcache).tree, opts, null, rcache);
+      expect(JSON.stringify(cached)).toBe(JSON.stringify(renderTree(parseMarkdown(text).tree, opts, null)));
+      expect(cached.lines.some((l) => l.scroll)).toBe(codeScroll);
     }
   });
 });
@@ -1161,6 +1244,27 @@ describe("Mermaid (12.10)", () => {
     });
     expect(rows(wide)[0]).toMatch(/mermaid — too wide to draw $/);
     for (const r of rows(wide)) expect(stringWidth(r)).toBeLessThanOrEqual(60);
+  });
+  test("where it scrolls sideways (codeScroll), one wider than the text is drawn all the same, closest together, a column in from each edge and a row under it for its scrollbar", () => {
+    const chain = Array.from({ length: 8 }, (_, i) => `N${i}[Node number ${i}]`).join(" --> ");
+    const wide = renderMarkdown(`\`\`\`mermaid\ngraph LR\n  ${chain}\n\`\`\`\n`, {
+      width: 60,
+      glyphs: unicode,
+      showUrls: false,
+      codeScroll: true,
+    });
+    expect(wide.clipped).toBe(0);
+    expect(rows(wide).join("\n")).not.toContain("too wide to draw");
+    expect(rows(wide).some((r) => r.includes("Node number 7"))).toBe(true);
+    const scrolls = wide.lines.map((l) => l.scroll);
+    expect(scrolls.every(Boolean)).toBe(true);
+    expect(scrolls.at(-1)!.part).toBe("bar");
+    expect(wide.lines.at(-1)!.spans).toEqual([]);
+    const total = Math.max(...wide.lines.map((l) => stringWidth(l.spans.map((s) => s.text).join("")) - 1));
+    expect(scrolls[0]).toEqual({ x: 1, w: 58, total });
+    expect(total).toBeGreaterThan(60);
+    // Every row at the block's line, as a drawn diagram's are.
+    expect(new Set(wide.lines.map((l) => l.src))).toEqual(new Set([1]));
   });
 });
 
