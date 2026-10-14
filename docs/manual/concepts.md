@@ -9,19 +9,20 @@ are and writes them back there. Close slipbox, and any other editor, git or sync
 
 [How slipbox works](how-it-works.md)
 
-## Root
+## Vault
 
-A root is a folder whose notes belong together. slipbox finds it for you: it's the nearest folder above a note that
-holds `.git`, `.slipbox/`, `.obsidian/` or `.zk/`. So a repository is a root, and so is an Obsidian vault.
+A vault is a folder whose notes belong together. slipbox finds it for you: it's the nearest folder above a note that
+holds `.git`, `.slipbox/`, `.obsidian/` or `.zk/`. So a git repository is a vault, and so are an Obsidian vault and a
+zk notebook.
 
-The root decides how links resolve, what is searched together, and which settings apply. Opening any file in a root
-opens the whole root. The status line shows which root you're in.
+The vault decides how links resolve, what is searched together, and which settings apply. Opening any file in a vault
+opens the whole vault. The status line shows which vault you're in.
 
-[Links and roots](links-and-roots.md#roots)
+[Links and vaults](links-and-vaults.md#vaults)
 
 ## The index
 
-slipbox keeps an index of each root: the notes' names, their links and their words. It makes search, backlinks and
+slipbox keeps an index of each vault: the notes' names, their links and their words. It makes search, backlinks and
 link checks fast. The index is a copy kept in slipbox's own cache folder. Deleting it is always safe; slipbox builds it
 again.
 
@@ -62,14 +63,14 @@ Source mode is the other way to edit: `ctrl+k` shows the whole note as Markdown.
 slipbox reads the links you already write: Markdown links, wikilinks, links to headings. `enter` follows one, and
 `ctrl+o` comes back. A note's backlinks are the notes that link to it. Renaming or moving a note fixes the links to it.
 
-[Links and roots](links-and-roots.md)
+[Links and vaults](links-and-vaults.md)
 
 ## Pointers
 
-A pointer is a link that reaches a note in another root, by that root's name: `slipbox://notes/ideas/coffee.md`. It
+A pointer is a link that reaches a note in another vault, by that vault's name: `slipbox://notes/ideas/coffee.md`. It
 keeps working when the folder moves.
 
-[Links and roots](links-and-roots.md#pointers)
+[Links and vaults](links-and-vaults.md#pointers)
 
 ## The command line
 
@@ -96,14 +97,14 @@ one Markdown document.
 
 ## Trust
 
-A folder can bring code with it: tools, build scripts, git hooks. slipbox runs none of it until you trust that root.
+A folder can bring code with it: tools, build scripts, git hooks. slipbox runs none of it until you trust that vault.
 It asks the first time it matters. `:trust` and `:untrust` change your answer.
 
 [Code](code.md#trust)
 
 ## Settings
 
-Your settings are in `~/.config/slipbox/config.toml`. A root can have its own, in `.slipbox/config.toml`. A root's
+Your settings are in `~/.config/slipbox/config.toml`. A vault can have its own, in `.slipbox/config.toml`. A vault's
 settings never run programs or reach the network; only yours can.
 
 [Configuration](configuration.md)

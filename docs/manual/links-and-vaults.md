@@ -1,4 +1,4 @@
-# Links and roots
+# Links and vaults
 
 slipbox reads the links your notes already have, written the way GitHub, Obsidian or zk write them. It follows them
 from one folder into another.
@@ -7,7 +7,7 @@ This chapter covers:
 
 - following a link
 - every form a link can take, and where each one lands
-- the folders that give links their meaning (roots)
+- the folders that give links their meaning (vaults)
 - the names that let a link reach another folder, wherever it is
 - writing links
 - backlinks
@@ -31,7 +31,7 @@ A link to a note in another folder works too:
 
 Two ideas sit behind this:
 
-- A **root** is the folder a note belongs to. It decides what a link like `/plan.md` or `[[plan]]` means.
+- A **vault** is the folder a note belongs to. It decides what a link like `/plan.md` or `[[plan]]` means.
 - A **name** is what a pointer calls a folder by.
 
 Both are explained below, as the links need them.
@@ -69,7 +69,7 @@ What happens depends on what the link reaches:
 | a picture on the web | fetches it to draw it, after asking by default (`render.images_remote`) |
 | a footnote reference | moves to the footnote's definition |
 | a tag | lists the notes that carry it |
-| a note in another root | switches to that root, with the note open ([Switching roots](#switching-roots)) |
+| a note in another vault | switches to that vault, with the note open ([Switching vaults](#switching-vaults)) |
 | one of several notes | lists them, to pick the one you meant |
 
 [Reading](reading.md) describes how pictures, embedded notes and pictures on the web are drawn.
@@ -87,19 +87,19 @@ A Markdown link's destination is a path. These are the forms slipbox reads, writ
 | Written as | Reaches |
 | --- | --- |
 | `[t](ideas/coffee.md)` | the file relative to the note: the form slipbox writes unless the folder says otherwise |
-| `[t](/ideas/coffee.md)` | the file from the root. If the root has nothing there, the filesystem's `/ideas/coffee.md` |
+| `[t](/ideas/coffee.md)` | the file from the vault's top, else the filesystem's `/ideas/coffee.md` |
 | `[t](ideas/coffee)` | without an extension: the file as written, else `ideas/coffee.md`, else the folder |
 | `[t](ideas/)` | a folder |
 | `[t](~/notes/ideas/coffee.md)` | the file from your home folder |
-| `[t](/home/you/notes/ideas/coffee.md)` | the absolute path, when nothing in the root is at `/home/…` |
+| `[t](/home/you/notes/ideas/coffee.md)` | the absolute path, when nothing in the vault is at `/home/…` |
 | `[t](file:///home/you/notes/ideas/coffee.md)` | a file URL |
 | `[t](<cold brew.md>)`, `[t](cold%20brew.md)` | a name with spaces, in angle brackets or percent-encoded |
 
 A few things hold for every path:
 
 - A note is found by its name whatever the case, on every filesystem. `[t](Inbox.md)` reaches `inbox.md`.
-- A path may leave the root (`../website/docs/plan.md`, `~/…`, an absolute path). It reaches the file in whichever root
-  holds it, and following it switches to that root. Such links work while the folders are laid out the same way.
+- A path may leave the vault (`../website/docs/plan.md`, `~/…`, an absolute path). It reaches the file in whichever
+  vault holds it, and following it switches to that vault. Such links work while the folders are laid out the same way.
   [Names and pointers](#names-and-pointers) has the form that doesn't depend on it.
 - Nothing inside code is a link, neither in a code span nor in a fenced block.
 - A link in an HTML comment isn't one, nor is a link whose bracket is escaped (`\[t](x.md)`).
@@ -112,8 +112,8 @@ A wikilink is Obsidian's form: double brackets around a note's name.
 
 | Written as | Reaches |
 | --- | --- |
-| `[[coffee]]` | the note whose file name, without its extension, is `coffee`, anywhere in the root |
-| `[[ideas/coffee]]` | the note at that path from the root, or the one whose path ends so |
+| `[[coffee]]` | the note whose file name, without its extension, is `coffee`, anywhere in the vault |
+| `[[ideas/coffee]]` | the note at that path from the vault's top, or the one whose path ends so |
 | `[[coffee.md]]` | the same note. An extension is allowed |
 | `[[coffee\|how I brew]]` | the note, shown as "how I brew" |
 | `[[coffee#Brewing]]` | the note, at its heading "Brewing" |
@@ -128,8 +128,8 @@ front matter gives under `aliases:` (or `alias:`), after every file name.
 A picture or other file (`![[beans.png]]`) is looked for in this order, as Obsidian finds one:
 
 1. beside the note
-2. from the root
-3. by its name anywhere in the root
+2. from the vault's top
+3. by its name anywhere in the vault
 
 A Markdown export's copies are left out. They're in a folder ending `.export.assets`, or beside the export they belong
 to (`book.assets/` beside `book.md`).
@@ -143,14 +143,14 @@ When two notes share a name, slipbox takes the first of these:
 3. the one in the deepest folder the two share
 4. the one with the shortest path
 
-That is how Obsidian's default setting writes links, so a vault opens unchanged. If two candidates are still equal,
-slipbox doesn't guess. Following the link lists them to pick from.
+That is how Obsidian's default setting writes links, so an Obsidian vault opens unchanged. If two candidates are still
+equal, slipbox doesn't guess. Following the link lists them to pick from.
 
-A wikilink is read within its root. A root nested inside this one ends its names, so a link into it needs a path
+A wikilink is read within its vault. A vault nested inside this one ends its names, so a link into it needs a path
 (`[[nested/coffee]]`).
 
-A file that belongs to no root has no names to look in, so its wikilinks reach nothing. When you follow one, slipbox
-says so, and says what would make the folder a root.
+A file that belongs to no vault has no names to look in, so its wikilinks reach nothing. When you follow one, slipbox
+says so, and says what would make the folder a vault.
 
 ### Headings, blocks and lines
 
@@ -223,7 +223,7 @@ with the shortest path. A note of the same name written nearer would take it, wi
 
 - A fragile link is among the note's problems, as information, with the path that names the note for sure.
 - `space c a` on the link writes that path.
-- `slipbox problems` lists every fragile link in the root.
+- `slipbox problems` lists every fragile link in the vault.
 
 A note you make or remove may send an existing link by name somewhere else. slipbox then says so in a message, even
 though no link broke.
@@ -235,9 +235,9 @@ though no link broke.
 
 Both are in [The command line](cli.md).
 
-## Roots
+## Vaults
 
-A note's root is the nearest folder above it that holds one of these:
+A note's vault is the nearest folder above it that holds one of these:
 
 | Marker | The folder is |
 | --- | --- |
@@ -246,39 +246,39 @@ A note's root is the nearest folder above it that holds one of these:
 | `.obsidian/` | an Obsidian vault |
 | `.zk/` | a zk notebook |
 
-So a repository is a root, and so is a vault or a notebook, with nothing to set up.
+So a repository is a vault, and so is an Obsidian vault or a zk notebook, with nothing to set up.
 
-The root decides:
+The vault decides:
 
 - what `/` at the start of a path starts from, and which notes a wikilink's name can match
 - how the links slipbox writes there look (see [Conventions](#how-a-folder-writes-links))
-- what is indexed and searched first. Opening any note or folder in a root opens the whole root.
+- what is indexed and searched first. Opening any note or folder in a vault opens the whole vault.
 - its settings, when it has a `.slipbox/config.toml` (see [Configuration](configuration.md))
 - its session, its trash and its history, which slipbox keeps in its own state folder, never in yours
 
-A note has one root, however you open it. Opening a file deep in a repository opens the repository, from its top.
+A note has one vault, however you open it. Opening a file deep in a repository opens the repository, from its top.
 
-The status line shows which root you are in, by its name (below) or its path. `space v i` (`slipbox info`) tells you
+The status line shows which vault you are in, by its name (below) or its path. `space v i` (`slipbox info`) tells you
 more about it.
 
-On the command line, a command works in the root of the note it names, or of the current folder. `--root` says where to
-start ([The command line](cli.md)).
+On the command line, a command works in the vault of the note it names, or of the current folder. `--root` says where
+to start ([The command line](cli.md)).
 
-A few rules keep roots predictable:
+A few rules keep vaults predictable:
 
-- **Your home folder and `/` are never roots,** whatever they hold.
-- **A root inside a root is a root of its own.** A repository cloned into your notes folder keeps its notes to itself.
-  The outer root doesn't index them, and its names don't reach them. The explorer shows such a folder with its own
-  icon.
-- **Several markers in one folder make one root.** Its settings and name come from `.slipbox/`.
-- **Which markers count** is `walk.root_markers`. Only your own config may set it, since it decides where roots are.
+- **Your home folder and `/` are never vaults,** whatever they hold.
+- **A vault inside a vault is a vault of its own.** A repository cloned into your notes folder keeps its notes to
+  itself. The outer vault doesn't index them, and its names don't reach them. The explorer shows such a folder with its
+  own icon.
+- **Several markers in one folder make one vault.** Its settings and name come from `.slipbox/`.
+- **Which markers count** is `walk.root_markers`. Only your own config may set it, since it decides where vaults are.
 
-### A plain folder
+### A folder outside every vault
 
-A folder with no marker above it works too. The folder you opened stands in for a root. Its notes are listed, indexed
+A folder with no marker above it works too. The folder you opened stands in for a vault. Its notes are listed, indexed
 and searched, and it has its own session.
 
-In a plain folder:
+In a folder outside every vault:
 
 - `/` means the filesystem's root.
 - Wikilinks have no names to look in.
@@ -287,7 +287,7 @@ In a plain folder:
 Your home folder or `/`, opened as a folder, is listed a level at a time. It's never walked or indexed as a whole. Its
 search reads the files instead.
 
-A file outside every root, opened by following a link to it, opens beside the root you are in. Its own links can't be
+A file outside every vault, opened by following a link to it, opens beside the vault you are in. Its own links can't be
 followed from there, except web addresses and pointers. To follow them, open its folder.
 
 ### Giving a folder `.slipbox/`
@@ -297,52 +297,53 @@ followed from there, except web addresses and pointers. To follow them, open its
 - `slipbox init` in a folder gives it a `.slipbox/` with settings only. `slipbox init --name notes` names it too.
 - `slipbox init --private` adds `.slipbox/` to the repository's `.git/info/exclude`. So it stays on this machine and
   out of git.
-- In the TUI, `space v m` (`:init`) in a plain folder asks whether to give it one, and goes into it as a root.
+- In the TUI, `space v m` (`:init`) in a folder outside every vault asks whether to give it one, and goes into it as a
+  vault.
 
 A committed `.slipbox/` travels with the folder. It holds only settings and the name, never anything slipbox writes as
 you work.
 
-Inside a root, a folder can become a root of its own. Select it in the explorer and press `v`, or `space v m`. Or run
+Inside a vault, a folder can become a vault of its own. Select it in the explorer and press `v`, or `space v m`. Or run
 `slipbox init <folder>`.
 
 Some links would stop reaching what they did, such as a `/…` path or a wikilink by name across the new boundary. They
 are rewritten first, after a preview.
 
-To turn the folder back into a plain folder, press `shift+v` in the explorer or `space v shift+m`, or run
+To make the folder part of the vault holding it again, press `shift+v` in the explorer or `space v shift+m`, or run
 `slipbox deinit <folder>`. Its `.slipbox/` goes to the trash, and the links are rewritten the other way.
 
-A git repository stays a root whatever you do, so it can't be made a plain folder.
+A git repository stays a vault whatever you do, so it can't be made part of the vault holding it.
 
-### Switching roots
+### Switching vaults
 
-The TUI is always in one root. Opening a note of another root switches to it. You open one by any of these:
+The TUI is always in one vault. Opening a note of another vault switches to it. You open one by any of these:
 
 - following a link or a pointer into it
 - a backlink from it
 - a search hit
-- a root picked in the explorer or from `space v v`
+- a vault picked in the explorer or from `space v v`
 
-slipbox becomes that root's, as if you had started it there. You get:
+slipbox becomes that vault's, as if you had started it there. You get:
 
 - its settings
 - its index
 - its session, with its tabs
 - the note open where the link pointed
 
-A message names the root you are now in.
+A message names the vault you are now in.
 
-- **Back returns.** `ctrl+o` from the first place you visited in a root takes you back to the root before. You are at
-  the note and place you left. A chain of switches unwinds one at a time.
-- **Unsaved notes stop a switch.** slipbox refuses to leave a root while a note in it is unsaved, and names the note.
+- **Back returns.** `ctrl+o` from the first place you visited in a vault takes you back to the vault before. You are
+  at the note and place you left. A chain of switches unwinds one at a time.
+- **Unsaved notes stop a switch.** slipbox refuses to leave a vault while a note in it is unsaved, and names the note.
   Save it (`:wa` saves them all) or revert it first.
-- **The explorer lists other roots** below the one you are in. These are the one you started in, and the folder of a
-  file open beside this root. `:pin-root` keeps the current root in that list after you leave it.
-- **Starting in a plain folder,** such as `slipbox ~`, shows the named folders first when there are any. So you can go
-  into one.
+- **The explorer lists other vaults** below the one you are in. These are the one you started in, and the folder of a
+  file open beside this vault. `:pin-root` keeps the current vault in that list after you leave it.
+- **Starting in a folder outside every vault,** such as `slipbox ~`, shows the named folders first when there are any.
+  So you can go into one.
 
 ### Worktrees
 
-A git worktree (made with `git worktree add`) is a root of its own, with its own session, scratch and history. That's
+A git worktree (made with `git worktree add`) is a vault of its own, with its own session, scratch and history. That's
 because a worktree is usually a separate task, often an agent's.
 
 The status line shows a worktree by its repository's name and its branch: `website@fix-menu`.
@@ -406,9 +407,9 @@ slipbox writes this table only when you ask, never by opening a folder. You ask 
 - **A private name** (`slipbox init --private --name notes-review`) is in a `.slipbox/` kept out of git. So its
   pointers work on this machine only, and slipbox says so when it writes one.
 
-In the explorer, `shift+r` on a nested root's row names it.
+In the explorer, `shift+r` on a nested vault's row names it.
 
-`space v i` shows the root you are in: its name, and the other copies of it this machine knows.
+`space v i` shows the vault you are in: its name, and the other copies of it this machine knows.
 
 ### Pointers
 
@@ -481,20 +482,20 @@ slipbox learns where folders are by opening them, and from the background index 
 
 ## How a folder writes links
 
-Each root has one **convention**: how the links slipbox makes there are written. It has three parts:
+Each vault has one **convention**: how the links slipbox makes there are written. It has three parts:
 
 | Part | Is |
 | --- | --- |
 | style | a Markdown link, `[Coffee](ideas/coffee.md)`, or a wikilink, `[[coffee]]` |
-| path | relative to the note, from the root (`/ideas/coffee.md`), or by name (a wikilink's only) |
+| path | relative to the note, from the vault's top (`/ideas/coffee.md`), or by name (a wikilink's only) |
 | extension | `.md` kept or dropped |
 
 Each part comes from the first of these that says:
 
-1. your setting, `[links]`, in the root's `.slipbox/config.toml` or else your own config
+1. your setting, `[links]`, in the vault's `.slipbox/config.toml` or else your own config
    ([The links' convention](configuration.md#the-links-convention) has its values)
 2. the settings of the app that owns the folder: Obsidian's `.obsidian/app.json`, or zk's `.zk/config.toml` (below)
-3. the folder's notes, when one form has two-thirds or more of their links to the root's own notes
+3. the folder's notes, when one form has two-thirds or more of their links to the vault's own notes
 4. else slipbox's own: a Markdown link, relative, `.md` kept
 
 The style is found first. Then the path and extension are found for that style. For an app, that's as it writes that
@@ -531,7 +532,8 @@ So the conventions come out like this:
 
 A Markdown link is never by name. slipbox reads its destination as a path.
 
-A plain folder has no root to read names or `/` from. There, your setting applies where it can, else slipbox's own:
+A folder outside every vault has no vault to read names or `/` from. There, your setting applies where it can, else
+slipbox's own:
 
 - `style = "wiki"` writes a Markdown link.
 - `path = "root"` or `"name"` writes a relative one. A wikilink you type stays one, its path relative.
@@ -549,19 +551,19 @@ each existing link in the form it was written in.
 
 ## Writing links
 
-There are three ways to have slipbox write a link for you, all in the root's convention.
+There are three ways to have slipbox write a link for you, all in the vault's convention.
 
-- **The link picker:** `space l i` (`:link`) lists the root's notes and files. Pick one, and the link goes in at the
+- **The link picker:** `space l i` (`:link`) lists the vault's notes and files. Pick one, and the link goes in at the
   cursor while you type. While you read, it goes after the word under the cursor, and the note is saved.
 - **Completion:** typing `](` or `[[` in a note opens a list of the files a link could reach, narrowed as you type.
-  `tab` or `enter` puts the chosen one in. After `](` the list includes other roots' notes, as of their last indexing.
+  `tab` or `enter` puts the chosen one in. After `](` the list includes other vaults' notes, as of their last indexing.
   [Editing](editing.md) has completion's keys.
 - **The command line:** `slipbox link <note> --from <note>` prints the link slipbox would write, for an agent to use.
 
 A Markdown link's text is the note's title. A wikilink has none. A wikilink is written:
 
 - by name, where that name reaches the note from where you are
-- otherwise by its path from the root, or a relative path (`[[../coffee]]`)
+- otherwise by its path from the vault's top, or a relative path (`[[../coffee]]`)
 
 It is never written by a name that would land on another note.
 
@@ -597,24 +599,24 @@ Backlinks are worked out from slipbox's index, never stored in your files. They 
 - links from notes, embeds and pictures
 - links in front matter
 - data files' references and code comments' paths
-- links from other roots into this one: by path (relative, `~/`, absolute, a file URL), by pointer, or by this
+- links from other vaults into this one: by path (relative, `~/`, absolute, a file URL), by pointer, or by this
   repository's own hosting address
 
-A link from another root is shown by its path, `~/code/website/README.md`.
+A link from another vault is shown by its path, `~/code/website/README.md`.
 
 A note's links to itself don't count. Neither do a worktree's, since its notes are copies.
 
 In the TUI, a note's unsaved text counts as you type. The command line reads the files as saved.
 
-Another root's links count as of its last indexing. They count only for roots this machine knows, while those roots
-are there. A root on a drive that is unplugged drops out until the drive is back.
+Another vault's links count as of its last indexing. They count only for vaults this machine knows, while those
+vaults are there. A vault on a drive that is unplugged drops out until the drive is back.
 
-A root nested in this one, or holding it, is indexed as soon as a link or a backlink needs it.
+A vault nested in this one, or holding it, is indexed as soon as a link or a backlink needs it.
 
 **The background index** finds the rest. It runs while the TUI is open and nobody is working. Nobody is working when
 there's no key, no click, and no command from an agent for `index.idle_seconds`, 30 by default.
 
-Then slipbox walks your home folder a little at a time for roots, and indexes each. So backlinks from folders you never
+Then slipbox walks your home folder a little at a time for vaults, and indexes each. So backlinks from folders you never
 opened here appear by themselves.
 
 The background index:
@@ -629,24 +631,25 @@ Folders outside your home folder, such as other drives, are indexed when you ope
 
 ## Links kept through renames and moves
 
-Renaming or moving a note in slipbox rewrites every link to it, wherever slipbox reaches one: in this root, in other
-roots, in data files and code comments. A moved note's own relative links are rewritten too, so they still reach what
+Renaming or moving a note in slipbox rewrites every link to it, wherever slipbox reaches one: in this vault, in other
+vaults, in data files and code comments. A moved note's own relative links are rewritten too, so they still reach what
 they did.
 
 Each link keeps the form it was written in:
 
 - A wikilink stays a wikilink, and a path a path, with or without its extension as written.
-- A `/…` path stays from the root, a `~/` path from the home folder, an absolute path absolute, and a file URL a URL.
+- A `/…` path stays from the vault's top, a `~/` path from the home folder, an absolute path absolute, and a file URL
+  a URL.
 - A pointer stays a pointer, while the note stays in that folder.
 - A hosting address keeps its form, with only its path changed.
-- A wikilink by name stays a name, unless another note has the new name or the note leaves the root.
+- A wikilink by name stays a name, unless another note has the new name or the note leaves the vault.
 
 | To rename or move | Keys | Command |
 | --- | --- | --- |
 | a note, by its path | `space n m` (`:rename`, `:mv`), or `r` and `m` in the explorer | `slipbox mv` |
 | a heading | `space n h` for the heading the cursor is under, or `r` in the outline | `slipbox rename-heading` |
 
-You always see a preview first, with every line that will change, in every root. `enter` does it, and `esc` leaves
+You always see a preview first, with every line that will change, in every vault. `enter` does it, and `esc` leaves
 everything as it was. [Files](files.md) describes renaming, moving and the preview in full.
 
 Renaming a heading rewrites the links to it the same way.
@@ -700,8 +703,8 @@ It is one of the note's problems:
 [Configuration](configuration.md) has that setting.
 
 - `space n q` lists this note's problems.
-- `space v p` lists the whole root's, broken links among them. [Code](code.md) describes the Problems panel.
-- `slipbox problems` lists the root's broken, ambiguous and fragile links, and the notes nothing links to.
+- `space v p` lists the whole vault's, broken links among them. [Code](code.md) describes the Problems panel.
+- `slipbox problems` lists the vault's broken, ambiguous and fragile links, and the notes nothing links to.
 
 A link into a drive that isn't plugged in is broken until the drive is back, and slipbox says why.
 
@@ -716,7 +719,7 @@ run `slipbox convert-links [note]`.
 - Each wikilink becomes a relative Markdown link, and an embed an image link, with its shown text kept.
   `[[coffee#Brewing|how I brew]]` becomes `[how I brew](ideas/coffee.md#brewing)`.
 - Without shown text, the text is the link as it was drawn.
-- Each link written from the root (`/ideas/coffee.md`) becomes relative.
+- Each link written from the vault's top (`/ideas/coffee.md`) becomes relative.
 - Headings and blocks are checked to exist. A link that reaches nothing is left as it is, and listed.
 - A link several notes answer to is a row of its own at the top of the preview. `enter` lists the notes, to pick one.
 - Wikilinks in code and in front matter stay as they are.

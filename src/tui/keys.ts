@@ -574,7 +574,7 @@ export const EXPLORER_ACTION_INFO: Record<string, { title: string; desc: string 
   filter: { title: "Filter", desc: "Type to narrow the rows (the tree keeps its folders); enter opens, esc clears" },
   all_files: {
     title: "All files",
-    desc: "Shows every text file, or back to what files.show lists (auto: notes and data files in a notes root)",
+    desc: "Shows every text file, or back to what files.show lists (auto: notes and data files in a notes vault)",
   },
   new_note: {
     title: "New note here",
@@ -590,7 +590,7 @@ export const EXPLORER_ACTION_INFO: Record<string, { title: string; desc: string 
   },
   rename_root: {
     title: "Name it",
-    desc: "On a nested root's row: its name, as pointers name it (r renames its folder); after a preview",
+    desc: "On a nested vault's row: its name, as pointers name it (r renames its folder); after a preview",
   },
   move: {
     title: "Move to…",
@@ -610,11 +610,11 @@ export const EXPLORER_ACTION_INFO: Record<string, { title: string; desc: string 
   },
   make_root: {
     title: "Give it .slipbox/",
-    desc: "The selected folder becomes a root of its own (its .slipbox/, a name if given); links that would stop reaching across fixed after a preview",
+    desc: "The selected folder becomes a vault of its own (its .slipbox/, a name if given); links that would stop reaching across fixed after a preview",
   },
   unmake_root: {
-    title: "Make it a plain folder",
-    desc: "The selected root's notes become this one's; links fixed after a preview, its .slipbox/ to the trash",
+    title: "Make it part of the vault holding it",
+    desc: "The selected vault's notes become this one's; links fixed after a preview, its .slipbox/ to the trash",
   },
   menu: { title: "Actions…", desc: "The selected row's menu, as its … button opens it: rename, move, delete, copy…" },
   close: { title: "Close the explorer", desc: "Closes it; focus returns to the note" },

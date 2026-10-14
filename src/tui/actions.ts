@@ -438,7 +438,8 @@ function followLink(a: App, link: LayoutLink, into: Into): void {
         if (link.heading) jumpToHeading(a, view, link.heading, true);
         return;
       }
-      if (!from) return a.message("warn", `[[${link.target}]]: a wikilink is read within a root — this file has none`);
+      if (!from)
+        return a.message("warn", `[[${link.target}]]: a wikilink is read within a vault — this file is in none`);
       const r = a.graph.resolveLink({ kind: link.kind, target: link.target }, from);
       if (r.via)
         a.message(
@@ -470,7 +471,10 @@ function followLink(a: App, link: LayoutLink, into: Into): void {
       // A URL — a pointer too (21.7), which names its folder: followed from a file of no root as well.
       const external = /^[a-z][a-z0-9+.-]*:/i.test(link.target);
       if (!from && !external)
-        return a.message("warn", `${link.target}: this file is outside the root — open its folder to follow its links`);
+        return a.message(
+          "warn",
+          `${link.target}: this file is outside the vault — open its folder to follow its links`,
+        );
       // A picture on the internet: fetched, as `[render] images_remote` says (12.12).
       if (link.kind === "image" && external && a.followRemoteImage(link.target)) return;
       const r = a.graph.resolveLink(
@@ -1448,7 +1452,7 @@ export function registerActions(app: App): void {
       }),
     "backlinks.open": (a) =>
       withView(a, (v) => {
-        if (!v.buf.rel) return a.message("info", "backlinks are kept for the notes of a root (or the folder opened)");
+        if (!v.buf.rel) return a.message("info", "backlinks are kept for the notes of a vault (or the folder opened)");
         const bl = a.graph.backlinks(v.buf.rel);
         if (!bl.length) return a.message("info", `no notes link to ${v.buf.rel}`);
         a.openList({
@@ -2267,7 +2271,7 @@ export function registerActions(app: App): void {
     "vault.unmake": (a) => a.unmakeVaultHere(),
     "note.copy": (a) =>
       withView(a, (v) => {
-        if (!v.buf.rel) return a.message("warn", "only a note or file of this root can be copied here");
+        if (!v.buf.rel) return a.message("warn", "only a note or file of this vault can be copied here");
         try {
           const r = copyPath(a.graph, v.buf.rel);
           a.open(r.to);
@@ -2532,7 +2536,7 @@ export function registerActions(app: App): void {
       withView(a, (v) => {
         const rel = v.buf.rel;
         if (!rel || !a.graph.notes.has(rel))
-          return a.message("warn", "only a note of this root has its headings renamed with their links");
+          return a.message("warn", "only a note of this vault has its headings renamed with their links");
         // The section the cursor is in: the last heading at or above its line.
         const line = a.cursorLine(v);
         const h = [...(a.graph.entry(rel)?.headings ?? [])].reverse().find((x) => x.line <= line);
@@ -2549,7 +2553,7 @@ export function registerActions(app: App): void {
       // The explorer's selected root (one nested here), when it has focus.
       const item = a.explorerFocused() ? a.explorerItem() : null;
       if (item?.vault && !arg) return a.renameVaultItem(item);
-      if (a.loc.mode === "folder") return a.message("warn", `${a.loc.root} has no root to name: :init makes one`);
+      if (a.loc.mode === "folder") return a.message("warn", `${a.loc.root} has no vault to name: :init makes one`);
       const go = (name: string) => {
         const ident = folderIdentity(a.loc.root);
         const taken = readFolders().find((f) => f.key !== ident?.key && f.name.toLowerCase() === name.toLowerCase());
@@ -2586,7 +2590,7 @@ export function registerActions(app: App): void {
     },
     "link.relink": (a) =>
       withView(a, (v) => {
-        if (!v.buf.rel) return a.message("warn", "only this root's notes are relinked");
+        if (!v.buf.rel) return a.message("warn", "only this vault's notes are relinked");
         const rel = v.buf.rel;
         a.previewRename(() => planRelink(a.graph, [rel]));
       }),
@@ -2596,14 +2600,14 @@ export function registerActions(app: App): void {
       // Its name and copies, as pointers find it (21.6).
       const ident = a.loc.mode === "vault" ? folderIdentity(a.loc.root) : null;
       const named = ident ? readFolders().find((f) => f.key === ident.key) : undefined;
-      infoList(a, "Root", [
-        ["root", a.loc.root],
+      infoList(a, "Vault", [
+        ["vault", a.loc.root],
         ["mode", a.loc.mode],
         [
           "name",
           ident
             ? `${rootLabel(a.loc)}${a.loc.aliases.length ? ` (also ${a.loc.aliases.join(", ")})` : ""}`
-            : `none — ${a.loc.mode === "folder" ? "no root" : "no remote and no .slipbox/ name"}: linked to by relative path`,
+            : `none — ${a.loc.mode === "folder" ? "no vault" : "no remote and no .slipbox/ name"}: linked to by relative path`,
         ],
         ["notes", String(g.notes.size)],
         ["indexing", a.indexing ? `${a.indexing} left` : "done"],

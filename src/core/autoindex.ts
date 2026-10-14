@@ -81,7 +81,8 @@ export class AutoIndex {
           if (this.graph?.parseSome(Math.max(1, end - performance.now()))) return true;
           if (this.graph) {
             p.indexed++;
-            for (const s of this.graph.skipped) if (s.reason === "nested root") p.queue.unshift(join(p.current, s.rel));
+            for (const s of this.graph.skipped)
+              if (s.reason === "nested vault") p.queue.unshift(join(p.current, s.rel));
             this.markIndexed(p.current);
           }
           this.graph = null;
@@ -189,6 +190,6 @@ export function describeBackground(b: ReturnType<typeof backgroundStatus>): stri
   if (!b.on) return "background index off ([index] background)";
   if (!b.started) return "background index not started yet";
   if (b.finished)
-    return `background index: pass done ${b.finished.slice(0, 16).replace("T", " ")} — ${b.found} root${b.found === 1 ? "" : "s"} found`;
-  return `background index: ${b.found} root${b.found === 1 ? "" : "s"} found so far, ${b.left} folder${b.left === 1 ? "" : "s"} left`;
+    return `background index: pass done ${b.finished.slice(0, 16).replace("T", " ")} — ${b.found} vault${b.found === 1 ? "" : "s"} found`;
+  return `background index: ${b.found} vault${b.found === 1 ? "" : "s"} found so far, ${b.left} folder${b.left === 1 ? "" : "s"} left`;
 }

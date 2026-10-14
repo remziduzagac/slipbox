@@ -337,7 +337,7 @@ Usage:
                                     [--limit N]
   slipbox index                     build or bring up to date the search index here  [--rebuild]
   slipbox index --home              the background auto-index of the home folder, run now  [--budget MS] [--rebuild]
-  slipbox index --refresh [path]    bring a root's index up to date now — this one, or the one holding path
+  slipbox index --refresh [path]    bring a vault's index up to date now — this one, or the one holding path
   slipbox changed                   what this branch changed against the base (main), committed or not  [--base <ref>]
   slipbox diff <note>               the note's changes on this branch: against where it left the base  [--base <ref>]
   slipbox merge-review <branch>     the links merging <branch> here would break, from git's tentative result  [--into <ref>]
@@ -358,10 +358,10 @@ Usage:
   slipbox task <note> [line]        list tasks, or toggle one      [--check] [--uncheck] [--if-unchanged <sha>]
   slipbox read <note>               a note's text, and its sha
   slipbox stat <note>               a note's size, dates, title, counts, encoding (the TUI's note info)
-  slipbox write <note> [text]       write a note (atomic, in the root)  [--stdin] [--append [--paragraph]] [--create] [--if-unchanged <sha>] [--allow-empty]
+  slipbox write <note> [text]       write a note (atomic, in the vault)  [--stdin] [--append [--paragraph]] [--create] [--if-unchanged <sha>] [--allow-empty]
   slipbox mkdir <path>              make a folder here (and its parents)
   slipbox mv <note|folder> <new-path>  rename or move a note or folder; links fixed wherever they're reached  [--dry-run] [--plan]
-                                    <new-path> (and cp's path): from the root, or from here when ./ or ../, or absolute;
+                                    <new-path> (and cp's path): from the vault's top, or from here when ./ or ../, or absolute;
                                     a folder that's there, or a path ending in /, is moved or copied into (its name kept)
   slipbox cp <note|folder> [path]   copy a note or folder (beside it, as name-copy, when no path)
   slipbox rm <note|folder>          delete to the trash (slipbox trash restore puts it back)  [--dry-run]
@@ -372,7 +372,7 @@ Usage:
   slipbox folders [default <name> <path>]  the named folders: their copies, the one links open; or make one the one
   slipbox rename-heading <note> <heading> <new>  rename a heading; links to it fixed everywhere  [--dry-run] [--plan]
   slipbox relink [note]             rewrite links broken by a move slipbox saw, to where the file is  [--dry-run] [--plan]
-  slipbox convert-links [note]      wikilinks and links from the root rewritten as relative paths  [--dry-run] [--plan]
+  slipbox convert-links [note]      wikilinks and links from the vault's top rewritten as relative paths  [--dry-run] [--plan]
   slipbox undo                      take back the last mv, name, rename-heading, relink, convert-links or replace --all here
                                     [--dry-run] [--plan]
   slipbox apply [plan]              write a plan --plan saved (refused if a file changed since); none: those waiting  [--dry-run]
@@ -382,8 +382,8 @@ Usage:
   slipbox capture [text]            append to the scratch          [--ref path:L[-M] | path:L:C-D | path:L:C-M:D] [--snippet] [--stdin] [--lang L]
   slipbox scratch show|path|clear|copy                            [--if-unchanged <sha>]
   slipbox init [dir]                give <dir> a .slipbox/: settings, and a name with --name  [--name N] [--private] [--dry-run] [--plan]
-  slipbox deinit <dir>              take a nested root's .slipbox/ away: a plain folder of the root holding it  [--dry-run] [--plan]
-  slipbox info                      the root, its name and copies, its link convention, paths, versions, staleness
+  slipbox deinit <dir>              take a nested vault's .slipbox/ away: part of the vault holding it  [--dry-run] [--plan]
+  slipbox info                      the vault, its name and copies, its link convention, paths, versions, staleness
   slipbox doctor [file]             language servers and linters: each language's, found where, installed when needed, or missing
   slipbox diagnostics <file>        a file's problems: its servers', its linters', its syntax; a note's links and lint  [--severity S] [--timeout SECS]
   slipbox themes                    list themes
@@ -396,7 +396,7 @@ Usage:
   slipbox commands                  list named commands and their CLI equivalents
 
 Global options:
-  --root <dir>      the root to start from (default: the nearest folder above the path or cwd holding a root marker)
+  --root <dir>      the vault to start from (default: the nearest folder above the path or cwd holding a vault marker)
   --config <file>   user config file (default: $SLIPBOX_CONFIG or ~/.config/slipbox/config.toml)
   --json            one JSON object on stdout: {schema, ok, command, data, warnings, stale}
   --color <when>    auto | always | never
@@ -409,8 +409,8 @@ unless --from <note> picks the one a link from there reaches. resolve <link> --f
 href, the relative path a link there carries. After --, nothing is an option:
 slipbox read -- -dash.md names a note that starts with a dash.
 Exit codes: 0 ok, 1 error, 2 usage, 3 not found, 4 ambiguous (a link; several nvims for send),
-5 refused (--if-unchanged, a write outside the root or over an existing note, invalid UTF-8,
-  a read of a symlink leading out of the root).
+5 refused (--if-unchanged, a write outside the vault or over an existing note, invalid UTF-8,
+  a read of a symlink leading out of the vault).
 `;
 
 export const CLI_COMMANDS = new Set([
@@ -868,7 +868,7 @@ function resolveNote(s: Session, arg: string, parse = true): string {
   // Reading follows the vault's rule too: a symlink pointing out of it is not a note of it (the
   // walk leaves it out), so naming it by path reads nothing from outside.
   if (!landsInside(s.loc.root, join(s.loc.root, rel)))
-    throw new CliError(`${rel} points outside the root; not reading it`, EXIT.refused);
+    throw new CliError(`${rel} points outside the vault; not reading it`, EXIT.refused);
   return rel;
 }
 
@@ -1538,7 +1538,7 @@ const HANDLERS: Record<string, Handler> = {
           finished: p.passFinished,
           started: p.passStarted,
         },
-        human: `home folder ${p.root}: ${p.found} root${p.found === 1 ? "" : "s"} found, ${p.indexed} indexed${done ? ` — pass done ${p.passFinished!.slice(0, 16).replace("T", " ")}` : ` — ${p.queue.length} folder${p.queue.length === 1 ? "" : "s"} left`}\n`,
+        human: `home folder ${p.root}: ${p.found} vault${p.found === 1 ? "" : "s"} found, ${p.indexed} indexed${done ? ` — pass done ${p.passFinished!.slice(0, 16).replace("T", " ")}` : ` — ${p.queue.length} folder${p.queue.length === 1 ? "" : "s"} left`}\n`,
       };
     }
     if (isListed(s.loc))
@@ -1871,7 +1871,7 @@ const HANDLERS: Record<string, Handler> = {
     // A .slipbox/ made is no edit a saved plan holds (20.18): refused, nothing written.
     if (has(s.args, "plan"))
       throw new UsageError(
-        "making a .slipbox/ has no edits to plan: --dry-run previews it (--plan is for a folder inside a root)",
+        "making a .slipbox/ has no edits to plan: --dry-run previews it (--plan is for a folder inside a vault)",
       );
     let r: ReturnType<typeof initVault>;
     try {
@@ -1902,13 +1902,13 @@ const HANDLERS: Record<string, Handler> = {
     const abs = dir.startsWith("/") ? dir : join(s.io.cwd, dir);
     if (!hasMarker(abs))
       throw new CliError(
-        `${abs} has no .slipbox/ to take away${markersAt(abs).length ? ` (it's a root by its ${markersAt(abs).join(", ")})` : ""}`,
+        `${abs} has no .slipbox/ to take away${markersAt(abs).length ? ` (it's a vault by its ${markersAt(abs).join(", ")})` : ""}`,
         EXIT.refused,
       );
     const holder = findVaultRoot(dirname(abs));
     if (!holder)
       throw new CliError(
-        `${abs} isn't in another root: only a root nested in another becomes a plain folder (of the root holding it)`,
+        `${abs} isn't in another vault: only a vault nested in another becomes part of the vault holding it`,
         EXIT.refused,
       );
     const parent = openVault(holder);
@@ -2011,7 +2011,7 @@ const HANDLERS: Record<string, Handler> = {
   async name(s, rest) {
     const name = requireArg(rest, "the folder's new name");
     if (s.loc.mode === "folder")
-      throw new CliError(`${s.loc.root} has no root to name: slipbox init makes one`, EXIT.refused);
+      throw new CliError(`${s.loc.root} has no vault to name: slipbox init makes one`, EXIT.refused);
     const taken = folderNamed(name, s.loc.root).find((f) => f.name.toLowerCase() === name.toLowerCase());
     if (taken)
       throw new CliError(
@@ -2223,11 +2223,11 @@ const HANDLERS: Record<string, Handler> = {
     // A root you don't trust (23.x): what runs there is yours, never the folder's; said, with what it limits.
     const untrusted = (root: string, limits: string[]) => {
       s.warnings.push(
-        `${short(root)} isn't a root you trust: nothing of its own runs — not its programs, its settings that name one, or the code its servers and git would run${limits.length ? ` (here: ${limits.join("; ")})` : ""}; slipbox asks whether you trust it when that matters (or :trust there), and [trust] roots in your config can list it`,
+        `${short(root)} isn't a vault you trust: nothing of its own runs — not its programs, its settings that name one, or the code its servers and git would run${limits.length ? ` (here: ${limits.join("; ")})` : ""}; slipbox asks whether you trust it when that matters (or :trust there), and [trust] roots in your config can list it`,
       );
       if (!gitGuardsAttributes())
         s.warnings.push(
-          "git is older than 2.42: in a root you don't trust, the filters its attributes name can still run — git 2.42 or later stops them",
+          "git is older than 2.42: in a vault you don't trust, the filters its attributes name can still run — git 2.42 or later stops them",
         );
     };
     if (rest[0]) {
@@ -2237,7 +2237,7 @@ const HANDLERS: Record<string, Handler> = {
       if (!f.trusted) untrusted(f.root, f.limits);
       const skipped = f.skipped.map((k) => `  ${k.name.padEnd(28)} not run here: ${k.why}\n`);
       const human = [
-        `${rest[0]}: ${f.language}, its project ${short(f.root)}${f.trusted ? " (a root you trust)" : ""}\n`,
+        `${rest[0]}: ${f.language}, its project ${short(f.root)}${f.trusted ? " (a vault you trust)" : ""}\n`,
         ...f.run.map(line),
         ...skipped,
         ...f.linters.map(lintLine),
@@ -2421,9 +2421,11 @@ const HANDLERS: Record<string, Handler> = {
       version: VERSION,
       // A release build's repository and platform (14.2); null: run from source, or built by hand.
       release: RELEASE,
-      // The root (21.10): its path — a plain folder opened, that folder's — and its name, when it has one.
+      // The vault (21.10): its path — a folder outside every vault opened, that folder's — and its name, when it
+      // has one.
       root: s.loc.root,
-      // "root" where the code says vault: the word the user meets (DF-D9).
+      // "root" where the code says vault: the JSON's word since DF-D9, kept for the agents and scripts that read it;
+      // what's printed for a person says vault (VV-D1).
       mode: s.loc.mode === "vault" ? "root" : s.loc.mode,
       name: s.loc.name,
       // What its cache and state are kept by (21.8): its path's key.
@@ -2450,10 +2452,12 @@ const HANDLERS: Record<string, Handler> = {
     };
     const human = [
       `slipbox   ${VERSION}${RELEASE ? ` (${RELEASE.target}, released from ${RELEASE.repo})` : ""}`,
-      `root      ${data.root} (${data.mode}${data.markerVersion ? `, marker v${data.markerVersion}` : ""})`,
+      data.mode === "folder"
+        ? `folder    ${data.root} (outside every vault)`
+        : `vault     ${data.root}${data.markerVersion ? ` (marker v${data.markerVersion})` : ""}`,
       folder
         ? `name      ${folder.pointer}${folder.pointer !== folder.name ? ` (${folder.name} is another's too)` : ""}${folder.private ? ", private: this machine's only" : ""}${folder.copies.length > 1 ? ` — ${folder.copies.length} copies, links open ${tildePath(folder.default ?? "")}` : ""}`
-        : `name      none — ${s.loc.mode === "folder" ? "no root" : "no remote and no .slipbox/ name"}: linked to by relative path`,
+        : `name      none — ${s.loc.mode === "folder" ? "no vault" : "no remote and no .slipbox/ name"}: linked to by relative path`,
       `notes     ${data.notes} (parsed ${g.stats.parsed}, cached ${g.stats.cached}, ${g.stats.ms.toFixed(0)} ms)`,
       `index     ${data.index.written ? `written ${data.index.written.slice(0, 16).replace("T", " ")}` : "not written yet"}${g.reached.size ? `, ${g.reached.size} reached outside the walk` : ""}`,
       `home      ${describeBackground(data.background)}`,
@@ -2954,7 +2958,7 @@ const HANDLERS: Record<string, Handler> = {
       ["path", abs],
       ["size", `${data.size} bytes`],
       ["modified", data.mtime],
-      ["root", s.loc.mode === "folder" ? `none (the folder ${tildePath(s.loc.root)})` : rootLabel(s.loc)],
+      ["vault", s.loc.mode === "folder" ? `none (${tildePath(s.loc.root)} is outside every vault)` : rootLabel(s.loc)],
       ["title", data.title ?? "—"],
       ["tags", data.tags.join(", ") || "—"],
       ...Object.entries(data.properties ?? {}).map(([k, v]): [string, string] => [
@@ -2976,7 +2980,7 @@ const HANDLERS: Record<string, Handler> = {
     const arg = requireArg(rest, "path");
     const abs = arg.startsWith("/") ? arg : /^\.\.?\//.test(arg) ? join(s.io.cwd, arg) : join(s.loc.root, arg);
     if (!isInside(s.loc.root, abs) || !landsInside(s.loc.root, abs))
-      throw new CliError(`${arg} is outside the root (${s.loc.root})`, EXIT.refused);
+      throw new CliError(`${arg} is outside the vault (${s.loc.root})`, EXIT.refused);
     const rel = relative(s.loc.root, abs);
     if (existsSync(abs)) throw new CliError(`${rel} already exists`, EXIT.refused, { path: rel });
     mkdirSync(abs, { recursive: true });
@@ -3011,7 +3015,7 @@ const HANDLERS: Record<string, Handler> = {
       const abs = isKnownExtension(extensionOf(base)) ? base : `${base}.md`;
       // Outside by its path, or by a symlinked folder on the way: checked before any folder is made.
       if (!isInside(s.loc.root, abs) || !landsInside(s.loc.root, abs))
-        throw new CliError(`${noteArg} is outside the root (${s.loc.root})`, EXIT.refused);
+        throw new CliError(`${noteArg} is outside the vault (${s.loc.root})`, EXIT.refused);
       rel = relative(s.loc.root, abs);
       checkWritable(s, abs);
       if (existsSync(abs))
@@ -3225,7 +3229,7 @@ function checkWritable(s: Session, abs: string): void {
   const refuse = (why: string) => {
     throw new CliError(`${relative(s.io.cwd, abs) || abs}: ${why}; not writing it`, EXIT.refused);
   };
-  if (!isInside(s.loc.root, abs) || !landsInside(s.loc.root, abs)) refuse(`outside the root (${s.loc.root})`);
+  if (!isInside(s.loc.root, abs) || !landsInside(s.loc.root, abs)) refuse(`outside the vault (${s.loc.root})`);
   const rel = relative(s.loc.root, abs);
   // Notes, data and text files are written (16.4); binary files never are.
   if (classify(rel, s.config.walk.extensions).group === "binary") refuse("a binary file");
@@ -3392,7 +3396,7 @@ function destArg(s: Session, to: string | undefined, into = false): string | und
   const abs = to.startsWith("/") ? to : fromHere.test(to) ? join(s.io.cwd, to) : join(s.loc.root, to);
   const rel = relative(s.loc.root, abs).split(sep).join("/");
   if ((!rel && !into) || !isInside(s.loc.root, abs) || !landsInside(s.loc.root, abs))
-    throw new CliError(`${to} is outside the root (${s.loc.root})`, EXIT.refused);
+    throw new CliError(`${to} is outside the vault (${s.loc.root})`, EXIT.refused);
   if (!rel) return "/";
   return to.endsWith("/") ? `${rel}/` : rel;
 }
@@ -3512,9 +3516,9 @@ async function renameResult(s: Session, plan: () => RenamePlan, g = s.graph): Pr
       : p.kind === "relink" || p.kind === "convert"
         ? `${verb} ${p.from}`
         : p.kind === "make-vault"
-          ? `${verb} ${p.from}/ a root of its own${p.to !== p.from ? `, called ${p.to}` : ""}`
+          ? `${verb} ${p.from}/ a vault of its own${p.to !== p.from ? `, called ${p.to}` : ""}`
           : p.kind === "unmake-vault"
-            ? `${verb} ${p.from}/ a plain folder of ${p.to}`
+            ? `${verb} ${p.from}/ part of ${p.to}`
             : `${verb} ${p.from} → ${p.to}`;
   const human = [
     `${head}: ${links} change${links === 1 ? "" : "s"} in ${p.files.length} file${p.files.length === 1 ? "" : "s"}${saved ? ` — planned: slipbox apply ${saved.id} writes it (refused if any of these files changes first)` : ""}`,
@@ -3554,7 +3558,8 @@ function relearnRenamedRoots(r: Result): Result {
 
 /**
  * A change's kind as the JSON says it (DF-D9): "root" where the code, and the logs it keeps, say vault —
- * a root's naming `root`, `init`'s and `deinit`'s `make-root` and `unmake-root`.
+ * a vault's naming `root`, `init`'s and `deinit`'s `make-root` and `unmake-root`. Values agents and scripts read,
+ * kept when what's printed for a person came to say vault (VV-D1).
  */
 function kindWord(kind: RenamePlan["kind"]): string {
   return kind === "vault"

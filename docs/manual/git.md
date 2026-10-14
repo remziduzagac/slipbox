@@ -20,10 +20,10 @@ what it did. [Privacy](privacy.md) has the few cases where git itself reaches a 
 
 ## Git in slipbox
 
-A git repository is a root by itself. Open any file in it, and slipbox opens the repository from its top folder.
-[Links and roots](links-and-roots.md) explains roots.
+A git repository is a vault by itself. Open any file in it, and slipbox opens the repository from its top folder.
+[Links and vaults](links-and-vaults.md) explains vaults.
 
-The status line shows the root and the branch checked out. For example, it shows `app · main` for a repository named
+The status line shows the vault and the branch checked out. For example, it shows `app · main` for a repository named
 `app` by its remote. A worktree of a named folder shows as its name and branch, as in `app@fix/retry`.
 
 The examples in this chapter use that repository, `~/code/app`, as [Code](code.md) does.
@@ -65,10 +65,10 @@ Everything else is under `space g`:
 slipbox reads status, diffs, blame and history from git. It runs git to stage, unstage, discard, commit and switch
 branches.
 
-What else git runs depends on whether you trust the root. A repository you cloned can name programs for git to run.
-slipbox lets them run only in a root you trust. [Code](code.md#trust) explains trust.
+What else git runs depends on whether you trust the vault. A repository you cloned can name programs for git to run.
+slipbox lets them run only in a vault you trust. [Code](code.md#trust) explains trust.
 
-In a root you don't trust, git runs nothing of the repository's own:
+In a vault you don't trust, git runs nothing of the repository's own:
 
 - No hooks. A commit runs none, and isn't signed, since the repository's config could name the program that signs.
 - No `core.fsmonitor` command.
@@ -79,7 +79,7 @@ In a root you don't trust, git runs nothing of the repository's own:
 
 Blame always reads the last commit, never the files as they are now. Blaming those could run a filter.
 
-In a root you trust, git runs as the repository has it, with its hooks, its signing and its filters.
+In a vault you trust, git runs as the repository has it, with its hooks, its signing and its filters.
 
 A repository that keeps large files with Git LFS can show those files as changed until you trust it. That's because
 their filter doesn't run.
@@ -207,7 +207,7 @@ If the message is empty, or a hook refuses, slipbox says so in git's words. The 
 "Commit" and "Amend the last commit" are in the palette (`:`) too, for when source control isn't open. With nothing
 staged, a commit says so.
 
-In a root you don't trust, the commit's hooks don't run, and it isn't signed. The editor's first lines and a message
+In a vault you don't trust, the commit's hooks don't run, and it isn't signed. The editor's first lines and a message
 say so.
 
 ## Merge conflicts
@@ -282,8 +282,8 @@ Unsaved notes stay open, and a message says so.
 
 ## Worktrees
 
-A worktree, made with `git worktree add`, is a root of its own. It has its own tabs, positions and scratch.
-[Links and roots](links-and-roots.md#worktrees) has the rest.
+A worktree, made with `git worktree add`, is a vault of its own. It has its own tabs, positions and scratch.
+[Links and vaults](links-and-vaults.md#worktrees) has the rest.
 
 Worktrees suit giving an agent a branch of its own to work on.
 
@@ -293,7 +293,7 @@ Worktrees suit giving an agent a branch of its own to work on.
 - The one you're in is marked `●`.
 - A detached one shows by its short commit.
 
-`enter` switches to that checkout. You land at the same note when it's there, else at its root.
+`enter` switches to that checkout. You land at the same note when it's there, else at its top folder.
 
 ## Reviewing a branch
 
@@ -322,7 +322,7 @@ on the base since doesn't show.
 
 On the base branch itself, the list is what you haven't committed yet.
 
-In a repository where the root is a folder inside it, files outside that folder are left out.
+In a repository where the vault is a folder inside it, files outside that folder are left out.
 
 ### A file's diff
 
@@ -361,7 +361,7 @@ Each broken link has a cause:
 | Cause | What happened |
 | --- | --- |
 | **moved** | A branch moved the file it points to. The fix is the new path, written as the link writes paths |
-| **deleted** | A branch deleted the file, or moved it out of the root |
+| **deleted** | A branch deleted the file, or moved it out of the vault |
 | **note-moved** | The note itself moved, and its relative link no longer reaches from where it is now |
 | **missing** | Neither branch has the file. The link was already broken on the branch being merged |
 
@@ -374,7 +374,7 @@ The review checks:
 - links to this repository's own hosting
 - pointers to this folder
 
-[Links and roots](links-and-roots.md) explains each. A link to another repository or another folder isn't the merge's
+[Links and vaults](links-and-vaults.md) explains each. A link to another repository or another folder isn't the merge's
 to check.
 
 Only committed work is reviewed, since what isn't committed is in neither branch.
@@ -403,7 +403,7 @@ and when you follow the link.
 - `space l r` rewrites a note's broken links to where their files are now.
 - `slipbox relink` does it for every note.
 
-[Links and roots](links-and-roots.md#repairs) covers relinking.
+[Links and vaults](links-and-vaults.md#repairs) covers relinking.
 
 Two things it can't repair:
 
@@ -426,7 +426,7 @@ slipbox diff README.md              # a note's diff against the base, with three
 slipbox worktrees                   # the checkouts: the main one first, then each worktree by branch
 slipbox merge-review fix/retry      # the links merging fix/retry into this branch would break
 slipbox merge-review fix/retry --into main
-slipbox problems                    # the root's link problems; during a merge, its conflicts too
+slipbox problems                    # the vault's link problems; during a merge, its conflicts too
 ```
 
 `slipbox changed` prints one line for each file, as `space g c` lists them:

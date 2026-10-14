@@ -4,7 +4,7 @@ This chapter covers the few ideas the rest of slipbox rests on:
 
 - Your files are the notes.
 - The TUI and the command line share them.
-- A root gives links their meaning.
+- A vault gives links their meaning.
 - An index keeps answers quick.
 - Nothing leaves your machine or runs without your say.
 
@@ -63,19 +63,20 @@ What connects them is the disk:
 - **As it was, but for your change.** Line endings and a byte order mark are kept. A missing last line break is kept
   too, unless the folder's `.editorconfig` asks for one. A file that isn't valid UTF-8 is never rewritten, so no byte
   is lost.
-- **Only inside the note's root.** A write that would land outside it, through `..` or a symlink, is refused.
+- **Only inside the note's vault.** A write that would land outside it, through `..` or a symlink, is refused.
 - **Shown first when it's large.** A rename, a move or a replace in every note shows each line it will change, before
   it changes any. `--dry-run` shows the same on the command line. `slipbox undo` takes the last one back.
 - **Deleting moves to slipbox's trash.** A file stays there for 30 days, to be put back ([Deleting and the
   trash](files.md#deleting-and-the-trash)).
 - **Autosave never writes over a change** another program made on disk. It asks instead ([Saving](editing.md#saving)).
 
-## Roots and links
+## Vaults and links
 
-A note's **root** is the nearest folder above it holding `.git`, `.slipbox/`, `.obsidian/` or `.zk/`. That's a
-repository, a vault or a notebook. A folder with none of these works too, as a plain folder.
+A note's **vault** is the nearest folder above it holding `.git`, `.slipbox/`, `.obsidian/` or `.zk/`. That's a
+repository, an Obsidian vault or a zk notebook. A folder outside every vault works too: opened by its path, it stands in
+for one.
 
-The root decides:
+The vault decides:
 
 - what `/` at the start of a link means
 - where a wikilink's name is looked for
@@ -89,28 +90,28 @@ wrote it meant:
 - a wikilink by name, as in Obsidian
 - a path without `.md`, as in zk
 
-A link slipbox writes follows the root's own convention.
+A link slipbox writes follows the vault's own convention.
 
 You can name a folder once, with `slipbox init --name notes`. Then a pointer reaches it wherever it is on each machine:
 `slipbox://notes/inbox.md`.
 
 Renaming or moving a note rewrites every link to it that slipbox can reach. Each link keeps the form it was written in.
 
-[Links and roots](links-and-roots.md) explains all of it.
+[Links and vaults](links-and-vaults.md) explains all of it.
 
 ## The index
 
-slipbox keeps an index of each root in its cache. It holds the notes' names, their links and backlinks, and their
+slipbox keeps an index of each vault in its cache. It holds the notes' names, their links and backlinks, and their
 words for search.
 
-The TUI builds the index in the background when it opens a root. Then it keeps it up to date as files change, whoever
+The TUI builds the index in the background when it opens a vault. Then it keeps it up to date as files change, whoever
 changes them. A command brings it up to date before a search. Until it's built, search reads the files themselves. It
 finds the same notes, more slowly ([The index](finding.md#the-index)).
 
 The index is a copy, never the truth. Deleting the cache is always safe, and slipbox makes it again.
 
-While you aren't working, the TUI also looks through your home folder for other roots, and indexes them. So links from
-one root to another count as backlinks everywhere. `index.background = false` turns that off.
+While you aren't working, the TUI also looks through your home folder for other vaults, and indexes them. So links
+from one vault to another count as backlinks everywhere. `index.background = false` turns that off.
 
 ## What reaches the network
 
@@ -137,7 +138,7 @@ slipbox runs the programs you chose:
 
 A folder's own settings never name a program to run.
 
-A folder can hold programs of its own, such as a project's tools or git hooks. In a root you haven't trusted, none of
+A folder can hold programs of its own, such as a project's tools or git hooks. In a vault you haven't trusted, none of
 them runs. slipbox asks the first time it matters ([Trust](code.md#trust)).
 
 Text from a note is cleaned of terminal control codes before it reaches your terminal. So a note can't move your cursor
@@ -149,7 +150,7 @@ or retitle your window.
 - **The unsaved list is advice.** A command that writes a note you're editing still writes. The TUI then asks you what
   to keep.
 - **Big files and big folders.** A note larger than `walk.max_file_size` (4 MiB) is listed as skipped, not read. Your
-  home folder and `/` are never roots. If you open one, it's listed a level at a time, never indexed whole.
+  home folder and `/` are never vaults. If you open one, it's listed a level at a time, never indexed whole.
 - **A change it can't see.** On a Windows drive under WSL, slipbox notices a Windows program's change only in the notes
   it has open ([Windows, through WSL](../guides/install.md#windows-through-wsl)).
 - **Most commands may still change before 1.0.** A stable few won't, and nor will the exit codes and the `--json`

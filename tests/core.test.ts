@@ -3169,7 +3169,7 @@ describe("trust (23.x)", () => {
     const got = await runLint({ argv: [fake], literal: true }, files, root, undefined, (t) => said.push(t));
     expect(got!.map((i) => i.file)).toEqual([join(root, "plain/a.md")]);
     expect(said).toEqual([
-      `markdownlint-cli2 not run on 2 file(s): a markdownlint config there is code, or names code to load, and ${root} isn't a root you trust — [trust] roots in your config`,
+      `markdownlint-cli2 not run on 2 file(s): a markdownlint config there is code, or names code to load, and ${root} isn't a vault you trust — [trust] roots in your config`,
     ]);
     await runLint({ argv: [fake], literal: true }, files, root, undefined, (t) => said.push(t));
     expect(said.length).toBe(1); // said once

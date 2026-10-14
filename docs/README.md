@@ -31,7 +31,7 @@ Everything slipbox does, a chapter for each part.
 - [How slipbox works](manual/how-it-works.md): the ideas the rest rests on, and what slipbox promises.
 - [The screen](manual/screen.md): tabs, windows, the side panels, the status line, the mouse.
 - [Reading](manual/reading.md): how notes and other files are drawn, pictures and diagrams among them.
-- [Links and roots](manual/links-and-roots.md): the links slipbox reads and writes, and the folders they reach.
+- [Links and vaults](manual/links-and-vaults.md): the links slipbox reads and writes, and the folders they reach.
 - [Finding things](manual/finding.md): the switcher, search, find and replace, the outline, history.
 - [Editing](manual/editing.md): the lens and source mode, the keys, saving, completion, spelling.
 - [Files](manual/files.md): the explorer, and making, moving, renaming and removing files with their links kept.

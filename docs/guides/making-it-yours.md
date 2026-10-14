@@ -197,10 +197,10 @@ theme = "catppuccin-latte"
 autosave_ms = 5000   # save a changed note after 5 seconds without a key
 ```
 
-A folder with `.slipbox/` is a root, as a git repository is. [Links and roots](../manual/links-and-roots.md) says what
-that means for its links.
+A folder with `.slipbox/` is a vault, as a git repository is. [Links and vaults](../manual/links-and-vaults.md) says
+what that means for its links.
 
-A folder inside another root takes the outer one's settings too, and the nearer folder's settings win. A git repository
+A folder inside another vault takes the outer one's settings too, and the nearer folder's settings win. A git repository
 has no settings of its own until you `slipbox init` it. `--private` keeps its `.slipbox/` out of git.
 
 A folder's settings come with the folder, synced or cloned from someone else. So they can't choose what runs on your

@@ -185,7 +185,7 @@ from.
 | backlinks: the notes that link here | | `space l b` |
 | relink: point this note's links that a move broke to where the files are now | | `space l r` |
 
-[Links and roots](links-and-roots.md) explains where a link lands.
+[Links and vaults](links-and-vaults.md) explains where a link lands.
 
 ### What's under the cursor
 
@@ -338,15 +338,15 @@ Moving selects a row and opens nothing. [Files](files.md) explains what each of 
 | `a` | show every text file, or go back to what [`files.show`](configuration.md) lists |
 | `n` / `shift+n` | a new note / a new folder in the selected folder (beside a selected file) |
 | `r` | rename the selected note, file or folder in its folder, fixing every link to it after a preview |
-| `shift+r` | on a nested root's row, name it, as pointers name it |
+| `shift+r` | on a nested vault's row, name it, as pointers name it |
 | `m` | move it to a folder picked from a tree, fixing links after a preview |
 | `d` | delete it to slipbox's trash, after asking (it says how many links break) |
 | `u` | restore what was deleted last |
 | `shift+u` | undo the last rename, move or relink, after a preview |
 | `y` / `x` | copy / cut it, to paste |
 | `p` | paste in the selected folder (a copy of what was copied, or what was cut, moved there) |
-| `v` | give the selected folder a `.slipbox/` folder, making it a root of its own (it asks for a name) |
-| `shift+v` | make the selected nested root a plain folder again |
+| `v` | give the selected folder a `.slipbox/` folder, making it a vault of its own (it asks for a name) |
+| `shift+v` | make the selected nested vault part of the vault holding it again |
 | `.` | the row's menu, as its `…` button opens it (each entry's key picks it there) |
 | `q` | close the explorer |
 | `esc` | back to the note, and the explorer stays open (on a narrow screen, over the note, it closes) |
@@ -384,7 +384,7 @@ Press the key again while the view has the focus to close it.
 | --- | --- |
 | the outline: the note's headings | `space o` |
 | the footnotes: each one, its text and where it's referred to | `space n f` |
-| Info: the file's path, root, counts, properties, tags and links | `space n i` |
+| Info: the file's path, vault, counts, properties, tags and links | `space n i` |
 
 `space n shift+f` adds a footnote after the word at the cursor, and asks for its text.
 
@@ -653,8 +653,8 @@ With spelling on (`space u s`), these keys work:
 
 ### Your shell
 
-`:!cmd` runs `cmd` in your shell, in the root's folder, and shows what it prints in a window. In the command, `%` is
-the file's path.
+`:!cmd` runs `cmd` in your shell, in the vault's top folder, and shows what it prints in a window. In the command,
+`%` is the file's path.
 
 `:%!sort`, `:.!cmd`, `:3,7!cmd` and `:'<,'>!cmd` put the lines through it, in one undo step. `!` in visual mode types
 `:'<,'>!`.
@@ -792,23 +792,23 @@ act on this note's folder.
 | `space d y` / `space d x` | copy / cut the folder, to paste |
 | `space d p` | paste into the folder what was copied (a copy) or cut (moved, links fixed) |
 
-### Roots and named folders: `space v`
+### Vaults and named folders: `space v`
 
-A root is the folder slipbox works in. [Links and roots](links-and-roots.md) explains roots and their names.
+A vault is the folder slipbox works in. [Links and vaults](links-and-vaults.md) explains vaults and their names.
 
 | Keys | What |
 | --- | --- |
 | `space v v` | the named folders this machine knows (`enter` goes into one) |
 | `space v shift+v` | which copy a named folder's links open, when you have two |
-| `space v n` | name this root (or the selected one) as pointers name it, after a preview |
-| `space v m` | give this plain folder a `.slipbox/`, or in a root, make the selected folder a root of its own |
-| `space v shift+m` | make a nested root a plain folder of the root holding it |
+| `space v n` | name this vault (or the selected one) as pointers name it, after a preview |
+| `space v m` | outside every vault, give this folder a `.slipbox/`; in one, make the selected folder its own vault |
+| `space v shift+m` | make a nested vault part of the vault holding it |
 | `space v t` | slipbox's trash: what was deleted here (`enter` restores it, and its last row empties it) |
 | `space v u` | restore what was deleted last |
 | `space v shift+u` | undo the last rename, move, relink or replace in every note, after a preview |
-| `space v p` | the Problems panel's All tab: this root's broken links, lint, conflicts |
-| `space v r` | reindex the root |
-| `space v i` | about this folder: its root, name and copies, notes, what's skipped, the watcher |
+| `space v p` | the Problems panel's All tab: this vault's broken links, lint, conflicts |
+| `space v r` | reindex the vault |
+| `space v i` | about this folder: its vault, name and copies, notes, what's skipped, the watcher |
 | `space v c` | read the configuration again (saving it does that too) |
 
 ### The app
@@ -867,7 +867,7 @@ Your configuration's [`[aliases]`](configuration.md) adds more commands, or rena
 | `:tabpin` | pin or unpin the tab |
 | `:source` | the note as Markdown, or rendered again |
 | `:lens`, `:live` | open or close the lens |
-| `:new <name>` / `:mkdir <name>` | a new note / folder beside this note (with a leading `/`, from the root) |
+| `:new <name>` / `:mkdir <name>` | a new note / folder beside this note (with a leading `/`, from the vault's top) |
 | `:rename <path>`, `:mv <path>` | rename or move the note, fixing links after a preview |
 | `:delete` | delete the note to slipbox's trash, after asking |
 | `:trash` | slipbox's trash (`enter` restores an item) |
@@ -890,14 +890,14 @@ Your configuration's [`[aliases]`](configuration.md) adds more commands, or rena
 | `:folders` | the named folders, to pick one to go into |
 | `:folders-default` | which copy a named folder's links open |
 | `:name [new]` | name this folder, as pointers name it |
-| `:init` | give this plain folder a `.slipbox/` |
-| `:pin-root` | keep this root among the explorer's roots after you leave it, or no longer |
-| `:trust`, `:untrust` | trust this root, so its own tools run, or stop trusting it ([Code](code.md)) |
+| `:init` | give this folder, outside every vault, a `.slipbox/` |
+| `:pin-root` | keep this vault among the explorer's vaults after you leave it, or no longer |
+| `:trust`, `:untrust` | trust this vault, so its own tools run, or stop trusting it ([Code](code.md)) |
 | `:theme <name>` | set the theme |
 | `:glyphs <set>` | set the glyphs: `nerd`, `unicode`, `ascii` or `auto` |
 | `:zen` / `:wrap` | zen mode / wrapping, on or off |
 | `:messages` | the messages slipbox has shown |
-| `:reload` / `:reindex` | read the note from disk again / reindex the root |
+| `:reload` / `:reindex` | read the note from disk again / reindex the vault |
 | `:config` | read the configuration again |
 | `:help` | help: every key and command |
 
@@ -935,7 +935,7 @@ The switcher, the palette, help, pickers and menus share these keys:
 | `backspace` / `ctrl+w`, `ctrl+backspace` | delete a character / a word of what's typed |
 | an entry's key | in a menu, pick that entry (`shift+r` and `r` differ) |
 | `left` / `right` | in a tree of folders, fold / unfold |
-| `ctrl+a` | in search, more folders: those linked with this one, then every root, then this one again |
+| `ctrl+a` | in search, more folders: those linked with this one, then every vault, then this one again |
 
 Pasting puts the first line of the text in the list's filter or the prompt.
 

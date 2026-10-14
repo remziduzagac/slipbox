@@ -20,6 +20,13 @@ The format is [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.1.0/); wh
   or Code blocks in `space u u`, wraps them as before.
 - In source mode and the lens, `backspace` and `delete` delete a selection, as `d` and `x` do, without typing first.
 - Where a selection can't be edited, the message names the lens (`space n l`) and source mode (`ctrl+k`).
+- The folders slipbox works in are called vaults, as Obsidian calls them: any folder holding `.git`, `.slipbox/`,
+  `.obsidian/` or `.zk/` is a vault, so every git repository is one. The docs, the help, the command titles, the
+  messages and the human output of `slipbox info` and `slipbox stat` say vault where they said root, and the manual's
+  Links and roots is now [Links and vaults](docs/manual/links-and-vaults.md). Nothing a script or a config depends on
+  changed: the `--root` flag, `SLIPBOX_ROOT`, the settings that say root (`[trust] roots`, `walk.root_markers`,
+  `capture.location = "root"`, `links.path = "root"`), the `:pin-root` command, and the `--json` output's fields and
+  values (`root`, `mode`, a change's `kind`) are as they were. Only the reasons the JSON gives in words say vault.
 
 ### Fixed
 

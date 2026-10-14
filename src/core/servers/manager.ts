@@ -147,7 +147,7 @@ export class ServerManager {
       if (!this.o.ask)
         this.o.message(
           "info",
-          `${root} isn't a root you trust: ${limits.join("; ")} — trust it in slipbox (it asks), or [trust] roots in your config; slipbox doctor says more`,
+          `${root} isn't a vault you trust: ${limits.join("; ")} — trust it in slipbox (it asks), or [trust] roots in your config; slipbox doctor says more`,
         );
       else if (trustOf(root) === null) this.o.ask(root, limits);
     }

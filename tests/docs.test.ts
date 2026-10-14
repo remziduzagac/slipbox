@@ -84,12 +84,48 @@ function blueprintIds(text: string): string[] {
   ].map((m) => m[0]);
 }
 
+/** Text blanked, its line breaks kept: what's left keeps its line numbers. */
+const blank = (text: string) => text.replace(/[^\n]/g, " ");
+
+/** The words what users read no longer says (VV-D1): a vault is a vault, and nothing is a plain folder or loose file. */
+const NOT_VAULT = /\broots?\b|\bplain folders?\b|\bloose (?:files?|folders?)\b/i;
+/** Root's meanings other than a vault: the file system's `/`, the root user, the maths. */
+const ROOT_ELSEWHERE =
+  /\bfile ?system's root\b|\bas root\b|\broot (?:user|or administrator|cause)\b|\bsquare roots?\b/gi;
+/** The names that keep the word (VV-D1): a flag, settings, a command, the export's CSS. The docs show them as code. */
+const ROOT_NAMES = /--root\b|\[trust\] roots\b|\btrust\.roots\b|\broot_markers\b|\bpin-root\b|:root\b/g;
+
+/**
+ * Where a doc says "root" for a vault (or a plain folder, a loose file), as `line: text`: what users read says vault
+ * (VV-D1). Code, fenced or a span, and a link's target are left out — the flag `--root`, the setting `[trust] roots`,
+ * the JSON's `root` field keep the word — and so are root's other meanings.
+ */
+function rootsForVaults(text: string): string[] {
+  const kept = text
+    .replace(/^(```|~~~)[^\n]*\n[\s\S]*?^\1[ \t]*$/gm, blank)
+    .replace(/(`+)[\s\S]*?[^`]\1(?!`)/g, blank)
+    .replace(/(\]\()([^)\s]*\))/g, (_, open: string, target: string) => open + blank(target))
+    .replace(ROOT_ELSEWHERE, blank);
+  const lines = text.split("\n");
+  return kept.split("\n").flatMap((line, i) => (NOT_VAULT.test(line) ? [`${i + 1}: ${lines[i]!.trim()}`] : []));
+}
+
+/** Whether a message slipbox prints says "root" for a vault: one with a space in it, a sentence, not a key or a value. */
+const saysRoot = (message: string) =>
+  /\s/.test(message) && NOT_VAULT.test(message.replace(ROOT_NAMES, "").replace(ROOT_ELSEWHERE, ""));
+
+let messagesRead: Promise<{ where: string; text: string }[]> | undefined;
 /**
  * What slipbox can print: every string in its source, a template's substitutions left out, and the strings of the
  * scripts a user runs (the installer and the Pages site's that runs it, the Homebrew formula, the source launcher).
- * Comments may cite the blueprint.
+ * Comments may cite the blueprint. Read once, for every test that asks.
  */
-async function messages(): Promise<{ where: string; text: string }[]> {
+function messages(): Promise<{ where: string; text: string }[]> {
+  messagesRead ??= readMessages();
+  return messagesRead;
+}
+
+async function readMessages(): Promise<{ where: string; text: string }[]> {
   const sources: [string, Grammar][] = [
     ...readdirSync(join(TOP, "src"), { recursive: true })
       .map(String)
@@ -222,6 +258,26 @@ describe("the user documentation (DOC)", () => {
       idsInMessage("start nvim (0.9 or later); git 2.42; pyright@1.1.414; version 1.0; MPL-2.0; a 3D chart; ${…}"),
     ).toEqual([]);
   }, 60_000); // every source file parsed: seconds, more on a busy machine
+
+  test("vault, never root, for the folders slipbox works in: the docs, the README, the skill, the messages (VV-D1)", async () => {
+    const files = [...userDocs(), join(TOP, "README.md"), join(TOP, "skills", "slipbox", "SKILL.md")];
+    expect(files.flatMap((f) => rootsForVaults(read(f)).map((r) => `${relative(TOP, f)}:${r}`))).toEqual([]);
+    expect((await messages()).filter((m) => saysRoot(m.text)).map((m) => `${m.where}: ${m.text}`)).toEqual([]);
+    // The checks catch what they look for, and leave code, links' targets and root's other meanings alone.
+    expect(
+      rootsForVaults(
+        "Open the root.\nIn `--root <dir>`, the `root` field\nand a span `over\ntwo lines, root`.\n" +
+          "[Links](links-and-roots.md#roots), the filesystem's root, nothing runs as root.\n" +
+          "```toml\n# the root\n```\nSquare roots and a root cause.\nRoots nested in roots.\n" +
+          "A plain folder, `--plain`, a loose file.\n",
+      ),
+    ).toEqual(["1: Open the root.", "10: Roots nested in roots.", "11: A plain folder, `--plain`, a loose file."]);
+    expect(saysRoot("x is outside the root")).toBe(true);
+    expect(saysRoot("names need a Root")).toBe(true);
+    expect(saysRoot("made x/ a plain folder of y")).toBe(true);
+    expect(saysRoot("--root x isn't a vault; [trust] roots lists it; walk.root_markers; :root { }")).toBe(false);
+    expect(saysRoot("root")).toBe(false); // a value: the JSON's `mode`, a change's kind
+  }, 60_000); // every source file parsed, when the test above hasn't
 
   test("no link into the blueprint", () => {
     expect(

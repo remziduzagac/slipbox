@@ -640,7 +640,7 @@ function dropUserOnly(data: Record<string, unknown>, file: string, warnings: str
   if (isPlainObject(walk) && "root_markers" in walk) {
     delete walk.root_markers;
     warnings.push(
-      `config: ${file} sets walk.root_markers, which only your own config may set (it decides where roots are); ignored`,
+      `config: ${file} sets walk.root_markers, which only your own config may set (it decides where vaults are); ignored`,
     );
   }
   for (const [key, why] of Object.entries(USER_ONLY)) {
@@ -937,6 +937,6 @@ export const VAULT_CONFIG_TEMPLATE = `# slipbox: this folder's settings. They ov
 # theme = "tokyo-night"
 
 [walk]
-# Extra gitignore-syntax patterns to leave out of this root, on top of .gitignore.
+# Extra gitignore-syntax patterns to leave out of this vault, on top of .gitignore.
 # exclude = ["archive/"]
 `;

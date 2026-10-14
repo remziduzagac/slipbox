@@ -182,11 +182,11 @@ export function locateVault(opts: LocateOptions): VaultLocation {
       throw new VaultError(`--root is not a directory: ${opts.root}`);
     if (isNeverRoot(root))
       throw new VaultError(
-        `--root ${opts.root}: ${root === homeFolder() ? "your home folder" : "/"} is never a root; open a folder in it`,
+        `--root ${opts.root}: ${root === homeFolder() ? "your home folder" : "/"} is never a vault; open a folder in it`,
       );
     if (!isVaultRoot(root))
       throw new VaultError(
-        `--root ${opts.root} isn't a root (none of ${rootMarkers().join(", ")} in it): slipbox init ${opts.root} makes it one`,
+        `--root ${opts.root} isn't a vault (none of ${rootMarkers().join(", ")} in it): slipbox init ${opts.root} makes it one`,
       );
     if (file && !isInside(root, file)) throw new VaultError(`${opts.path} is outside --root ${opts.root}`);
     // A file has one root, however it's opened (21.x): its nearest. `--root` says where to start; a

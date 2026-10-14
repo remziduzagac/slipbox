@@ -1573,7 +1573,7 @@ export class App {
       // A path in the vault that a symlink leads out of: not a file of the vault (the walk leaves
       // it out, the CLI refuses it), so nothing from outside is read through it.
       if (inside && !landsInside(this.loc.root, abs)) {
-        this.message("warn", `${relRaw} points outside the root; not opening it`);
+        this.message("warn", `${relRaw} points outside the vault; not opening it`);
         return null;
       }
       buf = new NoteBuffer(rel, abs, key);
@@ -2482,12 +2482,12 @@ export class App {
         if (!isVaultRoot(vault))
           return this.message(
             "warn",
-            `${vault} isn't a root on that branch (none of ${rootMarkers().join(", ")} in it)`,
+            `${vault} isn't a vault on that branch (none of ${rootMarkers().join(", ")} in it)`,
           );
         const there = note && existsSync(join(vault, note)) ? join(vault, note) : null;
         const v = this.view;
         this.switchVault(rootAt(vault), there, there && v ? { ...v.topAnchor } : undefined);
-        if (note && !there) this.message("info", `${note} isn't on that branch: its root opened instead`);
+        if (note && !there) this.message("info", `${note} isn't on that branch: its vault opened instead`);
       },
     });
   }
@@ -4273,7 +4273,7 @@ export class App {
 
   /** A new note, folder or paste with another root's row selected: refused, its files aren't this root's. */
   private refuseOtherRoot(): void {
-    this.message("warn", "another root's folder: select a folder of this root");
+    this.message("warn", "another vault's folder: select a folder of this vault");
   }
 
   /** A path typed for a new note or folder, from `base` (or the root, with a leading `/`); null
@@ -4283,7 +4283,7 @@ export class App {
     if (!typed) return null;
     const rel = posix.normalize(typed.startsWith("/") ? typed.slice(1) : posix.join(base, typed)).replace(/\/+$/, "");
     if (!rel || rel === "." || rel.startsWith("../") || rel === ".." || posix.isAbsolute(rel)) {
-      this.message("warn", `${typed}: not inside the root`);
+      this.message("warn", `${typed}: not inside the vault`);
       return null;
     }
     // Through a symlinked folder or not, never outside the vault.
@@ -4293,7 +4293,7 @@ export class App {
       root = realpathSync(root);
     } catch {}
     if (climbsOut(relative(root, target))) {
-      this.message("warn", `${typed} resolves outside the root — not creating it`);
+      this.message("warn", `${typed} resolves outside the vault — not creating it`);
       return null;
     }
     return rel;
@@ -4397,7 +4397,7 @@ export class App {
         if (v.insert) insertText(this, v, v.buf.eol);
       }
     };
-    this.prompt(`new note in ${base ? `${base}/` : "the root"}`, make);
+    this.prompt(`new note in ${base ? `${base}/` : "the vault's top folder"}`, make);
     if (prefill && this.overlay?.kind === "prompt") this.overlay.text = prefill;
   }
 
@@ -4480,7 +4480,9 @@ export class App {
     if (item.vault) actions.push(["rename_root", "Name it"]);
     actions.push(["move", "Move to…"], ["copy", "Copy"], ["cut", "Cut"]);
     if (item.dir)
-      actions.push(item.vault ? ["unmake_root", "Make it a plain folder"] : ["make_root", "Give it .slipbox/"]);
+      actions.push(
+        item.vault ? ["unmake_root", "Make it part of the vault holding it"] : ["make_root", "Give it .slipbox/"],
+      );
     if (this.fileClip)
       actions.push([
         "paste",
@@ -4488,7 +4490,7 @@ export class App {
           ? `Paste ${posix.basename(this.fileClip.rel)} here (move)`
           : `Paste a copy of ${posix.basename(this.fileClip.rel)} here`,
       ]);
-    actions.push(["delete", item.vault ? "Delete the root" : "Delete"]);
+    actions.push(["delete", item.vault ? "Delete the vault" : "Delete"]);
     const items: ListItem[] = actions.map(([action, label]) => {
       const key = this.explorerKeys.keysFor(action)[0];
       const shifted = key ? /^shift\+(.)$/.exec(key) : null;
@@ -4547,13 +4549,16 @@ export class App {
           : this.message(
               "info",
               item.vault
-                ? `${item.rel} is a root already — shift+v makes it a plain folder`
+                ? `${item.rel} is a vault already — shift+v makes it part of the vault holding it`
                 : "give a folder .slipbox/: select a folder first",
             );
       case "unmake_root":
         return item.vault
           ? this.unmakeVaultItem(item)
-          : this.message("info", "make a plain folder: select a nested root (its folder has its own icon)");
+          : this.message(
+              "info",
+              "to make a vault part of this one, select a nested vault (its folder has its own icon)",
+            );
     }
   }
 
@@ -4665,7 +4670,7 @@ export class App {
       return null;
     }
     const rel = this.view?.buf.rel ?? null;
-    if (rel === null) this.message("info", "open a note of this root, or select one in the explorer");
+    if (rel === null) this.message("info", "open a note of this vault, or select one in the explorer");
     return rel === null ? null : { rel, dir: false };
   }
 
@@ -4683,7 +4688,7 @@ export class App {
     this.message(
       "info",
       item
-        ? `${item.rel} is at the root: select a folder in the explorer`
+        ? `${item.rel} is at the vault's top: select a folder in the explorer`
         : "select a folder in the explorer, or open a note in one",
     );
     return null;
@@ -4693,7 +4698,11 @@ export class App {
   makeVaultHere(): void {
     const f = this.folderTarget();
     if (!f) return;
-    if (f.vault) return this.message("info", `${f.rel} is a root already — space v shift+m makes it a plain folder`);
+    if (f.vault)
+      return this.message(
+        "info",
+        `${f.rel} is a vault already — space v shift+m makes it part of the vault holding it`,
+      );
     this.makeVaultItem(f);
   }
 
@@ -4701,7 +4710,11 @@ export class App {
   unmakeVaultHere(): void {
     const item = this.explorerFocused() ? this.explorerItem() : null;
     if (item?.vault) return this.unmakeVaultItem(item);
-    if (item) return this.message("info", "make a plain folder: select a nested root (its folder has its own icon)");
+    if (item)
+      return this.message(
+        "info",
+        "to make a vault part of this one, select a nested vault (its folder has its own icon)",
+      );
     this.unmakeThisVault();
   }
 
@@ -4714,7 +4727,7 @@ export class App {
     if (!holder)
       return this.message(
         "info",
-        `${this.loc.name ?? this.loc.root} isn't inside another root: only a root nested in another becomes a plain folder (of the root holding it)`,
+        `${this.loc.name ?? this.loc.root} isn't inside another vault: only a vault nested in another becomes part of the vault holding it`,
       );
     // Refused before anything changes when the switch into the holder would be: never a root
     // whose .slipbox/ is gone, still open.
@@ -4736,7 +4749,7 @@ export class App {
         this.switchVault(rootAt(holder), open && existsSync(open) ? open : null);
         this.message(
           "info",
-          `made ${rel}/ a plain folder of ${plan.to} (its .slipbox/ is in the trash): ${n} change${n === 1 ? "" : "s"} in ${applied.written.length} file${applied.written.length === 1 ? "" : "s"}`,
+          `made ${rel}/ part of ${plan.to} (its .slipbox/ is in the trash): ${n} change${n === 1 ? "" : "s"} in ${applied.written.length} file${applied.written.length === 1 ? "" : "s"}`,
         );
       },
     );
@@ -4822,7 +4835,7 @@ export class App {
     });
     const source = (input: string): ListItem[] => {
       const out: ListItem[] = [
-        { label: `${g.dirOpen} / (the root)`, hint: opts.current === "" ? "here" : "", data: "" },
+        { label: `${g.dirOpen} / (the vault's top)`, hint: opts.current === "" ? "here" : "", data: "" },
       ];
       const q = input.trim();
       if (q) {
@@ -4879,7 +4892,7 @@ export class App {
     if (item.vault) {
       // A whole vault: said so, with how much it holds.
       const g = openVault(join(this.loc.root, item.rel));
-      what = `the root ${g.loc.name ?? item.rel} (${item.rel}/, ${g.notes.size} note${g.notes.size === 1 ? "" : "s"})`;
+      what = `the vault ${g.loc.name ?? item.rel} (${item.rel}/, ${g.notes.size} note${g.notes.size === 1 ? "" : "s"})`;
     }
     const warn = breaking ? ` ${breaking} link${breaking === 1 ? "" : "s"} to it will break.` : "";
     this.confirm(`Delete ${what}?${warn} It goes to the trash: u restores it.`, () => {
@@ -4984,7 +4997,7 @@ export class App {
     const name = posix.basename(clip.rel);
     const to = into ? `${into}/${name}` : name;
     if (clip.mode === "cut") {
-      if (into === from) return this.message("info", `${clip.rel} is already in ${into || "the root"}`);
+      if (into === from) return this.message("info", `${clip.rel} is already in ${into || "the vault's top folder"}`);
       if (clip.dir && (into === clip.rel || into.startsWith(`${clip.rel}/`)))
         return this.message("warn", `${clip.rel} can't move into itself`);
       return this.previewRename(this.movePlan(clip, to));
@@ -5012,7 +5025,7 @@ export class App {
 
   /** A nested root's name (`R`, the row's button): its `.slipbox/` name, which pointers use (17.15, 21.10: `slipbox name`); links are paths and don't change. */
   renameVaultItem(item: ExplorerItem): void {
-    if (!item.vault) return this.message("info", "R names a nested root: select one (its folder has its own icon)");
+    if (!item.vault) return this.message("info", "R names a nested vault: select one (its folder has its own icon)");
     const root = join(this.loc.root, item.rel);
     const name = rootAt(root).name ?? posix.basename(item.rel);
     this.prompt(`name ${name}, as pointers name it: `, (text) => {
@@ -5026,7 +5039,10 @@ export class App {
   /** Ask for a new folder's name and make it. */
   promptNewFolder(base = this.newItemBase()): void {
     if (base === null) return this.refuseOtherRoot();
-    this.prompt(`new folder in ${base ? `${base}/` : "the root"}`, (text) => void this.createFolder(text, base));
+    this.prompt(
+      `new folder in ${base ? `${base}/` : "the vault's top folder"}`,
+      (text) => void this.createFolder(text, base),
+    );
   }
 
   /** Create a folder (`shift+n` in the explorer, `space d n`, `:mkdir`): selected in the explorer. */
@@ -5566,7 +5582,7 @@ export class App {
       "# Lines starting with # are left out. ctrl+s commits; esc leaves it.",
       ...(trusted
         ? []
-        : ["# This root isn't trusted: its hooks don't run, and the commit isn't signed (:trust trusts it)."]),
+        : ["# This vault isn't trusted: its hooks don't run, and the commit isn't signed (:trust trusts it)."]),
     ];
     const buf = new NoteBuffer(null, `${c.root}#commit`, `commit:${c.root}`);
     buf.kind = { group: "text", format: "text" };
@@ -5585,7 +5601,7 @@ export class App {
     // A new commit's message is the first thing typed: its editor opens typing, on the empty first line. An amend's
     // has its message to change: it opens as any editor does.
     if (!amend) startInsert(this, fv, () => 0);
-    if (!trusted) this.message("warn", "this root isn't trusted: the commit's hooks don't run, and it isn't signed");
+    if (!trusted) this.message("warn", "this vault isn't trusted: the commit's hooks don't run, and it isn't signed");
   }
 
   /** The commit editor gone: back to where it was opened from — source control, when it's still there. */
@@ -6294,8 +6310,8 @@ export class App {
     row("File", "path", b.rel ?? b.abs, { copy: b.abs });
     row(
       "File",
-      "root",
-      this.loc.mode === "folder" ? `none — the plain folder ${tildePath(this.loc.root)}` : rootLabel(this.loc),
+      "vault",
+      this.loc.mode === "folder" ? `none — ${tildePath(this.loc.root)} is outside every vault` : rootLabel(this.loc),
       { copy: this.loc.root },
     );
     row(
@@ -6424,7 +6440,7 @@ export class App {
       row(
         "Links",
         "path",
-        shown({ relative: "relative", root: "from the root", name: "by name" }[c.path.value], c.path),
+        shown({ relative: "relative", root: "from the vault's top", name: "by name" }[c.path.value], c.path),
         copy,
         1,
       );
@@ -6616,7 +6632,7 @@ export class App {
   private footnoteNote(): boolean {
     const view = this.view;
     if (view?.buf.kind.group !== "note" || view.buf.rel === null) {
-      this.message("info", "footnotes are in this root's notes");
+      this.message("info", "footnotes are in this vault's notes");
       return false;
     }
     // Deleted on disk, or not valid UTF-8: not edited (its save would bring it back, or change bytes).
@@ -6929,7 +6945,7 @@ export class App {
     const named = (abs: string) => this.rootName(abs);
     if (!isListed(this.loc)) {
       for (const s of this.graph.skipped) {
-        if (s.reason !== "nested root") continue;
+        if (s.reason !== "nested vault") continue;
         const abs = join(this.loc.root, s.rel);
         out.set(s.rel, { kind: "vault", abs, name: named(abs) });
       }
@@ -7195,10 +7211,10 @@ export class App {
     return out;
   }
 
-  /** Keep the root open among the explorer's roots, or no longer (`:pin-root`). */
+  /** Keep the vault open among the explorer's vaults, or no longer (`:pin-root`). */
   togglePinnedRoot(): void {
     const r = this.loc.root;
-    if (r === this.mainRoot) return this.message("info", "the folder slipbox was opened on is always a root");
+    if (r === this.mainRoot) return this.message("info", "the folder slipbox was opened on is always in the explorer");
     if (this.pinnedRoots.has(r)) this.pinnedRoots.delete(r);
     else this.pinnedRoots.add(r);
     this.saveRoots();
@@ -7206,8 +7222,8 @@ export class App {
     this.message(
       "info",
       this.pinnedRoots.has(r)
-        ? `${this.vaultLabel(this.loc)}: a root of the explorer from now on`
-        : `${this.vaultLabel(this.loc)}: no longer kept as a root`,
+        ? `${this.vaultLabel(this.loc)}: kept in the explorer from now on`
+        : `${this.vaultLabel(this.loc)}: no longer kept in the explorer`,
     );
   }
 
@@ -8057,7 +8073,7 @@ export class App {
       case "rename":
         if (!row || !view) break;
         if (!view.buf.rel || !this.graph.notes.has(view.buf.rel))
-          this.message("warn", "only a note of this root has its headings renamed with their links");
+          this.message("warn", "only a note of this vault has its headings renamed with their links");
         else this.promptHeadingRename(view.buf.rel, row.text);
         break;
       default:
@@ -9633,7 +9649,7 @@ export class App {
     const places: SavePlace[] = [{ label: "Beside the note", path: dirname(beside) }];
     if (last && last !== dirname(beside)) places.push({ label: "Last export", path: last });
     for (const f of userFolders(this.home)) places.push({ label: f.name, path: f.path });
-    places.push({ label: "This root", path: this.loc.root });
+    places.push({ label: "This vault", path: this.loc.root });
     const o: SaveAsOverlay = openSaveAs(this, {
       title: `Export ${what} as ${format.title}`,
       dir: last ?? dirname(beside),
@@ -10805,9 +10821,9 @@ export class App {
           : plan.kind === "vault"
             ? `name ${plan.from} → ${plan.to}`
             : plan.kind === "make-vault"
-              ? `${plan.from}/ → a root of its own${plan.to !== plan.from ? `, called ${plan.to}` : ""}`
+              ? `${plan.from}/ → a vault of its own${plan.to !== plan.from ? `, called ${plan.to}` : ""}`
               : plan.kind === "unmake-vault"
-                ? `${plan.from}/ → a plain folder of ${plan.to}`
+                ? `${plan.from}/ → part of ${plan.to}`
                 : plan.kind === "convert"
                   ? "links → plain paths"
                   : plan.kind === "replace"
@@ -10952,9 +10968,9 @@ export class App {
           : plan.kind === "vault"
             ? `named the folder ${plan.from} → ${plan.to}`
             : plan.kind === "make-vault"
-              ? `made ${plan.from}/ a root of its own${plan.to !== plan.from ? `, called ${plan.to}` : ""}`
+              ? `made ${plan.from}/ a vault of its own${plan.to !== plan.from ? `, called ${plan.to}` : ""}`
               : plan.kind === "unmake-vault"
-                ? `made ${plan.from}/ a plain folder of ${plan.to} (its .slipbox/ is in the trash)`
+                ? `made ${plan.from}/ part of ${plan.to} (its .slipbox/ is in the trash)`
                 : plan.kind === "convert"
                   ? "converted links to plain paths"
                   : plan.kind === "replace"

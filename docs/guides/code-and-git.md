@@ -15,7 +15,7 @@ This guide opens a repository, reads and checks its code, commits a change, and 
 slipbox ~/code/app
 ```
 
-A git repository is a root of its own. slipbox opens it from its top folder, whichever file or subfolder inside it you
+A git repository is a vault of its own. slipbox opens it from its top folder, whichever file or subfolder inside it you
 name. It writes nothing into it.
 
 The explorer (`space e`) lists every text file in it, code included. In a repository holding a `.slipbox/` folder, it
@@ -114,7 +114,7 @@ worst problem, and the status line counts them.
 | Press | To |
 | --- | --- |
 | `space n q` | Open the Problems panel on this file, a row per problem with its line |
-| `space v p` | Open the panel's All tab: the whole root's broken links, lint and conflicts |
+| `space v p` | Open the panel's All tab: the whole vault's broken links, lint and conflicts |
 | `shift+k` | Show what's under the cursor: its type, its documentation |
 | `g d` | Go to its definition |
 | `g r` | List where it's used |

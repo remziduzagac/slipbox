@@ -213,12 +213,12 @@ function discard(app: App, row: GitRow): void {
     return app.message("info", "a conflict: resolve it in the file, then s marks it resolved");
   const rel = relOf(app, e.path);
   if (row.section === "untracked") {
-    if (rel === null) return app.message("warn", `${e.path} is outside this root`);
+    if (rel === null) return app.message("warn", `${e.path} is outside this vault`);
     return app.deleteItem({ rel, dir: false });
   }
   if (unsavedFor(app, e.path)) return;
   if (row.kind === "change") {
-    if (rel === null) return app.message("warn", `${e.path} is outside this root`);
+    if (rel === null) return app.message("warn", `${e.path} is outside this vault`);
     const ch = row.change!;
     app.confirm(`Discard the change at line ${ch.from} of ${e.path}? It goes back to what's staged.`, () => {
       const buf = app.buffer(rel);
@@ -257,7 +257,7 @@ function preview(app: App, row: GitRow): void {
 function openRow(app: App, row: GitRow): void {
   const e = row.entry!;
   const rel = relOf(app, e.path);
-  if (rel === null) return app.message("warn", `${e.path} is outside this root`);
+  if (rel === null) return app.message("warn", `${e.path} is outside this vault`);
   if (!existsSync(join(app.checkout!.root, e.path)))
     return app.message("info", `${e.path} is deleted — . shows what it had`);
   app.openOrSwitchTab(rel);

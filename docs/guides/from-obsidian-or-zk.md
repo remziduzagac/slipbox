@@ -13,8 +13,8 @@ shows two things you may want later: a name other folders can link to it by, and
 slipbox ~/notes
 ```
 
-To slipbox, a folder holding `.obsidian/` or `.zk/` is a root: one collection of notes. It opens from its top, whichever
-note or subfolder you name.
+To slipbox, a folder holding `.obsidian/` or `.zk/` is a vault: one collection of notes. It opens from its top,
+whichever note or subfolder you name.
 
 The explorer (`space e`) lists its notes and folders. Hidden ones aren't listed, such as `.obsidian/` itself and
 Obsidian's `.trash/`.
@@ -56,7 +56,7 @@ In a zk notebook, it says `markdown links, relative, without .md — zk's .zk/co
 ![An Obsidian vault's home note: its properties as a table, wikilinks, a callout and tags](../images/obsidian-home.png)
 
 The rest is Markdown: tables, code, maths and diagrams. [Reading](../manual/reading.md) shows how each is drawn.
-[Links and roots](../manual/links-and-roots.md) shows every link form.
+[Links and vaults](../manual/links-and-vaults.md) shows every link form.
 
 ## Links written their way
 
@@ -148,5 +148,5 @@ style = "markdown"
 ## Where next
 
 - [Getting started](getting-started.md): a first session, if you haven't had one.
-- [Links and roots](../manual/links-and-roots.md): every link form, roots, named folders and backlinks.
+- [Links and vaults](../manual/links-and-vaults.md): every link form, vaults, named folders and backlinks.
 - [Making it yours](making-it-yours.md): a theme, your keys and settings.

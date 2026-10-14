@@ -504,7 +504,7 @@ A list shows under the cursor. While it shows:
 | `esc` | Closes the list and stops typing |
 
 In a note, typing a link's target (after `](` or `[[`) lists the notes and files it could reach. The one you pick is
-written as the folder writes its links ([Links and roots](links-and-roots.md)).
+written as the folder writes its links ([Links and vaults](links-and-vaults.md)).
 
 In code, the language server offers its own completions. One that puts in a snippet leaves the cursor on the snippet's
 first blank. `tab` and `shift+tab` go to the next and previous blank ([Code](code.md)).
@@ -621,7 +621,7 @@ You can also type part of any command's name and pick it from the list ([The scr
 
 ## Running a command and filtering lines
 
-As in vim, `:!` runs a command by your shell (`$SHELL`), in the root's folder.
+As in vim, `:!` runs a command by your shell (`$SHELL`), in the vault's top folder.
 
 **Running.** `:!make` runs the command and shows what it prints, both streams. It shows them in a window titled with how
 the command ended.
@@ -629,8 +629,8 @@ the command ended.
 `enter` on a line that names a file and a line opens that file there. Such a line looks like `notes/inbox.md:12`, as
 `grep -n` and compilers print them.
 
-**The file's path.** `%` in the command is this file's path from the root: `:!wc -w %`. `\%` is a percent sign. The
-command also finds the root's and the file's paths in `SLIPBOX_ROOT` and `SLIPBOX_FILE`.
+**The file's path.** `%` in the command is this file's path from the vault's top: `:!wc -w %`. `\%` is a percent sign.
+The command also finds the vault's and the file's paths in `SLIPBOX_ROOT` and `SLIPBOX_FILE`.
 
 **Filtering.** `:{range}!cmd` gives lines to the command, and puts what it prints in their place, as one undo step:
 
@@ -682,8 +682,8 @@ From the command line, `slipbox send inbox.md --line 42` does what `space n s` d
 The scratch is a Markdown file where you collect references and snippets to hand to an agent. It holds lines of your
 notes and code, each with its `path:line`. You paste it into a prompt when you are ready.
 
-Each root has its own scratch, kept in slipbox's own state folder. It is outside your notes, and never committed. With
-`capture.location = "root"`, it is a note in the root instead: `scratch.md`, or the name in `capture.file`.
+Each vault has its own scratch, kept in slipbox's own state folder. It is outside your notes, and never committed. With
+`capture.location = "root"`, it is a note in the vault instead: `scratch.md`, or the name in `capture.file`.
 
 | Key | What it does |
 | --- | --- |
@@ -748,7 +748,7 @@ slipbox scratch show                              # what it holds; also: path, c
 The command line changes notes the way slipbox saves them:
 
 - whole and at once
-- inside the root
+- inside the vault
 - keeping their line endings
 
 The commands for editing:
