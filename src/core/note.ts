@@ -17,7 +17,7 @@ import {
 } from "./layout/render.ts";
 import { headingLabel, headingText, type ParsedNote, parseMarkdown } from "./parse.ts";
 import { findHeading } from "./landing.ts";
-import { findVaultRoot } from "./vault.ts";
+import { vaultOf } from "./vault.ts";
 
 /** Effective inset: the configured value, but never more than ~5% of a narrow pane, and ≥ 1 (2.7). */
 export function effectiveInset(paneWidth: number, inset: number): number {
@@ -211,7 +211,7 @@ export function embedder(g: Graph, fromRel: string): RenderOptions["embed"] {
     if (!parsed) return null;
     const name = basename(abs).replace(/\.(md|markdown)$/i, "");
     // Another vault's: its own graph, from its own root.
-    const there = isAbsolute(r.path) ? (g.reach?.graphAt(findVaultRoot(abs) ?? dirname(abs)) ?? null) : g;
+    const there = isAbsolute(r.path) ? (g.reach?.graphAt(vaultOf(abs) ?? dirname(abs)) ?? null) : g;
     const rel = there ? relative(there.root, abs) : null;
     const nodes = heading
       ? sectionOf(parsed.tree, heading)

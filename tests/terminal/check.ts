@@ -2,7 +2,7 @@
 // covers — the reference set's areas (`examples/home/CASES.md`'s `###` headings) and the commands it runs for their
 // effect (TT-D4) — and what the checks share: reading the cursor's place, opening a note, leader keys, an explorer row.
 
-import { readFileSync } from "node:fs";
+import { cpSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import type { Session, SessionOptions } from "./session.ts";
 
@@ -139,6 +139,15 @@ export async function problemListed(s: Session, needle: string | RegExp, timeout
   await s.see(needle, timeout);
   await s.keys("q");
   await s.until(() => !s.statusLine().includes("PROBLEMS"), 3000, "the Problems panel closed");
+}
+
+/**
+ * The reference set's Downloads, copied beside home, to `elsewhere/` in the check's folder: a folder outside every vault
+ * and outside home. Downloads itself is home's, and its skip list leaves it out of home's index (VV-D2); a check of
+ * what a folder outside every vault does starts here instead (`startAt: "elsewhere/stray-note.md"`).
+ */
+export function downloadsElsewhere(s: Session): void {
+  cpSync(s.path("~/Downloads"), join(s.dir, "elsewhere"), { recursive: true, verbatimSymlinks: true });
 }
 
 /** Leader sequences: space, then the keys. */

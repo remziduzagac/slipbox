@@ -274,7 +274,7 @@ signs_at = "gutter_right"      # where: gutter_right (its last column, against t
 engine = "auto"                # auto (the index once it's built, else a scan) | index (built first) | scan (no index)
 
 [index]                        # the background index of your home folder, in the TUI
-background = true              # vaults found under ~ slowly and indexed: their links become backlinks
+background = true              # home's notes and the vaults under ~ slowly indexed: their links become backlinks
 idle_seconds = 30              # 1–86400: it works only once nobody has pressed a key or run a command this long
 
 [diagnostics]                  # a file's problems, where they are
@@ -809,7 +809,8 @@ What it keeps, it keeps in four folders of its own, XDG's, on macOS too:
 A vault has a folder of its own in the cache folder, and another in the state folder. Both are named by the vault's
 key. The key is the vault's folder name and twelve characters of a hash of its path, such as `notes-84ec07632af6`.
 
-A folder outside every vault, opened by its path, gets its folders the same way. `slipbox info` prints the two folders.
+Home, and a folder outside every vault opened by its path, get theirs the same way. `slipbox info` prints the two
+folders.
 
 In a vault itself there is only `.slipbox/`, where a vault has one. It holds:
 
@@ -832,6 +833,7 @@ In a vault itself there is only `.slipbox/`, where a vault has one. It holds:
 | `images/` | Pictures fetched from the internet, a file each, and SVG pictures, diagrams and maths as drawn |
 | `<key>/index.json` | The vault's links |
 | `<key>/search.db` | The vault's search index |
+| `<key>/walk.json` | Home's walk, kept: the notes, files and folders it found, so opening home never walks it |
 
 ### State
 
@@ -839,7 +841,7 @@ For the machine:
 
 | File | What it holds |
 | --- | --- |
-| `roots.json` | Every vault seen, and every folder outside one opened; the moves of those that moved |
+| `roots.json` | Every vault seen, home among them, and every folder outside one opened; the moves of those that moved |
 | `folders.json` | Named folders: their names, copies and defaults |
 | `trust.json` | Your answers when asked whether to trust a vault |
 | `positions.json` | Where you were in each note, the newest 5,000 |

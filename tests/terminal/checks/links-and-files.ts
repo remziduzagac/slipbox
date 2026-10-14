@@ -2,11 +2,22 @@
 // commands this area owns by their group (saving, exporting, the editor hand-off, info, trust), a short check each.
 
 import { spawnSync } from "node:child_process";
-import { chmodSync, existsSync, readdirSync, readFileSync, renameSync, rmSync, statSync, writeFileSync } from "node:fs";
+import {
+  chmodSync,
+  cpSync,
+  existsSync,
+  readdirSync,
+  readFileSync,
+  renameSync,
+  rmSync,
+  statSync,
+  writeFileSync,
+} from "node:fs";
 import { join } from "node:path";
 import {
   explorerOpen,
   type Check,
+  downloadsElsewhere,
   explorerRow,
   follow,
   type LeftOut,
@@ -443,8 +454,9 @@ const LINKS: Check[] = [
       await s.restart({ startAt: "home/hobbies/cooking/Recipes/Weeknight/Dal.md" });
       await follow(s, "Dal ^tadka");
       await s.status(/L3[23]:/);
-      // Downloads has no root: a name finds nothing, and the hint says what makes one.
-      await s.restart({ startAt: "home/Downloads/stray-note.md" });
+      // Outside every vault and outside home (Downloads, copied beside it): a name finds nothing, and the hint says
+      // what makes a vault.
+      await s.restart({ startAt: "elsewhere/stray-note.md", setup: downloadsElsewhere });
       await s.see("See plan for the order of work");
       await follow(s, "plan for the order");
       await s.message(/\[\[plan\]\]: names need a vault/);
@@ -711,22 +723,26 @@ const ROOTS: Check[] = [
   },
   {
     area: "links-and-files",
-    name: "roots: a plain folder opened — its tree, by its path, no list over it; space v v goes into a named one (20.22, VV-D5)",
+    name: "roots: a folder outside every vault and outside home opened — its tree, by its path, no list over it; space v v goes into a named one (20.22, VV-D5)",
     covers: { cases: ["vault", "links/roots", "links/state"], commands: ["search.open", "folders.open"] },
     options: {
       home: true,
-      startAt: "home/Downloads",
+      startAt: "elsewhere",
       setup: (s) => {
+        // Beside home, not in it (home is a vault, VV-D2): a few of Downloads' files.
+        const at = join(s.dir, "elsewhere");
+        cpSync(s.path("~/Downloads/old-blog-export"), join(at, "old-blog-export"), { recursive: true });
+        cpSync(s.path("~/Downloads/stray-note.md"), join(at, "stray-note.md"));
         s.cliIn("~/notes", "ls"); // notes: known to this machine
       },
     },
     run: async (s) => {
-      await s.status(/ ~\/Downloads\b/); // unnamed: its path where a root's name would be
+      await s.status(/\/elsewhere\b/); // unnamed: its path where a root's name would be
       await s.see("stray-note.md");
       await s.see("old-blog-export");
       // No list of the named folders over it at the start (it used to open): its tree, the breadcrumb above it.
       s.expect(s.rowOf(/Folders \(\d+\)/) < 0, "no named folders' list at the start");
-      await s.until(() => crumbs(s) === "~ › Downloads ›", 3000, "the breadcrumb: ~ › Downloads ›");
+      await s.until(() => / elsewhere ›$/.test(crumbs(s)), 3000, "the breadcrumb: … › elsewhere ›");
       s.expect(!listed(s, /\s\.\.$/), "no .. above the tree");
       // Walked as a root is: a note in a folder of it, found by search.
       await leader(s, "f", "s");
@@ -744,45 +760,42 @@ const ROOTS: Check[] = [
   },
   {
     area: "links-and-files",
-    name: "roots: $HOME opened — the folder a level at a time, never walked, no list over it; into notes, across into a repository, and back",
-    covers: { cases: ["vault", "links/roots", "links/travel", "links/index"] },
+    name: "vaults: home — started in ~, home is the vault: a note of its own has its backlinks once home is walked, while nobody works; the vaults in it their own",
+    covers: {
+      cases: ["vault", "links/roots", "links/travel", "links/backlinks", "info"],
+      commands: ["note.info", "backlinks.open"],
+    },
     options: {
       home: true,
       startAt: "home",
-      // Two roots this machine has seen: nothing lists them over $HOME's own listing.
+      // The background index on, as by default, and soon at work: home's walk and index first (VV-D2).
+      config: "[index]\nidle_seconds = 1\n",
+      // A named folder this machine has seen: no list of them to go into first — home is a vault.
       setup: (s) => {
         s.cliIn("~/notes", "ls");
-        s.cliIn("~/work/kestrel", "ls");
       },
     },
     run: async (s) => {
-      await s.status(/ ~ /); // a plain folder: its path where a vault's name would be
-      s.expect(s.rowOf(/Folders \(\d+\)/) < 0, "no named folders' list at the start");
-      // A level at a time: its folders, not what's in them (cooking is two down, kestrel one).
+      await s.status(/ ~ /); // home, by its path
+      s.expect(s.rowOf(/Folders \(\d+\)/) < 0, "home is a vault: no named folders to go into first");
+      // A note of its own, at its top; its backlink lies below it, found once home is walked.
+      await open(s, "todo.md");
+      await leader(s, "n", "i");
+      await s.status("INFO");
+      await s.see(/vault +home \(~\)/);
+      await s.see(/backlinks +1\b/, 20000);
+      await leader(s, "l", "b");
+      await s.see("Linking to");
+      await s.see("household/bike-insurance.md");
+      await s.keys("escape");
+      // Its tree: its folders, and the vaults in it.
       await explorerOpen(s);
       await s.until(
-        () => [/\sDownloads$/, /\shobbies$/, /\snotes$/, /\swork$/].every((n) => listed(s, n)),
+        () => [/\shousehold$/, /\shobbies$/, /\snotes$/, /\swork$/].every((n) => listed(s, n)),
         3000,
-        "$HOME's own folders listed",
+        "home's folders and vaults listed",
       );
-      s.expect(!listed(s, /\s\.\.$/), "no .. above it");
-      s.expect(!explorer(s).some((r) => /cooking|kestrel|people/.test(r)), "nothing below $HOME's own folders listed");
-      // Never walked: a search finds only what lies in $HOME itself, though notes far below say it too.
-      const top = readdirSync(s.home).filter(
-        (f) => f.endsWith(".md") && readFileSync(join(s.home, f), "utf8").toLowerCase().includes("maqluba"),
-      );
-      s.expect(
-        top.length > 0 && readFileSync(s.path("~/hobbies/cooking/Home.md"), "utf8").toLowerCase().includes("maqluba"),
-        "maqluba both at the top and below",
-      );
-      await s.keys("escape");
-      await leader(s, "f", "s");
-      await s.type("maqluba");
-      await s.see(`"maqluba" — ${top.length} files (scanned: no index here)`, 5000);
-      s.expect(s.rowOf(/[│┃] hobbies\/\S*:\d+/) < 0, "no result from below $HOME");
-      await s.keys("escape");
-      // notes is a root in it: enter goes into it.
-      await explorerOpen(s);
+      // notes is a vault of its own: enter goes into it.
       await explorerRow(s, "notes");
       await s.keys("enter");
       await s.status(/ notes .*index\.md/, 5000);
@@ -836,13 +849,15 @@ const ROOTS: Check[] = [
       const was = before.get(s)!;
       s.expect(JSON.stringify(tree(s.path("~/hobbies/cooking"))) === JSON.stringify(was.cooking), "cooking as it was");
       s.expect(JSON.stringify(tree(s.path("~/hobbies/cycling"))) === JSON.stringify(was.cycling), "cycling as it was");
-      // Your config says what marks a root: without .obsidian it's a plain folder, by its path, no vault named above it.
+      // Your config says what marks a vault: without .obsidian, cooking is a folder of home (VV-D2), its note by its
+      // path from home, the view at home, no vault named in it.
       const config = join(s.dir, "config", "slipbox", "config.toml");
       writeFileSync(config, `${readFileSync(config, "utf8")}\n[walk]\nroot_markers = [".git", ".slipbox"]\n`);
       await s.restart({ startAt: "home/hobbies/cooking/Home.md" });
-      await s.status(/ ~\/hobbies\/cooking +‹ Home\.md/);
+      await s.status(/ ~ +‹ hobbies\/cooking\/Home\.md/);
       await explorerOpen(s);
-      await s.until(() => crumbs(s) === "~ › hobbies › cooking ›", 3000, "a plain folder's breadcrumb, no vault");
+      await s.until(() => listed(s, /\scooking$/), 3000, "cooking, a folder of home's tree");
+      s.expect(!/cooking/.test(crumbs(s)), `the view at home: ${crumbs(s)}`);
     },
   },
   {
@@ -906,7 +921,7 @@ const ROOTS: Check[] = [
   },
   {
     area: "links-and-files",
-    name: "roots: where a file is — a root by its name, an unnamed one by its path; :folders goes into one; a loose file's folder in the view (21.9, 21.10)",
+    name: "roots: where a file is — a root by its name, an unnamed one by its path; :folders goes into one; a file of home's a link leads to peeked at, o into home; a loose one peeked at, o beside (21.9, 21.10, VV-D2)",
     covers: { cases: ["links/named-folders", "links/roots", "vault"], commands: ["folders.open"] },
     options: { home: true, startAt: "home/notes/index.md" },
     run: async (s) => {
@@ -921,22 +936,26 @@ const ROOTS: Check[] = [
       // An Obsidian vault with no .slipbox/ name and no remote: its path, from home.
       await s.restart({ startAt: "home/hobbies/cooking/Home.md" });
       await s.status(/ ~\/hobbies\/cooking /);
-      // A loose file a link leads to is peeked at (VV-D7); o opens it beside the vault: the view zooms out to hold
-      // it, its folder unfolded (VV-D5).
+      // A file of home's (VV-D2) a link leads to, out of this vault: peeked at, home naming it (VV-D7); o goes into
+      // home, the note open there; ctrl+o back.
       await s.restart({ startAt: "home/notes/daily/2026-09-22.md" });
       await follow(s, "the worker log");
+      await s.see("~ › Downloads/sync-worker-2026-09-22.log.md", 5000);
+      await s.keys("o");
+      await s.notSee(PEEK_HINT);
+      await s.status(/ ~ +‹ Downloads\/sync-worker-2026-09-22\.log\.md/, 5000);
+      await s.see("§ sync-worker log, 2026-09-22", 10000); // read and drawn
+      await s.keys("ctrl+o");
+      await s.status(/ notes .*2026-09-22\.md/, 5000);
+      // A file outside every vault and outside home a link leads to: peeked at, said so; o opens it beside, as it is.
+      s.write("~/notes/daily/2026-09-22.md", `[elsewhere](${join(s.dir, "elsewhere", "stray-note.md")})\n`);
+      await s.restart({ startAt: "home/notes/daily/2026-09-22.md", setup: downloadsElsewhere });
+      await follow(s, "elsewhere");
       await s.see("— outside every vault", 5000);
       await s.keys("o");
       await s.notSee(PEEK_HINT);
-      await s.status(/sync-worker-2026-09-22\.log\.md/);
-      await s.see("§ sync-worker log, 2026-09-22", 10000); // read and drawn
-      await explorerOpen(s);
-      await s.until(
-        () => crumbs(s) === "~ › Downloads" && listed(s, /\ssync-worker-2026-09-22\b/),
-        3000,
-        "the view at ~, Downloads unfolded and past it in the breadcrumb",
-      );
-      s.expect(listed(s, /\snotes\s/), "the vault open in the same tree");
+      await s.status(/stray-note\.md/, 5000);
+      await s.status(/ notes /);
     },
   },
   {

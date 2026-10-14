@@ -73,8 +73,9 @@ What connects them is the disk:
 ## Vaults and links
 
 A note's **vault** is the nearest folder above it holding `.git`, `.slipbox/`, `.obsidian/` or `.zk/`. That's a
-repository, an Obsidian vault or a zk notebook. A folder outside every vault works too: opened by its path, it stands in
-for one.
+repository, an Obsidian vault or a zk notebook. Your home folder is a vault without a marker, home: its notes are those
+no other vault holds. A folder outside every vault and outside home works too: opened by its path, it stands in for
+one.
 
 The vault decides:
 
@@ -110,8 +111,9 @@ finds the same notes, more slowly ([The index](finding.md#the-index)).
 
 The index is a copy, never the truth. Deleting the cache is always safe, and slipbox makes it again.
 
-While you aren't working, the TUI also looks through your home folder for other vaults, and indexes them. So links
-from one vault to another count as backlinks everywhere. `index.background = false` turns that off.
+While you aren't working, the TUI also looks through your home folder a little at a time. It indexes home's own notes,
+then the other vaults it finds there. So links from one vault to another count as backlinks everywhere.
+`index.background = false` turns that off ([Home](links-and-vaults.md#home)).
 
 ## What reaches the network
 
@@ -149,8 +151,9 @@ or retitle your window.
 - **The TUI needs a terminal.** Started from a script, slipbox says to use a command instead, and exits.
 - **The unsaved list is advice.** A command that writes a note you're editing still writes. The TUI then asks you what
   to keep.
-- **Big files and big folders.** A note larger than `walk.max_file_size` (4 MiB) is listed as skipped, not read. Your
-  home folder and `/` are never vaults. If you open one, it's listed a level at a time, never indexed whole.
+- **Big files and big folders.** A note larger than `walk.max_file_size` (4 MiB) is listed as skipped, not read.
+  Home's index leaves out hidden folders, `Downloads` and the busy folders, and holds 10,000 notes at most. `/` is never
+  a vault: if you open it, it's listed a level at a time, never indexed whole.
 - **A change it can't see.** On a Windows drive under WSL, slipbox notices a Windows program's change only in the notes
   it has open ([Windows, through WSL](../guides/install.md#windows-through-wsl)).
 - **Most commands may still change before 1.0.** A stable few won't, and nor will the exit codes and the `--json`

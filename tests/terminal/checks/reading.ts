@@ -7,6 +7,7 @@ import { UNSAFE } from "../../../src/core/sanitize.ts";
 import { loadTheme } from "../../../src/core/theme/index.ts";
 import {
   type Check,
+  downloadsElsewhere,
   type LeftOut,
   leader,
   moveTo,
@@ -340,7 +341,8 @@ export const READING: Check[] = [
     area: "reading",
     name: "hostile names: a bidi override, C1, ESC and an OSC in file names never reach the terminal",
     covers: { cases: ["hostile"], commands: ["backlinks.open"] },
-    options: { home: true, startAt: "home/Downloads/stray-note.md" },
+    // Downloads beside home, a folder outside every vault: its notes walked and indexed together (VV-D2).
+    options: { home: true, startAt: "elsewhere/stray-note.md", setup: downloadsElsewhere },
     run: async (s) => {
       // The explorer lists Downloads: each hostile name drawn without what it carried.
       await s.see("invoicefdp.md");
@@ -1622,19 +1624,22 @@ export const READING: Check[] = [
   // --- the sample set's own fixtures ------------------------------------------------------------------
   {
     area: "reading",
-    name: "samples: the agent replay script edits Downloads while it's shown — its note comes and goes in the explorer, the plan beside it untouched",
+    name: "samples: the agent replay script edits a folder while it's shown — its note comes and goes in the explorer, the plan beside it untouched",
     covers: { cases: ["samples-meta"] },
-    options: { home: true, startAt: "home/Downloads/plan.md" },
+    // Downloads beside home, a folder outside every vault, walked and watched whole (home's index leaves Downloads out).
+    options: { home: true, startAt: "elsewhere/plan.md", setup: downloadsElsewhere },
     run: async (s) => {
-      const plan = s.read("~/Downloads/plan.md");
+      const dir = join(s.dir, "elsewhere");
+      const plan = s.read(join(dir, "plan.md"));
       const script = s.path("~/work/kestrel/scripts/dev/agent-replay.sh");
-      const run = Bun.spawn(["bash", script], { env: { PATH: process.env.PATH ?? "", PAUSE: "0.3" }, stdout: "pipe" });
+      const env = { PATH: process.env.PATH ?? "", PAUSE: "0.3" };
+      const run = Bun.spawn(["bash", script, dir], { env, stdout: "pipe" });
       await s.see("agent-scratch.md", 10_000);
       await run.exited;
       s.expect(run.exitCode === 0, `the script ran to its end (exit ${run.exitCode})`);
       await s.notSee("agent-scratch", 5000);
       await s.status("plan.md");
-      s.expect(s.read("~/Downloads/plan.md") === plan, "the plan untouched");
+      s.expect(s.read(join(dir, "plan.md")) === plan, "the plan untouched");
     },
   },
 ];

@@ -823,7 +823,7 @@ A vault is the folder slipbox works in. [Links and vaults](links-and-vaults.md) 
 | `space v v` | the named folders this machine knows (`enter` goes into one) |
 | `space v shift+v` | which copy a named folder's links open, when you have two |
 | `space v n` | name this vault (or the selected one) as pointers name it, after a preview |
-| `space v m` | outside every vault, give this folder a `.slipbox/`; in one, make the selected folder its own vault |
+| `space v m` | outside every vault, give this folder a `.slipbox/`; in one, or home, make the selected folder a vault |
 | `space v shift+m` | make a nested vault part of the vault holding it |
 | `space v t` | slipbox's trash: what was deleted here (`enter` restores it, and its last row empties it) |
 | `space v u` | restore what was deleted last |

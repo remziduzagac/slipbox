@@ -212,7 +212,8 @@ Some of it is as personal as your notes:
 - **The cache** holds a search index of each folder of notes, with their words in it. Deleting the cache is always
   safe. slipbox makes it again. It carries a `CACHEDIR.TAG`, so backup tools that know the tag leave it out.
 - **The background index** looks through your home folder for folders of notes, while you aren't working. It indexes
-  each, so that links from one to another count everywhere. `index.background = false` turns it off.
+  each, and your home folder's own notes, so that links from one to another count everywhere. Hidden folders,
+  `Downloads` and the busy folders it leaves alone. `index.background = false` turns it off.
 
 ## Removing it all
 

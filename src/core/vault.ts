@@ -4,13 +4,13 @@
 // and markers): `.git`, `.slipbox/`, `.obsidian/`, `.zk/`. Several in one folder make one root, its
 // name and settings from `.slipbox/`; a root inside another is a root of its own. Nothing is written
 // into a root by opening it: `.slipbox/`'s id and name only by `slipbox init` and `slipbox name`
-// (21.8). A file under none is loose: the plain folder opened stands in, known by its path, walked and
-// indexed as a root is — but `$HOME` and `/`, never a root: that would index everything (the background
-// index walks the home folder, slowly), so those are listed a folder at a time. `--root` names a root
-// outright.
+// (21.8). A file under none is home's when it's under `~` (VV-D2: home, a vault without a marker — its
+// files those no other vault holds, its index walked with a skip list, a slice at a time: home.ts);
+// else it's loose: the plain folder opened stands in, known by its path, walked and indexed as a root
+// is — but `/`, listed a folder at a time. `--root` names a root outright.
 
 import { execFileSync } from "node:child_process";
-import { existsSync, mkdirSync, statSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, realpathSync, statSync, writeFileSync } from "node:fs";
 import { homedir } from "node:os";
 import { dirname, join, relative, resolve, sep } from "node:path";
 import { loadConfig, VAULT_CONFIG_TEMPLATE } from "./config.ts";
@@ -58,12 +58,13 @@ export interface Worktree {
 /** Format version of the marker directory. Bump with a migration, never silently. */
 export const VAULT_FORMAT_VERSION = 1;
 
-/** `vault`: a root — a folder holding a root marker (21.1). `folder`: a plain folder outside every
- *  root, opened — unnamed, known by its path (20.22). */
+/** `vault`: a root — a folder holding a root marker (21.1). `home`: `~`, a vault without a marker (VV-D2) — its
+ *  files those no other vault holds. `folder`: a plain folder outside every root and outside home, opened —
+ *  unnamed, known by its path (20.22). */
 export type VaultMode = RootKind;
 
 export interface VaultLocation {
-  /** The root: the vault's, or the plain folder opened (a loose file's own). */
+  /** The root: the vault's, home, or the plain folder opened (a loose file's own). */
   root: string;
   mode: VaultMode;
   /** The note that was named on the command line, if any (absolute). */
@@ -118,7 +119,8 @@ export function markersAt(dir: string): string[] {
 
 /**
  * A root (20.3, 21.1): a folder holding a root marker — a git checkout's top, `.slipbox/`, an
- * Obsidian vault, a zk notebook. Several in one folder make one root. `$HOME` and `/` never are.
+ * Obsidian vault, a zk notebook. Several in one folder make one root. `$HOME` and `/` never are:
+ * home is a vault without a marker, whatever it holds (VV-D2; `homeAt`), `/` none.
  */
 export function isVaultRoot(dir: string): boolean {
   return !isNeverRoot(dir) && markersAt(dir).length > 0;
@@ -134,9 +136,46 @@ export function homeFolder(): string {
   return process.env.HOME || homedir();
 }
 
-/** `$HOME` and `/`: never a root, whatever they hold. */
+/** `$HOME` and `/`: never a root marked, whatever they hold — home is a vault of its own kind (VV-D2). */
 export function isNeverRoot(dir: string): boolean {
-  return dir === homeFolder() || dirname(dir) === dir;
+  return isHome(dir) || dirname(dir) === dir;
+}
+
+let realHomeMemo: { home: string; real: string } | null = null;
+
+/** The home folder's real path (VV-D2: home is known by it), read again when `$HOME` changes. */
+function realHome(): string {
+  const home = homeFolder();
+  if (realHomeMemo?.home !== home) {
+    let real = home;
+    try {
+      real = realpathSync(home);
+    } catch {}
+    realHomeMemo = { home, real };
+  }
+  return realHomeMemo.real;
+}
+
+/** Whether `dir` is home: `$HOME`, or its real path — never `/` (a service's `HOME=/` makes no home of everything). */
+export function isHome(dir: string): boolean {
+  return dirname(dir) !== dir && (dir === homeFolder() || dir === realHome());
+}
+
+/** Home (VV-D2) as it holds `path` — `$HOME`, or its real path when `path` is reached by that — or null outside it. */
+export function homeOf(path: string): string | null {
+  const home = homeFolder();
+  if (dirname(home) === home) return null;
+  if (isInside(home, path)) return home;
+  const real = realHome();
+  return real !== home && dirname(real) !== real && isInside(real, path) ? real : null;
+}
+
+/**
+ * The vault a path belongs to (VV-D4): the nearest folder holding a marker, else home when it's under `~` (VV-D2);
+ * null outside both — the no-vault of a plain folder or a loose file.
+ */
+export function vaultOf(path: string): string | null {
+  return findVaultRoot(path) ?? homeOf(resolve(path));
 }
 
 function startDir(start: string): string {
@@ -180,10 +219,13 @@ export function locateVault(opts: LocateOptions): VaultLocation {
     const root = resolve(cwd, opts.root);
     if (!existsSync(root) || !statSync(root).isDirectory())
       throw new VaultError(`--root is not a directory: ${opts.root}`);
-    if (isNeverRoot(root))
-      throw new VaultError(
-        `--root ${opts.root}: ${root === homeFolder() ? "your home folder" : "/"} is never a vault; open a folder in it`,
-      );
+    // Home (VV-D2): a vault without a marker; a file of a vault in it is that vault's.
+    if (isHome(root)) {
+      if (file && !isInside(root, file)) throw new VaultError(`${opts.path} is outside --root ${opts.root}`);
+      const own = file ? findVaultRoot(file) : null;
+      return own ? rootAt(own, file) : homeAt(root, file);
+    }
+    if (isNeverRoot(root)) throw new VaultError(`--root ${opts.root}: / is never a vault; open a folder in it`);
     if (!isVaultRoot(root))
       throw new VaultError(
         `--root ${opts.root} isn't a vault (none of ${rootMarkers().join(", ")} in it): slipbox init ${opts.root} makes it one`,
@@ -197,7 +239,51 @@ export function locateVault(opts: LocateOptions): VaultLocation {
 
   const found = findVaultRoot(target ?? cwd);
   if (found) return rootAt(found, file);
+  // No marker: home's, when it's under `~` (VV-D2, VV-D4); else outside every vault.
+  const home = homeOf(target ?? cwd);
+  if (home) return homeAt(home, file);
   return folderAt(file ? dirname(file) : (target ?? cwd), file);
+}
+
+/**
+ * Home's location (VV-D2): `~`, a vault without a marker — unnamed, keyed by its path as any vault is; its settings
+ * yours alone; its git, `~`'s own repository if it is one (`checkoutAt`).
+ */
+export function homeAt(root: string = homeFolder(), file: string | null = null): VaultLocation {
+  return {
+    root,
+    mode: "home",
+    file,
+    key: vaultKey(root),
+    id: null,
+    name: null,
+    aliases: [],
+    previous_names: [],
+    worktree: null,
+  };
+}
+
+/** The location of the vault holding the folder `dir` (VV-D4): its marker's, home's, else the plain folder. */
+export function locationAt(dir: string): VaultLocation {
+  const root = findVaultRoot(dir);
+  if (root) return rootAt(root);
+  const home = homeOf(resolve(dir));
+  return home ? homeAt(home) : folderAt(dir);
+}
+
+/** The location of a vault by its folder: home's, or a marker's. */
+export function vaultAt(root: string): VaultLocation {
+  return isHome(root) ? homeAt(root) : rootAt(root);
+}
+
+/**
+ * The git checkout a vault's files are in (5.9): a vault's; home's only when `~` is itself a repository (VV-D2); a
+ * plain folder's none.
+ */
+export function checkoutAt(loc: Pick<VaultLocation, "mode" | "root">): ReturnType<typeof checkoutOf> {
+  if (loc.mode === "folder") return null;
+  const c = checkoutOf(loc.root);
+  return loc.mode === "home" && c?.root !== loc.root ? null : c;
 }
 
 /** The location of a root (21.1): read, never written — its name, id and settings as they are. */
@@ -229,13 +315,13 @@ export function rootAt(root: string, file: string | null = null): VaultLocation 
 
 /**
  * A plain folder opened, outside every root (20.22): unnamed, keyed by its path — moved, it starts
- * afresh. Walked and indexed as a root is, unless it's `$HOME` or `/` (`isListed`).
+ * afresh. Walked and indexed as a root is, unless it's `/` (`isListed`).
  */
 export function folderAt(dir: string, file: string | null = null): VaultLocation {
   return { root: dir, mode: "folder", file, key: vaultKey(dir), id: null, name: null, aliases: [], previous_names: [] };
 }
 
-/** A plain folder only listed, a level at a time: `$HOME` or `/`, whose walk is the background index's (20.9). */
+/** A plain folder only listed, a level at a time: `/` — home is a vault (VV-D2), never a plain folder. */
 export function isListed(loc: Pick<VaultLocation, "mode" | "root">): boolean {
   return loc.mode === "folder" && isNeverRoot(loc.root);
 }
@@ -270,8 +356,10 @@ export function vaultConfigPath(loc: Pick<VaultLocation, "mode" | "root">): stri
  * Where it came from, when it did.
  */
 export function recordLocation(loc: VaultLocation): { carriedFrom: string | null } {
-  if (loc.mode === "folder") {
-    recordRoot({ kind: "folder", path: loc.root });
+  if (loc.mode === "folder" || loc.mode === "home") {
+    // Home (VV-D2) where `~` opened was a plain folder: the same place, one entry — home's now, its state kept.
+    if (loc.mode === "home") forgetRoot(loc.root, ["folder"]);
+    recordRoot({ kind: loc.mode, path: loc.root });
     pruneWorktrees(Date.now(), isVaultRoot);
     return { carriedFrom: null };
   }
@@ -366,10 +454,11 @@ export interface InitResult {
  */
 export function checkInit(dir: string, name?: string): void {
   const root = resolve(dir);
-  if (isNeverRoot(root))
+  if (isHome(root))
     throw new VaultError(
-      `${root} can't have a .slipbox/: slipbox never indexes all of ${root === homeFolder() ? "your home folder" : "/"}`,
+      `${root} can't have a .slipbox/: home is a vault already, its settings your own config's — give a folder in it one`,
     );
+  if (isNeverRoot(root)) throw new VaultError(`${root} can't have a .slipbox/: slipbox never indexes all of /`);
   if (name === undefined) return;
   if (!VAULT_NAME.test(name))
     throw new VaultError(

@@ -10,6 +10,7 @@ import {
   mkdtempSync,
   readdirSync,
   readFileSync,
+  realpathSync,
   renameSync,
   rmSync,
   statSync,
@@ -13602,6 +13603,51 @@ describe("the background auto-index in the TUI (20.9)", () => {
     h.app.indexing = 0;
     h.app.config.index.background = false;
     expect(h.app.autoIndexDue(now)).toBe(false);
+  });
+
+  test("home the vault open (VV-D2): its walk and index made while nobody works, the background index off — then its notes have their backlinks", async () => {
+    const { homeAt } = await import("../src/core/vault.ts");
+    const home = realpathSync(mkdtempSync(join(sandbox, "home-")));
+    mkdirSync(join(home, "deep", "er"), { recursive: true });
+    writeFileSync(join(home, "a.md"), "# A\n");
+    writeFileSync(join(home, "deep", "er", "b.md"), "[a](../../a.md)\n");
+    const before = process.env.HOME;
+    process.env.HOME = home;
+    try {
+      const h = await harness({ loc: homeAt(home), open: "a.md" });
+      // Not walked yet: its top alone.
+      expect(h.app.graph.home?.walked).toBeNull();
+      expect(h.app.graph.backlinks("a.md")).toEqual([]);
+      const job = h.app.indexJob();
+      expect(job?.root).toBe(home);
+      while (job!.step(50)) {}
+      expect(h.app.graph.home?.walked).not.toBeNull();
+      expect(h.app.graph.backlinks("a.md").map((b) => b.from)).toEqual(["deep/er/b.md"]);
+      // In a vault, the background index off: nothing works while nobody does.
+      const v = await harness({});
+      expect(v.app.indexJob()).toBeNull();
+    } finally {
+      process.env.HOME = before;
+    }
+  });
+
+  test("home's Downloads opened (VV-D2): left out of home's index, listed in the explorer a level at a time", async () => {
+    const { homeAt } = await import("../src/core/vault.ts");
+    const home = realpathSync(mkdtempSync(join(sandbox, "home-")));
+    mkdirSync(join(home, "Downloads", "sub"), { recursive: true });
+    writeFileSync(join(home, "a.md"), "# A\n");
+    writeFileSync(join(home, "Downloads", "d.md"), "# D\n");
+    const before = process.env.HOME;
+    process.env.HOME = home;
+    try {
+      const h = await harness({ loc: homeAt(home), open: null, folder: join(home, "Downloads") });
+      expect(h.app.graph.notes.has("Downloads/d.md")).toBe(false);
+      const names = h.app.treeRows().map((r) => r.name);
+      expect(names).toContain("d.md");
+      expect(names).toContain("sub");
+    } finally {
+      process.env.HOME = before;
+    }
   });
 });
 

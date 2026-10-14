@@ -25,18 +25,24 @@ import { DEFAULT_CONFIG, loadConfig } from "../src/core/config.ts";
 import { openGraph } from "../src/core/graph.ts";
 import { applyPlan, planHeadingRename, planRelink, planUndo } from "../src/core/rename.ts";
 import {
+  checkoutAt,
+  configFilesFor,
   findVaultRoot,
   folderAt,
   gitRootOf,
+  homeAt,
   initVault,
   isListed,
   isVaultRoot,
   locateVault,
   markersAt,
   recordLocation,
+  rootAt,
   setRootMarkers,
+  vaultOf,
 } from "../src/core/vault.ts";
 import { cacheDir, vaultKey } from "../src/core/paths.ts";
+import { walkHomeNow } from "../src/core/home.ts";
 import { renderMarkdown } from "../src/core/layout/render.ts";
 import { glyphsFor } from "../src/core/glyphs.ts";
 
@@ -119,27 +125,97 @@ describe("vault discovery (1.1)", () => {
       name: "both-named",
     });
   });
-  test("$HOME and / are never a root, whatever they hold (17.1)", () => {
-    const home = mkdtempSync(join(tmpdir(), "slipbox-home-"));
+  test("a file's vault (VV-D4): its nearest marker's; else home's, under ~ (VV-D2); else none — a file outside both", () => {
+    const base = realpathSync(mkdtempSync(join(tmpdir(), "slipbox-home-")));
+    const home = join(base, "home");
+    const files = {
+      "notes/.slipbox/config.toml": "",
+      "notes/n.md": "# n\n",
+      "loose/deep/l.md": "# l\n",
+      "top.md": "# top\n",
+    };
+    for (const [rel, text] of Object.entries(files)) {
+      mkdirSync(dirname(join(home, rel)), { recursive: true });
+      writeFileSync(join(home, rel), text);
+    }
+    // ~ a repository itself (dotfiles kept with git), and a .slipbox/ of its own: home all the same.
     mkdirSync(join(home, ".git"));
     mkdirSync(join(home, ".slipbox"));
-    mkdirSync(join(home, "notes"));
-    writeFileSync(join(home, "notes", "n.md"), "# n\n");
+    writeFileSync(join(home, ".slipbox", "config.toml"), '[vault]\nname = "dotfiles"\n');
+    mkdirSync(join(base, "elsewhere"));
+    writeFileSync(join(base, "elsewhere", "e.md"), "# e\n");
     const before = process.env.HOME;
     process.env.HOME = home;
     try {
-      expect(findVaultRoot(join(home, "notes", "n.md"))).toBeNull();
-      // Nor a vault seen from above (a dotfiles repository in $HOME): the explorer, a walk (20.3).
+      // Under a marker: that vault's.
+      expect(locateVault({ path: join(home, "notes", "n.md") })).toMatchObject({
+        mode: "vault",
+        root: join(home, "notes"),
+      });
+      expect(vaultOf(join(home, "notes", "n.md"))).toBe(join(home, "notes"));
+      // Under ~, under no marker: home's — however deep, opened by a file, a folder or ~ itself.
+      const l = locateVault({ path: join(home, "loose", "deep", "l.md") });
+      expect(l).toMatchObject({ mode: "home", root: home, file: join(home, "loose", "deep", "l.md"), name: null });
+      expect(l.key).toBe(vaultKey(home));
+      expect(locateVault({ path: join(home, "loose") })).toMatchObject({ mode: "home", root: home, file: null });
+      expect(locateVault({ path: home, cwd: base })).toMatchObject({ mode: "home", root: home });
+      expect(locateVault({ cwd: join(home, "loose", "deep") })).toMatchObject({ mode: "home", root: home });
+      expect(vaultOf(join(home, "top.md"))).toBe(home);
+      // Outside both: no vault, the folder opened standing in.
+      expect(locateVault({ path: join(base, "elsewhere", "e.md") })).toMatchObject({
+        mode: "folder",
+        root: join(base, "elsewhere"),
+      });
+      expect(vaultOf(join(base, "elsewhere", "e.md"))).toBeNull();
+      // Never a vault by its markers (seen from above, by a walk: 20.3); its settings yours, no name of its own.
       expect(isVaultRoot(home)).toBe(false);
-      const loc = locateVault({ path: join(home, "notes", "n.md") });
-      expect(loc.mode).toBe("folder");
-      expect(loc.root).toBe(join(home, "notes"));
-      expect(() => initVault(home)).toThrow(/never indexes/);
-      // --root at it: said so, not a `slipbox init` that would refuse it.
-      expect(() => locateVault({ root: home })).toThrow(
-        `--root ${home}: your home folder is never a vault; open a folder in it`,
-      );
+      expect(findVaultRoot(join(home, "top.md"))).toBeNull();
+      expect(configFilesFor(l)).toEqual({ vaultFile: null, outerFiles: [] });
+      expect(() => initVault(home)).toThrow(/home is a vault already/);
+      // --root at it: home; a file of a vault in it, that vault's.
+      expect(locateVault({ root: home, path: join(home, "top.md") })).toMatchObject({ mode: "home", root: home });
+      expect(locateVault({ root: home, path: join(home, "notes", "n.md") }).root).toBe(join(home, "notes"));
       expect(() => locateVault({ root: "/" })).toThrow("--root /: / is never a vault; open a folder in it");
+      // Its git: ~'s own repository.
+      expect(checkoutAt(l)?.root).toBe(home);
+      // Reached through a link, it's the same home, by its real path.
+      symlinkSync(home, join(base, "link"));
+      process.env.HOME = join(base, "link");
+      expect(locateVault({ path: join(home, "top.md") })).toMatchObject({ mode: "home", root: home });
+      expect(locateVault({ path: join(base, "link", "top.md") })).toMatchObject({
+        mode: "home",
+        root: join(base, "link"),
+      });
+    } finally {
+      process.env.HOME = before;
+    }
+  });
+
+  test("HOME=/ (a service's) makes no home of everything: its files stay outside every vault (VV-D2)", () => {
+    const dir = realpathSync(mkdtempSync(join(tmpdir(), "slipbox-rootfs-")));
+    writeFileSync(join(dir, "a.md"), "# a\n");
+    const before = process.env.HOME;
+    process.env.HOME = "/";
+    try {
+      expect(locateVault({ path: join(dir, "a.md") })).toMatchObject({ mode: "folder", root: dir });
+      expect(vaultOf(join(dir, "a.md"))).toBeNull();
+    } finally {
+      process.env.HOME = before;
+    }
+  });
+
+  test("home's git is only ~'s own: a repository around it isn't home's (VV-D2)", () => {
+    const repo = realpathSync(mkdtempSync(join(tmpdir(), "slipbox-homerepo-")));
+    mkdirSync(join(repo, ".git"));
+    mkdirSync(join(repo, "me"));
+    writeFileSync(join(repo, "me", "a.md"), "# a\n");
+    const before = process.env.HOME;
+    process.env.HOME = join(repo, "me");
+    try {
+      const loc = locateVault({ path: join(repo, "me", "a.md") });
+      expect(loc).toMatchObject({ mode: "home", root: join(repo, "me") });
+      expect(checkoutAt(loc)).toBeNull();
+      expect(checkoutAt(rootAt(repo))?.root).toBe(repo);
     } finally {
       process.env.HOME = before;
     }
@@ -864,19 +940,36 @@ describe("review cycle 5 (vault, a loose folder)", () => {
     expect(r.json.data.hits.map((h: { abs: string }) => h.abs).sort()).toEqual([join(plain, "p.md"), join(v, "w.md")]);
   });
 
-  test("$HOME or / opened as a plain folder is listed a level at a time, never walked or indexed (20.22)", () => {
-    const home = mkdtempSync(join(tmpdir(), "slipbox-home-"));
+  test("home opened is never walked then (VV-D2): its top alone until its walk is made, then the walk kept — each note looked at again", () => {
+    const home = realpathSync(mkdtempSync(join(tmpdir(), "slipbox-home-")));
     mkdirSync(join(home, "sub"));
     writeFileSync(join(home, "a.md"), "# A\n");
-    writeFileSync(join(home, "sub", "c.md"), "# C\n");
+    writeFileSync(join(home, "sub", "c.md"), "[a](../a.md)\n");
     const before = process.env.HOME;
     process.env.HOME = home;
     try {
       const loc = locateVault({ path: home, cwd: home });
-      expect(loc.mode).toBe("folder");
-      expect(isListed(loc)).toBe(true);
-      expect([...openGraph(loc, DEFAULT_CONFIG, true).notes.keys()]).toEqual(["a.md"]);
-      expect(existsSync(join(cacheDir(loc), "index.json"))).toBe(false);
+      expect(loc.mode).toBe("home");
+      expect(isListed(loc)).toBe(false);
+      // Not walked yet: its top's notes, its folders listed, not looked into.
+      const first = openGraph(loc, DEFAULT_CONFIG, true);
+      expect([...first.notes.keys()]).toEqual(["a.md"]);
+      expect(first.dirs).toEqual(["", "sub"]);
+      expect(first.home).toEqual({ walked: null, capped: null });
+      // Walked (a slice at a time, while nobody works — here at once) and kept: the graph is built from it.
+      const walked = walkHomeNow(loc, DEFAULT_CONFIG);
+      expect(walked.walk.files.map((f) => f.rel)).toEqual(["a.md", "sub/c.md"]);
+      const g = openGraph(loc, DEFAULT_CONFIG, true);
+      expect([...g.notes.keys()]).toEqual(["a.md", "sub/c.md"]);
+      expect(g.home?.walked).toBeGreaterThanOrEqual(walked.walked!);
+      expect(g.backlinks("a.md").map((b) => b.from)).toEqual(["sub/c.md"]);
+      expect(existsSync(join(cacheDir(loc), "index.json"))).toBe(true);
+      // Each note looked at again when the graph is built: one gone is gone, one changed is read again.
+      rmSync(join(home, "sub", "c.md"));
+      writeFileSync(join(home, "a.md"), "# A, longer now\n");
+      const again = openGraph(loc, DEFAULT_CONFIG, true);
+      expect([...again.notes.keys()]).toEqual(["a.md"]);
+      expect(again.entry("a.md")?.title).toBe("A, longer now");
     } finally {
       process.env.HOME = before;
     }
@@ -5683,11 +5776,14 @@ describe("the background auto-index of the home folder (20.9)", () => {
     const home = makeHome();
     const file = join(home, "..", `${basename(home)}-progress.json`);
     const first = new AutoIndex(home, file);
+    // Home first, then the vaults it found, one at a time: stopped with some left.
+    while (!first.status.home) first.step(0);
     first.step(0);
     const left = [...first.status.queue];
     expect(left.length).toBeGreaterThan(0);
     const again = new AutoIndex(home, file);
     expect(again.status.queue).toEqual(left);
+    expect(again.status.home).toBe(true);
     while (again.step(50)) {}
     expect(again.status.found).toBe(4);
     const later = new AutoIndex(home, file, () => Date.now() + REPASS_MS + 1000);
@@ -5719,7 +5815,7 @@ describe("the background auto-index of the home folder (20.9)", () => {
         return JSON.parse(out.join("")).data;
       };
       const r = await run(["index", "--home"]);
-      expect(r).toMatchObject({ root: home, found: 4, indexed: 4, left: 0 });
+      expect(r).toMatchObject({ root: home, found: 4, indexed: 4, left: 0, home: { indexed: true, notes: 1 } });
       // Every command leaves its mark: the TUI's auto-index waits while an agent works.
       const { activityFile } = await import("../src/core/autoindex.ts");
       expect(Date.now() - statSync(activityFile()).mtimeMs).toBeLessThan(5000);
@@ -5730,6 +5826,326 @@ describe("the background auto-index of the home folder (20.9)", () => {
     } finally {
       process.env.HOME = before;
     }
+  });
+});
+
+describe("home, a vault without a marker (VV-D2)", () => {
+  /** A home folder of its own: `files` in it, `$HOME` while `f` runs. */
+  const withHome = async <T>(files: Record<string, string>, f: (home: string) => T | Promise<T>): Promise<T> => {
+    const home = realpathSync(mkdtempSync(join(tmpdir(), "slipbox-vhome-")));
+    for (const [rel, text] of Object.entries(files)) {
+      mkdirSync(dirname(join(home, rel)), { recursive: true });
+      writeFileSync(join(home, rel), text);
+    }
+    const before = process.env.HOME;
+    process.env.HOME = home;
+    try {
+      return await f(home);
+    } finally {
+      process.env.HOME = before;
+    }
+  };
+  const cli = async (args: string[], cwd: string) => {
+    const out: string[] = [];
+    const code = await runCli([...args, "--json"], {
+      out: (x: string) => out.push(x),
+      err: () => {},
+      stdin: async () => "",
+      isTTY: false,
+      columns: 80,
+      cwd,
+      env: process.env,
+    });
+    return { code, json: JSON.parse(out.join("")) };
+  };
+
+  test("its skip list: hidden folders, the system's, Downloads, the busy folders, and what isn't a note or a text file; large notes listed, not read; no .gitignore", async () => {
+    const { homeSkip, isBusyFolder, SlicedWalk, WalkFilter } = await import("../src/core/walk.ts");
+    const busy = ["node_modules", ".venv", "venv", "__pycache__", "target", "build", "dist", ".next", "vendor"];
+    const busier = ["Pods", "DerivedData", ".gradle", ".tox", "cache", "Caches", ".cache", "pip-cache"];
+    const files: Record<string, string> = {
+      "a.md": "# A\n",
+      "docs/b.md": "# B\n",
+      "docs/plan.json": "{}\n",
+      "docs/script.py": "print(1)\n",
+      "docs/photo.png": "png",
+      "docs/archive.zip": "zip",
+      "docs/big.md": `# Big\n\n${"x".repeat(300)}\n`,
+      ".config/c.md": "# C\n",
+      ".local/share/s.md": "# S\n",
+      "Downloads/d.md": "# D\n",
+      "Library/l.md": "# L\n",
+      "AppData/x.md": "# X\n",
+      "work/.gitignore": "*\n",
+      "work/w.md": "# W\n",
+      "work/sub/Downloads/kept.md": "# a Downloads below the top is a folder like any\n",
+      "repo/.git/HEAD": "ref: refs/heads/main\n",
+      "repo/r.md": "# R\n",
+    };
+    for (const b of [...busy, ...busier]) files[`work/${b}/n.md`] = "# busy\n";
+    await withHome(files, (home) => {
+      const config = structuredClone(DEFAULT_CONFIG);
+      config.walk.max_file_size = 200;
+      const walk = (platform: string) => {
+        const w = new SlicedWalk(home, new WalkFilter(home, config.walk, { home: true, platform }));
+        while (w.step(50)) {}
+        return w.result!;
+      };
+      const mac = walk("darwin");
+      expect(mac.files.map((f) => f.rel)).toEqual([
+        "AppData/x.md",
+        "a.md",
+        "docs/b.md",
+        "work/sub/Downloads/kept.md",
+        "work/w.md",
+      ]);
+      // Text files are home's files; a picture, an archive aren't.
+      expect(mac.assets.sort()).toEqual(["docs/plan.json", "docs/script.py"]);
+      // A large note: listed, not read. A vault: a boundary, its own.
+      expect(mac.skipped).toContainEqual({ rel: "docs/big.md", reason: expect.stringMatching(/^larger than/) });
+      expect(mac.skipped).toContainEqual({ rel: "repo", reason: "nested vault" });
+      expect(mac.dirs).not.toContain("Library");
+      expect(walk("win32").files.map((f) => f.rel)).toEqual([
+        "Library/l.md",
+        "a.md",
+        "docs/b.md",
+        "work/sub/Downloads/kept.md",
+        "work/w.md",
+      ]);
+      // Each folder's reason, for the explorer's marks to say.
+      expect(homeSkip(".config")).toBe("hidden");
+      expect(homeSkip("Downloads")).toBe("Downloads");
+      expect(homeSkip("Library", { platform: "darwin" })).toBe("system folder");
+      expect(homeSkip("work/Library", { platform: "darwin" })).toBeNull();
+      expect(homeSkip("x/dist")).toBe("busy folder");
+      for (const b of [...busy, ...busier]) expect(isBusyFolder(b)).toBe(true);
+      for (const b of ["notes", "docs", "src", "cached-notes", "Builds"]) expect(isBusyFolder(b)).toBe(false);
+      // Named, a file the skip list leaves out is opened, and nothing more: never indexed.
+      const g = openGraph(homeAt(home), config, true);
+      for (const rel of [".config/c.md", "Downloads/d.md", "work/node_modules/n.md", "docs/photo.png"])
+        expect(g.reachFile(rel, { keep: true })).toBe(false);
+      expect(g.reachFile("docs/big.md")).toBe(false);
+    });
+  });
+
+  test("its Downloads is where the desktop keeps it (user-dirs.dirs)", async () => {
+    const { SlicedWalk, WalkFilter } = await import("../src/core/walk.ts");
+    const files = { "Téléchargements/t.md": "# T\n", "Downloads/d.md": "# D\n" };
+    await withHome(files, (home) => {
+      const config = join(home, "..", `${basename(home)}-config`);
+      mkdirSync(config, { recursive: true });
+      writeFileSync(join(config, "user-dirs.dirs"), 'XDG_DOWNLOAD_DIR="$HOME/Téléchargements"\n');
+      const before = process.env.XDG_CONFIG_HOME;
+      process.env.XDG_CONFIG_HOME = config;
+      try {
+        const w = new SlicedWalk(home, new WalkFilter(home, DEFAULT_CONFIG.walk, { home: true }));
+        while (w.step(50)) {}
+        expect(w.result!.files.map((f) => f.rel)).toEqual(["Downloads/d.md"]);
+      } finally {
+        process.env.XDG_CONFIG_HOME = before;
+      }
+    });
+  });
+
+  test("a vault inside home stays its own: a boundary of home's walk, its notes never home's — nor its backlinks", async () => {
+    const { Reach } = await import("../src/core/reach.ts");
+    const { walkHomeNow } = await import("../src/core/home.ts");
+    const elsewhere = realpathSync(mkdtempSync(join(tmpdir(), "slipbox-vhome-other-")));
+    await withHome(
+      {
+        "todo.md": "# Todo\n",
+        "journal/day.md": "[todo](../todo.md) and [r](../repo/r.md)\n",
+        "repo/.git/HEAD": "ref: refs/heads/main\n",
+        "repo/r.md": "[todo](../todo.md)\n",
+      },
+      (home) => {
+        mkdirSync(join(elsewhere, ".slipbox"));
+        writeFileSync(join(elsewhere, "x.md"), `[t](${home}/todo.md) [r](${home}/repo/r.md)\n`);
+        const ox = rootAt(elsewhere);
+        recordLocation(ox);
+        openGraph(ox, DEFAULT_CONFIG, true).ensureAll();
+        const loc = locateVault({ path: join(home, "todo.md") });
+        walkHomeNow(loc, DEFAULT_CONFIG);
+        const g = openGraph(loc, DEFAULT_CONFIG, true);
+        expect([...g.notes.keys()].sort()).toEqual(["journal/day.md", "todo.md"]);
+        expect(g.nestedRoots()).toEqual(["repo"]);
+        expect(locateVault({ path: join(home, "repo", "r.md") })).toMatchObject({
+          mode: "vault",
+          root: join(home, "repo"),
+        });
+        g.reach = new Reach(loc);
+        // The other vault's link to a note of home: a backlink; to a note of the vault inside it: that vault's, not home's.
+        const inbound = g.reach.inbound(g);
+        expect([...inbound.keys()]).toEqual(["todo.md"]);
+        expect(
+          g
+            .backlinks("todo.md")
+            .map((b) => b.from)
+            .sort(),
+        ).toEqual([join(elsewhere, "x.md"), "journal/day.md"]);
+      },
+    );
+  });
+
+  test("built in slices while nobody is working: its walk, then its index; the cap said when it's reached", async () => {
+    const { AutoIndex } = await import("../src/core/autoindex.ts");
+    const { homeWalkKept } = await import("../src/core/home.ts");
+    const { SlicedWalk, WalkFilter } = await import("../src/core/walk.ts");
+    const files: Record<string, string> = { "a.md": "# A\n" };
+    for (let i = 0; i < 6; i++) files[`f${i}/n${i}.md`] = `[a](../a.md)\n`;
+    files["repo/.git/HEAD"] = "ref: refs/heads/main\n";
+    files["repo/r.md"] = "# R\n";
+    await withHome(files, (home) => {
+      const loc = homeAt(home);
+      const told: (string | null)[] = [];
+      // The TUI's, the background index off: home's own walk and index, the vaults in it left alone.
+      const job = new AutoIndex(home, null, () => Date.now(), { vaults: false, onHome: (c) => told.push(c) });
+      expect(job.step(0)).toBe(true); // a folder at a time: one slice is far from done
+      expect(homeWalkKept(loc)).toBe(false);
+      let slices = 1;
+      while (job.step(0)) slices++;
+      expect(slices).toBeGreaterThan(3);
+      expect(told).toEqual([null]);
+      expect(job.status).toMatchObject({ home: true, homeNotes: 7, found: 0, indexed: 0 });
+      expect(homeWalkKept(loc)).toBe(true);
+      expect(job.idle).toBe(true);
+      // Its index written: the graph opened from the walk kept has the backlinks, parsed already.
+      const g = openGraph(loc, DEFAULT_CONFIG, true, "lazy");
+      expect(g.pendingCount).toBe(0);
+      expect(g.backlinks("a.md").length).toBe(6);
+      // Walked again when asked (a folder came): told again.
+      writeFileSync(join(home, "f0", "new.md"), "[a](../a.md)\n");
+      job.homeAgain();
+      while (job.step(50)) {}
+      expect(told).toEqual([null, null]);
+      expect(openGraph(loc, DEFAULT_CONFIG, true).backlinks("a.md").length).toBe(7);
+      // The cap: so many notes, so many folders at most — the nearest the top kept — and said.
+      const capped = (limits: { notes: number; folders: number }) => {
+        const w = new SlicedWalk(home, new WalkFilter(home, DEFAULT_CONFIG.walk, { home: true }), limits);
+        while (w.step(50)) {}
+        return { files: w.result!.files.map((f) => f.rel), dirs: w.result!.dirs, capped: w.capped };
+      };
+      expect(capped({ notes: 3, folders: 100 })).toMatchObject({
+        files: ["a.md", "f0/n0.md", "f0/new.md"],
+        capped: "notes",
+      });
+      expect(capped({ notes: 100, folders: 2 })).toMatchObject({
+        files: ["a.md", "f0/n0.md", "f0/new.md"],
+        dirs: ["", "f0"],
+        capped: "folders",
+      });
+      expect(capped({ notes: 100, folders: 100 }).capped).toBeNull();
+    });
+  });
+
+  test("its notes are backlinks of a vault's, found by the background index; a vault's notes are home's", async () => {
+    const { AutoIndex } = await import("../src/core/autoindex.ts");
+    await withHome(
+      {
+        "plan.md": "[target](notes/target.md)\n",
+        "notes/.slipbox/config.toml": "",
+        "notes/target.md": "[plan](../plan.md)\n",
+      },
+      async (home) => {
+        const ai = new AutoIndex(home, join(home, "..", `${basename(home)}-progress.json`));
+        while (ai.step(50)) {}
+        expect(ai.status).toMatchObject({ home: true, homeNotes: 1, found: 1, indexed: 1 });
+        const into = await cli(["backlinks", "target.md"], join(home, "notes"));
+        expect(into.json.data.backlinks.map((b: { from: string }) => b.from)).toEqual([join(home, "plan.md")]);
+        const out = await cli(["backlinks", "plan.md"], home);
+        expect(out.json.data.backlinks.map((b: { from: string }) => b.from)).toEqual([
+          join(home, "notes", "target.md"),
+        ]);
+      },
+    );
+  });
+
+  test("its walk kept is brought up to now: a note come since, a folder become a vault, a vault become home's again", async () => {
+    const { walkHomeNow, homeWalkFile } = await import("../src/core/home.ts");
+    const files = {
+      "a.md": "# A\n",
+      "keep/k.md": "# K\n",
+      "proj/p.md": "[a](../a.md)\n",
+      "was/.slipbox/config.toml": "",
+      "was/w.md": "[a](../a.md)\n",
+    };
+    await withHome(files, (home) => {
+      const loc = homeAt(home);
+      // Its folders' times an hour back: unchanged since the walk, none is listed again.
+      const hour = new Date(Date.now() - 3_600_000);
+      for (const d of ["", "keep", "proj", "was"]) utimesSync(join(home, d), hour, hour);
+      walkHomeNow(loc, DEFAULT_CONFIG);
+      const written = () => statSync(homeWalkFile(loc)).mtimeMs;
+      const at = written();
+      const notes = () => [...openGraph(loc, DEFAULT_CONFIG, true).notes.keys()].sort();
+      expect(notes()).toEqual(["a.md", "keep/k.md", "proj/p.md"]);
+      expect(written()).toBe(at); // nothing changed: the walk kept as it was
+      // Home's time moved, nothing in it changed (a shell's history written over): listed again, not kept again.
+      utimesSync(home, new Date(), new Date());
+      expect(notes()).toEqual(["a.md", "keep/k.md", "proj/p.md"]);
+      expect(written()).toBe(at);
+      utimesSync(home, hour, hour); // the top unchanged again: what follows is found in the folders it's in
+      // Since: a note in a folder, a repository made of another, a .slipbox/ taken away.
+      writeFileSync(join(home, "keep", "new.md"), "# New\n");
+      mkdirSync(join(home, "proj", ".git"));
+      rmSync(join(home, "was", ".slipbox"), { recursive: true });
+      expect(notes()).toEqual(["a.md", "keep/k.md", "keep/new.md", "was/w.md"]);
+      const g = openGraph(loc, DEFAULT_CONFIG, true);
+      expect(g.nestedRoots()).toEqual(["proj"]);
+      expect(g.backlinks("a.md").map((b) => b.from)).toEqual(["was/w.md"]);
+      expect(written()).toBeGreaterThan(at); // kept so, for the next
+    });
+  });
+
+  test("a folder of home made a vault, and back: a name across the new edge rewritten to reach the same note", async () => {
+    const files = {
+      "a.md": "[[b]], and [the plan](projects/thesis/plan.md)\n",
+      "projects/thesis/b.md": "# B\n",
+      "projects/thesis/plan.md": "# Plan\n",
+    };
+    await withHome(files, async (home) => {
+      const thesis = join(home, "projects", "thesis");
+      const reached = async () =>
+        ((await cli(["links", "a.md"], home)).json.data as { status: string; path: string }[]).map((l) => [
+          l.status,
+          l.path.startsWith("/") ? l.path : join(home, l.path),
+        ]);
+      const before = [
+        ["note", join(thesis, "b.md")],
+        ["note", join(thesis, "plan.md")],
+      ];
+      // The first command in home: home walked for it, every folder of it there for the plan.
+      const made = (await cli(["init", "projects/thesis"], home)).json;
+      expect(made.data).toMatchObject({ kind: "make-root", from: "projects/thesis", dryRun: false });
+      expect(existsSync(join(thesis, ".slipbox", "config.toml"))).toBe(true);
+      expect(locateVault({ path: join(thesis, "b.md") }).root).toBe(thesis);
+      // A name doesn't reach into another vault: [[b]] written so it reaches b.md still; the path as it was.
+      const a = readFileSync(join(home, "a.md"), "utf8");
+      expect(a).not.toContain("[[b]]");
+      expect(a).toContain("(projects/thesis/plan.md)");
+      expect(await reached()).toEqual(before);
+      // Back: home's again, every link reaching what it did.
+      const back = (await cli(["deinit", "projects/thesis"], home)).json;
+      expect(back.data).toMatchObject({ kind: "unmake-root", from: "projects/thesis", dryRun: false });
+      expect(existsSync(join(thesis, ".slipbox"))).toBe(false);
+      expect(locateVault({ path: join(thesis, "b.md") })).toMatchObject({ mode: "home", root: home });
+      expect(await reached()).toEqual(before);
+    });
+  });
+
+  test("an agent in home: walked the first time, then the walk kept read; info says home", async () => {
+    const { homeWalkKept } = await import("../src/core/home.ts");
+    await withHome({ "a.md": "# A\n", "deep/er/b.md": "[a](../../a.md)\n" }, async (home) => {
+      expect(homeWalkKept(homeAt(home))).toBe(false);
+      const r = await cli(["backlinks", "a.md"], home);
+      expect(r.json.data.backlinks.map((b: { from: string }) => b.from)).toEqual(["deep/er/b.md"]);
+      expect(homeWalkKept(homeAt(home))).toBe(true);
+      const info = (await cli(["info"], join(home, "deep"))).json.data;
+      expect(info).toMatchObject({ root: home, mode: "home", name: null, notes: 2 });
+      expect(info.index.walked).not.toBeNull();
+      expect(info.index.capped).toBeNull();
+      expect((await cli(["name", "mine"], home)).code).toBe(5);
+    });
   });
 });
 
@@ -5773,14 +6189,19 @@ describe("freshness and coverage (20.10)", () => {
       gone: 1,
     });
     expect((await cli(["index", "--refresh"], here)).json.data.root).toBe(here); // this one, unnamed
-    // A plain folder has an index of its own (20.22); $HOME, only listed, has none.
-    const loose = mkdtempSync(join(tmpdir(), "slipbox-fresh-loose-"));
+    // A plain folder has an index of its own (20.22); home too (VV-D2), its every folder listed again.
+    const loose = realpathSync(mkdtempSync(join(tmpdir(), "slipbox-fresh-loose-")));
     writeFileSync(join(loose, "l.md"), "# L\n");
     expect((await cli(["index", "--refresh", loose], here)).json.data).toMatchObject({ root: loose, notes: 1 });
     const home = process.env.HOME;
     process.env.HOME = loose;
     try {
-      expect((await cli(["index", "--refresh", loose], here)).code).toBe(5);
+      mkdirSync(join(loose, "sub"));
+      writeFileSync(join(loose, "sub", "m.md"), "# M\n");
+      expect((await cli(["index", "--refresh", join(loose, "sub")], here)).json.data).toMatchObject({
+        root: loose,
+        notes: 2,
+      });
     } finally {
       process.env.HOME = home;
     }
@@ -5807,11 +6228,25 @@ describe("freshness and coverage (20.10)", () => {
     expect(lines.join("")).toMatch(/\nindex {5}written \d{4}-\d\d-\d\d \d\d:\d\d\n/);
     expect(lines.join("")).toMatch(/\nhome {6}background index\b/);
     const { describeBackground } = await import("../src/core/autoindex.ts");
-    expect(describeBackground({ on: false, found: 0, indexed: 0, left: 0, finished: null, started: null })).toBe(
-      "background index off ([index] background)",
-    );
-    expect(describeBackground({ on: true, found: 2, indexed: 1, left: 7, finished: null, started: "x" })).toBe(
-      "background index: 2 vaults found so far, 7 folders left",
+    const b = { found: 0, indexed: 0, left: 0, finished: null, started: null, home: false, homeNotes: 0, capped: null };
+    expect(describeBackground({ ...b, on: false })).toBe("background index off ([index] background)");
+    expect(describeBackground({ ...b, on: true, started: "x" })).toBe("background index: walking home");
+    expect(
+      describeBackground({ ...b, on: true, found: 2, indexed: 1, left: 7, started: "x", home: true, homeNotes: 12 }),
+    ).toBe("background index: home's 12 notes indexed, 2 vaults found so far, 7 left");
+    expect(
+      describeBackground({
+        ...b,
+        on: true,
+        found: 1,
+        started: "x",
+        finished: "2026-10-15T09:30:00Z",
+        home: true,
+        homeNotes: 1,
+        capped: "notes",
+      }),
+    ).toBe(
+      "background index: pass done 2026-10-15 09:30 — home's 1 note, 1 vault found — home's index is full: it holds 10,000 notes, those nearest the top — the rest aren't indexed",
     );
   });
 

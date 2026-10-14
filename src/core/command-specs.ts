@@ -1226,7 +1226,7 @@ export const COMMAND_SPECS: CommandSpec[] = [
     id: "vault.init",
     title: "Give a folder .slipbox/",
     cli: "slipbox init [dir] [--name N] [--private]",
-    desc: "This folder, outside every vault, gets its .slipbox/ (settings; a name with :name); in a vault, the explorer's selected folder (or this note's) becomes a vault of its own, links fixed after a preview",
+    desc: "This folder, outside every vault, gets its .slipbox/ (settings; a name with :name); in a vault or home, the explorer's selected folder (or this note's) becomes a vault of its own, links fixed after a preview",
   },
   {
     id: "problems.open",

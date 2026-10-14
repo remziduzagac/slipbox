@@ -15,6 +15,9 @@ A vault is a folder whose notes belong together. slipbox finds it for you: it's 
 holds `.git`, `.slipbox/`, `.obsidian/` or `.zk/`. So a git repository is a vault, and so are an Obsidian vault and a
 zk notebook.
 
+Your home folder is a vault too, without a marker: home. Its notes are those in your home folder that no other vault
+holds. Its index leaves out hidden folders, `Downloads` and other folders that aren't your notes.
+
 The vault decides how links resolve, what is searched together, and which settings apply. Opening any file in a vault
 opens the whole vault. The status line shows which vault you're in.
 

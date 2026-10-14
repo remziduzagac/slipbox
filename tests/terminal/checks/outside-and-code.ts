@@ -764,19 +764,22 @@ export const OUTSIDE_AND_CODE: Check[] = [
     area: "outside-and-code",
     name: "agent: a replay against the open note — append, prepend, rename, delete, recreate, an atomic rewrite, a burst",
     covers: { cases: ["agent", "watching"] },
-    options: { home: true, startAt: "home/Downloads/plan.md" },
+    // The note the script makes in ~/Downloads, open from the start: home's, though its index leaves Downloads out
+    // (VV-D2) — no watcher sees it, so it's read again as it changes.
+    options: {
+      home: true,
+      startAt: "home/Downloads/agent-scratch.md",
+      setup: (s) => s.write("~/Downloads/agent-scratch.md", "# agent scratch\n"),
+    },
     run: async (s) => {
-      // The set's own script (~/work/kestrel/scripts/dev/agent-replay.sh), a pause between its steps: the note it
-      // makes in ~/Downloads opened as soon as it's there.
+      await opened(s, "Downloads/agent-scratch.md");
+      // The set's own script (~/work/kestrel/scripts/dev/agent-replay.sh), a pause between its steps.
       const replay = Bun.spawn(["bash", s.path("~/work/kestrel/scripts/dev/agent-replay.sh"), s.path("~/Downloads")], {
         env: { ...process.env, PAUSE: "2.5" },
         stdout: "ignore",
         stderr: "ignore",
       });
       try {
-        await s.until(() => s.exists("~/Downloads/agent-scratch.md"), 5000, "the agent's note");
-        await s.ex("e agent-scratch.md");
-        await opened(s, "agent-scratch.md");
         await s.see("agent scratch", 5000);
         await s.see("first pass", 5000); // appended
         await s.see(/title\s+Agent scratch/, 5000); // frontmatter prepended: its properties

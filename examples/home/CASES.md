@@ -2179,8 +2179,10 @@ build (`scripts/build-home.ts`), not kept as they are. Each file's purpose and t
   `notes/research/route-engine-spike/README.md` (0.11; 21.x travel together 'outside git, one folder inside the other')
 - A plain folder with no marker — `Downloads/plan.md`, `Downloads/stray-note.md` (test 'a folder with no .slipbox or
   repository above it is walked as a vault is')
-- \$HOME and / are never roots — `Downloads/stray-note.md`, `notes/index.md` (test '\$HOME and / are never a root,
-  whatever they hold')
+- Home is a vault without a marker: a note under `~` that no other vault holds is home's, its backlinks home's — `todo.md`,
+  `household/bike-insurance.md` (VV-D2; test 'a file's vault (VV-D4)'; the terminal check 'vaults: home')
+- Home's skip list: hidden folders, the system's, Downloads, the busy folders; a vault inside home its own —
+  `Downloads/stray-note.md`, `notes/index.md`, `work/kestrel/README.md` (VV-D2; test 'its skip list')
 - root\_markers configurable — `work/infra/dotfiles/slipbox/config.toml`, `work/kestrel/.slipbox/config.toml` (test
   'root\_markers in your config decide what a root is')
 - --root override — `work/kestrel/README.md`, `work/kestrel/docs/qa/links.md` (test '--root names a vault: it takes

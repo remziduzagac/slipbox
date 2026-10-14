@@ -73,9 +73,11 @@ A file's vault is the nearest folder above it that holds a marker. The markers a
 and `.zk/` (the setting [`walk.root_markers`](configuration.md)). A command finds the vault from the note you name, or
 else from the folder you run it in.
 
-A folder outside every vault works too: it stands in for one of its own. Your home folder and `/` are never vaults.
-Opened as folders, they're listed a level at a time, never walked or indexed. [Links and vaults](links-and-vaults.md)
-explains vaults, folders outside them and names.
+A file under no marker in your home folder is home's: your home folder is a vault without a marker, its index leaving
+out hidden folders, `Downloads` and the like. The first command in home walks it, as far as its cap, and the walk is
+kept for the next. A folder outside every vault and outside home works too: it stands in for one of its own. `/` is
+never a vault: opened as a folder, it's listed a level at a time, never walked or indexed.
+[Links and vaults](links-and-vaults.md) explains vaults, home, folders outside them and names.
 
 `--root <folder>` says which vault to work in instead. It must name a vault (exit 3 otherwise). A note you name is
 looked for there. A file still belongs to its nearest vault. So a note in a vault nested inside `--root` belongs to that
@@ -530,17 +532,19 @@ slipbox index --refresh
 - `--rebuild`: start again from nothing.
 - `--refresh [path]`: bring a vault's link index up to date now. Every file's size and time is checked, and every
   folder listed again. Without `path`, it's this vault's index. With `path`, it's the index of the vault holding `path`,
-  opened before or not. A path outside every vault means the folder it's in, standing in for one.
-- `--home`: run the background index of your home folder now, in the foreground. It finds the vaults under your home
-  folder and indexes each, so their links count as backlinks of the vaults they reach. With `--budget <ms>`, it stops
-  after that long, and carries on from there next time. The default, 0, is the whole pass. `--rebuild` starts a new
-  pass.
+  opened before or not. In home, your home folder is walked again. A path outside every vault and outside home means
+  the folder it's in, standing in for one.
+- `--home`: run the background index of your home folder now, in the foreground. It indexes home's own notes, then
+  finds the vaults under your home folder and indexes each, so their links count as backlinks of the vaults they reach.
+  With `--budget <ms>`, it stops after that long, and carries on from there next time. The default, 0, is the whole
+  pass. `--rebuild` starts a new pass.
 
 With `--json`, the data is `{path, rebuilt, indexed, removed, files, ms}`. With `--refresh`, it's
 `{root, notes, changed, unchanged, gone, reached, indexed, ms}`. With `--home`, it's
-`{root, found, indexed, left, started, finished}`.
+`{root, found, indexed, left, started, finished, home{indexed, notes, capped}}`: `home` says whether home's own index is
+built this pass, its notes, and `notes` or `folders` when its cap stopped it short.
 
-A folder listed a level at a time (your home folder, `/`) has no index. `index` there is exit 5.
+`/`, a folder listed a level at a time, has no index. `index` there is exit 5.
 
 ## Changing notes
 
@@ -1195,7 +1199,10 @@ With `--json`, the data is `{version, release, root, mode, name, key, markerVers
 cache, state, scratch, notes, index{…, written, reached}, background{…}, search{engine, index}, skipped[{rel, reason}],
 folder, links, stale[]}`:
 
-- `mode` is `root` for a vault, and `folder` for a folder outside every vault, standing in for one.
+- `mode` is `root` for a vault, `home` for your home folder's, and `folder` for a folder outside every vault, standing
+  in for one.
+- In home, `index` also has `walked`, when home was last walked (`null`: not yet, its top folder alone), and `capped`,
+  `notes` or `folders` when home's cap stopped its walk short, else `null`.
 - `release` is `null` when slipbox runs from its source.
 - `folder` is the vault's name, `{name, pointer, remote, id, private, copies[{path, seen, here, available}], default}`,
   or `null`. `pointer` is the name pointers use. `default` is the copy links open.

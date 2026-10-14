@@ -53,7 +53,7 @@ import { formatPointer, isPointer, parsePointer, resolvePointer } from "./pointe
 import { parseHosted, withHostedPath } from "./hosting.ts";
 import { checkoutOf } from "./git.ts";
 import { gitArgs } from "./gitops.ts";
-import { findVaultRoot, hasMarker, initVault, isInside, markersAt, type VaultLocation } from "./vault.ts";
+import { findVaultRoot, hasMarker, initVault, isHome, isInside, markersAt, type VaultLocation } from "./vault.ts";
 
 export class RenameError extends Error {}
 
@@ -1199,7 +1199,9 @@ function vaultMoveFixes(g: Graph, from: string, c: Collector): void {
     }
   }
   for (const v of readRoots()) {
-    if (v.kind !== "vault" || v.path === to || isInside(to, v.path) || !existsSync(v.path)) continue;
+    // Home's notes too (VV-D2), as of its index.
+    const linker = v.kind === "vault" || (v.kind === "home" && isHome(v.path));
+    if (!linker || v.path === to || isInside(to, v.path) || !existsSync(v.path)) continue;
     const og = g.reach?.graphAt(v.path, { known: true }) ?? null;
     if (!og) continue;
     for (const rel of og.notes.keys()) {
@@ -1305,7 +1307,8 @@ export function planMakeVault(
   name: string | null,
   opts: { private?: boolean } = {},
 ): RenamePlan {
-  if (parent.loc.mode !== "vault")
+  // In home (VV-D2) too: a folder of it made a vault of its own.
+  if (parent.loc.mode === "folder")
     throw new RenameError(`${parent.root} isn't a vault: make it one first (slipbox init)`);
   const F = folderPath(parent, folderRel);
   if (parent.nestedRoots().includes(F)) throw new RenameError(`${F} is already a vault`);

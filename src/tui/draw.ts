@@ -2320,7 +2320,7 @@ function drawTree(app: App, c: Canvas, list: Rect, bg: Color | null, geo: Geomet
   const buttonsOf = (row: TreeRow) => {
     // The rows outside the vault's own tree (VV-D5) aren't this vault's to act on: no menu, as explorerItem has it.
     if (row.outside || row.root?.here) return null;
-    if (row.kind === "root" && !(row.root?.kind === "vault" && app.loc.mode === "vault")) return null;
+    if (row.kind === "root" && !(row.root?.kind === "vault" && app.loc.mode !== "folder")) return null;
     const bs: (readonly [string, string])[] = [[g.itemMenu, "xrow:menu"]];
     return { bs, w: bs.reduce((n, [glyph]) => n + stringWidth(glyph) + 2, 0) };
   };

@@ -34,6 +34,69 @@ root for a vault, nor plain folder or loose file, outside code and links' target
 string with a space in it), past the names above. Root's other meanings pass: the filesystem's root, running as root, a
 root cause, square roots.
 
+## MODIFIED design/roots.md: home (VV-T2)
+
+Done in VV-T2; the text for roots.md at consolidation. Supersedes D58, D69 and D80's "`$HOME` is never a root": home is
+a vault, `/` still none.
+
+**§ Roots and markers.** A file's vault is its nearest folder holding a marker; else home, when it's under `~`; else
+none, as a plain folder or a loose file is until VV-T3 (`locateVault`, `vaultOf` in `core/vault.ts`). Home is `~` by
+`$HOME`, or its real path when a path reaches it that way: one home, one key. It is never a marked vault, whatever it
+holds (`isVaultRoot` stays false for it): a `.slipbox/` or a `.git` in `~` don't make it another kind. `--root ~` is
+home; a file of a vault in it is that vault's.
+
+**§ Home** (new, in place of § Plain folders and loose files for `~`). Home's mode is `home` (`homeAt`), beside
+`vault` and `folder`. Its files are those in `~` that no other vault holds: the vaults inside home are boundaries of its
+walk, as nested roots are, and a link from another vault into one of them is that vault's backlink, never home's. Its
+state is keyed as any vault's, by its path (`vaultKey(~)`, the key `~` opened as a plain folder had: its session
+carries over); its settings are the user's alone (`configFilesFor` gives none of its own); it has no name, no pointers,
+and `init` and `name` refuse it; its git is `~`'s own repository only (`checkoutAt`). A folder of home given a
+`.slipbox/` (`init`, `space v m`) has its links across the new boundary fixed, as in any vault, and `deinit` makes a
+vault in home part of home again (`vaultOf` finds the vault holding it, `openVault` opens home). `/` and a link
+from its top resolve from home, as from any vault's top, and a wikilink's name matches its notes. The scratch stays in
+the state folder: nothing is written into `~` (D39).
+
+**§ The walk: home's skip list.** Home's `WalkFilter` (`{ home: true }`) applies its skip list instead of `.gitignore`
+(a dotfiles repository's `*` would empty it): `homeSkip` in `core/walk.ts` — hidden folders, the system's (`Library`
+on macOS, `AppData` on Windows, at the top), `Downloads` (where `user-dirs.dirs` says, else `Downloads`), and the busy
+folders anywhere (`BUSY_FOLDERS`, `isBusyFolder`: VV-D8's list and caches); and the files the explorer doesn't list,
+a note or a text file aside (`classify`'s binary group). A note over `walk.max_file_size` is listed as skipped, not
+read. `reachable` refuses all of it in home: named, such a file opens, and is never indexed. `exclusion` gives each
+reason, for VV-T5's marks. No watcher sees such a file, so the TUI polls it while it's open, as it polls a file outside
+the vault: every open file the graph doesn't know.
+
+**§ The index: home's, in slices.** Home is never walked when it's opened: its walk is made a slice at a time
+(`SlicedWalk`, breadth first, entries by name) while nobody is working, and kept in its cache folder (`walk.json`,
+`keepHomeWalk`); its graph is built from the walk kept (`homeWalk`), brought up to now as a build is (freshness
+checked, not assumed): each folder kept is statted, one changed since the walk listed again — what came and went, a
+folder new in it walked — one gone, or become a vault, dropped with what it held, a vault the walk found that is none
+any more walked as home's; each note statted again — gone, dropped; grown past the size cap, skipped. What changed is
+kept again (not a folder whose time moved alone: a shell's history rewritten in `~`). The graph's `walkedAt` is the
+walk's, so the watcher lists again the folders changed since. So an agent's note made in home is there at its next
+command, and a folder made a vault by hand (`git init`) leaves home.
+Never walked, home is its top alone (`walkTop`): its notes and files, the vaults in it, its folders listed but not
+looked into. The background index (`AutoIndex`) walks home first each pass — finding the vaults in it as it did —
+keeps the walk, builds home's index, then indexes the vaults it found; its progress is version 2 (`home`, `homeNotes`,
+`capped`, the queue now the vaults left), and home's walk, quick beside the vaults, is made again after a restart. With
+`[index] background = false` and home open, the TUI runs the same job for home alone, its place kept nowhere
+(`indexJob`). A folder that comes in home (the watcher's rescan), or home never walked, asks for the walk again
+(`homeAgain`); when it's done, the TUI's graph is built again from it. The CLI walks home at once the first time it
+needs it (an agent's answer is now), and `index --refresh ~` walks it again. Home's notes are another vault's backlinks
+as of its index (`Reach` reads it beside the vaults'), and the relink of a vault moved rewrites them too; search's
+linked and all scopes take home as a vault (`scopeRoots`).
+
+**The cap.** Home's index holds 10,000 notes at most, and its walk lists 5,000 folders (`HOME_LIMITS`), those nearest
+the top: what stopped it is kept with the walk, said in a message when the TUI's home is built from it, and in `info`
+(`index.walked`, `index.capped`; the `--home` run's `home.capped`; `describeCap`).
+
+**What's shown.** The status line names home `~`; `info` says `mode` `home` (an addition to schema 1's values), the
+Info view and `stat` `home (~)`. Started in `~`, there is no named folders' list to go into first: home is the vault.
+The explorer is home's tree from its walk; a folder of home its index leaves out, opened (`slipbox ~/Downloads`), is
+listed a level at a time as a folder above the root is, until VV-T4's view and VV-T5's marks.
+
+**Not done here.** The vaults inside a folder home's skip list leaves out (a clone in `~/Downloads`) are no longer
+found by the background index: they're found when opened. Link completion offers other vaults' notes, not home's.
+
 ## MODIFIED design/roots.md
 
 Rewritten in vaults' terms (VV-D1–VV-D4): a vault and its markers; home, a vault without one, and its skip list;

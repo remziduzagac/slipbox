@@ -132,7 +132,7 @@ Search reads an index that slipbox keeps in its cache, outside your folder.
 - `slipbox index` builds the index on demand. `--rebuild` starts it again.
 
 Until the index exists, search reads the files themselves. It finds the same notes, more slowly, and the list's title
-says "scanned". Your home folder or `/`, opened as a folder, is always read that way.
+says "scanned". `/`, opened as a folder, is always read that way.
 
 `search.engine` chooses how search reads ([Configuration](configuration.md)):
 

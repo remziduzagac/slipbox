@@ -17,8 +17,9 @@ import { cacheHome, stateHome, vaultKey } from "./paths.ts";
 
 export const MARKER = ".slipbox";
 
-/** What's opened: a root (a folder holding a root marker), or a plain folder outside every root. */
-export type RootKind = "vault" | "folder";
+/** What's opened: a root (a folder holding a root marker), home (VV-D2: `~`, a vault without one), or a plain
+ *  folder outside every root and outside home. */
+export type RootKind = "vault" | "folder" | "home";
 
 export interface VaultIdentity {
   id: string | null;
@@ -194,7 +195,11 @@ export function readRoots(): KnownRoot[] {
   if (!f) return existsSync(oldListFile()) ? migrate() : [];
   if (f.version !== 1 || !Array.isArray(f.roots)) return [];
   return f.roots.filter(
-    (v) => v && typeof v.key === "string" && typeof v.path === "string" && (v.kind === "vault" || v.kind === "folder"),
+    (v) =>
+      v &&
+      typeof v.key === "string" &&
+      typeof v.path === "string" &&
+      (v.kind === "vault" || v.kind === "folder" || v.kind === "home"),
   );
 }
 

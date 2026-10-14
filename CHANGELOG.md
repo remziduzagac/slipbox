@@ -49,6 +49,12 @@ The format is [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.1.0/); wh
   zooms in on a folder, `-` out a level, and a click on the breadcrumb to that folder. Another vault in the view
   unfolds in place with `l`; `enter` goes into it. A file you may not write opens read-only and says so; a folder you
   may not read says why.
+- Your home folder is a vault, home: its notes outside every other vault have backlinks, are searched together, and
+  have their own tabs. Starting slipbox in `~` starts in home, instead of a folder listed a level at a time. Home is
+  indexed a little at a time while nobody is working, leaving out hidden folders, `Downloads`, the system's folders,
+  busy folders such as `node_modules`, and what isn't a note or a text file; it holds 10,000 notes at most, and says so
+  when it's full. The background index indexes home's notes before the vaults in it. `slipbox info` says `mode`
+  `home` there ([Home](docs/manual/links-and-vaults.md#home)).
 
 ### Removed
 
