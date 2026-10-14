@@ -10,6 +10,9 @@
 Read, review and edit what your agent writes. Markdown and code are rendered cleanly, the editor is necessary and
 sufficient, and agent integration is built in.
 
+![slipbox on a repository's design doc: the agent's change marked beside its lines, the lens open on its new line
+while you type, and the scratch on the right holding the code and the decision it cited](docs/images/readme-hero.png)
+
 slipbox sits beside Claude Code, Codex, or any agent that runs shell commands. Follow an idea from the first plan to
 the code that implements it. Read comfortably, review what changed, and make edits of your own. Tables fit the window,
 and code is highlighted. Pictures, diagrams and maths sit alongside your writing. Themes, keys and settings make the
