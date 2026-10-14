@@ -49,11 +49,16 @@ each, steps as numbered steps, tables for what is looked up, colons only to intr
 ("It's a window like any other: the scratch rendered, the lens to edit it, …"), DOC's rule "colons, commas and
 semicolons rather than dashes" taken further than it meant.
 
-## DS-D5: The reference chapters' lists generated from the code (2026-10-14)
+## DS-D5: The reference chapters stay written by hand, in plain sentences (2026-10-14)
 
-**Decision:** The keys, configuration and command-line chapters keep their prose; their lists of keys, settings and
-commands are generated from the code (the keymap, the config's defaults and their doc comments, the command specs)
-between markers, and a test fails when what's there differs from what the generator writes.
+**Decision:** The keys, configuration and command-line chapters stay written by hand; their prose is rewritten to
+DS-D4's rules like every page's, their tables and the configuration's TOML listing kept as they are.
 
-**Why:** As herdsman's configuration reference is generated: the lists can't fall behind the code. Today's tests check
-that each key and command is mentioned; generated, each is also described as the code says.
+**Why:** The user's call, once the chapters were read for generating them: the keys chapter pairs related keys in a
+row (a key and its leader form, next and previous) with descriptions a person wrote; the configuration's "Every key" is
+a TOML file to copy, every default and its values in comments; the command line's entries explain each flag. A list
+generated from the keymap, the defaults or the specs would be flatter. And what generating was for, lists that can't
+fall behind the code, the tests already hold: every default key, every setting's default, every command and flag.
+
+**Not chosen:** the lists generated from the code between markers, a test failing when they differ (first proposed,
+after herdsman's generated configuration reference).

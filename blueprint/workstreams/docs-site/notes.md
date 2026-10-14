@@ -26,3 +26,13 @@ request. The user: "I think we should fix everything and have documentation webs
 
 Found on the way: greenrepo's DOC-06 (a docs site) was an accepted deviation until after the first release (GR-D8);
 the site meets it.
+
+## 2026-10-14: the reference chapters stay written by hand
+
+Read for generating their lists, the keys, configuration and command-line chapters turned out better written: keys
+paired in rows with plain descriptions, the settings as a TOML file to copy, each command's flags explained; and the
+tests already fail on a key, default, command or flag left out. The user: "keep them hand-written" (DS-D5). Their prose
+was rewritten like every page's.
+
+Also asked: what sharp's LGPL asks of the project. Nothing, as used (installed on CI, never run, never distributed), but
+the user chose to have it not installed at all: an override puts a placeholder in its place (DS-D1's cost).

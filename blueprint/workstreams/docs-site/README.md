@@ -7,8 +7,8 @@ created: "2026-10-14"
 
 slipbox's user documentation made as easy to follow as herdsman's: a website on GitHub Pages, built with Starlight
 from `docs/` as it is; a front door that starts each reader on their own path, with a quick start, the concepts on one
-page, and a guide an agent reads to walk a person through slipbox; the prose rewritten in short, plain sentences; and
-the reference chapters' lists generated from the code. Proposed by the user on 2026-10-14, after comparing the docs
+page, and a guide an agent reads to walk a person through slipbox; the prose rewritten in short, plain
+sentences, the reference chapters' too. Proposed by the user on 2026-10-14, after comparing the docs
 with herdsman's ("I think we should fix everything and have documentation website as herdsman on githubpages").
 
 - [requirements.md](requirements.md): its goals, acceptance criteria and its changes to the root's requirements.
