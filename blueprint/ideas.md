@@ -63,6 +63,20 @@ idea without an outcome is still open. Nothing here is agreed: the decisions are
   the harnesses, publishing to npm). (2026-10-12) A release install has the skill now, from the binary (`slipbox skill
   --install`, GR-D10); the package per harness is still open.
 - How agents and slipbox work together, in more detail. (2026-10-11) Open: the user's note, to discuss later.
+- Send the scratch to the agent in one key: in herdr, `herdr agent prompt` puts it in as the agent's next message, as
+  plannotator-tui sends its feedback ([research/plannotator.md](research/plannotator.md)); copied and pasted
+  (`space s c`) elsewhere. (2026-10-14)
+- Remember what was sent to the agent: send only what is new since the last send, then finish and archive, as
+  plannotator-tui's `E`, `S` and `F`. The scratch has no notion of "given to the agent". (2026-10-14)
+- Review an agent's reply, not only its files: its recent replies, read from its session's transcript (Claude Code,
+  Codex and others), opened as a document to read, mark and answer, as plannotator-tui's `last`. (2026-10-14)
+- A pane's recent output as a document to review, as Plannotator's herdr plugin does with `herdr terminal`.
+  (2026-10-14)
+- The skill teaching a loop: the agent writes its plan, opens it in slipbox for review and ends its turn; the review
+  comes back as its next message, as plannotator-tui's draft skill has it. (2026-10-14)
+- Annotations that leave the document alone: a selection marked as a comment, an approval or a rejection, kept outside
+  the file and sent numbered with its lines, as plannotator-tui does. To weigh against the scratch's At and Note
+  entries, which are a note of their own. (2026-10-14)
 
 ## Capture
 
@@ -114,6 +128,12 @@ idea without an outcome is still open. Nothing here is agreed: the decisions are
   checked only in aggregate) is known, and generated inputs find its siblings. (2026-09-25) Built (`0.4`, `2.3`).
 - Backfill workstreams for the past phases. (2026-10-11) Not chosen (D210).
 - Keep the plan's item IDs as the decisions' IDs. (2026-10-11) Not chosen (D210).
+- Drive a running slipbox from inside it, for the terminal tests and the screenshots, as ttt's `--exec` does (keys,
+  typing, waiting for text, a screenshot): steadier and faster than reading a headless terminal's screen, and the
+  screenshots without a herdr pane. Over a socket, as ttt's `--listen`, it would be D13's server, not chosen for agents
+  for now. (2026-10-14)
+- Random input: thousands of random keys and events against the app, each crash's log replayable, as ttt fuzzes in
+  Docker. (2026-10-14)
 
 ## Roots and vaults
 
@@ -295,6 +315,12 @@ idea without an outcome is still open. Nothing here is agreed: the decisions are
 - Tidy footnote definitions into reference order. (2026-09-30) Not chosen (D150).
 - vim's marks, macros, named registers and block selection. (2026-10-09) Not chosen (D155).
 - nspell, pure JavaScript, for spelling: 950 ms and 250 MB to open Turkish. (2026-10-10) Not chosen (D157).
+- Several cursors at once, each typing the same edit, as ttt and VS Code have ([research/ttt.md](research/ttt.md)):
+  the desktop editor's answer to what vim's block selection does, which D155 left out. (2026-10-14)
+- Format a file as it's saved, through its language server, as ttt does: `lsp.format` is a key today, never on save.
+  (2026-10-14)
+- A keymap without modes, as ttt's default is VS Code's: typing types at once, no `i` first, and vim's keys are an
+  option. The familiar keys are bound already (DS-D6); `i` is what a desktop editor's user still meets. (2026-10-14)
 
 ## Concurrency
 
@@ -324,6 +350,8 @@ idea without an outcome is still open. Nothing here is agreed: the decisions are
   prop. (2026-09-25)
 - Take a branch switch's files for moves. (2026-10-01) Not chosen (D153).
 - Measure a branch's changes against the base branch's tip. (2026-10-01) Not chosen (D154).
+- The changes marked in the scrollbar's track as well as the gutter, as ttt added (#895): where a file's changes are,
+  at a glance. Not chosen with the signs (D225), as instead of them; raised again beside them. (2026-10-14)
 
 ## Linting
 
@@ -378,6 +406,8 @@ idea without an outcome is still open. Nothing here is agreed: the decisions are
 
 - Tier 2: TypeScript modules loaded at startup that register commands, add panes or hook rendering as OpenTUI's
   `renderNode` does. (2026-09-25) Not chosen (D36).
+- Plugins in Lua, in a sandbox, each capability asked for, with a community registry, as ttt has: the model if
+  slipbox ever takes extensions; close to how it trusts a folder (D172). (2026-10-14)
 - The optional multiplexer hand-off (`13.6`): whether "run it beside me" is worth building at all, beside the three
   built-in output sinks. (2026-09-25) Deferred (D37).
 
@@ -391,6 +421,7 @@ idea without an outcome is still open. Nothing here is agreed: the decisions are
 - `bun:sqlite`, Bun's own SQLite API, the index's until 2026-10-01. (2026-10-01) Not chosen (D191, D196).
 - Sign and notarize the macOS binaries from the first release. (2026-10-10) Not chosen (D198).
 - Keep slipbox's folders in `~/Library` on macOS. (2026-10-10) Not chosen (D200).
+- More ways to install, as ttt has: AUR, a Nix flake, binaries for Windows itself. (2026-10-14)
 
 ## Licence
 
