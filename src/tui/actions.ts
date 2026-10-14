@@ -172,13 +172,13 @@ function workspaceSymbols(a: App, overlay: App["overlay"]): { list: (query: stri
   };
 }
 
-/** A cursor command: compute the target from the layout, then move (extending when asked). */
 /** Where a vertical move lands on a row: the layout column drawn at the goal's screen column (App.layoutCol). */
 function goalAt(a: App, v: View): (row: number, col: number) => number {
   const layout = lay(a, v);
   return (row, col) => a.layoutCol(v, layout, row, col);
 }
 
+/** A cursor command: compute the target from the layout, then move (extending when asked). */
 function motion(target: (a: App, v: View) => C.Pos, opts: { keepGoal?: boolean } = {}): Run {
   return (a, arg) =>
     withView(a, (v) => {
@@ -1176,16 +1176,16 @@ function infoList(a: App, title: string, rows: [string, string][]): void {
   });
 }
 
-/**
- * `n` / `shift+n`, as in vim: the next match after the cursor (or before it), wrapping around the
- * note, wherever the cursor has moved since the last one.
- */
 /** The cursor to a find's match; in a code block that scrolls sideways, the match in sight whole where it fits. */
 function toMatch(a: App, v: View, m: { row: number; col: number; len: number }): void {
   a.moveCursor(v, { row: m.row, col: m.col });
   a.revealInCode(v, lay(a, v), m.row, m.col, m.col + m.len);
 }
 
+/**
+ * `n` / `shift+n`, as in vim: the next match after the cursor (or before it), wrapping around the
+ * note, wherever the cursor has moved since the last one.
+ */
 function findStep(a: App, dir: 1 | -1, from?: { row: number; col: number }): void {
   const v = a.view;
   if (!v?.find?.matches.length) return a.message("info", "no search — ctrl+f or / starts one");
