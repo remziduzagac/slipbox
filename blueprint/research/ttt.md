@@ -5,10 +5,10 @@ created: "2026-10-14"
 
 # Research: ttt, a code editor in the terminal
 
-[`eugenioenko/ttt`](https://github.com/eugenioenko/ttt), noted by the user on 2026-10-14 as a competitor or
-alternative. Read on 2026-10-14 from its README, docs, source tree, GitHub's data and issues; not installed or run, so
-nothing here says how well it works. Its ideas for slipbox are in [ideas.md](../ideas.md) § Editing, § Process, § Extensibility and
-§ Distribution.
+[`eugenioenko/ttt`](https://github.com/eugenioenko/ttt), noted by the user on 2026-10-14 as a competitor or alternative.
+Read on 2026-10-14 from its README, docs, source tree, GitHub's data and issues; not installed or run, so nothing here
+says how well it works. Its ideas for slipbox are in [ideas.md](../ideas.md) § Editing, § Process, § Extensibility
+and § Distribution.
 
 ## Summary
 
