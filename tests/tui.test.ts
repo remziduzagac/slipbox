@@ -14362,6 +14362,26 @@ describe("the diff window (GIT-D2)", () => {
     expect(styleAt(h, "+ const line2 = 22", "line2")).toMatchObject({ bold: false, underline: false });
   });
 
+  test("no line number drawn in it, line numbers on: its rows aren't a file's lines", async () => {
+    // A row past the hundredth whose text is shorter than its number: the number would show past the text.
+    const before = `${Array.from({ length: 105 }, (_, i) => `a${i}`).join("\n")}\n\nb\n`;
+    const root = makeVault();
+    const h = await harness({
+      root,
+      open: "index.md",
+      width: 100,
+      height: 40,
+      config: (c) => (c.ui.line_numbers = true),
+    });
+    h.app.showLineDiff(before, before.replace(/^a/gm, "A"), "x.txt", "x.txt: every line");
+    await h.keys("shift+g");
+    const rows = screen(h);
+    const y = rows.findIndex((r) => r.includes("+ A104"));
+    // Between the window's borders, less the scrollbar's column.
+    const inside = (r: string) => r.slice(r.indexOf("│") + 1, r.lastIndexOf("│") - 1);
+    expect([inside(rows[y + 1]!).trim(), inside(rows[y + 2]!).trim()]).toEqual(["", "b"]);
+  });
+
   test("two texts the same: said, and back where it came from; no window", async () => {
     const root = makeVault();
     const h = await harness({ root, open: "index.md" });
@@ -16950,6 +16970,15 @@ describe("spelling (25.6)", () => {
     const y = c.rows.findIndex((r) => r.join("").includes(row));
     return c.styles[y]![c.rows[y]!.join("").indexOf(word, c.rows[y]!.join("").indexOf(row))]!;
   };
+
+  test("a diff isn't checked: its rows aren't a note's prose, and marks found in them would land on the wrong rows", async () => {
+    const root = vault({ "s0.md": "# Spelling\n\nThis has a recieve.\n" });
+    const h = await harness({ root, open: "s0.md", width: 120, height: 30 });
+    expect(await on(h)).toEqual(["recieve"]);
+    h.app.showLineDiff("one line\n", "one recieve line\n", "s0.md", "s0.md: a diff");
+    expect(h.app.floating?.kind).toBe("diff");
+    expect(h.app.misspelt(h.app.floating!.view)).toBeNull();
+  });
 
   test("off by default; space u s turns it on: misspelt words marked in the render and in source, not in code; ] s and [ s go to them", async () => {
     const root = vault({
