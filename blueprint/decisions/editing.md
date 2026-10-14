@@ -441,3 +441,19 @@ change.
 **Not chosen:** a thinner glyph (`▏`): the colour was what drew the eye, and a sign as wide as the explorer's and the
 quote bar's stays easy to find; marks in the scrollbar's track, as VS Code's overview ruler has them: they show where
 the changes are in the whole file, not which rows changed.
+
+## D231: backspace and delete delete a visual selection (2026-10-14)
+
+**Decision:** In visual mode, `backspace` and `delete` delete the selection, as `d` and `x` do (`[keys.visual]`). In
+source mode and the lens, a selection made with `shift` and a move, or a drag, is a visual one (DF-D15), so a desktop
+editor's keys delete it without typing first. Where a selection can't be edited, the message names the lens and
+source mode by the keys the docs lead with. Decided by an issue (#54) and one pull request (D223).
+
+**Why:** The docs tell a reader who doesn't use vim that `shift` with an arrow selects. Selecting in the lens, then
+pressing `delete`, did nothing: only vim's `d` and `x`, and `ctrl+x`, deleted it. The message for a rendered note
+still called the lens "live preview".
+
+**Cost:** None to vim's keys: in vim, `backspace` in visual mode moves a character back, which `h` and `left` do here.
+
+**Not chosen:** `backspace` and `delete` while reading, on a rendered note: there a selection is a plain one, and
+deleting is an edit, made in the lens or source mode.

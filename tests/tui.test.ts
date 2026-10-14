@@ -491,6 +491,29 @@ describe("selection", () => {
     await h.keys("escape", "0", "shift+end", "ctrl+c");
     expect(h.copied.at(-1)).toBe("Back to index and on to beta.");
   });
+  test("a shift selection in source mode or the lens: backspace and delete delete it, as a desktop editor's", async () => {
+    const root = makeVault();
+    writeFileSync(join(root, "s.md"), "alpha beta gamma\n");
+    const h = await harness({ root, open: "s.md", config: (c) => (c.editor.edit_in = "live") });
+    const v = h.app.view!;
+    await h.keys("space", "n", "v", "w", "shift+right", "shift+right"); // on "beta": b, e and t
+    await h.keys("delete");
+    expect(v.buf.source).toBe("alpha a gamma\n");
+    expect([v.visual, v.sel]).toEqual([null, null]);
+    await h.keys("shift+left", "backspace"); // the space and "a"
+    expect(v.buf.source).toBe("alpha gamma\n");
+    // The lens: its first i opens it, and a shift selection there is a visual one too.
+    await h.keys("ctrl+k", "0", "i");
+    expect(v.live).toBe(true);
+    await h.keys("shift+right", "delete"); // "al"
+    expect(v.buf.source).toBe("pha gamma\n");
+    await h.keys("shift+right", "backspace"); // "ph"
+    expect(v.buf.source).toBe("a gamma\n");
+    expect(v.live).toBe(true);
+    // Reading, a selection is a plain one: nothing to delete, and the note unchanged.
+    await h.keys("escape", "escape", "shift+right", "delete");
+    expect(v.buf.source).toBe("a gamma\n");
+  });
   test("in source mode a shift selection is a visual one, as a drag's: d, x and c act on it, esc leaves it (DF-D15)", async () => {
     const root = makeVault();
     writeFileSync(join(root, "s.md"), "alpha beta gamma delta\n");
@@ -8770,7 +8793,7 @@ describe("the key map as agreed (vim first, desktop editors' ctrl keys, space fo
     for (const key of ["ctrl+x", "ctrl+v"]) {
       await h.keys("escape", "shift+right", key);
       expect(v.buf.source).toBe("ZEZEDbeta ZED\nZED\ngamma\n");
-      expect(h.app.messages.at(-1)!.text).toBe("editing is in source mode (space n v) or live preview (space n l)");
+      expect(h.app.messages.at(-1)!.text).toBe("editing is in the lens (space n l) or source mode (ctrl+k)");
     }
     await h.keys("escape", "ctrl+k");
     expect(v.source).toBe(true);

@@ -327,7 +327,7 @@ function selectionRange(a: App, v: View): { range: V.Range; from: number; to: nu
 /** d / c / > / < on a visual selection (char or line), in source mode. */
 function visualOp(a: App, op: "d" | "c" | ">" | "<" | "gc"): void {
   withView(a, (v) => {
-    if (!editable(v)) return a.message("info", "editing is in source mode (space n v) or live preview (space n l)");
+    if (!editable(v)) return a.message("info", "editing is in the lens (space n l) or source mode (ctrl+k)");
     const why = E.cannotEdit(v);
     if (why) return a.message("warn", `${why} — not editing`);
     const line = v.visual === "line";
@@ -1998,7 +1998,7 @@ export function registerActions(app: App): void {
     "edit.paste": (a) =>
       withView(a, (v) => {
         if (!v.sel) return sourceEdit(a, (w) => V.put(a, w, true));
-        if (!editable(v)) return a.message("info", "editing is in source mode (space n v) or live preview (space n l)");
+        if (!editable(v)) return a.message("info", "editing is in the lens (space n l) or source mode (ctrl+k)");
         const why = E.cannotEdit(v);
         if (why) return a.message("warn", `${why} — not editing`);
         const reg = a.pasteText();

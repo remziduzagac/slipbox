@@ -383,9 +383,11 @@ export const DEFAULT_VISUAL_KEYS: Record<string, string> = {
   o: "visual.swap",
   "!": "shell.filter",
   y: "visual.yank",
-  // Source mode: edit the selection.
+  // Source mode: edit the selection. backspace and delete too, as a desktop editor's (a shift selection is a visual one).
   d: "visual.delete",
   x: "visual.delete",
+  backspace: "visual.delete",
+  delete: "visual.delete",
   c: "visual.change",
   ">": "visual.indent",
   "<": "visual.outdent",

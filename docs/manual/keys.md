@@ -575,7 +575,7 @@ they are under [`[keys.visual]`](configuration.md).
 
 | What | Keys |
 | --- | --- |
-| delete the selection | `d`, `x` |
+| delete the selection | `d`, `x`, `backspace`, `delete` |
 | delete it and type in its place | `c` |
 | indent / outdent its lines | `>` / `<` |
 | comment or uncomment its lines | `g c`, `ctrl+/` |

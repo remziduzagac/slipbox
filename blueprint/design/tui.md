@@ -246,7 +246,8 @@ A reading cursor sits on the rendered text, like vim's normal mode.
 **Selection.** A selection is an anchor plus the cursor. It's extended by `shift`+movement or by visual mode (`v` by
 character, `shift+v` by whole row); `o` swaps the ends, and `esc` clears it. A mouse drag makes one too, copied on
 release. In source mode or the lens, one made by a drag or by `shift`+movement is a visual selection (as vim's mouse
-makes one; DF-D15, DF-D28), so `d`, `c`, `x`, `>`, `<` and `y` act on it, any movement extends it and `esc` leaves it;
+makes one; DF-D15, DF-D28), so `d`, `c`, `x`, `>`, `<` and `y` act on it (`backspace` and `delete` as `d`, D231), any
+movement extends it and `esc` leaves it;
 an operator's shifted motion (`d shift+right`) leaves none behind. While typing, `shift`+movement selects as a desktop
 editor does (§ Editing). Copied text is the rendered text, which is what you saw. A double-click on a link follows it
 once: the second click, landing in the note it opened, is swallowed.
