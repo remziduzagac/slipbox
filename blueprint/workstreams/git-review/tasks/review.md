@@ -7,7 +7,7 @@ created: "2026-10-14"
 
 # GIT-T2: Reviewing a change, a hunk at a time
 
-`space g v`: the working tree's changes walked one hunk at a time, each kept, reverted or noted (GIT-D3).
+`v` in the git panel: the working tree's changes walked one hunk at a time, each kept, reverted or noted (GIT-D3).
 
 ## Description
 

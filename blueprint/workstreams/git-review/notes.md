@@ -45,7 +45,19 @@ editors' git tools now do (GIT-D8, GIT-D9).
 | Rebase onto the base | medium | it stops at each conflict: the merge screen, with continue, skip and abort |
 | Interactive rebase | large | left out: a git client's job |
 
-## Questions for the user
+## The user's answers (2026-10-15)
+
+1. A note's diff: not the note's reading view, which would be confused with the note, but a diff render of its own,
+   before-and-after blocks (GIT-D2).
+2. The review's revert: saved at once, with undo.
+3. Keys: `space g` becomes the git panel itself, its single keys acting there (GIT-D12).
+4. `↑↓` on the status line: once the branch has an upstream, as of the last fetch.
+5. A new worktree's folder: beside the repository by default, configurable as herdsman's `[worktrees] directory` is
+   (GIT-D13); the user's own is `~/Projects/worktrees`. A first-run setup screen choosing such options: an idea for
+   later.
+6. A conflict handed to the agent: into the scratch.
+
+## Questions for the user (as first asked)
 
 1. A note's diff rendered by default, the source a key away (GIT-D2)? Proposed: yes.
 2. The review's revert saved at once, with undo (GIT-D3), unlike `space g r`, which leaves it unsaved? Proposed: saved.

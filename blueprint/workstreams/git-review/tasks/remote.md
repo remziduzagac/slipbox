@@ -11,7 +11,7 @@ Fetch, pull (fast-forward), push and stash, asked for and never automatic (GIT-D
 
 ## Description
 
-- `space g f`, `space g l`, `space g shift+p`, `space g z`, and the same from source control.
+- In the git panel: `f` fetch, `p` pull, `shift+p` push, `z` stash (GIT-D12); in the palette as every command.
 - git without a terminal: `GIT_TERMINAL_PROMPT=0`; ssh in batch mode unless the user set their own; a failure said in
   git's words with a hint.
 - A push's pre-push hook only in a trusted vault (D172, D175); an upstream asked for when the branch has none.

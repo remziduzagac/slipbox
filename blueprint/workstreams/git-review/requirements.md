@@ -3,12 +3,12 @@
 ## Goals
 
 - An agent's change reviewed in slipbox, a piece at a time: each kept, reverted, or sent back with a note (GIT-D3).
-- A diff read as easily as a note: a note's rendered, its changed words marked; code's highlighted, its long lines
-  scrolling sideways, side by side where the window is wide (GIT-D2, GIT-D7).
+- A diff read as easily as a note: a note's before and after, its changed words marked; code's highlighted, its long
+  lines scrolling sideways, side by side where the window is wide (GIT-D2, GIT-D7).
 - git's conflicts settled in slipbox, each one's sides readable, without editing conflict markers by hand (GIT-D5).
-- The git panel worked by mouse as by keys, its keys shown; what the branch changed against its base in it; the
-  branches in it, a worktree marked on its branch, each with what it holds, opened, made and removed there; each
-  branch measured against its own base; the panel following the vault (GIT-D8–GIT-D11, VV-D10).
+- The git panel worked by mouse as by keys, its keys shown; what the branch changed against its base in it; the branches
+  in it, a worktree marked on its branch, each with what it holds, opened, made and removed there; each branch measured
+  against its own base; the panel following the vault (GIT-D8–GIT-D11, VV-D10).
 - The remote reached from slipbox: fetch, pull, push and stash, asked for and never automatic; a pull where both sides
   moved, and a branch rebased onto the base, through the same merge screen (GIT-D4, GIT-D6).
 
@@ -32,25 +32,25 @@
 
 ## Acceptance criteria
 
-- **The panel** (GIT-T9): stage, unstage, discard, commit and amend each done by a click as by its key, the key shown
-  on the pointer; with nothing uncommitted and a branch ahead of the base, the panel lists the branch's files, a click
+- **The panel** (GIT-T9): stage, unstage, discard, commit and amend each done by a click as by its key, the key shown on
+  the pointer; with nothing uncommitted and a branch ahead of the base, the panel lists the branch's files, a click
   showing a file's diff. A terminal check drives it with mouse events.
-- **Branches** (GIT-T10): the panel lists the example set's branches, its worktrees marked, ordered and folded as
-  GIT-D9 says; one opened up in place; one gone into; a new branch made from `dev` in a new worktree, measured against
-  `dev`; a merged worktree removed after asking, one with changes refused.
-- **Review** (GIT-T2): with an agent's uncommitted changes in three files, the review walks every hunk across them;
-  `y` stages one, `x` reverts one, `c` writes a note for the agent into the scratch with its file and lines; the end
-  says what was kept, reverted and noted. A terminal check covers it.
-- **The diff** (GIT-T1, GIT-T4): `space g d`, a file's diff from the changes list, a history entry's diff to now and
-  the conflict prompt's (D)iff all draw one way: changed words marked inside a changed line; a note rendered, with
-  deleted words struck and inserted ones tinted, and the source a key away; code highlighted, its long lines scrolling
-  sideways, never cut with `…`.
+- **Branches** (GIT-T10): the panel lists the example set's branches, its worktrees marked, ordered and folded as GIT-D9
+  says; one opened up in place; one gone into; a new branch made from `dev` in a new worktree, measured against `dev`; a
+  merged worktree removed after asking, one with changes refused.
+- **Review** (GIT-T2): with an agent's uncommitted changes in three files, the review walks every hunk across them; `y`
+  stages one, `x` reverts one, `c` writes a note for the agent into the scratch with its file and lines; the end says
+  what was kept, reverted and noted. A terminal check covers it.
+- **The diff** (GIT-T1, GIT-T4): the panel's diffs, a file's diff from the changes list, a history entry's diff to now
+  and the conflict prompt's (D)iff all draw one way: changed words marked inside a changed line; a note's as
+  before-and-after blocks, the removed and added words marked, the source a key away; code highlighted, its long lines
+  scrolling sideways, never cut with `…`.
 - **The remote** (GIT-T3): fetch, pull (fast-forward), push and stash each run from source control and `space g`, and
-  say git's result; a remote that needs a password fails at once with git's words and a hint, never hanging; the
-  status line shows the branch ahead of and behind its upstream; a push runs the pre-push hook only in a trusted vault.
-- **The merge screen** (GIT-T5): a file with conflicts opens one card a conflict, base, yours and theirs drawn as
-  diffs against the base; yours, theirs, both, or edited by hand in the lens; the result shown as it's settled; saved,
-  then staged on request. A conflict can go to the agent through the scratch.
+  say git's result; a remote that needs a password fails at once with git's words and a hint, never hanging; the status
+  line shows the branch ahead of and behind its upstream; a push runs the pre-push hook only in a trusted vault.
+- **The merge screen** (GIT-T5): a file with conflicts opens one card a conflict, base, yours and theirs drawn as diffs
+  against the base; yours, theirs, both, or edited by hand in the lens; the result shown as it's settled; saved, then
+  staged on request. A conflict can go to the agent through the scratch.
 - **Pull and rebase** (GIT-T6): a pull that can't fast-forward asks merge or rebase; rebasing onto the base is one
   command; each conflict on the way opens the merge screen; continue, skip and abort are offered while it's under way,
   and the status line says so.
@@ -68,8 +68,8 @@ and a file's history, branches; a change reviewed a hunk at a time, each kept, r
 fetch, pull, push and stash, asked for (GIT-D4); git's conflicts settled in a merge screen, a pull where both sides
 moved and a rebase onto the base through it (GIT-D5, GIT-D6); the git panel by mouse as by keys, what the branch changed
 and the branches with their worktrees in it, each against its own base (GIT-D8–GIT-D11). Adds a bullet: diffs drawn as
-slipbox draws notes — changed words marked, a note rendered, code highlighted and scrolling sideways, side by side where
-there's room (GIT-D2, GIT-D7).
+slipbox draws notes — changed words marked, a note's before and after, code highlighted and scrolling sideways, side by
+side where there's room (GIT-D2, GIT-D7).
 
 Previously: "Stash and the remote's commands are deferred (D156, D158)."
 

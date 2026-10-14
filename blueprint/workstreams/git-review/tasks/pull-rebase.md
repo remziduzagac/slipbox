@@ -12,7 +12,7 @@ A diverged pull and a rebase onto the base, their conflicts through the merge sc
 ## Description
 
 - A pull that can't fast-forward asks merge, rebase or nothing, defaulting to `pull.rebase`.
-- `space g shift+r` rebases onto the base's tip.
+- `shift+r` in the git panel rebases onto the base's tip.
 - An operation under way on the status line; continue, skip and abort in `space g`; hooks only where trusted.
 
 ## Acceptance criteria
