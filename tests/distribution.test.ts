@@ -52,6 +52,7 @@ import {
   writeSite,
 } from "../scripts/release.ts";
 import { bootstrapScript } from "../scripts/bootstrap.ts";
+import { codeChanged, isDocs } from "../scripts/ci-scope.ts";
 import { pagesBase, RELEASE, tagOf } from "../src/core/release.ts";
 import {
   howToUpgrade,
@@ -256,6 +257,67 @@ describe("the supply chain's gates (14.10)", () => {
     expect(others.length).toBeGreaterThan(1);
     expect([...(ci.jobs.ci?.needs ?? [])].sort()).toEqual(others.sort());
     expect(ci.jobs.ci?.if).toBe("${{ always() }}");
+  });
+
+  test("a pull request of the docs alone skips the tests and the terminal tests; lint runs the docs' tests (D230)", () => {
+    expect(codeChanged(["docs/guides/x.md", "docs/images/a.png", "blueprint/roadmap.md", "README.md"])).toBeNull();
+    expect(codeChanged(["site/src/content/docs/index.mdx", "CHANGELOG.md"])).toBeNull();
+    expect(codeChanged(["docs/a.md", "src/main.ts"])).toBe("src/main.ts");
+    expect(codeChanged([])).toBe("no file changed");
+    // What a test, a build or the supply chain's gates read is code: the site's packages, the samples, the skill.
+    for (const f of [
+      "site/package.json",
+      "site/bun.lock",
+      "site/scripts/gather.ts",
+      "examples/home/CASES.md",
+      "skills/slipbox/SKILL.md",
+      ".github/workflows/ci.yml",
+      "tests/docs.test.ts",
+      "package.json",
+    ])
+      expect([f, isDocs(f)]).toEqual([f, false]);
+    const ci = Bun.YAML.parse(readFileSync(join(ROOT, ".github", "workflows", "ci.yml"), "utf8")) as {
+      jobs: Record<string, { needs?: string; if?: string; steps?: { run?: string }[] }>;
+    };
+    for (const job of ["test", "terminal"])
+      expect([job, ci.jobs[job]?.needs, ci.jobs[job]?.if]).toEqual([
+        job,
+        "changes",
+        "${{ needs.changes.outputs.code == 'true' }}",
+      ]);
+    expect(ci.jobs.changes?.steps?.at(-1)?.run).toBe("bun run ci:scope");
+    expect(ci.jobs.lint?.steps?.map((s) => s.run)).toContain("bun run test:docs");
+  });
+
+  test("ci:scope: code=false for a pull request's merge commit of the docs alone; true for code, a push, an unread diff", () => {
+    const repo = mkdtempSync(join(sandbox, "scope-"));
+    const git = (...args: string[]) => Bun.spawnSync(["git", "-C", repo, ...args], { env: gitEnv });
+    const gitEnv = { ...process.env, GIT_AUTHOR_NAME: "t", GIT_AUTHOR_EMAIL: "t@t", GIT_COMMITTER_NAME: "t" };
+    let runs = 0;
+    const scope = (event: string) => {
+      const out = join(sandbox, `scope-out-${++runs}`);
+      Bun.spawnSync([process.execPath, join(ROOT, "scripts", "ci-scope.ts")], {
+        cwd: repo,
+        env: { ...gitEnv, GITHUB_EVENT_NAME: event, GITHUB_OUTPUT: out },
+      });
+      return readFileSync(out, "utf8");
+    };
+    const commit = (message: string) => {
+      git("add", ".");
+      git("-c", "user.email=t@t", "commit", "-qm", message);
+    };
+    git("init", "-q");
+    writeFileSync(join(repo, "a.ts"), "1\n");
+    commit("base");
+    expect(scope("pull_request")).toBe("code=true\n"); // no parent: the diff can't be read
+    mkdirSync(join(repo, "docs"));
+    writeFileSync(join(repo, "docs", "x.md"), "# x\n");
+    commit("docs");
+    expect(scope("pull_request")).toBe("code=false\n");
+    expect(scope("push")).toBe("code=true\n");
+    writeFileSync(join(repo, "a.ts"), "2\n");
+    commit("code");
+    expect(scope("pull_request")).toBe("code=true\n");
   });
 
   test("Dependabot: Bun's packages and the actions, grouped, monthly, a week's cooldown as bunfig's", () => {

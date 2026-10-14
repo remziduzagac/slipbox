@@ -89,3 +89,25 @@ maintained, without naming the maintainer. This amends the requirement, from gre
 say who maintains it.
 
 **Why:** The user's call, 2026-10-13, with the README's opening rewritten (D226): not needed there.
+
+## D230: A pull request of the docs alone skips the tests (2026-10-14)
+
+**Decision:** CI's `changes` job reads what a pull request changed (its merge commit against its base). When every
+file is the docs' (`docs/`, `blueprint/`, `site/src/`, a Markdown file at the top), the `test` and `terminal` jobs are
+skipped, and `lint` runs the tests that read the docs (`bun run test:docs`: the docs' and the site's tests). The two
+tests that read a chapter from elsewhere moved there: the configuration's listing against the defaults, and help's
+mouse list (`src/tui/mouse-help.ts`) against the keys chapter. A test fails when any other test reads the docs, so
+none is skipped with them. A push to `main`, a merge group, a run by hand and a diff that can't be read run everything;
+the required check (`ci`) counts a skipped job as passed, as it did. Decided by an issue (#59) and one pull request
+(D223).
+
+**Why:** The user's request, 2026-10-14, after a pull request of a few Markdown files waited twelve minutes on the
+terminal tests, and longer while macOS runners queued; nothing in it could change their result.
+
+**Cost:** A file put in the docs' paths that a test or a build reads without the tests knowing (a test reading the
+docs by a path the check doesn't recognise) would be skipped with them. The check looks for the repository's root
+joined with `docs`, `blueprint`, `site` or a top-level Markdown file.
+
+**Not chosen:** `paths-ignore` on the workflow: a required check that never starts blocks the merge. A list of test
+files kept by hand in the workflow: the test on `test:docs` keeps it in one place, and true.
+

@@ -81,7 +81,8 @@ it can't be, it is quarantined: `test.skip`, with a `// quarantined: <issue>` co
 assertions as they were. `bun test` counts it as skipped, and `grep -rn "quarantined:" tests/` lists them; it comes
 back with its fix. An assertion is never deleted or loosened to make a test pass.
 
-**CI runs the suite on Linux and macOS** (GR-D9), on every change: the scripts `bun run check` runs, split into jobs
+**CI runs the suite on Linux and macOS** (GR-D9), on every change but a pull request of the docs alone, which runs
+the docs' tests only (D230): the scripts `bun run check` runs, split into jobs
 ([repository.md](repository.md) § CI). A release runs it again on every platform it builds, the Intel Mac and ARM
 Linux among them, before anything is built ([distribution.md](distribution.md) § Releases).
 
