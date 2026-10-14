@@ -322,7 +322,7 @@ command = []                   # []: markdownlint-cli2, found or installed; else
 [watch]                        # noticing what changes on disk
 enabled = true
 debounce_ms = 120              # 0–10000: changes gathered this long before they're shown
-poll_ms = 2000                 # 50–600000: how often folders that can't be watched are looked at
+poll_ms = 2000                 # 50–600000: how often folders are checked for what watching missed
 
 [types.memory]                 # a document type of your own; skill and adr are built in
 paths = ["memory/*.md"]        # its notes: globs from the root's top; paths = [] turns a type off

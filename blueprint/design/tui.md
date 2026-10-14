@@ -1261,16 +1261,27 @@ rather than rebuilt (`5.8`; D137).
 
 ### Bun's watcher, and what covers its gaps
 
-Found while testing on Linux. Bun 1.3's `fs.watch` drops some events, so the watcher has
-backstops:
+Found while testing, on Linux and then on macOS. Bun's `fs.watch` drops some events, so the watcher has backstops:
 
 | Bun does not report | Covered by |
 | --- | --- |
-| a directory renamed out of the root | each tick checks that watched directories exist |
+| a directory renamed out of the root | each tick stats the watched directories: one gone is reported |
+| on macOS, anything just after a watch is added or removed | each tick: a directory whose mtime moved is listed again |
 | the old name in a rename (`g.md → h.md` only reports `h.md`) | re-checking known notes in that directory |
 | a note moved to another directory under its name | re-checking known notes with that file name |
 | anything on dot-files, `.gitignore` included | `.gitignore` mtimes polled each tick |
 | a directory containing a broken symlink (it errors) | that directory is polled instead, with a warning |
+
+**The second look.** On macOS one FSEvents stream serves every watched folder, and Bun restarts it "since now" each
+time a watch is added or removed: at start, and whenever a folder comes or goes, nothing anywhere is reported for a
+moment. So each tick stats every watched directory (the check that each still exists took that stat already) and
+lists one again only when its mtime moved since what it held was last known. What it holds that isn't known (a note,
+an attachment, a folder, adopted with all inside) is pending as if its event had come, and so is what's known there
+and gone; the debounce settles them with the events that did come. A folder that changed after the walk began, which
+the walk may have read before its watch began, is listed on the first tick. A folder read within 2 s of its last
+change is listed again on each tick until that change is older, since a coarse clock (FAT's, HFS+'s) can give the
+next change the same mtime. In a folder listed, not walked (`~`, `/`), the second look takes in notes only. A note
+rewritten in place moves no folder's mtime: the sweep finds that.
 
 The tick runs every `watch.poll_ms`, and every 15th tick sweeps all known notes. A change counts
 when a note's mtime or size differs, so a rewrite in the same second is still seen. Attachments (any

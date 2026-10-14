@@ -8,6 +8,10 @@
 //
 // If registration fails (inotify limits on the Linux VMs: ENOSPC / EMFILE), the watcher degrades
 // *loudly*: it reports once and falls back to polling the files it was asked to poll.
+//
+// Events can be lost (on macOS, Bun restarts its one FSEvents stream "since now" whenever a watch is
+// added or removed), so each tick stats the watched directories, and one whose mtime moved since it
+// was last looked at is listed again: what came or went there is settled as its events would have been.
 
 import {
   type Dirent,
@@ -54,7 +58,23 @@ export interface WatcherOptions {
   /** Files to poll when degraded (open buffers). */
   pollTargets?: () => string[];
   pollMs?: number;
+  /** The non-note files known (the graph's attachments), so a directory listed again reports only
+   *  those that came or went. */
+  attachments?: Iterable<string>;
+  /** When the walk that found the directories given (`dirs`, or `sync`'s) began: one changed since
+   *  may hold what it didn't see, so it is listed again on the next tick. */
+  walkedAt?: () => number;
+  /** A folder listed, not walked (`~` or `/`, 20.22): its subdirectories aren't the vault's, so a
+   *  second look at it takes in none of them, nor any file but a note. */
+  listed?: boolean;
 }
+
+/**
+ * How long after a directory changes its mtime can't tell a later change apart: a coarse clock (FAT's
+ * 2 s, HFS+'s 1 s, Linux's tick) can give the next change the same mtime. A directory read that soon
+ * after its change is listed again on the next tick.
+ */
+const SETTLE_MS = 2000;
 
 export class VaultWatcher {
   private readonly watchers = new Map<string, FSWatcher>();
@@ -74,6 +94,14 @@ export class VaultWatcher {
    *  events for dot-files, so these are polled on the housekeeping tick. */
   private readonly gitignores = new Map<string, number>();
 
+  /** Each watched directory's mtime when what it holds was last known, or -1 to list it again on the
+   *  next tick: a change since that no event reported is found by its mtime (`lookAgain`). */
+  private readonly stamps = new Map<string, number>();
+
+  /** The non-note files known, by their directory: what a directory listed again holds beyond them
+   *  and the notes known is new. */
+  private readonly attachments = new Map<string, Set<string>>();
+
   /** The root's real path: a symlink is kept only when it points inside it (0.11). */
   private readonly realRoot: string;
 
@@ -84,7 +112,9 @@ export class VaultWatcher {
     } catch {}
     this.realRoot = realRoot;
     for (const [k, v] of opts.sizes ?? []) this.sizes.set(k, v);
-    for (const d of opts.dirs) this.watchDir(d);
+    for (const rel of opts.attachments ?? []) this.attachment(rel, true);
+    const walkedAt = opts.walkedAt?.() ?? Date.now();
+    for (const d of opts.dirs) this.watchDir(d, walkedAt);
     this.ensurePollTimer();
   }
 
@@ -96,10 +126,12 @@ export class VaultWatcher {
         w.close();
         this.watchers.delete(d);
         this.gitignores.delete(d);
+        this.stamps.delete(d);
       }
     }
     for (const d of this.polled) if (!want.has(d)) this.polled.delete(d);
-    for (const d of dirs) this.watchDir(d);
+    const walkedAt = this.opts.walkedAt?.() ?? Date.now();
+    for (const d of dirs) this.watchDir(d, walkedAt);
     this.opts.known.clear();
     for (const [k, v] of known) this.opts.known.set(k, v);
     this.sizes.clear();
@@ -120,6 +152,7 @@ export class VaultWatcher {
         w.close();
         this.watchers.delete(d);
         this.gitignores.delete(d);
+        this.stamps.delete(d);
       }
     }
     for (const d of this.polled) if (d === dirRel || d.startsWith(`${dirRel}/`)) this.polled.delete(d);
@@ -189,7 +222,8 @@ export class VaultWatcher {
     if (this.pollTimer) clearInterval(this.pollTimer);
   }
 
-  private watchDir(dirRel: string): void {
+  /** Watch a directory whose contents were read at `readAt` (the walk's, or a listing about to be). */
+  private watchDir(dirRel: string, readAt = Date.now()): void {
     if (this.watchers.has(dirRel) || this.degraded) return;
     try {
       const w = watch(join(this.opts.root, dirRel), { persistent: false }, (_event, name) => {
@@ -210,6 +244,7 @@ export class VaultWatcher {
       });
       this.watchers.set(dirRel, w);
       this.gitignores.set(dirRel, this.gitignoreStamp(dirRel));
+      this.stamps.set(dirRel, settled(dirMtime(join(this.opts.root, dirRel)), readAt));
     } catch (err) {
       const code = (err as NodeJS.ErrnoException).code;
       if (code === "ENOSPC" || code === "EMFILE" || code === "ENFILE")
@@ -238,10 +273,18 @@ export class VaultWatcher {
   /** Stat-scan polled directories (and, when degraded, open files) for changes. Exposed for tests. */
   pollTick(): void {
     const { filter, known, root } = this.opts;
-    // Bun's fs.watch drops some events: a directory renamed out of the vault reports nothing,
-    // and a rename reports only the new name. So check that watched directories still exist,
-    // and every ~15 ticks sweep every known note as a backstop.
-    for (const d of this.watchers.keys()) if (d && !existsSync(join(root, d))) this.pending.add(d);
+    // Bun's fs.watch drops some events: a directory renamed out of the vault reports nothing, a
+    // rename reports only the new name, and on macOS nothing at all is reported for a moment after
+    // any watch is added or removed. So stat each watched directory: one gone is reported, one whose
+    // mtime moved is listed again; and every ~15 ticks sweep every known note as a backstop.
+    const statAt = Date.now();
+    const moved: [string, number][] = [];
+    for (const d of this.watchers.keys()) {
+      const mtime = dirMtime(join(root, d));
+      if (mtime === null) {
+        if (d) this.pending.add(d);
+      } else if (mtime !== this.stamps.get(d)) moved.push([d, mtime]);
+    }
     // The sweep compares each known note's mtime and size, not just that it exists: fs.watch merges a
     // burst of writes (a git checkout) into an event or two, and a missed change would stay missed.
     if (++this.ticks % 15 === 0) {
@@ -292,6 +335,57 @@ export class VaultWatcher {
     }
     if (this.degraded) for (const rel of this.opts.pollTargets?.() ?? []) this.pending.add(rel);
     if (this.pending.size || this.rescan) this.flush();
+    if (moved.length) this.lookAgain(moved, statAt);
+  }
+
+  /**
+   * List again the watched directories whose mtime moved (stat'ed at `statAt`), and add what came or
+   * went there to the pending paths, as their events would have: a new note, attachment or
+   * directory (adopted with all it holds), a known one gone. The debounce settles them with any
+   * events that did come.
+   */
+  private lookAgain(moved: [string, number][], statAt: number): void {
+    const { filter, known, root, listed } = this.opts;
+    // What's known in each: whatever isn't listed there now went.
+    const missing = new Map(moved.map(([d]) => [d, new Set(this.attachments.get(d))]));
+    for (const rel of known.keys()) missing.get(parentOf(rel))?.add(rel);
+    const before = this.pending.size;
+    for (const [d, mtime] of moved) {
+      let entries: Dirent[];
+      try {
+        entries = readdirSync(join(root, d), { withFileTypes: true });
+      } catch {
+        continue; // gone since: the next tick reports it
+      }
+      this.stamps.set(d, settled(mtime, statAt));
+      const gone = missing.get(d)!;
+      for (const e of entries) {
+        const rel = d ? `${d}/${e.name}` : e.name;
+        if (e.isDirectory()) {
+          // A folder the walk would take and not watched yet: adopted, with all it holds.
+          if (listed || this.watchers.has(rel) || this.polled.has(rel) || filter.exclusion(rel, true) !== null)
+            continue;
+        } else {
+          if (gone.delete(rel)) continue; // known, and still here
+          if (listed && !filter.isNoteName(e.name)) continue;
+          // As the walk takes it: a symlink only to a file inside the root (0.11).
+          if (filter.exclusion(rel, false) !== null || (e.isSymbolicLink() && !this.symlinkKept(rel))) continue;
+        }
+        this.pending.add(rel);
+      }
+      for (const rel of gone) this.pending.add(rel);
+    }
+    if (this.pending.size > before) this.schedule();
+  }
+
+  /** Keep an attachment known as there, or not. */
+  private attachment(rel: string, there: boolean): void {
+    const dir = parentOf(rel);
+    const inDir = this.attachments.get(dir);
+    if (there) {
+      if (inDir) inDir.add(rel);
+      else this.attachments.set(dir, new Set([rel]));
+    } else if (inDir?.delete(rel) && !inDir.size) this.attachments.delete(dir);
   }
 
   private degrade(reason: string): void {
@@ -364,6 +458,7 @@ export class VaultWatcher {
         if (/^\d+$|~$|\.sw[a-p]$|^\.#|^#.*#$/.test(name)) continue;
         // An attachment: the graph keeps a name index of them for ![[embeds]].
         changes.push({ rel, kind: st ? "created" : "deleted", isNote: false });
+        this.attachment(rel, !!st);
         continue;
       }
       const own = this.ownWrites.get(rel);
@@ -426,6 +521,26 @@ function isSymlink(path: string): boolean {
 /** A polling interval for a message: "2 s", or "500 ms" under a second (never "0 s"). */
 function every(ms: number): string {
   return ms < 1000 ? `${ms} ms` : `${Math.round(ms / 1000)} s`;
+}
+
+/** A directory's mtime, or null when it isn't there. */
+function dirMtime(path: string): number | null {
+  try {
+    return statSync(path).mtimeMs;
+  } catch {
+    return null;
+  }
+}
+
+/** A directory's mtime as its stamp, when what it holds was read at `readAt`; -1, to list it again on
+ *  the next tick, when that was too soon after it changed (`SETTLE_MS`) or it couldn't be stat'ed. */
+function settled(mtime: number | null, readAt: number): number {
+  return mtime === null || mtime >= readAt - SETTLE_MS ? -1 : mtime;
+}
+
+function parentOf(rel: string): string {
+  const slash = rel.lastIndexOf("/");
+  return slash >= 0 ? rel.slice(0, slash) : "";
 }
 
 function statOrNull(path: string): { mtimeMs: number; size: number } | null {
