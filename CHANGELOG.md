@@ -6,11 +6,15 @@ The format is [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.1.0/); wh
 
 ## [Unreleased]
 
+## [0.3.0] - 2026-10-14
+
 ### Added
 
 - Homebrew, on macOS and Linux: `brew install remziduzagac/tap/slipbox`, and `brew upgrade` after.
 - The documentation is a website, with search: <https://remziduzagac.github.io/slipbox/docs/>. It has a quick start, a
   page of concepts, and a guide your coding agent can read to walk you through slipbox.
+- `[git] signs_at` places the gutter's git signs: `gutter_right`, the default, where they were, against the text;
+  `gutter_left`, before the line numbers; or `window_right`, by the scrollbar.
 - `space s r` opens the scratch in the window on the right, and `capture.open_in = "right"` (or Scratch opens in the
   UI settings) makes that where it always opens.
 
@@ -22,6 +26,12 @@ The format is [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.1.0/); wh
 - Adding to the scratch (`space s a`) opens it ready to type a note about what you added: each entry is `**At:**`
   the place, then `**Note:**` with the cursor after it, and a rule between entries. `esc` then `q` takes you back; a
   `**Note:**` left empty is dropped. `slipbox capture` with `--ref` writes the same shape, its text after `**Note:**`.
+- The gutter's git signs have softer colours of their own: three new roles, `git_sign_add`, `git_sign_change` and
+  `git_sign_delete`, which `[colors]` can set.
+- Every page of the documentation is rewritten in short, plain sentences, and there's a quick start, a page of concepts
+  and a guide for your agent.
+- slipbox describes itself as the terminal companion for coding agents, in its help, its package and its Homebrew
+  formula.
 
 ### Fixed
 
@@ -81,6 +91,7 @@ The first release. 0.2.0 was tagged but never released: its build failed a test 
   `slipbox uninstall`; Windows through WSL.
 - `slipbox skill`: the skill for agents carried by the binary, printed or installed where an agent reads skills.
 
-[Unreleased]: https://github.com/remziduzagac/slipbox/compare/v0.2.2...HEAD
+[Unreleased]: https://github.com/remziduzagac/slipbox/compare/v0.3.0...HEAD
+[0.3.0]: https://github.com/remziduzagac/slipbox/compare/v0.2.2...v0.3.0
 [0.2.2]: https://github.com/remziduzagac/slipbox/compare/v0.2.1...v0.2.2
 [0.2.1]: https://github.com/remziduzagac/slipbox/releases/tag/v0.2.1
