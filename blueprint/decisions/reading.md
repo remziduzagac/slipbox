@@ -646,3 +646,24 @@ on 2026-10-11: the design held it, dated, with no decision.
 
 **Why:** slipbox counted widths its own way and OpenTUI the terminal's, and the two parted inside one frame
 (`हिन्दी`: 2 columns to slipbox, 3 to OpenTUI in herdr), shifting rows and borders (f9e3ebb).
+
+## D233: Code blocks scroll sideways rather than wrap (2.2, 2.4, 2026-10-14)
+
+**Decision:** In the TUI's rendered view, with wrapping on, a code block whose lines are too long for its room keeps
+each line whole on one row, and the block scrolls sideways on its own; the window and the rest of the note stay. A
+`▄` bar on the block's last row and `‹` `›` at its edges show it; the cursor drives it, kept 4 columns from either
+edge as the window keeps it with wrapping off; a sideways wheel or `shift` with the wheel, its bar, a click and find
+work on it. Each block's offset is the window's while it shows the note. `[render] code_wrap = "wrap"` keeps the lines
+wrapped, marked `↪`. Unchanged: source mode and the lens (`ui.wrap`), wrapping off (the window scrolls and a block
+follows it), and `slipbox render`, which wraps. A Mermaid diagram too wide is drawn, closest together, and scrolls as
+a block does. As built: design/tui.md § Code blocks that scroll, design/rendering.md § Blocks and inlines.
+
+**Why:** A code block's columns carry its meaning: a directory tree, an ASCII or box-drawing diagram, aligned log
+output, a table typed as text. Wrapping at the edge broke each of them, and a copy of a wrapped line took the `↪` and
+the break with it. GitHub's and VS Code's previews scroll a block on its own.
+
+**Cost:** A long command line is no longer seen whole at a glance: its end is a scroll away, which the `›` says. The
+cursor, find and a copy still reach all of it.
+
+**Not chosen:** wrapping, as before (kept as the setting); the whole window scrolling sideways for a wide block, which
+wrapping off does: the paragraphs around it would move too, and the block would scroll twice (ideas.md § Reading).

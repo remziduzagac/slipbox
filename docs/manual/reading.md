@@ -125,6 +125,9 @@ With wrapping off, the window scrolls sideways:
 - A sideways wheel or trackpad scrolls.
 - A scrollbar runs along the window's bottom row.
 
+With wrapping on, a code block too wide for the window scrolls sideways on its own instead, as
+[Code blocks](#code-blocks) says.
+
 ### Emphasis, code and links
 
 - `**strong**` text is bold, in a lighter colour so it stands out even where a terminal's bold is faint.
@@ -241,7 +244,32 @@ C++, CSS and SCSS, diff, Dockerfile, Go, HTML and XML, Java, JavaScript, JSON, L
 Python, Ruby, Rust, SQL, Swift, TOML and INI, TypeScript, Vim script and YAML. A block without a language isn't
 guessed at.
 
-A line too long for the window carries on in the next row, marked `↪`. A tab is four columns.
+A tab is four columns.
+
+A code block keeps its lines whole. When one is too long for the window, the block scrolls sideways on its own, as
+code does on GitHub, and the rest of the note stays where it is. A tree, a diagram drawn in characters or a log keeps
+its columns lined up.
+
+- A `›` at the block's right edge says a row goes on past it, and a `‹` at its left edge says some of it is out of
+  sight that way.
+- The block's bottom row holds its scrollbar. Click or drag it to scroll the block.
+- Moving the cursor along a line scrolls the block to keep the cursor four columns from either edge: `l` and `h`,
+  `w` and `b`, `0` and `$`, `f`. Moving up and down keeps the cursor's column on the screen.
+- A sideways wheel or trackpad over the block scrolls it, and so does the wheel with `shift` held. The block then
+  stays where you left it until the cursor next moves.
+- A click lands on the character under the pointer.
+- Find scrolls the block to show the match.
+- Copying takes whole lines, never only the part on screen.
+
+Each block keeps how far it's scrolled while the window shows the note. Open another note in the window, and the
+blocks start from the left again.
+
+Code blocks in lists and quotes scroll the same way, and so does code in the scratch. The code a diagram or a block of
+maths falls back to scrolls too.
+
+`render.code_wrap = "wrap"`, or Code blocks in `space u u`, wraps the lines instead: a line too long carries on in the
+next row, marked `↪`. With wrapping off (`space u w`), the whole window scrolls sideways and a code block moves with
+it. The Markdown, in source mode and in the lens, follows wrapping alone.
 
 ### Footnotes
 
@@ -354,9 +382,10 @@ slipbox draws these kinds:
 - state, sequence, class and entity-relationship diagrams
 - XY charts
 
-A diagram too wide for its spacing is drawn closer together. It stays a code block when:
+A diagram too wide for its spacing is drawn closer together. Still too wide, it's drawn as close as it goes and
+scrolls sideways, as a code block does. It stays a code block when:
 
-- it's still too wide
+- it's too wide and code blocks wrap (`render.code_wrap = "wrap"`)
 - it's of a kind slipbox doesn't draw (`pie`, `gantt`)
 - slipbox can't read it
 
@@ -574,6 +603,7 @@ In the output:
 
 - Pictures are their `▣` line.
 - Diagrams are drawn in characters, and maths as text.
+- A code block's long lines wrap, marked `↪`: printed text has no window to scroll.
 - Embedded notes are drawn in place.
 - A data file is drawn as in the TUI.
 

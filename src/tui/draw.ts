@@ -15,6 +15,7 @@ import { sanitize, sanitizeMap } from "../core/sanitize.ts";
 import type { GitState } from "../core/gitops.ts";
 import {
   type App,
+  codeBlocks,
   DRAWING_ROWS,
   type HistoryRow,
   LEFT_VIEWS,
@@ -68,6 +69,8 @@ export interface ScrollbarGeom extends Rect {
   view?: View;
   /** The window's horizontal scrollbar (wrapping off): its position moves the view sideways. */
   horizontal?: boolean;
+  /** A code block's own horizontal scrollbar, on its last row (`[render] code_wrap`): its key, the block it moves. */
+  block?: string;
   pane?: "sidebar" | "outline";
   total: number;
 }
@@ -1349,6 +1352,7 @@ function drawPane(
   const signBg = at === "gutter_left" ? gutterBg : page;
   // The rows shown: an oversized lens hides the ones outside its inner window (4.15).
   const shown = app.screenRows(view, layout);
+  const codeRows = codeBlocks(layout);
   const hidden = app.lensHidden(view, layout);
   for (let i = 0; i < body.h; i++) {
     const row = shown[i];
@@ -1426,7 +1430,20 @@ function drawPane(
     if (stop && !line.decor) marks.push(...offsetMarks(line, stopLines.get(line.src), false, "selection"));
     // Last: the first mark a cell has is the one drawn, so a find's match or the selection shows over a misspelt word.
     for (const s of spelling.get(row) ?? []) marks.push({ from: s.col, to: s.col + s.width, role: "spell" });
-    drawLine(c, textX, y, line, textW, theme, band, page, underCursor, marks, view.left);
+    // A code block that scrolls sideways on its own (`[render] code_wrap`): its code drawn from its offset, the rest
+    // of the row where it is.
+    const scroll = line.scroll && codeRows.byRow.has(row) ? line.scroll : undefined;
+    const codeOff = scroll ? app.codeOffset(view, layout, row) : 0;
+    const clip = scroll && !scroll.part ? { x: scroll.x, w: scroll.w, off: codeOff } : undefined;
+    drawLine(c, textX, y, line, textW, theme, band, page, underCursor, marks, view.left, clip);
+    if (clip) codeMarks(app, c, textX - view.left, y, line, clip, band, page);
+    // Its scrollbar, on its last row, under its code.
+    if (scroll?.part === "bar" && scroll.total > scroll.w) {
+      const r = { x: textX + scroll.x - view.left, y, w: scroll.w, h: 1 };
+      const bg = band ?? (line.fill ? (theme.roles[line.fill].bg ?? page) : page);
+      drawHScrollbar(app, c, r, scroll.total, codeOff, active, bg);
+      geo.scrollbars.push({ ...r, view, total: scroll.total, horizontal: true, block: codeRows.byRow.get(row)!.key });
+    }
     // The lens's counters (`[ui] relative_numbers`), in the column its rows keep free: each row's distance from the
     // cursor's, the cursor's 0 — every row a step of j and k, a wrapped line's too — so vim's counts read off them. In
     // the lens's accent; the cursor's in the current line's colour.
@@ -1472,9 +1489,14 @@ function drawPane(
         drawText(c, x, y, label, { ...roleStyle(theme, view.insert ? "lens_edit" : "lens", page), bg: page });
       }
     }
-    if (isCursorRow && view.cur.col >= view.left && view.cur.col < view.left + textW) {
-      drawCursor(c, textX - view.left, y, line, view.cur.col, theme, view.left + textW);
-      if (view === app.view) geo.cursor = { x: textX - view.left + view.cur.col, y };
+    // In a scrolled code block's code, the cursor is where its character is drawn, if it's in sight.
+    const inCode = !!clip && view.cur.col >= clip.x;
+    const shift = inCode ? clip!.off : 0;
+    const from = inCode ? clip!.x + clip!.off : view.left;
+    const to = inCode ? clip!.x + clip!.off + clip!.w : view.left + textW;
+    if (isCursorRow && view.cur.col >= from && view.cur.col < to) {
+      drawCursor(c, textX - view.left - shift, y, line, view.cur.col, theme, to);
+      if (view === app.view) geo.cursor = { x: textX - view.left - shift + view.cur.col, y };
     }
   }
   if (c.image && view.left === 0 && app.picturesNow(view)) drawPictures(c, layout, shown, body.y, textX, textW);
@@ -1810,9 +1832,18 @@ function drawCursor(
   else c.cell(x + col, y, " ", 1, st);
 }
 
+/** A code block that scrolls sideways, on one of its code rows: its code from column `x`, drawn from `off` columns in,
+ *  `w` columns of it. */
+interface CodeClip {
+  x: number;
+  w: number;
+  off: number;
+}
+
 /**
  * Draw one layout row from column `left` (wrapping off, scrolled sideways), `maxW` columns of it.
- * `marks` override styles by column range; the link under the cursor too.
+ * `marks` override styles by column range; the link under the cursor too. `clip`: a code block's row scrolled on its
+ * own — its code drawn `clip.off` columns to the left, inside its `clip.w` columns, what's before and after it hidden.
  */
 function drawLine(
   c: Canvas,
@@ -1826,19 +1857,20 @@ function drawLine(
   focusLink: number,
   marks: { from: number; to: number; role: Role }[],
   left = 0,
+  clip?: CodeClip,
 ): void {
   let col = 0;
   const end = left + maxW;
   const fillBg = line.fill ? theme.roles[line.fill].bg : undefined;
   for (const span of line.spans) {
-    if (col >= end) break;
+    if (col >= end && !clip) break;
     const focused = focusLink >= 0 && span.link === focusLink;
     const st = spanStyle(theme, span, line, focused ? "link_focus" : undefined);
     // The cursor-row band replaces the page and the block's fill, never a span's own background;
     // off the cursor row, text keeps its block's fill (a code block's text on its background).
     if (band && (!st.bg || st.bg === fillBg)) st.bg = band;
     else if (!st.bg) st.bg = page;
-    if (!marks.length && !left) {
+    if (!marks.length && !left && !clip) {
       const w = drawText(c, x + col, y, span.text, st, maxW - col);
       if (w < stringWidth(span.text)) return; // cut at the edge (a wide character that didn't fit)
       col += w;
@@ -1846,19 +1878,55 @@ function drawLine(
     }
     for (const g of graphemes(span.text)) {
       const w = graphemeWidth(g);
-      if (col + w > end) return;
+      // Where it's drawn: in a scrolled code block's code, `off` columns to the left; scrolled out of it, not at all.
+      let at = col;
+      if (clip && col >= clip.x) {
+        const from = clip.x + clip.off;
+        if (col < from) {
+          // A wide character cut by the block's left edge shows as a blank.
+          if (col + w > from) c.cell(x + clip.x - left, y, " ", 1, st);
+          col += w;
+          continue;
+        }
+        if (col + w > from + clip.w) return;
+        at = col - clip.off;
+      }
+      if (at + w > end) return;
       // A wide character cut by the left edge shows as a blank.
-      if (col < left) {
-        if (col + w > left) c.cell(x, y, " ", 1, st);
+      if (at < left) {
+        if (at + w > left) c.cell(x, y, " ", 1, st);
         col += w;
         continue;
       }
       const mark = marks.find((m) => col >= m.from && col < m.to);
       const cell = mark ? { ...st, ...markStyle(theme, mark.role) } : st;
-      if (w > 0) c.cell(x + col - left, y, g, w, cell);
+      if (w > 0) c.cell(x + at - left, y, g, w, cell);
       col += w;
     }
   }
+}
+
+/**
+ * A scrolled code block's row: `‹` in its gutter while text of the row is hidden to the left, `›` in its right margin
+ * while some is to the right. `x` is the screen column of the row's column 0.
+ */
+function codeMarks(
+  app: App,
+  c: Canvas,
+  x: number,
+  y: number,
+  line: Line,
+  clip: CodeClip,
+  band: Color | null,
+  page: Color | null,
+): void {
+  const text = cells(line).filter((k) => k.x >= clip.x && !/^\s$/.test(k.g));
+  if (!text.length) return;
+  const fill = line.fill ? app.theme.roles[line.fill].bg : undefined;
+  const st = { ...roleStyle(app.theme, "code_gutter", page), bg: band ?? fill ?? page };
+  if (text[0]!.x < clip.x + clip.off) drawText(c, x + clip.x - 1, y, app.glyphs.codeLeft, st, 1);
+  const last = text[text.length - 1]!;
+  if (last.x + last.w > clip.x + clip.off + clip.w) drawText(c, x + clip.x + clip.w, y, app.glyphs.codeRight, st, 1);
 }
 
 function markStyle(theme: Theme, role: Role): Partial<CellStyle> {

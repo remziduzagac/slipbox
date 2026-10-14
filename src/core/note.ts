@@ -37,6 +37,8 @@ export interface NoteRenderOptions {
   picture?: RenderOptions["picture"];
   /** What's drawn as a picture by choice (12.16, 12.17): see RenderOptions.drawings. */
   drawings?: RenderOptions["drawings"];
+  /** A code block too wide keeps its lines whole, to scroll sideways: see RenderOptions.codeScroll. */
+  codeScroll?: boolean;
 }
 
 export function linkResolver(graph: Graph | null, rel: string | null) {

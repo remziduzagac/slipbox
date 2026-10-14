@@ -34,6 +34,10 @@ export interface Glyphs {
     hh: string;
   };
   codeWrap: string;
+  /** A code block scrolled sideways (`[render] code_wrap`): at its left edge on a row whose text is hidden that way,
+   *  and at its right. */
+  codeLeft: string;
+  codeRight: string;
   embed: string;
   image: string;
   footnote: string;
@@ -161,6 +165,8 @@ const unicode: Glyphs = {
     hh: "═",
   },
   codeWrap: "↪",
+  codeLeft: "‹",
+  codeRight: "›",
   embed: "⧉",
   image: "▣",
   footnote: "†",
@@ -305,6 +311,8 @@ const ascii: Glyphs = {
     hh: "=",
   },
   codeWrap: ">",
+  codeLeft: "<",
+  codeRight: ">",
   embed: "=>",
   image: "[img]",
   footnote: "^",

@@ -189,6 +189,9 @@ idea without an outcome is still open. Nothing here is agreed: the decisions are
   deliberately. (2026-09-25) Built (`3.14`).
 - The input model: vim-like keys, remappable from the first version rather than later, and whether the mouse is
   supported at all. (2026-09-25) Chosen (D11, D99, D106); the mouse is supported.
+- A code block too wide for the window: its long lines wrapped, marked `↪` (as built until then); the whole window
+  scrolled sideways for it, as with wrapping off; or the block scrolled sideways on its own, as GitHub's and VS Code's
+  previews do. (2026-10-14) The block on its own chosen, wrapping kept as a setting (D233).
 
 ## Themes
 

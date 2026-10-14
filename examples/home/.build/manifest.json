@@ -2136,6 +2136,7 @@
    "purpose": "The offline sync rewrite (Aiko leads): design notes, a diff of the retry policy, tables of queue states.",
    "cases": [
     "code: Diff fence with +/- lines, shell session… — diff fence",
+    "code: A tree too wide for the window, its columns… — Bramble's files, a block that scrolls sideways",
     "tables: Soft segments: columns of dotted… — table of dotted identifiers, paths, snake_case",
     "code: Fenced code with ``` and ~~~, language… — ts, python, sql fences",
     "links-data: Notes link to data and code files with… — links to kestrel code and config with extension and #section",

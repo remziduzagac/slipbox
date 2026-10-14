@@ -66,8 +66,8 @@ export function withoutWindow<T>(fn: () => T): T {
   }
 }
 
-/** A diagram's rows, or why it's its code instead. */
-export type Drawn = { rows: string[] } | { why: string };
+/** A diagram's rows (`wide`: wider than asked, to scroll sideways), or why it's its code instead. */
+export type Drawn = { rows: string[]; wide?: true } | { why: string };
 
 /** Gaps between boxes tried in turn until the diagram fits: the library's own across, then narrower. */
 const SPACINGS = [
@@ -77,10 +77,12 @@ const SPACINGS = [
 ];
 
 /** Draw a Mermaid diagram at most `width` columns wide — in ASCII where the glyphs are; null while the library loads.
- *  (A drawn block is kept by the render cache, 15.1: drawn again only when it or the width changes.) */
-export function drawMermaid(source: string, width: number, ascii: boolean): Drawn | null {
+ *  Too wide even drawn close together: drawn so all the same where the window scrolls it sideways (`scroll`), else
+ *  why. (A drawn block is kept by the render cache, 15.1: drawn again only when it or the width changes.) */
+export function drawMermaid(source: string, width: number, ascii: boolean, scroll = false): Drawn | null {
   const m = mermaid();
   if (!m) return null;
+  let closest: string[] = [];
   for (const spacing of SPACINGS) {
     let text: string;
     try {
@@ -94,6 +96,7 @@ export function drawMermaid(source: string, width: number, ascii: boolean): Draw
     while (rows.length && !rows[rows.length - 1]) rows.pop();
     if (!rows.length) return { why: "nothing to draw" };
     if (Math.max(...rows.map(stringWidth)) <= width) return { rows };
+    closest = rows;
   }
-  return { why: "too wide to draw" };
+  return scroll ? { rows: closest, wide: true } : { why: "too wide to draw" };
 }

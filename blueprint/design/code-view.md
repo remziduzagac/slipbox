@@ -181,6 +181,8 @@ the tokens differ.
   to its `(`, each parameter four columns further in, then its `)` and the rest at the line's indentation — a call's
   arguments are broken as any line is. A line that fits is never broken, and lines are never joined: the author's breaks
   stay, so line numbers stay the file's. With wrapping off (`space u w`), lines run on and the view scrolls sideways.
+  `[render] code_wrap` (D233) is a rendered note's code blocks', not the cells': a fenced example in a doc comment's
+  prose wraps, as printed code does.
 
 ## How it behaves
 

@@ -211,7 +211,8 @@ thumb bright while the pane is focused). With wrapping off, each window's last r
 horizontal bar: a `▄` track and thumb under the text (ascii `-` and `#`), drawn when the note is
 wider than the window; the row stays reserved when it isn't, so the text doesn't jump. A side pane
 whose rows are wider than it scrolls sideways too: its rows are clipped instead of cut with `…`,
-and its last row holds the same `▄` bar (only while they overflow). Every bar can be clicked and
+and its last row holds the same `▄` bar (only while they overflow). A code block that scrolls sideways has its own
+`▄` bar on its last row, under its code (§ Code blocks that scroll). Every bar can be clicked and
 dragged; in a side pane that focuses the pane and pins its scroll, like the wheel. A horizontal
 wheel or trackpad scrolls a side pane sideways as it does the note.
 
@@ -842,6 +843,7 @@ These are the `space u` toggles and pickers (list in [keys.md](../../docs/manual
   framing the text), then a column of the page's before the text
 - the breadcrumb (no key of its own: the `space u u` list, or the palette)
 - wrapping (below)
+- code blocks too wide: scrolled sideways or wrapped (no key of its own; below)
 - link URLs
 - mouse capture
 - spelling (below)
@@ -889,6 +891,41 @@ a rule (so a titled rule such as the properties header counts only up to its tit
 one overrode, on every start (with a path too). At the next start, or on a config reload, an
 override is kept only while that config value is unchanged. Editing the config therefore always
 wins, and the TUI never writes your config.
+
+### Code blocks that scroll
+
+With wrapping on, a code block too wide for its room in a rendered note keeps its lines whole and scrolls sideways
+on its own (`[render] code_wrap = "scroll"`, the default; D233; the layout's side: rendering.md § Blocks and inlines).
+The window doesn't move; paragraphs, lists, quotes and tables wrap as ever. Code blocks in lists, quotes, callouts
+and embedded notes do the same, as do the code a diagram or maths falls back to, code in the scratch and in a hover,
+and a Mermaid diagram too wide to draw at its closest.
+
+- **What shows.** Each row of the block shows its block's width of its line from the block's offset, its gutter and a
+  container's indent before it fixed. `‹` in the gutter says text of the row is out of sight to the left (its
+  indentation alone doesn't count), `›` in the block's right margin that some is to the right. The block's last row
+  holds its `▄` bar under its code, only while the block overflows; a diagram gets a row for it.
+- **Its offset** is the window's, by the block's first line and how many blocks before it start there (an embed's are
+  all at one line), kept while the window shows the note — scrolled away, the lens opened and closed, a resize (then
+  clamped) — and dropped when the window shows another note. It isn't saved in the session.
+- **The cursor drives it.** A move that leaves the cursor in a block's code keeps it 4 columns from either edge (a
+  quarter of a narrow block), as the window does with wrapping off: `l` `h`, the words, `$`, `f`, a click. `0` and
+  `home` go to the code's start, past its gutter; on the gutter or an indent, nothing is hidden and the block stays.
+  Moving off the block leaves its offset as it was. A move up or down keeps the cursor's column on the screen (its
+  goal is a screen column), so it goes straight through a scrolled block, and down a scrolled block's lines without
+  moving it — unless a shorter line pulls it back to show the cursor.
+- **The mouse.** A sideways wheel or trackpad over a block, or the wheel with `shift`, scrolls it 6 columns a notch
+  without moving the cursor; elsewhere the wheel does what it did. A click or a drag on its bar moves it there. A block
+  the mouse moved stays where it was left — a re-layout (a linter's answer, the watcher) doesn't bring it back to a
+  cursor in it — until the cursor next moves. A click lands on the character drawn under the pointer.
+- **Find** brings a match past the edge into sight, the whole match where it fits, else from its start.
+- **Copy** takes the rows' text, and a row is a whole line: never only the part on screen. Cut and paste are the
+  lens's and source mode's, which show the Markdown.
+
+Not here: source mode and the lens draw the Markdown, which `ui.wrap` alone wraps; with wrapping off a note is laid out
+at its natural width with every line of code whole, and the whole window scrolls (above), a block only following it —
+it never scrolls on its own then. `code_wrap = "wrap"` wraps each long line at the block's width, its rows after the
+first marked `↪`, as `slipbox render` always does. The code view's cells are the file, broken at their structure
+(code-view.md § What it looks like), not a code block.
 
 ## Configuration reload
 

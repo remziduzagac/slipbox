@@ -146,9 +146,11 @@ build (`scripts/build-home.ts`), not kept as they are. Each file's purpose and t
   highlighting; pipeline-cookbook)
 - Fence with unknown language, no language, 'text', 'plaintext' (no highlight, label rules) —
   `notes/research/route-cost-models.md`, `work/kestrel/docs/qa/theme-showcase.md` (rendering.md only named languages)
-- Fence longer than the row hard-wraps; very long unbroken line; code line wider than 500 columns —
-  `Downloads/transcript-2026-09-24-incident-review.md`, `work/kestrel/docs/qa/render-torture.md` (render.test code
-  blocks; rendering.md)
+- Fence longer than the row scrolls sideways (hard-wraps with `code_wrap = "wrap"`); very long unbroken line; code
+  line wider than 500 columns — `Downloads/transcript-2026-09-24-incident-review.md`,
+  `work/kestrel/docs/qa/render-torture.md` (render.test code blocks; rendering.md)
+- A tree too wide for the window, its columns lined up: the block scrolls sideways on its own, its lines whole —
+  `notes/projects/sync-rewrite.md` (rendering.md code; tui.md code blocks that scroll)
 - Fence edge: 4-backtick fence containing \`\`\`, unclosed fence to end of file, fence closed by longer fence, empty
   fence, fence with only blank lines — `notes/inbox.md`, `work/kestrel/docs/qa/render-torture.md` (CommonMark)
 - Indented code block (4 spaces and tab) reports its own source lines — `notes/research/route-cost-models.md`,
@@ -3016,6 +3018,8 @@ Wide tables and code blocks to edit in place.
   (command-specs.ts)
 - `ui.code_cells` — Code cells: boxes or bands — `work/kestrel/src/routes/RouteMap.tsx`, `notes/index.md`
   (command-specs.ts)
+- `ui.code_wrap` — Code blocks: scroll or wrap — `notes/projects/sync-rewrite.md`,
+  `work/kestrel/docs/qa/render-torture.md` (command-specs.ts)
 - `problems.file` — This file's problems — `work/kestrel/src/routes/RouteMap.tsx`, `notes/index.md` (command-specs.ts)
 
 ### tag

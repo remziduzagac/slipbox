@@ -22,6 +22,7 @@ import {
   A_BOLD,
   A_ITALIC,
   A_STRIKE,
+  type CodeScroll,
   type Layout,
   type LayoutHeading,
   type LayoutLink,
@@ -54,6 +55,10 @@ export interface RenderOptions {
   picture?: (from: PictureSource, width: number) => Picture | null;
   /** Mermaid and a display's maths drawn as pictures (12.16, 12.17), as chosen where pictures are: in these colours. */
   drawings?: { mermaid: boolean; math: boolean; colors: DrawingColors & { math: string } };
+  /** A code block too wide for its room keeps its lines whole, to scroll sideways in the window (`[render] code_wrap
+   *  = "scroll"`, the TUI's); without it, each long line wraps, its rows after the first marked `↪` — what's printed
+   *  (`slipbox render`), which has no window to scroll. */
+  codeScroll?: boolean;
 }
 
 /**
@@ -170,7 +175,7 @@ export function renderTree(
   collectDefinitions(tree, ctx);
   const width = Math.max(8, opts.width);
   if (!cache) return finish(blocks(tree.children, ctx, width, TEXT, frontmatter), ctx, width);
-  const key = `${width}|${opts.glyphs.mode}|${opts.showUrls ? 1 : 0}|${[...ctx.definitions].join("\u0001")}`;
+  const key = `${width}|${opts.glyphs.mode}|${opts.showUrls ? 1 : 0}|${opts.codeScroll ? 1 : 0}|${[...ctx.definitions].join("\u0001")}`;
   if (cache.key !== key) {
     cache.key = key;
     cache.blocks = new WeakMap();
@@ -259,6 +264,12 @@ function finishRows(lines: Line[], ctx: Ctx, width: number): Layout {
  * True when it had to clip (counted in `Layout.clipped`, which the tests hold at 0).
  */
 function enforceRow(line: Line, width: number): boolean {
+  // A code block's row that scrolls sideways (`codeScroll`) is wider by design: its code is whole, the TUI shows the
+  // block's width of it at a time. What's before its code (an indent, the gutter) fits, as any block's does.
+  if (line.scroll && !line.scroll.part) {
+    for (const span of line.spans) if (span.text.includes("\t")) span.text = span.text.replace(/\t/g, " ");
+    return false;
+  }
   let used = 0;
   const kept: Span[] = [];
   for (const span of line.spans) {
@@ -398,9 +409,13 @@ function block(node: RootContent, ctx: Ctx, width: number, base: Style, fm?: Fro
           if (rows) return rows;
         }
         // Drawn in the terminal's own characters (12.10); its code where it can't be, saying why.
-        const d = drawMermaid(sanitize(node.value), width, ctx.opts.glyphs.mode === "ascii");
+        const ascii = ctx.opts.glyphs.mode === "ascii";
+        const d = drawMermaid(sanitize(node.value), width, ascii, !!ctx.opts.codeScroll);
         if (!d) ctx.pending.add(MERMAID);
-        if (d && "rows" in d) return diagram(d.rows, srcOf(node), ctx.opts.glyphs.mode === "ascii");
+        if (d && "rows" in d) {
+          const rows = diagram(d.rows, srcOf(node), ascii);
+          return d.wide ? scrollingDiagram(rows, srcOf(node), width) : rows;
+        }
         return codeBlock(node.value, node.lang, srcOf(node), ctx, width, fenced ? 1 : 0, d?.why);
       }
       return codeBlock(node.value, node.lang ?? null, srcOf(node), ctx, width, fenced ? 1 : 0);
@@ -700,6 +715,20 @@ function drawing(svg: string, kind: "diagram" | "math", src: number, ctx: Ctx, w
   );
 }
 
+/**
+ * A diagram too wide for its room even drawn close together (12.10), drawn anyway to scroll sideways in the window
+ * (`codeScroll`), as a code block too wide does: a column either side of it for the marks saying it goes on, and a row
+ * under it for its scrollbar.
+ */
+function scrollingDiagram(lines: Line[], src: number, width: number): Line[] {
+  const total = Math.max(0, ...lines.map((l) => l.spans.reduce((w, s) => w + stringWidth(s.text), 0)));
+  const scroll: CodeScroll = { x: 1, w: Math.max(1, width - 2), total };
+  return [
+    ...lines.map((l): Line => ({ ...l, spans: [{ text: " ", role: "text", attrs: 0 }, ...l.spans], scroll })),
+    { spans: [], src, scroll: { ...scroll, part: "bar" } },
+  ];
+}
+
 /** A diagram drawn in text (12.10), every row at its block's line: its lines in the table's border colour, its words
  *  as text. */
 function diagram(rows: string[], src: number, ascii: boolean): Line[] {
@@ -748,21 +777,38 @@ function codeBlock(
       { text: `${shown} `, role: "code_label", attrs: 0 },
     );
   }
-  out.push({ spans: top, src, fill: "code_block" });
   const inner = Math.max(1, width - 2);
+  // A line too long for the block: with `codeScroll`, every line kept whole, the block scrolling sideways in the
+  // window — its label row and its last, where its scrollbar goes, staying put; else each long line wrapped.
+  const widest = Math.max(0, ...sourceLines.map((l) => stringWidth(l)));
+  const scroll: CodeScroll | undefined =
+    ctx.opts.codeScroll && widest > inner ? { x: 1, w: inner, total: widest } : undefined;
+  out.push({ spans: top, src, fill: "code_block", ...(scroll ? { scroll: { ...scroll, part: "top" } } : {}) });
   sourceLines.forEach((text, i) => {
     const lineSrc = src + firstLine + i;
     const spans: Span[] = tokens?.[i]?.length
       ? tokens[i]!.map((t) => ({ text: t.text, role: t.role ?? "code_block", attrs: 0, src: lineSrc }))
       : [{ text, role: "code_block", attrs: 0, src: lineSrc }];
+    const gutter: Span = { text: " ", role: "code_gutter", attrs: 0 };
+    if (scroll) {
+      out.push({ spans: [gutter, ...spans], src: lineSrc, fill: "code_block", scroll });
+      return;
+    }
     // Hard wrap at the block width; continuation rows carry a marker in the gutter.
-    const rows = breakHard(spans, inner);
-    rows.forEach((row, r) => {
-      const gutter: Span = { text: r === 0 ? " " : g.codeWrap.slice(0, 1), role: "code_gutter", attrs: 0 };
-      out.push({ spans: [gutter, ...row], src: lineSrc, fill: "code_block" });
+    breakHard(spans, inner).forEach((row, r) => {
+      out.push({
+        spans: [r === 0 ? gutter : { ...gutter, text: g.codeWrap.slice(0, 1) }, ...row],
+        src: lineSrc,
+        fill: "code_block",
+      });
     });
   });
-  out.push({ spans: [], src: src + sourceLines.length + 1, fill: "code_block" });
+  out.push({
+    spans: [],
+    src: src + sourceLines.length + 1,
+    fill: "code_block",
+    ...(scroll ? { scroll: { ...scroll, part: "bar" } } : {}),
+  });
   return out;
 }
 
@@ -868,12 +914,17 @@ function calloutRole(kind: string): Role {
   }
 }
 
-/** Prefix every row: `first` on row one, spaces of the same width after (or `first` on all rows). */
+/** Prefix every row: `first` on row one, spaces of the same width after (or `first` on all rows). A code block's rows
+ *  that scroll sideways keep where their code starts, moved over by the prefix. */
 function prefixed(lines: Line[], first: Span[], src: number, everyRow = false): Line[] {
   const w = first.reduce((a, s) => a + stringWidth(s.text), 0);
   const hang: Span[] = [{ text: " ".repeat(w), role: "text", attrs: 0 }];
   if (lines.length === 0) return [{ spans: first, src }];
-  return lines.map((line, i) => ({ ...line, spans: [...(i === 0 || everyRow ? first : hang), ...line.spans] }));
+  return lines.map((line, i) => ({
+    ...line,
+    spans: [...(i === 0 || everyRow ? first : hang), ...line.spans],
+    ...(line.scroll ? { scroll: { ...line.scroll, x: line.scroll.x + w } } : {}),
+  }));
 }
 
 /** A list inside a list item, counted against the nesting cap like any container. */

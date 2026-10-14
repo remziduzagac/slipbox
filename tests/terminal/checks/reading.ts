@@ -218,6 +218,53 @@ export const READING: Check[] = [
   },
   {
     area: "reading",
+    name: "code blocks: a tree too wide scrolls sideways on its own — find, $ and 0, a sideways wheel, shift and the wheel; the UI settings wrap it instead",
+    covers: { cases: ["code"], commands: ["ui.code_wrap"] },
+    options: { home: true, startAt: "home/notes/projects/sync-rewrite.md", size: { cols: 100, rows: 34 } },
+    run: async (s) => {
+      const START = "├── config/app.toml";
+      const END = "park_on_conflict";
+      await s.status("sync-rewrite.md");
+      // Found past the block's right edge: the block scrolls to it, the window doesn't.
+      await s.keys("/");
+      await s.type(END);
+      await s.keys("enter", "escape");
+      await s.see(END);
+      await s.notSee(START);
+      await s.see("Where Bramble lives"); // the paragraph above it, where it was
+      // 0: the line's start, the block back; each line of it on one row, › where more is to the right.
+      await s.keys("0");
+      await s.see(START);
+      await s.notSee(END);
+      const row = s.rowOf(START);
+      s.expect(/›/.test(s.screen()[row]!), `a › at the block's edge\n${s.screen()[row]}`);
+      s.expect(s.rowOf("├── src/sync/retry.ts") === row - 2, "the tree's lines a row each, none wrapped");
+      // $: its end.
+      await s.keys("$");
+      await s.see(END);
+      await s.keys("0");
+      await s.see(START);
+      // The wheel over it, sideways (SGR's 67, right) and shift with it (68, shift and up): the block moves.
+      const x = Bun.stringWidth(s.screen()[row]!.slice(0, s.screen()[row]!.indexOf("config"))) + 1;
+      for (let i = 0; i < 12; i++) await s.send(`\x1b[<67;${x};${row + 1}M`);
+      await s.see(END);
+      await s.notSee(START);
+      for (let i = 0; i < 12; i++) await s.send(`\x1b[<68;${x};${row + 1}M`);
+      await s.see(START);
+      await s.notSee(END);
+      // Wrapping instead, from the UI settings: the line's rest on the next row, marked ↪.
+      await leader(s, "u", "u");
+      await s.see("UI settings");
+      await s.type("Code blocks");
+      await s.keys("enter");
+      await s.message("Code blocks: wrap");
+      await s.see(/↪/);
+      const at = s.rowOf(START);
+      s.expect(at >= 0 && /↪/.test(s.screen()[at + 1] ?? ""), `the line's rest on the next row\n${s.dump()}`);
+    },
+  },
+  {
+    area: "reading",
     name: "width: names in their own scripts — Japanese, Arabic, an emoji — in a table below the embeds",
     covers: { cases: ["width"] },
     run: async (s) => {

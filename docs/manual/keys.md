@@ -665,7 +665,7 @@ the file's path.
 
 | Keys | What |
 | --- | --- |
-| `space u u` | every UI setting with its value, to pick one and change it (the breadcrumb's too, which has no key) |
+| `space u u` | every UI setting with its value, to pick one and change it (the breadcrumb, code blocks: no key) |
 | `space u t` | pick a theme, previewed as you move (`esc` puts it back) |
 | `space u g` | pick the glyphs: nerd, unicode, ascii or auto, previewed |
 | `space u shift+w` | readable width: the text in a centred column, [`ui.readable_max`](configuration.md) wide (100) |
@@ -1011,6 +1011,7 @@ it back to the terminal.
 | a note | a click moves the cursor, or follows the link under it, and a drag selects and copies on release |
 | a note, double / triple click | selects and copies the word / the row |
 | a note, the wheel | scrolls (a sideways wheel scrolls sideways when wrapping is off) |
+| a code block too wide, a sideways wheel, or the wheel with `shift` | scrolls the block sideways |
 | the tab strip, the wheel | switches to the next or the previous tab |
 | the explorer | a click selects a note, a double-click opens it as a tab, and a click on a folder folds or unfolds it |
 | the history, source control | a click selects, a double-click goes there |

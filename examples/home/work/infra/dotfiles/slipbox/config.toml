@@ -11,6 +11,7 @@ glyphs = "unicode"              # our terminal font has no Nerd glyphs
 show_urls = "always"
 code = "document"               # code opens as a document (24.x) where its language is mapped
 code_cells = "box"              # the code view's cells in boxes, or on bands
+code_wrap = "scroll"            # a code block too wide scrolls sideways (our trees and logs keep their columns)
 images = "auto"                 # pictures in notes, where the terminal draws them
 images_remote = "ask"           # pictures online: asked for on enter
 mermaid = "picture"             # diagrams as pictures where the terminal draws them; text elsewhere
@@ -411,6 +412,7 @@ sidebar_vault = { bold = true, underline = true }
 "leader ; e m" = "ui.code_cells"
 "leader ; e n" = "ui.spell"
 "leader ; e o" = "ui.scratch_in"
+"leader ; e p" = "ui.code_wrap"
 "leader ; V a" = "spell.next"
 "leader ; V b" = "spell.prev"
 "leader ; V c" = "spell.suggest"

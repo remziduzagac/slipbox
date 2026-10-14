@@ -14,7 +14,7 @@ export const MOUSE_HELP: [string, string[], string][] = [
   [
     "Scroll",
     ["wheel"],
-    "Scrolls the note (sideways too, when wrapping is off), a panel (its selection stays) or a list (its selection moves only to stay in view); over the tab strip, switches tabs",
+    "Scrolls the note (sideways too, when wrapping is off), a panel (its selection stays) or a list (its selection moves only to stay in view); over a code block too wide, a sideways wheel or shift with it scrolls the block; over the tab strip, switches tabs",
   ],
   // Around them.
   [

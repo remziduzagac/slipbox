@@ -61,6 +61,23 @@ export interface Line {
   /** A picture's first row (12.x): the file, and the columns and rows it takes — this row and the `rows - 1` after
    *  it, blank frame rows the drawing puts the image over. */
   image?: Picture;
+  /** A row of a code block too wide for its room, laid out whole to scroll sideways rather than wrap
+   *  (`[render] code_wrap = "scroll"`): see CodeScroll. */
+  scroll?: CodeScroll;
+}
+
+/**
+ * A code block that scrolls sideways on its own: each of its rows says where its code is. From column `x` a row's text
+ * is the code's, whole, shown `w` columns at a time from the block's offset (which the TUI keeps); `total` is its widest
+ * line. Before `x` (a container's indent, the block's gutter) and after `x + w` (its right margin) nothing moves. The
+ * block's first row (`part: "top"`, its label) never moves, and its last (`"bar"`) holds its scrollbar. A container
+ * that indents the block moves `x` with it. A block that fits has none.
+ */
+export interface CodeScroll {
+  x: number;
+  w: number;
+  total: number;
+  part?: "top" | "bar";
 }
 
 /** A picture drawn in a note (12.x): its file (absolute), and the cells it takes. */

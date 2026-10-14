@@ -408,6 +408,10 @@ dates. Each says what was asked, decided, built and found, and cites the decisio
   own, as herdsman's is; the maintainer made the key, the secret and the variable (D228, #38).
 - The scratch is for capturing quickly, the user said: it floats in the middle and `q` closes it, a capture shows it,
   and a setting, or `space s r`, puts it on the right instead (D229, #43).
+- Code blocks wrapped their long lines, which broke trees, diagrams and aligned logs. The user approved a design: a
+  block too wide scrolls sideways on its own, the cursor, the mouse and find driving it, wrapping kept as a setting
+  (D233, #69). Built with it: a Mermaid diagram too wide is drawn and scrolls too, and a block the mouse scrolled stays
+  there until the cursor moves.
 - The docs compared with herdsman's: the content was there, the site, the front door and the plain prose weren't. The
   user: "fix everything and have documentation website as herdsman on githubpages". Workstream DS: a Starlight site
   from `docs/`, a front door, every page in plain sentences (the reference chapters still by hand); greenrepo's DOC-06

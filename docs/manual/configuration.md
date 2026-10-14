@@ -198,6 +198,7 @@ glyphs = "auto"                # icons and marks: auto (from the terminal) | ner
 show_urls = "auto"             # a link's address after its text: auto (only without colour) | always | never
 code = "document"              # a code file opens: document (the code view, where its language has one) | source
 code_cells = "box"             # the code view's cells: box (framed) | band (on a tint); space u c switches
+code_wrap = "scroll"           # a code block too wide, in the TUI: scroll (sideways, its lines whole) | wrap (↪)
 images = "auto"                # a note's pictures: auto (drawn where the terminal can) | never
 images_remote = "ask"          # your file only. Pictures on the internet: ask (enter fetches one) | show (fetched as
                                # the note opens) | never (neither fetched nor drawn)
