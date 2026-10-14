@@ -14,6 +14,7 @@ import {
   rmSync,
   statSync,
   symlinkSync,
+  utimesSync,
   writeFileSync,
 } from "node:fs";
 import { tmpdir } from "node:os";
@@ -1002,6 +1003,121 @@ describe("review cycle 5 (the watcher's polling fallbacks)", () => {
       (w as unknown as { pending: Set<string> }).pending.add("rota.md");
       w.flush();
       expect(changes).toEqual(["deleted rota.md"]);
+    } finally {
+      w.close();
+    }
+  });
+});
+
+describe("the watcher's second look: what its events didn't say (5.1, #56)", () => {
+  // macOS's watch reports nothing for a moment after any folder's watch is added or removed (Bun restarts its one
+  // FSEvents stream "since now"). The watches closed here make that loss certain: only the second look remains.
+  const silenced = async (o: {
+    root: string;
+    dirs: string[];
+    known?: Map<string, number>;
+    attachments?: string[];
+    walkedAt?: () => number;
+    listed?: boolean;
+  }) => {
+    const { VaultWatcher } = await import("../src/core/watch.ts");
+    const { WalkFilter } = await import("../src/core/walk.ts");
+    const changes: string[] = [];
+    const w = new VaultWatcher({
+      ...o,
+      filter: new WalkFilter(o.root, DEFAULT_CONFIG.walk),
+      known: o.known ?? new Map(),
+      debounceMs: 20,
+      pollMs: 600_000, // ticks only when the test calls one
+      onBatch: (b) => changes.push(...b.changes.map((c) => `${c.kind} ${c.rel}${c.isNote ? "" : " (file)"}`)),
+      onDegraded: () => {},
+    });
+    for (const fsw of (w as unknown as { watchers: Map<string, { close(): void }> }).watchers.values()) fsw.close();
+    const tick = () => {
+      w.pollTick();
+      w.flush();
+      return changes.splice(0).sort();
+    };
+    return { w, tick };
+  };
+  const hourAgo = () => new Date(Date.now() - 3_600_000);
+  const age = (...dirs: string[]) => {
+    for (const d of dirs) utimesSync(d, hourAgo(), hourAgo());
+  };
+
+  test("a folder whose mtime moved is listed again: what came and went there is said, the rest isn't", async () => {
+    const root = mkdtempSync(join(tmpdir(), "slipbox-lost-"));
+    mkdirSync(join(root, "sub"));
+    for (const f of ["a.md", "sub/b.md", "pic.png", "old.png"]) writeFileSync(join(root, f), "x\n");
+    symlinkSync(join(root, "nowhere.md"), join(root, "dead.md")); // left out, as the walk leaves it: never said gone
+    age(root, join(root, "sub"));
+    const known = new Map(["a.md", "sub/b.md"].map((f) => [f, statSync(join(root, f)).mtimeMs] as [string, number]));
+    const { w, tick } = await silenced({ root, dirs: ["", "sub"], known, attachments: ["pic.png", "old.png"] });
+    try {
+      // Nothing changed: nothing said.
+      expect(tick()).toEqual([]);
+      renameSync(join(root, "a.md"), join(root, "sub", "moved.md"));
+      mkdirSync(join(root, "deep", "er"), { recursive: true });
+      writeFileSync(join(root, "deep", "er", "n.md"), "# N\n");
+      writeFileSync(join(root, "new.png"), "png");
+      rmSync(join(root, "old.png"));
+      expect(tick()).toEqual([
+        "created deep/er/n.md",
+        "created new.png (file)",
+        "created sub/moved.md",
+        "deleted a.md",
+        "deleted old.png (file)",
+      ]);
+      expect(w.watchedCount).toBe(4); // deep and deep/er, adopted
+      // Looked at again while their mtimes are fresh, all of it known now: said once.
+      expect(tick()).toEqual([]);
+    } finally {
+      w.close();
+    }
+  });
+
+  test("a file written after the walk read its folder, before the watch, is found on the first tick", async () => {
+    const root = mkdtempSync(join(tmpdir(), "slipbox-late-"));
+    writeFileSync(join(root, "late.md"), "# Late\n");
+    // The folder changed ten seconds ago, after the walk began a minute ago: the walk may not have seen it.
+    const tenAgo = new Date(Date.now() - 10_000);
+    utimesSync(root, tenAgo, tenAgo);
+    const { w, tick } = await silenced({ root, dirs: [""], walkedAt: () => Date.now() - 60_000 });
+    try {
+      expect(tick()).toEqual(["created late.md"]);
+    } finally {
+      w.close();
+    }
+  });
+
+  test("a change the folder's mtime can't tell apart, so soon after the last, is still found", async () => {
+    const root = mkdtempSync(join(tmpdir(), "slipbox-coarse-"));
+    writeFileSync(join(root, "a.md"), "# A\n");
+    // Changed half a second before the walk: a coarse clock can give the next change the very same mtime.
+    const was = new Date(Date.now() - 500);
+    utimesSync(root, was, was);
+    const known = new Map([["a.md", statSync(join(root, "a.md")).mtimeMs]]);
+    const { w, tick } = await silenced({ root, dirs: [""], known, walkedAt: () => Date.now() });
+    try {
+      writeFileSync(join(root, "b.md"), "# B\n");
+      utimesSync(root, was, was);
+      expect(tick()).toEqual(["created b.md"]);
+    } finally {
+      w.close();
+    }
+  });
+
+  test("a folder listed, not walked (~): a second look takes in its new notes, never its folders or other files", async () => {
+    const root = mkdtempSync(join(tmpdir(), "slipbox-listed-"));
+    mkdirSync(join(root, "Documents"));
+    writeFileSync(join(root, "Documents", "deep.md"), "# Deep\n");
+    age(root);
+    const { w, tick } = await silenced({ root, dirs: [""], listed: true });
+    try {
+      writeFileSync(join(root, "todo.md"), "# Todo\n");
+      writeFileSync(join(root, "photo.png"), "png");
+      expect(tick()).toEqual(["created todo.md"]);
+      expect(w.watchedCount).toBe(1);
     } finally {
       w.close();
     }

@@ -9868,6 +9868,9 @@ export class App {
       pollMs: this.config.watch.poll_ms,
       known: this.knownFromGraph(),
       sizes: this.sizesFromGraph(),
+      attachments: this.graph.filePaths(),
+      walkedAt: () => this.graph.walkedAt,
+      listed: isListed(this.loc),
       onBatch: (b) => this.receiveBatch(b),
       onDegraded: (reason) => {
         this.message("error", `watching degraded: ${reason}`);

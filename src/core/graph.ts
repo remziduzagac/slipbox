@@ -283,6 +283,8 @@ export class Graph {
   notes = new Map<string, NoteEntry>();
   index = new LinkIndex([]);
   dirs: string[] = [];
+  /** When the last walk began (epoch ms): a folder changed since may hold what it didn't see. */
+  walkedAt = 0;
   /** lower(basename) → vault-relative paths of non-note files. */
   assets = new Map<string, string[]>();
   skipped: Skipped[] = [];
@@ -334,6 +336,7 @@ export class Graph {
    */
   build(useCache = true, parse: "all" | "lazy" = "all"): this {
     const t0 = performance.now();
+    this.walkedAt = Date.now();
     const walk = isListed(this.loc) ? listDirectory(this.root, this.filter) : walkVault(this.root, this.filter);
     this.dirs = walk.dirs;
     this.assets.clear();

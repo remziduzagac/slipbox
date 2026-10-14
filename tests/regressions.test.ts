@@ -209,6 +209,40 @@ describe("medium", () => {
       app.watcher?.close();
     }
   });
+  test("watcher: files that come and go before the watch reports anything still reach the graph (#56)", async () => {
+    // On macOS the watch starts a moment after it's asked for, and nothing before then is reported: the same
+    // renames failed so on CI. Here every watch is closed as the app starts, so no event ever comes.
+    const dir = vault({ "g.md": "# g\n", "a/x.md": "# x\n", "b/keep.md": "# k\n", "old.png": "png" });
+    const config: Config = structuredClone(DEFAULT_CONFIG);
+    config.ui.restore_session = false;
+    config.watch.debounce_ms = 30;
+    config.watch.poll_ms = 80;
+    const loc = locateVault({ root: dir });
+    const app = new App({
+      loc,
+      config,
+      graph: openGraph(loc, config, false),
+      host: { requestRender() {}, osc52: () => true, quit() {} },
+      open: "b/keep.md",
+    });
+    try {
+      for (const w of (app.watcher as unknown as { watchers: Map<string, { close(): void }> }).watchers.values())
+        w.close();
+      renameSync(join(dir, "g.md"), join(dir, "h.md"));
+      renameSync(join(dir, "a", "x.md"), join(dir, "b", "x.md"));
+      mkdirSync(join(dir, "c"));
+      writeFileSync(join(dir, "c", "new.md"), "# new\n");
+      writeFileSync(join(dir, "new.png"), "png");
+      rmSync(join(dir, "old.png"));
+      const notes = () => [...app.graph.notes.keys()].sort().join();
+      const files = () => app.graph.filePaths().sort().join();
+      await until(() => notes() === "b/keep.md,b/x.md,c/new.md,h.md" && files() === "new.png");
+      expect(notes()).toBe("b/keep.md,b/x.md,c/new.md,h.md");
+      expect(files()).toBe("new.png");
+    } finally {
+      app.watcher?.close();
+    }
+  });
   test("a rescan reloads open buffers whose files changed", async () => {
     const dir = vault({ "a.md": "# one\n" });
     const config = structuredClone(DEFAULT_CONFIG);
