@@ -28,6 +28,9 @@ export interface TerminalOptions {
   colors?: { fg: string; bg: string };
 }
 
+/** The longest a frame is waited for (ms): one begun and not ended this long is read as it is. */
+const FRAME_MAX = 1000;
+
 /** `#rrggbb` as an OSC colour answer: `rgb:rrrr/gggg/bbbb`. */
 const oscColor = (hex: string) => `rgb:${[1, 3, 5].map((i) => hex.slice(i, i + 2).repeat(2)).join("/")}`;
 
@@ -89,6 +92,8 @@ export class HeadlessTerminal {
   output = "";
   /** When the program last wrote anything (performance.now()). */
   lastOutput = 0;
+  /** When the frame being drawn began (synchronized output, mode 2026), as xterm has read it: 0 between frames. */
+  private frameSince = 0;
 
   constructor(readonly opts: TerminalOptions) {
     const keyboard = opts.keyboard ?? "kitty";
@@ -113,6 +118,14 @@ export class HeadlessTerminal {
         return true;
       });
     }
+    // A frame's start and end (`CSI ? 2026 h`, `l`): a frame's bytes arrive in several chunks, and between them the
+    // screen is part old, part new. Noted, and left to xterm too (false: not consumed).
+    const frame = (ps: (number | number[])[], begun: boolean) => {
+      if (ps.includes(2026)) this.frameSince = begun ? performance.now() : 0;
+      return false;
+    };
+    p.registerCsiHandler({ prefix: "?", final: "h" }, (ps) => frame(ps, true));
+    p.registerCsiHandler({ prefix: "?", final: "l" }, (ps) => frame(ps, false));
     p.registerOscHandler(10, (d) => (d === "?" ? (this.reply(`\x1b]10;${oscColor(colors.fg)}\x07`), true) : false));
     p.registerOscHandler(11, (d) => (d === "?" ? (this.reply(`\x1b]11;${oscColor(colors.bg)}\x07`), true) : false));
     p.registerOscHandler(52, (d) => {
@@ -129,6 +142,7 @@ export class HeadlessTerminal {
   /** Start a program in it (one at a time). */
   spawn(argv: string[], opts: { cwd: string; env: Record<string, string> }): Bun.Subprocess {
     this.kitty = [];
+    this.frameSince = 0;
     const decoder = new TextDecoder();
     this.pty = new Bun.Terminal({
       cols: this.opts.cols,
@@ -190,6 +204,14 @@ export class HeadlessTerminal {
   /** Whether everything written has been drawn into the screen. */
   get drawn(): boolean {
     return this.pending === 0;
+  }
+
+  /**
+   * Whether the screen is part of a frame: the program began one and hasn't ended it. For a second at most, as a
+   * terminal waits before drawing anyway: a program that never ends one doesn't stop every check.
+   */
+  get midFrame(): boolean {
+    return this.frameSince > 0 && performance.now() - this.frameSince < FRAME_MAX;
   }
 
   /** The visible screen, one string per row (wide characters once, as they show). */

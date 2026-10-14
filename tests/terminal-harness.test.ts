@@ -3,6 +3,7 @@
 
 import { describe, expect, test } from "bun:test";
 import { encodeKey } from "./terminal/keys.ts";
+import { Session } from "./terminal/session.ts";
 import { HeadlessTerminal } from "./terminal/terminal.ts";
 
 describe("keys as a terminal sends them", () => {
@@ -122,5 +123,66 @@ describe("the headless terminal", () => {
     for (let i = 0; i < 100 && (!t.drawn || performance.now() - t.lastOutput < 30); i++) await Bun.sleep(10);
     expect(t.screen().join("").trim()).toBe("11");
     t.dispose();
+  });
+});
+
+describe("frames read whole (synchronized output)", () => {
+  const env = { PATH: process.env.PATH ?? "/usr/bin:/bin" };
+  /** Until the first row shows `text`, or a second goes by. */
+  const shows = async (t: HeadlessTerminal, text: string) => {
+    for (let i = 0; i < 100 && !t.screen()[0]!.includes(text); i++) await Bun.sleep(10);
+  };
+
+  test("a frame begun and not yet ended is said, until it ends", async () => {
+    const t = new HeadlessTerminal({ cols: 40, rows: 4 });
+    t.spawn(["sh", "-c", String.raw`printf '\033[?2026hhalf'; sleep 0.4; printf ' whole\033[?2026l'; sleep 2`], {
+      cwd: "/",
+      env,
+    });
+    await shows(t, "half");
+    expect(t.screen()[0]).toBe("half");
+    expect(t.midFrame).toBe(true);
+    await shows(t, "whole");
+    expect(t.midFrame).toBe(false);
+    t.dispose();
+  });
+
+  test("one never ended is read as it is after a second: a program that never ends a frame stops no check", async () => {
+    const t = new HeadlessTerminal({ cols: 40, rows: 4 });
+    t.spawn(["sh", "-c", String.raw`printf '\033[?2026hstuck'; sleep 3`], { cwd: "/", env });
+    await shows(t, "stuck");
+    expect(t.midFrame).toBe(true);
+    await Bun.sleep(1100);
+    expect(t.midFrame).toBe(false);
+    t.dispose();
+  });
+
+  test("a check's wait holds only between frames: what it waited for, with the rest of its frame", async () => {
+    const s = new Session();
+    try {
+      s.term.spawn(["sh", "-c", String.raw`printf '\033[?2026hhalf'; sleep 0.4; printf ' whole\033[?2026l'; sleep 3`], {
+        cwd: "/",
+        env,
+      });
+      await s.until(() => s.text().includes("half"), undefined, "the frame's first half");
+      expect(s.screen()[0]).toBe("half whole");
+    } finally {
+      s.cleanup();
+    }
+  });
+
+  test("the quiet after a key isn't a pause in the middle of a frame", async () => {
+    const s = new Session();
+    try {
+      const sent = performance.now();
+      s.term.spawn(["sh", "-c", String.raw`printf '\033[?2026hhalf'; sleep 0.4; printf ' whole\033[?2026l'; sleep 3`], {
+        cwd: "/",
+        env,
+      });
+      await s.settle(sent);
+      expect(s.screen()[0]).toBe("half whole");
+    } finally {
+      s.cleanup();
+    }
   });
 });
