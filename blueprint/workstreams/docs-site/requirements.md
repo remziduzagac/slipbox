@@ -9,8 +9,8 @@
   has slipbox working in two minutes, the concepts are on one page, and an agent guide lets a person's own agent walk
   them through slipbox (DS-D3).
 - The docs read easily: short sentences, one idea each, steps as steps, keys and settings in tables (DS-D4).
-- The reference chapters' lists (keys, settings, commands) are generated from the code, so they can't fall behind it
-  (DS-D5).
+- The reference chapters (keys, configuration, the command line) read as plainly, their lists kept whole by the
+  tests (DS-D5).
 
 ## Non-goals
 
@@ -33,8 +33,8 @@
 - The docs' home has the paths, the install and quick-start buttons, and the agent prompt; the quick start, the
   concepts page and the agent guide exist, linked from the map, checked by `tests/docs.test.ts` like every page.
 - Every page follows the writing rules of DS-D4.
-- The keys, configuration and command-line chapters' lists are generated from the code, and a test fails when one
-  is out of date.
+- The keys, configuration and command-line chapters' prose follows DS-D4; their tables and the configuration's
+  TOML listing stay, every key, default, command and flag in them as the tests check.
 - greenrepo's DOC-06 is met: its deviation is gone from `.github/upkeep/deviations.toml`.
 - `bun run check` passes.
 
@@ -44,7 +44,8 @@
 
 Adds: the docs are also a website on GitHub Pages, built from `docs/` by Starlight, searchable, deployed with the
 installer (DS-D1, DS-D2); a home with a path for each reader, a quick start, a concepts page and an agent guide
-(DS-D3); the keys, settings and commands generated from the code (DS-D5). The writing rules (How) become DS-D4's.
+(DS-D3); the reference chapters written by hand, held whole by the tests (DS-D5). The writing rules (How) become
+DS-D4's.
 
 Previously: "slipbox ships user documentation in Markdown in `docs/`" (read on GitHub only; greenrepo's DOC-06 a
 deviation, GR-D8), with the writing rules of workstreams/archive/user-docs/requirements.md § How they are written.
