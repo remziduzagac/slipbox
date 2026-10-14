@@ -1077,9 +1077,16 @@ export const NAVIGATING: Check[] = [
       await s.keys("ctrl+p");
       await s.see(/Open (note|\()/);
       await s.type("contacts");
-      await s.see(/ 1\/2 /);
-      const listed = s.screen().flatMap((r) => /│ ((?:people|equipment)\/contacts\.md)\s/.exec(r)?.[1] ?? []);
-      s.expect(listed.length === 2, `two contacts notes listed: ${listed}`);
+      // The two rows, once the frame is whole: its counter can be drawn before the longer list it replaces is cleared.
+      let listed: string[] = [];
+      await s.until(
+        () => {
+          listed = s.screen().flatMap((r) => /│ ((?:people|equipment)\/contacts\.md)\s/.exec(r)?.[1] ?? []);
+          return / 1\/2 /.test(s.screen().join("\n")) && listed.length === 2;
+        },
+        undefined,
+        "the counter at 1/2 and two contacts notes listed",
+      );
       await s.keys("ctrl+j");
       await s.see(/ 2\/2 /);
       await s.keys("enter");
