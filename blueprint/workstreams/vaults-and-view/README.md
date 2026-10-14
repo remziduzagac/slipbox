@@ -1,5 +1,5 @@
 ---
-status: proposed
+status: active
 created: "2026-10-14"
 ---
 
@@ -11,8 +11,7 @@ shows the root instead. The user found the explorer's roots confusing while look
 this), and worked the model out in conversation on 2026-10-14: vaults, home among them, a no-vault for the rest of the
 file system, and the explorer as one view of the whole tree, zoomed.
 
-Settled in conversation, to be accepted as a whole before the work starts; GIT (`../git-review/`) is rebased on it
-once it is.
+Accepted by the user on 2026-10-15, as a whole; GIT (`../git-review/`) is rebased on it and follows it.
 
 - [requirements.md](requirements.md): its goals, acceptance criteria and its changes to the root's requirements.
 - [design.md](design.md): its changes to the root's design.

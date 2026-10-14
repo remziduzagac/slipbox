@@ -630,7 +630,7 @@ was added 2026-10-09 at the user's asking.*
 
 ## Vaults and the explorer's view
 
-*Not a phase. Proposed 2026-10-15, settled in conversation the day before; the git workstream waits for it.*
+*Not a phase. Accepted 2026-10-15, settled in conversation the day before; the git workstream follows it.*
 
 - [ ] **[Vaults and the explorer's view](workstreams/vaults-and-view/README.md)** (VV): "vault" for every folder with a
   marker, home a vault without one, Elsewhere for the rest; the explorer as one tree, its view zoomed, a breadcrumb;
