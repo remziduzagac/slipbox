@@ -8,6 +8,7 @@
 //   - Links between the docs become the site's addresses (`../manual/keys.md#leader` → `/slipbox/docs/manual/keys/#leader`);
 //     one to a file outside docs/ goes to it on GitHub. Code, fenced or inline, is left as it is.
 //   - The screenshots are copied to public/images; the agent guide is served as it is, for an agent to read.
+//   - The logo is the README's (assets/logo.svg), copied to public/logo.svg: the site's logo and its favicon.
 
 import {
   copyFileSync,
@@ -152,9 +153,15 @@ function gather(): void {
   rmSync(images, { recursive: true, force: true });
   mkdirSync(images, { recursive: true });
   for (const f of readdirSync(join(DOCS, "images"))) copyFileSync(join(DOCS, "images", f), join(images, f));
+  copyLogo(join(SITE, "public"));
   if (existsSync(join(DOCS, "agent-guide.md")))
     copyFileSync(join(DOCS, "agent-guide.md"), join(SITE, "public", "agent-guide.md"));
   console.log(`gather: ${pages} pages in ${sidebar.length} groups, from ${relative(REPO, DOCS)}/`);
+}
+
+/** The README's logo (assets/logo.svg) into `publicDir`, as logo.svg: the site's logo and its favicon. */
+export function copyLogo(publicDir: string): void {
+  copyFileSync(join(REPO, "assets", "logo.svg"), join(publicDir, "logo.svg"));
 }
 
 if (import.meta.main) gather();

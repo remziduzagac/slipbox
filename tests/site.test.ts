@@ -2,9 +2,10 @@
 // the site's addresses, a page's title and description. The build itself runs in CI's `site` job (`bun run site`).
 
 import { describe, expect, test } from "bun:test";
-import { readdirSync, readFileSync } from "node:fs";
+import { mkdtempSync, readdirSync, readFileSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { pageUrl, readMap, rewriteLinks, rewriteTarget, splitPage } from "../site/scripts/gather.ts";
+import { copyLogo, pageUrl, readMap, rewriteLinks, rewriteTarget, splitPage } from "../site/scripts/gather.ts";
 
 const DOCS = join(import.meta.dir, "..", "docs");
 const noDirs = () => false;
@@ -115,5 +116,23 @@ describe("the docs' site: its pages gathered from docs/ (DS-D2)", () => {
       expect(title, page).not.toBe("");
       expect(description, page).not.toBe("");
     }
+  });
+});
+
+describe("the docs' site: its logo", () => {
+  test("the README's: the gathering copies the logo the README shows, and the site's header and favicon use it", () => {
+    const top = join(import.meta.dir, "..");
+    const shown = /<img src="([^"]+\.svg)"/.exec(readFileSync(join(top, "README.md"), "utf8"))?.[1];
+    expect(shown).toBeDefined();
+    const dir = mkdtempSync(join(tmpdir(), "slipbox-site-"));
+    try {
+      copyLogo(dir);
+      expect(readFileSync(join(dir, "logo.svg"), "utf8")).toBe(readFileSync(join(top, shown!), "utf8"));
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+    const config = readFileSync(join(top, "site", "astro.config.mjs"), "utf8");
+    expect(config).toContain('logo: { src: "./public/logo.svg" }');
+    expect(config).toContain('favicon: "/logo.svg"');
   });
 });
