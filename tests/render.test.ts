@@ -6,7 +6,9 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { glyphsFor } from "../src/core/glyphs.ts";
 import { layoutToAnsi } from "../src/core/layout/ansi.ts";
-import { A_BOLD, type Layout } from "../src/core/layout/ir.ts";
+import { A_BOLD, type Layout, type Line } from "../src/core/layout/ir.ts";
+import { layoutDiff } from "../src/core/layout/diff.ts";
+import { diffView } from "../src/core/merge.ts";
 import { type PictureSource, renderMarkdown, renderTree } from "../src/core/layout/render.ts";
 import { dataLinks, parseData } from "../src/core/data.ts";
 import { classify } from "../src/core/filetypes.ts";
@@ -1399,5 +1401,123 @@ describe("drawn as pictures, by choice (12.16, 12.17)", () => {
       { pending: ["mathjax", "resvg"], images: 0 },
       { pending: ["resvg"], images: 0 },
     ]);
+  });
+});
+
+describe("a diff's rows as drawn (GIT-D2)", () => {
+  const code = `${Array.from({ length: 20 }, (_, i) => `const line${i + 1} = ${i + 1}; // line ${i + 1}`).join("\n")}\n`;
+  const diff = (
+    before: string,
+    now: string,
+    o: Partial<Parameters<typeof layoutDiff>[3]> = {},
+    open: ReadonlySet<number> = new Set(),
+  ) =>
+    layoutDiff(diffView(before, now, open), before, now, {
+      width: 60,
+      glyphs: unicode,
+      language: "typescript",
+      wrap: true,
+      codeScroll: true,
+      ...o,
+    });
+  const textOf = (r: Line) => r.spans.map((s) => s.text).join("");
+  const row = (l: Layout, starts: string) => l.lines.find((x) => textOf(x).startsWith(starts))!;
+  /** The role and tint of the span holding the first character of `piece`, on the row starting with `starts`. */
+  const at = (l: Layout, starts: string, piece: string) => {
+    const r = row(l, starts);
+    const i = textOf(r).indexOf(piece);
+    let n = 0;
+    for (const s of r.spans) {
+      if (i >= 0 && i < n + s.text.length) return { role: s.role, bg: s.bg };
+      n += s.text.length;
+    }
+    return null;
+  };
+
+  test("a row a line, its sign in the gutter, highlighted by its language; a changed line tinted, its changed words more", () => {
+    const now = code.replace("const line2 = 2;", "const line2 = 22;");
+    const l = diff(code, now);
+    expect(text(l).split("\n")).toEqual([
+      "@@ line 2",
+      "  const line1 = 1; // line 1",
+      "- const line2 = 2; // line 2",
+      "+ const line2 = 22; // line 2",
+      "  const line3 = 3; // line 3",
+      "  const line4 = 4; // line 4",
+      "  const line5 = 5; // line 5",
+      "▸ 15 unchanged lines",
+    ]);
+    // The head and the fold: their own colours, the fold's row saying how many lines it holds.
+    expect(row(l, "@@").spans[0]!.role).toBe("diff_head");
+    expect(row(l, "▸").spans[0]!.role).toBe("dim");
+    // A changed line: its sign in the colour, the row on its tint, the words the pair doesn't share on the stronger.
+    expect(row(l, "- ").fill).toBe("diff_del");
+    expect(row(l, "- ").spans[0]).toMatchObject({ text: "- ", role: "diff_del" });
+    expect(at(l, "- ", "2;")).toEqual({ role: "syn_number", bg: "diff_del_word" });
+    expect(at(l, "+ ", "22")).toEqual({ role: "syn_number", bg: "diff_add_word" });
+    // The rest of the line: highlighted, on the line's tint.
+    expect(at(l, "+ ", "const")).toEqual({ role: "syn_keyword", bg: "diff_add" });
+    expect(at(l, "+ ", "// line 2")).toEqual({ role: "syn_comment", bg: "diff_add" });
+    // An unchanged line: highlighted, not tinted.
+    expect(at(l, "  const line1", "const")).toEqual({ role: "syn_keyword", bg: undefined });
+    expect(row(l, "  const line1").fill).toBeUndefined();
+    // A line removed with no line like it: tinted, no word marked.
+    const gone = diff(code, code.replace("const line9 = 9; // line 9\n", ""));
+    expect(
+      row(gone, "- ")
+        .spans.slice(1)
+        .map((s) => s.bg),
+    ).toEqual(
+      row(gone, "- ")
+        .spans.slice(1)
+        .map(() => "diff_del"),
+    );
+    // A fold opened: its lines in its place.
+    const opened = diff(code, now, {}, new Set([6]));
+    expect(text(opened)).not.toContain("unchanged");
+    expect(text(opened).split("\n").at(-1)).toBe("  const line20 = 20; // line 20");
+  });
+
+  test("a note's lines coloured as source mode colours them: what a line is follows from the lines before it", () => {
+    const before = "# Sync\n\n```sh\n# a comment, not a heading\necho one\n```\n\n## Retry budget\n";
+    const now = before.replace("echo one", "echo two").replace("## Retry budget", "## Retry limit");
+    const l = diff(before, now, { language: null });
+    // In the fence: its code, though the line read alone would be a heading.
+    expect(at(l, "  # a comment", "a comment")?.role).toBe("code_block");
+    expect(at(l, "+ echo two", "two")).toEqual({ role: "code_block", bg: "diff_add_word" });
+    // A heading: its level's colour, the word changed marked.
+    expect(at(l, "+ ## Retry limit", "Retry")).toEqual({ role: "h2", bg: "diff_add" });
+    expect(at(l, "+ ## Retry limit", "limit")).toEqual({ role: "h2", bg: "diff_add_word" });
+  });
+
+  test("a line too long scrolls sideways as a code block does: whole, never cut; the heads and folds fixed, a row for its scrollbar", () => {
+    const tail = ", and a tail long enough to go past the edge of a window sixty columns wide";
+    const now = code.replace("// line 18\n", `// line 18${tail}\n`);
+    const l = diff(code, now);
+    const long = row(l, "+ ");
+    expect(text(l)).not.toContain("…");
+    expect(textOf(long)).toBe(`+ const line18 = 18; // line 18${tail}`);
+    // One block: every row of it scrolls from the gutter's end, the head and the fold kept where they are.
+    const total = stringWidth(`const line18 = 18; // line 18${tail}`);
+    expect(long.scroll).toEqual({ x: 2, w: 57, total });
+    expect(row(l, "@@").scroll).toEqual({ x: 2, w: 57, total, part: "top" });
+    expect(row(l, "▸").scroll).toEqual({ x: 2, w: 57, total, part: "top" });
+    expect(l.lines.at(-1)).toMatchObject({ spans: [], decor: true, scroll: { part: "bar" } });
+    expect(l.lines.every((x) => x.scroll)).toBe(true);
+    // A row's text from the gutter's end: where the cursor stops.
+    expect(long.text?.[0]).toBe(2);
+    // `[render] code_wrap = "wrap"`: wrapped, its rows after the first marked; none past the width.
+    const wrapped = diff(code, now, { codeScroll: false });
+    const rows = text(wrapped).split("\n");
+    const first = rows.findIndex((r) => r.startsWith("+ "));
+    expect(rows[first + 1]!.startsWith("↪ ")).toBe(true);
+    expect(rows.every((r) => stringWidth(r) <= 60)).toBe(true);
+    expect(wrapped.lines.some((x) => x.scroll)).toBe(false);
+    // Wrapping off: the rows whole, the layout as wide as the widest; the window scrolls.
+    const whole = diff(code, now, { wrap: false });
+    expect(whole.lines.some((x) => x.scroll)).toBe(false);
+    expect(whole.width).toBe(total + 3);
+    // A diff whose lines fit: no block at all.
+    expect(diff(code, code.replace("= 2;", "= 3;")).lines.some((x) => x.scroll)).toBe(false);
   });
 });

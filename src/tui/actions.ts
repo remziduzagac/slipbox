@@ -56,6 +56,7 @@ import * as R from "./replacing.ts";
 import { spellAdd, spellStep, spellSuggest } from "./spelling.ts";
 import { shellFilter, shellRun, shellStop } from "./shellrun.ts";
 import { endSnippet } from "./snippets.ts";
+import { diffEnter } from "./diffview.ts";
 import { gitPreview, gitReset, gitStep } from "./gitchanges.ts";
 import { blameHere, historyHere } from "./githistory.ts";
 import { parseBang } from "../core/shell.ts";
@@ -1348,7 +1349,7 @@ export function registerActions(app: App): void {
       // The floating scratch is a window like any (#43): esc leaves its lens first, and closes it last.
       else if (floating && a.floating?.kind === "scratch" && v.live) a.setViewMode(v, "rendered");
       else if (floating && !v.find)
-        a.closeFloating(); // the floating editor: closed, written back (3.20)
+        a.leaveFloating(); // the floating editor: closed, written back (3.20); a diff's, back where it was opened
       else if (v.live)
         a.setViewMode(v, "rendered"); // esc in normal mode closes the lens
       else if (v.find) v.find = null;
@@ -1396,6 +1397,8 @@ export function registerActions(app: App): void {
     "link.prev": (a) => cycleLink(a, -1),
     "link.follow": (a) =>
       withView(a, (v) => {
+        // A diff window's row (GIT-D2): a fold opened, a line gone to.
+        if (diffEnter(a, v)) return;
         // The code view's run of imports (24.5): folded or unfolded.
         if (a.toggleCodeFold(v)) return;
         const i = a.linkForFollow(v);

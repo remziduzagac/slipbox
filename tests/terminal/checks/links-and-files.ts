@@ -1727,6 +1727,43 @@ const GIT: Check[] = [
   },
   {
     area: "links-and-files",
+    name: "git: a diff marks a changed line's changed words, and a line too long reaches its end by scrolling sideways",
+    covers: { cases: ["git", "links/git"], commands: ["git.diff"] },
+    // Narrow enough that the agent's longest line doesn't fit the diff's window.
+    options: { home: true, startAt: "home/work/kestrel-agent-sync-retry/docs/sync.md", size: { cols: 120, rows: 40 } },
+    run: async (s) => {
+      await leader(s, "g", "d");
+      await s.see("docs/sync.md against main", 5000);
+      // The line whose numbers the agent changed: those words on the stronger tint, the rest of it on the line's.
+      await s.see("+ The numbers are `DEFAULT_POLICY` in [lines 12 to 15 of retry.ts](../src/sync/retry.ts#L12-L15).");
+      await s.see("- The numbers are `DEFAULT_POLICY` in [lines 17 to 21 of retry.ts](../src/sync/retry.ts#L17-L21).");
+      const bg = (needle: string) => s.styleOf(needle)?.bg?.toLowerCase() ?? null;
+      const roles = loadTheme("tokyo-night", "/nonexistent").theme.roles;
+      const tint = (role: Role) => roles[role].bg!.toLowerCase();
+      s.expect(bg("12 to 15") === tint("diff_add_word"), "an added word marked");
+      s.expect(bg("to 15 of retry.ts") === tint("diff_add"), "the rest of its line on the line's tint");
+      s.expect(bg("17 to 21") === tint("diff_del_word"), "a removed word marked");
+      s.expect(bg("to 21 of retry.ts") === tint("diff_del"), "the rest of its line on the line's tint");
+      // A sentence rewritten: no line like it to pair with, so nothing in it marked.
+      s.expect(bg("Each op has a retry budget") === tint("diff_add"), "a line with no pair: tinted, not marked");
+      // The agent's longest line: whole, never cut with …, its end out of sight until the rows scroll to it.
+      await s.see("the sixth failure parks it");
+      const row = () => s.screen()[s.rowOf("the sixth failure parks")] ?? "";
+      s.expect(!row().includes("…") && !row().includes("hold the whole queue."), "its end beyond the edge, not cut");
+      await s.keys("/");
+      await s.type("sixth");
+      await s.keys("enter", "$");
+      await s.see("hold the whole queue.");
+      s.expect(row().includes("+‹"), "its start scrolled out of sight, said so");
+      await s.keys("0");
+      await s.see("+ ([ADR 4](adr/0004-retry-budget.md));");
+      await s.notSee("hold the whole queue.");
+      await s.keys("escape", "escape");
+      await s.notSee("docs/sync.md against main");
+    },
+  },
+  {
+    area: "links-and-files",
     name: "git: space g m — a merge's broken links before it, each fix said; after it, git's rename says where a file went (20.21)",
     covers: { cases: ["git", "links/git"], commands: ["git.merge_review", "link.relink"] },
     options: { home: true, startAt: "home/work/kestrel/docs/architecture.md" },

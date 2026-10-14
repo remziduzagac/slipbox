@@ -77,7 +77,7 @@ import {
   writeExport,
 } from "../core/export/index.ts";
 import { listTasks, taskHolding, toggleTask } from "../core/tasks.ts";
-import { merge3, unifiedDiff } from "../core/merge.ts";
+import { merge3 } from "../core/merge.ts";
 import { compilePattern, findAll } from "../core/replace.ts";
 import { planReplace } from "../core/replace-files.ts";
 import { writeDirty } from "../core/stale.ts";
@@ -171,7 +171,8 @@ import {
 import { type GitRow, gitRows, gitViewAction } from "./gitview.ts";
 import { type GitChange, gitChanges } from "../core/gitsigns.ts";
 import { describeBreak, type MergeBreak, type MergeReview, reviewMerge } from "../core/mergereview.ts";
-import { diffLines, diffRows } from "../core/merge.ts";
+import { diffLines } from "../core/merge.ts";
+import { type DiffWindow, openDiff } from "./diffview.ts";
 import { planConvert } from "../core/convert.ts";
 import {
   type Ambiguous,
@@ -2357,7 +2358,7 @@ export class App {
     );
   }
 
-  /** A diff, `before` to `now`, a row a line, coloured; enter goes to the line in `rel`; esc: `back`. */
+  /** A diff, `before` to `now`, in the diff window (GIT-D2); enter goes to the line in `rel`; esc: `back`. */
   showLineDiff(
     before: string,
     now: string,
@@ -2366,23 +2367,16 @@ export class App {
     none = "no differences",
     back?: () => void,
   ): void {
-    const rows = diffRows(before, now);
-    const role: Record<string, Role> = { "@@": "diff_head", "+": "diff_add", "-": "diff_del" };
-    this.openList({
+    openDiff(this, {
+      before,
+      now,
+      path: rel,
       title,
-      filterable: false,
-      items: rows.length
-        ? rows.map((r) => ({
-            label: r.kind === "@@" ? `@@ ${r.text}` : `${r.kind} ${sanitize(r.text.replace(/\t/g, "  "))}`,
-            role: role[r.kind],
-            data: r,
-          }))
-        : [{ label: none, data: null }],
-      accept: (item) => {
-        const r = item.data as { line: number } | null;
-        if (r && existsSync(join(this.loc.root, rel))) this.openAt(rel, r.line);
+      none,
+      back,
+      go: (line) => {
+        if (existsSync(join(this.loc.root, rel))) this.openAt(rel, line);
       },
-      ...(back ? { cancel: back } : {}),
     });
   }
 
@@ -2814,6 +2808,7 @@ export class App {
   /** Whether a file has a rendered view: markdown notes do, data files while they parse
    *  (16.11–16.14), text files never. */
   canRender(buf: NoteBuffer): boolean {
+    if (buf.drawn) return true; // a layout of its own (a diff)
     if (buf.kind.group === "data") return !buf.parsed.error;
     return buf.kind.group === "note" || this.isCodeDocument(buf); // every note format has a reader (16.2)
   }
@@ -3091,6 +3086,8 @@ export class App {
     // (its reading position stays for the real layout, a moment later).
     if (!view.source && !view.live && view.buf.parseAhead())
       return this.readingLayout(view.buf, this.textWidth(paneWidth, gutter));
+    // A layout of its own (a diff, GIT-D2): drawn whatever the window's mode, at the whole text column less a column.
+    const drawn = view.buf.drawn;
     // A data file that stopped parsing (16.14) goes to source mode, the error said — when insert
     // mode ends, never mid-typing (an open quote is normal while a value is typed).
     if (!view.source && !view.insert && !this.canRender(view.buf)) {
@@ -3101,31 +3098,35 @@ export class App {
     // Source mode: the whole text column (no readable width), less one for a cursor after a full
     // row's end; unwrapped, as long as the longest line.
     const code = !view.source && !view.live && this.isCodeDocument(view.buf);
-    const width = view.source
-      ? Math.max(10, paneWidth - gutter - 2)
-      : this.ui.wrap
-        ? this.textWidth(paneWidth, gutter)
-        : code
-          ? layoutWidth(paneWidth - gutter, this.config.render.inset, NOWRAP_PROBE)
-          : this.nowrapWidth(view, paneWidth, gutter);
+    const width = drawn
+      ? Math.max(10, paneWidth - gutter - 1)
+      : view.source
+        ? Math.max(10, paneWidth - gutter - 2)
+        : this.ui.wrap
+          ? this.textWidth(paneWidth, gutter)
+          : code
+            ? layoutWidth(paneWidth - gutter, this.config.render.inset, NOWRAP_PROBE)
+            : this.nowrapWidth(view, paneWidth, gutter);
     if (view.source || this.isCodeDocument(view.buf)) this.ensureSyntax(view.buf);
     this.ensureLint(view.buf);
     this.ensureLinters(view.buf);
     this.ensureServers(view.buf);
-    const layout = view.source
-      ? view.buf.sourceLayout(width, this.ui.wrap, this.glyphs)
-      : view.live
-        ? this.liveLayout(view, width)
-        : code
-          ? view.buf.codeLayout(width, this.ui.wrap, this.glyphs, this.ui.code_cells, this.cellProblems(view))
-          : view.buf.layout(
-              width,
-              this.glyphs,
-              this.ui.urls,
-              view.buf.rel ? this.graph : null,
-              this.picturesFor(view.buf),
-              this.codeScroll(),
-            );
+    const layout = drawn
+      ? drawn(width, { glyphs: this.glyphs, wrap: this.ui.wrap, codeScroll: this.codeScroll() })
+      : view.source
+        ? view.buf.sourceLayout(width, this.ui.wrap, this.glyphs)
+        : view.live
+          ? this.liveLayout(view, width)
+          : code
+            ? view.buf.codeLayout(width, this.ui.wrap, this.glyphs, this.ui.code_cells, this.cellProblems(view))
+            : view.buf.layout(
+                width,
+                this.glyphs,
+                this.ui.urls,
+                view.buf.rel ? this.graph : null,
+                this.picturesFor(view.buf),
+                this.codeScroll(),
+              );
     const block = view.live && view.liveBase ? `${view.liveBase.active[0]}-${view.liveBase.active[1]}` : "";
     const key = `${view.source ? "s" : view.live ? "l" : "r"}${block}:${width}:${this.glyphs.mode}:${this.ui.urls}:${layout.lines.length}:${view.buf.version}:${view.height}`;
     if (view.layoutKey !== key) {
@@ -3428,6 +3429,8 @@ export class App {
   /** The gutter's width for a view: the problems bar's or the line numbers', then a column of the page's between it
    *  and the text (0 when both are off). */
   gutterWidth(view: View): number {
+    // A layout of its own (a diff) has no lines of a file to number or sign: its rows say what they are.
+    if (view.buf.drawn) return 0;
     const w = this.barWidth(view) + (this.ui.line_numbers ? String(view.buf.lineStarts().length).length + 1 : 0);
     // Its last column has the git signs (26.1); with nothing else in it, it's theirs alone, once the file has had any.
     // Before the gutter (`[git] signs_at`, #22) they take the window's margin, there with or without one.
@@ -3630,6 +3633,7 @@ export class App {
   setViewMode(view: View, mode: "rendered" | "source" | "live"): void {
     const now = view.source ? "source" : view.live ? "live" : "rendered";
     if (now === mode) return;
+    if (view.buf.drawn) return this.message("info", "a diff is drawn one way");
     if (mode !== "source" && !this.canRender(view.buf)) {
       const why =
         view.buf.kind.group === "data"
@@ -3887,7 +3891,7 @@ export class App {
 
   /** `:q`: this window, or its tab; the very last one quits. */
   closeOrQuit(): void {
-    if (this.floating) return void this.closeFloating();
+    if (this.floating) return void this.leaveFloating();
     const t = this.tab;
     if (!t || (t.views.length <= 1 && this.tabs.length <= 1)) return this.requestQuit();
     this.closeWindow();
@@ -4229,7 +4233,7 @@ export class App {
   }
 
   closeWindow(): void {
-    if (this.floating) return void this.closeFloating();
+    if (this.floating) return void this.leaveFloating();
     const t = this.tab;
     if (!t) return;
     if (t.views.length > 1) {
@@ -5418,6 +5422,7 @@ export class App {
         | { kind: "hover" }
         | { kind: "commit"; amend: boolean; from: Region }
         | { kind: "scratch" }
+        | { kind: "diff"; diff: DiffWindow }
       ) & { view: View; title: string })
     | null = null;
 
@@ -5559,6 +5564,13 @@ export class App {
       this.commitDone(f.from);
     }
     return true;
+  }
+
+  /** The floating window closed by you (`esc`, `q`, `:q`): a diff's goes back to what it was opened from (GIT-D2). */
+  leaveFloating(): void {
+    const f = this.floating;
+    if (!this.closeFloating()) return;
+    if (f?.kind === "diff") f.diff.back?.();
   }
 
   /**
@@ -8896,7 +8908,10 @@ export class App {
       this.activeTab = (this.activeTab + dir + this.tabs.length) % this.tabs.length;
       return;
     }
-    const pane = g.panes.find((p) => inRect(p, ev.x, ev.y));
+    // Over the floating window, it scrolls: never the window or the side pane under it.
+    const floating = this.floating?.view;
+    const over = floating ? g.panes.find((p) => p.view === floating && inRect(p, ev.x, ev.y)) : undefined;
+    const pane = over ?? g.panes.find((p) => inRect(p, ev.x, ev.y));
     // Sideways (a horizontal wheel or trackpad), when wrapping is off: the view moves, not the cursor.
     const side = ev.scroll?.direction === "left" ? -1 : ev.scroll?.direction === "right" ? 1 : 0;
     // Over a code block that scrolls on its own, sideways — or shift with the wheel, up for left — the block moves, 6
@@ -8913,8 +8928,9 @@ export class App {
     }
     if (side) {
       // Side panes first (they lie over the note on narrow screens); drawing clamps the offset.
-      const sidePane =
-        g.outlinePane && inRect(g.outlinePane, ev.x, ev.y)
+      const sidePane = over
+        ? null
+        : g.outlinePane && inRect(g.outlinePane, ev.x, ev.y)
           ? this.outline
           : g.sidebarPane && inRect(g.sidebarPane, ev.x, ev.y)
             ? this.sidebar
@@ -8933,7 +8949,7 @@ export class App {
       return;
     }
     // The Problems panel: its list scrolls, the selection moving only to stay in view (drawing keeps it there).
-    if (g.problems && inRect(g.problems, ev.x, ev.y)) {
+    if (!over && g.problems && inRect(g.problems, ev.x, ev.y)) {
       const p = this.problemsPanel;
       const s = p.tab === "file" ? p.file : p.all;
       const shown = Math.max(1, g.problemsPage ?? 1);
@@ -8943,10 +8959,10 @@ export class App {
       return;
     }
     // Side panes first: on narrow screens they lie over the note.
-    if (g.outlinePane && inRect(g.outlinePane, ev.x, ev.y)) {
+    if (!over && g.outlinePane && inRect(g.outlinePane, ev.x, ev.y)) {
       this.outline.scroll = Math.max(0, this.outline.scroll + dir * n);
       this.outline.pinned = true;
-    } else if (g.sidebarPane && inRect(g.sidebarPane, ev.x, ev.y)) {
+    } else if (!over && g.sidebarPane && inRect(g.sidebarPane, ev.x, ev.y)) {
       this.sidebar.scroll = Math.max(0, this.sidebar.scroll + dir * n);
       this.sidebar.pinned = true;
     } else if (pane) {
@@ -10493,7 +10509,7 @@ export class App {
     );
   }
 
-  /** Yours → theirs as a read-only list; closing it goes back to where it came from. */
+  /** Yours → theirs in the diff window (GIT-D2); closing it, or enter, goes back to where it came from. */
   showDiff(buf: NoteBuffer, back: () => void, theirs?: string): void {
     let disk = theirs;
     if (disk === undefined) {
@@ -10503,15 +10519,12 @@ export class App {
         return this.message("warn", `${buf.key} is gone from disk`);
       }
     }
-    const lines = unifiedDiff(buf.source, disk);
-    this.openList({
+    openDiff(this, {
+      before: buf.source,
+      now: disk,
+      path: buf.rel ?? buf.abs,
       title: `Diff — yours → theirs (${this.displayName(buf)})`,
-      filterable: false,
-      items: lines.length
-        ? lines.map((l) => ({ label: sanitize(l), data: null }))
-        : [{ label: "no differences", data: null }],
-      accept: () => back(),
-      cancel: () => back(),
+      back,
     });
   }
 

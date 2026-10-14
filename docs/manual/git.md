@@ -249,7 +249,8 @@ The list follows the file back through renames. A commit from before a rename sa
 `enter` on a commit offers two things:
 
 - **Read it as it was**: the file at that commit, read-only, in a floating window. A note is rendered.
-- **Its diff to the text now**: each line removed or added since, as a list. `enter` on a line goes there.
+- **Its diff to the text now**: each line removed or added since, drawn as [a diff](#how-a-diff-is-drawn). `enter`
+  on a line goes there.
 
 ## Branches
 
@@ -329,9 +330,34 @@ In a repository where the vault is a folder inside it, files outside that folder
 `space g d` (`:diff`) shows the diff of the file on screen against the base. It uses the file as it is now, unsaved
 changes included.
 
-- Each group of changes is under `@@ line N`.
-- Removed lines are red, and added lines green.
-- `enter` on a line goes to it in the file.
+It's drawn as the next section says.
+
+### How a diff is drawn
+
+Every diff slipbox shows is drawn the same way: `space g d`, a file's diff from `space g c`, a commit's diff to now
+from `space g h`, and the differences the conflict prompt shows ([Editing](editing.md)). It opens in a floating window
+as wide as the screen allows.
+
+- Each line is a row, `-` before a removed line and `+` before an added one. Its text is highlighted as in source
+  mode: a note's Markdown, or code by its file's language.
+- A removed or added line sits on a tint of red or green.
+- A changed line keeps its unchanged words plain and marks the words that changed on a stronger tint. slipbox pairs
+  each removed line with the added line most like it and compares the two word by word. A line less than half like
+  any other is only removed, or only added, with no words marked.
+- Each group of changes is under `@@ line N`, with up to three unchanged lines around it.
+- The unchanged lines between groups, and before and after them, fold to one row that says how many there are:
+  `▸ 12 unchanged lines`. `enter` on it opens it.
+- A line too long for the window is never cut. The rows scroll sideways, as a [code block](reading.md#code-blocks)
+  too wide does: move the cursor along the line (`$`, `0`, `w`), or use a sideways wheel or the wheel with `shift`
+  held. A `‹` or `›` at an edge says the line goes on that way. With `render.code_wrap = "wrap"` the long lines wrap
+  instead, and with wrapping off the whole window scrolls sideways.
+
+`enter` on a line goes to it in the file. `esc` or `q` closes the diff, and goes back to the list or the question it
+came from. The conflict prompt's diff goes back to the prompt on `enter` too.
+
+In the terminal's theme and without colour, the changed words are bold and underlined instead of tinted.
+`[colors]` sets the tints: `diff_add` and `diff_del` for the lines, `diff_add_word` and `diff_del_word` for the words
+([Configuration](configuration.md)).
 
 ### Another base
 

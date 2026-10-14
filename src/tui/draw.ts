@@ -481,7 +481,8 @@ function drawFloating(app: App, c: Canvas, mainY: number, mainH: number, geo: Ge
   const theme = app.theme;
   const W = c.width;
   const scratch = f.kind === "scratch";
-  const w = Math.max(24, Math.min(100, scratch ? Math.floor((W * 3) / 4) : W - 8));
+  // A diff (GIT-D2) as wide as there's room for: its lines are a file's, not text to read at a measure.
+  const w = Math.max(24, f.kind === "diff" ? W - 8 : Math.min(100, scratch ? Math.floor((W * 3) / 4) : W - 8));
   const h = scratch
     ? Math.max(6, Math.min(mainH - 1, Math.floor((mainH * 3) / 4)))
     : Math.max(6, Math.min(mainH - 1, f.view.buf.lineStarts().length + 5));
@@ -502,11 +503,13 @@ function drawFloating(app: App, c: Canvas, mainY: number, mainH: number, geo: Ge
   const hint =
     f.kind === "hover"
       ? " esc · q closes "
-      : f.kind === "commit"
-        ? ` ctrl+s ${f.amend ? "amends" : "commits"} · esc · q leaves it `
-        : f.kind === "scratch"
-          ? " esc · q closes, saved "
-          : ` esc · q closes, writing back · ctrl+s writes `;
+      : f.kind === "diff"
+        ? ` ${f.diff.go ? "enter goes to the line · " : ""}esc · q ${f.diff.back ? "goes back" : "closes"} `
+        : f.kind === "commit"
+          ? ` ctrl+s ${f.amend ? "amends" : "commits"} · esc · q leaves it `
+          : f.kind === "scratch"
+            ? " esc · q closes, saved "
+            : ` esc · q closes, writing back · ctrl+s writes `;
   const bottom = `${b.bl}${b.h.repeat(Math.max(0, w - 2 - stringWidth(hint)))}`;
   drawText(c, x, y + h - 1, bottom, border);
   drawText(c, x + stringWidth(bottom), y + h - 1, truncate(hint, w - stringWidth(bottom) - 1) + b.br, dim);
@@ -1291,7 +1294,8 @@ function drawPane(
   const problems = app.problemsShown(view);
   const onLine = problemLines(problems);
   const barW = app.barWidth(view);
-  const numbers = app.ui.line_numbers;
+  // A layout of its own (a diff) has no gutter: no lines of a file to number.
+  const numbers = app.ui.line_numbers && !view.buf.drawn;
   const relativeNumbers = app.config.ui.relative_numbers === "lens";
   // Where each problem starts: the bar's sign there, or — beside line numbers, no bar — the number clicked.
   const barAt = barW || numbers ? barRows(layout, problems) : null;
