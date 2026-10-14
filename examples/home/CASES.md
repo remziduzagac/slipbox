@@ -1550,6 +1550,8 @@ build (`scripts/build-home.ts`), not kept as they are. Each file's purpose and t
   (git.changes 5.13)
 - space g d per-note diff with unsaved changes, @@ headers, enter on line goes — `.build/kestrel.toml`,
   `work/kestrel/docs/sync.md` (git.diff)
+- a diff's changed words marked in a changed line, lines highlighted, unchanged stretches folded, the agent's longest
+  line scrolled sideways to its end, never cut — `.build/kestrel.toml`, `work/kestrel/docs/sync.md` (git.diff GIT-D2)
 - worktrees list and open note there; merge-review list with causes and fixes, red when no fix — `.build/kestrel.toml`,
   `work/kestrel/docs/sync.md` (git.worktrees 5.14, git.merge\_review 20.21)
 - after merge/pull links broken by git renames get 'where it went' in Problems and follow —
