@@ -70,6 +70,41 @@ A worktree kept elsewhere chosen: the view zooms out to the common parent, `~`, 
           ▸ docs/  ▸ src/
 ```
 
+## Symlinks (settled 2026-10-14)
+
+A link is followed only when the user says so; once followed, it still can't be used to write out of a vault, to show
+an agent what wasn't allowed, or to lead somewhere other than what was allowed.
+
+- **Not followed by default.** A symlinked folder (or file) leading out of its vault, or out of home, is shown as a
+  link and not opened: `▸ data/   → /mnt/disk/data   not followed`.
+- **Asked the first time it's opened:** follow it (part of the vault or home: read, indexed, searchable), just look
+  (read-only, this once, nothing indexed), or no. The answer is kept for that link and that target: if the link later
+  points elsewhere (a pull changed it, a disk is mounted elsewhere), it's asked again.
+- **Trust is kept in slipbox's state, never in the vault**: a cloned repository can't bring its links trusted.
+- **What a yes allows:** in home, reading, the index and writing through it; in a vault, reading and the index, never a
+  write to a target outside the vault, trusted or not (a link a pull can change could lead a save to `~/.bashrc`).
+- **Agents:** what's followed is in search, the context bundle and the CLI's answers. The prompt says so when the
+  target is hidden (`~/.ssh`, `~/.aws`) or outside home; the CLI refuses any link not trusted.
+- **Slow or big targets** (a network share, an archive): a followed link is read in the background, a disk that
+  doesn't answer is given up on and said so; the watcher checks such a target less often.
+- **Unchanged:** a vault is known by its real path, so one reached through two links is one vault, one index, one set
+  of tabs; a file reached by two names is one tab, indexed once; loops, broken links, devices and pipes are skipped;
+  the watcher decides as the walk does.
+- **Shown where reached:** the view, the breadcrumb and the zoom's common parent use the path as reached
+  (`~/projects/kestrel`), with the target dimmed beside a link (`→ /mnt/disk/kestrel`); belonging and identity use the
+  real path.
+
+Two refinements of the assistant's, for the user to confirm:
+
+- **Only links leading out ask.** A link to elsewhere in the same vault, or within home (the links `stow` makes,
+  `~/.zshrc → ~/dotfiles/zsh/.zshrc`), is a second name for what's there: shown once, no question, never indexed twice.
+- **No-vault doesn't ask.** With no index and nothing exposed, browsing `/etc` follows its links for reading.
+
+Today's rules, as they change: a symlinked folder is never followed → not until allowed; a symlinked file is kept
+only inside the root → inside kept, out asked; writes through a link only inside the root (D220) → the same for
+vaults, home may write through links it trusted; the CLI refuses reads through a link out of the root → refuses any
+link not trusted.
+
 ## Proposed, not yet agreed
 
 - **Looking never switches.** Following a link to a file of another vault, or of no-vault, opens a peek (a floating
@@ -85,9 +120,4 @@ tree); the named folders' list opening when started in a plain folder; `:pin-roo
 
 ## Open
 
-- **Symlinks**, next: what a vault, home, no-vault and the view do with a symlinked file or folder, a link leading to
-  another disk among them. Today's rules: a symlinked folder is never walked; a symlinked file is in a vault's index
-  only when its real path is inside the vault and isn't already walked; a write goes through to its target only when
-  the target is inside the vault (D220); a vault is known by its real path, so one reached through a symlink is the
-  same vault, with the same state.
 - How the git panel (GIT) shows a vault holding other vaults, such as home, once this is settled.
