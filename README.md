@@ -183,6 +183,12 @@ bun run test:terminal  # the terminal tests: slipbox itself, driven by keys in h
 [blueprint/design/testing.md](blueprint/design/testing.md) describes the test strategy, the demo folder
 (`examples/vault`) and the terminal tests.
 
+## Thanks
+
+slipbox's rendering was measured against [leaf](https://github.com/RivoLink/leaf), RivoLink's lightweight Markdown
+reader for the terminal: it set the bar for how Markdown should look there. If reading is all you need, leaf is the
+one to use.
+
 ## Licence
 
 slipbox is licensed under the [Apache License 2.0](LICENSE). Each release carries the licence and `NOTICES.txt`.
