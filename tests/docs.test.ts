@@ -24,13 +24,13 @@ import { placeholderRow } from "../src/tui/placeholders.ts";
 const TOP = join(import.meta.dir, "..");
 const DOCS = join(TOP, "docs");
 
-/** The user docs: the map, the guides, the manual; not whatever else lies in docs/. */
+/** The user docs: the map, the guides, the manual, the agent guide; not whatever else lies in docs/. */
 function userDocs(): string[] {
   const chapters = (dir: string) =>
     readdirSync(join(DOCS, dir))
       .filter((f) => f.endsWith(".md"))
       .map((f) => join(DOCS, dir, f));
-  return [join(DOCS, "README.md"), ...chapters("guides"), ...chapters("manual")];
+  return [join(DOCS, "README.md"), ...chapters("guides"), ...chapters("manual"), join(DOCS, "agent-guide.md")];
 }
 
 const read = (file: string) => readFileSync(file, "utf8");

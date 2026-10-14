@@ -22,6 +22,7 @@
     "check:docs": "bun scripts/check-docs.ts",
     "check:actions": "zizmor .github && actionlint",
     "audit": "bun scripts/audit.ts",
+    "site": "bun install --cwd site --frozen-lockfile && bun run --cwd site build",
     "lint": "biome ci --error-on-warnings .",
     "format": "biome format --write .",
     "check": "bun run typecheck && bun run check:boundary && bun run check:deps && bun run lint && bun run check:actions && bun run check:docs && bun run test",

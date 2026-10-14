@@ -3,8 +3,10 @@ name: pages
 # GR-D14: the GitHub Pages site, https://<owner>.github.io/<name>/, which installs slipbox at an address that doesn't
 # change: `install.sh`, the bootstrap (`scripts/bootstrap.ts`), and the channels it reads, `stable` and `preview`, each
 # one line, `<tag> <SHA-256 of that release's install.sh>` — the highest stable release, the newest preview; none for
-# a channel with no release (`scripts/release.ts site`). Deployed when a release is published (by a person: a release
-# CI publishes starts no workflow), by preview.yml once a preview is, when the bootstrap changes on main, and by hand.
+# a channel with no release (`scripts/release.ts site`); and the docs at `docs/`, the site/ Starlight site built from
+# docs/ (DS), where the site's index sends a visitor. Deployed when a release is published (by a person: a release CI
+# publishes starts no workflow), by preview.yml once a preview is, when the bootstrap, the docs or the site change on
+# main, and by hand.
 # Every action pinned by its commit, a week old when taken (14.10); values reach the shell through env, never inline.
 on:
   workflow_call:
@@ -14,6 +16,8 @@ on:
     branches: [main]
     paths:
       - "scripts/bootstrap*"
+      - "docs/**"
+      - "site/**"
       - ".github/workflows/pages.yml"
   workflow_dispatch:
 
@@ -27,8 +31,9 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  # The site, from main's bootstrap whichever ref started the run, and the releases as they are now. Only slipbox's
-  # own scripts run here, no dependency's: nothing is installed.
+  # The site, from main's bootstrap whichever ref started the run, and the releases as they are now; the docs under
+  # docs/, built by the site's own packages (site/package.json, installed under site/bunfig.toml's gates: no install
+  # script runs). No other dependency is installed.
   site:
     # Never in a fork: its Pages isn't this one's.
     if: ${{ !github.event.repository.fork }}
@@ -53,6 +58,10 @@ jobs:
           mkdir -p _site
           bun --no-install scripts/bootstrap.ts "$GITHUB_REPOSITORY" _site/install.sh
           bun --no-install scripts/release.ts site --repo "$GITHUB_REPOSITORY" --out _site
+      - name: docs
+        run: |
+          bun run site
+          cp -R site/dist _site/docs
       - uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9 # v5.0.0
         with:
           path: _site

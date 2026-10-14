@@ -487,8 +487,9 @@ export async function channelFiles(
   return { stable: await line(stable), preview: await line(preview) };
 }
 
-/** The Pages site's own files written into `out`, beside the bootstrap: the channel files — none for a channel with
- *  no release — and `index.html`, which sends a visitor to the repository. Their paths. */
+/** The Pages site's own files written into `out`, beside the bootstrap and the docs: the channel files — none for a
+ *  channel with no release — and `index.html`, which sends a visitor to the docs (`docs/`, the site the pages workflow
+ *  builds from site/). Their paths. */
 export function writeSite(out: string, repo: string, channels: { stable: string | null; preview: string | null }) {
   if (repoOf(repo) !== repo) throw new Error(`not a repository: ${repo}`);
   mkdirSync(out, { recursive: true });
@@ -499,10 +500,9 @@ export function writeSite(out: string, repo: string, channels: { stable: string 
     writeFileSync(join(out, name), text);
     written.push(join(out, name));
   }
-  const home = `https://github.com/${repo}`;
   writeFileSync(
     join(out, "index.html"),
-    `<!doctype html>\n<meta charset="utf-8">\n<title>slipbox</title>\n<meta http-equiv="refresh" content="0; url=${home}">\n<p><a href="${home}">slipbox</a> is on GitHub.</p>\n`,
+    `<!doctype html>\n<meta charset="utf-8">\n<title>slipbox</title>\n<meta http-equiv="refresh" content="0; url=docs/">\n<p><a href="docs/">slipbox's documentation</a>, and <a href="https://github.com/${repo}">its repository</a>.</p>\n`,
   );
   return [...written, join(out, "index.html")];
 }

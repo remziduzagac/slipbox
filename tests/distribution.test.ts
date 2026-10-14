@@ -28,6 +28,7 @@ import {
   repoLink,
   type Sbom,
   sbom,
+  siteProblems,
   specProblems,
   workflowProblems,
   workflowShapeProblems,
@@ -145,6 +146,17 @@ describe("the supply chain's gates (14.10)", () => {
   test("this repository passes them all: exact versions, the install gates, licences, actions pinned", () => {
     expect(checkDeps(ROOT).problems).toEqual([]);
   });
+  test("the docs' site holds to them too: its versions exact, its install gated (DS)", () => {
+    const root = mkdtempSync(join(tmpdir(), "slipbox-site-"));
+    expect(siteProblems(root)).toEqual([]); // no site: nothing to say
+    mkdirSync(join(root, "site"));
+    writeFileSync(join(root, "site", "package.json"), JSON.stringify({ dependencies: { astro: "^7.3.5" } }));
+    writeFileSync(join(root, "site", "bunfig.toml"), "[install]\nignoreScripts = true\nexact = true\n");
+    expect(siteProblems(root)).toEqual([
+      'site/package.json: dependencies: astro is "^7.3.5", not an exact version',
+      "site/bunfig.toml: [install] minimumReleaseAge = 604800 or more, a week",
+    ]);
+  });
   test("slipbox's own licence: LICENSE is Apache-2.0's text, and package.json says so", () => {
     const text = readFileSync(join(ROOT, "LICENSE"), "utf8");
     expect(text).toContain("Apache License\n                           Version 2.0, January 2004");
@@ -250,13 +262,19 @@ describe("the supply chain's gates (14.10)", () => {
     const config = Bun.YAML.parse(readFileSync(join(ROOT, ".github", "dependabot.yml"), "utf8")) as {
       updates: {
         "package-ecosystem": string;
+        directory: string;
         schedule: { interval: string };
         cooldown: { "default-days": number };
         groups: Record<string, { patterns: string[] }>;
       }[];
     };
     const age = Number(/minimumReleaseAge\s*=\s*(\d+)/.exec(readFileSync(join(ROOT, "bunfig.toml"), "utf8"))?.[1]);
-    expect(config.updates.map((u) => u["package-ecosystem"]).sort()).toEqual(["bun", "github-actions"]);
+    // Bun's packages twice: slipbox's own, and the docs' site's (site/, DS).
+    expect(config.updates.map((u) => u["package-ecosystem"]).sort()).toEqual(["bun", "bun", "github-actions"]);
+    expect(config.updates.filter((u) => u["package-ecosystem"] === "bun").map((u) => u.directory)).toEqual([
+      "/",
+      "/site",
+    ]);
     for (const u of config.updates) {
       expect(u.schedule.interval).toBe("monthly");
       expect(u.cooldown["default-days"] * 86400).toBe(age);

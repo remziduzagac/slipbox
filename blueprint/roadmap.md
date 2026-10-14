@@ -619,6 +619,14 @@ was added 2026-10-09 at the user's asking.*
   Bun's pseudo-terminal and a headless xterm, in parallel and in CI on Linux and macOS; one check per feature, tied to
   the reference set's cases, coverage checked; content from the sample folders only.
 
+## The documentation site
+
+*Not a phase. Accepted 2026-10-14.*
+
+- [ ] **[The documentation site, and docs a newcomer can follow](workstreams/docs-site/README.md)** (DS): the docs
+  as a Starlight site on GitHub Pages, gathered from `docs/`; a front door with a path for each reader, a quick
+  start, the concepts and an agent guide; every page's prose in plain sentences, the reference chapters' too.
+
 ## Later
 
 Agreed, but not scheduled.

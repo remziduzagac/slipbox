@@ -9,6 +9,8 @@ The format is [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.1.0/); wh
 ### Added
 
 - Homebrew, on macOS and Linux: `brew install remziduzagac/tap/slipbox`, and `brew upgrade` after.
+- The documentation is a website, with search: <https://remziduzagac.github.io/slipbox/docs/>. It has a quick start, a
+  page of concepts, and a guide your coding agent can read to walk you through slipbox.
 - `space s r` opens the scratch in the window on the right, and `capture.open_in = "right"` (or Scratch opens in the
   UI settings) makes that where it always opens.
 

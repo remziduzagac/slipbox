@@ -5,7 +5,20 @@
   "vcs": { "enabled": true, "clientKind": "git", "useIgnoreFile": true },
   "files": {
     // The examples are other projects' files, wrong on purpose where they test slipbox; the fixtures too.
-    "includes": ["src/**", "tests/**", "scripts/**", "*.json", "*.jsonc", "!tests/fixtures", "!!examples"]
+    // The docs' site: its own scripts and config, not what its build gathers or makes.
+    "includes": [
+      "src/**",
+      "tests/**",
+      "scripts/**",
+      "site/scripts/**",
+      "site/astro.config.mjs",
+      "site/src/content.config.ts",
+      "site/package.json",
+      "*.json",
+      "*.jsonc",
+      "!tests/fixtures",
+      "!!examples"
+    ]
   },
   "formatter": {
     "enabled": true,
