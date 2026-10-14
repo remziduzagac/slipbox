@@ -35,6 +35,11 @@ for a person, and a command line for agents and scripts, both over the same plai
 renderer, input, shutdown) touch OpenTUI; everything else is driven in tests through a text canvas, with no terminal.
 `bun run check:boundary` (`scripts/check-boundary.ts`) fails on any import that crosses.
 
+**The size of a file.** No source file is over 1,500 lines (D235): a feature lives in a module of its own, and `App`
+keeps the shared state and the wiring. `bun run check:size` (`scripts/check-size.ts`) fails on a file past the limit;
+the few past it today (`app.ts`, `draw.ts`, `cli.ts`, `actions.ts`, `graph.ts`, `rename.ts`, `render.ts`) are capped and
+may only shrink, until they're split.
+
 ## Where things live
 
 | Path | What |

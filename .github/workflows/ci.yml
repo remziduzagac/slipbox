@@ -44,6 +44,9 @@ jobs:
       # GR-D7: Biome's format and lint, warnings failing.
       - name: biome
         run: bun run lint
+      # D235: no source file over 1,500 lines; the few past it capped, only shrinking.
+      - name: file sizes
+        run: bun run check:size
       # GR-D9: zizmor and actionlint over the workflows and Dependabot's config; zizmor's online audits (an impostor
       # commit, a version comment that lies, an action with a known vulnerability) with this job's token.
       - name: workflows
