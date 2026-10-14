@@ -625,7 +625,7 @@ was added 2026-10-09 at the user's asking.*
 
 - [ ] **[The documentation site, and docs a newcomer can follow](workstreams/docs-site/README.md)** (DS): the docs
   as a Starlight site on GitHub Pages, gathered from `docs/`; a front door with a path for each reader, a quick
-  start, the concepts and an agent guide; the prose in plain sentences; the reference lists generated from the code.
+  start, the concepts and an agent guide; every page's prose in plain sentences, the reference chapters' too.
 
 ## Later
 
