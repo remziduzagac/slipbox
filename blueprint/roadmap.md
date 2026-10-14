@@ -637,6 +637,16 @@ was added 2026-10-09 at the user's asking.*
   links followed only when allowed; another vault's file in a peek; busy folders listed, a row's marks at its right;
   the git panel following the vault.
 
+## Git: reviewing, diffing and merging
+
+*Not a phase. Accepted 2026-10-15, after VV, whose vaults it follows.*
+
+- [ ] **[Reviewing, diffing and merging what an agent changed](workstreams/git-review/README.md)** (GIT): an agent's
+  change reviewed a hunk at a time, kept, reverted or noted; the git panel by mouse, with the branch's changes, the
+  branches and their worktrees, each against its own base; fetch, pull, push and stash (`26.6`); diffs with their
+  changed words, a note's rendered, code's scrolling sideways and side by side; a merge screen, with pulling where both
+  sides moved and rebasing onto the base.
+
 ## Later
 
 Agreed, but not scheduled.
