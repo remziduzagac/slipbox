@@ -49,6 +49,7 @@ A click puts the cursor where you click. The wheel scrolls.
 | Select | `shift` with a key that moves, or a drag |
 | Select a word / a row | A double-click / a triple-click |
 | Copy / cut / paste | `ctrl+c` / `ctrl+x` / `ctrl+v` |
+| Delete the selection | `backspace` or `delete`, in the lens or source mode |
 | Clear the selection | `esc` |
 
 A drag, a double-click and a triple-click also copy what they select, as a terminal does.
