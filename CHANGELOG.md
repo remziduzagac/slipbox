@@ -6,10 +6,22 @@ The format is [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.1.0/); wh
 
 ## [Unreleased]
 
+### Added
+
+- Keys you already know, a page for those who don't use vim: the arrows and the shortcuts of other editors that slipbox
+  has, the four keys that are new, and where slipbox's keys differ. The README, the quick start and getting started
+  give the familiar key first.
+
 ### Changed
 
 - In source mode and the lens, `backspace` and `delete` delete a selection, as `d` and `x` do, without typing first.
 - Where a selection can't be edited, the message names the lens (`space n l`) and source mode (`ctrl+k`).
+
+### Fixed
+
+- A file created, renamed or moved while slipbox started watching its folder could stay missing until a reindex: on
+  macOS, at startup or whenever a folder was added, and on any system between the first scan and the watch. A folder
+  that changed without word from the watcher is now looked at again.
 
 ## [0.3.0] - 2026-10-14
 
