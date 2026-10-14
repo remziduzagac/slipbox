@@ -131,28 +131,31 @@ This changes D50: a link into another vault peeks instead of switching.
   `target`, `build`, `dist`, `.next`, `vendor`, `Pods`, `DerivedData`, `.gradle`, `.tox`, caches; in a vault, what its
   `.gitignore` leaves out, as today; in home, its skip list. They're listed, opened and browsed like any folder; nothing
   in them is indexed, searched or linked to by name. Today the walk leaves them out of the explorer too.
-- **A row can carry several marks**, one per thing it tells, so a folder's state reads at a glance. Proposed set (each
-  in the nerd, unicode and ascii glyphs, as every mark is):
+- **A row can carry several marks**, one per thing it tells, so a folder's state reads at a glance. No emoji: each mark
+  is one column wide in every terminal, in the nerd, unicode and ascii glyphs as every mark is.
+- **The index's state**, a family (the user's: indexed has its own mark too):
 
-| Mark | Says |
-| --- | --- |
-| `◈` | a vault; highlighted, the current vault |
-| `⎇ branch` | a worktree, and its branch |
-| `→ target` | a link, where it points; `not followed` until allowed |
-| `⊘` | not indexed: a busy folder, the skip list, `.gitignore` |
-| `◌` | being indexed now |
-| `🔒` | can't be read |
-| `⚠` | a broken link, or a disk that doesn't answer |
+| State | nerd / unicode / ascii | Says |
+| --- | --- | --- |
+| indexed | `●` / `●` / `*` | read into its vault's index; drawn dimmed, since most folders are |
+| indexing | `◐` / `◐` / `~` | being read now |
+| not indexed | `⊘` / `⊘` / `-` | skipped: a busy folder, the skip list, `.gitignore`, a link not followed |
+| can't read | a lock / `⚿` / `#` | no permission; `⚿` (U+26BF, a squared key) isn't an emoji |
+| a problem | `⚠` / `⚠` / `!` | a broken link, a disk that doesn't answer (`⚠` is slipbox's warning already) |
+
+- **Marks are aligned at the right** (the user's), in columns: the index's state last, always in the same place; git's
+  mark before it (`M`, `+`, `R`, `•` for a folder with a change in it), as the row's end has it today; between the name
+  and those, dimmed, what describes the row: a vault's branch, where a link points.
 
 ```text
- ~ › projects › kestrel ›
- ≡  ◈ kestrel                    main
-    ▸ docs/
-    ▸ src/
-    ▸ node_modules/              ⊘
-    ▸ target/                    ⊘
-    ▸ shared/                    → /srv/team/shared   not followed
-    ▸ archive/                   ◌
+ ≡  ◈ kestrel                   main      ●
+    ▸ docs/                          •    ●
+    ▸ src/                                ●
+    ▸ node_modules/                       ⊘
+    ▸ shared/      → /srv/team/shared     ⊘
+    ▸ private/                            ⚿
+    ▸ archive/                            ◐
+      README.md                      M
 ```
 
 ## Goes away
