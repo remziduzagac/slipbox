@@ -17863,11 +17863,15 @@ describe("changes against what's staged, in the gutter (26.1)", () => {
     expect(await until(() => (h.frame(), h.app.git.changesOf(h.app.view!) !== null))).toBe(true);
     return h.app.git.changesOf(h.app.view!)!;
   };
-  /** The gutter cell just before a row's text, and its style. */
+  /** The gutter cell just before a row's text, and its style. Looked for in the window alone: the explorer's
+   *  breadcrumb names the root's folder, `signs-` and six random letters, which may hold the text too. */
   const signAt = (h: Harness, text: string) => {
     const c = h.canvas();
-    const y = c.rows.findIndex((r) => r.join("").includes(text));
-    const x = c.rows[y]!.join("").indexOf(text) - 1;
+    const p = h.app.geometry!.panes.find((g) => g.view === h.app.view)!;
+    const row = (y: number) => c.rows[y]!.slice(p.x, p.x + p.w).join("");
+    let y = p.y;
+    while (y < p.y + p.h - 1 && !row(y).includes(text)) y++;
+    const x = p.x + row(y).indexOf(text) - 1;
     return { ch: c.rows[y]![x], fg: c.styles[y]![x]!.fg };
   };
 
