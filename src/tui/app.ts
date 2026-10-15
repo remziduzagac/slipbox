@@ -161,13 +161,14 @@ import {
 import {
   commitLater,
   createBranch,
-  entriesLater,
   type GitDone,
   lastMessage,
   sections,
   type StatusEntry,
+  statusLater,
   switchBranch,
 } from "../core/gitstage.ts";
+import { type Track, trackText } from "../core/gitremote.ts";
 import { type GitRow, gitRows, gitViewAction } from "./gitview.ts";
 import { type GitChange, gitChanges } from "../core/gitsigns.ts";
 import { describeBreak, type MergeBreak, type MergeReview, reviewMerge } from "../core/mergereview.ts";
@@ -2196,14 +2197,18 @@ export class App {
     const root = this.loc.root;
     if (!c) {
       this.gitStates = null;
+      this.gitTrack = null;
       this.gitFolders.clear();
       return Promise.resolve();
     }
-    this.gitAsking = entriesLater(c)
-      .then((entries) => {
+    this.gitAsking = statusLater(c)
+      .then((answer) => {
         if (this.loc.root !== root) return;
+        const entries = answer?.entries ?? null;
         // Each file's two letters for the source control view (26.2); one state each for the explorer's marks.
         this.gitEntries = entries;
+        // The branch against its upstream, as of the last fetch (26.6): the status line's ↑ and ↓.
+        this.gitTrack = answer?.track ?? null;
         const status = entries && new Map(entries.map((e) => [e.path, stateOf(e.x + e.y)] as const));
         const states = new Map<string, GitState>();
         const folders = new Map<string, GitState>();
@@ -2236,6 +2241,8 @@ export class App {
   gitGeneration = 0;
   /** The checkout's changed files, each with its two letters (26.2); null until git has answered, or with no git. */
   gitEntries: StatusEntry[] | null = null;
+  /** Where the branch stands against its upstream (26.6), as git last said; null until it has, or with no git. */
+  gitTrack: Track | null = null;
   /** The source control view's files opened up into their changes, `section:path`. */
   readonly gitOpen = new Set<string>();
   private readonly gitChangeMemo = new WeakMap<
@@ -2422,18 +2429,21 @@ export class App {
     });
   }
 
-  /** Unsaved notes before a checkout changes the files under them: saved, or kept as they are — asked; none, at once. */
-  private beforeCheckout(go: () => void): void {
+  /**
+   * Unsaved notes before git changes the files under them — a checkout, a pull, a stash (26.5, 26.6): saved, or kept as
+   * they are — asked; none, at once. `act` names what git does: its verb, as a noun, done.
+   */
+  beforeCheckout(go: () => void, act = { verb: "switch", noun: "the switch", done: "switched" }): void {
     const dirty = this.dirtyBuffers();
     if (!dirty.length) return go();
     const names = dirty.map((b) => this.displayName(b)).join(", ");
     this.openList({
       title: `Unsaved: ${names}`,
       items: [
-        { label: "Save them, then switch", data: "save" },
+        { label: `Save them, then ${act.verb}`, data: "save" },
         {
-          label: "Switch, keeping them unsaved",
-          detail: "their text as typed; a file the switch changes, a conflict to settle on saving",
+          label: `${act.verb[0]!.toUpperCase()}${act.verb.slice(1)}, keeping them unsaved`,
+          detail: `their text as typed; a file ${act.noun} changes, a conflict to settle on saving`,
           data: "keep",
         },
         { label: "Cancel", data: "cancel" },
@@ -2441,7 +2451,7 @@ export class App {
       accept: (item) => {
         if (item.data === "cancel") return;
         if (item.data === "save" && !dirty.every((b) => this.saveBuffer(b, true)))
-          return this.message("warn", "not every note saved — nothing switched");
+          return this.message("warn", `not every note saved — nothing ${act.done}`);
         go();
       },
     });
@@ -2595,13 +2605,16 @@ export class App {
   /**
    * Where the file is, as the status line says it (21.9): the root's name if it has one, else its path,
    * else the folder opened; a repository's branch after it — `research · main`, `~/src/experiment ·
-   * main`, `notes`, `~/scratch`; a named worktree, its name and branch in one, `research@refactor`.
+   * main`, `notes`, `~/scratch`; a named worktree, its name and branch in one, `research@refactor`. A branch with an
+   * upstream, how far ahead of it and behind it, as of the last fetch (26.6): `research · main ↑2 ↓1`.
    */
   vaultStatus(max = Number.POSITIVE_INFINITY): string {
     const b = this.loc.mode === "vault" ? this.branch() : null;
     const named = this.loc.mode === "vault" ? this.loc.name : null;
     const where = named ?? tildePath(this.loc.root);
-    const after = named && this.loc.worktree ? (b ? `@${b}` : "") : b ? ` · ${b}` : "";
+    const t = this.gitTrack;
+    const track = b && t?.branch === b ? trackText(t, this.glyphs.gitAhead, this.glyphs.gitBehind) : "";
+    const after = (named && this.loc.worktree ? (b ? `@${b}` : "") : b ? ` · ${b}` : "") + (track ? ` ${track}` : "");
     // Short of room, a path is cut from the front: its last folders, and the branch, are kept.
     if (stringWidth(where + after) <= max) return where + after;
     return named ? truncate(where + after, max) : truncateStart(where, Math.max(4, max - stringWidth(after))) + after;

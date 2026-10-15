@@ -57,6 +57,60 @@ window, as wide as the screen less its margins.
   to what opened it: the changes' list, the prompt. Two texts the same are said ("no differences from main"), and go
   back. The wheel over the floating window scrolls it, never the window or the side pane under it.
 
+### The remote and stash, as built (GIT-T3)
+
+The text for § Git, after "Branches":
+
+**The remote and stash** (`26.6`; GIT-D4; `core/gitremote.ts`, `tui/gitremote.ts`): source control's keys and the
+palette's commands — no `space g` keys of their own, as `space g` becomes the git panel (GIT-D12, GIT-T9). `f`
+(`:fetch`, `git.fetch`) fetches — the branch's remote, else origin, git's own choice; `p` (`:pull`, `git.pull`; `l`
+opens a file up there) pulls, fast-forward only (`git pull --ff-only --no-rebase`); `shift+p` (`:push`, `git.push`)
+pushes the branch to its upstream (`git push <remote> refs/heads/<branch>:<its ref>`, the remote and ref as
+`%(upstream:remotename)` and `%(upstream:remoteref)` name them). A branch with no upstream is asked "Push it to
+origin/<branch>, and track it there?" (`-u`): origin, else the only remote; with none, or several and no origin, said
+how to set one. Each is asked for, none on a timer; each runs in the background, one at a time ("git is
+still fetching" to another), a message saying it's under way and how it went: "fetched: main is 3 commits behind
+origin/main — p pulls (:pull)", "pulled: main fast-forwarded to 1a2b3c4", "pushed main to origin/main". Before a pull,
+unsaved notes are saved or kept, as before a branch switch (`beforeCheckout`); HEAD moving on is then the feed's
+(`5.9`, `checkHead`): no switch, the tabs stay. A failure is git's own words (`gitReason`): a remote's refusal
+(`[rejected] main -> main (fetch first)`, with "fetch them (f) and pull (p) first"), else its `fatal:` or `error:`
+line and the files it names, else a conflict; a pull that can't fast-forward adds that git merge or git rebase, in a
+terminal, brings the two together (GIT-T6 asks merge or rebase instead).
+
+git runs without a terminal: `GIT_TERMINAL_PROMPT=0`, so a login git can't make with what it has fails at once ("could
+not read Username for '…': terminal prompts disabled") rather than wait at a prompt; and ssh in batch mode
+(`GIT_SSH_COMMAND="ssh -o BatchMode=yes"`), which asks no password or passphrase, unless you set your own
+(`GIT_SSH_COMMAND`, `GIT_SSH`, or `core.sshCommand` in any of git's config). Credential helpers still answer. A failure
+that's a login (`needsLogin`: prompts disabled, permission denied, a host's key) adds "git in a terminal can log in
+(git fetch), then try here again".
+
+`z` (`:stash`, `git.stash`) lists the stashes, newest first (`git stash list`), under "Stash the changes…" and
+"Stash the changes, untracked files too…" (`--include-untracked`), each asking a message (none: git's own, `WIP on
+main: …`); `enter` on a stash offers Pop it, Apply it, and Drop it… after asking. A stash is acted on by its name as
+listed and only while that name still holds its commit: one saved meanwhile (an agent, a terminal) renumbers them, and
+the pick is refused, said why. Saving and bringing one back change the files: unsaved notes are saved or kept first.
+git's "No local changes to save" is said as nothing to stash; a conflict, in git's words, the stash kept.
+
+The status line (§ Screen layout): a branch with an upstream, after the branch's name, how far it's ahead of it and
+behind it, only what isn't zero (`research · main ↑2 ↓1`; ASCII glyphs `+2 -1`; `gitAhead`, `gitBehind`), as of the
+last fetch: read from `git status --branch`'s first line, asked with the status in the background whenever git has news
+(`statusLater`), so after a fetch, a pull, a push, or HEAD moving.
+
+### The source control view's keys, as built (GIT-T3)
+
+The text for § Side panes ("Source control"), after **Commit**: `f` fetches, `p` (the explorer's paste) pulls,
+`shift+p` pushes and `z` lists the stashes (explorer actions `fetch`, `paste`, `push`, `stash`, each running its named
+command, so the palette's are the same; in the explorer and the history they do nothing).
+
+## MODIFIED design/trust.md § What slipbox runs
+
+The git bullet adds, after the commit (GIT-T3): a push runs no hook — its pre-push neither — and isn't signed
+(`push.gpgSign=false`); a fetch, pull or push reaches no submodule (`--no-recurse-submodules`); and one whose
+repository's own config (`local` or `worktree` scope, `git config --show-scope`) names a program git would run to reach
+the remote — `core.sshCommand`, `core.gitProxy`, `core.askPass`, a credential helper, a remote's `uploadpack` or
+`receivepack`, a transport allowed (`protocol.*.allow`: `ext::` runs a command) — is refused before it starts, said
+which, and `:trust` lets it run. A git too old to say whose config it is (before 2.26) refuses all three there.
+
 ## MODIFIED design/tui.md § Side panes ("Source control")
 
 Adds (GIT-D8, GIT-D9): the message box, the buttons and their keys, the sections' and the rows' actions, the right

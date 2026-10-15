@@ -2,7 +2,9 @@
 // staged, changed and not staged, untracked — each opened up into its changes (`l`): a staged file's against the last
 // commit, a changed one's against what's staged, as on disk. `s` stages a file or a change, `u` unstages one, `d`
 // discards one (asking first: an untracked file goes to the trash), `a` stages everything and `U` unstages it, `.`
-// shows a file's or a change's diff; `enter` opens the file there. The explorer's keymap, read this view's way.
+// shows a file's or a change's diff; `enter` opens the file there; `f` fetches, `p` pulls, `shift+p` pushes and `z`
+// lists the stashes (26.6, gitremote.ts: `git.fetch`, `git.pull`, `git.push`, `git.stash`). The explorer's keymap, read
+// this view's way.
 
 import { existsSync, readFileSync } from "node:fs";
 import { basename, dirname, join, relative } from "node:path";
@@ -312,6 +314,15 @@ export function gitViewAction(app: App, action: string): void {
       return app.openCommitEditor(false);
     case "amend":
       return app.openCommitEditor(true);
+    // The remote's commands and stash (26.6): their named commands, as the palette runs them.
+    case "fetch":
+      return void app.run("git.fetch");
+    case "paste":
+      return void app.run("git.pull");
+    case "push":
+      return void app.run("git.push");
+    case "stash":
+      return void app.run("git.stash");
     case "close":
       return app.showSidebar(false);
     case "leave":

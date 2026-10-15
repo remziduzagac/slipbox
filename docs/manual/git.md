@@ -10,13 +10,13 @@ slipbox shows what git knows about the repository:
 - who last changed a line
 - what a file looked like before
 
-You can stage, commit, switch branches and move between worktrees without leaving slipbox. You can also review a branch
-before you merge it, including the links a merge would break.
+You can stage, commit, switch branches and move between worktrees without leaving slipbox. You can fetch, pull, push
+and stash. You can also review a branch before you merge it, including the links a merge would break.
 
 slipbox runs the `git` on your `PATH`. Without it, none of this shows.
 
-slipbox never fetches, pulls, pushes, merges, rebases or stashes. You run git yourself for those, and slipbox follows
-what it did. [Privacy](privacy.md) has the few cases where git itself reaches a remote.
+slipbox fetches, pulls and pushes only when you ask, never on its own. It doesn't merge or rebase. You run git yourself
+for those, and slipbox follows what it did. [Privacy](privacy.md) has the few cases where git itself reaches a remote.
 
 ## Git in slipbox
 
@@ -25,6 +25,9 @@ A git repository is a vault by itself. Open any file in it, and slipbox opens th
 
 The status line shows the vault and the branch checked out. For example, it shows `app · main` for a repository named
 `app` by its remote. A worktree of a named folder shows as its name and branch, as in `app@fix/retry`.
+
+When the branch has an upstream, the status line also shows how far the branch is ahead of it and behind it, as of the
+last fetch: `app · main ↑2 ↓1` has two commits to push and one to pull. Nothing shows when they're in step.
 
 The examples in this chapter use that repository, `~/code/app`, as [Code](code.md) does.
 
@@ -58,19 +61,25 @@ Everything else is under `space g`:
 | `space g d` | Shows this file's diff against the base branch (`:diff`) |
 | `space g m` | Shows the links a merge would break (`:merge-review`) |
 
+Fetching, pulling, pushing and the stashes are keys of source control, and commands: `:fetch`, `:pull`, `:push` and
+`:stash`.
+
 [Keys](keys.md) has every key. You can change these like any other.
 
 ## What slipbox runs
 
 slipbox reads status, diffs, blame and history from git. It runs git to stage, unstage, discard, commit and switch
-branches.
+branches. When you ask, it runs git to fetch, pull, push and stash.
 
 What else git runs depends on whether you trust the vault. A repository you cloned can name programs for git to run.
 slipbox lets them run only in a vault you trust. [Code](code.md#trust) explains trust.
 
 In a vault you don't trust, git runs nothing of the repository's own:
 
-- No hooks. A commit runs none, and isn't signed, since the repository's config could name the program that signs.
+- No hooks. A commit or a push runs none, not even the `pre-push` hook. Neither is signed, since the repository's config
+  could name the program that signs.
+- No program the repository's own config names for reaching a remote, such as an ssh command or a credential helper. A
+  fetch, pull or push with one stops before it starts, and says which. `:trust` lets it run.
 - No `core.fsmonitor` command.
 - No filter, diff driver or merge driver named in its attributes. This needs git 2.42 or later. With an older git, a
   repository's filters can still run, and `slipbox doctor` warns of it.
@@ -172,6 +181,8 @@ Source control takes the explorer's keys, read its own way:
 | `.` | Shows the file's diff, or the change's, in a floating window |
 | `enter` | Opens the file at the change |
 | `c` / `shift+c` | Commits what's staged / amends the last commit |
+| `f` / `p` / `shift+p` | Fetches / pulls / pushes ([Fetching, pulling and pushing](#fetching-pulling-and-pushing)) |
+| `z` | Lists the stashes ([Stashes](#stashes)) |
 | `/` | Filters the files by path |
 | `q` / `esc` | Closes source control / goes back to the note, leaving it open |
 
@@ -209,6 +220,74 @@ staged, a commit says so.
 
 In a vault you don't trust, the commit's hooks don't run, and it isn't signed. The editor's first lines and a message
 say so.
+
+## Fetching, pulling and pushing
+
+slipbox reaches a remote only when you ask. Nothing runs on a timer.
+
+| In source control | Command | What it does |
+| --- | --- | --- |
+| `f` | `:fetch` | Fetches the branch's remote, or `origin` when the branch has no upstream |
+| `p` | `:pull` | Pulls: brings the upstream's new commits into the branch, when it can fast-forward |
+| `shift+p` | `:push` | Pushes the branch to its upstream |
+
+The palette (`:`) has them too, as Fetch, Pull (fast-forward) and Push.
+
+Each runs in the background, so slipbox never waits on the network. A message says how it went, in git's words when it
+failed.
+
+- **Fetch** gets the remote's new commits without touching your files. The status line then shows how far the branch is
+  behind its upstream, as in `main ↓3`.
+- **Pull** brings those commits into the branch only when it can fast-forward, that is, when the branch has no commits
+  of its own that the upstream lacks. When both sides have new commits, git refuses, slipbox says so in git's words, and
+  nothing changes. You merge or rebase in a terminal then.
+- **Push** sends the branch to its upstream. A branch without one gets a question first: push it to `origin` under the
+  same name, and track it there? A remote that refuses the push, because it has commits the branch lacks, is said so.
+  Fetch and pull first.
+
+Before a pull, unsaved notes are handled as for a branch switch: save them, keep them unsaved, or cancel. A pull that
+moves the branch on is no switch, and your tabs stay as they were.
+
+### Logging in
+
+slipbox never asks for a password or a passphrase, and git never waits for one. git runs without a terminal to ask in:
+
+- Your credential helper still answers, as it does in a terminal.
+- ssh runs in batch mode, so a key it would ask the passphrase of isn't used. A key without a passphrase, or one your
+  ssh agent holds, works. If you set your own ssh command (`core.sshCommand` or `GIT_SSH_COMMAND`), slipbox uses yours
+  as it is.
+
+A remote that needs a login git can't make that way fails at once, in git's words. For example: `could not read
+Username for 'https://…': terminal prompts disabled`. Run the same command in a terminal, where git can ask. Once your
+credential helper or your ssh agent has the login, slipbox can use it too.
+
+### In a vault you don't trust
+
+A push runs none of the repository's hooks, not even its `pre-push` hook, and it isn't signed. A fetch, pull or push
+whose repository names its own program for reaching the remote stops before it starts, and says which.
+[What slipbox runs](#what-slipbox-runs) has the rest.
+
+## Stashes
+
+`z` in source control, or `:stash`, lists the stashes, newest first, under two ways to make one:
+
+- **Stash the changes…** asks for a message, then sets your uncommitted changes aside, staged or not. The files go back
+  to the last commit. Untracked files stay.
+- **Stash the changes, untracked files too…** sets those aside as well.
+
+Without a message, git names the stash, as in `WIP on main: …`.
+
+`enter` on a stash offers three things:
+
+- **Pop it**: its changes put back in the files, and the stash dropped.
+- **Apply it**: its changes put back, and the stash kept.
+- **Drop it…**: the stash thrown away, after asking.
+
+Before a stash, or a stash brought back, changes the files, unsaved notes are handled as for a pull. A stash that
+conflicts with your changes is said in git's words, and kept.
+
+A stash made somewhere else in the meantime, by an agent or in a terminal, renumbers the others. slipbox then refuses
+the one you picked, rather than act on another, and `z` lists them again.
 
 ## Merge conflicts
 
@@ -469,5 +548,5 @@ These commands exit with code 3:
 - with no base branch
 - with a branch or commit that isn't there
 
-The rest has no command: the gutter, source control, commits, blame, history and branches. An agent runs git itself
-for those.
+The rest has no command: the gutter, source control, commits, blame, history, branches, the remote and stashes. An
+agent runs git itself for those.

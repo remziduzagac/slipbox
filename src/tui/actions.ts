@@ -59,6 +59,7 @@ import { endSnippet } from "./snippets.ts";
 import { diffEnter } from "./diffview.ts";
 import { gitPreview, gitReset, gitStep } from "./gitchanges.ts";
 import { blameHere, historyHere } from "./githistory.ts";
+import { gitFetch, gitPull, gitPush, gitStash } from "./gitremote.ts";
 import { parseBang } from "../core/shell.ts";
 import * as V from "./vim.ts";
 import { rank } from "./match.ts";
@@ -1686,6 +1687,11 @@ export function registerActions(app: App): void {
     "git.change_undo": (a) => withView(a, (v) => gitReset(a, v)),
     "git.worktrees": (a) => a.openWorktrees(),
     "git.merge_review": (a) => a.openMergeReview(),
+    // The remote's commands and stash (26.6): in the background, asked for, never on a timer.
+    "git.fetch": (a) => gitFetch(a),
+    "git.pull": (a) => gitPull(a),
+    "git.push": (a) => gitPush(a),
+    "git.stash": (a) => gitStash(a),
     "find.vault": (a, arg) => {
       const run = (query: string) => {
         if (!query.trim()) return;

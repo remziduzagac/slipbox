@@ -745,6 +745,10 @@ Each button has a key, which acts on the cell at the cursor.
 | `.` | its diff, in a floating window |
 | `c` | commit what's staged, writing the message in a floating editor |
 | `shift+c` | amend the last commit with what's staged |
+| `f` | fetch from the remote, in the background (`:fetch`) |
+| `p` | pull the upstream's new commits, fast-forward only, unsaved notes saved or kept first (`:pull`) |
+| `shift+p` | push the branch to its upstream; with none, asks to push it to `origin` and track it (`:push`) |
+| `z` | the stashes: stash your changes with a message, or pop, apply or drop a stash (`:stash`) |
 | `g g` / `shift+g` | the first / last row |
 | `/` | filter the files by path |
 | `q` | close source control |
@@ -887,6 +891,8 @@ Your configuration's [`[aliases]`](configuration.md) adds more commands, or rena
 | `:export-notes` | export notes as one document |
 | `:changes` / `:diff` | the branch's changed files / this note's diff, against the base |
 | `:worktrees` / `:merge-review` | the worktrees / the links a merge would break |
+| `:fetch` / `:pull` / `:push` | fetch, pull (fast-forward only) or push, as source control's `f`, `p` and `shift+p` |
+| `:stash` | the stashes, as source control's `z` |
 | `:folders` | the named folders, to pick one to go into |
 | `:folders-default` | which copy a named folder's links open |
 | `:name [new]` | name this folder, as pointers name it |

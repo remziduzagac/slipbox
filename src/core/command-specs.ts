@@ -487,6 +487,30 @@ export const COMMAND_SPECS: CommandSpec[] = [
     desc: "The last commit's message in a floating editor: ctrl+s amends it with what's staged",
   },
   {
+    id: "git.fetch",
+    title: "Fetch",
+    cli: I,
+    desc: "Fetches the branch's remote in the background; the status line's ↓ then says how far behind its upstream it is",
+  },
+  {
+    id: "git.pull",
+    title: "Pull (fast-forward)",
+    cli: I,
+    desc: "Brings in the upstream's new commits, fast-forward only, unsaved notes saved or kept first; where both sides moved, git's refusal",
+  },
+  {
+    id: "git.push",
+    title: "Push",
+    cli: I,
+    desc: "Pushes the branch to its upstream; with none, asks to push it to origin and track it there. In a vault not trusted, no hook runs",
+  },
+  {
+    id: "git.stash",
+    title: "Stashes",
+    cli: I,
+    desc: "The stashes: the changes stashed with a message, or one popped, applied or dropped (after asking)",
+  },
+  {
     id: "git.change_next",
     title: "Next change against what's staged",
     cli: I,

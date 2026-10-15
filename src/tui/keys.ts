@@ -438,6 +438,10 @@ export const DEFAULT_EXPLORER_KEYS: Record<string, string> = {
   // Source control's (26.3): a commit of what's staged; the last one amended.
   c: "commit",
   "shift+c": "amend",
+  // Source control's (26.6): fetch, push and the stashes; `p` (paste) pulls there.
+  f: "fetch",
+  "shift+p": "push",
+  z: "stash",
   q: "close",
   escape: "leave",
 };
@@ -472,6 +476,9 @@ export const EXPLORER_ACTIONS = [
   "leave",
   "commit",
   "amend",
+  "fetch",
+  "push",
+  "stash",
 ];
 
 /** Moving about a list pane — the outline, the footnotes, Info: key → action. */
@@ -665,6 +672,19 @@ export const GIT_ACTION_INFO: Record<string, { title: string; desc: string; acti
     title: "Amend",
     desc: "The last commit's message in the floating editor: ctrl+s amends it with what's staged",
   },
+  fetch: { title: "Fetch", desc: "Fetches the branch's remote, in the background (:fetch)" },
+  paste: {
+    title: "Pull",
+    desc: "Brings in the upstream's new commits, fast-forward only; unsaved notes saved or kept first (:pull)",
+  },
+  push: {
+    title: "Push",
+    desc: "Pushes the branch to its upstream; with none, asks to push it to origin and track it (:push)",
+  },
+  stash: {
+    title: "Stashes",
+    desc: "The changes stashed with a message, or a stash popped, applied or dropped (:stash)",
+  },
   filter: { title: "Filter", desc: "Type to narrow the files by path" },
   close: { title: "Close source control", desc: "Closes it; focus returns to the note" },
   leave: { title: "Back to the note", desc: "Focuses the note; the view stays open" },
@@ -851,6 +871,11 @@ export const DEFAULT_ALIASES: Record<string, string> = {
   diff: "git.diff",
   worktrees: "git.worktrees",
   "merge-review": "git.merge_review",
+  // The remote's commands and stash (26.6): source control's f, p, shift+p and z.
+  fetch: "git.fetch",
+  pull: "git.pull",
+  push: "git.push",
+  stash: "git.stash",
   "undo-rename": "rename.undo",
   delete: "note.delete",
   trash: "trash.open",
