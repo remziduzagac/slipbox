@@ -850,13 +850,17 @@ const ROOTS: Check[] = [
       s.expect(JSON.stringify(tree(s.path("~/hobbies/cooking"))) === JSON.stringify(was.cooking), "cooking as it was");
       s.expect(JSON.stringify(tree(s.path("~/hobbies/cycling"))) === JSON.stringify(was.cycling), "cycling as it was");
       // Your config says what marks a vault: without .obsidian, cooking is a folder of home (VV-D2), its note by its
-      // path from home, the view at home, no vault named in it.
+      // path from home, the view at home, no vault named in it — cooking in home's tree once home is walked, while
+      // nobody works (the config's last table is [index]: a second would be no TOML).
       const config = join(s.dir, "config", "slipbox", "config.toml");
-      writeFileSync(config, `${readFileSync(config, "utf8")}\n[walk]\nroot_markers = [".git", ".slipbox"]\n`);
+      writeFileSync(
+        config,
+        `${readFileSync(config, "utf8")}idle_seconds = 1\n\n[walk]\nroot_markers = [".git", ".slipbox"]\n`,
+      );
       await s.restart({ startAt: "home/hobbies/cooking/Home.md" });
       await s.status(/ ~ +‹ hobbies\/cooking\/Home\.md/);
       await explorerOpen(s);
-      await s.until(() => listed(s, /\scooking$/), 3000, "cooking, a folder of home's tree");
+      await s.until(() => listed(s, /\scooking$/), 20_000, "cooking, a folder of home's tree");
       s.expect(!/cooking/.test(crumbs(s)), `the view at home: ${crumbs(s)}`);
     },
   },
