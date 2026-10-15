@@ -27,9 +27,10 @@
     {
       "endpoint": "repos/{repo}",
       "reader": "admin",
-      "about": "Squash merges titled by the pull request, branches deleted (GR-D6); secret scanning, security updates",
+      "about": "Squash merges titled by the pull request, branches deleted (GR-D6); auto-merge per pull request, once its checks pass; secret scanning, security updates",
       "expect": {
         "allow_squash_merge": true,
+        "allow_auto_merge": true,
         "allow_merge_commit": false,
         "allow_rebase_merge": false,
         "squash_merge_commit_title": "PR_TITLE",
