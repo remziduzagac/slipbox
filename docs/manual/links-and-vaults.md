@@ -69,11 +69,38 @@ What happens depends on what the link reaches:
 | a picture on the web | fetches it to draw it, after asking by default (`render.images_remote`) |
 | a footnote reference | moves to the footnote's definition |
 | a tag | lists the notes that carry it |
-| a note in another vault | switches to that vault, with the note open ([Switching vaults](#switching-vaults)) |
+| a note in another vault, or a file outside every vault | reads it in a peek, at the place the link names (below) |
 | one of several notes | lists them, to pick the one you meant |
 
 [Reading](reading.md) describes how pictures, embedded notes and pictures on the web are drawn.
 [Configuration](configuration.md) has the setting.
+
+### A peek at another vault
+
+Following a link never moves you to another vault. A note there opens in a peek: a large floating window over the one
+you are in, the note drawn as it would be there. Your tabs, your vault and your place stay as they were.
+
+A peek is for reading. `/` finds in it, and you can select and copy, but you can't edit it.
+
+| Key | Does |
+| --- | --- |
+| `o` | goes there: into the note's vault, with its own tabs, as [switching vaults](#switching-vaults) does |
+| `t` | keeps it as a tab in this vault, read-only, the tab marked with its vault's name (`kestrel: sync.md`) |
+| `z` | fills the screen, or makes it most of the screen again |
+| `esc` | closes it. You are where you were |
+
+The links in a peek are read in the note's own vault:
+
+- A link to another note of that vault moves the peek there. `ctrl+o` goes back, inside the peek.
+- A link to a note of the vault you are in closes the peek and opens the note in your tabs, as usual.
+- A link to a third vault moves the peek there.
+
+Under the note, the peek lists its backlinks, when its vault has an index. Most do, once the background index has
+been through (see [Backlinks](#backlinks)). A vault without one yet says so: `o` goes there, and finds them.
+
+The same peek opens for a backlink from another vault, for another vault's hit in a search widened with `ctrl+a`, and
+for a file outside every vault that a link reaches. With the mouse, a click on such a link peeks, and `ctrl+click`
+goes there at once. `ctrl+enter` still follows a link of this vault into a new tab.
 
 ## The forms a link takes
 
@@ -287,8 +314,9 @@ In a folder outside every vault:
 Your home folder or `/`, opened as a folder, is listed a level at a time. It's never walked or indexed as a whole. Its
 search reads the files instead.
 
-A file outside every vault, opened by following a link to it, opens beside the vault you are in. Its own links can't be
-followed from there, except web addresses and pointers. To follow them, open its folder.
+A file outside every vault, reached by a link, is read in a peek. Its relative links are followed from its folder
+there. `o` opens it beside the vault you are in, to edit. Opened beside, its own links can't be followed, except web
+addresses and pointers. To follow them, open its folder.
 
 ### Giving a folder `.slipbox/`
 
@@ -316,19 +344,22 @@ A git repository stays a vault whatever you do, so it can't be made part of the 
 
 ### Switching vaults
 
-The TUI is always in one vault. Opening a note of another vault switches to it. You open one by any of these:
+The TUI is always in one vault. Going into another vault switches to it. You go into one by any of these:
 
-- following a link or a pointer into it
-- a backlink from it
-- a search hit
+- `o` in a peek at one of its notes ([A peek at another vault](#a-peek-at-another-vault))
+- `ctrl+click` on a link into it
 - a vault picked in the explorer or from `space v v`
+- `:e` with the path of one of its notes
+
+Following a link, a pointer, a backlink or a search hit into another vault only peeks at the note. Nothing switches
+until you choose to go.
 
 slipbox becomes that vault's, as if you had started it there. You get:
 
 - its settings
 - its index
 - its session, with its tabs
-- the note open where the link pointed
+- the note open where you were reading it
 
 A message names the vault you are now in.
 
@@ -587,7 +618,8 @@ A private name is written, and slipbox says that pointer works on this machine o
 ## Backlinks
 
 `space l b` (or `g r`) lists the notes that link to the one you are reading, each with its line and the link's text.
-`enter` opens one at the link.
+`enter` opens one at the link. One from another vault is read in a peek there
+([A peek at another vault](#a-peek-at-another-vault)).
 
 `space l l` lists this note's own links, each with whether it resolves. `enter` follows one.
 

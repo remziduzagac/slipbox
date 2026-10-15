@@ -564,6 +564,13 @@ export const DEFAULT_RESIZE_KEYS: Record<string, string> = {
   q: "leave",
 };
 
+/** A peek's own keys (VV-D7), over the note's while it's open: commands, as the note's keys are. */
+export const DEFAULT_PEEK_KEYS: Record<string, string> = {
+  o: "peek.go",
+  t: "peek.tab",
+  z: "peek.fill",
+};
+
 /** What the explorer's and the outline's actions do, for help. */
 export const EXPLORER_ACTION_INFO: Record<string, { title: string; desc: string }> = {
   down: { title: "Move down", desc: "Selects the next row; nothing opens" },

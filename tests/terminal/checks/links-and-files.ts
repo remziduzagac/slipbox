@@ -18,7 +18,7 @@ import {
   problemListed,
 } from "../check.ts";
 import { loadTheme, type Role } from "../../../src/core/theme/index.ts";
-import type { Session } from "../session.ts";
+import { type Session, sleep } from "../session.ts";
 
 /** A role's foreground in a built-in theme, as the terminal reports it. */
 const themeFg = (name: string, role: Role) => loadTheme(name, "/nonexistent").theme.roles[role].fg!.toLowerCase();
@@ -311,11 +311,12 @@ const LINKS: Check[] = [
         await s.keys("ctrl+o");
         await opened(s, "research/link-styles.md");
       }
-      // A file URL is followed, not copied as a URL: the file it names opened, outside every root.
+      // A file URL is followed, not copied as a URL: the file it names read in a peek, outside every root (VV-D7).
       await toLink(s, "file:///etc/hosts");
       await s.keys("enter");
+      await s.see("/etc/hosts — outside every vault", 5000);
       await s.status(/ ‹ \S*\/etc\/hosts › /);
-      await s.keys("ctrl+o");
+      await s.keys("escape");
       await opened(s, "research/link-styles.md");
       // The same, broken: a note that isn't there is offered to be made, its name filled in; esc, nothing written.
       await toLink(s, "../projects/kestrel-v2-33.md");
@@ -509,7 +510,7 @@ const LINKS: Check[] = [
 const ROOTS: Check[] = [
   {
     area: "links-and-files",
-    name: "roots: a path into another root switches into it and back; a broken one said; a backlink from it, by its path (17.x, 21.9)",
+    name: "roots: a path into another root peeks, o goes into it, and back; a broken one said; a backlink from it, by its path (17.x, 21.9)",
     covers: { cases: ["links/travel", "links/backlinks", "links/forms", "vault"], commands: ["backlinks.open"] },
     options: { home: true, startAt: "home/notes/index.md" },
     run: async (s) => {
@@ -517,8 +518,10 @@ const ROOTS: Check[] = [
       await leader(s, "l", "b");
       await s.see("Linking to", 10000);
       await s.keys("escape");
-      // ../work/kestrel/docs/architecture.md: into kestrel, at its own path; back, at the link.
+      // ../work/kestrel/docs/architecture.md: a peek; o, into kestrel, at its own path; back, at the link.
       await follow(s, ARCHITECTURE);
+      await s.see(PEEK_HINT, 5000);
+      await s.keys("o");
       await s.message(/kestrel — /);
       await s.status(/kestrel · main +‹ docs\/architecture\.md/, 5000);
       await s.keys("ctrl+o");
@@ -529,6 +532,8 @@ const ROOTS: Check[] = [
       await opened(s, "index.md");
       // architecture.md's backlinks: notes' index among them, by its path from home (21.9).
       await follow(s, ARCHITECTURE);
+      await s.see(PEEK_HINT, 5000);
+      await s.keys("o");
       await s.status(/kestrel · main +‹ docs\/architecture\.md/, 5000);
       await leader(s, "l", "b");
       await s.see("Linking to", 10000);
@@ -538,16 +543,21 @@ const ROOTS: Check[] = [
   },
   {
     area: "links-and-files",
-    name: "nested roots: the demo's outreach — in by path, back, backlinks, two deep",
+    name: "nested roots: the demo's outreach — peeked at by path, o in, back, backlinks, two deep",
     covers: { cases: ["vault", "links/roots", "links/backlinks"], commands: ["backlinks.open"] },
     run: async (s) => {
-      // home's last link: outreach/index.md, in a root nested in this one (enter: the row's link).
+      // home's last link: outreach/index.md, in a root nested in this one (enter: the row's link) — a vault of its
+      // own, so a peek (VV-D7); o goes into it.
       await s.keys("shift+g", "enter");
+      await s.see("outreach › index.md", 5000);
+      await s.keys("o");
       await s.message(" outreach — "); // as the switch says it: name — path
       await s.status("index.md");
       await s.see("The observatory's public programme");
       // Two deep: the school visits.
       await s.keys("g", "g", "tab", "tab", "enter");
+      await s.see("outreach-school-visits › index.md", 5000);
+      await s.keys("o");
       await s.message(" outreach-school-visits — ");
       await s.see("A vault nested two deep");
       // Back, and back again: to the observatory's home.
@@ -757,9 +767,11 @@ const ROOTS: Check[] = [
       await explorerRow(s, "notes");
       await s.keys("enter");
       await s.status(/ notes .*index\.md/, 5000);
-      // Across roots by a relative path: into the kestrel repository, its top the root; back.
+      // Across roots by a relative path: a peek, o into the kestrel repository, its top the root; back.
       await s.keys("escape");
       await follow(s, ARCHITECTURE);
+      await s.see(PEEK_HINT, 5000);
+      await s.keys("o");
       await s.status(/kestrel · main +‹ docs\/architecture\.md/, 5000);
       await s.keys("ctrl+o");
       await s.status(/ notes .*index\.md/, 5000);
@@ -828,6 +840,8 @@ const ROOTS: Check[] = [
         await s.until(() => listed(s, /\speople$/), 3000, "notes' tree");
       };
       await follow(s, ARCHITECTURE);
+      await s.see(PEEK_HINT, 5000); // a peek (VV-D7): o goes into kestrel
+      await s.keys("o");
       await s.status(/kestrel · main +‹ docs\/architecture\.md/, 5000);
       await s.keys("ctrl+o");
       await s.status(/ notes .*index\.md/, 5000);
@@ -835,6 +849,8 @@ const ROOTS: Check[] = [
       s.expect(!showsKestrel(), "left, a followed vault goes from the roots");
       await s.keys("escape");
       await follow(s, ARCHITECTURE);
+      await s.see(PEEK_HINT, 5000); // a peek (VV-D7): o goes into kestrel
+      await s.keys("o");
       await s.status("docs/architecture.md", 5000);
       await s.ex("pin-root");
       await s.message(/kestrel: kept in the explorer/); // the box wraps the rest
@@ -845,6 +861,8 @@ const ROOTS: Check[] = [
       await s.keys("escape");
       // Unpinned: gone again once left.
       await follow(s, ARCHITECTURE);
+      await s.see(PEEK_HINT, 5000); // a peek (VV-D7): o goes into kestrel
+      await s.keys("o");
       await s.status("docs/architecture.md", 5000);
       await s.ex("pin-root");
       await s.message(/kestrel: no longer kept/);
@@ -871,9 +889,13 @@ const ROOTS: Check[] = [
       // An Obsidian vault with no .slipbox/ name and no remote: its path, from home.
       await s.restart({ startAt: "home/hobbies/cooking/Home.md" });
       await s.status(/ ~\/hobbies\/cooking /);
-      // A loose file a link leads to opens beside the root: its folder among the explorer's roots while it's shown.
+      // A loose file a link leads to is peeked at (VV-D7); o opens it beside the root: its folder among the explorer's
+      // roots while it's shown.
       await s.restart({ startAt: "home/notes/daily/2026-09-22.md" });
       await follow(s, "the worker log");
+      await s.see("— outside every vault", 5000);
+      await s.keys("o");
+      await s.notSee(PEEK_HINT);
       await s.status(/sync-worker-2026-09-22\.log\.md/);
       await s.see("§ sync-worker log, 2026-09-22", 10000); // read and drawn
       await s.keys("ctrl+e");
@@ -1030,18 +1052,27 @@ const NAMED: Check[] = [
       // Opened once (an agent's ls): in the lookup, and the pointer leads there.
       s.cliIn("~/hobbies/photography", "ls");
       await follow(s, "Kyoto notes");
+      await s.see("photography › trips/", 5000); // a peek (VV-D7): o goes into photography
+      await s.keys("o");
+      await s.notSee(PEEK_HINT);
       await s.status(/photography/);
       await s.see("Kyoto"); // the trip's index, in the photography folder
       // kestrel's sync doc: Sam's notes (the notes folder), and the agent's copy on its branch — its worktree.
       s.cliIn("~/notes", "ls");
       await s.restart({ startAt: "home/work/kestrel/docs/sync.md" });
       await follow(s, "his notes");
+      await s.see("notes › projects/sync-rewrite.md", 5000);
+      await s.keys("o");
+      await s.notSee(PEEK_HINT);
       await s.status(/notes/);
       await opened(s, "projects/sync-rewrite.md");
       await s.restart({ startAt: "home/work/kestrel/docs/sync.md" });
       await s.keys("/");
       await s.type("is at");
       await s.keys("enter", "escape", "tab", "enter");
+      await s.see(PEEK_HINT, 5000);
+      await s.keys("o");
+      await s.notSee(PEEK_HINT);
       await s.status(/sync-retry/);
       await opened(s, "docs/sync.md");
     },
@@ -1105,6 +1136,8 @@ const NAMED: Check[] = [
     run: async (s) => {
       // `slipbox://github.com/kestrel-labs/kestrel/docs/architecture.md`: the copy called by the remote's name.
       await follow(s, "qualified.");
+      await s.see("kestrel › docs/architecture.md", 5000); // a peek (VV-D7): o goes there
+      await s.keys("o");
       await s.status(/ kestrel[ ·]/);
       await opened(s, "docs/architecture.md");
       s.expect(!/engine-spike/.test(s.statusLine()), `kestrel, not the spike:\n${s.statusLine()}`);
@@ -1116,6 +1149,8 @@ const NAMED: Check[] = [
       await s.keys("enter", "escape", "tab");
       await s.status(/→ https:\/\/github\.com\/kestrel-labs\/kestrel\b/);
       await s.keys("enter");
+      await s.see("kestrel › README.md", 5000);
+      await s.keys("o");
       await s.status(/ kestrel[ ·]/);
       await opened(s, "README.md");
       s.expect(!/engine-spike/.test(s.statusLine()), `kestrel, not the spike:\n${s.statusLine()}`);
@@ -1168,6 +1203,8 @@ const NAMED: Check[] = [
       ] as const) {
         await s.restart({ startAt: "home/notes/meetings/2026-09-05-feedback-synthesis.md" });
         await follow(s, link);
+        await s.see("product › prd/route-sharing.md", 5000); // a peek (VV-D7), at its top; o goes there
+        await s.keys("o");
         await opened(s, "prd/route-sharing.md");
         await s.status(/ product[ ·]/);
         await s.status(/L1:/);
@@ -1365,6 +1402,8 @@ const FILES: Check[] = [
       // In a root nested in halden (outreach, by home's link): made part of halden.
       await open(s, "home");
       await s.keys("shift+g", "enter");
+      await s.see("outreach › index.md", 5000); // a peek (VV-D7): o goes into it
+      await s.keys("o");
       await s.message(" outreach — ");
       await leader(s, "v", "shift+m");
       await s.see(/outreach\/ → part of halden: \d+ changes? in \d+ files?/);
@@ -2446,6 +2485,163 @@ const NOTES: Check[] = [
   },
 ];
 
-export const LINKS_AND_FILES: Check[] = [...LINKS, ...ROOTS, ...NAMED, ...FILES, ...RENAMES, ...GIT, ...NOTES];
+/** The peek's title, `kestrel › docs/architecture.md`: the column it starts at, -1 while no peek shows it. */
+function peekTitleAt(s: Session, title: string): number {
+  const row = s.screen().find((r) => r.includes(title));
+  return row ? [...row].join("").indexOf(title) : -1;
+}
+
+/** A peek's hint, in its bottom border, while one is open. */
+const PEEK_HINT = "o go there · t keep as a tab";
+
+const PEEK: Check[] = [
+  {
+    area: "links-and-files",
+    name: "peek: a link into another vault peeks, notes left as it was — esc back where you were, z fills the screen, t keeps it as a tab, o goes there (VV-D7)",
+    covers: {
+      cases: ["links/travel", "links/roots", "links/backlinks", "vault"],
+      commands: ["link.follow", "peek.fill", "peek.tab", "peek.go", "history.back"],
+    },
+    options: { home: true, startAt: "home/notes/index.md" },
+    run: async (s) => {
+      const title = "kestrel › docs/architecture.md";
+      // notes indexed whole, its index on disk for kestrel to read (17.11).
+      await leader(s, "l", "b");
+      await s.see("Linking to", 10000);
+      await s.keys("escape");
+      // Into kestrel by its path: read in a peek, this vault's status line, its note's path the peek's.
+      await follow(s, ARCHITECTURE);
+      await s.see(title, 5000);
+      await s.see(PEEK_HINT);
+      await s.status(/ notes .*kestrel: docs\/architecture\.md/);
+      // Its backlinks: kestrel has no index here yet, so how to see them.
+      await s.keys("shift+g");
+      await s.see("kestrel has no index here yet — o goes there, and finds them.");
+      // esc: closed, exactly where you were.
+      await s.keys("escape");
+      await s.notSee(PEEK_HINT);
+      await opened(s, "index.md");
+      s.expect(linkHere(s) === "../work/kestrel/docs/architecture.md", `on the link still: ${linkHere(s)}`);
+      // z: the whole screen; again, most of it.
+      await s.keys("enter");
+      await s.see(title, 5000);
+      const most = peekTitleAt(s, title);
+      await s.keys("z");
+      await s.see("z smaller");
+      await s.until(() => peekTitleAt(s, title) < most, 3000, "the peek wider, its title further left");
+      s.expect(peekTitleAt(s, title) <= 4, `filling the screen: its title at ${peekTitleAt(s, title)}`);
+      await s.keys("z");
+      await s.until(() => peekTitleAt(s, title) === most, 3000, "the peek as it was");
+      // t: a tab here, read-only, marked with its vault's name; notes still the vault.
+      await s.keys("t");
+      await s.notSee(PEEK_HINT);
+      await s.see("kestrel: architecture.md");
+      await s.status(/ notes .*kestrel: docs\/architecture\.md/);
+      await s.keys("i");
+      await s.message("read-only here: kestrel's");
+      // o: from the note's tab, peeked at again, gone into — kestrel's own tabs; ctrl+o, back in notes.
+      await s.keys("g", "t");
+      await opened(s, "index.md");
+      await s.keys("enter");
+      await s.see(title, 5000);
+      await s.keys("o");
+      await s.status(/kestrel · main +‹ docs\/architecture\.md/, 5000);
+      // Indexed there: its backlinks, notes' among them, now in a peek from notes.
+      await leader(s, "l", "b");
+      await s.see("~/notes/index.md", 10000);
+      await s.keys("escape");
+      await s.keys("ctrl+o");
+      await s.status(/ notes .*index\.md/, 5000);
+      await follow(s, ARCHITECTURE);
+      await s.see(title, 5000);
+      await s.keys("shift+g");
+      await s.see(/Linked from \(\d+\):/);
+      await s.see(/~\/notes\/index\.md:41 — architecture/);
+    },
+  },
+  {
+    area: "links-and-files",
+    name: "peek: links inside it — kestrel's own moves it, ctrl+o back inside it; notes' closes it and opens here; a third vault's moves it (VV-D7)",
+    covers: { cases: ["links/travel", "links/roots"], commands: ["link.follow", "history.back"] },
+    options: { home: true, startAt: "home/notes/index.md" },
+    run: async (s) => {
+      await follow(s, ARCHITECTURE);
+      await s.see("kestrel › docs/architecture.md", 5000);
+      // Its own vault's: the peek moves there; ctrl+o comes back inside the peek, notes untouched.
+      await follow(s, "sync.md, if you work");
+      await s.see("kestrel › docs/sync.md", 5000);
+      await s.see("ctrl+o back");
+      await s.keys("ctrl+o");
+      await s.see("kestrel › docs/architecture.md", 5000);
+      await s.status(/ notes /);
+      // This vault's: the peek closes, the note opens in the tabs, as usual.
+      await follow(s, "sync-rewrite in his");
+      await s.notSee(PEEK_HINT, 5000);
+      await opened(s, "projects/sync-rewrite.md");
+      await s.status(/ notes /);
+      // A third vault's, from product's PRD peeked at: the peek moves on, into kestrel.
+      await s.restart({ startAt: "home/notes/meetings/2026-09-05-feedback-synthesis.md" });
+      await follow(s, "the pricing section");
+      await s.see("product › prd/route-sharing.md", 5000);
+      await follow(s, "the feature doc");
+      await s.see("kestrel › docs/features/route-sharing.md", 5000);
+      await s.status(/ notes /);
+      await s.keys("ctrl+o");
+      await s.see("product › prd/route-sharing.md", 5000);
+    },
+  },
+  {
+    area: "links-and-files",
+    name: "peek: a backlink from another vault is read in a peek, this vault left as it was (VV-D7)",
+    covers: { cases: ["links/backlinks", "vault"], commands: ["backlinks.open"] },
+    options: { home: true, startAt: "home/notes/index.md" },
+    run: async (s) => {
+      // notes indexed whole, its index on disk for kestrel to read (17.11).
+      await leader(s, "l", "b");
+      await s.see("Linking to", 10000);
+      await s.keys("escape");
+      await s.restart({ startAt: "home/work/kestrel/docs/architecture.md" });
+      await leader(s, "l", "b");
+      await s.see("Linking to", 10000);
+      await s.type("notes/index");
+      await s.see("~/notes/index.md");
+      await s.keys("enter");
+      await s.see("notes › index.md", 5000);
+      await s.see(PEEK_HINT);
+      await s.status(/kestrel · main +‹ notes: index\.md/);
+      await s.see("The architecture overview, by path"); // at the line linking here
+    },
+  },
+  {
+    area: "links-and-files",
+    name: "peek: a click on a link into another vault peeks; ctrl+click goes there at once (VV-D7)",
+    covers: { cases: ["mouse", "vault"], commands: ["link.go"] },
+    run: async (s) => {
+      /** A click on `needle` (SGR's reports, as a terminal sends them): `button` 16 is the left one with ctrl. */
+      const click = async (needle: string, button = 0) => {
+        const row = s.rowOf(needle);
+        s.expect(row >= 0, `${needle} on screen to click`);
+        const col = [...s.screen()[row]!].join("").indexOf(needle);
+        const x = Bun.stringWidth(s.screen()[row]!.slice(0, col)) + 1;
+        await s.send(`\x1b[<${button};${x};${row + 1}M`);
+        await s.send(`\x1b[<${button};${x};${row + 1}m`);
+      };
+      // home's outreach/index.md: a vault of its own, nested in this one.
+      await click("outreach — the public");
+      await s.see("outreach › index.md", 5000);
+      await s.see(PEEK_HINT);
+      await s.keys("escape");
+      await s.notSee(PEEK_HINT);
+      await opened(s, "home.md");
+      await sleep(600); // past a double-click
+      await click("outreach — the public", 16);
+      await s.message(" outreach — "); // as the switch says it: name — path
+      await s.status(/ outreach .*index\.md/);
+      s.expect(!s.text().includes(PEEK_HINT), "no peek on the way");
+    },
+  },
+];
+
+export const LINKS_AND_FILES: Check[] = [...LINKS, ...ROOTS, ...NAMED, ...FILES, ...RENAMES, ...GIT, ...NOTES, ...PEEK];
 
 export const LEFT_OUT_LINKS_AND_FILES: LeftOut = {};

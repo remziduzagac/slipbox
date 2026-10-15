@@ -2519,6 +2519,17 @@ A long note: headings, paragraphs, pages to move through; the daily note has the
   (command-specs.ts)
 - `link.insert` — Insert a link to a note… — `hobbies/cooking/Home.md`, `hobbies/cycling/202608151900-index.md`
   (command-specs.ts; 21.5)
+- `link.go` — Go where the link leads — `notes/index.md`, `notes/meetings/2026-09-05-feedback-synthesis.md`
+  (command-specs.ts; VV-D7)
+
+### peek
+
+- `peek.go` — Go there — `notes/index.md`, `work/kestrel/docs/architecture.md`
+  (command-specs.ts; VV-D7)
+- `peek.tab` — Keep the peek as a tab — `notes/index.md`, `work/kestrel/docs/architecture.md`
+  (command-specs.ts; VV-D7)
+- `peek.fill` — Peek: fill the screen — `notes/index.md`, `work/kestrel/docs/architecture.md`
+  (command-specs.ts; VV-D7)
 
 ### spell
 

@@ -36,6 +36,7 @@ import { type Spot, spellSpots } from "./spelling.ts";
 import { snippetMark } from "./snippets.ts";
 import { gitRows } from "./gitview.ts";
 import { match } from "./match.ts";
+import { peekTitle } from "./peek.ts";
 import { keyChar, prettyKey } from "./keys.ts";
 import { dateText, placeOf, type SaveAsGeometry, type SaveAsOverlay, sizeText } from "./saveas.ts";
 
@@ -481,20 +482,33 @@ function drawFloating(app: App, c: Canvas, mainY: number, mainH: number, geo: Ge
   const theme = app.theme;
   const W = c.width;
   const scratch = f.kind === "scratch";
+  // A peek (VV-D7): most of the screen, in the middle of it; `z`, all of it, its margin too.
+  const peek = f.kind === "peek" ? f.peek : null;
+  const full = !!peek?.full;
   // A diff (GIT-D2) as wide as there's room for: its lines are a file's, not text to read at a measure.
-  const w = Math.max(24, f.kind === "diff" ? W - 8 : Math.min(100, scratch ? Math.floor((W * 3) / 4) : W - 8));
-  const h = scratch
-    ? Math.max(6, Math.min(mainH - 1, Math.floor((mainH * 3) / 4)))
-    : Math.max(6, Math.min(mainH - 1, f.view.buf.lineStarts().length + 5));
+  const w = full
+    ? W
+    : peek
+      ? Math.max(24, W - 4 - Math.max(4, Math.floor(W / 8)))
+      : Math.max(24, f.kind === "diff" ? W - 8 : Math.min(100, scratch ? Math.floor((W * 3) / 4) : W - 8));
+  const h = full
+    ? Math.max(4, mainH)
+    : peek
+      ? Math.max(6, mainH - 2 - Math.max(1, Math.floor(mainH / 10)))
+      : scratch
+        ? Math.max(6, Math.min(mainH - 1, Math.floor((mainH * 3) / 4)))
+        : Math.max(6, Math.min(mainH - 1, f.view.buf.lineStarts().length + 5));
   const x = Math.floor((W - w) / 2);
-  const y = mainY + (scratch ? Math.floor((mainH - h) / 2) : Math.max(0, Math.min(1, mainH - h)));
+  const y = mainY + (full ? 0 : scratch || peek ? Math.floor((mainH - h) / 2) : Math.max(0, Math.min(1, mainH - h)));
   const bg = roleStyle(theme, "overlay", null);
   const border = roleStyle(theme, "overlay_border", null);
   const dim = roleStyle(theme, "overlay_dim", null);
   const b = app.glyphs.box;
-  c.fill(x - 2, y - 1, w + 4, h + 2, bg.bg);
+  c.fill(full ? x : x - 2, full ? y : y - 1, full ? w : w + 4, full ? h : h + 2, bg.bg);
   drawText(c, x, y, `${b.tl}${b.h}`, border);
-  const tw = drawText(c, x + 2, y, truncate(` ${f.title} `, w - 6), { ...border, bold: true });
+  // A peek's: its path cut from the front, where it is and the file's name kept (VV-D7).
+  const title = f.kind === "peek" ? peekTitle(f.peek, f.view.buf.elsewhere?.rel ?? null, w - 8) : f.title;
+  const tw = drawText(c, x + 2, y, truncate(` ${title} `, w - 6), { ...border, bold: true });
   drawText(c, x + 2 + tw, y, b.h.repeat(Math.max(0, w - 3 - tw)) + b.tr, border);
   for (let k = 1; k < h - 1; k++) {
     drawText(c, x, y + k, b.v, border, 1);
@@ -509,12 +523,14 @@ function drawFloating(app: App, c: Canvas, mainY: number, mainH: number, geo: Ge
           ? ` ctrl+s ${f.amend ? "amends" : "commits"} · esc · q leaves it `
           : f.kind === "scratch"
             ? " esc · q closes, saved "
-            : ` esc · q closes, writing back · ctrl+s writes `;
+            : f.kind === "peek"
+              ? ` o go there · t keep as a tab · z ${f.peek.full ? "smaller" : "fill"}${f.peek.back.length ? " · ctrl+o back" : ""} · esc closes `
+              : ` esc · q closes, writing back · ctrl+s writes `;
   const bottom = `${b.bl}${b.h.repeat(Math.max(0, w - 2 - stringWidth(hint)))}`;
   drawText(c, x, y + h - 1, bottom, border);
   drawText(c, x + stringWidth(bottom), y + h - 1, truncate(hint, w - stringWidth(bottom) - 1) + b.br, dim);
   drawPane(app, c, f.view, { x: x + 1, y: y + 1, w: w - 2, h: h - 2 }, true, false, true, false, geo);
-  return { x: x - 2, y: y - 1, w: w + 4, h: h + 2 };
+  return full ? { x, y, w, h } : { x: x - 2, y: y - 1, w: w + 4, h: h + 2 };
 }
 
 /** Narrower than this, a question goes over the status line instead of floating. */
@@ -898,7 +914,10 @@ function drawTabs(app: App, c: Canvas, x0: number, band: Band, geo: Geometry): v
     const v = t.views[t.active]!;
     // Unsaved changes (any tab showing the note), else a recent change on disk.
     const changed = v.buf.dirty ? " •" : v.buf.changedAt && app.now() - v.buf.changedAt < CHANGE_MARKER_MS ? " ↻" : "";
-    return ` ${i + 1} ${t.pinned ? `${app.glyphs.pin} ` : ""}${truncate(app.displayName(v.buf).split("/").pop()!, 24)}${changed} `;
+    // Another vault's file, kept from a peek (VV-D7): marked with that vault's name.
+    const e = v.buf.elsewhere;
+    const name = e?.rel ? `${e.vault}: ${e.rel.split("/").pop()!}` : app.displayName(v.buf).split("/").pop()!;
+    return ` ${i + 1} ${t.pinned ? `${app.glyphs.pin} ` : ""}${truncate(name, e ? 36 : 24)}${changed} `;
   });
   const close = `${app.glyphs.close} `;
   const widths = labels.map((l) => stringWidth(l) + stringWidth(close) + 1);

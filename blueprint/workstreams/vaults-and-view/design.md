@@ -56,7 +56,49 @@ zooming out replace it), the roots beside the tree, `:pin-root`.
 
 ## ADDED design/tui.md § The peek
 
-The floating window for another vault's file (VV-D7): its keys, links inside it, where it's used, its size.
+Done in VV-T7 (`tui/peek.ts`). **Looking never moves you** (VV-D7): a link that leads out of the current vault — into
+another vault, a vault nested in this one among them, or to a file outside every vault, by a path, a pointer or a
+wikilink — opens a peek, never a switch (D50's switch on following a link is gone). So does a backlink from another
+vault (`space l b`, `g r`), another vault's hit in the search widened with `ctrl+a`, and `ctrl+enter` or the split's
+follow on such a link. `:e` with a path or a pointer, the explorer and `space v v` still go there: choosing, not
+looking (VV-D4). A folder link out of the vault is revealed in its own vault, as before.
+
+- **The window:** the floating window (3.20) of kind `peek`, a virtual buffer of the file's text (`peek:<path>`, never
+  read from or written to the disk again, never a place remembered), read-only (`a peek is read-only — o goes there,
+  to edit it`). A note is rendered, a data or code file shown as its kind opens; a binary file isn't peeked at. Its
+  `elsewhere` holds its vault's name and the vault's graph and path there: the layout reads its links and embeds in
+  that graph, and `followLink` resolves them there (`tui/actions.ts`). Its size: the content's width less an eighth
+  (at least four columns each side) and its height less a tenth, centred; `z` (`peek.fill`) the whole content area,
+  no margin; again, back. Titled `kestrel › docs/architecture.md`, outside every vault `/etc/hosts — outside every
+  vault`, the path cut from the front when it doesn't fit (`peekTitle`), so the vault, the file's name and "outside
+  every vault" stay; its bottom border `o go there · t keep as a tab · z fill · ctrl+o back · esc closes` (`z smaller`
+  while it fills the screen, `ctrl+o back` while it has somewhere to go back to). The status line keeps the current
+  vault, the path being the peek's (`kestrel: docs/architecture.md`).
+- **Keys:** the peek's keymap (`DEFAULT_PEEK_KEYS`, over the note's, not in visual mode): `o` `peek.go`, `t`
+  `peek.tab`, `z` `peek.fill`; `esc` closes it (a find first), `q` too, as every floating window. `/`, the moves, the
+  selection and `y` as in any rendered note.
+- **`o` (`peek.go`):** into its vault as a switch does (`switchVault`, at the cursor's place in the peek), the trail
+  kept, so `ctrl+o` comes back; refused while a note is unsaved, the peek staying. Outside every vault, the file
+  opened beside this vault's notes, editable, as a file a link reached always was. On a tab kept from a peek, from the
+  palette: the same, into that file's vault.
+- **`t` (`peek.tab`):** a tab here of the file (`buffer`'s path-keyed buffer beside the vault, as a loose file's),
+  at the peek's place. A file of another vault is read-only whenever it's open here (`markElsewhere`: `read-only here:
+  kestrel's — go into kestrel to edit it`), the session's tabs bringing it back so; its tab marked `kestrel:
+  architecture.md`, its links read in its vault. One outside every vault is read-only while kept (`read-only: kept
+  from a peek`); `o` makes it a file beside, editable. Back (`ctrl+o`) from the vault gone into from such a tab goes
+  into the vault it was kept in, its tabs.
+- **Links inside it:** one to the peeked note's vault moves the peek there, the place left kept: `ctrl+o` back, and
+  forward, inside the peek (`peekStep`). One to the current vault closes the peek and opens there, in the tabs, as a
+  link does. One to a third vault, or outside every vault, moves the peek there too. A wikilink by a name that vault
+  has no note of, or a path not written yet, is said, never made: notes are written in their own vault. In a file
+  outside every vault, its paths are read from its folder (`b.md` as `./b.md`), its wikilinks said to need a vault.
+- **Backlinks:** under a Markdown note, after a rule, `Linked from (n):` — each a link from the note's folder to the
+  line linking here (`[~/notes/index.md:41](<../../../notes/index.md#L41>) — architecture`), followed as any link in
+  the peek — when its vault has an index on disk (the background index has most); none yet: `Linked from: kestrel has
+  no index here yet — o goes there, and finds them.` The vault's graph is the one this vault reaches it by (`Reach`,
+  opened once, its index caught up then), given a reach of its own for other vaults' links into it.
+- **Mouse:** a click on a link out of the vault peeks; `ctrl+click` (`link.go`, the terminal's ctrl with a click) goes
+  there at once, a peek skipped; within the vault it's a click. A click outside the peek closes it.
 
 ## MODIFIED design/tui.md § Side panes ("Source control")
 

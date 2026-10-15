@@ -61,7 +61,9 @@ Source mode is the other way to edit: `ctrl+k` shows the whole note as Markdown.
 ## Links and backlinks
 
 slipbox reads the links you already write: Markdown links, wikilinks, links to headings. `enter` follows one, and
-`ctrl+o` comes back. A note's backlinks are the notes that link to it. Renaming or moving a note fixes the links to it.
+`ctrl+o` comes back. A link into another vault opens a peek: the note read in a floating window, you staying where you
+are, until `o` goes there. A note's backlinks are the notes that link to it. Renaming or moving a note fixes the links
+to it.
 
 [Links and vaults](links-and-vaults.md)
 

@@ -1,7 +1,7 @@
 ---
-status: proposed
-assignee: null
-blocked_by: [VV-T1]
+status: done
+assignee: claude-cli
+blocked_by: []
 created: "2026-10-15"
 ---
 

@@ -48,10 +48,9 @@ const COMMAND_OWNERS: Record<string, Area> = {
     ["theme", "glyphs", "cell", "info", "footnotes", "footnote", "heading", "type"].map((g) => [g, "reading" as const]),
   ),
   ...Object.fromEntries(
-    ["link", "links", "backlinks", "note", "folder", "folders", "root", "vault", "trash", "rename", "git"].map((g) => [
-      g,
-      "links-and-files" as const,
-    ]),
+    ["link", "links", "backlinks", "peek", "note", "folder", "folders", "root", "vault", "trash", "rename", "git"].map(
+      (g) => [g, "links-and-files" as const],
+    ),
   ),
   ...Object.fromEntries(["lsp", "problems", "shell", "context"].map((g) => [g, "outside-and-code" as const])),
 };

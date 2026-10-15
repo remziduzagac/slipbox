@@ -112,8 +112,8 @@ Search starts with the vault you are in. Press `ctrl+a` in the search list to wi
 
 The list's title says which.
 
-A hit in another vault is shown by its path (`~/code/website/README.md`). `enter` on it switches to that vault, at the
-line.
+A hit in another vault is shown by its path (`~/code/website/README.md`). `enter` on it reads the file in a peek, at
+the line, and `o` goes there ([A peek at another vault](links-and-vaults.md#a-peek-at-another-vault)).
 
 A worktree is left out, even when a note links into it. Its notes are copies of its main checkout's.
 
