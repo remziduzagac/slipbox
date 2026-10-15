@@ -2,26 +2,27 @@
 //
 // Containers (quotes, list items, callouts) lay their children out at a reduced width and then
 // prefix every row, so nesting composes without any block knowing where it sits.
+//
+// Here, a note's blocks; inlines are render-inline.ts's, tables render-table.ts's, front matter and
+// data files' rows render-data.ts's, and what they all share render-context.ts's.
 
-import type { Heading, Nodes, Parents, PhrasingContent, Root, RootContent, Table, TableCell } from "mdast";
+import type { Heading, Nodes, Parents, PhrasingContent, Root, RootContent } from "mdast";
 import type { Glyphs } from "../glyphs.ts";
-import { type CellLink, type DataComment, type DataField, fieldLink, type TreePlace } from "../data.ts";
+import type { DataComment, DataField } from "../data.ts";
 import { type DrawingColors, drawMermaid, MERMAID, mermaidSvg } from "../diagrams.ts";
 import { RESVG, rasterizer } from "../svg.ts";
 import { MATHJAX, typesetter } from "../typeset.ts";
-import { mathRows, mathText } from "../math.ts";
+import { mathRows } from "../math.ts";
 import { onlyComments } from "../obsidian.ts";
-import { headingLabel, ORIGIN, parseMarkdown, type Frontmatter, slugify } from "../parse.ts";
+import { headingLabel, ORIGIN, parseMarkdown, type Frontmatter } from "../parse.ts";
 import { expandTabs, sanitize } from "../sanitize.ts";
 import type { Role } from "../theme/theme.ts";
 import { graphemes, graphemeWidth, padEnd, stringWidth, truncate } from "../width.ts";
-import type { Hashtag } from "../tags.ts";
-import { parseWikiTarget, type WikiLink } from "../wikilink.ts";
+import type { WikiLink } from "../wikilink.ts";
 import { highlight } from "./highlight.ts";
 import {
   A_BOLD,
   A_ITALIC,
-  A_STRIKE,
   type CodeScroll,
   type Layout,
   type LayoutHeading,
@@ -31,8 +32,11 @@ import {
   type Picture,
   type Span,
 } from "./ir.ts";
-import { allocate, PADDING } from "./table.ts";
-import { fit, longestWord, measure, naturalWidth, wrapSpans } from "./wrap.ts";
+import { wrapSpans } from "./wrap.ts";
+import { type Ctx, type Style, TEXT, srcOf, breakHard, addLink, textOf } from "./render-context.ts";
+import { NOTE_URL, IMAGE_FILE, SIZE, inline } from "./render-inline.ts";
+import { frontmatterBlock, placeOf, guides, dataField, dataComment } from "./render-data.ts";
+import { table } from "./render-table.ts";
 
 export interface RenderOptions {
   /** Layout width in columns — the caller has already subtracted the inset (2.7). */
@@ -73,7 +77,9 @@ export type PictureSource =
   | { file: string; size: PictureSize | null }
   /** An SVG slipbox drew (12.16, 12.17): a diagram's, sized as the terminal's words are, or a display's maths. */
   | { svg: string; kind: "diagram" | "math" };
+
 export type PictureSize = { width: number; height: number | null };
+
 /** A picture found: its file, or its address on the internet. */
 export type FoundPicture = Exclude<PictureSource, { name: string }>;
 
@@ -96,37 +102,12 @@ export interface Embedded {
   locate?: (from: PictureSource) => FoundPicture | null;
 }
 
-interface Ctx {
-  opts: RenderOptions;
-  links: LayoutLink[];
-  headings: Omit<LayoutHeading, "line">[];
-  definitions: Map<string, string>;
-  /** How many containers (quotes, lists, footnotes) deep the block being rendered is. */
-  nesting: number;
-  /** The notes being drawn, the outermost first: an embed of one of them is a loop (1.11). */
-  embedChain: string[];
-  /** Every note embedded so far, nested ones too. */
-  embedded: Set<string>;
-  /** What its blocks waited for, a module still loading (16.6): a block that did is never kept. */
-  pending: Set<string>;
-  /** Inside an embed: its links are at the embed's line, and resolved from the embedded note. */
-  linkSrc?: number;
-  linkFrom?: string;
-}
-
 /** Embeds inside embeds are drawn this deep, no deeper: past it, a line says to open it. */
 const MAX_EMBED_DEPTH = 3;
 
 /** Containers deeper than this render as their plain text: nobody reads 60 levels of quote, and a
  *  hostile note 5,000 deep must not overflow the stack (the note would then show nothing at all). */
 const MAX_NESTING = 60;
-
-interface Style {
-  role: Role;
-  attrs: number;
-}
-
-const TEXT: Style = { role: "text", attrs: 0 };
 
 export function renderMarkdown(source: string, opts: RenderOptions): Layout {
   const parsed = parseMarkdown(source);
@@ -309,10 +290,6 @@ function collectDefinitions(tree: Root, ctx: Ctx) {
 // ---------------------------------------------------------------------------------------------
 // Blocks
 
-function srcOf(n: Nodes): number {
-  return n.position?.start.line ?? 1;
-}
-
 /** Separator rows carry the source line of the row above, so anchoring to a block's first line
  *  lands on the block, never on the gap before it (3.5). */
 function gapAfter(rows: Line[], fallback: number): Line {
@@ -477,7 +454,7 @@ function block(node: RootContent, ctx: Ctx, width: number, base: Style, fm?: Fro
   }
 }
 
-function heading(
+export function heading(
   depth: number,
   children: PhrasingContent[],
   src: number,
@@ -607,13 +584,6 @@ interface EmbedRef {
   link: string;
   node: PhrasingContent;
 }
-
-/** A URL that names a note: an image-syntax link to it embeds it. */
-const NOTE_URL = /\.(md|markdown)$/i;
-
-/** A picture's file, embedded by name (`![[dal.png]]`), and the size Obsidian lets it carry. */
-const IMAGE_FILE = /\.(png|jpe?g|gif|webp|avif|svg|bmp|ico|tiff?|heic)$/i;
-const SIZE = /^(\d+)(?:x(\d+))?$/;
 
 /** An image URL's path and its fragment: `#^id` a block, any other a heading. */
 function urlParts(url: string): { target: string; heading: string | null; block: string | null } {
@@ -747,6 +717,7 @@ function diagram(rows: string[], src: number, ascii: boolean): Line[] {
 
 /** A diagram's lines, arrows and node shapes: box drawing, arrows, geometric shapes — in ASCII, `+ - | < > ^`. */
 const DRAWING = /^[\u2190-\u21ff\u2500-\u257f\u25a0-\u25ff]$/;
+
 const ASCII_DRAWING = /^[+\-|<>^]$/;
 
 /** `note`: why a block that's drawn elsewhere is its code here (a diagram too wide, a kind not drawn), after its
@@ -812,28 +783,6 @@ function codeBlock(
   return out;
 }
 
-/** Break spans into rows of at most `width` columns, by grapheme, keeping styles. */
-function breakHard(spans: Span[], width: number): Span[][] {
-  const rows: Span[][] = [[]];
-  let w = 0;
-  for (const span of spans) {
-    let cur = "";
-    for (const g of graphemes(span.text)) {
-      const gw = graphemeWidth(g);
-      if (w + gw > width && w > 0) {
-        if (cur) rows[rows.length - 1]!.push({ ...span, text: cur });
-        rows.push([]);
-        cur = "";
-        w = 0;
-      }
-      cur += g;
-      w += gw;
-    }
-    if (cur) rows[rows.length - 1]!.push({ ...span, text: cur });
-  }
-  return rows;
-}
-
 const CALLOUT = /^\[!([A-Za-z]+)\]([+-])?[ \t]*/;
 
 function blockquote(children: RootContent[], src: number, ctx: Ctx, width: number, literal = false): Line[] {
@@ -873,11 +822,6 @@ function blockquote(children: RootContent[], src: number, ctx: Ctx, width: numbe
   if (width - 2 < MIN_NESTED) return blocks(children, ctx, width, { role: "quote", attrs: 0 });
   const lines = blocks(children, ctx, width - 2, { role: "quote", attrs: 0 });
   return prefixed(lines, [{ text: `${g.quoteBar} `, role: "quote_bar", attrs: 0 }], src, true);
-}
-
-/** A wide character of a script written without spaces between words (Han, kana; not Hangul or emoji). */
-function joinsWithoutSpace(g: string): boolean {
-  return !!g && graphemeWidth(g) === 2 && !/[\p{Script=Hangul}\p{Extended_Pictographic}]/u.test(g);
 }
 
 /** Below this many columns for a child, a container stops indenting (a quote's bar, a list's hang). */
@@ -1008,611 +952,4 @@ function htmlBlock(value: string, src: number, width: number): Line[] | null {
         out.push({ spans: row, src: src + i });
     });
   return out;
-}
-
-function frontmatterBlock(fm: Frontmatter | null, raw: string, src: number, ctx: Ctx, width: number): Line[] {
-  const g = ctx.opts.glyphs;
-  const title = truncate(` ${g.fmOpen} properties `, Math.max(0, width - 2));
-  const top: Span[] = [
-    { text: g.rule.repeat(2), role: "fm_border", attrs: 0 },
-    { text: title, role: "fm_border", attrs: 0 },
-    { text: g.rule.repeat(Math.max(0, width - 2 - stringWidth(title))), role: "fm_border", attrs: 0 },
-  ];
-  const out: Line[] = [{ spans: top, src }];
-  const data = fm?.data;
-  if (data && Object.keys(data).length) {
-    const keys = Object.keys(data);
-    const keyW = Math.min(20, Math.max(...keys.map((k) => stringWidth(sanitize(k)))), Math.floor(width / 3));
-    let line = src + 1;
-    for (const key of keys) {
-      const value = formatValue(data[key]);
-      const keyLine = findKeyLine(raw, key);
-      const ksrc = keyLine >= 0 ? src + 1 + keyLine : line;
-      const valueRows = wrapSpans(propertySpans(value, ksrc, ctx), Math.max(4, width - keyW - 3));
-      valueRows.forEach((row, i) => {
-        // A key longer than the column is cut with an ellipsis, never silently.
-        const k = i === 0 ? padEnd(truncate(sanitize(key), keyW), keyW) : " ".repeat(keyW);
-        out.push({
-          spans: [{ text: ` ${k}`, role: "fm_key", attrs: 0 }, { text: "  ", role: "text", attrs: 0 }, ...row],
-          src: ksrc,
-        });
-      });
-      line++;
-    }
-  } else {
-    raw.split("\n").forEach((text, i) => {
-      for (const row of breakHard([{ text: ` ${expandTabs(sanitize(text))}`, role: "fm_value", attrs: 0 }], width))
-        out.push({ spans: row, src: src + 1 + i });
-    });
-    if (fm?.error)
-      for (const row of wrapSpans([{ text: sanitize(fm.error), role: "fm_error", attrs: 0 }], Math.max(1, width - 1)))
-        out.push({ spans: [{ text: " ", role: "fm_error", attrs: 0 }, ...row], src });
-  }
-  out.push({
-    spans: [{ text: g.rule.repeat(width), role: "fm_border", attrs: 0 }],
-    src: src + raw.split("\n").length + 1,
-  });
-  return out;
-}
-
-/**
- * A property's value as spans: its text, and each wikilink in it a link (Obsidian's properties:
- * `related: "[[Plan]]"`), drawn and followed as the text's are.
- */
-function propertySpans(value: string, src: number, ctx: Ctx): Span[] {
-  const out: Span[] = [];
-  let last = 0;
-  for (const m of value.matchAll(/(!?)\[\[([^[\]\n]+)\]\]/g)) {
-    if (m.index! > last) out.push({ text: value.slice(last, m.index), role: "fm_value", attrs: 0 });
-    const w = parseWikiTarget(m[2]!);
-    const kind = m[1] ? "embed" : "wiki";
-    const s = status(ctx, kind, w.target);
-    const shown =
-      w.alias ?? (w.heading ? `${w.target} › ${w.heading}` : w.block ? `${w.target} ^${w.block}` : w.target);
-    const id = addLink(ctx, {
-      kind,
-      target: w.target,
-      heading: w.heading ?? (w.block ? `^${w.block}` : null),
-      text: shown,
-      status: s,
-      src,
-    });
-    out.push({
-      text: sanitize(shown),
-      role: s === "unresolved" ? "link_unresolved" : s === "ambiguous" ? "link_ambiguous" : "wikilink",
-      attrs: 0,
-      link: id,
-    });
-    last = m.index! + m[0].length;
-  }
-  if (last < value.length || !out.length) out.push({ text: value.slice(last), role: "fm_value", attrs: 0 });
-  return out;
-}
-
-/** A table's place in a data file's tree, if it has one. */
-function placeOf(n: RootContent): TreePlace | undefined {
-  return (n.data as { tree?: TreePlace } | undefined)?.tree;
-}
-
-/**
- * The guides before a row of a data file's tree (16.12), from its place: `row`, its own first row
- * (├─ or └─ at its level); `down`, a row below it that is still its (a wrapped value, a table);
- * `above`, comment lines above it (its parent's line running down to it). The top level has none.
- */
-function guides(lasts: boolean[], at: "row" | "down" | "above", ctx: Ctx, room = Infinity): Span[] {
-  const g = ctx.opts.glyphs;
-  // A narrow pane keeps the innermost levels that fit in `room` (3 columns each), so the row's
-  // text keeps its floor and nothing is cut; the outer ones go.
-  const keep = Math.min(lasts.length, Math.max(0, Math.floor(room / 3)));
-  if (keep < lasts.length) lasts = lasts.slice(lasts.length - keep);
-  const n = lasts.length;
-  if (!n) return [];
-  let text = "";
-  for (let i = 0; i < n - 1; i++) text += lasts[i] ? "   " : `${g.guide}  `;
-  if (at === "row") text += `${lasts[n - 1] ? g.guideLast : g.guideBranch}${g.guideDash} `;
-  else if (at === "above") text += `${g.guide}  `;
-  else text += lasts[n - 1] ? "   " : `${g.guide}  `;
-  return [{ text, role: "table_border", attrs: 0 }];
-}
-
-/** A data file's key and value (16.11): drawn like frontmatter's properties, the value coloured
- *  by its kind, a comment dimmed after it; the key column shared by the section's keys. In a tree
- *  (YAML, JSON), inside its guides; a branch (an object's key) is a row of the outline. */
-function dataField(f: DataField, ctx: Ctx, width: number): Line[] {
-  const src = srcOf(f as unknown as Nodes);
-  const place = f.tree;
-  // The guides' room: a branch's key keeps 4 columns after its space; a key and value 8.
-  const room = width - (place?.branch ? 5 : 8);
-  const lead = place ? guides(place.lasts, "row", ctx, room) : [];
-  const leadW = lead.reduce((a, s) => a + stringWidth(s.text), 0);
-  if (place?.branch) {
-    // The key alone, its comment after it; a heading of the outline (and the breadcrumb, and a
-    // `#key` link's target), drawn as a row like any other.
-    const level = Math.min(6, place.lasts.length + 1);
-    const text = sanitize(f.key);
-    const idx = ctx.headings.push({ level, text, slug: slugify(text), src }) - 1;
-    const spans: Span[] = [{ text: f.key ? text : "·", role: "fm_key", attrs: A_BOLD }];
-    if (f.comment)
-      spans.push({
-        text: `  # ${expandTabs(sanitize(f.comment).replace(/\s*\n\s*/g, " "))}`,
-        role: "syn_comment",
-        attrs: 0,
-      });
-    const down = guides(place.lasts, "down", ctx, room);
-    const rows = wrapSpans(spans, Math.max(4, width - 1 - leadW));
-    return rows.map((row, i) => ({
-      spans: [{ text: " ", role: "text", attrs: 0 }, ...(i === 0 ? lead : down), ...row],
-      src,
-      heading: i === 0 ? idx : undefined,
-    }));
-  }
-  width -= leadW;
-  // The key column leaves the value 4 columns (with the space before the key and the two after it).
-  const kw = Math.max(1, Math.min(f.keyWidth || stringWidth(sanitize(f.key)), Math.floor(width / 3), width - 7));
-  let role: Role =
-    f.kind === "number" || f.kind === "date"
-      ? "syn_number"
-      : f.kind === "boolean" || f.kind === "null"
-        ? "syn_constant"
-        : "fm_value";
-  const value = expandTabs(sanitize(f.value)) || (f.kind === "string" ? '""' : "");
-  // A value that is a link (16.15): a URL, a reference key's value, or a path that resolves.
-  const l = fieldLink(f);
-  const dl = l ? dataValueLink(ctx, l, f.value, f.keyLine) : null;
-  if (dl) role = dl.role;
-  const spans: Span[] = [{ text: value, role, attrs: 0, ...(dl ? { link: dl.link } : {}) }];
-  if (f.comment)
-    spans.push({
-      text: `${value ? "  " : ""}# ${expandTabs(sanitize(f.comment).replace(/\s*\n\s*/g, " "))}`,
-      role: "syn_comment",
-      attrs: 0,
-    });
-  const rows = wrapSpans(spans, Math.max(4, width - kw - 3));
-  const down = place ? guides(place.lasts, "down", ctx, room) : [];
-  return rows.map((row, i) => ({
-    spans: [
-      { text: " ", role: "text", attrs: 0 },
-      ...(i === 0 ? lead : down),
-      { text: i === 0 ? padEnd(truncate(sanitize(f.key), kw), kw) : " ".repeat(kw), role: "fm_key", attrs: 0 },
-      { text: "  ", role: "text", attrs: 0 },
-      ...row,
-    ],
-    src,
-  }));
-}
-
-/** A data value's link (16.15), when it is one: explicit (a URL, a reference key's), or a path that
- *  resolves. A field's value, or a records table's cell. */
-function dataValueLink(ctx: Ctx, l: CellLink, text: string, src: number): { link: number; role: Role } | null {
-  const s = status(ctx, "markdown", l.target);
-  if (!l.explicit && s !== "resolved") return null;
-  return {
-    link: addLink(ctx, { kind: "markdown", target: l.target, heading: null, text, status: s, src }),
-    role: s === "unresolved" ? "link_unresolved" : "link",
-  };
-}
-
-/** Comment lines of a data file on their own: dimmed, wrapped. */
-function dataComment(c: DataComment, width: number, ctx: Ctx): Line[] {
-  const src = srcOf(c as unknown as Nodes);
-  // In a tree, inside the guides of the key it's above.
-  const lead = c.tree ? guides(c.tree.lasts, c.tree.above ? "above" : "down", ctx, width - 5) : [];
-  const w = lead.reduce((a, s) => a + stringWidth(s.text), 0);
-  return c.text
-    .split("\n")
-    .flatMap((text, i) =>
-      wrapSpans([{ text: expandTabs(sanitize(text)), role: "syn_comment", attrs: 0 }], Math.max(4, width - 1 - w)).map(
-        (row) => ({ spans: [{ text: " ", role: "text", attrs: 0 }, ...lead, ...row], src: src + i }),
-      ),
-    );
-}
-
-function findKeyLine(raw: string, key: string): number {
-  const lines = raw.split("\n");
-  return lines.findIndex((l) => l.startsWith(`${key}:`) || l.startsWith(`"${key}":`) || l.startsWith(`'${key}':`));
-}
-
-function formatValue(v: unknown): string {
-  if (v === null || v === undefined) return "";
-  if (v instanceof Date) return v.toISOString().slice(0, 10);
-  if (Array.isArray(v)) return v.map(formatValue).join(", ");
-  if (typeof v === "object") {
-    return Object.entries(v as Record<string, unknown>)
-      .map(([k, x]) => `${k}: ${formatValue(x)}`)
-      .join("; ");
-  }
-  return sanitize(String(v))
-    .replace(/\s*\n\s*/g, " ")
-    .replace(/\t/g, " ");
-}
-
-// ---------------------------------------------------------------------------------------------
-// Tables
-
-function table(node: Table, ctx: Ctx, width: number): Line[] {
-  const g = ctx.opts.glyphs;
-  const b = g.box;
-  const src = srcOf(node);
-  const ncols = Math.max(...node.children.map((r) => r.children.length));
-  const align = node.align ?? [];
-  const cells: Span[][][] = node.children.map((row, ri) => {
-    const style: Style = ri === 0 ? { role: "table_header", attrs: A_BOLD } : TEXT;
-    const out: Span[][] = [];
-    for (let c = 0; c < ncols; c++) {
-      const cell = row.children[c] as TableCell | undefined;
-      // A records table's cell whose value is a link (a data file's, 16.15), drawn as a field's is.
-      const l = ri > 0 ? (cell?.data as { link?: CellLink } | undefined)?.link : undefined;
-      const value = l ? textOf(cell as unknown as Nodes) : "";
-      const dl = l ? dataValueLink(ctx, l, value, srcOf(row)) : null;
-      out.push(
-        dl
-          ? [{ text: expandTabs(sanitize(value)), role: dl.role, attrs: 0, src: srcOf(row), link: dl.link }]
-          : cell
-            ? inline(cell.children, ctx, style, srcOf(row))
-            : [],
-      );
-    }
-    return out;
-  });
-  const desired: number[] = [];
-  const minimum: number[] = [];
-  for (let c = 0; c < ncols; c++) {
-    let d = 1;
-    let m = 1;
-    for (const row of cells) {
-      d = Math.max(d, naturalWidth(row[c]!));
-      m = Math.max(m, longestWord(row[c]!));
-    }
-    desired.push(d + 2 * PADDING);
-    minimum.push(m + 2 * PADDING);
-  }
-  // Measure every cell once; the allocator asks for line counts at many widths.
-  const measured = cells.map((row) => row.map((spans) => measure(spans)));
-  const alloc = allocate(desired, minimum, width, (col, w) => {
-    let splits = 0;
-    const lines = measured.map((row) => {
-      const f = fit(row[col]!, w);
-      splits += f.splits;
-      return f.lines;
-    });
-    return { lines, splits };
-  });
-  if (alloc.mode === "records") return tableRecords(node, cells, ctx, width);
-
-  const widths = alloc.widths;
-  // Each rule belongs to a source line: the top to the table's first, the header rule to the
-  // delimiter line, a rule between rows and the bottom to the row above them — so a cursor or a
-  // window top on a rule comes back to that rule after a re-layout, not to the table's top.
-  const border = (l: string, m: string, r: string, h: string, at = src): Line => ({
-    spans: [{ text: l + widths.map((w) => h.repeat(w)).join(m) + r, role: "table_border", attrs: 0 }],
-    src: at,
-  });
-  const wrapped = cells.map((row) => row.map((spans, c) => wrapSpans(spans, widths[c]! - 2 * PADDING)));
-  const multiLine = wrapped.slice(1).some((row) => row.some((rows) => rows.length > 1));
-  const out: Line[] = [border(b.tl, b.tm, b.tr, b.h)];
-  wrapped.forEach((row, ri) => {
-    const height = Math.max(...row.map((r) => r.length));
-    const rowSrc = srcOf(node.children[ri]!);
-    for (let k = 0; k < height; k++) {
-      const spans: Span[] = [{ text: b.v, role: "table_border", attrs: 0 }];
-      row.forEach((cellRows, c) => {
-        const content = cellRows[k] ?? [];
-        const cw = content.reduce((a, s) => a + stringWidth(s.text), 0);
-        const room = widths[c]! - 2 * PADDING - cw;
-        const a = align[c];
-        const left = a === "right" ? room : a === "center" ? Math.floor(room / 2) : 0;
-        spans.push({ text: " ".repeat(PADDING + left), role: "text", attrs: 0 });
-        spans.push(...content);
-        spans.push({ text: " ".repeat(room - left + PADDING), role: "text", attrs: 0 });
-        spans.push({ text: b.v, role: "table_border", attrs: 0 });
-      });
-      out.push({ spans, src: rowSrc });
-    }
-    if (ri === 0) out.push(border(b.hl, b.hx, b.hr, b.hh, rowSrc + 1));
-    else if (multiLine && ri < wrapped.length - 1) out.push(border(b.ml, b.mm, b.mr, b.h, rowSrc));
-  });
-  out.push(border(b.bl, b.bm, b.br, b.h, srcOf(node.children[node.children.length - 1]!)));
-  return out;
-}
-
-/** Narrow collapse: one record per row, `header: value`, when no grid can fit. */
-function tableRecords(node: Table, cells: Span[][][], ctx: Ctx, width: number): Line[] {
-  const g = ctx.opts.glyphs;
-  const header = cells[0] ?? [];
-  const labels = header.map(
-    (h, c) =>
-      h
-        .map((s) => s.text)
-        .join("")
-        .trim() || `#${c + 1}`,
-  );
-  // Labels in an aligned column (at most a third of the width), values hanging beside them.
-  const labelW = Math.max(1, Math.min(Math.max(...labels.map((l) => stringWidth(l))), Math.floor(width / 3)));
-  const valueW = Math.max(1, width - labelW - 2);
-  const out: Line[] = [];
-  const rule = (src: number): Line => ({
-    spans: [{ text: g.rule.repeat(width), role: "table_border", attrs: 0 }],
-    src,
-  });
-  cells.slice(1).forEach((row, ri) => {
-    const src = srcOf(node.children[ri + 1]!);
-    out.push(rule(src));
-    row.forEach((spans, c) => {
-      // The header's own spans, so a link in it stays a link (placed at its first record).
-      const head = header[c]?.some((sp) => sp.text.trim())
-        ? header[c]!.map((sp) => ({
-            ...sp,
-            role: sp.link !== undefined ? sp.role : ("table_header" as Role),
-            attrs: sp.attrs | A_BOLD,
-          }))
-        : [{ text: labels[c] ?? `#${c + 1}`, role: "table_header" as Role, attrs: A_BOLD }];
-      const labelRows = wrapSpans(head, labelW);
-      const valueRows = wrapSpans(spans, valueW);
-      const n = Math.max(labelRows.length, valueRows.length);
-      for (let k = 0; k < n; k++) {
-        const label = labelRows[k] ?? [];
-        const lw = label.reduce((a, sp) => a + stringWidth(sp.text), 0);
-        out.push({
-          spans: [...label, { text: " ".repeat(labelW - lw + 2), role: "text", attrs: 0 }, ...(valueRows[k] ?? [])],
-          src,
-        });
-      }
-    });
-  });
-  // A table with a header only: its column names, one per row, so it doesn't vanish.
-  if (!out.length && labels.length) {
-    const src = srcOf(node);
-    out.push(rule(src));
-    for (const l of labels)
-      for (const row of wrapSpans([{ text: l, role: "table_header", attrs: A_BOLD }], width))
-        out.push({ spans: row, src });
-  }
-  if (out.length) out.push(rule(srcOf(node)));
-  return out;
-}
-
-// ---------------------------------------------------------------------------------------------
-// Inlines
-
-const DROP_TAGS =
-  /^<\/?(?:kbd|sup|sub|b|i|u|em|strong|mark|span|small|abbr|ins|del|s|q|cite|code|samp|var|a)\b[^>]*>$/i;
-
-/** What closes a sentence or a bracket: no space before it, where a comment was. */
-const CLOSING = /^[.,;:!?)\]}…]/;
-
-function inline(nodes: PhrasingContent[], ctx: Ctx, style: Style, src: number): Span[] {
-  const out: Span[] = [];
-  let line = src;
-  /** An Obsidian comment just left out (DF-D17): the white space after it goes where there's some before it. */
-  let squeeze = false;
-  const push = (text: string, st: Style, extra: Partial<Span> = {}) => {
-    if (!text) return;
-    squeeze = false;
-    out.push({ text, role: st.role, attrs: st.attrs, src: line, ...extra });
-  };
-  const text = (value: string, st: Style, extra: Partial<Span> = {}) => {
-    // Soft line breaks become spaces; each one advances the source line.
-    // A tab in prose or a table cell is whitespace; the width function gives it no columns.
-    let v = sanitize(value).replace(/\t/g, " ");
-    const before = out[out.length - 1];
-    if (squeeze && (!before || /\s$/.test(before.text))) {
-      const lead = /^\s*/.exec(v)![0];
-      line += lead.split("\n").length - 1;
-      v = v.slice(lead.length);
-      // `oil %%a note%%.`: the space before it goes too, where what follows closes the sentence.
-      if (before && CLOSING.test(v)) {
-        before.text = before.text.replace(/\s+$/, "");
-        if (!before.text) out.pop();
-      }
-    }
-    const parts = v.split("\n");
-    parts.forEach((p, i) => {
-      if (i > 0) {
-        line++;
-        // Between two Chinese or Japanese characters a soft break is no space at all, as those
-        // scripts write; Korean spaces its words, and emoji are words of their own.
-        const before = graphemes(parts[i - 1]!).at(-1) ?? "";
-        const after = graphemes(p)[0] ?? "";
-        if (!(joinsWithoutSpace(before) && joinsWithoutSpace(after))) push(" ", st, extra);
-      }
-      push(p, st, extra);
-    });
-  };
-  const walk = (ns: PhrasingContent[], st: Style, extra: Partial<Span> = {}) => {
-    for (const n of ns) {
-      if (n.position) line = n.position.start.line;
-      switch (n.type) {
-        case "text":
-          text(n.value, st, extra);
-          break;
-        case "strong":
-          walk(
-            n.children,
-            { role: st.role === "text" || st.role === "quote" ? "strong" : st.role, attrs: st.attrs | A_BOLD },
-            extra,
-          );
-          break;
-        case "emphasis":
-          walk(n.children, { role: st.role === "text" ? "emphasis" : st.role, attrs: st.attrs | A_ITALIC }, extra);
-          break;
-        case "delete":
-          walk(n.children, { role: st.role === "text" ? "strike" : st.role, attrs: st.attrs | A_STRIKE }, extra);
-          break;
-        case "highlight":
-          // Obsidian's `==highlight==` (DF-D17): on its own background, what's inside it (a link, code) too.
-          walk(n.children, { role: "highlight", attrs: st.attrs }, { ...extra, bg: "highlight" });
-          break;
-        case "comment":
-          // Obsidian's `%%comment%%`: hidden while reading (source mode and the lens show the text as typed).
-          squeeze = true;
-          break;
-        case "inlineCode":
-          push(expandTabs(sanitize(n.value).replace(/\n/g, " "), 2), { role: "code_inline", attrs: 0 }, extra);
-          break;
-        case "inlineMath":
-          // Maths as Unicode text (12.11); one that can't be, as written.
-          push(
-            sanitize(mathText(n.value) ?? `$${n.value}$`).replace(/\n/g, " "),
-            { role: "math", attrs: st.attrs },
-            extra,
-          );
-          break;
-        case "break":
-          push("\n", st);
-          break;
-        case "link":
-          linkNode(n.url, n.children, st, n.position?.start.line ?? line, extra);
-          break;
-        case "linkReference": {
-          const url = ctx.definitions.get(n.identifier.toLowerCase());
-          if (url !== undefined) linkNode(url, n.children, st, line, extra);
-          else walk(n.children, st, extra);
-          break;
-        }
-        case "image":
-        case "imageReference": {
-          const url = n.type === "image" ? n.url : (ctx.definitions.get(n.identifier.toLowerCase()) ?? "");
-          const alt = n.alt || url.split("/").pop() || "image";
-          // Inside a link (a badge: [![alt](img)](url)) the image is that link's text: it follows
-          // the link, not the image.
-          const id =
-            extra.link ??
-            addLink(ctx, {
-              kind: "image",
-              target: url,
-              heading: null,
-              text: alt,
-              status: status(ctx, "image", url),
-              src: line,
-            });
-          // A note's (`![x](note.md)`, 20.1) where it isn't drawn in place — beside other text, or not
-          // there — is a reference to an embed, as `![[note]]`'s was; a picture's is a picture's.
-          const note = NOTE_URL.test(url.split("#")[0]!);
-          push(
-            `${note ? ctx.opts.glyphs.embed : ctx.opts.glyphs.image} ${sanitize(alt)}`,
-            { role: note ? "embed" : "image", attrs: 0 },
-            { link: id },
-          );
-          if (ctx.opts.showUrls && url) push(` <${sanitize(url)}>`, { role: "url", attrs: 0 });
-          break;
-        }
-        case "footnoteReference": {
-          const id = addLink(ctx, {
-            kind: "footnote",
-            target: n.identifier,
-            heading: null,
-            text: n.identifier,
-            status: "resolved",
-            src: line,
-          });
-          push(`[${sanitize(n.label ?? n.identifier)}]`, { role: "footnote", attrs: 0 }, { link: id });
-          break;
-        }
-        case "html": {
-          const v = n.value.trim();
-          if (/^<br\s*\/?>$/i.test(v)) push("\n", st);
-          else if (/^<!--[\s\S]*-->$/.test(v) || DROP_TAGS.test(v)) break;
-          else push(sanitize(n.value), { role: "html", attrs: 0 }, extra);
-          break;
-        }
-        default:
-          if ((n.type as string) === "wikiLink") wiki(n as unknown as WikiLink, st, extra);
-          else if ((n.type as string) === "hashtag") {
-            // A tag (1.6): followed, the notes that carry it.
-            const name = (n as unknown as Hashtag).value;
-            const id = addLink(ctx, {
-              kind: "tag",
-              target: name,
-              heading: null,
-              text: `#${name}`,
-              status: "resolved",
-              src: line,
-            });
-            push(`#${sanitize(name)}`, { role: "tag", attrs: st.attrs }, { link: id });
-          } else if ("children" in n) walk((n as unknown as Parents).children as PhrasingContent[], st, extra);
-          else if ("value" in n) text(String((n as { value: unknown }).value), st, extra);
-      }
-    }
-  };
-  const linkNode = (url: string, children: PhrasingContent[], st: Style, at: number, around: Partial<Span> = {}) => {
-    const visible = textOf({ type: "paragraph", children });
-    const s = status(ctx, "markdown", url);
-    const id = addLink(ctx, { kind: "markdown", target: url, heading: null, text: visible || url, status: s, src: at });
-    const role: Role = s === "unresolved" ? "link_unresolved" : "link";
-    // What the file says (21.9): its text, or, a link without text of its own, its target as written —
-    // no form made up for the screen.
-    // On a highlight's background, inside one.
-    const bg = around.bg ? { bg: around.bg } : {};
-    if (children.length) walk(children, { role, attrs: st.attrs }, { ...bg, link: id });
-    else push(sanitize(url), { role, attrs: st.attrs }, { ...bg, link: id });
-    const external = /^[a-z][a-z0-9+.-]*:/i.test(url);
-    // The URL after the text, unless the text already is it (www. autolinks, empty link text).
-    const same = url === visible || ["mailto:", "http://", "https://"].some((scheme) => url === `${scheme}${visible}`);
-    if (ctx.opts.showUrls && external && children.length && !same) {
-      push(` <${sanitize(url)}>`, { role: "url", attrs: 0 });
-    }
-  };
-  const wiki = (w: WikiLink, st: Style, around: Partial<Span> = {}) => {
-    const kind = w.embed ? "embed" : "wiki";
-    const s = status(ctx, kind, w.target);
-    // A picture embedded by name, as Obsidian writes one: `|300` and `|240x180` its size, not words.
-    const picture = w.embed && IMAGE_FILE.test(w.target);
-    const alias = picture && w.alias && SIZE.test(w.alias.trim()) ? null : w.alias;
-    const shown =
-      alias ??
-      (picture ? w.target.split("/").pop()! : null) ??
-      (!w.target
-        ? w.heading
-          ? `#${w.heading}`
-          : w.block
-            ? `^${w.block}`
-            : w.value
-        : w.heading
-          ? `${w.target} › ${w.heading}`
-          : w.block
-            ? `${w.target} ^${w.block}`
-            : w.target);
-    // A block's `^id` rides as the heading does (`#^id`): followed, it lands on its block.
-    const id = addLink(ctx, {
-      kind,
-      target: w.target,
-      heading: w.heading ?? (w.block ? `^${w.block}` : null),
-      text: shown,
-      status: s,
-      src: line,
-    });
-    const role: Role = picture
-      ? "image"
-      : w.embed
-        ? "embed"
-        : s === "unresolved"
-          ? "link_unresolved"
-          : s === "ambiguous"
-            ? "link_ambiguous"
-            : "wikilink";
-    const prefix = picture ? `${ctx.opts.glyphs.image} ` : w.embed ? `${ctx.opts.glyphs.embed} ` : "";
-    push(prefix + sanitize(shown), { role, attrs: st.attrs }, { ...(around.bg ? { bg: around.bg } : {}), link: id });
-  };
-  walk(nodes, style);
-  return out;
-}
-
-function status(ctx: Ctx, kind: "wiki" | "embed" | "markdown" | "image", target: string): LinkStatus {
-  if (/^[a-z][a-z0-9+.-]*:/i.test(target) && kind !== "wiki" && kind !== "embed") return "external";
-  return ctx.opts.resolveLink ? ctx.opts.resolveLink(kind, target) : "unknown";
-}
-
-function addLink(ctx: Ctx, l: Omit<LayoutLink, "line" | "col">): number {
-  // Inside an embed: at the embed's line in the note shown, followed from the embedded note.
-  const inEmbed =
-    ctx.linkSrc !== undefined ? { src: ctx.linkSrc, ...(ctx.linkFrom ? { from: ctx.linkFrom } : {}) } : {};
-  return ctx.links.push({ ...l, ...inEmbed, line: -1, col: 0 }) - 1;
-}
-
-function textOf(n: Nodes): string {
-  if ((n.type as string) === "hashtag") return `#${(n as unknown as Hashtag).value}`;
-  if ("value" in n && typeof n.value === "string") return n.value;
-  if ((n.type as string) === "wikiLink") return (n as unknown as WikiLink).alias ?? (n as unknown as WikiLink).value;
-  const ch = (n as Parents).children;
-  return ch ? ch.map((c) => textOf(c)).join("") : "";
 }

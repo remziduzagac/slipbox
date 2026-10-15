@@ -26,7 +26,8 @@ for a person, and a command line for agents and scripts, both over the same plai
 - **`src/core/`** is everything that doesn't draw: finding a file's root, walking it, parsing notes, resolving and
   rewriting links, the graph and its indexes, search, laying a note out for a width, themes and glyphs, git, language
   servers, export, installing and updating. Both faces call it.
-- **`src/cli/`** is the command line: `cli.ts` runs each command, `args.ts` parses flags.
+- **`src/cli/`** is the command line: `cli.ts` parses a command line and runs the command, each group of commands in a
+  module of its own (`links.ts`, `files.ts`, `git.ts`, …) and what they share in `common.ts`; `args.ts` parses flags.
 - **`src/tui/`** is the TUI: `app.ts` is the model (panes, buffers, modes), `draw.ts` paints it on an abstract `Canvas`,
   `actions.ts` implements the commands, `keys.ts` the default keys.
 
@@ -37,15 +38,15 @@ renderer, input, shutdown) touch OpenTUI; everything else is driven in tests thr
 
 **The size of a file.** No source file is over 1,500 lines (D235): a feature lives in a module of its own, and `App`
 keeps the shared state and the wiring. `bun run check:size` (`scripts/check-size.ts`) fails on a file past the limit;
-the few past it today (`app.ts`, `draw.ts`, `cli.ts`, `actions.ts`, `graph.ts`, `rename.ts`, `render.ts`) are capped and
-may only shrink, until they're split.
+the few past it today (`app.ts`, `draw.ts`, `actions.ts`) are capped and may only shrink, until they're split.
 
 ## Where things live
 
 | Path | What |
 | --- | --- |
 | `src/core/` | the core; `layout/` (a note laid out), `theme/`, `export/` (formats), `servers/` (language servers) |
-| `src/cli/`, `src/tui/` | the two faces |
+| `src/cli/` | the command line: `cli.ts` dispatches, a module per group of commands, `common.ts` what they share |
+| `src/tui/` | the TUI |
 | `src/version.ts` | the version, one source; `package.json`'s must match |
 | `tests/` | the headless tests by area (`core`, `render`, `vault`, `cli`, `tui`, …), their snapshots, fixtures |
 | `tests/terminal/` | the terminal tests: slipbox driven by keys in headless terminals; `herdr/`, a real terminal's |
@@ -60,9 +61,14 @@ may only shrink, until they're split.
 A few modules to know first:
 
 - `core/command-specs.ts` and `core/commands.ts`: every user action, by its id, with its command-line equivalent.
-- `core/graph.ts`: the notes of a root, their links and backlinks, parsed lazily and cached.
+- `core/graph.ts`: the notes of a root, their links and backlinks, parsed lazily and cached; how a link resolves is
+  `graph-resolve.ts`'s, a note's entry from its text `graph-extract.ts`'s, their shapes `graph-types.ts`'s.
+- `core/rename.ts`: renames and moves as plans of byte-range edits, previewed first; a plan's shape is
+  `rename-plan.ts`'s, carrying one out and undoing it `rename-apply.ts`'s.
 - `core/note.ts` and `core/layout/`: a note from its text to rows for a width, the same for `slipbox render` and the
-  TUI.
+  TUI; `layout/render.ts` lays out its blocks, `render-inline.ts`, `render-table.ts` and `render-data.ts` the rest.
+- `cli/cli.ts`: the command line's dispatcher, its help and flags; each command's code is in its group's module, the
+  session and the helpers they share in `cli/common.ts`.
 - `core/fsutil.ts`: atomic writes, and `writeNote`, which never writes outside the root.
 - `core/width.ts` and `core/sanitize.ts`: how wide text is, and text made safe for a terminal.
 - `core/paths.ts`: slipbox's own config, cache, state and data folders.

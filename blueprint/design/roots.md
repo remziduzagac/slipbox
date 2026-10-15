@@ -235,7 +235,7 @@ The CLI says root where the code says vault, in its messages and its JSON, whose
 `mode` is `root` or `folder`; a change's `kind` is `root` for a root's naming, `make-root` for `init` of a folder
 inside a root, `unmake-root` for `deinit`; a root nested in another is skipped by the walk as a `nested root`; and
 nothing to undo is "in this root". The renames log and the saved plans keep the code's words, `vault`, `make-vault`
-and `unmake-vault`, and the CLI says them as root when it prints them (`kindWord` in `cli/cli.ts`). A theme slipbox
+and `unmake-vault`, and the CLI says them as root when it prints them (`kindWord` in `cli/files.ts`). A theme slipbox
 ships is `built-in`, as a document type is ([docs/manual/cli.md](../../docs/manual/cli.md) § `info`, § Moving,
 copying and deleting, § `themes`).
 

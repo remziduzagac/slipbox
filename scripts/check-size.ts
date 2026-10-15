@@ -19,11 +19,7 @@ export const LIMIT = 1500;
 export const CAPPED: Record<string, number> = {
   "src/tui/app.ts": 13000,
   "src/tui/draw.ts": 4000,
-  "src/cli/cli.ts": 3800,
   "src/tui/actions.ts": 3200,
-  "src/core/graph.ts": 2300,
-  "src/core/rename.ts": 2050,
-  "src/core/layout/render.ts": 1750,
 };
 
 /** A cap can come down when a file is this far under it. */

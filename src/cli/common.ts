@@ -1,0 +1,379 @@
+// What every CLI command shares: the session (the vault found, its config, its graph opened lazily), the errors
+// and exit codes, a note named on the command line resolved, and a note's file read and written as the writers do —
+// its sha checked, its BOM and line endings kept.
+
+import { createHash } from "node:crypto";
+import { existsSync, writeFileSync } from "node:fs";
+import { join, relative, resolve } from "node:path";
+import { type Config, loadConfig } from "../core/config.ts";
+import { folderIdentity } from "../core/folders.ts";
+import { type Graph, openGraph, type Retarget } from "../core/graph.ts";
+import type { ParsedNote } from "../core/parse.ts";
+import { parseNoteFile } from "../core/readers.ts";
+import { parseData } from "../core/data.ts";
+import { classify } from "../core/filetypes.ts";
+import { stateHome } from "../core/paths.ts";
+import { readStale, type StaleEntry } from "../core/stale.ts";
+import { UNSAFE } from "../core/sanitize.ts";
+import {
+  type DecodedFile,
+  decodeText,
+  ensureDir,
+  landsInside,
+  readRegular,
+  WriteRefused,
+  writeNote,
+} from "../core/fsutil.ts";
+import { compilePattern } from "../core/replace.ts";
+import { openVault, Reach } from "../core/reach.ts";
+import { planRelink } from "../core/rename.ts";
+import { activityFile } from "../core/autoindex.ts";
+import { rootLabel } from "../core/names.ts";
+import { isHome, isInside, vaultOf, recordLocation, type VaultLocation, configFilesFor } from "../core/vault.ts";
+import { homeWalkKept, walkHomeNow } from "../core/home.ts";
+import { type Args, flag, has, UsageError } from "./args.ts";
+
+export const EXIT = { ok: 0, error: 1, usage: 2, notFound: 3, ambiguous: 4, refused: 5 } as const;
+
+export class CliError extends Error {
+  constructor(
+    message: string,
+    readonly code: number = EXIT.error,
+    readonly data?: unknown,
+  ) {
+    super(message);
+  }
+}
+
+export interface Io {
+  out: (s: string) => void;
+  err: (s: string) => void;
+  stdin: () => Promise<string>;
+  isTTY: boolean;
+  columns: number | undefined;
+  cwd: string;
+  env: NodeJS.ProcessEnv;
+}
+
+export class Session {
+  warnings: string[] = [];
+  private _graph: Graph | null = null;
+  readonly config: Config;
+  /** The config files read, in the order applied (user, then the vault's). */
+  readonly configSources: string[];
+  /** Which file set each setting taken (`links.style` → its file), for `info` (21.4). */
+  readonly configOrigins: Record<string, string>;
+
+  constructor(
+    readonly args: Args,
+    readonly loc: VaultLocation,
+    readonly io: Io,
+  ) {
+    const loaded = loadConfig({ ...configFilesFor(loc), configFile: flag(args, "config") });
+    this.config = loaded.config;
+    this.configSources = loaded.sources;
+    this.configOrigins = loaded.origins;
+    this.warnings.push(...loaded.warnings);
+    if (loc.note) this.warnings.push(loc.note);
+    // An agent is working (20.9): the TUI's background auto-index waits a while.
+    try {
+      ensureDir(stateHome());
+      writeFileSync(activityFile(), `${Date.now()}\n`);
+    } catch {}
+    // A named folder moved here by hand (21.8): its state came along — sure, so nothing asked; said once.
+    const { carriedFrom } = recordLocation(loc);
+    if (carriedFrom) {
+      // The links its move broke, in and out of it (20.17): counted, for relink to fix — never the
+      // pointers relink offers for links that still reach their file (21.7), as the TUI's offer counts.
+      const broken = planRelink(openVault(loc.root), undefined, { pointers: false }).files.reduce(
+        (n, f) => n + f.edits.length,
+        0,
+      );
+      const fix = broken
+        ? ` — its move broke links on ${broken} line${broken === 1 ? "" : "s"}: slipbox relink fixes them (--dry-run shows how)`
+        : "";
+      this.warnings.push(
+        `${rootLabel(loc)} moved here from ${carriedFrom}: its sessions, scratch, trash and reading positions came along${fix}`,
+      );
+    }
+  }
+
+  get graph(): Graph {
+    if (!this._graph) {
+      // Home never walked yet (VV-D2): walked now, as far as its cap — an agent's answer is now, not after the
+      // background index; kept for the next command and the TUI.
+      if (this.loc.mode === "home" && !homeWalkKept(this.loc)) walkHomeNow(this.loc, this.config);
+      this._graph = openGraph(this.loc, this.config, true, "lazy");
+      // One process, one answer: an alias in a note not parsed yet still counts (17.7), and other
+      // vaults are reached through the machine's list (17.8).
+      this._graph.thorough = true;
+      this._graph.reach = new Reach(this.loc);
+      // A note this command made or removed sent links by name elsewhere: said, not silent.
+      this._graph.onRetarget((rs) => this.warnings.push(...rs.map(retargetSaid)));
+    }
+    return this._graph;
+  }
+
+  /** Warnings, including walk and parse errors found lazily while the command ran. */
+  allWarnings(): string[] {
+    return [...this.warnings, ...(this._graph?.errors ?? [])];
+  }
+
+  stale(): StaleEntry[] {
+    return readStale(this.loc);
+  }
+
+  private roots = new Map<string, { root: string | null; name: string | null }>();
+
+  /**
+   * The root a file is in, when it's another than this one, and that root's name (21.10): what JSON
+   * says of a link's file, a backlink's, a hit's — `{root: null, name: null}` for this root's own
+   * files, and for a file of no root. Home's (VV-D2) is home, unnamed.
+   */
+  rootOf(abs: string | null): { root: string | null; name: string | null } {
+    const none = { root: null, name: null };
+    if (!abs) return none;
+    const root = vaultOf(abs);
+    if (!root || root === this.loc.root) return none;
+    let hit = this.roots.get(root);
+    if (!hit) this.roots.set(root, (hit = { root, name: isHome(root) ? null : (folderIdentity(root)?.name ?? null) }));
+    return hit;
+  }
+}
+
+/**
+ * A note's or data file's tree: markdown parsed, a data file read by its format (16.11), its
+ * parse error a CliError. A text file has no rendered form (exit 2: `read` gives its text).
+ */
+export function parseFile(s: Session, rel: string, text: string): ParsedNote {
+  const kind = classify(rel, s.config.walk.extensions);
+  if (kind.group === "data") {
+    const d = parseData(kind.format, text);
+    if (d.error) throw new CliError(`${rel} doesn't parse — ${d.error}`, EXIT.error);
+    return { tree: d.tree, frontmatter: null, source: text };
+  }
+  if (kind.group === "text")
+    throw new UsageError(
+      `${rel} is a ${kind.format === "text" ? "text" : kind.format} file, with no rendered form (slipbox read shows its text)`,
+    );
+  return parseNoteFile(rel, text);
+}
+
+/** The root's data and text files (not notes, not binary), with their group and format. */
+export function textFiles(s: Session): { path: string; group: string; format: string }[] {
+  return s.graph
+    .filePaths()
+    .map((path) => ({ path, ...classify(path, s.config.walk.extensions) }))
+    .filter((f) => f.group !== "binary")
+    .sort((a, b) => a.path.localeCompare(b.path));
+}
+
+export interface Result {
+  data: unknown;
+  human?: string;
+  code?: number;
+}
+
+export type Handler = (s: Session, rest: string[]) => Result | Promise<Result>;
+
+export function requireArg(rest: string[], what: string): string {
+  const v = rest[0];
+  if (!v) throw new UsageError(`missing ${what}`);
+  return v;
+}
+
+/** A link sent elsewhere by a note coming or going, for people. */
+export function retargetSaid(r: Retarget): string {
+  return `${r.from}:${r.line}: [[${r.target}]] reached ${r.was}; it reaches ${r.now} now`;
+}
+
+/**
+ * Resolve a note argument to a root-relative path, or fail with exit 3/4. `parse` is false for
+ * commands that need only the file's bytes: a big note the walk leaves out is then never parsed.
+ */
+export function resolveNote(s: Session, arg: string, parse = true): string {
+  const rel = findNoteArg(s, arg, parse);
+  // Reading follows the vault's rule too: a symlink pointing out of it is not a note of it (the
+  // walk leaves it out), so naming it by path reads nothing from outside.
+  if (!landsInside(s.loc.root, join(s.loc.root, rel)))
+    throw new CliError(`${rel} points outside the vault; not reading it`, EXIT.refused);
+  return rel;
+}
+
+function findNoteArg(s: Session, arg: string, parse: boolean): string {
+  // The file that said which vault this is: only the argument naming it (context takes several).
+  const root = flag(s.args, "root");
+  // Named from here, or from --root (`noteArgPath`): the file that said which root this is.
+  if (
+    s.loc.file &&
+    isInside(s.loc.root, s.loc.file) &&
+    (resolve(s.io.cwd, arg) === s.loc.file || (root && resolve(s.io.cwd, root, arg) === s.loc.file))
+  ) {
+    const rel = relative(s.loc.root, s.loc.file);
+    if (s.graph.notes.has(rel)) return rel;
+    // An existing file the walk leaves out: named, it's reached (20.8) — git-ignored or under a
+    // hidden folder, it's indexed from now on, as the TUI does; under node_modules, excluded by
+    // walk.exclude, it's read without joining the vault.
+    // The argument names s.loc.file (from here or from --root): whether it exists is that file's.
+    if (arg && existsSync(s.loc.file)) {
+      // A data or text file is itself (16.4): never parsed as a note.
+      if (!s.graph.reachFile(rel, { keep: true }) && parse && classify(rel, s.config.walk.extensions).group === "note")
+        s.graph.adopt(rel);
+      return rel;
+    }
+  }
+  const r = s.graph.findNote(arg, s.io.cwd);
+  if (r.status === "resolved") return r.path;
+  // --from: a name several notes share means the one a link from that note reaches (the nearest).
+  const fromArg = flag(s.args, "from");
+  if (r.status === "ambiguous" && fromArg !== undefined && fromArg !== arg) {
+    const from = s.graph.findNote(fromArg, s.io.cwd);
+    if (from.status === "resolved") {
+      const l = s.graph.nearestNamed(arg, from.path);
+      if (l.status === "resolved") return l.path;
+    }
+  }
+  if (r.status === "ambiguous") {
+    throw new CliError(`ambiguous note "${arg}": ${r.candidates.join(", ")}`, EXIT.ambiguous, {
+      candidates: r.candidates,
+    });
+  }
+  // A data or text file of the vault, named by its path with its extension (16.4): from the
+  // current folder, or from the vault's root.
+  for (const abs of new Set([arg.startsWith("/") ? arg : join(s.io.cwd, arg), join(s.loc.root, arg)])) {
+    if (!isInside(s.loc.root, abs)) continue;
+    const rel = relative(s.loc.root, abs);
+    if (s.graph.filePaths().includes(rel) && classify(rel, s.config.walk.extensions).group !== "binary") return rel;
+  }
+  throw new CliError(`no note or file "${arg}" in ${s.loc.root}`, EXIT.notFound);
+}
+
+/**
+ * A match's line for display: the whole line when short, else a window of it around the match with
+ * `…` where it was cut — a long line (a data URI) repeated per match would grow as its square.
+ */
+export function around(text: string, lineStart: number, lineEnd: number, from: number, to: number): string {
+  const MAX = 160;
+  const line = text.slice(lineStart, lineEnd).replace(/\r$/, "");
+  if (line.length <= MAX) return line;
+  const room = Math.max(0, MAX - (to - from));
+  const a = Math.max(lineStart, from - Math.floor(room / 2));
+  const b = Math.min(lineEnd, Math.max(to, a + MAX));
+  return `${a > lineStart ? "…" : ""}${text.slice(a, b).replace(/\r$/, "")}${b < lineEnd ? "…" : ""}`;
+}
+
+/** The query as a pattern, with the shared flags; a bad regex is a usage error. */
+export function pattern(s: Session, query: string): RegExp {
+  const re = compilePattern(query, {
+    regex: has(s.args, "regex"),
+    whole: has(s.args, "whole"),
+    ignoreCase: has(s.args, "ignore-case"),
+  });
+  if (typeof re === "string") throw new UsageError(`not a regex: ${re}`);
+  return re;
+}
+
+export function lineStarts(text: string): number[] {
+  const out = [0];
+  for (let i = text.indexOf("\n"); i >= 0; i = text.indexOf("\n", i + 1)) out.push(i + 1);
+  return out;
+}
+
+/** The 1-based line holding offset `at`. */
+export function lineAt(starts: number[], at: number): number {
+  let lo = 0;
+  let hi = starts.length - 1;
+  while (lo < hi) {
+    const mid = (lo + hi + 1) >> 1;
+    if (starts[mid]! <= at) lo = mid;
+    else hi = mid - 1;
+  }
+  return lo + 1;
+}
+
+export interface NoteFile extends DecodedFile {
+  bytes: Uint8Array;
+  sha: string;
+}
+
+/**
+ * A note's bytes, text and sha (of the bytes), checked against `--if-unchanged`. A note that isn't
+ * valid UTF-8 is read, never rewritten: its invalid bytes would be lost.
+ */
+export function readNoteFile(s: Session, abs: string, forWriting = true): NoteFile {
+  let bytes: Buffer;
+  try {
+    bytes = readRegular(abs);
+  } catch (err) {
+    throw new CliError(
+      `${relative(s.loc.root, abs)}: ${(err as NodeJS.ErrnoException).code === "ENOENT" ? "gone (deleted since it was found)" : (err as Error).message}`,
+      EXIT.notFound,
+    );
+  }
+  const decoded = decodeText(bytes);
+  const sha = createHash("sha256").update(bytes).digest("hex").slice(0, 16);
+  if (forWriting) {
+    checkUnchanged(s, abs, sha);
+    if (decoded.invalidUtf8)
+      throw new CliError(`${relative(s.loc.root, abs)} isn't valid UTF-8; not rewriting it`, EXIT.refused);
+  }
+  return { ...decoded, bytes, sha };
+}
+
+/**
+ * What a writer (`write`, `replace`, `task`) may change: a note, data or text file of the root
+ * (never a binary one, 16.4), inside it by its real path, and where the walk lists files — never
+ * `.slipbox/`, `.git/`, a hidden folder the root hasn't reached, or `node_modules`. Refused, exit 5.
+ */
+export function checkWritable(s: Session, abs: string): void {
+  const refuse = (why: string) => {
+    throw new CliError(`${relative(s.io.cwd, abs) || abs}: ${why}; not writing it`, EXIT.refused);
+  };
+  if (!isInside(s.loc.root, abs) || !landsInside(s.loc.root, abs)) refuse(`outside the vault (${s.loc.root})`);
+  const rel = relative(s.loc.root, abs);
+  // Notes, data and text files are written (16.4); binary files never are.
+  if (classify(rel, s.config.walk.extensions).group === "binary") refuse("a binary file");
+  // A hidden folder's note the vault has reached (20.8) is the vault's like any other; .git and
+  // .slipbox never are, nor node_modules.
+  if (rel.split("/").some((part) => part.startsWith(".") || part === "node_modules") && !s.graph.reached.has(rel))
+    refuse("in a folder the walk doesn't list");
+  if (UNSAFE.test(rel) || /[\x1b\t\n]/.test(rel)) refuse("a control character in its name");
+}
+
+/** `--if-unchanged <sha>`: refuse (exit 5) unless the note's bytes still have that sha. */
+export function checkUnchanged(s: Session, abs: string, sha: string): void {
+  const expect = flag(s.args, "if-unchanged");
+  if (expect === undefined) return;
+  if (!expect) throw new UsageError("--if-unchanged needs a sha (an empty one would check nothing)");
+  if (expect !== sha)
+    throw new CliError(`${relative(s.loc.root, abs)} changed since ${expect} (now ${sha}); not written`, EXIT.refused, {
+      sha,
+    });
+}
+
+/**
+ * Write a note's text back as it was stored: its BOM and its line endings kept. Returns the sha of
+ * the bytes written — not of the file re-read after, which another writer (a TUI's autosave) may
+ * already have changed.
+ */
+export function writeNoteText(s: Session, abs: string, text: string, was: DecodedFile | null): string {
+  let out = text;
+  if (was?.crlf) out = out.replace(/\r?\n/g, "\r\n");
+  if (was?.bom) out = `\uFEFF${out}`;
+  try {
+    writeNote(s.loc.root, abs, out);
+  } catch (err) {
+    if (err instanceof WriteRefused) throw new CliError(err.message, EXIT.refused);
+    throw err;
+  }
+  return createHash("sha256").update(Buffer.from(out, "utf8")).digest("hex").slice(0, 16);
+}
+
+/** A whole-number flag within `lo`–`hi`, or `fallback` when it isn't given. */
+export function wholeFlag(s: Session, name: string, fallback: number, lo: number, hi: number): number {
+  const v = flag(s.args, name);
+  if (v === undefined) return fallback;
+  if (!/^\d+$/.test(v) || Number(v) < lo || Number(v) > hi)
+    throw new UsageError(`--${name} must be a whole number from ${lo} to ${hi}`);
+  return Number(v);
+}

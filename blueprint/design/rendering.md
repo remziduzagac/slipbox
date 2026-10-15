@@ -35,8 +35,9 @@ turns it into a string for `slipbox render`.
 
 ## Blocks and inlines (plan `2.2`)
 
-`layout/render.ts` handles every mdast node remark-gfm produces, plus `#tags` and Obsidian's highlights and comments.
-Containers lay their children out at reduced width and prefix every row, so nesting composes.
+`layout/render.ts` handles every mdast node remark-gfm produces, plus `#tags` and Obsidian's highlights and comments:
+the blocks itself, inlines in `render-inline.ts`, tables in `render-table.ts`, front matter and data files' rows in
+`render-data.ts`. Containers lay their children out at reduced width and prefix every row, so nesting composes.
 
 | Node | Rendering |
 | --- | --- |
