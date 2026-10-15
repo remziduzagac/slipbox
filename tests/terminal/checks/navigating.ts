@@ -7,6 +7,7 @@ import { UNSAFE } from "../../../src/core/sanitize.ts";
 import { loadTheme } from "../../../src/core/theme/index.ts";
 import {
   type Check,
+  downloadsElsewhere,
   explorerClosed,
   explorerOpen,
   HANDBOOK,
@@ -998,7 +999,8 @@ export const NAVIGATING: Check[] = [
     area: "navigating",
     name: "title: the file on screen, else the folder; a name's escape sequence never in it",
     covers: { cases: ["safety", "hostile"] },
-    options: { home: true, startAt: "home/Downloads/stray-note.md" },
+    // Downloads beside home, a folder outside every vault: its notes listed together (home's index leaves it out).
+    options: { home: true, startAt: "elsewhere/stray-note.md", setup: downloadsElsewhere },
     run: async (s) => {
       await s.until(() => s.title() === "slipbox — stray-note.md", 3000, "the title naming the note");
       // An escape in the name would end the title's own sequence and spill the rest onto the screen.
@@ -1013,7 +1015,7 @@ export const NAVIGATING: Check[] = [
       // Every tab closed: the folder.
       await s.keys("ctrl+t", "shift+q");
       await s.see("No note open");
-      await s.until(() => s.title() === `slipbox — ${s.path("~/Downloads")}`, 3000, "the title naming the folder");
+      await s.until(() => s.title() === `slipbox — ${join(s.dir, "elsewhere")}`, 3000, "the title naming the folder");
     },
   },
 

@@ -48,8 +48,9 @@ import { contentHash, Redirects } from "./redirects.ts";
 import { dataLinks, parseData } from "./data.ts";
 import { isExport } from "./export/mark.ts";
 import { classify, extensionOf, noteFormat } from "./filetypes.ts";
-import { findVaultRoot, isListed, type VaultLocation } from "./vault.ts";
-import { listDirectory, type NoteFile, type Skipped, WalkFilter, walkVault } from "./walk.ts";
+import { type HomeWalk, homeWalk } from "./home.ts";
+import { checkoutAt, findVaultRoot, isListed, type VaultLocation } from "./vault.ts";
+import { listDirectory, type NoteFile, type Skipped, type WalkCap, WalkFilter, walkVault } from "./walk.ts";
 import { type Hashtag, tagKey, tagName } from "./tags.ts";
 
 export type LinkKind = "wiki" | "embed" | "markdown" | "image";
@@ -320,8 +321,12 @@ export class Graph {
     readonly loc: VaultLocation,
     readonly config: Config,
   ) {
-    this.filter = new WalkFilter(loc.root, config.walk);
+    this.filter = new WalkFilter(loc.root, config.walk, { home: loc.mode === "home" });
   }
+
+  /** Home's walk (VV-D2): when it was made (null: not yet, its top alone looked at), what its cap left out. Null in a
+   *  vault or a plain folder, which are walked whole at each build. */
+  home: { walked: number | null; capped: WalkCap | null } | null = null;
 
   get root(): string {
     return this.loc.root;
@@ -333,11 +338,22 @@ export class Graph {
    * `parse: "lazy"` parses nothing that the cache cannot supply: link resolution needs only the
    * walk's note names, so `render` and `resolve` never pay for parsing the whole vault. Entries
    * not yet parsed are stubs until `entry()`, `ensureAll()` or `parseSome()` fills them.
+   *
+   * Home (VV-D2) is never walked here: its walk is the one kept (`homeWalk`), or `given` — one just made, a slice at a
+   * time, by the background index or the TUI.
    */
-  build(useCache = true, parse: "all" | "lazy" = "all"): this {
+  build(useCache = true, parse: "all" | "lazy" = "all", given?: HomeWalk): this {
     const t0 = performance.now();
     this.walkedAt = Date.now();
-    const walk = isListed(this.loc) ? listDirectory(this.root, this.filter) : walkVault(this.root, this.filter);
+    const home = this.loc.mode === "home" ? (given ?? homeWalk(this.loc, this.filter)) : null;
+    // What changed after home's walk began may be missing from it: the watcher looks at those folders again.
+    if (home?.walked) this.walkedAt = home.walked;
+    this.home = home ? { walked: home.walked, capped: home.capped } : null;
+    const walk = home
+      ? home.walk
+      : isListed(this.loc)
+        ? listDirectory(this.root, this.filter)
+        : walkVault(this.root, this.filter);
     this.dirs = walk.dirs;
     this.assets.clear();
     for (const a of walk.assets) this.addAsset(a);
@@ -662,8 +678,9 @@ export class Graph {
    * Returns the moves recorded, vault paths old → new.
    */
   catchUpWithGit(): [string, string][] {
-    if (this.loc.mode !== "vault") return [];
-    const c = checkoutOf(this.root);
+    // A vault's git; home's only when `~` is itself a repository (VV-D2).
+    if (this.loc.mode === "folder") return [];
+    const c = checkoutAt(this.loc);
     const branch = c ? headOf(c).branch : null;
     const commit = c ? headCommit(c) : null;
     if (!c || !branch || !commit) return [];
@@ -712,7 +729,7 @@ export class Graph {
 
   /** The branch the vault's checkout has (null: detached, or no git). */
   branchNow(): string | null {
-    const c = this.loc.mode === "vault" ? checkoutOf(this.root) : null;
+    const c = checkoutAt(this.loc);
     return c ? headOf(c).branch : null;
   }
 

@@ -173,10 +173,13 @@ import {
   hasMarker,
   homeFolder,
   initVault,
+  isHome,
   isListed,
   isInside,
   isVaultRoot,
   locateVault,
+  locationAt,
+  vaultOf,
   markersAt,
   setRootMarkers,
   readVaultVersion,
@@ -186,6 +189,7 @@ import {
   type VaultLocation,
   configFilesFor,
 } from "../core/vault.ts";
+import { describeCap, homeWalkKept, walkHomeNow } from "../core/home.ts";
 import { isTrusted, setTrustedRoots } from "../core/trust.ts";
 import { type Args, flag, has, parseArgs, UsageError, VALUED } from "./args.ts";
 import { VERSION } from "../version.ts";
@@ -285,6 +289,9 @@ class Session {
 
   get graph(): Graph {
     if (!this._graph) {
+      // Home never walked yet (VV-D2): walked now, as far as its cap — an agent's answer is now, not after the
+      // background index; kept for the next command and the TUI.
+      if (this.loc.mode === "home" && !homeWalkKept(this.loc)) walkHomeNow(this.loc, this.config);
       this._graph = openGraph(this.loc, this.config, true, "lazy");
       // One process, one answer: an alias in a note not parsed yet still counts (17.7), and other
       // vaults are reached through the machine's list (17.8).
@@ -310,15 +317,15 @@ class Session {
   /**
    * The root a file is in, when it's another than this one, and that root's name (21.10): what JSON
    * says of a link's file, a backlink's, a hit's — `{root: null, name: null}` for this root's own
-   * files, and for a file of no root.
+   * files, and for a file of no root. Home's (VV-D2) is home, unnamed.
    */
   rootOf(abs: string | null): { root: string | null; name: string | null } {
     const none = { root: null, name: null };
     if (!abs) return none;
-    const root = findVaultRoot(abs);
+    const root = vaultOf(abs);
     if (!root || root === this.loc.root) return none;
     let hit = this.roots.get(root);
-    if (!hit) this.roots.set(root, (hit = { root, name: folderIdentity(root)?.name ?? null }));
+    if (!hit) this.roots.set(root, (hit = { root, name: isHome(root) ? null : (folderIdentity(root)?.name ?? null) }));
     return hit;
   }
 }
@@ -1480,21 +1487,15 @@ const HANDLERS: Record<string, Handler> = {
     if (has(s.args, "refresh")) {
       const at = rest[0] ? (isAbsolute(rest[0]) ? rest[0] : join(s.io.cwd, rest[0])) : s.loc.root;
       if (!existsSync(at)) throw new CliError(`no such file or folder: ${rest[0]}`, EXIT.notFound);
-      const vault = findVaultRoot(at);
-      // Outside every vault: the plain folder it's in, or this one's (20.22) — its own index.
-      const loc = vault ? rootAt(vault) : !rest[0] ? s.loc : folderAt(statSync(at).isDirectory() ? at : dirname(at));
-      if (isListed(loc))
-        throw new CliError(
-          `${loc.root} is listed a folder at a time, never indexed (the background index walks it: slipbox index --home)`,
-          EXIT.refused,
-        );
+      // Its vault — a marker's, or home (VV-D2) — else the plain folder it's in, or this one's (20.22): its own index.
+      const loc = !rest[0] ? s.loc : locationAt(statSync(at).isDirectory() ? at : dirname(at));
+      if (isListed(loc)) throw new CliError(`${loc.root} is listed a folder at a time, never indexed`, EXIT.refused);
       const root = loc.root;
       recordLocation(loc); // known on this machine from now on, as reaching it would make it (17.6)
       const t = performance.now();
-      const g = new Graph(loc, loadConfig({ ...configFilesFor(loc), configFile: flag(s.args, "config") }).config).build(
-        true,
-        "all",
-      );
+      const config = loadConfig({ ...configFilesFor(loc), configFile: flag(s.args, "config") }).config;
+      // Home's every folder listed again too (VV-D2): its walk made now, and kept.
+      const g = new Graph(loc, config).build(true, "all", loc.mode === "home" ? walkHomeNow(loc, config) : undefined);
       noteIndexed(loc.key);
       const ms = Math.round(performance.now() - t);
       const st = g.stats;
@@ -1529,23 +1530,22 @@ const HANDLERS: Record<string, Handler> = {
       ) {}
       const p = job.status;
       const done = !!p.passFinished;
+      const left = p.queue.length + (p.current ? 1 : 0);
       return {
         data: {
           root: p.root,
           found: p.found,
           indexed: p.indexed,
-          left: p.queue.length + (p.current ? 1 : 0),
+          left,
           finished: p.passFinished,
           started: p.passStarted,
+          // Home's own index (VV-D2): built this pass, its notes, what its cap left out.
+          home: { indexed: p.home, notes: p.homeNotes, capped: p.capped },
         },
-        human: `home folder ${p.root}: ${p.found} vault${p.found === 1 ? "" : "s"} found, ${p.indexed} indexed${done ? ` — pass done ${p.passFinished!.slice(0, 16).replace("T", " ")}` : ` — ${p.queue.length} folder${p.queue.length === 1 ? "" : "s"} left`}\n`,
+        human: `home ${p.root}: ${p.home ? `${p.homeNotes} note${p.homeNotes === 1 ? "" : "s"} of its own indexed` : "being walked"}, ${p.found} vault${p.found === 1 ? "" : "s"} found, ${p.indexed} indexed${done ? ` — pass done ${p.passFinished!.slice(0, 16).replace("T", " ")}` : p.home ? ` — ${left} vault${left === 1 ? "" : "s"} left` : ""}${p.capped ? `\n${describeCap(p.capped)}` : ""}\n`,
       };
     }
-    if (isListed(s.loc))
-      throw new CliError(
-        `${s.loc.root} is listed a folder at a time, never indexed (the background index walks it: slipbox index --home)`,
-        EXIT.refused,
-      );
+    if (isListed(s.loc)) throw new CliError(`${s.loc.root} is listed a folder at a time, never indexed`, EXIT.refused);
     const idx = SearchIndex.open(s.loc);
     if (!idx) throw new CliError("the search index can't be opened", 1);
     try {
@@ -1843,10 +1843,10 @@ const HANDLERS: Record<string, Handler> = {
     const dir = rest[0] ?? flag(s.args, "root") ?? s.io.cwd;
     const name = flag(s.args, "name");
     if (name === "") throw new UsageError("--name needs a name");
-    // A folder inside a vault (18.11): a vault of its own, the links that would stop reaching
-    // across the new boundary fixed.
+    // A folder inside a vault, home among them (18.11, VV-D2): a vault of its own, the links that would stop
+    // reaching across the new boundary fixed.
     const abs = dir.startsWith("/") ? dir : join(s.io.cwd, dir);
-    const holder = existsSync(abs) && !isVaultRoot(abs) ? findVaultRoot(dirname(abs)) : null;
+    const holder = existsSync(abs) && !isVaultRoot(abs) ? vaultOf(dirname(abs)) : null;
     if (holder) {
       const parent = openVault(holder);
       const rel = relative(holder, abs);
@@ -1905,7 +1905,8 @@ const HANDLERS: Record<string, Handler> = {
         `${abs} has no .slipbox/ to take away${markersAt(abs).length ? ` (it's a vault by its ${markersAt(abs).join(", ")})` : ""}`,
         EXIT.refused,
       );
-    const holder = findVaultRoot(dirname(abs));
+    // The vault holding it: a marker's, or home (VV-D2).
+    const holder = vaultOf(dirname(abs));
     if (!holder)
       throw new CliError(
         `${abs} isn't in another vault: only a vault nested in another becomes part of the vault holding it`,
@@ -2012,6 +2013,11 @@ const HANDLERS: Record<string, Handler> = {
     const name = requireArg(rest, "the folder's new name");
     if (s.loc.mode === "folder")
       throw new CliError(`${s.loc.root} has no vault to name: slipbox init makes one`, EXIT.refused);
+    if (s.loc.mode === "home")
+      throw new CliError(
+        "home is ~, and takes no name: give a folder in it a .slipbox/ and name that (slipbox init --name)",
+        EXIT.refused,
+      );
     const taken = folderNamed(name, s.loc.root).find((f) => f.name.toLowerCase() === name.toLowerCase());
     if (taken)
       throw new CliError(
@@ -2440,7 +2446,15 @@ const HANDLERS: Record<string, Handler> = {
       state: stateDir(s.loc),
       scratch: scratch.path,
       notes: g.notes.size,
-      index: { ...g.stats, written: g.indexedAt()?.toISOString() ?? null, reached: g.reached.size },
+      index: {
+        ...g.stats,
+        written: g.indexedAt()?.toISOString() ?? null,
+        reached: g.reached.size,
+        // Home's walk (VV-D2): when it was made (null: not yet, its top alone looked at), what its cap left out.
+        ...(g.home
+          ? { walked: g.home.walked === null ? null : new Date(g.home.walked).toISOString(), capped: g.home.capped }
+          : {}),
+      },
       // The background auto-index of the home folder (20.9): where it is.
       background: backgroundStatus(s.config),
       search: searchInfo(s),
@@ -2454,12 +2468,19 @@ const HANDLERS: Record<string, Handler> = {
       `slipbox   ${VERSION}${RELEASE ? ` (${RELEASE.target}, released from ${RELEASE.repo})` : ""}`,
       data.mode === "folder"
         ? `folder    ${data.root} (outside every vault)`
-        : `vault     ${data.root}${data.markerVersion ? ` (marker v${data.markerVersion})` : ""}`,
+        : data.mode === "home"
+          ? `vault     ${data.root} (home: its notes outside every other vault)`
+          : `vault     ${data.root}${data.markerVersion ? ` (marker v${data.markerVersion})` : ""}`,
       folder
         ? `name      ${folder.pointer}${folder.pointer !== folder.name ? ` (${folder.name} is another's too)` : ""}${folder.private ? ", private: this machine's only" : ""}${folder.copies.length > 1 ? ` — ${folder.copies.length} copies, links open ${tildePath(folder.default ?? "")}` : ""}`
-        : `name      none — ${s.loc.mode === "folder" ? "no vault" : "no remote and no .slipbox/ name"}: linked to by relative path`,
+        : `name      none — ${s.loc.mode === "folder" ? "no vault" : s.loc.mode === "home" ? "home is ~" : "no remote and no .slipbox/ name"}: linked to by relative path`,
       `notes     ${data.notes} (parsed ${g.stats.parsed}, cached ${g.stats.cached}, ${g.stats.ms.toFixed(0)} ms)`,
       `index     ${data.index.written ? `written ${data.index.written.slice(0, 16).replace("T", " ")}` : "not written yet"}${g.reached.size ? `, ${g.reached.size} reached outside the walk` : ""}`,
+      ...(g.home
+        ? [
+            `walk      ${g.home.walked === null ? "not yet: home's top alone, the rest while nobody is working" : `home walked ${new Date(g.home.walked).toISOString().slice(0, 16).replace("T", " ")}`}${g.home.capped ? ` — ${describeCap(g.home.capped)}` : ""}`,
+          ]
+        : []),
       `home      ${describeBackground(data.background)}`,
       `links     ${describeConvention(data.links)}`,
       `theme     ${data.config.theme}`,
@@ -2958,7 +2979,14 @@ const HANDLERS: Record<string, Handler> = {
       ["path", abs],
       ["size", `${data.size} bytes`],
       ["modified", data.mtime],
-      ["vault", s.loc.mode === "folder" ? `none (${tildePath(s.loc.root)} is outside every vault)` : rootLabel(s.loc)],
+      [
+        "vault",
+        s.loc.mode === "folder"
+          ? `none (${tildePath(s.loc.root)} is outside every vault)`
+          : s.loc.mode === "home"
+            ? "home (~)"
+            : rootLabel(s.loc),
+      ],
       ["title", data.title ?? "—"],
       ["tags", data.tags.join(", ") || "—"],
       ...Object.entries(data.properties ?? {}).map(([k, v]): [string, string] => [

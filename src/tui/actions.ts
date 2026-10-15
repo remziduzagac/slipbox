@@ -22,6 +22,7 @@ import { anchorsOf } from "../core/parse.ts";
 import { blockLine, findHeading, landingText, lineFragment } from "../core/landing.ts";
 import { dirname, isAbsolute, join, posix, relative } from "node:path";
 import { backgroundStatus, describeBackground } from "../core/autoindex.ts";
+import { describeCap } from "../core/home.ts";
 import { rootLabel, tildePath } from "../core/names.ts";
 import { isPointer, parsePointer, resolvePointer } from "../core/pointer.ts";
 import { noteProblems, type Problem, rootTypes } from "../core/diagnostics.ts";
@@ -2346,8 +2347,8 @@ export function registerActions(app: App): void {
     "problems.open": (a) => a.openProblems("all"),
     "problems.file": (a) => a.openProblems("file"),
     "vault.init": (a) => {
-      // In a root: the explorer's selected folder (or this note's) a root of its own (18.11).
-      if (a.loc.mode === "vault") return a.makeVaultHere();
+      // In a root, or home (VV-D2): the explorer's selected folder (or this note's) a root of its own (18.11).
+      if (a.loc.mode !== "folder") return a.makeVaultHere();
       const dir = a.loc.root;
       if (isNeverRoot(dir)) return a.message("warn", `${dir} can't have a .slipbox/: slipbox never indexes all of it`);
       a.vaultChoices(dir);
@@ -2612,6 +2613,8 @@ export function registerActions(app: App): void {
       const item = a.explorerFocused() ? a.explorerItem() : null;
       if (item?.vault && !arg) return a.renameVaultItem(item);
       if (a.loc.mode === "folder") return a.message("warn", `${a.loc.root} has no vault to name: :init makes one`);
+      if (a.loc.mode === "home")
+        return a.message("warn", "home is ~, and takes no name: :init gives a folder in it a .slipbox/ to name");
       const go = (name: string) => {
         const ident = folderIdentity(a.loc.root);
         const taken = readFolders().find((f) => f.key !== ident?.key && f.name.toLowerCase() === name.toLowerCase());
@@ -2664,10 +2667,19 @@ export function registerActions(app: App): void {
           "name",
           ident
             ? `${rootLabel(a.loc)}${a.loc.aliases.length ? ` (also ${a.loc.aliases.join(", ")})` : ""}`
-            : `none — ${a.loc.mode === "folder" ? "no vault" : "no remote and no .slipbox/ name"}: linked to by relative path`,
+            : `none — ${a.loc.mode === "folder" ? "no vault" : a.loc.mode === "home" ? "home is ~" : "no remote and no .slipbox/ name"}: linked to by relative path`,
         ],
         ["notes", String(g.notes.size)],
         ["indexing", a.indexing ? `${a.indexing} left` : "done"],
+        // Home's walk (VV-D2): made while nobody is working, as far as its cap.
+        ...(g.home
+          ? [
+              [
+                "walk",
+                `${g.home.walked === null ? "not yet: home's top alone, the rest while nobody is working" : `home walked ${new Date(g.home.walked).toISOString().slice(0, 16).replace("T", " ")}`}${g.home.capped ? ` — ${describeCap(g.home.capped)}` : ""}`,
+              ] as [string, string],
+            ]
+          : []),
         // How fresh, and what else is covered (20.10).
         [
           "index",

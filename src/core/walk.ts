@@ -1,11 +1,16 @@
 // The file walk (plan 1.2), implementing decision 0.11. The watcher uses the same `WalkFilter`,
 // so what the walk excludes is exactly what the watcher does not subscribe to (5.2).
+//
+// Home (VV-D2) is walked by the same filter with its skip list (`homeSkip`) instead of `.gitignore`: a slice at a
+// time (`SlicedWalk`), breadth first, as far as its cap (`HOME_LIMITS`).
 
 import { type Dirent, lstatSync, readdirSync, realpathSync, type Stats, statSync } from "node:fs";
 import { readRegular, SMALL_FILE } from "./fsutil.ts";
 import { join, relative, sep } from "node:path";
 import ignore, { type Ignore } from "ignore";
 import type { Config } from "./config.ts";
+import { classify } from "./filetypes.ts";
+import { userFolders } from "./paths.ts";
 import { isInside, isVaultRoot, MARKER } from "./vault.ts";
 
 export interface NoteFile {
@@ -35,17 +40,81 @@ const ALWAYS_SKIPPED = new Set([".git", MARKER, "node_modules"]);
 /** git's default `core.ignorecase`: true on macOS (case-insensitive filesystem), false on Linux. */
 const GIT_IGNORECASE = process.platform === "darwin" || process.platform === "win32";
 
+/**
+ * The busy folders (VV-D8): tools' output, their environments and their caches — many files, none of them a person's
+ * notes. Home's walk leaves them out wherever they are (VV-D2).
+ */
+export const BUSY_FOLDERS: ReadonlySet<string> = new Set([
+  "node_modules",
+  ".venv",
+  "venv",
+  "__pycache__",
+  "target",
+  "build",
+  "dist",
+  ".next",
+  "vendor",
+  "Pods",
+  "DerivedData",
+  ".gradle",
+  ".tox",
+]);
+
+/** A busy folder by its name (VV-D8): one of `BUSY_FOLDERS`, or a cache (`cache`, `.cache`, `Caches`, `pip-cache`). */
+export function isBusyFolder(name: string): boolean {
+  return BUSY_FOLDERS.has(name) || /(^|[._-])caches?$/i.test(name);
+}
+
+/** The system's folders at home's top, by platform (VV-D2): an application's, never a person's notes. */
+const SYSTEM_FOLDERS: Record<string, readonly string[]> = { darwin: ["Library"], win32: ["AppData"] };
+
+/** Why home's walk leaves a folder out (VV-D2). */
+export type HomeSkip = "hidden" | "system folder" | "Downloads" | "busy folder";
+
+/**
+ * Why home's walk leaves the folder `rel` (home's path for it) out, or null — home's skip list (VV-D2): a hidden folder
+ * (`.cache`, `.config`, `.local`, every dot folder), the system's (`Library` on macOS, `AppData` on Windows),
+ * `Downloads` (`downloads`: where the desktop keeps it, as home's path for it), a busy folder anywhere. Its files are
+ * left out by `WalkFilter.exclusion`: what the explorer doesn't list as a note or a text file.
+ */
+export function homeSkip(rel: string, opts: { platform?: string; downloads?: string } = {}): HomeSkip | null {
+  const name = rel.slice(rel.lastIndexOf("/") + 1);
+  if (name.startsWith(".")) return "hidden";
+  const top = !rel.includes("/");
+  if (top && (SYSTEM_FOLDERS[opts.platform ?? process.platform] ?? []).includes(name)) return "system folder";
+  if (rel === (opts.downloads ?? "Downloads")) return "Downloads";
+  if (isBusyFolder(name)) return "busy folder";
+  return null;
+}
+
+/** Home's Downloads, as home's path for it: where the desktop says (`user-dirs.dirs`), else `Downloads`. */
+function downloadsIn(home: string): string {
+  const at = userFolders(home).find((f) => f.name === "Downloads")?.path;
+  const rel = at ? relative(home, at).split(sep).join("/") : "";
+  return rel && !rel.startsWith("..") ? rel : "Downloads";
+}
+
 export class WalkFilter {
   private readonly extensions: Set<string>;
   private readonly gitignores = new Map<string, Ignore | null>();
   private readonly configIgnore: Ignore;
+  /** Home's Downloads (VV-D2), as home's path for it; null in a vault's filter. */
+  private readonly downloads: string | null;
 
+  /** `home`: home's filter (VV-D2) — its skip list, never a `.gitignore`. */
   constructor(
     readonly root: string,
     private readonly walk: Config["walk"],
+    readonly opts: { home?: boolean; platform?: string } = {},
   ) {
     this.extensions = new Set(walk.extensions.map((e) => e.replace(/^\./, "").toLowerCase()));
     this.configIgnore = ignore({ ignorecase: GIT_IGNORECASE }).add(walk.exclude);
+    this.downloads = opts.home ? downloadsIn(root) : null;
+  }
+
+  /** Home's filter (VV-D2), not a vault's. */
+  get home(): boolean {
+    return !!this.opts.home;
   }
 
   isNoteName(name: string): boolean {
@@ -60,7 +129,8 @@ export class WalkFilter {
   /**
    * Whether `rel` may be indexed when it's reached though the walk leaves it out (20.8): nothing on
    * its way is always skipped, excluded by `walk.exclude` or a vault of its own — only a hidden
-   * folder or `.gitignore` keeps it from the walk.
+   * folder or `.gitignore` keeps it from the walk. In home, nothing its skip list leaves out is read
+   * (VV-D2): named, such a file is opened, and nothing more.
    */
   reachable(rel: string): boolean {
     const parts = rel.split("/");
@@ -68,7 +138,7 @@ export class WalkFilter {
     for (let i = 0; i < parts.length; i++) {
       const prefix = parts.slice(0, i + 1).join("/");
       const why = this.exclusion(prefix, i < parts.length - 1);
-      if (why !== null && why !== "hidden" && why !== ".gitignore") return false;
+      if (why !== null && (this.home || (why !== "hidden" && why !== ".gitignore"))) return false;
       // A root of its own, hidden or git-ignored too (a vendored clone): `exclusion` says why the
       // walk skips it before it looks for markers.
       if (why !== null && i < parts.length - 1 && isVaultRoot(join(this.root, prefix))) return false;
@@ -82,6 +152,18 @@ export class WalkFilter {
     if (ALWAYS_SKIPPED.has(name)) return "always skipped";
     if (name.startsWith(".")) return "hidden";
     if (this.configIgnore.ignores(isDir ? `${rel}/` : rel)) return "walk.exclude";
+    // Home (VV-D2): its skip list, never a `.gitignore` — a dotfiles repository's `*` would leave home empty.
+    if (this.home) {
+      if (isDir) {
+        const why = homeSkip(rel, { platform: this.opts.platform, downloads: this.downloads ?? undefined });
+        if (why) return why;
+        return isVaultRoot(join(this.root, rel)) ? "nested vault" : null;
+      }
+      // What the explorer doesn't list as a note or a text file: a picture, an archive, a program.
+      return this.isNoteName(name) || classify(name, this.walk.extensions).group !== "binary"
+        ? null
+        : "not a note or text file";
+    }
     // git semantics: every .gitignore from the root down applies to the path relative to its own
     // directory, and the last one with an opinion wins — so a deeper `!keep.md` re-includes.
     // (A directory already excluded is never descended into, as with git.)
@@ -122,28 +204,133 @@ export class WalkFilter {
   }
 }
 
-export function walkVault(root: string, filter: WalkFilter): WalkResult {
-  const result: WalkResult = { files: [], assets: [], dirs: [], skipped: [], errors: [] };
+/** One walk's place: what it has found so far, and its symlinked notes' targets (a note twice is dropped at its end). */
+interface WalkState {
+  root: string;
+  realRoot: string;
+  filter: WalkFilter;
+  out: WalkResult;
+  /** Symlinked notes found → their target, vault-relative. */
+  links: Map<NoteFile, string>;
+  /** Each folder's entries by name: which come first decides what a cap leaves out, the same each time. */
+  sorted: boolean;
+}
+
+function startWalk(root: string, filter: WalkFilter, sorted = false): WalkState {
   let realRoot = root;
   try {
     realRoot = realpathSync(root);
   } catch {}
-  walkDir(root, realRoot, "", filter, result);
+  const out: WalkResult = { files: [], assets: [], dirs: [], skipped: [], errors: [] };
+  return { root, realRoot, filter, out, links: new Map(), sorted };
+}
+
+/** A walk done: a symlinked note whose target it includes dropped, the notes sorted. */
+function finishWalk(st: WalkState): WalkResult {
+  const result = st.out;
   // A symlinked note whose target the walk already includes is the same note twice: it would
   // double every backlink. Keep it only when its target is not otherwise in the vault.
-  const walked = new Set(result.files.filter((f) => !symlinkTargets.has(f)).map((f) => f.rel));
+  const walked = new Set(result.files.filter((f) => !st.links.has(f)).map((f) => f.rel));
   result.files = result.files.filter((f) => {
-    const target = symlinkTargets.get(f);
+    const target = st.links.get(f);
     if (target === undefined || !walked.has(target)) return true;
     result.skipped.push({ rel: f.rel, reason: `symlink to ${target}, already in the vault` });
     return false;
   });
-  symlinkTargets.clear();
   result.files.sort((a, b) => (a.rel < b.rel ? -1 : a.rel > b.rel ? 1 : 0));
   return result;
 }
 
-function walkDir(root: string, realRoot: string, dirRel: string, filter: WalkFilter, out: WalkResult): void {
+export function walkVault(root: string, filter: WalkFilter): WalkResult {
+  const st = startWalk(root, filter);
+  const visit = (rel: string) => listDir(st, rel, visit);
+  visit("");
+  return finishWalk(st);
+}
+
+/** Home's cap (VV-D2): its index holds this many notes at most, and its walk lists this many folders. */
+export const HOME_LIMITS = { notes: 10_000, folders: 5_000 } as const;
+
+/** What stopped a walk short: its cap of notes, or of folders. */
+export type WalkCap = "notes" | "folders";
+
+/**
+ * A walk made a slice at a time (VV-D2: home's, while nobody is working), breadth first — the folders nearest the top
+ * before deeper ones, so a cap leaves out the deepest — as far as `limits` allows. `step` works for a while; `result`
+ * is the walk once it's done, `capped` what stopped it short.
+ */
+export class SlicedWalk {
+  private readonly st: WalkState;
+  private readonly queue: string[];
+  private next = 0;
+  private done: WalkResult | null = null;
+  capped: WalkCap | null = null;
+
+  /** `from`: the folders to list, the top by default; `known`: folders walked already, never gone into again. */
+  constructor(
+    root: string,
+    filter: WalkFilter,
+    readonly limits: { notes: number; folders: number } = HOME_LIMITS,
+    private readonly opts: { from?: string[]; known?: ReadonlySet<string> } = {},
+  ) {
+    this.st = startWalk(root, filter, true);
+    this.queue = [...(opts.from ?? [""])];
+  }
+
+  /** Folders listed so far. */
+  get folders(): number {
+    return this.st.out.dirs.length;
+  }
+
+  /** The walk, once it's done; null until then. */
+  get result(): WalkResult | null {
+    return this.done;
+  }
+
+  /** Work for up to `budgetMs`, a folder at least; false once the walk is done. */
+  step(budgetMs: number): boolean {
+    if (this.done) return false;
+    const end = performance.now() + budgetMs;
+    const out = this.st.out;
+    do {
+      if (this.next >= this.queue.length) return this.finish(null);
+      if (out.dirs.length >= this.limits.folders) return this.finish("folders");
+      listDir(this.st, this.queue[this.next++]!, (rel) => {
+        if (!this.opts.known?.has(rel)) this.queue.push(rel);
+      });
+      if (out.files.length >= this.limits.notes) {
+        out.files.length = this.limits.notes;
+        return this.finish("notes");
+      }
+    } while (performance.now() < end);
+    return true;
+  }
+
+  /** The folders a cap left unlisted: found, not looked into. */
+  rest(): string[] {
+    return this.queue.slice(this.next);
+  }
+
+  private finish(cap: WalkCap | null): false {
+    this.capped = cap;
+    this.done = finishWalk(this.st);
+    return false;
+  }
+}
+
+/**
+ * A folder's top alone (VV-D2: home, not walked yet): its notes and files, the vaults in it; its folders listed, not
+ * looked into.
+ */
+export function walkTop(root: string, filter: WalkFilter): WalkResult {
+  const st = startWalk(root, filter, true);
+  listDir(st, "", (rel) => st.out.dirs.push(rel));
+  return finishWalk(st);
+}
+
+/** One folder listed: its notes and files kept, each folder of it given to `descend`, a vault in it skipped. */
+function listDir(st: WalkState, dirRel: string, descend: (rel: string) => void): void {
+  const { root, realRoot, filter, out } = st;
   let entries: Dirent[];
   try {
     entries = readdirSync(join(root, dirRel), { withFileTypes: true });
@@ -151,18 +338,19 @@ function walkDir(root: string, realRoot: string, dirRel: string, filter: WalkFil
     out.errors.push(`${dirRel || "."}: ${(err as NodeJS.ErrnoException).code ?? (err as Error).message}`);
     return;
   }
+  if (st.sorted) entries.sort((a, b) => (a.name < b.name ? -1 : a.name > b.name ? 1 : 0));
   out.dirs.push(dirRel);
   for (const entry of entries) {
     const rel = dirRel ? `${dirRel}/${entry.name}` : entry.name;
     const abs = join(root, rel);
     if (entry.isDirectory()) {
       const why = filter.exclusion(rel, true);
-      if (why === null) walkDir(root, realRoot, rel, filter, out);
+      if (why === null) descend(rel);
       else if (why === "nested vault") out.skipped.push({ rel, reason: why });
       continue;
     }
     if (entry.isSymbolicLink()) {
-      handleSymlink(abs, rel, realRoot, filter, out);
+      handleSymlink(abs, rel, realRoot, st);
       continue;
     }
     if (!entry.isFile()) continue;
@@ -200,7 +388,8 @@ export function symlinkVerdict(
   return { kept: true, target };
 }
 
-function handleSymlink(abs: string, rel: string, realRoot: string, filter: WalkFilter, out: WalkResult): void {
+function handleSymlink(abs: string, rel: string, realRoot: string, st: WalkState): void {
+  const { filter, out } = st;
   const v = symlinkVerdict(abs, realRoot);
   if (!v.kept) {
     if (v.reason && (!v.special || filter.isNoteName(rel.slice(rel.lastIndexOf("/") + 1))))
@@ -215,11 +404,8 @@ function handleSymlink(abs: string, rel: string, realRoot: string, filter: WalkF
   }
   addFile(abs, rel, filter, out);
   const added = out.files[out.files.length - 1];
-  if (added?.rel === rel) symlinkTargets.set(added, relative(realRoot, target).split(sep).join("/"));
+  if (added?.rel === rel) st.links.set(added, relative(realRoot, target).split(sep).join("/"));
 }
-
-/** Symlinked notes found during the current walk → their target, vault-relative. */
-const symlinkTargets = new Map<NoteFile, string>();
 
 function addFile(abs: string, rel: string, filter: WalkFilter, out: WalkResult): void {
   try {

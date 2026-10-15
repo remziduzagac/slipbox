@@ -275,6 +275,9 @@ A note's vault is the nearest folder above it that holds one of these:
 
 So a repository is a vault, and so is an Obsidian vault or a zk notebook, with nothing to set up.
 
+A note under no marker is in home, your home folder's own vault, when it's in your home folder (below). Outside both,
+its folder stands in for a vault.
+
 The vault decides:
 
 - what `/` at the start of a path starts from, and which notes a wikilink's name can match
@@ -293,17 +296,48 @@ to start ([The command line](cli.md)).
 
 A few rules keep vaults predictable:
 
-- **Your home folder and `/` are never vaults,** whatever they hold.
+- **Your home folder is a vault without a marker,** home, whatever it holds (below). `/` is never a vault.
 - **A vault inside a vault is a vault of its own.** A repository cloned into your notes folder keeps its notes to
   itself. The outer vault doesn't index them, and its names don't reach them. The explorer shows such a folder with its
-  own icon.
+  own icon. The vaults in your home folder are their own the same way.
 - **Several markers in one folder make one vault.** Its settings and name come from `.slipbox/`.
 - **Which markers count** is `walk.root_markers`. Only your own config may set it, since it decides where vaults are.
 
+### Home
+
+Your home folder, `~`, is a vault of its own, home. Its notes are those in your home folder that no other vault holds:
+a list at its top, a letter in `Documents`. Start slipbox in your home folder, or open a note of home's, and home is
+the vault you are in. The status line names it `~`. A link from another vault to a note of home's opens it in a peek,
+as any other vault's does: `~ › todo.md`, and `o` goes into home.
+
+Home is a vault as the others are. Its notes have backlinks, `/` starts from your home folder, and a wikilink's name
+matches its notes. It has its own session, with its tabs. Its settings are your own config, since it has no
+`.slipbox/` to hold any. It has git only when your home folder is itself a repository.
+
+Home's index leaves out what isn't your notes:
+
+- what the explorer doesn't list as a note or a text file, such as pictures and archives
+- hidden folders: `.cache`, `.config`, `.local` and every other folder whose name starts with a dot
+- the system's folders: `Library` on macOS, `AppData` on Windows
+- `Downloads`, where your desktop keeps it
+- the busy folders, wherever they are: `node_modules`, `.venv`, `venv`, `__pycache__`, `target`, `build`, `dist`,
+  `.next`, `vendor`, `Pods`, `DerivedData`, `.gradle`, `.tox`, and caches
+- notes larger than `walk.max_file_size`, which are listed as skipped, not read
+
+A file there still opens, and is read again when it changes on disk, but it is never indexed.
+
+Home is walked a little at a time while nobody is working, by the background index (see [Backlinks](#backlinks)), or
+by the TUI while home is open and the background index is off. Until then, home is its top folder alone. The walk is
+kept, so opening home never walks it again: the files it found are looked at, and a folder that changed is listed
+again. The command line walks home the first time it needs to, and `slipbox index --refresh ~` walks it again.
+
+Home's index holds 10,000 notes at most, and its walk lists 5,000 folders at most, those nearest the top first.
+slipbox says so when it stops there, in a message and in `slipbox info`.
+
 ### A folder outside every vault
 
-A folder with no marker above it works too. The folder you opened stands in for a vault. Its notes are listed, indexed
-and searched, and it has its own session.
+A folder outside every vault and outside your home folder works too: another drive, a share. The folder you opened
+stands in for a vault. Its notes are listed, indexed and searched, and it has its own session.
 
 In a folder outside every vault:
 
@@ -311,8 +345,8 @@ In a folder outside every vault:
 - Wikilinks have no names to look in.
 - The links slipbox writes follow your own setting, else its default (see [Conventions](#how-a-folder-writes-links)).
 
-Your home folder or `/`, opened as a folder, is listed a level at a time. It's never walked or indexed as a whole. Its
-search reads the files instead.
+`/`, opened as a folder, is listed a level at a time. It's never walked or indexed as a whole. Its search reads the
+files instead.
 
 A file outside every vault, reached by a link, is read in a peek. Its relative links are followed from its folder
 there. `o` opens it beside the vault you are in, to edit. Opened beside, its own links can't be followed, except web
@@ -648,12 +682,13 @@ A vault nested in this one, or holding it, is indexed as soon as a link or a bac
 **The background index** finds the rest. It runs while the TUI is open and nobody is working. Nobody is working when
 there's no key, no click, and no command from an agent for `index.idle_seconds`, 30 by default.
 
-Then slipbox walks your home folder a little at a time for vaults, and indexes each. So backlinks from folders you never
-opened here appear by themselves.
+Then slipbox walks your home folder a little at a time. It indexes home's own notes first (see [Home](#home)), then
+each vault it found there. So backlinks from folders you never opened here appear by themselves, and from the notes in
+your home folder that no other vault holds.
 
 The background index:
 
-- skips hidden folders, `node_modules` and the like
+- skips what home's index leaves out: hidden folders, `Downloads`, `node_modules` and the like
 - picks up where it stopped
 - once it has been through, waits a day before the next pass
 

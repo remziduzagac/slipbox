@@ -10,7 +10,7 @@ import type { Graph } from "./graph.ts";
 import { readRoots } from "./registry.ts";
 import { catchUp, search, type SearchHit, type SearchResult } from "./search.ts";
 import { SearchIndex } from "./search-index.ts";
-import { findVaultRoot, isListed, isVaultRoot } from "./vault.ts";
+import { isHome, isListed, isVaultRoot, vaultOf } from "./vault.ts";
 
 export const SCOPES = ["here", "linked", "all"] as const;
 export type Scope = (typeof SCOPES)[number];
@@ -39,7 +39,8 @@ export function scopeRoots(g: Graph, scope: Scope): string[] {
   if (scope === "here" || isListed(g.loc)) return [];
   const out = new Set<string>();
   const add = (abs: string) => {
-    const root = findVaultRoot(abs);
+    // Its vault: a marker's, or home (VV-D2).
+    const root = vaultOf(abs);
     if (root && root !== g.root && !checkoutOf(root)?.worktree) out.add(root);
   };
   for (const rel of g.notes.keys()) {
@@ -53,7 +54,11 @@ export function scopeRoots(g: Graph, scope: Scope): string[] {
   const linked = [...out];
   if (scope === "linked") return linked;
   const rest = readRoots().filter(
-    (v) => v.kind === "vault" && !v.worktree && v.path !== g.root && !out.has(v.path) && isVaultRoot(v.path),
+    (v) =>
+      (v.kind === "home" ? isHome(v.path) : v.kind === "vault" && isVaultRoot(v.path)) &&
+      !v.worktree &&
+      v.path !== g.root &&
+      !out.has(v.path),
   );
   return [...linked, ...rest.map((v) => v.path)];
 }

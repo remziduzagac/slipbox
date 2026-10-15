@@ -124,7 +124,7 @@ import { type Layout, type LayoutLink, type Picture, posOfSrc, srcAt } from "../
 import type { PictureSource, RenderOptions } from "../core/layout/render.ts";
 import { type Rasterizer, rasterizer } from "../core/svg.ts";
 import { layoutWidth, pictureLocator } from "../core/note.ts";
-import { cacheHome, ensureCacheHome, stateDir, userConfigFile, userFolders } from "../core/paths.ts";
+import { cacheHome, ensureCacheHome, slipboxOwn, stateDir, userConfigFile, userFolders } from "../core/paths.ts";
 import {
   SESSION_BRANCHES,
   type SessionTab,
@@ -204,7 +204,9 @@ import {
 } from "../core/footnotes.ts";
 import { copyPath, emptyTrash, linksInto, listTrash, restorePath, type TrashItem, trashPath } from "../core/files.ts";
 import { readIdentity, slugName, vaultConfigFile } from "../core/registry.ts";
-import { activityFile, AutoIndex } from "../core/autoindex.ts";
+import { activityFile, AutoIndex, autoIndexFile } from "../core/autoindex.ts";
+import { describeCap } from "../core/home.ts";
+import type { WalkCap } from "../core/walk.ts";
 import { notesOfType, ofType, type TypedNote } from "../core/doctypes.ts";
 import { type Scope, SCOPES, searchOthers } from "../core/scope.ts";
 import { rootLabel, tildePath } from "../core/names.ts";
@@ -221,9 +223,9 @@ import {
   suggestFolderName,
 } from "../core/folders.ts";
 import {
+  checkoutAt,
   configFilesFor,
   findVaultRoot,
-  folderAt,
   hasMarker,
   homeFolder,
   initVault,
@@ -231,6 +233,9 @@ import {
   isListed,
   isVaultRoot,
   locateVault,
+  locationAt,
+  vaultAt,
+  vaultOf,
   recordLocation,
   rootAt,
   rootMarkers,
@@ -1650,9 +1655,10 @@ export class App {
    */
   private markElsewhere(buf: NoteBuffer): void {
     if (buf.abs === this.scratch().path) return;
-    const root = findVaultRoot(buf.abs);
+    // Its vault: a marker's, or home (VV-D2).
+    const root = vaultOf(buf.abs);
     if (!root || root === this.loc.root) return;
-    const label = rootLabel(rootAt(root));
+    const label = rootLabel(vaultAt(root));
     const graph = vaultGraph(this, root);
     buf.elsewhere = { vault: label, graph, rel: graph ? relative(root, buf.abs) : null };
     buf.readOnly = `read-only here: ${label}'s — go into ${label} to edit it`;
@@ -2182,7 +2188,7 @@ export class App {
     if (m?.root !== this.loc.root || (!m.c && this.now() - m.at > 1000))
       this.checkoutMemo = {
         root: this.loc.root,
-        c: this.loc.mode === "vault" ? checkoutOf(this.loc.root) : null,
+        c: checkoutAt(this.loc),
         at: this.now(),
       };
     return this.checkoutMemo!.c;
@@ -2672,7 +2678,7 @@ export class App {
    * upstream, how far ahead of it and behind it, as of the last fetch (26.6): `research · main ↑2 ↓1`.
    */
   vaultStatus(max = Number.POSITIVE_INFINITY): string {
-    const b = this.loc.mode === "vault" ? this.branch() : null;
+    const b = this.loc.mode !== "folder" ? this.branch() : null;
     const named = this.loc.mode === "vault" ? this.loc.name : null;
     const where = named ?? tildePath(this.loc.root);
     const t = this.gitTrack;
@@ -4526,7 +4532,9 @@ export class App {
     // Above the vault, beside it, in another (VV-D5), the vault itself: not this one's to rename, move or delete here.
     if (row.outside || row.root?.here) return null;
     if (row.kind === "root")
-      return row.root?.kind === "vault" && this.loc.mode === "vault" ? { rel: row.path, dir: true, vault: true } : null;
+      return row.root?.kind === "vault" && this.loc.mode !== "folder"
+        ? { rel: row.path, dir: true, vault: true }
+        : null;
     return { rel: row.path, dir: row.kind === "dir" };
   }
 
@@ -4805,7 +4813,7 @@ export class App {
    * preview from the vault holding it; then into that vault, the note still open.
    */
   unmakeThisVault(): void {
-    const holder = this.loc.mode === "vault" ? findVaultRoot(dirname(this.loc.root)) : null;
+    const holder = this.loc.mode === "vault" ? vaultOf(dirname(this.loc.root)) : null;
     if (!holder)
       return this.message(
         "info",
@@ -4828,7 +4836,7 @@ export class App {
           return this.message("error", (err as Error).message);
         }
         const n = plan.files.reduce((k, f) => k + f.edits.length, 0);
-        this.switchVault(rootAt(holder), open && existsSync(open) ? open : null);
+        this.switchVault(vaultAt(holder), open && existsSync(open) ? open : null);
         this.message(
           "info",
           `made ${rel}/ part of ${plan.to} (its .slipbox/ is in the trash): ${n} change${n === 1 ? "" : "s"} in ${applied.written.length} file${applied.written.length === 1 ? "" : "s"}`,
@@ -4844,7 +4852,7 @@ export class App {
    */
   makeVaultItem(item: ExplorerItem): void {
     const abs = join(this.loc.root, item.rel);
-    if (this.loc.mode !== "vault") return this.vaultChoices(abs);
+    if (this.loc.mode === "folder") return this.vaultChoices(abs);
     this.prompt(`give ${item.rel}/ its .slipbox/, called (empty: no name): `, (name) => {
       this.previewRename(() => planMakeVault(this.graph, item.rel, name.trim() || null));
     });
@@ -6402,7 +6410,11 @@ export class App {
     row(
       "File",
       "vault",
-      this.loc.mode === "folder" ? `none — ${tildePath(this.loc.root)} is outside every vault` : rootLabel(this.loc),
+      this.loc.mode === "folder"
+        ? `none — ${tildePath(this.loc.root)} is outside every vault`
+        : this.loc.mode === "home"
+          ? "home (~)"
+          : rootLabel(this.loc),
       { copy: this.loc.root },
     );
     row(
@@ -7071,7 +7083,20 @@ export class App {
     // A folder only listed (`~`, `/`): its own rows are its folders, by their names.
     if (isListed(this.loc)) return dirname(abs) === R ? basename(abs) : abs;
     const rel = relative(R, abs).split(sep).join("/");
+    // Home (VV-D2): what its index leaves out (Downloads, a busy folder, a hidden one) isn't in its own tree: listed
+    // a level at a time, by its path, as a folder outside the vault is.
+    if (this.loc.mode === "home" && this.leftOutOfHome(rel)) return abs;
     return this.nestedRels().some((n) => rel.startsWith(`${n}/`)) ? abs : rel;
+  }
+
+  /** A path of home's (its path in it) its index leaves out: under, or at, a folder its skip list names (VV-D2). */
+  private leftOutOfHome(rel: string): boolean {
+    const parts = rel.split("/");
+    for (let i = 1; i <= parts.length; i++) {
+      const why = this.graph.filter.exclusion(parts.slice(0, i).join("/"), true);
+      if (why !== null && why !== "nested vault") return true;
+    }
+    return false;
   }
 
   /** A row's path, absolute. */
@@ -7132,7 +7157,7 @@ export class App {
           path: R,
           name: e.name,
           depth,
-          root: { kind: this.loc.mode, abs: R, name: this.rootName(R), here: true },
+          root: { kind: this.loc.mode === "folder" ? "folder" : "vault", abs: R, name: this.rootName(R), here: true },
         });
         if (this.expanded.has(R)) for (const r of this.rootTree()) out.push({ ...r, depth: r.depth + depth + 1 });
         continue;
@@ -7845,8 +7870,8 @@ export class App {
    */
   revealFolder(path: string): void {
     if (isAbsolute(path)) {
-      const root = findVaultRoot(path);
-      if (!this.switchVault(root ? rootAt(root) : folderAt(path), null)) return;
+      // Its vault: a marker's, home (VV-D2), else the plain folder.
+      if (!this.switchVault(locationAt(path), null)) return;
       path = relative(this.loc.root, path) || ".";
     }
     this.switchLeftView("explorer");
@@ -10120,13 +10145,22 @@ export class App {
   /** When a key or a click last came: the background auto-index waits while someone works (20.9). */
   lastInputAt = 0;
   autoIndex: AutoIndex | null = null;
+  /** Home's own walk and index (VV-D2), while home is the vault open and the background index is off. */
+  homeIndex: AutoIndex | null = null;
 
   /**
-   * Whether the background auto-index may work now (20.9): it's on, this vault's own index is done,
-   * and nobody is working — no key or click here, no CLI command from an agent — for `idle_seconds`.
+   * Whether the background auto-index may work now (20.9): it's on, and nobody is working (`nobodyWorking`).
    */
   autoIndexDue(now = this.now()): boolean {
-    if (!this.config.index.background || this.indexing) return false;
+    return this.config.index.background && this.nobodyWorking(now);
+  }
+
+  /**
+   * Whether nobody is working (20.9): this vault's own index is done, and no key or click here, no CLI command from an
+   * agent, for `idle_seconds`.
+   */
+  nobodyWorking(now = this.now()): boolean {
+    if (this.indexing) return false;
     const quiet = this.config.index.idle_seconds * 1000;
     if (now - this.lastInputAt < quiet) return false;
     try {
@@ -10135,28 +10169,70 @@ export class App {
     return true;
   }
 
-  /** The background auto-index of the home folder (20.9): a slice of it every quarter second while due. */
+  /**
+   * What works while nobody is: the background auto-index of home (20.9) — home's walk and index first (VV-D2), then
+   * the vaults in it — or, that off and home the vault open, home's own walk and index alone. Null: neither.
+   */
+  indexJob(): AutoIndex | null {
+    const onHome = (capped: WalkCap | null) => this.homeIndexed(capped);
+    if (this.config.index.background)
+      return (this.autoIndex ??= new AutoIndex(homeFolder(), autoIndexFile(), () => Date.now(), { onHome }));
+    if (this.loc.mode !== "home") return null;
+    if (this.homeIndex?.root !== this.loc.root)
+      this.homeIndex = new AutoIndex(this.loc.root, null, () => Date.now(), { vaults: false, onHome });
+    return this.homeIndex;
+  }
+
+  /** Home's walk made again while nobody is working (VV-D2): never made yet, or a folder came that only a walk finds. */
+  walkHomeAgain(): void {
+    if (this.loc.mode === "home") this.indexJob()?.homeAgain();
+  }
+
+  /** The background auto-index (20.9, VV-D2): a slice of it every quarter second while nobody is working. */
   private startAutoIndex(): void {
     this.lastInputAt = this.now();
+    if (this.graph.home?.walked === null) this.walkHomeAgain();
     const t = setInterval(() => {
       if (this.quitting) return clearInterval(t);
-      if (!this.autoIndexDue()) return;
-      this.autoIndex ??= new AutoIndex(homeFolder());
-      if (this.autoIndex.idle) return;
-      this.autoIndex.step(15);
+      if (!this.nobodyWorking()) return;
+      const job = this.indexJob();
+      if (!job || job.idle) return;
+      job.step(15);
     }, 250);
     (t as { unref?: () => void }).unref?.();
   }
 
-  /** Poll what the vault watcher cannot see: files open from outside the vault (the scratch)
-   *  and the config files, which reload automatically when saved. */
+  /**
+   * Home's walk made and its index written (VV-D2): while home is the vault open, its graph built again from them —
+   * what came, what went — and its cap said when it's reached.
+   */
+  private homeIndexed(capped: WalkCap | null): void {
+    if (this.loc.mode !== "home" || this.quitting) return;
+    const keep = this.rememberSelections();
+    this.graph.build(true, "lazy");
+    keep();
+    this.watcher?.sync(this.graph.dirs, this.knownFromGraph(), this.sizesFromGraph());
+    this.indexInBackground();
+    // The notes the walk found, searched too: the search index caught up with them.
+    this.startSearch();
+    this.invalidateTree();
+    for (const b of this.buffers.values()) b.invalidateLayouts();
+    this.relayoutAll();
+    if (capped) this.message("warn", describeCap(capped));
+    this.host.requestRender();
+  }
+
+  /** Poll what the vault watcher cannot see: files open from outside the vault (the scratch), or from
+   *  what home's index leaves out, and the config files, which reload automatically when saved. */
   private startPolling(): void {
     const t = setInterval(
       () => {
         if (this.quitting) return clearInterval(t);
         let changed = false;
         for (const buf of this.buffers.values()) {
-          if (buf.rel !== null || buf.key !== buf.abs) continue;
+          // Not the graph's, so no watcher sees it: outside the vault (the scratch), or a file of it the walk leaves
+          // out — in home, one in Downloads or a hidden folder (VV-D2).
+          if (buf.rel !== null) continue;
           if (buf.changedOnDisk()) {
             this.reloadBuffer(buf);
             changed = true;
@@ -10237,6 +10313,8 @@ export class App {
     if (batch.rescan) {
       this.indexInBackground();
       this.watcher?.sync(isListed(this.loc) ? [""] : this.graph.dirs, this.knownFromGraph(), this.sizesFromGraph());
+      // Home's graph is built from its walk kept (VV-D2): a folder that came is walked with the rest, while nobody works.
+      this.walkHomeAgain();
       // The walk itself changed: any open note may have changed, appeared or gone.
       for (const buf of this.buffers.values()) if (buf.changedOnDisk()) this.reloadBuffer(buf);
     }
@@ -10776,6 +10854,8 @@ export class App {
       if (this.config.watch.enabled) this.startWatcher();
       this.indexInBackground();
       this.refreshGit();
+      // Home never walked yet (VV-D2): its top alone, the rest while nobody is working.
+      if (this.graph.home?.walked === null) this.walkHomeAgain();
     }
     this.message(
       "info",
@@ -10794,7 +10874,7 @@ export class App {
   enterRoot(row: TreeRow): void {
     const r = row.root;
     if (!r) return;
-    this.switchVault(r.kind === "folder" ? folderAt(r.abs) : rootAt(r.abs), null);
+    this.switchVault(r.kind === "folder" ? locationAt(r.abs) : rootAt(r.abs), null);
   }
 
   /**
@@ -10804,7 +10884,8 @@ export class App {
    * vault's notes: it has no vault to switch into.
    */
   private intoOtherVault(path: string, anchor?: Anchor): boolean {
-    if (!isAbsolute(path) || !existsSync(path)) return false;
+    // slipbox's own files (the scratch, in its state folder under ~) are no vault's to go into, home's neither (VV-D2).
+    if (!isAbsolute(path) || !existsSync(path) || slipboxOwn(path)) return false;
     let target: VaultLocation;
     try {
       target = locateVault({ path });
@@ -10825,7 +10906,7 @@ export class App {
     try {
       const file = existsSync(t.path) ? locateVault({ path: t.path }) : null;
       // A file of another vault read there, kept from a peek (VV-D7), is no way back into it: its vault, its tabs.
-      const kept = file?.mode === "vault" && file.root !== t.root;
+      const kept = !!file && file.mode !== "folder" && file.root !== t.root;
       target = file && !kept ? file : locateVault({ path: t.root });
       if (file && !kept) open = t.path;
     } catch {

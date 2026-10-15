@@ -21,10 +21,21 @@ import { pathLink, wikiPathCandidates } from "./links.ts";
 import { folderIdentity, lookupFolder, type NamedFolder, readFolders } from "./folders.ts";
 import { checkoutOf } from "./git.ts";
 import { checkoutRemotes, hostedHere } from "./hosting.ts";
+import { homeWalkKept, walkHomeNow } from "./home.ts";
 import { cacheDir } from "./paths.ts";
 import { tildePath } from "./names.ts";
 import { type KnownRoot, readRoots } from "./registry.ts";
-import { findVaultRoot, isInside, recordLocation, rootAt, type VaultLocation, configFilesFor } from "./vault.ts";
+import {
+  findVaultRoot,
+  isHome,
+  isInside,
+  recordLocation,
+  rootAt,
+  type VaultLocation,
+  configFilesFor,
+  vaultAt,
+  vaultOf,
+} from "./vault.ts";
 import { isPointer, parsePointer, resolvePointer } from "./pointer.ts";
 
 function real(p: string): string {
@@ -40,9 +51,12 @@ function real(p: string): string {
  * roots reached from it — so its backlinks include theirs.
  */
 export function openVault(root: string): Graph {
-  const loc = rootAt(root);
+  const loc = vaultAt(root);
   recordLocation(loc); // seen, like every open (17.6)
-  const g = openGraph(loc, loadConfig({ ...configFilesFor(loc) }).config, true, "lazy");
+  const config = loadConfig({ ...configFilesFor(loc) }).config;
+  // Home never walked yet (VV-D2): walked now, as far as its cap — a plan across it needs every folder of it.
+  if (loc.mode === "home" && !homeWalkKept(loc)) walkHomeNow(loc, config);
+  const g = openGraph(loc, config, true, "lazy");
   g.thorough = true;
   g.reach = new Reach(loc);
   return g;
@@ -88,12 +102,13 @@ export class Reach implements VaultReach {
 
   private names = new Map<string, { at: number; name: string }>();
 
-  /** A root as it's named to the user (21.9): its name (21.6), else its path; looked up again after a second. */
+  /** A root as it's named to the user (21.9): its name (21.6), else its path — home, `~` (VV-D2); looked up again after
+   *  a second. */
   private shown(root: string): string {
     const now = Date.now();
     const hit = this.names.get(root);
     if (hit && now - hit.at < 1000) return hit.name;
-    const name = folderIdentity(root)?.name ?? tildePath(root);
+    const name = isHome(root) ? tildePath(root) : (folderIdentity(root)?.name ?? tildePath(root));
     this.names.set(root, { at: now, name });
     return name;
   }
@@ -108,7 +123,8 @@ export class Reach implements VaultReach {
     if (this.graphs.has(key)) return this.graphs.get(key)!;
     let g: Graph | null = null;
     try {
-      const loc = rootAt(root);
+      // Home (VV-D2) by its kept walk; any other vault by its marker.
+      const loc = vaultAt(root);
       if (!opts.known) recordLocation(loc); // reached: known on this machine, its links counted as backlinks (17.11)
       const config = loadConfig({ ...configFilesFor(loc) }).config;
       g = openGraph(loc, config, true, "lazy");
@@ -131,6 +147,8 @@ export class Reach implements VaultReach {
   discover(g: Graph): void {
     if (this.discovered) return;
     this.discovered = true;
+    // Home's vaults (VV-D2) are many, and big: the background index finds and indexes them, as it found them.
+    if (g.loc.mode === "home") return;
     const roots: { root: string; nested: boolean }[] = g.skipped
       .filter((s) => s.reason === "nested vault")
       .map((s) => ({ root: join(g.root, s.rel), nested: true }));
@@ -196,12 +214,12 @@ export class Reach implements VaultReach {
   }
 
   vaultOf(abs: string): string | null {
-    const found = findVaultRoot(abs);
+    const found = vaultOf(abs);
     return found ? this.shown(found) : null;
   }
 
   entryAt(abs: string): NoteEntry | undefined {
-    const found = findVaultRoot(abs);
+    const found = vaultOf(abs);
     if (!found) return undefined;
     const g = this.graphAt(found);
     return g?.entry(relative(g.root, abs));
@@ -212,8 +230,13 @@ export class Reach implements VaultReach {
   private indexes(g: Graph): { v: KnownRoot; file: string }[] {
     this.discover(g);
     const here = real(g.root);
+    // Home's notes link too (VV-D2): its index is one of them.
     const sources = this.known().filter(
-      (v) => v.kind === "vault" && !v.worktree && real(v.path) !== here && existsSync(v.path),
+      (v) =>
+        (v.kind === "vault" || (v.kind === "home" && isHome(v.path))) &&
+        !v.worktree &&
+        real(v.path) !== here &&
+        existsSync(v.path),
     );
     return sources.map((v) => ({ v, file: join(cacheDir(v), "index.json") }));
   }

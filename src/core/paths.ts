@@ -120,6 +120,17 @@ export function dataHome(): string {
 }
 
 /**
+ * A file of slipbox's own (D39): in its config, cache, state or data folder — the scratch, a plan, your words. Under
+ * `~` by default, it's no note of home's (VV-D2): opened as it is, never gone into as a vault's.
+ */
+export function slipboxOwn(abs: string): boolean {
+  return (["config", "cache", "state", "data"] as const).some((k) => {
+    const dir = storeDir(k);
+    return abs === dir || abs.startsWith(`${dir}/`);
+  });
+}
+
+/**
  * The folders a person keeps things in, those there are (10.14): Downloads, Desktop and Documents — where the desktop
  * says (`user-dirs.dirs`, which may name them in another language), else as they're called in English — then home.
  */

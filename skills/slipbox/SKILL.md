@@ -25,8 +25,10 @@ slipbox info --json          # the vault, its name, the link convention, paths, 
 
 A file's **vault** is the nearest folder above it holding `.git`, `.slipbox/`, `.obsidian/` or `.zk/`; commands find
 it by walking up from the note you name, or the current directory. `--root <dir>` says which vault to work in (a vault
-nested in it stays its own). Outside every vault, the folder you're in stands in for one: everything works, but `/` in
-a link means the filesystem's root and wikilinks have no names to look up. A vault may have a **name** — its
+nested in it stays its own). Under no marker in your home folder, a file is **home**'s, a vault without a marker
+(`info`'s `mode` is `home`): its index leaves out hidden folders, `Downloads` and busy folders such as `node_modules`.
+Outside every vault and outside home, the folder you're in stands in for one: everything works, but `/` in a link
+means the filesystem's root and wikilinks have no names to look up. A vault may have a **name** — its
 `.slipbox/` name, else its repository's remote's — which other folders link to it by: `slipbox://<name>/<path>`.
 `info` gives `root` (the vault's path), `name` and `links` (how this folder writes links, and what said so).
 

@@ -34,6 +34,8 @@ Each has a note in `notes/people/`, with the aliases given.
 ```text
 home/
   README.md  CASES.md
+  todo.md         no marker — home's own: a vault without one, its notes those no other vault holds
+  household/      no marker — home's too: a note linking back to todo.md, found by home's walk
   notes/          .slipbox/ named "notes" — the knowledge base, synced, no git; relative markdown links
     index.md  inbox.md
     daily/        YYYY-MM-DD.md daily notes: tasks, meetings, links everywhere
@@ -55,7 +57,8 @@ home/
                   notebook's root; rides, routes (GeoJSON), gear, maintenance, rides.csv
     photography/  .slipbox/ named "photography", no git — gear comparisons, EXIF exports, photo walks, the Kyoto
                   trip (京都; captions in Japanese), images
-  Downloads/      no marker — exported transcripts, a CSV, a stray note, a PDF: the casual folder
+  Downloads/      no marker — exported transcripts, a CSV, a stray note, a PDF: the casual folder, home's, its
+                  skip list leaving it out of home's index
   .build/         how the build makes the git histories and the files that can't be committed (below)
 ../vault/         halden, the demo vault — linked from here by relative paths (../../../vault/…)
 ```

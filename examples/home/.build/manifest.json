@@ -5141,6 +5141,24 @@
     "links: Parentheses and brackets in a file name — brackets in a file name (plan [draft].md)"
    ],
    "links": []
+  },
+  {
+   "path": "todo.md",
+   "purpose": "Sam's list at the top of home: a note no vault but home holds (VV-D2), linking nowhere, so its backlink is found by home's walk alone.",
+   "cases": [
+    "links/roots: Home is a vault without a marker — home's own note, with a backlink from below"
+   ],
+   "links": []
+  },
+  {
+   "path": "household/bike-insurance.md",
+   "purpose": "Two insurance quotes in a folder of home, linking back to the list: found only by home's walk.",
+   "cases": [
+    "links/roots: Home is a vault without a marker — a backlink of home's, from a folder below its top"
+   ],
+   "links": [
+    "todo.md"
+   ]
   }
  ]
 }

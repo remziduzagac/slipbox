@@ -254,7 +254,7 @@ describe("the reference set is complete (examples/home)", () => {
   const filesOf = (b: string) =>
     [...b.slice(b.lastIndexOf(" — `") + 3).matchAll(/`([^`]+)`/g)]
       .map((m) => m[1]!)
-      .filter((p) => /^(notes|work|hobbies|Downloads|\.build)\/|^(README|CASES)\.md$/.test(p));
+      .filter((p) => /^(notes|work|hobbies|household|Downloads|\.build)\/|^[^/]+\.md$/.test(p));
 
   test("every file CASES.md names is there, or made by the build; every case names one", () => {
     expect(bullets.length).toBeGreaterThan(700);
