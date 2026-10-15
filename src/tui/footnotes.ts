@@ -53,7 +53,7 @@ export class Footnotes {
     return rows;
   }
 
-  /** Index into footnoteRows() of the footnote the cursor's line holds (a reference to it, or its
+  /** Index into rows() of the footnote the cursor's line holds (a reference to it, or its
    *  definition), else the last one before it; -1 with none. */
   current(): number {
     const view = this.app.view;

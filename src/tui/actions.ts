@@ -1,6 +1,7 @@
 // Command implementations for the TUI. Ids and titles come from core/command-specs.ts, so the CLI
-// can list them and the parity test can check them; this is where each one does its work. The
-// keys are in keys.ts and docs/manual/keys.md.
+// can list them and the parity test can check them; registerActions registers each one, its work
+// done here (the app's own: escape, copying, the UI settings, the theme, the scratch, quitting) or
+// in the actions-*.ts module of its area (D235). The keys are in keys.ts and docs/manual/keys.md.
 
 import { clearScratch, dropEmptyAsks, formatEntry, readScratch } from "../core/capture.ts";
 import { COMMAND_SPECS } from "../core/command-specs.ts";

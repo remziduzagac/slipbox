@@ -1,6 +1,6 @@
 // A file's changes against what's staged, from the TUI (plan 26.1): to the next or the one before (`] c`, `[ c`),
 // one's diff in the floating window, one undone — its lines as staged put back in the text, an edit like any other.
-// The gutter's signs are draw.ts's; the changes, `core/gitsigns.ts`.
+// The gutter's signs are draw-pane.ts's; the changes, `core/gitsigns.ts`.
 
 import { changeAt, changeDiff, type GitChange } from "../core/gitsigns.ts";
 import type { App, View } from "./app.ts";

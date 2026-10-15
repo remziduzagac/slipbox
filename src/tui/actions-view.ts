@@ -180,7 +180,7 @@ export function viewActions(): Record<string, Run> {
   };
 }
 
-/** Where a vertical move lands on a row: the layout column drawn at the goal's screen column (App.layoutCol). */
+/** Where a vertical move lands on a row: the layout column drawn at the goal's screen column (Code.layoutCol). */
 function goalAt(a: App, v: View): (row: number, col: number) => number {
   const layout = lay(a, v);
   return (row, col) => a.code.layoutCol(v, layout, row, col);

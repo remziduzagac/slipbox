@@ -117,7 +117,7 @@ export class OutlineView {
     return out;
   }
 
-  /** Index into outlineRows() of the section the cursor is in. */
+  /** Index into rows() of the section the cursor is in. */
   currentSection(): number {
     const view = this.app.view;
     if (!view) return -1;

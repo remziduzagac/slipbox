@@ -1,6 +1,6 @@
 // The vim-shaped normal mode of source mode (phase 3 step 3): counts, operators waiting for a
 // motion or a text object, a register, and `.`. Each operator and edit is a named command (in
-// actions.ts, bound in `[keys.source]`); this file is the grammar around them — what follows an
+// actions-edit.ts, bound in `[keys.source]`); this file is the grammar around them — what follows an
 // operator is read here, the way which-key reads what follows a prefix.
 
 import type { App, View } from "./app.ts";

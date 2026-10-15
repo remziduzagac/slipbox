@@ -27,10 +27,10 @@ when stdin and stdout are terminals (`9.3`). The TUI is loaded with a dynamic `i
 CLI call never loads OpenTUI's native renderer.
 
 Every user action is a named command (D11). `core/command-specs.ts` gives each command id the CLI invocation that
-reaches the same state change, or marks it an interaction; the TUI implements each one (`tui/actions.ts`) in the
-`CommandRegistry` (`core/commands.ts`), and keys, the palette and the `:` prompt run them by id. A command implemented
-without a spec, or specified without an implementation, fails at start-up and fails a test
-([tui.md](tui.md) § Parity with the CLI).
+reaches the same state change, or marks it an interaction; the TUI implements each one (`tui/actions.ts` and the
+`tui/actions-*.ts` of its area) in the `CommandRegistry` (`core/commands.ts`), and keys, the palette and the `:` prompt
+run them by id. A command implemented without a spec, or specified without an implementation, fails at start-up and
+fails a test ([tui.md](tui.md) § Parity with the CLI).
 
 ### The boundary is enforced, not hoped for
 
@@ -46,9 +46,9 @@ gates (`14.10`, [distribution.md](distribution.md) § The supply chain).
 
 ### Only the final draw step touches OpenTUI
 
-Inside the TUI, the same rule applies one level down. `src/tui/app.ts` (the model) and
-`src/tui/draw.ts` (painting) talk to an abstract `Canvas` and `Host`. Only two files import
-OpenTUI:
+Inside the TUI, the same rule applies one level down. `src/tui/app.ts` (the model, its features each a
+controller of its own) and `src/tui/draw.ts` (painting, its regions in `draw-*.ts`) talk to an abstract
+`Canvas` and `Host`. Only two files import OpenTUI:
 
 | File | What it does with OpenTUI |
 | --- | --- |
@@ -264,6 +264,9 @@ The CLI's commands are the user's reference, [cli.md](../../docs/manual/cli.md);
 | `cli/args.ts` | 9.1 | flag parsing: flags anywhere, `--x=v` or `--x v`, `--` ends flags |
 | `version.ts` | — | the version, one source |
 | `tui/*` | 3.x, 5.3–5.7 | the app: reading, panes, saving and conflicts |
+| `tui/app.ts` | D235 | the model: the state every part shares and the wiring; a controller per feature (`app.git`) |
+| `tui/actions*.ts` | 0.8 | the commands' implementations, by area, registered by `registerActions` |
+| `tui/draw*.ts` | 3.1, 3.2 | painting: the frame, then each region (windows, panels, status line, overlays) |
 | `tui/buffer.ts` | 4.5–4.8 | a note's text, its undo steps, unsaved state, BOM and line endings |
 | `tui/editing.ts` | 4.3 | the cursor as a text offset; insert mode |
 | `tui/vim.ts` | 4.4 | counts, operators and text objects, the register, `.` |

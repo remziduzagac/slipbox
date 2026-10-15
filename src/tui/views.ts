@@ -360,8 +360,7 @@ export class Views {
   }
 
   // -------------------------------------------------------------------------------------------
-  // Writing notes (phase 3). Every write goes through writeBuffer: atomic, inside the vault, the
-  // watcher told it's ours, the buffer reloaded with its views' anchors kept.
+  // Tasks (ctrl+l, a click on [ ]): checked and unchecked in the note, through App.writeBuffer.
 
   /** The task item at the cursor: the innermost one whose source lines hold the cursor's row. */
   taskAt(view: View): { line: number; end: number; checked: boolean } | null {

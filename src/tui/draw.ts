@@ -1,5 +1,9 @@
 // Painting the app (3.1, 3.2): tab bar, explorer | content (one split) | outline, status line,
-// the which-key popup and overlays. Viewport-only: only the rows on screen are drawn.
+// the which-key popup and overlays. Viewport-only: only the rows on screen are drawn. This file
+// lays the screen out and draws its frame — the top bar, the tabs, the rails, the breadcrumb, the
+// rules between panes; each region's own drawing is a draw-*.ts of its own (D235): the windows'
+// (draw-pane.ts), the side panels' (draw-panels.ts), the Problems panel's, the status line's, what
+// floats over the windows (draw-overlays.ts).
 //
 // Returns the geometry of what was drawn, which the mouse handler hit-tests against.
 
@@ -41,7 +45,7 @@ export interface PaneGeom extends Rect {
   textX: number;
 }
 
-/** A clickable region: its id says what a click does (see App.clickHot). */
+/** A clickable region: its id says what a click does (see Mouse.clickHot). */
 export interface Hot extends Rect {
   id: string;
 }

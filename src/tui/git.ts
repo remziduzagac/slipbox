@@ -49,11 +49,6 @@ import type { App, View, Region } from "./app.ts";
 export class Git {
   constructor(readonly app: App) {}
 
-  // -------------------------------------------------------------------------------------------
-  // Search (6.5, 6.9): the vault's index kept as the app runs — brought up to the files in idle
-  // slices when the vault opens, then each file as the graph hears it change (a save here, the
-  // watcher, a rename) — and a list ranked as you type.
-
   private checkoutMemo: { root: string; c: Checkout | null; at: number } | null = null;
 
   /** The git checkout the vault is in (17.19): the main one or a worktree. Read once per vault —

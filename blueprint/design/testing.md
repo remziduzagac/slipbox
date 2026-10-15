@@ -63,11 +63,12 @@ shows, run: 3 minutes).
 
 **A test waits for a condition, never a fixed time, and counts work rather than timing it.** A CI runner, or a machine
 busy with other work, is slower by a different amount each run. A test waits until what it needs has happened (a
-watcher's event, `App.whenIndexed`, `whenParsed`, `whenSearchIndexed`), bounded only by its timeout, which is a
-backstop for a stuck test and not a measure. Where a test guards against work done in the wrong place, it counts that
-work: the background index's test (`15.1`) checks that the main thread parsed none of a big note's chunks, not how
-long its slices took. A test about a time itself, a timeout that must stop something, bounds it with a wide margin
-(stopped at 0.2 s, checked under 3 s). Timings are the benchmark's (§ Timings), read and not asserted.
+watcher's event, `app.watch.whenIndexed`, `app.views.whenParsed`, `app.search.whenIndexed`), bounded only by its
+timeout, which is a backstop for a stuck test and not a measure. Where a test guards against work done in the wrong
+place, it counts that work: the background index's test (`15.1`) checks that the main thread parsed none of a big
+note's chunks, not how long its slices took. A test about a time itself, a timeout that must stop something, bounds it
+with a wide margin (stopped at 0.2 s, checked under 3 s). Timings are the benchmark's (§ Timings), read and not
+asserted.
 
 **Nothing a test file leaves behind changes another's results.** `bun test` runs every file in one process, so what
 loads lazily (`16.6`), Mermaid or MathJax, is loaded by whichever file asked first. A file whose output depends on one

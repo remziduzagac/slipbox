@@ -215,14 +215,6 @@ export class Saving {
     this.app.session.publishDirty();
   }
 
-  // -------------------------------------------------------------------------------------------
-  // Vaults (17.10, 17.13, 17.14)
-
-  /**
-   * Become another root's TUI, as if started there (17.10): its config, index, watcher, reading
-   * positions and session — with `open` open (an absolute path), or the session's tabs. Leaving
-   * saves this one's as quitting does. Refused while a note is unsaved: it would be left behind.
-   */
   /** Whether this root can be left now: nothing unsaved; said when not. */
   canLeave(): boolean {
     // The floating window first: changed properties go into their note (or it asks, and nothing

@@ -3,9 +3,9 @@
 // hard to read, to review and to change in parallel; a feature goes in a module of its own, the shared state and the
 // wiring staying where they are.
 //
-// The files already past it are listed with a cap: they may shrink, never grow past it. When one shrinks, lower its
-// cap to its size (the check says so); when one is under LIMIT, drop it from the list. The split of the big files
-// (the roadmap's Later list) takes them off.
+// A file past it is listed with a cap: it may shrink, never grow past it. When one shrinks, lower its cap to its size
+// (the check says so); when one is under LIMIT, drop it from the list. The seven past it on 2026-10-15 were split
+// (D235): none is listed now.
 
 import { readdirSync, readFileSync, statSync } from "node:fs";
 import { join, relative, resolve } from "node:path";
@@ -15,12 +15,11 @@ const ROOT = resolve(import.meta.dir, "..");
 /** The most lines a source file may have. */
 export const LIMIT = 1500;
 
-/** The files past LIMIT on 2026-10-15, each capped: their size then, plus what the tasks under way were adding. */
-export const CAPPED: Record<string, number> = {
-  "src/tui/app.ts": 13000,
-  "src/tui/draw.ts": 4000,
-  "src/tui/actions.ts": 3200,
-};
+/**
+ * The files past LIMIT, each capped: they may shrink, never grow. None since the big files were split (D235); kept for
+ * a file that ever must be, its cap its size then.
+ */
+export const CAPPED: Record<string, number> = {};
 
 /** A cap can come down when a file is this far under it. */
 const SLACK = 200;

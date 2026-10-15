@@ -1,7 +1,7 @@
 // Editing in source mode (plan 4.3, 4.4; phase 3 step 3). The text is the buffer's `source`; a
 // cursor is a place in it, found through the source layout's `srcMap` (every cell drawn knows the
 // offset it shows). Insert mode types into it; the normal-mode commands (`i`, `o`, `x`, `u`…) are
-// named commands in actions.ts that call in here.
+// named commands in actions-edit.ts that call in here.
 
 import { graphemes } from "../core/width.ts";
 import { type App, editable, type View } from "./app.ts";

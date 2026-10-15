@@ -176,6 +176,11 @@ export class Vaults {
     });
   }
 
+  /**
+   * Become another root's TUI, as if started there (17.10): its config, index, watcher, reading
+   * positions and session — with `open` open (an absolute path), or the session's tabs. Leaving
+   * saves this one's as quitting does. Refused while a note is unsaved: it would be left behind.
+   */
   switchVault(target: VaultLocation, open: string | null, anchor?: Anchor, how: { back?: boolean } = {}): boolean {
     if (!this.app.saving.canLeave()) return false;
     const v = this.app.view;

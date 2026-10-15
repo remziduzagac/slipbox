@@ -1,7 +1,8 @@
-// The TUI app model (plan 3.x; keymap in docs/manual/keys.md): tabs of one or two windows over
-// shared buffers, a reading cursor with selection, the explorer and outline panes, overlays,
-// history, link-following, find, the which-key popup, UI settings, live reload from the watcher
-// (5.1–5.4), and live reload of the configuration itself.
+// The TUI app model (plan 3.x; keymap in docs/manual/keys.md): the state every part shares — the vault open, its
+// graph and config, tabs of one or two windows over shared buffers, the panels' state, the overlay and the floating
+// window, messages, the UI settings — and the wiring: the start, opening a note, a window's layout and cursor, the
+// one write path, drawing, quitting. Each feature is a controller of its own, in its own file, holding the App and
+// whatever state is the feature's alone (D235): `app.explorer`, `app.git`, `app.lens`, `app.mouse`, …
 //
 // Notes are written only through writeBuffer (atomic, inside the vault, the watcher told); besides
 // them, its own state (reading positions, session) and the scratch, through core.
@@ -497,6 +498,42 @@ export class App {
   readonly live: boolean;
   /** `--theme`: kept over a vault's own theme when switching vaults. */
   readonly explicitTheme: string | undefined;
+  /**
+   * The floating window (3.20): a view over the windows, of text that isn't a file of its own — a note's frontmatter,
+   * a hover, a commit's message, the scratch, a diff, a peek — with every editing key there is; closed (esc, q, :q) or
+   * saved (ctrl+s, :w), its text goes back where it came from, as one undo step there.
+   */
+  floating:
+    | ((
+        | { kind: "properties"; note: NoteBuffer; format: "yaml" | "toml"; original: string }
+        | { kind: "hover" }
+        | { kind: "commit"; amend: boolean; from: Region }
+        | { kind: "scratch" }
+        | { kind: "diff"; diff: DiffWindow }
+        | { kind: "peek"; peek: Peek }
+      ) & { view: View; title: string })
+    | null = null;
+  /** Completion's popup while typing (19.16), and the signature being typed. */
+  completion: CompletionState | null = null;
+  signature: SignatureState | null = null;
+  /** A server's snippet being typed through (25.8): its stops. */
+  snippet: SnippetSession | null = null;
+  /** The command your shell is running (25.7): one at a time. */
+  shellJob: { command: string; stop: () => void } | null = null;
+  /**
+   * The watcher's news, held while git writes, applied to the graph (5.9, 5.10): what git does to the vault's files is
+   * one event — a branch switch, a merge, a reset — whose batches are held while git holds its index lock, then applied
+   * together; the files a branch switch brings and takes aren't taken for moves; each branch keeps its tabs.
+   */
+  readonly feed: VaultFeed;
+  /** When a key or a click last came: the background auto-index waits while someone works (20.9). */
+  lastInputAt = 0;
+  /** Home, for an export's places and `~/` (a test's own, never yours). */
+  home = homedir();
+  /** Stops following what loads lazily (a grammar), on quit. */
+  private stopLazy: (() => void) | null = null;
+
+  // The features, each a controller of its own (D235).
   /** The configuration: keys, theme, glyphs, the UI settings, and live reload. */
   readonly settings = new Settings(this);
   /** Pictures (12.x): drawn, fetched, and held back while a view scrolls. */
@@ -855,19 +892,9 @@ export class App {
       ...(this.canRender(buf) ? {} : (this.lens.saySourceWhy(buf), { source: true })),
     };
   }
-  /** Completion's popup while typing (19.16), and the signature being typed. */
-  completion: CompletionState | null = null;
-  signature: SignatureState | null = null;
 
   // -------------------------------------------------------------------------------------------
-  // Git (5.9, 5.10): what git does to the vault's files as one event — a branch switch, a merge, a
-  // reset. The watcher's batches are held while git holds its index lock, then applied together;
-  // the files a branch switch brings and takes aren't taken for moves; each branch keeps its tabs.
-
-  /** The watcher's news, held while git writes, applied to the graph (5.9, 5.10). */
-  readonly feed: VaultFeed;
-
-  private stopLazy: (() => void) | null = null;
+  // Opening a note, and a window's layout and cursor (the rest of the view's work is app.views').
 
   /** Whether a file has a rendered view: markdown notes do, data files while they parse
    *  (16.11–16.14), text files never. */
@@ -943,6 +970,7 @@ export class App {
     this.explorer.reveal(undefined, false, true);
   }
 
+  /** A window's layout at its width now, its gutter taken off. */
   currentLayout(view: View): Layout {
     return this.views.layoutFor(view, view.width, this.views.gutterWidth(view));
   }
@@ -963,6 +991,10 @@ export class App {
     // The column on screen, once a code block the cursor is in has scrolled to it.
     if (!opts.keepGoal) view.goal = this.code.screenCol(view, layout, view.cur.row, view.cur.col);
   }
+
+  // -------------------------------------------------------------------------------------------
+  // Writing notes (phase 3). Every write goes through writeBuffer: atomic, inside the vault, the
+  // watcher told it's ours, the buffer reloaded with its views' anchors kept.
 
   /** Write a buffer's file and take the result back in; false (with a message) if refused. */
   writeBuffer(buf: NoteBuffer, content: string | Uint8Array, saving = false): boolean {
@@ -1004,23 +1036,9 @@ export class App {
     const line = this.currentLayout(view).lines[view.cur.row];
     return line ? srcAt(line, view.cur.col) : 1;
   }
-  /** Home, for an export's places and `~/` (a test's own, never yours). */
-  home = homedir();
 
-  // The floating editor (3.20): a view over the windows, of text that isn't a file of its own — a
-  // note's frontmatter — with every editing key there is; closed (esc, q, :q) or saved (ctrl+s,
-  // :w), its text goes back where it came from, as one undo step there.
-
-  floating:
-    | ((
-        | { kind: "properties"; note: NoteBuffer; format: "yaml" | "toml"; original: string }
-        | { kind: "hover" }
-        | { kind: "commit"; amend: boolean; from: Region }
-        | { kind: "scratch" }
-        | { kind: "diff"; diff: DiffWindow }
-        | { kind: "peek"; peek: Peek }
-      ) & { view: View; title: string })
-    | null = null;
+  // -------------------------------------------------------------------------------------------
+  // A file opened at a line, a command run, the screen drawn.
 
   /**
    * A file opened at a line (the Problems panel's All, 1.7): in this window, in a tab — its own, or the one
@@ -1122,7 +1140,7 @@ export class App {
   }
 
   // -------------------------------------------------------------------------------------------
-  // Clipboard, capture
+  // The clipboard, every view and buffer, quitting.
 
   /**
    * What `p` puts: the system clipboard when it can be read and holds something else than the
@@ -1153,12 +1171,6 @@ export class App {
     return !r.file;
   }
 
-  /** A server's snippet being typed through (25.8): its stops. */
-  snippet: SnippetSession | null = null;
-
-  /** The command your shell is running (25.7): one at a time. */
-  shellJob: { command: string; stop: () => void } | null = null;
-
   allViews(): View[] {
     return [...this.tabs.flatMap((t) => t.views), ...(this.floating ? [this.floating.view] : [])];
   }
@@ -1169,9 +1181,6 @@ export class App {
     if (e) return e.rel !== null ? `${e.vault}: ${e.rel}` : buf.abs;
     return buf.abs === this.scratch.location().path ? "scratch" : buf.key;
   }
-
-  /** When a key or a click last came: the background auto-index waits while someone works (20.9). */
-  lastInputAt = 0;
 
   /** Buffers with unsaved changes. */
   dirtyBuffers(): NoteBuffer[] {

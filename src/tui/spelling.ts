@@ -1,6 +1,7 @@
 // Spelling in the TUI (plan 25.6): a note's misspelt words (`core/spell.ts`) where the window shows them — in source
 // rows by their offsets, in rendered rows found in the prose's spans — so the marks, `] s` / `[ s`, `z =` and `z g`
-// agree in every view: source, rendered and the lens.
+// agree in every view: source, rendered and the lens. Its checkers (`app.speller`): a note's languages, a dictionary
+// for each loaded in the background, the misspelt words of the text on screen, suggestions, your own words added.
 
 import type { Layout, Line } from "../core/layout/ir.ts";
 import type { SpellWord } from "../core/spell.ts";
