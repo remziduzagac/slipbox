@@ -11,12 +11,24 @@ Code, in `src/tui/`:
 
 | File | Role |
 | --- | --- |
-| `app.ts` | the model: state, dispatch, panes, mouse, reload, session |
-| `actions.ts` | the command implementations, the palette, help and pickers |
+| `app.ts` | the model: the shared state (tabs, windows, buffers, panels, the overlay, messages) and the wiring |
+| `settings.ts`, `session.ts` | the keymaps, theme, glyphs, UI settings and live reload; the session kept and restored |
+| `views.ts`, `lens.ts`, `code.ts` | a window's layout, cursor and scrolling; the lens and source mode; code blocks |
+| `input.ts`, `mouse.ts` | keys and pastes, dispatched in order, the which-key popup; clicks, drags, the wheel |
+| `overlays.ts`, `properties.ts` | lists, prompts and dialogs; the properties editor in the floating window |
+| `panels.ts`, `explorer.ts`, `history.ts` | the side panels, their widths and filters; the explorer; the history |
+| `git.ts`, `info.ts`, `outline.ts`, `footnotes.ts` | source control; the Info view; the outline; the footnotes |
+| `problems.ts`, `languages.ts` | the Problems panel and marks; syntax, language servers, linters, trust |
+| `windows.ts`, `files.ts`, `vaults.ts` | windows and tabs; file operations and the trash; vaults switched and made |
+| `renaming.ts`, `linking.ts`, `search.ts` | renames previewed; links under the cursor, inserted; search, tags, types |
+| `watch.ts`, `saving.ts` | the watcher, polling, indexing, reloads; saving, autosave, conflicts, quitting |
+| `pictures.ts`, `exporter.ts`, `handoff.ts`, `scratch.ts` | pictures; export; hand-offs to an editor; scratch |
+| `actions.ts`, `actions-*.ts` | the command implementations, by area; `registerActions` registers them all |
+| `palette.ts` | the command palette and the help list |
 | `buffer.ts` | a note's text, its undo steps, unsaved state, and cached layouts |
 | `canvas.ts` | the drawing surface; `TextCanvas` for headless tests |
 | `cursor.ts` | the motions |
-| `draw.ts` | painting, and the geometry the mouse uses |
+| `draw.ts`, `draw-*.ts` | painting — the frame, then each region in a file of its own — and the mouse's geometry |
 | `editing.ts` | the cursor as a text offset; insert mode |
 | `completion.ts` | completion while typing, signature help (`19.16`); a link's target completed by slipbox (`21.5`) |
 | `vim.ts` | normal mode in source and the lens: counts, operators, the register, `.` |
@@ -529,7 +541,7 @@ hides the panel when that view already shows. Each view keeps its own position w
 (selection, scroll, sideways offset and filter text) and gets it back when it returns; on its first
 showing the explorer reveals the current note and the history selects `here`. The views are a
 registry (`LEFT_VIEWS`,
-`RIGHT_VIEWS` in `app.ts`) and more will come on both sides, each with its own rows, drawing and
+`RIGHT_VIEWS` in `panels.ts`) and more will come on both sides, each with its own rows, drawing and
 keys.
 
 - **Explorer (left, `≡`):** the walked notes as a tree, directories first, from the folder slipbox was opened on (the
@@ -806,7 +818,7 @@ its title (`␣ l › links`), the hint (`backspace up · esc cancel`) in its bo
 below the entries, and the same margin; it sits centred just above the bottom of the content area. A prefix of one key,
 which no popup above it lists with its explanation (`z`, `[`, `]`, `g`, `y`, `ctrl+w`), has its explanation in the title
 too, after a colon: `z › scroll: the cursor's line to the middle (z), top (t), …` (DF-D31; `groupExplanation` in
-`tui/app.ts`). The box widens to hold that title, as far as the screen allows (past the entries' 140 columns), and a
+`tui/input.ts`). The box widens to hold that title, as far as the screen allows (past the entries' 140 columns), and a
 title still too long is cut with `…`. On a short screen the blank rows go first, then the explanations (the blank rows
 never show without them); entries that still don't fit are counted in the bottom border (`+3 more`), and with no room at
 all the popup isn't drawn. The entries are in at most three columns, as many as fit. Each column is sized to its own
@@ -1070,7 +1082,7 @@ the lens to keep the cursor two rows from its rules; the wheel over the lens scr
 at its end goes on to the page. Growing to its minimum never pulls in a neighbour too big for it:
 a heading next to a long code block stays a small lens until the cursor moves into the block. The
 hidden rows are still in the layout — motions, find and editing see all of the block — and only
-the drawing, clicks, drags and scrolling map screen rows around them (`App.screenRows`).
+the drawing, clicks, drags and scrolling map screen rows around them (`Lens.screenRows`).
 
 **How it's drawn.** It is composed, not re-rendered (`core/layout/live.ts`): the render with the
 lens's rows swapped for source rows (which carry `srcMap`, so everything in
@@ -1083,7 +1095,7 @@ only the chunks the edits touched and re-rendering only their blocks.
 
 **Another note in the window.** Following a link from the lens, or `ctrl+o` / `ctrl+i` to another note, keeps the
 lens open on the new note's cursor block: the old note's render, size, place and inner scroll go with it
-(`App.resetForBuffer`), so the window never shows one note while keys edit another.
+(`Lens.resetForBuffer`), so the window never shows one note while keys edit another.
 
 ## Files beyond notes (plan `16.x`)
 
@@ -1214,7 +1226,7 @@ after `*`, whole words only). `.` replays the keys of the last change, the keys 
 included (`insertRecord`), a paste as a key of its own, so anything that changed the text repeats exactly — `cgn` then
 `.` walks the matches. A visual-mode change repeats on as much text from the cursor, as in vim (`V`, `j`s and the
 operator; `v`, `l`s and the operator on one line); one across lines of characters can't be said in keys, and `.` then
-has nothing to repeat rather than an older change. Keys are handled one at a time, in order (`App.handleKey` queues
+has nothing to repeat rather than an older change. Keys are handled one at a time, in order (`Input.handleKey` queues
 them, a paste too), so a burst of typed keys or a paste never interleaves with a command still running; `.`'s own replay
 runs inside its turn.
 

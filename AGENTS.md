@@ -13,11 +13,13 @@ a change users will see updates it in the same piece of work, without the bluepr
 - **`src/core/` never imports `src/tui/` or `@opentui/*`**, and `src/cli/` never imports `src/tui/`.
   `bun run check:boundary` enforces it. Only `src/tui/opentui.ts` and `src/tui/run.ts` touch OpenTUI.
 - **No source file over 1,500 lines, and no class that does everything** (D235). A feature goes in a module of its own;
-  `App` (`src/tui/app.ts`) keeps the shared state and the wiring, and a feature's code works on it from its own file, as
-  `actions.ts` does. `bun run check:size` enforces the limit; the few files past it are capped and may only shrink.
+  `App` (`src/tui/app.ts`) keeps the shared state and the wiring, and a feature is a controller in its own file that
+  `App` owns (`src/tui/explorer.ts` is `app.explorer`), holding the state that is the feature's alone.
+  `bun run check:size` enforces the limit.
 - **Every user action is a named command.** Add it to `src/core/command-specs.ts` with its CLI
-  equivalent (or `null` for a pure interaction), then implement it in `src/tui/actions.ts`
-  (`registerActions`). Registration fails at startup, and a test fails, if the two disagree.
+  equivalent (or `null` for a pure interaction), then implement it in the `src/tui/actions-*.ts` of its area
+  (or `actions.ts`), which `registerActions` registers. Registration fails at startup, and a test fails, if the two
+  disagree.
 - **The design stays true to the code.** A behaviour change updates the matching file in
   `blueprint/design/` in the same change; since the initial design was settled (D210), a planned change to
   requirements or design goes through a workstream.

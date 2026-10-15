@@ -49,7 +49,7 @@ function ending(r: ShellResult): string {
 function showOutput(app: App, label: string, r: ShellResult): void {
   const text = r.output.replace(/\r?\n$/, "");
   if (!text) return app.message(r.code === 0 ? "info" : "warn", `${label}: ${ending(r)}, no output`);
-  app.openList({
+  app.overlays.openList({
     title: `$ ${label} — ${ending(r)}`,
     items: text.split(/\r?\n/).map((l) => ({ label: sanitize(l.replace(/\t/g, "  ")) || " ", data: l })),
     accept: (item) => openPlace(app, item.data as string),
@@ -104,7 +104,7 @@ export function shellFilter(app: App, text: string): void {
   view.visual = null;
   const cmd = prepared(app, bang.command);
   if (cmd === null) return;
-  if (!editable(view)) app.setViewMode(view, app.editMode(view));
+  if (!editable(view)) app.lens.setViewMode(view, app.lens.editMode(view));
   filter(app, view, span, bang.command, cmd);
 }
 

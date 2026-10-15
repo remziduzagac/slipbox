@@ -28,8 +28,9 @@ for a person, and a command line for agents and scripts, both over the same plai
   servers, export, installing and updating. Both faces call it.
 - **`src/cli/`** is the command line: `cli.ts` parses a command line and runs the command, each group of commands in a
   module of its own (`links.ts`, `files.ts`, `git.ts`, …) and what they share in `common.ts`; `args.ts` parses flags.
-- **`src/tui/`** is the TUI: `app.ts` is the model (panes, buffers, modes), `draw.ts` paints it on an abstract `Canvas`,
-  `actions.ts` implements the commands, `keys.ts` the default keys.
+- **`src/tui/`** is the TUI: `app.ts` is the model (the shared state and the wiring), each feature a controller of its
+  own beside it; `draw.ts` and its `draw-*.ts` paint it on an abstract `Canvas`; `actions.ts` and its `actions-*.ts`
+  implement the commands; `keys.ts` holds the default keys.
 
 **The boundary.** `src/core/` never imports `src/tui/`, `src/cli/` or `@opentui/*`, and `src/cli/` never imports
 `src/tui/`. Inside the TUI, only `src/tui/opentui.ts` (the `Canvas` over OpenTUI's buffer) and `src/tui/run.ts` (the
@@ -37,8 +38,8 @@ renderer, input, shutdown) touch OpenTUI; everything else is driven in tests thr
 `bun run check:boundary` (`scripts/check-boundary.ts`) fails on any import that crosses.
 
 **The size of a file.** No source file is over 1,500 lines (D235): a feature lives in a module of its own, and `App`
-keeps the shared state and the wiring. `bun run check:size` (`scripts/check-size.ts`) fails on a file past the limit;
-the few past it today (`app.ts`, `draw.ts`, `actions.ts`) are capped and may only shrink, until they're split.
+keeps the shared state and the wiring. `bun run check:size` (`scripts/check-size.ts`) fails on a file past the limit.
+Since the big files were split, none is past it; a file that ever must be is capped in `CAPPED` and may only shrink.
 
 ## Where things live
 
@@ -46,7 +47,7 @@ the few past it today (`app.ts`, `draw.ts`, `actions.ts`) are capped and may onl
 | --- | --- |
 | `src/core/` | the core; `layout/` (a note laid out), `theme/`, `export/` (formats), `servers/` (language servers) |
 | `src/cli/` | the command line: `cli.ts` dispatches, a module per group of commands, `common.ts` what they share |
-| `src/tui/` | the TUI |
+| `src/tui/` | `app.ts` the model, a controller per feature (`explorer.ts`: `app.explorer`), `draw*.ts`, `actions*.ts` |
 | `src/version.ts` | the version, one source; `package.json`'s must match |
 | `tests/` | the headless tests by area (`core`, `render`, `vault`, `cli`, `tui`, …), their snapshots, fixtures |
 | `tests/terminal/` | the terminal tests: slipbox driven by keys in headless terminals; `herdr/`, a real terminal's |
@@ -78,8 +79,9 @@ A few modules to know first:
 What every change keeps. Each is checked by a test or a script where it can be.
 
 - **Every user action is a named command.** Its id and its command-line equivalent (or `null`, for a pure interaction)
-  are in `core/command-specs.ts`; the TUI implements it in `tui/actions.ts` (`registerActions`). A command implemented
-  without a spec, or specified without an implementation, fails at start-up and fails a test.
+  are in `core/command-specs.ts`; the TUI implements it in `tui/actions.ts` or the `tui/actions-*.ts` of its area, all
+  registered by `registerActions`. A command implemented without a spec, or specified without an implementation, fails
+  at start-up and fails a test.
 - **Disk is the contract.** A command reads saved files only, writes atomically, and is never blocked by an open editor.
   The TUI takes a command's write as any program's: it reloads, or asks when the note has unsaved changes. It lists the
   notes it holds unsaved for commands to warn about (`core/stale.ts`): advice, never a lock.

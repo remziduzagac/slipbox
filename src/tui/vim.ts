@@ -1,6 +1,6 @@
 // The vim-shaped normal mode of source mode (phase 3 step 3): counts, operators waiting for a
 // motion or a text object, a register, and `.`. Each operator and edit is a named command (in
-// actions.ts, bound in `[keys.source]`); this file is the grammar around them — what follows an
+// actions-edit.ts, bound in `[keys.source]`); this file is the grammar around them — what follows an
 // operator is read here, the way which-key reads what follows a prefix.
 
 import type { App, View } from "./app.ts";
@@ -156,7 +156,7 @@ export async function visualKey(app: App, view: View, key: string, dispatch: () 
     const r = textObject(view, E.offsetOf(app, view), kind, ch, takeCount(app));
     if (!r) return app.message("info", `no ${kind}${ch} here`);
     E.placeAt(app, view, r.from);
-    app.select(view, { ...view.cur }, view.visual === "line");
+    app.views.select(view, { ...view.cur }, view.visual === "line");
     E.placeAt(app, view, Math.max(r.from, E.prevBoundary(view.buf.source, r.to)));
     app.moveCursor(view, view.cur);
     return;
@@ -745,7 +745,7 @@ export async function repeat(app: App): Promise<void> {
   }
   s.replaying = true;
   try {
-    for (const k of keys) await app.processKey(k);
+    for (const k of keys) await app.input.processKey(k);
   } finally {
     s.replaying = false;
     s.undoing = true; // `.` itself isn't the change to repeat next time

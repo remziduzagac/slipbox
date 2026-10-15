@@ -1,7 +1,7 @@
 // Editing in source mode (plan 4.3, 4.4; phase 3 step 3). The text is the buffer's `source`; a
 // cursor is a place in it, found through the source layout's `srcMap` (every cell drawn knows the
 // offset it shows). Insert mode types into it; the normal-mode commands (`i`, `o`, `x`, `u`…) are
-// named commands in actions.ts that call in here.
+// named commands in actions-edit.ts that call in here.
 
 import { graphemes } from "../core/width.ts";
 import { type App, editable, type View } from "./app.ts";
@@ -62,7 +62,7 @@ export function placeAt(app: App, view: View, at: number, past = false, again = 
     const holder = layout.lines.findLastIndex((l) => l.src <= src && !l.decor);
     if (holder >= 0) {
       view.cur = { row: holder, col: 0 };
-      app.setCursorAnchor(view, layout);
+      app.views.setCursorAnchor(view, layout);
       return placeAt(app, view, at, past, true);
     }
   }
@@ -86,7 +86,7 @@ export function placeAt(app: App, view: View, at: number, past = false, again = 
   } else col = cs[k]!.x;
   view.cur = { row, col };
   view.goal = col;
-  app.setCursorAnchor(view, layout);
+  app.views.setCursorAnchor(view, layout);
 }
 
 /** The text of source line `src` (1-based), without its line ending. */
@@ -134,8 +134,8 @@ export function cannotEdit(view: Pick<View, "buf">): string | null {
  */
 export function toEditing(app: App, view: View): boolean {
   if (editable(view)) return true;
-  const mode = app.editMode(view);
-  app.setViewMode(view, mode);
+  const mode = app.lens.editMode(view);
+  app.lens.setViewMode(view, mode);
   const what = view.buf.kind.group === "text" ? "code" : "markdown";
   if (mode === "live") {
     app.message("info", `the lens: the ${what} around the cursor — the key again edits it, esc closes it`);
@@ -416,7 +416,7 @@ function selectingMove(key: string): string | null {
 
 /** A shifted move while typing: the selection from where it started (the cursor, the first time) to where it goes. */
 function selectTo(app: App, view: View, move: string): void {
-  if (!view.sel) app.select(view, { ...view.cur }, false);
+  if (!view.sel) app.views.select(view, { ...view.cur }, false);
   insertKeyNow(app, view, move);
   // Back where it started, nothing is selected.
   if (view.sel && view.sel.anchor.row === view.cur.row && view.sel.anchor.col === view.cur.col) view.sel = null;
@@ -520,7 +520,7 @@ function rowsWhileTyping(app: App, view: View, n: number): number {
   const goal = view.goal;
   const went = row - view.cur.row;
   view.cur = { row, col: cs.find((c) => c.x + c.w > col)?.x ?? endCol };
-  app.setCursorAnchor(view, layout);
+  app.views.setCursorAnchor(view, layout);
   view.goal = goal;
   return went;
 }
@@ -537,9 +537,9 @@ function pageWhileTyping(app: App, view: View, dir: -1 | 1): void {
   // The view scrolled by as many rows as the cursor went, from where it was (the cursor's move may have scrolled it).
   const cur = view.cur;
   view.top = top;
-  app.scrollBy(view, went, false);
+  app.views.scrollBy(view, went, false);
   view.cur = cur;
-  app.setCursorAnchor(view, app.currentLayout(view));
+  app.views.setCursorAnchor(view, app.currentLayout(view));
 }
 
 function insertKeyNow(app: App, view: View, key: string): void {

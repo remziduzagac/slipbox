@@ -1,6 +1,6 @@
 // A file's changes against what's staged, from the TUI (plan 26.1): to the next or the one before (`] c`, `[ c`),
 // one's diff in the floating window, one undone — its lines as staged put back in the text, an edit like any other.
-// The gutter's signs are draw.ts's; the changes, `core/gitsigns.ts`.
+// The gutter's signs are draw-pane.ts's; the changes, `core/gitsigns.ts`.
 
 import { changeAt, changeDiff, type GitChange } from "../core/gitsigns.ts";
 import type { App, View } from "./app.ts";
@@ -18,7 +18,7 @@ const startOf = (c: GitChange) => (c.kind === "delete" ? Math.max(1, c.from - 1)
 
 /** The file's changes, or why there are none to go to (said). */
 function changesHere(app: App, view: View): GitChange[] | null {
-  const changes = app.gitChangesOf(view);
+  const changes = app.git.changesOf(view);
   if (!changes?.length) {
     app.message(
       "info",
@@ -38,7 +38,7 @@ export function gitStep(app: App, view: View, dir: 1 | -1): void {
     dir === 1
       ? (changes.find((c) => startOf(c) > Math.max(...lines)) ?? changes[0]!)
       : ([...changes].reverse().find((c) => startOf(c) < Math.min(...lines)) ?? changes[changes.length - 1]!);
-  app.pushHistory(view);
+  app.history.push(view);
   app.placeAtLine(view, startOf(next));
 }
 
@@ -64,7 +64,7 @@ export function gitPreview(app: App, view: View): void {
       : c.from === c.to
         ? `line ${c.from}`
         : `lines ${c.from}–${c.to}`;
-  app.openHover(`\`\`\`diff\n${changeDiff(c)}\n\`\`\``, `${where}, against what's staged`);
+  app.overlays.openHover(`\`\`\`diff\n${changeDiff(c)}\n\`\`\``, `${where}, against what's staged`);
 }
 
 /** The change on the cursor's line undone: its lines as staged put back — one undo step, left unsaved. */

@@ -72,7 +72,7 @@ export function leadsOut(app: App, path: string): { abs: string; loc: VaultLocat
 export function peekInstead(app: App, path: string, anchor?: Anchor, go = false): boolean {
   const out = leadsOut(app, path);
   if (!out) {
-    if (peekOf(app)) app.closeFloating();
+    if (peekOf(app)) app.overlays.closeFloating();
     return false;
   }
   if (go) goThere(app, out.abs, out.loc, anchor);
@@ -103,7 +103,7 @@ export function peekAt(app: App, abs: string, loc: VaultLocation, anchor?: Ancho
     return app.message("warn", `${tildePath(abs)} holds binary bytes; slipbox opens text`);
   const was = peekOf(app);
   const back = was ? [...was.back, here(app)!] : [];
-  if (!was && app.floating && !app.closeFloating()) return;
+  if (!was && app.floating && !app.overlays.closeFloating()) return;
   show(app, { abs, loc, back, fwd: [], full: was?.full ?? false }, text, anchor);
 }
 
@@ -225,7 +225,7 @@ export function peekStep(app: App, dir: "back" | "forward"): void {
 export function goThere(app: App, abs: string, loc: VaultLocation, anchor?: Anchor): void {
   if (loc.mode !== "folder") {
     const f = app.floating;
-    if (!app.switchVault(loc, abs, anchor) && f?.kind === "peek" && !app.floating) app.floating = f;
+    if (!app.vaults.switchVault(loc, abs, anchor) && f?.kind === "peek" && !app.floating) app.floating = f;
     return;
   }
   // A file kept from a peek is read-only; opened beside, it's a file like any outside every vault.
@@ -259,7 +259,7 @@ export function peekKeep(app: App): void {
   const { abs, loc, label } = f.peek;
   const top = { ...f.view.topAnchor };
   const cursor = { ...f.view.curAnchor };
-  app.closeFloating();
+  app.overlays.closeFloating();
   const open = app.buffers.get(abs);
   const buf = open ?? app.buffer(abs);
   if (!buf) return;

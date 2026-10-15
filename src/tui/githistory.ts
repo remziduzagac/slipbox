@@ -15,7 +15,7 @@ const day = (time: number) => new Date(time * 1000).toISOString().slice(0, 10);
 
 /** The window's file in the checkout (its path there), or why there's none (said). */
 function fileHere(app: App, view: View | null): string | null {
-  const c = app.checkout;
+  const c = app.git.checkout;
   if (!c) return app.message("info", "not a git checkout"), null;
   if (!view?.buf.abs || view.buf.virtual) return app.message("info", "open a file first"), null;
   const path = relative(c.root, view.buf.abs);
@@ -34,7 +34,7 @@ export function blameHere(app: App): void {
   const view = app.view;
   const path = fileHere(app, view);
   if (path === null) return;
-  const c = app.checkout!;
+  const c = app.git.checkout!;
   const line = cursorLine(app, view!);
   const head = showAt(c, "HEAD", path);
   if (head === null) return app.message("info", `${path} isn't in the last commit: every line is new`);
@@ -43,7 +43,7 @@ export function blameHere(app: App): void {
   const b = blameLine(c, path, at);
   if (!b) return app.message("warn", `git couldn't blame line ${line}`);
   const message = messageOf(c, b.hash) || b.subject;
-  app.openHover(
+  app.overlays.openHover(
     `**${b.hash.slice(0, 8)}** · ${b.author} · ${day(b.time)}\n\n\`\`\`text\n${message}\n\`\`\`\n\n\`space g h\`: the file's history`,
     `line ${line}, last changed in ${b.hash.slice(0, 8)}`,
   );
@@ -54,10 +54,10 @@ export function historyHere(app: App): void {
   const view = app.view;
   const path = fileHere(app, view);
   if (path === null) return;
-  const log = fileLog(app.checkout!, path);
+  const log = fileLog(app.git.checkout!, path);
   if (log === null) return app.message("warn", "git couldn't read its history");
   if (!log.length) return app.message("info", `${path} has no commits yet`);
-  app.openList({
+  app.overlays.openList({
     title: `${path} — ${log.length} commit${log.length === 1 ? "" : "s"}: enter, read it or its diff to now`,
     items: log.map((x) => ({
       label: `${x.hash.slice(0, 7)} ${sanitize(x.subject)}`,
@@ -70,19 +70,19 @@ export function historyHere(app: App): void {
 
 /** A version picked: read it, as it was — or its diff to the text as it is now. */
 function pickVersion(app: App, view: View, path: string, x: CommitInfo): void {
-  const c = app.checkout!;
+  const c = app.git.checkout!;
   const text = showAt(c, x.hash, x.path);
   if (text === null) return app.message("warn", `git has no ${x.path} at ${x.hash.slice(0, 7)}`);
   const at = `${x.path} at ${x.hash.slice(0, 7)} (${day(x.time)})`;
-  app.openList({
+  app.overlays.openList({
     title: at,
     items: [
       { label: "Read it as it was", detail: "read-only, in the floating window", data: "read" },
       { label: "Its diff to the text now", detail: "what's changed since, line by line", data: "diff" },
     ],
     accept: (item) => {
-      if (item.data === "read") return app.showVersion(text, x.path, `${at}, read-only`);
-      app.showLineDiff(
+      if (item.data === "read") return app.git.showVersion(text, x.path, `${at}, read-only`);
+      app.git.showLineDiff(
         text,
         view.buf.source,
         relative(app.loc.root, join(c.root, path)),

@@ -297,7 +297,7 @@ function jump(app: App, o: SaveAsOverlay, ch: string): void {
   }
 }
 
-/** Where the window's parts are on screen, for the mouse (`draw.ts` fills it). */
+/** Where the window's parts are on screen, for the mouse (`draw-overlays.ts` fills it). */
 export interface SaveAsGeometry {
   box: { x: number; y: number; w: number; h: number };
   places: { x: number; y: number; w: number; h: number };

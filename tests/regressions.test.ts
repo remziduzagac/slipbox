@@ -16,9 +16,11 @@ import { listThemes } from "../src/core/theme/index.ts";
 import { folderAt, locateVault } from "../src/core/vault.ts";
 import { WalkFilter, walkVault } from "../src/core/walk.ts";
 import { stringWidth } from "../src/core/width.ts";
-import { App, computeFind, selectedText } from "../src/tui/app.ts";
+import { App } from "../src/tui/app.ts";
 import { TextCanvas } from "../src/tui/canvas.ts";
 import { importsOf } from "../scripts/check-boundary.ts";
+import { computeFind } from "../src/tui/search.ts";
+import { selectedText } from "../src/tui/views.ts";
 
 const sandbox = mkdtempSync(join(tmpdir(), "slipbox-reg-"));
 process.env.XDG_STATE_HOME = join(sandbox, "state");
@@ -111,8 +113,8 @@ describe("medium", () => {
     app.draw(new TextCanvas(80, 20));
     await app.run("note.open a.md");
     rmSync(join(dir, "b.md"));
-    app.applyChanges({ changes: [{ rel: "b.md", kind: "deleted", isNote: true }], rescan: false });
-    await app.handleKey("ctrl+o");
+    app.watch.applyChanges({ changes: [{ rel: "b.md", kind: "deleted", isNote: true }], rescan: false });
+    await app.input.handleKey("ctrl+o");
     expect(app.view!.buf.key).toBe("b.md");
     expect(app.view!.buf.source).toBe("# B\n");
     await app.run("history.forward");
@@ -133,7 +135,7 @@ describe("medium", () => {
       watch: false,
     });
     app.view!.back.push({ key: "gone.md", anchor: { heading: null, headingIndex: 0, offset: 0, line: 1 } });
-    await app.handleKey("ctrl+o");
+    await app.input.handleKey("ctrl+o");
     expect(app.view!.buf.key).toBe("a.md");
     expect(app.view!.fwd).toHaveLength(0);
   });
@@ -257,7 +259,7 @@ describe("medium", () => {
       watch: false,
     });
     writeFileSync(join(dir, "a.md"), "# two, longer\n");
-    app.applyChanges({ changes: [], rescan: true });
+    app.watch.applyChanges({ changes: [], rescan: true });
     expect(app.view!.buf.source).toBe("# two, longer\n");
   });
   test("an unreadable note is never cached as empty", async () => {
@@ -326,7 +328,7 @@ describe("low", () => {
       open: "a.md",
       watch: false,
     });
-    for (const k of ["space", "u", "t", "s", "o", "l", "z", "z", "z", "enter"]) await app.handleKey(k);
+    for (const k of ["space", "u", "t", "s", "o", "l", "z", "z", "z", "enter"]) await app.input.handleKey(k);
     expect(app.messages.some((m) => m.text.includes("not bound"))).toBe(false);
     expect(app.theme.name).toBe("tokyo-night");
     expect(app.overlay).toBeNull();
@@ -459,8 +461,8 @@ describe("found in hands-on review", () => {
     const canvas = () => app.draw(new TextCanvas(100, 20));
     canvas();
     for (let i = 0; i < 20; i++) {
-      await app.handleKey("]");
-      await app.handleKey("]");
+      await app.input.handleKey("]");
+      await app.input.handleKey("]");
     }
     canvas();
     const topText = () =>
@@ -471,7 +473,7 @@ describe("found in hands-on review", () => {
     expect(topText()).toContain("H19");
     const change = (src: string) => {
       writeFileSync(join(dir, "n.md"), src);
-      app.applyChanges({ changes: [{ rel: "n.md", kind: "changed", isNote: true }], rescan: false });
+      app.watch.applyChanges({ changes: [{ rel: "n.md", kind: "changed", isNote: true }], rescan: false });
       canvas();
     };
     const orig = `# N\n\n${body}`;
