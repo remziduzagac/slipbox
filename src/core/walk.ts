@@ -306,6 +306,11 @@ export class SlicedWalk {
     return true;
   }
 
+  /** The folders a cap left unlisted: found, not looked into. */
+  rest(): string[] {
+    return this.queue.slice(this.next);
+  }
+
   private finish(cap: WalkCap | null): false {
     this.capped = cap;
     this.done = finishWalk(this.st);

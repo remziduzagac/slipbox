@@ -6038,6 +6038,25 @@ describe("home, a vault without a marker (VV-D2)", () => {
     });
   });
 
+  test("past home's cap, the background index still finds the vaults in the folders it left, its skip list held", async () => {
+    const { AutoIndex } = await import("../src/core/autoindex.ts");
+    const files = {
+      "a/n.md": "# N\n",
+      "b/c/repo/.git/HEAD": "ref: refs/heads/main\n",
+      "b/c/repo/r.md": "# R\n",
+      "b/node_modules/dep/.git/HEAD": "ref: refs/heads/main\n",
+      "b/.hidden/h/.git/HEAD": "ref: refs/heads/main\n",
+    };
+    await withHome(files, async (home) => {
+      const file = join(home, "..", `${basename(home)}-progress.json`);
+      const ai = new AutoIndex(home, file, () => Date.now(), { limits: { notes: 100, folders: 2 } });
+      while (ai.step(50)) {}
+      expect(ai.status).toMatchObject({ home: true, capped: "folders", homeNotes: 1, found: 1, indexed: 1 });
+      const { readRoots } = await import("../src/core/registry.ts");
+      expect(readRoots().some((v) => v.path === join(home, "b", "c", "repo") && v.found)).toBe(true);
+    });
+  });
+
   test("its notes are backlinks of a vault's, found by the background index; a vault's notes are home's", async () => {
     const { AutoIndex } = await import("../src/core/autoindex.ts");
     await withHome(

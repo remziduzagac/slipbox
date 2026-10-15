@@ -87,7 +87,8 @@ linked and all scopes take home as a vault (`scopeRoots`).
 
 **The cap.** Home's index holds 10,000 notes at most, and its walk lists 5,000 folders (`HOME_LIMITS`), those nearest
 the top: what stopped it is kept with the walk, said in a message when the TUI's home is built from it, and in `info`
-(`index.walked`, `index.capped`; the `--home` run's `home.capped`; `describeCap`).
+(`index.walked`, `index.capped`; the `--home` run's `home.capped`; `describeCap`). Past the cap, the background index
+still looks in the folders it left for vaults, a level at a time, home's skip list held (`seek`, kept with its place).
 
 **What's shown.** The status line names home `~`; `info` says `mode` `home` (an addition to schema 1's values), the
 Info view and `stat` `home (~)`. Started in `~`, there is no named folders' list to go into first: home is the vault.
