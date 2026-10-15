@@ -124,7 +124,7 @@ import { type Layout, type LayoutLink, type Picture, posOfSrc, srcAt } from "../
 import type { PictureSource, RenderOptions } from "../core/layout/render.ts";
 import { type Rasterizer, rasterizer } from "../core/svg.ts";
 import { layoutWidth, pictureLocator } from "../core/note.ts";
-import { cacheHome, ensureCacheHome, stateDir, userConfigFile, userFolders } from "../core/paths.ts";
+import { cacheHome, ensureCacheHome, slipboxOwn, stateDir, userConfigFile, userFolders } from "../core/paths.ts";
 import {
   SESSION_BRANCHES,
   type SessionTab,
@@ -1655,9 +1655,10 @@ export class App {
    */
   private markElsewhere(buf: NoteBuffer): void {
     if (buf.abs === this.scratch().path) return;
-    const root = findVaultRoot(buf.abs);
+    // Its vault: a marker's, or home (VV-D2).
+    const root = vaultOf(buf.abs);
     if (!root || root === this.loc.root) return;
-    const label = rootLabel(rootAt(root));
+    const label = rootLabel(vaultAt(root));
     const graph = vaultGraph(this, root);
     buf.elsewhere = { vault: label, graph, rel: graph ? relative(root, buf.abs) : null };
     buf.readOnly = `read-only here: ${label}'s — go into ${label} to edit it`;
@@ -10883,7 +10884,8 @@ export class App {
    * vault's notes: it has no vault to switch into.
    */
   private intoOtherVault(path: string, anchor?: Anchor): boolean {
-    if (!isAbsolute(path) || !existsSync(path)) return false;
+    // slipbox's own files (the scratch, in its state folder under ~) are no vault's to go into, home's neither (VV-D2).
+    if (!isAbsolute(path) || !existsSync(path) || slipboxOwn(path)) return false;
     let target: VaultLocation;
     try {
       target = locateVault({ path });
@@ -10904,7 +10906,7 @@ export class App {
     try {
       const file = existsSync(t.path) ? locateVault({ path: t.path }) : null;
       // A file of another vault read there, kept from a peek (VV-D7), is no way back into it: its vault, its tabs.
-      const kept = file?.mode === "vault" && file.root !== t.root;
+      const kept = !!file && file.mode !== "folder" && file.root !== t.root;
       target = file && !kept ? file : locateVault({ path: t.root });
       if (file && !kept) open = t.path;
     } catch {

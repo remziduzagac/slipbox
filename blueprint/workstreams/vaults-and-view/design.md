@@ -95,6 +95,12 @@ Info view and `stat` `home (~)`. Started in `~`, there is no named folders' list
 The explorer is home's tree from its walk; a folder of home its index leaves out, opened (`slipbox ~/Downloads`), is
 listed a level at a time as a folder above the root is, until VV-T4's view and VV-T5's marks.
 
+**The peek (VV-D7).** Home is a vault to the peek as any other: a link, a backlink or a hit from another vault into a
+note of home's peeks at it, titled `~ › todo.md`, read with home's graph; `o` goes into home, `t` keeps it as a tab,
+read-only, marked `~` (`markElsewhere` asks `vaultOf`). In home, a link to home's own note, one in `~/Downloads` among
+them, opens there. slipbox's own files (`slipboxOwn`: the scratch in its state folder under `~`) are no note of home's:
+opened as they are, never gone into.
+
 **Not done here.** The vaults inside a folder home's skip list leaves out (a clone in `~/Downloads`) are no longer
 found by the background index: they're found when opened. Link completion offers other vaults' notes, not home's.
 

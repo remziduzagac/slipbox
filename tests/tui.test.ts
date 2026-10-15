@@ -13631,6 +13631,52 @@ describe("the background auto-index in the TUI (20.9)", () => {
     }
   });
 
+  test("a link from a vault to a note of home's peeks (VV-D2, VV-D7): home names it, t keeps it read-only, o goes into home; the scratch is no note of home's", async () => {
+    const home = realpathSync(mkdtempSync(join(sandbox, "home-")));
+    const notes = join(home, "notes");
+    mkdirSync(join(notes, ".slipbox"), { recursive: true });
+    writeFileSync(join(notes, "index.md"), "# Index\n\n[the list](../todo.md)\n");
+    writeFileSync(join(home, "todo.md"), "# To do\n\nA list of home's own: [more](more.md).\n");
+    writeFileSync(join(home, "more.md"), "# More\n");
+    const before = { home: process.env.HOME, state: process.env.XDG_STATE_HOME };
+    process.env.HOME = home;
+    // slipbox's own state folder under ~, as by default: the scratch there.
+    process.env.XDG_STATE_HOME = join(home, ".local", "state");
+    try {
+      const h = await harness({ root: notes, open: "index.md" });
+      await h.keys("tab", "enter");
+      expect(h.app.loc.root).toBe(notes);
+      expect(h.app.floating?.kind).toBe("peek");
+      expect(h.app.view!.buf.abs).toBe(join(home, "todo.md"));
+      expect(h.frame()).toContain("~ › todo.md");
+      // Kept as a tab: home's, read-only here.
+      await h.keys("t");
+      expect(h.app.loc.root).toBe(notes);
+      expect(h.app.displayName(h.app.view!.buf)).toBe("~: todo.md");
+      expect(h.app.view!.buf.readOnly).toContain("go into ~ to edit it");
+      // o: into home, the note its own there.
+      await h.app.run("peek.go");
+      expect(h.app.loc).toMatchObject({ mode: "home", root: home });
+      expect(h.app.view!.buf.rel).toBe("todo.md");
+      expect(h.app.view!.buf.readOnly).toBeNull();
+      // In home, a link to home's own note opens there: no peek.
+      await h.keys("tab", "enter");
+      expect(h.app.floating).toBeNull();
+      expect(h.app.view!.buf.rel).toBe("more.md");
+      await h.app.run("history.back");
+      await h.app.run("history.back");
+      expect(h.app.loc.root).toBe(notes);
+      // The scratch, in slipbox's state folder under ~, opens beside: no vault's to go into, home's neither.
+      h.app.openScratch("right");
+      expect(h.app.loc.root).toBe(notes);
+      expect(h.app.view!.buf.abs).toBe(h.app.scratch().path);
+      expect(h.app.view!.buf.elsewhere ?? null).toBeNull();
+    } finally {
+      process.env.HOME = before.home;
+      process.env.XDG_STATE_HOME = before.state;
+    }
+  });
+
   test("home's Downloads opened (VV-D2): left out of home's index, listed in the explorer a level at a time", async () => {
     const { homeAt } = await import("../src/core/vault.ts");
     const home = realpathSync(mkdtempSync(join(sandbox, "home-")));

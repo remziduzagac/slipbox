@@ -12,7 +12,7 @@ import { rootLabel, tildePath } from "../core/names.ts";
 import type { Anchor, CursorAnchor } from "../core/position.ts";
 import { Reach } from "../core/reach.ts";
 import { sanitize } from "../core/sanitize.ts";
-import { isInside, locateVault, rootAt, type VaultLocation } from "../core/vault.ts";
+import { isInside, locateVault, type VaultLocation, vaultAt } from "../core/vault.ts";
 import { stringWidth, truncate, truncateStart } from "../core/width.ts";
 import type { App, View } from "./app.ts";
 import { NoteBuffer } from "./buffer.ts";
@@ -59,8 +59,9 @@ export function leadsOut(app: App, path: string): { abs: string; loc: VaultLocat
   } catch {
     return null;
   }
-  // A vault's own files, nested vaults apart (each is its own, VV-D4); a folder opened outside every vault, its own.
-  if (loc.mode === "vault") return loc.root === app.loc.root ? null : { abs, loc };
+  // A vault's own files, nested vaults apart (each is its own, VV-D4) — home's too, a vault without a marker (VV-D2);
+  // a folder opened outside every vault, its own.
+  if (loc.mode !== "folder") return loc.root === app.loc.root ? null : { abs, loc };
   return app.loc.mode === "folder" && isInside(app.loc.root, abs) ? null : { abs, loc };
 }
 
@@ -108,16 +109,16 @@ export function peekAt(app: App, abs: string, loc: VaultLocation, anchor?: Ancho
 
 /** The peek showing `p`'s file: its buffer, read-only, its links read in its own vault. */
 function show(app: App, p: Omit<Peek, "label">, text: string, anchor?: Anchor, cursor?: CursorAnchor): void {
-  const graph = p.loc.mode === "vault" ? vaultGraph(app, p.loc.root) : null;
+  const graph = p.loc.mode !== "folder" ? vaultGraph(app, p.loc.root) : null;
   const rel = graph ? relative(p.loc.root, p.abs) : null;
-  const label = p.loc.mode === "vault" ? rootLabel(p.loc) : tildePath(p.loc.root);
+  const label = p.loc.mode !== "folder" ? rootLabel(p.loc) : tildePath(p.loc.root);
   // Whether its vault has an index, asked before anything reads it: a note's backlinks are read from it.
   const indexed = !!graph && graph.indexedAt() !== null;
   const buf = new NoteBuffer(null, p.abs, `peek:${p.abs}`);
   buf.kind = classify(p.abs, app.config.walk.extensions);
   buf.virtual = { save: () => true };
   buf.readOnly =
-    p.loc.mode === "vault"
+    p.loc.mode !== "folder"
       ? "a peek is read-only — o goes there, to edit it"
       : "a peek is read-only — o opens it beside this vault's notes, to edit it";
   buf.elsewhere = { vault: label, graph, rel };
@@ -157,7 +158,7 @@ export function peekTitle(
  */
 export function vaultGraph(app: App, root: string): Graph | null {
   const graph = app.reach.graphAt(root);
-  if (graph && !graph.reach) graph.reach = new Reach(rootAt(root));
+  if (graph && !graph.reach) graph.reach = new Reach(vaultAt(root));
   return graph;
 }
 
@@ -222,7 +223,7 @@ export function peekStep(app: App, dir: "back" | "forward"): void {
  * every vault, opened beside this vault's notes. A switch refused (a note unsaved, said) leaves the peek as it was.
  */
 export function goThere(app: App, abs: string, loc: VaultLocation, anchor?: Anchor): void {
-  if (loc.mode === "vault") {
+  if (loc.mode !== "folder") {
     const f = app.floating;
     if (!app.switchVault(loc, abs, anchor) && f?.kind === "peek" && !app.floating) app.floating = f;
     return;
@@ -263,7 +264,7 @@ export function peekKeep(app: App): void {
   const buf = open ?? app.buffer(abs);
   if (!buf) return;
   // Another vault's file is marked so by `buffer` (VV-D7); one outside every vault, here.
-  if (!open && !buf.elsewhere && loc.mode !== "vault") {
+  if (!open && !buf.elsewhere && loc.mode === "folder") {
     buf.elsewhere = { vault: label, graph: null, rel: null };
     buf.readOnly = "read-only: kept from a peek";
   }

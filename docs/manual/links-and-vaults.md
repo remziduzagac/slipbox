@@ -307,7 +307,8 @@ A few rules keep vaults predictable:
 
 Your home folder, `~`, is a vault of its own, home. Its notes are those in your home folder that no other vault holds:
 a list at its top, a letter in `Documents`. Start slipbox in your home folder, or open a note of home's, and home is
-the vault you are in. The status line names it `~`.
+the vault you are in. The status line names it `~`. A link from another vault to a note of home's opens it in a peek,
+as any other vault's does: `~ › todo.md`, and `o` goes into home.
 
 Home is a vault as the others are. Its notes have backlinks, `/` starts from your home folder, and a wikilink's name
 matches its notes. It has its own session, with its tabs. Its settings are your own config, since it has no
