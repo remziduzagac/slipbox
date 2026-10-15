@@ -9,10 +9,10 @@ links; how a link is drawn, [rendering.md](rendering.md) § Blocks and inlines; 
 
 Every link, whatever its written form, is read as a file and a fragment (`#heading`, `#^block`, `#L42`). Everything
 behind the reading works on that: the index, backlinks, renames, repairs, the merge review and plans see only paths
-(D68; the resolver is `core/graph.ts`, `resolveLink`, over `core/links.ts`). A path resolves without the index: its
-target exists or it doesn't (D56). A wikilink's name needs the index of its root (D71). A broken link stays broken
-until it is repaired, never resolved quietly by a name or a remembered move (D56, D78). The index makes lookups fast
-and gives backlinks; it never decides where a link points (D61).
+(D68; the resolver is `core/graph-resolve.ts`, behind `resolveLink`, over `core/links.ts`). A path resolves without
+the index: its target exists or it doesn't (D56). A wikilink's name needs the index of its root (D71). A broken link
+stays broken until it is repaired, never resolved quietly by a name or a remembered move (D56, D78). The index makes
+lookups fast and gives backlinks; it never decides where a link points (D61).
 
 ## Forms
 
@@ -37,7 +37,7 @@ inlines).
 
 ## Paths
 
-A markdown link's path (`resolvePath` in `core/graph.ts`, `resolveMarkdownUrl` in `core/links.ts`):
+A markdown link's path (`resolvePath` in `core/graph-resolve.ts`, `resolveMarkdownUrl` in `core/links.ts`):
 
 - **Relative to the file** is the form slipbox writes by default. A relative link within a repository works anywhere
   the repository is cloned; `~/…`, absolute paths and links between repositories depend on how the machine is laid
@@ -70,7 +70,7 @@ files). Neither has wikilinks.
 ## Wikilinks
 
 A wikilink is read by a micromark extension, never inside code (`core/wikilink.ts`; [rendering.md](rendering.md) §
-The wikilink tokenizer), and resolved within its root (D71; `resolveWiki` in `core/graph.ts`, `LinkIndex` in
+The wikilink tokenizer), and resolved within its root (D71; `resolveWiki` in `core/graph-resolve.ts`, `LinkIndex` in
 `core/links.ts`):
 
 - **Forms.** `[[name]]` matches file names without their extension; `[[dir/name]]` a path from the root
@@ -84,9 +84,9 @@ The wikilink tokenizer), and resolved within its root (D71; `resolveWiki` in `co
   root, as Obsidian finds one (`![[dal.png]]`), but in a Markdown export's pictures, whose copies would answer for the
   pictures they were copied from: a folder named `*.export.assets/`, or any `<name>.assets/` beside a note
   `<name>.md` (or `.markdown`) that carries the export's mark, `generator: slipbox`, in its front matter (DF-D18,
-  DF-D25; `exportPicturesFolder` in `core/graph.ts`, the mark read again when the note changes) — unless the name
-  goes through such a folder (`[[report.export.assets/dal.png]]`, `[[book.assets/dal.png]]`); a note by an alias its
-  front matter gives (`aliases` or `alias`), after every file name (D71, D46). The converter's reading of the old
+  DF-D25; `exportPicturesFolder` in `core/graph-resolve.ts`, the mark read again when the note changes) — unless the
+  name goes through such a folder (`[[report.export.assets/dal.png]]`, `[[book.assets/dal.png]]`); a note by an alias
+  its front matter gives (`aliases` or `alias`), after every file name (D71, D46). The converter's reading of the old
   wikilinks leaves them out alike.
 - **Case.** Names are compared case aside, after Unicode NFC: `[[Readme]]` reaches `readme.md` on every filesystem.
   The Turkish i's fold too: `İ` lowers to `i` with a combining dot, which goes, and `ı` is `i`, so `[[izmir]]` finds
@@ -130,7 +130,7 @@ the hover and `shift+k`: the heading's section, the block, the lines ([tui.md](t
 ## How a link landed
 
 Every link that reaches a file or folder says how it landed, and every resolution how sure it is (D86; `Landed` in
-`core/links.ts`, `certainty` in `core/graph.ts`):
+`core/links.ts`, `certainty` in `core/graph-types.ts`):
 
 - **How** it landed: a markdown link by its path (`path`), in any of its forms (relative, `/…`, extensionless, a
   folder, `~/`, absolute, `file://`); a pointer by its folder's name (`pointer`); a link to the repository's own

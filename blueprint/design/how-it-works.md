@@ -138,6 +138,11 @@ The CLI's commands are the user's reference, [cli.md](../../docs/manual/cli.md);
 | `core/reach.ts` | 17.9–17.11 | other roots: paths out of the root, their backlinks here; the converter's `[[x:…]]` |
 | `core/redirects.ts` | 17.12 | moves seen, by content hash; where an old path went |
 | `core/rename.ts` | 7.1–7.3, 17.15, 20.19 | renames and moves: each link rewritten as byte-range edits, previewed |
+| `core/rename-plan.ts` | 7.2, 7.3 | a plan's shape; its edits collected, each file read once; git trees with changes |
+| `core/rename-links.ts` | 7.6, 17.15 | one link rewritten in the form it was written, at the place the index recorded |
+| `core/rename-vaults.ts` | 18.11, 21.10 | a folder named, made a vault of its own, or a plain folder again: as plans |
+| `core/rename-apply.ts` | 7.1–7.4 | a plan carried out, its files unchanged since, the index following; undone |
+| `core/rename-heading.ts` | 11.9 | a heading renamed, with every link to it |
 | `core/plans.ts` | 20.18 | edits as plans: saved, tied to file contents, refused once stale, applied once |
 | `core/convert.ts` | 20.1 | the converter: `[[…]]` and `/…` links made relative paths, by their own old rules |
 | `core/rename-log.ts` | 7.4 | each rename's files and moves, as it found them: what an undo gives back |
@@ -158,6 +163,9 @@ The CLI's commands are the user's reference, [cli.md](../../docs/manual/cli.md);
 | `core/sqlite.ts` | 6.6 | the runtime's SQLite (`node:sqlite`): the few calls the index and the parse cache make |
 | `core/trust.ts` | 23.x | the roots whose own code may run: your answers (`trust.json`), your `[trust] roots` |
 | `core/graph.ts` | 1.5–1.9, 6.7, 11.8 | notes, links, backlinks, lazy parsing, the index; change feed; unsaved text |
+| `core/graph-types.ts` | 1.5–1.7 | a note's entry, a link as written and resolved, a backlink, a problem; how sure |
+| `core/graph-extract.ts` | 1.5, 1.6, 20.11 | a note's entry from its text: title, headings, links, tags, names |
+| `core/graph-resolve.ts` | 20.2, 21.2–21.7 | `LinkResolver`: by path, name, alias, pointer, hosting URL; moves |
 | `core/readers.ts` | 16.2 | a reader per note format: its parse into mdast, headings and links off raw lines |
 | `core/filetypes.ts` | 16.1 | a file's group (note, data, text, binary) and format, by extension |
 | `core/doctypes.ts` | 22.2, 22.3 | document types: notes of a kind by where they are; their rules, order, status |
@@ -239,7 +247,20 @@ The CLI's commands are the user's reference, [cli.md](../../docs/manual/cli.md);
 | `core/skill.ts` | GR-D10 | the skill for agents, built in: printed; installed, never over another's file or a link |
 | `core/wsl.ts` | 14.12 | WSL known; Windows' drives from its mounts; their fonts; notes on one, said |
 | `core/stale.ts` | 9.9 | advisory list of unsaved paths, pid-stamped: the TUI writes it, the CLI reads it |
-| `cli/cli.ts` | 9.1–9.6 | the CLI face |
+| `cli/cli.ts` | 9.1–9.6 | the CLI face: the dispatcher, the help, each command's arguments and flags; `--json` |
+| `cli/common.ts` | 9.2, 9.4, 9.10 | the session; errors, exit codes; a note named, resolved; a note read and written |
+| `cli/render.ts` | 2.x, 10.x | `render`, `export` |
+| `cli/reading.ts` | 9.5, 25.6 | `outline`, `read`, `ls`, `find`, `spell` |
+| `cli/writing.ts` | 9.4, 9.10, 25.4 | `write`, `task`, `replace`, `footnotes`, `mkdir` |
+| `cli/links.ts` | 9.5, 21.5 | `link`, `resolve`, `links`, `backlinks`, `problems`, `tags` |
+| `cli/files.ts` | 7.x, 18.x | `mv`, `cp`, `rm`, `trash`, `rename-heading`, `relink`, `convert-links`, `undo`, `apply` |
+| `cli/vaults.ts` | 18.11, 21.6, 21.10 | `init`, `deinit`, `name`, `folders` |
+| `cli/git.ts` | 5.11–5.14, 20.21 | `changed`, `merge-review`, `diff`, `worktrees` |
+| `cli/search.ts` | 6.x, 20.9, 20.10 | `search`, `index` |
+| `cli/info.ts` | 22.3 | `info`, `stat`, `types`, `themes`, `history`, `commands` |
+| `cli/servers.ts` | 19.7, 19.22 | `doctor`, `diagnostics` |
+| `cli/agents.ts` | 4.12, 8.2–8.4, 9.7 | `context`, `capture`, `scratch`, `send` |
+| `cli/install.ts` | 14.4, 14.8, GR-D10 | `upgrade`, `channel`, `uninstall`, `skill` |
 | `cli/args.ts` | 9.1 | flag parsing: flags anywhere, `--x=v` or `--x v`, `--` ends flags |
 | `version.ts` | — | the version, one source |
 | `tui/*` | 3.x, 5.3–5.7 | the app: reading, panes, saving and conflicts |

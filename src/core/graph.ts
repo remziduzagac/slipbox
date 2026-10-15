@@ -3,260 +3,66 @@
 // One pass over the vault extracts per-note facts (title, headings, links). Resolution happens at
 // query time against the LinkIndex, so adding or removing a note never leaves stale answers.
 // The CLI reads a fresh cache instead of reparsing every note on every agent call (9.4).
+//
+// Here, the graph: its walk, the index kept, a file's changes heard, backlinks, tags and problems. What it
+// keeps of a note and its links is graph-types.ts's, a note's entry made from its text graph-extract.ts's,
+// and how a link resolves graph-resolve.ts's (`LinkResolver`). All of it is imported from here.
 
-import { existsSync, statSync } from "node:fs";
+import { statSync } from "node:fs";
 import { commentLinks, grammar, grammarFor, grammarNow, linkTokens, parseSyntax, type Grammar } from "./syntax.ts";
 import { basename, isAbsolute, join, posix, relative, sep } from "node:path";
-import type { Definition, Nodes } from "mdast";
 import type { Config } from "./config.ts";
 import { climbsOut, ensureDir, landsInside, readJson, readText, writeJson } from "./fsutil.ts";
-import { parseWikiTarget, type WikiLink } from "./wikilink.ts";
 import { countForms, type FormCounts } from "./convention.ts";
-import { formatPointer, isPointer, parsePointer, resolvePointer } from "./pointer.ts";
-import { checkoutRemotes, hostedHere } from "./hosting.ts";
-import { lookupFolder, pointerName } from "./folders.ts";
-import {
-  extensionless,
-  type Landed,
-  LinkIndex,
-  type MdLinkTarget,
-  normKey,
-  onDisk,
-  pathLink,
-  pickCandidate,
-  type Resolution,
-  resolveAttachment,
-  resolveMarkdownUrl,
-  wikiPathCandidates,
-} from "./links.ts";
-import {
-  type AnchorInfo,
-  anchorsOf,
-  type HeadingInfo,
-  headingsOf,
-  noteTitle,
-  type ParseCache as ChunkCache,
-  visit,
-} from "./parse.ts";
-import { parseNoteFile } from "./readers.ts";
+import { LinkIndex, normKey, onDisk, type Resolution } from "./links.ts";
+import type { ParseCache as ChunkCache } from "./parse.ts";
 import { tildePath } from "./names.ts";
-import { ParseCache, sharedParseCache } from "./parsecache.ts";
+import { sharedParseCache } from "./parsecache.ts";
 import { cacheDir, ensureCacheHome, stateDir } from "./paths.ts";
-import { checkoutOf, headCommit, headOf } from "./git.ts";
+import { headCommit, headOf } from "./git.ts";
 import { changedBetween, inVault } from "./gitops.ts";
 import { contentHash, Redirects } from "./redirects.ts";
 import { dataLinks, parseData } from "./data.ts";
-import { isExport } from "./export/mark.ts";
-import { classify, extensionOf, noteFormat } from "./filetypes.ts";
+import { classify, extensionOf } from "./filetypes.ts";
 import { type HomeWalk, homeWalk } from "./home.ts";
 import { checkoutAt, findVaultRoot, isListed, type VaultLocation } from "./vault.ts";
 import { listDirectory, type NoteFile, type Skipped, type WalkCap, WalkFilter, walkVault } from "./walk.ts";
-import { type Hashtag, tagKey, tagName } from "./tags.ts";
+import { tagKey, tagName } from "./tags.ts";
+import {
+  type LinkRef,
+  type NoteEntry,
+  type VaultChange,
+  type ResolvedLink,
+  type Retarget,
+  fragile,
+  describeLanding,
+  type Target,
+  type VaultReach,
+  type LinkProblem,
+  disambiguated,
+  type Backlink,
+  NOTE_EXT_RE,
+} from "./graph-types.ts";
+import { INDEX_VERSION, extractNote, extractFromSource } from "./graph-extract.ts";
+import { LinkResolver } from "./graph-resolve.ts";
 
-export type LinkKind = "wiki" | "embed" | "markdown" | "image";
-
-export interface LinkRef {
-  kind: LinkKind;
-  /** wiki: the target name; markdown/image: the URL. */
-  target: string;
-  heading: string | null;
-  block: string | null;
-  alias: string | null;
-  /** Visible text, for listings. */
-  text: string;
-  line: number;
-  column: number;
-  /** Where it ends: its last line, and the column after its last character (1-based, as remark counts). */
-  end: Pos;
-}
-
-/** A place in a file's text: a line and a column, both from 1 (a column counts UTF-16 units). */
-export interface Pos {
-  line: number;
-  column: number;
-}
-
-export interface NoteEntry {
-  rel: string;
-  title: string;
-  headings: HeadingInfo[];
-  /** HTML anchors (`<a id>`) a fragment may name (an entry from an older index has none). */
-  anchors?: AnchorInfo[];
-  links: LinkRef[];
-  tags: string[];
-  /** Frontmatter `aliases` (and `alias`): names `[[…]]` reaches the note by, like its own (17.7). */
-  aliases: string[];
-  /** Frontmatter `previous_names`, as renames wrote them before 21.12: the converter reads them (21.3), links never. */
-  previous: string[];
-  /** Its content hash: a note that vanished and turns up elsewhere with it was moved (17.12). */
-  hash: string;
-  mtimeMs: number;
-  size: number;
-  flags: string[];
-}
-
-/**
- * A change to the vault's files as the graph hears of it (6.7): whatever made it — the watcher, a
- * save here, a CLI write, a rename — it passes through the graph, and whoever keeps something
- * derived from the files (the search index; later, an outside indexer) listens here.
- */
-export type VaultChange =
-  | { kind: "changed"; path: string }
-  | { kind: "removed"; path: string }
-  | { kind: "moved"; from: string; to: string };
-
-/** How a link reached its target when not directly: an alias, a pointer's folder by an old name or another copy (21.7)… */
-export type Via = "alias" | "previous-name" | "redirect" | "old-name" | "another-copy" | "hosting";
-
-export interface ResolvedLink extends LinkRef {
-  /** note: a vault note; file: an attachment; folder: a folder (21.2); external: a URL; anchor: within this note. */
-  resolvedKind: "note" | "file" | "folder" | "external" | "anchor" | "unresolved" | "ambiguous";
-  /** Vault-relative; absolute when the target is in another root (17.8, 17.9). */
-  path: string | null;
-  candidates: string[];
-  /** The other vault's name (or folder), when the target is in another root. */
-  vault?: string | null;
-  via?: Via;
-  /** Why it didn't resolve, when there's more to say than "no such note" ("unknown vault"). */
-  reason?: string;
-  /** A pointer to a branch not checked out here (21.7): the file as it is there, read from git. */
-  gitRef?: { root: string; rel: string; branch: string };
-  /** How it landed (`links.ts` `Landed`): its path, a pointer, a hosting URL, a name, a tie broken. Every link reaching a file or folder has one. */
-  how?: Landed;
-  /** A hosting URL (via "hosting") naming another ref than the branch checked out: both. */
-  hosted?: { ref: string; branch: string | null };
-  /** A file named the old way (`research:x.md`, `[[research:x]]`, 21.11): the pointer that names it. */
-  suggest?: string;
-}
-
-/** A link that reached one note and reaches another now, after a note came or went. */
-export interface Retarget {
-  from: string;
-  line: number;
-  target: string;
-  was: string;
-  now: string;
-}
-
-/**
- * How sure a link's target is (trailscout's terms): `exact` — by its path, a unique name, an alias,
- * a pointer, a hosting URL at the branch here; `inferred` — a tie broken, a path's end, a folder's old
- * name or another copy, a hosting URL at another ref; else `ambiguous`, `broken`.
- */
-export function certainty(
-  t: Pick<Target, "resolvedKind" | "how" | "via" | "hosted">,
-): "exact" | "inferred" | "ambiguous" | "broken" {
-  if (t.resolvedKind === "unresolved") return "broken";
-  if (t.resolvedKind === "ambiguous") return "ambiguous";
-  if (t.via === "hosting") return t.hosted ? "inferred" : "exact";
-  if (t.via === "previous-name" || t.via === "redirect" || t.via === "old-name" || t.via === "another-copy")
-    return "inferred";
-  return !t.how || t.how === "path" || t.how === "name" || t.how === "pointer" || t.how === "hosting"
-    ? "exact"
-    : "inferred";
-}
-
-/** A tie broken by where the link is — the deepest folder shared, the shortest path: a note of the name nearer would take it. */
-export function fragile(t: Pick<Target, "how">): boolean {
-  return t.how === "deepest-shared" || t.how === "shortest";
-}
-
-/** How a link landed, for people, when it wasn't by its own path: "the nearest of 2 named so". */
-export function describeLanding(t: Pick<Target, "how" | "via" | "candidates" | "hosted">): string | null {
-  const n = t.candidates.length;
-  if (t.via === "hosting")
-    return t.hosted ? `its URL names ${t.hosted.ref}; this copy is on ${t.hosted.branch ?? "no branch"}` : null;
-  if (t.via === "alias") return "by an alias";
-  if (t.via === "old-name") return "by its folder's old name";
-  if (t.via === "another-copy") return "in another copy of its folder";
-  switch (t.how) {
-    case "suffix":
-      return "by the end of its path";
-    case "exact-case":
-      return `spelled exactly so, of ${n}`;
-    case "same-folder":
-      return `in the same folder, of ${n}`;
-    case "deepest-shared":
-      return `the nearest of ${n} named so`;
-    case "shortest":
-      return `the shortest path of ${n} named so`;
-    default:
-      return null;
-  }
-}
-
-/** What resolving a link found, without the link's own fields. */
-export type Target = Omit<ResolvedLink, keyof LinkRef>;
-
-/**
- * Other vaults, as this one reaches them (17.8–17.11; core/reach.ts): `[[vault:note]]`, the root
- * holding a path outside this one, and the links other vaults make into this one.
- */
-export interface VaultReach {
-  /** `[[vault:target]]` from `g`; null when `vault` names no folder (the link may be something else). */
-  wiki(vault: string, target: string, g: Graph): Target | null;
-  /** The name (or folder) of the root holding an absolute path outside this vault. */
-  vaultOf(abs: string): string | null;
-  /** Links from other vaults' indexes into `g`, by the vault-relative path they reach. */
-  inbound(g: Graph): Map<string, Backlink[]>;
-  /** The entry of a note in another root, by its absolute path. */
-  entryAt(abs: string): NoteEntry | undefined;
-  /** Another root's graph (an embed of its note resolves its links there, 1.11); null if unreadable. */
-  graphAt(root: string, opts?: { known?: boolean }): Graph | null;
-}
-
-/** A link that reaches nothing, or more than one note (1.7): where it is, how it's written, why. */
-export interface LinkProblem {
-  from: string;
-  line: number;
-  column: number;
-  end: Pos;
-  kind: LinkKind;
-  target: string;
-  text: string;
-  reason: string | null;
-  candidates: string[];
-  /** A broken link's file, seen to move: where it is now (vault path), the relink's fix. */
-  moved?: string | null;
-  /** A fragile link's: the target that names its note for sure — its path from the root, or a relative one for a top-level note. */
-  fix?: string;
-}
-
-/**
- * The target that names a link's note (or file) for sure, written in the note at `fromRel`: its path
- * from the root — but a top-level note's path is its bare name, read as a name again (21.3), so
- * that one is a relative path (`../plan`, `./plan`). Without `.md` when the link had none.
- */
-export function disambiguated(l: Pick<ResolvedLink, "target" | "path">, fromRel: string): string {
-  let p = l.path!;
-  if (!p.includes("/")) {
-    p = posix.relative(posix.dirname(fromRel), p);
-    if (!p.startsWith("../")) p = `./${p}`;
-  }
-  return NOTE_EXT_RE.test(l.target) || !NOTE_EXT_RE.test(p) ? p : p.replace(NOTE_EXT_RE, "");
-}
-
-export interface Backlink {
-  /** Vault-relative; absolute for a link from another vault (17.11). */
-  from: string;
-  /** The linking vault's name, for a link from another vault. */
-  vault?: string | null;
-  line: number;
-  column: number;
-  end: Pos;
-  text: string;
-  /** How the link is written, so a caller can rewrite it (a rename): its kind and parts. */
-  kind: LinkKind;
-  target: string;
-  heading: string | null;
-  block: string | null;
-  alias: string | null;
-}
-
-const NOTE_EXT_RE = /\.(md|markdown)$/i;
-
-/** Bumped when what a note's entry holds changes: 5, content hashes (17.12). */
-export const INDEX_VERSION = 12; // 6: inline #tags (1.6); 7: where links end (11.7); 8: no wikilinks (20.22); 9: wikilinks again (21.3); 10: heading ids, anchors; 11: front matter links; 12: worker-parsed heading ids (15.1)
+export { certainty, fragile, describeLanding, disambiguated } from "./graph-types.ts";
+export type {
+  LinkKind,
+  LinkRef,
+  Pos,
+  NoteEntry,
+  VaultChange,
+  Via,
+  ResolvedLink,
+  Retarget,
+  Target,
+  VaultReach,
+  LinkProblem,
+  Backlink,
+} from "./graph-types.ts";
+export { INDEX_VERSION, extractNote, extractText, frontmatterLinks, extractFromSource } from "./graph-extract.ts";
+export { VAULT_LINK } from "./graph-resolve.ts";
 
 interface IndexFile {
   version: number;
@@ -305,10 +111,8 @@ export class Graph {
   } | null = null;
   private formCache: { generation: number; counts: FormCounts } | null = null;
   private readonly dataLinkCache = new Map<string, { stamp: string; links: LinkRef[] }>();
-  /** Whether a note is a Markdown export (its mark), as of its entry's time: what its pictures' folder is (DF-D25). */
-  private readonly exportMarks = new Map<string, { mtimeMs: number; marked: boolean }>();
-  /** Aliases and previous names → notes, from the entries parsed so far (null: rebuild). */
-  private nameCache: { aliases: Map<string, string[]>; previous: Map<string, string[]> } | null = null;
+  /** How its links resolve (graph-resolve.ts): by path, by name or alias, by pointer or hosting URL; moves seen. */
+  private readonly resolver = new LinkResolver(this);
   /** Other vaults (17.8–17.11); the CLI and the TUI set it, a graph opened alone has none. */
   reach: VaultReach | null = null;
   /**
@@ -406,7 +210,7 @@ export class Graph {
     this.backlinkCache = null;
     this.tagCache = null;
     this.generation++;
-    this.nameCache = null;
+    this.resolver.forgetNames();
     this.cacheDirty = Object.keys(old).length !== reused;
     const toParse = this.unparsed.size;
     if (parse === "all") this.ensureAll();
@@ -508,7 +312,7 @@ export class Graph {
     this.backlinkCache = null;
     this.tagCache = null;
     this.generation++;
-    this.nameCache = null;
+    this.resolver.forgetNames();
     this.emit({ kind: "changed", path: rel });
     if (opts.keep) {
       this.entry(rel);
@@ -585,7 +389,7 @@ export class Graph {
       this.backlinkCache = null;
       this.tagCache = null;
       this.generation++;
-      this.nameCache = null;
+      this.resolver.forgetNames();
     }
     return this.notes.get(rel);
   }
@@ -805,7 +609,7 @@ export class Graph {
     this.backlinkCache = null;
     this.tagCache = null;
     this.generation++;
-    this.nameCache = null;
+    this.resolver.forgetNames();
     this.emit({ kind: "changed", path: rel });
     if (watch) this.reportRetargets(watch);
     return true;
@@ -828,7 +632,7 @@ export class Graph {
     const name = posix.basename(rel).replace(NOTE_EXT_RE, "");
     const key = normKey(name);
     const named = this.index.resolveWiki(name, null).candidates.filter((c) => c !== rel).length;
-    if (!named && !this.otherNames().aliases.has(key)) return null;
+    if (!named && !this.resolver.otherNames().aliases.has(key)) return null;
     // One process, one answer (the CLI's): a link in a note not parsed yet is watched too.
     if (this.thorough && this.unparsed.size) this.ensureAll();
     const out: { from: string; link: LinkRef; was: string }[] = [];
@@ -882,7 +686,7 @@ export class Graph {
     this.backlinkCache = null;
     this.tagCache = null;
     this.generation++;
-    this.nameCache = null;
+    this.resolver.forgetNames();
     this.dataLinkCache.clear(); // a path in a data file or a comment may resolve now
     this.emit({ kind: "changed", path: rel });
     return true;
@@ -903,7 +707,7 @@ export class Graph {
     this.backlinkCache = null;
     this.tagCache = null;
     this.generation++;
-    this.nameCache = null;
+    this.resolver.forgetNames();
     this.emit({ kind: "removed", path: rel });
     return true;
   }
@@ -924,7 +728,7 @@ export class Graph {
     this.backlinkCache = null;
     this.tagCache = null;
     this.generation++;
-    this.nameCache = null;
+    this.resolver.forgetNames();
     this.emit({ kind: "removed", path: rel });
     if (watch) this.reportRetargets(watch);
   }
@@ -955,7 +759,7 @@ export class Graph {
     this.backlinkCache = null;
     this.tagCache = null;
     this.generation++;
-    this.nameCache = null;
+    this.resolver.forgetNames();
   }
 
   /** Whether an editor's text stands for the note (11.8). */
@@ -1007,423 +811,23 @@ export class Graph {
    * this one (17.9); a wikilink within its root (21.3).
    */
   resolveLink(link: Pick<LinkRef, "kind" | "target">, fromRel: string): Target {
-    if (link.kind === "wiki" || link.kind === "embed") return this.resolveWiki(link.target, fromRel);
-    return this.resolvePath(link, fromRel);
+    if (link.kind === "wiki" || link.kind === "embed") return this.resolver.resolveWiki(link.target, fromRel);
+    return this.resolver.resolvePath(link, fromRel);
   }
 
-  /**
-   * A wikilink, read within its root (21.3): a note's name or path, an alias from front matter, an
-   * attachment by its name (as Obsidian finds one); a path into a root nested in this one is a path.
-   * Two notes (or attachments) of one name: the nearest, then the shortest; a real tie is ambiguous. No
-   * root, no names. Previous names, `[[vault:note]]` and remembered moves aren't read (20.22's kept).
-   */
-  private resolveWiki(target: string, fromRel: string): Target {
-    if (!target) return { resolvedKind: "anchor", path: fromRel, candidates: [] };
-    if (this.loc.mode === "folder")
-      return {
-        resolvedKind: "unresolved",
-        path: null,
-        candidates: [],
-        reason: "names need a vault, and this folder is in none: .git, .slipbox/, .obsidian/ or .zk/ makes one",
-      };
-    const r = this.index.resolveWiki(target, fromRel);
-    if (r.status === "resolved")
-      return { resolvedKind: "note", path: r.path, candidates: r.candidates, ...(r.how ? { how: r.how } : {}) };
-    if (r.status === "ambiguous") return { resolvedKind: "ambiguous", path: null, candidates: r.candidates };
-    // A path: out of the root (`../`), or into a root nested in it.
-    const byPath =
-      (/^\.\.?\//.test(target) ? this.byFilesystemPath(target, fromRel, true) : null) ??
-      this.intoNested(target.replace(/^\/+/, ""), true);
-    if (byPath) return byPath;
-    if (classify(target, this.config.walk.extensions).group !== "note" && /\.[A-Za-z0-9]+$/.test(target)) {
-      const att = resolveAttachment(target, fromRel, this.root);
-      if (att) return { resolvedKind: "file", path: att, candidates: [], how: "path" };
-      // Obsidian finds attachments anywhere in the vault by name.
-      const hits = this.byFileName(target);
-      // Two of a name, as two notes are: the nearest, then the shortest; a real tie ambiguous.
-      const r = pickCandidate(hits, target.normalize("NFC"), fromRel);
-      if (r.status === "resolved")
-        return { resolvedKind: "file", path: r.path, candidates: r.candidates, ...(r.how ? { how: r.how } : {}) };
-      if (r.status === "ambiguous") return { resolvedKind: "ambiguous", path: null, candidates: r.candidates };
-    }
-    const aliased = this.byAlias(target, fromRel);
-    if (aliased) return aliased;
-    return this.oldForm(target) ?? { resolvedKind: "unresolved", path: null, candidates: [] };
-  }
-
-  /**
-   * The attachments a wikilink's name finds anywhere in the root, as Obsidian finds them: by the file's name, or a
-   * path's end aligned on segments. A Markdown export's pictures are left out, unless the name itself goes through
-   * their folder: their copies would answer for the pictures they were copied from (DF-D18, DF-D25).
-   */
-  private byFileName(target: string): string[] {
-    const named = this.assets.get(target.split("/").pop()!.normalize("NFC").toLowerCase()) ?? [];
-    const suffix = target.normalize("NFC").toLowerCase();
-    const depth = suffix.split("/").length;
-    return named.filter((p) => {
-      const lower = p.toLowerCase();
-      if (lower !== suffix && !lower.endsWith(`/${suffix}`)) return false;
-      // The segment the name starts at: at or before the export's folder, it goes through it.
-      const folder = this.exportPicturesFolder(p);
-      return folder < 0 || p.split("/").length - depth <= folder;
-    });
-  }
-
-  /**
-   * Which segment of a root-relative path is a folder holding a Markdown export's pictures, or -1: one named so
-   * (`report.export.assets/`), or any `<name>.assets/` beside a note `<name>.md` marked as an export (`-o book.md`
-   * makes `book.assets/`) (DF-D25).
-   */
-  private exportPicturesFolder(rel: string): number {
-    const parts = rel.split("/");
-    let at = -1;
-    for (let i = 0; i < parts.length - 1; i++) {
-      const seg = parts[i]!;
-      if (!/\.assets$/i.test(seg)) continue;
-      const stem = [...parts.slice(0, i), seg.slice(0, -".assets".length)].join("/");
-      if (/\.export$/i.test(stem) || this.marked(`${stem}.md`) || this.marked(`${stem}.markdown`)) at = i;
-    }
-    return at;
-  }
-
-  /** Whether the note at `rel` is a Markdown export, by its mark; read once for each time its file changes. */
-  private marked(rel: string): boolean {
-    const e = this.notes.get(rel);
-    if (!e) return false;
-    const known = this.exportMarks.get(rel);
-    if (known?.mtimeMs === e.mtimeMs) return known.marked;
-    const marked = isExport(join(this.root, rel));
-    this.exportMarks.set(rel, { mtimeMs: e.mtimeMs, marked });
-    return marked;
-  }
-
-  /**
-   * A file named the old way (20.x's `vault:path`: `research:x.md`, `[[research:x]]`, 21.11) where a
-   * folder this machine knows has that name: not a link — said, with the pointer that is one.
-   * Null when the part before `:` names no folder (`Meeting: Q3` is a note's name).
-   */
+  /** A file named the old way, where a folder this machine knows has that name (21.11): not a link, said. */
   oldForm(target: string): Target | null {
-    const m = /^([^:/\s#]+):(?!\/\/)([^#]+)/.exec(target);
-    if (!m) return null;
-    const [, name, rest] = m as unknown as [string, string, string];
-    const l = lookupFolder(name);
-    if (l.status === "unknown") return null;
-    let suggest: string | undefined;
-    if (l.status === "found") {
-      // Its file: a path in the folder (`x.md`, extensionless too), else a note's name there.
-      const hit = pathLink(join(l.path, rest), join(l.path, "_"), false, undefined, false);
-      let rel = hit ? relative(l.path, hit.abs) : null;
-      if (!rel) {
-        const r = this.reach?.graphAt(l.path)?.resolveLink({ kind: "wiki", target: rest }, "");
-        rel =
-          (r?.resolvedKind === "note" || r?.resolvedKind === "file") && r.path
-            ? isAbsolute(r.path)
-              ? relative(l.path, r.path)
-              : r.path
-            : null;
-      }
-      if (rel)
-        suggest = formatPointer({
-          name: pointerName(l.folder),
-          branch: null,
-          path: rel.split(sep).join("/"),
-          fragment: null,
-        });
-    }
-    const reason = `${name}:${rest} names a folder the old way — not a link${suggest ? `; ${suggest} is (space c a writes it)` : ""}`;
-    return { resolvedKind: "unresolved", path: null, candidates: [], reason, ...(suggest ? { suggest } : {}) };
+    return this.resolver.oldForm(target);
   }
 
-  /** A note by an alias its front matter gives (21.3): never by a previous name. */
-  private byAlias(target: string, fromRel: string): Target | null {
-    if (target.includes("/")) return null;
-    const stem = target.replace(/\.(md|markdown)$/i, "");
-    const aliased = this.otherNames().aliases.get(normKey(stem));
-    if (!aliased?.length) return null;
-    const r = pickCandidate(aliased, stem, fromRel);
-    if (r.status === "resolved")
-      return {
-        resolvedKind: "note",
-        path: r.path,
-        candidates: r.candidates,
-        via: "alias",
-        ...(r.how ? { how: r.how } : {}),
-      };
-    return { resolvedKind: "ambiguous", path: null, candidates: r.candidates, via: "alias" };
-  }
-
-  /**
-   * How a wikilink resolved before links were paths (1.4, 17.7, 17.8, 17.12): the note's name or path
-   * in this vault; `[[vault:name]]`; an attachment, by its name; a note's alias; its previous name; a
-   * move remembered. The converter's legacy reader (20.1, 20.22): nothing else resolves a link by a name.
-   */
+  /** How a wikilink resolved before links were paths: the converter's legacy reader (20.1, 20.22). */
   resolveLegacyWiki(link: Pick<LinkRef, "kind" | "target">, fromRel: string): Target {
-    if (!link.target) return { resolvedKind: "anchor", path: fromRel, candidates: [] };
-    const r = this.index.resolveWiki(link.target, fromRel);
-    if (r.status === "resolved") return { resolvedKind: "note", path: r.path, candidates: r.candidates };
-    if (r.status === "ambiguous") return { resolvedKind: "ambiguous", path: null, candidates: r.candidates };
-    const byPath =
-      this.byFilesystemPath(link.target, fromRel, true) ?? this.intoNested(link.target.replace(/^\/+/, ""), true);
-    if (byPath) return byPath;
-    const inter = VAULT_LINK.exec(link.target);
-    if (inter) {
-      // This vault by its own name reaches its own notes; another's is looked up.
-      if (this.answersTo(inter[1]!)) return this.resolveLegacyWiki({ kind: link.kind, target: inter[2]! }, fromRel);
-      const other = this.reach?.wiki(inter[1]!, inter[2]!, this);
-      if (other) return other;
-      // No folder of that name: a name with a colon (an alias, a previous name) comes first.
-    }
-    if (classify(link.target, this.config.walk.extensions).group !== "note" && /\.[A-Za-z0-9]+$/.test(link.target)) {
-      const att = resolveAttachment(link.target, fromRel, this.root);
-      if (att) return { resolvedKind: "file", path: att, candidates: [] };
-      // Obsidian finds attachments anywhere in the vault by name.
-      const hits = this.byFileName(link.target);
-      if (hits.length === 1) return { resolvedKind: "file", path: hits[0]!, candidates: hits };
-      if (hits.length > 1) return { resolvedKind: "ambiguous", path: null, candidates: hits.sort() };
-    }
-    const named = this.byOtherName(link.target, fromRel);
-    if (named) return named;
-    const moved = this.movedWiki(link.target);
-    if (moved) return moved;
-    if (inter && this.reach)
-      return {
-        resolvedKind: "unresolved",
-        path: null,
-        candidates: [],
-        vault: inter[1]!,
-        reason: `unknown folder "${inter[1]}"`,
-      };
-    return { resolvedKind: "unresolved", path: null, candidates: [] };
-  }
-
-  /** A link's path, from the note at `fromRel` (20.2). */
-  private resolvePath(link: Pick<LinkRef, "kind" | "target">, fromRel: string): Target {
-    // A `file://` URL or a `~/` path names a file, not a web page (17.16).
-    if (/^file:\/\//i.test(link.target) || link.target.startsWith("~/")) {
-      const path = /^file:/i.test(link.target) ? link.target : link.target.split("#")[0]!;
-      return this.byFilesystemPath(path, fromRel, false) ?? { resolvedKind: "unresolved", path: null, candidates: [] };
-    }
-    // A pointer into a named folder (21.7): wherever this machine has it.
-    if (isPointer(link.target)) return this.byPointer(link.target, fromRel);
-    // A folder named the old way (`research:x.md`): no link, but its pointer said (21.11).
-    if (!/^(?:https?|mailto|file|ftp|data|tel):/i.test(link.target)) {
-      const old = this.oldForm(link.target);
-      if (old) return old;
-    }
-    // This repository's hosting (a README's `https://github.com/me/repo/blob/main/x.md`): the file here.
-    if (/^https?:\/\//i.test(link.target)) {
-      const hosted = this.byHosting(link.target, fromRel);
-      if (hosted) return hosted;
-    }
-    // `/` from the nearest root, every file's (21.2): this graph's root — a plain folder opened has
-    // none, and there it's the filesystem's path alone.
-    const m: MdLinkTarget = resolveMarkdownUrl(link.target, fromRel, this.root, this.index, this.loc.mode !== "folder");
-    if (
-      (m.kind === "file" || m.kind === "folder" || m.kind === "missing") &&
-      !m.target.startsWith("../") &&
-      !m.target.startsWith("/")
-    ) {
-      // Into a vault nested in this one: its note, there (17.17).
-      const nested = this.intoNested(m.target, false);
-      if (nested) return nested;
-    }
-    // A path that reaches nothing is broken, whatever moved (20.2): a move is evidence for a fix
-    // (`movedTo`, the relink), never a way to resolve.
-    if (m.kind === "missing") {
-      // A path out of this root (17.9), or the filesystem's own `/…` (20.2): the file wherever it
-      // is, in whichever root holds it.
-      const byPath = this.byFilesystemPath(link.target.split("#")[0]!, fromRel, false);
-      if (byPath) return byPath;
-    }
-    switch (m.kind) {
-      case "external":
-        return { resolvedKind: "external", path: m.target, candidates: [] };
-      case "anchor":
-        return { resolvedKind: "anchor", path: fromRel, candidates: [] };
-      // By its path (D86): all a path link has.
-      case "note":
-        return { resolvedKind: "note", path: m.target, candidates: [], how: "path" };
-      case "file":
-        return { resolvedKind: "file", path: m.target, candidates: [], how: "path" };
-      case "folder":
-        return { resolvedKind: "folder", path: m.target, candidates: [], how: "path" };
-      default:
-        return { resolvedKind: "unresolved", path: null, candidates: [] };
-    }
-  }
-
-  /**
-   * A target written as a filesystem path (17.16): relative out of the root, `~/`, absolute, a
-   * `file://` URL. Inside this vault, its note or file like any other link's (a backlink too);
-   * elsewhere, the file by its absolute path, in whichever root holds it.
-   */
-  private byFilesystemPath(target: string, fromRel: string, wiki: boolean): Target | null {
-    // From the linking note; with none (a lookup), from the vault's root. In a linked worktree, a
-    // relative path out of its checkout is taken from the main checkout (17.19): `../y/plan.md`
-    // means the sibling repository beside the main one, wherever the worktree is kept.
-    const wt = this.loc.worktree;
-    const hit = pathLink(
-      target,
-      join(this.root, fromRel || "_"),
-      wiki,
-      wt?.main ? { from: wt.checkout, to: wt.main } : undefined,
-      true,
-    );
-    if (!hit) return null;
-    const rel = relative(this.root, hit.abs);
-    const inside = !rel.startsWith("..") && !isAbsolute(rel);
-    if (hit.folder)
-      return {
-        resolvedKind: "folder",
-        path: inside ? rel || "." : hit.abs,
-        candidates: [],
-        how: "path",
-        ...(inside ? {} : { vault: this.reach?.vaultOf(hit.abs) ?? null }),
-      };
-    if (inside) {
-      if (this.notes.has(rel)) return { resolvedKind: "note", path: rel, candidates: [rel], how: "path" };
-      if (this.known(rel)) return { resolvedKind: "file", path: rel, candidates: [rel], how: "path" };
-    }
-    return {
-      resolvedKind: classify(hit.abs, this.config.walk.extensions).group === "note" ? "note" : "file",
-      path: hit.abs,
-      candidates: [],
-      how: "path",
-      vault: this.reach?.vaultOf(hit.abs) ?? null,
-    };
-  }
-
-  /**
-   * A `slipbox://` pointer (21.7): its folder's copy here (21.6), the file in it as a path link finds
-   * one (no extension, a folder); in this root, its note or file like any link's (a backlink too).
-   * A branch not checked out here: the file as git has it there, read-only. Else why not.
-   */
-  private byPointer(target: string, fromRel: string): Target {
-    const p = parsePointer(target);
-    if (!p) return { resolvedKind: "unresolved", path: null, candidates: [] };
-    const t = resolvePointer(p);
-    if (t.status === "ambiguous")
-      return { resolvedKind: "ambiguous", path: null, candidates: t.candidates, reason: t.reason };
-    if (t.status === "unresolved") return { resolvedKind: "unresolved", path: null, candidates: [], reason: t.reason };
-    if (t.status === "branch") {
-      const kind = classify(t.rel, this.config.walk.extensions).group === "note" ? "note" : "file";
-      return {
-        resolvedKind: kind,
-        path: join(t.root, t.rel),
-        candidates: [],
-        how: "pointer",
-        vault: t.folder.name,
-        gitRef: { root: t.root, rel: t.rel, branch: t.branch },
-      };
-    }
-    const hit = pathLink(t.abs, join(this.root, fromRel || "_"), false, undefined, true);
-    const via = t.via ? { via: t.via } : {};
-    if (!hit)
-      return {
-        resolvedKind: "unresolved",
-        path: null,
-        candidates: [],
-        reason: `no ${p.path || "folder"} in ${p.name}${p.branch ? `@${p.branch}` : ""}`,
-        ...via,
-      };
-    const rel = relative(this.root, hit.abs);
-    const inside = !rel.startsWith("..") && !isAbsolute(rel);
-    // By its folder's name (D86); by an old one, or in another copy, said too.
-    const landed = { how: "pointer" as const, ...via };
-    if (hit.folder)
-      return {
-        resolvedKind: "folder",
-        path: inside ? rel || "." : hit.abs,
-        candidates: [],
-        ...(inside ? {} : { vault: t.folder.name }),
-        ...landed,
-      };
-    if (inside && this.notes.has(rel)) return { resolvedKind: "note", path: rel, candidates: [rel], ...landed };
-    if (inside && this.known(rel)) return { resolvedKind: "file", path: rel, candidates: [rel], ...landed };
-    return {
-      resolvedKind: classify(hit.abs, this.config.walk.extensions).group === "note" ? "note" : "file",
-      path: hit.abs,
-      candidates: [],
-      vault: t.folder.name,
-      ...landed,
-    };
-  }
-
-  private remotesCache: string[] | null = null;
-
-  /** This checkout's remotes (`host/path`, lower case): what a hosting URL to it names. */
-  private ownRemotes(): string[] {
-    if (this.remotesCache) return this.remotesCache;
-    const c = checkoutOf(this.root);
-    this.remotesCache = c ? checkoutRemotes(c) : [];
-    return this.remotesCache;
-  }
-
-  /**
-   * A link to a repository's hosting (`hosting.ts`): this checkout's own remote, or a named folder's
-   * (21.6) — the file in this copy, a note, file or folder like any link's (a backlink too). Another
-   * ref than the branch checked out is kept, to be said. Null when it isn't one, or names none here.
-   */
-  private byHosting(url: string, fromRel: string): Target | null {
-    const t = hostedHere(url, this.root, { remotes: this.ownRemotes() });
-    if (!t) return null;
-    const other = t.other ? { hosted: t.other } : {};
-    const hit = pathLink(join(t.top, t.path), join(this.root, fromRel || "_"), false, undefined, true);
-    if (!hit)
-      return {
-        resolvedKind: "unresolved",
-        path: null,
-        candidates: [],
-        reason: `no ${t.path || "folder"} in this copy of ${t.hosted.remote}`,
-        via: "hosting",
-        ...other,
-      };
-    const rel = relative(this.root, hit.abs);
-    const inside = !rel.startsWith("..") && !isAbsolute(rel);
-    // By this repository's remote (D86, D87).
-    const at = (kind: "note" | "file" | "folder", p: string): Target => ({
-      resolvedKind: kind,
-      path: p,
-      candidates: [],
-      how: "hosting",
-      via: "hosting",
-      ...other,
-    });
-    if (hit.folder) return at("folder", inside ? rel || "." : hit.abs);
-    if (inside && this.notes.has(rel)) return at("note", rel);
-    if (inside && this.known(rel)) return at("file", rel);
-    return at(classify(hit.abs, this.config.walk.extensions).group === "note" ? "note" : "file", hit.abs);
+    return this.resolver.resolveLegacyWiki(link, fromRel);
   }
 
   /** The vaults nested in this one: folders the walk leaves to them. */
   nestedRoots(): string[] {
     return this.skipped.filter((s) => s.reason === "nested vault").map((s) => s.rel);
-  }
-
-  /**
-   * A vault path that leads into a vault nested in this one (17.17): `[t](outreach/index.md)`,
-   * `[[outreach/index]]` — the note there, by its absolute path, as a path out of the root is.
-   */
-  private intoNested(rel: string, wiki: boolean): Target | null {
-    const p = posix.normalize(rel);
-    if (!this.nestedRoots().some((r) => p.startsWith(`${r}/`))) return null;
-    const abs = join(this.root, p);
-    const candidates = wiki ? wikiPathCandidates(abs) : [abs];
-    const hit = candidates.find((c) => {
-      try {
-        return statSync(c).isFile();
-      } catch {
-        return false;
-      }
-    });
-    if (!hit) return null;
-    return {
-      resolvedKind: classify(hit, this.config.walk.extensions).group === "note" ? "note" : "file",
-      path: hit,
-      candidates: [],
-      how: "path",
-      vault: this.reach?.vaultOf(hit) ?? null,
-    };
   }
 
   /** Whether `[[name:…]]` names this vault: its name, an alias, or a previous name. */
@@ -1432,146 +836,19 @@ export class Graph {
     return [this.loc.name, ...this.loc.aliases, ...this.loc.previous_names].some((x) => x?.toLowerCase() === n);
   }
 
-  /** The names notes declare in their frontmatter, from the entries parsed so far. */
-  private otherNames(): NonNullable<Graph["nameCache"]> {
-    if (this.thorough && this.unparsed.size) this.ensureAll();
-    if (!this.nameCache) {
-      const aliases = new Map<string, string[]>();
-      const previous = new Map<string, string[]>();
-      const add = (map: Map<string, string[]>, name: string, rel: string) => {
-        const k = normKey(name.trim());
-        if (!k) return;
-        const list = map.get(k) ?? [];
-        if (!list.includes(rel)) list.push(rel);
-        map.set(k, list);
-      };
-      for (const [rel, e] of this.notes) {
-        for (const a of e.aliases ?? []) add(aliases, a, rel);
-        for (const p of e.previous ?? []) add(previous, p, rel);
-      }
-      this.nameCache = { aliases, previous };
-    }
-    return this.nameCache;
-  }
-
-  /**
-   * A name no note has as its file name (17.7): a note's alias, resolved like a name (several go
-   * through the same disambiguation); else a previous name, when exactly one note claims it.
-   */
-  private byOtherName(target: string, fromRel: string): Target | null {
-    if (target.includes("/")) return null;
-    const stem = target.replace(/\.(md|markdown)$/i, "");
-    const names = this.otherNames();
-    const aliased = names.aliases.get(normKey(stem));
-    if (aliased?.length) {
-      const r = pickCandidate(aliased, stem, fromRel);
-      if (r.status === "resolved")
-        return { resolvedKind: "note", path: r.path, candidates: r.candidates, via: "alias" };
-      return { resolvedKind: "ambiguous", path: null, candidates: r.candidates, via: "alias" };
-    }
-    const prev = names.previous.get(normKey(stem));
-    if (prev?.length === 1) return { resolvedKind: "note", path: prev[0]!, candidates: prev, via: "previous-name" };
-    if (prev && prev.length > 1)
-      return { resolvedKind: "ambiguous", path: null, candidates: [...prev].sort(), via: "previous-name" };
-    return null;
-  }
-
   /** Where a path went (17.12), when that's a note or file of the vault now. */
   movedTo(rel: string): string | null {
-    const to = this.redirects?.follow(rel);
-    return to && (this.notes.has(to) || this.known(to)) ? to : null;
+    return this.resolver.movedTo(rel);
   }
 
-  /**
-   * Where a broken path link's file went, when a move of it was seen (17.12): evidence for a fix —
-   * the relink, a problem saying so — never a way to resolve it (20.2). Null when it isn't broken,
-   * isn't a vault path, or no move of it is known.
-   */
+  /** Where a broken path link's file went, a move of it seen (17.12): evidence for a fix, never a resolution. */
   movedTarget(link: Pick<LinkRef, "kind" | "target">, fromRel: string): string | null {
-    const wiki = link.kind === "wiki" || link.kind === "embed";
-    const rel = wiki ? this.brokenWikiPath(link, fromRel) : this.brokenPath(link, fromRel);
-    if (rel === null) return null;
-    // Written without its extension (21.2): the note's move counts — a wikilink's whatever its name's dots.
-    return (
-      this.movedTo(rel) ??
-      (extensionless(rel) || (wiki && !/\.(md|markdown)$/i.test(rel)) ? this.movedTo(`${rel}.md`) : null)
-    );
+    return this.resolver.movedTarget(link, fromRel);
   }
 
-  /**
-   * A broken wikilink's path in this root, as `brokenPath` for a markdown link's: one written as a
-   * path (`[[docs/plan]]` from the root, `[[../plan]]` from the note) — a name alone stays a name,
-   * which no move resolves (20.2). Null in a plain folder, which reads no wikilink.
-   */
-  private brokenWikiPath(link: Pick<LinkRef, "kind" | "target">, fromRel: string): string | null {
-    const t = link.target.trim();
-    if (this.loc.mode === "folder" || !t.includes("/") || /^[a-z][a-z0-9+.-]*:/i.test(t) || t.startsWith("~/"))
-      return null;
-    if (this.resolveLink(link, fromRel).resolvedKind !== "unresolved") return null;
-    const rel = /^\.\.?\//.test(t)
-      ? posix.normalize(posix.join(posix.dirname(fromRel), t))
-      : posix.normalize(t.replace(/^\/+/, ""));
-    return rel === ".." || rel.startsWith("../") ? null : rel;
-  }
-
-  /**
-   * The note a broken path link names, not written yet (vault-relative): what following it offers to
-   * make, and a problem calls information rather than a warning (as a wikilink's was). Null when it
-   * isn't broken, isn't a note's path in this vault, or its note was seen to move (`movedTarget`).
-   */
+  /** The note a broken path link names, not written yet (vault-relative); null when it isn't one. */
   missingNote(link: Pick<LinkRef, "kind" | "target">, fromRel: string): string | null {
-    const rel = this.brokenPath(link, fromRel);
-    if (rel === null || rel.endsWith("/") || this.movedTo(rel)) return null;
-    // Written without an extension (21.2): the note it reads as, `plan.md`.
-    const note = extensionless(rel) ? `${rel}.md` : rel;
-    return /\.(md|markdown)$/i.test(note) && !this.movedTo(note) ? note : null;
-  }
-
-  /** A broken link's path in this vault (vault-relative, decoded): null for one that resolves, or isn't a vault path. */
-  private brokenPath(link: Pick<LinkRef, "kind" | "target">, fromRel: string): string | null {
-    if (link.kind !== "markdown" && link.kind !== "image") return null;
-    if (this.resolveLink(link, fromRel).resolvedKind !== "unresolved") return null;
-    const path = link.target.split("#")[0]!;
-    if (!path || /^[a-z][a-z0-9+.-]*:/i.test(path) || path.startsWith("~/")) return null;
-    // `/…` from the root (21.2); with none (a plain folder), the filesystem's: not a path in it.
-    if (path.startsWith("/") && this.loc.mode === "folder") return null;
-    let decoded = path;
-    try {
-      decoded = decodeURIComponent(path);
-    } catch {}
-    // A `/…` naming no folder of the root is a filesystem path that isn't there (an unplugged
-    // drive's), not a place in the root.
-    if (
-      decoded.startsWith("/") &&
-      decoded.slice(1).includes("/") &&
-      !existsSync(join(this.root, decoded.slice(1).split("/")[0]!))
-    )
-      return null;
-    const rel = decoded.startsWith("/")
-      ? posix.normalize(decoded.slice(1))
-      : posix.normalize(posix.join(posix.dirname(fromRel), decoded));
-    return rel === ".." || rel.startsWith("../") ? null : rel;
-  }
-
-  /** `[[dir/old]]` or `[[old]]` whose note moved: by its old path, else its old name when unique. */
-  private movedWiki(target: string): Target | null {
-    if (!this.redirects) return null;
-    const t = target.trim().replace(/^\/+/, "");
-    const withExt = /\.(md|markdown)$/i.test(t) ? [t] : [`${t}.md`, `${t}.markdown`];
-    const byPath = t.includes("/") ? withExt.map((p) => this.movedTo(p)).find((p) => p) : null;
-    if (byPath) return { resolvedKind: "note", path: byPath, candidates: [byPath], via: "redirect" };
-    if (t.includes("/")) return null;
-    const to = [
-      ...new Set(
-        this.redirects
-          .named(t)
-          .map((p) => this.movedTo(p))
-          .filter((p): p is string => !!p),
-      ),
-    ];
-    if (to.length === 1) return { resolvedKind: "note", path: to[0]!, candidates: to, via: "redirect" };
-    if (to.length > 1) return { resolvedKind: "ambiguous", path: null, candidates: to.sort(), via: "redirect" };
-    return null;
+    return this.resolver.missingNote(link, fromRel);
   }
 
   linksOf(rel: string): ResolvedLink[] {
@@ -1765,7 +1042,7 @@ export class Graph {
     this.backlinkCache = null;
     this.tagCache = null;
     this.generation++;
-    this.nameCache = null;
+    this.resolver.forgetNames();
   }
 
   /** A grammar finished loading: code files' links can be read now (the TUI hears of it). */
@@ -1773,7 +1050,7 @@ export class Graph {
     this.backlinkCache = null;
     this.tagCache = null;
     this.generation++;
-    this.nameCache = null;
+    this.resolver.forgetNames();
   }
 
   /** Whether a vault-relative path is a note or a file of the vault (by the index: no disk). */
@@ -1890,7 +1167,7 @@ export class Graph {
     this.backlinkCache = null;
     this.tagCache = null;
     this.generation++;
-    this.nameCache = null;
+    this.resolver.forgetNames();
     this.emit({ kind: "changed", path: rel });
   }
 }
@@ -1917,242 +1194,4 @@ function stub(f: NoteFile): NoteEntry {
     size: f.size,
     flags: ["unparsed"],
   };
-}
-
-/** `[[vault:name]]`: a vault's name, a colon, the rest (17.8). */
-export const VAULT_LINK = /^([\p{L}\p{N}][\p{L}\p{N}._-]*):(.+)$/u;
-
-/** Parse one note and extract what the graph needs. */
-export function extractNote(
-  file: NoteFile,
-  cache: ParseCache | null = sharedParseCache(),
-  chunks?: ChunkCache,
-): NoteEntry {
-  const flags: string[] = [];
-  let text = "";
-  try {
-    const decoded = readText(file.abs);
-    text = decoded.text;
-    if (decoded.invalidUtf8) flags.push("invalid-utf8");
-    if (decoded.bom) flags.push("bom");
-    if (decoded.crlf) flags.push("crlf");
-  } catch (err) {
-    flags.push(`unreadable: ${(err as NodeJS.ErrnoException).code ?? "error"}`);
-    return extractFromSource(file, text, flags);
-  }
-  return extractText(file, text, flags, cache, chunks);
-}
-
-/** A note's text parsed, from the parse cache when any copy parsed it before (20.11): a file's, or git's (20.21). */
-export function extractText(
-  file: NoteFile,
-  text: string,
-  flags: string[] = [],
-  cache: ParseCache | null = sharedParseCache(),
-  chunks?: ChunkCache,
-): NoteEntry {
-  // Parsed before, by any copy of it on this machine (20.11): its content as it was, its place its own.
-  const hash = contentHash(text);
-  const key = ParseCache.key(hash, noteFormat(file.rel), INDEX_VERSION);
-  const hit = cache?.get(key);
-  if (hit) {
-    return {
-      rel: file.rel,
-      title: hit.title ?? fileTitle(file.rel),
-      headings: hit.headings as HeadingInfo[],
-      anchors: (hit.anchors ?? []) as AnchorInfo[],
-      links: hit.links as LinkRef[],
-      tags: hit.tags,
-      aliases: hit.aliases,
-      previous: hit.previous,
-      hash,
-      mtimeMs: file.mtimeMs,
-      size: file.size,
-      flags,
-    };
-  }
-  const e = extractFromSource(file, text, flags, chunks);
-  cache?.put(key, {
-    title: ownTitle.get(e) ? e.title : null,
-    headings: e.headings,
-    anchors: e.anchors ?? [],
-    links: e.links,
-    tags: e.tags,
-    aliases: e.aliases,
-    previous: e.previous,
-  });
-  return e;
-}
-
-/** The wikilinks in a front matter's text (its lines from the note's second), each at its line and column; a YAML comment's aren't. */
-export function frontmatterLinks(raw: string): LinkRef[] {
-  const out: LinkRef[] = [];
-  raw.split("\n").forEach((line, i) => {
-    const text = line.slice(0, yamlCommentAt(line));
-    for (const m of text.matchAll(/(!?)\[\[([^[\]\n]+)\]\]/g)) {
-      const w = parseWikiTarget(m[2]!);
-      if (!w.target && !w.heading && !w.block) continue;
-      const column = m.index! + 1;
-      out.push({
-        kind: m[1] ? "embed" : "wiki",
-        target: w.target,
-        heading: w.heading,
-        block: w.block,
-        alias: w.alias,
-        text: w.alias ?? w.target,
-        line: i + 2,
-        column,
-        end: { line: i + 2, column: column + m[0].length },
-      });
-    }
-  });
-  return out;
-}
-
-/**
- * Where a YAML line's comment starts (its length when it has none): the first `#` outside a quoted
- * scalar, at the line's start or after whitespace — so `[[Plan#Goals]]`'s `#` is no comment.
- */
-function yamlCommentAt(line: string): number {
-  let quote: string | null = null;
-  for (let i = 0; i < line.length; i++) {
-    const c = line[i]!;
-    if (quote === '"') {
-      if (c === "\\") i++;
-      else if (c === '"') quote = null;
-    } else if (quote === "'") {
-      if (c === "'" && line[i + 1] === "'") i++;
-      else if (c === "'") quote = null;
-    } else if ((c === '"' || c === "'") && (i === 0 || /[\s[{,]/.test(line[i - 1]!)))
-      quote = c; // a quoted scalar's start, not `Bob's`
-    else if (c === "#" && (i === 0 || /\s/.test(line[i - 1]!))) return i;
-  }
-  return line.length;
-}
-
-/** A note's title from its file's name: what stands in when it has none of its own. */
-function fileTitle(rel: string): string {
-  return basename(rel).replace(/\.(md|markdown)$/i, "");
-}
-
-/** Whether an entry's title is its own (frontmatter, a `#` heading), not its file's name. */
-const ownTitle = new WeakMap<NoteEntry, boolean>();
-
-export function extractFromSource(file: NoteFile, text: string, flags: string[] = [], chunks?: ChunkCache): NoteEntry {
-  const parsed = parseNoteFile(file.rel, text, chunks);
-  const links: LinkRef[] = [];
-  const inline: string[] = [];
-  const definitions = new Map<string, string>();
-  visit(parsed.tree, (n) => {
-    if (n.type === "definition") definitions.set((n as Definition).identifier.toLowerCase(), (n as Definition).url);
-    else if ((n.type as string) === "hashtag") inline.push((n as unknown as Hashtag).value);
-  });
-  visit(parsed.tree, (n: Nodes) => {
-    const pos = n.position?.start;
-    const line = pos?.line ?? 1;
-    const column = pos?.column ?? 1;
-    const end = n.position?.end ?? { line, column };
-    switch (n.type) {
-      case "link":
-        links.push(mdLink("markdown", n.url, plain(n), line, column, end));
-        return;
-      case "linkReference": {
-        const url = definitions.get(n.identifier.toLowerCase());
-        if (url) links.push(mdLink("markdown", url, plain(n), line, column, end));
-        return;
-      }
-      case "image":
-        links.push(mdLink("image", n.url, n.alt ?? "", line, column, end));
-        return;
-    }
-    // A wikilink or an embed (21.3): read within the note's root.
-    if ((n.type as string) === "wikiLink") {
-      const w = n as unknown as WikiLink;
-      links.push({
-        kind: w.embed ? "embed" : "wiki",
-        target: w.target,
-        heading: w.heading,
-        block: w.block,
-        alias: w.alias,
-        text: w.alias ?? w.value,
-        line,
-        column,
-        end: { line: end.line, column: end.column },
-      });
-    }
-  });
-  // Wikilinks in the front matter's values (Obsidian's properties: `related: "[[Plan]]"`), each where
-  // it's written — read, backlinked and renamed as the text's are; not in a comment. First: they come first.
-  const fmRaw = parsed.frontmatter?.raw;
-  if (fmRaw) links.unshift(...frontmatterLinks(fmRaw));
-  const fm = parsed.frontmatter?.data;
-  // The frontmatter's first, then the text's, each once (as first written).
-  const tags: string[] = [];
-  const seen = new Set<string>();
-  for (const t of [...normaliseTags(fm?.tags ?? fm?.tag), ...inline]) {
-    const name = tagName(t);
-    if (name && !seen.has(tagKey(name))) {
-      seen.add(tagKey(name));
-      tags.push(name);
-    }
-  }
-  const own = noteTitle(parsed, "");
-  const entry: NoteEntry = {
-    rel: file.rel,
-    title: own || fileTitle(file.rel),
-    headings: headingsOf(parsed.tree),
-    anchors: anchorsOf(parsed.tree),
-    links,
-    tags,
-    aliases: names(fm?.aliases ?? fm?.alias),
-    previous: names(fm?.previous_names),
-    hash: contentHash(text),
-    mtimeMs: file.mtimeMs,
-    size: file.size,
-    flags,
-  };
-  ownTitle.set(entry, !!own);
-  return entry;
-}
-
-function mdLink(kind: LinkKind, url: string, text: string, line: number, column: number, end: Pos): LinkRef {
-  return {
-    kind,
-    target: url,
-    heading: null,
-    block: null,
-    alias: null,
-    text,
-    line,
-    column,
-    end: { line: end.line, column: end.column },
-  };
-}
-
-function plain(n: Nodes): string {
-  const parts: string[] = [];
-  visit(n, (c) => {
-    if (c.type === "text" || c.type === "inlineCode") parts.push(c.value);
-    else if (c.type === "inlineMath") parts.push(`$${c.value}$`); // as written (12.11)
-  });
-  return parts.join("");
-}
-
-/** A frontmatter list of names (or one name); anything else is none. */
-function names(v: unknown): string[] {
-  const list = Array.isArray(v) ? v : typeof v === "string" ? [v] : [];
-  return list
-    .filter((n): n is string | number => typeof n === "string" || typeof n === "number")
-    .map((n) => String(n).trim())
-    .filter(Boolean);
-}
-
-function normaliseTags(v: unknown): string[] {
-  if (Array.isArray(v)) return v.map((t) => String(t).replace(/^#/, "")).filter(Boolean);
-  if (typeof v === "string")
-    return v
-      .split(/[,\s]+/)
-      .map((t) => t.replace(/^#/, ""))
-      .filter(Boolean);
-  return [];
 }

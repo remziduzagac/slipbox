@@ -97,7 +97,7 @@ export function searchOthers(
     if (!og) continue;
     let oi = og.config.search.engine === "scan" || !SearchIndex.exists(og.loc) ? null : SearchIndex.open(og.loc);
     try {
-      // As this root's own (cli.ts): still being built, the files scanned; else caught up first.
+      // As this root's own (cli/search.ts): still being built, the files scanned; else caught up first.
       if (oi && og.config.search.engine === "auto" && !oi.complete) {
         oi.close();
         oi = null;
