@@ -192,7 +192,8 @@ export async function explorerRow(s: Session, name: string): Promise<void> {
     if (title < 0) return null;
     const border = [...screen[title]!].findIndex((c) => c === "│" || c === "┃");
     const left = (r: string) => [...r].slice(3, border).join("");
-    const first = screen.findIndex((r, i) => i > title && /\S/.test(left(r)));
+    // The tree's rows: from under the breadcrumb, the title's next row (VV-D5).
+    const first = screen.findIndex((r, i) => i > title + 1 && /\S/.test(left(r)));
     const at = screen.findIndex((r, i) => i >= first && new RegExp(`\\b${name}\\b`).test(left(r)));
     return first >= 0 && at >= first ? { first, at } : null;
   };

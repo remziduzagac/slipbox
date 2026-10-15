@@ -35,14 +35,27 @@ The format is [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.1.0/); wh
   messages and the human output of `slipbox info` and `slipbox stat` say vault where they said root, and the manual's
   Links and roots is now [Links and vaults](docs/manual/links-and-vaults.md). Nothing a script or a config depends on
   changed: the `--root` flag, `SLIPBOX_ROOT`, the settings that say root (`[trust] roots`, `walk.root_markers`,
-  `capture.location = "root"`, `links.path = "root"`), the `:pin-root` command, and the `--json` output's fields and
-  values (`root`, `mode`, a change's `kind`) are as they were. Only the reasons the JSON gives in words say vault.
+  `capture.location = "root"`, `links.path = "root"`), and the `--json` output's fields and values (`root`, `mode`, a
+  change's `kind`) are as they were. Only the reasons the JSON gives in words say vault.
 - Following a link into another vault no longer switches to it. The note opens in a peek, a large floating window over
   the vault you are in: read-only, `/` finds in it, and your tabs stay as they were. `o` goes there, `t` keeps it as a
   read-only tab marked with its vault's name, `z` fills the screen and `esc` closes it. A backlink from another vault,
   another vault's search hit and a file outside every vault open in the same peek, which lists the note's backlinks
   when its vault has an index. A click on such a link peeks, and `ctrl+click` goes there at once. See
   [A peek at another vault](docs/manual/links-and-vaults.md#a-peek-at-another-vault).
+- The explorer is one tree of your files, and shows a part of it, the view. The view starts at the folder you opened
+  (`slipbox ~/work/kestrel/docs` shows `docs`), a breadcrumb above it says where it is
+  (`~ › work › ◈ kestrel › docs ›`), and going somewhere outside it zooms it out to the folder holding both places. `z`
+  zooms in on a folder, `-` out a level, and a click on the breadcrumb to that folder. Another vault in the view
+  unfolds in place with `l`; `enter` goes into it. A file you may not write opens read-only and says so; a folder you
+  may not read says why.
+
+### Removed
+
+- **Breaking:** `:pin-root` (`vault.pin_root`), the list of other vaults under the explorer's tree, the `..` row above
+  it, and the named folders' list that opened when slipbox started in a folder outside every vault. The explorer's
+  view holds the vaults you go between, `-` goes up, and `space v v` still lists the named folders. A `[keys]` binding
+  to `vault.pin_root` is warned about as unknown: remove it.
 
 ### Fixed
 

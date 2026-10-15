@@ -322,6 +322,7 @@ export function gitViewAction(app: App, action: string): void {
     case "push":
       return void app.run("git.push");
     case "stash":
+    case "zoom_in": // `z`, the explorer's zoom in (VV-D5): here, the stashes
       return void app.run("git.stash");
     case "close":
       return app.showSidebar(false);

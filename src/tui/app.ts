@@ -42,7 +42,9 @@ import { addToDictionaries, openDictionary, threadDictionaries } from "../core/s
 import ignore from "ignore";
 import { classify, extensionOf, type FileGroup, isKnownExtension } from "../core/filetypes.ts";
 import {
+  accessSync,
   appendFileSync,
+  constants as fsConstants,
   type Dirent,
   existsSync,
   mkdirSync,
@@ -57,7 +59,6 @@ import { createHash } from "node:crypto";
 import { basename, dirname, isAbsolute, join, posix, relative, sep } from "node:path";
 import {
   climbsOut,
-  ensureDir,
   landsInside,
   readJson,
   readRegular,
@@ -699,22 +700,20 @@ export interface ExplorerItem {
 
 export interface TreeRow {
   /** "note": a row the explorer opens — a note, or a data or text file (`group` says which).
-   *  "root": a folder that is another root — a vault, a repository — or, in a loose folder, a
-   *  folder beside it: opening one switches the TUI there (17.13, 17.14). */
+   *  "root": a folder that is a vault — the one open, another, one nested in it — or, in a folder only
+   *  listed (`~`), a folder of it: `l` unfolds it in place, `enter` goes into it (17.13, VV-D4). */
   kind: "dir" | "note" | "root";
+  /** Its path in the vault open, for what the vault's own tree holds; else absolute (`outside`, the vault open's). */
   path: string;
   name: string;
   depth: number;
   /** A file beyond notes: its group (16.x). */
   group?: FileGroup;
-  /** A root row: what it is, where it is, and the vault's name when it isn't the folder's; `other`:
-   *  another of the explorer's roots (20.15), beside the vault open — unfolded, not entered; `here`:
-   *  the root open, in a folder above it the explorer climbed to (`..`) — its tree under it. */
-  root?: { kind: "vault" | "folder"; abs: string; name?: string; other?: boolean; here?: boolean };
-  /** A row of another root (20.15): that root's folder. Opening its file switches into it. */
-  under?: string;
-  /** A row above the root open (`..` climbed): its path absolute, listed a level at a time. Opening
-   *  its file switches into the file's root, as a link does. */
+  /** A root row: what it is, where it is, and the vault's name when it isn't the folder's; `here`:
+   *  the vault open, in a view above it (VV-D5) — highlighted, its tree under it. */
+  root?: { kind: "vault" | "folder"; abs: string; name?: string; here?: boolean };
+  /** A row outside the vault open's own tree — above it, beside it, in another vault: its path absolute,
+   *  listed a level at a time. Opening its file goes into the file's vault, as a link does (VV-D4). */
   outside?: boolean;
 }
 
@@ -797,6 +796,39 @@ export function uiDefaults(c: Config): UiState {
 }
 
 const HISTORY_LIMIT = 200;
+
+/** Why a folder can't be read, in a few words (VV-D5); null when it can. */
+export function folderUnreadable(dir: string): string | null {
+  try {
+    if (!statSync(dir).isDirectory()) return "it isn't a folder";
+    // Listed (read) and gone into (searched): both, as the account running slipbox may.
+    accessSync(dir, fsConstants.R_OK | fsConstants.X_OK);
+    return null;
+  } catch (err) {
+    const code = (err as NodeJS.ErrnoException).code;
+    if (code === "EACCES" || code === "EPERM") return "you may not read it (no permission)";
+    if (code === "ENOENT") return "it isn't there";
+    if (code === "ENOTDIR") return "it isn't a folder";
+    return code ?? (err as Error).message;
+  }
+}
+
+/** Why a file can't be written, when it can be read (VV-D5): not by you, or not in its folder; null when it can. */
+export function fileUnwritable(path: string): string | null {
+  try {
+    accessSync(path, fsConstants.W_OK);
+    // A save writes beside it and renames it over the file: its folder must take that.
+    accessSync(dirname(path), fsConstants.W_OK);
+    return null;
+  } catch (err) {
+    const code = (err as NodeJS.ErrnoException).code;
+    return code === "EACCES" || code === "EPERM" || code === "EROFS"
+      ? code === "EROFS"
+        ? "its disk is read-only"
+        : "you may not write it (no permission)"
+      : null;
+  }
+}
 const MESSAGE_LIMIT = 500;
 /** Floating messages at once; older ones stay in the messages list. */
 const TOAST_LIMIT = 4;
@@ -813,9 +845,7 @@ export interface AppOptions {
   configFile?: string;
   watch?: boolean;
   now?: () => number;
-  /** Show the named folders at once (17.14, 21.10): slipbox was opened on a loose folder, not a file. */
-  launcher?: boolean;
-  /** The folder slipbox was opened on, inside its root: the explorer starts there (`..` climbs). */
+  /** The folder slipbox was opened on, inside its vault: the explorer's view starts there (VV-D5). */
   folder?: string;
   /**
    * The root already recorded as seen, and what that found (21.8): the TUI's start records it before
@@ -892,10 +922,16 @@ export class App {
   outline: SidePaneState & { folded: Set<number>; forKey: string };
   expanded = new Set<string>();
   /**
-   * The explorer's top folder (absolute): the root's, or the folder slipbox was opened on; `..` climbs
-   * from it — above the root too, to `/`, a folder listed a level at a time (never walked).
+   * The explorer's view (VV-D5): the folder whose tree it shows, absolute — the folder opened, or the
+   * vault's top. It zooms out by itself when you go somewhere outside it, in only when asked; above
+   * the vault open, a folder is listed a level at a time (never walked).
    */
   explorerTop = "";
+  /**
+   * The breadcrumb's deepest folder (absolute): the view, or a folder in it the breadcrumb can zoom
+   * back into — the view zoomed out from, or where you went when it zoomed out by itself.
+   */
+  explorerTrail = "";
   overlay: Overlay | null = null;
   pending: string[] = [];
   private pendingTimer: ReturnType<typeof setTimeout> | null = null;
@@ -951,12 +987,7 @@ export class App {
 
   constructor(opts: AppOptions) {
     this.loc = opts.loc;
-    this.explorerTop = opts.loc.root;
-    if (opts.folder && opts.folder !== opts.loc.root && isInside(opts.loc.root, opts.folder))
-      this.setExplorerTop(opts.folder);
-    this.mainRoot = opts.loc.root;
-    this.mainKey = opts.loc.key;
-    this.pinnedRoots = new Set(readJson<string[]>(this.pinnedRootsFile(), []).filter((r) => typeof r === "string"));
+    this.explorerTop = this.explorerTrail = opts.loc.root;
     this.config = opts.config;
     this.graph = opts.graph;
     // This machine sees the root (17.6); a named folder moved here by hand brought its state (21.8).
@@ -1023,11 +1054,16 @@ export class App {
       const first = opts.open ?? this.defaultNote();
       if (first) this.openInNewTab(first);
     }
-    if (!this.tabs.length) this.message("info", `no notes in ${this.loc.root}`);
+    // The view starts at the folder opened (VV-D5): `x/y` shows y, in vault x — set once its notes are open, so
+    // the one shown, outside it, leaves it be. A folder that can't be read says why.
+    const opened = opts.folder ?? (opts.open ? null : this.loc.root);
+    const unreadable = opened ? folderUnreadable(opened) : null;
+    if (unreadable) this.message("warn", `can't read ${tildePath(opened!)}: ${unreadable}`);
+    else if (opts.folder && opts.folder !== this.loc.root && isInside(this.loc.root, opts.folder))
+      this.zoomTo(opts.folder);
+    if (!this.tabs.length && !unreadable) this.message("info", `no notes in ${this.loc.root}`);
     // Moved here by hand, its state along (21.8): the links the move broke, their fix previewed (20.17).
     if (carriedFrom) this.offerMovedRelink();
-    // Opened on a loose folder, the named folders to go into (17.14, 21.10).
-    if (opts.launcher && !this.overlay && this.folderChoices().length) this.openFolders();
     // A second copy of this folder (21.6): which one links open, asked once.
     if (!this.overlay) this.askDefaultCopy();
     // A grammar (or anything lazy) that finished loading: lay out again and draw.
@@ -1596,6 +1632,13 @@ export class App {
         return null;
       }
       if (buf.invalidUtf8) this.message("warn", `${buf.key}: not valid UTF-8; invalid bytes shown as �`);
+      // A file you may read but not write opens all the same, read-only, and says so (VV-D5); another vault's is
+      // read-only here already, for its own reason.
+      const locked = buf.elsewhere ? null : fileUnwritable(abs);
+      if (locked) {
+        buf.readOnly = `${tildePath(buf.key)} is read-only: ${locked}`;
+        this.message("info", buf.readOnly);
+      }
       this.buffers.set(key, buf);
     }
     return buf;
@@ -2877,7 +2920,7 @@ export class App {
     });
     this.activeTab = this.tabs.length - 1;
     this.region = "content";
-    this.revealInSidebar();
+    this.revealInSidebar(undefined, false, true); // gone there: the view zooms out to hold it (VV-D5)
   }
 
   /** Switch to a tab already showing this note, or open it in a new one. */
@@ -2920,7 +2963,7 @@ export class App {
     Object.assign(view, this.makeView(buf, anchor), { back: view.back, fwd: [] });
     this.fitMode(view, before);
     this.region = "content";
-    this.revealInSidebar();
+    this.revealInSidebar(undefined, false, true);
   }
 
   pushHistory(view: View): void {
@@ -2978,7 +3021,7 @@ export class App {
     });
     view.goal = view.curAnchor.col;
     this.fitMode(view, before);
-    this.revealInSidebar();
+    this.revealInSidebar(undefined, false, true);
   }
 
   /** A data file that opens in source mode because it doesn't parse (16.14): the error said. */
@@ -4296,13 +4339,13 @@ export class App {
   /**
    * Where a new note or folder goes: the explorer's selected folder (or the folder of its selected
    * file) when the explorer has focus, else the current note's folder; the vault's root without
-   * one. Vault-relative, "" for the root; null for another root's row, which isn't this root's.
+   * one. Vault-relative, "" for the root; null for a row outside the vault's own tree, which isn't this vault's.
    */
   newItemBase(): string | null {
     if (this.region === "sidebar" && this.leftView === "explorer") {
       const row = this.explorerRows()[this.sidebar.selected];
-      // Another root's row (20.15), or one under it, or above the root: none of this root's folders (null, refused).
-      if (row?.under || row?.root?.other || row?.outside) return null;
+      // Above the vault, beside it, in another (VV-D5): none of this vault's folders (null, refused).
+      if (row?.outside) return null;
       if (row?.root?.here) return "";
       if (row) return row.kind === "dir" ? row.path : posix.dirname(row.path) === "." ? "" : posix.dirname(row.path);
     }
@@ -4475,13 +4518,13 @@ export class App {
   private lastTrashed: string | null = null;
 
   /** What the explorer's selected row names: a note or file, a folder, or a vault nested in this
-   *  one (its folder); `..` and a loose folder's rows name nothing to change. */
+   *  one (its folder); the rows outside its own tree name nothing to change. */
   explorerItem(): ExplorerItem | null {
     if (this.leftView !== "explorer") return null;
     const row = this.explorerRows()[this.sidebar.selected];
     if (!row) return null;
-    // Another root's (20.15), or above the root: its files aren't this one's to rename, move or delete here.
-    if (row.under || row.root?.other || row.outside || row.root?.here) return null;
+    // Above the vault, beside it, in another (VV-D5), the vault itself: not this one's to rename, move or delete here.
+    if (row.outside || row.root?.here) return null;
     if (row.kind === "root")
       return row.root?.kind === "vault" && this.loc.mode === "vault" ? { rel: row.path, dir: true, vault: true } : null;
     return { rel: row.path, dir: row.kind === "dir" };
@@ -7011,47 +7054,56 @@ export class App {
     return out;
   }
 
-  treeRows(): TreeRow[] {
-    // The folders of files open beside this root come and go with their tabs (21.9).
-    const beside = `${this.besideRoots().join("\n")}\n${this.explorerTop}`;
-    if (this.tree && this.treeBeside === beside) return this.tree;
-    this.treeBeside = beside;
+  /** The folders of vaults nested in this one, by their path in it (cheaper than `rootRows`: no names read). */
+  private nestedRels(): string[] {
+    if (isListed(this.loc)) return [];
+    return this.graph.skipped.filter((s) => s.reason === "nested vault").map((s) => s.rel);
+  }
+
+  /**
+   * A path's row in the explorer, and a folder's key in `expanded`: its path in the vault open, for what
+   * the vault's own tree holds (a nested vault's folder among them); else absolute — the vault open's
+   * top, what's above or beside it, what's in a vault nested in it.
+   */
+  rowPath(abs: string): string {
     const R = this.loc.root;
+    if (abs === R || !isInside(R, abs)) return abs;
+    // A folder only listed (`~`, `/`): its own rows are its folders, by their names.
+    if (isListed(this.loc)) return dirname(abs) === R ? basename(abs) : abs;
+    const rel = relative(R, abs).split(sep).join("/");
+    return this.nestedRels().some((n) => rel.startsWith(`${n}/`)) ? abs : rel;
+  }
+
+  /** A row's path, absolute. */
+  rowAbs(row: Pick<TreeRow, "path">): string {
+    return isAbsolute(row.path) ? row.path : join(this.loc.root, row.path);
+  }
+
+  /** The view at `dir` shows the vault open's own tree from there: its path in it ("" its top); else null. */
+  private ownView(dir: string): string | null {
+    if (dir === this.loc.root) return "";
+    if (isListed(this.loc)) return null;
+    const p = this.rowPath(dir);
+    return isAbsolute(p) || this.nestedRels().includes(p) ? null : p;
+  }
+
+  treeRows(): TreeRow[] {
+    if (this.tree) return this.tree;
     const T = this.explorerTop;
     const rows: TreeRow[] = [];
-    // `..` (17.14): the explorer up a folder — no fence at the root, up to `/`.
-    if (dirname(T) !== T)
-      rows.push({ kind: "root", path: "..", name: "..", depth: 0, root: { kind: "folder", abs: dirname(T) } });
-    if (T === R) rows.push(...this.rootTree());
-    else if (isInside(R, T)) {
-      // A folder of the root: its rows, from it.
-      const sub = relative(R, T).split(sep).join("/");
-      const d = sub.split("/").length;
-      for (const r of this.rootTree()) if (r.path.startsWith(`${sub}/`)) rows.push({ ...r, depth: r.depth - d });
-    } else this.outsideRows(T, 0, rows);
-    // The explorer's other roots (20.15), each by its name, unfolded on a key; their rows are theirs —
-    // those in the folder climbed to are there already.
-    for (const abs of this.otherRoots()) {
-      if (!isInside(R, T) && isInside(T, abs)) continue;
-      const vault = isVaultRoot(abs);
-      const name = vault ? (this.reach?.vaultOf(abs) ?? basename(abs)) : tildePath(abs);
-      rows.push({
-        kind: "root",
-        path: abs,
-        name,
-        depth: 0,
-        root: { kind: vault ? "vault" : "folder", abs, name, other: true },
-      });
-      if (vault && this.expanded.has(abs)) this.otherRootRows(abs, rows);
-    }
+    // The view (VV-D5): the vault's own tree from it, or, anywhere else, its folder listed a level at a time.
+    const own = this.ownView(T);
+    if (own === null) this.outsideRows(T, 0, rows);
+    else rows.push(...this.rootTree(own));
     this.tree = rows;
     return rows;
   }
 
   /**
-   * A folder above the root open, listed a level at a time (never walked): its folders — the root
-   * open marked, its tree under it while unfolded; other roots by their icon and name — then its files,
-   * as `files.show` would list them in their root.
+   * A folder outside the vault open's own tree — above it, beside it, in another vault — listed a level
+   * at a time (never walked): its folders — the vault open marked and highlighted, its tree under it
+   * while unfolded; other vaults by their icon and name — then its files, as `files.show` would list
+   * them in their vault.
    */
   private outsideRows(dir: string, depth: number, out: TreeRow[]): void {
     let entries: Dirent[] = [];
@@ -7097,7 +7149,7 @@ export class App {
       else out.push({ kind: "dir", path: abs, name: e.name, depth, outside: true });
       if (this.expanded.has(abs)) this.outsideRows(abs, depth + 1, out);
     }
-    // Its files as their root lists them: auto, every text file but in a notes root.
+    // Its files as their vault lists them: auto, every text file but in a notes vault.
     const show = this.sidebar.allFiles ? "all" : this.config.files.show;
     const own = findVaultRoot(dir);
     const mode = show === "auto" ? (own && hasMarker(own) ? "renderable" : "all") : show;
@@ -7110,90 +7162,153 @@ export class App {
     }
   }
 
-  /** The explorer's top to `dir`, the folders down to it unfolded (inside the root, by their paths there). */
-  setExplorerTop(dir: string): void {
-    const R = this.loc.root;
+  /**
+   * The view at `dir` (VV-D5), on purpose — `z`, the breadcrumb, `-`, the folder opened. Zoomed out,
+   * the folders down to the one it showed are unfolded and that one selected; the breadcrumb keeps
+   * the folders past the view it can zoom back into while the view is on their way.
+   */
+  zoomTo(dir: string): void {
+    const from = this.explorerTop;
+    if (dir === from) return;
+    const why = folderUnreadable(dir);
+    if (why) return this.message("warn", `can't read ${tildePath(dir)}: ${why}`);
     this.explorerTop = dir;
-    if (dir !== R && isInside(R, dir)) {
-      const parts = relative(R, dir).split(sep);
-      for (let i = 1; i <= parts.length; i++) this.expanded.add(parts.slice(0, i).join("/"));
-    }
+    if (!isInside(dir, this.explorerTrail)) this.explorerTrail = dir;
+    const out = isInside(dir, from);
+    if (out) for (let d = from; d !== dir; d = dirname(d)) this.expanded.add(this.rowPath(d));
     this.invalidateTree();
+    this.sidebar.pinned = false;
+    this.sidebar.scroll = 0;
+    this.sidebar.selected = out
+      ? Math.max(
+          0,
+          this.explorerRows().findIndex((r) => r.path === this.rowPath(from)),
+        )
+      : 0;
+  }
+
+  /** `-`: the view a folder up (VV-D5), the folder it showed unfolded in it and selected. */
+  zoomOut(): void {
+    const up = dirname(this.explorerTop);
+    if (up === this.explorerTop) return this.message("info", "the view shows everything: nothing is above /");
+    this.zoomTo(up);
+  }
+
+  /** `z`: the view zoomed in on the selected folder or vault — a file's, its folder (VV-D5). */
+  zoomIn(): void {
+    const row = this.explorerRows()[this.sidebar.selected];
+    if (!row || this.sidebar.filter) return this.message("info", "zoom in: select a folder");
+    const abs = this.rowAbs(row);
+    const dir = row.kind === "note" ? dirname(abs) : abs;
+    if (dir === this.explorerTop) return this.message("info", "zoom in: select a folder in the view");
+    this.zoomTo(dir);
   }
 
   /**
-   * `..` (17.14): the explorer up a folder — past the root too, to `/`. The folder it showed stays in
-   * the tree, unfolded and selected (the root open marked).
+   * Gone to `abs` (VV-D5): a file opened, a vault gone into. Outside the view, the view zooms out to
+   * the common parent of the two, only their paths unfolded — what was unfolded in the old view kept —
+   * and the breadcrumb leads back to where you went. Never for what the tree doesn't list: a hidden
+   * folder's file, `node_modules`, slipbox's own (the scratch). True when the view holds it now.
    */
-  explorerUp(): void {
-    const R = this.loc.root;
-    const from = this.explorerTop;
-    const up = dirname(from);
-    if (up === from) return;
-    this.explorerTop = up;
-    const inside = from !== R && isInside(R, from);
-    this.expanded.add(inside ? relative(R, from).split(sep).join("/") : from);
+  zoomToHold(abs: string, dir = dirname(abs)): boolean {
+    const T = this.explorerTop;
+    if (isInside(T, abs)) return true;
+    let common = T;
+    while (!isInside(common, abs) && dirname(common) !== common) common = dirname(common);
+    if (!isInside(common, abs)) return false;
+    const hidden = relative(common, abs)
+      .split(sep)
+      .some((p) => p.startsWith(".") || p === "node_modules");
+    if (hidden || abs === this.scratch().path) return false;
+    // Only the two paths unfolded: what was unfolded in the old view stays, nothing else.
+    const kept = [...this.expanded].filter((k) => isInside(T, this.rowAbs({ path: k })));
+    this.expanded = new Set(kept);
+    for (let d = T; d !== common; d = dirname(d)) this.expanded.add(this.rowPath(d));
+    for (let d = dir; d !== common && isInside(common, d); d = dirname(d)) this.expanded.add(this.rowPath(d));
+    this.explorerTop = common;
+    this.explorerTrail = dir;
     this.invalidateTree();
-    const key = inside ? relative(R, from).split(sep).join("/") : from;
-    this.sidebar.selected = Math.max(
-      0,
-      this.explorerRows().findIndex((r) => r.path === key),
-    );
     this.sidebar.scroll = 0;
+    return true;
   }
 
-  /** The root's own tree: its folders, notes and files, and the roots in it (17.13). */
-  private rootTree(): TreeRow[] {
+  /** The breadcrumb over the explorer (VV-D5): the folders down to the view, then those past it it can zoom back into. */
+  explorerCrumbs(): { abs: string; label: string; vault: boolean; current: boolean; past: boolean }[] {
+    const key = `${this.explorerTop}\n${this.explorerTrail}\n${this.loc.root}`;
+    if (this.crumbs?.key === key) return this.crumbs.list;
+    const home = homeFolder();
+    const trail = isInside(this.explorerTop, this.explorerTrail) ? this.explorerTrail : this.explorerTop;
+    const top = isInside(home, trail) ? home : sep;
+    const dirs = [top];
+    const rel = relative(top, trail);
+    if (rel) for (const p of rel.split(sep)) dirs.push(join(dirs.at(-1)!, p));
+    const list = dirs.map((abs) => ({
+      abs,
+      label: abs === home ? "~" : abs === sep ? "/" : basename(abs),
+      vault: abs === this.loc.root ? this.loc.mode === "vault" : isVaultRoot(abs),
+      current: abs === this.loc.root,
+      past: abs !== this.explorerTop && isInside(this.explorerTop, abs),
+    }));
+    this.crumbs = { key, list };
+    return list;
+  }
+
+  private crumbs: { key: string; list: ReturnType<App["explorerCrumbs"]> } | null = null;
+
+  /** The vault's own tree, from `sub` ("" its top): its folders, notes and files, and the vaults in it (17.13) —
+   *  one unfolded listed a level at a time under its row. */
+  private rootTree(sub = ""): TreeRow[] {
     const rows: TreeRow[] = [];
     const groups = new Map(this.shownFiles().map((f) => [f.path, f.group]));
     // The walk's folders too, so one with nothing listed in it (just made, or holding only files
     // the explorer leaves out) is still there to open and to create in.
     const folders = new Set(this.graph.dirs.filter((d) => d));
     const roots = this.rootRows();
-    const paths = [...this.graph.notes.keys(), ...groups.keys(), ...folders, ...roots.keys()].sort((a, b) => {
-      const da = a.split("/");
-      const db = b.split("/");
-      for (let i = 0; i < Math.min(da.length, db.length); i++) {
-        const lastA = i === da.length - 1 && !folders.has(a) && !roots.has(a);
-        const lastB = i === db.length - 1 && !folders.has(b) && !roots.has(b);
-        if (da[i] !== db[i]) {
-          if (lastA !== lastB) return lastA ? 1 : -1; // directories first
-          return da[i]!.localeCompare(db[i]!, undefined, { sensitivity: "base" });
+    const under = (p: string) => !sub || p.startsWith(`${sub}/`);
+    const d0 = sub ? sub.split("/").length : 0;
+    const paths = [...this.graph.notes.keys(), ...groups.keys(), ...folders, ...roots.keys()]
+      .filter(under)
+      .sort((a, b) => {
+        const da = a.split("/");
+        const db = b.split("/");
+        for (let i = 0; i < Math.min(da.length, db.length); i++) {
+          const lastA = i === da.length - 1 && !folders.has(a) && !roots.has(a);
+          const lastB = i === db.length - 1 && !folders.has(b) && !roots.has(b);
+          if (da[i] !== db[i]) {
+            if (lastA !== lastB) return lastA ? 1 : -1; // directories first
+            return da[i]!.localeCompare(db[i]!, undefined, { sensitivity: "base" });
+          }
         }
-      }
-      return da.length - db.length;
-    });
+        return da.length - db.length;
+      });
     const seen = new Set<string>();
     for (const p of paths) {
       const parts = p.split("/");
       let visible = true;
       // A folder: its own row (its parents first), when they're unfolded.
       const own = folders.has(p) ? parts.length : parts.length - 1;
-      for (let i = 0; i < own; i++) {
+      for (let i = d0; i < own; i++) {
         const dir = parts.slice(0, i + 1).join("/");
         if (!seen.has(dir) && visible) {
           seen.add(dir);
-          rows.push({ kind: "dir", path: dir, name: parts[i]!, depth: i });
+          rows.push({ kind: "dir", path: dir, name: parts[i]!, depth: i - d0 });
         }
         if (!this.expanded.has(dir)) {
           visible = false;
           break;
         }
       }
-      if (visible && roots.has(p))
-        rows.push({
-          kind: "root",
-          path: p,
-          name: parts[parts.length - 1]!,
-          depth: parts.length - 1,
-          root: roots.get(p)!,
-        });
-      else if (visible && !folders.has(p))
+      if (visible && roots.has(p)) {
+        const root = roots.get(p)!;
+        rows.push({ kind: "root", path: p, name: parts[parts.length - 1]!, depth: parts.length - 1 - d0, root });
+        // Unfolded in place (VV-D5): its folder listed a level at a time, its rows another vault's.
+        if (this.expanded.has(p)) this.outsideRows(root.abs, parts.length - d0, rows);
+      } else if (visible && !folders.has(p))
         rows.push({
           kind: "note",
           path: p,
           name: parts[parts.length - 1]!,
-          depth: parts.length - 1,
+          depth: parts.length - 1 - d0,
           ...(groups.has(p) ? { group: groups.get(p) } : {}),
         });
     }
@@ -7202,117 +7317,6 @@ export class App {
 
   invalidateTree(): void {
     this.tree = null;
-  }
-
-  // -------------------------------------------------------------------------------------------
-  // The explorer's roots (20.15)
-
-  /** The vault or folder slipbox was opened on: always one of the explorer's roots. */
-  readonly mainRoot: string;
-  /** Roots kept beside it (`:pin-root`), with the opened vault's state. */
-  readonly pinnedRoots: Set<string>;
-  /** The opened vault's state key: where the pinned roots are kept. */
-  private readonly mainKey: string;
-
-  private pinnedRootsFile(): string {
-    return join(stateDir({ key: this.mainKey }), "roots.json");
-  }
-
-  /**
-   * The explorer's other roots, beside the root open (20.15, 21.9): the one opened, those pinned, and
-   * the folders of files open beside it. A root followed into is the root open while it is; left, it
-   * goes unless pinned. Never overlapping: one inside the root open, or around it, isn't listed apart —
-   * its folder is in the tree, or the tree is in it.
-   */
-  otherRoots(): string[] {
-    const here = this.loc.root;
-    const out: string[] = [];
-    for (const r of [this.mainRoot, ...this.pinnedRoots, ...this.besideRoots()]) {
-      if (out.includes(r) || r === here || isInside(here, r) || isInside(r, here) || !existsSync(r)) continue;
-      if (out.some((o) => isInside(o, r) || isInside(r, o))) continue;
-      out.push(r);
-    }
-    return out;
-  }
-
-  private treeBeside = "";
-  private besideOf = new Map<string, string>();
-
-  /**
-   * The folders of the files open beside this root (21.9: a loose file a link was followed to, one
-   * opened by its path): each one's nearest root, else its folder — while a file of it is open. Never
-   * the scratch's (slipbox's own state folder, by default) nor a virtual buffer's.
-   */
-  private besideRoots(): string[] {
-    const here = this.loc.root;
-    const scratch = this.scratch().path;
-    const out: string[] = [];
-    for (const t of this.tabs) {
-      for (const v of t.views) {
-        const abs = v.buf.abs;
-        if (isInside(here, abs) || abs === scratch || v.buf.virtual) continue;
-        let r = this.besideOf.get(abs);
-        if (r === undefined) this.besideOf.set(abs, (r = findVaultRoot(abs) ?? dirname(abs)));
-        if (!out.includes(r)) out.push(r);
-      }
-    }
-    return out;
-  }
-
-  /** Keep the vault open among the explorer's vaults, or no longer (`:pin-root`). */
-  togglePinnedRoot(): void {
-    const r = this.loc.root;
-    if (r === this.mainRoot) return this.message("info", "the folder slipbox was opened on is always in the explorer");
-    if (this.pinnedRoots.has(r)) this.pinnedRoots.delete(r);
-    else this.pinnedRoots.add(r);
-    this.saveRoots();
-    this.invalidateTree();
-    this.message(
-      "info",
-      this.pinnedRoots.has(r)
-        ? `${this.vaultLabel(this.loc)}: kept in the explorer from now on`
-        : `${this.vaultLabel(this.loc)}: no longer kept in the explorer`,
-    );
-  }
-
-  private saveRoots(): void {
-    try {
-      ensureDir(stateDir({ key: this.mainKey }));
-      writeJson(this.pinnedRootsFile(), [...this.pinnedRoots]);
-    } catch {}
-  }
-
-  /** Another root's rows (20.15): its notes and files as its index has them, its folders as unfolded. */
-  private otherRootRows(abs: string, rows: TreeRow[]): void {
-    const g = this.reach?.graphAt(abs) ?? null;
-    if (!g) return;
-    const paths = [...g.notes.keys(), ...g.filePaths()].sort((a, b) =>
-      a.localeCompare(b, undefined, { sensitivity: "base" }),
-    );
-    const seen = new Set<string>();
-    for (const p of paths) {
-      const parts = p.split("/");
-      let visible = true;
-      for (let i = 0; i < parts.length - 1; i++) {
-        const dir = `${abs}/${parts.slice(0, i + 1).join("/")}`;
-        if (!seen.has(dir)) {
-          seen.add(dir);
-          rows.push({ kind: "dir", path: dir, name: parts[i]!, depth: i + 1, under: abs });
-        }
-        if (!this.expanded.has(dir)) {
-          visible = false;
-          break;
-        }
-      }
-      if (visible)
-        rows.push({
-          kind: "note",
-          path: `${abs}/${p}`,
-          name: parts[parts.length - 1]!,
-          depth: parts.length,
-          under: abs,
-        });
-    }
   }
 
   /** The explorer's rows: the tree, or while filtering the matching notes under their folders
@@ -7791,6 +7795,8 @@ export class App {
         s.filtering = true;
         break;
       case "collapse":
+      case "zoom_in":
+      case "zoom_out":
         break;
       case "close":
         this.showSidebar(false);
@@ -7804,29 +7810,38 @@ export class App {
     }
   }
 
-  /** The note on screen (or `rel`) shown in the explorer: its folders unfolded, its row selected; `open` a folder's own too. */
-  revealInSidebar(rel: string | null | undefined = this.view?.buf.rel, open = false): void {
+  /**
+   * The note on screen (or `rel`: in the vault, "." its top, or absolute) shown in the explorer: its
+   * folders unfolded, its row selected; `open` a folder's own too. Outside the view it isn't shown —
+   * unless it was gone to (`zoom`): the view then zooms out to hold it (VV-D5).
+   */
+  revealInSidebar(rel?: string | null, open = false, zoom = false): void {
     this.sidebar.pinned = false;
-    if (!rel) return;
-    // Climbed above the root: the root unfolded in it. (Down in a folder of it, a path elsewhere isn't shown.)
-    if (!isInside(this.loc.root, this.explorerTop)) this.expanded.add(this.loc.root);
-    const parts = rel === "." ? [] : rel.split("/");
-    for (let i = 1; i < parts.length; i++) this.expanded.add(parts.slice(0, i).join("/"));
-    if (open && rel !== ".") this.expanded.add(rel);
+    const v = this.view;
+    const abs =
+      rel === undefined
+        ? v && !v.buf.virtual
+          ? v.buf.abs
+          : null
+        : rel
+          ? isAbsolute(rel)
+            ? rel
+            : join(this.loc.root, rel === "." ? "" : rel)
+          : null;
+    if (!abs) return;
+    if (!isInside(this.explorerTop, abs) && !(zoom && this.zoomToHold(abs, open ? abs : dirname(abs)))) return;
+    const view = this.explorerTop;
+    for (let d = open ? abs : dirname(abs); d !== view && isInside(view, d); d = dirname(d))
+      this.expanded.add(this.rowPath(d));
     this.invalidateTree();
-    const idx =
-      rel === "."
-        ? Math.max(
-            0,
-            this.treeRows().findIndex((r) => r.path !== ".."),
-          )
-        : this.treeRows().findIndex((r) => r.path === rel);
+    const idx = abs === view ? 0 : this.treeRows().findIndex((r) => r.path === this.rowPath(abs));
     if (idx >= 0) this.sidebar.selected = idx;
   }
 
   /**
    * A link to a folder followed (21.2): the folder revealed in the explorer, unfolded, the explorer
-   * focused — in its own root when it's outside this one (that root's, or the folder opened).
+   * focused — in its own vault when it's outside this one (that vault's, or the folder opened); outside
+   * the view, the view zooms out to hold it (VV-D5).
    */
   revealFolder(path: string): void {
     if (isAbsolute(path)) {
@@ -7838,7 +7853,7 @@ export class App {
     this.sidebar.filter = "";
     this.sidebar.filtering = false;
     this.showSidebar(true);
-    this.revealInSidebar(path, true);
+    this.revealInSidebar(path, true, true);
     this.region = "sidebar";
   }
 
@@ -7852,36 +7867,22 @@ export class App {
     }
     const rows = this.explorerRows();
     const row = rows[this.sidebar.selected];
+    // A folder, or the vault open's row in a view above it: unfolded (or folded, `toggle`) in place.
+    const unfold = (toggle = false) => {
+      if (!row) return;
+      if (toggle && this.expanded.has(row.path)) this.expanded.delete(row.path);
+      else if (!this.expanded.has(row.path)) {
+        const why = row.outside || row.kind === "root" ? folderUnreadable(this.rowAbs(row)) : null;
+        if (why) return this.message("warn", `can't read ${tildePath(this.rowAbs(row))}: ${why}`);
+        this.expanded.add(row.path);
+      }
+      this.invalidateTree();
+    };
     const openNote = (where: "here" | "tab" | "split") => {
       if (!row) return;
-      // Another root (20.15): unfolded and folded like a folder; a file of it, opened there.
-      if (row.root?.other && row.root.kind === "vault") {
-        if (this.expanded.has(row.path)) this.expanded.delete(row.path);
-        else this.expanded.add(row.path);
-        this.invalidateTree();
-        return;
-      }
-      if (row.under && row.kind === "note") return void this.switchVault(rootAt(row.under), row.path);
-      if (row.path === ".." && row.kind === "root") return this.explorerUp();
-      // The root open, in a folder above it: the explorer back down to it.
-      if (row.root?.here) {
-        this.explorerTop = this.loc.root;
-        this.invalidateTree();
-        this.sidebar.selected = 0;
-        return;
-      }
-      // Above the root, another root is a folder to unfold, like any (its file, opened, switches into it).
-      if (row.kind === "root" && row.outside) {
-        this.expanded.add(row.path);
-        this.invalidateTree();
-        return;
-      }
+      if (row.kind === "dir" || row.root?.here) return unfold();
+      // Another vault's folder, chosen: into it, its tabs (VV-D4); a file of one, opened, goes into it too.
       if (row.kind === "root") return this.enterRoot(row);
-      if (row.kind === "dir") {
-        this.expanded.add(row.path);
-        this.invalidateTree();
-        return;
-      }
       if (where === "tab") this.openOrSwitchTab(row.path);
       else if (where === "split") {
         this.otherWindow();
@@ -7949,19 +7950,14 @@ export class App {
         openNote("here");
         break;
       case "expand":
-        // A folder unfolds (above the root, a root too, and the root open); a note opens as a tab.
-        if (row?.kind === "dir") openNote("here");
-        else if (row?.kind === "root" && (row.outside || row.root?.here)) {
-          this.expanded.add(row.path);
-          this.invalidateTree();
-        } else openNote("tab");
+        // A folder unfolds in place, a vault's too (VV-D5) — the one open, another, one nested here; a note opens as a tab.
+        if (row?.kind === "dir" || row?.kind === "root") unfold();
+        else openNote("tab");
         break;
       case "open_tab":
-        if (row?.kind === "dir" || (row?.kind === "root" && row.outside)) {
-          if (this.expanded.has(row.path)) this.expanded.delete(row.path);
-          else this.expanded.add(row.path);
-          this.invalidateTree();
-        } else openNote("tab");
+        // A folder folds or unfolds, the vault open's row too; another vault's goes into it (VV-D4).
+        if (row?.kind === "dir" || row?.root?.here) unfold(true);
+        else openNote("tab");
         break;
       case "open_split":
         openNote("split");
@@ -7969,24 +7965,28 @@ export class App {
       case "collapse": {
         // A filtered list shows every match whatever is folded: folding would act on rows not shown.
         if (!row || this.sidebar.filter) break;
-        // Another root's row (20.15), the root open or one beside it above it: folded, the selection
-        // staying on it (its path is absolute).
-        if (row.root?.other || row.root?.here || (row.kind === "root" && row.outside)) {
-          if (this.expanded.delete(row.path)) this.invalidateTree();
+        // An unfolded folder or vault folds, the selection staying on it; anything else folds the folder
+        // holding it, selected — when that's a row of the view.
+        if (row.kind !== "note" && this.expanded.has(row.path)) {
+          this.expanded.delete(row.path);
+          this.invalidateTree();
           break;
         }
-        const dir =
-          row.kind === "dir" && this.expanded.has(row.path) ? row.path : row.path.split("/").slice(0, -1).join("/");
-        if (dir) {
-          this.expanded.delete(dir);
-          this.invalidateTree();
-          this.sidebar.selected = Math.max(
-            0,
-            this.treeRows().findIndex((r) => r.path === dir),
-          );
-        }
+        const parent = dirname(this.rowAbs(row));
+        if (parent === this.explorerTop || !isInside(this.explorerTop, parent)) break;
+        const dir = this.rowPath(parent);
+        this.expanded.delete(dir);
+        this.invalidateTree();
+        this.sidebar.selected = Math.max(
+          0,
+          this.treeRows().findIndex((r) => r.path === dir),
+        );
         break;
       }
+      case "zoom_in":
+        return this.zoomIn();
+      case "zoom_out":
+        return this.zoomOut();
       case "close":
         this.showSidebar(false);
         break;
@@ -9190,12 +9190,9 @@ export class App {
         if (this.narrow || this.ui.zen) this.sidebar.overlay = false; // an overlaid pane closes after a pick
         return;
       }
-      if (row.kind === "dir") {
-        if (this.sidebar.filter) return; // a filtered list ignores folds: a click there only selects
-        if (this.expanded.has(row.path)) this.expanded.delete(row.path);
-        else this.expanded.add(row.path);
-        this.invalidateTree();
-      } else this.explorerAction("open_tab");
+      if (row.kind === "dir" && this.sidebar.filter) return; // a filtered list ignores folds: a click there only selects
+      // A folder folds or unfolds; a note opens, another vault's folder is gone into (VV-D4).
+      this.explorerAction("open_tab");
       return;
     }
     const sep = g.separators.find((s) => inRect(s, ev.x, ev.y));
@@ -9392,6 +9389,10 @@ export class App {
         this.region = "sidebar";
         this.explorerAction(kind === "xnew" ? (arg === "note" ? "new_note" : "new_folder") : arg);
         break;
+      // A folder of the breadcrumb over the explorer (VV-D5): the view zoomed to it, out or back in.
+      case "xcrumb":
+        this.region = "sidebar";
+        return this.zoomTo(arg);
       case "fn":
         return this.addFootnote();
       // A code cell's button (24.13): `action:line`.
@@ -10668,6 +10669,8 @@ export class App {
     } catch {}
     this.watcher?.close();
     this.watcher = null;
+    // The explorer's unfolded folders, by their whole paths: the vault's own are its paths in it.
+    const unfolded = [...this.expanded].map((k) => this.rowAbs({ path: k }));
     // Enter.
     this.loc = target;
     this.feed.reset();
@@ -10696,14 +10699,24 @@ export class App {
     this.tabs = [];
     this.activeTab = 0;
     this.overlay = null;
-    this.expanded.clear();
-    // The explorer climbed above the root left (`..`), to a folder the new one is in too: it stays there,
-    // the new root unfolded in it (17.14). Else it starts at the new root.
-    const top = this.explorerTop;
-    const climbed = !!from && top !== from.root && !isInside(from.root, top);
-    if (climbed && isInside(top, target.root) && top !== target.root) {
-      for (let d = target.root; d !== top && isInside(top, d); d = dirname(d)) this.expanded.add(d);
-    } else this.explorerTop = target.root;
+    // The explorer's view (VV-D5): holding the vault gone into, it stays, the vault unfolded in it; else it
+    // zooms out to the common parent of the two, only their paths unfolded. Where the tree can't show the
+    // vault (in a hidden folder: a worktree in .claude/), it moves to the vault.
+    this.expanded = new Set(unfolded.map((a) => this.rowPath(a)));
+    this.invalidateTree();
+    const T = this.explorerTop;
+    const shown = (from: string) =>
+      !relative(from, target.root)
+        .split(sep)
+        .some((p) => p.startsWith(".") || p === "node_modules");
+    if (isInside(T, target.root) ? !shown(T) : !this.zoomToHold(target.root, target.root)) {
+      this.explorerTop = this.explorerTrail = target.root;
+      this.expanded.clear();
+    } else if (isInside(T, target.root)) {
+      for (let d = target.root; d !== T; d = dirname(d)) this.expanded.add(this.rowPath(d));
+      if (target.root !== T) this.explorerTrail = target.root;
+    }
+    this.invalidateTree();
     // The clipboard and the last delete name the old root's things: forgotten.
     this.fileClip = null;
     this.lastTrashed = null;

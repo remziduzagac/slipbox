@@ -1229,12 +1229,6 @@ export const COMMAND_SPECS: CommandSpec[] = [
     desc: "This folder, outside every vault, gets its .slipbox/ (settings; a name with :name); in a vault, the explorer's selected folder (or this note's) becomes a vault of its own, links fixed after a preview",
   },
   {
-    id: "vault.pin_root",
-    title: "Pin this vault in the explorer",
-    cli: null,
-    desc: "Keeps the vault open among the explorer's vaults after leaving it, or no longer",
-  },
-  {
     id: "problems.open",
     title: "Problems: open, focus, close",
     cli: "slipbox problems",

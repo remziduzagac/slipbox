@@ -18,7 +18,7 @@ import {
   writeFileSync,
 } from "node:fs";
 import { UNSAFE } from "../src/core/sanitize.ts";
-import { tmpdir } from "node:os";
+import { homedir, tmpdir } from "node:os";
 import { randomBytes } from "node:crypto";
 import { basename, dirname, join, relative } from "node:path";
 import { COMMAND_SPECS, commandGroup } from "../src/core/command-specs.ts";
@@ -26,6 +26,7 @@ import { canonKey, canonSeq } from "../src/core/commands.ts";
 import { type Config, DEFAULT_CONFIG } from "../src/core/config.ts";
 import { openGraph } from "../src/core/graph.ts";
 import { locateVault } from "../src/core/vault.ts";
+import { tildePath } from "../src/core/paths.ts";
 import { type ListOverlay, App, codeBlocks, type Host, PICTURE_ROWS, PICTURES_REST_MS } from "../src/tui/app.ts";
 import { dateText, listFolder, placeOf, type SaveAsOverlay, sizeText } from "../src/tui/saveas.ts";
 import { placeIn } from "../src/tui/shellrun.ts";
@@ -51,7 +52,7 @@ import { OptimizedBuffer } from "@opentui/core";
 import { inflateSync } from "node:zlib";
 import { cells } from "../src/tui/cursor.ts";
 import { lineOf, offsetOf } from "../src/tui/editing.ts";
-import { DEFAULT_GROUPS, DEFAULT_KEYS, keyChar, keyName, parseGroup } from "../src/tui/keys.ts";
+import { DEFAULT_ALIASES, DEFAULT_GROUPS, DEFAULT_KEYS, keyChar, keyName, parseGroup } from "../src/tui/keys.ts";
 import { MOUSE_HELP } from "../src/tui/mouse-help.ts";
 
 const sandbox = mkdtempSync(join(tmpdir(), "slipbox-tui-"));
@@ -106,8 +107,7 @@ interface Opts {
   themeName?: string;
   /** Start here instead of at `root` as a vault (a loose folder: the home vault). */
   loc?: import("../src/core/vault.ts").VaultLocation;
-  launcher?: boolean;
-  /** The folder slipbox was opened on, inside the root. */
+  /** The folder slipbox was opened on, inside the root: the explorer's view starts there. */
   folder?: string;
   /** The terminal's pictures (12.x), as a stand-in: none unless given. */
   images?: Host["images"];
@@ -153,7 +153,6 @@ async function harness(opts: Opts = {}): Promise<Harness> {
     watch: opts.watch ?? false,
     configFile: opts.configFile,
     themeName: opts.themeName,
-    launcher: opts.launcher,
     folder: opts.folder,
   });
   // Never the machine's own nvims.
@@ -3353,15 +3352,14 @@ describe("top bar, tab strip, status line", () => {
     const sb = h.app.geometry!.sidebar!;
     expect(strip.x).toBe(sb.x + sb.w + 1);
     expect(strip.x + strip.w).toBe(160);
-    expect(sb.y).toBe(4); // the tree, under the "Explorer" title (beside the strip) and a blank row
+    expect(sb.y).toBe(4); // the tree, under the "Explorer" title (beside the strip) and the breadcrumb
     expect(h.frame().split("\n")[2]!.slice(sb.x).startsWith(" Explorer")).toBe(true);
-    // Under the title a blank row; the strip's rule starts at the explorer's border.
-    expect(
-      h
-        .frame()
-        .split("\n")[3]!
-        .slice(sb.x - 1, sb.x + sb.w + 2),
-    ).toBe(`${" ".repeat(sb.w + 1)}┣━`); // the tinted rail, then the explorer
+    // Under the title the breadcrumb, the view's folder last (VV-D5); the strip's rule starts at the explorer's border.
+    const under = h
+      .frame()
+      .split("\n")[3]!
+      .slice(sb.x - 1, sb.x + sb.w + 2);
+    expect(under).toMatch(new RegExp(` ${basename(h.root)} › +┣━$`)); // the tinted rail, then the explorer
     const rows = h.frame().split("\n");
     // A rule over everything (the tinted rail too), the explorer's border starting under it (┳)…
     const bx = sb.x + sb.w;
@@ -5444,13 +5442,13 @@ describe("scratch (space s)", () => {
     const bogus = await harness({ root, open: "notes/alpha.md", config });
     expect(bogus.app.ui.scratch_in).toBe("right");
   });
-  test("the scratch open is never another root in the explorer (21.9): it lives in slipbox's own state folder", async () => {
+  test("the scratch open never moves the explorer's view (VV-D5): it lives in slipbox's own state folder", async () => {
     const h = await harness();
     h.app.capture("x");
     await h.app.run("scratch.open");
     expect(h.app.view!.buf.abs.startsWith(`${h.root}/`)).toBe(false); // the default place: outside the root
-    expect(h.app.otherRoots()).toEqual([]);
-    expect(h.app.explorerRows().some((r) => r.root?.other)).toBe(false);
+    expect(h.app.explorerTop).toBe(h.root);
+    expect(h.app.explorerRows().some((r) => r.outside)).toBe(false);
   });
 });
 
@@ -8460,16 +8458,18 @@ describe("source files through tree-sitter (16.6–16.9)", () => {
   });
 });
 
-describe("the explorer: no fence at the root (17.14)", () => {
-  /** A folder of roots: a notes root, a repository, a plain folder, a loose note and a picture. */
+describe("the explorer's view (VV-D5)", () => {
+  /** A folder of vaults: a notes vault, a repository, a plain folder, a loose note and a picture. */
   const place = () => {
     const P = mkdtempSync(join(sandbox, "place-"));
     mkdirSync(join(P, "notes", ".slipbox"), { recursive: true });
     mkdirSync(join(P, "notes", "sub"));
+    mkdirSync(join(P, "notes", "other"));
     writeFileSync(join(P, "notes", "a.md"), "# A\n");
     writeFileSync(join(P, "notes", "data.json"), "{}\n");
     writeFileSync(join(P, "notes", "script.py"), "print(1)\n");
     writeFileSync(join(P, "notes", "sub", "b.md"), "# B\n");
+    writeFileSync(join(P, "notes", "other", "c.md"), "# C\n");
     mkdirSync(join(P, "code", ".git"), { recursive: true });
     writeFileSync(join(P, "code", "main.ts"), "export {};\n");
     mkdirSync(join(P, "loose"));
@@ -8481,16 +8481,28 @@ describe("the explorer: no fence at the root (17.14)", () => {
   const shown = (h: Harness) =>
     h.app
       .explorerRows()
-      .map(
-        (r) =>
-          `${"  ".repeat(r.depth)}${r.name}${r.root?.here ? " (here)" : r.kind === "root" && r.path !== ".." ? " (root)" : ""}`,
-      );
+      .map((r) => `${"  ".repeat(r.depth)}${r.name}${r.root?.here ? " (here)" : r.kind === "root" ? " (vault)" : ""}`);
   const select = async (h: Harness, name: string) => {
+    h.app.leftView = "explorer";
     h.app.sidebar.selected = h.app.explorerRows().findIndex((r) => r.name === name);
     h.app.region = "sidebar";
   };
+  /** The breadcrumb as drawn: the explorer's row under its title. */
+  const crumbRow = (h: Harness) => {
+    const f = h.frame().split("\n");
+    const list = h.app.geometry!.sidebar!;
+    return [...f[list.y - 1]!].slice(list.x, list.x + list.w).join("");
+  };
+  /** A folder of the breadcrumb, clicked. */
+  const clickCrumb = (h: Harness, abs: string) => {
+    h.frame();
+    const hot = h.app.geometry!.hot.find((r) => r.id === `xcrumb:${abs}`);
+    if (!hot) throw new Error(`no breadcrumb for ${abs}: ${crumbRow(h)}`);
+    h.app.handleMouse({ type: "down", x: hot.x, y: hot.y, button: 0 });
+    h.app.handleMouse({ type: "up", x: hot.x, y: hot.y, button: 0 });
+  };
 
-  test("files.show auto: notes and data files in a notes root, every text file in a repository", async () => {
+  test("files.show auto: notes and data files in a notes vault, every text file in a repository; no .. above", async () => {
     const P = place();
     const h = await harness({
       root: join(P, "notes"),
@@ -8499,29 +8511,75 @@ describe("the explorer: no fence at the root (17.14)", () => {
     });
     expect(DEFAULT_CONFIG.files.show).toBe("auto");
     expect(h.app.filesShown()).toBe("renderable");
-    expect(shown(h)).toEqual(["..", "sub", "a.md", "data.json"]);
+    expect(shown(h)).toEqual(["other", "sub", "a.md", "data.json"]);
     const code = await harness({
       root: join(P, "code"),
       open: null,
       config: (c) => (c.files.show = DEFAULT_CONFIG.files.show),
     });
     expect(code.app.filesShown()).toBe("all");
-    expect(shown(code)).toEqual(["..", "main.ts"]);
+    expect(shown(code)).toEqual(["main.ts"]);
   });
 
-  test("..: up a folder, past the root — its tree kept under it, marked; another root's file opened switches into it", async () => {
+  test("x/y opened shows y, vault x named in the breadcrumb; - zooms out, y unfolded and selected; the breadcrumb and z zoom back in", async () => {
+    const P = place();
+    const { prepare } = await import("../src/tui/run.ts");
+    const start = prepare([join(P, "notes", "sub")]);
+    if (typeof start === "number") throw new Error(`exit ${start}`);
+    expect(start.folder).toBe(join(P, "notes", "sub"));
+    const h = await harness({ root: join(P, "notes"), open: null, folder: join(P, "notes", "sub") });
+    expect(h.app.explorerTop).toBe(join(P, "notes", "sub"));
+    expect(shown(h)).toEqual(["b.md"]);
+    // The breadcrumb: the folders down to the view, the vault open marked as one and current.
+    const crumbs = h.app.explorerCrumbs();
+    expect(crumbs.at(-1)).toMatchObject({ abs: join(P, "notes", "sub"), label: "sub", past: false });
+    expect(crumbs.at(-2)).toMatchObject({ abs: join(P, "notes"), label: "notes", vault: true, current: true });
+    expect(crumbs[0]!.label).toBe(P.startsWith(`${homedir()}/`) ? "~" : "/");
+    expect(crumbRow(h)).toContain(`◈ notes › sub ›`);
+    // -: a folder up, the folder it showed unfolded and selected.
+    await select(h, "b.md");
+    await h.keys("-");
+    expect(h.app.explorerTop).toBe(join(P, "notes"));
+    expect(shown(h)).toEqual(["other", "sub", "  b.md", "a.md", "data.json"]);
+    expect(h.app.explorerRows()[h.app.sidebar.selected]!.name).toBe("sub");
+    // The folder zoomed out of stays in the breadcrumb, dimmed past the view: a click zooms back in.
+    expect(h.app.explorerCrumbs().at(-1)).toMatchObject({ label: "sub", past: true });
+    expect(crumbRow(h)).toMatch(/◈ notes › sub\s*$/);
+    clickCrumb(h, join(P, "notes", "sub"));
+    expect(h.app.explorerTop).toBe(join(P, "notes", "sub"));
+    // An ancestor clicked zooms out to it.
+    clickCrumb(h, join(P, "notes"));
+    expect(h.app.explorerTop).toBe(join(P, "notes"));
+    // z on a folder zooms in on it; on a file, on its folder; the breadcrumb's way down is the new one.
+    await select(h, "other");
+    await h.keys("z");
+    expect(h.app.explorerTop).toBe(join(P, "notes", "other"));
+    expect(shown(h)).toEqual(["c.md"]);
+    expect(h.app.explorerCrumbs().at(-1)).toMatchObject({ label: "other", past: false });
+    await h.keys("-");
+    await select(h, "b.md");
+    await h.keys("z");
+    expect(h.app.explorerTop).toBe(join(P, "notes", "sub"));
+    // Nothing above /.
+    h.app.zoomTo("/");
+    await h.keys("-");
+    expect(h.app.explorerTop).toBe("/");
+    expect(h.app.messages.at(-1)!.text).toBe("the view shows everything: nothing is above /");
+  });
+
+  test("- past the vault: it highlighted, its tree under it; l unfolds another vault in place, enter goes into it (VV-D4)", async () => {
     const P = place();
     const h = await harness({ root: join(P, "notes"), open: "a.md", config: (c) => (c.files.show = "auto") });
-    await select(h, "..");
-    await h.keys("enter");
+    await select(h, "a.md");
+    await h.keys("-");
     expect(h.app.explorerTop).toBe(P);
-    expect(h.app.loc.root).toBe(join(P, "notes")); // the root open is still this one
-    // A level at a time: the folders (roots by their icon), then the files; the root open unfolded, marked.
+    expect(h.app.loc.root).toBe(join(P, "notes")); // the vault open is still this one
+    // A level at a time: the folders (vaults by their icon), then the files; the vault open unfolded, marked.
     expect(shown(h)).toEqual([
-      "..",
-      "code (root)",
+      "code (vault)",
       "loose",
       "notes (here)",
+      "  other",
       "  sub",
       "  a.md",
       "  data.json",
@@ -8534,54 +8592,117 @@ describe("the explorer: no fence at the root (17.14)", () => {
     const y = list.y + h.app.explorerRows().findIndex((r) => r.root?.here) - h.app.sidebar.scroll;
     const x = [...c.toString().split("\n")[y]!].join("").indexOf("notes");
     expect(c.styles[y]![x]!.fg).toBe(h.app.theme.roles.sidebar_active.fg!);
-    // A plain folder unfolds a level; its note opens beside this root's (it has none of its own).
+    // A plain folder unfolds a level; nothing of this vault's to rename or delete there.
     await select(h, "loose");
     await h.keys("l");
     expect(shown(h)).toContain("  x.md");
-    expect(h.app.explorerItem()).toBeNull(); // nothing of this root's to rename or delete
-    // Another root unfolds like a folder; its file, opened, switches into it — the explorer staying put.
+    await select(h, "x.md");
+    expect(h.app.explorerItem()).toBeNull();
+    // Another vault unfolds in place with l, the vault open unchanged; enter goes into it, the view staying.
     await select(h, "code");
-    await h.keys("enter");
+    await h.keys("l");
     expect(shown(h)).toContain("  main.ts");
+    expect(h.app.loc.root).toBe(join(P, "notes"));
     await select(h, "main.ts");
     await h.keys("enter");
     expect(h.app.loc.root).toBe(join(P, "code"));
     expect(h.app.view!.buf.abs).toBe(join(P, "code", "main.ts"));
     expect(h.app.explorerTop).toBe(P);
-    expect(shown(h)).toEqual(["..", "code (here)", "  main.ts", "loose", "notes (root)", "readme.md"]);
-    // h and l fold and unfold the root open; enter takes the explorer back down to it.
+    expect(shown(h).slice(0, 3)).toEqual(["code (here)", "  main.ts", "loose"]);
+    expect(shown(h)).toContain("notes (vault)");
+    // h folds the vault open, l unfolds it; z zooms in on it.
     await select(h, "code");
     await h.keys("h");
-    expect(shown(h)).toEqual(["..", "code (here)", "loose", "notes (root)", "readme.md"]);
+    expect(shown(h).slice(0, 2)).toEqual(["code (here)", "loose"]);
     await h.keys("l");
     expect(shown(h)).toContain("  main.ts");
-    await h.keys("enter");
+    await h.keys("z");
     expect(h.app.explorerTop).toBe(join(P, "code"));
-    // The root opened on stays one of the explorer's roots, under the tree (20.15).
-    expect(shown(h).slice(0, 2)).toEqual(["..", "main.ts"]);
-    expect(
-      h.app
-        .explorerRows()
-        .slice(2)
-        .map((r) => [r.root?.abs, r.root?.other]),
-    ).toEqual([[join(P, "notes"), true]]);
+    expect(shown(h)).toEqual(["main.ts"]);
+    // enter on another vault's row goes into it.
+    await h.keys("-");
+    await select(h, "notes");
+    await h.keys("enter");
+    expect(h.app.loc.root).toBe(join(P, "notes"));
   });
 
-  test("it starts at the folder slipbox was opened on; .. climbs to the root, the folder unfolded; / has no ..", async () => {
+  test("~ listed a level at a time: l unfolds a folder of it in place, h from a row in it folds it again", async () => {
+    const P = place();
+    const before = process.env.HOME;
+    process.env.HOME = P;
+    try {
+      const { folderAt } = await import("../src/core/vault.ts");
+      const h = await harness({ loc: folderAt(P), open: null });
+      expect(h.app.explorerCrumbs().map((c) => c.label)).toEqual(["~"]);
+      await select(h, "loose");
+      await h.keys("l");
+      expect(shown(h)).toContain("  x.md");
+      await select(h, "x.md");
+      await h.keys("h");
+      expect(shown(h)).not.toContain("  x.md");
+      expect(h.app.explorerRows()[h.app.sidebar.selected]!.name).toBe("loose");
+    } finally {
+      process.env.HOME = before;
+    }
+  });
+
+  test("a note opened outside the view: it zooms out to the common parent, only the two paths unfolded", async () => {
     const P = place();
     const h = await harness({ root: join(P, "notes"), open: null, folder: join(P, "notes", "sub") });
     expect(h.app.explorerTop).toBe(join(P, "notes", "sub"));
-    expect(shown(h)).toEqual(["..", "b.md"]);
-    await select(h, "..");
-    await h.keys("enter");
+    h.app.expanded.add("elsewhere"); // unfolded once, out of sight: folded by the zoom
+    await h.app.run("note.open other/c.md");
+    expect(h.app.view!.buf.rel).toBe("other/c.md");
     expect(h.app.explorerTop).toBe(join(P, "notes"));
-    expect(shown(h)).toEqual(["..", "sub", "  b.md", "a.md", "data.json"]);
-    expect(h.app.explorerRows()[h.app.sidebar.selected]!.name).toBe("sub");
-    // `/` (and `~`): listed a level at a time, never walked; nothing above it.
-    h.app.setExplorerTop("/");
-    const rows = h.app.explorerRows();
-    expect(rows[0]!.name).not.toBe("..");
-    expect(rows.every((r) => r.depth === 0 || r.root?.other)).toBe(true);
+    expect([...h.app.expanded].sort()).toEqual(["other", "sub"]);
+    expect(shown(h)).toEqual(["other", "  c.md", "sub", "  b.md", "a.md", "data.json"]);
+    expect(h.app.explorerRows()[h.app.sidebar.selected]!.path).toBe("other/c.md");
+    // The breadcrumb leads back where you went.
+    expect(h.app.explorerCrumbs().at(-1)).toMatchObject({ abs: join(P, "notes", "other"), past: true });
+    // Inside the view, nothing zooms.
+    await h.app.run("note.open sub/b.md");
+    expect(h.app.explorerTop).toBe(join(P, "notes"));
+  });
+
+  test("a file you may not write opens read-only and says so; a folder you may not read says why (VV-D5)", async () => {
+    if (process.getuid?.() === 0) return; // root may write anything: nothing to refuse
+    const P = place();
+    chmodSync(join(P, "notes", "a.md"), 0o444);
+    mkdirSync(join(P, "locked"));
+    chmodSync(join(P, "locked"), 0o000);
+    try {
+      const h = await harness({ root: join(P, "notes"), open: "a.md" });
+      expect(h.app.view!.buf.readOnly).toBe("a.md is read-only: you may not write it (no permission)");
+      expect(h.app.messages.some((m) => m.text === "a.md is read-only: you may not write it (no permission)")).toBe(
+        true,
+      );
+      await h.keys("shift+g", "shift+a", "!");
+      expect(h.app.view!.buf.dirty).toBe(false);
+      expect(readFileSync(join(P, "notes", "a.md"), "utf8")).toBe("# A\n");
+      // Zoomed out to it: unfolded, then zoomed into, it says why — and stays as it was.
+      await h.keys("escape");
+      await select(h, "a.md");
+      await h.keys("-");
+      await select(h, "locked");
+      await h.keys("l");
+      expect(h.app.messages.at(-1)!.text).toBe(
+        `can't read ${tildePath(join(P, "locked"))}: you may not read it (no permission)`,
+      );
+      expect(h.app.expanded.has(join(P, "locked"))).toBe(false);
+      h.app.messages.length = 0;
+      await h.keys("z");
+      expect(h.app.messages.at(-1)!.text).toBe(
+        `can't read ${tildePath(join(P, "locked"))}: you may not read it (no permission)`,
+      );
+      expect(h.app.explorerTop).toBe(P);
+      // Opened on it: said at once.
+      const { folderAt } = await import("../src/core/vault.ts");
+      const at = await harness({ loc: folderAt(join(P, "locked")), open: null });
+      expect(at.app.messages.some((m) => m.text.startsWith(`can't read ${tildePath(join(P, "locked"))}:`))).toBe(true);
+    } finally {
+      chmodSync(join(P, "locked"), 0o755);
+      chmodSync(join(P, "notes", "a.md"), 0o644);
+    }
   });
 });
 
@@ -10173,55 +10294,51 @@ describe("vaults in the TUI (17.x)", () => {
     });
   });
 
-  test("the explorer's roots (20.15): the vault opened stays beside one followed into; its files open there; pinned, a root stays", async () => {
-    const { notes, app, n } = await twoVaults();
+  test("into another vault (VV-D5): the view zooms out to the common parent, both unfolded; nothing listed beside the tree; :pin-root is gone", async () => {
+    const { base, notes, app } = await twoVaults();
     const h = await harness({ root: notes, open: "index.md" });
+    expect(h.app.explorerTop).toBe(notes);
     await h.keys("tab", "enter", "o"); // into the app vault, by the link: its peek, then o
     expect(h.app.loc.root).toBe(app);
-    const others = () =>
-      h.app
-        .explorerRows()
-        .filter((r) => r.root?.other)
-        .map((r) => r.root!.abs);
-    expect(others()).toEqual([notes]);
-    expect(h.app.explorerRows().find((r) => r.root?.other)!.name).toBe(`tnotes${n}`);
-    // Unfolded: its files, as its index has them; none of this vault's file operations on them.
+    const shown = () =>
+      h.app.explorerRows().map((r) => `${"  ".repeat(r.depth)}${r.name}${r.root?.here ? " (here)" : ""}`);
+    expect(h.app.explorerTop).toBe(base);
+    expect(shown()).toEqual(["app (here)", "  design.md", "  links.md", "notes", "  index.md", "  todo.md"]);
+    // The breadcrumb leads to where you went.
+    expect(h.app.explorerCrumbs().at(-1)).toMatchObject({ abs: app, current: true, past: true });
+    // One tree: every row is the view's or under one of its folders — no vault listed beside it (20.15's are gone).
+    const own = () => h.app.explorerRows().every((r) => r.depth > 0 || dirname(h.app.rowAbs(r)) === h.app.explorerTop);
+    expect(own()).toBe(true);
+    // Another vault's file chosen goes into it, its tabs (VV-D4); the view holds both, and stays.
     h.app.leftView = "explorer";
     h.app.region = "sidebar";
-    h.app.sidebar.selected = h.app.explorerRows().findIndex((r) => r.root?.other);
-    h.app.explorerAction("open");
-    const rows = h.app.explorerRows();
-    const todo = rows.findIndex((r) => r.under === notes && r.name === "todo.md");
-    expect(todo).toBeGreaterThan(0);
-    h.app.sidebar.selected = todo;
-    expect(h.app.explorerItem()).toBeNull();
-    // Opened: into that vault, the file there; the one left isn't kept (not pinned).
-    h.app.explorerAction("open");
+    h.app.sidebar.selected = h.app.explorerRows().findIndex((r) => r.name === "todo.md");
+    expect(h.app.explorerItem()).toBeNull(); // not this vault's to rename or delete
+    await h.keys("enter");
     expect(h.app.loc.root).toBe(notes);
     expect(h.app.view!.buf.rel).toBe("todo.md");
-    expect(others()).toEqual([]);
-    // Pinned: kept beside, and from then on (with the opened vault's state).
-    await h.app.run("note.open index.md");
-    await h.keys("tab", "enter", "o"); // into app again, by the link
+    expect(h.app.explorerTop).toBe(base);
+    expect(own()).toBe(true);
+    // Back: into app again, the view as it was.
+    await h.app.run("history.back");
     expect(h.app.loc.root).toBe(app);
-    await h.app.run("vault.pin_root");
-    h.app.switchVault((await import("../src/core/vault.ts")).rootAt(notes), join(notes, "todo.md"));
-    expect(h.app.loc.root).toBe(notes);
-    expect(others()).toEqual([app]);
-    const again = await harness({ root: notes, open: "index.md" });
-    expect(again.app.otherRoots()).toEqual([app]);
-    await again.app.switchVault((await import("../src/core/vault.ts")).rootAt(app), null);
-    await again.app.run("vault.pin_root");
-    expect((await harness({ root: notes, open: "index.md" })).app.otherRoots()).toEqual([]);
+    expect(h.app.explorerTop).toBe(base);
+    // Zoomed in on app, notes outside the view — the vault opened, gone into since: nothing lists it beside the tree.
+    h.app.zoomTo(app);
+    expect(h.app.explorerRows().some((r) => r.path === notes || r.root?.abs === notes)).toBe(false);
+    expect(own()).toBe(true);
+    // Nothing pins a vault beside the tree any more.
+    expect(h.app.registry.get("vault.pin_root")).toBeUndefined();
+    expect(DEFAULT_ALIASES["pin-root"]).toBeUndefined();
   });
 
-  test("another root's row (20.15): its name once, no menu button for the menu that refuses it", async () => {
+  test("another vault's row: its name once, no menu button for the menu that refuses it", async () => {
     const { notes, n } = await twoVaults();
     const h = await harness({ root: notes, open: "index.md", width: 120, height: 30 });
     await h.keys("tab", "enter", "o"); // into the app vault, by the link: its peek, then o
     h.app.leftView = "explorer";
     h.app.region = "sidebar";
-    h.app.sidebar.selected = h.app.explorerRows().findIndex((r) => r.root?.other);
+    h.app.sidebar.selected = h.app.explorerRows().findIndex((r) => r.root?.abs === notes);
     const row = h
       .frame()
       .split("\n")
@@ -10229,47 +10346,52 @@ describe("vaults in the TUI (17.x)", () => {
     expect(row.split(`tnotes${n}`).length - 1).toBe(1);
     expect(row).not.toContain(h.app.glyphs.itemMenu);
     expect(h.app.geometry!.hot.some((x) => x.id === "xrow:menu")).toBe(false);
-    // Unfolded, its files' rows neither.
-    h.app.explorerAction("open");
-    h.app.sidebar.selected = h.app.explorerRows().findIndex((r) => r.under === notes && r.name === "todo.md");
+    // Its files' rows neither.
+    h.app.sidebar.selected = h.app.explorerRows().findIndex((r) => r.name === "todo.md");
     h.frame();
     expect(h.app.geometry!.hot.some((x) => x.id === "xrow:menu")).toBe(false);
   });
 
-  test("the explorer's roots never overlap (20.15): a vault inside the one open, or around it, isn't one apart", async () => {
+  test("a vault nested in the one open: going into it keeps the view, it unfolded and highlighted; back, its own tree again", async () => {
     const { locateVault } = await import("../src/core/vault.ts");
     const outer = makeVault(); // its nested-vault/ is a vault of its own
     const inner = join(outer, "nested-vault");
-    const h = await harness({ loc: locateVault({ path: inner }), open: null });
-    expect(h.app.otherRoots()).toEqual([]); // opened on the inner: nothing apart
+    const h = await harness({ loc: locateVault({ path: outer }), open: null });
+    h.app.switchVault(locateVault({ path: inner }), null);
+    expect(h.app.loc.root).toBe(inner);
+    expect(h.app.explorerTop).toBe(outer);
+    const here = h.app.explorerRows().findIndex((r) => r.root?.here);
+    expect(h.app.explorerRows()[here]).toMatchObject({ name: "nested-vault", path: inner, depth: 0 });
+    expect(h.app.explorerRows()[here + 1]!.depth).toBe(1); // unfolded: its tree under it
     h.app.switchVault(locateVault({ path: outer }), null);
-    expect(h.app.otherRoots()).toEqual([]); // around it: the tree is in it
+    expect(h.app.explorerTop).toBe(outer);
+    expect(h.app.explorerRows().find((r) => r.name === "nested-vault")).toMatchObject({ path: "nested-vault" });
   });
 
-  test("h on another root's row folds it, the selection staying there (20.15)", async () => {
+  test("h on another vault's row folds it, the selection staying there", async () => {
     const { notes, app } = await twoVaults();
     const h = await harness({ root: notes, open: "index.md" });
-    await h.keys("tab", "enter", "o"); // into app (its peek, then o); notes is the other root
+    await h.keys("tab", "enter", "o"); // into app (its peek, then o); notes beside it in the view, unfolded
     expect(h.app.loc.root).toBe(app);
     h.app.leftView = "explorer";
     h.app.region = "sidebar";
-    const at = h.app.explorerRows().findIndex((r) => !!r.root?.other);
+    const at = h.app.explorerRows().findIndex((r) => r.root?.abs === notes);
     h.app.sidebar.selected = at;
-    h.app.explorerAction("open"); // unfolded
     expect(h.app.expanded.has(notes)).toBe(true);
-    expect(h.app.explorerRows().some((r) => r.under === notes)).toBe(true);
     h.app.explorerAction("collapse");
     expect(h.app.expanded.has(notes)).toBe(false);
-    expect(h.app.explorerRows().some((r) => r.under === notes)).toBe(false);
+    expect(h.app.explorerRows().some((r) => r.name === "todo.md")).toBe(false);
     expect(h.app.sidebar.selected).toBe(at);
-    h.app.explorerAction("collapse"); // folded already: stays put
+    h.app.explorerAction("collapse"); // folded already, at the view's top: stays put
     expect(h.app.sidebar.selected).toBe(at);
+    h.app.explorerAction("expand");
+    expect(h.app.explorerRows().some((r) => r.name === "todo.md")).toBe(true);
   });
 
-  test("paste, new note and new folder on another root's row are refused (20.15), never a folder named by its path", async () => {
+  test("paste, new note and new folder on another vault's row are refused, never a folder named by its path", async () => {
     const { notes, app } = await twoVaults();
     const h = await harness({ root: notes, open: "index.md" });
-    await h.keys("tab", "enter", "o"); // into app (its peek, then o); notes is the other root
+    await h.keys("tab", "enter", "o"); // into app (its peek, then o); notes beside it in the view
     expect(h.app.loc.root).toBe(app);
     h.app.leftView = "explorer";
     h.app.region = "sidebar";
@@ -10280,7 +10402,7 @@ describe("vaults in the TUI (17.x)", () => {
     const before = readdirSync(app, { recursive: true }).sort();
     const refused = () =>
       expect(h.app.messages.at(-1)!.text).toBe("another vault's folder: select a folder of this vault");
-    sel((r) => !!r.root?.other);
+    sel((r) => r.root?.abs === notes);
     h.app.explorerAction("paste");
     refused();
     h.app.explorerAction("new_note");
@@ -10289,9 +10411,8 @@ describe("vaults in the TUI (17.x)", () => {
     h.app.explorerAction("new_folder");
     refused();
     expect(h.app.overlay).toBeNull();
-    // A row under it, once unfolded: the same.
-    h.app.explorerAction("open");
-    sel((r) => r.under === notes && r.name === "todo.md");
+    // A row under it: the same.
+    sel((r) => r.name === "todo.md");
     expect(h.app.sidebar.selected).toBeGreaterThan(0);
     h.app.explorerAction("paste");
     refused();
@@ -10300,35 +10421,42 @@ describe("vaults in the TUI (17.x)", () => {
     expect(readdirSync(notes)).not.toContain("design.md");
   });
 
-  test("the explorer's roots (21.9): a loose file open beside the root brings its folder, gone when none of its files is shown", async () => {
-    const root = makeVault();
-    const loose = mkdtempSync(join(sandbox, "beside-"));
+  test("a loose file followed to (21.9): the view zooms out to hold it, its folder unfolded — never a folder listed beside the tree", async () => {
+    const base = mkdtempSync(join(sandbox, "beside-"));
+    const root = join(base, "v");
+    const loose = join(base, "loose");
+    mkdirSync(join(root, ".slipbox"), { recursive: true });
+    mkdirSync(loose);
     writeFileSync(join(loose, "l.md"), "# Loose\n");
     writeFileSync(join(loose, "m.md"), "# More\n");
     writeFileSync(join(root, "beside.md"), `# Beside\n\n[l](${join(loose, "l.md")})\n`);
     const h = await harness({ root, open: "beside.md" });
-    expect(h.app.otherRoots()).toEqual([]);
-    // Followed to: a file outside every vault is peeked at (VV-D7), nothing beside yet; o opens it beside, as it is.
+    expect(h.app.explorerTop).toBe(root);
+    // Followed to: a file outside every vault is peeked at (VV-D7), the view unmoved; o opens it beside, as it is, and
+    // the view zooms out to hold both.
     await h.keys("tab", "enter");
     expect(h.app.floating?.kind).toBe("peek");
-    expect(h.app.otherRoots()).toEqual([]);
+    expect(h.app.explorerTop).toBe(root); // looking never moves the view
     await h.keys("o");
     expect(h.app.floating).toBeNull();
     expect(h.app.loc.root).toBe(root);
     expect(h.app.view?.buf.abs).toBe(join(loose, "l.md"));
     expect(h.app.view?.buf.readOnly).toBeNull();
-    expect(h.app.otherRoots()).toEqual([loose]);
-    const row = h.app.explorerRows().find((r) => r.kind === "root" && r.path === loose);
-    expect(row).toMatchObject({ root: { kind: "folder", abs: loose, other: true } });
-    // Another of its files open too: one folder; the first closed, still there; the last closed, gone.
-    h.app.openInNewTab(join(loose, "m.md"));
-    expect(h.app.otherRoots()).toEqual([loose]);
-    await h.app.run("tab.close");
-    expect(h.app.otherRoots()).toEqual([loose]);
-    await h.app.run("history.back"); // the window back at beside.md: none of its files shown any more
+    expect(h.app.explorerTop).toBe(base);
+    const shown = () => h.app.explorerRows().map((r) => `${"  ".repeat(r.depth)}${r.name}`);
+    expect(shown()).toEqual(["loose", "  l.md", "  m.md", "v", "  beside.md"]);
+    expect(h.app.explorerRows()[h.app.sidebar.selected]!.path).toBe(join(loose, "l.md"));
+    // Back at beside.md, nothing goes or comes: one tree, no folder beside it.
+    await h.app.run("history.back");
     expect(h.app.view?.buf.rel).toBe("beside.md");
-    expect(h.app.otherRoots()).toEqual([]);
-    expect(h.app.explorerRows().some((r) => r.path === loose)).toBe(false);
+    expect(h.app.explorerTop).toBe(base);
+    expect(h.app.explorerRows().every((r) => r.depth > 0 || dirname(h.app.rowAbs(r)) === base)).toBe(true);
+    // Zoomed in on the vault, the loose file shown again: its folder isn't listed beside the tree.
+    h.app.zoomTo(root);
+    await h.app.run("history.forward");
+    expect(h.app.view?.buf.abs).toBe(join(loose, "l.md"));
+    h.app.zoomTo(root);
+    expect(h.app.explorerRows().some((r) => r.path === loose || r.root?.abs === loose)).toBe(false);
   });
 
   test("following a path link into another vault peeks, at the heading: nothing switches (VV-D7; D50's switch gone)", async () => {
@@ -10666,7 +10794,7 @@ describe("vaults in the TUI (17.x)", () => {
     expect(h.app.view!.buf.rel).toBe("inner.md");
   });
 
-  test("a plain folder is walked: its folders, the vaults in it, and .. to go up (17.13, 17.14, 20.22)", async () => {
+  test("a plain folder is walked: its folders and the vaults in it, nothing above (17.13, 20.22, VV-D5)", async () => {
     const { folderAt } = await import("../src/core/vault.ts");
     const dir = mkdtempSync(join(sandbox, "loose-"));
     writeFileSync(join(dir, "note.md"), "# loose\n");
@@ -10677,7 +10805,6 @@ describe("vaults in the TUI (17.x)", () => {
     const h = await harness({ loc: folderAt(dir), open: "note.md" });
     // Walked as a vault is (20.22): its folders in the tree, the vaults in it roots of their own.
     expect(h.app.explorerRows().map((r) => [r.name, r.kind, r.root?.kind])).toEqual([
-      ["..", "root", "folder"],
       ["box", "root", "vault"],
       ["code", "root", "vault"],
       ["plain", "dir", undefined],
@@ -10687,7 +10814,7 @@ describe("vaults in the TUI (17.x)", () => {
     expect(h.frame()).toContain("◈ code");
     expect(h.app.vaultStatus()).toBe(dir); // unnamed: its path (20.22)
     expect(statusRow(h.frame())).toContain(dir.slice(-12));
-    h.app.enterRoot(h.app.explorerRows()[1]!);
+    h.app.enterRoot(h.app.explorerRows()[0]!);
     expect(h.app.loc).toMatchObject({ mode: "vault", root: join(dir, "box") });
   });
 
@@ -10716,23 +10843,36 @@ describe("vaults in the TUI (17.x)", () => {
     expect(existsSync(join(loose, ".slipbox", "config.toml"))).toBe(true);
   });
 
-  test("opened on a loose folder, the named folders come first, seen last first; space v v lists them anywhere (17.14, 21.10)", async () => {
-    const { notes, app, n } = await twoVaults();
-    const { folderAt } = await import("../src/core/vault.ts");
-    const dir = mkdtempSync(join(sandbox, "launch-"));
-    const h = await harness({ loc: folderAt(dir), open: null, launcher: true });
-    expect(h.app.overlay?.kind).toBe("list");
-    const f = h.frame();
-    expect(f).toContain(`tnotes${n}`);
-    expect(f).toContain(`tapp${n}`);
-    // Pick tnotes.
-    const items = (h.app.overlay as ListOverlay).items.map((it) => it.label);
-    for (let i = 0; i < items.indexOf(`tnotes${n}`); i++) await h.keys("down");
-    await h.keys("enter");
-    expect(h.app.loc.root).toBe(notes);
-    await h.keys("space", "v", "v");
-    expect(h.frame()).toContain(`tapp${n}`);
-    expect((h.app.overlay as ListOverlay).items.some((it) => it.detail === app)).toBe(true);
+  test("opened on a loose folder, no list of named folders over it (VV-D5); space v v lists them, seen last first (21.10)", async () => {
+    const { base, notes, app, n } = await twoVaults();
+    await onlyRootsUnder(base, async () => {
+      const dir = mkdtempSync(join(sandbox, "launch-"));
+      // Started as the TUI starts: prepare's options, as they are, make the App.
+      const { prepare } = await import("../src/tui/run.ts");
+      const start = prepare([dir]);
+      if (typeof start === "number") throw new Error(`exit ${start}`);
+      expect(start.loc.mode).toBe("folder");
+      const host: Host = { requestRender() {}, osc52: () => true, quit() {} };
+      const started = new App({ ...start, host, watch: false });
+      expect(started.folderChoices().length).toBeGreaterThan(0); // there are named folders to list
+      expect(started.overlay).toBeNull();
+      started.quit();
+      // space v v: the named folders, from anywhere; enter goes into one.
+      const { folderAt } = await import("../src/core/vault.ts");
+      const h = await harness({ loc: folderAt(dir), open: null });
+      expect(h.app.overlay).toBeNull();
+      await h.keys("space", "v", "v");
+      const f = h.frame();
+      expect(f).toContain(`tnotes${n}`);
+      expect(f).toContain(`tapp${n}`);
+      const items = (h.app.overlay as ListOverlay).items.map((it) => it.label);
+      for (let i = 0; i < items.indexOf(`tnotes${n}`); i++) await h.keys("down");
+      await h.keys("enter");
+      expect(h.app.loc.root).toBe(notes);
+      await h.keys("space", "v", "v");
+      expect(h.frame()).toContain(`tapp${n}`);
+      expect((h.app.overlay as ListOverlay).items.some((it) => it.detail === app)).toBe(true);
+    });
   });
 
   test("space n m renames a note: a preview of every change, then enter; open notes follow (17.15)", async () => {
@@ -13999,7 +14139,7 @@ describe("git worktrees in the TUI (17.19)", () => {
     });
   });
 
-  test("the start (prepare): a path that isn't there said in a line, exit 3; a note opens in its vault, the flags passed on; a loose folder starts on the launcher", async () => {
+  test("the start (prepare): a path that isn't there said in a line, exit 3; a note opens in its vault, the flags passed on; a folder, the view at it (VV-D5)", async () => {
     const { prepare } = await import("../src/tui/run.ts");
     const said: string[] = [];
     const write = process.stderr.write;
@@ -14018,7 +14158,7 @@ describe("git worktrees in the TUI (17.19)", () => {
     expect(start.loc.root).toBe(root);
     expect(start.open).toBe(join(root, "notes", "alpha.md"));
     expect(start.themeName).toBe("nord");
-    expect(start.launcher).toBe(false);
+    expect(start.folder).toBeUndefined();
     expect(start.graph.notes.has("notes/alpha.md")).toBe(true);
     const loose = mkdtempSync(join(sandbox, "loose-"));
     writeFileSync(join(loose, "a.md"), "# A\n");
@@ -14026,7 +14166,7 @@ describe("git worktrees in the TUI (17.19)", () => {
     if (typeof folder === "number") throw new Error(`exit ${folder}`);
     expect(folder.loc.mode).toBe("folder");
     expect(folder.open).toBeNull();
-    expect(folder.launcher).toBe(true);
+    expect(folder.folder).toBe(loose);
   });
 
   test("a named folder moved by hand: the links its move broke, their fix previewed at once (20.17, 21.8)", async () => {

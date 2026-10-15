@@ -70,9 +70,7 @@ export function prepare(argv: string[]): Start | number {
     open: loc.file ?? null,
     themeName: flag(args, "theme"),
     configFile: flag(args, "config"),
-    // A loose folder opened without a file (`slipbox ~`): the named folders first (17.14, 21.10).
-    launcher: loc.mode === "folder" && !loc.file,
-    // A folder of a root opened: the explorer starts there.
+    // A folder opened: the explorer's view starts there, in its vault (VV-D5).
     folder: path && !loc.file ? resolve(path) : undefined,
     recorded,
   };

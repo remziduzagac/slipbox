@@ -41,13 +41,34 @@ function gitOk(s: Session, what: string, ok: boolean, repo: string, ...args: str
   s.expect(false, `${what} (git ${args.join(" ")}: exit ${r.code})\n${r.out.trim()}\ngit status:\n${status}`);
 }
 
-/** What the explorer shows: each row left of its border, from its title down (empty when it's closed). */
+/** What the explorer shows: each row left of its border, from under its breadcrumb down (empty when it's closed). */
 function explorer(s: Session): string[] {
   const rows = s.screen();
   const title = rows.findIndex((r) => /Explorer/.test(r));
   if (title < 0) return [];
   const border = [...rows[title]!].findIndex((c) => c === "│" || c === "┃");
-  return rows.slice(title + 1, -1).map((r) => [...r].slice(0, border).join(""));
+  return rows.slice(title + 2, -1).map((r) => [...r].slice(0, border).join(""));
+}
+
+/** The explorer's breadcrumb (VV-D5): its row under the title, left of its border ("" when it's closed). */
+function crumbs(s: Session): string {
+  const rows = s.screen();
+  const title = rows.findIndex((r) => /Explorer/.test(r));
+  if (title < 0) return "";
+  const border = [...rows[title]!].findIndex((c) => c === "│" || c === "┃");
+  return [...rows[title + 1]!].slice(3, border).join("").trim(); // past the rail
+}
+
+/** A click on the breadcrumb's folder `name` (SGR's reports, as a terminal sends them). */
+async function clickCrumb(s: Session, name: string): Promise<void> {
+  const rows = s.screen();
+  const row = rows.findIndex((r) => /Explorer/.test(r)) + 1;
+  const at = new RegExp(`(^|\\s)${name}(\\s|$)`).exec(rows[row] ?? "");
+  s.expect(row > 0 && !!at, `${name} in the breadcrumb to click: ${crumbs(s)}`);
+  const col = at!.index + at![1]!.length;
+  const x = Bun.stringWidth(rows[row]!.slice(0, col)) + 1;
+  await s.send(`\x1b[<0;${x};${row + 1}M`);
+  await s.send(`\x1b[<0;${x};${row + 1}m`);
 }
 
 /** The explorer has a row that ends with `name` (a folder's or a file's, after its icon and marks). */
@@ -690,7 +711,7 @@ const ROOTS: Check[] = [
   },
   {
     area: "links-and-files",
-    name: "roots: a plain folder opened — the named folders first; its tree, by its path, .. to go up; space v v goes into a named one (20.22)",
+    name: "roots: a plain folder opened — its tree, by its path, no list over it; space v v goes into a named one (20.22, VV-D5)",
     covers: { cases: ["vault", "links/roots", "links/state"], commands: ["search.open", "folders.open"] },
     options: {
       home: true,
@@ -700,20 +721,20 @@ const ROOTS: Check[] = [
       },
     },
     run: async (s) => {
-      await s.see(/Folders \(\d+\)/);
-      await s.see("notes");
-      await s.keys("escape");
-      await s.notSee(/Folders \(\d+\)/); // closed, before keys meant for the note go
       await s.status(/ ~\/Downloads\b/); // unnamed: its path where a root's name would be
       await s.see("stray-note.md");
-      await s.see(/\.\./);
       await s.see("old-blog-export");
+      // No list of the named folders over it at the start (it used to open): its tree, the breadcrumb above it.
+      s.expect(s.rowOf(/Folders \(\d+\)/) < 0, "no named folders' list at the start");
+      await s.until(() => crumbs(s) === "~ › Downloads ›", 3000, "the breadcrumb: ~ › Downloads ›");
+      s.expect(!listed(s, /\s\.\.$/), "no .. above the tree");
       // Walked as a root is: a note in a folder of it, found by search.
       await leader(s, "f", "s");
       await s.type("export button");
       await s.see("old-blog-export/README.md", 5000);
       await s.keys("escape");
       await leader(s, "v", "v");
+      await s.see(/Folders \(\d+\)/);
       await s.see("notes");
       await s.type("notes");
       await s.keys("enter");
@@ -723,30 +744,28 @@ const ROOTS: Check[] = [
   },
   {
     area: "links-and-files",
-    name: "roots: $HOME opened — the known roots first, the folder a level at a time, never walked; into notes, across into a repository, and back",
+    name: "roots: $HOME opened — the folder a level at a time, never walked, no list over it; into notes, across into a repository, and back",
     covers: { cases: ["vault", "links/roots", "links/travel", "links/index"] },
     options: {
       home: true,
       startAt: "home",
-      // Two roots this machine has seen: the launcher lists them over $HOME's own listing.
+      // Two roots this machine has seen: nothing lists them over $HOME's own listing.
       setup: (s) => {
         s.cliIn("~/notes", "ls");
         s.cliIn("~/work/kestrel", "ls");
       },
     },
     run: async (s) => {
-      await s.see(/Folders \(\d+\)/);
-      await s.see(/\bnotes +~\/notes\b/);
-      await s.see(/\bkestrel +~\/work\/kestrel\b/);
-      await s.keys("escape");
       await s.status(/ ~ /); // a plain folder: its path where a vault's name would be
+      s.expect(s.rowOf(/Folders \(\d+\)/) < 0, "no named folders' list at the start");
       // A level at a time: its folders, not what's in them (cooking is two down, kestrel one).
       await explorerOpen(s);
       await s.until(
-        () => [/\s\.\.$/, /\sDownloads$/, /\shobbies$/, /\snotes$/, /\swork$/].every((n) => listed(s, n)),
+        () => [/\sDownloads$/, /\shobbies$/, /\snotes$/, /\swork$/].every((n) => listed(s, n)),
         3000,
         "$HOME's own folders listed",
       );
+      s.expect(!listed(s, /\s\.\.$/), "no .. above it");
       s.expect(!explorer(s).some((r) => /cooking|kestrel|people/.test(r)), "nothing below $HOME's own folders listed");
       // Never walked: a search finds only what lies in $HOME itself, though notes far below say it too.
       const top = readdirSync(s.home).filter(
@@ -790,20 +809,19 @@ const ROOTS: Check[] = [
       },
     },
     run: async (s) => {
-      // .obsidian/ makes cooking a root: unnamed, shown by its path (21.9); its own tree at the explorer's top, `..`
-      // above it all the same (17.14: no fence at the root).
+      // .obsidian/ makes cooking a root: unnamed, shown by its path (21.9); its own tree in the explorer, the
+      // breadcrumb naming it a vault (VV-D5).
       await s.status(/ ~\/hobbies\/cooking +‹ Home\.md/);
       await explorerOpen(s);
       await s.until(() => listed(s, /\sRecipes$/), 3000, "cooking's own tree");
-      s.expect(listed(s, /\s\.\.$/), "`..` above the root");
-      // `..`: hobbies a level at a time — cooking marked and unfolded (its Recipes under it), cycling a root beside
-      // it; a file of cycling's opened switches into it, the explorer staying in hobbies.
-      await s.keys("g", "g"); // `..`, the first row
-      await s.keys("enter");
+      await s.until(() => /^~ › hobbies › \S+ cooking ›$/.test(crumbs(s)), 3000, "the breadcrumb: cooking a vault");
+      // -: the view a folder up, hobbies a level at a time — cooking highlighted and unfolded (its Recipes under it),
+      // cycling a vault beside it, unfolded in place by l; a file of it opened goes into it, the view staying.
+      await s.keys("-");
       await s.until(() => listed(s, /\scycling$/), 3000, "hobbies listed");
       s.expect(listed(s, /\sRecipes$/), "cooking still unfolded under it");
       await explorerRow(s, "cycling");
-      await s.keys("enter");
+      await s.keys("l");
       await s.until(() => listed(s, /202608151900-index\.md$/), 3000, "cycling unfolded");
       await explorerRow(s, "202608151900-index\\.md");
       await s.keys("enter");
@@ -818,63 +836,77 @@ const ROOTS: Check[] = [
       const was = before.get(s)!;
       s.expect(JSON.stringify(tree(s.path("~/hobbies/cooking"))) === JSON.stringify(was.cooking), "cooking as it was");
       s.expect(JSON.stringify(tree(s.path("~/hobbies/cycling"))) === JSON.stringify(was.cycling), "cycling as it was");
-      // Your config says what marks a root: without .obsidian it's a plain folder, by its path, `..` above it.
+      // Your config says what marks a root: without .obsidian it's a plain folder, by its path, no vault named above it.
       const config = join(s.dir, "config", "slipbox", "config.toml");
       writeFileSync(config, `${readFileSync(config, "utf8")}\n[walk]\nroot_markers = [".git", ".slipbox"]\n`);
       await s.restart({ startAt: "home/hobbies/cooking/Home.md" });
       await s.status(/ ~\/hobbies\/cooking +‹ Home\.md/);
       await explorerOpen(s);
-      await s.until(() => listed(s, /\s\.\.$/), 3000, "a plain folder's .. above it");
+      await s.until(() => crumbs(s) === "~ › hobbies › cooking ›", 3000, "a plain folder's breadcrumb, no vault");
     },
   },
   {
     area: "links-and-files",
-    name: "roots: :pin-root keeps a root among the explorer's after leaving it; again, no longer",
-    covers: { cases: ["vault"], commands: ["vault.pin_root"] },
-    options: { home: true, startAt: "home/notes/index.md" },
+    name: "view: a worktree kept outside the view chosen — the view zooms out to the common parent, only both paths unfolded (VV-D5)",
+    covers: { cases: ["vault", "explorer", "multiple-roots"], commands: ["git.worktrees"] },
+    options: { home: true, startAt: "home/work/kestrel/README.md" },
     run: async (s) => {
-      // The explorer open, on notes' tree: a row says kestrel only when it's kept as a root.
-      const showsKestrel = () => explorer(s).some((r) => /kestrel/.test(r));
-      const openExplorer = async () => {
-        await explorerOpen(s);
-        await s.until(() => listed(s, /\speople$/), 3000, "notes' tree");
-      };
-      await follow(s, ARCHITECTURE);
-      await s.see(PEEK_HINT, 5000); // a peek (VV-D7): o goes into kestrel
-      await s.keys("o");
-      await s.status(/kestrel · main +‹ docs\/architecture\.md/, 5000);
-      await s.keys("ctrl+o");
-      await s.status(/ notes .*index\.md/, 5000);
-      await openExplorer();
-      s.expect(!showsKestrel(), "left, a followed vault goes from the roots");
+      // The view starts at the vault: kestrel's top.
+      await s.status(/kestrel · main +‹ README\.md/);
+      await explorerOpen(s);
+      await s.until(() => /^~ › work › \S+ kestrel ›$/.test(crumbs(s)), 3000, "the view at kestrel");
+      s.expect(!listed(s, /\sproduct$/), "kestrel's neighbours outside the view");
       await s.keys("escape");
-      await follow(s, ARCHITECTURE);
-      await s.see(PEEK_HINT, 5000); // a peek (VV-D7): o goes into kestrel
-      await s.keys("o");
-      await s.status("docs/architecture.md", 5000);
-      await s.ex("pin-root");
-      await s.message(/kestrel: kept in the explorer/); // the box wraps the rest
-      await s.keys("ctrl+o");
-      await s.status(/ notes .*index\.md/, 5000);
-      await openExplorer();
-      await s.until(showsKestrel, 3000, "kestrel kept among the roots");
-      await s.keys("escape");
-      // Unpinned: gone again once left.
-      await follow(s, ARCHITECTURE);
-      await s.see(PEEK_HINT, 5000); // a peek (VV-D7): o goes into kestrel
-      await s.keys("o");
-      await s.status("docs/architecture.md", 5000);
-      await s.ex("pin-root");
-      await s.message(/kestrel: no longer kept/);
-      await s.keys("ctrl+o");
-      await s.status(/ notes .*index\.md/, 5000);
-      await openExplorer();
-      s.expect(!showsKestrel(), "unpinned, gone");
+      // The agent's worktree, kept beside the main checkout (~/work/kestrel-agent-sync-retry): chosen, gone into.
+      await leader(s, "g", "w");
+      await s.see("Worktrees (2) — enter: this note there");
+      await s.type("sync-retry");
+      await s.keys("enter");
+      await s.status(/kestrel@agent\/sync-retry +‹ README\.md/, 5000);
+      // The view zoomed out to ~/work, the common parent; the breadcrumb leads on to the worktree, where you went.
+      await explorerOpen(s);
+      await s.until(
+        () => /^~ › work › \S+ kestrel-agent/.test(crumbs(s)),
+        3000,
+        "the view at ~/work, the worktree past it in the breadcrumb",
+      );
+      // Both paths unfolded — kestrel's folders listed, the worktree's tree under it, the vault open — and only
+      // them: the other repositories folded.
+      for (const n of [/\skestrel$/, /\skestrel-agent-sync-retry\b/, /\sproduct$/, /\sinfra$/])
+        s.expect(listed(s, n), `${n.source} in the view`);
+      s.expect(explorer(s).filter((r) => /\sdocs$/.test(r.trimEnd())).length === 2, "docs/ under each of the two");
+      s.expect(!listed(s, /\sprd$/) && !listed(s, /\sk8s$/), "product and infra folded");
     },
   },
   {
     area: "links-and-files",
-    name: "roots: where a file is — a root by its name, an unnamed one by its path; :folders goes into one; a loose file's folder beside (21.9, 21.10)",
+    name: "view: z zooms in on a folder, - out a level; a click on the breadcrumb zooms back in, or out (VV-D5)",
+    covers: { cases: ["explorer", "mouse"] },
+    options: { home: true, startAt: "home/work/kestrel/README.md" },
+    run: async (s) => {
+      await explorerOpen(s);
+      await s.until(() => /^~ › work › \S+ kestrel ›$/.test(crumbs(s)), 3000, "the view at kestrel");
+      // z on a folder: the view at it, what's above it in the breadcrumb.
+      await explorerRow(s, "docs");
+      await s.keys("z");
+      await s.until(() => / kestrel › docs ›$/.test(crumbs(s)), 3000, "z: the view at docs");
+      await s.until(() => listed(s, /\sarchitecture\.md$/), 3000, "docs' notes");
+      s.expect(!listed(s, /\sREADME\.md$/), "the README, above the view, not listed");
+      // -: a level up, docs unfolded in it, and in the breadcrumb past the view.
+      await s.keys("-");
+      await s.until(() => / kestrel › docs$/.test(crumbs(s)), 3000, "-: the view at kestrel, docs past it");
+      await s.until(() => listed(s, /\sREADME\.md$/), 3000, "the README in the view again");
+      // A click on docs, past the view, zooms back in; one on work, above it, out.
+      await clickCrumb(s, "docs");
+      await s.until(() => / kestrel › docs ›$/.test(crumbs(s)), 3000, "the click: the view at docs again");
+      await clickCrumb(s, "work");
+      await s.until(() => /^~ › work › \S+ kestrel › docs$/.test(crumbs(s)), 3000, "the click: the view at ~/work");
+      await s.until(() => listed(s, /\sproduct$/), 3000, "work's repositories");
+    },
+  },
+  {
+    area: "links-and-files",
+    name: "roots: where a file is — a root by its name, an unnamed one by its path; :folders goes into one; a loose file's folder in the view (21.9, 21.10)",
     covers: { cases: ["links/named-folders", "links/roots", "vault"], commands: ["folders.open"] },
     options: { home: true, startAt: "home/notes/index.md" },
     run: async (s) => {
@@ -889,8 +921,8 @@ const ROOTS: Check[] = [
       // An Obsidian vault with no .slipbox/ name and no remote: its path, from home.
       await s.restart({ startAt: "home/hobbies/cooking/Home.md" });
       await s.status(/ ~\/hobbies\/cooking /);
-      // A loose file a link leads to is peeked at (VV-D7); o opens it beside the root: its folder among the explorer's
-      // roots while it's shown.
+      // A loose file a link leads to is peeked at (VV-D7); o opens it beside the vault: the view zooms out to hold
+      // it, its folder unfolded (VV-D5).
       await s.restart({ startAt: "home/notes/daily/2026-09-22.md" });
       await follow(s, "the worker log");
       await s.see("— outside every vault", 5000);
@@ -898,11 +930,13 @@ const ROOTS: Check[] = [
       await s.notSee(PEEK_HINT);
       await s.status(/sync-worker-2026-09-22\.log\.md/);
       await s.see("§ sync-worker log, 2026-09-22", 10000); // read and drawn
-      await s.keys("ctrl+e");
-      await s.see("~/Downloads");
-      await s.keys("escape", "ctrl+o"); // back: the loose file no longer shown
-      await s.keys("ctrl+e");
-      await s.notSee("~/Downloads", 1500);
+      await explorerOpen(s);
+      await s.until(
+        () => crumbs(s) === "~ › Downloads" && listed(s, /\ssync-worker-2026-09-22\b/),
+        3000,
+        "the view at ~, Downloads unfolded and past it in the breadcrumb",
+      );
+      s.expect(listed(s, /\snotes\s/), "the vault open in the same tree");
     },
   },
   {

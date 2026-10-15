@@ -435,13 +435,15 @@ export const DEFAULT_EXPLORER_KEYS: Record<string, string> = {
   "shift+v": "unmake_root",
   // The selected row's menu, as its … button opens it.
   ".": "menu",
+  // The view (VV-D5): zoomed in on the selected folder; a folder up — nvim-tree's and oil's `-`.
+  z: "zoom_in",
+  "-": "zoom_out",
   // Source control's (26.3): a commit of what's staged; the last one amended.
   c: "commit",
   "shift+c": "amend",
-  // Source control's (26.6): fetch, push and the stashes; `p` (paste) pulls there.
+  // Source control's (26.6): fetch, push and the stashes; `p` (paste) pulls there, `z` (zoom in) is its stashes.
   f: "fetch",
   "shift+p": "push",
-  z: "stash",
   q: "close",
   escape: "leave",
 };
@@ -472,6 +474,8 @@ export const EXPLORER_ACTIONS = [
   "make_root",
   "unmake_root",
   "menu",
+  "zoom_in",
+  "zoom_out",
   "close",
   "leave",
   "commit",
@@ -577,9 +581,9 @@ export const EXPLORER_ACTION_INFO: Record<string, { title: string; desc: string 
   up: { title: "Move up", desc: "Selects the previous row; nothing opens" },
   open_tab: {
     title: "Open as a tab",
-    desc: "Opens the note in a tab (or switches to its tab); folds or unfolds a folder",
+    desc: "Opens the note in a tab (or switches to its tab); folds or unfolds a folder; goes into another vault",
   },
-  expand: { title: "Open as a tab / unfold", desc: "Opens the note in a tab; unfolds a folder" },
+  expand: { title: "Open as a tab / unfold", desc: "Opens the note in a tab; unfolds a folder or a vault in place" },
   open: { title: "Open here", desc: "Replaces the current window's note with this one" },
   collapse: { title: "Fold", desc: "Folds the folder, or goes to its parent" },
   open_split: { title: "Open in the split", desc: "Opens the note in the other window" },
@@ -631,6 +635,11 @@ export const EXPLORER_ACTION_INFO: Record<string, { title: string; desc: string 
     desc: "The selected vault's notes become this one's; links fixed after a preview, its .slipbox/ to the trash",
   },
   menu: { title: "Actions…", desc: "The selected row's menu, as its … button opens it: rename, move, delete, copy…" },
+  zoom_in: {
+    title: "Zoom in",
+    desc: "The view shows the selected folder or vault (a file's, its folder); the breadcrumb leads back up",
+  },
+  zoom_out: { title: "Zoom out", desc: "The view shows the folder holding it, the folder it showed unfolded" },
   close: { title: "Close the explorer", desc: "Closes it; focus returns to the note" },
   leave: { title: "Back to the note", desc: "Focuses the note; the explorer stays open" },
 };
@@ -691,6 +700,8 @@ export const GIT_ACTION_INFO: Record<string, { title: string; desc: string; acti
   stash: {
     title: "Stashes",
     desc: "The changes stashed with a message, or a stash popped, applied or dropped (:stash)",
+    // `z`: the explorer's zoom in (VV-D5), the stashes in source control.
+    actions: ["stash", "zoom_in"],
   },
   filter: { title: "Filter", desc: "Type to narrow the files by path" },
   close: { title: "Close source control", desc: "Closes it; focus returns to the note" },
@@ -859,7 +870,6 @@ export const DEFAULT_ALIASES: Record<string, string> = {
   reload: "note.reload",
   reindex: "vault.reindex",
   init: "vault.init",
-  "pin-root": "vault.pin_root",
   rename: "note.rename",
   mv: "note.rename",
   relink: "link.relink",
