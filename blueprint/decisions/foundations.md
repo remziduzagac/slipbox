@@ -582,3 +582,19 @@ were typing; `**For:**` and `**Do:**`, tried first, `Do` fitting only what an ag
 for your text, or the reference and your text on one line (no room for a snippet between); the labels as plain text
 (`Note:`, which a `---` under it would make a heading), or as a list; dropping an empty `**Note:**` when another
 program adds (the TUI's cursor may be on it).
+
+## D235: No source file over 1,500 lines; App keeps state and wiring, features their own modules (2026-10-15)
+
+**Decision:** No source file is over 1,500 lines. A feature goes in a module of its own; `App` (`src/tui/app.ts`) keeps
+the TUI's shared state (tabs, views, buffers) and the wiring, and a feature's code works on it from its own file, as
+`actions.ts` does for the commands. `bun run check:size` (`scripts/check-size.ts`), in `bun run check` and CI's lint
+job, fails on a file past the limit; the seven past it on 2026-10-15 are capped (their size then, plus what the tasks
+under way were adding) and may only shrink, the check saying when a cap can come down. The big files are split next,
+after the tasks under way (VV-T2, VV-T4, VV-T7, GIT-T3), before the rest of VV and GIT.
+
+**Why:** The user's, 2026-10-15: `src/tui/app.ts` had reached 11,500 lines and 436 methods, a class that does
+everything, against single responsibility and separation of concerns; three agents changing it at once slowed VV. It
+grew because every feature's state lived in `App` and only the commands' entry points were kept out (`actions.ts`), new
+code matching the code around it, with no limit to stop it.
+
+**Not chosen:** splitting later, after VV and GIT: the seventeen tasks left would each add to it first.

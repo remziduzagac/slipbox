@@ -628,6 +628,16 @@ was added 2026-10-09 at the user's asking.*
   start, the concepts and an agent guide; every page's prose in plain sentences, the reference chapters' too; the
   familiar keys first (consolidated 2026-10-14).
 
+## The big files split
+
+*Not a phase. The user's, 2026-10-15 (D235): next, after VV-T2, VV-T4, VV-T7 and GIT-T3 land, before the rest of VV
+and GIT.*
+
+- [ ] **The split**: `src/tui/app.ts` (11,500 lines, 436 methods) by concern — the explorer, the git panel, the lens,
+  views and scrolling, the mouse, overlays and the peek, vaults and sessions, indexing and the watcher, find, conflicts
+  — `App` keeping the shared state and the wiring; `cli.ts`, `draw.ts` and `actions.ts` likewise; each file under 1,500
+  lines, the caps in `scripts/check-size.ts` lowered as they go. No behaviour changes; the terminal tests are its net.
+
 ## Vaults and the explorer's view
 
 *Not a phase. Accepted 2026-10-15, settled in conversation the day before; the git workstream follows it.*
