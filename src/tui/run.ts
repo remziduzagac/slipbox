@@ -200,7 +200,7 @@ export async function runTui(argv: string[]): Promise<number> {
     }
     if (picturesNow() !== picturesSeen) {
       picturesSeen = picturesNow();
-      app.picturesChanged();
+      app.pictures.changed();
     }
     if (app.theme.bg !== bg) {
       bg = app.theme.bg;
@@ -212,7 +212,7 @@ export async function runTui(argv: string[]): Promise<number> {
   const view = new AppRenderable(renderer, paint, pictures);
   renderer.root.add(view);
   view.onMouse = (e) => {
-    app.handleMouse({
+    app.mouse.handle({
       type: e.type,
       x: e.x,
       y: e.y,
@@ -225,11 +225,11 @@ export async function runTui(argv: string[]): Promise<number> {
   };
   renderer.keyInput.on("keypress", (k: KeyEvent) => {
     if (k.eventType === "release") return;
-    void app.handleKey(keyName(k)).finally(handled);
+    void app.input.handleKey(keyName(k)).finally(handled);
   });
   // Bracketed paste arrives as one event, not keys: into the list filter or prompt.
   renderer.keyInput.on("paste", (p: { bytes: Uint8Array }) => {
-    app.paste(new TextDecoder().decode(p.bytes));
+    app.input.paste(new TextDecoder().decode(p.bytes));
     renderer.requestRender();
     handled();
   });

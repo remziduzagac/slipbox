@@ -28,7 +28,7 @@ import { type Config, DEFAULT_CONFIG } from "../src/core/config.ts";
 import { openGraph } from "../src/core/graph.ts";
 import { locateVault } from "../src/core/vault.ts";
 import { tildePath } from "../src/core/paths.ts";
-import { type ListOverlay, App, codeBlocks, type Host, PICTURE_ROWS, PICTURES_REST_MS } from "../src/tui/app.ts";
+import { type ListOverlay, App, type Host } from "../src/tui/app.ts";
 import { dateText, listFolder, placeOf, type SaveAsOverlay, sizeText } from "../src/tui/saveas.ts";
 import { placeIn } from "../src/tui/shellrun.ts";
 import { setTrust } from "../src/core/trust.ts";
@@ -55,6 +55,8 @@ import { cells } from "../src/tui/cursor.ts";
 import { lineOf, offsetOf } from "../src/tui/editing.ts";
 import { DEFAULT_ALIASES, DEFAULT_GROUPS, DEFAULT_KEYS, keyChar, keyName, parseGroup } from "../src/tui/keys.ts";
 import { MOUSE_HELP } from "../src/tui/mouse-help.ts";
+import { codeBlocks } from "../src/tui/code.ts";
+import { PICTURE_ROWS, PICTURES_REST_MS } from "../src/tui/pictures.ts";
 
 const sandbox = mkdtempSync(join(tmpdir(), "slipbox-tui-"));
 process.env.XDG_STATE_HOME = join(sandbox, "state");
@@ -157,8 +159,8 @@ async function harness(opts: Opts = {}): Promise<Harness> {
     folder: opts.folder,
   });
   // Never the machine's own nvims.
-  app.nvimDiscovery = () => [];
-  app.nvimProbe = () => null;
+  app.handoff.nvimDiscovery = () => [];
+  app.handoff.nvimProbe = () => null;
   // Nor its home: an export's places (Downloads…) are a test's own, where one makes them.
   app.home = join(sandbox, "no-home");
   const W = opts.width ?? 120;
@@ -175,7 +177,7 @@ async function harness(opts: Opts = {}): Promise<Harness> {
   frame();
   const keys = async (...ks: string[]) => {
     for (const k of ks) {
-      await app.handleKey(canonKey(k));
+      await app.input.handleKey(canonKey(k));
       frame();
     }
     return frame();
@@ -456,10 +458,10 @@ describe("cursor movement", () => {
   test("mouse click moves the cursor; the wheel scrolls the view", async () => {
     const h = await harness({ open: "samples/handbook/operations-handbook.md" });
     const pane = h.app.geometry!.panes[0]!;
-    h.app.handleMouse({ type: "down", x: pane.textX + 3, y: pane.y + 5, button: 0 });
-    h.app.handleMouse({ type: "up", x: pane.textX + 3, y: pane.y + 5, button: 0 });
+    h.app.mouse.handle({ type: "down", x: pane.textX + 3, y: pane.y + 5, button: 0 });
+    h.app.mouse.handle({ type: "up", x: pane.textX + 3, y: pane.y + 5, button: 0 });
     expect(h.app.view!.cur.row).toBe(5);
-    h.app.handleMouse({
+    h.app.mouse.handle({
       type: "scroll",
       x: pane.x + 5,
       y: pane.y + 2,
@@ -558,9 +560,9 @@ describe("selection", () => {
     const h = await harness({ open: "notes/alpha.md" });
     const pane = h.app.geometry!.panes[0]!;
     const row = rowStarting(h, "Back to");
-    h.app.handleMouse({ type: "down", x: pane.textX, y: pane.y + row, button: 0 });
-    h.app.handleMouse({ type: "drag", x: pane.textX + 6, y: pane.y + row, button: 0 });
-    h.app.handleMouse({ type: "up", x: pane.textX + 6, y: pane.y + row, button: 0 });
+    h.app.mouse.handle({ type: "down", x: pane.textX, y: pane.y + row, button: 0 });
+    h.app.mouse.handle({ type: "drag", x: pane.textX + 6, y: pane.y + row, button: 0 });
+    h.app.mouse.handle({ type: "up", x: pane.textX + 6, y: pane.y + row, button: 0 });
     expect(h.copied.at(-1)).toBe("Back to");
   });
   test("y p, y r (cursor row), y l (link under the cursor)", async () => {
@@ -643,7 +645,7 @@ describe("links and history", () => {
   test("space l: n y s b l", async () => {
     const h = await harness();
     await h.keys("space", "l", "n");
-    expect(h.app.linkUnderCursor()).toBeGreaterThanOrEqual(0);
+    expect(h.app.linking.linkUnderCursor()).toBeGreaterThanOrEqual(0);
     await h.keys("space", "l", "y");
     expect(h.copied.at(-1)).toEndWith("/notes/alpha.md");
     await h.keys("space", "l", "s");
@@ -664,7 +666,7 @@ describe("links and history", () => {
     expect(h.app.overlay).toBeNull();
     expect(h.app.leftView).toBe("history");
     expect(h.app.region).toBe("sidebar");
-    const rows = h.app.historyRows();
+    const rows = h.app.history.rows();
     expect(rows[h.app.sidebar.selected]!.here).toBe(true);
     expect(h.frame()).toContain("here");
     await h.keys("down", "down", "enter");
@@ -679,11 +681,11 @@ describe("links and history", () => {
     await h.keys("space", "h", "h");
     h.frame();
     const sb = h.app.geometry!.sidebar!;
-    const rows = h.app.historyRows();
+    const rows = h.app.history.rows();
     const i = rows.findIndex((r) => r.path === "index.md");
     expect(i).toBeGreaterThanOrEqual(0);
     const y = sb.y + i - h.app.sidebar.scroll;
-    const at = (type: string) => h.app.handleMouse({ type, x: sb.x + 4, y, button: 0 });
+    const at = (type: string) => h.app.mouse.handle({ type, x: sb.x + 4, y, button: 0 });
     at("down");
     at("up");
     expect(h.app.sidebar.selected).toBe(i); // selected…
@@ -736,8 +738,8 @@ describe("links and history", () => {
     const link = h.app.currentLayout(v).links.find((l) => l.target === "notes/beta.md")!;
     const x = pane.textX + link.col + 1;
     const y = pane.y + link.line - v.top;
-    h.app.handleMouse({ type: "down", x, y, button: 0 });
-    h.app.handleMouse({ type: "up", x, y, button: 0 });
+    h.app.mouse.handle({ type: "down", x, y, button: 0 });
+    h.app.mouse.handle({ type: "up", x, y, button: 0 });
     await new Promise((r) => setTimeout(r, 10));
     expect(h.app.view!.buf.rel).toBe("notes/beta.md");
   });
@@ -747,7 +749,7 @@ describe("which-key", () => {
   test("the leader shows the popup at once, with group names; backspace goes up; esc cancels", async () => {
     const h = await harness();
     const f = await h.keys("space");
-    expect(h.app.whichKey).toBe(true);
+    expect(h.app.input.whichKey).toBe(true);
     expect(f).toContain("+links");
     expect(f).toContain("+history");
     const f2 = await h.keys("l");
@@ -757,7 +759,7 @@ describe("which-key", () => {
     expect(h.app.pending).toEqual(["space"]);
     await h.keys("escape");
     expect(h.app.pending).toEqual([]);
-    expect(h.app.whichKey).toBe(false);
+    expect(h.app.input.whichKey).toBe(false);
   });
   test("layout: framed like the other popups; at most three columns of key → name + explanation", async () => {
     const h = await harness({ width: 160, height: 40 });
@@ -779,9 +781,12 @@ describe("which-key", () => {
     expect(rows[head + 2]!.slice(left - 2, left)).toBe("  ");
     const status = rows.length - 1;
     expect(rows[status - 1]!.startsWith("━━━")).toBe(true); // the frame's bottom rule
-    expect(rows[status - 2]!.slice(h.app.leftRailWidth, rows[status - 2]!.length - h.app.rightRailWidth).trim()).toBe(
-      "",
-    ); // the popup's margin row (between the rails)
+    expect(
+      rows[status - 2]!.slice(
+        h.app.panels.leftRailWidth,
+        rows[status - 2]!.length - h.app.panels.rightRailWidth,
+      ).trim(),
+    ).toBe(""); // the popup's margin row (between the rails)
     // Centred.
     const right = rows[head]!.lastIndexOf("┐");
     expect(Math.abs(left - (160 - 1 - right))).toBeLessThanOrEqual(1);
@@ -856,9 +861,9 @@ describe("which-key", () => {
   test("other prefixes show it only after the delay", async () => {
     const h = await harness({ config: (c) => (c.input.which_key_delay_ms = 50) });
     await h.keys("y");
-    expect(h.app.whichKey).toBe(false);
+    expect(h.app.input.whichKey).toBe(false);
     await new Promise((r) => setTimeout(r, 90));
-    expect(h.app.whichKey).toBe(true);
+    expect(h.app.input.whichKey).toBe(true);
     expect(h.frame()).toContain("Copy note path");
   });
 });
@@ -1157,7 +1162,7 @@ describe("resize mode (ctrl+alt+w, space w r)", () => {
     await h.keys("ctrl+w", "v", "ctrl+w", "h"); // left window active
     const t = h.app.tab!;
     const f = await h.keys("space", "w", "r");
-    expect(h.app.resizeMode).toBe(true);
+    expect(h.app.panels.resizeMode).toBe(true);
     expect(statusRow(f)).toContain("RESIZE");
     expect(f).toContain("Wider");
     const w0 = h.app.geometry!.panes[0]!.w;
@@ -1167,14 +1172,14 @@ describe("resize mode (ctrl+alt+w, space w r)", () => {
     await h.keys("=");
     expect(t.ratio).toBe(0.5);
     await h.keys("escape");
-    expect(h.app.resizeMode).toBe(false);
+    expect(h.app.panels.resizeMode).toBe(false);
   });
   test("ctrl+w > < + - resize one step, then stay in the mode so the key repeats", async () => {
     const h = await harness({ open: "samples/handbook/operations-handbook.md", width: 160, height: 40 });
     await h.keys("ctrl+w", "v", "ctrl+w", "h");
     const t = h.app.tab!;
     await h.keys("ctrl+w", ">");
-    expect(h.app.resizeMode).toBe(true);
+    expect(h.app.panels.resizeMode).toBe(true);
     const once = t.ratio;
     expect(once).toBeGreaterThan(0.5);
     await h.keys(">", ">");
@@ -1195,9 +1200,9 @@ describe("resize mode (ctrl+alt+w, space w r)", () => {
   test("any other key leaves the mode and does its normal job", async () => {
     const h = await harness({ open: "samples/handbook/operations-handbook.md" });
     await h.keys("space", "w", "r");
-    expect(h.app.resizeMode).toBe(true);
+    expect(h.app.panels.resizeMode).toBe(true);
     await h.keys("ctrl+d");
-    expect(h.app.resizeMode).toBe(false);
+    expect(h.app.panels.resizeMode).toBe(false);
     expect(h.app.view!.top).toBeGreaterThan(0);
   });
   test("stacked splits resize with j k; the right window grows by lowering the ratio", async () => {
@@ -1211,17 +1216,17 @@ describe("resize mode (ctrl+alt+w, space w r)", () => {
     const root = makeVault();
     const h = await harness({ root, width: 160, config: (c) => (c.ui.outline = true) });
     await h.keys("ctrl+w", "h", "space", "w", "r", "l", "l", "escape");
-    expect(h.app.sideW).toBe(34);
+    expect(h.app.panels.sideW).toBe(34);
     await h.keys("ctrl+w", "l", "ctrl+w", "l", "space", "w", "r", "h", "escape");
     expect(h.app.region).toBe("outline");
-    expect(h.app.outW).toBe(30);
+    expect(h.app.panels.outW).toBe(30);
     await h.keys("ctrl+w", "h", "ctrl+w", "v", "space", "w", "r", "l", "escape");
     const ratio = h.app.tab!.ratio;
     h.app.quit();
     const again = await harness({ root, open: null, width: 160, config: (c) => (c.ui.restore_session = true) });
-    expect(again.app.sideW).toBe(34);
-    expect(again.app.outW).toBe(30);
-    expect(again.app.outlineShown).toBe(true); // the outline pane itself is restored too
+    expect(again.app.panels.sideW).toBe(34);
+    expect(again.app.panels.outW).toBe(30);
+    expect(again.app.panels.outlineShown).toBe(true); // the outline pane itself is restored too
     expect(again.app.tab!.ratio).toBeCloseTo(ratio, 5);
   });
   test("resize keys and the default split ratio come from config", async () => {
@@ -1243,8 +1248,8 @@ describe("the rails (ui.left_rail, ui.right_rail)", () => {
     const f = h.frame();
     const rows = f.split("\n");
     const W = 140;
-    const x = W - h.app.rightRailWidth;
-    expect(h.app.rightRailWidth).toBe(3); // tinted: one button wide, no border
+    const x = W - h.app.panels.rightRailWidth;
+    expect(h.app.panels.rightRailWidth).toBe(3); // tinted: one button wide, no border
     const btn = h.app.geometry!.hot.find((r) => r.id === "btn:outline")!;
     expect(btn.x).toBe(x);
     expect([...rows[btn.y]!][x + 1]).toBe("▤");
@@ -1255,10 +1260,10 @@ describe("the rails (ui.left_rail, ui.right_rail)", () => {
     expect(col).not.toMatch(/[┃┳┻┫]/u);
     // Only one ▤: not on the breadcrumb as well.
     expect(h.app.geometry!.hot.filter((r) => r.id === "btn:outline").length).toBe(1);
-    h.app.handleMouse({ type: "down", x: btn.x + 1, y: btn.y, button: 0 });
-    h.app.handleMouse({ type: "up", x: btn.x + 1, y: btn.y, button: 0 });
+    h.app.mouse.handle({ type: "down", x: btn.x + 1, y: btn.y, button: 0 });
+    h.app.mouse.handle({ type: "up", x: btn.x + 1, y: btn.y, button: 0 });
     h.frame();
-    expect(h.app.outlineShown).toBe(true);
+    expect(h.app.panels.outlineShown).toBe(true);
     const o = h.app.geometry!.outline!;
     expect(o.x + o.w).toBe(x); // the outline ends at the rail
     // Without colour there's no tint: the rail is a bordered column, joined to the rules.
@@ -1269,14 +1274,14 @@ describe("the rails (ui.left_rail, ui.right_rail)", () => {
       themeName: "mono",
     });
     const mrows = mono.frame().split("\n");
-    expect(mono.app.rightRailWidth).toBe(4);
+    expect(mono.app.panels.rightRailWidth).toBe(4);
     const mcol = mrows.map((r) => [...r][W - 4] ?? "").join("");
     expect(mcol).toContain("┳");
     expect(mcol).toContain("┻");
     // Zen has no rails; ui.right_rail = false removes it and the breadcrumb gets ▤ back.
     await h.app.run("ui.zen");
     h.frame();
-    expect(h.app.rightRailWidth).toBe(0);
+    expect(h.app.panels.rightRailWidth).toBe(0);
     await h.app.run("ui.zen");
     const n = await harness({
       open: "samples/handbook/operations-handbook.md",
@@ -1285,7 +1290,7 @@ describe("the rails (ui.left_rail, ui.right_rail)", () => {
       config: (c) => (c.ui.right_rail = false),
     });
     n.frame();
-    expect(n.app.rightRailWidth).toBe(0);
+    expect(n.app.panels.rightRailWidth).toBe(0);
     const b2 = n.app.geometry!.hot.find((r) => r.id === "btn:outline")!;
     expect(b2.x + b2.w).toBe(W);
   });
@@ -1319,7 +1324,7 @@ describe("the left rail", () => {
       config: (c) => (c.ui.sidebar = false),
     });
     const rows = h.frame().split("\n");
-    expect(h.app.leftRailWidth).toBe(3);
+    expect(h.app.panels.leftRailWidth).toBe(3);
     const btn = h.app.geometry!.hot.find((r) => r.id === "btn:explorer")!;
     expect(btn.x).toBe(0);
     expect(btn.y).toBe(2); // under the top bar's rule, level with the tab strip
@@ -1328,10 +1333,10 @@ describe("the left rail", () => {
     expect(h.canvas().styles[btn.y + 5]![1]!.bg).toBe(h.app.theme.roles.rail.bg!); // tinted, no border
     expect(rows[1]!.slice(0, 5)).toBe("━".repeat(5)); // the top rule runs over it unbroken
     expect(h.app.geometry!.tabStrip!.x).toBe(3); // the strip starts after the rail
-    h.app.handleMouse({ type: "down", x: btn.x + 1, y: btn.y, button: 0 });
-    h.app.handleMouse({ type: "up", x: btn.x + 1, y: btn.y, button: 0 });
+    h.app.mouse.handle({ type: "down", x: btn.x + 1, y: btn.y, button: 0 });
+    h.app.mouse.handle({ type: "up", x: btn.x + 1, y: btn.y, button: 0 });
     h.frame();
-    expect(h.app.sidebarShown).toBe(true);
+    expect(h.app.panels.sidebarShown).toBe(true);
     expect(h.app.geometry!.sidebarPane!.x).toBe(3);
     // Without it, ≡ is back in the top bar.
     const n = await harness({ width: 140, height: 30, config: (c) => (c.ui.left_rail = false) });
@@ -1348,21 +1353,21 @@ describe("the left panel's views and filter", () => {
     const hot = (id: string) => h.app.geometry!.hot.find((r) => r.id === id)!;
     const click = (id: string) => {
       const b = hot(id);
-      h.app.handleMouse({ type: "down", x: b.x + 1, y: b.y, button: 0 });
-      h.app.handleMouse({ type: "up", x: b.x + 1, y: b.y, button: 0 });
+      h.app.mouse.handle({ type: "down", x: b.x + 1, y: b.y, button: 0 });
+      h.app.mouse.handle({ type: "up", x: b.x + 1, y: b.y, button: 0 });
       return h.frame();
     };
     expect(hot("btn:history").y).toBe(hot("btn:explorer").y + 1); // one button per row
     let f = click("btn:history");
-    expect(h.app.sidebarShown).toBe(true);
+    expect(h.app.panels.sidebarShown).toBe(true);
     expect(h.app.leftView).toBe("history");
     expect(f).toContain("History");
     f = click("btn:explorer"); // the other view: the same panel switches
-    expect(h.app.sidebarShown).toBe(true);
+    expect(h.app.panels.sidebarShown).toBe(true);
     expect(h.app.leftView).toBe("explorer");
     expect(f).toContain("Explorer");
     click("btn:explorer"); // the showing view: hide
-    expect(h.app.sidebarShown).toBe(false);
+    expect(h.app.panels.sidebarShown).toBe(false);
     // ctrl+e always comes back to the tree.
     click("btn:history");
     await h.keys("space", "e");
@@ -1373,15 +1378,15 @@ describe("the left panel's views and filter", () => {
     h.frame();
     const click = (id: string) => {
       const b = h.app.geometry!.hot.find((r) => r.id === id)!;
-      h.app.handleMouse({ type: "down", x: b.x + 1, y: b.y, button: 0 });
-      h.app.handleMouse({ type: "up", x: b.x + 1, y: b.y, button: 0 });
+      h.app.mouse.handle({ type: "down", x: b.x + 1, y: b.y, button: 0 });
+      h.app.mouse.handle({ type: "up", x: b.x + 1, y: b.y, button: 0 });
       return h.frame();
     };
     expect([...h.frame().split("\n")[h.app.geometry!.hot.find((r) => r.id === "btn:git")!.y]!][1]).toBe("±");
     click("btn:git");
-    expect([h.app.sidebarShown, h.app.leftView, h.app.region]).toEqual([true, "git", "sidebar"]);
+    expect([h.app.panels.sidebarShown, h.app.leftView, h.app.region]).toEqual([true, "git", "sidebar"]);
     click("btn:git");
-    expect(h.app.sidebarShown).toBe(false);
+    expect(h.app.panels.sidebarShown).toBe(false);
   });
   test("each view keeps its position (selection, scroll, filter) while the other shows", async () => {
     const h = await harness({ open: "index.md", width: 140, height: 30 });
@@ -1390,8 +1395,8 @@ describe("the left panel's views and filter", () => {
     const click = (id: string) => {
       h.frame();
       const b = h.app.geometry!.hot.find((r) => r.id === id)!;
-      h.app.handleMouse({ type: "down", x: b.x + 1, y: b.y, button: 0 });
-      h.app.handleMouse({ type: "up", x: b.x + 1, y: b.y, button: 0 });
+      h.app.mouse.handle({ type: "down", x: b.x + 1, y: b.y, button: 0 });
+      h.app.mouse.handle({ type: "up", x: b.x + 1, y: b.y, button: 0 });
     };
     await h.keys("space", "e", "g", "g", "j", "j");
     const explorerSel = h.app.sidebar.selected;
@@ -1422,7 +1427,7 @@ describe("the left panel's views and filter", () => {
     const h = await harness({ open: "index.md", width: 140, height: 30 });
     await h.keys("space", "e", "/", "b", "e", "t");
     expect(h.app.sidebar.filtering).toBe(true);
-    const rows = h.app.explorerRows();
+    const rows = h.app.explorer.rows();
     expect(rows.filter((r) => r.kind === "note").map((r) => r.path)).toContain("notes/beta.md");
     expect(rows.some((r) => r.kind === "dir" && r.path === "notes")).toBe(true); // its folder, unfolded
     expect(rows.some((r) => r.path === "notes/alpha.md")).toBe(false);
@@ -1438,9 +1443,9 @@ describe("the left panel's views and filter", () => {
     expect(h.app.sidebar.selected).toBe(rows.findIndex((r) => r.kind === "note"));
     await h.keys("escape");
     expect(h.app.sidebar.filter).toBe("");
-    expect(h.app.explorerRows()).toBe(h.app.treeRows());
+    expect(h.app.explorer.rows()).toBe(h.app.explorer.treeRows());
     await h.keys("/", "b", "e", "t", "a");
-    const pick = h.app.explorerRows()[h.app.sidebar.selected]!;
+    const pick = h.app.explorer.rows()[h.app.sidebar.selected]!;
     await h.keys("enter");
     expect(h.app.view!.buf.rel).toBe(pick.path);
     expect(h.app.region).toBe("content");
@@ -1453,18 +1458,18 @@ describe("the left panel's views and filter", () => {
       height: 40,
       config: (c) => (c.ui.outline = true),
     });
-    h.app.showSidebar(true);
+    h.app.panels.showSidebar(true);
     h.app.leftView = "explorer";
     h.app.region = "sidebar";
     await h.keys("/");
-    await h.app.paste("beta\nmore");
+    await h.app.input.paste("beta\nmore");
     expect(h.app.sidebar.filter).toBe("beta");
-    expect(h.app.explorerRows()[h.app.sidebar.selected]!.path).toBe("notes/beta.md");
+    expect(h.app.explorer.rows()[h.app.sidebar.selected]!.path).toBe("notes/beta.md");
     await h.keys("escape", "space", "o", "/");
     expect(h.app.region as string).toBe("outline");
-    await h.app.paste("Swapping\r\nnot this");
+    await h.app.input.paste("Swapping\r\nnot this");
     expect(h.app.outline.filter).toBe("Swapping");
-    expect(h.app.outlineRows()[h.app.outline.selected]!.text).toStartWith("Swapping a filter");
+    expect(h.app.outlineView.rows()[h.app.outline.selected]!.text).toStartWith("Swapping a filter");
   });
   test("/ filters the outline: matching headings under their parents; enter jumps, esc clears", async () => {
     const h = await harness({
@@ -1477,7 +1482,7 @@ describe("the left panel's views and filter", () => {
     expect(h.app.region).toBe("outline");
     await h.keys("/", ..."Swapping");
     expect(h.app.outline.filtering).toBe(true);
-    const rows = h.app.outlineRows();
+    const rows = h.app.outlineView.rows();
     expect(rows.some((r) => r.text.startsWith("Swapping a filter"))).toBe(true);
     expect(rows.some((r) => r.text.startsWith("O16:"))).toBe(true); // its parent, kept
     expect(rows.some((r) => r.text.startsWith("O1:"))).toBe(false);
@@ -1490,7 +1495,7 @@ describe("the left panel's views and filter", () => {
     expect(h.app.outline.filter).toBe("");
     await h.keys("space", "o", "/", "x", "escape");
     expect(h.app.outline.filter).toBe("");
-    expect(h.app.outlineRows().length).toBeGreaterThan(10);
+    expect(h.app.outlineView.rows().length).toBeGreaterThan(10);
   });
   test("history: notes read in other tabs and earlier sessions are there too, under recent (found in use)", async () => {
     const root = makeVault();
@@ -1499,7 +1504,7 @@ describe("the left panel's views and filter", () => {
     h.app.openInNewTab("notes/alpha.md");
     h.app.openInNewTab("notes/beta.md");
     await h.keys("space", "h", "h");
-    const rows = h.app.historyRows();
+    const rows = h.app.history.rows();
     expect(rows.map((r) => (r.heading ? "--" : r.label))).toEqual(["beta.md", "--", "alpha.md", "index.md"]);
     expect(rows[2]!.hint).toBe("tab 2"); // open in another tab: which
     expect(h.frame()).toContain("recent here");
@@ -1510,7 +1515,7 @@ describe("the left panel's views and filter", () => {
     expect(h.app.view!.buf.rel).toBe("notes/alpha.md");
     expect(h.app.view!.back.map((l) => l.key)).toEqual(["notes/beta.md"]);
     // A restart: the window's timeline comes back with the session.
-    h.app.saveState();
+    h.app.session.save();
     const again = await harness({ root, open: null, config: (c) => (c.ui.restore_session = true) });
     const v = again.app.view!;
     expect(v.buf.rel).toBe("notes/alpha.md");
@@ -1523,13 +1528,13 @@ describe("the left panel's views and filter", () => {
     await h.app.run("note.open notes/alpha.md");
     await h.app.run("note.open notes/beta.md");
     await h.keys("space", "h", "h", "/", ...[..."index"]);
-    const rows = h.app.historyRows();
+    const rows = h.app.history.rows();
     const i = rows.findIndex((r) => r.path === "index.md");
     expect(i).toBe(0); // unfiltered, row 0 is beta.md, here
     h.frame();
     const sb = h.app.geometry!.sidebar!;
     const y = sb.y + i - h.app.sidebar.scroll;
-    for (const type of ["down", "up", "down", "up"]) h.app.handleMouse({ type, x: sb.x + 4, y, button: 0 });
+    for (const type of ["down", "up", "down", "up"]) h.app.mouse.handle({ type, x: sb.x + 4, y, button: 0 });
     expect(h.app.view!.buf.rel).toBe("index.md");
     expect(h.app.sidebar.filter).toBe("");
   });
@@ -1538,7 +1543,7 @@ describe("the left panel's views and filter", () => {
     h.app.openInNewTab("notes/alpha.md");
     h.app.openInNewTab("notes/beta.md"); // this window: beta.md alone; alpha.md and index.md are recent
     await h.keys("space", "h", "h", "/", ...[..."alpha"]);
-    const rows = h.app.historyRows();
+    const rows = h.app.history.rows();
     expect(rows.map((r) => (r.heading ? "--" : r.label))).toEqual(["--", "alpha.md"]);
     expect(h.app.sidebar.selected).toBe(1); // on the note, not the heading
     await h.keys("enter");
@@ -1558,7 +1563,7 @@ describe("the left panel's views and filter", () => {
     ps.save();
     const later = await harness({ root });
     await later.keys("space", "h", "h");
-    const recent = later.app.historyRows().filter((r) => r.recent);
+    const recent = later.app.history.rows().filter((r) => r.recent);
     expect(recent.map((r) => r.path).sort()).toEqual([...files].sort());
     expect(recent.every((r) => /^\d\d:\d\d$/.test(r.hint))).toBe(true);
     // A name too long for the pane beside its hint is cut, the hint kept.
@@ -1575,11 +1580,11 @@ describe("the left panel's views and filter", () => {
     // As many as ui.history_limit says: 3, then none.
     const three = await harness({ root, config: (c) => (c.ui.history_limit = 3) });
     await three.keys("space", "h", "h");
-    expect(three.app.historyRows().filter((r) => r.recent)).toHaveLength(3);
+    expect(three.app.history.rows().filter((r) => r.recent)).toHaveLength(3);
     const none = await harness({ root, config: (c) => (c.ui.history_limit = 0) });
     await none.app.run("note.open notes/alpha.md");
     await none.keys("space", "h", "h");
-    expect(none.app.historyRows().some((r) => r.heading || r.recent)).toBe(false);
+    expect(none.app.history.rows().some((r) => r.heading || r.recent)).toBe(false);
     // Out of range: said, and the default kept.
     const { loadConfig } = await import("../src/core/config.ts");
     const file = join(root, "limit.toml");
@@ -1593,7 +1598,7 @@ describe("the left panel's views and filter", () => {
     await h.app.run("note.open notes/alpha.md");
     await h.app.run("note.open notes/beta.md");
     await h.keys("space", "h", "h", "/", "a", "l", "p");
-    const rows = h.app.historyRows();
+    const rows = h.app.history.rows();
     expect(rows.map((r) => r.label)).toEqual([expect.stringContaining("alpha")]);
     await h.keys("enter");
     expect(h.app.view!.buf.rel).toBe("notes/alpha.md");
@@ -1760,7 +1765,7 @@ describe("editing: insert mode, undo, save (step 3b)", () => {
     expect(v.source).toBe(true); // ctrl+e moves: it never switches the view any more
     // Extending: shift with them.
     await h.keys("ctrl+a", "shift+ctrl+e");
-    expect(h.app.selectionText(v)).toBe("three four");
+    expect(h.app.views.selectionText(v)).toBe("three four");
     await h.keys("escape", "shift+a"); // typing at the line's end
     seen.length = 0;
     for (const key of ["ctrl+a", "ctrl+e", "cmd+left", "cmd+right", "cmd+up", "cmd+down"]) {
@@ -1780,7 +1785,7 @@ describe("editing: insert mode, undo, save (step 3b)", () => {
     await h.keys("space", "n", "v", "g", "g", "i"); // typing at the note's start
     await h.keys("shift+right", "shift+right", "shift+right");
     expect(v.insert).toBe(true);
-    expect(h.app.selectionText(v)).toBe("one"); // the cursor sits between characters: the one after it isn't taken
+    expect(h.app.views.selectionText(v)).toBe("one"); // the cursor sits between characters: the one after it isn't taken
     expect(h.frame()).toContain("one two three"); // drawn so: the selection role on "one" only
     const c = h.canvas();
     const y = c.rows.findIndex((r) => r.join("").includes("one two three"));
@@ -1791,7 +1796,7 @@ describe("editing: insert mode, undo, save (step 3b)", () => {
     expect(v.buf.source).toBe("ONE two three\nfour five\n");
     expect(v.sel).toBeNull();
     await h.keys("ctrl+shift+right"); // by word: " two"
-    expect(h.app.selectionText(v)).toBe(" two");
+    expect(h.app.views.selectionText(v)).toBe(" two");
     await h.keys("backspace");
     expect(v.buf.source).toBe("ONE three\nfour five\n");
     await h.keys("shift+end", "delete"); // to the line's end
@@ -1813,8 +1818,8 @@ describe("editing: insert mode, undo, save (step 3b)", () => {
     await h.keys("shift+home"); // from past the line's last character, where the cursor was…
     v.layoutKey = ""; // …which a re-layout (a resize, a message line) keeps
     h.frame();
-    expect(h.app.selectionText(v)).toBe("fou");
-    await h.app.paste("NEW"); // the terminal's own paste replaces it too
+    expect(h.app.views.selectionText(v)).toBe("fou");
+    await h.app.input.paste("NEW"); // the terminal's own paste replaces it too
     expect(v.buf.source).toBe("ONE-+\n\nNEW\n");
     await h.keys("shift+left", "escape"); // esc stops typing; the selection goes with it
     expect(v.insert).toBe(false);
@@ -1982,7 +1987,7 @@ describe("saving and conflicts (step 4)", () => {
   test("an outside change to a clean note reloads it as an undo step: u brings back what you had", async () => {
     const { h, file, v } = await setup("mine\n");
     await touch(file, "the agent's version\n");
-    h.app.reloadBuffer(v.buf);
+    h.app.watch.reloadBuffer(v.buf);
     expect(v.buf.source).toBe("the agent's version\n");
     expect(v.buf.dirty).toBe(false);
     await h.keys("u");
@@ -1993,7 +1998,7 @@ describe("saving and conflicts (step 4)", () => {
     const { h, file, v } = await setup("line\n");
     await h.keys("shift+a", "!", "escape");
     await touch(file, "theirs\n");
-    h.app.reloadBuffer(v.buf);
+    h.app.watch.reloadBuffer(v.buf);
     const o = h.app.overlay as ListOverlay;
     expect(o.title).toContain("changed on disk");
     await h.keys("l");
@@ -2002,7 +2007,7 @@ describe("saving and conflicts (step 4)", () => {
     expect(v.buf.source).toBe("line!\n");
     // Changed again: keep yours this time.
     await touch(file, "theirs again\n");
-    h.app.reloadBuffer(v.buf);
+    h.app.watch.reloadBuffer(v.buf);
     await h.keys("k");
     expect(v.buf.conflictKept).toBe(true);
     expect(statusRow(h.frame())).toContain("differs from disk");
@@ -2042,7 +2047,7 @@ describe("saving and conflicts (step 4)", () => {
     const { h, file, v } = await setup("one\ntwo\nthree\n");
     await h.keys("space", "n", "v", "g", "g", "shift+a", "!", "escape"); // yours: one!
     await touch(file, "one\ntwo\nTHREE\n"); // theirs: THREE
-    h.app.reloadBuffer(v.buf);
+    h.app.watch.reloadBuffer(v.buf);
     await h.keys("d");
     const d = h.app.floating!;
     expect([d.kind, d.title]).toEqual(["diff", "Diff — yours → theirs (c.md)"]);
@@ -2061,7 +2066,7 @@ describe("saving and conflicts (step 4)", () => {
     // Both changing the same line: marked.
     await h.keys("g", "g", "shift+a", "?", "escape");
     await touch(file, "one?!\ntwo\nTHREE\n".replace("?!", "#"));
-    h.app.reloadBuffer(v.buf);
+    h.app.watch.reloadBuffer(v.buf);
     await h.keys("m");
     expect(v.buf.source).toBe("<<<<<<< yours\none!?\n=======\none#\n>>>>>>> theirs\ntwo\nTHREE\n");
     expect(h.app.transient!.text).toContain("1 conflict");
@@ -2087,7 +2092,7 @@ describe("saving and conflicts (step 4)", () => {
     // After keep: never on its own.
     await h.keys("shift+a", "d", "escape");
     await touch(file, "other\n");
-    h.app.reloadBuffer(v.buf);
+    h.app.watch.reloadBuffer(v.buf);
     await h.keys("k");
     await Bun.sleep(60);
     expect(readFileSync(file, "utf8")).toBe("other\n");
@@ -2203,8 +2208,8 @@ describe("vim-shaped normal mode in source (step 3c)", () => {
     const hot = (id: string) => h.app.geometry!.hot.find((r) => r.id === id)!;
     const regexBtn = hot("findopt:regex:0");
     expect(h.canvas().styles[regexBtn.y]![regexBtn.x + 1]!.fg).toBe(h.app.theme.roles.topbar_button_on.fg!);
-    h.app.handleMouse({ type: "down", x: regexBtn.x + 1, y: regexBtn.y, button: 0 });
-    h.app.handleMouse({ type: "up", x: regexBtn.x + 1, y: regexBtn.y, button: 0 });
+    h.app.mouse.handle({ type: "down", x: regexBtn.x + 1, y: regexBtn.y, button: 0 });
+    h.app.mouse.handle({ type: "up", x: regexBtn.x + 1, y: regexBtn.y, button: 0 });
     expect(v.findOpts!.regex).toBe(false);
     expect(v.find!.matches.length).toBe(2); // plain, whole words: the two standalone a.b
     await h.keys("enter");
@@ -2249,8 +2254,8 @@ describe("vim-shaped normal mode in source (step 3c)", () => {
     await type("$1ub");
     h.frame();
     const all = h.app.geometry!.hot.find((r) => r.id === "findrep:all:0")!;
-    h.app.handleMouse({ type: "down", x: all.x + 1, y: all.y, button: 0 });
-    h.app.handleMouse({ type: "up", x: all.x + 1, y: all.y, button: 0 });
+    h.app.mouse.handle({ type: "down", x: all.x + 1, y: all.y, button: 0 });
+    h.app.mouse.handle({ type: "up", x: all.x + 1, y: all.y, button: 0 });
     expect(v.buf.source).toBe("# R\n\ncow dog cub\n\n**cub** here\n");
     await h.keys("escape");
   });
@@ -2317,7 +2322,7 @@ describe("vim-shaped normal mode in source (step 3c)", () => {
     const h = await harness({ root, open: "v.md", width: 100, height: 30 });
     await h.keys("space", "n", "v", "j", "j", "w", "2", "d", "w");
     // Both at once, not awaiting the first: as a terminal delivers "j." typed fast.
-    await Promise.all([h.app.handleKey("j"), h.app.handleKey(".")]);
+    await Promise.all([h.app.input.handleKey("j"), h.app.input.handleKey(".")]);
     expect(h.app.view!.buf.source).toBe("# Vim\n\nthe fox\njumpthe lazy dog\n");
   });
   test("f F t T and ; , — as motions, with counts, and after an operator", async () => {
@@ -2473,8 +2478,8 @@ describe("the lens (live preview: space n l, i/a/o with edit_in = live)", () => 
     const click = () => {
       h.frame();
       const b = h.app.geometry!.hot.find((r) => r.id === "findopt:replace:0")!;
-      h.app.handleMouse({ type: "down", x: b.x + 1, y: b.y, button: 0 });
-      h.app.handleMouse({ type: "up", x: b.x + 1, y: b.y, button: 0 });
+      h.app.mouse.handle({ type: "down", x: b.x + 1, y: b.y, button: 0 });
+      h.app.mouse.handle({ type: "up", x: b.x + 1, y: b.y, button: 0 });
     };
     const rep = () => (h.app.overlay as { replace?: { focus: boolean } } | null)?.replace;
     await h.keys("/", "c", "a", "t");
@@ -2504,18 +2509,18 @@ describe("the lens (live preview: space n l, i/a/o with edit_in = live)", () => 
     await h.app.run("find.replace");
     await h.keys(..."cat", "tab");
     expect(o().replace?.focus).toBe(true);
-    await h.app.paste("NEW");
+    await h.app.input.paste("NEW");
     expect(o().replace!.text).toBe("NEW");
     expect(o().text).toBe("cat");
     await h.keys("shift+tab");
-    await h.app.paste("s");
+    await h.app.input.paste("s");
     expect(o().text).toBe("cats");
     expect(o().replace!.text).toBe("NEW");
     await h.keys("escape");
     // Confirming each match (:s///c): a paste is no answer, and changes nothing.
     await h.keys(":", ..."%s/cat/X/gc", "enter");
     expect(o().replace?.confirm).toBeTruthy();
-    await h.app.paste("y");
+    await h.app.input.paste("y");
     expect(o().text).toBe("cat");
     expect(o().replace!.text).toBe("X");
     expect(h.app.view!.buf.source).toBe("cat dog cat\n");
@@ -2703,9 +2708,9 @@ describe("the lens (live preview: space n l, i/a/o with edit_in = live)", () => 
     h.frame();
     const pane = h.app.geometry!.panes[0]!;
     const y = pane.y + nested - v.top;
-    h.app.handleMouse({ type: "down", x: pane.textX, y, button: 0 });
-    h.app.handleMouse({ type: "drag", x: pane.textX + 8, y, button: 0 });
-    h.app.handleMouse({ type: "up", x: pane.textX + 8, y, button: 0 });
+    h.app.mouse.handle({ type: "down", x: pane.textX, y, button: 0 });
+    h.app.mouse.handle({ type: "drag", x: pane.textX + 8, y, button: 0 });
+    h.app.mouse.handle({ type: "up", x: pane.textX + 8, y, button: 0 });
     expect(h.copied.at(-1)).toBe("  - n");
   });
   test("it opens on the cursor's innermost section whole when it fits, and moves to the next whole; one too tall, its blocks", async () => {
@@ -2805,9 +2810,9 @@ describe("the lens (live preview: space n l, i/a/o with edit_in = live)", () => 
     await h.keys("space", "n", "l");
     const f = () => h.frame().split("\n");
     let frame = f();
-    const max = h.app.lensRows(v);
+    const max = h.app.lens.rows(v);
     const L = h.app.currentLayout(v);
-    const shown = h.app.screenRows(v, L).filter((r) => L.lines[r]!.lens === "source");
+    const shown = h.app.lens.screenRows(v, L).filter((r) => L.lines[r]!.lens === "source");
     expect(shown.length).toBe(max); // the lens is capped
     expect(frame.join("\n")).toContain("Intro paragraph before."); // the prose above is still there
     expect(frame.join("\n")).toMatch(/↓ \d+ lines/); // what's below the window, counted on the rule
@@ -2815,20 +2820,20 @@ describe("the lens (live preview: space n l, i/a/o with edit_in = live)", () => 
     for (let k = 0; k < 30; k++) await h.keys("j");
     frame = f();
     expect(text(v.cur.row)).toContain("of code");
-    expect(h.app.screenRows(v, h.app.currentLayout(v))).toContain(v.cur.row);
+    expect(h.app.lens.screenRows(v, h.app.currentLayout(v))).toContain(v.cur.row);
     expect(frame.join("\n")).toMatch(/↑ \d+ lines/);
     expect(frame.join("\n")).toMatch(/↓ \d+ lines/);
     expect(frame.join("\n")).toContain("Intro paragraph before.");
     // A click on a row inside lands on that row.
     const pane = h.app.geometry!.panes[0]!;
-    const rows = h.app.screenRows(v, h.app.currentLayout(v));
+    const rows = h.app.lens.screenRows(v, h.app.currentLayout(v));
     const i = rows.findIndex((r) => h.app.currentLayout(v).lines[r]!.lens === "source") + 3;
-    h.app.handleMouse({ type: "down", x: pane.textX + 2, y: pane.y + i, button: 0 });
-    h.app.handleMouse({ type: "up", x: pane.textX + 2, y: pane.y + i, button: 0 });
+    h.app.mouse.handle({ type: "down", x: pane.textX + 2, y: pane.y + i, button: 0 });
+    h.app.mouse.handle({ type: "up", x: pane.textX + 2, y: pane.y + i, button: 0 });
     expect(v.cur.row).toBe(rows[i]!);
     // The wheel over it scrolls inside first.
     const before = v.lensInner;
-    h.app.handleMouse({
+    h.app.mouse.handle({
       type: "scroll",
       x: pane.textX + 2,
       y: pane.y + i,
@@ -2838,14 +2843,14 @@ describe("the lens (live preview: space n l, i/a/o with edit_in = live)", () => 
     expect(v.lensInner ?? 0).toBeGreaterThan(before ?? 0);
     // …and the cursor comes along: never on a row the lens now hides, so dd deletes what's seen.
     for (let k = 0; k < 6; k++)
-      h.app.handleMouse({
+      h.app.mouse.handle({
         type: "scroll",
         x: pane.textX + 2,
         y: pane.y + i,
         button: 0,
         scroll: { direction: "down", delta: 1 },
       });
-    expect(h.app.screenRows(v, h.app.currentLayout(v))).toContain(v.cur.row);
+    expect(h.app.lens.screenRows(v, h.app.currentLayout(v))).toContain(v.cur.row);
     const seen = text(v.cur.row);
     await h.keys("d", "d");
     expect(v.buf.source).not.toContain(`${seen.trim()}\n`);
@@ -2864,7 +2869,7 @@ describe("the lens (live preview: space n l, i/a/o with edit_in = live)", () => 
     for (let k = 0; k < 30; k++) await h.keys("j");
     h.frame();
     expect(v.liveBase!.active).toEqual([5, 87]); // into the block: the lens is that block, scrolled
-    expect(h.app.lensHidden(v, h.app.currentLayout(v)).length).toBeGreaterThan(0);
+    expect(h.app.lens.hidden(v, h.app.currentLayout(v)).length).toBeGreaterThan(0);
   });
   test("clicking around: each clicked line stays under the pointer as the lens moves to it", async () => {
     const root = makeVault();
@@ -2884,8 +2889,8 @@ describe("the lens (live preview: space n l, i/a/o with edit_in = live)", () => 
       );
       expect(target).toBeGreaterThanOrEqual(0); // still on screen: the page didn't jump away
       const screen = target - v.top;
-      h.app.handleMouse({ type: "down", x: pane.textX + 3, y: pane.y + screen, button: 0 });
-      h.app.handleMouse({ type: "up", x: pane.textX + 3, y: pane.y + screen, button: 0 });
+      h.app.mouse.handle({ type: "down", x: pane.textX + 3, y: pane.y + screen, button: 0 });
+      h.app.mouse.handle({ type: "up", x: pane.textX + 3, y: pane.y + screen, button: 0 });
       h.frame();
       expect(rows()[v.cur.row]).toBe(`Para ${want} with **bold**.`);
       // Exactly where it was clicked — except inside the scrolloff margin at an edge, where the
@@ -2911,8 +2916,8 @@ describe("the lens (live preview: space n l, i/a/o with edit_in = live)", () => 
     });
     const which = /Para (\d+)/.exec(rows()[target]!)![1];
     const y = pane.y + target - v.top;
-    h.app.handleMouse({ type: "down", x: pane.textX + 2, y, button: 0 });
-    h.app.handleMouse({ type: "up", x: pane.textX + 2, y, button: 0 });
+    h.app.mouse.handle({ type: "down", x: pane.textX + 2, y, button: 0 });
+    h.app.mouse.handle({ type: "up", x: pane.textX + 2, y, button: 0 });
     h.frame();
     expect(v.live).toBe(true);
     expect(lens().source.join("\n")).toContain(`Para ${which} with **bold**.`);
@@ -3029,8 +3034,8 @@ describe('the nvim preset ([editor] remote = "nvim", the default)', () => {
     const h = await harness({ open: "notes/alpha.md" });
     const sent: string[][] = [];
     (h.app as unknown as { host: Host }).host.runDetached = async (argv) => (sent.push(argv), 0);
-    h.app.nvimDiscovery = () => found;
-    h.app.nvimProbe = (s) => found.find((f) => f.socket === s) ?? null;
+    h.app.handoff.nvimDiscovery = () => found;
+    h.app.handoff.nvimProbe = (s) => found.find((f) => f.socket === s) ?? null;
     return { h, sent, root: h.root };
   };
   test("none running: says so; one: sends there straight away, opening the file then the line", async () => {
@@ -3045,7 +3050,7 @@ describe('the nvim preset ([editor] remote = "nvim", the default)', () => {
       ["nvim", "--server", "/run/nvim.elsewhere.sock", "--remote", join(root, "notes", "alpha.md")],
       ["nvim", "--server", "/run/nvim.elsewhere.sock", "--remote-send", `<C-\\><C-N>:${line}<CR>`],
     ]);
-    expect(h.app.remoteServer).toBe("/run/nvim.elsewhere.sock");
+    expect(h.app.handoff.remoteServer).toBe("/run/nvim.elsewhere.sock");
   });
   test("several: a picker, the nvim working where the note lives first; the pick is remembered", async () => {
     const root = makeVault();
@@ -3053,8 +3058,8 @@ describe('the nvim preset ([editor] remote = "nvim", the default)', () => {
     const h = await harness({ root, open: "notes/alpha.md" });
     const sent: string[][] = [];
     (h.app as unknown as { host: Host }).host.runDetached = async (argv) => (sent.push(argv), 0);
-    h.app.nvimDiscovery = () => found;
-    h.app.nvimProbe = (s) => found.find((f) => f.socket === s) ?? null;
+    h.app.handoff.nvimDiscovery = () => found;
+    h.app.handoff.nvimProbe = (s) => found.find((f) => f.socket === s) ?? null;
     await h.keys("space", "n", "s");
     const o = h.app.overlay as ListOverlay;
     expect(o.title).toContain("which nvim");
@@ -3073,13 +3078,13 @@ describe('the nvim preset ([editor] remote = "nvim", the default)', () => {
     // …and kept in the session.
     h.app.quit();
     const again = await harness({ root, open: "notes/alpha.md" });
-    expect(again.app.remoteServer).toBe(found[0]!.socket);
+    expect(again.app.handoff.remoteServer).toBe(found[0]!.socket);
     // space n p always asks.
     await h.keys("space", "n", "p");
     expect(h.app.overlay?.kind).toBe("list");
     await h.keys("escape");
     // Gone: the picker comes back.
-    h.app.nvimProbe = () => null;
+    h.app.handoff.nvimProbe = () => null;
     await h.keys("space", "n", "s");
     expect(h.app.overlay?.kind).toBe("list");
   });
@@ -3168,8 +3173,8 @@ describe("task toggle (ctrl+l, a click on [ ])", () => {
       col += s.text.length;
     }
     const y = pane.y + row - v.top;
-    h.app.handleMouse({ type: "down", x: pane.textX + col, y, button: 0 });
-    h.app.handleMouse({ type: "up", x: pane.textX + col, y, button: 0 });
+    h.app.mouse.handle({ type: "down", x: pane.textX + col, y, button: 0 });
+    h.app.mouse.handle({ type: "up", x: pane.textX + col, y, button: 0 });
     expect(readFileSync(file, "utf8")).toContain("- [x] parent task");
     // Someone else rewrites the file: the next toggle reloads instead of writing blind.
     writeFileSync(file, "# Moved\n\n\n" + readFileSync(file, "utf8"));
@@ -3231,12 +3236,12 @@ describe("breadcrumb collapse (…) and the path dropdown", () => {
     const target = h.app.currentLayout(v).headings.find((x) => x.text.startsWith("Swapping a filter"))!;
     h.app.moveCursor(v, { row: target.line + 1, col: 0 });
     h.frame();
-    const chain = h.app.breadcrumb(v);
+    const chain = h.app.outlineView.breadcrumb(v);
     expect(chain.length).toBe(3);
     const more = h.app.geometry!.hot.find((r) => r.id === "crumbmore:0")!;
     expect(more).toBeDefined();
-    h.app.handleMouse({ type: "down", x: more.x, y: more.y, button: 0 });
-    h.app.handleMouse({ type: "up", x: more.x, y: more.y, button: 0 });
+    h.app.mouse.handle({ type: "down", x: more.x, y: more.y, button: 0 });
+    h.app.mouse.handle({ type: "up", x: more.x, y: more.y, button: 0 });
     const o = h.app.overlay as ListOverlay;
     expect(o.kind).toBe("list");
     expect(o.anchor).toEqual({ x: more.x, y: more.y });
@@ -3269,7 +3274,7 @@ describe("breadcrumb collapse (…) and the path dropdown", () => {
     await h.keys("up", "up");
     h.frame();
     const g = h.app.geometry!.overlay!;
-    h.app.handleMouse({ type: "down", x: g.x + 4, y: g.listY, button: 0 });
+    h.app.mouse.handle({ type: "down", x: g.x + 4, y: g.listY, button: 0 });
     expect(h.app.overlay).toBeNull();
     expect(v.cur.row).toBe(chain[0]!.line);
   });
@@ -3283,8 +3288,8 @@ describe("top bar, tab strip, status line", () => {
     return r;
   };
   const click = (h: Harness, x: number, y: number, button = 0) => {
-    h.app.handleMouse({ type: "down", x, y, button });
-    h.app.handleMouse({ type: "up", x, y, button });
+    h.app.mouse.handle({ type: "down", x, y, button });
+    h.app.mouse.handle({ type: "up", x, y, button });
     h.frame();
   };
   test("top bar: explorer and outline buttons, the chip opens the palette, vault state on the right", async () => {
@@ -3306,15 +3311,15 @@ describe("top bar, tab strip, status line", () => {
     expect(h.frame().split("\n")[1]!.startsWith("━━━━")).toBe(true);
     const ex = hot(h, "btn:explorer");
     click(h, ex.x, ex.y);
-    expect(h.app.sidebarShown).toBe(false);
+    expect(h.app.panels.sidebarShown).toBe(false);
     click(h, ex.x, ex.y);
-    expect(h.app.sidebarShown).toBe(true);
+    expect(h.app.panels.sidebarShown).toBe(true);
     const ol = hot(h, "btn:outline");
     expect(ol.x + ol.w).toBe(160); // far right, the rail's second button: Info's is first (3.19), level with the breadcrumb
     expect(hot(h, "btn:info").y).toBe(h.app.geometry!.panes[0]!.y - 2);
     expect(ol.y).toBe(hot(h, "btn:info").y + 1);
     click(h, ol.x + 1, ol.y);
-    expect(h.app.outlineShown).toBe(true);
+    expect(h.app.panels.outlineShown).toBe(true);
     const chip = hot(h, "btn:palette");
     click(h, chip.x + 2, chip.y);
     expect(h.app.overlay?.kind).toBe("list");
@@ -3322,12 +3327,12 @@ describe("top bar, tab strip, status line", () => {
   test("hover highlights what is under the mouse", async () => {
     const h = await harness({ width: 160 });
     const ex = hot(h, "btn:explorer");
-    h.app.handleMouse({ type: "move", x: ex.x, y: ex.y, button: 0 });
-    expect(h.app.hover).toBe("btn:explorer");
+    h.app.mouse.handle({ type: "move", x: ex.x, y: ex.y, button: 0 });
+    expect(h.app.mouse.hover).toBe("btn:explorer");
     const c = h.canvas();
     expect(c.styles[ex.y]![ex.x + 1]!.bg).toBe(h.app.theme.roles.hover.bg!);
-    h.app.handleMouse({ type: "move", x: 80, y: 10, button: 0 });
-    expect(h.app.hover).toBeNull();
+    h.app.mouse.handle({ type: "move", x: 80, y: 10, button: 0 });
+    expect(h.app.mouse.hover).toBeNull();
   });
   test("top_bar = false removes it; zen hides it", async () => {
     const off = await harness({ config: (c) => (c.ui.top_bar = false) });
@@ -3376,7 +3381,7 @@ describe("top bar, tab strip, status line", () => {
     const tab = (i: number) => h.app.geometry!.tabs[i]!;
     click(h, tab(0).x + 2, strip.y);
     expect(h.app.activeTab).toBe(0);
-    h.app.handleMouse({
+    h.app.mouse.handle({
       type: "scroll",
       x: strip.x + 5,
       y: strip.y,
@@ -3388,9 +3393,9 @@ describe("top bar, tab strip, status line", () => {
     const names = () => h.app.tabs.map((t) => t.views[0]!.buf.name);
     const first = names()[0];
     h.frame();
-    h.app.handleMouse({ type: "down", x: tab(0).x + 2, y: strip.y, button: 0 });
-    h.app.handleMouse({ type: "drag", x: tab(2).x + 2, y: strip.y, button: 0 });
-    h.app.handleMouse({ type: "up", x: tab(2).x + 2, y: strip.y, button: 0 });
+    h.app.mouse.handle({ type: "down", x: tab(0).x + 2, y: strip.y, button: 0 });
+    h.app.mouse.handle({ type: "drag", x: tab(2).x + 2, y: strip.y, button: 0 });
+    h.app.mouse.handle({ type: "up", x: tab(2).x + 2, y: strip.y, button: 0 });
     expect(names()[2]).toBe(first!);
     h.frame();
     const x0 = hot(h, "tabclose:0");
@@ -3431,7 +3436,7 @@ describe("top bar, tab strip, status line", () => {
       return c.styles[r.y]![r.x + 1]!;
     };
     const roles = h.app.theme.roles;
-    h.app.handleMouse({ type: "move", x: 80, y: 10, button: 0 }); // no hover
+    h.app.mouse.handle({ type: "move", x: 80, y: 10, button: 0 }); // no hover
     expect(btn("btn:explorer").fg).toBe(roles.topbar_button_on.fg!); // the explorer is open
     expect(btn("btn:explorer").bg).toBe(roles.rail.bg!); // the rail's tint
     expect(btn("btn:outline").fg).toBe(roles.topbar_button.fg!); // the outline is closed
@@ -3446,7 +3451,7 @@ describe("top bar, tab strip, status line", () => {
     });
     const c = h.canvas();
     const sb = h.app.geometry!.sidebar!;
-    const rows = h.app.treeRows();
+    const rows = h.app.explorer.treeRows();
     const at = (i: number) => c.rows[sb.y + i - h.app.sidebar.scroll]!;
     // In each expanded folder, children branch with ├─ and the last one closes with └─.
     const kids = rows.map((r, i) => ({ r, i })).filter(({ r }) => r.depth === 1);
@@ -3468,7 +3473,7 @@ describe("top bar, tab strip, status line", () => {
     expect(c.styles[sb.y + kids[0]!.i - h.app.sidebar.scroll]![sb.x + 1]!.fg).toBe(h.app.theme.roles.tree_guide.fg!);
     // The outline: a sub-heading under a section with later siblings has │ then ├─ or └─.
     const o = h.app.geometry!.outline!;
-    const orows = h.app.outlineRows();
+    const orows = h.app.outlineView.rows();
     const sub = orows.findIndex((r, i) => r.level === 3 && orows.slice(i + 1).some((x) => x.level === 2));
     const line = c.rows[o.y + sub - h.app.outline.scroll]!.slice(o.x + 1, o.x + 5).join("");
     expect(line).toMatch(/^│ [├└]─$/);
@@ -3536,8 +3541,8 @@ describe("top bar, tab strip, status line", () => {
       config: (c) => (c.ui.outline = true),
     });
     const click = (x: number, y: number) => {
-      h.app.handleMouse({ type: "down", x, y, button: 0 });
-      h.app.handleMouse({ type: "up", x, y, button: 0 });
+      h.app.mouse.handle({ type: "down", x, y, button: 0 });
+      h.app.mouse.handle({ type: "up", x, y, button: 0 });
       h.frame();
     };
     h.frame();
@@ -3549,16 +3554,16 @@ describe("top bar, tab strip, status line", () => {
     click(g().sidebarPane!.x + 3, g().sidebarPane!.y + g().sidebarPane!.h - 1); // below the tree
     expect(h.app.region).toBe("sidebar");
     const o = g().outline!;
-    const row = h.app.outlineRows()[2]!;
+    const row = h.app.outlineView.rows()[2]!;
     click(o.x + 12, o.y + 2 - h.app.outline.scroll);
     expect(h.app.view!.cur.row).toBe(row.line); // the note moved there
     expect(h.app.region).toBe("content"); // and took the focus
     // The ▤ button: open (and focus) when closed, close when open.
     await h.app.run("outline.toggle");
-    expect(h.app.outlineShown).toBe(false);
+    expect(h.app.panels.outlineShown).toBe(false);
     const btn = g().hot.find((r) => r.id === "btn:outline")!;
     click(btn.x + 1, btn.y);
-    expect(h.app.outlineShown).toBe(true);
+    expect(h.app.panels.outlineShown).toBe(true);
     expect(h.app.region).toBe("outline");
   });
   test("a ┃ after each tab, joined to the rules above and below the strip", async () => {
@@ -3598,8 +3603,8 @@ describe("top bar, tab strip, status line", () => {
     h.frame();
     expect(h.app.geometry!.tabs[0]!.index).toBe(0);
     const m = h.app.geometry!.hot.find((r) => r.id === "tabmore:")!;
-    h.app.handleMouse({ type: "down", x: m.x + 1, y: m.y, button: 0 });
-    h.app.handleMouse({ type: "up", x: m.x + 1, y: m.y, button: 0 });
+    h.app.mouse.handle({ type: "down", x: m.x + 1, y: m.y, button: 0 });
+    h.app.mouse.handle({ type: "up", x: m.x + 1, y: m.y, button: 0 });
     h.frame();
     expect(h.app.overlay?.kind).toBe("list");
     expect(h.frame()).toContain("Tabs");
@@ -3664,22 +3669,22 @@ describe("top bar, tab strip, status line", () => {
     expect(styleOf("status:forward").fg).toBe(dim);
     // Hovered: where it goes, over the frame's rule.
     const back = hot(h, "status:back");
-    h.app.handleMouse({ type: "move", x: back.x, y: back.y, button: 0 });
+    h.app.mouse.handle({ type: "move", x: back.x, y: back.y, button: 0 });
     const rows = h.frame().split("\n");
     expect(rows.at(-2)).toContain(" back: notes/alpha.md ");
     // Clicked: back; forward lights up.
-    for (const type of ["down", "up"]) h.app.handleMouse({ type, x: back.x, y: back.y, button: 0 });
+    for (const type of ["down", "up"]) h.app.mouse.handle({ type, x: back.x, y: back.y, button: 0 });
     expect(h.app.view!.buf.rel).toBe("notes/alpha.md");
     expect(styleOf("status:forward").fg).not.toBe(dim);
     const fwd = hot(h, "status:forward");
-    for (const type of ["down", "up"]) h.app.handleMouse({ type, x: fwd.x, y: fwd.y, button: 0 });
+    for (const type of ["down", "up"]) h.app.mouse.handle({ type, x: fwd.x, y: fwd.y, button: 0 });
     expect(h.app.view!.buf.rel).toBe("notes/beta.md");
     // The path: the history above it — forward places on top, here marked, back below; enter jumps.
     await h.app.run("note.open index.md");
     await h.app.run("history.back");
     h.frame();
     const path = hot(h, "status:path");
-    for (const type of ["down", "up"]) h.app.handleMouse({ type, x: path.x, y: path.y, button: 0 });
+    for (const type of ["down", "up"]) h.app.mouse.handle({ type, x: path.x, y: path.y, button: 0 });
     const menu = h.app.overlay as ListOverlay;
     expect(menu.title).toBe("History");
     expect(menu.items.map((i) => `${i.label}|${i.hint ?? ""}`)).toEqual([
@@ -3806,17 +3811,17 @@ describe("top bar, tab strip, status line", () => {
 
 describe("review round 1", () => {
   const click = (h: Harness, x: number, y: number, button = 0) => {
-    h.app.handleMouse({ type: "down", x, y, button });
-    h.app.handleMouse({ type: "up", x, y, button });
+    h.app.mouse.handle({ type: "down", x, y, button });
+    h.app.mouse.handle({ type: "up", x, y, button });
     h.frame();
   };
   test("a drag selection survives the re-layout its copy message causes", async () => {
     const h = await harness({ open: "samples/about-this-vault.md", width: 120, height: 30 });
     h.frame();
     const p = h.app.geometry!.panes[0]!;
-    h.app.handleMouse({ type: "down", x: p.textX + 2, y: p.y + 2, button: 0 });
-    h.app.handleMouse({ type: "drag", x: p.textX + 10, y: p.y + 8, button: 0 });
-    h.app.handleMouse({ type: "up", x: p.textX + 10, y: p.y + 8, button: 0 });
+    h.app.mouse.handle({ type: "down", x: p.textX + 2, y: p.y + 2, button: 0 });
+    h.app.mouse.handle({ type: "drag", x: p.textX + 10, y: p.y + 8, button: 0 });
+    h.app.mouse.handle({ type: "up", x: p.textX + 10, y: p.y + 8, button: 0 });
     const cur = { ...h.app.view!.cur };
     h.frame(); // the message line changes the pane's height
     expect(h.app.view!.cur).toEqual(cur);
@@ -3851,10 +3856,10 @@ describe("review round 1", () => {
     h.app.openInNewTab("notes/alpha.md");
     h.app.openInNewTab("notes/beta.md");
     h.app.activeTab = 0;
-    h.app.closeTabAt(2);
+    h.app.windows.closeTabAt(2);
     expect(h.app.activeTab).toBe(0);
     h.app.activeTab = 1;
-    h.app.closeTabAt(0);
+    h.app.windows.closeTabAt(0);
     expect(h.app.tabs[h.app.activeTab]!.views[0]!.buf.rel).toBe("notes/alpha.md");
   });
   test("the wheel scrolls the explorer and outline, and on narrow screens not the note under them", async () => {
@@ -3866,11 +3871,23 @@ describe("review round 1", () => {
     });
     h.frame();
     const sb = h.app.geometry!.sidebarPane!;
-    h.app.handleMouse({ type: "scroll", x: sb.x + 3, y: sb.y + 4, button: 0, scroll: { direction: "down", delta: 1 } });
+    h.app.mouse.handle({
+      type: "scroll",
+      x: sb.x + 3,
+      y: sb.y + 4,
+      button: 0,
+      scroll: { direction: "down", delta: 1 },
+    });
     h.frame();
     expect(h.app.sidebar.scroll).toBeGreaterThan(0);
     const op = h.app.geometry!.outlinePane!;
-    h.app.handleMouse({ type: "scroll", x: op.x + 3, y: op.y + 4, button: 0, scroll: { direction: "down", delta: 1 } });
+    h.app.mouse.handle({
+      type: "scroll",
+      x: op.x + 3,
+      y: op.y + 4,
+      button: 0,
+      scroll: { direction: "down", delta: 1 },
+    });
     h.frame();
     expect(h.app.outline.scroll).toBeGreaterThan(0);
     const n = await harness({ open: "samples/handbook/operations-handbook.md", width: 70, height: 20 });
@@ -3878,7 +3895,7 @@ describe("review round 1", () => {
     n.frame();
     const p = n.app.geometry!.sidebarPane!;
     const top = n.app.view!.top;
-    n.app.handleMouse({ type: "scroll", x: p.x + 3, y: p.y + 4, button: 0, scroll: { direction: "down", delta: 1 } });
+    n.app.mouse.handle({ type: "scroll", x: p.x + 3, y: p.y + 4, button: 0, scroll: { direction: "down", delta: 1 } });
     expect(n.app.view!.top).toBe(top);
   });
   test("wrapping off: the sideways offset is clamped when the window widens", async () => {
@@ -3905,13 +3922,13 @@ describe("review round 1", () => {
     const wide = h.app.draw.bind(h.app);
     const { TextCanvas } = await import("../src/tui/canvas.ts");
     wide(new TextCanvas(200, 30));
-    expect(v.left).toBeLessThanOrEqual(Math.max(0, h.app.currentLayout(v).width - h.app.textColumns(v)));
+    expect(v.left).toBeLessThanOrEqual(Math.max(0, h.app.currentLayout(v).width - h.app.views.textColumns(v)));
   });
   test("focus never stays on a hidden pane", async () => {
     const h = await harness({ width: 120, height: 30 });
     await h.keys("space", "e");
     expect(h.app.region).toBe("sidebar");
-    h.app.setUi("zen", true);
+    h.app.settings.setUi("zen", true);
     h.frame();
     expect(h.app.region).toBe("content");
   });
@@ -3919,12 +3936,12 @@ describe("review round 1", () => {
     const root = mkdtempSync(join(sandbox, "vault-"));
     cpSync(join(import.meta.dir, "fixtures", "vault"), root, { recursive: true, verbatimSymlinks: true });
     const a = await harness({ root, open: "notes/alpha.md" });
-    a.app.setUi("line_numbers", true);
-    a.app.saveState();
+    a.app.settings.setUi("line_numbers", true);
+    a.app.session.save();
     const b = await harness({ root, open: "notes/beta.md" }); // with a path: tabs not restored
     expect(b.app.ui.line_numbers).toBe(true);
-    b.app.setUi("theme", "nord");
-    b.app.saveState();
+    b.app.settings.setUi("theme", "nord");
+    b.app.session.save();
     const c = await harness({ root, open: "notes/beta.md", themeName: "dracula" });
     expect(c.app.ui.theme).toBe("dracula");
   });
@@ -4020,7 +4037,7 @@ describe("review round 1", () => {
     const btn = h.app.geometry!.hot.find((r) => r.id === "btn:outline")!;
     expect(btn.y).toBe(0);
     click(h, btn.x + 1, btn.y);
-    expect(h.app.outlineShown).toBe(true);
+    expect(h.app.panels.outlineShown).toBe(true);
   });
   test("which-key on a short screen drops its blank rows before its explanations", async () => {
     // At every height: blank rows inside the box only ever appear together with the explanations.
@@ -4039,8 +4056,8 @@ describe("review round 1", () => {
 
 describe("review round 2", () => {
   const click = (h: Harness, x: number, y: number) => {
-    h.app.handleMouse({ type: "down", x, y, button: 0 });
-    h.app.handleMouse({ type: "up", x, y, button: 0 });
+    h.app.mouse.handle({ type: "down", x, y, button: 0 });
+    h.app.mouse.handle({ type: "up", x, y, button: 0 });
     h.frame();
   };
   test("side panes can't squeeze the note to nothing: no crash with a split and wide panes", async () => {
@@ -4052,7 +4069,7 @@ describe("review round 2", () => {
     });
     await h.keys("ctrl+w", "v");
     h.frame(); // throws on a drawing failure
-    expect(h.app.contentWidth()).toBeGreaterThanOrEqual(24);
+    expect(h.app.panels.contentWidth()).toBeGreaterThanOrEqual(24);
   });
   test("an overlaid explorer keeps clicks on its border and margin", async () => {
     const h = await harness({ open: "samples/about-this-vault.md", width: 70, height: 30 });
@@ -4069,7 +4086,13 @@ describe("review round 2", () => {
     h.frame();
     const p = h.app.geometry!.sidebarPane!;
     for (let i = 0; i < 3; i++)
-      h.app.handleMouse({ type: "scroll", x: p.x + 3, y: p.y + 3, button: 0, scroll: { direction: "down", delta: 1 } });
+      h.app.mouse.handle({
+        type: "scroll",
+        x: p.x + 3,
+        y: p.y + 3,
+        button: 0,
+        scroll: { direction: "down", delta: 1 },
+      });
     expect(h.app.sidebar.pinned).toBe(true);
     await h.keys("space", "e");
     h.frame();
@@ -4132,7 +4155,7 @@ describe("review round 3", () => {
   test("pasted text goes into the list filter or prompt (first line, sanitized)", async () => {
     const h = await harness();
     await h.keys("ctrl+p");
-    h.app.paste("alp\u001b[31m\nsecond line");
+    h.app.input.paste("alp\u001b[31m\nsecond line");
     const o = h.app.overlay as ListOverlay;
     expect(o.input).toBe("alp");
     expect(o.filtered[0]!.item.label).toContain("alpha");
@@ -4152,7 +4175,7 @@ describe("review round 3", () => {
     const before = h.app.currentLayout(wide);
     const alpha = h.app.tabs[0]!.views[0]!;
     const alphaBefore = h.app.currentLayout(alpha);
-    h.app.applyChanges({ changes: [{ rel: "notes/beta.md", kind: "changed", isNote: true }], rescan: false });
+    h.app.watch.applyChanges({ changes: [{ rel: "notes/beta.md", kind: "changed", isNote: true }], rescan: false });
     expect(h.app.currentLayout(wide)).toBe(before); // no link to beta: the same layout object
     expect(h.app.currentLayout(alpha)).not.toBe(alphaBefore); // links to beta: re-laid out
   });
@@ -4218,21 +4241,21 @@ describe("review round 3", () => {
     const h = await harness({ root, config: (c) => (c.walk.max_file_size = 100) });
     const file = join(root, "notes", "beta.md");
     writeFileSync(file, "x".repeat(200));
-    h.app.applyChanges({ changes: [{ rel: "notes/beta.md", kind: "changed", isNote: true }], rescan: false });
+    h.app.watch.applyChanges({ changes: [{ rel: "notes/beta.md", kind: "changed", isNote: true }], rescan: false });
     expect(h.app.graph.notes.has("notes/beta.md")).toBe(false);
-    h.app.expanded.add("notes"); // its folder open, so its notes are rows
-    h.app.invalidateTree();
-    expect(h.app.treeRows().some((r) => r.path === "notes/beta.md")).toBe(false); // the tree, cached
+    h.app.explorer.expanded.add("notes"); // its folder open, so its notes are rows
+    h.app.explorer.invalidateTree();
+    expect(h.app.explorer.treeRows().some((r) => r.path === "notes/beta.md")).toBe(false); // the tree, cached
     writeFileSync(file, "# Beta small\n");
-    h.app.applyChanges({ changes: [{ rel: "notes/beta.md", kind: "changed", isNote: true }], rescan: false });
+    h.app.watch.applyChanges({ changes: [{ rel: "notes/beta.md", kind: "changed", isNote: true }], rescan: false });
     expect(h.app.graph.notes.has("notes/beta.md")).toBe(true);
-    expect(h.app.treeRows().some((r) => r.path === "notes/beta.md")).toBe(true); // refreshed by the change
+    expect(h.app.explorer.treeRows().some((r) => r.path === "notes/beta.md")).toBe(true); // refreshed by the change
   });
   test("tiny terminals: panes go over the note, and nothing fails to draw", async () => {
     for (const width of [12, 20, 26, 40]) {
       const h = await harness({ width, height: 12, config: (c) => ((c.ui.narrow_width = 0), (c.ui.outline = true)) });
       h.frame(); // throws on a drawing failure
-      expect(h.app.sidebarBeside && h.app.outlineBeside && h.app.contentWidth() < 24).toBe(false);
+      expect(h.app.panels.sidebarBeside && h.app.panels.outlineBeside && h.app.panels.contentWidth() < 24).toBe(false);
     }
   });
   test("the outline button stays reachable when an overlaid outline hides the breadcrumb", async () => {
@@ -4275,18 +4298,18 @@ describe("wrap (space u s, ui.wrap)", () => {
     const v = h.app.view!;
     expect(v.left).toBeGreaterThan(0);
     expect(v.cur.col).toBeGreaterThanOrEqual(v.left);
-    expect(v.cur.col).toBeLessThan(v.left + h.app.textColumns(v));
+    expect(v.cur.col).toBeLessThan(v.left + h.app.views.textColumns(v));
     // What's drawn is the row's end, and a click lands on the column under it.
     const f = h.frame();
     expect(f).toContain("before anyone signs a purchase order.");
     const pane = h.app.geometry!.panes[0]!;
     const y = pane.y + row - v.top;
-    h.app.handleMouse({ type: "down", x: pane.textX + 5, y, button: 0 });
-    h.app.handleMouse({ type: "up", x: pane.textX + 5, y, button: 0 });
+    h.app.mouse.handle({ type: "down", x: pane.textX + 5, y, button: 0 });
+    h.app.mouse.handle({ type: "up", x: pane.textX + 5, y, button: 0 });
     expect(h.app.view!.cur.col).toBe(v.left + 5);
     // A horizontal wheel scrolls sideways without moving the cursor.
     const before = v.left;
-    h.app.handleMouse({ type: "scroll", x: pane.textX + 5, y, button: 0, scroll: { direction: "left", delta: 1 } });
+    h.app.mouse.handle({ type: "scroll", x: pane.textX + 5, y, button: 0, scroll: { direction: "left", delta: 1 } });
     expect(v.left).toBeLessThan(before);
     // Back on: wrapped again, no sideways scroll.
     await h.keys("space", "u", "w");
@@ -4357,7 +4380,7 @@ describe("code blocks that scroll sideways ([render] code_wrap)", () => {
   /** The block holding `row`: its scroll, and how far it's scrolled. */
   const block = (h: Harness, row: number) => {
     const layout = h.app.currentLayout(h.app.view!);
-    return { s: layout.lines[row]!.scroll!, off: h.app.codeOffset(h.app.view!, layout, row) };
+    return { s: layout.lines[row]!.scroll!, off: h.app.code.offset(h.app.view!, layout, row) };
   };
   /** A scrolling row's code: its text from where its code starts. */
   const codeOf = (h: Harness, row: number) => {
@@ -4466,7 +4489,7 @@ describe("code blocks that scroll sideways ([render] code_wrap)", () => {
     const y = pane.y + one - v.top;
     const cur = { ...v.cur };
     const wheel = (direction: string, shift = false, at = y) =>
-      h.app.handleMouse({
+      h.app.mouse.handle({
         type: "scroll",
         x: pane.textX + 10,
         y: at,
@@ -4493,8 +4516,8 @@ describe("code blocks that scroll sideways ([render] code_wrap)", () => {
     expect(block(h, rowOf(h, "cardamom")).off).toBe(0);
     expect(v.left).toBe(0);
     // A click on the block, scrolled: the cursor on the character drawn under the pointer.
-    h.app.handleMouse({ type: "down", x: pane.textX + 11, y, button: 0 });
-    h.app.handleMouse({ type: "up", x: pane.textX + 11, y, button: 0 });
+    h.app.mouse.handle({ type: "down", x: pane.textX + 11, y, button: 0 });
+    h.app.mouse.handle({ type: "up", x: pane.textX + 11, y, button: 0 });
     expect(v.cur).toEqual({ row: one, col: 11 + 6 });
     expect(block(h, one).off).toBe(6);
     expect(h.canvas().rows[pane.y + one - v.top]![pane.textX + 11]).toBe([...LONG_ONE][10 + 6]);
@@ -4532,13 +4555,13 @@ describe("code blocks that scroll sideways ([render] code_wrap)", () => {
     expect(c.styles[bar.y]![bar.x + bar.w - 1]!.fg).toBe(h.app.theme.roles.scrollbar_track.fg!);
     // On the code's background.
     expect(c.styles[bar.y]![bar.x]!.bg).toBe(h.app.theme.roles.code_block.bg!);
-    h.app.handleMouse({ type: "down", x: bar.x + bar.w - 1, y: bar.y, button: 0 });
-    h.app.handleMouse({ type: "up", x: bar.x + bar.w - 1, y: bar.y, button: 0 });
+    h.app.mouse.handle({ type: "down", x: bar.x + bar.w - 1, y: bar.y, button: 0 });
+    h.app.mouse.handle({ type: "up", x: bar.x + bar.w - 1, y: bar.y, button: 0 });
     expect(block(h, one).off).toBe(s.total - s.w);
     expect(h.frame()).toContain("bergamot");
-    h.app.handleMouse({ type: "down", x: bar.x + bar.w - 1, y: bar.y, button: 0 });
-    h.app.handleMouse({ type: "drag", x: bar.x, y: bar.y, button: 0 });
-    h.app.handleMouse({ type: "up", x: bar.x, y: bar.y, button: 0 });
+    h.app.mouse.handle({ type: "down", x: bar.x + bar.w - 1, y: bar.y, button: 0 });
+    h.app.mouse.handle({ type: "drag", x: bar.x, y: bar.y, button: 0 });
+    h.app.mouse.handle({ type: "up", x: bar.x, y: bar.y, button: 0 });
     expect(block(h, one).off).toBe(0);
     expect([v.left, v.top]).toEqual([0, 0]);
     // Wide enough for every line: no block scrolls, none has a bar.
@@ -4607,7 +4630,7 @@ describe("code blocks that scroll sideways ([render] code_wrap)", () => {
     const pane = h.app.geometry!.panes[0]!;
     const three = rowOf(h, "cardamom");
     const scroll = { direction: "right", delta: 1 };
-    h.app.handleMouse({ type: "scroll", x: pane.textX + 10, y: pane.y + three, button: 0, scroll });
+    h.app.mouse.handle({ type: "scroll", x: pane.textX + 10, y: pane.y + three, button: 0, scroll });
     expect(block(h, three).off).toBe(6);
     h.app.open("notes/alpha.md");
     await h.keys("ctrl+o");
@@ -4668,7 +4691,7 @@ describe("code blocks that scroll sideways ([render] code_wrap)", () => {
     expect(h.frame()).not.toContain("too wide to draw");
     h.app.moveCursor(v, { row, col: 0 });
     await h.keys("$");
-    expect(h.app.codeOffset(v, layout, row)).toBeGreaterThan(0);
+    expect(h.app.code.offset(v, layout, row)).toBeGreaterThan(0);
     expect(h.frame()).toContain("node number 8");
     // Wrapping instead (the setting): its code, saying why, as before.
     await h.app.run("ui.code_wrap");
@@ -4678,8 +4701,8 @@ describe("code blocks that scroll sideways ([render] code_wrap)", () => {
 
 describe("mouse", () => {
   const click = (h: Harness, x: number, y: number) => {
-    h.app.handleMouse({ type: "down", x, y, button: 0 });
-    h.app.handleMouse({ type: "up", x, y, button: 0 });
+    h.app.mouse.handle({ type: "down", x, y, button: 0 });
+    h.app.mouse.handle({ type: "up", x, y, button: 0 });
     h.frame();
   };
   test("double-click selects a word, triple-click the row; both copy", async () => {
@@ -4704,9 +4727,9 @@ describe("mouse", () => {
     expect(c.styles[bar.y + bar.h - 1]![bar.x]!.fg).toBe(h.app.theme.roles.scrollbar_track.fg!);
     click(h, bar.x, bar.y + bar.h - 1);
     expect(h.app.view!.top).toBeGreaterThan(100);
-    h.app.handleMouse({ type: "down", x: bar.x, y: bar.y + bar.h - 1, button: 0 });
-    h.app.handleMouse({ type: "drag", x: bar.x, y: bar.y, button: 0 });
-    h.app.handleMouse({ type: "up", x: bar.x, y: bar.y, button: 0 });
+    h.app.mouse.handle({ type: "down", x: bar.x, y: bar.y + bar.h - 1, button: 0 });
+    h.app.mouse.handle({ type: "drag", x: bar.x, y: bar.y, button: 0 });
+    h.app.mouse.handle({ type: "up", x: bar.x, y: bar.y, button: 0 });
     expect(h.app.view!.top).toBe(0);
   });
   test("side panes get a scrollbar when their rows overflow; clicking it pins the scroll", async () => {
@@ -4747,12 +4770,12 @@ describe("mouse", () => {
     const rows = c.rows.slice(list.y, list.y + list.h).map((r) => r.slice(list.x, list.x + list.w).join(""));
     expect(rows.some((r) => r.includes("…"))).toBe(false);
     // Dragging to the end shows the ends of the longest rows; the wheel comes back.
-    h.app.handleMouse({ type: "down", x: bar.x + bar.w - 1, y: bar.y, button: 0 });
-    h.app.handleMouse({ type: "up", x: bar.x + bar.w - 1, y: bar.y, button: 0 });
+    h.app.mouse.handle({ type: "down", x: bar.x + bar.w - 1, y: bar.y, button: 0 });
+    h.app.mouse.handle({ type: "up", x: bar.x + bar.w - 1, y: bar.y, button: 0 });
     h.frame();
     expect(h.app.outline.left).toBe(bar.total - bar.w);
     for (let k = 0; k < 100; k++)
-      h.app.handleMouse({
+      h.app.mouse.handle({
         type: "scroll",
         x: list.x + 2,
         y: list.y + 1,
@@ -4761,7 +4784,7 @@ describe("mouse", () => {
       });
     h.frame();
     expect(h.app.outline.left).toBe(0);
-    h.app.handleMouse({
+    h.app.mouse.handle({
       type: "scroll",
       x: list.x + 2,
       y: list.y + 1,
@@ -4794,9 +4817,9 @@ describe("mouse", () => {
     expect(c.styles[bar.y]![bar.x + bar.w - 1]!.fg).toBe(h.app.theme.roles.scrollbar_track.fg!);
     click(h, bar.x + bar.w - 1, bar.y);
     expect(v.left).toBe(bar.total - bar.w);
-    h.app.handleMouse({ type: "down", x: bar.x + bar.w - 1, y: bar.y, button: 0 });
-    h.app.handleMouse({ type: "drag", x: bar.x, y: bar.y, button: 0 });
-    h.app.handleMouse({ type: "up", x: bar.x, y: bar.y, button: 0 });
+    h.app.mouse.handle({ type: "down", x: bar.x + bar.w - 1, y: bar.y, button: 0 });
+    h.app.mouse.handle({ type: "drag", x: bar.x, y: bar.y, button: 0 });
+    h.app.mouse.handle({ type: "up", x: bar.x, y: bar.y, button: 0 });
     expect(v.left).toBe(0);
     // A note that fits keeps the row (the text doesn't jump) but draws no bar.
     await h.keys("space", "u", "w", "space", "u", "w");
@@ -4837,33 +4860,34 @@ describe("mouse", () => {
     h.frame();
     const seps = h.app.geometry!.separators;
     const side = seps.find((s) => s.kind === "sidebar")!;
-    h.app.handleMouse({ type: "down", x: side.x, y: side.y + 3, button: 0 });
-    h.app.handleMouse({ type: "drag", x: side.x + 8, y: side.y + 3, button: 0 });
-    h.app.handleMouse({ type: "up", x: side.x + 8, y: side.y + 3, button: 0 });
-    expect(h.app.sideW).toBe(side.x + 8 - h.app.leftRailWidth);
+    h.app.mouse.handle({ type: "down", x: side.x, y: side.y + 3, button: 0 });
+    h.app.mouse.handle({ type: "drag", x: side.x + 8, y: side.y + 3, button: 0 });
+    h.app.mouse.handle({ type: "up", x: side.x + 8, y: side.y + 3, button: 0 });
+    expect(h.app.panels.sideW).toBe(side.x + 8 - h.app.panels.leftRailWidth);
     const out = seps.find((s) => s.kind === "outline")!;
-    h.app.handleMouse({ type: "down", x: out.x, y: out.y + 3, button: 0 });
-    h.app.handleMouse({ type: "drag", x: out.x - 6, y: out.y + 3, button: 0 });
-    h.app.handleMouse({ type: "up", x: out.x - 6, y: out.y + 3, button: 0 });
-    expect(h.app.outW).toBe(170 - h.app.rightRailWidth - (out.x - 6) - 1);
+    h.app.mouse.handle({ type: "down", x: out.x, y: out.y + 3, button: 0 });
+    h.app.mouse.handle({ type: "drag", x: out.x - 6, y: out.y + 3, button: 0 });
+    h.app.mouse.handle({ type: "up", x: out.x - 6, y: out.y + 3, button: 0 });
+    expect(h.app.panels.outW).toBe(170 - h.app.panels.rightRailWidth - (out.x - 6) - 1);
     h.frame();
     const split = h.app.geometry!.separators.find((s) => s.kind === "split-side")!;
-    h.app.handleMouse({ type: "down", x: split.x, y: split.y + 3, button: 0 });
-    h.app.handleMouse({ type: "drag", x: split.area!.x + Math.round(split.area!.w * 0.3), y: split.y + 3, button: 0 });
-    h.app.handleMouse({ type: "up", x: split.x, y: split.y + 3, button: 0 });
+    h.app.mouse.handle({ type: "down", x: split.x, y: split.y + 3, button: 0 });
+    h.app.mouse.handle({ type: "drag", x: split.area!.x + Math.round(split.area!.w * 0.3), y: split.y + 3, button: 0 });
+    h.app.mouse.handle({ type: "up", x: split.x, y: split.y + 3, button: 0 });
     expect(h.app.tab!.ratio).toBeCloseTo(0.3, 1);
   });
   test("explorer: click a folder to fold it; a click selects a note, a double-click or enter opens it", async () => {
     const h = await harness({ open: "notes/alpha.md" });
     h.frame();
     const sb = h.app.geometry!.sidebar!;
-    const rowOf = (path: string) => h.app.treeRows().findIndex((r) => r.path === path) - h.app.sidebar.scroll + sb.y;
+    const rowOf = (path: string) =>
+      h.app.explorer.treeRows().findIndex((r) => r.path === path) - h.app.sidebar.scroll + sb.y;
     click(h, sb.x + 3, rowOf("notes"));
-    expect(h.app.treeRows().some((r) => r.path === "notes/beta.md")).toBe(false);
+    expect(h.app.explorer.treeRows().some((r) => r.path === "notes/beta.md")).toBe(false);
     click(h, sb.x + 3, rowOf("notes"));
-    expect(h.app.treeRows().some((r) => r.path === "notes/beta.md")).toBe(true);
+    expect(h.app.explorer.treeRows().some((r) => r.path === "notes/beta.md")).toBe(true);
     const y = rowOf("notes/beta.md");
-    const selected = () => h.app.treeRows()[h.app.sidebar.selected]?.path;
+    const selected = () => h.app.explorer.treeRows()[h.app.sidebar.selected]?.path;
     click(h, sb.x + 6, y); // one click: selected, not opened
     expect(h.app.tabs).toHaveLength(1);
     expect(selected()).toBe("notes/beta.md");
@@ -4888,13 +4912,13 @@ describe("mouse", () => {
     });
     h.frame();
     const o = h.app.geometry!.outline!;
-    const before = h.app.outlineRows().length;
-    const first = h.app.outlineRows()[0]!;
+    const before = h.app.outlineView.rows().length;
+    const first = h.app.outlineView.rows()[0]!;
     click(h, o.x + 1 + (first.level - 1) * 2, o.y);
-    expect(h.app.outlineRows().length).toBeLessThan(before);
+    expect(h.app.outlineView.rows().length).toBeLessThan(before);
     click(h, o.x + 1 + (first.level - 1) * 2, o.y);
     click(h, o.x + 10, o.y + 2);
-    expect(h.app.view!.cur.row).toBe(h.app.outlineRows()[2]!.line);
+    expect(h.app.view!.cur.row).toBe(h.app.outlineView.rows()[2]!.line);
   });
   test("which-key entries are clickable", async () => {
     const h = await harness({ width: 160 });
@@ -4942,7 +4966,7 @@ describe("mouse", () => {
     const o = h.app.overlay as ListOverlay;
     const r = h.app.geometry!.overlay!;
     const wheel = (direction: string) => {
-      h.app.handleMouse({ type: "scroll", x: r.x + 5, y: r.listY + 3, button: 0, scroll: { direction, delta: 1 } });
+      h.app.mouse.handle({ type: "scroll", x: r.x + 5, y: r.listY + 3, button: 0, scroll: { direction, delta: 1 } });
       h.frame();
     };
     expect(o.selected).toBe(2);
@@ -4989,18 +5013,18 @@ describe("tabs (ctrl+t, space t)", () => {
 describe("explorer and outline panes", () => {
   test("ctrl+e cycles open, focus, close; enter and l open tabs (or switch); o here; s the split; q closes", async () => {
     const h = await harness({ config: (c) => (c.ui.sidebar = false) });
-    expect(h.app.sidebarShown).toBe(false);
+    expect(h.app.panels.sidebarShown).toBe(false);
     await h.keys("space", "e");
-    expect(h.app.sidebarShown).toBe(true);
+    expect(h.app.panels.sidebarShown).toBe(true);
     expect(h.app.region).toBe("sidebar");
     await h.keys("escape");
     expect(h.app.region).toBe("content");
     await h.keys("space", "e");
     expect(h.app.region).toBe("sidebar");
     await h.keys("space", "e");
-    expect(h.app.sidebarShown).toBe(false);
+    expect(h.app.panels.sidebarShown).toBe(false);
     await h.keys("space", "e");
-    h.app.sidebar.selected = h.app.treeRows().findIndex((r) => r.path === "notes");
+    h.app.sidebar.selected = h.app.explorer.treeRows().findIndex((r) => r.path === "notes");
     await h.keys("l", "j", "enter");
     expect(h.app.tabs).toHaveLength(2);
     await h.keys("space", "e", "j", "l"); // l opens a tab too
@@ -5015,42 +5039,42 @@ describe("explorer and outline panes", () => {
     await h.keys("space", "e", "s");
     expect(h.app.tab!.views).toHaveLength(2);
     await h.keys("space", "e", "q");
-    expect(h.app.sidebarShown).toBe(false);
+    expect(h.app.panels.sidebarShown).toBe(false);
   });
   test("reveal: space shift+e", async () => {
     const h = await harness({ open: "notes/beta.md", config: (c) => (c.ui.sidebar = false) });
     await h.keys("space", "shift+e");
-    expect(h.app.treeRows()[h.app.sidebar.selected]!.path).toBe("notes/beta.md");
+    expect(h.app.explorer.treeRows()[h.app.sidebar.selected]!.path).toBe("notes/beta.md");
   });
   test("outline: ctrl+o opens and focuses, focuses, closes; it follows the cursor while unfocused; enter jumps; h folds", async () => {
     const h = await harness({ open: "samples/handbook/operations-handbook.md", width: 160 });
     await h.keys("space", "o");
-    expect(h.app.outlineShown).toBe(true);
+    expect(h.app.panels.outlineShown).toBe(true);
     expect(h.app.region).toBe("outline"); // opening focuses it
     expect(h.app.geometry!.outline).not.toBeNull();
     await h.keys("escape"); // back to the note; the outline stays open
     expect(h.app.region).toBe("content");
-    expect(h.app.outlineShown).toBe(true);
+    expect(h.app.panels.outlineShown).toBe(true);
     await h.keys("space", "o"); // open, focus elsewhere: focus it
     expect(h.app.region).toBe("outline");
     await h.keys("space", "o"); // focused: close
-    expect(h.app.outlineShown).toBe(false);
+    expect(h.app.panels.outlineShown).toBe(false);
     expect(h.app.region).toBe("content");
     await h.keys("space", "o", "escape");
     await h.keys("]", "]", "]", "]");
-    expect(h.app.outline.selected).toBe(h.app.currentSection());
+    expect(h.app.outline.selected).toBe(h.app.outlineView.currentSection());
     await h.keys("ctrl+w", "l");
     expect(h.app.region).toBe("outline");
     await h.keys("g", "g", "enter");
     expect(h.app.region).toBe("content");
-    expect(h.app.view!.cur.row).toBe(h.app.outlineRows()[0]!.line);
-    const before = h.app.outlineRows().length;
+    expect(h.app.view!.cur.row).toBe(h.app.outlineView.rows()[0]!.line);
+    const before = h.app.outlineView.rows().length;
     await h.keys("ctrl+w", "l", "g", "g", "h");
-    expect(h.app.outlineRows().length).toBeLessThan(before);
+    expect(h.app.outlineView.rows().length).toBeLessThan(before);
     await h.keys("l");
-    expect(h.app.outlineRows().length).toBe(before);
+    expect(h.app.outlineView.rows().length).toBe(before);
     await h.keys("q");
-    expect(h.app.outlineShown).toBe(false);
+    expect(h.app.panels.outlineShown).toBe(false);
   });
   test("narrow: panes overlay the content and close after a pick", async () => {
     const h = await harness({ width: 60, height: 20 });
@@ -5153,7 +5177,7 @@ describe("UI settings (space u)", () => {
       open: null,
       config: (c) => ((c.ui.restore_session = true), (c.ui.line_numbers = true)),
     });
-    expect(changed.app.uiOverrides.line_numbers).toBeUndefined();
+    expect(changed.app.settings.uiOverrides.line_numbers).toBeUndefined();
     const flipped = await harness({
       root,
       open: null,
@@ -5230,7 +5254,7 @@ describe("configuration: everything from config, and live reload", () => {
     writeFileSync(file, '[colors]\ntree_guide = "#445566"\n');
     const h = await harness({ configFile: file, config: (c) => (c.colors = { tree_guide: "#445566" }) });
     expect(h.app.theme.roles.tree_guide.fg).toBe("#445566");
-    expect(h.app.themeNamed("nord").theme.roles.tree_guide.fg).toBe("#445566"); // what the picker previews
+    expect(h.app.settings.themeNamed("nord").theme.roles.tree_guide.fg).toBe("#445566"); // what the picker previews
     writeFileSync(file, '[colors]\ntree_guide = "#778899"\n');
     await h.keys("space", "v", "c");
     expect(h.app.theme.roles.tree_guide.fg).toBe("#778899");
@@ -5271,7 +5295,7 @@ describe("scratch (space s)", () => {
 
   test("add the cursor row reference, add a selection: each shown floating, typing its note; esc then q back, a note left empty dropped; open, copy (#43, D229)", async () => {
     const h = await harness({ open: "notes/alpha.md" });
-    const path = h.app.scratch().path;
+    const path = h.app.scratch.location().path;
     await h.keys("space", "s", "a");
     const at = () => [h.app.floating?.kind, h.app.displayName(h.app.view!.buf), lineAt(h), h.app.view!.insert];
     expect(at()).toEqual(["scratch", "scratch", 3, true]);
@@ -5302,7 +5326,7 @@ describe("scratch (space s)", () => {
 
   test("the floating scratch: empty, it opens too, in the middle, three quarters of the screen; typed in, saved as it closes (#43)", async () => {
     const h = await harness({ open: "notes/alpha.md", width: 120, height: 40 });
-    const path = h.app.scratch().path;
+    const path = h.app.scratch.location().path;
     expect(existsSync(path)).toBe(false);
     await h.keys("space", "s", "s");
     expect(h.app.floating?.kind).toBe("scratch");
@@ -5328,7 +5352,7 @@ describe("scratch (space s)", () => {
       height: 40,
       config: (c) => (c.editor.edit_in = "live"),
     });
-    const path = h.app.scratch().path;
+    const path = h.app.scratch.location().path;
     mkdirSync(dirname(path), { recursive: true });
     writeFileSync(path, "# Ideas\n\nfirst idea\n\n- a list item\n");
     await h.keys("space", "s", "s");
@@ -5366,7 +5390,7 @@ describe("scratch (space s)", () => {
     await h.keys("d", "o", "escape");
     expect([h.app.floating?.kind, status()]).toEqual(["scratch", expect.stringMatching(/^ LENS /)]);
     await h.keys("q");
-    expect([h.app.floating, readFileSync(h.app.scratch().path, "utf8")]).toEqual([
+    expect([h.app.floating, readFileSync(h.app.scratch.location().path, "utf8")]).toEqual([
       null,
       "**At:** `notes/alpha.md:1`\n\n**Note:** do\n",
     ]);
@@ -5380,7 +5404,7 @@ describe("scratch (space s)", () => {
       config: (c) => ((c.capture.open_in = "right"), (c.ui.restore_session = true)),
     });
     // A long scratch: what's added goes below the window's last row.
-    const path = h.app.scratch().path;
+    const path = h.app.scratch.location().path;
     mkdirSync(dirname(path), { recursive: true });
     writeFileSync(path, "x\n\n".repeat(40));
     // A split stacked once and closed since: the scratch goes on the right all the same.
@@ -5422,7 +5446,7 @@ describe("scratch (space s)", () => {
     expect([h.app.floating, t.views.length, h.app.displayName(h.app.view!.buf)]).toEqual([null, 2, "scratch"]);
     // In a split already: its other window takes the scratch.
     await h.keys("q");
-    h.app.splitWith("side");
+    h.app.windows.split("side");
     t.active = 0;
     await h.keys("space", "s", "r");
     expect([t.views.length, t.active, t.views[0]!.buf.key, h.app.displayName(t.views[1]!.buf)]).toEqual([
@@ -5445,11 +5469,11 @@ describe("scratch (space s)", () => {
   });
   test("the scratch open never moves the explorer's view (VV-D5): it lives in slipbox's own state folder", async () => {
     const h = await harness();
-    h.app.capture("x");
+    h.app.scratch.capture("x");
     await h.app.run("scratch.open");
     expect(h.app.view!.buf.abs.startsWith(`${h.root}/`)).toBe(false); // the default place: outside the root
-    expect(h.app.explorerTop).toBe(h.root);
-    expect(h.app.explorerRows().some((r) => r.outside)).toBe(false);
+    expect(h.app.explorer.top).toBe(h.root);
+    expect(h.app.explorer.rows().some((r) => r.outside)).toBe(false);
   });
 });
 
@@ -5460,7 +5484,7 @@ describe("external changes (5.3, 5.4) and anchoring (3.5)", () => {
     const before = rowText(h);
     const file = join(h.root, "samples", "handbook", "operations-handbook.md");
     writeFileSync(file, `# Inserted by an agent\n\n${"A new paragraph.\n\n".repeat(20)}${readFileSync(file, "utf8")}`);
-    h.app.applyChanges({
+    h.app.watch.applyChanges({
       changes: [{ rel: "samples/handbook/operations-handbook.md", kind: "changed", isNote: true }],
       rescan: false,
     });
@@ -5477,11 +5501,11 @@ describe("external changes (5.3, 5.4) and anchoring (3.5)", () => {
         .find((s) => s.text.includes("missing-note"))!.role;
     expect(role()).toBe("link_unresolved");
     writeFileSync(join(h.root, "missing-note.md"), "# now exists\n");
-    h.app.applyChanges({ changes: [{ rel: "missing-note.md", kind: "created", isNote: true }], rescan: false });
+    h.app.watch.applyChanges({ changes: [{ rel: "missing-note.md", kind: "created", isNote: true }], rescan: false });
     expect(role()).toBe("link");
     await h.app.run("note.open missing-note.md");
     rmSync(join(h.root, "missing-note.md"));
-    h.app.applyChanges({ changes: [{ rel: "missing-note.md", kind: "deleted", isNote: true }], rescan: false });
+    h.app.watch.applyChanges({ changes: [{ rel: "missing-note.md", kind: "deleted", isNote: true }], rescan: false });
     expect(h.frame()).toContain("deleted on disk");
   });
   test("the real watcher: write, temp-and-rename, create, delete", async () => {
@@ -5629,7 +5653,7 @@ describe("OpenTUI end to end", () => {
       watch: false,
     });
     renderer.root.add(new AppRenderable(renderer, (c) => app.draw(c)));
-    renderer.keyInput.on("keypress", (k) => void app.handleKey(keyName(k)));
+    renderer.keyInput.on("keypress", (k) => void app.input.handleKey(keyName(k)));
     await renderOnce();
     expect(captureCharFrame()).toContain("Home");
     const wait = () => new Promise((r) => setTimeout(r, 20));
@@ -5681,7 +5705,7 @@ describe("review cycle 1 (TUI)", () => {
     const { h, v, file } = await source("one\n", (c) => (c.editor.autosave_ms = 20));
     await h.keys("shift+a", "!", "escape");
     await touch(file, "one?\n");
-    h.app.reloadBuffer(v.buf);
+    h.app.watch.reloadBuffer(v.buf);
     await h.keys("m");
     expect(v.buf.source).toContain("<<<<<<< yours");
     await Bun.sleep(80);
@@ -5693,7 +5717,7 @@ describe("review cycle 1 (TUI)", () => {
     const { h, v, file } = await source("mine\n");
     await h.keys("shift+a", "space", "h", "e");
     await touch(file, "theirs\n");
-    h.app.reloadBuffer(v.buf);
+    h.app.watch.reloadBuffer(v.buf);
     expect(h.app.overlay).toBeNull();
     await h.keys("l", "l", "o");
     expect(v.buf.source).toBe("mine hello\n");
@@ -5728,7 +5752,7 @@ describe("review cycle 1 (TUI)", () => {
     expect(v.buf.source.split("\n")[1]).toBe("cdef"); // two characters again, not an older change
     at(2, 0);
     await h.keys("shift+a");
-    await h.app.paste("XY");
+    await h.app.input.paste("XY");
     await h.keys("escape", "j", ".");
     expect(v.buf.source.split("\n").slice(2, 4)).toEqual(["xXY", "yXY"]);
   });
@@ -5864,9 +5888,9 @@ describe("review cycle 1 (TUI)", () => {
     const h = await harness({ open: "index.md", width: 160, height: 40 });
     await h.keys("ctrl+w", "v", "ctrl+w", "h");
     const reading = h.app.tab!.views[0]!.buf.rel;
-    h.app.showSidebar(true);
+    h.app.panels.showSidebar(true);
     h.app.region = "sidebar";
-    h.app.sidebar.selected = h.app.explorerRows().findIndex((r) => r.path === "crlf.md");
+    h.app.sidebar.selected = h.app.explorer.rows().findIndex((r) => r.path === "crlf.md");
     await h.keys("s");
     expect(h.app.tab!.views[0]!.buf.rel).toBe(reading);
     expect(h.app.tab!.views[1]!.buf.rel).toBe("crlf.md");
@@ -5884,12 +5908,12 @@ describe("review cycle 1 (TUI)", () => {
     for (let i = 0; i < 15; i++) await h.app.run("window.wider");
     await h.keys("escape");
     await h.app.run("outline.cycle");
-    let last = h.app.outlineWidth();
+    let last = h.app.panels.outlineWidth();
     for (let i = 0; i < 3; i++) {
       await h.app.run("window.narrower");
       h.frame();
-      expect(h.app.outlineWidth()).toBeLessThan(last);
-      last = h.app.outlineWidth();
+      expect(h.app.panels.outlineWidth()).toBeLessThan(last);
+      last = h.app.panels.outlineWidth();
     }
   });
   test("popups: the bottom-right corner is under the top-right one", async () => {
@@ -5978,7 +6002,7 @@ describe("review cycle 2 (TUI)", () => {
     };
     const before = span();
     writeFileSync(join(root, "l.md"), `${note}${"more\n\n".repeat(200)}`);
-    h.app.reloadBuffer(v.buf);
+    h.app.watch.reloadBuffer(v.buf);
     h.frame();
     expect(span()).toBeLessThanOrEqual(before + 2);
   });
@@ -6024,7 +6048,7 @@ describe("review cycle 2 (TUI editing)", () => {
     writeFileSync(join(root, "e.md"), "agent\n");
     const future = Date.now() / 1000 + 5;
     (await import("node:fs")).utimesSync(join(root, "e.md"), future, future);
-    h.app.reloadBuffer(v.buf);
+    h.app.watch.reloadBuffer(v.buf);
     expect(v.buf.source).toBe("agent\n");
     await h.keys("x", "y", "z", "escape");
     expect(v.buf.source).toContain("xyz");
@@ -6035,8 +6059,8 @@ describe("review cycle 2 (TUI editing)", () => {
 
 describe("review cycle 2 (TUI navigation)", () => {
   const click = (h: Harness, x: number, y: number) => {
-    h.app.handleMouse({ type: "down", x, y, button: 0 });
-    h.app.handleMouse({ type: "up", x, y, button: 0 });
+    h.app.mouse.handle({ type: "down", x, y, button: 0 });
+    h.app.mouse.handle({ type: "up", x, y, button: 0 });
   };
   test("wikilinks followed within their root: a name, an alias, a block, a tie picked; in source mode too (21.3)", async () => {
     const root = makeVault();
@@ -6098,8 +6122,8 @@ describe("review cycle 2 (TUI navigation)", () => {
     await h.keys("tab", "enter");
     expect(h.app.leftView).toBe("explorer");
     expect(h.app.region).toBe("sidebar");
-    expect(h.app.expanded.has("notes")).toBe(true);
-    expect(h.app.explorerRows()[h.app.sidebar.selected]?.path).toBe("notes");
+    expect(h.app.explorer.expanded.has("notes")).toBe(true);
+    expect(h.app.explorer.rows()[h.app.sidebar.selected]?.path).toBe("notes");
     expect(h.app.view?.buf.rel).toBe("folders.md"); // nothing opened in its place
   });
   test("enter follows a link in source mode and in the lens", async () => {
@@ -6176,14 +6200,14 @@ describe("review cycle 2 (TUI navigation)", () => {
   test("the explorer and outline keep their selection when an agent adds a note or a heading", async () => {
     const root = makeVault();
     const h = await harness({ root, open: "index.md", width: 160, height: 40 });
-    h.app.showSidebar(true);
+    h.app.panels.showSidebar(true);
     h.app.region = "sidebar";
-    h.app.expanded.add("notes");
-    h.app.invalidateTree();
-    h.app.sidebar.selected = h.app.explorerRows().findIndex((r) => r.path === "notes/beta.md");
+    h.app.explorer.expanded.add("notes");
+    h.app.explorer.invalidateTree();
+    h.app.sidebar.selected = h.app.explorer.rows().findIndex((r) => r.path === "notes/beta.md");
     writeFileSync(join(root, "notes", "aaa.md"), "# new\n");
-    h.app.applyChanges({ changes: [{ rel: "notes/aaa.md", kind: "created", isNote: true }], rescan: false });
-    expect(h.app.explorerRows()[h.app.sidebar.selected]!.path).toBe("notes/beta.md");
+    h.app.watch.applyChanges({ changes: [{ rel: "notes/aaa.md", kind: "created", isNote: true }], rescan: false });
+    expect(h.app.explorer.rows()[h.app.sidebar.selected]!.path).toBe("notes/beta.md");
   });
   test("repeated headings: an entry prepended above doesn't move the reader to another entry", async () => {
     const root = makeVault();
@@ -6205,7 +6229,7 @@ describe("review cycle 2 (TUI navigation)", () => {
     writeFileSync(join(root, "log.md"), `# Log\n\n${entry("newest")}\n${entry("newer")}\n${entry("older")}`);
     const future = Date.now() / 1000 + 5;
     (await import("node:fs")).utimesSync(join(root, "log.md"), future, future);
-    h.app.reloadBuffer(v.buf);
+    h.app.watch.reloadBuffer(v.buf);
     h.frame();
     expect(rowText(h)).toContain("newer line 20");
   });
@@ -6218,7 +6242,7 @@ describe("review cycle 2 (TUI navigation)", () => {
     click(h, pane.x + pane.w - 2, pane.y + 1);
     expect(h.app.pending.length).toBe(0);
     await h.keys("ctrl+t", "c");
-    h.app.showSidebar(true);
+    h.app.panels.showSidebar(true);
     h.app.region = "sidebar";
     h.frame();
     const tab = h.app.geometry!.tabs[0]!;
@@ -6359,10 +6383,10 @@ describe("review cycle 3 (config in the TUI)", () => {
     const cfg = join(root, "user.toml");
     writeFileSync(cfg, 'theme = "nord"\n[keys]\n"leader z" = "ui.zen"\n');
     const h = await harness({ root, configFile: cfg });
-    h.app.reloadConfig();
+    h.app.settings.reload();
     await h.app.run("theme.set dracula");
     writeFileSync(cfg, 'theme = "nord"\n[keys\n');
-    h.app.reloadConfig();
+    h.app.settings.reload();
     expect(h.app.ui.theme).toBe("dracula");
     await h.keys("space", "z");
     expect(h.app.ui.zen).toBe(true);
@@ -6376,7 +6400,7 @@ describe("review cycle 3 (config in the TUI)", () => {
     const h = await harness({ root, configFile: cfg });
     await h.keys("space", "u", "t", "j");
     writeFileSync(cfg, 'theme = "nord"\n');
-    h.app.reloadConfig();
+    h.app.settings.reload();
     await h.keys("escape");
     expect(h.app.theme.name).toBe("nord");
   });
@@ -6419,10 +6443,10 @@ describe("review cycle 4 (TUI)", () => {
     const v = h.app.view!;
     await h.keys("space", "n", "v", "shift+a", "!", "escape");
     rmSync(file);
-    h.app.reloadBuffer(v.buf, true);
+    h.app.watch.reloadBuffer(v.buf, true);
     expect(v.buf.deleted).toBe(true);
     await touch(file, "# agent's\n");
-    h.app.reloadBuffer(v.buf);
+    h.app.watch.reloadBuffer(v.buf);
     await h.keys("k"); // keep mine
     await h.keys(":", "w", "enter");
     expect(readFileSync(file, "utf8")).toBe("# agent's\n");
@@ -6485,12 +6509,12 @@ describe("review cycle 4 (TUI)", () => {
     const v = h.app.view!;
     await h.keys("space", "n", "v", "shift+a", "!", "escape");
     await touch(file, "theirs\n");
-    h.app.reloadBuffer(v.buf);
+    h.app.watch.reloadBuffer(v.buf);
     h.frame();
     const load = h.app.geometry!.overlay!;
     // The first entry of the prompt, (l) load theirs.
-    h.app.handleMouse({ type: "down", x: load.x + 3, y: load.listY, button: 0 });
-    h.app.handleMouse({ type: "up", x: load.x + 3, y: load.listY, button: 0 });
+    h.app.mouse.handle({ type: "down", x: load.x + 3, y: load.listY, button: 0 });
+    h.app.mouse.handle({ type: "up", x: load.x + 3, y: load.listY, button: 0 });
     expect(v.buf.dirty).toBe(false);
     const { readStale } = await import("../src/core/stale.ts");
     expect(readStale(h.app.loc).map((x) => x.path)).not.toContain("c.md");
@@ -6730,7 +6754,7 @@ describe("review cycle 5 (TUI, behaviour no test had pinned)", () => {
     await h.keys("escape", "escape");
     await h.keys(":", ..."glyphs", "space", ..."ascii", "enter");
     expect(h.app.glyphs.mode).toBe("ascii");
-    const scratch = h.app.scratch().path;
+    const scratch = h.app.scratch.location().path;
     mkdirSync(dirname(scratch), { recursive: true });
     writeFileSync(scratch, "keep me\n");
     await h.app.run("scratch.clear");
@@ -6764,8 +6788,8 @@ describe("review cycle 5 (TUI journeys: the mouse)", () => {
     const x = pane.textX + l.col + 1;
     const y = pane.y + l.line - v.top;
     for (let k = 0; k < 2; k++) {
-      h.app.handleMouse({ type: "down", x, y, button: 0 });
-      h.app.handleMouse({ type: "up", x, y, button: 0 });
+      h.app.mouse.handle({ type: "down", x, y, button: 0 });
+      h.app.mouse.handle({ type: "up", x, y, button: 0 });
       await Bun.sleep(5);
     }
     expect(h.app.view!.buf.rel).toBe("notes/alpha.md");
@@ -6784,7 +6808,7 @@ describe("review cycle 5 (TUI journeys: narrow screens)", () => {
     for (const r of wk) expect(r.x + r.w).toBeLessThanOrEqual(right(r.y));
     const last = wk.reduce((a, b) => (a.x + a.w > b.x + b.w ? a : b));
     const border = right(last.y);
-    h.app.handleMouse({ type: "move", x: last.x, y: last.y, button: 0 });
+    h.app.mouse.handle({ type: "move", x: last.x, y: last.y, button: 0 });
     h.frame();
     expect(h.canvas().rows[last.y]![border]).toBe("│");
   });
@@ -6798,9 +6822,9 @@ describe("review cycle 5 (TUI journeys: a drag in source)", () => {
     await h.keys("space", "n", "v");
     const pane = h.app.geometry!.panes[0]!;
     const y = pane.y + h.app.view!.cur.row - h.app.view!.top;
-    h.app.handleMouse({ type: "down", x: pane.textX + 6, y, button: 0 });
-    h.app.handleMouse({ type: "drag", x: pane.textX + 9, y, button: 0 }); // "beta", its last letter included
-    h.app.handleMouse({ type: "up", x: pane.textX + 9, y, button: 0 });
+    h.app.mouse.handle({ type: "down", x: pane.textX + 6, y, button: 0 });
+    h.app.mouse.handle({ type: "drag", x: pane.textX + 9, y, button: 0 }); // "beta", its last letter included
+    h.app.mouse.handle({ type: "up", x: pane.textX + 9, y, button: 0 });
     expect(h.app.view!.visual).toBe("char");
     await h.keys("x");
     expect(h.app.view!.buf.source).toBe("alpha  gamma\n");
@@ -6820,7 +6844,7 @@ describe("review cycle 5 (TUI journeys: the status line when narrow)", () => {
     writeFileSync(file, "theirs\n");
     const t = Date.now() / 1000 + 5;
     (await import("node:fs")).utimesSync(file, t, t);
-    h.app.reloadBuffer(v.buf);
+    h.app.watch.reloadBuffer(v.buf);
     await h.keys("k"); // keep mine
     expect(v.buf.conflictKept).toBe(true);
     const status = statusRow(h.frame());
@@ -6860,11 +6884,11 @@ describe("review cycle 5 (TUI journeys: the lens after a reload)", () => {
           writeFileSync(file, text.slice(0, i) + add + text.slice(i));
           const t = Date.now() / 1000 + 5;
           (await import("node:fs")).utimesSync(file, t, t);
-          h.app.reloadBuffer(v.buf);
+          h.app.watch.reloadBuffer(v.buf);
           await h.keys(keep); // load theirs, or merge
           const status = statusRow(h.frame());
           const pct = Number(/(\d+)%/.exec(status)?.[1] ?? 0);
-          const shown = h.app.screenRows(v, h.app.currentLayout(v)).length;
+          const shown = h.app.lens.screenRows(v, h.app.currentLayout(v)).length;
           if (pct > 100 || shown < v.height)
             bad.push(`${paras}/${at}/${keep}: ${status.trim()} (${shown} rows of ${v.height})`);
         }
@@ -6880,7 +6904,7 @@ describe("review cycle 5 (TUI journeys: a resize round trip)", () => {
     const h = await harness({ open: "samples/logs/observing-log-2026.md", width: 130, height: 36 });
     const v = h.app.view!;
     for (const start of [0, 7, 19, 33, 51]) {
-      h.app.scrollBy(v, start - v.top, false);
+      h.app.views.scrollBy(v, start - v.top, false);
       drawAt(h, 130, 36);
       const top = v.top;
       drawAt(h, 130, 20);
@@ -6917,12 +6941,12 @@ describe("files beyond notes (16.3–16.5)", () => {
   test("the explorer lists data files by default; `a` shows every text file; binary never", async () => {
     const h = await harness({ root: await setup(), width: 120 });
     await h.keys("space", "e"); // focus the explorer
-    const paths = () => h.app.explorerRows().map((r) => r.path);
-    h.app.expanded.add("cfg");
-    h.app.invalidateTree();
+    const paths = () => h.app.explorer.rows().map((r) => r.path);
+    h.app.explorer.expanded.add("cfg");
+    h.app.explorer.invalidateTree();
     expect(paths()).toContain("cfg/app.toml");
     expect(paths()).not.toContain("run.py");
-    const row = h.app.explorerRows().find((r) => r.path === "cfg/app.toml")!;
+    const row = h.app.explorer.rows().find((r) => r.path === "cfg/app.toml")!;
     expect(row.group).toBe("data");
     expect(h.frame()).toContain("app.toml"); // shown with its extension
     await h.keys("a");
@@ -6977,8 +7001,8 @@ describe("files beyond notes (16.3–16.5)", () => {
         here.push(chunks ? noteChunks(text).filter((c) => !chunks.chunks.has(c.text)).length : "whole");
       return entry(rel, chunks);
     };
-    h.app.indexInBackground();
-    await h.app.whenIndexed(); // however long the threads take
+    h.app.watch.indexInBackground();
+    await h.app.watch.whenIndexed(); // however long the threads take
     expect(g.backlinks("notes/alpha.md").filter((b) => b.from === big)).toHaveLength(count);
     expect(here).toEqual([0]); // once, every chunk of it parsed on another thread
   });
@@ -7185,7 +7209,7 @@ describe("code as a notebook (24.x, 24.13)", () => {
     return h.app.geometry!.hot.find((x) => x.id === id);
   };
   const click = (h: Harness, at: { x: number; y: number }) => {
-    for (const type of ["down", "up"]) h.app.handleMouse({ type, x: at.x, y: at.y, button: 0 });
+    for (const type of ["down", "up"]) h.app.mouse.handle({ type, x: at.x, y: at.y, button: 0 });
   };
   const line = (h: Harness) => srcAt(h.app.currentLayout(h.app.view!).lines[h.app.view!.cur.row]!, h.app.view!.cur.col);
 
@@ -7446,7 +7470,7 @@ describe("code as a notebook (24.x, 24.13)", () => {
     expect(h.app.messages.at(-1)!.text).toBe(
       "resolve — lines 4–15 added to the scratch; add a note, esc then q closes it",
     );
-    expect(readFileSync(h.app.scratch().path, "utf8")).toContain("sample.ts:4-15");
+    expect(readFileSync(h.app.scratch.location().path, "utf8")).toContain("sample.ts:4-15");
     // Shown in the scratch, floating, typing its note (#43, D229); esc then q, back at the cell.
     expect([
       h.app.floating?.kind,
@@ -7473,10 +7497,10 @@ describe("code as a notebook (24.x, 24.13)", () => {
     h.app.dismissToasts(); // the messages' boxes off the header
     expect(rows(h)[rowIndex(h, "function: resolve")]).toMatch(/ 4–15 ⚠ ⇢ ⧉ ✎ ◎ ▾ ──$/);
     click(h, hot(h, "cell:problems:4")!);
-    expect(h.app.problemsPanel).toMatchObject({ shown: true, tab: "file" });
-    expect(h.app.fileRows()[h.app.problemsPanel.file.selected]!.message).toBe("a warning");
+    expect(h.app.problems.panel).toMatchObject({ shown: true, tab: "file" });
+    expect(h.app.problems.fileRows()[h.app.problems.panel.file.selected]!.message).toBe("a warning");
     // ⇢: from its name.
-    h.app.closeProblems();
+    h.app.problems.close();
     click(h, hot(h, "cell:references:4")!);
     expect(line(h)).toBe(11);
     expect(v.buf.lines()[10]!.slice(placedColumn(h))).toStartWith("resolve(");
@@ -7600,7 +7624,7 @@ describe("code as a notebook (24.x, 24.13)", () => {
     const v = h.app.view!;
     expect(v.source).toBeFalsy(); // the code view
     expect(v.buf.syntax!.errors.length).toBeGreaterThan(0);
-    expect(h.app.problemsShown(v).map((p) => p.source)).toContain("syntax");
+    expect(h.app.problems.ofView(v).map((p) => p.source)).toContain("syntax");
     h.app.dismissToasts();
     // The cell's header counts them, its ⚠ button the panel's; the other cell has none.
     expect(hot(h, "cell:problems:1")).toBeDefined();
@@ -7618,7 +7642,7 @@ describe("code as a notebook (24.x, 24.13)", () => {
     // Once a server has said what it finds, its errors stand in for slipbox's.
     v.buf.serverProblems.set("fake", { version: v.buf.version, raw: [], list: [] });
     v.layoutKey = "";
-    expect(h.app.problemsShown(v)).toEqual([]);
+    expect(h.app.problems.ofView(v)).toEqual([]);
     expect(hot(h, "cell:problems:1")).toBeUndefined();
   });
 
@@ -7672,9 +7696,9 @@ describe("code as a notebook (24.x, 24.13)", () => {
     h.app.moveCursor(v, { row, col });
     expect(v.cur).toEqual({ row, col });
     // Copied, it's the file's text, never its rows, borders or guides.
-    h.app.select(v, { row: row - 1, col: 0 }, true);
+    h.app.views.select(v, { row: row - 1, col: 0 }, true);
     h.app.moveCursor(v, { row, col: 0 }, { extend: true });
-    expect(h.app.selectionText(v)).toBe(line13);
+    expect(h.app.views.selectionText(v)).toBe(line13);
     // ]]: from one definition to the next.
     v.sel = null;
     h.app.moveCursor(v, { row: 0, col: 0 });
@@ -8311,7 +8335,7 @@ describe("code as a document: comments, Python beside TypeScript (24.4, 24.9)", 
     const crumbAt = (line: number) => {
       const layout = h.app.currentLayout(v);
       h.app.moveCursor(v, { row: layout.lines.findIndex((l) => l.src === line && l.srcMap), col: 0 });
-      return h.app.breadcrumb(v).map((c) => c.text);
+      return h.app.outlineView.breadcrumb(v).map((c) => c.text);
     };
     const inView = crumbAt(8);
     expect(h.app.currentLayout(v).headings.map((x) => `${x.level} ${x.text}`)).toEqual([
@@ -8480,12 +8504,12 @@ describe("the explorer's view (VV-D5)", () => {
     return P;
   };
   const shown = (h: Harness) =>
-    h.app
-      .explorerRows()
+    h.app.explorer
+      .rows()
       .map((r) => `${"  ".repeat(r.depth)}${r.name}${r.root?.here ? " (here)" : r.kind === "root" ? " (vault)" : ""}`);
   const select = async (h: Harness, name: string) => {
     h.app.leftView = "explorer";
-    h.app.sidebar.selected = h.app.explorerRows().findIndex((r) => r.name === name);
+    h.app.sidebar.selected = h.app.explorer.rows().findIndex((r) => r.name === name);
     h.app.region = "sidebar";
   };
   /** The breadcrumb as drawn: the explorer's row under its title. */
@@ -8499,8 +8523,8 @@ describe("the explorer's view (VV-D5)", () => {
     h.frame();
     const hot = h.app.geometry!.hot.find((r) => r.id === `xcrumb:${abs}`);
     if (!hot) throw new Error(`no breadcrumb for ${abs}: ${crumbRow(h)}`);
-    h.app.handleMouse({ type: "down", x: hot.x, y: hot.y, button: 0 });
-    h.app.handleMouse({ type: "up", x: hot.x, y: hot.y, button: 0 });
+    h.app.mouse.handle({ type: "down", x: hot.x, y: hot.y, button: 0 });
+    h.app.mouse.handle({ type: "up", x: hot.x, y: hot.y, button: 0 });
   };
 
   test("files.show auto: notes and data files in a notes vault, every text file in a repository; no .. above", async () => {
@@ -8511,14 +8535,14 @@ describe("the explorer's view (VV-D5)", () => {
       config: (c) => (c.files.show = DEFAULT_CONFIG.files.show),
     });
     expect(DEFAULT_CONFIG.files.show).toBe("auto");
-    expect(h.app.filesShown()).toBe("renderable");
+    expect(h.app.explorer.filesShown()).toBe("renderable");
     expect(shown(h)).toEqual(["other", "sub", "a.md", "data.json"]);
     const code = await harness({
       root: join(P, "code"),
       open: null,
       config: (c) => (c.files.show = DEFAULT_CONFIG.files.show),
     });
-    expect(code.app.filesShown()).toBe("all");
+    expect(code.app.explorer.filesShown()).toBe("all");
     expect(shown(code)).toEqual(["main.ts"]);
   });
 
@@ -8529,10 +8553,10 @@ describe("the explorer's view (VV-D5)", () => {
     if (typeof start === "number") throw new Error(`exit ${start}`);
     expect(start.folder).toBe(join(P, "notes", "sub"));
     const h = await harness({ root: join(P, "notes"), open: null, folder: join(P, "notes", "sub") });
-    expect(h.app.explorerTop).toBe(join(P, "notes", "sub"));
+    expect(h.app.explorer.top).toBe(join(P, "notes", "sub"));
     expect(shown(h)).toEqual(["b.md"]);
     // The breadcrumb: the folders down to the view, the vault open marked as one and current.
-    const crumbs = h.app.explorerCrumbs();
+    const crumbs = h.app.explorer.crumbs();
     expect(crumbs.at(-1)).toMatchObject({ abs: join(P, "notes", "sub"), label: "sub", past: false });
     expect(crumbs.at(-2)).toMatchObject({ abs: join(P, "notes"), label: "notes", vault: true, current: true });
     expect(crumbs[0]!.label).toBe(P.startsWith(`${homedir()}/`) ? "~" : "/");
@@ -8540,31 +8564,31 @@ describe("the explorer's view (VV-D5)", () => {
     // -: a folder up, the folder it showed unfolded and selected.
     await select(h, "b.md");
     await h.keys("-");
-    expect(h.app.explorerTop).toBe(join(P, "notes"));
+    expect(h.app.explorer.top).toBe(join(P, "notes"));
     expect(shown(h)).toEqual(["other", "sub", "  b.md", "a.md", "data.json"]);
-    expect(h.app.explorerRows()[h.app.sidebar.selected]!.name).toBe("sub");
+    expect(h.app.explorer.rows()[h.app.sidebar.selected]!.name).toBe("sub");
     // The folder zoomed out of stays in the breadcrumb, dimmed past the view: a click zooms back in.
-    expect(h.app.explorerCrumbs().at(-1)).toMatchObject({ label: "sub", past: true });
+    expect(h.app.explorer.crumbs().at(-1)).toMatchObject({ label: "sub", past: true });
     expect(crumbRow(h)).toMatch(/◈ notes › sub\s*$/);
     clickCrumb(h, join(P, "notes", "sub"));
-    expect(h.app.explorerTop).toBe(join(P, "notes", "sub"));
+    expect(h.app.explorer.top).toBe(join(P, "notes", "sub"));
     // An ancestor clicked zooms out to it.
     clickCrumb(h, join(P, "notes"));
-    expect(h.app.explorerTop).toBe(join(P, "notes"));
+    expect(h.app.explorer.top).toBe(join(P, "notes"));
     // z on a folder zooms in on it; on a file, on its folder; the breadcrumb's way down is the new one.
     await select(h, "other");
     await h.keys("z");
-    expect(h.app.explorerTop).toBe(join(P, "notes", "other"));
+    expect(h.app.explorer.top).toBe(join(P, "notes", "other"));
     expect(shown(h)).toEqual(["c.md"]);
-    expect(h.app.explorerCrumbs().at(-1)).toMatchObject({ label: "other", past: false });
+    expect(h.app.explorer.crumbs().at(-1)).toMatchObject({ label: "other", past: false });
     await h.keys("-");
     await select(h, "b.md");
     await h.keys("z");
-    expect(h.app.explorerTop).toBe(join(P, "notes", "sub"));
+    expect(h.app.explorer.top).toBe(join(P, "notes", "sub"));
     // Nothing above /.
-    h.app.zoomTo("/");
+    h.app.explorer.zoomTo("/");
     await h.keys("-");
-    expect(h.app.explorerTop).toBe("/");
+    expect(h.app.explorer.top).toBe("/");
     expect(h.app.messages.at(-1)!.text).toBe("the view shows everything: nothing is above /");
   });
 
@@ -8573,7 +8597,7 @@ describe("the explorer's view (VV-D5)", () => {
     const h = await harness({ root: join(P, "notes"), open: "a.md", config: (c) => (c.files.show = "auto") });
     await select(h, "a.md");
     await h.keys("-");
-    expect(h.app.explorerTop).toBe(P);
+    expect(h.app.explorer.top).toBe(P);
     expect(h.app.loc.root).toBe(join(P, "notes")); // the vault open is still this one
     // A level at a time: the folders (vaults by their icon), then the files; the vault open unfolded, marked.
     expect(shown(h)).toEqual([
@@ -8586,11 +8610,11 @@ describe("the explorer's view (VV-D5)", () => {
       "  data.json",
       "readme.md",
     ]);
-    expect(h.app.explorerRows()[h.app.sidebar.selected]!.name).toBe("notes");
+    expect(h.app.explorer.rows()[h.app.sidebar.selected]!.name).toBe("notes");
     h.app.region = "content"; // not drawn selected
     const c = h.canvas();
     const list = h.app.geometry!.sidebar!;
-    const y = list.y + h.app.explorerRows().findIndex((r) => r.root?.here) - h.app.sidebar.scroll;
+    const y = list.y + h.app.explorer.rows().findIndex((r) => r.root?.here) - h.app.sidebar.scroll;
     const x = [...c.toString().split("\n")[y]!].join("").indexOf("notes");
     expect(c.styles[y]![x]!.fg).toBe(h.app.theme.roles.sidebar_active.fg!);
     // A plain folder unfolds a level; nothing of this vault's to rename or delete there.
@@ -8598,7 +8622,7 @@ describe("the explorer's view (VV-D5)", () => {
     await h.keys("l");
     expect(shown(h)).toContain("  x.md");
     await select(h, "x.md");
-    expect(h.app.explorerItem()).toBeNull();
+    expect(h.app.explorer.item()).toBeNull();
     // Another vault unfolds in place with l, the vault open unchanged; enter goes into it, the view staying.
     await select(h, "code");
     await h.keys("l");
@@ -8608,7 +8632,7 @@ describe("the explorer's view (VV-D5)", () => {
     await h.keys("enter");
     expect(h.app.loc.root).toBe(join(P, "code"));
     expect(h.app.view!.buf.abs).toBe(join(P, "code", "main.ts"));
-    expect(h.app.explorerTop).toBe(P);
+    expect(h.app.explorer.top).toBe(P);
     expect(shown(h).slice(0, 3)).toEqual(["code (here)", "  main.ts", "loose"]);
     expect(shown(h)).toContain("notes (vault)");
     // h folds the vault open, l unfolds it; z zooms in on it.
@@ -8618,7 +8642,7 @@ describe("the explorer's view (VV-D5)", () => {
     await h.keys("l");
     expect(shown(h)).toContain("  main.ts");
     await h.keys("z");
-    expect(h.app.explorerTop).toBe(join(P, "code"));
+    expect(h.app.explorer.top).toBe(join(P, "code"));
     expect(shown(h)).toEqual(["main.ts"]);
     // enter on another vault's row goes into it.
     await h.keys("-");
@@ -8634,14 +8658,14 @@ describe("the explorer's view (VV-D5)", () => {
     try {
       const { folderAt } = await import("../src/core/vault.ts");
       const h = await harness({ loc: folderAt(P), open: null });
-      expect(h.app.explorerCrumbs().map((c) => c.label)).toEqual(["~"]);
+      expect(h.app.explorer.crumbs().map((c) => c.label)).toEqual(["~"]);
       await select(h, "loose");
       await h.keys("l");
       expect(shown(h)).toContain("  x.md");
       await select(h, "x.md");
       await h.keys("h");
       expect(shown(h)).not.toContain("  x.md");
-      expect(h.app.explorerRows()[h.app.sidebar.selected]!.name).toBe("loose");
+      expect(h.app.explorer.rows()[h.app.sidebar.selected]!.name).toBe("loose");
     } finally {
       process.env.HOME = before;
     }
@@ -8650,19 +8674,19 @@ describe("the explorer's view (VV-D5)", () => {
   test("a note opened outside the view: it zooms out to the common parent, only the two paths unfolded", async () => {
     const P = place();
     const h = await harness({ root: join(P, "notes"), open: null, folder: join(P, "notes", "sub") });
-    expect(h.app.explorerTop).toBe(join(P, "notes", "sub"));
-    h.app.expanded.add("elsewhere"); // unfolded once, out of sight: folded by the zoom
+    expect(h.app.explorer.top).toBe(join(P, "notes", "sub"));
+    h.app.explorer.expanded.add("elsewhere"); // unfolded once, out of sight: folded by the zoom
     await h.app.run("note.open other/c.md");
     expect(h.app.view!.buf.rel).toBe("other/c.md");
-    expect(h.app.explorerTop).toBe(join(P, "notes"));
-    expect([...h.app.expanded].sort()).toEqual(["other", "sub"]);
+    expect(h.app.explorer.top).toBe(join(P, "notes"));
+    expect([...h.app.explorer.expanded].sort()).toEqual(["other", "sub"]);
     expect(shown(h)).toEqual(["other", "  c.md", "sub", "  b.md", "a.md", "data.json"]);
-    expect(h.app.explorerRows()[h.app.sidebar.selected]!.path).toBe("other/c.md");
+    expect(h.app.explorer.rows()[h.app.sidebar.selected]!.path).toBe("other/c.md");
     // The breadcrumb leads back where you went.
-    expect(h.app.explorerCrumbs().at(-1)).toMatchObject({ abs: join(P, "notes", "other"), past: true });
+    expect(h.app.explorer.crumbs().at(-1)).toMatchObject({ abs: join(P, "notes", "other"), past: true });
     // Inside the view, nothing zooms.
     await h.app.run("note.open sub/b.md");
-    expect(h.app.explorerTop).toBe(join(P, "notes"));
+    expect(h.app.explorer.top).toBe(join(P, "notes"));
   });
 
   test("a file you may not write opens read-only and says so; a folder you may not read says why (VV-D5)", async () => {
@@ -8689,13 +8713,13 @@ describe("the explorer's view (VV-D5)", () => {
       expect(h.app.messages.at(-1)!.text).toBe(
         `can't read ${tildePath(join(P, "locked"))}: you may not read it (no permission)`,
       );
-      expect(h.app.expanded.has(join(P, "locked"))).toBe(false);
+      expect(h.app.explorer.expanded.has(join(P, "locked"))).toBe(false);
       h.app.messages.length = 0;
       await h.keys("z");
       expect(h.app.messages.at(-1)!.text).toBe(
         `can't read ${tildePath(join(P, "locked"))}: you may not read it (no permission)`,
       );
-      expect(h.app.explorerTop).toBe(P);
+      expect(h.app.explorer.top).toBe(P);
       // Opened on it: said at once.
       const { folderAt } = await import("../src/core/vault.ts");
       const at = await harness({ loc: folderAt(join(P, "locked")), open: null });
@@ -8775,7 +8799,7 @@ describe("a component in the TUI (16.22)", () => {
       h.frame();
       await Bun.sleep(10);
     }
-    expect(h.app.outlineRows().map((r) => `${r.level}:${r.text}`)).toEqual([
+    expect(h.app.outlineView.rows().map((r) => `${r.level}:${r.text}`)).toEqual([
       "1:template",
       "2:const",
       '1:script setup lang="ts"',
@@ -9095,7 +9119,7 @@ describe("the key map as agreed (vim first, desktop editors' ctrl keys, space fo
     const h = await harness({ root: long(), open: "long.md", height: 30 });
     const v = h.app.view!;
     await h.keys("ctrl+d", "ctrl+d", "ctrl+d"); // far enough down for zb to have room above
-    const rows = h.app.screenRows(v, h.app.currentLayout(v));
+    const rows = h.app.lens.screenRows(v, h.app.currentLayout(v));
     await h.keys("shift+h");
     expect(v.cur.row).toBeGreaterThanOrEqual(rows[0]!);
     expect(v.cur.row).toBeLessThan(rows[0]! + 5); // scrolloff rows in
@@ -9106,17 +9130,17 @@ describe("the key map as agreed (vim first, desktop editors' ctrl keys, space fo
     expect(Math.abs(v.cur.row - rows[Math.floor((rows.length - 1) / 2)]!)).toBeLessThanOrEqual(1);
     const row = v.cur.row;
     // zt and zb keep the scrolloff rows (3) to the edge, so H and L stay on the cursor's row.
-    const at = () => h.app.screenRows(v, h.app.currentLayout(v)).indexOf(row);
+    const at = () => h.app.lens.screenRows(v, h.app.currentLayout(v)).indexOf(row);
     await h.keys("z", "t");
     expect(at()).toBe(3);
     await h.keys("shift+h");
     expect(v.cur.row).toBe(row);
     await h.keys("z", "b");
-    expect(at()).toBe(h.app.screenRows(v, h.app.currentLayout(v)).length - 1 - 3);
+    expect(at()).toBe(h.app.lens.screenRows(v, h.app.currentLayout(v)).length - 1 - 3);
     await h.keys("shift+l");
     expect(v.cur.row).toBe(row);
     await h.keys("z", "z");
-    const shown = h.app.screenRows(v, h.app.currentLayout(v));
+    const shown = h.app.lens.screenRows(v, h.app.currentLayout(v));
     expect(Math.abs(shown.indexOf(row) - Math.floor((shown.length - 1) / 2))).toBeLessThanOrEqual(1);
   });
   test("go to line: ctrl+g asks, :42 goes; ctrl+z undoes, ctrl+y redoes; space n v toggles source", async () => {
@@ -9211,7 +9235,7 @@ describe("the key map as agreed (vim first, desktop editors' ctrl keys, space fo
     await h.keys("0", "shift+p");
     expect(v.buf.source).toBe("ZEDlapha beta\n");
     // A terminal paste in normal mode puts, as p does.
-    h.app.paste("++");
+    h.app.input.paste("++");
     await h.keys("escape");
     expect(v.buf.source).toContain("++");
   });
@@ -9612,7 +9636,7 @@ describe("pictures (12.x)", () => {
     expect(drawn()).toBe(true);
     // A wheel: held back from its first tick.
     t += 1000;
-    h.app.handleMouse({ type: "scroll", x: 50, y: 10, button: 0, scroll: { direction: "down", delta: 1 } });
+    h.app.mouse.handle({ type: "scroll", x: 50, y: 10, button: 0, scroll: { direction: "down", delta: 1 } });
     expect(v.top).toBeGreaterThan(0);
     expect(drawn()).toBe(false);
     t += PICTURES_REST_MS;
@@ -9687,7 +9711,7 @@ describe("pictures (12.x)", () => {
       const t = h.app.theme;
       const fg = colorHex(t.roles.text.fg ?? t.fg, "?");
       const of = (r: keyof typeof t.roles) => colorHex(t.roles[r].fg ?? fg, fg);
-      const pictures = h.app.picturesFor(h.app.view!.buf)!;
+      const pictures = h.app.pictures.forBuffer(h.app.view!.buf)!;
       expect(pictures.drawings!.colors).toEqual({
         bg: colorHex(t.bg, "?"),
         fg,
@@ -9701,12 +9725,12 @@ describe("pictures (12.x)", () => {
       const retina = await at(mermaid, (c) => (c.render.mermaid = "picture"), {}, { width: 16, height: 34 });
       const drawn = retina.layout.lines.find((l) => l.image)!.image!;
       const r = (await loadRasterizer())!;
-      const colors = retina.h.app.picturesFor(retina.h.app.view!.buf)!.drawings!.colors;
+      const colors = retina.h.app.pictures.forBuffer(retina.h.app.view!.buf)!.drawings!.colors;
       const own = r.size(mermaidSvg("graph TD\n  A --> B", colors, r.family)!)!;
       expect(drawn.cols).toBe(Math.ceil((own.width * 34 * 0.8) / 13 / 16));
       const text = await at(mermaid);
       expect(text.layout.lines.some((l) => l.image)).toBe(false);
-      expect(text.h.app.picturesFor(text.h.app.view!.buf)!.key).not.toBe(pictures.key); // a choice changed: laid out again
+      expect(text.h.app.pictures.forBuffer(text.h.app.view!.buf)!.key).not.toBe(pictures.key); // a choice changed: laid out again
     });
     test("a drawing taller than a picture may be: scrolled past its top, the rest still drawn", async () => {
       const chain = Array.from({ length: 8 }, (_, i) => `N${i}[Step ${i}]`).join(" --> ");
@@ -9790,13 +9814,13 @@ describe("pictures (12.x)", () => {
       await settle(() => pictures() === 1);
       expect([asked, pictures()]).toEqual([[url], 1]);
       expect(h.app.currentLayout(h.app.view!).lines.find((l) => l.image)!.image!.src).toBe(
-        h.app.remoteImages.file(url),
+        h.app.pictures.remote.file(url),
       );
       // The other: yes for the site — and then any picture of it fetched as the note's laid out.
       await onLink("other");
       await h.keys("s");
       await settle(() => pictures() === 2);
-      expect(h.app.remoteImages.sites.has("https://pictures.example")).toBe(true);
+      expect(h.app.pictures.remote.sites.has("https://pictures.example")).toBe(true);
     });
     test("ask, answered no: nothing fetched", async () => {
       const { h, asked, pictures, onLink } = await web("ask");
@@ -9810,8 +9834,8 @@ describe("pictures (12.x)", () => {
       await shown.settle(() => shown.pictures() === 2);
       expect(shown.asked).toHaveLength(2);
       const never = await web("never");
-      writeFileSync(never.h.app.remoteImages.file(never.url), "fetched before");
-      never.h.app.picturesChanged();
+      writeFileSync(never.h.app.pictures.remote.file(never.url), "fetched before");
+      never.h.app.pictures.changed();
       expect([never.pictures(), never.asked]).toEqual([0, []]);
       await never.onLink("web");
       expect(never.h.copied.at(-1)).toBe(never.url);
@@ -9849,7 +9873,7 @@ describe("pictures (12.x)", () => {
           expect.stringMatching(/: not an image \(text\/html\)$/),
         ].sort(),
       );
-      failing.h.app.picturesChanged();
+      failing.h.app.pictures.changed();
       failing.h.frame();
       await Bun.sleep(20);
       expect(failing.asked).toHaveLength(2); // not again by itself
@@ -9871,7 +9895,7 @@ describe("pictures (12.x)", () => {
     const h = await harness({ root, open: "p.md", width: 100, height: 40, images });
     expect(h.app.currentLayout(h.app.view!).lines.some((l) => l.image)).toBe(false);
     supported = true;
-    h.app.picturesChanged();
+    h.app.pictures.changed();
     expect(h.app.currentLayout(h.app.view!).lines.some((l) => l.image)).toBe(true);
   });
 });
@@ -9913,7 +9937,7 @@ describe("creating notes and folders", () => {
     const root = makeVault();
     const h = await harness({ root });
     await h.keys("space", "e");
-    const at = h.app.explorerRows().findIndex((r) => r.kind === "dir" && r.path === "notes");
+    const at = h.app.explorer.rows().findIndex((r) => r.kind === "dir" && r.path === "notes");
     h.app.sidebar.selected = at;
     h.app.region = "sidebar";
     await h.keys("shift+n");
@@ -9921,7 +9945,7 @@ describe("creating notes and folders", () => {
     for (const c of "ideas") await h.keys(c);
     await h.keys("enter");
     expect(existsSync(join(root, "notes", "ideas"))).toBe(true);
-    const sel = h.app.explorerRows()[h.app.sidebar.selected]!;
+    const sel = h.app.explorer.rows()[h.app.sidebar.selected]!;
     expect([sel.kind, sel.path]).toEqual(["dir", "notes/ideas"]);
     expect(h.frame()).toContain("ideas"); // empty, still listed
     await h.keys("n");
@@ -9932,7 +9956,7 @@ describe("creating notes and folders", () => {
     // space n n, from the explorer: the same, in its selected folder.
     await h.keys("escape", "space", "e");
     h.app.region = "sidebar";
-    h.app.selectInExplorer("notes/ideas");
+    h.app.explorer.select("notes/ideas");
     await h.keys("space", "n", "n");
     expect(h.app.overlay).toMatchObject({ kind: "prompt", label: "new note in notes/ideas/" });
   });
@@ -9946,10 +9970,10 @@ describe("creating notes and folders", () => {
     await Bun.sleep(DEFAULT_CONFIG.input.which_key_delay_ms + 150);
     expect(h.app.pending).toEqual(["w"]);
     expect(h.app.region).toBe("sidebar");
-    h.app.whichKey = true;
+    h.app.input.whichKey = true;
     expect(h.frame()).toContain("Bottom"); // which-key names the pane's action as help does
     await h.keys("w");
-    expect(h.app.sidebar.selected).toBe(h.app.explorerRows().length - 1);
+    expect(h.app.sidebar.selected).toBe(h.app.explorer.rows().length - 1);
   });
   test("following a link to a note that doesn't exist asks to create it, the name filled in", async () => {
     const root = makeVault();
@@ -10298,35 +10322,36 @@ describe("vaults in the TUI (17.x)", () => {
   test("into another vault (VV-D5): the view zooms out to the common parent, both unfolded; nothing listed beside the tree; :pin-root is gone", async () => {
     const { base, notes, app } = await twoVaults();
     const h = await harness({ root: notes, open: "index.md" });
-    expect(h.app.explorerTop).toBe(notes);
+    expect(h.app.explorer.top).toBe(notes);
     await h.keys("tab", "enter", "o"); // into the app vault, by the link: its peek, then o
     expect(h.app.loc.root).toBe(app);
     const shown = () =>
-      h.app.explorerRows().map((r) => `${"  ".repeat(r.depth)}${r.name}${r.root?.here ? " (here)" : ""}`);
-    expect(h.app.explorerTop).toBe(base);
+      h.app.explorer.rows().map((r) => `${"  ".repeat(r.depth)}${r.name}${r.root?.here ? " (here)" : ""}`);
+    expect(h.app.explorer.top).toBe(base);
     expect(shown()).toEqual(["app (here)", "  design.md", "  links.md", "notes", "  index.md", "  todo.md"]);
     // The breadcrumb leads to where you went.
-    expect(h.app.explorerCrumbs().at(-1)).toMatchObject({ abs: app, current: true, past: true });
+    expect(h.app.explorer.crumbs().at(-1)).toMatchObject({ abs: app, current: true, past: true });
     // One tree: every row is the view's or under one of its folders — no vault listed beside it (20.15's are gone).
-    const own = () => h.app.explorerRows().every((r) => r.depth > 0 || dirname(h.app.rowAbs(r)) === h.app.explorerTop);
+    const own = () =>
+      h.app.explorer.rows().every((r) => r.depth > 0 || dirname(h.app.explorer.rowAbs(r)) === h.app.explorer.top);
     expect(own()).toBe(true);
     // Another vault's file chosen goes into it, its tabs (VV-D4); the view holds both, and stays.
     h.app.leftView = "explorer";
     h.app.region = "sidebar";
-    h.app.sidebar.selected = h.app.explorerRows().findIndex((r) => r.name === "todo.md");
-    expect(h.app.explorerItem()).toBeNull(); // not this vault's to rename or delete
+    h.app.sidebar.selected = h.app.explorer.rows().findIndex((r) => r.name === "todo.md");
+    expect(h.app.explorer.item()).toBeNull(); // not this vault's to rename or delete
     await h.keys("enter");
     expect(h.app.loc.root).toBe(notes);
     expect(h.app.view!.buf.rel).toBe("todo.md");
-    expect(h.app.explorerTop).toBe(base);
+    expect(h.app.explorer.top).toBe(base);
     expect(own()).toBe(true);
     // Back: into app again, the view as it was.
     await h.app.run("history.back");
     expect(h.app.loc.root).toBe(app);
-    expect(h.app.explorerTop).toBe(base);
+    expect(h.app.explorer.top).toBe(base);
     // Zoomed in on app, notes outside the view — the vault opened, gone into since: nothing lists it beside the tree.
-    h.app.zoomTo(app);
-    expect(h.app.explorerRows().some((r) => r.path === notes || r.root?.abs === notes)).toBe(false);
+    h.app.explorer.zoomTo(app);
+    expect(h.app.explorer.rows().some((r) => r.path === notes || r.root?.abs === notes)).toBe(false);
     expect(own()).toBe(true);
     // Nothing pins a vault beside the tree any more.
     expect(h.app.registry.get("vault.pin_root")).toBeUndefined();
@@ -10339,7 +10364,7 @@ describe("vaults in the TUI (17.x)", () => {
     await h.keys("tab", "enter", "o"); // into the app vault, by the link: its peek, then o
     h.app.leftView = "explorer";
     h.app.region = "sidebar";
-    h.app.sidebar.selected = h.app.explorerRows().findIndex((r) => r.root?.abs === notes);
+    h.app.sidebar.selected = h.app.explorer.rows().findIndex((r) => r.root?.abs === notes);
     const row = h
       .frame()
       .split("\n")
@@ -10348,7 +10373,7 @@ describe("vaults in the TUI (17.x)", () => {
     expect(row).not.toContain(h.app.glyphs.itemMenu);
     expect(h.app.geometry!.hot.some((x) => x.id === "xrow:menu")).toBe(false);
     // Its files' rows neither.
-    h.app.sidebar.selected = h.app.explorerRows().findIndex((r) => r.name === "todo.md");
+    h.app.sidebar.selected = h.app.explorer.rows().findIndex((r) => r.name === "todo.md");
     h.frame();
     expect(h.app.geometry!.hot.some((x) => x.id === "xrow:menu")).toBe(false);
   });
@@ -10358,15 +10383,15 @@ describe("vaults in the TUI (17.x)", () => {
     const outer = makeVault(); // its nested-vault/ is a vault of its own
     const inner = join(outer, "nested-vault");
     const h = await harness({ loc: locateVault({ path: outer }), open: null });
-    h.app.switchVault(locateVault({ path: inner }), null);
+    h.app.vaults.switchVault(locateVault({ path: inner }), null);
     expect(h.app.loc.root).toBe(inner);
-    expect(h.app.explorerTop).toBe(outer);
-    const here = h.app.explorerRows().findIndex((r) => r.root?.here);
-    expect(h.app.explorerRows()[here]).toMatchObject({ name: "nested-vault", path: inner, depth: 0 });
-    expect(h.app.explorerRows()[here + 1]!.depth).toBe(1); // unfolded: its tree under it
-    h.app.switchVault(locateVault({ path: outer }), null);
-    expect(h.app.explorerTop).toBe(outer);
-    expect(h.app.explorerRows().find((r) => r.name === "nested-vault")).toMatchObject({ path: "nested-vault" });
+    expect(h.app.explorer.top).toBe(outer);
+    const here = h.app.explorer.rows().findIndex((r) => r.root?.here);
+    expect(h.app.explorer.rows()[here]).toMatchObject({ name: "nested-vault", path: inner, depth: 0 });
+    expect(h.app.explorer.rows()[here + 1]!.depth).toBe(1); // unfolded: its tree under it
+    h.app.vaults.switchVault(locateVault({ path: outer }), null);
+    expect(h.app.explorer.top).toBe(outer);
+    expect(h.app.explorer.rows().find((r) => r.name === "nested-vault")).toMatchObject({ path: "nested-vault" });
   });
 
   test("h on another vault's row folds it, the selection staying there", async () => {
@@ -10376,17 +10401,17 @@ describe("vaults in the TUI (17.x)", () => {
     expect(h.app.loc.root).toBe(app);
     h.app.leftView = "explorer";
     h.app.region = "sidebar";
-    const at = h.app.explorerRows().findIndex((r) => r.root?.abs === notes);
+    const at = h.app.explorer.rows().findIndex((r) => r.root?.abs === notes);
     h.app.sidebar.selected = at;
-    expect(h.app.expanded.has(notes)).toBe(true);
-    h.app.explorerAction("collapse");
-    expect(h.app.expanded.has(notes)).toBe(false);
-    expect(h.app.explorerRows().some((r) => r.name === "todo.md")).toBe(false);
+    expect(h.app.explorer.expanded.has(notes)).toBe(true);
+    h.app.explorer.action("collapse");
+    expect(h.app.explorer.expanded.has(notes)).toBe(false);
+    expect(h.app.explorer.rows().some((r) => r.name === "todo.md")).toBe(false);
     expect(h.app.sidebar.selected).toBe(at);
-    h.app.explorerAction("collapse"); // folded already, at the view's top: stays put
+    h.app.explorer.action("collapse"); // folded already, at the view's top: stays put
     expect(h.app.sidebar.selected).toBe(at);
-    h.app.explorerAction("expand");
-    expect(h.app.explorerRows().some((r) => r.name === "todo.md")).toBe(true);
+    h.app.explorer.action("expand");
+    expect(h.app.explorer.rows().some((r) => r.name === "todo.md")).toBe(true);
   });
 
   test("paste, new note and new folder on another vault's row are refused, never a folder named by its path", async () => {
@@ -10396,28 +10421,28 @@ describe("vaults in the TUI (17.x)", () => {
     expect(h.app.loc.root).toBe(app);
     h.app.leftView = "explorer";
     h.app.region = "sidebar";
-    const sel = (f: (r: ReturnType<App["explorerRows"]>[number]) => boolean) =>
-      (h.app.sidebar.selected = h.app.explorerRows().findIndex(f));
+    const sel = (f: (r: ReturnType<App["explorer"]["rows"]>[number]) => boolean) =>
+      (h.app.sidebar.selected = h.app.explorer.rows().findIndex(f));
     sel((r) => r.path === "design.md");
-    h.app.explorerAction("copy");
+    h.app.explorer.action("copy");
     const before = readdirSync(app, { recursive: true }).sort();
     const refused = () =>
       expect(h.app.messages.at(-1)!.text).toBe("another vault's folder: select a folder of this vault");
     sel((r) => r.root?.abs === notes);
-    h.app.explorerAction("paste");
+    h.app.explorer.action("paste");
     refused();
-    h.app.explorerAction("new_note");
+    h.app.explorer.action("new_note");
     refused();
     expect(h.app.overlay).toBeNull();
-    h.app.explorerAction("new_folder");
+    h.app.explorer.action("new_folder");
     refused();
     expect(h.app.overlay).toBeNull();
     // A row under it: the same.
     sel((r) => r.name === "todo.md");
     expect(h.app.sidebar.selected).toBeGreaterThan(0);
-    h.app.explorerAction("paste");
+    h.app.explorer.action("paste");
     refused();
-    expect(h.app.createNote("x", h.app.newItemBase())).toBeNull();
+    expect(h.app.files.createNote("x", h.app.files.newItemBase())).toBeNull();
     expect(readdirSync(app, { recursive: true }).sort()).toEqual(before);
     expect(readdirSync(notes)).not.toContain("design.md");
   });
@@ -10432,32 +10457,32 @@ describe("vaults in the TUI (17.x)", () => {
     writeFileSync(join(loose, "m.md"), "# More\n");
     writeFileSync(join(root, "beside.md"), `# Beside\n\n[l](${join(loose, "l.md")})\n`);
     const h = await harness({ root, open: "beside.md" });
-    expect(h.app.explorerTop).toBe(root);
+    expect(h.app.explorer.top).toBe(root);
     // Followed to: a file outside every vault is peeked at (VV-D7), the view unmoved; o opens it beside, as it is, and
     // the view zooms out to hold both.
     await h.keys("tab", "enter");
     expect(h.app.floating?.kind).toBe("peek");
-    expect(h.app.explorerTop).toBe(root); // looking never moves the view
+    expect(h.app.explorer.top).toBe(root); // looking never moves the view
     await h.keys("o");
     expect(h.app.floating).toBeNull();
     expect(h.app.loc.root).toBe(root);
     expect(h.app.view?.buf.abs).toBe(join(loose, "l.md"));
     expect(h.app.view?.buf.readOnly).toBeNull();
-    expect(h.app.explorerTop).toBe(base);
-    const shown = () => h.app.explorerRows().map((r) => `${"  ".repeat(r.depth)}${r.name}`);
+    expect(h.app.explorer.top).toBe(base);
+    const shown = () => h.app.explorer.rows().map((r) => `${"  ".repeat(r.depth)}${r.name}`);
     expect(shown()).toEqual(["loose", "  l.md", "  m.md", "v", "  beside.md"]);
-    expect(h.app.explorerRows()[h.app.sidebar.selected]!.path).toBe(join(loose, "l.md"));
+    expect(h.app.explorer.rows()[h.app.sidebar.selected]!.path).toBe(join(loose, "l.md"));
     // Back at beside.md, nothing goes or comes: one tree, no folder beside it.
     await h.app.run("history.back");
     expect(h.app.view?.buf.rel).toBe("beside.md");
-    expect(h.app.explorerTop).toBe(base);
-    expect(h.app.explorerRows().every((r) => r.depth > 0 || dirname(h.app.rowAbs(r)) === base)).toBe(true);
+    expect(h.app.explorer.top).toBe(base);
+    expect(h.app.explorer.rows().every((r) => r.depth > 0 || dirname(h.app.explorer.rowAbs(r)) === base)).toBe(true);
     // Zoomed in on the vault, the loose file shown again: its folder isn't listed beside the tree.
-    h.app.zoomTo(root);
+    h.app.explorer.zoomTo(root);
     await h.app.run("history.forward");
     expect(h.app.view?.buf.abs).toBe(join(loose, "l.md"));
-    h.app.zoomTo(root);
-    expect(h.app.explorerRows().some((r) => r.path === loose || r.root?.abs === loose)).toBe(false);
+    h.app.explorer.zoomTo(root);
+    expect(h.app.explorer.rows().some((r) => r.path === loose || r.root?.abs === loose)).toBe(false);
   });
 
   test("following a path link into another vault peeks, at the heading: nothing switches (VV-D7; D50's switch gone)", async () => {
@@ -10468,7 +10493,7 @@ describe("vaults in the TUI (17.x)", () => {
     expect(h.app.loc.root).toBe(notes);
     expect(h.app.graph.root).toBe(notes);
     expect(h.app.tabs.map((t) => t.views.map((v) => v.buf.rel))).toEqual([["index.md"]]);
-    expect(h.app.vaultTrail).toEqual([]);
+    expect(h.app.vaults.trail).toEqual([]);
     expect(h.app.floating?.kind).toBe("peek");
     expect(h.app.view!.buf.abs).toBe(join(app, "design.md"));
     expect(h.app.view!.curAnchor.anchor.line).toBe(5);
@@ -10588,7 +10613,7 @@ describe("vaults in the TUI (17.x)", () => {
     await h.keys("ctrl+o");
     expect(peeked()).toBe(join(app, "hub.md"));
     expect(h.app.loc.root).toBe(notes);
-    expect(h.app.linkUnderCursor(h.app.view!)).toBeGreaterThanOrEqual(0);
+    expect(h.app.linking.linkUnderCursor(h.app.view!)).toBeGreaterThanOrEqual(0);
     // A third vault's: the peek moves there, named by it; back again.
     await h.keys("tab", "tab", "enter");
     expect(peeked()).toBe(join(third, "far.md"));
@@ -10634,7 +10659,7 @@ describe("vaults in the TUI (17.x)", () => {
       writeFileSync(join(bare, "b.md"), "# B\n");
       (await import("../src/core/vault.ts")).initVault(bare, `tbare${n}`);
       writeFileSync(join(notes, "to-bare.md"), "[b](../bare/b.md)\n");
-      h.app.closeFloating();
+      h.app.overlays.closeFloating();
       await h.app.run("note.open to-bare.md");
       await h.keys("tab", "enter");
       expect(h.app.view!.buf.abs).toBe(join(bare, "b.md"));
@@ -10651,14 +10676,14 @@ describe("vaults in the TUI (17.x)", () => {
       const pane = h.app.geometry!.panes[0]!;
       const x = pane.textX + l.col + 1;
       const y = pane.y + l.line - v.top;
-      h.app.handleMouse({ type: "down", x, y, button: 0, ctrl });
-      h.app.handleMouse({ type: "up", x, y, button: 0, ctrl });
+      h.app.mouse.handle({ type: "down", x, y, button: 0, ctrl });
+      h.app.mouse.handle({ type: "up", x, y, button: 0, ctrl });
       await Bun.sleep(5);
     };
     await click(false);
     expect(h.app.loc.root).toBe(notes);
     expect(h.app.floating?.kind).toBe("peek");
-    h.app.closeFloating();
+    h.app.overlays.closeFloating();
     h.frame();
     await Bun.sleep(400); // past a double-click
     await click(true);
@@ -10725,17 +10750,17 @@ describe("vaults in the TUI (17.x)", () => {
     await h.keys("space", "n", "v", "shift+a", "!", "escape");
     expect(h.app.view!.buf.dirty).toBe(true);
     await h.app.run("history.back"); // nothing: no earlier place, no vault before
-    h.app.switchVault(locateVault({ root: app }), join(app, "design.md"));
+    h.app.vaults.switchVault(locateVault({ root: app }), join(app, "design.md"));
     expect(h.app.loc.root).toBe(notes);
     expect(h.app.messages.at(-1)!.text).toContain("unsaved: index.md");
     await h.keys("ctrl+s");
-    expect(h.app.switchVault(locateVault({ root: app }), join(app, "design.md"))).toBe(true);
+    expect(h.app.vaults.switchVault(locateVault({ root: app }), join(app, "design.md"))).toBe(true);
     await h.app.run("tab.new");
     await h.app.run("note.open links.md");
-    h.app.switchVault(locateVault({ root: notes }), null);
+    h.app.vaults.switchVault(locateVault({ root: notes }), null);
     expect(h.app.loc.root).toBe(notes);
     // Into app again: its session comes back, its two tabs.
-    h.app.switchVault(locateVault({ root: app }), null);
+    h.app.vaults.switchVault(locateVault({ root: app }), null);
     expect(h.app.tabs.map((t) => t.views[0]!.buf.rel).sort()).toEqual(["design.md", "links.md"]);
   });
 
@@ -10751,7 +10776,7 @@ describe("vaults in the TUI (17.x)", () => {
     await h.keys("escape");
     expect(h.app.floating!.view.buf.dirty).toBe(true);
     // Doesn't parse: it asks, and nothing switches.
-    expect(h.app.switchVault(locateVault({ root: app }), null)).toBe(false);
+    expect(h.app.vaults.switchVault(locateVault({ root: app }), null)).toBe(false);
     expect(h.app.loc.root).toBe(notes);
     expect(h.app.floating).not.toBeNull();
     expect((h.app.overlay as { confirm?: boolean } | null)?.confirm).toBe(true);
@@ -10760,7 +10785,7 @@ describe("vaults in the TUI (17.x)", () => {
     await type("a: 1");
     await h.keys("escape");
     // Parses: written into index.md, the editor closed, then the switch.
-    expect(h.app.switchVault(locateVault({ root: app }), null)).toBe(true);
+    expect(h.app.vaults.switchVault(locateVault({ root: app }), null)).toBe(true);
     expect(h.app.floating).toBeNull();
     expect(h.app.loc.root).toBe(app);
     expect(h.app.view?.buf.key).not.toContain("#properties");
@@ -10775,7 +10800,7 @@ describe("vaults in the TUI (17.x)", () => {
     );
     const h = await harness({ root, open: "index.md", config: (c) => (c.colors = { sidebar_root: "#ff00aa" }) });
     h.app.region = "sidebar";
-    const rows = h.app.explorerRows();
+    const rows = h.app.explorer.rows();
     const i = rows.findIndex((r) => r.path === "nested-vault");
     expect(rows[i]).toMatchObject({ kind: "root", root: { kind: "vault", name: "inner-notes" } });
     const f = h.frame();
@@ -10805,7 +10830,7 @@ describe("vaults in the TUI (17.x)", () => {
     mkdirSync(join(dir, "box", ".slipbox"), { recursive: true });
     const h = await harness({ loc: folderAt(dir), open: "note.md" });
     // Walked as a vault is (20.22): its folders in the tree, the vaults in it roots of their own.
-    expect(h.app.explorerRows().map((r) => [r.name, r.kind, r.root?.kind])).toEqual([
+    expect(h.app.explorer.rows().map((r) => [r.name, r.kind, r.root?.kind])).toEqual([
       ["box", "root", "vault"],
       ["code", "root", "vault"],
       ["plain", "dir", undefined],
@@ -10813,9 +10838,9 @@ describe("vaults in the TUI (17.x)", () => {
     ]);
     expect(h.frame()).toContain("◈ box");
     expect(h.frame()).toContain("◈ code");
-    expect(h.app.vaultStatus()).toBe(dir); // unnamed: its path (20.22)
+    expect(h.app.git.vaultStatus()).toBe(dir); // unnamed: its path (20.22)
     expect(statusRow(h.frame())).toContain(dir.slice(-12));
-    h.app.enterRoot(h.app.explorerRows()[0]!);
+    h.app.vaults.enterRoot(h.app.explorer.rows()[0]!);
     expect(h.app.loc).toMatchObject({ mode: "vault", root: join(dir, "box") });
   });
 
@@ -10855,7 +10880,7 @@ describe("vaults in the TUI (17.x)", () => {
       expect(start.loc.mode).toBe("folder");
       const host: Host = { requestRender() {}, osc52: () => true, quit() {} };
       const started = new App({ ...start, host, watch: false });
-      expect(started.folderChoices().length).toBeGreaterThan(0); // there are named folders to list
+      expect(started.vaults.folderChoices().length).toBeGreaterThan(0); // there are named folders to list
       expect(started.overlay).toBeNull();
       started.quit();
       // space v v: the named folders, from anywhere; enter goes into one.
@@ -10944,7 +10969,7 @@ describe("vaults in the TUI (17.x)", () => {
     expect(h.app.view!.buf.source).toContain("## Part One\n");
     // The outline's r: its selected heading.
     await h.app.run("outline.toggle");
-    const rows = h.app.outlineRows();
+    const rows = h.app.outlineView.rows();
     h.app.outline.selected = rows.findIndex((r) => r.text === "Section Two");
     await h.keys("r");
     expect((h.app.overlay as import("../src/tui/app.ts").PromptOverlay).text).toBe("Section Two");
@@ -10983,7 +11008,7 @@ describe("vaults in the TUI (17.x)", () => {
       /^renamed notes\/first.md back to notes\/alpha.md: \d+ changes in \d+ files$/,
     );
     // Nothing more: said so. The explorer's shift+u is the same command.
-    h.app.showSidebar(true);
+    h.app.panels.showSidebar(true);
     h.app.region = "sidebar";
     await h.keys("shift+u");
     expect(h.app.overlay).toBeNull();
@@ -11281,9 +11306,9 @@ describe("vaults in the TUI (17.x)", () => {
     // Remembered for the root, not the session: a new app has it too; a folder gone since, not.
     const again = await harness({ root, open: "rep.md" });
     again.app.home = home;
-    expect(again.app.lastExportDir()).toBe(join(home, "Downloads"));
+    expect(again.app.exporter.lastDir()).toBe(join(home, "Downloads"));
     rmSync(join(home, "Downloads"), { recursive: true });
-    expect(again.app.lastExportDir()).toBeNull();
+    expect(again.app.exporter.lastDir()).toBeNull();
   });
 
   test("the window's folder: folders then files; enter or → in, ← or ‥ up (back on the folder left); a file's name taken; typing jumps", async () => {
@@ -11346,7 +11371,7 @@ describe("vaults in the TUI (17.x)", () => {
     // A paste goes into the name.
     o.name = "";
     await h.keys("tab", "tab");
-    h.app.paste("final.docx");
+    h.app.input.paste("final.docx");
     expect([o.name, o.focus]).toEqual(["final.docx", "name"]);
     // ~/ in the name: from home, wherever the window is.
     o.name = "~/alpha/out.docx";
@@ -11440,7 +11465,7 @@ describe("vaults in the TUI (17.x)", () => {
     const o = saveAs(h);
     h.frame();
     const g = h.app.geometry!.saveas!;
-    const click = (x: number, y: number) => h.app.handleMouse({ type: "down", x, y, button: 0 });
+    const click = (x: number, y: number) => h.app.mouse.handle({ type: "down", x, y, button: 0 });
     // Documents is the second place.
     click(g.places.x + 2, g.places.y + 1);
     expect(o.dir).toBe(join(home, "Documents"));
@@ -11500,9 +11525,9 @@ describe("vaults in the TUI (17.x)", () => {
     await h.keys("shift+a", "!", "escape");
     const buf = h.app.view!.buf;
     expect(buf.dirty).toBe(true);
-    h.app.openList({ title: "Something else", items: [{ label: "x", data: null }], accept: () => {} });
+    h.app.overlays.openList({ title: "Something else", items: [{ label: "x", data: null }], accept: () => {} });
     const before = h.app.messages.length;
-    for (let k = 0; k < 3; k++) h.app.conflictPrompt(buf);
+    for (let k = 0; k < 3; k++) h.app.saving.conflictPrompt(buf);
     expect(
       h.app.messages.slice(before).filter((m) => m.text.includes("changed on disk while you have unsaved changes")),
     ).toHaveLength(1);
@@ -11525,9 +11550,9 @@ describe("vaults in the TUI (17.x)", () => {
     await h.keys("escape"); // cancelled: nothing changed
     expect(existsSync(join(root, "notes", "alpha.md"))).toBe(true);
     // The explorer: r on the selected note asks for its new name, in its folder.
-    h.app.showSidebar(true);
+    h.app.panels.showSidebar(true);
     h.app.region = "sidebar";
-    h.app.sidebar.selected = h.app.explorerRows().findIndex((r) => r.path === "notes/beta.md");
+    h.app.sidebar.selected = h.app.explorer.rows().findIndex((r) => r.path === "notes/beta.md");
     await h.keys("r");
     expect(h.app.overlay).toMatchObject({ kind: "prompt", label: "rename notes/beta.md to: ", text: "beta" });
   });
@@ -11537,7 +11562,7 @@ describe("vaults in the TUI (17.x)", () => {
     const root = makeVault();
     const h = await harness({ root, open: "notes/alpha.md" });
     h.app.view!.buf.edit(0, 0, "UNSAVED ");
-    h.app.previewRename(() => planFolderMove(h.app.graph, "notes", "notes2"));
+    h.app.renaming.preview(() => planFolderMove(h.app.graph, "notes", "notes2"));
     expect(h.app.overlay).toBeNull();
     expect(h.app.messages.at(-1)!.text).toStartWith("unsaved: notes/alpha.md");
     expect(existsSync(join(root, "notes", "alpha.md"))).toBe(true);
@@ -11626,8 +11651,8 @@ describe("vaults in the TUI (17.x)", () => {
 describe("questions float in a window of their own", () => {
   const ask = (h: Harness) => h.app.overlay as import("../src/tui/app.ts").PromptOverlay;
   const click = (h: Harness, x: number, y: number) => {
-    h.app.handleMouse({ type: "down", x, y, button: 0 });
-    h.app.handleMouse({ type: "up", x, y, button: 0 });
+    h.app.mouse.handle({ type: "down", x, y, button: 0 });
+    h.app.mouse.handle({ type: "up", x, y, button: 0 });
   };
   const clickHot = (h: Harness, id: string) => {
     const r = h.app.geometry!.hot.find((x) => x.id === id)!;
@@ -11685,7 +11710,7 @@ describe("questions float in a window of their own", () => {
     const said: { v: boolean | null } = { v: null };
     const question = () => {
       asked++;
-      h.app.confirm(
+      h.app.overlays.confirm(
         "Really?",
         () => (said.v = true),
         () => (said.v = false),
@@ -11714,7 +11739,7 @@ describe("questions float in a window of their own", () => {
     expect(asked).toBe(4);
     // Too small to float: the status line says how to answer.
     const small = await harness({ root, open: "notes/alpha.md", height: 8 });
-    small.app.confirm("Really?", () => {});
+    small.app.overlays.confirm("Really?", () => {});
     f = small.frame().split("\n");
     expect(f.at(-1)).toContain("Really? y / n");
   });
@@ -11734,11 +11759,11 @@ describe("the explorer's file operations and buttons (18.x)", () => {
   /** The explorer focused, `rel` selected. */
   async function at(root: string, rel: string, open = "index.md") {
     const h = await harness({ root, open });
-    h.app.showSidebar(true);
+    h.app.panels.showSidebar(true);
     h.app.leftView = "explorer";
     h.app.region = "sidebar";
-    h.app.selectInExplorer(rel);
-    expect(h.app.explorerRows()[h.app.sidebar.selected]!.path).toBe(rel);
+    h.app.explorer.select(rel);
+    expect(h.app.explorer.rows()[h.app.sidebar.selected]!.path).toBe(rel);
     return h;
   }
   const prompt = (h: Harness) => h.app.overlay as import("../src/tui/app.ts").PromptOverlay;
@@ -11756,7 +11781,7 @@ describe("the explorer's file operations and buttons (18.x)", () => {
     await h.keys("enter");
     expect(existsSync(join(root, "notes", "first.md"))).toBe(true);
     expect(readFileSync(join(root, "index.md"), "utf8")).toContain("[alpha](notes/first.md)");
-    expect(h.app.explorerRows()[h.app.sidebar.selected]!.path).toBe("notes/first.md"); // still selected
+    expect(h.app.explorer.rows()[h.app.sidebar.selected]!.path).toBe("notes/first.md"); // still selected
     // m: the folders as a tree, the root first, this one marked (18.8).
     await h.keys("m");
     const list = h.app.overlay as ListOverlay;
@@ -11789,7 +11814,7 @@ describe("the explorer's file operations and buttons (18.x)", () => {
     expect(readFileSync(join(root, "notes", "alpha.md"), "utf8")).toContain("Alpha");
     expect(h.app.graph.notes.has("notes/alpha.md")).toBe(true);
     // A folder, with everything in it; the trash lists it, enter restores.
-    h.app.selectInExplorer("projects");
+    h.app.explorer.select("projects");
     await h.keys("d", "y");
     expect(existsSync(join(root, "projects"))).toBe(false);
     await h.app.run("trash.open");
@@ -11802,7 +11827,7 @@ describe("the explorer's file operations and buttons (18.x)", () => {
     const root = makeVault();
     const h = await at(root, "notes/alpha.md");
     await h.keys("d", "y");
-    h.app.selectInExplorer("notes/beta.md");
+    h.app.explorer.select("notes/beta.md");
     await h.keys("d", "y");
     const { listTrash, trashDir, trashPath } = await import("../src/core/files.ts");
     expect(listTrash(h.app.loc)).toHaveLength(2);
@@ -11849,19 +11874,19 @@ describe("the explorer's file operations and buttons (18.x)", () => {
     await h.keys("y");
     await h.keys("p"); // the selection is beside it: a copy there
     expect(existsSync(join(root, "notes", "beta-copy.md"))).toBe(true);
-    h.app.selectInExplorer("projects");
+    h.app.explorer.select("projects");
     await h.keys("p");
     expect(existsSync(join(root, "projects", "beta.md"))).toBe(true);
     // Cut, then paste into a folder: a move, links fixed after the preview.
-    h.app.selectInExplorer("notes/alpha.md");
+    h.app.explorer.select("notes/alpha.md");
     await h.keys("x");
-    h.app.selectInExplorer("projects");
+    h.app.explorer.select("projects");
     await h.keys("p");
     expect((h.app.overlay as ListOverlay).title).toStartWith("notes/alpha.md → projects/alpha.md");
     await h.keys("enter");
     expect(existsSync(join(root, "projects", "alpha.md"))).toBe(true);
     expect(existsSync(join(root, "notes", "alpha.md"))).toBe(false);
-    expect(h.app.fileClip).toBeNull(); // pasted: done
+    expect(h.app.files.clip).toBeNull(); // pasted: done
   });
 
   test("a root switch forgets what was copied or cut and the last delete: p and u never reach the other root's files", async () => {
@@ -11871,17 +11896,17 @@ describe("the explorer's file operations and buttons (18.x)", () => {
     writeFileSync(join(b, "notes", "x.md"), "# from B\n");
     const h = await at(a, "notes/x.md");
     await h.keys("y");
-    h.app.selectInExplorer("notes/alpha.md");
+    h.app.explorer.select("notes/alpha.md");
     await h.keys("d", "y");
     expect(existsSync(join(a, "notes", "alpha.md"))).toBe(false);
-    h.app.switchVault((await import("../src/core/vault.ts")).rootAt(b), null);
+    h.app.vaults.switchVault((await import("../src/core/vault.ts")).rootAt(b), null);
     expect(h.app.loc.root).toBe(b);
-    h.app.pasteItem();
+    h.app.files.pasteItem();
     expect(h.app.messages.at(-1)!.text).toBe("nothing copied or cut: y copies, x cuts");
     expect(readdirSync(join(b, "notes")).filter((n) => n.startsWith("x"))).toEqual(["x.md"]);
     expect(readdirSync(b).filter((n) => n.startsWith("x"))).toEqual([]);
     // u: B's trash (empty), not A's last delete looked for in it.
-    h.app.restoreLast();
+    h.app.files.restoreLast();
     expect(h.app.messages.at(-1)!.text).toBe("the trash is empty");
   });
 
@@ -11912,8 +11937,8 @@ describe("the explorer's file operations and buttons (18.x)", () => {
     expect([...row].lastIndexOf("…")).toBe([...title].lastIndexOf("▸"));
     const hot = (id: string) => h.app.geometry!.hot.find((x) => x.id === id)!;
     const click = (x: number, y: number) => {
-      h.app.handleMouse({ type: "down", x, y, button: 0 });
-      h.app.handleMouse({ type: "up", x, y, button: 0 });
+      h.app.mouse.handle({ type: "down", x, y, button: 0 });
+      h.app.mouse.handle({ type: "up", x, y, button: 0 });
     };
     const clickHot = (id: string) => click(hot(id).x + 1, hot(id).y);
     click(hot("xnew:folder").x + 1, hot("xnew:folder").y);
@@ -11954,7 +11979,7 @@ describe("the explorer's file operations and buttons (18.x)", () => {
     await h.keys("escape");
     // A folder's: new note and folder in it, and, with something copied, paste.
     await h.keys("y");
-    h.app.selectInExplorer("projects");
+    h.app.explorer.select("projects");
     await h.keys(".");
     expect(menu().items.map((it) => it.label)).toEqual([
       "New note here",
@@ -12044,7 +12069,7 @@ describe("the explorer's file operations and buttons (18.x)", () => {
     expect(readFileSync(join(root, "nested-vault", ".slipbox", "config.toml"), "utf8")).toContain('name = "inner-box"');
     expect(existsSync(join(root, "nested-vault"))).toBe(true);
     // r: its folder; links into it by path fixed.
-    h.app.selectInExplorer("nested-vault");
+    h.app.explorer.select("nested-vault");
     await h.keys("r", "ctrl+u");
     await type(h, "box");
     await h.keys("enter");
@@ -12052,7 +12077,7 @@ describe("the explorer's file operations and buttons (18.x)", () => {
     await h.keys("enter");
     expect(existsSync(join(root, "box", "inner.md"))).toBe(true);
     expect(readFileSync(join(root, "vault-links.md"), "utf8")).toBe("[in](box/inner.md)\n");
-    expect(h.app.explorerRows().some((r) => r.path === "box" && r.root?.kind === "vault")).toBe(true);
+    expect(h.app.explorer.rows().some((r) => r.path === "box" && r.root?.kind === "vault")).toBe(true);
   });
 
   test("v gives a folder .slipbox/ (its name asked, the links previewed); V makes it a plain folder again (18.11, 21.10)", async () => {
@@ -12076,7 +12101,7 @@ describe("the explorer's file operations and buttons (18.x)", () => {
       "Back to [index](../index.md) and on to [beta](beta.md).",
     );
     // The explorer: its row a vault's now, selected; its notes the new vault's.
-    const row = h.app.explorerRows()[h.app.sidebar.selected]!;
+    const row = h.app.explorer.rows()[h.app.sidebar.selected]!;
     expect(row).toMatchObject({ path: "notes", kind: "root" });
     expect(h.app.graph.notes.has("notes/alpha.md")).toBe(false);
     expect(h.app.messages.at(-1)!.text).toMatch(/^made notes\/ a vault of its own, called fixture-notes/);
@@ -12087,7 +12112,7 @@ describe("the explorer's file operations and buttons (18.x)", () => {
     expect(existsSync(join(root, "notes", ".slipbox"))).toBe(false);
     expect(index()).toBe(before);
     expect(h.app.graph.notes.has("notes/alpha.md")).toBe(true);
-    expect(h.app.explorerRows()[h.app.sidebar.selected]).toMatchObject({ path: "notes", kind: "dir" });
+    expect(h.app.explorer.rows()[h.app.sidebar.selected]).toMatchObject({ path: "notes", kind: "dir" });
     // The name cleared: a vault of its own, unnamed (21.10).
     await h.keys("v");
     (h.app.overlay as { text: string }).text = "";
@@ -12095,7 +12120,7 @@ describe("the explorer's file operations and buttons (18.x)", () => {
     expect((h.app.overlay as ListOverlay).title).toMatch(/^notes\/ → a vault of its own: /);
     await h.keys("escape");
     // On a note, and on a vault for v: said so.
-    h.app.selectInExplorer("notes/alpha.md");
+    h.app.explorer.select("notes/alpha.md");
     await h.keys("v");
     expect(h.app.messages.at(-1)!.text).toContain("select a folder first");
   });
@@ -12136,7 +12161,7 @@ describe("the explorer's file operations and buttons (18.x)", () => {
     const h = await harness({ root, open: "notes/alpha.md" });
     const group = async (...keys: string[]) => {
       await h.keys("space", ...keys);
-      const out = Object.fromEntries(h.app.whichKeyEntries().map((e) => [e.key, e.label]));
+      const out = Object.fromEntries(h.app.input.whichKeyEntries().map((e) => [e.key, e.label]));
       await h.keys("escape");
       return out;
     };
@@ -12231,15 +12256,15 @@ describe("the explorer's file operations and buttons (18.x)", () => {
     await h.keys("/");
     await type(h, "alpha notes");
     expect(
-      h.app
-        .explorerRows()
+      h.app.explorer
+        .rows()
         .filter((r) => r.kind === "note")
         .map((r) => r.path),
     ).toEqual(["notes/alpha.md"]);
     await h.keys("ctrl+u");
     await type(h, "al");
-    const al = h.app
-      .explorerRows()
+    const al = h.app.explorer
+      .rows()
       .filter((r) => r.kind === "note")
       .map((r) => r.path);
     expect(al).toContain("notes/alpha.md");
@@ -12272,7 +12297,7 @@ describe("the explorer's file operations and buttons (18.x)", () => {
     writeFileSync(join(root, "projects", "deep", "deeper", "d.md"), "# d\n");
     const h = await at(root, "notes/alpha.md");
     h.app.graph.build(false);
-    h.app.expanded.delete("projects");
+    h.app.explorer.expanded.delete("projects");
     await h.keys("m");
     const o = () => h.app.overlay as ListOverlay;
     const labels = () => o().filtered.map((e) => e.item.label.trim());
@@ -12296,7 +12321,7 @@ describe("the explorer's file operations and buttons (18.x)", () => {
     expect((h.app.overlay as ListOverlay).title).toStartWith("notes/alpha.md → projects/deep/deeper/alpha.md");
     // A folder the explorer has unfolded is unfolded here, its folders shown.
     await h.keys("escape");
-    h.app.expanded.add("projects");
+    h.app.explorer.expanded.add("projects");
     await h.keys("m");
     expect(labels()).toContain("▾ projects");
     expect(labels()).toContain("▸ deep");
@@ -12369,24 +12394,24 @@ describe("document types (22.2, 22.3)", () => {
   test("frontmatter breaking its type's rules (22.2): in the note's problems, and the panel's All under Frontmatter — opened at its line", async () => {
     const { h } = await setup("skills/broken/SKILL.md");
     expect(
-      h.app
-        .fileProblems()
+      h.app.problems
+        .ofFile()
         .filter((p) => p.code === "frontmatter")
         .map((p) => `${p.start.line}: ${p.message}`),
     ).toEqual(['1: skill: "description" is missing', '2: skill: "name" should be a string, not a number']);
     h.app.open("index.md");
-    const rows = h.app.problemRows();
+    const rows = h.app.problems.rows();
     const at = rows.findIndex((r) => r.section === "Frontmatter" && r.heading);
     expect(rows[at]!.label).toBe("Frontmatter (2)");
     expect(rows.slice(at + 1, at + 4).map((r) => r.label)).toEqual(["skills/broken/SKILL.md", "L1", "L2"]);
-    expect(h.app.problemCount()).toBeGreaterThanOrEqual(2);
-    h.app.problemsPanel.tab = "all";
-    h.app.clickProblemRow(at + 3, 1);
+    expect(h.app.problems.count()).toBeGreaterThanOrEqual(2);
+    h.app.problems.panel.tab = "all";
+    h.app.problems.clickRow(at + 3, 1);
     expect(h.app.view!.buf.rel).toBe("skills/broken/SKILL.md");
     expect(h.app.cursorLine(h.app.view!)).toBe(2);
     // Fixed and saved: gone from the panel at once.
     h.app.writeBuffer(h.app.view!.buf, "---\nname: broken\ndescription: fixed now\n---\n# Broken\n");
-    expect(h.app.problemRows().some((r) => r.section === "Frontmatter")).toBe(false);
+    expect(h.app.problems.rows().some((r) => r.section === "Frontmatter")).toBe(false);
   });
 });
 
@@ -12463,7 +12488,7 @@ describe("footnotes in the right panel (3.17)", () => {
     writeFileSync(join(root, "fn.md"), NOTE);
     return await harness({ root, open: "fn.md", width: 140 });
   };
-  const rows = (h: Harness) => h.app.footnoteRows().map((r) => r.text);
+  const rows = (h: Harness) => h.app.footnotes.rows().map((r) => r.text);
 
   test("space n f shows them beside the note: each footnote, its references unfolded under it; the rail's button under the outline's", async () => {
     const h = await setup();
@@ -12500,12 +12525,12 @@ describe("footnotes in the right panel (3.17)", () => {
     await h.keys("space", "n", "f", "l", "j", "j", "enter"); // [one]'s second reference
     expect(h.app.region).toBe("content");
     const v = h.app.view!;
-    const link = h.app.currentLayout(v).links[h.app.linkUnderCursor(v)]!;
+    const link = h.app.currentLayout(v).links[h.app.linking.linkUnderCursor(v)]!;
     expect(link).toMatchObject({ kind: "footnote", src: 5 });
     // Following the cursor, unfocused: onto [two]'s definition, its row.
     h.app.moveCursor(v, { row: h.app.currentLayout(v).lines.findIndex((l) => l.footnoteDef === "two"), col: 0 });
     h.frame();
-    expect(h.app.footnoteRows()[h.app.outline.selected]!.text).toBe("[two] The second, on two lines.");
+    expect(h.app.footnotes.rows()[h.app.outline.selected]!.text).toBe("[two] The second, on two lines.");
     // A footnote's own row: its definition.
     await h.keys("space", "n", "f", "g", "g", "h", "j", "enter"); // [one] folded again, then [two] (its definition's label)
     expect(h.app.currentLayout(v).lines[v.cur.row]!.footnoteDef).toBe("two");
@@ -12519,8 +12544,8 @@ describe("footnotes in the right panel (3.17)", () => {
     const h = await setup();
     const click = (id: string) => {
       const r = h.app.geometry!.hot.find((x) => x.id === id)!;
-      h.app.handleMouse({ type: "down", x: r.x + 1, y: r.y, button: 0 });
-      h.app.handleMouse({ type: "up", x: r.x + 1, y: r.y, button: 0 });
+      h.app.mouse.handle({ type: "down", x: r.x + 1, y: r.y, button: 0 });
+      h.app.mouse.handle({ type: "up", x: r.x + 1, y: r.y, button: 0 });
       h.frame();
     };
     h.frame();
@@ -12533,11 +12558,11 @@ describe("footnotes in the right panel (3.17)", () => {
     click("btn:footnotes");
     expect(h.app.outline.selected).toBe(2); // where it was
     click("btn:footnotes"); // its own button again: hidden
-    expect(h.app.outlineShown).toBe(false);
+    expect(h.app.panels.outlineShown).toBe(false);
     await h.keys(":");
     for (const ch of "footnotes") await h.keys(ch);
     await h.keys("enter");
-    expect(h.app.outlineShown).toBe(true);
+    expect(h.app.panels.outlineShown).toBe(true);
     await h.keys("/", "s", "e", "c");
     expect(rows(h)).toEqual(["[two] The second, on two lines."]);
   });
@@ -12617,15 +12642,15 @@ describe("adding and changing footnotes (3.18)", () => {
     expect(read()).toBe("# N\n\nOne[^src] and two[^src].\n\n[^src]: Rewritten\n");
     // The + on its title: a new one, at the note's cursor.
     const plus = h.app.geometry!.hot.find((x) => x.id === "fn:add")!;
-    h.app.handleMouse({ type: "down", x: plus.x + 1, y: plus.y, button: 0 });
-    h.app.handleMouse({ type: "up", x: plus.x + 1, y: plus.y, button: 0 });
+    h.app.mouse.handle({ type: "down", x: plus.x + 1, y: plus.y, button: 0 });
+    h.app.mouse.handle({ type: "up", x: plus.x + 1, y: plus.y, button: 0 });
     expect(prompt(h).label).toBe("Add a footnote — its text:");
     await type(h, "Second");
     await h.keys("enter");
     expect(read()).toMatch(/\[\^src\]: Rewritten\n\[\^1\]: Second\n$/);
     // d: after asking.
     h.app.region = "outline";
-    h.app.outline.selected = h.app.footnoteRows().findIndex((r) => r.fn.label === "src");
+    h.app.outline.selected = h.app.footnotes.rows().findIndex((r) => r.fn.label === "src");
     await h.keys("d");
     expect(prompt(h)).toMatchObject({
       confirm: true,
@@ -12633,7 +12658,7 @@ describe("adding and changing footnotes (3.18)", () => {
     });
     await h.keys("y");
     expect(read()).not.toContain("[^src]");
-    expect(h.app.footnoteRows().map((r) => r.fn.label)).toEqual(["1"]);
+    expect(h.app.footnotes.rows().map((r) => r.fn.label)).toEqual(["1"]);
   });
 });
 
@@ -12647,7 +12672,7 @@ describe("the Info view (3.19)", () => {
     return await harness({ root, open: "info.md", width: 140 });
   };
   const rows = (h: Harness) =>
-    h.app.infoRows().map((r) => (r.heading ? `# ${r.key}` : `${"  ".repeat(r.depth)}${r.key}: ${r.value}`));
+    h.app.info.rows().map((r) => (r.heading ? `# ${r.key}` : `${"  ".repeat(r.depth)}${r.key}: ${r.value}`));
 
   test("space n i: the file on screen — where, which root, its counts and state; its properties, tags and links; the rail's button above ▤", async () => {
     const h = await setup();
@@ -12679,7 +12704,7 @@ describe("the Info view (3.19)", () => {
     await h.keys("escape");
     h.app.view!.buf.edit(0, 0, "x");
     expect(rows(h)).toContain("state: unsaved changes");
-    h.app.saveBuffer(h.app.view!.buf);
+    h.app.saving.save(h.app.view!.buf);
     expect(rows(h)).toContain("state: saved"); // a save doesn't change the text: still shown
     // Another note's link to it counts at once.
     writeFileSync(join(h.root, "linker2.md"), "[info](info.md)\n");
@@ -12698,10 +12723,10 @@ describe("the Info view (3.19)", () => {
     await h.keys("space", "n", "i");
     expect(h.app.region).toBe("outline");
     await h.keys("/", ..."links");
-    expect(h.app.infoRows()[h.app.outline.selected]).toMatchObject({ heading: true, section: "Links" });
+    expect(h.app.info.rows()[h.app.outline.selected]).toMatchObject({ heading: true, section: "Links" });
     await h.keys("enter");
-    expect([...h.app.infoFolded]).toEqual(["Links"]);
-    expect(h.app.infoRows()[h.app.outline.selected]).toMatchObject({ heading: true, section: "Links" });
+    expect([...h.app.info.folded]).toEqual(["Links"]);
+    expect(h.app.info.rows()[h.app.outline.selected]).toMatchObject({ heading: true, section: "Links" });
   });
 
   test("a note's links' convention in its Links, and what said each part: the root's tool, its notes, one written since (21.4)", async () => {
@@ -12722,7 +12747,7 @@ describe("the Info view (3.19)", () => {
       "  from: Obsidian",
     ]);
     // y copies it whole.
-    h.app.outline.selected = h.app.infoRows().findIndex((x) => x.key === "writes");
+    h.app.outline.selected = h.app.info.rows().findIndex((x) => x.key === "writes");
     h.app.region = "outline";
     await h.keys("y");
     expect(h.copied.at(-1)).toBe("wikilinks, relative, without .md — Obsidian's .obsidian/app.json");
@@ -12761,7 +12786,7 @@ describe("the Info view (3.19)", () => {
     const h = await setup();
     await h.keys("space", "n", "i");
     const select = (label: string) => {
-      h.app.outline.selected = h.app.infoRows().findIndex((r) => (r.heading ? `# ${r.key}` : r.key) === label);
+      h.app.outline.selected = h.app.info.rows().findIndex((r) => (r.heading ? `# ${r.key}` : r.key) === label);
       h.app.region = "outline";
     };
     select("title");
@@ -12893,8 +12918,8 @@ describe("the properties editor: a note's frontmatter in a floating window (3.20
     // A click outside its box closes it.
     await h.app.run("note.properties");
     h.frame();
-    h.app.handleMouse({ type: "down", x: 1, y: 30, button: 0 });
-    h.app.handleMouse({ type: "up", x: 1, y: 30, button: 0 });
+    h.app.mouse.handle({ type: "down", x: 1, y: 30, button: 0 });
+    h.app.mouse.handle({ type: "up", x: 1, y: 30, button: 0 });
     expect(h.app.floating).toBeNull();
   });
 
@@ -12938,13 +12963,13 @@ describe("the properties editor: a note's frontmatter in a floating window (3.20
     await h.keys("escape");
     h.frame();
     const tab = h.app.geometry!.tabs.find((t) => t.index === 1)!;
-    h.app.handleMouse({ type: "down", x: tab.x + 1, y: tab.y, button: 0 });
-    h.app.handleMouse({ type: "up", x: tab.x + 1, y: tab.y, button: 0 });
+    h.app.mouse.handle({ type: "down", x: tab.x + 1, y: tab.y, button: 0 });
+    h.app.mouse.handle({ type: "up", x: tab.x + 1, y: tab.y, button: 0 });
     expect(h.app.floating).toBeNull();
     expect(h.app.activeTab).toBe(0); // the click was the editor's closing
     expect(read()).toBe("---\ntitle: A\nx: 1\n---\n# A\n");
     // The explorer: likewise.
-    h.app.showSidebar(true);
+    h.app.panels.showSidebar(true);
     await h.app.run("note.properties");
     await h.keys("shift+g", "o");
     await type(h, "z: 3");
@@ -12952,8 +12977,8 @@ describe("the properties editor: a note's frontmatter in a floating window (3.20
     h.frame();
     const sb = h.app.geometry!.sidebarPane!;
     h.app.region = "content";
-    h.app.handleMouse({ type: "down", x: sb.x + 1, y: sb.y + 1, button: 0 });
-    h.app.handleMouse({ type: "up", x: sb.x + 1, y: sb.y + 1, button: 0 });
+    h.app.mouse.handle({ type: "down", x: sb.x + 1, y: sb.y + 1, button: 0 });
+    h.app.mouse.handle({ type: "up", x: sb.x + 1, y: sb.y + 1, button: 0 });
     expect(h.app.floating).toBeNull();
     expect(h.app.region).toBe("content");
     expect(read()).toBe("---\ntitle: A\nx: 1\nz: 3\n---\n# A\n");
@@ -12973,19 +12998,19 @@ describe("the Problems panel (1.7)", () => {
     return await harness({ root, open: "other.md", width: 140, height });
   };
   const rows = (h: Harness) =>
-    h.app
-      .problemRows()
+    h.app.problems
+      .rows()
       .map((r) => (r.heading ? `# ${r.label}` : r.note ? `  ${r.label}` : `    ${r.label}  ${r.detail}`));
   const hot = (h: Harness, id: string) => h.app.geometry!.hot.find((x) => x.id === id);
   const click = (h: Harness, at: { x: number; y: number }, times = 1) => {
     for (let i = 0; i < times; i++)
-      for (const type of ["down", "up"]) h.app.handleMouse({ type, x: at.x, y: at.y, button: 0 });
+      for (const type of ["down", "up"]) h.app.mouse.handle({ type, x: at.x, y: at.y, button: 0 });
   };
 
   test("space v p: All — the root's broken links, by note, across the bottom; enter goes there, onto the link", async () => {
     const h = await setup();
     await h.keys("space", "v", "p");
-    expect(h.app.problemsPanel).toMatchObject({ shown: true, tab: "all" });
+    expect(h.app.problems.panel).toMatchObject({ shown: true, tab: "all" });
     expect(h.app.region).toBe("problems");
     expect(h.app.leftView).toBe("explorer"); // not the left panel's view any more
     expect(rows(h)).toEqual([
@@ -13015,13 +13040,13 @@ describe("the Problems panel (1.7)", () => {
     const pane = h.app.geometry!.panes[0]!;
     expect(pane.y + pane.h).toBeLessThan(tabsY);
     // Enter on a problem: its note, the cursor on the link; the panel stays, the note has the keys.
-    h.app.problemsPanel.all.selected = 2;
+    h.app.problems.panel.all.selected = 2;
     await h.keys("enter");
     const v = h.app.view!;
     expect(v.buf.rel).toBe("index.md");
     expect(h.app.region).toBe("content");
-    expect(h.app.problemsPanel.shown).toBe(true);
-    expect(h.app.currentLayout(v).links[h.app.linkUnderCursor(v)]).toMatchObject({ target: "missing.md" });
+    expect(h.app.problems.panel.shown).toBe(true);
+    expect(h.app.currentLayout(v).links[h.app.linking.linkUnderCursor(v)]).toMatchObject({ target: "missing.md" });
     // Fixed: gone at once.
     writeFileSync(join(h.root, "missing.md"), "# Missing\n");
     const st = statSync(join(h.root, "missing.md"));
@@ -13036,7 +13061,7 @@ describe("the Problems panel (1.7)", () => {
     await h.keys("space", "v", "p");
     expect(h.app.region).toBe("problems");
     await h.keys("space", "v", "p");
-    expect(h.app.problemsPanel.shown).toBe(false);
+    expect(h.app.problems.panel.shown).toBe(false);
     expect(h.app.region).toBe("content");
     expect(h.frame()).not.toContain(" This file (");
   });
@@ -13044,12 +13069,12 @@ describe("the Problems panel (1.7)", () => {
   test("a section's heading folds; a note's row goes to its first problem; / filters", async () => {
     const h = await setup();
     await h.keys("space", "v", "p");
-    h.app.problemsPanel.all.selected = 0;
+    h.app.problems.panel.all.selected = 0;
     await h.keys("h");
     expect(rows(h)[0]).toBe("# Broken links (2)");
     expect(rows(h)[1]).toBe("# Ambiguous links (0)");
     await h.keys("l");
-    h.app.problemsPanel.all.selected = 3; // other.md's row
+    h.app.problems.panel.all.selected = 3; // other.md's row
     await h.keys("enter");
     expect(h.app.view!.buf.rel).toBe("other.md");
     await h.keys("space", "v", "p", "/", "t", "w", "i", "n");
@@ -13063,8 +13088,8 @@ describe("the Problems panel (1.7)", () => {
     ).toContain("› twin");
     // An orphan's row: the note.
     await h.keys("escape");
-    h.app.problemsPanel.all.selected = h.app
-      .problemRows()
+    h.app.problems.panel.all.selected = h.app.problems
+      .rows()
       .findIndex((r) => r.section === "Orphans" && r.note === "b/twin.md");
     await h.keys("enter");
     expect(h.app.view!.buf.rel).toBe("b/twin.md");
@@ -13090,15 +13115,15 @@ describe("the Problems panel (1.7)", () => {
     expect(h.app.activeTab).toBe(1);
     expect(line()).toBe(3);
     expect(h.app.region).toBe("content");
-    expect(h.app.problemsPanel.all.filter).toBe(""); // the filter cleared, the panel open
-    expect(h.app.problemsPanel.shown).toBe(true);
+    expect(h.app.problems.panel.all.filter).toBe(""); // the filter cleared, the panel open
+    expect(h.app.problems.panel.shown).toBe(true);
     // index.md's: a third tab; other.md's again, from elsewhere — its tab, no new one, back to its line.
-    click(h, at(h.app.problemRows().findIndex((r) => r.link?.from === "index.md")));
+    click(h, at(h.app.problems.rows().findIndex((r) => r.link?.from === "index.md")));
     expect(tabs()).toEqual(["a/twin.md", "other.md", "index.md"]);
     h.app.activeTab = 1;
     h.app.placeAtLine(h.app.view!, 1);
     h.app.activeTab = 0;
-    click(h, at(h.app.problemRows().findIndex((r) => r.link?.from === "other.md")));
+    click(h, at(h.app.problems.rows().findIndex((r) => r.link?.from === "other.md")));
     expect(tabs()).toEqual(["a/twin.md", "other.md", "index.md"]);
     expect(h.app.activeTab).toBe(1);
     expect(line()).toBe(3);
@@ -13107,11 +13132,11 @@ describe("the Problems panel (1.7)", () => {
     // The keys as the explorer's: o in this window, s in the split's other.
     await h.app.run("tab.close_others");
     await h.keys("space", "v", "p");
-    h.app.problemsPanel.all.selected = h.app.problemRows().findIndex((r) => r.link?.from === "index.md");
+    h.app.problems.panel.all.selected = h.app.problems.rows().findIndex((r) => r.link?.from === "index.md");
     await h.keys("o");
     expect(tabs()).toEqual(["index.md"]);
     await h.keys("space", "v", "p");
-    h.app.problemsPanel.all.selected = h.app.problemRows().findIndex((r) => r.link?.from === "other.md");
+    h.app.problems.panel.all.selected = h.app.problems.rows().findIndex((r) => r.link?.from === "other.md");
     await h.keys("s");
     expect(tabs()).toEqual(["index.md|other.md"]);
   });
@@ -13127,9 +13152,9 @@ describe("the Problems panel (1.7)", () => {
       config: (c) => (c.diagnostics.marks = "off"),
     });
     await h.keys("space", "n", "q");
-    expect(h.app.problemsPanel).toMatchObject({ shown: true, tab: "file" });
+    expect(h.app.problems.panel).toMatchObject({ shown: true, tab: "file" });
     expect(h.app.region).toBe("problems");
-    expect(h.app.fileProblems().map((p) => `${p.start.line}:${p.start.column} ${p.target}`)).toEqual([
+    expect(h.app.problems.ofFile().map((p) => `${p.start.line}:${p.start.column} ${p.target}`)).toEqual([
       "3:5 gone-a.png",
       "5:6 gone-b.png",
     ]);
@@ -13156,26 +13181,26 @@ describe("the Problems panel (1.7)", () => {
     expect(c.styles[noteRow("Then")]![col(noteRow("Then"), "b too")]?.bg ?? null).not.toBe(focusBg);
     // j: the next one — the cursor (and the view) on its line, the panel keeping the keys.
     await h.keys("j");
-    expect(h.app.problemsPanel.file.selected).toBe(1);
+    expect(h.app.problems.panel.file.selected).toBe(1);
     expect(h.app.region).toBe("problems");
     const v = h.app.view!;
     expect(srcAt(h.app.currentLayout(v).lines[v.cur.row]!, v.cur.col)).toBe(5);
     // Focus elsewhere: no mark.
     await h.keys("escape");
     expect(h.app.region).toBe("content");
-    expect(h.app.chosenProblem()).toBeUndefined();
+    expect(h.app.problems.chosen()).toBeUndefined();
     // Back, then enter: there, the note has the keys; back (alt+b) returns where it was.
     await h.keys("space", "n", "q");
     expect(h.app.region).toBe("problems");
-    h.app.problemsPanel.file.selected = 0;
+    h.app.problems.panel.file.selected = 0;
     await h.keys("enter");
     expect(h.app.region).toBe("content");
     expect(srcAt(h.app.currentLayout(v).lines[v.cur.row]!, v.cur.col)).toBe(3);
     // tab: All, and back.
     await h.keys("space", "n", "q", "tab");
-    expect(h.app.problemsPanel.tab).toBe("all");
+    expect(h.app.problems.panel.tab).toBe("all");
     await h.keys("shift+tab");
-    expect(h.app.problemsPanel.tab).toBe("file");
+    expect(h.app.problems.panel.tab).toBe("file");
   });
 
   test("the status line's problems, clicked, open This file; a tab's title switches; its button closes", async () => {
@@ -13184,17 +13209,17 @@ describe("the Problems panel (1.7)", () => {
     const at = hot(h, "status:problems")!;
     expect(at.y).toBe(39);
     click(h, at);
-    expect(h.app.problemsPanel).toMatchObject({ shown: true, tab: "file" });
+    expect(h.app.problems.panel).toMatchObject({ shown: true, tab: "file" });
     expect(h.app.region).toBe("problems");
     h.frame();
     click(h, hot(h, "ptab:all")!);
-    expect(h.app.problemsPanel.tab).toBe("all");
+    expect(h.app.problems.panel.tab).toBe("all");
     h.frame();
     click(h, hot(h, "ptab:file")!);
-    expect(h.app.problemsPanel.tab).toBe("file");
+    expect(h.app.problems.panel.tab).toBe("file");
     h.frame();
     click(h, hot(h, "ptab:close")!);
-    expect(h.app.problemsPanel.shown).toBe(false);
+    expect(h.app.problems.panel.shown).toBe(false);
     expect(h.app.region).toBe("content");
     // No button on the left rail: a file with none has the panel's on the status line, dim — it opens All.
     await h.app.run("note.open a/twin.md");
@@ -13204,10 +13229,10 @@ describe("the Problems panel (1.7)", () => {
     const none = hot(h, "status:problems")!;
     expect(h.canvas().styles[none.y]![none.x]!.fg).toBe(h.app.theme.roles.status_dim.fg!);
     click(h, none);
-    expect(h.app.problemsPanel).toMatchObject({ shown: true, tab: "all" });
+    expect(h.app.problems.panel).toMatchObject({ shown: true, tab: "all" });
     h.frame();
     click(h, hot(h, "status:problems")!);
-    expect(h.app.problemsPanel.shown).toBe(false);
+    expect(h.app.problems.panel.shown).toBe(false);
     // A short screen keeps the note: no panel drawn, its keys still work.
     const s = await setup(12);
     await s.keys("space", "n", "q");
@@ -13227,18 +13252,18 @@ describe("the Problems panel: filtered, resized, opened from the bar (1.7)", () 
   test("This file's filter: / narrows by message, place or line; enter goes there, the filter cleared", async () => {
     const h = await two();
     await h.keys("space", "n", "q", "/", "T", "h", "e", "n");
-    expect(h.app.fileRows().map((p) => p.start.line)).toEqual([5]); // the line's text matched
+    expect(h.app.problems.fileRows().map((p) => p.start.line)).toEqual([5]); // the line's text matched
     expect(h.frame()).toMatch(/This file \(2\) .*› Then/); // its count all of them; the filter after the titles
     expect(h.frame()).not.toContain("3:5");
     await h.keys("enter");
     expect(h.app.region).toBe("content");
     expect(line(h)).toBe(5);
-    expect(h.app.problemsPanel.file.filter).toBe("");
+    expect(h.app.problems.panel.file.filter).toBe("");
     // Nothing matches: said.
     await h.keys("space", "n", "q", "/", "z", "z", "z");
     expect(h.frame()).toContain("no matches");
     await h.keys("escape");
-    expect(h.app.fileRows()).toHaveLength(2);
+    expect(h.app.problems.fileRows()).toHaveLength(2);
   });
 
   test("resized as a window is: ctrl+w + and -, resize mode's j / k, a drag of its rule; = a third again; kept", async () => {
@@ -13248,36 +13273,36 @@ describe("the Problems panel: filtered, resized, opened from the bar (1.7)", () 
     const first = drawn();
     await h.keys("ctrl+w", "+");
     expect(drawn()).toBe(first + 1);
-    expect(h.app.resizeMode).toBe(true);
+    expect(h.app.panels.resizeMode).toBe(true);
     await h.keys("j", "j", "k");
     expect(drawn()).toBe(first + 2);
     await h.keys("h");
     expect(h.app.messages.at(-1)!.text).toContain("j / k resize it");
     await h.keys("escape");
-    expect(h.app.resizeMode).toBe(false);
+    expect(h.app.panels.resizeMode).toBe(false);
     await h.keys("ctrl+w", "-", "escape");
     expect(drawn()).toBe(first + 1);
     // Its rule dragged up three rows: three taller; the windows above shorter.
     const rule = h.app.geometry!.separators.find((s) => s.kind === "problems")!;
     expect(rule.y).toBe(h.app.geometry!.problems!.y - 1);
     const paneH = h.app.geometry!.panes[0]!.h;
-    h.app.handleMouse({ type: "down", x: 60, y: rule.y, button: 0 });
-    h.app.handleMouse({ type: "drag", x: 60, y: rule.y - 3, button: 0 });
-    h.app.handleMouse({ type: "up", x: 60, y: rule.y - 3, button: 0 });
+    h.app.mouse.handle({ type: "down", x: 60, y: rule.y, button: 0 });
+    h.app.mouse.handle({ type: "drag", x: 60, y: rule.y - 3, button: 0 });
+    h.app.mouse.handle({ type: "up", x: 60, y: rule.y - 3, button: 0 });
     expect(drawn()).toBe(first + 4);
     expect(h.app.geometry!.panes[0]!.h).toBe(paneH - 3);
     // Never leaving the note under four rows.
-    h.app.resizeProblems(200);
+    h.app.problems.resize(200);
     h.frame();
     expect(h.app.geometry!.problems!.y - 1 - h.app.geometry!.panes[0]!.y).toBeGreaterThanOrEqual(4);
     // = : back to a third of the screen.
     await h.keys("ctrl+w", "=");
     expect(drawn()).toBe(first);
     // Kept in the session.
-    h.app.resizeProblems(15);
+    h.app.problems.resize(15);
     h.app.quit();
     const again = await harness({ root: h.root, open: null, config: (c) => (c.ui.restore_session = true) });
-    expect(again.app.problemsPanel.height).toBe(15);
+    expect(again.app.problems.panel.height).toBe(15);
     await again.keys("space", "n", "q");
     expect(again.app.geometry!.problems!.h).toBe(15);
   });
@@ -13288,18 +13313,18 @@ describe("the Problems panel: filtered, resized, opened from the bar (1.7)", () 
     const sign = h.app.geometry!.hot.find((x) => x.id === "pbar:5:6")!;
     expect(h.frame().split("\n")[sign.y]).toContain("Then b too");
     expect(h.canvas().styles[sign.y]![sign.x]!.bg).toBe(h.app.theme.roles.gutter.bg!); // on the gutter's shade
-    for (const type of ["down", "up"]) h.app.handleMouse({ type, x: sign.x, y: sign.y, button: 0 });
-    expect(h.app.problemsPanel).toMatchObject({ shown: true, tab: "file" });
-    expect(h.app.problemsPanel.file.selected).toBe(1);
+    for (const type of ["down", "up"]) h.app.mouse.handle({ type, x: sign.x, y: sign.y, button: 0 });
+    expect(h.app.problems.panel).toMatchObject({ shown: true, tab: "file" });
+    expect(h.app.problems.panel.file.selected).toBe(1);
     expect(h.app.region).toBe("problems");
     expect(line(h)).toBe(5);
     // Again, on the other: its own, the filter there cleared, the panel still open.
-    h.app.problemsPanel.file.filter = "Then";
+    h.app.problems.panel.file.filter = "Then";
     h.frame();
     const other = h.app.geometry!.hot.find((x) => x.id === "pbar:3:5")!;
-    for (const type of ["down", "up"]) h.app.handleMouse({ type, x: other.x, y: other.y, button: 0 });
-    expect(h.app.problemsPanel.file).toMatchObject({ selected: 0, filter: "" });
-    expect(h.app.problemsPanel.shown).toBe(true);
+    for (const type of ["down", "up"]) h.app.mouse.handle({ type, x: other.x, y: other.y, button: 0 });
+    expect(h.app.problems.panel.file).toMatchObject({ selected: 0, filter: "" });
+    expect(h.app.problems.panel.shown).toBe(true);
     expect(line(h)).toBe(3);
   });
 });
@@ -13351,54 +13376,54 @@ describe("the lint surface: your linter's findings in notes (3.21)", () => {
     const signs = h.app.geometry!.hot.filter((x) => x.id.startsWith("pbar:3:"));
     expect(signs).toHaveLength(1); // the number's, no sign under it
     expect([signs[0]!.y, signs[0]!.x <= num && num < signs[0]!.x + signs[0]!.w]).toEqual([y3, true]);
-    for (const type of ["down", "up"]) h.app.handleMouse({ type, x: num, y: y3, button: 0 });
-    expect(h.app.problemsPanel).toMatchObject({ shown: true, tab: "file" });
-    h.app.closeProblems();
+    for (const type of ["down", "up"]) h.app.mouse.handle({ type, x: num, y: y3, button: 0 });
+    expect(h.app.problems.panel).toMatchObject({ shown: true, tab: "file" });
+    h.app.problems.close();
     // Typing: its text isn't the file's any more — nothing shown until it's saved (and linted again).
     h.app.view!.buf.edit(0, 0, "x");
     h.frame();
     await new Promise((r) => setTimeout(r, 450)); // past a re-lint's 300 ms: none while it's unsaved
     h.frame();
-    expect(h.app.problemsShown(h.app.view!)).toEqual([]);
+    expect(h.app.problems.ofView(h.app.view!)).toEqual([]);
     expect(statusRow(h.frame())).not.toMatch(/⚠ [1-9]|MD013/);
     expect(statusRow(h.frame())).toContain("⚠ 0"); // none: the Problems panel's button
-    h.app.saveBuffer(h.app.view!.buf);
+    h.app.saving.save(h.app.view!.buf);
     h.frame();
-    await until(() => h.app.problemsShown(h.app.view!).length > 0);
+    await until(() => h.app.problems.ofView(h.app.view!).length > 0);
   });
 
   test("the Problems panel lints the root: a Lint section by note; enter opens a finding; a linter that can't run says so once", async () => {
     const { h } = await setup();
     await h.keys("space", "v", "p");
-    await until(() => h.app.vaultLint.issues !== null && !h.app.vaultLint.running);
-    const rows = h.app.problemRows();
+    await until(() => h.app.languages.vaultLint.issues !== null && !h.app.languages.vaultLint.running);
+    const rows = h.app.problems.rows();
     const lint = rows.filter((r) => r.section === "Lint");
     expect(lint[0]!.label).toMatch(/^Lint \(\d+\)$/);
     const row = lint.findIndex((r) => r.lint?.file.endsWith("/l.md"));
     expect(lint[row - 1]!.note).toBe("l.md");
-    h.app.problemsPanel.all.selected = rows.indexOf(lint[row]!);
+    h.app.problems.panel.all.selected = rows.indexOf(lint[row]!);
     await h.keys("enter");
     expect(h.app.view!.buf.rel).toBe("l.md");
     expect(statusRow(h.frame())).toContain("L3:1"); // rendered: its line's start, not the row's end (a regression)
     // Filtered, the note's row first: enter takes it to its finding, not its top (a regression).
     await h.keys("g", "g");
     await h.keys("space", "v", "p");
-    await until(() => !h.app.vaultLint.running);
+    await until(() => !h.app.languages.vaultLint.running);
     await h.keys("/");
     await h.keys(...[..."MD013 l.md"].map((c) => (c === " " ? "space" : c)));
-    expect(h.app.problemRows()[h.app.problemsPanel.all.selected]!.note).toBe("l.md");
+    expect(h.app.problems.rows()[h.app.problems.panel.all.selected]!.note).toBe("l.md");
     await h.keys("enter");
     expect(h.app.cursorLine(h.app.view!)).toBe(3);
     // In source mode, on its column.
     await h.app.run("view.source");
     await h.keys("g", "g", "space", "v", "p");
-    h.app.problemsPanel.all.selected = h.app.problemRows().findIndex((r) => r.lint?.file.endsWith("/l.md"));
+    h.app.problems.panel.all.selected = h.app.problems.rows().findIndex((r) => r.lint?.file.endsWith("/l.md"));
     await h.keys("enter");
     expect(statusRow(h.frame())).toContain("L3:5");
     // Not there: said once, lint off.
     const bad = await setup(["no-such-linter-slipbox-test"]);
     bad.h.frame();
-    await until(() => bad.h.app.lintCmd === null);
+    await until(() => bad.h.app.languages.lintCmd === null);
     expect(bad.h.app.messages.filter((m) => m.text.includes("couldn't run"))).toHaveLength(1);
   });
 });
@@ -13419,14 +13444,14 @@ describe("big notes (15.1)", () => {
     const buf = h.app.view!.buf;
     expect(buf.parsing).not.toBeNull();
     // Nothing parses it here meanwhile: the footnotes view waits; a click on the placeholder is dropped.
-    expect(h.app.footnotes()).toEqual([]);
+    expect(h.app.footnotes.list()).toEqual([]);
     expect((buf as unknown as { parsedVersion: number }).parsedVersion).not.toBe(buf.version);
     const y = h
       .frame()
       .split("\n")
       .findIndex((r) => r.includes("reading big.md"));
-    h.app.handleMouse({ type: "down", x: 40, y, button: 0 });
-    h.app.handleMouse({ type: "up", x: 40, y, button: 0 });
+    h.app.mouse.handle({ type: "down", x: 40, y, button: 0 });
+    h.app.mouse.handle({ type: "up", x: 40, y, button: 0 });
     // A key waits for the parse, then acts on the note, where it was opened.
     const pressed = h.keys("j");
     expect(buf.parsing).not.toBeNull();
@@ -13462,8 +13487,8 @@ describe("search in the TUI (6.5, 6.9)", () => {
     const h = await withNotes({
       "dome.md": "# Dome\n\nThe quetzal plinth was replaced,\nits bolts too.\n\n## Later\n\nAnd the dome rollers.\n",
     });
-    await h.app.whenSearchIndexed();
-    expect(h.app.searchIndex?.complete).toBe(true);
+    await h.app.search.whenIndexed();
+    expect(h.app.search.index?.complete).toBe(true);
     await h.keys("space", "f", "s");
     expect((h.app.overlay as ListOverlay).title).toStartWith("search here — words");
     await typeIn(h, "quetzal plinth");
@@ -13490,16 +13515,16 @@ describe("search in the TUI (6.5, 6.9)", () => {
 
   test("kept current: a save here, a change the watcher reports, a rename; unsaved text searched as it's shown", async () => {
     const h = await withNotes({ "a.md": "# A\n\nplain words\n" });
-    await h.app.whenSearchIndexed();
-    const found = (q: string) => h.app.searchVault(q).hits.map((x) => `${x.path}:${x.line}`);
+    await h.app.search.whenIndexed();
+    const found = (q: string) => h.app.search.query(q).hits.map((x) => `${x.path}:${x.line}`);
     await h.app.run("note.open a.md");
     // Typed, not saved: found as it's shown — and not as the file still has it.
     await h.keys("shift+g", "o", ...[..."a zebra"].map((ch) => (ch === " " ? "space" : ch)), "escape");
     expect(h.app.view!.buf.dirty).toBe(true);
     expect(found("zebra")).toEqual(["a.md:4"]);
-    expect(h.app.searchIndex!.query('"zebra"', { limit: 5 })).toEqual([]); // the index is the disk's
+    expect(h.app.search.index!.query('"zebra"', { limit: 5 })).toEqual([]); // the index is the disk's
     await h.keys("ctrl+s");
-    expect(h.app.searchIndex!.query('"zebra"', { limit: 5 })!.map((r) => r.path)).toEqual(["a.md"]); // the save, through the feed
+    expect(h.app.search.index!.query('"zebra"', { limit: 5 })!.map((r) => r.path)).toEqual(["a.md"]); // the save, through the feed
     // Unsaved again, the word gone: not found, though the index has it.
     await h.keys("u");
     expect(h.app.view!.buf.dirty).toBe(true);
@@ -13512,10 +13537,10 @@ describe("search in the TUI (6.5, 6.9)", () => {
     expect(found("quokka")).toEqual(["b.md:3"]);
     // Renamed here: the old path gone, the new one found.
     const { planNoteRename } = await import("../src/core/rename.ts");
-    h.app.previewRename(() => planNoteRename(h.app.graph, "b.md", "c"));
+    h.app.renaming.preview(() => planNoteRename(h.app.graph, "b.md", "c"));
     await h.keys("enter");
     expect(found("quokka")).toEqual(["c.md:3"]); // as it was: nothing written into it (21.12)
-    expect(h.app.searchIndex!.indexed().has("b.md")).toBe(false);
+    expect(h.app.search.index!.indexed().has("b.md")).toBe(false);
   });
 
   test("while the index is first built the list says so, and fills when it's done; without one (a scan engine), it scans", async () => {
@@ -13523,21 +13548,21 @@ describe("search in the TUI (6.5, 6.9)", () => {
     for (let i = 0; i < 400; i++)
       many[`n${i}.md`] = `# Note ${i}\n\n${"filler words here. ".repeat(40)}${i === 7 ? "a narwhal" : ""}\n`;
     const h = await withNotes(many);
-    expect(h.app.searchJob).not.toBeNull();
+    expect(h.app.search.job).not.toBeNull();
     await h.keys("space", "f", "s");
     await typeIn(h, "narwhal");
     const list = h.app.overlay as ListOverlay;
-    expect(h.app.searchJob).not.toBeNull(); // keys don't wait for it: its slices run between frames
+    expect(h.app.search.job).not.toBeNull(); // keys don't wait for it: its slices run between frames
     // Asked directly meanwhile, the files are scanned: the index isn't whole yet.
-    expect(h.app.searchVault("narwhal")).toMatchObject({ engine: "scan", hits: [{ path: "n7.md", line: 3 }] });
+    expect(h.app.search.query("narwhal")).toMatchObject({ engine: "scan", hits: [{ path: "n7.md", line: 3 }] });
     expect(list.title).toMatch(/^search — the folder is being indexed: [\d,]+ of [\d,]+ files…$/);
     expect(list.filtered).toEqual([]);
-    await h.app.whenSearchIndexed();
+    await h.app.search.whenIndexed();
     expect(list.title).toBe('"narwhal" — 1 file');
     expect(list.filtered.map((f) => f.item.label)).toEqual(["n7.md:3"]);
     // [search] engine = "scan": no index, the files scanned.
     const s = await withNotes({ "w.md": "# W\n\na walrus\n" }, { config: (c) => (c.search.engine = "scan") });
-    expect(s.app.searchIndex).toBeNull();
+    expect(s.app.search.index).toBeNull();
     await s.keys("space", "f", "s");
     await typeIn(s, "walrus");
     expect((s.app.overlay as ListOverlay).title).toBe('"walrus" — 1 file (scanned: no index here)');
@@ -13591,18 +13616,18 @@ describe("the background auto-index in the TUI (20.9)", () => {
     writeFileSync(activityFile(), "0\n");
     utimesSync(activityFile(), new Date(now - 2 * quiet), new Date(now - 2 * quiet));
     h.app.lastInputAt = now - 2 * quiet;
-    expect(h.app.autoIndexDue(now)).toBe(true);
+    expect(h.app.watch.autoIndexDue(now)).toBe(true);
     await h.keys("j"); // a key now
-    expect(h.app.autoIndexDue(Date.now())).toBe(false);
+    expect(h.app.watch.autoIndexDue(Date.now())).toBe(false);
     h.app.lastInputAt = now - 2 * quiet;
     utimesSync(activityFile(), new Date(now), new Date(now)); // an agent just ran a command
-    expect(h.app.autoIndexDue(now)).toBe(false);
+    expect(h.app.watch.autoIndexDue(now)).toBe(false);
     utimesSync(activityFile(), new Date(now - 2 * quiet), new Date(now - 2 * quiet));
     h.app.indexing = 3; // this vault's own index first
-    expect(h.app.autoIndexDue(now)).toBe(false);
+    expect(h.app.watch.autoIndexDue(now)).toBe(false);
     h.app.indexing = 0;
     h.app.config.index.background = false;
-    expect(h.app.autoIndexDue(now)).toBe(false);
+    expect(h.app.watch.autoIndexDue(now)).toBe(false);
   });
 
   test("home the vault open (VV-D2): its walk and index made while nobody works, the background index off — then its notes have their backlinks", async () => {
@@ -13618,14 +13643,14 @@ describe("the background auto-index in the TUI (20.9)", () => {
       // Not walked yet: its top alone.
       expect(h.app.graph.home?.walked).toBeNull();
       expect(h.app.graph.backlinks("a.md")).toEqual([]);
-      const job = h.app.indexJob();
+      const job = h.app.watch.indexJob();
       expect(job?.root).toBe(home);
       while (job!.step(50)) {}
       expect(h.app.graph.home?.walked).not.toBeNull();
       expect(h.app.graph.backlinks("a.md").map((b) => b.from)).toEqual(["deep/er/b.md"]);
       // In a vault, the background index off: nothing works while nobody does.
       const v = await harness({});
-      expect(v.app.indexJob()).toBeNull();
+      expect(v.app.watch.indexJob()).toBeNull();
     } finally {
       process.env.HOME = before;
     }
@@ -13667,9 +13692,9 @@ describe("the background auto-index in the TUI (20.9)", () => {
       await h.app.run("history.back");
       expect(h.app.loc.root).toBe(notes);
       // The scratch, in slipbox's state folder under ~, opens beside: no vault's to go into, home's neither.
-      h.app.openScratch("right");
+      h.app.scratch.open("right");
       expect(h.app.loc.root).toBe(notes);
-      expect(h.app.view!.buf.abs).toBe(h.app.scratch().path);
+      expect(h.app.view!.buf.abs).toBe(h.app.scratch.location().path);
       expect(h.app.view!.buf.elsewhere ?? null).toBeNull();
     } finally {
       process.env.HOME = before.home;
@@ -13688,7 +13713,7 @@ describe("the background auto-index in the TUI (20.9)", () => {
     try {
       const h = await harness({ loc: homeAt(home), open: null, folder: join(home, "Downloads") });
       expect(h.app.graph.notes.has("Downloads/d.md")).toBe(false);
-      const names = h.app.treeRows().map((r) => r.name);
+      const names = h.app.explorer.treeRows().map((r) => r.name);
       expect(names).toContain("d.md");
       expect(names).toContain("sub");
     } finally {
@@ -13707,10 +13732,10 @@ describe("settings from the vaults around this one (20.7)", () => {
     mkdirSync(join(inner, ".slipbox"), { recursive: true });
     writeFileSync(join(inner, "n.md"), "# N\n");
     const h = await harness({ root: inner, open: "n.md" });
-    expect(h.app.configChangedOnDisk()).toBe(false);
+    expect(h.app.settings.changedOnDisk()).toBe(false);
     writeFileSync(cfg, "[ui]\nsidebar_width = 41\n");
-    expect(h.app.configChangedOnDisk()).toBe(true);
-    h.app.reloadConfig("file changed");
+    expect(h.app.settings.changedOnDisk()).toBe(true);
+    h.app.settings.reload("file changed");
     expect(h.app.config.ui.sidebar_width).toBe(41);
   });
 });
@@ -13916,7 +13941,7 @@ describe("git worktrees in the TUI (17.19)", () => {
     // Moved elsewhere (a file manager): one batch, gone and come with the same text.
     mkdirSync(join(root, "new"));
     renameSync(join(root, "old", "plan.md"), join(root, "new", "plan.md"));
-    h.app.applyChanges({
+    h.app.watch.applyChanges({
       changes: [
         { rel: "old/plan.md", kind: "deleted", isNote: true },
         { rel: "new/plan.md", kind: "created", isNote: true },
@@ -14170,7 +14195,7 @@ describe("git worktrees in the TUI (17.19)", () => {
     try {
       // Another window open: the question waits for it to close, then for a key.
       await h.keys(":");
-      h.app.askTrust(join(root, "src"), ["fake without the project's code"]);
+      h.app.languages.askTrust(join(root, "src"), ["fake without the project's code"]);
       expect((h.app.overlay as { label?: string } | null)?.label ?? "").not.toContain("Trust");
       await h.keys("escape");
       // Typing: a typed n is text, never an answer.
@@ -14185,7 +14210,7 @@ describe("git worktrees in the TUI (17.19)", () => {
       );
       // Its servers started again, trusted: a stand-in manager says which root.
       const restarted: string[] = [];
-      const app = h.app as unknown as { servers: unknown };
+      const app = h.app.languages as unknown as { servers: unknown };
       const said = { restartUnder: (r: string) => restarted.push(r) } as Record<string | symbol, unknown>;
       app.servers = new Proxy(said, { get: (t, k) => (k in t ? t[k] : () => undefined) }); // the rest: nothing
       await h.keys("y");
@@ -14196,7 +14221,7 @@ describe("git worktrees in the TUI (17.19)", () => {
         `: its own tools run as they would anywhere — :untrust takes it back`,
       );
       // Answered: never asked again.
-      h.app.askTrust(root, ["x"]);
+      h.app.languages.askTrust(root, ["x"]);
       expect(h.app.overlay).toBeNull();
       await h.app.run("root.untrust");
       expect(trustOf(root)).toBe("restricted");
@@ -14292,7 +14317,7 @@ describe("git worktrees in the TUI (17.19)", () => {
     if (!l) return;
     const { folderAt } = await import("../src/core/vault.ts");
     const h = await harness({ loc: folderAt(l.wts), open: null });
-    h.app.showSidebar(true);
+    h.app.panels.showSidebar(true);
     const f = h.frame();
     expect(f).toMatch(/feat +⎇ feat/);
     expect(f).toMatch(/fix +⎇ fix/);
@@ -14323,24 +14348,24 @@ describe("a branch switch as one event (5.9)", () => {
     const root = repo();
     if (!root) return;
     const h = await harness({ root, open: "a.md", config: (c) => (c.ui.restore_session = true) });
-    expect(h.app.checkHead()).toBe(false);
+    expect(h.app.git.checkHead()).toBe(false);
     git(root, "checkout", "-q", "-b", "feat");
-    expect(h.app.checkHead()).toBe(true);
+    expect(h.app.git.checkHead()).toBe(true);
     expect(h.app.messages.at(-1)!.text).toBe("switched to branch feat"); // none kept for feat yet: these stay
     await h.app.run("note.open b.md");
     expect(shown(h)).toEqual(["b.md"]);
     git(root, "checkout", "-q", "main");
-    h.app.checkHead();
+    h.app.git.checkHead();
     expect(h.app.messages.at(-1)!.text).toBe("switched to branch main: its tabs are back");
     expect(shown(h)).toEqual(["a.md"]);
     git(root, "checkout", "-q", "feat");
-    h.app.checkHead();
+    h.app.git.checkHead();
     expect(shown(h)).toEqual(["b.md"]);
     // Unsaved: what's open stays open.
     await h.keys("space", "n", "v", "shift+a", "!", "escape");
     expect(h.app.view!.buf.dirty).toBe(true);
     git(root, "checkout", "-q", "main");
-    h.app.checkHead();
+    h.app.git.checkHead();
     expect(h.app.messages.at(-1)!.text).toBe(
       "switched to branch main — unsaved notes stay open, so its tabs aren't brought back",
     );
@@ -14353,12 +14378,12 @@ describe("a branch switch as one event (5.9)", () => {
     writeFileSync(join(root, "b.md"), "# B\n\n[a](a.md)\n");
     git(root, "commit", "-q", "-am", "b links a");
     const h = await harness({ root, open: "b.md", config: (c) => (c.ui.restore_session = true) });
-    h.app.checkHead();
+    h.app.git.checkHead();
     const said = h.app.messages.length;
     // A commit moving nothing: HEAD moved, nothing to say, the tabs as they are.
     writeFileSync(join(root, "a.md"), "# A\n\nThe first note, long enough to know again by its text.\nMore.\n");
     git(root, "commit", "-q", "-am", "more");
-    expect(h.app.checkHead()).toBe(true);
+    expect(h.app.git.checkHead()).toBe(true);
     expect(h.app.messages.length).toBe(said);
     // As a pull brings it: a.md moved, and changed as it went; b.md's link left as it was.
     git(root, "checkout", "-q", "-b", "upstream");
@@ -14370,9 +14395,9 @@ describe("a branch switch as one event (5.9)", () => {
     );
     git(root, "commit", "-q", "-am", "moved");
     git(root, "checkout", "-q", "main");
-    h.app.checkHead(); // a switch, and back: nothing moved
+    h.app.git.checkHead(); // a switch, and back: nothing moved
     git(root, "merge", "-q", "--ff-only", "upstream");
-    h.app.checkHead();
+    h.app.git.checkHead();
     expect(h.app.messages.at(-1)!.text).toBe(
       "branch main moved on: git moved 1 file — links to it say where (space v p); space l r relinks a note's",
     );
@@ -14393,7 +14418,7 @@ describe("a branch switch as one event (5.9)", () => {
     if (git(root, "init", "-q", "-b", "main").exitCode !== 0) return;
     const later = Date.now() + 5_000; // the next look for a repository
     (h.app as unknown as { now: () => number }).now = () => later;
-    expect(h.app.checkHead()).toBe(true); // news for the status line (20.14)
+    expect(h.app.git.checkHead()).toBe(true); // news for the status line (20.14)
     expect(statusRow(h.frame())).toContain(" · main");
     expect(h.app.messages.some((m) => m.text.startsWith("switched"))).toBe(false); // not a switch
   });
@@ -14409,7 +14434,7 @@ describe("a branch switch as one event (5.9)", () => {
     const row = statusRow(h.frame());
     expect(row).toMatch(/ …[^ ]*\/experiment · main /); // its last folders, and the branch
     expect(row).not.toContain(root); // too long for its 40 columns
-    expect(h.app.vaultStatus(200)).toBe(`${root} · main`);
+    expect(h.app.git.vaultStatus(200)).toBe(`${root} · main`);
     // However wide the screen, at most 40 columns: the note's own path comes first.
     const wide = await harness({ root, open: "a.md", width: 300 });
     expect(statusRow(wide.frame())).not.toContain(root);
@@ -14417,7 +14442,7 @@ describe("a branch switch as one event (5.9)", () => {
     const plain = mkdtempSync(join(sandbox, "plain-status-"));
     writeFileSync(join(plain, "p.md"), "# P\n");
     const p = await harness({ loc: folderAt(plain), open: "p.md" });
-    expect(p.app.vaultStatus(200)).toBe(plain);
+    expect(p.app.git.vaultStatus(200)).toBe(plain);
   });
 
   test("started again, each branch opens on its own tabs", async () => {
@@ -14426,9 +14451,9 @@ describe("a branch switch as one event (5.9)", () => {
     const restore = (c: Config) => (c.ui.restore_session = true);
     const h = await harness({ root, open: "a.md", config: restore });
     git(root, "checkout", "-q", "-b", "feat");
-    h.app.checkHead(); // main's tabs kept: a.md
+    h.app.git.checkHead(); // main's tabs kept: a.md
     await h.app.run("note.open b.md");
-    h.app.saveState(); // feat's: b.md
+    h.app.session.save(); // feat's: b.md
     expect(shown(await harness({ root, open: null, config: restore }))).toEqual(["b.md"]);
     git(root, "checkout", "-q", "main");
     expect(shown(await harness({ root, open: null, config: restore }))).toEqual(["a.md"]);
@@ -14446,7 +14471,7 @@ describe("a branch switch as one event (5.9)", () => {
     // git busy: held.
     writeFileSync(join(root, ".git", "index.lock"), "");
     writeFileSync(join(root, "b.md"), "# B, changed\n");
-    h.app.receiveBatch({ changes: [{ rel: "b.md", kind: "changed", isNote: true }], rescan: false });
+    h.app.watch.receiveBatch({ changes: [{ rel: "b.md", kind: "changed", isNote: true }], rescan: false });
     expect(h.app.view!.buf.source).toBe("# B\n");
     rmSync(join(root, ".git", "index.lock"));
     for (let i = 0; i < 50 && h.app.view!.buf.source !== "# B, changed\n"; i++) await Bun.sleep(20);
@@ -14454,7 +14479,7 @@ describe("a branch switch as one event (5.9)", () => {
     git(root, "checkout", "-q", "--", "b.md");
     // The switch: a.md goes, c.md comes with its text — not a move, so no redirect.
     git(root, "checkout", "-q", "feat");
-    h.app.receiveBatch({
+    h.app.watch.receiveBatch({
       changes: [
         { rel: "a.md", kind: "deleted", isNote: true },
         { rel: "c.md", kind: "created", isNote: true },
@@ -14467,7 +14492,7 @@ describe("a branch switch as one event (5.9)", () => {
     renameSync(join(root, "c.md"), join(root, "d.md"));
     const later = Date.now() + 10_000; // past the switch's settling
     (h.app as unknown as { now: () => number }).now = () => later;
-    h.app.receiveBatch({
+    h.app.watch.receiveBatch({
       changes: [
         { rel: "c.md", kind: "deleted", isNote: true },
         { rel: "d.md", kind: "created", isNote: true },
@@ -14506,10 +14531,10 @@ describe("git in the TUI: marks, what changed, a note's diff, worktrees, conflic
     const root = repo();
     if (!root) return;
     const h = await harness({ root, open: "a.md" });
-    await h.app.refreshGitNow();
-    h.app.showSidebar(true);
-    h.app.expanded.add("notes");
-    h.app.invalidateTree();
+    await h.app.git.refreshNow();
+    h.app.panels.showSidebar(true);
+    h.app.explorer.expanded.add("notes");
+    h.app.explorer.invalidateTree();
     const rows = h.frame().split("\n");
     const row = (name: string) =>
       rows.find((r) => new RegExp(`\\b${name.replace(".", "\\.")}\\b`).test(r.split(/[┃┣]/)[0]!))!.split(/[┃┣]/)[0]!;
@@ -14520,7 +14545,7 @@ describe("git in the TUI: marks, what changed, a note's diff, worktrees, conflic
     // A name as long as the row: cut short of its mark, never under it.
     writeFileSync(join(root, "a-rather-long-note-name-that-fills-the-whole-row.md"), "# Long\n");
     h.app.graph.build(true, "lazy");
-    await h.app.refreshGitNow();
+    await h.app.git.refreshNow();
     const long = h
       .frame()
       .split("\n")
@@ -14540,10 +14565,10 @@ describe("git in the TUI: marks, what changed, a note's diff, worktrees, conflic
       height: 40,
       config: (c) => (c.ui.sidebar_width = 30),
     });
-    h.app.showSidebar(true);
-    h.app.gitStates = new Map([[name, "modified"]]);
-    h.app.gitFolders.set("nested-vault", "modified");
-    h.app.invalidateTree();
+    h.app.panels.showSidebar(true);
+    h.app.git.states = new Map([[name, "modified"]]);
+    h.app.git.folders.set("nested-vault", "modified");
+    h.app.explorer.invalidateTree();
     const row = (has: string) =>
       h
         .frame()
@@ -14562,10 +14587,10 @@ describe("git in the TUI: marks, what changed, a note's diff, worktrees, conflic
       height: 6,
       config: (c) => (c.ui.sidebar_width = 30),
     });
-    short.app.showSidebar(true);
-    short.app.gitStates = new Map([[name, "modified"]]);
-    short.app.invalidateTree();
-    short.app.selectInExplorer(name);
+    short.app.panels.showSidebar(true);
+    short.app.git.states = new Map([[name, "modified"]]);
+    short.app.explorer.invalidateTree();
+    short.app.explorer.select(name);
     short.app.region = "content";
     expect(
       short
@@ -14648,7 +14673,7 @@ describe("git in the TUI: marks, what changed, a note's diff, worktrees, conflic
     expect(statusRow(h.frame())).toMatch(/ L3:\d+ /);
     // Nothing would break: said so, no list.
     git(root, "checkout", "-q", "-b", "quiet", "main");
-    h.app.checkHead();
+    h.app.git.checkHead();
     await h.keys("space", "g", "m");
     list = h.app.overlay as ListOverlay;
     list.selected = list.items.findIndex((i) => i.label.endsWith("main → quiet"));
@@ -14711,15 +14736,15 @@ describe("git in the TUI: marks, what changed, a note's diff, worktrees, conflic
     git(root, "commit", "-q", "-am", "main's two");
     git(root, "merge", "-q", "feat");
     const h = await harness({ root, open: "notes/b.md" });
-    await h.app.refreshGitNow();
-    const rows = h.app.problemRows().filter((r) => r.section === "Conflicts");
+    await h.app.git.refreshNow();
+    const rows = h.app.problems.rows().filter((r) => r.section === "Conflicts");
     expect(rows.map((r) => [r.label, r.detail])).toEqual([
       ["Conflicts (1)", ""],
       ["a.md", "L4"],
     ]);
     await h.keys("space", "v", "p");
-    h.app.problemsPanel.all.selected = h.app
-      .problemRows()
+    h.app.problems.panel.all.selected = h.app.problems
+      .rows()
       .findIndex((r) => r.label === "a.md" && r.section === "Conflicts");
     await h.keys("enter");
     expect(h.app.view!.buf.rel).toBe("a.md");
@@ -14727,8 +14752,8 @@ describe("git in the TUI: marks, what changed, a note's diff, worktrees, conflic
     // Filtered to it, the selection on its heading (git's answer came after the typing): enter goes to its first.
     await h.app.run("note.open notes/b.md");
     await h.keys("space", "v", "p", "/", "a", ".", "m", "d");
-    expect(h.app.problemRows()[0]!.label).toBe("Conflicts (1)");
-    h.app.problemsPanel.all.selected = 0;
+    expect(h.app.problems.rows()[0]!.label).toBe("Conflicts (1)");
+    h.app.problems.panel.all.selected = 0;
     await h.keys("enter");
     expect(h.app.view!.buf.rel).toBe("a.md");
     expect(h.app.cursorLine(h.app.view!)).toBe(4);
@@ -14750,7 +14775,7 @@ describe("the diff window (GIT-D2)", () => {
     const root = makeVault();
     writeFileSync(join(root, "x.ts"), now);
     const h = await harness({ root, open: "index.md", width, height: 40 });
-    h.app.showLineDiff(code, now, "x.ts", "x.ts: its change");
+    h.app.git.showLineDiff(code, now, "x.ts", "x.ts: its change");
     return h;
   };
 
@@ -14808,7 +14833,7 @@ describe("the diff window (GIT-D2)", () => {
     // The wheel: sideways, or shift with it, over the rows.
     const pane = h.app.geometry!.panes.find((p) => p.view === h.app.floating!.view)!;
     const wheel = (direction: string, shift = false) =>
-      h.app.handleMouse({ type: "scroll", x: pane.textX + 10, y, button: 0, scroll: { direction, delta: 3 }, shift });
+      h.app.mouse.handle({ type: "scroll", x: pane.textX + 10, y, button: 0, scroll: { direction, delta: 3 }, shift });
     wheel("right");
     expect(screen(h)[y]).not.toContain("+ const line18");
     expect(screen(h)[y]).toContain("‹");
@@ -14828,7 +14853,7 @@ describe("the diff window (GIT-D2)", () => {
     h.frame();
     const pane = h.app.geometry!.panes.find((p) => p.view === f)!;
     const wheel = (x: number) =>
-      h.app.handleMouse({ type: "scroll", x, y: pane.y + 2, button: 0, scroll: { direction: "down", delta: 1 } });
+      h.app.mouse.handle({ type: "scroll", x, y: pane.y + 2, button: 0, scroll: { direction: "down", delta: 1 } });
     // Where the explorer is under it.
     const explorer = h.app.geometry!.sidebarPane!;
     expect(pane.textX + 4 < explorer.x + explorer.w && pane.y + 2 < explorer.y + explorer.h).toBe(true);
@@ -14846,7 +14871,7 @@ describe("the diff window (GIT-D2)", () => {
   test("the terminal's theme: a changed word bold and underlined, a theme without tints to give", async () => {
     const root = makeVault();
     const h = await harness({ root, open: "index.md", width: 100, height: 40, themeName: "terminal" });
-    h.app.showLineDiff(code, code.replace("const line2 = 2;", "const line2 = 22;"), "x.ts", "x.ts: its change");
+    h.app.git.showLineDiff(code, code.replace("const line2 = 2;", "const line2 = 22;"), "x.ts", "x.ts: its change");
     expect(styleAt(h, "+ const line2 = 22", "22")).toMatchObject({ bold: true, underline: true });
     expect(styleAt(h, "+ const line2 = 22", "line2")).toMatchObject({ bold: false, underline: false });
   });
@@ -14862,7 +14887,7 @@ describe("the diff window (GIT-D2)", () => {
       height: 40,
       config: (c) => (c.ui.line_numbers = true),
     });
-    h.app.showLineDiff(before, before.replace(/^a/gm, "A"), "x.txt", "x.txt: every line");
+    h.app.git.showLineDiff(before, before.replace(/^a/gm, "A"), "x.txt", "x.txt: every line");
     await h.keys("shift+g");
     const rows = screen(h);
     const y = rows.findIndex((r) => r.includes("+ A104"));
@@ -14875,7 +14900,7 @@ describe("the diff window (GIT-D2)", () => {
     const root = makeVault();
     const h = await harness({ root, open: "index.md" });
     let back = 0;
-    h.app.showLineDiff(code, code, "x.ts", "x.ts: none", "no differences from main", () => back++);
+    h.app.git.showLineDiff(code, code, "x.ts", "x.ts: none", "no differences from main", () => back++);
     expect([h.app.floating, h.app.messages.at(-1)?.text, back]).toEqual([null, "no differences from main", 1]);
   });
 
@@ -15077,8 +15102,8 @@ describe("problems where they are: the bar, the marks, the status line (19.8–1
       info: rowOf(h, "And").styles[rowOf(h, "And").at("[nope")]!.fg === roles.problem_info.fg,
     });
     expect(
-      h.app
-        .problemsShown(h.app.view!)
+      h.app.problems
+        .ofView(h.app.view!)
         .map((p) => p.severity)
         .sort(),
     ).toEqual(["error", "info", "warning"]);
@@ -15115,11 +15140,11 @@ describe("problems where they are: the bar, the marks, the status line (19.8–1
     h.frame();
     const clean = rowOf(h, "See").at("See");
     writeFileSync(join(root, "p.md"), "# P\n\nSee [twin](twin.png) here.\n");
-    h.app.applyChanges({ changes: [{ rel: "p.md", kind: "changed", isNote: true }], rescan: false });
+    h.app.watch.applyChanges({ changes: [{ rel: "p.md", kind: "changed", isNote: true }], rescan: false });
     h.frame();
     expect(rowOf(h, "See").at("See")).toBe(clean + 4);
     writeFileSync(join(root, "p.md"), "# P\n\nSee [twin](x/twin.md) here.\n");
-    h.app.applyChanges({ changes: [{ rel: "p.md", kind: "changed", isNote: true }], rescan: false });
+    h.app.watch.applyChanges({ changes: [{ rel: "p.md", kind: "changed", isNote: true }], rescan: false });
     h.frame();
     expect(rowOf(h, "See").bar).toBe(" ");
     expect(rowOf(h, "See").at("See")).toBe(clean + 4); // kept: the text doesn't move back
@@ -15157,11 +15182,11 @@ describe("language servers in the TUI (19.1, 19.8)", () => {
     const root = makeVault();
     writeFileSync(join(root, "a.fk"), "fine\nBAD here\n");
     const h = await harness({ root, open: "a.fk", config: served });
-    h.app.startServers();
+    h.app.languages.startServers();
     h.frame(); // shown: opened in its server
     const buf = h.app.view!.buf;
-    expect(await until(() => h.app.problemsShown(h.app.view!).length === 1)).toBe(true);
-    expect(h.app.problemsShown(h.app.view!)[0]).toMatchObject({
+    expect(await until(() => h.app.problems.ofView(h.app.view!).length === 1)).toBe(true);
+    expect(h.app.problems.ofView(h.app.view!)[0]).toMatchObject({
       start: { line: 2, column: 1 },
       severity: "warning",
       source: "fake",
@@ -15170,10 +15195,10 @@ describe("language servers in the TUI (19.1, 19.8)", () => {
     // Typing: the old problems hidden (their text is gone), then the server's answer for the new text.
     buf.edit(0, 0, "BAD ");
     h.frame();
-    expect(h.app.problemsShown(h.app.view!)).toEqual([]);
-    expect(await until(() => (h.frame(), h.app.problemsShown(h.app.view!).length === 2))).toBe(true);
-    expect(h.app.servers!.list()).toMatchObject([{ name: "fake", state: "running", files: 1 }]);
-    await h.app.servers!.stopAll();
+    expect(h.app.problems.ofView(h.app.view!)).toEqual([]);
+    expect(await until(() => (h.frame(), h.app.problems.ofView(h.app.view!).length === 2))).toBe(true);
+    expect(h.app.languages.servers!.list()).toMatchObject([{ name: "fake", state: "running", files: 1 }]);
+    await h.app.languages.servers!.stopAll();
   });
 
   test("a file whose server isn't installed: said once, on the screen", async () => {
@@ -15188,7 +15213,7 @@ describe("language servers in the TUI (19.1, 19.8)", () => {
         c.language = [{ name: "fake", "file-types": ["fk"], "language-servers": ["nope"] }];
       },
     });
-    h.app.startServers();
+    h.app.languages.startServers();
     h.frame();
     const said = (h2: Harness) => h2.app.messages.filter((m) => m.text.startsWith("fake: nope isn't installed"));
     expect(await until(() => said(h).length === 1)).toBe(true);
@@ -15198,16 +15223,16 @@ describe("language servers in the TUI (19.1, 19.8)", () => {
     h.frame();
     await Bun.sleep(100);
     expect(said(h)).toHaveLength(1);
-    await h.app.servers!.stopAll();
+    await h.app.languages.servers!.stopAll();
   });
 
   test("shift+k: the server's hover, floating; g d its definition; g r its references, to pick from (19.12, 19.13)", async () => {
     const root = makeVault();
     writeFileSync(join(root, "a.fk"), "  DEF here\nuse it\nREF one\nREF two\n");
     const h = await harness({ root, open: "a.fk", config: served });
-    h.app.startServers();
+    h.app.languages.startServers();
     h.frame();
-    expect(await until(() => (h.frame(), h.app.servers!.list()[0]?.state === "running"))).toBe(true);
+    expect(await until(() => (h.frame(), h.app.languages.servers!.list()[0]?.state === "running"))).toBe(true);
     await h.app.run("cursor.goto_line 2");
     await h.keys("shift+k");
     expect(await until(() => h.app.floating?.kind === "hover")).toBe(true);
@@ -15224,7 +15249,7 @@ describe("language servers in the TUI (19.1, 19.8)", () => {
     expect((h.app.overlay as ListOverlay).items.map((i) => i.label)).toEqual(["a.fk:3", "a.fk:4"]);
     await h.keys("down", "enter");
     expect(h.app.cursorLine(h.app.view!)).toBe(4);
-    await h.app.servers!.stopAll();
+    await h.app.languages.servers!.stopAll();
   });
 
   test("g y: the type's definition; g I: the implementations, to pick from; none: said (19.13)", async () => {
@@ -15232,9 +15257,9 @@ describe("language servers in the TUI (19.1, 19.8)", () => {
     writeFileSync(join(root, "a.fk"), "use it\n  TYPE Shape\nIMPL circle\nIMPL square\n");
     writeFileSync(join(root, "b.fk"), "nothing here\n");
     const h = await harness({ root, open: "a.fk", config: served });
-    h.app.startServers();
+    h.app.languages.startServers();
     h.frame();
-    expect(await until(() => (h.frame(), h.app.servers!.list()[0]?.state === "running"))).toBe(true);
+    expect(await until(() => (h.frame(), h.app.languages.servers!.list()[0]?.state === "running"))).toBe(true);
     await h.keys("g", "y");
     expect(await until(() => h.app.cursorLine(h.app.view!) === 2)).toBe(true);
     expect(h.app.view!.cur.col).toBe(2); // at TYPE, past the indent
@@ -15245,24 +15270,24 @@ describe("language servers in the TUI (19.1, 19.8)", () => {
     await h.keys("down", "enter");
     expect(h.app.cursorLine(h.app.view!)).toBe(4);
     await h.app.run("note.open b.fk");
-    expect(await until(() => (h.frame(), h.app.servers!.isOpen(join(root, "b.fk"))))).toBe(true);
+    expect(await until(() => (h.frame(), h.app.languages.servers!.isOpen(join(root, "b.fk"))))).toBe(true);
     await h.keys("g", "shift+i");
     expect(await until(() => h.app.messages.at(-1)?.text === "no implementation found here")).toBe(true);
-    await h.app.servers!.stopAll();
+    await h.app.languages.servers!.stopAll();
   });
 
   test("a file tree-sitter has no outline of takes its server's symbols as its outline, nested; again as it changes (19.14)", async () => {
     const root = makeVault();
     writeFileSync(join(root, "a.fk"), "function first\n  method inner\nfunction second\n");
     const h = await harness({ root, open: "a.fk", config: served });
-    h.app.startServers();
+    h.app.languages.startServers();
     h.frame();
-    const outline = () => h.app.outlineRows().map((r) => `${r.level}:${r.text}`);
+    const outline = () => h.app.outlineView.rows().map((r) => `${r.level}:${r.text}`);
     expect(await until(() => (h.frame(), outline().length === 3))).toBe(true);
     expect(outline()).toEqual(["1:first", "2:inner", "1:second"]);
     h.app.view!.buf.edit(h.app.view!.buf.source.length, 0, "function third\n");
     expect(await until(() => (h.frame(), outline().length === 4))).toBe(true);
-    await h.app.servers!.stopAll();
+    await h.app.languages.servers!.stopAll();
   });
 
   test("in a note slipbox answers itself: shift+k where a link lands, g d follows it, g r its backlinks", async () => {
@@ -15374,9 +15399,9 @@ describe("what a code file's server changes (19.15)", () => {
     return ok();
   };
   const ready = async (h: Harness) => {
-    h.app.startServers();
+    h.app.languages.startServers();
     h.frame();
-    expect(await until(() => (h.frame(), h.app.servers!.list()[0]?.state === "running"))).toBe(true);
+    expect(await until(() => (h.frame(), h.app.languages.servers!.list()[0]?.state === "running"))).toBe(true);
   };
 
   test("inserts at one place are made in the edit's order, as the preview shows them", async () => {
@@ -15390,7 +15415,7 @@ describe("what a code file's server changes (19.15)", () => {
       { range: at, newText: "import b\n" },
     ];
     const preview = TextDocument.applyEdits(TextDocument.create("", "", 0, "print(1)\n"), edits);
-    expect(h.app.applyWorkspaceEdit({ changes: { [`file://${join(root, "x.py")}`]: edits } })).toEqual({
+    expect(h.app.languages.applyWorkspaceEdit({ changes: { [`file://${join(root, "x.py")}`]: edits } })).toEqual({
       files: 1,
       edits: 2,
     });
@@ -15404,7 +15429,7 @@ describe("what a code file's server changes (19.15)", () => {
     writeFileSync(join(root, "code.txt"), "short\nkeep this line\nand this\n");
     const h = await harness({ root, open: "index.md" });
     const edits = [{ range: { start: { line: 0, character: 0 }, end: { line: 0, character: 100 } }, newText: "SHORT" }];
-    expect(h.app.applyWorkspaceEdit({ changes: { [`file://${join(root, "code.txt")}`]: edits } })).toEqual({
+    expect(h.app.languages.applyWorkspaceEdit({ changes: { [`file://${join(root, "code.txt")}`]: edits } })).toEqual({
       files: 1,
       edits: 1,
     });
@@ -15432,7 +15457,7 @@ describe("what a code file's server changes (19.15)", () => {
     expect(h.app.view!.buf.dirty).toBe(true); // shown: left for its saving
     expect(readFileSync(join(root, "other.fk"), "utf8")).toBe("NAME there\n"); // not shown: saved
     expect(readFileSync(join(root, "a.fk"), "utf8")).toBe("REF one REF\n");
-    await h.app.servers!.stopAll();
+    await h.app.languages.servers!.stopAll();
   });
 
   test("space c a: the server's fixes for the line's problems — its edit made, its command run (asking for an edit), resolved late", async () => {
@@ -15440,7 +15465,7 @@ describe("what a code file's server changes (19.15)", () => {
     writeFileSync(join(root, "a.fk"), "BAD here BAD\n");
     const h = await harness({ root, open: "a.fk", config: served });
     await ready(h);
-    expect(await until(() => (h.frame(), h.app.problemsShown(h.app.view!).length === 1))).toBe(true); // a problem a line
+    expect(await until(() => (h.frame(), h.app.problems.ofView(h.app.view!).length === 1))).toBe(true); // a problem a line
     const pick = async (title: string) => {
       await h.keys("space", "c", "a");
       expect(await until(() => h.app.overlay?.kind === "list")).toBe(true);
@@ -15460,7 +15485,7 @@ describe("what a code file's server changes (19.15)", () => {
     expect(await until(() => h.app.view!.buf.source === "GOOD here FIXED\n")).toBe(true);
     await pick("Lazy fix");
     expect(await until(() => h.app.view!.buf.source === "LAZY GOOD here FIXED\n")).toBe(true);
-    await h.app.servers!.stopAll();
+    await h.app.languages.servers!.stopAll();
   });
 
   test("space c f: formatted as the server formats it, one undo step", async () => {
@@ -15472,7 +15497,7 @@ describe("what a code file's server changes (19.15)", () => {
     expect(await until(() => h.app.view!.buf.source === "a b c\nd e\n")).toBe(true);
     await h.keys("u");
     expect(h.app.view!.buf.source).toBe("a  b   c\nd    e\n");
-    await h.app.servers!.stopAll();
+    await h.app.languages.servers!.stopAll();
   });
 
   test("space c f: the server asked to format with the file's own indentation — its .editorconfig, else its lines", async () => {
@@ -15487,7 +15512,7 @@ describe("what a code file's server changes (19.15)", () => {
       const h = await harness({ root, open: file, config: served });
       await ready(h);
       // What the client asks the server, at the request it builds.
-      const s = h.app.servers!;
+      const s = h.app.languages.servers!;
       const request = s.request.bind(s);
       s.request = ((path, method, params, capability, feature) => {
         if (method === "textDocument/formatting") asked.push((params as { options: unknown }).options);
@@ -15523,11 +15548,11 @@ describe("completion while typing (19.16)", () => {
     return ok();
   };
   const ready = async (h: Harness) => {
-    h.app.startServers();
+    h.app.languages.startServers();
     h.frame();
-    expect(await until(() => (h.frame(), h.app.servers!.list()[0]?.state === "running"))).toBe(true);
-    h.app.serverTriggers(h.app.view!.buf.abs); // asked once its servers run
-    await until(() => h.app.serverTriggers(h.app.view!.buf.abs).completion.length > 0);
+    expect(await until(() => (h.frame(), h.app.languages.servers!.list()[0]?.state === "running"))).toBe(true);
+    h.app.languages.triggers(h.app.view!.buf.abs); // asked once its servers run
+    await until(() => h.app.languages.triggers(h.app.view!.buf.abs).completion.length > 0);
   };
   const shown = (h: Harness) => h.app.completion?.shown.map((i) => i.label) ?? [];
 
@@ -15549,7 +15574,7 @@ describe("completion while typing (19.16)", () => {
     await h.keys("space", "z", "q");
     await Bun.sleep(300);
     expect(h.app.completion).toBeNull(); // nothing for zq
-    await h.app.servers!.stopAll();
+    await h.app.languages.servers!.stopAll();
   });
 
   test("the open files' words (25.5) beside a server: no ask waiting replaces them; a trigger closes them, the server's come", async () => {
@@ -15570,7 +15595,7 @@ describe("completion while typing (19.16)", () => {
     await Bun.sleep(400);
     expect(h.app.completion?.words).toBe(true);
     await h.keys("escape");
-    await h.app.servers!.stopAll();
+    await h.app.languages.servers!.stopAll();
   });
 
   test("a snippet (25.8): its stops in turn — the placeholder replaced by what's typed, its mirrors following — then $0", async () => {
@@ -15604,7 +15629,7 @@ describe("completion while typing (19.16)", () => {
     // A snippet's typing can't be repeated as keys: . has nothing.
     await h.keys(".");
     expect(text()).toBe("SNIPPETS\nfor (k = 0; k < len; k++) {\n  x\n}\n");
-    await h.app.servers!.stopAll();
+    await h.app.languages.servers!.stopAll();
   });
 
   test("a snippet's placeholder kept by a move, typed into there; a nested stop gone with its parent's placeholder; :e! ends it", async () => {
@@ -15638,7 +15663,7 @@ describe("completion while typing (19.16)", () => {
     await h.keys("ctrl+s");
     await h.app.run("note.revert");
     expect(h.app.snippet).toBeNull();
-    await h.app.servers!.stopAll();
+    await h.app.languages.servers!.stopAll();
   });
 
   test("a snippet's choice (the first), its variable's value; an import added above moves its stops; esc ends it", async () => {
@@ -15668,7 +15693,7 @@ describe("completion while typing (19.16)", () => {
     expect(h.app.snippet).toBeNull();
     expect(text()).toBe("import x\nSNIPPETS\npick(one, b)\n  use(z)\n");
     await h.keys("escape");
-    await h.app.servers!.stopAll();
+    await h.app.languages.servers!.stopAll();
   });
 
   test("after a trigger character at once: ctrl+n moves, enter puts it in with its import; escape closes and leaves insert", async () => {
@@ -15693,7 +15718,7 @@ describe("completion while typing (19.16)", () => {
     await h.keys("escape");
     expect(h.app.completion).toBeNull();
     expect(h.app.view!.insert).toBe(false);
-    await h.app.servers!.stopAll();
+    await h.app.languages.servers!.stopAll();
   });
 
   test("the last ask's answer stands: a pause's ask gives way to a trigger's, an older answer arriving late is dropped", async () => {
@@ -15714,7 +15739,7 @@ describe("completion while typing (19.16)", () => {
     expect(await until(() => shown(h).length === 2)).toBe(true);
     await Bun.sleep(500);
     expect(shown(h)).toEqual(members);
-    await h.app.servers!.stopAll();
+    await h.app.languages.servers!.stopAll();
   });
 
   test("signature help: after ( the signature, its parameter marked; after , the next; ) closes it", async () => {
@@ -15731,7 +15756,7 @@ describe("completion while typing (19.16)", () => {
     expect(await until(() => marked() === "b: string")).toBe(true);
     await h.keys(")");
     expect(h.app.signature).toBeNull();
-    await h.app.servers!.stopAll();
+    await h.app.languages.servers!.stopAll();
   });
 
   test("up (ctrl+p) from the first item wraps to the last; backspace to the word's start closes the popup", async () => {
@@ -15755,7 +15780,7 @@ describe("completion while typing (19.16)", () => {
     expect(h.app.completion).toBeNull(); // nothing typed of a word
     await Bun.sleep(300);
     expect(h.app.completion).toBeNull(); // and not asked again
-    await h.app.servers!.stopAll();
+    await h.app.languages.servers!.stopAll();
   });
 
   test("signature help closes when the server has none for where the cursor is", async () => {
@@ -15767,7 +15792,7 @@ describe("completion while typing (19.16)", () => {
     expect(await until(() => h.app.signature !== null)).toBe(true);
     await h.keys("enter", ","); // a new line: no call being typed there
     expect(await until(() => h.app.signature === null)).toBe(true);
-    await h.app.servers!.stopAll();
+    await h.app.languages.servers!.stopAll();
   });
 
   test("`(` ends the word: signature help slow to answer, the pause after `fn` asks for no completion (#37)", async () => {
@@ -15782,7 +15807,7 @@ describe("completion while typing (19.16)", () => {
     await h.keys("enter", ",");
     expect(h.app.view!.buf.source).toMatch(/^LATESIG start\nfn\(\n *,\n$/); // indented as after a `(`
     expect(await until(() => h.app.signature === null)).toBe(true);
-    await h.app.servers!.stopAll();
+    await h.app.languages.servers!.stopAll();
   });
 
   test("`(` ends the word: the word's items asked for before it, answered late, open no popup after it (#37)", async () => {
@@ -15795,7 +15820,7 @@ describe("completion while typing (19.16)", () => {
     await h.keys("(");
     await new Promise((r) => setTimeout(r, 450)); // their answer come
     expect(h.app.completion).toBeNull();
-    await h.app.servers!.stopAll();
+    await h.app.languages.servers!.stopAll();
   });
 });
 
@@ -15837,7 +15862,7 @@ describe("linters without a server (19.19)", () => {
     writeFileSync(join(root, "Dockerfile"), "FROM x\nRUN BAD\n");
     const h = await harness({ root, open: "Dockerfile", config: linters });
     const shown = () =>
-      h.app.problemsShown(h.app.view!).map((p) => `${p.start.line} ${p.severity} ${p.source}: ${p.message}`);
+      h.app.problems.ofView(h.app.view!).map((p) => `${p.start.line} ${p.severity} ${p.source}: ${p.message}`);
     expect(await until(() => (h.frame(), shown().length === 2))).toBe(true);
     expect(shown().sort()).toEqual(["2 error fake: found BAD", "2 warning saved: saved BAD"]);
     expect(h.frame()).toMatch(/[┃│] ✖2 {2}RUN BAD/); // the bar: the worse one's sign and its two, beside its line
@@ -15871,7 +15896,7 @@ describe("linters without a server (19.19)", () => {
       config: (c) => (linters(c), (c.language = [{ name: "dockerfile", linters: ["gone"] }])),
     });
     const other = h.app.buffer("web/Dockerfile")!;
-    h.app.ensureLinters(other); // both run together
+    h.app.languages.ensureLinters(other); // both run together
     h.frame();
     expect(await until(() => other.linted.typed >= 0 && h.app.view!.buf.linted.typed >= 0)).toBe(true);
     await Bun.sleep(300);
@@ -15885,7 +15910,7 @@ describe("linters without a server (19.19)", () => {
     h.frame();
     await Bun.sleep(400);
     h.frame();
-    expect(h.app.problemsShown(h.app.view!)).toEqual([]);
+    expect(h.app.problems.ofView(h.app.view!)).toEqual([]);
   });
 });
 
@@ -15927,9 +15952,9 @@ describe("the switcher's workspace symbols (19.14)", () => {
         c.language = [{ name: "fake", "file-types": ["fk"], "language-servers": ["fake"] }];
       },
     });
-    h.app.startServers();
+    h.app.languages.startServers();
     h.frame();
-    expect(await until(() => (h.frame(), h.app.servers!.list()[0]?.state === "running"))).toBe(true);
+    expect(await until(() => (h.frame(), h.app.languages.servers!.list()[0]?.state === "running"))).toBe(true);
     await h.keys("ctrl+p", "#", "a", "l");
     const shown = () =>
       ((h.app.overlay as ListOverlay | null)?.filtered ?? []).map((e) => [e.item.label, e.item.hint, e.item.detail]);
@@ -15952,7 +15977,7 @@ describe("the switcher's workspace symbols (19.14)", () => {
     expect(shown().length).toBe(2);
     await h.keys("down", "enter");
     expect(statusRow(h.frame())).toMatch(/L4:10\b/);
-    await h.app.servers!.stopAll();
+    await h.app.languages.servers!.stopAll();
   });
 });
 
@@ -16179,7 +16204,7 @@ describe("review (tui): what a filter or a search marks, drawn where it is", () 
       height: 30,
       config: (c) => (c.search.engine = "auto"),
     });
-    await h.app.whenSearchIndexed();
+    await h.app.search.whenIndexed();
     await h.keys("space", "f", "s");
     for (const k of "quetzal") await h.keys(k);
     const list = h.app.overlay as ListOverlay;
@@ -16240,14 +16265,14 @@ describe("review (tui): the app's floating windows, new paths, roots and repeats
 
   test("a split made with the properties editor open is of the window under it, never of the floating one", async () => {
     const h = await harness();
-    h.app.openPropertiesEditor();
+    h.app.properties.open();
     await h.app.run("window.split_side");
     expect(h.app.floating).toBeNull();
     expect(h.app.tab!.views.map((v) => v.buf.key)).toEqual(["index.md", "index.md"]);
     // "In the split" (otherWindow) from a hover: the same.
     const o = await harness();
-    o.app.openHover("**x**", "Definition of foo");
-    o.app.otherWindow();
+    o.app.overlays.openHover("**x**", "Definition of foo");
+    o.app.windows.other();
     expect(o.app.floating).toBeNull();
     expect(o.app.tab!.views.map((v) => v.buf.key)).toEqual(["index.md", "index.md"]);
     expect([...virtualInTabs(h), ...virtualInTabs(o)]).toEqual([]);
@@ -16256,7 +16281,7 @@ describe("review (tui): the app's floating windows, new paths, roots and repeats
   test("a new note in a nested root or a walk-excluded folder isn't this root's; the nested one opens in its root", async () => {
     const root = makeVault();
     const h = await harness({ root });
-    h.app.promptNewNote("");
+    h.app.files.promptNewNote("");
     await type(h, "nested-vault/idea");
     await h.keys("enter");
     expect(existsSync(join(root, "nested-vault", "idea.md"))).toBe(true);
@@ -16264,15 +16289,15 @@ describe("review (tui): the app's floating windows, new paths, roots and repeats
     expect(h.app.view!.buf.rel).toBe("idea.md");
     expect(h.app.view!.insert).toBe(true); // typed into, as any new note
     const d = await harness({ root: makeVault() }); // walk.exclude = ["drafts/"]
-    const r = d.app.createNote("drafts/new-one", "")!;
+    const r = d.app.files.createNote("drafts/new-one", "")!;
     expect(d.app.graph.notes.has("drafts/new-one.md")).toBe(false);
     expect(d.app.graph.dirs.filter((x) => x === "drafts" || x.startsWith("drafts/"))).toEqual([]);
     d.app.open(r.open);
     expect(d.app.view!.buf.key).toBe("drafts/new-one.md");
-    const n = d.app.createNote("nested-vault/idea", "")!;
+    const n = d.app.files.createNote("nested-vault/idea", "")!;
     expect(d.app.graph.notes.has("nested-vault/idea.md")).toBe(false);
     expect(n.open).toBe(join(d.root, "nested-vault", "idea.md"));
-    d.app.createFolder("drafts/sub", "");
+    d.app.files.createFolder("drafts/sub", "");
     expect(d.app.graph.dirs.filter((x) => x.startsWith("drafts"))).toEqual([]);
   });
 
@@ -16281,12 +16306,12 @@ describe("review (tui): the app's floating windows, new paths, roots and repeats
     writeFileSync(join(root, "nested-vault", "other.md"), "# Other\n");
     const h = await harness({ root: join(root, "nested-vault"), open: "inner.md" });
     h.app.buffer("other.md")!.edit(0, 0, "x");
-    h.app.unmakeThisVault();
+    h.app.vaults.unmakeThis();
     expect(h.app.overlay).toBeNull(); // no preview
     expect(last(h)).toMatchObject({ level: "warn", text: expect.stringContaining("unsaved: other.md") });
     // Made unsaved while the preview showed: refused at its enter.
     const p = await harness({ root: join(root, "nested-vault"), open: "inner.md" });
-    p.app.unmakeThisVault();
+    p.app.vaults.unmakeThis();
     expect(p.app.overlay).not.toBeNull();
     p.app.buffer("other.md")!.edit(0, 0, "x");
     await p.keys("enter");
@@ -16304,15 +16329,15 @@ describe("review (tui): the app's floating windows, new paths, roots and repeats
     host.runForeground = (argv) => (calls.push(argv), 0);
     host.runDetached = async (argv) => (calls.push(argv), 0);
     const note = join(h.root, "index.md");
-    h.app.openPropertiesEditor();
+    h.app.properties.open();
     await h.app.run("note.edit");
     expect(h.app.floating).toBeNull();
-    h.app.openPropertiesEditor();
+    h.app.properties.open();
     await h.app.run("note.send");
     expect(calls).toHaveLength(2);
     expect(calls[0]).toEqual(["myed", "+1", note]);
     expect(calls[1]).toContain(note);
-    h.app.openHover("**x**", "Definition of foo");
+    h.app.overlays.openHover("**x**", "Definition of foo");
     await h.app.run("note.edit");
     await h.app.run("note.send");
     expect(calls).toHaveLength(2);
@@ -16323,9 +16348,9 @@ describe("review (tui): the app's floating windows, new paths, roots and repeats
   test("a new note or folder named ..draft is inside the root; a root file named ..notes.md is keyed by its path", async () => {
     const root = makeVault();
     const h = await harness({ root });
-    expect(h.app.createNote("..draft", "")).toMatchObject({ rel: "..draft.md", created: true });
+    expect(h.app.files.createNote("..draft", "")).toMatchObject({ rel: "..draft.md", created: true });
     expect(existsSync(join(root, "..draft.md"))).toBe(true);
-    expect(h.app.createFolder("..dir", "")).toBe("..dir");
+    expect(h.app.files.createFolder("..dir", "")).toBe("..dir");
     writeFileSync(join(root, "..notes.md"), "# N\n");
     expect(h.app.buffer("..notes.md")!.key).toBe("..notes.md");
   });
@@ -16367,7 +16392,7 @@ describe("review (tui): the app's floating windows, new paths, roots and repeats
     const c = await fnSetup(NOTE);
     await c.h.app.run("view.source");
     c.h.app.moveCursor(c.h.app.view!, { row: 1, col: 0 });
-    c.h.app.insertLink(c.h.app.view!);
+    c.h.app.linking.insertLink(c.h.app.view!);
     await type(c.h, "alpha");
     await c.h.keys("enter");
     expect(c.read()).not.toBe(NOTE);
@@ -16382,7 +16407,7 @@ describe("review (tui): the app's floating windows, new paths, roots and repeats
     await a.h.app.run("footnote.add");
     await type(a.h, "hi");
     rmSync(file);
-    a.h.app.reloadBuffer(buf, true);
+    a.h.app.watch.reloadBuffer(buf, true);
     expect(buf.deleted).toBe(true);
     await a.h.keys("enter");
     expect(existsSync(file)).toBe(false);
@@ -16399,7 +16424,7 @@ describe("review (tui): the app's floating windows, new paths, roots and repeats
     await p.h.keys("i");
     await type(p.h, "title: T");
     rmSync(join(p.root, "fn.md"));
-    p.h.app.reloadBuffer(p.h.app.tab!.views[0]!.buf, true);
+    p.h.app.watch.reloadBuffer(p.h.app.tab!.views[0]!.buf, true);
     await p.h.keys("escape", "escape");
     expect(p.h.app.floating).toBeNull();
     expect(existsSync(join(p.root, "fn.md"))).toBe(false);
@@ -16417,29 +16442,29 @@ describe("review (tui): the app's floating windows, new paths, roots and repeats
 
   test("a root switch forgets the old root's git states: no marks, no conflicts from it", async () => {
     const h = await harness();
-    h.app.gitStates = new Map([["notes/alpha.md", "conflict"]]);
-    h.app.gitFolders.set("notes", "conflict");
-    expect(h.app.problemRows().some((r) => r.section === "Conflicts")).toBe(true);
-    expect(h.app.switchVault(locateVault({ root: makeVault() }), null)).toBe(true);
-    expect(h.app.gitStates).toBeNull();
-    expect(h.app.gitFolders.size).toBe(0);
-    expect(h.app.problemRows().some((r) => r.section === "Conflicts")).toBe(false);
+    h.app.git.states = new Map([["notes/alpha.md", "conflict"]]);
+    h.app.git.folders.set("notes", "conflict");
+    expect(h.app.problems.rows().some((r) => r.section === "Conflicts")).toBe(true);
+    expect(h.app.vaults.switchVault(locateVault({ root: makeVault() }), null)).toBe(true);
+    expect(h.app.git.states).toBeNull();
+    expect(h.app.git.folders.size).toBe(0);
+    expect(h.app.problems.rows().some((r) => r.section === "Conflicts")).toBe(false);
   });
 
   test("a floating window is never a reading position, and the history is the window's under it", async () => {
     const h = await harness();
-    h.app.openPropertiesEditor();
-    h.app.saveState();
-    h.app.closeFloating();
-    h.app.openHover("**x**", "Definition of foo");
-    h.app.saveState();
+    h.app.properties.open();
+    h.app.session.save();
+    h.app.overlays.closeFloating();
+    h.app.overlays.openHover("**x**", "Definition of foo");
+    h.app.session.save();
     expect(
       h.app.positions
         .entries()
         .map((e) => e.key)
         .filter((k) => k.includes("#properties") || k.startsWith("hover:")),
     ).toEqual([]);
-    expect(h.app.historyRows().find((r) => r.here)).toMatchObject({ path: "index.md" });
+    expect(h.app.history.rows().find((r) => r.here)).toMatchObject({ path: "index.md" });
   });
 
   test("properties: a yes from ctrl+s (text that doesn't parse, or changed meanwhile) writes them and keeps the editor open", async () => {
@@ -16484,7 +16509,7 @@ describe("review (tui): the app's floating windows, new paths, roots and repeats
     const h = await harness({ root, open: "p.md" });
     await h.keys("space", "n", "v", "x");
     const v = h.app.view!;
-    await h.app.paste("ZZ");
+    await h.app.input.paste("ZZ");
     expect(v.buf.source).toBe("bZZcdef\n");
     await h.keys(".");
     expect(v.buf.source).toBe("bZZZZcdef\n");
@@ -16573,9 +16598,9 @@ describe("lists and commands no test had run (the TUI model)", () => {
     const h = await harness({ open: "notes/alpha.md" });
     const pane = h.app.geometry!.panes[0]!;
     const row = rowStarting(h, "Back to");
-    h.app.handleMouse({ type: "down", x: pane.textX, y: pane.y + row, button: 0 });
-    h.app.handleMouse({ type: "drag", x: pane.textX + 6, y: pane.y + row, button: 0 });
-    h.app.handleMouse({ type: "up", x: pane.textX + 6, y: pane.y + row, button: 0 });
+    h.app.mouse.handle({ type: "down", x: pane.textX, y: pane.y + row, button: 0 });
+    h.app.mouse.handle({ type: "drag", x: pane.textX + 6, y: pane.y + row, button: 0 });
+    h.app.mouse.handle({ type: "up", x: pane.textX + 6, y: pane.y + row, button: 0 });
     h.copied.length = 0;
     await h.keys("y", "y");
     expect(h.copied).toEqual(["Back to"]);
@@ -16597,7 +16622,7 @@ describe("lists and commands no test had run (the TUI model)", () => {
     writeFileSync(file, "theirs\n");
     const future = Date.now() / 1000 + 5;
     utimesSync(file, future, future);
-    h.app.reloadBuffer(v.buf);
+    h.app.watch.reloadBuffer(v.buf);
     expect((h.app.overlay as ListOverlay).title).toContain("changed on disk");
     await h.keys("escape");
     expect(v.buf.conflictKept).toBe(true);
@@ -16814,7 +16839,7 @@ describe("what keymap.md and tui.md promise (review: docs against the tests)", (
     expect(strip()).toContain(" 1 a-note-whose-name-runs-… ");
     expect(strip()).not.toContain("past");
     writeFileSync(join(root, name), "# Long\n\ntext, changed\n");
-    h.app.applyChanges({ changes: [{ rel: name, kind: "changed", isNote: true }], rescan: false });
+    h.app.watch.applyChanges({ changes: [{ rel: name, kind: "changed", isNote: true }], rescan: false });
     expect(strip()).toContain("runs-… ↻");
     now += 3_001;
     expect(strip()).not.toContain("↻");
@@ -16995,7 +17020,7 @@ describe("indentation in the editor (25.1)", () => {
     expect(h.app.view!.buf.indent()).toMatchObject({ tabs: false, size: 3, from: "editorconfig" });
     await h.keys(">", ">");
     expect(text(h).split("\n")[3]).toBe("   c();");
-    const info = h.app.infoRows().find((r) => r.key === "indent");
+    const info = h.app.info.rows().find((r) => r.key === "indent");
     expect(info?.value).toBe("3 spaces (.editorconfig)");
   });
 
@@ -17167,7 +17192,7 @@ describe("brackets in the editor (25.3)", () => {
   test("the bracket at the cursor and its match marked, typing too the one before it; none elsewhere, none in the render", async () => {
     const h = await open({ "a.ts": "f(x, [y]);\n" }, "a.ts", 1);
     await h.keys("f", "[");
-    expect([...h.app.bracketMarks(h.app.view!)!.entries()]).toEqual([
+    expect([...h.app.views.bracketMarks(h.app.view!)!.entries()]).toEqual([
       [
         1,
         [
@@ -17182,10 +17207,10 @@ describe("brackets in the editor (25.3)", () => {
     const x = c.rows[y]!.join("").indexOf("]");
     expect(c.styles[y]![x]!.bg).toBe(h.app.theme.roles.bracket_match.bg!);
     await h.keys("0");
-    expect(h.app.bracketMarks(h.app.view!)).toBeNull();
+    expect(h.app.views.bracketMarks(h.app.view!)).toBeNull();
     // Typing just after one: it and its match.
     await h.keys("f", ")", "a");
-    expect([...h.app.bracketMarks(h.app.view!)!.entries()]).toEqual([
+    expect([...h.app.views.bracketMarks(h.app.view!)!.entries()]).toEqual([
       [
         1,
         [
@@ -17195,7 +17220,7 @@ describe("brackets in the editor (25.3)", () => {
       ],
     ]);
     await h.keys("escape", "ctrl+k");
-    expect(h.app.bracketMarks(h.app.view!)).toBeNull();
+    expect(h.app.views.bracketMarks(h.app.view!)).toBeNull();
   });
 
   test("auto_pairs on: an opening bracket or a quote closes its pair, a closing one typed steps over, backspace takes both; off, as typed", async () => {
@@ -17446,12 +17471,12 @@ describe("spelling (25.6)", () => {
   };
   /** The window's note checked: its dictionaries loaded, and every word of it answered by the spell checker's thread. */
   const checked = (h: Harness) =>
-    until(() => (h.frame(), h.app.misspelt(h.app.view!) !== null && !h.app.spellPending(h.app.view!)));
+    until(() => (h.frame(), h.app.speller.misspelt(h.app.view!) !== null && !h.app.speller.pending(h.app.view!)));
   /** Spelling turned on, its dictionaries loaded: the window's misspelt words. */
   const on = async (h: Harness) => {
     await h.keys("space", "u", "s");
     expect(await checked(h)).toBe(true);
-    return h.app.misspelt(h.app.view!)!.map((w) => w.word);
+    return h.app.speller.misspelt(h.app.view!)!.map((w) => w.word);
   };
   /** The style of the first cell of `word` on the row showing `row`'s text. */
   const styleAt = (h: Harness, row: string, word: string) => {
@@ -17464,9 +17489,9 @@ describe("spelling (25.6)", () => {
     const root = vault({ "s0.md": "# Spelling\n\nThis has a recieve.\n" });
     const h = await harness({ root, open: "s0.md", width: 120, height: 30 });
     expect(await on(h)).toEqual(["recieve"]);
-    h.app.showLineDiff("one line\n", "one recieve line\n", "s0.md", "s0.md: a diff");
+    h.app.git.showLineDiff("one line\n", "one recieve line\n", "s0.md", "s0.md: a diff");
     expect(h.app.floating?.kind).toBe("diff");
-    expect(h.app.misspelt(h.app.floating!.view)).toBeNull();
+    expect(h.app.speller.misspelt(h.app.floating!.view)).toBeNull();
   });
 
   test("off by default; space u s turns it on: misspelt words marked in the render and in source, not in code; ] s and [ s go to them", async () => {
@@ -17474,7 +17499,7 @@ describe("spelling (25.6)", () => {
       "s1.md": "# Spelling\n\nThis has a recieve and a\nseccond word here.\n\n`recieve` is code; this recieve isn't.\n",
     });
     const h = await harness({ root, open: "s1.md", width: 120, height: 30 });
-    expect(h.app.misspelt(h.app.view!)).toBeNull();
+    expect(h.app.speller.misspelt(h.app.view!)).toBeNull();
     expect(await on(h)).toEqual(["recieve", "seccond", "recieve"]);
     expect(h.app.messages.some((m) => m.text === "Spelling: on")).toBe(true);
     const spell = h.app.theme.roles.spell;
@@ -17526,9 +17551,9 @@ describe("spelling (25.6)", () => {
       ...[..."[recieve](recieve.md) and likely lik"].map((k) => (k === " " ? "space" : k)),
       "escape",
     );
-    expect(await until(() => (h.frame(), (h.app.misspelt(h.app.view!) ?? []).length === 5))).toBe(true);
+    expect(await until(() => (h.frame(), (h.app.speller.misspelt(h.app.view!) ?? []).length === 5))).toBe(true);
     expect(
-      h.app
+      h.app.speller
         .misspelt(h.app.view!)!
         .slice(3)
         .map((w) => w.word),
@@ -17547,7 +17572,7 @@ describe("spelling (25.6)", () => {
     expect(styleAt(h, "seccond word here", "seccond").fg).not.toBe(spell.fg);
     // Off again: no marks, ] s says why.
     await h.keys("escape", "space", "u", "s");
-    expect(h.app.misspelt(h.app.view!)).toBeNull();
+    expect(h.app.speller.misspelt(h.app.view!)).toBeNull();
     await h.keys("]", "s");
     expect(h.app.messages.at(-1)?.text).toBe("spelling is off — space u s turns it on");
   });
@@ -17576,10 +17601,10 @@ describe("spelling (25.6)", () => {
     await h.keys("g", "g", "]", "s", "]", "s");
     await h.keys("z", "g");
     expect(h.app.messages.at(-1)?.text).toStartWith('"Zorvexium" added to your words');
-    expect(h.app.misspelt(h.app.view!)!.map((w) => w.word)).toEqual(["recieve"]);
+    expect(h.app.speller.misspelt(h.app.view!)!.map((w) => w.word)).toEqual(["recieve"]);
     h.app.openInNewTab("s2.md");
     expect(await checked(h)).toBe(true);
-    expect(h.app.misspelt(h.app.view!)!.map((w) => w.word)).toEqual(["Quorblet"]);
+    expect(h.app.speller.misspelt(h.app.view!)!.map((w) => w.word)).toEqual(["Quorblet"]);
     // The add row does as z g.
     await h.keys("]", "s", "z", "=");
     await h.keys(...Array((h.app.overlay as ListOverlay).items.length - 1).fill("down"), "enter");
@@ -17605,9 +17630,9 @@ describe("spelling (25.6)", () => {
     ).toBe(1);
     h.app.openInNewTab("s3.md");
     expect(await checked(h)).toBe(true);
-    expect(h.app.misspelt(h.app.view!)!.map((w) => w.word)).toEqual(["evlerinzde"]);
+    expect(h.app.speller.misspelt(h.app.view!)!.map((w) => w.word)).toEqual(["evlerinzde"]);
     h.app.openInNewTab("s5.ts");
-    expect(h.app.misspelt(h.app.view!)).toBeNull();
+    expect(h.app.speller.misspelt(h.app.view!)).toBeNull();
     await h.keys("]", "s");
     expect(h.app.messages.at(-1)?.text).toBe("spelling is a note's");
   });
@@ -17642,7 +17667,7 @@ describe("spelling (25.6)", () => {
     const asked = performance.now();
     try {
       await h.keys("space", "u", "s");
-      expect(await until(() => (h.frame(), h.app.misspelt(h.app.view!) !== null))).toBe(true);
+      expect(await until(() => (h.frame(), h.app.speller.misspelt(h.app.view!) !== null))).toBe(true);
     } finally {
       clearInterval(tick);
     }
@@ -17650,15 +17675,15 @@ describe("spelling (25.6)", () => {
     expect(dictionariesBuilt()).toBe(built); // none here
     expect(longest).toBeLessThan(loading / 2);
     expect(await checked(h)).toBe(true);
-    expect(h.app.misspelt(h.app.view!)!.map((w) => w.word)).toEqual(["evlerinzde"]);
+    expect(h.app.speller.misspelt(h.app.view!)!.map((w) => w.word)).toEqual(["evlerinzde"]);
     // Typing a word the thread hasn't answered: the marks it has answered stay, at every key.
     await h.keys("shift+g", "shift+a");
     for (const k of ["space", ..."kitpa"]) {
       await h.keys(k);
-      expect(h.app.misspelt(h.app.view!)!.map((w) => w.word)).toContain("evlerinzde");
+      expect(h.app.speller.misspelt(h.app.view!)!.map((w) => w.word)).toContain("evlerinzde");
     }
     expect(await checked(h)).toBe(true);
-    expect(h.app.misspelt(h.app.view!)!.map((w) => w.word)).toEqual(["evlerinzde", "kitpa"]);
+    expect(h.app.speller.misspelt(h.app.view!)!.map((w) => w.word)).toEqual(["evlerinzde", "kitpa"]);
   });
 });
 // typos: on
@@ -17835,8 +17860,8 @@ describe("changes against what's staged, in the gutter (26.1)", () => {
   };
   /** The window's changes, once git has answered. */
   const changes = async (h: Harness) => {
-    expect(await until(() => (h.frame(), h.app.gitChangesOf(h.app.view!) !== null))).toBe(true);
-    return h.app.gitChangesOf(h.app.view!)!;
+    expect(await until(() => (h.frame(), h.app.git.changesOf(h.app.view!) !== null))).toBe(true);
+    return h.app.git.changesOf(h.app.view!)!;
   };
   /** The gutter cell just before a row's text, and its style. */
   const signAt = (h: Harness, text: string) => {
@@ -17937,28 +17962,28 @@ describe("changes against what's staged, in the gutter (26.1)", () => {
     if (!h.app.view!.source) await h.keys("ctrl+k");
     const v = h.app.view!;
     expect(await changes(h)).toEqual([]);
-    expect(h.app.gutterWidth(v)).toBe(0);
+    expect(h.app.views.gutterWidth(v)).toBe(0);
     v.buf.edit(0, 1, "A");
     expect((await changes(h)).map((c) => c.kind)).toEqual(["change"]);
-    expect(h.app.gutterWidth(v)).toBe(1);
+    expect(h.app.views.gutterWidth(v)).toBe(1);
     expect(signAt(h, "A").ch).toBe("▎");
     // Saved and staged: nothing against the index; the column kept, so the text doesn't move.
     await h.keys("ctrl+s");
     git(root, "add", "g2.md");
-    await h.app.refreshGitNow();
-    expect(await until(() => (h.frame(), h.app.gitChangesOf(v)?.length === 0))).toBe(true);
-    expect(h.app.gutterWidth(v)).toBe(1);
+    await h.app.git.refreshNow();
+    expect(await until(() => (h.frame(), h.app.git.changesOf(v)?.length === 0))).toBe(true);
+    expect(h.app.views.gutterWidth(v)).toBe(1);
     // An untracked file: every line added.
     writeFileSync(join(root, "u.md"), "x\ny\n");
-    await h.app.refreshGitNow();
+    await h.app.git.refreshNow();
     h.app.open("u.md", { heading: null, headingIndex: 0, offset: 0, line: 1 });
-    expect(await until(() => (h.frame(), (h.app.gitChangesOf(h.app.view!) ?? []).length > 0))).toBe(true);
-    expect(h.app.gitChangesOf(h.app.view!)).toEqual([
+    expect(await until(() => (h.frame(), (h.app.git.changesOf(h.app.view!) ?? []).length > 0))).toBe(true);
+    expect(h.app.git.changesOf(h.app.view!)).toEqual([
       { kind: "add", from: 1, to: 2, wasAt: 0, was: [], now: ["x", "y"] },
     ]);
     // Signs off: none, and nothing to go to.
     h.app.config.git.signs = false;
-    expect(h.app.gitChangesOf(h.app.view!)).toBeNull();
+    expect(h.app.git.changesOf(h.app.view!)).toBeNull();
   });
 
   test("where [git] signs_at puts them — before the gutter, against the text, at the window's right edge — with line numbers and without, in source mode, the rendered view and the code view", async () => {
@@ -17981,7 +18006,7 @@ describe("changes against what's staged, in the gutter (26.1)", () => {
           const c = h.canvas();
           const v = h.app.view!;
           const p = pane();
-          const gutter = h.app.gutterWidth(v);
+          const gutter = h.app.views.gutterWidth(v);
           const x = at === "gutter_left" ? p.textX - gutter - 1 : at === "gutter_right" ? p.textX - 1 : p.x + p.w - 2;
           const y = c.rows.findIndex((r) => r.join("").includes(text));
           return { ch: c.rows[y]?.[x], fg: c.styles[y]?.[x]?.fg, bg: c.styles[y]?.[x]?.bg, row: c.rows[y]!.join("") };
@@ -17990,7 +18015,7 @@ describe("changes against what's staged, in the gutter (26.1)", () => {
           const rel = mode === "code" ? "g8.ts" : "g7.md";
           h.app.open(rel, { heading: null, headingIndex: 0, offset: 0, line: 1 });
           // Set, not toggled: ctrl+k's notice of the mode would cover the window's right edge a while.
-          h.app.setViewMode(h.app.view!, mode === "source" ? "source" : "rendered");
+          h.app.lens.setViewMode(h.app.view!, mode === "source" ? "source" : "rendered");
           if (mode === "code") expect(h.app.isCodeDocument(h.app.view!.buf)).toBe(true);
           expect(await changes(h)).toEqual([]);
           const textX = pane().textX;
@@ -18034,7 +18059,7 @@ describe("changes against what's staged, in the gutter (26.1)", () => {
     const root = repo({ "g9.md": "# Head\n\nOne line.\n\n- item a\n- item b\n\nLast.\n\n```text\naaa\n\nbbb\n```\n" });
     if (!root) return;
     const h = await harness({ root, open: "g9.md", width: 100, height: 30 });
-    h.app.setViewMode(h.app.view!, "rendered");
+    h.app.lens.setViewMode(h.app.view!, "rendered");
     expect(await changes(h)).toEqual([]);
     const buf = h.app.view!.buf;
     buf.edit(
@@ -18085,7 +18110,7 @@ describe("source control (26.2)", () => {
   const opened = async (root: string) => {
     const h = await harness({ root, open: "a.md", width: 120, height: 40 });
     await h.app.run("git.view");
-    await h.app.refreshGitNow();
+    await h.app.git.refreshNow();
     expect(h.app.leftView).toBe("git");
     return h;
   };
@@ -18096,7 +18121,7 @@ describe("source control (26.2)", () => {
     h.app.sidebar.selected = i;
   };
   const settle = async (h: Harness, want: string[]) => {
-    await h.app.refreshGitNow();
+    await h.app.git.refreshNow();
     expect(await until(() => (h.frame(), JSON.stringify(labels(h)) === JSON.stringify(want)))).toBe(true);
   };
 
@@ -18138,12 +18163,12 @@ describe("source control (26.2)", () => {
     const h = await opened(root);
     expect(labels(h)).toEqual(["Changes (1)", "M b.md"]);
     // The question out, asked before the stage: its answer, from before it, comes once the stage is done.
-    const app = h.app as unknown as { gitAsking: Promise<void> | null };
+    const app = h.app.git as unknown as { asking: Promise<void> | null };
     let answer = () => {};
-    app.gitAsking = new Promise<void>((done) => {
+    app.asking = new Promise<void>((done) => {
       answer = done;
     }).finally(() => {
-      app.gitAsking = null;
+      app.asking = null;
     });
     select(h, "M b.md");
     await h.keys("s");
@@ -18254,7 +18279,7 @@ describe("source control (26.2)", () => {
     expect(await until(() => lineOf(h.app.view!, offsetOf(h.app, h.app.view!)) === 3)).toBe(true);
     // Unsaved: a discard refused.
     h.app.view!.buf.edit(0, 0, "x");
-    h.app.openLeftView("git", "cycle");
+    h.app.panels.openLeftView("git", "cycle");
     h.app.region = "sidebar";
     select(h, "M a.md");
     await h.keys("d");
@@ -18263,7 +18288,7 @@ describe("source control (26.2)", () => {
     // b.md's changes discarded whole, after asking: open, it shows the file as it is now.
     h.app.openInNewTab("b.md");
     const bBuf = h.app.view!.buf;
-    h.app.openLeftView("git", "cycle");
+    h.app.panels.openLeftView("git", "cycle");
     h.app.region = "sidebar";
     select(h, "M b.md");
     await h.keys("d", "y");
@@ -18312,7 +18337,7 @@ describe("commit (26.3)", () => {
     setTrust(root, trusted ? "trusted" : null);
     const h = await harness({ root, open: "a.md", width: 120, height: 40 });
     await h.app.run("git.view");
-    await h.app.refreshGitNow();
+    await h.app.git.refreshNow();
     return h;
   };
 
@@ -18323,9 +18348,9 @@ describe("commit (26.3)", () => {
     if (!root) return;
     const h = await open(root);
     writeFileSync(join(root, "a.md"), "A\n");
-    await h.app.refreshGitNow();
+    await h.app.git.refreshNow();
     await h.keys("a", "c");
-    await h.app.refreshGitNow();
+    await h.app.git.refreshNow();
     await h.keys("c");
     expect(h.app.floating?.kind).toBe("commit");
     expect(h.app.floating!.view.insert).toBe(true);
@@ -18340,9 +18365,9 @@ describe("commit (26.3)", () => {
     if (!root) return;
     const h = await open(root);
     writeFileSync(join(root, "a.md"), "A\n");
-    await h.app.refreshGitNow();
+    await h.app.git.refreshNow();
     await h.keys("a", "c");
-    await h.app.refreshGitNow();
+    await h.app.git.refreshNow();
     // No identity, and none guessed: git refuses to commit.
     git(root, "config", "--unset", "user.name");
     git(root, "config", "--unset", "user.email");
@@ -18382,9 +18407,9 @@ describe("commit (26.3)", () => {
     git(root, "config", "commit.gpgSign", "true");
     git(root, "config", "gpg.program", signer);
     writeFileSync(join(root, "a.md"), "A\n");
-    await h.app.refreshGitNow();
+    await h.app.git.refreshNow();
     await h.keys("a", "c");
-    await h.app.refreshGitNow();
+    await h.app.git.refreshNow();
     await h.keys("c");
     expect(h.app.floating?.kind).toBe("commit");
     expect(h.app.floating!.view.buf.source).toContain("# Committing: 1 file staged (a.md).");
@@ -18430,7 +18455,7 @@ describe("commit (26.3)", () => {
     const t = await open(root, true);
     writeFileSync(join(root, "a.md"), "changed\n");
     git(root, "add", "a.md");
-    await t.app.refreshGitNow();
+    await t.app.git.refreshNow();
     await t.keys("c");
     expect(t.app.floating!.view.buf.source).not.toContain("isn't trusted");
     await t.keys("x", "escape", "ctrl+s");
@@ -18685,12 +18710,12 @@ describe("the remote's commands and stash (26.6)", () => {
       commit(other, "b.md", "theirs\n");
       git(other, "push", "-q");
       const h = await harness({ root, open: "a.md", width: 120, height: 40 });
-      await h.app.refreshGitNow();
-      expect(h.app.vaultStatus()).toEndWith(" · main");
+      await h.app.git.refreshNow();
+      expect(h.app.git.vaultStatus()).toEndWith(" · main");
       await h.app.run("git.fetch");
       expect(h.app.messages.some((m) => m.text === "fetching…")).toBe(true);
       expect(await said(h, "fetched: main is 1 commit behind origin/main — p pulls (:pull)")).toBe(true);
-      expect(await until(() => h.app.vaultStatus().endsWith(" · main ↓1"))).toBe(true);
+      expect(await until(() => h.app.git.vaultStatus().endsWith(" · main ↓1"))).toBe(true);
       // Unsaved: asked first, as a branch switch asks; cancelled, nothing pulled.
       const a = h.app.view!.buf;
       a.edit(0, 0, "edited ");
@@ -18709,7 +18734,7 @@ describe("the remote's commands and stash (26.6)", () => {
       expect(await said(h, /^pulled: main fast-forwarded to [0-9a-f]+$/)).toBe(true);
       expect(readFileSync(join(root, "b.md"), "utf8")).toBe("theirs\n");
       expect(readFileSync(join(root, "a.md"), "utf8")).toBe("edited a\n");
-      expect(await until(() => h.app.vaultStatus().endsWith(" · main"))).toBe(true);
+      expect(await until(() => h.app.git.vaultStatus().endsWith(" · main"))).toBe(true);
       // Nothing more: said so.
       await h.app.run("git.pull");
       expect(await said(h, "main is up to date with origin/main")).toBe(true);
@@ -18725,7 +18750,7 @@ describe("the remote's commands and stash (26.6)", () => {
       const h = await harness({ root, open: "a.md", width: 120, height: 40 });
       const head = git(root, "rev-parse", "HEAD");
       await h.app.run("git.fetch");
-      expect(await until(() => h.app.vaultStatus().endsWith(" · main ↑1 ↓1"))).toBe(true);
+      expect(await until(() => h.app.git.vaultStatus().endsWith(" · main ↑1 ↓1"))).toBe(true);
       await h.app.run("git.pull");
       expect(await said(h, /^git: Not possible to fast-forward, aborting\. — both sides have moved on/)).toBe(true);
       expect(git(root, "rev-parse", "HEAD")).toBe(head);
@@ -18737,12 +18762,12 @@ describe("the remote's commands and stash (26.6)", () => {
       const { root, bare } = withRemote();
       commit(root, "a.md", "mine\n");
       const h = await harness({ root, open: "a.md", width: 120, height: 40 });
-      await h.app.refreshGitNow();
-      expect(h.app.vaultStatus()).toEndWith(" · main ↑1");
+      await h.app.git.refreshNow();
+      expect(h.app.git.vaultStatus()).toEndWith(" · main ↑1");
       await h.app.run("git.push");
       expect(await said(h, "pushed main to origin/main — this vault isn't trusted, so no hook ran")).toBe(true);
       expect(git(bare, "rev-parse", "main")).toBe(git(root, "rev-parse", "HEAD"));
-      expect(await until(() => h.app.vaultStatus().endsWith(" · main"))).toBe(true);
+      expect(await until(() => h.app.git.vaultStatus().endsWith(" · main"))).toBe(true);
       // A new branch: asked; no, nothing; yes, pushed and tracked.
       git(root, "switch", "-q", "-c", "topic");
       await h.app.run("git.push");
@@ -18769,7 +18794,7 @@ describe("the remote's commands and stash (26.6)", () => {
       git(other, "push", "-q");
       const h = await harness({ root, open: "a.md", width: 120, height: 40 });
       await h.app.run("git.view");
-      await h.app.refreshGitNow();
+      await h.app.git.refreshNow();
       expect(h.app.leftView).toBe("git");
       await h.keys("f");
       expect(await said(h, /^fetched: main is 1 commit behind/)).toBe(true);

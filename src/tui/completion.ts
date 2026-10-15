@@ -168,7 +168,7 @@ export function afterInsertKey(app: App, view: View, key: string): void {
     }
     if (c?.links) app.completion = null;
   }
-  const s = app.servers;
+  const s = app.languages.servers;
   if (!s?.isOpen(view.buf.abs) || !view.insert) {
     app.completion = null;
     app.signature = null;
@@ -177,7 +177,7 @@ export function afterInsertKey(app: App, view: View, key: string): void {
   const typed = keyChar(key);
   const at = offsetOf(app, view);
   const from = wordStart(view.buf.source, at);
-  const t = app.serverTriggers(view.buf.abs);
+  const t = app.languages.triggers(view.buf.abs);
   if (typed !== null && t.signature.includes(typed)) void signature(app, view);
   if (typed === ")") app.signature = null;
   if (typed !== null && t.completion.includes(typed)) return void ask(app, view, typed);
@@ -227,7 +227,7 @@ export function wikiTargetStart(source: string, at: number): number | null {
  */
 function linkItems(app: App, view: View, style: LinkStyle): CompletionItem[] {
   const g = app.graph;
-  const c = conventionOf(g, app.config, app.configOrigins, style);
+  const c = conventionOf(g, app.config, app.settings.origins, style);
   const home = homeFolder();
   const tilde = (abs: string) => (abs.startsWith(`${home}/`) ? `~/${relative(home, abs)}` : abs);
   const item = (abs: string, form: string, here: boolean): CompletionItem => {
@@ -269,15 +269,15 @@ function linkItems(app: App, view: View, style: LinkStyle): CompletionItem[] {
 
 /** Asked of the file's servers: what goes at the cursor (`trigger`, the character that asked). */
 async function ask(app: App, view: View, trigger: string | null): Promise<void> {
-  const s = app.servers!;
+  const s = app.languages.servers!;
   // This ask stands for any waiting: a word's pause then a `.` asks once, for the `.`.
   if (timer) clearTimeout(timer);
   timer = null;
   const mine = ++asked;
-  app.syncServers(view.buf);
+  app.languages.sync(view.buf);
   const params = {
     textDocument: { uri: pathToFileURL(view.buf.abs).href },
-    position: app.lspPosition(view),
+    position: app.languages.position(view),
     context: trigger ? { triggerKind: 2, triggerCharacter: trigger } : { triggerKind: 1 },
   };
   const r = await s.request<CompletionItem[] | CompletionList>(
@@ -400,10 +400,10 @@ function acceptPointer(app: App, c: CompletionState, to: string, style: LinkStyl
   const version = view.buf.version;
   app.completion = null;
   let now = true;
-  app.writeLinkAsked(view.buf.abs, to, (ends) => {
+  app.linking.writeLinkAsked(view.buf.abs, to, (ends) => {
     if (view.buf.version !== version)
       return app.message("warn", "the note changed while you picked: complete the link again");
-    const text = linkDestination(conventionOf(app.graph, app.config, app.configOrigins, style), style, ends);
+    const text = linkDestination(conventionOf(app.graph, app.config, app.settings.origins, style), style, ends);
     const s = app.vim;
     if (s.inInsert && !s.replaying) {
       if (now) {
@@ -424,7 +424,7 @@ function acceptPointer(app: App, c: CompletionState, to: string, style: LinkStyl
 function applyElsewhere(app: App, view: View, edits: TextEdit[]): void {
   const before = view.buf.source.length;
   const at = offsetOf(app, view);
-  app.applyWorkspaceEdit({ changes: { [pathToFileURL(view.buf.abs).href]: edits } });
+  app.languages.applyWorkspaceEdit({ changes: { [pathToFileURL(view.buf.abs).href]: edits } });
   const starts = view.buf.lineStarts();
   // Edits above the cursor moved it on by what they added.
   const above = edits.filter((e) => (starts[e.range.start.line] ?? 0) + e.range.start.character <= at);
@@ -433,12 +433,12 @@ function applyElsewhere(app: App, view: View, edits: TextEdit[]): void {
 
 /** The signature being typed, from the file's servers: its label, its active parameter marked. */
 async function signature(app: App, view: View): Promise<void> {
-  const s = app.servers!;
-  app.syncServers(view.buf);
+  const s = app.languages.servers!;
+  app.languages.sync(view.buf);
   const r = await s.request<SignatureHelp>(
     view.buf.abs,
     "textDocument/signatureHelp",
-    { textDocument: { uri: pathToFileURL(view.buf.abs).href }, position: app.lspPosition(view) },
+    { textDocument: { uri: pathToFileURL(view.buf.abs).href }, position: app.languages.position(view) },
     "signatureHelpProvider",
     "signature-help",
   );

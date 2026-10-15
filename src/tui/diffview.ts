@@ -57,7 +57,7 @@ export function openDiff(app: App, d: DiffRequest): void {
     d.back?.();
     return;
   }
-  if (app.floating && !app.closeFloating()) return;
+  if (app.floating && !app.overlays.closeFloating()) return;
   const kind = classify(d.path, app.config.walk.extensions);
   const language = kind.group === "note" ? readerFor(kind.format).language : kind.format;
   const tabWidth = indentFor(isAbsolute(d.path) ? d.path : join(app.loc.root, d.path), d.now).tabWidth;
@@ -95,10 +95,10 @@ export function diffEnter(app: App, view: View): boolean {
     return true;
   }
   if (!w.go) {
-    app.leaveFloating();
+    app.overlays.leaveFloating();
     return true;
   }
-  if (!app.closeFloating()) return true;
+  if (!app.overlays.closeFloating()) return true;
   w.go(row.line);
   return true;
 }

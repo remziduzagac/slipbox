@@ -1,0 +1,188 @@
+// Export in the TUI (10.x): notes picked, a format chosen, a place to write it asked — beside the note, or where you
+// say — and written there, never over a note.
+
+import { existsSync, statSync } from "node:fs";
+import { basename, dirname, isAbsolute, join, relative, sep } from "node:path";
+import { climbsOut, readJson, writeJson } from "../core/fsutil.ts";
+import {
+  defaultTarget,
+  type ExportFormat,
+  exportNotes,
+  exportTarget,
+  FORMATS,
+  formatFor,
+  writeExport,
+} from "../core/export/index.ts";
+import { stateDir, userFolders } from "../core/paths.ts";
+import { openSaveAs, type SaveAsOverlay, type SavePlace } from "./saveas.ts";
+import { rank } from "./match.ts";
+import type { App, ListItem, ListOverlay } from "./app.ts";
+
+/** Export: notes, a format, a place. */
+export class Exporter {
+  constructor(readonly app: App) {}
+
+  /**
+   * Export a note (10.x): the explorer's selected one, or this one. Its format picked — or named, `:export docx` — then
+   * where asked: beside it, its name, unless you say otherwise.
+   */
+  exportNote(name?: string): void {
+    const t = this.app.explorer.noteTarget();
+    if (!t) return;
+    if (!this.app.graph.notes.has(t.rel))
+      return this.app.message("info", `export: ${t.rel} isn't a note — a note is exported`);
+    this.chooseFormat([t.rel], name);
+  }
+
+  /**
+   * Export notes as one document (10.9), a chapter each: picked from the root's notes in the order wanted — the one on
+   * screen (or the explorer's) first — each pick numbered, a pick again taken out; then "Export…", first in the list
+   * whatever's typed, asks the format and where, as `space n o` does.
+   */
+  compose(picked?: string[], input = "", selected?: number): void {
+    if (!picked) {
+      const t = this.app.explorer.focused()
+        ? this.app.explorer.item()
+        : this.app.view?.buf.rel
+          ? { rel: this.app.view.buf.rel, dir: false }
+          : null;
+      picked = t && !t.dir && this.app.graph.notes.has(t.rel) ? [t.rel] : [];
+    }
+    const chosen = picked;
+    const go: ListItem[] = chosen.length
+      ? [
+          {
+            label: `Export ${chosen.length === 1 ? chosen[0] : `these ${chosen.length} notes`}…`,
+            hint: "enter",
+            data: null,
+          },
+        ]
+      : [];
+    const notes: ListItem[] = [...this.app.graph.notes.keys()]
+      .sort()
+      .map((rel) => ({ label: rel, hint: chosen.includes(rel) ? String(chosen.indexOf(rel) + 1) : "", data: rel }));
+    this.app.overlays.openList({
+      title: chosen.length
+        ? `Notes to export, in order — ${chosen.length} picked`
+        : "Notes to export, in order: pick the first",
+      items: [...go, ...notes],
+      // The notes filtered by what's typed; "Export…" always first.
+      source: (typed) => (typed.trim() ? [...go, ...rank(typed, notes, (i) => i.label).map((r) => r.item)] : null),
+      input,
+      ...(selected !== undefined ? { selected } : {}),
+      accept: (item) => {
+        if (item.data === null) return this.chooseFormat(chosen);
+        const rel = item.data as string;
+        const next = chosen.includes(rel) ? chosen.filter((r) => r !== rel) : [...chosen, rel];
+        // "Export…" comes and goes: the selection stays on the note.
+        const shift = (next.length ? 1 : 0) - (chosen.length ? 1 : 0);
+        this.compose(next, list.input, list.selected + shift);
+      },
+    });
+    const list = this.app.overlay as ListOverlay;
+  }
+
+  /** The format for an export of `rels` picked — or named — then where asked. */
+  chooseFormat(rels: string[], name?: string): void {
+    if (name) {
+      const format = formatFor(name);
+      if (!format)
+        return this.app.message("warn", `export: no format ${name} — ${FORMATS.map((f) => f.name).join(", ")}`);
+      return this.browser(rels, format);
+    }
+    const what = rels.length === 1 ? rels[0]! : `${rels.length} notes`;
+    this.app.overlays.openList({
+      title: `Export ${what} as`,
+      items: FORMATS.map((f) => ({ label: f.title, hint: f.name, data: f })),
+      accept: (item) => this.browser(rels, item.data as ExportFormat),
+    });
+  }
+
+  /**
+   * Where an export goes (10.14), in a Save As window: open where you exported last (else beside the note), the note's
+   * name filled in — `enter` exports there — with places down its left, the folder's folders and files, folders made.
+   */
+  browser(rels: string[], format: ExportFormat): void {
+    const beside = defaultTarget(this.app.graph.abs(rels[0]!), format);
+    const last = this.lastDir();
+    const what = rels.length === 1 ? rels[0]! : `${rels.length} notes`;
+    const places: SavePlace[] = [{ label: "Beside the note", path: dirname(beside) }];
+    if (last && last !== dirname(beside)) places.push({ label: "Last export", path: last });
+    for (const f of userFolders(this.app.home)) places.push({ label: f.name, path: f.path });
+    places.push({ label: "This vault", path: this.app.loc.root });
+    const o: SaveAsOverlay = openSaveAs(this.app, {
+      title: `Export ${what} as ${format.title}`,
+      dir: last ?? dirname(beside),
+      name: basename(beside),
+      places,
+      accept: (path) => this.chosen(rels, format, path, o),
+    });
+  }
+
+  /** The file picked for an export: never a note (said, the window back); a file there replaced once you say so. */
+  private chosen(rels: string[], format: ExportFormat, path: string, o: SaveAsOverlay): void {
+    let target: string;
+    try {
+      target = exportTarget(this.app.graph, rels[0]!, format, path, this.app.loc.root);
+    } catch (err) {
+      this.app.message("warn", `export: ${(err as Error).message}`);
+      this.app.overlay = o;
+      return;
+    }
+    const go = () => void this.write(rels, format, target);
+    if (existsSync(target)) {
+      return this.app.overlays.confirm(`${this.app.graph.shownPath(target)} is there — replace it?`, go, () => {
+        this.app.overlay = o;
+      });
+    }
+    go();
+  }
+
+  /** A folder as an export's places show it: from the root inside it, `~/` under home, else whole. */
+  shownDir(dir: string): string {
+    const inRoot = relative(this.app.loc.root, dir);
+    if (!climbsOut(inRoot) && !isAbsolute(inRoot)) return inRoot ? `${inRoot.split(sep).join("/")}/` : "./";
+    const inHome = relative(this.app.home, dir);
+    if (!climbsOut(inHome) && !isAbsolute(inHome)) return inHome ? `~/${inHome.split(sep).join("/")}/` : "~/";
+    return `${dir}/`;
+  }
+
+  /** The folder an export went to last from this root (kept in its state), if it's still there. */
+  lastDir(): string | null {
+    const dir = readJson<{ dir?: unknown }>(join(stateDir(this.app.loc), "export.json"), {}).dir;
+    return typeof dir === "string" && isDir(dir) ? dir : null;
+  }
+
+  /** The notes at `rels` exported as one document to `target`, unsaved ones saved first (4.10): what's on screen. */
+  async write(rels: string[], format: ExportFormat, target: string): Promise<void> {
+    if (!this.app.handoff.savedForHandoff("export", "not exporting")) return;
+    const shown = this.app.graph.shownPath(target);
+    this.app.message("info", `exporting to ${shown}…`);
+    this.app.host.requestRender();
+    let files: string[];
+    try {
+      files = writeExport(target, await exportNotes(this.app.graph, rels, format, target));
+    } catch (err) {
+      return this.app.message("error", `export: ${shown} not written — ${(err as Error).message}`);
+    }
+    const beside = files.length ? `, ${files.length} file${files.length === 1 ? "" : "s"} beside it` : "";
+    this.app.message(
+      "info",
+      `exported ${rels.length === 1 ? rels[0] : `${rels.length} notes`} to ${shown} (${format.title})${beside}`,
+    );
+    // Where it went, for "Where you exported last".
+    try {
+      writeJson(join(stateDir(this.app.loc), "export.json"), { dir: dirname(target) });
+    } catch {}
+    this.app.host.requestRender();
+  }
+}
+
+/** Whether `path` is a folder (through a link); false where nothing's there. */
+export function isDir(path: string): boolean {
+  try {
+    return statSync(path).isDirectory();
+  } catch {
+    return false;
+  }
+}

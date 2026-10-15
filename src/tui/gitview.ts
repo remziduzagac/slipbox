@@ -66,13 +66,13 @@ interface Texts {
 const texts = new WeakMap<App, Map<string, Texts>>();
 
 function textsOf(app: App, path: string): Texts | null {
-  const c = app.checkout;
+  const c = app.git.checkout;
   if (!c) return null;
   let all = texts.get(app);
   if (!all) texts.set(app, (all = new Map()));
   const t = all.get(path);
-  if (t?.generation === app.gitGeneration) return t;
-  const fresh: Texts = { generation: app.gitGeneration, head: undefined, index: undefined, ready: Promise.resolve() };
+  if (t?.generation === app.git.generation) return t;
+  const fresh: Texts = { generation: app.git.generation, head: undefined, index: undefined, ready: Promise.resolve() };
   all.set(path, fresh);
   fresh.ready = Promise.all([showLater(c, "HEAD", path), showLater(c, "", path)]).then(([head, index]) => {
     fresh.head = head;
@@ -84,7 +84,7 @@ function textsOf(app: App, path: string): Texts | null {
 
 /** A file in the checkout, as on disk ("" when it isn't there). */
 function onDisk(app: App, path: string): string {
-  const abs = join(app.checkout!.root, path);
+  const abs = join(app.git.checkout!.root, path);
   try {
     return existsSync(abs) ? readFileSync(abs, "utf8") : "";
   } catch {
@@ -104,7 +104,7 @@ export function fileChanges(app: App, e: StatusEntry, section: GitSection): GitC
 
 /** The view's rows: each section's heading and files, a file opened up followed by its changes; the filter keeps files by path. */
 export function gitRows(app: App): GitRow[] {
-  const entries = app.gitEntries ?? [];
+  const entries = app.git.entries ?? [];
   const s = sections(entries);
   const q = app.sidebar.filter ?? "";
   const rows: GitRow[] = [];
@@ -121,7 +121,7 @@ export function gitRows(app: App): GitRow[] {
         label: `${stateLetter(e, section)} ${sanitize(basename(e.path))}`,
         hint: dir === "." ? "" : sanitize(dir),
       });
-      if (!app.gitOpen.has(`${section}:${e.path}`)) continue;
+      if (!app.git.opened.has(`${section}:${e.path}`)) continue;
       for (const change of fileChanges(app, e, section) ?? []) {
         const first = sanitize((change.now[0] ?? change.was[0] ?? "").trim());
         rows.push({
@@ -140,7 +140,7 @@ export function gitRows(app: App): GitRow[] {
 
 /** A row's vault path, or null where the file is outside this root. */
 function relOf(app: App, path: string): string | null {
-  const rel = relative(app.loc.root, join(app.checkout!.root, path));
+  const rel = relative(app.loc.root, join(app.git.checkout!.root, path));
   return climbsOut(rel) ? null : rel;
 }
 
@@ -148,7 +148,7 @@ function relOf(app: App, path: string): string | null {
 function after(app: App, why: GitDone, said: string, follow?: string): void {
   if (why) return app.message("warn", `git: ${why}`);
   app.message("info", said);
-  void app.refreshGitNow().then(() => {
+  void app.git.refreshNow().then(() => {
     // The file staged or unstaged is selected where it went, so `u` or `s` takes it straight back: its row number
     // left alone, the list re-sorted under it, the selection landed on whatever came there (found trying 26.2 live).
     if (follow !== undefined) {
@@ -161,7 +161,7 @@ function after(app: App, why: GitDone, said: string, follow?: string): void {
 
 /** An open note's buffer for a file, unsaved: refused (what git would change isn't what's open). */
 function unsavedFor(app: App, path: string): boolean {
-  const abs = join(app.checkout!.root, path);
+  const abs = join(app.git.checkout!.root, path);
   const dirty = [...app.buffers.values()].find((b) => b.abs === abs && b.dirty);
   if (dirty) app.message("warn", `unsaved: ${app.displayName(dirty)} — save it first: git works on the file on disk`);
   return !!dirty;
@@ -169,13 +169,13 @@ function unsavedFor(app: App, path: string): boolean {
 
 /** Open buffers of a file reloaded from disk once git has changed it there. */
 function reload(app: App, path: string): void {
-  const abs = join(app.checkout!.root, path);
-  for (const b of app.buffers.values()) if (b.abs === abs && !b.dirty) app.reloadBuffer(b);
+  const abs = join(app.git.checkout!.root, path);
+  for (const b of app.buffers.values()) if (b.abs === abs && !b.dirty) app.watch.reloadBuffer(b);
 }
 
 /** `s`: the selected file, or change, staged — a conflict's file marked resolved. */
 function stage(app: App, row: GitRow): void {
-  const c = app.checkout!;
+  const c = app.git.checkout!;
   const e = row.entry!;
   if (row.kind === "change") {
     if (row.section !== "unstaged") return app.message("info", "that change is staged already — u unstages it");
@@ -194,7 +194,7 @@ function stage(app: App, row: GitRow): void {
 
 /** `u`: the selected file, or change, unstaged. */
 function unstage(app: App, row: GitRow): void {
-  const c = app.checkout!;
+  const c = app.git.checkout!;
   const e = row.entry!;
   if (row.section !== "staged") return app.message("info", `${e.path} has nothing staged`);
   if (row.kind === "change") {
@@ -207,7 +207,7 @@ function unstage(app: App, row: GitRow): void {
 
 /** `d`: the selected file's changes not staged, or one change, discarded — after asking; an untracked file, to the trash. */
 function discard(app: App, row: GitRow): void {
-  const c = app.checkout!;
+  const c = app.git.checkout!;
   const e = row.entry!;
   if (row.section === "staged")
     return app.message("info", "staged: u unstages it first — discarding is for what isn't staged");
@@ -216,25 +216,28 @@ function discard(app: App, row: GitRow): void {
   const rel = relOf(app, e.path);
   if (row.section === "untracked") {
     if (rel === null) return app.message("warn", `${e.path} is outside this vault`);
-    return app.deleteItem({ rel, dir: false });
+    return app.files.deleteItem({ rel, dir: false });
   }
   if (unsavedFor(app, e.path)) return;
   if (row.kind === "change") {
     if (rel === null) return app.message("warn", `${e.path} is outside this vault`);
     const ch = row.change!;
-    app.confirm(`Discard the change at line ${ch.from} of ${e.path}? It goes back to what's staged.`, () => {
+    app.overlays.confirm(`Discard the change at line ${ch.from} of ${e.path}? It goes back to what's staged.`, () => {
       const buf = app.buffer(rel);
       if (!buf) return app.message("warn", `${e.path} can't be read`);
       buf.edit(0, buf.source.length, replaceLines(buf.source, ch.from - 1, ch.now.length, ch.was));
-      if (app.saveBuffer(buf, true)) after(app, null, `discarded a change of ${e.path}`);
+      if (app.saving.save(buf, true)) after(app, null, `discarded a change of ${e.path}`);
     });
     return;
   }
-  app.confirm(`Discard the changes to ${e.path} that aren't staged? The file goes back to what's staged.`, () => {
-    const why = discardFile(c, e.path);
-    if (!why) reload(app, e.path);
-    after(app, why, `discarded the changes to ${e.path}`);
-  });
+  app.overlays.confirm(
+    `Discard the changes to ${e.path} that aren't staged? The file goes back to what's staged.`,
+    () => {
+      const why = discardFile(c, e.path);
+      if (!why) reload(app, e.path);
+      after(app, why, `discarded the changes to ${e.path}`);
+    },
+  );
 }
 
 /** `.`: the selected file's diff, or a change's, in the floating window. */
@@ -249,7 +252,7 @@ function preview(app: App, row: GitRow): void {
       row.section === "untracked" ? `${e.path} is new: all of it` : `${e.path}: nothing to show`,
     );
   const against = row.section === "staged" ? "the last commit" : "what's staged";
-  app.openHover(
+  app.overlays.openHover(
     changes.map((ch) => `\`\`\`diff\n${changeDiff(ch)}\n\`\`\``).join("\n\n"),
     `${e.path} against ${against}`,
   );
@@ -260,7 +263,7 @@ function openRow(app: App, row: GitRow): void {
   const e = row.entry!;
   const rel = relOf(app, e.path);
   if (rel === null) return app.message("warn", `${e.path} is outside this vault`);
-  if (!existsSync(join(app.checkout!.root, e.path)))
+  if (!existsSync(join(app.git.checkout!.root, e.path)))
     return app.message("info", `${e.path} is deleted — . shows what it had`);
   app.openOrSwitchTab(rel);
   app.region = "content";
@@ -289,7 +292,7 @@ export function gitViewAction(app: App, action: string): void {
     return rows[i]?.kind === "heading" ? from : i;
   };
   const row = rows[s.selected];
-  if (!app.checkout) return app.message("info", "not a git checkout");
+  if (!app.git.checkout) return app.message("info", "not a git checkout");
   switch (action) {
     case "down":
       s.selected = step(s.selected, 1);
@@ -307,13 +310,13 @@ export function gitViewAction(app: App, action: string): void {
       s.filtering = true;
       return;
     case "all_files":
-      return after(app, stageAll(app.checkout), "staged everything");
+      return after(app, stageAll(app.git.checkout), "staged everything");
     case "undo_rename":
-      return after(app, unstageAll(app.checkout), "unstaged everything");
+      return after(app, unstageAll(app.git.checkout), "unstaged everything");
     case "commit":
-      return app.openCommitEditor(false);
+      return app.git.openCommitEditor(false);
     case "amend":
-      return app.openCommitEditor(true);
+      return app.git.openCommitEditor(true);
     // The remote's commands and stash (26.6): their named commands, as the palette runs them.
     case "fetch":
       return void app.run("git.fetch");
@@ -325,7 +328,7 @@ export function gitViewAction(app: App, action: string): void {
     case "zoom_in": // `z`, the explorer's zoom in (VV-D5): here, the stashes
       return void app.run("git.stash");
     case "close":
-      return app.showSidebar(false);
+      return app.panels.showSidebar(false);
     case "leave":
       app.region = "content";
       return;
@@ -341,7 +344,7 @@ export function gitViewAction(app: App, action: string): void {
   }
   switch (action) {
     case "expand":
-      if (row.kind === "file") app.gitOpen.add(`${row.section}:${row.entry!.path}`);
+      if (row.kind === "file") app.git.opened.add(`${row.section}:${row.entry!.path}`);
       return;
     case "collapse": {
       const key = `${row.section}:${row.entry!.path}`;
@@ -349,7 +352,7 @@ export function gitViewAction(app: App, action: string): void {
         s.selected = rows.findIndex(
           (r) => r.kind === "file" && r.section === row.section && r.entry!.path === row.entry!.path,
         );
-      app.gitOpen.delete(key);
+      app.git.opened.delete(key);
       return;
     }
     case "open_tab":

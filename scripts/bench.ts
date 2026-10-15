@@ -81,12 +81,12 @@ async function makeApp(open: string, width = 120, height = 40) {
   let h = height;
   const frame = () => app.draw(new TextCanvas(w, h));
   const key = async (k: string) => {
-    await app.handleKey(canonKey(k));
+    await app.input.handleKey(canonKey(k));
     frame();
   };
   frame();
   // A big note parses on other threads (15.1): its first frame says so; then it's drawn.
-  await app.whenParsed();
+  await app.views.whenParsed();
   frame();
   return { app, key, frame, resize: (nw: number, nh: number) => ((w = nw), (h = nh), frame()) };
 }
@@ -130,7 +130,7 @@ for (const note of ["k1.md", "k20.md"]) {
           app.draw(new TextCanvas(120, 40));
         }),
       );
-      await app!.whenParsed(); // not timed: the next run starts clean
+      await app!.views.whenParsed(); // not timed: the next run starts clean
     }
     return xs;
   });
@@ -196,7 +196,7 @@ for (const note of ["k1.md", "k20.md"]) {
     const xs: number[] = [];
     for (let k = 0; k < 3; k++) {
       writeFileSync(join(vault, note), `${notes[note]}\nappended ${k}\n`);
-      xs.push(await time(() => (app.reloadBuffer(app.view!.buf), frame())));
+      xs.push(await time(() => (app.watch.reloadBuffer(app.view!.buf), frame())));
     }
     writeFileSync(join(vault, note), notes[note]!);
     return xs;
@@ -211,8 +211,8 @@ await bench("the background index: a big note's longest main-thread slice", asyn
   const g = app.graph;
   const pass = async () => {
     g.build(true, "lazy"); // every note unparsed, as at a cold start
-    app.indexInBackground();
-    await app.whenIndexed();
+    app.watch.indexInBackground();
+    await app.watch.whenIndexed();
   };
   await pass(); // not timed: the other notes into the parse cache, so only the big note is new below
   let slices: number[] = [];

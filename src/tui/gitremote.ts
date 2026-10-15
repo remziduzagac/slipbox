@@ -31,7 +31,7 @@ const running = new WeakMap<App, string>();
 
 /** The checkout, when there's one and nothing of this kind is running; else null, said why. */
 function ready(app: App): Checkout | null {
-  const c = app.checkout;
+  const c = app.git.checkout;
   if (!c) {
     app.message("info", "not a git checkout");
     return null;
@@ -83,7 +83,7 @@ function inBackground(
       app.message("warn", `git: ${sanitize((err as Error).message)}`);
     })
     .finally(() => {
-      void app.refreshGitNow().then(() => app.host.requestRender());
+      void app.git.refreshNow().then(() => app.host.requestRender());
       app.host.requestRender();
     });
 }
@@ -106,8 +106,8 @@ export function gitFetch(app: App): void {
     "fetch",
     () => fetchLater(c),
     async () => {
-      await app.refreshGitNow();
-      const t = app.gitTrack;
+      await app.git.refreshNow();
+      const t = app.git.track;
       if (!t?.branch || !t.upstream)
         return app.message("info", "fetched — this branch has no upstream to compare with");
       if (t.gone) return app.message("info", `fetched: ${t.upstream} is gone from the remote`);
@@ -130,7 +130,7 @@ export function gitPull(app: App): void {
   const up = upstreamOf(c, branch);
   if (!up)
     return app.message("info", `${branch} has no upstream to pull from — a push (shift+p, :push) asks to set one`);
-  app.beforeCheckout(
+  app.git.beforeCheckout(
     () => {
       const before = headShort(c);
       inBackground(
@@ -140,7 +140,7 @@ export function gitPull(app: App): void {
         () => pullLater(c),
         () => {
           // HEAD moved on its branch: seen now, as the watcher would see it, the tabs kept (no switch).
-          app.checkHead();
+          app.git.checkHead();
           const now = headShort(c);
           app.message(
             "info",
@@ -170,7 +170,7 @@ export function gitPush(app: App): void {
       "info",
       `${branch} has no upstream, and no remote is called origin — git push -u <remote> ${branch} sets one`,
     );
-  app.confirm(`${branch} has no upstream. Push it to ${to.remote}/${to.branch}, and track it there?`, () =>
+  app.overlays.confirm(`${branch} has no upstream. Push it to ${to.remote}/${to.branch}, and track it there?`, () =>
     push(app, c, branch, { remote: to.remote, ref: `refs/heads/${to.branch}` }, true),
   );
 }
@@ -199,7 +199,7 @@ export function gitStash(app: App): void {
   if (!c) return;
   const stashes = stashesOf(c);
   if (stashes === null) return app.message("warn", "git couldn't list the stashes");
-  app.openList({
+  app.overlays.openList({
     title: `Stashes (${stashes.length}) — enter: pop, apply or drop one`,
     items: [
       { label: "Stash the changes…", detail: "with a message; untracked files stay", data: "save" },
@@ -209,7 +209,7 @@ export function gitStash(app: App): void {
     accept: (item) => {
       if (item.data === "save" || item.data === "save-all") {
         const untracked = item.data === "save-all";
-        return app.prompt("stash message: ", (message) => stashSave(app, c, message.trim(), untracked));
+        return app.overlays.prompt("stash message: ", (message) => stashSave(app, c, message.trim(), untracked));
       }
       stashActions(app, c, item.data as Stash);
     },
@@ -217,7 +217,7 @@ export function gitStash(app: App): void {
 }
 
 function stashSave(app: App, c: Checkout, message: string, untracked: boolean): void {
-  app.beforeCheckout(
+  app.git.beforeCheckout(
     () =>
       inBackground(
         app,
@@ -239,7 +239,7 @@ function stashSave(app: App, c: Checkout, message: string, untracked: boolean): 
 /** One stash's ways: popped (applied, then dropped), applied (kept), dropped (after asking). esc: back to the list. */
 function stashActions(app: App, c: Checkout, s: Stash): void {
   const name = `${s.ref} (${sanitize(s.message)})`;
-  app.openList({
+  app.overlays.openList({
     title: `${s.ref}: ${sanitize(s.message)}`,
     items: [
       { label: "Pop it", detail: "applied to the files, then dropped from the list", data: "pop" },
@@ -249,7 +249,7 @@ function stashActions(app: App, c: Checkout, s: Stash): void {
     accept: (item) => {
       const how = item.data as "pop" | "apply" | "drop";
       if (how === "drop")
-        return app.confirm(`Drop ${name}? Its changes are gone with it.`, () =>
+        return app.overlays.confirm(`Drop ${name}? Its changes are gone with it.`, () =>
           inBackground(
             app,
             "dropping the stash",
@@ -258,7 +258,7 @@ function stashActions(app: App, c: Checkout, s: Stash): void {
             () => app.message("info", `dropped ${name}`),
           ),
         );
-      app.beforeCheckout(
+      app.git.beforeCheckout(
         () =>
           inBackground(
             app,

@@ -156,7 +156,7 @@ export async function visualKey(app: App, view: View, key: string, dispatch: () 
     const r = textObject(view, E.offsetOf(app, view), kind, ch, takeCount(app));
     if (!r) return app.message("info", `no ${kind}${ch} here`);
     E.placeAt(app, view, r.from);
-    app.select(view, { ...view.cur }, view.visual === "line");
+    app.views.select(view, { ...view.cur }, view.visual === "line");
     E.placeAt(app, view, Math.max(r.from, E.prevBoundary(view.buf.source, r.to)));
     app.moveCursor(view, view.cur);
     return;
@@ -745,7 +745,7 @@ export async function repeat(app: App): Promise<void> {
   }
   s.replaying = true;
   try {
-    for (const k of keys) await app.processKey(k);
+    for (const k of keys) await app.input.processKey(k);
   } finally {
     s.replaying = false;
     s.undoing = true; // `.` itself isn't the change to repeat next time

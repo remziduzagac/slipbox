@@ -11,8 +11,9 @@ import {
   parseSubstitute,
   type TextMatch,
 } from "../core/replace.ts";
-import { type App, computeFind, editable, type PromptOverlay, type View } from "./app.ts";
+import { type App, editable, type PromptOverlay, type View } from "./app.ts";
 import * as E from "./editing.ts";
+import { computeFind } from "./search.ts";
 
 export interface ReplaceState {
   text: string;
@@ -65,7 +66,7 @@ export function textMatches(
 /** Open the replace field on a window's find prompt (the window switched to editing first). */
 export function openReplace(app: App, o: PromptOverlay, view: View, range?: [number, number]): void {
   if (!editable(view)) {
-    app.setViewMode(view, app.editMode(view));
+    app.lens.setViewMode(view, app.lens.editMode(view));
     app.message("info", "replacing in the markdown");
   }
   o.replace ??= { text: "", focus: true, range, current: 0, total: 0 };
@@ -209,7 +210,7 @@ export function substitute(app: App, view: View, input: string): void {
   // The cursor's line before the window changes mode.
   const span = exLines(app, view, sub.range);
   if (typeof span === "string") return app.message("warn", span);
-  if (!editable(view)) app.setViewMode(view, app.editMode(view));
+  if (!editable(view)) app.lens.setViewMode(view, app.lens.editMode(view));
   const text = view.buf.source;
   const starts = view.buf.lineStarts();
   const [a, b] = span;
@@ -237,7 +238,7 @@ export function substitute(app: App, view: View, input: string): void {
 /** The confirm prompt: the find and replace rows, asking `replace? y n a q` at each match. */
 function startConfirm(app: App, view: View, pattern: string, c: Confirm): void {
   view.buf.beginStep(E.offsetOf(app, view));
-  app.prompt(
+  app.overlays.prompt(
     "/",
     () => finishConfirm(app, view, c),
     undefined,
