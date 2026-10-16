@@ -17,11 +17,15 @@ export class Scratch {
     return scratchLocation(this.app.loc, this.app.config);
   }
 
-  capture(entry: string): void {
+  /**
+   * An entry added to the scratch, the scratch left as it is — shown, or not (a review's note, GIT-D3): its text after,
+   * or null when it couldn't be (an open scratch's typing that couldn't be saved first).
+   */
+  add(entry: string): string | null {
     const loc = this.location();
     // An open, changed scratch is saved first, so the entry goes after what you typed (4.10).
     const scratchBuf = this.app.buffers.get(loc.path) ?? this.app.buffers.get(relative(this.app.loc.root, loc.path));
-    if (scratchBuf?.dirty && !this.app.saving.save(scratchBuf)) return;
+    if (scratchBuf?.dirty && !this.app.saving.save(scratchBuf)) return null;
     const text = appendScratch(loc, entry, true);
     const rel = relative(this.app.loc.root, loc.path);
     if (!climbsOut(rel)) this.app.watcher?.noteOwnWrite(rel);
@@ -30,6 +34,13 @@ export class Scratch {
       open.load();
       for (const v of this.app.allViews()) if (v.buf === open) v.layoutKey = "";
     }
+    return text;
+  }
+
+  capture(entry: string): void {
+    const text = this.add(entry);
+    if (text === null) return;
+    const loc = this.location();
     // The scratch opened on the entry (#43), typing after its **Note:** (D229): a word about it said at once.
     const at = text.length - 1;
     this.open(undefined, at);

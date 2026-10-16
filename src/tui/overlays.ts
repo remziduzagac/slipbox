@@ -8,6 +8,7 @@ import { NoteBuffer } from "./buffer.ts";
 import { keyChar } from "./keys.ts";
 import type { App, View, ListItem, ListOverlay, Overlay } from "./app.ts";
 import { rank } from "./match.ts";
+import { reviewEnded } from "./review.ts";
 
 /** Lists, prompts, dialogs, and the floating window's closing. */
 export class Overlays {
@@ -30,6 +31,8 @@ export class Overlays {
       this.app.message("info", f.amend ? "not amended" : "not committed");
       this.app.git.commitDone(f.from);
     }
+    // A review closed (GIT-D3): what it did, said.
+    if (f.kind === "review") reviewEnded(this.app, f.review);
     return true;
   }
 

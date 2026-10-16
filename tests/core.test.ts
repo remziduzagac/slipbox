@@ -66,6 +66,8 @@ import { glyphsFor } from "../src/core/glyphs.ts";
 import { WriteRefused, writeNote } from "../src/core/fsutil.ts";
 import { listTasks, toggleTask } from "../src/core/tasks.ts";
 import { diffLines, diffView, diffWords, merge3, pairLines } from "../src/core/merge.ts";
+import { findChange, hunkEntry, hunkLines, hunkView, sameChange, tallyText } from "../src/core/gitreview.ts";
+import { gitChanges } from "../src/core/gitsigns.ts";
 import {
   compilePattern,
   expandReplacement,
@@ -4853,6 +4855,59 @@ describe("the remote's commands and stash (26.6)", () => {
       expect((await stashLater(c, "drop", stashesOf(c)![0]!)).ok).toBe(true);
       expect(stashesOf(c)).toEqual([]);
     });
+  });
+});
+
+describe("reviewing a change, a hunk at a time (GIT-D3)", () => {
+  const now = ["one", "two", "THREE", "four", "five", "six", "seven", "eight"];
+  const changes = gitChanges("one\ntwo\nthree\nfour\nfive\nsix\neight\n", `${now.join("\n")}\n`);
+  test("a hunk with the file's lines around it, each row at its line in the file", () => {
+    expect(changes.map((c) => c.kind)).toEqual(["change", "add"]);
+    expect(hunkView(changes[1]!, now).rows.map((r) => `${r.kind}${r.line} ${r.text}`)).toEqual([
+      "@@7 line 7",
+      " 4 four",
+      " 5 five",
+      " 6 six",
+      "+7 seven",
+      " 8 eight",
+    ]);
+    expect(hunkView(changes[0]!, now).rows.map((r) => `${r.kind}${r.text}`)).toEqual([
+      "@@line 3",
+      " one",
+      " two",
+      "-three",
+      "+THREE",
+      " four",
+      " five",
+      " six",
+    ]);
+    const del = gitChanges("a\nb\nc\n", "a\nc\n")[0]!;
+    expect(hunkView(del, ["a", "c"]).rows.map((r) => `${r.kind}${r.text}`)).toEqual(["@@line 2", " a", "-b", " c"]);
+    expect(hunkLines(del)).toEqual({ from: 1, to: 1 });
+    const fresh = gitChanges(null, "x\ny\n")[0]!;
+    expect(hunkView(fresh, ["x", "y"]).rows.filter((r) => r.kind === "+").length).toBe(2);
+  });
+  test("a hunk found again once the index or the file moved: the same lines, the nearest", () => {
+    const after = gitChanges("one\ntwo\nTHREE\nfour\nfive\nsix\neight\n", `${now.join("\n")}\n`);
+    expect(after.length).toBe(1);
+    expect(findChange(after, changes[1]!)).toEqual(after[0]!);
+    expect(findChange(after, changes[0]!)).toBeNull();
+    const twice = gitChanges("a\nb\na\nb\n", "a\nX\na\nX\n");
+    expect(findChange(twice, { ...twice[1]!, from: 4 })).toBe(twice[1]!);
+    expect(sameChange(twice[0]!, twice[1]!)).toBe(true);
+    // The same lines now, but others staged under them: another change.
+    expect(findChange(gitChanges("z\n", "Y\n"), gitChanges("x\n", "Y\n")[0]!)).toBeNull();
+  });
+  test("a note for the agent: where the hunk is, its diff, the note; what the review says at its end", () => {
+    expect(hunkEntry("/v/docs/sync.md", changes[0]!, "keep the old wording", "/v")).toBe(
+      "**At:** `docs/sync.md:3`\n\n```diff\n-three\n+THREE\n```\n\n**Note:** keep the old wording",
+    );
+    expect(tallyText({ kept: 1, reverted: 1, noted: 1, skipped: 0, left: 0 })).toBe(
+      "review: 1 kept (staged), 1 reverted, 1 note for the agent in the scratch — space s y copies it",
+    );
+    expect(tallyText({ kept: 0, reverted: 0, noted: 0, skipped: 1, left: 2 })).toBe(
+      "review: nothing kept, reverted or noted; 1 skipped, 2 left as they were",
+    );
   });
 });
 

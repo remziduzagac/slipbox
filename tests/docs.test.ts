@@ -18,6 +18,7 @@ import {
   DEFAULT_OUTLINE_KEYS,
   DEFAULT_PEEK_KEYS,
   DEFAULT_RESIZE_KEYS,
+  DEFAULT_REVIEW_KEYS,
   DEFAULT_SOURCE_KEYS,
   DEFAULT_VISUAL_KEYS,
 } from "../src/tui/keys.ts";
@@ -182,6 +183,7 @@ const KEY_TABLES = {
   DEFAULT_INFO_KEYS,
   DEFAULT_RESIZE_KEYS,
   DEFAULT_PEEK_KEYS,
+  DEFAULT_REVIEW_KEYS,
 };
 
 /** The default keys, every mode's, that the keys chapter doesn't show in backticks. */

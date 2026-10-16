@@ -96,6 +96,47 @@ export function layoutDiff(rows: DiffViewRow[], from: string, to: string, opts: 
   return { lines, links: [], headings: [], width };
 }
 
+/** A diff's rows as its window's text, a line a row: what its height counts, and what its cursor's lines are. */
+export const diffText = (rows: DiffViewRow[]): string[] =>
+  rows.map((r) =>
+    r.kind === "@@" ? `@@ ${r.text}` : r.kind === "fold" ? `${r.count} unchanged lines` : `${r.kind} ${r.text}`,
+  );
+
+/**
+ * A part of a screen made of diffs (the review's, the merge screen's, GIT-D3 and GIT-D5): a row of text, or a diff
+ * laid out as `layoutDiff` lays it out.
+ */
+export type ScreenPart = { spans: Span[]; fill?: Role } | { rows: DiffViewRow[]; from: string; to: string };
+
+/** A screen's text: a line for each of its rows — a text row's own, a diff's (`diffText`). */
+export function screenText(parts: ScreenPart[]): string {
+  return parts.flatMap((p) => ("spans" in p ? [p.spans.map((s) => s.text).join("")] : diffText(p.rows))).join("\n");
+}
+
+/**
+ * Parts laid out one after another, each row a line of the screen's text (`screenText`): a text row as it is, a diff
+ * as `layoutDiff` lays it out, its lines counted on from the parts before it. Each diff too wide scrolls sideways on its
+ * own.
+ */
+export function layoutScreen(parts: ScreenPart[], opts: DiffLayoutOptions): Layout {
+  const lines: Line[] = [];
+  let width = opts.width;
+  let at = 0;
+  for (const p of parts) {
+    if ("spans" in p) {
+      lines.push({ spans: p.spans, src: ++at, ...(p.fill ? { fill: p.fill } : {}) });
+      continue;
+    }
+    if (!p.rows.length) continue;
+    const l = layoutDiff(p.rows, p.from, p.to, opts);
+    for (const line of l.lines) lines.push({ ...line, src: line.src + at });
+    at += p.rows.length;
+    width = Math.max(width, l.width);
+  }
+  if (!lines.length) lines.push({ spans: [], src: 1 });
+  return { lines, links: [], headings: [], width };
+}
+
 /**
  * One side's lines, those wanted (1-based), highlighted as source mode has them: a row each. Markdown's highlighter
  * carries what it knows from line to line (front matter, a fence), so it reads the text whole; code is highlighted a

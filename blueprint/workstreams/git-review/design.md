@@ -102,6 +102,43 @@ The text for § Side panes ("Source control"), after **Commit**: `f` fetches, `p
 `shift+p` pushes and `z` lists the stashes (explorer actions `fetch`, `paste`, `push`, `stash`, each running its named
 command, so the palette's are the same; in the explorer and the history they do nothing).
 
+And (GIT-T2): `v` reviews the changes (the git panel's `review`, `git.review`), and a Review button is there while a
+change isn't staged; a changed file's footer says `v`.
+
+### Reviewing a change, as built (GIT-T2)
+
+The text for § Git, after "The diff":
+
+**Reviewing a change** (GIT-D3; `core/gitreview.ts`, `tui/review.ts`): `v` in the git panel (`[keys.git]`'s `review`),
+its Review button, `:review` or `git.review` walks the working tree's changes against what's staged — the gutter's hunks
+(`gitChanges`), the files as they are on disk — across every file `git status` has changed and not staged, and every
+untracked one, as wholly added, in path order (`localeCompare`, as the panel lists them). A folder (a submodule's), a
+file gone or binary (a NUL in its first 8 KB) is left out; a deleted file is one hunk, all removed. Each hunk is shown
+in the floating window, as wide as a diff's: a row with its file, its lines (a deletion's, the line before it) and its
+place (`change 2 of 3 here, 5 of 9 in all`, a new or deleted file said, what was done with it), a row of its keys, then
+its diff as every diff is drawn (`layoutDiff`): its lines as staged and as they are, with up to three of the file's
+lines on each side (`hunkView`), each row at its line in the file. The window is a screen of parts (`layoutScreen`,
+`layout/diff.ts`): text rows and diffs, a line of its text each, the review's own keys over the note's (`reviewKeys`,
+`DEFAULT_REVIEW_KEYS`, as a peek has its own).
+
+- `y` (`git.review_keep`) stages the hunk as source control's `s` stages a change (`stageChange`): found again among
+  the file's changes now (`findChange`: the same lines as staged and now, the nearest to where it was), since the index
+  or the file may have moved under it; a new or deleted file is staged whole.
+- `x` (`git.review_revert`) puts the hunk's lines back as staged, in the file's buffer, as one edit — the part of the
+  text that differs — so one undo step there, and saves it at once (`Saving.save`, so `App.writeBuffer`). A file with
+  unsaved typing is never written over: the hunk is skipped, said, and the review goes on. A new file goes to the trash,
+  asked first (`Files.deleteItem`); a deleted one comes back as staged (`discardFile`); a file outside the vault is
+  refused, as slipbox writes only inside it.
+- `c` (`git.review_note`) asks for a note, then adds an entry to the scratch without opening it (`Scratch.add`): the
+  file and the hunk's lines (`path:from-to`), its diff fenced, and the note (`hunkEntry`).
+- `n` and `p` (`git.review_next`, `git.review_prev`) move; `enter` (`git.review_go`) ends the review and opens the file
+  at the line under the cursor, else the hunk's first; `esc` and `q` end it.
+
+After `y`, `x` or `c`, the review goes on to the next hunk not yet dealt with, after it and then from the start; with
+none left, it ends. Its end, however it comes, says what it did (`tallyText`): `review: 1 kept (staged), 1 reverted,
+1 note for the agent in the scratch — space s y copies it; 2 left as they were` — `space s y` named when a note was
+written. Nothing is committed.
+
 ## MODIFIED design/trust.md § What slipbox runs
 
 The git bullet adds, after the commit (GIT-T3): a push runs no hook — its pre-push neither — and isn't signed

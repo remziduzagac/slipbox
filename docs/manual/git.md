@@ -12,8 +12,9 @@ slipbox shows what git knows about the repository:
 - what each branch changed, and where its worktree is
 
 You can stage, commit, make and switch branches, and make worktrees for agents without leaving slipbox, by keys or by
-mouse. You can fetch, pull, push and stash. You can also review a branch before you merge it, including the links a
-merge would break, and merge it.
+mouse. You can fetch, pull, push and stash. You can review an agent's change one piece at a time, keeping, reverting or
+sending back each. You can also review a branch before you merge it, including the links a merge would break, and merge
+it.
 
 slipbox runs the `git` on your `PATH`. Without it, none of this shows.
 
@@ -58,8 +59,8 @@ Everything else is in the git panel:
 | `] c` / `[ c` | Goes to the next / previous changed line in this file |
 
 The rest are the panel's own keys, its buttons, and commands in the palette (`:`): `:changes`, `:diff`, `:worktrees`,
-`:merge-review`, `:fetch`, `:pull`, `:push`, `:stash`, and Branches, Who changed this line, This file's history,
-Preview the change and Undo the change, by their titles.
+`:merge-review`, `:fetch`, `:pull`, `:push`, `:stash`, `:review`, and Branches, Who changed this line, This file's
+history, Preview the change and Undo the change, by their titles.
 
 [Keys](keys.md) has every key. You can change these like any other.
 
@@ -200,6 +201,7 @@ The panel's foot says the keys of the row selected. Its keys:
 | `a` / `shift+u` | Stages everything, untracked files too / unstages everything |
 | `i` | Types in the message box |
 | `c` / `shift+c` | Commits what's staged / amends the last commit ([Committing](#committing)) |
+| `v` | Reviews the changes, one at a time ([Reviewing a change](#reviewing-a-change)) |
 | `f` / `p` / `shift+p` | Fetches / pulls / pushes ([Fetching, pulling and pushing](#fetching-pulling-and-pushing)) |
 | `z` | Lists the stashes ([Stashes](#stashes)) |
 | `n` / `m` | A new branch / merges the branch selected ([Branches](#branches)) |
@@ -255,6 +257,36 @@ staged, a commit says so.
 
 In a vault you don't trust, the commit's hooks don't run, and it isn't signed. The editor's first lines and a message
 say so.
+
+## Reviewing a change
+
+When an agent has changed files, you can go through what it did one change at a time. You keep each change, revert it,
+or send it back to the agent with a note.
+
+Press `v` in the git panel, or click Review, or run `:review`. The review walks every change in the working tree that
+isn't staged yet, file by file, in the order the panel lists them. A file git doesn't track yet counts as one change,
+all of it added. Each change shows in a floating window as a diff, with a few of the file's lines around it. Above the
+diff are the file, where the change is (`line 12 · change 2 of 3 here, 5 of 9 in all`), and the keys:
+
+| Key | What it does |
+| --- | --- |
+| `y` | Keeps the change: stages it, as `s` stages one change in the git panel |
+| `x` | Reverts the change: its lines go back to what's staged, and the file is saved at once |
+| `c` | Asks for a note, and adds the change to the scratch for the agent: the file, its lines, the diff and your note |
+| `n` / `p` | Goes to the next / previous change |
+| `enter` | Ends the review, and opens the file at the change |
+| `esc` | Ends the review |
+
+After `y`, `x` or `c`, the review moves on to the next change you haven't dealt with. When none is left, or when you
+press `esc`, a message says what you kept, reverted and noted. When you noted something, it names `space s y`, which
+copies the scratch for the agent ([The scratch](editing.md#the-scratch)).
+
+A revert is one step of the file's undo: open the file and press `u` to bring the change back. slipbox doesn't revert a
+file with unsaved typing, since that would write over it. It says so, skips the change, and goes on. A file git doesn't
+track goes to slipbox's trash when you revert it, after asking. A deleted file comes back as staged.
+
+The review commits nothing. Staging is how it marks what you kept, so a commit afterwards (`c` in the git panel)
+takes exactly what you reviewed.
 
 ## Fetching, pulling and pushing
 
@@ -700,5 +732,5 @@ These commands exit with code 3:
 - with no base branch
 - with a branch or commit that isn't there
 
-The rest has no command: the gutter, source control, commits, blame, history, branches, the remote and stashes. An
-agent runs git itself for those.
+The rest has no command: the gutter, source control, commits, blame, history, branches, the remote and stashes, and
+the review. An agent runs git itself for those.

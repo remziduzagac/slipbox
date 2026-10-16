@@ -36,6 +36,10 @@ The format is [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.1.0/); wh
   from, else the nearest of `git.bases`. In a vault that isn't a repository, the panel lists the repositories in the
   view, by what needs attention. A click on the status line's branch lists the branches, and one on a change's sign in
   the gutter shows the change, with Revert and Stage.
+- Reviewing a change, one piece at a time: `v` in the git panel, its Review button, or `:review` walks the changes that
+  aren't staged, across every changed file, each drawn as a diff. `y` keeps one (stages it), `x` reverts it (saved at
+  once; `u` in the file brings it back), `c` sends it to the agent with a note, through the scratch. The end says what
+  you kept, reverted and noted. A file with unsaved typing is never written over.
 
 ### Changed
 

@@ -441,3 +441,26 @@ describe("the repositories by what needs attention (VV-D10)", () => {
     expect(attention([null, undefined])).toBe(0);
   });
 });
+
+describe("the review, the merge screen and the rebase, from the panel (GIT-D3, GIT-D5, GIT-D6)", () => {
+  test("Review: a button while a change isn't staged, its key v said under the pointer; clicked, the review", async () => {
+    const root = repo();
+    const { app, click, keys, frame } = await panel(root);
+    // Nothing to review: no button.
+    expect(app.gitPanel.buttons().map((b) => b.id)).not.toContain("review");
+    writeFileSync(join(root, "a.md"), "# A\n\ntwo\n");
+    await app.git.refreshNow();
+    frame();
+    expect(app.gitPanel.buttons().map((b) => b.id)).toContain("review");
+    expect(pointedAt(app, "git:btn:review")).toEqual({ key: "v", desc: "Review: the changes not staged, a hunk at a time" });
+    click("git:btn:review");
+    expect(await until(() => app.floating?.kind === "review")).toBe(true);
+    await keys("escape");
+    // A changed file's footer says v too; v reviews.
+    app.region = "sidebar";
+    app.sidebar.selected = rowOf(app, (r) => r.kind === "file" && r.entry.path === "a.md");
+    expect(app.gitPanel.footer(app.gitPanel.rows()[app.sidebar.selected])).toContainEqual(["v", "review"]);
+    await keys("v");
+    expect(await until(() => app.floating?.kind === "review")).toBe(true);
+  });
+});

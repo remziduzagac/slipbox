@@ -759,6 +759,7 @@ pointer says its own. `[keys.git]` changes them ([Configuration](configuration.m
 | `i` | type the commit's message in the panel's message box |
 | `c` | commit what's staged, with the box's message, or one written in a floating editor |
 | `shift+c` | amend the last commit with what's staged |
+| `v` | review the changes not staged, one at a time (`:review`) |
 | `f` | fetch from the remote, in the background (`:fetch`) |
 | `p` | pull the upstream's new commits, fast-forward only, unsaved notes saved or kept first (`:pull`) |
 | `shift+p` | push the branch to its upstream; with none, asks to push it to `origin` and track it (`:push`) |
@@ -774,6 +775,19 @@ pointer says its own. `[keys.git]` changes them ([Configuration](configuration.m
 In the message box, `ctrl+enter` commits, `enter` takes the message to the floating editor, and `esc` leaves the box,
 keeping what's typed. In the floating editor, every editing key works: `ctrl+s` (or `:w`) commits, and `esc` (or `q`)
 leaves it, committing nothing.
+
+### Inside a review
+
+`v` in the git panel walks the changes not staged, one at a time ([Reviewing a change](git.md#reviewing-a-change)).
+
+| Keys | What |
+| --- | --- |
+| `y` | keep the change: stage it |
+| `x` | revert it: its lines as staged again, the file saved |
+| `c` | a note for the agent: the change, its file and lines, into the scratch |
+| `n` / `p` | the next / previous change |
+| `enter` | end the review, and go to the change in its file |
+| `esc` | end the review: what you kept, reverted and noted, said |
 
 ## Note, folder, app
 
@@ -911,6 +925,7 @@ Your configuration's [`[aliases]`](configuration.md) adds more commands, or rena
 | `:worktrees` / `:merge-review` | the worktrees / the links a merge would break |
 | `:fetch` / `:pull` / `:push` | fetch, pull (fast-forward only) or push, as source control's `f`, `p` and `shift+p` |
 | `:stash` | the stashes, as source control's `z` |
+| `:review` | review the changes not staged, one at a time, as source control's `v` |
 | `:folders` | the named folders, to pick one to go into |
 | `:folders-default` | which copy a named folder's links open |
 | `:name [new]` | name this folder, as pointers name it |

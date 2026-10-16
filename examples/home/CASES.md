@@ -2825,6 +2825,18 @@ The same notes, one per tab.
   prompts disabled" — `work/kestrel/README.md`, `work/kestrel/docs/sync.md` (GIT's design.md The remote and stash
   (26.6); tests 'the remote's commands and stash (26.6)'; terminal checks 'push, fetch and pull against a bare
   repository', 'a pull where both sides moved', 'stash', 'a remote that asks for a password')
+- `git.review` — Review the changes — `work/kestrel/README.md`, `work/kestrel/docs/sync.md` (command-specs.ts)
+- `git.review_keep` — Keep this change (review) — `work/kestrel/README.md` (command-specs.ts)
+- `git.review_revert` — Revert this change (review) — `work/kestrel/docs/architecture.md` (command-specs.ts)
+- `git.review_note` — Note this change for the agent (review) — `work/kestrel/docs/sync.md` (command-specs.ts)
+- `git.review_next` — Next change (review) — `work/kestrel/README.md` (command-specs.ts)
+- `git.review_prev` — Previous change (review) — `work/kestrel/README.md` (command-specs.ts)
+- `git.review_go` — Go to the change (review) — `work/kestrel/docs/sync.md` (command-specs.ts)
+- an agent's changes to three of kestrel's files reviewed among the working tree's others (`.editorconfig`, the
+  untracked `docs/plan.md`): `n` and `p` through them; one kept (staged), one reverted (as staged, saved), one noted for
+  the agent (the scratch, `space s y`); `esc`'s summary; `enter` to a change in its file; a file with unsaved typing
+  skipped — `work/kestrel/README.md`, `work/kestrel/docs/architecture.md`, `work/kestrel/docs/sync.md` (GIT's design.md
+  Reviewing a change (GIT-D3); tests 'reviewing a change (GIT-D3)')
 
 ### shell
 

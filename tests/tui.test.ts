@@ -18672,6 +18672,198 @@ describe("branches (26.5)", () => {
   });
 });
 
+describe("git's review, merge screen, pull and rebase (GIT-D3, GIT-D5, GIT-D6)", () => {
+  const git = (cwd: string, ...args: string[]) =>
+    new TextDecoder()
+      .decode(
+        Bun.spawnSync(["git", "-c", "user.email=t@example.invalid", "-c", "user.name=t", "-C", cwd, ...args]).stdout,
+      )
+      .trim();
+  const until = async (ok: () => boolean, ms = 25_000) => {
+    for (const t = Date.now(); !ok() && Date.now() - t < ms; ) await Bun.sleep(20);
+    return ok();
+  };
+  /** Nobody's git config but the test's, while it runs; its commits made by the test. */
+  const isolated = async (run: () => Promise<void>) => {
+    const keys = [
+      "GIT_CONFIG_GLOBAL",
+      "GIT_CONFIG_NOSYSTEM",
+      "GIT_AUTHOR_NAME",
+      "GIT_AUTHOR_EMAIL",
+      "GIT_COMMITTER_NAME",
+      "GIT_COMMITTER_EMAIL",
+    ];
+    const was = Object.fromEntries(keys.map((k) => [k, process.env[k]]));
+    process.env.GIT_CONFIG_GLOBAL = "/dev/null";
+    process.env.GIT_CONFIG_NOSYSTEM = "1";
+    process.env.GIT_AUTHOR_NAME = process.env.GIT_COMMITTER_NAME = "t";
+    process.env.GIT_AUTHOR_EMAIL = process.env.GIT_COMMITTER_EMAIL = "t@example.invalid";
+    try {
+      await run();
+    } finally {
+      for (const [k, v] of Object.entries(was))
+        if (v === undefined) delete process.env[k];
+        else process.env[k] = v;
+    }
+  };
+  /** A vault that's a repository, its files committed; with an origin beside it and a clone of it, if asked. */
+  const repo = (files: Record<string, string>, remote = false) => {
+    const top = mkdtempSync(join(sandbox, "git-"));
+    const root = join(top, "work");
+    mkdirSync(join(root, ".slipbox"), { recursive: true });
+    writeFileSync(join(root, ".gitignore"), ".slipbox/\n");
+    for (const [f, t] of Object.entries(files)) writeFileSync(join(root, f), t);
+    git(root, "init", "-q", "-b", "main");
+    // git's own markers, whatever the machine's config says (diff3's base section is read too: core.test.ts).
+    git(root, "config", "merge.conflictStyle", "merge");
+    git(root, "add", "-A");
+    git(root, "commit", "-q", "-m", "start");
+    const bare = join(top, "origin.git");
+    const other = join(top, "other");
+    if (remote) {
+      Bun.spawnSync(["git", "init", "-q", "--bare", "-b", "main", bare]);
+      git(root, "remote", "add", "origin", bare);
+      git(root, "push", "-q", "-u", "origin", "main");
+      Bun.spawnSync(["git", "clone", "-q", bare, other]);
+    }
+    return { root, bare, other };
+  };
+  const said = (h: Harness, text: string | RegExp) =>
+    until(() => h.app.messages.some((m) => (typeof text === "string" ? m.text === text : text.test(m.text))));
+  const type = (s: string) => [...s].map((ch) => (ch === " " ? "space" : ch));
+  const floatText = (h: Harness) => h.app.floating?.view.buf.source ?? "";
+
+  describe("reviewing a change (GIT-D3)", () => {
+    test("a review: three files' changes, one kept (staged), one reverted (saved, one undo), one noted (the scratch)", async () => {
+      await isolated(async () => {
+        const { root } = repo({ "a.md": "a\n", "b.md": "b one\nb two\n", "c.md": "c\n" });
+        writeFileSync(join(root, "a.md"), "a\nkeep me\n");
+        writeFileSync(join(root, "b.md"), "b one\nb TWO\n");
+        writeFileSync(join(root, "c.md"), "c, noted\n");
+        const h = await harness({ root, open: "a.md", width: 120, height: 40 });
+        await h.app.run("git.review");
+        expect(await until(() => h.app.floating?.kind === "review")).toBe(true);
+        expect(h.app.floating!.title).toBe("Review — 1 of 3");
+        expect(floatText(h)).toContain("a.md  line 2 · change 1 of 1 here, 1 of 3 in all");
+        expect(floatText(h)).toContain("+ keep me");
+        expect(h.frame()).toContain("y keep  x revert  c note for the agent");
+        // y: staged; on to b.md.
+        await h.keys("y");
+        expect(git(root, "diff", "--cached", "--name-only")).toBe("a.md");
+        expect(h.app.floating!.title).toBe("Review — 2 of 3");
+        expect(floatText(h)).toContain("- b two");
+        // x: b.md's lines back as staged, saved; u in it brings the change back.
+        await h.keys("x");
+        expect(readFileSync(join(root, "b.md"), "utf8")).toBe("b one\nb two\n");
+        expect(await said(h, "reverted a change of b.md, saved — u in the file brings it back")).toBe(true);
+        const b = h.app.buffers.get("b.md")!;
+        b.undo();
+        expect(b.source).toBe("b one\nb TWO\n");
+        b.redo();
+        // c: a note asked for; the scratch has the file, its line, the diff and the note.
+        await h.keys("c", ...type("say why"), "enter");
+        const scratch = readFileSync(h.app.scratch.location().path, "utf8");
+        expect(scratch).toContain("**At:** `c.md:1`");
+        expect(scratch).toContain("-c\n+c, noted");
+        expect(scratch).toContain("**Note:** say why");
+        // None left: the review's end, what it did said.
+        expect(h.app.floating).toBeNull();
+        expect(
+          await said(
+            h,
+            "review: 1 kept (staged), 1 reverted, 1 note for the agent in the scratch — space s y copies it",
+          ),
+        ).toBe(true);
+        // Nothing committed.
+        expect(git(root, "log", "--oneline").split("\n").length).toBe(1);
+      });
+    });
+
+    test("a review: n and p move; a hunk found again after another moved it; unsaved typing skipped; esc ends it", async () => {
+      await isolated(async () => {
+        const { root } = repo({ "a.md": "one\ntwo\nthree\nfour\nfive\nsix\nseven\neight\nnine\n" });
+        writeFileSync(join(root, "a.md"), "ONE\nadded\ntwo\nthree\nfour\nfive\nsix\nseven\neight\nNINE\n");
+        writeFileSync(join(root, "new.md"), "brand new\n");
+        const h = await harness({ root, open: "a.md", width: 120, height: 40 });
+        await h.app.run("git.review");
+        expect(await until(() => h.app.floating?.kind === "review")).toBe(true);
+        // a.md's two changes, then the new file, wholly added.
+        expect(h.app.floating!.title).toBe("Review — 1 of 3");
+        await h.keys("n", "n");
+        expect(floatText(h)).toContain("new.md  line 1 · change 1 of 1 here, 3 of 3 in all  new file");
+        await h.keys("n");
+        expect(await said(h, "the last change — esc ends the review")).toBe(true);
+        await h.keys("p");
+        expect(h.app.floating!.title).toBe("Review — 2 of 3");
+        // The second change kept, then the first: found again though the index moved under it.
+        await h.keys("y");
+        expect(git(root, "show", ":a.md")).toBe("one\ntwo\nthree\nfour\nfive\nsix\nseven\neight\nNINE");
+        expect(h.app.floating!.title).toBe("Review — 3 of 3");
+        await h.keys("p", "p", "y");
+        expect(git(root, "show", ":a.md")).toBe("ONE\nadded\ntwo\nthree\nfour\nfive\nsix\nseven\neight\nNINE");
+        await h.keys("escape");
+        expect(await said(h, "review: 2 kept (staged); 1 left as it was")).toBe(true);
+        // Unsaved typing in new.md: x refuses to write over it, says so, goes on.
+        await h.app.run("note.open new.md");
+        h.app.view!.buf.edit(0, 0, "typed ");
+        await h.app.run("git.review");
+        expect(await until(() => h.app.floating?.kind === "review")).toBe(true);
+        expect(floatText(h)).toContain("new.md  line 1");
+        await h.keys("x");
+        expect(await said(h, "skipped: new.md has unsaved typing — save it, then x reverts the change")).toBe(true);
+        expect(existsSync(join(root, "new.md"))).toBe(true);
+        expect(await said(h, "review: nothing kept, reverted or noted; 1 skipped")).toBe(true);
+      });
+    });
+
+    test("source control's v starts a review; with nothing to review, said; enter goes to the change", async () => {
+      await isolated(async () => {
+        const { root } = repo({ "a.md": "one\ntwo\nthree\n" });
+        const h = await harness({ root, open: "a.md", width: 120, height: 40 });
+        await h.app.run("git.view");
+        await h.app.git.refreshNow();
+        await h.keys("v");
+        expect(await said(h, "nothing to review: the working tree has no change that isn't staged")).toBe(true);
+        writeFileSync(join(root, "a.md"), "one\nTWO\nTHREE\n");
+        await h.keys("v");
+        expect(await until(() => h.app.floating?.kind === "review")).toBe(true);
+        // enter on the change's second line: there, in the file, not at its first; the review ended.
+        const row = h.app
+          .currentLayout(h.app.floating!.view)
+          .lines.findIndex((l) => l.spans.some((s) => s.text.includes("THREE")));
+        h.app.moveCursor(h.app.floating!.view, { row, col: 2 });
+        await h.keys("enter");
+        expect(h.app.floating).toBeNull();
+        expect(h.app.view!.buf.rel).toBe("a.md");
+        expect(h.app.cursorLine(h.app.view!)).toBe(3);
+        expect(await said(h, "review: nothing kept, reverted or noted; 1 left as it was")).toBe(true);
+      });
+    });
+
+    test("a review's revert: a deleted file comes back as staged; a new one goes to the trash, after asking", async () => {
+      await isolated(async () => {
+        const { root } = repo({ "a.md": "a\n", "b.md": "b\n" });
+        rmSync(join(root, "b.md"));
+        writeFileSync(join(root, "new.md"), "brand new\n");
+        const h = await harness({ root, open: "a.md", width: 120, height: 40 });
+        await h.app.run("git.review");
+        expect(await until(() => h.app.floating?.kind === "review")).toBe(true);
+        expect(floatText(h)).toContain("b.md  line 1 · change 1 of 1 here, 1 of 2 in all  deleted");
+        expect(floatText(h)).toContain("- b");
+        await h.keys("x");
+        expect(readFileSync(join(root, "b.md"), "utf8")).toBe("b\n");
+        expect(await said(h, "b.md is back as staged")).toBe(true);
+        expect(floatText(h)).toContain("new.md  line 1");
+        await h.keys("x");
+        expect(h.app.overlay).toMatchObject({ kind: "prompt", confirm: true });
+        await h.keys("y");
+        expect(existsSync(join(root, "new.md"))).toBe(false);
+        expect(await said(h, "review: 2 reverted")).toBe(true);
+      });
+    });
+  });
+});
+
 describe("the remote's commands and stash (26.6)", () => {
   const git = (cwd: string, ...args: string[]) =>
     new TextDecoder()

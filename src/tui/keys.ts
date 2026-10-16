@@ -498,6 +498,7 @@ export const DEFAULT_GIT_KEYS: Record<string, string> = {
   z: "stash",
   n: "new_branch",
   m: "merge",
+  v: "review",
   "/": "filter",
   q: "close",
   escape: "leave",
@@ -527,6 +528,7 @@ export const GIT_ACTIONS = [
   "stash",
   "new_branch",
   "merge",
+  "review",
   "filter",
   "close",
   "leave",
@@ -620,6 +622,16 @@ export const DEFAULT_PEEK_KEYS: Record<string, string> = {
   o: "peek.go",
   t: "peek.tab",
   z: "peek.fill",
+};
+
+/** A review's own keys (GIT-D3), over the note's while it's open: commands, as the note's keys are. */
+export const DEFAULT_REVIEW_KEYS: Record<string, string> = {
+  y: "git.review_keep",
+  x: "git.review_revert",
+  c: "git.review_note",
+  n: "git.review_next",
+  p: "git.review_prev",
+  enter: "git.review_go",
 };
 
 /** What the explorer's and the outline's actions do, for help. */
@@ -755,6 +767,10 @@ export const GIT_ACTION_INFO: Record<string, { title: string; desc: string; acti
   pull: {
     title: "Pull",
     desc: "Brings in the upstream's new commits, fast-forward only; unsaved notes saved or kept first (:pull)",
+  },
+  review: {
+    title: "Review",
+    desc: "The changes that aren't staged, a hunk at a time: y keeps one, x reverts it, c notes it for the agent (:review)",
   },
   push: {
     title: "Push",
@@ -961,6 +977,8 @@ export const DEFAULT_ALIASES: Record<string, string> = {
   pull: "git.pull",
   push: "git.push",
   stash: "git.stash",
+  // The review (GIT-D3).
+  review: "git.review",
   "undo-rename": "rename.undo",
   delete: "note.delete",
   trash: "trash.open",

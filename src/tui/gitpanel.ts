@@ -180,11 +180,13 @@ export class GitPanel {
     return st?.base ? { ahead: st.ahead, behind: st.behind, base: st.base } : null;
   }
 
-  /** The buttons at the panel's top (GIT-D8), as the repository stands: commit with what's staged, the remote's. */
+  /** The buttons at the panel's top (GIT-D8), as the repository stands: commit with what's staged, the remote's; the
+   *  review while a change isn't staged. */
   buttons(): PanelButton[] {
     const app = this.app;
     const g = app.glyphs.git;
-    const staged = sections(app.git.entries ?? []).staged.length;
+    const work = sections(app.git.entries ?? []);
+    const staged = work.staged.length;
     const t = app.git.track;
     const up = !!t?.upstream && !t.gone;
     const label = (glyph: string, text: string) => (glyph ? `${glyph} ${text}` : text);
@@ -214,7 +216,10 @@ export class GitPanel {
       },
       { id: "fetch", label: label(g.fetch, "Fetch"), action: "fetch", desc: "fetches the remote's new commits" },
       { id: "stash", label: "Stash", action: "stash", desc: "the stashes: the changes stashed, or one brought back" },
-      // The review (v), the merge screen (x) and rebasing onto the base (shift+r) come here, as buttons of their own.
+      // The review (GIT-D3), while there's a change not staged.
+      ...(work.unstaged.length || work.untracked.length
+        ? [{ id: "review", label: "Review", action: "review", desc: "the changes not staged, a hunk at a time" }]
+        : []),
     ];
   }
 
@@ -246,6 +251,7 @@ export class GitPanel {
           ...(s === "unstaged" || s === "untracked" ? k("stage", "stage all") : []),
           ...(s === "staged" ? k("unstage", "unstage all") : []),
           ...(s === "unstaged" ? k("discard", "discard all") : []),
+          ...(s === "unstaged" || s === "untracked" ? k("review", "review") : []),
           ...(s === "branches" ? k("new_branch", "new branch") : []),
         ];
       }
@@ -255,6 +261,7 @@ export class GitPanel {
           ...(row.section === "staged" ? k("unstage", "unstage") : k("stage", "stage")),
           ...(row.section === "unstaged" || row.section === "untracked" ? k("discard", "discard") : []),
           ...k("open", "diff"),
+          ...(row.section === "unstaged" || row.section === "untracked" ? k("review", "review") : []),
           ...(row.kind === "file" ? k("expand", "changes") : []),
           ...k("go", "open"),
           ...k("menu", "more"),
@@ -343,6 +350,9 @@ export class GitPanel {
         return void app.run("git.push");
       case "stash":
         return void app.run("git.stash");
+      // The review (GIT-D3): every change not staged, a hunk at a time.
+      case "review":
+        return void app.run("git.review");
       case "stage_all":
         return sectionAction(app, "all", "stage");
       case "unstage_all":

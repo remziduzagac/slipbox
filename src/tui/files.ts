@@ -325,8 +325,8 @@ export class Files {
     });
   }
 
-  /** Delete to the vault's trash, after asking — saying how many links it breaks. */
-  deleteItem(item: ExplorerItem): void {
+  /** Delete to the vault's trash, after asking — saying how many links it breaks; `then`, once it's gone. */
+  deleteItem(item: ExplorerItem, then?: () => void): void {
     const unsaved = this.unsavedIn(item.rel);
     if (unsaved.length)
       return this.app.message(
@@ -354,6 +354,7 @@ export class Files {
         if (b.rel !== null && (b.rel === item.rel || b.rel.startsWith(`${item.rel}/`))) b.deleted = true;
       this.afterFileOp();
       this.app.message("info", `deleted ${item.rel} to the trash — u in the explorer (or :trash) restores it`);
+      then?.();
     });
   }
 

@@ -534,6 +534,49 @@ export const COMMAND_SPECS: CommandSpec[] = [
     cli: I,
     desc: "The stashes: the changes stashed with a message, or one popped, applied or dropped (after asking)",
   },
+  // Reviewing a change, a hunk at a time (GIT-D3): source control's v; the keys inside a review.
+  {
+    id: "git.review",
+    title: "Review the changes",
+    cli: I,
+    desc: "The working tree's changes against what's staged, a hunk at a time, every changed file: keep, revert or note each",
+  },
+  {
+    id: "git.review_keep",
+    title: "Keep this change (review)",
+    cli: I,
+    desc: "In a review: stages the change shown, and goes on to the next",
+  },
+  {
+    id: "git.review_revert",
+    title: "Revert this change (review)",
+    cli: I,
+    desc: "In a review: the change's lines back as staged, the file saved at once (u in it brings them back); unsaved typing, skipped",
+  },
+  {
+    id: "git.review_note",
+    title: "Note this change for the agent (review)",
+    cli: I,
+    desc: "In a review: asks for a note, and adds the change to the scratch with its file, lines and diff",
+  },
+  {
+    id: "git.review_next",
+    title: "Next change (review)",
+    cli: I,
+    desc: "In a review: the next change, across the files",
+  },
+  {
+    id: "git.review_prev",
+    title: "Previous change (review)",
+    cli: I,
+    desc: "In a review: the change before",
+  },
+  {
+    id: "git.review_go",
+    title: "Go to the change (review)",
+    cli: I,
+    desc: "In a review: ends it, and opens the file at the change",
+  },
   {
     id: "git.change_next",
     title: "Next change against what's staged",

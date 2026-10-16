@@ -2711,4 +2711,20 @@ const PEEK: Check[] = [
 
 export const LINKS_AND_FILES: Check[] = [...LINKS, ...ROOTS, ...NAMED, ...FILES, ...RENAMES, ...GIT, ...NOTES, ...PEEK];
 
-export const LEFT_OUT_LINKS_AND_FILES: LeftOut = {};
+/** GIT's review, merge screen and rebase: their checks come in one pass once the workstream's parts are all in. */
+const GIT_LATER =
+  "GIT's terminal checks come in one pass at the workstream's end; tests/tui.test.ts drives it meanwhile";
+
+export const LEFT_OUT_LINKS_AND_FILES: LeftOut = {
+  commands: Object.fromEntries(
+    [
+      "git.review",
+      "git.review_keep",
+      "git.review_revert",
+      "git.review_note",
+      "git.review_next",
+      "git.review_prev",
+      "git.review_go",
+    ].map((c) => [c, GIT_LATER]),
+  ),
+};

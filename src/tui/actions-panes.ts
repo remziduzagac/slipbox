@@ -6,6 +6,7 @@ import type { App } from "./app.ts";
 import { blameHere, historyHere } from "./githistory.ts";
 import { gitStep, gitPreview, gitReset } from "./gitchanges.ts";
 import { gitFetch, gitPull, gitPush, gitStash } from "./gitremote.ts";
+import { openReview, reviewGo, reviewKeep, reviewNote, reviewRevert, reviewStep } from "./review.ts";
 import * as E from "./editing.ts";
 
 /** Windows, tabs and panels: splits and tabs, each window's history, the side panels, the Problems panel and source control. */
@@ -174,6 +175,14 @@ export function paneActions(): Record<string, Run> {
     "git.pull": (a) => gitPull(a),
     "git.push": (a) => gitPush(a),
     "git.stash": (a) => gitStash(a),
+    // Reviewing a change (GIT-D3).
+    "git.review": (a) => openReview(a),
+    "git.review_keep": (a) => reviewKeep(a),
+    "git.review_revert": (a) => reviewRevert(a),
+    "git.review_note": (a) => reviewNote(a),
+    "git.review_next": (a) => reviewStep(a, 1),
+    "git.review_prev": (a) => reviewStep(a, -1),
+    "git.review_go": (a) => reviewGo(a),
     "tab.close_others": (a) => a.windows.closeOtherTabs(),
     "tab.close_all": (a) => a.windows.closeAllTabs(),
     "outline.pick": (a) =>
