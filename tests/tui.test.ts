@@ -10704,7 +10704,9 @@ describe("vaults in the TUI (17.x)", () => {
     const h = await harness({ root, open: "out.md" });
     await h.keys("tab", "enter");
     expect(h.app.floating?.kind).toBe("peek");
-    expect(h.frame()).toContain(`Elsewhere › ${join(loose, "a.md")}`);
+    // Named Elsewhere; drawn, a long path is cut from the front (macOS's temporary ones are), the file's name kept.
+    expect(h.app.floating!.title).toBe(`Elsewhere › ${join(loose, "a.md")}`);
+    expect(h.frame()).toMatch(/Elsewhere › \S*\/a\.md /);
     await h.keys("tab", "enter");
     expect(h.app.view!.buf.abs).toBe(join(loose, "b.md"));
     await h.keys("t");
@@ -19592,6 +19594,15 @@ describe("links followed only when you say so (VV-D6)", () => {
     } finally {
       h.app.watcher?.close();
     }
+  });
+
+  test(":e naming a note through a link not followed asks first: never made the vault's unasked", async () => {
+    const { root } = linked();
+    const h = await harness({ root, open: "index.md" });
+    await h.app.run("note.open data/far.md");
+    expect((h.app.overlay as ListOverlay).title).toContain("leads out of");
+    expect(h.app.graph.notes.has("data/far.md")).toBe(false);
+    expect(h.app.view!.buf.rel).toBe("index.md");
   });
 
   test("a link that leads elsewhere now is asked about again; a session's tab through one isn't read", async () => {

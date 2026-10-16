@@ -50,9 +50,11 @@ export function fileActions(): Record<string, Run> {
       // Any other file of the vault, by its path with its extension (16.4), as :e opens it in vim.
       const rel = arg.replace(/^\.?\//, "");
       if (a.graph.filePaths().includes(rel)) return fileLink(a, rel);
+      const abs = join(a.loc.root, rel);
+      // Through a link not followed (VV-D6): never made the vault's unasked — opened, it asks first.
+      if (rel && isInside(a.loc.root, abs) && isFile(abs) && a.following.blocked(abs)) return a.open(rel);
       // There on disk, but the vault hasn't heard of it yet (written a moment ago, the watcher not yet
       // told): the vault told now, as the watcher would, and it opened as its own.
-      const abs = join(a.loc.root, rel);
       if (rel && isInside(a.loc.root, abs) && isFile(abs) && walked(a, rel)) {
         const isNote = classify(rel, a.config.walk.extensions).group === "note";
         a.watch.applyChanges({ changes: [{ rel, kind: "created", isNote }], rescan: false });

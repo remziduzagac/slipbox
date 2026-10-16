@@ -2323,7 +2323,8 @@ describe("moves: detected by content, kept as redirects (17.12)", () => {
     expect(at(outside, "index.md")).toMatchObject({ resolvedKind: "note", path: outside });
     expect(at(outside.replace(/\.md$/, ""), "index.md")).toMatchObject({ resolvedKind: "note", path: outside }); // without its extension too
     expect(at("/nowhere/x.md", "index.md").resolvedKind).toBe("unresolved");
-    // A plain folder has no root: `/` is the filesystem's alone.
+    // Elsewhere has no root (VV-D3): `/` is the filesystem's alone, and a note in a folder of it, never walked, is
+    // reached by its whole path.
     const loose = mkdtempSync(join(tmpdir(), "slipbox-loose-slash-"));
     mkdirSync(join(loose, "notes"));
     writeFileSync(join(loose, "notes", "a.md"), "# A\n");
@@ -2331,7 +2332,7 @@ describe("moves: detected by content, kept as redirects (17.12)", () => {
     expect(lg.resolveLink({ kind: "markdown", target: "/notes/a.md" }, "x.md").resolvedKind).toBe("unresolved");
     expect(lg.resolveLink({ kind: "markdown", target: join(loose, "notes", "a.md") }, "x.md")).toMatchObject({
       resolvedKind: "note",
-      path: "notes/a.md",
+      path: join(loose, "notes", "a.md"),
     });
   });
 

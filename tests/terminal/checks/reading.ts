@@ -580,16 +580,17 @@ export const READING: Check[] = [
       // The vault's info says why each was left out of the walk.
       await leader(s, "v", "i");
       await s.see(/research\/zero\.md — symlink to something that isn't a file/);
-      await s.see(/research\/outside\.md — symlink points outside the vault/);
+      await s.see(/research\/outside\.md — link not followed: it leads out of the vault/);
       await s.keys("escape");
-      // A symlink out of the root: never read, as the walk and the CLI (exit 5) refuse it.
+      // A symlink out of the vault: never read unasked, as the walk and the CLI (exit 5) leave it — opened, it asks.
       await ex(s, "e research/outside.md");
       await s.until(
-        () => s.statusLine().includes("outside.md") || /outside the vault|no note or file/.test(s.text()),
+        () => s.statusLine().includes("outside.md") || /Just look/.test(s.text()),
         3000,
-        "outside.md opened or refused",
+        "outside.md opened or asked about",
       );
-      s.expect(!s.statusLine().includes("outside.md"), "a symlink leading out of the root isn't opened");
+      s.expect(!s.statusLine().includes("outside.md"), "a symlink leading out of the vault isn't opened unasked");
+      await s.keys("escape");
     },
   },
   {
