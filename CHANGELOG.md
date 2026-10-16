@@ -52,6 +52,12 @@ The format is [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.1.0/); wh
 
 ### Changed
 
+- A file outside your home folder and outside every vault is in Elsewhere: one place for the whole machine, with one
+  set of tabs, your own settings, and no index. The status line names it `Elsewhere`. A folder there is listed a level
+  at a time instead of walked and indexed, and backlinks, search, tags and `slipbox problems` say Elsewhere has no
+  index (exit 5 on the command line). Choosing a file of Elsewhere's from a vault (`:e`, the explorer, `o` in a peek)
+  goes into Elsewhere instead of opening it beside the vault's notes. `slipbox info` and `stat` say `Elsewhere`; the
+  JSON's `mode` is still `folder`.
 - **Breaking:** `space g` opens the git panel, as `space e` the explorer, and its keys act there (`[keys.git]`). The
   keys under `space g` are gone: `space g c`, `d`, `w` and `m` are `:changes`, `:diff`, `:worktrees` and
   `:merge-review`, and the others are in the panel and the palette (Branches, Who changed this line, This file's

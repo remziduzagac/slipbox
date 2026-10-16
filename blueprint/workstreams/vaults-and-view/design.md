@@ -25,7 +25,7 @@ The paragraph on the CLI's words becomes: what the CLI prints for a person says 
 change's `kind` is `root` for a vault's naming, `make-root` for `init` of a folder inside a vault, `unmake-root` for
 `deinit`. Its reasons in words say vault: a vault nested in another is skipped by the walk as a `nested vault`, a
 symlink out of it as `symlink points outside the vault`; nothing to undo is "in this vault". `info` labels the vault
-`vault` (a folder outside every vault `folder`, "outside every vault"); `stat`'s row and the Info view's say `vault`.
+`vault` (Elsewhere `vault  Elsewhere — …`, VV-T3); `stat`'s row and the Info view's say `vault`.
 
 ## MODIFIED design/testing.md § Strategy
 
@@ -103,6 +103,37 @@ opened as they are, never gone into.
 
 **Not done here.** The vaults inside a folder home's skip list leaves out (a clone in `~/Downloads`) are no longer
 found by the background index: they're found when opened. Link completion offers other vaults' notes, not home's.
+
+## MODIFIED design/roots.md: Elsewhere (VV-T3)
+
+Done in VV-T3; the text for roots.md at consolidation. Supersedes the plain folder and the loose file (D58, D76).
+
+**§ Roots and markers.** A file's vault is its nearest marker's, else home's when it's under `~`, else no-vault:
+Elsewhere on screen (VV-D3; `elsewhereAt` in `core/vault.ts`, mode `folder` as the code's and the JSON's word).
+Elsewhere's location is opened from a folder — the one opened, or the file's own — where its paths start (`root`), but
+it is one place for the machine: one key, `elsewhere` (`ELSEWHERE_KEY`), so one session, one set of tabs, one scratch
+and trash, wherever its files are. It isn't kept in the machine's list (`roots.json`): there's no index to find again.
+
+**§ Elsewhere** (new, in place of § Plain folders and loose files). Nothing in Elsewhere needs an index, and nothing
+that does is offered there, each said so rather than shown empty: it is listed a folder at a time, never walked
+(`isListed`: the graph lists the folder opened's notes, `listDirectory`; the watcher watches that folder alone); no
+backlinks (`space l b`, the Info view's count, `slipbox backlinks`), no search (`space f s`, `slipbox search`), no tags
+across it, no check of its links (`slipbox tags`, `problems`: exit 5, `Elsewhere has no index, so no …`), no git. The
+context bundle leaves backlinks out, said in a warning. Its settings are yours; `/` is the filesystem's root; a
+wikilink has no names to match. A peek at its file (a link from a vault) is titled `Elsewhere › /etc/hosts`, and under
+a note says it has no backlinks and why.
+
+**What's shown.** The status line names it `Elsewhere` (`rootLabel`, `ELSEWHERE` in `core/names.ts`), the path beside
+it whole: its buffers are keyed by their absolute paths, wherever the folder opened is. Going in says `Elsewhere —
+/etc/nginx`. `info` says `vault  Elsewhere — <folder> (outside home and every vault: no index)`, `stat` and the Info
+view `Elsewhere`. The explorer in Elsewhere has no tree of its own: every folder is listed a level at a time
+(`outsideRows`), by its whole path, the view starting at the folder opened.
+
+**Going in and out** (VV-D4). Choosing a file of Elsewhere's from a vault or home — `:e`, the explorer, `o` in a peek —
+goes into Elsewhere as into a vault (`intoOther`, `goThere`): its tabs, `ctrl+o` back. In Elsewhere, a file of
+Elsewhere's anywhere opens there: it's one place. A peek's `t` keeps Elsewhere's file as a tab read-only, marked
+`Elsewhere` (`markElsewhere`); `o` on it goes into Elsewhere. Gone: a loose file opened beside a vault's notes,
+editable, and a plain folder walked and indexed as a vault.
 
 ## MODIFIED design/roots.md
 
@@ -288,4 +319,4 @@ Vault, home, no-vault (Elsewhere), the view, the peek added; root, plain folder,
 in VV-T1, the vocabulary page changing at once: vault, vault marker and trusted vault in; root, root marker and trusted
 root retired, with the names that keep the word; plain folder and loose file noted as what users read as "a folder
 (a file) outside every vault". Home, no-vault, the view and the peek come in with their tasks, plain folder and loose
-file leave with VV-T2 and VV-T3.
+file leave with VV-T2 and VV-T3. Done for no-vault in VV-T3: Elsewhere in, plain folder and loose file retired.

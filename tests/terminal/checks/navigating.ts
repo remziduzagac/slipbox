@@ -999,10 +999,11 @@ export const NAVIGATING: Check[] = [
     area: "navigating",
     name: "title: the file on screen, else the folder; a name's escape sequence never in it",
     covers: { cases: ["safety", "hostile"] },
-    // Downloads beside home, a folder outside every vault: its notes listed together (home's index leaves it out).
+    // Downloads beside home, in Elsewhere: its notes listed together, each by its whole path (home's index leaves it out).
     options: { home: true, startAt: "elsewhere/stray-note.md", setup: downloadsElsewhere },
     run: async (s) => {
-      await s.until(() => s.title() === "slipbox — stray-note.md", 3000, "the title naming the note");
+      const at = (name: string) => `slipbox — ${join(s.dir, "elsewhere", name)}`;
+      await s.until(() => s.title() === at("stray-note.md"), 3000, "the title naming the note");
       // An escape in the name would end the title's own sequence and spill the rest onto the screen.
       await s.keys("ctrl+p");
       await s.see(/Open (note|\()/);
@@ -1010,7 +1011,7 @@ export const NAVIGATING: Check[] = [
       await s.see(/│ escred\.md\s/);
       await s.keys("enter");
       await s.status("escred.md");
-      await s.until(() => s.title() === "slipbox — escred.md", 3000, "the title without the escape");
+      await s.until(() => s.title() === at("escred.md"), 3000, "the title without the escape");
       s.expect(!UNSAFE.test(s.title()), "nothing unsafe in the title");
       // Every tab closed: the folder.
       await s.keys("ctrl+t", "shift+q");

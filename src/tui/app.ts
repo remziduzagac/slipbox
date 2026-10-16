@@ -28,7 +28,7 @@ import type { Glyphs } from "../core/glyphs.ts";
 import type { Graph } from "../core/graph.ts";
 import { lintCommand } from "../core/lint.ts";
 import { type Layout, posOfSrc, srcAt } from "../core/layout/ir.ts";
-import { stateDir } from "../core/paths.ts";
+import { slipboxOwn, stateDir } from "../core/paths.ts";
 import { type Anchor, type CursorAnchor, loadSession, PositionStore, TOP } from "../core/position.ts";
 import type { Role, Theme } from "../core/theme/index.ts";
 import { Reach } from "../core/reach.ts";
@@ -36,7 +36,7 @@ import { type Peek, vaultGraph } from "./peek.ts";
 import type { DiffWindow } from "./diffview.ts";
 import type { MergeState } from "./mergescreen.ts";
 import type { Review } from "./review.ts";
-import { rootLabel, tildePath } from "../core/names.ts";
+import { ELSEWHERE, rootLabel, tildePath } from "../core/names.ts";
 import { configFilesFor, isInside, vaultAt, vaultOf, recordLocation, type VaultLocation } from "../core/vault.ts";
 import { VaultFeed } from "../core/vault-feed.ts";
 import type { VaultWatcher } from "../core/watch.ts";
@@ -685,7 +685,13 @@ export class App {
     if (unreadable) this.message("warn", `can't read ${tildePath(opened!)}: ${unreadable}`);
     else if (opts.folder && opts.folder !== this.loc.root && isInside(this.loc.root, opts.folder))
       this.explorer.zoomTo(opts.folder);
-    if (!this.tabs.length && !unreadable) this.message("info", `no notes in ${this.loc.root}`);
+    if (!this.tabs.length && !unreadable)
+      this.message(
+        "info",
+        this.loc.mode === "folder"
+          ? `${ELSEWHERE} — ${tildePath(this.loc.root)}: open a file from the explorer`
+          : `no notes in ${this.loc.root}`,
+      );
     // Moved here by hand, its state along (21.8): the links the move broke, their fix previewed (20.17).
     if (carriedFrom) this.vaults.offerMovedRelink();
     // A second copy of this folder (21.6): which one links open, asked once.
@@ -819,7 +825,8 @@ export class App {
   buffer(pathOrRel: string): NoteBuffer | null {
     const abs = pathOrRel.startsWith("/") ? pathOrRel : join(this.loc.root, pathOrRel);
     const relRaw = relative(this.loc.root, abs);
-    const inside = !climbsOut(relRaw);
+    // Elsewhere (VV-D3) is one place, wherever its files are: each by its whole path.
+    const inside = this.loc.mode !== "folder" && !climbsOut(relRaw);
     const key = inside ? relRaw : abs;
     let buf = this.buffers.get(key);
     if (!buf) {
@@ -867,10 +874,16 @@ export class App {
    * being going there, marked with its vault's name, its links read in its vault. The scratch is slipbox's own.
    */
   private markElsewhere(buf: NoteBuffer): void {
-    if (buf.abs === this.scratch.location().path) return;
-    // Its vault: a marker's, or home (VV-D2).
+    if (buf.abs === this.scratch.location().path || slipboxOwn(buf.abs)) return;
+    // Its vault: a marker's, or home (VV-D2); else Elsewhere's (VV-D3), read-only here as another vault's file is.
     const root = vaultOf(buf.abs);
-    if (!root || root === this.loc.root) return;
+    if (!root) {
+      if (this.loc.mode === "folder") return;
+      buf.elsewhere = { vault: ELSEWHERE, graph: null, rel: null };
+      buf.readOnly = `read-only here: ${ELSEWHERE}'s — o goes there, to edit it`;
+      return;
+    }
+    if (root === this.loc.root) return;
     const label = rootLabel(vaultAt(root));
     const graph = vaultGraph(this, root);
     buf.elsewhere = { vault: label, graph, rel: graph ? relative(root, buf.abs) : null };

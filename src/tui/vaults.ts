@@ -311,7 +311,11 @@ export class Vaults {
     }
     this.app.message(
       "info",
-      target.mode === "vault" && target.name ? `${rootLabel(target)} — ${target.root}` : target.root,
+      target.mode === "folder"
+        ? `${rootLabel(target)} — ${tildePath(open ?? target.root)}`
+        : target.mode === "vault" && target.name
+          ? `${rootLabel(target)} — ${target.root}`
+          : target.root,
     );
     this.app.host.requestRender();
     return true;
@@ -330,10 +334,10 @@ export class Vaults {
   }
 
   /**
-   * An absolute path that belongs to another vault or repository, opened by choice (`:e`, the explorer,
-   * a peek's `o`; a link, a backlink or a search hit only peeks, VV-D7): switch there and open it
-   * (17.10); true when it was (or the switch was refused). A loose file opens as it is, beside this
-   * vault's notes: it has no vault to switch into.
+   * An absolute path that belongs to another vault or repository, or to Elsewhere (VV-D3), opened by choice (`:e`,
+   * the explorer, a peek's `o`; a link, a backlink or a search hit only peeks, VV-D7): switch there and open it
+   * (17.10, VV-D4); true when it was (or the switch was refused). In Elsewhere, a file of Elsewhere opens there: it's
+   * one place, wherever its files are.
    */
   intoOther(path: string, anchor?: Anchor): boolean {
     // slipbox's own files (the scratch, in its state folder under ~) are no vault's to go into, home's neither (VV-D2).
@@ -344,7 +348,7 @@ export class Vaults {
     } catch {
       return false;
     }
-    if (target.mode === "folder" || target.root === this.app.loc.root) return false;
+    if (target.mode === "folder" ? this.app.loc.mode === "folder" : target.root === this.app.loc.root) return false;
     this.switchVault(target, path, anchor);
     return true;
   }
@@ -357,8 +361,9 @@ export class Vaults {
     let open: string | null = null;
     try {
       const file = existsSync(t.path) ? locateVault({ path: t.path }) : null;
-      // A file of another vault read there, kept from a peek (VV-D7), is no way back into it: its vault, its tabs.
-      const kept = !!file && file.mode !== "folder" && file.root !== t.root;
+      // A file of another vault read there, kept from a peek (VV-D7), is no way back into it: its vault, its tabs —
+      // Elsewhere's (VV-D3) neither, kept in a vault.
+      const kept = !!file && (file.mode === "folder" ? vaultOf(t.root) !== null : file.root !== t.root);
       target = file && !kept ? file : locateVault({ path: t.root });
       if (file && !kept) open = t.path;
     } catch {

@@ -285,9 +285,8 @@ export class Explorer {
    */
   rowPath(abs: string): string {
     const R = this.app.loc.root;
-    if (abs === R || !isInside(R, abs)) return abs;
-    // A folder only listed (`~`, `/`): its own rows are its folders, by their names.
-    if (isListed(this.app.loc)) return dirname(abs) === R ? basename(abs) : abs;
+    // Elsewhere (VV-D3) has no tree of its own: every row by its whole path.
+    if (abs === R || !isInside(R, abs) || isListed(this.app.loc)) return abs;
     const rel = relative(R, abs).split(sep).join("/");
     // What the walk leaves out (VV-D8: a busy folder, `.gitignore`'s, home's skip list) isn't in the vault's own
     // tree: listed a level at a time, by its path, as a folder outside the vault is.
@@ -322,8 +321,9 @@ export class Explorer {
 
   /** The view at `dir` shows the vault open's own tree from there: its path in it ("" its top); else null. */
   private ownView(dir: string): string | null {
-    if (dir === this.app.loc.root) return "";
+    // Elsewhere (VV-D3): every folder listed a level at a time, wherever the view is.
     if (isListed(this.app.loc)) return null;
+    if (dir === this.app.loc.root) return "";
     const p = this.rowPath(dir);
     return isAbsolute(p) || this.nestedRels().includes(p) ? null : p;
   }
@@ -368,7 +368,7 @@ export class Explorer {
     const shown = entries.filter((e) => !e.name.startsWith("."));
     for (const e of shown.filter(isDir).sort(byName)) {
       const abs = join(dir, e.name);
-      if (abs === R) {
+      if (abs === R && !isListed(this.app.loc)) {
         out.push({
           kind: "root",
           path: R,

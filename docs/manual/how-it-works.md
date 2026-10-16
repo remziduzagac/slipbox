@@ -74,8 +74,8 @@ What connects them is the disk:
 
 A note's **vault** is the nearest folder above it holding `.git`, `.slipbox/`, `.obsidian/` or `.zk/`. That's a
 repository, an Obsidian vault or a zk notebook. Your home folder is a vault without a marker, home: its notes are those
-no other vault holds. A folder outside every vault and outside home works too: opened by its path, it stands in for
-one.
+no other vault holds. Everything outside home and every vault is Elsewhere: one place for the machine, with its own
+tabs and no index.
 
 The vault decides:
 

@@ -4,7 +4,7 @@
 import { listTasks } from "../core/tasks.ts";
 import { placeAt } from "./editing.ts";
 import { type ConventionPart, conventionOf, describeConvention } from "../core/convention.ts";
-import { rootLabel, tildePath } from "../core/names.ts";
+import { ELSEWHERE, rootLabel } from "../core/names.ts";
 import { match } from "./match.ts";
 import type { App } from "./app.ts";
 
@@ -60,7 +60,7 @@ export class Info {
       "File",
       "vault",
       this.app.loc.mode === "folder"
-        ? `none — ${tildePath(this.app.loc.root)} is outside every vault`
+        ? `${ELSEWHERE} — outside home and every vault: no index`
         : this.app.loc.mode === "home"
           ? "home (~)"
           : rootLabel(this.app.loc),
@@ -166,7 +166,15 @@ export class Info {
     const links = b.rel ? this.app.graph.linksOf(b.rel) : [];
     const broken = links.filter((l) => l.resolvedKind === "unresolved").length;
     row("Links", "links", `${links.length}${broken ? ` (${broken} unresolved)` : ""}`, { run: "links.open" });
-    row("Links", "backlinks", String(b.rel ? this.app.graph.backlinks(b.rel).length : 0), { run: "backlinks.open" });
+    row(
+      "Links",
+      "backlinks",
+      // Elsewhere has no index (VV-D3): none to count, said so, not shown as none.
+      this.app.loc.mode === "folder"
+        ? `none in ${ELSEWHERE}: it has no index`
+        : String(b.rel ? this.app.graph.backlinks(b.rel).length : 0),
+      { run: "backlinks.open" },
+    );
     row("Links", "headings", String(this.app.currentLayout(view).headings.length), { run: "outline.toggle" });
     if (note) {
       row("Links", "footnotes", String(this.app.footnotes.list().length), { run: "footnotes.toggle" });

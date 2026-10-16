@@ -28,7 +28,7 @@ import { compilePattern } from "../core/replace.ts";
 import { openVault, Reach } from "../core/reach.ts";
 import { planRelink } from "../core/rename.ts";
 import { activityFile } from "../core/autoindex.ts";
-import { rootLabel } from "../core/names.ts";
+import { ELSEWHERE, rootLabel } from "../core/names.ts";
 import { isHome, isInside, vaultOf, recordLocation, type VaultLocation, configFilesFor } from "../core/vault.ts";
 import { homeWalkKept, walkHomeNow } from "../core/home.ts";
 import { type Args, flag, has, UsageError } from "./args.ts";
@@ -139,6 +139,18 @@ export class Session {
     if (!hit) this.roots.set(root, (hit = { root, name: isHome(root) ? null : (folderIdentity(root)?.name ?? null) }));
     return hit;
   }
+}
+
+/**
+ * What needs an index, asked in Elsewhere (VV-D3): refused, and why — it has none — never an empty answer. `what`
+ * says what was asked for.
+ */
+export function needsIndex(s: Session, what: string): void {
+  if (s.loc.mode === "folder")
+    throw new CliError(
+      `${ELSEWHERE} has no index, so no ${what}: ${s.loc.root} is outside home and every vault — a vault or home has them`,
+      EXIT.refused,
+    );
 }
 
 /**

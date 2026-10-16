@@ -548,7 +548,7 @@ A vault's `.slipbox/config.toml` may set them, and wins over your own file there
 [How a folder writes links](links-and-vaults.md#how-a-folder-writes-links) says:
 
 - how each part is found
-- what applies in a folder outside every vault
+- what applies in Elsewhere
 - how to see the convention a folder has
 
 ## Colours
@@ -821,8 +821,8 @@ What it keeps, it keeps in four folders of its own, XDG's, on macOS too:
 A vault has a folder of its own in the cache folder, and another in the state folder. Both are named by the vault's
 key. The key is the vault's folder name and twelve characters of a hash of its path, such as `notes-84ec07632af6`.
 
-Home, and a folder outside every vault opened by its path, get theirs the same way. `slipbox info` prints the two
-folders.
+Home gets its folders the same way. Elsewhere has one state folder for the machine, `elsewhere`, and no cache.
+`slipbox info` prints the two folders.
 
 In a vault itself there is only `.slipbox/`, where a vault has one. It holds:
 

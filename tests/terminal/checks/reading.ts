@@ -7,7 +7,7 @@ import { UNSAFE } from "../../../src/core/sanitize.ts";
 import { loadTheme } from "../../../src/core/theme/index.ts";
 import {
   type Check,
-  downloadsElsewhere,
+  downloadsVault,
   type LeftOut,
   leader,
   moveTo,
@@ -341,8 +341,8 @@ export const READING: Check[] = [
     area: "reading",
     name: "hostile names: a bidi override, C1, ESC and an OSC in file names never reach the terminal",
     covers: { cases: ["hostile"], commands: ["backlinks.open"] },
-    // Downloads beside home, a folder outside every vault: its notes walked and indexed together (VV-D2).
-    options: { home: true, startAt: "elsewhere/stray-note.md", setup: downloadsElsewhere },
+    // Downloads beside home, a vault of its own: its notes walked and indexed together, their backlinks among them.
+    options: { home: true, startAt: "downloads/stray-note.md", setup: downloadsVault },
     run: async (s) => {
       // The explorer lists Downloads: each hostile name drawn without what it carried.
       await s.see("invoicefdp.md");
@@ -1626,10 +1626,10 @@ export const READING: Check[] = [
     area: "reading",
     name: "samples: the agent replay script edits a folder while it's shown — its note comes and goes in the explorer, the plan beside it untouched",
     covers: { cases: ["samples-meta"] },
-    // Downloads beside home, a folder outside every vault, walked and watched whole (home's index leaves Downloads out).
-    options: { home: true, startAt: "elsewhere/plan.md", setup: downloadsElsewhere },
+    // Downloads beside home, a vault of its own, walked and watched whole (home's index leaves Downloads out).
+    options: { home: true, startAt: "downloads/plan.md", setup: downloadsVault },
     run: async (s) => {
-      const dir = join(s.dir, "elsewhere");
+      const dir = join(s.dir, "downloads");
       const plan = s.read(join(dir, "plan.md"));
       const script = s.path("~/work/kestrel/scripts/dev/agent-replay.sh");
       const env = { PATH: process.env.PATH ?? "", PAUSE: "0.3" };

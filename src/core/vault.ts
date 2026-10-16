@@ -6,8 +6,8 @@
 // into a root by opening it: `.slipbox/`'s id and name only by `slipbox init` and `slipbox name`
 // (21.8). A file under none is home's when it's under `~` (VV-D2: home, a vault without a marker — its
 // files those no other vault holds, its index walked with a skip list, a slice at a time: home.ts);
-// else it's loose: the plain folder opened stands in, known by its path, walked and indexed as a root
-// is — but `/`, listed a folder at a time. `--root` names a root outright.
+// else it's in no-vault, shown as Elsewhere (VV-D3): one place for the machine, its tabs its own, with
+// nothing that needs an index — listed a folder at a time, never walked. `--root` names a root outright.
 
 import { execFileSync } from "node:child_process";
 import { existsSync, mkdirSync, realpathSync, statSync, writeFileSync } from "node:fs";
@@ -59,19 +59,20 @@ export interface Worktree {
 export const VAULT_FORMAT_VERSION = 1;
 
 /** `vault`: a root — a folder holding a root marker (21.1). `home`: `~`, a vault without a marker (VV-D2) — its
- *  files those no other vault holds. `folder`: a plain folder outside every root and outside home, opened —
- *  unnamed, known by its path (20.22). */
+ *  files those no other vault holds. `folder`: no-vault, Elsewhere (VV-D3) — everything outside home and every
+ *  vault, one place for the machine. */
 export type VaultMode = RootKind;
 
 export interface VaultLocation {
-  /** The root: the vault's, home, or the plain folder opened (a loose file's own). */
+  /** The root: the vault's, home; in Elsewhere, the folder opened (a file's own folder), where its paths start. */
   root: string;
   mode: VaultMode;
   /** The note that was named on the command line, if any (absolute). */
   file: string | null;
-  /** The storage key: its path's (21.8), what the cache and state directories are named by. */
+  /** The storage key: its path's (21.8), what the cache and state directories are named by; Elsewhere's one for
+   *  the machine (`ELSEWHERE_KEY`). */
   key: string;
-  /** Its `.slipbox/`'s id; null without one (a repository, a plain folder, a `.slipbox/` never named). */
+  /** Its `.slipbox/`'s id; null without one (a repository, Elsewhere, a `.slipbox/` never named). */
   id: string | null;
   /** Its name, as pointers name it (21.6): a `.slipbox/` name, else its repository's remote's; null for none. */
   name: string | null;
@@ -172,7 +173,7 @@ export function homeOf(path: string): string | null {
 
 /**
  * The vault a path belongs to (VV-D4): the nearest folder holding a marker, else home when it's under `~` (VV-D2);
- * null outside both — the no-vault of a plain folder or a loose file.
+ * null outside both — no-vault, Elsewhere (VV-D3).
  */
 export function vaultOf(path: string): string | null {
   return findVaultRoot(path) ?? homeOf(resolve(path));
@@ -239,10 +240,10 @@ export function locateVault(opts: LocateOptions): VaultLocation {
 
   const found = findVaultRoot(target ?? cwd);
   if (found) return rootAt(found, file);
-  // No marker: home's, when it's under `~` (VV-D2, VV-D4); else outside every vault.
+  // No marker: home's, when it's under `~` (VV-D2, VV-D4); else Elsewhere (VV-D3).
   const home = homeOf(target ?? cwd);
   if (home) return homeAt(home, file);
-  return folderAt(file ? dirname(file) : (target ?? cwd), file);
+  return elsewhereAt(file ? dirname(file) : (target ?? cwd), file);
 }
 
 /**
@@ -263,12 +264,12 @@ export function homeAt(root: string = homeFolder(), file: string | null = null):
   };
 }
 
-/** The location of the vault holding the folder `dir` (VV-D4): its marker's, home's, else the plain folder. */
+/** The location of the vault holding the folder `dir` (VV-D4): its marker's, home's, else Elsewhere, from `dir`. */
 export function locationAt(dir: string): VaultLocation {
   const root = findVaultRoot(dir);
   if (root) return rootAt(root);
   const home = homeOf(resolve(dir));
-  return home ? homeAt(home) : folderAt(dir);
+  return home ? homeAt(home) : elsewhereAt(dir);
 }
 
 /** The location of a vault by its folder: home's, or a marker's. */
@@ -277,8 +278,8 @@ export function vaultAt(root: string): VaultLocation {
 }
 
 /**
- * The git checkout a vault's files are in (5.9): a vault's; home's only when `~` is itself a repository (VV-D2); a
- * plain folder's none.
+ * The git checkout a vault's files are in (5.9): a vault's; home's only when `~` is itself a repository (VV-D2);
+ * Elsewhere's none (VV-D3).
  */
 export function checkoutAt(loc: Pick<VaultLocation, "mode" | "root">): ReturnType<typeof checkoutOf> {
   if (loc.mode === "folder") return null;
@@ -313,23 +314,28 @@ export function rootAt(root: string, file: string | null = null): VaultLocation 
   };
 }
 
+/** Elsewhere's storage key (VV-D3): one for the machine — its tabs, its scratch, its trash, wherever it was opened. */
+export const ELSEWHERE_KEY = "elsewhere";
+
 /**
- * A plain folder opened, outside every root (20.22): unnamed, keyed by its path — moved, it starts
- * afresh. Walked and indexed as a root is, unless it's `/` (`isListed`).
+ * No-vault, shown as Elsewhere (VV-D3): a file outside home and every vault, opened from `dir` (its folder, or the
+ * folder opened), where its paths start. One place for the machine — one key, one set of tabs — your settings, and
+ * nothing that needs an index: listed a folder at a time, never walked (`isListed`), no backlinks, no search across
+ * it, no git.
  */
-export function folderAt(dir: string, file: string | null = null): VaultLocation {
-  return { root: dir, mode: "folder", file, key: vaultKey(dir), id: null, name: null, aliases: [], previous_names: [] };
+export function elsewhereAt(dir: string, file: string | null = null): VaultLocation {
+  return { root: dir, mode: "folder", file, key: ELSEWHERE_KEY, id: null, name: null, aliases: [], previous_names: [] };
 }
 
-/** A plain folder only listed, a level at a time: `/` — home is a vault (VV-D2), never a plain folder. */
-export function isListed(loc: Pick<VaultLocation, "mode" | "root">): boolean {
-  return loc.mode === "folder" && isNeverRoot(loc.root);
+/** Elsewhere (VV-D3): listed a level at a time, never walked or indexed. */
+export function isListed(loc: Pick<VaultLocation, "mode">): boolean {
+  return loc.mode === "folder";
 }
 
 /**
  * The config files that set a vault's settings besides your own (20.7): its own `.slipbox/config.toml`,
- * and those of the vaults enclosing it, broadest first — deeper over broader. A plain folder has only
- * yours (20.22).
+ * and those of the vaults enclosing it, broadest first — deeper over broader. Home and Elsewhere have only
+ * yours (VV-D2, VV-D3).
  */
 export function configFilesFor(loc: Pick<VaultLocation, "mode" | "root">): {
   vaultFile: string | null;
@@ -343,7 +349,7 @@ export function configFilesFor(loc: Pick<VaultLocation, "mode" | "root">): {
   return { vaultFile: vaultConfigPath(loc), outerFiles };
 }
 
-/** The vault's config file, `.slipbox/config.toml`; a plain folder has none (20.22). */
+/** The vault's config file, `.slipbox/config.toml`; home and Elsewhere have none. */
 export function vaultConfigPath(loc: Pick<VaultLocation, "mode" | "root">): string | null {
   return loc.mode === "vault" ? vaultConfigFile(loc.root) : null;
 }
@@ -358,8 +364,11 @@ export function vaultConfigPath(loc: Pick<VaultLocation, "mode" | "root">): stri
 export function recordLocation(loc: VaultLocation): { carriedFrom: string | null } {
   if (loc.mode === "folder" || loc.mode === "home") {
     // Home (VV-D2) where `~` opened was a plain folder: the same place, one entry — home's now, its state kept.
-    if (loc.mode === "home") forgetRoot(loc.root, ["folder"]);
-    recordRoot({ kind: loc.mode, path: loc.root });
+    // Elsewhere (VV-D3) has no index to find again: nothing of it is kept in the machine's list.
+    if (loc.mode === "home") {
+      forgetRoot(loc.root, ["folder"]);
+      recordRoot({ kind: loc.mode, path: loc.root });
+    }
     pruneWorktrees(Date.now(), isVaultRoot);
     return { carriedFrom: null };
   }

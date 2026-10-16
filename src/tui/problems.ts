@@ -239,6 +239,8 @@ export class Problems {
 
   /** How many problems the All tab has: links, lint, conflicts — orphans, notes nothing links to, aside. */
   count(): number {
+    // Elsewhere has no index to check its links across (VV-D3): none counted; the tab says why.
+    if (this.app.loc.mode === "folder") return 0;
     const p = this.app.graph.problems();
     const conflicts = [...(this.app.git.states ?? [])].filter(([, st]) => st === "conflict").length;
     const frontmatter = frontmatterFindings(this.app.graph).reduce((n, f) => n + f.problems.length, 0);
@@ -277,6 +279,7 @@ export class Problems {
 
   /** Its rows: each section's heading (with its count), its problems under it unless folded; `/` filters. */
   rows(): ProblemRow[] {
+    if (this.app.loc.mode === "folder") return [];
     const q = this.panel.all.filter;
     const p = this.app.graph.problems();
     const out: ProblemRow[] = [];

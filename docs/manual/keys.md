@@ -189,12 +189,12 @@ from.
 
 ### Inside a peek
 
-A link into another vault, or to a file outside every vault, opens a peek: the file read in a floating window, the
+A link into another vault, or to a file of Elsewhere's, opens a peek: the file read in a floating window, the
 vault you are in left as it was ([A peek at another vault](links-and-vaults.md#a-peek-at-another-vault)).
 
 | Keys | What |
 | --- | --- |
-| `o` | go there: into its vault, with its own tabs (outside every vault, opened beside this vault's notes) |
+| `o` | go there: into its vault, or into Elsewhere, with its own tabs |
 | `t` | keep it as a tab here, read-only, marked with its vault's name |
 | `z` | fill the screen, or most of it again |
 | `ctrl+o`, `space h n` | back and forward through the files its links moved it to |
@@ -854,7 +854,7 @@ A vault is the folder slipbox works in. [Links and vaults](links-and-vaults.md) 
 | `space v v` | the named folders this machine knows (`enter` goes into one) |
 | `space v shift+v` | which copy a named folder's links open, when you have two |
 | `space v n` | name this vault (or the selected one) as pointers name it, after a preview |
-| `space v m` | outside every vault, give this folder a `.slipbox/`; in one, or home, make the selected folder a vault |
+| `space v m` | in Elsewhere, give the folder opened a `.slipbox/`; in a vault or home, make the selected one a vault |
 | `space v shift+m` | make a nested vault part of the vault holding it |
 | `space v t` | slipbox's trash: what was deleted here (`enter` restores it, and its last row empties it) |
 | `space v u` | restore what was deleted last |
@@ -950,7 +950,7 @@ Your configuration's [`[aliases]`](configuration.md) adds more commands, or rena
 | `:folders` | the named folders, to pick one to go into |
 | `:folders-default` | which copy a named folder's links open |
 | `:name [new]` | name this folder, as pointers name it |
-| `:init` | give this folder, outside every vault, a `.slipbox/` |
+| `:init` | give the folder opened in Elsewhere a `.slipbox/` |
 | `:trust`, `:untrust` | trust this vault, so its own tools run, or stop trusting it ([Code](code.md)) |
 | `:theme <name>` | set the theme |
 | `:glyphs <set>` | set the glyphs: `nerd`, `unicode`, `ascii` or `auto` |

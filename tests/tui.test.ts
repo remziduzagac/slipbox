@@ -8662,8 +8662,8 @@ describe("the explorer's view (VV-D5)", () => {
     const before = process.env.HOME;
     process.env.HOME = P;
     try {
-      const { folderAt } = await import("../src/core/vault.ts");
-      const h = await harness({ loc: folderAt(P), open: null });
+      const { elsewhereAt } = await import("../src/core/vault.ts");
+      const h = await harness({ loc: elsewhereAt(P), open: null });
       expect(h.app.explorer.crumbs().map((c) => c.label)).toEqual(["~"]);
       await select(h, "loose");
       await h.keys("l");
@@ -8727,8 +8727,8 @@ describe("the explorer's view (VV-D5)", () => {
       );
       expect(h.app.explorer.top).toBe(P);
       // Opened on it: said at once.
-      const { folderAt } = await import("../src/core/vault.ts");
-      const at = await harness({ loc: folderAt(join(P, "locked")), open: null });
+      const { elsewhereAt } = await import("../src/core/vault.ts");
+      const at = await harness({ loc: elsewhereAt(join(P, "locked")), open: null });
       expect(at.app.messages.some((m) => m.text.startsWith(`can't read ${tildePath(join(P, "locked"))}:`))).toBe(true);
     } finally {
       chmodSync(join(P, "locked"), 0o755);
@@ -10453,7 +10453,7 @@ describe("vaults in the TUI (17.x)", () => {
     expect(readdirSync(notes)).not.toContain("design.md");
   });
 
-  test("a loose file followed to (21.9): the view zooms out to hold it, its folder unfolded — never a folder listed beside the tree", async () => {
+  test("a file of Elsewhere's followed to and gone into (VV-D3, VV-D4): the view zooms out to hold both, its folder unfolded", async () => {
     const base = mkdtempSync(join(sandbox, "beside-"));
     const root = join(base, "v");
     const loose = join(base, "loose");
@@ -10464,31 +10464,25 @@ describe("vaults in the TUI (17.x)", () => {
     writeFileSync(join(root, "beside.md"), `# Beside\n\n[l](${join(loose, "l.md")})\n`);
     const h = await harness({ root, open: "beside.md" });
     expect(h.app.explorer.top).toBe(root);
-    // Followed to: a file outside every vault is peeked at (VV-D7), the view unmoved; o opens it beside, as it is, and
-    // the view zooms out to hold both.
+    // Followed to: a file of Elsewhere's is peeked at (VV-D7), the view unmoved; o goes into Elsewhere, and the view
+    // zooms out to hold both.
     await h.keys("tab", "enter");
     expect(h.app.floating?.kind).toBe("peek");
     expect(h.app.explorer.top).toBe(root); // looking never moves the view
     await h.keys("o");
     expect(h.app.floating).toBeNull();
-    expect(h.app.loc.root).toBe(root);
+    expect(h.app.loc).toMatchObject({ mode: "folder", root: loose });
     expect(h.app.view?.buf.abs).toBe(join(loose, "l.md"));
     expect(h.app.view?.buf.readOnly).toBeNull();
     expect(h.app.explorer.top).toBe(base);
     const shown = () => h.app.explorer.rows().map((r) => `${"  ".repeat(r.depth)}${r.name}`);
     expect(shown()).toEqual(["loose", "  l.md", "  m.md", "v", "  beside.md"]);
     expect(h.app.explorer.rows()[h.app.sidebar.selected]!.path).toBe(join(loose, "l.md"));
-    // Back at beside.md, nothing goes or comes: one tree, no folder beside it.
+    // Back: into the vault, beside.md; the view holds both still.
     await h.app.run("history.back");
+    expect(h.app.loc.root).toBe(root);
     expect(h.app.view?.buf.rel).toBe("beside.md");
     expect(h.app.explorer.top).toBe(base);
-    expect(h.app.explorer.rows().every((r) => r.depth > 0 || dirname(h.app.explorer.rowAbs(r)) === base)).toBe(true);
-    // Zoomed in on the vault, the loose file shown again: its folder isn't listed beside the tree.
-    h.app.explorer.zoomTo(root);
-    await h.app.run("history.forward");
-    expect(h.app.view?.buf.abs).toBe(join(loose, "l.md"));
-    h.app.explorer.zoomTo(root);
-    expect(h.app.explorer.rows().some((r) => r.path === loose || r.root?.abs === loose)).toBe(false);
   });
 
   test("following a path link into another vault peeks, at the heading: nothing switches (VV-D7; D50's switch gone)", async () => {
@@ -10698,7 +10692,7 @@ describe("vaults in the TUI (17.x)", () => {
     expect(h.app.view!.buf.rel).toBe("design.md");
   });
 
-  test("a file outside every vault, peeked at: its relative links followed from where it is; t keeps it read-only (VV-D7)", async () => {
+  test("a file of Elsewhere's, peeked at: its relative links followed from where it is; t keeps it read-only (VV-D7)", async () => {
     const root = makeVault();
     const loose = mkdtempSync(join(sandbox, "nowhere-"));
     writeFileSync(join(loose, "a.md"), "# A\n\n[b](b.md)\n");
@@ -10707,12 +10701,12 @@ describe("vaults in the TUI (17.x)", () => {
     const h = await harness({ root, open: "out.md" });
     await h.keys("tab", "enter");
     expect(h.app.floating?.kind).toBe("peek");
-    expect(h.frame()).toContain("— outside every vault");
+    expect(h.frame()).toContain(`Elsewhere › ${join(loose, "a.md")}`);
     await h.keys("tab", "enter");
     expect(h.app.view!.buf.abs).toBe(join(loose, "b.md"));
     await h.keys("t");
     expect(h.app.view!.buf.abs).toBe(join(loose, "b.md"));
-    expect(h.app.view!.buf.readOnly).toBe("read-only: kept from a peek");
+    expect(h.app.view!.buf.readOnly).toBe("read-only here: Elsewhere's — o goes there, to edit it");
     expect(h.app.loc.root).toBe(root);
   });
 
@@ -10735,8 +10729,9 @@ describe("vaults in the TUI (17.x)", () => {
     expect(title()).toContain(`tapp${n} › …`);
     expect(title()).toContain("/far.md ");
     await h.keys("escape", "shift+g", "enter"); // the last row's
-    expect(title()).toContain("/x.md — outside every vault ");
-    expect(title()).toMatch(/─ …/);
+    // Elsewhere's file: where it is named, its path cut from the front.
+    expect(title()).toContain("Elsewhere › …");
+    expect(title()).toContain("/x.md ─");
   });
 
   test("another vault's picture, linked: its own path copied, never this vault's root before it", async () => {
@@ -10826,16 +10821,16 @@ describe("vaults in the TUI (17.x)", () => {
     expect(h.app.view!.buf.rel).toBe("inner.md");
   });
 
-  test("a plain folder is walked: its folders and the vaults in it, nothing above (17.13, 20.22, VV-D5)", async () => {
-    const { folderAt } = await import("../src/core/vault.ts");
+  test("Elsewhere's folder is listed: its folders and the vaults in it, by their whole paths (VV-D3, VV-D5)", async () => {
+    const { elsewhereAt } = await import("../src/core/vault.ts");
     const dir = mkdtempSync(join(sandbox, "loose-"));
     writeFileSync(join(dir, "note.md"), "# loose\n");
     mkdirSync(join(dir, "plain"));
     writeFileSync(join(dir, "plain", "p.md"), "# p\n");
     mkdirSync(join(dir, "code", ".git"), { recursive: true }); // a repository: a vault by itself (20.3)
     mkdirSync(join(dir, "box", ".slipbox"), { recursive: true });
-    const h = await harness({ loc: folderAt(dir), open: "note.md" });
-    // Walked as a vault is (20.22): its folders in the tree, the vaults in it roots of their own.
+    const h = await harness({ loc: elsewhereAt(dir), open: "note.md" });
+    // Listed a level at a time, never walked (VV-D3): its folders, the vaults in it roots of their own.
     expect(h.app.explorer.rows().map((r) => [r.name, r.kind, r.root?.kind])).toEqual([
       ["box", "root", "vault"],
       ["code", "root", "vault"],
@@ -10844,14 +10839,14 @@ describe("vaults in the TUI (17.x)", () => {
     ]);
     expect(h.frame()).toContain("◈ box");
     expect(h.frame()).toContain("◈ code");
-    expect(h.app.git.vaultStatus()).toBe(dir); // unnamed: its path (20.22)
-    expect(statusRow(h.frame())).toContain(dir.slice(-12));
+    expect(h.app.git.vaultStatus()).toBe("Elsewhere"); // one place, wherever it's opened (VV-D3)
+    expect(statusRow(h.frame())).toContain("Elsewhere");
     h.app.vaults.enterRoot(h.app.explorer.rows()[0]!);
     expect(h.app.loc).toMatchObject({ mode: "vault", root: join(dir, "box") });
   });
 
   test("a note in a git repository opens the repository as its root: nothing offered, nothing written (20.3)", async () => {
-    const { folderAt, locateVault } = await import("../src/core/vault.ts");
+    const { elsewhereAt, locateVault } = await import("../src/core/vault.ts");
     const repo = join(mkdtempSync(join(sandbox, "repo-")), "alpha");
     mkdirSync(join(repo, "docs"), { recursive: true });
     mkdirSync(join(repo, ".git"));
@@ -10865,7 +10860,7 @@ describe("vaults in the TUI (17.x)", () => {
     // A loose folder: :init offers .slipbox/, and goes into the vault it makes.
     const loose = mkdtempSync(join(sandbox, "loose-"));
     writeFileSync(join(loose, "n.md"), "# N\n");
-    const l = await harness({ loc: folderAt(loose), open: "n.md" });
+    const l = await harness({ loc: elsewhereAt(loose), open: "n.md" });
     expect(l.app.overlay).toBeNull();
     await l.app.run("vault.init");
     expect((l.app.overlay as ListOverlay).title).toBe(`${loose} is a folder without .slipbox/ — give it one?`);
@@ -10890,8 +10885,8 @@ describe("vaults in the TUI (17.x)", () => {
       expect(started.overlay).toBeNull();
       started.quit();
       // space v v: the named folders, from anywhere; enter goes into one.
-      const { folderAt } = await import("../src/core/vault.ts");
-      const h = await harness({ loc: folderAt(dir), open: null });
+      const { elsewhereAt } = await import("../src/core/vault.ts");
+      const h = await harness({ loc: elsewhereAt(dir), open: null });
       expect(h.app.overlay).toBeNull();
       await h.keys("space", "v", "v");
       const f = h.frame();
@@ -14321,8 +14316,8 @@ describe("git worktrees in the TUI (17.19)", () => {
   test("the folder holding the worktrees: each its own vault, its branch beside it", async () => {
     const l = layout();
     if (!l) return;
-    const { folderAt } = await import("../src/core/vault.ts");
-    const h = await harness({ loc: folderAt(l.wts), open: null });
+    const { elsewhereAt } = await import("../src/core/vault.ts");
+    const h = await harness({ loc: elsewhereAt(l.wts), open: null });
     h.app.panels.showSidebar(true);
     const f = h.frame();
     expect(f).toMatch(/feat +⎇ feat/);
@@ -14429,8 +14424,8 @@ describe("a branch switch as one event (5.9)", () => {
     expect(h.app.messages.some((m) => m.text.startsWith("switched"))).toBe(false); // not a switch
   });
 
-  test("the status line says where the file is (21.9): an unnamed root by its path, cut from the front to fit, the branch kept; a plain folder by its path", async () => {
-    const { folderAt } = await import("../src/core/vault.ts");
+  test("the status line says where the file is (21.9): an unnamed root by its path, cut from the front to fit, the branch kept; Elsewhere by its name", async () => {
+    const { elsewhereAt } = await import("../src/core/vault.ts");
     const root = join(mkdtempSync(join(sandbox, "a-folder-with-a-rather-long-name-")), "experiment");
     mkdirSync(root);
     writeFileSync(join(root, "a.md"), "# A\n");
@@ -14444,11 +14439,11 @@ describe("a branch switch as one event (5.9)", () => {
     // However wide the screen, at most 40 columns: the note's own path comes first.
     const wide = await harness({ root, open: "a.md", width: 300 });
     expect(statusRow(wide.frame())).not.toContain(root);
-    // A plain folder: its path, no branch.
+    // Outside home and every vault: Elsewhere, no branch (VV-D3).
     const plain = mkdtempSync(join(sandbox, "plain-status-"));
     writeFileSync(join(plain, "p.md"), "# P\n");
-    const p = await harness({ loc: folderAt(plain), open: "p.md" });
-    expect(p.app.git.vaultStatus(200)).toBe(plain);
+    const p = await harness({ loc: elsewhereAt(plain), open: "p.md" });
+    expect(p.app.git.vaultStatus(200)).toBe("Elsewhere");
   });
 
   test("started again, each branch opens on its own tabs", async () => {
@@ -19381,5 +19376,116 @@ describe("the remote's commands and stash (26.6)", () => {
       expect(await said(h, "dropped stash@{0} (On main: keep me)")).toBe(true);
       expect(git(root, "stash", "list")).toBe("");
     });
+  });
+});
+
+describe("Elsewhere: no-vault (VV-D3)", () => {
+  /** A folder outside home and every vault: a note linking to another, and a folder beside it. */
+  const nowhere = () => {
+    const dir = realpathSync(mkdtempSync(join(sandbox, "elsewhere-")));
+    writeFileSync(join(dir, "a.md"), "# A\n\n[b](b.md)\n");
+    writeFileSync(join(dir, "b.md"), "# B\n\nBee.\n");
+    mkdirSync(join(dir, "deep"));
+    writeFileSync(join(dir, "deep", "c.md"), "# C\n");
+    return dir;
+  };
+
+  test("opened there: Elsewhere on the status line, its files by their whole paths, and what needs an index said missing", async () => {
+    const { elsewhereAt } = await import("../src/core/vault.ts");
+    const dir = nowhere();
+    writeFileSync(join(dir, "broken.md"), "[gone](gone.md)\n"); // a link that reaches nothing: never counted here
+    const h = await harness({ loc: elsewhereAt(dir, join(dir, "b.md")), open: join(dir, "b.md") });
+    expect(h.app.view!.buf.key).toBe(join(dir, "b.md"));
+    expect(h.app.view!.buf.readOnly).toBeNull();
+    expect(h.app.git.vaultStatus()).toBe("Elsewhere");
+    expect(statusRow(h.frame())).toMatch(/Elsewhere .*b\.md/);
+    // No index: backlinks and search say so, never an empty list.
+    await h.app.run("backlinks.open");
+    expect(h.app.overlay).toBeNull();
+    expect(h.app.messages.at(-1)!.text).toBe(
+      "no backlinks in Elsewhere: it has no index — a note in a vault or home has them",
+    );
+    await h.app.run("search.open");
+    expect(h.app.overlay).toBeNull();
+    expect(h.app.messages.at(-1)!.text).toContain("Elsewhere has no index to search");
+    expect(h.app.info.rows().find((r) => r.key === "backlinks")?.value).toBe("none in Elsewhere: it has no index");
+    expect(h.app.info.rows().find((r) => r.key === "vault")?.value).toBe(
+      "Elsewhere — outside home and every vault: no index",
+    );
+    // Its notes listed a folder at a time: the explorer by whole paths, nothing walked.
+    expect(h.app.graph.dirs).toEqual([""]);
+    expect(h.app.explorer.rows().map((r) => r.path)).toEqual(
+      ["deep", "a.md", "b.md", "broken.md"].map((n) => join(dir, n)),
+    );
+    // Nor a check of its notes' links across them: the Problems panel's All tab says why.
+    h.app.problems.open("all");
+    expect(h.app.problems.rows()).toEqual([]);
+    expect(h.app.problems.count()).toBe(0);
+    expect(h.frame()).toContain("Elsewhere has no index: no check of its notes' links");
+    h.app.problems.close();
+    // A file of Elsewhere's in another folder opens here: it's one place.
+    const other = nowhere();
+    h.app.open(join(other, "a.md"));
+    expect(h.app.loc.mode).toBe("folder");
+    expect(h.app.view!.buf.abs).toBe(join(other, "a.md"));
+    // Its relative links followed from its folder; one to another folder of Elsewhere's opens here too, never a peek.
+    await h.keys("tab", "enter");
+    expect(h.app.view!.buf.abs).toBe(join(other, "b.md"));
+    writeFileSync(join(other, "far.md"), `[far](${join(dir, "a.md")})\n`);
+    h.app.open(join(other, "far.md"));
+    await h.keys("tab", "enter");
+    expect(h.app.floating).toBeNull();
+    expect(h.app.view!.buf.abs).toBe(join(dir, "a.md"));
+  });
+
+  test("a file of Elsewhere's opened in a vault — a session's tab, say — is Elsewhere's: read-only here", async () => {
+    const dir = nowhere();
+    const h = await harness({ root: makeVault(), open: "index.md" });
+    const buf = h.app.buffer(join(dir, "a.md"))!;
+    expect(buf.elsewhere?.vault).toBe("Elsewhere");
+    expect(buf.readOnly).toBe("read-only here: Elsewhere's — o goes there, to edit it");
+  });
+
+  test("going in from a vault and out again: each its own tabs, Elsewhere's one set wherever its files are", async () => {
+    const dir = nowhere();
+    const root = makeVault();
+    const h = await harness({ root, open: "index.md" });
+    // Chosen (:e), a file of Elsewhere's goes into Elsewhere, as into a vault (VV-D4): its own tabs.
+    await h.app.run(`note.open ${join(dir, "a.md")}`);
+    expect(h.app.loc).toMatchObject({ mode: "folder", root: dir });
+    expect(h.app.tabs.map((t) => t.views[0]!.buf.key)).toContain(join(dir, "a.md"));
+    expect(h.app.view!.buf.key).toBe(join(dir, "a.md"));
+    expect(h.app.messages.some((m) => m.text === `Elsewhere — ${tildePath(join(dir, "a.md"))}`)).toBe(true);
+    // Back into the vault: its tabs.
+    expect(h.app.vaults.back()).toBe(true);
+    expect(h.app.loc.root).toBe(root);
+    expect(h.app.tabs.map((t) => t.views[0]!.buf.rel)).toEqual(["index.md"]);
+    // Elsewhere again, from another folder: the same tabs, the new file among them.
+    const other = nowhere();
+    h.app.open(join(other, "b.md"));
+    expect(h.app.loc).toMatchObject({ mode: "folder", root: other });
+    expect(h.app.tabs.map((t) => t.views[0]!.buf.key)).toContain(join(dir, "a.md"));
+    expect(h.app.view!.buf.abs).toBe(join(other, "b.md"));
+  });
+
+  test("peeked at from a vault: Elsewhere naming it, its backlinks said missing; t keeps it read-only, o goes into Elsewhere", async () => {
+    const dir = nowhere();
+    const root = makeVault();
+    writeFileSync(join(root, "out.md"), `# Out\n\n[a](${join(dir, "a.md")})\n`);
+    const h = await harness({ root, open: "out.md" });
+    await h.keys("tab", "enter");
+    expect(h.app.floating?.kind).toBe("peek");
+    expect(h.app.floating!.title).toBe(`Elsewhere › ${join(dir, "a.md")}`);
+    expect(h.app.view!.buf.source).toContain("no backlinks in Elsewhere — it has no index");
+    // Its relative links are followed from its folder, inside the peek.
+    await h.keys("tab", "enter");
+    expect(h.app.view!.buf.abs).toBe(join(dir, "b.md"));
+    await h.keys("t");
+    expect(h.app.view!.buf.readOnly).toBe("read-only here: Elsewhere's — o goes there, to edit it");
+    expect(h.app.loc.root).toBe(root);
+    await h.app.run("peek.go");
+    expect(h.app.loc).toMatchObject({ mode: "folder", root: dir });
+    expect(h.app.view!.buf.abs).toBe(join(dir, "b.md"));
+    expect(h.app.view!.buf.readOnly).toBeNull();
   });
 });

@@ -33,10 +33,13 @@ export const AGENT_COMMANDS: Record<string, Handler> = {
     const num = (name: string, fallback: number, lo: number, hi: number) => wholeFlag(s, name, fallback, lo, hi);
     const opts = {
       depth: num("depth", s.config.context.depth, 0, 5),
-      backlinks: s.config.context.backlinks && !has(s.args, "no-backlinks"),
+      // Elsewhere has none to add (VV-D3): said, below.
+      backlinks: s.config.context.backlinks && !has(s.args, "no-backlinks") && s.loc.mode !== "folder",
       limit: num("limit", s.config.context.limit, 1, 500),
     };
     await s.graph.loadGrammars(); // code files link from their comments (16.10): backlinks too
+    if (s.loc.mode === "folder" && s.config.context.backlinks && !has(s.args, "no-backlinks"))
+      s.warnings.push("no backlinks: Elsewhere has no index — the notes' own links only");
     const b = buildContext(s.graph, start, opts);
     const files = b.items.map(({ text: _, ...i }) => i);
     const data = { start, ...opts, files, left: b.left, chars: b.text.length, text: b.text };

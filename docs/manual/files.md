@@ -96,7 +96,8 @@ Zoomed out past the vault you are in, the explorer lists folders one level at a 
   ([Links and vaults](links-and-vaults.md#switching-vaults)).
 - Nothing outside the vault you are in can be renamed, moved or deleted from there.
 
-You can open any folder you may read, inside your home folder or not:
+You can open any folder you may read, inside your home folder or not. Outside home and every vault, it's
+[Elsewhere](links-and-vaults.md#elsewhere), whose folders are listed a level at a time:
 
 - A file you may not write opens read-only, and slipbox says so.
 - A folder you may not read says why when you open it, unfold it or zoom into it.

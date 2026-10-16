@@ -27,14 +27,16 @@ import { applyPlan, planHeadingRename, planRelink, planUndo } from "../src/core/
 import {
   checkoutAt,
   configFilesFor,
+  ELSEWHERE_KEY,
   findVaultRoot,
-  folderAt,
+  elsewhereAt,
   gitRootOf,
   homeAt,
   initVault,
   isListed,
   isVaultRoot,
   locateVault,
+  locationAt,
   markersAt,
   recordLocation,
   rootAt,
@@ -42,6 +44,7 @@ import {
   vaultOf,
 } from "../src/core/vault.ts";
 import { cacheDir, vaultKey } from "../src/core/paths.ts";
+import { readRoots } from "../src/core/registry.ts";
 import { walkHomeNow } from "../src/core/home.ts";
 import { renderMarkdown } from "../src/core/layout/render.ts";
 import { glyphsFor } from "../src/core/glyphs.ts";
@@ -94,16 +97,16 @@ describe("vault discovery (1.1)", () => {
     expect(findVaultRoot(join(wt, "x.md"))).toBe(wt);
     expect(gitRootOf(wt)).toBe(wt);
   });
-  test("neither: a plain folder — the loose file's own, an unnamed instance keyed by its path (20.22)", () => {
+  test("neither: Elsewhere — opened from the file's folder, one key for the machine (VV-D3)", () => {
     const dir = mkdtempSync(join(tmpdir(), "slipbox-loose-"));
     writeFileSync(join(dir, "n.md"), "# n\n");
     const loc = locateVault({ path: join(dir, "n.md") });
-    expect(loc).toMatchObject({ mode: "folder", root: dir, id: null, name: null, key: vaultKey(dir) });
+    expect(loc).toMatchObject({ mode: "folder", root: dir, id: null, name: null, key: ELSEWHERE_KEY });
     // No home vault: nothing made in the data directory.
     expect(existsSync(join(process.env.XDG_DATA_HOME!, "slipbox", "home"))).toBe(false);
-    // Another folder, another instance.
+    // Another folder, the same place.
     const other = mkdtempSync(join(tmpdir(), "slipbox-loose-"));
-    expect(locateVault({ path: other }).key).not.toBe(loc.key);
+    expect(locateVault({ path: other }).key).toBe(loc.key);
   });
   test("a repository inside a vault is a vault of its own; .slipbox/ and .git in one folder are one vault (20.3)", () => {
     const dir = mkdtempSync(join(tmpdir(), "slipbox-nest-"));
@@ -896,7 +899,7 @@ describe("review cycle 5 (the repo carries the demo vault)", () => {
 });
 
 describe("review cycle 5 (vault, a loose folder)", () => {
-  test("a folder with no .slipbox or repository above it is walked as a vault is: an unnamed instance (20.22)", () => {
+  test("a folder with no .slipbox or repository above it is Elsewhere: listed, never walked, no index kept (VV-D3)", () => {
     const dir = mkdtempSync(join(tmpdir(), "slipbox-loose-"));
     mkdirSync(join(dir, "sub"));
     writeFileSync(join(dir, "a.md"), "# A\n\n[b](b.md) [c](sub/c.md)\n");
@@ -905,13 +908,12 @@ describe("review cycle 5 (vault, a loose folder)", () => {
     const loc = locateVault({ path: dir, cwd: dir });
     expect(loc.mode).toBe("folder");
     const g = openGraph(loc, DEFAULT_CONFIG, true);
-    expect([...g.notes.keys()].sort()).toEqual(["a.md", "b.md", "sub/c.md"]);
-    expect(g.backlinks("sub/c.md").map((b) => b.from)).toEqual(["a.md"]);
-    // Its index kept, in its own cache: a second open reads it back.
-    expect(openGraph(loc, DEFAULT_CONFIG, true).stats.cached).toBe(3);
+    expect([...g.notes.keys()].sort()).toEqual(["a.md", "b.md"]);
+    // Nothing kept: a second open reads nothing back.
+    expect(openGraph(loc, DEFAULT_CONFIG, true).stats.cached).toBe(0);
   });
 
-  test("a plain folder in the CLI: its search index, its scope reaching the vaults it links to (20.22)", async () => {
+  test("Elsewhere in the CLI: no index to build or search (VV-D3)", async () => {
     const base = mkdtempSync(join(tmpdir(), "slipbox-plainscope-"));
     const plain = join(base, "plain");
     const v = join(base, "v");
@@ -934,10 +936,12 @@ describe("review cycle 5 (vault, a loose folder)", () => {
       return { code, json: JSON.parse(out.join("")) };
     };
     await cli(["ls"], v);
-    expect((await cli(["index"], plain)).code).toBe(0);
+    const index = await cli(["index"], plain);
+    expect(index.code).toBe(5);
+    expect(index.json.error.message).toBe(`Elsewhere has no index: ${plain} is outside home and every vault`);
     const r = await cli(["search", "walrus", "--scope", "linked"], plain);
-    expect(r.json.data.engine).toBe("index");
-    expect(r.json.data.hits.map((h: { abs: string }) => h.abs).sort()).toEqual([join(plain, "p.md"), join(v, "w.md")]);
+    expect(r.code).toBe(5);
+    expect(r.json.error.message).toStartWith("Elsewhere has no index, so no search across it");
   });
 
   test("home opened is never walked then (VV-D2): its top alone until its walk is made, then the walk kept — each note looked at again", () => {
@@ -1875,7 +1879,7 @@ describe("a root's identity, its state by path, the machine's roots (17.3–17.6
     fromRoot.set("docs/a.md", { heading: null, headingIndex: 0, offset: 0, line: 12 });
     fromRoot.save();
     // The same file, asked by its absolute path (another root opened it, or the folder alone).
-    const loose = folderAt(join(dir, "docs"));
+    const loose = elsewhereAt(join(dir, "docs"));
     expect(new PositionStore(loose).get("a.md")?.line).toBe(12);
     expect(new PositionStore(loose).get(join(dir, "docs", "a.md"))?.line).toBe(12);
     // A root's list of what was read: its own files, by their paths in it; a file outside it read from it, by its own.
@@ -1953,26 +1957,30 @@ describe("a root's identity, its state by path, the machine's roots (17.3–17.6
     expect(locateVault({ path: repo })).toMatchObject({ root: repo, name: tag, id: made.id });
   });
 
-  test("a plain folder keeps its own session, by its path; positions by file (20.22, 21.8)", async () => {
+  test("Elsewhere keeps one session for the machine, wherever it's opened; positions by file (VV-D3, 21.8)", async () => {
     const { PositionStore, loadSession, saveSession } = await import("../src/core/position.ts");
     const one = fresh("l1");
     const two = fresh("l2");
     const a = locateVault({ path: one });
     const b = locateVault({ path: two });
-    expect(a.key).not.toBe(b.key);
+    expect(a.key).toBe(b.key);
     const pa = new PositionStore(a);
-    pa.set("n.md", { heading: null, headingIndex: 0, offset: 0, line: 3 });
+    pa.set(join(one, "n.md"), { heading: null, headingIndex: 0, offset: 0, line: 3 });
     pa.save();
-    expect(new PositionStore(locateVault({ path: one })).get("n.md")?.line).toBe(3); // kept, by its own path
-    expect(new PositionStore(b).get("n.md")).toBeNull(); // another folder's n.md
+    expect(new PositionStore(b).get(join(one, "n.md"))?.line).toBe(3); // kept, by the file's whole path
+    expect(new PositionStore(b).get(join(two, "n.md"))).toBeNull(); // another folder's n.md
     saveSession(a, {
       version: 1,
-      tabs: [{ panes: [{ path: "n.md", anchor: { heading: null, headingIndex: 0, offset: 0, line: 1 } }], active: 0 }],
+      tabs: [
+        {
+          panes: [{ path: join(one, "n.md"), anchor: { heading: null, headingIndex: 0, offset: 0, line: 1 } }],
+          active: 0,
+        },
+      ],
       activeTab: 0,
       sidebar: true,
     });
-    expect(loadSession(a)?.tabs).toHaveLength(1);
-    expect(loadSession(b)).toBeNull();
+    expect(loadSession(b)?.tabs).toHaveLength(1);
   });
 });
 
@@ -2301,7 +2309,7 @@ describe("moves: detected by content, kept as redirects (17.12)", () => {
     const loose = mkdtempSync(join(tmpdir(), "slipbox-loose-slash-"));
     mkdirSync(join(loose, "notes"));
     writeFileSync(join(loose, "notes", "a.md"), "# A\n");
-    const lg = openGraph(folderAt(loose), DEFAULT_CONFIG, true);
+    const lg = openGraph(elsewhereAt(loose), DEFAULT_CONFIG, true);
     expect(lg.resolveLink({ kind: "markdown", target: "/notes/a.md" }, "x.md").resolvedKind).toBe("unresolved");
     expect(lg.resolveLink({ kind: "markdown", target: join(loose, "notes", "a.md") }, "x.md")).toMatchObject({
       resolvedKind: "note",
@@ -5388,26 +5396,26 @@ describe("a root's name and entry: by its remote, its .slipbox/, its path (20.22
     expect(
       rootLabel({ mode: "vault", name: null, root: join(homeFolder(), "src", "experiment"), worktree: null }),
     ).toBe("~/src/experiment");
-    expect(rootLabel({ mode: "folder", name: null, root: "/srv/scratch", worktree: null })).toBe("/srv/scratch");
-    expect(rootLabel({ mode: "folder", name: null, root: homeFolder(), worktree: null })).toBe("~");
+    expect(rootLabel({ mode: "home", name: null, root: homeFolder(), worktree: null })).toBe("~");
+    // Outside home and every vault: Elsewhere, wherever it's opened (VV-D3).
+    expect(rootLabel({ mode: "folder", name: null, root: "/srv/scratch", worktree: null })).toBe("Elsewhere");
   });
 
-  test("a plain folder opened is listed by its path; given .slipbox/, the root's entry; gone a month, forgotten", async () => {
-    const { pruneWorktrees, readRoots, rootsFile } = await import("../src/core/registry.ts");
+  test("Elsewhere isn't in the machine's list; given .slipbox/, the vault's entry; an old folder's, gone a month, forgotten", async () => {
+    const { pruneWorktrees, readRoots, recordRoot, rootsFile } = await import("../src/core/registry.ts");
     const dir = fresh("plainf");
     writeFileSync(join(dir, "n.md"), "# N\n");
     await cli(["ls"], dir);
-    const folder = readRoots().filter((v) => v.path === dir);
-    expect(folder).toEqual([expect.objectContaining({ kind: "folder", key: vaultKey(dir) })]);
+    expect(readRoots().filter((v) => v.path === dir)).toEqual([]);
     await cli(["init", dir], dir);
     expect(
       readRoots()
         .filter((v) => v.path === dir)
         .map((v) => v.kind),
     ).toEqual(["vault"]);
-    // A folder gone a month is dropped; one gone a day is kept.
+    // A folder an older slipbox listed, gone a month, is dropped; one gone a day is kept.
     const gone = fresh("plaingone");
-    await cli(["ls"], gone);
+    recordRoot({ kind: "folder", path: gone });
     // Its own cache (index, search) and state (session): kept a day, removed with it after the month.
     const { cacheHome, stateHome } = await import("../src/core/paths.ts");
     const own = [join(cacheHome(), vaultKey(gone)), join(stateHome(), vaultKey(gone))];
@@ -5627,7 +5635,7 @@ describe("the index on demand: what the walk leaves out, indexed when reached (2
     expect(g.adopt("node_modules/nope.md")).toBeUndefined();
   });
 
-  test("the CLI reaches what it's told to read; a plain folder too, but $HOME, only listed (20.22)", async () => {
+  test("the CLI reaches what it's told to read; Elsewhere, listed, reaches nothing; nor home what its skip list leaves out", async () => {
     const dir = make();
     writeFileSync(join(dir, ".slipbox", "config.toml"), 'walk.exclude = ["drafts/"]\n');
     const out: string[] = [];
@@ -5649,13 +5657,13 @@ describe("the index on demand: what the walk leaves out, indexed when reached (2
     // Never: under node_modules, read all the same, but not the vault's.
     expect((await cli(["read", "node_modules/dep.md"])).code).toBe(0);
     expect((await cli(["ls"])).json.data.map((n: { path: string }) => n.path)).not.toContain("node_modules/dep.md");
-    // A plain folder reaches as a vault does (20.22); `$HOME`, only listed, reaches nothing.
+    // Elsewhere, listed a folder at a time, has no index to reach into (VV-D3); home leaves its hidden folders out.
     const loose = mkdtempSync(join(tmpdir(), "slipbox-reach-loose-"));
     mkdirSync(join(loose, ".hid"));
     writeFileSync(join(loose, "a.md"), "[h](.hid/h.md)\n");
     writeFileSync(join(loose, ".hid", "h.md"), "# H\n");
     expect(openGraph(locateVault({ path: join(loose, "a.md") }), DEFAULT_CONFIG, false).reachFile(".hid/h.md")).toBe(
-      true,
+      false,
     );
     const home = process.env.HOME;
     process.env.HOME = loose;
@@ -6208,10 +6216,10 @@ describe("freshness and coverage (20.10)", () => {
       gone: 1,
     });
     expect((await cli(["index", "--refresh"], here)).json.data.root).toBe(here); // this one, unnamed
-    // A plain folder has an index of its own (20.22); home too (VV-D2), its every folder listed again.
+    // Elsewhere has no index (VV-D3): refused; home has one (VV-D2), its every folder listed again.
     const loose = realpathSync(mkdtempSync(join(tmpdir(), "slipbox-fresh-loose-")));
     writeFileSync(join(loose, "l.md"), "# L\n");
-    expect((await cli(["index", "--refresh", loose], here)).json.data).toMatchObject({ root: loose, notes: 1 });
+    expect((await cli(["index", "--refresh", loose], here)).code).toBe(5);
     const home = process.env.HOME;
     process.env.HOME = loose;
     try {
@@ -6952,7 +6960,7 @@ describe("links by name, read again within their root (21.3)", () => {
     const loose = mkdtempSync(join(tmpdir(), "slipbox-wiki-loose-"));
     writeFileSync(join(loose, "x.md"), "[[y]]\n");
     writeFileSync(join(loose, "y.md"), "# Y\n");
-    const lg = openGraph(folderAt(loose), DEFAULT_CONFIG, true);
+    const lg = openGraph(elsewhereAt(loose), DEFAULT_CONFIG, true);
     expect(lg.resolveLink({ kind: "wiki", target: "y" }, "x.md")).toMatchObject({
       resolvedKind: "unresolved",
       reason: "names need a vault, and this folder is in none: .git, .slipbox/, .obsidian/ or .zk/ makes one",
@@ -9676,7 +9684,7 @@ describe("review cycle 3 (core)", () => {
     mkdirSync(join(dir, "sub"));
     writeFileSync(join(dir, "plan.md"), "# Plan\n");
     writeFileSync(join(dir, "sub", "a.md"), "# A\n");
-    const g = openGraph(folderAt(dir), DEFAULT_CONFIG, true);
+    const g = openGraph(elsewhereAt(dir), DEFAULT_CONFIG, true);
     for (const [style, path] of [
       ["wiki", "name"],
       ["markdown", "root"],
@@ -10153,5 +10161,63 @@ describe("deleting and copying: the path checked by the core, whoever asks (18.4
     );
     expect(shown(day(0))).toEqual([]);
     expect(existsSync(outside)).toBe(true);
+  });
+});
+
+describe("Elsewhere: no-vault (VV-D3)", () => {
+  test("a file outside home and every vault is Elsewhere's: one key for the machine, from wherever it's opened", () => {
+    const one = realpathSync(mkdtempSync(join(tmpdir(), "slipbox-elsewhere-")));
+    const two = realpathSync(mkdtempSync(join(tmpdir(), "slipbox-elsewhere-")));
+    writeFileSync(join(one, "n.md"), "# n\n");
+    const loc = locateVault({ path: join(one, "n.md") });
+    expect(loc).toMatchObject({ mode: "folder", root: one, file: join(one, "n.md"), key: ELSEWHERE_KEY, name: null });
+    // Another folder, the same place: one set of tabs, one scratch, one trash.
+    expect(locateVault({ path: two }).key).toBe(loc.key);
+    expect(locationAt(two)).toMatchObject({ mode: "folder", root: two, key: ELSEWHERE_KEY });
+    expect(isListed(loc)).toBe(true);
+    // Nothing of it in the machine's list of vaults: it has no index to find again.
+    recordLocation(loc);
+    expect(readRoots().some((r) => r.path === one)).toBe(false);
+  });
+  test("its notes are never walked or indexed: a folder of it listed, its notes' links nobody's backlinks", () => {
+    const dir = realpathSync(mkdtempSync(join(tmpdir(), "slipbox-elsewhere-")));
+    mkdirSync(join(dir, "deep"));
+    writeFileSync(join(dir, "a.md"), "[b](b.md)\n");
+    writeFileSync(join(dir, "b.md"), "# B\n");
+    writeFileSync(join(dir, "deep", "c.md"), "[b](../b.md)\n");
+    const g = openGraph(locateVault({ path: dir }), DEFAULT_CONFIG, true);
+    expect([...g.notes.keys()].sort()).toEqual(["a.md", "b.md"]);
+    expect(g.dirs).toEqual([""]);
+    expect(existsSync(join(process.env.XDG_CACHE_HOME!, "slipbox", ELSEWHERE_KEY, "index.json"))).toBe(false);
+  });
+  test("the command line says what needs an index isn't there: backlinks, search, the index, problems, tags", async () => {
+    const dir = realpathSync(mkdtempSync(join(tmpdir(), "slipbox-elsewhere-")));
+    writeFileSync(join(dir, "a.md"), "[b](b.md) #tag\n");
+    writeFileSync(join(dir, "b.md"), "# B\n");
+    const at = async (argv: string[]) => {
+      let out = "";
+      let err = "";
+      const code = await runCli(argv, {
+        out: (s) => (out += s),
+        err: (s) => (err += s),
+        stdin: async () => "",
+        isTTY: false,
+        columns: undefined,
+        cwd: dir,
+        env: { ...process.env, NO_COLOR: "1" },
+      });
+      return { code, out, err };
+    };
+    for (const argv of [["backlinks", "b.md"], ["search", "B"], ["index"], ["problems"], ["tags"]]) {
+      const r = await at(argv);
+      expect(r.code).toBe(5);
+      expect(r.err).toContain("Elsewhere has no index");
+    }
+    // A note of it is read, its links followed from its folder.
+    expect((await at(["read", "b.md"])).out).toBe("# B\n");
+    expect((await at(["links", "a.md"])).code).toBe(0);
+    // info and stat say where it is.
+    expect((await at(["info"])).out).toMatch(/^vault +Elsewhere /m);
+    expect((await at(["stat", "a.md"])).out).toMatch(/vault +Elsewhere/);
   });
 });

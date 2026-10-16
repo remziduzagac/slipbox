@@ -36,6 +36,9 @@ what replaced them.
   frontmatter and an order. [document-types.md](document-types.md) § Types.
 - **Embed**: `![[note]]` or `![](note.md)` alone in a paragraph, drawn in place, read-only.
   [rendering.md](rendering.md) § Blocks and inlines.
+- **Elsewhere**: no-vault as users read it: every file outside home and every vault, one place for the machine, with
+  its own tabs and no index (VV-D3). The code's mode `folder`. [VV's design](../workstreams/vaults-and-view/design.md)
+  § Elsewhere, in roots.md once VV is consolidated.
 - **Face**: a front end on the core: the TUI or the CLI. [how-it-works.md](how-it-works.md) § One core, two faces.
 - **The fixture vault**: `tests/fixtures/vault/`, the cases the samples lack. [testing.md](testing.md) § The fixture
   vault.
@@ -63,8 +66,6 @@ what replaced them.
   [tui.md](tui.md) § The lint surface.
 - **The lookup**: the record of named folders, their copies and defaults (`folders.json`).
   [roots.md](roots.md) § Named folders.
-- **Loose file**: a file in no vault; what users read says "a file outside every vault", and no-vault replaces it
-  (VV-D3, to come). [roots.md](roots.md) § Plain folders and loose files.
 - **Main server**: the first of a language's servers that applies and is found. [lsp.md](lsp.md) § The client for
   code.
 - **Named folder**: a vault a pointer can name, by its `.slipbox/` name, else its repository's remote.
@@ -72,9 +73,6 @@ what replaced them.
 - **Peek**: another vault's file, or one outside every vault, read in a large floating window, read-only, where a link,
   a backlink or a search hit led; going there a choice (`o`, VV-D7). [VV's design](../workstreams/vaults-and-view/design.md)
   § The peek, in tui.md once VV is consolidated.
-- **Plain folder**: a folder outside every vault, opened by its path, standing in for a vault; what users read says "a
-  folder outside every vault", and home and no-vault replace it (VV-D2, VV-D3, to come). [roots.md](roots.md) § Plain
-  folders and loose files.
 - **Plan**: a generated edit, previewed, tied to each file's content hash, refused once stale, applied once
   (`--plan`, `slipbox apply`). [links.md](links.md) § Repairs.
 - **Pointer**: a `slipbox://<name>[@branch]/<path>#fragment` link into a named folder.
@@ -122,7 +120,9 @@ what replaced them.
 Older decisions use these; the design doesn't.
 
 - **collection**, **instance**: a named folder, and its copies (D59, D79).
-- **home vault**, **single-file mode**: gone; a plain folder stands in (D58).
+- **home vault**, **single-file mode**: gone; a plain folder stood in (D58), then home and Elsewhere (VV-D2, VV-D3).
+- **plain folder**, **loose file**: a folder, a file, outside every vault, opened by its path: Elsewhere now, and a
+  file of it is Elsewhere's, never opened beside a vault's notes (VV-D3).
 - **the LSP face** (`slipbox lsp`): removed; editors' own markdown servers follow path links, and agents use the CLI
   (D67).
 - **root**, **root marker**, **trusted root**: a vault, a vault marker, a trusted vault (VV-D1, reversing D79's choice

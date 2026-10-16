@@ -352,10 +352,10 @@ const LINKS: Check[] = [
         await s.keys("ctrl+o");
         await opened(s, "research/link-styles.md");
       }
-      // A file URL is followed, not copied as a URL: the file it names read in a peek, outside every root (VV-D7).
+      // A file URL is followed, not copied as a URL: the file it names read in a peek, Elsewhere's (VV-D7, VV-D3).
       await toLink(s, "file:///etc/hosts");
       await s.keys("enter");
-      await s.see("/etc/hosts — outside every vault", 5000);
+      await s.see("Elsewhere › /etc/hosts", 5000);
       await s.status(/ ‹ \S*\/etc\/hosts › /);
       await s.keys("escape");
       await opened(s, "research/link-styles.md");
@@ -463,12 +463,11 @@ const LINKS: Check[] = [
       await s.restart({ startAt: "home/hobbies/cooking/Recipes/Weeknight/Dal.md" });
       await follow(s, "Dal ^tadka");
       await s.status(/L3[23]:/);
-      // Outside every vault and outside home (Downloads, copied beside it): a name finds nothing, and the hint says
-      // what makes a vault.
+      // In Elsewhere (Downloads, copied beside home): a name finds nothing, and says why — no vault to look in.
       await s.restart({ startAt: "elsewhere/stray-note.md", setup: downloadsElsewhere });
       await s.see("See plan for the order of work");
       await follow(s, "plan for the order");
-      await s.message(/\[\[plan\]\]: names need a vault/);
+      await s.message(/\[\[plan\]\]: a wikilink is read within a vault/);
     },
   },
   {
@@ -732,13 +731,16 @@ const ROOTS: Check[] = [
   },
   {
     area: "links-and-files",
-    name: "roots: a folder outside every vault and outside home opened — its tree, by its path, no list over it; space v v goes into a named one (20.22, VV-D5)",
-    covers: { cases: ["vault", "links/roots", "links/state"], commands: ["search.open", "folders.open"] },
+    name: "vaults: Elsewhere — a folder outside home and every vault opens in no-vault, its tabs its own, no index and said so; going into a vault brings its tabs",
+    covers: {
+      cases: ["vault", "links/roots", "links/state", "links/backlinks"],
+      commands: ["search.open", "backlinks.open", "folders.open"],
+    },
     options: {
       home: true,
       startAt: "elsewhere",
       setup: (s) => {
-        // Beside home, not in it (home is a vault, VV-D2): a few of Downloads' files.
+        // Beside home, not in it (home is a vault): a few of Downloads' files.
         const at = join(s.dir, "elsewhere");
         cpSync(s.path("~/Downloads/old-blog-export"), join(at, "old-blog-export"), { recursive: true });
         cpSync(s.path("~/Downloads/stray-note.md"), join(at, "stray-note.md"));
@@ -746,25 +748,31 @@ const ROOTS: Check[] = [
       },
     },
     run: async (s) => {
-      await s.status(/\/elsewhere\b/); // unnamed: its path where a root's name would be
+      await s.status(/ Elsewhere\b/);
       await s.see("stray-note.md");
       await s.see("old-blog-export");
-      // No list of the named folders over it at the start (it used to open): its tree, the breadcrumb above it.
+      // No list of the named folders over it at the start: its folder, the breadcrumb above it.
       s.expect(s.rowOf(/Folders \(\d+\)/) < 0, "no named folders' list at the start");
       await s.until(() => / elsewhere ›$/.test(crumbs(s)), 3000, "the breadcrumb: … › elsewhere ›");
-      s.expect(!listed(s, /\s\.\.$/), "no .. above the tree");
-      // Walked as a root is: a note in a folder of it, found by search.
+      // A note of its own: no backlinks, and why — never an empty list.
+      await explorerOpen(s);
+      await explorerRow(s, "stray-note.md");
+      await s.keys("enter");
+      await s.status(/ Elsewhere .*stray-note\.md/);
+      await leader(s, "l", "b");
+      await s.message("no backlinks in Elsewhere: it has no index");
+      // No search across it.
       await leader(s, "f", "s");
-      await s.type("export button");
-      await s.see("old-blog-export/README.md", 5000);
-      await s.keys("escape");
+      await s.message("Elsewhere has no index to search");
+      // Into a vault: its own tabs; back with ctrl+o: Elsewhere's, the note where it was.
       await leader(s, "v", "v");
       await s.see(/Folders \(\d+\)/);
-      await s.see("notes");
       await s.type("notes");
       await s.keys("enter");
       await s.message(" notes — ");
       await s.status(/ notes[ ·]/);
+      await s.keys("ctrl+o");
+      await s.status(/ Elsewhere .*stray-note\.md/, 5000);
     },
   },
   {
@@ -960,15 +968,14 @@ const ROOTS: Check[] = [
       await s.see("§ sync-worker log, 2026-09-22", 10000); // read and drawn
       await s.keys("ctrl+o");
       await s.status(/ notes .*2026-09-22\.md/, 5000);
-      // A file outside every vault and outside home a link leads to: peeked at, said so; o opens it beside, as it is.
+      // A file of Elsewhere's a link leads to: peeked at, Elsewhere naming it; o goes into Elsewhere, its tabs.
       s.write("~/notes/daily/2026-09-22.md", `[elsewhere](${join(s.dir, "elsewhere", "stray-note.md")})\n`);
       await s.restart({ startAt: "home/notes/daily/2026-09-22.md", setup: downloadsElsewhere });
       await follow(s, "elsewhere");
-      await s.see("— outside every vault", 5000);
+      await s.see("Elsewhere › ", 5000);
       await s.keys("o");
       await s.notSee(PEEK_HINT);
-      await s.status(/stray-note\.md/, 5000);
-      await s.status(/ notes /);
+      await s.status(/ Elsewhere .*stray-note\.md/, 5000);
     },
   },
   {

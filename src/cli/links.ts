@@ -18,7 +18,7 @@ import { frontmatterFindings } from "../core/diagnostics.ts";
 import { urlPath } from "../core/convert.ts";
 import { findVaultRoot, isInside } from "../core/vault.ts";
 import { flag, has, UsageError } from "./args.ts";
-import { EXIT, CliError, type Handler, requireArg, resolveNote } from "./common.ts";
+import { EXIT, CliError, type Handler, needsIndex, requireArg, resolveNote } from "./common.ts";
 
 /** Links: one written, one followed, a note's links and backlinks, what's broken, the tags. */
 export const LINK_COMMANDS: Record<string, Handler> = {
@@ -278,6 +278,7 @@ export const LINK_COMMANDS: Record<string, Handler> = {
 
   async backlinks(s, rest) {
     const rel = resolveNote(s, requireArg(rest, "note"));
+    needsIndex(s, "backlinks");
     await s.graph.loadGrammars(); // code files link from their comments (16.10)
     // Each from as shown (21.9): its path from this root, else from home, else absolute.
     const bl = s.graph.backlinks(rel).map(({ vault: _, ...b }) => {
@@ -289,7 +290,8 @@ export const LINK_COMMANDS: Record<string, Handler> = {
 
   async problems(s) {
     // What's wrong in the vault (1.7, 9.5): links that reach nothing, or more than one note; notes
-    // nothing links to.
+    // nothing links to. Elsewhere has no index to look across (VV-D3).
+    needsIndex(s, "check of its links");
     const p = s.graph.problems();
     const shown = (x: LinkProblem) =>
       `${x.from}:${x.line}:${x.column}  ${x.kind === "wiki" || x.kind === "embed" ? `[[${x.target}]]` : x.target}`;
@@ -370,7 +372,8 @@ export const LINK_COMMANDS: Record<string, Handler> = {
   },
 
   tags(s, rest) {
-    // A tag's notes — its nested tags' too (1.6) — or every tag with its count.
+    // A tag's notes — its nested tags' too (1.6) — or every tag with its count; none in Elsewhere (VV-D3).
+    needsIndex(s, "tags across its notes");
     const want = rest[0];
     if (want !== undefined) {
       const t = s.graph.tagged(want);

@@ -17,7 +17,7 @@ import { isAbsolute, join, posix } from "node:path";
 import { isNotePath, pathLink, pathForm } from "../core/links.ts";
 import { isFile } from "./actions-files.ts";
 import { isPointer, parsePointer, resolvePointer } from "../core/pointer.ts";
-import { tildePath } from "../core/names.ts";
+import { ELSEWHERE, tildePath } from "../core/names.ts";
 import { slugName } from "../core/registry.ts";
 import { rootAt } from "../core/vault.ts";
 import { classify } from "../core/filetypes.ts";
@@ -103,7 +103,13 @@ export function linkActions(): Record<string, Run> {
       }),
     "backlinks.open": (a) =>
       withView(a, (v) => {
-        if (!v.buf.rel) return a.message("info", "backlinks are kept for the notes of a vault (or the folder opened)");
+        // Elsewhere has no index (VV-D3): no backlinks there, and why, not an empty list.
+        if (a.loc.mode === "folder")
+          return a.message(
+            "info",
+            `no backlinks in ${ELSEWHERE}: it has no index — a note in a vault or home has them`,
+          );
+        if (!v.buf.rel) return a.message("info", "backlinks are kept for the notes of a vault");
         const bl = a.graph.backlinks(v.buf.rel);
         if (!bl.length) return a.message("info", `no notes link to ${v.buf.rel}`);
         a.overlays.openList({
@@ -281,9 +287,10 @@ function followLink(a: App, link: LayoutLink, into: Into, goOut = false): void {
         }
       }
       if ((!from || !graph) && !external) {
-        // A file outside every vault, read in a peek: its paths read from where it is (VV-D7).
+        // A file outside every vault, read in a peek (VV-D7), or one of Elsewhere's (VV-D3): its paths read from
+        // where it is.
         const path = link.target.split("#")[0]!;
-        if (there && !there.graph) {
+        if ((there && !there.graph) || a.loc.mode === "folder") {
           if (!path && frag) return jumpToHeading(a, view, frag);
           // A plain `b.md` is from its folder too: no vault's top to start from.
           const hit = path ? pathLink(pathForm(path) ? path : `./${path}`, view.buf.abs, false) : null;
