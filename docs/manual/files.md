@@ -59,7 +59,7 @@ With the mouse:
 - While the explorer has the keys, the selected row has a button at its end, `…`. It opens the same menu as `.`, with
   every action this chapter describes, each with its key.
 
-A file git sees as changed is marked at the end of its row ([Git](git.md)).
+A row ends with marks: what slipbox has indexed, and what git sees changed ([below](#a-rows-marks)).
 
 ### The view
 
@@ -101,6 +101,36 @@ You can open any folder you may read, inside your home folder or not:
 - A file you may not write opens read-only, and slipbox says so.
 - A folder you may not read says why when you open it, unfold it or zoom into it.
 
+### A row's marks
+
+A row can end with marks, each in a column of its own, so they line up down the tree:
+
+```text
+◈ kestrel                main    ●
+  docs                        •  ●
+  node_modules                   ⊘
+  private                        ⚿
+  README.md                   M
+```
+
+The last column says what slipbox's index holds of the row, for links, backlinks and search:
+
+| Mark | In ASCII | It says |
+| --- | --- | --- |
+| `●`, dimmed | `*` | indexed |
+| `◐` | `~` | being indexed now |
+| `⊘` | `-` | not indexed: a busy folder, or what `.gitignore` or `walk.exclude` leaves out (below), or a note too big |
+| `⚿` | `#` | you may not read it |
+| `⚠` | `!` | a problem, such as a link whose target isn't there |
+
+Most folders are indexed, so a file has a mark there only when it isn't what its folder says. With Nerd Font icons,
+`⚿` is a lock.
+
+The column before it is git's: `M`, `+`, `R` or `!` for a changed file, and `•` for a folder with a change in it, `o` in
+ASCII ([Git](git.md)).
+
+Before the marks, dimmed, is what describes the row: a vault's branch, or a worktree's after `⎇`.
+
 ## What the explorer lists
 
 The explorer shows every note, under its name with its extension (`inbox.md`). It shows every folder too, even an empty
@@ -123,16 +153,27 @@ Two more settings name files:
 
 Both write their patterns in `.gitignore`'s way (`"*.py"`, `"scripts/"`).
 
-The switcher (`ctrl+p`) lists the same files ([Finding things](finding.md)).
+The switcher (`ctrl+p`) lists the same files, except those in a folder slipbox doesn't index (below)
+([Finding things](finding.md)).
 
 Some files are never listed:
 
 - pictures, archives and other binary files, which slipbox doesn't open
-- hidden files and folders (a name starting with `.`), and what `.gitignore` leaves out
-- `node_modules`, and what `walk.exclude` leaves out
+- hidden files and folders, whose names start with `.`
 
-You can still open a hidden or git-ignored file by its path (`:e .drafts/plan.md`), or by following a link to it. It
-opens, and its links count from then on. A file under `node_modules` or `walk.exclude` doesn't open.
+Some folders are listed, but nothing in them is indexed. They are marked `⊘`:
+
+- `node_modules` and the other folders tools fill: `venv`, `__pycache__`, `target`, `build`, `dist`, `vendor`, `Pods`,
+  `DerivedData` and caches, wherever they are
+- what `.gitignore` and `walk.exclude` leave out
+- in your home folder, `Downloads` and the system's folders ([Home](links-and-vaults.md#home))
+
+You can unfold them and open their files. Their notes have no backlinks, search doesn't find them, and a wikilink's name
+doesn't reach them. Nothing in them can be renamed, moved or deleted from the explorer.
+
+You can also open a hidden or git-ignored file by its path (`:e .drafts/plan.md`), or by following a link to it. It
+opens, and its links count from then on. A file in a busy folder, or in what `walk.exclude` leaves out, opens from the
+explorer only, and its links never count.
 
 A folder that is a vault of its own is listed with its own icon, and its files are its own.
 [Links and vaults](links-and-vaults.md) has what that means.

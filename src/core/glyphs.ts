@@ -78,6 +78,17 @@ export interface Glyphs {
   /** Files beyond notes in the explorer: data (JSON, TOML…) and text or code. */
   dataFile: string;
   textFile: string;
+  /**
+   * A row's marks in the explorer (VV-D9), at its right, each one column wide in every terminal and none an emoji: its
+   * index's state — indexed, being indexed, not indexed, not yours to read, a problem (a link whose target isn't
+   * there) — and git's mark on a folder with a change in it (5.11), a file's being its letter.
+   */
+  markIndexed: string;
+  markIndexing: string;
+  markNotIndexed: string;
+  markCantRead: string;
+  markProblem: string;
+  markGitFolder: string;
   sep: string;
   scrollThumb: string;
   scrollTrack: string;
@@ -198,6 +209,13 @@ const unicode: Glyphs = {
   file: " ",
   dataFile: " ",
   textFile: " ",
+  markIndexed: "●",
+  markIndexing: "◐",
+  markNotIndexed: "⊘",
+  // A squared key (U+26BF), not an emoji: 🔒 is drawn two columns wide in some terminals.
+  markCantRead: "⚿",
+  markProblem: "⚠",
+  markGitFolder: "•",
   sep: "›",
   // The bar is a thin column, unlike the ┃ borders it often sits beside; colour tells the thumb.
   scrollThumb: "▐",
@@ -287,6 +305,7 @@ const nerd: Glyphs = {
   file: "󰍔",
   dataFile: "\u{f0626}", // nf-md-code_json
   textFile: "\u{f022e}", // nf-md-file_code
+  markCantRead: "\u{f033e}", // nf-md-lock
 };
 
 const ascii: Glyphs = {
@@ -346,6 +365,13 @@ const ascii: Glyphs = {
   file: " ",
   dataFile: " ",
   textFile: " ",
+  markIndexed: "*",
+  markIndexing: "~",
+  markNotIndexed: "-",
+  markCantRead: "#",
+  markProblem: "!",
+  // Not `*`, which says indexed in the column beside it.
+  markGitFolder: "o",
   sep: ">",
   scrollThumb: "#",
   scrollTrack: "|",

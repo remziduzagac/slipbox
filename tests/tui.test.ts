@@ -4236,7 +4236,7 @@ describe("review round 3", () => {
       h.app.watcher?.close();
     }
   });
-  test("a note that shrinks back under the size cap rejoins the explorer", async () => {
+  test("a note that shrinks back under the size cap rejoins the index; too big, it's listed all the same (VV-D8)", async () => {
     const root = makeVault();
     const h = await harness({ root, config: (c) => (c.walk.max_file_size = 100) });
     const file = join(root, "notes", "beta.md");
@@ -4245,11 +4245,13 @@ describe("review round 3", () => {
     expect(h.app.graph.notes.has("notes/beta.md")).toBe(false);
     h.app.explorer.expanded.add("notes"); // its folder open, so its notes are rows
     h.app.explorer.invalidateTree();
-    expect(h.app.explorer.treeRows().some((r) => r.path === "notes/beta.md")).toBe(false); // the tree, cached
+    // Listed from the disk, not read: the walk doesn't have it.
+    expect(h.app.explorer.treeRows().find((r) => r.path === "notes/beta.md")).toMatchObject({ unwalked: true });
     writeFileSync(file, "# Beta small\n");
     h.app.watch.applyChanges({ changes: [{ rel: "notes/beta.md", kind: "changed", isNote: true }], rescan: false });
     expect(h.app.graph.notes.has("notes/beta.md")).toBe(true);
-    expect(h.app.explorer.treeRows().some((r) => r.path === "notes/beta.md")).toBe(true); // refreshed by the change
+    // The walk's again: the tree refreshed by the change.
+    expect(h.app.explorer.treeRows().find((r) => r.path === "notes/beta.md")?.unwalked).toBeUndefined();
   });
   test("tiny terminals: panes go over the note, and nothing fails to draw", async () => {
     for (const width of [12, 20, 26, 40]) {
@@ -5473,7 +5475,8 @@ describe("scratch (space s)", () => {
     await h.app.run("scratch.open");
     expect(h.app.view!.buf.abs.startsWith(`${h.root}/`)).toBe(false); // the default place: outside the root
     expect(h.app.explorer.top).toBe(h.root);
-    expect(h.app.explorer.rows().some((r) => r.outside)).toBe(false);
+    // Nothing outside the vault listed: its rows are its own, those its walk leaves out (VV-D8) among them.
+    expect(h.app.explorer.rows().every((r) => h.app.explorer.rowAbs(r).startsWith(`${h.root}/`))).toBe(true);
   });
 });
 
@@ -14540,7 +14543,7 @@ describe("git in the TUI: marks, what changed, a note's diff, worktrees, conflic
       rows.find((r) => new RegExp(`\\b${name.replace(".", "\\.")}\\b`).test(r.split(/[┃┣]/)[0]!))!.split(/[┃┣]/)[0]!;
     expect(row("a.md").trimEnd()).toMatch(/a\.md +M$/);
     expect(row("c.md").trimEnd()).toMatch(/c\.md +\+$/);
-    expect(row("notes").trimEnd()).toMatch(/notes +•$/);
+    expect(row("notes").trimEnd()).toMatch(/notes +• ●$/); // git's dot, then the index's mark (VV-D9)
     expect(row("b.md").trimEnd()).toMatch(/b\.md +M$/);
     // A name as long as the row: cut short of its mark, never under it.
     writeFileSync(join(root, "a-rather-long-note-name-that-fills-the-whole-row.md"), "# Long\n");

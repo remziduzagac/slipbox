@@ -11,6 +11,7 @@ import { LEFT_VIEWS, RIGHT_VIEWS } from "./panels.ts";
 import { sanitize } from "../core/sanitize.ts";
 import { gitRows } from "./gitview.ts";
 import type { TreeRow } from "./explorer.ts";
+import { INDEX_ROLE, indexGlyph } from "./marks.ts";
 import { GIT_MARK, marked } from "./draw-overlays.ts";
 import { match } from "./match.ts";
 import type { HistoryRow } from "./history.ts";
@@ -365,10 +366,13 @@ function drawTree(app: App, c: Canvas, list: Rect, bg: Color | null, geo: Geomet
   const prefix = (row: TreeRow) =>
     `${" ".repeat(1 + row.depth * 2)}${row.kind === "dir" ? (q || app.explorer.expanded.has(row.path) ? g.dirOpen : g.dirClosed) : icon(row)} `;
   const text = (row: TreeRow) => prefix(row) + nameOf(row);
-  // Its git state at the row's end (5.11): a file's letter, a folder's dot. Its 2 columns count in
-  // the row's width, so a name scrolled to its end ends before the mark, never under it.
+  // Its marks at its right (VV-D9), in columns: the index's state in the last, git's mark (5.11: a file's letter, a
+  // folder's dot) two before it. Their columns count in the row's width, so a name scrolled to its end ends before
+  // them, never under them.
   const gitOf = (row: TreeRow) => (row.kind === "note" ? app.git.states?.get(row.path) : app.git.folders.get(row.path));
-  const measured = (row: TreeRow) => (gitOf(row) ? `${text(row)}  ` : text(row));
+  const marksOf = (row: TreeRow) => app.explorer.marks.of(row);
+  const reserveOf = (git: unknown, index: unknown) => (git ? 4 : index ? 2 : 0);
+  const measured = (row: TreeRow) => `${text(row)}${" ".repeat(reserveOf(gitOf(row), marksOf(row).index))}`;
   // The selected note, file, folder or nested vault: a button at the row's end opening its menu
   // (18.1) — rename, move, delete… — its right edge under the title's buttons'.
   const buttonsOf = (row: TreeRow) => {
@@ -387,6 +391,7 @@ function drawTree(app: App, c: Canvas, list: Rect, bg: Color | null, geo: Geomet
   followSelection(s, rows.length, rect.h);
   if (!rows.length && q) drawText(c, rect.x + 1, rect.y, "no matches", roleStyle(theme, "dim", bg), rect.w - 1);
   const current = app.view?.buf.rel;
+  const currentAbs = app.view?.buf.abs;
   const matchSt = roleStyle(theme, "overlay_match", null);
   for (let i = 0; i < rect.h; i++) {
     const row = rows[s.scroll + i];
@@ -400,7 +405,7 @@ function drawTree(app: App, c: Canvas, list: Rect, bg: Color | null, geo: Geomet
         ? "sidebar_root"
         : row.kind !== "note"
           ? "sidebar_dir"
-          : row.path === current
+          : row.path === current || (row.outside && row.path === currentAbs)
             ? "sidebar_active"
             : "sidebar";
     if (selected) role = "sidebar_selected";
@@ -408,20 +413,31 @@ function drawTree(app: App, c: Canvas, list: Rect, bg: Color | null, geo: Geomet
     if (selected) c.fill(rect.x, y, rect.w, 1, st.bg);
     const withButtons = selected && row === sel && buttonsFit;
     const buttonsW = withButtons ? selButtons!.w : 0;
-    // Its git state, not under its buttons; the text cut short of it (with a `…` when it can't scroll).
+    // Its marks, not under its buttons; the text cut short of them (with a `…` when it can't scroll).
+    const marks = marksOf(row);
     const gst = withButtons ? undefined : gitOf(row);
-    const markW = gst ? 3 : 0; // a space, the mark, the last column
-    const shown = sideRow(text(row), sv, gst ? 2 : 0);
+    const index = withButtons ? undefined : marks.index;
+    const reserve = reserveOf(gst, index);
+    const shown = sideRow(text(row), sv, reserve);
     const room = sv.cols - buttonsW;
     const drawn = !withButtons ? shown : sv.hbar ? splitAtWidth(shown, room)[0] : truncate(shown, room);
-    const w = drawText(c, rect.x, y, drawn, st, rect.w - markW);
+    const w = drawText(c, rect.x, y, drawn, st, rect.w - (reserve ? reserve + 1 : 0));
     // Where the filter's matches may be marked: on the name as drawn, short of the `…` that cut it.
     const cut = !sv.hbar && w === stringWidth(drawn) && stringWidth(drawn) < stringWidth(text(row));
     const markEnd = rect.x + w - (cut ? 1 : 0);
+    if (index)
+      drawText(
+        c,
+        rect.x + rect.w - 2,
+        y,
+        indexGlyph(g, index),
+        { ...roleStyle(theme, INDEX_ROLE[index], st.bg), bg: st.bg },
+        1,
+      );
     if (gst) {
-      const mark = row.kind === "note" ? GIT_MARK[gst] : "•";
+      const mark = row.kind === "note" ? GIT_MARK[gst] : g.markGitFolder;
       const role: Role = gst === "conflict" ? "git_conflict" : gst === "new" ? "git_new" : "git_modified";
-      drawText(c, rect.x + rect.w - 2, y, mark, { ...roleStyle(theme, role, st.bg), bg: st.bg }, 1);
+      drawText(c, rect.x + rect.w - 4, y, mark, { ...roleStyle(theme, role, st.bg), bg: st.bg }, 1);
     }
     if (withButtons) {
       let x = rect.x + rect.w - 1;
@@ -430,20 +446,13 @@ function drawTree(app: App, c: Canvas, list: Rect, bg: Color | null, geo: Geomet
         smallButton(app, c, x, y, ` ${glyph} `, id, geo, st.bg);
       }
     }
-    // A vault named otherwise than its folder: the name, dimmed, after it (17.13) — up to its
-    // buttons, when it has them.
-    const vaultName = row.root?.name;
-    // Short of its git mark and the scrollbar's column.
-    const nameEnd = withButtons ? room : sv.cols - (gst ? 2 : 0);
-    if (vaultName && !sv.left && w + 1 < nameEnd)
-      drawText(
-        c,
-        rect.x + w + 1,
-        y,
-        truncate(vaultName, nameEnd - w - 1),
-        { ...roleStyle(theme, "dim", st.bg), bg: st.bg },
-        nameEnd - w - 1,
-      );
+    if (!sv.left)
+      drawDescribed(app, c, { x: rect.x, y, w }, row.root?.name, marks.describe, {
+        // Up to its buttons, or a space short of git's column: one column for every row's, so they line up.
+        nameEnd: withButtons ? room : sv.cols - reserve,
+        describeEnd: withButtons ? room - 1 : sv.cols - 4,
+        bg: st.bg,
+      });
     drawGuides(app, c, rect, y, row.depth, lines[s.scroll + i]!, st.bg, sv.left);
     // What the filter matched in a note's name (it matches the path: a word may be a folder's).
     const m = q && row.kind === "note" && row.path.endsWith(nameOf(row)) ? match(q, row.path) : null;
@@ -470,6 +479,33 @@ function drawTree(app: App, c: Canvas, list: Rect, bg: Color | null, geo: Geomet
   paneScrollbar(app, c, rect, rows.length, s.scroll, "sidebar", app.region === "sidebar", bg, geo);
   sideHScrollbar(app, c, sv, "sidebar", app.region === "sidebar", bg, geo);
   return rect;
+}
+
+/**
+ * After an explorer row's name, dimmed: a vault's name when it isn't its folder's (17.13), up to `nameEnd`; then, to
+ * the right, ending at `describeEnd`, what describes the row (VV-D9) — a vault's branch, where a link points — where
+ * there's room for it after the name, two spaces between, cut short with `…` when it doesn't fit whole.
+ */
+function drawDescribed(
+  app: App,
+  c: Canvas,
+  at: { x: number; y: number; w: number },
+  vaultName: string | undefined,
+  describe: string | undefined,
+  o: { nameEnd: number; describeEnd: number; bg: Color | null },
+): void {
+  const dim = { ...roleStyle(app.theme, "dim", o.bg), bg: o.bg };
+  let after = at.w;
+  if (vaultName && at.w + 1 < o.nameEnd) {
+    const room = o.nameEnd - at.w - 1;
+    after += 1 + drawText(c, at.x + at.w + 1, at.y, truncate(vaultName, room), dim, room);
+  }
+  if (!describe) return;
+  const room = o.describeEnd - after - 2;
+  if (room < Math.min(stringWidth(describe), 6)) return;
+  const text = truncate(describe, room);
+  const w = stringWidth(text);
+  drawText(c, at.x + o.describeEnd - w, at.y, text, dim, w);
 }
 
 /** A one-row button: its text, the hover role under the mouse, a hot region for clicks. */

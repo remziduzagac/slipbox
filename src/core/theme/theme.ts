@@ -99,6 +99,8 @@ export const ROLES = [
   "sidebar_selected",
   "sidebar_active",
   "sidebar_root",
+  // a row's mark in the explorer that it's indexed (VV-D9): dimmed, since most folders are
+  "sidebar_mark",
   // a file's git state in the explorer (5.11); a diff's added and removed lines (5.13), and a changed line's changed
   // words, tinted more strongly than their line (GIT-D2)
   "git_new",
@@ -374,6 +376,8 @@ export function themeFromPalette(
     // A folder that is a root of its own, nested (17.13): a folder's colour — its icon tells it apart —
     // and a role of its own, for [colors] to set.
     sidebar_root: { fg: p.blue },
+    // That a row is indexed (VV-D9), at its right: dimmer than its name, since most folders are.
+    sidebar_mark: { fg: p.comment },
     git_new: { fg: p.green },
     git_modified: { fg: p.yellow },
     git_conflict: { fg: p.red, bold: true },

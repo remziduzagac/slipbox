@@ -1,11 +1,12 @@
 // The explorer (VV-D5): one tree, the vault's files and the folders around it, and the view — the part of it shown,
-// zoomed into and out of along its breadcrumb; its rows, its keys, its item menu.
+// zoomed into and out of along its breadcrumb; its rows, its keys, its item menu. What the walk didn't give is read
+// from the disk (`explorer-disk.ts`, VV-D8); a row's marks are `marks.ts`' (VV-D9).
 
 import ignore from "ignore";
 import { classify, type FileGroup } from "../core/filetypes.ts";
 import { type Dirent, readdirSync, statSync } from "node:fs";
 import { basename, dirname, isAbsolute, join, posix, relative, sep } from "node:path";
-import { checkoutOf, headOf } from "../core/git.ts";
+import { checkoutOf } from "../core/git.ts";
 import { gitViewAction } from "./gitview.ts";
 import { readIdentity, vaultConfigFile } from "../core/registry.ts";
 import { tildePath } from "../core/names.ts";
@@ -14,10 +15,18 @@ import { match } from "./match.ts";
 import { prettyKey } from "./keys.ts";
 import type { App, ListItem } from "./app.ts";
 import { folderUnreadable } from "./app.ts";
+import { type DiskEntry, fromDisk } from "./explorer-disk.ts";
+import { Marks } from "./marks.ts";
 
 /** The explorer: its tree, its view and breadcrumb, its keys. */
 export class Explorer {
   constructor(readonly app: App) {}
+
+  /** Its rows' marks (VV-D9). */
+  get marks(): Marks {
+    return (this.marksOf ??= new Marks(this.app));
+  }
+  private marksOf: Marks | null = null;
 
   expanded = new Set<string>();
   /**
@@ -197,30 +206,34 @@ export class Explorer {
    * `files.exclude` never. Binary files are never listed.
    */
   shownFiles(): { path: string; group: FileGroup }[] {
-    const f = this.app.config.files;
-    const mode = this.app.sidebar.allFiles ? "all" : this.filesShown();
-    const incl = f.include.length ? ignore().add(f.include) : null;
-    const excl = f.exclude.length ? ignore().add(f.exclude) : null;
+    const lists = this.listsFiles();
     const out: { path: string; group: FileGroup }[] = [];
     for (const path of this.app.graph.filePaths()) {
       const { group } = classify(path, this.app.config.walk.extensions);
-      if (group === "binary" || excl?.ignores(path)) continue;
-      if (incl?.ignores(path) || mode === "all" || (mode === "renderable" && group === "data"))
-        out.push({ path, group });
+      if (lists(path, group)) out.push({ path, group });
     }
     return out;
   }
 
-  /** A root's name beside its folder's, when it has another one; a worktree's, its branch (17.19). */
+  /** Whether the explorer lists a file of the vault, by its path in it and its kind: `shownFiles`' rule. */
+  private listsFiles(): (path: string, group: FileGroup) => boolean {
+    const f = this.app.config.files;
+    const mode = this.app.sidebar.allFiles ? "all" : this.filesShown();
+    const incl = f.include.length ? ignore().add(f.include) : null;
+    const excl = f.exclude.length ? ignore().add(f.exclude) : null;
+    return (path, group) => {
+      if (group === "note") return true;
+      if (group === "binary" || excl?.ignores(path)) return false;
+      return !!incl?.ignores(path) || mode === "all" || (mode === "renderable" && group === "data");
+    };
+  }
+
+  /** A vault's name beside its folder's, when it has another one (17.13); none for a worktree, every one of which has
+   *  its repository's: its branch tells them apart (17.19), among the row's marks (VV-D9, `marks.ts`). */
   private rootName(abs: string): string | undefined {
+    if (checkoutOf(abs)?.worktree) return undefined;
     const n = readIdentity(vaultConfigFile(abs)).name;
-    const name = n && n !== basename(abs) ? n : undefined;
-    // A worktree of a repository (17.19): its branch beside it — every worktree has the
-    // repository's name, so the branch is what tells them apart.
-    const c = checkoutOf(abs);
-    if (!c?.worktree) return name;
-    const h = headOf(c);
-    return `${this.app.glyphs.branch} ${h.branch ?? h.commit?.slice(0, 7) ?? c.worktree}`;
+    return n && n !== basename(abs) ? n : undefined;
   }
 
   /**
@@ -277,18 +290,28 @@ export class Explorer {
     // A folder only listed (`~`, `/`): its own rows are its folders, by their names.
     if (isListed(this.app.loc)) return dirname(abs) === R ? basename(abs) : abs;
     const rel = relative(R, abs).split(sep).join("/");
-    // Home (VV-D2): what its index leaves out (Downloads, a busy folder, a hidden one) isn't in its own tree: listed
-    // a level at a time, by its path, as a folder outside the vault is.
-    if (this.app.loc.mode === "home" && this.leftOutOfHome(rel)) return abs;
+    // What the walk leaves out (VV-D8: a busy folder, `.gitignore`'s, home's skip list) isn't in the vault's own
+    // tree: listed a level at a time, by its path, as a folder outside the vault is.
+    if (this.leftOut(rel, abs)) return abs;
     return this.nestedRels().some((n) => rel.startsWith(`${n}/`)) ? abs : rel;
   }
 
-  /** A path of home's (its path in it) its index leaves out: under, or at, a folder its skip list names (VV-D2). */
-  private leftOutOfHome(rel: string): boolean {
+  /**
+   * A path of the vault open (its path in it, and absolute) that its walk leaves out: at, or under, what it excludes
+   * (VV-D8) — a hidden folder only in home, whose tree lists none; in a vault, a hidden note reached by a link is in
+   * its tree (20.8).
+   */
+  private leftOut(rel: string, abs: string): boolean {
+    const filter = this.app.graph.filter;
     const parts = rel.split("/");
     for (let i = 1; i <= parts.length; i++) {
-      const why = this.app.graph.filter.exclusion(parts.slice(0, i).join("/"), true);
-      if (why !== null && why !== "nested vault") return true;
+      let dir = true;
+      if (i === parts.length)
+        try {
+          dir = statSync(abs).isDirectory();
+        } catch {}
+      const why = filter.exclusion(parts.slice(0, i).join("/"), dir);
+      if (why !== null && why !== "nested vault" && (filter.home || why !== "hidden")) return true;
     }
     return false;
   }
@@ -319,10 +342,10 @@ export class Explorer {
   }
 
   /**
-   * A folder outside the vault open's own tree — above it, beside it, in another vault — listed a level
-   * at a time (never walked): its folders — the vault open marked and highlighted, its tree under it
-   * while unfolded; other vaults by their icon and name — then its files, as `files.show` would list
-   * them in their vault.
+   * A folder outside the vault open's own tree — above it, beside it, in another vault, one its walk
+   * leaves out — listed a level at a time (never walked): its folders — the vault open marked and
+   * highlighted, its tree under it while unfolded; other vaults by their icon and name — then its files,
+   * as `files.show` would list them in their vault.
    */
   private outsideRows(dir: string, depth: number, out: TreeRow[]): void {
     let entries: Dirent[] = [];
@@ -342,7 +365,8 @@ export class Explorer {
         return false;
       }
     };
-    const shown = entries.filter((e) => !e.name.startsWith(".") && e.name !== "node_modules");
+    // Hidden names aren't listed; the busy folders are (VV-D8), never indexed.
+    const shown = entries.filter((e) => !e.name.startsWith("."));
     for (const e of shown.filter(isDir).sort(byName)) {
       const abs = join(dir, e.name);
       if (abs === R) {
@@ -432,7 +456,8 @@ export class Explorer {
    * Gone to `abs` (VV-D5): a file opened, a vault gone into. Outside the view, the view zooms out to
    * the common parent of the two, only their paths unfolded — what was unfolded in the old view kept —
    * and the breadcrumb leads back to where you went. Never for what the tree doesn't list: a hidden
-   * folder's file, `node_modules`, slipbox's own (the scratch). True when the view holds it now.
+   * folder's file, slipbox's own (the scratch); a busy folder's is listed (VV-D8). True when the view
+   * holds it now.
    */
   zoomToHold(abs: string, dir = dirname(abs)): boolean {
     const T = this.top;
@@ -440,10 +465,7 @@ export class Explorer {
     let common = T;
     while (!isInside(common, abs) && dirname(common) !== common) common = dirname(common);
     if (!isInside(common, abs)) return false;
-    const hidden = relative(common, abs)
-      .split(sep)
-      .some((p) => p.startsWith(".") || p === "node_modules");
-    if (hidden || abs === this.app.scratch.location().path) return false;
+    if (!listedDown(common, abs) || abs === this.app.scratch.location().path) return false;
     // Only the two paths unfolded: what was unfolded in the old view stays, nothing else.
     const kept = [...this.expanded].filter((k) => isInside(T, this.rowAbs({ path: k })));
     this.expanded = new Set(kept);
@@ -480,24 +502,54 @@ export class Explorer {
   private crumbsMemo: { key: string; list: ReturnType<App["explorer"]["crumbs"]> } | null = null;
 
   /** The vault's own tree, from `sub` ("" its top): its folders, notes and files, and the vaults in it (17.13) —
-   *  one unfolded listed a level at a time under its row. */
+   *  one unfolded listed a level at a time under its row — and what the walk didn't give, from the disk (VV-D8). */
   private rootTree(sub = ""): TreeRow[] {
     const rows: TreeRow[] = [];
+    const graph = this.app.graph;
     const groups = new Map(this.shownFiles().map((f) => [f.path, f.group]));
     // The walk's folders too, so one with nothing listed in it (just made, or holding only files
     // the explorer leaves out) is still there to open and to create in.
-    const folders = new Set(this.app.graph.dirs.filter((d) => d));
+    const folders = new Set(graph.dirs.filter((d) => d));
     const roots = this.rootRows();
+    // What the walk didn't give, in the folders shown (VV-D8): what it leaves out — a row by its path, listed a level
+    // at a time — and what it hasn't reached — the vault's, as if walked (home's folders before its walk).
+    const disk = isListed(this.app.loc)
+      ? new Map<string, DiskEntry>()
+      : fromDisk(
+          this.app,
+          sub,
+          this.expanded,
+          { dirs: folders, vaults: roots, file: (p) => graph.notes.has(p) || groups.has(p) },
+          this.listsFiles(),
+        );
+    const leftOut = new Map<string, DiskEntry>();
+    const unwalked = new Set<string>();
+    for (const [p, d] of disk)
+      if (d.leftOut !== null) leftOut.set(p, d);
+      else {
+        unwalked.add(p);
+        if (d.dir) folders.add(p);
+        else if (d.group !== "note") groups.set(p, d.group!);
+      }
+    // A note of a folder left out, reached by a link (20.8): listed in that folder's rows, by its path.
+    const inLeftOut = (p: string) => {
+      for (let i = p.indexOf("/"); i > 0; i = p.indexOf("/", i + 1)) if (leftOut.has(p.slice(0, i))) return true;
+      return false;
+    };
+    const notes = [...graph.notes.keys(), ...[...unwalked].filter((p) => !folders.has(p) && !groups.has(p))];
+    const isDir = (p: string) => folders.has(p) || roots.has(p) || !!leftOut.get(p)?.dir;
     const under = (p: string) => !sub || p.startsWith(`${sub}/`);
     const d0 = sub ? sub.split("/").length : 0;
-    const paths = [...this.app.graph.notes.keys(), ...groups.keys(), ...folders, ...roots.keys()]
+    const paths = [...notes, ...groups.keys()]
+      .filter((p) => !graph.reached.has(p) || !inLeftOut(p))
+      .concat([...folders, ...roots.keys(), ...leftOut.keys()])
       .filter(under)
       .sort((a, b) => {
         const da = a.split("/");
         const db = b.split("/");
         for (let i = 0; i < Math.min(da.length, db.length); i++) {
-          const lastA = i === da.length - 1 && !folders.has(a) && !roots.has(a);
-          const lastB = i === db.length - 1 && !folders.has(b) && !roots.has(b);
+          const lastA = i === da.length - 1 && !isDir(a);
+          const lastB = i === db.length - 1 && !isDir(b);
           if (da[i] !== db[i]) {
             if (lastA !== lastB) return lastA ? 1 : -1; // directories first
             return da[i]!.localeCompare(db[i]!, undefined, { sensitivity: "base" });
@@ -515,28 +567,50 @@ export class Explorer {
         const dir = parts.slice(0, i + 1).join("/");
         if (!seen.has(dir) && visible) {
           seen.add(dir);
-          rows.push({ kind: "dir", path: dir, name: parts[i]!, depth: i - d0 });
+          const fresh = unwalked.has(dir) ? { unwalked: true } : {};
+          rows.push({ kind: "dir", path: dir, name: parts[i]!, depth: i - d0, ...fresh });
         }
         if (!this.expanded.has(dir)) {
           visible = false;
           break;
         }
       }
-      if (visible && roots.has(p)) {
+      if (!visible) continue;
+      const name = parts[parts.length - 1]!;
+      const depth = parts.length - 1 - d0;
+      const out = leftOut.get(p);
+      if (out) {
+        rows.push(this.leftOutRow(out, name, depth));
+        // Unfolded in place: listed a level at a time, as a folder outside the vault's own tree.
+        const abs = join(this.app.loc.root, p);
+        if (out.dir && this.expanded.has(abs)) this.outsideRows(abs, depth + 1, rows);
+      } else if (roots.has(p)) {
         const root = roots.get(p)!;
-        rows.push({ kind: "root", path: p, name: parts[parts.length - 1]!, depth: parts.length - 1 - d0, root });
+        rows.push({ kind: "root", path: p, name, depth, root });
         // Unfolded in place (VV-D5): its folder listed a level at a time, its rows another vault's.
         if (this.expanded.has(p)) this.outsideRows(root.abs, parts.length - d0, rows);
-      } else if (visible && !folders.has(p))
+      } else if (!folders.has(p))
         rows.push({
           kind: "note",
           path: p,
-          name: parts[parts.length - 1]!,
-          depth: parts.length - 1 - d0,
+          name,
+          depth,
           ...(groups.has(p) ? { group: groups.get(p) } : {}),
+          ...(unwalked.has(p) ? { unwalked: true } : {}),
         });
     }
     return rows;
+  }
+
+  /** A folder or file the vault's walk leaves out (VV-D8): a row by its path, not this vault's to change; a vault in
+   *  it (a busy folder holding `.git`), a vault's row. */
+  private leftOutRow(d: DiskEntry, name: string, depth: number): TreeRow {
+    const abs = join(this.app.loc.root, d.rel);
+    const why = { outside: true, leftOut: d.leftOut! } as const;
+    if (d.dir && isVaultRoot(abs))
+      return { kind: "root", path: abs, name, depth, root: { kind: "vault", abs, name: this.rootName(abs) }, ...why };
+    if (d.dir) return { kind: "dir", path: abs, name, depth, ...why };
+    return { kind: "note", path: abs, name, depth, ...(d.group !== "note" ? { group: d.group } : {}), ...why };
   }
 
   invalidateTree(): void {
@@ -654,7 +728,8 @@ export class Explorer {
       if (!row) return;
       if (toggle && this.expanded.has(row.path)) this.expanded.delete(row.path);
       else if (!this.expanded.has(row.path)) {
-        const why = row.outside || row.kind === "root" ? folderUnreadable(this.rowAbs(row)) : null;
+        // One you may not read, wherever it is: one the vault's walk couldn't read is listed too (VV-D9).
+        const why = row.kind !== "note" ? folderUnreadable(this.rowAbs(row)) : null;
         if (why) return this.app.message("warn", `can't read ${tildePath(this.rowAbs(row))}: ${why}`);
         this.expanded.add(row.path);
       }
@@ -803,7 +878,22 @@ export interface TreeRow {
   /** A root row: what it is, where it is, and the vault's name when it isn't the folder's; `here`:
    *  the vault open, in a view above it (VV-D5) — highlighted, its tree under it. */
   root?: { kind: "vault" | "folder"; abs: string; name?: string; here?: boolean };
-  /** A row outside the vault open's own tree — above it, beside it, in another vault: its path absolute,
-   *  listed a level at a time. Opening its file goes into the file's vault, as a link does (VV-D4). */
+  /** A row outside the vault open's own tree — above it, beside it, in another vault, in what its walk
+   *  leaves out: its path absolute, listed a level at a time. Opening its file goes into the file's vault,
+   *  as a link does (VV-D4). */
   outside?: boolean;
+  /** What the vault open's walk leaves out (VV-D8), listed from the disk: why (`busy folder`, `.gitignore`,
+   *  `walk.exclude`, `Downloads`…). Never indexed. */
+  leftOut?: string;
+  /** The vault open's, listed from the disk where its walk hasn't been (yet): a folder it couldn't read, home's
+   *  before its walk, a folder or file come since. */
+  unwalked?: boolean;
+}
+
+/** Whether the explorer lists every folder from `from` down to `to`, inside it: none of them hidden — a busy folder
+ *  is listed (VV-D8). */
+export function listedDown(from: string, to: string): boolean {
+  return !relative(from, to)
+    .split(sep)
+    .some((p) => p.startsWith("."));
 }

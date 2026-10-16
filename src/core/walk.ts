@@ -42,7 +42,7 @@ const GIT_IGNORECASE = process.platform === "darwin" || process.platform === "wi
 
 /**
  * The busy folders (VV-D8): tools' output, their environments and their caches — many files, none of them a person's
- * notes. Home's walk leaves them out wherever they are (VV-D2).
+ * notes. Every walk leaves them out, a vault's as home's (VV-D2); the explorer lists them, never indexed.
  */
 export const BUSY_FOLDERS: ReadonlySet<string> = new Set([
   "node_modules",
@@ -128,9 +128,9 @@ export class WalkFilter {
 
   /**
    * Whether `rel` may be indexed when it's reached though the walk leaves it out (20.8): nothing on
-   * its way is always skipped, excluded by `walk.exclude` or a vault of its own — only a hidden
-   * folder or `.gitignore` keeps it from the walk. In home, nothing its skip list leaves out is read
-   * (VV-D2): named, such a file is opened, and nothing more.
+   * its way is always skipped, a busy folder (VV-D8), excluded by `walk.exclude` or a vault of its own —
+   * only a hidden folder or `.gitignore` keeps it from the walk. In home, nothing its skip list leaves
+   * out is read (VV-D2): named, such a file is opened, and nothing more.
    */
   reachable(rel: string): boolean {
     const parts = rel.split("/");
@@ -164,6 +164,8 @@ export class WalkFilter {
         ? null
         : "not a note or text file";
     }
+    // A busy folder (VV-D8), whatever `.gitignore` says: listed in the explorer, never indexed.
+    if (isDir && isBusyFolder(name)) return "busy folder";
     // git semantics: every .gitignore from the root down applies to the path relative to its own
     // directory, and the last one with an opinion wins — so a deeper `!keep.md` re-includes.
     // (A directory already excluded is never descended into, as with git.)
