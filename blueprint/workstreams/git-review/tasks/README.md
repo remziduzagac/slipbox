@@ -9,7 +9,7 @@ and GIT-T6; GIT-T7 any time after GIT-T1; GIT-T8 last.
 - [GIT-T3](archive/remote.md): The remote's commands and stash. Done.
 - [GIT-T4](blocks-diff.md): A note's diff before and after.
 - [GIT-T5](archive/merge-screen.md): The merge screen. Done.
-- [GIT-T6](pull-rebase.md): Pulling where both sides moved, and rebasing onto the base.
+- [GIT-T6](archive/pull-rebase.md): Pulling where both sides moved, and rebasing onto the base. Done.
 - [GIT-T7](side-by-side.md): A code file's diff side by side, and its cells folded.
 - [GIT-T8](docs.md): The docs, the screenshots, and consolidation.
 - [GIT-T9](archive/panel.md): The git panel by mouse as by keys, and what the branch changed. Done.

@@ -1,10 +1,11 @@
-// The remote's commands and stash (plan 26.6, GIT-D4): fetch, pull (fast-forward only), push to the branch's upstream,
-// and the stashes listed, saved, applied, popped and dropped — each asked for, none on a timer. git runs without a
-// terminal: nothing waits for a password (`GIT_TERMINAL_PROMPT=0`, ssh in batch mode unless you set your own ssh
-// command); git's credential helpers still answer. A failure is git's own words. In a vault not trusted, `gitArgs`'s
-// guards hold — no hook runs, a push's pre-push neither (D172, D175) — a push isn't signed, submodules aren't reached,
-// and a program the repository's own config names for the remote (its ssh command, a credential helper, an upload
-// pack) refuses the command rather than run. Paths and refs are git's; nothing here waits on the network.
+// The remote's commands and stash (plan 26.6, GIT-D4): fetch, pull (fast-forward; merging or rebasing when asked,
+// GIT-D6), push to the branch's upstream, and the stashes listed, saved, applied, popped and dropped — each asked for,
+// none on a timer. git runs without a terminal: nothing waits for a password (`GIT_TERMINAL_PROMPT=0`, ssh in batch
+// mode unless you set your own ssh command); git's credential helpers still answer. A failure is git's own words. In a
+// vault not trusted, `gitArgs`'s guards hold — no hook runs, a push's pre-push neither (D172, D175) — a push and a
+// pull's commits aren't signed, submodules aren't reached, and a program the repository's own config names for the
+// remote (its ssh command, a credential helper, an upload pack) refuses the command rather than run. Paths and refs are
+// git's; nothing here waits on the network.
 
 import { execFile, execFileSync } from "node:child_process";
 import type { Checkout } from "./git.ts";
@@ -91,6 +92,14 @@ const OWN = new Set(["local", "worktree"]);
 
 /** Of the remote's programs, those the repository's own config names. */
 export const ownPrograms = (config: Scoped[]): string[] => config.filter((c) => OWN.has(c.scope)).map((c) => c.key);
+
+/**
+ * git's environment for a merge or a rebase (GIT-D6): no terminal prompt, and no editor — the repository's own
+ * `core.editor` names a program too — so a message is kept as git has it.
+ */
+export function editorless(env: NodeJS.ProcessEnv): NodeJS.ProcessEnv {
+  return { ...env, GIT_TERMINAL_PROMPT: "0", GIT_EDITOR: "true", GIT_SEQUENCE_EDITOR: "true" };
+}
 
 /**
  * The environment git reaches a remote with: never a terminal prompt — a login git can't make with what it has fails
@@ -210,8 +219,10 @@ function runLater(c: Pick<Checkout, "root">, args: string[], network: boolean): 
       });
     env = remoteEnv(process.env, config?.sshCommandSet ?? false);
   }
-  // Not trusted: nothing signed (the repository's config could name the signing program), no submodule reached.
   const [cmd, ...rest] = args;
+  // A pull that merges or rebases (GIT-D6) opens no editor: a message is git's own.
+  if (cmd === "pull") env = editorless(env);
+  // Not trusted: nothing signed (the repository's config could name the signing program), no submodule reached.
   const guarded = trusted
     ? args
     : cmd === "push"
@@ -219,7 +230,14 @@ function runLater(c: Pick<Checkout, "root">, args: string[], network: boolean): 
       : cmd === "fetch" || cmd === "pull"
         ? [cmd, "--no-recurse-submodules", ...rest]
         : args;
-  const signing = !trusted && cmd === "push" ? ["-c", "push.gpgSign=false"] : [];
+  // A pull's merge commit, or the commits a rebase replays, likewise unsigned.
+  const signing = trusted
+    ? []
+    : cmd === "push"
+      ? ["-c", "push.gpgSign=false"]
+      : cmd === "pull"
+        ? ["-c", "commit.gpgSign=false"]
+        : [];
   return new Promise((done) => {
     execFile(
       "git",
@@ -240,9 +258,20 @@ export function fetchLater(c: Pick<Checkout, "root">): Promise<RemoteDone> {
   return runLater(c, ["fetch"], true);
 }
 
-/** Pulled, fast-forward only: git refuses, in its words, where both sides moved. */
-export function pullLater(c: Pick<Checkout, "root">): Promise<RemoteDone> {
-  return runLater(c, ["pull", "--ff-only", "--no-rebase"], true);
+/**
+ * Pulled: fast-forward only (`ff`), git refusing in its words where both sides moved; or, asked (GIT-D6), the two
+ * brought together by a merge or a rebase.
+ */
+export function pullLater(c: Pick<Checkout, "root">, how: "ff" | "merge" | "rebase" = "ff"): Promise<RemoteDone> {
+  const args =
+    how === "ff"
+      ? ["--ff-only", "--no-rebase"]
+      : how === "merge"
+        ? // A merge where both moved (GIT-D6): its commit with git's own message, never an editor; `--ff` over a
+          // `pull.ff = only` of yours, which would refuse it again.
+          ["--no-rebase", "--ff", "--no-edit"]
+        : ["--rebase"];
+  return runLater(c, ["pull", ...args], true);
 }
 
 /**

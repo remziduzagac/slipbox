@@ -19020,6 +19020,162 @@ describe("git's review, merge screen, pull and rebase (GIT-D3, GIT-D5, GIT-D6)",
       });
     });
   });
+
+  describe("pulling where both sides moved, and rebasing (GIT-D6)", () => {
+    test("a merge settled on the merge screen, then concluded: the status line says it; shift+r offers continue, abort", async () => {
+      await isolated(async () => {
+        const root = conflicted();
+        const h = await harness({ root, open: "sync.md", width: 120, height: 50 });
+        await h.app.git.refreshNow();
+        await h.app.run("git.merge_screen");
+        await h.keys("o", "t", "w", "s");
+        expect(await said(h, "sync.md staged, marked resolved — no conflict left: shift+r concludes the merge")).toBe(
+          true,
+        );
+        // The status line says a merge is under way; shift+r offers continue and abort (skip is a rebase's).
+        expect(statusRow(h.frame())).toContain("main merging");
+        await h.app.run("git.rebase");
+        expect(list(h).title).toBe("Merging theirs");
+        expect(list(h).items.map((i) => i.label)).toEqual(["(c) Continue", "(a) Abort"]);
+        await h.keys("escape");
+        await h.app.run("git.continue");
+        expect(await said(h, /^merged: the merge committed/)).toBe(true);
+        expect(git(root, "log", "-1", "--format=%s")).toBe("Merge branch 'theirs'");
+        expect(statusRow(h.frame())).not.toContain("merging");
+      });
+    });
+
+    test("a pull where both sides moved asks: merge, rebase or nothing — git's pull.rebase the default", async () => {
+      await isolated(async () => {
+        const { root, other } = repo({ "a.md": "a\n" }, true);
+        commit(other, "b.md", "theirs\n");
+        git(other, "push", "-q");
+        commit(root, "c.md", "mine\n");
+        const h = await harness({ root, open: "a.md", width: 120, height: 40 });
+        const head = git(root, "rev-parse", "HEAD");
+        await h.app.run("git.pull");
+        expect(await until(() => h.app.overlay?.kind === "list")).toBe(true);
+        expect(list(h).title).toBe("main and origin/main have both moved on — bring them together?");
+        expect(list(h).selected).toBe(0);
+        expect(list(h).items[0]!.detail).toContain("the default (pull.rebase)");
+        // Nothing: as they were.
+        await h.keys("n");
+        expect(await said(h, "nothing pulled: main and origin/main as they were")).toBe(true);
+        expect(git(root, "rev-parse", "HEAD")).toBe(head);
+        // Merge: a merge commit with both.
+        await h.app.run("git.pull");
+        expect(await until(() => h.app.overlay?.kind === "list")).toBe(true);
+        await h.keys("m");
+        expect(await said(h, "pulled: merged origin/main into main — this vault isn't trusted, so no hook ran")).toBe(
+          true,
+        );
+        expect(git(root, "log", "-1", "--format=%P").split(" ").length).toBe(2);
+        expect(existsSync(join(root, "b.md"))).toBe(true);
+        // pull.rebase true: rebase the default, and done.
+        commit(other, "d.md", "theirs again\n");
+        git(other, "push", "-q");
+        commit(root, "e.md", "mine again\n");
+        git(root, "config", "pull.rebase", "true");
+        await h.app.run("git.pull");
+        expect(await until(() => h.app.overlay?.kind === "list")).toBe(true);
+        expect(list(h).selected).toBe(1);
+        await h.keys("enter");
+        expect(await said(h, /^pulled: main rebased onto origin\/main/)).toBe(true);
+        expect(git(root, "log", "-1", "--format=%P").split(" ").length).toBe(1);
+        expect(existsSync(join(root, "d.md"))).toBe(true);
+      });
+    });
+
+    /** A branch behind main, both having changed the same line: a rebase onto main stops there. */
+    const behind = () => {
+      const { root } = repo({ "a.md": "one\ntwo\nthree\n", "b.md": "b\n" });
+      git(root, "switch", "-q", "-c", "agent");
+      commit(root, "a.md", "one\nagent's two\nthree\n", "Agent: two");
+      commit(root, "b.md", "b, the agent's\n", "Agent: b");
+      git(root, "switch", "-q", "main");
+      commit(root, "a.md", "one\nmain's two\nthree\n", "Main: two");
+      git(root, "switch", "-q", "agent");
+      return root;
+    };
+
+    test("shift+r rebases onto the base: asked, stopped at a conflict, the merge screen, the status line; continued", async () => {
+      await isolated(async () => {
+        const root = behind();
+        const h = await harness({ root, open: "b.md", width: 120, height: 50 });
+        await h.app.run("git.view");
+        await h.app.git.refreshNow();
+        await h.keys("shift+r");
+        expect(h.app.overlay).toMatchObject({
+          kind: "prompt",
+          label: "Rebase agent onto main? Its 2 commits replayed after main's 1 new.",
+        });
+        await h.keys("y");
+        expect(await until(() => h.app.floating?.kind === "merge")).toBe(true);
+        expect(
+          await said(
+            h,
+            /^the rebase stopped at commit 1 of 2: 1 file in conflict \(a\.md\) — settle on the merge screen/,
+          ),
+        ).toBe(true);
+        expect(floatText(h)).toContain("Rebasing: yours is what's rebased onto; theirs, the commit being replayed");
+        expect(statusRow(h.frame())).toContain("agent rebasing 1/2");
+        // Settled, saved, staged; shift+r: continue.
+        await h.keys("t", "w", "s");
+        expect(await said(h, /^a\.md staged, marked resolved — no conflict left: shift\+r continues the rebase/)).toBe(
+          true,
+        );
+        h.app.region = "sidebar";
+        await h.keys("shift+r");
+        expect(list(h).items.map((i) => i.label)).toEqual(["(c) Continue", "(s) Skip this commit", "(a) Abort"]);
+        await h.keys("c");
+        expect(await said(h, /^rebased: the rebase is done/)).toBe(true);
+        expect(git(root, "log", "--format=%s", "main..agent")).toBe("Agent: b\nAgent: two");
+        expect(readFileSync(join(root, "a.md"), "utf8")).toBe("one\nagent's two\nthree\n");
+        expect(statusRow(h.frame())).not.toContain("rebasing");
+      });
+    });
+
+    test("a rebase aborted: the branch as it was; again, the conflicting commit skipped", async () => {
+      await isolated(async () => {
+        const root = behind();
+        const was = git(root, "rev-parse", "agent");
+        const h = await harness({ root, open: "b.md", width: 120, height: 50 });
+        await h.app.run("git.rebase");
+        await h.keys("y");
+        expect(await until(() => h.app.floating?.kind === "merge")).toBe(true);
+        await h.keys("escape");
+        await h.app.run("git.abort");
+        expect(await said(h, "the rebase aborted: agent as it was — this vault isn't trusted, so no hook ran")).toBe(
+          true,
+        );
+        expect(git(root, "rev-parse", "HEAD")).toBe(was);
+        expect(git(root, "status", "--porcelain")).toBe("");
+        await h.app.run("git.rebase");
+        await h.keys("y");
+        expect(await until(() => h.app.floating?.kind === "merge")).toBe(true);
+        await h.keys("escape");
+        // Continue refused while a file is in conflict.
+        await h.app.run("git.continue");
+        expect(await said(h, /^still in conflict: a\.md/)).toBe(true);
+        await h.app.run("git.skip");
+        expect(await said(h, /^rebased: the rebase is done, a commit skipped/)).toBe(true);
+        expect(git(root, "log", "--format=%s", "main..agent")).toBe("Agent: b");
+      });
+    });
+
+    test("nothing under way: continue, skip and abort say so; shift+r on the base says there's nothing to rebase", async () => {
+      await isolated(async () => {
+        const { root } = repo({ "a.md": "a\n" });
+        const h = await harness({ root, open: "a.md", width: 120, height: 40 });
+        await h.app.run("git.continue");
+        expect(await said(h, "no merge or rebase under way")).toBe(true);
+        await h.app.run("git.skip");
+        expect(await said(h, "no rebase under way: only a rebase skips a commit")).toBe(true);
+        await h.app.run("git.rebase");
+        expect(await said(h, "main is the base: nothing to rebase it onto")).toBe(true);
+      });
+    });
+  });
 });
 
 describe("the remote's commands and stash (26.6)", () => {
@@ -19114,7 +19270,7 @@ describe("the remote's commands and stash (26.6)", () => {
     });
   });
 
-  test("a pull where both sides moved: refused in git's words, with what would bring them together", async () => {
+  test("a pull where both sides moved: not refused, but asked how to bring them together (GIT-D6)", async () => {
     await isolated(async () => {
       const { root, other } = withRemote();
       commit(other, "b.md", "theirs\n");
@@ -19125,7 +19281,13 @@ describe("the remote's commands and stash (26.6)", () => {
       await h.app.run("git.fetch");
       expect(await until(() => h.app.git.vaultStatus().endsWith(" · main ↑1 ↓1"))).toBe(true);
       await h.app.run("git.pull");
-      expect(await said(h, /^git: Not possible to fast-forward, aborting\. — both sides have moved on/)).toBe(true);
+      expect(await until(() => h.app.overlay?.kind === "list")).toBe(true);
+      expect(list(h).items.map((i) => i.label)).toEqual([
+        "(m) Merge origin/main into main",
+        "(r) Rebase main onto origin/main",
+        "(n) Nothing",
+      ]);
+      await h.keys("escape");
       expect(git(root, "rev-parse", "HEAD")).toBe(head);
     });
   });

@@ -36,7 +36,7 @@ Everything slipbox does, a chapter for each part.
 - [Editing](manual/editing.md): the lens and source mode, the keys, saving, completion, spelling.
 - [Files](manual/files.md): the explorer, and making, moving, renaming and removing files with their links kept.
 - [Git](manual/git.md): changes, source control, commits, blame, branches, fetch, pull, push and stash, reviewing a
-  change, the merge screen, reviewing a merge.
+  change, the merge screen, rebasing, reviewing a merge.
 - [Code](manual/code.md): the code view, language servers, problems, and trusting a folder.
 - [Exporting](manual/export.md): every format, and what each keeps.
 

@@ -518,9 +518,9 @@ export const COMMAND_SPECS: CommandSpec[] = [
   },
   {
     id: "git.pull",
-    title: "Pull (fast-forward)",
+    title: "Pull",
     cli: I,
-    desc: "Brings in the upstream's new commits, fast-forward only, unsaved notes saved or kept first; where both sides moved, git's refusal",
+    desc: "Brings in the upstream's new commits, unsaved notes saved or kept first; where both sides moved, asks: merge, rebase or nothing",
   },
   {
     id: "git.push",
@@ -643,6 +643,31 @@ export const COMMAND_SPECS: CommandSpec[] = [
     title: "Stage the merged file (merge screen)",
     cli: I,
     desc: "On the merge screen: the saved file staged, which tells git it's resolved; the next file in conflict opens",
+  },
+  // Rebasing onto the base, and a merge or rebase under way (GIT-D6).
+  {
+    id: "git.rebase",
+    title: "Rebase onto the base",
+    cli: I,
+    desc: "Rebases this branch onto the base's tip, after asking; while a merge or rebase is under way, continue, skip or abort it",
+  },
+  {
+    id: "git.continue",
+    title: "Continue the merge or rebase",
+    cli: I,
+    desc: "Once no file is in conflict: a rebase's next commit replayed, or a merge's commit made",
+  },
+  {
+    id: "git.skip",
+    title: "Skip this commit (rebase)",
+    cli: I,
+    desc: "Leaves the rebase's current commit out, and replays the next",
+  },
+  {
+    id: "git.abort",
+    title: "Abort the merge or rebase",
+    cli: I,
+    desc: "Gives up the merge or rebase under way: the branch back where it was before it",
   },
   {
     id: "git.change_next",

@@ -28,6 +28,7 @@ import {
   workRows,
 } from "./gitview.ts";
 import { pointedAt } from "./gitmouse.ts";
+import { operationNow } from "./rebase.ts";
 import type { App } from "./app.ts";
 
 /** A section of the panel: the working tree's four; the branch's, this file's; the branches, the merged and older among
@@ -181,7 +182,8 @@ export class GitPanel {
   }
 
   /** The buttons at the panel's top (GIT-D8), as the repository stands: commit with what's staged, the remote's; the
-   *  review while a change isn't staged. */
+   *  review while a change isn't staged, the merge screen while a file's in conflict; while a merge or a rebase is under
+   *  way, continue, skip (a rebase's) and abort. */
   buttons(): PanelButton[] {
     const app = this.app;
     const g = app.glyphs.git;
@@ -190,6 +192,7 @@ export class GitPanel {
     const t = app.git.track;
     const up = !!t?.upstream && !t.gone;
     const label = (glyph: string, text: string) => (glyph ? `${glyph} ${text}` : text);
+    const op = operationNow(app);
     return [
       {
         id: "commit",
@@ -204,7 +207,7 @@ export class GitPanel {
               id: "pull",
               label: label(app.glyphs.gitBehind, `Pull${t!.behind ? ` ${t!.behind}` : ""}`),
               action: "pull",
-              desc: `brings in ${sanitize(t!.upstream!)}'s new commits (fast-forward)`,
+              desc: `brings in ${sanitize(t!.upstream!)}'s new commits; where both sides moved, asks how`,
             },
           ]
         : []),
@@ -230,6 +233,26 @@ export class GitPanel {
             },
           ]
         : []),
+      // A merge or a rebase under way (GIT-D6): carried on, a rebase's commit left out, or given up.
+      ...(op
+        ? [
+            {
+              id: "continue",
+              label: "Continue",
+              action: "continue",
+              desc: op.kind === "rebase" ? "commits what's settled, and replays the next" : "commits the merge",
+            },
+            ...(op.kind === "rebase"
+              ? [{ id: "skip", label: "Skip", action: "skip", desc: "leaves out this commit, and replays the next" }]
+              : []),
+            {
+              id: "abort",
+              label: "Abort",
+              action: "abort",
+              desc: `the branch back where it was before the ${op.kind}`,
+            },
+          ]
+        : []),
     ];
   }
 
@@ -252,7 +275,14 @@ export class GitPanel {
       return key ? [[key, what]] : [];
     };
     if (!row || row.kind === "note")
-      return this.app.git.checkout ? [...k("commit", "commit"), ...k("fetch", "fetch")] : k("go", "go in");
+      return this.app.git.checkout
+        ? [
+            ...k("commit", "commit"),
+            ...k("fetch", "fetch"),
+            // A merge or a rebase under way (GIT-D6): `shift+r` offers continue, skip and abort.
+            ...(operationNow(this.app) ? k("rebase", "continue…") : []),
+          ]
+        : k("go", "go in");
     switch (row.kind) {
       case "heading": {
         const s = row.section;
@@ -289,6 +319,8 @@ export class GitPanel {
           ...k("open", row.open ? "fold" : "open up"),
           ...(row.branch.worktree && !row.branch.here ? k("go", "go in") : []),
           ...k("merge", "merge…"),
+          // The branch checked out here, rebased onto the base (GIT-D6).
+          ...(row.branch.here ? k("rebase", "rebase…") : []),
           ...(row.branch.worktree && !row.branch.here && !row.branch.worktree.main ? k("discard", "remove") : []),
           ...k("menu", "more"),
         ];
@@ -370,6 +402,15 @@ export class GitPanel {
         const rel = row?.kind === "file" && row.section === "conflicted" ? relOf(app, row.entry.path) : null;
         return void app.run(rel === null ? "git.merge_screen" : `git.merge_screen ${rel}`);
       }
+      // Rebasing onto the base (GIT-D6), or what's under way carried on, skipped or given up.
+      case "rebase":
+        return void app.run("git.rebase");
+      case "continue":
+        return void app.run("git.continue");
+      case "skip":
+        return void app.run("git.skip");
+      case "abort":
+        return void app.run("git.abort");
       case "stage_all":
         return sectionAction(app, "all", "stage");
       case "unstage_all":

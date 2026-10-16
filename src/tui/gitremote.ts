@@ -1,6 +1,6 @@
 // The remote's commands and stash from the TUI (plan 26.6, GIT-D4), source control's keys and the palette's commands
-// (`:fetch`, `:pull`, `:push`, `:stash`): `f` fetches, `p` pulls (fast-forward only; `l` opens a file up there),
-// `shift+p` pushes to the branch's upstream — asking to set one, `origin/<branch>`, where there's none — and `z` lists
+// (`:fetch`, `:pull`, `:push`, `:stash`): `f` fetches, `p` pulls (fast-forward; where both sides moved, asking
+// merge or rebase, GIT-D6; `l` opens a file up there), `shift+p` pushes to the branch's upstream — asking to set one, `origin/<branch>`, where there's none — and `z` lists
 // the stashes: the changes saved with a message, one applied, popped or dropped (after asking). `space g` gets none of
 // its own: it becomes the git panel's (GIT-T9). Each runs in the background, one at a time, and a message says
 // how it went: git's own words when it failed, with a hint where a login was what it lacked. Never on a timer. Before a
@@ -25,6 +25,7 @@ import {
 import { sanitize } from "../core/sanitize.ts";
 import { isTrusted } from "../core/trust.ts";
 import type { App } from "./app.ts";
+import { askDiverged } from "./rebase.ts";
 
 /** What's running, by app: one of these at a time. */
 const running = new WeakMap<App, string>();
@@ -51,22 +52,20 @@ function failed(app: App, verb: string, why: string, login: boolean): void {
     ? ` — git in a terminal can log in (git ${verb}), then try here again`
     : /\[rejected\].*\((fetch first|non-fast-forward)\)/.test(words)
       ? " — the remote has commits this branch hasn't: fetch them (f) and pull (p) first"
-      : /fast-forward/i.test(words) && verb === "pull"
-        ? " — both sides have moved on: git merge or git rebase, in a terminal, brings them together"
-        : "";
+      : "";
   app.message("warn", `git: ${words}${hint}`);
 }
 
 /**
- * `work` run in the background, `doing` said while it runs; `done` given git's answer when it went. Refused while
- * another runs (one asked for before a question about unsaved notes was answered).
+ * `work` run in the background, one git command at a time (a merge's and a rebase's too, rebase.ts), `doing` said while
+ * it runs; `after` given git's answer, whether it went or not. Refused while another runs (one asked for before a
+ * question about unsaved notes was answered).
  */
-function inBackground(
+export function runInBackground(
   app: App,
   doing: string,
-  verb: string,
   work: () => Promise<RemoteDone>,
-  done: (r: Extract<RemoteDone, { ok: true }>) => Promise<void> | void,
+  after: (r: RemoteDone) => Promise<void> | void,
 ): void {
   const busy = running.get(app);
   if (busy) return app.message("info", `git is still ${busy} — a moment`);
@@ -75,8 +74,7 @@ function inBackground(
   void work()
     .then(async (r) => {
       running.delete(app);
-      if (!r.ok) failed(app, verb, r.why, r.login);
-      else await done(r);
+      await after(r);
     })
     .catch((err) => {
       running.delete(app);
@@ -86,6 +84,17 @@ function inBackground(
       void app.git.refreshNow().then(() => app.host.requestRender());
       app.host.requestRender();
     });
+}
+
+/** `runInBackground`, `done` given git's answer when it went; a failure said in git's words. */
+function inBackground(
+  app: App,
+  doing: string,
+  verb: string,
+  work: () => Promise<RemoteDone>,
+  done: (r: Extract<RemoteDone, { ok: true }>) => Promise<void> | void,
+): void {
+  runInBackground(app, doing, work, (r) => (r.ok ? done(r) : failed(app, verb, r.why, r.login)));
 }
 
 /** An upstream's name as git shows it: `origin/main`. */
@@ -121,7 +130,10 @@ export function gitFetch(app: App): void {
   );
 }
 
-/** Pull (`p`): the upstream's commits brought in, fast-forward only — unsaved notes saved or kept first. */
+/**
+ * Pull (`p`): the upstream's commits brought in, fast-forward — unsaved notes saved or kept first. Where both sides
+ * moved, asked: merge, rebase or nothing (GIT-D6, rebase.ts).
+ */
 export function gitPull(app: App): void {
   const c = ready(app);
   if (!c) return;
@@ -133,12 +145,15 @@ export function gitPull(app: App): void {
   app.git.beforeCheckout(
     () => {
       const before = headShort(c);
-      inBackground(
+      runInBackground(
         app,
         "pulling",
-        "pull",
         () => pullLater(c),
-        () => {
+        (r) => {
+          // Both sides moved: git can't fast-forward. Asked how to bring them together instead.
+          if (!r.ok && !r.login && /not possible to fast-forward/i.test(r.why))
+            return askDiverged(app, c, branch, shown(up));
+          if (!r.ok) return failed(app, "pull", r.why, r.login);
           // HEAD moved on its branch: seen now, as the watcher would see it, the tabs kept (no switch).
           app.git.checkHead();
           const now = headShort(c);

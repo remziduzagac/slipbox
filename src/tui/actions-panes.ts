@@ -7,6 +7,7 @@ import { blameHere, historyHere } from "./githistory.ts";
 import { gitStep, gitPreview, gitReset } from "./gitchanges.ts";
 import { gitFetch, gitPull, gitPush, gitStash } from "./gitremote.ts";
 import { mergeAgent, mergeEdit, mergeSave, mergeStage, mergeStep, mergeTake, openMergeScreen } from "./mergescreen.ts";
+import { gitAbort, gitContinue, gitRebase, gitSkip } from "./rebase.ts";
 import { openReview, reviewGo, reviewKeep, reviewNote, reviewRevert, reviewStep } from "./review.ts";
 import * as E from "./editing.ts";
 
@@ -176,7 +177,7 @@ export function paneActions(): Record<string, Run> {
     "git.pull": (a) => gitPull(a),
     "git.push": (a) => gitPush(a),
     "git.stash": (a) => gitStash(a),
-    // Reviewing a change (GIT-D3), the merge screen (GIT-D5).
+    // Reviewing a change (GIT-D3), the merge screen (GIT-D5), pull and rebase (GIT-D6).
     "git.review": (a) => openReview(a),
     "git.review_keep": (a) => reviewKeep(a),
     "git.review_revert": (a) => reviewRevert(a),
@@ -196,6 +197,10 @@ export function paneActions(): Record<string, Run> {
     "git.merge_prev": (a) => mergeStep(a, -1),
     "git.merge_save": (a) => void mergeSave(a),
     "git.merge_stage": (a) => mergeStage(a),
+    "git.rebase": (a) => gitRebase(a),
+    "git.continue": (a) => gitContinue(a),
+    "git.skip": (a) => gitSkip(a),
+    "git.abort": (a) => gitAbort(a),
     "tab.close_others": (a) => a.windows.closeOtherTabs(),
     "tab.close_all": (a) => a.windows.closeAllTabs(),
     "outline.pick": (a) =>

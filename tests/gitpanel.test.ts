@@ -502,4 +502,110 @@ describe("the review, the merge screen and the rebase, from the panel (GIT-D3, G
     expect(app.floating?.title).toBe("Merge — b.md");
     frame();
   });
+
+  test("shift+r: the branch checked out rebased onto its base, asked first; its row's footer says it", async () => {
+    const root = repo();
+    git(root, "switch", "-q", "main");
+    writeFileSync(join(root, "b.md"), "# B, main's\n");
+    git(root, "commit", "-qam", "main's");
+    git(root, "switch", "-q", "feature");
+    const { app, frame, keys } = await panel(root);
+    const here = () => rowOf(app, (r) => r.kind === "branch" && r.branch.here);
+    const main = () => rowOf(app, (r) => r.kind === "branch" && r.branch.name === "main");
+    expect(await until(() => (frame(), here() >= 0 && main() >= 0))).toBe(true);
+    expect(app.gitPanel.footer(app.gitPanel.rows()[here()])).toContainEqual(["shift+r", "rebase…"]);
+    // Another branch's row doesn't: it isn't the one rebased.
+    expect(app.gitPanel.footer(app.gitPanel.rows()[main()]).map(([k]) => k)).not.toContain("shift+r");
+    // Nothing under way: no Continue, Skip or Abort, and the panel's top says no shift+r.
+    expect(app.gitPanel.buttons().map((b) => b.id)).not.toContain("abort");
+    expect(app.gitPanel.footer(undefined).map(([k]) => k)).not.toContain("shift+r");
+    app.sidebar.selected = here();
+    await keys("shift+r");
+    expect(app.overlay).toMatchObject({
+      kind: "prompt",
+      label: "Rebase feature onto main? Its 1 commit replayed after main's 1 new.",
+    });
+    await keys("y");
+    expect(await until(() => git(root, "merge-base", "main", "feature") === git(root, "rev-parse", "main"))).toBe(true);
+    expect(git(root, "log", "--format=%s", "main..feature")).toBe("c\n");
+  });
+
+  test("shift+r rebases onto the branch's own base: dev, the nearest of [git] bases, not main", async () => {
+    const root = repo();
+    // topic made from dev, which then moved on; main hasn't.
+    git(root, "switch", "-q", "-c", "dev", "main");
+    writeFileSync(join(root, "d.md"), "# D\n");
+    git(root, "add", "d.md");
+    git(root, "commit", "-q", "-m", "d");
+    git(root, "switch", "-q", "-c", "topic");
+    writeFileSync(join(root, "e.md"), "# E\n");
+    git(root, "add", "e.md");
+    git(root, "commit", "-q", "-m", "e");
+    git(root, "switch", "-q", "dev");
+    writeFileSync(join(root, "f.md"), "# F\n");
+    git(root, "add", "f.md");
+    git(root, "commit", "-q", "-m", "f");
+    git(root, "switch", "-q", "topic");
+    const { app, keys } = await panel(root);
+    app.config.git.bases = ["main", "dev"];
+    app.git.forgetBase();
+    await keys("shift+r");
+    expect(app.overlay).toMatchObject({
+      kind: "prompt",
+      label: "Rebase topic onto dev? Its 1 commit replayed after dev's 1 new.",
+    });
+  });
+
+  test("Continue, Skip and Abort: buttons while a rebase is under way (Skip a rebase's alone); Abort clicked, given up", async () => {
+    const root = repo();
+    // feature and main both change a.md's line: feature rebased onto main stops there.
+    writeFileSync(join(root, "a.md"), "# A\n\nfeature's\n");
+    git(root, "commit", "-qam", "feature's");
+    git(root, "switch", "-q", "main");
+    writeFileSync(join(root, "a.md"), "# A\n\nmain's\n");
+    git(root, "commit", "-qam", "main's");
+    git(root, "switch", "-q", "feature");
+    const was = git(root, "rev-parse", "HEAD");
+    git(root, "-c", "merge.conflictStyle=merge", "rebase", "-q", "main");
+    const { app, click, frame } = await panel(root, "b.md");
+    const ids = () => app.gitPanel.buttons().map((b) => b.id);
+    expect(ids()).toEqual(expect.arrayContaining(["resolve", "continue", "skip", "abort"]));
+    expect(pointedAt(app, "git:btn:continue")).toEqual({
+      key: null,
+      desc: "Continue: commits what's settled, and replays the next",
+    });
+    expect(pointedAt(app, "git:btn:abort")).toEqual({
+      key: null,
+      desc: "Abort: the branch back where it was before the rebase",
+    });
+    // The panel's top says shift+r offers them too.
+    expect(app.gitPanel.footer(undefined)).toContainEqual(["shift+r", "continue…"]);
+    // Continue, with a file still in conflict: refused, said.
+    click("git:btn:continue");
+    expect(app.messages.at(-1)?.text).toStartWith("still in conflict: a.md");
+    click("git:btn:abort");
+    expect(await until(() => (frame(), !ids().includes("abort")))).toBe(true);
+    expect(git(root, "rev-parse", "HEAD")).toBe(was);
+    expect(ids()).not.toContain("continue");
+    expect(ids()).not.toContain("resolve");
+    // Again; Skip clicked: the conflicting commit left out, the rest rebased.
+    git(root, "-c", "merge.conflictStyle=merge", "rebase", "-q", "main");
+    await app.git.refreshNow();
+    expect(await until(() => (frame(), ids().includes("skip")))).toBe(true);
+    click("git:btn:skip");
+    expect(await until(() => (frame(), !ids().includes("skip")))).toBe(true);
+    expect(git(root, "log", "--format=%s", "main..feature")).toBe("c\n");
+  });
+
+  test("a merge under way: Continue and Abort, no Skip; Abort clicked, the merge given up", async () => {
+    const root = conflicted();
+    const { app, click, frame } = await panel(root, "c.md");
+    const ids = () => app.gitPanel.buttons().map((b) => b.id);
+    expect(ids()).toEqual(expect.arrayContaining(["resolve", "continue", "abort"]));
+    expect(ids()).not.toContain("skip");
+    expect(pointedAt(app, "git:btn:continue")?.desc).toBe("Continue: commits the merge");
+    click("git:btn:abort");
+    expect(await until(() => (frame(), !ids().includes("abort")))).toBe(true);
+    expect(git(root, "status", "--porcelain")).toBe("");
+  });
 });

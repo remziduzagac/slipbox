@@ -2816,15 +2816,16 @@ The same notes, one per tab.
   tree's changes (26.1, D225); tests 'where [git] signs_at puts them'; terminal check 'the gutter's signs where [git]
   signs_at puts them')
 - `git.fetch` — Fetch — `work/kestrel/README.md`, `notes/index.md` (command-specs.ts)
-- `git.pull` — Pull (fast-forward) — `work/kestrel/README.md`, `notes/index.md` (command-specs.ts)
+- `git.pull` — Pull — `work/kestrel/README.md`, `notes/index.md` (command-specs.ts)
 - `git.push` — Push — `work/kestrel/README.md`, `notes/index.md` (command-specs.ts)
 - `git.stash` — Stashes — `work/kestrel/docs/sync.md`, `notes/index.md` (command-specs.ts)
 - kestrel's origin a bare repository in the check's folder: main pushed after the upstream's question, fetched (`↓1`),
   pulled fast-forward, an agent's commit (`↑1`) pushed, the pre-push hook not run while not trusted; a pull where both
-  sides moved refused; an edit stashed with a message and popped; a remote answering 401 failing at once, "terminal
-  prompts disabled" — `work/kestrel/README.md`, `work/kestrel/docs/sync.md` (GIT's design.md The remote and stash
-  (26.6); tests 'the remote's commands and stash (26.6)'; terminal checks 'push, fetch and pull against a bare
-  repository', 'a pull where both sides moved', 'stash', 'a remote that asks for a password')
+  sides moved asked about, then merged; an edit stashed with a message and popped; a remote answering 401 failing at
+  once, "terminal prompts disabled" — `work/kestrel/README.md`, `work/kestrel/docs/sync.md` (GIT's design.md The remote
+  and stash (26.6), Pull and rebase (GIT-D6); tests 'the remote's commands and stash (26.6)'; terminal checks 'push,
+  fetch and pull against a bare repository', 'a pull where both sides moved', 'stash', 'a remote that asks for a
+  password')
 - `git.review` — Review the changes — `work/kestrel/README.md`, `work/kestrel/docs/sync.md` (command-specs.ts)
 - `git.review_keep` — Keep this change (review) — `work/kestrel/README.md` (command-specs.ts)
 - `git.review_revert` — Revert this change (review) — `work/kestrel/docs/architecture.md` (command-specs.ts)
@@ -2854,8 +2855,16 @@ The same notes, one per tab.
   (command-specs.ts)
 - jo/release-notes-wording merged into main, a commit more on each side: two conflicts in the release notes, each one's
   base from git's index; both either way, yours, `a` to the agent, `e` into the lens and `:resolve` back, theirs;
-  saved, staged — `work/kestrel/docs/release-notes/2.3.md` (GIT's design.md
+  saved, staged, the merge concluded from source control — `work/kestrel/docs/release-notes/2.3.md` (GIT's design.md
   The merge screen (GIT-D5); tests 'the merge screen (GIT-D5)')
+- `git.rebase` — Rebase onto the base — `work/kestrel/src/sync/retry.ts` (command-specs.ts)
+- `git.continue` — Continue the merge or rebase — `work/kestrel/src/sync/retry.ts` (command-specs.ts)
+- `git.skip` — Skip this commit (rebase) — `work/kestrel/src/sync/retry.ts` (command-specs.ts)
+- `git.abort` — Abort the merge or rebase — `work/kestrel/src/sync/retry.ts` (command-specs.ts)
+- the agent's worktree (agent/sync-retry) rebased onto main, main having changed a line of `src/sync/retry.ts` its
+  first commit changed: stopped there, the merge screen, `rebasing 1/2` on the status line, theirs taken, continued;
+  aborted, the branch as it was; the conflicting commit skipped — `work/kestrel/src/sync/retry.ts` (GIT's design.md Pull
+  and rebase (GIT-D6); tests 'pulling where both sides moved, and rebasing (GIT-D6)')
 
 ### shell
 

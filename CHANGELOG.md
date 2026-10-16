@@ -44,6 +44,11 @@ The format is [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.1.0/); wh
   `:resolve`, shows each conflict with its base, and yours and theirs as diffs against it, the file as it will be below.
   `o`, `t`, `b` and `shift+b` take a side or both, `e` settles one by hand in the lens, `a` hands it to the agent, `w`
   saves and `s` stages. The conflict prompt's (M)erge settles its conflicts on the same screen.
+- A pull where both sides moved asks: merge, rebase, or nothing, git's `pull.rebase` the default. `shift+r` in the git
+  panel (or `:rebase`) rebases the branch onto the base, each conflict on the way opening the merge screen. While a
+  merge or a rebase is under way, the status line says so (`rebasing 2/5`), the panel has Continue, Skip and Abort
+  buttons, and `shift+r` offers the same (`:continue`, `:skip`, `:abort`). In a vault you don't trust, none of them
+  runs the repository's hooks.
 
 ### Changed
 

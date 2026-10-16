@@ -22,6 +22,7 @@ import {
   withStages,
 } from "../core/conflicts.ts";
 import { inCheckout, inVault, showAt } from "../core/gitops.ts";
+import { operationOf } from "../core/gitrebase.ts";
 import { sections, stageFile } from "../core/gitstage.ts";
 import { layoutScreen, type ScreenPart, screenText } from "../core/layout/diff.ts";
 import type { Layout, Span } from "../core/layout/ir.ts";
@@ -46,6 +47,8 @@ export interface MergeState {
   read: string;
   /** Saved as settled. */
   saved: boolean;
+  /** Mid-rebase: yours is what's rebased onto, theirs the commit replayed. */
+  rebasing: boolean;
   /** The conflict prompt's: the note's buffer, and the text on disk its merge was made with. */
   prompt?: { buf: NoteBuffer; theirs: string };
 }
@@ -108,6 +111,7 @@ export function openMergeScreen(app: App, rel?: string): void {
     at: 0,
     read: text,
     saved: false,
+    rebasing: operationOf(c)?.kind === "rebase",
   });
 }
 
@@ -125,6 +129,7 @@ export function openPromptMerge(app: App, buf: NoteBuffer, theirs: string): void
     at: 0,
     read: buf.source,
     saved: false,
+    rebasing: false,
     prompt: { buf, theirs },
   });
 }
@@ -178,6 +183,9 @@ function show(app: App, m: MergeState): void {
         ...(m.path === null ? [] : ([["s", "stage"]] as [string, string][])),
       ]),
     },
+    ...(m.rebasing
+      ? [label("Rebasing: ", "yours is what's rebased onto; theirs, the commit being replayed", "dim")]
+      : []),
     { spans: [] },
     c.base === null
       ? label("Base", " · not known: neither the markers nor git's index hold it")
@@ -366,10 +374,15 @@ export function mergeStage(app: App): void {
   app.floating = null;
   void app.git.refreshNow().then(() => {
     const next = conflictedFiles(app).find((p) => p !== m.rel);
+    const op = operationOf(c);
     if (next) {
       app.message("info", `${m.rel} staged, marked resolved — next: ${next}`);
       openMergeScreen(app, next);
-    } else app.message("info", `${m.rel} staged, marked resolved — no conflict left`);
+    } else
+      app.message(
+        "info",
+        `${m.rel} staged, marked resolved — no conflict left${op ? `: shift+r ${op.kind === "rebase" ? "continues the rebase" : "concludes the merge"}` : ""}`,
+      );
     app.host.requestRender();
   });
 }

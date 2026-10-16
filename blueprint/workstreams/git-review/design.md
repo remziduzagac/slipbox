@@ -102,9 +102,12 @@ The text for § Side panes ("Source control"), after **Commit**: `f` fetches, `p
 `shift+p` pushes and `z` lists the stashes (explorer actions `fetch`, `paste`, `push`, `stash`, each running its named
 command, so the palette's are the same; in the explorer and the history they do nothing).
 
-And (GIT-T2, GIT-T5): `v` reviews the changes (the git panel's `review`, `git.review`), and a Review button is there
-while a change isn't staged; `x` opens the merge screen on the conflicted file selected, else the first (`resolve`,
-`git.merge_screen`), and a Resolve button is there while a file is in conflict. Their rows' footers say them. In the
+And (GIT-T2, GIT-T5, GIT-T6): `v` reviews the changes (the git panel's `review`, `git.review`), and a Review button
+is there while a change isn't staged; `x` opens the merge screen on the conflicted file selected, else the first
+(`resolve`, `git.merge_screen`), and a Resolve button is there while a file is in conflict; `shift+r` rebases onto the
+base (`rebase`, `git.rebase`), or, while a merge or rebase is under way, offers continue, skip and abort — there the
+panel has Continue, Skip (a rebase's) and Abort buttons (`continue`, `skip`, `abort`: `git.continue`, `git.skip`,
+`git.abort`, with no key of their own). Their rows' footers say them: the checked-out branch's `shift+r` rebases. In the
 Problems panel's All tab, `x` on a conflict opens the merge screen on its file.
 
 ### Reviewing a change, as built (GIT-T2)
@@ -123,7 +126,7 @@ lines on each side (`hunkView`), each row at its line in the file. The window is
 `layout/diff.ts`): text rows and diffs, a line of its text each, the review's own keys over the note's (`reviewKeys`,
 `DEFAULT_REVIEW_KEYS`, as a peek has its own).
 
-- `y` (`git.review_keep`) stages the hunk as source control's `s` stages a change (`stageChange`): found again among
+- `y` (`git.review_keep`) stages the hunk as the git panel's `s` stages a change (`stageChange`): found again among
   the file's changes now (`findChange`: the same lines as staged and now, the nearest to where it was), since the index
   or the file may have moved under it; a new or deleted file is staged whole.
 - `x` (`git.review_revert`) puts the hunk's lines back as staged, in the file's buffer, as one edit — the part of the
@@ -145,17 +148,18 @@ written. Nothing is committed.
 
 The text for § Git, after "Reviewing a change":
 
-**The merge screen** (GIT-D5; `core/conflicts.ts`, `tui/mergescreen.ts`): `x` on a file in conflict in source control
-(the explorer's `cut`), `x` on a conflict in the Problems panel's All tab, `:resolve [file]` or `git.merge_screen` — the
-file named, else this note when it's in conflict, else the first that is — opens the file's buffer (read again first
-when git changed it on disk and it isn't being typed in) and reads git's markers (`parseConflicts`): `<<<<<<< label`,
-yours, `||||||| label` and the base where git wrote it (diff3, zdiff3), `=======`, theirs, `>>>>>>> label`; a marker
-that doesn't close, or a `=======` outside a conflict (a setext heading's), is text. The markers give the conflicts, so
-what was settled by hand stays settled. Each conflict's base where the markers don't hold it comes from the index's
-stage 1 (`withStages`): yours is found in stage 2, and theirs in stage 3, where the stretches before put it (else
-wherever it is), each mapped back onto stage 1 through that side's changes (`toBase`, a boundary inside a change
-widened to the whole of it), the two ranges joined. Where neither has it (the stages gone), there's no base. A file in
-conflict with no marker (one side deleted it) is said, with `s` in source control to mark it resolved.
+**The merge screen** (GIT-D5; `core/conflicts.ts`, `tui/mergescreen.ts`): `x` on a file in conflict in the git panel
+(its `resolve`, or its Resolve button), `x` on a conflict in the Problems panel's All tab, `:resolve [file]` or
+`git.merge_screen` — the file named, else this note when it's in conflict, else the first that is — opens the file's
+buffer (read again first when git changed it on disk and it isn't being typed in) and reads git's markers
+(`parseConflicts`): `<<<<<<< label`, yours, `||||||| label` and the base where git wrote it (diff3, zdiff3), `=======`,
+theirs, `>>>>>>> label`; a marker that doesn't close, or a `=======` outside a conflict (a setext heading's), is text.
+The markers give the conflicts, so what was settled by hand stays settled. Each conflict's base where the markers don't
+hold it comes from the index's stage 1 (`withStages`): yours is found in stage 2, and theirs in stage 3, where the
+stretches before put it (else wherever it is), each mapped back onto stage 1 through that side's changes (`toBase`, a
+boundary inside a change widened to the whole of it), the two ranges joined. Where neither has it (the stages gone),
+there's no base. A file in conflict with no marker (one side deleted it) is said, with `s` in the git panel to mark it
+resolved.
 
 The screen, in the floating window as tall as a peek's, a conflict at a time: its number, its line in the result and
 how it's settled; the keys; while a rebase is under way, that yours is what's rebased onto and theirs the commit
@@ -183,6 +187,39 @@ text as loaded (the base), as typed (yours) and on disk (theirs) (`fromMerge`, f
 built on): `w` puts the result in the note, measured against the text on disk from then on (`rebase`), and saves it;
 `esc` goes back to the prompt; `s` is git's alone. A merge with no conflict is applied as before, unsaved.
 
+### Pull and rebase, as built (GIT-T6)
+
+The text for § Git, after "The remote and stash":
+
+**Pulling where both sides moved** (GIT-D6; `core/gitremote.ts` `pullLater`, `tui/rebase.ts`): a pull that can't
+fast-forward (git's "Not possible to fast-forward") asks: `(m)` merge the upstream into the branch (`git pull
+--no-rebase --ff --no-edit`: git's own message, never an editor; `--ff` over a `pull.ff = only`), `(r)` rebase the branch
+onto it (`git pull --rebase`), `(n)` nothing. Selected is what git's config says (`pullDefault`): a rebase where
+`branch.<name>.rebase`, else `pull.rebase`, is true or a kind of rebase, else a merge.
+
+**Rebasing onto the base** (`git.rebase`, `:rebase`, `shift+r` in the git panel — its `rebase`): the branch rebased onto
+the base's tip — the branch's own (GIT-D10, `baseOf`), else `[git] base`, main or master (`baseBranch`) — after asking,
+with how many commits each side has (`aheadBehind`); unsaved notes saved or kept first, as before a pull. On the base,
+detached, or with nothing new on the base: said, nothing run.
+
+**A merge or a rebase under way** (`core/gitrebase.ts` `operationOf`): read from git's own files, no git run —
+`rebase-merge/` (`msgnum`, `end`, `head-name`), `rebase-apply/` (`next`, `last`; `applying`, a `git am`, is none of
+slipbox's), `MERGE_HEAD` and its `MERGE_MSG` — again when git has news or half a second on (`operationNow`). The status
+line says it after the branch, a rebase's branch named rather than its detached commit: `kestrel · main merging`,
+`kestrel@agent/sync-retry rebasing 2/5`. `shift+r` then offers, as a question with keys: `(x)` the merge screen on a
+file still in conflict, `(c)` continue (`git.continue`, `:continue`: `git rebase --continue`, or `git commit --no-edit`
+for a merge; refused, said which, while a file is in conflict), `(s)` skip (`git.skip`, `:skip`: `git rebase --skip`, a
+rebase's alone), `(a)` abort (`git.abort`, `:abort`: `git rebase --abort`, `git merge --abort`). The git panel has the
+three as buttons meanwhile: Continue, Skip (a rebase's) and Abort.
+
+Each runs in the background, one git command at a time with the remote's (`runInBackground`), without a terminal or an
+editor (`GIT_TERMINAL_PROMPT=0`, `GIT_EDITOR=true`, `GIT_SEQUENCE_EDITOR=true`: a commit settled on the way keeps its
+message). After it, HEAD is seen and git asked again; a stop at a conflict says where (`the rebase stopped at commit 1
+of 2: 1 file in conflict (src/sync/retry.ts)`) and opens the merge screen on its first file; a stop for another reason
+is said in git's words, with `shift+r`'s choices named; the end is said (`rebased: the rebase is done`), a merge screen
+of git's still open closed. In a vault not trusted, `gitArgs`'s guards hold — no hook runs (a rebase's `pre-rebase`, a
+merge's `pre-merge-commit`), no merge driver — and nothing is signed (`commit.gpgSign=false`); said.
+
 ## MODIFIED design/trust.md § What slipbox runs
 
 The git bullet adds, after the commit (GIT-T3): a push runs no hook — its pre-push neither — and isn't signed
@@ -195,6 +232,10 @@ which, and `:trust` lets it run. A git too old to say whose config it is (before
 And (GIT-T10): a merge from the git panel (Merge…) runs no hook and isn't signed (`commit.gpgSign=false`), a branch or
 a worktree made and a worktree removed run none either (`gitArgs`); a worktree made is checked out with no filter its
 attributes name, as every git command there (`--attr-source`).
+
+And (GIT-T6): a merge or a rebase — a pull's, a rebase onto the base, continuing, skipping or aborting one — runs no
+hook and isn't signed (`commit.gpgSign=false`) there either, and opens no editor anywhere (`GIT_EDITOR=true`): the
+repository's own `core.editor` names a program too.
 
 ## MODIFIED design/tui.md § Side panes ("Source control")
 

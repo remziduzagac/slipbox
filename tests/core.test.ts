@@ -79,6 +79,18 @@ import {
   toBase,
   withStages,
 } from "../src/core/conflicts.ts";
+import { checkoutOf } from "../src/core/git.ts";
+import {
+  abortLater,
+  aheadBehind,
+  continueLater,
+  operationOf,
+  operationText,
+  pullDefault,
+  rebaseLater,
+  skipLater,
+} from "../src/core/gitrebase.ts";
+import { pullLater } from "../src/core/gitremote.ts";
 import {
   compilePattern,
   expandReplacement,
@@ -5110,6 +5122,225 @@ describe("a file in conflict, read for the merge screen (GIT-D5)", () => {
       " z2",
       " z3",
     ]);
+  });
+});
+
+describe("a merge or a rebase under way, and a pull where both sides moved (GIT-D6)", () => {
+  const git = (cwd: string, ...args: string[]) =>
+    new TextDecoder()
+      .decode(
+        Bun.spawnSync(["git", "-c", "user.email=t@example.invalid", "-c", "user.name=t", "-C", cwd, ...args]).stdout,
+      )
+      .trim();
+  /** Nobody's git config but the test's while it runs, its commits made by the test; the environment put back. */
+  const isolated = async (run: () => Promise<void>) => {
+    const keys = [
+      "GIT_CONFIG_GLOBAL",
+      "GIT_CONFIG_NOSYSTEM",
+      "GIT_AUTHOR_NAME",
+      "GIT_AUTHOR_EMAIL",
+      "GIT_COMMITTER_NAME",
+      "GIT_COMMITTER_EMAIL",
+    ];
+    const was = Object.fromEntries(keys.map((k) => [k, process.env[k]]));
+    process.env.GIT_CONFIG_GLOBAL = "/dev/null";
+    process.env.GIT_CONFIG_NOSYSTEM = "1";
+    process.env.GIT_AUTHOR_NAME = process.env.GIT_COMMITTER_NAME = "t";
+    process.env.GIT_AUTHOR_EMAIL = process.env.GIT_COMMITTER_EMAIL = "t@example.invalid";
+    try {
+      await run();
+    } finally {
+      for (const [k, v] of Object.entries(was))
+        if (v === undefined) delete process.env[k];
+        else process.env[k] = v;
+    }
+  };
+  const commit = (root: string, file: string, text: string, message = `${file}: ${text.trim()}`) => {
+    writeFileSync(join(root, file), text);
+    git(root, "add", "-A");
+    git(root, "commit", "-q", "-m", message);
+  };
+  /** A branch behind main, both having changed the same line. */
+  const behind = () => {
+    const root = realpathSync(mkdtempSync(join(sandbox, "rebase-")));
+    git(root, "init", "-q", "-b", "main");
+    commit(root, "a.md", "one\ntwo\nthree\n");
+    commit(root, "b.md", "b\n");
+    git(root, "switch", "-q", "-c", "agent");
+    commit(root, "a.md", "one\nagent's two\nthree\n", "Agent: two");
+    commit(root, "b.md", "b, the agent's\n", "Agent: b");
+    git(root, "switch", "-q", "main");
+    commit(root, "a.md", "one\nmain's two\nthree\n", "Main: two");
+    git(root, "switch", "-q", "agent");
+    return root;
+  };
+
+  test("read from git's own files: a rebase's step and steps, its branch; a merge's other side; git am none", () => {
+    const dir = mkdtempSync(join(sandbox, "gitdir-"));
+    expect(operationOf({ gitDir: dir })).toBeNull();
+    mkdirSync(join(dir, "rebase-merge"));
+    writeFileSync(join(dir, "rebase-merge", "msgnum"), "2\n");
+    writeFileSync(join(dir, "rebase-merge", "end"), "5\n");
+    writeFileSync(join(dir, "rebase-merge", "head-name"), "refs/heads/agent/sync-retry\n");
+    const op = operationOf({ gitDir: dir })!;
+    expect(op).toEqual({ kind: "rebase", step: 2, total: 5, branch: "agent/sync-retry", merging: null });
+    expect(operationText(op)).toBe("rebasing 2/5");
+    rmSync(join(dir, "rebase-merge"), { recursive: true });
+    mkdirSync(join(dir, "rebase-apply"));
+    writeFileSync(join(dir, "rebase-apply", "next"), "1");
+    writeFileSync(join(dir, "rebase-apply", "last"), "3");
+    writeFileSync(join(dir, "rebase-apply", "head-name"), "detached HEAD");
+    expect(operationOf({ gitDir: dir })).toMatchObject({ step: 1, total: 3, branch: null });
+    // git am's: none of slipbox's.
+    writeFileSync(join(dir, "rebase-apply", "applying"), "");
+    expect(operationOf({ gitDir: dir })).toBeNull();
+    rmSync(join(dir, "rebase-apply"), { recursive: true });
+    writeFileSync(join(dir, "MERGE_HEAD"), "0123\n");
+    writeFileSync(join(dir, "MERGE_MSG"), "Merge branch 'main' of /tmp/origin into main\n");
+    const merge = operationOf({ gitDir: dir })!;
+    expect(merge).toMatchObject({ kind: "merge", merging: "main" });
+    expect(operationText(merge)).toBe("merging");
+    expect(operationText({ kind: "rebase", step: null, total: null, branch: null, merging: null })).toBe("rebasing");
+  });
+
+  test("a rebase stopped at its conflict, read; continued once settled; aborted; a commit skipped", async () => {
+    await isolated(async () => {
+      const root = behind();
+      const c = checkoutOf(root)!;
+      expect(aheadBehind(c, "main")).toEqual({ ahead: 2, behind: 1 });
+      expect(operationOf(c)).toBeNull();
+      const r = await rebaseLater(c, "main");
+      expect(r.ok).toBe(false);
+      expect(!r.ok && r.why).toContain("CONFLICT (content): Merge conflict in a.md");
+      expect(operationOf(c)).toEqual({ kind: "rebase", step: 1, total: 2, branch: "agent", merging: null });
+      // Settled and staged: continued, the message kept (no editor).
+      writeFileSync(join(root, "a.md"), "one\nboth twos\nthree\n");
+      git(root, "add", "a.md");
+      const done = await continueLater(c, operationOf(c)!);
+      expect(done.ok).toBe(true);
+      expect(operationOf(c)).toBeNull();
+      expect(git(root, "log", "--format=%s", "main..agent")).toBe("Agent: b\nAgent: two");
+    });
+  });
+
+  test("aborted: the branch where it was; skipped: the commit left out", async () => {
+    await isolated(async () => {
+      const root = behind();
+      const c = checkoutOf(root)!;
+      const was = git(root, "rev-parse", "HEAD");
+      await rebaseLater(c, "main");
+      expect((await abortLater(c, operationOf(c)!)).ok).toBe(true);
+      expect(operationOf(c)).toBeNull();
+      expect(git(root, "rev-parse", "HEAD")).toBe(was);
+      await rebaseLater(c, "main");
+      expect((await skipLater(c)).ok).toBe(true);
+      expect(git(root, "log", "--format=%s", "main..agent")).toBe("Agent: b");
+    });
+  });
+
+  test("not trusted, a rebase runs no hook; trusted, it does", async () => {
+    await isolated(async () => {
+      const root = behind();
+      const c = checkoutOf(root)!;
+      const mark = join(root, "..", `${root.split("/").pop()}-hook-ran`);
+      const hook = join(root, ".git", "hooks", "pre-rebase");
+      mkdirSync(join(root, ".git", "hooks"), { recursive: true });
+      writeFileSync(hook, `#!/bin/sh\ntouch '${mark}'\n`);
+      chmodSync(hook, 0o755);
+      await rebaseLater(c, "main");
+      expect(existsSync(mark)).toBe(false);
+      await abortLater(c, operationOf(c)!);
+      setTrust(root, "trusted");
+      try {
+        await rebaseLater(c, "main");
+        expect(existsSync(mark)).toBe(true);
+        await abortLater(c, operationOf(c)!);
+      } finally {
+        setTrust(root, null);
+      }
+    });
+  });
+
+  test("not trusted, nothing a rebase or a pull commits is signed: the repository's own signing program never runs", async () => {
+    await isolated(async () => {
+      const root = behind();
+      const c = checkoutOf(root)!;
+      // The repository's config asks for every commit signed, by a program of its own.
+      const mark = join(root, "..", `${root.split("/").pop()}-signer-ran`);
+      const signer = join(root, "..", `${root.split("/").pop()}-signer`);
+      writeFileSync(signer, `#!/bin/sh\ntouch '${mark}'\nexit 1\n`);
+      chmodSync(signer, 0o755);
+      git(root, "config", "commit.gpgSign", "true");
+      git(root, "config", "gpg.program", signer);
+      await rebaseLater(c, "main");
+      writeFileSync(join(root, "a.md"), "one\nboth twos\nthree\n");
+      git(root, "add", "a.md");
+      expect((await continueLater(c, operationOf(c)!)).ok).toBe(true);
+      expect(operationOf(c)).toBeNull();
+      expect(existsSync(mark)).toBe(false);
+      // A pull's merge commit likewise.
+      const bare = join(root, "..", `${root.split("/").pop()}-origin.git`);
+      const other = join(root, "..", `${root.split("/").pop()}-other`);
+      Bun.spawnSync(["git", "init", "-q", "--bare", "-b", "agent", bare]);
+      git(root, "remote", "add", "origin", bare);
+      git(root, "-c", "commit.gpgSign=false", "push", "-q", "-u", "origin", "agent");
+      Bun.spawnSync(["git", "clone", "-q", "-b", "agent", bare, other]);
+      commit(other, "c.md", "theirs\n");
+      git(other, "push", "-q");
+      git(root, "-c", "commit.gpgSign=false", "commit", "-q", "--allow-empty", "-m", "mine");
+      expect((await pullLater(c, "merge")).ok).toBe(true);
+      expect(git(root, "log", "-1", "--format=%P").split(" ").length).toBe(2);
+      expect(existsSync(mark)).toBe(false);
+    });
+  });
+
+  test("a merge stopped at its conflict: read, committed with its own message", async () => {
+    await isolated(async () => {
+      const root = behind();
+      const c = checkoutOf(root)!;
+      git(root, "switch", "-q", "main");
+      git(root, "merge", "-q", "agent");
+      expect(operationOf(c)).toMatchObject({ kind: "merge", merging: "agent" });
+      writeFileSync(join(root, "a.md"), "one\ntwo\nthree\n");
+      git(root, "add", "a.md");
+      expect((await continueLater(c, operationOf(c)!)).ok).toBe(true);
+      expect(git(root, "log", "-1", "--format=%s")).toBe("Merge branch 'agent'");
+    });
+  });
+
+  test("a pull where both moved: merged, or rebased; pull.rebase the default", async () => {
+    await isolated(async () => {
+      const top = realpathSync(mkdtempSync(join(sandbox, "pull-")));
+      const root = join(top, "work");
+      const bare = join(top, "origin.git");
+      const other = join(top, "other");
+      mkdirSync(root);
+      git(root, "init", "-q", "-b", "main");
+      commit(root, "a.md", "a\n");
+      Bun.spawnSync(["git", "init", "-q", "--bare", "-b", "main", bare]);
+      git(root, "remote", "add", "origin", bare);
+      git(root, "push", "-q", "-u", "origin", "main");
+      Bun.spawnSync(["git", "clone", "-q", bare, other]);
+      const c = checkoutOf(root)!;
+      expect(pullDefault(c, "main")).toBe("merge");
+      commit(other, "b.md", "theirs\n");
+      git(other, "push", "-q");
+      commit(root, "c.md", "mine\n");
+      expect((await pullLater(c)).ok).toBe(false);
+      const m = await pullLater(c, "merge");
+      expect(m.ok).toBe(true);
+      expect(git(root, "log", "-1", "--format=%P").split(" ").length).toBe(2);
+      git(root, "config", "pull.rebase", "true");
+      expect(pullDefault(c, "main")).toBe("rebase");
+      git(root, "config", "branch.main.rebase", "false");
+      expect(pullDefault(c, "main")).toBe("merge");
+      commit(other, "d.md", "theirs again\n");
+      git(other, "push", "-q");
+      commit(root, "e.md", "mine again\n");
+      expect((await pullLater(c, "rebase")).ok).toBe(true);
+      expect(git(root, "log", "-1", "--format=%P").split(" ").length).toBe(1);
+      expect(readFileSync(join(root, "d.md"), "utf8")).toBe("theirs again\n");
+    });
   });
 });
 

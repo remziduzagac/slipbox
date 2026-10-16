@@ -761,8 +761,9 @@ pointer says its own. `[keys.git]` changes them ([Configuration](configuration.m
 | `shift+c` | amend the last commit with what's staged |
 | `v` | review the changes not staged, one at a time (`:review`) |
 | `x` | the merge screen, on the file in conflict selected (`:resolve`) |
+| `shift+r` | rebase onto the base; while a merge or a rebase is under way, continue, skip or abort it (`:rebase`) |
 | `f` | fetch from the remote, in the background (`:fetch`) |
-| `p` | pull the upstream's new commits, fast-forward only, unsaved notes saved or kept first (`:pull`) |
+| `p` | pull the upstream's new commits, unsaved notes saved or kept first; where both sides moved, it asks (`:pull`) |
 | `shift+p` | push the branch to its upstream; with none, asks to push it to `origin` and track it (`:push`) |
 | `z` | the stashes: stash your changes with a message, or pop, apply or drop a stash (`:stash`) |
 | `n` | a new branch: its name, where it starts, and where it goes, in a new worktree by default |
@@ -940,10 +941,12 @@ Your configuration's [`[aliases]`](configuration.md) adds more commands, or rena
 | `:export-notes` | export notes as one document |
 | `:changes` / `:diff` | the branch's changed files / this note's diff, against the base |
 | `:worktrees` / `:merge-review` | the worktrees / the links a merge would break |
-| `:fetch` / `:pull` / `:push` | fetch, pull (fast-forward only) or push, as source control's `f`, `p` and `shift+p` |
+| `:fetch` / `:pull` / `:push` | fetch, pull or push, as source control's `f`, `p` and `shift+p` |
 | `:stash` | the stashes, as source control's `z` |
 | `:review` | review the changes not staged, one at a time, as source control's `v` |
 | `:resolve [file]` | the merge screen on a file in conflict: the one named, this note, or the first |
+| `:rebase` | rebase onto the base, or the merge or rebase under way's choices, as source control's `shift+r` |
+| `:continue` / `:skip` / `:abort` | continue the merge or rebase under way, skip the rebase's commit, or abort it |
 | `:folders` | the named folders, to pick one to go into |
 | `:folders-default` | which copy a named folder's links open |
 | `:name [new]` | name this folder, as pointers name it |
