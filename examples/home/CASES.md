@@ -2901,6 +2901,9 @@ The same notes, one per tab.
   a block added or removed whole once; `tab` its lines and back; `[git] diff` — `work/kestrel/docs/sync.md` (GIT's
   design.md Before and after (GIT-D2); tests 'a note's diff before and after, laid out', 'the diff window'; terminal
   check 'a diff marks a changed line's changed words' (tab))
+- a code file's diff side by side where each side has 80 columns, both sides scrolled sideways together by the cursor;
+  unified narrower; `[git] diff_layout` — `work/kestrel/src/sync/retry.ts` (GIT's design.md Side by side (GIT-D7);
+  tests 'a code file's diff side by side', 'the diff window')
 - `git.worktrees` — Open in another worktree — `work/kestrel/docs/architecture.md`, `work/product/prd/route-sharing.md`
   (command-specs.ts)
 - `git.merge_review` — Review a merge's links — `work/kestrel/docs/architecture.md`, `work/product/prd/route-sharing.md`
@@ -3092,6 +3095,8 @@ Wide tables and code blocks to edit in place.
 - `cell.problems` — The cell's problems — `work/kestrel/api/kestrel_api/half_written.py`, `notes/index.md`
   (command-specs.ts)
 - `cell.scratch` — Add the cell to the scratch — `work/kestrel/api/kestrel_api/app.py`, `notes/index.md`
+  (command-specs.ts)
+- `cell.fold_unchanged` — Fold the cells that didn't change — `work/kestrel/src/sync/retry.ts`, `notes/index.md`
   (command-specs.ts)
 - `ui.code_cells` — Code cells: boxes or bands — `work/kestrel/src/routes/RouteMap.tsx`, `notes/index.md`
   (command-specs.ts)

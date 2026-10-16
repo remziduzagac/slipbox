@@ -291,6 +291,8 @@ export function registerActions(app: App): void {
   };
   for (const action of ["fold", "edit", "copy", "references", "problems", "scratch"])
     impl[`cell.${action}`] = (a) => a.code.cellAction(action);
+  // The cells a change touched left open, the rest folded (GIT-D7).
+  impl["cell.fold_unchanged"] = (a) => a.code.foldUnchanged();
 
   for (const spec of COMMAND_SPECS) {
     const run = impl[spec.id];

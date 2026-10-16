@@ -1866,6 +1866,7 @@ describe("what manual/configuration.md promises", () => {
       ["files", "show", "all"],
       ["git", "signs_at", "window_right"],
       ["git", "diff", "source"],
+      ["git", "diff_layout", "split"],
       ["capture", "open_in", "right"],
     ];
     for (const [section, key, good] of keys) {

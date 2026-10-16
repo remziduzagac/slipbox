@@ -200,6 +200,10 @@ Each button in a cell's header is a key too. It acts on the cell at the cursor. 
 
 A cell folds whole. You can't fold part of one, such as an `if` or a loop.
 
+`space k d` folds every cell with no change against what's staged, and opens every cell with one. The changes are the
+lines the gutter marks ([Git](git.md#changed-lines-in-the-gutter)), so the file reads as which definitions changed. The
+cursor goes to the first changed cell. Press it again to open every cell.
+
 ### Moving and editing
 
 The cursor moves over the text of the cells, never their borders. The one exception is a folded cell's header, its one

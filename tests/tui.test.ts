@@ -14989,6 +14989,45 @@ describe("the diff window (GIT-D2)", () => {
     expect(h.app.messages.at(-1)?.text).toBe("a code file's diff is drawn as its lines: only a note's has blocks");
     expect(screen(h).some((r) => r.includes("+ const line2 = 22;"))).toBe(true);
   });
+
+  test("a code file's diff side by side where two columns of 80 fit, both sides scrolled sideways together; unified narrower", async () => {
+    const tail = ", and a tail long enough to go well past the edge of a column ninety wide, to its very end";
+    const from = code.replace("// line 17\n", `// line 17${tail}\n`);
+    const now = from.replace("const line18 = 18;", "const line18 = 180;");
+    const root = makeVault();
+    const h = await harness({ root, open: "index.md", width: 200, height: 40 });
+    h.app.git.showLineDiff(from, now, "x.ts", "x.ts: its change");
+    const row = (text: string) => screen(h).find((r) => r.includes(text)) ?? "";
+    // Side by side: the line removed beside the line it became.
+    expect(row("- const line18 = 18;")).toMatch(/- const line18 = 18; \/\/ line 18 +│ \+ const line18 = 180;/);
+    // The long line, on both sides: its end out of sight on each; `$` on it scrolls both, one offset.
+    expect(row("const line17")).not.toContain("its very end");
+    expect(row("const line17").match(/const line17/g)?.length).toBe(2);
+    await h.keys("j", "j", "j", "j"); // on line 17
+    await h.keys("$");
+    const scrolled = row("its very end");
+    expect(scrolled.match(/its very end/g)?.length).toBe(2);
+    expect(scrolled.match(/‹/g)?.length).toBe(2);
+    await h.keys("0");
+    expect(row("const line17").match(/const line17/g)?.length).toBe(2);
+    await h.keys("escape");
+    // [git] diff_layout: unified however wide; side by side however narrow.
+    h.app.config.git.diff_layout = "unified";
+    h.app.git.showLineDiff(from, now, "x.ts", "x.ts: its change");
+    expect([row("- const line18 = 18;").includes("│ +"), row("+ const line18 = 180;") !== ""]).toEqual([false, true]);
+    await h.keys("escape");
+    const narrow = await harness({ root, open: "index.md", width: 120, height: 40 });
+    narrow.app.git.showLineDiff(from, now, "x.ts", "x.ts: its change");
+    const narrowRow = (text: string) =>
+      narrow
+        .frame()
+        .split("\n")
+        .find((r) => r.includes(text)) ?? "";
+    expect(narrowRow("- const line18 = 18;")).not.toContain("+ const line18");
+    narrow.app.config.git.diff_layout = "split";
+    narrow.app.git.showLineDiff(from, now, "x.ts", "x.ts: its change");
+    expect(narrowRow("- const line18")).toContain("│ + const line18");
+  });
 });
 
 describe("lines inside a rendered paragraph (a regression)", () => {
@@ -18155,6 +18194,44 @@ describe("changes against what's staged, in the gutter (26.1)", () => {
     // The code block's rows: the blank line added is signed, the one it had isn't.
     expect(signs("aaa", 4)).toEqual([" ", "▎", " ", " "]);
     expect(c.styles[at("aaa") + 1]![x]!.fg).toBe(h.app.theme.roles.git_sign_add.fg!);
+  });
+
+  test("space k d folds the code view's cells that didn't change, those that did open, the cursor on the first; again, all open (GIT-D7)", async () => {
+    const fn = (name: string, n: number) => `export function ${name}(): number {\n  return ${n};\n}\n`;
+    const src = [fn("alpha", 1), fn("beta", 2), fn("gamma", 3), fn("delta", 4)].join("\n");
+    const root = repo({ "k.ts": src });
+    if (!root) return;
+    const h = await harness({ root, open: "k.ts", width: 100, height: 40 });
+    const v = h.app.view!;
+    for (let i = 0; i < 200 && v.buf.syntax?.version !== v.buf.version; i++) {
+      h.frame();
+      await Bun.sleep(10);
+    }
+    expect([h.app.isCodeDocument(v.buf), v.source ?? false]).toEqual([true, false]);
+    const cells = () => (h.app.currentLayout(v).cells ?? []).map((c) => c.title);
+    expect(cells()).toEqual(["alpha", "beta", "gamma", "delta"]);
+    v.buf.edit(src.indexOf("return 2"), "return 2".length, "return 22");
+    v.buf.edit(v.buf.source.indexOf("return 4"), "return 4".length, "return 44");
+    expect((await changes(h)).map((c) => c.from)).toEqual([6, 14]);
+    await h.keys("space", "k", "d");
+    expect([...v.buf.codeFolded].sort((a, b) => a - b)).toEqual([1, 9]);
+    expect(h.app.messages.at(-1)?.text).toBe("2 unchanged cells folded, 2 changed ones open; again, all open");
+    // Folded to their headers: their code gone, the changed ones' shown; the cursor in the first changed.
+    const frame = h.frame();
+    expect([frame.includes("return 1;"), frame.includes("return 22;"), frame.includes("return 44;")]).toEqual([
+      false,
+      true,
+      true,
+    ]);
+    expect(h.app.cursorLine(v)).toBeGreaterThanOrEqual(5);
+    expect(h.app.cursorLine(v)).toBeLessThanOrEqual(7);
+    await h.keys("space", "k", "d");
+    expect([v.buf.codeFolded.size, h.app.messages.at(-1)?.text]).toEqual([0, "every cell open"]);
+    // Nothing changed: nothing to fold around, said.
+    v.buf.edit(0, v.buf.source.length, src);
+    expect(await changes(h)).toEqual([]);
+    await h.keys("space", "k", "d");
+    expect(h.app.messages.at(-1)?.text).toBe("nothing changed against what's staged: nothing to fold");
   });
 });
 

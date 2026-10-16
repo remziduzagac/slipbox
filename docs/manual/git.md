@@ -685,7 +685,7 @@ It's drawn as the next section says.
 Every diff slipbox shows is drawn the same way: `:diff`, a file's diff from the git panel or `:changes`, a commit's
 diff to now from a file's history, and the differences the conflict prompt shows ([Editing](editing.md)). It opens in
 a floating window as wide as the screen allows. A note's diff opens as its blocks before and after. A code file's
-opens as its lines.
+opens as its lines, side by side when the window is wide enough.
 
 #### A note's diff: before and after
 
@@ -735,6 +735,20 @@ as its lines ([Configuration](configuration.md)).
   too wide does: move the cursor along the line (`$`, `0`, `w`), or use a sideways wheel or the wheel with `shift`
   held. A `‹` or `›` at an edge says the line goes on that way. With `render.code_wrap = "wrap"` the long lines wrap
   instead, and with wrapping off the whole window scrolls sideways.
+
+#### Side by side
+
+A code file's diff shows its two versions side by side when the window gives each side at least 80 columns: about 170
+columns of terminal. The version before is on the left and the one now on the right.
+
+- Each line sits beside the line it became. A changed line is beside the line most like it, its changed words marked
+  on both sides. A line removed or added sits beside a blank.
+- The unchanged lines are on both sides, and fold as they do in one column.
+- Both sides scroll sideways together, by the cursor, the wheel or the scrollbar. Each shows its own `‹` and `›`. With
+  `render.code_wrap = "wrap"` each side wraps in its own column.
+
+`git.diff_layout` chooses: `auto` (side by side where it fits), `unified` (always one column) or `split` (always side
+by side). A note's diff is never side by side.
 
 #### Going to a line
 

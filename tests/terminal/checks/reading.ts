@@ -1644,4 +1644,9 @@ export const READING: Check[] = [
   },
 ];
 
-export const LEFT_OUT_READING: LeftOut = {};
+export const LEFT_OUT_READING: LeftOut = {
+  commands: {
+    "cell.fold_unchanged":
+      "GIT's terminal checks come in one pass when the workstream is done; tests/tui.test.ts's 'space k d folds' runs it",
+  },
+};

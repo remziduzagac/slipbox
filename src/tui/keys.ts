@@ -251,6 +251,7 @@ export const DEFAULT_KEYS: Record<string, string> = {
   "leader k r": "cell.references",
   "leader k p": "cell.problems",
   "leader k s": "cell.scratch",
+  "leader k d": "cell.fold_unchanged",
   // scratch
   "leader s s": "scratch.open",
   "leader s r": "scratch.open_right",

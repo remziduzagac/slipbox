@@ -10,7 +10,7 @@ and GIT-T6; GIT-T7 any time after GIT-T1; GIT-T8 last.
 - [GIT-T4](archive/blocks-diff.md): A note's diff before and after. Done.
 - [GIT-T5](archive/merge-screen.md): The merge screen. Done.
 - [GIT-T6](archive/pull-rebase.md): Pulling where both sides moved, and rebasing onto the base. Done.
-- [GIT-T7](side-by-side.md): A code file's diff side by side, and its cells folded.
+- [GIT-T7](archive/side-by-side.md): A code file's diff side by side, and its cells folded. Done.
 - [GIT-T8](docs.md): The docs, the screenshots, and consolidation.
 - [GIT-T9](archive/panel.md): The git panel by mouse as by keys, and what the branch changed. Done.
 - [GIT-T10](archive/branches.md): Branches in the git panel, their worktrees and bases. Done.

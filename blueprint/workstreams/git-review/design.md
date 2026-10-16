@@ -91,6 +91,30 @@ diff (a file the walk reads as a note) in every window a diff opens in, unless `
   (`git.diff_view`, the diff window's own keymap, `DEFAULT_DIFF_KEYS`) switches between the blocks and the lines, the
   cursor on the first line's row at or after the line it was on; a code file's diff says it has only its lines.
 
+### Side by side, as built (GIT-T7)
+
+The text for tui.md § Git, after **Before and after**:
+
+**Side by side** (GIT-D7; `core/layout/splitdiff.ts` `layoutSplitDiff`): a code file's diff (anything not a note) where
+each side gets at least `SPLIT_MIN` (80) text columns — the window less, each side, a sign and a space before its text
+and a column after it (its `›`), and ` │ ` between (`splitColumns`) — unless `[git] diff_layout = "unified"`; `"split"`
+puts it side by side however narrow. `from` on the left, `to` on the right (`splitRows`): an unchanged line on both; in
+a run of changes, each removed line beside the added line it's paired with (the k-th paired of each), those paired with
+none beside each other in order, a side with no line blank. A changed side is on its sign's tint up to the rule, its
+changed words on the stronger. The heads and folds span both. Each row's `src` is the unified row it stands for (the
+right's, else the left's), so the window's text, `enter` and the folds are the unified diff's, and a resize between the
+two layouts keeps them.
+
+- **Scrolling:** both sides scroll by the one offset, as a code block's rows do (D233). A row's `scroll` (`CodeScroll`)
+  gains `right`: where its second text starts, after the first's `total` columns, padded, and what's fixed between;
+  that text is drawn `total - w` columns to the left as well as by the offset (`scrolledCol`, `scrolledInSight`,
+  `unscrolledCol` in `layout/ir.ts`), each text showing its own `‹` and `›`. The cursor stops on the texts up to the
+  right's end, and moving it reveals its side. With `[render] code_wrap = "wrap"` each side wraps in its column, `↪` on
+  its rows after the first; wrapping off, the rows are whole and the window scrolls.
+- **The code view's cells folded** (`cell.fold_unchanged`, `space k d`): every cell with no line changed against what's
+  staged (the gutter's signs, `26.1`) folds to its header and every one with one opens, the cursor on the first that
+  changed; with every unchanged cell folded already, every cell opens. A file with no change says so and folds nothing.
+
 ### The remote and stash, as built (GIT-T3)
 
 The text for § Git, after "Branches":
@@ -413,9 +437,10 @@ or dash at its ends, `branch` when nothing's left — `~` home, a relative path 
 your own config's alone (`USER_ONLY`: it says where slipbox makes folders, outside the vault). `[keys.git]`, the git
 panel's keymap, is a key table as `[keys.explorer]` is (GIT-T9).
 
-Built (GIT-T4): `[git] diff = "blocks" | "source"` (default `blocks`), in the manual's configuration chapter. A
-before-and-after frame's rules are in `git_sign_delete` and `git_sign_add`, its marked words in `diff_del_word` and
-`diff_add_word`, a block added or removed whole on `diff_add` or `diff_del`: no new roles.
+Built (GIT-T4, GIT-T7): `[git] diff = "blocks" | "source"` (default `blocks`) and `[git] diff_layout = "auto" |
+"unified" | "split"` (default `auto`), in the manual's configuration chapter. A before-and-after frame's rules are in
+`git_sign_delete` and `git_sign_add`, its marked words in `diff_del_word` and `diff_add_word`, a block added or removed
+whole on `diff_add` or `diff_del`: no new roles.
 
 ## MODIFIED design/tui.md § Keys
 

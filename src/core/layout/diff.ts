@@ -26,12 +26,12 @@ export interface DiffLayoutOptions {
 }
 
 /** What a changed line and its changed words are tinted with, by its sign. */
-const TINT: Record<"-" | "+", { line: Role; word: Role }> = {
+export const TINT: Record<"-" | "+", { line: Role; word: Role }> = {
   "-": { line: "diff_del", word: "diff_del_word" },
   "+": { line: "diff_add", word: "diff_add_word" },
 };
 
-interface Cell {
+export interface Cell {
   g: string;
   w: number;
   role: Role;
@@ -142,7 +142,12 @@ export function layoutScreen(parts: ScreenPart[], opts: DiffLayoutOptions): Layo
  * carries what it knows from line to line (front matter, a fence), so it reads the text whole; code is highlighted a
  * line at a time, so only the lines shown are.
  */
-function highlighted(text: string, wanted: number[], language: string | null, tabWidth: number): Map<number, Line> {
+export function highlighted(
+  text: string,
+  wanted: number[],
+  language: string | null,
+  tabWidth: number,
+): Map<number, Line> {
   const out = new Map<number, Line>();
   if (!wanted.length) return out;
   const opts = { width: 1, wrap: false, headings: [], language, tabWidth, slice: true };
@@ -164,7 +169,7 @@ function highlighted(text: string, wanted: number[], language: string | null, ta
 }
 
 /** A highlighted row's cells: on a changed line, each on the line's tint, its changed words on the stronger one. */
-function cellsOf(
+export function cellsOf(
   row: Line | undefined,
   words: WordRange[] | undefined,
   tint: { line: Role; word: Role } | null,
@@ -185,7 +190,7 @@ function cellsOf(
 }
 
 /** Cells as spans: a run of one role and tint, one span. */
-function spansOf(cells: Cell[]): Span[] {
+export function spansOf(cells: Cell[]): Span[] {
   const out: Span[] = [];
   for (const c of cells) {
     const last = out[out.length - 1];
@@ -196,7 +201,7 @@ function spansOf(cells: Cell[]): Span[] {
 }
 
 /** Cells in rows of at most `width` columns (a wide character never split). */
-function chunks(cells: Cell[], width: number): Cell[][] {
+export function chunks(cells: Cell[], width: number): Cell[][] {
   const out: Cell[][] = [[]];
   let w = 0;
   for (const c of cells) {

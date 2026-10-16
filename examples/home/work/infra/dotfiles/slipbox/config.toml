@@ -77,6 +77,7 @@ signs_at = "gutter_left"        # before the line numbers, away from the text
 bases = ["main", "release"]     # a branch made from release is measured against it, not main
 worktrees = "~/work/worktrees/{repo}/{branch}" # the agents' worktrees in one folder, not beside each repository
 diff = "source"                 # a note's diff as its lines; tab shows its blocks before and after
+diff_layout = "split"           # a code file's diff side by side, however narrow the window
 
 [search]
 engine = "index"
@@ -527,6 +528,7 @@ sidebar_vault = { bold = true, underline = true }
 "leader ; T d" = "cell.references"
 "leader ; T e" = "cell.problems"
 "leader ; T f" = "cell.scratch"
+"leader ; T g" = "cell.fold_unchanged"
 "leader ; D a" = "config.reload"
 "leader ; K a" = "messages.open"
 "leader ; H a" = "help.open"

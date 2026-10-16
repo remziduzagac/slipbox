@@ -6,10 +6,11 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { glyphsFor } from "../src/core/glyphs.ts";
 import { layoutToAnsi } from "../src/core/layout/ansi.ts";
-import { A_BOLD, type Layout, type Line } from "../src/core/layout/ir.ts";
+import { A_BOLD, type Layout, type Line, scrolledCol, scrolledInSight, unscrolledCol } from "../src/core/layout/ir.ts";
 import { blockDiff } from "../src/core/blockdiff.ts";
 import { layoutBlockDiff } from "../src/core/layout/blockdiff.ts";
 import { layoutDiff } from "../src/core/layout/diff.ts";
+import { layoutSplitDiff, splitColumns, splitRows } from "../src/core/layout/splitdiff.ts";
 import { diffView } from "../src/core/merge.ts";
 import { type PictureSource, renderMarkdown, renderTree } from "../src/core/layout/render.ts";
 import { dataLinks, parseData } from "../src/core/data.ts";
@@ -1671,5 +1672,86 @@ describe("a note's diff before and after, laid out (GIT-D2)", () => {
       "after: the rules (diff_add_word)",
       "after: The (diff_add_word)",
     ]);
+  });
+});
+
+describe("a code file's diff side by side (GIT-D7)", () => {
+  const code = `${Array.from({ length: 20 }, (_, i) => `const line${i + 1} = ${i + 1}; // line ${i + 1}`).join("\n")}\n`;
+  const now = code
+    .replace("const line2 = 2;", "const line2 = 22;")
+    .replace("const line4 = 4; // line 4\n", "")
+    .replace("// line 6\n", "// line 6\nconst inserted = true;\n");
+  const split = (to: string, o: Partial<Parameters<typeof layoutSplitDiff>[3]> = {}) =>
+    layoutSplitDiff(diffView(code, to), code, to, {
+      width: 200,
+      glyphs: unicode,
+      language: "typescript",
+      wrap: true,
+      codeScroll: true,
+      ...o,
+    });
+  const rowText = (r: Line) => r.spans.map((s) => s.text).join("");
+
+  test("each line beside the one it became: a changed line beside its pair, the unpaired beside nothing, the heads across", () => {
+    const l = split(now);
+    const rows = l.lines.map((r) => rowText(r).replace(/ {2,}/g, "  ").trimEnd());
+    expect(rows.slice(0, 9)).toEqual([
+      "@@ line 2",
+      "  const line1 = 1; // line 1  │  const line1 = 1; // line 1",
+      "- const line2 = 2; // line 2  │ + const line2 = 22; // line 2",
+      "  const line3 = 3; // line 3  │  const line3 = 3; // line 3",
+      "- const line4 = 4; // line 4  │",
+      "  const line5 = 5; // line 5  │  const line5 = 5; // line 5",
+      "  const line6 = 6; // line 6  │  const line6 = 6; // line 6",
+      "  │ + const inserted = true;",
+      "  const line7 = 7; // line 7  │  const line7 = 7; // line 7",
+    ]);
+    // Two columns of (200 - 8) / 2: the rule after the left's, the right's sign after it.
+    expect(splitColumns(200)).toBe(96);
+    const pair = l.lines.find((r) => rowText(r).startsWith("- const line2"))!;
+    expect(rowText(pair).indexOf("│")).toBe(2 + 96 + 1);
+    expect(rowText(pair).indexOf("+ const")).toBe(2 + 96 + 3);
+    // Each side on its sign's tint, its changed words more strongly; `enter` there goes to the added line.
+    const bgOf = (piece: string) => pair.spans.find((s) => s.text.trim() === piece)?.bg;
+    expect([bgOf("-"), bgOf("2"), bgOf("+"), bgOf("22")]).toEqual([
+      "diff_del",
+      "diff_del_word",
+      "diff_add",
+      "diff_add_word",
+    ]);
+    expect(splitRows(diffView(code, now))[2]).toEqual({ left: 2, right: 3, unit: 3 });
+    expect(pair.src).toBe(4);
+  });
+
+  test("a line too long for its side scrolls, both sides by the one offset; wrapped, each side in its column", () => {
+    const tail = ", and a tail long enough to go well past the edge of a column ninety-six wide, to the end";
+    const long = now.replace("// line 18\n", `// line 18${tail}\n`);
+    const l = split(long);
+    const total = stringWidth(`const line18 = 18; // line 18${tail}`);
+    const row = l.lines.find((r) => rowText(r).includes("line 18,"))!;
+    // Whole: the right's text after the left's, padded to the widest; one block, the heads fixed, a row for its bar.
+    expect(row.scroll).toEqual({ x: 2, w: 96, total, right: 2 + total + 5 });
+    expect(rowText(row).indexOf("+ const line18")).toBe(2 + total + 3);
+    expect(l.lines.find((r) => rowText(r).startsWith("@@"))!.scroll?.part).toBe("top");
+    expect(l.lines.at(-1)).toMatchObject({ decor: true, scroll: { part: "bar" } });
+    // Where a column is drawn: the right's text `total - w` to the left, both texts less the offset.
+    const s = row.scroll!;
+    expect([scrolledCol(s, 2, 0), scrolledCol(s, s.right!, 0), scrolledCol(s, s.right!, 10)]).toEqual([
+      2,
+      2 + 96 + 5,
+      2 + 96 + 5 - 10,
+    ]);
+    expect([
+      scrolledInSight(s, 2 + 96, 0),
+      scrolledInSight(s, 2 + 96, 10),
+      scrolledInSight(s, s.right! + 5, 10),
+    ]).toEqual([false, true, false]);
+    expect(unscrolledCol(s, 2 + 96 + 5 + 3, 10)).toBe(s.right! + 13);
+    expect(unscrolledCol(s, 2 + 96 + 1, 10)).toBe(2 + total + 1); // the rule, fixed
+    // `[render] code_wrap = "wrap"`: each side wraps in its own column, the other's rows blank.
+    const wrapped = split(long, { codeScroll: false });
+    const at = wrapped.lines.findIndex((r) => rowText(r).includes("line 18,"));
+    expect(rowText(wrapped.lines[at + 1]!)).toMatch(/^ {98} │ ↪ /);
+    expect(wrapped.lines.every((r) => stringWidth(rowText(r)) <= 200)).toBe(true);
   });
 });

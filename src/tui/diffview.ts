@@ -1,10 +1,11 @@
-// The diff window (GIT-D2): one way of drawing a diff for every window that shows one — `space g d`, a file's diff from
-// `space g c`'s list, a history entry's diff to now, the conflict prompt's (D)iff. In the floating window. A note's
-// opens as its changed blocks before and after (`[git] diff`), `tab` switching to its lines and back. The lines: a row
-// a line, `-` or `+` in its gutter, highlighted by the file's language, a changed line's changed words tinted; each
-// group under its `@@ line N`, the unchanged stretches folded. A long line scrolls sideways as a code block does
-// (D233): the cursor, a sideways wheel or `shift` with the wheel. `enter` on a fold opens it; on a line, goes there (or
-// back, where the window has nowhere to go); `esc` goes back where it came from.
+// The diff window (GIT-D2, GIT-D7): one way of drawing a diff for every window that shows one — `space g d`, a file's
+// diff from `space g c`'s list, a history entry's diff to now, the conflict prompt's (D)iff. In the floating window. A
+// note's opens as its changed blocks before and after (`[git] diff`), `tab` switching to its lines and back; a code
+// file's is its lines, side by side where each side has 80 columns (`[git] diff_layout`). The lines: a row a line, `-`
+// or `+` in its gutter, highlighted by the file's language, a changed line's changed words tinted; each group under its
+// `@@ line N`, the unchanged stretches folded. A long line scrolls sideways as a code block does (D233): the cursor, a
+// sideways wheel or `shift` with the wheel; side by side, both sides together. `enter` on a fold opens it; on a line,
+// goes there (or back, where the window has nowhere to go); `esc` goes back where it came from.
 
 import { isAbsolute, join } from "node:path";
 import { type BlockDiff, blockDiff } from "../core/blockdiff.ts";
@@ -13,6 +14,7 @@ import { indentFor } from "../core/indent.ts";
 import { layoutBlockDiff } from "../core/layout/blockdiff.ts";
 import { diffText, layoutDiff } from "../core/layout/diff.ts";
 import type { Layout } from "../core/layout/ir.ts";
+import { layoutSplitDiff, SPLIT_MIN, splitColumns } from "../core/layout/splitdiff.ts";
 import { type DiffViewRow, diffView } from "../core/merge.ts";
 import { TOP } from "../core/position.ts";
 import { readerFor } from "../core/readers.ts";
@@ -91,7 +93,10 @@ export function openDiff(app: App, d: DiffRequest): void {
   buf.readOnly = "the floating window is read-only";
   let made: { key: string; layout: Layout } | null = null;
   buf.drawn = (width, how) => {
-    const mode = w.blocks?.on ? "blocks" : "lines";
+    // A code file's side by side where each side has its columns, or as `[git] diff_layout` says.
+    const layout = app.config.git.diff_layout;
+    const split = !w.blocks && (layout === "split" || (layout === "auto" && splitColumns(width) >= SPLIT_MIN));
+    const mode = w.blocks?.on ? "blocks" : split ? "split" : "lines";
     const key = `${mode}:${width}:${how.glyphs.mode}:${how.wrap}:${how.codeScroll}:${buf.version}`;
     if (made?.key !== key) {
       const opts = { width, language, tabWidth, ...how };
@@ -99,7 +104,9 @@ export function openDiff(app: App, d: DiffRequest): void {
         key,
         layout: w.blocks?.on
           ? layoutBlockDiff(w.blocks.diff, { width, glyphs: how.glyphs, tabWidth })
-          : layoutDiff(w.rows, w.before, w.now, opts),
+          : split
+            ? layoutSplitDiff(w.rows, w.before, w.now, opts)
+            : layoutDiff(w.rows, w.before, w.now, opts),
       };
     }
     return made.layout;

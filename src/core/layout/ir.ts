@@ -78,6 +78,40 @@ export interface CodeScroll {
   w: number;
   total: number;
   part?: "top" | "bar";
+  /**
+   * A second text on the row, scrolled by the same offset (a code file's diff side by side, GIT-D7): its column, past
+   * the first's `total` columns and what's fixed after them. It's drawn `total - w` columns to the left of where it's
+   * laid out, as the fixed part between is.
+   */
+  right?: number;
+}
+
+/**
+ * Where layout column `col` of a row that scrolls is drawn, `off` its block's offset: before `x` where it is; in its
+ * text (from `x`, and from `right`) `off` columns to the left; between a side by side row's two texts, `total - w`
+ * columns to the left, as its second text is, besides.
+ */
+export function scrolledCol(s: CodeScroll, col: number, off: number): number {
+  if (s.part || col < s.x) return col;
+  if (s.right === undefined || col < s.x + s.total) return col - off;
+  return col - (s.total - s.w) - (col < s.right ? 0 : off);
+}
+
+/** Whether layout column `col` of a row that scrolls is in sight, `off` its block's offset: what's fixed is; a text's
+ *  column is when it's among the `w` shown from its offset. */
+export function scrolledInSight(s: CodeScroll, col: number, off: number): boolean {
+  if (s.part || col < s.x) return true;
+  const start = s.right !== undefined && col >= s.right ? s.right : s.x;
+  if (start === s.x && s.right !== undefined && col >= s.x + s.total) return true;
+  return col - start >= off && col - start < off + s.w;
+}
+
+/** The layout column drawn at screen column `col` of a row that scrolls (`scrolledCol`'s inverse). */
+export function unscrolledCol(s: CodeScroll, col: number, off: number): number {
+  if (s.part || col < s.x) return col;
+  if (s.right === undefined || col < s.x + s.w) return col + off;
+  const gap = s.total - s.w;
+  return col < s.right - gap ? col + gap : col + gap + off;
 }
 
 /** A picture drawn in a note (12.x): its file (absolute), and the cells it takes. */

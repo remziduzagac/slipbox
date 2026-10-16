@@ -160,6 +160,8 @@ export interface Config {
     worktrees: string;
     /** How a note's diff opens (GIT-D2): its changed blocks before and after, or its lines; `tab` switches. */
     diff: "blocks" | "source";
+    /** A code file's diff (GIT-D7): side by side where each side has 80 columns (`auto`), always, or never. */
+    diff_layout: "auto" | "unified" | "split";
   };
   /** Search (6.x): `auto`, the index when it's built, else a scan of the files; `index`, the index
    *  (built first when there's none); `scan`, the files every time (no index kept). */
@@ -350,6 +352,7 @@ export const DEFAULT_CONFIG: Config = {
     bases: ["main"],
     worktrees: "{parent}/{repo}-{branch}",
     diff: "blocks",
+    diff_layout: "auto",
   },
   search: { engine: "auto" },
   index: { background: true, idle_seconds: 30 },
@@ -411,6 +414,7 @@ const ENUMS: Record<string, readonly string[]> = {
   "capture.open_in": ["float", "right"],
   "git.signs_at": ["gutter_left", "gutter_right", "window_right"],
   "git.diff": ["blocks", "source"],
+  "git.diff_layout": ["auto", "unified", "split"],
   "lint.enabled": ["auto", "on", "off"],
   "search.engine": ["auto", "index", "scan"],
   "diagnostics.bar": ["auto", "on", "off"],

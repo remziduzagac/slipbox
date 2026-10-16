@@ -729,6 +729,7 @@ Each button has a key, which acts on the cell at the cursor.
 | `space k r` | where the cell's definition is used, from its language server | `⇢` |
 | `space k p` | the cell's problems, in the Problems panel on the first | `⚠` and a count |
 | `space k s` | add the cell to the scratch, with its path and lines | `◎` |
+| `space k d` | fold the cells with no change against what's staged, open the others; again, open them all | |
 
 ## Git: `space g`
 
@@ -749,7 +750,7 @@ A diff opens in a floating window ([How a diff is drawn](git.md#how-a-diff-is-dr
 | --- | --- |
 | `tab` | a note's diff: switch between its blocks before and after and its lines |
 | `enter` | on a fold, show the lines it holds; on a line, go to it in the file |
-| `$` / `0` | to a long line's end or start, the rows scrolling sideways |
+| `$` / `0` | to a long line's end or start, the rows scrolling sideways (both sides of a diff side by side) |
 | `esc`, `q` | close it, back to the panel, the list or the question it came from |
 
 ### Inside the git panel
