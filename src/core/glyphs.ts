@@ -150,6 +150,23 @@ export interface Glyphs {
   cellCopy: string;
   cellRefs: string;
   cellScratch: string;
+  /**
+   * The git panel's (GIT-D8, GIT-D9): a branch here, one checked out in a worktree, a worktree's uncommitted files,
+   * something to review, merged; a row's buttons — stage, unstage, discard, its diff — and a button's: commit, fetch.
+   */
+  git: {
+    here: string;
+    worktree: string;
+    edited: string;
+    review: string;
+    merged: string;
+    stage: string;
+    unstage: string;
+    discard: string;
+    diff: string;
+    commit: string;
+    fetch: string;
+  };
 }
 
 const unicode: Glyphs = {
@@ -260,6 +277,19 @@ const unicode: Glyphs = {
   cellCopy: "⧉",
   cellRefs: "⇢",
   cellScratch: "◎",
+  git: {
+    here: "●",
+    worktree: "⎇",
+    edited: "✎",
+    review: "◆",
+    merged: "✓",
+    stage: "+",
+    unstage: "−",
+    discard: "↺",
+    diff: "⧉",
+    commit: "✓",
+    fetch: "⟳",
+  },
 };
 
 const nerd: Glyphs = {
@@ -415,6 +445,19 @@ const ascii: Glyphs = {
   cellCopy: "c",
   cellRefs: "r",
   cellScratch: "s",
+  git: {
+    here: "*",
+    worktree: "&",
+    edited: "~",
+    review: "!",
+    merged: "=",
+    stage: "+",
+    unstage: "-",
+    discard: "x",
+    diff: "d",
+    commit: "*",
+    fetch: "@",
+  },
 };
 
 const SETS = { unicode, nerd, ascii };

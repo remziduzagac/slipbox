@@ -73,6 +73,11 @@ export class Input {
       }
       return;
     }
+    // Into the git panel's message box, while it's typed in: every line of it.
+    if (!o && this.app.region === "sidebar" && this.app.leftView === "git" && this.app.gitPanel.typing) {
+      this.app.gitPanel.message += sanitize(text.replace(/\r\n?/g, "\n"));
+      return;
+    }
     const line = sanitize(text.replace(/\r\n?/g, "\n").split("\n")[0] ?? "");
     if (!line) return;
     if (!o) {
@@ -173,16 +178,16 @@ export class Input {
     }[] = [];
     // A pane's own actions carry their titles (which-key says "New note here", as help does).
     if (this.app.region === "sidebar" && this.app.panels.sidebarShown)
-      out.push({
-        map: this.app.explorerKeys,
-        run: (a) => this.app.explorer.action(a),
-        info:
-          this.app.leftView === "history"
-            ? HISTORY_ACTION_INFO
-            : this.app.leftView === "git"
-              ? GIT_ACTION_INFO
-              : EXPLORER_ACTION_INFO,
-      });
+      out.push(
+        // The git panel's own keys (GIT-D12); the history takes the explorer's, read its way.
+        this.app.leftView === "git"
+          ? { map: this.app.gitKeys, run: (a) => this.app.gitPanel.action(a), info: GIT_ACTION_INFO }
+          : {
+              map: this.app.explorerKeys,
+              run: (a) => this.app.explorer.action(a),
+              info: this.app.leftView === "history" ? HISTORY_ACTION_INFO : EXPLORER_ACTION_INFO,
+            },
+      );
     if (this.app.region === "problems" && this.app.problems.panel.shown)
       out.push({
         map: this.app.problemsKeys,
@@ -297,6 +302,15 @@ export class Input {
       !this.app.pending.length
     )
       return this.app.panels.filterKey(key);
+    // The git panel's message box, typed in (GIT-D8).
+    if (
+      this.app.region === "sidebar" &&
+      this.app.panels.sidebarShown &&
+      this.app.leftView === "git" &&
+      this.app.gitPanel.typing &&
+      !this.app.pending.length
+    )
+      return this.app.gitPanel.messageKey(key);
     if (
       this.app.region === "outline" &&
       this.app.panels.outlineShown &&

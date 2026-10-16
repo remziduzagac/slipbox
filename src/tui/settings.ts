@@ -14,6 +14,7 @@ import { setTrustedRoots } from "../core/trust.ts";
 import {
   DEFAULT_ALIASES,
   DEFAULT_EXPLORER_KEYS,
+  DEFAULT_GIT_KEYS,
   DEFAULT_GROUPS,
   DEFAULT_KEYS,
   DEFAULT_OUTLINE_KEYS,
@@ -26,6 +27,7 @@ import {
   DEFAULT_VISUAL_KEYS,
   DEFAULT_SOURCE_KEYS,
   EXPLORER_ACTIONS,
+  GIT_ACTIONS,
   OUTLINE_ACTIONS,
   RESIZE_ACTIONS,
   parseGroup,
@@ -63,11 +65,12 @@ export class Settings {
       );
     }
     this.app.leader = leader;
-    const { visual, explorer, outline, footnotes, info, resize, source, ...normal } = c.keys;
+    const { visual, explorer, git, outline, footnotes, info, resize, source, ...normal } = c.keys;
     this.app.keymap = new Keymap(DEFAULT_KEYS, normal as Record<string, string>, this.app.leader);
     this.app.visualKeys = new Keymap(DEFAULT_VISUAL_KEYS, visual ?? {}, this.app.leader);
     this.app.sourceKeys = new Keymap(DEFAULT_SOURCE_KEYS, source ?? {}, this.app.leader);
     this.app.explorerKeys = new Keymap(DEFAULT_EXPLORER_KEYS, explorer ?? {}, this.app.leader);
+    this.app.gitKeys = new Keymap(DEFAULT_GIT_KEYS, git ?? {}, this.app.leader);
     this.app.problemsKeys = new Keymap(
       { ...DEFAULT_EXPLORER_KEYS, tab: "switch", "shift+tab": "switch" },
       explorer ?? {},
@@ -96,7 +99,7 @@ export class Settings {
       if (!ids.has(v.split(" ")[0]!)) this.app.message("warn", `config: [aliases] ${a} = unknown command "${v}"`);
     // Keys with a modifier slipbox doesn't know can never be pressed: say so.
     const tables: [string, Record<string, unknown>][] = [["keys", c.keys as Record<string, unknown>]];
-    for (const sub of ["visual", "source", "explorer", "outline", "footnotes", "info", "resize"]) {
+    for (const sub of ["visual", "source", "explorer", "git", "outline", "footnotes", "info", "resize"]) {
       const t = (c.keys as Record<string, unknown>)[sub];
       if (t && typeof t === "object") tables.push([`keys.${sub}`, t as Record<string, unknown>]);
     }
@@ -113,6 +116,7 @@ export class Settings {
     // The in-pane keymaps name actions, not commands: check them against their own lists.
     const panes: [string, Keymap, readonly string[]][] = [
       ["keys.explorer", this.app.explorerKeys, EXPLORER_ACTIONS],
+      ["keys.git", this.app.gitKeys, GIT_ACTIONS],
       ["keys.outline", this.app.outlineKeys, OUTLINE_ACTIONS],
       ["keys.footnotes", this.app.footnoteKeys, FOOTNOTE_ACTIONS],
       ["keys.info", this.app.infoKeys, INFO_ACTIONS],

@@ -34,7 +34,9 @@ export function drawStatus(app: App, c: Canvas, band: Band, geo: Geometry): void
           : view?.visual === "line"
             ? " V-LINE "
             : app.region === "sidebar"
-              ? " FILES "
+              ? app.leftView === "git"
+                ? " GIT "
+                : " FILES "
               : app.region === "problems"
                 ? " PROBLEMS "
                 : app.region === "outline"
@@ -97,7 +99,21 @@ export function drawStatus(app: App, c: Canvas, band: Band, geo: Geometry): void
   // Where the file is (21.9), in the room the path leaves it — at most 40 columns.
   const rootRoom = Math.min(40, c.width - x - rightW - 4 - 24);
   const vault = rootRoom >= 8 ? app.git.vaultStatus(rootRoom) : "";
-  if (vault) x += drawText(c, x, y, `${sanitize(vault)}  `, { ...roleStyle(theme, "status_dim", st.bg), bg: st.bg });
+  if (vault) {
+    // In a repository, clicked: the branches, pull and push (GIT-D8).
+    const id = app.git.checkout ? "status:branch" : null;
+    const w = drawText(
+      c,
+      x,
+      y,
+      sanitize(vault),
+      id && app.mouse.hover === id
+        ? roleStyle(theme, "hover", st.bg)
+        : { ...roleStyle(theme, "status_dim", st.bg), bg: st.bg },
+    );
+    if (id) geo.hot.push({ id, x, y: band.y, w, h: band.h });
+    x += w + drawText(c, x + w, y, "  ", { ...roleStyle(theme, "status_dim", st.bg), bg: st.bg });
+  }
   const pathId = "status:path";
   // The path shrinks to leave room for its marker (reloaded / deleted) and the right-hand side;
   // the watch marker after it is dropped when it doesn't fit.

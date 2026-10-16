@@ -257,7 +257,7 @@ export interface Config {
   };
   /**
    * key sequence → command spec, e.g. `"leader l n" = "link.next"`; `""` unbinds a default.
-   * Sub-tables `visual`, `source`, `explorer`, `outline`, `footnotes`, `info` and `resize` hold the
+   * Sub-tables `visual`, `source`, `explorer`, `git`, `outline`, `footnotes`, `info` and `resize` hold the
    * keymaps of those contexts.
    */
   keys: Record<string, string> & {
@@ -265,6 +265,8 @@ export interface Config {
     /** Source mode's own keys, before the reading ones (`x` deletes a character there). */
     source?: Record<string, string>;
     explorer?: Record<string, string>;
+    /** The git panel's own keys (GIT-D12): staging, discarding, committing, the remote's, the branches'. */
+    git?: Record<string, string>;
     outline?: Record<string, string>;
     /** The footnotes view's own keys (3.18): the outline's, and a / e / d / r. */
     footnotes?: Record<string, string>;
@@ -760,10 +762,11 @@ function merge<T>(base: T, over: Record<string, unknown>, file: string, prefix: 
       prefix === "aliases" ||
       prefix === "groups" ||
       prefix === "spell.dictionaries" ||
-      /^keys\.(visual|source|explorer|outline|footnotes|info|resize)$/.test(prefix)
+      /^keys\.(visual|source|explorer|git|outline|footnotes|info|resize)$/.test(prefix)
     ) {
       const table =
-        prefix === "keys" && ["visual", "source", "explorer", "outline", "footnotes", "info", "resize"].includes(key);
+        prefix === "keys" &&
+        ["visual", "source", "explorer", "git", "outline", "footnotes", "info", "resize"].includes(key);
       if (table && !isPlainObject(value))
         warnings.push(`config: ${file}: ${path} must be a table of key = "command" (a mode's own keys)`);
       else if (typeof value === "string") out[key] = renewed(prefix, value);

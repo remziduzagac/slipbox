@@ -1,0 +1,252 @@
+// The git panel (GIT-D8): its message box, its buttons and rows by mouse, its footer, what the branch changed — on an
+// App drawn to a text canvas, driven by keys and by the mouse's events, as the terminal sends them to it.
+
+import { afterAll, describe, expect, test } from "bun:test";
+import { spawnSync } from "node:child_process";
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { canonKey } from "../src/core/commands.ts";
+import { DEFAULT_CONFIG } from "../src/core/config.ts";
+import { openGraph } from "../src/core/graph.ts";
+import { locateVault } from "../src/core/vault.ts";
+import { App, type ListOverlay } from "../src/tui/app.ts";
+import { TextCanvas } from "../src/tui/canvas.ts";
+import { pointedAt } from "../src/tui/gitmouse.ts";
+
+const sandbox = mkdtempSync(join(tmpdir(), "slipbox-gitpanel-"));
+const saved = { ...process.env };
+process.env.XDG_STATE_HOME = join(sandbox, "state");
+process.env.XDG_CACHE_HOME = join(sandbox, "cache");
+process.env.XDG_CONFIG_HOME = join(sandbox, "config");
+process.env.XDG_DATA_HOME = join(sandbox, "data");
+process.env.SLIPBOX_CLIPBOARD = "file";
+delete process.env.SLIPBOX_CONFIG;
+afterAll(() => {
+  for (const k of ["XDG_STATE_HOME", "XDG_CACHE_HOME", "XDG_CONFIG_HOME", "XDG_DATA_HOME", "SLIPBOX_CLIPBOARD"])
+    if (saved[k] === undefined) delete process.env[k];
+    else process.env[k] = saved[k];
+  rmSync(sandbox, { recursive: true, force: true });
+});
+
+const git = (cwd: string, ...args: string[]) =>
+  spawnSync("git", ["-c", "user.email=t@example.invalid", "-c", "user.name=t", "-C", cwd, ...args], {
+    encoding: "utf8",
+  }).stdout;
+
+/** A repository of two notes, committed on main; `feature` a branch with a commit of its own, checked out. */
+function repo(): string {
+  const root = mkdtempSync(join(sandbox, "repo-"));
+  mkdirSync(join(root, ".slipbox"));
+  writeFileSync(join(root, ".gitignore"), ".slipbox/\n");
+  writeFileSync(join(root, "a.md"), "# A\n\none\n");
+  writeFileSync(join(root, "b.md"), "# B\n");
+  git(root, "init", "-q", "-b", "main");
+  // Who commits from the app: git won't without a name.
+  git(root, "config", "user.email", "t@example.invalid");
+  git(root, "config", "user.name", "t");
+  git(root, "add", "-A");
+  git(root, "commit", "-q", "-m", "start");
+  git(root, "switch", "-q", "-c", "feature");
+  writeFileSync(join(root, "c.md"), "# C\n");
+  git(root, "add", "c.md");
+  git(root, "commit", "-q", "-m", "c");
+  return root;
+}
+
+const until = async (ok: () => boolean, ms = 10_000) => {
+  for (const t = Date.now(); !ok() && Date.now() - t < ms; ) await Bun.sleep(20);
+  return ok();
+};
+
+/** The app on `root`, `open` open, the git panel open and focused (unless `show` is false), git's answer in. */
+async function panel(root: string, open: string | null = "a.md", show = true) {
+  const config = structuredClone(DEFAULT_CONFIG);
+  config.ui.restore_session = false;
+  config.lint.enabled = "off";
+  config.search.engine = "scan";
+  config.index.background = false;
+  config.render.glyphs = "unicode";
+  config.ui.sidebar_width = 44;
+  const loc = locateVault({ root });
+  const app = new App({
+    loc,
+    config,
+    graph: openGraph(loc, config, false),
+    host: { requestRender() {}, osc52: () => true, quit: () => {}, fetch: () => Promise.reject(new Error("no")) },
+    open,
+    watch: false,
+  });
+  const frame = () => {
+    const c = new TextCanvas(140, 40);
+    app.draw(c);
+    return c.toString();
+  };
+  const keys = async (...ks: string[]) => {
+    for (const k of ks) {
+      await app.input.handleKey(canonKey(k));
+      frame();
+    }
+  };
+  /** A click where the last frame drew the hot region `id`: SGR's press and release, button 0 (2 the right one). */
+  const click = (id: string, button = 0) => {
+    frame();
+    const h = app.geometry!.hot.find((x) => x.id === id);
+    expect(h).toBeDefined();
+    app.mouse.handle({ type: "down", x: h!.x, y: h!.y, button });
+    app.mouse.handle({ type: "up", x: h!.x, y: h!.y, button });
+    frame();
+  };
+  if (show) await app.run("git.view");
+  await app.git.refreshNow();
+  frame();
+  return { app, frame, keys, click };
+}
+
+/** The panel's row of a kind and label (or a file's path), by its index. */
+const rowOf = (app: App, test: (r: ReturnType<App["gitPanel"]["rows"]>[number]) => boolean) =>
+  app.gitPanel.rows().findIndex(test);
+
+describe("the git panel by mouse as by keys (GIT-D8)", () => {
+  test("the message box: i types in it, ctrl+enter commits what's staged with it, and it's empty again", async () => {
+    const root = repo();
+    writeFileSync(join(root, "a.md"), "# A\n\ntwo\n");
+    git(root, "add", "a.md");
+    const { app, keys, frame } = await panel(root);
+    expect(frame()).toContain("ctrl+enter commits");
+    await keys("i", ..."Say two".split("").map((c) => (c === " " ? "space" : c)));
+    expect([app.gitPanel.typing, app.gitPanel.message]).toEqual([true, "Say two"]);
+    expect(frame()).toContain("Say two");
+    await keys("ctrl+enter");
+    expect(await until(() => git(root, "log", "-1", "--format=%s").trim() === "Say two")).toBe(true);
+    expect(await until(() => app.gitPanel.message === "" && !app.gitPanel.typing)).toBe(true);
+    // enter takes a message to the floating editor, the text it had there to go on with.
+    await keys("i", "x", "enter");
+    expect(app.gitPanel.typing).toBe(false);
+    // Nothing staged: said, no editor.
+    expect(app.messages.at(-1)?.text).toBe("nothing staged — s stages a file in the git panel (space g)");
+  });
+
+  test("a row's buttons under the pointer: + stages, − unstages; the footer says the button's key and what it does", async () => {
+    const root = repo();
+    writeFileSync(join(root, "a.md"), "# A\n\ntwo\n");
+    const { app, click, frame } = await panel(root);
+    const i = rowOf(app, (r) => r.kind === "file" && r.entry.path === "a.md");
+    app.mouse.hover = `git:row:${i}`;
+    frame();
+    expect(pointedAt(app, `git:act:${i}:stage`)).toEqual({ key: "s", desc: "stages it" });
+    app.mouse.hover = `git:act:${i}:stage`;
+    expect(frame()).toContain("s stages it");
+    click(`git:act:${i}:stage`);
+    expect(await until(() => git(root, "diff", "--cached", "--name-only") === "a.md\n")).toBe(true);
+    await app.git.refreshNow();
+    const j = rowOf(app, (r) => r.kind === "file" && r.section === "staged");
+    app.mouse.hover = `git:row:${j}`;
+    click(`git:act:${j}:unstage`);
+    expect(await until(() => git(root, "diff", "--cached", "--name-only") === "")).toBe(true);
+    // A heading's buttons are always there: Changes' + stages its files.
+    await app.git.refreshNow();
+    const h = rowOf(app, (r) => r.kind === "heading" && r.section === "unstaged");
+    click(`git:act:${h}:stage`);
+    expect(await until(() => git(root, "diff", "--cached", "--name-only") === "a.md\n")).toBe(true);
+    // A button at the top says its key under the pointer.
+    expect(pointedAt(app, "git:btn:amend")).toEqual({
+      key: "shift+c",
+      desc: "Amend: amends the last commit with what's staged",
+    });
+  });
+
+  test("a click on a file shows its diff, esc back to the panel; a right click, its menu; a heading clicked folds", async () => {
+    const root = repo();
+    writeFileSync(join(root, "a.md"), "# A\n\ntwo\n");
+    const { app, click } = await panel(root);
+    const i = rowOf(app, (r) => r.kind === "file" && r.entry.path === "a.md");
+    click(`git:row:${i}`);
+    expect(await until(() => app.floating?.kind === "diff")).toBe(true);
+    expect(app.floating!.title).toBe("a.md against what's staged — esc: source control");
+    await app.input.handleKey("escape");
+    expect([app.floating, app.region]).toEqual([null, "sidebar"]);
+    click(`git:row:${i}`, 2);
+    const menu = app.overlay as ListOverlay;
+    expect(menu.items.map((it) => it.label)).toEqual([
+      "Stage",
+      "Discard…",
+      "Its diff",
+      "Open it",
+      "Show it in the explorer",
+      "A note for the agent…",
+      "Copy its path",
+    ]);
+    await app.input.handleKey("escape");
+    const h = rowOf(app, (r) => r.kind === "heading" && r.section === "unstaged");
+    click(`git:row:${h}`);
+    expect(app.gitPanel.folded.has("unstaged")).toBe(true);
+    expect(rowOf(app, (r) => r.kind === "file")).toBe(-1);
+  });
+
+  test("a branch committed and clean: nothing uncommitted, This branch against main its files, a click its diff", async () => {
+    const root = repo();
+    const { app, frame, click } = await panel(root);
+    expect(await until(() => (frame(), rowOf(app, (r) => r.kind === "ahead") >= 0))).toBe(true);
+    const rows = app.gitPanel.rows();
+    expect(rows.some((r) => r.kind === "note" && r.text === "nothing uncommitted")).toBe(true);
+    expect(rows.find((r) => r.kind === "heading" && r.section === "ahead")).toMatchObject({
+      label: "This branch against main (1)",
+    });
+    const i = rowOf(app, (r) => r.kind === "ahead" && r.file.path === "c.md");
+    click(`git:row:${i}`);
+    expect(app.floating?.title).toBe("c.md against main — esc: source control");
+    // On the base itself: none.
+    git(root, "switch", "-q", "main");
+    app.git.checkHead();
+    await app.git.refreshNow();
+    expect(await until(() => (frame(), rowOf(app, (r) => r.kind === "ahead") < 0))).toBe(true);
+  });
+});
+
+describe("space g, the status line's branch, a change's sign (GIT-D8, GIT-D12)", () => {
+  test("space g opens the git panel and focuses it; again, closes it", async () => {
+    const root = repo();
+    const { app, keys } = await panel(root, "a.md", false);
+    expect(app.panels.sidebarShown && app.leftView === "git").toBe(false);
+    await keys("space", "g");
+    expect([app.leftView, app.region, app.panels.sidebarShown]).toEqual(["git", "sidebar", true]);
+    await keys("space", "g");
+    expect(app.panels.sidebarShown).toBe(false);
+  });
+
+  test("the status line's vault and branch clicked: push and fetch, then the branches; one picked, checked out", async () => {
+    const root = repo();
+    const { app, click } = await panel(root, "a.md", false);
+    click("status:branch");
+    const list = app.overlay as ListOverlay;
+    expect(list.title).toStartWith("Branches (2)");
+    expect(list.items.map((i) => i.label)).toEqual([
+      "↑ Push, and track it on origin",
+      "Fetch",
+      "The git panel",
+      "feature",
+      "main",
+      "A new branch from here…",
+    ]);
+    list.selected = list.filtered.findIndex((f) => f.item.label === "main");
+    await app.input.handleKey("enter");
+    expect(git(root, "branch", "--show-current")).toBe("main\n");
+  });
+
+  test("a change's sign clicked: the change, with Revert and Stage; Stage stages that change alone", async () => {
+    const root = repo();
+    writeFileSync(join(root, "a.md"), "# A\n\nONE\n\nmore\n");
+    const { app, click, frame } = await panel(root, "a.md", false);
+    const view = app.view!;
+    expect(await until(() => (frame(), (app.git.changesOf(view)?.length ?? 0) > 0))).toBe(true);
+    const sign = () => app.geometry!.hot.find((h) => h.id.startsWith("gsign:"))?.id;
+    expect(await until(() => (frame(), !!sign()))).toBe(true);
+    click(sign()!);
+    const menu = app.overlay as ListOverlay;
+    expect(menu.title).toBe("lines 3–5, against what's staged");
+    expect(menu.items.map((i) => i.label)).toEqual(["Revert it", "Stage it", "- one", "+ ONE", "+ ", "+ more"]);
+    await app.input.handleKey("s");
+    expect(git(root, "show", ":a.md")).toBe("# A\n\nONE\n\nmore\n");
+  });
+});

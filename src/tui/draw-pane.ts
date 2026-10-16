@@ -343,12 +343,15 @@ export function drawPane(
     // The git sign (26.1), in its column: a rendered row joining several lines takes their strongest. None on the blank
     // row between blocks, which carries the line above it but is no line of the note (#41).
     if (signs && signX !== null && !line.decor && !line.gap) {
-      const sign = rowSign(signs, line);
-      if (sign)
-        drawText(c, signX, y, gitGlyph(app.glyphs, sign), {
-          ...roleStyle(theme, SIGN_ROLE[sign], page),
+      const at = rowSign(signs, line);
+      if (at) {
+        drawText(c, signX, y, gitGlyph(app.glyphs, at.sign), {
+          ...roleStyle(theme, SIGN_ROLE[at.sign], page),
           bg: band ?? signBg,
         });
+        // Clicked: the change, with Revert and Stage (GIT-D12).
+        if (!view.buf.virtual) geo.hot.push({ id: `gsign:${at.src}`, x: signX, y, w: 1, h: 1 });
+      }
     }
     if (!line.decor) prevSrc = line.src;
     const fill = line.fill ? theme.roles[line.fill].bg : undefined;
@@ -582,11 +585,11 @@ function gitGlyph(g: Glyphs, s: GitSign): string {
 }
 
 /** A row's sign: its line's, or (a rendered row joining several) the strongest of theirs. */
-function rowSign(signs: Map<number, GitSign>, line: Line): GitSign | undefined {
-  let best: GitSign | undefined;
+function rowSign(signs: Map<number, GitSign>, line: Line): { sign: GitSign; src: number } | undefined {
+  let best: { sign: GitSign; src: number } | undefined;
   for (const src of new Set([line.src, ...line.spans.flatMap((s) => (s.src === undefined ? [] : [s.src]))])) {
     const s = signs.get(src);
-    if (s && (!best || SIGN_RANK[s] > SIGN_RANK[best])) best = s;
+    if (s && (!best || SIGN_RANK[s] > SIGN_RANK[best.sign])) best = { sign: s, src };
   }
   return best;
 }

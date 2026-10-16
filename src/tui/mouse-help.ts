@@ -47,6 +47,12 @@ export const MOUSE_HELP: [string, string[], string][] = [
   ["Back / forward", ["click"], "On the status line's ‹ / ›: back and forward in the window's history"],
   ["The window's history", ["click"], "On the status line's path: the places the window has been, Copy path first"],
   [
+    "The branches",
+    ["click"],
+    "On the status line's vault and branch, in a repository: pull, push and fetch, then the branches to check one out",
+  ],
+  ["A change in the gutter", ["click"], "On a change's sign: the change, with Revert and Stage"],
+  [
     "The problems",
     ["click"],
     "On the status line's problems: the Problems panel on This file (All when it has none), or closes it; a sign in the problems bar or a coloured line number: on that problem",
@@ -60,10 +66,11 @@ export const MOUSE_HELP: [string, string[], string][] = [
     ["click", "double-click"],
     "In the explorer: a click selects a note, a double-click opens it as a tab; a click on a folder folds or unfolds it",
   ],
+  ["Go to a place", ["click", "double-click"], "In the history: a click selects, a double-click goes there"],
   [
-    "Go to a place",
-    ["click", "double-click"],
-    "In the history and source control: a click selects, a double-click goes there",
+    "Work in source control",
+    ["click", "double-click", "right-click"],
+    "In the git panel: a file's row shows its diff, a double-click opens it; under the pointer, a row's buttons (+ stage, − unstage, ↺ discard, ⧉ its diff) and a heading's; its message box, buttons and branches as their keys; a right click, the row's menu",
   ],
   ["Go to a heading", ["click"], "In the outline: goes to the heading; on ▾ / ▸, folds or unfolds it"],
   ["Go to a footnote", ["click"], "In the footnotes or Info: goes to the footnote, or opens what the row names"],

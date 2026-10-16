@@ -886,7 +886,7 @@ const ROOTS: Check[] = [
       s.expect(!listed(s, /\sproduct$/), "kestrel's neighbours outside the view");
       await s.keys("escape");
       // The agent's worktree, kept beside the main checkout (~/work/kestrel-agent-sync-retry): chosen, gone into.
-      await leader(s, "g", "w");
+      await s.ex("worktrees");
       await s.see("Worktrees (2) — enter: this note there");
       await s.type("sync-retry");
       await s.keys("enter");
@@ -1824,12 +1824,12 @@ const GIT: Check[] = [
   },
   {
     area: "links-and-files",
-    name: "git: what this branch changed — space g c lists it, enter a file's diff; space g d this note's; the explorer's marks",
+    name: "git: what this branch changed — :changes lists it, enter a file's diff; :diff this note's; the explorer's marks",
     covers: { cases: ["git", "links/git"], commands: ["git.changes", "git.diff"] },
     options: { home: true, startAt: "home/work/kestrel-agent-sync-retry/docs/sync.md" },
     run: async (s) => {
       // The agent's worktree: its branch's commits against main — a rename among them, by git's own evidence.
-      await leader(s, "g", "c");
+      await s.ex("changes");
       await s.see(/Changed against main \(\d+\) — enter: the diff/, 5000);
       await s.see("M docs/sync.md");
       await s.see(/R src\/sync\/backoff\.ts/);
@@ -1841,7 +1841,7 @@ const GIT: Check[] = [
       await s.see(/Changed against main \(\d+\)/);
       await s.keys("escape");
       // This note's own: the branch's changes to it.
-      await leader(s, "g", "d");
+      await s.ex("diff");
       await s.see("+ [a] -> [c]            [b] failed five times: spent, and support sees it", 5000);
       await s.keys("escape");
       // An agent's edit, not committed: the explorer marks the file.
@@ -1860,7 +1860,7 @@ const GIT: Check[] = [
     // Narrow enough that the agent's longest line doesn't fit the diff's window.
     options: { home: true, startAt: "home/work/kestrel-agent-sync-retry/docs/sync.md", size: { cols: 120, rows: 40 } },
     run: async (s) => {
-      await leader(s, "g", "d");
+      await s.ex("diff");
       await s.see("docs/sync.md against main", 5000);
       // The line whose numbers the agent changed: those words on the stronger tint, the rest of it on the line's.
       await s.see("+ The numbers are `DEFAULT_POLICY` in [lines 12 to 15 of retry.ts](../src/sync/retry.ts#L12-L15).");
@@ -1892,12 +1892,12 @@ const GIT: Check[] = [
   },
   {
     area: "links-and-files",
-    name: "git: space g m — a merge's broken links before it, each fix said; after it, git's rename says where a file went (20.21)",
+    name: "git: :merge-review — a merge's broken links before it, each fix said; after it, git's rename says where a file went (20.21)",
     covers: { cases: ["git", "links/git"], commands: ["git.merge_review", "link.relink"] },
     options: { home: true, startAt: "home/work/kestrel/docs/architecture.md" },
     run: async (s) => {
       await s.status(/kestrel · main /);
-      await leader(s, "g", "m");
+      await s.ex("merge-review");
       await s.see("Review a merge — enter: the links it would break", 5000);
       await s.type("refactor/docs-layout");
       await s.keys("enter");
@@ -1923,13 +1923,13 @@ const GIT: Check[] = [
   },
   {
     area: "links-and-files",
-    name: "git: a worktree — name@branch, space g w lists both checkouts, enter opens the note in the other",
+    name: "git: a worktree — name@branch, :worktrees lists both checkouts, enter opens the note in the other",
     covers: { cases: ["git", "links/git"], commands: ["git.worktrees"] },
     options: { home: true, startAt: "home/work/kestrel-agent-sync-retry/README.md" },
     run: async (s) => {
       // The build's worktree of kestrel (git worktree add): named for its main checkout and its branch.
       await s.status(/kestrel@agent\/sync-retry +‹ README\.md/);
-      await leader(s, "g", "w");
+      await s.ex("worktrees");
       await s.see("Worktrees (2) — enter: this note there");
       await s.see(/\smain\s+\/\S+\/work\/kestrel\s/); // the main checkout (after its branch icon)
       await s.see(/●\s+(\S+\s+)?agent\/sync-retry\s+\/\S+\/work\/kestrel-agent-sync-retry/); // this one, marked
@@ -2075,15 +2075,16 @@ const GIT: Check[] = [
       await s.keys(":");
       await s.type("Commit");
       await s.keys("enter");
-      await s.message("nothing staged — s stages a file in source control");
-      // space g s: the changed files by section; s stages the one selected.
-      await leader(s, "g", "s");
+      await s.message("nothing staged — s stages a file in the git panel");
+      // space g: the git panel, the changed files by section; s stages the one selected.
+      await leader(s, "g");
       await s.see("Source control");
       await s.see(/Changes \(\d+\)/, 5000);
       await s.see(/M sync\.md +docs/);
-      // The first file is the local .editorconfig, then sync.md: selected (its row drawn apart from the heading's).
+      // The first row is Changes' heading, then the local .editorconfig, then sync.md: selected (its row drawn apart
+      // from the heading's).
       const bgOf = (text: string) => s.runs()[s.rowOf(text)]?.find((r) => r.text.includes(text))?.bg;
-      await s.keys("g", "g", "j");
+      await s.keys("g", "g", "j", "j");
       await s.until(() => bgOf("M sync.md") !== bgOf("Changes ("), 3000, "sync.md selected");
       await s.keys("s");
       await s.message("staged docs/sync.md", 5000);
@@ -2129,14 +2130,14 @@ const GIT: Check[] = [
     covers: { cases: ["git"], commands: ["git.branches"] },
     options: { home: true, startAt: "home/work/kestrel/README.md" },
     run: async (s) => {
-      await leader(s, "g", "o");
+      await s.ex("Branches");
       await s.see(/Branches \(\d+\) — enter: check one out/);
       await s.see("A new branch from here…");
       await s.type("cleanup");
       await s.keys("enter");
       await s.status(/ · cleanup\/remove-legacy /, 5000);
       s.expect(git(s, KESTREL, "branch", "--show-current").out.trim() === "cleanup/remove-legacy", "checked out");
-      await leader(s, "g", "o");
+      await s.ex("Branches");
       await s.type("A new branch");
       await s.keys("enter");
       await s.see("new branch:");
@@ -2159,7 +2160,7 @@ const GIT: Check[] = [
       chmodSync(hook, 0o755);
       await s.status(/ · main {2}/);
       // Source control's keys: shift+p pushes, f fetches, p pulls.
-      await leader(s, "g", "s");
+      await leader(s, "g");
       await s.see("Source control");
       // main has no upstream: asked to push it to origin/main and track it there.
       await s.keys("shift+p");
@@ -2220,7 +2221,7 @@ const GIT: Check[] = [
       s.write(SYNC, `${s.read(SYNC)}\n${LINE}\n`);
       await s.status("reloaded", 5000);
       // Source control's z; then the palette's :stash.
-      await leader(s, "g", "s");
+      await leader(s, "g");
       await s.see("Source control");
       await s.keys("z");
       await s.see("Stashes (0) — enter: pop, apply or drop one");
@@ -2284,11 +2285,11 @@ const GIT: Check[] = [
     covers: { cases: ["git", "links/git"], commands: ["git.blame", "git.history"] },
     options: { home: true, startAt: "home/work/kestrel/docs/runbooks/sync-queue.md" },
     run: async (s) => {
-      await leader(s, "g", "b");
+      await s.ex("Who changed this line");
       await s.see(/line 1, last changed in [0-9a-f]{8}/, 8000);
       await s.keys("escape");
       // The history follows the file from before it moved next to the other runbooks.
-      await leader(s, "g", "h");
+      await s.ex("This file's history");
       await s.see(/docs\/runbooks\/sync-queue\.md — \d+ commits: enter, read it or its diff to now/, 8000);
       await s.see("as docs/runbook-sync.md");
       // up from the newest: the oldest, from before the move.
@@ -2301,7 +2302,7 @@ const GIT: Check[] = [
   },
   {
     area: "links-and-files",
-    name: "git: the gutter's changes — ] c and [ c go to them, space g p shows one, space g r undoes it",
+    name: "git: the gutter's changes — ] c and [ c go to them, Preview the change shows one, Undo the change undoes it",
     covers: {
       cases: ["git"],
       commands: ["git.change_next", "git.change_prev", "git.change_preview", "git.change_undo"],
@@ -2322,12 +2323,12 @@ const GIT: Check[] = [
       const last = pos(s).line;
       await moveTo(s, ["[", "c"], (l) => l === first, "[ c: back to the first");
       // Its diff, against what's staged.
-      await leader(s, "g", "p");
+      await s.ex("Preview the change");
       await s.see(`line ${first}, against what's staged`);
       await s.see("+How an edit travels between devices.");
       await s.keys("escape");
       // Undone: its lines as staged, put back; unsaved, one undo step.
-      await leader(s, "g", "r");
+      await s.ex("Undo the change");
       await s.message(`the change at line ${first} undone, as staged (unsaved)`);
       await s.see("How an edit gets from one device to the others.");
       await s.status("unsaved");

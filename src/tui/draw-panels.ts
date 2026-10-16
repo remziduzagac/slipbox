@@ -9,7 +9,7 @@ import { stringWidth, truncate, splitAtWidth, graphemes, graphemeWidth } from ".
 import { drawHScrollbar, paneScrollbar } from "./draw-pane.ts";
 import { LEFT_VIEWS, RIGHT_VIEWS } from "./panels.ts";
 import { sanitize } from "../core/sanitize.ts";
-import { gitRows } from "./gitview.ts";
+import { drawGitPanel } from "./draw-git.ts";
 import type { TreeRow } from "./explorer.ts";
 import { INDEX_ROLE, indexGlyph } from "./marks.ts";
 import { GIT_MARK, marked } from "./draw-overlays.ts";
@@ -160,13 +160,11 @@ export function drawSidebar(app: App, c: Canvas, pane: Rect, geo: Geometry): Rec
     // Under the title, the breadcrumb: what's above the view (VV-D5).
     drawCrumbs(app, c, pane.x + 1, pane.y + 1, pane.w - 1, base.bg, geo);
   }
+  // The git panel: its top (the branch, the message box, the buttons) above its filter (draw-git.ts).
+  if (view === "git") return drawGitPanel(app, c, rect, base.bg, geo);
   const s = app.sidebar;
   rect = filterRow(app, c, rect, s, app.region === "sidebar", base.bg, geo);
-  return view === "history"
-    ? drawHistoryList(app, c, rect, base.bg, geo)
-    : view === "git"
-      ? drawGitList(app, c, rect, base.bg, geo)
-      : drawTree(app, c, rect, base.bg, geo);
+  return view === "history" ? drawHistoryList(app, c, rect, base.bg, geo) : drawTree(app, c, rect, base.bg, geo);
 }
 
 /**
@@ -222,96 +220,12 @@ function drawCrumbs(app: App, c: Canvas, x: number, y: number, w: number, bg: Co
   if (!list.at(-1)?.cr.past) put(` ${g.crumb}`, dim);
 }
 
-/** A file's state letter's colour in source control (26.2): as the explorer's marks have it. */
-const LETTER_ROLE: Record<string, Role> = {
-  M: "git_modified",
-  R: "git_modified",
-  C: "git_modified",
-  T: "git_modified",
-  A: "git_new",
-  "?": "git_new",
-  D: "diff_del",
-  U: "git_conflict",
-};
-
-/** The source control view (26.2): each section's heading, its files — a state letter, the name, the folder dim — and a
- *  file's changes under it when opened up. */
-function drawGitList(app: App, c: Canvas, list: Rect, bg: Color | null, geo: Geometry): Rect {
-  const theme = app.theme;
-  const rows = gitRows(app);
-  const s = app.sidebar;
-  const sv = sideView(list, rows, () => "", s);
-  const rect = sv.list;
-  followSelection(s, rows.length, rect.h);
-  if (!rows.length) {
-    const why = !app.git.checkout
-      ? "not a git checkout"
-      : app.git.entries === null
-        ? "asking git…"
-        : s.filter
-          ? "no matches"
-          : "nothing changed";
-    drawText(c, rect.x + 1, rect.y, why, roleStyle(theme, "dim", bg), rect.w - 1);
-  }
-  for (let i = 0; i < rect.h; i++) {
-    const row = rows[s.scroll + i];
-    if (!row) break;
-    const y = rect.y + i;
-    if (row.kind === "heading") {
-      drawText(c, rect.x, y, sideRow(` ${row.label}`, sv), { ...roleStyle(theme, "dim", bg), bold: true }, rect.w);
-      continue;
-    }
-    const selected = s.scroll + i === s.selected && app.region === "sidebar";
-    const st = roleStyle(theme, selected ? "sidebar_selected" : "sidebar", bg);
-    if (selected) c.fill(rect.x, y, rect.w, 1, st.bg);
-    let x = rect.x + 1;
-    if (row.kind === "file") {
-      // Its letter in its state's colour, then its name.
-      const letter = row.label.slice(0, 1);
-      x += drawText(c, x, y, letter, {
-        ...roleStyle(theme, LETTER_ROLE[letter] ?? "git_modified", st.bg),
-        bg: st.bg,
-        bold: true,
-      });
-      x += drawText(
-        c,
-        x,
-        y,
-        truncate(row.label.slice(1), Math.max(1, sv.cols - (x - rect.x) - 1)),
-        st,
-        rect.w - (x - rect.x),
-      );
-    } else
-      x += drawText(
-        c,
-        x,
-        y,
-        truncate(row.label, sv.cols - 2),
-        {
-          ...roleStyle(
-            theme,
-            row.change!.kind === "add" ? "git_new" : row.change!.kind === "delete" ? "diff_del" : "git_modified",
-            st.bg,
-          ),
-          bg: st.bg,
-        },
-        rect.w - 1,
-      );
-    // Its folder (a file's) or its first line (a change's), dim, where there's room.
-    const hint = truncate(sanitize(row.hint), Math.max(0, sv.cols - (x - rect.x) - 2));
-    if (hint && x - rect.x + 1 + stringWidth(hint) <= sv.cols - 1)
-      drawText(c, x + 1, y, hint, { ...roleStyle(theme, "dim", st.bg), bg: st.bg });
-  }
-  paneScrollbar(app, c, rect, rows.length, s.scroll, "sidebar", app.region === "sidebar", bg, geo);
-  return rect;
-}
-
 /**
  * A pane's filter (`/`), at the top of its list while it's open or holds text: the `› text` row
  * and a rule across the pane (joined to its border), then the list. Returns the rect
  * left for the list; a short pane gets only the text row.
  */
-function filterRow(
+export function filterRow(
   app: App,
   c: Canvas,
   rect: Rect,
@@ -335,7 +249,7 @@ function filterRow(
 }
 
 /** Keep a side list's selection in view (unless the wheel moved it) and clamp its scroll. */
-function followSelection(s: SidePaneState, count: number, h: number): void {
+export function followSelection(s: SidePaneState, count: number, h: number): void {
   s.selected = Math.max(0, Math.min(s.selected, count - 1));
   if (!s.pinned && s.selected < s.scroll) s.scroll = s.selected;
   if (!s.pinned && s.selected >= s.scroll + h) s.scroll = s.selected - h + 1;

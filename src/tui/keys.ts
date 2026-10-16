@@ -257,17 +257,9 @@ export const DEFAULT_KEYS: Record<string, string> = {
   "leader s a": "scratch.add",
   "leader s y": "scratch.copy",
   "leader s c": "context.copy",
-  "leader g c": "git.changes",
-  "leader g s": "git.view",
-  "leader g b": "git.blame",
-  "leader g h": "git.history",
-  "leader g o": "git.branches",
-  "leader g p": "git.change_preview",
-  "leader g r": "git.change_undo",
-  "leader g d": "git.diff",
-  "leader g w": "git.worktrees",
-  "leader g m": "git.merge_review",
   "leader s d": "scratch.clear",
+  // The git panel (GIT-D12): open, focus, close, as space e the explorer; its own keys act there ([keys.git]).
+  "leader g": "git.view",
   // note, folder, app
   "leader n r": "note.reload",
   "leader n e": "note.edit",
@@ -438,12 +430,6 @@ export const DEFAULT_EXPLORER_KEYS: Record<string, string> = {
   // The view (VV-D5): zoomed in on the selected folder; a folder up — nvim-tree's and oil's `-`.
   z: "zoom_in",
   "-": "zoom_out",
-  // Source control's (26.3): a commit of what's staged; the last one amended.
-  c: "commit",
-  "shift+c": "amend",
-  // Source control's (26.6): fetch, push and the stashes; `p` (paste) pulls there, `z` (zoom in) is its stashes.
-  f: "fetch",
-  "shift+p": "push",
   q: "close",
   escape: "leave",
 };
@@ -478,11 +464,68 @@ export const EXPLORER_ACTIONS = [
   "zoom_out",
   "close",
   "leave",
+];
+
+/**
+ * Keys inside the git panel (GIT-D12): key → the panel's action, on the row selected. Its buttons and its footer say
+ * them. The review (`v`), the merge screen (`x`) and rebasing onto the base (`shift+r`) come here with their actions.
+ */
+export const DEFAULT_GIT_KEYS: Record<string, string> = {
+  j: "down",
+  down: "down",
+  k: "up",
+  up: "up",
+  "g g": "top",
+  "shift+g": "bottom",
+  l: "expand",
+  right: "expand",
+  h: "collapse",
+  left: "collapse",
+  enter: "open",
+  o: "go",
+  ".": "menu",
+  s: "stage",
+  u: "unstage",
+  d: "discard",
+  a: "stage_all",
+  "shift+u": "unstage_all",
+  i: "message",
+  c: "commit",
+  "shift+c": "amend",
+  f: "fetch",
+  p: "pull",
+  "shift+p": "push",
+  z: "stash",
+  "/": "filter",
+  q: "close",
+  escape: "leave",
+};
+
+export const GIT_ACTIONS = [
+  "down",
+  "up",
+  "top",
+  "bottom",
+  "expand",
+  "collapse",
+  "open",
+  "go",
+  "menu",
+  "stage",
+  "unstage",
+  "discard",
+  "stage_all",
+  "unstage_all",
+  "message",
   "commit",
   "amend",
   "fetch",
+  "pull",
   "push",
   "stash",
+  "filter",
+  "close",
+  "leave",
 ];
 
 /** Moving about a list pane — the outline, the footnotes, Info: key → action. */
@@ -661,35 +704,51 @@ export const HISTORY_ACTION_INFO: Record<string, { title: string; desc: string; 
   leave: { title: "Back to the note", desc: "Focuses the note; the history stays open" },
 };
 
-/** The source control view takes the explorer's keymap (26.2): what its actions do there, for help. */
+/** What the git panel's actions do (GIT-D12), for help, which-key and its footer. */
 export const GIT_ACTION_INFO: Record<string, { title: string; desc: string; actions?: string[] }> = {
-  down: { title: "Move down", desc: "Selects the next file or change (a section's heading is stepped over)" },
-  up: { title: "Move up", desc: "Selects the one before" },
-  open_tab: { title: "Open it", desc: "Opens the file at the change (a file's first)", actions: ["open_tab", "open"] },
+  down: { title: "Move down", desc: "Selects the next row" },
+  up: { title: "Move up", desc: "Selects the row before" },
+  top: { title: "Top", desc: "Selects the first row" },
+  bottom: { title: "Bottom", desc: "Selects the last row" },
+  open: {
+    title: "Its diff, or fold",
+    desc: "A file's diff, or a change's, in the diff window; a section's heading folds or unfolds; a branch or a repository opens up in place",
+  },
+  go: {
+    title: "Go there",
+    desc: "Opens the file at its change; goes into a branch's worktree, or a repository",
+  },
   expand: {
-    title: "Its changes",
-    desc: "Opens up a file into its changes: a staged one's against the last commit, a changed one's against what's staged",
+    title: "Open up",
+    desc: "A file into its changes (a staged one's against the last commit, a changed one's against what's staged); a branch or a repository in place",
   },
-  collapse: { title: "Fold", desc: "Folds a file's changes; from a change, back to its file" },
-  open_split: { title: "Stage", desc: "Stages the file, or the one change; a conflict's file, marked resolved" },
-  restore: { title: "Unstage", desc: "Unstages the file, or the one change" },
-  delete: {
+  collapse: { title: "Fold", desc: "Folds what's opened up; from inside it, back to its row" },
+  menu: { title: "Its menu", desc: "Everything the row offers, as a right click opens it" },
+  stage: {
+    title: "Stage",
+    desc: "Stages the file, or the one change; a conflict's file, marked resolved; on a heading, every file under it",
+  },
+  unstage: { title: "Unstage", desc: "Unstages the file, or the one change; on Staged's heading, everything" },
+  discard: {
     title: "Discard",
-    desc: "Discards what isn't staged — the file's, or the one change's — after asking; an untracked file goes to the trash",
+    desc: "Discards what isn't staged — the file's, the change's, on Changes' heading every file's — after asking; an untracked file to the trash; a merged branch's worktree removed",
   },
-  all_files: { title: "Stage everything", desc: "Stages every change, untracked files too (git add -A)" },
-  undo_rename: { title: "Unstage everything", desc: "Unstages every change" },
-  menu: { title: "Its diff", desc: "Shows the file's diff, or the change's, in a floating window" },
+  stage_all: { title: "Stage everything", desc: "Stages every change, untracked files too (git add -A)" },
+  unstage_all: { title: "Unstage everything", desc: "Unstages every change" },
+  message: {
+    title: "Type the message",
+    desc: "Into the message box: ctrl+enter commits, enter opens the editor, esc leaves it",
+  },
   commit: {
     title: "Commit",
-    desc: "Writes the message for what's staged in a floating editor: ctrl+s commits, esc leaves it",
+    desc: "Commits what's staged with the box's message; with none, the message in a floating editor (ctrl+s commits)",
   },
   amend: {
     title: "Amend",
     desc: "The last commit's message in the floating editor: ctrl+s amends it with what's staged",
   },
   fetch: { title: "Fetch", desc: "Fetches the branch's remote, in the background (:fetch)" },
-  paste: {
+  pull: {
     title: "Pull",
     desc: "Brings in the upstream's new commits, fast-forward only; unsaved notes saved or kept first (:pull)",
   },
@@ -700,12 +759,10 @@ export const GIT_ACTION_INFO: Record<string, { title: string; desc: string; acti
   stash: {
     title: "Stashes",
     desc: "The changes stashed with a message, or a stash popped, applied or dropped (:stash)",
-    // `z`: the explorer's zoom in (VV-D5), the stashes in source control.
-    actions: ["stash", "zoom_in"],
   },
   filter: { title: "Filter", desc: "Type to narrow the files by path" },
-  close: { title: "Close source control", desc: "Closes it; focus returns to the note" },
-  leave: { title: "Back to the note", desc: "Focuses the note; the view stays open" },
+  close: { title: "Close the git panel", desc: "Closes it; focus returns to the note" },
+  leave: { title: "Back to the note", desc: "Focuses the note; the panel stays open" },
 };
 
 /** The Problems panel takes the explorer's keymap too (1.7), `tab` switching its tabs: what its actions do there, for help. */
@@ -802,7 +859,6 @@ export const DEFAULT_GROUPS: Record<string, string> = {
   "leader u": "ui: theme, icons, width, zen, toggles",
   "leader s": "scratch: collect references for agents",
   "leader k": "cell: fold, edit, copy, references, problems, scratch — the code view's cell at the cursor",
-  "leader g": "git: what changed, a note's diff, the worktrees, a merge's links",
   "leader c": "code: rename, actions, format — the language server's",
   "leader n": "note: new, rename, move, delete, copy, cut, source, the lens, save, edit elsewhere, reload, info",
   "leader d": "folder: new, rename, move, delete, copy, cut, paste — the explorer's selected one, or this note's",
