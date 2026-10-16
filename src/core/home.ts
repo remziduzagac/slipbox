@@ -4,19 +4,22 @@
 // home never walks it: its graph is built from the walk kept, each note's size and time read again. Nothing is
 // written into `~` itself (D39).
 
-import { statSync } from "node:fs";
+import { realpathSync, statSync } from "node:fs";
 import { join } from "node:path";
 import type { Config } from "./config.ts";
 import { ensureDir, readJson, writeJson } from "./fsutil.ts";
 import { cacheDir, ensureCacheHome, type Keyed } from "./paths.ts";
+import { answered, followedTarget, isLink, linkTarget } from "./symlinks.ts";
 import { isVaultRoot, type VaultLocation } from "./vault.ts";
 import {
   HOME_LIMITS,
+  LINK_REASON,
   type NoteFile,
   type Skipped,
   SlicedWalk,
   type WalkCap,
   WalkFilter,
+  symlinkVerdict,
   type WalkResult,
   walkTop,
 } from "./walk.ts";
@@ -106,6 +109,22 @@ export function homeWalk(loc: Pick<VaultLocation, "root" | "key">, filter: WalkF
   for (const d of strings(kept.dirs).sort()) {
     if (dropped.some((x) => under(d, x))) continue;
     const abs = join(root, d);
+    // A folder reached through a link (VV-D6): kept only while you follow it to where it led, and it answers — never
+    // read through on this thread before then: one that leads elsewhere now, or isn't followed, dropped with all it
+    // held, the link kept as the walk would have it, to walk once it answers.
+    if (d && isLink(abs)) {
+      const t = followedTarget(abs);
+      const waiting = !!t && answered(t) !== true;
+      if (!t || waiting || linkTarget(abs) !== t) {
+        dropped.push(d);
+        became.push({
+          rel: d,
+          reason: waiting ? LINK_REASON.waiting : LINK_REASON.out,
+          link: { target: waiting ? t : (linkTarget(abs) ?? abs), dir: true },
+        });
+        continue;
+      }
+    }
     let mtime: number;
     try {
       const st = statSync(abs);
@@ -124,6 +143,17 @@ export function homeWalk(loc: Pick<VaultLocation, "root" | "key">, filter: WalkF
     }
     dirs.push(d);
     if (changed) relist.push(d);
+  }
+  // A link the walk didn't go through, followed now and answering (VV-D6): its folder listed again, so it's walked.
+  let realRoot = root;
+  try {
+    realRoot = realpathSync(root);
+  } catch {}
+  for (const k of Array.isArray(kept.skipped) ? kept.skipped : []) {
+    if (!k?.link || (k.reason !== LINK_REASON.out && k.reason !== LINK_REASON.waiting)) continue;
+    const parent = parentOf(k.rel);
+    if (dirs.includes(parent) && !relist.includes(parent) && symlinkVerdict(join(root, k.rel), realRoot).kept)
+      relist.push(parent);
   }
   const relisted = new Set(relist);
   /** Kept as the walk had it: not in a folder dropped, nor directly in one listed again (that listing has it). */

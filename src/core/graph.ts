@@ -12,7 +12,8 @@ import { statSync } from "node:fs";
 import { commentLinks, grammar, grammarFor, grammarNow, linkTokens, parseSyntax, type Grammar } from "./syntax.ts";
 import { basename, isAbsolute, join, posix, relative, sep } from "node:path";
 import type { Config } from "./config.ts";
-import { climbsOut, ensureDir, landsInside, readJson, readText, writeJson } from "./fsutil.ts";
+import { climbsOut, ensureDir, readJson, readText, writeJson } from "./fsutil.ts";
+import { blockingLink } from "./symlinks.ts";
 import { countForms, type FormCounts } from "./convention.ts";
 import { LinkIndex, normKey, onDisk, type Resolution } from "./links.ts";
 import type { ParseCache as ChunkCache } from "./parse.ts";
@@ -282,9 +283,12 @@ export class Graph {
   private reachable(rel: string): NoteFile | null {
     if (isListed(this.loc) || !this.filter.reachable(rel)) return null;
     const abs = join(this.root, rel);
+    // Through a link only when you follow it and its target answered (VV-D6): what a link not followed leads to is
+    // never the vault's, and a disk that hasn't answered isn't read here.
+    if (blockingLink(this.loc, abs, { answering: true })) return null;
     try {
       const st = statSync(abs);
-      if (!st.isFile() || st.size > this.filter.maxFileSize || !landsInside(this.root, abs)) return null;
+      if (!st.isFile() || st.size > this.filter.maxFileSize) return null;
       return { rel, abs, size: st.size, mtimeMs: st.mtimeMs };
     } catch {
       return null;

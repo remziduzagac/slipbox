@@ -102,7 +102,7 @@ export class VaultWatcher {
    *  and the notes known is new. */
   private readonly attachments = new Map<string, Set<string>>();
 
-  /** The root's real path: a symlink is kept only when it points inside it (0.11). */
+  /** The root's real path: a symlink is kept when it points inside it, or out and you follow it (0.11, VV-D6). */
   private readonly realRoot: string;
 
   constructor(private readonly opts: WatcherOptions) {
@@ -183,14 +183,16 @@ export class VaultWatcher {
   }
 
   /**
-   * Whether the symlink at `rel` is one the walk keeps (0.11): a file inside the root — never a
-   * directory, never outside — that isn't a note already known by its own path.
+   * Whether the symlink at `rel` is one the walk keeps (0.11, VV-D6), and as what: a file inside the root that isn't a
+   * note already known by its own path, or one outside you follow (`"file"`); a folder outside you follow (`"dir"`),
+   * watched as the walk walks it; else null — a folder within the root (a second name), a link not followed.
    */
-  private symlinkKept(rel: string): boolean {
+  private symlinkKept(rel: string): "file" | "dir" | null {
     const v = symlinkVerdict(join(this.opts.root, rel), this.realRoot);
-    if (!v.kept) return false;
+    if (!v.kept) return null;
+    if (v.dir) return "dir";
     const target = relative(this.realRoot, v.target).split(sep).join("/");
-    return target === rel || !this.opts.known.has(target);
+    return target === rel || !this.opts.known.has(target) ? "file" : null;
   }
 
   get watchedCount(): number {
@@ -368,7 +370,7 @@ export class VaultWatcher {
         } else {
           if (gone.delete(rel)) continue; // known, and still here
           if (listed && !filter.isNoteName(e.name)) continue;
-          // As the walk takes it: a symlink only to a file inside the root (0.11).
+          // As the walk takes it: a symlink to a file inside the root, or one you follow (0.11, VV-D6).
           if (filter.exclusion(rel, false) !== null || (e.isSymbolicLink() && !this.symlinkKept(rel))) continue;
         }
         this.pending.add(rel);
@@ -427,7 +429,8 @@ export class VaultWatcher {
       try {
         st = statSync(join(root, rel));
       } catch {}
-      // A symlink as the walk takes it (0.11): a directory never followed, a file outside never adopted.
+      // A symlink as the walk takes it (0.11, VV-D6): a folder within the root never followed, nothing outside
+      // adopted unless you follow it.
       if (st && isSymlink(join(root, rel)) && !this.symlinkKept(rel)) {
         if (!known.has(rel)) continue;
         st = null; // a note that became such a link: gone

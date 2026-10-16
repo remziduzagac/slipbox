@@ -194,6 +194,8 @@ export class Vaults {
     } catch {}
     this.app.watcher?.close();
     this.app.watcher = null;
+    // What was looked at through a link there is behind you (VV-D6).
+    this.app.following.left();
     // The explorer's unfolded folders, by their whole paths: the vault's own are its paths in it.
     const unfolded = [...this.app.explorer.expanded].map((k) => this.app.explorer.rowAbs({ path: k }));
     // Enter.
@@ -308,6 +310,8 @@ export class Vaults {
       this.app.git.refresh();
       // Home never walked yet (VV-D2): its top alone, the rest while nobody is working.
       if (this.app.graph.home?.walked === null) this.app.watch.walkHomeAgain();
+      // Its followed links' targets asked whether they answer (VV-D6), walked once they do.
+      this.app.following.probe();
     }
     this.app.message(
       "info",

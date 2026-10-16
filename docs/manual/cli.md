@@ -165,7 +165,8 @@ The shapes below use a short notation:
 Exit code 5 also covers:
 
 - a note or stdin that isn't valid UTF-8 (never rewritten, so no byte is lost)
-- a read of a symlink leading out of the vault
+- a path through a link that isn't followed: one leading out of the vault or home, or any in Elsewhere. The command
+  line never follows a link on its own ([Links that lead out](links-and-vaults.md#links-that-lead-out))
 - what needs an index, asked of Elsewhere
 
 `diagnostics` exits with 1 when it shows an error. `uninstall` exits with 1 when it couldn't remove something.
@@ -552,7 +553,8 @@ Elsewhere has no index. `index` there is exit 5.
 
 - atomically, never half-written
 - keeping its byte order mark and its line endings
-- only inside the note's vault, by its real path (a symlinked folder leading out is refused)
+- only inside the note's vault, by its real path: a link leading out is refused, even one you follow. In home, a
+  link you follow is written through, and in Elsewhere, one you follow
 - only where the vault's notes are, never in `.slipbox/`, `.git/`, `node_modules` or a hidden folder (unless you named a
   note there)
 - never a binary file
@@ -1196,8 +1198,8 @@ links     markdown links, relative, with .md — style: the notes, 100% of 382 l
 ```
 
 With `--json`, the data is `{version, release, root, mode, name, key, markerVersion, config{user, sources[], theme},
-cache, state, scratch, notes, index{…, written, reached}, background{…}, search{engine, index}, skipped[{rel, reason}],
-folder, links, stale[]}`:
+cache, state, scratch, notes, index{…, written, reached}, background{…}, search{engine, index}, skipped[{rel, reason,
+link}], folder, links, stale[]}`:
 
 - `mode` is `root` for a vault, `home` for your home folder's, and `folder` for Elsewhere.
 - In home, `index` also has `walked`, when home was last walked (`null`: not yet, its top folder alone), and `capped`,
@@ -1208,7 +1210,8 @@ folder, links, stale[]}`:
 - `links` is the convention, `{style, path, extension}`. Each of these is `{value, source, why}`. `source` is `setting`,
   `tool`, `notes` (with `share`, a percentage) or `default`.
 - `root` is the vault's path.
-- `skipped` lists what the walk left out, and why (too large, a symlink out of the vault, a nested vault).
+- `skipped` lists what the walk left out, and why (too large, a link not followed, a nested vault). A link has
+  `link`, `{target, dir}`: where it leads, and whether that's a folder.
 
 ### `init`
 

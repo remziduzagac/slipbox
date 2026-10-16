@@ -364,6 +364,44 @@ In Elsewhere:
 A file of Elsewhere's that a link reaches from a vault is read in a peek, titled `Elsewhere › /etc/hosts`, which says
 it has no backlinks. Its relative links are followed from its folder there. `o` goes into Elsewhere, to edit it.
 
+### Links that lead out
+
+A symlinked folder or file that leads out of its vault, or out of your home folder, isn't followed until you say so.
+The explorer shows where it leads, and that it isn't followed: `data → /mnt/disk/data not followed`. In Elsewhere,
+with no vault to stay inside, every link is shown that way.
+
+The first time you open one, slipbox asks:
+
+| Answer | Does |
+| --- | --- |
+| Follow it (`f`) | reads it as part of the vault you are in: indexed, searched, its links counted as backlinks |
+| Just look (`l`) | opens it read-only, this once. Nothing of it is indexed |
+| No (`n`) | leaves it unfollowed. Opening it again asks again |
+
+What following allows depends on where the link is:
+
+- **In home,** slipbox reads, indexes and writes through it.
+- **In a vault,** it reads and indexes through it, but never writes to a file it leads to outside the vault. A link
+  that a pull can change could otherwise lead a save to `~/.bashrc`.
+- **In Elsewhere,** it reads and writes as the file system allows.
+
+The answer is kept for that link and the place it leads, in slipbox's own state folder, never in the vault. So a
+repository you clone can't bring its links already followed, and if a link later leads somewhere else, slipbox asks
+again.
+
+Agents see what is followed: it's in search, in the context bundle and in the command line's answers. When a link leads
+to a hidden folder (`~/.ssh`, `~/.aws`) or outside your home folder, the question says so.
+
+A link within its own vault, or within your home folder, is a second name for what's already there, like the links
+`stow` makes (`~/.zshrc → ~/dotfiles/zsh/.zshrc`). slipbox never asks about it, and indexes what it leads to once. The
+explorer shows where it leads, and opening a link to a folder shows that folder.
+
+A followed link on a slow disk, such as a network share, is read in the background. If it doesn't answer within three
+seconds, slipbox gives up on it for now and says so.
+
+On the command line, a path through a link that isn't followed is refused (exit 5). The command line never follows a
+link on its own: answer in the TUI first.
+
 ### Giving a folder `.slipbox/`
 
 `.slipbox/` is optional. It holds a folder's own settings, `.slipbox/config.toml`, and, if you choose, its name.

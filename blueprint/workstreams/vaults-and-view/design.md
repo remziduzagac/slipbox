@@ -24,8 +24,8 @@ The paragraph on the CLI's words becomes: what the CLI prints for a person says 
 (VV-D1); its JSON keeps root in its values, whose `schema` stays 1 (DF-D9): `info`'s `mode` is `root` or `folder`; a
 change's `kind` is `root` for a vault's naming, `make-root` for `init` of a folder inside a vault, `unmake-root` for
 `deinit`. Its reasons in words say vault: a vault nested in another is skipped by the walk as a `nested vault`, a
-symlink out of it as `symlink points outside the vault`; nothing to undo is "in this vault". `info` labels the vault
-`vault` (Elsewhere `vault  Elsewhere — …`, VV-T3); `stat`'s row and the Info view's say `vault`.
+link out of it as `link not followed: it leads out of the vault` (VV-T6); nothing to undo is "in this vault". `info`
+labels the vault `vault` (Elsewhere `vault  Elsewhere — …`, VV-T3); `stat`'s row and the Info view's say `vault`.
 
 ## MODIFIED design/testing.md § Strategy
 
@@ -134,6 +134,55 @@ goes into Elsewhere as into a vault (`intoOther`, `goThere`): its tabs, `ctrl+o`
 Elsewhere's anywhere opens there: it's one place. A peek's `t` keeps Elsewhere's file as a tab read-only, marked
 `Elsewhere` (`markElsewhere`); `o` on it goes into Elsewhere. Gone: a loose file opened beside a vault's notes,
 editable, and a plain folder walked and indexed as a vault.
+
+## MODIFIED design/roots.md § The walk; design/trust.md: links followed only when you say so (VV-T6)
+
+Done in VV-T6 (`core/symlinks.ts`, `tui/following.ts`); the text for roots.md and trust.md at consolidation.
+Supersedes the walk's "a symlinked folder is never followed" and "a symlinked file only inside the root", and the
+CLI's refusal of reads through a link out of the root; D220 kept for vaults.
+
+**Which links ask.** A link's scope (`linkScope`) is its vault's real path, home's for home, none in Elsewhere. A link
+whose real target is inside it is `within`: a second name for what's there, never asked about — a file kept as the
+walk kept it (a note twice dropped), a folder not walked again (`LINK_REASON.within`). One leading out is asked about;
+in Elsewhere every link is.
+
+**The answer** (`linkAnswer`, `setLinkAnswer`): follow or no, kept in `links.json` in the state folder, by the link's
+own path (its folder by its real path, `linkKey`) and its target's real path; a link that leads elsewhere now has no
+answer, so it asks again. Just looking is the TUI's, for this once (`Following.looking`), never kept, cleared when you
+go into another vault.
+
+**The walk and the watcher** (`symlinkVerdict`): a link out is gone through only when you follow it and its target has
+answered a probe (`answered`); a folder is walked under the link's name, once (`followed`: a second link to it, or into
+it, skipped as `LINK_REASON.twice`), never one holding the vault (`loop`). What isn't gone through is in `skipped` with
+the link's target (`Skipped.link`): `out` (not followed), `waiting` (followed, its target not answering yet), `within`.
+The watcher takes the same verdict: a followed folder adopted and watched as the walk walks it. `reachable` reads
+through followed links only (`blockingLink`).
+
+**Slow targets** (`probe`, `probeFollowed`): before anything reads through them, a vault's followed links' targets are
+asked whether they answer — a folder listed, a file statted — off the main thread, given up on after three seconds
+(`PROBE_MS`), asked again a minute later. The CLI asks before each command (`probeLinks`; a target given up on is a
+warning); the TUI at the start and on going into a vault, in the background, walking the vault again with those that
+answer. Never answered, a followed link is skipped as `waiting`.
+
+**What a yes allows** (`writesThrough`, `writeNote`'s `through`): in home, reading, the index and writing through it;
+in a vault, reading and the index, never a write that lands outside the vault, followed or not; in Elsewhere, what the
+file system allows. Where links are looked at on a path's way (`blockingLink`): from the vault's or home's folder; in
+Elsewhere, from the folder opened, or — a path named outright outside it — its own folder, the file itself asking.
+
+**The CLI** refuses a path through a link not followed (`refuseUnfollowed`, exit 5: `… is reached through a link that
+isn't followed (~/notes/data → /mnt/disk/data): open it in slipbox to choose`) for reads and writes alike, and a
+vault's write through a followed one (`a link leads it out of the vault`). It never asks, nor follows unasked.
+
+**The TUI** (`tui/following.ts`): opening a path through a link not followed — a note (`open`, `openInNewTab`), an
+explorer row's folder unfolded or zoomed into — asks first (`gate`): a list of three answers, `f` follow it, `l` just
+look, `n` no, saying what a yes allows here; when the target is hidden (a dot folder on its way from home) or outside
+home, a line over them says agents see what's followed (`agentsWarning`). Follow: kept, the target probed, the vault
+walked again (`walkAgain`), then what was asked done. Just look: read-only (`just looking: … isn't followed —
+read-only`), never indexed; a folder listed a level at a time. No: kept; opening it again asks again. A path through
+a link not followed opened otherwise (a session's tab) isn't read, said so. **In the explorer**, a link row says where
+it leads, dimmed after its name (`Following.describe`): `→ /mnt/disk/data`, then `not followed`, `just looking` or
+`not answering` while the walk doesn't go through it; a second name for a folder of the vault, opened, shows that
+folder. VV-T5's columns take these.
 
 ## MODIFIED design/roots.md
 
@@ -311,7 +360,8 @@ selected (`switchVault`, VV-D4); `enter` on a checkout too. The filter keeps rep
 ## MODIFIED design/trust.md
 
 Adds the links' trust (VV-D6): asked when a link out is first opened, kept by link and target, never in the vault,
-asked again when the target changes; beside a vault's trust for its tools (D172), not part of it.
+asked again when the target changes; beside a vault's trust for its tools (D172), not part of it. Done in VV-T6: the
+text is in § The walk; design/trust.md, above, with the walk's.
 
 ## MODIFIED design/terms.md
 

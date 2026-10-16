@@ -11,6 +11,7 @@ import ignore, { type Ignore } from "ignore";
 import type { Config } from "./config.ts";
 import { classify } from "./filetypes.ts";
 import { userFolders } from "./paths.ts";
+import { answered, linkAnswer } from "./symlinks.ts";
 import { isInside, isVaultRoot, MARKER } from "./vault.ts";
 
 export interface NoteFile {
@@ -24,6 +25,8 @@ export interface NoteFile {
 export interface Skipped {
   rel: string;
   reason: string;
+  /** A link the walk didn't go through (VV-D6): where it leads, by its real path, and whether that's a folder. */
+  link?: { target: string; dir: boolean };
 }
 
 export interface WalkResult {
@@ -216,6 +219,8 @@ interface WalkState {
   links: Map<NoteFile, string>;
   /** Each folder's entries by name: which come first decides what a cap leaves out, the same each time. */
   sorted: boolean;
+  /** The folders outside the vault its followed links lead to (VV-D6), by their real paths: each walked once. */
+  followed: Set<string>;
 }
 
 function startWalk(root: string, filter: WalkFilter, sorted = false): WalkState {
@@ -224,7 +229,7 @@ function startWalk(root: string, filter: WalkFilter, sorted = false): WalkState 
     realRoot = realpathSync(root);
   } catch {}
   const out: WalkResult = { files: [], assets: [], dirs: [], skipped: [], errors: [] };
-  return { root, realRoot, filter, out, links: new Map(), sorted };
+  return { root, realRoot, filter, out, links: new Map(), sorted, followed: new Set() };
 }
 
 /** A walk done: a symlinked note whose target it includes dropped, the notes sorted. */
@@ -332,7 +337,7 @@ export function walkTop(root: string, filter: WalkFilter): WalkResult {
 
 /** One folder listed: its notes and files kept, each folder of it given to `descend`, a vault in it skipped. */
 function listDir(st: WalkState, dirRel: string, descend: (rel: string) => void): void {
-  const { root, realRoot, filter, out } = st;
+  const { root, filter, out } = st;
   let entries: Dirent[];
   try {
     entries = readdirSync(join(root, dirRel), { withFileTypes: true });
@@ -352,7 +357,7 @@ function listDir(st: WalkState, dirRel: string, descend: (rel: string) => void):
       continue;
     }
     if (entry.isSymbolicLink()) {
-      handleSymlink(abs, rel, realRoot, st);
+      handleSymlink(abs, rel, st, descend);
       continue;
     }
     if (!entry.isFile()) continue;
@@ -362,15 +367,33 @@ function listDir(st: WalkState, dirRel: string, descend: (rel: string) => void):
   }
 }
 
+/** Why the walk didn't go through a link (VV-D6), as `Skipped` says it. */
+export const LINK_REASON = {
+  /** Within the vault, to a folder: a second name for what's walked under its own. */
+  within: "link within the vault: a second name for its folder",
+  /** Out of the vault, not followed: you haven't said to, or said no, or it leads elsewhere since. */
+  out: "link not followed: it leads out of the vault",
+  /** Followed, its target not answering yet: asked in the background, walked once it answers. */
+  waiting: "link followed, its target not answering yet",
+  /** Followed, to a folder that holds the vault: walking it would walk the vault again. */
+  loop: "link to a folder holding the vault",
+  /** Followed, to a folder another followed link leads into: walked once, under that one's name. */
+  twice: "link to a folder followed already, through another link",
+} as const;
+
+/** What the walk makes of a symlink: kept (a file read, a folder walked), or skipped with why. */
+export type LinkVerdict =
+  | { kept: true; target: string; dir: boolean }
+  | { kept: false; reason: string | null; special?: boolean; link?: { target: string; dir: boolean } };
+
 /**
- * What the walk makes of the symlink at `abs` (0.11) — the watcher too, so both take the same: a
- * directory is never followed; a file is kept only inside the root (`realRoot`, its real path), any
- * file, a note or not; anything else is skipped, with why (`special`: a FIFO, socket or device).
+ * What the walk makes of the symlink at `abs` (0.11, VV-D6) — the watcher too, so both take the same. Within the vault
+ * (`realRoot`, its real path), a file is kept, and a folder is a second name for what's walked already, never walked
+ * twice; a link leading out is followed only when you said so for that link and that target (`links.json`), once its
+ * target answered (`answered`: a disk that doesn't is never waited for), and a folder never into one holding the
+ * vault. Anything else is skipped, with why (`special`: a FIFO, socket or device).
  */
-export function symlinkVerdict(
-  abs: string,
-  realRoot: string,
-): { kept: true; target: string } | { kept: false; reason: string | null; special?: boolean } {
+export function symlinkVerdict(abs: string, realRoot: string): LinkVerdict {
   let target: string;
   try {
     target = realpathSync(abs);
@@ -383,22 +406,38 @@ export function symlinkVerdict(
   } catch {
     return { kept: false, reason: null };
   }
-  if (st.isDirectory()) return { kept: false, reason: "symlinked directory (not followed)" };
+  const dir = st.isDirectory();
   // A FIFO, socket or device: reading one would hang.
-  if (!st.isFile()) return { kept: false, reason: "symlink to something that isn't a file", special: true };
-  if (!isInside(realRoot, target)) return { kept: false, reason: "symlink points outside the vault" };
-  return { kept: true, target };
+  if (!dir && !st.isFile()) return { kept: false, reason: "symlink to something that isn't a file", special: true };
+  const link = { target, dir };
+  if (isInside(realRoot, target))
+    return dir ? { kept: false, reason: LINK_REASON.within, link } : { kept: true, target, dir: false };
+  if (linkAnswer(abs, target) !== "follow") return { kept: false, reason: LINK_REASON.out, link };
+  if (answered(target) !== true) return { kept: false, reason: LINK_REASON.waiting, link };
+  if (dir && isInside(target, realRoot)) return { kept: false, reason: LINK_REASON.loop, link };
+  return { kept: true, target, dir };
 }
 
-function handleSymlink(abs: string, rel: string, realRoot: string, st: WalkState): void {
-  const { filter, out } = st;
+function handleSymlink(abs: string, rel: string, st: WalkState, descend: (rel: string) => void): void {
+  const { filter, out, realRoot } = st;
   const v = symlinkVerdict(abs, realRoot);
   if (!v.kept) {
     if (v.reason && (!v.special || filter.isNoteName(rel.slice(rel.lastIndexOf("/") + 1))))
-      out.skipped.push({ rel, reason: v.reason });
+      out.skipped.push({ rel, reason: v.reason, ...(v.link ? { link: v.link } : {}) });
     return;
   }
   const target = v.target;
+  if (v.dir) {
+    // A folder you follow (VV-D6): walked as the vault's, under the link's name — once, whatever leads to it.
+    const why = filter.exclusion(rel, true);
+    if (why === "nested vault") out.skipped.push({ rel, reason: why });
+    if (why !== null) return;
+    if ([...st.followed].some((f) => isInside(f, target) || isInside(target, f)))
+      return void out.skipped.push({ rel, reason: LINK_REASON.twice, link: { target, dir: true } });
+    st.followed.add(target);
+    descend(rel);
+    return;
+  }
   if (filter.exclusion(rel, false) !== null) return;
   if (!filter.isNoteName(rel.slice(rel.lastIndexOf("/") + 1))) {
     out.assets.push(rel);

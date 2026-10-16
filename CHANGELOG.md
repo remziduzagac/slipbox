@@ -8,6 +8,15 @@ The format is [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.1.0/); wh
 
 ### Added
 
+- Links that lead out of a vault, or out of your home folder, are followed only when you say so. The explorer shows
+  such a link with where it leads, and `not followed`. Opening it asks: follow it (read and indexed as part of the
+  vault, and in home written through), just look (read-only, this once, nothing indexed), or no. The answer is kept for
+  that link and where it leads, in slipbox's state, never in the vault, and asked again when the link leads elsewhere.
+  In a vault, nothing is ever written through a link to outside it. When the link leads to a hidden folder or outside
+  your home folder, the question says that agents will see what's followed. A followed link on a disk that doesn't
+  answer within three seconds is given up on for now. On the command line, a path through a link not followed is
+  refused (exit 5). A link within its vault or home, like the ones `stow` makes, is never asked about.
+
 - Keys you already know, a page for those who don't use vim: the arrows and the shortcuts of other editors that slipbox
   has, the four keys that are new, and where slipbox's keys differ. The README, the quick start and getting started
   give the familiar key first.

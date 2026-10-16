@@ -15,7 +15,8 @@ import { onLoaded } from "../core/lazy.ts";
 import { classify, extensionOf } from "../core/filetypes.ts";
 import { accessSync, appendFileSync, constants as fsConstants, statSync } from "node:fs";
 import { dirname, join, relative } from "node:path";
-import { climbsOut, landsInside, WriteRefused, writeNote } from "../core/fsutil.ts";
+import { climbsOut, WriteRefused, writeNote } from "../core/fsutil.ts";
+import { linkSaid, writesThrough } from "../core/symlinks.ts";
 import { writeDirty } from "../core/stale.ts";
 import { placeAt, stopInsert } from "./editing.ts";
 import { newVimState } from "./vim.ts";
@@ -82,6 +83,7 @@ import { Saving } from "./saving.ts";
 import { Vaults, carried } from "./vaults.ts";
 import { Renaming } from "./renaming.ts";
 import { Speller } from "./spelling.ts";
+import { Following } from "./following.ts";
 
 export interface Host {
   requestRender(): void;
@@ -608,6 +610,8 @@ export class App {
   readonly vaults = new Vaults(this);
   /** Renames and their previews. */
   readonly renaming = new Renaming(this);
+  /** Links out of the vault, followed only when you say so (VV-D6). */
+  readonly following = new Following(this);
 
   constructor(opts: AppOptions) {
     this.loc = opts.loc;
@@ -713,6 +717,8 @@ export class App {
       this.watch.indexInBackground();
       this.git.refresh();
       this.watch.startAutoIndex();
+      // The followed links' targets asked whether they answer, in the background (VV-D6): walked once they do.
+      this.following.probe();
       this.loadCodeGrammars();
     }
   }
@@ -821,6 +827,11 @@ export class App {
     return notes[0] ?? null;
   }
 
+  /** A vault-relative or absolute path, absolute. */
+  absOf(pathOrRel: string): string {
+    return pathOrRel.startsWith("/") ? pathOrRel : join(this.loc.root, pathOrRel);
+  }
+
   /** Buffer for a vault-relative or absolute path. Keyed by path, not graph membership. */
   buffer(pathOrRel: string): NoteBuffer | null {
     const abs = pathOrRel.startsWith("/") ? pathOrRel : join(this.loc.root, pathOrRel);
@@ -838,10 +849,11 @@ export class App {
         this.message("warn", `${relRaw || abs} is a binary file; slipbox opens text`);
         return null;
       }
-      // A path in the vault that a symlink leads out of: not a file of the vault (the walk leaves
-      // it out, the CLI refuses it), so nothing from outside is read through it.
-      if (inside && !landsInside(this.loc.root, abs)) {
-        this.message("warn", `${relRaw} points outside the vault; not opening it`);
+      // A path a link not followed leads to (VV-D6): nothing is read through it — the walk leaves it out, the CLI
+      // refuses it — until you say so, opening it.
+      const blocked = this.following.blocked(abs);
+      if (blocked) {
+        this.message("warn", `${linkSaid(blocked.link, blocked.target)} isn't followed — open it to choose`);
         return null;
       }
       buf = new NoteBuffer(rel, abs, key);
@@ -863,6 +875,11 @@ export class App {
       if (locked) {
         buf.readOnly = `${tildePath(buf.key)} is read-only: ${locked}`;
         this.message("info", buf.readOnly);
+      }
+      // Read through a link you're only looking at (VV-D6): read-only, and never indexed — it isn't the vault's.
+      const look = buf.elsewhere ? null : this.following.lookedAt(abs);
+      if (look) {
+        buf.readOnly = `just looking: ${tildePath(look)} isn't followed — read-only`;
       }
       this.buffers.set(key, buf);
     }
@@ -938,6 +955,7 @@ export class App {
 
   openInNewTab(path: string, anchor?: Anchor): void {
     if (this.vaults.intoOther(path, anchor)) return;
+    if (this.following.gate(this.absOf(path), () => this.openInNewTab(path, anchor))) return;
     const buf = this.buffer(path);
     if (!buf) return;
     this.history.touchRecent(buf.key);
@@ -955,6 +973,7 @@ export class App {
   /** Switch to a tab already showing this note, or open it in a new one. */
   openOrSwitchTab(path: string): void {
     if (this.vaults.intoOther(path)) return;
+    if (this.following.gate(this.absOf(path), () => this.openOrSwitchTab(path))) return;
     const buf = this.buffer(path);
     if (!buf) return;
     const i = this.tabs.findIndex((t) => t.views.some((v) => v.buf === buf));
@@ -975,6 +994,7 @@ export class App {
     }
     if (!view) return this.openInNewTab(path, anchor);
     if (this.vaults.intoOther(path, anchor)) return;
+    if (this.following.gate(this.absOf(path), () => this.open(path, anchor))) return;
     const buf = this.buffer(path);
     if (!buf) return;
     // A pinned tab keeps its note: another one opens in a new tab.
@@ -1023,11 +1043,13 @@ export class App {
 
   /** Write a buffer's file and take the result back in; false (with a message) if refused. */
   writeBuffer(buf: NoteBuffer, content: string | Uint8Array, saving = false): boolean {
-    // A vault note stays inside the vault; a file from outside it (the scratch) inside its folder.
+    // A vault note stays inside the vault; a file from outside it (the scratch) inside its folder. Through a link
+    // you follow, home's and Elsewhere's are written where it leads; a vault's never out of it (VV-D6).
     const root = buf.rel !== null ? this.loc.root : dirname(buf.abs);
+    const through = this.loc.mode !== "vault" && !buf.elsewhere && writesThrough(this.loc, buf.abs);
     let written: ReturnType<typeof writeNote>;
     try {
-      written = writeNote(root, buf.abs, content);
+      written = writeNote(root, buf.abs, content, { through });
     } catch (err) {
       this.message(
         "error",

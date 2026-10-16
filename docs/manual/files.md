@@ -179,6 +179,11 @@ explorer only, and its links never count.
 A folder that is a vault of its own is listed with its own icon, and its files are its own.
 [Links and vaults](links-and-vaults.md) has what that means.
 
+A link (a symlink) says where it leads after its name, dimmed: `data → /mnt/disk/data`. One that leads out of the vault,
+or out of home, isn't followed until you say so, and says that too: `not followed`. Opening it asks whether to follow
+it, just look, or leave it ([Links that lead out](links-and-vaults.md#links-that-lead-out)). In Elsewhere, every link
+asks.
+
 ## Making notes and folders
 
 ### A new note

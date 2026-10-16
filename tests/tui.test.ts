@@ -28,6 +28,7 @@ import { type Config, DEFAULT_CONFIG } from "../src/core/config.ts";
 import { openGraph } from "../src/core/graph.ts";
 import { locateVault } from "../src/core/vault.ts";
 import { tildePath } from "../src/core/paths.ts";
+import { linkAnswer, probe, setLinkAnswer } from "../src/core/symlinks.ts";
 import { type ListOverlay, App, type Host } from "../src/tui/app.ts";
 import { dateText, listFolder, placeOf, type SaveAsOverlay, sizeText } from "../src/tui/saveas.ts";
 import { placeIn } from "../src/tui/shellrun.ts";
@@ -7052,14 +7053,16 @@ describe("files beyond notes (16.3–16.5)", () => {
     expect(h.app.buffer("dump.txt")).toBeNull();
     expect(h.app.messages.at(-1)!.text).toBe("dump.txt holds binary bytes; slipbox opens text");
     expect(h.app.buffer("late.txt")).not.toBeNull();
-    // A symlink in the vault leading out of it isn't a file of the vault: nothing outside is read
-    // through it (the CLI refuses it too). One leading to a note inside opens.
-    const outside = join(mkdtempSync(join(tmpdir(), "slipbox-outside-")), "secret.md");
+    // A symlink in the vault leading out of it isn't a file of the vault until you follow it (VV-D6): nothing outside
+    // is read through it (the CLI refuses it too). One leading to a note inside opens.
+    const outside = join(realpathSync(mkdtempSync(join(tmpdir(), "slipbox-outside-"))), "secret.md");
     writeFileSync(outside, "# Secret\n");
     symlinkSync(outside, join(root, "out.md"));
     symlinkSync(join(root, "links-out.md"), join(root, "in.md"));
     expect(h.app.buffer("out.md")).toBeNull();
-    expect(h.app.messages.at(-1)!.text).toBe("out.md points outside the vault; not opening it");
+    expect(h.app.messages.at(-1)!.text).toBe(
+      `${tildePath(join(root, "out.md"))} → ${tildePath(outside)} isn't followed — open it to choose`,
+    );
     expect(h.app.buffer("in.md")?.source).toBe(readFileSync(join(root, "links-out.md"), "utf8"));
   });
   test("the switcher lists the files the explorer shows", async () => {
@@ -19487,5 +19490,163 @@ describe("Elsewhere: no-vault (VV-D3)", () => {
     expect(h.app.loc).toMatchObject({ mode: "folder", root: dir });
     expect(h.app.view!.buf.abs).toBe(join(dir, "b.md"));
     expect(h.app.view!.buf.readOnly).toBeNull();
+  });
+});
+
+describe("links followed only when you say so (VV-D6)", () => {
+  /** A vault with a link to a folder outside it, and a note there. */
+  const linked = () => {
+    const top = realpathSync(mkdtempSync(join(sandbox, "links-")));
+    const root = join(top, "vault");
+    const out = join(top, "out");
+    mkdirSync(join(root, ".slipbox"), { recursive: true });
+    mkdirSync(out);
+    writeFileSync(join(root, "index.md"), "# Index\n\n[far](data/far.md)\n");
+    writeFileSync(join(out, "far.md"), "# Far\n\nFrom far away.\n");
+    symlinkSync(out, join(root, "data"));
+    return { top, root, out, link: join(root, "data") };
+  };
+  const row = (h: Harness, name: string) => h.app.explorer.rows().find((r) => r.name === name);
+  const select = (h: Harness, name: string) => {
+    h.app.leftView = "explorer";
+    h.app.sidebar.visible = true;
+    h.app.sidebar.selected = h.app.explorer.rows().findIndex((r) => r.name === name);
+    h.app.region = "sidebar";
+  };
+
+  test("a link out of the vault: shown where it leads, not followed; opened, asked — and followed, read and indexed", async () => {
+    const { root, out } = linked();
+    const h = await harness({ root, open: "index.md" });
+    expect(h.app.graph.notes.has("data/far.md")).toBe(false);
+    expect(row(h, "data")?.link).toMatchObject({ target: out, dir: true });
+    expect(h.app.following.describe(row(h, "data")!)).toBe(`→ ${out}  not followed`);
+    select(h, "data");
+    // Drawn after its name, where it leads cut from the front: its last folder and its state kept.
+    h.app.region = "content"; // no buttons over the row's end
+    expect(h.frame()).toMatch(/ data → …\S*out {2}not followed/);
+    h.app.region = "sidebar";
+    await h.keys("enter");
+    const o = h.app.overlay as ListOverlay;
+    expect(o.title).toBe(`${tildePath(join(root, "data"))} → ${out} leads out of ${tildePath(root)}: follow it?`);
+    // Outside home: agents will see what's followed, said over the answers.
+    expect(o.items.map((i) => i.label)).toEqual([
+      `${out} is outside your home folder: agents see what's followed — search, the context bundle, the command line`,
+      "Follow it",
+      "Just look",
+      "No",
+    ]);
+    await h.keys("f");
+    await h.app.following.settled();
+    expect(h.app.graph.notes.has("data/far.md")).toBe(true);
+    expect(h.app.graph.backlinks("data/far.md").map((b) => b.from)).toEqual(["index.md"]);
+    expect(h.app.explorer.expanded.has("data")).toBe(true);
+    expect(h.app.following.describe(row(h, "data")!)).toBe(`→ ${out}`);
+    expect(h.app.explorer.rows().some((r) => r.path === "data/far.md")).toBe(true);
+    // Followed, it opens as the vault's: read and indexed, never written to — it's outside the vault.
+    h.app.open("data/far.md");
+    expect(h.app.view!.buf.rel).toBe("data/far.md");
+    expect(h.app.writeBuffer(h.app.view!.buf, "# Changed\n")).toBe(false);
+    expect(h.app.messages.at(-1)!.text).toContain("resolves outside the vault");
+    expect(readFileSync(join(out, "far.md"), "utf8")).toBe("# Far\n\nFrom far away.\n");
+  });
+
+  test("just look: read-only, this once, nothing indexed; no: not followed, asked again when it's opened", async () => {
+    const { root, link } = linked();
+    const h = await harness({ root, open: "index.md" });
+    // A note through the link, followed from a note: asked first.
+    await h.keys("tab", "enter");
+    expect((h.app.overlay as ListOverlay).title).toContain("leads out of");
+    await h.keys("n");
+    expect(h.app.view!.buf.rel).toBe("index.md");
+    expect(linkAnswer(link)).toBe("no");
+    expect(h.app.following.describe(row(h, "data")!)).toContain("not followed");
+    // Asked again, opened again; just looked at: read-only, never the vault's.
+    await h.keys("enter");
+    expect(h.app.overlay?.kind).toBe("list");
+    await h.keys("l");
+    expect(h.app.view!.buf.abs).toBe(join(link, "far.md"));
+    expect(h.app.view!.buf.readOnly).toBe(`just looking: ${tildePath(link)} isn't followed — read-only`);
+    expect(h.app.graph.notes.has("data/far.md")).toBe(false);
+    // The folder unfolds, listed a level at a time; nothing asked while you look.
+    select(h, "data");
+    await h.keys("l");
+    expect(h.app.overlay).toBeNull();
+    expect(h.app.explorer.rows().some((r) => r.path === join(link, "far.md"))).toBe(true);
+    expect(h.app.following.describe(row(h, "data")!)).toContain("just looking");
+    // Gone into another vault: what was looked at is behind you.
+    h.app.vaults.switchVault(locateVault({ root: makeVault() }), null);
+    expect(h.app.following.looking.size).toBe(0);
+  });
+
+  test("a followed link's target asked at the start, in the background: walked once it answers", async () => {
+    const { root, link, out } = linked();
+    setLinkAnswer(link, "follow");
+    // Started as slipbox starts, watching: the graph built before its target is asked, the walk not going through.
+    const h = await harness({ root, open: "index.md", watch: true });
+    try {
+      expect(h.app.graph.notes.has("data/far.md")).toBe(false);
+      expect(h.app.following.describe(row(h, "data")!)).toBe(`→ ${out}  not answering`);
+      await h.app.following.settled();
+      expect(h.app.graph.notes.has("data/far.md")).toBe(true);
+      expect(h.app.following.describe(row(h, "data")!)).toBe(`→ ${out}`);
+    } finally {
+      h.app.watcher?.close();
+    }
+  });
+
+  test("a link that leads elsewhere now is asked about again; a session's tab through one isn't read", async () => {
+    const { top, root, link } = linked();
+    setLinkAnswer(link, "follow");
+    await probe(join(top, "out"));
+    const h = await harness({ root, open: "index.md" });
+    expect(h.app.graph.notes.has("data/far.md")).toBe(true);
+    // A pull pointed it elsewhere.
+    mkdirSync(join(top, "other"));
+    writeFileSync(join(top, "other", "far.md"), "# Other\n");
+    rmSync(link);
+    symlinkSync(join(top, "other"), link);
+    await h.app.run("vault.reindex");
+    expect(h.app.graph.notes.has("data/far.md")).toBe(false);
+    expect(h.app.buffer("data/far.md")).toBeNull();
+    expect(h.app.messages.at(-1)!.text).toBe(
+      `${tildePath(link)} → ${join(top, "other")} isn't followed — open it to choose`,
+    );
+    h.app.open("data/far.md");
+    expect((h.app.overlay as ListOverlay).title).toContain(`→ ${join(top, "other")} leads out of`);
+  });
+
+  test("within the vault, a second name: never asked about; a folder's, opened, shows the folder it names", async () => {
+    const root = makeVault();
+    symlinkSync(join(root, "notes"), join(root, "again"));
+    const h = await harness({ root, open: "index.md" });
+    expect(row(h, "again")?.link).toMatchObject({ dir: true });
+    expect(h.app.following.describe(row(h, "again")!)).toBe(`→ ${tildePath(join(root, "notes"))}`);
+    select(h, "again");
+    await h.keys("enter");
+    expect(h.app.overlay).toBeNull();
+    expect(h.app.messages.at(-1)!.text).toBe("again is a second name for notes");
+    expect(h.app.explorer.rows()[h.app.sidebar.selected]!.path).toBe("notes");
+  });
+
+  test("home writes through a link it follows, and reads nothing through one it doesn't", async () => {
+    const { root, link, out } = linked();
+    const before = process.env.HOME;
+    process.env.HOME = root; // the folder is home: its link leads out of home
+    try {
+      setLinkAnswer(link, "follow");
+      await probe(out);
+      const { homeAt } = await import("../src/core/vault.ts");
+      const h = await harness({ loc: homeAt(root), open: null });
+      const buf = h.app.buffer(join(link, "far.md"))!;
+      expect(buf.readOnly).toBeNull();
+      expect(h.app.writeBuffer(buf, "# Written\n")).toBe(true);
+      expect(readFileSync(join(out, "far.md"), "utf8")).toBe("# Written\n");
+      // Said no: nothing read through it.
+      setLinkAnswer(link, "no");
+      writeFileSync(join(out, "more.md"), "# More\n");
+      expect(h.app.buffer(join(link, "more.md"))).toBeNull();
+    } finally {
+      process.env.HOME = before;
+    }
   });
 });

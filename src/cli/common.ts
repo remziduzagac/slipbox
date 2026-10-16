@@ -15,15 +15,8 @@ import { classify } from "../core/filetypes.ts";
 import { stateHome } from "../core/paths.ts";
 import { readStale, type StaleEntry } from "../core/stale.ts";
 import { UNSAFE } from "../core/sanitize.ts";
-import {
-  type DecodedFile,
-  decodeText,
-  ensureDir,
-  landsInside,
-  readRegular,
-  WriteRefused,
-  writeNote,
-} from "../core/fsutil.ts";
+import { type DecodedFile, decodeText, ensureDir, readRegular, WriteRefused, writeNote } from "../core/fsutil.ts";
+import { blockingLink, linkSaid, PROBE_MS, probeFollowed, writesThrough } from "../core/symlinks.ts";
 import { compilePattern } from "../core/replace.ts";
 import { openVault, Reach } from "../core/reach.ts";
 import { planRelink } from "../core/rename.ts";
@@ -142,6 +135,17 @@ export class Session {
 }
 
 /**
+ * The vault's followed links' targets asked whether they answer (VV-D6), before anything is read: one that doesn't is
+ * given up on this time, said so — never waited for.
+ */
+export async function probeLinks(s: Session): Promise<void> {
+  if (s.loc.mode === "folder") return;
+  const r = await probeFollowed(s.loc.root);
+  for (const g of r.gaveUp)
+    s.warnings.push(`${linkSaid(g.link, g.target)} didn't answer in ${PROBE_MS / 1000} s: not followed this time`);
+}
+
+/**
  * What needs an index, asked in Elsewhere (VV-D3): refused, and why — it has none — never an empty answer. `what`
  * says what was asked for.
  */
@@ -149,6 +153,19 @@ export function needsIndex(s: Session, what: string): void {
   if (s.loc.mode === "folder")
     throw new CliError(
       `${ELSEWHERE} has no index, so no ${what}: ${s.loc.root} is outside home and every vault — a vault or home has them`,
+      EXIT.refused,
+    );
+}
+
+/**
+ * A path read through a link you don't follow (VV-D6): refused, exit 5 — one leading out of the vault, out of home, or
+ * any in Elsewhere. The TUI asks; the command line never does, nor follows one unasked.
+ */
+export function refuseUnfollowed(s: Session, abs: string, shown: string): void {
+  const b = blockingLink(s.loc, abs);
+  if (b)
+    throw new CliError(
+      `${shown} is reached through a link that isn't followed (${linkSaid(b.link, b.target)}): open it in slipbox to choose`,
       EXIT.refused,
     );
 }
@@ -204,12 +221,7 @@ export function retargetSaid(r: Retarget): string {
  * commands that need only the file's bytes: a big note the walk leaves out is then never parsed.
  */
 export function resolveNote(s: Session, arg: string, parse = true): string {
-  const rel = findNoteArg(s, arg, parse);
-  // Reading follows the vault's rule too: a symlink pointing out of it is not a note of it (the
-  // walk leaves it out), so naming it by path reads nothing from outside.
-  if (!landsInside(s.loc.root, join(s.loc.root, rel)))
-    throw new CliError(`${rel} points outside the vault; not reading it`, EXIT.refused);
-  return rel;
+  return findNoteArg(s, arg, parse);
 }
 
 function findNoteArg(s: Session, arg: string, parse: boolean): string {
@@ -223,6 +235,9 @@ function findNoteArg(s: Session, arg: string, parse: boolean): string {
   ) {
     const rel = relative(s.loc.root, s.loc.file);
     if (s.graph.notes.has(rel)) return rel;
+    // Reading follows the vault's rule too (VV-D6): a link not followed leads to nothing of the vault's (the walk
+    // leaves it out), so naming a path through it reads nothing — refused before anything reads it.
+    refuseUnfollowed(s, s.loc.file, rel);
     // An existing file the walk leaves out: named, it's reached (20.8) — git-ignored or under a
     // hidden folder, it's indexed from now on, as the TUI does; under node_modules, excluded by
     // walk.exclude, it's read without joining the vault.
@@ -341,7 +356,11 @@ export function checkWritable(s: Session, abs: string): void {
   const refuse = (why: string) => {
     throw new CliError(`${relative(s.io.cwd, abs) || abs}: ${why}; not writing it`, EXIT.refused);
   };
-  if (!isInside(s.loc.root, abs) || !landsInside(s.loc.root, abs)) refuse(`outside the vault (${s.loc.root})`);
+  if (!isInside(s.loc.root, abs)) refuse(`outside the vault (${s.loc.root})`);
+  // A link on the way not followed, or — in a vault — one leading the write out of it, followed or not (VV-D6).
+  const b = blockingLink(s.loc, abs);
+  if (b) refuse(`reached through a link that isn't followed (${linkSaid(b.link, b.target)})`);
+  if (!writesThrough(s.loc, abs)) refuse(`a link leads it out of the vault (${s.loc.root}), where nothing is written`);
   const rel = relative(s.loc.root, abs);
   // Notes, data and text files are written (16.4); binary files never are.
   if (classify(rel, s.config.walk.extensions).group === "binary") refuse("a binary file");
@@ -373,7 +392,8 @@ export function writeNoteText(s: Session, abs: string, text: string, was: Decode
   if (was?.crlf) out = out.replace(/\r?\n/g, "\r\n");
   if (was?.bom) out = `\uFEFF${out}`;
   try {
-    writeNote(s.loc.root, abs, out);
+    // Home's and Elsewhere's through the links they follow; a vault's never out of it (VV-D6).
+    writeNote(s.loc.root, abs, out, { through: s.loc.mode !== "vault" && writesThrough(s.loc, abs) });
   } catch (err) {
     if (err instanceof WriteRefused) throw new CliError(err.message, EXIT.refused);
     throw err;

@@ -63,7 +63,8 @@ What connects them is the disk:
 - **As it was, but for your change.** Line endings and a byte order mark are kept. A missing last line break is kept
   too, unless the folder's `.editorconfig` asks for one. A file that isn't valid UTF-8 is never rewritten, so no byte
   is lost.
-- **Only inside the note's vault.** A write that would land outside it, through `..` or a symlink, is refused.
+- **Only inside the note's vault.** A write that would land outside it, through `..` or a symlink, is refused. In
+  home, a link you follow is written through ([Links that lead out](links-and-vaults.md#links-that-lead-out)).
 - **Shown first when it's large.** A rename, a move or a replace in every note shows each line it will change, before
   it changes any. `--dry-run` shows the same on the command line. `slipbox undo` takes the last one back.
 - **Deleting moves to slipbox's trash.** A file stays there for 30 days, to be put back ([Deleting and the
