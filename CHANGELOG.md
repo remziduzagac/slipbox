@@ -21,6 +21,11 @@ The format is [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.1.0/); wh
   no upstream is asked whether to push to `origin` and track it there. git never waits for a password: a remote that
   needs a login fails at once, in git's words. The status line shows how far the branch is ahead of its upstream and
   behind it (`main ↑2 ↓1`). In a vault you don't trust, a push runs none of the repository's hooks.
+- The explorer marks each row at its right, in columns that line up down the tree. The last says what slipbox has
+  indexed: `●` indexed (dimmed), `◐` being indexed, `⊘` not indexed, `⚿` you may not read it, `⚠` a problem, such as a
+  link whose target isn't there. git's mark is in the column before it, and before that, dimmed, a vault's branch, or a
+  worktree's after `⎇`. Each mark is one column wide, with ASCII and Nerd Font forms ([A row's
+  marks](docs/manual/files.md#a-rows-marks)). A new colour, `sidebar_mark`, is the indexed mark's.
 
 ### Changed
 
@@ -55,6 +60,11 @@ The format is [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.1.0/); wh
   busy folders such as `node_modules`, and what isn't a note or a text file; it holds 10,000 notes at most, and says so
   when it's full. The background index indexes home's notes before the vaults in it. `slipbox info` says `mode`
   `home` there ([Home](docs/manual/links-and-vaults.md#home)).
+- The explorer lists `node_modules`, the other folders tools fill (`build`, `dist`, `target`, `vendor`, `__pycache__`,
+  caches…), what `.gitignore` and `walk.exclude` leave out, and home's `Downloads`, each marked `⊘`. You can unfold
+  them and open their files; nothing in them is indexed. A folder you may not read is listed too, marked `⚿`. Every
+  vault's index now leaves those busy folders out, as home's did, even where its `.gitignore` doesn't: a note kept in a
+  folder named `build` or `vendor` is no longer indexed, so rename the folder to have it indexed again.
 
 ### Removed
 

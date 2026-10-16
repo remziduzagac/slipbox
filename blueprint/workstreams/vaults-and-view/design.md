@@ -136,41 +136,77 @@ parent, `z` and the breadcrumb zooming in; vaults marked, the current one highli
 (VV-D8); a row's marks in their columns (VV-D9). Goes: `..` above the root as a mode of its own (the breadcrumb and
 zooming out replace it), the roots beside the tree, `:pin-root`.
 
-Done in VV-T4 but the busy folders and the marks (VV-T5). The explorer bullet becomes:
+Done in VV-T4, the busy folders and the marks in VV-T5. The explorer bullet becomes:
 
-- **Explorer (left, `≡`): one tree, the view a part of it** (VV-D5). The view (`explorerTop`, absolute) is a folder:
-  its rows are what's in it. In the vault open, the vault's own tree from there (`rootTree(sub)`, its notes and files
-  as `files.show` lists them, the walk's folders, nested vaults by their rows); anywhere else — above the vault,
-  beside it, in another vault, a nested one's folder — the folder listed a level at a time, never walked
-  (`outsideRows`): its folders, then its files as their vault's `files.show` would list them, hidden ones and
-  `node_modules` left out. There the vault open is a row, highlighted (`sidebar_active`), its tree under it while
-  unfolded; another vault is a row with the vault's icon in a folder's blue (`sidebar_root`), its name dimmed after
-  the folder's when they differ, a worktree's branch (`⎇ feat`). A row's path is its path in the vault for what the
-  vault's own tree holds, else absolute (`outside`), and so is a folder's key in `expanded`; none of this vault's file
-  operations act on an `outside` row. **It starts** at the folder opened (`slipbox x/y`: y, in vault x; `prepare`'s
-  `folder`), set once the notes are open, so the note shown outside it leaves it be; opened on a note, at its vault.
-  **The breadcrumb**, on the row under the pane's title (where a blank row was), says where the view is: `~` for home
-  (else `/`), then each folder down to the view and a `›`; a vault with its icon, the vault open highlighted, the view
-  bold. Past the view, dimmed, the trail (`explorerTrail`): the folders it can zoom back into — the view zoomed out
-  from, or where you went when it zoomed out by itself — kept while the view is on their way. Too long for the pane,
-  the trail gives way first (from its end, its first folder cut short, kept), then the folders above the view, from
-  the start, to `…`. A click on a folder of it zooms the view there (`xcrumb:<path>`). **Zooming** on purpose
-  (`zoomTo`): `z` (`zoom_in`) on a folder or vault, a file's folder on a file; `-` (`zoom_out`, nvim-tree's and oil's
-  key for the parent) a folder up, the folder left unfolded and selected; nothing above `/`, said. **By itself**
-  (`zoomToHold`), only outward: going somewhere outside the view — a note opened, followed to, gone back or forward
-  to, revealed (`space shift+e`), a folder link followed, a vault gone into — zooms the view out to the common parent
-  of the view and the place, only their two paths unfolded (what was unfolded in the old view kept, every other
-  folder folded), the trail at the place. Not for what the tree doesn't list (a hidden folder's file, `node_modules`),
-  nor the scratch; the explorer's first showing, a session's tabs restored, and the filter's `esc` reveal the note
-  only inside the view. **Keys on a row:** `enter` folds or unfolds a folder and the vault open's row, opens a note,
-  goes into another vault (VV-D4); `l` unfolds any folder or vault in place; `h` folds an unfolded folder or vault,
-  else the folder holding the row (when it's a row of the view). **Any folder you may read:** a folder you may not
-  read (`access`: read and search) says why when it's opened on, unfolded or zoomed into (`can't read ~/x: you may not
-  read it (no permission)`), nothing unfolded; a file you may not write — it, or its folder, for the save's rename —
-  opens read-only (`buf.readOnly`), said at once and when typing is refused (`notes/a.md is read-only: you may not
-  write it (no permission)`). Gone with VV-T4: `..` and climbing above the root (`explorerUp`), the roots beside the
-  tree (`otherRoots`: the one opened, those pinned, a loose file's folder — the view holds them now), `:pin-root`
-  (`vault.pin_root`, its `roots.json` in the vault's state no longer read).
+- **Explorer (left, `≡`): one tree, the view a part of it** (VV-D5). The view (`explorerTop`, absolute) is a folder: its
+  rows are what's in it. In the vault open, the vault's own tree from there (`rootTree(sub)`, its notes and files as
+  `files.show` lists them, the walk's folders, nested vaults by their rows); anywhere else — above the vault, beside it,
+  in another vault, a nested one's folder — the folder listed a level at a time, never walked (`outsideRows`): its
+  folders, then its files as their vault's `files.show` would list them, hidden ones left out (a busy folder is listed,
+  VV-D8). There the vault open is a row, highlighted (`sidebar_active`), its tree under it while unfolded; another vault
+  is a row with the vault's icon in a folder's blue (`sidebar_root`), its name dimmed after the folder's when they
+  differ, its branch among its marks (below). A row's path is its path in the vault for what the vault's own tree holds,
+  else absolute (`outside`), and so is a folder's key in `expanded`; none of this vault's file operations act on an
+  `outside` row. **It starts** at the folder opened (`slipbox x/y`: y, in vault x; `prepare`'s `folder`), set once the
+  notes are open, so the note shown outside it leaves it be; opened on a note, at its vault. **The breadcrumb**, on the
+  row under the pane's title (where a blank row was), says where the view is: `~` for home (else `/`), then each folder
+  down to the view and a `›`; a vault with its icon, the vault open highlighted, the view bold. Past the view, dimmed,
+  the trail (`explorerTrail`): the folders it can zoom back into — the view zoomed out from, or where you went when it
+  zoomed out by itself — kept while the view is on their way. Too long for the pane, the trail gives way first (from its
+  end, its first folder cut short, kept), then the folders above the view, from the start, to `…`. A click on a folder
+  of it zooms the view there (`xcrumb:<path>`). **Zooming** on purpose (`zoomTo`): `z` (`zoom_in`) on a folder or vault,
+  a file's folder on a file; `-` (`zoom_out`, nvim-tree's and oil's key for the parent) a folder up, the folder left
+  unfolded and selected; nothing above `/`, said. **By itself** (`zoomToHold`), only outward: going somewhere outside
+  the view — a note opened, followed to, gone back or forward to, revealed (`space shift+e`), a folder link followed, a
+  vault gone into — zooms the view out to the common parent of the view and the place, only their two paths unfolded
+  (what was unfolded in the old view kept, every other folder folded), the trail at the place. Not for what the tree
+  doesn't list (a hidden folder's file), nor the scratch; the explorer's first showing, a session's tabs restored, and
+  the filter's `esc` reveal the note only inside the view. **Keys on a row:** `enter` folds or unfolds a folder and the
+  vault open's row, opens a note, goes into another vault (VV-D4); `l` unfolds any folder or vault in place; `h` folds
+  an unfolded folder or vault, else the folder holding the row (when it's a row of the view). **Any folder you may
+  read:** a folder you may not read (`access`: read and search) says why when it's opened on, unfolded or zoomed into
+  (`can't read ~/x: you may not read it (no permission)`), nothing unfolded; a file you may not write — it, or its
+  folder, for the save's rename — opens read-only (`buf.readOnly`), said at once and when typing is refused (`notes/a.md
+  is read-only: you may not write it (no permission)`). Gone with VV-T4: `..` and climbing above the root
+  (`explorerUp`), the roots beside the tree (`otherRoots`: the one opened, those pinned, a loose file's folder — the
+  view holds them now), `:pin-root` (`vault.pin_root`, its `roots.json` in the vault's state no longer read).
+- **What the walk leaves out, listed** (VV-D8, VV-T5; `tui/explorer-disk.ts`). In each folder of the vault's own tree
+  the explorer shows — the view's, and each unfolded under it — what's on the disk that the walk didn't give is read
+  (`fromDisk`), a hidden name or a link aside (VV-D6's). What the walk leaves out — `node_modules` and the other busy
+  folders, what `.gitignore` or `walk.exclude` leaves out, home's skip list — is a row by its absolute path (`outside`,
+  its `leftOut` the reason `exclusion` gives), listed a level at a time as a folder outside the vault, never this
+  vault's to rename, move, delete or make a note in; a file of it opens from the explorer, never indexed; a note of it a
+  link reached (20.8) is listed there, not under a folder of the vault's own. What it hasn't reached — a folder it
+  couldn't read, home's folders before its walk, a folder or file come since the walk — is the vault's, by its path in
+  it (`unwalked`), listed from the disk until the walk has it: so a top-level folder of home unfolded before home was
+  ever walked lists what's in it at once (VV-T2's gap). `rowPath` gives a path at or under what the walk leaves out its
+  absolute path (a hidden one only in home, as before); the view zooms out by itself to hold such a file (`zoomToHold`:
+  only a hidden folder's isn't, `listedDown`), and the view's own folder can be one (`ownView` null).
+- **A row's marks** (VV-D9, VV-T5; `tui/marks.ts`, drawn by `drawTree`). At a row's right, in columns that line up: the
+  index's state in the last (`indexGlyph`, `INDEX_ROLE`) — indexed `●` (`sidebar_mark`, a new role: dimmer than a name),
+  indexing `◐` (`info`), not indexed `⊘` (`sidebar`), can't read `⚿` (a lock in nerd; `warn`), a problem `⚠` (`warn`);
+  git's mark two columns before it, a file's letter or a folder's `markGitFolder` (`•`, `o` in ascii, where `*` says
+  indexed); and, between the name and those, dimmed and ending a space short of git's column, what describes the row
+  (`describe`): a vault's branch when it's a repository's top, a worktree's after `⎇` — where VV-T6 puts a link's
+  target. Each glyph is one column wide in every set (`core/glyphs.ts`, `mark…`); none is an emoji. A vault's other name
+  stays after its folder's (17.13); a row with its menu's button shows no marks, as git's mark wasn't. The index's
+  state: a folder of the vault's own tree is indexed, or indexing while home is unwalked, while the walk hasn't reached
+  it (`unwalked`; past home's cap, not indexed), or while a note in it waits to be parsed (`app.indexing`,
+  `graph.pendingPaths`); what the walk leaves out (`leftOut`), a busy folder anywhere and a note too big
+  (`walk.max_file_size`) are not indexed; the vault open's row is indexing while its index is built, else indexed;
+  another vault's is indexed when its index is on the disk, indexing while the background index builds it
+  (`AutoIndex.status.current`), else unmarked; a note in what the walk leaves out that a link reached is indexed. A
+  folder you may not list and a file you may not read: can't read; a link whose target isn't there: a problem. A file's
+  row carries one only when it isn't its folder's. What the disk says of a row (`Facts`: access, a broken link, the
+  size, a vault's index and branch) is read once per row, again when the tree is built again.
+
+## MODIFIED design/roots.md § The walk: the busy folders (VV-T5)
+
+Every vault's walk leaves out the busy folders (VV-D8), as home's does: `WalkFilter.exclusion` says `busy folder` for a
+folder `isBusyFolder` names (`BUSY_FOLDERS` and caches), after `walk.exclude` and before `.gitignore`, whatever
+`.gitignore` says (`node_modules` stays `always skipped`). Such a folder is never reached (20.8): a file of it named
+opens, never indexed; the watcher doesn't watch it. Before, a vault left out only `node_modules`, the rest unless
+`.gitignore` did.
 
 ## ADDED design/tui.md § The peek
 

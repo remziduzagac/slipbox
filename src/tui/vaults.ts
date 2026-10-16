@@ -2,7 +2,7 @@
 // and their copies (21.x).
 
 import { existsSync } from "node:fs";
-import { dirname, isAbsolute, join, posix, relative, sep } from "node:path";
+import { dirname, isAbsolute, join, posix, relative } from "node:path";
 import { writeDirty } from "../core/stale.ts";
 import { loadConfig } from "../core/config.ts";
 import { Graph } from "../core/graph.ts";
@@ -44,7 +44,7 @@ import {
 } from "../core/vault.ts";
 import type { App, ListItem, PromptOverlay } from "./app.ts";
 import { uiDefaults, RECENT_MAX, RECENT_NOTES_MAX } from "./app.ts";
-import type { ExplorerItem, TreeRow } from "./explorer.ts";
+import { type ExplorerItem, listedDown, type TreeRow } from "./explorer.ts";
 
 /** Vaults: switching, making and unmaking, named folders. */
 export class Vaults {
@@ -235,11 +235,9 @@ export class Vaults {
     this.app.explorer.expanded = new Set(unfolded.map((a) => this.app.explorer.rowPath(a)));
     this.app.explorer.invalidateTree();
     const T = this.app.explorer.top;
-    const shown = (from: string) =>
-      !relative(from, target.root)
-        .split(sep)
-        .some((p) => p.startsWith(".") || p === "node_modules");
-    if (isInside(T, target.root) ? !shown(T) : !this.app.explorer.zoomToHold(target.root, target.root)) {
+    if (
+      isInside(T, target.root) ? !listedDown(T, target.root) : !this.app.explorer.zoomToHold(target.root, target.root)
+    ) {
       this.app.explorer.top = this.app.explorer.trail = target.root;
       this.app.explorer.expanded.clear();
     } else if (isInside(T, target.root)) {

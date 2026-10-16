@@ -576,8 +576,9 @@ build (`scripts/build-home.ts`), not kept as they are. Each file's purpose and t
 
 - Explorer default shows notes and data files, hides plain code; 'a' toggles to all text files —
   `notes/.slipbox/config.toml`, `work/kestrel/README.md` (tui.md 'What lists them' files.show)
-- Hidden, git-ignored and node\_modules files: reached by :e or link but not listed — `.build/extras.toml`,
-  `work/kestrel/.gitignore`, `work/kestrel/docs/generated/api.md` (tui.md 'Opening' (20.8))
+- Hidden files: reached by :e or link but not listed; git-ignored and node\_modules ones listed, not indexed —
+  `.build/extras.toml`, `work/kestrel/.gitignore`, `work/kestrel/docs/generated/api.md` (tui.md 'Opening' (20.8);
+  VV-D8)
 - Names with spaces, unicode and long names for data and code files — `Downloads/Q3 budget (final).csv`,
   `Downloads/données.json5`, `Downloads/résumé-template.py` (tui.md explorer; rendering sanitize/width)
 - tree with deep folders (6+ levels), many files (500), folders-first order, tree lines —
@@ -587,6 +588,9 @@ build (`scripts/build-home.ts`), not kept as they are. Each file's purpose and t
   `work/kestrel/README.md` (tui.md Files beyond notes; test 'the explorer lists data files by default')
 - hidden and git-ignored files and folders, node\_modules, walk.exclude — `.build/extras.toml`,
   `work/kestrel/.gitignore` (tui.md Opening 20.8; test ':e of a git-ignored or hidden file opens it')
+- a row's marks: indexed `●` dimmed, not indexed `⊘` (node\_modules, build, vendor, tmp listed and browsed), git's
+  mark before them, a vault's branch and a worktree's after `⎇` dimmed — `.build/extras.toml`, `.build/kestrel.toml`
+  (its worktree), `work/kestrel/.gitignore` (VV-D8, VV-D9; tests/marks.test.ts)
 - git marks M + R ! and folder bullet — `.build/extras.toml` (M: local edits), `.build/kestrel.toml` (R and ! from
   test steps: `git mv`, merging `jo/release-notes-wording`), `work/kestrel/README.md` (tui.md Git's marks 5.11)
 - explorer filter: words in any order, letters together, smart case, highlight — `notes/index.md`,

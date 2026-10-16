@@ -83,7 +83,16 @@ async function clickCrumb(s: Session, name: string): Promise<void> {
 }
 
 /** The explorer has a row that ends with `name` (a folder's or a file's, after its icon and marks). */
-const listed = (s: Session, name: RegExp) => explorer(s).some((r) => name.test(r.trimEnd()));
+const listed = (s: Session, name: RegExp) => explorer(s).some((r) => names(r, name));
+
+/** Whether an explorer row matches: its whole text, or what comes before a run of spaces — its name, the description
+ *  and the marks at its right (VV-D9) left out. */
+function names(row: string, name: RegExp): boolean {
+  const t = row.trimEnd();
+  if (name.test(t)) return true;
+  for (const m of t.matchAll(/ {2,}/g)) if (name.test(t.slice(0, m.index))) return true;
+  return false;
+}
 
 /** The explorer opened (space e toggles it, so up to three tries) with focus. */
 
@@ -893,7 +902,7 @@ const ROOTS: Check[] = [
       // them: the other repositories folded.
       for (const n of [/\skestrel$/, /\skestrel-agent-sync-retry\b/, /\sproduct$/, /\sinfra$/])
         s.expect(listed(s, n), `${n.source} in the view`);
-      s.expect(explorer(s).filter((r) => /\sdocs$/.test(r.trimEnd())).length === 2, "docs/ under each of the two");
+      s.expect(explorer(s).filter((r) => names(r, /\sdocs$/)).length === 2, "docs/ under each of the two");
       s.expect(!listed(s, /\sprd$/) && !listed(s, /\sk8s$/), "product and infra folded");
     },
   },

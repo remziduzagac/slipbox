@@ -40,7 +40,8 @@ The explorer marks each changed file at the end of its row:
 | `R` | renamed |
 | `!` | in conflict, during a merge |
 
-A folder with a changed file somewhere inside it shows `•`.
+A folder with a changed file somewhere inside it shows `•` (`o` with ASCII icons). git's mark is in the column before
+the one that says what's indexed ([A row's marks](files.md#a-rows-marks)).
 
 slipbox asks git in the background, a moment after anything changes. That can be a save, a file an agent wrote, or a
 branch switch.

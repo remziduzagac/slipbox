@@ -256,6 +256,11 @@ export class Graph {
     return this.unparsed.size;
   }
 
+  /** The notes still waiting to be parsed, by their paths: the explorer marks their folders as being indexed (VV-D9). */
+  pendingPaths(): IterableIterator<string> {
+    return this.unparsed.keys();
+  }
+
   /**
    * Files the walk leaves out — under a hidden folder, or git-ignored — reached since (20.8): a link
    * points at one, or it was opened or named. Indexed as the walked ones are, and kept with the index.

@@ -300,6 +300,9 @@ A few rules keep vaults predictable:
 - **A vault inside a vault is a vault of its own.** A repository cloned into your notes folder keeps its notes to
   itself. The outer vault doesn't index them, and its names don't reach them. The explorer shows such a folder with its
   own icon. The vaults in your home folder are their own the same way.
+- **A vault's index leaves out the busy folders,** `node_modules`, `build`, `vendor` and the like, whatever its
+  `.gitignore` says, and what `.gitignore` and `walk.exclude` leave out. The explorer lists them, marked `⊘`
+  ([What the explorer lists](files.md#what-the-explorer-lists)).
 - **Several markers in one folder make one vault.** Its settings and name come from `.slipbox/`.
 - **Which markers count** is `walk.root_markers`. Only your own config may set it, since it decides where vaults are.
 
@@ -324,7 +327,8 @@ Home's index leaves out what isn't your notes:
   `.next`, `vendor`, `Pods`, `DerivedData`, `.gradle`, `.tox`, and caches
 - notes larger than `walk.max_file_size`, which are listed as skipped, not read
 
-A file there still opens, and is read again when it changes on disk, but it is never indexed.
+A file there still opens, and is read again when it changes on disk, but it is never indexed. The explorer lists those
+folders, marked `⊘`, except the hidden ones.
 
 Home is walked a little at a time while nobody is working, by the background index (see [Backlinks](#backlinks)), or
 by the TUI while home is open and the background index is off. Until then, home is its top folder alone. The walk is

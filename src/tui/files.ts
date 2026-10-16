@@ -10,7 +10,7 @@ import { normKey } from "../core/links.ts";
 import { openVault } from "../core/reach.ts";
 import { planFolderMove, planNoteRename, planVaultFolderMove, type RenamePlan } from "../core/rename.ts";
 import { copyPath, emptyTrash, linksInto, listTrash, restorePath, type TrashItem, trashPath } from "../core/files.ts";
-import { isListed } from "../core/vault.ts";
+import { isInside, isListed } from "../core/vault.ts";
 import type { NoteBuffer } from "./buffer.ts";
 import { match } from "./match.ts";
 import type { App, ListItem, PromptOverlay } from "./app.ts";
@@ -40,6 +40,10 @@ export class Files {
 
   /** A new note, folder or paste with another root's row selected: refused, its files aren't this root's. */
   private refuseOtherRoot(): void {
+    const row = this.app.explorer.rows()[this.app.sidebar.selected];
+    // In a folder this vault's walk leaves out (VV-D8): listed, not indexed, not a place for its notes.
+    if (row && isInside(this.app.loc.root, this.app.explorer.rowAbs(row)))
+      return this.app.message("warn", "a folder this vault doesn't index: select one it does");
     this.app.message("warn", "another vault's folder: select a folder of this vault");
   }
 
