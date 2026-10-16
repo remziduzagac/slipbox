@@ -4,6 +4,7 @@
 import { existsSync } from "node:fs";
 import { basename, join, posix, relative, sep } from "node:path";
 import { readText } from "../core/fsutil.ts";
+import { baseFor } from "../core/gitbase.ts";
 import { startInsert } from "./editing.ts";
 import { fence, fenceLanguage } from "../core/capture.ts";
 import { loadSession, TOP } from "../core/position.ts";
@@ -214,13 +215,26 @@ export class Git {
     return changes;
   }
 
-  /** A branch's base: `[git] base`, else main or master; null for the base itself, or with none. */
+  private baseMemo: { key: string; base: string | null } | null = null;
+
+  /**
+   * A branch's own base (GIT-D10): kept when slipbox made it, else the nearest of `[git] bases`, else `[git] base`, main
+   * or master; null for the base itself, or with none. Asked of git once each time it has news.
+   */
   baseOf(c: Checkout, branch: string | null): string | null {
-    const base = baseBranch(c, this.app.config.git.base);
-    return base === branch ? null : base;
+    if (!branch) return baseBranch(c, this.app.config.git.base);
+    const key = `${this.generation}\0${c.root}\0${branch}`;
+    if (this.baseMemo?.key !== key)
+      this.baseMemo = { key, base: baseFor(c, branch, this.app.config.git)?.base ?? null };
+    return this.baseMemo.base;
   }
 
-  /** The base branch here: on the base itself the base; null (said) when there's none. */
+  /** The base asked again (one kept or dropped: "Compare against…"). */
+  forgetBase(): void {
+    this.baseMemo = null;
+  }
+
+  /** The base branch here: this branch's own (GIT-D10), on the base itself the base; null (said) when there's none. */
   private base(c: Checkout): string | null {
     const base = this.baseOf(c, headOf(c).branch) ?? baseBranch(c, this.app.config.git.base);
     if (!base)

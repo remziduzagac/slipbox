@@ -763,6 +763,8 @@ pointer says its own. `[keys.git]` changes them ([Configuration](configuration.m
 | `p` | pull the upstream's new commits, fast-forward only, unsaved notes saved or kept first (`:pull`) |
 | `shift+p` | push the branch to its upstream; with none, asks to push it to `origin` and track it (`:push`) |
 | `z` | the stashes: stash your changes with a message, or pop, apply or drop a stash (`:stash`) |
+| `n` | a new branch: its name, where it starts, and where it goes, in a new worktree by default |
+| `m` | merge the branch selected into its base, the links it would break shown first |
 | `.` | the row's menu, as a right click opens it |
 | `g g` / `shift+g` | the first / last row |
 | `/` | filter the files, branches and repositories by name |

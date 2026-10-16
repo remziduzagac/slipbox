@@ -234,6 +234,22 @@ function drawRow(
     if (x >= end) return;
     x += drawText(c, x, r.y, truncate(text, end - x), style, end - x);
   };
+  /**
+   * What a row says at its end, right-aligned before its buttons: a branch's figures, a repository's state — the first
+   * of `choices` that leaves its name `least` columns (a shorter way of saying it after a longer).
+   */
+  const tail = (choices: { text: string; role: Role }[][], least = 16) => {
+    const width = (parts: { text: string }[]) => parts.reduce((n, p, i) => n + (i ? 1 : 0) + stringWidth(p.text), 0);
+    const parts = choices.find((ps) => end - width(ps) - 1 >= x + least) ?? [];
+    const w = width(parts);
+    if (!w) return;
+    let tx = end - w - 1;
+    end = tx - 1;
+    parts.forEach((p, i) => {
+      if (i) tx += 1;
+      tx += drawText(c, tx, r.y, p.text, { ...roleStyle(theme, p.role, rowBg), bg: rowBg });
+    });
+  };
   const letter = (l: string) =>
     put(l, { ...roleStyle(theme, LETTER_ROLE[l] ?? "git_modified", rowBg), bg: rowBg, bold: true });
   const body = (): void => {
@@ -242,6 +258,7 @@ function drawRow(
         return put(row.text, dim);
       case "heading": {
         const folded = app.gitPanel.folded.has(row.section) && !app.sidebar.filter;
+        if (row.section === "older") x += 2;
         return put(`${folded ? g.foldClosed : g.foldOpen} ${row.label}`, { ...dim, bold: true });
       }
       case "file":
@@ -268,6 +285,61 @@ function drawRow(
       case "thisfile":
         x += 2;
         return put(row.label, st);
+      case "branch": {
+        const b = row.branch;
+        const stats = app.gitPanel.branches.statsOf(b);
+        // Its figures (GIT-D9): ahead of its base (and behind), on which; a worktree's uncommitted files; something to
+        // review — a worktree's work, not merged — or merged. Short of room: the base's name goes, then the behind.
+        const marks: { text: string; role: Role }[] = [];
+        if (b.worktree?.gone) marks.push({ text: "folder gone", role: "warn" });
+        if (stats?.dirty) marks.push({ text: `${g.git.edited}${stats.dirty}`, role: "git_modified" });
+        if (stats?.base && b.worktree && !b.here && (stats.dirty || (stats.ahead && !stats.merged)))
+          marks.push({ text: g.git.review, role: "warn" });
+        if (stats?.base && stats.merged && !b.here) marks.push({ text: g.git.merged, role: "git_new" });
+        if (b.here) marks.push({ text: "here", role: "dim" });
+        const ahead = stats?.base && (stats.ahead || !stats.merged) ? `${g.gitAhead}${stats.ahead}` : "";
+        const behind = ahead && stats!.behind ? ` ${g.gitBehind}${stats!.behind}` : "";
+        const on = (text: string): { text: string; role: Role }[] => (text ? [{ text, role: "dim" }] : []);
+        // Its name kept whole where it can be: the figures shortened first.
+        tail(
+          [
+            [...on(ahead && `${ahead}${behind} on ${sanitize(stats!.base!)}`), ...marks],
+            [...on(ahead && `${ahead} on ${sanitize(stats!.base!)}`), ...marks],
+            [...on(`${ahead}${behind}`), ...marks],
+            [...on(ahead), ...marks],
+            marks,
+          ],
+          Math.min(28, stringWidth(sanitize(b.name)) + 6),
+        );
+        x += 2;
+        if (row.open) put(`${g.foldOpen} `, dim);
+        const mark = b.here ? g.git.here : b.worktree ? g.git.worktree : " ";
+        put(`${mark} `, { ...roleStyle(theme, b.here ? "sidebar_active" : "sidebar_root", rowBg), bg: rowBg });
+        return put(sanitize(b.name), b.here ? { ...st, bold: true } : st);
+      }
+      case "bline":
+        x += 6;
+        return put(row.text, row.gone ? { ...roleStyle(theme, "warn", rowBg), bg: rowBg } : dim);
+      case "bsub":
+        x += 6;
+        return put(row.label, { ...dim, bold: true });
+      case "bbuttons": {
+        x += 6;
+        for (const b of row.buttons) {
+          const id = `git:bb:${idx}:${b.action}`;
+          const text = `[${b.label}]`;
+          if (x + stringWidth(text) > end) break;
+          const w = drawText(c, x, r.y, text, button(id));
+          geo.hot.push({ id, x, y: r.y, w, h: 1 });
+          x += w + 1;
+        }
+        return;
+      }
+      case "bfile":
+        x += 8;
+        letter(row.letter);
+        x += 1;
+        return put(sanitize(row.path), st);
     }
   };
   body();

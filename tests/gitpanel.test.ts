@@ -3,7 +3,7 @@
 
 import { afterAll, describe, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { canonKey } from "../src/core/commands.ts";
@@ -102,6 +102,9 @@ async function panel(root: string, open: string | null = "a.md", show = true) {
   frame();
   return { app, frame, keys, click };
 }
+
+/** Typed, a key a character (a space by its name). */
+const typed = (text: string) => [...text].map((c) => (c === " " ? "space" : c));
 
 /** The panel's row of a kind and label (or a file's path), by its index. */
 const rowOf = (app: App, test: (r: ReturnType<App["gitPanel"]["rows"]>[number]) => boolean) =>
@@ -248,5 +251,116 @@ describe("space g, the status line's branch, a change's sign (GIT-D8, GIT-D12)",
     expect(menu.items.map((i) => i.label)).toEqual(["Revert it", "Stage it", "- one", "+ ONE", "+ ", "+ more"]);
     await app.input.handleKey("s");
     expect(git(root, "show", ":a.md")).toBe("# A\n\nONE\n\nmore\n");
+  });
+});
+
+describe("the branches (GIT-D9, GIT-D10, GIT-D13)", () => {
+  /** A worktree for `branch`, made from `from`, beside the repository; its commit, `commit`. */
+  const worktree = (root: string, branch: string, from: string, commit = false) => {
+    const at = `${root}-${branch.replace(/\//g, "-")}`;
+    git(root, "worktree", "add", "-q", "-b", branch, at, from);
+    if (commit) {
+      writeFileSync(join(at, "w.md"), "# W\n");
+      git(at, "add", "w.md");
+      git(at, "commit", "-q", "-m", "w");
+    }
+    return at;
+  };
+  const branchRow = (app: App, name: string) => rowOf(app, (r) => r.kind === "branch" && r.branch.name === name);
+
+  test("this branch, then the worktrees', then the rest; merged ones folded; / filters; opened up, its buttons and files", async () => {
+    const root = repo();
+    git(root, "branch", "merged-one", "main");
+    const at = worktree(root, "agent/a", "main", true);
+    const { app, frame, keys } = await panel(root);
+    expect(await until(() => (frame(), branchRow(app, "agent/a") >= 0))).toBe(true);
+    const names = () =>
+      app.gitPanel
+        .rows()
+        .filter((r) => r.kind === "branch" || (r.kind === "heading" && r.section === "older"))
+        .map((r) => (r.kind === "branch" ? r.branch.name : "(older)"));
+    expect(await until(() => (frame(), names().join() === "feature,agent/a,main,(older)"))).toBe(true);
+    // Folded: the merged one; unfolded, it's there.
+    app.sidebar.selected = rowOf(app, (r) => r.kind === "heading" && r.section === "older");
+    await keys("enter");
+    expect(names()).toEqual(["feature", "agent/a", "main", "(older)", "merged-one"]);
+    // / filters by name.
+    await keys("/", ...typed("agent"));
+    expect(names()).toEqual(["agent/a"]);
+    await keys("enter");
+    // Opened up in place (enter kept the filter): its folder, its buttons, its files against its base.
+    expect(await until(() => (frame(), app.gitPanel.rows().some((r) => r.kind === "bfile")))).toBe(true);
+    const rows = app.gitPanel.rows();
+    expect(rows.find((r) => r.kind === "bline")).toMatchObject({ gone: false });
+    expect(rows.find((r) => r.kind === "bbuttons")).toMatchObject({
+      buttons: [
+        { action: "go", label: "Open" },
+        { action: "merge", label: "Merge…" },
+        { action: "remove", label: "Remove…" },
+      ],
+    });
+    expect(rows.filter((r) => r.kind === "bfile").map((r) => (r.kind === "bfile" ? r.path : ""))).toEqual(["w.md"]);
+    expect(at).toBeTruthy();
+  });
+
+  test("a branch made from another in a new worktree beside the repository, measured against what it was made from", async () => {
+    const root = repo();
+    git(root, "branch", "dev", "main");
+    git(root, "switch", "-q", "dev");
+    writeFileSync(join(root, "d.md"), "# D\n");
+    git(root, "add", "d.md");
+    git(root, "commit", "-q", "-m", "d");
+    git(root, "switch", "-q", "feature");
+    const { app, frame, keys } = await panel(root);
+    await keys("n", ...typed("agent/cache"), "enter");
+    expect((app.overlay as ListOverlay).title).toBe("agent/cache: from where?");
+    await keys(...typed("dev"), "enter");
+    expect((app.overlay as ListOverlay).title).toBe("agent/cache from dev: where?");
+    await keys("enter");
+    const folder = `${root}-agent-cache`;
+    expect(git(folder, "branch", "--show-current")).toBe("agent/cache\n");
+    // Its base is dev, kept — [git] bases names main alone.
+    writeFileSync(join(folder, "w.md"), "# W\n");
+    git(folder, "add", "w.md");
+    git(folder, "commit", "-q", "-m", "w");
+    await app.git.refreshNow();
+    const stats = () => {
+      const b = app.gitPanel.rows().find((r) => r.kind === "branch" && r.branch.name === "agent/cache");
+      return b?.kind === "branch" ? app.gitPanel.branches.statsOf(b.branch) : null;
+    };
+    expect(await until(() => (frame(), stats()?.base === "dev" && stats()?.ahead === 1))).toBe(true);
+    expect(frame()).toContain("↑1 on dev");
+  });
+
+  test("Remove…: refused for one not merged, and for one with uncommitted files; a merged one removed after asking; a gone one pruned", async () => {
+    const root = repo();
+    const ahead = worktree(root, "agent/ahead", "main", true);
+    const done = worktree(root, "agent/done", "main");
+    const gone = worktree(root, "agent/gone", "main");
+    const { app, frame } = await panel(root);
+    const branch = (name: string) => {
+      const r = app.gitPanel.rows().find((x) => x.kind === "branch" && x.branch.name === name);
+      return r?.kind === "branch" ? r.branch : null;
+    };
+    expect(await until(() => (frame(), !!branch("agent/done")))).toBe(true);
+    const said = (text: string) => until(() => app.messages.at(-1)?.text.startsWith(text) ?? false);
+    app.gitPanel.branches.button(branch("agent/ahead")!, "remove");
+    expect(await said("not removed: agent/ahead isn't merged into main — 1 commit of its own")).toBe(true);
+    writeFileSync(join(done, "notes.md"), "notes\n");
+    app.gitPanel.branches.button(branch("agent/done")!, "remove");
+    expect(await said(`not removed: ${done} has 1 uncommitted file`)).toBe(true);
+    rmSync(join(done, "notes.md"));
+    app.gitPanel.branches.button(branch("agent/done")!, "remove");
+    expect(await until(() => (app.overlay as ListOverlay | null)?.title === `Remove the worktree ${done}?`)).toBe(true);
+    await app.input.handleKey("enter");
+    expect(await said(`removed the worktree ${done}; agent/done kept`)).toBe(true);
+    expect([existsSync(done), git(root, "branch", "--list", "agent/done")]).toEqual([false, "  agent/done\n"]);
+    expect(existsSync(ahead)).toBe(true);
+    // Gone by hand: marked, and pruned.
+    rmSync(gone, { recursive: true, force: true });
+    await app.git.refreshNow();
+    expect(await until(() => (frame(), branch("agent/gone")?.worktree?.gone === true))).toBe(true);
+    app.gitPanel.branches.button(branch("agent/gone")!, "prune");
+    expect(git(root, "worktree", "list")).not.toContain("agent-gone");
   });
 });

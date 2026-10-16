@@ -154,6 +154,10 @@ export interface Config {
     /** Where the signs sit (#22): the gutter's first column, before the problems bar and the line numbers; its last,
      *  against the text; or the window's right edge, by the scrollbar. */
     signs_at: "gutter_left" | "gutter_right" | "window_right";
+    /** The bases a branch's own is guessed among (GIT-D10): the nearest of them, by merge base; `base` too, when set. */
+    bases: string[];
+    /** Where a worktree slipbox makes goes (GIT-D13): a path template of `{parent}`, `{repo}`, `{branch}` and `~`. */
+    worktrees: string;
   };
   /** Search (6.x): `auto`, the index when it's built, else a scan of the files; `index`, the index
    *  (built first when there's none); `scan`, the files every time (no index kept). */
@@ -337,7 +341,7 @@ export const DEFAULT_CONFIG: Config = {
   input: { leader: "space", which_key: true, which_key_delay_ms: 500 },
   lint: { enabled: "auto", command: [] },
   capture: { location: "state", file: "scratch.md", open_in: "float" },
-  git: { base: "", signs: true, signs_at: "gutter_right" },
+  git: { base: "", signs: true, signs_at: "gutter_right", bases: ["main"], worktrees: "{parent}/{repo}-{branch}" },
   search: { engine: "auto" },
   index: { background: true, idle_seconds: 30 },
   diagnostics: { bar: "auto", marks: "error", severity: "warning" },
@@ -555,6 +559,7 @@ export const USER_ONLY: Record<string, string> = {
   "render.images_remote": "what reaches the network is yours to allow",
   "lsp.auto_install": "what reaches the network is yours to allow",
   "update.check": "what reaches the network is yours to allow",
+  "git.worktrees": "it says where slipbox makes folders, outside the vault",
 };
 
 /**

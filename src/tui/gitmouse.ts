@@ -35,6 +35,14 @@ export function rowActions(app: App, row: PanelRow): RowAction[] {
           return [stage("stages every change here"), discard("discards every change here, after asking")];
         case "untracked":
           return [stage("stages every new file")];
+        case "branches":
+          return [
+            {
+              glyph: `${g.stage} New`,
+              action: "new_branch",
+              desc: "a new branch: its name, where it starts, where it goes",
+            },
+          ];
         default:
           return [];
       }
@@ -57,6 +65,7 @@ export function rowActions(app: App, row: PanelRow): RowAction[] {
         ? [unstage("unstages this change")]
         : [stage("stages this change"), discard("reverts this change, after asking")];
     case "ahead":
+    case "bfile":
       return [diff];
     default:
       return [];
@@ -77,6 +86,20 @@ export function pointedAt(app: App, id: string | null): { key: string | null; de
     const row = p.rows()[Number(act[1])];
     const a = row ? rowActions(app, row).find((x) => x.action === act[2]) : undefined;
     return a ? { key: p.keyFor(a.action), desc: a.desc } : null;
+  }
+  const bb = /^git:bb:(\d+):(.+)$/.exec(id);
+  if (bb) {
+    const row = p.rows()[Number(bb[1])];
+    const b = row?.kind === "bbuttons" ? row.buttons.find((x) => x.action === bb[2]) : undefined;
+    const key =
+      bb[2] === "go"
+        ? p.keyFor("go")
+        : bb[2] === "merge"
+          ? p.keyFor("merge")
+          : bb[2] === "remove"
+            ? p.keyFor("discard")
+            : null;
+    return b ? { key, desc: b.label } : null;
   }
   if (id === "git:box") return { key: p.keyFor("message"), desc: "type the commit's message: ctrl+enter commits it" };
   if (id === "git:head") return { key: null, desc: "the branches: check one out, make one; pull, push, fetch" };
@@ -107,14 +130,23 @@ export function gitClick(app: App, id: string, clicks: number): boolean {
     p.action(act[2]!);
     return true;
   }
+  const bb = /^git:bb:(\d+):(.+)$/.exec(id);
+  if (bb) {
+    const row = p.rows()[Number(bb[1])];
+    s.selected = Number(bb[1]);
+    if (row?.kind === "bbuttons") p.branches.button(row.branch, bb[2]!);
+    return true;
+  }
   const row = /^git:row:(\d+)$/.exec(id);
   if (row) {
     const i = Number(row[1]);
     const r = p.rows()[i];
     if (!r || r.kind === "note") return true;
     s.selected = i;
-    // One click: what enter does (a file's diff, a heading folded); a second, what o does.
-    p.action(clicks >= 2 && r.kind !== "heading" ? "go" : "open");
+    // A branch's lines and its buttons' row: selected, nothing more — its buttons are their own.
+    if (r.kind === "bbuttons" || r.kind === "bline" || r.kind === "bsub") return true;
+    // One click: what enter does (a file's diff, a heading folded, a branch opened up); a second, what o does.
+    p.action(clicks >= 2 && r.kind !== "heading" && r.kind !== "branch" ? "go" : "open");
     return true;
   }
   return true;

@@ -2,8 +2,8 @@
 // shown. At its top, the repository and its branch, against its base and its upstream; a message box, typed in, where
 // ctrl+enter commits; the buttons — commit, amend, pull, push, fetch, stash — each saying its key under the pointer.
 // Under them its sections: the working tree's (gitview.ts), what this branch changed against its base, this file's
-// diff, history and blame. Its keys (`[keys.git]`) act on the row selected, and its footer says them; `space g` opens it
-// and focuses it (`git.view`).
+// diff, history and blame, the branches (gitbranchview.ts). Its keys (`[keys.git]`) act on the row selected, and its
+// footer says them; `space g` opens it and focuses it (`git.view`).
 
 import { basename } from "node:path";
 import { headOf } from "../core/git.ts";
@@ -14,6 +14,7 @@ import { formatEntry } from "../core/capture.ts";
 import { sanitize } from "../core/sanitize.ts";
 import { keyChar, spellKey } from "./keys.ts";
 import { match } from "./match.ts";
+import { BranchView, type BranchViewRow } from "./gitbranchview.ts";
 import {
   backToPanel,
   type ChangeRow,
@@ -27,8 +28,9 @@ import {
 import { pointedAt } from "./gitmouse.ts";
 import type { App } from "./app.ts";
 
-/** A section of the panel: the working tree's four; the branch's, this file's. */
-export type SectionId = GitSection | "ahead" | "file";
+/** A section of the panel: the working tree's four; the branch's, this file's; the branches, the merged and older among
+ *  them. */
+export type SectionId = GitSection | "ahead" | "file" | "branches" | "older";
 
 export interface HeadingRow {
   kind: "heading";
@@ -57,7 +59,7 @@ export interface ThisFileRow {
   label: string;
 }
 
-export type PanelRow = HeadingRow | NoteRow | FileRow | ChangeRow | AheadRow | ThisFileRow;
+export type PanelRow = HeadingRow | NoteRow | FileRow | ChangeRow | AheadRow | ThisFileRow | BranchViewRow;
 
 /** A button at the panel's top (GIT-D8): what it says, the action its key runs, what it does. */
 export interface PanelButton {
@@ -78,13 +80,17 @@ export const STATE_LETTER: Record<GitState, string> = {
 
 /** The panel's own state: the message typed, the sections folded, what's asked of git for it. */
 export class GitPanel {
-  constructor(readonly app: App) {}
+  constructor(readonly app: App) {
+    this.branches = new BranchView(app);
+  }
 
+  /** The branches (GIT-D9): their state, what they ask of git. */
+  readonly branches: BranchView;
   /** The message box's text (GIT-D8), and whether keys go to it. */
   message = "";
   typing = false;
-  /** The sections folded, by id. */
-  readonly folded = new Set<SectionId>();
+  /** The sections folded, by id: the merged and older branches, to begin with. */
+  readonly folded = new Set<SectionId>(["older"]);
   /** What this branch changed against its base (GIT-D8), asked of git in the background, by the question asked. */
   private ahead: { key: string; base: string; files: Changed[] | null } | null = null;
 
@@ -124,7 +130,7 @@ export class GitPanel {
     const work = workRows(app);
     rows.push(...work);
     if (!work.length && !q) rows.push({ kind: "note", text: "nothing uncommitted" });
-    rows.push(...this.aheadRows(q), ...this.fileRows(q));
+    rows.push(...this.aheadRows(q), ...this.fileRows(q), ...this.branches.rows());
     if (q && rows.every((r) => r.kind === "note")) return [{ kind: "note", text: "no matches" }];
     return rows;
   }
@@ -164,7 +170,9 @@ export class GitPanel {
 
   /** Where the branch stands against its base, as the panel's top says it: `↑5 on main`; null for the base itself. */
   standing(): { ahead: number; behind: number; base: string } | null {
-    return null;
+    const here = this.branches.here();
+    const st = here ? this.branches.statsOf(here) : null;
+    return st?.base ? { ahead: st.ahead, behind: st.behind, base: st.base } : null;
   }
 
   /** The buttons at the panel's top (GIT-D8), as the repository stands: commit with what's staged, the remote's. */
@@ -232,6 +240,7 @@ export class GitPanel {
           ...(s === "unstaged" || s === "untracked" ? k("stage", "stage all") : []),
           ...(s === "staged" ? k("unstage", "unstage all") : []),
           ...(s === "unstaged" ? k("discard", "discard all") : []),
+          ...(s === "branches" ? k("new_branch", "new branch") : []),
         ];
       }
       case "file":
@@ -245,9 +254,22 @@ export class GitPanel {
           ...k("menu", "more"),
         ];
       case "ahead":
-        return [...k("open", "diff"), ...k("go", "open"), ...k("menu", "more")];
+      case "bfile":
+        return [...k("open", "diff"), ...(row.kind !== "bfile" ? k("go", "open") : []), ...k("menu", "more")];
       case "thisfile":
         return k("open", row.label.toLowerCase());
+      case "branch":
+        return [
+          ...k("open", row.open ? "fold" : "open up"),
+          ...(row.branch.worktree && !row.branch.here ? k("go", "go in") : []),
+          ...k("merge", "merge…"),
+          ...(row.branch.worktree && !row.branch.here && !row.branch.worktree.main ? k("discard", "remove") : []),
+          ...k("menu", "more"),
+        ];
+      case "bline":
+      case "bsub":
+      case "bbuttons":
+        return [...k("collapse", "fold"), ...k("menu", "more")];
     }
   }
 
@@ -311,6 +333,8 @@ export class GitPanel {
         return sectionAction(app, "all", "stage");
       case "unstage_all":
         return sectionAction(app, "staged", "unstage");
+      case "new_branch":
+        return this.branches.newBranch(row?.kind === "branch" ? row.branch.name : undefined);
     }
     if (!row || row.kind === "note") return;
     switch (row.kind) {
@@ -325,6 +349,10 @@ export class GitPanel {
       case "thisfile":
         if (action === "open" || action === "go" || action === "expand") return void app.run(row.command);
         return;
+      default:
+        if (action === "merge" && row.kind !== "branch")
+          return app.message("info", "m merges the branch selected: select one in Branches");
+        return this.branches.action(row, action);
     }
   }
 
@@ -348,6 +376,8 @@ export class GitPanel {
         if (s === "conflicted" || s === "staged" || s === "unstaged" || s === "untracked")
           return sectionAction(this.app, s, action);
         return this.app.message("info", "a section's heading: s, u and d act on the files under it");
+      case "merge":
+        return this.app.message("info", "m merges the branch selected: select one in Branches");
     }
   }
 
@@ -429,6 +459,14 @@ export class GitPanel {
   /** A row's menu (`.`, a right click): what its keys do, and what only the menu does — reveal it, copy it, a note. */
   menu(row: PanelRow, at?: { x: number; y: number }): void {
     const app = this.app;
+    if (
+      row.kind === "branch" ||
+      row.kind === "bline" ||
+      row.kind === "bbuttons" ||
+      row.kind === "bsub" ||
+      row.kind === "bfile"
+    )
+      return this.branches.menu(row.branch, at);
     if (row.kind !== "file" && row.kind !== "change" && row.kind !== "ahead") return;
     const items: { label: string; action: string; run: () => void }[] = [];
     const add = (label: string, action: string, run: () => void) => items.push({ label, action, run });
