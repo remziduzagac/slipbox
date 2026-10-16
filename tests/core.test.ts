@@ -91,6 +91,7 @@ import {
   skipLater,
 } from "../src/core/gitrebase.ts";
 import { pullLater } from "../src/core/gitremote.ts";
+import { blockDiff, blockText, noteBlocks } from "../src/core/blockdiff.ts";
 import {
   compilePattern,
   expandReplacement,
@@ -1256,6 +1257,159 @@ describe("changed words inside changed lines (GIT-D2)", () => {
   });
 });
 
+describe("a note's diff as blocks, before and after (GIT-D2)", () => {
+  const note = [
+    "# Sync",
+    "",
+    "The queue is drained by a loop that wakes every 30 seconds.",
+    "",
+    "## Retry",
+    "",
+    "The 409 case is the one that bit us: a conflict is not transient. Since 2.3 a 409 parks",
+    "the op, and the loop goes on.",
+    "",
+    "- Two ops on the same field: the later one wins.",
+    "  - the loser stays in the log",
+    "- A delete beats an edit.",
+    "",
+    "| State | Meaning |",
+    "| --- | --- |",
+    "| pending | waiting its turn |",
+    "| parked | taken out after a conflict |",
+    "",
+    "[ref]: https://example.com",
+    "",
+    "The end.",
+    "",
+  ].join("\n");
+  const blocksOf = (text: string) => {
+    const lines = text.split("\n").slice(0, -1);
+    return noteBlocks(parseMarkdown(text).tree, lines).map((b) => [b.from, b.to, b.node?.type ?? null]);
+  };
+  const shape = (d: ReturnType<typeof blockDiff>) =>
+    d.items.map((i) =>
+      i.kind === "@@"
+        ? `@@ ${i.line} ${i.heading}`
+        : i.kind === "fold"
+          ? `fold ${i.own}+${i.count} at ${i.line}`
+          : i.kind === "change"
+            ? `change ${i.before.from}-${i.before.to} ${i.after.from}-${i.after.to}`
+            : i.kind === "same"
+              ? `same ${i.block.from}-${i.block.to}`
+              : `${i.kind} ${i.block.from}-${i.block.to}`,
+    );
+
+  test("a note's blocks: its nodes, a list's items (a nested one after its item's own lines), a table's rows", () => {
+    expect(noteBlocks(parseMarkdown(note).tree, note.split("\n")).flatMap((b) => (b.header ? [b.from] : []))).toEqual([
+      14,
+    ]);
+    expect(blocksOf(note)).toEqual([
+      [1, 1, "heading"],
+      [3, 3, "paragraph"],
+      [5, 5, "heading"],
+      [7, 8, "paragraph"],
+      [10, 10, "listItem"],
+      [11, 11, "listItem"],
+      [12, 12, "listItem"],
+      // The header's row with its delimiter row.
+      [14, 15, "tableRow"],
+      [16, 16, "tableRow"],
+      [17, 17, "tableRow"],
+      [19, 19, "definition"],
+      [21, 21, "paragraph"],
+    ]);
+  });
+
+  test("white space is one in prose: a paragraph wrapped again differs only in its words", () => {
+    const a = "Since 2.3 a 409 parks\nthe op, and the loop goes on.";
+    const b = "Since the incident a 409\nparks the op, and the loop goes on.";
+    const words = (s: string, r: [number, number][]) => r.map(([x, y]) => s.slice(x, y));
+    const w = diffWords(a, b, true);
+    expect([words(a, w.del), words(b, w.add)]).toEqual([["2.3"], ["the incident"]]);
+    // As lines, the breaks that moved are changes too.
+    expect(words(b, diffWords(a, b).add)).not.toEqual(["the incident"]);
+  });
+
+  test("a reworded sentence: its paragraph before and after, only the words that changed marked; the rest folded", () => {
+    const to = note.replace("Since 2.3 a 409 parks\nthe op", "Since the incident a 409\nparks the op");
+    const d = blockDiff(note, to);
+    expect(shape(d)).toEqual(["fold 1+6 at 1", "@@ 7 ## Retry", "change 7-8 7-8", "fold 9+13 at 9"]);
+    const change = d.items[2]!;
+    if (change.kind !== "change") throw new Error("a change");
+    const words = (s: string, r: [number, number][]) => r.map(([x, y]) => s.slice(x, y));
+    expect(words(blockText(d.from, change.before), change.del)).toEqual(["2.3"]);
+    expect(words(blockText(d.to, change.after), change.add)).toEqual(["the incident"]);
+    // The window's text: a row each, as the source diff's read; each going to its line in `to`, a line before to where
+    // its block is now.
+    expect(d.units.map((u) => [u.text.slice(0, 12), u.line])).toEqual([
+      ["6 unchanged ", 1],
+      ["@@ ## Retry ", 7],
+      ["- The 409 ca", 7],
+      ["- the op, an", 7],
+      ["+ The 409 ca", 7],
+      ["+ parks the ", 8],
+      ["13 unchanged", 9],
+    ]);
+    // One line of a paragraph changed: the paragraph, whole.
+    const one = blockDiff(note, note.replace("the op, and the loop goes on.", "the op, and the loop goes on at once."));
+    expect(shape(one).slice(1, 3)).toEqual(["@@ 7 ## Retry", "change 7-8 7-8"]);
+    // Two changes with a line of text between: one group, that line shown.
+    const two = blockDiff(note, to.replace("every 30 seconds", "every minute"));
+    expect(shape(two).slice(0, 5)).toEqual(["@@ 1 null", "same 1-1", "change 3-3 3-3", "same 5-5", "change 7-8 7-8"]);
+    // A fold opened: its blocks shown, unchanged.
+    expect(shape(blockDiff(note, to, new Set([1])))).toEqual([
+      "same 1-1",
+      "same 3-3",
+      "same 5-5",
+      "@@ 7 ## Retry",
+      "change 7-8 7-8",
+      "fold 9+13 at 9",
+    ]);
+  });
+
+  test("a block added, a block removed, a list item and a table's row changed; what's alike paired, what isn't not", () => {
+    const to = note
+      .replace("The queue is drained by a loop that wakes every 30 seconds.\n\n", "")
+      .replace("the later one wins.", "the later ULID wins.")
+      .replace("| parked | taken out after a conflict |", "| parked | taken out after a 409 conflict |")
+      .replace("The end.\n", "The end.\n\nA new paragraph, about something else altogether.\n");
+    expect(shape(blockDiff(note, to))).toEqual([
+      "@@ 1 null",
+      "same 1-1",
+      "removed 3-3",
+      "fold 5+5 at 3",
+      "@@ 8 ## Retry",
+      "change 10-10 8-8",
+      "fold 11+6 at 9",
+      "@@ 15 ## Retry",
+      "change 17-17 15-15",
+      "fold 18+4 at 16",
+      "@@ 21 ## Retry",
+      "added 21-21",
+    ]);
+    // Rewritten past half its words: removed and added, not paired.
+    const rewritten = blockDiff(note, note.replace("A delete beats an edit.", "Nothing of the kind, at all."));
+    expect(shape(rewritten).slice(1)).toEqual(["@@ 12 ## Retry", "removed 12-12", "added 12-12", "fold 13+9 at 13"]);
+  });
+
+  test("the same text: nothing; a new note: every block added; a note emptied: every block removed", () => {
+    expect(blockDiff(note, note).items).toEqual([]);
+    expect(
+      new Set(
+        blockDiff("", note)
+          .items.slice(1)
+          .map((i) => i.kind),
+      ),
+    ).toEqual(new Set(["added"]));
+    expect(
+      new Set(
+        blockDiff(note, "")
+          .items.slice(1)
+          .map((i) => i.kind),
+      ),
+    ).toEqual(new Set(["removed"]));
+  });
+});
 describe("find and replace (core/replace.ts)", () => {
   const re = (q: string, o: Partial<{ regex: boolean; whole: boolean; ignoreCase: boolean }> = {}) => {
     const r = compilePattern(q, { regex: false, whole: false, ...o });
@@ -1711,6 +1865,7 @@ describe("what manual/configuration.md promises", () => {
       ["editor", "edit_in", "live"],
       ["files", "show", "all"],
       ["git", "signs_at", "window_right"],
+      ["git", "diff", "source"],
       ["capture", "open_in", "right"],
     ];
     for (const [section, key, good] of keys) {

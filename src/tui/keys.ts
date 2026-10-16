@@ -655,6 +655,11 @@ export const DEFAULT_MERGE_KEYS: Record<string, string> = {
   s: "git.merge_stage",
 };
 
+/** A diff window's own keys (GIT-D2), over the note's while it has the cursor: commands, as the note's keys are. */
+export const DEFAULT_DIFF_KEYS: Record<string, string> = {
+  tab: "git.diff_view",
+};
+
 /** What the explorer's and the outline's actions do, for help. */
 export const EXPLORER_ACTION_INFO: Record<string, { title: string; desc: string }> = {
   down: { title: "Move down", desc: "Selects the next row; nothing opens" },

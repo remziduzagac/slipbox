@@ -700,6 +700,12 @@ export const COMMAND_SPECS: CommandSpec[] = [
     desc: "This note's changes on the branch, against where it left main; enter goes to the line",
   },
   {
+    id: "git.diff_view",
+    title: "Switch the diff: its blocks before and after, or its lines",
+    cli: I,
+    desc: "In a note's diff: its changed blocks before and after, or its lines as source (tab there); [git] diff picks the first",
+  },
+  {
     id: "git.worktrees",
     title: "Open in another worktree",
     cli: "slipbox worktrees",

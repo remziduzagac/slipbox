@@ -1843,13 +1843,15 @@ const GIT: Check[] = [
       await s.type("docs/sync");
       await s.keys("enter");
       await s.see("docs/sync.md against main — esc: the changes", 5000);
-      await s.see("+ | spent | out of retry budget; kept in the log, never sent again |");
+      // A note's diff: its blocks before and after; the table's row the agent added, framed once.
+      await s.see("┌ added");
+      await s.see("spent │ out of retry budget; kept in the log, never sent again");
       await s.keys("escape");
       await s.see(/Changed against main \(\d+\)/);
       await s.keys("escape");
       // This note's own: the branch's changes to it.
       await s.ex("diff");
-      await s.see("+ [a] -> [c]            [b] failed five times: spent, and support sees it", 5000);
+      await s.see("[a] -> [c]            [b] failed five times: spent, and support sees it", 5000);
       await s.keys("escape");
       // An agent's edit, not committed: the explorer marks the file.
       s.write(
@@ -1863,12 +1865,16 @@ const GIT: Check[] = [
   {
     area: "links-and-files",
     name: "git: a diff marks a changed line's changed words, and a line too long reaches its end by scrolling sideways",
-    covers: { cases: ["git", "links/git"], commands: ["git.diff"] },
+    covers: { cases: ["git", "links/git"], commands: ["git.diff", "git.diff_view"] },
     // Narrow enough that the agent's longest line doesn't fit the diff's window.
     options: { home: true, startAt: "home/work/kestrel-agent-sync-retry/docs/sync.md", size: { cols: 120, rows: 40 } },
     run: async (s) => {
       await s.ex("diff");
       await s.see("docs/sync.md against main", 5000);
+      // A note's diff opens as its blocks; tab, its lines.
+      await s.see("┌ before");
+      await s.keys("tab");
+      await s.notSee("┌ before");
       // The line whose numbers the agent changed: those words on the stronger tint, the rest of it on the line's.
       await s.see("+ The numbers are `DEFAULT_POLICY` in [lines 12 to 15 of retry.ts](../src/sync/retry.ts#L12-L15).");
       await s.see("- The numbers are `DEFAULT_POLICY` in [lines 17 to 21 of retry.ts](../src/sync/retry.ts#L17-L21).");

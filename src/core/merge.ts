@@ -98,7 +98,7 @@ export interface DiffRow {
 }
 
 /** A text's lines, to show: a final line break ends the last line; it doesn't start another one. */
-function textLines(text: string): string[] {
+export function textLines(text: string): string[] {
   if (text === "") return [];
   const l = splitLines(text);
   if (l.length && l[l.length - 1] === "" && /\r?\n$/.test(text)) l.pop();
@@ -157,13 +157,14 @@ const MAX_TOKENS = 4000;
  * How two lines differ by word: the runs of `a` that `b` doesn't have (`del`), those of `b` that `a` doesn't (`add`),
  * and how alike they are — twice the words kept over the words of both, from 0 to 1 (two lines with no words at all,
  * punctuation only: 1). White space at a run's ends isn't part of it, and two runs with only white space between them
- * are one.
+ * are one. `prose`: white space is one, whatever it is — a paragraph wrapped again, its line breaks moved, is the same.
  */
-export function diffWords(a: string, b: string): { del: WordRange[]; add: WordRange[]; alike: number } {
+export function diffWords(a: string, b: string, prose = false): { del: WordRange[]; add: WordRange[]; alike: number } {
   const ta = tokens(a);
   const tb = tokens(b);
   if (ta.length + tb.length > MAX_TOKENS) return { del: [], add: [], alike: 0 };
-  const hunks = diffLines(ta, tb);
+  const same = (t: string[]) => (prose ? t.map((x) => (white(x) ? " " : x)) : t);
+  const hunks = diffLines(same(ta), same(tb));
   const words = (t: string[], from = 0, to = t.length) => t.slice(from, to).filter(word).length;
   const wa = words(ta);
   const wb = words(tb);
@@ -218,9 +219,9 @@ const PAIR_LIMIT = 2500;
 
 /**
  * Inside a hunk: each removed line paired with the added line most like it — the pairs, in order, that make the hunk
- * most alike — none less than half alike (`diffWords`).
+ * most alike — none less than half alike (`diffWords`; `prose`, its white space all one).
  */
-export function pairLines(removed: string[], added: string[]): LinePair[] {
+export function pairLines(removed: string[], added: string[], prose = false): LinePair[] {
   const n = removed.length;
   const m = added.length;
   if (!n || !m) return [];
@@ -233,12 +234,12 @@ export function pairLines(removed: string[], added: string[]): LinePair[] {
   if (n * m > PAIR_LIMIT) {
     const out: LinePair[] = [];
     for (let i = 0; i < Math.min(n, m); i++) {
-      const w = diffWords(removed[i]!, added[i]!);
+      const w = diffWords(removed[i]!, added[i]!, prose);
       if (w.alike >= ALIKE) out.push(pair(i, i, w));
     }
     return out;
   }
-  const sim = removed.map((r) => added.map((x) => diffWords(r, x)));
+  const sim = removed.map((r) => added.map((x) => diffWords(r, x, prose)));
   // best[i][j]: the most alike the first i removed lines and the first j added ones can be paired.
   const best = Array.from({ length: n + 1 }, () => new Float64Array(m + 1));
   for (let i = 1; i <= n; i++)

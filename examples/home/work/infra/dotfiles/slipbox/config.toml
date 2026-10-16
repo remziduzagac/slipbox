@@ -76,6 +76,7 @@ signs = true                    # changed lines in the gutter, against what's st
 signs_at = "gutter_left"        # before the line numbers, away from the text
 bases = ["main", "release"]     # a branch made from release is measured against it, not main
 worktrees = "~/work/worktrees/{repo}/{branch}" # the agents' worktrees in one folder, not beside each repository
+diff = "source"                 # a note's diff as its lines; tab shows its blocks before and after
 
 [search]
 engine = "index"
@@ -463,6 +464,7 @@ sidebar_vault = { bold = true, underline = true }
 "leader ; 1 h" = "git.continue"
 "leader ; 1 i" = "git.skip"
 "leader ; 1 j" = "git.abort"
+"leader ; 1 k" = "git.diff_view"
 "leader ; Y a" = "type.list"
 "leader ; Y b" = "type.next"
 "leader ; Y c" = "type.prev"

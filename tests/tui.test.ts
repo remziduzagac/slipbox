@@ -14608,7 +14608,8 @@ describe("git in the TUI: marks, what changed, a note's diff, worktrees, conflic
   test(":changes lists what this branch changed; enter shows a file's diff; esc goes back; enter on a line goes there", async () => {
     const root = repo();
     if (!root) return;
-    const h = await harness({ root, open: "c.md" });
+    // A note's diff as its lines (`[git] diff`): a row a line, each going to its own.
+    const h = await harness({ root, open: "c.md", config: (c) => (c.git.diff = "source") });
     await h.app.run("git.changes");
     const list = h.app.overlay as ListOverlay;
     expect(list.title).toBe("Changed against main (3) — enter: the diff");
@@ -14927,6 +14928,66 @@ describe("the diff window (GIT-D2)", () => {
     // esc closes it: opened from nowhere, it has nowhere to go back to.
     await h.keys("escape");
     expect(h.app.floating).toBeNull();
+  });
+
+  test("a note's diff: its changed block before and after, only its changed words marked; tab its lines and back; enter goes to the line", async () => {
+    const before =
+      "# N\n\nThe 409 case is the one that bit us: a conflict is not transient. Since 2.3 a 409 parks\nthe op, and the loop goes on.\n\nThe end.\n\nMore one.\n\nMore two.\n\nMore three.\n";
+    const now = before.replace("Since 2.3 a 409 parks\nthe op", "Since the incident a 409\nparks the op");
+    const root = makeVault();
+    writeFileSync(join(root, "n.md"), now);
+    const h = await harness({ root, open: "index.md", width: 100, height: 40 });
+    h.app.git.showLineDiff(before, now, "n.md", "n.md: its change");
+    const roles = h.app.theme.roles;
+    const has = (text: string) => screen(h).some((r) => r.includes(text));
+    expect([has("┌ before"), has("┌ after"), has("@@ line 1")]).toEqual([true, true, true]);
+    expect(has("tab: its lines · enter goes to the line")).toBe(true); // its footer says so
+    // The words that changed, on the stronger tints; the rest of the paragraph plain, its moved line break no change.
+    expect(styleAt(h, "Since 2.3 a 409", "2.3")).toMatchObject({ bg: roles.diff_del_word.bg });
+    expect(styleAt(h, "Since the incident", "the incident")).toMatchObject({ bg: roles.diff_add_word.bg });
+    const plain = styleAt(h, "a 409 parks the op", "parks");
+    expect([roles.diff_add_word.bg, roles.diff_add.bg]).not.toContain(plain.bg ?? undefined);
+    // tab: its lines, as source; the cursor on the row of the line it was on.
+    await h.keys("j", "j", "j", "j"); // the after frame's first row: line 3
+    await h.keys("tab");
+    expect([has("┌ before"), has("+ parks the op, and the loop goes on.")]).toEqual([false, true]);
+    expect(h.app.messages.at(-1)?.text).toBe("the diff's lines — tab: its blocks, before and after");
+    const row = h.app.currentLayout(h.app.floating!.view).lines[h.app.floating!.view.cur.row]!;
+    expect(row.spans.map((s) => s.text).join("")).toStartWith("- The 409 case");
+    await h.keys("tab");
+    expect(has("┌ before")).toBe(true);
+    // enter on the fold after it: its blocks, unframed.
+    const text = (r: Line) => r.spans.map((s) => s.text).join("");
+    const fold = h.app.currentLayout(h.app.floating!.view).lines.findIndex((r) => text(r).includes("unchanged lines"));
+    h.app.moveCursor(h.app.floating!.view, { row: fold, col: 0 });
+    await h.keys("enter");
+    expect([has("unchanged lines"), has("  More three."), h.app.floating?.kind]).toEqual([false, true, "diff"]);
+    // enter on the after frame's second row: the line its first word is on, in the file ("a 409", line 3).
+    const rows = h.app.currentLayout(h.app.floating!.view).lines;
+    const at = rows.findIndex((r) =>
+      r.spans
+        .map((s) => s.text)
+        .join("")
+        .includes("a 409 parks the op"),
+    );
+    h.app.moveCursor(h.app.floating!.view, { row: at, col: 4 });
+    await h.keys("enter");
+    expect([h.app.floating, h.app.view!.buf.rel]).toEqual([null, "n.md"]);
+    expect(statusRow(h.frame())).toMatch(/ L3:\d+ /);
+  });
+
+  test("[git] diff = \"source\": a note's diff opens as its lines, tab its blocks; a code file's has only its lines", async () => {
+    const root = makeVault();
+    const h = await harness({ root, open: "index.md", width: 100, height: 40, config: (c) => (c.git.diff = "source") });
+    h.app.git.showLineDiff("one two three four\n", "one two THREE four\n", "n.md", "n.md: its change");
+    expect(screen(h).some((r) => r.includes("+ one two THREE four"))).toBe(true);
+    await h.keys("tab");
+    expect(screen(h).some((r) => r.includes("┌ after"))).toBe(true);
+    await h.keys("escape");
+    h.app.git.showLineDiff(code, code.replace("= 2;", "= 22;"), "x.ts", "x.ts: its change");
+    await h.keys("tab");
+    expect(h.app.messages.at(-1)?.text).toBe("a code file's diff is drawn as its lines: only a note's has blocks");
+    expect(screen(h).some((r) => r.includes("+ const line2 = 22;"))).toBe(true);
   });
 });
 
@@ -18553,9 +18614,10 @@ describe("blame and a file's history (26.4, 22.1)", () => {
     await h.keys("escape");
     await h.app.run("git.history");
     await h.keys("down", "down", "enter", "down", "enter");
-    // With the lines around it, as the note's diff has them, in the diff window (GIT-D2).
+    // Its blocks before and after, as a note's diff has them, in the diff window (GIT-D2): a word rewritten whole, the
+    // paragraph removed and added; the line of text before it shown.
     expect(h.app.floating?.kind).toBe("diff");
-    expect(h.app.floating!.view.buf.source.split("\n")).toEqual(["@@ line 3", "  one", "  ", "- two", "+ TWO"]);
+    expect(h.app.floating!.view.buf.source.split("\n")).toEqual(["@@ line 1", "  one", "- two", "+ TWO"]);
   });
 
   test("a version read as it was is read-only: typing, deleting, pasting there change nothing, and say so (regression)", async () => {

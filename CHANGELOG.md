@@ -16,6 +16,9 @@ The format is [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.1.0/); wh
   added lines tinted and the changed words more strongly. The unchanged lines between changes fold to a row saying how
   many, which `enter` opens. A line too long scrolls sideways as a code block does, never cut with `…`. Two new
   colours, `diff_add_word` and `diff_del_word`, mark the words.
+- A note's diff shows each changed block before and after: a paragraph, a heading, a list item or a table's row in one
+  frame as it was and another as it is, lightly formatted, the words removed and added marked. A block added or
+  removed whole is shown once. `tab` in the diff switches to its lines, and `git.diff = "source"` opens it that way.
 - Fetch, pull (fast-forward only) and push, and the stashes: `f`, `p`, `shift+p` and `z` in source control, or
   `:fetch`, `:pull`, `:push` and `:stash`. Each runs in the background when you ask, never on its own. A branch with
   no upstream is asked whether to push to `origin` and track it there. git never waits for a password: a remote that

@@ -2894,6 +2894,13 @@ The same notes, one per tab.
   (command-specs.ts)
 - `git.diff` — Diff this note against the base — `work/kestrel/docs/architecture.md`,
   `work/product/prd/route-sharing.md` (command-specs.ts)
+- `git.diff_view` — Switch the diff: its blocks before and after, or its lines — `work/kestrel/docs/sync.md`,
+  `notes/index.md` (command-specs.ts)
+- a note's diff as its blocks before and after: a reworded sentence's paragraph in a `before` and an `after` frame,
+  only its changed words marked, its line breaks moved no change; a list item, a table's row, a heading, a code block;
+  a block added or removed whole once; `tab` its lines and back; `[git] diff` — `work/kestrel/docs/sync.md` (GIT's
+  design.md Before and after (GIT-D2); tests 'a note's diff before and after, laid out', 'the diff window'; terminal
+  check 'a diff marks a changed line's changed words' (tab))
 - `git.worktrees` — Open in another worktree — `work/kestrel/docs/architecture.md`, `work/product/prd/route-sharing.md`
   (command-specs.ts)
 - `git.merge_review` — Review a merge's links — `work/kestrel/docs/architecture.md`, `work/product/prd/route-sharing.md`

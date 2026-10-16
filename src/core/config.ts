@@ -158,6 +158,8 @@ export interface Config {
     bases: string[];
     /** Where a worktree slipbox makes goes (GIT-D13): a path template of `{parent}`, `{repo}`, `{branch}` and `~`. */
     worktrees: string;
+    /** How a note's diff opens (GIT-D2): its changed blocks before and after, or its lines; `tab` switches. */
+    diff: "blocks" | "source";
   };
   /** Search (6.x): `auto`, the index when it's built, else a scan of the files; `index`, the index
    *  (built first when there's none); `scan`, the files every time (no index kept). */
@@ -341,7 +343,14 @@ export const DEFAULT_CONFIG: Config = {
   input: { leader: "space", which_key: true, which_key_delay_ms: 500 },
   lint: { enabled: "auto", command: [] },
   capture: { location: "state", file: "scratch.md", open_in: "float" },
-  git: { base: "", signs: true, signs_at: "gutter_right", bases: ["main"], worktrees: "{parent}/{repo}-{branch}" },
+  git: {
+    base: "",
+    signs: true,
+    signs_at: "gutter_right",
+    bases: ["main"],
+    worktrees: "{parent}/{repo}-{branch}",
+    diff: "blocks",
+  },
   search: { engine: "auto" },
   index: { background: true, idle_seconds: 30 },
   diagnostics: { bar: "auto", marks: "error", severity: "warning" },
@@ -401,6 +410,7 @@ const ENUMS: Record<string, readonly string[]> = {
   "capture.location": ["state", "root"],
   "capture.open_in": ["float", "right"],
   "git.signs_at": ["gutter_left", "gutter_right", "window_right"],
+  "git.diff": ["blocks", "source"],
   "lint.enabled": ["auto", "on", "off"],
   "search.engine": ["auto", "index", "scan"],
   "diagnostics.bar": ["auto", "on", "off"],

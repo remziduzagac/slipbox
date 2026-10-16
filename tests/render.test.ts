@@ -7,6 +7,8 @@ import { join } from "node:path";
 import { glyphsFor } from "../src/core/glyphs.ts";
 import { layoutToAnsi } from "../src/core/layout/ansi.ts";
 import { A_BOLD, type Layout, type Line } from "../src/core/layout/ir.ts";
+import { blockDiff } from "../src/core/blockdiff.ts";
+import { layoutBlockDiff } from "../src/core/layout/blockdiff.ts";
 import { layoutDiff } from "../src/core/layout/diff.ts";
 import { diffView } from "../src/core/merge.ts";
 import { type PictureSource, renderMarkdown, renderTree } from "../src/core/layout/render.ts";
@@ -1519,5 +1521,155 @@ describe("a diff's rows as drawn (GIT-D2)", () => {
     expect(whole.width).toBe(total + 3);
     // A diff whose lines fit: no block at all.
     expect(diff(code, code.replace("= 2;", "= 3;")).lines.some((x) => x.scroll)).toBe(false);
+  });
+});
+
+describe("a note's diff before and after, laid out (GIT-D2)", () => {
+  const note = [
+    "# Sync",
+    "",
+    "## The retry policy",
+    "",
+    "The 409 case is the one that bit us: a conflict is not transient. Since 2.3 a 409 parks",
+    "the op (see [the rules](rules.md)), and the loop goes on.",
+    "",
+    "- Two ops on the same field: the later one wins, and the loser stays in the log.",
+    "",
+    "| State | Meaning |",
+    "| --- | --- |",
+    "| parked | taken out after a conflict; it needs a human to look at it |",
+    "",
+    "The end of it.",
+    "",
+  ].join("\n");
+  const lay = (to: string, width = 60) => layoutBlockDiff(blockDiff(note, to), { width, glyphs: unicode });
+  const rowText = (r: Line) => r.spans.map((s) => s.text).join("");
+  /** The frame (its label) and its text rows, as `label: text`, each row's text inside its rules. */
+  const frames = (l: Layout) => {
+    const out: string[] = [];
+    let label = "";
+    for (const r of l.lines) {
+      const t = rowText(r);
+      const top = /^┌ (\w+) /.exec(t);
+      if (top) label = top[1]!;
+      else if (t.startsWith("│ ")) out.push(`${label}: ${t.slice(2, -2).trimEnd()}`);
+      else if (!t.startsWith("└")) out.push(t.trimEnd());
+    }
+    return out;
+  };
+  /** The words on a tint, by the frame they're in: `before`'s, `after`'s, an `added` or `removed` block's. */
+  const marked = (l: Layout) => {
+    const out: string[] = [];
+    let label = "";
+    for (const r of l.lines) {
+      const top = /^┌ (\w+) /.exec(rowText(r));
+      if (top) label = top[1]!;
+      for (const s of r.spans) if (s.bg && s.text.trim()) out.push(`${label}: ${s.text.trim()} (${s.bg})`);
+    }
+    return out;
+  };
+
+  test("a paragraph: before and after, only the words that changed marked, its line breaks the frame's own", () => {
+    const l = lay(note.replace("Since 2.3 a 409 parks\nthe op", "Since the incident a 409\nparks the op"));
+    expect(frames(l)).toEqual([
+      "▸ 4 unchanged lines",
+      "@@ ## The retry policy  (line 5)",
+      "before: The 409 case is the one that bit us: a conflict is not",
+      "before: transient. Since 2.3 a 409 parks the op (see the rules),",
+      "before: and the loop goes on.",
+      "after: The 409 case is the one that bit us: a conflict is not",
+      "after: transient. Since the incident a 409 parks the op (see",
+      "after: the rules), and the loop goes on.",
+      "▸ 8 unchanged lines",
+    ]);
+    expect(marked(l)).toEqual(["before: 2.3 (diff_del_word)", "after: the incident (diff_add_word)"]);
+    // Its frames' rules: decoration, never the cursor's, in the signs' colours; every row as wide as the window.
+    const top = l.lines.find((r) => rowText(r).startsWith("┌ before"))!;
+    expect([top.decor, top.spans[0]!.role]).toEqual([true, "git_sign_delete"]);
+    expect(l.lines.find((r) => rowText(r).startsWith("┌ after"))!.spans[0]!.role).toBe("git_sign_add");
+    expect(l.lines.every((r) => stringWidth(rowText(r)) <= 60)).toBe(true);
+    expect(l.lines.filter((r) => rowText(r).startsWith("│")).every((r) => stringWidth(rowText(r)) === 60)).toBe(true);
+    // Lightly formatted: a link as its text, in its colour; the cursor only on the text, between the rules.
+    const link = l.lines.flatMap((r) => r.spans).find((s) => s.text.includes("rules"))!;
+    expect(link.role).toBe("link");
+    expect(l.lines.find((r) => rowText(r).startsWith("│ The 409"))!.text).toEqual([2, 58]);
+  });
+
+  test("a list item and a table's row: the item's marker, the row's cells; a heading in its colour", () => {
+    const to = note
+      .replace("the later one wins", "the later ULID wins")
+      .replace("taken out after a conflict", "taken out after a 409 conflict")
+      .replace("## The retry policy", "## The retry budget");
+    const l = lay(to, 100);
+    expect(frames(l)).toEqual([
+      "@@ line 1",
+      "  Sync",
+      "before: The retry policy",
+      "after: The retry budget",
+      "▸ 4 unchanged lines",
+      "@@ ## The retry budget  (line 8)",
+      "before: • Two ops on the same field: the later one wins, and the loser stays in the log.",
+      "after: • Two ops on the same field: the later ULID wins, and the loser stays in the log.",
+      "▸ 3 unchanged lines",
+      "@@ ## The retry budget  (line 12)",
+      "before: parked │ taken out after a conflict; it needs a human to look at it",
+      "after: parked │ taken out after a 409 conflict; it needs a human to look at it",
+      "  The end of it.",
+    ]);
+    expect(marked(l)).toEqual([
+      "before: policy (diff_del_word)",
+      "after: budget (diff_add_word)",
+      "before: one (diff_del_word)",
+      "after: ULID (diff_add_word)",
+      "after: 409 (diff_add_word)",
+    ]);
+    // Inside the frame: past its left rule.
+    const span = (starts: string, piece: string) =>
+      l.lines
+        .find((r) => rowText(r).includes(starts))!
+        .spans.slice(1)
+        .find((s) => s.text.includes(piece))!;
+    expect(span("The retry budget", "budget").role).toBe("h2");
+    expect(span("ULID", "•").role).toBe("list_marker");
+    expect(span("409 conflict", "│").role).toBe("table_border");
+  });
+
+  test("a block added, and one removed: one frame each, its text on its sign's tint", () => {
+    const to = note
+      .replace("The end of it.\n", "The end of it.\n\nA paragraph the agent added.\n")
+      .replace("- Two ops on the same field: the later one wins, and the loser stays in the log.\n\n", "");
+    const l = lay(to);
+    expect(frames(l)).toEqual([
+      "▸ 7 unchanged lines",
+      "@@ ## The retry policy  (line 8)",
+      "removed: • Two ops on the same field: the later one wins, and the",
+      "removed:   loser stays in the log.",
+      "▸ 5 unchanged lines",
+      "@@ ## The retry policy  (line 14)",
+      "added: A paragraph the agent added.",
+    ]);
+    const tints = new Set(marked(l).map((m) => m.replace(/^.*\(/, "(").replace(/^(\w+):.*/, "$1")));
+    expect(tints).toEqual(new Set(["(diff_del)", "(diff_add)"]));
+    expect(
+      marked(l)
+        .filter((m) => m.startsWith("added:"))
+        .every((m) => m.endsWith("(diff_add)")),
+    ).toBe(true);
+    expect(
+      marked(l)
+        .filter((m) => m.startsWith("removed:"))
+        .every((m) => m.endsWith("(diff_del)")),
+    ).toBe(true);
+  });
+
+  test("what the formatting hides, marked through what shows: a link's target, text made bold", () => {
+    const l = lay(
+      note.replace("[the rules](rules.md)", "[the rules](policy.md)").replace("The end of it.", "**The** end of it."),
+    );
+    expect(marked(l)).toEqual([
+      "before: the rules (diff_del_word)",
+      "after: the rules (diff_add_word)",
+      "after: The (diff_add_word)",
+    ]);
   });
 });

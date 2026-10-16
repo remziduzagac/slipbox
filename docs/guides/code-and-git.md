@@ -168,7 +168,8 @@ Before you merge it:
 
 1. Click the agent's branch, or press `enter` on it. It opens up in place: its folder, its files against its base, and
    its buttons.
-2. Click a file to see its diff. Press `esc` to come back.
+2. Click a file to see its diff. A note's diff shows each changed paragraph as it was and as it is, the words that
+   changed marked; `tab` shows its lines instead. Press `esc` to come back.
 3. Click `[Open]` to go into its worktree, at the note you were on if the branch has it. `ctrl+o` comes back.
 4. Click `[Merge…]` on the branch, and pick "The links it would break". slipbox asks git what the merge would give,
    without touching your files. It lists each link the merge would break, by note and line, with the cause and the fix

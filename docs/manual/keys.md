@@ -741,6 +741,17 @@ The rest of git is the panel's, and the palette's: `:changes`, `:diff`, `:worktr
 titled Branches, Who changed this line, This file's history, Preview the change and Undo the change. A click on a
 change's sign in the gutter shows the change, with Revert and Stage. [Git](git.md) explains each of these.
 
+### Inside a diff
+
+A diff opens in a floating window ([How a diff is drawn](git.md#how-a-diff-is-drawn)).
+
+| Keys | What |
+| --- | --- |
+| `tab` | a note's diff: switch between its blocks before and after and its lines |
+| `enter` | on a fold, show the lines it holds; on a line, go to it in the file |
+| `$` / `0` | to a long line's end or start, the rows scrolling sideways |
+| `esc`, `q` | close it, back to the panel, the list or the question it came from |
+
 ### Inside the git panel
 
 Its keys act on the row selected. The panel's footer says the ones that do something there, and a button under the
