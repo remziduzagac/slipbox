@@ -124,6 +124,8 @@ describe("the git panel by mouse as by keys (GIT-D8)", () => {
     await keys("ctrl+enter");
     expect(await until(() => git(root, "log", "-1", "--format=%s").trim() === "Say two")).toBe(true);
     expect(await until(() => app.gitPanel.message === "" && !app.gitPanel.typing)).toBe(true);
+    // git's status after the commit, in: nothing staged now (on a slow machine it comes after the box empties).
+    expect(await until(() => app.git.entries?.length === 0)).toBe(true);
     // enter takes a message to the floating editor, the text it had there to go on with.
     await keys("i", "x", "enter");
     expect(app.gitPanel.typing).toBe(false);
