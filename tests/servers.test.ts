@@ -53,6 +53,11 @@ setDefaultTimeout(30_000);
 const FAKE = join(import.meta.dir, "fixtures", "fake-lsp.ts");
 const sandbox = mkdtempSync(join(tmpdir(), "slipbox-servers-"));
 process.env.XDG_DATA_HOME = join(sandbox, "data"); // slipbox's installs, and Mason's, are the sandbox's
+// Isolation (testing.md): never the real config, cache or state — the roots trusted here (trust.json) were the
+// developer's own, and runs at once wrote over each other's.
+process.env.XDG_STATE_HOME = join(sandbox, "state");
+process.env.XDG_CACHE_HOME = join(sandbox, "cache");
+process.env.XDG_CONFIG_HOME = join(sandbox, "config");
 delete process.env.SLIPBOX_CONFIG;
 afterAll(() => rmSync(sandbox, { recursive: true, force: true }));
 
@@ -91,11 +96,32 @@ const until = async (ok: () => boolean, ms = 25_000) => {
   return ok();
 };
 
+/**
+ * Waiting on what a server says, not on a clock: `when(ok)` settles as soon as `ok` holds, checked each time `heard()`
+ * says something came in — however long that takes on a loaded machine (the test's own timeout is the only limit).
+ */
+function events() {
+  const waiting: { ok: () => boolean; go: () => void }[] = [];
+  return {
+    heard(): void {
+      for (const w of [...waiting])
+        if (w.ok()) {
+          waiting.splice(waiting.indexOf(w), 1);
+          w.go();
+        }
+    },
+    when(ok: () => boolean): Promise<void> {
+      return ok() ? Promise.resolve() : new Promise((go) => waiting.push({ ok, go }));
+    },
+  };
+}
+
 /** The fake server as a client starts it, and what it hears. */
 function fake(opts: { pull?: boolean; settings?: Record<string, unknown> } = {}) {
   const heard = new Map<string, { diagnostics: Diagnostic[]; version: number | null }>();
   const logs: string[] = [];
   const exits: { expected: boolean; why: string }[] = [];
+  const e = events();
   const spec: ServerSpec = {
     name: "fake",
     argv: ["bun", FAKE, "--stdio"],
@@ -104,11 +130,11 @@ function fake(opts: { pull?: boolean; settings?: Record<string, unknown> } = {})
     root: sandbox,
   };
   const client = new LanguageClient(spec, {
-    diagnostics: (uri, diagnostics, version) => heard.set(uri, { diagnostics, version }),
-    log: (m) => logs.push(m),
-    exited: (expected, why) => exits.push({ expected, why }),
+    diagnostics: (uri, diagnostics, version) => (heard.set(uri, { diagnostics, version }), e.heard()),
+    log: (m) => (logs.push(m), e.heard()),
+    exited: (expected, why) => (exits.push({ expected, why }), e.heard()),
   });
-  return { client, heard, logs, exits };
+  return { client, heard, logs, exits, when: e.when };
 }
 
 const uri = pathToFileURL(join(sandbox, "a.ts")).href;
@@ -140,8 +166,11 @@ describe("the client (19.1)", () => {
     const f = fake({ pull: true });
     await f.client.start();
     // As rust-analyzer without cargo check: nothing until its workspace loads, then no refresh asked — a `$/progress` end.
-    await f.client.didOpen(uri, "typescript", 1, "LOADING\nBAD here\n");
-    expect(await until(() => f.heard.get(uri)?.diagnostics.length === 1, 3000)).toBe(true);
+    await f.client.didOpen(uri, "typescript", 1, "WORKING\nBAD here\n");
+    await f.when(() => f.heard.get(uri)?.diagnostics.length === 0); // asked at once: nothing yet
+    await f.client.request("fake/release", {}); // its work done, said, and nothing more
+    await f.when(() => f.heard.get(uri)?.diagnostics.length === 1);
+    expect(f.heard.get(uri)!.version).toBe(1);
     await f.client.stop();
   });
 
@@ -150,19 +179,26 @@ describe("the client (19.1)", () => {
     await f.client.start();
     expect(f.client.pullsDiagnostics).toBe(true);
     await f.client.didOpen(uri, "typescript", 1, "BAD\n");
-    expect(await until(() => f.heard.get(uri)?.diagnostics.length === 1)).toBe(true);
+    await f.when(() => f.heard.get(uri)?.diagnostics.length === 1);
     await f.client.didChange(uri, 2, "fine\n");
-    expect(await until(() => f.heard.get(uri)?.diagnostics.length === 0)).toBe(true);
+    await f.when(() => f.heard.get(uri)?.version === 2 && f.heard.get(uri)!.diagnostics.length === 0);
     // Asked to ask again (pyright does), it asks again — the server, answered, lives on.
     await f.client.didChange(uri, 3, "REFRESH BAD\n");
-    expect(await until(() => f.heard.get(uri)?.version === 3 && f.heard.get(uri)!.diagnostics.length === 2)).toBe(true); // asked again
-    await f.client.didChange(uri, 4, "ASK\n"); // a method slipbox doesn't know: answered, not refused
-    await Bun.sleep(300);
-    expect(f.client.state).toBe("running");
-    // An answer about an older text, arriving after the newer one's, is dropped.
-    await f.client.didChange(uri, 5, "SLOW BAD\n");
+    await f.when(() => f.heard.get(uri)?.version === 3 && f.heard.get(uri)!.diagnostics.length === 2); // asked again
+    // A method slipbox doesn't know: answered, not refused — the server, which dies of a refusal, answers after it.
+    await f.client.didChange(uri, 4, "ASK\n");
+    await f.when(() => f.logs.some((l) => l.includes("asked custom/ask")));
+    const after = await f.client.request("textDocument/hover", {
+      textDocument: { uri },
+      position: { line: 0, character: 0 },
+    });
+    expect([after, f.client.state]).toEqual([{ contents: { kind: "markdown", value: "line 0: ASK" } }, "running"]);
+    // An answer about an older text, arriving after the newer one's, is dropped: the older one's held until the newer
+    // one's is in, then given.
+    await f.client.didChange(uri, 5, "HELD BAD\n");
     await f.client.didChange(uri, 6, "fine\n");
-    await Bun.sleep(700);
+    await f.when(() => f.heard.get(uri)?.version === 6);
+    await f.client.request("fake/release", {});
     expect(f.heard.get(uri)).toEqual({ diagnostics: [], version: 6 });
     await f.client.stop();
   });
@@ -741,13 +777,14 @@ describe("the servers of open files (19.1)", () => {
   const managed = (t: ServerTable, autoInstall = false) => {
     const problems = new Map<string, { version: number | null; list: Problem[] }>();
     const messages: string[] = [];
+    const e = events();
     const m = new ServerManager({
       table: () => t,
       autoInstall: () => autoInstall,
-      problems: (path, _s, version, list) => problems.set(path, { version, list }),
-      message: (_l, text) => messages.push(text),
+      problems: (path, _s, version, list) => (problems.set(path, { version, list }), e.heard()),
+      message: (_l, text) => (messages.push(text), e.heard()),
     });
-    return { m, problems, messages };
+    return { m, problems, messages, when: e.when };
   };
   const project = (name: string) => {
     const root = join(sandbox, name);
@@ -916,11 +953,12 @@ describe("the servers of open files (19.1)", () => {
     const problems = new Map<string, { version: number | null; list: Problem[] }>();
     const messages: string[] = [];
     const asked: string[] = [];
+    const e = events();
     const m = new ServerManager({
       table: () => table({ fake: folder }),
       userTable: () => table({ fake: { ...folder, config: { fake: { level: 1 } } } }),
       autoInstall: () => false,
-      problems: (path, _s, version, list) => problems.set(path, { version, list }),
+      problems: (path, _s, version, list) => (problems.set(path, { version, list }), e.heard()),
       message: (_l, text) => messages.push(text),
       ask: (root, limits) => asked.push(`${root}: ${limits.join("; ")}`),
     });
@@ -930,23 +968,20 @@ describe("the servers of open files (19.1)", () => {
     m.open(join(top, "b.fk"), 1, "fine\n");
     expect(asked).toEqual([`${top}: fake without the project's code`]); // once
     expect(messages.filter((t) => t.includes("trust"))).toEqual([]);
-    // The settings a server reports once it has asked for them: told again until it has.
+    // The settings the file's server reports (it says nothing before it has them), once it's running: a change, and
+    // what it says of it.
     let version = 1;
-    const settings = async (want: unknown) => {
-      for (const t = Date.now(); Date.now() - t < 8000; ) {
-        m.change(file, ++version, "BAD\n");
-        if (!(await until(() => problems.get(file)?.version === version, 2000))) continue;
-        const got = JSON.parse(problems.get(file)!.list[0]!.message.replace(/^bad, with /, ""));
-        if (JSON.stringify(got) === JSON.stringify(want)) return got;
-        await Bun.sleep(100);
-      }
-      return JSON.parse(problems.get(file)?.list[0]?.message.replace(/^bad, with /, "") ?? "null");
+    const settings = async () => {
+      expect(await m.started(file, "diagnostics")).toEqual(["fake"]);
+      m.change(file, ++version, "BAD\n");
+      await e.when(() => problems.get(file)?.version === version);
+      return JSON.parse(problems.get(file)!.list[0]!.message.replace(/^bad, with /, ""));
     };
-    expect(await settings({ level: 1, safe: true })).toEqual({ level: 1, safe: true });
+    expect(await settings()).toEqual({ level: 1, safe: true });
     // Trusted: started again with the folder's own settings, nothing more asked.
     setTrust(top, "trusted");
     m.restartUnder(top);
-    expect(await settings({ level: 2 })).toEqual({ level: 2 });
+    expect(await settings()).toEqual({ level: 2 });
     expect(asked.length).toBe(1);
     await m.stopAll();
     // Another root, kept restricted: neither asked nor told.
@@ -963,7 +998,7 @@ describe("the servers of open files (19.1)", () => {
     expect(asked.length).toBe(1);
     expect(messages.filter((t) => t.includes("trust"))).toEqual([]);
     await m2.stopAll();
-  });
+  }, 90_000); // three servers started one after another: the time a loaded machine takes
 
   test("a server's start in a root you don't trust (23.4): its safe environment and initialize options; in one you trust, its own", () => {
     const top = project("untrusted-start");
@@ -1067,20 +1102,22 @@ describe("the servers of open files (19.1)", () => {
     });
   });
 
+  // Four servers started one after another: on a loaded machine each start can take seconds, so the test is given the
+  // time they take, and waits for what they say rather than for a while.
   test("a crash: started again, its files told again; one that keeps crashing is left stopped", async () => {
-    const { m, problems, messages } = managed(
+    const { m, problems, messages, when } = managed(
       table({ fake: { name: "fake", command: launcher("fake-crash"), args: ["--stdio"] } }),
     );
     const root = project("pc");
     const file = join(root, "a.fk");
     m.open(file, 1, "BAD\n");
-    expect(await until(() => problems.get(file)?.list.length === 1)).toBe(true);
+    await when(() => problems.get(file)?.list.length === 1);
     problems.clear();
     m.change(file, 2, "CRASH\n"); // it dies on this text, every time it's told it
-    expect(await until(() => messages.some((x) => x.includes("keeps crashing")), 15_000)).toBe(true);
+    await when(() => messages.some((x) => x.includes("keeps crashing")));
     expect(messages.filter((x) => x.startsWith("fake crashed")).length).toBe(3);
     await m.stopAll();
-  });
+  }, 120_000);
 
   test("a crash whose program has gone: left stopped and said so — never installed, native or npm with auto_install off", async () => {
     setTrustedRoots([sandbox]); // a root you trust (23.x): the project's own programs and settings count

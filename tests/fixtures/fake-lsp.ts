@@ -3,6 +3,10 @@
 // on CRASH; on REFRESH it asks the client to ask again, as pyright does; on LOADING it has nothing to say until its
 // work is done a moment later, said by `$/progress` and no refresh, as rust-analyzer does; hover says the line; SHOW,
 // REGISTER and SAVED below.
+//
+// What a test waits for happens when it says so, never after a while: on WORKING the work is done, and on HELD an
+// answer asked for is given, only when the client asks `fake/release` — answered once they are. And it says nothing
+// before it has its settings, so what it says always says them.
 import { readFileSync } from "node:fs";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { createConnection, DiagnosticSeverity, DocumentDiagnosticRequest, MessageType, ProposedFeatures, ShowMessageNotification, TextDocuments, TextDocumentSyncKind, type TextEdit } from "vscode-languageserver/node";
@@ -40,8 +44,24 @@ conn.onInitialize((p) => ({
   },
   serverInfo: { name: `fake (root ${p.rootUri})` },
 }));
+let settled = () => {};
+/** Its settings, asked for once it's initialized: what it says waits for them. */
+const settingsReady = new Promise<void>((done) => (settled = done));
 conn.onInitialized(async () => {
-  settings = await conn.workspace.getConfiguration("fake");
+  try {
+    settings = await conn.workspace.getConfiguration("fake");
+  } finally {
+    settled();
+  }
+});
+/** What waits for the client's `fake/release`: work to end, answers to give. */
+const held: (() => Promise<unknown>)[] = [];
+/** The answers it has given or will give to `textDocument/diagnostic`: a release returns once they're out. */
+let answers: Promise<unknown>[] = [];
+conn.onRequest("fake/release", async () => {
+  await Promise.all(held.splice(0).map((go) => go()));
+  await Promise.all(answers.splice(0));
+  return null;
 });
 
 const problems = (doc: TextDocument | undefined) => [
@@ -55,17 +75,23 @@ docs.onDidChangeContent((e) => {
   refreshed.delete(e.document.uri); // the refresh's problem is the text's it came with
   // LOADING: work begun at once and done 1.2 s later — longer than a pause in what it says — said by
   // `$/progress` alone, no refresh asked.
-  if (e.document.getText().includes("LOADING") && !loadStarted.has(e.document.uri)) {
-    loadStarted.add(e.document.uri);
-    loading.add(e.document.uri);
+  // WORKING: the same, its work done when the client says so (`fake/release`).
+  const text = e.document.getText();
+  if ((text.includes("LOADING") || text.includes("WORKING")) && !loadStarted.has(e.document.uri)) {
+    const uri = e.document.uri;
+    loadStarted.add(uri);
+    loading.add(uri);
     const token = "loading";
-    void conn.sendRequest("window/workDoneProgress/create", { token }).then(() => {
-      void conn.sendNotification("$/progress", { token, value: { kind: "begin", title: "Loading" } });
-      setTimeout(() => {
-        loading.delete(e.document.uri);
-        void conn.sendNotification("$/progress", { token, value: { kind: "end" } });
-      }, 1200);
-    });
+    const begun = conn.sendRequest("window/workDoneProgress/create", { token }).then(() =>
+      conn.sendNotification("$/progress", { token, value: { kind: "begin", title: "Loading" } }),
+    );
+    const done = async () => {
+      await begun;
+      loading.delete(uri);
+      await conn.sendNotification("$/progress", { token, value: { kind: "end" } });
+    };
+    if (text.includes("WORKING")) held.push(done);
+    else void begun.then(() => setTimeout(done, 1200));
   }
   if (e.document.getText().includes("CRASH")) process.exit(3);
   // As pyright does: asks the client to ask again, and dies if that fails (an unhandled rejection);
@@ -84,14 +110,22 @@ docs.onDidChangeContent((e) => {
       );
     }, 300);
   }
-  if (!pull) void conn.sendDiagnostics({ uri: e.document.uri, version: e.document.version, diagnostics: problems(e.document) });
+  // The text as it is now, said once its settings are in.
+  const now = TextDocument.create(e.document.uri, e.document.languageId, e.document.version, text);
+  if (!pull) void settingsReady.then(() => conn.sendDiagnostics({ uri: now.uri, version: now.version, diagnostics: problems(now) }));
 });
-conn.languages.diagnostics.on(async (p) => {
-  const doc = docs.get(p.textDocument.uri);
-  const items = doc && loading.has(doc.uri) ? [] : problems(doc);
-  // SLOW: answered late, after an answer about a newer text.
-  if (doc?.getText().includes("SLOW")) await new Promise((r) => setTimeout(r, 400));
-  return { kind: "full", items };
+conn.languages.diagnostics.on((p) => {
+  const answer = (async () => {
+    await settingsReady;
+    const doc = docs.get(p.textDocument.uri);
+    const items = doc && loading.has(doc.uri) ? [] : problems(doc);
+    // SLOW: answered late, after an answer about a newer text; HELD: when the client says so.
+    if (doc?.getText().includes("SLOW")) await new Promise((r) => setTimeout(r, 400));
+    if (doc?.getText().includes("HELD")) await new Promise<void>((go) => held.push(async () => go()));
+    return { kind: "full" as const, items };
+  })();
+  answers.push(answer);
+  return answer;
 });
 conn.onHover((p) => ({ contents: { kind: "markdown", value: `line ${p.position.line}: ${docs.get(p.textDocument.uri)?.getText().split("\n")[p.position.line] ?? ""}` } }));
 // The definition: the first line holding DEF; the references: each line holding REF.
