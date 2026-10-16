@@ -7,7 +7,7 @@ import type { App } from "./app.ts";
 import { type Canvas, drawText } from "./canvas.ts";
 import { type Geometry, type Rect, roleStyle } from "./draw.ts";
 import type { Color, Role } from "../core/theme/theme.ts";
-import { splitAtWidth, stringWidth, truncate } from "../core/width.ts";
+import { splitAtWidth, stringWidth, truncate, truncateStart } from "../core/width.ts";
 import { sanitize } from "../core/sanitize.ts";
 import { headOf } from "../core/git.ts";
 import { trackText } from "../core/gitremote.ts";
@@ -340,6 +340,36 @@ function drawRow(
         letter(row.letter);
         x += 1;
         return put(sanitize(row.path), st);
+      case "repo": {
+        const sum = app.gitPanel.repos.summary(row.repo);
+        tail([
+          sum
+            ? [
+                { text: sum.text, role: sum.text === "clean" ? ("dim" as Role) : ("git_modified" as Role) },
+                ...(sum.review ? [{ text: g.git.review, role: "warn" as Role }] : []),
+              ]
+            : [{ text: "asking git…", role: "dim" }],
+        ]);
+        put(`${row.open ? g.foldOpen : g.foldClosed} `, dim);
+        return put(sanitize(row.repo.name), { ...st, bold: true });
+      }
+      case "rcheckout": {
+        const l = app.gitPanel.repos.checkoutLabel(row.repo, row.checkout);
+        const known = app.gitPanel.repos.known(row.checkout);
+        if (known?.entries.length) tail([[{ text: `${g.git.edited}${known.entries.length}`, role: "git_modified" }]]);
+        x += 4;
+        put(`${l.mark} `, { ...roleStyle(theme, "sidebar_root", rowBg), bg: rowBg });
+        put(l.branch, st);
+        x += 1;
+        return put(truncateStart(l.where, Math.max(4, end - x)), dim);
+      }
+      case "rfile": {
+        x += 6;
+        const e = row.entry;
+        letter(e.x === "?" ? "?" : e.x !== " " ? e.x : e.y);
+        x += 1;
+        return put(sanitize(e.path), st);
+      }
     }
   };
   body();

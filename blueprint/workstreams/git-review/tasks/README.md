@@ -12,5 +12,5 @@ and GIT-T6; GIT-T7 any time after GIT-T1; GIT-T8 last.
 - [GIT-T6](pull-rebase.md): Pulling where both sides moved, and rebasing onto the base.
 - [GIT-T7](side-by-side.md): A code file's diff side by side, and its cells folded.
 - [GIT-T8](docs.md): The docs, the screenshots, and consolidation.
-- [GIT-T9](panel.md): The git panel by mouse as by keys, and what the branch changed.
-- [GIT-T10](branches.md): Branches in the git panel, their worktrees and bases.
+- [GIT-T9](archive/panel.md): The git panel by mouse as by keys, and what the branch changed. Done.
+- [GIT-T10](archive/branches.md): Branches in the git panel, their worktrees and bases. Done.

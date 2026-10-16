@@ -126,6 +126,8 @@ export class Git {
       this.states = null;
       this.track = null;
       this.folders.clear();
+      // News all the same: the git panel's repositories in the view are asked again (VV-D10).
+      this.generation++;
       return Promise.resolve();
     }
     this.asking = statusLater(c)

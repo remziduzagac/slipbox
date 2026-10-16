@@ -259,6 +259,24 @@ looking (VV-D4). A folder link out of the vault is revealed in its own vault, as
 The panel follows the vault (VV-D10): the current vault's repository, the repositories in the view, their order, opened
 up in place, asked about in the background.
 
+Done in VV-T8 (`tui/gitreposview.ts`, `core/gitrepos.ts`), with GIT's panel (GIT-T9): **the repositories in the view**
+are found under the explorer's view (`explorer.top`, else the vault) three folders down (`reposUnder`, `REPO_DEPTH`),
+2,000 folders at most, in the background: not into a hidden folder, a busy one (`isBusyFolder`, VV-D8) or a
+repository, whose folders are its own; a checkout's `.git` makes it one, and a worktree found beside its main checkout
+is grouped under it, by its repository's shared git folder (`groupRepos`, `repoKey`). Found again each time the panel
+is shown (`RepoView.again`). **In a repository**, its own panel, and after it, folded, **Other repositories (n)**: the
+view's others. **In a vault that isn't one** — home, a vault without git, Elsewhere — they're the panel: a line saying
+`~/work holds 3 repositories` (or that it holds none), then each repository's row; in a folder of home, the view not
+home itself, the rest of home's repositories (looked for from `~`) folded under **Elsewhere in home (n)**. Each row
+says, at its end, its checkouts' uncommitted files (`✎n`), its main checkout's ahead and behind its upstream, or
+`clean`, `◆` when a worktree has uncommitted files, `asking git…` meanwhile: `git status --branch` asked per checkout
+(`checkoutStateLater`) only for the rows drawn, again when git has news or the panel's shown again. **Ordered** by
+what needs attention, as far as git has said (`attention`): a worktree with uncommitted files, uncommitted files,
+ahead of or behind the upstream, clean, then not asked yet; then by name. **Opened up in place** (`enter`, a click):
+each checkout's row, the main one `●`, a worktree `⎇`, by branch and folder, and its uncommitted files, each a diff
+against its last commit in the diff window. **`o`** goes into a repository (its first checkout) or the checkout
+selected (`switchVault`, VV-D4); `enter` on a checkout too. The filter keeps repositories by name.
+
 ## MODIFIED design/trust.md
 
 Adds the links' trust (VV-D6): asked when a link out is first opened, kept by link and target, never in the vault,

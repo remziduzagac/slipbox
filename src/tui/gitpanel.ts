@@ -2,8 +2,9 @@
 // shown. At its top, the repository and its branch, against its base and its upstream; a message box, typed in, where
 // ctrl+enter commits; the buttons — commit, amend, pull, push, fetch, stash — each saying its key under the pointer.
 // Under them its sections: the working tree's (gitview.ts), what this branch changed against its base, this file's
-// diff, history and blame, the branches (gitbranchview.ts). Its keys (`[keys.git]`) act on the row selected, and its
-// footer says them; `space g` opens it and focuses it (`git.view`).
+// diff, history and blame, the branches (gitbranchview.ts), the other repositories in the view (gitreposview.ts) — or,
+// in a vault that isn't a repository, those repositories alone (VV-D10). Its keys (`[keys.git]`) act on the row
+// selected, and its footer says them; `space g` opens it and focuses it (`git.view`).
 
 import { basename } from "node:path";
 import { headOf } from "../core/git.ts";
@@ -15,6 +16,7 @@ import { sanitize } from "../core/sanitize.ts";
 import { keyChar, spellKey } from "./keys.ts";
 import { match } from "./match.ts";
 import { BranchView, type BranchViewRow } from "./gitbranchview.ts";
+import { RepoView, type RepoViewRow } from "./gitreposview.ts";
 import {
   backToPanel,
   type ChangeRow,
@@ -29,8 +31,8 @@ import { pointedAt } from "./gitmouse.ts";
 import type { App } from "./app.ts";
 
 /** A section of the panel: the working tree's four; the branch's, this file's; the branches, the merged and older among
- *  them. */
-export type SectionId = GitSection | "ahead" | "file" | "branches" | "older";
+ *  them; the other repositories, the rest of home's. */
+export type SectionId = GitSection | "ahead" | "file" | "branches" | "older" | "repos" | "home";
 
 export interface HeadingRow {
   kind: "heading";
@@ -59,7 +61,15 @@ export interface ThisFileRow {
   label: string;
 }
 
-export type PanelRow = HeadingRow | NoteRow | FileRow | ChangeRow | AheadRow | ThisFileRow | BranchViewRow;
+export type PanelRow =
+  | HeadingRow
+  | NoteRow
+  | FileRow
+  | ChangeRow
+  | AheadRow
+  | ThisFileRow
+  | BranchViewRow
+  | RepoViewRow;
 
 /** A button at the panel's top (GIT-D8): what it says, the action its key runs, what it does. */
 export interface PanelButton {
@@ -82,20 +92,23 @@ export const STATE_LETTER: Record<GitState, string> = {
 export class GitPanel {
   constructor(readonly app: App) {
     this.branches = new BranchView(app);
+    this.repos = new RepoView(app);
   }
 
-  /** The branches (GIT-D9): their state, what they ask of git. */
+  /** The branches (GIT-D9) and the repositories in the view (VV-D10): their state, what they ask of git. */
   readonly branches: BranchView;
+  readonly repos: RepoView;
   /** The message box's text (GIT-D8), and whether keys go to it. */
   message = "";
   typing = false;
-  /** The sections folded, by id: the merged and older branches, to begin with. */
-  readonly folded = new Set<SectionId>(["older"]);
+  /** The sections folded, by id: the merged and older branches, the other repositories, home's, to begin with. */
+  readonly folded = new Set<SectionId>(["older", "repos", "home"]);
   /** What this branch changed against its base (GIT-D8), asked of git in the background, by the question asked. */
   private ahead: { key: string; base: string; files: Changed[] | null } | null = null;
 
-  /** The panel opened, or the focus back on it: git asked again about what it shows. */
+  /** The panel opened, or the focus back on it: git asked again about what it shows (VV-D10). */
   shown(): void {
+    this.repos.again();
     void this.app.git.refreshNow().then(() => this.app.host.requestRender());
   }
 
@@ -123,14 +136,15 @@ export class GitPanel {
   rows(): PanelRow[] {
     const app = this.app;
     const c = app.git.checkout;
-    if (!c) return [{ kind: "note", text: "not a git repository" }];
+    // Not a repository (home, a vault without git, Elsewhere): the repositories in the view are the panel (VV-D10).
+    if (!c) return this.repos.rows("all");
     if (app.git.entries === null) return [{ kind: "note", text: "asking git…" }];
     const q = app.sidebar.filter ?? "";
     const rows: PanelRow[] = [];
     const work = workRows(app);
     rows.push(...work);
     if (!work.length && !q) rows.push({ kind: "note", text: "nothing uncommitted" });
-    rows.push(...this.aheadRows(q), ...this.fileRows(q), ...this.branches.rows());
+    rows.push(...this.aheadRows(q), ...this.fileRows(q), ...this.branches.rows(), ...this.repos.rows("others"));
     if (q && rows.every((r) => r.kind === "note")) return [{ kind: "note", text: "no matches" }];
     return rows;
   }
@@ -231,7 +245,8 @@ export class GitPanel {
       const key = this.keyFor(action);
       return key ? [[key, what]] : [];
     };
-    if (!row || row.kind === "note") return [...k("commit", "commit"), ...k("fetch", "fetch")];
+    if (!row || row.kind === "note")
+      return this.app.git.checkout ? [...k("commit", "commit"), ...k("fetch", "fetch")] : k("go", "go in");
     switch (row.kind) {
       case "heading": {
         const s = row.section;
@@ -255,6 +270,7 @@ export class GitPanel {
         ];
       case "ahead":
       case "bfile":
+      case "rfile":
         return [...k("open", "diff"), ...(row.kind !== "bfile" ? k("go", "open") : []), ...k("menu", "more")];
       case "thisfile":
         return k("open", row.label.toLowerCase());
@@ -270,6 +286,10 @@ export class GitPanel {
       case "bsub":
       case "bbuttons":
         return [...k("collapse", "fold"), ...k("menu", "more")];
+      case "repo":
+        return [...k("open", row.open ? "fold" : "open up"), ...k("go", "go in"), ...k("menu", "more")];
+      case "rcheckout":
+        return [...k("open", "go in"), ...k("menu", "more")];
     }
   }
 
@@ -311,8 +331,11 @@ export class GitPanel {
         return;
     }
     const row = rows[s.selected];
+    // The repositories' rows answer wherever they are; the rest is a repository's.
+    if (row && (row.kind === "repo" || row.kind === "rcheckout" || row.kind === "rfile"))
+      return this.repos.action(row, action);
     const c = app.git.checkout;
-    if (!c) return app.message("info", "not in a git repository");
+    if (!c) return app.message("info", "not in a git repository: o goes into one of those listed");
     switch (action) {
       case "message":
         this.typing = true;
@@ -467,6 +490,7 @@ export class GitPanel {
       row.kind === "bfile"
     )
       return this.branches.menu(row.branch, at);
+    if (row.kind === "repo" || row.kind === "rcheckout" || row.kind === "rfile") return this.repos.menu(row, at);
     if (row.kind !== "file" && row.kind !== "change" && row.kind !== "ahead") return;
     const items: { label: string; action: string; run: () => void }[] = [];
     const add = (label: string, action: string, run: () => void) => items.push({ label, action, run });

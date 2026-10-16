@@ -9,6 +9,7 @@ import { join } from "node:path";
 import { canonKey } from "../src/core/commands.ts";
 import { DEFAULT_CONFIG } from "../src/core/config.ts";
 import { openGraph } from "../src/core/graph.ts";
+import { attention } from "../src/core/gitrepos.ts";
 import { locateVault } from "../src/core/vault.ts";
 import { App, type ListOverlay } from "../src/tui/app.ts";
 import { TextCanvas } from "../src/tui/canvas.ts";
@@ -362,5 +363,60 @@ describe("the branches (GIT-D9, GIT-D10, GIT-D13)", () => {
     expect(await until(() => (frame(), branch("agent/gone")?.worktree?.gone === true))).toBe(true);
     app.gitPanel.branches.button(branch("agent/gone")!, "prune");
     expect(git(root, "worktree", "list")).not.toContain("agent-gone");
+  });
+});
+
+describe("the repositories in the view (VV-D10)", () => {
+  test("in a vault that isn't a repository, they're the panel: by what needs attention, opened up in place, gone into", async () => {
+    const root = mkdtempSync(join(sandbox, "folder-"));
+    mkdirSync(join(root, ".slipbox"));
+    writeFileSync(join(root, "a.md"), "# A\n");
+    for (const name of ["alpha", "beta", "gamma"]) {
+      mkdirSync(join(root, name));
+      writeFileSync(join(root, name, "x.md"), "# X\n");
+      git(join(root, name), "init", "-q", "-b", "main");
+      git(join(root, name), "add", "-A");
+      git(join(root, name), "commit", "-q", "-m", "x");
+    }
+    // gamma changed, beta's worktree too (an agent's work to review); alpha clean.
+    writeFileSync(join(root, "gamma", "x.md"), "# X, changed\n");
+    git(join(root, "beta"), "worktree", "add", "-q", "-b", "agent", join(root, "beta-agent"), "main");
+    writeFileSync(join(root, "beta-agent", "y.md"), "# Y\n");
+    const { app, frame, keys } = await panel(root);
+    const repos = () =>
+      app.gitPanel
+        .rows()
+        .filter((r) => r.kind === "repo")
+        .map((r) => (r.kind === "repo" ? r.repo.name : ""));
+    expect(await until(() => (frame(), repos().length === 3))).toBe(true);
+    expect(app.gitPanel.rows()[0]).toMatchObject({
+      kind: "note",
+      text: expect.stringMatching(/holds 3 repositories$/),
+    });
+    expect(await until(() => (frame(), repos().join() === "beta,gamma,alpha"))).toBe(true);
+    // Opened up: its checkouts, the worktree by its branch, and their files.
+    app.sidebar.selected = rowOf(app, (r) => r.kind === "repo" && r.repo.name === "beta");
+    await keys("enter");
+    expect(await until(() => (frame(), app.gitPanel.rows().some((r) => r.kind === "rfile")))).toBe(true);
+    expect(frame()).toContain("? y.md");
+    // o goes into one.
+    app.sidebar.selected = rowOf(app, (r) => r.kind === "repo" && r.repo.name === "alpha");
+    await keys("o");
+    expect(app.loc.root).toBe(join(root, "alpha"));
+  });
+});
+
+describe("the repositories by what needs attention (VV-D10)", () => {
+  const state = (entries: number, ahead = 0) => ({
+    branch: "main",
+    entries: Array.from({ length: entries }, (_, i) => ({ path: `f${i}`, x: " ", y: "M" })),
+    track: { branch: "main", upstream: "origin/main", ahead, behind: 0, gone: false },
+  });
+  test("a worktree's work to review, then changes, then ahead or behind, then clean; not asked, last", () => {
+    expect(attention([state(0), state(2)])).toBe(4);
+    expect(attention([state(3), state(0)])).toBe(3);
+    expect(attention([state(0, 1)])).toBe(2);
+    expect(attention([state(0)])).toBe(1);
+    expect(attention([null, undefined])).toBe(0);
   });
 });

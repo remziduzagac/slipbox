@@ -26,8 +26,24 @@ The format is [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.1.0/); wh
   link whose target isn't there. git's mark is in the column before it, and before that, dimmed, a vault's branch, or a
   worktree's after `⎇`. Each mark is one column wide, with ASCII and Nerd Font forms ([A row's
   marks](docs/manual/files.md#a-rows-marks)). A new colour, `sidebar_mark`, is the indexed mark's.
+- The git panel works by mouse as by keys, and says its keys: a message box where `ctrl+enter` commits; buttons to
+  commit, amend, pull, push, fetch and stash; each row's buttons under the pointer to stage, unstage, discard or show
+  its diff, and a menu on a right click. It shows what the branch changed against its base, so a branch whose work is
+  committed never says "nothing changed"; the note on screen's diff, history and blame; and the branches, a worktree
+  marked `⎇` on its branch with its folder, each opened up in place to see its files and diffs, open its worktree,
+  check it out, merge it or remove a merged worktree. `n` makes a branch from where you say, in a new worktree by
+  default, in the folder `git.worktrees` names. Each branch is measured against its own base: the branch it was made
+  from, else the nearest of `git.bases`. In a vault that isn't a repository, the panel lists the repositories in the
+  view, by what needs attention. A click on the status line's branch lists the branches, and one on a change's sign in
+  the gutter shows the change, with Revert and Stage.
 
 ### Changed
+
+- **Breaking:** `space g` opens the git panel, as `space e` the explorer, and its keys act there (`[keys.git]`). The
+  keys under `space g` are gone: `space g c`, `d`, `w` and `m` are `:changes`, `:diff`, `:worktrees` and
+  `:merge-review`, and the others are in the panel and the palette (Branches, Who changed this line, This file's
+  history, Preview the change, Undo the change). In the panel, `enter` shows a file's diff and `o` opens it. The
+  explorer's keys no longer include the panel's `c`, `shift+c`, `f` and `shift+p`.
 
 - A code block too wide for the window scrolls sideways on its own instead of wrapping its lines, so trees, diagrams
   and aligned output keep their columns. The cursor, a sideways wheel (or `shift` with the wheel), the block's

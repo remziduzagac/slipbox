@@ -66,7 +66,10 @@ export function rowActions(app: App, row: PanelRow): RowAction[] {
         : [stage("stages this change"), discard("reverts this change, after asking")];
     case "ahead":
     case "bfile":
+    case "rfile":
       return [diff];
+    case "repo":
+      return [{ glyph: app.glyphs.navForward, action: "go", desc: "goes into it" }];
     default:
       return [];
   }
@@ -146,7 +149,7 @@ export function gitClick(app: App, id: string, clicks: number): boolean {
     // A branch's lines and its buttons' row: selected, nothing more — its buttons are their own.
     if (r.kind === "bbuttons" || r.kind === "bline" || r.kind === "bsub") return true;
     // One click: what enter does (a file's diff, a heading folded, a branch opened up); a second, what o does.
-    p.action(clicks >= 2 && r.kind !== "heading" && r.kind !== "branch" ? "go" : "open");
+    p.action(clicks >= 2 && r.kind !== "heading" && r.kind !== "branch" && r.kind !== "repo" ? "go" : "open");
     return true;
   }
   return true;
