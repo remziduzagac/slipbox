@@ -216,9 +216,19 @@ export class GitPanel {
       },
       { id: "fetch", label: label(g.fetch, "Fetch"), action: "fetch", desc: "fetches the remote's new commits" },
       { id: "stash", label: "Stash", action: "stash", desc: "the stashes: the changes stashed, or one brought back" },
-      // The review (GIT-D3), while there's a change not staged.
+      // The review (GIT-D3), while there's a change not staged; the merge screen (GIT-D5), while a file's in conflict.
       ...(work.unstaged.length || work.untracked.length
         ? [{ id: "review", label: "Review", action: "review", desc: "the changes not staged, a hunk at a time" }]
+        : []),
+      ...(work.conflicted.length
+        ? [
+            {
+              id: "resolve",
+              label: `Resolve ${work.conflicted.length}`,
+              action: "resolve",
+              desc: "the files in conflict, on the merge screen: a conflict at a time",
+            },
+          ]
         : []),
     ];
   }
@@ -252,12 +262,14 @@ export class GitPanel {
           ...(s === "staged" ? k("unstage", "unstage all") : []),
           ...(s === "unstaged" ? k("discard", "discard all") : []),
           ...(s === "unstaged" || s === "untracked" ? k("review", "review") : []),
+          ...(s === "conflicted" ? k("resolve", "merge screen") : []),
           ...(s === "branches" ? k("new_branch", "new branch") : []),
         ];
       }
       case "file":
       case "change":
         return [
+          ...(row.section === "conflicted" ? k("resolve", "merge screen") : []),
           ...(row.section === "staged" ? k("unstage", "unstage") : k("stage", "stage")),
           ...(row.section === "unstaged" || row.section === "untracked" ? k("discard", "discard") : []),
           ...k("open", "diff"),
@@ -353,6 +365,11 @@ export class GitPanel {
       // The review (GIT-D3): every change not staged, a hunk at a time.
       case "review":
         return void app.run("git.review");
+      // The merge screen (GIT-D5): the file in conflict selected, else this note when it's in conflict, else the first.
+      case "resolve": {
+        const rel = row?.kind === "file" && row.section === "conflicted" ? relOf(app, row.entry.path) : null;
+        return void app.run(rel === null ? "git.merge_screen" : `git.merge_screen ${rel}`);
+      }
       case "stage_all":
         return sectionAction(app, "all", "stage");
       case "unstage_all":

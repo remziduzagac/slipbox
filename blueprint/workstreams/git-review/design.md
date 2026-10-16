@@ -102,8 +102,10 @@ The text for § Side panes ("Source control"), after **Commit**: `f` fetches, `p
 `shift+p` pushes and `z` lists the stashes (explorer actions `fetch`, `paste`, `push`, `stash`, each running its named
 command, so the palette's are the same; in the explorer and the history they do nothing).
 
-And (GIT-T2): `v` reviews the changes (the git panel's `review`, `git.review`), and a Review button is there while a
-change isn't staged; a changed file's footer says `v`.
+And (GIT-T2, GIT-T5): `v` reviews the changes (the git panel's `review`, `git.review`), and a Review button is there
+while a change isn't staged; `x` opens the merge screen on the conflicted file selected, else the first (`resolve`,
+`git.merge_screen`), and a Resolve button is there while a file is in conflict. Their rows' footers say them. In the
+Problems panel's All tab, `x` on a conflict opens the merge screen on its file.
 
 ### Reviewing a change, as built (GIT-T2)
 
@@ -138,6 +140,48 @@ After `y`, `x` or `c`, the review goes on to the next hunk not yet dealt with, a
 none left, it ends. Its end, however it comes, says what it did (`tallyText`): `review: 1 kept (staged), 1 reverted,
 1 note for the agent in the scratch — space s y copies it; 2 left as they were` — `space s y` named when a note was
 written. Nothing is committed.
+
+### The merge screen, as built (GIT-T5)
+
+The text for § Git, after "Reviewing a change":
+
+**The merge screen** (GIT-D5; `core/conflicts.ts`, `tui/mergescreen.ts`): `x` on a file in conflict in source control
+(the explorer's `cut`), `x` on a conflict in the Problems panel's All tab, `:resolve [file]` or `git.merge_screen` — the
+file named, else this note when it's in conflict, else the first that is — opens the file's buffer (read again first
+when git changed it on disk and it isn't being typed in) and reads git's markers (`parseConflicts`): `<<<<<<< label`,
+yours, `||||||| label` and the base where git wrote it (diff3, zdiff3), `=======`, theirs, `>>>>>>> label`; a marker
+that doesn't close, or a `=======` outside a conflict (a setext heading's), is text. The markers give the conflicts, so
+what was settled by hand stays settled. Each conflict's base where the markers don't hold it comes from the index's
+stage 1 (`withStages`): yours is found in stage 2, and theirs in stage 3, where the stretches before put it (else
+wherever it is), each mapped back onto stage 1 through that side's changes (`toBase`, a boundary inside a change
+widened to the whole of it), the two ranges joined. Where neither has it (the stages gone), there's no base. A file in
+conflict with no marker (one side deleted it) is said, with `s` in source control to mark it resolved.
+
+The screen, in the floating window as tall as a peek's, a conflict at a time: its number, its line in the result and
+how it's settled; the keys; while a rebase is under way, that yours is what's rebased onto and theirs the commit
+replayed; the base's lines; yours, then theirs, each under its marker's label as a diff against the base (with no base,
+whole); then the file as it will be (`resultView`): each conflict settled (its lines `+`) or still marked, two lines
+around it, under a head naming it and how it's settled, the stretches between folded. Its own keys (`mergeKeys`,
+`DEFAULT_MERGE_KEYS`):
+
+- `o`, `t`, `b`, `shift+b` (`git.merge_ours`, `_theirs`, `_both`, `_both_theirs`) settle the conflict — yours, theirs,
+  both with yours first or theirs first — and go on to the next one not settled.
+- `e` (`git.merge_edit`) puts the result in the file's buffer as one edit — the conflicts not settled still marked,
+  `markers` set so autosave doesn't write them — and opens the file at the conflict, in the lens (source for code).
+  `x` reads what's left of it onto the screen again.
+- `a` (`git.merge_agent`) asks for a note and adds the conflict to the scratch (`conflictExcerpt`): its lines in the
+  file, three lines around it, the base between the sides as diff3 writes it.
+- `n`, `p` (`git.merge_next`, `_prev`) move between conflicts.
+- `w` (`git.merge_save`; `ctrl+s` and `:w` too) once every conflict is settled: the result into the buffer as one edit,
+  saved through `App.writeBuffer`; refused, said, while one isn't, or when the buffer changed since the screen read it.
+- `s` (`git.merge_stage`) once saved: `git add` the file, which marks it resolved; the next file in conflict opens,
+  else what comes next is said (`shift+r` continues the rebase, or concludes the merge).
+- `esc` closes it; what's settled is kept for the file while its text is the same, and opening it again brings it back.
+
+The conflict prompt's (M)erge (`5.5`), where its three-way merge leaves a conflict, opens the same screen on the note's
+text as loaded (the base), as typed (yours) and on disk (theirs) (`fromMerge`, from `mergeChunks`, which `merge3` is now
+built on): `w` puts the result in the note, measured against the text on disk from then on (`rebase`), and saves it;
+`esc` goes back to the prompt; `s` is git's alone. A merge with no conflict is applied as before, unsaved.
 
 ## MODIFIED design/trust.md § What slipbox runs
 

@@ -577,6 +577,73 @@ export const COMMAND_SPECS: CommandSpec[] = [
     cli: I,
     desc: "In a review: ends it, and opens the file at the change",
   },
+  // The merge screen (GIT-D5): x on a conflicted file; the keys on it.
+  {
+    id: "git.merge_screen",
+    title: "Settle the conflicts",
+    cli: I,
+    desc: "The merge screen: a file in conflict (this note, or the first) settled a conflict at a time, then saved and staged",
+  },
+  {
+    id: "git.merge_ours",
+    title: "Take yours (merge screen)",
+    cli: I,
+    desc: "On the merge screen: the conflict settled with your side",
+  },
+  {
+    id: "git.merge_theirs",
+    title: "Take theirs (merge screen)",
+    cli: I,
+    desc: "On the merge screen: the conflict settled with their side",
+  },
+  {
+    id: "git.merge_both",
+    title: "Take both, yours first (merge screen)",
+    cli: I,
+    desc: "On the merge screen: the conflict settled with both sides, yours first",
+  },
+  {
+    id: "git.merge_both_theirs",
+    title: "Take both, theirs first (merge screen)",
+    cli: I,
+    desc: "On the merge screen: the conflict settled with both sides, theirs first",
+  },
+  {
+    id: "git.merge_edit",
+    title: "Edit in the lens (merge screen)",
+    cli: I,
+    desc: "On the merge screen: the result in the file, unsaved, the lens opened at the conflict to settle it by hand",
+  },
+  {
+    id: "git.merge_agent",
+    title: "Send the conflict to the agent (merge screen)",
+    cli: I,
+    desc: "On the merge screen: the conflict, its base and the lines around it into the scratch, with a note",
+  },
+  {
+    id: "git.merge_next",
+    title: "Next conflict (merge screen)",
+    cli: I,
+    desc: "On the merge screen: the next conflict",
+  },
+  {
+    id: "git.merge_prev",
+    title: "Previous conflict (merge screen)",
+    cli: I,
+    desc: "On the merge screen: the conflict before",
+  },
+  {
+    id: "git.merge_save",
+    title: "Save the merged file (merge screen)",
+    cli: I,
+    desc: "On the merge screen: once every conflict is settled, the file saved as it shows",
+  },
+  {
+    id: "git.merge_stage",
+    title: "Stage the merged file (merge screen)",
+    cli: I,
+    desc: "On the merge screen: the saved file staged, which tells git it's resolved; the next file in conflict opens",
+  },
   {
     id: "git.change_next",
     title: "Next change against what's staged",

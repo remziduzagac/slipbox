@@ -367,23 +367,30 @@ export interface MergeResult {
   conflicts: number;
 }
 
+/** A stretch of a three-way merge: lines it settled (one side's change, the same change on both, or neither's), or a
+ *  conflict — the base's lines and each side's, where both changed them differently. */
+export type MergeChunk = { lines: string[] } | { base: string[]; ours: string[]; theirs: string[] };
+
 /**
- * Three-way merge by lines: what changed from `base` in only one of `ours` / `theirs` is taken;
- * the same change on both sides once; different changes to the same lines become a conflict,
- * marked `<<<<<<< yours` / `=======` / `>>>>>>> theirs` (git's markers).
+ * Three-way merge by lines, stretch by stretch: what changed from `base` in only one of `ours` / `theirs` is taken;
+ * the same change on both sides once; different changes to the same lines are a conflict, each side's lines and the
+ * base's kept. Lines as `splitLines` gives them: a final line break leaves an empty last line.
  */
-export function merge3(base: string, ours: string, theirs: string): MergeResult {
+export function mergeChunks(base: string, ours: string, theirs: string): MergeChunk[] {
   const B = splitLines(base);
   const O = splitLines(ours);
   const T = splitLines(theirs);
   const ho = diffLines(B, O).map((h) => ({ ...h, side: "o" as const }));
   const ht = diffLines(B, T).map((h) => ({ ...h, side: "t" as const }));
   const all = [...ho, ...ht].sort((x, y) => x.aStart - y.aStart || x.aLen - y.aLen);
-  const out: string[] = [];
-  let conflicts = 0;
+  const out: MergeChunk[] = [];
+  const keep = (lines: string[]) => {
+    if (!lines.length) return;
+    const last = out[out.length - 1];
+    if (last && "lines" in last) last.lines.push(...lines);
+    else out.push({ lines: [...lines] });
+  };
   let bi = 0; // next base line not yet written
-  // Lines keep their \r in a CRLF note; the markers get one too, so the note stays all CRLF.
-  const cr = ours.includes("\r\n") ? "\r" : "";
   // A side's lines for base lines [start, end): shifted by the hunks before the group, and grown or
   // shrunk by the group's own.
   const sideLines = (hs: Hunk[], group: Hunk[], lines: string[], start: number, end: number) => {
@@ -409,21 +416,37 @@ export function merge3(base: string, ours: string, theirs: string): MergeResult 
       j++;
     }
     const start = Math.min(...group.map((g) => g.aStart));
-    for (; bi < start; bi++) out.push(B[bi]!);
+    keep(B.slice(bi, start));
     const og = group.filter((g) => g.side === "o");
     const tg = group.filter((g) => g.side === "t");
     const o = sideLines(ho, og, O, start, end);
     const t = sideLines(ht, tg, T, start, end);
-    if (!tg.length) out.push(...o);
-    else if (!og.length) out.push(...t);
-    else if (o.join("\n") === t.join("\n")) out.push(...o);
-    else {
-      conflicts++;
-      out.push(`<<<<<<< yours${cr}`, ...o, `=======${cr}`, ...t, `>>>>>>> theirs${cr}`);
-    }
+    if (!tg.length) keep(o);
+    else if (!og.length) keep(t);
+    else if (o.join("\n") === t.join("\n")) keep(o);
+    else out.push({ base: B.slice(start, end), ours: o, theirs: t });
     bi = end;
     i = j;
   }
-  for (; bi < B.length; bi++) out.push(B[bi]!);
+  keep(B.slice(bi));
+  return out;
+}
+
+/**
+ * Three-way merge by lines (`mergeChunks`), each conflict marked `<<<<<<< yours` / `=======` / `>>>>>>> theirs`, as
+ * git marks one.
+ */
+export function merge3(base: string, ours: string, theirs: string): MergeResult {
+  // Lines keep their \r in a CRLF note; the markers get one too, so the note stays all CRLF.
+  const cr = ours.includes("\r\n") ? "\r" : "";
+  const out: string[] = [];
+  let conflicts = 0;
+  for (const c of mergeChunks(base, ours, theirs)) {
+    if ("lines" in c) out.push(...c.lines);
+    else {
+      conflicts++;
+      out.push(`<<<<<<< yours${cr}`, ...c.ours, `=======${cr}`, ...c.theirs, `>>>>>>> theirs${cr}`);
+    }
+  }
   return { text: out.join("\n"), conflicts };
 }

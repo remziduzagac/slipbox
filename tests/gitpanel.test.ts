@@ -452,7 +452,10 @@ describe("the review, the merge screen and the rebase, from the panel (GIT-D3, G
     await app.git.refreshNow();
     frame();
     expect(app.gitPanel.buttons().map((b) => b.id)).toContain("review");
-    expect(pointedAt(app, "git:btn:review")).toEqual({ key: "v", desc: "Review: the changes not staged, a hunk at a time" });
+    expect(pointedAt(app, "git:btn:review")).toEqual({
+      key: "v",
+      desc: "Review: the changes not staged, a hunk at a time",
+    });
     click("git:btn:review");
     expect(await until(() => app.floating?.kind === "review")).toBe(true);
     await keys("escape");
@@ -462,5 +465,41 @@ describe("the review, the merge screen and the rebase, from the panel (GIT-D3, G
     expect(app.gitPanel.footer(app.gitPanel.rows()[app.sidebar.selected])).toContainEqual(["v", "review"]);
     await keys("v");
     expect(await until(() => app.floating?.kind === "review")).toBe(true);
+  });
+
+  /** `feature` merged into main, both having changed a.md's line and b.md's: two files in conflict. */
+  const conflicted = () => {
+    const root = repo();
+    writeFileSync(join(root, "a.md"), "# A\n\nfeature's\n");
+    writeFileSync(join(root, "b.md"), "# B, feature's\n");
+    git(root, "commit", "-qam", "feature's");
+    git(root, "switch", "-q", "main");
+    writeFileSync(join(root, "a.md"), "# A\n\nmain's\n");
+    writeFileSync(join(root, "b.md"), "# B, main's\n");
+    git(root, "commit", "-qam", "main's");
+    git(root, "-c", "merge.conflictStyle=merge", "merge", "-q", "feature");
+    return root;
+  };
+
+  test("Resolve: a button while a file's in conflict; x on a conflicted file, the merge screen on it", async () => {
+    const root = conflicted();
+    const { app, click, keys, frame } = await panel(root);
+    expect(app.gitPanel.buttons().find((b) => b.id === "resolve")?.label).toBe("Resolve 2");
+    expect(pointedAt(app, "git:btn:resolve")?.key).toBe("x");
+    click("git:btn:resolve");
+    // The note on screen is in conflict: it's the one.
+    expect(app.floating?.kind).toBe("merge");
+    expect(app.floating!.title).toBe("Merge — a.md");
+    await keys("escape");
+    // The other selected: x takes it, not this note; its footer says so.
+    app.region = "sidebar";
+    app.sidebar.selected = rowOf(
+      app,
+      (r) => r.kind === "file" && r.section === "conflicted" && r.entry.path === "b.md",
+    );
+    expect(app.gitPanel.footer(app.gitPanel.rows()[app.sidebar.selected])).toContainEqual(["x", "merge screen"]);
+    await keys("x");
+    expect(app.floating?.title).toBe("Merge — b.md");
+    frame();
   });
 });

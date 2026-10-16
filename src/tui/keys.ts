@@ -499,6 +499,7 @@ export const DEFAULT_GIT_KEYS: Record<string, string> = {
   n: "new_branch",
   m: "merge",
   v: "review",
+  x: "resolve",
   "/": "filter",
   q: "close",
   escape: "leave",
@@ -529,6 +530,7 @@ export const GIT_ACTIONS = [
   "new_branch",
   "merge",
   "review",
+  "resolve",
   "filter",
   "close",
   "leave",
@@ -632,6 +634,20 @@ export const DEFAULT_REVIEW_KEYS: Record<string, string> = {
   n: "git.review_next",
   p: "git.review_prev",
   enter: "git.review_go",
+};
+
+/** The merge screen's own keys (GIT-D5), over the note's while it's open. */
+export const DEFAULT_MERGE_KEYS: Record<string, string> = {
+  o: "git.merge_ours",
+  t: "git.merge_theirs",
+  b: "git.merge_both",
+  "shift+b": "git.merge_both_theirs",
+  e: "git.merge_edit",
+  a: "git.merge_agent",
+  n: "git.merge_next",
+  p: "git.merge_prev",
+  w: "git.merge_save",
+  s: "git.merge_stage",
 };
 
 /** What the explorer's and the outline's actions do, for help. */
@@ -772,6 +788,10 @@ export const GIT_ACTION_INFO: Record<string, { title: string; desc: string; acti
     title: "Review",
     desc: "The changes that aren't staged, a hunk at a time: y keeps one, x reverts it, c notes it for the agent (:review)",
   },
+  resolve: {
+    title: "The merge screen",
+    desc: "A file in conflict settled a conflict at a time: yours, theirs or both, then saved and staged (:resolve)",
+  },
   push: {
     title: "Push",
     desc: "Pushes the branch to its upstream; with none, asks to push it to origin and track it (:push)",
@@ -806,6 +826,7 @@ export const PROBLEMS_ACTION_INFO: Record<string, { title: string; desc: string;
   top: { title: "Top", desc: "Selects the first row" },
   bottom: { title: "Bottom", desc: "Selects the last row" },
   switch: { title: "Other tab", desc: "Between This file and All" },
+  cut: { title: "The merge screen", desc: "All: on a merge's conflict, its file settled on the merge screen" },
   filter: {
     title: "Filter",
     desc: "Type to narrow the problems (This file: by place, message or line; All: by note and link); enter goes there, esc clears",
@@ -977,8 +998,9 @@ export const DEFAULT_ALIASES: Record<string, string> = {
   pull: "git.pull",
   push: "git.push",
   stash: "git.stash",
-  // The review (GIT-D3).
+  // The review and the merge screen (GIT-D3, GIT-D5).
   review: "git.review",
+  resolve: "git.merge_screen",
   "undo-rename": "rename.undo",
   delete: "note.delete",
   trash: "trash.open",

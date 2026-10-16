@@ -176,8 +176,9 @@ export function drawFloating(app: App, c: Canvas, mainY: number, mainH: number, 
   // A peek (VV-D7): most of the screen, in the middle of it; `z`, all of it, its margin too.
   const peek = f.kind === "peek" ? f.peek : null;
   const full = !!peek?.full;
-  // A diff (GIT-D2), and a review's, as wide as there's room for: its lines are a file's, not text to read at a measure.
-  const wide = f.kind === "diff" || f.kind === "review";
+  // A diff (GIT-D2), a review's and the merge screen's too, as wide as there's room for: its lines are a file's, not
+  // text to read at a measure. The merge screen as tall as a peek: its card and result change as it's settled.
+  const wide = f.kind === "diff" || f.kind === "review" || f.kind === "merge";
   const w = full
     ? W
     : peek
@@ -185,7 +186,7 @@ export function drawFloating(app: App, c: Canvas, mainY: number, mainH: number, 
       : Math.max(24, wide ? W - 8 : Math.min(100, scratch ? Math.floor((W * 3) / 4) : W - 8));
   const h = full
     ? Math.max(4, mainH)
-    : peek
+    : peek || f.kind === "merge"
       ? Math.max(6, mainH - 2 - Math.max(1, Math.floor(mainH / 10)))
       : scratch
         ? Math.max(6, Math.min(mainH - 1, Math.floor((mainH * 3) / 4)))
@@ -219,7 +220,9 @@ export function drawFloating(app: App, c: Canvas, mainY: number, mainH: number, 
               ? ` o go there · t keep as a tab · z ${f.peek.full ? "smaller" : "fill"}${f.peek.back.length ? " · ctrl+o back" : ""} · esc closes `
               : f.kind === "review"
                 ? " esc ends the review "
-                : ` esc · q closes, writing back · ctrl+s writes `;
+                : f.kind === "merge"
+                  ? ` esc ${f.merge.prompt ? "goes back to the question" : "closes, what's settled kept"} `
+                  : ` esc · q closes, writing back · ctrl+s writes `;
   const bottom = `${b.bl}${b.h.repeat(Math.max(0, w - 2 - stringWidth(hint)))}`;
   drawText(c, x, y + h - 1, bottom, border);
   drawText(c, x + stringWidth(bottom), y + h - 1, truncate(hint, w - stringWidth(bottom) - 1) + b.br, dim);

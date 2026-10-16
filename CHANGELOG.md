@@ -40,6 +40,10 @@ The format is [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.1.0/); wh
   aren't staged, across every changed file, each drawn as a diff. `y` keeps one (stages it), `x` reverts it (saved at
   once; `u` in the file brings it back), `c` sends it to the agent with a note, through the scratch. The end says what
   you kept, reverted and noted. A file with unsaved typing is never written over.
+- A merge screen for git's conflicts: `x` on a file in conflict, in the git panel or Problems, its Resolve button, or
+  `:resolve`, shows each conflict with its base, and yours and theirs as diffs against it, the file as it will be below.
+  `o`, `t`, `b` and `shift+b` take a side or both, `e` settles one by hand in the lens, `a` hands it to the agent, `w`
+  saves and `s` stages. The conflict prompt's (M)erge settles its conflicts on the same screen.
 
 ### Changed
 

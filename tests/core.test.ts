@@ -69,6 +69,17 @@ import { diffLines, diffView, diffWords, merge3, pairLines } from "../src/core/m
 import { findChange, hunkEntry, hunkLines, hunkView, sameChange, tallyText } from "../src/core/gitreview.ts";
 import { gitChanges } from "../src/core/gitsigns.ts";
 import {
+  conflictExcerpt,
+  conflictsOf,
+  fromMerge,
+  parseConflicts,
+  resultParts,
+  resultText,
+  resultView,
+  toBase,
+  withStages,
+} from "../src/core/conflicts.ts";
+import {
   compilePattern,
   expandReplacement,
   findAll,
@@ -4908,6 +4919,197 @@ describe("reviewing a change, a hunk at a time (GIT-D3)", () => {
     expect(tallyText({ kept: 0, reverted: 0, noted: 0, skipped: 1, left: 2 })).toBe(
       "review: nothing kept, reverted or noted; 1 skipped, 2 left as they were",
     );
+  });
+});
+
+describe("a file in conflict, read for the merge screen (GIT-D5)", () => {
+  const TWO = [
+    "# Sync",
+    "",
+    "<<<<<<< HEAD",
+    "Retry up to a minute.",
+    "=======",
+    "Retry with a budget of five.",
+    ">>>>>>> agent/sync-retry",
+    "",
+    "Middle.",
+    "",
+    "<<<<<<< HEAD",
+    "A 409 parks the op.",
+    "=======",
+    "A 409 drops the op.",
+    ">>>>>>> agent/sync-retry",
+    "End.",
+    "",
+  ].join("\n");
+  const STAGES = {
+    base: "# Sync\n\nRetry forever.\n\nMiddle.\n\nA 409 retries the op.\nEnd.\n",
+    ours: "# Sync\n\nRetry up to a minute.\n\nMiddle.\n\nA 409 parks the op.\nEnd.\n",
+    theirs: "# Sync\n\nRetry with a budget of five.\n\nMiddle.\n\nA 409 drops the op.\nEnd.\n",
+  };
+
+  test("git's markers read: plain stretches and conflicts, their labels and lines; written back as they were", () => {
+    const f = parseConflicts(TWO);
+    expect(f.final).toBe(true);
+    expect(f.segments.map((s) => s.kind)).toEqual(["plain", "conflict", "plain", "conflict", "plain"]);
+    const [a, b] = conflictsOf(f);
+    expect(a).toMatchObject({
+      ours: ["Retry up to a minute."],
+      theirs: ["Retry with a budget of five."],
+      base: null,
+      oursLabel: "HEAD",
+      theirsLabel: "agent/sync-retry",
+      line: 3,
+    });
+    expect(b!.line).toBe(11);
+    expect(resultText(f, [null, null])).toBe(TWO);
+    const d3 = parseConflicts("<<<<<<<\r\nmine\r\n||||||| base\r\nold\r\n=======\r\ntheirs\r\n>>>>>>> x\r\n");
+    expect(conflictsOf(d3)[0]).toMatchObject({
+      ours: ["mine\r"],
+      base: ["old\r"],
+      markedBase: true,
+      theirs: ["theirs\r"],
+      oursLabel: "",
+      theirsLabel: "x",
+    });
+  });
+
+  test("markers that don't close are text, and a setext heading's ======= outside a conflict too", () => {
+    expect(conflictsOf(parseConflicts("Title\n=======\n\n<<<<<<< HEAD\nno end\n")).length).toBe(0);
+    expect(resultText(parseConflicts("Title\n=======\n"), [])).toBe("Title\n=======\n");
+    const f = parseConflicts("<<<<<<< a\nx\n<<<<<<< b\ny\n=======\nz\n>>>>>>> c\n");
+    expect(f.segments[0]).toEqual({ kind: "plain", lines: ["<<<<<<< a", "x"] });
+    expect(conflictsOf(f)[0]).toMatchObject({ ours: ["y"], theirs: ["z"], line: 3 });
+    // A heading's ======= inside theirs is theirs: only the first one parts the sides.
+    const setext = parseConflicts("<<<<<<< a\nMine\n=======\nTheirs\n=======\n>>>>>>> b\n");
+    expect(conflictsOf(setext)[0]).toMatchObject({ ours: ["Mine"], theirs: ["Theirs", "======="] });
+  });
+
+  test("settled: yours, theirs, both either way, or lines of your own; the rest still marked", () => {
+    const f = parseConflicts(TWO);
+    expect(resultText(f, ["ours", "theirs"])).toBe(
+      "# Sync\n\nRetry up to a minute.\n\nMiddle.\n\nA 409 drops the op.\nEnd.\n",
+    );
+    const both = resultText(f, ["both", "both-theirs"]).split("\n");
+    expect(both.slice(2, 4)).toEqual(["Retry up to a minute.", "Retry with a budget of five."]);
+    expect(both.slice(7, 9)).toEqual(["A 409 drops the op.", "A 409 parks the op."]);
+    expect(resultText(f, [{ lines: ["Mine."] }, null])).toContain("Mine.\n\nMiddle.\n\n<<<<<<< HEAD\n");
+    expect(
+      resultParts(f, ["ours", null])
+        .filter((p) => p.conflict !== undefined)
+        .map((p) => [p.line, p.settled]),
+    ).toEqual([
+      [3, true],
+      [7, false],
+    ]);
+  });
+
+  test("each conflict's base from the index's stage 1: yours found in stage 2, theirs in 3, mapped back", () => {
+    const f = withStages(parseConflicts(TWO), STAGES);
+    expect(conflictsOf(f).map((c) => c.base)).toEqual([["Retry forever."], ["A 409 retries the op."]]);
+    const edited = withStages(parseConflicts(`An added line.\n${TWO}`), STAGES);
+    expect(conflictsOf(edited).map((c) => c.base)).toEqual([["Retry forever."], ["A 409 retries the op."]]);
+    const gone = withStages(parseConflicts("a\n<<<<<<< HEAD\n=======\nB\n>>>>>>> x\nc\n"), {
+      base: "a\nb\nc\n",
+      ours: "a\nc\n",
+      theirs: "a\nB\nc\n",
+    });
+    expect(conflictsOf(gone)[0]!.base).toEqual(["b"]);
+    // Theirs gone from the index: the base from yours alone, its empty run placed where the stretches before put it.
+    const ours = withStages(parseConflicts("a\n<<<<<<< HEAD\n=======\nB\n>>>>>>> x\nc\n"), {
+      base: "a\nb\nc\n",
+      ours: "a\nc\n",
+      theirs: null,
+    });
+    expect(conflictsOf(ours)[0]!.base).toEqual(["b"]);
+    expect(conflictsOf(withStages(parseConflicts(TWO), { ...STAGES, base: null }))[0]!.base).toBeNull();
+    const d3 = "<<<<<<< a\nx\n||||||| b\nmarked\n=======\ny\n>>>>>>> c\n";
+    expect(conflictsOf(withStages(parseConflicts(d3), { base: "q\n", ours: "x\n", theirs: "y\n" }))[0]!.base).toEqual([
+      "marked",
+    ]);
+  });
+
+  test("a side's lines as the base's: a boundary inside a change widened to the whole of it", () => {
+    const h = diffLines(["a", "b", "c", "d"], ["a", "X", "d"]);
+    expect(toBase(h, 1, 2)).toEqual([1, 3]);
+    expect(toBase(h, 0, 1)).toEqual([0, 1]);
+    expect(toBase(h, 2, 3)).toEqual([3, 4]);
+    const del = diffLines(["a", "b", "c"], ["a", "c"]);
+    expect(toBase(del, 1, 1)).toEqual([1, 2]);
+  });
+
+  test("the conflict prompt's merge read the same way: each conflict with its base, labelled yours and theirs", () => {
+    const base = "one\ntwo\nthree\n";
+    const f = fromMerge(base, "one\nTWO\nthree\n", "one\ntwo-t\nthree\n");
+    expect(conflictsOf(f)[0]).toMatchObject({ ours: ["TWO"], theirs: ["two-t"], base: ["two"], line: 2 });
+    expect(resultText(f, [null])).toBe(merge3(base, "one\nTWO\nthree\n", "one\ntwo-t\nthree\n").text);
+    expect(resultText(f, ["theirs"])).toBe("one\ntwo-t\nthree\n");
+    // The final line break ends the last line: no empty line after it, in the result as drawn either.
+    expect(f.segments[f.segments.length - 1]).toEqual({ kind: "plain", lines: ["three"] });
+    expect(resultView(f, ["theirs"]).rows.at(-1)).toMatchObject({ kind: " ", text: "three" });
+    expect(fromMerge("a", "b", "c").final).toBe(false);
+  });
+
+  test("a conflict for the agent: its lines in the file, the base between the sides, three lines around", () => {
+    const f = withStages(parseConflicts(TWO), STAGES);
+    const ex = conflictExcerpt(f, 1)!;
+    expect([ex.from, ex.to]).toEqual([11, 15]);
+    expect(ex.text.split("\n")).toEqual([
+      "",
+      "Middle.",
+      "",
+      "<<<<<<< HEAD",
+      "A 409 parks the op.",
+      "||||||| base",
+      "A 409 retries the op.",
+      "=======",
+      "A 409 drops the op.",
+      ">>>>>>> agent/sync-retry",
+      "End.",
+    ]);
+    expect(conflictExcerpt(f, 2)).toBeNull();
+  });
+
+  test("the result as the merge screen draws it: each conflict under its head, the stretches between folded", () => {
+    const long = ["<<<<<<< a", "x", "=======", "y", ">>>>>>> b", ...Array.from({ length: 10 }, (_, i) => `l${i}`)];
+    const f = parseConflicts(`${long.join("\n")}\n<<<<<<< a\np\n=======\nq\n>>>>>>> b\n`);
+    const v = resultView(f, ["ours", null]);
+    expect(v.lines).toEqual([1, 12]);
+    expect(
+      v.rows.map((r) => (r.kind === "@@" || r.kind === "fold" ? `${r.kind} ${r.text}` : `${r.kind}${r.text}`)),
+    ).toEqual([
+      "@@ conflict 1, line 1: yours",
+      "+x",
+      " l0",
+      " l1",
+      "fold 6 unchanged lines",
+      "@@ conflict 2, line 12: not settled",
+      " l8",
+      " l9",
+      " <<<<<<< a",
+      " p",
+      " =======",
+      " q",
+      " >>>>>>> b",
+    ]);
+    // Two whose lines around them leave one line between: one group, both heads in it; a line alone at the end shown.
+    const near = parseConflicts(
+      "<<<<<<< a\nx\n=======\ny\n>>>>>>> b\nm1\nm2\nm3\nm4\nm5\n<<<<<<< a\np\n=======\nq\n>>>>>>> b\nz1\nz2\nz3\n",
+    );
+    const rows = resultView(near, ["ours", "theirs"]).rows.map((r) => `${r.kind}${r.text}`);
+    expect(rows).toEqual([
+      "@@conflict 1, line 1: yours · conflict 2, line 7: theirs",
+      "+x",
+      " m1",
+      " m2",
+      " m3",
+      " m4",
+      " m5",
+      "+q",
+      " z1",
+      " z2",
+      " z3",
+    ]);
   });
 });
 

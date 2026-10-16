@@ -15,6 +15,7 @@ import {
   DEFAULT_GIT_KEYS,
   DEFAULT_INFO_KEYS,
   DEFAULT_KEYS,
+  DEFAULT_MERGE_KEYS,
   DEFAULT_OUTLINE_KEYS,
   DEFAULT_PEEK_KEYS,
   DEFAULT_RESIZE_KEYS,
@@ -184,6 +185,7 @@ const KEY_TABLES = {
   DEFAULT_RESIZE_KEYS,
   DEFAULT_PEEK_KEYS,
   DEFAULT_REVIEW_KEYS,
+  DEFAULT_MERGE_KEYS,
 };
 
 /** The default keys, every mode's, that the keys chapter doesn't show in backticks. */

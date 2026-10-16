@@ -539,6 +539,11 @@ export class Problems {
       case "leave":
         this.app.region = "content";
         break;
+      case "cut":
+        // `x` on a merge's conflict: the merge screen on its file (GIT-D5).
+        if (row?.conflict) void this.app.run(`git.merge_screen ${row.conflict.path}`);
+        else if (row) this.app.message("info", "x opens the merge screen on a conflict's file");
+        break;
       // The explorer's other actions (new, rename…) mean nothing here.
     }
   }

@@ -2063,13 +2063,15 @@ describe("saving and conflicts (step 4)", () => {
     expect(v.buf.dirty).toBe(true);
     await h.keys(":", "w", "enter"); // the file is theirs now: a plain save
     expect(readFileSync(file, "utf8")).toBe("one!\ntwo\nTHREE\n");
-    // Both changing the same line: marked.
     await h.keys("g", "g", "shift+a", "?", "escape");
     await touch(file, "one?!\ntwo\nTHREE\n".replace("?!", "#"));
     h.app.watch.reloadBuffer(v.buf);
+    // Both changing the same line: the merge screen settles it (GIT-D5); e puts it in the note, still marked.
     await h.keys("m");
+    expect(h.app.floating?.kind).toBe("merge");
+    await h.keys("e");
     expect(v.buf.source).toBe("<<<<<<< yours\none!?\n=======\none#\n>>>>>>> theirs\ntwo\nTHREE\n");
-    expect(h.app.transient!.text).toContain("1 conflict");
+    expect(v.buf.dirty).toBe(true);
   });
   test("autosave: after the idle delay; not mid-insert, not after keep, not during a git commit", async () => {
     const { h, file, v, root } = await setup("a\n", (c) => (c.editor.autosave_ms = 20));
@@ -5709,7 +5711,8 @@ describe("review cycle 1 (TUI)", () => {
     await h.keys("shift+a", "!", "escape");
     await touch(file, "one?\n");
     h.app.watch.reloadBuffer(v.buf);
-    await h.keys("m");
+    // Marked from the merge screen's e (GIT-D5), as (m) once marked it.
+    await h.keys("m", "e");
     expect(v.buf.source).toContain("<<<<<<< yours");
     await Bun.sleep(80);
     expect(readFileSync(file, "utf8")).toBe("one?\n");
@@ -18728,10 +18731,34 @@ describe("git's review, merge screen, pull and rebase (GIT-D3, GIT-D5, GIT-D6)",
     }
     return { root, bare, other };
   };
+  const commit = (root: string, file: string, text: string, message = `${file}: ${text.trim()}`) => {
+    writeFileSync(join(root, file), text);
+    git(root, "add", "-A");
+    git(root, "commit", "-q", "-m", message);
+  };
   const said = (h: Harness, text: string | RegExp) =>
     until(() => h.app.messages.some((m) => (typeof text === "string" ? m.text === text : text.test(m.text))));
+  const list = (h: Harness) => h.app.overlay as ListOverlay;
   const type = (s: string) => [...s].map((ch) => (ch === " " ? "space" : ch));
   const floatText = (h: Harness) => h.app.floating?.view.buf.source ?? "";
+
+  const MIDDLE =
+    "The queue is ordered.\nAn op waits its turn.\nA drain takes fifty.\nIt wakes every thirty seconds.\nOr when the network is back.";
+  /** A merge of `theirs` into main stopped at its conflicts: both changed the same two lines of sync.md (and, `also`,
+   *  a line of another.md). */
+  const conflicted = (also = false) => {
+    // Far enough apart for git to keep them two.
+    const base = `# Sync\n\nRetry forever.\n\n${MIDDLE}\n\nA 409 retries the op.\nEnd.\n`;
+    const { root } = repo({ "sync.md": base, "another.md": "one\n" });
+    git(root, "switch", "-q", "-c", "theirs");
+    if (also) commit(root, "another.md", "theirs\n");
+    commit(root, "sync.md", base.replace("Retry forever.", "Retry with a budget.").replace("retries", "drops"));
+    git(root, "switch", "-q", "main");
+    if (also) commit(root, "another.md", "mine\n");
+    commit(root, "sync.md", base.replace("Retry forever.", "Retry up to a minute.").replace("retries", "parks"));
+    git(root, "merge", "-q", "theirs");
+    return root;
+  };
 
   describe("reviewing a change (GIT-D3)", () => {
     test("a review: three files' changes, one kept (staged), one reverted (saved, one undo), one noted (the scratch)", async () => {
@@ -18859,6 +18886,137 @@ describe("git's review, merge screen, pull and rebase (GIT-D3, GIT-D5, GIT-D6)",
         await h.keys("y");
         expect(existsSync(join(root, "new.md"))).toBe(false);
         expect(await said(h, "review: 2 reverted")).toBe(true);
+      });
+    });
+  });
+
+  describe("the merge screen (GIT-D5)", () => {
+    test("the merge screen: two conflicts, one taken from each side, saved, staged — git resolved", async () => {
+      await isolated(async () => {
+        const root = conflicted();
+        expect(git(root, "status", "--porcelain")).toBe("UU sync.md");
+        const h = await harness({ root, open: "sync.md", width: 120, height: 50 });
+        await h.app.git.refreshNow();
+        await h.app.run("git.merge_screen");
+        expect(h.app.floating?.kind).toBe("merge");
+        const card = floatText(h);
+        expect(card).toContain("Conflict 1 of 2 · line 3 · not settled");
+        // The base from stage 1; each side against it.
+        expect(card).toContain("Base\n  Retry forever.");
+        expect(card).toContain("Yours · HEAD, against the base\n- Retry forever.\n+ Retry up to a minute.");
+        expect(card).toContain("Theirs · theirs, against the base\n- Retry forever.\n+ Retry with a budget.");
+        expect(card).toContain("The result · 0 of 2 settled");
+        // o: yours; on to the second. t: theirs. The result below, settled.
+        await h.keys("o");
+        expect(floatText(h)).toContain("Conflict 2 of 2");
+        expect(floatText(h)).toContain("@@ conflict 1, line 3: yours");
+        // w with one left: refused; the file as it was.
+        const before = readFileSync(join(root, "sync.md"), "utf8");
+        await h.keys("w");
+        expect(await said(h, "1 conflict left: o, t or b settles one, e edits it in the lens")).toBe(true);
+        expect(readFileSync(join(root, "sync.md"), "utf8")).toBe(before);
+        await h.keys("t");
+        expect(await said(h, "conflict 2: theirs — all settled: w saves sync.md")).toBe(true);
+        // s before w: saved first.
+        await h.keys("s");
+        expect(await said(h, "w saves it first")).toBe(true);
+        await h.keys("w");
+        expect(readFileSync(join(root, "sync.md"), "utf8")).toBe(
+          `# Sync\n\nRetry up to a minute.\n\n${MIDDLE}\n\nA 409 drops the op.\nEnd.\n`,
+        );
+        await h.keys("s");
+        expect(await said(h, /^sync\.md staged, marked resolved — no conflict left/)).toBe(true);
+        expect(git(root, "status", "--porcelain")).toBe("M  sync.md");
+        expect(h.app.floating).toBeNull();
+      });
+    });
+
+    test("the merge screen: both either way, e puts the result in the lens, a sends a conflict to the agent", async () => {
+      await isolated(async () => {
+        const root = conflicted();
+        const h = await harness({ root, open: "sync.md", width: 120, height: 50 });
+        await h.app.git.refreshNow();
+        await h.app.run("git.merge_screen");
+        await h.keys("shift+b");
+        expect(floatText(h)).toContain("conflict 1, line 3: both, theirs first");
+        // a: the conflict, its base between the sides, into the scratch.
+        await h.keys("a", ...type("both meant"), "enter");
+        const scratch = readFileSync(h.app.scratch.location().path, "utf8");
+        expect(scratch).toContain("**At:** `sync.md:");
+        // The base between the sides, as diff3 has it: from git's index, the markers lacking it.
+        expect(scratch).toContain(
+          "<<<<<<< HEAD\nA 409 parks the op.\n||||||| base\nA 409 retries the op.\n=======\nA 409 drops the op.",
+        );
+        expect(scratch).toContain("**Note:** both meant");
+        // e: the result in the file, the one not settled still marked, the lens on it; unsaved, autosave off.
+        await h.keys("e");
+        expect(h.app.floating).toBeNull();
+        const buf = h.app.view!.buf;
+        expect(buf.rel).toBe("sync.md");
+        expect(buf.source).toContain("Retry with a budget.\nRetry up to a minute.\n");
+        expect(buf.source).toContain("<<<<<<< HEAD\nA 409 parks the op.\n=======\n");
+        expect(buf.dirty).toBe(true);
+        expect(buf.markers).toBe(true);
+        // Opened again: what's left, read from the file's markers; b keeps both, yours first.
+        await h.app.run("git.merge_screen");
+        expect(floatText(h)).toContain("Conflict 1 of 1");
+        await h.keys("b", "w");
+        expect(readFileSync(join(root, "sync.md"), "utf8")).toContain("A 409 parks the op.\nA 409 drops the op.\n");
+      });
+    });
+
+    test("x on a conflict in the git panel, and in Problems, opens the merge screen; esc keeps what's settled", async () => {
+      await isolated(async () => {
+        const root = conflicted(true);
+        // Open on the other file in conflict: x takes the one selected, not this note.
+        const h = await harness({ root, open: "another.md", width: 120, height: 50 });
+        await h.app.run("git.view");
+        await h.app.git.refreshNow();
+        // The second file in conflict selected: its own.
+        h.app.sidebar.selected = h.app.gitPanel
+          .rows()
+          .findIndex((r) => r.kind === "file" && r.section === "conflicted" && r.entry.path === "sync.md");
+        await h.keys("x");
+        expect(h.app.floating?.kind).toBe("merge");
+        expect(h.app.floating!.title).toBe("Merge — sync.md");
+        await h.keys("o", "escape");
+        expect(await said(h, "sync.md: 1 of 2 settled, not saved — x opens the merge screen as you left it")).toBe(
+          true,
+        );
+        await h.app.run("problems.open");
+        h.app.region = "problems";
+        h.app.problems.panel.all.selected = h.app.problems.rows().findIndex((r) => r.conflict?.path === "sync.md");
+        await h.keys("x");
+        expect(h.app.floating?.kind).toBe("merge");
+        expect(floatText(h)).toContain("Conflict 2 of 2");
+        expect(floatText(h)).toContain("conflict 1, line 3: yours");
+        // The note changed meanwhile: not written over.
+        await h.keys("t");
+        const buf = h.app.buffers.get("sync.md")!;
+        buf.edit(0, 0, "typed ");
+        await h.keys("w");
+        expect(await said(h, "sync.md changed since the merge screen read it — x reads it again")).toBe(true);
+        expect(readFileSync(join(root, "sync.md"), "utf8")).toContain("<<<<<<< HEAD");
+      });
+    });
+
+    test("the conflict prompt's (m)erge settles a conflict on the merge screen; esc goes back to the prompt", async () => {
+      await isolated(async () => {
+        const { root } = repo({ "a.md": "one\ntwo\nthree\n" });
+        const h = await harness({ root, open: "a.md", width: 120, height: 50 });
+        const buf = h.app.view!.buf;
+        buf.edit(buf.source.indexOf("two"), 3, "TWO");
+        writeFileSync(join(root, "a.md"), "one\ntwo-t\nthree\n");
+        h.app.saving.resolveConflict(buf, "m");
+        expect(h.app.floating?.kind).toBe("merge");
+        expect(floatText(h)).toContain("Yours · yours, against the base\n- two\n+ TWO");
+        await h.keys("escape");
+        expect(list(h).title).toBe("a.md changed on disk, and you have unsaved changes");
+        await h.keys("m", "t", "w");
+        expect(readFileSync(join(root, "a.md"), "utf8")).toBe("one\ntwo-t\nthree\n");
+        expect(buf.dirty).toBe(false);
+        expect(await said(h, "merged and saved a.md")).toBe(true);
+        expect(h.app.floating).toBeNull();
       });
     });
   });

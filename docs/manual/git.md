@@ -13,8 +13,8 @@ slipbox shows what git knows about the repository:
 
 You can stage, commit, make and switch branches, and make worktrees for agents without leaving slipbox, by keys or by
 mouse. You can fetch, pull, push and stash. You can review an agent's change one piece at a time, keeping, reverting or
-sending back each. You can also review a branch before you merge it, including the links a merge would break, and merge
-it.
+sending back each. You can also review a branch before you merge it, including the links a merge would break, merge
+it, and settle a merge's conflicts on a merge screen.
 
 slipbox runs the `git` on your `PATH`. Without it, none of this shows.
 
@@ -59,8 +59,8 @@ Everything else is in the git panel:
 | `] c` / `[ c` | Goes to the next / previous changed line in this file |
 
 The rest are the panel's own keys, its buttons, and commands in the palette (`:`): `:changes`, `:diff`, `:worktrees`,
-`:merge-review`, `:fetch`, `:pull`, `:push`, `:stash`, `:review`, and Branches, Who changed this line, This file's
-history, Preview the change and Undo the change, by their titles.
+`:merge-review`, `:fetch`, `:pull`, `:push`, `:stash`, `:review`, `:resolve`, and Branches, Who changed this line,
+This file's history, Preview the change and Undo the change, by their titles.
 
 [Keys](keys.md) has every key. You can change these like any other.
 
@@ -205,6 +205,7 @@ The panel's foot says the keys of the row selected. Its keys:
 | `f` / `p` / `shift+p` | Fetches / pulls / pushes ([Fetching, pulling and pushing](#fetching-pulling-and-pushing)) |
 | `z` | Lists the stashes ([Stashes](#stashes)) |
 | `n` / `m` | A new branch / merges the branch selected ([Branches](#branches)) |
+| `x` | Opens the merge screen on a file in conflict ([The merge screen](#the-merge-screen)) |
 | `.` | The row's menu |
 | `/` | Filters the files, branches and repositories by name. `enter` keeps the filter; `esc` clears it |
 | `q` / `esc` | Closes the git panel / goes back to the note, leaving it open |
@@ -358,19 +359,57 @@ the one you picked, rather than act on another, and `z` lists them again.
 
 ## Merge conflicts
 
-While a merge has conflicts, the files git couldn't merge show in several places:
+While a merge or a rebase has conflicts, the files git couldn't merge show in several places:
 
 - The explorer marks them `!`.
 - The git panel lists them under Conflicts.
 - The Problems panel's All tab (`space v p`) lists them under Conflicts, each at its first `<<<<<<<` line.
 - In a note, each conflict is an error among the note's problems: "a merge conflict: both sides are still here".
 
-To mark a conflict resolved:
-
-1. Resolve the conflict in the file, and save it.
-2. In the git panel, press `s` on the file, or click its `+`. It's marked resolved.
-
 [Code](code.md#problems) covers the Problems panel.
+
+To settle a file's conflicts by hand instead, edit its markers away and save it. Then press `s` on it in the git
+panel: it's marked resolved.
+
+### The merge screen
+
+Press `x` on a file in conflict, in the git panel or in the Problems panel's All tab, click Resolve, or run `:resolve`
+on a note in conflict. The merge screen opens in a floating window, one conflict at a time. For each conflict, it shows:
+
+- **Base**: the version both sides started from.
+- **Yours**: your side, as a diff against the base. In a merge, it's the branch you're on.
+- **Theirs**: the other side, as a diff against the base. In a merge, it's the branch coming in.
+
+Below the conflict is the file as it will be. Each conflict shows there as you settled it, or still marked if you
+haven't.
+
+| Key | What it does |
+| --- | --- |
+| `o` | Takes yours |
+| `t` | Takes theirs |
+| `b` | Takes both, yours first |
+| `shift+b` | Takes both, theirs first |
+| `e` | Puts the result in the file, and opens it in the lens at this conflict, to settle by hand |
+| `a` | Asks for a note, and adds the conflict to the scratch for the agent, with its base and the lines around it |
+| `n` / `p` | Goes to the next / previous conflict |
+| `w` | Saves the file, once every conflict is settled |
+| `s` | Stages the saved file, which tells git it's resolved |
+| `esc` | Closes the screen. What you settled stays, as long as the file doesn't change |
+
+After you settle a conflict, the screen moves on to the next one you haven't. Once you've staged a file, the next file
+in conflict opens.
+
+The base comes from git. Where git wrote the conflict with its base (`merge.conflictStyle` set to `diff3` or `zdiff3`),
+it's that. Otherwise it's the version git keeps of the file while the merge is under way. Where git doesn't have it,
+each side shows whole.
+
+`e` writes the result into the file without saving it. The conflicts you haven't settled stay marked there, and
+autosave stays off until you save the file yourself. Edit them away, then save. Or press `x` again: the merge screen
+reads the conflicts that are left.
+
+The conflict prompt's (M)erge uses the same screen, for a note that changed on disk while you typed in it, when its
+merge leaves a conflict. There, yours is what you typed, and theirs is the file on disk. `w` saves the result, and `esc`
+goes back to the prompt ([Editing](editing.md)).
 
 ## Who changed a line
 
@@ -732,5 +771,5 @@ These commands exit with code 3:
 - with no base branch
 - with a branch or commit that isn't there
 
-The rest has no command: the gutter, source control, commits, blame, history, branches, the remote and stashes, and
-the review. An agent runs git itself for those.
+The rest has no command: the gutter, source control, commits, blame, history, branches, the remote and stashes, the
+review and the merge screen. An agent runs git itself for those.

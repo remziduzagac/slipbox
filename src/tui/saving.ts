@@ -6,6 +6,7 @@ import { readText } from "../core/fsutil.ts";
 import { merge3 } from "../core/merge.ts";
 import { stopInsert } from "./editing.ts";
 import { openDiff } from "./diffview.ts";
+import { openPromptMerge } from "./mergescreen.ts";
 import type { NoteBuffer } from "./buffer.ts";
 import type { App } from "./app.ts";
 
@@ -143,18 +144,15 @@ export class Saving {
       return this.app.message("warn", `${buf.key} is gone from disk`);
     }
     if (choice === "d") return this.showDiff(buf, () => this.conflictPrompt(buf), theirs);
-    // Merge: base (as loaded), yours, theirs. The result is an undo step; the file is theirs now.
+    // Merge: base (as loaded), yours, theirs. Where both changed the same lines, the merge screen settles them
+    // (GIT-D5); else the result is an undo step, and the file is theirs now.
     const r = merge3(buf.baseText, buf.source, theirs);
+    if (r.conflicts) return openPromptMerge(this.app, buf, theirs);
     buf.edit(0, buf.source.length, r.text);
     buf.rebase(theirs);
-    buf.markers = r.conflicts > 0; // autosave must not put <<<<<<< on disk; :w does, on purpose
+    buf.markers = false;
     for (const v of views) v.layoutKey = "";
-    this.app.message(
-      r.conflicts ? "warn" : "info",
-      r.conflicts
-        ? `merged — ${r.conflicts} conflict${r.conflicts === 1 ? "" : "s"} marked <<<<<<< yours … >>>>>>> theirs; unsaved`
-        : "merged cleanly — unsaved; :w writes it",
-    );
+    this.app.message("info", "merged cleanly — unsaved; :w writes it");
   }
 
   /** Yours → theirs in the diff window (GIT-D2); closing it, or enter, goes back to where it came from. */

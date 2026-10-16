@@ -207,9 +207,11 @@ export class Input {
     // A peek's own keys (VV-D7) over the note's: o goes there, t keeps it as a tab, z fills the screen.
     else if (this.app.region === "content" && this.app.floating?.kind === "peek")
       out.push({ map: this.app.peekKeys, run: (s) => this.app.run(s) });
-    // A review's (GIT-D3): y, x, c and the rest.
+    // A review's (GIT-D3) and the merge screen's (GIT-D5): y, x, c; o, t, b and the rest.
     else if (this.app.region === "content" && this.app.floating?.kind === "review")
       out.push({ map: this.app.reviewKeys, run: (s) => this.app.run(s) });
+    else if (this.app.region === "content" && this.app.floating?.kind === "merge")
+      out.push({ map: this.app.mergeKeys, run: (s) => this.app.run(s) });
     // Source mode's own keys (x deletes a character there) before the reading ones.
     if (this.app.region === "content" && editable(this.app.view) && !this.app.view!.visual)
       out.push({ map: this.app.sourceKeys, run: (s) => this.app.run(s) });

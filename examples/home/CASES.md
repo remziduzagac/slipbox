@@ -2837,6 +2837,25 @@ The same notes, one per tab.
   the agent (the scratch, `space s y`); `esc`'s summary; `enter` to a change in its file; a file with unsaved typing
   skipped — `work/kestrel/README.md`, `work/kestrel/docs/architecture.md`, `work/kestrel/docs/sync.md` (GIT's design.md
   Reviewing a change (GIT-D3); tests 'reviewing a change (GIT-D3)')
+- `git.merge_screen` — Settle the conflicts — `work/kestrel/docs/release-notes/2.3.md` (command-specs.ts)
+- `git.merge_ours` — Take yours (merge screen) — `work/kestrel/docs/release-notes/2.3.md` (command-specs.ts)
+- `git.merge_theirs` — Take theirs (merge screen) — `work/kestrel/docs/release-notes/2.3.md` (command-specs.ts)
+- `git.merge_both` — Take both, yours first (merge screen) — `work/kestrel/docs/release-notes/2.3.md`
+  (command-specs.ts)
+- `git.merge_both_theirs` — Take both, theirs first (merge screen) — `work/kestrel/docs/release-notes/2.3.md`
+  (command-specs.ts)
+- `git.merge_edit` — Edit in the lens (merge screen) — `work/kestrel/docs/release-notes/2.3.md` (command-specs.ts)
+- `git.merge_agent` — Send the conflict to the agent (merge screen) — `work/kestrel/docs/release-notes/2.3.md`
+  (command-specs.ts)
+- `git.merge_next` — Next conflict (merge screen) — `work/kestrel/docs/release-notes/2.3.md` (command-specs.ts)
+- `git.merge_prev` — Previous conflict (merge screen) — `work/kestrel/docs/release-notes/2.3.md` (command-specs.ts)
+- `git.merge_save` — Save the merged file (merge screen) — `work/kestrel/docs/release-notes/2.3.md` (command-specs.ts)
+- `git.merge_stage` — Stage the merged file (merge screen) — `work/kestrel/docs/release-notes/2.3.md`
+  (command-specs.ts)
+- jo/release-notes-wording merged into main, a commit more on each side: two conflicts in the release notes, each one's
+  base from git's index; both either way, yours, `a` to the agent, `e` into the lens and `:resolve` back, theirs;
+  saved, staged — `work/kestrel/docs/release-notes/2.3.md` (GIT's design.md
+  The merge screen (GIT-D5); tests 'the merge screen (GIT-D5)')
 
 ### shell
 

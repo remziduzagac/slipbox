@@ -1,7 +1,7 @@
 ---
-status: proposed
-assignee: null
-blocked_by: [GIT-T1, GIT-T4]
+status: done
+assignee: claude-cli
+blocked_by: []
 created: "2026-10-14"
 ---
 

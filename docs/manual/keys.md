@@ -760,6 +760,7 @@ pointer says its own. `[keys.git]` changes them ([Configuration](configuration.m
 | `c` | commit what's staged, with the box's message, or one written in a floating editor |
 | `shift+c` | amend the last commit with what's staged |
 | `v` | review the changes not staged, one at a time (`:review`) |
+| `x` | the merge screen, on the file in conflict selected (`:resolve`) |
 | `f` | fetch from the remote, in the background (`:fetch`) |
 | `p` | pull the upstream's new commits, fast-forward only, unsaved notes saved or kept first (`:pull`) |
 | `shift+p` | push the branch to its upstream; with none, asks to push it to `origin` and track it (`:push`) |
@@ -788,6 +789,21 @@ leaves it, committing nothing.
 | `n` / `p` | the next / previous change |
 | `enter` | end the review, and go to the change in its file |
 | `esc` | end the review: what you kept, reverted and noted, said |
+
+### Inside the merge screen
+
+`x` on a file in conflict settles its conflicts one at a time ([The merge screen](git.md#the-merge-screen)).
+
+| Keys | What |
+| --- | --- |
+| `o` / `t` | take yours / theirs |
+| `b` / `shift+b` | take both, yours first / theirs first |
+| `e` | the result in the file, the lens on this conflict, to settle by hand |
+| `a` | the conflict, its base and the lines around it, into the scratch for the agent |
+| `n` / `p` | the next / previous conflict |
+| `w` | save the file, once every conflict is settled (`ctrl+s` and `:w` too) |
+| `s` | stage the saved file, marking it resolved; the next file in conflict opens |
+| `esc` | close it, what's settled kept |
 
 ## Note, folder, app
 
@@ -864,6 +880,7 @@ The Problems panel lies across the bottom, in two tabs: This file (`space n q`) 
 | `j` / `k`, `down` / `up` | select the next / previous problem (in This file, the note shows it) |
 | `enter`, `l`, `right` | go there (from All, in a tab of its own, or the tab showing it) |
 | `o` / `s` | in All, open it in this window / in the split |
+| `x` | in All, on a merge's conflict: the merge screen on its file |
 | `h`, `left` | in All, fold the section, or go to its heading |
 | `tab`, `shift+tab` | the other tab |
 | `g g` / `shift+g` | the first / last row |
@@ -926,6 +943,7 @@ Your configuration's [`[aliases]`](configuration.md) adds more commands, or rena
 | `:fetch` / `:pull` / `:push` | fetch, pull (fast-forward only) or push, as source control's `f`, `p` and `shift+p` |
 | `:stash` | the stashes, as source control's `z` |
 | `:review` | review the changes not staged, one at a time, as source control's `v` |
+| `:resolve [file]` | the merge screen on a file in conflict: the one named, this note, or the first |
 | `:folders` | the named folders, to pick one to go into |
 | `:folders-default` | which copy a named folder's links open |
 | `:name [new]` | name this folder, as pointers name it |
