@@ -6,7 +6,7 @@
 // `x` named, while you type or a question is open (the pull's question likewise); the status line says what's under way
 // ("rebasing 2/5"). Each runs in the background, one git command at a time with the remote's (gitremote.ts), unsaved
 // notes saved or kept first. In a vault not trusted, no hook runs and nothing is signed. A rebase over tracked files
-// changed asks to stash them and put them back after (`--autostash`, D243); where they conflict going back, git keeps
+// changed asks to stash them and put them back after (`--autostash`, D247); where they conflict going back, git keeps
 // them in the stash, and the message names it.
 
 import { type Checkout, headOf } from "../core/git.ts";
@@ -107,7 +107,7 @@ async function after(app: App, r: RemoteDone, done: string): Promise<void> {
 }
 
 /**
- * Where your changes are when git, putting them back after a rebase (`--autostash`, D243), met a conflict: kept in the
+ * Where your changes are when git, putting them back after a rebase (`--autostash`, D247), met a conflict: kept in the
  * stash, as `autostash`, the newest of that name — named — and the files in conflict marked, settled as any are.
  */
 function keptStash(app: App, c: Checkout): string {
@@ -118,12 +118,12 @@ function keptStash(app: App, c: Checkout): string {
   return `your changes conflicted going back, so git kept them in ${where}: ${plural(files.length, "file")} in conflict (${files.map(sanitize).join(", ")}) — x in source control settles ${files.length === 1 ? "it" : "them"} (:resolve), then drop the stash (z)`;
 }
 
-/** The question before a rebase over tracked files changed (D243); `more`, what the rebase's own question would say. */
+/** The question before a rebase over tracked files changed (D247); `more`, what the rebase's own question would say. */
 const stashQuestion = (branch: string, onto: string, changed: number, more = "") =>
   `Stash your changes, rebase ${sanitize(branch)} onto ${sanitize(onto)}, put them back? ${plural(changed, "file")} changed${more}.`;
 
 /**
- * A rebase about to run (`shift+r`'s, a pull's) where tracked files are changed, which git won't rebase over (D243):
+ * A rebase about to run (`shift+r`'s, a pull's) where tracked files are changed, which git won't rebase over (D247):
  * asked first whether to stash them and put them back after — yes, `go` with `--autostash`; no, nothing runs. A clean
  * working tree runs as it is; untracked files are git's to judge, as without slipbox: it rebases past them, refusing in
  * its words only where one would be overwritten. `agreed`: asked already, in the rebase's own question.
@@ -143,7 +143,7 @@ function stashFirst(
 
 /**
  * A pull that couldn't fast-forward (26.6): both sides moved. Asked — merge, rebase, or nothing — git's `pull.rebase`
- * the default; then pulled that way, a rebase over tracked files changed asking to stash them first (D243). While you
+ * the default; then pulled that way, a rebase over tracked files changed asking to stash them first (D247). While you
  * type or answer something (`busy`), said instead: `p` asks again.
  */
 export function askDiverged(app: App, c: Checkout, branch: string, upstream: string): void {
@@ -190,7 +190,7 @@ export function askDiverged(app: App, c: Checkout, branch: string, upstream: str
                 : `pulled: ${branch} rebased onto ${upstream}`,
             ),
         );
-      // A rebase over files changed: asked to stash them first (D243). A merge is git's to judge, as it is.
+      // A rebase over files changed: asked to stash them first (D247). A merge is git's to judge, as it is.
       if (how === "merge") return pull(false);
       stashFirst(app, c, { branch, onto: upstream }, pull);
     },
@@ -199,7 +199,7 @@ export function askDiverged(app: App, c: Checkout, branch: string, upstream: str
 
 /**
  * `shift+r`: this branch rebased onto its base's tip (its own, GIT-D10) — asked first, unsaved notes saved or kept;
- * tracked files changed, stashed and put back after, the question says so (D243). While a merge, a rebase, a
+ * tracked files changed, stashed and put back after, the question says so (D247). While a merge, a rebase, a
  * cherry-pick or a revert is under way: continue, skip or abort it, or the merge screen on a file still in conflict.
  */
 export function gitRebase(app: App): void {
@@ -216,7 +216,7 @@ export function gitRebase(app: App): void {
   const ab = aheadBehind(c, base);
   if (!ab) return app.message("warn", `git couldn't compare ${branch} with ${base}`);
   if (!ab.behind) return app.message("info", `${branch} has all of ${base} already: nothing to rebase`);
-  // Tracked files changed (D243): the question asks to stash them too. Asked again after unsaved notes are saved, when
+  // Tracked files changed (D247): the question asks to stash them too. Asked again after unsaved notes are saved, when
   // saving them is what changed the files.
   const changed = changedTracked(c)?.length ?? 0;
   const replayed = `${plural(ab.ahead, "commit")} replayed after ${base}'s ${ab.behind} new`;

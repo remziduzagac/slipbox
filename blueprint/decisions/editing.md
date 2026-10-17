@@ -517,7 +517,7 @@ the keys after it wait with it. The binary is about 0.7 MB bigger: the parse wor
 **Not chosen:** building the dictionaries in slices between frames: Hunspell builds one in a single call that can't be
 split; checking only in the visible rows: it is the build, not the checking, that blocks.
 
-## D243: A rebase over files changed asks to stash them and put them back (2026-10-17)
+## D247: A rebase over files changed asks to stash them and put them back (2026-10-17)
 
 **Decision:** When tracked files are changed, staged or not, `shift+r` in the git panel (`git.rebase`, `:rebase`) and
 a pull's "rebase" answer where both sides moved ask "Stash your changes, rebase …, put them back?" instead of saying

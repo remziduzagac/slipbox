@@ -3,7 +3,7 @@
 // can say it each frame ("rebasing 2/5") — continued, a commit skipped, or aborted. git runs without a terminal or an editor: a commit settled on the way keeps its message
 // (`GIT_EDITOR=true`). In a vault not trusted, `gitArgs`'s guards hold (no hook runs, no merge driver), and nothing is
 // signed: the repository's own config could name the program that signs. Tracked files changed, which git won't rebase
-// over, are stashed and put back after when you say so (`--autostash`, D243): git keeps them in the stash where putting
+// over, are stashed and put back after when you say so (`--autostash`, D247): git keeps them in the stash where putting
 // them back conflicts.
 
 import { execFile, execFileSync } from "node:child_process";
@@ -159,7 +159,7 @@ export function aheadBehind(c: Pick<Checkout, "root">, base: string): { ahead: n
 }
 
 /**
- * The files changed that git won't start a rebase over (D243), from the checkout's top folder: tracked ones, staged or
+ * The files changed that git won't start a rebase over (D247), from the checkout's top folder: tracked ones, staged or
  * not. Not untracked files — git rebases past them, refusing in its words only where one would be overwritten, and
  * leaves them where they are — nor a submodule's changes, which git doesn't look at either. Null without git.
  */
@@ -169,7 +169,7 @@ export function changedTracked(c: Pick<Checkout, "root">): string[] | null {
 }
 
 /**
- * Whether git kept the changes it stashed for a rebase (`--autostash`, D243) in the stash: putting them back at the
+ * Whether git kept the changes it stashed for a rebase (`--autostash`, D247) in the stash: putting them back at the
  * rebase's end conflicted, and git says so ("Your changes are safe in the stash"), in its English (`inEnglish`).
  */
 export const stashKept = (r: RemoteDone): boolean =>
@@ -205,7 +205,7 @@ function runLater(c: Pick<Checkout, "root">, args: string[]): Promise<RemoteDone
 
 /**
  * This branch rebased onto `onto` (the base's tip): its own commits replayed after it. The name checked first. With
- * `autostash` (D243), the files changed stashed first and put back after (`--autostash`).
+ * `autostash` (D247), the files changed stashed first and put back after (`--autostash`).
  */
 export function rebaseLater(c: Pick<Checkout, "root">, onto: string, autostash = false): Promise<RemoteDone> {
   const why = refusedName("the base", onto);

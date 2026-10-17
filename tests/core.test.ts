@@ -6018,7 +6018,7 @@ describe("a merge or a rebase under way, and a pull where both sides moved (GIT-
     return root;
   };
 
-  test("files changed: tracked ones, staged or not, never untracked; rebased over, refused, or stashed and put back (D243)", async () => {
+  test("files changed: tracked ones, staged or not, never untracked; rebased over, refused, or stashed and put back (D247)", async () => {
     await isolated(async () => {
       const root = apart();
       const c = checkoutOf(root)!;
@@ -6045,7 +6045,7 @@ describe("a merge or a rebase under way, and a pull where both sides moved (GIT-
     });
   });
 
-  test("changes that conflict going back are kept in the stash: git's words say so (D243)", async () => {
+  test("changes that conflict going back are kept in the stash: git's words say so (D247)", async () => {
     await isolated(async () => {
       const root = apart();
       const c = checkoutOf(root)!;

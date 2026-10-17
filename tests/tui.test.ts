@@ -20213,7 +20213,7 @@ describe("git's review, merge screen, pull and rebase (GIT-D3, GIT-D5, GIT-D6)",
     });
   });
 
-  describe("a rebase over files changed: stashed and put back, asked (D243)", () => {
+  describe("a rebase over files changed: stashed and put back, asked (D247)", () => {
     /** A branch behind main, main having changed b.md and the branch made c.md: its rebase meets no conflict. */
     const apart = () => {
       const { root } = repo({ "a.md": "a\n", "b.md": "b\n" });

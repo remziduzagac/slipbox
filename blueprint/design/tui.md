@@ -2114,7 +2114,7 @@ the base's tip — the branch's own (GIT-D10, `baseOf`), else `[git] base`, main
 with how many commits each side has (`aheadBehind`); unsaved notes saved or kept first, as before a pull. On the base,
 detached, or with nothing new on the base: said, nothing run.
 
-**A rebase over files changed** (D243; `core/gitrebase.ts` `changedTracked`, `stashFirst` in `tui/rebase.ts`): git
+**A rebase over files changed** (D247; `core/gitrebase.ts` `changedTracked`, `stashFirst` in `tui/rebase.ts`): git
 won't start a rebase over tracked files changed, staged or not, so slipbox asks first instead of saying git's refusal.
 `shift+r`'s question becomes "Stash your changes, rebase agent onto main, put them back? 2 files changed; its 3 commits
 replayed after main's 1 new."; the pull's `(r)` asks "Stash your changes, rebase main onto origin/main, put them back?

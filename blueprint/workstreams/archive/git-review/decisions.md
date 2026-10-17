@@ -137,7 +137,7 @@ beside an agent; the cards hold the same, a conflict at a time.
 
 ## GIT-D6: Pulling where both sides moved, and rebasing onto the base (2026-10-14)
 
-> **Amended by D243 (2026-10-17):** a rebase over tracked files changed, `shift+r`'s or a pull's, asks to stash them
+> **Amended by D247 (2026-10-17):** a rebase over tracked files changed, `shift+r`'s or a pull's, asks to stash them
 > and put them back after (`--autostash`) instead of saying git's refusal; where they conflict going back, git keeps
 > them in the stash, and slipbox names the entry.
 

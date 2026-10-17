@@ -291,7 +291,7 @@ export function fetchLater(c: Pick<Checkout, "root">): Promise<RemoteDone> {
 /**
  * Pulled: fast-forward only (`ff`), git refusing in its words where both sides moved; or, asked (GIT-D6), the two
  * brought together by a merge or a rebase — the files changed stashed for the rebase and put back after, asked
- * (`autostash`, D243).
+ * (`autostash`, D247).
  */
 export function pullLater(
   c: Pick<Checkout, "root">,
