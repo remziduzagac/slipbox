@@ -96,6 +96,21 @@ In a vault you trust, git runs as the repository has it, with its hooks, its sig
 A repository that keeps large files with Git LFS can show those files as changed until you trust it. That's because
 their filter doesn't run.
 
+### Which git
+
+Most of this works with git 2.25 or later. These need a newer one:
+
+| Feature | Needs git |
+| --- | --- |
+| Staging, unstaging and discarding a file, or a section at once | 2.26 |
+| A branch's base, checked before git uses it | 2.30 |
+| A worktree whose folder's name holds a line break, listed whole | 2.36 |
+| Reviewing a merge ([Reviewing a merge](#reviewing-a-merge)) | 2.38 |
+| No filter, diff driver or merge driver of a vault you don't trust | 2.42 |
+
+With a git before 2.36, a worktree whose folder's name holds a line break is listed by the name's first line. Everything
+else about worktrees works as usual.
+
 ## Changed lines in the gutter
 
 As you read or edit a file, the gutter marks the lines that differ from what's staged. By default the signs sit in the

@@ -3,9 +3,9 @@
 
 import { afterAll, beforeAll, describe, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
-import { mkdirSync, mkdtempSync, readdirSync, symlinkSync, writeFileSync } from "node:fs";
+import { chmodSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, symlinkSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { delimiter, join } from "node:path";
 import { DEFAULT_CONFIG, loadConfig } from "../src/core/config.ts";
 import { type Checkout, checkoutOf } from "../src/core/git.ts";
 import { baseFor, chooseBase, keepBase, keptBases, nearest } from "../src/core/gitbase.ts";
@@ -26,7 +26,7 @@ import {
   parseWorktrees,
   worktreeFolder,
 } from "../src/core/gitbranches.ts";
-import { baseBranch, refName } from "../src/core/gitops.ts";
+import { baseBranch, refName, worktreeList } from "../src/core/gitops.ts";
 
 /** git in `repo`, as a test runs it: its own name and no system config. */
 function git(repo: string, ...args: string[]): string {
@@ -313,6 +313,43 @@ describe("worktrees made and removed (GIT-D9)", () => {
     expect(git(join(dir, "free"), "branch", "--show-current")).toBe("nb\n");
     // Made from a branch, it doesn't track it.
     expect(spawnSync("git", ["-C", root, "config", "branch.nb.merge"]).status).not.toBe(0);
+  });
+
+  test("a git before 2.36 refuses worktree list -z: the list read as lines instead, -z asked of it once", async () => {
+    const { dir, root } = repo();
+    git(root, "worktree", "add", "-q", "-b", "feat", join(dir, "wt"));
+    // A stand-in git: the real one, but for `worktree list -z`, which it refuses as git 2.35 does.
+    const bin = join(dir, "bin");
+    mkdirSync(bin);
+    const refused = join(dir, "refused");
+    writeFileSync(
+      join(bin, "git"),
+      [
+        "#!/bin/sh",
+        `case " $* " in *" worktree list "*" -z "*) echo z >> '${refused}'; echo "error: unknown switch 'z'" >&2; exit 129;; esac`,
+        `exec '${Bun.which("git")}' "$@"`,
+        "",
+      ].join("\n"),
+    );
+    chmodSync(join(bin, "git"), 0o755);
+    const was = process.env.PATH;
+    process.env.PATH = `${bin}${delimiter}${was}`;
+    try {
+      expect(worktreeList({ root })?.map((w) => [w.branch, w.main])).toEqual([
+        ["main", true],
+        ["feat", false],
+      ]);
+      const list = (await branchesLater({ root }))!;
+      expect(list.map((b) => [b.name, b.here, !!b.worktree])).toEqual([
+        ["feat", false, true],
+        ["main", true, true],
+      ]);
+      expect(worktreeList({ root })).toHaveLength(2);
+      // Refused once: which form it takes is kept for that git.
+      expect(readFileSync(refused, "utf8")).toBe("z\n");
+    } finally {
+      process.env.PATH = was;
+    }
   });
 
   test("a checkout runs as long as it takes, up to minutes; stopped, it says so and what it may have left", async () => {

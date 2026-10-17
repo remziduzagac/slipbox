@@ -194,7 +194,7 @@ The format is [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.1.0/); wh
 - Switching branches from the branches list runs in the background, with ten minutes to finish. git was stopped after
   fifteen seconds, so a big checkout could be left half done. If git is stopped now, slipbox says what it may have
   left.
-- `:worktrees` lists a worktree whose folder's name holds a line break by its whole path.
+- `:worktrees` lists a worktree whose folder's name holds a line break by its whole path, with git 2.36 or later.
 
 ## [0.3.0] - 2026-10-14
 

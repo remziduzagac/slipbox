@@ -811,9 +811,10 @@ keys.
   commit's and fetch's; ascii `* & ~ ! =`, `+ - x d`, `* @`).
 - **The Branches section** (GIT-D9; `gitbranchview.ts`, `core/gitbranches.ts`): the local branches
   (`branchesLater`: `for-each-ref` with each tip and its date, `worktree list --porcelain -z` for where each is checked
-  out — a folder's name may hold a line break — a folder gone marked `prunable`), ordered by `orderBranches`: the
-  branch here (`●`, `here`, by the folders' real paths), those checked out in
-  a worktree (`⎇`), those touched in 30 days (`OLD_MS`), the newest first; then folded under **Merged or older (n)**
+  out — a folder's name may hold a line break; a git before 2.36 refuses `-z`, and the list is read as lines then,
+  which form a git takes asked once and kept by its path (`worktreeRecordsLater`) — a folder gone marked `prunable`),
+  ordered by `orderBranches`: the branch here (`●`, `here`, by the folders' real paths), those checked out in a
+  worktree (`⎇`), those touched in 30 days (`OLD_MS`), the newest first; then folded under **Merged or older (n)**
   those merged into their base and the older — never one here or in a worktree. Merged is asked once a base
   (`for-each-ref --merged=<base>`: a branch merged into its kept base, else into any of its candidates, never the
   `main` or `master` fallback). Each row's figures, asked for the rows drawn (`statsOf`, again when git has news):

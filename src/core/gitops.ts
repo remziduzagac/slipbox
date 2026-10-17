@@ -4,7 +4,8 @@
 // files slipbox could read cheaply. A git that isn't there, or fails, is "nothing known".
 
 import { execFile, execFileSync, spawnSync } from "node:child_process";
-import { join, posix, relative, sep } from "node:path";
+import { accessSync, constants, statSync } from "node:fs";
+import { delimiter, join, posix, relative, sep } from "node:path";
 import { climbsOut } from "./fsutil.ts";
 import type { Checkout } from "./git.ts";
 import { isTrusted } from "./trust.ts";
@@ -96,6 +97,11 @@ function run(c: Pick<Checkout, "root">, args: string[]): string | null {
   } catch {
     return null;
   }
+}
+
+/** The same, not waiting on git. */
+function runLater(root: string, args: string[]): Promise<string | null> {
+  return new Promise((done) => execFile("git", gitArgs(root, args), OPTS, (err, out) => done(err ? null : out)));
 }
 
 /** git's porcelain status (v1, `-z`): each path (from the checkout's top folder) and its state. */
@@ -279,14 +285,83 @@ export function worktreeRecords(z: string): WorktreeRecord[] {
   return out;
 }
 
+/** `git worktree list --porcelain` as lines, read as `-z`'s: a line's end is a field's, a blank line a checkout's. */
+export const worktreeLines = (out: string): WorktreeRecord[] => worktreeRecords(out.replaceAll("\n", "\0"));
+
+/** Whether a git takes `worktree list -z` (2.36 and later), by its path: found by asking it once. */
+const takesZ = new Map<string, boolean>();
+const gitPaths = new Map<string, string>();
+
+/** The git a command runs: the first on PATH, by its path; "git" when none is found there. */
+function gitOnPath(): string {
+  const path = process.env.PATH ?? "";
+  let found = gitPaths.get(path);
+  if (found === undefined) {
+    found = "git";
+    const names = process.platform === "win32" ? ["git.exe", "git"] : ["git"];
+    search: for (const dir of path.split(delimiter))
+      for (const name of names) {
+        if (!dir) continue;
+        try {
+          accessSync(join(dir, name), constants.X_OK);
+          if (!statSync(join(dir, name)).isFile()) continue;
+          found = join(dir, name);
+          break search;
+        } catch {}
+      }
+    gitPaths.set(path, found);
+  }
+  return found;
+}
+
+const WORKTREE_LIST = ["worktree", "list", "--porcelain"];
+
+/**
+ * The repository's checkouts as git lists them, in git's order, waited for; null without git. With `-z` where this
+ * git takes it, so a folder's name may hold a line break; else (a git before 2.36 refuses it) as lines, where only
+ * such a name is misread. Which one a git takes is asked once and kept, so an old git doesn't refuse `-z` on every
+ * refresh.
+ */
+export function worktreeRecordsNow(root: string): WorktreeRecord[] | null {
+  const git = gitOnPath();
+  const known = takesZ.get(git);
+  if (known !== false) {
+    const z = run({ root }, [...WORKTREE_LIST, "-z"]);
+    if (z !== null) {
+      takesZ.set(git, true);
+      return worktreeRecords(z);
+    }
+  }
+  const lines = run({ root }, WORKTREE_LIST);
+  if (lines === null) return null;
+  // `-z` refused where the list itself isn't: a git before 2.36.
+  if (known === undefined) takesZ.set(git, false);
+  return worktreeLines(lines);
+}
+
+/** The same, not waiting on git. */
+export async function worktreeRecordsLater(root: string): Promise<WorktreeRecord[] | null> {
+  const git = gitOnPath();
+  const known = takesZ.get(git);
+  if (known !== false) {
+    const z = await runLater(root, [...WORKTREE_LIST, "-z"]);
+    if (z !== null) {
+      takesZ.set(git, true);
+      return worktreeRecords(z);
+    }
+  }
+  const lines = await runLater(root, WORKTREE_LIST);
+  if (lines === null) return null;
+  if (known === undefined) takesZ.set(git, false);
+  return worktreeLines(lines);
+}
+
 /** The repository's checkouts, the main one first (`git worktree list`); null without git. */
 export function worktreeList(c: Pick<Checkout, "root">): WorktreeEntry[] | null {
-  const out = run(c, ["worktree", "list", "--porcelain", "-z"]);
-  if (out === null) return null;
+  const records = worktreeRecordsNow(c.root);
+  if (records === null) return null;
   // Git lists the main checkout first; a bare repository is listed there instead, and has none.
-  return worktreeRecords(out).flatMap((r, i) =>
-    r.bare ? [] : [{ path: r.path, branch: r.branch, head: r.head, main: i === 0 }],
-  );
+  return records.flatMap((r, i) => (r.bare ? [] : [{ path: r.path, branch: r.branch, head: r.head, main: i === 0 }]));
 }
 
 /** A path of the checkout as one of the vault's, or null when it's outside the vault's folder. */

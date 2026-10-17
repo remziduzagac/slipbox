@@ -12,7 +12,14 @@ import { readdir } from "node:fs/promises";
 import { homedir } from "node:os";
 import { basename, dirname, isAbsolute, join, resolve } from "node:path";
 import type { Checkout } from "./git.ts";
-import { type Changed, gitArgs, parseNameStatus, worktreeRecords } from "./gitops.ts";
+import {
+  type Changed,
+  gitArgs,
+  parseNameStatus,
+  type WorktreeRecord,
+  worktreeRecords,
+  worktreeRecordsLater,
+} from "./gitops.ts";
 import { inEnglish } from "./gitremote.ts";
 import { isTrusted } from "./trust.ts";
 import { isBusyFolder } from "./walk.ts";
@@ -69,7 +76,12 @@ export interface Branch {
  * A folder's name may hold a line break: each field ends with a NUL, each checkout with another.
  */
 export function parseWorktrees(z: string): (WorktreeAt & { branch: string | null })[] {
-  return worktreeRecords(z).flatMap((r, i) =>
+  return worktreesOf(worktreeRecords(z));
+}
+
+/** Git's checkouts, as the branches have them: the main one first, a gone one marked, a bare repository left out. */
+function worktreesOf(records: WorktreeRecord[]): (WorktreeAt & { branch: string | null })[] {
+  return records.flatMap((r, i) =>
     r.bare ? [] : [{ path: r.path, main: i === 0, gone: r.prunable, branch: r.branch }],
   );
 }
@@ -96,11 +108,11 @@ export async function branchesLater(c: Pick<Checkout, "root">): Promise<Branch[]
       `--format=%(refname:short)${SEP}%(objectname)${SEP}%(committerdate:unix)`,
       "refs/heads",
     ]),
-    gitLater(c.root, ["worktree", "list", "--porcelain", "-z"]),
+    worktreeRecordsLater(c.root),
   ]);
   if (refs === null) return null;
   const at = new Map(
-    parseWorktrees(trees ?? "")
+    worktreesOf(trees ?? [])
       .filter((w) => w.branch)
       .map((w) => [w.branch!, w] as const),
   );
