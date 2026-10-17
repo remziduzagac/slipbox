@@ -6,6 +6,8 @@ The format is [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.1.0/); wh
 
 ## [Unreleased]
 
+## [0.4.1] - 2026-10-17
+
 ### Added
 
 - Hidden files and folders in the explorer. `shift+h` there lists the files and folders whose names start with a dot,
@@ -344,7 +346,8 @@ The first release. 0.2.0 was tagged but never released: its build failed a test 
   `slipbox uninstall`; Windows through WSL.
 - `slipbox skill`: the skill for agents carried by the binary, printed or installed where an agent reads skills.
 
-[Unreleased]: https://github.com/remziduzagac/slipbox/compare/v0.4.0...HEAD
+[Unreleased]: https://github.com/remziduzagac/slipbox/compare/v0.4.1...HEAD
+[0.4.1]: https://github.com/remziduzagac/slipbox/compare/v0.4.0...v0.4.1
 [0.4.0]: https://github.com/remziduzagac/slipbox/compare/v0.3.0...v0.4.0
 [0.3.0]: https://github.com/remziduzagac/slipbox/compare/v0.2.2...v0.3.0
 [0.2.2]: https://github.com/remziduzagac/slipbox/compare/v0.2.1...v0.2.2
