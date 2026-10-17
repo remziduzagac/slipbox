@@ -99,7 +99,8 @@ You can name a folder once, with `slipbox init --name notes`. Then a pointer rea
 
 Renaming or moving a note rewrites every link to it that slipbox can reach. Each link keeps the form it was written in.
 
-[Links and vaults](links-and-vaults.md) explains all of it.
+[Links and vaults](links-and-vaults.md) explains all of it. [Vaults, home and Elsewhere](../guides/vaults.md) walks
+through the vaults with examples.
 
 ## The index
 

@@ -371,6 +371,9 @@ Moving selects a row and opens nothing. [Files](files.md) explains what each of 
 
 Below [`ui.narrow_width`](configuration.md) columns (90), the explorer and the outline open over the note.
 
+Opening a symlink that leads out of the vault, or out of home, asks first: `f` follows it, `l` just looks, read-only,
+and `n` doesn't ([Links that lead out](links-and-vaults.md#links-that-lead-out)).
+
 ### Filtering a panel
 
 `/` filters a panel's rows as you type. The rows kept match every word you type, in any order. It works in:
@@ -1088,6 +1091,7 @@ it back to the terminal.
 | a code block too wide, a sideways wheel, or the wheel with `shift` | scrolls the block sideways |
 | the tab strip, the wheel | switches to the next or the previous tab |
 | the explorer | a click selects a note, a double-click opens it as a tab, and a click on a folder folds or unfolds it |
+| the explorer's breadcrumb | a click on a folder zooms the view to it ([Files](files.md#the-view)) |
 | the history | a click selects, a double-click goes there |
 | source control (the git panel) | a file's row shows its diff, a double-click opens it; a heading folds or unfolds |
 | source control, under the pointer | a row's buttons: `+` stage, `−` unstage, `↺` discard, `⧉` its diff |

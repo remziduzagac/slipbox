@@ -126,8 +126,9 @@ A few things hold for every path:
 
 - A note is found by its name whatever the case, on every filesystem. `[t](Inbox.md)` reaches `inbox.md`.
 - A path may leave the vault (`../website/docs/plan.md`, `~/…`, an absolute path). It reaches the file in whichever
-  vault holds it, and following it switches to that vault. Such links work while the folders are laid out the same way.
-  [Names and pointers](#names-and-pointers) has the form that doesn't depend on it.
+  vault holds it, and following it reads the file there in a peek ([A peek at another vault](#a-peek-at-another-vault)).
+  Such links work while the folders are laid out the same way. [Names and pointers](#names-and-pointers) has the form
+  that doesn't depend on it.
 - Nothing inside code is a link, neither in a code span nor in a fenced block.
 - A link in an HTML comment isn't one, nor is a link whose bracket is escaped (`\[t](x.md)`).
 - A destination with a bare space in it (`[t](my plan.md)`) isn't a link, as CommonMark says.
@@ -274,6 +275,7 @@ A note's vault is the nearest folder above it that holds one of these:
 | `.zk/` | a zk notebook |
 
 So a repository is a vault, and so is an Obsidian vault or a zk notebook, with nothing to set up.
+[Vaults, home and Elsewhere](../guides/vaults.md) walks through vaults with drawings and examples.
 
 A note under no marker is in home, your home folder's own vault, when it's in your home folder (below). Outside both,
 it's in [Elsewhere](#elsewhere), which has no index.
@@ -370,13 +372,17 @@ A symlinked folder or file that leads out of its vault, or out of your home fold
 The explorer shows where it leads, and that it isn't followed: `data → /mnt/disk/data not followed`. In Elsewhere,
 with no vault to stay inside, every link is shown that way.
 
-The first time you open one, slipbox asks:
+The first time you open one, from the explorer or by its path, slipbox asks:
+`~/notes/data → /mnt/disk/data leads out of notes: follow it?` (in Elsewhere, `… is a link: follow it?`).
 
 | Answer | Does |
 | --- | --- |
 | Follow it (`f`) | reads it as part of the vault you are in: indexed, searched, its links counted as backlinks |
-| Just look (`l`) | opens it read-only, this once. Nothing of it is indexed |
+| Just look (`l`) | opens it read-only, this once. Nothing of it is indexed. A folder is listed a level at a time |
 | No (`n`) | leaves it unfollowed. Opening it again asks again |
+
+Just looking lasts until you go into another vault. While it lasts, the explorer says `just looking` on the link's
+row.
 
 What following allows depends on where the link is:
 
@@ -385,9 +391,9 @@ What following allows depends on where the link is:
   that a pull can change could otherwise lead a save to `~/.bashrc`.
 - **In Elsewhere,** it reads and writes as the file system allows.
 
-The answer is kept for that link and the place it leads, in slipbox's own state folder, never in the vault. So a
-repository you clone can't bring its links already followed, and if a link later leads somewhere else, slipbox asks
-again.
+The answer is kept for that link and the place it leads, in `links.json` in slipbox's own state folder, never in the
+vault. So a repository you clone can't bring its links already followed, and if a link later leads somewhere else,
+slipbox asks again.
 
 Agents see what is followed: it's in search, in the context bundle and in the command line's answers. When a link leads
 to a hidden folder (`~/.ssh`, `~/.aws`) or outside your home folder, the question says so.
@@ -397,7 +403,8 @@ A link within its own vault, or within your home folder, is a second name for wh
 explorer shows where it leads, and opening a link to a folder shows that folder.
 
 A followed link on a slow disk, such as a network share, is read in the background. If it doesn't answer within three
-seconds, slipbox gives up on it for now and says so.
+seconds, slipbox gives up on it for now and says so, and the explorer says `not answering` on its row. It's asked
+again a minute later.
 
 On the command line, a path through a link that isn't followed is refused (exit 5). The command line never follows a
 link on its own: answer in the TUI first.
@@ -434,8 +441,9 @@ Elsewhere, by any of these:
 - `o` in a peek at one of its notes ([A peek at another vault](#a-peek-at-another-vault))
 - `ctrl+click` on a link into it
 - a vault, or a file of one, picked in the explorer
+- a repository or a worktree in the git panel, `o` on it, or a branch's `[Open]` ([Git](git.md))
 - a named folder picked from `space v v`
-- `:e` with the path of one of its notes
+- `:e` with the path of one of its notes, or a pointer
 
 Following a link, a pointer, a backlink or a search hit into another vault only peeks at the note. Nothing switches
 until you choose to go.
@@ -542,7 +550,8 @@ slipbox://github.com/you/website/docs/plan.md
   can't climb out of the named folder.
 - `@branch` names the repository at that branch. That's the copy or worktree that has it checked out. Else it's the
   file as it is on that branch, read from git and shown read-only.
-- Following a pointer into another folder switches to it, as following a path does.
+- Following a pointer into another vault reads the file in a peek, as following a path does. `:e` with a pointer goes
+  there.
 - If this machine doesn't know the name, or the folder isn't here, slipbox says so:
   "`notes` isn't on this machine yet: open it, or let the index find it". A pointer never offers to make a note.
 - If two different folders have the name, slipbox lists each by its path, to open the one meant. It offers to rename

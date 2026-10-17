@@ -81,13 +81,18 @@ Above the tree, a breadcrumb says where the view is:
 You zoom in and out yourself:
 
 - `z` zooms in on the selected folder. On a file, it zooms in on the file's folder.
-- `-` zooms out a level. The folder you were in stays unfolded and selected.
+- `-` zooms out a level. The folder you were in stays unfolded and selected. At `/`, there's nothing above, and
+  slipbox says so.
 - After zooming out, the breadcrumb keeps the folders you came from, dimmed after the view. A click on one zooms back
   in.
 
 The view also zooms out by itself when you go somewhere outside it: you open a note there, you follow a link to a file
 there, or you go into another vault. It becomes the folder holding both places, with only the paths to the two
-unfolded, and the breadcrumb leads on to where you went. It never zooms in by itself.
+unfolded, and the breadcrumb leads on to where you went. It never zooms in by itself. Going into a vault the view
+already holds leaves the view where it is, the folders down to the vault unfolded.
+
+Hidden folders aren't in the tree. So going into a vault inside one, such as an agent's worktree in
+`.claude/worktrees/`, moves the view to that vault.
 
 Zoomed out past the vault you are in, the explorer lists folders one level at a time:
 
@@ -99,8 +104,12 @@ Zoomed out past the vault you are in, the explorer lists folders one level at a 
 You can open any folder you may read, inside your home folder or not. Outside home and every vault, it's
 [Elsewhere](links-and-vaults.md#elsewhere), whose folders are listed a level at a time:
 
-- A file you may not write opens read-only, and slipbox says so.
-- A folder you may not read says why when you open it, unfold it or zoom into it.
+- A file you may not write opens read-only, and slipbox says so:
+  `/etc/hosts is read-only: you may not write it (no permission)`.
+- A folder you may not read says why when you open it, unfold it or zoom into it:
+  `can't read ~/private: you may not read it (no permission)`.
+
+[Vaults, home and Elsewhere](../guides/vaults.md) shows the view at work, with examples.
 
 ### A row's marks
 
