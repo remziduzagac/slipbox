@@ -1,11 +1,11 @@
 // A note's diff before and after (GIT-D2): the diff found by lines, as every diff is, then widened to the blocks it
 // touches — a paragraph, a heading, a list item, a table's row — so each changed block is shown whole, twice, as it was
-// and as it is, the words removed marked in the first and those added in the second. A block added or removed whole is
-// shown once. The unchanged stretches between fold to a row saying how many lines they hold. `layout/blockdiff.ts`
-// draws it.
+// and as it is, the words removed marked in the first and those added in the second; a block too big to diff by words,
+// its changed lines marked instead, and their changed words. A block added or removed whole is shown once. The
+// unchanged stretches between fold to a row saying how many lines they hold. `layout/blockdiff.ts` draws it.
 
 import type { ListItem, Nodes, Root, RootContent, Table } from "mdast";
-import { diffLines, type Hunk, pairLines, textLines, type WordRange } from "./merge.ts";
+import { diffLines, type Hunk, type LinePair, pairLines, textLines, type UnseenRows, type WordRange } from "./merge.ts";
 import { headingText, parseMarkdown } from "./parse.ts";
 
 /** A block of a note: its lines (1-based, inclusive), and the node it lays out; none: lines shown as written. */
@@ -31,12 +31,27 @@ export type BlockItem =
   | { kind: "fold"; own: number; line: number; count: number; unit: number }
   /** An unchanged block: a fold opened, or one between changes. */
   | { kind: "same"; block: NoteBlock; unit: number }
-  /** A changed block, before and after: the words `before` lost, and those `after` gained (offsets in its text). */
-  | { kind: "change"; before: NoteBlock; after: NoteBlock; del: WordRange[]; add: WordRange[]; unit: number }
+  /**
+   * A changed block, before and after: the words `before` lost, and those `after` gained (offsets in its text). A block
+   * too big to diff by words, by its lines: `delLines` and `addLines` its changed lines (their runs of its text), the
+   * words those paired with a line like them changed in `del` and `add`.
+   */
+  | {
+      kind: "change";
+      before: NoteBlock;
+      after: NoteBlock;
+      del: WordRange[];
+      add: WordRange[];
+      delLines?: WordRange[];
+      addLines?: WordRange[];
+      unit: number;
+    }
   /** A block removed whole (`from`'s), and where it was in `to`. */
   | { kind: "removed"; block: NoteBlock; line: number; unit: number }
   /** A block added whole (`to`'s). */
-  | { kind: "added"; block: NoteBlock; unit: number };
+  | { kind: "added"; block: NoteBlock; unit: number }
+  /** What changed that no line shows (`unseenRows`), as said, and the line it's at in `to`. */
+  | { kind: "\\"; text: string; line: number; unit: number };
 
 export interface BlockDiff {
   from: BlockSide;
@@ -44,9 +59,65 @@ export interface BlockDiff {
   items: BlockItem[];
   /**
    * The window's rows of text, each a unit the layout's rows point at (their `src`): a head, a fold, a line of a block
-   * shown. `line` is where `enter` goes, in `to`: a removed line's, where it was.
+   * shown, what no line shows. `line` is where `enter` goes, in `to`: a removed line's, where it was.
    */
   units: { text: string; line: number }[];
+}
+
+const noCR = (line: string) => line.replace(/\r$/, "");
+
+/**
+ * A changed block's lines diffed (`before` of `from`, `after` of `to`): where each of `before`'s lines is in `to` — an
+ * unchanged one, where it is in `after`; a changed one, where its run of changes is, the line after it (in `after`), as
+ * the source diff's removed lines go. A pair too big to diff by words (`byLines`): its changed lines, and the words
+ * changed in each changed line paired with one like it, as offsets in each block's text.
+ */
+function pairDiff(
+  fs: BlockSide,
+  before: NoteBlock,
+  ts: BlockSide,
+  after: NoteBlock,
+  p: LinePair,
+): { at: Int32Array; del: WordRange[]; add: WordRange[]; delLines?: WordRange[]; addLines?: WordRange[] } {
+  const ra = fs.lines.slice(before.from - 1, before.to);
+  const rb = ts.lines.slice(after.from - 1, after.to);
+  const la = ra.map(noCR);
+  const lb = rb.map(noCR);
+  const hunks = diffLines(la, lb);
+  const at = new Int32Array(la.length);
+  let k = 0;
+  let shift = 0;
+  for (const h of [...hunks, { aStart: la.length, aLen: 0, bStart: lb.length, bLen: 0 }]) {
+    for (; k < h.aStart; k++) at[k] = after.from + k + shift;
+    for (; k < h.aStart + h.aLen; k++) at[k] = after.from + Math.min(h.bStart, lb.length - 1);
+    shift = h.bStart + h.bLen - (h.aStart + h.aLen);
+  }
+  if (!p.byLines) return { at, del: p.delWords, add: p.addWords };
+  // Each line's first offset in its block's text; a run of lines up to the next one's, its line break with it.
+  const starts = (r: string[]) => {
+    const s = [0];
+    for (const l of r) s.push(s[s.length - 1]! + l.length + 1);
+    return s;
+  };
+  const sa = starts(ra);
+  const sb = starts(rb);
+  const out = {
+    at,
+    del: [] as WordRange[],
+    add: [] as WordRange[],
+    delLines: [] as WordRange[],
+    addLines: [] as WordRange[],
+  };
+  const moved = (ranges: WordRange[], by: number) => ranges.map(([x, y]): WordRange => [x + by, y + by]);
+  for (const h of hunks) {
+    if (h.aLen) out.delLines.push([sa[h.aStart]!, sa[h.aStart + h.aLen]!]);
+    if (h.bLen) out.addLines.push([sb[h.bStart]!, sb[h.bStart + h.bLen]!]);
+    for (const q of pairLines(la.slice(h.aStart, h.aStart + h.aLen), lb.slice(h.bStart, h.bStart + h.bLen))) {
+      out.del.push(...moved(q.delWords, sa[h.aStart + q.del]!));
+      out.add.push(...moved(q.addWords, sb[h.bStart + q.add]!));
+    }
+  }
+  return out;
 }
 
 /** A group's head as it reads: the heading it's under in `to`, and where it starts there. */
@@ -163,13 +234,14 @@ function cuts(at: Int32Array, i: number): boolean {
  * others removed or added whole. The unchanged lines between, before the first and after the last fold to a row —
  * unless they're blank, or the stretch's first line (`from`'s, 1-based) is in `open`: then its blocks are shown.
  * `heads` and `folds` off (a review's hunk, a merge's card: GIT-D3, GIT-D5): the changes alone, no head over a group
- * and nothing of the stretches between.
+ * and nothing of the stretches between. `unseen`: what changed that no line shows, said before the first group and
+ * after the last, as the source diff says it (`diffView`).
  */
 export function blockDiff(
   from: string,
   to: string,
   open: ReadonlySet<number> = new Set(),
-  opts: { heads?: boolean; folds?: boolean } = {},
+  opts: { heads?: boolean; folds?: boolean; unseen?: UnseenRows } = {},
 ): BlockDiff {
   const a = textLines(from);
   const b = textLines(to);
@@ -177,8 +249,17 @@ export function blockDiff(
   const tree = parseMarkdown(to).tree;
   const ts: BlockSide = { lines: b, blocks: noteBlocks(tree, b) };
   const d: BlockDiff = { from: fs, to: ts, items: [], units: [] };
+  const unit = (text: string, line: number) => d.units.push({ text, line }) - 1;
+  const said = (texts: string[] | undefined, line: number) => {
+    for (const text of texts ?? []) d.items.push({ kind: "\\", text, line, unit: unit(`\\ ${text}`, line) });
+  };
+  said(opts.unseen?.start, 1);
+  const done = () => {
+    said(opts.unseen?.end, Math.max(1, b.length));
+    return d;
+  };
   const hunks = diffLines(a, b);
-  if (!hunks.length) return d;
+  if (!hunks.length) return done();
   const fat = blockAt(fs.blocks, a.length);
   const tat = blockAt(ts.blocks, b.length);
   // The unchanged runs around the hunks: run k before hunk k (the last after the last hunk), the same length on both
@@ -228,15 +309,14 @@ export function blockDiff(
       ? [{ line: n.position.start.line, text: `${"#".repeat(n.depth)} ${headingText(n)}` }]
       : [],
   );
-  const unit = (text: string, line: number) => d.units.push({ text, line }) - 1;
   // A block's lines, a unit each, as the source diff's rows read: `-` before a line of `from`'s, `+` before one of
-  // `to`'s that changed, two spaces before one that didn't (a CRLF line's CR not part of it). A line of `from`'s goes to
-  // `line`.
-  const linesOf = (sign: "-" | "+" | " ", bl: NoteBlock, line?: number) => {
+  // `to`'s that changed, two spaces before one that didn't (a CRLF line's CR not part of it). A line of `from`'s goes
+  // where `line` says.
+  const linesOf = (sign: "-" | "+" | " ", bl: NoteBlock, line?: (l: number) => number) => {
     const s = sign === "-" ? fs : ts;
     let first = -1;
     for (let l = bl.from; l <= bl.to; l++) {
-      const u = unit(`${sign} ${(s.lines[l - 1] ?? "").replace(/\r$/, "")}`, line ?? l);
+      const u = unit(`${sign} ${noCR(s.lines[l - 1] ?? "")}`, line ? line(l) : l);
       if (first < 0) first = u;
     }
     return first;
@@ -286,7 +366,7 @@ export function blockDiff(
         for (; r < upTo; r++) {
           const bl = fb[h.aStart + r]!;
           const line = where(h.bStart + n);
-          d.items.push({ kind: "removed", block: bl, line, unit: linesOf("-", bl, line) });
+          d.items.push({ kind: "removed", block: bl, line, unit: linesOf("-", bl, () => line) });
         }
       };
       const added = (upTo: number) => {
@@ -300,9 +380,10 @@ export function blockDiff(
         added(p.add);
         const before = fb[h.aStart + r]!;
         const after = tb[h.bStart + n]!;
-        const u = linesOf("-", before, after.from);
+        const { at, ...marks } = pairDiff(fs, before, ts, after, p);
+        const u = linesOf("-", before, (l) => at[l - before.from]!);
         linesOf("+", after);
-        d.items.push({ kind: "change", before, after, del: p.delWords, add: p.addWords, unit: u });
+        d.items.push({ kind: "change", before, after, ...marks, unit: u });
         r++;
         n++;
       }
@@ -315,5 +396,5 @@ export function blockDiff(
     shownB = g.b1;
   }
   stretch(shownA, a.length, shownB);
-  return d;
+  return done();
 }

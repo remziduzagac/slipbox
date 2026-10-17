@@ -74,6 +74,7 @@ import {
   merge3,
   pairLines,
   unseenChange,
+  unseenRows,
 } from "../src/core/merge.ts";
 import { findChange, hunkEntry, hunkLines, hunkView, movedBy, sameChange, tallyText } from "../src/core/gitreview.ts";
 import { gitChanges } from "../src/core/gitsigns.ts";
@@ -1369,6 +1370,41 @@ describe("changed words inside changed lines (GIT-D2)", () => {
     expect(unseenChange(lf, lf)).toBeNull();
   });
 
+  test("what no line shows is a row of the diff: the line endings and the mark at its start, the final newline at its end", () => {
+    const lf = "one line\ntwo line\nthree line\n";
+    const crlf = lf.replace(/\n/g, "\r\n");
+    expect(unseenRows(crlf, lf)).toEqual({ start: ["line endings: CRLF → LF"], end: [] });
+    expect(unseenRows(lf, `﻿${lf}`)).toEqual({ start: ["byte order mark added"], end: [] });
+    expect(unseenRows("a\nb\n", "a\nb")).toEqual({ start: [], end: ["no newline at end of file"] });
+    expect(unseenRows("a\nb", "a\r\nb\r\n")).toEqual({
+      start: ["line endings: LF → CRLF"],
+      end: ["newline at end of file added"],
+    });
+    // A file made or emptied has no last line to compare: every line is added, or removed.
+    expect([unseenRows("", "a\nb"), unseenRows("a\nb\n", "")]).toEqual([
+      { start: [], end: [] },
+      { start: [], end: [] },
+    ]);
+    expect(unseenRows(lf, lf)).toEqual({ start: [], end: [] });
+    // In the diff: alone, its rows are the diff; with a line changed, before its first row and after its last — each at
+    // its place, line 1 and the last line.
+    const said = unseenRows(crlf, "one line\ntwo line\nthree line");
+    const rows = (a: string, b: string) => diffView(comparable(a), comparable(b), new Set(), 3, said);
+    expect(rows(crlf, "one line\ntwo line\nthree line").map((r) => [r.kind, r.text, r.line])).toEqual([
+      ["\\", "line endings: CRLF → LF", 1],
+      ["\\", "no newline at end of file", 3],
+    ]);
+    expect(rows(crlf, "one line\ntwo lines\nthree line").map((r) => `${r.kind} ${r.text}`)).toEqual([
+      "\\ line endings: CRLF → LF",
+      "@@ line 2",
+      "  one line",
+      "- two line",
+      "+ two lines",
+      "  three line",
+      "\\ no newline at end of file",
+    ]);
+  });
+
   test("an offset in a word's ranges, found by halves", () => {
     const ranges: [number, number][] = [
       [2, 4],
@@ -1420,7 +1456,9 @@ describe("a note's diff as blocks, before and after (GIT-D2)", () => {
             ? `change ${i.before.from}-${i.before.to} ${i.after.from}-${i.after.to}`
             : i.kind === "same"
               ? `same ${i.block.from}-${i.block.to}`
-              : `${i.kind} ${i.block.from}-${i.block.to}`,
+              : i.kind === "\\"
+                ? `\\ ${i.text} at ${i.line}`
+                : `${i.kind} ${i.block.from}-${i.block.to}`,
     );
 
   test("a note's blocks: its nodes, a list's items (a nested one after its item's own lines), a table's rows", () => {
@@ -1576,6 +1614,65 @@ describe("a note's diff as blocks, before and after (GIT-D2)", () => {
       [from[10]!.split(" ")[0]!],
       ["CHANGED"],
     ]);
+  });
+
+  test("a block too big to diff by words: diffed by its lines, the changed lines marked and their changed words", () => {
+    // A fence of 300 lines, past the tokens a pair is diffed by word: a word changed in one line, a line removed, a
+    // line added.
+    const fence = `intro\n\n\`\`\`js\n${Array.from({ length: 300 }, (_, i) => `const v${i} = ${i}; // about ${i}`).join("\n")}\n\`\`\`\n`;
+    const to = fence
+      .replace("const v5 = 5;", "const v5x = 5;")
+      .replace("const v9 = 9; // about 9\n", "")
+      .replace("// about 20\n", "// about 20\nconst added = true;\n");
+    const d = blockDiff(fence, to);
+    expect(shape(d)).toEqual(["@@ 1 null", "same 1-1", "change 3-304 3-304"]);
+    const c = d.items[2]!;
+    if (c.kind !== "change") throw new Error("a change");
+    const runs = (s: string, r: [number, number][] | undefined) => (r ?? []).map(([x, y]) => s.slice(x, y));
+    const [before, after] = [blockText(d.from, c.before), blockText(d.to, c.after)];
+    // The lines changed, each with its line break; in the one paired with a line like it, its changed word.
+    expect(runs(before, c.delLines)).toEqual(["const v5 = 5; // about 5\n", "const v9 = 9; // about 9\n"]);
+    expect(runs(after, c.addLines)).toEqual(["const v5x = 5; // about 5\n", "const added = true;\n"]);
+    expect([runs(before, c.del), runs(after, c.add)]).toEqual([["v5"], ["v5x"]]);
+    // A block small enough: its words, no lines.
+    const small = blockDiff(note, note.replace("the later one wins.", "the later ULID wins.")).items;
+    expect(small.find((i) => i.kind === "change")).not.toHaveProperty("delLines");
+  });
+
+  test("enter on a line before a change goes to its line now, by the block's line diff; a line removed, where it was", () => {
+    // A fence: a line added before them, one removed between, one added after.
+    const from = "```\na\nb\nc\nd\n```\n";
+    const to = "```\nNEW\na\nb\nd\nX\n```\n";
+    const d = blockDiff(from, to);
+    const c = d.items.find((i) => i.kind === "change")!;
+    const before = d.units.slice(c.unit, c.unit + 6);
+    expect(before.map((u) => [u.text, u.line])).toEqual([
+      ["- ```", 1],
+      ["- a", 3],
+      ["- b", 4],
+      ["- c", 5],
+      ["- d", 5],
+      ["- ```", 7],
+    ]);
+    // As the diff's lines have the line removed: where it was, the line after it.
+    expect(diffView(from, to).find((r) => r.kind === "-")).toMatchObject({ text: "c", line: 5 });
+  });
+
+  test("what no line shows: a row before the first group, and one after the last", () => {
+    const crlf = note.replace(/\n/g, "\r\n");
+    const to = note.replace("the later one wins.", "the later ULID wins.").replace(/\n$/, "");
+    const unseen = unseenRows(crlf, to);
+    const d = blockDiff(comparable(crlf), comparable(to), new Set(), { unseen });
+    const items = shape(d);
+    expect([items[0], items.at(-1)]).toEqual(["\\ line endings: CRLF → LF at 1", "\\ no newline at end of file at 21"]);
+    expect([d.units[0]!.text, d.units.at(-1)!.text]).toEqual([
+      "\\ line endings: CRLF → LF",
+      "\\ no newline at end of file",
+    ]);
+    // Alone: the rows alone.
+    expect(shape(blockDiff(comparable(crlf), comparable(note), new Set(), { unseen: unseenRows(crlf, note) }))).toEqual(
+      ["\\ line endings: CRLF → LF at 1"],
+    );
   });
 
   test("pairLines pairs as diffing every pair by word would: the pairs its words rule out could never be half alike", () => {
