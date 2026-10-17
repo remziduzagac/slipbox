@@ -115,7 +115,7 @@ what replaced them.
 - **The scratch**: a markdown file per vault, in slipbox's state by default, where captures go with their references.
   [how-it-works.md](how-it-works.md) § Storage.
 - **Row marks**: an explorer row's columns at its right: the index's state, git's mark, what describes the row
-  (VV-D9). [tui.md](tui.md) § Side panes.
+  (VV-D9); why one is `⊘`, on the status line and in Info (D244). [tui.md](tui.md) § Side panes.
 - **Session**: a vault's tabs, splits, cursors and pane widths, restored when slipbox starts there.
   [tui.md](tui.md) § Positions.
 - **Source mode**: a note shown as its raw markdown: another layout of the same note. [tui.md](tui.md) § Source mode.

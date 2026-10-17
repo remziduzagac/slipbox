@@ -305,7 +305,7 @@ The CLI's commands are the user's reference, [cli.md](../../docs/manual/cli.md);
 | `tui/rebase.ts` | GIT-D6 | a diverged pull asked about, a rebase onto the base, what's under way |
 | `tui/explorer.ts` | 3.7, VV-D5 | the explorer: one tree and its view, the breadcrumb, zooming; rows, keys, menu |
 | `tui/explorer-disk.ts` | VV-D8 | the explorer's rows the walk doesn't give: what it leaves out or hasn't reached |
-| `tui/marks.ts` | VV-D9 | a row's marks: the index's state, what describes the row |
+| `tui/marks.ts` | VV-D9, D244 | a row's marks: the index's state, what describes the row; why it isn't indexed |
 | `tui/peek.ts` | VV-D7 | the peek: another vault's file read in place; `o`, `t`, `z`; its backlinks |
 | `tui/following.ts` | VV-D6 | the question a link not followed asks; follow, just look, no; the probe |
 | `tui/gitchanges.ts` | 26.1 | `] c`, `[ c` to a change against what's staged; its preview; one undone |

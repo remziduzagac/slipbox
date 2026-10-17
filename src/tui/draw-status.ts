@@ -55,7 +55,14 @@ export function drawStatus(app: App, c: Canvas, band: Band, geo: Geometry): void
   const chipSt = roleStyle(theme, "status_accent", page);
   c.fill(0, band.y, stringWidth(chip), band.h, chipSt.bg ?? null);
   let x = drawText(c, 0, y, chip, chipSt);
-  if (!view) return;
+  // The explorer's row under the cursor not indexed (`⊘`, VV-D9): why, while the cursor is on it.
+  const why = app.explorer.marks.selectedWhy();
+  const whyText = why ? `${app.glyphs.markNotIndexed} not indexed: ${sanitize(why)}  ` : "";
+  const dim = { ...roleStyle(theme, "status_dim", st.bg), bg: st.bg };
+  if (!view) {
+    if (whyText) drawText(c, x + 1, y, truncate(whyText.trimEnd(), Math.max(0, c.width - x - 2)), dim);
+    return;
+  }
   const buf = view.buf;
   const layout = app.currentLayout(view);
   // Where the view is among the rows shown (an oversized lens hides some; they don't count).
@@ -70,8 +77,9 @@ export function drawStatus(app: App, c: Canvas, band: Band, geo: Geometry): void
   const src = cursorRow ? srcAt(cursorRow, view.cur.col) : 1;
   // The column in the row's own text: the lens's counters before it, or a code cell's border and padding, aren't text.
   const col = Math.max(0, view.cur.col - (cursorRow?.text?.[0] ?? 0)) + 1;
-  // The right side: the position always; the tab count and the link under the cursor only while
-  // the path keeps a readable width (the link goes first, then the tab count).
+  // The right side: the position always; the tab count, the link under the cursor and why the explorer's row isn't
+  // indexed only while the path keeps a readable width (the link goes first, then the reason is cut, then the tab
+  // count).
   const pos = `L${src}:${col} ${pct}`;
   // Words: the note's, or the selection's in visual mode; dropped first when room is short.
   const n = view.visual ? countWords(app.views.selectionText(view)) : buf.words();
@@ -88,10 +96,17 @@ export function drawStatus(app: App, c: Canvas, band: Band, geo: Geometry): void
     : "";
   const markerW = stringWidth(pathMarker(app, view));
   const room = c.width - stringWidth(chip) - 2 - Math.min(16, stringWidth(app.displayName(view.buf))) - markerW;
-  let right = `${linkText}${words}${tabs}${pos}`;
-  if (stringWidth(right) + 1 > room) right = `${linkText}${tabs}${pos}`;
-  if (stringWidth(right) + 1 > room) right = `${tabs}${pos}`;
-  if (stringWidth(right) + 1 > room) right = pos;
+  const fits = (s: string) => stringWidth(s) + 1 <= room;
+  let right = `${linkText}${whyText}${words}${tabs}${pos}`;
+  if (!fits(right)) right = `${linkText}${whyText}${tabs}${pos}`;
+  if (!fits(right)) right = `${whyText}${tabs}${pos}`;
+  // The row's reason cut to the room left, while that says something.
+  if (!fits(right) && whyText) {
+    const left = room - 1 - stringWidth(`${tabs}${pos}`);
+    right = left >= 16 ? `${truncate(whyText.trimEnd(), left - 2)}  ${tabs}${pos}` : `${tabs}${pos}`;
+  }
+  if (!fits(right)) right = `${tabs}${pos}`;
+  if (!fits(right)) right = pos;
 
   const rightW = stringWidth(right) + 1;
   x += drawText(c, x, y, " ", st);
@@ -212,7 +227,7 @@ export function drawStatus(app: App, c: Canvas, band: Band, geo: Geometry): void
   }
   if (x + stringWidth(watch.text) + 3 < rx)
     x += drawText(c, x, y, `  ${watch.text}`, { ...roleStyle(theme, watch.role, st.bg), bg: st.bg });
-  if (rx > x) drawText(c, rx, y, right, { ...roleStyle(theme, "status_dim", st.bg), bg: st.bg });
+  if (rx > x) drawText(c, rx, y, right, dim);
 }
 
 /** The marker after the status line's path (its length is what the right side must leave room for);

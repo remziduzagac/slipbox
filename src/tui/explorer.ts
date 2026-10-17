@@ -308,13 +308,17 @@ export class Explorer {
   /**
    * A path of the vault open (its path in it, and absolute) that its walk leaves out: at, or under, what it excludes
    * (VV-D8) — a hidden folder only in home, whose tree lists none; in a vault, a hidden note reached by a link is in
-   * its tree (20.8). Why, or null.
+   * its tree (20.8). Why, and the folder (or file) it says it of; or null.
    */
-  private leftOut(rel: string, abs: string): string | null {
+  private leftOut(rel: string, abs: string): LeftOut | null {
     const filter = this.app.graph.filter;
-    // On another disk (home's, VV-D2): known from the mount table, never looked at.
-    if (filter.onMount(rel)) return ANOTHER_DISK;
+    const R = this.app.loc.root;
     const parts = rel.split("/");
+    // On another disk (home's, VV-D2): known from the mount table, never looked at.
+    if (filter.onMount(rel)) {
+      const at = parts.findIndex((_, i) => filter.mountAt(parts.slice(0, i + 1).join("/")));
+      return { why: ANOTHER_DISK, at: at < 0 ? abs : join(R, ...parts.slice(0, at + 1)) };
+    }
     for (let i = 1; i <= parts.length; i++) {
       let dir = true;
       if (i === parts.length)
@@ -322,13 +326,14 @@ export class Explorer {
           dir = statSync(abs).isDirectory();
         } catch {}
       const why = filter.exclusion(parts.slice(0, i).join("/"), dir);
-      if (why !== null && why !== "nested vault" && (filter.home || why !== "hidden")) return why;
+      if (why !== null && why !== "nested vault" && (filter.home || why !== "hidden"))
+        return { why, at: join(R, ...parts.slice(0, i)) };
     }
     return null;
   }
 
   /** Why the vault open's walk leaves out the view's folder `abs` (VV-D8), when it's in its own tree; else null. */
-  private leftOutView(abs: string): string | null {
+  private leftOutView(abs: string): LeftOut | null {
     const R = this.app.loc.root;
     if (abs === R || !isInside(R, abs) || isListed(this.app.loc)) return null;
     const rel = relative(R, abs).split(sep).join("/");
@@ -368,10 +373,10 @@ export class Explorer {
    * A folder outside the vault open's own tree — above it, beside it, in another vault, one its walk
    * leaves out — listed a level at a time (never walked): its folders — the vault open marked and
    * highlighted, its tree under it while unfolded; other vaults by their icon and name — then its files,
-   * as `files.show` would list them in their vault. `leftOut`: in what the vault open's walk leaves out (VV-D8), why —
-   * its folders carry it, down to a vault of their own.
+   * as `files.show` would list them in their vault. `leftOut`: in what the vault open's walk leaves out (VV-D8), why and
+   * where — its folders carry it, down to a vault of their own.
    */
-  private outsideRows(dir: string, depth: number, out: TreeRow[], leftOut: string | null = null): void {
+  private outsideRows(dir: string, depth: number, out: TreeRow[], leftOut: LeftOut | null = null): void {
     let entries: Dirent[] = [];
     try {
       entries = readdirSync(dir, { withFileTypes: true });
@@ -426,7 +431,7 @@ export class Explorer {
           name: e.name,
           depth,
           outside: true,
-          ...(leftOut ? { leftOut } : {}),
+          ...(leftOut ? { leftOut: leftOut.why, leftOutAt: leftOut.at } : {}),
           ...this.linkOf(e, abs, true),
         });
       if (this.expanded.has(abs)) this.outsideRows(abs, depth + 1, out, vault ? null : leftOut);
@@ -656,7 +661,7 @@ export class Explorer {
             abs,
             depth + 1,
             rows,
-            out.leftOut === ANOTHER_DISK || !isVaultRoot(abs) ? out.leftOut : null,
+            out.leftOut === ANOTHER_DISK || !isVaultRoot(abs) ? { why: out.leftOut!, at: abs } : null,
           );
       } else if (roots.has(p)) {
         const root = roots.get(p)!;
@@ -689,7 +694,7 @@ export class Explorer {
    *  it (a busy folder holding `.git`), a vault's row. */
   private leftOutRow(d: DiskEntry, name: string, depth: number): TreeRow {
     const abs = join(this.app.loc.root, d.rel);
-    const why = { outside: true, leftOut: d.leftOut! } as const;
+    const why = { outside: true, leftOut: d.leftOut!, leftOutAt: abs } as const;
     // Another disk (VV-D2): never looked into for a marker — what it is shows once you unfold it.
     if (d.dir && d.leftOut !== ANOTHER_DISK && isVaultRoot(abs))
       return { kind: "root", path: abs, name, depth, root: { kind: "vault", abs, name: this.rootName(abs) }, ...why };
@@ -1050,11 +1055,20 @@ export interface TreeRow {
   /** What the vault open's walk leaves out (VV-D8), listed from the disk: why (`busy folder`, `.gitignore`,
    *  `walk.exclude`, `Downloads`…). Never indexed. A folder in it carries it too; a file, only `outside`. */
   leftOut?: string;
+  /** Where `leftOut` was decided, absolute: the folder (or file) the walk leaves out — this row's, or the one holding
+   *  it. Its name says a busy folder's reason (VV-D9: `generated (node_modules)`). */
+  leftOutAt?: string;
   /** The vault open's, listed from the disk where its walk hasn't been (yet): a folder it couldn't read, home's
    *  before its walk, a folder or file come since. */
   unwalked?: boolean;
   /** A symlink (VV-D6): where it leads, and why the walk didn't go through it, when it didn't. */
   link?: LinkRow;
+}
+
+/** What the vault open's walk leaves out (VV-D8), carried down what's listed in it: why, and where it was decided. */
+interface LeftOut {
+  why: string;
+  at: string;
 }
 
 /** Whether the explorer lists every folder from `from` down to `to`, inside it: none of them hidden — a busy folder

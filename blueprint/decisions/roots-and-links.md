@@ -990,3 +990,22 @@ compared as the folder has it. Clarifies D237. As built: `isBusyName` (`src/core
 so a capitalised one is more likely a person's folder of notes, which a busy name would leave out.
 
 **Not chosen:** every busy name in any case: a `Build/` of notes would be left out where nothing generated it.
+
+## D244: The explorer's `⊘` says why, on the status line and in Info (2026-10-17)
+
+**Decision:** A row marked `⊘` (not indexed, VV-D9) stays as it is. With the explorer's cursor on it, the status line
+says why, in words a user knows (`⊘ not indexed: generated (node_modules), git-ignored`), and stops when the cursor
+moves off; the Info view says it of the file on screen (`index`), its own row's reason or its folder's. The words come
+from the rule that marked the row, never a second guess: a busy folder says which of D237's two things hold —
+`generated (node_modules)` for no note at its top, `git-ignored` for ignored, both when both hold — and a folder in it
+names the busy one; what `.gitignore` or `walk.exclude` leaves out, home's skip list (`hidden`, `home's Downloads`, a
+system folder), another disk, a link not followed or whose disk isn't answering (VV-D6), a note over
+`walk.max_file_size`, a folder past home's cap, each its own. Details VV-D9. As built: `Marks.why` and `Marks.whyAt`
+(`src/tui/marks.ts`), `busyWhy` (`src/core/walk.ts`); design/tui.md § Side panes.
+
+**Why:** The maintainer's choice, 2026-10-17 (#138): every `⊘` looked the same whatever the reason, and a row has no
+width to spare for one. The cursor on a row is the question; the status line is where slipbox already says what's
+under the cursor (a link and its status).
+
+**Not chosen:** the reason on the row, after its name (no width; it would push out what describes the row); a
+different glyph per reason (one column each, and the user would have to learn them all).
