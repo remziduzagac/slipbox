@@ -3,7 +3,7 @@
 // check each, on the reference set or a fixture each check builds in its own folder.
 
 import { spawnSync } from "node:child_process";
-import { existsSync, lstatSync, mkdirSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
+import { existsSync, lstatSync, mkdirSync, rmSync, symlinkSync, utimesSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { type Check, downloadsElsewhere, explorerOpen, explorerRow, follow, leader, open, opened } from "../check.ts";
 import { CheckFailed, type Session } from "../session.ts";
@@ -100,12 +100,19 @@ function git(s: Session, cwd: string, ...args: string[]): void {
   if (r.status !== 0) throw new CheckFailed(`git ${args.join(" ")} in ${cwd}: exit ${r.status}\n${r.stderr}`);
 }
 
-/** Folders of home beside the reference set's (VV-D2): household's last policy a folder down, and garden. */
+/**
+ * Folders of home beside the reference set's (VV-D2): household's last policy a folder down, and garden — dated an
+ * hour back, as a person's folders are. Made the moment before slipbox starts, they would be new to its watcher: a
+ * folder changed in the two seconds before it watches is looked at again, and a folder that came in it taken in with
+ * its notes, garden's among them, whatever home's walk has done.
+ */
 function homeFolders(s: Session): void {
   if (s.exists("~/garden/plan.md")) return;
   s.write("~/household/archive/2025-policy.md", "# Last year's policy\n\nThe one the renewal replaces.\n");
   s.write("~/garden/plan.md", "# Garden plan\n\nBeds by the fence, herbs by the door.\n");
   s.write("~/garden/seeds.md", "# Seeds\n\nWhat to sow in spring.\n");
+  const before = new Date(Date.now() - 3_600_000);
+  for (const d of ["", "garden", "household", "household/archive"]) utimesSync(join(s.home, d), before, before);
 }
 
 /** The shelf: a folder of home outside the notes vault, linked from it (`~/notes/shelf`), and a note there through the
@@ -336,6 +343,10 @@ const MARKED: Check[] = [
         // notes indexed, its index on the disk.
         const r = s.cliIn("~/notes", "index", "--refresh");
         if (r.code !== 0) throw new CheckFailed(`slipbox index --refresh in ~/notes: exit ${r.code}\n${r.out}`);
+        // Home's top, built a moment ago, dated back: new to the watcher, its folders would be taken in, walked
+        // (homeFolders says why).
+        const before = new Date(Date.now() - 3_600_000);
+        utimesSync(s.home, before, before);
       },
     },
     run: async (s) => {
