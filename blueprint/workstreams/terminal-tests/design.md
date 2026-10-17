@@ -61,7 +61,10 @@ fails. `--repeat` runs each check that many times in the same pool, to show a fl
 
 **The checks** (`tests/terminal/checks/<area>.ts`) are one feature each, small related ones grouped, named by it under
 one of five areas (reading, editing, navigating, links and files, the outside and code), each declaring the reference
-set's areas it covers (`CASES.md`'s headings) and the commands it runs for their effect (TT-D3).
+set's areas it covers (`CASES.md`'s headings) and the commands it runs for their effect (TT-D3). Source control's —
+the git panel, its branches and worktrees, the diff window, the review, the merge screen, rebasing, the remote — are
+the outside and code's, in a file of their own (`source-control.ts`): each makes its repository with git in its own
+folder (commits, branches, a worktree, a bare repository as the remote, a conflict from a real merge or rebase).
 
 **Coverage** (`tests/terminal/coverage.ts`, tests/terminal-coverage.test.ts in `bun run test`): every command and every
 area of `CASES.md` (its "By area" part) is covered by a check, or left out, with its reason, in its area's file; the

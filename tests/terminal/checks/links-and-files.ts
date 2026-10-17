@@ -2752,35 +2752,5 @@ const PEEK: Check[] = [
 
 export const LINKS_AND_FILES: Check[] = [...LINKS, ...ROOTS, ...NAMED, ...FILES, ...RENAMES, ...GIT, ...NOTES, ...PEEK];
 
-/** GIT's review, merge screen and rebase: their checks come in one pass once the workstream's parts are all in. */
-const GIT_LATER =
-  "GIT's terminal checks come in one pass at the workstream's end; tests/tui.test.ts drives it meanwhile";
-
-export const LEFT_OUT_LINKS_AND_FILES: LeftOut = {
-  commands: Object.fromEntries(
-    [
-      "git.review",
-      "git.review_keep",
-      "git.review_revert",
-      "git.review_note",
-      "git.review_next",
-      "git.review_prev",
-      "git.review_go",
-      "git.merge_screen",
-      "git.merge_ours",
-      "git.merge_theirs",
-      "git.merge_both",
-      "git.merge_both_theirs",
-      "git.merge_edit",
-      "git.merge_agent",
-      "git.merge_next",
-      "git.merge_prev",
-      "git.merge_save",
-      "git.merge_stage",
-      "git.rebase",
-      "git.continue",
-      "git.skip",
-      "git.abort",
-    ].map((c) => [c, GIT_LATER]),
-  ),
-};
+// GIT's review, merge screen and rebase have their checks in source-control.ts, with the git panel's.
+export const LEFT_OUT_LINKS_AND_FILES: LeftOut = {};
