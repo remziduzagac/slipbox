@@ -127,6 +127,10 @@ where a link points.
 **Why:** The user's: the index's three states each marked, extra marks aligned at the right; `🔒` is drawn two columns
 wide in some terminals.
 
+> **Amended (2026-10-17):** a link to a disk that doesn't answer is marked `⊘`, not indexed, and described
+> `not answering`, as the walk leaves it out until it answers (design/tui.md § A row's marks); `⚠` is a broken link
+> alone. A folder inside one marked `⊘` is marked `⊘` too.
+
 ## VV-D10: The git panel follows the vault (2026-10-14)
 
 **Decision:** Source control shows the current vault's repository in full, when it is one (GIT's panel), and under it,

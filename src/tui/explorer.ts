@@ -307,9 +307,9 @@ export class Explorer {
   /**
    * A path of the vault open (its path in it, and absolute) that its walk leaves out: at, or under, what it excludes
    * (VV-D8) — a hidden folder only in home, whose tree lists none; in a vault, a hidden note reached by a link is in
-   * its tree (20.8).
+   * its tree (20.8). Why, or null.
    */
-  private leftOut(rel: string, abs: string): boolean {
+  private leftOut(rel: string, abs: string): string | null {
     const filter = this.app.graph.filter;
     const parts = rel.split("/");
     for (let i = 1; i <= parts.length; i++) {
@@ -319,9 +319,19 @@ export class Explorer {
           dir = statSync(abs).isDirectory();
         } catch {}
       const why = filter.exclusion(parts.slice(0, i).join("/"), dir);
-      if (why !== null && why !== "nested vault" && (filter.home || why !== "hidden")) return true;
+      if (why !== null && why !== "nested vault" && (filter.home || why !== "hidden")) return why;
     }
-    return false;
+    return null;
+  }
+
+  /** Why the vault open's walk leaves out the view's folder `abs` (VV-D8), when it's in its own tree; else null. */
+  private leftOutView(abs: string): string | null {
+    const R = this.app.loc.root;
+    if (abs === R || !isInside(R, abs) || isListed(this.app.loc)) return null;
+    const rel = relative(R, abs).split(sep).join("/");
+    // In a vault nested in it, or through a link the walk didn't take: that vault's, or not the walk's at all.
+    if ([...this.nestedRels(), ...this.unwalkedRels()].some((n) => rel === n || rel.startsWith(`${n}/`))) return null;
+    return this.leftOut(rel, abs);
   }
 
   /** A row's path, absolute. */
@@ -340,11 +350,12 @@ export class Explorer {
 
   treeRows(): TreeRow[] {
     if (this.tree) return this.tree;
+    this.keepToWhatsThere();
     const T = this.top;
     const rows: TreeRow[] = [];
     // The view (VV-D5): the vault's own tree from it, or, anywhere else, its folder listed a level at a time.
     const own = this.ownView(T);
-    if (own === null) this.outsideRows(T, 0, rows);
+    if (own === null) this.outsideRows(T, 0, rows, this.leftOutView(T));
     else rows.push(...this.rootTree(own));
     this.tree = rows;
     return rows;
@@ -354,9 +365,10 @@ export class Explorer {
    * A folder outside the vault open's own tree — above it, beside it, in another vault, one its walk
    * leaves out — listed a level at a time (never walked): its folders — the vault open marked and
    * highlighted, its tree under it while unfolded; other vaults by their icon and name — then its files,
-   * as `files.show` would list them in their vault.
+   * as `files.show` would list them in their vault. `leftOut`: in what the vault open's walk leaves out (VV-D8), why —
+   * its folders carry it, down to a vault of their own.
    */
-  private outsideRows(dir: string, depth: number, out: TreeRow[]): void {
+  private outsideRows(dir: string, depth: number, out: TreeRow[], leftOut: string | null = null): void {
     let entries: Dirent[] = [];
     try {
       entries = readdirSync(dir, { withFileTypes: true });
@@ -394,7 +406,8 @@ export class Explorer {
         if (this.expanded.has(R)) for (const r of this.rootTree()) out.push({ ...r, depth: r.depth + depth + 1 });
         continue;
       }
-      if (isVaultRoot(abs))
+      const vault = isVaultRoot(abs);
+      if (vault)
         out.push({
           kind: "root",
           path: abs,
@@ -403,8 +416,17 @@ export class Explorer {
           root: { kind: "vault", abs, name: this.rootName(abs) },
           outside: true,
         });
-      else out.push({ kind: "dir", path: abs, name: e.name, depth, outside: true, ...this.linkOf(e, abs, true) });
-      if (this.expanded.has(abs)) this.outsideRows(abs, depth + 1, out);
+      else
+        out.push({
+          kind: "dir",
+          path: abs,
+          name: e.name,
+          depth,
+          outside: true,
+          ...(leftOut ? { leftOut } : {}),
+          ...this.linkOf(e, abs, true),
+        });
+      if (this.expanded.has(abs)) this.outsideRows(abs, depth + 1, out, vault ? null : leftOut);
     }
     // Its files as their vault lists them: auto, every text file but in a notes vault.
     const show = this.app.sidebar.allFiles ? "all" : this.app.config.files.show;
@@ -509,17 +531,19 @@ export class Explorer {
 
   /** The breadcrumb over the explorer (VV-D5): the folders down to the view, then those past it it can zoom back into. */
   crumbs(): { abs: string; label: string; vault: boolean; current: boolean; past: boolean }[] {
+    if (!this.tree) this.keepToWhatsThere();
     const key = `${this.top}\n${this.trail}\n${this.app.loc.root}`;
     if (this.crumbsMemo?.key === key) return this.crumbsMemo.list;
     const home = homeFolder();
     const trail = isInside(this.top, this.trail) ? this.trail : this.top;
-    const top = isInside(home, trail) ? home : sep;
+    // From `~` when the view is in home, else from `/`: the view is always one of its folders.
+    const top = isInside(home, this.top) ? home : sep;
     const dirs = [top];
     const rel = relative(top, trail);
     if (rel) for (const p of rel.split(sep)) dirs.push(join(dirs.at(-1)!, p));
     const list = dirs.map((abs) => ({
       abs,
-      label: abs === home ? "~" : abs === sep ? "/" : basename(abs),
+      label: abs === sep ? "/" : abs === top ? "~" : basename(abs),
       vault: abs === this.app.loc.root ? this.app.loc.mode === "vault" : isVaultRoot(abs),
       current: abs === this.app.loc.root,
       past: abs !== this.top && isInside(this.top, abs),
@@ -621,7 +645,8 @@ export class Explorer {
         rows.push(this.leftOutRow(out, name, depth));
         // Unfolded in place: listed a level at a time, as a folder outside the vault's own tree.
         const abs = join(this.app.loc.root, p);
-        if (out.dir && this.expanded.has(abs)) this.outsideRows(abs, depth + 1, rows);
+        if (out.dir && this.expanded.has(abs))
+          this.outsideRows(abs, depth + 1, rows, isVaultRoot(abs) ? null : out.leftOut);
       } else if (roots.has(p)) {
         const root = roots.get(p)!;
         rows.push({ kind: "root", path: p, name, depth, root });
@@ -662,6 +687,44 @@ export class Explorer {
 
   invalidateTree(): void {
     this.tree = null;
+  }
+
+  /** A folder moved (18.3, 18.7): the view and the trail in it go with it, as its folds do. */
+  followMove(from: string, to: string): void {
+    const shift = (abs: string) => (abs && isInside(from, abs) ? to + abs.slice(from.length) : abs);
+    this.top = shift(this.top);
+    this.trail = shift(this.trail);
+    this.invalidateTree();
+  }
+
+  /**
+   * The view and the trail on folders that are there (VV-D5), asked as the tree is built again: one deleted, or renamed
+   * or moved outside slipbox, gives way to its nearest folder still there — the view's said.
+   */
+  private keepToWhatsThere(): void {
+    // Gone: not there, or a file now. One that can't be asked (no permission on its way) is left as it is.
+    const there = (dir: string) => {
+      try {
+        return statSync(dir).isDirectory();
+      } catch (err) {
+        const code = (err as NodeJS.ErrnoException).code;
+        return code !== "ENOENT" && code !== "ENOTDIR";
+      }
+    };
+    const nearest = (dir: string) => {
+      let d = dir;
+      while (!there(d) && dirname(d) !== d) d = dirname(d);
+      return d;
+    };
+    if (this.trail && !there(this.trail)) this.trail = nearest(this.trail);
+    if (!this.top || there(this.top)) return;
+    const gone = this.top;
+    this.top = nearest(gone);
+    if (!isInside(this.top, this.trail)) this.trail = this.top;
+    this.app.sidebar.pinned = false;
+    this.app.sidebar.scroll = 0;
+    this.app.sidebar.selected = 0;
+    this.app.message("info", `${tildePath(gone)} isn't there any more: the view is on ${tildePath(this.top)}`);
   }
 
   /**
@@ -966,7 +1029,7 @@ export interface TreeRow {
    *  as a link does (VV-D4). */
   outside?: boolean;
   /** What the vault open's walk leaves out (VV-D8), listed from the disk: why (`busy folder`, `.gitignore`,
-   *  `walk.exclude`, `Downloads`…). Never indexed. */
+   *  `walk.exclude`, `Downloads`…). Never indexed. A folder in it carries it too; a file, only `outside`. */
   leftOut?: string;
   /** The vault open's, listed from the disk where its walk hasn't been (yet): a folder it couldn't read, home's
    *  before its walk, a folder or file come since. */

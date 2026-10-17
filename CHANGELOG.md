@@ -105,9 +105,10 @@ The format is [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.1.0/); wh
 - The explorer is one tree of your files, and shows a part of it, the view. The view starts at the folder you opened
   (`slipbox ~/work/kestrel/docs` shows `docs`), a breadcrumb above it says where it is
   (`~ › work › ◈ kestrel › docs ›`), and going somewhere outside it zooms it out to the folder holding both places. `z`
-  zooms in on a folder, `-` out a level, and a click on the breadcrumb to that folder. Another vault in the view
-  unfolds in place with `l`; `enter` goes into it. A file you may not write opens read-only and says so; a folder you
-  may not read says why.
+  zooms in on a folder, `-` out a level, and a click on the breadcrumb to that folder. The view's folder renamed or
+  moved takes the view along; deleted, the view goes to the nearest folder still there, and says so. Another vault in
+  the view unfolds in place with `l`; `enter` goes into it. A file you may not write opens read-only and says so; a
+  folder you may not read says why.
 - Your home folder is a vault, home: its notes outside every other vault have backlinks, are searched together, and
   have their own tabs. Starting slipbox in `~` starts in home, instead of a folder listed a level at a time. Home is
   indexed a little at a time while nobody is working, leaving out hidden folders, `Downloads`, the system's folders,
@@ -119,7 +120,10 @@ The format is [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.1.0/); wh
   caches…), what `.gitignore` and `walk.exclude` leave out, and home's `Downloads`, each marked `⊘`. You can unfold
   them and open their files; nothing in them is indexed. A folder you may not read is listed too, marked `⚿`. Every
   vault's index now leaves those busy folders out, as home's did, even where its `.gitignore` doesn't: a note kept in a
-  folder named `build` or `vendor` is no longer indexed, so rename the folder to have it indexed again.
+  folder named `build` or `vendor` is no longer indexed, so rename the folder to have it indexed again. Nothing new
+  goes into such a folder, where nothing would find it: a new note, a move or a copy into one is refused, in the
+  explorer, as a typed path, and on the command line (`write --create`, `mv`, `cp`: exit 5). A note already there can
+  still be changed.
 
 ### Removed
 

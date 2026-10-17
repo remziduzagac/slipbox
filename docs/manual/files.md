@@ -74,7 +74,7 @@ Above the tree, a breadcrumb says where the view is:
 ~ › work › ◈ kestrel › docs ›
 ```
 
-- `~` is your home folder. Outside it, the breadcrumb starts at `/`.
+- `~` is your home folder. With the view outside it, the breadcrumb starts at `/`, and your home folder has its name.
 - A vault has its icon. The vault you are in is highlighted.
 - A click on a folder in it zooms the view to that folder.
 
@@ -93,6 +93,9 @@ already holds leaves the view where it is, the folders down to the vault unfolde
 
 Hidden folders aren't in the tree. So going into a vault inside one, such as an agent's worktree in
 `.claude/worktrees/`, moves the view to that vault.
+
+A folder you rename or move takes the view along when the view is on it. One deleted, or renamed outside slipbox,
+gives way to the nearest folder still there, and slipbox says so.
 
 Zoomed out past the vault you are in, the explorer lists folders one level at a time:
 
@@ -133,8 +136,8 @@ The last column says what slipbox's index holds of the row, for links, backlinks
 | `⚿` | `#` | you may not read it |
 | `⚠` | `!` | a problem, such as a link whose target isn't there |
 
-Most folders are indexed, so a file has a mark there only when it isn't what its folder says. With Nerd Font icons,
-`⚿` is a lock.
+Most folders are indexed, so a file has a mark there only when it isn't what its folder says. A folder inside a `⊘`
+folder is marked `⊘` too. With Nerd Font icons, `⚿` is a lock.
 
 The column before it is git's: `M`, `+`, `R` or `!` for a changed file, and `•` for a folder with a change in it, `o` in
 ASCII ([Git](git.md)).
@@ -182,6 +185,9 @@ Some folders are listed, but nothing in them is indexed. They are marked `⊘`:
 You can unfold them and open their files. Their notes have no backlinks, search doesn't find them, and a wikilink's name
 doesn't reach them. Nothing in them can be renamed, moved or deleted from the explorer.
 
+Nothing new goes into a folder tools fill, since nothing would find it there. A new note, a move or a copy into one is
+refused, typed as a path or from the command line. A note already there can still be changed.
+
 You can also open a hidden or git-ignored file by its path (`:e .drafts/plan.md`), or by following a link to it. It
 opens, and its links count from then on. A file in a busy folder, or in what `walk.exclude` leaves out, opens from the
 explorer only, and its links never count.
@@ -210,6 +216,7 @@ explorer's selected folder instead, or beside the selected file. The question sa
 - **A new note starts with its title,** `# coffee`. It opens with you typing on the line after the blank one, in the
   lens. With `editor.edit_in = "source"`, it opens in source mode instead.
 - **A name that is already there** opens that file, and makes nothing.
+- **A name in a folder tools fill**, such as `build/plan`, is refused: slipbox would never find the note there.
 - **A name another note has**, in another folder, would make a wikilink by that name (`[[coffee]]`) reach either of
   them. So slipbox suggests a distinct name instead, from the new note's folder (`ideas-coffee`). It says where the
   other one is. Type the name again to keep it anyway.
@@ -289,6 +296,7 @@ A rename is refused, with nothing changed, when:
 
 - the new name is taken, even by a name differing only in case
 - it would leave the vault or go into a hidden folder
+- it would go into a folder tools fill, such as `build` or `target`, or give a folder such a name
 - a file it would rewrite or move has unsaved changes. Save first.
 
 Renaming a heading and the links to it is in [Links and vaults](links-and-vaults.md).

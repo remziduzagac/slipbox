@@ -239,6 +239,62 @@ describe("a row's marks (VV-D9)", () => {
       expect(drawn(h, "reached.md").index).toBe(g.markIndexed);
       expect(drawn(h, "other.md").index).toBe(" ");
     });
+
+  test("a folder inside a busy folder is marked not indexed, zoomed into it too; a vault in it is its own", async () => {
+    const p = place();
+    if (!p) return;
+    const build = join(p.kestrel, "build");
+    mkdirSync(join(build, "sub", "deeper"), { recursive: true });
+    writeFileSync(join(build, "sub", "x.md"), "# X\n");
+    mkdirSync(join(build, "v", ".slipbox"), { recursive: true });
+    mkdirSync(join(build, "v", "d"));
+    mkdirSync(join(p.kestrel, "dist", ".slipbox"), { recursive: true }); // a busy folder that is a vault itself
+    mkdirSync(join(p.kestrel, "dist", "d2"));
+    const h = await harness({ root: p.kestrel });
+    h.app.region = "content";
+    for (const d of [build, join(build, "sub"), join(build, "v"), join(p.kestrel, "dist")])
+      h.app.explorer.expanded.add(d);
+    h.app.explorer.invalidateTree();
+    const index = (name: string) => {
+      const row = h.app.explorer.rows().find((r) => r.name === name);
+      if (!row) throw new Error(`no row ${name}`);
+      return h.app.explorer.marks.of(row).index;
+    };
+    const g = glyphsFor("unicode");
+    for (const name of ["sub", "deeper"]) {
+      expect(index(name)).toBe("not-indexed");
+      expect(drawn(h, name).index).toBe(g.markNotIndexed);
+    }
+    expect(index("x.md")).toBeUndefined(); // a file's is its folder's
+    expect(index("d")).toBeUndefined(); // the vault v's, not kestrel's to say
+    expect(index("d2")).toBeUndefined();
+    h.app.explorer.zoomTo(build);
+    expect(index("sub")).toBe("not-indexed");
+    expect(index("deeper")).toBe("not-indexed");
+    expect(index("d")).toBeUndefined();
+  });
+
+  test("a draw reads the disk only for the rows drawn, however many the tree has", async () => {
+    const root = mkdtempSync(join(sandbox, "many-"));
+    mkdirSync(join(root, ".slipbox"));
+    mkdirSync(join(root, "many"));
+    for (let i = 0; i < 500; i++) writeFileSync(join(root, "many", `n${i}.md`), "# N\n");
+    const h = await harness({ root });
+    h.app.region = "content";
+    h.app.explorer.expanded.add("many");
+    const marks = h.app.explorer.marks;
+    const of = marks.of.bind(marks);
+    let calls = 0;
+    marks.of = (row) => (calls++, of(row));
+    for (let i = 0; i < 2; i++) {
+      calls = 0;
+      h.app.explorer.invalidateTree();
+      h.canvas();
+      expect(h.app.explorer.rows().length).toBe(501);
+      expect(calls).toBeGreaterThan(0);
+      expect(calls).toBeLessThanOrEqual(h.app.geometry!.sidebar!.h);
+    }
+  });
 });
 
 describe("what describes a row (VV-D9)", () => {

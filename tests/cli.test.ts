@@ -386,6 +386,44 @@ describe("writing", () => {
     ]);
     expect(readFileSync(join(other, "theirs.md"), "utf8")).toBe("# Theirs\n");
   });
+  test("a new note, a move or a copy into a busy folder is refused, exit 5, nothing written; a note there is edited", () => {
+    const dir = mkdtempSync(join(sandbox, "busy-"));
+    const own = {
+      XDG_STATE_HOME: join(dir, "state"),
+      XDG_CACHE_HOME: join(dir, "cache"),
+      XDG_DATA_HOME: join(dir, "d"),
+    };
+    const root = join(dir, "root");
+    mkdirSync(join(root, ".slipbox"), { recursive: true });
+    mkdirSync(join(root, "build"));
+    mkdirSync(join(root, "docs"));
+    writeFileSync(join(root, "a.md"), "# A\n");
+    writeFileSync(join(root, "b.md"), "# B\n\nSee [[a]].\n");
+    writeFileSync(join(root, "docs", "d.md"), "# D\n");
+    writeFileSync(join(root, "build", "old.md"), "# Old\n");
+    const run = (args: string[]) => slipbox(args, { cwd: root, env: own });
+    const made = run(["write", "build/x.md", "text", "--create"]);
+    expect([made.code, made.err]).toEqual([
+      5,
+      "slipbox: build/x.md: build/ is a busy folder, which the vault doesn't index; not writing it\n",
+    ]);
+    expect(run(["write", "target/goal", "text", "--create"]).code).toBe(5); // not there yet: never made
+    expect([existsSync(join(root, "build", "x.md")), existsSync(join(root, "target"))]).toEqual([false, false]);
+    // Moved there, a note would leave every link to it broken: refused, the note where it was.
+    for (const to of ["target/a.md", "build/", "my-cache/a.md"]) expect(run(["mv", "a.md", to]).code).toBe(5);
+    expect(run(["mv", "docs", "dist"]).code).toBe(5); // a folder renamed to a busy name
+    expect(existsSync(join(root, "a.md"))).toBe(true);
+    expect(run(["problems"]).out).toContain("broken links (0)");
+    for (const [from, to] of [
+      ["b.md", "build/b.md"],
+      ["docs", "vendor/docs"],
+    ])
+      expect(run(["cp", from!, to!]).code).toBe(5);
+    expect([existsSync(join(root, "build", "b.md")), existsSync(join(root, "vendor"))]).toEqual([false, false]);
+    // A note already there is edited, as the TUI edits it.
+    expect(run(["write", "build/old.md", "# Old\n\nmore"]).code).toBe(0);
+    expect(readFileSync(join(root, "build", "old.md"), "utf8")).toBe("# Old\n\nmore\n");
+  });
   test("export to PDF, a web page, an e-book; Markdown beside it apart from the note, its pictures in a folder, an earlier one replaced", () => {
     for (const [to, magic] of [
       ["pdf", "%PDF-"],

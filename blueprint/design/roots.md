@@ -209,8 +209,9 @@ what the walk leaves out, the watcher doesn't subscribe to (D40).
   are listed as the vault's files (pictures, data, code), among which a wikilink finds an attachment by its name.
 - **Always skipped:** `.git`, `.slipbox`, `node_modules`, and every entry whose name starts with a dot.
 - **The busy folders** (VV-D8): `node_modules`, `.venv` and `venv`, `__pycache__`, `target`, `build`, `dist`, `.next`,
-  `vendor`, `Pods`, `DerivedData`, `.gradle`, `.tox`, and caches (`cache`, `Caches`, `pip-cache`, any case:
-  `BUSY_FOLDERS`, `isBusyFolder`, by the folder's own name at any depth) are left out of every vault's walk, as home's:
+  `vendor`, `Pods`, `DerivedData`, `.gradle`, `.tox`, and caches (`cache`, `Caches`, `pip-cache`, any case; the
+  others in their case alone, so `Build` is indexed: `BUSY_FOLDERS`, `isBusyFolder`, by the folder's own name at any
+  depth) are left out of every vault's walk, as home's:
   `exclusion` says `busy folder`, after `walk.exclude` and before `.gitignore`, whatever `.gitignore` says
   (`node_modules` stays `always skipped`); nothing turns the list off. Such a folder is never reached (below): a file of
   it named opens, never indexed; the watcher doesn't watch it. The explorer lists it all the same, browsed, never
@@ -226,9 +227,14 @@ what the walk leaves out, the watcher doesn't subscribe to (D40).
   reached (a note's link points at it, and then its own links reach further; it is opened in the TUI or named to the
   CLI) and stays indexed after, the list kept with the index (D61). `.git`, `.slipbox`, `node_modules`, a busy folder,
   `walk.exclude`, a vault of its own and, in home, all its skip list leaves out are never reached: named, such a file is
-  read and nothing more. The CLI still writes into a busy folder (`slipbox write build/x.md`): its guard
-  (`checkWritable`) refuses only hidden folders and `node_modules`. A folder listed a level at a time (Elsewhere's)
-  reaches nothing. Reached files aren't watched: they are read again when the index is next built.
+  read and nothing more. Nothing new is put where it would never be indexed: a new note (`write --create`, the TUI's
+  typed path), a move or rename (`mv`, a folder given a busy name) or a copy into a busy folder is refused — the CLI's
+  exit 5, the TUI's warning, as the explorer refuses a new note on a `⊘` row. The guards (`checkWritable`,
+  `cleanTarget`, `copyPath`, `Files.createNote`) ask the filter (`Graph.neverIndexed`: a folder on the way whose
+  `exclusion` is `busy folder` or `always skipped`, up to a root of its own), not a list of names, so the refusal
+  follows the filter. A file already there is edited as any other; `walk.exclude`'s folders and nested roots still take
+  a new note (made, not indexed here). A folder listed a level at a time (Elsewhere's) reaches nothing. Reached files
+  aren't watched: they are read again when the index is next built.
 - **Nested vaults are boundaries:** a subfolder holding a vault marker is a different vault, and is not walked (D69,
   D40). A fixture vault inside a repository doesn't leak into it, and a repository's notes, or an Obsidian vault's,
   stay its own.

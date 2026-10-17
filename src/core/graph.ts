@@ -26,7 +26,7 @@ import { contentHash, Redirects } from "./redirects.ts";
 import { dataLinks, parseData } from "./data.ts";
 import { classify, extensionOf } from "./filetypes.ts";
 import { type HomeWalk, homeWalk, walksInto } from "./home.ts";
-import { checkoutAt, findVaultRoot, isListed, type VaultLocation } from "./vault.ts";
+import { checkoutAt, findVaultRoot, isListed, isVaultRoot, type VaultLocation } from "./vault.ts";
 import { listDirectory, type NoteFile, type Skipped, type WalkCap, WalkFilter, walkVault } from "./walk.ts";
 import { tagKey, tagName } from "./tags.ts";
 import {
@@ -299,6 +299,27 @@ export class Graph {
     if (!this.filter.reachable(rel)) return false;
     const why = isDir ? this.filter.exclusion(rel, true) : null;
     return why === null || why === "hidden" || why === ".gitignore";
+  }
+
+  /**
+   * Why a new file at `rel` — a folder, with `isDir` — would never be indexed, said (VV-D8: a busy folder is listed,
+   * never indexed), or null: a folder on its way the walk's filter leaves out whatever reaches it, a busy one or one
+   * always skipped. Asked of the filter, so it follows it: a root of its own on the way answers for itself, and
+   * Elsewhere indexes nothing to begin with. A new note, a move or a copy there is refused.
+   */
+  neverIndexed(rel: string, isDir = false): string | null {
+    if (isListed(this.loc)) return null;
+    // By the names on disk, where the filesystem folds case: `Build/` typed is the `build/` the walk lists.
+    const parts = onDisk(this.root, rel).split("/");
+    for (let i = 1; i <= (isDir ? parts.length : parts.length - 1); i++) {
+      const dir = parts.slice(0, i).join("/");
+      const why = this.filter.exclusion(dir, true);
+      // A root of its own, named as a busy folder too (`build/` holding a `.slipbox/`): its walk starts there.
+      if (why === "nested vault" || (why === "busy folder" && isVaultRoot(join(this.root, dir)))) return null;
+      if (why === "busy folder") return `${dir}/ is a busy folder, which the vault doesn't index`;
+      if (why === "always skipped") return `${dir}/ is a folder the vault never indexes`;
+    }
+    return null;
   }
 
   /** `rel` as a file to index when reached: there, a file inside the vault, and only left out softly. */

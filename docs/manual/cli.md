@@ -557,6 +557,8 @@ Elsewhere has no index. `index` there is exit 5.
   link you follow is written through, and in Elsewhere, one you follow
 - only where the vault's notes are, never in `.slipbox/`, `.git/`, `node_modules` or a hidden folder (unless you named a
   note there)
+- a new note never in a folder tools fill (`build`, `target`, `dist`, `vendor`, a cache), which the vault lists but never
+  indexes ([Files](files.md#what-the-explorer-lists)). A note already there can still be changed
 - never a binary file
 - never a note that isn't valid UTF-8, since its bytes would be lost (a task can still be ticked)
 
@@ -946,6 +948,7 @@ written. It can't be done whole when there is:
 
 - a target that exists (or differs only in case)
 - a path outside the vault
+- a path in a folder tools fill (`build`, `target`…), which the vault never indexes: the links to it would break
 - a file changed between planning and writing
 
 A file that isn't valid UTF-8 is skipped and said, never rewritten.
@@ -1011,7 +1014,8 @@ starts with `./` or `../`.
 
 A folder that's there, or a path ending in `/`, is copied into, keeping the name. So `archive/` makes
 `archive/coffee.md`, and makes the folder if need be. Into the folder it is in already, the copy goes beside it as
-`name-copy`, as without a path. Any other path is the copy's whole path. An existing file there is refused (exit 5).
+`name-copy`, as without a path. Any other path is the copy's whole path. An existing file there is refused (exit 5), and
+so is a path in a folder tools fill, as `mv` refuses one.
 
 Links aren't rewritten. The copy says what the original says.
 
