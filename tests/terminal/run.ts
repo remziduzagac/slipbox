@@ -1,6 +1,6 @@
 // The terminal tests: slipbox in headless terminals of its own (terminal.ts), driven by keys and checked by what the
-// screen shows, many at once (TT-D6). `bun run test:terminal [--jobs N] [--repeat N] [--keep] [--list] [area or
-// name…]`.
+// screen shows, many at once (TT-D6). `bun run test:terminal [--jobs N] [--repeat N] [--keep] [--list] [area, check
+// file or name…]`.
 //
 // Every check gets a fresh copy of the sample folders and its own config, state, cache and home, so nothing in the
 // repository or your own setup is touched. A run goes to its end: every failure is reported there, with its screen,
@@ -11,7 +11,7 @@ import { availableParallelism, tmpdir } from "node:os";
 import { join } from "node:path";
 import { COMMAND_SPECS } from "../../src/core/command-specs.ts";
 import type { Check } from "./check.ts";
-import { CHECKS } from "./checks/index.ts";
+import { CHECK_FILES, CHECKS } from "./checks/index.ts";
 import type { WorkerResult } from "./worker.ts";
 
 const args = process.argv.slice(2);
@@ -30,9 +30,11 @@ const repeat = Math.max(1, Number(flag("--repeat") ?? 1));
 const list = bool("--list");
 const filters = args.map((f) => f.toLowerCase());
 
-/** A filter names an area, or a piece of a check's name. */
+/** A filter names an area, a check file (`checks/<name>.ts`), or a piece of a check's name. */
 const chosen = CHECKS.filter(
-  (c) => !filters.length || filters.some((f) => c.area === f || c.name.toLowerCase().includes(f)),
+  (c) =>
+    !filters.length ||
+    filters.some((f) => c.area === f || CHECK_FILES[f]?.includes(c) || c.name.toLowerCase().includes(f)),
 );
 
 if (list) {

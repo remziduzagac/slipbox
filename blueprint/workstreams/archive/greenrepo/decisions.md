@@ -95,6 +95,9 @@ accepted deviation until then, with a review date.
 
 ## GR-D9: Hardened CI, on Linux and macOS (2026-10-12)
 
+> **Amended by D239 (2026-10-17):** a pull request runs the tests and the terminal checks its files reach; every
+> push to `main` runs them all, on Linux and macOS.
+
 **Decision:** CI meets greenrepo's CI rules: no permission by default and each job's grants explained, actions pinned
 by commit, no credentials kept, timeouts, concurrency, the untrusted kept out of `run:`, zizmor and actionlint, one
 aggregator job as the required check, and the tests on Linux and macOS. Dependabot, a scheduled scanner and a weekly

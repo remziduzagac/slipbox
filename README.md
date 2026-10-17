@@ -188,10 +188,14 @@ scripts/install-local.sh         # a `slipbox` launcher in ~/.local/bin
 To check a change:
 
 ```bash
-bun run check          # typecheck, the core-never-imports-tui boundary, dependencies, lint, the docs' lint,
-                       # spelling and links, tests
-bun run test:terminal  # the terminal tests: slipbox itself, driven by keys in headless terminals
+bun run check                  # typecheck, the core-never-imports-tui boundary, dependencies, lint, the docs'
+                               # lint, spelling and links, the tests your change reaches
+bun run test:terminal:changed  # the terminal tests your change reaches: slipbox itself, driven by keys in
+                               # headless terminals
 ```
+
+Both compare your branch with where it left `origin/main`, as CI compares a pull request with its base; `bun run test`
+and `bun run test:terminal` run every one, as CI does after a merge.
 
 [blueprint/design/testing.md](blueprint/design/testing.md) describes the test strategy, the demo folder
 (`examples/vault`) and the terminal tests.

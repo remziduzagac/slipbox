@@ -14,7 +14,7 @@ import {
   writeFileSync,
 } from "node:fs";
 import { tmpdir } from "node:os";
-import { join, resolve } from "node:path";
+import { dirname, join, resolve } from "node:path";
 import { ACCEPTED, type Accepted, acceptedProblems, ignoreArgs } from "../scripts/audit.ts";
 import {
   bunfigProblems,
@@ -53,7 +53,7 @@ import {
   writeSite,
 } from "../scripts/release.ts";
 import { bootstrapScript } from "../scripts/bootstrap.ts";
-import { codeChanged, isDocs } from "../scripts/ci-scope.ts";
+import { codeChanged, importGraph, isDocs, scope as reaches } from "../scripts/ci-scope.ts";
 import { pagesBase, RELEASE, RETIRED, retired, tagOf } from "../src/core/release.ts";
 import {
   howToUpgrade,
@@ -280,11 +280,14 @@ describe("the supply chain's gates (14.10)", () => {
     const ci = Bun.YAML.parse(readFileSync(join(ROOT, ".github", "workflows", "ci.yml"), "utf8")) as {
       jobs: Record<string, { needs?: string; if?: string; steps?: { run?: string }[] }>;
     };
-    for (const job of ["test", "terminal"])
+    for (const [job, output] of [
+      ["test", "code"],
+      ["terminal", "checks"],
+    ] as const)
       expect([job, ci.jobs[job]?.needs, ci.jobs[job]?.if]).toEqual([
         job,
         "changes",
-        "${{ needs.changes.outputs.code == 'true' }}",
+        `\${{ needs.changes.outputs.${output} == 'true' }}`,
       ]);
     expect(ci.jobs.changes?.steps?.at(-1)?.run).toBe("bun run ci:scope");
     expect(ci.jobs.lint?.steps?.map((s) => s.run)).toContain("bun run test:docs");
@@ -310,15 +313,126 @@ describe("the supply chain's gates (14.10)", () => {
     git("init", "-q");
     writeFileSync(join(repo, "a.ts"), "1\n");
     commit("base");
-    expect(scope("pull_request")).toBe("code=true\n"); // no parent: the diff can't be read
+    expect(scope("pull_request")).toBe("code=true\nchecks=true\n"); // no parent: the diff can't be read
     mkdirSync(join(repo, "docs"));
     writeFileSync(join(repo, "docs", "x.md"), "# x\n");
     commit("docs");
-    expect(scope("pull_request")).toBe("code=false\n");
-    expect(scope("push")).toBe("code=true\n");
+    expect(scope("pull_request")).toBe("code=false\nchecks=false\n");
+    expect(scope("push")).toBe("code=true\nchecks=true\n");
     writeFileSync(join(repo, "a.ts"), "2\n");
     commit("code");
-    expect(scope("pull_request")).toBe("code=true\n");
+    expect(scope("pull_request")).toBe("code=true\nchecks=true\n"); // a file nothing names: everything
+  });
+
+  test("the import graph: what a file imports, a worker it starts, what it imports that isn't code, a path it names", () => {
+    const g = importGraph();
+    expect(g.get("src/core/walk.ts")).toContain("src/core/fsutil.ts");
+    expect(g.get("src/core/parse-pool.ts")).toContain("src/core/parse-worker.ts");
+    expect(g.get("src/core/skill.ts")).toContain("skills/slipbox/SKILL.md");
+    // Run by its path, from the file's folder or the top's name; a temporary folder's paths name nothing here.
+    expect(g.get("tests/cli.test.ts")).toContain("src/main.ts");
+    expect(g.get("tests/check-size.test.ts")).toContain("scripts/check-size.ts");
+    expect(g.get("tests/check-size.test.ts")).not.toContain("scripts");
+    expect(g.get("scripts/build-home.ts")).toContain("examples/home");
+  });
+
+  test("what a change reaches, in a repository made for it: each rule (D239)", () => {
+    const top = mkdtempSync(join(sandbox, "reach-"));
+    const files: Record<string, string> = {
+      "package.json": JSON.stringify({ scripts: { "test:docs": "bun test ./tests/docs.test.ts" } }),
+      "src/main.ts": 'export const tui = () => import("./tui/run.ts");\n',
+      "src/tui/run.ts": 'import { a } from "../core/a";\nexport const run = a;\n',
+      "src/core/a.ts": 'import { workerUrl } from "./workers.ts";\nexport const a = workerUrl("w.ts");\n',
+      "src/core/workers.ts": "export const workerUrl = (f: string) => f;\n",
+      "src/core/w.ts": "export {};\n",
+      "tests/a.test.ts": 'import { a } from "../src/core/a.ts";\nexport { a };\n',
+      "tests/docs.test.ts": 'import { a } from "../src/core/a.ts";\nexport { a };\n',
+      // Runs the app by its path; a temporary folder's paths name nothing in the repository.
+      "tests/run.test.ts": [
+        'const MAIN = join(import.meta.dir, "..", "src", "main.ts");',
+        'const P = mkdtempSync("t");',
+        'join(P, "src", "core");',
+        'const FIX = join(import.meta.dir, "fixtures");',
+        'const DEEP = join(FIX, "deep");',
+        'join(DEEP, "d.md");',
+      ].join("\n"),
+      "tests/terminal/run.ts": 'import "./checks/index.ts";\n',
+      "tests/terminal/worker.ts": 'import "./session.ts";\n',
+      "tests/terminal/checks/index.ts": 'import "./one.ts";\n',
+      "tests/terminal/checks/one.ts": 'import { REPO } from "../session.ts";\nexport { REPO };\n',
+      "tests/terminal/session.ts":
+        'export const REPO = join(import.meta.dir, "..", "..");\njoin(REPO, "src", "main.ts");\njoin(REPO, "examples", "home", "n.md");\n',
+      "tests/fixtures/deep/d.md": "# d\n",
+      "examples/home/n.md": "# n\n",
+      "examples/home/m.md": "# m\n",
+      "notes/x.txt": "x\n",
+    };
+    for (const [f, text] of Object.entries(files)) {
+      mkdirSync(dirname(join(top, f)), { recursive: true });
+      writeFileSync(join(top, f), text);
+    }
+    const g = importGraph(top);
+    expect(g.get("src/main.ts")).toEqual(["src/tui/run.ts"]); // imported when it's needed
+    expect(g.get("src/tui/run.ts")).toEqual(["src/core/a.ts"]); // without its extension
+    expect(g.get("src/core/a.ts")?.sort()).toEqual(["src/core/w.ts", "src/core/workers.ts"]); // a worker it starts
+    // By its path from the file's folder, or from a name set from it, at any depth; not from a temporary folder.
+    expect(g.get("tests/run.test.ts")?.sort()).toEqual([
+      "src/main.ts",
+      "tests/fixtures",
+      "tests/fixtures/deep",
+      "tests/fixtures/deep/d.md",
+    ]);
+    expect(g.get("tests/terminal/session.ts")?.sort()).toEqual(["examples/home/n.md", "src/main.ts"]);
+    const of = (...changed: string[]) => reaches(changed, g, top);
+    // A file the app loads, under no feature: the tests that use it, the docs' aside, and every check.
+    expect(of("src/core/w.ts")).toMatchObject({ tests: ["tests/a.test.ts", "tests/run.test.ts"], checks: "all" });
+    expect(of("tests/terminal/checks/one.ts")).toMatchObject({ tests: [], checks: ["one"] });
+    expect(of("examples/home/n.md")).toMatchObject({ checks: "all" }); // a sample the checks' harness names
+    expect(of("examples/home/m.md").all).toEqual(expect.any(String)); // one nothing names: everything
+    expect(of("notes/x.txt").all).toEqual(expect.any(String));
+    expect(of("src/core/gone.ts")).toMatchObject({ all: null, tests: [], checks: [] }); // what used it changed too
+  });
+
+  test("a pull request runs the tests and the terminal checks its files reach (D239)", () => {
+    const g = importGraph();
+    const of = (...files: string[]) => reaches(files, g);
+    // A feature's own file: the tests that use it, at any depth, and its checks.
+    const git = of("src/tui/gitbranchview.ts");
+    expect(git.all).toBeNull();
+    if (git.all === null) {
+      expect(git.tests).toContain("tests/tui.test.ts");
+      expect(git.tests).not.toContain("tests/release.test.ts");
+      expect(git.checks).toEqual(["git"]);
+    }
+    expect(of("scripts/release.ts")).toMatchObject({ tests: ["tests/distribution.test.ts", "tests/release.test.ts"] });
+    expect(of("scripts/release.ts")).toMatchObject({ checks: [] });
+    // A command of the command line's: its tests, no check.
+    expect(of("src/cli/git.ts")).toMatchObject({ checks: [] });
+    // A check file: its checks. A file of the app's with no feature of its own, the harness, a sample: every check.
+    expect(of("tests/terminal/checks/vaults.ts")).toMatchObject({ checks: ["vaults"] });
+    for (const f of ["src/tui/app.ts", "tests/terminal/session.ts", "examples/home/hobbies/cooking/Pantry.md"])
+      expect([f, of(f)]).toMatchObject([f, { checks: "all" }]);
+    expect(of("examples/home/hobbies/cooking/Pantry.md")).toMatchObject({
+      tests: expect.arrayContaining(["tests/home.test.ts"]),
+    });
+    // The samples changed most: what reads them.
+    expect(of("examples/home/CASES.md")).toMatchObject({
+      tests: ["tests/home.test.ts", "tests/terminal-coverage.test.ts"],
+      checks: [],
+    });
+    // A snapshot: its test. The lint's config: the lint alone.
+    expect(of("tests/__snapshots__/render.test.ts.snap")).toMatchObject({
+      tests: ["tests/render.test.ts"],
+      checks: [],
+    });
+    expect(of("_typos.toml")).toMatchObject({ tests: [], checks: [] });
+    // The docs' tests are the lint job's, on every change: never among a change's.
+    expect(of("src/tui/mouse-help.ts")).not.toMatchObject({ tests: expect.arrayContaining(["tests/docs.test.ts"]) });
+    // Everything: the packages, the toolchain, a workflow, the tests' preload, a file nothing names, a diff unread.
+    for (const f of ["package.json", "bun.lock", "mise.toml", ".github/workflows/ci.yml", "tests/setup.ts", "new.txt"])
+      expect([f, of(f).all]).toEqual([f, expect.any(String)]);
+    expect(reaches(null, g).all).toEqual(expect.any(String));
+    expect(reaches([], g).all).toEqual(expect.any(String));
   });
 
   test("Dependabot: Bun's packages and the actions, grouped, monthly, a week's cooldown as bunfig's", () => {
