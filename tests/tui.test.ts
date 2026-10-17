@@ -20047,4 +20047,32 @@ describe("links followed only when you say so (VV-D6)", () => {
       process.env.HOME = before;
     }
   });
+
+  test("a rename moves nothing out of a followed link's target, and its relinking leaves a note there as it is", async () => {
+    const { root, out, link } = linked();
+    const before = process.env.HOME;
+    process.env.HOME = mkdtempSync(join(sandbox, "home-")); // a home of the test's own
+    try {
+      writeFileSync(join(out, "x.md"), "# X\n\n[i](../index.md)\n");
+      setLinkAnswer(link, "follow");
+      await probe(out);
+      const h = await harness({ root, open: "index.md" });
+      expect(h.app.graph.notes.has("data/far.md")).toBe(true);
+      h.app.renaming.noteTo("data/far.md", "moved.md");
+      expect(h.app.overlay).toBeNull();
+      expect(h.app.messages.at(-1)!.text).toBe("data/far.md resolves outside the vault");
+      expect(existsSync(join(out, "far.md"))).toBe(true);
+      expect(existsSync(join(root, "moved.md"))).toBe(false);
+      // The vault's own note renamed: the note out there that links to it is left, and the preview says so.
+      h.app.renaming.noteTo("index.md", "home.md");
+      expect((h.app.overlay as ListOverlay).items.map((i) => `${i.label} ${i.detail ?? ""}`)).toContain(
+        "skipped data/x.md:3 a link leads it out of the vault: not rewritten",
+      );
+      await h.keys("enter");
+      expect(existsSync(join(root, "home.md"))).toBe(true);
+      expect(readFileSync(join(out, "x.md"), "utf8")).toBe("# X\n\n[i](../index.md)\n");
+    } finally {
+      process.env.HOME = before;
+    }
+  });
 });

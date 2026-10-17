@@ -6,6 +6,7 @@
 import { readText } from "./fsutil.ts";
 import type { Graph } from "./graph.ts";
 import { dirtyTrees, type Edit, type FileChange, RenameError, type RenamePlan } from "./rename.ts";
+import { LEADS_OUT, mayRewrite } from "./rename-plan.ts";
 import {
   compilePattern,
   expandReplacement,
@@ -41,18 +42,20 @@ export function planReplace(
     // With regex, `^` and `$` insert, as `:s` and `slipbox replace` have them.
     const ms = findAll(d.text, re, 0, d.text.length, opts.regex);
     if (!ms.length) continue;
+    const edits = lineEdits(d.text, ms, replacement, opts.regex);
     // Written back, its invalid bytes would be U+FFFD.
     if (d.invalidUtf8) {
-      skipped.push({
-        shown,
-        line: lineEdits(d.text, ms, replacement, opts.regex)[0]!.line,
-        reason: "not valid UTF-8: not rewritten",
-      });
+      skipped.push({ shown, line: edits[0]!.line, reason: "not valid UTF-8: not rewritten" });
       continue;
     }
     const next = replaceMatches(d.text, ms, replacement, opts.regex).text;
     if (next === d.text) continue;
-    files.push({ abs, shown, vault: null, edits: lineEdits(d.text, ms, replacement, opts.regex), text: d.text, next });
+    // Reached through a link out of the vault: read, never written there (VV-D6).
+    if (!mayRewrite(g, abs)) {
+      skipped.push({ shown, line: edits[0]?.line ?? 1, reason: LEADS_OUT });
+      continue;
+    }
+    files.push({ abs, shown, vault: null, edits, text: d.text, next });
   }
   return {
     kind: "replace",

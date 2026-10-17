@@ -33,7 +33,7 @@ import { type Site, NOTE_EXT, wikiTarget, rootOfPath, real, pathRetarget, mdTarg
 export { RenameError, Collector, dirtyTrees } from "./rename-plan.ts";
 export type { Edit, FileChange, RenamePlan, Ambiguous } from "./rename-plan.ts";
 export { planVaultRename, planMakeVault, planUnmakeVault } from "./rename-vaults.ts";
-export { loggedRenames, planUndo, applyPlan } from "./rename-apply.ts";
+export { loggedRenames, planUndo, applyPlan, outside } from "./rename-apply.ts";
 export type { Applied } from "./rename-apply.ts";
 export { planHeadingRename } from "./rename-heading.ts";
 
@@ -53,6 +53,14 @@ function cleanTarget(g: Graph, input: string, holds: "file" | "folder" | "vault"
   const where = fileInTheWay(g.root, rel);
   if (where) throw new RenameError(`${where} is a file: ${rel} can't go under it`);
   return rel;
+}
+
+/**
+ * What moves, by its real path inside the vault (VV-D6): nothing is moved out of where a link leads, followed or
+ * not, as nothing is moved into it — in home too, as a copy or a delete there.
+ */
+function checkSource(g: Graph, rel: string): void {
+  if (!landsInside(g.root, join(g.root, rel))) throw new RenameError(`${rel} resolves outside the vault`);
 }
 
 /**
@@ -99,6 +107,7 @@ export function fileInTheWay(root: string, rel: string): string | null {
 export function planNoteRename(g: Graph, fromRel: string, toInput: string): RenamePlan {
   const isNote = g.notes.has(fromRel);
   if (!isNote && !g.filePaths().includes(fromRel)) throw new RenameError(`no note or file ${fromRel} in ${g.root}`);
+  checkSource(g, fromRel);
   let toRel = cleanTarget(g, toInput, "file");
   if (posix.extname(toRel) === "" || (isNote && !NOTE_EXT.test(toRel))) toRel += posix.extname(fromRel);
   if (toRel === fromRel) throw new RenameError(`${fromRel} is already there`);
@@ -119,6 +128,7 @@ export function planNoteRename(g: Graph, fromRel: string, toInput: string): Rena
 export function planFolderMove(g: Graph, fromDir: string, toInput: string): RenamePlan {
   const from = posix.normalize(fromDir.replace(/\/+$/, ""));
   if (!g.dirs.includes(from) || !from || from === ".") throw new RenameError(`no folder ${fromDir} in ${g.root}`);
+  checkSource(g, from);
   const to = cleanTarget(g, toInput, "folder");
   if (to === from) throw new RenameError(`${from} is already there`);
   if (to.startsWith(`${from}/`)) throw new RenameError(`${from} can't move into itself`);
@@ -316,6 +326,7 @@ function relativeAs(written: string, fileAbs: string, targetAbs: string): string
 export function planVaultFolderMove(parent: Graph, fromRel: string, toInput: string): RenamePlan {
   const from = posix.normalize(fromRel.replace(/\/+$/, ""));
   if (!parent.nestedRoots().includes(from)) throw new RenameError(`no vault nested at ${fromRel} in ${parent.root}`);
+  checkSource(parent, from);
   const to = cleanTarget(parent, toInput, "vault");
   if (to === from) throw new RenameError(`${from} is already there`);
   if (to.startsWith(`${from}/`)) throw new RenameError(`${from} can't move into itself`);

@@ -136,7 +136,8 @@ slipbox export inbox.md ideas/coffee.md -o both.epub  # one e-book, two chapters
   - A folder that exists, or a path ending in `/`, gets the first note's name in it. The folder is made if it isn't
     there.
   - Any other path is the file's name. Its folders are made as needed.
-  - Without `-o`, the document goes beside the first note, under its name.
+  - Without `-o`, the document goes beside the first note, under its name. In a vault, a note reached through a link
+    out of the vault has no place beside it: slipbox asks you to name one with `-o`, and exits with 5.
 - **A file already there is replaced**, without asking, as `-o` does in any tool. A note is never replaced, of this
   vault or any other. slipbox says `ideas/coffee.md is a note — an export doesn't write over it` and exits with 5. An
   earlier Markdown export is the exception, and is replaced.

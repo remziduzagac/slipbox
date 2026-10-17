@@ -5,7 +5,7 @@ import { randomUUID } from "node:crypto";
 import { existsSync, mkdirSync, renameSync, rmdirSync, statSync, unlinkSync } from "node:fs";
 import { dirname, join, relative, sep } from "node:path";
 import { classify } from "./filetypes.ts";
-import { atomicWrite, readText } from "./fsutil.ts";
+import { atomicWrite, landsInside, readText } from "./fsutil.ts";
 import type { Graph } from "./graph.ts";
 import { trashVaultMarker } from "./files.ts";
 import { contentHash } from "./redirects.ts";
@@ -14,7 +14,15 @@ import { forgetRoot } from "./registry.ts";
 import { openVault } from "./reach.ts";
 import { recordFolder } from "./folders.ts";
 import { findVaultRoot, initVault, isInside } from "./vault.ts";
-import { RenameError, type FileChange, type RenamePlan, dirtyTrees, walkSkips, sameFile } from "./rename-plan.ts";
+import {
+  RenameError,
+  type FileChange,
+  type RenamePlan,
+  dirtyTrees,
+  mayRewrite,
+  walkSkips,
+  sameFile,
+} from "./rename-plan.ts";
 import { real } from "./rename-links.ts";
 
 // -------------------------------------------------------------------------------------------
@@ -81,6 +89,9 @@ export function planUndo(g: Graph): RenamePlan {
     throw new RenameError(`${relative(g.root, move.from)} isn't there any more: the ${what} can't be undone`);
   if (move && existsSync(move.to) && !sameFile(move.from, move.to))
     throw new RenameError(`${relative(g.root, move.to)} exists again: the ${what} can't be undone`);
+  // Back only inside the vault: a link that leads out of it now, where the folder was, isn't moved through (VV-D6).
+  const out = outside(g, { files, move });
+  if (out) throw new RenameError(`${out}: the ${what} can't be undone`);
   const back = (pairs: [string, string][]) => pairs.map(([a, b]): [string, string] => [b, a]);
   const warnings = dirtyTrees(files.map((f) => f.abs));
   return {
@@ -106,10 +117,30 @@ export interface Applied {
 }
 
 /**
+ * What of a plan would land out of where it may (VV-D6), said; null when nothing would. Every file it writes where
+ * `mayRewrite` allows; what moves, from and to, inside the vault by its real path, as a folder made a vault or a vault
+ * made a plain folder.
+ */
+export function outside(
+  g: Graph,
+  plan: Pick<RenamePlan, "files" | "move" | "makeVault" | "unmakeVault">,
+): string | null {
+  for (const f of plan.files)
+    if (!mayRewrite(g, f.abs))
+      return `${g.shownPath(f.abs)}: a link leads it out of the vault, where nothing is written`;
+  const ends = [plan.move?.from, plan.move?.to, plan.makeVault?.root, plan.unmakeVault?.root];
+  for (const end of ends) if (end && !landsInside(g.root, end)) return `${g.shownPath(end)} resolves outside the vault`;
+  return null;
+}
+
+/**
  * Carry a plan out: every file it touches still as it was planned from (else nothing is written),
- * then the edits, then the move. The vault's index and redirects follow.
+ * then the edits, then the move. The vault's index and redirects follow. Nothing is written where
+ * a link leads it out of the vault (`outside`): a plan saved, or one undone, is checked as it's carried out.
  */
 export function applyPlan(g: Graph, plan: RenamePlan): Applied {
+  const out = outside(g, plan);
+  if (out) throw new RenameError(`${out}; nothing changed`);
   /** The files that start with a byte order mark: a plan's texts are read without it, and it's written back. */
   const bom = new Set<string>();
   for (const f of plan.files) {

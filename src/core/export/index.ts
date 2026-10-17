@@ -4,7 +4,7 @@
 
 import { statSync } from "node:fs";
 import { basename, dirname, extname, join, relative, resolve, sep } from "node:path";
-import { atomicWrite, climbsOut, realTarget } from "../fsutil.ts";
+import { atomicWrite, climbsOut, landsInside, realTarget } from "../fsutil.ts";
 import type { Graph } from "../graph.ts";
 import { findVaultRoot } from "../vault.ts";
 import { assemble, type ExportDoc } from "./assemble.ts";
@@ -117,8 +117,8 @@ function noteOfARoot(graph: Graph, abs: string): boolean {
 
 /**
  * Where an export of notes, `first` the first, goes: `typed` (from `base`) — a folder, one there or a path ending in
- * `/` (made when it's written), the default's name in it — else beside the first note. Never over a note of any root,
- * but an earlier export: an error says so.
+ * `/` (made when it's written), the default's name in it — else beside the first note, in a vault only when that's in
+ * it. Never over a note of any root, but an earlier export: an error says so.
  */
 export function exportTarget(
   graph: Graph,
@@ -137,6 +137,11 @@ export function exportTarget(
   }
   if (noteOfARoot(graph, target) && !isExport(target))
     throw new Error(`${graph.shownPath(target)} is a note — an export doesn't write over it`);
+  // Beside a note a link leads out of the vault to: a place nobody named, outside the vault (VV-D6).
+  if (!typed && graph.loc.mode === "vault" && !landsInside(graph.root, target))
+    throw new Error(
+      `${first} is reached through a link out of the vault: its export isn't written beside it — name a place with --out`,
+    );
   return target;
 }
 
