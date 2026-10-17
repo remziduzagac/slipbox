@@ -228,6 +228,7 @@ show = "auto"                  # auto (renderable in a vault with .slipbox/, els
                                # | renderable (notes and data files) | all (every text file)
 include = []                   # always listed, in .gitignore's syntax: ["*.ts", "scripts/"]
 exclude = []                   # never listed, in .gitignore's syntax
+hidden = false                 # hidden files and folders listed too, never indexed (.git never); shift+h there
 
 [ui]                           # the screen
 sidebar = true                 # the explorer open beside the text on a wide terminal
@@ -445,9 +446,9 @@ Each of the other tables holds the keys of one place, and is tried before `[keys
 - `[keys.source]` holds source mode's own keys.
 - `[keys.visual]` holds visual mode's.
 - `[keys.explorer]` holds the explorer's, and the Problems panel's. They are bound to its actions: `down`, `up`,
-  `open_tab`, `expand`, `open`, `collapse`, `open_split`, `top`, `bottom`, `filter`, `all_files`, `new_note`,
-  `new_folder`, `rename`, `rename_root`, `move`, `delete`, `restore`, `undo_rename`, `copy`, `cut`, `paste`,
-  `make_root`, `unmake_root`, `menu`, `zoom_in`, `zoom_out`, `close`, `leave`.
+  `open_tab`, `expand`, `open`, `collapse`, `open_split`, `top`, `bottom`, `filter`, `all_files`, `toggle_hidden`,
+  `new_note`, `new_folder`, `rename`, `rename_root`, `move`, `delete`, `restore`, `undo_rename`, `copy`, `cut`,
+  `paste`, `make_root`, `unmake_root`, `menu`, `zoom_in`, `zoom_out`, `close`, `leave`.
 - `[keys.git]` holds the git panel's. Its actions are `down`, `up`, `top`, `bottom`, `expand`, `collapse`, `open`,
   `go`, `menu`, `stage`, `unstage`, `discard`, `stage_all`, `unstage_all`, `message`, `commit`, `amend`, `fetch`,
   `pull`, `push`, `stash`, `new_branch`, `merge`, `filter`, `close`, `leave`.

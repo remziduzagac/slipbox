@@ -269,16 +269,17 @@ what the walk leaves out, the watcher doesn't subscribe to (D40).
   there) or the vault is walked again (a `.gitignore` changed is a rescan); a note added inside a busy folder alone
   moves no watched folder. The explorer lists it all the same, browsed, never indexed ([tui.md](tui.md) § Side
   panes). The busy folders whose names start with a dot (`.venv`, `.next`, `.gradle`, `.tox`, `.cache`) are left out
-  as `hidden` first: the explorer doesn't list them, and in a vault a note in one, named or linked, is reached as in
-  any hidden folder (in home, never).
+  as `hidden` first: the explorer lists them only with the hidden names (`files.hidden`, D250), and in a vault a note
+  in one, named or linked, is reached as in any hidden folder (in home, never).
 - **`.gitignore` is honoured**, nested ones included, with git's own semantics: every `.gitignore` from the vault's top
   down applies, and the deepest one with an opinion wins, so `!keep.md` re-includes; a folder excluded is never
   descended into. Case follows git's default `core.ignorecase`: insensitive on macOS, sensitive on Linux. What git
   ignores (`target/`, `dist/`, vendored trees) is what must not resolve `[[README]]`. `walk.exclude` adds
   gitignore-syntax patterns. Home has its skip list instead (§ Home).
 - **Reached, then indexed:** a git-ignored file, or one under a hidden folder, isn't walked, but is indexed when it is
-  reached (a note's link points at it, and then its own links reach further; it is opened in the TUI or named to the
-  CLI) and stays indexed after, the list kept with the index (D61). `.git`, `.slipbox`, a busy folder, `walk.exclude`,
+  reached (a note's link points at it, and then its own links reach further; it is opened in the TUI — by `:e`, or
+  from its row while the explorer lists hidden names, D250 — or named to the CLI) and stays indexed after, the list
+  kept with the index (D61). `.git`, `.slipbox`, a busy folder, `walk.exclude`,
   a vault of its own and, in home, all its skip list leaves out are never reached: named, such a file is read and
   nothing more: the TUI's `:e` opens it as the explorer opens its row, never indexed — a nested vault's, in that vault
   (D249). Nothing new is put where it would never be indexed: a new note (`write --create`, the TUI's typed path), a

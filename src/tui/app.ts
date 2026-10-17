@@ -349,6 +349,8 @@ export interface UiState {
   spell: boolean;
   /** Where the scratch shows (#43): floating over the windows, or in the window on the right. */
   scratch_in: "float" | "right";
+  /** The explorer lists hidden files and folders (`files.hidden`; its `shift+h`), `.git` aside. */
+  hidden_files: boolean;
   theme: string;
   glyphs: string;
 }
@@ -370,6 +372,7 @@ export function uiDefaults(c: Config): UiState {
     code_wrap: c.render.code_wrap,
     spell: c.spell.enabled,
     scratch_in: c.capture.open_in,
+    hidden_files: c.files.hidden,
     // "auto": URLs where colour can't mark links (NO_COLOR), as in `slipbox render`.
     urls: c.render.show_urls === "always" || (c.render.show_urls === "auto" && !!process.env.NO_COLOR),
     theme: c.theme,

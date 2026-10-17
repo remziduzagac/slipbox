@@ -78,6 +78,9 @@ export interface Config {
     include: string[];
     /** gitignore-syntax patterns never shown (the walk's own excludes apply too). */
     exclude: string[];
+    /** The explorer lists hidden files and folders (names starting with `.`), `.git` aside: marked not indexed, as the
+     *  walk leaves them out. Its key (`shift+h`) and the UI settings toggle it. */
+    hidden: boolean;
   };
   ui: {
     /** Explorer shown beside the content on wide terminals. */
@@ -318,7 +321,7 @@ export const DEFAULT_CONFIG: Config = {
   },
   links: { style: "auto", path: "auto", extension: "auto" },
   trust: { roots: [] },
-  files: { show: "auto", include: [], exclude: [] },
+  files: { show: "auto", include: [], exclude: [], hidden: false },
   ui: {
     sidebar: true,
     sidebar_width: 30,

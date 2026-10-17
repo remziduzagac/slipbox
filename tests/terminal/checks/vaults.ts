@@ -526,6 +526,42 @@ const MARKED: Check[] = [
       s.expect(saved === "saved docs/generated/changes.md (not indexed: walk.exclude)", `saved: ${saved}`);
     },
   },
+  {
+    area: "navigating",
+    name: "hidden files: shift+h lists .github and the rest ⊘, said hidden, .git never; a workflow opened is indexed; shift+h again hides the rest",
+    covers: { cases: ["explorer", "index", "status"], commands: ["explorer.toggle_hidden"] },
+    // kestrel, a repository: .github/workflows/ci.yml, .vscode, .env.example and the like at its top.
+    options: { home: true, startAt: "home/work/kestrel/README.md" },
+    run: async (s) => {
+      await explorerOpen(s);
+      await explorerRow(s, "docs");
+      s.expect(rowEnd(s, ".github") === null && rowEnd(s, "docs") !== null, "no hidden name listed at first");
+      await s.keys("shift+h");
+      await s.message("explorer: hidden files shown");
+      await s.until(() => markOf(s, ".github") === "⊘" && markOf(s, ".vscode") === "⊘", 3000, ".github, .vscode: ⊘");
+      s.expect(rowEnd(s, ".git") === null, ".git never listed");
+      // The cursor on one: why it isn't indexed.
+      await explorerRow(s, "github");
+      await s.status("⊘ not indexed: hidden");
+      // A workflow, opened from its row: the vault's from then on, its row indexed.
+      await s.keys("l");
+      await explorerRow(s, "workflows");
+      await s.keys("l");
+      await explorerRow(s, "ci.yml");
+      await s.keys("enter");
+      await opened(s, ".github/workflows/ci.yml");
+      await s.until(() => markOf(s, "ci.yml") === "●", 3000, "ci.yml, indexed: ●");
+      // Hidden again: said, gone — but .github, which holds a file of the vault's now, as a reached one's folder is.
+      await explorerOpen(s);
+      await s.keys("shift+h");
+      await s.message("explorer: hidden files not shown");
+      await s.until(
+        () => rowEnd(s, ".vscode") === null && rowEnd(s, "docs") !== null && markOf(s, ".github") === "●",
+        3000,
+        ".vscode gone, .github the vault's: ●",
+      );
+    },
+  },
 ];
 
 // --- links ------------------------------------------------------------------------------------------------------

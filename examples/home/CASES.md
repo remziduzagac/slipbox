@@ -2757,6 +2757,8 @@ The same notes, one per tab.
 
 - `explorer.cycle` — Explorer: open, focus, close — `notes/projects/`, `notes/index.md` (command-specs.ts)
 - `explorer.reveal` — Reveal note in explorer — `notes/projects/`, `notes/index.md` (command-specs.ts)
+- `explorer.toggle_hidden` — Show or hide hidden files — `work/kestrel/.github/`, `work/kestrel/.env.example`
+  (command-specs.ts)
 
 ### outline
 

@@ -161,6 +161,7 @@ export class Settings {
     if (key === "theme") this.applyTheme();
     else if (key === "glyphs") this.app.glyphs = this.glyphSet(this.app.ui.glyphs);
     else if (key === "mouse") this.app.host.setMouse?.(this.app.ui.mouse);
+    else if (key === "hidden_files") this.app.explorer.invalidateTree();
     this.app.relayoutAll();
   }
 

@@ -629,8 +629,8 @@ What a worktree's links mean:
 In home, the git panel lists the worktree under kestrel, as one repository. `◆` marks a worktree with uncommitted
 files: work for you to review.
 
-When an agent keeps its worktree inside the repository, in `.claude/worktrees/`, it's a vault inside kestrel. The
-explorer doesn't list hidden folders, so going into it moves the view to the worktree itself.
+When an agent keeps its worktree inside the repository, in `.claude/worktrees/`, it's a vault inside kestrel. `.claude`
+is a hidden folder, so going into the worktree moves the explorer's view to the worktree itself.
 
 ### A notes vault inside a repository
 

@@ -255,9 +255,10 @@ export class Marks {
     if (row.leftOut) return { by: "left-out", reason: row.leftOut, at: row.leftOutAt ?? app.explorer.rowAbs(row) };
     if (row.outside) {
       const abs = app.explorer.rowAbs(row);
-      // In a folder the vault open's walk leaves out, a note reached by a link is indexed all the same (20.8).
+      // In a folder the vault open's walk leaves out, a note or file reached — by a link, or opened under a hidden
+      // folder — is indexed all the same (20.8).
       if (row.kind === "note" && isInside(app.loc.root, abs) && abs !== app.loc.root)
-        return app.graph.notes.has(relative(app.loc.root, abs).split(sep).join("/")) ? "indexed" : undefined;
+        return app.graph.known(relative(app.loc.root, abs).split(sep).join("/")) ? "indexed" : undefined;
       // Anywhere, a busy folder is never indexed.
       return f.busy ? { by: "busy", name: row.name, busy: f.busy } : undefined;
     }

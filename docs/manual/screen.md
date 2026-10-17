@@ -533,6 +533,7 @@ change it.
 | Code cells | `space u c` | the code view's cells in boxes, or on tinted bands |
 | Code blocks | (only in the list) | a code block too wide scrolls sideways, or wraps |
 | Scratch opens | (only in the list) | floating in the middle, or in the window on the right |
+| Hidden files in the explorer | `shift+h` in the explorer | lists the files and folders whose names start with `.` |
 
 How the theme, glyphs, wrapping, code blocks and URLs change a note is in [Reading](reading.md). Spelling and the
 scratch are in [Editing](editing.md). Problems and code cells are in [Code](code.md).

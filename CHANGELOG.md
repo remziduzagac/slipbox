@@ -6,6 +6,15 @@ The format is [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.1.0/); wh
 
 ## [Unreleased]
 
+### Added
+
+- Hidden files and folders in the explorer. `shift+h` there lists the files and folders whose names start with a dot,
+  such as `.github` and `.env`, and hides them again; `:hidden` and the UI settings (`space u u`) do the same, and
+  `files.hidden = true` lists them from the start, in your configuration or a vault's own. They are marked `⊘`, not
+  indexed, and the status line says `hidden` with the cursor on one. A hidden file you open from the explorer is
+  indexed from then on, as one opened by its path is, except in your home folder. `.git` is never listed, home's index
+  still leaves hidden folders out, and the switcher and search list only what's indexed.
+
 ## [0.4.0] - 2026-10-17
 
 ### Added
