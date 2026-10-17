@@ -58,6 +58,15 @@ the file's directory.
 
 ## D40: One walk for the index and the watcher (0.11, 2026-09-25)
 
+> **Partly superseded by VV-D6 (2026-10-14):** a symlink leading out of its vault, or out of home (any, in Elsewhere),
+> is followed once you say so, the answer kept in slipbox's state, never in the vault; one within is a second name,
+> never walked twice. "A symlinked directory is never followed" and "a symlinked file only inside the root" go.
+> design/roots.md § Links followed only when you say so.
+>
+> **Amended by VV-D2, VV-D8 (2026-10-14):** every vault's walk leaves out the busy folders (`build`, `target`, `vendor`,
+> `.venv`…), whatever `.gitignore` says, and the explorer lists them all the same; home's walk has a skip list in place
+> of `.gitignore`. The walk now: design/roots.md § The walk, § Home.
+>
 > **Detailed by D219 (2026-09-29, recorded 2026-10-11):** files a folder controls are read without blocking,
 > regular files only, small ones capped.
 >
@@ -285,6 +294,11 @@ state, not cache.
 
 ## D50: Following a link into another vault switches to it; the launcher (17.10, 17.14, 2026-09-30)
 
+> **Superseded by VV-D7, VV-D5 (2026-10-14):** following a link into another vault opens a peek — its file read in
+> place, read-only, going there a choice (`o`) — and never switches; the launcher is gone: started outside every vault,
+> nothing opens over the explorer, and `space v v` lists the named folders from anywhere. Going into another vault is a
+> choice: design/tui.md § Going into a vault, § The peek.
+>
 > **Amended by D79 (2026-10-05):** the launcher lists the named folders; picking one switches too.
 >
 > **Amended by D58 (2026-10-02):** `~` and `/` opened are listed a level at a time; a plain folder is opened as its
@@ -300,6 +314,9 @@ index everything under it.
 
 ## D51: A vault shows its own icon in the explorer (17.13, 2026-09-30)
 
+> **Amended by VV-D5, VV-D9 (2026-10-14):** the launcher is gone; a vault's row in the explorer keeps its icon, the
+> current vault's highlighted, and a repository's branch (a worktree's after `⎇`) is among the row's marks at its right.
+>
 > **Amended by D77 (2026-10-05):** any root nested in the open one is shown so, by the name pointers use; a
 > worktree by its branch (D54).
 
@@ -427,6 +444,11 @@ converter needs the resolution that `20.2` and `20.22` remove from reading.
 
 ## D58: A file's vault is its nearest `.slipbox/` or git checkout; no home vault (20.3, 20.22, 2026-10-02)
 
+> **Partly superseded by VV-D2, VV-D3 (2026-10-14):** there is a home again: `~` is a vault without a marker, its index
+> built with a skip list, in slices; a folder or file outside home and every vault is Elsewhere's, one place for the
+> machine with no index, never a plain folder walked and indexed as a vault. Vaults stay derived from what's on disk and
+> never managed, and nothing is written into a folder by opening it. "Vault" is the word users read again (VV-D1).
+>
 > **Amended by D79 (2026-10-05):** "vault" is no longer a word the user meets: a root, or a named folder.
 >
 > **Amended by D69 (2026-10-05):** `.obsidian/` and `.zk/` mark roots too, and the markers are configurable.
@@ -483,6 +505,10 @@ for agents in the CLI.
 
 ## D61: The index is a cache: on demand, in the background, shared by content (20.8–20.11, 2026-10-02)
 
+> **Amended by VV-D2, VV-D8 (2026-10-14):** home is a vault: the background index walks it first in each pass, a slice
+> at a time, keeps the walk and builds home's index from it, then indexes the vaults in it; a busy folder is never
+> walked, nor reached.
+>
 > **Clarified by D218 (2026-10-11):** the background index has no exclusions of its own and runs from the TUI;
 > the parse cache's key holds no settings.
 >
@@ -532,6 +558,9 @@ engine (`7.1`–`7.3`, D49, D52) on paths. Repairs now: design/links.md § Repai
 
 ## D64: Search ranks the current vault, then the linked ones (20.16, 2026-10-02)
 
+> **Amended by VV-D2, VV-D3, VV-D7 (2026-10-14):** home is searched as a vault; Elsewhere has no index, so no search,
+> said so; another vault's hit opens a peek.
+>
 > **Clarified by D214 (2026-10-11):** the widest scope is every root the machine knows, caught up on demand.
 >
 > **Amended by D79 (2026-10-05):** the first scope is `here`: the root, else the folder opened (`21.10`).
@@ -544,6 +573,10 @@ the vaults linked to or from it, under a divider, then everything indexed, only 
 
 ## D65: The status line names the vault and its branch; the explorer has roots (20.14, 20.15, 2026-10-02)
 
+> **Partly superseded by VV-D5 (2026-10-14):** the explorer is one tree, its view a part of it, a breadcrumb above it:
+> no roots beside the tree, none pinned, none added by following a link. The status line still names the vault and its
+> branch.
+>
 > **Amended by D77 (2026-10-05):** a root is shown by its name, else its path, else the folder opened.
 
 **Decision:** The status line shows the vault and its branch, `pathfinder · main`; a worktree, `pathfinder@refactor`
@@ -603,6 +636,9 @@ matters; no tool updates links after a move made outside it, and none links acro
 link between separate repositories works while the folders are laid out alike, and for no one when they aren't.
 
 ## D69: Roots come from markers (21.1, 2026-10-05)
+
+> **Partly superseded by VV-D2 (2026-10-14):** `$HOME` is a vault, home, without a marker, whatever it holds (never a
+> marked one); `/` still never is. Markers make vaults, as here, "root" read as vault (VV-D1).
 
 **Decision:** A root is the nearest folder above a file holding a marker: `.git`, `.slipbox/`, `.obsidian/` or
 `.zk/`, the list configurable in the user's own config (`root_markers`). `$HOME` and `/` never are. A root is never a
@@ -708,6 +744,9 @@ it, and the lookup finds it again.
 
 ## D76: Personal state by root's path, positions by file (21.8, 2026-10-05)
 
+> **Partly superseded by VV-D3 (2026-10-14):** outside home and every vault, state is Elsewhere's, one key (`elsewhere`)
+> for the machine, not the folder opened's; home's is kept by its path, as a vault's.
+
 **Decision:** Personal state (reading positions, sessions, the scratch, the trash, undo, moves seen) is kept in
 `$XDG_STATE_HOME/slipbox/`, keyed by path: positions by file; the rest by root, else by the folder opened. A named
 folder moved by hand takes its state along when the lookup sees it: the same remote or `.slipbox/` id at a new path,
@@ -724,6 +763,10 @@ back the same session, since both have the root `project/`; a worktree, another 
 name`) is the remedy.
 
 ## D77: The screen shows what the file says (21.9, 2026-10-05)
+
+> **Partly superseded by VV-D5 (2026-10-14):** the explorer shows what's opened as a view of one tree, a breadcrumb
+> above it, not the root of what's opened with a folder followed into beside it. Home is shown as `~` and no-vault as
+> `Elsewhere` (VV-D2, VV-D3).
 
 **Decision:** A wikilink is shown as one, a path as a path, a pointer as a pointer; rendered text shows a link's text,
 and a link without text its target as written. No form is invented for the screen. Files in lists (backlinks, search
@@ -749,6 +792,10 @@ break when a named folder moves; the relink offers their pointers.
 
 ## D79: Vaults stop being a concept: folders, not vaults (21.10, 21.12, 2026-10-05)
 
+> **Partly superseded by VV-D1, VV-D5 (2026-10-14):** "vault" is the word users read again, for every folder with a
+> marker, with home and Elsewhere beside them; root stays only in the names agents, scripts and configs rely on
+> (`--root`, the JSON's `root`, `[trust] roots`…). The launcher is gone. Named folders, pointers and the commands stand.
+
 **Decision:** The user meets folders, not vaults; "root" is a word of the design documents, and "named folder" of
 `slipbox://`'s. Gone (`21.12`, built 2026-10-06 and 07): vaults as a concept; collections and instances (D59),
 the `.slipbox/` id staying to tell copies apart; display names and the `vault:path` form (D60); the move question
@@ -763,6 +810,10 @@ docs/manual/cli.md.
 **Why:** Open any folder or file and work: no vault to make, name or manage.
 
 ## D80: A file's root is its nearest, however it is opened (21.1, 2026-10-06)
+
+> **Clarified by VV-D2 (2026-10-14):** `--root ~` opens home, a vault without a marker, and a file of a vault in it is
+> that vault's. VV-D2 names this entry among those whose "`$HOME` is never a root" it supersedes, but this entry never
+> said it (D69 did): it stands.
 
 **Decision:** `--root` says where to start and where a note's name is looked for; a root nested in it stays one, in
 the CLI as in the TUI. It supersedes D55's "`--root DIR`: `DIR`, exactly".
@@ -866,6 +917,10 @@ built: design/links.md § Renames and moves. Recorded on 2026-10-11 from the cod
 D86 lints it; a rename shouldn't write what the linter then flags.
 
 ## D218: The background index skips what the walk skips; the parse cache keys no settings (20.9, 20.11, 2026-10-11)
+
+> **Amended by VV-D2 (2026-10-14):** home's walk has a list of its own, a skip list in place of `.gitignore` (hidden and
+> system folders, `Downloads`, the busy folders, files not notes or text), and the background index leaves out what it
+> leaves out.
 
 **Decision:** The background index of the home folder has no list of exclusions of its own: it leaves out what the
 walk leaves out (D40). It runs from the TUI's idle check; a CLI call only marks the activity that pauses it. The

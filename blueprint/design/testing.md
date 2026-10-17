@@ -28,7 +28,7 @@ through OpenTUI itself, to prove the adapter and real key parsing.
 | `tests/release.test.ts` | previews and the Pages site: versions, tags, notes, the channel files, the workflows |
 | `tests/health.test.ts` | the health check (`scripts/health.ts`): the upkeep files, signals, the issue, its workflow |
 | `tests/check-docs.test.ts` | the docs' check on a repository of its own: a misspelling, a broken link, a long line |
-| `tests/docs.test.ts` | the user docs and the agent guide: links, anchors, every command, flag and key, no ID |
+| `tests/docs.test.ts` | the user docs and agent guide: links, anchors, commands, flags, keys; no ID; vault, not root |
 | `tests/site.test.ts` | the docs' site: pages gathered from the docs map, links rewritten, the home's cards (DS) |
 
 `tests/distribution.test.ts` builds a release for this machine and drives it as a user would: the packed binary
@@ -36,6 +36,10 @@ printing the skill, the release's notes, installed by the release's installer an
 `slipbox channel`, upgraded on either channel, removed; the bootstrap and the channel files are tested apart too, with
 fake `uname` and `ldd`, on any machine. `tests/check-docs.test.ts` holds the docs' check (`scripts/check-docs.ts`) to
 failing on a misspelling, a broken link or heading and a long line, and to reading only what git tracks.
+`tests/docs.test.ts` holds the user docs, the README, the skill and the messages slipbox prints (a string with a space
+in it) to vault for a vault, never root, plain folder or loose file, outside code and links' targets, past the names
+that keep the word ([roots.md](roots.md)); root's other meanings pass: the filesystem's root, running as root, a root
+cause, square roots (VV-D1).
 
 Later reviews keep their regression tests in `describe("review round N …")` or `describe("review cycle
 N …")` blocks in the file for the area: `tui.test.ts`, `core.test.ts`, `vault.test.ts`,
@@ -93,7 +97,7 @@ turned off with its reason); `bun run lint` fails on a warning, `bun run format`
 
 **Isolation.** Every test file points `XDG_STATE_HOME`, `XDG_CACHE_HOME`, `XDG_CONFIG_HOME` and
 `XDG_DATA_HOME` (tools installed) at its own temp directory and drops `SLIPBOX_CONFIG` (which would
-win over them), so a developer's config, editor, themes, session or list of roots never leak into
+win over them), so a developer's config, editor, themes, session or list of vaults never leak into
 a run; copies go to a file, never the clipboard (`SLIPBOX_CLIPBOARD=file`). TUI tests work on a
 temp copy of the fixture vault, so they can write, rename and delete notes. A test that finds a tool on `PATH` sets its
 own (`/usr/bin:/bin`): `bun run` puts the repository's `node_modules/.bin` first, markdownlint-cli2 among them, which
@@ -123,8 +127,8 @@ read `plan (v2).md` or `plan [x].md` as a pattern matching nothing, and passed, 
 | `cjk/日本語.md` | a Unicode file name linking out |
 | `attachments/diagram.png` | `![[diagram.png]]` resolved by name from anywhere |
 | `node_modules/`, `ignored/`, `*.skip.md` | always-skipped and `.gitignore`d paths |
-| `.hidden/`, `drafts/` | dot directories; `walk.exclude` from the root's config |
-| `nested-vault/` | a nested `.slipbox/` is a boundary, not part of this root |
+| `.hidden/`, `drafts/` | dot directories; `walk.exclude` from the vault's config |
+| `nested-vault/` | a nested `.slipbox/` is a boundary, not part of this vault |
 | `alias-link.md`, `outside-link.md`, `symlinked-dir` | symlinks: a duplicate (skipped), outside, directory |
 
 `tests/fixtures/.gitattributes` sets `-text` so CRLF and BOM bytes survive checkout.
@@ -139,15 +143,15 @@ screen, unbreakable tokens, lines over the limit, every link form, CJK, emoji an
 `about-this-vault.md` says what each note exercises; `scripts/sample-metrics.ts` measures it, so a
 change to a note can be checked against what it has to keep covering. The TUI tests copy its notes
 into a temporary fixture vault as `samples/` (without its marker, which would make it a nested
-root). The demo vault is named `halden` and holds two nested roots, `outreach/` and
+vault). The demo vault is named `halden` and holds two nested vaults, `outreach/` and
 `outreach/school-visits/`, linked every way across (its `about-this-vault.md`, "Nested vaults"): the
-material for trying nested roots by hand, and the e2e scenario "nested roots".
+material for trying nested vaults by hand, and the e2e scenario "nested roots".
 
 ## The reference set: `examples/home/`
 
 `examples/home/` is a developer's home folder — Sam Rivera's notes, work repositories and hobbies — written so that
 every feature is there in realistic use, each case in several variations and combinations. Its `README.md` sets the
-person, the cast, the timeline, the roots and the writing rules; `CASES.md` lists every case (from the commands, the
+person, the cast, the timeline, the vaults and the writing rules; `CASES.md` lists every case (from the commands, the
 tests, the design docs and the roadmap) and the files that cover it. Halden is its sibling (`../vault`), linked from it.
 
 **Built, not used in place.** A `.git` folder can't be committed inside this repository, so the mock repositories
@@ -177,10 +181,10 @@ bun run e2e find replace     # only the scenarios whose names contain these
 
 - **Isolated.** Each scenario gets a fresh copy of the demo vault — or the reference set built, its
   home folder as `$HOME` (`home`) — and its own config, state, cache and data directories (its own
-  list of roots). Nothing in the repo or in your own setup is touched, and a given pane that is
+  list of vaults). Nothing in the repo or in your own setup is touched, and a given pane that is
   running slipbox is refused rather than typed into. A scenario can put files beside the vault
-  (`beside`: another root, a plain folder), run the CLI before slipbox starts (`setup`: `init` that
-  root), and start slipbox another way: elsewhere (`startAt`), with no path (`startAt: null`), from
+  (`beside`: another vault, a folder outside every vault), run the CLI before slipbox starts (`setup`: `init`
+  that vault), and start slipbox another way: elsewhere (`startAt`), with no path (`startAt: null`), from
   a folder (`cwd`), with flags (`args`) or environment (`env`), or expecting it to fail (`noWait`).
 - **Waits, never sleeps.** Every check waits (up to a timeout) for the screen to agree: a row that
   contains something, the status line's mode, a message's floating box, a file on disk. Only a check
@@ -215,11 +219,11 @@ bun run e2e find replace     # only the scenarios whose names contain these
 | `tests/e2e/session.ts` | one scenario's slipbox, and the checks |
 | `tests/e2e/helpers.ts` | what scenarios share: the cursor's place, opening a note, leader keys |
 | `tests/e2e/scenarios.ts` | the app's own scenarios, by area, on halden |
-| `tests/e2e/world-git.ts` | the reference set's roots and real git: `$HOME`, markers, a worktree, a conflict |
+| `tests/e2e/world-git.ts` | the reference set's vaults and real git: `$HOME`, markers, a worktree, a conflict |
 | `tests/e2e/world-content.ts` | the set's content: every grammar, data, hostile text, wide characters, big files |
 | `tests/e2e/world-terminal.ts` | slipbox as a process: start-up forms, signals, restore, keys, pastes, colours |
 | `tests/e2e/world-outside.ts` | the world changing under it: the watcher, the CLI beside it, config, autosave |
-| `tests/e2e/world-links.ts` | links as `21.x` reads them: `/` from a root, no extension, folders, wikilinks |
+| `tests/e2e/world-links.ts` | links as `21.x` reads them: `/` from a vault's top, no extension, folders, wikilinks |
 | `tests/e2e/world-export.ts` | the export window: formats, the window's keys, replacing, notes in order, `:export` |
 | `tests/e2e/world-fixes.ts` | what writing the docs found, fixed (below) |
 | `tests/e2e/shots.ts` | the docs' screenshots (DF-D19): slipbox in a 120×34 pane, each screen brought about and read |

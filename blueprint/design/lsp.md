@@ -3,7 +3,7 @@
 slipbox is a client of the language servers of the code it opens (`19.x`), in the TUI and on the CLI (D161), and
 of linters with no server; their problems are the file's, as its own are (D167). It serves notes to no editor:
 editors' own markdown servers follow path links, a move made in an editor is repaired from the watcher, and agents
-use the CLI (D67). What a root you don't trust leaves out is [trust.md](trust.md).
+use the CLI (D67). What a vault you don't trust leaves out is [trust.md](trust.md).
 
 ## The client for code (`19.x`)
 
@@ -17,7 +17,7 @@ older text than the last sent is dropped. Its log and messages go to slipbox's; 
 action's command does) is made, through slipbox's own writes (`19.15`, `applyWorkspaceEdit`). Asked to ask again
 (`workspace/diagnostic/refresh`, which pyright sends), it asks about every open file; so it does, a moment later,
 when such a server says some work of its has ended (`$/progress`): rust-analyzer's first answer, before its workspace
-loads, is empty, and without `cargo check` (a root you don't trust) it asks nothing after. Anything else it's asked and
+loads, is empty, and without `cargo check` (a vault you don't trust) it asks nothing after. Anything else it's asked and
 doesn't know gets an empty answer, never an error — pyright crashed on that error, unhandled. Stopping it is
 `shutdown` then `exit`, then a kill; an exit that wasn't asked for, once it is running, is a crash, said with its last
 error line. One that exits before it answers `initialize`, or doesn't answer in 20 s, failed to start: said once, with
@@ -58,15 +58,15 @@ each config file's over the ones before it) all the way down, the rest replaced,
 type is dropped with a warning, and so is a known field spelled with underscores (`file_types`). A field slipbox doesn't
 read is kept without a warning, so a Helix section pastes in. A folder's config may tune a known server's `config` and a
 language's lists, never name slipbox's command for it: its `command`, `args`, `environment`, and any server slipbox
-doesn't know, are ignored with a warning. That `config` reaches the server in a root you trust — and some servers'
+doesn't know, are ignored with a warning. That `config` reaches the server in a vault you trust — and some servers'
 settings name programs (rust-analyzer's `check.overrideCommand`) — but not in one you don't ("Trust", below).
 
-**A project's `.vscode/settings.json`** (`19.20`, D165) answers its servers' settings too, in a root you trust, as
+**A project's `.vscode/settings.json`** (`19.20`, D165) answers its servers' settings too, in a vault you trust, as
 VS Code would: the nearest one at or above the server's project folder (short of `~`), read when the server starts,
 as VS Code reads it — comments and trailing commas allowed — its dotted keys nested
 (`"python.analysis.typeCheckingMode"` is `python.analysis.typeCheckingMode`, merged with a nested form beside it). It
 goes over the config's, as VS Code puts a workspace's settings over the user's: the defaults, then your config, then
-each enclosing root's `.slipbox/config.toml` and the root's own
+each enclosing vault's `.slipbox/config.toml` and the vault's own
 ([configuration.md](../../docs/manual/configuration.md)'s order), then the project's. VS Code's per-language overrides
 (`"[python]": {…}`) are left out. Changed, it counts from the server's next start.
 
@@ -77,20 +77,20 @@ are its settings: slipbox never restates them, so the editor, CI and slipbox agr
 its next — `tsconfig.json` before `package.json` before `.git` — as nvim's `root_markers` have it; never `~` or `/`;
 else the file's own folder.
 
-**Where its program is** (`19.4`, D162), in order: the path the user's config gives; the project's own, in a root you
+**Where its program is** (`19.4`, D162), in order: the path the user's config gives; the project's own, in a vault you
 trust (`node_modules/.bin`, `.venv/bin`, `venv/bin`, `vendor/bin`, from its folder up to its checkout's top); `PATH`;
 the places the user installs tools (Mason's `bin`, `~/.cargo/bin`, `~/go/bin`, `~/.local/bin`); slipbox's own installs.
 A program written for Node (`#!/usr/bin/env node`) runs on slipbox's own Bun — no Node needed — with no `bunfig.toml`
-and no `.env` (`--config=/dev/null --no-env-file`): it starts in its root, and Bun would otherwise run the root's
-preload and read its `.env`, whichever program it was, slipbox's own install too. A server whose program's name is
-common elsewhere is taken only from the project or slipbox's installs: a `tsc` on `PATH` may be an older TypeScript with
-no server. A server starts with your `PATH`, and Mason's `bin` after it when that folder exists and isn't on it already
-(D222, `serverPath`): a server finds its helpers on `PATH` — bash-language-server runs shellcheck only when it's there —
-and Mason installs them beside it. Mason's is one of your install folders, so it runs nothing a folder brings with it
-(D172); linters keep their own `PATH` (below).
+and no `.env` (`--config=/dev/null --no-env-file`): it starts in its project's folder, and Bun would otherwise run that
+folder's preload and read its `.env`, whichever program it was, slipbox's own install too. A server whose program's name
+is common elsewhere is taken only from the project or slipbox's installs: a `tsc` on `PATH` may be an older TypeScript
+with no server. A server starts with your `PATH`, and Mason's `bin` after it when that folder exists and isn't on it
+already (D222, `serverPath`): a server finds its helpers on `PATH` — bash-language-server runs shellcheck only when it's
+there — and Mason installs them beside it. Mason's is one of your install folders, so it runs nothing a folder brings
+with it (D172); linters keep their own `PATH` (below).
 
-**Trust** (`23.x`, D172–D177): what a root you don't trust leaves out, and how a root is trusted, is
-[trust.md](trust.md). For the servers, in a root you don't trust:
+**Trust** (`23.x`, D172–D177): what a vault you don't trust leaves out, and how a vault is trusted, is
+[trust.md](trust.md). For the servers, in a vault you don't trust:
 
 - **Safe modes** (D174): rust-analyzer without build scripts, proc macros or `cargo check` on save (in its settings and
   its `initialize` options); gopls with `GOTOOLCHAIN=local` and `CGO_ENABLED=0`; vtsls never switching to the project's
@@ -102,7 +102,7 @@ and Mason installs them beside it. Mason's is one of your install folders, so it
   under a markdownlint config that is code (`.cjs`, `.mjs`) or names code to load (`customRules`, `markdownItPlugins`,
   `outputFormatters`), said once.
 
-In a root you trust, each runs as it would anywhere else: its own defaults, the folder's settings, its own copy.
+In a vault you trust, each runs as it would anywhere else: its own defaults, the folder's settings, its own copy.
 
 **Installing** (`19.5`, `14.11`, `core/servers/install.ts`; D162, D202): a server published on npm and found nowhere is
 installed when a file first needs it — `[lsp] auto_install = false`, in your own config only (DF-D1), stops that — into
@@ -122,13 +122,13 @@ named in the config — the system is the user's.
 
 **The servers of open files** (`19.1`, `core/servers/manager.ts`; D161): one client per server and project, started when
 a file of its language in that project is first shown — installed first when it must be — and told about each such file
-as it opens, again 150 ms after typing pauses (never per key), and when it's saved; a file gone with a root switch or a
-rename is closed in it. Its diagnostics become the file's problems, in the bar, the marks and the status line
-([tui.md](tui.md) § Problems where they are; D167). A server that crashes is started again and told its files again; one
-that crashes more than three times in five minutes is left stopped, and said so, as is one whose program is gone (never
-installed then, but for an npm one with installing on). One that can't start, or doesn't answer `initialize`, never ran:
-it is said once and not started again. A server that's missing is said once: a native one to install yourself, an npm
-one when installing is off. Quitting kills them; `[lsp] enabled = false` runs none.
+as it opens, again 150 ms after typing pauses (never per key), and when it's saved; a file gone when the TUI goes into
+another vault, or with a rename, is closed in it. Its diagnostics become the file's problems, in the bar, the marks and
+the status line ([tui.md](tui.md) § Problems where they are; D167). A server that crashes is started again and told its
+files again; one that crashes more than three times in five minutes is left stopped, and said so, as is one whose
+program is gone (never installed then, but for an npm one with installing on). One that can't start, or doesn't answer
+`initialize`, never ran: it is said once and not started again. A server that's missing is said once: a native one to
+install yourself, an npm one when installing is off. Quitting kills them; `[lsp] enabled = false` runs none.
 
 **Several servers on one file** (`19.17`, D163): a file's main server and its add-ons all run, each doing its features —
 Helix's names: `diagnostics`, `hover`, `goto-definition`, `goto-type-definition`, `goto-implementation`,
@@ -146,7 +146,7 @@ a linter set up for efm pastes in — `[linter.<name>]` with `lint-command`, `li
 `lint-stdin`, `lint-source`, `lint-severity`, `lint-ignore-exit-code`, `root-markers`, `require-marker` — and a
 language's `linters` names its own. Each runs as efm runs it: through the shell, from the nearest folder holding one of
 its `root-markers` (with `require-marker`, only where there is one; else from the file's project), the project's own
-copy first in a root you trust (`node_modules/.bin`, `.venv/bin`, `venv/bin`, `vendor/bin` before `PATH`); its output
+copy first in a vault you trust (`node_modules/.bin`, `.venv/bin`, `venv/bin`, `vendor/bin` before `PATH`); its output
 and errors read together, each line by the first format matching it whole; and an exit of 0 is nothing found, unless
 `lint-ignore-exit-code`. A finding about another file is passed over; one about `-`, `stdin` or `<stdin>` is this
 file's. Built in, each only where the project has its config: **hadolint** for Dockerfiles (`.hadolint.yaml`) and
@@ -158,9 +158,9 @@ The errorformat read is the part linters use: `%f %l %c %v %e %k %t %n %m %r %p 
 `%*[^:]`, `%\s`, `%[…]`. Multi-line formats (`%A`, `%C`, `%Z`) and the file stack (`%D`, `%P`) aren't read: a
 linter whose formats need them says so when it would run.
 
-**Live checks** (`19.23`, 2026-10-07, Linux arm64), through `slipbox diagnostics` on a file with an error, in a root
+**Live checks** (`19.23`, 2026-10-07, Linux arm64), through `slipbox diagnostics` on a file with an error, in a vault
 you trust and one you don't: rust-analyzer, gopls, clangd, sourcekit-lsp, ruby-lsp, taplo, the Dockerfile and YAML
-servers, hadolint and yamllint each found what they should. rust-analyzer in a root you don't trust gave its own
+servers, hadolint and yamllint each found what they should. rust-analyzer in a vault you don't trust gave its own
 findings (a type mismatch, a syntax error) without running `build.rs`; trusted, `cargo check` ran it. Each server's
 own quirks, not slipbox's:
 

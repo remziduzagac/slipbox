@@ -1,9 +1,11 @@
 ---
-status: active
+status: consolidated
 created: "2026-10-14"
 ---
 
 # GIT: Reviewing, diffing and merging what an agent changed
+
+> Consolidated into its parent on 2026-10-17; its docs task is still open.
 
 slipbox's git, from reading a change to settling it. The git panel worked by mouse as by keys, with what the branch
 changed and the repository's worktrees in it. The working tree's changes walked one at a time, each kept, reverted or
@@ -22,3 +24,16 @@ accepted before any of it is built.
 
 Accepted by the user on 2026-10-14 and 2026-10-15, as talked through; rebased on VV (`../vaults-and-view/`), whose
 vaults it follows: GIT-D11.
+
+## Outcome
+
+Built as settled, in pull requests merged 2026-10-15 to 2026-10-17: changed words in every diff (GIT-T1, #82), the
+remote's commands and stash (GIT-T3, #83), a note's diff before and after and a code file's side by side (GIT-T4,
+GIT-T7, #94), the review, the merge screen, pulling and rebasing (GIT-T2, GIT-T5, GIT-T6, #96), and the git panel by
+mouse as by keys with its branches and worktrees, following the vault (GIT-T9, GIT-T10, #97). Consolidated on
+2026-10-17: the root's requirements (§ Git, § Non-goals), design/tui.md § Git and § Side panes, rendering.md § Diffs,
+trust.md's git, how-it-works.md's modules; notes under D139, D154, D156 and D158, which GIT-D4 supersedes. Where the code
+came out otherwise than the design here, the root says what the code does: the git panel's files diff in the diff
+window, not a peek; a branch opened up offers Open, Merge… and Remove…, no Review; `:merge-review` keeps `[git] base`;
+`ctrl+s` and `:w` don't save the merge screen (a gap, noted). GIT-T8's docs and screenshots are written apart, after
+this; its task stays open until they land.

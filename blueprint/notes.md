@@ -416,3 +416,32 @@ dates. Each says what was asked, decided, built and found, and cites the decisio
   user: "fix everything and have documentation website as herdsman on githubpages". Workstream DS: a Starlight site
   from `docs/`, a front door, every page in plain sentences (the reference chapters still by hand); greenrepo's DOC-06
   met on the way.
+
+## Vaults, the explorer's view, and git review (2026-10-14 to 2026-10-17)
+
+- After code blocks learned to scroll sideways (D233), the user asked what slipbox's git is missing, and whether the new
+  drawing could show diffs and help merging: drafted as the workstream GIT ([its
+  notes](workstreams/archive/git-review/notes.md)). Looking at the git panel, the user found the explorer's roots
+  confusing and asked to settle the concepts first: the workstream VV ([its
+  notes](workstreams/archive/vaults-and-view/notes.md)), its model worked out in conversation on 2026-10-14
+  (VV-D1–VV-D10) and accepted on 2026-10-15; GIT was rebased on it (GIT-D11) and took the user's answers (GIT-D12,
+  GIT-D13).
+- The big files were split first (D235). Then agents built both in worktrees, a pull request a part: VV's words, view,
+  peek, home, marks, Elsewhere and links (#81, #86, #88, #89, #95, #93); GIT's changed words, remote, before and after
+  with side by side, review with the merge screen and rebasing (#82, #83, #94, #96); the git panel for both (#97).
+- Consolidated 2026-10-17: requirements.md § Vaults and links, § Navigating and search, § Git, § Non-goals and `7.5`;
+  design/roots.md rewritten in vaults' terms; tui.md § Going into a vault, § The peek, § Side panes, § Git; trust.md
+  § Links you follow; rendering.md § Diffs; terms.md, how-it-works.md and testing.md; "root" read as vault in every
+  design file; notes under D40, D50, D51, D58, D61, D64, D65, D69, D76, D77, D79, D80, D139, D142, D154, D156, D158,
+  D218 and D220; the renamed terms and sections in decisions/README.md; both workstreams archived, their docs tasks
+  (VV-T9, GIT-T8) still being written. Every claim of the workstreams' design was checked against the code on `main`
+  first; where they had come apart, the root says what the code does, with the gap in a "Not done" note.
+- **Open, for the user:** the questions in ideas.md § Roots and vaults (the busy folders' names in a notes vault, vaults
+  in hidden or busy-named folders, un-following a link, a link not followed statted on the main thread, a folder link
+  going in from a peek, a peek's cost and stale backlinks, the git panel's files in a peek, asking git again on the
+  terminal's focus) and § Git (a first-run setup screen, key tables for the floating windows). And what the check
+  found in the code: `ctrl+s` and `:w` don't save the merge screen, which says it does (`tui/mergescreen.ts`); the
+  description of `peek.go` says a file outside every vault opens beside the vault, where `o` goes into Elsewhere
+  (`core/command-specs.ts`); VV-D9 gives a disk that doesn't answer `⚠`, the code `⊘` and `not answering`; and code
+  comments still name the removed `space g` keys (`tui/git.ts`, `tui/githistory.ts`, `core/gitbranches.ts`) and the
+  sections renamed (`core/registry.ts`, `core/names.ts`).

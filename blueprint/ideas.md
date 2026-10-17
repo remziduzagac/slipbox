@@ -76,7 +76,8 @@ idea without an outcome is still open. Nothing here is agreed: the decisions are
   comes back as its next message, as plannotator-tui's draft skill has it. (2026-10-14)
 - Annotations that leave the document alone: a selection marked as a comment, an approval or a rejection, kept outside
   the file and sent numbered with its lines, as plannotator-tui does. To weigh against the scratch's At and Note
-  entries, which are a note of their own. (2026-10-14)
+  entries, which are a note of their own. (2026-10-14) Not chosen for reviewing a change (GIT-D3): its notes go to the
+  scratch, sent in one key.
 
 ## Capture
 
@@ -151,6 +152,32 @@ idea without an outcome is still open. Nothing here is agreed: the decisions are
   (D43).
 - A folder-name stand-in for a vault's name; state keyed by path; a second kind of root. (2026-09-30) Not chosen
   (D44); state by path chosen later (D76), a folder's own name never (D74).
+- "Workspace" or "project" for the folders slipbox works in, rather than vault: VS Code's users know a workspace as a
+  window's set of folders, and a project reads as code. (2026-10-14) Not chosen (VV-D1).
+- Several trees in the explorer at once, or a workspace of several vaults open together; or always the whole home
+  tree. (2026-10-14) Not chosen (VV-D5): two trees becoming one confused; the whole home tree is noisy and deep, and the
+  view reaches it by zooming out.
+- Busy folders left out by name only where they're a tool's: `build`, `vendor`, `target`, `dist` or `cache` in an
+  Obsidian vault or a `.slipbox/` folder are as likely a person's notes, and today they're never indexed there, nor
+  can a setting bring one back (design/roots.md § The walk). By the vault's kind, by what the folder holds, or a
+  setting. (2026-10-17) Open.
+- A vault whose own folder is hidden or has a busy folder's name (`~/.dotfiles`, a repository cloned into `vendor/`)
+  is never found by the background index, nor indexed as a vault nested in another: the skip list and the busy
+  folders are checked before the markers. (2026-10-17) Open.
+- Un-following a link: a followed link's answer is kept until the link leads elsewhere, with no command, menu or CLI
+  to take it back; and a "no" kept asks again at every open, as no answer does. (2026-10-17) Open.
+- A link not followed still has its target statted on the main thread, by the walk, Elsewhere's listing and the
+  explorer: a mount that hangs behind it can hold them up; only followed links are probed off the thread.
+  (2026-10-17) Open.
+- A folder link out of the vault goes into the vault holding it, from a peek too: looking moves you there, where
+  VV-D7 says it never does. Peek at a folder, or ask. (2026-10-17) Open.
+- A peek's cost and freshness: the first peek into a vault builds its graph on the main thread, and a backlinks list
+  parses the notes changed since its index; the other vault's graph and its backlinks are kept, unwatched, until
+  going into another vault. Built in the background, watched, or asked again on each peek. (2026-10-17) Open.
+- The git panel's files of another checkout or branch shown in a peek, as VV-D7 and VV-D10 had them; they open in the
+  diff window. (2026-10-17) Open.
+- The git panel asking git again when the terminal gets the focus back (VV-D10): it asks when the panel is shown.
+  (2026-10-17) Open.
 
 ## Storage and state
 
@@ -215,7 +242,8 @@ idea without an outcome is still open. Nothing here is agreed: the decisions are
   (`19.14`).
 - Recent files and favourites, as `recent-files-obsidian`. (2026-09-25) Recency built, in the quick switcher (`3.8`);
   favourites open.
-- Fast browsing through breadcrumb dropdowns, as `quick-explorer`. (2026-09-25)
+- Fast browsing through breadcrumb dropdowns, as `quick-explorer`. (2026-09-25) The explorer's breadcrumb is built,
+  a click on a folder zooming the view there (VV-D5); no dropdowns. (2026-10-17)
 - A hierarchical parent, child and sibling structure beyond flat links, as `breadcrumbs`. (2026-09-25)
 
 ## Search
@@ -353,8 +381,22 @@ idea without an outcome is still open. Nothing here is agreed: the decisions are
   marked in the explorer; a note diffed against `HEAD` (OpenTUI ships a `Diff` component). (2026-09-25) Chosen (D154).
 - Per-note history. (2026-09-25) Built (`22.1`).
 - "What changed since I last looked": the review loop for agent-written notes, with watch mode and the `streaming`
-  prop. (2026-09-25)
+  prop. (2026-09-25) The working tree's changes reviewed a hunk at a time are built (GIT-D3); "since I last looked" is
+  still open. (2026-10-17)
 - Take a branch switch's files for moves. (2026-10-01) Not chosen (D153).
+- A diff drawn by OpenTUI's `Diff` component; a note's diff as reading lays the note out, its changes marked in place
+  (GIT's first draft, which the user found would be confused with the note); a diff by character. (2026-10-14) Not
+  chosen (GIT-D2): slipbox draws its own rows, a note's before and after, by word.
+- A three-pane merge screen, base, yours and theirs side by side above the result. (2026-10-14) Not chosen (GIT-D5):
+  too narrow beside an agent; the cards hold the same, a conflict at a time.
+- Side by side for notes. (2026-10-14) Not chosen (GIT-D7): before and after shows a note's change where it is.
+- A Worktrees section of its own in the git panel, the other branches in a picker. (2026-10-14) Not chosen (GIT-D9):
+  one list of branches, a worktree marked on its branch.
+- A fetch in the background; a git client's whole range (interactive rebase, cherry-pick, submodules, remotes, a
+  commit graph, a forge's pull requests). (2026-10-14) Not chosen (GIT-D4, GIT-D1).
+- A first-run screen choosing such options as where a new worktree goes (GIT-D13). (2026-10-15) Open.
+- Tables for the diff window's, the review's, the merge screen's and the peek's own keys, as `[keys.git]` is the git
+  panel's: their commands are bound in `[keys]` only. (2026-10-17) Open.
 - Measure a branch's changes against the base branch's tip. (2026-10-01) Not chosen (D154).
 - The changes marked in the scrollbar's track as well as the gutter, as ttt added (#895): where a file's changes are,
   at a glance. Not chosen with the signs (D225), as instead of them; raised again beside them. (2026-10-14)

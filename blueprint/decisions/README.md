@@ -29,7 +29,9 @@ dated notes later decisions left under it. Requirements and design say what hold
 - **New root decisions** take the next number and go at the end of the file of their theme; a new theme gets a new
   file, added above. Since the initial design was settled (D210), a change to requirements or design is decided
   inside its workstream, numbered with the workstream's key (`WG-D1`); root decisions are for what belongs to no
-  workstream.
+  workstream. A workstream's decisions stay in its `decisions.md` once it is consolidated and archived
+  (`workstreams/archive/vaults-and-view/decisions.md` holds VV-D1 onward), and a note under each root entry one of them
+  changed names it.
 - **Where they came from.** These entries were converted on 2026-10-11 from `docs/idea.md`, `docs/plan.md`,
   `docs/handoff.md` and `docs/design/decisions.md` (D210), keeping their wording where it moved. Their dates are the
   sources' own; where a source gave none, the date of the commit that recorded the decision.
@@ -38,21 +40,37 @@ dated notes later decisions left under it. Requirements and design say what hold
 
 Older entries use the words of their day. Read them as:
 
-- **vault** → a **root** (the nearest folder holding `.git`, `.slipbox/`, `.obsidian/` or `.zk/`: D69) or a **named
-  folder** (one a pointer names: D74). Until 2026-10-02 a vault was a folder with `.slipbox/` (D38, D42); from
-  2026-10-02 to 2026-10-05 a virtual vault was the nearest `.slipbox/` or git checkout (D58). Vaults stopped being a
-  concept on 2026-10-05 (D79).
-- **home vault**, **single-file mode** → gone; a **plain folder** stands in (D58).
+- **root**, **root marker**, **trusted root**, in the entries from 2026-10-05 to 2026-10-14 (D69, D79 and those
+  between) → a **vault**, a **vault marker**, a **trusted vault** (VV-D1): the nearest folder holding `.git`,
+  `.slipbox/`, `.obsidian/` or `.zk/`. The word stays only in the names agents, scripts and configs depend on
+  (design/roots.md).
+- **vault**, in the entries before 2026-10-05 → a vault much as now, its boundary as it was then: until 2026-10-02 a
+  folder with `.slipbox/` (D38, D42); from 2026-10-02 to 2026-10-05 a virtual vault, the nearest `.slipbox/` or git
+  checkout (D58). From 2026-10-05 to 2026-10-14 vaults were no word the user met, a **root** or a **named folder**
+  (D74, D79); since 2026-10-14 vault is the word again, for every folder with a marker, home and Elsewhere beside them
+  (VV-D1–VV-D3).
+- **home vault**, **single-file mode** → gone (D58); since 2026-10-14, **home**, `~`, a vault without a marker
+  (VV-D2), and **Elsewhere**, the rest of the file system (VV-D3).
+- **plain folder**, **loose file** (D58, D76) → Elsewhere's folder and file, or home for `~` (VV-D2, VV-D3).
+- **the launcher** (D50, D79) → gone; `space v v` lists the named folders from anywhere (VV-D5).
+- **the explorer's roots**, **pinned roots**, `:pin-root` (D65, D77) → gone; the explorer's view holds them (VV-D5).
 - **`[[vault:note]]`**, **`vault:path`** → a **pointer**, `slipbox://name/path` (D75), in files; a path on screen
   (D77).
 - **collection**, **instance** → gone; a named folder has **copies** (D74).
-- **scope** (D55, never built) → the root.
+- **scope** (D55, never built) → the vault.
 - **`slipbox vaults`** → `slipbox folders`; **`rename-vault`** → `slipbox name`; **`--scope vault`** →
   `--scope here` (D79).
 - **the LSP face**, `slipbox lsp` → removed (D67); the language-server **client** for code stays (D161).
 - **Scout** → **trailscout**, its own project (D124).
 - **the plan**, a **decide item**, a **constraint item** → the roadmap and its step IDs; a decide item's answer is a
   decision here, a constraint item is in requirements.md § Constraints.
-- Still named "vault" in code and config: `core/vault.ts`, the `[vault]` identity table in `.slipbox/config.toml`,
-  command ids such as `vault.init`; the colour role `sidebar_vault` is `sidebar_root` now, the old name still read
-  (DF-D22).
+- **`space g c`**, **`d`**, **`w`**, **`m`** (D154) → `:changes`, `:diff`, `:worktrees`, `:merge-review`; **`space g
+  s`** → the git panel, `space g`; **`space g o`**, **`b`**, **`h`**, **`p`**, **`r`** (D156) → the palette's Branches,
+  Who changed this line, This file's history, Preview the change, Undo the change (GIT-D12).
+- **Design sections renamed with the word** (2026-10-17), cited by older entries: design/roots.md § Roots and markers
+  → § Vaults and markers, § Plain folders and loose files → § Home and § Elsewhere, § How a root is named and shown →
+  § How a vault is named and shown, § State by root → § State by vault; design/tui.md § Switching roots → § Going into
+  a vault; design/trust.md § In a root you don't trust → § In a vault you don't trust, § Trusting a root → § Trusting a
+  vault. design/roots.md keeps its file's name.
+- The code says vault (`core/vault.ts`, the `[vault]` identity table in `.slipbox/config.toml`, command ids such as
+  `vault.init`); the colour role `sidebar_vault` is `sidebar_root` now, the old name still read (DF-D22).
