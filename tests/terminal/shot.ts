@@ -1,6 +1,11 @@
 // A docs' screenshot (docs/images/<name>.png): what it starts on, the keys that bring its screen about, and the
 // pictures on it. Each doc's shots are a file of their own in tests/terminal/shots/, named after the doc and exporting
 // `SHOTS`; `bun run shots` takes every file's (tests/terminal/shots.ts). What they share is here.
+//
+// To add one: put it in its doc's file (a new doc: a new file, as the others are), named after the doc
+// (`vaults-home`); take it, `bun run shots vaults-home`, and look at the PNG; then show it in the doc,
+// `![what it shows](../images/vaults-home.png)`. tests/docs.test.ts fails while a picture has no shot, or a shot's
+// picture is in no doc.
 
 import { cpSync, readdirSync } from "node:fs";
 import { join } from "node:path";

@@ -38,7 +38,7 @@ if (!chosen.length) {
   process.exit(2);
 }
 
-/** One shot taken and written: null, or why it failed, with the screen as it was. */
+/** One shot taken and written: why it failed (the screen as it was) or null, and the characters no font draws. */
 async function take(shot: Shot): Promise<{ error: string | null; lacking: string[] }> {
   const s = new Session({
     ...shot.options,
