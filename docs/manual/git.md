@@ -415,12 +415,16 @@ haven't.
 | `e` | Puts the result in the file, and opens it in the lens at this conflict, to settle by hand |
 | `a` | Asks for a note, and adds the conflict to the scratch for the agent, with its base and the lines around it |
 | `n` / `p` | Goes to the next / previous conflict |
-| `w` | Saves the file, once every conflict is settled |
+| `w` | Saves the file, once every conflict is settled. `ctrl+s` and `:w` do the same |
 | `s` | Stages the saved file, which tells git it's resolved |
 | `esc` | Closes the screen. What you settled stays, as long as the file doesn't change |
 
 After you settle a conflict, the screen moves on to the next one you haven't. Once you've staged a file, the next file
 in conflict opens.
+
+The file can change while the screen is open, when an agent writes it. Then `w` doesn't write over it: the screen says
+so, and `x` reads the file again. `s` reads the file before staging it, and doesn't stage one that changed since you
+saved it, or that still has conflict markers.
 
 The base comes from git. Where git wrote the conflict with its base (`merge.conflictStyle` set to `diff3` or `zdiff3`),
 it's that. Otherwise it's the version git keeps of the file while the merge is under way. Where git doesn't have it,

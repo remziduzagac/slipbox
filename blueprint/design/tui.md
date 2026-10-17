@@ -2110,7 +2110,8 @@ before put it (else wherever it is), each mapped back onto stage 1 through that 
 inside a change widened to the whole of it), the two ranges joined. Line endings and a byte order mark aren't compared,
 finding a side or diffing it against the base: the index holds LF where a checkout (`eol=crlf`) has CRLF. Where neither
 has it (the stages gone), there's no base. A file in conflict with no marker (one side deleted it) is said, with `s` in
-the git panel to mark it resolved. `enter` on a conflicted file in the panel shows its diff, not the screen.
+the git panel to mark it resolved — its buffer unsaved, `:w` first, as `s` stages the file on disk. `enter` on a
+conflicted file in the panel shows its diff, not the screen.
 
 The screen, in the floating window as tall as a peek's, a conflict at a time: its number, its line in the result and
 how it's settled; the keys; while a rebase is under way, that yours is what's rebased onto and theirs the commit
@@ -2130,11 +2131,15 @@ marked, two lines around it, under a head naming it and how it's settled, the st
   file, three lines around it, the base between the sides as diff3 writes it; a note left empty is "a merge conflict:
   settle it, keeping what each side meant".
 - `n`, `p` (`git.merge_next`, `_prev`) move between conflicts.
-- `w` (`git.merge_save`) once every conflict is settled: the result into the buffer as one edit, saved through
-  `App.writeBuffer`; refused, said, while one isn't, or when the buffer changed since the screen read it; a save
-  refused leaves the result in the buffer, unsaved.
-- `s` (`git.merge_stage`) once saved: `git add` the file, which marks it resolved; the next file in conflict opens,
-  else what comes next is said (`shift+r` continues the rebase, or concludes the merge).
+- `w` (`git.merge_save`), and `ctrl+s` and `:w` there (`note.save` sends them to it, as the commit editor's), once
+  every conflict is settled: the result into the buffer as one edit, saved through `App.writeBuffer`; refused, said,
+  while one isn't, or when the buffer changed since the screen read it. A save refused (the file changed on disk) puts
+  the buffer back as the screen read it, so nothing's in it the screen doesn't show, and says `x` reads the file again;
+  the conflict prompt's merge (below) leaves the result in the note, unsaved, its prompt saying how.
+- `s` (`git.merge_stage`) once saved: the file read again first — one changed since it was saved, or with markers
+  still in it (a side's own lines can hold them), isn't staged, said — then `git add` the file, which marks it
+  resolved; the next file in conflict opens, else what comes next is said (`shift+r` continues the rebase, or
+  concludes the merge).
 - `esc` closes it; what's settled is kept for the file while its text is the same, and opening it again brings it back.
 
 The conflict prompt's (M)erge (`5.5`), where its three-way merge leaves a conflict, opens the same screen on the note's
@@ -2142,9 +2147,7 @@ text as loaded (the base), as typed (yours) and on disk (theirs) (`fromMerge`, f
 built on): `w` puts the result in the note, measured against the text on disk from then on (`NoteBuffer.rebase`), and
 saves it; `esc` goes back to the prompt; `s` is git's alone. A merge with no conflict is applied as before, unsaved.
 
-Not done: `ctrl+s` and `:w` don't save the merge screen as `w` does: they run `note.save`, which finds the screen's
-buffer unchanged and says it has no changes to save. The diff window's, the review's, the merge screen's and the
-peek's keymaps have no table in the config (`[keys.git]` is the git panel's): their commands are bound in `[keys]`
+Not done: the diff window's, the review's, the merge screen's and the peek's keymaps have no table in the config (`[keys.git]` is the git panel's): their commands are bound in `[keys]`
 only, as the reference set's full config does for `git.diff_view`.
 
 **Settings** (the manual's configuration chapter lists them with the rest): `[git] base`, `[git] bases` (default

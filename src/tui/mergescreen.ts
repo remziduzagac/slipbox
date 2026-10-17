@@ -18,10 +18,12 @@ import {
   conflictsOf,
   fromMerge,
   markersOf,
+  parseConflicts,
   readConflicts,
   resultText,
   resultView,
 } from "../core/conflicts.ts";
+import { readText } from "../core/fsutil.ts";
 import { inCheckout, inVault, showAt } from "../core/gitops.ts";
 import { operationOf } from "../core/gitrebase.ts";
 import { sections, stageFile } from "../core/gitstage.ts";
@@ -100,9 +102,12 @@ export function openMergeScreen(app: App, rel?: string): void {
   if (!conflictsOf(file).length)
     return app.message(
       "info",
-      conflicted.includes(target)
-        ? `no conflict marker left in ${target}: s in source control stages it, marking it resolved`
-        : `${target} has no conflict to settle`,
+      !conflicted.includes(target)
+        ? `${target} has no conflict to settle`
+        : buf.dirty
+          ? // `s` stages the file on disk: what's typed here isn't in it yet.
+            `no conflict marker left in ${target}, unsaved: :w saves it, then s in source control stages it`
+          : `no conflict marker left in ${target}: s in source control stages it, marking it resolved`,
     );
   show(app, {
     rel: target,
@@ -223,7 +228,7 @@ function show(app: App, m: MergeState): void {
   const { language, tabWidth } = diffLanguage(app, path, m.read);
   const buf = new NoteBuffer(null, `merge:${m.rel}`, `merge:${m.rel}`);
   buf.kind = { group: "text", format: "text" };
-  // `:w` and ctrl+s save the result, as `w` does.
+  // `w` and, through `note.save`, `:w` and ctrl+s: the file saved as settled.
   buf.virtual = { save: () => mergeSave(app) };
   buf.readOnly = "the merge screen is read-only: o, t and b settle a conflict, e edits it in the lens";
   let made: { key: string; layout: Layout } | null = null;
@@ -366,9 +371,24 @@ export function mergeSave(app: App): boolean {
   }
   const buf = target(app, m);
   if (!buf) return false;
+  const before = { text: buf.source, markers: buf.markers };
   put(app, m, buf);
   if (!app.saving.save(buf, true)) {
-    app.message("warn", `${m.rel}: not saved — it changed on disk meanwhile; :w in it says how`);
+    if (m.prompt) {
+      app.message("warn", `${m.rel}: not saved — it changed on disk meanwhile; :w in it says how`);
+      return false;
+    }
+    // Refused: the file as the screen read it again, so the screen, `w` and `x` go on from there — nothing in the
+    // buffer that the screen doesn't show.
+    buf.edit(0, buf.source.length, before.text);
+    buf.markers = before.markers;
+    for (const v of app.allViews()) if (v.buf === buf) v.layoutKey = "";
+    app.message(
+      "warn",
+      buf.changedOnDisk()
+        ? `${m.rel}: not saved — it changed on disk since the merge screen read it; x reads it again`
+        : `${m.rel}: not saved`,
+    );
     return false;
   }
   m.read = buf.source;
@@ -383,6 +403,15 @@ export function mergeSave(app: App): boolean {
   return true;
 }
 
+/** A file's text on disk, as a buffer reads it; null when it can't be read. */
+function onDisk(abs: string): string | null {
+  try {
+    return readText(abs).text;
+  } catch {
+    return null;
+  }
+}
+
 /** `s`: the saved file staged — git told it's resolved — and the next file in conflict opened, if there's one. */
 export function mergeStage(app: App): void {
   const m = current(app, "s", "stages the file");
@@ -393,6 +422,16 @@ export function mergeStage(app: App): void {
       "info",
       m.choices.some((c) => !c) ? "settle every conflict, then w saves it" : "w saves it first",
     );
+  // The file read again: one changed since it was saved (an agent, a terminal), or with markers still in it, isn't
+  // marked resolved.
+  const disk = onDisk(join(app.loc.root, m.rel));
+  if (disk !== m.read) {
+    m.saved = false;
+    show(app, m);
+    return app.message("warn", `${m.rel} changed since it was saved — x reads it again`);
+  }
+  if (conflictsOf(parseConflicts(disk)).length)
+    return app.message("warn", `${m.rel} still has conflict markers: not staged — e edits them by hand`);
   const c = app.git.checkout!;
   const why = stageFile(c, m.path);
   if (why) return app.message("warn", `git: ${why}`);
