@@ -23,18 +23,22 @@ The format is [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.1.0/); wh
 - [Vaults, home and Elsewhere](docs/guides/vaults.md), a guide to the folders slipbox works in: what makes a folder a
   vault and how slipbox finds it, home and Elsewhere, going from one vault into another, the explorer's view, the
   peek, and symlinks followed only when you say so, with four worked examples drawn out.
-- Diffs mark the words that changed inside a changed line. A diff (`space g d`, a file's from `space g c`, a commit's
-  to now, the conflict prompt's) opens in a floating window, its lines highlighted by the file's language, removed and
-  added lines tinted and the changed words more strongly. The unchanged lines between changes fold to a row saying how
-  many, which `enter` opens. A line too long scrolls sideways as a code block does, never cut with `…`. Two new
-  colours, `diff_add_word` and `diff_del_word`, mark the words.
+- [The lens](docs/guides/lens.md), a guide with pictures and examples: what the lens is, when to use it rather than
+  source mode, how it opens and grows, typing in it, and its keys. [Code and git](docs/guides/code-and-git.md) now
+  walks through reviewing an agent's change from start to end: its diff, each change kept, reverted or sent back, a
+  rebase, a conflict on the merge screen, the merge, and pulling and pushing.
+- Diffs mark the words that changed inside a changed line. A diff (`:diff`, a file's from the git panel or `:changes`, a
+  commit's to now, the conflict prompt's) opens in a floating window, its lines highlighted by the file's language,
+  removed and added lines tinted and the changed words more strongly. The unchanged lines between changes fold to a
+  row saying how many, which `enter` opens. A line too long scrolls sideways as a code block does, never cut with `…`.
+  Two new colours, `diff_add_word` and `diff_del_word`, mark the words.
 - A note's diff shows each changed block before and after: a paragraph, a heading, a list item or a table's row in one
   frame as it was and another as it is, lightly formatted, the words removed and added marked. A block added or
   removed whole is shown once. `tab` in the diff switches to its lines, and `git.diff = "source"` opens it that way.
 - A code file's diff shows its two versions side by side where the window gives each 80 columns, both sides scrolling
   sideways together; `git.diff_layout` chooses `auto`, `unified` or `split`. In the code view, `space k d` folds the
   cells that didn't change, so the file reads as which definitions did.
-- Fetch, pull (fast-forward only) and push, and the stashes: `f`, `p`, `shift+p` and `z` in source control, or
+- Fetch, pull and push, and the stashes: `f`, `p`, `shift+p` and `z` in source control, or
   `:fetch`, `:pull`, `:push` and `:stash`. Each runs in the background when you ask, never on its own. A branch with
   no upstream is asked whether to push to `origin` and track it there. git never waits for a password: a remote that
   needs a login fails at once, in git's words. The status line shows how far the branch is ahead of its upstream and

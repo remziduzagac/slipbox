@@ -73,7 +73,7 @@ note stays rendered. `i` opens the lens, and `i` again starts typing. `esc` step
 
 Source mode is the other way to edit: `ctrl+k` shows the whole note as Markdown.
 
-[Editing](editing.md#source-mode-and-the-lens)
+[The lens](../guides/lens.md), [Editing](editing.md#source-mode-and-the-lens)
 
 ## The leader key
 

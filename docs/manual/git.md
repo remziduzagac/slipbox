@@ -269,14 +269,15 @@ say so.
 ## Reviewing a change
 
 When an agent has changed files, you can go through what it did one change at a time. You keep each change, revert it,
-or send it back to the agent with a note.
+or send it back to the agent with a note. [Code and git](../guides/code-and-git.md#review-an-agents-change) walks
+through one review, from the git panel to the merge.
 
 Press `v` in the git panel, or click Review, or run `:review`. The review walks every change in the working tree that
-isn't staged yet, file by file, in the order the panel lists them. A file git doesn't track yet counts as one change,
-all of it added. Each change shows in a floating window as a diff, with a few of the file's lines around it. It's drawn
-as every diff is ([How a diff is drawn](#how-a-diff-is-drawn)): a note's change as its paragraphs before and after, the
-words that changed marked; a code file's as its lines, side by side when the window is wide. Above the diff are the
-file, where the change is (`line 12 · change 2 of 3 here, 5 of 9 in all`), and the keys:
+isn't staged yet, file by file, in the order of their paths, untracked files among them. A file git doesn't track yet
+counts as one change, all of it added. Each change shows in a floating window as a diff, with a few of the file's
+lines around it. It's drawn as every diff is ([How a diff is drawn](#how-a-diff-is-drawn)): a note's change as its
+paragraphs before and after, the words that changed marked; a code file's as its lines, side by side when the window is
+wide. Above the diff are the file, where the change is (`line 12 · change 2 of 3 here, 5 of 9 in all`), and the keys:
 
 | Key | What it does |
 | --- | --- |
