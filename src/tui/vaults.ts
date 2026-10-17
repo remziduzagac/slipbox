@@ -6,6 +6,7 @@ import { dirname, isAbsolute, join, posix, relative } from "node:path";
 import { writeDirty } from "../core/stale.ts";
 import { loadConfig } from "../core/config.ts";
 import { Graph } from "../core/graph.ts";
+import { leftOutOfHome } from "../core/home.ts";
 import { lintCommand } from "../core/lint.ts";
 import { slipboxOwn } from "../core/paths.ts";
 import { type Anchor, type CursorAnchor, loadSession, PositionStore } from "../core/position.ts";
@@ -50,8 +51,29 @@ import { type ExplorerItem, listedDown, type TreeRow } from "./explorer.ts";
 export class Vaults {
   constructor(readonly app: App) {}
 
-  /** Where the TUI was before each switch into another vault: `back` returns there (17.10). */
-  trail: { root: string; path: string; anchor: Anchor; cursor: CursorAnchor }[] = [];
+  /** Where the TUI was before each switch into another vault: `back` returns there (17.10) — to the folder of home it
+   *  had open by name (VV-D2), when it had one. */
+  trail: { root: string; path: string; anchor: Anchor; cursor: CursorAnchor; folder?: string }[] = [];
+
+  /**
+   * What's asked for, entering the vault open (VV-D2) — the one way in, from the start or a switch, a folder revealed
+   * alike: a folder of home, by name (`folder`) or a file's (`open`; both absolute), its notes there at once
+   * (`Graph.askFolder`). The one named is `app.homeFolder`, home's path for it: its own tabs, its own first note.
+   */
+  ask(folder: string | null, open: string | null): void {
+    const asked = this.app.graph.askFolder(folder ?? (open ? dirname(open) : this.app.loc.root));
+    this.app.homeFolder = folder ? asked : null;
+  }
+
+  /** What's said when no note opens: a folder of home its index leaves out (`~/Downloads`) says why (VV-D2). */
+  noNotes(): string {
+    const f = this.app.homeFolder;
+    const abs = f ? join(this.app.loc.root, f) : this.app.loc.root;
+    const why = f ? leftOutOfHome(this.app.loc.root, this.app.graph.filter, f) : null;
+    return why
+      ? `${tildePath(abs)}: left out of home's index (${why}) — its files are listed in the explorer, not indexed`
+      : `no notes in ${tildePath(abs)}`;
+  }
 
   /** `space v m` in a vault (18.13): the explorer's selected folder (or this note's) made a vault. */
   makeHere(): void {
@@ -180,12 +202,25 @@ export class Vaults {
    * Become another root's TUI, as if started there (17.10): its config, index, watcher, reading
    * positions and session — with `open` open (an absolute path), or the session's tabs. Leaving
    * saves this one's as quitting does. Refused while a note is unsaved: it would be left behind.
+   * `folder`: a folder of home gone into by name (VV-D2: a folder revealed), as `slipbox ~/notes` opens it.
    */
-  switchVault(target: VaultLocation, open: string | null, anchor?: Anchor, how: { back?: boolean } = {}): boolean {
+  switchVault(
+    target: VaultLocation,
+    open: string | null,
+    anchor?: Anchor,
+    how: { back?: boolean; folder?: string } = {},
+  ): boolean {
     if (!this.app.saving.canLeave()) return false;
     const v = this.app.view;
+    const folder = this.app.homeFolder !== null ? join(this.app.loc.root, this.app.homeFolder) : undefined;
     const from = v
-      ? { root: this.app.loc.root, path: v.buf.abs, anchor: { ...v.topAnchor }, cursor: { ...v.curAnchor } }
+      ? {
+          root: this.app.loc.root,
+          path: v.buf.abs,
+          anchor: { ...v.topAnchor },
+          cursor: { ...v.curAnchor },
+          ...(folder ? { folder } : {}),
+        }
       : null;
     // Leave, as quitting would.
     this.app.session.save();
@@ -222,6 +257,8 @@ export class Vaults {
     this.app.reach = new Reach(target);
     this.app.graph = new Graph(target, this.app.config).build(true, "lazy");
     this.app.graph.reach = this.app.reach;
+    // A folder of home gone into, by name or a file's (VV-D2): its notes there at once, as when slipbox starts there.
+    this.ask(how.folder ?? null, open);
     this.app.watch.followGraph();
     if (this.app.live) this.app.loadCodeGrammars();
     for (const e of this.app.graph.errors) this.app.message("warn", e);
@@ -291,7 +328,7 @@ export class Vaults {
         if (anchor) this.app.history.jumpTo(t.views[t.active]!, anchor);
       } else this.app.openInNewTab(open, anchor);
     } else if (!restored) {
-      const first = this.app.defaultNote();
+      const first = this.app.defaultNote(this.app.homeFolder);
       if (first) this.app.openInNewTab(first);
     }
     if (from && !how.back) this.trail.push(from);
@@ -374,7 +411,9 @@ export class Vaults {
       this.app.message("warn", `${t.root} is gone`);
       return true;
     }
-    if (!this.switchVault(target, open, t.anchor, { back: true })) this.trail.push(t);
+    // Back into home, to the folder of it that was open by name (VV-D2): its tabs, as they were.
+    const folder = target.mode === "home" && target.root === t.root ? t.folder : undefined;
+    if (!this.switchVault(target, open, t.anchor, { back: true, ...(folder ? { folder } : {}) })) this.trail.push(t);
     return true;
   }
 

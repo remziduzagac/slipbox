@@ -71,7 +71,12 @@ state folder: nothing is written into `~` (D39).
 a dotfiles repository's `*` would empty it (`homeSkip` in `core/walk.ts`): hidden folders, the system's (`Library` on
 macOS, `AppData` on Windows, at the top), `Downloads` (where `user-dirs.dirs` says, else `Downloads`), and the busy
 folders anywhere (VV-D8; § The walk); and the files the explorer doesn't list, a note or a text file aside
-(`classify`'s binary group). A note over `walk.max_file_size` is listed as skipped, not read. `reachable` refuses all
+(`classify`'s binary group). A folder where another filesystem is mounted, a share, a USB disk, an sshfs or NFS mount,
+is left out as `another disk` (`ANOTHER_DISK`), known from the mount table alone (`core/mounts.ts`: `/proc/self/mounts`
+on Linux, one run of `mount` on macOS, read once per walk, `readMounts`), never looked at, nor for a marker: one that
+stops answering would hang whatever stats it. The skip is recorded in the walk, so a walk kept drops a folder mounted
+on since, and walks one whose disk is gone. The explorer lists it, `another disk` beside it, and only unfolding it
+looks in. A note over `walk.max_file_size` is listed as skipped, not read. `reachable` refuses all
 of it in home: named, such a file opens, and is never indexed. `exclusion` gives each reason, for the explorer's marks
 ([tui.md](tui.md) § Side panes). No watcher sees such a file, so the TUI polls it while it's open, as it polls every
 open file the graph doesn't know.
@@ -84,16 +89,22 @@ in it walked); one gone, or become a vault, is dropped with what it held; a vaul
 is walked as home's; each note is statted again (gone, dropped; grown past the size cap, skipped). What changed is kept
 again (not a folder whose time moved alone: a shell's history rewritten in `~`). The graph's `walkedAt` is the walk's,
 so the watcher lists again the folders changed since. So an agent's note made in home is there at its next command,
-and a folder made a vault by hand (`git init`) leaves home. Never walked, home is its top alone (`walkTop`): its notes
-and files, the vaults in it, its folders listed but not looked into.
+and a folder made a vault by hand (`git init`) leaves home. The walk is kept with its filter's settings
+(`WalkFilter.signature`: the note extensions, `walk.exclude`, the root markers, where Downloads is): kept under others,
+it's no walk of home's, so a `[walk]` setting changed is home never walked, its walk made again (the TUI's reload asks
+for it; the background index makes a walk under way again; the CLI walks it at once). Never walked, home is its top
+alone (`walkTop`): its notes and files, the vaults in it, its folders listed but not looked into.
 
 A folder of home asked for by name is what was asked for: opened (`slipbox ~/notes`), or a file in it opened, it's
-walked at once when home's walk doesn't cover it (never made, or its cap reached short of it), with home's skip list
-and as far as its cap, and merged into home's walk as the graph is built (`Graph.askFolder`, `homeWalk`'s `asked`), at
-each build after too, until home's walk covers it. That walk isn't kept: home's own, still made while nobody is
-working, covers it, and a start after finds the folder in it, walked once. One home's skip list leaves out
-(`~/Downloads`), or behind a link the walk doesn't go through (§ Links followed only when you say so), isn't walked
-(`walksInto`).
+walked at once when home's walk doesn't cover it (never made, or stopped at its cap: a walk capped covers no folder
+whole, since one it listed may hold folders it didn't), with home's skip list and as far as its cap, and merged into
+home's walk as the graph is built (`Graph.askFolder`, `homeWalk`'s `asked`), at each build after too, until home's
+walk covers it. Every way into a folder of home goes through one path (`Vaults.ask`): the start, and every switch into
+home, a note of it opened from another vault (`intoOther`, a peek's `o`), the way back, a folder revealed (a link to
+it). A graph built anew for home (a `[walk]` setting changed) carries the folders asked for (`askedFolders`). That walk
+isn't kept: home's own, still made while nobody is working, covers it, and a start after finds the folder in it,
+walked once. One home's skip list leaves out (`~/Downloads`, another disk), or behind a link the walk doesn't go
+through (§ Links followed only when you say so), isn't walked (`walksInto`; `leftOutOfHome` says why).
 
 The background index (`AutoIndex`, § The index) walks home first in each pass, finding the vaults in it as it did,
 keeps the walk, builds home's index, then indexes the vaults it found; its progress is version 2 (`home`, `homeNotes`,
@@ -106,15 +117,26 @@ backlinks as of its index (`Reach` reads it beside the vaults'), the relink of a
 search's linked and all scopes take home as a vault (`scopeRoots`).
 
 **The cap.** Home's index holds 10,000 notes at most, and its walk lists 5,000 folders (`HOME_LIMITS`), those nearest
-the top: what stopped it is kept with the walk, said in a message when a walk that reached it is done, and in
-`space v i` and `info` (`index.walked`, `index.capped`; the `--home` run's `home.capped`; `describeCap`). Home opened
-from a walk kept that reached it says nothing more. Past the cap, the background index
-still looks in the folders it left for vaults, a level at a time, home's skip list held (`seek`, kept with its place).
+the top: a walk stops past the cap, not at it, so one of exactly 10,000 notes left nothing out. What stopped it is kept
+with the walk, said in a message when a walk that reached it is done, and in `space v i`, `info` and
+`index --refresh ~` (`index.walked`, `index.capped`; the `--home` run's `home.capped`; the refresh's `capped`;
+`describeCap`). Home opened from a walk kept that reached it says nothing more. The walk kept, brought up to now, holds
+the cap too: a folder listed again walks what's new in it only as far as the room left, and says so when that runs
+out. Its other files are capped as well, 10,000 nearest the top, listed for a link to name one; the walk goes on for
+notes past them. What comes while home is open holds it: the watcher takes in no folder past it, and the graph no note
+(`maxDirs`, `applyToGraph`'s `maxNotes`), leaving them to home's walk. Past the cap, the background index still looks
+in the folders it left for vaults, a level at a time, home's skip list held (`seek`, kept with its place).
 
 **What's shown.** The status line names home `~`; `info` says `mode` `home` (an addition to schema 1's values), the
-Info view and `stat` `home (~)`. Started in `~`, nothing opens over the explorer: home is the vault. Started on a
-folder of home with no session to restore, the folder's own `index.md`, `README.md` or `home.md` opens, else its first
-note by path, never another of home's (`defaultNote`); none, nothing opens (a vault's folder opens the vault's). The
+Info view and `stat` `home (~)`. Started in `~`, nothing opens over the explorer: home is the vault. Each folder of
+home opened by name has its own tabs, kept in home's session beside its top's (`folders`, by home's path for it, as
+`branches` keeps a branch's; `SESSION_FOLDERS`), as it had before home was a vault; `slipbox ~`, and a switch into
+home by a note, bring back the top's, and the way back the folder's it left (`App.homeFolder`). The top's tabs from
+before folders kept theirs are kept as its own the first time one does. Started on a folder of home with no tabs of
+its own yet, the folder's own `index.md`, `README.md` or `home.md` opens, else its first note by path, one directly in
+it before one in a folder of it, never another of home's (`defaultNote`); none, nothing opens, and one home's index
+leaves out says why (`~/Downloads: left out of home's index (Downloads)`; else `no notes in ~/x`). A vault's folder
+opens the vault's, its one session (VV-D5: a vault is one project). The
 explorer is home's tree from its walk, and what home's skip list leaves out is listed there, never indexed
 ([tui.md](tui.md) § Side panes). A link, a backlink or a search hit from another vault into a note of home's peeks at
 it as at any vault's, titled `~ › todo.md`; slipbox's own files under `~` (`slipboxOwn`: the scratch in its state
@@ -123,7 +145,12 @@ folder) are no note of home's, opened as they are, never gone into.
 Not done: the vaults inside a folder home's skip list leaves out (a clone in `~/Downloads`) are no longer found by the
 background index, only when opened, and nor is a vault whose own folder is hidden or has a busy folder's name
 (`~/.dotfiles`, `~/build`), in home or nested in a vault: the skip list and the busy folders are checked before the
-markers. Link completion offers other vaults' notes, not home's.
+markers. Link completion offers other vaults' notes, not home's. Every walk of home runs on the main thread, a slice
+at a time: another disk is never walked, but a slow one that's home's own filesystem, or a mount you unfold in the
+explorer, holds the TUI up while it's read; a walk in a worker would not. Freshness is by a folder's time: a folder
+whose time is set back after its notes changed (an archive unpacked with its times, `cp -a`, `rsync -a`) isn't listed
+again, its notes waiting for home's next walk or `slipbox index --refresh ~` (the TUI's reindex reads the walk kept).
+Tabs of home's top restored in a folder its walk hasn't reached open as files the graph doesn't know, until it does.
 
 ## Elsewhere
 
@@ -478,7 +505,8 @@ Personal state is kept in the state folder, never in the folder it is about (D39
 - **By vault:** the session, scratch, trash, undo log, staleness, moves seen and branch heads seen are kept under the
   vault's key (§ Storage keys): home's by its path, as any vault's; Elsewhere's under its one key, `elsewhere`, wherever
   it was opened (VV-D3). Opening `project/` or `project/docs/` brings back the same session, since both are in the vault
-  `project/`; a worktree, another path, has its own.
+  `project/`; a worktree, another path, has its own. In home's one session, each folder of it opened by name keeps
+  its own tabs (§ Home).
 - **Reading positions are by file:** one `positions.json` for the machine, each note by its absolute path and the vault
   it was read from, so a note opened from another vault, or from a folder inside its vault, is where it was left. A
   vault's history lists its own files and those read from it. The newest 5,000 are kept.

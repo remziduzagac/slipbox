@@ -59,7 +59,7 @@ Each of the three kinds of place has its own tabs. They differ in the rest:
 | | A vault | Home | Elsewhere |
 | --- | --- | --- | --- |
 | What it is | a folder holding a marker | `~`, less the vaults in it | everything else |
-| Its tabs | its own | its own | one set for the machine |
+| Its tabs | its own | its own, and each folder's you open by name | one set for the machine |
 | Backlinks and search | yes | yes, less its skip list | no: it has no index |
 | Its settings | yours, then its `.slipbox/config.toml` | yours | yours |
 | Its git | when it's a repository | when `~` is a repository | none |
@@ -195,6 +195,8 @@ Home's skip list:
 - `Downloads`, where your desktop keeps it
 - the busy folders, wherever they are: `node_modules`, `.venv`, `venv`, `__pycache__`, `target`, `build`, `dist`,
   `.next`, `vendor`, `Pods`, `DerivedData`, `.gradle`, `.tox`, and caches
+- a folder where another disk is mounted, such as a network share: slipbox never looks into it, so one that stops
+  answering can't hold it up
 - files that aren't notes or text, such as pictures and archives
 - notes larger than `walk.max_file_size`, listed as skipped and not read
 
@@ -206,8 +208,10 @@ folders, marked `⊘`, all but the hidden ones.
 
 Home is indexed a little at a time, while nobody is working: no key, no click and no command from an agent for
 `index.idle_seconds`, 30 seconds by default. Until then, home is its top folder alone, and backlinks and search find
-more as it goes. The explorer, too, lists the vaults deeper in home as the walk finds them. slipbox keeps the walk, so
-this happens once: opening home again looks only at what changed.
+more as it goes. The explorer, too, lists the vaults deeper in home as the walk finds them. A folder of home you open
+by name, `slipbox ~/work`, or go into from another vault, is walked at once: its notes and the vaults in it are there
+from the start, and it keeps its own tabs. slipbox keeps the walk, so this happens once: opening home again looks only
+at what changed.
 
 Home's index holds 10,000 notes at most, and its walk lists 5,000 folders, those nearest the top. slipbox says so when
 it stops there. [Home](../manual/links-and-vaults.md#home) has the rest.

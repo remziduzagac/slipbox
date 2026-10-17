@@ -142,8 +142,8 @@ folder is marked `⊘` too. With Nerd Font icons, `⚿` is a lock.
 The column before it is git's: `M`, `+`, `R` or `!` for a changed file, and `•` for a folder with a change in it, `o` in
 ASCII ([Git](git.md)).
 
-Before the marks, dimmed, is what describes the row: a vault's branch, a worktree's after `⎇`, or where a link
-leads.
+Before the marks, dimmed, is what describes the row: a vault's branch, a worktree's after `⎇`, where a link leads, or
+`another disk` for a folder of your home folder where a disk or a share is mounted.
 
 ## What the explorer lists
 
@@ -180,7 +180,8 @@ Some folders are listed, but nothing in them is indexed. They are marked `⊘`:
 - `node_modules` and the other folders tools fill: `venv`, `__pycache__`, `target`, `build`, `dist`, `vendor`, `Pods`,
   `DerivedData` and caches, wherever they are
 - what `.gitignore` and `walk.exclude` leave out
-- in your home folder, `Downloads` and the system's folders ([Home](links-and-vaults.md#home))
+- in your home folder, `Downloads`, the system's folders, and a folder where another disk is mounted
+  ([Home](links-and-vaults.md#home))
 
 You can unfold them and open their files. Their notes have no backlinks, search doesn't find them, and a wikilink's name
 doesn't reach them. Nothing in them can be renamed, moved or deleted from the explorer.

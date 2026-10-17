@@ -6,8 +6,9 @@ import { readText } from "../core/fsutil.ts";
 import { offsetOf } from "./editing.ts";
 import { planRelink } from "../core/rename.ts";
 import { activityFile, AutoIndex, autoIndexFile } from "../core/autoindex.ts";
+import { loadConfig } from "../core/config.ts";
 import { describeCap } from "../core/home.ts";
-import type { WalkCap } from "../core/walk.ts";
+import { HOME_LIMITS, type WalkCap } from "../core/walk.ts";
 import { homeFolder, isListed } from "../core/vault.ts";
 import { applyToGraph } from "../core/vault-feed.ts";
 import { VaultWatcher, type WatchBatch } from "../core/watch.ts";
@@ -137,6 +138,8 @@ export class Watch {
       attachments: this.app.graph.filePaths(),
       walkedAt: () => this.app.graph.walkedAt,
       listed: isListed(this.app.loc),
+      // Home's cap held by what comes while it's open too (VV-D2).
+      ...(this.app.loc.mode === "home" ? { maxDirs: HOME_LIMITS.folders } : {}),
       onBatch: (b) => this.receiveBatch(b),
       onDegraded: (reason) => {
         this.app.message("error", `watching degraded: ${reason}`);
@@ -180,11 +183,14 @@ export class Watch {
    */
   indexJob(): AutoIndex | null {
     const onHome = (capped: WalkCap | null) => this.homeIndexed(capped);
+    // Home's settings, as this TUI has them: its own in home, your config's (`--config` too) in a vault.
+    const config = () =>
+      this.app.loc.mode === "home" ? this.app.config : loadConfig({ configFile: this.app.configFile }).config;
     if (this.app.config.index.background)
-      return (this.autoIndex ??= new AutoIndex(homeFolder(), autoIndexFile(), () => Date.now(), { onHome }));
+      return (this.autoIndex ??= new AutoIndex(homeFolder(), autoIndexFile(), () => Date.now(), { onHome, config }));
     if (this.app.loc.mode !== "home") return null;
     if (this.homeIndex?.root !== this.app.loc.root)
-      this.homeIndex = new AutoIndex(this.app.loc.root, null, () => Date.now(), { vaults: false, onHome });
+      this.homeIndex = new AutoIndex(this.app.loc.root, null, () => Date.now(), { vaults: false, onHome, config });
     return this.homeIndex;
   }
 

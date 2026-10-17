@@ -502,6 +502,9 @@ export class App {
 
   /** Commands run from the palette or help, most recent first (kept in the session). */
   recentCommands: string[] = [];
+  /** The folder of home opened by name (VV-D2: `slipbox ~/notes`), home's path for it — its own tabs, its own first
+   *  note; null at home's top, and in a vault (`Vaults.ask`). */
+  homeFolder: string | null = null;
   readonly configFile: string | undefined;
   readonly now: () => number;
   quitting = false;
@@ -621,9 +624,8 @@ export class App {
     this.config = opts.config;
     this.graph = opts.graph;
     // A folder of home opened by name, or a file's (VV-D2): what was asked for, its notes there at once, home walked
-    // or not — and a folder's own note opened, not home's.
-    const asked = this.graph.askFolder(opts.folder ?? (opts.open ? dirname(this.absOf(opts.open)) : this.loc.root));
-    const homeFolder = opts.folder ? asked : null;
+    // or not — and a folder's own tabs, or its own note, not home's.
+    this.vaults.ask(opts.folder ?? null, opts.open ? this.absOf(opts.open) : null);
     // This machine sees the root (17.6); a named folder moved here by hand brought its state (21.8).
     const { carriedFrom } = opts.recorded ?? recordLocation(opts.loc);
     this.reach = new Reach(opts.loc);
@@ -685,7 +687,7 @@ export class App {
     this.settings.applyTheme();
     this.glyphs = this.settings.glyphSet(this.ui.glyphs);
     if (!restored) {
-      const first = opts.open ?? this.defaultNote(homeFolder);
+      const first = opts.open ?? this.defaultNote(this.homeFolder);
       if (first) this.openInNewTab(first);
     }
     // The view starts at the folder opened (VV-D5): `x/y` shows y, in vault x — set once its notes are open, so
@@ -700,7 +702,7 @@ export class App {
         "info",
         this.loc.mode === "folder"
           ? `${ELSEWHERE} — ${tildePath(this.loc.root)}: open a file from the explorer`
-          : `no notes in ${homeFolder ? opts.folder : this.loc.root}`,
+          : this.vaults.noNotes(),
       );
     // Moved here by hand, its state along (21.8): the links the move broke, their fix previewed (20.17).
     if (carriedFrom) this.vaults.offerMovedRelink();
@@ -828,13 +830,16 @@ export class App {
   }
 
   /** The note opened when none is named or restored: `index.md`, `README.md` or `home.md`, else the first note by
-   *  path — the vault's; in `folder` (home's path for a folder of it opened by name, VV-D2), the folder's own, or none. */
+   *  path — the vault's; in `folder` (home's path for a folder of it opened by name, VV-D2), the folder's own — one
+   *  directly in it before one in a folder of it — or none. */
   defaultNote(folder: string | null = null): string | null {
     const at = folder ? `${folder}/` : "";
     const notes = [...this.graph.notes.keys()].filter((n) => n.startsWith(at));
     for (const pref of ["index.md", "README.md", "readme.md", "home.md"])
       if (notes.includes(`${at}${pref}`)) return `${at}${pref}`;
-    return notes[0] ?? null;
+    if (!folder) return notes[0] ?? null;
+    const depth = (n: string) => n.split("/").length;
+    return notes.sort((a, b) => depth(a) - depth(b) || (a < b ? -1 : a > b ? 1 : 0))[0] ?? null;
   }
 
   /** A vault-relative or absolute path, absolute. */

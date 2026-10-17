@@ -11,7 +11,7 @@ import { readIdentity, vaultConfigFile } from "../core/registry.ts";
 import { tildePath } from "../core/names.ts";
 import { findVaultRoot, hasMarker, homeFolder, isInside, isListed, isVaultRoot, locationAt } from "../core/vault.ts";
 import { isLink, linkScope, linkState, linkTarget } from "../core/symlinks.ts";
-import { LINK_REASON } from "../core/walk.ts";
+import { ANOTHER_DISK, LINK_REASON } from "../core/walk.ts";
 import { match } from "./match.ts";
 import { prettyKey } from "./keys.ts";
 import type { App, ListItem } from "./app.ts";
@@ -311,6 +311,8 @@ export class Explorer {
    */
   private leftOut(rel: string, abs: string): string | null {
     const filter = this.app.graph.filter;
+    // On another disk (home's, VV-D2): known from the mount table, never looked at.
+    if (filter.onMount(rel)) return ANOTHER_DISK;
     const parts = rel.split("/");
     for (let i = 1; i <= parts.length; i++) {
       let dir = true;
@@ -643,10 +645,16 @@ export class Explorer {
       const out = leftOut.get(p);
       if (out) {
         rows.push(this.leftOutRow(out, name, depth));
-        // Unfolded in place: listed a level at a time, as a folder outside the vault's own tree.
+        // Unfolded in place: listed a level at a time, as a folder outside the vault's own tree. Another disk (VV-D2)
+        // carries its reason down, never looked into for a marker: never home's, whatever it holds.
         const abs = join(this.app.loc.root, p);
         if (out.dir && this.expanded.has(abs))
-          this.outsideRows(abs, depth + 1, rows, isVaultRoot(abs) ? null : out.leftOut);
+          this.outsideRows(
+            abs,
+            depth + 1,
+            rows,
+            out.leftOut === ANOTHER_DISK || !isVaultRoot(abs) ? out.leftOut : null,
+          );
       } else if (roots.has(p)) {
         const root = roots.get(p)!;
         rows.push({ kind: "root", path: p, name, depth, root });
@@ -679,7 +687,8 @@ export class Explorer {
   private leftOutRow(d: DiskEntry, name: string, depth: number): TreeRow {
     const abs = join(this.app.loc.root, d.rel);
     const why = { outside: true, leftOut: d.leftOut! } as const;
-    if (d.dir && isVaultRoot(abs))
+    // Another disk (VV-D2): never looked into for a marker — what it is shows once you unfold it.
+    if (d.dir && d.leftOut !== ANOTHER_DISK && isVaultRoot(abs))
       return { kind: "root", path: abs, name, depth, root: { kind: "vault", abs, name: this.rootName(abs) }, ...why };
     if (d.dir) return { kind: "dir", path: abs, name, depth, ...why };
     return { kind: "note", path: abs, name, depth, ...(d.group !== "note" ? { group: d.group } : {}), ...why };
@@ -835,8 +844,9 @@ export class Explorer {
    */
   revealFolder(path: string): void {
     if (isAbsolute(path)) {
-      // Its vault: a marker's, home (VV-D2), else the plain folder.
-      if (!this.app.vaults.switchVault(locationAt(path), null)) return;
+      // Its vault: a marker's, home (VV-D2) — the folder gone into by name, its notes there at once — else the plain
+      // folder.
+      if (!this.app.vaults.switchVault(locationAt(path), null, undefined, { folder: path })) return;
       path = relative(this.app.loc.root, path) || ".";
     }
     this.app.panels.switchLeftView("explorer");

@@ -133,6 +133,7 @@ The CLI's commands are the user's reference, [cli.md](../../docs/manual/cli.md);
 | `core/config.ts` | 0.9, 20.7 | TOML: defaults ← yours ← each enclosing vault's ← its own; warnings, never crashes |
 | `core/vault.ts` | 1.1, 1.10, 0.12, 17.1, 20.3, 21.8 | a file's vault, home or Elsewhere; recorded; state moved |
 | `core/home.ts` | VV-D2 | home's walk, made in slices and kept (`walk.json`); its graph built from it; the cap |
+| `core/mounts.ts` | VV-D2 | the mount table, read without touching a mount: home's walk never goes into another disk |
 | `core/symlinks.ts` | VV-D6 | links followed only when you say so: the answers, a link's scope, writes, the probe |
 | `core/registry.ts` | 17.3–17.6, 21.8 | `[vault]` identity; the machine's vaults by path (`roots.json`) |
 | `core/remotes.ts` | 21.6 | a repository's remotes as `host/path`: what names it, what hosting URLs are its |

@@ -215,7 +215,7 @@ export class Renaming {
       this.app.loc = rootAt(this.app.loc.root);
       recordLocation(this.app.loc);
       this.app.reach = new Reach(this.app.loc);
-      this.app.graph = new Graph(this.app.loc, this.app.config).build(true, "lazy");
+      this.app.graph = new Graph(this.app.loc, this.app.config, this.app.graph.askedFolders).build(true, "lazy");
       this.app.graph.reach = this.app.reach;
       this.app.watch.followGraph();
       if (this.app.live) this.app.watch.indexInBackground();

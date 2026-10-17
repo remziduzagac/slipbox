@@ -445,4 +445,38 @@ describe("home before its walk (VV-D2, VV-D8)", () => {
       process.env.HOME = before;
     }
   });
+
+  test("a folder of home where another disk is mounted: listed, not indexed, `another disk` beside it — never looked at; unfolded, what's in it not indexed either", async () => {
+    const { setMountTable } = await import("../src/core/mounts.ts");
+    const home = realpathSync(mkdtempSync(join(sandbox, "home-")));
+    mkdirSync(join(home, "mnt", "docs"), { recursive: true });
+    writeFileSync(join(home, "mnt", "m.md"), "# M\n");
+    writeFileSync(join(home, "a.md"), "# A\n");
+    // One you may not read stands in for the disk: looked at, its row would say it can't be read.
+    lock(join(home, "mnt"));
+    setMountTable(() => [{ device: "server:/share", at: join(home, "mnt"), type: "nfs", options: "rw" }]);
+    const before = process.env.HOME;
+    process.env.HOME = home;
+    try {
+      const h = await harness({ loc: homeAt(home) });
+      expect(h.app.graph.skipped).toContainEqual({ rel: "mnt", reason: "another disk" });
+      h.app.region = "content";
+      const g = glyphsFor("unicode");
+      const row = drawn(h, "mnt");
+      expect(row.index).toBe(g.markNotIndexed);
+      expect(row.describe).toBe("another disk");
+      // Unfolded, as you ask: read, what's in it carrying its reason — not indexed, said on the mount alone.
+      chmodSync(join(home, "mnt"), 0o755);
+      h.app.explorer.expanded.add(join(home, "mnt"));
+      h.app.explorer.invalidateTree();
+      expect(h.app.explorer.rows().find((r) => r.name === "docs")).toMatchObject({ leftOut: "another disk" });
+      const docs = drawn(h, "docs");
+      expect(docs.index).toBe(g.markNotIndexed);
+      expect(docs.describe).toBe("");
+      expect(drawn(h, "mnt").describe).toBe("another disk");
+    } finally {
+      process.env.HOME = before;
+      setMountTable(null);
+    }
+  });
 });

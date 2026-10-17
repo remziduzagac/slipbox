@@ -6208,6 +6208,240 @@ describe("home, a vault without a marker (VV-D2)", () => {
       expect((await cli(["name", "mine"], home)).code).toBe(5);
     });
   });
+
+  test("the mount table read without going near the mounts: /proc/mounts' escapes, macOS's `mount`, a folder of home by either of its paths", async () => {
+    const { mountsIn, parseMountOutput, parseProcMounts } = await import("../src/core/mounts.ts");
+    const linux = parseProcMounts("server:/x /home/me/my\\040share nfs4 rw,relatime 0 0\n/dev/sda1 / ext4 rw 0 0\n");
+    expect(linux.map((m) => [m.at, m.type])).toEqual([
+      ["/home/me/my share", "nfs4"],
+      ["/", "ext4"],
+    ]);
+    const mac = parseMountOutput(
+      [
+        "/dev/disk3s1s1 on / (apfs, sealed, local, read-only, journaled)",
+        "/dev/disk3s5 on /System/Volumes/Data (apfs, local, journaled, nobrowse)",
+        "//me@nas/notes on /Users/me/nas notes (smbfs, nodev, nosuid, mounted by me)",
+        "me@host:/srv on /System/Volumes/Data/Users/me/remote (macfuse, nodev, nosuid, mounted by me)",
+      ].join("\n"),
+    );
+    expect(mac.map((m) => [m.at, m.type])).toEqual([
+      ["/", "apfs"],
+      ["/System/Volumes/Data", "apfs"],
+      ["/Users/me/nas notes", "smbfs"],
+      ["/System/Volumes/Data/Users/me/remote", "macfuse"],
+    ]);
+    // Inside home only, by home's paths: the data volume's name for a folder of /Users too.
+    expect([...mountsIn("/Users/me", "/Users/me", mac)].sort()).toEqual(["nas notes", "remote"]);
+    expect([...mountsIn("/home/me", "/home/me", linux)]).toEqual(["my share"]);
+    // Home reached through a link: the table names its real path.
+    const linked = parseProcMounts("s:/x /data/home/me/mnt nfs rw 0 0\n/dev/sdb /data nfs rw 0 0\n");
+    expect([...mountsIn("/home/me", "/data/home/me", linked)]).toEqual(["mnt"]);
+  });
+
+  test("a folder where another disk is mounted is never walked: known from the mount table alone, left out as another disk — dropped from a walk kept, walked again once the disk is gone", async () => {
+    const { setMountTable } = await import("../src/core/mounts.ts");
+    const { homeFilter, homeWalk, leftOutOfHome } = await import("../src/core/home.ts");
+    const { ANOTHER_DISK, SlicedWalk, walkTop } = await import("../src/core/walk.ts");
+    await withHome({ "a.md": "# A\n", "mnt/m.md": "# M\n", "notes/n.md": "# N\n" }, (home) => {
+      const loc = homeAt(home);
+      const mounts: { device: string; at: string; type: string; options: string }[] = [];
+      setMountTable(() => mounts);
+      try {
+        // Walked and kept before the disk came: a folder like any.
+        walkHomeNow(loc, DEFAULT_CONFIG);
+        const hour = new Date(Date.now() - 3_600_000);
+        for (const d of ["", "mnt", "notes"]) utimesSync(join(home, d), hour, hour);
+        // A disk mounted on it — one you may not read stands in for it, so a walk going into it would say so.
+        mounts.push({ device: "server:/share", at: join(home, "mnt"), type: "nfs", options: "rw" });
+        chmodSync(join(home, "mnt"), 0o000);
+        const filter = homeFilter(loc, DEFAULT_CONFIG);
+        const kept = homeWalk(loc, filter);
+        expect(kept.walk.files.map((f) => f.rel)).toEqual(["a.md", "notes/n.md"]);
+        expect(kept.walk.dirs).not.toContain("mnt");
+        expect(kept.walk.skipped).toContainEqual({ rel: "mnt", reason: ANOTHER_DISK });
+        expect(kept.walk.errors).toEqual([]);
+        // Walked anew, a slice at a time, or its top alone: left out the same, never read.
+        const w = new SlicedWalk(home, filter);
+        while (w.step(50)) {}
+        expect(w.result!.skipped).toContainEqual({ rel: "mnt", reason: ANOTHER_DISK });
+        expect(w.result!.errors).toEqual([]);
+        expect(walkTop(home, filter).dirs).toEqual(["", "notes"]);
+        // Asked for by name, it isn't walked either: home's index leaves it out, and says why.
+        expect(leftOutOfHome(home, filter, "mnt")).toBe(ANOTHER_DISK);
+        expect(leftOutOfHome(home, filter, "mnt/sub")).toBe(ANOTHER_DISK);
+        expect(homeWalk(loc, filter, ["mnt"]).walk.errors).toEqual([]);
+        // The disk taken away: home's folder again, walked.
+        chmodSync(join(home, "mnt"), 0o755);
+        mounts.length = 0;
+        expect(homeWalk(loc, homeFilter(loc, DEFAULT_CONFIG)).walk.files.map((f) => f.rel)).toEqual([
+          "a.md",
+          "mnt/m.md",
+          "notes/n.md",
+        ]);
+      } finally {
+        chmodSync(join(home, "mnt"), 0o755);
+        setMountTable(null);
+      }
+    });
+  });
+
+  test("its walk kept follows [walk]: one kept under other settings is no walk of home's — a folder excluded leaves, an extension added comes, a marker added makes a vault; a walk under way made again", async () => {
+    const { homeFilter, homeWalk, homeWalkKept } = await import("../src/core/home.ts");
+    const { AutoIndex } = await import("../src/core/autoindex.ts");
+    const files = { "a/n.md": "# N\n", "b/m.md": "# M\n", "b/t.txt": "text\n", "c/Cargo.toml": "", "c/c.md": "# C\n" };
+    await withHome(files, (home) => {
+      const loc = homeAt(home);
+      const settings = (f: (c: typeof DEFAULT_CONFIG) => void) => {
+        const c = structuredClone(DEFAULT_CONFIG);
+        f(c);
+        return c;
+      };
+      const walked = (c: typeof DEFAULT_CONFIG) => homeWalk(loc, homeFilter(loc, c));
+      const notes = (c: typeof DEFAULT_CONFIG) => walked(c).walk.files.map((f) => f.rel);
+      walkHomeNow(loc, DEFAULT_CONFIG);
+      const hour = new Date(Date.now() - 3_600_000);
+      for (const d of ["", "a", "b", "c"]) utimesSync(join(home, d), hour, hour);
+      expect(notes(DEFAULT_CONFIG)).toEqual(["a/n.md", "b/m.md", "c/c.md"]);
+      // A folder excluded since: the walk kept isn't home's under it — its top alone, until it's walked again.
+      const excluded = settings((c) => (c.walk.exclude = ["a/"]));
+      expect(homeWalkKept(loc, DEFAULT_CONFIG)).toBe(true);
+      expect(homeWalkKept(loc, excluded)).toBe(false);
+      expect(walked(excluded).walked).toBeNull();
+      expect([...openGraph(loc, excluded, true).notes.keys()]).toEqual([]);
+      walkHomeNow(loc, excluded);
+      expect(notes(excluded)).toEqual(["b/m.md", "c/c.md"]);
+      // An extension added: a text file of home's is a note now.
+      const txt = settings((c) => c.walk.extensions.push("txt"));
+      expect(walked(txt).walked).toBeNull();
+      walkHomeNow(loc, txt);
+      expect(notes(txt)).toEqual(["a/n.md", "b/m.md", "b/t.txt", "c/c.md"]);
+      // A marker added: a folder holding one is a vault of its own.
+      setRootMarkers([...DEFAULT_CONFIG.walk.root_markers, "Cargo.toml"]);
+      try {
+        expect(homeWalkKept(loc, txt)).toBe(false);
+        walkHomeNow(loc, txt);
+        expect(notes(txt)).toEqual(["a/n.md", "b/m.md", "b/t.txt"]);
+      } finally {
+        setRootMarkers(null);
+      }
+      // [walk] changed while home's walk is under way: made again under what it says now, never kept under the old.
+      const now = structuredClone(DEFAULT_CONFIG);
+      const job = new AutoIndex(home, null, () => Date.now(), { vaults: false, config: () => now });
+      expect(job.step(0)).toBe(true);
+      now.walk.exclude = ["b/"];
+      while (job.step(50)) {}
+      expect(homeWalkKept(loc, now)).toBe(true);
+      expect(notes(now)).toEqual(["a/n.md", "c/c.md"]);
+    });
+  });
+
+  test("its cap: a walk of exactly so many notes left nothing out; its other files capped too, those nearest the top", async () => {
+    const { SlicedWalk, WalkFilter } = await import("../src/core/walk.ts");
+    const files = { "a.md": "", "b.md": "", "c.md": "", "d/x.txt": "", "d/y.txt": "", "e.txt": "", "f.json": "" };
+    await withHome(files, (home) => {
+      const walk = (limits: { notes: number; folders: number; assets?: number }) => {
+        const w = new SlicedWalk(home, new WalkFilter(home, DEFAULT_CONFIG.walk, { home: true }), limits);
+        while (w.step(50)) {}
+        return { capped: w.capped, files: w.result!.files.length, dirs: w.result!.dirs, assets: w.result!.assets };
+      };
+      // Three notes, three at most: none left out, every folder listed.
+      expect(walk({ notes: 3, folders: 100 })).toMatchObject({ capped: null, files: 3, dirs: ["", "d"] });
+      expect(walk({ notes: 2, folders: 100 })).toMatchObject({ capped: "notes", files: 2 });
+      // Three other files at most: the top's first; the walk goes on for notes.
+      expect(walk({ notes: 100, folders: 100, assets: 3 })).toMatchObject({
+        capped: null,
+        files: 3,
+        dirs: ["", "d"],
+        assets: ["e.txt", "f.json", "d/x.txt"],
+      });
+    });
+  });
+
+  test("its cap holds what comes into a folder of a walk kept: a tree unpacked past the folder cap listed as far as the room left, and said", async () => {
+    const { homeFilter, homeWalk } = await import("../src/core/home.ts");
+    await withHome({ "a/n.md": "# N\n" }, (home) => {
+      const loc = homeAt(home);
+      const limits = { notes: 100, folders: 5 };
+      walkHomeNow(loc, DEFAULT_CONFIG, limits);
+      utimesSync(home, new Date(Date.now() - 3_600_000), new Date(Date.now() - 3_600_000));
+      // Unpacked into a: its time moves, so it's listed again.
+      for (let i = 0; i < 10; i++) {
+        mkdirSync(join(home, "a", "big", `d${i}`), { recursive: true });
+        writeFileSync(join(home, "a", "big", `d${i}`, "n.md"), "# N\n");
+      }
+      const w = homeWalk(loc, homeFilter(loc, DEFAULT_CONFIG), [], limits);
+      expect(w.capped).toBe("folders");
+      expect(w.walk.dirs.length).toBeLessThanOrEqual(limits.folders);
+      expect(w.walk.files.map((f) => f.rel)).toContain("a/n.md");
+      expect(homeWalk(loc, homeFilter(loc, DEFAULT_CONFIG), [], limits).capped).toBe("folders");
+    });
+  });
+
+  test("a folder asked for that a capped walk listed is walked whole: what's deeper wasn't listed", async () => {
+    const { AutoIndex } = await import("../src/core/autoindex.ts");
+    const { homeFilter, homeWalk } = await import("../src/core/home.ts");
+    await withHome({ "notes/inbox.md": "[d](sub/deep.md)\n", "notes/sub/deep.md": "# D\n" }, (home) => {
+      const loc = homeAt(home);
+      const job = new AutoIndex(home, null, () => Date.now(), { vaults: false, limits: { notes: 100, folders: 2 } });
+      while (job.step(50)) {}
+      expect(job.status.capped).toBe("folders");
+      const hour = new Date(Date.now() - 3_600_000);
+      for (const d of ["", "notes", "notes/sub"]) utimesSync(join(home, d), hour, hour);
+      const w = homeWalk(loc, homeFilter(loc, DEFAULT_CONFIG), ["notes"]);
+      expect(w.walk.files.map((f) => f.rel)).toEqual(["notes/inbox.md", "notes/sub/deep.md"]);
+      expect(new Set(w.walk.dirs).size).toBe(w.walk.dirs.length);
+    });
+  });
+
+  test("index --refresh ~ says when home's walk reached its cap", async () => {
+    await withHome({ "a.md": "# A\n" }, async (home) => {
+      for (let i = 0; i <= 5_000; i++) mkdirSync(join(home, `f${i}`));
+      const r = await cli(["index", "--refresh", home], home);
+      expect(r.json.data.capped).toBe("folders");
+      const out: string[] = [];
+      await runCli(["index", "--refresh", home], {
+        out: (x: string) => out.push(x),
+        err: () => {},
+        stdin: async () => "",
+        isTTY: false,
+        columns: 80,
+        cwd: home,
+        env: process.env,
+      });
+      expect(out.join("")).toContain("home's walk stopped at 5,000 folders");
+    });
+  });
+
+  test("what comes while home is open holds its cap: past it, a folder isn't taken in, nor a note — left to home's walk", async () => {
+    const { VaultWatcher } = await import("../src/core/watch.ts");
+    const { WalkFilter } = await import("../src/core/walk.ts");
+    const { applyToGraph } = await import("../src/core/vault-feed.ts");
+    await withHome({ "a.md": "# A\n" }, (home) => {
+      for (let i = 0; i < 6; i++) mkdirSync(join(home, "big", `d${i}`), { recursive: true });
+      const w = new VaultWatcher({
+        root: home,
+        filter: new WalkFilter(home, DEFAULT_CONFIG.walk, { home: true }),
+        dirs: [""],
+        debounceMs: 20,
+        known: new Map(),
+        onBatch: () => {},
+        onDegraded: () => {},
+        maxDirs: 3,
+      });
+      try {
+        (w as unknown as { adoptTree(d: string): string[] }).adoptTree("big");
+        expect(w.watchedCount + w.polledDirs.length).toBe(3);
+      } finally {
+        w.close();
+      }
+      walkHomeNow(homeAt(home), DEFAULT_CONFIG);
+      const g = openGraph(homeAt(home), DEFAULT_CONFIG, true, "lazy");
+      for (const n of ["b.md", "c.md", "d.md"]) writeFileSync(join(home, n), "# N\n");
+      const created = (rel: string) => ({ rel, kind: "created" as const, isNote: true });
+      applyToGraph(g, { changes: ["b.md", "c.md", "d.md"].map(created), rescan: false }, 1e9, 2);
+      expect([...g.notes.keys()].sort()).toEqual(["a.md", "b.md"]);
+    });
+  });
 });
 
 describe("freshness and coverage (20.10)", () => {

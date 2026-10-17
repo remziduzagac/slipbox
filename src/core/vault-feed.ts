@@ -7,6 +7,7 @@ import { existsSync, statSync } from "node:fs";
 import { join } from "node:path";
 import { type Checkout, headCommit, headOf } from "./git.ts";
 import type { Graph } from "./graph.ts";
+import { HOME_LIMITS } from "./walk.ts";
 import type { WatchBatch } from "./watch.ts";
 
 /** HEAD as seen: its branch and its commit — a merge, a pull, a commit move it on the branch (20.21). */
@@ -21,12 +22,13 @@ export const SWITCH_SETTLE_MS = 3000;
 /**
  * A batch applied to the graph: notes updated, added and removed, attachments, a rescan.
  * `structural` when notes came or went — every link's status may have changed — and warnings for
- * what was left out.
+ * what was left out. `maxNotes`: home's cap (VV-D2) — a note that comes past it is left to home's walk, which holds it.
  */
 export function applyToGraph(
   graph: Graph,
   batch: WatchBatch,
   maxFileSize: number,
+  maxNotes = graph.home ? HOME_LIMITS.notes : Number.POSITIVE_INFINITY,
 ): { structural: boolean; warnings: string[] } {
   let structural = false;
   const warnings: string[] = [];
@@ -62,6 +64,7 @@ export function applyToGraph(
       }
       structural = true;
     } else {
+      if (!graph.notes.has(c.rel) && graph.notes.size >= maxNotes) continue;
       if (c.kind === "created" || !graph.notes.has(c.rel)) structural = true;
       graph.updateFile(c.rel, { rel: c.rel, abs, size: st.size, mtimeMs: st.mtimeMs });
     }

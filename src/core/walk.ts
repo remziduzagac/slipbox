@@ -10,9 +10,10 @@ import { join, relative, sep } from "node:path";
 import ignore, { type Ignore } from "ignore";
 import type { Config } from "./config.ts";
 import { classify } from "./filetypes.ts";
+import { mountsIn } from "./mounts.ts";
 import { userFolders } from "./paths.ts";
 import { answered, linkAnswer } from "./symlinks.ts";
-import { isInside, isVaultRoot, MARKER } from "./vault.ts";
+import { isInside, isVaultRoot, MARKER, rootMarkers } from "./vault.ts";
 
 export interface NoteFile {
   /** Vault-relative, always `/`-separated. */
@@ -90,6 +91,12 @@ export function homeSkip(rel: string, opts: { platform?: string; downloads?: str
   return null;
 }
 
+/**
+ * Why home's walk leaves out a folder where another filesystem is mounted (VV-D2): a share, a USB disk, an sshfs or NFS
+ * mount — one that stops answering would hang whatever looks into it. Known from the mount table, never by looking.
+ */
+export const ANOTHER_DISK = "another disk";
+
 /** Home's Downloads, as home's path for it: where the desktop says (`user-dirs.dirs`), else `Downloads`. */
 function downloadsIn(home: string): string {
   const at = userFolders(home).find((f) => f.name === "Downloads")?.path;
@@ -99,10 +106,15 @@ function downloadsIn(home: string): string {
 
 export class WalkFilter {
   private readonly extensions: Set<string>;
+  /** `walk.exclude`, as it was when the filter was made: what it applies. */
+  private readonly exclude: string[];
   private readonly gitignores = new Map<string, Ignore | null>();
   private readonly configIgnore: Ignore;
   /** Home's Downloads (VV-D2), as home's path for it; null in a vault's filter. */
   private readonly downloads: string | null;
+  /** Home's folders where another filesystem is mounted (VV-D2), as home's paths for them: read from the mount table
+   *  at each walk (`readMounts`), the first time one's needed else. */
+  private mounts: Set<string> | null = null;
 
   /** `home`: home's filter (VV-D2) — its skip list, never a `.gitignore`. */
   constructor(
@@ -111,7 +123,8 @@ export class WalkFilter {
     readonly opts: { home?: boolean; platform?: string } = {},
   ) {
     this.extensions = new Set(walk.extensions.map((e) => e.replace(/^\./, "").toLowerCase()));
-    this.configIgnore = ignore({ ignorecase: GIT_IGNORECASE }).add(walk.exclude);
+    this.exclude = [...walk.exclude];
+    this.configIgnore = ignore({ ignorecase: GIT_IGNORECASE }).add(this.exclude);
     this.downloads = opts.home ? downloadsIn(root) : null;
   }
 
@@ -127,6 +140,47 @@ export class WalkFilter {
 
   get maxFileSize(): number {
     return this.walk.max_file_size;
+  }
+
+  /** The mount table read again (VV-D2: home's), once per walk: a disk mounted or taken away since is seen. */
+  readMounts(): void {
+    if (!this.home) return;
+    let real = this.root;
+    try {
+      real = realpathSync(this.root);
+    } catch {}
+    this.mounts = mountsIn(this.root, real);
+  }
+
+  /** Whether `rel` is, or is in, a folder of home where another filesystem is mounted (VV-D2); never in a vault. */
+  onMount(rel: string): boolean {
+    if (!this.home) return false;
+    if (!this.mounts) this.readMounts();
+    if (!this.mounts!.size) return false;
+    for (let i = rel.indexOf("/"); i > 0; i = rel.indexOf("/", i + 1))
+      if (this.mounts!.has(rel.slice(0, i))) return true;
+    return this.mounts!.has(rel);
+  }
+
+  /** Whether another filesystem is mounted at `rel` itself, a folder of home (VV-D2): not one in it. */
+  mountAt(rel: string): boolean {
+    if (!this.home) return false;
+    if (!this.mounts) this.readMounts();
+    return this.mounts!.has(rel);
+  }
+
+  /**
+   * What decides which files home's walk takes, the disk aside (VV-D2): the note extensions, `walk.exclude`, the root
+   * markers, where Downloads is, the platform. A walk kept under other settings is no walk of home's now (`homeWalk`).
+   */
+  signature(): string {
+    return JSON.stringify({
+      extensions: [...this.extensions].sort(),
+      exclude: this.exclude,
+      markers: [...rootMarkers()].sort(),
+      downloads: this.downloads,
+      platform: this.opts.platform ?? process.platform,
+    });
   }
 
   /**
@@ -160,6 +214,8 @@ export class WalkFilter {
       if (isDir) {
         const why = homeSkip(rel, { platform: this.opts.platform, downloads: this.downloads ?? undefined });
         if (why) return why;
+        // Another disk: never looked into, nor for a marker — known from the mount table alone.
+        if (this.onMount(rel)) return ANOTHER_DISK;
         return isVaultRoot(join(this.root, rel)) ? "nested vault" : null;
       }
       // What the explorer doesn't list as a note or a text file: a picture, an archive, a program.
@@ -221,15 +277,21 @@ interface WalkState {
   sorted: boolean;
   /** The folders outside the vault its followed links lead to (VV-D6), by their real paths: each walked once. */
   followed: Set<string>;
+  /** How many of its other files it lists at most (home's cap, VV-D2): those found first, nearest the top. */
+  maxAssets: number;
 }
 
-function startWalk(root: string, filter: WalkFilter, sorted = false): WalkState {
+/** `mounts`: the mount table read again for this walk — not for one that goes on from another (home's folders listed
+ *  again, or asked for: the build's own walk read it). */
+function startWalk(root: string, filter: WalkFilter, sorted = false, maxAssets = Infinity, mounts = true): WalkState {
   let realRoot = root;
   try {
     realRoot = realpathSync(root);
   } catch {}
+  // Where other disks are mounted, read once for the walk (home's: never gone into, VV-D2).
+  if (mounts) filter.readMounts();
   const out: WalkResult = { files: [], assets: [], dirs: [], skipped: [], errors: [] };
-  return { root, realRoot, filter, out, links: new Map(), sorted, followed: new Set() };
+  return { root, realRoot, filter, out, links: new Map(), sorted, followed: new Set(), maxAssets };
 }
 
 /** A walk done: a symlinked note whose target it includes dropped, the notes sorted. */
@@ -255,8 +317,18 @@ export function walkVault(root: string, filter: WalkFilter): WalkResult {
   return finishWalk(st);
 }
 
-/** Home's cap (VV-D2): its index holds this many notes at most, and its walk lists this many folders. */
-export const HOME_LIMITS = { notes: 10_000, folders: 5_000 } as const;
+/**
+ * Home's cap (VV-D2): its index holds this many notes at most, and its walk lists this many folders — and this many of
+ * its other files, for a link to name one (those past it are left unlisted: the walk goes on for notes).
+ */
+export const HOME_LIMITS = { notes: 10_000, folders: 5_000, assets: 10_000 } as const;
+
+/** A walk's cap: so many notes, so many folders, and so many other files (none: no cap on them). */
+export interface WalkLimits {
+  notes: number;
+  folders: number;
+  assets?: number;
+}
 
 /** What stopped a walk short: its cap of notes, or of folders. */
 export type WalkCap = "notes" | "folders";
@@ -273,14 +345,15 @@ export class SlicedWalk {
   private done: WalkResult | null = null;
   capped: WalkCap | null = null;
 
-  /** `from`: the folders to list, the top by default; `known`: folders walked already, never gone into again. */
+  /** `from`: the folders to list, the top by default — a walk going on from another, whose mount table it takes;
+   *  `known`: folders walked already, never gone into again. */
   constructor(
     root: string,
     filter: WalkFilter,
-    readonly limits: { notes: number; folders: number } = HOME_LIMITS,
+    readonly limits: WalkLimits = HOME_LIMITS,
     private readonly opts: { from?: string[]; known?: ReadonlySet<string> } = {},
   ) {
-    this.st = startWalk(root, filter, true);
+    this.st = startWalk(root, filter, true, limits.assets, !opts.from);
     this.queue = [...(opts.from ?? [""])];
   }
 
@@ -305,7 +378,8 @@ export class SlicedWalk {
       listDir(this.st, this.queue[this.next++]!, (rel) => {
         if (!this.opts.known?.has(rel)) this.queue.push(rel);
       });
-      if (out.files.length >= this.limits.notes) {
+      // Past the cap, not at it: a walk of exactly so many notes left nothing out.
+      if (out.files.length > this.limits.notes) {
         out.files.length = this.limits.notes;
         return this.finish("notes");
       }
@@ -353,7 +427,8 @@ function listDir(st: WalkState, dirRel: string, descend: (rel: string) => void):
     if (entry.isDirectory()) {
       const why = filter.exclusion(rel, true);
       if (why === null) descend(rel);
-      else if (why === "nested vault") out.skipped.push({ rel, reason: why });
+      // A vault of its own, another disk (home's, VV-D2): said, so what's kept knows it.
+      else if (why === "nested vault" || why === ANOTHER_DISK) out.skipped.push({ rel, reason: why });
       continue;
     }
     if (entry.isSymbolicLink()) {
@@ -363,7 +438,7 @@ function listDir(st: WalkState, dirRel: string, descend: (rel: string) => void):
     if (!entry.isFile()) continue;
     if (filter.exclusion(rel, false) !== null) continue;
     if (filter.isNoteName(entry.name)) addFile(abs, rel, filter, out);
-    else out.assets.push(rel);
+    else if (out.assets.length < st.maxAssets) out.assets.push(rel);
   }
 }
 
@@ -440,7 +515,7 @@ function handleSymlink(abs: string, rel: string, st: WalkState, descend: (rel: s
   }
   if (filter.exclusion(rel, false) !== null) return;
   if (!filter.isNoteName(rel.slice(rel.lastIndexOf("/") + 1))) {
-    out.assets.push(rel);
+    if (out.assets.length < st.maxAssets) out.assets.push(rel);
     return;
   }
   addFile(abs, rel, filter, out);
