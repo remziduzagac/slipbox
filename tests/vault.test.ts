@@ -11217,3 +11217,79 @@ describe("reading and writing keep to the links of the place a path is in (VV-D6
     }),
   );
 });
+
+describe("the symlinks you've answered: listed, and forgotten (VV-D6)", () => {
+  const cli = async (argv: string[], cwd: string) => {
+    let out = "";
+    let err = "";
+    const code = await runCli(argv, {
+      out: (s) => (out += s),
+      err: (s) => (err += s),
+      stdin: async () => "",
+      isTTY: false,
+      columns: undefined,
+      cwd,
+      env: { ...process.env, NO_COLOR: "1" },
+    });
+    return { code, out, err, json: () => JSON.parse(out) };
+  };
+
+  test("slipbox symlinks lists each answer, where it leads and what was said; forget forgets one: asked again, and followed no more, its notes gone from search", async () => {
+    const before = process.env.HOME;
+    const state = process.env.XDG_STATE_HOME;
+    process.env.HOME = realpathSync(mkdtempSync(join(tmpdir(), "slipbox-home-")));
+    process.env.XDG_STATE_HOME = realpathSync(mkdtempSync(join(tmpdir(), "slipbox-state-"))); // answers of its own
+    try {
+      const top = realpathSync(mkdtempSync(join(tmpdir(), "slipbox-forget-")));
+      const vault = join(top, "vault");
+      const out = join(top, "out");
+      mkdirSync(join(vault, ".slipbox"), { recursive: true });
+      mkdirSync(join(top, "other"));
+      mkdirSync(out);
+      writeFileSync(join(vault, "index.md"), "# Index\n\n[far](data/far.md)\n");
+      writeFileSync(join(out, "far.md"), "# Far\n\nquetzal feathers\n");
+      symlinkSync(out, join(vault, "data"));
+      symlinkSync(join(top, "other"), join(vault, "no"));
+      expect((await cli(["symlinks"], vault)).out).toBe(
+        "no symlink answered yet: one leading out asks when it's first opened in slipbox\n",
+      );
+      setLinkAnswer(join(vault, "data"), "follow");
+      setLinkAnswer(join(vault, "no"), "no");
+      await probe(out);
+      expect((await cli(["search", "quetzal"], vault)).out).toContain("data/far.md");
+      const listed = await cli(["symlinks"], vault);
+      expect(listed.out.split("\n").sort()).toEqual(
+        [
+          "",
+          `${join(vault, "data")} → ${out}  followed`,
+          `${join(vault, "no")} → ${join(top, "other")}  not followed`,
+        ].sort(),
+      );
+      const json = (await cli(["symlinks", "--json"], vault)).json().data;
+      expect(json.find((a: { link: string }) => a.link === join(vault, "data"))).toMatchObject({
+        target: out,
+        answer: "follow",
+        now: out,
+      });
+      // Forgotten, by its path from here: followed no more — not listed, nor searched, nor read; asked again in slipbox.
+      const forgot = await cli(["symlinks", "forget", "data"], vault);
+      expect(forgot.code).toBe(0);
+      expect(forgot.out).toBe(`forgot ${join(vault, "data")} → ${out} (followed): asked again when it's next opened\n`);
+      expect(linkAnswer(join(vault, "data"))).toBeNull();
+      expect((await cli(["ls"], vault)).out).not.toContain("data/far.md");
+      expect((await cli(["search", "quetzal"], vault)).out).not.toContain("data/far.md");
+      expect((await cli(["read", "data/far.md"], vault)).code).toBe(5);
+      expect((await cli(["symlinks"], vault)).out).toBe(`${join(vault, "no")} → ${join(top, "other")}  not followed\n`);
+      // Nothing said of it now; nor of a path that's no link.
+      expect((await cli(["symlinks", "forget", "data"], vault)).code).toBe(3);
+      expect((await cli(["symlinks", "forget", join(vault, "index.md")], vault)).code).toBe(3);
+      expect((await cli(["symlinks", "forget"], vault)).code).toBe(2);
+      expect((await cli(["symlinks", "follow", "data"], vault)).code).toBe(2);
+      expect((await cli(["symlinks", "forget", join(vault, "no")], top)).code).toBe(0);
+      expect(linkAnswer(join(vault, "no"))).toBeNull();
+    } finally {
+      process.env.HOME = before;
+      process.env.XDG_STATE_HOME = state;
+    }
+  });
+});

@@ -311,6 +311,15 @@ of every read through a link out of the root; D220's writes stay for vaults.
   own path (its folder by its real path, `linkKey`) and its target's real path, never in the vault: a cloned repository
   can't bring its links trusted. A link that leads elsewhere now has no answer, so it asks again. Just looking is the
   TUI's, for this once (`Following.looking`), never kept, cleared when you go into another vault.
+- **Forgetting an answer** (`answersKept`, `forgetLinkAnswer`): `space v l` (`vault.links`, `:symlinks`) lists the
+  symlinks answered — the answers kept, newest first, then those looked at this once — each `link → target` and what
+  was said (`followed`, `not followed`, `just looking, this once`; one that leads elsewhere now, or is gone, says so);
+  `enter` forgets one (`Following.forget`): asked again when it's next opened. One followed, or looked at, is no more at
+  once: the vault walked again without it (its notes out of the index and search, its folder no longer watched:
+  `watcher.sync` to the walk's folders), a tab read through it left read-only (`… isn't followed now — read-only; open
+  it again to choose`) and never read again through it, the explorer's rows marked again. The CLI: `slipbox symlinks`
+  lists them (`--json`: `[{link, target, answer, at, now}]`), `slipbox symlinks forget <link>` forgets one by its path
+  (exit 3 when nothing was said of it). Forgetting is the CLI's to do; answering stays slipbox's.
 - **The walk and the watcher** (`symlinkVerdict`): a link out is gone through only when you follow it and its target has
   answered a probe (`answered`); a folder is walked under the link's name, once (`followed`: a second link to it, or
   into it, skipped as `LINK_REASON.twice`), never one holding the vault (`loop`). What isn't gone through is in
@@ -363,9 +372,7 @@ of every read through a link out of the root; D220's writes stay for vaults.
 
 Not done:
 
-- Un-following a link: its answer is kept until the link leads elsewhere, with nothing to take it back but editing
-  `links.json` (`setLinkAnswer` can forget one; nothing calls it). A "no" kept asks again at every open, as no answer
-  does (ideas.md § Roots and vaults).
+- A "no" kept asks again at every open, as no answer does (ideas.md § Roots and vaults).
 - A link not followed still has its target resolved and statted on the main thread, by the walk (`symlinkVerdict`),
   Elsewhere's listing and the explorer's: a mount that hangs behind one can hold them up. The probe guards followed
   links only.

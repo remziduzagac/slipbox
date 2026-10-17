@@ -338,8 +338,10 @@ export class Watch {
       );
       // Home's graph is built from its walk kept (VV-D2): a folder that came is walked with the rest, while nobody works.
       this.walkHomeAgain();
-      // The walk itself changed: any open note may have changed, appeared or gone.
-      for (const buf of this.app.buffers.values()) if (buf.changedOnDisk()) this.reloadBuffer(buf);
+      // The walk itself changed: any open note may have changed, appeared or gone — never read again through a link
+      // not followed now (VV-D6: one forgotten).
+      for (const buf of this.app.buffers.values())
+        if (buf.changedOnDisk() && (buf.elsewhere || !this.app.following.blocked(buf.abs))) this.reloadBuffer(buf);
     }
     for (const c of batch.changes) {
       // An open note reloads — a data or text file too, like a note (16.4) — and a big one still

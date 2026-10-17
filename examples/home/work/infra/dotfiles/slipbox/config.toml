@@ -522,6 +522,7 @@ sidebar_vault = { bold = true, underline = true }
 "leader ; S b" = "folders.default"
 "leader ; S c" = "root.trust"
 "leader ; S d" = "root.untrust"
+"leader ; S e" = "vault.links"
 "leader ; T a" = "cell.fold"
 "leader ; T b" = "cell.edit"
 "leader ; T c" = "cell.copy"
