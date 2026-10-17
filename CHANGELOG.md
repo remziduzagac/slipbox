@@ -67,6 +67,10 @@ The format is [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.1.0/); wh
   link whose target isn't there. git's mark is in the column before it, and before that, dimmed, a vault's branch, or a
   worktree's after `⎇`. Each mark is one column wide, with ASCII and Nerd Font forms ([A row's
   marks](docs/manual/files.md#a-rows-marks)). A new colour, `sidebar_mark`, is the indexed mark's.
+- With the explorer's cursor on a row marked `⊘`, the status line says why it isn't indexed, until the cursor moves
+  off: `⊘ not indexed: generated (node_modules), git-ignored`, `walk.exclude`, `on another disk`, `a link not
+  followed`, `over walk.max_file_size`, and the others. Where two things hold, both are said. The Info view says it
+  too, of the file on screen.
 - The git panel works by mouse as by keys, and says its keys: a message box where `ctrl+enter` commits; buttons to
   commit, amend, pull, push, fetch and stash; each row's buttons under the pointer to stage, unstage, discard or show
   its diff, and a menu on a right click. It shows what the branch changed against its base, so a branch whose work is
