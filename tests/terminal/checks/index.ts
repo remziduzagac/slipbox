@@ -6,8 +6,17 @@ import { LEFT_OUT_LINKS_AND_FILES, LINKS_AND_FILES } from "./links-and-files.ts"
 import { LEFT_OUT_NAVIGATING, NAVIGATING } from "./navigating.ts";
 import { LEFT_OUT_OUTSIDE_AND_CODE, OUTSIDE_AND_CODE } from "./outside-and-code.ts";
 import { LEFT_OUT_READING, READING } from "./reading.ts";
+import { SOURCE_CONTROL } from "./source-control.ts";
 
-export const CHECKS: Check[] = [...READING, ...EDITING, ...NAVIGATING, ...LINKS_AND_FILES, ...OUTSIDE_AND_CODE];
+export const CHECKS: Check[] = [
+  ...READING,
+  ...EDITING,
+  ...NAVIGATING,
+  ...LINKS_AND_FILES,
+  ...OUTSIDE_AND_CODE,
+  // Source control's, in the outside-and-code area: their own file.
+  ...SOURCE_CONTROL,
+];
 
 const AREAS: LeftOut[] = [
   LEFT_OUT_READING,

@@ -500,48 +500,59 @@ export class BranchView {
     if (b.here || mine === there || mine.startsWith(`${there}${sep}`))
       return app.message("info", "the worktree you're in can't be removed from here: go into another first");
     if (w.main) return app.message("info", "the main checkout isn't a worktree to remove");
-    void Promise.all([this.ask(b), ignoredLater(w.path)]).then(([st, ignored]) => {
-      if (!st) return app.message("warn", "git couldn't say where the branch stands");
-      if (st.dirty)
-        return app.message(
-          "warn",
-          `not removed: ${tildePath(w.path)} has ${st.dirty} uncommitted file${st.dirty === 1 ? "" : "s"} — commit or discard them there first`,
-        );
-      if (!st.base || !st.merged)
-        return app.message(
-          "warn",
-          `not removed: ${b.name} isn't merged into ${st.base ?? "its base"} — ${st.ahead} commit${st.ahead === 1 ? "" : "s"} of its own; merge it first`,
-        );
-      // What git deletes with it, unasked: its ignored notes and files (D61: an ignored note is the vault's).
-      const also = ignored ? ignoredText(ignored) : "";
-      const detail = also ? `also deletes ${sanitize(also)}` : undefined;
-      app.overlays.openList({
-        title: `Remove the worktree ${tildePath(w.path)}?`,
-        filterable: false,
-        items: [
-          { label: `Remove it, keep ${sanitize(b.name)}`, ...(detail ? { detail } : {}), data: "keep" },
-          {
-            label: `Remove it and the branch ${sanitize(b.name)}`,
-            detail: `merged into ${st.base}${detail ? `; ${detail}` : ""}`,
-            data: "both",
+    void Promise.all([this.ask(b), ignoredLater(w.path)]).then(([st, ignored]) =>
+      this.answered(() => {
+        if (!st) return app.message("warn", "git couldn't say where the branch stands");
+        if (st.dirty)
+          return app.message(
+            "warn",
+            `not removed: ${tildePath(w.path)} has ${st.dirty} uncommitted file${st.dirty === 1 ? "" : "s"} — commit or discard them there first`,
+          );
+        if (!st.base || !st.merged)
+          return app.message(
+            "warn",
+            `not removed: ${b.name} isn't merged into ${st.base ?? "its base"} — ${st.ahead} commit${st.ahead === 1 ? "" : "s"} of its own; merge it first`,
+          );
+        // What git deletes with it, unasked: its ignored notes and files (D61: an ignored note is the vault's).
+        const also = ignored ? ignoredText(ignored) : "";
+        const detail = also ? `also deletes ${sanitize(also)}` : undefined;
+        app.overlays.openList({
+          title: `Remove the worktree ${tildePath(w.path)}?`,
+          filterable: false,
+          items: [
+            { label: `Remove it, keep ${sanitize(b.name)}`, ...(detail ? { detail } : {}), data: "keep" },
+            {
+              label: `Remove it and the branch ${sanitize(b.name)}`,
+              detail: `merged into ${st.base}${detail ? `; ${detail}` : ""}`,
+              data: "both",
+            },
+            { label: "Cancel", data: "cancel" },
+          ],
+          accept: (item) => {
+            if (item.data === "cancel") return;
+            app.message("info", `removing the worktree ${tildePath(w.path)}…`);
+            void removeWorktreeLater(c.root, w.path, item.data === "both" ? b.name : null).then((why) => {
+              if (why) return app.message("warn", `git: ${why}`);
+              this.opened.delete(b.name);
+              app.message(
+                "info",
+                `removed the worktree ${tildePath(w.path)}${item.data === "both" ? `, and ${b.name}` : `; ${b.name} kept`}`,
+              );
+              void app.git.refreshNow().then(() => app.host.requestRender());
+            });
           },
-          { label: "Cancel", data: "cancel" },
-        ],
-        accept: (item) => {
-          if (item.data === "cancel") return;
-          app.message("info", `removing the worktree ${tildePath(w.path)}…`);
-          void removeWorktreeLater(c.root, w.path, item.data === "both" ? b.name : null).then((why) => {
-            if (why) return app.message("warn", `git: ${why}`);
-            this.opened.delete(b.name);
-            app.message(
-              "info",
-              `removed the worktree ${tildePath(w.path)}${item.data === "both" ? `, and ${b.name}` : `; ${b.name} kept`}`,
-            );
-            void app.git.refreshNow().then(() => app.host.requestRender());
-          });
-        },
-      });
-    });
+        });
+      }),
+    );
+  }
+
+  /**
+   * What a branch's button says or asks once git's answer is in, in the background (Remove…, Merge…): drawn as it
+   * comes, not left for whatever draws next — a key, another answer.
+   */
+  private answered(then: () => void): void {
+    then();
+    this.app.host.requestRender();
   }
 
   /** "Open in a worktree": a worktree made for a branch checked out nowhere, in the folder `[git] worktrees` names; gone into. */
@@ -696,9 +707,17 @@ export class BranchView {
     const got = this.branches();
     if (!c || !got) return;
     const st = await this.ask(b);
+    this.answered(() => this.mergeAsked(b, st, got.branches));
+  }
+
+  /** Merge…'s menu, once its base is known: the links it would break, the merge itself, or into another branch. */
+  private mergeAsked(b: Branch, st: BranchStats | null, branches: Branch[]): void {
+    const app = this.app;
+    const c = app.git.checkout;
+    if (!c) return;
     const into = st?.base;
     if (!into) return app.message("info", `${b.name} has no base to merge into — Compare against… sets one`);
-    const target = got.branches.find((x) => x.name === into);
+    const target = branches.find((x) => x.name === into);
     const where = target?.here ? c.root : target?.worktree && !target.worktree.gone ? target.worktree.path : null;
     app.overlays.openList({
       title: `Merge ${sanitize(b.name)} into ${sanitize(into)}`,
@@ -722,7 +741,7 @@ export class BranchView {
         if (item.data === "review") return app.git.showMergeReview({ from: b.name, into });
         if (item.data === "nowhere")
           return app.message("info", `${into} isn't checked out anywhere: check it out, then merge ${b.name} there`);
-        if (item.data === "other") return this.mergeInto(b, got.branches);
+        if (item.data === "other") return this.mergeInto(b, branches);
         this.runMerge(b.name, into, where!, !!target?.here);
       },
     });
