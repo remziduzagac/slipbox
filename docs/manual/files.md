@@ -46,6 +46,7 @@ While it has the keys:
 | `s` | Open it in the other window of a split, splitting first |
 | `/` | Filter: type to narrow the tree, the folders kept. `enter` opens, `esc` clears |
 | `a` | Show every text file, or back to what it shows by default (below) |
+| `shift+h` | Show hidden files and folders too, or hide them again (below) |
 | `.` | The selected row's menu |
 | `esc` | Back to the note. The explorer stays open |
 | `q` | Close the explorer |
@@ -197,7 +198,19 @@ The switcher (`ctrl+p`) lists the same files, except those in a folder slipbox d
 Some files are never listed:
 
 - pictures, archives and other binary files, which slipbox doesn't open
-- hidden files and folders, whose names start with `.`
+- `.git`, git's own folder
+- hidden files and folders, whose names start with `.`, unless you ask for them
+
+`shift+h` in the explorer lists the hidden files and folders too, such as `.github` and `.env`, and hides them again.
+`:hidden` does the same, and so does the UI settings list (`space u u`). Your choice is remembered for the folder. To
+list them from the start, set `files.hidden = true` in your configuration, or in a vault's own `.slipbox/config.toml`
+([Configuration](configuration.md)).
+
+Hidden files and folders are not indexed, so they are marked `⊘`, and the status line says `hidden` while the cursor is
+on one. `.slipbox` says `slipbox's own folder`. A hidden file you open from the explorer is indexed from then on, and
+listed even while hidden files aren't, as when you open it by its path (below), except in your home folder and in
+`.slipbox`. The switcher (`ctrl+p`) and search
+list only what is indexed, so a hidden file shows there only once you've opened it.
 
 Some folders are listed, but nothing in them is indexed. They are marked `⊘`:
 

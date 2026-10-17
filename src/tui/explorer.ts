@@ -7,7 +7,7 @@ import { classify, type FileGroup } from "../core/filetypes.ts";
 import { type Dirent, readdirSync, statSync } from "node:fs";
 import { basename, dirname, isAbsolute, join, posix, relative, sep } from "node:path";
 import { checkoutOf } from "../core/git.ts";
-import { readIdentity, vaultConfigFile } from "../core/registry.ts";
+import { MARKER, readIdentity, vaultConfigFile } from "../core/registry.ts";
 import { tildePath } from "../core/names.ts";
 import { findVaultRoot, hasMarker, homeFolder, isInside, isListed, isVaultRoot, locationAt } from "../core/vault.ts";
 import { isLink, linkScope, linkState, linkTarget } from "../core/symlinks.ts";
@@ -16,7 +16,7 @@ import { match } from "./match.ts";
 import { prettyKey } from "./keys.ts";
 import type { App, ListItem } from "./app.ts";
 import { folderUnreadable } from "./app.ts";
-import { type DiskEntry, fromDisk } from "./explorer-disk.ts";
+import { type DiskEntry, fromDisk, listsName } from "./explorer-disk.ts";
 import { Marks } from "./marks.ts";
 
 /** The explorer: its tree, its view and breadcrumb, its keys. */
@@ -307,11 +307,13 @@ export class Explorer {
 
   /**
    * A path of the vault open (its path in it, and absolute) that its walk leaves out: at, or under, what it excludes
-   * (VV-D8) — a hidden folder only in home, whose tree lists none; in a vault, a hidden note reached by a link is in
-   * its tree (20.8). Why, and the folder (or file) it says it of; or null.
+   * (VV-D8) — a hidden name in home, and in a vault while the explorer lists them (`files.hidden`), each then a row by
+   * its path; else, in a vault, a hidden note reached by a link is in its tree (20.8), as a hidden file reached always
+   * is. Why, and the folder (or file) it says it of; or null.
    */
   private leftOut(rel: string, abs: string): LeftOut | null {
     const filter = this.app.graph.filter;
+    const shown = this.app.ui.hidden_files;
     const R = this.app.loc.root;
     const parts = rel.split("/");
     // On another disk (home's, VV-D2): known from the mount table, never looked at.
@@ -326,8 +328,9 @@ export class Explorer {
           dir = statSync(abs).isDirectory();
         } catch {}
       const why = filter.exclusion(parts.slice(0, i).join("/"), dir);
-      if (why !== null && why !== "nested vault" && (filter.home || why !== "hidden"))
-        return { why, at: join(R, ...parts.slice(0, i)) };
+      if (why === null || why === "nested vault") continue;
+      if (why === "hidden" && !filter.home && (!shown || (i === parts.length && this.app.graph.known(rel)))) continue;
+      return { why, at: join(R, ...parts.slice(0, i)) };
     }
     return null;
   }
@@ -341,6 +344,18 @@ export class Explorer {
     // In a vault nested in it, or through a link the walk didn't take: that vault's, or not the walk's at all.
     if ([...this.nestedRels(), ...this.unwalkedRels()].some((n) => rel === n || rel.startsWith(`${n}/`))) return null;
     return this.leftOut(rel, abs);
+  }
+
+  /**
+   * A hidden file of the vault open, listed (`files.hidden`) and opened: reached (20.8), the vault's from now on, as
+   * `:e` makes it. Not in home, whose walk never takes one, nor in `.slipbox`, nor under what the walk leaves out
+   * otherwise (a git-ignored folder's row opens its file unreached).
+   */
+  private reachHidden(row: TreeRow): void {
+    if (!row.outside || row.kind !== "note") return;
+    const abs = this.rowAbs(row);
+    if (this.leftOutAt(abs)?.why !== "hidden") return;
+    this.app.graph.reachFile(relative(this.app.loc.root, abs).split(sep).join("/"), { keep: true });
   }
 
   /** A row's path, absolute. */
@@ -395,10 +410,11 @@ export class Explorer {
         return false;
       }
     };
-    // Hidden names aren't listed; the busy folders are (VV-D8), never indexed.
-    const shown = entries.filter((e) => !e.name.startsWith("."));
+    // Hidden names only while `files.hidden` is on, `.git` never; the busy folders are (VV-D8). Neither is indexed.
+    const shown = entries.filter((e) => listsName(e.name, this.app.ui.hidden_files));
     for (const e of shown.filter(isDir).sort(byName)) {
       const abs = join(dir, e.name);
+      const why = leftOut ?? hiddenOut(e.name, abs);
       if (abs === R && !isListed(this.app.loc)) {
         out.push({
           kind: "root",
@@ -432,10 +448,10 @@ export class Explorer {
           name: e.name,
           depth,
           outside: true,
-          ...(leftOut ? { leftOut: leftOut.why, leftOutAt: leftOut.at } : {}),
+          ...(why ? { leftOut: why.why, leftOutAt: why.at } : {}),
           ...this.linkOf(e, abs, true),
         });
-      if (this.expanded.has(abs)) this.outsideRows(abs, depth + 1, out, vault ? null : leftOut);
+      if (this.expanded.has(abs)) this.outsideRows(abs, depth + 1, out, vault ? null : why);
     }
     // Its files as their vault lists them: auto, every text file but in a notes vault.
     const show = this.app.sidebar.allFiles ? "all" : this.app.config.files.show;
@@ -446,6 +462,8 @@ export class Explorer {
       const { group } = classify(abs, this.app.config.walk.extensions);
       if (group === "binary" || (group !== "note" && (mode === "notes" || (mode === "renderable" && group !== "data"))))
         continue;
+      // A hidden file where nothing holding it is left out: its own `⊘`, as a hidden folder has.
+      const hidden = leftOut ? null : hiddenOut(e.name, abs);
       out.push({
         kind: "note",
         path: abs,
@@ -453,6 +471,7 @@ export class Explorer {
         depth,
         outside: true,
         ...(group !== "note" ? { group } : {}),
+        ...(hidden ? { leftOut: hidden.why, leftOutAt: hidden.at } : {}),
         ...this.linkOf(e, abs, false),
       });
     }
@@ -527,7 +546,7 @@ export class Explorer {
     let common = T;
     while (!isInside(common, abs) && dirname(common) !== common) common = dirname(common);
     if (!isInside(common, abs)) return false;
-    if (!listedDown(common, abs) || abs === this.app.scratch.location().path) return false;
+    if (!listedDown(common, abs, this.app.ui.hidden_files) || abs === this.app.scratch.location().path) return false;
     // Only the two paths unfolded: what was unfolded in the old view stays, nothing else.
     const kept = [...this.expanded].filter((k) => isInside(T, this.rowAbs({ path: k })));
     this.expanded = new Set(kept);
@@ -565,6 +584,32 @@ export class Explorer {
 
   private crumbsMemo: { key: string; list: ReturnType<App["explorer"]["crumbs"]> } | null = null;
 
+  /**
+   * `shift+h` (`explorer.toggle_hidden`, `:hidden`): hidden files and folders listed, or not — `files.hidden` changed
+   * as the UI settings change one, kept for the vault until its config value changes — said; the selection stays on
+   * its row. Hidden again, a view in a hidden folder goes out to the folder holding it.
+   */
+  toggleHidden(): void {
+    const shown = !this.app.ui.hidden_files;
+    const mine = this.app.leftView === "explorer" && !this.app.sidebar.filter;
+    const at = mine ? this.rows()[this.app.sidebar.selected]?.path : undefined;
+    this.app.settings.setUi("hidden_files", shown);
+    if (!shown) {
+      // The highest hidden folder on the view's way that isn't the vault open's own way (a vault in ~/.dotfiles).
+      let out: string | null = null;
+      for (let d = this.top; dirname(d) !== d; d = dirname(d))
+        if (basename(d).startsWith(".") && !isInside(d, this.app.loc.root)) out = dirname(d);
+      if (out) this.zoomTo(out);
+    }
+    if (mine) {
+      const rows = this.rows();
+      const again = rows.findIndex((r) => r.path === at);
+      this.app.sidebar.selected =
+        again >= 0 ? again : Math.min(this.app.sidebar.selected, Math.max(0, rows.length - 1));
+    }
+    this.app.message("info", shown ? "explorer: hidden files shown" : "explorer: hidden files not shown");
+  }
+
   /** The vault's own tree, from `sub` ("" its top): its folders, notes and files, and the vaults in it (17.13) —
    *  one unfolded listed a level at a time under its row — and what the walk didn't give, from the disk (VV-D8). */
   private rootTree(sub = ""): TreeRow[] {
@@ -595,11 +640,13 @@ export class Explorer {
         if (d.dir) folders.add(p);
         else if (d.group !== "note") groups.set(p, d.group!);
       }
-    // A note of a folder left out, reached by a link (20.8): listed in that folder's rows, by its path.
+    // A note of a folder left out, reached by a link (20.8) or made in a hidden one: listed in that folder's rows, by its
+    // path; and a hidden folder the walk knows of (a note made there), only by its row there.
     const inLeftOut = (p: string) => {
       for (let i = p.indexOf("/"); i > 0; i = p.indexOf("/", i + 1)) if (leftOut.has(p.slice(0, i))) return true;
       return false;
     };
+    for (const f of [...folders]) if (leftOut.has(f) || inLeftOut(f)) folders.delete(f);
     const notes = [...graph.notes.keys(), ...[...unwalked].filter((p) => !folders.has(p) && !groups.has(p))];
     const isDir = (p: string) => folders.has(p) || roots.has(p) || !!leftOut.get(p)?.dir || !!links.get(p)?.dir;
     // The links the walk didn't go through (VV-D6): a second name for a folder of the vault, one not followed, one
@@ -610,7 +657,7 @@ export class Explorer {
     const under = (p: string) => !sub || p.startsWith(`${sub}/`);
     const d0 = sub ? sub.split("/").length : 0;
     const paths = [...notes, ...groups.keys()]
-      .filter((p) => !graph.reached.has(p) || !inLeftOut(p))
+      .filter((p) => !inLeftOut(p))
       .concat([...folders, ...roots.keys(), ...leftOut.keys(), ...links.keys()])
       .filter(under)
       .sort((a, b) => {
@@ -902,6 +949,7 @@ export class Explorer {
       if (row.kind === "dir" || row.root?.here) return unfold();
       // Another vault's folder, chosen: into it, its tabs (VV-D4); a file of one, opened, goes into it too.
       if (row.kind === "root") return this.app.vaults.enterRoot(row);
+      this.reachHidden(row);
       if (where === "tab") this.app.openOrSwitchTab(row.path);
       else if (where === "split") {
         this.app.windows.other();
@@ -961,6 +1009,9 @@ export class Explorer {
         );
         break;
       }
+      case "toggle_hidden":
+        // A command (`explorer.toggle_hidden`, `:hidden`), a UI setting as the others are.
+        return void this.app.run("explorer.toggle_hidden");
       case "bottom":
         this.app.sidebar.selected = rows.length - 1;
         break;
@@ -1054,7 +1105,8 @@ export interface TreeRow {
    *  as a link does (VV-D4). */
   outside?: boolean;
   /** What the vault open's walk leaves out (VV-D8), listed from the disk: why (`busy folder`, `.gitignore`,
-   *  `walk.exclude`, `Downloads`…). Never indexed. A folder in it carries it too; a file, only `outside`. */
+   *  `walk.exclude`, `Downloads`…). Never indexed. A folder in it carries it too; a file, only `outside`. A hidden name
+   *  listed (`files.hidden`) anywhere else has it too: `hidden`. */
   leftOut?: string;
   /** Where `leftOut` was decided, absolute: the folder (or file) the walk leaves out — this row's, or the one holding
    *  it. Its name says a busy folder's reason (VV-D9: `generated (node_modules)`). */
@@ -1072,10 +1124,17 @@ export interface LeftOut {
   at: string;
 }
 
-/** Whether the explorer lists every folder from `from` down to `to`, inside it: none of them hidden — a busy folder
- *  is listed (VV-D8). */
-export function listedDown(from: string, to: string): boolean {
-  return !relative(from, to)
+/** A hidden name listed (`files.hidden`) where nothing holding it is left out: why no walk takes it — `hidden`, or
+ *  slipbox's own folder — said of itself; null for any other name. */
+function hiddenOut(name: string, abs: string): LeftOut | null {
+  if (!name.startsWith(".")) return null;
+  return { why: name === MARKER ? "always skipped" : "hidden", at: abs };
+}
+
+/** Whether the explorer lists every folder from `from` down to `to`, inside it: none of them hidden, unless
+ *  `showHidden` (`files.hidden`) — `.git` never — a busy folder is listed (VV-D8). */
+export function listedDown(from: string, to: string, showHidden = false): boolean {
+  return relative(from, to)
     .split(sep)
-    .some((p) => p.startsWith("."));
+    .every((p) => listsName(p, showHidden));
 }

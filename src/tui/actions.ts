@@ -181,6 +181,7 @@ export function registerActions(app: App): void {
         { label: "Code cells", hint: a.ui.code_cells === "box" ? "boxes" : "bands", data: "ui.code_cells" },
         { label: "Code blocks", hint: CODE_WRAP_SAID[a.ui.code_wrap], data: "ui.code_wrap" },
         { label: "Scratch opens", hint: SCRATCH_SAID[a.ui.scratch_in], data: "ui.scratch_in" },
+        { label: "Hidden files in the explorer", hint: onOff(a.ui.hidden_files), data: "explorer.toggle_hidden" },
       ];
       a.overlays.openList({
         title: "UI settings — enter changes one",

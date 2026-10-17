@@ -354,6 +354,7 @@ Moving selects a row and opens nothing. [Files](files.md) explains what each of 
 | `g g` / `shift+g` | the first / last row |
 | `/` | filter the tree, keeping its folders ([Filtering a panel](#filtering-a-panel)) |
 | `a` | show every text file, or go back to what [`files.show`](configuration.md) lists |
+| `shift+h` | show hidden files and folders too (`⊘`, not indexed), or hide them again ([Files](files.md)) |
 | `n` / `shift+n` | a new note / a new folder in the selected folder (beside a selected file) |
 | `r` | rename the selected note, file or folder in its folder, fixing every link to it after a preview |
 | `shift+r` | on a nested vault's row, name it, as pointers name it |
@@ -972,6 +973,7 @@ Your configuration's [`[aliases]`](configuration.md) adds more commands, or rena
 | `:theme <name>` | set the theme |
 | `:glyphs <set>` | set the glyphs: `nerd`, `unicode`, `ascii` or `auto` |
 | `:zen` / `:wrap` | zen mode / wrapping, on or off |
+| `:hidden` | hidden files and folders in the explorer, shown or not, as its `shift+h` |
 | `:messages` | the messages slipbox has shown |
 | `:reload` / `:reindex` | read the note from disk again / reindex the vault |
 | `:config` | read the configuration again |

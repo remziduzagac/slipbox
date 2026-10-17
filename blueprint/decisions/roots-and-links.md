@@ -1084,3 +1084,30 @@ the walk's settings' to say, and opening it doesn't overrule them.
 
 **Not chosen:** indexing it once opened, as a git-ignored file is (a look would overrule `walk.exclude` and the busy
 folders' rule); a second path for `:e` beside the explorer's, which could open it differently; refusing it, as before.
+
+## D250: Hidden files in the explorer, by a setting and a key, never indexed (2026-10-17)
+
+**Decision:** A setting, `files.hidden` (default `false`; your config, a vault's `.slipbox/config.toml`, and the UI
+settings), and a key in the explorer that toggles it, `shift+h` (`toggle_hidden`; the command
+`explorer.toggle_hidden`, `:hidden`), modelled on `a`: it says `explorer: hidden files shown` or `explorer: hidden
+files not shown` and keeps the selection on its row; changed in the TUI, it is kept for the vault as a UI setting is,
+until its config value changes. On, the explorer lists the files and folders whose names start with a dot as it lists
+what the walk leaves out (VV-D8): rows by their paths, marked `⊘`, the status line's reason `hidden` (D244), `.slipbox`
+said `slipbox's own folder`; listed a level at a time anywhere, a hidden name is `⊘ hidden` itself. `.git` is never
+listed. Nothing hidden is indexed by being listed; a hidden file opened from its row in a vault is reached (20.8),
+indexed from then on, as `:e` reaches it, while in home, whose walk never takes a hidden folder, and in `.slipbox` it
+opens unreached. The walks are unchanged — home's still leaves hidden folders out — and so are the switcher, the
+explorer's filter, search and find: they list what's indexed, a hidden file once reached, as for the busy folders.
+Off, nothing changes. As built: `listsName` (`src/tui/explorer-disk.ts`), `Explorer.toggleHidden` and `reachHidden`
+(`src/tui/explorer.ts`); design/tui.md § Side panes.
+
+**Why:** The maintainer's choice, 2026-10-17 (#157): in a repository, `.github/`, `.claude/` and `.slipbox/` could be
+reached only by typing a path. A key is how a file manager shows them for a moment; a setting keeps them shown for
+those who always want them. Listed as left out, they read as what they are: there, browsable, not part of the index.
+
+**Cost:** With it on, each folder shown reads its hidden entries too, and `rowPath` asks whether a hidden file is
+reached (one index lookup) for a path at a hidden name.
+
+**Not chosen:** `files.show` or `files.include` naming them (a pattern for each, and still left out of the walk);
+indexing what's listed (a dotfiles folder's every file); `.git` listed with the rest (git's own, thousands of files);
+the switcher and find following the setting (they'd list files the index doesn't hold, which no search finds).

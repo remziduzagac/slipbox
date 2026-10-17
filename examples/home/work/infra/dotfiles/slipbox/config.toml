@@ -32,6 +32,7 @@ extension = "keep"              # mdBook turns foo.md into foo.html; a link with
 show = "all"                    # every text file; ctrl+n with a name like deploy.toml or run.py makes that file
 include = ["*.ts", "scripts/"]
 exclude = ["*.lock", "dist/"]
+hidden = true                   # .github, .env and the rest listed too: a repository's config is there
 
 [ui]
 sidebar = false                 # opened with the rail's button when I want it
@@ -336,6 +337,7 @@ sidebar_vault = { bold = true, underline = true }
 "leader ; f k" = "tab.close_all"
 "leader ; v a" = "explorer.cycle"
 "leader ; v b" = "explorer.reveal"
+"leader ; v c" = "explorer.toggle_hidden"
 "leader ; s a" = "outline.cycle"
 "leader ; s b" = "outline.toggle"
 "leader ; w a" = "footnotes.cycle"

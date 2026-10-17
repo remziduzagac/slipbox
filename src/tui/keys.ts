@@ -410,6 +410,8 @@ export const DEFAULT_EXPLORER_KEYS: Record<string, string> = {
   "shift+g": "bottom",
   "/": "filter",
   a: "all_files",
+  // Hidden files and folders listed, or not (`files.hidden`): `.` is the row's menu.
+  "shift+h": "toggle_hidden",
   // Making and changing files (18.x), in the selected folder or on the selected row. nvim-tree's
   // keys where they fit: r renames, d deletes (to the trash), y x p copy, cut and paste; n makes a
   // note (space n n too, as everywhere), N a folder.
@@ -448,6 +450,7 @@ export const EXPLORER_ACTIONS = [
   "bottom",
   "filter",
   "all_files",
+  "toggle_hidden",
   "new_note",
   "new_folder",
   "rename",
@@ -682,6 +685,10 @@ export const EXPLORER_ACTION_INFO: Record<string, { title: string; desc: string 
   all_files: {
     title: "All files",
     desc: "Shows every text file, or back to what files.show lists (auto: notes and data files in a notes vault)",
+  },
+  toggle_hidden: {
+    title: "Hidden files",
+    desc: "Lists the files and folders whose names start with a dot, not indexed (⊘), or stops; .git never (files.hidden)",
   },
   new_note: {
     title: "New note here",
@@ -986,6 +993,7 @@ export const DEFAULT_ALIASES: Record<string, string> = {
   glyphs: "glyphs.set",
   zen: "ui.zen",
   wrap: "ui.wrap",
+  hidden: "explorer.toggle_hidden",
   vs: "window.split_side",
   sp: "window.split_stacked",
   tabnew: "tab.new",
