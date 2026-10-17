@@ -13726,6 +13726,66 @@ describe("the background auto-index in the TUI (20.9)", () => {
       process.env.HOME = before;
     }
   });
+
+  test("a folder of home opened by name (VV-D2): its notes there at once, home never walked — its first note open, the switcher listing them; a file's folder too", async () => {
+    const { homeAt } = await import("../src/core/vault.ts");
+    const { homeWalkKept } = await import("../src/core/home.ts");
+    const home = realpathSync(mkdtempSync(join(sandbox, "home-")));
+    mkdirSync(join(home, "notes", "ideas"), { recursive: true });
+    mkdirSync(join(home, "other"), { recursive: true });
+    // Home's own notes, at its top and in another folder: neither is what was asked for.
+    writeFileSync(join(home, "README.md"), "# Home\n");
+    writeFileSync(join(home, "other", "o.md"), "# O\n");
+    writeFileSync(join(home, "notes", "inbox.md"), "# Inbox\n\nIdeas so far: [coffee](ideas/coffee.md).\n");
+    writeFileSync(join(home, "notes", "ideas", "coffee.md"), "# Coffee\n");
+    const loc = homeAt(home);
+    const before = process.env.HOME;
+    process.env.HOME = home;
+    try {
+      // `slipbox ~/notes`, home never walked: no idle wait, the folder walked at once — home's walk still to make.
+      const h = await harness({ loc, open: null, folder: join(home, "notes") });
+      expect(h.app.graph.home?.walked).toBeNull();
+      expect(homeWalkKept(loc)).toBe(false);
+      expect(h.app.view?.buf.rel).toBe("notes/ideas/coffee.md");
+      expect(h.app.explorer.top).toBe(join(home, "notes"));
+      await h.keys("ctrl+p");
+      const o = h.app.overlay as ListOverlay;
+      expect(o.title).toBe("Open note (3)");
+      expect(o.filtered.map((e) => e.item.data).sort()).toEqual([
+        "README.md",
+        "notes/ideas/coffee.md",
+        "notes/inbox.md",
+      ]);
+      await h.keys("escape");
+      // Built again (a reindex, the watcher's rescan), it's walked again: still there.
+      await h.app.run("vault.reindex");
+      expect(h.app.graph.notes.has("notes/inbox.md")).toBe(true);
+      // A file of it opened: its folder's notes known, so its link reaches one.
+      const f = await harness({ loc, open: join(home, "notes", "inbox.md") });
+      expect(f.app.view?.buf.rel).toBe("notes/inbox.md");
+      expect(f.app.graph.notes.has("notes/ideas/coffee.md")).toBe(true);
+      expect(f.app.graph.linksOf("notes/inbox.md").map((l) => [l.resolvedKind, l.path])).toEqual([
+        ["note", "notes/ideas/coffee.md"],
+      ]);
+      // Home walked and kept: the folder's in that walk, never walked a second time — a note come since, its folder's
+      // time set back as if nothing had, isn't seen.
+      const job = h.app.watch.indexJob()!;
+      while (job.step(50)) {}
+      expect(homeWalkKept(loc)).toBe(true);
+      writeFileSync(join(home, "notes", "late.md"), "# Late\n");
+      const hour = new Date(Date.now() - 3_600_000);
+      utimesSync(join(home, "notes"), hour, hour);
+      const again = await harness({ loc, open: null, folder: join(home, "notes") });
+      expect(again.app.graph.home?.walked).not.toBeNull();
+      expect(again.app.graph.notes.has("notes/inbox.md")).toBe(true);
+      expect(again.app.graph.notes.has("notes/late.md")).toBe(false);
+      expect(again.app.view?.buf.rel).toBe("notes/ideas/coffee.md");
+      await again.app.run("vault.reindex");
+      expect(again.app.graph.notes.has("notes/late.md")).toBe(false);
+    } finally {
+      process.env.HOME = before;
+    }
+  });
 });
 
 describe("settings from the vaults around this one (20.7)", () => {

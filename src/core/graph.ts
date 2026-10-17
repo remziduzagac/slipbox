@@ -25,7 +25,7 @@ import { changedBetween, inVault } from "./gitops.ts";
 import { contentHash, Redirects } from "./redirects.ts";
 import { dataLinks, parseData } from "./data.ts";
 import { classify, extensionOf } from "./filetypes.ts";
-import { type HomeWalk, homeWalk } from "./home.ts";
+import { type HomeWalk, homeWalk, walksInto } from "./home.ts";
 import { checkoutAt, findVaultRoot, isListed, type VaultLocation } from "./vault.ts";
 import { listDirectory, type NoteFile, type Skipped, type WalkCap, WalkFilter, walkVault } from "./walk.ts";
 import { tagKey, tagName } from "./tags.ts";
@@ -133,6 +133,27 @@ export class Graph {
    *  vault or a plain folder, which are walked whole at each build. */
   home: { walked: number | null; capped: WalkCap | null } | null = null;
 
+  /** The folders of home asked for by name (VV-D2), home's paths for them: walked at each build its walk doesn't
+   *  cover them. */
+  private readonly asked: string[] = [];
+
+  /**
+   * A folder of home asked for by name (VV-D2: `slipbox ~/notes`, or a file in it), by its whole path: its notes known
+   * now. Home's walk not covering it yet — never made, or its cap reached short of it — the graph is built again with
+   * the folder walked, as it is at each build after until the walk covers it (`homeWalk`). Home's path for it; null in
+   * a vault, or for home's top.
+   */
+  askFolder(abs: string): string | null {
+    if (this.loc.mode !== "home") return null;
+    const rel = relative(this.root, abs).split(sep).join("/");
+    if (!rel || climbsOut(rel) || isAbsolute(rel)) return null;
+    if (this.asked.includes(rel)) return rel;
+    this.asked.push(rel);
+    const covered = this.home?.walked != null && this.dirs.includes(rel);
+    if (!covered && walksInto(this.root, this.filter, rel)) this.build(this.useCache, "lazy");
+    return rel;
+  }
+
   get root(): string {
     return this.loc.root;
   }
@@ -144,13 +165,14 @@ export class Graph {
    * walk's note names, so `render` and `resolve` never pay for parsing the whole vault. Entries
    * not yet parsed are stubs until `entry()`, `ensureAll()` or `parseSome()` fills them.
    *
-   * Home (VV-D2) is never walked here: its walk is the one kept (`homeWalk`), or `given` — one just made, a slice at a
-   * time, by the background index or the TUI.
+   * Home (VV-D2) is never walked here: its walk is the one kept (`homeWalk`), the folders asked for that it doesn't
+   * cover walked with it (`askFolder`), or `given` — one just made, a slice at a time, by the background index or the
+   * TUI.
    */
   build(useCache = true, parse: "all" | "lazy" = "all", given?: HomeWalk): this {
     const t0 = performance.now();
     this.walkedAt = Date.now();
-    const home = this.loc.mode === "home" ? (given ?? homeWalk(this.loc, this.filter)) : null;
+    const home = this.loc.mode === "home" ? (given ?? homeWalk(this.loc, this.filter, this.asked)) : null;
     // What changed after home's walk began may be missing from it: the watcher looks at those folders again.
     if (home?.walked) this.walkedAt = home.walked;
     this.home = home ? { walked: home.walked, capped: home.capped } : null;

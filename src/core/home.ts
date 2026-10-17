@@ -1,8 +1,9 @@
 // Home (VV-D2): `~`, a vault without a marker. Its files are those in it that no other vault holds, less its skip
 // list (`homeSkip` in walk.ts); its walk is made a slice at a time while nobody is working — by the background index
 // (autoindex.ts), and by the TUI while home is the vault open — and kept in its cache folder (`walk.json`), so opening
-// home never walks it: its graph is built from the walk kept, each note's size and time read again. Nothing is
-// written into `~` itself (D39).
+// home never walks it: its graph is built from the walk kept, each note's size and time read again — a folder of it
+// asked for by name (`slipbox ~/notes`) walked at once when that walk doesn't cover it. Nothing is written into `~`
+// itself (D39).
 
 import { realpathSync, statSync } from "node:fs";
 import { join } from "node:path";
@@ -87,6 +88,66 @@ const isDir = (abs: string) => {
 };
 
 /**
+ * Home's walk, to build its graph from (VV-D2): the walk kept, brought up to now (`keptWalk`) — never walked, its top
+ * alone — and the folders of home asked for by name (`asked`, home's paths for them: `slipbox ~/notes`, or a file in
+ * it) that it doesn't cover yet, walked now, as far as home's cap and with its skip list: what was asked for has its
+ * notes at once. That walk isn't kept: home's own, made while nobody is working, covers them.
+ */
+export function homeWalk(
+  loc: Pick<VaultLocation, "root" | "key">,
+  filter: WalkFilter,
+  asked: readonly string[] = [],
+): HomeWalk {
+  const home = keptWalk(loc, filter);
+  // Never walked, home's top lists its folders without looking into them: none of them is covered.
+  const covered = new Set(home.walked === null ? [] : home.walk.dirs);
+  const from = asked.filter(
+    (rel, _, all) =>
+      !covered.has(rel) && !all.some((o) => o && o !== rel && under(rel, o)) && walksInto(loc.root, filter, rel),
+  );
+  if (!from.length) return home;
+  const w = new SlicedWalk(loc.root, filter, HOME_LIMITS, { from, known: covered });
+  while (w.step(1000)) {}
+  const more = w.result!;
+  const { walk } = home;
+  const files = new Set(walk.files.map((f) => f.rel));
+  const assets = new Set(walk.assets);
+  const dirs = new Set(walk.dirs);
+  return {
+    ...home,
+    walk: {
+      files: [...walk.files, ...more.files.filter((f) => !files.has(f.rel))].sort((a, b) =>
+        a.rel < b.rel ? -1 : a.rel > b.rel ? 1 : 0,
+      ),
+      assets: [...walk.assets, ...more.assets.filter((a) => !assets.has(a))],
+      dirs: [...walk.dirs, ...more.dirs.filter((d) => !dirs.has(d))],
+      skipped: [...walk.skipped, ...more.skipped],
+      errors: [...walk.errors, ...more.errors],
+    },
+  };
+}
+
+/**
+ * Whether home's walk goes into the folder `rel` (home's path for it; VV-D2): a folder, with nothing on its way that
+ * home's skip list leaves out or that is a vault of its own, and no link the walk wouldn't go through (VV-D6).
+ */
+export function walksInto(root: string, filter: WalkFilter, rel: string): boolean {
+  let realRoot = root;
+  try {
+    realRoot = realpathSync(root);
+  } catch {}
+  const parts = rel.split("/");
+  for (let i = 1; i <= parts.length; i++) {
+    const name = parts[i - 1]!;
+    const p = parts.slice(0, i).join("/");
+    if (!name || name === "." || name === ".." || filter.exclusion(p, true) !== null) return false;
+    const abs = join(root, p);
+    if (isLink(abs) && !symlinkVerdict(abs, realRoot).kept) return false;
+  }
+  return isDir(join(root, rel));
+}
+
+/**
  * Home's walk as it was kept, brought up to now — freshness checked, not assumed (VV-D2): each folder looked at again,
  * since its time moves when what's in it comes or goes. One gone, or become a vault, is dropped with all it held; one
  * changed since the walk is listed again, what came and went in it taken, a folder new in it walked; a vault the walk
@@ -94,7 +155,7 @@ const isDir = (abs: string) => {
  * grown past `walk.max_file_size` skipped, as the walk would. What changed is kept, for the next. Never walked, home
  * is its top alone, looked at now (`walkTop`).
  */
-export function homeWalk(loc: Pick<VaultLocation, "root" | "key">, filter: WalkFilter): HomeWalk {
+function keptWalk(loc: Pick<VaultLocation, "root" | "key">, filter: WalkFilter): HomeWalk {
   const kept = readJson<KeptWalk | null>(homeWalkFile(loc), null);
   if (kept?.version !== 1 || !Array.isArray(kept.notes))
     return { walk: walkTop(loc.root, filter), walked: null, capped: null };
