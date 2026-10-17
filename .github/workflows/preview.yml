@@ -1,6 +1,6 @@
 name: preview
 
-# GR-D13: `test` fast-forwarded from `main` (`git push origin main:test`) publishes a preview. Its version is
+# GR-D13, D251: `test` fast-forwarded from `dev` (`git push origin dev:test`) publishes a preview. Its version is
 # package.json's with the commit's UTC time and hash after it, <x.y.z>-preview.<YYYYMMDDHHMM>.g<hash>, stamped into
 # the build's checkouts and never committed; refused when v<x.y.z> is released already (bump the version first). It
 # is built by build.yml exactly as a release is, then published as the pre-release preview-<time>-<hash>: drafted, its

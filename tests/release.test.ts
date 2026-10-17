@@ -553,14 +553,19 @@ describe("the workflows: one build for releases and previews, previews from test
         Math.max(r.indexOf("release.ts build"), r.indexOf("release.ts finish")),
       );
     }
-    // The tests run on the code as committed, before the stamp — a release's: a preview's commit passed CI already.
+    // The tests, when asked, run on the code as committed, before the stamp. Neither caller asks: a preview's commit
+    // passed CI before `test` took it, a release's passed `full`, the whole suite, before `main` did (D251) — which the
+    // release checks before anything is built.
     const tests = runs(build.jobs.build!).indexOf("bun run test");
     expect(tests).toBeGreaterThanOrEqual(0);
     expect(tests).toBeLessThan(runs(build.jobs.build!).indexOf("release.ts stamp"));
     expect(build.jobs.build!.steps?.find((s) => s.name === "tests")?.if).toContain("inputs.suite");
     const suiteOf = (file: string) =>
       Object.values(workflow(file).jobs).find((j) => j.uses === "./.github/workflows/build.yml")?.with?.suite;
-    expect([suiteOf("release.yml"), suiteOf("preview.yml")]).toEqual([true, false]);
+    expect([suiteOf("release.yml"), suiteOf("preview.yml")]).toEqual([false, false]);
+    const plan = workflow("release.yml").jobs.plan;
+    expect(plan?.steps?.find((s) => s.name === "passed in full")?.run).toContain("check_name=full");
+    expect(plan?.permissions?.checks).toBe("read");
     const upload = build.jobs.finish?.steps?.find((s) => s.uses?.startsWith("actions/upload-artifact@"));
     expect(upload?.with?.name).toBe("release");
     // It can't write to the repository: the callers publish.
