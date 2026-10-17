@@ -43,6 +43,9 @@ cover). The terminal tests' report says what each check covered.
 
 ## TT-D5: Content from the sample folders only (2026-10-13)
 
+> **Amended by D241 (2026-10-17):** a check may build the git state it needs — history, branches, a remote, a
+> conflict, an operation under way — with git, from the samples' files.
+
 **Decision:** A terminal check opens the reference set (`examples/home`) or the demo vault (`examples/vault`), or a
 set of `examples/` made for a purpose (the guides' `~/notes`); a case they lack is added there, with its `CASES.md`
 entry, never written by the check. What git can't hold is made by `scripts/build-home.ts`. A unit test that checks one

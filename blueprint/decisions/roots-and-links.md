@@ -946,6 +946,9 @@ be; a read of it would hang or never end. A hostile folder gets a warning, never
 
 ## D237: A busy folder is one that looks generated (0.11, 2026-10-17)
 
+> **Clarified by D240 (2026-10-17):** a busy name matches in its own case only (`Build` is a folder like any); a
+> cache's name, in any case.
+
 **Decision:** A folder with a busy name (`node_modules`, `.venv`, `venv`, `__pycache__`, `target`, `build`, `dist`,
 `.next`, `vendor`, `Pods`, `DerivedData`, `.gradle`, `.tox`, a cache) is busy only when it looks generated: its
 repository's `.gitignore` ignores it, or it holds no note directly in it (a file of a note's extension at its top; its
@@ -975,3 +978,15 @@ changes or the vault is walked again.
 **Not chosen:** the busy names only in code repositories, by the vault's markers; a setting or an allow-list
 (`walk.busy`, `walk.include`); `git check-ignore` per folder (a process per folder, and outside a repository nothing to
 ask). ideas.md § Roots and vaults.
+
+## D240: Busy names in their own case alone (0.11, 2026-10-17)
+
+**Decision:** A busy folder's name (D237's list) matches only as tools write it: `node_modules`, `build`, `target`,
+`Pods`, `DerivedData`. `Build` or `Node_Modules` is a folder like any, walked and indexed. A cache's name (`cache`,
+`.cache`, `Caches`, `pip-cache`) still matches in any case. On a disk that ignores case, as macOS's do, the name is
+compared as the folder has it. Clarifies D237. As built: `isBusyName` (`src/core/walk.ts`); design/roots.md § The walk.
+
+**Why:** The maintainer's choice, 2026-10-17, for the question D237 left open. Tools write these names in one case,
+so a capitalised one is more likely a person's folder of notes, which a busy name would leave out.
+
+**Not chosen:** every busy name in any case: a `Build/` of notes would be left out where nothing generated it.
