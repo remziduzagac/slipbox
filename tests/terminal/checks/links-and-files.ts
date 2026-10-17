@@ -133,11 +133,26 @@ export async function lastMessage(s: Session, needle: string): Promise<string> {
 /** The link under the cursor, as the status line names it (`→ path`). */
 const linkHere = (s: Session) => /→ (\S+)/.exec(s.statusLine())?.[1] ?? "";
 
-/** From the top, tab from link to link until the one under the cursor is `target` (as the status line names it). */
+/**
+ * From the top, tab from link to link until the one under the cursor is `target` (as the status line names it). Each
+ * move is seen on the screen before the link is read: a note's place comes back at a start, the cursor maybe on this
+ * very link, and a loaded machine's frame reaches the terminal after slipbox has drawn it — read before it lands, the
+ * status line still names the link while the cursor is at the top, and `enter` sent then follows nothing.
+ */
 export async function toLink(s: Session, target: string | RegExp): Promise<void> {
   const is = () => (typeof target === "string" ? linkHere(s) === target : target.test(linkHere(s)));
+  const at = () => `${pos(s).line}:${pos(s).col}`;
+  const from = at();
+  const sent = performance.now();
   await s.keys("g", "g");
-  for (let i = 0; i < 60 && !is(); i++) await s.keys("tab");
+  await s.settle(sent); // what slipbox wrote for it, arrived
+  // Still on a link where it was: the top's frame not here yet (unless that was the top).
+  if (linkHere(s) && from !== "1:1") await s.until(() => at() !== from, 3000, "g g to move the cursor to the top");
+  for (let i = 0; i < 60 && !is(); i++) {
+    const before = at();
+    await s.keys("tab");
+    await s.until(() => at() !== before, 3000, "tab to move the cursor to the next link");
+  }
   await s.until(is, 1000, `the cursor on the link to ${target}`);
 }
 
