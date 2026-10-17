@@ -2,6 +2,7 @@
 
 import { CLI_CASES, type Check, type LeftOut } from "../check.ts";
 import { EDITING, LEFT_OUT_EDITING } from "./editing.ts";
+import { GIT_DIFF } from "./git-diff.ts";
 import { LEFT_OUT_LINKS_AND_FILES, LINKS_AND_FILES } from "./links-and-files.ts";
 import { LEFT_OUT_NAVIGATING, NAVIGATING } from "./navigating.ts";
 import { LEFT_OUT_OUTSIDE_AND_CODE, OUTSIDE_AND_CODE } from "./outside-and-code.ts";
@@ -20,6 +21,9 @@ export const CHECK_FILES: Record<string, Check[]> = {
   "outside-and-code": OUTSIDE_AND_CODE,
   // Source control's, in the outside-and-code area: their own file.
   "source-control": SOURCE_CONTROL,
+  // The diff window's later edges (a block by its lines, enter on a line before, what no line shows): source
+  // control's too, in a file of their own, source-control.ts being near the size limit.
+  "git-diff": GIT_DIFF,
 };
 
 export const CHECKS: Check[] = Object.values(CHECK_FILES).flat();
