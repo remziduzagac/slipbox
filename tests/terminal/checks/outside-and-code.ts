@@ -1336,6 +1336,48 @@ export const OUTSIDE_AND_CODE: Check[] = [
   },
   {
     area: "outside-and-code",
+    name: "export: an earlier PDF, web page or e-book export replaced at once, known by its mark; another tool's web page only on y",
+    covers: { commands: ["note.export"] },
+    run: async (s) => {
+      const formats: [string, string, string][] = [
+        ["pdf", "home.pdf", "%PDF-"],
+        ["html", "home.html", "<!doctype html>"],
+        ["epub", "home.epub", "PK\x03\x04"],
+      ];
+      for (const [name, file, magic] of formats) {
+        // Exported once; again, over the first: an export of slipbox's, by the mark in it — written, nothing asked.
+        await format(s, "home.md", name);
+        await s.see(`Name: ${file}`);
+        await s.keys("enter");
+        await exported(s, file, magic);
+        const first = statSync(s.path(file)).mtimeMs;
+        await format(s, "home.md", name);
+        await s.see(`Name: ${file}`);
+        await s.keys("enter");
+        await s.until(() => statSync(s.path(file)).mtimeMs !== first, 15000, `${file} written again`);
+        await exported(s, file, magic);
+        s.expect(!s.text().includes("It isn't an export."), `${file}: replaced without a question`);
+      }
+      // A web page another tool made, there: not slipbox's mark, so asked; n, the window back and the page as it was.
+      const theirs =
+        '<!doctype html>\n<html><head><meta name="generator" content="pandoc"><title>Home</title></head><body><p>Home.</p></body></html>\n';
+      s.write("home.html", theirs);
+      await format(s, "home.md", "html");
+      await s.see("Name: home.html");
+      await s.keys("enter");
+      await s.see("Replace home.html? It isn't an export.");
+      await s.keys("n");
+      await s.see("Name: home.html");
+      s.expect(s.read("home.html") === theirs, "their page untouched after n");
+      // y: written, slipbox's mark in it now.
+      await s.keys("enter");
+      await s.see("Replace home.html? It isn't an export.");
+      await s.keys("y");
+      await s.file("home.html", (t) => /<meta\s+name="generator"\s+content="slipbox"/.test(t), "home.html exported");
+    },
+  },
+  {
+    area: "outside-and-code",
     name: "export: a note named as the file — refused, said, the window kept; the note untouched",
     covers: { commands: ["note.export"] },
     run: async (s) => {

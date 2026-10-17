@@ -1,8 +1,9 @@
 // Source control (GIT-D2–GIT-D13): the git panel by keys and by mouse; its branches, their worktrees and each one's
-// base; the diff window's changed words, a note's blocks before and after, a code file's two sides, line endings; the
-// review of what isn't staged; the merge screen; rebasing onto the base; the remote's commands and stash. Each on a
-// repository the check makes in its own home with git itself — commits, branches, a worktree, a bare repository as its
-// remote, a conflict from a real merge or rebase — so what slipbox reads is git's own doing.
+// base; the diff window's changed words, a note's blocks before and after, a code file's two sides, line endings (its
+// later edges, git-diff.ts's); the review of what isn't staged; the merge screen; rebasing onto the base, over files
+// changed too (stashed and put back, D247); the remote's commands and stash. Each on a repository the check makes in
+// its own home with git itself — commits, branches, a worktree, a bare repository as its remote, a conflict from a
+// real merge or rebase — so what slipbox reads is git's own doing.
 
 import { spawnSync } from "node:child_process";
 import { join } from "node:path";
@@ -26,7 +27,7 @@ const WHO = {
 };
 
 /** The repository every check makes, in its own home: a guide to a ridge trail. */
-const TRAIL = "~/work/trail";
+export const TRAIL = "~/work/trail";
 /** Where slipbox starts: the guide's README, in the repository (a vault by its `.git`). */
 const README = "home/work/trail/README.md";
 const GUIDE = "# Ridge trail\n\nA guide to the ridge trail, hut to hut.\n";
@@ -54,7 +55,7 @@ function gitOk(s: Session, cwd: string, ...args: string[]): string {
 }
 
 /** Files written in a folder (`~/…`). */
-function put(s: Session, at: string, files: Record<string, string>): void {
+export function put(s: Session, at: string, files: Record<string, string>): void {
   for (const [f, t] of Object.entries(files)) s.write(`${at}/${f}`, t);
 }
 
@@ -66,7 +67,7 @@ function commit(s: Session, at: string, files: Record<string, string>, message: 
 }
 
 /** ~/work/trail made a repository, its files committed on main; a conflict's markers git's plain ones (no base). */
-function trail(s: Session, files: Record<string, string> = {}): void {
+export function trail(s: Session, files: Record<string, string> = {}): void {
   put(s, TRAIL, { "README.md": GUIDE, ...files });
   gitOk(s, TRAIL, "init", "-q", "-b", "main");
   gitOk(s, TRAIL, "config", "merge.conflictStyle", "merge");
@@ -76,7 +77,7 @@ function trail(s: Session, files: Record<string, string> = {}): void {
 }
 
 /** A check's options: slipbox on the guide's README, the repository made by `make` before it starts. */
-const repoAt = (make: (s: Session) => void, more: SessionOptions = {}): SessionOptions => ({
+export const repoAt = (make: (s: Session) => void, more: SessionOptions = {}): SessionOptions => ({
   startAt: README,
   env: WHO,
   config: WIDE,
@@ -108,8 +109,8 @@ function pushedElsewhere(s: Session, other: string, files: Record<string, string
 // The git panel on screen: its rows, its selection, its buttons; clicks as a terminal sends them (SGR's reports).
 
 /** The default theme's roles: the panel's selection, a diff's tints. */
-const ROLES = loadTheme("tokyo-night", "/nonexistent").theme.roles;
-const bgOf = (role: Role) => ROLES[role].bg!.toLowerCase();
+export const ROLES = loadTheme("tokyo-night", "/nonexistent").theme.roles;
+export const bgOf = (role: Role) => ROLES[role].bg!.toLowerCase();
 
 /**
  * The panel's own title, at its top: "Source control" and the spaces up to its border. Not the leader's which-key
@@ -121,7 +122,7 @@ const TITLE = /Source control +[│┃]/;
  * The git panel open and focused: `space g` pressed once, unless it is already, then the panel's own title and the
  * status line's GIT waited for. Never pressed again on a screen that hasn't caught up: a second press closes it.
  */
-async function toPanel(s: Session): Promise<void> {
+export async function toPanel(s: Session): Promise<void> {
   const focused = () => s.rowOf(TITLE) >= 0 && s.statusLine().includes(" GIT ");
   if (focused()) return;
   await leader(s, "g");
@@ -153,7 +154,7 @@ async function panelRow(s: Session, needle: string | RegExp): Promise<number> {
 
 /** The background of the cell holding `piece` — its first place at or after where `holding` starts — in the first row
  *  showing `holding`; null without one. */
-function bgIn(s: Session, holding: string, piece: string): string | null {
+export function bgIn(s: Session, holding: string, piece: string): string | null {
   for (const row of s.runs()) {
     const plain = row.map((r) => r.text).join("");
     const from = plain.indexOf(holding);
@@ -198,7 +199,7 @@ async function mouse(s: Session, x: number, y: number, how: "click" | "move" = "
 }
 
 /** A click on `needle` where the panel shows it, else where the screen first does. */
-async function on(s: Session, needle: string): Promise<void> {
+export async function on(s: Session, needle: string): Promise<void> {
   await s.until(() => s.rowOf(needle) >= 0, undefined, `${needle} on screen`);
   const inPanel = rowWith(s, needle);
   const y = inPanel >= 0 ? inPanel : s.rowOf(needle);
@@ -531,7 +532,7 @@ const BRANCHES: Check[] = [
 /** A line too long for a window, whose number changes. */
 const LONG =
   "export const maxClimb = 450; // metres of climbing in a day, past which the guide suggests a night at the second hut before the ridge";
-const NUMBERS = `// The ridge trail's numbers.\nexport const huts = 2;\n${LONG}\nexport const days = 3;\n`;
+export const NUMBERS = `// The ridge trail's numbers.\nexport const huts = 2;\n${LONG}\nexport const days = 3;\n`;
 
 /** The guide's numbers committed; the long line's number changed since. */
 function numbersChanged(s: Session): void {
@@ -1090,6 +1091,21 @@ async function rebaseOntoMain(s: Session): Promise<void> {
   await s.keys("y");
 }
 
+/** agent made from main, its commit a new file; main's since, a change to gear.md: a rebase that meets no conflict. */
+function apart(s: Session, files: Record<string, string> = {}): void {
+  trail(s, { "gear.md": GEAR, ...files });
+  gitOk(s, TRAIL, "switch", "-q", "-c", "agent");
+  commit(s, TRAIL, { "rope.md": "# Rope\n" }, "Agent: rope");
+  gitOk(s, TRAIL, "switch", "-q", "main");
+  commit(s, TRAIL, { "gear.md": "# Gear\n\nBoots, a map and water.\n" }, "Main: water");
+  gitOk(s, TRAIL, "switch", "-q", "agent");
+}
+
+/** agent on main's tip: rebased. */
+const rebased = (s: Session) => gitOk(s, TRAIL, "merge-base", "main", "agent") === gitOk(s, TRAIL, "rev-parse", "main");
+
+const CAMP = "# Camp\n\nPitch the tent.\n";
+
 const REBASE: Check[] = [
   {
     area: "outside-and-code",
@@ -1213,6 +1229,79 @@ const REBASE: Check[] = [
       s.expect(gitOk(s, TRAIL, "status", "--porcelain") === "", "nothing left of it");
     },
   },
+  {
+    area: "outside-and-code",
+    name: "git rebase: shift+r over files changed asks to stash them too — n, nothing done; y, rebased and the changes put back",
+    covers: { cases: ["git"], commands: ["git.view", "git.rebase"] },
+    options: repoAt((s) => {
+      apart(s, { "huts.md": HUTS, "camp.md": CAMP });
+      // A change not staged, one staged, and a new file git doesn't track (not one it refuses a rebase over).
+      put(s, TRAIL, { "huts.md": "# Huts\n\nThree huts.\n", "camp.md": "# Camp\n\nPitch the tent early.\n" });
+      gitOk(s, TRAIL, "add", "camp.md");
+      put(s, TRAIL, { "water.md": "# Water\n" });
+    }),
+    run: async (s) => {
+      const was = gitOk(s, TRAIL, "rev-parse", "HEAD");
+      await toPanel(s);
+      await panelRow(s, /● agent\s+↑1 ↓1 on main/);
+      // The question's window wraps its words at 60 columns: two files changed, the untracked one not counted.
+      await s.keys("shift+r");
+      await s.see("Stash your changes, rebase agent onto main, put them back? 2");
+      await s.see("files changed; its 1 commit replayed after main's 1 new.");
+      // n: nothing done — not rebased, nothing stashed, the changes where they were.
+      await s.keys("n");
+      await s.notSee("Stash your changes");
+      s.expect(gitOk(s, TRAIL, "rev-parse", "HEAD") === was, "not rebased");
+      s.expect(gitOk(s, TRAIL, "stash", "list") === "", "nothing stashed");
+      s.expect(s.read(`${TRAIL}/huts.md`) === "# Huts\n\nThree huts.\n", "the change where it was");
+      // y: stashed, rebased, put back.
+      await s.keys("shift+r");
+      await s.see("Stash your changes, rebase agent onto main, put them back? 2");
+      await s.keys("y");
+      await s.message("rebased agent onto main");
+      await s.until(() => rebased(s), undefined, "agent on main's tip");
+      s.expect(gitOk(s, TRAIL, "log", "--format=%s", "main..agent") === "Agent: rope", "its commit replayed");
+      s.expect(s.read(`${TRAIL}/huts.md`) === "# Huts\n\nThree huts.\n", "the change not staged put back");
+      s.expect(s.read(`${TRAIL}/camp.md`) === "# Camp\n\nPitch the tent early.\n", "the staged one put back");
+      s.expect(s.read(`${TRAIL}/water.md`) === "# Water\n", "the untracked file where it was");
+      s.expect(s.read(`${TRAIL}/gear.md`).includes("water"), "main's change here");
+      s.expect(gitOk(s, TRAIL, "stash", "list") === "", "no stash left behind");
+      await panelRow(s, /● agent\s+↑1 on main/);
+    },
+  },
+  {
+    area: "outside-and-code",
+    name: "git rebase: changes that conflict going back stay in the stash — the stash and the file in conflict named",
+    covers: { cases: ["git"], commands: ["git.view", "git.rebase"] },
+    options: repoAt((s) => {
+      apart(s);
+      // gear.md's line, which main changed too.
+      put(s, TRAIL, { "gear.md": "# Gear\n\nBoots, a map and a rope.\n" });
+    }),
+    run: async (s) => {
+      await toPanel(s);
+      await panelRow(s, /● agent\s+↑1 ↓1 on main/);
+      await s.keys("shift+r");
+      await s.see("Stash your changes, rebase agent onto main, put them back? 1");
+      await s.see("file changed; its 1 commit replayed after main's 1 new.");
+      await s.keys("y");
+      await s.message("rebased agent onto main");
+      const said = await lastMessage(s, "conflicted going back");
+      const kept =
+        'rebased agent onto main — your changes conflicted going back, so git kept them in the stash, stash@{0} ("autostash"): 1 file in conflict (gear.md) — x in source control settles it (:resolve), then drop the stash (z)';
+      s.expect(said.startsWith(kept), `said: ${kept}\n(the newest holding "conflicted going back": ${said})`);
+      s.expect(rebased(s), "agent on main's tip");
+      // Kept in the stash, the file in conflict: nothing of yours lost.
+      s.expect(gitOk(s, TRAIL, "stash", "list", "--format=%gd %gs") === "stash@{0} autostash", "the stash kept");
+      s.expect(gitOk(s, TRAIL, "show", "stash@{0}:gear.md").includes("a rope"), "your change in it");
+      s.expect(
+        gitOk(s, TRAIL, "status", "--porcelain", "--untracked-files=no") === "UU gear.md",
+        "gear.md in conflict",
+      );
+      await toPanel(s);
+      await panelRow(s, "Conflicts (1)");
+    },
+  },
 ];
 
 // ---------------------------------------------------------------------------------------------------------------
@@ -1267,6 +1356,49 @@ const REMOTE: Check[] = [
         "mine replayed after theirs, no merge commit",
       );
       await s.file(`${TRAIL}/water.md`, (t) => t === "# Water\n", "their file here");
+    },
+  },
+  {
+    area: "outside-and-code",
+    name: "git remote: a pull's rebase over a file changed asks to stash it — n pulls nothing; y rebases and puts it back",
+    covers: { cases: ["git"], commands: ["git.pull"] },
+    options: repoAt((s) => {
+      trail(s, { "gear.md": GEAR });
+      const { other } = withOrigin(s);
+      pushedElsewhere(s, other, { "water.md": "# Water\n" }, "Theirs: water");
+      commit(s, TRAIL, { "rope.md": "# Rope\n" }, "Mine: rope");
+      put(s, TRAIL, { "gear.md": "# Gear\n\nBoots, a map and a stove.\n" });
+    }),
+    run: async (s) => {
+      const mine = "# Gear\n\nBoots, a map and a stove.\n";
+      const was = gitOk(s, TRAIL, "rev-parse", "HEAD");
+      /** p, and the rebase answered: the question asked (its window wraps its words at 60 columns). */
+      const rebaseAnswer = async () => {
+        await s.keys("p");
+        await s.see("(r) Rebase main onto origin/main");
+        await s.keys("r");
+        await s.see("Stash your changes, rebase main onto origin/main, put them");
+        await s.see("back? 1 file changed.");
+      };
+      await toPanel(s);
+      // n: nothing pulled — the change where it was, nothing stashed.
+      await rebaseAnswer();
+      await s.keys("n");
+      await s.notSee("Stash your changes");
+      s.expect(gitOk(s, TRAIL, "rev-parse", "HEAD") === was, "nothing pulled");
+      s.expect(gitOk(s, TRAIL, "stash", "list") === "", "nothing stashed");
+      s.expect(s.read(`${TRAIL}/gear.md`) === mine, "the change where it was");
+      // y: stashed, rebased onto the upstream, put back.
+      await rebaseAnswer();
+      await s.keys("y");
+      await s.message("pulled: main rebased onto origin/main");
+      s.expect(
+        gitOk(s, TRAIL, "log", "--format=%s", "-2") === "Mine: rope\nTheirs: water",
+        "mine replayed after theirs, no merge commit",
+      );
+      await s.file(`${TRAIL}/water.md`, (t) => t === "# Water\n", "their file here");
+      s.expect(s.read(`${TRAIL}/gear.md`) === mine, "the change put back");
+      s.expect(gitOk(s, TRAIL, "stash", "list") === "", "no stash left behind");
     },
   },
   {
