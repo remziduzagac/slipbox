@@ -647,7 +647,8 @@ keys.
   (`slipbox x/y`: y, in vault x; `prepare`'s `folder`), set once the notes are open, so the note shown outside it leaves
   it be; opened on a note, at its vault. In Elsewhere it has no tree of its own: every folder is listed a level at a
   time, by its whole path, the view starting at the folder opened. **The breadcrumb**, on the row under the pane's
-  title, says where the view is: `~` for home (else `/`), then each folder down to the view and a `›`; a vault with its
+  title, says where the view is: `~` for home when the view is in it (else `/`, home by its name), then each folder
+  down to the view and a `›`, the view always among them; a vault with its
   icon, the vault open highlighted, the view bold. Past the view, dimmed, the trail (`explorer.trail`): the folders it
   can zoom back into — the view zoomed out from, or where you went when it zoomed out by itself — kept while the view is
   on their way. Too long for the pane, the trail gives way first (from its end, its first folder cut short, kept while
@@ -659,14 +660,17 @@ keys.
   into — zooms the view out to the common parent of the view and the place, only their two paths unfolded (what was
   unfolded in the old view kept, every other folder folded), the trail at the place. Not for what the tree doesn't list
   (a hidden folder's file), nor the scratch; the explorer's first showing, a session's tabs restored, and the filter's
-  `esc` reveal the note only inside the view. **Keys on a row:** `enter` (or a double-click) folds or unfolds a folder
-  and the vault open's row, opens a note as a tab (or switches to the tab already showing it), goes into another vault
-  (VV-D4; § Going into a vault); `l` unfolds any folder or vault in place, another vault's listed a level at a time, its
-  rows not this vault's to change; `h` folds an unfolded folder or vault, else the folder holding the row (when it's a
-  row of the view); `o` replaces the current window's note (on a folder, unfolds it), and `s` opens it in the split's
-  other window. Moving the selection, or a click on a note, only selects; a click on a folder folds or unfolds it. New
-  notes and folders, renames, moves, deletes, copies: "Files in the explorer", above. **Any folder you may read:** a
-  folder you may not read says why when it's opened on, unfolded or zoomed into
+  `esc` reveal the note only inside the view. **A folder gone:** the view and the trail go with a folder slipbox renames
+  or moves (`followMove`, from `Renaming.apply`, as the folds do); one deleted, or gone outside slipbox, gives way to
+  its nearest folder still there when the tree or the breadcrumb is built again (`keepToWhatsThere`), the view's said
+  (`~/x isn't there any more: the view is on ~`). **Keys on a row:** `enter` (or a double-click) folds or unfolds a
+  folder and the vault open's row, opens a note as a tab (or switches to the tab already showing it), goes into another
+  vault (VV-D4; § Going into a vault); `l` unfolds any folder or vault in place, another vault's listed a level at a
+  time, its rows not this vault's to change; `h` folds an unfolded folder or vault, else the folder holding the row
+  (when it's a row of the view); `o` replaces the current window's note (on a folder, unfolds it), and `s` opens it in
+  the split's other window. Moving the selection, or a click on a note, only selects; a click on a folder folds or
+  unfolds it. New notes and folders, renames, moves, deletes, copies: "Files in the explorer", above. **Any folder you
+  may read:** a folder you may not read says why when it's opened on, unfolded or zoomed into
   (`can't read ~/x: you may not read it (no permission)`), nothing unfolded; a file you may not write — it, or its
   folder, for the save's rename — opens read-only (`buf.readOnly`), said at once and when typing is refused
   (`notes/a.md is read-only: you may not write it (no permission)`). Gone with VV-D5: `..` and climbing above the vault,

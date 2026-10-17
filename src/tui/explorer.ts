@@ -340,6 +340,7 @@ export class Explorer {
 
   treeRows(): TreeRow[] {
     if (this.tree) return this.tree;
+    this.keepToWhatsThere();
     const T = this.top;
     const rows: TreeRow[] = [];
     // The view (VV-D5): the vault's own tree from it, or, anywhere else, its folder listed a level at a time.
@@ -509,17 +510,19 @@ export class Explorer {
 
   /** The breadcrumb over the explorer (VV-D5): the folders down to the view, then those past it it can zoom back into. */
   crumbs(): { abs: string; label: string; vault: boolean; current: boolean; past: boolean }[] {
+    if (!this.tree) this.keepToWhatsThere();
     const key = `${this.top}\n${this.trail}\n${this.app.loc.root}`;
     if (this.crumbsMemo?.key === key) return this.crumbsMemo.list;
     const home = homeFolder();
     const trail = isInside(this.top, this.trail) ? this.trail : this.top;
-    const top = isInside(home, trail) ? home : sep;
+    // From `~` when the view is in home, else from `/`: the view is always one of its folders.
+    const top = isInside(home, this.top) ? home : sep;
     const dirs = [top];
     const rel = relative(top, trail);
     if (rel) for (const p of rel.split(sep)) dirs.push(join(dirs.at(-1)!, p));
     const list = dirs.map((abs) => ({
       abs,
-      label: abs === home ? "~" : abs === sep ? "/" : basename(abs),
+      label: abs === sep ? "/" : abs === top ? "~" : basename(abs),
       vault: abs === this.app.loc.root ? this.app.loc.mode === "vault" : isVaultRoot(abs),
       current: abs === this.app.loc.root,
       past: abs !== this.top && isInside(this.top, abs),
@@ -662,6 +665,44 @@ export class Explorer {
 
   invalidateTree(): void {
     this.tree = null;
+  }
+
+  /** A folder moved (18.3, 18.7): the view and the trail in it go with it, as its folds do. */
+  followMove(from: string, to: string): void {
+    const shift = (abs: string) => (abs && isInside(from, abs) ? to + abs.slice(from.length) : abs);
+    this.top = shift(this.top);
+    this.trail = shift(this.trail);
+    this.invalidateTree();
+  }
+
+  /**
+   * The view and the trail on folders that are there (VV-D5), asked as the tree is built again: one deleted, or renamed
+   * or moved outside slipbox, gives way to its nearest folder still there — the view's said.
+   */
+  private keepToWhatsThere(): void {
+    // Gone: not there, or a file now. One that can't be asked (no permission on its way) is left as it is.
+    const there = (dir: string) => {
+      try {
+        return statSync(dir).isDirectory();
+      } catch (err) {
+        const code = (err as NodeJS.ErrnoException).code;
+        return code !== "ENOENT" && code !== "ENOTDIR";
+      }
+    };
+    const nearest = (dir: string) => {
+      let d = dir;
+      while (!there(d) && dirname(d) !== d) d = dirname(d);
+      return d;
+    };
+    if (this.trail && !there(this.trail)) this.trail = nearest(this.trail);
+    if (!this.top || there(this.top)) return;
+    const gone = this.top;
+    this.top = nearest(gone);
+    if (!isInside(this.top, this.trail)) this.trail = this.top;
+    this.app.sidebar.pinned = false;
+    this.app.sidebar.scroll = 0;
+    this.app.sidebar.selected = 0;
+    this.app.message("info", `${tildePath(gone)} isn't there any more: the view is on ${tildePath(this.top)}`);
   }
 
   /**

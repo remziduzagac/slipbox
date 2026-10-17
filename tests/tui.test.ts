@@ -8601,6 +8601,37 @@ describe("the explorer's view (VV-D5)", () => {
     expect(h.app.messages.at(-1)!.text).toBe("the view shows everything: nothing is above /");
   });
 
+  test("the breadcrumb above home names the view: from /, home by its name, the trail in home past it", async () => {
+    const P = place();
+    const before = process.env.HOME;
+    process.env.HOME = P;
+    try {
+      const h = await harness({ root: join(P, "notes"), open: null });
+      await select(h, "sub");
+      await h.keys("-");
+      expect(h.app.explorer.crumbs().map((c) => [c.label, c.past])).toEqual([
+        ["~", false],
+        ["notes", true],
+      ]);
+      await h.keys("-");
+      const view = dirname(P);
+      expect(h.app.explorer.top).toBe(view);
+      const crumbs = h.app.explorer.crumbs();
+      expect(crumbs[0]).toMatchObject({ abs: "/", label: "/" });
+      expect(crumbs.find((c) => !c.past)).toBeDefined();
+      expect(crumbs.findLast((c) => !c.past)).toMatchObject({ abs: view, label: basename(view) });
+      expect(crumbs.slice(-2).map((c) => [c.label, c.past])).toEqual([
+        [basename(P), true],
+        ["notes", true],
+      ]);
+      expect(crumbRow(h)).toContain(`… › ${basename(view)} › `); // the view drawn, the trail giving way first
+      h.app.explorer.zoomTo("/");
+      expect(h.app.explorer.crumbs()[0]).toMatchObject({ abs: "/", past: false });
+    } finally {
+      process.env.HOME = before;
+    }
+  });
+
   test("- past the vault: it highlighted, its tree under it; l unfolds another vault in place, enter goes into it (VV-D4)", async () => {
     const P = place();
     const h = await harness({ root: join(P, "notes"), open: "a.md", config: (c) => (c.files.show = "auto") });
@@ -11929,6 +11960,57 @@ describe("the explorer's file operations and buttons (18.x)", () => {
     expect(h.app.view!.buf.rel).toBe("papers/beta.md"); // the open note went with it
     expect(readFileSync(join(root, "index.md"), "utf8")).toContain("[alpha](papers/alpha.md)");
     expect(h.app.graph.notes.has("papers/alpha.md")).toBe(true);
+  });
+
+  test("the view's folder renamed takes the view and the breadcrumb along; deleted, the view zooms out and says so", async () => {
+    const root = makeVault();
+    const h = await harness({ root, open: "notes/beta.md" });
+    h.app.panels.showSidebar(true);
+    h.app.leftView = "explorer";
+    h.app.explorer.zoomTo(join(root, "notes"));
+    // space d r: the open note's folder, the view's own.
+    await h.app.run("folder.rename");
+    await h.keys("ctrl+u");
+    await type(h, "papers");
+    await h.keys("enter", "enter");
+    expect(existsSync(join(root, "papers"))).toBe(true);
+    expect(h.app.explorer.top).toBe(join(root, "papers"));
+    expect(h.app.explorer.rows().map((r) => r.path)).toContain("papers/beta.md");
+    // Zoomed out of it, it's the trail: renamed again from the view above, the trail follows it too.
+    h.app.explorer.zoomOut();
+    expect(h.app.explorer.trail).toBe(join(root, "papers"));
+    h.app.region = "content";
+    await h.app.run("folder.rename");
+    await h.keys("ctrl+u");
+    await type(h, "notes");
+    await h.keys("enter", "enter");
+    expect(h.app.explorer.trail).toBe(join(root, "notes"));
+    expect(h.app.explorer.crumbs().at(-1)).toMatchObject({ abs: join(root, "notes"), past: true });
+    // Deleted while the view is on it: zoomed out to the folder holding it, said, nothing pointing at it.
+    h.app.explorer.zoomTo(join(root, "notes"));
+    await h.app.run("folder.delete");
+    await h.keys("y");
+    expect(existsSync(join(root, "notes"))).toBe(false);
+    expect(h.app.explorer.rows().length).toBeGreaterThan(0);
+    expect(h.app.explorer.top).toBe(root);
+    expect(h.app.messages.at(-1)!.text).toBe(
+      `${tildePath(join(root, "notes"))} isn't there any more: the view is on ${tildePath(root)}`,
+    );
+    expect(h.app.explorer.crumbs().map((c) => c.abs)).not.toContain(join(root, "notes"));
+    // Gone outside slipbox, the trail too gives way to what's there.
+    mkdirSync(join(root, "gone", "deeper"), { recursive: true });
+    h.app.explorer.zoomTo(join(root, "gone", "deeper"));
+    h.app.explorer.zoomTo(root);
+    rmSync(join(root, "gone"), { recursive: true });
+    h.app.explorer.invalidateTree();
+    expect(h.app.explorer.crumbs().at(-1)!.abs).toBe(root);
+    // And the view, as its rows are asked for: there's no breadcrumb drawn in a short pane.
+    mkdirSync(join(root, "gone"));
+    h.app.explorer.zoomTo(join(root, "gone"));
+    rmSync(join(root, "gone"), { recursive: true });
+    h.app.explorer.invalidateTree();
+    expect(h.app.explorer.rows().length).toBeGreaterThan(0);
+    expect(h.app.explorer.top).toBe(root);
   });
 
   test("buttons: a new note and a new folder on the title; on the selected row, … opens its menu", async () => {

@@ -74,7 +74,7 @@ Above the tree, a breadcrumb says where the view is:
 ~ › work › ◈ kestrel › docs ›
 ```
 
-- `~` is your home folder. Outside it, the breadcrumb starts at `/`.
+- `~` is your home folder. With the view outside it, the breadcrumb starts at `/`, and your home folder has its name.
 - A vault has its icon. The vault you are in is highlighted.
 - A click on a folder in it zooms the view to that folder.
 
@@ -93,6 +93,9 @@ already holds leaves the view where it is, the folders down to the vault unfolde
 
 Hidden folders aren't in the tree. So going into a vault inside one, such as an agent's worktree in
 `.claude/worktrees/`, moves the view to that vault.
+
+A folder you rename or move takes the view along when the view is on it. One deleted, or renamed outside slipbox,
+gives way to the nearest folder still there, and slipbox says so.
 
 Zoomed out past the vault you are in, the explorer lists folders one level at a time:
 

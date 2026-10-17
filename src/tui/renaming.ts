@@ -178,6 +178,7 @@ export class Renaming {
           d === from || d.startsWith(`${from}/`) ? to + d.slice(from.length) : d,
         ),
       );
+      this.app.explorer.followMove(plan.move.from, plan.move.to);
     }
     // A cut that was pasted: done.
     if (
