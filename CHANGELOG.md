@@ -6,6 +6,8 @@ The format is [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.1.0/); wh
 
 ## [Unreleased]
 
+## [0.4.0] - 2026-10-17
+
 ### Added
 
 - Links that lead out of a vault, or out of your home folder, are followed only when you say so. The explorer shows
@@ -242,6 +244,8 @@ The format is [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.1.0/); wh
 - `:worktrees` lists a worktree whose folder's name holds a line break by its whole path, with git 2.36 or later.
 - A rename staged with `git mv` shows in source control as `R old.md → new.md`, and its diff is what changed against
   the old name. It used to show the whole file as added.
+- `:e` with a file's whole path inside the vault opens it, as its path from the vault's top does. A data file, or a
+  git-ignored note, named that way said `no note or file`.
 - `esc` after typing at the end of a line could leave the cursor one character short, and `g i` then typed before the
   last character instead of after it. It happened when `esc` came just as something finished in the background, such
   as the vault's index or a grammar loading.
@@ -331,7 +335,8 @@ The first release. 0.2.0 was tagged but never released: its build failed a test 
   `slipbox uninstall`; Windows through WSL.
 - `slipbox skill`: the skill for agents carried by the binary, printed or installed where an agent reads skills.
 
-[Unreleased]: https://github.com/remziduzagac/slipbox/compare/v0.3.0...HEAD
+[Unreleased]: https://github.com/remziduzagac/slipbox/compare/v0.4.0...HEAD
+[0.4.0]: https://github.com/remziduzagac/slipbox/compare/v0.3.0...v0.4.0
 [0.3.0]: https://github.com/remziduzagac/slipbox/compare/v0.2.2...v0.3.0
 [0.2.2]: https://github.com/remziduzagac/slipbox/compare/v0.2.1...v0.2.2
 [0.2.1]: https://github.com/remziduzagac/slipbox/releases/tag/v0.2.1
