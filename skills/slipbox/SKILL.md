@@ -211,7 +211,8 @@ slipbox export <note> -o out/                   # into a folder (made if missing
 Embeds are drawn in, diagrams and display maths drawn as pictures, and links to the notes exported stay links inside
 the document; nothing is fetched (a picture on the web is its cached copy, or its link). Only the vault's pictures go
 in: one from outside the vault is its alt text, or in Markdown a link to it. It never writes over a note, of any vault
-(exit 5; an earlier Markdown export aside: `name.export.md`).
+(exit 5; an earlier Markdown export aside: `name.export.md`). An earlier export there, of any format, is replaced; any
+other file is refused (exit 5) unless `--force`: ask the user before writing over it.
 
 Obsidian's `%%comments%%` are left out of every format, as they're hidden while reading; its `==highlights==` stay.
 

@@ -1924,8 +1924,12 @@ margins.
 
 - **Compared:** the two texts without their line endings or a byte order mark (`comparable`): CRLF is LF, as git has
   it for a checkout that turns LF into CRLF and as the gutter's signs have it, so a CRLF file's diff against git's LF
-  is its changed lines, not all of them. Two texts whose lines are the same but whose line endings, mark or final line
-  break differ say which ("only the line endings (CRLF → LF) changed: no line to show"), never "nothing to show".
+  is its changed lines, not all of them. What changed of them, and of the final line break (when both texts have a
+  last line), is a dim row of its own, as git says `\ No newline at end of file` (`unseenRows`, D245): the line endings
+  (`\ line endings: CRLF → LF`, or `mixed`) and the mark (`\ byte order mark removed`) before the diff's first row, at
+  line 1; the final line break (`\ no newline at end of file`, `\ newline at end of file added`) after its last, at
+  the last line — whether or not a line changed too; alone, the diff's only rows. The command line's `git diff` says
+  it instead of rows: "only the line endings (CRLF → LF) changed from main".
 - **Found:** hunks of lines by the Myers diff (`core/myers.ts`), as git's xdiff finds them, which every diff, the
   gutter's signs, blame and the three-way merge use: the common head and tail trimmed; the lines only one side has set
   aside as changed, whatever else is (a rewrite costs a read); the rest searched from both ends at once for the
@@ -1950,7 +1954,8 @@ margins.
   tinted. Each group — hunks whose context meets, or leaves a line between, are one — is under `@@ line N`
   (`diff_head`), with up to three unchanged lines around it. The unchanged stretches between groups, before the first
   and after the last fold to `▸ N unchanged lines` (`dim`); a stretch of one line is shown instead. `enter` on a fold
-  opens it, the cursor staying on its row.
+  opens it, the cursor staying on its row. What no line shows is its `\ …` row, `dim` (`acrossRow`, as a head and a
+  fold are drawn).
 - **Long lines** scroll sideways as a code block does (D233). With wrapping on and `[render] code_wrap = "scroll"`,
   the rows are one block, their text from the gutter's end; the heads and folds stay put (`part: "top"`), and a last
   row holds the scrollbar. The cursor, a sideways wheel and `shift` with the wheel scroll it. `code_wrap = "wrap"`
@@ -1960,8 +1965,8 @@ margins.
   gutter, line numbers on or not, and no source mode or lens: switching says "a diff is drawn one way". `enter` on a
   line closes it and opens the file there, when the file is there and in the vault; the conflict prompt's, a branch's
   and another repository's go back instead. `esc`, `q` and `:q` go back to what opened it: the git panel, the changes'
-  list, the prompt. Two texts the same are said ("no differences from main"), or what of them differs that no line
-  shows (above), and go back. The wheel over the floating
+  list, the prompt. Two texts the same are said ("no differences from main"), and go back; two whose only change no
+  line shows open on its rows (above), `enter` on one going to its line. The wheel over the floating
   window scrolls it, never the window or the side pane under it.
 - **Roles:** `diff_add` and `diff_del` have a `bg`, the line's tint: their colour 12% of the way from the page in a
   dark theme, 14% in a light one; `diff_add_word` and `diff_del_word` are the same colours 32% and 34% of the way. The
@@ -1982,9 +1987,14 @@ diff (a file the walk reads as a note) in every window a diff opens in, unless `
   before the first or after the last is taken in. In a group, the blocks the same on both sides are found by their
   text; between them each removed block is paired with the added one most like it (`pairLines` with `prose`: white
   space is one, so a paragraph wrapped again differs only in its words), none less than half alike — within the pairs'
-  budget of tokens (above), so a note rewritten whole shows its blocks removed and added at once. A pair is a change,
-  the rest removed or added whole; the unchanged blocks in a group are shown between, unframed. The window finds the
-  blocks the first time it draws them: a diff opened on its lines (`[git] diff = "source"`) never pays for them.
+  budget of tokens (above), so a note rewritten whole shows its blocks removed and added at once. Two blocks past
+  `MAX_TOKENS` together (a fence of about 150 lines) are compared by their lines instead (`diffByLines`: twice the
+  lines kept over the lines of both, each line a token of the budget; D245). A pair is a change, the rest removed or
+  added whole; the unchanged blocks in a group are shown between, unframed. Each pair's lines are diffed too
+  (`pairDiff`): where each line before is now, and, for a pair compared by its lines, its changed lines (their runs of
+  the block's text, `delLines` and `addLines`) and, in each changed line paired with one like it (`pairLines`), its
+  changed words. The window finds the blocks the first time it draws them: a diff opened on its lines (`[git] diff =
+  "source"`) never pays for them.
 - **Drawn:** each group under `@@ <the heading it's under in to>  (line N)`, or `@@ line N` above the first heading
   (`diff_head`). A change is two frames as wide as the window, however narrow (the label cut to fit), `before` and
   `after` on their top rules (`git_sign_delete`, `git_sign_add`), lightly formatted: a heading's text in its colour,
@@ -1994,13 +2004,19 @@ diff (a file the walk reads as a note) in every window a diff opens in, unless `
   bar, a fence, the frontmatter and anything else as written. A CRLF note's CR isn't shown, and its line break in a
   paragraph is a space, as an LF one is. Each cell knows the offset in its block of what it shows,
   so the words the pair doesn't share are on `diff_del_word` in the first and `diff_add_word` in the second; a node
-  whose source changed where none of it shows (a link's target, `**` added) is marked whole. A block added or removed
-  whole is one frame, `added` or `removed`, its text on `diff_add` or `diff_del`. The unchanged stretches between
-  groups, before the first and after the last fold to `▸ N unchanged lines` (blank, they're nothing); `enter` on one
-  shows its blocks. No new roles: the frames' rules are the gutter signs' roles, the marked words the diff's.
+  whose source changed where none of it shows (a link's target, `**` added) is marked whole. A pair compared by its
+  lines is drawn whole too, its changed lines' cells on `diff_del` or `diff_add` and their changed words on the
+  stronger tint; a changed line drawn as written (code, the frontmatter) has its row's padding tinted to the frame's
+  edge, so a blank line added shows. A block added or removed whole is one frame, `added` or `removed`, its text on
+  `diff_add` or `diff_del`. The unchanged stretches between groups, before the first and after the last fold to `▸ N
+  unchanged lines` (blank, they're nothing); `enter` on one shows its blocks. What no line shows is its `\ …` row,
+  `dim`, before the first group and after the last (`blockDiff`'s `unseen`). No new roles: the frames' rules are the
+  gutter signs' roles, the marked words the diff's.
 - **The window:** its text a unit a line — a head, a fold, a line of a block shown, with a `-`, a `+` or a space and
-  a space before it, as the source diff's rows read — and each layout row's `src` its first word's unit; `enter` goes
-  to the unit's line (a `before` line, or a removed block's: where its block is, or was, now). `tab`
+  a space before it, as the source diff's rows read, a `\ …` row — and each layout row's `src` its first word's unit;
+  `enter` goes to the unit's line: a `before` line's, found by its pair's line diff, where it is in the `after` block
+  if it's unchanged, else where its run of changes is (the line after it, inside the block), as the source diff's
+  removed lines go (D245); a removed block's, where it was. `tab`
   (`git.diff_view`, the diff window's own keymap, `DEFAULT_DIFF_KEYS`) switches between the blocks and the lines, the
   cursor on the first line's row at or after the line it was on; a code file's diff says it has only its lines. The
   review's and the merge screen's keymaps have it too: there, `tab` switches each hunk, or each side against the
@@ -2012,9 +2028,9 @@ between (the left's `›` in its first column) and a column after the right's te
 diff_layout = "unified"` (default `auto`); `"split"` puts it side by side however narrow. `from` on the left, `to` on
 the right (`splitRows`): an unchanged line on both; in a run of changes, each removed line beside the added line it's
 paired with (the k-th paired of each), those paired with none beside each other in order, a side with no line blank.
-A changed side is on its sign's tint up to the rule, its changed words on the stronger. The heads and folds span both.
-Each row's `src` is the unified row it stands for (the right's, else the left's), so the window's text, `enter` and
-the folds are the unified diff's, and a resize between the two layouts keeps them.
+A changed side is on its sign's tint up to the rule, its changed words on the stronger. The heads, the folds and the
+`\ …` rows span both. Each row's `src` is the unified row it stands for (the right's, else the left's), so the
+window's text, `enter` and the folds are the unified diff's, and a resize between the two layouts keeps them.
 
 - **Scrolling:** both sides scroll by the one offset, as a code block's rows do (D233). A row's `scroll` (`CodeScroll`)
   gains `right`: where its second text starts, after the first's `total` columns, padded, and what's fixed between;

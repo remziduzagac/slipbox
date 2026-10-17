@@ -74,12 +74,13 @@ export const RENDER_COMMANDS: Record<string, Handler> = {
 
   /**
    * Notes exported as one document (10.x): a chapter each, in the order given; to `--out` (`-o`), else beside the first
-   * with its name; in `--to`'s format, else `--out`'s extension's, else Word's.
+   * with its name; in `--to`'s format, else `--out`'s extension's, else Word's. Over a file there only when it's an
+   * earlier export, or with `--force` (D243); never over a note.
    */
   async export(s, rest) {
     if (!rest.length)
       throw new UsageError(
-        "export needs a note: slipbox export <note…> [--to docx|pdf|html|epub|md] [--out|-o <path>]",
+        "export needs a note: slipbox export <note…> [--to docx|pdf|html|epub|md] [--out|-o <path>] [--force]",
       );
     const rels = rest.map((r) => resolveNote(s, r));
     const out = flag(s.args, "out");
@@ -92,7 +93,7 @@ export const RENDER_COMMANDS: Record<string, Handler> = {
     if (!format) throw new UsageError(`--to must be one of: ${FORMATS.map((f) => f.name).join(", ")}`);
     let target: string;
     try {
-      target = exportTarget(s.graph, rels[0]!, format, out ?? null, s.io.cwd);
+      target = exportTarget(s.graph, rels[0]!, format, out ?? null, s.io.cwd, has(s.args, "force"));
     } catch (err) {
       throw new CliError((err as Error).message, EXIT.refused);
     }

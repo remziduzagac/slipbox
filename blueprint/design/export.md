@@ -22,14 +22,14 @@ The code is in `src/core/export/`:
 | `convert.ts` | a picture of a kind a format doesn't hold made a PNG first: BMP, GIF and WebP decoded (`10.10`) |
 | `style.ts` | the look on paper: print's colours, a callout's, code's; the stylesheet |
 | `index.ts` | the formats, by name; where an export goes; writing it |
-| `mark.ts` | the mark a Markdown export carries, `generator: slipbox`: read by `index.ts` and by the graph's lookups |
+| `mark.ts` | each format's mark, that slipbox wrote it: read by `index.ts`; Markdown's also by the graph's lookups |
 
 `src/core/imagecache.ts` is where a picture on the web is kept once the TUI has fetched it (`12.12`). An export reads
 it, and fetches nothing. Every writer is loaded when it's first used, not at start.
 
 ## Asking for one
 
-**The CLI**: `slipbox export <note…> [--to docx|pdf|html|epub|md] [--out|-o <path>]`.
+**The CLI**: `slipbox export <note…> [--to docx|pdf|html|epub|md] [--out|-o <path>] [--force]`.
 
 - The format is `--to`'s: a name (`docx`, `pdf`, `html`, `epub`, `md`), another name for it (`word`, `doc`, `htm`,
   `web`, `ebook`, `markdown`) or an extension (`.docx`). Without `--to`, it's `-o`'s extension; without either, Word.
@@ -40,10 +40,14 @@ it, and fetches nothing. Every writer is loaded when it's first used, not at sta
   `notes/report.export.md`, apart from the note it's of. In a vault, beside a note reached through a link out of it
   is outside the vault, a place nobody named: refused (exit 5), saying to name one with `--out` (VV-D6).
 - Several notes make one document, a chapter each, in the order given.
-- A file already there is replaced, as `-o` does in any tool. A note never is (exit 5), of this vault or any other
-  (DF-D3): this vault's as its index has them; another's, a file of a note's name in a folder that is a vault, where it
-  is reached or where it really is (a symlinked folder counts). An earlier Markdown export is: its frontmatter's
-  `generator: slipbox` says it is one.
+- A file already there is replaced when it's an earlier export, of any format (§ Earlier exports); any other only with
+  `--force` (D243): without it, `rep.docx isn't an export — an export doesn't write over it without --force`, exit 5,
+  the file as it was. Something there that isn't a file counts as one that isn't an export (a link to nowhere, a
+  folder at the default name). A note never is (exit 5), even with `--force`, of this vault or any other (DF-D3): this
+  vault's as its index has them; another's, a file of a note's name in a folder that is a vault, where it is reached
+  or where it really is (a symlinked folder counts). An earlier Markdown export is: its frontmatter's
+  `generator: slipbox` says it is one. The refusals come in that order: a note, beside a link out (VV-D6), then a file
+  that isn't an export.
 - `--json`: `{path, format, notes[], bytes, files[]}` — `files`, what was written beside it (Markdown's pictures). The
   human line: `exported notes/report.md to notes/report.docx (Word (.docx))`, with `, 2 files beside it` where there
   are some.
@@ -70,12 +74,34 @@ it, and fetches nothing. Every writer is loaded when it's first used, not at sta
     ending in `/` is made first where it isn't there (DF-D5, DF-D29), as `ctrl+n` makes one.
   - **The mouse:** a place clicked goes there; an entry clicked is picked, clicked again opened; the name clicked
     takes the focus; the wheel scrolls; a click outside cancels.
-- A file there is replaced only after `y` to "rep.docx is there — replace it?" (`n`: the window again); a note of any
-  vault is refused, the window kept (an earlier Markdown export aside, which is asked about as a file is) (DF-D3).
+- An earlier export there, of any format, is replaced without a question; any other file only after `y` to "Replace
+  rep.docx? It isn't an export." (`n`: the window again) (D243). A note of any vault is refused, the window kept (an
+  earlier Markdown export aside, replaced as every earlier export is) (DF-D3).
 - Unsaved notes are saved first, as every hand-off does (`4.10`), since the export reads the notes from disk. One that
   can't be saved stops it, said as `space s c` says it: `export: x.md changed on disk while unsaved — ␣ n c resolves
   it first`.
 - While it's written, `exporting to rep.docx…`; then `exported rep.md to rep.docx (Word (.docx))`, or why it wasn't.
+
+## Earlier exports
+
+Every writer puts a mark in its file that says slipbox wrote it, and `isExport` (`mark.ts`) reads it back, whatever
+the file's name, by what the file starts with (D243):
+
+| Format | The mark | Where `isExport` reads it |
+| --- | --- | --- |
+| Word | the custom property `generator`, `slipbox` | `docProps/custom.xml`, by the zip's central directory |
+| PDF | the Info's Creator, `slipbox` | the trailer's `/Info`, by the cross-reference table, as pdfkit writes them |
+| A web page | `<meta name="generator" content="slipbox">` | its head, in the first 8 KiB |
+| An e-book | `<meta name="generator" content="slipbox"/>` | `OEBPS/content.opf`, by the zip's central directory |
+| Markdown | `generator: slipbox` in its frontmatter | the first 2,048 characters |
+
+It reads only those parts, never the whole file: a zip's part bigger than 1 MiB, or a PDF whose objects aren't where
+its table says, isn't one. A file it can't read that way, cut short or damaged, isn't one either. The graph reads only
+Markdown's (`isMarkdownExport`), for the pictures' folder (§ Markdown).
+
+A mark says slipbox wrote the file, not that it's as slipbox left it: an export edited in Word, an editor or a PDF tool
+keeps its mark as a rule, and is replaced; a file of another tool's carrying the same mark would be too. Word's mark
+came with D243: a Word export from before carries none, and is asked about (or needs `--force`) once.
 
 ## The assembler (`10.1`)
 
@@ -137,6 +163,8 @@ Word comes first (D185). Written by `docx` (MIT), whose zip, JSZip, is dual-lice
   6.3 pixels (11-point text).
 - **Maths:** a display without a picture is its Unicode rows (`12.11`), centred, else as written. Inline maths is
   Unicode text in italics, else as written.
+- **Its properties:** the title, the author where there is one, and the custom property `generator`, `slipbox`: its
+  mark (§ Earlier exports).
 
 ## PDF (`10.5`)
 
@@ -213,7 +241,8 @@ One portable file, for GitHub or any editor (D181):
   callout as `> [!tip] Its title`, a highlight as `==…==`.
 - **Footnotes** are numbered `[^1]`, `[^2]` in the order they're referred to.
 - **Its frontmatter** has the title, author, date and language, and the mark `generator: slipbox`, which lets a later
-  export replace it, though it's a note. Pictures left from an earlier export of other pictures stay in the folder.
+  export replace it, though it's a note (§ Earlier exports). Pictures left from an earlier export of other pictures
+  stay in the folder.
 
 ## Pictures made PNG (`10.10`)
 

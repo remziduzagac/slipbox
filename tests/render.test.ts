@@ -12,7 +12,7 @@ import { layoutBlockDiff } from "../src/core/layout/blockdiff.ts";
 import { layoutDiff } from "../src/core/layout/diff.ts";
 import { layoutSplitDiff, splitColumns, splitRows } from "../src/core/layout/splitdiff.ts";
 import { layoutScreen, type ScreenPart, screenText } from "../src/core/layout/screen.ts";
-import { diffView } from "../src/core/merge.ts";
+import { comparable, diffView, unseenRows } from "../src/core/merge.ts";
 import { type PictureSource, renderMarkdown, renderTree } from "../src/core/layout/render.ts";
 import { dataLinks, parseData } from "../src/core/data.ts";
 import { classify } from "../src/core/filetypes.ts";
@@ -1762,6 +1762,60 @@ describe("a note's diff before and after, laid out (GIT-D2)", () => {
     const { l, d } = small;
     const row = l.lines.find((r) => rowText(r).includes("const v700 = 700;"))!;
     expect(d.units[row.src - 1]!.text).toContain("const v700 = 700;");
+  });
+
+  test("a block too big to diff by words: its changed lines on their sign's tint to the frame's edge, their words more", () => {
+    const fence = `\`\`\`js\n${Array.from({ length: 300 }, (_, i) => `const v${i} = ${i}; // about ${i}`).join("\n")}\n\`\`\`\n`;
+    const to = fence
+      .replace("const v5 = 5;", "const v5x = 5;")
+      .replace("const v9 = 9; // about 9\n", "")
+      .replace("// about 20\n", "// about 20\n\n");
+    const l = layoutBlockDiff(blockDiff(fence, to), { width: 50, glyphs: unicode });
+    expect(l.lines.some((r) => /^┌ (removed|added) /.test(rowText(r)))).toBe(false);
+    /** A frame's row, found by its label and the row before it: its text and padding, each piece's tint. */
+    const tints = (label: string, after: string, k = 1) => {
+      const top = l.lines.findIndex((r) => rowText(r).startsWith(`┌ ${label} `));
+      const at = l.lines.findIndex((r, i) => i > top && rowText(r).includes(after)) + k - 1;
+      return l.lines[at]!.spans.slice(1, -1).map((s) => `${s.text.trim() || "·"}:${s.bg ?? ""}`);
+    };
+    expect(tints("before", "const v4 =")).toEqual(["const v4 = 4; // about 4:", "·:"]);
+    expect(tints("before", "const v5 =")).toEqual([
+      "const:diff_del",
+      "v5:diff_del_word",
+      "= 5; // about 5:diff_del",
+      "·:diff_del",
+    ]);
+    expect(tints("before", "const v9 =")).toEqual(["const v9 = 9; // about 9:diff_del", "·:diff_del"]);
+    expect(tints("after", "const v5x =")).toEqual([
+      "const:diff_add",
+      "v5x:diff_add_word",
+      "= 5; // about 5:diff_add",
+      "·:diff_add",
+    ]);
+    // A blank line added: its row on the tint, though it has no text.
+    expect(tints("after", "const v20 =", 2)).toEqual(["·:diff_add"]);
+    expect(tints("after", "const v21 =")).toEqual(["const v21 = 21; // about 21:", "·:"]);
+  });
+
+  test("what no line shows: a dim row, in a note's blocks as in its lines and side by side", () => {
+    const from = "# T\n\nalpha one\n\nbeta two\n".replace(/\n/g, "\r\n");
+    const to = "# T\n\nalpha one\n\nbeta three";
+    const unseen = unseenRows(from, to);
+    const [a, b] = [comparable(from), comparable(to)];
+    const rows = diffView(a, b, new Set(), 3, unseen);
+    const opts = { width: 200, glyphs: unicode, language: null, wrap: true, codeScroll: true };
+    for (const l of [
+      layoutBlockDiff(blockDiff(a, b, new Set(), { unseen }), { width: 60, glyphs: unicode }),
+      layoutDiff(rows, a, b, opts),
+      layoutSplitDiff(rows, a, b, opts),
+    ]) {
+      const said = l.lines.filter((r) => rowText(r).startsWith("\\"));
+      expect(said.map((r) => [rowText(r), r.spans.map((s) => s.role)])).toEqual([
+        ["\\ line endings: CRLF → LF", ["dim"]],
+        ["\\ no newline at end of file", ["dim"]],
+      ]);
+      expect([l.lines[0], l.lines.at(-1)]).toEqual(said);
+    }
   });
 });
 
