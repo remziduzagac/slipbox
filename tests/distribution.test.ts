@@ -864,11 +864,16 @@ describe("a release (14.2)", () => {
         expect(bom.components.filter((c) => c.purl?.startsWith("pkg:npm/")).map((c) => c.purl)).toEqual(
           packages.map((p) => purl(p.name, p.version)),
         );
-        // Homebrew's formula beside it, for a platform Homebrew installs on.
-        if (!host!.endsWith("-musl"))
-          expect(readFileSync(join(out, "slipbox.rb"), "utf8")).toContain(
-            `url "https://github.com/example/slipbox/releases/download/v${VERSION}/${assetName(VERSION, host!)}"\n      sha256 "${sha256sums([pack]).split(" ")[0]}"`,
-          );
+        // Homebrew's formula beside it, for a platform Homebrew installs on: the pack's address, its sum on the next
+        // line (nested as deep as its platform's block is: macOS has one, Linux one per architecture).
+        if (!host!.endsWith("-musl")) {
+          const lines = readFileSync(join(out, "slipbox.rb"), "utf8")
+            .split("\n")
+            .map((l) => l.trim());
+          const url = `url "https://github.com/example/slipbox/releases/download/v${VERSION}/${assetName(VERSION, host!)}"`;
+          expect(lines).toContain(url);
+          expect(lines[lines.indexOf(url) + 1]).toBe(`sha256 "${sha256sums([pack]).split(" ")[0]}"`);
+        }
       },
       60_000,
     );
