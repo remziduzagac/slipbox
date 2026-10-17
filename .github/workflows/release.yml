@@ -53,7 +53,7 @@ jobs:
     with:
       tag: ${{ github.ref_name }}
       version: ${{ needs.plan.outputs.version }}
-      # The whole suite on every platform released, the Intel Mac and ARM Linux among them, before anything is built.
+      # The whole suite on every platform released, ARM Linux among them, before anything is built.
       suite: true
 
   # The draft, from build.yml's `release` artifact: the packs, their SBOMs, `SHA256SUMS`, `install.sh` and

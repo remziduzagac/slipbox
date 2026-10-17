@@ -60,7 +60,7 @@ inputs" were a few hundred distinct ones (the allocator's floor bug hid behind t
 
 **Slow is not stuck.** Every test is bounded at 30 s by `bun run test`'s `--timeout 30000`, which the check, CI and
 the release's build run: a harness copies and indexes a vault, a CLI test starts processes, and a loaded machine or a
-small runner (CI's Intel Mac) makes either take seconds. A preload's `setDefaultTimeout` reaches the first test file
+small runner (a shared CI runner) makes either take seconds. A preload's `setDefaultTimeout` reaches the first test file
 alone, so the bound is the runner's flag, and a test holds the script to it; most files set the same bound
 themselves, for a run of one file by `bun test`. A test that needs longer says so itself (every command the skill
 shows, run: 3 minutes).
@@ -92,8 +92,8 @@ back with its fix. An assertion is never deleted or loosened to make a test pass
 
 **CI runs the suite on Linux and macOS** (GR-D9), on every change but a pull request of the docs alone, which runs
 the docs' tests only (D230): the scripts `bun run check` runs, split into jobs
-([repository.md](repository.md) § CI). A release runs it again on every platform it builds, the Intel Mac and ARM
-Linux among them, before anything is built ([distribution.md](distribution.md) § Releases).
+([repository.md](repository.md) § CI). A release runs it again on every platform it builds, ARM Linux among
+them, before anything is built ([distribution.md](distribution.md) § Releases).
 
 **Biome formats and lints the code** (`biome.jsonc`: 120 columns, the recommended rules but the code's idioms, each
 turned off with its reason); `bun run lint` fails on a warning, `bun run format` writes (GR-D7).

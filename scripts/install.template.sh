@@ -54,6 +54,11 @@ target() {
   if [ "$os" = darwin ] && [ "$arch" = x64 ] && [ "$(sysctl -n sysctl.proc_translated 2>/dev/null || true)" = 1 ]; then
     arch=arm64
   fi
+  # An Intel Mac, then: no build for it after 0.3.0 (D238; core/release.ts's RETIRED says the same). Nothing is
+  # downloaded.
+  if [ "$os" = darwin ] && [ "$arch" = x64 ]; then
+    fail "Intel Macs aren't supported any more: 0.3.0 was the last release built for them"
+  fi
   # Linux whose C library is musl (Alpine): its own build.
   libc=""
   if [ "$os" = linux ] && { ls /lib/ld-musl-* >/dev/null 2>&1 || ldd --version 2>&1 | grep -qi musl; }; then

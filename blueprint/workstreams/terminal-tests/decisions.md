@@ -52,6 +52,9 @@ rule may keep its few inline lines; realistic content comes from the sample fold
 
 ## TT-D6: In parallel, everywhere; test, then fix (2026-10-13)
 
+> **Amended by D238 (2026-10-17):** CI's Mac is Apple silicon alone: Intel Macs aren't built for after 0.3.0, and
+> `macos-15-intel` no longer runs the checks. Linux still runs them on x64 and arm64.
+
 **Decision:** The checks run concurrently, as many as the machine has cores, each its own terminal, folders and
 slipbox; CI runs them on Linux and macOS, x64 and arm64, on every pull request, inside the required `ci` check. A run
 goes to its end and reports every failure; fixes are made together, then everything runs again.

@@ -8,7 +8,7 @@ import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { LEFT_OUT, lycheePath } from "../scripts/check-docs.ts";
 
-// Processes started, repositories made: slow on a loaded or small machine (CI's Intel Mac), not stuck.
+// Processes started, repositories made: slow on a loaded or small machine (a small CI runner), not stuck.
 setDefaultTimeout(30_000);
 
 const TOP = join(import.meta.dir, "..");

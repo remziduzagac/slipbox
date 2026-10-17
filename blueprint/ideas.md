@@ -476,6 +476,8 @@ idea without an outcome is still open. Nothing here is agreed: the decisions are
 - Sign and notarize the macOS binaries from the first release. (2026-10-10) Not chosen (D198).
 - Keep slipbox's folders in `~/Library` on macOS. (2026-10-10) Not chosen (D200).
 - More ways to install, as ttt has: AUR, a Nix flake, binaries for Windows itself. (2026-10-14)
+- Keep building for Intel Macs (`darwin-x64`) until Apple's last security update for macOS 26, or build them without
+  a CI runner testing them. (2026-10-17) Not chosen (D238).
 
 ## Licence
 

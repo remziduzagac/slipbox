@@ -58,7 +58,8 @@ writes nothing there. Your notes and code stay in their files, alongside the too
 
 ## Install
 
-On macOS and Linux (and Windows through WSL), one line installs slipbox, with nothing else needed:
+On a Mac with Apple silicon and on Linux (and Windows through WSL), one line installs slipbox, with nothing else
+needed:
 
 ```bash
 curl -fsSL https://remziduzagac.github.io/slipbox/install.sh | sh                   # the latest release
@@ -70,7 +71,8 @@ will hold.
 
 `slipbox upgrade` keeps it current. `slipbox channel` says whether it follows previews, and changes that.
 
-With Homebrew, from 0.3.0 on, run `brew install remziduzagac/tap/slipbox`.
+With Homebrew, from 0.3.0 on, run `brew install remziduzagac/tap/slipbox`. Intel Macs aren't supported any more:
+0.3.0 was the last release built for them.
 
 [Installing slipbox](docs/guides/install.md) has the rest: previews, Windows through WSL, upgrading and removing it,
 and running it from source.

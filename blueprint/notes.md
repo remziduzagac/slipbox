@@ -445,3 +445,14 @@ dates. Each says what was asked, decided, built and found, and cites the decisio
   goes into Elsewhere (`core/command-specs.ts`); and code comments still name the removed `space g` keys (`tui/git.ts`,
   `tui/githistory.ts`, `core/gitbranches.ts`) and the sections renamed (`core/registry.ts`, `core/names.ts`). VV-D9's
   `⚠` for a disk that doesn't answer is amended to the code's `⊘` (2026-10-17).
+
+## Intel Macs dropped (2026-10-17)
+
+- The maintainer decided to stop supporting Intel Macs, completely: Apple has stopped making macOS for them, macOS 26
+  Tahoe the last, and CI's Intel Mac runner had been the slowest and flakiest of the four (D238, `14.18`). 0.3.0, the
+  latest release, was the last with a `darwin-x64` pack; the 0.4.0 previews published before this still have one.
+- One pull request: no `darwin-x64` pack, SBOM or formula block, `macos-15-intel` out of the terminal tests and the
+  release's build; the installer and `slipbox upgrade` tell an Intel Mac so, naming 0.3.0, before downloading anything;
+  the formula asks for arm64 on macOS. The required check was already the aggregate `ci` on `main`'s and `test`'s
+  rulesets, so no setting names the Intel runner. The lockfiles keep their `darwin-x64` entries: they are tools'
+  optional packages, as are the language servers' lockfiles slipbox ships (`core/servers/locks.ts`).

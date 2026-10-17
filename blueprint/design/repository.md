@@ -111,8 +111,9 @@ step a package.json script, never a command of its own:
   supply chain's gates (this platform's OpenTUI package's licence among them) and the tests. On macOS the SQLite is
   Apple's, so the index's FTS5 (`unicode61`, `remove_diacritics 2`) and its `bm25` ranking are tested there on every
   change (`tests/core.test.ts`, `tests/vault.test.ts`, `tests/cli.test.ts`; `14.13`).
-- **`terminal`**, on `ubuntu-24.04`, `ubuntu-24.04-arm`, `macos-15` and `macos-15-intel`: the terminal tests
-  (`bun run test:terminal`, TT-D6).
+- **`terminal`**, on `ubuntu-24.04`, `ubuntu-24.04-arm` and `macos-15`: the terminal tests (`bun run test:terminal`,
+  TT-D6). No job runs on an Intel Mac, for which nothing is built after 0.3.0 (D238); a test holds every workflow to
+  it.
 - **`site`**, on `ubuntu-24.04`: the docs' site built (`bun run site`), every link within it landing (DS).
 - **`ci`**, the aggregator and the one required check: it always runs, waits for every other job, and fails unless
   each passed or was skipped. A job skipped by its `if:` counts as passed; one that failed, was cancelled or never

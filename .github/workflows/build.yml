@@ -39,10 +39,9 @@ jobs:
             runner: ubuntu-24.04
           - target: linux-arm64
             runner: ubuntu-24.04-arm
+          # A Mac is Apple silicon: 0.3.0 was the last release built for Intel Macs (D238).
           - target: darwin-arm64
             runner: macos-15
-          - target: darwin-x64
-            runner: macos-15-intel
           # musl, for Alpine (14.5): built on the same runners, their OpenTUI package installed there too.
           - target: linux-x64-musl
             runner: ubuntu-24.04
@@ -142,7 +141,7 @@ jobs:
     needs: build
     strategy:
       matrix:
-        target: [linux-x64, linux-arm64, darwin-arm64, darwin-x64, linux-x64-musl, linux-arm64-musl]
+        target: [linux-x64, linux-arm64, darwin-arm64, linux-x64-musl, linux-arm64-musl]
     runs-on: ubuntu-24.04
     timeout-minutes: 10
     permissions:

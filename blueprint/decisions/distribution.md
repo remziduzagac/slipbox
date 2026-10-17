@@ -84,6 +84,9 @@ they don't open.
 > **Detailed by GR-D13 (2026-10-12):** previews from the `test` branch, built by the release's own workflow
 > (`build.yml`) and published as pre-releases. The first release is 0.2.1, published 2026-10-12 (GR-D18).
 
+> **Partly superseded by D238 (2026-10-17):** macOS is Apple silicon's alone: no x64 build after 0.3.0, the last
+> release built for Intel Macs, and none of CI's jobs runs on one. Linux stays x64 and arm64.
+
 **Decision:** Decided with the user after reading trailscout's packaging design (its `design/09-application.md`, the
 same machine), taken where it fits: slipbox has no daemon, no native npm packages and no models to fetch. Releases are
 for macOS (arm64, x64) and Linux (x64, arm64) first, and Windows if it isn't difficult (D205). Each platform is built
@@ -191,6 +194,9 @@ time, so a musl build fixes that in.
 > **Amended by D228 (2026-10-13):** the tap is `remziduzagac/homebrew-tap`, shared with herdsman, pushed to with a
 > deploy key, not a token.
 
+> **Amended by D238 (2026-10-17):** the formula's macOS block asks for arm64 (`depends_on arch: :arm64`) and holds
+> Apple silicon's pack alone, so an Intel Mac is refused with Homebrew's own word, not a formula with no address.
+
 **Decision:** Each release writes a Homebrew formula, copied into a tap once the release is published. A slipbox
 Homebrew installed is left to brew: `slipbox upgrade`, the daily check and `slipbox uninstall` say brew's commands.
 Detail: design/distribution.md § Homebrew.
@@ -243,3 +249,25 @@ is 0.3.0's; 0.2.1 and 0.2.2 have none.
 
 **Not chosen:** a tap of slipbox's own, `remziduzagac/homebrew-slipbox`, as planned; the fine-grained token
 `HOMEBREW_TAP_TOKEN`, as planned (GR-D9); herdsman's key, shared.
+
+## D238: No build for Intel Macs; 0.3.0 was the last (14.2, 14.18, 2026-10-17)
+
+**Decision:** The maintainer's call: slipbox stops supporting Intel Macs, completely. From 0.4.0 no `darwin-x64` pack
+is built, attested, summed or put in the Homebrew formula, and no CI job runs on an Intel Mac (`macos-15-intel` leaves
+the terminal tests and the release's build). 0.3.0 was the last release built for them; its packs stay published.
+On an Intel Mac the installer says so, naming 0.3.0, and stops before downloading anything; `slipbox upgrade` on that
+platform says the same before it asks for anything; the formula asks for arm64 on macOS. The platforms retired and
+the last release for each are one table, `core/release.ts`'s `RETIRED`, which the installer's message is held to by a
+test. A Mac terminal under Rosetta on Apple silicon still gets the arm64 build. Detail: design/distribution.md
+§ Releases, § Installing, § Homebrew, § Updates.
+
+**Why:** Apple has stopped making macOS for Intel Macs: macOS 26 Tahoe is the last they get. And CI's Intel Mac was
+the slowest and flakiest of its four terminal-test runners: the release of 0.2.0 failed on it (GR-D18), and waits and
+timeouts were set by it (design/testing.md § Strategy).
+
+**Cost:** An Intel Mac stays on 0.3.0, which its own installer still installs. 0.3.0's `slipbox upgrade` runs 0.3.0's
+code, which says only that it couldn't find the latest release's `darwin-x64` build; the plain message is in the
+installer and in builds from 0.4.0 on. Running from source on an Intel Mac may still work, untested.
+
+**Not chosen:** keeping the Intel build until Apple's last security update for macOS 26; building it without testing
+it (ideas.md § Distribution).

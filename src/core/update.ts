@@ -25,7 +25,7 @@ import {
   writeFileSync,
 } from "node:fs";
 import { dirname, join } from "node:path";
-import { PREVIEW_TAG, pagesBase, type ReleaseBuild, tagOf } from "./release.ts";
+import { PREVIEW_TAG, pagesBase, type ReleaseBuild, retired, tagOf } from "./release.ts";
 import { type Channel, howToUpgrade, type InstalledBy, installedBy, readChannel } from "./install.ts";
 
 type Fetcher = (url: string, init?: RequestInit) => Promise<Response>;
@@ -235,7 +235,8 @@ function versionOf(bin: string): string | null {
  * `slipbox upgrade`: this install — the installer's, in `data` — moved to the newest its channel offers (`<data>/
  * channel`: the latest release, or on `preview` the newer of that and the newest preview), or, with `check`, only
  * told of it. The pack's SHA-256 must be its SHA256SUMS line's and its binary must say its version before `current`
- * moves; the version replaced is kept, any older removed.
+ * moves; the version replaced is kept, any older removed. A platform no longer released for (an Intel Mac, D238) is
+ * told so, and the last release built for it, before anything is asked for.
  */
 export async function upgrade(opts: {
   release: ReleaseBuild;
@@ -246,6 +247,8 @@ export async function upgrade(opts: {
   check?: boolean;
   fetcher?: Fetcher;
 }): Promise<UpgradeResult> {
+  const gone = retired(opts.release.target);
+  if (gone) throw new UpgradeError(gone);
   const fetcher = opts.fetcher ?? fetch;
   const versions = join(opts.data, "versions");
   let installed = false;

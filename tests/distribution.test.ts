@@ -49,11 +49,12 @@ import {
   repoOf,
   sbomName,
   sha256sums,
+  TARGETS,
   writeSite,
 } from "../scripts/release.ts";
 import { bootstrapScript } from "../scripts/bootstrap.ts";
 import { codeChanged, isDocs } from "../scripts/ci-scope.ts";
-import { pagesBase, RELEASE, tagOf } from "../src/core/release.ts";
+import { pagesBase, RELEASE, RETIRED, retired, tagOf } from "../src/core/release.ts";
 import {
   howToUpgrade,
   installation,
@@ -85,7 +86,7 @@ import {
 } from "../src/core/update.ts";
 import { VERSION } from "../src/version.ts";
 
-// Processes started, repositories made: slow on a loaded or small machine (CI's Intel Mac), not stuck.
+// Processes started, repositories made: slow on a loaded or small machine (a small CI runner), not stuck.
 setDefaultTimeout(30_000);
 
 const ROOT = resolve(import.meta.dir, "..");
@@ -520,13 +521,61 @@ describe("the supply chain's gates (14.10)", () => {
 describe("a release (14.2)", () => {
   test("the platforms released, by name; this machine's when it's one of them", () => {
     expect(hostTarget("linux", "arm64", false)).toBe("linux-arm64");
-    expect(hostTarget("darwin", "x64", false)).toBe("darwin-x64");
+    expect(hostTarget("darwin", "arm64", false)).toBe("darwin-arm64");
+    // An Intel Mac: none after 0.3.0.
+    expect(hostTarget("darwin", "x64", false)).toBeNull();
     // musl's Linux, Alpine's (14.5): its own build; a Mac has no such thing.
     expect(hostTarget("linux", "x64", true)).toBe("linux-x64-musl");
     expect(hostTarget("linux", "arm64", true)).toBe("linux-arm64-musl");
     expect(hostTarget("darwin", "arm64", true)).toBe("darwin-arm64");
     expect(hostTarget("freebsd", "x64")).toBeNull();
     expect(hostTarget("win32", "x64")).toBeNull(); // 14.12, when it's done
+  });
+
+  test("a platform released once and no longer: said, with the last release built for it — never one still released", () => {
+    expect(retired("darwin-x64")).toBe(
+      "Intel Macs aren't supported any more: 0.3.0 was the last release built for them",
+    );
+    for (const t of ["darwin-arm64", "linux-x64", "linux-arm64-musl", "constructor", "win32-x64"])
+      expect(retired(t)).toBeNull();
+    for (const t of Object.keys(RETIRED)) expect(TARGETS[t]).toBeUndefined();
+    // The last release built for one is a release: x.y.z.
+    for (const { last } of Object.values(RETIRED)) expect(last).toMatch(/^\d+\.\d+\.\d+$/);
+  });
+
+  test("an Intel Mac is told the installer has nothing for it, and the last release that had; nothing downloaded", () => {
+    const dir = mkdtempSync(join(sandbox, "intel-"));
+    const template = readFileSync(join(ROOT, "scripts", "install.template.sh"), "utf8");
+    const sums = Object.fromEntries(Object.keys(TARGETS).map((t, i) => [t, String(i).repeat(64)]));
+    writeFileSync(join(dir, "install.sh"), installScript(template, "1.2.3", "example/slipbox", sums));
+    const run = (sysctl: string | null) => {
+      const fakes = mkdtempSync(join(dir, "fakes-"));
+      writeFileSync(join(fakes, "uname"), '#!/bin/sh\ncase "$1" in -s) echo Darwin ;; -m) echo x86_64 ;; esac\n');
+      chmodSync(join(fakes, "uname"), 0o755);
+      // An Intel Mac's sysctl says 0 of Rosetta, or knows no such name (an older macOS): either way, not translated.
+      if (sysctl !== null) {
+        writeFileSync(join(fakes, "sysctl"), `#!/bin/sh\n${sysctl}\n`);
+        chmodSync(join(fakes, "sysctl"), 0o755);
+      }
+      const home = mkdtempSync(join(dir, "home-"));
+      const r = Bun.spawnSync(["sh", join(dir, "install.sh")], {
+        env: {
+          HOME: home,
+          PATH: `${fakes}:/usr/bin:/bin`,
+          TMPDIR: home,
+          SLIPBOX_RELEASES_URL: `file://${join(dir, "nowhere")}`,
+        },
+        cwd: home,
+      });
+      return { code: r.exitCode, out: r.stdout.toString(), err: r.stderr.toString(), home };
+    };
+    for (const sysctl of ["echo 0", "echo 'unknown oid' >&2; exit 1", null]) {
+      const r = run(sysctl);
+      expect(r.code).toBe(1);
+      expect(r.err).toBe(`slipbox: ${retired("darwin-x64")}\n`);
+      expect(r.out).not.toContain("downloading");
+      expect(readdirSync(r.home)).toEqual([]);
+    }
   });
 
   test("the repository released from: owner/name, or a GitHub remote's URL — nothing else", () => {
@@ -715,11 +764,17 @@ describe("a release (14.2)", () => {
       "linux-x64-musl": "e".repeat(64),
     };
     const f = homebrewFormula(template, "1.2.3", "o/r", sums);
-    const block = (_os: string, cpu: string, target: string, sum: string) =>
-      `    ${cpu} do\n      url "https://github.com/o/r/releases/download/v1.2.3/slipbox-1.2.3-${target}.tar.gz"\n      sha256 "${sum}"\n    end`;
+    const url = (target: string) =>
+      `url "https://github.com/o/r/releases/download/v1.2.3/slipbox-1.2.3-${target}.tar.gz"`;
+    const block = (cpu: string, target: string, sum: string) =>
+      `    ${cpu} do\n      ${url(target)}\n      sha256 "${sum}"\n    end`;
+    // macOS is Apple silicon's alone: arm64 asked for, so an Intel Mac is refused saying so, then its one pack.
     expect(f).toContain(
-      `  on_macos do\n${block("on_macos", "on_arm", "darwin-arm64", "a".repeat(64))}\n${block("on_macos", "on_intel", "darwin-x64", "b".repeat(64))}\n  end\n  on_linux do\n${block("on_linux", "on_arm", "linux-arm64", "c".repeat(64))}\n${block("on_linux", "on_intel", "linux-x64", "d".repeat(64))}\n  end`,
+      `  on_macos do\n    depends_on arch: :arm64\n    ${url("darwin-arm64")}\n    sha256 "${"a".repeat(64)}"\n  end\n  on_linux do\n${block("on_arm", "linux-arm64", "c".repeat(64))}\n${block("on_intel", "linux-x64", "d".repeat(64))}\n  end`,
     );
+    // An Intel Mac's pack, were there one, isn't Homebrew's: 0.3.0 was the last release built for them.
+    expect(f).not.toContain("darwin-x64");
+    expect(f.match(/depends_on/g)).toHaveLength(1);
     expect(f).toContain('  version "1.2.3"\n');
     expect(f).toContain('  license "Apache-2.0"\n');
     expect(f).toContain('  homepage "https://github.com/o/r"\n');
@@ -730,6 +785,9 @@ describe("a release (14.2)", () => {
     const macOnly = homebrewFormula(template, "1.2.3", "o/r", { "darwin-arm64": "a".repeat(64) });
     expect(macOnly).not.toContain("on_linux");
     expect(macOnly).not.toContain("on_intel");
+    const linuxOnly = homebrewFormula(template, "1.2.3", "o/r", { "linux-x64": "d".repeat(64) });
+    expect(linuxOnly).not.toContain("on_macos");
+    expect(linuxOnly).not.toContain("depends_on");
     expect(() => homebrewFormula(template, "1.2.3", "o/r", { "linux-x64-musl": "e".repeat(64) })).toThrow(
       "no pack Homebrew installs",
     );
@@ -806,11 +864,16 @@ describe("a release (14.2)", () => {
         expect(bom.components.filter((c) => c.purl?.startsWith("pkg:npm/")).map((c) => c.purl)).toEqual(
           packages.map((p) => purl(p.name, p.version)),
         );
-        // Homebrew's formula beside it, for a platform Homebrew installs on.
-        if (!host!.endsWith("-musl"))
-          expect(readFileSync(join(out, "slipbox.rb"), "utf8")).toContain(
-            `url "https://github.com/example/slipbox/releases/download/v${VERSION}/${assetName(VERSION, host!)}"\n      sha256 "${sha256sums([pack]).split(" ")[0]}"`,
-          );
+        // Homebrew's formula beside it, for a platform Homebrew installs on: the pack's address, its sum on the next
+        // line (nested as deep as its platform's block is: macOS has one, Linux one per architecture).
+        if (!host!.endsWith("-musl")) {
+          const lines = readFileSync(join(out, "slipbox.rb"), "utf8")
+            .split("\n")
+            .map((l) => l.trim());
+          const url = `url "https://github.com/example/slipbox/releases/download/v${VERSION}/${assetName(VERSION, host!)}"`;
+          expect(lines).toContain(url);
+          expect(lines[lines.indexOf(url) + 1]).toBe(`sha256 "${sha256sums([pack]).split(" ")[0]}"`);
+        }
       },
       60_000,
     );
@@ -1312,8 +1375,10 @@ describe("a release (14.2)", () => {
         if (host === "darwin-arm64")
           expect(install(mkdtempSync(join(sandbox, "home-")), {}, { fake: mac }).code).toBe(0);
         else expect(install(home, {}, { fake: mac }).err).toContain("has no darwin-arm64 build");
-        if (host !== "darwin-x64")
-          expect(install(home, {}, { fake: { ...mac, sysctl: "echo 0" } }).err).toContain("has no darwin-x64 build");
+        // An Intel Mac: none built for it after 0.3.0, said before anything is downloaded.
+        expect(install(home, {}, { fake: { ...mac, sysctl: "echo 0" } }).err).toBe(
+          `slipbox: ${retired("darwin-x64")}\n`,
+        );
         expect(existsSync(join(home, ".local"))).toBe(false);
       },
       60_000,
@@ -1641,6 +1706,34 @@ describe("updates (14.4)", () => {
     expect(await attempt("slipbox 2.0.0", elsewhere)).toBe(
       `this slipbox (${elsewhere}) wasn't installed by its installer: upgrade it the way it was installed`,
     );
+  });
+
+  test("upgrade on an Intel Mac: told no release is built for it now, and the last that was; nothing asked for", async () => {
+    const data = join(mkdtempSync(join(sandbox, "upg-")), "slipbox");
+    mkdirSync(join(data, "versions", "0.3.0"), { recursive: true });
+    writeFileSync(join(data, "versions", "0.3.0", "slipbox"), "");
+    symlinkSync("versions/0.3.0", join(data, "current"));
+    const asked: string[] = [];
+    // A release that had an Intel Mac's pack, were it asked: still never downloaded.
+    const fetcher = async (url: string) => (asked.push(url), new Response(`${sum}  slipbox-0.4.0-darwin-x64.tar.gz\n`));
+    for (const check of [false, true]) {
+      const tried = upgrade({
+        release: { repo: "o/r", target: "darwin-x64" },
+        version: "0.3.0",
+        data,
+        execPath: join(data, "versions", "0.3.0", "slipbox"),
+        env: {},
+        check,
+        fetcher,
+      });
+      await expect(tried).rejects.toBeInstanceOf(UpgradeError);
+      await expect(tried).rejects.toThrow(
+        "Intel Macs aren't supported any more: 0.3.0 was the last release built for them",
+      );
+    }
+    expect(asked).toEqual([]);
+    expect(readlinkSync(join(data, "current"))).toBe("versions/0.3.0");
+    expect(readdirSync(join(data, "versions"))).toEqual(["0.3.0"]);
   });
 });
 

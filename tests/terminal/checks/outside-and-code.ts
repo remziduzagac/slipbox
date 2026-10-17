@@ -1032,7 +1032,7 @@ export const OUTSIDE_AND_CODE: Check[] = [
       await s.keys("escape");
       // Sooner than the 6 MB note's parse: it's parsed on other threads, and a key waiting for it on the main thread
       // would wait as long as this runner takes to parse it on one. Measured on this runner, not a fixed bound: a
-      // shared one's speed comes and goes (CI's Intel Mac has answered in two seconds, and in five).
+      // shared one's speed comes and goes (a CI runner has answered in two seconds, and in five).
       s.expect(
         answered < bigParse,
         `keys answered while it indexes, before its big note's parse (${answered} ms; ${Math.round(bigParse)} ms)`,
