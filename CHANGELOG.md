@@ -242,6 +242,9 @@ The format is [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.1.0/); wh
 - `:worktrees` lists a worktree whose folder's name holds a line break by its whole path, with git 2.36 or later.
 - A rename staged with `git mv` shows in source control as `R old.md → new.md`, and its diff is what changed against
   the old name. It used to show the whole file as added.
+- `esc` after typing at the end of a line could leave the cursor one character short, and `g i` then typed before the
+  last character instead of after it. It happened when `esc` came just as something finished in the background, such
+  as the vault's index or a grammar loading.
 
 ## [0.3.0] - 2026-10-14
 

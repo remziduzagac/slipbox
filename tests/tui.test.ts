@@ -8976,6 +8976,20 @@ describe("word count, save all, the change list, moving lines", () => {
     await h.keys("g", "g", "g", "i", "x", "escape");
     expect(v.buf.source).toContain("line four?x");
   });
+  test("esc read while a new layout is pending: gi still comes back past the line's end, the cursor on its last character", async () => {
+    const root = makeVault();
+    writeFileSync(join(root, "c.md"), "line one\nline two\n");
+    const h = await harness({ root, open: "c.md" });
+    const v = h.app.view!;
+    await h.keys("space", "n", "v", "j", "A", "!");
+    // The index's last notes parsed, a grammar loaded, the watcher's news: every window laid out again, and esc read
+    // before the frame that would have done it.
+    h.app.relayoutAll();
+    await h.app.input.handleKey("escape");
+    expect(statusRow(h.frame())).toContain("L2:9"); // on the `!`
+    await h.keys("g", "g", "g", "i", "?", "escape");
+    expect(v.buf.source).toBe("line one\nline two!?\n");
+  });
   test("alt+shift+up/down move the line, or V's lines, as one undo step; from the render too", async () => {
     const root = makeVault();
     writeFileSync(join(root, "m.md"), "a\nb\nc\nd\n");
