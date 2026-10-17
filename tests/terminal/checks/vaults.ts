@@ -256,22 +256,24 @@ const ELSEWHERE: Check[] = [
     covers: { cases: ["vault", "tabs", "links/travel"], commands: ["tab.new", "note.open", "history.back"] },
     options: { home: true, startAt: "home/notes/index.md", setup: downloadsElsewhere },
     run: async (s) => {
-      // notes: two tabs.
+      // notes: two tabs. (Not inbox.md: notes' config makes it its scratch, shown as `scratch`.)
       await s.status(/ notes .*index\.md/);
       await s.keys("ctrl+t", "c");
       await s.see(tab(2, "index.md"));
-      await open(s, "inbox");
-      await s.see(tab(2, "inbox.md"));
+      await open(s, "sync-rewrite");
+      await opened(s, "projects/sync-rewrite.md");
+      await s.see(tab(2, "sync-rewrite.md"));
       // A file outside home and every vault, chosen: into Elsewhere (VV-D3, VV-D4), its tabs, none of notes'.
       await s.ex(`e ${join(s.dir, "elsewhere", "stray-note.md")}`);
       await s.status(/ Elsewhere .*stray-note\.md/, 5000);
-      await s.notSee(tab("\\d", "inbox.md"));
+      await s.notSee(tab("\\d", "sync-rewrite.md"));
       await s.notSee(tab("\\d", "index.md"));
       // Back: notes, its two tabs, at the note left.
       await s.keys("ctrl+o");
-      await s.status(/ notes .*inbox\.md/, 5000);
+      await opened(s, "projects/sync-rewrite.md");
+      await s.status(/ notes /);
       await s.see(tab(1, "index.md"));
-      await s.see(tab(2, "inbox.md"));
+      await s.see(tab(2, "sync-rewrite.md"));
       await s.notSee(tab("\\d", "stray-note.md"));
     },
   },
