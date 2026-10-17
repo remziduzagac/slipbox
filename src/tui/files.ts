@@ -26,18 +26,32 @@ export class Files {
   /**
    * Where a new note or folder goes: the explorer's selected folder (or the folder of its selected
    * file) when the explorer has focus, else the current note's folder; the vault's root without
-   * one. Vault-relative, "" for the root; null for a row outside the vault's own tree, which isn't this vault's.
+   * one. Vault-relative, "" for the root; null for a row outside the vault's own tree, which isn't this vault's — but
+   * one `walk.exclude` leaves out, which is (D246).
    */
   newItemBase(): string | null {
     if (this.app.region === "sidebar" && this.app.leftView === "explorer") {
       const row = this.app.explorer.rows()[this.app.sidebar.selected];
-      // Above the vault, beside it, in another (VV-D5): none of this vault's folders (null, refused).
-      if (row?.outside) return null;
+      // Above the vault, beside it, in another (VV-D5), in a busy folder (VV-D8): none of this vault's folders (null,
+      // refused). What `walk.exclude` leaves out is, by your own setting: its folder, as a typed path takes it (D246).
+      if (row?.outside) return row.kind === "root" ? null : this.excludedBase(this.app.explorer.rowAbs(row), row.kind);
       if (row?.root?.here) return "";
       if (row) return row.kind === "dir" ? row.path : posix.dirname(row.path) === "." ? "" : posix.dirname(row.path);
     }
     const rel = this.app.view?.buf.rel;
     return rel && posix.dirname(rel) !== "." ? posix.dirname(rel) : "";
+  }
+
+  /**
+   * The folder a `⊘` row at `abs` gives a new note, a new folder or a paste, when `walk.exclude` leaves the row out
+   * (`Graph.notIndexed`, D246): a folder's own path, a file's folder; null for any other row outside the vault's tree.
+   */
+  private excludedBase(abs: string, kind: "dir" | "note"): string | null {
+    const rel = relative(this.app.loc.root, abs);
+    if (!rel || climbsOut(rel)) return null;
+    const p = rel.split(sep).join("/");
+    if (!this.app.graph.notIndexed(p, kind === "dir")) return null;
+    return kind === "dir" ? p : posix.dirname(p) === "." ? "" : posix.dirname(p);
   }
 
   /** A new note, folder or paste with another root's row selected: refused, its files aren't this root's. */

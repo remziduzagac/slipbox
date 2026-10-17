@@ -653,7 +653,8 @@ keys.
   name, read as it: DF-D22), its name dimmed after the folder's when they differ, its branch among its marks (below). A
   row's path is its path in the vault for what the vault's own tree holds, else absolute (`outside`), and so is a
   folder's key in `expanded`; none of this vault's file operations act on an `outside` row (a paste, new note or new
-  folder there says `another vault's folder: select a folder of this vault`). **It starts** at the folder opened
+  folder there says `another vault's folder: select a folder of this vault`), but one `walk.exclude` leaves out (D246,
+  below). **It starts** at the folder opened
   (`slipbox x/y`: y, in vault x; `prepare`'s `folder`), set once the notes are open, so the note shown outside it leaves
   it be; opened on a note, at its vault. In Elsewhere it has no tree of its own: every folder is listed a level at a
   time, by its whole path, the view starting at the folder opened. **The breadcrumb**, on the row under the pane's
@@ -693,7 +694,11 @@ keys.
   walk leaves out — `node_modules` and the other busy folders (D237: ignored, or no note at their top; a notes `build/`
   is the vault's own), what `.gitignore` or `walk.exclude` leaves out, home's
   skip list — is a row by its absolute path (`outside`, its `leftOut` the reason `exclusion` gives), listed a level at
-  a time as a folder outside the vault, never this vault's to rename, move, delete or make a note in; a file of it
+  a time as a folder outside the vault, never this vault's to rename, move or delete, nor to make a note in (`a folder
+  this vault doesn't index: select one it does`) — but what `walk.exclude` leaves out, your own setting, takes a new
+  note, a new folder or a paste as a typed path into it does, said `not indexed` (D246: `Files.newItemBase` gives the
+  row's folder when `Graph.notIndexed` says so of the row's path; a busy folder, a `.gitignore`'s, home's skip list or
+  a vault there is refused as before); a file of it
   opens from the explorer, never indexed; a note of it a link reached (`20.8`) is listed there, not under a folder of
   the vault's own. What it hasn't reached — a folder it couldn't read, home's folders before its walk, a folder or file
   come since the walk — is the vault's, by its path in it (`unwalked`), listed from the disk until the walk has it: so

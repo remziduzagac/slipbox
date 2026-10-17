@@ -16820,6 +16820,45 @@ describe("review (tui): the app's floating windows, new paths, roots and repeats
     await h.keys("p");
     expect(existsSync(join(root, "projects", "notes", "alpha.md"))).toBe(true);
     expect(last(h).text).toBe("copied notes → projects/notes (not indexed: walk.exclude)");
+    // In the explorer, its ⊘ row as a typed path: a new note, a new folder and a paste are made there, and said so.
+    const pick = (name: string) => {
+      h.app.region = "sidebar";
+      h.app.sidebar.selected = h.app.explorer.rows().findIndex((r) => r.name === name);
+      expect(h.app.explorer.rows()[h.app.sidebar.selected]).toMatchObject({ outside: true });
+    };
+    pick("drafts");
+    expect(h.app.explorer.rows()[h.app.sidebar.selected]!.leftOut).toBe("walk.exclude");
+    h.app.explorer.action("new_note");
+    expect((h.app.overlay as import("../src/tui/app.ts").PromptOverlay).label).toBe("new note in drafts/");
+    await type(h, "fresh");
+    await h.keys("enter");
+    expect(readFileSync(join(root, "drafts", "fresh.md"), "utf8")).toStartWith("# fresh\n");
+    expect(h.app.messages.map((m) => m.text)).toContain("created drafts/fresh.md (not indexed: walk.exclude)");
+    await h.keys("escape");
+    pick("drafts");
+    h.app.explorer.action("new_folder");
+    await type(h, "sub");
+    await h.keys("enter");
+    expect(existsSync(join(root, "drafts", "sub"))).toBe(true);
+    expect(last(h).text).toBe("created drafts/sub/ (not indexed: walk.exclude)");
+    h.app.files.clipItem("copy", { rel: "index.md", dir: false });
+    pick("drafts");
+    h.app.files.pasteItem();
+    expect(last(h).text).toBe("copied index.md → drafts/index.md (not indexed: walk.exclude)");
+    // A file's row in it: its folder.
+    pick("drafts");
+    h.app.explorer.action("expand");
+    pick("wip.md");
+    h.app.explorer.action("new_note");
+    expect((h.app.overlay as import("../src/tui/app.ts").PromptOverlay).label).toBe("new note in drafts/");
+    await h.keys("escape");
+    // A busy folder that looks generated, and a vault of its own there, are refused as before.
+    for (const name of ["node_modules", "nested-vault"]) {
+      pick(name);
+      h.app.explorer.action("new_note");
+      expect(h.app.overlay).toBeNull();
+      expect(last(h).text).toBe("a folder this vault doesn't index: select one it does");
+    }
     // Exported there as Markdown, a note; as Word, nothing a vault indexes, so nothing said.
     const { formatFor } = await import("../src/core/export/index.ts");
     await h.app.exporter.write(["index.md"], formatFor("md")!, join(root, "drafts", "index.export.md"));

@@ -997,7 +997,9 @@ so a capitalised one is more likely a person's folder of notes, which a busy nam
 leaves it out — the path or a folder on its way named by it, no root nested on the way — is written, never refused,
 and the message the write gives anyway ends with `(not indexed: walk.exclude)` after the path it names: `created
 drafts/x.md (not indexed: walk.exclude)`, `saved …`, `autosaved …`, a move's, a copy's, a Markdown export's. It is said
-at every write of the note, never as a message of its own. On the command line, `write`, `mv`, `cp` and `export` end
+at every write of the note, never as a message of its own. The explorer's `⊘` row of such a folder takes a new note,
+a new folder or a paste as a typed path into it does, said so; the rows of a busy folder, a `.gitignore`'s, home's skip
+list or a vault there are refused as before. On the command line, `write`, `mv`, `cp` and `export` end
 their line so and add `notIndexed` to their JSON; `capture` and `mkdir`, whose human output is a bare path, say it as
 a warning. One function decides it (`WalkFilter.notIndexed`), asked of the walk's settings, not the index. As built:
 design/roots.md § The walk.
@@ -1011,6 +1013,7 @@ again anyway.
 **Cost:** A save's message is longer for such a note, every time. The walk's patterns are matched once per folder on
 the way at each write, and a root nested on the way costs a look for its markers.
 
-**Not chosen:** refusing the write, as a busy folder's is (the setting is yours); saying it once per note or per session
+**Not chosen:** refusing the write, as a busy folder's is (the setting is yours), in the explorer too, where a typed
+path was already allowed; saying it once per note or per session
 (a state to keep, and a save that reads as indexed); a message of its own after the write (the status line shows the
 last message, and the save's would hide it); text added to a bare-path output (`capture`, `mkdir`), which scripts read.

@@ -270,7 +270,7 @@ what the walk leaves out, the watcher doesn't subscribe to (D40).
   a vault of its own and, in home, all its skip list leaves out are never reached: named, such a file is read and
   nothing more. Nothing new is put where it would never be indexed: a new note (`write --create`, the TUI's typed
   path), a move or rename (`mv`, a folder given a busy name) or a copy into a busy folder is refused — the CLI's exit
-  5, the TUI's warning, as the explorer refuses a new note on a `⊘` row. The guards (`checkWritable`, `cleanTarget`,
+  5, the TUI's warning, as the explorer refuses one on a busy `⊘` row. The guards (`checkWritable`, `cleanTarget`,
   `copyPath`, `Files.createNote`) ask the filter (`Graph.neverIndexed`: a folder on the way whose `exclusion` is `busy
   folder` or `always skipped`, up to a root of its own), not a list of names, so the refusal follows the filter. They
   ask it of the folder as the write leaves it: the folder a note lands in holds a note then (a moved or copied folder's
@@ -280,21 +280,23 @@ what the walk leaves out, the watcher doesn't subscribe to (D40).
   other; `walk.exclude`'s folders and nested roots still take
   a new note (made, not indexed here). A folder listed a level at a time (Elsewhere's) reaches nothing. Reached files
   aren't watched: they are read again when the index is next built.
-- **Written where `walk.exclude` leaves it out, said** (D246): the setting is yours, so a write there is never
-  refused, as a busy folder's is, but the message the write gives anyway ends with where the path stands — `created
-  drafts/x.md (not indexed: walk.exclude)`, `saved …`, `autosaved …`, `renamed a.md → drafts/a.md (not indexed:
-  walk.exclude): 2 changes in 1 file`, `copied …`, `exported … (Markdown (.md), not indexed: walk.exclude)`, `added to
-  the scratch (not indexed: walk.exclude)` — at every write of the note, never as a message of its own: each save's
-  message stands alone in the status line and Messages, so it says what that write did, and a note said once would
-  read as indexed at the next save. `WalkFilter.notIndexed` decides it: `walk.exclude` names the path or a folder on
-  its way, and no root nested on the way takes it (indexed there by its own settings); `Graph.notIndexed` adds that
-  Elsewhere indexes nothing; `notIndexedSaid` words it. The TUI asks it of what each write's message names
-  (`Files.notIndexed`: a new note or folder, a save, `:wa` — the one left out named, else counted — a move, a paste,
-  a Markdown export, the scratch kept in the vault); a task ticked or a rename's link fixes say what they did, as
-  before. The command line: `write`, `mv` (a dry run's too), `cp` and `export` end their line so and add
-  `notIndexed: "walk.exclude"` to their JSON; `capture` and `mkdir`, whose human output is a bare path for scripts,
-  keep it so and say it as a warning (in human output only: the JSON's field says it there). Asked of the walk's
-  settings, never the index, so a `capture` walks nothing.
+- **Written where `walk.exclude` leaves it out, said** (D246): the setting is yours, so a write there is never refused,
+  as a busy folder's is, but the message the write gives anyway ends with where the path stands — `created drafts/x.md
+  (not indexed: walk.exclude)`, `saved …`, `autosaved …`, `renamed a.md → drafts/a.md (not indexed: walk.exclude): 2
+  changes in 1 file`, `copied …`, `exported … (Markdown (.md), not indexed: walk.exclude)`, `added to the scratch (not
+  indexed: walk.exclude)` — at every write of the note, never as a message of its own: each save's message stands alone
+  in the status line and Messages, so it says what that write did, and a note said once would read as indexed at the
+  next save. `WalkFilter.notIndexed` decides it: `walk.exclude` names the path or a folder on its way, and no root
+  nested on the way takes it (indexed there by its own settings); `Graph.notIndexed` adds that Elsewhere indexes
+  nothing; `notIndexedSaid` words it. The TUI asks it of what each write's message names (`Files.notIndexed`: a new note
+  or folder, a save, `:wa` — the one left out named, else counted — a move, a paste, a Markdown export, the scratch kept
+  in the vault); a task ticked or a rename's link fixes say what they did, as before. The explorer's `⊘` row of what
+  `walk.exclude` leaves out takes a new note, a new folder or a paste as the typed path does (`Files.newItemBase`: the
+  row's folder, when `Graph.notIndexed` says so of the row's path); any other `⊘` row is refused as before. The command
+  line: `write`, `mv` (a dry run's too), `cp` and `export` end their line so and add `notIndexed: "walk.exclude"` to
+  their JSON; `capture` and `mkdir`, whose human output is a bare path for scripts, keep it so and say it as a warning
+  (in human output only: the JSON's field says it there). Asked of the walk's settings, never the index, so a `capture`
+  walks nothing.
 - **Nested vaults are boundaries:** a subfolder holding a vault marker is a different vault, and is not walked (D69,
   D40). A fixture vault inside a repository doesn't leak into it, and a repository's notes, or an Obsidian vault's,
   stay its own.
