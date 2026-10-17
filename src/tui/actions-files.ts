@@ -64,6 +64,9 @@ export function fileActions(): Record<string, Run> {
       // Git-ignored, or in a hidden folder: reached by opening it (20.8), it's the vault's from now on.
       if (rel && isInside(a.loc.root, abs) && a.graph.reachFile(rel, { keep: true }))
         return a.graph.notes.has(rel) ? a.open(rel) : fileLink(a, rel);
+      // Left out and never reached (D249) — a busy folder (D237), `walk.exclude`, a vault of its own, home's skip list
+      // (VV-D2): opened as the explorer opens its `⊘` row, by the row's path, and never indexed.
+      if (rel && isInside(a.loc.root, abs) && isFile(abs)) return a.open(a.explorer.rowPath(abs));
       a.message("warn", `no note or file "${arg}"`);
     },
     // note, vault, app

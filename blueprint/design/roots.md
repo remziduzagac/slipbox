@@ -280,9 +280,10 @@ what the walk leaves out, the watcher doesn't subscribe to (D40).
   reached (a note's link points at it, and then its own links reach further; it is opened in the TUI or named to the
   CLI) and stays indexed after, the list kept with the index (D61). `.git`, `.slipbox`, a busy folder, `walk.exclude`,
   a vault of its own and, in home, all its skip list leaves out are never reached: named, such a file is read and
-  nothing more. Nothing new is put where it would never be indexed: a new note (`write --create`, the TUI's typed
-  path), a move or rename (`mv`, a folder given a busy name) or a copy into a busy folder is refused — the CLI's exit
-  5, the TUI's warning, as the explorer refuses one on a busy `⊘` row. The guards (`checkWritable`, `cleanTarget`,
+  nothing more: the TUI's `:e` opens it as the explorer opens its row, never indexed — a nested vault's, in that vault
+  (D249). Nothing new is put where it would never be indexed: a new note (`write --create`, the TUI's typed path), a
+  move or rename (`mv`, a folder given a busy name) or a copy into a busy folder is refused — the CLI's exit 5, the
+  TUI's warning, as the explorer refuses one on a busy `⊘` row. The guards (`checkWritable`, `cleanTarget`,
   `copyPath`, `Files.createNote`) ask the filter (`Graph.neverIndexed`: a folder on the way whose `exclusion` is `busy
   folder` or `always skipped`, up to a root of its own), not a list of names, so the refusal follows the filter. They
   ask it of the folder as the write leaves it: the folder a note lands in holds a note then (a moved or copied folder's

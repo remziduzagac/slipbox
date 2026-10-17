@@ -1475,8 +1475,8 @@ build (`scripts/build-home.ts`), not kept as they are. Each file's purpose and t
 - links in comments: URLs, relative path, vault-root path, path:42, path in string; backlinks and rename rewrite —
   `work/kestrel/api/kestrel_api/sync.py`, `work/kestrel/crates/route-engine/src/graph.rs`,
   `work/kestrel/src/sync/queue.ts` (Links in comments 16.10, 20.19)
-- files opened by :e: a file just written (watcher unaware), ignored/hidden file, node\_modules refused, binary
-  refused, NUL-in-text refused — `Downloads/data.txt`, `work/kestrel/docs/generated/api.md` (tui.md Opening)
+- files opened by :e: a file just written (watcher unaware), ignored/hidden file, node\_modules opened not indexed,
+  binary refused, NUL-in-text refused — `Downloads/data.txt`, `work/kestrel/docs/generated/api.md` (tui.md Opening)
 - data files rendered: TOML sections as headings, YAML list of records as table, JSON deep guides, \$ref pointer
   followed, path-valued values are links, parse error opens source with error each time —
   `work/kestrel/api/openapi.yaml`, `work/kestrel/config/regions.yaml`, `work/kestrel/kestrel.toml` (tests 'TOML opens
