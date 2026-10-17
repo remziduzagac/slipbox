@@ -208,6 +208,25 @@ describe("the git panel by mouse as by keys (GIT-D8)", () => {
     await app.git.refreshNow();
     expect(await until(() => (frame(), rowOf(app, (r) => r.kind === "ahead") < 0))).toBe(true);
   });
+
+  test("This branch's files marked as the explorer marks them: its letter, in its colour", async () => {
+    const root = repo();
+    git(root, "mv", "b.md", "e.md");
+    git(root, "commit", "-q", "-m", "e");
+    const { app, frame } = await panel(root);
+    expect(await until(() => (frame(), rowOf(app, (r) => r.kind === "ahead" && r.file.path === "e.md") >= 0))).toBe(
+      true,
+    );
+    const c = new TextCanvas(140, 40);
+    app.draw(c);
+    const drawn = (text: string) => {
+      const y = c.rows.findIndex((r) => r.join("").includes(text));
+      expect(y).toBeGreaterThanOrEqual(0);
+      return c.styles[y]![c.rows[y]!.join("").indexOf(text)]!.fg;
+    };
+    expect(drawn("+ c.md")).toBe(app.theme.roles.git_new.fg!);
+    expect(drawn("R e.md")).toBe(app.theme.roles.git_modified.fg!);
+  });
 });
 
 describe("space g, the status line's branch, a change's sign (GIT-D8, GIT-D12)", () => {

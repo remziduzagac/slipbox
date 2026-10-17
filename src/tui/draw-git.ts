@@ -13,10 +13,14 @@ import { headOf } from "../core/git.ts";
 import { trackText } from "../core/gitremote.ts";
 import { filterRow, followSelection } from "./draw-panels.ts";
 import { paneScrollbar } from "./draw-pane.ts";
-import { type PanelRow, STATE_LETTER } from "./gitpanel.ts";
+import type { PanelRow } from "./gitpanel.ts";
+import { GIT_MARK } from "./draw-overlays.ts";
 import { rowActions } from "./gitmouse.ts";
 
-/** A file's state letter's colour (26.2): as the explorer's marks have it. */
+/**
+ * A file's state letter's colour (26.2): git's status letters, and the explorer's marks (`GIT_MARK`) in the explorer's
+ * colours; a deleted file, which the explorer never lists, red, as a diff has it.
+ */
 const LETTER_ROLE: Record<string, Role> = {
   M: "git_modified",
   R: "git_modified",
@@ -279,7 +283,7 @@ function drawRow(
         return;
       case "ahead":
         x += 2;
-        letter(STATE_LETTER[row.file.state]);
+        letter(GIT_MARK[row.file.state]);
         x += 1;
         return put(sanitize(row.rel ?? row.file.path), st);
       case "thisfile":

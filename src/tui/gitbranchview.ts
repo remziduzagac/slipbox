@@ -12,6 +12,7 @@ import { checkoutOf, headOf } from "../core/git.ts";
 import { baseBranch, branchesOf, type Changed, inVault, showAt } from "../core/gitops.ts";
 import { type StatusEntry, switchBranch } from "../core/gitstage.ts";
 import { backToPanel } from "./gitview.ts";
+import { GIT_MARK } from "./draw-overlays.ts";
 import {
   addWorktree,
   aheadBehindLater,
@@ -259,7 +260,7 @@ export class BranchView {
           branch: b,
           against: "base",
           path: f.path,
-          letter: f.state === "new" ? "+" : f.state === "deleted" ? "D" : f.state === "renamed" ? "R" : "M",
+          letter: GIT_MARK[f.state],
           base: st.base,
         });
     }

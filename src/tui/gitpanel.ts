@@ -8,7 +8,7 @@
 
 import { basename } from "node:path";
 import { headOf } from "../core/git.ts";
-import { baseBranch, type Changed, type GitState, inVault } from "../core/gitops.ts";
+import { baseBranch, type Changed, inVault } from "../core/gitops.ts";
 import { changedLater } from "../core/gitbranches.ts";
 import { commitLater, sections } from "../core/gitstage.ts";
 import { formatEntry } from "../core/capture.ts";
@@ -78,15 +78,6 @@ export interface PanelButton {
   action: string;
   desc: string;
 }
-
-/** A state's letter, as the explorer marks it (5.11). */
-export const STATE_LETTER: Record<GitState, string> = {
-  new: "+",
-  modified: "M",
-  renamed: "R",
-  deleted: "D",
-  conflict: "!",
-};
 
 /** The panel's own state: the message typed, the sections folded, what's asked of git for it. */
 export class GitPanel {
