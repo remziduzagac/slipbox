@@ -495,19 +495,22 @@ about bringing both sides together: `p` asks it again.
 ## A merge or a rebase under way
 
 While a merge or a rebase is under way, the status line says so, and the git panel has Continue, Skip (for a rebase)
-and Abort buttons. `shift+r` in the git panel, or `:rebase`, offers the same:
+and Abort buttons. A cherry-pick or a revert you started in a terminal (`git cherry-pick`, `git revert`) counts too,
+when it stops at a conflict, or between the commits of a series: the status line says `cherry-picking` or
+`reverting`, and the same buttons are there. `shift+r` in the git panel, or `:rebase`, offers the same:
 
 | Key | Command | What it does |
 | --- | --- | --- |
-| `c` | `:continue` | Continues: a rebase replays its next commit, and a merge makes its commit |
-| `s` | `:skip` | Leaves the rebase's current commit out, and goes on |
-| `a` | `:abort` | Gives up the merge or the rebase, after asking: the branch goes back to where it was |
+| `c` | `:continue` | Continues: commits what's settled, and goes on to the next commit; a merge makes its commit |
+| `s` | `:skip` | Leaves the current commit of a rebase, a cherry-pick or a revert out, and goes on |
+| `a` | `:abort` | Gives it up, after asking: the branch goes back to where it was |
 | `x` | | Opens the merge screen on a file still in conflict |
 
-A continue waits until no file is in conflict. Each runs in the background, and a message says how it went, in git's
-words when it failed. A commit made on the way keeps its message: git doesn't open an editor for it.
+A continue waits until no file is in conflict. When it stops at the next commit's conflict, the merge screen opens on
+it. Each runs in the background, and a message says how it went, in git's words when it failed. A commit made on the
+way keeps its message: git doesn't open an editor for it.
 
-In a vault you don't trust, a merge or a rebase runs none of the repository's hooks, and its commits aren't signed.
+In a vault you don't trust, none of them runs the repository's hooks, and its commits aren't signed.
 
 ## Who changed a line
 
@@ -845,7 +848,8 @@ The merge review can. It asks git for the merge's result, without touching your 
 every link in that result.
 
 1. In the git panel, choose Merge… on a branch, and The links it would break: that branch into its base. Or run
-   `:merge-review`, which asks which merge you mean: this branch into the base, or another branch into this one.
+   `:merge-review`, which asks which merge you mean: this branch into its base, or another branch into this one. A
+   branch's base is the one the git panel measures it against ([The base of each branch](#the-base-of-each-branch)).
 2. The review lists each link the merge would break, by note and line. Each shows what broke it and, where there is
    one, the fix. Each link is yellow when there's a fix, and red when there isn't.
 3. Press `enter` to go to a link. A note only the other branch has is said to come with it.
@@ -916,7 +920,8 @@ A branch is only ever compared with itself. Switching branches is no evidence of
 ## From the command line
 
 The review of a branch and a merge has command-line equivalents, for agents and scripts. Each takes `--json`.
-[The command line](cli.md) has their output in full.
+[The command line](cli.md) has their output in full. `slipbox merge-review` merges into `--into`, or the branch
+checked out, not into a branch's own base as `:merge-review` does.
 
 ```bash
 slipbox changed                     # what this branch changed against the base, committed or not

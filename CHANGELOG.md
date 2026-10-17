@@ -85,10 +85,14 @@ The format is [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.1.0/); wh
   panel (or `:rebase`) rebases the branch onto the base, each conflict on the way opening the merge screen, unless
   you're typing or answering something: then a message says `x` opens it. While a merge or a rebase is under way, the
   status line says so (`rebasing 2/5`), the panel has Continue, Skip and Abort buttons, and `shift+r` offers the same
-  (`:continue`, `:skip`, `:abort`); Abort asks first. In a vault you don't trust, none of them runs the repository's
+  (`:continue`, `:skip`, `:abort`); Abort asks first. A cherry-pick or a revert you started in a terminal is shown and
+  handled the same way (`cherry-picking`, `reverting`). In a vault you don't trust, none of them runs the repository's
   hooks.
 
 ### Changed
+
+- `:merge-review` offers this branch into its own base, the one the git panel measures it against, rather than `[git]
+  base`. `slipbox merge-review` still merges into `--into`, or the branch checked out.
 
 - A file outside your home folder and outside every vault is in Elsewhere: one place for the whole machine, with one
   set of tabs, your own settings, and no index. The status line names it `Elsewhere`. A folder there is listed a level

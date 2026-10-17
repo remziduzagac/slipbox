@@ -5816,6 +5816,32 @@ describe("a merge or a rebase under way, and a pull where both sides moved (GIT-
     expect(operationText({ kind: "rebase", step: null, total: null, branch: null, merging: null })).toBe("rebasing");
   });
 
+  test("a cherry-pick or a revert under way, read from git's files: the commit it's at; a series between commits", () => {
+    const dir = mkdtempSync(join(sandbox, "gitdir-"));
+    writeFileSync(join(dir, "CHERRY_PICK_HEAD"), "0123\n");
+    writeFileSync(join(dir, "MERGE_MSG"), "Retry with a budget\n\n# Conflicts:\n#\ta.md\n");
+    const pick = operationOf({ gitDir: dir })!;
+    expect(pick).toMatchObject({ kind: "cherry-pick", commit: "Retry with a budget", branch: null });
+    expect(operationText(pick)).toBe("cherry-picking");
+    rmSync(join(dir, "CHERRY_PICK_HEAD"));
+    writeFileSync(join(dir, "REVERT_HEAD"), "0123\n");
+    writeFileSync(join(dir, "MERGE_MSG"), 'Revert "Retry with a budget"\n\nThis reverts commit 0123.\n');
+    const revert = operationOf({ gitDir: dir })!;
+    expect(revert).toMatchObject({ kind: "revert", commit: "Retry with a budget" });
+    expect(operationText(revert)).toBe("reverting");
+    // A series between its commits: what it does next, as its list says.
+    rmSync(join(dir, "REVERT_HEAD"));
+    rmSync(join(dir, "MERGE_MSG"));
+    mkdirSync(join(dir, "sequencer"));
+    writeFileSync(join(dir, "sequencer", "todo"), "revert 0123 Retry with a budget\n");
+    expect(operationOf({ gitDir: dir })).toMatchObject({ kind: "revert" });
+    writeFileSync(join(dir, "sequencer", "todo"), "pick 0123 Retry with a budget\n");
+    expect(operationOf({ gitDir: dir })).toMatchObject({ kind: "cherry-pick" });
+    // A rebase is a rebase, whatever else is there.
+    mkdirSync(join(dir, "rebase-merge"));
+    expect(operationOf({ gitDir: dir })!.kind).toBe("rebase");
+  });
+
   test("a base whose name starts with - isn't passed to git: not compared, not rebased onto (regression)", async () => {
     await isolated(async () => {
       const root = behind();
@@ -5915,7 +5941,7 @@ describe("a merge or a rebase under way, and a pull where both sides moved (GIT-
       expect(operationOf(c)).toBeNull();
       expect(git(root, "rev-parse", "HEAD")).toBe(was);
       await rebaseLater(c, "main");
-      expect((await skipLater(c)).ok).toBe(true);
+      expect((await skipLater(c, operationOf(c)!)).ok).toBe(true);
       expect(git(root, "log", "--format=%s", "main..agent")).toBe("Agent: b");
     });
   });

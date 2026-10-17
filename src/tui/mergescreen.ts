@@ -25,7 +25,7 @@ import {
 } from "../core/conflicts.ts";
 import { readText } from "../core/fsutil.ts";
 import { inCheckout, inVault, showAt } from "../core/gitops.ts";
-import { operationOf } from "../core/gitrebase.ts";
+import { OPERATIONS, operationOf } from "../core/gitrebase.ts";
 import { sections, stageFile } from "../core/gitstage.ts";
 import { layoutScreen, type ScreenPart, screenText } from "../core/layout/screen.ts";
 import type { Layout, Span } from "../core/layout/ir.ts";
@@ -462,7 +462,7 @@ export function mergeStage(app: App): void {
     } else
       app.message(
         "info",
-        `${m.rel} staged, marked resolved — no conflict left${op ? `: shift+r ${op.kind === "rebase" ? "continues the rebase" : "concludes the merge"}` : ""}`,
+        `${m.rel} staged, marked resolved — no conflict left${op ? `: shift+r ${op.kind === "merge" ? "concludes" : "continues"} the ${OPERATIONS[op.kind].noun}` : ""}`,
       );
     app.host.requestRender();
   });

@@ -1,8 +1,8 @@
 // Pulling where both sides moved, and rebasing onto the base (GIT-D6). A pull that can't fast-forward asks: merge,
 // rebase, or nothing — git's `pull.rebase` the default. `shift+r` in the git panel (`git.rebase`, `:rebase`) rebases
-// this branch onto its base's tip, after asking; while a merge or a rebase is under way it offers continue, skip and
-// abort instead (`git.continue`, `git.skip`, `git.abort`; `:continue`, `:skip`, `:abort`; the panel's buttons, which
-// gitpanel.ts shows meanwhile), abort asked first. A stop at a conflict opens the merge screen on it — said instead,
+// this branch onto its base's tip, after asking; while a merge, a rebase, or a cherry-pick or a revert begun in a
+// terminal is under way it offers continue, skip and abort instead (`git.continue`, `git.skip`, `git.abort`;
+// `:continue`, `:skip`, `:abort`; the panel's buttons, which gitpanel.ts shows meanwhile), abort asked first. A stop at a conflict opens the merge screen on it — said instead,
 // `x` named, while you type or a question is open (the pull's question likewise); the status line says what's under way
 // ("rebasing 2/5"). Each runs in the background, one git command at a time with the remote's (gitremote.ts), unsaved
 // notes saved or kept first. In a vault not trusted, no hook runs and nothing is signed.
@@ -12,6 +12,7 @@ import {
   abortLater,
   aheadBehind,
   continueLater,
+  OPERATIONS,
   type Operation,
   operationOf,
   operationText,
@@ -82,8 +83,8 @@ async function after(app: App, r: RemoteDone, done: string): Promise<void> {
   const where =
     op.kind === "rebase"
       ? `the rebase stopped${op.step && op.total ? ` at commit ${op.step} of ${op.total}` : ""}`
-      : "the merge stopped";
-  const next = op.kind === "rebase" ? "shift+r continues" : "shift+r concludes the merge";
+      : `the ${OPERATIONS[op.kind].noun} stopped`;
+  const next = op.kind === "merge" ? "shift+r concludes the merge" : "shift+r continues";
   if (files.length) {
     const inConflict = `${where}: ${plural(files.length, "file")} in conflict (${files.map(sanitize).join(", ")})`;
     if (busy(app))
@@ -152,8 +153,9 @@ export function askDiverged(app: App, c: Checkout, branch: string, upstream: str
 }
 
 /**
- * `shift+r`: this branch rebased onto its base's tip (its own, GIT-D10) — asked first, unsaved notes saved or kept. While a merge or a
- * rebase is under way: continue, skip or abort it, or the merge screen on a file still in conflict.
+ * `shift+r`: this branch rebased onto its base's tip (its own, GIT-D10) — asked first, unsaved notes saved or kept.
+ * While a merge, a rebase, a cherry-pick or a revert is under way: continue, skip or abort it, or the merge screen on a
+ * file still in conflict.
  */
 export function gitRebase(app: App): void {
   const c = app.git.checkout;
@@ -185,13 +187,23 @@ export function gitRebase(app: App): void {
   );
 }
 
-/** What's under way, and what to do with it: continue, skip (a rebase's), abort; a file still in conflict, settled. */
+/** What's under way, as a question's title says it: `Rebasing agent: 1 of 2`, `Merging theirs`, `Cherry-picking …`. */
+export function operationTitle(op: Operation): string {
+  const words = OPERATIONS[op.kind];
+  if (op.kind === "rebase")
+    return `${words.doing}${op.branch ? ` ${op.branch}` : ""}${op.step && op.total ? `: ${op.step} of ${op.total}` : ""}`;
+  if (op.kind === "merge") return `${words.doing}${op.merging ? ` ${op.merging}` : ""}`;
+  return `${words.doing}${op.commit ? ` "${op.commit}"` : ""}`;
+}
+
+/**
+ * What's under way, and what to do with it: continue, skip (a rebase's, a cherry-pick's, a revert's), abort; a file
+ * still in conflict, settled.
+ */
 function underWay(app: App, op: Operation): void {
   const files = conflictedFiles(app);
-  const what =
-    op.kind === "rebase"
-      ? `Rebasing${op.branch ? ` ${op.branch}` : ""}${op.step && op.total ? `: ${op.step} of ${op.total}` : ""}`
-      : `Merging${op.merging ? ` ${op.merging}` : ""}`;
+  const words = OPERATIONS[op.kind];
+  const what = operationTitle(op);
   app.overlays.openList({
     title: `${sanitize(what)}${files.length ? ` — ${plural(files.length, "file")} in conflict` : ""}`,
     filterable: false,
@@ -206,16 +218,9 @@ function underWay(app: App, op: Operation): void {
             },
           ]
         : []),
-      {
-        label: "(c) Continue",
-        detail: op.kind === "rebase" ? "commits what's settled, and replays the next" : "commits the merge",
-        hotkey: "c",
-        data: "c",
-      },
-      ...(op.kind === "rebase"
-        ? [{ label: "(s) Skip this commit", detail: "leaves it out, and replays the next", hotkey: "s", data: "s" }]
-        : []),
-      { label: "(a) Abort", detail: `the branch back where it was before the ${op.kind}`, hotkey: "a", data: "a" },
+      { label: "(c) Continue", detail: words.carryOn, hotkey: "c", data: "c" },
+      ...(words.skip ? [{ label: "(s) Skip this commit", detail: words.skip, hotkey: "s", data: "s" }] : []),
+      { label: "(a) Abort", detail: `the branch back where it was before the ${words.noun}`, hotkey: "a", data: "a" },
     ],
     accept: (item) => {
       const pick = item.data as "x" | "c" | "s" | "a";
@@ -225,22 +230,30 @@ function underWay(app: App, op: Operation): void {
   });
 }
 
-/** What's under way, when something is; null (said) when nothing is, or there's no git. */
-function underWayNow(app: App, kind?: "rebase"): { c: Checkout; op: Operation } | null {
+/**
+ * What's under way, when something is; null (said) when nothing is, or there's no git — or, `skipping`, when it's a
+ * merge, which has no commit to skip.
+ */
+function underWayNow(app: App, skipping = false): { c: Checkout; op: Operation } | null {
   const c = app.git.checkout;
   if (!c) {
     app.message("info", "not a git checkout");
     return null;
   }
   const op = operationOf(c);
-  if (!op || (kind && op.kind !== kind)) {
-    app.message("info", kind ? "no rebase under way: only a rebase skips a commit" : "no merge or rebase under way");
+  if (!op || (skipping && !OPERATIONS[op.kind].skip)) {
+    app.message(
+      "info",
+      skipping
+        ? "no rebase, cherry-pick or revert under way: only they skip a commit"
+        : "no merge, rebase, cherry-pick or revert under way",
+    );
     return null;
   }
   return { c, op };
 }
 
-/** `git.continue`: a rebase's next commit, or a merge's commit — once no file is in conflict. */
+/** `git.continue`: a rebase's, a cherry-pick's or a revert's next commit, or a merge's commit — once no file is in conflict. */
 export function gitContinue(app: App): void {
   const now = underWayNow(app);
   if (!now) return;
@@ -251,52 +264,59 @@ export function gitContinue(app: App): void {
       "info",
       `still in conflict: ${files.map(sanitize).join(", ")} — x settles a file on the merge screen, s stages it`,
     );
+  const words = OPERATIONS[op.kind];
   app.git.beforeCheckout(
     () =>
       runInBackground(
         app,
-        op.kind === "rebase" ? "continuing the rebase" : "concluding the merge",
+        words.continuing,
         () => continueLater(c, op),
-        (r) => after(app, r, op.kind === "rebase" ? "rebased: the rebase is done" : "merged: the merge committed"),
+        (r) => after(app, r, words.done),
       ),
-    { verb: "continue", noun: `the ${op.kind}`, done: "continued" },
+    { verb: "continue", noun: `the ${words.noun}`, done: "continued" },
   );
 }
 
-/** `git.skip`: a rebase's commit left out. */
+/** `git.skip`: a rebase's, a cherry-pick's or a revert's commit left out. */
 export function gitSkip(app: App): void {
-  const now = underWayNow(app, "rebase");
+  const now = underWayNow(app, true);
   if (!now) return;
+  const { c, op } = now;
+  const words = OPERATIONS[op.kind];
   app.git.beforeCheckout(
     () =>
       runInBackground(
         app,
         "skipping the commit",
-        () => skipLater(now.c),
-        (r) => after(app, r, "rebased: the rebase is done, a commit skipped"),
+        () => skipLater(c, op),
+        (r) => after(app, r, `${words.done}, a commit skipped`),
       ),
-    { verb: "skip", noun: "the rebase", done: "skipped" },
+    { verb: "skip", noun: `the ${words.noun}`, done: "skipped" },
   );
 }
 
-/** `git.abort`: the merge or rebase under way given up, the branch back where it was — asked first, as a rebase is. */
+/**
+ * `git.abort`: the merge, rebase, cherry-pick or revert under way given up, the branch back where it was — asked
+ * first, as a rebase is.
+ */
 export function gitAbort(app: App): void {
   const now = underWayNow(app);
   if (!now) return;
   const { c, op } = now;
+  const noun = OPERATIONS[op.kind].noun;
   const branch = op.branch ?? headOf(c).branch;
   app.overlays.confirm(
-    `Abort the ${op.kind}? ${branch ? sanitize(branch) : "The branch"} goes back as it was before it, and what's settled so far is lost.`,
+    `Abort the ${noun}? ${branch ? sanitize(branch) : "The branch"} goes back as it was before it, and what's settled so far is lost.`,
     () =>
       app.git.beforeCheckout(
         () =>
           runInBackground(
             app,
-            `aborting the ${op.kind}`,
+            `aborting the ${noun}`,
             () => abortLater(c, op),
-            (r) => after(app, r, `the ${op.kind} aborted${branch ? `: ${branch} as it was` : ""}`),
+            (r) => after(app, r, `the ${noun} aborted${branch ? `: ${branch} as it was` : ""}`),
           ),
-        { verb: "abort", noun: `the ${op.kind}`, done: "aborted" },
+        { verb: "abort", noun: `the ${noun}`, done: "aborted" },
       ),
   );
 }

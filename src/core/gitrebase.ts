@@ -1,6 +1,6 @@
-// A merge or a rebase from the TUI (GIT-D6): this branch rebased onto its base, and what's under way — read from
-// git's own files, no git run, so the status line can say it each frame ("rebasing 2/5") — continued, a commit
-// skipped, or aborted. git runs without a terminal or an editor: a commit settled on the way keeps its message
+// A merge or a rebase from the TUI (GIT-D6): this branch rebased onto its base, and what's under way — a merge, a
+// rebase, or a cherry-pick or a revert started in a terminal, read from git's own files, no git run, so the status line
+// can say it each frame ("rebasing 2/5") — continued, a commit skipped, or aborted. git runs without a terminal or an editor: a commit settled on the way keeps its message
 // (`GIT_EDITOR=true`). In a vault not trusted, `gitArgs`'s guards hold (no hook runs, no merge driver), and nothing is
 // signed: the repository's own config could name the program that signs.
 
@@ -12,9 +12,15 @@ import { gitArgs } from "./gitops.ts";
 import { editorless, failureOf, inEnglish, type RemoteDone, refusedName } from "./gitremote.ts";
 import { isTrusted } from "./trust.ts";
 
-/** A merge or a rebase under way: how far a rebase has got and the branch it rebases; what a merge brings in. */
+/** What can be under way: a merge, a rebase, or a cherry-pick or a revert (started in a terminal). */
+export type OperationKind = "merge" | "rebase" | "cherry-pick" | "revert";
+
+/**
+ * A merge, a rebase, a cherry-pick or a revert under way: how far a rebase has got and the branch it rebases; what a
+ * merge brings in; the commit a cherry-pick or a revert is at.
+ */
 export interface Operation {
-  kind: "merge" | "rebase";
+  kind: OperationKind;
   /** A rebase's step (from 1) and its steps, as git counts them; null where it doesn't say. */
   step: number | null;
   total: number | null;
@@ -22,11 +28,53 @@ export interface Operation {
   branch: string | null;
   /** What a merge brings in, as its message names it (`origin/main`); null for a rebase, or when it doesn't. */
   merging: string | null;
+  /** The commit a cherry-pick or a revert is at, by its subject; absent (or null) where git's files don't say. */
+  commit?: string | null;
 }
+
+/** How each kind is said: its noun, what it's doing, what Continue and Skip do, and what it says once done. */
+export const OPERATIONS: Record<
+  OperationKind,
+  { noun: string; doing: string; carryOn: string; skip: string | null; continuing: string; done: string }
+> = {
+  rebase: {
+    noun: "rebase",
+    doing: "Rebasing",
+    carryOn: "commits what's settled, and replays the next",
+    skip: "leaves this commit out, and replays the next",
+    continuing: "continuing the rebase",
+    done: "rebased: the rebase is done",
+  },
+  merge: {
+    noun: "merge",
+    doing: "Merging",
+    carryOn: "commits the merge",
+    skip: null,
+    continuing: "concluding the merge",
+    done: "merged: the merge committed",
+  },
+  "cherry-pick": {
+    noun: "cherry-pick",
+    doing: "Cherry-picking",
+    carryOn: "commits what's settled, and picks the next, if there's one",
+    skip: "leaves this commit out, and picks the next",
+    continuing: "continuing the cherry-pick",
+    done: "cherry-picked: the cherry-pick is done",
+  },
+  revert: {
+    noun: "revert",
+    doing: "Reverting",
+    carryOn: "commits what's settled, and reverts the next, if there's one",
+    skip: "leaves this commit as it is, and reverts the next",
+    continuing: "continuing the revert",
+    done: "reverted: the revert is done",
+  },
+};
 
 /**
  * What's under way in a checkout, from git's own files: a rebase (`rebase-merge/`, `rebase-apply/`), a merge
- * (`MERGE_HEAD`); null when nothing is. A `git am` (`rebase-apply/applying`) is none of slipbox's.
+ * (`MERGE_HEAD`), a cherry-pick or a revert (`CHERRY_PICK_HEAD`, `REVERT_HEAD`; a series of them, `sequencer/`, between
+ * its commits too); null when nothing is. A `git am` (`rebase-apply/applying`) is none of slipbox's.
  */
 export function operationOf(c: Pick<Checkout, "gitDir">): Operation | null {
   const read = (p: string) => {
@@ -52,14 +100,33 @@ export function operationOf(c: Pick<Checkout, "gitDir">): Operation | null {
       merging: null,
     };
   }
-  if (!existsSync(join(c.gitDir, "MERGE_HEAD"))) return null;
   const msg = read("MERGE_MSG")?.split("\n")[0] ?? "";
-  return { kind: "merge", step: null, total: null, branch: null, merging: /'([^']+)'/.exec(msg)?.[1] ?? null };
+  if (existsSync(join(c.gitDir, "MERGE_HEAD")))
+    return { kind: "merge", step: null, total: null, branch: null, merging: /'([^']+)'/.exec(msg)?.[1] ?? null };
+  // A cherry-pick or a revert stopped at a commit: its message (MERGE_MSG) names the commit — a revert's, quoted.
+  const picking = existsSync(join(c.gitDir, "CHERRY_PICK_HEAD"));
+  if (picking || existsSync(join(c.gitDir, "REVERT_HEAD"))) {
+    const commit = picking ? msg : (/^Revert "(.*)"$/.exec(msg)?.[1] ?? msg);
+    return { ...none(picking ? "cherry-pick" : "revert"), commit: commit || null };
+  }
+  // A series between its commits (one committed by hand): what it does next, as its list says.
+  if (!existsSync(join(c.gitDir, "sequencer"))) return null;
+  const next = (read("sequencer/todo") ?? "").split("\n").find((l) => l.trim() && !l.startsWith("#")) ?? "";
+  return none(/^\s*(revert|r)\s/.test(next) ? "revert" : "cherry-pick");
 }
 
-/** What's under way, as the status line says it: `rebasing 2/5`, `merging`. */
+/** A cherry-pick or a revert, as git's files say it: no steps, branch or merge. */
+const none = (kind: "cherry-pick" | "revert"): Operation => ({
+  kind,
+  step: null,
+  total: null,
+  branch: null,
+  merging: null,
+});
+
+/** What's under way, as the status line says it: `rebasing 2/5`, `merging`, `cherry-picking`, `reverting`. */
 export function operationText(op: Operation): string {
-  if (op.kind === "merge") return "merging";
+  if (op.kind !== "rebase") return OPERATIONS[op.kind].doing.toLowerCase();
   return op.step && op.total ? `rebasing ${Math.min(op.step, op.total)}/${op.total}` : "rebasing";
 }
 
@@ -122,12 +189,16 @@ export function rebaseLater(c: Pick<Checkout, "root">, onto: string): Promise<Re
   return runLater(c, ["rebase", "--end-of-options", onto]);
 }
 
-/** What's under way, continued: a rebase's next commit; a merge's commit, made with its own message. */
+/**
+ * What's under way, continued: a rebase's next commit, a cherry-pick's or a revert's (its commit made with the message
+ * git prepared); a merge's commit, made with its own message.
+ */
 export const continueLater = (c: Pick<Checkout, "root">, op: Operation): Promise<RemoteDone> =>
-  runLater(c, op.kind === "rebase" ? ["rebase", "--continue"] : ["commit", "--no-edit"]);
+  runLater(c, op.kind === "merge" ? ["commit", "--no-edit"] : [op.kind, "--continue"]);
 
-/** A rebase's commit left out, and the rebase on to the next. */
-export const skipLater = (c: Pick<Checkout, "root">): Promise<RemoteDone> => runLater(c, ["rebase", "--skip"]);
+/** A rebase's, a cherry-pick's or a revert's commit left out, and it on to the next (a merge has none: git refuses). */
+export const skipLater = (c: Pick<Checkout, "root">, op: Operation): Promise<RemoteDone> =>
+  runLater(c, [op.kind, "--skip"]);
 
 /** What's under way, aborted: the branch back where it was before it began. */
 export const abortLater = (c: Pick<Checkout, "root">, op: Operation): Promise<RemoteDone> =>
