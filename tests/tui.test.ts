@@ -19094,6 +19094,17 @@ describe("branches (26.5)", () => {
   const branch = (root: string) => git(root, "branch", "--show-current").trim();
   const list = (h: Harness) => h.app.overlay as ListOverlay;
   const type = (s: string) => [...s].map((ch) => (ch === " " ? "space" : ch));
+  /** A checkout runs in the background (a big tree takes a while): `root` on `name` once it's done. */
+  const on = async (root: string, name: string) => {
+    for (const t = Date.now(); branch(root) !== name && Date.now() - t < 10_000; ) await Bun.sleep(20);
+    return branch(root);
+  };
+  /** The last message once one matching `text` has come. */
+  const said = async (h: Harness, text: RegExp) => {
+    for (const t = Date.now(); !text.test(h.app.messages.at(-1)?.text ?? "") && Date.now() - t < 10_000; )
+      await Bun.sleep(20);
+    return h.app.messages.at(-1)?.text ?? "";
+  };
 
   test("the branches, this one marked; one checked out; a new one made from here; a name git won't take, said", async () => {
     const root = repo();
@@ -19107,8 +19118,8 @@ describe("branches (26.5)", () => {
     ]);
     expect(list(h).selected).toBe(1);
     await h.keys("up", "enter");
-    expect(branch(root)).toBe("feat");
-    expect(h.app.messages.some((m) => m.text.startsWith("switched to branch feat"))).toBe(true);
+    expect(await on(root, "feat")).toBe("feat");
+    expect(await said(h, /^switched to branch feat/)).toStartWith("switched to branch feat");
     // Already there: said.
     await h.app.run("git.branches");
     await h.keys("enter");
@@ -19116,11 +19127,11 @@ describe("branches (26.5)", () => {
     // A new one, from here.
     await h.app.run("git.branches");
     await h.keys("down", "down", "enter", ...type("topic"), "enter");
-    expect(branch(root)).toBe("topic");
+    expect(await on(root, "topic")).toBe("topic");
     await h.app.run("git.branches");
     // Three branches now, topic selected: the new-branch row is the next.
     await h.keys("down", "enter", ...type("bad name"), "enter");
-    expect(h.app.messages.at(-1)?.text).toBe(`git: "bad name" isn't a name git takes for a branch`);
+    expect(await said(h, /bad name/)).toBe(`git: "bad name" isn't a name git takes for a branch`);
     expect(branch(root)).toBe("topic");
   });
 
@@ -19144,21 +19155,19 @@ describe("branches (26.5)", () => {
     // Kept: switched, the note as typed.
     await h.app.run("git.branches");
     await h.keys("up", "enter", "down", "enter");
-    expect(branch(root)).toBe("feat");
+    expect(await on(root, "feat")).toBe("feat");
     expect([a.dirty, a.source]).toEqual([true, "edited a\n"]);
     // Saved, then switched: the change goes along (git keeps it, b.md not touched).
     await h.app.run("git.branches");
     await h.keys("down", "enter", "enter");
-    expect(branch(root)).toBe("main");
+    expect(await on(root, "main")).toBe("main");
     expect(a.dirty).toBe(false);
     expect(readFileSync(join(root, "a.md"), "utf8")).toBe("edited a\n");
     // b.md changed here, and different on feat: git won't switch, and says why.
     writeFileSync(join(root, "b.md"), "mine\n");
     await h.app.run("git.branches");
     await h.keys("up", "enter");
-    expect(h.app.messages.at(-1)?.text).toMatch(
-      /^git: error: Your local changes to the following files would be overwritten/,
-    );
+    expect(await said(h, /^git: /)).toMatch(/^git: Your local changes to the following files would be overwritten/);
     expect(branch(root)).toBe("main");
   });
 });

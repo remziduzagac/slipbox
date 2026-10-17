@@ -290,6 +290,13 @@ export class Vaults {
     // So are git's states (the explorer's marks, the Problems' conflicts): asked again, below.
     this.app.git.states = null;
     this.app.git.folders.clear();
+    // And the git panel's: the files git listed, where the branch stood, those opened up, and the message typed for a
+    // commit there — never committed in another vault.
+    this.app.git.entries = null;
+    this.app.git.track = null;
+    this.app.git.opened.clear();
+    this.app.gitPanel.message = "";
+    this.app.gitPanel.typing = false;
     this.app.panels.leftPositions.clear();
     this.app.sidebar = { visible: this.app.config.ui.sidebar, overlay: false, selected: 0, scroll: 0 };
     this.app.panels.sideW = this.app.config.ui.sidebar_width;

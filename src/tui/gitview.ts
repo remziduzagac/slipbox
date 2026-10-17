@@ -5,7 +5,7 @@
 // `a` stages everything and `U` unstages it. `enter` shows a file's or a change's diff, `o` opens the file there. The panel's keys,
 // buttons and mouse are gitpanel.ts's and gitmouse.ts's; these are what they run.
 
-import { existsSync, readFileSync } from "node:fs";
+import { existsSync, lstatSync, readlinkSync } from "node:fs";
 import { basename, dirname, join, relative } from "node:path";
 import { type GitChange, gitChanges } from "../core/gitsigns.ts";
 import { showLater } from "../core/gitops.ts";
@@ -24,7 +24,7 @@ import {
   unstageChange,
   unstageFile,
 } from "../core/gitstage.ts";
-import { climbsOut } from "../core/fsutil.ts";
+import { climbsOut, decodeText, readRegular } from "../core/fsutil.ts";
 import { sanitize } from "../core/sanitize.ts";
 import { openDiff } from "./diffview.ts";
 import { match } from "./match.ts";
@@ -95,14 +95,34 @@ function textsOf(app: App, path: string): Texts | null {
   return fresh;
 }
 
-/** A file in the checkout, as on disk ("" when it isn't there). */
-function onDisk(app: App, path: string): string {
-  const abs = join(app.git.checkout!.root, path);
+/** The largest file a diff reads from disk: past it, the diff isn't shown. */
+export const DIFF_MAX = 8 * 1024 * 1024;
+
+/**
+ * A file on disk as a diff reads it: "" when it isn't there; a link as git keeps one, the path it leads to, never
+ * followed; else its text — or why not, when it isn't a regular file or is larger than `DIFF_MAX`.
+ */
+export function readForDiff(abs: string): string | { why: string } {
+  let st: ReturnType<typeof lstatSync>;
   try {
-    return existsSync(abs) ? readFileSync(abs, "utf8") : "";
+    st = lstatSync(abs);
   } catch {
     return "";
   }
+  try {
+    if (st.isSymbolicLink()) return readlinkSync(abs);
+    if (!st.isFile()) return { why: "not a regular file: no diff shown" };
+    if (st.size > DIFF_MAX) return { why: `larger than ${DIFF_MAX / (1024 * 1024)} MB: no diff shown` };
+    return decodeText(readRegular(abs, DIFF_MAX)).text;
+  } catch (err) {
+    return { why: `can't be read: ${(err as Error).message}` };
+  }
+}
+
+/** A file in the checkout, as on disk ("" when it isn't there, or can't be read for a diff). */
+function onDisk(app: App, path: string): string {
+  const r = readForDiff(join(app.git.checkout!.root, path));
+  return typeof r === "string" ? r : "";
 }
 
 /** A file's changes in a section — a staged file's against the last commit, a changed one's against the index — or null while git reads. */
@@ -283,7 +303,9 @@ export function showWorkDiff(app: App, row: WorkRow): void {
   const rel = relOf(app, e.path);
   const staged = row.section === "staged";
   const before = staged ? (t.head ?? "") : row.section === "untracked" ? "" : (t.index ?? "");
-  const now = staged ? (t.index ?? "") : onDisk(app, e.path);
+  const disk = staged ? "" : readForDiff(join(app.git.checkout!.root, e.path));
+  if (typeof disk !== "string") return app.message("info", `${e.path}: ${disk.why}`);
+  const now = staged ? (t.index ?? "") : disk;
   const against = staged ? "the last commit" : row.section === "untracked" ? "nothing: it's new" : "what's staged";
   openDiff(app, {
     before,

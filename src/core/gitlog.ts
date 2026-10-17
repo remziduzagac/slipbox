@@ -78,7 +78,7 @@ export function blameLine(c: Pick<Checkout, "root">, path: string, line: number)
 
 /** A commit's whole message. */
 export function messageOf(c: Pick<Checkout, "root">, hash: string): string {
-  return (run(c, ["show", "-s", "--format=%B", hash]) ?? "").replace(/\s+$/, "");
+  return (run(c, ["show", "-s", "--format=%B", "--end-of-options", hash]) ?? "").replace(/\s+$/, "");
 }
 
 /** `git log --follow`'s records — `\x01`, then hash, author, time and subject apart by `\0`, a blank line, the path. */

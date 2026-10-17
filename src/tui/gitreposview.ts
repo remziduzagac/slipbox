@@ -5,7 +5,7 @@
 // repositories folded and counted under them. git is asked only about the rows on screen, in the background, again
 // when it has news and when the panel is opened.
 
-import { existsSync, readFileSync } from "node:fs";
+import { existsSync } from "node:fs";
 import { join } from "node:path";
 import type { Checkout } from "../core/git.ts";
 import { showAt } from "../core/gitops.ts";
@@ -16,6 +16,7 @@ import { tildePath } from "../core/names.ts";
 import { sanitize } from "../core/sanitize.ts";
 import { homeFolder, isInside, isVaultRoot, rootAt } from "../core/vault.ts";
 import { openDiff } from "./diffview.ts";
+import { readForDiff } from "./gitview.ts";
 import { match } from "./match.ts";
 import type { App } from "./app.ts";
 import type { PanelRow } from "./gitpanel.ts";
@@ -246,17 +247,18 @@ export class RepoView {
     const app = this.app;
     const c = row.checkout;
     const abs = join(c.root, row.entry.path);
-    let now = "";
-    try {
-      now = existsSync(abs) ? readFileSync(abs, "utf8") : "";
-    } catch {}
-    const before = row.entry.x === "?" ? "" : (showAt(c, "HEAD", row.entry.path) ?? "");
+    const now = readForDiff(abs);
+    if (typeof now !== "string") return app.message("info", `${row.entry.path}: ${now.why}`);
+    // A rename: before, under the name it had.
+    const was = row.entry.from ?? row.entry.path;
+    const before = row.entry.x === "?" ? "" : (showAt(c, "HEAD", was) ?? "");
     const from = app.region;
+    const named = row.entry.from ? `${row.entry.from} → ${row.entry.path}` : row.entry.path;
     openDiff(app, {
       before,
       now,
       path: abs,
-      title: `${tildePath(c.root)}: ${sanitize(row.entry.path)} against its last commit — esc: source control`,
+      title: `${tildePath(c.root)}: ${sanitize(named)} against its last commit — esc: source control`,
       none: `${row.entry.path}: nothing to show`,
       back: () => {
         if (from === "sidebar" && app.panels.sidebarShown) app.region = "sidebar";

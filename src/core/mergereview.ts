@@ -78,7 +78,7 @@ function git(
 }
 
 function commitOf(c: Pick<Checkout, "root">, ref: string): string | null {
-  const r = git(c, ["rev-parse", "--verify", "--quiet", `${ref}^{commit}`]);
+  const r = git(c, ["rev-parse", "--verify", "--quiet", "--end-of-options", `${ref}^{commit}`]);
   return r.status === 0 ? r.out.toString("utf8").trim() : null;
 }
 
@@ -292,7 +292,7 @@ export function reviewMerge(c: Checkout, root: string, from: string, into = "HEA
   const theirs = commitOf(c, from);
   if (!theirs) throw new MergeReviewError(`no branch or commit ${from}`);
   const intoName = into === "HEAD" ? (headOf(c).branch ?? ours.slice(0, 7)) : into;
-  const mt = git(c, ["merge-tree", "--write-tree", "--name-only", "--no-messages", ours, theirs]);
+  const mt = git(c, ["merge-tree", "--write-tree", "--name-only", "--no-messages", "--end-of-options", ours, theirs]);
   if (mt.status !== 0 && mt.status !== 1) {
     const err = mt.err.trim();
     // Histories with nothing in common: git won't merge them, nor review the merge.
@@ -304,7 +304,7 @@ export function reviewMerge(c: Checkout, root: string, from: string, into = "HEA
   }
   const [tree, ...conflicted] = mt.out.toString("utf8").split("\n").filter(Boolean);
   if (!tree) throw new MergeReviewError("git merge-tree wrote no tree");
-  const base = git(c, ["merge-base", ours, theirs]).out.toString("utf8").trim() || null;
+  const base = git(c, ["merge-base", "--end-of-options", ours, theirs]).out.toString("utf8").trim() || null;
 
   const R = filesIn(c, root, tree);
   const O = filesIn(c, root, ours);

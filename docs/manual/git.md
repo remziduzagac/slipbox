@@ -160,7 +160,8 @@ At its top:
 - the repository and its branch, clicked as the status line's are: the branches, pull, push and fetch
 - where the branch stands: how far it's ahead of its base and behind it (`↑5 on main`), and against its upstream
   (`↑1 origin/main`), or that it has none yet (`not pushed`)
-- the message box, for a commit's message ([Committing](#committing))
+- the message box, for a commit's message ([Committing](#committing)). Going into another vault empties it, so a
+  message is never committed in the wrong repository
 - the buttons: Commit (with how many files are staged), Amend, Pull (once there's an upstream), Push (Publish without
   one), Fetch and Stash; Review while a change isn't staged, Resolve while a file is in conflict, and Continue, Skip
   and Abort while a merge or a rebase is under way. Each does what its key does; under the pointer, the panel's foot
@@ -565,6 +566,8 @@ its name.
 3. Where it goes: **In a new worktree** (the default), in the folder `git.worktrees` names; **In a new worktree, in
    another folder…**, typed; **Check it out here**; or **Just make it**.
 
+If git can't make the worktree, say because its folder is taken, the branch isn't made either.
+
 slipbox keeps the branch it was made from as its base ([The base of each branch](#the-base-of-each-branch)).
 
 A worktree suits giving an agent a branch of its own to work on. Made beside the repository by default, it shows under
@@ -624,8 +627,15 @@ It's `"{parent}/{repo}-{branch}"` as it comes: beside the repository, as `~/code
 - its branch is merged into its base, so nothing of its own would be left only there
 - it has no uncommitted files
 
-Otherwise it's refused, and slipbox says why. Asked, you can keep the branch, or remove it too. A worktree whose folder
-is gone, deleted by hand, says so on its branch, with **Prune**, which has git forget it.
+Otherwise it's refused, and slipbox says why. Asked, you can keep the branch, or remove it too. Removing a worktree
+deletes the files git ignores there too, as git does. The question names them first, notes before other files, such as
+`also deletes 2 ignored notes: local/draft.md, local/b.md`. What tools build, such as `node_modules` or `dist`, isn't
+listed. You can't remove the worktree you're in, even when you opened it through a link to its folder. A worktree whose
+folder is gone, deleted by hand, says so on its branch, with **Prune**, which has git forget it.
+
+Checking a branch out, and making or removing a worktree, run in the background, so a big checkout doesn't hold
+slipbox up. If git takes more than ten minutes, slipbox stops it and says what it may have left, such as a worktree
+half checked out.
 
 `:worktrees` lists the repository's checkouts by branch:
 
@@ -680,7 +690,9 @@ looking like its own. A branch's base is:
    `dev` against `main`, and `main`, the first, against none
 3. else `main`, else `master`
 
-`git.bases` is `["main"]` as it comes ([Configuration](configuration.md)). The git panel shows each branch's base at
+`git.bases` is `["main"]` as it comes ([Configuration](configuration.md)). A vault's own configuration may set its
+bases too. Each must be a branch's name, a tag's or a commit's. Any other value is left out, and slipbox says so.
+The git panel shows each branch's base at
 its row's end, as in `↑3 on dev`, and the panel's top shows this branch's. Compare against…, in a branch's menu (`.`
 or a right click on it), picks another base, kept; or goes back to the one guessed.
 

@@ -130,14 +130,25 @@ export function statusOf(c: Pick<Checkout, "root">): Map<string, GitState> | nul
   return out === null ? null : parseStatus(out);
 }
 
+/**
+ * Whether `ref` is a name git takes for a branch, a tag or a commit, as `git check-ref-format` has it: `main`,
+ * `origin/main`, a hash — never one starting with `-`, nor with a space, a control character, `~^:?*[\`, `..` or `@{`
+ * in it. A base (`[git] base`, `[git] bases`, a kept one) is used only when it is one.
+ */
+export function refName(ref: string): boolean {
+  if (!ref || ref === "@" || ref.startsWith("-") || ref.endsWith("/") || ref.endsWith(".")) return false;
+  if (/[\u0000- \u007f~^:?*[\\]|\.\.|@\{|\/\//.test(ref)) return false;
+  return ref.split("/").every((part) => part && !part.startsWith(".") && !part.endsWith(".lock"));
+}
+
 /** Whether a ref names a commit in the repository. */
 function exists(c: Pick<Checkout, "root">, ref: string): boolean {
-  return run(c, ["rev-parse", "--verify", "--quiet", `${ref}^{commit}`]) !== null;
+  return refName(ref) && run(c, ["rev-parse", "--verify", "--quiet", "--end-of-options", `${ref}^{commit}`]) !== null;
 }
 
 /**
- * The branch changes are measured against: `[git] base` when set (any ref), else `main`, else
- * `master`. Null when none is there.
+ * The branch changes are measured against: `[git] base` when set (a branch's name, a tag's or a commit's), else
+ * `main`, else `master`. Null when none is there.
  */
 export function baseBranch(c: Pick<Checkout, "root">, configured = ""): string | null {
   for (const ref of configured ? [configured] : ["main", "master"]) if (exists(c, ref)) return ref;
@@ -146,7 +157,7 @@ export function baseBranch(c: Pick<Checkout, "root">, configured = ""): string |
 
 /** Where this checkout's branch left `base`: what it changed is measured from there. */
 export function mergeBaseOf(c: Pick<Checkout, "root">, base: string): string | null {
-  return run(c, ["merge-base", base, "HEAD"])?.trim() || null;
+  return run(c, ["merge-base", "--end-of-options", base, "HEAD"])?.trim() || null;
 }
 
 export interface Changed {
@@ -164,7 +175,7 @@ export interface Changed {
 export function changedSince(c: Pick<Checkout, "root">, base: string): { mergeBase: string; files: Changed[] } | null {
   const mergeBase = mergeBaseOf(c, base);
   if (!mergeBase) return null;
-  const diff = run(c, ["diff", "--name-status", "-z", "-M", mergeBase]);
+  const diff = run(c, ["diff", "--name-status", "-z", "-M", "--end-of-options", mergeBase]);
   const status = statusOf(c);
   if (diff === null || status === null) return null;
   const files = new Map<string, Changed>();
@@ -198,7 +209,7 @@ export function parseNameStatus(z: string): Changed[] {
 
 /** What changed from commit `from` to `to`, renames paired by git (`-M`, by similarity); null without git. */
 export function changedBetween(c: Pick<Checkout, "root">, from: string, to: string): Changed[] | null {
-  const out = run(c, ["diff", "--name-status", "-z", "-M", from, to]);
+  const out = run(c, ["diff", "--name-status", "-z", "-M", "--end-of-options", from, to]);
   return out === null ? null : parseNameStatus(out);
 }
 
@@ -210,14 +221,17 @@ export function branchesOf(c: Pick<Checkout, "root">): string[] | null {
 
 /** A file as `ref` has it (path from the checkout's top folder); null where it hasn't one. `ref` "": as staged. */
 export function showAt(c: Pick<Checkout, "root">, ref: string, path: string): string | null {
-  return run(c, ["show", `${ref}:${path.split(sep).join(posix.sep)}`]);
+  return run(c, ["show", "--end-of-options", `${ref}:${path.split(sep).join(posix.sep)}`]);
 }
 
 /** The same, not waiting on git (the TUI's gutter, 26.1). */
 export function showLater(c: Pick<Checkout, "root">, ref: string, path: string): Promise<string | null> {
   return new Promise((done) => {
-    execFile("git", gitArgs(c.root, ["show", `${ref}:${path.split(sep).join(posix.sep)}`]), OPTS, (err, out) =>
-      done(err ? null : out),
+    execFile(
+      "git",
+      gitArgs(c.root, ["show", "--end-of-options", `${ref}:${path.split(sep).join(posix.sep)}`]),
+      OPTS,
+      (err, out) => done(err ? null : out),
     );
   });
 }
@@ -232,24 +246,47 @@ export interface WorktreeEntry {
   main: boolean;
 }
 
+/** A checkout as `git worktree list --porcelain -z` lists it. */
+export interface WorktreeRecord {
+  path: string;
+  head: string | null;
+  branch: string | null;
+  bare: boolean;
+  /** Its folder is gone: git would prune it. */
+  prunable: boolean;
+}
+
+/**
+ * `git worktree list --porcelain -z` read, checkout by checkout, in git's order — the main checkout first, or a bare
+ * repository there instead. Each field ends with a NUL and each checkout with another, so a folder's name may hold a
+ * line break.
+ */
+export function worktreeRecords(z: string): WorktreeRecord[] {
+  const out: WorktreeRecord[] = [];
+  let at: WorktreeRecord | null = null;
+  for (const field of z.split("\0")) {
+    if (field.startsWith("worktree ")) {
+      at = { path: field.slice("worktree ".length), head: null, branch: null, bare: false, prunable: false };
+      out.push(at);
+    } else if (!field) at = null;
+    else if (at) {
+      if (field.startsWith("HEAD ")) at.head = field.slice(5);
+      else if (field.startsWith("branch refs/heads/")) at.branch = field.slice("branch refs/heads/".length);
+      else if (field === "bare") at.bare = true;
+      else if (field === "prunable" || field.startsWith("prunable ")) at.prunable = true;
+    }
+  }
+  return out;
+}
+
 /** The repository's checkouts, the main one first (`git worktree list`); null without git. */
 export function worktreeList(c: Pick<Checkout, "root">): WorktreeEntry[] | null {
-  const out = run(c, ["worktree", "list", "--porcelain"]);
+  const out = run(c, ["worktree", "list", "--porcelain", "-z"]);
   if (out === null) return null;
-  const list: WorktreeEntry[] = [];
   // Git lists the main checkout first; a bare repository is listed there instead, and has none.
-  let first = true;
-  for (const block of out.split(/\n\n+/)) {
-    const path = /^worktree (.+)$/m.exec(block)?.[1];
-    if (!path) continue;
-    const main = first;
-    first = false;
-    if (/^bare$/m.test(block)) continue;
-    const branch = /^branch refs\/heads\/(.+)$/m.exec(block)?.[1] ?? null;
-    const head = /^HEAD ([0-9a-f]+)$/m.exec(block)?.[1] ?? null;
-    list.push({ path, branch, head, main });
-  }
-  return list;
+  return worktreeRecords(out).flatMap((r, i) =>
+    r.bare ? [] : [{ path: r.path, branch: r.branch, head: r.head, main: i === 0 }],
+  );
 }
 
 /** A path of the checkout as one of the vault's, or null when it's outside the vault's folder. */

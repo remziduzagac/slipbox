@@ -365,7 +365,7 @@ export function stashLater(
   how: "apply" | "pop" | "drop",
   s: Pick<Stash, "ref" | "hash">,
 ): Promise<RemoteDone> {
-  const now = ask(c, ["rev-parse", "--verify", "--quiet", s.ref])?.trim();
+  const now = ask(c, ["rev-parse", "--verify", "--quiet", "--end-of-options", s.ref])?.trim();
   if (now !== s.hash)
     return Promise.resolve({
       ok: false,

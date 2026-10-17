@@ -349,7 +349,9 @@ file of another vault opened from the explorer or with `:e` (a path, a pointer; 
 (§ The peek), the git panel's `o` on a repository, a checkout or a branch's worktree (Open), a named folder picked
 from `space v v`, a folder link that leads out of the vault (revealed in its own vault, D81). The TUI becomes that
 vault's, as if started there — its config, its index (refreshed), its watcher, its reading positions and its session,
-whose tabs come back, with the note open (at its heading). Leaving saves the one before as quitting does. **Refused
+whose tabs come back, with the note open (at its heading). What git said of the vault left is forgotten — its files'
+states, the git panel's files, where its branch stood, those opened up — and the git panel's message box is emptied: a
+message typed in one vault is never committed in another. Leaving saves the one before as quitting does. **Refused
 while a note is unsaved** (`unsaved: … — save (:wa) or revert before leaving`): it would be left behind. The
 properties editor closes first, writing its edits into the note — or, while it asks (they don't parse, or changed
 meanwhile), nothing switches. **Looking never moves you** (VV-D7): following a link into another vault, a backlink
@@ -788,14 +790,15 @@ keys.
   heading, opens up a branch or a repository; `o` (`go`) opens the file at its change, goes into a branch's worktree
   (a branch without one: its menu) or a repository, or into a checkout at a file of its own (VV-D4); `l`/`h` open up
   and fold; `s`, `u`, `d` stage (a conflict's file: marked resolved), unstage, discard after asking (on a branch, a
-  worktree removed, a gone one pruned at once); `a`/`shift+u` everything; `c`/`shift+c` commit and amend; `f` fetch,
-  `p` pull, `shift+p` push, `z` the stashes (`fetch`, `pull`, `push`, `stash`, each running `git.fetch`… so the
-  palette's are the same); `v` the review (`review`), `x` the merge screen on the conflicted file selected (`resolve`),
-  `shift+r` a rebase onto the base, or while a merge or a rebase is under way its continue, skip and abort (`rebase`;
-  `continue`, `skip` and `abort` are actions with no key); `n` a new branch, `m` Merge… on the branch selected; `.`
-  the row's menu; `/` filters files, branches and repositories by name — `enter` keeps the filter and acts on the row,
-  `esc` clears it before it leaves; `q` closes, `esc` leaves. The explorer's keymap has none of git's: its `p` pastes
-  and its `z` zooms in.
+  worktree removed, a gone one pruned at once); `a`/`shift+u` everything; `c`/`shift+c` commit and amend (the box's
+  message one commit at a time: `ctrl+enter` again before git answers is said, not run, `committing`); `f` fetch, `p`
+  pull, `shift+p` push, `z` the stashes (`fetch`, `pull`, `push`, `stash`, each running `git.fetch`… so the palette's
+  are the same); `v` the review (`review`), `x` the merge screen on the conflicted file selected (`resolve`), `shift+r`
+  a rebase onto the base, or while a merge or a rebase is under way its continue, skip and abort (`rebase`; `continue`,
+  `skip` and `abort` are actions with no key); `n` a new branch, `m` Merge… on the branch selected; `.` the row's menu;
+  `/` filters files, branches and repositories by name — `enter` keeps the filter and acts on the row, `esc` clears it
+  before it leaves; `q` closes, `esc` leaves. The explorer's keymap has none of git's: its `p` pastes and its `z` zooms
+  in.
 - **By mouse** (`gitmouse.ts`; each row a hot region `git:row:<i>`, its buttons `git:act:<i>:<action>` before it): a
   click selects a row and does what `enter` does, a double-click what `o` does (a heading, a branch, a repository only
   toggle; a click on a branch's line, label or buttons' row only selects); the pointer on a row (and the row selected)
@@ -807,8 +810,9 @@ keys.
   own; a heading has none. The glyphs are `Glyphs.git`'s (`● ⎇ ✎ ◆ ✓` marks, `+ − ↺ ⧉` a row's buttons, `✓ ⟳`
   commit's and fetch's; ascii `* & ~ ! =`, `+ - x d`, `* @`).
 - **The Branches section** (GIT-D9; `gitbranchview.ts`, `core/gitbranches.ts`): the local branches
-  (`branchesLater`: `for-each-ref` with each tip and its date, `worktree list --porcelain` for where each is checked
-  out, a folder gone marked `prunable`), ordered by `orderBranches`: the branch here (`●`, `here`), those checked out in
+  (`branchesLater`: `for-each-ref` with each tip and its date, `worktree list --porcelain -z` for where each is checked
+  out — a folder's name may hold a line break — a folder gone marked `prunable`), ordered by `orderBranches`: the
+  branch here (`●`, `here`, by the folders' real paths), those checked out in
   a worktree (`⎇`), those touched in 30 days (`OLD_MS`), the newest first; then folded under **Merged or older (n)**
   those merged into their base and the older — never one here or in a worktree. Merged is asked once a base
   (`for-each-ref --merged=<base>`: a branch merged into its kept base, else into any of its candidates, never the
@@ -822,19 +826,32 @@ keys.
   then gone into); Merge…; Remove… for a worktree; Prune for a gone one — always in the same places, so a click never
   lands on one moved under the pointer; then its worktree's uncommitted files (`Uncommitted (n)`) and its commits'
   files against its base (`Against main (n)`, `git diff base...branch`), each a diff in the diff window (against the
-  merge base, or, uncommitted, the worktree's last commit). Its menu (`.`, a right click): its buttons' and Compare
+  merge base, a renamed file's under the name it had there and titled `old → new`, or, uncommitted, the worktree's
+  last commit). A file read from disk for a diff (`readForDiff`, the working tree's and the repositories' too) is read
+  as git keeps it: a link is the path it leads to, never followed; past 8 MB, or not a regular file, it isn't read and
+  the diff says why. Its menu (`.`, a right click): its buttons' and Compare
   against…, A new branch from it…, Copy its name.
 - **A new branch** (`n`, `+ New`; `newBranch`): its name (`check-ref-format --branch`, said when git won't take it),
   where it starts (this branch, the bases listed there are, every other branch, or a commit typed; `n` on a branch's
   row, and its menu's A new branch from it…, start from that branch without asking), and where it goes: In a new
   worktree (the default, `worktreeFolder`), In a new worktree, in another folder…, Check it out here (unsaved notes
-  first), Just make it. `git branch --no-track <name> <from>`, then `git worktree add -- <folder> <name>` (no hook in a
-  vault not trusted, `gitArgs`); its base kept (`keepBase`); it's opened up and selected.
+  first), Just make it. In a worktree, one command, `git worktree add --no-track -b <name> -- <folder> <from>`
+  (`newWorktreeLater`): git makes the branch before it looks at the folder, so a branch it made for a folder it then
+  refused is deleted again; else `git branch --no-track <name> <from>`, then `git switch` (no hook in a vault not
+  trusted, `gitArgs`); its base kept (`keepBase`); it's opened up and selected. A checkout — a switch, a worktree made
+  or removed — runs in the background (`checkoutLater`) with ten minutes to finish, not fifteen seconds: a big tree, or
+  a trusted vault's LFS filters, take a while; stopped, the message says what it may have left (a worktree half
+  checked out, a folder partly deleted).
 - **Remove…** (`remove`): refused, said why, for a worktree with uncommitted files (`not removed: ~/x has 2
   uncommitted files — commit or discard them there first`) and for a branch not merged into its base (`… isn't merged
   into dev — 1 commit of its own; merge it first`); else asked — Remove it, keep the branch; Remove it and the branch
-  (`git worktree remove`, no `--force`; `git branch -d`). The worktree you're in, and the main checkout, aren't
-  removed from here. **Prune** forgets the worktrees whose folders are gone (`git worktree prune`).
+  (`git worktree remove`, no `--force`; `git branch -d`). git deletes a worktree's ignored files with it, unasked, and
+  an ignored note is still the vault's (D61): never refused for them, the question names them — `also deletes 2
+  ignored notes and 1 other ignored file: local/draft.md, local/b.md, .env` (`ignoredLater`: `git status --ignored`,
+  an ignored folder looked into, links not followed, a thousand files at most; a busy folder's, such as
+  `node_modules` or `dist`, never listed). The worktree you're in — by the folders' real paths, so one opened through
+  a link to it too (`realPath`; a branch is `here` the same way) — and the main checkout aren't removed from here.
+  **Prune** forgets the worktrees whose folders are gone (`git worktree prune`).
 - **Merge…** (`mergeMenu`): The links it would break (`showMergeReview`, `20.21`, against the branch's own base), Merge
   it — run where the base is checked out, here (unsaved notes first) or in its worktree (`git merge --no-edit`, in the
   background; in a vault not trusted no hook, `commit.gpgSign=false`); a conflict said, `git merge --abort` named — or,
@@ -1824,7 +1841,11 @@ From, or Compare against… — when it's still there; else the nearest of its c
 (default `["main"]`), with `[git] base` when set, a base listed there measured only against those before it
 (`["main", "dev"]`: dev against main, main against none), the nearest the one that leaves the branch fewest commits of
 its own (`git rev-list --count c..branch`; a tie, the first); else `[git] base`, main or master. Null for the trunk
-itself. `Git.baseOf` asks it once each time git has news; the panel, `:changes` (`openChanges`), `:diff`
+itself. A base is a branch's name (or a tag's, or a commit's) before git is given it (`refName`, as `git
+check-ref-format` has it): `[git] base` and `[git] bases`, a vault's own config's too, are checked as the config is
+read, anything else left out and said; a kept one is checked before use; and git is given each after
+`--end-of-options`. `Git.baseOf` asks it once each time git has news, `Git.fallbackBase` `[git] base`, main or master
+the same — never on every frame that draws it; the panel, `:changes` (`openChanges`), `:diff`
 (`showDiff`), This branch against main, Merge… and the rebase onto the base use it. `:merge-review` keeps
 `[git] base`, as the CLI does: `changed` and `diff` take `--base`, else `[git] base`; `merge-review` merges a branch
 into `--into`, else HEAD.

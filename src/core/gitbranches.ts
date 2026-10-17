@@ -7,12 +7,15 @@
 // `gitArgs`'s guards (in a vault not trusted, no hook runs); nothing waits on git but what changes the repository.
 
 import { execFile, execFileSync } from "node:child_process";
+import { type Dirent, realpathSync } from "node:fs";
+import { readdir } from "node:fs/promises";
 import { homedir } from "node:os";
 import { basename, dirname, isAbsolute, join, resolve } from "node:path";
 import type { Checkout } from "./git.ts";
-import { type Changed, gitArgs, parseNameStatus } from "./gitops.ts";
+import { type Changed, gitArgs, parseNameStatus, worktreeRecords } from "./gitops.ts";
 import { inEnglish } from "./gitremote.ts";
 import { isTrusted } from "./trust.ts";
+import { isBusyFolder } from "./walk.ts";
 
 const OPTS = { encoding: "utf8" as const, timeout: 15_000, maxBuffer: 64 * 1024 * 1024 };
 
@@ -61,24 +64,14 @@ export interface Branch {
   here: boolean;
 }
 
-/** `git worktree list --porcelain`, read: each checkout's folder and branch, the main one first, a gone one marked. */
-export function parseWorktrees(out: string): (WorktreeAt & { branch: string | null })[] {
-  const list: (WorktreeAt & { branch: string | null })[] = [];
-  let first = true;
-  for (const block of out.split(/\n\n+/)) {
-    const path = /^worktree (.+)$/m.exec(block)?.[1];
-    if (!path) continue;
-    const main = first;
-    first = false;
-    if (/^bare$/m.test(block)) continue;
-    list.push({
-      path,
-      main,
-      gone: /^prunable\b/m.test(block),
-      branch: /^branch refs\/heads\/(.+)$/m.exec(block)?.[1] ?? null,
-    });
-  }
-  return list;
+/**
+ * `git worktree list --porcelain -z`, read: each checkout's folder and branch, the main one first, a gone one marked.
+ * A folder's name may hold a line break: each field ends with a NUL, each checkout with another.
+ */
+export function parseWorktrees(z: string): (WorktreeAt & { branch: string | null })[] {
+  return worktreeRecords(z).flatMap((r, i) =>
+    r.bare ? [] : [{ path: r.path, main: i === 0, gone: r.prunable, branch: r.branch }],
+  );
 }
 
 const SEP = "\u001f";
@@ -103,7 +96,7 @@ export async function branchesLater(c: Pick<Checkout, "root">): Promise<Branch[]
       `--format=%(refname:short)${SEP}%(objectname)${SEP}%(committerdate:unix)`,
       "refs/heads",
     ]),
-    gitLater(c.root, ["worktree", "list", "--porcelain"]),
+    gitLater(c.root, ["worktree", "list", "--porcelain", "-z"]),
   ]);
   if (refs === null) return null;
   const at = new Map(
@@ -111,14 +104,98 @@ export async function branchesLater(c: Pick<Checkout, "root">): Promise<Branch[]
       .filter((w) => w.branch)
       .map((w) => [w.branch!, w] as const),
   );
+  // Here by the folders' real paths: a checkout opened through a link to it is still this one.
+  const root = realPath(c.root);
   return parseBranches(refs).map((b) => {
     const w = at.get(b.name);
     return {
       ...b,
       worktree: w ? { path: w.path, main: w.main, gone: w.gone } : null,
-      here: !!w && resolve(w.path) === resolve(c.root),
+      here: !!w && realPath(w.path) === root,
     };
   });
+}
+
+/** A folder's real path, links followed; as written (resolved) when it can't be read. */
+export function realPath(p: string): string {
+  try {
+    return realpathSync(p);
+  } catch {
+    return resolve(p);
+  }
+}
+
+/** The files a worktree's removal deletes with it unasked: git-ignored ones, notes first. */
+export interface Ignored {
+  /** Notes (`.md`, `.markdown`), a vault's own even when ignored. */
+  notes: string[];
+  /** Any other file, outside the busy folders. */
+  others: string[];
+  /** More than were counted: the count stopped at `IGNORED_MAX`. */
+  more: boolean;
+}
+
+export const IGNORED_MAX = 1000;
+
+/**
+ * A worktree's git-ignored files (`git status --ignored`), as Remove's question names them: its notes and other files,
+ * never what's in a busy folder (`node_modules`, `dist`, a cache: tools' output). An ignored folder is looked into,
+ * links not followed, up to `IGNORED_MAX` files. Null without git.
+ */
+export async function ignoredLater(path: string): Promise<Ignored | null> {
+  const out = await gitLater(path, [
+    "status",
+    "--porcelain=v1",
+    "-z",
+    "--ignored=traditional",
+    "--untracked-files=normal",
+  ]);
+  if (out === null) return null;
+  const found: Ignored = { notes: [], others: [], more: false };
+  const busy = (rel: string) => rel.split("/").some((s) => s && isBusyFolder(s));
+  const add = (rel: string): boolean => {
+    if (found.notes.length + found.others.length >= IGNORED_MAX) return !(found.more = true);
+    (/\.(md|markdown)$/i.test(rel) ? found.notes : found.others).push(rel);
+    return true;
+  };
+  const look = async (dir: string): Promise<boolean> => {
+    let entries: Dirent[];
+    try {
+      entries = await readdir(join(path, dir), { withFileTypes: true });
+    } catch {
+      return true;
+    }
+    for (const e of entries.sort((a, b) => (a.name < b.name ? -1 : 1))) {
+      const rel = `${dir}${e.name}`;
+      if (e.isDirectory()) {
+        if (!isBusyFolder(e.name) && !(await look(`${rel}/`))) return false;
+      } else if (!add(rel)) return false;
+    }
+    return true;
+  };
+  const parts = out.split("\0");
+  for (let i = 0; i < parts.length; i++) {
+    const e = parts[i]!;
+    if (e[0] === "R" || e[0] === "C") i++;
+    if (!e.startsWith("!! ")) continue;
+    const rel = e.slice(3);
+    if (busy(rel)) continue;
+    if (!(rel.endsWith("/") ? await look(rel) : add(rel))) break;
+  }
+  return found;
+}
+
+/** Remove's words for a worktree's ignored files: `2 ignored notes: local/draft.md, local/b.md`; "" with none. */
+export function ignoredText(ig: Ignored): string {
+  const n = ig.notes.length;
+  const m = ig.others.length;
+  if (!n && !m) return "";
+  const count = (k: number, what: string) => `${k}${ig.more ? "+" : ""} ${what}${k === 1 ? "" : "s"}`;
+  const what = n
+    ? `${count(n, "ignored note")}${m ? ` and ${count(m, "other ignored file")}` : ""}`
+    : count(m, "ignored file");
+  const names = [...ig.notes, ...ig.others];
+  return `${what}: ${names.slice(0, 3).join(", ")}${names.length > 3 ? ", …" : ""}`;
 }
 
 /** The branches merged into `base` (reachable from it), asked in the background; null without git or the base. */
@@ -133,7 +210,7 @@ export async function aheadBehindLater(
   base: string,
   branch: string,
 ): Promise<{ ahead: number; behind: number } | null> {
-  const out = await gitLater(root, ["rev-list", "--left-right", "--count", `${base}...${branch}`]);
+  const out = await gitLater(root, ["rev-list", "--left-right", "--count", "--end-of-options", `${base}...${branch}`]);
   const m = out && /^(\d+)\s+(\d+)/.exec(out.trim());
   return m ? { behind: Number(m[1]), ahead: Number(m[2]) } : null;
 }
@@ -223,9 +300,9 @@ export async function changedLater(
   base: string,
   entries: { path: string; x: string; y: string }[],
 ): Promise<Changed[] | null> {
-  const mergeBase = (await gitLater(c.root, ["merge-base", base, "HEAD"]))?.trim();
+  const mergeBase = (await gitLater(c.root, ["merge-base", "--end-of-options", base, "HEAD"]))?.trim();
   if (!mergeBase) return null;
-  const diff = await gitLater(c.root, ["diff", "--name-status", "-z", "-M", mergeBase]);
+  const diff = await gitLater(c.root, ["diff", "--name-status", "-z", "-M", "--end-of-options", mergeBase]);
   if (diff === null) return null;
   const files = new Map<string, Changed>();
   for (const f of parseNameStatus(diff)) files.set(f.path, f);
@@ -238,13 +315,13 @@ export async function changedLater(
 
 /** What a branch's commits changed against `base`, since it left it (`git diff base...branch`); null without git. */
 export async function branchChangedLater(root: string, base: string, branch: string): Promise<Changed[] | null> {
-  const out = await gitLater(root, ["diff", "--name-status", "-z", "-M", `${base}...${branch}`]);
+  const out = await gitLater(root, ["diff", "--name-status", "-z", "-M", "--end-of-options", `${base}...${branch}`]);
   return out === null ? null : parseNameStatus(out).sort((a, b) => (a.path < b.path ? -1 : 1));
 }
 
 /** Where `branch` left `base`: the commit a diff of what it changed starts from; null without one in common. */
 export async function mergeBaseLater(root: string, base: string, branch: string): Promise<string | null> {
-  return (await gitLater(root, ["merge-base", base, branch]))?.trim() || null;
+  return (await gitLater(root, ["merge-base", "--end-of-options", base, branch]))?.trim() || null;
 }
 
 /** What an operation says when it fails: why, in git's words; null when it went. */
@@ -265,16 +342,63 @@ export function makeBranch(root: string, name: string, from: string): Done {
   return r.ok ? null : r.why;
 }
 
-/** A worktree made for a branch there is, in `folder`. Not trusted: no hook runs as it checks out (gitArgs). */
-export function addWorktree(root: string, folder: string, branch: string): Done {
-  const r = gitNow(root, ["worktree", "add", "--", folder, branch]);
-  return r.ok ? null : r.why;
+/** How long a checkout may take (a switch, a worktree made or removed): a big tree, or LFS's filters, take a while. */
+export const CHECKOUT_MS = 10 * 60_000;
+
+/**
+ * A command that checks files out or deletes them, in the background: null when it went, else why — git's words, or,
+ * stopped after `CHECKOUT_MS`, that it was and what it may have left (`left`).
+ */
+export function checkoutLater(root: string, args: string[], left: string, ms = CHECKOUT_MS): Promise<Done> {
+  return new Promise((done) => {
+    execFile("git", gitArgs(root, args), { ...OPTS, timeout: ms }, (err, _out, stderr) => {
+      if (!err) return done(null);
+      if ((err as { killed?: boolean }).killed) return done(`git took too long, and was stopped: ${left}`);
+      done(why(stderr || err.message));
+    });
+  });
 }
 
-/** A worktree removed — git refuses one with changes (no `--force`) — and, asked, its branch deleted (merged: `-d`). */
-export function removeWorktree(root: string, folder: string, branch: string | null): Done {
-  const r = gitNow(root, ["worktree", "remove", "--", folder]);
-  if (!r.ok) return r.why;
+/** Another branch checked out in `root` (26.5), in the background; git's own refusal — a change it would overwrite — said. */
+export function switchLater(root: string, name: string): Promise<Done> {
+  return checkoutLater(root, ["switch", "--", name], "the checkout may be half done — git status says what's left");
+}
+
+const halfMade = (folder: string) =>
+  `${folder} may hold a worktree half checked out — git worktree remove --force removes it`;
+
+/** A worktree made for a branch there is, in `folder`, in the background. Not trusted: no hook runs as it checks out. */
+export function addWorktreeLater(root: string, folder: string, branch: string): Promise<Done> {
+  return checkoutLater(root, ["worktree", "add", "--", folder, branch], halfMade(folder));
+}
+
+/**
+ * A new branch made at `from` in a new worktree in `folder`, not tracking anything, in the background — or, when git
+ * refuses the worktree (a folder that's taken), no branch: git makes the branch before it looks at the folder, so one
+ * it made is deleted again.
+ */
+export async function newWorktreeLater(root: string, folder: string, name: string, from: string): Promise<Done> {
+  const bad = badBranchName(root, name);
+  if (bad) return bad;
+  const had = () => gitNow(root, ["rev-parse", "--verify", "--quiet", "--end-of-options", `refs/heads/${name}`]).ok;
+  const before = had();
+  const r = await checkoutLater(
+    root,
+    ["worktree", "add", "--no-track", "-b", name, "--", folder, from],
+    halfMade(folder),
+  );
+  // Stopped partway, its worktree may be there: the branch stays with it.
+  if (r && !before && !r.startsWith("git took too long") && had()) gitNow(root, ["branch", "-D", "--", name]);
+  return r;
+}
+
+/**
+ * A worktree removed — git refuses one with changes (no `--force`), and deletes its ignored files with it — and, asked,
+ * its branch deleted (merged: `-d`); in the background.
+ */
+export async function removeWorktreeLater(root: string, folder: string, branch: string | null): Promise<Done> {
+  const r = await checkoutLater(root, ["worktree", "remove", "--", folder], `${folder} may be partly deleted`);
+  if (r) return r;
   if (!branch) return null;
   const d = gitNow(root, ["branch", "-d", "--", branch]);
   return d.ok ? null : `the worktree is gone, the branch kept: ${d.why}`;
