@@ -48,8 +48,6 @@ slipbox ~/notes
 slipbox fills the terminal. It opens the folder's `index.md` or `README.md` if there is one. Otherwise it opens the
 first note by path, here `ideas/coffee.md`.
 
-If you've used slipbox in other folders, a list of them may open first, called "Folders". Press `esc` to close it.
-
 ## The screen
 
 - On the left, the explorer lists the folder's notes.
