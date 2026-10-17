@@ -224,10 +224,15 @@ export class Renaming {
     if (plan.move) this.app.explorer.select(relative(this.app.loc.root, plan.move.to));
     if (plan.makeVault || plan.unmakeVault) this.app.explorer.select(plan.from);
     const n = plan.files.reduce((k, f) => k + f.edits.length, 0);
+    // A note or folder moved where the vault never indexes it (D246): said after where it went.
+    const left =
+      plan.move && (plan.kind === "note" || plan.kind === "folder")
+        ? this.app.files.notIndexed(plan.move.to, plan.move.dir)
+        : "";
     const what = plan.undo
       ? {
-          note: `renamed ${plan.from} back to ${plan.to}`,
-          folder: `moved ${plan.from}/ back to ${plan.to}/`,
+          note: `renamed ${plan.from} back to ${plan.to}${left}`,
+          folder: `moved ${plan.from}/ back to ${plan.to}/${left}`,
           vault: `named the folder ${plan.from} back to ${plan.to}`,
           relink: "undid the relink",
           "make-vault": "",
@@ -237,9 +242,9 @@ export class Renaming {
           replace: `undid the replace of ${JSON.stringify(plan.to)} with ${JSON.stringify(plan.from)}`,
         }[plan.kind]
       : plan.kind === "note" || plan.kind === "heading"
-        ? `renamed ${plan.from} → ${plan.to}`
+        ? `renamed ${plan.from} → ${plan.to}${left}`
         : plan.kind === "folder"
-          ? `moved ${plan.from}/ → ${plan.to}/`
+          ? `moved ${plan.from}/ → ${plan.to}/${left}`
           : plan.kind === "vault"
             ? `named the folder ${plan.from} → ${plan.to}`
             : plan.kind === "make-vault"

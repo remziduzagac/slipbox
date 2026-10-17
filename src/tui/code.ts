@@ -167,7 +167,7 @@ export class Code {
         );
         return this.app.message(
           "info",
-          `${cell.title} — ${lines} added to the scratch; add a note, esc then q closes it`,
+          `${cell.title} — ${lines} added to the scratch${this.app.scratch.notIndexed()}; add a note, esc then q closes it`,
         );
     }
   }

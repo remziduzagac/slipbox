@@ -3,8 +3,9 @@
 
 import { classify, extensionOf, isKnownExtension } from "../core/filetypes.ts";
 import { existsSync, mkdirSync, statSync } from "node:fs";
-import { basename, dirname, join, posix } from "node:path";
-import { writeNote } from "../core/fsutil.ts";
+import { basename, dirname, join, posix, relative, sep } from "node:path";
+import { climbsOut, writeNote } from "../core/fsutil.ts";
+import { notIndexedSaid } from "../core/graph.ts";
 import { blockingLink, linkSaid, writesThrough } from "../core/symlinks.ts";
 import { insertText, startInsert } from "./editing.ts";
 import { normKey } from "../core/links.ts";
@@ -25,18 +26,32 @@ export class Files {
   /**
    * Where a new note or folder goes: the explorer's selected folder (or the folder of its selected
    * file) when the explorer has focus, else the current note's folder; the vault's root without
-   * one. Vault-relative, "" for the root; null for a row outside the vault's own tree, which isn't this vault's.
+   * one. Vault-relative, "" for the root; null for a row outside the vault's own tree, which isn't this vault's — but
+   * one `walk.exclude` leaves out, which is (D246).
    */
   newItemBase(): string | null {
     if (this.app.region === "sidebar" && this.app.leftView === "explorer") {
       const row = this.app.explorer.rows()[this.app.sidebar.selected];
-      // Above the vault, beside it, in another (VV-D5): none of this vault's folders (null, refused).
-      if (row?.outside) return null;
+      // Above the vault, beside it, in another (VV-D5), in a busy folder (VV-D8): none of this vault's folders (null,
+      // refused). What `walk.exclude` leaves out is, by your own setting: its folder, as a typed path takes it (D246).
+      if (row?.outside) return row.kind === "root" ? null : this.excludedBase(this.app.explorer.rowAbs(row), row.kind);
       if (row?.root?.here) return "";
       if (row) return row.kind === "dir" ? row.path : posix.dirname(row.path) === "." ? "" : posix.dirname(row.path);
     }
     const rel = this.app.view?.buf.rel;
     return rel && posix.dirname(rel) !== "." ? posix.dirname(rel) : "";
+  }
+
+  /**
+   * The folder a `⊘` row at `abs` gives a new note, a new folder or a paste, when `walk.exclude` leaves the row out
+   * (`Graph.notIndexed`, D246): a folder's own path, a file's folder; null for any other row outside the vault's tree.
+   */
+  private excludedBase(abs: string, kind: "dir" | "note"): string | null {
+    const rel = relative(this.app.loc.root, abs);
+    if (!rel || climbsOut(rel)) return null;
+    const p = rel.split(sep).join("/");
+    if (!this.app.graph.notIndexed(p, kind === "dir")) return null;
+    return kind === "dir" ? p : posix.dirname(p) === "." ? "" : posix.dirname(p);
   }
 
   /** A new note, folder or paste with another root's row selected: refused, its files aren't this root's. */
@@ -73,6 +88,22 @@ export class Files {
       return null;
     }
     return rel;
+  }
+
+  /**
+   * What a write's message adds when the vault never indexes the file at `abs` — a folder, with `isDir` (D246): ` (not
+   * indexed: walk.exclude)`, else nothing. Said by each write's own message — created, saved, autosaved, moved, copied,
+   * exported — every time, never as a message of its own.
+   */
+  notIndexed(abs: string, isDir = false): string {
+    return notIndexedSaid(this.leftOut(abs, isDir));
+  }
+
+  /** Why the vault never indexes the file at `abs`, written there (`Graph.notIndexed`): `walk.exclude`, or null. */
+  leftOut(abs: string, isDir = false): string | null {
+    const rel = relative(this.app.loc.root, abs);
+    if (!rel || climbsOut(rel)) return null;
+    return this.app.graph.notIndexed(rel.split(sep).join("/"), isDir);
   }
 
   /** A new file's write, as `writeNote` takes it: through the links home follows, Elsewhere's (VV-D6). */
@@ -155,7 +186,7 @@ export class Files {
       this.app.explorer.invalidateTree();
       this.app.relayoutAll(); // links to it resolve now
     }
-    this.app.message("info", `created ${rel}`);
+    this.app.message("info", `created ${rel}${this.notIndexed(abs)}`);
     return { rel, created: true, open };
   }
 
@@ -478,7 +509,7 @@ export class Files {
     }
     this.afterFileOp();
     this.app.explorer.select(r.to);
-    this.app.message("info", `copied ${r.from} → ${r.to}`);
+    this.app.message("info", `copied ${r.from} → ${r.to}${this.notIndexed(join(this.app.loc.root, r.to), r.dir)}`);
   }
 
   /** After files moved, came or went: the tree, the watcher and the layouts follow. */
@@ -529,7 +560,7 @@ export class Files {
     const at = this.app.explorer.rows().findIndex((r) => r.kind === "dir" && r.path === rel);
     if (at >= 0) this.app.sidebar.selected = at;
     this.app.region = "sidebar";
-    this.app.message("info", `created ${rel}/`);
+    this.app.message("info", `created ${rel}/${this.notIndexed(abs, true)}`);
     return rel;
   }
 }

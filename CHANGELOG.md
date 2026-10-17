@@ -173,6 +173,12 @@ The format is [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.1.0/); wh
   busy folder, or deeper in one with no note at its top, is refused, in the explorer, as a typed path, and on the
   command line (`write --create`, `mv`, `cp`: exit 5). A note already there can still be changed. `node_modules` is
   decided the same way, so a note already in one can be changed too.
+- A note written where `walk.exclude` leaves it out is still written, and now says it isn't indexed. In the explorer,
+  that folder's `⊘` row takes a new note, a new folder or a paste, as a path typed into it did; a busy folder's row
+  still refuses them. Made, saved, autosaved, moved, copied, exported as Markdown or captured there, the write's
+  message ends with `(not indexed: walk.exclude)`, every time: `saved drafts/plan.md (not indexed: walk.exclude)`. On
+  the command line, `write`, `mv`, `cp` and `export` say it in their line and add `notIndexed` to their `--json`;
+  `capture` and `mkdir`, whose output is a path, say it as a warning.
 
 ### Removed
 

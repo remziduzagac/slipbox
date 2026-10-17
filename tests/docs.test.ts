@@ -334,7 +334,26 @@ describe("the user documentation (DOC)", () => {
     ]);
     expect(commandsLeftOut("`render`")).toContain("render --width");
   });
+  test("no merge's conflict markers left in the Markdown, the samples' own aside", () => {
+    const files = Bun.spawnSync(["git", "ls-files", "-z", "*.md"], { cwd: TOP })
+      .stdout.toString()
+      .split("\0")
+      .filter((f) => f && !/^(examples|tests\/fixtures)\//.test(f));
+    expect(files.length).toBeGreaterThan(100);
+    expect(files.flatMap((f) => conflictMarkers(readFileSync(join(TOP, f), "utf8")).map((l) => `${f}:${l}`))).toEqual(
+      [],
+    );
+    // A merge's three kinds, zdiff3's base among them; a quote's `>` and a rule of `=` aren't.
+    expect(conflictMarkers("a\n<<<<<<< HEAD\nb\n||||||| 61b0b3a\n=======\n>>>>>>> main\n> quoted\n===\n")).toEqual([
+      2, 4, 6,
+    ]);
+  });
 });
+
+/** The lines (1-based) a merge's conflict left: `<<<<<<<`, `|||||||` (diff3's base) or `>>>>>>>`, alone or named. */
+function conflictMarkers(text: string): number[] {
+  return text.split("\n").flatMap((l, i) => (/^(<{7}|\|{7}|>{7})( |$)/.test(l) ? [i + 1] : []));
+}
 
 describe("what the manual promises of the code (DOC)", () => {
   type Sections = Record<string, Record<string, unknown>>;

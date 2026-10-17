@@ -16,6 +16,7 @@ import { stateHome } from "../core/paths.ts";
 import { readStale, type StaleEntry } from "../core/stale.ts";
 import { UNSAFE } from "../core/sanitize.ts";
 import {
+  climbsOut,
   type DecodedFile,
   decodeText,
   ensureDir,
@@ -30,7 +31,15 @@ import { openVault, Reach } from "../core/reach.ts";
 import { planRelink } from "../core/rename.ts";
 import { activityFile } from "../core/autoindex.ts";
 import { ELSEWHERE, rootLabel } from "../core/names.ts";
-import { isHome, isInside, vaultOf, recordLocation, type VaultLocation, configFilesFor } from "../core/vault.ts";
+import {
+  isHome,
+  isInside,
+  isListed,
+  vaultOf,
+  recordLocation,
+  type VaultLocation,
+  configFilesFor,
+} from "../core/vault.ts";
 import { homeWalkKept, walkHomeNow } from "../core/home.ts";
 import { WalkFilter } from "../core/walk.ts";
 import { type Args, flag, has, UsageError } from "./args.ts";
@@ -413,6 +422,18 @@ export function checkWritable(s: Session, abs: string): void {
   const never = existsSync(abs) ? null : s.graph.neverIndexed(rel);
   if (never) refuse(never);
   if (UNSAFE.test(rel) || /[\x1b\t\n]/.test(rel)) refuse("a control character in its name");
+}
+
+/**
+ * Why the vault never indexes a file written at `abs` — a folder, with `isDir` (D246, `WalkFilter.notIndexed`):
+ * `walk.exclude`, or null. Asked of the walk's settings, not the index, so a quick write (`capture`, `mkdir`) walks
+ * nothing; Elsewhere indexes nothing to leave out. The JSON says it as `notIndexed`; a human line ends with
+ * `notIndexedSaid`, and one that is a bare path, for scripts, is kept so and it's a warning instead.
+ */
+export function notIndexed(s: Session, abs: string, isDir = false): string | null {
+  const rel = relative(s.loc.root, abs);
+  if (!rel || climbsOut(rel) || isListed(s.loc)) return null;
+  return new WalkFilter(s.loc.root, s.config.walk).notIndexed(rel.split(sep).join("/"), isDir);
 }
 
 /** `--if-unchanged <sha>`: refuse (exit 5) unless the note's bytes still have that sha. */

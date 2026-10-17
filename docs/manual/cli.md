@@ -606,10 +606,13 @@ comes.
   piped into `write` can't empty a note. With `--create` and no text at all, it makes an empty note to fill later, as in
   `slipbox write ideas/tea --create --allow-empty`.
 
-A note that doesn't exist is exit 3 (add `--create`). A new name with a control character is refused (exit 5).
+A note that doesn't exist is exit 3 (add `--create`). A new name with a control character is refused (exit 5). A note
+where `walk.exclude` leaves it out is written, and the line says it isn't indexed:
+`created drafts/idea.md (not indexed: walk.exclude)`.
 
-With `--json`, the data is `{path, created, shadows[]?, appended, previousSha, sha}`. With `--create`, `shadows` lists
-the other notes of the same name. `previousSha` is `null` for a new note.
+With `--json`, the data is `{path, created, shadows[]?, appended, previousSha, sha, notIndexed?}`. With `--create`,
+`shadows` lists the other notes of the same name. `previousSha` is `null` for a new note. `notIndexed` is
+`walk.exclude` for a note the vault doesn't index.
 
 ### `replace`
 
@@ -737,7 +740,8 @@ starts with `./` or `../`. It can also be absolute.
 slipbox mkdir ideas/drinks
 ```
 
-An existing path, or one outside the vault, is refused (exit 5). With `--json`, the data is `{path, created}`.
+An existing path, or one outside the vault, is refused (exit 5). A folder where `walk.exclude` leaves it out is made,
+and a warning says it isn't indexed. With `--json`, the data is `{path, created, notIndexed?}`.
 
 ## Links
 
@@ -965,11 +969,13 @@ In a git repository, a vault with uncommitted changes is named in the warnings. 
 - `replace --all`
 - `apply`
 
-A change is `{kind, from, to, dryRun, move, files[], warnings[], skipped[], ambiguous[]?, written[], undo?, plan?}`:
+A change is
+`{kind, from, to, dryRun, move, notIndexed?, files[], warnings[], skipped[], ambiguous[]?, written[], undo?, plan?}`:
 
 - `kind` is `note`, `folder`, `root` (a vault's name), `heading`, `relink`, `convert`, `replace`, `make-root` (`init`) or
   `unmake-root` (`deinit`).
 - `move` is `{from, to, dir}`, the absolute paths moved, when something moves.
+- `notIndexed` is `walk.exclude` when a note or folder moves where the vault doesn't index it.
 - `files[{path, abs, root, name, edits[{line, before, after}]}]` lists each file rewritten, and each line in it.
 - `skipped` lists the links left as they are, and why.
 - `written` lists the files written (empty on a dry run).
@@ -997,7 +1003,8 @@ is the file's whole new path. A note's extension is kept when the new path has n
 A note's own relative links are rewritten to work from its new folder. So are the paths in a code file's comments and a
 data file's values. A folder moves with everything in it, and links between two of its files stay as they are. A vault
 nested in this one moves as a folder, keeping its name. A pointer as the new path is refused (exit 5). A pointer as what
-to move is fine.
+to move is fine. Moved where `walk.exclude` leaves it out, it's moved, and the line says it isn't indexed:
+`renamed coffee.md → drafts/coffee.md (not indexed: walk.exclude): 0 changes in 0 files`.
 
 `mv` takes `--dry-run` and `--plan`. With `--json`, the data is [a change](#moving-copying-and-deleting), with `kind`
 `note` or `folder`.
@@ -1020,9 +1027,10 @@ A folder that's there, or a path ending in `/`, is copied into, keeping the name
 `name-copy`, as without a path. Any other path is the copy's whole path. An existing file there is refused (exit 5), and
 so is a path in a folder tools fill, as `mv` refuses one.
 
-Links aren't rewritten. The copy says what the original says.
+Links aren't rewritten. The copy says what the original says. A copy where `walk.exclude` leaves it out is made, and
+the line says it isn't indexed.
 
-With `--json`, the data is `{from, to, dir}`.
+With `--json`, the data is `{from, to, dir, notIndexed?}`.
 
 ### `rm`
 
@@ -1476,8 +1484,9 @@ printf 'brew ratio 1:16\n' | slipbox capture --stdin --lang text
   it's the text. Empty stdin is refused (exit 2).
 - `--lang <language>`: fence stdin as code in this language.
 
-The human output is the scratch's path. With `--json`, the data is `{scratch, project, entry}`. `project` is the vault,
-and `entry` is what was added.
+The human output is the scratch's path. A scratch kept in the vault where `walk.exclude` leaves it out is written to,
+and a warning says it isn't indexed. With `--json`, the data is `{scratch, project, entry, notIndexed?}`. `project` is
+the vault, and `entry` is what was added.
 
 ### `scratch`
 
@@ -1601,8 +1610,10 @@ An earlier export already at the path is replaced, whatever its format: each car
 note is never replaced, of this vault or another, not even with `--force` (exit 5). The one exception is an earlier
 Markdown export ([Exporting](export.md#from-the-command-line)).
 
-`export` fetches nothing from the network. With `--json`, the data is `{path, format, notes[], bytes, files[]}`. `files`
-are the pictures written beside it.
+A Markdown export where `walk.exclude` leaves it out is written, and the line says it isn't indexed.
+
+`export` fetches nothing from the network. With `--json`, the data is
+`{path, format, notes[], bytes, files[], notIndexed?}`. `files` are the pictures written beside it.
 
 ## Code
 

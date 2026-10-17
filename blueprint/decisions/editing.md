@@ -564,4 +564,3 @@ without the index. While a rebase stopped at a conflict is under way, the change
 **Not chosen:** stashing untracked files too (`git stash --include-untracked` around the rebase): git's autostash
 leaves them, and they're in the way only where git says so. Following `rebase.autoStash` without asking: the question
 says where the changes go.
-||||||| d9355a3

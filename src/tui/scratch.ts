@@ -17,6 +17,11 @@ export class Scratch {
     return scratchLocation(this.app.loc, this.app.config);
   }
 
+  /** What a message about an entry added adds when the scratch is in the vault where it's never indexed (D246). */
+  notIndexed(): string {
+    return this.app.files.notIndexed(this.location().path);
+  }
+
   /**
    * An entry added to the scratch, the scratch left as it is — shown, or not (a review's note, GIT-D3): its text after,
    * or null when it couldn't be (an open scratch's typing that couldn't be saved first).
@@ -48,7 +53,7 @@ export class Scratch {
     if (v?.buf.abs !== loc.path) return;
     if (!editable(v)) this.app.lens.setViewMode(v, this.app.lens.editMode(v)); // the lens opened on the entry, or the source
     startInsert(this.app, v, () => at);
-    this.app.message("info", "added to the scratch; add a note, esc then q closes it");
+    this.app.message("info", `added to the scratch${this.notIndexed()}; add a note, esc then q closes it`);
   }
 
   /** The scratch's empty notes dropped as it closes (D229): a capture with nothing said about it is its reference. */

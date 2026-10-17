@@ -36,7 +36,17 @@ import {
 import { forgetPlan, listPlans, loadPlan, type SavedPlan, savePlan } from "../core/plans.ts";
 import { isInside, isVaultRoot, recordLocation, rootAt } from "../core/vault.ts";
 import { has, UsageError } from "./args.ts";
-import { EXIT, CliError, type Session, type Result, type Handler, requireArg, resolveNote } from "./common.ts";
+import { notIndexedSaid } from "../core/graph.ts";
+import {
+  EXIT,
+  CliError,
+  type Session,
+  type Result,
+  type Handler,
+  requireArg,
+  resolveNote,
+  notIndexed,
+} from "./common.ts";
 
 /** Files and folders moved, copied, deleted and restored; the commands whose edits are a rename's plan. */
 export const FILE_COMMANDS: Record<string, Handler> = {
@@ -64,7 +74,12 @@ export const FILE_COMMANDS: Record<string, Handler> = {
     const to = dest === undefined ? undefined : moveTarget(s.graph, rel, dest);
     try {
       const r = copyPath(s.graph, rel, to !== dest && to === rel ? undefined : to);
-      return { data: r, human: `copied ${r.from} → ${r.to}\n` };
+      // Where `walk.exclude` leaves the copy out (D246): made, and said that the vault never indexes it.
+      const left = notIndexed(s, join(s.loc.root, r.to), r.dir);
+      return {
+        data: { ...r, ...(left ? { notIndexed: left } : {}) },
+        human: `copied ${r.from} → ${r.to}${notIndexedSaid(left)}\n`,
+      };
     } catch (err) {
       if (err instanceof FileOpError) throw new CliError(err.message, EXIT.refused);
       throw err;
@@ -274,6 +289,11 @@ export async function renameResult(s: Session, plan: () => RenamePlan, g = s.gra
     ),
   );
   const links = p.files.reduce((n, f) => n + f.edits.length, 0);
+  // A note or folder moved where `walk.exclude` leaves it out (D246): said after where it goes, done or to be done.
+  const left =
+    p.move && (p.kind === "note" || p.kind === "folder")
+      ? g.notIndexed(relative(g.root, p.move.to).split(sep).join("/"), p.move.dir)
+      : null;
   const verb = p.undo
     ? applied
       ? {
@@ -326,7 +346,7 @@ export async function renameResult(s: Session, plan: () => RenamePlan, g = s.gra
       ? `${verb} ${p.to}`
       : p.kind === "replace"
         ? `${verb} ${JSON.stringify(p.to)} with ${JSON.stringify(p.from)}`
-        : `${verb} ${p.from} back to ${p.to}`
+        : `${verb} ${p.from} back to ${p.to}${notIndexedSaid(left)}`
     : p.kind === "replace"
       ? `${verb} ${JSON.stringify(p.from)} with ${JSON.stringify(p.to)}`
       : p.kind === "relink" || p.kind === "convert"
@@ -335,7 +355,7 @@ export async function renameResult(s: Session, plan: () => RenamePlan, g = s.gra
           ? `${verb} ${p.from}/ a vault of its own${p.to !== p.from ? `, called ${p.to}` : ""}`
           : p.kind === "unmake-vault"
             ? `${verb} ${p.from}/ part of ${p.to}`
-            : `${verb} ${p.from} → ${p.to}`;
+            : `${verb} ${p.from} → ${p.to}${notIndexedSaid(left)}`;
   const human = [
     `${head}: ${links} change${links === 1 ? "" : "s"} in ${p.files.length} file${p.files.length === 1 ? "" : "s"}${saved ? ` — planned: slipbox apply ${saved.id} writes it (refused if any of these files changes first)` : ""}`,
     ...p.files.flatMap((f) => f.edits.map((e) => `  ${f.shown}:${e.line}\n    - ${e.before}\n    + ${e.after}`)),
@@ -348,6 +368,7 @@ export async function renameResult(s: Session, plan: () => RenamePlan, g = s.gra
       to: p.to,
       dryRun: !applied,
       move: p.move,
+      ...(left ? { notIndexed: left } : {}),
       files: p.files.map((f) => ({ path: f.shown, abs: f.abs, ...s.rootOf(f.abs), edits: f.edits })),
       warnings: p.warnings,
       skipped: p.skipped,
