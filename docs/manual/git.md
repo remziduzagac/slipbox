@@ -477,7 +477,8 @@ When the branch and its upstream both have new commits, a pull can't fast-forwar
 - **Rebase** the branch onto the upstream: its own commits are replayed after the upstream's.
 - **Nothing**: both stay as they are.
 
-The one git's `pull.rebase` names is selected; without it, merge. A conflict on the way opens the merge screen.
+The one git's `pull.rebase` names is selected; without it, merge. A conflict on the way opens the merge screen. A rebase
+over uncommitted changes asks first whether to stash them ([below](#a-rebase-over-uncommitted-changes)).
 
 ## Rebasing onto the base
 
@@ -493,6 +494,24 @@ Git runs in the background, so you may be typing, or answering another question,
 doesn't open over what you're doing, since your keys would settle conflicts there. A message says where the rebase
 stopped instead: press `x` in the git panel, or run `:resolve`, when you're ready. The same goes for a pull's question
 about bringing both sides together: `p` asks it again.
+
+### A rebase over uncommitted changes
+
+Git won't start a rebase while tracked files have changes, staged or not. So when they do, slipbox asks first, before
+`shift+r`'s rebase or a pull's: `Stash your changes, rebase fix/retry onto main, put them back?`, with how many files
+are changed. For `shift+r`, that's its one question, which also says how many commits each side has.
+
+Yes stashes the changes, rebases, and puts them back. Changes you had staged come back not staged, though a new file
+stays staged. No does nothing. If the rebase stops at a conflict, your changes stay stashed until it's continued to
+the end or aborted.
+
+Untracked files are left where they are, as git leaves them. They don't stop a rebase unless the other side has a file
+of the same name: then git refuses, and slipbox says so in git's words.
+
+If putting your changes back conflicts with what the rebase brought in, git keeps them in the stash, and marks the
+files in conflict. The message says so, names the stash, as in `stash@{0} ("autostash")`, and lists the files. Settle
+them on the merge screen (`x` in the git panel, or `:resolve`), then drop the stash: `z`, the stash named
+`autostash`, and Drop it.
 
 ## A merge or a rebase under way
 

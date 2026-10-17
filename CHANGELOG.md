@@ -99,7 +99,9 @@ The format is [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.1.0/); wh
   status line says so (`rebasing 2/5`), the panel has Continue, Skip and Abort buttons, and `shift+r` offers the same
   (`:continue`, `:skip`, `:abort`); Abort asks first. A cherry-pick or a revert you started in a terminal is shown and
   handled the same way (`cherry-picking`, `reverting`). In a vault you don't trust, none of them runs the repository's
-  hooks.
+  hooks. A rebase over uncommitted changes, `shift+r`'s or a pull's, asks "Stash your changes, rebase, put them back?"
+  instead of failing; yes stashes them, rebases and puts them back. Where they clash with what the rebase brought in,
+  git keeps them in the stash, and the message names it and the files in conflict.
 
 ### Changed
 

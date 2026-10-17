@@ -245,16 +245,17 @@ slipbox never reverts a change in a file you have unsaved typing in. It says so,
 While the agent worked, `main` moved on. A rebase replays the agent's commits after `main`'s new ones, so its branch
 merges as if it had started from `main` as it is now.
 
-1. git won't rebase over uncommitted changes. If the agent's worktree still has some, set them aside: press `z` in the
-   git panel, and pick "Stash the changes…". Type a message, or none, and press `enter`.
-2. Press `shift+r` in the git panel, or run `:rebase`. slipbox asks first, and says how many commits each side has:
+1. Press `shift+r` in the git panel, or run `:rebase`. slipbox asks first, and says how many commits each side has:
    `Rebase fix/retry onto main? Its 3 commits replayed after main's 2 new.`
+2. git won't rebase over uncommitted changes. If the agent's worktree still has some, the question offers to set them
+   aside and bring them back: `Stash your changes, rebase fix/retry onto main, put them back?` Press `y`.
 3. The rebase runs in the background. While it's under way, the status line says so: `rebasing 2/3`.
 4. If a commit doesn't replay cleanly, the rebase stops there, and the merge screen opens on its conflict
    ([below](#settle-a-conflict-on-the-merge-screen)). Settle it, save it and stage it. Then press `shift+r` again, and
    Continue (`c`). Abort (`a`) puts the branch back where it was.
-5. When it's done, a message says `rebased fix/retry onto main`. To bring back what you stashed, press `z`, pick the
-   stash, and Pop it.
+5. When it's done, a message says `rebased fix/retry onto main`, and the changes you had are back. If they clash with
+   what the rebase brought in, git keeps them in the stash, and the message names it and the files in conflict.
+   Settle those files on the merge screen, then drop the stash: press `z`, pick it, and Drop it.
 
 ### Settle a conflict on the merge screen
 
