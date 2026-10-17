@@ -8,7 +8,7 @@
 import type { Parents, PhrasingContent } from "mdast";
 import { type BlockDiff, type BlockItem, type BlockSide, blockText, headText, type NoteBlock } from "../blockdiff.ts";
 import type { Glyphs } from "../glyphs.ts";
-import type { WordRange } from "../merge.ts";
+import { inRanges, type WordRange } from "../merge.ts";
 import { sanitize } from "../sanitize.ts";
 import type { Role } from "../theme/theme.ts";
 import { graphemes, graphemeWidth, stringWidth } from "../width.ts";
@@ -63,11 +63,13 @@ const FRAMES = {
 
 /**
  * The diff's items laid out at `width`: each row's `src` is the unit it shows (`BlockDiff.units`, 1-based), so `enter`
- * knows where it goes. A frame is as wide as the window; its rules are decoration, never the cursor's.
+ * knows where it goes. A frame is as wide as the window, however narrow (its label cut to fit); its rules are
+ * decoration, never the cursor's.
  */
 export function layoutBlockDiff(d: BlockDiff, opts: BlockDiffLayoutOptions): Layout {
   const g = opts.glyphs;
-  const width = Math.max(12, opts.width);
+  // The narrowest a frame can be: its rules, and a column of text between them.
+  const width = Math.max(5, opts.width);
   const lines: Line[] = [];
   let prev: BlockItem | null = null;
   for (const item of d.items) {
@@ -108,7 +110,7 @@ export function layoutBlockDiff(d: BlockDiff, opts: BlockDiffLayoutOptions): Lay
 
 /** An unchanged block: its rows where a frame's text is, unframed. */
 function plain(side: BlockSide, b: NoteBlock, unit: number, width: number, opts: BlockDiffLayoutOptions): Line[] {
-  return rowsOf(side, b, unit, Math.max(4, width - 4), [], undefined, opts).map(({ cells, src }) => ({
+  return rowsOf(side, b, unit, width - 4, [], undefined, opts).map(({ cells, src }) => ({
     spans: [{ text: "  ", role: "text", attrs: 0 }, ...spansOf(cells)],
     src,
     text: [2, Number.MAX_SAFE_INTEGER] as [number, number],
@@ -128,7 +130,7 @@ function framed(
   const box = opts.glyphs.box;
   const inner = width - 4;
   const rule = (text: string, attrs = 0): Span => ({ text, role: f.role, attrs });
-  const label = ` ${f.label} `;
+  const label = ` ${f.label} `.slice(0, width - 2);
   const out: Line[] = [
     {
       spans: [rule(box.tl), rule(label, A_BOLD), rule(box.h.repeat(Math.max(0, width - 2 - label.length)) + box.tr)],
@@ -160,13 +162,19 @@ function rowsOf(
   opts: BlockDiffLayoutOptions,
 ): { cells: Cell[]; src: number }[] {
   const text = blockText(side, b);
-  // Each line's first offset in the block's text, and the line an offset is on.
+  // Each line's first offset in the block's text, and the line an offset is on (found by halves: a fence can be
+  // thousands of lines).
   const starts = [0];
   for (const l of side.lines.slice(b.from - 1, b.to - 1)) starts.push(starts[starts.length - 1]! + l.length + 1);
   const lineOf = (at: number) => {
-    let k = 0;
-    while (k + 1 < starts.length && starts[k + 1]! <= at) k++;
-    return b.from + k;
+    let lo = 0;
+    let hi = starts.length - 1;
+    while (lo < hi) {
+      const mid = (lo + hi + 1) >> 1;
+      if (starts[mid]! <= at) lo = mid;
+      else hi = mid - 1;
+    }
+    return b.from + lo;
   };
   const out: { cells: Cell[]; src: number }[] = [];
   for (const p of piecesOf(side, b, text, starts, marks, opts)) {
@@ -174,13 +182,20 @@ function rowsOf(
       if (c.at < 0) continue;
       c.src = unit + lineOf(c.at) - b.from + 1;
       if (f?.all) c.bg = f.all;
-      else if (f?.word && (c.mark || marks.some(([s, e]) => c.at >= s && c.at < e))) c.bg = f.word;
+      else if (f?.word && (c.mark || inRanges(marks, c.at))) c.bg = f.word;
     }
-    const lead = p.lead.reduce((n, c) => n + c.w, 0);
-    wrap(p.cells, Math.max(1, inner - lead), p.prose).forEach((cells, k) => {
+    // A lead as wide as the frame (a list nested deep, a narrow window): its indent goes, then the rest of it.
+    const lead = fit(p.lead, inner);
+    const hang =
+      widthOf(p.hang) <= widthOf(lead)
+        ? p.hang
+        : p.hang.every((c) => c.at < 0 && !c.g.trim())
+          ? spaces(widthOf(lead))
+          : fit(p.hang, inner);
+    wrap(p.cells, Math.max(1, inner - Math.max(widthOf(lead), widthOf(hang))), p.prose).forEach((cells, k) => {
       const first = cells.find((c) => c.at >= 0);
       out.push({
-        cells: [...(k ? p.hang : p.lead), ...cells],
+        cells: [...(k ? hang : lead), ...cells],
         src: unit + (first ? lineOf(first.at) : p.line) - b.from + 1,
       });
     });
@@ -269,6 +284,14 @@ const MARKER = /^(\s*)([-*+]|\d{1,9}[.)])(\s+)(\[[ xX]\](?:\s+|$))?/;
 const spaces = (w: number, role: Role = "text"): Cell[] => (w ? [{ g: " ".repeat(w), w, role, attrs: 0, at: -1 }] : []);
 const widthOf = (cells: Cell[]) => cells.reduce((n, c) => n + c.w, 0);
 
+/** A lead that leaves `inner` room for its text — two columns, a wide character's: as it is; else without its indent;
+ *  else none. */
+function fit(lead: Cell[], inner: number): Cell[] {
+  if (widthOf(lead) + 2 <= inner) return lead;
+  const kept = lead.filter((c) => c.at >= 0 || c.g.trim());
+  return widthOf(kept) + 2 <= inner ? kept : [];
+}
+
 /** A block as pieces, a line each, laid out by its kind. */
 function piecesOf(
   side: BlockSide,
@@ -284,12 +307,14 @@ function piecesOf(
   /** The offset in the block's text of a point of the note. */
   const off = (p: { line: number; column: number } | undefined) =>
     p ? Math.min(text.length, (starts[p.line - b.from] ?? text.length) + p.column - 1) : -1;
-  /** Lines `from` to `to` as written, `lead` before the first and `hang` before the others. */
+  /** Lines `from` to `to` as written, `lead` before the first and `hang` before the others. A CRLF line's CR isn't
+   *  shown, as source mode doesn't show it. */
   const asWritten = (role: Role, from = b.from, to = b.to, lead: Cell[] = [], hang = spaces(widthOf(lead))) => {
     const out: Piece[] = [];
     for (let l = from; l <= Math.min(to, b.to); l++) {
       const s = starts[l - b.from] ?? text.length;
-      const e = (starts[l - b.from + 1] ?? text.length + 1) - 1;
+      let e = (starts[l - b.from + 1] ?? text.length + 1) - 1;
+      if (e > s && text[e - 1] === "\r") e--;
       out.push({ lead: l === from ? lead : hang, hang, cells: verbatim(text, s, e, role, tab), prose: false, line: l });
     }
     return out;
@@ -404,8 +429,9 @@ function phrasing(
 ): Cell[][] {
   const lines: Cell[][] = [[]];
   const cur = () => lines[lines.length - 1]!;
-  const marked = (c: Cell) => c.mark || marks.some(([s, e]) => c.at >= s && c.at < e);
-  /** `shown`'s characters, each at its place in the text from `from` on (before `to`); white space as a space. */
+  const marked = (c: Cell) => c.mark || inRanges(marks, c.at);
+  /** `shown`'s characters, each at its place in the text from `from` on (before `to`); white space as a space — a CRLF
+   *  line break, one character to the eye, too. */
   const put = (shown: string, from: number, to: number, r: Role, a: number) => {
     let p = Math.max(0, from);
     const end = to < 0 ? text.length : to;
@@ -414,7 +440,7 @@ function phrasing(
       const found = q >= 0 && q < end;
       const at = found ? q : Math.min(p, Math.max(0, end - 1));
       if (found) p = q + ch.length;
-      const s = /^\s$/.test(ch) ? " " : sanitize(ch);
+      const s = /^\s+$/.test(ch) ? " " : sanitize(ch);
       const w = graphemeWidth(s);
       if (s && w) cur().push({ g: s, w, role: r, attrs: a, at });
     }

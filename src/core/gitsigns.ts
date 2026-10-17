@@ -1,9 +1,10 @@
 // A file's changes against what's staged (plan 26.1): the runs of lines the text — as it is now, unsaved typing
 // included — has that git's index hasn't, each as the gutter signs it: lines added, lines changed, lines deleted
 // (marked on the line before them, or the first line when they were the first). Line endings don't count: a checkout
-// that turns LF into CRLF changes no line.
+// that turns LF into CRLF changes no line. Nor does a byte order mark, which git keeps in the file's text and slipbox
+// keeps apart from it (a change's lines never carry it).
 
-import { diffLines } from "./merge.ts";
+import { comparable, diffLines } from "./merge.ts";
 
 /** A run of changed lines: where it is now (`from`–`to`, lines from 1; a deletion's `to` is `from - 1`), what it was. */
 export interface GitChange {
@@ -20,7 +21,7 @@ export interface GitChange {
 /** How the gutter marks a line: added, changed, deleted below it — or above it, where it's the first. */
 export type GitSign = "add" | "change" | "delete" | "topdelete";
 
-const lines = (text: string) => text.replace(/\r\n/g, "\n").split("\n");
+const lines = (text: string) => comparable(text).split("\n");
 
 /** The changes from `staged` to `text`, in order. Null staged (a file git doesn't have): every line added. */
 export function gitChanges(staged: string | null, text: string): GitChange[] {

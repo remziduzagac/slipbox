@@ -225,7 +225,8 @@ The CLI's commands are the user's reference, [cli.md](../../docs/manual/cli.md);
 | `core/spell.ts` | 25.6 | a note's prose word by word; Hunspell dictionaries: slipbox's, yours, the system's |
 | `core/spell-thread.ts` | 25.6 | the spell checker's thread (`spell-worker.ts`, D232): its dictionaries, its answers |
 | `core/hunspell.ts` | 25.6 | Hunspell as WebAssembly: a dictionary built; loaded by the spell checker's thread alone |
-| `core/merge.ts` | 5.5, GIT-D2 | line diff (Myers), changed words in paired lines, three-way merge; every diff |
+| `core/myers.ts` | 5.5, GIT-D2 | the line diff every diff is: Myers' in linear space, as git's, its cost capped |
+| `core/merge.ts` | 5.5, GIT-D2 | changed words in paired lines, three-way merge, a diff's rows; what a diff compares |
 | `core/blockdiff.ts` | GIT-D2 | a note's diff before and after: the line diff widened to the blocks it touches |
 | `core/conflicts.ts` | GIT-D5 | a file in conflict for the merge screen: markers, the index's stages, the result |
 | `core/gitreview.ts` | GIT-D3 | the review's hunk shown, found again, a note's scratch entry, the end's tally |

@@ -14855,6 +14855,31 @@ describe("git in the TUI: marks, what changed, a note's diff, worktrees, conflic
     ]);
   });
 
+  test(":diff: a note with a byte order mark, unchanged, has no differences; its first line changed, that line", async () => {
+    const root = repo();
+    if (!root) return;
+    git(root, "checkout", "-q", "main");
+    writeFileSync(join(root, "d.md"), "\uFEFF# D\n\nbody\n");
+    git(root, "add", "d.md");
+    git(root, "commit", "-q", "-m", "d");
+    git(root, "checkout", "-q", "feat");
+    git(root, "merge", "-q", "main");
+    const h = await harness({ root, open: "d.md" });
+    await h.app.run("git.diff");
+    expect([h.app.floating, h.app.messages.at(-1)?.text]).toEqual([null, "no differences from main"]);
+    // Its gutter: no sign on the first line either (once git has said what's staged).
+    for (let t = Date.now(); h.app.git.changesOf(h.app.view!) === null && Date.now() - t < 10_000; )
+      await Bun.sleep(20);
+    expect(h.app.git.changesOf(h.app.view!)).toEqual([]);
+    h.app.view!.buf.edit(0, "# D".length, "# E"); // typed, unsaved
+    await h.app.run("git.diff");
+    const w = h.app.floating?.kind === "diff" ? h.app.floating.diff : null;
+    expect(w?.rows.filter((r) => r.kind === "-" || r.kind === "+").map((r) => `${r.kind} ${r.text}`)).toEqual([
+      "- # D",
+      "+ # E",
+    ]);
+  });
+
   test(":worktrees: the worktrees by branch; enter opens this note in the one picked", async () => {
     const root = repo();
     if (!root) return;
@@ -15053,6 +15078,29 @@ describe("the diff window (GIT-D2)", () => {
     expect([h.app.floating, h.app.messages.at(-1)?.text, back]).toEqual([null, "no differences from main", 1]);
   });
 
+  test("line endings, a byte order mark, a final line break: not drawn as every line changed, nor as nothing — said", async () => {
+    const root = makeVault();
+    const h = await harness({ root, open: "index.md" });
+    const crlf = code.replace(/\n/g, "\r\n");
+    const said = (before: string, now: string) => {
+      h.app.git.showLineDiff(before, now, "x.ts", "x.ts: its change", "x.ts: nothing to show");
+      return [h.app.floating?.kind ?? null, h.app.messages.at(-1)?.text];
+    };
+    expect(said(crlf, code)).toEqual([null, "only the line endings (CRLF → LF) changed: no line to show"]);
+    expect(said(code, code.replace(/\n$/, ""))).toEqual([
+      null,
+      "only the final line break (removed) changed: no line to show",
+    ]);
+    expect(said(`\uFEFF${code}`, code)).toEqual([null, "only the byte order mark (removed) changed: no line to show"]);
+    // A line changed as well: that line, and no other.
+    said(crlf, code.replace("const line2 = 2;", "const line2 = 22;"));
+    const w = h.app.floating?.kind === "diff" ? h.app.floating.diff : null;
+    expect(w?.rows.filter((r) => r.kind === "-" || r.kind === "+").map((r) => `${r.kind} ${r.text}`)).toEqual([
+      "- const line2 = 2; // line 2",
+      "+ const line2 = 22; // line 2",
+    ]);
+  });
+
   test("the window is read-only, drawn one way: typing refused, no source mode; as wide as the screen less its margins", async () => {
     const h = await opened(code.replace("const line2 = 2;", "const line2 = 22;"), 140);
     const top = screen(h).find((r) => r.includes("x.ts: its change"))!;
@@ -15119,8 +15167,12 @@ describe("the diff window (GIT-D2)", () => {
     const h = await harness({ root, open: "index.md", width: 100, height: 40, config: (c) => (c.git.diff = "source") });
     h.app.git.showLineDiff("one two three four\n", "one two THREE four\n", "n.md", "n.md: its change");
     expect(screen(h).some((r) => r.includes("+ one two THREE four"))).toBe(true);
+    // Its blocks not found until they're drawn.
+    const blocks = () => (h.app.floating?.kind === "diff" ? h.app.floating.diff.blocks : undefined);
+    expect(blocks()).toMatchObject({ on: false, diff: null });
     await h.keys("tab");
     expect(screen(h).some((r) => r.includes("┌ after"))).toBe(true);
+    expect(blocks()?.diff?.items.some((i) => i.kind === "change")).toBe(true);
     await h.keys("escape");
     h.app.git.showLineDiff(code, code.replace("= 2;", "= 22;"), "x.ts", "x.ts: its change");
     await h.keys("tab");

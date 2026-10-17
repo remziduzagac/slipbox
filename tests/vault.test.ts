@@ -4567,6 +4567,21 @@ describe("git: status, what changed, diffs, worktrees, conflicts (5.11–5.14)",
     expect((await cli(["changed"], plain)).code).toBe(3);
   });
 
+  test("diff: a byte order mark kept, line endings and a final line break changed: no line changed", async () => {
+    const r = await repo();
+    if (!r) return;
+    git(r.top, "checkout", "-q", "main");
+    writeFileSync(join(r.root, "m.md"), "\uFEFF# M\n\nbody\n");
+    writeFileSync(join(r.root, "e.md"), "# E\n\nbody\n");
+    git(r.top, "add", "-A");
+    git(r.top, "commit", "-q", "-m", "m and e");
+    git(r.top, "checkout", "-q", "feat");
+    git(r.top, "merge", "-q", "main");
+    expect((await cli(["diff", "m.md"], r.root)).json.data.rows).toEqual([]);
+    writeFileSync(join(r.root, "e.md"), "# E\r\n\r\nbody");
+    expect((await cli(["diff", "e.md"], r.root)).json.data.rows).toEqual([]);
+  });
+
   test("a merge's conflicts are problems: each file, at its first marker", async () => {
     const r = await repo();
     if (!r) return;

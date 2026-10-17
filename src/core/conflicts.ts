@@ -4,7 +4,7 @@
 // three-way merge that made it (the conflict prompt's) — and the file as it will be, each conflict settled or still
 // marked.
 
-import { type DiffViewRow, diffLines, type Hunk, mergeChunks } from "./merge.ts";
+import { comparable, type DiffViewRow, diffLines, type Hunk, mergeChunks } from "./merge.ts";
 
 /** One of git's conflicts: yours, theirs, the base where it's known, and the markers' labels. */
 export interface Conflict {
@@ -288,13 +288,14 @@ export function resultView(
  * Each conflict's base where the markers didn't hold it, from the index's stages (`base` stage 1, `ours` 2, `theirs`
  * 3): where yours sits in stage 2, and theirs in 3, mapped back onto stage 1 through each side's changes. Yours is
  * looked for where the stretches before it put it, else wherever it is; a conflict found on neither side keeps none.
+ * Line endings and a byte order mark aren't compared: git's index can hold LF where a checkout has CRLF.
  */
 export function withStages(
   f: Conflicted,
   stages: { base: string | null; ours: string | null; theirs: string | null },
 ): Conflicted {
   if (stages.base === null) return f;
-  const norm = (t: string | null) => (t === null ? null : linesOf(t.replace(/\r\n/g, "\n")).lines);
+  const norm = (t: string | null) => (t === null ? null : linesOf(comparable(t)).lines);
   const B = norm(stages.base)!;
   const O = norm(stages.ours);
   const T = norm(stages.theirs);
@@ -309,9 +310,9 @@ export function withStages(
       return s;
     }
     const ranges: [number, number][] = [];
-    const o = O && ho ? locate(O, s.ours, atO) : null;
+    const o = O && ho ? locate(O, s.ours.map(bare), atO) : null;
     if (o !== null) ranges.push(toBase(ho!, o, o + s.ours.length));
-    const t = T && ht ? locate(T, s.theirs, atT) : null;
+    const t = T && ht ? locate(T, s.theirs.map(bare), atT) : null;
     if (t !== null) ranges.push(toBase(ht!, t, t + s.theirs.length));
     atO = (o ?? atO) + s.ours.length;
     atT = (t ?? atT) + s.theirs.length;

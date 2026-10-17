@@ -220,6 +220,28 @@ describe("the git panel by mouse as by keys (GIT-D8)", () => {
     expect(rowOf(app, (r) => r.kind === "file")).toBe(-1);
   });
 
+  test("a CRLF checkout (eol=crlf): a file's diff against what's staged shows the line changed, not every line", async () => {
+    const root = repo();
+    writeFileSync(join(root, ".gitattributes"), "*.md text eol=crlf\n");
+    writeFileSync(join(root, "n.md"), "one line\ntwo line\nthree line\n");
+    git(root, "add", "-A");
+    git(root, "commit", "-q", "-m", "n");
+    // Checked out again: CRLF on disk, LF in git. One word changed.
+    rmSync(join(root, "n.md"));
+    git(root, "checkout", "--", "n.md");
+    writeFileSync(join(root, "n.md"), "one line\r\ntwo lines\r\nthree line\r\n");
+    expect(git(root, "status", "--porcelain", "--", "n.md")).toBe(" M n.md\n");
+    const { app, click } = await panel(root);
+    const i = rowOf(app, (r) => r.kind === "file" && r.entry.path === "n.md");
+    click(`git:row:${i}`);
+    expect(await until(() => app.floating?.kind === "diff")).toBe(true);
+    const w = app.floating?.kind === "diff" ? app.floating.diff : null;
+    expect(w?.rows.filter((r) => r.kind === "-" || r.kind === "+").map((r) => `${r.kind} ${r.text}`)).toEqual([
+      "- two line",
+      "+ two lines",
+    ]);
+  });
+
   test("a branch committed and clean: nothing uncommitted, This branch against main its files, a click its diff", async () => {
     const root = repo();
     const { app, frame, click } = await panel(root);
@@ -531,6 +553,28 @@ describe("the review, the merge screen and the rebase, from the panel (GIT-D3, G
     await keys("x");
     expect(app.floating?.title).toBe("Merge — b.md");
     frame();
+  });
+
+  test("a CRLF checkout's conflict (eol=crlf): its base found in git's index, each side shown against it by its change", async () => {
+    const root = repo();
+    writeFileSync(join(root, ".gitattributes"), "*.md text eol=crlf\n");
+    writeFileSync(join(root, "m.md"), "# M\n\none\n\ntwo\n\nend\n");
+    git(root, "add", "-A");
+    git(root, "commit", "-q", "-m", "m");
+    git(root, "switch", "-q", "-c", "other");
+    writeFileSync(join(root, "m.md"), "# M\n\nONE TWO\n\nend\n");
+    git(root, "commit", "-qam", "other's");
+    git(root, "switch", "-q", "feature");
+    writeFileSync(join(root, "m.md"), "# M\n\nuno\n\ntwo\n\nend\n");
+    git(root, "commit", "-qam", "feature's");
+    git(root, "-c", "merge.conflictStyle=merge", "merge", "-q", "other");
+    const { app, click } = await panel(root, "m.md");
+    click("git:btn:resolve");
+    expect(app.floating?.kind).toBe("merge");
+    const shown = app.floating!.view.buf.source.split("\n");
+    expect(shown.filter((l) => /^Base/.test(l))).toEqual(["Base"]);
+    // Yours and theirs against the base: what each changed; yours left "two" as it was.
+    expect(shown.filter((l) => /^[-+] /.test(l))).toEqual(["- one", "+ uno", "- one", "- two", "+ ONE TWO"]);
   });
 
   test("shift+r: the branch checked out rebased onto its base, asked first; its row's footer says it", async () => {

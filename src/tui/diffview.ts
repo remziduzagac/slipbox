@@ -15,7 +15,7 @@ import { layoutBlockDiff } from "../core/layout/blockdiff.ts";
 import { diffText, layoutDiff } from "../core/layout/diff.ts";
 import { type Layout, srcAt } from "../core/layout/ir.ts";
 import { layoutSplitDiff, SPLIT_MIN, splitColumns } from "../core/layout/splitdiff.ts";
-import { type DiffViewRow, diffView } from "../core/merge.ts";
+import { comparable, type DiffViewRow, diffView, unseenChange } from "../core/merge.ts";
 import { TOP } from "../core/position.ts";
 import { readerFor } from "../core/readers.ts";
 import type { App, View } from "./app.ts";
@@ -28,9 +28,9 @@ export interface DiffWindow {
   rows: DiffViewRow[];
   /** The folds opened, by their first line in `before`. */
   open: Set<number>;
-  /** A note's diff (GIT-D2): its blocks before and after, drawn while `on`, and their folds opened; `tab` switches
-   *  between them and the rows. A code file's has none. */
-  blocks: { on: boolean; diff: BlockDiff; open: Set<number> } | null;
+  /** A note's diff (GIT-D2): its blocks before and after, drawn while `on` — found the first time they are (`blocksOf`)
+   *  — and their folds opened; `tab` switches between them and the rows. A code file's has none. */
+  blocks: { on: boolean; diff: BlockDiff | null; open: Set<number> } | null;
   /** `enter` on a line: there (its line in `now`). Without, `enter` goes back as `esc` does. */
   go?: (line: number) => void;
   /** Where `esc` goes: the list or the question the diff was opened from. */
@@ -52,11 +52,22 @@ export interface DiffRequest {
 /** The window's text: a line a row of its drawing's (a unit of the blocks'), each saying what it is — what its height
  *  counts, and what its cursor's lines are. */
 function textOf(w: DiffWindow): string {
-  return w.blocks?.on ? w.blocks.diff.units.map((u) => u.text).join("\n") : diffText(w.rows).join("\n");
+  return w.blocks?.on
+    ? blocksOf(w)
+        .units.map((u) => u.text)
+        .join("\n")
+    : diffText(w.rows).join("\n");
 }
 
 /** Where each line of the window's text goes in `now`: a row's line, or a unit's. */
-const linesOf = (w: DiffWindow): number[] => (w.blocks?.on ? w.blocks.diff.units : w.rows).map((r) => r.line);
+const linesOf = (w: DiffWindow): number[] => (w.blocks?.on ? blocksOf(w).units : w.rows).map((r) => r.line);
+
+/** A note's diff as its blocks: found the first time it's wanted, so a diff drawn as its lines never pays for them. */
+export function blocksOf(w: DiffWindow): BlockDiff {
+  const b = w.blocks!;
+  b.diff ??= blockDiff(w.before, w.now, b.open);
+  return b.diff;
+}
 
 /** How a file's diff is highlighted: its language (a note's, markdown's highlighter: null) and its tab's width. */
 export function diffLanguage(app: App, path: string, text: string): { language: string | null; tabWidth: number } {
@@ -79,23 +90,31 @@ export function sideBySide(app: App, path: string, width: number): boolean {
   return layout === "split" || (layout === "auto" && splitColumns(width) >= SPLIT_MIN);
 }
 
-/** A diff, `before` to `now`, in the floating window; nothing different: said, and back. */
+/**
+ * A diff, `before` to `now`, in the floating window. Line endings and a byte order mark aren't the text's, so they're
+ * not compared (a checkout that turns LF into CRLF changes no line, as git and the gutter's signs have it). Nothing
+ * different: said, and back — what differs that the diff doesn't show (the line endings, the mark, the final line
+ * break) said too.
+ */
 export function openDiff(app: App, d: DiffRequest): void {
-  const rows = diffView(d.before, d.now);
+  const before = comparable(d.before);
+  const now = comparable(d.now);
+  const rows = diffView(before, now);
   if (!rows.length) {
-    app.message("info", d.none ?? "no differences");
+    const only = unseenChange(d.before, d.now);
+    app.message("info", only ? `only ${only} changed: no line to show` : (d.none ?? "no differences"));
     d.back?.();
     return;
   }
   if (app.floating && !app.overlays.closeFloating()) return;
-  const { language, tabWidth } = diffLanguage(app, d.path, d.now);
+  const { language, tabWidth } = diffLanguage(app, d.path, now);
   const note = classify(d.path, app.config.walk.extensions).group === "note";
   const w: DiffWindow = {
-    before: d.before,
-    now: d.now,
+    before,
+    now,
     rows,
     open: new Set(),
-    blocks: note ? { on: app.config.git.diff === "blocks", diff: blockDiff(d.before, d.now), open: new Set() } : null,
+    blocks: note ? { on: app.config.git.diff === "blocks", diff: null, open: new Set() } : null,
     go: d.go,
     back: d.back,
   };
@@ -114,7 +133,7 @@ export function openDiff(app: App, d: DiffRequest): void {
       made = {
         key,
         layout: w.blocks?.on
-          ? layoutBlockDiff(w.blocks.diff, { width, glyphs: how.glyphs, tabWidth })
+          ? layoutBlockDiff(blocksOf(w), { width, glyphs: how.glyphs, tabWidth })
           : split
             ? layoutSplitDiff(w.rows, w.before, w.now, opts)
             : layoutDiff(w.rows, w.before, w.now, opts),
@@ -137,7 +156,7 @@ export function diffEnter(app: App, view: View): boolean {
   const row = app.currentLayout(view).lines[view.cur.row];
   const at = (row ? srcAt(row, view.cur.col) : 0) - 1;
   if (w.blocks?.on) {
-    const fold = w.blocks.diff.items.find((i) => i.kind === "fold" && i.unit === at);
+    const fold = blocksOf(w).items.find((i) => i.kind === "fold" && i.unit === at);
     if (fold?.kind === "fold") {
       // Its blocks in its place; the cursor stays on its row, now their first.
       w.blocks.open.add(fold.own);
