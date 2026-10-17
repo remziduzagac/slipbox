@@ -349,7 +349,7 @@ is grouped under it, by its repository's shared git folder (`groupRepos`, `repoK
 is shown (`RepoView.again`). **In a repository**, its own panel, and after it, folded, **Other repositories (n)**: the
 view's others. **In a vault that isn't one** — home, a vault without git, Elsewhere — they're the panel: a line saying
 `~/work holds 3 repositories` (or that it holds none), then each repository's row; in a folder of home, the view not
-home itself, the rest of home's repositories (looked for from `~`) folded under **Elsewhere in home (n)**. Each row
+home itself, the rest of home's repositories (looked for from `~`) folded under **More in home (n)**. Each row
 says, at its end, its checkouts' uncommitted files (`✎n`), its main checkout's ahead and behind its upstream, or
 `clean`, `◆` when a worktree has uncommitted files, `asking git…` meanwhile: `git status --branch` asked per checkout
 (`checkoutStateLater`) only for the rows drawn, again when git has news or the panel's shown again. **Ordered** by
