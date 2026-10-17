@@ -182,3 +182,34 @@ gap costs time, not cover.
 snapshot, or the terminal checks. Requiring a branch up to date with `main` before it merges, or a merge queue (an
 organisation's repository): each still runs everything, more often. Checks chosen by the commands they declare: a
 changed file can't be tied to the commands it serves without running them.
+
+## D241: A terminal check may build its git state (2026-10-17)
+
+**Decision:** A terminal check's notes and files still come from the sample folders (TT-D5), but the git state it
+needs is made by the check, with git, in its own home: a repository's history and branches, a worktree, a bare
+repository as its remote, a conflict from a real merge or rebase, an operation under way. Histories the reference set
+has for itself stay in `.build/<repo>.toml`, replayed by `scripts/build-home.ts`; a state reached by doing something
+(a merge that conflicts, a remote that moved, a rebase stopped) is the check's own. Amends TT-D5. As built:
+`tests/terminal/checks/source-control.ts`; design/testing.md § The reference set.
+
+**Why:** The maintainer's choice, 2026-10-17. A conflict, a remote ahead or a rebase under way can't be committed as
+files, and each source-control check needs its own from its first key; made by git itself, what slipbox reads is
+git's own doing.
+
+**Cost:** Those checks' setup is code, not sample files: a case they build is in the check, not among `CASES.md`'s
+files.
+
+## D242: No merge queue, and no branch kept up to date before merging (2026-10-17)
+
+**Decision:** `main`'s rules don't require a pull request's branch to be up to date with `main`, and there's no merge
+queue. When `main` has moved under the files a pull request changes, its branch is updated (`gh pr update-branch`) and
+its CI runs again before it merges. A break two pull requests make together is found by `main`'s full run after the
+merge (D239) and fixed by a pull request of its own.
+
+**Why:** The maintainer's choice, 2026-10-17. A merge queue needs an organisation's repository. Requiring branches up
+to date runs CI again for every open pull request each time `main` moves, mostly for changes far apart.
+
+**Cost:** Such a break reaches `main` before CI says so. It happened once: two pull requests, each green, broke the
+typecheck together (2026-10-17), fixed within the hour.
+
+**Not chosen:** a merge queue (an organisation's repository first); branches required up to date.
