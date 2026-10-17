@@ -1036,7 +1036,6 @@ the way at each write, and a root nested on the way costs a look for its markers
 path was already allowed; saying it once per note or per session
 (a state to keep, and a save that reads as indexed); a message of its own after the write (the status line shows the
 last message, and the save's would hide it); text added to a bare-path output (`capture`, `mkdir`), which scripts read.
-||||||| 61b0b3a
 
 ## D248: A folder of home opened by name is whole, and counts against home's cap (2026-10-17)
 
@@ -1058,4 +1057,3 @@ it. A very large folder opened by name holds that many notes, as a vault of that
 
 **Not chosen:** the folder opened capped with home, its own deepest notes left out; the docs saying the folder opened
 is an exception to the cap, home's index going past it.
-||||||| 61b0b3a
