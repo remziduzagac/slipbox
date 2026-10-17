@@ -274,9 +274,21 @@ function keptWalk(loc: Pick<VaultLocation, "root" | "key">, filter: WalkFilter, 
     ...keptSkipped.filter((s) => keep(s.rel) && !former.includes(s)),
     ...became.filter((s) => !relisted.has(parentOf(s.rel))),
   ];
+  /**
+   * A file of the walk kept that is a link (VV-D6): kept only while the walk would keep it — within home, or followed
+   * to where it leads now and answering; else left out, its link said as the walk says it. Its folder's time needn't
+   * move when the link is pointed elsewhere.
+   */
+  const linkKept = (rel: string): boolean => {
+    const abs = join(root, rel);
+    if (!isLink(abs)) return true;
+    const v = symlinkVerdict(abs, realRoot);
+    if (!v.kept && v.reason) skipped.push({ rel, reason: v.reason, ...(v.link ? { link: v.link } : {}) });
+    return v.kept;
+  };
   const files: NoteFile[] = [];
   for (const rel of strings(kept.notes)) {
-    if (!keep(rel)) continue;
+    if (!keep(rel) || !linkKept(rel)) continue;
     const abs = join(root, rel);
     try {
       const st = statSync(abs);
@@ -285,7 +297,7 @@ function keptWalk(loc: Pick<VaultLocation, "root" | "key">, filter: WalkFilter, 
       else files.push({ rel, abs, size: st.size, mtimeMs: st.mtimeMs });
     } catch {}
   }
-  const assets = strings(kept.assets).filter(keep);
+  const assets = strings(kept.assets).filter((rel) => keep(rel) && linkKept(rel));
   // The folders listed again, and the vaults that are home's again, walked now: what's new in them — as far as the
   // cap's room left (the folders listed again always: they were listed before), and said when it's reached.
   const from = [...relist, ...former.filter((s) => isDir(join(root, s.rel))).map((s) => s.rel)];

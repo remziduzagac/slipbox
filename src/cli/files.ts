@@ -227,8 +227,10 @@ function destArg(s: Session, to: string | undefined, into = false): string | und
   const fromHere = into ? /^\.\.?(\/|$)/ : /^\.\.?\//;
   const abs = to.startsWith("/") ? to : fromHere.test(to) ? join(s.io.cwd, to) : join(s.loc.root, to);
   const rel = relative(s.loc.root, abs).split(sep).join("/");
-  if ((!rel && !into) || !isInside(s.loc.root, abs) || !landsInside(s.loc.root, abs))
+  if ((!rel && !into) || !isInside(s.loc.root, abs))
     throw new CliError(`${to} is outside the vault (${s.loc.root})`, EXIT.refused);
+  // Through a link out of the vault, followed or not, in home too: said as the TUI's move and copy say it (VV-D6).
+  if (!landsInside(s.loc.root, abs)) throw new CliError(`${rel} would land outside the vault`, EXIT.refused);
   if (!rel) return "/";
   return to.endsWith("/") ? `${rel}/` : rel;
 }

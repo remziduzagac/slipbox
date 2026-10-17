@@ -317,6 +317,9 @@ export async function runCli(argv: string[], io: Io): Promise<number> {
     // init makes the vault: opening the folder as one first would name it before --name could.
     const loc =
       command === "init" ? elsewhereAt(io.cwd) : locateVault({ root: flag(args, "root"), path: pathArg, cwd: io.cwd });
+    // In Elsewhere, every link on a path's way from the folder you work in down asks (VV-D6), not only those from the
+    // file's own folder.
+    if (loc.mode === "folder" && dirname(io.cwd) !== io.cwd) loc.workDir = io.cwd;
     session = new Session(args, loc, io);
     const handler = HANDLERS[command];
     if (!handler) throw new UsageError(`unknown command: ${command} (see slipbox help)`);

@@ -12,6 +12,7 @@ import { ELSEWHERE, rootLabel, tildePath } from "../core/names.ts";
 import type { Anchor, CursorAnchor } from "../core/position.ts";
 import { Reach } from "../core/reach.ts";
 import { sanitize } from "../core/sanitize.ts";
+import { linkSaid } from "../core/symlinks.ts";
 import { isInside, locateVault, type VaultLocation, vaultAt } from "../core/vault.ts";
 import { stringWidth, truncate, truncateStart } from "../core/width.ts";
 import type { App, View } from "./app.ts";
@@ -37,6 +38,22 @@ export interface Peek {
   fwd: Place[];
   /** `z`: the whole screen, not most of it. */
   full: boolean;
+  /** Not read: a link of its place's on its way isn't followed there (VV-D6) — the peek says so, and `o` goes there. */
+  unread?: boolean;
+}
+
+/**
+ * The link keeping the peek from reading `abs` (VV-D6): one of this vault's on its way, asked about first (`gate`), or
+ * one the place it's peeked into hasn't followed, by that place's rule — that vault's, home's, Elsewhere's from the
+ * file's own folder.
+ */
+function unfollowed(app: App, abs: string, loc: VaultLocation): { link: string; target: string | null } | null {
+  return app.following.blocked(abs) ?? app.following.blockedThere(abs, loc);
+}
+
+/** What a peek shows of a file it doesn't read (VV-D6): the link, and that going there is where it's asked. */
+function notRead(b: { link: string; target: string | null }, label: string): string {
+  return `**Not read here:** ${md(linkSaid(b.link, b.target))} isn't followed in ${md(label)}. \`o\` goes there, where opening it asks.\n`;
 }
 
 /** The peek open, when the floating window is one (and `view`, given, is its window). */
@@ -93,20 +110,27 @@ export function ownPath(app: App, path: string): string {
  * A note shows its backlinks after its text when its vault has an index; else it says how to see them.
  */
 export function peekAt(app: App, abs: string, loc: VaultLocation, anchor?: Anchor): void {
+  // A link of this vault's on the way, not followed: asked first, as opening it here would ask (VV-D6).
+  if (app.following.gate(abs, () => peekAt(app, abs, loc, anchor))) return;
   const kind = classify(abs, app.config.walk.extensions);
   if (kind.group === "binary") return app.message("warn", `${tildePath(abs)} is a binary file; slipbox opens text`);
+  // One the place it's in hasn't followed: not read, said so in the peek — `o` goes there, to choose.
+  const b = unfollowed(app, abs, loc);
   let text: string;
-  try {
-    text = readText(abs).text;
-  } catch {
-    return app.message("error", `cannot read ${tildePath(abs)}`);
+  if (b) text = notRead(b, rootLabel(loc));
+  else {
+    try {
+      text = readText(abs).text;
+    } catch {
+      return app.message("error", `cannot read ${tildePath(abs)}`);
+    }
+    if (kind.group !== "note" && text.slice(0, 8192).includes("\u0000"))
+      return app.message("warn", `${tildePath(abs)} holds binary bytes; slipbox opens text`);
   }
-  if (kind.group !== "note" && text.slice(0, 8192).includes("\u0000"))
-    return app.message("warn", `${tildePath(abs)} holds binary bytes; slipbox opens text`);
   const was = peekOf(app);
   const back = was ? [...was.back, here(app)!] : [];
   if (!was && app.floating && !app.overlays.closeFloating()) return;
-  show(app, { abs, loc, back, fwd: [], full: was?.full ?? false }, text, anchor);
+  show(app, { abs, loc, back, fwd: [], full: was?.full ?? false, ...(b ? { unread: true } : {}) }, text, anchor);
 }
 
 /** The peek showing `p`'s file: its buffer, read-only, its links read in its own vault. */
@@ -117,11 +141,12 @@ function show(app: App, p: Omit<Peek, "label">, text: string, anchor?: Anchor, c
   // Whether its vault has an index, asked before anything reads it: a note's backlinks are read from it.
   const indexed = !!graph && graph.indexedAt() !== null;
   const buf = new NoteBuffer(null, p.abs, `peek:${p.abs}`);
-  buf.kind = classify(p.abs, app.config.walk.extensions);
+  // Not read, it shows what's said of it, as Markdown.
+  buf.kind = p.unread ? { group: "note", format: "markdown" } : classify(p.abs, app.config.walk.extensions);
   buf.virtual = { save: () => true };
   buf.readOnly = "a peek is read-only — o goes there, to edit it";
   buf.elsewhere = { vault: label, graph, rel };
-  const markdown = buf.kind.group === "note" && buf.kind.format === "markdown";
+  const markdown = !p.unread && buf.kind.group === "note" && buf.kind.format === "markdown";
   buf.loadText(
     markdown && graph && rel !== null
       ? withBacklinks(text, p.abs, label, indexed ? graph : null, rel)
@@ -168,6 +193,12 @@ function md(s: string): string {
   return s.replace(/[\\`*_[\]<>|~$]/g, "\\$&");
 }
 
+/** A file's name on one line: a control character in it — a newline — shown as its escape (`\n`, `\x1b`). */
+function visible(s: string): string {
+  const named: Record<string, string> = { "\n": "\\n", "\r": "\\r", "\t": "\\t" };
+  return s.replace(/[\x00-\x1f\x7f]/g, (c) => named[c] ?? `\\x${c.charCodeAt(0).toString(16).padStart(2, "0")}`);
+}
+
 /**
  * A note's text and, under a rule, its backlinks (`graph`, its vault's, when it has an index): each a link to the
  * line linking here, from the note's folder — a link inside the peek like any. Without an index, how to see them.
@@ -180,8 +211,9 @@ function withBacklinks(text: string, abs: string, label: string, graph: Graph | 
   if (!list.length) return `${text}${end}\n---\n\n**Linked from:** no note links here.\n`;
   const rows = list.map((b) => {
     const from = isAbsolute(b.from) ? b.from : join(graph.root, b.from);
-    const href = relative(dirname(abs), from).replace(/[%#]/g, (c) => encodeURIComponent(c));
-    const shown = graph.shownPath(from);
+    // What would end the `<…>` or its line, or start a fragment, percent-encoded: a file's name can hold any of them.
+    const href = relative(dirname(abs), from).replace(/[%#<>\x00-\x1f\x7f]/g, (c) => encodeURIComponent(c));
+    const shown = visible(graph.shownPath(from));
     return `- [${md(shown)}:${b.line}](<${href}#L${b.line}>)${b.text ? ` — ${md(b.text)}` : ""}`;
   });
   return `${text}${end}\n---\n\n**Linked from** (${list.length}):\n\n${rows.join("\n")}\n`;
@@ -212,17 +244,27 @@ export function peekStep(app: App, dir: "back" | "forward"): void {
       "info",
       dir === "back" ? "the peek's first place — esc closes it, o goes there" : "no later place in the peek",
     );
+  // Read as a link to it is: not through a link not followed, which can have changed since (VV-D6).
+  const b = unfollowed(app, place.abs, place.loc);
   let text: string;
-  try {
-    text = readText(place.abs).text;
-  } catch {
-    from.pop();
-    return app.message("warn", `${tildePath(place.abs)} is gone`);
-  }
+  if (b) text = notRead(b, rootLabel(place.loc));
+  else
+    try {
+      text = readText(place.abs).text;
+    } catch {
+      from.pop();
+      return app.message("warn", `${tildePath(place.abs)} is gone`);
+    }
   from.pop();
   const back = dir === "back" ? p.back : [...p.back, to];
   const fwd = dir === "back" ? [...p.fwd, to] : p.fwd;
-  show(app, { abs: place.abs, loc: place.loc, back, fwd, full: p.full }, text, place.top, place.cursor);
+  show(
+    app,
+    { abs: place.abs, loc: place.loc, back, fwd, full: p.full, ...(b ? { unread: true } : {}) },
+    text,
+    place.top,
+    place.cursor,
+  );
 }
 
 /**
@@ -257,6 +299,10 @@ export function peekKeep(app: App): void {
   const f = app.floating;
   if (f?.kind !== "peek") return app.message("info", "t keeps a peek as a tab: there's no peek open");
   const { abs, loc, label } = f.peek;
+  // A tab reads it: not through a link its place hasn't followed (VV-D6).
+  const b = unfollowed(app, abs, loc);
+  if (b)
+    return app.message("warn", `${linkSaid(b.link, b.target)} isn't followed in ${label} — o goes there to choose`);
   const top = { ...f.view.topAnchor };
   const cursor = { ...f.view.curAnchor };
   app.overlays.closeFloating();

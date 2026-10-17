@@ -86,7 +86,9 @@ breadth first, entries by name) while nobody is working, and kept in its cache f
 `core/home.ts`). Its graph is built from the walk kept (`homeWalk`), brought up to now as a build is (freshness checked,
 not assumed): each folder kept is statted; one changed since the walk is listed again (what came and went, a folder new
 in it walked); one gone, or become a vault, is dropped with what it held; a vault the walk found that is none any more
-is walked as home's; each note is statted again (gone, dropped; grown past the size cap, skipped). What changed is kept
+is walked as home's; each note is statted again (gone, dropped; grown past the size cap, skipped), and one that is a link
+kept only while the walk would keep it (`symlinkVerdict`: pointed elsewhere, it asks again, whatever its folder's time
+says; § Links followed only when you say so). What changed is kept
 again (not a folder whose time moved alone: a shell's history rewritten in `~`). The graph's `walkedAt` is the walk's,
 so the watcher lists again the folders changed since. So an agent's note made in home is there at its next command,
 and a folder made a vault by hand (`git init`) leaves home. The walk is kept with its filter's settings
@@ -311,21 +313,28 @@ of every read through a link out of the root; D220's writes stay for vaults.
   on is a warning); the TUI at the start and on going into a vault, in the background, walking the vault again with
   those that answer. Never answered, a followed link is skipped as `waiting`. Only the probe is off the main thread: a
   target that answered is walked as the vault is.
-- **What a yes allows** (`writesThrough`, `writeNote`'s `through`): in home, reading, the index and writing through it;
-  in a vault, reading and the index, never a write that lands outside the vault, followed or not (D220); in Elsewhere,
-  what the file system allows. Plans keep to it (`mayRewrite` in `core/rename-plan.ts`): a rename's relinking, a
-  replace across files, the converter and a heading's rename leave a file whose write would land out of its vault as
-  it is, a `skipped` row saying so, and `applyPlan` refuses a plan holding one, or moving anything from or to outside
-  the vault (`outside`), before it writes: an undo and a saved plan are checked as they're carried out. A move's
-  source is checked as its destination is, in home too: a move, copy or delete across a link is refused. An export's
-  default place, beside a note reached through a link out of the vault, is refused; `--out` names one. Where links are
-  looked at on a path's way (`blockingLink`): from the vault's or home's folder; in Elsewhere, from the folder opened,
-  or — a path named outright outside it — its own folder, the file itself asking.
+- **What a yes allows** (`writesThrough`, `writeNote`'s `through`): in home, reading, the index and writing through it
+  — a note's text, a new note, a new folder, in the CLI and the TUI alike (`newPath` in `tui/files.ts`); in a vault,
+  reading and the index, never a write that lands outside the vault, followed or not (D220); in Elsewhere, what the
+  file system allows. Plans keep to it (`mayRewrite` in `core/rename-plan.ts`): a rename's relinking, a replace across
+  files, the converter and a heading's rename leave a file whose write would land out of its vault as it is, a
+  `skipped` row saying so, and `applyPlan` refuses a plan holding one, or moving anything from or to outside the vault
+  (`outside`), before it writes: an undo and a saved plan are checked as they're carried out. A move's source is
+  checked as its destination is: a move, copy or delete whose source or destination crosses a link out of the vault,
+  or out of home, is refused in the CLI and the TUI, in home too, said the same: `… resolves outside the vault` for
+  what's moved, copied or deleted, `… would land outside the vault` for where it goes. An export's default place,
+  beside a note reached through a link out of the vault, is refused; `--out` names one. Where links are looked at on a
+  path's way (`blockingLink`): from the vault's or home's folder; in Elsewhere every link on the way asks, from the
+  folder you work in — the TUI's folder opened, the CLI's current folder (`workDir`) — down; a path named outright
+  outside it starts at its own folder, the file itself asking: what's above the folder you work in is yours to name
+  (macOS's `/tmp` and `/var` are links).
 - **The CLI** refuses a read through a link not followed (`refuseUnfollowed`, exit 5: `… is reached through a link
-  that isn't followed (~/notes/data → /mnt/disk/data): open it in slipbox to choose`), a write through one
-  (`checkWritable`, exit 5: `…: reached through a link that isn't followed (…); not writing it`), and a vault's write
-  through a followed one (`a link leads it out of the vault`); `mkdir` says either is outside the vault. It never asks,
-  nor follows unasked.
+  that isn't followed (~/notes/data → /mnt/disk/data): open it in slipbox to choose`) — a note however it's named
+  (`resolveNote`, Elsewhere's listing holding a linked note as any other), a snippet `capture --ref --snippet` reads —
+  a write through one (`checkWritable`, exit 5: `…: reached through a link that isn't followed (…); not writing it`),
+  and a vault's write through a followed one (`a link leads it out of the vault`); `mkdir` says either is outside the
+  vault. `checkWritable`'s hidden folders are measured as the path is reached and where the write lands: a link into a
+  hidden folder of home or of a vault is refused there as the path named there is. It never asks, nor follows unasked.
 - **The TUI** asks before it opens a path through a link not followed — a note (`open`, `openInNewTab`), an explorer
   row's folder unfolded or zoomed into (`gate`): a list of three answers, `f` follow it, `l` just look, `n` no, saying
   what a yes allows here; when the target is hidden (a dot folder on its way from home) or outside home, a line over
@@ -333,8 +342,12 @@ of every read through a link out of the root; D220's writes stay for vaults.
   kept, the target probed, the vault walked again (`walkAgain`), then what was asked done. Just look: read-only (`just
   looking: … isn't followed — read-only`), never indexed; a folder listed a level at a time. No: kept; opening it again
   asks again. A path through a link not followed opened otherwise (a session's tab, `:e`) isn't read, said so or
-  asked. In the explorer a link row says where it leads, and whether it's followed ([tui.md](tui.md) § Side panes).
-  Elsewhere's listing shows a linked note as any other; only opening it asks.
+  asked. In the explorer a link row says where it leads, and whether it's followed ([tui.md](tui.md) § Side panes);
+  out of the vault open, by the rule of the place it's in (`locationAt`), and unfolding one not followed there asks
+  (`gate`'s `there`). Elsewhere's listing shows a linked note as any other; only opening it asks. A peek (VV-D7), and
+  `t` and `ctrl+o` in one, read by the rule of the place peeked into (`Following.blockedThere`): through a link it
+  hasn't followed, the peek says so instead of reading (`Not read here: …`), `t` keeps nothing, and `o` goes there,
+  where opening it asks; a link of this vault's on the way asks first.
 
 Not done:
 

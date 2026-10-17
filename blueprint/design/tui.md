@@ -572,7 +572,10 @@ vault). A folder link out of the vault is revealed in its own vault, as before (
 - **The window:** the floating window (`3.20`) of kind `peek`, a virtual buffer of the file's text (`peek:<path>`,
   never read from or written to the disk again, never a place remembered), read-only (`a peek is read-only — o goes
   there, to edit it`). A note is rendered, a data or code file shown as its kind opens; a binary file isn't peeked at,
-  said so. Its `elsewhere` holds its vault's name and the vault's graph and path there: the layout reads its links and
+  said so. A file reached through a link its place hasn't followed isn't read: the peek holds `Not read here: … isn't
+  followed in kestrel`, `t` keeps nothing, and `o` goes there, where opening it asks; a link of the current vault's on
+  the way asks first, as opening it would ([roots.md](roots.md) § Links followed only when you say so). Its
+  `elsewhere` holds its vault's name and the vault's graph and path there: the layout reads its links and
   embeds in that graph, and `followLink` resolves them there (`tui/actions.ts`). Its size: the screen's width less an
   eighth (at least four columns) and four more for its margin, and the main area's height less a tenth (at least a row)
   and two more, centred; `z` (`peek.fill`) the whole content area, no margin; again, back. Titled
@@ -602,7 +605,9 @@ vault). A folder link out of the vault is revealed in its own vault, as before (
   wikilinks said to need a vault.
 - **Backlinks:** under a Markdown note, after a rule, `Linked from (n):` — each a link from the note's folder to the
   line linking here (`[~/notes/index.md:41](<../../../notes/index.md#L41>) — architecture`), followed as any link in
-  the peek — when its vault has an index on disk (the background index has most); none yet: `Linked from: kestrel has
+  the peek; a file's name holding `<`, `>`, `%`, `#` or a control character has them percent-encoded in the link, and
+  a control character shown as its escape (`\n`) in its text — when its vault has an index on disk (the background
+  index has most); none yet: `Linked from: kestrel has
   no index here yet — o goes there, and finds them.`; none at all: `Linked from: no note links here.`; Elsewhere's:
   `no backlinks in Elsewhere — it has no index; a note in a vault or home has them.` The vault's graph is the one this
   vault reaches it by (`Reach`, opened once, its index caught up then), given a reach of its own for other vaults'
@@ -701,7 +706,8 @@ keys.
   folder's with one in it (`markGitFolder`, `•`; `o` in ascii, where `*` says indexed); and, between the name and
   those, dimmed and ending a space short of git's column, what describes the row (`describe`): a vault's branch when
   it's a repository's top, a worktree's after `⎇`, a link's target and whether it's followed (`→ /mnt/disk/data`, then
-  `not followed`, `just looking` or `not answering` while the walk doesn't go through it; `Marks.describe`, from
+  `not followed`, `just looking` or `not answering` while the walk doesn't go through it — in a folder out of the
+  vault open, by the rule of the place it's in, unfolded only once asked; `Marks.describe`, from
   `Following.describe`), its place cut from the front to fit, the state kept (`RowMarks.fit`); a folder of home where
   another disk is mounted, `another disk` (VV-D2, [roots.md](roots.md) § Home). Each glyph is one
   column wide in every set (`core/glyphs.ts`, `mark…`); none is an emoji. A vault's other name stays after its

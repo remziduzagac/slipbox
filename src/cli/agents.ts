@@ -4,7 +4,7 @@
 import { createHash } from "node:crypto";
 import { spawnSync } from "node:child_process";
 import { existsSync } from "node:fs";
-import { isAbsolute, join } from "node:path";
+import { isAbsolute, join, resolve } from "node:path";
 import {
   appendScratch,
   CaptureError,
@@ -22,7 +22,16 @@ import { editorArgv } from "../core/editor.ts";
 import { discoverNvims, NVIM_REMOTE, probeNvim } from "../core/nvim.ts";
 import { loadSession } from "../core/position.ts";
 import { flag, has, UsageError } from "./args.ts";
-import { EXIT, CliError, type Session, type Handler, requireArg, resolveNote, wholeFlag } from "./common.ts";
+import {
+  EXIT,
+  CliError,
+  type Session,
+  type Handler,
+  refuseUnfollowed,
+  requireArg,
+  resolveNote,
+  wholeFlag,
+} from "./common.ts";
 
 /** For an agent at work: a context bundle, the scratch, a note sent to a running editor. */
 export const AGENT_COMMANDS: Record<string, Handler> = {
@@ -76,6 +85,9 @@ export const AGENT_COMMANDS: Record<string, Handler> = {
     }
     if (!text.trim() && !ref && snippetText === undefined)
       throw new UsageError("nothing to capture: give text, --ref, or --stdin");
+    // A snippet read from the file follows the place's rule, as `read` does (VV-D6): not through a link not followed.
+    if (ref && snippetText === undefined && has(s.args, "snippet"))
+      refuseUnfollowed(s, resolve(s.io.cwd, ref.path), ref.path);
     let entry: string;
     try {
       entry = formatEntry(
