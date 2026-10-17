@@ -13557,6 +13557,22 @@ describe("the index on demand in the TUI (20.8)", () => {
     expect(h.app.view!.buf.rel).toBe(".private/p.md");
     expect(h.app.messages.at(-1)?.text).toBe('no note or file "node_modules/dep/dep.md"');
   });
+  test(":e by a file's whole path inside the vault opens it as by its path from the top: a data file, a git-ignored note", async () => {
+    const root = makeVault();
+    writeFileSync(join(root, ".gitignore"), "tmp/\n");
+    mkdirSync(join(root, "tmp"));
+    writeFileSync(join(root, "tmp", "scratchpad.md"), "# Scratchpad\n");
+    writeFileSync(join(root, "rides.csv"), "date,km\n2026-10-01,42\n");
+    const h = await harness({ root, open: "index.md" });
+    await h.app.run(`note.open ${join(root, "rides.csv")}`);
+    expect(h.app.view!.buf.rel).toBe("rides.csv");
+    await h.app.run(`note.open ${join(root, "tmp", "scratchpad.md")}`);
+    expect(h.app.view!.buf.rel).toBe("tmp/scratchpad.md");
+    expect(h.app.graph.notes.has("tmp/scratchpad.md")).toBe(true);
+    // Not there: said so, by the path as typed.
+    await h.app.run(`note.open ${join(root, "tmp", "gone.md")}`);
+    expect(h.app.messages.at(-1)?.text).toBe(`no note or file "${join(root, "tmp", "gone.md")}"`);
+  });
 });
 
 describe("the background auto-index in the TUI (20.9)", () => {
