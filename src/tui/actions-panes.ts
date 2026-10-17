@@ -3,6 +3,7 @@
 
 import { type Run, withView, lay } from "./actions.ts";
 import type { App } from "./app.ts";
+import { diffSwitch } from "./diffview.ts";
 import { blameHere, historyHere } from "./githistory.ts";
 import { gitStep, gitPreview, gitReset } from "./gitchanges.ts";
 import { gitFetch, gitPull, gitPush, gitStash } from "./gitremote.ts";
@@ -159,6 +160,8 @@ export function paneActions(): Record<string, Run> {
     "footnote.add": (a) => a.footnotes.add(),
     "git.changes": (a) => a.git.openChanges(),
     "git.diff": (a) => a.git.openDiff(),
+    // A note's diff: its blocks before and after, or its lines (GIT-D2).
+    "git.diff_view": (a) => diffSwitch(a),
     // The working tree's changes against what's staged (26.1).
     "git.view": (a) => a.panels.openLeftView("git", "cycle"),
     "git.commit": (a) => a.git.openCommitEditor(false),

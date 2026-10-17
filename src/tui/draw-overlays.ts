@@ -184,13 +184,19 @@ export function drawFloating(app: App, c: Canvas, mainY: number, mainH: number, 
     : peek
       ? Math.max(24, W - 4 - Math.max(4, Math.floor(W / 8)))
       : Math.max(24, wide ? W - 8 : Math.min(100, scratch ? Math.floor((W * 3) / 4) : W - 8));
+  // A diff (a review's too) is as tall as its rows, not its text's lines: a block's frame, a paragraph laid out again
+  // (GIT-D2). Laid out at its pane's width less the scrollbar's column, as the pane will lay it out.
+  const drawn = f.kind === "diff" || f.kind === "review" ? f.view.buf.drawn : undefined;
+  const lines = drawn
+    ? drawn(Math.max(10, w - 3), { glyphs: app.glyphs, wrap: app.ui.wrap, codeScroll: app.code.scrolls() }).lines.length
+    : f.view.buf.lineStarts().length;
   const h = full
     ? Math.max(4, mainH)
     : peek || f.kind === "merge"
       ? Math.max(6, mainH - 2 - Math.max(1, Math.floor(mainH / 10)))
       : scratch
         ? Math.max(6, Math.min(mainH - 1, Math.floor((mainH * 3) / 4)))
-        : Math.max(6, Math.min(mainH - 1, f.view.buf.lineStarts().length + 5));
+        : Math.max(6, Math.min(mainH - 1, lines + 5));
   const x = Math.floor((W - w) / 2);
   const y = mainY + (full ? 0 : scratch || peek ? Math.floor((mainH - h) / 2) : Math.max(0, Math.min(1, mainH - h)));
   const bg = roleStyle(theme, "overlay", null);
@@ -207,11 +213,13 @@ export function drawFloating(app: App, c: Canvas, mainY: number, mainH: number, 
     drawText(c, x, y + k, b.v, border, 1);
     drawText(c, x + w - 1, y + k, b.v, border, 1);
   }
+  // A note's diff: tab switches between its blocks and its lines (GIT-D2).
+  const tab = f.kind === "diff" && f.diff.blocks ? `tab: its ${f.diff.blocks.on ? "lines" : "blocks"} · ` : "";
   const hint =
     f.kind === "hover"
       ? " esc · q closes "
       : f.kind === "diff"
-        ? ` ${f.diff.go ? "enter goes to the line · " : ""}esc · q ${f.diff.back ? "goes back" : "closes"} `
+        ? ` ${tab}${f.diff.go ? "enter goes to the line · " : ""}esc · q ${f.diff.back ? "goes back" : "closes"} `
         : f.kind === "commit"
           ? ` ctrl+s ${f.amend ? "amends" : "commits"} · esc · q leaves it `
           : f.kind === "scratch"

@@ -274,6 +274,10 @@ worktrees = "{parent}/{repo}-{branch}" # where a worktree slipbox makes goes: {p
 signs = true                   # the lines changed from what's staged, marked in the gutter
 signs_at = "gutter_right"      # where: gutter_right (its last column, against the text) | gutter_left (its first,
                                # before the line numbers) | window_right (the window's right edge, by the scrollbar)
+diff = "blocks"                # a note's diff opens as: blocks (each changed block before and after) | source (its
+                               # lines); tab in the diff switches
+diff_layout = "auto"           # a code file's diff: auto (side by side where each side gets 80 columns) | unified
+                               # (one column) | split (side by side)
 
 [search]                       # searching across notes: space f s, slipbox search
 engine = "auto"                # auto (the index once it's built, else a scan) | index (built first) | scan (no index)

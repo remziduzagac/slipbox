@@ -3,7 +3,8 @@
 
 import { placeAt } from "./editing.ts";
 import { formatEntry } from "../core/capture.ts";
-import { type Layout, srcAt } from "../core/layout/ir.ts";
+import { gitSigns } from "../core/gitsigns.ts";
+import { type Layout, scrolledCol, srcAt, unscrolledCol } from "../core/layout/ir.ts";
 import type { Problem } from "../core/diagnostics.ts";
 import { graphemes } from "../core/width.ts";
 import { cells, ordered, type Pos } from "./cursor.ts";
@@ -46,13 +47,13 @@ export class Code {
    */
   screenCol(view: View, layout: Layout, row: number, col: number): number {
     const s = layout.lines[row]?.scroll;
-    return s && !s.part && col >= s.x ? col - this.offset(view, layout, row) : col;
+    return s ? scrolledCol(s, col, this.offset(view, layout, row)) : col;
   }
 
   /** The layout column drawn at screen column `col` of `row` (screenCol's inverse): a click's, a vertical move's. */
   layoutCol(view: View, layout: Layout, row: number, col: number): number {
     const s = layout.lines[row]?.scroll;
-    return s && !s.part && col >= s.x ? col + this.offset(view, layout, row) : col;
+    return s ? unscrolledCol(s, col, this.offset(view, layout, row)) : col;
   }
 
   /**
@@ -71,7 +72,10 @@ export class Code {
   reveal(view: View, layout: Layout, row: number, from: number, to: number): void {
     const s = layout.lines[row]?.scroll;
     if (!s || s.part || from < s.x) return;
-    const [a, b] = [from - s.x, Math.max(from + 1, to) - s.x];
+    // Side by side (GIT-D7): the right's text from where it starts; what's fixed between the two is never hidden.
+    const start = s.right !== undefined && from >= s.right ? s.right : s.x;
+    if (start === s.x && s.right !== undefined && from >= s.x + s.total) return;
+    const [a, b] = [from - start, Math.max(from + 1, to) - start];
     const margin = Math.min(4, Math.floor(s.w / 4));
     const was = this.offset(view, layout, row);
     let off = was;
@@ -166,6 +170,48 @@ export class Code {
           `${cell.title} — ${lines} added to the scratch; add a note, esc then q closes it`,
         );
     }
+  }
+
+  /**
+   * The code view's cells that didn't change folded to their headers, those that did open (GIT-D7): changed against
+   * what's staged, as the gutter's signs mark them (26.1), so the file reads as which definitions changed. The cursor
+   * goes to the first that did. Again, with nothing left to fold: every cell opened.
+   */
+  foldUnchanged(): void {
+    const v = this.app.view;
+    if (!v || !this.app.isCodeDocument(v.buf) || v.source)
+      return this.app.message("info", "a cell is the code view's: a file of a language it maps, as a document");
+    const changes = this.app.git.changesOf(v);
+    if (!changes) return this.app.message("info", "no changes to read: the file isn't git's, or its signs are off");
+    if (!changes.length) return this.app.message("info", "nothing changed against what's staged: nothing to fold");
+    const signed = [...gitSigns(changes).keys()];
+    const folded = v.buf.codeFolded;
+    const relayout = () => {
+      for (const x of this.app.allViews()) if (x.buf === v.buf) x.layoutKey = "";
+    };
+    const was = [...folded];
+    // Every cell, a folded class's members too: the folds taken off to find them.
+    folded.clear();
+    relayout();
+    const cells = this.app.currentLayout(v).cells ?? [];
+    const changed = cells.filter((c) => signed.some((l) => l >= c.from && l <= c.to));
+    const unchanged = cells.filter((c) => !changed.includes(c)).map((c) => c.from);
+    const again = unchanged.length > 0 && was.length === unchanged.length && unchanged.every((f) => was.includes(f));
+    if (!again) for (const f of unchanged) folded.add(f);
+    relayout();
+    if (again) return this.app.message("info", "every cell open");
+    const first = changed[0];
+    if (first) {
+      const rows = this.app.currentLayout(v).lines;
+      const row = rows.findIndex((l) => !l.decor && l.src >= first.from && l.src <= first.to);
+      if (row >= 0 && rows[row]!.srcMap) this.app.placeAtLine(v, rows[row]!.src);
+      else if (row >= 0) this.app.moveCursor(v, { row, col: 0 });
+    }
+    const n = (k: number, what: string) => `${k} ${what}${k === 1 ? "" : "s"}`;
+    this.app.message(
+      "info",
+      `${n(unchanged.length, "unchanged cell")} folded, ${n(changed.length, "changed one")} open; again, all open`,
+    );
   }
 
   /** The code view's run of imports on the cursor's row (24.5), folded or unfolded; false when the row isn't one. */

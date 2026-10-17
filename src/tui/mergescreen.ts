@@ -8,6 +8,7 @@
 // prompt's (M)erge opens it where its three-way merge leaves a conflict, `esc` going back to the prompt.
 
 import { join } from "node:path";
+import { blockDiff } from "../core/blockdiff.ts";
 import { fenceLanguage, formatEntry } from "../core/capture.ts";
 import {
   type Choice,
@@ -24,7 +25,7 @@ import {
 import { inCheckout, inVault, showAt } from "../core/gitops.ts";
 import { operationOf } from "../core/gitrebase.ts";
 import { sections, stageFile } from "../core/gitstage.ts";
-import { layoutScreen, type ScreenPart, screenText } from "../core/layout/diff.ts";
+import { layoutScreen, type ScreenPart, screenText } from "../core/layout/screen.ts";
 import type { Layout, Span } from "../core/layout/ir.ts";
 import { type DiffViewRow, diffView } from "../core/merge.ts";
 import { TOP } from "../core/position.ts";
@@ -32,7 +33,7 @@ import { sanitize } from "../core/sanitize.ts";
 import type { App } from "./app.ts";
 import { editable } from "./app.ts";
 import { NoteBuffer } from "./buffer.ts";
-import { diffLanguage } from "./diffview.ts";
+import { asBlocks, diffLanguage, sideBySide } from "./diffview.ts";
 import { keyRow } from "./review.ts";
 
 /** A file on the merge screen: its conflicts, how each is settled, the one shown. */
@@ -154,9 +155,15 @@ function show(app: App, m: MergeState): void {
   const settled = m.choices.filter(Boolean).length;
   const result = resultView(m.file, m.choices);
   const named = (l: string) => (l ? ` · ${sanitize(l)}` : "");
-  // A side against the base: its diff; unchanged, its lines as they are; no base known, the side whole.
+  // A side against the base: its diff — a note's as its blocks before and after, a code file's lines side by side where
+  // there's room (GIT-D2, GIT-D7); unchanged, its lines as they are; no base known, the side whole.
+  const path = m.prompt?.buf.abs ?? join(app.loc.root, m.rel);
   const side = (ls: string[]): ScreenPart => {
     const from = c.base === null ? "" : text(c.base);
+    if (c.base !== null && asBlocks(app, path)) {
+      const blocks = blockDiff(from, text(ls), new Set(), { heads: false, folds: false });
+      if (blocks.units.length) return { blocks };
+    }
     const rows = diffView(from, text(ls), new Set(), Number.MAX_SAFE_INTEGER).filter((r) => r.kind !== "@@");
     return rows.length ? { rows, from, to: text(ls) } : { rows: plain(ls), from: text(ls), to: text(ls) };
   };
@@ -203,7 +210,7 @@ function show(app: App, m: MergeState): void {
     ),
     { rows: result.rows, from: result.text, to: result.text },
   ];
-  const { language, tabWidth } = diffLanguage(app, m.prompt?.buf.abs ?? join(app.loc.root, m.rel), m.read);
+  const { language, tabWidth } = diffLanguage(app, path, m.read);
   const buf = new NoteBuffer(null, `merge:${m.rel}`, `merge:${m.rel}`);
   buf.kind = { group: "text", format: "text" };
   // `:w` and ctrl+s save the result, as `w` does.
@@ -212,7 +219,11 @@ function show(app: App, m: MergeState): void {
   let made: { key: string; layout: Layout } | null = null;
   buf.drawn = (width, how) => {
     const key = `${width}:${how.glyphs.mode}:${how.wrap}:${how.codeScroll}`;
-    if (made?.key !== key) made = { key, layout: layoutScreen(parts, { width, language, tabWidth, ...how }) };
+    if (made?.key !== key)
+      made = {
+        key,
+        layout: layoutScreen(parts, { width, language, tabWidth, split: sideBySide(app, path, width), ...how }),
+      };
     return made.layout;
   };
   buf.loadText(screenText(parts));

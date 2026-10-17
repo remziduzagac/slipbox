@@ -658,8 +658,8 @@ and GIT.*
 - [ ] **[Reviewing, diffing and merging what an agent changed](workstreams/git-review/README.md)** (GIT): an agent's
   change reviewed a hunk at a time, kept, reverted or noted; the git panel by mouse, with the branch's changes, the
   branches and their worktrees, each against its own base; fetch, pull, push and stash (`26.6`); diffs with their
-  changed words, a note's rendered, code's scrolling sideways and side by side; a merge screen, with pulling where both
-  sides moved and rebasing onto the base.
+  changed words, a note's before and after, code's scrolling sideways and side by side; a merge screen, with pulling
+  where both sides moved and rebasing onto the base.
 
 ## Later
 

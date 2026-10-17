@@ -212,6 +212,9 @@ export class Input {
       out.push({ map: this.app.reviewKeys, run: (s) => this.app.run(s) });
     else if (this.app.region === "content" && this.app.floating?.kind === "merge")
       out.push({ map: this.app.mergeKeys, run: (s) => this.app.run(s) });
+    // A diff window's (GIT-D2): tab switches a note's between its blocks and its lines.
+    else if (this.app.region === "content" && this.app.floating?.kind === "diff")
+      out.push({ map: this.app.diffKeys, run: (s) => this.app.run(s) });
     // Source mode's own keys (x deletes a character there) before the reading ones.
     if (this.app.region === "content" && editable(this.app.view) && !this.app.view!.visual)
       out.push({ map: this.app.sourceKeys, run: (s) => this.app.run(s) });

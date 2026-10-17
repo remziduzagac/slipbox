@@ -700,6 +700,12 @@ export const COMMAND_SPECS: CommandSpec[] = [
     desc: "This note's changes on the branch, against where it left main; enter goes to the line",
   },
   {
+    id: "git.diff_view",
+    title: "Switch the diff: its blocks before and after, or its lines",
+    cli: I,
+    desc: "In a note's diff: its changed blocks before and after, or its lines as source (tab there); [git] diff picks the first",
+  },
+  {
     id: "git.worktrees",
     title: "Open in another worktree",
     cli: "slipbox worktrees",
@@ -1068,6 +1074,12 @@ export const COMMAND_SPECS: CommandSpec[] = [
     title: "Add the cell to the scratch",
     cli: "slipbox capture --ref <path:line> [--snippet]",
     desc: "Adds the code cell at the cursor to the scratch, with its path and lines, for an agent",
+  },
+  {
+    id: "cell.fold_unchanged",
+    title: "Fold the cells that didn't change",
+    cli: I,
+    desc: "Folds each code cell with no change against what's staged to its header, opening those with one; again, opens them all",
   },
   { id: "ui.urls", title: "Show link URLs", cli: I, desc: "Prints link addresses after their text" },
   { id: "ui.mouse", title: "Mouse", cli: I, desc: "Turns the mouse off so the terminal selects" },

@@ -25,8 +25,8 @@ deferred (`26.6`).
 
 ### The diff, as built (GIT-T1)
 
-The text for tui.md § Git, after "The working tree's changes"; a note's before and after, and `tab`, come with
-GIT-T4.
+The text for tui.md § Git, after "The working tree's changes"; a note's before and after, and `tab`, are the next
+section's (GIT-T4).
 
 **The diff** (GIT-D2; `core/merge.ts` `diffView`, `core/layout/diff.ts`, `tui/diffview.ts`): `space g d`, a file's diff
 from `space g c`'s list, a history entry's diff to now and the conflict prompt's (D)iff draw one way, in the floating
@@ -56,6 +56,64 @@ window, as wide as the screen less its margins.
   line closes it and opens the file there; the conflict prompt's goes back to the prompt. `esc`, `q` and `:q` go back
   to what opened it: the changes' list, the prompt. Two texts the same are said ("no differences from main"), and go
   back. The wheel over the floating window scrolls it, never the window or the side pane under it.
+
+### A note's diff before and after, as built (GIT-T4)
+
+The text for tui.md § Git, after **The diff**; rendering.md's sentence on the before-and-after diff points to it.
+
+**Before and after** (GIT-D2; `core/blockdiff.ts` `blockDiff`, `core/layout/blockdiff.ts` `layoutBlockDiff`): a note's
+diff (a file the walk reads as a note) in every window a diff opens in, unless `[git] diff = "source"`.
+
+- **Its blocks** (`noteBlocks`): the note's top-level nodes as the parse has them, a list a block per item (a nested
+  list's items blocks of their own after their item's own lines), a table a block per row (the header's with its
+  delimiter row). A line no node covers that isn't blank is a block as written.
+- **Found:** the line diff, as the source diff's. Each run of hunks is widened to the nearest cut on each side of it,
+  in the unchanged lines around, that splits no block of `from` or of `to`; a run of unchanged lines with no such cut
+  before the next hunk joins the two. Groups with no more than a line of text between them are one, and a line of text
+  before the first or after the last is taken in. In a group, the blocks the same on both sides are found by their
+  text; between them each removed block is paired with the added one most like it (`pairLines` with `prose`: white
+  space is one, so a paragraph wrapped again differs only in its words), none less than half alike. A pair is a change,
+  the rest removed or added whole; the unchanged blocks in a group are shown between, unframed.
+- **Drawn:** each group under `@@ <the heading it's under in to>  (line N)`, or `@@ line N` above the first heading
+  (`diff_head`). A change is two frames as wide as the window, `before` and `after` on their top rules
+  (`git_sign_delete`, `git_sign_add`), lightly formatted: a heading's text in its colour, emphasis, strong and struck
+  text in theirs, a link or a wikilink as it reads, inline code and maths without their marks, a list's marker (its
+  bullet, its number, a task's box) with its text hung under it, a table's row its cells between `│`, a quote with its
+  bar, a fence, the frontmatter and anything else as written. Each cell knows the offset in its block of what it shows,
+  so the words the pair doesn't share are on `diff_del_word` in the first and `diff_add_word` in the second; a node
+  whose source changed where none of it shows (a link's target, `**` added) is marked whole. A block added or removed
+  whole is one frame, `added` or `removed`, its text on `diff_add` or `diff_del`. The unchanged stretches between
+  groups, before the first and after the last fold to `▸ N unchanged lines` (blank, they're nothing); `enter` on one
+  shows its blocks.
+- **The window:** its text a unit a line — a head, a fold, a line of a block shown, with a `-`, a `+` or a space and
+  a space before it, as the source diff's rows read — and each layout row's `src` its first word's unit; `enter` goes
+  to the unit's line (a `before` line, or a removed block's: where its block is, or was, now). `tab`
+  (`git.diff_view`, the diff window's own keymap, `DEFAULT_DIFF_KEYS`) switches between the blocks and the lines, the
+  cursor on the first line's row at or after the line it was on; a code file's diff says it has only its lines.
+
+### Side by side, as built (GIT-T7)
+
+The text for tui.md § Git, after **Before and after**:
+
+**Side by side** (GIT-D7; `core/layout/splitdiff.ts` `layoutSplitDiff`): a code file's diff (anything not a note) where
+each side gets at least `SPLIT_MIN` (80) text columns — the window less, each side, a sign and a space before its text
+and a column after it (its `›`), and ` │ ` between (`splitColumns`) — unless `[git] diff_layout = "unified"`; `"split"`
+puts it side by side however narrow. `from` on the left, `to` on the right (`splitRows`): an unchanged line on both; in
+a run of changes, each removed line beside the added line it's paired with (the k-th paired of each), those paired with
+none beside each other in order, a side with no line blank. A changed side is on its sign's tint up to the rule, its
+changed words on the stronger. The heads and folds span both. Each row's `src` is the unified row it stands for (the
+right's, else the left's), so the window's text, `enter` and the folds are the unified diff's, and a resize between the
+two layouts keeps them.
+
+- **Scrolling:** both sides scroll by the one offset, as a code block's rows do (D233). A row's `scroll` (`CodeScroll`)
+  gains `right`: where its second text starts, after the first's `total` columns, padded, and what's fixed between;
+  that text is drawn `total - w` columns to the left as well as by the offset (`scrolledCol`, `scrolledInSight`,
+  `unscrolledCol` in `layout/ir.ts`), each text showing its own `‹` and `›`. The cursor stops on the texts up to the
+  right's end, and moving it reveals its side. With `[render] code_wrap = "wrap"` each side wraps in its column, `↪` on
+  its rows after the first; wrapping off, the rows are whole and the window scrolls.
+- **The code view's cells folded** (`cell.fold_unchanged`, `space k d`): every cell with no line changed against what's
+  staged (the gutter's signs, `26.1`) folds to its header and every one with one opens, the cursor on the first that
+  changed; with every unchanged cell folded already, every cell opens. A file with no change says so and folds nothing.
 
 ### The remote and stash, as built (GIT-T3)
 
@@ -123,8 +181,15 @@ in the floating window, as wide as a diff's: a row with its file, its lines (a d
 place (`change 2 of 3 here, 5 of 9 in all`, a new or deleted file said, what was done with it), a row of its keys, then
 its diff as every diff is drawn (`layoutDiff`): its lines as staged and as they are, with up to three of the file's
 lines on each side (`hunkView`), each row at its line in the file. The window is a screen of parts (`layoutScreen`,
-`layout/diff.ts`): text rows and diffs, a line of its text each, the review's own keys over the note's (`reviewKeys`,
+`layout/screen.ts`): text rows and diffs, a line of its text each, the review's own keys over the note's (`reviewKeys`,
 `DEFAULT_REVIEW_KEYS`, as a peek has its own).
+
+As built with GIT-T4 and GIT-T7: a note's hunk is its blocks before and after (`asBlocks`, `[git] diff`) — the file with
+this change undone against the file as it is (`hunkBlocks`), so its paragraphs are whole, no head and no folds
+(`blockDiff`'s `heads` and `folds` off) — and its lines where only blank lines changed; a code file's lines go side by
+side where there's room (`sideBySide`, `layoutScreen`'s `split`, a part that changes something). `enter` goes to the
+line of what's under the cursor (`srcAt`: a block's span carries its line's unit), as in the diff window; the window is
+as tall as its rows.
 
 - `y` (`git.review_keep`) stages the hunk as the git panel's `s` stages a change (`stageChange`): found again among
   the file's changes now (`findChange`: the same lines as staged and now, the nearest to where it was), since the index
@@ -164,8 +229,9 @@ resolved.
 The screen, in the floating window as tall as a peek's, a conflict at a time: its number, its line in the result and
 how it's settled; the keys; while a rebase is under way, that yours is what's rebased onto and theirs the commit
 replayed; the base's lines; yours, then theirs, each under its marker's label as a diff against the base (with no base,
-whole); then the file as it will be (`resultView`): each conflict settled (its lines `+`) or still marked, two lines
-around it, under a head naming it and how it's settled, the stretches between folded. Its own keys (`mergeKeys`,
+whole) — a note's as its blocks before and after (no head, no folds), a code file's side by side where there's room
+(GIT-T4, GIT-T7); then the file as it will be (`resultView`): each conflict settled (its lines `+`) or still marked, two
+lines around it, under a head naming it and how it's settled, the stretches between folded. Its own keys (`mergeKeys`,
 `DEFAULT_MERGE_KEYS`):
 
 - `o`, `t`, `b`, `shift+b` (`git.merge_ours`, `_theirs`, `_both`, `_both_theirs`) settle the conflict — yours, theirs,
@@ -356,6 +422,9 @@ table's cells), in a `before` and an `after` frame, the removed words marked in 
 block added or removed whole laid out once, marked; unchanged stretches folded. The layout's other users never see the
 marks.
 
+Built (GIT-T4): a layout of its own, `core/layout/blockdiff.ts`, beside the note's (§ Git's "Before and after" says
+how); the note's renderer is unchanged.
+
 ## MODIFIED design/tui.md § Git: its roles and settings
 
 Adds the roles `diff_add_word` and `diff_del_word`, a changed word inside a changed line, stronger than `diff_add` and
@@ -375,6 +444,11 @@ worktrees` (default `"{parent}/{repo}-{branch}"`, `worktreeFolder`: `{parent}` t
 or dash at its ends, `branch` when nothing's left — `~` home, a relative path from `{parent}`). `git.worktrees` is
 your own config's alone (`USER_ONLY`: it says where slipbox makes folders, outside the vault). `[keys.git]`, the git
 panel's keymap, is a key table as `[keys.explorer]` is (GIT-T9).
+
+Built (GIT-T4, GIT-T7): `[git] diff = "blocks" | "source"` (default `blocks`) and `[git] diff_layout = "auto" |
+"unified" | "split"` (default `auto`), in the manual's configuration chapter. A before-and-after frame's rules are in
+`git_sign_delete` and `git_sign_add`, its marked words in `diff_del_word` and `diff_add_word`, a block added or removed
+whole on `diff_add` or `diff_del`: no new roles.
 
 ## MODIFIED design/tui.md § Keys
 

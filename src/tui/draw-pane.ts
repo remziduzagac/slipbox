@@ -16,7 +16,7 @@ import type { Role, Color, Theme } from "../core/theme/theme.ts";
 import { LENS_COUNTERS } from "../core/layout/live.ts";
 import { sanitize } from "../core/sanitize.ts";
 import type { Glyphs } from "../core/glyphs.ts";
-import type { Line, Layout } from "../core/layout/ir.ts";
+import { type CodeScroll, type Line, type Layout, scrolledCol, scrolledInSight } from "../core/layout/ir.ts";
 import type { CommentLink } from "../core/syntax.ts";
 import { DRAWING_ROWS } from "./pictures.ts";
 import { spanStyle } from "../core/layout/style.ts";
@@ -385,7 +385,7 @@ export function drawPane(
     // of the row where it is.
     const scroll = line.scroll && codeRows.byRow.has(row) ? line.scroll : undefined;
     const codeOff = scroll ? app.code.offset(view, layout, row) : 0;
-    const clip = scroll && !scroll.part ? { x: scroll.x, w: scroll.w, off: codeOff } : undefined;
+    const clip = scroll && !scroll.part ? { ...scroll, off: codeOff } : undefined;
     drawLine(c, textX, y, line, textW, theme, band, page, underCursor, marks, view.left, clip);
     if (clip) codeMarks(app, c, textX - view.left, y, line, clip, band, page);
     // Its scrollbar, on its last row, under its code.
@@ -440,12 +440,19 @@ export function drawPane(
         drawText(c, x, y, label, { ...roleStyle(theme, view.insert ? "lens_edit" : "lens", page), bg: page });
       }
     }
-    // In a scrolled code block's code, the cursor is where its character is drawn, if it's in sight.
-    const inCode = !!clip && view.cur.col >= clip.x;
-    const shift = inCode ? clip!.off : 0;
-    const from = inCode ? clip!.x + clip!.off : view.left;
-    const to = inCode ? clip!.x + clip!.off + clip!.w : view.left + textW;
-    if (isCursorRow && view.cur.col >= from && view.cur.col < to) {
+    // In a scrolled code block's code, the cursor is where its character is drawn, if it's in sight: in a side by side
+    // row's (GIT-D7), on its side.
+    let shift = 0;
+    let seen = view.cur.col >= view.left && view.cur.col < view.left + textW;
+    let to = view.left + textW;
+    if (clip && view.cur.col >= clip.x) {
+      shift = view.cur.col - scrolledCol(clip, view.cur.col, clip.off);
+      seen = scrolledInSight(clip, view.cur.col, clip.off);
+      const right = clip.right !== undefined && view.cur.col >= clip.right;
+      const between = clip.right !== undefined && !right && view.cur.col >= clip.x + clip.total;
+      to = between ? Number.POSITIVE_INFINITY : (right ? clip.right! : clip.x) + clip.off + clip.w;
+    }
+    if (isCursorRow && seen) {
       drawCursor(c, textX - view.left - shift, y, line, view.cur.col, theme, to);
       if (view === app.view) geo.cursor = { x: textX - view.left - shift + view.cur.col, y };
     }
@@ -789,12 +796,8 @@ function drawCursor(
 }
 
 /** A code block that scrolls sideways, on one of its code rows: its code from column `x`, drawn from `off` columns in,
- *  `w` columns of it. */
-interface CodeClip {
-  x: number;
-  w: number;
-  off: number;
-}
+ *  `w` columns of it; side by side (GIT-D7), its second text from `right` the same. */
+type CodeClip = CodeScroll & { off: number };
 
 /**
  * Draw one layout row from column `left` (wrapping off, scrolled sideways), `maxW` columns of it.
@@ -836,7 +839,18 @@ function drawLine(
       const w = graphemeWidth(g);
       // Where it's drawn: in a scrolled code block's code, `off` columns to the left; scrolled out of it, not at all.
       let at = col;
-      if (clip && col >= clip.x) {
+      if (clip && col >= clip.x && clip.right !== undefined) {
+        // Side by side (GIT-D7): each text from the one offset, what's fixed between them where it is.
+        const first = scrolledInSight(clip, col, clip.off);
+        const last = scrolledInSight(clip, col + w - 1, clip.off);
+        if (!first || !last) {
+          // A wide character cut by a text's left edge shows as a blank.
+          if (!first && last) c.cell(x + scrolledCol(clip, col + w - 1, clip.off) - left, y, " ", 1, st);
+          col += w;
+          continue;
+        }
+        at = scrolledCol(clip, col, clip.off);
+      } else if (clip && col >= clip.x) {
         const from = clip.x + clip.off;
         if (col < from) {
           // A wide character cut by the block's left edge shows as a blank.
@@ -876,11 +890,21 @@ function codeMarks(
   band: Color | null,
   page: Color | null,
 ): void {
-  const text = cells(line).filter((k) => k.x >= clip.x && !/^\s$/.test(k.g));
-  if (!text.length) return;
   const fill = line.fill ? app.theme.roles[line.fill].bg : undefined;
   const st = { ...roleStyle(app.theme, "code_gutter", page), bg: band ?? fill ?? page };
-  if (text[0]!.x < clip.x + clip.off) drawText(c, x + clip.x - 1, y, app.glyphs.codeLeft, st, 1);
-  const last = text[text.length - 1]!;
-  if (last.x + last.w > clip.x + clip.off + clip.w) drawText(c, x + clip.x + clip.w, y, app.glyphs.codeRight, st, 1);
+  // Each text's own: one, or side by side (GIT-D7) two, the second drawn `total - w` columns to the left.
+  const texts =
+    clip.right === undefined
+      ? [{ from: clip.x, to: Number.POSITIVE_INFINITY, at: clip.x }]
+      : [
+          { from: clip.x, to: clip.x + clip.total, at: clip.x },
+          { from: clip.right, to: Number.POSITIVE_INFINITY, at: clip.right - (clip.total - clip.w) },
+        ];
+  for (const t of texts) {
+    const text = cells(line).filter((k) => k.x >= t.from && k.x < t.to && !/^\s$/.test(k.g));
+    if (!text.length) continue;
+    if (text[0]!.x < t.from + clip.off) drawText(c, x + t.at - 1, y, app.glyphs.codeLeft, st, 1);
+    const last = text[text.length - 1]!;
+    if (last.x + last.w > t.from + clip.off + clip.w) drawText(c, x + t.at + clip.w, y, app.glyphs.codeRight, st, 1);
+  }
 }

@@ -251,6 +251,7 @@ export const DEFAULT_KEYS: Record<string, string> = {
   "leader k r": "cell.references",
   "leader k p": "cell.problems",
   "leader k s": "cell.scratch",
+  "leader k d": "cell.fold_unchanged",
   // scratch
   "leader s s": "scratch.open",
   "leader s r": "scratch.open_right",
@@ -653,6 +654,11 @@ export const DEFAULT_MERGE_KEYS: Record<string, string> = {
   p: "git.merge_prev",
   w: "git.merge_save",
   s: "git.merge_stage",
+};
+
+/** A diff window's own keys (GIT-D2), over the note's while it has the cursor: commands, as the note's keys are. */
+export const DEFAULT_DIFF_KEYS: Record<string, string> = {
+  tab: "git.diff_view",
 };
 
 /** What the explorer's and the outline's actions do, for help. */

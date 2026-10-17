@@ -829,7 +829,7 @@ export const OUTSIDE_AND_CODE: Check[] = [
       await s.see("changed on disk — write yours over it?");
       await s.keys("d");
       await s.see("Diff — yours → theirs");
-      await s.see(/\+ ?theirs two/);
+      await s.see("theirs two");
       await s.keys("escape");
       await s.see("write yours over it?");
       await s.keys("y");

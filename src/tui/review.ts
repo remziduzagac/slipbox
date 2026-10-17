@@ -9,18 +9,26 @@
 
 import { readFileSync, statSync } from "node:fs";
 import { join } from "node:path";
+import { type BlockDiff, blockDiff } from "../core/blockdiff.ts";
 import { inVault, showAt } from "../core/gitops.ts";
 import { findChange, hunkEntry, hunkLines, hunkView, type Tally, tallyText } from "../core/gitreview.ts";
 import { type GitChange, gitChanges } from "../core/gitsigns.ts";
 import { discardFile, replaceLines, sections, stageChange, stageFile } from "../core/gitstage.ts";
-import { layoutScreen, type ScreenPart, screenText } from "../core/layout/diff.ts";
-import type { Layout, Span } from "../core/layout/ir.ts";
-import type { DiffViewRow } from "../core/merge.ts";
+import { layoutScreen, type ScreenPart, screenText } from "../core/layout/screen.ts";
+import { type Layout, type Span, srcAt } from "../core/layout/ir.ts";
 import { TOP } from "../core/position.ts";
 import { sanitize } from "../core/sanitize.ts";
 import type { App } from "./app.ts";
 import { NoteBuffer } from "./buffer.ts";
-import { diffLanguage } from "./diffview.ts";
+import { asBlocks, diffLanguage, sideBySide } from "./diffview.ts";
+
+/** A note's change as its blocks before and after: the file with this change undone against the file as it is. */
+function hunkBlocks(it: Item): BlockDiff {
+  const at = it.change.from - 1;
+  const was = [...it.now.slice(0, at), ...it.change.was, ...it.now.slice(at + it.change.now.length)];
+  const text = (ls: string[]) => (ls.length ? `${ls.join("\n")}\n` : "");
+  return blockDiff(text(was), text(it.now), new Set(), { heads: false, folds: false });
+}
 
 /** A hunk of the review, and what was done with it. */
 interface Item {
@@ -37,11 +45,12 @@ interface Item {
   noted: boolean;
 }
 
-/** A review under way: its hunks, the one shown, and that one's rows as drawn. */
+/** A review under way: its hunks, the one shown, and where each line of that one's diff is in its file (null: a head's,
+ *  a fold's). */
 export interface Review {
   items: Item[];
   at: number;
-  rows: DiffViewRow[];
+  lines: (number | null)[];
 }
 
 /** The rows above a hunk's diff: its file and place, the keys, a blank one. */
@@ -98,7 +107,7 @@ export function openReview(app: App): void {
     }
     if (!items.length)
       return app.message("info", "nothing to review: the working tree has no change that isn't staged");
-    show(app, { items, at: 0, rows: [] });
+    show(app, { items, at: 0, lines: [] });
     app.host.requestRender();
   });
 }
@@ -147,13 +156,19 @@ function show(app: App, r: Review): void {
     ["enter", "go there"],
     ["esc", "end"],
   ]);
+  // Drawn as every diff is (GIT-D2): a note's as its blocks before and after — the file as staged against as it is,
+  // this change alone, so its paragraphs are whole — a code file's as its lines, side by side where there's room.
   const view = hunkView(it.change, it.now);
-  r.rows = view.rows;
+  const drawn = asBlocks(app, it.abs) ? hunkBlocks(it) : null;
+  const blocks = drawn?.units.length ? drawn : null; // a change of blank lines alone: its lines
+  r.lines = blocks
+    ? blocks.units.map((u) => u.line)
+    : view.rows.map((row) => (row.kind === "@@" || row.kind === "fold" ? null : row.line));
   const parts: ScreenPart[] = [
     { spans: head },
     { spans: keys },
     { spans: [] },
-    { rows: view.rows, from: view.before, to: view.after },
+    blocks ? { blocks } : { rows: view.rows, from: view.before, to: view.after },
   ];
   const { language, tabWidth } = diffLanguage(app, it.abs, view.after);
   const buf = new NoteBuffer(null, `review:${it.path}`, `review:${it.path}`);
@@ -163,7 +178,10 @@ function show(app: App, r: Review): void {
   let made: { key: string; layout: Layout } | null = null;
   buf.drawn = (width, how) => {
     const key = `${width}:${how.glyphs.mode}:${how.wrap}:${how.codeScroll}`;
-    if (made?.key !== key) made = { key, layout: layoutScreen(parts, { width, language, tabWidth, ...how }) };
+    if (made?.key !== key) {
+      const split = sideBySide(app, it.abs, width);
+      made = { key, layout: layoutScreen(parts, { width, language, tabWidth, split, ...how }) };
+    }
     return made.layout;
   };
   buf.loadText(screenText(parts));
@@ -315,9 +333,9 @@ export function reviewGo(app: App): void {
   if (it.rel === null) return app.message("warn", `${it.path} is outside this vault`);
   if (it.kind === "deleted") return app.message("info", `${it.path} is deleted — x brings it back`);
   const v = app.floating!.view;
-  const src = app.currentLayout(v).lines[v.cur.row]?.src ?? 0;
-  const row = r.rows[src - HEAD - 1];
-  const line = row && row.kind !== "@@" && row.kind !== "fold" ? row.line : hunkLines(it.change).from;
+  // The line of what's under the cursor: in a paragraph laid out again, its word's own.
+  const row = app.currentLayout(v).lines[v.cur.row];
+  const line = r.lines[(row ? srcAt(row, v.cur.col) : 0) - HEAD - 1] ?? hunkLines(it.change).from;
   if (!app.overlays.closeFloating()) return;
   app.openAt(it.rel, line);
 }

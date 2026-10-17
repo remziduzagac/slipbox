@@ -273,8 +273,10 @@ or send it back to the agent with a note.
 
 Press `v` in the git panel, or click Review, or run `:review`. The review walks every change in the working tree that
 isn't staged yet, file by file, in the order the panel lists them. A file git doesn't track yet counts as one change,
-all of it added. Each change shows in a floating window as a diff, with a few of the file's lines around it. Above the
-diff are the file, where the change is (`line 12 · change 2 of 3 here, 5 of 9 in all`), and the keys:
+all of it added. Each change shows in a floating window as a diff, with a few of the file's lines around it. It's drawn
+as every diff is ([How a diff is drawn](#how-a-diff-is-drawn)): a note's change as its paragraphs before and after, the
+words that changed marked; a code file's as its lines, side by side when the window is wide. Above the diff are the
+file, where the change is (`line 12 · change 2 of 3 here, 5 of 9 in all`), and the keys:
 
 | Key | What it does |
 | --- | --- |
@@ -386,6 +388,10 @@ on a note in conflict. The merge screen opens in a floating window, one conflict
 - **Base**: the version both sides started from.
 - **Yours**: your side, as a diff against the base. In a merge, it's the branch you're on.
 - **Theirs**: the other side, as a diff against the base. In a merge, it's the branch coming in.
+
+Each side's diff is drawn as every diff is ([How a diff is drawn](#how-a-diff-is-drawn)): in a note, its paragraphs as
+the base had them and as the side has them, the words that changed marked; in a code file, the base's lines beside the
+side's when the window is wide.
 
 Below the conflict is the file as it will be. Each conflict shows there as you settled it, or still marked if you
 haven't.
@@ -684,7 +690,43 @@ It's drawn as the next section says.
 
 Every diff slipbox shows is drawn the same way: `:diff`, a file's diff from the git panel or `:changes`, a commit's
 diff to now from a file's history, and the differences the conflict prompt shows ([Editing](editing.md)). It opens in
-a floating window as wide as the screen allows.
+a floating window as wide as the screen allows. A note's diff opens as its blocks before and after. A code file's
+opens as its lines, side by side when the window is wide enough.
+
+#### A note's diff: before and after
+
+An agent often rewrites prose a sentence at a time. Shown as lines, a changed paragraph is all removed and all added.
+So a note's diff shows each changed block twice, as it was and as it is now:
+
+```text
+@@ ## Retry  (line 17)
+┌ before ───────────────────────────────────────┐
+│ …up to a minute. Until the retry budget of    │
+│ ADR 4 is on, an op is retried forever.        │
+└───────────────────────────────────────────────┘
+┌ after ────────────────────────────────────────┐
+│ …up to a minute. Each op has a retry budget   │
+│ of five attempts; the sixth failure parks it. │
+└───────────────────────────────────────────────┘
+▸ 14 unchanged lines
+```
+
+- A block is a paragraph, a heading, a list item, a table's row, a quote, a code block or the frontmatter.
+- The `before` frame marks the words that went, on a red tint. The `after` frame marks the words that came, on a
+  green one. A paragraph whose line breaks moved is not changed by that: only its words are compared.
+- The blocks are lightly formatted. A heading is in its colour, emphasis and links read as they do in a note, a list
+  item has its bullet, a table's row shows its cells between `│`. A code block and the frontmatter are as written.
+- What the formatting hides still shows as changed. A link whose target changed is marked whole, and so is text made
+  bold.
+- A block added or removed whole has one frame, `added` or `removed`, its text on the tint.
+- Each group of changes is under `@@`, with the heading it's under and its line. The unchanged lines between groups
+  fold to one row that says how many there are. `enter` on it shows them.
+- A changed block less than half like any other is shown removed, then added, with no words marked.
+
+`tab` switches to the diff's lines, drawn as the next section says, and back. `git.diff = "source"` opens a note's diff
+as its lines ([Configuration](configuration.md)).
+
+#### A diff's lines
 
 - Each line is a row, `-` before a removed line and `+` before an added one. Its text is highlighted as in source
   mode: a note's Markdown, or code by its file's language.
@@ -700,8 +742,25 @@ a floating window as wide as the screen allows.
   held. A `‹` or `›` at an edge says the line goes on that way. With `render.code_wrap = "wrap"` the long lines wrap
   instead, and with wrapping off the whole window scrolls sideways.
 
-`enter` on a line goes to it in the file. `esc` or `q` closes the diff, and goes back to the panel, the list or the
-question it came from. The conflict prompt's diff goes back to the prompt on `enter` too.
+#### Side by side
+
+A code file's diff shows its two versions side by side when the window gives each side at least 80 columns: about 170
+columns of terminal. The version before is on the left and the one now on the right.
+
+- Each line sits beside the line it became. A changed line is beside the line most like it, its changed words marked
+  on both sides. A line removed or added sits beside a blank.
+- The unchanged lines are on both sides, and fold as they do in one column.
+- Both sides scroll sideways together, by the cursor, the wheel or the scrollbar. Each shows its own `‹` and `›`. With
+  `render.code_wrap = "wrap"` each side wraps in its own column.
+
+`git.diff_layout` chooses: `auto` (side by side where it fits), `unified` (always one column) or `split` (always side
+by side). A note's diff is never side by side.
+
+#### Going to a line
+
+`enter` on a line goes to it in the file. On a block before a change, it goes to where the block is now. `esc` or `q`
+closes the diff, and goes back to the panel, the list or the question it came from. The conflict prompt's diff goes
+back to the prompt on `enter` too.
 
 In the terminal's theme and without colour, the changed words are bold and underlined instead of tinted.
 `[colors]` sets the tints: `diff_add` and `diff_del` for the lines, `diff_add_word` and `diff_del_word` for the words

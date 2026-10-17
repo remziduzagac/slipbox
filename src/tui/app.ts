@@ -456,6 +456,8 @@ export class App {
   /** A review's own keys (GIT-D3), and the merge screen's (GIT-D5), over the note's while one is open. */
   reviewKeys!: Keymap;
   mergeKeys!: Keymap;
+  /** A diff window's own keys (GIT-D2), over the note's while it has the cursor: tab. */
+  diffKeys!: Keymap;
   aliases: Record<string, string> = {};
   groups = new Map<string, { name: string; desc: string }>();
   leader = "space";
