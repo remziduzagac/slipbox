@@ -1,5 +1,6 @@
 // The CLI's vault commands: a `.slipbox/` made — a vault of its own, inside another (18.11) — or taken away, a
-// vault named (21.10), and the named folders this machine knows, with the copy links open (21.6).
+// vault named (21.10), the named folders this machine knows, with the copy links open (21.6), and the symlinks answered
+// (VV-D6).
 
 import { existsSync } from "node:fs";
 import { dirname, join, relative, resolve } from "node:path";
@@ -16,6 +17,7 @@ import { openVault } from "../core/reach.ts";
 import { planMakeVault, planUnmakeVault, planVaultRename } from "../core/rename.ts";
 import { readIdentity, vaultConfigFile } from "../core/registry.ts";
 import { tildePath } from "../core/names.ts";
+import { answersKept, forgetLinkAnswer, linkSaid } from "../core/symlinks.ts";
 import {
   checkInit,
   hasMarker,
@@ -214,6 +216,45 @@ export const VAULT_COMMANDS: Record<string, Handler> = {
     return {
       data,
       human: human ? `${human}\n` : "no named folders yet: a .slipbox/ name, or a repository's remote, names one\n",
+    };
+  },
+
+  /**
+   * The symlinks you've answered (VV-D6), newest first: each by its own path, where it led then, what you said, where
+   * it leads now. `forget <link>` forgets the answer: asked again when it's next opened in slipbox, and one followed
+   * isn't followed any more. The command line never follows one: that's answered in slipbox.
+   */
+  symlinks(s, rest) {
+    if (rest[0] === "forget") {
+      const named = rest[1];
+      if (!named || rest.length > 2) throw new UsageError("symlinks forget takes the link, by its path");
+      const was = forgetLinkAnswer(resolve(s.io.cwd, named));
+      if (!was) throw new CliError(`nothing said of ${named} to forget (slipbox symlinks lists them)`, EXIT.notFound);
+      const said = was.answer === "follow" ? "followed" : "not followed";
+      return {
+        data: { link: was.link, target: was.target, answer: was.answer, forgotten: true },
+        human: `forgot ${linkSaid(was.link, was.target)} (${said}): asked again when it's next opened\n`,
+      };
+    }
+    if (rest.length) throw new UsageError("symlinks takes nothing, or forget <link>");
+    const data = answersKept().map((a) => ({
+      link: a.link,
+      target: a.target,
+      answer: a.answer,
+      at: a.at,
+      now: a.now,
+    }));
+    const human = data
+      .map(
+        (a) =>
+          `${linkSaid(a.link, a.target)}  ${a.answer === "follow" ? "followed" : "not followed"}${
+            a.now === a.target ? "" : a.now ? `  (leads to ${tildePath(a.now)} now: asks again)` : "  (gone)"
+          }\n`,
+      )
+      .join("");
+    return {
+      data,
+      human: human || "no symlink answered yet: one leading out asks when it's first opened in slipbox\n",
     };
   },
 };

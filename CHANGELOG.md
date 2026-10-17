@@ -27,6 +27,12 @@ The format is [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.1.0/); wh
   instead of reading it, and `o` goes there, where opening it asks. An explorer row's link in a folder outside the
   vault you're in says whether it's followed there, and asks before it's unfolded.
 
+- An answer about a symlink can be taken back. `space v l` (`:symlinks`) lists the symlinks you've answered, with
+  where each leads and whether you followed it, said no, or are just looking, and `enter` forgets one: opening it asks
+  again. One you followed is followed no more at once: its notes leave the index and search, its folder is no longer
+  watched, and a tab open through it turns read-only. `slipbox symlinks` lists them on the command line, and
+  `slipbox symlinks forget <link>` forgets one.
+
 - Keys you already know, a page for those who don't use vim: the arrows and the shortcuts of other editors that slipbox
   has, the four keys that are new, and where slipbox's keys differ. The README, the quick start and getting started
   give the familiar key first.

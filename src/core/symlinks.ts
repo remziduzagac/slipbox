@@ -19,7 +19,7 @@ import { stateHome, tildePath } from "./paths.ts";
 export type LinkAnswer = "follow" | "no";
 
 /** A link's answer, as `links.json` keeps it: the link by its own path, the target it led to then. */
-interface KeptLink {
+export interface KeptLink {
   link: string;
   target: string;
   answer: LinkAnswer;
@@ -114,6 +114,34 @@ export function setLinkAnswer(link: string, answer: LinkAnswer | null): void {
   ensureDir(stateHome());
   writeJson(linksFile(), { version: 1, links: list });
   cache = null;
+}
+
+/** An answer kept (VV-D6), as it's listed: and where the link leads now, the answer holding only while it's `target`. */
+export interface AnswerKept extends KeptLink {
+  /** Where the link leads now, by its real path; null when it's gone, or leads nowhere. */
+  now: string | null;
+}
+
+/** The answers kept (VV-D6), newest first: each link by its own path, where it led then, what you said, and when. */
+export function answersKept(): AnswerKept[] {
+  return kept()
+    .map((e) => ({ ...e, now: isLink(e.link) ? linkTarget(e.link) : null }))
+    .sort((a, b) => (a.at < b.at ? 1 : a.at > b.at ? -1 : 0));
+}
+
+/**
+ * Forget what you answered for `link` (VV-D6) — named by its path as reached, or as `answersKept` lists it: asked
+ * again the next time it's opened; followed, it's followed no more. The answer forgotten; null when none was kept.
+ */
+export function forgetLinkAnswer(link: string): KeptLink | null {
+  const keys = new Set([linkKey(link), resolve(link)]);
+  const list = kept();
+  const hit = list.find((e) => keys.has(e.link));
+  if (!hit) return null;
+  ensureDir(stateHome());
+  writeJson(linksFile(), { version: 1, links: list.filter((e) => e !== hit) });
+  cache = null;
+  return hit;
 }
 
 /**

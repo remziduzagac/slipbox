@@ -185,6 +185,15 @@ describe("links", () => {
     expect(n.code).toBe(0);
     expect(n.json.data).toMatchObject({ kind: "root", to: "halden-renamed", dryRun: true });
   });
+  test("symlinks (VV-D6): the symlinks answered, none here yet; forgetting one never answered is not found", () => {
+    const s = slipbox(["symlinks", "--json"]);
+    expect(s.code).toBe(0);
+    expect(s.json.data).toEqual([]);
+    expect(slipbox(["symlinks"]).out).toContain("no symlink answered yet");
+    const f = slipbox(["symlinks", "forget", "no-such-link", "--json"]);
+    expect(f.code).toBe(3);
+    expect(f.json.error?.message).toContain("nothing said of no-such-link to forget");
+  });
   test("links and backlinks, with their status", () => {
     const l = slipbox(["links", "partners-and-names", "--json"]).json.data;
     expect(

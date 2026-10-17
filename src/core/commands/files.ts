@@ -230,6 +230,12 @@ export const FILE_SPECS: CommandSpec[] = [
     desc: "Nothing of its own runs from now on: its servers in their safe modes, git with its guards",
   },
   {
+    id: "vault.links",
+    title: "Symlinks you've answered",
+    cli: "slipbox symlinks [forget <link>]",
+    desc: "Each symlink you said to follow, or not, or are just looking at, with where it leads; enter forgets the answer: asked again when it's next opened, and one followed is followed no more",
+  },
+  {
     id: "folders.default",
     title: "Which copy a folder's links open",
     cli: "slipbox folders default <name> <path>",

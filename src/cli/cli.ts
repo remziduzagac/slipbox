@@ -98,6 +98,8 @@ Usage:
   slipbox name <new>                this folder's name, as a pointer names it: changed, the old kept; a repository given one
                                     [--dry-run] [--plan]
   slipbox folders [default <name> <path>]  the named folders: their copies, the one links open; or make one the one
+  slipbox symlinks [forget <link>]  the symlinks you've answered, followed or not, and where they lead; or forget one:
+                                    asked again in slipbox, and followed no more
   slipbox rename-heading <note> <heading> <new>  rename a heading; links to it fixed everywhere  [--dry-run] [--plan]
   slipbox relink [note]             rewrite links broken by a move slipbox saw, to where the file is  [--dry-run] [--plan]
   slipbox convert-links [note]      wikilinks and links from the vault's top rewritten as relative paths  [--dry-run] [--plan]
@@ -149,6 +151,7 @@ export const CLI_COMMANDS = new Set([
   "backlinks",
   "name",
   "folders",
+  "symlinks",
   "ls",
   "outline",
   "find",
@@ -406,6 +409,7 @@ const MAX_ARGS: Record<string, number> = {
   links: 1,
   name: 1,
   folders: 3,
+  symlinks: 2,
   backlinks: 1,
   ls: 0,
   outline: 1,

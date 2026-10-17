@@ -498,6 +498,10 @@ The answer is kept by symlink and target:
   symlinks already followed.
 - **For where it leads now.** If the symlink later leads somewhere else, by a pull or by hand, slipbox asks again.
 - **Just look is for this once.** It isn't kept, and it ends when you go into another vault.
+- **Until you forget it.** `space v l` lists the symlinks you've answered, with where each leads and what you said.
+  `enter` forgets one, and opening it asks again. One you followed is followed no more, at once: its notes leave the
+  index and search, and a tab open through it turns read-only. `slipbox symlinks` and `slipbox symlinks forget <link>`
+  do the same from the command line.
 
 A followed symlink on a slow disk, a network share or a drive unplugged, is asked whether it answers before anything
 reads through it. If it doesn't answer within three seconds, slipbox gives up on it for now, and says so:
