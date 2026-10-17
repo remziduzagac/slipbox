@@ -184,6 +184,9 @@ Elsewhere. You and the agent both add to it. You read it, and paste it into the 
 
 In a code file's code view, `space k s` adds the cell at the cursor, with its path and lines.
 
+When you review what the agent changed, a change at a time, `c` sends one back the same way: the file, its lines, the
+diff and your note ([Review an agent's change](code-and-git.md#review-an-agents-change)).
+
 An agent clears the scratch only with `slipbox scratch clear --if-unchanged <sha>`. So nothing added since it read the
 scratch is lost.
 
@@ -264,4 +267,5 @@ nvim, as `space n s` does from slipbox. The skill tells the agent to do so only 
 - [The command line](../manual/cli.md): every command, its JSON and its exit codes.
 - [Editing](../manual/editing.md): saving, autosave and the conflict prompt.
 - [Configuration](../manual/configuration.md): the scratch's place, the context's defaults, your editor.
-- [Code and git](code-and-git.md): reviewing what an agent changed on its branch, before you merge it.
+- [Code and git](code-and-git.md): reviewing what an agent changed, a change at a time, and its branch before you
+  merge it.

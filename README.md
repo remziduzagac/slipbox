@@ -35,6 +35,10 @@ saves appears at once. If a file changes while you have unsaved edits, slipbox a
 Gather references and excerpts in the scratch, each with its file path and line numbers. Build your next prompt while
 keeping your document focused.
 
+Review what the agent changed, in git. A note's diff shows each paragraph before and after, with the words that changed
+marked, and a code file's sits side by side. Keep, revert or send back each change, one at a time. Settle a merge's
+conflicts on a merge screen, and see which links a merge would break before you make it.
+
 Open the folder you already have: a repository, an Obsidian vault, a zk notebook or an ordinary folder. Opening it
 writes nothing there. Your notes and code stay in their files, alongside the tools you already use.
 
@@ -42,8 +46,9 @@ writes nothing there. Your notes and code stay in their files, alongside the too
   [Quick start](docs/guides/quick-start.md) takes two minutes. The documentation is a website, with search:
   <https://remziduzagac.github.io/slipbox/docs/>.
 - **Status:** every phase on the [roadmap](blueprint/roadmap.md) is built: reading, editing, search, vaults and named
-  folders, git and merge review, language servers and linters, and export. Releases are published, with previews of
-  the next one between them. slipbox is before 1.0. [Versions](docs/manual/versions.md) says what may still change.
+  folders, git with its review and merge screen, language servers and linters, and export. Releases are published,
+  with previews of the next one between them. slipbox is before 1.0. [Versions](docs/manual/versions.md) says what may
+  still change.
 - **Help:** the documentation, and its [troubleshooting chapter](docs/manual/troubleshooting.md) for the usual
   problems. Questions and ideas go in [Discussions](https://github.com/remziduzagac/slipbox/discussions). A bug goes
   in an [issue](https://github.com/remziduzagac/slipbox/issues/new/choose). A security problem goes privately, as
@@ -104,6 +109,7 @@ everything else, and `?` lists every key. These are the keys to start with:
 | Open a new tab | `ctrl+t c` |
 | Open the lens, then start typing there | `i`, `a` or `o`, then the same key again |
 | Show the whole note as Markdown (source mode), and back | `ctrl+k` (or `space n v`) |
+| Open the git panel: review, commit, pull and push | `space g` |
 | Save | `ctrl+s` |
 | Tick a task | `ctrl+l` (or `space n t`, or a click) |
 | Hand the note to your editor | `space n e` |
@@ -114,12 +120,14 @@ Everything is clickable too.
 
 The lens shows the Markdown around the cursor between two rules, with the rest left rendered. The vim commands work
 (`dw`, `ciw`, `p`, `u`, `.`), and autosave saves after a pause. When you quit, slipbox remembers where you were.
+[The lens](docs/guides/lens.md) shows it with pictures and examples.
 
 [Keys you already know](docs/guides/keys-you-know.md) lists the shortcuts from other editors. Every key is in
 [Keys](docs/manual/keys.md), and all of them are configurable
 ([Configuration](docs/manual/configuration.md)). The configuration reloads itself when you save it.
 
 [Getting started](docs/guides/getting-started.md) walks through a first session.
+[Code and git](docs/guides/code-and-git.md) reviews an agent's change, from its diff to its merge.
 [Links and vaults](docs/manual/links-and-vaults.md) explains how links find their notes, across folders too.
 [Vaults, home and Elsewhere](docs/guides/vaults.md) explains the folders slipbox works in, with examples.
 

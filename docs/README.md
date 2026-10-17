@@ -19,7 +19,8 @@ These pages are also a website, with search: <https://remziduzagac.github.io/sli
 Each one walks through a job from start to end.
 
 - [Working with agents](guides/agents.md): slipbox beside a coding agent, on the same files.
-- [Code and git](guides/code-and-git.md): a repository's code, its problems and its changes.
+- [The lens](guides/lens.md): editing a note in place, the Markdown where you are and the rest rendered.
+- [Code and git](guides/code-and-git.md): a repository's code, its problems, and reviewing an agent's change.
 - [Vaults, home and Elsewhere](guides/vaults.md): the folders slipbox works in, how it finds them, and how you move
   between them.
 - [Coming from Obsidian or zk](guides/from-obsidian-or-zk.md): opening a vault or a notebook as it is.

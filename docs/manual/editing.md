@@ -98,7 +98,8 @@ The Markdown is lightly highlighted:
 
 ### The lens
 
-The lens edits a note in place. Press `space n l` (or `:lens`) to open it.
+The lens edits a note in place. Press `space n l` (or `:lens`) to open it. [The lens](../guides/lens.md) walks
+through it, with pictures and examples.
 
 The blocks around the cursor are shown as their Markdown, between two heavy rules. A block is a paragraph, a heading, a
 table, a code block or a list item. The rest of the note stays rendered above and below. Where you are looking is
