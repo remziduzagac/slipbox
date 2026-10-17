@@ -70,7 +70,11 @@ export function gitPreview(app: App, view: View): void {
 /** The change on the cursor's line undone: its lines as staged put back — one undo step, left unsaved. */
 export function gitReset(app: App, view: View): void {
   const c = changeHere(app, view);
-  if (!c) return;
+  if (c) revertChange(app, view, c);
+}
+
+/** A change undone: its lines as staged put back — one undo step, left unsaved (its sign clicked: Revert, GIT-D12). */
+export function revertChange(app: App, view: View, c: GitChange): void {
   const why = cannotEdit(view);
   if (why) return app.message("warn", `${why} — not editing`);
   const buf = view.buf;

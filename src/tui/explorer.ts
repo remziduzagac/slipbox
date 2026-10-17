@@ -7,7 +7,6 @@ import { classify, type FileGroup } from "../core/filetypes.ts";
 import { type Dirent, readdirSync, statSync } from "node:fs";
 import { basename, dirname, isAbsolute, join, posix, relative, sep } from "node:path";
 import { checkoutOf } from "../core/git.ts";
-import { gitViewAction } from "./gitview.ts";
 import { readIdentity, vaultConfigFile } from "../core/registry.ts";
 import { tildePath } from "../core/names.ts";
 import { findVaultRoot, hasMarker, homeFolder, isInside, isListed, isVaultRoot, locationAt } from "../core/vault.ts";
@@ -716,7 +715,7 @@ export class Explorer {
   action(action: string): void {
     this.app.sidebar.pinned = false;
     if (this.app.leftView === "history") return this.app.history.action(action);
-    if (this.app.leftView === "git") return gitViewAction(this.app, action);
+    if (this.app.leftView === "git") return this.app.gitPanel.action(action);
     if (action === "filter") {
       this.app.sidebar.filtering = true; // resumes a filter already there (a view's restored one)
       return;

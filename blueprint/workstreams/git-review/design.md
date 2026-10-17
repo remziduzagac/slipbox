@@ -111,6 +111,10 @@ the remote — `core.sshCommand`, `core.gitProxy`, `core.askPass`, a credential 
 `receivepack`, a transport allowed (`protocol.*.allow`: `ext::` runs a command) — is refused before it starts, said
 which, and `:trust` lets it run. A git too old to say whose config it is (before 2.26) refuses all three there.
 
+And (GIT-T10): a merge from the git panel (Merge…) runs no hook and isn't signed (`commit.gpgSign=false`), a branch or
+a worktree made and a worktree removed run none either (`gitArgs`); a worktree made is checked out with no filter its
+attributes name, as every git command there (`--attr-source`).
+
 ## MODIFIED design/tui.md § Side panes ("Source control")
 
 Adds (GIT-D8, GIT-D9): the message box, the buttons and their keys, the sections' and the rows' actions, the right
@@ -118,6 +122,110 @@ click's menu, the changes' stage and revert, the branch's section against its ba
 worktrees marked, ordered and folded, opened up in place, new, remove; each branch's base (GIT-D10); the other
 repositories in the view (GIT-D11, VV-D10). The status line's branch, clicked. Previously: keys only; "nothing changed"
 with nothing uncommitted; worktrees only in `space g w`'s list.
+
+### The git panel, as built (GIT-T9, GIT-T10)
+
+The text for § Side panes, in place of "Source control"'s bullet (`tui/gitpanel.ts`, the panel's state, rows, keys and
+footer, `app.gitPanel`; `tui/gitview.ts`, the working tree's sections; `tui/gitbranchview.ts`, the branches;
+`tui/gitreposview.ts`, the repositories; `tui/draw-git.ts`; `tui/gitmouse.ts`):
+
+- **Source control (left, `±`): the git panel**, by mouse as by keys, its keys shown (GIT-D8). `space g` (`git.view`)
+  opens it and focuses it, again closes it, as `space e` the explorer; the status line's mode chip says `GIT` while it
+  has the keys. Shown again (opened, or its view picked on the rail), git is asked again about all it shows
+  (`GitPanel.shown`). **Its top**, from a pane 10 rows tall: the repository (`Git.repoName`: the vault's name, else the
+  main checkout's folder's) and its branch, a click (`git:head`) the status line's branches; under it, from 12 rows,
+  where the branch stands — `↑5 ↓2 on main`, its own base's figures (GIT-D10), then its upstream's: `↑1 origin/main`,
+  `in step with origin/main`, `not pushed` (no upstream), `origin/x is gone`. From 16 rows, **the message box**: a
+  frame titled Message, its text wrapped, its last three rows shown, `ctrl+enter commits` in it while empty; a click
+  (`git:box`) or `i` (`message`) types in it (`GitPanel.typing`, keys to `messageKey`: typed, `backspace`, `ctrl+w`,
+  `ctrl+u`; a paste, every line), `ctrl+enter` commits what's staged with it in the background (`commitLater`, the box
+  emptied when it's in), `enter` takes it to the floating editor, `esc` leaves it, as a click anywhere else does.
+  **The buttons**, flowing over as many rows as they take: Commit (and the count staged), Amend, Pull (the count
+  behind, once there's an upstream), Push (the count ahead; Publish with no upstream), Fetch, Stash (`buttons()`), each
+  running its key's action — Commit with the box empty opens the editor, Amend starts from the box's text when it has
+  one. Then the filter's row (`/`), the rows, and at the foot, under a rule, the keys of the row selected
+  (`footer(row)`), or, under the pointer, a button's or a row's button's key and what it does (`pointedAt`), or, typing
+  in the box, its keys.
+- **Its rows** (`rows()`), each section under a heading that `enter`, a click, `l` and `h` fold (`GitPanel.folded`;
+  the merged and older branches, the other repositories and home's folded to begin with): **Conflicts**, **Staged**,
+  **Changes**, **Untracked** as before (26.2), a line saying `nothing uncommitted` when they're empty; **This branch
+  against main** — what the branch changed against its own base, committed or not, its untracked files and conflicts
+  (`changedLater`: the merge base, `git diff --name-status -M` against the working tree, the status's new files), asked
+  again whenever git has news, none on the base itself; **This file: name** — Its diff against main (`git.diff`), Its
+  history (`git.history`), Who changed this line (`git.blame`), for the note on screen in this checkout, not while
+  filtering; **Branches**; **Other repositories** (VV-D10). Headings are rows: the selection moves through them, and
+  on one, `s`, `u` and `d` act on its files (`sectionAction`): Changes' and Untracked's staged file by file, Staged's
+  all unstaged, Changes' discarded after asking (`Discard every change that isn't staged, in 2 files? …`; untracked
+  files stay; refused while one is unsaved). A heading's buttons are always drawn at its end: `−` on Staged, `+ ↺` on
+  Changes, `+` on Untracked, `+ New` on Branches.
+- **Its keys** (`[keys.git]`, `DEFAULT_GIT_KEYS`, actions `GIT_ACTIONS`): `j`/`k`, `g g`/`shift+g` move; `enter`
+  (`open`) a file's or a change's diff in the diff window (GIT-D2, `showWorkDiff`: a staged one's against the last
+  commit, a changed one's against what's staged, an untracked file's all added; `esc` back to the panel), folds a
+  heading, opens up a branch or a repository; `o` (`go`) opens the file at its change, goes into a branch's worktree
+  or a repository; `l`/`h` open up and fold; `s`, `u`, `d` stage, unstage, discard (a worktree removed, a gone one
+  pruned, on a branch); `a`/`shift+u` everything; `c`/`shift+c` commit and amend; `f`, `p`, `shift+p`, `z` the remote's
+  and the stashes (GIT-T3's, now the panel's own); `n` a new branch, `m` Merge… on the branch selected; `.` the row's
+  menu; `/` filters files, branches and repositories by name — `enter` keeps the filter and acts on the row, `esc`
+  clears it before it leaves; `q` closes, `esc` leaves. `v` (the review), `x` (the merge screen) and `shift+r` (rebase
+  onto the base) are left for GIT-T2, GIT-T5 and GIT-T6: their place is marked in `DEFAULT_GIT_KEYS` and the buttons.
+  The explorer's keymap loses `c`, `shift+c`, `f`, `shift+p` and their actions.
+- **By mouse** (`gitmouse.ts`; each row a hot region `git:row:<i>`, its buttons `git:act:<i>:<action>` before it): a
+  click selects a row and does what `enter` does, a double-click what `o` does (a heading, a branch, a repository only
+  toggle); the pointer on a row (and the row selected) shows its buttons at its end — a working file's `+` or `−`, `↺`
+  but on Staged and Conflicts, `⧉` its diff; a change's `+`/`−`, `↺`; a branch's file's and a repository's file's `⧉`; a
+  repository's `›`, going in. A right click (button 2) opens the row's menu at the pointer (`GitPanel.menu`): for a
+  file, its keys' actions with their keys, then Show it in the explorer, A note for the agent… (the scratch's capture
+  of the file at the change, `formatEntry`, typing after its note), Copy its path; a branch's, a repository's, their
+  own. The glyphs are `Glyphs.git`'s (`+ − ↺ ⧉ ✓ ⟳ ● ⎇ ✎ ◆`; ascii `+ - x d` and letters).
+- **The Branches section** (GIT-D9; `gitbranchview.ts`, `core/gitbranches.ts`): the local branches
+  (`branchesLater`: `for-each-ref` with each tip and its date, `worktree list --porcelain` for where each is checked
+  out, a folder gone marked `prunable`), ordered by `orderBranches`: the branch here (`●`, `here`), those checked out in
+  a worktree (`⎇`), those touched in 30 days (`OLD_MS`), the newest first; then folded under **Merged or older (n)**
+  those merged into their base and the older — never one here or in a worktree. Merged is asked once a base
+  (`for-each-ref --merged=<base>`: a branch merged into its kept base, else into any of its candidates). Each row's
+  figures, asked for the rows drawn (`statsOf`, again when git has news): `↑ahead ↓behind on base`
+  (`rev-list --left-right --count base...branch`, against each candidate, the nearest kept), a worktree's
+  uncommitted files `✎n` (`status --porcelain` there; here, the panel's own), `◆` for a worktree's work to review
+  (uncommitted, or ahead and not merged), `✓` merged, `folder gone`; short of room, the base's name goes first, then
+  the behind, the name kept to 28 columns. **Opened up in place** (`opened`): its worktree's folder (or `its folder is
+  gone`), its buttons — Open (into the worktree, VV-D4, at the note open here when it has it), or Check out here
+  (`beforeCheckout`, `git switch`) and Open in a worktree (one made in `[git] worktrees`'s folder, or one typed, then
+  gone into); Merge…; Remove… for a worktree; Prune for a gone one — always in the same places, so a click never lands
+  on one moved under the pointer; then its worktree's uncommitted files (`Uncommitted (n)`) and its commits' files
+  against its base (`Against main (n)`, `git diff base...branch`), each a diff in the diff window (against the merge
+  base, or, uncommitted, the worktree's last commit). Its menu (`.`, a right click): its buttons' and Compare against…,
+  A new branch from it…, Copy its name.
+- **A new branch** (`n`, `+ New`; `newBranch`): its name (`check-ref-format --branch`, said when git won't take it),
+  where it starts (this branch, the bases listed there are, every other branch, or a commit typed), and where it goes:
+  In a new worktree (the default, `worktreeFolder`), In a new worktree, in another folder…, Check it out here (unsaved
+  notes first), Just make it. `git branch --no-track <name> <from>`, then `git worktree add -- <folder> <name>` (no hook
+  in a vault not trusted, `gitArgs`); its base kept (`keepBase`); it's opened up and selected.
+- **Remove…** (`remove`): refused, said why, for a worktree with uncommitted files (`not removed: ~/x has 2
+  uncommitted files — commit or discard them there first`) and for a branch not merged into its base (`… isn't merged
+  into dev — 1 commit of its own; merge it first`); else asked — Remove it, keep the branch; Remove it and the branch
+  (`git worktree remove`, no `--force`; `git branch -d`). The worktree you're in, and the main checkout, aren't
+  removed from here. **Prune** forgets the worktrees whose folders are gone (`git worktree prune`).
+- **Merge…** (`mergeMenu`): The links it would break (`showMergeReview`, 20.21), Merge it — run where the base is checked
+  out, here (unsaved notes first) or in its worktree (`git merge --no-edit`, in the background; in a vault not trusted
+  no hook, `commit.gpgSign=false`); a conflict said, `git merge --abort` named — or, checked out nowhere, said so; Into
+  another branch… among those checked out here or in a worktree.
+- **The status line's branch** (`status:branch`, in a repository): the branches list (`openBranches`) with Pull
+  (behind its upstream), Push (or Push, and track it on origin), Fetch and The git panel before the branches.
+- **A change's sign in the gutter**, clicked (`gsign:<line>`, GIT-D12): a menu at the sign — `line 12, against what's
+  staged`, Revert it (`r`, `revertChange`: as `git.change_undo`, unsaved, one undo step), Stage it (`s`, `stageSign`:
+  the index given the change's lines as they are now, refused while the file is unsaved), then the change's lines,
+  `-` and `+`, eight at most.
+
+## MODIFIED design/tui.md § Git: each branch's own base, as built (GIT-T10)
+
+`core/gitbase.ts`: a branch's base (`chooseBase`, `baseFor`) is the one kept for it in `bases.json` (slipbox's state,
+by repository: its shared git folder's real path, `repoKey`) — by a new branch's From, or Compare against… — when it's
+still there; else the nearest of its candidates (`candidates`): `[git] bases`, with `[git] base` when set, a base
+listed there measured only against those before it (`["main", "dev"]`: dev against main, main against none), the
+nearest the one that leaves the branch fewest commits of its own (`git rev-list --count c..branch`; a tie, the first);
+else `[git] base`, main or master. Null for the trunk itself. `Git.baseOf` asks it once each time git has news; the
+panel, `:changes` (`openChanges`), `:diff` and `showDiff`, This branch against main and Merge… use it. The CLI's
+`changed`, `diff` and `merge-review` keep `[git] base`.
 
 ## MODIFIED design/rendering.md
 
@@ -139,8 +247,21 @@ terminal's theme can't mix its sixteen colours with the page: a diff's lines hav
 changed words are bold and underlined, as without colour (`NO_COLOR`). A span's background role (`Span.bg`) gives its
 bold and underline as well as its colour (`layout/style.ts`), so the words are marked where there's no tint to give.
 
+Built (GIT-T10): `[git] bases` (default `["main"]`, each branch's own base guessed among them, GIT-D10) and `[git]
+worktrees` (default `"{parent}/{repo}-{branch}"`, `worktreeFolder`: `{parent}` the folder holding the main checkout,
+`{repo}` its folder's name, `{branch}` the branch's made safe for a folder's — `/`, `\`, `:` and the like a `-`, no dot
+or dash at its ends, `branch` when nothing's left — `~` home, a relative path from `{parent}`). `git.worktrees` is
+your own config's alone (`USER_ONLY`: it says where slipbox makes folders, outside the vault). `[keys.git]`, the git
+panel's keymap, is a key table as `[keys.explorer]` is (GIT-T9).
+
 ## MODIFIED design/tui.md § Keys
 
 `space g` opens and focuses the git panel (GIT-D12), as `space e` the explorer; the panel's single keys act on its
 selection; `space g`'s keys of their own (`c`, `d`, `h`, `b`, `w`, `m`, `p`, `r`) go, their commands staying in the
 palette and the panel's "This file" section; a click on a change's sign in the gutter shows it with Revert and Stage.
+
+Done in GIT-T9: `leader g` is `git.view` (open, focus, close), the `leader g` group gone; `space g c`, `d`, `w` and
+`m` are `:changes`, `:diff`, `:worktrees` and `:merge-review`; Branches, Who changed this line, This file's history,
+Preview the change and Undo the change are the palette's (and the first three the panel's). The panel's keys are a
+keymap of their own, `[keys.git]` (§ Side panes); help lists them under "Inside the git panel", which-key from
+`GIT_ACTION_INFO`.

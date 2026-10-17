@@ -476,9 +476,9 @@ export const COMMAND_SPECS: CommandSpec[] = [
   },
   {
     id: "git.view",
-    title: "Source control: open, focus, close",
+    title: "The git panel: open, focus, close",
     cli: I,
-    desc: "The changed files — conflicts, staged, changes, untracked — in the left panel: s stages, u unstages, d discards, l opens one up into its changes",
+    desc: "Source control in the left panel: the changed files to stage, discard and commit, by keys or by mouse; what the branch changed; the branches and their worktrees; the other repositories in the view",
   },
   {
     id: "git.branches",

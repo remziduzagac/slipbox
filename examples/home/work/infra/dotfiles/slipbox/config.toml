@@ -74,6 +74,8 @@ open_in = "right"                # beside the note, not floating over it
 base = "release"
 signs = true                    # changed lines in the gutter, against what's staged
 signs_at = "gutter_left"        # before the line numbers, away from the text
+bases = ["main", "release"]     # a branch made from release is measured against it, not main
+worktrees = "~/work/worktrees/{repo}/{branch}" # the agents' worktrees in one folder, not beside each repository
 
 [search]
 engine = "index"
@@ -524,6 +526,10 @@ sidebar_vault = { bold = true, underline = true }
 "escape" = "leave"
 "j" = "down"
 "k" = "up"
+
+[keys.git]
+"S" = "stage_all"
+"b" = "new_branch"
 
 [keys.outline]
 "z a" = "fold"

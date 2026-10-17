@@ -154,6 +154,10 @@ export interface Config {
     /** Where the signs sit (#22): the gutter's first column, before the problems bar and the line numbers; its last,
      *  against the text; or the window's right edge, by the scrollbar. */
     signs_at: "gutter_left" | "gutter_right" | "window_right";
+    /** The bases a branch's own is guessed among (GIT-D10): the nearest of them, by merge base; `base` too, when set. */
+    bases: string[];
+    /** Where a worktree slipbox makes goes (GIT-D13): a path template of `{parent}`, `{repo}`, `{branch}` and `~`. */
+    worktrees: string;
   };
   /** Search (6.x): `auto`, the index when it's built, else a scan of the files; `index`, the index
    *  (built first when there's none); `scan`, the files every time (no index kept). */
@@ -257,7 +261,7 @@ export interface Config {
   };
   /**
    * key sequence → command spec, e.g. `"leader l n" = "link.next"`; `""` unbinds a default.
-   * Sub-tables `visual`, `source`, `explorer`, `outline`, `footnotes`, `info` and `resize` hold the
+   * Sub-tables `visual`, `source`, `explorer`, `git`, `outline`, `footnotes`, `info` and `resize` hold the
    * keymaps of those contexts.
    */
   keys: Record<string, string> & {
@@ -265,6 +269,8 @@ export interface Config {
     /** Source mode's own keys, before the reading ones (`x` deletes a character there). */
     source?: Record<string, string>;
     explorer?: Record<string, string>;
+    /** The git panel's own keys (GIT-D12): staging, discarding, committing, the remote's, the branches'. */
+    git?: Record<string, string>;
     outline?: Record<string, string>;
     /** The footnotes view's own keys (3.18): the outline's, and a / e / d / r. */
     footnotes?: Record<string, string>;
@@ -335,7 +341,7 @@ export const DEFAULT_CONFIG: Config = {
   input: { leader: "space", which_key: true, which_key_delay_ms: 500 },
   lint: { enabled: "auto", command: [] },
   capture: { location: "state", file: "scratch.md", open_in: "float" },
-  git: { base: "", signs: true, signs_at: "gutter_right" },
+  git: { base: "", signs: true, signs_at: "gutter_right", bases: ["main"], worktrees: "{parent}/{repo}-{branch}" },
   search: { engine: "auto" },
   index: { background: true, idle_seconds: 30 },
   diagnostics: { bar: "auto", marks: "error", severity: "warning" },
@@ -553,6 +559,7 @@ export const USER_ONLY: Record<string, string> = {
   "render.images_remote": "what reaches the network is yours to allow",
   "lsp.auto_install": "what reaches the network is yours to allow",
   "update.check": "what reaches the network is yours to allow",
+  "git.worktrees": "it says where slipbox makes folders, outside the vault",
 };
 
 /**
@@ -760,10 +767,11 @@ function merge<T>(base: T, over: Record<string, unknown>, file: string, prefix: 
       prefix === "aliases" ||
       prefix === "groups" ||
       prefix === "spell.dictionaries" ||
-      /^keys\.(visual|source|explorer|outline|footnotes|info|resize)$/.test(prefix)
+      /^keys\.(visual|source|explorer|git|outline|footnotes|info|resize)$/.test(prefix)
     ) {
       const table =
-        prefix === "keys" && ["visual", "source", "explorer", "outline", "footnotes", "info", "resize"].includes(key);
+        prefix === "keys" &&
+        ["visual", "source", "explorer", "git", "outline", "footnotes", "info", "resize"].includes(key);
       if (table && !isPlainObject(value))
         warnings.push(`config: ${file}: ${path} must be a table of key = "command" (a mode's own keys)`);
       else if (typeof value === "string") out[key] = renewed(prefix, value);

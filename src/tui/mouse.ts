@@ -3,7 +3,7 @@
 
 import { stopInsert } from "./editing.ts";
 import * as R from "./replacing.ts";
-import { gitRows, gitViewAction } from "./gitview.ts";
+import { branchMenu, gitClick, gitRightClick, signClick } from "./gitmouse.ts";
 import { stringWidth } from "../core/width.ts";
 import { saveAsMouse } from "./saveas.ts";
 import { clampPos, type Pos, wordAt } from "./cursor.ts";
@@ -259,10 +259,17 @@ export class Mouse {
   }
 
   private down(ev: { x: number; y: number; button: number; ctrl?: boolean }, g: Geometry, hot: string | null): void {
+    // A click anywhere but the git panel's message box ends typing there (GIT-D8).
+    if (hot !== "git:box") this.app.gitPanel.typing = false;
     // Middle-click closes a tab.
     if (ev.button === 1) {
       const tab = g.tabs.find((t) => inRect(t, ev.x, ev.y));
       if (tab) this.app.windows.closeTabAt(tab.index);
+      return;
+    }
+    // A right click: a git panel's row's menu (GIT-D8).
+    if (ev.button === 2) {
+      gitRightClick(this.app, hot, ev.x, ev.y);
       return;
     }
     if (ev.button !== 0) return;
@@ -289,6 +296,19 @@ export class Mouse {
     const panelRule = g.separators.find((s) => s.kind === "problems" && inRect(s, ev.x, ev.y));
     if (panelRule) {
       this.drag = { kind: "separator", sep: panelRule };
+      return;
+    }
+    // The git panel's own: its rows, their buttons, its message box and buttons (GIT-D8).
+    if (hot?.startsWith("git:") && gitClick(this.app, hot, clicks)) return;
+    // A change's sign in the gutter (GIT-D12): the change, with Revert and Stage.
+    if (hot?.startsWith("gsign:")) {
+      const pane = g.panes.find((p) => p.x <= ev.x && ev.x < p.x + p.w && p.y <= ev.y && ev.y < p.y + p.h);
+      const t = this.app.tab;
+      if (pane && t && !this.app.floating && t.views.includes(pane.view)) {
+        t.active = t.views.indexOf(pane.view);
+        this.app.region = "content";
+        signClick(this.app, pane.view, Number(hot.slice(6)), { x: ev.x + 1, y: ev.y });
+      }
       return;
     }
     if (hot && !hot.startsWith("tab:")) return this.clickHot(hot);
@@ -360,14 +380,8 @@ export class Mouse {
       this.app.region = "sidebar";
       if (!g.sidebar || !inRect(g.sidebar, ev.x, ev.y)) return;
       const idx = ev.y - g.sidebar.y + this.app.sidebar.scroll;
-      if (this.app.leftView === "git") {
-        const r = gitRows(this.app)[idx];
-        if (!r || r.kind === "heading") return;
-        this.app.sidebar.selected = idx;
-        // One click selects; a double-click opens the file there, as enter does.
-        if (clicks >= 2) gitViewAction(this.app, "open_tab");
-        return;
-      }
+      // The git panel's rows are its own hot regions (gitmouse.ts): elsewhere in it, a click focuses it.
+      if (this.app.leftView === "git") return;
       if (this.app.leftView === "history") {
         const h = this.app.history.rows()[idx];
         if (!h || h.heading) return;
@@ -694,6 +708,8 @@ export class Mouse {
       case "status":
         // The path: its window's history, and Copy path; the arrows around it, back and forward.
         if (arg === "path" && this.app.view) this.app.history.openPathMenu();
+        // The vault and its branch (GIT-D8): the branches, pull and push.
+        else if (arg === "branch") branchMenu(this.app);
         else if (arg === "back" || arg === "forward") this.app.history.go(arg);
         else if (arg === "message") void this.app.run("messages.open");
         // The file's problems: the Problems panel on This file (1.7) — on All when it has none; open there, closed.

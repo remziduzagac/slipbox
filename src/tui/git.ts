@@ -2,8 +2,9 @@
 // asked in the background; the changes, the diffs, branches, worktrees and merges; committing.
 
 import { existsSync } from "node:fs";
-import { join, posix, relative, sep } from "node:path";
+import { basename, join, posix, relative, sep } from "node:path";
 import { readText } from "../core/fsutil.ts";
+import { baseFor } from "../core/gitbase.ts";
 import { startInsert } from "./editing.ts";
 import { fence, fenceLanguage } from "../core/capture.ts";
 import { loadSession, TOP } from "../core/position.ts";
@@ -125,6 +126,8 @@ export class Git {
       this.states = null;
       this.track = null;
       this.folders.clear();
+      // News all the same: the git panel's repositories in the view are asked again (VV-D10).
+      this.generation++;
       return Promise.resolve();
     }
     this.asking = statusLater(c)
@@ -214,9 +217,28 @@ export class Git {
     return changes;
   }
 
-  /** The base branch here: `[git] base`, else main or master; null (said) when there's none. */
+  private baseMemo: { key: string; base: string | null } | null = null;
+
+  /**
+   * A branch's own base (GIT-D10): kept when slipbox made it, else the nearest of `[git] bases`, else `[git] base`, main
+   * or master; null for the base itself, or with none. Asked of git once each time it has news.
+   */
+  baseOf(c: Checkout, branch: string | null): string | null {
+    if (!branch) return baseBranch(c, this.app.config.git.base);
+    const key = `${this.generation}\0${c.root}\0${branch}`;
+    if (this.baseMemo?.key !== key)
+      this.baseMemo = { key, base: baseFor(c, branch, this.app.config.git)?.base ?? null };
+    return this.baseMemo.base;
+  }
+
+  /** The base asked again (one kept or dropped: "Compare against…"). */
+  forgetBase(): void {
+    this.baseMemo = null;
+  }
+
+  /** The base branch here: this branch's own (GIT-D10), on the base itself the base; null (said) when there's none. */
   private base(c: Checkout): string | null {
-    const base = baseBranch(c, this.app.config.git.base);
+    const base = this.baseOf(c, headOf(c).branch) ?? baseBranch(c, this.app.config.git.base);
     if (!base)
       this.app.message(
         "warn",
@@ -269,8 +291,8 @@ export class Git {
     this.showDiff(rel);
   }
 
-  /** A file's diff against the merge base, a row a line, coloured; enter goes to the line; esc: `back`. */
-  showDiff(rel: string, back?: () => void): void {
+  /** A file's diff against the merge base, a row a line, coloured; enter goes to the line; esc: `back`, titled so. */
+  showDiff(rel: string, back?: () => void, title?: string): void {
     const c = this.checkout;
     if (!c) return this.app.message("info", "not in a git repository");
     const base = this.base(c);
@@ -287,7 +309,7 @@ export class Git {
       before,
       now,
       rel,
-      `${rel} against ${base}${back ? " — esc: the changes" : ""}`,
+      title ?? `${rel} against ${base}${back ? " — esc: the changes" : ""}`,
       `no differences from ${base}`,
       back,
     );
@@ -322,11 +344,12 @@ export class Git {
   }
 
   /**
-   * `space g o` (26.5): the branches, this one marked; one picked is checked out — unsaved notes saved, or kept as they
-   * are, first — and "a new branch from here…" makes one there. git's refusal (a change it would overwrite) is said in its
-   * words; a switch done is one event, each branch keeping its tabs (5.9).
+   * The branches (26.5; `:Branches`, the status line's branch clicked): this one marked; one picked is checked out —
+   * unsaved notes saved, or kept as they are, first — and "a new branch from here…" makes one there. git's refusal (a
+   * change it would overwrite) is said in its words; a switch done is one event, each branch keeping its tabs (5.9).
+   * `first`: entries before the branches (the remote's, from the status line, GIT-D8).
    */
-  openBranches(): void {
+  openBranches(first: { label: string; run: () => void }[] = []): void {
     const c = this.checkout;
     if (!c) return this.app.message("info", "not a git checkout");
     const branches = branchesOf(c);
@@ -336,6 +359,7 @@ export class Git {
     this.app.overlays.openList({
       title: `Branches (${branches.length}) — enter: check one out`,
       items: [
+        ...first.map((f) => ({ label: f.label, data: f })),
         ...branches.map((b) => ({ label: sanitize(b), detail: b === current ? "here" : "", data: b })),
         {
           label: "A new branch from here…",
@@ -343,8 +367,10 @@ export class Git {
           data: NEW,
         },
       ],
-      selected: Math.max(0, branches.indexOf(current ?? "")),
+      selected: first.length ? 0 : Math.max(0, branches.indexOf(current ?? "")),
       accept: (item) => {
+        const extra = first.find((f) => f === item.data);
+        if (extra) return extra.run();
         if (item.data === NEW) {
           return this.app.overlays.prompt("new branch: ", (name) => {
             if (name.trim()) this.beforeCheckout(() => this.checkedOut(createBranch(c, name.trim())));
@@ -523,6 +549,19 @@ export class Git {
     this.app.message("info", `switched to ${name(now)}`);
   }
 
+  /** A file's text as staged, as git last said it (26.1): null for a file git hasn't; undefined while it hasn't said. */
+  stagedText(buf: NoteBuffer): string | null | undefined {
+    const known = this.staged.get(buf);
+    return !known || known.text === "none" ? undefined : known.text;
+  }
+
+  /** The repository's name, as the git panel heads it: the vault's name, else the checkout's folder's (a worktree's main's). */
+  repoName(): string {
+    const c = this.checkout;
+    const named = this.app.loc.mode === "vault" ? this.app.loc.name : null;
+    return named ?? basename(c?.main ?? c?.root ?? this.app.loc.root);
+  }
+
   /** The branch checked out (a detached HEAD: its commit, short), or null outside git. */
   branch(): string | null {
     const c = this.checkout;
@@ -553,16 +592,17 @@ export class Git {
   /**
    * A commit (26.3): its message in the floating editor — `ctrl+s` (`:w`) commits what's staged, or amends the last
    * commit with it; closing it (`esc`, `q`) leaves it. Its `#` lines say what's staged and are left out. In a root not
-   * trusted, said: its hooks don't run, and it isn't signed.
+   * trusted, said: its hooks don't run, and it isn't signed. `typed`: the git panel's message box's text (GIT-D8), the
+   * message to start from — the box emptied once it's committed.
    */
-  openCommitEditor(amend: boolean): void {
+  openCommitEditor(amend: boolean, typed = ""): void {
     const c = this.checkout;
     if (!c) return this.app.message("info", "not a git checkout");
     if (this.app.floating && !this.app.overlays.closeFloating()) return;
     const staged = sections(this.entries ?? []).staged.map((e) => e.path);
     if (!amend && !staged.length)
-      return this.app.message("info", "nothing staged — s stages a file in source control (space g s)");
-    const last = amend ? lastMessage(c) : null;
+      return this.app.message("info", "nothing staged — s stages a file in the git panel (space g)");
+    const last = amend ? (typed.trim() ? typed.replace(/\s+$/, "") : lastMessage(c)) : typed.replace(/\s+$/, "");
     if (amend && last === null) return this.app.message("info", "no commit to amend yet");
     const trusted = isTrusted(c.root);
     const files = staged.length ? ` (${staged.slice(0, 5).join(", ")}${staged.length > 5 ? ", …" : ""})` : "";
@@ -575,7 +615,7 @@ export class Git {
     ];
     const buf = new NoteBuffer(null, `${c.root}#commit`, `commit:${c.root}`);
     buf.kind = { group: "text", format: "text" };
-    buf.virtual = { save: (text) => (this.commitWith(text, amend), true) };
+    buf.virtual = { save: (text) => (this.commitWith(text, amend, typed), true) };
     buf.loadText(`${last ?? ""}\n\n${guide.join("\n")}\n`);
     const fv = this.app.makeView(buf, { ...TOP }, { anchor: { ...TOP }, sub: 0, col: 0 });
     this.app.floating = {
@@ -587,9 +627,9 @@ export class Git {
     };
     this.app.lens.setViewMode(fv, "source");
     this.app.region = "content";
-    // A new commit's message is the first thing typed: its editor opens typing, on the empty first line. An amend's
-    // has its message to change: it opens as any editor does.
-    if (!amend) startInsert(this.app, fv, () => 0);
+    // A new commit's message is the first thing typed: its editor opens typing, on the empty first line — or after what
+    // the message box had. An amend's has its message to change: it opens as any editor does.
+    if (!amend) startInsert(this.app, fv, () => (last ?? "").length);
     if (!trusted)
       this.app.message("warn", "this vault isn't trusted: the commit's hooks don't run, and it isn't signed");
   }
@@ -600,13 +640,15 @@ export class Git {
   }
 
   /** The commit editor's text committed: in the background; the editor closed when it's done, kept (said why) when not. */
-  private commitWith(text: string, amend: boolean): void {
+  private commitWith(text: string, amend: boolean, typed = ""): void {
     const c = this.checkout;
     if (!c) return;
     this.app.message("info", amend ? "amending…" : "committing…");
     void commitLater(c, text, amend).then((r) => {
       if ("why" in r) this.app.message("warn", `git: ${r.why}`);
       else {
+        // The message box's text went into it: the box is empty again.
+        if (typed && this.app.gitPanel.message === typed) this.app.gitPanel.message = "";
         const f = this.app.floating;
         if (f?.kind === "commit") {
           this.app.floating = null;

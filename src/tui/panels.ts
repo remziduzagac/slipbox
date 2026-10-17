@@ -1,7 +1,7 @@
 // The side panels: their widths and rails, which view each shows (the left: explorer, history, source control; the
 // right: info, outline, footnotes), resize mode, the filters typed into them, and where focus may be.
 
-import { type GitRow, gitRows, gitViewAction } from "./gitview.ts";
+import type { PanelRow } from "./gitpanel.ts";
 import { match } from "./match.ts";
 import { RESIZE_ACTIONS, keyChar } from "./keys.ts";
 import type { App, SidePaneState } from "./app.ts";
@@ -222,18 +222,19 @@ export class Panels {
     this.app.sidebar.filtering = false;
     this.showSidebar(true);
     this.app.region = "sidebar";
+    // The git panel shown again: git asked again about what it shows (VV-D10).
+    if (view === "git") this.app.gitPanel.shown();
     if (restored) return;
     // Its first showing (or reopened on the same view): the current note, or the current place.
     this.app.sidebar.filter = "";
     this.app.sidebar.pinned = false;
     if (view === "explorer") this.app.explorer.reveal();
-    else if (view === "git") {
+    else if (view === "git")
       this.app.sidebar.selected = Math.max(
         0,
-        gitRows(this.app).findIndex((r) => r.kind !== "heading"),
+        this.app.gitPanel.rows().findIndex((r) => r.kind !== "heading" && r.kind !== "note"),
       );
-      void this.app.git.refreshNow().then(() => this.app.host.requestRender());
-    } else
+    else
       this.app.sidebar.selected = Math.max(
         0,
         this.app.history.rows().findIndex((r) => r.here),
@@ -359,7 +360,7 @@ export class Panels {
       this.app.leftView === "explorer"
         ? this.app.explorer.rows()
         : this.app.leftView === "git"
-          ? gitRows(this.app)
+          ? this.app.gitPanel.rows()
           : this.app.history.rows();
     const typed = keyChar(key);
     const done = () => {
@@ -377,8 +378,9 @@ export class Panels {
         const row = rows[s.selected];
         if (!row) return;
         if (this.app.leftView === "git") {
-          done();
-          return gitViewAction(this.app, "open_tab");
+          // The rows stay filtered, the keys the panel's again: enter does what it does on the row (esc clears it).
+          s.filtering = false;
+          return this.app.gitPanel.action("open");
         }
         if (this.app.leftView === "history") {
           // A note read elsewhere ("recent here") opens here; a place in this window's history is gone back to.
@@ -441,14 +443,14 @@ export class Panels {
       this.app.leftView === "explorer"
         ? this.app.explorer.rows()
         : this.app.leftView === "git"
-          ? gitRows(this.app)
+          ? this.app.gitPanel.rows()
           : this.app.history.rows();
     s.selected = Math.max(
       0,
       this.app.leftView === "explorer"
         ? next.findIndex((r) => (r as TreeRow).kind === "note")
         : this.app.leftView === "git"
-          ? next.findIndex((r) => (r as GitRow).kind !== "heading")
+          ? next.findIndex((r) => (r as PanelRow).kind !== "heading" && (r as PanelRow).kind !== "note")
           : next.findIndex((r) => !(r as HistoryRow).heading),
     );
   }

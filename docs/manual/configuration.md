@@ -106,6 +106,7 @@ These come from your own file only. In a folder's file, each is ignored, with a 
   is yours to allow.
 - **`[trust]`.** A folder can't trust itself.
 - **`walk.root_markers`.** Where vaults are is settled before any folder's file is read.
+- **`git.worktrees`.** Where slipbox makes a worktree's folder, outside the vault, is yours to say.
 - **A key or alias bound to a command that throws work away or runs a program:** `app.quit_force`, `note.revert`,
   `note.save_force`, `scratch.clear`, `shell.run` and `shell.filter`. A clone can't put a quit without saving on
   `ctrl+s`, or a program of its choosing on `:wq`. Your own file may: `"g m" = "shell.run make"`.
@@ -266,6 +267,10 @@ open_in = "float"              # where it opens: float (in the middle, over the 
 
 [git]
 base = ""                      # the branch or commit changes are measured against; "": main, else master
+bases = ["main"]               # the bases a branch's own is guessed among: the nearest; each listed is measured
+                               # against those before it, the first against none
+worktrees = "{parent}/{repo}-{branch}" # where a worktree slipbox makes goes: {parent} the folder holding the
+                               # repository, {repo} its name, {branch} the branch's, made safe; ~ home; your file only
 signs = true                   # the lines changed from what's staged, marked in the gutter
 signs_at = "gutter_right"      # where: gutter_right (its last column, against the text) | gutter_left (its first,
                                # before the line numbers) | window_right (the window's right edge, by the scrollbar)
@@ -369,6 +374,9 @@ require-marker = true          # …and only where there is one
 [keys.explorer]                # key = the explorer's action (see Keys, aliases and groups)
 "shift+o" = "open_split"
 
+[keys.git]                     # key = the git panel's action
+"shift+s" = "stage_all"
+
 [keys.outline]                 # key = the outline's action
 "z a" = "fold"
 
@@ -434,7 +442,10 @@ Each of the other tables holds the keys of one place, and is tried before `[keys
 - `[keys.explorer]` holds the explorer's, and the Problems panel's. They are bound to its actions: `down`, `up`,
   `open_tab`, `expand`, `open`, `collapse`, `open_split`, `top`, `bottom`, `filter`, `all_files`, `new_note`,
   `new_folder`, `rename`, `rename_root`, `move`, `delete`, `restore`, `undo_rename`, `copy`, `cut`, `paste`,
-  `make_root`, `unmake_root`, `menu`, `close`, `leave`, `commit`, `amend`.
+  `make_root`, `unmake_root`, `menu`, `zoom_in`, `zoom_out`, `close`, `leave`.
+- `[keys.git]` holds the git panel's. Its actions are `down`, `up`, `top`, `bottom`, `expand`, `collapse`, `open`,
+  `go`, `menu`, `stage`, `unstage`, `discard`, `stage_all`, `unstage_all`, `message`, `commit`, `amend`, `fetch`,
+  `pull`, `push`, `stash`, `new_branch`, `merge`, `filter`, `close`, `leave`.
 - `[keys.outline]` holds the outline's. Its actions are `down`, `up`, `jump`, `fold`, `unfold`, `top`, `bottom`,
   `filter`, `close`, `leave`, `rename`.
 - `[keys.footnotes]` holds the footnotes pane's. Its actions are the outline's moves (all of them but `rename`), and

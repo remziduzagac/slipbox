@@ -2789,7 +2789,7 @@ The same notes, one per tab.
 
 ### git changes
 
-- `git.view` — Source control: open, focus, close — `notes/index.md`, `work/kestrel/README.md` (command-specs.ts)
+- `git.view` — The git panel: open, focus, close — `notes/index.md`, `work/kestrel/README.md` (command-specs.ts)
 - source control: sections, l on a file, s on a change, d asks, an untracked file to the trash, a, U, . —
   `work/kestrel/README.md`, `notes/index.md` (tui.md Source control (26.2); tests 'source control (26.2)')
 - `git.branches` — Branches — `notes/index.md`, `work/kestrel/README.md` (command-specs.ts)

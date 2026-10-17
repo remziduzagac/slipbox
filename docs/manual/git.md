@@ -1,7 +1,7 @@
 # Git
 
-This chapter covers what slipbox does when the folder you open is a git repository. The command line's git commands
-come at the end.
+This chapter covers what slipbox does when the folder you open is a git repository, or holds some. The command line's
+git commands come at the end.
 
 slipbox shows what git knows about the repository:
 
@@ -9,14 +9,17 @@ slipbox shows what git knows about the repository:
 - which lines of the file on screen changed
 - who last changed a line
 - what a file looked like before
+- what each branch changed, and where its worktree is
 
-You can stage, commit, switch branches and move between worktrees without leaving slipbox. You can fetch, pull, push
-and stash. You can also review a branch before you merge it, including the links a merge would break.
+You can stage, commit, make and switch branches, and make worktrees for agents without leaving slipbox, by keys or by
+mouse. You can fetch, pull, push and stash. You can also review a branch before you merge it, including the links a
+merge would break, and merge it.
 
 slipbox runs the `git` on your `PATH`. Without it, none of this shows.
 
-slipbox fetches, pulls and pushes only when you ask, never on its own. It doesn't merge or rebase. You run git yourself
-for those, and slipbox follows what it did. [Privacy](privacy.md) has the few cases where git itself reaches a remote.
+slipbox fetches, pulls and pushes only when you ask, never on its own. It merges a branch only when you ask, and doesn't
+rebase. You run git yourself for the rest, and slipbox follows what it did. [Privacy](privacy.md) has the few cases
+where git itself reaches a remote.
 
 ## Git in slipbox
 
@@ -24,7 +27,8 @@ A git repository is a vault by itself. Open any file in it, and slipbox opens th
 [Links and vaults](links-and-vaults.md) explains vaults.
 
 The status line shows the vault and the branch checked out. For example, it shows `app · main` for a repository named
-`app` by its remote. A worktree of a named folder shows as its name and branch, as in `app@fix/retry`.
+`app` by its remote. A worktree of a named folder shows as its name and branch, as in `app@fix/retry`. Click them, and
+slipbox lists the branches, with pull, push and fetch first.
 
 When the branch has an upstream, the status line also shows how far the branch is ahead of it and behind it, as of the
 last fetch: `app · main ↑2 ↓1` has two commits to push and one to pull. Nothing shows when they're in step.
@@ -46,31 +50,24 @@ the one that says what's indexed ([A row's marks](files.md#a-rows-marks)).
 slipbox asks git in the background, a moment after anything changes. That can be a save, a file an agent wrote, or a
 branch switch.
 
-Everything else is under `space g`:
+Everything else is in the git panel:
 
 | Keys | What it does |
 | --- | --- |
-| `space g s` | Opens source control: the changed files, to stage, discard and commit |
+| `space g` | Opens the git panel, focuses it, and closes it, in turn |
 | `] c` / `[ c` | Goes to the next / previous changed line in this file |
-| `space g p` | Shows the change on the cursor's line, as a diff |
-| `space g r` | Undoes the change on the cursor's line |
-| `space g b` | Shows who last changed the cursor's line |
-| `space g h` | Shows this file's history |
-| `space g o` | Lists the branches, to switch to one or make one |
-| `space g w` | Lists the worktrees, to open this note in another |
-| `space g c` | Shows what this branch changed against the base branch (`:changes`) |
-| `space g d` | Shows this file's diff against the base branch (`:diff`) |
-| `space g m` | Shows the links a merge would break (`:merge-review`) |
 
-Fetching, pulling, pushing and the stashes are keys of source control, and commands: `:fetch`, `:pull`, `:push` and
-`:stash`.
+The rest are the panel's own keys, its buttons, and commands in the palette (`:`): `:changes`, `:diff`, `:worktrees`,
+`:merge-review`, `:fetch`, `:pull`, `:push`, `:stash`, and Branches, Who changed this line, This file's history,
+Preview the change and Undo the change, by their titles.
 
 [Keys](keys.md) has every key. You can change these like any other.
 
 ## What slipbox runs
 
 slipbox reads status, diffs, blame and history from git. It runs git to stage, unstage, discard, commit and switch
-branches. When you ask, it runs git to fetch, pull, push and stash.
+branches. When you ask, it runs git to fetch, pull, push and stash, to make a branch or a worktree, to remove a
+worktree, and to merge.
 
 What else git runs depends on whether you trust the vault. A repository you cloned can name programs for git to run.
 slipbox lets them run only in a vault you trust. [Code](code.md#trust) explains trust.
@@ -136,26 +133,47 @@ go.
 | Keys | What it does |
 | --- | --- |
 | `] c` / `[ c` | Goes to the next / previous change, going round at the file's ends |
-| `space g p` | Shows the change on the cursor's line as a diff, in a floating window |
-| `space g r` | Undoes that change: the lines as staged are put back |
+| a click on a change's sign | Shows the change, with Revert and Stage |
 
-The diff from `space g p` shows the change's lines as staged, then as they are now.
+The click shows the change's lines as staged, then as they are now, in a menu at the sign:
 
-`space g r` is one undo step, so `u` brings your lines back. It leaves the file unsaved.
+- **Revert it** (`r`) puts the lines back as staged. It's one undo step, so `u` brings your lines back, and it leaves
+  the file unsaved.
+- **Stage it** (`s`) stages that change alone, as `git add -p` does. Save the file first: git stages what's on disk.
+
+The palette has the same for the cursor's line: Preview the change, and Undo the change.
 
 `git.signs = false` turns the signs off ([Configuration](configuration.md)).
 
-## Source control
+## The git panel
 
-Press `space g s`, or click `±` on the left rail. Source control opens in the left panel. It lists the checkout's
-changed files under their sections:
+Press `space g`, or click `±` on the left rail. The git panel, source control, opens in the left panel with the keys:
+the status line says `GIT`. `space g` again closes it. It works by mouse as by keys, and says its keys as it goes.
+
+At its top:
+
+- the repository and its branch, clicked as the status line's are: the branches, pull, push and fetch
+- where the branch stands: how far it's ahead of its base and behind it (`↑5 on main`), and against its upstream
+  (`↑1 origin/main`), or that it has none yet (`not pushed`)
+- the message box, for a commit's message ([Committing](#committing))
+- the buttons: Commit (with how many files are staged), Amend, Pull (once there's an upstream), Push (Publish without
+  one), Fetch and Stash. Each does what its key does; under the pointer, the panel's foot says the key.
+
+Under them are its sections, each under a heading that `enter` or a click folds and unfolds:
 
 - **Conflicts**: files a merge left unmerged.
 - **Staged**: what the next commit takes.
 - **Changes**: changed, not staged yet.
 - **Untracked**: new files git doesn't track yet.
+- **This branch against main**: what the branch changed against its base, committed or not
+  ([Reviewing a branch](#reviewing-a-branch)). On the base itself there's none. With nothing uncommitted, it's what
+  the panel shows, so an agent's committed work is never "nothing changed".
+- **This file**: the note on screen's diff against the base, its history, and who changed the cursor's line.
+- **Branches**: the repository's branches, their worktrees marked ([Branches](#branches)).
+- **Other repositories**: the others in the explorer's view, folded
+  ([The repositories around you](#the-repositories-around-you)).
 
-Each file shows its state letter, coloured. After its name comes its folder, dimmed. The letters are:
+Each changed file shows its state letter, coloured. After its name comes its folder, dimmed. The letters are:
 
 | Letter | The file is |
 | --- | --- |
@@ -168,24 +186,38 @@ Each file shows its state letter, coloured. After its name comes its folder, dim
 
 A file can be in Staged and in Changes at once, when part of it is staged.
 
-Source control takes the explorer's keys, read its own way:
+The panel's foot says the keys of the row selected. Its keys:
 
 | Key | What it does |
 | --- | --- |
-| `j` / `k` | Moves through the files and changes |
-| `l` / `h` | Opens a file up into its changes / folds it again |
+| `j` / `k` | Moves through the rows, the sections' headings among them |
+| `enter` | Shows a file's diff, or a change's ([How a diff is drawn](#how-a-diff-is-drawn)). On a heading, folds it |
+| `o` | Opens the file at the change. On a branch's row, goes into its worktree |
+| `l` / `h` | Opens a file up into its changes, or a branch, in place / folds it again |
 | `s` | Stages the file, or just the change selected. On a conflict, it marks the file resolved |
 | `u` | Unstages the file, or just the change selected |
 | `d` | Discards what isn't staged: the file's changes, or the one change. It asks first |
-| `a` | Stages everything, untracked files too |
-| `shift+u` | Unstages everything |
-| `.` | Shows the file's diff, or the change's, in a floating window |
-| `enter` | Opens the file at the change |
-| `c` / `shift+c` | Commits what's staged / amends the last commit |
+| `a` / `shift+u` | Stages everything, untracked files too / unstages everything |
+| `i` | Types in the message box |
+| `c` / `shift+c` | Commits what's staged / amends the last commit ([Committing](#committing)) |
 | `f` / `p` / `shift+p` | Fetches / pulls / pushes ([Fetching, pulling and pushing](#fetching-pulling-and-pushing)) |
 | `z` | Lists the stashes ([Stashes](#stashes)) |
-| `/` | Filters the files by path |
-| `q` / `esc` | Closes source control / goes back to the note, leaving it open |
+| `n` / `m` | A new branch / merges the branch selected ([Branches](#branches)) |
+| `.` | The row's menu |
+| `/` | Filters the files, branches and repositories by name. `enter` keeps the filter; `esc` clears it |
+| `q` / `esc` | Closes the git panel / goes back to the note, leaving it open |
+
+On a section's heading, `s`, `u` and `d` act on every file under it: Changes' and Untracked's staged, Staged's
+unstaged, Changes' discarded (after asking; untracked files stay).
+
+By mouse:
+
+- A click on a file shows its diff; a double-click opens it. A click on a heading folds or unfolds it.
+- Under the pointer, a row shows its buttons: `+` stages, `−` unstages, `↺` discards, `⧉` shows the diff. A heading has
+  its own, always shown: `+` and `↺` on Changes, `+` on Untracked, `−` on Staged. The foot says what each does, and
+  its key.
+- A right click opens a row's menu: what its keys do, and Show it in the explorer, Copy its path, and A note for the
+  agent, which adds the file to the scratch for you to write about.
 
 A staged file opens up into its changes against the last commit. A changed one opens up into its changes against
 what's staged, as the file is on disk.
@@ -205,18 +237,20 @@ When git refuses something, slipbox says why in git's own words.
 
 ## Committing
 
-1. In source control, press `c`. A floating editor opens for the commit message, and you type on its first line.
-   Lines starting with `#` say what's staged. They're left out of the message.
-2. Write the message, then press `ctrl+s` (or `:w`) to commit. The commit runs in the background, as a hook can take a
-   while. When it's done, a message says its short hash and subject.
+1. Type the message in the panel's message box: click it, or press `i`. `esc` leaves it, keeping what's typed.
+2. Press `ctrl+enter`, or click Commit. The commit runs in the background, as a hook can take a while. When it's done,
+   a message says its short hash and subject, and the box is empty again.
 
-`esc` or `q` leaves the editor and commits nothing.
+For a longer message, press `c`, or `enter` in the box, or Commit with the box empty. A floating editor opens for the
+message, with the box's text, and you type on. Lines starting with `#` say what's staged. They're left out of the
+message. `ctrl+s` (or `:w`) commits. `esc` or `q` leaves the editor and commits nothing.
 
 If the message is empty, or a hook refuses, slipbox says so in git's words. The editor stays open.
 
-`shift+c` amends the last commit with what's staged. The last commit's message is there to start from.
+`shift+c`, or Amend, amends the last commit with what's staged. The last commit's message is there to start from, or
+the box's, when it has one.
 
-"Commit" and "Amend the last commit" are in the palette (`:`) too, for when source control isn't open. With nothing
+"Commit" and "Amend the last commit" are in the palette (`:`) too, for when the git panel isn't open. With nothing
 staged, a commit says so.
 
 In a vault you don't trust, the commit's hooks don't run, and it isn't signed. The editor's first lines and a message
@@ -226,7 +260,7 @@ say so.
 
 slipbox reaches a remote only when you ask. Nothing runs on a timer.
 
-| In source control | Command | What it does |
+| In the git panel | Command | What it does |
 | --- | --- | --- |
 | `f` | `:fetch` | Fetches the branch's remote, or `origin` when the branch has no upstream |
 | `p` | `:pull` | Pulls: brings the upstream's new commits into the branch, when it can fast-forward |
@@ -270,7 +304,7 @@ whose repository names its own program for reaching the remote stops before it s
 
 ## Stashes
 
-`z` in source control, or `:stash`, lists the stashes, newest first, under two ways to make one:
+`z` in the git panel, or `:stash`, lists the stashes, newest first, under two ways to make one:
 
 - **Stash the changes…** asks for a message, then sets your uncommitted changes aside, staged or not. The files go back
   to the last commit. Untracked files stay.
@@ -295,20 +329,21 @@ the one you picked, rather than act on another, and `z` lists them again.
 While a merge has conflicts, the files git couldn't merge show in several places:
 
 - The explorer marks them `!`.
-- Source control lists them under Conflicts.
+- The git panel lists them under Conflicts.
 - The Problems panel's All tab (`space v p`) lists them under Conflicts, each at its first `<<<<<<<` line.
 - In a note, each conflict is an error among the note's problems: "a merge conflict: both sides are still here".
 
 To mark a conflict resolved:
 
 1. Resolve the conflict in the file, and save it.
-2. In source control, press `s` on the file. It's marked resolved.
+2. In the git panel, press `s` on the file, or click its `+`. It's marked resolved.
 
 [Code](code.md#problems) covers the Problems panel.
 
 ## Who changed a line
 
-`space g b` shows who last changed the cursor's line, in a floating window. The window shows the commit's:
+Who changed this line, in the git panel's This file or the palette, shows who last changed the cursor's line, in a
+floating window. The window shows the commit's:
 
 - short hash
 - author
@@ -322,7 +357,8 @@ commit has no one to name.
 
 ## A file's history
 
-`space g h` lists the commits that changed the file on screen, newest first. Each has its author and day.
+Its history, in the git panel's This file, or This file's history in the palette, lists the commits that changed
+the file on screen, newest first. Each has its author and day.
 
 The list follows the file back through renames. A commit from before a rename says the path the file had then.
 
@@ -334,7 +370,57 @@ The list follows the file back through renames. A commit from before a rename sa
 
 ## Branches
 
-`space g o` lists the local branches. The one checked out is marked `here`.
+The git panel's Branches section lists the local branches, in this order:
+
+1. the branch checked out here, marked `●` and `here`
+2. those checked out in a worktree, marked `⎇`, the newest first ([Worktrees](#worktrees))
+3. those touched in the last month, the newest first
+
+Then, folded under **Merged or older**, the branches merged into their base and those untouched for a month. `/`
+filters them all by name.
+
+At its end, each says what it holds, as git last said: how far it's ahead of its base and behind it, with the base's
+name (`↑3 ↓1 on dev`); a worktree's uncommitted files (`✎2`); `◆` when a worktree has work to review, uncommitted or
+not merged; `✓` when it's merged. Short of room, the base's name goes first.
+
+`enter`, or a click, opens a branch up in place, without going anywhere:
+
+- its worktree's folder, or that the folder is gone
+- its buttons: Open, for a branch in a worktree; Check out here and Open in a worktree, for one checked out nowhere;
+  then Merge…; and Remove… for a worktree
+- a worktree's uncommitted files, and the files the branch changed against its base, each showing its diff on a click
+  or `enter`
+
+`.`, or a right click, opens a branch's menu: what its buttons do, Compare against…, a new branch from it, and Copy
+its name.
+
+- **Open**, or `o`, goes into the worktree, a vault of its own. You land at the same note when it's there, else at its
+  top folder. `ctrl+o` comes back.
+- **Check out here** checks the branch out in this checkout.
+- **Open in a worktree** makes a worktree for the branch, in the folder `git.worktrees` names, and goes into it.
+- **Merge…**, or `m`, merges the branch into its base. It offers the links the merge would break first
+  ([Reviewing a merge](#reviewing-a-merge)), then the merge itself, run where the base is checked out: here, or in its
+  worktree. Into another branch… picks another. A merge that conflicts stops, git's words said, its files under
+  Conflicts; `git merge --abort` undoes it. In a vault you don't trust, it runs no hook and isn't signed.
+
+### A new branch
+
+`n` in the git panel, or `+ New` on the Branches heading, asks three things:
+
+1. Its name. If git won't take it, slipbox says so.
+2. Where it starts: this branch, the bases (`git.bases`), any other branch, or a commit you type.
+3. Where it goes: **In a new worktree** (the default), in the folder `git.worktrees` names; **In a new worktree, in
+   another folder…**, typed; **Check it out here**; or **Just make it**.
+
+slipbox keeps the branch it was made from as its base ([The base of each branch](#the-base-of-each-branch)).
+
+A worktree suits giving an agent a branch of its own to work on. Made beside the repository by default, it shows under
+Branches at once, `⎇` and its folder; the agent's commits show there against its base.
+
+### Switching branches
+
+The status line's branch, clicked, lists the local branches, with pull, push and fetch first. So does the palette's
+Branches. The one checked out is marked `here`.
 
 - `enter` on another branch checks it out.
 - The last entry, "A new branch from here…", asks for a name. It makes the branch where you are, then switches to it.
@@ -363,12 +449,32 @@ Unsaved notes stay open, and a message says so.
 
 ## Worktrees
 
-A worktree, made with `git worktree add`, is a vault of its own. It has its own tabs, positions and scratch.
-[Links and vaults](links-and-vaults.md#worktrees) has the rest.
+A worktree, made with `git worktree add` or from the git panel, is a vault of its own. It has its own tabs, positions
+and scratch. [Links and vaults](links-and-vaults.md#worktrees) has the rest.
 
-Worktrees suit giving an agent a branch of its own to work on.
+The git panel shows each worktree on its branch, in Branches ([Branches](#branches)).
 
-`space g w` lists the repository's checkouts by branch:
+`git.worktrees` says where a worktree slipbox makes goes. It's a path with three blanks to fill:
+
+| Blank | Filled with |
+| --- | --- |
+| `{parent}` | the folder holding the repository's main checkout |
+| `{repo}` | the main checkout's folder's name |
+| `{branch}` | the branch's name, made safe for a folder's: `agent/sync-retry` is `agent-sync-retry` |
+
+It's `"{parent}/{repo}-{branch}"` as it comes: beside the repository, as `~/code/app-fix-retry`. Yours could be
+`"~/Projects/worktrees/{repo}/{branch}"`, one folder for all of them. A path not starting with `/` or `~` is from
+`{parent}`. Only your own configuration sets it ([Configuration](configuration.md)).
+
+**Remove…**, on a worktree's branch, removes the worktree, after asking, when two things hold:
+
+- its branch is merged into its base, so nothing of its own would be left only there
+- it has no uncommitted files
+
+Otherwise it's refused, and slipbox says why. Asked, you can keep the branch, or remove it too. A worktree whose folder
+is gone, deleted by hand, says so on its branch, with **Prune**, which has git forget it.
+
+`:worktrees` lists the repository's checkouts by branch:
 
 - The main one comes first.
 - The one you're in is marked `●`.
@@ -376,20 +482,61 @@ Worktrees suit giving an agent a branch of its own to work on.
 
 `enter` switches to that checkout. You land at the same note when it's there, else at its top folder.
 
+## The repositories around you
+
+The git panel follows the vault you're in. In a repository, it's that repository's, and under it, folded, are the other
+repositories in the explorer's view: **Other repositories**.
+
+In a vault that isn't a repository, those repositories are the panel. That's home, a vault without git, or a folder
+outside every vault. It says how many the view holds (`~/code holds 3 repositories`), and lists them by what needs
+attention:
+
+1. a worktree with uncommitted files: an agent's work to review
+2. uncommitted files
+3. commits to push or to pull
+4. clean
+
+A worktree is listed under its repository, as one. In a folder of home, the repositories elsewhere in home are folded
+and counted under **Elsewhere in home**.
+
+Each says its state at its end: its uncommitted files (`✎3`), ahead of its upstream and behind it, or `clean`. git is
+asked only about the rows on screen, in the background, and again when you open the panel.
+
+- `enter`, or a click, opens a repository up in place: its checkouts, the main one `●` and each worktree `⎇` by its
+  branch, and their uncommitted files. A file shows its diff against its last commit.
+- `o` goes into a repository, or into the checkout selected, a vault of its own. `ctrl+o` comes back.
+
+slipbox looks for repositories three folders down from the view, not in hidden folders, nor in busy ones such as
+`node_modules`.
+
 ## Reviewing a branch
 
-To see what a branch did, before a merge or a pull request, measure it against the base branch. The base branch is:
+To see what a branch did, before a merge or a pull request, measure it against its base. slipbox compares from where
+the branch left the base (the merge base), as a pull request's diff does. So what happened on the base since doesn't
+show.
 
-- `git.base`, when you've set it ([Configuration](configuration.md))
-- else `main`
-- else `master`
+### The base of each branch
 
-slipbox compares from where the branch left the base (the merge base), as a pull request's diff does. So what happened
-on the base since doesn't show.
+Each branch has a base of its own, so a branch made from `dev` isn't measured against `main`, every commit of `dev`'s
+looking like its own. A branch's base is:
+
+1. the branch slipbox made it from ([A new branch](#a-new-branch)), or the one you picked with Compare against…, kept
+   in slipbox's state
+2. else the nearest of `git.bases`: the one that leaves the branch fewest commits of its own. `git.base` is among them
+   when you've set it. A branch listed there is measured only against those listed before it: with `["main", "dev"]`,
+   `dev` against `main`, and `main`, the first, against none
+3. else `main`, else `master`
+
+`git.bases` is `["main"]` as it comes ([Configuration](configuration.md)). The git panel shows each branch's base at
+its row's end, as in `↑3 on dev`, and the panel's top shows this branch's. Compare against…, in a branch's menu (`.`
+or a right click on it), picks another base, kept; or goes back to the one guessed.
+
+The panel's diffs, This branch against main, `:changes`, `:diff` and Merge… all use it.
 
 ### The files a branch changed
 
-`space g c` (`:changes`) lists the files this branch changed, committed or not, and the new ones:
+The git panel's **This branch against main** lists the files this branch changed against its base, committed or not,
+and the new ones. `enter`, or a click, shows one's diff; `esc` comes back. `:changes` lists the same in a window:
 
 | Mark | The file is |
 | --- | --- |
@@ -405,18 +552,21 @@ On the base branch itself, the list is what you haven't committed yet.
 
 In a repository where the vault is a folder inside it, files outside that folder are left out.
 
+Another branch's files, opened up in Branches, are what its commits changed against its base; a worktree's uncommitted
+ones are listed apart.
+
 ### A file's diff
 
-`space g d` (`:diff`) shows the diff of the file on screen against the base. It uses the file as it is now, unsaved
-changes included.
+`:diff`, or Its diff against main in the git panel's This file, shows the diff of the file on screen against the base.
+It uses the file as it is now, unsaved changes included.
 
 It's drawn as the next section says.
 
 ### How a diff is drawn
 
-Every diff slipbox shows is drawn the same way: `space g d`, a file's diff from `space g c`, a commit's diff to now
-from `space g h`, and the differences the conflict prompt shows ([Editing](editing.md)). It opens in a floating window
-as wide as the screen allows.
+Every diff slipbox shows is drawn the same way: `:diff`, a file's diff from the git panel or `:changes`, a commit's
+diff to now from a file's history, and the differences the conflict prompt shows ([Editing](editing.md)). It opens in
+a floating window as wide as the screen allows.
 
 - Each line is a row, `-` before a removed line and `+` before an added one. Its text is highlighted as in source
   mode: a note's Markdown, or code by its file's language.
@@ -432,8 +582,8 @@ as wide as the screen allows.
   held. A `‹` or `›` at an edge says the line goes on that way. With `render.code_wrap = "wrap"` the long lines wrap
   instead, and with wrapping off the whole window scrolls sideways.
 
-`enter` on a line goes to it in the file. `esc` or `q` closes the diff, and goes back to the list or the question it
-came from. The conflict prompt's diff goes back to the prompt on `enter` too.
+`enter` on a line goes to it in the file. `esc` or `q` closes the diff, and goes back to the panel, the list or the
+question it came from. The conflict prompt's diff goes back to the prompt on `enter` too.
 
 In the terminal's theme and without colour, the changed words are bold and underlined instead of tinted.
 `[colors]` sets the tints: `diff_add` and `diff_del` for the lines, `diff_add_word` and `diff_del_word` for the words
@@ -442,7 +592,7 @@ In the terminal's theme and without colour, the changed words are bold and under
 ### Another base
 
 `git.base` takes any branch or commit, so you can measure changes since a commit too. On the command line, `--base`
-does the same for one command.
+does the same for one command; the command line uses `git.base`, else `main` or `master`, for every branch.
 
 ## Reviewing a merge
 
@@ -452,13 +602,14 @@ other adds a link to it. The merge leaves that link broken, and git can't see it
 The merge review can. It asks git for the merge's result, without touching your files or your branch. Then it checks
 every link in that result.
 
-1. Press `space g m` (`:merge-review`). It asks which merge you mean: this branch into the base, or another branch
-   into this one.
-2. Pick the merge. The review lists each link the merge would break, by note and line. Each shows what broke it and,
-   where there is one, the fix. Each link is yellow when there's a fix, and red when there isn't.
+1. In the git panel, choose Merge… on a branch, and The links it would break: that branch into its base. Or run
+   `:merge-review`, which asks which merge you mean: this branch into the base, or another branch into this one.
+2. The review lists each link the merge would break, by note and line. Each shows what broke it and, where there is
+   one, the fix. Each link is yellow when there's a fix, and red when there isn't.
 3. Press `enter` to go to a link. A note only the other branch has is said to come with it.
 
-`esc` goes back to the choice of merges.
+`esc` goes back to the choice of merges. Merge…'s Merge it then merges, where the base is checked out
+([Branches](#branches)).
 
 When nothing would break, a message says so. Either way, the files git couldn't merge are counted.
 
@@ -535,7 +686,7 @@ slipbox merge-review fix/retry --into main
 slipbox problems                    # the vault's link problems; during a merge, its conflicts too
 ```
 
-`slipbox changed` prints one line for each file, as `space g c` lists them:
+`slipbox changed` prints one line for each file, as `:changes` lists them:
 
 ```text
 M README.md

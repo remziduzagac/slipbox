@@ -52,6 +52,7 @@ import { Settings } from "./settings.ts";
 import { Pictures } from "./pictures.ts";
 import { Languages } from "./languages.ts";
 import { Git } from "./git.ts";
+import { GitPanel } from "./gitpanel.ts";
 import { Search } from "./search.ts";
 import { Views } from "./views.ts";
 import { Lens, type LiveBase } from "./lens.ts";
@@ -442,6 +443,8 @@ export class App {
   visualKeys!: Keymap;
   sourceKeys!: Keymap;
   explorerKeys!: Keymap;
+  /** The git panel's own keys (GIT-D12), `[keys.git]`. */
+  gitKeys!: Keymap;
   outlineKeys!: Keymap;
   footnoteKeys!: Keymap;
   infoKeys!: Keymap;
@@ -542,6 +545,8 @@ export class App {
   readonly languages = new Languages(this);
   /** Source control: git's view of the files, its diffs, branches and commits. */
   readonly git = new Git(this);
+  /** The git panel (GIT-D8): its message, its sections folded, its branches and repositories, its keys and mouse. */
+  readonly gitPanel = new GitPanel(this);
   /** Search: the index and its list, tags and types, replace across notes. */
   readonly search = new Search(this);
   /** Views: layout, anchors, cursor and selection, scrolling. */

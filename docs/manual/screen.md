@@ -160,7 +160,7 @@ Each side of the screen has a panel that shows one view at a time, and a rail of
 | --- | --- | --- | --- | --- |
 | left | the explorer: the folder's notes and files | `≡` | `space e` | [Files](files.md) |
 | left | the history: where this window has been | `◷` | `space h h` | [Finding things](finding.md) |
-| left | source control: the files changed in git | `±` | `space g s` | [Git](git.md) |
+| left | source control, the git panel: the files changed, the branches | `±` | `space g` | [Git](git.md) |
 | right | Info: what the file on screen is | `ℹ` | `space n i` | [below](#the-info-view) |
 | right | the outline: the note's headings | `▤` | `space o` | [Finding things](finding.md) |
 | right | the footnotes: the note's footnotes | `¹` | `space n f` | [Finding things](finding.md) |
@@ -192,8 +192,8 @@ A view keeps its place, its selection and its filter while another view shows. I
 The wheel scrolls a pane without moving its selection. A pane whose rows are wider than it scrolls sideways, with a
 scrollbar along its bottom row.
 
-Each pane's keys are listed in [Keys](keys.md). You can change them under `[keys.explorer]`, `[keys.outline]`,
-`[keys.footnotes]` and `[keys.info]`.
+Each pane's keys are listed in [Keys](keys.md). You can change them under `[keys.explorer]`, `[keys.git]`,
+`[keys.outline]`, `[keys.footnotes]` and `[keys.info]`.
 
 These settings set up the panes:
 
@@ -323,7 +323,8 @@ The status line describes the file in the focused window. From the left:
   | `LENS` | the note, with the lens open on the block being edited |
   | `INSERT` | typing |
   | `VISUAL`, `V-LINE` | a selection, by character or by whole rows |
-  | `FILES` | the left panel: the explorer, the history or source control |
+  | `FILES` | the left panel: the explorer or the history |
+  | `GIT` | the left panel: source control, the git panel |
   | `OUTLINE`, `FOOTNOTES`, `INFO` | the right panel's view |
   | `PROBLEMS` | the Problems panel |
   | `RESIZE` | resize mode |
@@ -472,9 +473,9 @@ The same pause is how long a key waits before it runs, when it is both a command
 Some things show in a floating window over the note, framed, near the top of the content:
 
 - what's under the cursor (`shift+k`): a link's destination in a note, or a language server's description in code
-- who last changed the cursor's line (`space g b`)
-- a change shown as a diff (`space g p`)
-- a file as it was in an older commit (`space g h`), or as it is on another branch when a link leads there
+- who last changed the cursor's line (Who changed this line, in the git panel's This file or the palette)
+- a change shown as a diff (Preview the change, in the palette)
+- a file as it was in an older commit (This file's history), or as it is on another branch when a link leads there
 - the properties editor (`space n shift+p`) and a commit's message, which you type into
 
 There is one at a time. In one you only read, you can move, select and copy as in a note. `esc` or `q` closes it, and

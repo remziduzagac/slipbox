@@ -42,6 +42,7 @@ The chip at the left of the status line says what your keys act on.
 | `INSERT` | you're typing |
 | `SOURCE` | the whole note as Markdown |
 | `FILES` | the explorer on the left has the keys |
+| `GIT` | the git panel on the left has the keys |
 
 [The screen](screen.md#the-status-line)
 

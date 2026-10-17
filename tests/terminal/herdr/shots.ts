@@ -194,10 +194,10 @@ const SHOTS: Shot[] = [
     options: HOME("work/infra/k8s/tiles.yaml"),
     take: async (s) => {
       await s.status("tiles.yaml");
-      await leader(s, "g", "s");
+      await leader(s, "g");
       await s.see("Changes");
-      // The first file, wherever the selection starts: its changes opened up under it.
-      await s.keys("g", "g", "l");
+      // The first file, under its section's heading: its changes opened up under it.
+      await s.keys("g", "g", "j", "l");
     },
   },
   {
@@ -206,7 +206,7 @@ const SHOTS: Shot[] = [
     take: async (s) => {
       await s.status("README.md");
       await quiet(s);
-      await leader(s, "g", "m");
+      await s.ex("merge-review");
       await s.see("docs-layout");
       await s.type("docs-layout");
       await s.keys("enter");

@@ -330,8 +330,8 @@ export function openHelp(a: App): void {
     ...pane(a.explorerKeys, EXPLORER_ACTION_INFO),
     ...heading("Inside the history", false),
     ...pane(a.explorerKeys, HISTORY_ACTION_INFO),
-    ...heading("Inside source control", false),
-    ...pane(a.explorerKeys, GIT_ACTION_INFO),
+    ...heading("Inside the git panel", false),
+    ...pane(a.gitKeys, GIT_ACTION_INFO),
     ...heading("Inside Problems", false),
     ...pane(a.problemsKeys, PROBLEMS_ACTION_INFO),
     ...heading("Filtering a panel (/)", false),
@@ -359,7 +359,7 @@ export function openHelp(a: App): void {
   const left = {
     explorer: "Inside the explorer",
     history: "Inside the history",
-    git: "Inside source control",
+    git: "Inside the git panel",
   } as const;
   const right = { outline: "Inside the outline", info: "Inside Info", footnotes: "Inside the footnotes" } as const;
   const section =

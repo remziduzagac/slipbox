@@ -734,46 +734,46 @@ Each button has a key, which acts on the cell at the cursor.
 
 | Keys | What |
 | --- | --- |
-| `space g s` | source control: the changed files, in the left panel (opens it, focuses it, closes it) |
-| `space g c` | the files this branch changed against the base (`enter` shows a file's diff) |
-| `space g d` | this note's diff against the base (`enter` goes to the line) |
-| `space g h` | this file's history: its commits, one read as it was, or its diff to now |
-| `space g b` | who last changed the cursor's line: the commit, its author, date and message |
-| `space g o` | the branches: check one out, or make a new one from here |
-| `space g w` | the worktrees by branch (`enter` opens this note in the one you pick) |
-| `space g m` | the links a merge you pick would break, each with its fix |
+| `space g` | the git panel: opens it, focuses it, closes it, in turn |
 | `] c` / `[ c` | the next / previous line changed against what's staged, as the gutter marks them |
-| `space g p` | the change on the cursor's line, as a diff in a floating window |
-| `space g r` | undo that change, putting its lines back as staged, in one undo step, unsaved |
 
-[Git](git.md) explains each of these.
+The rest of git is the panel's, and the palette's: `:changes`, `:diff`, `:worktrees`, `:merge-review`, and the commands
+titled Branches, Who changed this line, This file's history, Preview the change and Undo the change. A click on a
+change's sign in the gutter shows the change, with Revert and Stage. [Git](git.md) explains each of these.
 
-### Inside source control
+### Inside the git panel
+
+Its keys act on the row selected. The panel's footer says the ones that do something there, and a button under the
+pointer says its own. `[keys.git]` changes them ([Configuration](configuration.md)).
 
 | Keys | What |
 | --- | --- |
-| `j` / `k`, `down` / `up` | select the next / previous file or change |
-| `enter`, `o` | open the file at the change |
-| `l`, `right` | open a file up into its changes |
-| `h`, `left` | fold a file's changes, or from a change, go back to its file |
-| `s` | stage the file, or the one change (a conflict's file is marked resolved) |
-| `u` | unstage it |
-| `d` | discard what isn't staged, after asking (an untracked file goes to slipbox's trash) |
+| `j` / `k`, `down` / `up` | select the next / previous row |
+| `enter` | a file's diff, or a change's; fold or unfold a section; open up a branch or a repository in place |
+| `o` | open the file at its change; go into a branch's worktree, or a repository |
+| `l`, `right` / `h`, `left` | open up a file into its changes, a branch, a repository / fold it again |
+| `s` | stage the file, or the one change (a conflict's file is marked resolved); on a heading, every file under it |
+| `u` | unstage it; on Staged's heading, everything |
+| `d` | discard what isn't staged, after asking (an untracked file goes to slipbox's trash); remove a worktree |
 | `a` / `shift+u` | stage / unstage everything |
-| `.` | its diff, in a floating window |
-| `c` | commit what's staged, writing the message in a floating editor |
+| `i` | type the commit's message in the panel's message box |
+| `c` | commit what's staged, with the box's message, or one written in a floating editor |
 | `shift+c` | amend the last commit with what's staged |
 | `f` | fetch from the remote, in the background (`:fetch`) |
 | `p` | pull the upstream's new commits, fast-forward only, unsaved notes saved or kept first (`:pull`) |
 | `shift+p` | push the branch to its upstream; with none, asks to push it to `origin` and track it (`:push`) |
 | `z` | the stashes: stash your changes with a message, or pop, apply or drop a stash (`:stash`) |
+| `n` | a new branch: its name, where it starts, and where it goes, in a new worktree by default |
+| `m` | merge the branch selected into its base, the links it would break shown first |
+| `.` | the row's menu, as a right click opens it |
 | `g g` / `shift+g` | the first / last row |
-| `/` | filter the files by path |
-| `q` | close source control |
-| `esc` | back to the note |
+| `/` | filter the files, branches and repositories by name |
+| `q` | close the git panel |
+| `esc` | back to the note (with a filter kept, it clears it first) |
 
-In the commit message's editor, every editing key works. `ctrl+s` (or `:w`) commits. `esc` (or `q`) leaves it,
-committing nothing.
+In the message box, `ctrl+enter` commits, `enter` takes the message to the floating editor, and `esc` leaves the box,
+keeping what's typed. In the floating editor, every editing key works: `ctrl+s` (or `:w`) commits, and `esc` (or `q`)
+leaves it, committing nothing.
 
 ## Note, folder, app
 
@@ -1004,7 +1004,7 @@ it back to the terminal.
 | --- | --- |
 | `≡` on the left rail (without the rail, on the top bar) | shows the explorer, focused, or hides it |
 | `◷` on the left rail | shows the history, focused, or hides it |
-| `±` on the left rail | shows source control, focused, or hides it |
+| `±` on the left rail | shows source control, the git panel, focused, or hides it |
 | `ℹ` on the right rail | shows Info, focused, or hides it |
 | `▤` on the right rail (without it, on the breadcrumb or the top bar) | shows the outline, focused, or hides it |
 | `¹` on the right rail | shows the footnotes, focused, or hides them |
@@ -1018,6 +1018,8 @@ it back to the terminal.
 | a task's box (`☐` / `☑`) | ticks or unticks it |
 | the status line's `‹` / `›` | back / forward in the window's history |
 | the status line's path | lists the window's history, with Copy path first |
+| the status line's vault and branch | in a repository: pull, push and fetch, then the branches to check one out |
+| a change's sign in the gutter | shows the change, with Revert and Stage |
 | the status line's problems | the Problems panel on This file (on All when the file has none), or closes it |
 | a sign in the problems bar, a coloured line number | the Problems panel, on that problem |
 | a Problems tab's title | switches to it |
@@ -1038,7 +1040,10 @@ it back to the terminal.
 | a code block too wide, a sideways wheel, or the wheel with `shift` | scrolls the block sideways |
 | the tab strip, the wheel | switches to the next or the previous tab |
 | the explorer | a click selects a note, a double-click opens it as a tab, and a click on a folder folds or unfolds it |
-| the history, source control | a click selects, a double-click goes there |
+| the history | a click selects, a double-click goes there |
+| source control (the git panel) | a file's row shows its diff, a double-click opens it; a heading folds or unfolds |
+| source control, under the pointer | a row's buttons: `+` stage, `−` unstage, `↺` discard, `⧉` its diff |
+| source control, a right click | the row's menu: its keys' actions, show it in the explorer, copy its path, a note |
 | the outline | a click goes to the heading, or on `▾` / `▸`, folds or unfolds |
 | the footnotes, Info | a click goes to the footnote, or opens what the row names |
 | a panel, the wheel | scrolls it, and the selection stays |

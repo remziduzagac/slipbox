@@ -32,7 +32,7 @@ import { type ListOverlay, App, type Host } from "../src/tui/app.ts";
 import { dateText, listFolder, placeOf, type SaveAsOverlay, sizeText } from "../src/tui/saveas.ts";
 import { placeIn } from "../src/tui/shellrun.ts";
 import { setTrust } from "../src/core/trust.ts";
-import { gitRows } from "../src/tui/gitview.ts";
+import type { PanelRow } from "../src/tui/gitpanel.ts";
 import type { NvimServer } from "../src/core/nvim.ts";
 import { TextCanvas } from "../src/tui/canvas.ts";
 import { match, rank } from "../src/tui/match.ts";
@@ -14602,11 +14602,11 @@ describe("git in the TUI: marks, what changed, a note's diff, worktrees, conflic
         .find((r) => r.includes("aaaaaaaa")),
     ).toMatch(/a… M/);
   });
-  test("space g c lists what this branch changed; enter shows a file's diff; esc goes back; enter on a line goes there", async () => {
+  test(":changes lists what this branch changed; enter shows a file's diff; esc goes back; enter on a line goes there", async () => {
     const root = repo();
     if (!root) return;
     const h = await harness({ root, open: "c.md" });
-    await h.keys("space", "g", "c");
+    await h.app.run("git.changes");
     const list = h.app.overlay as ListOverlay;
     expect(list.title).toBe("Changed against main (3) — enter: the diff");
     expect(list.items.map((i) => [i.label, i.role])).toEqual([
@@ -14642,7 +14642,7 @@ describe("git in the TUI: marks, what changed, a note's diff, worktrees, conflic
     expect(statusRow(h.frame())).toMatch(/ L4:\d+ /); // on that line, inside its paragraph
   });
 
-  test("space g m: a branch picked, the links its merge would break; enter goes to one; esc back to the branches (20.21)", async () => {
+  test(":merge-review: a branch picked, the links its merge would break; enter goes to one; esc back to the branches (20.21)", async () => {
     const root = repo();
     if (!root) return;
     git(root, "add", "-A");
@@ -14656,7 +14656,7 @@ describe("git in the TUI: marks, what changed, a note's diff, worktrees, conflic
     writeFileSync(join(root, "c.md"), "# C\n\nSee [a](a.md).\n");
     git(root, "commit", "-q", "-am", "c links a");
     const h = await harness({ root, open: "c.md" });
-    await h.keys("space", "g", "m");
+    await h.app.run("git.merge_review");
     let list = h.app.overlay as ListOverlay;
     expect(list.title).toBe("Review a merge — enter: the links it would break");
     expect(list.items.map((i) => [i.label.replace(/^\S+ /, ""), i.detail])).toEqual([
@@ -14677,19 +14677,19 @@ describe("git in the TUI: marks, what changed, a note's diff, worktrees, conflic
     // Nothing would break: said so, no list.
     git(root, "checkout", "-q", "-b", "quiet", "main");
     h.app.git.checkHead();
-    await h.keys("space", "g", "m");
+    await h.app.run("git.merge_review");
     list = h.app.overlay as ListOverlay;
     list.selected = list.items.findIndex((i) => i.label.endsWith("main → quiet"));
     await h.keys("enter");
     expect(h.app.messages.at(-1)!.text).toBe("merging main into quiet breaks no link");
   });
 
-  test("space g d: this note's diff, as it is now (unsaved too); nothing different, said so", async () => {
+  test(":diff: this note's diff, as it is now (unsaved too); nothing different, said so", async () => {
     const root = repo();
     if (!root) return;
     const h = await harness({ root, open: "a.md" });
     await h.keys("space", "n", "v", "shift+g", "o", ...[..."four"], "escape");
-    await h.keys("space", "g", "d");
+    await h.app.run("git.diff");
     const labels = h.app.floating!.view.buf.source.split("\n");
     expect(labels).toContain("+ four");
     expect(labels).toContain("+ TWO");
@@ -14701,7 +14701,7 @@ describe("git in the TUI: marks, what changed, a note's diff, worktrees, conflic
     git(root, "commit", "-q", "-m", "c");
     git(root, "checkout", "-q", "main");
     git(root, "merge", "-q", "feat");
-    await h.keys("space", "g", "d");
+    await h.app.run("git.diff");
     expect([h.app.floating, h.app.overlay, h.app.messages.at(-1)?.text]).toEqual([
       null,
       null,
@@ -14709,7 +14709,7 @@ describe("git in the TUI: marks, what changed, a note's diff, worktrees, conflic
     ]);
   });
 
-  test("space g w: the worktrees by branch; enter opens this note in the one picked", async () => {
+  test(":worktrees: the worktrees by branch; enter opens this note in the one picked", async () => {
     const root = repo();
     if (!root) return;
     git(root, "add", "-A");
@@ -14717,7 +14717,7 @@ describe("git in the TUI: marks, what changed, a note's diff, worktrees, conflic
     const wt = `${root}-other`;
     git(root, "worktree", "add", "-q", "-b", "other", wt, "main");
     const h = await harness({ root, open: "notes/b.md" });
-    await h.keys("space", "g", "w");
+    await h.app.run("git.worktrees");
     const list = h.app.overlay as ListOverlay;
     expect(list.items.map((i) => [i.label, i.detail])).toEqual([
       ["● ⎇ feat", `${root}  (main)`],
@@ -18112,8 +18112,17 @@ describe("source control (26.2)", () => {
     git(root, "commit", "-q", "-m", "start");
     return git(root, "rev-parse", "HEAD") ? root : null;
   };
-  const labels = (h: Harness) => gitRows(h.app).map((r) => r.label);
-  /** The view open on a repository's changes, git's answer in. */
+  /** The working tree's rows, the panel's first sections: their headings, files and changes, by label. */
+  const work = (r: PanelRow) =>
+    (r.kind === "heading" && ["conflicted", "staged", "unstaged", "untracked"].includes(r.section)) ||
+    r.kind === "file" ||
+    r.kind === "change";
+  const labels = (h: Harness) =>
+    h.app.gitPanel
+      .rows()
+      .filter(work)
+      .map((r) => (r as { label: string }).label);
+  /** The panel open on a repository's changes, git's answer in. */
   const opened = async (root: string) => {
     const h = await harness({ root, open: "a.md", width: 120, height: 40 });
     await h.app.run("git.view");
@@ -18121,18 +18130,20 @@ describe("source control (26.2)", () => {
     expect(h.app.leftView).toBe("git");
     return h;
   };
-  /** The selection put on the row labelled so. */
+  /** The selection put on the working tree's row labelled so. */
   const select = (h: Harness, label: string) => {
-    const i = labels(h).indexOf(label);
+    const i = h.app.gitPanel.rows().findIndex((r) => work(r) && (r as { label: string }).label === label);
     expect(i).toBeGreaterThanOrEqual(0);
     h.app.sidebar.selected = i;
   };
+  /** The working tree's row selected, by its label. */
+  const selected = (h: Harness) => (h.app.gitPanel.rows()[h.app.sidebar.selected] as { label?: string }).label;
   const settle = async (h: Harness, want: string[]) => {
     await h.app.git.refreshNow();
     expect(await until(() => (h.frame(), JSON.stringify(labels(h)) === JSON.stringify(want)))).toBe(true);
   };
 
-  test("a file staged or unstaged stays selected where it went, so u or s takes it back; a heading says what acts (regression)", async () => {
+  test("a file staged or unstaged stays selected where it went, so u or s takes it back; a heading's keys act on its files (regression)", async () => {
     // Found trying 26.2 live (2026-10-10): after s, the selection kept its row and landed on a heading; u there did nothing,
     // and said nothing.
     const root = repo({ ".gitignore": ".slipbox/\n", "a.md": "a\n", "b.md": "b\n" });
@@ -18144,21 +18155,24 @@ describe("source control (26.2)", () => {
     select(h, "M b.md");
     await h.keys("s");
     await settle(h, ["Staged (1)", "M b.md", "Changes (1)", "M a.md"]);
-    expect(await until(() => labels(h)[h.app.sidebar.selected] === "M b.md" && h.app.sidebar.selected === 1)).toBe(
-      true,
-    );
+    expect(await until(() => selected(h) === "M b.md" && h.app.sidebar.selected === 1)).toBe(true);
     await h.keys("u");
     await settle(h, ["Changes (2)", "M a.md", "M b.md"]);
     expect(git(root, "diff", "--cached", "--name-only")).toBe("");
-    expect(await until(() => labels(h)[h.app.sidebar.selected] === "M b.md")).toBe(true);
-    // A heading: s, u and d say what they act on.
+    expect(await until(() => selected(h) === "M b.md")).toBe(true);
+    // A heading (GIT-D8): u says there's nothing staged there; d asks to discard every file's changes (no, here); s
+    // stages them all.
     h.app.sidebar.selected = 0;
-    for (const key of ["s", "u", "d"]) {
-      await h.keys(key);
-      expect(h.app.messages.at(-1)?.text).toBe(
-        "a section's heading: s, u and d act on the file selected — a stages everything, U unstages it",
-      );
-    }
+    await h.keys("u");
+    expect(h.app.messages.at(-1)?.text).toBe("nothing staged there");
+    await h.keys("d");
+    expect((h.app.overlay as { label?: string }).label).toBe(
+      "Discard every change that isn't staged, in 2 files? They go back to what's staged; untracked files stay.",
+    );
+    await h.keys("n");
+    expect(readFileSync(join(root, "a.md"), "utf8")).toBe("A\n");
+    await h.keys("s");
+    await settle(h, ["Staged (2)", "M a.md", "M b.md"]);
   });
 
   test("a file staged while git's answer to an earlier question is still out: git asked again, the file shown staged (regression)", async () => {
@@ -18198,12 +18212,14 @@ describe("source control (26.2)", () => {
     const c = h.canvas();
     const y = c.rows.findIndex((r) => r.join("").includes("M a.md"));
     expect(c.styles[y]![c.rows[y]!.join("").indexOf("M a.md")]!.fg).toBe(h.app.theme.roles.git_modified.fg!);
-    // Moving steps over a section's heading.
+    // Moving goes through a section's heading too: its keys act on its files (GIT-D8).
     select(h, "M b.md");
     await h.keys("j");
-    expect(labels(h)[h.app.sidebar.selected]).toBe("M a.md");
-    await h.keys("k");
-    expect(labels(h)[h.app.sidebar.selected]).toBe("M b.md");
+    expect(selected(h)).toBe("Changes (1)");
+    await h.keys("j");
+    expect(selected(h)).toBe("M a.md");
+    await h.keys("k", "k");
+    expect(selected(h)).toBe("M b.md");
     // A staged file opened up: its change against the last commit; s on it says it's staged, u on a changed file says
     // there's nothing staged.
     await h.keys("l");
@@ -18214,7 +18230,7 @@ describe("source control (26.2)", () => {
     expect(h.app.messages.at(-1)?.text).toBe("that change is staged already — u unstages it");
     // h from a change: back to its file, folded.
     await h.keys("h");
-    expect(labels(h)[h.app.sidebar.selected]).toBe("M b.md");
+    expect(selected(h)).toBe("M b.md");
     expect(labels(h)).not.toContain("  1 change");
     select(h, "M a.md");
     await h.keys("u");
@@ -18263,7 +18279,7 @@ describe("source control (26.2)", () => {
     await settle(h, ["Changes (2)", "M a.md", "M b.md", "Untracked (1)", "? u.md"]);
   });
 
-  test("a file's diff shown; enter opens it at its change; discard a whole file, and an untracked one to the trash; unsaved refused", async () => {
+  test("a file's diff shown by enter, esc back to the panel; o opens it at its change; discard a whole file, and an untracked one to the trash; unsaved refused", async () => {
     const root = repo({ ".gitignore": ".slipbox/\n", "a.md": "one\n\ntwo\n", "b.md": "b\n" });
     if (!root) return;
     writeFileSync(join(root, "a.md"), "one\n\nTWO\n");
@@ -18271,14 +18287,14 @@ describe("source control (26.2)", () => {
     writeFileSync(join(root, "u.md"), "new\n");
     const h = await opened(root);
     select(h, "M a.md");
-    await h.keys(".");
-    expect(await until(() => h.app.floating?.kind === "hover")).toBe(true);
-    expect(h.app.floating!.view.buf.source).toBe("```diff\n-two\n+TWO\n```\n");
-    await h.keys("escape");
-    await h.app.run("git.view");
-    if (h.app.region !== "sidebar") await h.app.run("git.view");
-    select(h, "M a.md");
     await h.keys("enter");
+    expect(await until(() => h.app.floating?.kind === "diff")).toBe(true);
+    expect(h.app.floating!.title).toBe("a.md against what's staged — esc: source control");
+    expect(h.app.floating!.view.buf.source).toContain("- two\n+ TWO");
+    await h.keys("escape");
+    expect([h.app.floating, h.app.region]).toEqual([null, "sidebar"]);
+    select(h, "M a.md");
+    await h.keys("o");
     expect(h.app.view!.buf.rel).toBe("a.md");
     expect(h.app.region).toBe("content");
     // At its change: line 3.
@@ -18406,7 +18422,7 @@ describe("commit (26.3)", () => {
     // Nothing staged: said, no editor.
     await h.keys("c");
     expect(h.app.floating).toBeNull();
-    expect(h.app.messages.at(-1)?.text).toBe("nothing staged — s stages a file in source control (space g s)");
+    expect(h.app.messages.at(-1)?.text).toBe("nothing staged — s stages a file in the git panel (space g)");
     // The repository's own config signs commits with a program of its choosing: not run in a root not trusted.
     const signer = join(root, ".git", "signer.sh");
     writeFileSync(signer, `#!/bin/sh\ntouch ${JSON.stringify(join(root, ".git", "SIGNER_RAN"))}\nexit 1\n`);
@@ -18433,7 +18449,7 @@ describe("commit (26.3)", () => {
     expect(git(root, "status", "--porcelain")).toBe("");
     expect(existsSync(join(root, ".git", "SIGNER_RAN"))).toBe(false);
     // The view asked again: nothing left in it.
-    expect(await until(() => gitRows(h.app).length === 0)).toBe(true);
+    expect(await until(() => !h.app.gitPanel.rows().some((r) => r.kind === "file"))).toBe(true);
   });
 
   test("amended: the last message to start from; an empty message refused; esc leaves it; trusted, a hook refusing it says so", async () => {
