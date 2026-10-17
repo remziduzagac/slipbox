@@ -490,12 +490,27 @@ const LINKED: Check[] = [
       await s.see(asked("~/shelf"));
       await s.keys("f");
       await opened(s, "shelf/far.md");
-      await leader(s, "l", "b");
-      await s.see("Linking to far.md (1)", 10_000);
-      await s.keys("escape");
+      // Followed: the target asked, then the vault walked again through the link and its notes parsed, in the
+      // background — the row says so once they're done, indexed.
       await explorerOpen(s);
       await s.keys("escape");
-      await s.until(() => rowEnd(s, "shelf")?.describe === "→ ~/shelf", 5000, "the row: → ~/shelf, followed");
+      await s.until(
+        () => rowEnd(s, "shelf")?.describe === "→ ~/shelf" && markOf(s, "shelf") === "●",
+        20_000,
+        "the row: → ~/shelf, followed and indexed ●",
+      );
+      // Its backlink found: asked until the list shows it (a press while the index catches up says none yet).
+      await s.retry(
+        async () => {
+          if (s.rowOf("Linking to") >= 0) await s.keys("escape");
+          await leader(s, "l", "b");
+        },
+        () => s.rowOf("Linking to far.md (1)") >= 0,
+        "far.md's backlink, from to-shelf.md",
+        2000,
+        20_000,
+      );
+      await s.keys("escape");
       // Kept: started again, the link opens, nothing asked.
       await s.keys("ctrl+o");
       await opened(s, "to-shelf.md");
