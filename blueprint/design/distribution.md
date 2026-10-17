@@ -1,9 +1,9 @@
 # Distribution
 
-How slipbox gets from this repository to someone's machine, and what keeps that path honest (`14.x`). macOS and Linux
-first, Windows through WSL (D197, D203, D205); no signing (D198); a daily update check, on (D199); XDG's folders kept
-(D200); previews between releases, and channels an install follows (GR-D13–GR-D15). The repository that does it, its
-workflows and its upkeep: [repository.md](repository.md).
+How slipbox gets from this repository to someone's machine, and what keeps that path honest (`14.x`). macOS on Apple
+silicon and Linux first, Windows through WSL (D197, D203, D205, D238); no signing (D198); a daily update check, on
+(D199); XDG's folders kept (D200); previews between releases, and channels an install follows (GR-D13–GR-D15). The
+repository that does it, its workflows and its upkeep: [repository.md](repository.md).
 
 ## Folders
 
@@ -77,14 +77,16 @@ packs, refusing another version's packs or SBOMs beside them, and the installer.
 | Asset | Bun's target |
 | --- | --- |
 | `darwin-arm64` | `bun-darwin-arm64` |
-| `darwin-x64` | `bun-darwin-x64-baseline` |
 | `linux-x64` | `bun-linux-x64-baseline` |
 | `linux-arm64` | `bun-linux-arm64` |
 | `linux-x64-musl` | `bun-linux-x64-baseline-musl` |
 | `linux-arm64-musl` | `bun-linux-arm64-musl` |
 
-x64 takes Bun's baseline build: it runs on any x64 processor, with no AVX2 asked for, and a terminal program loses
-nothing by it. `-musl` is Linux whose C library is musl — Alpine's (`14.5`, D203). SQLite is the runtime's own (below),
+A Mac is Apple silicon: 0.3.0 was the last release built for Intel Macs (`darwin-x64`, D238). The platforms released
+once and no longer, and the last release built for each, are `core/release.ts`'s `RETIRED`; `build` refuses one,
+saying so, and the installer and `slipbox upgrade` tell such a machine the same (§ Installing, § Updates). x64 takes
+Bun's baseline build: it runs on any x64 processor, with no AVX2 asked for, and a terminal program loses nothing by
+it. `-musl` is Linux whose C library is musl — Alpine's (`14.5`, D203). SQLite is the runtime's own (below),
 so nothing else differs, but for OpenTUI: it picks its musl library only when `OPENTUI_LIBC=musl` at run time, so a musl
 build is built with that defined (`--define process.env.OPENTUI_LIBC="musl"`) — fixed, whatever the environment says.
 Its glibc library is bundled too (Bun doesn't drop the branch not taken); only the musl one is loaded. Bun's musl
@@ -145,12 +147,12 @@ Bun fixes the platform at build time, so only that platform's package is bundled
 
 ## Signing
 
-Releases are neither signed nor notarized (D198). Bun signs a darwin binary ad hoc as it compiles it, but the x64
-build's signature came out broken ("code or signature have been modified") where the arm64 one's held. So a Mac's
-binary is built on a Mac and signed ad hoc again there once it's compiled (`codesign --force --sign -`, `signArgs` in
-`scripts/release.ts`); one built on another system can't be signed, and isn't released. CI then checks each Mac
-pack's binary with `codesign --verify` (`14.13`). Gatekeeper stops a binary a browser downloaded; the installer's
-`curl` doesn't mark what it downloads, so the installer's slipbox isn't stopped.
+Releases are neither signed nor notarized (D198). Bun signs a darwin binary ad hoc as it compiles it, but the Intel
+Mac's build's signature came out broken ("code or signature have been modified") where the arm64 one's held, while there
+was one (until 0.3.0, D238). So a Mac's binary is built on a Mac and signed ad hoc again there once it's compiled
+(`codesign --force --sign -`, `signArgs` in `scripts/release.ts`); one built on another system can't be signed, and
+isn't released. CI then checks each Mac pack's binary with `codesign --verify` (`14.13`). Gatekeeper stops a binary a
+browser downloaded; the installer's `curl` doesn't mark what it downloads, so the installer's slipbox isn't stopped.
 
 ## SQLite
 
@@ -192,9 +194,11 @@ channels' files from elsewhere, as `SLIPBOX_RELEASES_URL` the releases.
 The release's installer runs on its own too (`…/releases/latest/download/install.sh | sh`). POSIX `sh` (dash, bash,
 macOS's), the whole of it a function called on its last line, so a download cut short runs nothing. In order:
 
-1. **The platform**, from `uname`: Linux or macOS, x64 or arm64; a Mac terminal under Rosetta gets the arm64 build;
-   Linux with musl's loader (or an `ldd` that says musl) gets the `-musl` build. Any other system is refused (Windows
-   is `14.12`). On Alpine, without curl, busybox's `wget -qO- …/install.sh | sh` runs it, and it downloads by wget.
+1. **The platform**, from `uname`: Linux, x64 or arm64, or macOS on Apple silicon; a Mac terminal under Rosetta gets
+   the arm64 build; Linux with musl's loader (or an `ldd` that says musl) gets the `-musl` build. An Intel Mac — x64,
+   not translated — is told `Intel Macs aren't supported any more: 0.3.0 was the last release built for them` and the
+   installer stops (D238; a test holds the message to `RETIRED`'s). Any other system is refused (Windows is
+   `14.12`). On Alpine, without curl, busybox's `wget -qO- …/install.sh | sh` runs it, and it downloads by wget.
 2. **A slipbox already there** — `~/.local/bin/slipbox`, or `$SLIPBOX_BIN_DIR`'s — that isn't this installer's link
    (a launcher from `scripts/install-local.sh`, another install) is left as it is: the installer stops and says so,
    before downloading anything.
@@ -227,10 +231,12 @@ kept, as it is not the installer's link (§ Uninstalling).
 ## Homebrew
 
 `finish` writes `slipbox.rb` too (`14.3`, D204): the formula, from `scripts/homebrew.template.rb`, with a block for each
-platform the release has a pack for that Homebrew installs on — macOS, arm64 and Intel, and Linux's glibc builds
-(Homebrew on Linux needs glibc; musl's packs aren't in it) — each its pack's address and SHA-256. It installs the
-binary and puts its notices in Homebrew's `doc`; its test runs `slipbox --version`. Its licence is Apache-2.0
-(GR-D3), named in the formula.
+platform the release has a pack for that Homebrew installs on — macOS on Apple silicon, and Linux's glibc builds, arm64
+and Intel (Homebrew on Linux needs glibc; musl's packs aren't in it) — each its pack's address and SHA-256. macOS's
+block asks for arm64 (`depends_on arch: :arm64`) and holds its one pack's address straight in it, so on an Intel Mac
+Homebrew loads the formula and refuses it, saying the arm64 architecture is required (D238), where a formula with no
+address there would fail to load. It installs the binary and puts its notices in Homebrew's `doc`; its test runs
+`slipbox --version`. Its licence is Apache-2.0 (GR-D3), named in the formula.
 
 It reaches people through a tap: `remziduzagac/homebrew-tap`, shared with herdsman (`brew install
 remziduzagac/tap/slipbox`, D228). `.github/workflows/homebrew.yml` copies the release's formula into the tap's
@@ -367,14 +373,15 @@ it` — on `preview`, `slipbox 0.3.0-preview.202610121530.g1a2b3c4 is out on the
 `brew upgrade slipbox` for Homebrew's, and the releases' address for a binary put somewhere by hand. It follows the
 installer's install's channel; any other install's, stable releases.
 
-**`slipbox upgrade`** moves the installer's install to the newest its channel offers (`--check`: only says whether
-there is one). From source, or a binary the installer didn't put in `versions/`, it says so and does nothing.
-Otherwise, as the installer would: the pack downloaded, its SHA-256 checked against its `SHA256SUMS` line, unpacked
-beside the others, its binary run — it must say its version — and only then `current` moved, in one step (a link made
-beside it and renamed over it). The version replaced is kept, to go back to (`ln -sfn versions/<old> <data>/current`);
-any older one is removed. Any check failing changes nothing. Nothing found on `preview` says where it looked, the
-releases and the site's `preview`. When the version installed is newer than what's offered — a preview, back on
-`stable` — it's current, and said so: `slipbox <version> is newer than the latest release, <latest>: it stays until a
+**`slipbox upgrade`** moves the installer's install to the newest its channel offers (`--check`: only says whether there
+is one). On a platform no longer released for (`RETIRED`: an Intel Mac, D238) it says so first, and the last release
+built for it, asking for nothing (exit 1). From source, or a binary the installer didn't put in `versions/`, it says so
+and does nothing. Otherwise, as the installer would: the pack downloaded, its SHA-256 checked against its `SHA256SUMS`
+line, unpacked beside the others, its binary run — it must say its version — and only then `current` moved, in one step
+(a link made beside it and renamed over it). The version replaced is kept, to go back to (`ln -sfn versions/<old>
+<data>/current`); any older one is removed. Any check failing changes nothing. Nothing found on `preview` says where it
+looked, the releases and the site's `preview`. When the version installed is newer than what's offered — a preview, back
+on `stable` — it's current, and said so: `slipbox <version> is newer than the latest release, <latest>: it stays until a
 newer one`.
 
 **Bun's own crash reports** are off (D221): on macOS and Windows a crashing Bun sends a report to `bun.report` unless

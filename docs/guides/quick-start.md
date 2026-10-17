@@ -9,8 +9,8 @@ the keys first.
 curl -fsSL https://remziduzagac.github.io/slipbox/install.sh | sh
 ```
 
-slipbox runs in a terminal on macOS, Linux, and Windows through WSL. [Installing slipbox](install.md) has the other
-ways to install it, and how to upgrade.
+slipbox runs in a terminal on a Mac with Apple silicon, Linux, and Windows through WSL.
+[Installing slipbox](install.md) has the other ways to install it, and how to upgrade.
 
 ## Open a folder
 

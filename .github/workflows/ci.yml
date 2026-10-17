@@ -126,7 +126,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-24.04, ubuntu-24.04-arm, macos-15, macos-15-intel]
+        os: [ubuntu-24.04, ubuntu-24.04-arm, macos-15]
     runs-on: ${{ matrix.os }}
     # About five minutes on a 10-core machine, a check per core; a runner has 3 or 4.
     timeout-minutes: 45
@@ -142,8 +142,8 @@ jobs:
           minimum_release_age: 7d
       - run: bun install --frozen-lockfile
       - name: terminal tests
-        # A runner is slower than the machine a check was written on, the Intel Macs most: each wait gets at least 30 s
-        # (a wait that passes returns at once).
+        # A runner is slower than the machine a check was written on: each wait gets at least 30 s (a wait that passes
+        # returns at once).
         env:
           SLIPBOX_TERMINAL_WAIT: "30000"
         run: bun run test:terminal

@@ -381,8 +381,10 @@ Each was decided after a wrong turn, and is not re-litigated:
 
 ### Platforms
 
-- macOS (arm64, x64) and Linux (x64, arm64; glibc, and Alpine's musl) are released, each built on its own in CI
-  (D197, D203). Windows is reached through WSL; native Windows is staged as `14.14`–`14.17` (D205).
+- macOS on Apple silicon (arm64) and Linux (x64, arm64; glibc, and Alpine's musl) are released, each built on its own
+  in CI (D197, D203). Intel Macs aren't: 0.3.0 was the last release built for them, and on one the installer and
+  `slipbox upgrade` say so, naming it, and stop (D238). Windows is reached through WSL; native Windows is staged as
+  `14.14`–`14.17` (D205).
 - Releases are neither signed nor notarized (D198). The test suite runs on macOS (`macos-15`, arm64) in CI on every
   change, so Apple's SQLite is tested there — FTS5 with `unicode61`, and `bm25` — and each Mac binary is signed ad hoc
   again by `codesign` on the Mac runner that built it, its signature then checked (`codesign --verify`) (`14.13`, D196,

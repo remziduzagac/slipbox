@@ -397,7 +397,8 @@ first needs to run on a VM. Decided 2026-10-10 (D197); the licence (`14.6`) park
 2026-10-12 (GR-D3). The first release, 0.2.1, published 2026-10-12 (GR-D18).*
 
 - [x] **14.1** `bun build --compile` per target; its autoload flags off (2026-10-10), in `build`, tested.
-- [x] **14.2** Release assets: darwin-arm64, darwin-x64, linux-x64, linux-arm64; `SHA256SUMS`, attestations.
+- [x] **14.2** Release assets: darwin-arm64, linux-x64, linux-arm64; `SHA256SUMS`, attestations. darwin-x64 until
+  0.3.0 (D238, `14.18`).
 - [x] **14.3** Homebrew: a formula each release, into a tap once it's published; Homebrew's own left to brew.
 - [x] **14.4** Update path: `slipbox upgrade`; a daily check, on by default, that sends nothing identifying.
 - [x] **14.5** Alpine (musl): `-musl` packs, OpenTUI's musl library fixed in; run in Alpine by CI.
@@ -416,6 +417,8 @@ first needs to run on a VM. Decided 2026-10-10 (D197); the licence (`14.6`) park
 - [ ] **14.15** Native Windows: note paths kept with `/` from every `relative()`; path checks by `sep`, not `/`.
 - [ ] **14.16** Native Windows: `:!` through `cmd.exe`, editors, the clipboard, processes and signals.
 - [ ] **14.17** Native Windows: the test suite on a Windows runner; the TUI in Windows Terminal.
+- [x] **14.18** Intel Macs dropped: no build, test job or formula block after 0.3.0, the last built for them; the
+  installer and `slipbox upgrade` say so there, naming 0.3.0 (2026-10-17, D238).
 - [x] **Crash reports**: Bun's own, sent on macOS and Windows unless `DO_NOT_TRACK` is set: turned off at start
   (D221; task T1).
 

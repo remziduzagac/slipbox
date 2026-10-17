@@ -96,9 +96,9 @@ and `.github/workflows/pages.yml` the installer's site once it's published. The 
    runner it runs the tests, then builds and packs that platform; a Mac's binary has its signature checked, and a musl
    build is run in Alpine. Then it writes `SHA256SUMS`, the installer and the formula, the SBOM, attests them all, and
    drafts the release with its notes.
-8. **Check the draft** before anyone can see it: every pack is there (`darwin-arm64`, `darwin-x64`, `linux-x64`,
-   `linux-arm64`, `linux-x64-musl`, `linux-arm64-musl`), with `SHA256SUMS`, `install.sh`, `slipbox.rb` and the SBOM; the
-   notes read right. Then, in an empty folder:
+8. **Check the draft** before anyone can see it: every pack is there (`darwin-arm64`, `linux-x64`, `linux-arm64`,
+   `linux-x64-musl`, `linux-arm64-musl`; none for Intel Macs, whose last was 0.3.0), with `SHA256SUMS`, `install.sh`,
+   `slipbox.rb` and the SBOM; the notes read right. Then, in an empty folder:
 
    ```bash
    gh release download v0.3.0 --repo remziduzagac/slipbox
@@ -109,8 +109,8 @@ and `.github/workflows/pages.yml` the installer's site once it's published. The 
    tar -xzf slipbox-0.3.0-linux-x64.tar.gz && slipbox-0.3.0-linux-x64/slipbox --version
    ```
 
-   On a Mac, `shasum -a 256 -c SHA256SUMS` checks the sums, and a `darwin` pack runs. Each pack holds the binary,
-   `LICENSE` and `NOTICES.txt`.
+   On a Mac, `shasum -a 256 -c SHA256SUMS` checks the sums, and the `darwin-arm64` pack runs. Each pack holds the
+   binary, `LICENSE` and `NOTICES.txt`.
 9. **Publish the draft** on its page, or with `gh release edit v0.3.0 --repo remziduzagac/slipbox --draft=false`. A
    published release can't be changed.
 10. **Homebrew and Pages follow:** publishing runs `homebrew.yml`, which copies the release's formula into the tap,

@@ -14,7 +14,7 @@
 // there.
 // finish: `SHA256SUMS` over the packs in `--out`; `install.sh` (14.7): `install.template.sh` with the version, its
 // tag, the repository and each pack's sum written in; and, but for a preview, `slipbox.rb` (14.3), the Homebrew
-// formula, from `homebrew.template.rb` — macOS's and glibc Linux's packs, which are Homebrew's.
+// formula, from `homebrew.template.rb` — Apple silicon's and glibc Linux's packs, which are Homebrew's.
 // notes: the release's notes on stdout, its version's section of CHANGELOG.md; none there fails.
 //
 // The version is package.json's, which must be `src/version.ts`'s, and the tag's when one is given. `--out` is
@@ -45,17 +45,17 @@
 import { createHash } from "node:crypto";
 import { copyFileSync, existsSync, mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { basename, join, resolve } from "node:path";
-import { PREVIEW_TAG, PREVIEW_VERSION, pagesBase, tagOf } from "../src/core/release.ts";
+import { PREVIEW_TAG, PREVIEW_VERSION, pagesBase, retired, tagOf } from "../src/core/release.ts";
 import { checkDeps, notices, sbom } from "./check-deps.ts";
 
 const ROOT = resolve(import.meta.dir, "..");
 
 /** The platforms released, by their assets' names, and Bun's target for each. x64 is Bun's baseline build: it runs on
  *  any x64 processor (no AVX2 asked for), and a terminal program loses nothing by it. `-musl`: Linux whose C library
- *  is musl, Alpine's (14.5). */
+ *  is musl, Alpine's (14.5). A Mac is Apple silicon: 0.3.0 was the last release built for Intel Macs (D238,
+ *  `RETIRED`). */
 export const TARGETS: Record<string, string> = {
   "darwin-arm64": "bun-darwin-arm64",
-  "darwin-x64": "bun-darwin-x64-baseline",
   "linux-x64": "bun-linux-x64-baseline",
   "linux-arm64": "bun-linux-arm64",
   "linux-x64-musl": "bun-linux-x64-baseline-musl",
@@ -69,9 +69,10 @@ export function onMusl(): boolean {
 
 /**
  * How a Mac's binary is signed ad hoc again, built on a Mac (14.13, D198): Bun signs what it compiles ad hoc, but the
- * x64 build's signature came out broken ("code or signature have been modified"), and a Mac may refuse a binary whose
- * signature doesn't hold. `codesign` signs it again, ad hoc as before, so `codesign --verify` passes. Null elsewhere:
- * another platform's binary, or a Mac's built on another system, which can't be signed there.
+ * Intel Mac's build's signature came out broken ("code or signature have been modified"; built until 0.3.0), and a
+ * Mac may refuse a binary whose signature doesn't hold. `codesign` signs it again, ad hoc as before, so `codesign
+ * --verify` passes. Null elsewhere: another platform's binary, or a Mac's built on another system, which can't be
+ * signed there.
  */
 export function signArgs(bin: string, target: string, platform: string = process.platform): string[] | null {
   return target.startsWith("darwin-") && platform === "darwin" ? ["codesign", "--force", "--sign", "-", bin] : null;
@@ -292,7 +293,10 @@ export function buildRelease(opts: {
   mkdirSync(opts.out, { recursive: true });
   const packs: string[] = [];
   for (const target of opts.targets) {
-    if (!(target in TARGETS)) throw new Error(`no such target: ${target} (${Object.keys(TARGETS).join(", ")})`);
+    if (!(target in TARGETS)) {
+      const why = retired(target);
+      throw new Error(`no such target: ${target} (${Object.keys(TARGETS).join(", ")})${why ? ` — ${why}` : ""}`);
+    }
     const native = join(root, "node_modules", "@opentui", `core-${target}`);
     if (!existsSync(native))
       throw new Error(
@@ -348,15 +352,20 @@ export function installScript(template: string, version: string, repo: string, s
   return out;
 }
 
-/** The platforms Homebrew installs on, by its own blocks: macOS, and Linux (glibc's: Homebrew's own needs it). */
-const HOMEBREW: Record<string, [string, string]> = {
-  "darwin-arm64": ["on_macos", "on_arm"],
-  "darwin-x64": ["on_macos", "on_intel"],
+/** The platforms Homebrew installs on, by its own blocks: macOS on Apple silicon, and Linux (glibc's: Homebrew's own
+ *  needs it), arm64 and Intel. */
+const HOMEBREW: Record<string, [string, string | null]> = {
+  "darwin-arm64": ["on_macos", null],
   "linux-arm64": ["on_linux", "on_arm"],
   "linux-x64": ["on_linux", "on_intel"],
 };
 
-/** The Homebrew formula for a release: a block per platform it has a pack for, its address and its sum. */
+/** What an OS's block asks of the machine before its pack: on macOS, Apple silicon. An Intel Mac (D238) is refused by
+ *  Homebrew, saying the arm64 architecture is required, where a formula with no address for it would fail to load. */
+const HOMEBREW_NEEDS: Record<string, string> = { on_macos: "depends_on arch: :arm64" };
+
+/** The Homebrew formula for a release: a block per platform it has a pack for, its address and its sum — one alone
+ *  for its OS (macOS's) straight in the OS's block, after what that OS asks of the machine. */
 export function homebrewFormula(template: string, version: string, repo: string, sums: Record<string, string>): string {
   if (!/^\d+\.\d+\.\d+(-[0-9A-Za-z.]+)?$/.test(version)) throw new Error(`not a version: ${version}`);
   if (PREVIEW_VERSION.test(version)) throw new Error(`${version} is a preview's: Homebrew never gets one`);
@@ -367,9 +376,12 @@ export function homebrewFormula(template: string, version: string, repo: string,
       .filter(([target, [o]]) => o === os && sums[target] !== undefined)
       .map(([target, [, cpu]]) => {
         if (!/^[0-9a-f]{64}$/.test(sums[target]!)) throw new Error(`not a sum: ${sums[target]}`);
-        return `    ${cpu} do\n      url "https://github.com/${repo}/releases/download/v${version}/${assetName(version, target)}"\n      sha256 "${sums[target]}"\n    end`;
+        const url = `url "https://github.com/${repo}/releases/download/v${version}/${assetName(version, target)}"`;
+        const sha = `sha256 "${sums[target]}"`;
+        return cpu ? `    ${cpu} do\n      ${url}\n      ${sha}\n    end` : `    ${url}\n    ${sha}`;
       });
-    if (inner.length) blocks.push(`  ${os} do\n${inner.join("\n")}\n  end`);
+    const needs = HOMEBREW_NEEDS[os];
+    if (inner.length) blocks.push(`  ${os} do\n${needs ? `    ${needs}\n` : ""}${inner.join("\n")}\n  end`);
   }
   if (!blocks.length) throw new Error("no pack Homebrew installs: macOS's or glibc Linux's");
   const out = template

@@ -154,6 +154,11 @@ The format is [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.1.0/); wh
 
 ### Removed
 
+- **Breaking:** Intel Macs: no build from this release on; 0.3.0 was the last. Apple has stopped making macOS for
+  them, macOS 26 Tahoe the last they get. On an Intel Mac the installer says so and stops before downloading anything,
+  and Homebrew says the arm64 architecture is required. There, stay on 0.3.0: its own installer still installs it
+  (`curl -fsSL https://github.com/remziduzagac/slipbox/releases/download/v0.3.0/install.sh | sh`).
+
 - **Breaking:** `:pin-root` (`vault.pin_root`), the list of other vaults under the explorer's tree, the `..` row above
   it, and the named folders' list that opened when slipbox started in a folder outside every vault. The explorer's
   view holds the vaults you go between, `-` goes up, and `space v v` still lists the named folders. A `[keys]` binding

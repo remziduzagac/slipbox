@@ -1,7 +1,8 @@
 # Installing slipbox
 
-slipbox runs in a terminal, on macOS and Linux, and on Windows through WSL. This guide covers the two ways to install
-it, then checking that it works, upgrading it and removing it.
+slipbox runs in a terminal, on a Mac with Apple silicon, on Linux, and on Windows through WSL. Intel Macs aren't
+supported any more ([Intel Macs](#intel-macs)). This guide covers the two ways to install it, then checking that it
+works, upgrading it and removing it.
 
 - One line installs a release build, which needs nothing else on your machine.
 - You can also run slipbox from its source code.
@@ -43,9 +44,9 @@ curl -fsSL https://remziduzagac.github.io/slipbox/install.sh | sh -s -- --previe
 The script at that address installs nothing itself. It looks up which release to install, and downloads that
 release's own installer. It checks the installer against the checksum published for it, then runs it.
 
-The installer picks the build for your machine: macOS or Linux, Intel or ARM, and Alpine's own. It checks the download
-against the checksum written into it. Then it installs slipbox into `~/.local/share/slipbox`, with a `slipbox` link in
-`~/.local/bin`. Nothing runs as root, and nothing else is touched.
+The installer picks the build for your machine: a Mac with Apple silicon, Linux on Intel or ARM, and Alpine's own. It
+checks the download against the checksum written into it. Then it installs slipbox into `~/.local/share/slipbox`, with
+a `slipbox` link in `~/.local/bin`. Nothing runs as root, and nothing else is touched.
 
 If `~/.local/bin` isn't on your PATH, the installer says how to add it. `SLIPBOX_BIN_DIR` puts the link in another
 folder.
@@ -64,7 +65,7 @@ The installer stops if there's already a `slipbox` in `~/.local/bin` that it did
 launcher. It stops before downloading anything. Remove that one first (`rm ~/.local/bin/slipbox`), then run the
 installer again.
 
-**Homebrew**, on macOS and Linux, from 0.3.0 on:
+**Homebrew**, on a Mac with Apple silicon and on Linux, from 0.3.0 on:
 
 ```bash
 brew install remziduzagac/tap/slipbox
@@ -166,6 +167,21 @@ a Windows program changes a file on a Windows drive. So on a Windows drive, slip
 it has open, and it reads more slowly. It says so once when you open notes there.
 
 slipbox doesn't run on Windows outside WSL.
+
+## Intel Macs
+
+slipbox isn't built for Intel Macs any more. Apple has stopped making macOS for them: macOS 26 Tahoe is the last one
+they get. 0.3.0 was the last release of slipbox built for them.
+
+On an Intel Mac, the installer says so and stops, before downloading anything. Homebrew won't install a later release
+either: it says the arm64 architecture is required. 0.3.0 still installs from its own installer:
+
+```bash
+curl -fsSL https://github.com/remziduzagac/slipbox/releases/download/v0.3.0/install.sh | sh
+```
+
+There, `slipbox upgrade` says it couldn't find the latest release's `darwin-x64` build, and the daily update check
+finds nothing newer. Running slipbox from source may still work on an Intel Mac, but nothing tests it there.
 
 ## Checking it works
 

@@ -2,7 +2,16 @@
 // refused once its version is released; a preview's installer, notes and SBOM; the channel files made from the
 // releases; the previews kept; and the workflows that build, publish and deploy them.
 import { afterAll, describe, expect, test } from "bun:test";
-import { chmodSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import {
+  chmodSync,
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readdirSync,
+  readFileSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { sbom } from "../scripts/check-deps.ts";
@@ -470,13 +479,6 @@ const runs = (j: Job) => (j.steps ?? []).map((s) => s.run ?? "").join("\n");
 
 describe("a Mac's binary signed again (14.13)", () => {
   test("ad hoc, by codesign, when built on a Mac; never elsewhere, nor another platform's", () => {
-    expect(signArgs("/x/slipbox", "darwin-x64", "darwin")).toEqual([
-      "codesign",
-      "--force",
-      "--sign",
-      "-",
-      "/x/slipbox",
-    ]);
     expect(signArgs("/x/slipbox", "darwin-arm64", "darwin")).toEqual([
       "codesign",
       "--force",
@@ -511,6 +513,17 @@ describe("the workflows: one build for releases and previews, previews from test
       }
     }
   });
+  test("no job runs on an Intel Mac: 0.3.0 was the last release built for one, and CI tests on none", () => {
+    const dir = join(ROOT, ".github", "workflows");
+    const files = readdirSync(dir).filter((f) => f.endsWith(".yml"));
+    expect(files).toContain("ci.yml");
+    for (const f of files) {
+      // GitHub's Intel Mac runners: macos-13, macos-<n>-intel, macos-<n>-large.
+      const intel = readFileSync(join(dir, f), "utf8").match(/\bmacos-(?:13\b|\d+-(?:intel|large)\b)/g);
+      expect({ f, intel }).toEqual({ f, intel: null });
+    }
+  });
+
   test("build.yml, called with a tag and a version, builds every platform, attests each SBOM, then finishes", () => {
     const build = workflow("build.yml");
     expect(Object.keys(build.on)).toEqual(["workflow_call"]);

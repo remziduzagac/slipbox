@@ -625,7 +625,7 @@ describe("the vault and the tool", () => {
       });
       if (r.code === 2) throw new Error(`${line}: a usage error\n${r.err || r.out}`);
     }
-    // Every command the skill shows, one process each: a slow runner's minutes (CI's Intel Mac), not a hang.
+    // Every command the skill shows, one process each: a slow runner's minutes (a small CI runner), not a hang.
   }, 180_000);
   test("info, themes, commands, init, help, version", () => {
     const i = slipbox(["info", "--json"]).json.data;
