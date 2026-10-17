@@ -641,7 +641,7 @@ describe("the review, the merge screen and the rebase, from the panel (GIT-D3, G
     git(root, "switch", "-q", "feature");
     const was = git(root, "rev-parse", "HEAD");
     git(root, "-c", "merge.conflictStyle=merge", "rebase", "-q", "main");
-    const { app, click, frame } = await panel(root, "b.md");
+    const { app, click, frame, keys } = await panel(root, "b.md");
     const ids = () => app.gitPanel.buttons().map((b) => b.id);
     expect(ids()).toEqual(expect.arrayContaining(["resolve", "continue", "skip", "abort"]));
     expect(pointedAt(app, "git:btn:continue")).toEqual({
@@ -657,8 +657,18 @@ describe("the review, the merge screen and the rebase, from the panel (GIT-D3, G
     // Continue, with a file still in conflict: refused, said.
     click("git:btn:continue");
     expect(app.messages.at(-1)?.text).toStartWith("still in conflict: a.md");
+    // Abort: asked first, then given up. Waited for until slipbox has said so — git's status read again by then, so
+    // the buttons from it (Resolve) and from git's files (Continue, Abort) agree.
     click("git:btn:abort");
-    expect(await until(() => (frame(), !ids().includes("abort")))).toBe(true);
+    expect(app.overlay).toMatchObject({
+      kind: "prompt",
+      confirm: true,
+      label: expect.stringMatching(/^Abort the rebase\?/),
+    });
+    await keys("y");
+    expect(
+      await until(() => (frame(), app.messages.some((m) => /^the rebase aborted: feature as it was/.test(m.text)))),
+    ).toBe(true);
     expect(git(root, "rev-parse", "HEAD")).toBe(was);
     expect(ids()).not.toContain("continue");
     expect(ids()).not.toContain("resolve");
@@ -667,19 +677,30 @@ describe("the review, the merge screen and the rebase, from the panel (GIT-D3, G
     await app.git.refreshNow();
     expect(await until(() => (frame(), ids().includes("skip")))).toBe(true);
     click("git:btn:skip");
-    expect(await until(() => (frame(), !ids().includes("skip")))).toBe(true);
+    expect(
+      await until(
+        () => (frame(), app.messages.some((m) => /^rebased: the rebase is done, a commit skipped/.test(m.text))),
+      ),
+    ).toBe(true);
     expect(git(root, "log", "--format=%s", "main..feature")).toBe("c\n");
   });
 
-  test("a merge under way: Continue and Abort, no Skip; Abort clicked, the merge given up", async () => {
+  test("a merge under way: Continue and Abort, no Skip; Abort clicked, asked, the merge given up", async () => {
     const root = conflicted();
-    const { app, click, frame } = await panel(root, "c.md");
+    const { app, click, frame, keys } = await panel(root, "c.md");
     const ids = () => app.gitPanel.buttons().map((b) => b.id);
     expect(ids()).toEqual(expect.arrayContaining(["resolve", "continue", "abort"]));
     expect(ids()).not.toContain("skip");
     expect(pointedAt(app, "git:btn:continue")?.desc).toBe("Continue: commits the merge");
     click("git:btn:abort");
-    expect(await until(() => (frame(), !ids().includes("abort")))).toBe(true);
+    expect(app.overlay).toMatchObject({
+      kind: "prompt",
+      confirm: true,
+      label: expect.stringMatching(/^Abort the merge\?/),
+    });
+    await keys("y");
+    expect(await until(() => (frame(), app.messages.some((m) => /^the merge aborted/.test(m.text))))).toBe(true);
+    expect(ids()).not.toContain("abort");
     expect(git(root, "status", "--porcelain")).toBe("");
   });
 });

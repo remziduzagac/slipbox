@@ -19691,7 +19691,55 @@ describe("git's review, merge screen, pull and rebase (GIT-D3, GIT-D5, GIT-D6)",
       });
     });
 
-    test("a rebase aborted: the branch as it was; again, the conflicting commit skipped", async () => {
+    test("a rebase that stops while you type: the merge screen not opened over the text, x named (regression)", async () => {
+      await isolated(async () => {
+        const root = behind();
+        const h = await harness({ root, open: "b.md", width: 120, height: 50 });
+        await h.app.run("git.rebase");
+        await h.keys("y");
+        // Back to typing while git runs.
+        await h.keys("i");
+        expect(h.app.view!.insert).toBe(true);
+        expect(
+          await said(
+            h,
+            /^the rebase stopped at commit 1 of 2: 1 file in conflict \(a\.md\) — x in source control opens the merge screen \(:resolve\), s stages/,
+          ),
+        ).toBe(true);
+        expect(h.app.floating).toBeNull();
+        // The letters go into the note, none of them the merge screen's.
+        await h.keys("t", "w", "s");
+        expect(h.app.view!.buf.rel).toBe("b.md");
+        expect(h.app.view!.buf.source).toStartWith("tws");
+        expect(git(root, "status", "--porcelain")).toContain("UU a.md");
+        // Typing done: x opens it.
+        await h.keys("escape");
+        await h.app.run("git.merge_screen");
+        expect(h.app.floating?.kind).toBe("merge");
+      });
+    });
+
+    test("a pull where both sides moved, while a question is open: said, not asked over it (regression)", async () => {
+      await isolated(async () => {
+        const { root, other } = repo({ "a.md": "a\n" }, true);
+        commit(other, "b.md", "theirs\n");
+        git(other, "push", "-q");
+        commit(root, "c.md", "mine\n");
+        const h = await harness({ root, open: "a.md", width: 120, height: 40 });
+        await h.app.run("git.pull");
+        // A question of its own opened while git pulls: its letters aren't the pull's m, r and n.
+        h.app.overlays.confirm("Something else?", () => {});
+        expect(
+          await said(
+            h,
+            "main and origin/main have both moved on — p in source control (:pull) asks how to bring them together",
+          ),
+        ).toBe(true);
+        expect(h.app.overlay).toMatchObject({ kind: "prompt", label: "Something else?" });
+      });
+    });
+
+    test("a rebase aborted, asked first: the branch as it was; again, the conflicting commit skipped", async () => {
       await isolated(async () => {
         const root = behind();
         const was = git(root, "rev-parse", "agent");
@@ -19700,7 +19748,18 @@ describe("git's review, merge screen, pull and rebase (GIT-D3, GIT-D5, GIT-D6)",
         await h.keys("y");
         expect(await until(() => h.app.floating?.kind === "merge")).toBe(true);
         await h.keys("escape");
+        // Asked first, as a rebase is: n leaves it under way; y gives it up.
         await h.app.run("git.abort");
+        expect(h.app.overlay).toMatchObject({
+          kind: "prompt",
+          confirm: true,
+          label: "Abort the rebase? agent goes back as it was before it, and what's settled so far is lost.",
+        });
+        await h.keys("n");
+        expect(existsSync(join(root, ".git", "rebase-merge"))).toBe(true);
+        expect(git(root, "status", "--porcelain")).toBe("UU a.md");
+        await h.app.run("git.abort");
+        await h.keys("y");
         expect(await said(h, "the rebase aborted: agent as it was — this vault isn't trusted, so no hook ran")).toBe(
           true,
         );

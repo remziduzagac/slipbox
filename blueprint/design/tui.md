@@ -2072,14 +2072,18 @@ slipbox's), `MERGE_HEAD` and its `MERGE_MSG` — again when git has news or half
 keys: `(x)` the merge screen on a file still in conflict, `(c)` continue (`git.continue`, `:continue`: `git rebase
 --continue`, or `git commit --no-edit` for a merge; refused, said which, while a file is in conflict), `(s)` skip
 (`git.skip`, `:skip`: `git rebase --skip`, a rebase's alone), `(a)` abort (`git.abort`, `:abort`: `git rebase --abort`,
-`git merge --abort`). The git panel has the three as buttons meanwhile: Continue, Skip (a rebase's) and Abort.
+`git merge --abort`; asked first, as a rebase is: "Abort the rebase? agent goes back as it was before it, and what's
+settled so far is lost."). The git panel has the three as buttons meanwhile: Continue, Skip (a rebase's) and Abort.
 
 Each runs in the background, one git command at a time with the remote's (`runInBackground`), without a terminal or an
 editor (`GIT_TERMINAL_PROMPT=0`, `GIT_EDITOR=true`, `GIT_SEQUENCE_EDITOR=true`: a commit settled on the way keeps its
 message). After it, HEAD is seen and git asked again; a stop at a conflict says where (`the rebase stopped at commit 1
 of 2: 1 file in conflict (src/sync/retry.ts)`) and opens the merge screen on its first file; a stop for another reason
 is said in git's words, with `shift+r`'s choices named; the end is said (`rebased: the rebase is done`), a merge screen
-of git's still open closed. In a vault not trusted, `gitArgs`'s guards hold — no hook runs (a rebase's `pre-rebase`, a
+of git's still open closed. Neither the merge screen nor the pull's question (above) opens over typing — in a note, a
+window or the git panel's message — or over a question or a list already open, whose keys would take letters meant
+for those (`busy`, as the conflict prompt waits, `5.5`): said instead, with the key that opens it (`x in source control
+opens the merge screen (:resolve)`; `p in source control (:pull) asks how to bring them together`). In a vault not trusted, `gitArgs`'s guards hold — no hook runs (a rebase's `pre-rebase`, a
 merge's `pre-merge-commit`), no merge driver — and nothing is signed (`commit.gpgSign=false`); said.
 
 **The merge screen** (GIT-D5; `core/conflicts.ts`, `tui/mergescreen.ts`): `x` on a file in conflict in the git panel

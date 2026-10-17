@@ -464,6 +464,11 @@ has. Unsaved notes are handled as for a pull.
 When a commit doesn't replay cleanly, the rebase stops there, and the merge screen opens on its conflict. Settle it,
 save it and stage it, then continue.
 
+Git runs in the background, so you may be typing, or answering another question, when it stops. Then the merge screen
+doesn't open over what you're doing, since your keys would settle conflicts there. A message says where the rebase
+stopped instead: press `x` in the git panel, or run `:resolve`, when you're ready. The same goes for a pull's question
+about bringing both sides together: `p` asks it again.
+
 ## A merge or a rebase under way
 
 While a merge or a rebase is under way, the status line says so, and the git panel has Continue, Skip (for a rebase)
@@ -473,7 +478,7 @@ and Abort buttons. `shift+r` in the git panel, or `:rebase`, offers the same:
 | --- | --- | --- |
 | `c` | `:continue` | Continues: a rebase replays its next commit, and a merge makes its commit |
 | `s` | `:skip` | Leaves the rebase's current commit out, and goes on |
-| `a` | `:abort` | Gives up the merge or the rebase: the branch goes back to where it was |
+| `a` | `:abort` | Gives up the merge or the rebase, after asking: the branch goes back to where it was |
 | `x` | | Opens the merge screen on a file still in conflict |
 
 A continue waits until no file is in conflict. Each runs in the background, and a message says how it went, in git's
