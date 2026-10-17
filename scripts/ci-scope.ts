@@ -257,6 +257,19 @@ export function scope(files: string[] | null, graph = importGraph(), root = ROOT
   };
 }
 
+/**
+ * The package.json script, and its arguments, that runs a scope's tests or terminal checks: everything's, the change's
+ * own, or none. The tests always through `bun run test`, which bounds each at 30 s.
+ */
+export function scriptFor(what: "test" | "terminal", s: Scope): string[] | null {
+  if (what === "test") {
+    if (s.all !== null) return ["test"];
+    return s.tests.length ? ["test", ...s.tests.map((t) => `./${t}`)] : null;
+  }
+  if (s.all !== null || s.checks === "all") return ["test:terminal"];
+  return s.checks.length ? ["test:terminal", ...s.checks] : null;
+}
+
 /** A pull request's files in CI (its merge commit against its base); here, the branch against `base`'s fork point. */
 export function changedFiles(root = ROOT, base = "origin/main"): string[] | null {
   const git = (...args: string[]) => {
@@ -294,17 +307,8 @@ if (import.meta.main) {
   const docsOnly = files !== null && codeChanged(files) === null;
   const s: Scope = docsOnly ? { all: null, tests: [], checks: [], why: [] } : scope(files, importGraph(here), here);
   console.log(docsOnly ? `the docs only (${files?.length} files): the tests are skipped` : say(s, files));
-  /** The script a change's tests or checks run with: everything's, the change's own, or none. */
-  const command = (): string[] | null => {
-    if (what === "test") {
-      if (s.all !== null) return ["test"];
-      return s.tests.length ? ["test", ...s.tests.map((t) => `./${t}`)] : null;
-    }
-    if (s.all !== null || s.checks === "all") return ["test:terminal"];
-    return s.checks.length ? ["test:terminal", ...s.checks] : null;
-  };
   if (what === "test" || what === "terminal") {
-    const cmd = command();
+    const cmd = scriptFor(what, s);
     if (!cmd) console.log(`no ${what === "test" ? "test" : "terminal check"} reaches this change`);
     else
       process.exit(
