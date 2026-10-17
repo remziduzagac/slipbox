@@ -1842,14 +1842,14 @@ From, or Compare against… — when it's still there; else the nearest of its c
 (default `["main"]`), with `[git] base` when set, a base listed there measured only against those before it
 (`["main", "dev"]`: dev against main, main against none), the nearest the one that leaves the branch fewest commits of
 its own (`git rev-list --count c..branch`; a tie, the first); else `[git] base`, main or master. Null for the trunk
-itself. A base is a branch's name (or a tag's, or a commit's) before git is given it (`refName`, as `git
-check-ref-format` has it): `[git] base` and `[git] bases`, a vault's own config's too, are checked as the config is
-read, anything else left out and said; a kept one is checked before use; and git is given each after
-`--end-of-options`. `Git.baseOf` asks it once each time git has news, `Git.fallbackBase` `[git] base`, main or master
-the same — never on every frame that draws it; the panel, `:changes` (`openChanges`), `:diff`
-(`showDiff`), This branch against main, Merge… and the rebase onto the base use it. `:merge-review` keeps
-`[git] base`, as the CLI does: `changed` and `diff` take `--base`, else `[git] base`; `merge-review` merges a branch
-into `--into`, else HEAD.
+itself. A base is a branch's name (or a tag's, or a commit's) before git is given it (`refName`, as
+`git check-ref-format` has it, the one rule for every name slipbox hands git; `refusedName` says why one is refused):
+`[git] base` and `[git] bases`, a vault's own config's too, are checked as the config is read, anything else left out
+and said; a kept one is checked before use; and git is given each after `--end-of-options`. `Git.baseOf` asks it once
+each time git has news, `Git.fallbackBase` `[git] base`, main or master the same — never on every frame that draws it;
+the panel, `:changes` (`openChanges`), `:diff` (`showDiff`), This branch against main, Merge… and the rebase onto the
+base use it. `:merge-review` keeps `[git] base`, as the CLI does: `changed` and `diff` take `--base`, else `[git] base`;
+`merge-review` merges a branch into `--into`, else HEAD.
 
 What's on request (the changes, a diff, the worktrees) asks git there and then; the explorer's marks and the panel's
 rows are asked in the background (D154; § Side panes).
@@ -2063,16 +2063,16 @@ the palette's commands, none of `space g`'s. `f` (`:fetch`, `git.fetch`) fetches
 git's own choice; `p` (`:pull`, `git.pull`) pulls, fast-forward only (`git pull --ff-only --no-rebase`), and where both
 sides moved asks merge or rebase (below); `shift+p` (`:push`, `git.push`) pushes the branch to its upstream (`git push
 --end-of-options <remote> refs/heads/<branch>:<its ref>`, the remote and ref as `%(upstream:remotename)` and
-`%(upstream:remoteref)` name them; a remote, branch or ref whose name starts with `-` is refused before git is run,
-said, as a base rebased onto is, `refusedName`). A branch with no upstream is asked "Push it to origin/<branch>, and
-track it there?" (`-u`): origin, else the only remote; with none, or several and no origin, said how to set one. Each is
-asked for, none on a timer, nothing in the background reaching the network; each runs in the background, one at a time
-("git is still fetching" to another), a message saying it's under way and how it went: "fetched: main is 3 commits
-behind origin/main — p pulls (:pull)", "pulled: main fast-forwarded to 1a2b3c4", "pushed main to origin/main". Before a
-pull, unsaved notes are saved or kept, as before a branch switch (`beforeCheckout`); HEAD moving on is then the feed's
-(`5.9`, `checkHead`): no switch, the tabs stay. A failure is git's own words (`gitReason`): a remote's refusal
-(`[rejected] main -> main (fetch first)`, with "fetch them (f) and pull (p) first"), else its `fatal:` or `error:` line
-and the files it names, else a conflict.
+`%(upstream:remoteref)` name them; a remote, branch or ref whose name isn't one git takes — one that starts with `-`
+among them — is refused before git is run, said, as a base rebased onto is, `refusedName`, by `refName`'s rule). A
+branch with no upstream is asked "Push it to origin/<branch>, and track it there?" (`-u`): origin, else the only remote;
+with none, or several and no origin, said how to set one. Each is asked for, none on a timer, nothing in the background
+reaching the network; each runs in the background, one at a time ("git is still fetching" to another), a message saying
+it's under way and how it went: "fetched: main is 3 commits behind origin/main — p pulls (:pull)", "pulled: main
+fast-forwarded to 1a2b3c4", "pushed main to origin/main". Before a pull, unsaved notes are saved or kept, as before a
+branch switch (`beforeCheckout`); HEAD moving on is then the feed's (`5.9`, `checkHead`): no switch, the tabs stay. A
+failure is git's own words (`gitReason`): a remote's refusal (`[rejected] main -> main (fetch first)`, with "fetch them
+(f) and pull (p) first"), else its `fatal:` or `error:` line and the files it names, else a conflict.
 
 git runs without a terminal: `GIT_TERMINAL_PROMPT=0`, so a login git can't make with what it has fails at once ("could
 not read Username for '…': terminal prompts disabled") rather than wait at a prompt; and ssh in batch mode

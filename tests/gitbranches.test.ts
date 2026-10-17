@@ -27,6 +27,7 @@ import {
   worktreeFolder,
 } from "../src/core/gitbranches.ts";
 import { baseBranch, refName, worktreeList } from "../src/core/gitops.ts";
+import { refusedName } from "../src/core/gitremote.ts";
 
 /** git in `repo`, as a test runs it: its own name and no system config. */
 function git(repo: string, ...args: string[]): string {
@@ -211,6 +212,14 @@ describe("their settings: [git] bases and worktrees, [keys.git]", () => {
       "a.lock",
     ])
       expect(refName(bad)).toBe(false);
+    // The same rule for every name slipbox hands git, said why where it's refused (a remote's, a base rebased onto).
+    expect(refusedName("the base", "origin/main")).toBeNull();
+    expect(refusedName("the base", "--root")).toBe(
+      'the base "--root" starts with "-": slipbox doesn\'t pass it to git',
+    );
+    expect(refusedName("the remote's name", "a b")).toBe(
+      "the remote's name \"a b\" isn't a name git takes: slipbox doesn't pass it to git",
+    );
   });
 });
 

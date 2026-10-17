@@ -20,7 +20,7 @@ import {
   worktreeRecords,
   worktreeRecordsLater,
 } from "./gitops.ts";
-import { inEnglish } from "./gitremote.ts";
+import { failureOf, inEnglish } from "./gitremote.ts";
 import { isTrusted } from "./trust.ts";
 import { isBusyFolder } from "./walk.ts";
 
@@ -357,16 +357,20 @@ export function makeBranch(root: string, name: string, from: string): Done {
 /** How long a checkout may take (a switch, a worktree made or removed): a big tree, or LFS's filters, take a while. */
 export const CHECKOUT_MS = 10 * 60_000;
 
+/** A failure `failureOf` says is git stopped partway (too long, or too much printed): what it did may be half done. */
+const stoppedPartway = (why: string) => why.endsWith("and was stopped");
+
 /**
  * A command that checks files out or deletes them, in the background: null when it went, else why — git's words, or,
  * stopped after `CHECKOUT_MS`, that it was and what it may have left (`left`).
  */
 export function checkoutLater(root: string, args: string[], left: string, ms = CHECKOUT_MS): Promise<Done> {
   return new Promise((done) => {
-    execFile("git", gitArgs(root, args), { ...OPTS, timeout: ms }, (err, _out, stderr) => {
+    // git's words in English, as the remote's commands have them (`failureOf`).
+    execFile("git", gitArgs(root, args), { ...OPTS, timeout: ms, env: inEnglish(process.env) }, (err, out, stderr) => {
       if (!err) return done(null);
-      if ((err as { killed?: boolean }).killed) return done(`git took too long, and was stopped: ${left}`);
-      done(why(stderr || err.message));
+      const said = failureOf(err, stderr, out);
+      done(stoppedPartway(said) ? `${said}: ${left}` : said);
     });
   });
 }
@@ -400,7 +404,7 @@ export async function newWorktreeLater(root: string, folder: string, name: strin
     halfMade(folder),
   );
   // Stopped partway, its worktree may be there: the branch stays with it.
-  if (r && !before && !r.startsWith("git took too long") && had()) gitNow(root, ["branch", "-D", "--", name]);
+  if (r && !before && !stoppedPartway(r) && had()) gitNow(root, ["branch", "-D", "--", name]);
   return r;
 }
 

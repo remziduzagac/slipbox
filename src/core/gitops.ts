@@ -139,7 +139,8 @@ export function statusOf(c: Pick<Checkout, "root">): Map<string, GitState> | nul
 /**
  * Whether `ref` is a name git takes for a branch, a tag or a commit, as `git check-ref-format` has it: `main`,
  * `origin/main`, a hash — never one starting with `-`, nor with a space, a control character, `~^:?*[\`, `..` or `@{`
- * in it. A base (`[git] base`, `[git] bases`, a kept one) is used only when it is one.
+ * in it. A base (`[git] base`, `[git] bases`, a kept one) is used only when it is one; the one rule for every name
+ * slipbox hands git, said why where it's refused (`refusedName`: a remote's, a branch's, a base rebased onto).
  */
 export function refName(ref: string): boolean {
   if (!ref || ref === "@" || ref.startsWith("-") || ref.endsWith("/") || ref.endsWith(".")) return false;
