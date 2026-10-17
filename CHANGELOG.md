@@ -179,6 +179,11 @@ The format is [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.1.0/); wh
   message ends with `(not indexed: walk.exclude)`, every time: `saved drafts/plan.md (not indexed: walk.exclude)`. On
   the command line, `write`, `mv`, `cp` and `export` say it in their line and add `notIndexed` to their `--json`;
   `capture` and `mkdir`, whose output is a path, say it as a warning.
+- `:e` opens a file in a busy folder (`node_modules`…), in what `walk.exclude` leaves out, in `.git` or, in home, in
+  what its index leaves out (`Downloads`, hidden folders), as the explorer opens it: by its path from the vault's top
+  or its whole path, on screen, never indexed, and Info says why. It said `no note or file` before. A file of a vault
+  inside this one, opened so, goes into that vault. In a vault, a hidden or git-ignored file still joins its index once
+  opened.
 
 ### Removed
 

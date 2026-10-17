@@ -508,6 +508,10 @@ for agents in the CLI.
 
 ## D61: The index is a cache: on demand, in the background, shared by content (20.8–20.11, 2026-10-02)
 
+> **Amended by D249 (2026-10-17):** opening a file reaches it only when it's git-ignored or under a hidden folder, as
+> before; the TUI's `:e` now opens one the walk leaves out and never reaches (a busy folder's, `walk.exclude`'s, home's
+> skip list's) as the explorer does, never indexed, where it said `no note or file`.
+>
 > **Amended by VV-D2, VV-D8 (2026-10-14):** home is a vault: the background index walks it first in each pass, a slice
 > at a time, keeps the walk and builds home's index from it, then indexes the vaults in it; a busy folder is never
 > walked, nor reached.
@@ -1057,3 +1061,26 @@ it. A very large folder opened by name holds that many notes, as a vault of that
 
 **Not chosen:** the folder opened capped with home, its own deepest notes left out; the docs saying the folder opened
 is an exception to the cap, home's index going past it.
+
+## D249: `:e` opens a file the walk leaves out as the explorer does, never indexed (20.8, 2026-10-17)
+
+**Decision:** `:e <path>` (`note.open`) on a file that is there but that the vault's walk leaves out and opening never
+reaches — in a busy folder (D237), what `walk.exclude` leaves out, `.git` or `.slipbox`, a vault nested in this one
+and, in home, what its skip list leaves out — opens it as the explorer opens its row: by the row's path
+(`Explorer.rowPath`), through `App.open`, the same call, so the two can't drift. The file is on screen, polled while
+it's open, and never indexed: the notes, the files and the backlinks stay as they were. A nested vault's file goes
+into that vault, as its row does. Its path from the vault's top and its whole path inside the vault both work. Only a
+hidden or git-ignored file is made the vault's by being opened (D61), as before; a file through a link not followed
+still asks first (VV-D6); a path that isn't there still says `no note or file`. Info says why it isn't indexed (D244):
+from its row in the explorer, or, for a file no row lists — under a hidden folder, `.git` or home's `.config` — from
+the walk's reason for its path, the words its row would have. As built: `note.open` (`src/tui/actions-files.ts`),
+`Marks.whyAt` (`src/tui/marks.ts`); design/tui.md § Files beyond notes, design/roots.md § The walk.
+
+**Why:** The maintainer's choice, 2026-10-17 (#152): `:e` said `no note or file` of a file that is there, which the
+explorer opens from its `⊘` row and the design said opens when named. Opening it is looking; whether it's indexed is
+the walk's settings' to say, and opening it doesn't overrule them.
+
+**Cost:** Info asks the walk's filter of a file no row lists each time it's drawn: a few pattern matches and a `stat`.
+
+**Not chosen:** indexing it once opened, as a git-ignored file is (a look would overrule `walk.exclude` and the busy
+folders' rule); a second path for `:e` beside the explorer's, which could open it differently; refusing it, as before.

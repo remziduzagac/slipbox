@@ -332,8 +332,9 @@ export class Explorer {
     return null;
   }
 
-  /** Why the vault open's walk leaves out the view's folder `abs` (VV-D8), when it's in its own tree; else null. */
-  private leftOutView(abs: string): LeftOut | null {
+  /** Why the vault open's walk leaves out `abs` (VV-D8), when it's in its own tree: the view's folder, or a file Info
+   *  shows that no row lists (under a hidden folder, D249); else null. */
+  leftOutAt(abs: string): LeftOut | null {
     const R = this.app.loc.root;
     if (abs === R || !isInside(R, abs) || isListed(this.app.loc)) return null;
     const rel = relative(R, abs).split(sep).join("/");
@@ -363,7 +364,7 @@ export class Explorer {
     const rows: TreeRow[] = [];
     // The view (VV-D5): the vault's own tree from it, or, anywhere else, its folder listed a level at a time.
     const own = this.ownView(T);
-    if (own === null) this.outsideRows(T, 0, rows, this.leftOutView(T));
+    if (own === null) this.outsideRows(T, 0, rows, this.leftOutAt(T));
     else rows.push(...this.rootTree(own));
     this.tree = rows;
     return rows;
@@ -1066,7 +1067,7 @@ export interface TreeRow {
 }
 
 /** What the vault open's walk leaves out (VV-D8), carried down what's listed in it: why, and where it was decided. */
-interface LeftOut {
+export interface LeftOut {
   why: string;
   at: string;
 }

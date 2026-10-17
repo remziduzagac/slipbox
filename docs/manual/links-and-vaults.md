@@ -334,8 +334,9 @@ Home's index leaves out what isn't your notes:
   from the system's list of mounts and never looks into it, so a share that stops answering can't hold slipbox up
 - notes larger than `walk.max_file_size`, which are listed as skipped, not read
 
-A file there still opens, and is read again when it changes on disk, but it is never indexed. The explorer lists those
-folders, marked `⊘`, except the hidden ones, and says `another disk` beside a mounted one. Unfolding it looks in.
+A file there still opens, from the explorer or by its path (`:e Downloads/list.md`, `:e .config/git/config`), and is
+read again when it changes on disk, but it is never indexed. The explorer lists those folders, marked `⊘`, except the
+hidden ones, and says `another disk` beside a mounted one. Unfolding it looks in.
 `slipbox ~/Downloads` says why its notes aren't indexed: `~/Downloads: left out of home's index (Downloads)`.
 
 Home is walked a little at a time while nobody is working, by the background index (see [Backlinks](#backlinks)), or

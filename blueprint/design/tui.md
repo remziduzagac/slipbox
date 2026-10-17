@@ -701,14 +701,14 @@ keys.
   this vault doesn't index: select one it does`) — but what `walk.exclude` leaves out, your own setting, takes a new
   note, a new folder or a paste as a typed path into it does, said `not indexed` (D246: `Files.newItemBase` gives the
   row's folder when `Graph.notIndexed` says so of the row's path; a busy folder, a `.gitignore`'s, home's skip list or
-  a vault there is refused as before); a file of it
-  opens from the explorer, never indexed; a note of it a link reached (`20.8`) is listed there, not under a folder of
-  the vault's own. What it hasn't reached — a folder it couldn't read, home's folders before its walk, a folder or file
-  come since the walk — is the vault's, by its path in it (`unwalked`), listed from the disk until the walk has it: so
-  a top-level folder of home unfolded before home was ever walked lists what's in it at once. `rowPath` gives a path at
-  or under what the walk leaves out its absolute path (a hidden one only in home); the view zooms out by itself to hold
-  such a file (`zoomToHold`: only a hidden folder's isn't, `listedDown`), and the view's own folder can be one
-  (`ownView` null). The busy folders whose names start with a dot (`.venv`, `.cache`) are hidden, never listed.
+  a vault there is refused as before); a file of it opens from the explorer, and by `:e` the same way (D249), never
+  indexed; a note of it a link reached (`20.8`) is listed there, not under a folder of the vault's own. What it hasn't
+  reached — a folder it couldn't read, home's folders before its walk, a folder or file come since the walk — is the
+  vault's, by its path in it (`unwalked`), listed from the disk until the walk has it: so a top-level folder of home
+  unfolded before home was ever walked lists what's in it at once. `rowPath` gives a path at or under what the walk
+  leaves out its absolute path (a hidden one only in home); the view zooms out by itself to hold such a file
+  (`zoomToHold`: only a hidden folder's isn't, `listedDown`), and the view's own folder can be one (`ownView` null).
+  The busy folders whose names start with a dot (`.venv`, `.cache`) are hidden, never listed.
 - **A row's marks** (VV-D9; `tui/marks.ts`, drawn by `drawTree`). At a row's right, in columns that line up: the
   index's state in the last (`indexGlyph`, `INDEX_ROLE`) — indexed `●` (`sidebar_mark`: dimmer than a name), indexing
   `◐` (`info`), not indexed `⊘` (`sidebar`), can't read `⚿` (a lock in Nerd; `warn`), a problem `⚠` (`warn`), ascii
@@ -928,17 +928,18 @@ keys.
 - **Info (right, `3.19`):** what the file on screen is — the right panel's views all show that file, and follow it.
   Sections that fold (`h`/`l`): **File** (its path, the vault it belongs to — home, or Elsewhere — its kind, size,
   modified time, words and reading time, lines, encoding and line endings, saved or not; `index`, only when it isn't
-  indexed: why, as the status line says it of its explorer row — its own `⊘`, or its folder's, D244), **Properties**
-  (the frontmatter's keys and values, nested maps indented under their key), **Tags** (its own, frontmatter's and
-  text's), **Links** (links and how many are unresolved, backlinks, headings, footnotes, tasks done; how links are
-  written here, `21.4` — `writes`, its `path` and `.md`, then `from` what said them, or each part's source after it,
-  `y` copying it whole). `enter` opens what a row names: a property's line in the frontmatter (source mode: its own
-  line; rendered, the row that shows it), a tag's notes, the links or backlinks list, the outline or the footnotes
-  view; any other row copies its value, as `y` does. The vault's own information — its name and the other copies of
-  it this machine knows (`21.6`), its notes, index (when it was written, what was reached outside the walk, `20.10`;
-  home's cap) and watcher, the background index — is `space v i`'s window: a vault isn't a file. Names are a column a
-  third of the pane at most, values cut to it (no sideways scrolling). `/` filters (see Filter). `space n i`, the `ℹ`
-  button, `slipbox stat` (its `root`, `name` and `properties` too). `e` edits the properties (below).
+  indexed: why, as the status line says it of its explorer row — its own `⊘`, or its folder's, D244; a file no row
+  lists, under a hidden folder (`.git`, home's `.config`), as its row would: the walk's reason for its path, D249),
+  **Properties** (the frontmatter's keys and values, nested maps indented under their key), **Tags** (its own,
+  frontmatter's and text's), **Links** (links and how many are unresolved, backlinks, headings, footnotes, tasks done;
+  how links are written here, `21.4` — `writes`, its `path` and `.md`, then `from` what said them, or each part's
+  source after it, `y` copying it whole). `enter` opens what a row names: a property's line in the frontmatter
+  (source mode: its own line; rendered, the row that shows it), a tag's notes, the links or backlinks list, the outline
+  or the footnotes view; any other row copies its value, as `y` does. The vault's own information — its name and the
+  other copies of it this machine knows (`21.6`), its notes, index (when it was written, what was reached outside the
+  walk, `20.10`; home's cap) and watcher, the background index — is `space v i`'s window: a vault isn't a file. Names
+  are a column a third of the pane at most, values cut to it (no sideways scrolling). `/` filters (see Filter). `space
+  n i`, the `ℹ` button, `slipbox stat` (its `root`, `name` and `properties` too). `e` edits the properties (below).
 - **The properties editor** (`3.20`; D151): `e` in the Info view, or `space n shift+p`, opens the note's frontmatter —
   YAML or TOML, as the note has it — in a floating window over the others: framed, titled "Properties — note (YAML)", as
   tall as its text. Inside is a window like any — a view of a buffer that isn't a file — in source mode, with every
@@ -1429,8 +1430,11 @@ the only one (`16.16`, `16.17`; D112): Org and AsciiDoc files open as text.
   still copy their path). `:e path` opens a file written a moment ago too, before the watcher has told the index:
   the vault learns of it then, as the watcher would have it — if the walk takes it. One git-ignored or under a
   hidden folder is reached (`20.8`): opened, and indexed from then on, as a link to it would; one in a busy folder
-  (`node_modules`…), `walk.exclude` or, in home, what its skip list leaves out isn't the vault's: it opens, polled while
-  it's open, and is never indexed (VV-D8).
+  (`node_modules`…), `walk.exclude`, `.git` or `.slipbox` or, in home, what its skip list leaves out isn't the vault's:
+  it opens, polled while it's open, and is never indexed (VV-D8). `:e` opens it as the explorer opens its `⊘` row — by
+  the row's path (`Explorer.rowPath`), through `App.open`, the same call (D249) — by its path from the vault's top or
+  its whole path; one in a vault nested in this one goes into that vault, as its row does. Info says why it isn't
+  indexed, a file no row lists (under a hidden folder) by the walk's reason for its path (`Marks.whyAt`).
 - **Data files open rendered** (`16.11`–`16.13`, D108; [rendering.md](rendering.md) § Data files), with
   source mode a key away and the lens editing a card at a time: in YAML and JSON a key with the
   plain values listed right under it (`defaults` and its settings), in TOML and INI one key — never

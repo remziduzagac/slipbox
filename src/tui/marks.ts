@@ -146,13 +146,20 @@ export class Marks {
   /**
    * Why the file `abs` isn't indexed (VV-D9), for Info: its row's `⊘`, or — a file's mark being its folder's when it
    * has none of its own — the nearest folder's above it, up to a vault's row. From the explorer's tree, where it's
-   * listed (the file on screen is, revealed there); null when it's indexed, or isn't listed.
+   * listed (the file on screen is, revealed there); one no row lists, under a hidden folder (`.git`, home's `.config`,
+   * opened by its path: D249), from the walk's reason for its path, as its row would say it. Null when it's indexed.
    */
   whyAt(abs: string): string | null {
     const ex = this.app.explorer;
     const rows = ex.treeRows();
     const path = ex.rowPath(abs);
-    for (let at = rows.findIndex((r) => r.path === path); at >= 0; ) {
+    const listed = rows.findIndex((r) => r.path === path);
+    if (listed < 0) {
+      const out = ex.leftOutAt(abs);
+      const rel = relative(this.app.loc.root, abs).split(sep).join("/");
+      return out && !this.app.graph.known(rel) ? this.words({ by: "left-out", reason: out.why, at: out.at }) : null;
+    }
+    for (let at = listed; at >= 0; ) {
       const row = rows[at]!;
       const n = this.index(row, this.factsOf(row));
       if (n !== undefined || row.kind === "root") return typeof n === "object" ? this.words(n) : null;

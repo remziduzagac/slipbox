@@ -227,10 +227,11 @@ of its own. On the command line, `write`, `mv`, `cp` and `export` say it in thei
 
 You can also open a hidden or git-ignored file by its path (`:e .drafts/plan.md`), or by following a link to it. It
 opens, and its links count from then on. A file in a busy folder, or in what `walk.exclude` leaves out, opens from the
-explorer only, and its links never count.
+explorer or by its path (`:e node_modules/pkg/README.md`), the same either way, and its links never count. Info says
+why it isn't indexed.
 
-A folder that is a vault of its own is listed with its own icon, and its files are its own.
-[Links and vaults](links-and-vaults.md) has what that means.
+A folder that is a vault of its own is listed with its own icon, and its files are its own: opening one, from the
+explorer or by its path, goes into that vault. [Links and vaults](links-and-vaults.md) has what that means.
 
 A link (a symlink) says where it leads, dimmed, before its marks: `→ /mnt/disk/data`. One that leads out of the vault,
 or out of home, isn't followed until you say so, and says that too: `not followed`, marked `⊘`. Opening it asks whether
