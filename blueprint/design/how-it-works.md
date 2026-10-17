@@ -26,11 +26,11 @@ paths (D8, D67).
 when stdin and stdout are terminals (`9.3`). The TUI is loaded with a dynamic `import()`, so a
 CLI call never loads OpenTUI's native renderer.
 
-Every user action is a named command (D11). `core/command-specs.ts` gives each command id the CLI invocation that
-reaches the same state change, or marks it an interaction; the TUI implements each one (`tui/actions.ts` and the
-`tui/actions-*.ts` of its area) in the `CommandRegistry` (`core/commands.ts`), and keys, the palette and the `:` prompt
-run them by id. A command implemented without a spec, or specified without an implementation, fails at start-up and
-fails a test ([tui.md](tui.md) § Parity with the CLI).
+Every user action is a named command (D11). `core/commands/*.ts` (by area, listed by `core/command-specs.ts`) give
+each command id the CLI invocation that reaches the same state change, or mark it an interaction; the TUI implements
+each one (`tui/actions.ts` and the `tui/actions-*.ts` of its area) in the `CommandRegistry` (`core/commands.ts`), and
+keys, the palette and the `:` prompt run them by id. A command implemented without a spec, or specified without an
+implementation, fails at start-up and fails a test ([tui.md](tui.md) § Parity with the CLI).
 
 ### The boundary is enforced, not hoped for
 
@@ -243,7 +243,8 @@ The CLI's commands are the user's reference, [cli.md](../../docs/manual/cli.md);
 | `core/theme/*` | 2.6 | semantic roles, built-in themes, base16 loader |
 | `core/glyphs.ts` | 2.8 | Nerd, Unicode and ASCII glyph sets |
 | `core/commands.ts` | 0.8 | `CommandRegistry` and `Keymap` |
-| `core/command-specs.ts` | 0.8, parity | every command id with its CLI equivalent |
+| `core/command-specs.ts` | 0.8, parity | the `CommandSpec` type and `COMMAND_SPECS`, built from `core/commands/*.ts` |
+| `core/commands/*.ts` | 0.8, parity, D235 | every command id with its CLI equivalent, by area |
 | `core/position.ts` | 3.4, 3.5, 3.15 | anchors, reading positions, session file |
 | `core/watch.ts` | 5.1, 5.2 | per-directory watcher, debounce, polling fallbacks |
 | `core/vault-feed.ts` | 5.1, 5.9, 5.10 | the watcher's news into a graph, held while git writes (TUI) |

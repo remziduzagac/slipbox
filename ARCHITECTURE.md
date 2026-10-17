@@ -61,7 +61,8 @@ Since the big files were split, none is past it; a file that ever must be is cap
 
 A few modules to know first:
 
-- `core/command-specs.ts` and `core/commands.ts`: every user action, by its id, with its command-line equivalent.
+- `core/command-specs.ts` (the list, from `core/commands/*.ts`) and `core/commands.ts`: every user action, by its id,
+  with its command-line equivalent.
 - `core/graph.ts`: the notes of a root, their links and backlinks, parsed lazily and cached; how a link resolves is
   `graph-resolve.ts`'s, a note's entry from its text `graph-extract.ts`'s, their shapes `graph-types.ts`'s.
 - `core/rename.ts`: renames and moves as plans of byte-range edits, previewed first; a plan's shape is
@@ -79,9 +80,9 @@ A few modules to know first:
 What every change keeps. Each is checked by a test or a script where it can be.
 
 - **Every user action is a named command.** Its id and its command-line equivalent (or `null`, for a pure interaction)
-  are in `core/command-specs.ts`; the TUI implements it in `tui/actions.ts` or the `tui/actions-*.ts` of its area, all
-  registered by `registerActions`. A command implemented without a spec, or specified without an implementation, fails
-  at start-up and fails a test.
+  are in `core/commands/*.ts`, by area; the TUI implements it in `tui/actions.ts` or the `tui/actions-*.ts` of its
+  area, all registered by `registerActions`. A command implemented without a spec, or specified without an
+  implementation, fails at start-up and fails a test.
 - **Disk is the contract.** A command reads saved files only, writes atomically, and is never blocked by an open editor.
   The TUI takes a command's write as any program's: it reloads, or asks when the note has unsaved changes. It lists the
   notes it holds unsaved for commands to warn about (`core/stale.ts`): advice, never a lock.

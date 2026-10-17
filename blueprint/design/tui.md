@@ -1069,7 +1069,7 @@ past theirs), so the content behind never runs up to the edge.
   footer. The footer is always four rows under a rule, so the list doesn't jump (on a short screen
   it's left out before the list gets under four rows): the selected entry's name
   (bold), its explanation in normal text (wrapping to a second row), and its other bindings
-  ("also", as keycaps). Explanations are the `desc` of each command in `core/command-specs.ts`:
+  ("also", as keycaps). Explanations are the `desc` of each command in `core/commands/*.ts`:
   a plain sentence saying what it does ("Moves the cursor to the end of the row").
 - **Keycaps:** key bindings are spelled out (`ctrl+d`, `shift+g`, `space l y`, `esc`) and each
   binding is its own keycap (`keycap` role; `keycap_selected` on the selected row), so the space
@@ -1116,7 +1116,7 @@ all the popup isn't drawn. The entries are in at most three columns, as many as 
 entries, so a long explanation in one never spreads the others apart. Each entry is `key → name` with a short, dimmed
 explanation underneath:
 
-- **For a command:** its `desc` in `core/command-specs.ts`.
+- **For a command:** its `desc` in `core/commands/*.ts`.
 - **For a group:** from `[groups]`: its explanation under its name, or, for a prefix of one key, in the popup's own
   title.
 
@@ -2253,7 +2253,7 @@ runs the binding.
 
 ## Parity with the CLI
 
-Every command is declared in `core/command-specs.ts` with the CLI invocation that reaches the same state change, or
+Every command is declared in `core/commands/*.ts` with the CLI invocation that reaches the same state change, or
 marked as an interaction: cursor, scrolling, selection, focus, panes, overlays (D11, D14). Editing keys are interactions
 too: the state they change, a note's text, is reached from the CLI by `write`, `replace` and `task` (D14, D18). Git in
 the editor is marked so too, though it changes state: it is the TUI's alone (§ Git; D156). Tests fail when a command is
