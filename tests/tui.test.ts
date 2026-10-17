@@ -15256,27 +15256,41 @@ describe("the diff window (GIT-D2)", () => {
     expect([h.app.floating, h.app.messages.at(-1)?.text, back]).toEqual([null, "no differences from main", 1]);
   });
 
-  test("line endings, a byte order mark, a final line break: not drawn as every line changed, nor as nothing — said", async () => {
+  test("line endings, a byte order mark, a final line break: not drawn as every line changed, nor as nothing — a dim row", async () => {
     const root = makeVault();
-    const h = await harness({ root, open: "index.md" });
+    writeFileSync(join(root, "x.ts"), code);
+    writeFileSync(join(root, "n.md"), "# N\n\nOne.\n\nTwo.");
+    const h = await harness({ root, open: "index.md", width: 100, height: 40 });
     const crlf = code.replace(/\n/g, "\r\n");
-    const said = (before: string, now: string) => {
-      h.app.git.showLineDiff(before, now, "x.ts", "x.ts: its change", "x.ts: nothing to show");
-      return [h.app.floating?.kind ?? null, h.app.messages.at(-1)?.text];
+    /** The window's text opened on the two, a line a row; null: no window. */
+    const said = async (before: string, now: string, path = "x.ts") => {
+      if (h.app.floating) await h.keys("escape");
+      h.app.git.showLineDiff(before, now, path, `${path}: its change`, `${path}: nothing to show`);
+      return h.app.floating?.kind === "diff" ? h.app.floating.view.buf.source.split("\n") : null;
     };
-    expect(said(crlf, code)).toEqual([null, "only the line endings (CRLF → LF) changed: no line to show"]);
-    expect(said(code, code.replace(/\n$/, ""))).toEqual([
-      null,
-      "only the final line break (removed) changed: no line to show",
-    ]);
-    expect(said(`\uFEFF${code}`, code)).toEqual([null, "only the byte order mark (removed) changed: no line to show"]);
-    // A line changed as well: that line, and no other.
-    said(crlf, code.replace("const line2 = 2;", "const line2 = 22;"));
-    const w = h.app.floating?.kind === "diff" ? h.app.floating.diff : null;
-    expect(w?.rows.filter((r) => r.kind === "-" || r.kind === "+").map((r) => `${r.kind} ${r.text}`)).toEqual([
+    expect(await said(crlf, code)).toEqual(["\\ line endings: CRLF → LF"]);
+    expect(await said(code, code.replace(/\n$/, ""))).toEqual(["\\ no newline at end of file"]);
+    expect(await said(`\uFEFF${code}`, code)).toEqual(["\\ byte order mark removed"]);
+    // Drawn dim, as it reads.
+    expect(screen(h).some((r) => r.includes("\\ byte order mark removed"))).toBe(true);
+    expect(styleAt(h, "\\ byte order mark", "byte")).toMatchObject({ fg: h.app.theme.roles.dim.fg });
+    // A line changed as well: that line, and no other, the line endings said before it.
+    const both = await said(crlf, code.replace("const line2 = 2;", "const line2 = 22;"));
+    expect(both?.filter((r) => /^[-+\\] /.test(r))).toEqual([
+      "\\ line endings: CRLF → LF",
       "- const line2 = 2; // line 2",
       "+ const line2 = 22; // line 2",
     ]);
+    // Nothing different: said, no window.
+    expect([await said(code, code), h.app.messages.at(-1)?.text]).toEqual([null, "x.ts: nothing to show"]);
+    // A note's, as its blocks: the row too; enter on it goes to the line it's at, the last.
+    expect(await said("# N\n\nOne.\n\nTwo.\n", "# N\n\nOne.\n\nTwo.", "n.md")).toEqual([
+      "\\ no newline at end of file",
+    ]);
+    expect(h.app.floating?.kind === "diff" && h.app.floating.diff.blocks?.on).toBe(true);
+    await h.keys("enter");
+    expect([h.app.floating, h.app.view!.buf.rel]).toEqual([null, "n.md"]);
+    expect(statusRow(h.frame())).toMatch(/ L5:\d+ /);
   });
 
   test("the window is read-only, drawn one way: typing refused, no source mode; as wide as the screen less its margins", async () => {

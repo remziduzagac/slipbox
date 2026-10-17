@@ -441,11 +441,12 @@ A diff has layouts of its own beside the note's, which they leave unchanged (GIT
 (`core/layout/diff.ts`), a row a line, highlighted as source mode highlights the file, its changed words tinted more
 strongly than their line; a note's **before and after** (`core/layout/blockdiff.ts`), each changed block laid out
 twice, lightly formatted (headings, emphasis, links as they read, a list's marker, a table's cells, a quote's bar), in
-a `before` and an `after` frame, the removed words marked in the first and the added in the second, a block added or
-removed whole laid out once, marked, the unchanged stretches folded; and a code file's **side by side**
-(`core/layout/splitdiff.ts`), its two texts scrolling sideways by one offset, as a code block does (D233). The
-layout's other users never see the marks. How each is found and drawn, its roles and its window: [tui.md](tui.md)
-§ Git.
+a `before` and an `after` frame, the removed words marked in the first and the added in the second (a block too big to
+diff by words, its changed lines and their words), a block added or removed whole laid out once, marked, the
+unchanged stretches folded; and a code file's **side by side** (`core/layout/splitdiff.ts`), its two texts scrolling
+sideways by one offset, as a code block does (D233). Each says in a dim row what changed that no line shows, the line
+endings or the final newline (D245). The layout's other users never see the marks. How each is found and drawn, its
+roles and its window: [tui.md](tui.md) § Git.
 
 ## The ANSI writer
 

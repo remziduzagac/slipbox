@@ -640,7 +640,7 @@ const DIFFS: Check[] = [
   },
   {
     area: "outside-and-code",
-    name: "git diff: a file whose only change is its line endings says so — no diff of every line, nor of nothing",
+    name: "git diff: a file whose only change is its line endings says so in a dim row — no diff of every line, nor nothing",
     covers: { cases: ["git", "encoding"], commands: ["git.view"] },
     options: repoAt((s) => {
       trail(s, { "camp.md": "# Camp\n\nPitch the tent.\nBoil the water.\n" });
@@ -650,8 +650,11 @@ const DIFFS: Check[] = [
     run: async (s) => {
       await toPanel(s);
       await on(s, "M camp.md");
-      await s.message("only the line endings (LF → CRLF) changed");
-      s.expect(!s.text().includes("against what's staged"), "no diff window");
+      await s.see("camp.md against what's staged");
+      await s.see("\\ line endings: LF → CRLF");
+      s.expect(!s.text().includes("┌ before") && !s.text().includes("┌ removed"), "no block shown changed");
+      await s.keys("escape");
+      await s.notSee("camp.md against what's staged");
       await s.status("GIT");
     },
   },

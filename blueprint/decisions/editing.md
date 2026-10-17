@@ -516,3 +516,29 @@ the keys after it wait with it. The binary is about 0.7 MB bigger: the parse wor
 
 **Not chosen:** building the dictionaries in slices between frames: Hunspell builds one in a single call that can't be
 split; checking only in the visible rows: it is the build, not the checking, that blocks.
+
+## D245: A note's diff: a big block by its lines, a line before to its line, what no line shows a row (2026-10-17)
+
+**Decision:** Three edges of the block diff (GIT-D2). A changed block too big to diff by words (past `MAX_TOKENS`, 4,000
+tokens, about 150 lines of code) is paired with the block most like it by its lines — twice the lines kept over the
+lines of both, each line a token of the pairing's budget — and diffed by its lines inside the block: its frames show it
+whole, as a smaller block's do, its changed lines on their sign's tint to the frame's edge (a blank one too), its
+unchanged lines plain, and the words changed in a changed line paired with one like it on the stronger tint. `enter`
+on a line of a `before` frame goes to that line now, found by the block's line diff: an unchanged line where it is in
+the `after` block, a changed or removed one where its run of changes is (the line after it, inside the block), as the
+source diff's removed lines go. What changed that no line shows is a dim row, in the source diff, side by side and
+before and after alike, said as git says `\ No newline at end of file`: `\ line endings: CRLF → LF` and
+`\ byte order mark removed` before the first row, `\ no newline at end of file` or `\ newline at end of file added`
+after the last; said also when a line changed, and alone the diff's only rows, the window opened on them, where a
+message said it before. Decided by an issue (#141) and one pull request (D223).
+
+**Why:** The maintainer's choices. A big block, often a fence of code, showed whole twice, removed then added, the one
+changed line nowhere marked; a `before` line went to its block's first line, however far down it was; and a file git
+lists as changed only by its line endings or its last line break showed a message instead of its diff, and a diff with
+a line changed said nothing of them.
+
+**Cost:** A big block is still drawn whole in both frames: a fence of 400 lines with one line changed is 800 rows.
+
+**Not chosen:** a big block drawn once, its lines interleaved as the source diff's are: the frames are GIT-D2's, and
+`tab` gives the lines; a removed line going to the added line it's paired with: the source diff's removed lines go to
+where their run is, and the two drawings `tab` between keep the cursor's line.

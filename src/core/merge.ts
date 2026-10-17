@@ -27,13 +27,18 @@ export function comparable(text: string): string {
   return t.includes("\r\n") ? t.replace(/\r\n/g, "\n") : t;
 }
 
-/**
- * What changed between two texts whose lines are the same (`comparable`, and `textLines`): the line endings, the byte
- * order mark, the final line break — said as "the line endings (CRLF → LF)"; null when nothing did.
- */
-export function unseenChange(before: string, now: string): string | null {
-  if (before === now) return null;
-  const parts: string[] = [];
+/** What changed between two texts that their lines, compared (`comparable`, `textLines`), don't show. */
+interface Unseen {
+  /** The line endings, as they were and as they are ("CRLF", "LF", "mixed"): when both texts have line breaks. */
+  eol?: [string, string];
+  bom?: "added" | "removed";
+  /** The final line break: when both texts have a line to end. */
+  final?: "added" | "removed";
+}
+
+function unseen(before: string, now: string): Unseen {
+  const out: Unseen = {};
+  if (before === now) return out;
   const eol = (t: string) => {
     const crlf = t.split("\r\n").length - 1;
     const lf = t.split("\n").length - 1 - crlf;
@@ -41,12 +46,48 @@ export function unseenChange(before: string, now: string): string | null {
   };
   const eb = eol(before);
   const en = eol(now);
-  if (eb && en && eb !== en) parts.push(`the line endings (${eb} → ${en})`);
+  if (eb && en && eb !== en) out.eol = [eb, en];
   const bom = (t: string) => t.charCodeAt(0) === 0xfeff;
-  if (bom(before) !== bom(now)) parts.push(`the byte order mark (${bom(now) ? "added" : "removed"})`);
+  if (bom(before) !== bom(now)) out.bom = bom(now) ? "added" : "removed";
   const final = (t: string) => t.endsWith("\n");
-  if (final(before) !== final(now)) parts.push(`the final line break (${final(now) ? "added" : "removed"})`);
+  const lines = (t: string) => textLines(comparable(t)).length > 0;
+  if (final(before) !== final(now) && lines(before) && lines(now)) out.final = final(now) ? "added" : "removed";
+  return out;
+}
+
+/**
+ * What changed between two texts whose lines are the same (`comparable`, and `textLines`): the line endings, the byte
+ * order mark, the final line break — said as "the line endings (CRLF → LF)"; null when nothing did.
+ */
+export function unseenChange(before: string, now: string): string | null {
+  const u = unseen(before, now);
+  const parts: string[] = [];
+  if (u.eol) parts.push(`the line endings (${u.eol[0]} → ${u.eol[1]})`);
+  if (u.bom) parts.push(`the byte order mark (${u.bom})`);
+  if (u.final) parts.push(`the final line break (${u.final})`);
   return parts.length ? parts.join(" and ") : null;
+}
+
+/** What a diff says that no line of it shows, a row each: those `start` says before its first row, `end` after its
+ *  last. */
+export interface UnseenRows {
+  start: string[];
+  end: string[];
+}
+
+/**
+ * What changed between two texts that no line shows, as a diff's rows say it, the way git says `\ No newline at end of
+ * file`: where it is — the line endings ("line endings: CRLF → LF") and the byte order mark at the start, the final
+ * line break ("no newline at end of file", or "newline at end of file added") at the end. Said whether or not a line
+ * changed too.
+ */
+export function unseenRows(before: string, now: string): UnseenRows {
+  const u = unseen(before, now);
+  const start: string[] = [];
+  if (u.eol) start.push(`line endings: ${u.eol[0]} → ${u.eol[1]}`);
+  if (u.bom) start.push(`byte order mark ${u.bom}`);
+  const end = u.final ? [u.final === "removed" ? "no newline at end of file" : "newline at end of file added"] : [];
+  return { start, end };
 }
 
 /** A text's lines, to show: a final line break ends the last line; it doesn't start another one. */
@@ -114,7 +155,8 @@ const white = (t: string) => /^\s/.test(t);
 /** A token that's a word: punctuation and white space are diffed, but not counted in how alike two lines are. */
 const word = (t: string) => /^[\p{L}\p{M}\p{N}_]/u.test(t);
 
-/** Past this many tokens in the two lines together, a pair isn't diffed by word: too long a line to be prose or code. */
+/** Past this many tokens in the two lines together, a pair isn't diffed by word: too long a line to be prose or code.
+ *  Two blocks of a note's diff past it are compared by their lines (`pairLines`). */
 const MAX_TOKENS = 4000;
 
 /**
@@ -127,7 +169,8 @@ export function diffWords(a: string, b: string, prose = false): WordDiff {
   return diffTokens(tokens(a), tokens(b), prose);
 }
 
-type WordDiff = { del: WordRange[]; add: WordRange[]; alike: number };
+/** `byLines`: two texts too long to diff by word, found alike by their lines (`diffByLines`), no words. */
+type WordDiff = { del: WordRange[]; add: WordRange[]; alike: number; byLines?: true };
 
 /** `diffWords`, of two lines' tokens. */
 function diffTokens(ta: string[], tb: string[], prose: boolean): WordDiff {
@@ -173,12 +216,26 @@ function runs(t: string[], changed: [number, number][]): WordRange[] {
   return out;
 }
 
+/**
+ * How alike two texts too long to diff by word are by their lines: twice the lines kept over the lines of both
+ * (`prose`: each line's white space one, and none at its ends). No words: a line alone is alike no other line.
+ */
+function diffByLines(a: string, b: string, prose: boolean): WordDiff {
+  const lines = (t: string) => t.split("\n").map((l) => (prose ? l.replace(/\s+/g, " ").trim() : l.replace(/\r$/, "")));
+  const la = lines(a);
+  const lb = lines(b);
+  const kept = la.length - diffLines(la, lb).reduce((n, h) => n + h.aLen, 0);
+  return { del: [], add: [], alike: (2 * kept) / (la.length + lb.length), byLines: true };
+}
+
 /** A removed line paired with an added one (indexes in the hunk's removed and added lines), and their changed words. */
 export interface LinePair {
   del: number;
   add: number;
   delWords: WordRange[];
   addWords: WordRange[];
+  /** Two texts of lines (a note's blocks) too long to diff by word: paired by their lines, no words found. */
+  byLines?: true;
 }
 
 /** A pair less alike than this stays a line removed and a line added. */
@@ -221,7 +278,8 @@ function mostAlike(a: Tokens, b: Tokens): number {
 /**
  * Inside a hunk: each removed line paired with the added line most like it — the pairs, in order, that make the hunk
  * most alike — none less than half alike (`diffWords`; `prose`, its white space all one). Only the pairs whose words
- * could make them half alike are diffed, the likeliest first, until `PAIR_TOKENS` are spent.
+ * could make them half alike are diffed, the likeliest first, until `PAIR_TOKENS` are spent. Two too long to diff by
+ * word (`MAX_TOKENS`), a note's blocks of many lines, are compared by their lines instead, each line a token spent.
  */
 export function pairLines(removed: string[], added: string[], prose = false): LinePair[] {
   const n = removed.length;
@@ -232,6 +290,7 @@ export function pairLines(removed: string[], added: string[], prose = false): Li
     add: j,
     delWords: w.del,
     addWords: w.add,
+    ...(w.byLines ? { byLines: true as const } : {}),
   });
   const rt = removed.map(tokensOf);
   const at = added.map(tokensOf);
@@ -247,7 +306,12 @@ export function pairLines(removed: string[], added: string[], prose = false): Li
     for (const k of order) {
       const [i, j] = pairs[k]!;
       const size = rt[i]!.all.length + at[j]!.all.length;
-      if (size > MAX_TOKENS) continue;
+      if (size > MAX_TOKENS) {
+        const lines = (t: string) => t.split("\n").length;
+        if ((spent += lines(removed[i]!) + lines(added[j]!)) > PAIR_TOKENS) break;
+        out[k] = diffByLines(removed[i]!, added[j]!, prose);
+        continue;
+      }
       if ((spent += size) > PAIR_TOKENS) break;
       out[k] = diffTokens(rt[i]!.all, at[j]!.all, prose);
     }
@@ -281,9 +345,10 @@ export function pairLines(removed: string[], added: string[], prose = false): Li
 
 /** A row of a diff as slipbox draws it (GIT-D2). */
 export interface DiffViewRow {
-  /** A group's head, a line both have, one only `from` has, one only `to` has, or unchanged lines folded. */
-  kind: "@@" | " " | "-" | "+" | "fold";
-  /** The line's text; a head's `line N`. */
+  /** A group's head, a line both have, one only `from` has, one only `to` has, unchanged lines folded, or what changed
+   *  that no line shows (`unseenRows`). */
+  kind: "@@" | " " | "-" | "+" | "fold" | "\\";
+  /** The line's text; a head's `line N`; what no line shows, as said. */
   text: string;
   /** The line of `to` (1-based) the row is at — a removed line's: where it was. */
   line: number;
@@ -300,13 +365,24 @@ export interface DiffViewRow {
  * A diff as slipbox draws it (GIT-D2): each changed run under its `@@ line N`, with up to `context` unchanged lines
  * around it, each removed line paired with an added one like it and their changed words found; the unchanged
  * stretches between, before the first and after the last folded to a row saying how many lines they hold — but a
- * single line, shown in the context beside it, and a stretch whose first line (`from`'s) is in `open`.
+ * single line, shown in the context beside it, and a stretch whose first line (`from`'s) is in `open`. What changed
+ * that no line shows (`unseen`, of the texts before `comparable` made them alike): a row before the first, at line 1,
+ * or after the last, at the last line.
  */
-export function diffView(from: string, to: string, open: ReadonlySet<number> = new Set(), context = 3): DiffViewRow[] {
+export function diffView(
+  from: string,
+  to: string,
+  open: ReadonlySet<number> = new Set(),
+  context = 3,
+  unseen: UnseenRows = { start: [], end: [] },
+): DiffViewRow[] {
   const a = textLines(from);
   const b = textLines(to);
   const hunks = diffLines(a, b);
-  if (!hunks.length) return [];
+  const said = (text: string, line: number, own: number): DiffViewRow => ({ kind: "\\", text, line, own });
+  const start = unseen.start.map((t) => said(t, 1, 1));
+  const end = unseen.end.map((t) => said(t, Math.max(1, b.length), Math.max(1, a.length)));
+  if (!hunks.length) return [...start, ...end];
   // Hunks whose context meets, or leaves a line between: one group.
   const groups: Hunk[][] = [];
   for (const h of hunks) {
@@ -329,7 +405,7 @@ export function diffView(from: string, to: string, open: ReadonlySet<number> = n
     }
     return k + shifts[lo]! + 1;
   };
-  const out: DiffViewRow[] = [];
+  const out: DiffViewRow[] = start;
   const same = (k: number) => out.push({ kind: " ", text: a[k]!, line: toLine(k), own: k + 1 });
   // `from`'s unchanged lines [s, e): folded, or shown. Never one line alone: a group takes it into its context.
   const stretch = (s: number, e: number) => {
@@ -378,6 +454,7 @@ export function diffView(from: string, to: string, open: ReadonlySet<number> = n
     shown = end;
   }
   stretch(shown, a.length);
+  out.push(...end);
   return out;
 }
 

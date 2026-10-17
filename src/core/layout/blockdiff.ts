@@ -3,7 +3,8 @@
 // quote's bar, code as written — the removed words marked in the first and the added in the second; a block added or
 // removed whole in one frame, on its sign's tint; each group under its head, the unchanged stretches folded to a row.
 // What the formatting hides is marked through what shows: a link whose target changed, text made bold, are marked
-// whole.
+// whole. A block too big to diff by words has its changed lines on its sign's tint, their changed words more strongly.
+// What changed that no line shows is a dim row.
 
 import type { Parents, PhrasingContent } from "mdast";
 import { type BlockDiff, type BlockItem, type BlockSide, blockText, headText, type NoteBlock } from "../blockdiff.ts";
@@ -46,17 +47,18 @@ interface Piece {
 }
 
 /** How a frame is drawn: its label, its rules' colour, and what its text is marked with — `word` the marked words,
- *  `all` every cell. */
+ *  `line` the marked lines (a block diffed by its lines), `all` every cell. */
 interface Frame {
   label: string;
   role: Role;
   word?: Role;
+  line?: Role;
   all?: Role;
 }
 
 const FRAMES = {
-  before: { label: "before", role: "git_sign_delete", word: "diff_del_word" },
-  after: { label: "after", role: "git_sign_add", word: "diff_add_word" },
+  before: { label: "before", role: "git_sign_delete", word: "diff_del_word", line: "diff_del" },
+  after: { label: "after", role: "git_sign_add", word: "diff_add_word", line: "diff_add" },
   removed: { label: "removed", role: "git_sign_delete", all: "diff_del" },
   added: { label: "added", role: "git_sign_add", all: "diff_add" },
 } satisfies Record<string, Frame>;
@@ -85,22 +87,27 @@ export function layoutBlockDiff(d: BlockDiff, opts: BlockDiffLayoutOptions): Lay
         lines.push({ spans: [{ text, role: "dim", attrs: 0 }], src: item.unit + 1 });
         break;
       }
+      case "\\":
+        lines.push({ spans: [{ text: sanitize(`\\ ${item.text}`), role: "dim", attrs: 0 }], src: item.unit + 1 });
+        break;
       case "same":
         // Unchanged blocks one after another: a blank row between, as the note has.
         if (prev?.kind === "same") lines.push({ spans: [], src: item.unit + 1, gap: true });
         lines.push(...plain(d.to, item.block, item.unit, width, opts));
         break;
       case "change": {
-        lines.push(...framed(d.from, item.before, item.unit, item.del, FRAMES.before, width, opts));
+        const del = { words: item.del, lines: item.delLines };
+        lines.push(...framed(d.from, item.before, item.unit, del, FRAMES.before, width, opts));
         const after = item.unit + item.before.to - item.before.from + 1;
-        lines.push(...framed(d.to, item.after, after, item.add, FRAMES.after, width, opts));
+        const add = { words: item.add, lines: item.addLines };
+        lines.push(...framed(d.to, item.after, after, add, FRAMES.after, width, opts));
         break;
       }
       case "removed":
-        lines.push(...framed(d.from, item.block, item.unit, [], FRAMES.removed, width, opts));
+        lines.push(...framed(d.from, item.block, item.unit, NONE, FRAMES.removed, width, opts));
         break;
       case "added":
-        lines.push(...framed(d.to, item.block, item.unit, [], FRAMES.added, width, opts));
+        lines.push(...framed(d.to, item.block, item.unit, NONE, FRAMES.added, width, opts));
     }
     prev = item;
   }
@@ -108,21 +115,29 @@ export function layoutBlockDiff(d: BlockDiff, opts: BlockDiffLayoutOptions): Lay
   return { lines, links: [], headings: [], width };
 }
 
+/** What a frame marks: the words changed, and the lines (a block diffed by its lines) — offsets in its block's text. */
+interface Marks {
+  words: WordRange[];
+  lines?: WordRange[];
+}
+
+const NONE: Marks = { words: [] };
+
 /** An unchanged block: its rows where a frame's text is, unframed. */
 function plain(side: BlockSide, b: NoteBlock, unit: number, width: number, opts: BlockDiffLayoutOptions): Line[] {
-  return rowsOf(side, b, unit, width - 4, [], undefined, opts).map(({ cells, src }) => ({
+  return rowsOf(side, b, unit, width - 4, NONE, undefined, opts).map(({ cells, src }) => ({
     spans: [{ text: "  ", role: "text", attrs: 0 }, ...spansOf(cells)],
     src,
     text: [2, Number.MAX_SAFE_INTEGER] as [number, number],
   }));
 }
 
-/** A block in a frame: its label on the top rule, its rows between the side rules. */
+/** A block in a frame: its label on the top rule, its rows between the side rules — a marked line's on its tint. */
 function framed(
   side: BlockSide,
   b: NoteBlock,
   unit: number,
-  marks: WordRange[],
+  marks: Marks,
   f: Frame,
   width: number,
   opts: BlockDiffLayoutOptions,
@@ -140,7 +155,12 @@ function framed(
   ];
   for (const r of rowsOf(side, b, unit, inner, marks, f, opts)) {
     const w = r.cells.reduce((n, c) => n + c.w, 0);
-    const pad: Span = { text: " ".repeat(Math.max(0, inner - w)), role: "text", attrs: 0 };
+    const pad: Span = {
+      text: " ".repeat(Math.max(0, inner - w)),
+      role: "text",
+      attrs: 0,
+      ...(r.tint ? { bg: r.tint } : {}),
+    };
     out.push({
       spans: [rule(`${box.v} `), ...spansOf(r.cells), pad, rule(` ${box.v}`)],
       src: r.src,
@@ -151,16 +171,19 @@ function framed(
   return out;
 }
 
-/** A block's rows at `inner` columns, marked as its frame says, each with the unit (1-based) of its first line. */
+/**
+ * A block's rows at `inner` columns, marked as its frame says, each with the unit (1-based) of its first line; a row of
+ * a line as written that's a marked line has its frame's line tint (`tint`), to go to the frame's edge.
+ */
 function rowsOf(
   side: BlockSide,
   b: NoteBlock,
   unit: number,
   inner: number,
-  marks: WordRange[],
+  marks: Marks,
   f: Frame | undefined,
   opts: BlockDiffLayoutOptions,
-): { cells: Cell[]; src: number }[] {
+): { cells: Cell[]; src: number; tint?: Role }[] {
   const text = blockText(side, b);
   // Each line's first offset in the block's text, and the line an offset is on (found by halves: a fence can be
   // thousands of lines).
@@ -176,14 +199,18 @@ function rowsOf(
     }
     return b.from + lo;
   };
-  const out: { cells: Cell[]; src: number }[] = [];
-  for (const p of piecesOf(side, b, text, starts, marks, opts)) {
+  const out: { cells: Cell[]; src: number; tint?: Role }[] = [];
+  const changed = marks.lines ?? [];
+  for (const p of piecesOf(side, b, text, starts, marks.words, opts)) {
     for (const c of [...p.lead, ...p.cells]) {
       if (c.at < 0) continue;
       c.src = unit + lineOf(c.at) - b.from + 1;
       if (f?.all) c.bg = f.all;
-      else if (f?.word && (c.mark || inRanges(marks, c.at))) c.bg = f.word;
+      else if (f?.word && (c.mark || inRanges(marks.words, c.at))) c.bg = f.word;
+      else if (f?.line && inRanges(changed, c.at)) c.bg = f.line;
     }
+    // A line as written that's marked: tinted to the frame's edge, as the source diff's row is — a blank one too.
+    const tint = f?.line && !p.prose && inRanges(changed, starts[p.line - b.from] ?? -1) ? f.line : undefined;
     // A lead as wide as the frame (a list nested deep, a narrow window): its indent goes, then the rest of it.
     const lead = fit(p.lead, inner);
     const hang =
@@ -197,6 +224,7 @@ function rowsOf(
       out.push({
         cells: [...(k ? hang : lead), ...cells],
         src: unit + (first ? lineOf(first.at) : p.line) - b.from + 1,
+        ...(tint ? { tint } : {}),
       });
     });
   }

@@ -755,9 +755,22 @@ a floating window as wide as the screen allows. A note's diff opens as its block
 opens as its lines, side by side when the window is wide enough.
 
 Line endings and a byte order mark are not compared, as git doesn't compare them in a checkout that turns LF into CRLF
-(`eol=crlf` in `.gitattributes`, or `core.autocrlf`): a file's diff shows the lines that changed, not every line. When
-only the line endings, the byte order mark or the final line break changed, slipbox says which instead of opening the
-diff: `only the line endings (CRLF → LF) changed: no line to show`.
+(`eol=crlf` in `.gitattributes`, or `core.autocrlf`): a file's diff shows the lines that changed, not every line. What
+changed of them, or of the final line break, is a dim row of the diff, as git writes `\ No newline at end of file`:
+
+```text
+\ line endings: CRLF → LF
+@@ line 12
+  export const minClimb = 120;
+- export const maxClimb = 450;
++ export const maxClimb = 600;
+\ no newline at end of file
+```
+
+The line endings and the byte order mark (`\ byte order mark removed`) are said at the top, the final line break at
+the end (`\ no newline at end of file`, or `\ newline at end of file added`). When nothing else changed, these rows are
+the whole diff. On the command line, `slipbox git diff` says which instead: `only the line endings (CRLF → LF) changed
+from main`.
 
 A big file reformatted or rewritten whole opens at once too. Past a certain cost slipbox stops looking for the smallest
 diff and shows a coarser one, still correct, as git does.
@@ -792,6 +805,9 @@ So a note's diff shows each changed block twice, as it was and as it is now:
   fold to one row that says how many there are. `enter` on it shows them.
 - A changed block less than half like any other is shown removed, then added, with no words marked. A note rewritten
   whole shows its blocks removed and added; slipbox compares by word only the blocks whose words could make them alike.
+- A block too big to compare word by word, such as a code block of more than about 150 lines, is compared line by
+  line. Its changed lines are on the red or green tint, to the frame's edge, and its unchanged lines are plain. In a
+  changed line, the words that changed are marked on the stronger tint.
 
 `tab` switches to the diff's lines, drawn as the next section says, and back. It does in a review's changes and on the
 merge screen too. `git.diff = "source"` opens a note's diff as its lines ([Configuration](configuration.md)).
@@ -828,9 +844,10 @@ by side). A note's diff is never side by side.
 
 #### Going to a line
 
-`enter` on a line goes to it in the file. On a block before a change, it goes to where the block is now. `esc` or `q`
-closes the diff, and goes back to the panel, the list or the question it came from. The conflict prompt's diff goes
-back to the prompt on `enter` too.
+`enter` on a line goes to it in the file. On a line in a `before` frame, it goes to that line where it is now; a line
+that changed or went goes to where its change is, as on a removed line in the diff's lines. `esc` or `q` closes the
+diff, and goes back to the panel, the list or the question it came from. The conflict prompt's diff goes back to the
+prompt on `enter` too.
 
 In the terminal's theme and without colour, the changed words are bold and underlined instead of tinted.
 `[colors]` sets the tints: `diff_add` and `diff_del` for the lines, `diff_add_word` and `diff_del_word` for the words

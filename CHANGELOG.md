@@ -49,8 +49,10 @@ The format is [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.1.0/); wh
   row saying how many, which `enter` opens. A line too long scrolls sideways as a code block does, never cut with `…`.
   Two new colours, `diff_add_word` and `diff_del_word`, mark the words.
 - A note's diff shows each changed block before and after: a paragraph, a heading, a list item or a table's row in one
-  frame as it was and another as it is, lightly formatted, the words removed and added marked. A block added or
-  removed whole is shown once. `tab` in the diff switches to its lines, and `git.diff = "source"` opens it that way.
+  frame as it was and another as it is, lightly formatted, the words removed and added marked. A block too big to
+  compare word by word, such as a long code block, is compared line by line: its changed lines are marked, and the
+  words that changed in them. A block added or removed whole is shown once. `enter` on a line as it was goes to that
+  line where it is now. `tab` in the diff switches to its lines, and `git.diff = "source"` opens it that way.
 - A code file's diff shows its two versions side by side where the window gives each 80 columns, both sides scrolling
   sideways together; `git.diff_layout` chooses `auto`, `unified` or `split`. In the code view, `space k d` folds the
   cells that didn't change, so the file reads as which definitions did.
@@ -208,8 +210,10 @@ The format is [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.1.0/); wh
   the two texts, and a file rewritten whole takes no longer than a few changes. Past a certain cost it shows a coarser
   diff, still correct, as git does.
 - With line endings converted on checkout (`eol=crlf` in `.gitattributes`, or `core.autocrlf`), a file's diff showed
-  every line changed. Line endings aren't compared now. When only the line endings, the byte order mark or the final
-  line break changed, the diff says which, instead of showing every line, or nothing for a file git lists as changed.
+  every line changed. Line endings aren't compared now. What changed of them, the byte order mark or the final line
+  break is a dim row of the diff, as git writes `\ No newline at end of file`: `\ line endings: CRLF → LF` at its top,
+  `\ no newline at end of file` at its end, whether lines changed too or not. A file git lists as changed for these
+  alone used to show every line, or nothing.
 - In a note with a byte order mark, the gutter's git signs and `space g d` marked the first line changed when it
   wasn't, and undoing that change wrote a second mark into the file. The mark is never a change now, and staging a
   change keeps it.
