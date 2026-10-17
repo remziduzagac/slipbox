@@ -169,12 +169,10 @@ export function unstageAll(c: Pick<Checkout, "root">): GitDone {
   );
 }
 
-/** Another branch checked out (26.5): git's own refusal — a change it would overwrite — said in its words. */
-export function switchBranch(c: Pick<Checkout, "root">, name: string): GitDone {
-  return done(git(c, ["switch", "--", name]));
-}
-
-/** A new branch made from where HEAD is, and checked out; a name git won't take, said why. */
+/**
+ * A new branch made from where HEAD is, and checked out — no file changes, so it's waited for (another branch checked
+ * out, which changes files, is `switchLater`'s); a name git won't take, said why.
+ */
 export function createBranch(c: Pick<Checkout, "root">, name: string): GitDone {
   const valid = git(c, ["check-ref-format", "--branch", name]);
   if (!valid.ok) return `"${name}" isn't a name git takes for a branch`;

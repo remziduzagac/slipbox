@@ -3,13 +3,31 @@
 
 import { afterAll, beforeAll, describe, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
-import { mkdirSync, mkdtempSync, writeFileSync } from "node:fs";
+import { chmodSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, symlinkSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { delimiter, join } from "node:path";
 import { DEFAULT_CONFIG, loadConfig } from "../src/core/config.ts";
 import { type Checkout, checkoutOf } from "../src/core/git.ts";
 import { baseFor, chooseBase, keepBase, keptBases, nearest } from "../src/core/gitbase.ts";
-import { folderSafe, OLD_MS, orderBranches, parseWorktrees, worktreeFolder } from "../src/core/gitbranches.ts";
+import {
+  aheadBehindLater,
+  branchChangedLater,
+  branchesLater,
+  CHECKOUT_MS,
+  changedLater,
+  checkoutLater,
+  folderSafe,
+  ignoredLater,
+  ignoredText,
+  mergeBaseLater,
+  newWorktreeLater,
+  OLD_MS,
+  orderBranches,
+  parseWorktrees,
+  worktreeFolder,
+} from "../src/core/gitbranches.ts";
+import { baseBranch, refName, worktreeList } from "../src/core/gitops.ts";
+import { refusedName } from "../src/core/gitremote.ts";
 
 /** git in `repo`, as a test runs it: its own name and no system config. */
 function git(repo: string, ...args: string[]): string {
@@ -165,6 +183,67 @@ describe("their settings: [git] bases and worktrees, [keys.git]", () => {
     );
     expect(DEFAULT_CONFIG.git).toMatchObject({ bases: ["main"], worktrees: "{parent}/{repo}-{branch}" });
   });
+
+  test("a base is a branch's name: anything else in [git] base or bases is left out, and said", () => {
+    const dir = mkdtempSync(join(tmpdir(), "git-config-"));
+    mkdirSync(join(dir, "v", ".slipbox"), { recursive: true });
+    const folder = join(dir, "v", ".slipbox", "config.toml");
+    writeFileSync(folder, '[git]\nbases = ["-x", "main", "a b", "origin/dev"]\nbase = "-y"\n');
+    const got = loadConfig({ configFile: join(dir, "none.toml"), vaultFile: folder });
+    expect(got.config.git.bases).toEqual(["main", "origin/dev"]);
+    expect(got.config.git.base).toBe("");
+    expect(got.warnings.filter((w) => /git\.bases? takes/.test(w))).toHaveLength(2);
+    for (const ok of ["main", "origin/main", "release/2.0", "v1.2", "0123abc", "HEAD"]) expect(refName(ok)).toBe(true);
+    for (const bad of [
+      "",
+      "-x",
+      "--x=y",
+      "a b",
+      "a..b",
+      "a~1",
+      "a^",
+      "a:b",
+      "a?",
+      "a*",
+      "a[",
+      "@",
+      "a/",
+      ".a",
+      "a.lock",
+    ])
+      expect(refName(bad)).toBe(false);
+    // The same rule for every name slipbox hands git, said why where it's refused (a remote's, a base rebased onto).
+    expect(refusedName("the base", "origin/main")).toBeNull();
+    expect(refusedName("the base", "--root")).toBe(
+      'the base "--root" starts with "-": slipbox doesn\'t pass it to git',
+    );
+    expect(refusedName("the remote's name", "a b")).toBe(
+      "the remote's name \"a b\" isn't a name git takes: slipbox doesn't pass it to git",
+    );
+  });
+});
+
+describe("a base before git uses it", () => {
+  test("a base that isn't a branch's name never reaches git: no count, no diff, no merge base, guessed past", async () => {
+    const dir = mkdtempSync(join(tmpdir(), "bases-"));
+    const repo = join(dir, "repo");
+    mkdirSync(repo);
+    git(repo, "init", "-q", "-b", "main");
+    commit(repo, "a.md", "one");
+    git(repo, "switch", "-qc", "feature");
+    commit(repo, "b.md", "two");
+    const odd = `--output=${join(dir, "x")}`;
+    expect(await aheadBehindLater(repo, odd, "feature")).toBeNull();
+    expect(await branchChangedLater(repo, odd, "feature")).toBeNull();
+    expect(await mergeBaseLater(repo, odd, "feature")).toBeNull();
+    expect(await changedLater({ root: repo }, odd, [])).toBeNull();
+    expect(baseBranch({ root: repo }, odd)).toBeNull();
+    expect(readdirSync(dir)).toEqual(["repo"]);
+    // Kept, or listed: passed over, the next one taken.
+    const c = checkoutOf(repo)!;
+    expect(baseFor(c, "feature", { base: odd, bases: [odd, "main"] })).toEqual({ base: "main", how: "nearest" });
+    expect(readdirSync(dir)).toEqual(["repo"]);
+  });
 });
 
 describe("the branches in the panel (GIT-D9)", () => {
@@ -190,16 +269,120 @@ describe("the branches in the panel (GIT-D9)", () => {
     expect(order.shown.map((x) => x.name)).toEqual(["main", "agent/a", "agent/b", "recent"]);
     expect(order.folded.map((x) => x.name)).toEqual(["merged", "old", "older-still"]);
   });
-  test("git's worktree list read: the main checkout first, a gone folder marked, a bare repository left out", () => {
+  test("git's worktree list read (-z): the main checkout first, a gone folder marked, a line break in a folder's name", () => {
     const out = [
-      "worktree /w/k\nHEAD 1\nbranch refs/heads/main\n",
-      "worktree /w/k-a\nHEAD 2\nbranch refs/heads/agent/a\nprunable gitdir file points to non-existent location\n",
-      "worktree /w/k-d\nHEAD 3\ndetached\n",
-    ].join("\n");
+      "worktree /w/k\0HEAD 1\0branch refs/heads/main\0",
+      "worktree /w/k-a\0HEAD 2\0branch refs/heads/agent/a\0prunable gitdir file points to non-existent location\0",
+      "worktree /w/k-d\0HEAD 3\0detached\0",
+      "worktree /w/k\nnl\0HEAD 4\0branch refs/heads/nl\0",
+    ].join("\0");
     expect(parseWorktrees(out)).toEqual([
       { path: "/w/k", main: true, gone: false, branch: "main" },
       { path: "/w/k-a", main: false, gone: true, branch: "agent/a" },
       { path: "/w/k-d", main: false, gone: false, branch: null },
+      { path: "/w/k\nnl", main: false, gone: false, branch: "nl" },
     ]);
+    // A bare repository is listed first, and has no checkout of its own.
+    expect(parseWorktrees("worktree /w/b.git\0bare\0\0worktree /w/x\0HEAD 1\0branch refs/heads/x\0\0")).toEqual([
+      { path: "/w/x", main: false, gone: false, branch: "x" },
+    ]);
+  });
+});
+
+describe("worktrees made and removed (GIT-D9)", () => {
+  const repo = () => {
+    const dir = mkdtempSync(join(tmpdir(), "trees-"));
+    const root = join(dir, "repo");
+    mkdirSync(root);
+    git(root, "init", "-q", "-b", "main");
+    commit(root, "a.md", "one");
+    return { dir, root };
+  };
+
+  test("a checkout opened through a link to its folder is here: its branch marked so, the others not", async () => {
+    const { dir, root } = repo();
+    const wt = join(dir, "wt");
+    git(root, "worktree", "add", "-q", "-b", "feat", wt);
+    symlinkSync(wt, join(dir, "link"));
+    const list = (await branchesLater(checkoutOf(join(dir, "link"))!))!;
+    expect(list.map((b) => [b.name, b.here])).toEqual([
+      ["feat", true],
+      ["main", false],
+    ]);
+  });
+
+  test("a branch for a worktree whose folder is taken isn't made; one whose folder is free is, checked out there", async () => {
+    const { dir, root } = repo();
+    const taken = join(dir, "taken");
+    mkdirSync(taken);
+    writeFileSync(join(taken, "x"), "x");
+    expect(await newWorktreeLater(root, taken, "nb", "main")).toMatch(/already exists/);
+    expect(git(root, "branch", "--list", "nb")).toBe("");
+    expect(await newWorktreeLater(root, join(dir, "free"), "nb", "main")).toBeNull();
+    expect(git(join(dir, "free"), "branch", "--show-current")).toBe("nb\n");
+    // Made from a branch, it doesn't track it.
+    expect(spawnSync("git", ["-C", root, "config", "branch.nb.merge"]).status).not.toBe(0);
+  });
+
+  test("a git before 2.36 refuses worktree list -z: the list read as lines instead, -z asked of it once", async () => {
+    const { dir, root } = repo();
+    git(root, "worktree", "add", "-q", "-b", "feat", join(dir, "wt"));
+    // A stand-in git: the real one, but for `worktree list -z`, which it refuses as git 2.35 does.
+    const bin = join(dir, "bin");
+    mkdirSync(bin);
+    const refused = join(dir, "refused");
+    writeFileSync(
+      join(bin, "git"),
+      [
+        "#!/bin/sh",
+        `case " $* " in *" worktree list "*" -z "*) echo z >> '${refused}'; echo "error: unknown switch 'z'" >&2; exit 129;; esac`,
+        `exec '${Bun.which("git")}' "$@"`,
+        "",
+      ].join("\n"),
+    );
+    chmodSync(join(bin, "git"), 0o755);
+    const was = process.env.PATH;
+    process.env.PATH = `${bin}${delimiter}${was}`;
+    try {
+      expect(worktreeList({ root })?.map((w) => [w.branch, w.main])).toEqual([
+        ["main", true],
+        ["feat", false],
+      ]);
+      const list = (await branchesLater({ root }))!;
+      expect(list.map((b) => [b.name, b.here, !!b.worktree])).toEqual([
+        ["feat", false, true],
+        ["main", true, true],
+      ]);
+      expect(worktreeList({ root })).toHaveLength(2);
+      // Refused once: which form it takes is kept for that git.
+      expect(readFileSync(refused, "utf8")).toBe("z\n");
+    } finally {
+      process.env.PATH = was;
+    }
+  });
+
+  test("a checkout runs as long as it takes, up to minutes; stopped, it says so and what it may have left", async () => {
+    const { root } = repo();
+    expect(CHECKOUT_MS).toBeGreaterThanOrEqual(10 * 60_000);
+    // A command that waits for what never comes (its input stays open), stopped at 50 ms.
+    const why = await checkoutLater(root, ["hash-object", "--stdin"], "what was left", 50);
+    expect(why).toBe("git took too long, and was stopped: what was left");
+  });
+
+  test("a worktree's ignored files, as Remove names them: notes first, then the others; never a busy folder's", async () => {
+    const { root } = repo();
+    writeFileSync(join(root, ".gitignore"), "local/\n.env\nnode_modules/\ndist/\n*.log\n");
+    git(root, "add", ".gitignore");
+    git(root, "commit", "-qm", "ignore");
+    mkdirSync(join(root, "local", "sub"), { recursive: true });
+    mkdirSync(join(root, "node_modules", "x"), { recursive: true });
+    mkdirSync(join(root, "dist"), { recursive: true });
+    for (const f of ["local/draft.md", "local/sub/b.md", ".env", "a.log", "node_modules/x/y.md", "dist/out.js"])
+      writeFileSync(join(root, f), "x\n");
+    const ig = (await ignoredLater(root))!;
+    expect(ig).toEqual({ notes: ["local/draft.md", "local/sub/b.md"], others: [".env", "a.log"], more: false });
+    expect(ignoredText(ig)).toBe("2 ignored notes and 2 other ignored files: local/draft.md, local/sub/b.md, .env, …");
+    expect(ignoredText({ notes: [], others: [".env"], more: false })).toBe("1 ignored file: .env");
+    expect(ignoredText({ notes: [], others: [], more: false })).toBe("");
   });
 });

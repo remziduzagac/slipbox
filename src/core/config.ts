@@ -7,6 +7,7 @@ import { deepMerge, type LanguageConfig, type ServerConfig, SERVERS } from "./se
 import { type LinterConfig, LINTERS } from "./servers/linters.ts";
 import { existsSync } from "node:fs";
 import { readRegular, SMALL_FILE } from "./fsutil.ts";
+import { refName } from "./gitops.ts";
 import { join } from "node:path";
 import { parse as parseToml } from "smol-toml";
 import { tildePath, userConfigFile } from "./paths.ts";
@@ -556,6 +557,18 @@ export function loadConfig(opts: LoadConfigOptions = {}): LoadedConfig {
       `config: capture.file must be a relative .md path inside the project, not hidden (got ${JSON.stringify(config.capture.file)}); using "${DEFAULT_CONFIG.capture.file}"`,
     );
     config.capture.file = DEFAULT_CONFIG.capture.file;
+  }
+  // A base (GIT-D10): a branch's name, a tag's or a commit's, as git takes one; anything else left out.
+  if (config.git.base && !refName(config.git.base)) {
+    warnings.push(`config: git.base takes a branch's name; ignored ${JSON.stringify(config.git.base)}`);
+    config.git.base = "";
+  }
+  const bases = config.git.bases.filter((b) => typeof b === "string" && refName(b));
+  if (bases.length !== config.git.bases.length) {
+    warnings.push(
+      `config: git.bases takes branches' names; ignored ${JSON.stringify(config.git.bases.filter((b) => !bases.includes(b)))}`,
+    );
+    config.git.bases = bases;
   }
   return { config, sources, warnings, origins };
 }

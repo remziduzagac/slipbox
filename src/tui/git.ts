@@ -32,8 +32,8 @@ import {
   sections,
   type StatusEntry,
   statusLater,
-  switchBranch,
 } from "../core/gitstage.ts";
+import { switchLater } from "../core/gitbranches.ts";
 import { type Track, trackText } from "../core/gitremote.ts";
 import { type GitChange, gitChanges } from "../core/gitsigns.ts";
 import { describeBreak, type MergeBreak, type MergeReview, reviewMerge } from "../core/mergereview.ts";
@@ -226,21 +226,34 @@ export class Git {
    * or master; null for the base itself, or with none. Asked of git once each time it has news.
    */
   baseOf(c: Checkout, branch: string | null): string | null {
-    if (!branch) return baseBranch(c, this.app.config.git.base);
+    if (!branch) return this.fallbackBase(c);
     const key = `${this.generation}\0${c.root}\0${branch}`;
     if (this.baseMemo?.key !== key)
       this.baseMemo = { key, base: baseFor(c, branch, this.app.config.git)?.base ?? null };
     return this.baseMemo.base;
   }
 
+  private fallbackMemo: { key: string; base: string | null } | null = null;
+
+  /**
+   * `[git] base`, else main or master, as there are (`baseBranch`): asked of git once each time it has news, not on
+   * every frame that draws it.
+   */
+  fallbackBase(c: Checkout): string | null {
+    const key = `${this.generation}\0${c.root}\0${this.app.config.git.base}`;
+    if (this.fallbackMemo?.key !== key) this.fallbackMemo = { key, base: baseBranch(c, this.app.config.git.base) };
+    return this.fallbackMemo.base;
+  }
+
   /** The base asked again (one kept or dropped: "Compare against…"). */
   forgetBase(): void {
     this.baseMemo = null;
+    this.fallbackMemo = null;
   }
 
   /** The base branch here: this branch's own (GIT-D10), on the base itself the base; null (said) when there's none. */
   private base(c: Checkout): string | null {
-    const base = this.baseOf(c, headOf(c).branch) ?? baseBranch(c, this.app.config.git.base);
+    const base = this.baseOf(c, headOf(c).branch) ?? this.fallbackBase(c);
     if (!base)
       this.app.message(
         "warn",
@@ -380,12 +393,16 @@ export class Git {
         if (extra) return extra.run();
         if (item.data === NEW) {
           return this.app.overlays.prompt("new branch: ", (name) => {
+            // Made where HEAD is: no file changes, so it's waited for.
             if (name.trim()) this.beforeCheckout(() => this.checkedOut(createBranch(c, name.trim())));
           });
         }
         const name = item.data as string;
         if (name === current) return this.app.message("info", `already on ${name}`);
-        this.beforeCheckout(() => this.checkedOut(switchBranch(c, name)));
+        this.beforeCheckout(() => {
+          this.app.message("info", `checking out ${name}…`);
+          void switchLater(c.root, name).then((why) => this.checkedOut(why));
+        });
       },
     });
   }

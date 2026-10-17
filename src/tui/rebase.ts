@@ -8,7 +8,6 @@
 // notes saved or kept first. In a vault not trusted, no hook runs and nothing is signed.
 
 import { type Checkout, headOf } from "../core/git.ts";
-import { baseBranch } from "../core/gitops.ts";
 import {
   abortLater,
   aheadBehind,
@@ -164,7 +163,7 @@ export function gitRebase(app: App): void {
   const branch = headOf(c).branch;
   if (!branch) return app.message("info", "not on a branch: nothing to rebase");
   // The branch's own base (GIT-D10), else `[git] base`, main or master.
-  const base = app.git.baseOf(c, branch) ?? baseBranch(c, app.config.git.base);
+  const base = app.git.baseOf(c, branch) ?? app.git.fallbackBase(c);
   if (!base) return app.message("warn", "no base branch: neither main nor master is there — [git] base sets one");
   if (base === branch) return app.message("info", `${branch} is the base: nothing to rebase it onto`);
   const ab = aheadBehind(c, base);

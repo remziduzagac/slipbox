@@ -64,12 +64,12 @@ The format is [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.1.0/); wh
   its diff, and a menu on a right click. It shows what the branch changed against its base, so a branch whose work is
   committed never says "nothing changed"; the note on screen's diff, history and blame; and the branches, a worktree
   marked `⎇` on its branch with its folder, each opened up in place to see its files and diffs, open its worktree,
-  check it out, merge it or remove a merged worktree. `n` makes a branch from where you say, in a new worktree by
-  default, in the folder `git.worktrees` names. Each branch is measured against its own base: the branch it was made
-  from, else the nearest of `git.bases`. The panel follows the vault you're in: in a repository, the other
-  repositories in the explorer's view are folded under its own; in a vault that isn't one, they're the panel, by what
-  needs attention, `o` going into one. A click on the status line's branch lists the branches, and one on a change's
-  sign in the gutter shows the change, with Revert and Stage.
+  check it out, merge it or remove a merged worktree, the question naming the ignored notes and files that go with it.
+  `n` makes a branch from where you say, in a new worktree by default, in the folder `git.worktrees` names. Each branch
+  is measured against its own base: the branch it was made from, else the nearest of `git.bases`. The panel follows the
+  vault you're in: in a repository, the other repositories in the explorer's view are folded under its own; in a vault
+  that isn't one, they're the panel, by what needs attention, `o` going into one. A click on the status line's branch
+  lists the branches, and one on a change's sign in the gutter shows the change, with Revert and Stage.
 - Reviewing a change, one piece at a time: `v` in the git panel, its Review button, or `:review` walks the changes that
   aren't staged, across every changed file, each drawn as a diff. `y` keeps one (stages it), `x` reverts it (saved at
   once; `u` in the file brings it back), `c` sends it to the agent with a note, through the scratch. `tab` shows a
@@ -192,6 +192,10 @@ The format is [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.1.0/); wh
   wasn't, and undoing that change wrote a second mark into the file. The mark is never a change now, and staging a
   change keeps it.
 - `capture --ref … --snippet` reads only a regular file, as `read` does: a FIFO or a device is refused at once.
+- Switching branches from the branches list runs in the background, with ten minutes to finish. git was stopped after
+  fifteen seconds, so a big checkout could be left half done. If git is stopped now, slipbox says what it may have
+  left.
+- `:worktrees` lists a worktree whose folder's name holds a line break by its whole path, with git 2.36 or later.
 
 ## [0.3.0] - 2026-10-14
 

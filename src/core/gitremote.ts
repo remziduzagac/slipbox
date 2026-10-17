@@ -9,7 +9,7 @@
 
 import { execFile, execFileSync } from "node:child_process";
 import type { Checkout } from "./git.ts";
-import { gitArgs } from "./gitops.ts";
+import { gitArgs, refName } from "./gitops.ts";
 import { isTrusted } from "./trust.ts";
 
 /** Where the branch stands against its upstream, as `git status --branch` says it. */
@@ -120,11 +120,15 @@ export function failureOf(err: unknown, stderr: string, stdout: string): string 
 }
 
 /**
- * A name slipbox hands git — a remote's, a branch's, a ref's — checked first: one that starts with `-` is refused,
- * said why (null: it's fine). No remote or branch git makes is named so; git is also told where its options end.
+ * A name slipbox hands git — a remote's, a branch's, a ref's, a base — checked first, as `refName` has it (git's own
+ * rules for a ref's name): one that isn't such a name, one that starts with `-` among them, is refused, said why (null:
+ * it's fine). No remote or branch git makes is named so; git is also told where its options end.
  */
 export function refusedName(what: string, name: string): string | null {
-  return name.startsWith("-") ? `${what} "${name}" starts with "-": slipbox doesn't pass it to git` : null;
+  if (refName(name)) return null;
+  return name.startsWith("-")
+    ? `${what} "${name}" starts with "-": slipbox doesn't pass it to git`
+    : `${what} "${name}" isn't a name git takes: slipbox doesn't pass it to git`;
 }
 
 /**
@@ -365,7 +369,7 @@ export function stashLater(
   how: "apply" | "pop" | "drop",
   s: Pick<Stash, "ref" | "hash">,
 ): Promise<RemoteDone> {
-  const now = ask(c, ["rev-parse", "--verify", "--quiet", s.ref])?.trim();
+  const now = ask(c, ["rev-parse", "--verify", "--quiet", "--end-of-options", s.ref])?.trim();
   if (now !== s.hash)
     return Promise.resolve({
       ok: false,

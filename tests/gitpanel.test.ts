@@ -3,7 +3,7 @@
 
 import { afterAll, describe, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
-import { existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { canonKey } from "../src/core/commands.ts";
@@ -14,6 +14,7 @@ import { locateVault } from "../src/core/vault.ts";
 import { App, type ListOverlay } from "../src/tui/app.ts";
 import { TextCanvas } from "../src/tui/canvas.ts";
 import { pointedAt } from "../src/tui/gitmouse.ts";
+import { DIFF_MAX, readForDiff } from "../src/tui/gitview.ts";
 
 const sandbox = mkdtempSync(join(tmpdir(), "slipbox-gitpanel-"));
 const saved = { ...process.env };
@@ -308,7 +309,8 @@ describe("space g, the status line's branch, a change's sign (GIT-D8, GIT-D12)",
     ]);
     list.selected = list.filtered.findIndex((f) => f.item.label === "main");
     await app.input.handleKey("enter");
-    expect(git(root, "branch", "--show-current")).toBe("main\n");
+    // Checked out in the background: a big tree takes a while.
+    expect(await until(() => git(root, "branch", "--show-current") === "main\n")).toBe(true);
   });
 
   test("a change's sign clicked: the change, with Revert and Stage; Stage stages that change alone", async () => {
@@ -392,6 +394,7 @@ describe("the branches (GIT-D9, GIT-D10, GIT-D13)", () => {
     expect((app.overlay as ListOverlay).title).toBe("agent/cache from dev: where?");
     await keys("enter");
     const folder = `${root}-agent-cache`;
+    expect(await until(() => app.messages.some((m) => m.text.startsWith("made agent/cache from dev")))).toBe(true);
     expect(git(folder, "branch", "--show-current")).toBe("agent/cache\n");
     // Its base is dev, kept — [git] bases names main alone.
     writeFileSync(join(folder, "w.md"), "# W\n");
@@ -436,6 +439,119 @@ describe("the branches (GIT-D9, GIT-D10, GIT-D13)", () => {
     expect(await until(() => (frame(), branch("agent/gone")?.worktree?.gone === true))).toBe(true);
     app.gitPanel.branches.button(branch("agent/gone")!, "prune");
     expect(git(root, "worktree", "list")).not.toContain("agent-gone");
+  });
+
+  test("Remove… names the ignored files the removal deletes too, notes first, never a busy folder's; none gone till asked", async () => {
+    const root = repo();
+    const done = worktree(root, "agent/done", "main");
+    writeFileSync(join(root, ".git", "info", "exclude"), "local/\n.env\nnode_modules/\n");
+    mkdirSync(join(done, "local"));
+    mkdirSync(join(done, "node_modules"));
+    for (const f of ["local/draft.md", ".env", "node_modules/m.md"]) writeFileSync(join(done, f), "x\n");
+    const { app, frame } = await panel(root);
+    const row = () => app.gitPanel.rows().find((x) => x.kind === "branch" && x.branch.name === "agent/done");
+    expect(await until(() => (frame(), !!row()))).toBe(true);
+    const r = row();
+    if (r?.kind !== "branch") throw new Error("no branch row");
+    app.gitPanel.branches.button(r.branch, "remove");
+    expect(await until(() => (app.overlay as ListOverlay | null)?.title === `Remove the worktree ${done}?`)).toBe(true);
+    const items = (app.overlay as ListOverlay).items;
+    expect(items[0]!.detail).toBe("also deletes 1 ignored note and 1 other ignored file: local/draft.md, .env");
+    expect(items[1]!.detail).toBe(
+      "merged into main; also deletes 1 ignored note and 1 other ignored file: local/draft.md, .env",
+    );
+    expect(existsSync(join(done, "local", "draft.md"))).toBe(true);
+  });
+
+  test("a branch's renamed file, one line changed: its diff against the base is that line, from the name it had", async () => {
+    const root = repo();
+    writeFileSync(join(root, "long.md"), `${Array.from({ length: 12 }, (_, i) => `line ${i + 1}`).join("\n")}\n`);
+    git(root, "add", "long.md");
+    git(root, "commit", "-q", "-m", "long");
+    git(root, "branch", "-f", "main", "feature");
+    const at = worktree(root, "agent/mv", "main");
+    git(at, "mv", "long.md", "moved.md");
+    writeFileSync(
+      join(at, "moved.md"),
+      `${Array.from({ length: 12 }, (_, i) => (i === 5 ? "line SIX" : `line ${i + 1}`)).join("\n")}\n`,
+    );
+    git(at, "commit", "-q", "-am", "moved");
+    const { app, frame } = await panel(root);
+    app.gitPanel.branches.opened.add("agent/mv");
+    const file = () => app.gitPanel.rows().find((r) => r.kind === "bfile" && r.path === "moved.md");
+    expect(await until(() => (frame(), !!file()))).toBe(true);
+    const f = file()!;
+    expect(f).toMatchObject({ from: "long.md", letter: "R" });
+    if (f.kind !== "bfile") throw new Error("no file row");
+    app.gitPanel.branches.action(f, "open");
+    expect(await until(() => app.floating?.kind === "diff")).toBe(true);
+    expect(app.floating!.title).toBe("agent/mv: long.md → moved.md against main — esc: source control");
+    const d = (app.floating as { diff: { before: string; now: string } }).diff;
+    expect(d.before).toContain("line 6\n");
+    expect(d.before.replace("line 6", "line SIX")).toBe(d.now);
+  });
+});
+
+describe("a diff's file read from disk", () => {
+  test("a link read as git keeps it, where it leads, never followed; a file past the cap not read; one not there, empty", () => {
+    const dir = mkdtempSync(join(sandbox, "read-"));
+    writeFileSync(join(dir, "elsewhere.md"), "not the vault's\n");
+    symlinkSync(join(dir, "elsewhere.md"), join(dir, "link.md"));
+    expect(readForDiff(join(dir, "link.md"))).toBe(join(dir, "elsewhere.md"));
+    expect(readForDiff(join(dir, "elsewhere.md"))).toBe("not the vault's\n");
+    writeFileSync(join(dir, "big.md"), Buffer.alloc(DIFF_MAX + 1, 97));
+    expect(readForDiff(join(dir, "big.md"))).toEqual({ why: "larger than 8 MB: no diff shown" });
+    expect(readForDiff(join(dir, "none.md"))).toBe("");
+  });
+});
+
+describe("the panel's state, by vault and in flight (GIT-D8)", () => {
+  test("the commit box, git's files and those opened up are the vault's: switching vaults empties them", async () => {
+    const root = repo();
+    writeFileSync(join(root, "a.md"), "# A\n\ntwo\n");
+    const other = repo();
+    const { app, keys } = await panel(root);
+    await keys("i", ...typed("half a message"));
+    expect(app.git.entries?.length).toBe(1);
+    app.git.opened.add("unstaged:a.md");
+    app.vaults.switchVault(locateVault({ root: other }), null);
+    expect([app.gitPanel.message, app.gitPanel.typing, app.git.entries, app.git.track]).toEqual([
+      "",
+      false,
+      null,
+      null,
+    ]);
+    expect(app.git.opened.size).toBe(0);
+  });
+
+  test("ctrl+enter twice before git answers commits once, and says the second waits", async () => {
+    const root = repo();
+    writeFileSync(join(root, "a.md"), "# A\n\ntwo\n");
+    git(root, "add", "a.md");
+    const { app, keys } = await panel(root);
+    const before = Number(git(root, "rev-list", "--count", "HEAD"));
+    await keys("i", ...typed("Once"), "ctrl+enter", "i", "ctrl+enter");
+    expect(app.messages.some((m) => m.text === "committing already — git hasn't answered yet")).toBe(true);
+    expect(await until(() => app.messages.some((m) => m.text.startsWith("committed ")))).toBe(true);
+    await Bun.sleep(300);
+    expect(Number(git(root, "rev-list", "--count", "HEAD"))).toBe(before + 1);
+    expect(app.messages.some((m) => m.level === "warn")).toBe(false);
+    // Answered: the box commits again.
+    expect(app.gitPanel.committing).toBe(false);
+  });
+
+  test("the base a frame draws is asked of git once each time git has news, not on every frame", async () => {
+    const root = repo();
+    git(root, "switch", "-q", "main");
+    const { app } = await panel(root);
+    const c = app.git.checkout!;
+    expect(app.git.fallbackBase(c)).toBe("main");
+    // Gone from git, not yet news: the answer kept.
+    git(root, "branch", "-m", "main", "trunk");
+    expect(app.git.fallbackBase(c)).toBe("main");
+    // git's news: asked again.
+    await app.git.refreshNow();
+    expect(app.git.fallbackBase(c)).toBeNull();
   });
 });
 

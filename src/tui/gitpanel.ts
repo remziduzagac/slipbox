@@ -8,7 +8,7 @@
 
 import { basename } from "node:path";
 import { headOf } from "../core/git.ts";
-import { baseBranch, type Changed, inVault } from "../core/gitops.ts";
+import { type Changed, inVault } from "../core/gitops.ts";
 import { changedLater } from "../core/gitbranches.ts";
 import { commitLater, sections } from "../core/gitstage.ts";
 import { formatEntry } from "../core/capture.ts";
@@ -93,6 +93,8 @@ export class GitPanel {
   /** The message box's text (GIT-D8), and whether keys go to it. */
   message = "";
   typing = false;
+  /** A commit of the box's message under way: another waits for git's answer. */
+  committing = false;
   /** The sections folded, by id: the merged and older branches, the other repositories, home's, to begin with. */
   readonly folded = new Set<SectionId>(["older", "repos", "home"]);
   /** What this branch changed against its base (GIT-D8), asked of git in the background, by the question asked. */
@@ -165,7 +167,7 @@ export class GitPanel {
     if (!v || !rel || q || v.buf.virtual || !v.buf.abs || !v.buf.abs.startsWith(`${c.root}/`)) return [];
     const rows: PanelRow[] = [{ kind: "heading", section: "file", label: `This file: ${sanitize(basename(rel))}` }];
     if (this.folded.has("file")) return rows;
-    const base = this.app.git.baseOf(c, headOf(c).branch) ?? baseBranch(c, this.app.config.git.base);
+    const base = this.app.git.baseOf(c, headOf(c).branch) ?? this.app.git.fallbackBase(c);
     rows.push(
       { kind: "thisfile", command: "git.diff", label: `Its diff against ${sanitize(base ?? "the base")}` },
       { kind: "thisfile", command: "git.history", label: "Its history" },
@@ -487,12 +489,15 @@ export class GitPanel {
     const app = this.app;
     const c = app.git.checkout;
     if (!c) return app.message("info", "not in a git repository");
+    // One at a time: another ctrl+enter before git answers would commit twice, or fail on git's lock.
+    if (this.committing) return app.message("info", "committing already — git hasn't answered yet");
     if (!this.message.trim()) return app.git.openCommitEditor(false);
     if (!sections(app.git.entries ?? []).staged.length)
       return app.message(
         "info",
         `nothing staged — ${this.keyFor("stage") ?? "s"} stages a file, ${this.keyFor("stage_all") ?? "a"} everything`,
       );
+    this.committing = true;
     const text = this.message;
     app.message("info", "committing…");
     // As typed: a line starting with `#` is the message's own (`#12 fixed`), not a guide's.
@@ -504,6 +509,7 @@ export class GitPanel {
         app.message("info", `committed ${r.hash}: ${r.subject}`);
         void app.git.refreshNow().then(() => app.host.requestRender());
       }
+      this.committing = false;
       app.host.requestRender();
     });
   }

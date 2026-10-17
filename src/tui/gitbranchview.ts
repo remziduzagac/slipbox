@@ -6,15 +6,15 @@
 // starts where it's asked to, in a new worktree if ticked, its base kept. git is asked in the background, a branch's
 // figures only for the rows on screen.
 
-import { existsSync, readFileSync } from "node:fs";
-import { join, relative } from "node:path";
+import { existsSync } from "node:fs";
+import { join, relative, sep } from "node:path";
 import { checkoutOf, headOf } from "../core/git.ts";
-import { baseBranch, branchesOf, type Changed, inVault, showAt } from "../core/gitops.ts";
-import { type StatusEntry, switchBranch } from "../core/gitstage.ts";
-import { backToPanel } from "./gitview.ts";
+import { branchesOf, type Changed, inVault, refName, showAt } from "../core/gitops.ts";
+import type { StatusEntry } from "../core/gitstage.ts";
+import { backToPanel, readForDiff } from "./gitview.ts";
 import { GIT_MARK } from "./draw-overlays.ts";
 import {
-  addWorktree,
+  addWorktreeLater,
   aheadBehindLater,
   badBranchName,
   type Branch,
@@ -22,13 +22,18 @@ import {
   branchChangedLater,
   branchesLater,
   dirtyLater,
+  ignoredLater,
+  ignoredText,
   makeBranch,
   mergeBaseLater,
   mergedLater,
   mergeLater,
+  newWorktreeLater,
   orderBranches,
   pruneWorktrees,
-  removeWorktree,
+  realPath,
+  removeWorktreeLater,
+  switchLater,
   worktreeFolder,
 } from "../core/gitbranches.ts";
 import { candidates, keepBase, keptBases, nearest } from "../core/gitbase.ts";
@@ -69,6 +74,8 @@ export interface BranchFileRow {
   branch: Branch;
   against: "base" | "uncommitted";
   path: string;
+  /** A rename's old path: what it was before. */
+  from?: string;
   letter: string;
   base: string | null;
 }
@@ -116,8 +123,10 @@ export class BranchView {
         const branches = await branchesLater(c);
         const kept = keptBases(c);
         const git = this.app.config.git;
-        const fallback = baseBranch(c, git.base);
-        const bases = [...new Set([...candidates("", git), ...Object.values(kept), ...(fallback ? [fallback] : [])])];
+        const fallback = this.app.git.fallbackBase(c);
+        const bases = [
+          ...new Set([...candidates("", git), ...Object.values(kept), ...(fallback ? [fallback] : [])]),
+        ].filter(refName);
         const sets = await Promise.all(bases.map((b) => mergedLater(c.root, b)));
         const into = new Map(bases.map((b, i) => [b, sets[i]] as const));
         const merged = new Set<string>();
@@ -163,14 +172,15 @@ export class BranchView {
     const c = this.app.git.checkout;
     if (!c) return null;
     const git = this.app.config.git;
-    const kept = keptBases(c)[b.name];
+    // A base is a branch's name before git sees it (`refName`): one kept that isn't, passed over.
+    const kept = [keptBases(c)[b.name] ?? ""].find(refName);
     const listed = kept ? [kept] : candidates(b.name, git);
     // None of them there, and the branch no trunk listed first: `[git] base`, main or master (GIT-D10).
     const trunk = !kept && !listed.length && candidates("", git).includes(b.name);
     const counts = await Promise.all(listed.map((base) => aheadBehindLater(c.root, base, b.name)));
     let near = nearest(listed.map((base, i) => ({ base, ahead: counts[i]?.ahead ?? null })));
     let ab = near === null ? null : counts[listed.indexOf(near)]!;
-    const fallback = near || trunk ? null : baseBranch(c, git.base);
+    const fallback = near || trunk ? null : this.app.git.fallbackBase(c);
     if (fallback && fallback !== b.name) {
       near = fallback;
       ab = await aheadBehindLater(c.root, fallback, b.name);
@@ -260,6 +270,7 @@ export class BranchView {
           branch: b,
           against: "base",
           path: f.path,
+          ...(f.from ? { from: f.from } : {}),
           letter: GIT_MARK[f.state],
           base: st.base,
         });
@@ -369,10 +380,12 @@ export class BranchView {
         return this.goInto(b);
       case "checkout":
         return app.git.beforeCheckout(() => {
-          const why = switchBranch(c, b.name);
-          if (why) return app.message("warn", `git: ${why}`);
-          app.git.checkHead();
-          void app.git.refreshNow().then(() => app.host.requestRender());
+          app.message("info", `checking out ${b.name}…`);
+          void switchLater(c.root, b.name).then((why) => {
+            if (why) app.message("warn", `git: ${why}`);
+            app.git.checkHead();
+            void app.git.refreshNow().then(() => app.host.requestRender());
+          });
         });
       case "worktree":
         return this.worktreeFor(b);
@@ -423,12 +436,13 @@ export class BranchView {
     const back = backToPanel(app);
     if (row.against === "uncommitted" && b.worktree) {
       before = showAt({ root: b.worktree.path }, "HEAD", row.path) ?? "";
-      try {
-        now = readFileSync(join(b.worktree.path, row.path), "utf8");
-      } catch {}
+      const read = readForDiff(join(b.worktree.path, row.path));
+      if (typeof read !== "string") return app.message("info", `${row.path}: ${read.why}`);
+      now = read;
     } else if (row.base) {
       const from = await mergeBaseLater(c.root, row.base, b.name);
-      before = from ? (showAt(c, from, row.path) ?? "") : "";
+      // A rename: before, under the name it had.
+      before = from ? (showAt(c, from, row.from ?? row.path) ?? "") : "";
       now = showAt(c, b.name, row.path) ?? "";
     }
     const against = row.against === "base" ? `against ${sanitize(row.base ?? "")}` : "not committed";
@@ -436,7 +450,7 @@ export class BranchView {
       before,
       now,
       path: join(c.root, row.path),
-      title: `${sanitize(b.name)}: ${sanitize(row.path)} ${against} — esc: source control`,
+      title: `${sanitize(b.name)}: ${sanitize(row.from ? `${row.from} → ${row.path}` : row.path)} ${against} — esc: source control`,
       none: `${row.path}: nothing to show`,
       back,
     });
@@ -472,16 +486,21 @@ export class BranchView {
 
   /**
    * Remove a worktree (GIT-D9): only one whose branch is merged into its base, and none with uncommitted changes —
-   * refused, said why — after asking; its branch kept unless asked.
+   * refused, said why — after asking; its branch kept unless asked. Its git-ignored files go with it, as git removes
+   * them: the question names them, its notes first (never a busy folder's, such as `node_modules`).
    */
   private remove(b: Branch): void {
     const app = this.app;
     const c = app.git.checkout;
     const w = b.worktree;
     if (!c || !w) return app.message("info", `${b.name} has no worktree to remove`);
-    if (b.here) return app.message("info", "the worktree you're in can't be removed from here: go into another first");
+    const mine = realPath(app.loc.root);
+    const there = realPath(w.path);
+    // The folder you're in, however it was opened (a link to it too).
+    if (b.here || mine === there || mine.startsWith(`${there}${sep}`))
+      return app.message("info", "the worktree you're in can't be removed from here: go into another first");
     if (w.main) return app.message("info", "the main checkout isn't a worktree to remove");
-    void this.ask(b).then((st) => {
+    void Promise.all([this.ask(b), ignoredLater(w.path)]).then(([st, ignored]) => {
       if (!st) return app.message("warn", "git couldn't say where the branch stands");
       if (st.dirty)
         return app.message(
@@ -493,24 +512,33 @@ export class BranchView {
           "warn",
           `not removed: ${b.name} isn't merged into ${st.base ?? "its base"} — ${st.ahead} commit${st.ahead === 1 ? "" : "s"} of its own; merge it first`,
         );
+      // What git deletes with it, unasked: its ignored notes and files (D61: an ignored note is the vault's).
+      const also = ignored ? ignoredText(ignored) : "";
+      const detail = also ? `also deletes ${sanitize(also)}` : undefined;
       app.overlays.openList({
         title: `Remove the worktree ${tildePath(w.path)}?`,
         filterable: false,
         items: [
-          { label: `Remove it, keep ${sanitize(b.name)}`, data: "keep" },
-          { label: `Remove it and the branch ${sanitize(b.name)}`, detail: `merged into ${st.base}`, data: "both" },
+          { label: `Remove it, keep ${sanitize(b.name)}`, ...(detail ? { detail } : {}), data: "keep" },
+          {
+            label: `Remove it and the branch ${sanitize(b.name)}`,
+            detail: `merged into ${st.base}${detail ? `; ${detail}` : ""}`,
+            data: "both",
+          },
           { label: "Cancel", data: "cancel" },
         ],
         accept: (item) => {
           if (item.data === "cancel") return;
-          const why = removeWorktree(c.root, w.path, item.data === "both" ? b.name : null);
-          if (why) return app.message("warn", `git: ${why}`);
-          this.opened.delete(b.name);
-          app.message(
-            "info",
-            `removed the worktree ${tildePath(w.path)}${item.data === "both" ? `, and ${b.name}` : `; ${b.name} kept`}`,
-          );
-          void app.git.refreshNow().then(() => app.host.requestRender());
+          app.message("info", `removing the worktree ${tildePath(w.path)}…`);
+          void removeWorktreeLater(c.root, w.path, item.data === "both" ? b.name : null).then((why) => {
+            if (why) return app.message("warn", `git: ${why}`);
+            this.opened.delete(b.name);
+            app.message(
+              "info",
+              `removed the worktree ${tildePath(w.path)}${item.data === "both" ? `, and ${b.name}` : `; ${b.name} kept`}`,
+            );
+            void app.git.refreshNow().then(() => app.host.requestRender());
+          });
         },
       });
     });
@@ -523,12 +551,14 @@ export class BranchView {
     if (!c) return;
     const folder = worktreeFolder(app.config.git.worktrees, c.main ?? c.root, b.name);
     this.askFolder(folder, (to) => {
-      const why = addWorktree(c.root, to, b.name);
-      if (why) return app.message("warn", `git: ${why}`);
-      app.message("info", `${b.name} is in a worktree at ${tildePath(to)}`);
-      void app.git.refreshNow().then(() => {
-        app.host.requestRender();
-        this.goInto({ ...b, worktree: { path: to, main: false, gone: false } });
+      app.message("info", `checking ${b.name} out at ${tildePath(to)}…`);
+      void addWorktreeLater(c.root, to, b.name).then((why) => {
+        if (why) return app.message("warn", `git: ${why}`);
+        app.message("info", `${b.name} is in a worktree at ${tildePath(to)}`);
+        void app.git.refreshNow().then(() => {
+          app.host.requestRender();
+          this.goInto({ ...b, worktree: { path: to, main: false, gone: false } });
+        });
       });
     });
   }
@@ -624,11 +654,14 @@ export class BranchView {
       ],
       accept: (item) => {
         const how = item.data as string;
+        // The branch and its worktree in one: a folder git won't take leaves no branch behind.
         const inWorktree = (to: string) => {
-          if (!make()) return;
-          const why = addWorktree(c.root, to, name);
-          if (why) return app.message("warn", `${name} made, but git: ${why}`);
-          done(`made ${name} from ${from}, in a new worktree at ${tildePath(to)} — o goes into it`);
+          app.message("info", `making ${name} in a new worktree at ${tildePath(to)}…`);
+          void newWorktreeLater(c.root, to, name, from).then((why) => {
+            if (why) return app.message("warn", `git: ${why}`);
+            keepBase(c, name, from);
+            done(`made ${name} from ${from}, in a new worktree at ${tildePath(to)} — o goes into it`);
+          });
         };
         if (how === "worktree") return inWorktree(folder);
         if (how === "elsewhere") {
@@ -643,10 +676,11 @@ export class BranchView {
         if (how === "make") return make() && done(`made ${name} from ${from}`);
         app.git.beforeCheckout(() => {
           if (!make()) return;
-          const why = switchBranch(c, name);
-          if (why) return app.message("warn", `${name} made, but git: ${why}`);
-          app.git.checkHead();
-          done(`made ${name} from ${from}, and checked it out`);
+          void switchLater(c.root, name).then((why) => {
+            if (why) return app.message("warn", `${name} made, but git: ${why}`);
+            app.git.checkHead();
+            done(`made ${name} from ${from}, and checked it out`);
+          });
         });
       },
     });

@@ -8,7 +8,7 @@ import { realpathSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { ensureDir, readJson, writeJson } from "./fsutil.ts";
 import type { Checkout } from "./git.ts";
-import { baseBranch, gitArgs } from "./gitops.ts";
+import { baseBranch, gitArgs, refName } from "./gitops.ts";
 import { stateHome } from "./paths.ts";
 
 /** Where the kept bases are: one file for the machine, by repository. */
@@ -91,7 +91,8 @@ export interface BaseQuery {
  * is never measured against a branch made from it.
  */
 export function candidates(branch: string, config: { base: string; bases: string[] }): string[] {
-  const listed = [...new Set([...config.bases, ...(config.base ? [config.base] : [])])].filter(Boolean);
+  // Each a ref's name (`refName`): anything else is never handed to git.
+  const listed = [...new Set([...config.bases, ...(config.base ? [config.base] : [])])].filter(refName);
   const at = listed.indexOf(branch);
   return at < 0 ? listed : listed.slice(0, at);
 }
@@ -103,7 +104,7 @@ export function candidates(branch: string, config: { base: string; bases: string
  */
 export function chooseBase(branch: string, q: BaseQuery): { base: string; how: BaseHow } | null {
   const kept = q.kept[branch];
-  if (kept && kept !== branch && q.exists(kept)) return { base: kept, how: "kept" };
+  if (kept && kept !== branch && refName(kept) && q.exists(kept)) return { base: kept, how: "kept" };
   const all = candidates(branch, q);
   const listed = all.filter((b) => q.exists(b));
   if (listed.length === 1) return { base: listed[0]!, how: "nearest" };
@@ -138,9 +139,9 @@ export function baseFor(
     kept: keptBases(c),
     bases: config.bases,
     base: config.base,
-    exists: (ref) => ask(c.root, ["rev-parse", "--verify", "--quiet", `${ref}^{commit}`]) !== null,
+    exists: (ref) => ask(c.root, ["rev-parse", "--verify", "--quiet", "--end-of-options", `${ref}^{commit}`]) !== null,
     ahead: (base, b) => {
-      const out = ask(c.root, ["rev-list", "--count", `${base}..${b}`]);
+      const out = ask(c.root, ["rev-list", "--count", "--end-of-options", `${base}..${b}`]);
       return out === null ? null : Number(out.trim());
     },
     fallback: () => baseBranch(c, config.base),
