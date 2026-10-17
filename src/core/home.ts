@@ -49,6 +49,14 @@ export interface HomeWalk {
   walked: number | null;
   /** What stopped it short (`HOME_LIMITS`), if anything did. */
   capped: WalkCap | null;
+  /** The folders asked for by name walked into it whole (VV-D2); none when home's walk covers them. */
+  asked?: AskedWhole;
+}
+
+/** Folders of home asked for by name, walked whole (VV-D2): home's paths for them, and how many notes they hold. */
+export interface AskedWhole {
+  folders: string[];
+  notes: number;
 }
 
 export function homeWalkFile(loc: Keyed): string {
@@ -101,9 +109,14 @@ const isDir = (abs: string) => {
 /**
  * Home's walk, to build its graph from (VV-D2): the walk kept, brought up to now (`keptWalk`) — never walked, its top
  * alone — and the folders of home asked for by name (`asked`, home's paths for them: `slipbox ~/notes`, or a file in
- * it) that it doesn't cover yet, walked now, as far as home's cap and with its skip list: what was asked for has its
- * notes at once. A walk kept that stopped at its cap covers none of them whole: a folder it listed may hold folders it
- * didn't. That walk isn't kept: home's own, made while nobody is working, covers them.
+ * it) that it doesn't cover yet, walked now with its skip list: what was asked for has its notes at once. A walk kept
+ * that stopped at its cap covers none of them whole: a folder it listed may hold folders it didn't. That walk isn't
+ * kept: home's own, made while nobody is working, covers them.
+ *
+ * What was asked for is walked whole, whatever it holds — you're working in it — and its notes count against home's
+ * cap: home's own make room for them, the deepest left out first, as home's walk leaves them (`nearer`). So home's
+ * walk, made before or after, holds as many fewer of its own as the folders asked for hold; and those alone past the
+ * cap are whole all the same, home's own all left out. Its other files are held so too.
  */
 export function homeWalk(
   loc: Pick<VaultLocation, "root" | "key">,
@@ -114,31 +127,76 @@ export function homeWalk(
   const home = keptWalk(loc, filter, limits);
   // Never walked, home's top lists its folders without looking into them: none of them is covered.
   const covered = new Set(home.walked === null || home.capped ? [] : home.walk.dirs);
-  const from = asked.filter(
-    (rel, _, all) =>
-      !covered.has(rel) && !all.some((o) => o && o !== rel && under(rel, o)) && walksInto(loc.root, filter, rel),
-  );
+  /** One asked for that home's walk goes into, in none other asked for. */
+  const walked = (rel: string, _: number, all: readonly string[]) =>
+    !all.some((o) => o && o !== rel && under(rel, o)) && walksInto(loc.root, filter, rel);
+  const from = asked.filter((rel, i, all) => !covered.has(rel) && walked(rel, i, all));
   if (!from.length) return home;
-  const w = new SlicedWalk(loc.root, filter, limits, { from, known: covered });
+  // Every one is whole, those home's walk covers too: none of theirs is left out to make room for another's.
+  const whole = asked.filter((rel, i, all) => from.includes(rel) || (covered.has(rel) && walked(rel, i, all)));
+  const w = new SlicedWalk(
+    loc.root,
+    filter,
+    { notes: Number.POSITIVE_INFINITY, folders: Number.POSITIVE_INFINITY },
+    { from, known: covered },
+  );
   while (w.step(1000)) {}
   const more = w.result!;
   const { walk } = home;
-  const files = new Set(walk.files.map((f) => f.rel));
-  const assets = new Set(walk.assets);
+  // Home's walk has theirs that it covers, all kept (the walk now has the others'); and its own, out of every folder
+  // asked for, as many as the cap leaves room for.
+  const theirs = (rel: string) => inFolders(rel, whole) && !inFolders(rel, from);
+  const own = (rel: string) => !inFolders(rel, whole);
+  const kept = walk.files.filter((f) => theirs(f.rel));
+  const others = walk.files.filter((f) => own(f.rel));
+  const files = nearestTop(others, limits.notes - more.files.length - kept.length, (f) => f.rel);
+  const keptAssets = walk.assets.filter(theirs);
+  const otherAssets = walk.assets.filter(own);
+  const assets =
+    limits.assets === undefined
+      ? otherAssets
+      : nearestTop(otherAssets, limits.assets - more.assets.length - keptAssets.length, (a) => a);
   const dirs = new Set(walk.dirs);
   const skipped = new Set(walk.skipped.map((s) => `${s.rel}\0${s.reason}`));
   return {
     ...home,
+    capped: files.length < others.length ? "notes" : home.capped,
+    asked: { folders: whole, notes: more.files.length + kept.length },
     walk: {
-      files: [...walk.files, ...more.files.filter((f) => !files.has(f.rel))].sort((a, b) =>
-        a.rel < b.rel ? -1 : a.rel > b.rel ? 1 : 0,
-      ),
-      assets: [...walk.assets, ...more.assets.filter((a) => !assets.has(a))],
+      files: [...kept, ...files, ...more.files].sort((a, b) => (a.rel < b.rel ? -1 : a.rel > b.rel ? 1 : 0)),
+      assets: [...keptAssets, ...assets, ...more.assets],
       dirs: [...walk.dirs, ...more.dirs.filter((d) => !dirs.has(d))],
       skipped: [...walk.skipped, ...more.skipped.filter((s) => !skipped.has(`${s.rel}\0${s.reason}`))],
       errors: [...walk.errors, ...more.errors],
     },
   };
+}
+
+/** Whether `rel` is one of `folders` or in one (home's paths for folders asked for by name). */
+export const inFolders = (rel: string, folders: readonly string[]): boolean =>
+  folders.some((d) => d !== "" && under(rel, d));
+
+const depth = (rel: string) => rel.split("/").length;
+
+/**
+ * The order home's cap keeps in (VV-D2): the nearest the top first, then by path — so what it leaves out is the
+ * deepest, the last by path of those as deep.
+ */
+const nearer = (a: string, b: string) => depth(a) - depth(b) || (a < b ? -1 : a > b ? 1 : 0);
+
+/** As many of `items` as `n` allows, those nearest the top (`nearer`), by their paths (`rel`). */
+function nearestTop<T>(items: T[], n: number, rel: (x: T) => string): T[] {
+  return items.length <= n ? items : [...items].sort((a, b) => nearer(rel(a), rel(b))).slice(0, Math.max(0, n));
+}
+
+/**
+ * The note home's cap leaves out first (VV-D2): of `rels`, the deepest out of `folders` (those asked for by name, none
+ * of theirs ever left out), the last by path of those as deep; null when every one is in them.
+ */
+export function deepestOutside(rels: Iterable<string>, folders: readonly string[]): string | null {
+  let out: string | null = null;
+  for (const rel of rels) if (!inFolders(rel, folders) && (out === null || nearer(rel, out) > 0)) out = rel;
+  return out;
 }
 
 /**
@@ -312,16 +370,15 @@ function keptWalk(loc: Pick<VaultLocation, "root" | "key">, filter: WalkFilter, 
     for (const d of more.dirs) if (!relisted.has(d)) dirs.push(d);
     if (w.capped && capped !== "notes") capped = w.capped;
   }
-  const depth = (rel: string) => rel.split("/").length;
   // As far as the cap: the notes nearest the top.
   if (files.length > limits.notes) {
-    files.sort((a, b) => depth(a.rel) - depth(b.rel) || (a.rel < b.rel ? -1 : 1));
+    files.sort((a, b) => nearer(a.rel, b.rel));
     files.length = limits.notes;
     capped = "notes";
   }
   // Its other files too, those nearest the top.
   if (limits.assets !== undefined && assets.length > limits.assets) {
-    assets.sort((a, b) => depth(a) - depth(b) || (a < b ? -1 : 1));
+    assets.sort(nearer);
     assets.length = limits.assets;
   }
   files.sort((a, b) => (a.rel < b.rel ? -1 : a.rel > b.rel ? 1 : 0));
@@ -384,10 +441,20 @@ export function walkHomeNow(
   return { walk: w.result!, walked, capped: w.capped };
 }
 
-/** What home's cap left out, in words (VV-D2): said when it's reached. */
-export function describeCap(cap: WalkCap): string {
+/**
+ * What home's cap left out, in words (VV-D2): said when it's reached — and, folders asked for by name (`asked`), that
+ * they're whole; holding the cap or more alone, home holds theirs and nothing else.
+ */
+export function describeCap(cap: WalkCap, asked?: AskedWhole): string {
   const n = (x: number) => x.toLocaleString("en-US");
-  return cap === "notes"
-    ? `home's index is full: it holds ${n(HOME_LIMITS.notes)} notes, those nearest the top — the rest aren't indexed`
-    : `home's walk stopped at ${n(HOME_LIMITS.folders)} folders, those nearest the top — the notes deeper aren't indexed`;
+  const names = asked?.folders.map((f) => `~/${f}`) ?? [];
+  const named = names.length > 1 ? `${names.slice(0, -1).join(", ")} and ${names.at(-1)}` : names[0];
+  const opened = names.length > 1 ? "the folders you opened" : "the folder you opened";
+  if (cap === "notes" && asked && named && asked.notes >= HOME_LIMITS.notes)
+    return `home's index is full: it holds ${n(asked.notes)} notes, all in ${named}, ${opened} — the rest aren't indexed`;
+  const said =
+    cap === "notes"
+      ? `home's index is full: it holds ${n(HOME_LIMITS.notes)} notes, those nearest the top — the rest aren't indexed`
+      : `home's walk stopped at ${n(HOME_LIMITS.folders)} folders, those nearest the top — the notes deeper aren't indexed`;
+  return named ? `${said}; ${named}, ${opened}, ${names.length > 1 ? "are" : "is"} whole` : said;
 }

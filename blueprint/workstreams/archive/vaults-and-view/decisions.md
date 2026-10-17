@@ -19,6 +19,10 @@ such a folder, and the code's word.
 
 ## VV-D2: Home is a vault, without a marker (2026-10-14)
 
+> **Detailed by D248 (2026-10-17):** a folder of home opened by name is walked whole, and its notes count against
+> home's cap of 10,000: home's deepest other notes make room for them, and one holding more than the cap alone is
+> whole all the same.
+
 **Decision:** `~` is a vault: its files are those in it that no other vault holds, its tabs its own, its settings the
 user's, its git only if `~` is a repository. Its index covers its own notes, less a skip list: what the explorer
 doesn't list as a note or a text file; hidden folders (`.cache`, `.config`, `.local`…); the system's (`Library`,

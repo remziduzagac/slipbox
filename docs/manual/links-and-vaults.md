@@ -350,7 +350,14 @@ isn't, and its notes wait for the next walk. The command line walks home the fir
 home again too.
 
 Home's index holds 10,000 notes at most, and its walk lists 5,000 folders at most, those nearest the top first.
-slipbox says so when it stops there, in a message, in `slipbox info` and in `slipbox index --refresh ~`.
+slipbox says so when it stops there, in a message, in `space v i`, in `slipbox info` and in
+`slipbox index --refresh ~`.
+
+The folder you opened is indexed whole, however deep it is. Its notes count toward the 10,000: home's deepest other
+notes make room for them, so a full home still holds 10,000. A note you make in it while home is full is indexed too,
+and home's deepest other note leaves for it. A folder that holds more than 10,000 notes by itself is indexed whole all
+the same, and home then holds its notes and no others. When home is full, the message adds that the folder is whole:
+`~/notes, the folder you opened, is whole`.
 
 ### Elsewhere
 

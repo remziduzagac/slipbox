@@ -99,14 +99,15 @@ alone (`walkTop`): its notes and files, the vaults in it, its folders listed but
 
 A folder of home asked for by name is what was asked for: opened (`slipbox ~/notes`), or a file in it opened, it's
 walked at once when home's walk doesn't cover it (never made, or stopped at its cap: a walk capped covers no folder
-whole, since one it listed may hold folders it didn't), with home's skip list and as far as its cap, and merged into
-home's walk as the graph is built (`Graph.askFolder`, `homeWalk`'s `asked`), at each build after too, until home's
-walk covers it. Every way into a folder of home goes through one path (`Vaults.ask`): the start, and every switch into
-home, a note of it opened from another vault (`intoOther`, a peek's `o`), the way back, a folder revealed (a link to
-it). A graph built anew for home (a `[walk]` setting changed) carries the folders asked for (`askedFolders`). That walk
-isn't kept: home's own, still made while nobody is working, covers it, and a start after finds the folder in it,
-walked once. One home's skip list leaves out (`~/Downloads`, another disk), or behind a link the walk doesn't go
-through (§ Links followed only when you say so), isn't walked (`walksInto`; `leftOutOfHome` says why).
+whole, since one it listed may hold folders it didn't), with home's skip list and whole, whatever it holds (D248: you
+are working in it; the cap, below), and merged into home's walk as the graph is built (`Graph.askFolder`, `homeWalk`'s
+`asked`), at each build after too, until home's walk covers it. Every way into a folder of home goes through one path
+(`Vaults.ask`): the start, and every switch into home, a note of it opened from another vault (`intoOther`, a peek's
+`o`), the way back, a folder revealed (a link to it). A graph built anew for home (a `[walk]` setting changed) carries
+the folders asked for (`askedFolders`). That walk isn't kept: home's own, still made while nobody is working, covers
+it, and a start after finds the folder in it, walked once. One home's skip list leaves out (`~/Downloads`, another
+disk), or behind a link the walk doesn't go through (§ Links followed only when you say so), isn't walked
+(`walksInto`; `leftOutOfHome` says why).
 
 The background index (`AutoIndex`, § The index) walks home first in each pass, finding the vaults in it as it did,
 keeps the walk, builds home's index, then indexes the vaults it found; its progress is version 2 (`home`, `homeNotes`,
@@ -128,6 +129,17 @@ out. Its other files are capped as well, 10,000 nearest the top, listed for a li
 notes past them. What comes while home is open holds it: the watcher takes in no folder past it, and the graph no note
 (`maxDirs`, `applyToGraph`'s `maxNotes`), leaving them to home's walk. Past the cap, the background index still looks
 in the folders it left for vaults, a level at a time, home's skip list held (`seek`, kept with its place).
+
+The folders asked for by name (D248) are walked whole and count against the cap, which never leaves out a note of
+theirs: the merge (`homeWalk`) keeps all of theirs and as many of home's own as the room left, the deepest left out
+first as the walk leaves them (`nearer`: the nearest the top kept, then by path). So home's walk, made before or
+after, keeps as many fewer of its own in the graph as they hold; the walk kept is home's own still, at its cap, for a
+start that asks for none. One that alone holds more than the cap is walked whole all the same, past both caps, its
+notes all there and none of home's own. Its other files are held the same way. A note that comes into one while home
+is open comes past `maxNotes`, home's deepest own note leaving the graph for it (`deepestOutside`); none left, it comes
+past the cap. The cap's message, said as the graph built again after home's walk has it, adds that they're whole
+(`describeCap`'s `asked`): `…; ~/notes, the folder you opened, is whole`; past the cap alone, `home's index is full:
+it holds 12,345 notes, all in ~/big, the folder you opened — the rest aren't indexed`.
 
 **What's shown.** The status line names home `~`; `info` says `mode` `home` (an addition to schema 1's values), the
 Info view and `stat` `home (~)`. Started in `~`, nothing opens over the explorer: home is the vault. Each folder of
