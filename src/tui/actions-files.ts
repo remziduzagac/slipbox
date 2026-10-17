@@ -4,7 +4,7 @@
 import { type Run, withView } from "./actions.ts";
 import { isPointer } from "../core/pointer.ts";
 import { fileLink } from "./actions-links.ts";
-import { join, dirname, isAbsolute } from "node:path";
+import { join, dirname, isAbsolute, relative } from "node:path";
 import { isInside, isNeverRoot, hasMarker, initVault, rootAt } from "../core/vault.ts";
 import { classify } from "../core/filetypes.ts";
 import { revert } from "./actions-edit.ts";
@@ -47,8 +47,9 @@ export function fileActions(): Record<string, Run> {
       if (r.status === "ambiguous") return a.message("warn", `"${arg}" matches ${r.candidates.join(", ")}`);
       // A file by its whole path outside this vault: gone to, into its vault — Elsewhere's among them (VV-D3, VV-D4).
       if (isAbsolute(arg) && (a.loc.mode === "folder" || !isInside(a.loc.root, arg)) && isFile(arg)) return a.open(arg);
-      // Any other file of the vault, by its path with its extension (16.4), as :e opens it in vim.
-      const rel = arg.replace(/^\.?\//, "");
+      // Any other file of the vault, by its path with its extension (16.4), as :e opens it in vim — from the vault's
+      // top, or its whole path inside the vault.
+      const rel = isAbsolute(arg) ? relative(a.loc.root, arg) : arg.replace(/^\.?\//, "");
       if (a.graph.filePaths().includes(rel)) return fileLink(a, rel);
       const abs = join(a.loc.root, rel);
       // Through a link not followed (VV-D6): never made the vault's unasked — opened, it asks first.
