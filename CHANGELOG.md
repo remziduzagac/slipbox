@@ -134,6 +134,16 @@ The format is [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.1.0/); wh
 
 ### Fixed
 
+- A file whose name holds `?`, `*` or `[`, or starts with `:`, is staged, unstaged, discarded, marked resolved and
+  followed through its history as that one file. git had read such a name as a pattern, so source control acted on
+  every file it matched: discarding `Why?.md` discarded the changes to `WhyX.md` too.
+- Unstaging everything (`shift+u`) during a merge keeps the merge: a file in conflict stays in conflict, and the next
+  commit is still the merge. It used to end the merge.
+- Unstaging a renamed file unstages the rename whole: the old name is back and the new one untracked. The old name's
+  deletion used to stay staged.
+- Amending a commit whose message has a line starting with `#` keeps that line. The commit editor's own lines start
+  with `;` then, as git's do. The git panel's message box commits what you typed, a line starting with `#` too.
+- Staging or discarding a section of the git panel at once runs git once, not once a file.
 - Following a link to a picture in another vault copied a wrong path, the current vault's folder before the picture's
   own. It copies the picture's path.
 - A file created, renamed or moved while slipbox started watching its folder could stay missing until a reindex: on

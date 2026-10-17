@@ -1,12 +1,13 @@
 // Who changed what, and a file's history (plans 26.4 and 22.1): a line's last commit by `git blame` — of the last
 // commit, never the working tree, which could run a repository's filter (docs: the code-execution review); a line
 // changed since is the working tree's own — and a file's commits by `git log --follow`, each with the path it had then,
-// so a version from before a rename can be read. Every command with `23.6`'s guards in a root not trusted.
+// so a version from before a rename can be read. Every command with `23.6`'s guards in a root not trusted, a file's
+// path taken as that file, literally (`literalArgs`).
 
 import { execFileSync } from "node:child_process";
 import { posix, sep } from "node:path";
 import type { Checkout } from "./git.ts";
-import { gitArgs } from "./gitops.ts";
+import { gitArgs, literalArgs, literalEnv } from "./gitops.ts";
 import { diffLines } from "./merge.ts";
 
 const OPTS = {
@@ -16,9 +17,12 @@ const OPTS = {
   maxBuffer: 64 * 1024 * 1024,
 };
 
-function run(c: Pick<Checkout, "root">, args: string[]): string | null {
+/** A git command's output, or null; one given a file's path (`literal`) takes it as that file, never a pattern. */
+function run(c: Pick<Checkout, "root">, args: string[], literal = false): string | null {
   try {
-    return execFileSync("git", gitArgs(c.root, args), OPTS);
+    return literal
+      ? execFileSync("git", literalArgs(c.root, args), { ...OPTS, env: literalEnv() })
+      : execFileSync("git", gitArgs(c.root, args), OPTS);
   } catch {
     return null;
   }
@@ -68,7 +72,7 @@ export function parseBlame(porcelain: string, path: string): CommitInfo | null {
 
 /** Who last changed line `line` of a file as the last commit has it (lines from 1); null where git can't say. */
 export function blameLine(c: Pick<Checkout, "root">, path: string, line: number): CommitInfo | null {
-  const out = run(c, ["blame", "--porcelain", "-L", `${line},${line}`, "HEAD", "--", posixPath(path)]);
+  const out = run(c, ["blame", "--porcelain", "-L", `${line},${line}`, "HEAD", "--", posixPath(path)], true);
   return out === null ? null : parseBlame(out, path);
 }
 
@@ -92,14 +96,18 @@ export function parseLog(out: string): CommitInfo[] {
 
 /** A file's commits, newest first — up to `max` — following it back through its renames. */
 export function fileLog(c: Pick<Checkout, "root">, path: string, max = 500): CommitInfo[] | null {
-  const out = run(c, [
-    "log",
-    "--follow",
-    `--max-count=${max}`,
-    "--format=%x01%H%x00%an%x00%at%x00%s",
-    "--name-only",
-    "--",
-    posixPath(path),
-  ]);
+  const out = run(
+    c,
+    [
+      "log",
+      "--follow",
+      `--max-count=${max}`,
+      "--format=%x01%H%x00%an%x00%at%x00%s",
+      "--name-only",
+      "--",
+      posixPath(path),
+    ],
+    true,
+  );
   return out === null ? null : parseLog(out);
 }

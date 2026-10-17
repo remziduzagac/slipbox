@@ -66,6 +66,23 @@ export function gitArgs(root: string, args: string[]): string[] {
   ];
 }
 
+/**
+ * `gitArgs` for a command given files' paths: each path is that file, read literally — `Why?.md`, `[draft] x.md`,
+ * `a*.md` and `:a.md` name themselves, never a pattern or git's pathspec magic. Only for those commands: git passes the
+ * setting on to the hooks it runs, which may expect their own patterns.
+ */
+export function literalArgs(root: string, args: string[]): string[] {
+  return ["--literal-pathspecs", ...gitArgs(root, args)];
+}
+
+/** The environment for those: git refuses literal paths beside a setting of the user's for patterns. */
+export function literalEnv(): NodeJS.ProcessEnv {
+  const env = { ...process.env };
+  for (const k of ["GIT_GLOB_PATHSPECS", "GIT_NOGLOB_PATHSPECS", "GIT_ICASE_PATHSPECS", "GIT_LITERAL_PATHSPECS"])
+    delete env[k];
+  return env;
+}
+
 const OPTS = {
   encoding: "utf8" as const,
   stdio: ["ignore", "pipe", "ignore"] as ["ignore", "pipe", "ignore"],

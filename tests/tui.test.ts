@@ -19292,6 +19292,28 @@ describe("git's review, merge screen, pull and rebase (GIT-D3, GIT-D5, GIT-D6)",
       });
     });
 
+    test("the merge screen marks resolved the file it settled, and only it: a name like a pattern names itself", async () => {
+      await isolated(async () => {
+        const { root } = repo({ "Why?.md": "one\n", "WhyX.md": "one\n" });
+        git(root, "switch", "-q", "-c", "theirs");
+        commit(root, "Why?.md", "theirs\n");
+        commit(root, "WhyX.md", "theirs\n");
+        git(root, "switch", "-q", "main");
+        commit(root, "Why?.md", "mine\n");
+        commit(root, "WhyX.md", "mine\n");
+        git(root, "merge", "-q", "theirs");
+        expect(git(root, "status", "--porcelain")).toBe("UU Why?.md\nUU WhyX.md");
+        const h = await harness({ root, open: "Why?.md", width: 120, height: 50 });
+        await h.app.git.refreshNow();
+        await h.app.run("git.merge_screen");
+        expect(h.app.floating?.kind).toBe("merge");
+        await h.keys("t", "w", "s");
+        expect(await said(h, "Why?.md staged, marked resolved — next: WhyX.md")).toBe(true);
+        // WhyX.md is still in conflict, its markers not staged.
+        expect(git(root, "status", "--porcelain")).toBe("M  Why?.md\nUU WhyX.md");
+      });
+    });
+
     test("the merge screen: both either way, e puts the result in the lens, a sends a conflict to the agent", async () => {
       await isolated(async () => {
         const root = conflicted();

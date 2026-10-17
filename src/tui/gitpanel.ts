@@ -495,7 +495,8 @@ export class GitPanel {
       );
     const text = this.message;
     app.message("info", "committing…");
-    void commitLater(c, text, false).then((r) => {
+    // As typed: a line starting with `#` is the message's own (`#12 fixed`), not a guide's.
+    void commitLater(c, text, false, null).then((r) => {
       if ("why" in r) app.message("warn", `git: ${r.why}`);
       else {
         if (this.message === text) this.message = "";

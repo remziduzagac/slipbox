@@ -4702,6 +4702,120 @@ describe("staging, from the source control view (26.2)", () => {
     expect(unstageFile({ root: fresh }, "f.md")).toBeNull();
     expect(git(fresh, "status", "--porcelain")).toBe("?? f.md\n");
   });
+
+  /** The paths git has staged, and those it hasn't, as `-z` gives them. */
+  const listOf = (root: string, ...args: string[]) =>
+    git(root, ...args, "--name-only", "-z")
+      .split("\0")
+      .filter(Boolean)
+      .sort();
+  const NAMES = ["Why?.md", "WhyX.md", "a*.md", "ab.md", "[x] d.md", "x d.md", ":!k.md", "k.md", ":j.md", "j.md"];
+
+  test("a file whose name holds a glob's characters, or starts with `:`, is the only one staged, unstaged or discarded", async () => {
+    const { discardFile, stageFile, unstageFile, writeIndex } = await import("../src/core/gitstage.ts");
+    const { blameLine, fileLog } = await import("../src/core/gitlog.ts");
+    const root = repo(Object.fromEntries(NAMES.map((n) => [n, "1\n"])));
+    const c = { root };
+    for (const n of NAMES) writeFileSync(join(root, n), `1\n2 ${n}\n`);
+    // Discarded: that file alone goes back; the files its name would match as a pattern keep their changes.
+    for (const n of ["Why?.md", "a*.md", "[x] d.md", ":!k.md", ":j.md"]) expect(discardFile(c, n)).toBeNull();
+    expect(listOf(root, "diff")).toEqual(["WhyX.md", "ab.md", "j.md", "k.md", "x d.md"]);
+    for (const n of NAMES) writeFileSync(join(root, n), `1\n2 ${n}\n`);
+    // Staged, one by one: each name stages itself and nothing else.
+    for (const n of ["Why?.md", "a*.md", "[x] d.md", ":!k.md", ":j.md"]) {
+      expect(stageFile(c, n)).toBeNull();
+      expect(listOf(root, "diff", "--cached")).toEqual([n]);
+      expect(unstageFile(c, n)).toBeNull();
+      expect(listOf(root, "diff", "--cached")).toEqual([]);
+    }
+    // Unstaged with its look-alike staged too: the look-alike stays.
+    stageFile(c, "Why?.md");
+    stageFile(c, "WhyX.md");
+    expect(unstageFile(c, "Why?.md")).toBeNull();
+    expect(listOf(root, "diff", "--cached")).toEqual(["WhyX.md"]);
+    // A file's history and blame are its own: not the commits of a file its name would match.
+    git(root, "commit", "-q", "-m", "only WhyX");
+    expect(fileLog(c, "Why?.md")!.map((x) => x.subject)).toEqual(["start"]);
+    expect(fileLog(c, ":!k.md")!.map((x) => x.subject)).toEqual(["start"]);
+    expect(blameLine(c, "[x] d.md", 1)!.subject).toBe("start");
+    // A new file's mode is a new file's, not that of a file its name would match.
+    writeFileSync(join(root, "RunX.sh"), "echo\n");
+    chmodSync(join(root, "RunX.sh"), 0o755);
+    git(root, "add", "RunX.sh");
+    git(root, "commit", "-q", "-m", "run");
+    expect(writeIndex(c, "Run?.sh", "echo new\n")).toBeNull();
+    expect(git(root, "--literal-pathspecs", "ls-files", "-s", "--", "Run?.sh")).toStartWith("100644 ");
+  });
+
+  test("a section staged, unstaged or discarded in one git call: its files, and only them", async () => {
+    const { discardFiles, stageFiles, unstageFiles } = await import("../src/core/gitstage.ts");
+    const root = repo(Object.fromEntries(NAMES.map((n) => [n, "1\n"])));
+    const c = { root };
+    for (const n of NAMES) writeFileSync(join(root, n), `1\n2 ${n}\n`);
+    const some = ["Why?.md", "a*.md", "[x] d.md", ":!k.md"];
+    expect(stageFiles(c, some)).toBeNull();
+    expect(listOf(root, "diff", "--cached")).toEqual([...some].sort());
+    expect(unstageFiles(c, ["Why?.md", ":!k.md"])).toBeNull();
+    expect(listOf(root, "diff", "--cached")).toEqual(["[x] d.md", "a*.md"]);
+    expect(discardFiles(c, ["Why?.md", ":j.md"])).toBeNull();
+    expect(listOf(root, "diff")).toEqual(
+      NAMES.filter((n) => !["Why?.md", ":j.md", "[x] d.md", "a*.md"].includes(n)).sort(),
+    );
+    // None: nothing asked of git.
+    expect(stageFiles(c, [])).toBeNull();
+    // A setting of the user's for patterns doesn't stop it: git refuses it beside literal paths, so it's left out.
+    const was = process.env.GIT_GLOB_PATHSPECS;
+    process.env.GIT_GLOB_PATHSPECS = "1";
+    try {
+      expect(stageFiles(c, ["ab.md"])).toBeNull();
+    } finally {
+      if (was === undefined) delete process.env.GIT_GLOB_PATHSPECS;
+      else process.env.GIT_GLOB_PATHSPECS = was;
+    }
+    expect(listOf(root, "diff", "--cached")).toEqual(["[x] d.md", "a*.md", "ab.md"]);
+  });
+
+  test("unstaging everything during a merge keeps the merge: a conflict stays one, the next commit is the merge's", async () => {
+    const { unstageAll } = await import("../src/core/gitstage.ts");
+    const root = repo({ "a.md": "1\n", "b.md": "1\n" });
+    git(root, "switch", "-q", "-c", "x");
+    writeFileSync(join(root, "a.md"), "x\n");
+    writeFileSync(join(root, "b.md"), "x\n");
+    git(root, "commit", "-q", "-am", "x");
+    git(root, "switch", "-q", "main");
+    writeFileSync(join(root, "a.md"), "m\n");
+    git(root, "commit", "-q", "-am", "m");
+    git(root, "merge", "-q", "x");
+    expect(git(root, "status", "--porcelain")).toBe("UU a.md\nM  b.md\n");
+    expect(unstageAll({ root })).toBeNull();
+    expect(existsSync(join(root, ".git", "MERGE_HEAD"))).toBe(true);
+    expect(git(root, "status", "--porcelain")).toBe("UU a.md\n M b.md\n");
+  });
+
+  test("a staged rename unstaged whole: its old path back, its new one untracked, nothing staged", async () => {
+    const { parseEntries, unstageAll, unstageFile } = await import("../src/core/gitstage.ts");
+    const root = repo({ "old.md": "a\nb\nc\nd\n" });
+    git(root, "mv", "old.md", "new.md");
+    const e = parseEntries(git(root, "status", "--porcelain=v1", "-z")).find((x) => x.x === "R")!;
+    expect(e).toEqual({ path: "new.md", x: "R", y: " ", from: "old.md" });
+    expect(unstageFile({ root }, e.path, e.from)).toBeNull();
+    expect(git(root, "status", "--porcelain")).toBe(" D old.md\n?? new.md\n");
+    // Everything unstaged takes a rename whole too.
+    git(root, "add", "-A");
+    expect(unstageAll({ root })).toBeNull();
+    expect(git(root, "status", "--porcelain")).toBe(" D old.md\n?? new.md\n");
+  });
+
+  test("the message box's text committed as typed: a line starting with # is its own; the editor's guide picks a mark", async () => {
+    const { cleanMessage, commentFor } = await import("../src/core/gitstage.ts");
+    expect(cleanMessage("#12 fix the link\n", null)).toBe("#12 fix the link");
+    expect(cleanMessage("# Notes cleanup\n\nbody\n", null)).toBe("# Notes cleanup\n\nbody");
+    // The editor's: its guide's lines start with a mark no line of the message does, as git's commentChar = auto.
+    expect(commentFor("Fix it\n\nbody")).toBe("#");
+    expect(commentFor("#12 fix the link")).toBe(";");
+    expect(commentFor("# Notes\n;x")).toBe("@");
+    expect(cleanMessage("#12 fix the link\n\n; Committing: 1 file staged.\n", ";")).toBe("#12 fix the link");
+  });
 });
 
 describe("the remote's commands and stash (26.6)", () => {

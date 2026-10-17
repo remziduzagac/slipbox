@@ -24,6 +24,7 @@ import {
   worktreeList,
 } from "../core/gitops.ts";
 import {
+  commentFor,
   commitLater,
   createBranch,
   type GitDone,
@@ -597,7 +598,8 @@ export class Git {
 
   /**
    * A commit (26.3): its message in the floating editor — `ctrl+s` (`:w`) commits what's staged, or amends the last
-   * commit with it; closing it (`esc`, `q`) leaves it. Its `#` lines say what's staged and are left out. In a root not
+   * commit with it; closing it (`esc`, `q`) leaves it. Its `#` lines say what's staged and are left out (`;` lines, or
+   * another of git's marks, when a line of the message to start from begins with `#`: `commentFor`). In a root not
    * trusted, said: its hooks don't run, and it isn't signed. `typed`: the git panel's message box's text (GIT-D8), the
    * message to start from — the box emptied once it's committed.
    */
@@ -612,16 +614,18 @@ export class Git {
     if (amend && last === null) return this.app.message("info", "no commit to amend yet");
     const trusted = isTrusted(c.root);
     const files = staged.length ? ` (${staged.slice(0, 5).join(", ")}${staged.length > 5 ? ", …" : ""})` : "";
+    // The guide's lines start with `#`, or, when a line of the message does, a mark none of its lines starts with.
+    const mark = commentFor(last ?? "");
     const guide = [
-      `# ${amend ? "Amending the last commit" : "Committing"}: ${staged.length} file${staged.length === 1 ? "" : "s"} staged${files}.`,
-      "# Lines starting with # are left out. ctrl+s commits; esc leaves it.",
+      `${mark} ${amend ? "Amending the last commit" : "Committing"}: ${staged.length} file${staged.length === 1 ? "" : "s"} staged${files}.`,
+      `${mark} Lines starting with ${mark} are left out. ctrl+s commits; esc leaves it.`,
       ...(trusted
         ? []
-        : ["# This vault isn't trusted: its hooks don't run, and the commit isn't signed (:trust trusts it)."]),
+        : [`${mark} This vault isn't trusted: its hooks don't run, and the commit isn't signed (:trust trusts it).`]),
     ];
     const buf = new NoteBuffer(null, `${c.root}#commit`, `commit:${c.root}`);
     buf.kind = { group: "text", format: "text" };
-    buf.virtual = { save: (text) => (this.commitWith(text, amend, typed), true) };
+    buf.virtual = { save: (text) => (this.commitWith(text, amend, typed, mark), true) };
     buf.loadText(`${last ?? ""}\n\n${guide.join("\n")}\n`);
     const fv = this.app.makeView(buf, { ...TOP }, { anchor: { ...TOP }, sub: 0, col: 0 });
     this.app.floating = {
@@ -646,11 +650,11 @@ export class Git {
   }
 
   /** The commit editor's text committed: in the background; the editor closed when it's done, kept (said why) when not. */
-  private commitWith(text: string, amend: boolean, typed = ""): void {
+  private commitWith(text: string, amend: boolean, typed: string, mark: string): void {
     const c = this.checkout;
     if (!c) return;
     this.app.message("info", amend ? "amending…" : "committing…");
-    void commitLater(c, text, amend).then((r) => {
+    void commitLater(c, text, amend, mark).then((r) => {
       if ("why" in r) this.app.message("warn", `git: ${r.why}`);
       else {
         // The message box's text went into it: the box is empty again.
