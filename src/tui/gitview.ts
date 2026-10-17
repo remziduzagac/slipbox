@@ -1,8 +1,8 @@
 // The git panel's working tree (plan 26.2, GIT-D8): the checkout's changed files by section — in conflict, staged,
 // changed and not staged, untracked — each opened up into its changes (`l`): a staged file's against the last commit, a
 // changed one's against what's staged, as on disk. `s` stages a file or a change, `u` unstages one, `d` discards one
-// (asking first: an untracked file goes to the trash); on a section's heading, its files all at once; `a` stages
-// everything and `U` unstages it. `enter` shows a file's or a change's diff, `o` opens the file there. The panel's keys,
+// (asking first: an untracked file goes to the trash); on a section's heading, its files all at once, in one call;
+// `a` stages everything and `U` unstages it. `enter` shows a file's or a change's diff, `o` opens the file there. The panel's keys,
 // buttons and mouse are gitpanel.ts's and gitmouse.ts's; these are what they run.
 
 import { existsSync, readFileSync } from "node:fs";
@@ -11,12 +11,14 @@ import { type GitChange, gitChanges } from "../core/gitsigns.ts";
 import { showLater } from "../core/gitops.ts";
 import {
   discardFile,
+  discardFiles,
   type GitDone,
   replaceLines,
   sections,
   stageAll,
   stageChange,
   stageFile,
+  stageFiles,
   type StatusEntry,
   unstageAll,
   unstageChange,
@@ -216,7 +218,7 @@ function unstage(app: App, row: WorkRow): void {
     if (t?.index === undefined) return app.message("info", "git hasn't answered yet");
     return after(app, unstageChange(c, e.path, t.index ?? "", row.change), `unstaged a change of ${e.path}`, e.path);
   }
-  after(app, unstageFile(c, e.path), `unstaged ${e.path}`, e.path);
+  after(app, unstageFile(c, e.path, e.from), `unstaged ${e.path}`, e.path);
 }
 
 /** `d`: the selected file's changes not staged, or one change, discarded — after asking; an untracked file, to the trash. */
@@ -360,9 +362,14 @@ export function sectionAction(app: App, section: GitSection | "all", op: string)
     if (section === "staged") return app.message("info", "staged already — u unstages them");
     if (section === "conflicted") return app.message("info", "a conflict: resolve each, then s marks it resolved");
     const list = s[section];
-    let why: GitDone = null;
-    for (const e of list) why ??= stageFile(c, e.path);
-    return after(app, why, `staged ${files(list.length)}`);
+    return after(
+      app,
+      stageFiles(
+        c,
+        list.map((e) => e.path),
+      ),
+      `staged ${files(list.length)}`,
+    );
   }
   if (op === "unstage") {
     if (section !== "staged" && section !== "all") return app.message("info", "nothing staged there");
@@ -376,11 +383,11 @@ export function sectionAction(app: App, section: GitSection | "all", op: string)
     app.overlays.confirm(
       `Discard every change that isn't staged, in ${files(list.length)}? They go back to what's staged; untracked files stay.`,
       () => {
-        let why: GitDone = null;
-        for (const e of list) {
-          why ??= discardFile(c, e.path);
-          reload(app, e.path);
-        }
+        const why = discardFiles(
+          c,
+          list.map((e) => e.path),
+        );
+        for (const e of list) reload(app, e.path);
         after(app, why, `discarded the changes to ${files(list.length)}`);
       },
     );

@@ -218,7 +218,9 @@ The panel's foot says the keys of the row selected. Its keys:
 | `q` / `esc` | Closes the git panel / goes back to the note, leaving it open |
 
 On a section's heading, `s`, `u` and `d` act on every file under it: Changes' and Untracked's staged, Staged's
-unstaged, Changes' discarded (after asking; untracked files stay).
+unstaged, Changes' discarded (after asking; untracked files stay). Unstaging everything during a merge keeps the merge:
+a file in conflict stays in conflict. Unstaging a renamed file unstages the rename: the old name comes back, and the new
+one is untracked.
 
 By mouse:
 
@@ -249,11 +251,13 @@ When git refuses something, slipbox says why in git's own words.
 
 1. Type the message in the panel's message box: click it, or press `i`. `esc` leaves it, keeping what's typed.
 2. Press `ctrl+enter`, or click Commit. The commit runs in the background, as a hook can take a while. When it's done,
-   a message says its short hash and subject, and the box is empty again.
+   a message says its short hash and subject, and the box is empty again. The message is what you typed: a line
+   starting with `#`, such as `#12 fix the link`, is part of it.
 
 For a longer message, press `c`, or `enter` in the box, or Commit with the box empty. A floating editor opens for the
 message, with the box's text, and you type on. Lines starting with `#` say what's staged. They're left out of the
-message. `ctrl+s` (or `:w`) commits. `esc` or `q` leaves the editor and commits nothing.
+message. When the message you start from has a line starting with `#`, those lines start with `;` instead, and your
+`#` lines are kept. `ctrl+s` (or `:w`) commits. `esc` or `q` leaves the editor and commits nothing.
 
 If the message is empty, or a hook refuses, slipbox says so in git's words. The editor stays open.
 

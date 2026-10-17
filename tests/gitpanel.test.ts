@@ -133,6 +133,36 @@ describe("the git panel by mouse as by keys (GIT-D8)", () => {
     expect(app.messages.at(-1)?.text).toBe("nothing staged — s stages a file in the git panel (space g)");
   });
 
+  test("a line starting with # is the message's own: the box commits it as typed; the editor's guide starts with ; then", async () => {
+    const root = repo();
+    writeFileSync(join(root, "a.md"), "# A\n\ntwo\n");
+    git(root, "add", "a.md");
+    const { app, keys } = await panel(root);
+    await keys("i", ...typed("#12 fix the link"), "ctrl+enter");
+    expect(await until(() => git(root, "log", "-1", "--format=%s").trim() === "#12 fix the link")).toBe(true);
+    expect(await until(() => app.gitPanel.message === "" && app.git.entries?.length === 0)).toBe(true);
+    // Amended in the editor: the message to start from has a # line, so the guide's lines start with ; instead.
+    await keys("shift+c");
+    expect(app.floating?.kind).toBe("commit");
+    const text = app.floating!.view.buf.source;
+    expect(text).toStartWith("#12 fix the link\n\n; Amending the last commit: 0 files staged.\n");
+    expect(text).toContain("; Lines starting with ; are left out.");
+    await keys("ctrl+s");
+    expect(await until(() => app.floating === null)).toBe(true);
+    expect(git(root, "log", "-1", "--format=%B").trim()).toBe("#12 fix the link");
+  });
+
+  test("u on a staged rename unstages it whole: its old path back, the new one untracked", async () => {
+    const root = repo();
+    git(root, "mv", "b.md", "d.md");
+    const { app, keys } = await panel(root);
+    const i = rowOf(app, (r) => r.kind === "file" && r.section === "staged" && r.entry.path === "d.md");
+    expect(i).toBeGreaterThanOrEqual(0);
+    app.sidebar.selected = i;
+    await keys("u");
+    expect(await until(() => git(root, "status", "--porcelain") === " D b.md\n?? d.md\n")).toBe(true);
+  });
+
   test("a row's buttons under the pointer: + stages, − unstages; the footer says the button's key and what it does", async () => {
     const root = repo();
     writeFileSync(join(root, "a.md"), "# A\n\ntwo\n");

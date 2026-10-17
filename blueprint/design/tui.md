@@ -731,17 +731,17 @@ keys.
   `origin/x is gone`; `HEAD detached` when it is; from 18 (17 without that line), **the message box**: a frame titled
   Message, its text wrapped, its last three rows shown, `ctrl+enter commits` in it while empty; a click (`git:box`) or
   `i` (`message`) types in it (`GitPanel.typing`, keys to `messageKey`: typed, `backspace`, `ctrl+w` and
-  `ctrl+backspace`, `ctrl+u`; a paste, every line), `ctrl+enter` commits what's staged with it in the background
-  (`commitLater`, the box emptied when it's in), `enter` takes it to the floating editor, `esc`, `ctrl+c` and `ctrl+g`
-  leave it, as a click anywhere else does. **The buttons**, flowing over as many rows as they take while eight rows are
-  left under them (`buttons()`): Commit (and the count staged), Amend, Review (while a change isn't staged or a file is
-  untracked), `Resolve N` (while files are in conflict), Pull (the count behind, once there's an upstream, not when it's
-  gone), Push (the count ahead; Publish with no upstream), Fetch, Stash, and while a merge or a rebase is under way
-  Continue, Skip (a rebase's) and Abort — each running its key's action; Commit with the box empty opens the editor,
-  Amend starts from the box's text when it has one. Then the filter's row (`/`), the rows, and at the foot, under a
-  rule, the keys of the row selected (`footer(row)`; with none, commit's and fetch's, and `shift+r continue…` while
-  something is under way), or, under the pointer, a button's or a row's button's key and what it does (`pointedAt`),
-  or, typing in the box, its keys.
+  `ctrl+backspace`, `ctrl+u`; a paste, every line), `ctrl+enter` commits what's staged with it in the background,
+  as typed: a line starting with `#` is its own (`commitLater`, the box emptied when it's in), `enter` takes it to the
+  floating editor, `esc`, `ctrl+c` and `ctrl+g` leave it, as a click anywhere else does. **The buttons**, flowing over
+  as many rows as they take while eight rows are left under them (`buttons()`): Commit (and the count staged), Amend,
+  Review (while a change isn't staged or a file is untracked), `Resolve N` (while files are in conflict), Pull (the
+  count behind, once there's an upstream, not when it's gone), Push (the count ahead; Publish with no upstream), Fetch,
+  Stash, and while a merge or a rebase is under way Continue, Skip (a rebase's) and Abort — each running its key's
+  action; Commit with the box empty opens the editor, Amend starts from the box's text when it has one. Then the
+  filter's row (`/`), the rows, and at the foot, under a rule, the keys of the row selected (`footer(row)`; with none,
+  commit's and fetch's, and `shift+r continue…` while something is under way), or, under the pointer, a button's or a
+  row's button's key and what it does (`pointedAt`), or, typing in the box, its keys.
 - **Its rows** (`rows()`), each section under a heading that `enter`, a click, `l` and `h` fold (`GitPanel.folded`;
   the merged and older branches, the other repositories and home's folded to begin with): **Conflicts**, **Staged**,
   **Changes**, **Untracked** (`26.2`), a line saying `nothing uncommitted` when they're empty; **This branch against
@@ -750,13 +750,16 @@ keys.
   again whenever git has news, none on the base itself; **This file: name** — Its diff against main (`git.diff`), Its
   history (`git.history`), Who changed this line (`git.blame`), for the note on screen in this checkout, not while
   filtering; **Branches**; **Other repositories** (VV-D10). Headings are rows: the selection moves through them, and
-  on one, `s`, `u` and `d` act on its files (`sectionAction`): Changes' and Untracked's staged file by file, Staged's
-  all unstaged, Changes' discarded after asking (`Discard every change that isn't staged, in 2 files? …`; untracked
-  files stay; refused while one is unsaved). A heading's buttons are always drawn at its end: `−` on Staged, `+ ↺` on
-  Changes, `+` on Untracked, `+ New` on Branches. Each file has its state letter in its colour (`M`, `A`, `D`, `R`,
-  `U`, `?`) and its folder dim; `l` opens a file up into its changes (a staged file's against the last commit, a changed
-  one's against what's staged, as on disk), `h` folds it. A change is staged as `git add -p` does: the index given its
-  text with that change made (`hash-object`, `update-index`), so nothing else in it moves. A file unsaved here isn't
+  on one, `s`, `u` and `d` act on its files (`sectionAction`), in one call of git's: Changes' and Untracked's staged,
+  Staged's all unstaged (by path, never `git reset`, so a merge under way stays one), Changes' discarded after asking
+  (`Discard every change that isn't staged, in 2 files? …`; untracked files stay; refused while one is unsaved). A
+  heading's buttons are always drawn at its end: `−` on Staged, `+ ↺` on Changes, `+` on Untracked, `+ New` on
+  Branches. Each file has its state letter in its colour (`M`, `A`, `D`, `R`, `U`, `?`) and its folder dim; `l` opens
+  a file up into its changes (a staged file's against the last commit, a changed one's against what's staged, as on
+  disk), `h` folds it. git takes each path as that file (`literalArgs`: `--literal-pathspecs` on the commands given
+  paths only, never in the environment, which a hook would inherit), so `Why?.md` or `:a.md` never names another. A
+  rename is unstaged whole, both its paths. A change is staged as `git add -p` does: the index given its text with that
+  change made (`hash-object`, `update-index`), so nothing else in it moves. A file unsaved here isn't
   discarded: git works on the file on disk; an untracked file discarded goes to the trash, as the explorer's `d`. git's
   answer comes in the background, again whenever it has news; `23.6`'s guards apply in a vault not trusted (D175).
 - **Its keys** (`[keys.git]`, `DEFAULT_GIT_KEYS`, actions `GIT_ACTIONS`): `j`/`k`, `g g`/`shift+g` move; `enter`
@@ -843,11 +846,12 @@ keys.
   the index given the change's lines as they are now, an untracked file staged whole, refused while the file is
   unsaved), then the change's lines, `-` and `+`, eight at most.
 - **Commit** (`26.3`): `c` (or Commit with the box empty) writes the message for what's staged in the floating editor,
-  `shift+c` amends the last commit (its message to start from); `#` lines say what's staged and are left out, `ctrl+s`
-  commits (in the background: a hook can take a while), `esc` or `q` leaves it, and the focus goes back where it was.
-  An empty message, or a hook refusing, is said in git's words and the editor stays. In a vault not trusted the
-  commit's hooks don't run and it isn't signed — the repository's own config could name what runs — and both the
-  editor and a message say so.
+  `shift+c` amends the last commit (its message to start from); `#` lines say what's staged and are left out (when a
+  line of the message to start from begins with `#`, the guide's begin with `;`, or the next of git's marks:
+  `commentFor`, as `core.commentChar = auto`), `ctrl+s` commits (in the background: a hook can take a while), `esc` or
+  `q` leaves it, and the focus goes back where it was. An empty message, or a hook refusing, is said in git's words and
+  the editor stays. In a vault not trusted the commit's hooks don't run and it isn't signed — the repository's own
+  config could name what runs — and both the editor and a message say so.
 - **Filter (`/`, in the explorer, the history, the outline, Info and the footnotes; Problems' All tab, below):** a
   `› text` row at
   the top of the list, a rule under it (joined to the pane's border), then the list —

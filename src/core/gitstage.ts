@@ -2,12 +2,13 @@
 // letters — and what the source control view does with them: a file staged, unstaged or its changes discarded, all
 // staged or unstaged, and one change staged or unstaged, as `git add -p` does — the index given the text with that one
 // change applied (`hash-object`, `update-index`), so nothing else in it moves. Every command with `23.6`'s guards in a
-// root not trusted (`gitArgs`). Paths are from the checkout's top folder.
+// root not trusted (`gitArgs`). Paths are from the checkout's top folder, and git takes each as that file, literally
+// (`literalArgs`): never a pattern that names others.
 
 import { execFile, execFileSync } from "node:child_process";
 import { posix, sep } from "node:path";
 import type { Checkout } from "./git.ts";
-import { gitArgs, STATUS_ARGS } from "./gitops.ts";
+import { gitArgs, literalArgs, literalEnv, STATUS_ARGS } from "./gitops.ts";
 import { parseTrack, type Track } from "./gitremote.ts";
 import { isTrusted } from "./trust.ts";
 import type { GitChange } from "./gitsigns.ts";
@@ -80,14 +81,21 @@ const OPTS = {
   maxBuffer: 64 * 1024 * 1024,
 };
 
-/** A git command run in the checkout: its output, or why it failed (its own words). */
+/**
+ * A git command run in the checkout: its output, or why it failed (its own words). One given files' paths (`literal`)
+ * takes each as that file, never a pattern.
+ */
 function git(
   c: Pick<Checkout, "root">,
   args: string[],
   input?: string,
+  literal = false,
 ): { ok: true; out: string } | { ok: false; why: string } {
   try {
-    return { ok: true, out: execFileSync("git", gitArgs(c.root, args), { ...OPTS, input }) };
+    const out = literal
+      ? execFileSync("git", literalArgs(c.root, args), { ...OPTS, input, env: literalEnv() })
+      : execFileSync("git", gitArgs(c.root, args), { ...OPTS, input });
+    return { ok: true, out };
   } catch (err) {
     const e = err as { stderr?: string; message: string };
     return { ok: false, why: (e.stderr || e.message).trim().split("\n")[0] ?? "git failed" };
@@ -96,33 +104,69 @@ function git(
 
 const posixPath = (p: string) => p.split(sep).join(posix.sep);
 
+/** Files' paths for git to read from its input, one after another, each ended by a NUL (`listed`). */
+const PATHS = ["--pathspec-from-file=-", "--pathspec-file-nul"];
+const listed = (paths: string[]) => paths.map((p) => `${posixPath(p)}\0`).join("");
+
 /** What an operation says when it fails: why, in git's words; null when it went. */
 export type GitDone = string | null;
 const done = (r: ReturnType<typeof git>): GitDone => (r.ok ? null : r.why);
 
 /** A file's changes staged — a deletion's too. */
 export function stageFile(c: Pick<Checkout, "root">, path: string): GitDone {
-  return done(git(c, ["add", "-A", "--", posixPath(path)]));
+  return stageFiles(c, [path]);
 }
 
-/** A file unstaged: the index back to the last commit's (with none yet, the file out of the index). */
-export function unstageFile(c: Pick<Checkout, "root">, path: string): GitDone {
-  const r = git(c, ["restore", "--staged", "--", posixPath(path)]);
-  return r.ok ? null : done(git(c, ["rm", "--cached", "-q", "--", posixPath(path)]));
+/** Files' changes staged, in one git call: a section's, all at once (GIT-D8). */
+export function stageFiles(c: Pick<Checkout, "root">, paths: string[]): GitDone {
+  return paths.length ? done(git(c, ["add", "-A", ...PATHS], listed(paths), true)) : null;
+}
+
+/**
+ * A file unstaged: the index back to the last commit's (with none yet, the file out of the index). A rename (`from`,
+ * where it came from) is unstaged whole: its old path back in the index, its new one out.
+ */
+export function unstageFile(c: Pick<Checkout, "root">, path: string, from?: string): GitDone {
+  return unstageFiles(c, from ? [path, from] : [path]);
+}
+
+/** Files unstaged, in one git call: the index's entries for them back to the last commit's. */
+export function unstageFiles(c: Pick<Checkout, "root">, paths: string[]): GitDone {
+  if (!paths.length) return null;
+  const r = git(c, ["restore", "--staged", ...PATHS], listed(paths), true);
+  if (r.ok) return null;
+  // No commit yet: nothing to go back to, so the files leave the index.
+  if (git(c, ["rev-parse", "--verify", "--quiet", "HEAD"]).ok) return r.why;
+  return done(git(c, ["rm", "--cached", "-q", ...PATHS], listed(paths), true));
 }
 
 /** A file's changes not staged, discarded: the working tree back to the index's. */
 export function discardFile(c: Pick<Checkout, "root">, path: string): GitDone {
-  return done(git(c, ["restore", "--worktree", "--", posixPath(path)]));
+  return discardFiles(c, [path]);
 }
 
-/** Every change staged; every one unstaged. */
+/** Files' changes not staged, discarded, in one git call. */
+export function discardFiles(c: Pick<Checkout, "root">, paths: string[]): GitDone {
+  return paths.length ? done(git(c, ["restore", "--worktree", ...PATHS], listed(paths), true)) : null;
+}
+
+/** Every change staged. */
 export function stageAll(c: Pick<Checkout, "root">): GitDone {
   return done(git(c, ["add", "-A"]));
 }
+
+/**
+ * Every change unstaged: what's staged, file by file (in one call) — never `git reset`, which would end a merge under
+ * way. A file in conflict stays one, and the next commit is still the merge's.
+ */
 export function unstageAll(c: Pick<Checkout, "root">): GitDone {
-  const r = git(c, ["reset", "-q"]);
-  return r.ok ? null : done(git(c, ["rm", "-r", "--cached", "-q", "."]));
+  const r = git(c, ["status", "--porcelain=v1", "-z", "--untracked-files=no"]);
+  if (!r.ok) return r.why;
+  const staged = sections(parseEntries(r.out)).staged;
+  return unstageFiles(
+    c,
+    staged.flatMap((e) => (e.from ? [e.path, e.from] : [e.path])),
+  );
 }
 
 /** Another branch checked out (26.5): git's own refusal — a change it would overwrite — said in its words. */
@@ -137,18 +181,31 @@ export function createBranch(c: Pick<Checkout, "root">, name: string): GitDone {
   return done(git(c, ["switch", "-c", name]));
 }
 
-/** A commit message as git keeps it: its `#` lines and the blank lines around it gone; "" when nothing's left. */
-export function cleanMessage(text: string): string {
+/**
+ * A commit message as git keeps it: its comment lines (those starting with `comment`, `#` unless said; none when null)
+ * and the blank lines around it gone; "" when nothing's left.
+ */
+export function cleanMessage(text: string, comment: string | null = "#"): string {
   return text
     .split(/\r?\n/)
-    .filter((l) => !l.startsWith("#"))
+    .filter((l) => comment === null || !l.startsWith(comment))
     .join("\n")
     .replace(/^\s+|\s+$/g, "")
     .replace(/\n{3,}/g, "\n\n");
 }
 
 /**
- * A commit of what's staged (26.3), or the last one amended, with `message` (its `#` lines left out). In a root not
+ * What the commit editor's guide lines start with, as git's `core.commentChar = auto` picks it: `#`, unless a line of
+ * the message starts with one (`#12 fixed`, a Markdown heading) — then the first of git's others that none does.
+ */
+export function commentFor(message: string): string {
+  const lines = message.split(/\r?\n/);
+  return [..."#;@!$%^&|:"].find((ch) => !lines.some((l) => l.startsWith(ch))) ?? "#";
+}
+
+/**
+ * A commit of what's staged (26.3), or the last one amended, with `message` — its comment lines left out, those
+ * starting with `comment` (the editor's guide), none when null (the message box's text, as typed). In a root not
  * trusted its hooks don't run (`gitArgs`) and it isn't signed: the repository's own config could name the program that
  * signs. Not waiting on git — a hook can take a while. Its short hash and subject, or why it failed.
  */
@@ -156,8 +213,9 @@ export function commitLater(
   c: Pick<Checkout, "root">,
   message: string,
   amend: boolean,
+  comment: string | null = "#",
 ): Promise<{ hash: string; subject: string } | { why: string }> {
-  const body = cleanMessage(message);
+  const body = cleanMessage(message, comment);
   if (!body) return Promise.resolve({ why: "the message is empty: nothing committed" });
   const unsigned = isTrusted(c.root) ? [] : ["-c", "commit.gpgSign=false"];
   const args = [
@@ -200,7 +258,7 @@ export function replaceLines(text: string, at: number, count: number, put: strin
 
 /** The index's entry for a file: its mode (`100644`, `100755`), else a new file's. */
 function modeOf(c: Pick<Checkout, "root">, path: string): string {
-  const r = git(c, ["ls-files", "-s", "--", posixPath(path)]);
+  const r = git(c, ["ls-files", "-s", "--", posixPath(path)], undefined, true);
   return (r.ok && /^(\d{6}) /.exec(r.out)?.[1]) || "100644";
 }
 
