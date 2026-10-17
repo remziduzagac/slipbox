@@ -20,6 +20,7 @@ through OpenTUI itself, to prove the adapter and real key parsing.
 | `tests/vault.test.ts` | discovery, the walk against the fixture vault, the graph, the CLI and parity |
 | `tests/cli.test.ts` | the CLI as an agent meets it: the real process on a copy of the demo vault; every command |
 | `tests/tui.test.ts` | the TUI model, the real watcher, state, keymap, OpenTUI end to end |
+| `tests/tui-git.test.ts` | source control in the TUI: worktrees, marks, the diff window, review, merge, pull, rebase |
 | `tests/servers.test.ts` | slipbox as a client of language servers, against a fake one (`tests/fixtures/fake-lsp.ts`) |
 | `tests/regressions.test.ts` | one test per bug found in review (later: "review round/cycle N" blocks) |
 | `tests/home.test.ts` | the reference set's build (`scripts/build-home.ts`): histories, extras, the checks |
@@ -40,6 +41,12 @@ failing on a misspelling, a broken link or heading and a long line, and to readi
 in it) to vault for a vault, never root, plain folder or loose file, outside code and links' targets, past the names
 that keep the word ([roots.md](roots.md)); root's other meanings pass: the filesystem's root, running as root, a root
 cause, square roots (VV-D1).
+
+A test file stays under 1 MiB, the most Biome checks: past it, `bun run lint` fails on it. `tests/tui.test.ts` reached
+it, and source control's TUI tests went to `tests/tui-git.test.ts`. The two share their harness, `tests/tui-harness.ts`
+(a vault copied, the TUI driven, its rows read). `bun test` evaluates a module once a run, however many files import
+it, and an `afterAll` at its top would be the first file's alone: so each file calls `makeSandbox()` at its own top, for
+a sandbox of its own, removed when that file ends.
 
 Later reviews keep their regression tests in `describe("review round N …")` or `describe("review cycle
 N …")` blocks in the file for the area: `tui.test.ts`, `core.test.ts`, `vault.test.ts`,
@@ -81,7 +88,7 @@ as the TUI draws them once it's in, whichever file ran before. What's drawn whil
 process of its own. Nor does a test lean on the tests before it in its file: it makes the state it needs (a vault opened
 first, a state folder), so it passes alone, filtered or in order. The vaults a file's tests open stay on the machine's
 list, hundreds by its end: a test whose work reads them all (a link's target offered from every vault) runs with only
-its own listed (`onlyRootsUnder` in `tests/tui.test.ts`), or it slows with each test added before it.
+its own listed (`onlyRootsUnder` in `tests/tui-harness.ts`), or it slows with each test added before it.
 
 **Flaky tests are fixed, or quarantined by name; never retried.** No test is retried, by the runner or by itself: one
 that fails at random has a cause, in the code or in the test. It is fixed, the failure shown before the fix (in the bad
