@@ -307,6 +307,14 @@ You zoom in and out yourself:
 After you zoom out, the breadcrumb goes on, dimmed, to the folders you came from: `~ › work › ◈ kestrel › docs`, the
 view at `kestrel`. A click on one zooms back in.
 
+Here kestrel is open, and `-` has zoomed the view out to `~/work`. The breadcrumb ends at `◈ kestrel`, where the view
+came from. Another repository, infra, is beside kestrel, and each says its branch:
+
+![The explorer zoomed out to ~/work, its breadcrumb reading ~ › work › ◈ kestrel. Two repositories, infra and kestrel,
+are marked ◈ with their branch, main. kestrel, the vault open, is unfolded: its folders marked ● as indexed, build,
+node_modules, tmp and vendor marked ⊘ as not indexed, and docs and src marked • for their
+changes](../images/vaults-explorer.png)
+
 The view also zooms out by itself, when you go somewhere outside it: you open a note there, you follow a link to a file
 there, or you go into another vault. It becomes the folder holding both places, with only the paths to the two
 unfolded, and the breadcrumb leads on to where you went. It never zooms in by itself.
@@ -378,11 +386,12 @@ Say `~/notes/index.md` links into kestrel twice, once by a path and once by a po
 - The same file, by pointer: [kestrel architecture](slipbox://kestrel/docs/architecture.md).
 ```
 
-`enter` on either opens a peek titled `kestrel › docs/architecture.md`. Its bottom border lists its keys:
+`enter` on either opens a peek titled `kestrel › docs/architecture.md`. The status line still names the vault you
+are in, `notes`, and the peek's bottom border lists its keys:
 
-```text
-o go there · t keep as a tab · z fill · esc closes
-```
+![A peek over notes' index: kestrel's docs/architecture.md drawn in a large floating window titled kestrel ›
+docs/architecture.md, its bottom border reading o go there · t keep as a tab · z fill · esc closes, the status line
+still in notes](../images/vaults-peek.png)
 
 | Press | To |
 | --- | --- |
@@ -440,8 +449,23 @@ not indexed:
   outside.md       → /etc/hosts  not followed  ⊘
 ```
 
+Here the view is zoomed in on `notes/research`. `loop` leads back to `~/notes`, within the vault, so it never asks.
+`outside.md` leads to `/etc/hosts`, and isn't followed. `route-engine-spike`, a repository inside notes, is a vault of
+its own, marked `◈`:
+
+![The explorer zoomed in on ~/notes/research: loop → ~/notes; route-engine-spike marked ◈ as a vault, with its name and
+branch; gps-traces.md marked ⊘, too big to index; outside.md → /etc/hosts, not followed, marked
+⊘](../images/vaults-links.png)
+
 Opening it asks, titled `~/notes/research/outside.md → /etc/hosts leads out of notes: follow it?` (in Elsewhere,
-`… is a link: follow it?`). Each answer has its key:
+`… is a link: follow it?`). Under the answers, the one selected says what it allows here:
+
+![The question over a note: ~/notes/research/outside.md → /etc/hosts leads out of notes: follow it? A line says
+/etc/hosts is outside your home folder and agents see what's followed; then Follow it, Just look and No; under them,
+Follow it: read and indexed as notes's, never written to: it's outside the vault, kept for this link and where it
+leads](../images/vaults-link-question.png)
+
+Press `f`, `l` or `n`, or move to an answer and press `enter`:
 
 | Answer | What it does |
 | --- | --- |
