@@ -169,6 +169,11 @@ a file over the size cap, an unreadable one. The e2e scenarios of `world-*.ts` b
 parses or fails as it means to, that every note renders inside its width at four widths (`tests/render.test.ts`),
 and that no open in place gave its folders this machine's identity.
 
+**Git state a check makes.** A terminal check takes its notes and files from the samples, but the git state it needs
+it makes itself, with git, in its own home (D241): a repository's history and branches, a worktree, a bare repository
+as its remote, a conflict from a real merge or rebase, a rebase stopped. The source-control checks
+(`tests/terminal/checks/source-control.ts`) do so; the histories the set has for itself stay in `.build/`.
+
 ## The terminal tests (`bun run e2e`)
 
 The headless tests drive the model; these drive slipbox itself in a real terminal, a herdr pane,

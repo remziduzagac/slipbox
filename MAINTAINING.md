@@ -48,12 +48,16 @@ GitHub's releases are, with `SLIPBOX_RELEASES_URL`. A person able to take over w
 
 ## Merging a change
 
-Every change reaches `main` through a pull request: the rules on `main` require one, and require the `ci` check, which
-runs everything on Linux and macOS, to pass. No approval is required, since there is no second person to give one.
+Every change reaches `main` through a pull request: the rules on `main` require one, and require the `ci` check to
+pass. For a pull request, `ci` runs the tests and the terminal checks its change reaches, on Linux and macOS; after
+the merge, `main` runs everything (D239). No approval is required, since there is no second person to give one.
 
 - **Who:** agents and collaborators work on a branch and open the pull request; the maintainer merges it. Agents never
   merge, release, tag, push `test` or change settings.
 - **How:** squash is the only merge method, so `main` has one commit per change. The branch is deleted once merged.
+- **Up to date:** a branch needn't be up to date with `main` to merge, and there's no merge queue (D242). When `main`
+  has moved under the files a pull request changes, update its branch (`gh pr update-branch <n>`) and let CI run
+  again first. A failure on `main` that a pull request didn't reach gets a pull request of its own.
 - **The title** is a [Conventional Commit](https://www.conventionalcommits.org/en/v1.0.0/), and becomes the squashed
   commit's subject: `fix(export): …`, `feat(cli): …`, `docs: …`, `refactor`, `perf`, `test`, `build`, `ci`, `chore`; a
   `!` before the colon marks a breaking change (`feat(cli)!: …`).
