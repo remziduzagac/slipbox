@@ -112,8 +112,9 @@ The format is [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.1.0/); wh
   have their own tabs. Starting slipbox in `~` starts in home, instead of a folder listed a level at a time. Home is
   indexed a little at a time while nobody is working, leaving out hidden folders, `Downloads`, the system's folders,
   busy folders such as `node_modules`, and what isn't a note or a text file; it holds 10,000 notes at most, and says so
-  when it's full. The background index indexes home's notes before the vaults in it. `slipbox info` says `mode`
-  `home` there ([Home](docs/manual/links-and-vaults.md#home)).
+  when it's full. A folder of home you open, such as `slipbox ~/notes`, or a note in one, has its notes at once, and
+  the folder's first note opens, as before. The background index indexes home's notes before the vaults in it.
+  `slipbox info` says `mode` `home` there ([Home](docs/manual/links-and-vaults.md#home)).
 - The explorer lists `node_modules`, the other folders tools fill (`build`, `dist`, `target`, `vendor`, `__pycache__`,
   caches…), what `.gitignore` and `walk.exclude` leave out, and home's `Downloads`, each marked `⊘`. You can unfold
   them and open their files; nothing in them is indexed. A folder you may not read is listed too, marked `⚿`. Every

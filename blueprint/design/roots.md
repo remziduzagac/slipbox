@@ -87,6 +87,14 @@ so the watcher lists again the folders changed since. So an agent's note made in
 and a folder made a vault by hand (`git init`) leaves home. Never walked, home is its top alone (`walkTop`): its notes
 and files, the vaults in it, its folders listed but not looked into.
 
+A folder of home asked for by name is what was asked for: opened (`slipbox ~/notes`), or a file in it opened, it's
+walked at once when home's walk doesn't cover it (never made, or its cap reached short of it), with home's skip list
+and as far as its cap, and merged into home's walk as the graph is built (`Graph.askFolder`, `homeWalk`'s `asked`), at
+each build after too, until home's walk covers it. That walk isn't kept: home's own, still made while nobody is
+working, covers it, and a start after finds the folder in it, walked once. One home's skip list leaves out
+(`~/Downloads`), or behind a link the walk doesn't go through (§ Links followed only when you say so), isn't walked
+(`walksInto`).
+
 The background index (`AutoIndex`, § The index) walks home first in each pass, finding the vaults in it as it did,
 keeps the walk, builds home's index, then indexes the vaults it found; its progress is version 2 (`home`, `homeNotes`,
 `capped`, the queue now the vaults left), and home's walk, quick beside the vaults, is made again after a restart. With
@@ -104,11 +112,13 @@ from a walk kept that reached it says nothing more. Past the cap, the background
 still looks in the folders it left for vaults, a level at a time, home's skip list held (`seek`, kept with its place).
 
 **What's shown.** The status line names home `~`; `info` says `mode` `home` (an addition to schema 1's values), the
-Info view and `stat` `home (~)`. Started in `~`, nothing opens over the explorer: home is the vault. The explorer is
-home's tree from its walk, and what home's skip list leaves out is listed there, never indexed ([tui.md](tui.md) § Side
-panes). A link, a backlink or a search hit from another vault into a note of home's peeks at it as at any vault's,
-titled `~ › todo.md`; slipbox's own files under `~` (`slipboxOwn`: the scratch in its state folder) are no note of
-home's, opened as they are, never gone into.
+Info view and `stat` `home (~)`. Started in `~`, nothing opens over the explorer: home is the vault. Started on a
+folder of home with no session to restore, the folder's own `index.md`, `README.md` or `home.md` opens, else its first
+note by path, never another of home's (`defaultNote`); none, nothing opens (a vault's folder opens the vault's). The
+explorer is home's tree from its walk, and what home's skip list leaves out is listed there, never indexed
+([tui.md](tui.md) § Side panes). A link, a backlink or a search hit from another vault into a note of home's peeks at
+it as at any vault's, titled `~ › todo.md`; slipbox's own files under `~` (`slipboxOwn`: the scratch in its state
+folder) are no note of home's, opened as they are, never gone into.
 
 Not done: the vaults inside a folder home's skip list leaves out (a clone in `~/Downloads`) are no longer found by the
 background index, only when opened, and nor is a vault whose own folder is hidden or has a busy folder's name

@@ -333,9 +333,11 @@ A file there still opens, and is read again when it changes on disk, but it is n
 folders, marked `⊘`, except the hidden ones.
 
 Home is walked a little at a time while nobody is working, by the background index (see [Backlinks](#backlinks)), or
-by the TUI while home is open and the background index is off. Until then, home is its top folder alone. The walk is
-kept, so opening home never walks it again: the files it found are looked at, and a folder that changed is listed
-again. The command line walks home the first time it needs to, and `slipbox index --refresh ~` walks it again.
+by the TUI while home is open and the background index is off. Until then, home is its top folder alone, and the folder
+you opened: `slipbox ~/notes` walks `~/notes` at once, so its notes are there and its first note opens, and
+`slipbox ~/notes/inbox.md` walks the note's folder the same way. The walk is kept, so opening home never walks it
+again: the files it found are looked at, and a folder that changed is listed again. The command line walks home the
+first time it needs to, and `slipbox index --refresh ~` walks it again.
 
 Home's index holds 10,000 notes at most, and its walk lists 5,000 folders at most, those nearest the top first.
 slipbox says so when it stops there, in a message and in `slipbox info`.
