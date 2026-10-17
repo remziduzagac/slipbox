@@ -297,7 +297,7 @@ environment, which takes deployments from `main`, `test` and `v*` tags only.
 ## The documentation site
 
 **The site** (`site/`, DS-D1) is an Astro Starlight project of its own: its packages in `site/package.json`, exact,
-under the root's install gates in `site/bunfig.toml` (no install script, a week's age), checked by
+under the repository's own install gates, repeated in `site/bunfig.toml` (no install script, a week's age), checked by
 `bun run check:deps` (`siteProblems`), updated by Dependabot with the rest. It's served at
 `https://<owner>.github.io/<name>/docs/` (`base: /slipbox/docs`), with Starlight's search (Pagefind, built with the
 site), its sidebar, light and dark themes, and an edit link on each page. Pictures pass through as they are (no image

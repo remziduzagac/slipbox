@@ -1,7 +1,9 @@
 # Roadmap
 
 Status: **initial design settled** (D210, 2026-10-11); phases 0–6+ built. The repository is public on GitHub and kept
-to greenrepo (GR, consolidated 2026-10-13), and 0.2.1, the first release, is out (2026-10-12). Next: native Windows
+to greenrepo (GR, consolidated 2026-10-13), and 0.2.1, the first release, is out (2026-10-12). Vaults and the
+explorer's view (VV) and reviewing, diffing and merging (GIT) are built and consolidated (2026-10-17), their docs being
+written. Next: native Windows
 (`14.14`–`14.17`); and, open in ideas.md, the skill as an npx package for common harnesses and how agents and slipbox
 work together (§ Agent surface), and search's improvements (§ Search).
 
@@ -644,22 +646,24 @@ and GIT.*
 
 ## Vaults and the explorer's view
 
-*Not a phase. Accepted 2026-10-15, settled in conversation the day before; the git workstream follows it.*
+*Not a phase. Accepted 2026-10-15, settled in conversation the day before; the git workstream follows it. Built
+2026-10-15 to 17; consolidated 2026-10-17, VV-T9's docs and screenshots still being written.*
 
-- [ ] **[Vaults and the explorer's view](workstreams/vaults-and-view/README.md)** (VV): "vault" for every folder with a
-  marker, home a vault without one, Elsewhere for the rest; the explorer as one tree, its view zoomed, a breadcrumb;
-  links followed only when allowed; another vault's file in a peek; busy folders listed, a row's marks at its right;
-  the git panel following the vault.
+- [x] **[Vaults and the explorer's view](workstreams/archive/vaults-and-view/README.md)** (VV): "vault" for every
+  folder with a marker, home a vault without one, Elsewhere for the rest; the explorer as one tree, its view zoomed, a
+  breadcrumb; links followed only when allowed; another vault's file in a peek; busy folders listed, a row's marks at
+  its right; the git panel following the vault (consolidated 2026-10-17).
 
 ## Git: reviewing, diffing and merging
 
-*Not a phase. Accepted 2026-10-15, after VV, whose vaults it follows.*
+*Not a phase. Accepted 2026-10-15, after VV, whose vaults it follows. Built 2026-10-15 to 17; consolidated
+2026-10-17, GIT-T8's docs and screenshots still being written.*
 
-- [ ] **[Reviewing, diffing and merging what an agent changed](workstreams/git-review/README.md)** (GIT): an agent's
-  change reviewed a hunk at a time, kept, reverted or noted; the git panel by mouse, with the branch's changes, the
-  branches and their worktrees, each against its own base; fetch, pull, push and stash (`26.6`); diffs with their
+- [x] **[Reviewing, diffing and merging what an agent changed](workstreams/archive/git-review/README.md)** (GIT): an
+  agent's change reviewed a hunk at a time, kept, reverted or noted; the git panel by mouse, with the branch's changes,
+  the branches and their worktrees, each against its own base; fetch, pull, push and stash (`26.6`); diffs with their
   changed words, a note's before and after, code's scrolling sideways and side by side; a merge screen, with pulling
-  where both sides moved and rebasing onto the base.
+  where both sides moved and rebasing onto the base (consolidated 2026-10-17).
 
 ## Later
 

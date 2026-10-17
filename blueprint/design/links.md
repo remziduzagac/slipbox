@@ -1,6 +1,6 @@
 # Links
 
-How slipbox reads, resolves, writes and repairs links: one model inside, every tool's forms at the edges (D68). Roots,
+How slipbox reads, resolves, writes and repairs links: one model inside, every tool's forms at the edges (D68). Vaults,
 which give links their scope, are [roots.md](roots.md). Following each form in the TUI is [tui.md](tui.md) § Following
 links; how a link is drawn, [rendering.md](rendering.md) § Blocks and inlines; the CLI's words,
 [docs/manual/cli.md](../../docs/manual/cli.md) § `resolve` and § Moving, copying and deleting.
@@ -10,22 +10,22 @@ links; how a link is drawn, [rendering.md](rendering.md) § Blocks and inlines; 
 Every link, whatever its written form, is read as a file and a fragment (`#heading`, `#^block`, `#L42`). Everything
 behind the reading works on that: the index, backlinks, renames, repairs, the merge review and plans see only paths
 (D68; the resolver is `core/graph-resolve.ts`, behind `resolveLink`, over `core/links.ts`). A path resolves without
-the index: its target exists or it doesn't (D56). A wikilink's name needs the index of its root (D71). A broken link
+the index: its target exists or it doesn't (D56). A wikilink's name needs the index of its vault (D71). A broken link
 stays broken until it is repaired, never resolved quietly by a name or a remembered move (D56, D78). The index makes
 lookups fast and gives backlinks; it never decides where a link points (D61).
 
 ## Forms
 
 Each written form has a reader, and each but `~/` a writer: a rename writes a link back in its own form (§ Renames
-and moves), and the links slipbox makes follow the root's convention (§ Conventions).
+and moves), and the links slipbox makes follow the vault's convention (§ Conventions).
 
 | Written as | Read as |
 | --- | --- |
 | `[t](../docs/plan.md)` | relative to the file: what slipbox writes by default (D56) |
-| `[t](/docs/plan.md)` | from the nearest root; if nothing is there, the filesystem's path (D70) |
+| `[t](/docs/plan.md)` | from the nearest vault's top; if nothing is there, the filesystem's path (D70) |
 | `[t](plan)` | an extensionless path: the file, else `plan.md`, else a folder (D81) |
 | `[t](docs/)` | a folder: revealed in the explorer when followed (D81) |
-| `[[plan]]`, `[[docs/plan#Aims\|a]]` | a wikilink, by name or path, within its root (D71) |
+| `[[plan]]`, `[[docs/plan#Aims\|a]]` | a wikilink, by name or path, within its vault (D71) |
 | `[t](file:///home/me/x.md)` | the filesystem's path (D48) |
 | `[t](~/notes/x.md)` | the home folder's path: read, never written (D48) |
 | `[t](slipbox://research/x.md)` | a named folder's path: a pointer (D75) |
@@ -43,46 +43,48 @@ A markdown link's path (`resolvePath` in `core/graph-resolve.ts`, `resolveMarkdo
   the repository is cloned; `~/…`, absolute paths and links between repositories depend on how the machine is laid
   out (D56). A path is percent-decoded, and a note is found by its own spelling, case aside: `[t](Plan.md)` reaches
   `plan.md` on every filesystem, as a name does (D41).
-- **A leading `/`** starts from the nearest root; when nothing is there, it is the filesystem's path. In a plain
-  folder, with no root, `/` is the filesystem's alone (D70).
+- **A leading `/`** starts from the nearest vault's top, home's among them; when nothing is there, it is the
+  filesystem's path. In Elsewhere, with no vault, `/` is the filesystem's alone (D70, VV-D3).
 - **A path without an extension** is the file as written, else its note (`plan` → `plan.md`, `plan.markdown`), else a
   folder (D81), as zk, mkdnflow and Typora write them.
 - **A link to a folder** resolves and is never broken: followed, the folder is revealed in the explorer, unfolded and
-  focused (one outside the root, in its own root); a move of the folder rewrites it (D81).
-- **Filesystem paths,** for what other editors and agents write: `../` out of the root, `~/` (the home folder), an
-  absolute path, a `file://` URL. A path out of the root reaches the file in whichever root holds it; a path landing
-  in this root is its note or file like any other link's, and a backlink (D48). A wikilink takes only the relative
+  focused (one outside the vault in its own vault, which the TUI goes into: [tui.md](tui.md) § Going into a vault); a
+  move of the folder rewrites it (D81).
+- **Filesystem paths,** for what other editors and agents write: `../` out of the vault, `~/` (the home folder), an
+  absolute path, a `file://` URL. A path out of the vault reaches the file in whichever vault holds it, home and
+  Elsewhere included, and the TUI peeks at it when it's followed ([tui.md](tui.md) § The peek; VV-D7); a path landing
+  in this vault is its note or file like any other link's, and a backlink (D48). A wikilink takes only the relative
   form (`[[../app/x]]`), its note found without an extension (`.md`, `.markdown`).
-- **Into a nested root:** a path from this root into a root nested in it (`[t](outreach/index.md)`,
-  `[[outreach/index]]`) reaches the note there, as a path out of the root does (D48).
+- **Into a nested vault:** a path from this vault into a vault nested in it (`[t](outreach/index.md)`,
+  `[[outreach/index]]`) reaches the note there, as a path out of the vault does (D48).
 - **In a worktree,** a relative path out of the repository is taken from the main checkout: `../y/plan.md` names the
   sibling repository beside the main one, wherever the worktree is kept; inside the repository, the worktree's own
   (D54).
-- **Broken:** a path that reaches nothing is broken, whatever moved (D56). A broken `/x.md` or `x` inside the root
-  offers to make the note when followed; a `/…` naming no folder of the root (an unplugged drive's path) offers none
+- **Broken:** a path that reaches nothing is broken, whatever moved (D56). A broken `/x.md` or `x` inside the vault
+  offers to make the note when followed; a `/…` naming no folder of the vault (an unplugged drive's path) offers none
   ([tui.md](tui.md) § Following links).
 
 Code and data files have links of their own: in a code comment a path names a file relative to the file, then to its
-root, a leading `/` too, and `path:42` its line (`16.10`; [tui.md](tui.md) § Files beyond notes); a data file's
+vault's top, a leading `/` too, and `path:42` its line (`16.10`; [tui.md](tui.md) § Files beyond notes); a data file's
 reference keys and path-like values are links relative to the file (`16.15`; [rendering.md](rendering.md) § Data
 files). Neither has wikilinks.
 
 ## Wikilinks
 
 A wikilink is read by a micromark extension, never inside code (`core/wikilink.ts`; [rendering.md](rendering.md) §
-The wikilink tokenizer), and resolved within its root (D71; `resolveWiki` in `core/graph-resolve.ts`, `LinkIndex` in
+The wikilink tokenizer), and resolved within its vault (D71; `resolveWiki` in `core/graph-resolve.ts`, `LinkIndex` in
 `core/links.ts`):
 
-- **Forms.** `[[name]]` matches file names without their extension; `[[dir/name]]` a path from the root
+- **Forms.** `[[name]]` matches file names without their extension; `[[dir/name]]` a path from the vault's top
   (`[[Recipes/Weeknight/Dal]]`), else a path's end aligned on segments; `[[name.md]]` is accepted, an extension
   narrowing the candidates to files with it. `#heading`, `#^block` and `|alias` are split off first; `\|` divides an
   alias too, as a wikilink inside a table cell is written. A bare `^block` (`[[name^id]]`) only when an id (letters,
   digits, `-`) follows the caret and no `#` comes before it: `[[n#O(n^2)]]` is a heading. A relative wikilink starts
   `./` or `../` and is a path from the linking note, never a name (D83). An empty one, `[[#Heading]]`, is this note.
-- **What it reaches,** in order: a note by its name (its file's) or by its path; a path out of the root or into a
-  root nested in it; an attachment, relative to the note, then from the root, then by its file name anywhere in the
-  root, as Obsidian finds one (`![[dal.png]]`), but in a Markdown export's pictures, whose copies would answer for the
-  pictures they were copied from: a folder named `*.export.assets/`, or any `<name>.assets/` beside a note
+- **What it reaches,** in order: a note by its name (its file's) or by its path; a path out of the vault or into a
+  vault nested in it; an attachment, relative to the note, then from the vault's top, then by its file name anywhere in
+  the vault, as Obsidian finds one (`![[dal.png]]`), but in a Markdown export's pictures, whose copies would answer for
+  the pictures they were copied from: a folder named `*.export.assets/`, or any `<name>.assets/` beside a note
   `<name>.md` (or `.markdown`) that carries the export's mark, `generator: slipbox`, in its front matter (DF-D18,
   DF-D25; `exportPicturesFolder` in `core/graph-resolve.ts`, the mark read again when the note changes) — unless the
   name goes through such a folder (`[[report.export.assets/dal.png]]`, `[[book.assets/dal.png]]`); a note by an alias
@@ -95,8 +97,9 @@ The wikilink tokenizer), and resolved within its root (D71; `resolveWiki` in `co
   the one in the deepest folder shared with it; then the shortest path. A real tie is ambiguous: every candidate
   returned, picked when followed, never guessed (exit 4 in the CLI) (D41, D71). A tie broken by where the link is, is
   fragile (§ How a link landed).
-- **Scope.** A root nested inside ends its names: a path into it is a path. A file with no root has no names: a
-  wikilink there resolves to nothing, with a hint saying what makes a root (D71).
+- **Scope.** A vault nested inside ends its names: a path into it is a path. Home's names are its own notes'.
+  Elsewhere has no names: a wikilink there resolves to nothing, saying what makes a vault (`names need a vault, and
+  this folder is in none: .git, .slipbox/, .obsidian/ or .zk/ makes one`) (D71, VV-D3).
 - **Not read:** a note's previous names, `[[vault:note]]` and remembered moves; only the converter reads them (§ The
   converter). A wikilink naming a folder the old way is flagged (§ Repairs).
 
@@ -150,8 +153,8 @@ Every link that reaches a file or folder says how it landed, and every resolutio
 check flags a fragile tie and another ref.
 
 A link won by where it is written (the deepest shared folder, the shortest path) is **fragile**: a note of the name
-nearer would take it. The link check says so (`fragile`) with the path that names its note for sure (from the root,
-or `./x`, `../x` for a top-level note), and the fix is a code action. A note coming or going that sends a link by
+nearer would take it. The link check says so (`fragile`) with the path that names its note for sure (from the vault's
+top, or `./x`, `../x` for a top-level note), and the fix is a code action. A note coming or going that sends a link by
 name elsewhere (a nearer namesake, a note named like an alias) is said, as a TUI message and the CLI's warning, not
 only when a link breaks or heals; it is checked only when another note or an alias has the new note's name, so a
 unique name costs nothing (`namesakeLinks`). The TUI's words: [tui.md](tui.md) § Following links; the CLI's:
@@ -172,7 +175,7 @@ GitHub's `/blob/<ref>/`, `/tree/<ref>/`, `/raw/<ref>/`; GitLab's `/-/blob/<ref>/
 `/-/raw/<ref>/` (groups nested); Bitbucket's `/src/<ref>/`, with its `#markdown-header-` headings; a repository's own
 page (`host/owner/repo`), and `#readme` (its README). The shapes are read on any host. It counts when the URL is one of
 this checkout's remotes, or a named folder's by its remote (`hostedHere` in `core/hosting.ts`). Such a link resolves
-(`how` and `via` both `hosting`), is a backlink within its root and from other roots (§ Backlinks), is followed, is
+(`how` and `via` both `hosting`), is a backlink within its vault and from other vaults (§ Backlinks), is followed, is
 checked by the merge review (§ The merge review), and a rename rewrites the URL's path after the ref in place, the
 URL keeping its form. A ref other than the branch checked out (`HEAD` is it) is inferred, and the link check says so
 (`other-ref`); when the path as first split isn't there, a branch with `/` is told by the repository's branches, the
@@ -180,28 +183,29 @@ longest that is.
 
 ## Conventions
 
-A root's convention says how the links slipbox makes are written (`core/convention.ts`; D72, D82). It has three
-parts: style (markdown or wiki), path (relative, from the root, or by name) and extension (kept or dropped). Each part
+A vault's convention says how the links slipbox makes are written (`core/convention.ts`; D72, D82). It has three parts:
+style (markdown or wiki), path (relative, from the vault's top, or by name) and extension (kept or dropped). Each part
 is the first that says:
 
-1. the user's setting: `[links]` in the root's `.slipbox/config.toml`, over the user's own config;
-2. the setting of the tool that owns the root: Obsidian's `.obsidian/app.json` (`useMarkdownLinks`, wikilinks when it
+1. the user's setting: `[links]` in the vault's `.slipbox/config.toml`, over the user's own config;
+2. the setting of the tool that owns the vault: Obsidian's `.obsidian/app.json` (`useMarkdownLinks`, wikilinks when it
    is unset; `newLinkFormat`, "shortest" when unset, read as by name, "relative" as relative, "absolute" as from the
-   root; `.md` kept in a markdown link and dropped in a wikilink), zk's `.zk/config.toml` (`link-format`, "markdown"
-   when unset, a markdown link from the note and a wikilink from the notebook's top, a custom template saying
+   vault's top; `.md` kept in a markdown link and dropped in a wikilink), zk's `.zk/config.toml` (`link-format`,
+   "markdown" when unset, a markdown link from the note and a wikilink from the notebook's top, a custom template saying
    nothing; `link-drop-extension`, dropped unless it is false);
-3. the root's notes, when one form has two-thirds or more of their links to the root's own notes (6 of 9 is a
-   majority); links out of the root, to files, broken, or written as a URL or with `~/` aren't counted;
+3. the vault's notes, when one form has two-thirds or more of their links to the vault's own notes (6 of 9 is a
+   majority); links out of the vault, to files, broken, or written as a URL or with `~/` aren't counted;
 4. else ours: markdown, relative, `.md` kept.
 
 The style is found first; the path and extension within it: a tool's as it writes that style, the notes' counted
-among their links of that style. A style already chosen (`](` typed in a wikilink root) keeps it, the path and
+among their links of that style. A style already chosen (`](` typed in a wikilink vault) keeps it, the path and
 extension then that style's. A markdown link is never by name, since slipbox reads it as a path: a "shortest"
 Obsidian setting says nothing of one, and the next source answers (D82).
 
-One convention per root: every note in a root writes the same way, whichever note the link is made in (D72). A root
-mixing forms, with none at two-thirds, writes ours unless the user sets one. A folder with no root has the user's
-setting where it can apply, else ours: it reads no wikilink and no path from a root, so there `style = "wiki"` writes
+One convention per vault: every note in a vault writes the same way, whichever note the link is made in (D72); home's
+is found as any vault's. A vault mixing forms, with none at two-thirds, writes ours unless the user sets one.
+Elsewhere has the user's setting where it can apply, else ours: it reads no wikilink and no path from a vault's top,
+so there `style = "wiki"` writes
 a markdown link and `path = "root"` or `"name"` a relative one, a wikilink typed by hand staying one with its path
 relative; the extension is the user's. `slipbox info` and the Info view say each part and what said it. The
 convention decides only the links slipbox makes; a rename keeps each link's own form (§ Renames and moves). The keys:
@@ -209,14 +213,14 @@ convention decides only the links slipbox makes; a rename keeps each link's own 
 
 ## Links slipbox writes
 
-Completion (`](` and `[[`), the link picker (`space l i`) and `slipbox link` all write through `core/write-link.ts`,
-in the root's convention (D83). A markdown link's text is the note's title, a wikilink has none unless one is given
+Completion (`](` and `[[`), the link picker (`space l i`) and `slipbox link` all write through `core/write-link.ts`, in
+the vault's convention (D83). A markdown link's text is the note's title, a wikilink has none unless one is given
 (`[[dest|text]]`, when the text isn't what the link shows by itself). A wikilink is a name only where the name reaches
-the note from the linking file; else its path from the root, a top-level note's path being its name, or a relative
-path (`./plan`, `../plan`): never a name that would land elsewhere. With the path from the root, a markdown link is
-written `/docs/plan.md`. A file outside the root follows § Between folders: its pointer when a named folder holds it
-and the two don't travel together, else a relative path, its extension kept. A pointer is always written as a
-markdown link, in a wikilink root too, since a wikilink reads none (D75). Its name is said when it's private or
+the note from the linking file; else its path from the vault's top, a top-level note's path being its name, or a
+relative path (`./plan`, `../plan`): never a name that would land elsewhere. With the path from the vault's top, a
+markdown link is written `/docs/plan.md`. A file outside the vault follows § Between folders: its pointer when a named
+folder holds it and the two don't travel together, else a relative path, its extension kept. A pointer is always written
+as a markdown link, in a wikilink vault too, since a wikilink reads none (D75). Its name is said when it's private or
 different folders share it, and in the TUI a shared one is asked about before anything is written (§ Pointers,
 "Written"; D74, D83).
 
@@ -231,7 +235,7 @@ A link from one file to another is written (D73; `travelTogether` in `core/folde
 
 1. in the file's convention, when the two travel together: one clone, or one folder moved as a whole, carries both
    (the same repository; a repository and a submodule it records; outside git, one folder inside the other);
-2. as a pointer, `slipbox://<name>/<path from its root>#fragment`, when the target is in a named folder (§ Pointers;
+2. as a pointer, `slipbox://<name>/<path from its top>#fragment`, when the target is in a named folder (§ Pointers;
    [roots.md](roots.md) § Named folders);
 3. otherwise as a relative path, which works while the folders are laid out alike.
 
@@ -263,16 +267,16 @@ when its target is in a named folder (§ Repairs).
 - **Followed:** an unknown name, or a copy that isn't here, says why ("`notes` isn't on this machine yet: open it, or
   let the index find it"), never offering a note by that name; a name of different folders lists each, and offers
   renaming a `.slipbox/` one (the parent folder's name prefixed, the config edit previewed). A pointer from a file of
-  no root follows like a URL. A private name's pointers work on this machine only.
+  Elsewhere's follows like a URL. A private name's pointers work on this machine only.
 - **Kept:** backlinks count another folder's pointers, as of its index; a rename keeps a pointer one, by its name,
   branch and form as written, while the target stays in that folder (§ Renames and moves); an old name stays until
   the relink; a whole named folder moved rewrites no pointer, since the lookup finds it again.
 - **Agents** resolve a pointer as any link (`slipbox resolve slipbox://notes/inbox.md` gives the path), and every note
   argument takes one ([docs/manual/cli.md](../../docs/manual/cli.md) § Naming a note).
 
-A named folder made a plain folder of its parent (`slipbox deinit`, `shift+v` on its row in the explorer) takes its
+A named folder made part of its parent again (`slipbox deinit`, `shift+v` on its row in the explorer) takes its
 name with its `.slipbox/`, so the pointers by it are rewritten in that plan, previewed with the rest (D74, D75, D149):
-in its own notes, the parent's, and every other root's this machine reaches, as of their last indexing (§ Backlinks).
+in its own notes, the parent's, and every other vault's this machine reaches, as of their last indexing (§ Backlinks).
 Each becomes what a link to where its file now is gets (§ Between folders): a relative path where the two travel
 together, else the parent's pointer when the parent is named, else a relative path. One at a branch becomes the
 parent's pointer at that branch, or, the parent unnamed, is left and said; one opening another copy of the folder is
@@ -282,18 +286,19 @@ left, as it still reaches one.
 
 Backlinks are derived from the index, never stored in files, and complete for what is indexed: indexing more only
 adds backlinks, never changes where a link points (D61). Where a link points depends on where the file is, so links
-are resolved, and backlinks derived, per root (D76); names never cross roots.
+are resolved, and backlinks derived, per vault (D76); names never cross vaults. Elsewhere has no index, and so no
+backlinks, said so rather than shown empty (VV-D3).
 
-- **Within the root,** notes, data files and code files all link: a data file's values and a code comment's paths
+- **Within the vault,** notes, data files and code files all link: a data file's values and a code comment's paths
   are backlinks of what they name, as links to attachments and folders are.
-- **From other roots,** a note's links into this one by path (relative, `~/`, absolute, `file://`, a wikilink's
-  `../`), by pointer, or by this repository's hosting URL count, as of that root's last indexing, read from its saved
-  index (D48, D87; `core/reach.ts`). Each is read as that root reads it: a pointer by the folder this machine has of
-  that name; a hosting URL by that root's own checkout's remote, else the named folder of that remote, so it counts
-  in the copy its link opens. Only roots this machine knows count, and only while their folder is there: an
-  unplugged drive's drop out until it is back. Another root's data and code files don't count: its saved index holds
-  its notes' links only.
-- **Roots nested in this one, or holding it,** are recorded and indexed when a link or a backlink needs them, so their
+- **From other vaults,** home among them (VV-D2), a note's links into this one by path (relative, `~/`, absolute,
+  `file://`, a wikilink's `../`), by pointer, or by this repository's hosting URL count, as of that vault's last
+  indexing, read from its saved index (D48, D87; `core/reach.ts`). Each is read as that vault reads it: a pointer by the
+  folder this machine has of that name; a hosting URL by that vault's own checkout's remote, else the named folder of
+  that remote, so it counts in the copy its link opens. Only vaults this machine knows count, and only while their
+  folder is there: an unplugged drive's drop out until it is back. Another vault's data and code files don't count: its
+  saved index holds its notes' links only.
+- **Vaults nested in this one, or holding it,** are recorded and indexed when a link or a backlink needs them, so their
   links count without their having been opened on this machine (D48).
 - **A worktree's links don't count:** its notes are copies of the main checkout's (D54).
 - **Unsaved text:** in the TUI, a note's unsaved text stands in for its links, tags and aliases while it is held, so
@@ -301,30 +306,30 @@ are resolved, and backlinks derived, per root (D76); names never cross roots.
 
 ## Renames and moves
 
-A rename or move in slipbox rewrites exactly the files linking in, found by backlinks (another root's links and
+A rename or move in slipbox rewrites exactly the files linking in, found by backlinks (another vault's links and
 pointers, data files' values and code comments' paths included), and a moved file's own relative links when its
 folder changes, a code or data file's as a note's: previewed, undoable, a plan in the CLI (D63, D143;
 `core/rename.ts`). Each link keeps its form (D72, D81, D83):
 
 - a wikilink stays a wikilink, a path a path, `./` kept, an extension kept or left off as written, a folder's
   trailing `/` kept, percent-encoding and `<…>` kept, a reference definition rewritten where it is;
-- `/…` stays from the root while the root holds the target; an absolute path stays absolute, `~/` stays from home
-  while the file is under it, `file://` stays a URL;
+- `/…` stays from the vault's top while the vault holds the target; an absolute path stays absolute, `~/` stays from
+  home while the file is under it, `file://` stays a URL;
 - a pointer stays a pointer, by its name, branch and form, while the target stays in that folder; moved into another
   named folder, it becomes that folder's pointer, and out of every named folder a path;
 - a hosting URL keeps its form, only its path after the ref replaced;
-- a wikilink by name stays a name while no other note has the new name and the note stays in the root; else it
+- a wikilink by name stays a name while no other note has the new name and the note stays in the vault; else it
   becomes a path;
-- a moved code file's comment path written beside it is rewritten from where it goes, its `:42` kept; one the root
-  still reaches (read from the root when nothing is beside the file), and a `/…`, stays; a data file's value keeps
+- a moved code file's comment path written beside it is rewritten from where it goes, its `:42` kept; one the vault
+  still reaches (read from its top when nothing is beside the file), and a `/…`, stays; a data file's value keeps
   its `./` and its fragment (`#/definitions/User`), and neither is percent-encoded, being no URL.
 
 **Where a move or a copy lands** (DF-D4, DF-D20). A new path typed for a move — `slipbox mv`, `space n m`, `:mv` —
 or for a copy — `slipbox cp` — that is a folder already, or ends in `/`, means into it: the note, file or folder
 keeps its name there (`slipbox mv note.md ideas/` makes `ideas/note.md`). A path ending in `/` is always a folder to
 go into, made when it isn't there yet: `slipbox mv drafts archive/` makes `archive/drafts`, never renaming `drafts`
-to `archive`, as the shell's `mv` would (DF-D21). The root itself is such a folder: `/` in the TUI; in the CLI, the
-root's path, or `.`, `./` at its top. A copy into the folder it is in already goes beside it as `name-copy`, as a
+to `archive`, as the shell's `mv` would (DF-D21). The vault's top is such a folder: `/` in the TUI; in the CLI, the
+vault's path, or `.`, `./` at its top. A copy into the folder it is in already goes beside it as `name-copy`, as a
 paste there does. Any other path is the whole new path, a note's extension added when it has none; anything already
 there is refused, never overwritten, and so is a path under a file (`slipbox cp a.md b.md/`). In the CLI, `.` and
 `..` are from the current folder, as `./` and `../` are; a move's plan (`--dry-run`, `--plan`) holds the path it
@@ -346,14 +351,14 @@ once indexed, and the repair applies (§ Repairs). Keys and the preview: [tui.md
   index is built, and in the watcher, where a removal and an arrival within a minute, in either order, pair; two of
   one text gone and one come (or the other way) are no move, and a note back where it was is none either. A broken
   path link whose file was seen to move says "moved to …", and slipbox offers the relink once for each batch of
-  moves. Moves seen, slipbox's own included, are kept in the root's state (`redirects.json`, the newest 5,000) as
+  moves. Moves seen, slipbox's own included, are kept in the vault's state (`redirects.json`, the newest 5,000) as
   evidence, never to resolve a link (D56). The files of a branch switch aren't paired as moves (D153).
 - **The relink** (`slipbox relink`, `space l r`) rewrites, each in its own form: a link broken by a move seen; a
   pointer by a name its folder had, to the name it has; a path into a named folder that doesn't travel with this one,
-  to its pointer; and the links the root's own last move broke (D63, D78).
+  to its pointer; and the links the vault's own last move broke (D63, D78).
 - **A named folder moved or renamed on disk** needs no link edited: pointers name it, and the lookup finds it again.
   Only relative links between folders that don't travel together break; the relink offers their pointers. A named
-  folder moved by hand has its relink offered at once ([roots.md](roots.md) § State by root).
+  folder moved by hand has its relink offered at once ([roots.md](roots.md) § State by vault).
 - **A link naming a folder the old way** (`[[research:x]]`, `research:x.md`), where a folder this machine knows has
   that name, isn't a link: it is flagged (`old-form`), with the pointer that names its file, and the fix writes that
   pointer as a markdown link, its heading or block kept. Copies meant for a note give a link, never a label (D78).
@@ -370,15 +375,15 @@ once indexed, and the repair applies (§ Repairs). Keys and the preview: [tui.md
 
 ## The merge review
 
-Before a merge, git's own tentative result (`git merge-tree --write-tree`, without touching the working tree) is
-checked for the links it would break (D66; `core/mergereview.ts`): "`refactor` moves `docs/plan.md`; `main` added a
-link to it in `docs/b.md`", each with its cause (`moved`, `deleted`, `note-moved`, `missing`) and the fix in the
-link's own form, shown, not written; in review for people (`space g m`), from the CLI for agents (`slipbox
-merge-review`). It reads paths (relative, `/…`, `~/`, absolute), wikilinks by name or path, links to this
-repository's own hosting (D87: a URL naming one of this checkout's remotes, its path from the repository's top, a
-branch with `/` told by the repository's branches), and pointers naming this folder at no branch (D75); the fix of a
-URL is the URL with its new path after the ref, of a pointer the pointer by its name as written. Another
-repository's URL, a repository's own page, and a pointer to another folder or at a branch aren't the merge's to
+Before a merge, git's own tentative result (`git merge-tree --write-tree`, without touching the working tree) is checked
+for the links it would break (D66; `core/mergereview.ts`): "`refactor` moves `docs/plan.md`; `main` added a link to it
+in `docs/b.md`", each with its cause (`moved`, `deleted`, `note-moved`, `missing`) and the fix in the link's own form,
+shown, not written; in review for people (`:merge-review`, and the git panel's Merge… on a branch: [tui.md](tui.md) §
+Git), from the CLI for agents (`slipbox merge-review`). It reads paths (relative, `/…`, `~/`, absolute), wikilinks by
+name or path, links to this repository's own hosting (D87: a URL naming one of this checkout's remotes, its path from
+the repository's top, a branch with `/` told by the repository's branches), and pointers naming this folder at no branch
+(D75); the fix of a URL is the URL with its new path after the ref, of a pointer the pointer by its name as written.
+Another repository's URL, a repository's own page, and a pointer to another folder or at a branch aren't the merge's to
 check.
 
 After `HEAD` moves on within a branch (a merge, a pull, a commit), git's renames between the old and the new commit
@@ -391,11 +396,11 @@ install, never slipbox's default (D66). The CLI's words: [docs/manual/cli.md](..
 
 ## The converter
 
-`slipbox convert-links` (`:convert-links`; `core/convert.ts`) makes a root's links plain paths, opt-in: nothing asks
+`slipbox convert-links` (`:convert-links`; `core/convert.ts`) makes a vault's links plain paths, opt-in: nothing asks
 to run it (D57). Each `[[…]]` becomes a relative path link, an embed `![…](…)`, its alias kept as the link text (else
 the target, with its heading) and its heading as a `#fragment` checked to exist, written as the heading's id or
 numbered slug (`[[plan#Aims|the aims]]` → `[the aims](docs/plan.md#aims)`); a block's `^id` is checked too. Each
-markdown link starting with `/` that reaches a file in the root becomes relative. It reads by its own legacy rules
+markdown link starting with `/` that reaches a file in the vault becomes relative. It reads by its own legacy rules
 (`parseLegacy`, `resolveLegacyWiki`): names, paths, attachments by name, aliases, a note's previous names, moves
 remembered, and `[[name:note]]` through the named folders' lookup (D79). Previewed before anything is written; a link
 several notes answer to is listed to pick; missing ones are left and reported. Undone like a rename. Its TUI form:

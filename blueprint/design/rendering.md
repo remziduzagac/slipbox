@@ -79,11 +79,11 @@ file (PNG, JPEG, WebP, GIF), is drawn under its `▣ alt` line where the termina
 as OpenTUI finds it asking, never blocks of colour (D126) — sized to the text width, its proportions kept, at most 12
 rows, from where its `▣ alt` text starts (past a list's bullet, a quote's bar); scrolled half out of sight, the part
 that shows. One embedded by name, `![[dal.png]]` (12.13, D103), is drawn the same, found as its link is (anywhere in the
-root, the nearest of two; two tied, neither): Obsidian's `|300` its width in pixels, `|240x180` the box it fits in, its
+vault, the nearest of two; two tied, neither): Obsidian's `|300` its width in pixels, `|240x180` the box it fits in, its
 proportions kept. An SVG (12.15, D127) — by its name, or a picture fetched told by how it starts — is rasterised by
 resvg (WebAssembly) at the size it's drawn, from its own size, into the cache, and drawn as a PNG is; it fetches nothing
 it links to. One in an embedded note (12.14) is found from where that note is — its path from its folder, its name from
-its place in its root — and drawn inside its frame. Beside text, or where the terminal draws none (`[render] images =
+its place in its vault — and drawn inside its frame. Beside text, or where the terminal draws none (`[render] images =
 "never"` too): `▣ alt` alone. Where the terminal speaks Kitty graphics, a picture is sent to it once (12.7, D102) —
 compressed, at the pixels it's drawn in, with a virtual placement of its cells — and drawn as Kitty's Unicode
 placeholders: each cell U+10EEEE in the picture's id's colour, its row and column as combining marks. They're text, so
@@ -142,8 +142,8 @@ embedded by name, `![[dal.png]]`, is `▣ dal.png`, as a picture by its path is:
 
 **What the file says** (`21.9`, D77): a link without text of its own — `[](docs/plan.md)`,
 or text that is just its target — shows its target as written; no form is made up for the screen. Where a file is
-named in a list — backlinks, search results, pickers, hovers, rename previews — it's by its path: from this root (or
-the folder opened), else from home (`~/…`), else absolute (`graph.shownPath`).
+named in a list — backlinks, search results, pickers, hovers, rename previews — it's by its path: from this vault's top
+(Elsewhere's: the folder opened), else from home (`~/…`), else absolute (`graph.shownPath`).
 
 **Embeds** (`1.11`, D113): a paragraph of nothing but embeds — each a note by name, `![[note]]` (`21.3`), or by its
 path, `![text](note.md)`, as the converter writes them (`20.1`) and Obsidian does without wikilinks — draws each
@@ -197,7 +197,7 @@ the breadcrumb, `[x](file.toml#section)`, find and the lens work unchanged:
 - **Values that are links** (`16.15`) draw as links, followed with `enter`: a URL; a reference
   key's value (`$ref`, `$schema`, `schema`, `include(s)`, `extends`, `import(s)`, `file`, `path`),
   shown broken when it doesn't resolve; and any path-like value (`schemas/user.json`,
-  `../base.toml`) that resolves to a file of the root — relative to the file's folder, as a markdown
+  `../base.toml`) that resolves to a file of the vault — relative to the file's folder, as a markdown
   link is. A link is a single value, not a list or a number: `includes: [base.json]`, `schema: 2`
   and `path: null` are no links. The graph reads the same links (files over 256 KB aside), so a
   data file shows among the backlinks of what it points at, and `slipbox links` lists them. No
@@ -403,6 +403,9 @@ directly). The chrome has ASCII fallbacks too: `≡`→`=`, `▤`→`#`, `×`→
 box joints `+`. And what such a console can't draw goes as an ASCII look-alike, one column for one, in the chrome and
 the note alike: the marks (`•` unsaved `*`, `⚠` `!`, `↻` `~`, `●` watching `*`), `…` `~`, dashes and curly quotes; the
 leader key shows as `SPC`. The Nerd set uses the same heading icons as the render-markdown configuration it replaces.
+The explorer's row marks (VV-D9) are one column wide in every set, none an emoji: the index's `●` `◐` `⊘` `⚿` (a lock
+in Nerd) `⚠`, ascii `*` `~` `-` `#` `!`; and the git panel's `● ⎇ ✎ ◆ ✓`, ascii `* & ~ ! =` ([tui.md](tui.md) § Side
+panes).
 
 ## Escapes (constraint `2.9`)
 
@@ -431,6 +434,18 @@ Source files in source mode use it too, a line at a time, with tree-sitter (`cor
 `16.7`, D109) painting over it the parts of lines inside a string or comment that spans lines — which a
 line alone can't know — and, in a file of several languages (`16.22`: a component's script and style), saying which
 language each line is in (`languageAt`; D122). See [tui.md](tui.md) § Files beyond notes.
+
+## Diffs
+
+A diff has layouts of its own beside the note's, which they leave unchanged (GIT-D2, GIT-D7): its lines
+(`core/layout/diff.ts`), a row a line, highlighted as source mode highlights the file, its changed words tinted more
+strongly than their line; a note's **before and after** (`core/layout/blockdiff.ts`), each changed block laid out
+twice, lightly formatted (headings, emphasis, links as they read, a list's marker, a table's cells, a quote's bar), in
+a `before` and an `after` frame, the removed words marked in the first and the added in the second, a block added or
+removed whole laid out once, marked, the unchanged stretches folded; and a code file's **side by side**
+(`core/layout/splitdiff.ts`), its two texts scrolling sideways by one offset, as a code block does (D233). The
+layout's other users never see the marks. How each is found and drawn, its roles and its window: [tui.md](tui.md)
+§ Git.
 
 ## The ANSI writer
 

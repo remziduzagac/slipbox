@@ -1,14 +1,14 @@
 # Search
 
-How slipbox ranks a root's notes and data files by words (plans `6.1`–`6.12`): in the core, so the CLI and the TUI
+How slipbox ranks a vault's notes and data files by words (plans `6.1`–`6.12`): in the core, so the CLI and the TUI
 share it (D114). The query and the results as the user meets them are [cli.md](../../docs/manual/cli.md) § `search`; the
-TUI's list is [tui.md](tui.md) § Overlays; which roots a search covers is [roots.md](roots.md) § Search scope (D64,
+TUI's list is [tui.md](tui.md) § Overlays; which vaults a search covers is [roots.md](roots.md) § Search scope (D64,
 D79). Code: `core/search.ts` (the query, a file read for it, the index kept, the index or a scan, hits located),
-`core/search-index.ts` (the index), `core/sqlite.ts`, `core/scope.ts` (search by root).
+`core/search-index.ts` (the index), `core/sqlite.ts`, `core/scope.ts` (search by vault).
 
 ## The index and the scan
 
-An SQLite FTS5 index in the root's cache (`search.db`, [how-it-works.md](how-it-works.md) § Storage), ranked by BM25
+An SQLite FTS5 index in the vault's cache (`search.db`, [how-it-works.md](how-it-works.md) § Storage), ranked by BM25
 with the title weighing most (D114). Its columns are a file's title, aliases, tags, path, headings and text, weighted
 10, 8, 5, 3, 4 and 1; its tokenizer is `unicode61` with diacritics removed, so case and accents don't count. While
 there's none, a scan of the files answers the same query over the same fields with a BM25-like score (each word's
@@ -17,8 +17,10 @@ file has every word, the files with some of them answer, and the result says it 
 
 The query is deliberately small: words, phrases, prefixes, exclusions, `title:`, tags and folders (D114). None of it
 reaches FTS5 as syntax: every term is quoted. `[search] engine` chooses: `auto`, the index once it has been built
-whole, else the scan; `index`, the index, built first when there's none; `scan`, never an index. A plain folder opened
-at `~` or `/` keeps none, and is scanned.
+whole, else the scan; `index`, the index, built first when there's none; `scan`, never an index. Home keeps one as
+any vault does, over what its index holds (VV-D2). Elsewhere has no index and no search: the TUI says so
+(`Elsewhere has no index to search — …`), and `slipbox search` exits 5 (`Elsewhere has no index, so no search across
+it: …`; `needsIndex` in `cli/common.ts`) (VV-D3).
 
 The index is a cache (D39): one of another version, or one SQLite can't read, is deleted and made again, and one that
 can't be made (a read-only cache) leaves the scan. It asks of SQLite only FTS5 with `unicode61`, `bm25`, WAL and a
@@ -64,7 +66,7 @@ per file.
 ## Kept current
 
 Two ways (D118). Each catch-up compares every file's size and mtime with the index's, whoever changed it: the CLI
-catches up before each search, the TUI as the root opens ([tui.md](tui.md) § Overlays). And whatever changes a file
+catches up before each search, the TUI as the vault opens ([tui.md](tui.md) § Overlays). And whatever changes a file
 through slipbox, or is seen by its watcher, reaches the graph, which says so to its listeners (`onChange`): the TUI's
 index updates a file as it changes, and an outside engine will hear of the same changes, moves included.
 

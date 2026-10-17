@@ -14,9 +14,9 @@ The code is `core/doctypes.ts`.
 | `adr` | `**/adr/*.md`, `**/adrs/*.md`, `**/decisions/*.md`, `**/decision-records/*.md` | a number, a status |
 
 Your own, or a folder's for its notes, are `[types.<name>]` in a config
-([configuration.md](../../docs/manual/configuration.md)): `paths` (globs from the root — `**` any folders, `*` any
-name), `required` (keys each note must have; dotted for a key in a table, `metadata.type`), `keys` (a key's kind when
-it's there: string, number, boolean, date, list, table), `values` (its allowed values), `number` (a pattern on the
+([configuration.md](../../docs/manual/configuration.md)): `paths` (globs from the vault's top — `**` any folders, `*`
+any name), `required` (keys each note must have; dotted for a key in a table, `metadata.type`), `keys` (a key's kind
+when it's there: string, number, boolean, date, list, table), `values` (its allowed values), `number` (a pattern on the
 file's name whose first group is its number) and `status` (the frontmatter key of its status). One named as a built-in
 changes only the fields it gives; `paths = []` turns a type off. A folder's config may add types: they only read (D133).
 A field of the wrong kind is dropped and said, as any.
@@ -28,7 +28,7 @@ empty, a key of another kind (a date is `2026-10-10`, a time after it allowed, o
 allowed. Each is a warning at the key's line — at the first line for one missing — from `slipbox`, code
 `frontmatter`. A note with none at all needs it; frontmatter that doesn't parse is said once, its rules unchecked.
 They're a note's own problems (`core/diagnostics.ts`, `noteProblems`; D167), so they're in the bar and the marks, the
-panel's This file tab and `slipbox diagnostics`; and the root's are a Frontmatter section of the panel's All tab and
+panel's This file tab and `slipbox diagnostics`; and the vault's are a Frontmatter section of the panel's All tab and
 `slipbox problems`' `frontmatter[]`, kept until a note changes.
 
 ## Order and status (`22.3`)

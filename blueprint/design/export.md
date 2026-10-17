@@ -39,8 +39,8 @@ it, and fetches nothing. Every writer is loaded when it's first used, not at sta
   goes beside the first note, under its name (D185): `notes/report.md` gives `notes/report.docx`. Markdown's is
   `notes/report.export.md`, apart from the note it's of.
 - Several notes make one document, a chapter each, in the order given.
-- A file already there is replaced, as `-o` does in any tool. A note never is (exit 5), of this root or any other
-  (DF-D3): this root's as its index has them; another's, a file of a note's name in a folder that is a root, where it
+- A file already there is replaced, as `-o` does in any tool. A note never is (exit 5), of this vault or any other
+  (DF-D3): this vault's as its index has them; another's, a file of a note's name in a folder that is a vault, where it
   is reached or where it really is (a symlinked folder counts). An earlier Markdown export is: its frontmatter's
   `generator: slipbox` says it is one.
 - `--json`: `{path, format, notes[], bytes, files[]}` — `files`, what was written beside it (Markdown's pictures). The
@@ -51,16 +51,16 @@ it, and fetches nothing. Every writer is loaded when it's first used, not at sta
 
 - `space n o` exports the explorer's selected note when the explorer has focus, else the note on screen; a file that
   isn't a note is said, not exported.
-- `space n shift+o` lists the root's notes to pick, in the order wanted: the one on screen (or the explorer's) is
+- `space n shift+o` lists the vault's notes to pick, in the order wanted: the one on screen (or the explorer's) is
   picked already, each pick shows its number, and picking one again takes it out. The list filters as you type, and
   keeps what's typed and where you were between picks. Its first row, whatever's typed, is "Export these 3 notes…".
 - Then a list of the formats; `:export docx` (or `word`, completed) skips it.
 - Then where (`10.14`, D190), in a Save As window: places down its left, the folder it's in on the right — its folders,
   then its files with their size and date — and the file's name at the bottom, with Export and Cancel buttons. It
-  opens where you exported last (kept for the root in its state, `export.json`, while that folder is there), else
+  opens where you exported last (kept for the vault in its state, `export.json`, while that folder is there), else
   beside the note, the note's name filled in and its focus: `enter` exports there.
   - **Places:** Beside the note; Last export; Downloads, Desktop and Documents — where the desktop's `user-dirs.dirs`
-    says, else by those names — and Home, those there are; This root. The one the folder is in is marked.
+    says, else by those names — and Home, those there are; This vault. The one the folder is in is marked.
   - **Keys:** `tab` (`shift+tab` back) moves between the places, the folder and the name. In the folder, `enter` or
     `→` goes into a folder (a file: its name taken), `←` or "‥" up, back on the folder left; typing jumps to an entry
     that starts so (the same letter again, the next), a `.` first showing the hidden ones; `~` goes home; `ctrl+n`
@@ -70,7 +70,7 @@ it, and fetches nothing. Every writer is loaded when it's first used, not at sta
   - **The mouse:** a place clicked goes there; an entry clicked is picked, clicked again opened; the name clicked
     takes the focus; the wheel scrolls; a click outside cancels.
 - A file there is replaced only after `y` to "rep.docx is there — replace it?" (`n`: the window again); a note of any
-  root is refused, the window kept (an earlier Markdown export aside, which is asked about as a file is) (DF-D3).
+  vault is refused, the window kept (an earlier Markdown export aside, which is asked about as a file is) (DF-D3).
 - Unsaved notes are saved first, as every hand-off does (`4.10`), since the export reads the notes from disk. One that
   can't be saved stops it, said as `space s c` says it: `export: x.md changed on disk while unsaved — ␣ n c resolves
   it first`.
@@ -101,9 +101,9 @@ markdown tree, made ready for a writer, which never looks anything up.
 - **Tags** are their text.
 - **Pictures** are found as on screen (`12.13`, `12.14`): a path from its note's folder, `![[name]]` by name, and
   Obsidian's `|300` or `|240x180` kept as the size. One on the web is its cached copy (its address kept), else its
-  words linked to it, marked a picture's for a format that keeps it one. A missing one is its words. Only the root's
-  pictures go into a document (DF-D24): a file outside the root of the notes exported, by where it really is (a link
-  inside the root leading out is out), is marked `outside` on its picture, and no writer reads it — Word, PDF, the web
+  words linked to it, marked a picture's for a format that keeps it one. A missing one is its words. Only the vault's
+  pictures go into a document (DF-D24): a file outside the vault of the notes exported, by where it really is (a link
+  inside the vault leading out is out), is marked `outside` on its picture, and no writer reads it — Word, PDF, the web
   page and the e-book show its words, as they show a picture they can't read (`pictureData` in `images.ts`), nothing
   is made PNG of it (`convert.ts`), and Markdown links to it (§ Markdown). A web picture's cached copy goes in.
 - **Diagrams and maths.** A Mermaid block becomes an SVG in print's colours, dark on white, its source kept (a kind
@@ -200,11 +200,11 @@ One portable file, for GitHub or any editor (D181):
 - **Links inside it** go to the heading ids GitHub gives, a name used again numbered across the whole document; a
   chapter's goes to its title (a note opening with no heading gets one, its title).
 - **Pictures** are copied into a folder beside it, `report.export.assets/`: only files that are pictures by what they
-  hold (a raster's header, an SVG's start), of the root (those the assembler hasn't marked `outside`), or a picture
+  hold (a raster's header, an SVG's start), of the vault (those the assembler hasn't marked `outside`), or a picture
   from the web, its cached copy (DF-D2, DF-D24). Each goes by its own name (one from the web by its address's, with
   its kind's extension where that names none); a second of a name is numbered. Obsidian's size is kept where Obsidian
   reads it: `![alt|240](…)`. A picture on the web with no copy here stays a picture, its address as it was. Anything
-  else a picture link names — a file that isn't a picture, one outside the root — is a link to it from the export,
+  else a picture link names — a file that isn't a picture, one outside the vault — is a link to it from the export,
   `[alt](../notes.txt)` (its alt, else its file's name), nothing of it copied; one on another drive is its words. The
   folder answers no lookup by name, whatever its name: `report.export.assets/`, or `book.assets/` for `-o book.md`
   ([links.md](links.md) § Wikilinks; DF-D25).

@@ -202,7 +202,7 @@ the tokens differ.
   keeps the cursor on it (its header, or its first row), so `z a` again opens what it folded. The rows of code keep a
   map of each cell to its place in the file, so find, a selection, problem marks, a language server's hover and jumps
   all land where they are in the file; documentation's and comments' rows are rendered prose, placed by line.
-- **Links in comments** (`16.10`): a comment's paths that name a file of the root are links in its prose — a doc's, a
+- **Links in comments** (`16.10`): a comment's paths that name a file of the vault are links in its prose — a doc's, a
   comment's box, a comment among code — drawn and followed as a Markdown link in it is (`enter`, `] l`, the links list),
   to their line where they name one (`path:42`); on a row of code (a note beside code, a comment kept as written) they
   are drawn as source mode draws them, and `enter` reads them from the text.

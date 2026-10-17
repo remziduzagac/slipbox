@@ -92,6 +92,9 @@ the in-app editor, never bolted on after autosave ships.
 
 ## D139: A genuine conflict prompts, in vim's shape: Load, Keep, Diff, Merge (5.5, 5.7, 2026-09-24)
 
+> **Detailed by GIT-D2, GIT-D5 (2026-10-14):** (D)iff draws as every diff does, the changed words marked, a note's
+> before and after; (M)erge, where the three-way merge leaves a conflict, settles it on the merge screen.
+
 **Decision:** When a note with unsaved changes changes on disk, slipbox prompts, modelled on vim's `W12: File has
 changed and the buffer was changed in Vim as well`: it stops, names the situation, and makes you choose; nothing is
 resolved automatically. **(L)oad** takes theirs, reloading from disk and losing the buffer's edits; **(K)eep** keeps
@@ -128,6 +131,9 @@ is "something like vim tabs".
 
 ## D142: Notes are written atomically, and never outside the vault root (4.6, 7.5, 2026-09-25)
 
+> **Amended by VV-D6 (2026-10-14):** in home, a link you followed is written through wherever it leads; in Elsewhere,
+> which no vault bounds, a write is what the file system allows. In a vault nothing is written outside it, as here.
+>
 > **Detailed by D220 (2026-09-28, recorded 2026-10-11):** a symlinked note is written through to its target;
 > a target outside the root is refused.
 
@@ -302,6 +308,10 @@ in the way of nothing, and the hash check would refuse it anyway.
 
 ## D154: Git, for reviewing (5.11–5.14, 2026-10-01)
 
+> **Amended by GIT-D10 (2026-10-14):** in the TUI each branch is measured against its own base — the one it was made
+> from, else the nearest of `[git] bases` — not one base for the repository; the CLI's `changed` and `diff`, and the
+> TUI's `:merge-review`, keep `[git] base`.
+>
 > **Amended by D156 (2026-10-09):** the working tree's git comes into the TUI: staging, unstaging, discarding,
 > committing.
 
@@ -343,6 +353,11 @@ without its arguments' places to fill.
 
 ## D156: Git in the editor: the working tree's, the TUI's alone (26.x, 2026-10-09)
 
+> **Amended by GIT-D4, GIT-D8, GIT-D12 (2026-10-14, 2026-10-15):** source control is the git panel, `space g`, worked by
+> mouse as by keys, with what the branch changed and the branches with their worktrees; stash, fetch, pull and push are
+> built, asked for (`26.6`), and a conflict's ours, theirs or both is the merge screen (GIT-D5). `space g`'s keys of
+> their own are gone, their commands in the palette and the panel.
+
 **Decision:** Beside the git for reviewing at the branch's level (D154, `20.21`), the TUI gets the working tree's,
 built after 25.x:
 
@@ -379,6 +394,10 @@ and 250 MB for the same answers. Its licence, MPL-1.1, was accepted for it (D194
 
 ## D158: Stash and the remote's commands deferred (26.6, 2026-10-10)
 
+> **Superseded by GIT-D4, GIT-D5 (2026-10-14):** `26.6` is built: stash, fetch, pull and push, asked for and never
+> automatic; a conflict's ours, theirs or both on the merge screen; a pull where both sides moved, and a rebase onto the
+> base, through it (GIT-D6).
+>
 > **Taken up by GIT (2026-10-15):** stash, fetch, pull and push built as GIT-D4 has them (GIT-T3); a conflict's ours,
 > theirs or both is GIT's merge screen (GIT-D5).
 
@@ -399,6 +418,10 @@ already.
 **Not chosen:** D141's minimum of a buffer list beside the switcher (ideas.md § Editing).
 
 ## D220: A symlinked note is written through to its target, inside the root (7.5, 2026-09-28)
+
+> **Amended by VV-D6 (2026-10-14):** kept for vaults, a followed link's target outside the vault refused too; in home, a
+> target a followed link leads to is written through, outside home too; in Elsewhere, as the file system allows. The CLI
+> refuses a write through a link not followed.
 
 **Decision:** A write to a note that is a symlink replaces its target, atomically and keeping its permissions; a
 target outside the root is refused, and nothing is made outside the root, through a symlink or otherwise. As built:

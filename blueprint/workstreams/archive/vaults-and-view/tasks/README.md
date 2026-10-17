@@ -1,7 +1,8 @@
 # Tasks: vaults and the explorer's view
 
 The workstream's work, one file per task, its ID in its H1; finished ones move to `archive/`. VV-T1 first; then
-VV-T2, VV-T4 and VV-T7 in parallel; VV-T3 and VV-T6 after VV-T2; VV-T5 and VV-T8 after VV-T4; VV-T9 last.
+VV-T2, VV-T4 and VV-T7 in parallel; VV-T3 and VV-T6 after VV-T2; VV-T5 and VV-T8 after VV-T4; VV-T9 last. Every task
+but VV-T9 is done; VV-T9's consolidation is done (2026-10-17), its docs and screenshots still open.
 
 - [VV-T1](archive/words.md): Vault, home and Elsewhere, in everything users read.
 - [VV-T2](archive/home.md): Home, a vault without a marker.

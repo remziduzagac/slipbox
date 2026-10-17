@@ -20,7 +20,8 @@ between them, edit them, and hand their notes to agents, while agents read and c
   project, and handed to an agent (D19, D20, D30).
 - **An editor that's necessary and sufficient:** small edits stop provoking a reach for `$EDITOR`, which stays a key
   away for anything substantial (D134, D226).
-- **Open any folder or file and work:** nothing to set up, and no vault to make, name or manage. An Obsidian vault or a
+- **Open any folder or file and work:** nothing to set up, and nothing to make, name or manage: a folder with a marker
+  is a vault, home and Elsewhere hold the rest (VV-D1–VV-D3). An Obsidian vault or a
   zk notebook opens unchanged, its links, tags, aliases and link settings read as its own tool reads them (D53, D68,
   D72, D79).
 - **Open source, with contributors** (D193).
@@ -35,7 +36,8 @@ between them, edit them, and hand their notes to agents, while agents read and c
 - All of vim, or an IDE: vim's marks, macros, named registers and block selection aren't wanted (D146, D155).
 - Lint rules of slipbox's own, and installing native language servers or linters: the system is the user's (D160,
   D162).
-- Git in the editor from the CLI: an agent runs `git` itself (D156).
+- Git in the editor from the CLI: an agent runs `git` itself (D156). Nor a git client's whole range: interactive
+  rebase, cherry-pick, submodules, managing remotes, a commit graph, a forge's pull requests (GIT-D1).
 - A typesetting engine: a PDF good enough to hand someone a note (D181). Credentials for an online service: Google Docs
   is reached by a Word file, uploaded (D183).
 - For now: extending slipbox with commands that shell out, output sinks and external panes, all deferred (D37);
@@ -72,17 +74,20 @@ How: design/rendering.md; design/tui.md § Screen layout, § Positions.
 How: design/tui.md § Files beyond notes; design/rendering.md § Data files; design/code-view.md;
 design/document-types.md.
 
-## Roots and links
+## Vaults and links
 
-- A file's root is its nearest folder holding `.git`, `.slipbox/`, `.obsidian/` or `.zk/`, however it is opened. A
-  folder without a marker works too; `$HOME` and `/` are never a root, and opened, are listed a level at a time (D58,
-  D69, D80).
+- A file's vault is its nearest folder holding `.git`, `.slipbox/`, `.obsidian/` or `.zk/`, however it is opened; else
+  home (`~`), a vault without a marker, its index with a skip list; else no-vault, shown as Elsewhere, which has no
+  index. Every file is in exactly one; choosing a file of another vault goes into it, its tabs its own (D58, D69, D80,
+  VV-D1–VV-D4).
+- A link leading out of a vault or home is followed only when the user says so, the answer kept by slipbox, never by
+  the vault, and never to write out of a vault (VV-D6).
 - Opening a folder writes nothing into it: nothing derived or personal lives in the user's folders. Reading positions,
   sessions, the scratch and the trash stay on the machine, kept by path (D39, D58, D76).
-- Every link form other tools write is read: a path relative to the file, `/` from the root, a path without its
+- Every link form other tools write is read: a path relative to the file, `/` from the vault's top, a path without its
   extension, a folder, a wikilink with its aliases and attachments, `file://`, `~/`, a link in front matter, the
   repository's own hosting URL (D68, D70, D71, D81, D85, D87). One matcher decides where a fragment lands (D84).
-- Links are written in each root's own convention, and a link slipbox writes never lands elsewhere (D72, D82, D83).
+- Links are written in each vault's own convention, and a link slipbox writes never lands elsewhere (D72, D82, D83).
 - A link means the same on every machine: it resolves by the files and fixed rules, never by what the index holds; a
   tie is ambiguous, never guessed; how each link landed is said (D61, D71, D86).
 - Links between folders that don't travel together keep working when another machine lays them out differently:
@@ -92,20 +97,22 @@ design/document-types.md.
   is found from evidence, and the relink is offered; before a merge, the links it would break are shown (D63, D66,
   D78, D143, D152).
 
-How: design/roots.md; design/links.md.
+How: design/roots.md; design/links.md; design/trust.md § Links you follow.
 
 ## Navigating and search
 
 - Links are followed, with history back and forward; backlinks, the outline, the quick switcher and the command
   palette are a key away (D11, D27).
-- The explorer shows the root of what's opened, and a folder a link was followed into beside it; files on screen are
-  shown by path, as the file says (D65, D77).
+- The explorer shows the file system as one tree, the view starting at what's opened, a breadcrumb saying what's
+  above, zoomed out when going elsewhere and in when asked; vaults, links, the index's state and git marked on each
+  row; files on screen are shown by path, as the file says (D77, VV-D5, VV-D8, VV-D9).
+- Another vault's file is read in a peek, going there a choice (VV-D7).
 - Search is slipbox's own, in the core, shared by the TUI and the CLI, and always answers, from the index or a scan:
   words, phrases, prefixes, exclusions, titles, tags and folders, ranked; a hit opens where most of its words are
-  (D114–D118). `find` lists every match of a literal or a regex beside it (D119). Search covers the root, the folders
+  (D114–D118). `find` lists every match of a literal or a regex beside it (D119). Search covers the vault, the vaults
   linked to or from it, or everything indexed (D64, D79).
 
-How: design/tui.md § Following links, § Side panes, § Overlays; design/search.md.
+How: design/tui.md § Following links, § The peek, § Side panes, § Overlays; design/search.md.
 
 ## Editing
 
@@ -178,11 +185,18 @@ How: design/lsp.md; design/tui.md § The lint surface, § Problems where they ar
 
 ## Git
 
-- For reviewing: what a branch changed against its merge base, a note's diff, the worktrees, a merge's conflicts in
-  Problems, and the links a merge would break (D66, D154).
+- For reviewing: what a branch changed against its merge base, each branch against its own base in the TUI, a note's
+  diff, the worktrees, a merge's conflicts in Problems, and the links a merge would break (D66, D154, GIT-D10).
 - In the editor, the TUI's alone: changed lines in the gutter, source control, commit, blame and a file's history,
-  branches. Stash and the remote's commands are deferred (D156, D158).
-- git runs nothing of a repository's own where its root isn't trusted (D175).
+  branches; a change reviewed a hunk at a time, each kept, reverted or noted for the agent (GIT-D3); fetch, pull, push
+  and stash, asked for, never on a timer (GIT-D4); git's conflicts settled in a merge screen, a pull where both sides
+  moved and a rebase onto the base through it (GIT-D5, GIT-D6); the git panel by mouse as by keys, what the branch
+  changed and the branches with their worktrees in it, each against its own base (D156, GIT-D8–GIT-D13).
+- The git panel follows the vault: the current vault's repository, and the repositories in the explorer's view
+  (VV-D10, GIT-D11).
+- Diffs drawn as slipbox draws notes: changed words marked, a note's before and after, code highlighted and scrolling
+  sideways, side by side where there's room (GIT-D2, GIT-D7).
+- git runs nothing of a repository's own where its vault isn't trusted (D175).
 
 How: design/tui.md § Git; docs/manual/cli.md § Git.
 
@@ -202,7 +216,7 @@ How: design/export.md.
   is under the leader, `space`; every binding is a named command, and can be remapped (D11, D106).
 - Every `ctrl+` chord has another route; plain `q` never quits, and `ctrl+c` only copies (D99). What macOS terminals
   send for a Mac's own keys is bound (D128).
-- Configuration is TOML: the user's, then each root's `.slipbox/config.toml`, deeper over broader. slipbox runs
+- Configuration is TOML: the user's, then each vault's `.slipbox/config.toml`, deeper over broader. slipbox runs
   correctly with no config at all (D12, D62).
 
 How: docs/manual/keys.md; docs/manual/configuration.md; design/tui.md § Modes and dispatch.
@@ -304,7 +318,7 @@ How: design/repository.md; the maintainer's procedures: `MAINTAINING.md`.
   file changed since; CRLF, a BOM, no final newline and invalid UTF-8 survive an edit. Checked by the fixture vault's
   awkward files (design/testing.md § The fixture vault), and by exit 5 for a stale plan or `--if-unchanged`
   (docs/manual/cli.md § What a command prints).
-- **Safe to open anything** (D166, D172–D177, D195). Nothing a folder brings runs unless you trust its root: not its
+- **Safe to open anything** (D166, D172–D177, D195). Nothing a folder brings runs unless you trust its vault: not its
   programs, nor the code its servers would run, its git config and files, or the `bunfig.toml` and `.env` Bun would
   read. A folder's own config never names a program to run, nor trusts itself; trusting takes no file edited; an agent
   can't grant it. Checked by the tests, one of them that the compiled binary loads nothing of its folder, and said by
@@ -340,9 +354,10 @@ Each was decided after a wrong turn, and is not re-litigated:
 - **`2.9`** (D90): terminal escapes are stripped from text on its way into the layout. Every string entering the
   layout passes through `sanitize`, and the CLI's human output is sanitised alike, so no escape sequence in a note
   reaches the terminal. design/rendering.md § Escapes.
-- **`7.5`** (D142, D69, D79): slipbox never writes outside the root. A symlinked note is written through to its
-  target, and a target outside the root is refused; nothing is made outside the root. The plan's "vault root" is the
-  root now, vaults having stopped being a concept. design/tui.md § Writing notes.
+- **`7.5`** (D142, D69, D79, VV-D6): slipbox never writes outside the vault. A symlinked note is written through to
+  its target, and a target outside the vault is refused; nothing is made outside the vault. In home, a link the user
+  followed is written through wherever it leads; in Elsewhere, which no vault bounds, what the file system allows.
+  design/tui.md § Writing notes; design/roots.md § Links followed only when you say so.
 - **`12.5`** (D101, D126): a note never becomes unreadable because a picture couldn't render: its alt text and its link
   are the floor. design/rendering.md § Blocks and inlines.
 - **`13.2`** (D159, D37): values substituted into a command slipbox runs are passed as an argument vector, never
@@ -351,8 +366,8 @@ Each was decided after a wrong turn, and is not re-litigated:
 - **The network** (DF-D1, DF-D23): what reaches the network — a web picture fetched, a package installed, the update
   check — is yours alone to allow: a folder's settings never turn any of it on, and one that tries is ignored, with a
   warning. design/trust.md § What runs.
-- **Exports** (DF-D2, DF-D3, DF-D24): an export holds pictures of the root only, and never writes over a note, of
-  this root or any other. design/export.md § Asking for one, § The assembler.
+- **Exports** (DF-D2, DF-D3, DF-D24): an export holds pictures of the vault only, and never writes over a note, of
+  this vault or any other. design/export.md § Asking for one, § The assembler.
 
 ### Licences
 

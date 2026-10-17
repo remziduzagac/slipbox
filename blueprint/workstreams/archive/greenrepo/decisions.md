@@ -50,6 +50,9 @@ leaked, whatever is rewritten after.
 
 ## GR-D5: Issues open, pull requests from collaborators only (2026-10-12)
 
+> **Partly superseded by D234 (2026-10-14):** the contributing guide, the code of conduct and the pull request template
+> are there while pull requests still come from collaborators only.
+
 **Decision:** Anyone may open an issue; pull requests are limited to collaborators, with GitHub's pull request
 controls. Until that changes, Contrib is false: no contributing guide, code of conduct, pull request template or AI
 policy.
@@ -58,9 +61,6 @@ policy.
 asks for wait until someone asks to contribute.
 
 **Not chosen:** open pull requests with Contrib's documents from the start.
-
-> **Partly superseded by D234 (2026-10-14):** the contributing guide, the code of conduct and the pull request template
-> are there while pull requests still come from collaborators only.
 
 ## GR-D6: Every change through a pull request the user merges (2026-10-12)
 
