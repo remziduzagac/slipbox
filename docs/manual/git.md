@@ -203,11 +203,13 @@ Each changed file shows its state letter, coloured. After its name comes its fol
 | `M` | modified |
 | `A` | added |
 | `D` | deleted |
-| `R` | renamed |
+| `R` | renamed, its old name before its new one: `R draft.md → idea.md` |
 | `U` | in conflict |
 | `?` | untracked |
 
-A file can be in Staged and in Changes at once, when part of it is staged.
+A file can be in Staged and in Changes at once, when part of it is staged. A renamed file's diff in Staged is against
+its old name in the last commit, so it shows what changed, not the whole file as new. Its edits not staged show in
+Changes, against what's staged, as any file's do.
 
 The panel's foot says the keys of the row selected. Its keys:
 

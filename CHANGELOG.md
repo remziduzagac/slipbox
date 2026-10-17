@@ -200,6 +200,8 @@ The format is [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.1.0/); wh
   fifteen seconds, so a big checkout could be left half done. If git is stopped now, slipbox says what it may have
   left.
 - `:worktrees` lists a worktree whose folder's name holds a line break by its whole path, with git 2.36 or later.
+- A rename staged with `git mv` shows in source control as `R old.md → new.md`, and its diff is what changed against
+  the old name. It used to show the whole file as added.
 
 ## [0.3.0] - 2026-10-14
 
