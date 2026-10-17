@@ -9,7 +9,7 @@ import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import type { Checkout } from "./git.ts";
 import { gitArgs } from "./gitops.ts";
-import { editorless, gitReason, type RemoteDone } from "./gitremote.ts";
+import { editorless, failureOf, inEnglish, type RemoteDone, refusedName } from "./gitremote.ts";
 import { isTrusted } from "./trust.ts";
 
 /** A merge or a rebase under way: how far a rebase has got and the branch it rebases; what a merge brings in. */
@@ -76,9 +76,13 @@ function ask(c: Pick<Checkout, "root">, args: string[]): string | null {
   }
 }
 
-/** How far HEAD and `base` have each gone since they parted: HEAD's own commits and the base's; null without git. */
+/**
+ * How far HEAD and `base` have each gone since they parted: HEAD's own commits and the base's; null without git, or
+ * for a base whose name isn't passed to git (`refusedName`).
+ */
 export function aheadBehind(c: Pick<Checkout, "root">, base: string): { ahead: number; behind: number } | null {
-  const out = ask(c, ["rev-list", "--left-right", "--count", `${base}...HEAD`]);
+  if (refusedName("the base", base)) return null;
+  const out = ask(c, ["rev-list", "--left-right", "--count", "--end-of-options", `${base}...HEAD`]);
   const m = /^(\d+)\s+(\d+)/.exec(out?.trim() ?? "");
   return m ? { ahead: Number(m[2]), behind: Number(m[1]) } : null;
 }
@@ -101,19 +105,22 @@ function runLater(c: Pick<Checkout, "root">, args: string[]): Promise<RemoteDone
     execFile(
       "git",
       [...unsigned, ...gitArgs(c.root, args)],
-      { encoding: "utf8", env: editorless(process.env), timeout: 120_000, maxBuffer: 16 * 1024 * 1024 },
+      // git's words in English: a conflict, a refusal, as matched (`gitReason`).
+      { encoding: "utf8", env: inEnglish(editorless(process.env)), timeout: 120_000, maxBuffer: 16 * 1024 * 1024 },
       (err, out, stderr) => {
         if (!err) return done({ ok: true, out, err: stderr });
-        const killed = (err as { killed?: boolean }).killed;
-        done({ ok: false, why: killed ? "git took too long, and was stopped" : gitReason(stderr, out), login: false });
+        done({ ok: false, why: failureOf(err, stderr, out), login: false });
       },
     );
   });
 }
 
-/** This branch rebased onto `onto` (the base's tip): its own commits replayed after it. */
-export const rebaseLater = (c: Pick<Checkout, "root">, onto: string): Promise<RemoteDone> =>
-  runLater(c, ["rebase", onto]);
+/** This branch rebased onto `onto` (the base's tip): its own commits replayed after it. The name checked first. */
+export function rebaseLater(c: Pick<Checkout, "root">, onto: string): Promise<RemoteDone> {
+  const why = refusedName("the base", onto);
+  if (why) return Promise.resolve({ ok: false, why, login: false });
+  return runLater(c, ["rebase", "--end-of-options", onto]);
+}
 
 /** What's under way, continued: a rebase's next commit; a merge's commit, made with its own message. */
 export const continueLater = (c: Pick<Checkout, "root">, op: Operation): Promise<RemoteDone> =>

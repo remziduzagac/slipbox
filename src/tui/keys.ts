@@ -640,6 +640,7 @@ export const DEFAULT_REVIEW_KEYS: Record<string, string> = {
   n: "git.review_next",
   p: "git.review_prev",
   enter: "git.review_go",
+  tab: "git.diff_view",
 };
 
 /** The merge screen's own keys (GIT-D5), over the note's while it's open. */
@@ -654,6 +655,7 @@ export const DEFAULT_MERGE_KEYS: Record<string, string> = {
   p: "git.merge_prev",
   w: "git.merge_save",
   s: "git.merge_stage",
+  tab: "git.diff_view",
 };
 
 /** A diff window's own keys (GIT-D2), over the note's while it has the cursor: commands, as the note's keys are. */

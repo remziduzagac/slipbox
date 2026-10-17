@@ -11,6 +11,7 @@ import { homedir } from "node:os";
 import { basename, dirname, isAbsolute, join, resolve } from "node:path";
 import type { Checkout } from "./git.ts";
 import { type Changed, gitArgs, parseNameStatus } from "./gitops.ts";
+import { inEnglish } from "./gitremote.ts";
 import { isTrusted } from "./trust.ts";
 
 const OPTS = { encoding: "utf8" as const, timeout: 15_000, maxBuffer: 64 * 1024 * 1024 };
@@ -298,7 +299,8 @@ export function mergeLater(
     execFile(
       "git",
       [...unsigned, ...gitArgs(root, ["merge", "--no-edit", "--", branch])],
-      { ...OPTS, timeout: 120_000, env: { ...process.env, GIT_TERMINAL_PROMPT: "0", GIT_EDITOR: "true" } },
+      // git's words in English: its conflict is matched below.
+      { ...OPTS, timeout: 120_000, env: inEnglish({ ...process.env, GIT_TERMINAL_PROMPT: "0", GIT_EDITOR: "true" }) },
       (err, out, stderr) => {
         if (!err) return done({ ok: true });
         const text = `${out}\n${stderr}`;

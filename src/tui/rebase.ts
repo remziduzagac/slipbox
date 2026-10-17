@@ -2,10 +2,10 @@
 // rebase, or nothing — git's `pull.rebase` the default. `shift+r` in the git panel (`git.rebase`, `:rebase`) rebases
 // this branch onto its base's tip, after asking; while a merge or a rebase is under way it offers continue, skip and
 // abort instead (`git.continue`, `git.skip`, `git.abort`; `:continue`, `:skip`, `:abort`; the panel's buttons, which
-// gitpanel.ts shows meanwhile). A stop at a conflict opens
-// the merge screen on it; the status line says what's under way ("rebasing 2/5"). Each runs in the background, one git
-// command at a time with the remote's (gitremote.ts), unsaved notes saved or kept first. In a vault not trusted, no hook
-// runs and nothing is signed.
+// gitpanel.ts shows meanwhile), abort asked first. A stop at a conflict opens the merge screen on it — said instead,
+// `x` named, while you type or a question is open (the pull's question likewise); the status line says what's under way
+// ("rebasing 2/5"). Each runs in the background, one git command at a time with the remote's (gitremote.ts), unsaved
+// notes saved or kept first. In a vault not trusted, no hook runs and nothing is signed.
 
 import { type Checkout, headOf } from "../core/git.ts";
 import { baseBranch } from "../core/gitops.ts";
@@ -51,8 +51,18 @@ export function operationStatus(app: App): { text: string; branch: string | null
 const plural = (n: number, one: string) => `${n} ${one}${n === 1 ? "" : "s"}`;
 
 /**
+ * Whether you're typing — in a note, a window, the git panel's message — or a question or a list is open: git's
+ * answer, come in the background, then opens nothing of its own over it, whose keys would take the letters meant for
+ * the text or the question; it says how to open it instead.
+ */
+function busy(app: App): boolean {
+  return app.overlay !== null || app.gitPanel.typing || app.allViews().some((v) => v.insert);
+}
+
+/**
  * After git moved the branch (a pull, a rebase, continue, skip, abort): HEAD seen, git asked again. A stop at a
- * conflict opens the merge screen on it; one for another reason is said, with what comes next; else `done` is said.
+ * conflict opens the merge screen on it — said instead, `x` named, while you type or answer something (`busy`); one for
+ * another reason is said, with what comes next; else `done` is said.
  */
 async function after(app: App, r: RemoteDone, done: string): Promise<void> {
   const c = app.git.checkout;
@@ -76,10 +86,13 @@ async function after(app: App, r: RemoteDone, done: string): Promise<void> {
       : "the merge stopped";
   const next = op.kind === "rebase" ? "shift+r continues" : "shift+r concludes the merge";
   if (files.length) {
-    app.message(
-      "warn",
-      `${where}: ${plural(files.length, "file")} in conflict (${files.map(sanitize).join(", ")}) — settle on the merge screen, s stages, then ${next}`,
-    );
+    const inConflict = `${where}: ${plural(files.length, "file")} in conflict (${files.map(sanitize).join(", ")})`;
+    if (busy(app))
+      return app.message(
+        "warn",
+        `${inConflict} — x in source control opens the merge screen (:resolve), s stages, then ${next}`,
+      );
+    app.message("warn", `${inConflict} — settle on the merge screen, s stages, then ${next}`);
     return openMergeScreen(app, files[0]);
   }
   app.message(
@@ -90,9 +103,14 @@ async function after(app: App, r: RemoteDone, done: string): Promise<void> {
 
 /**
  * A pull that couldn't fast-forward (26.6): both sides moved. Asked — merge, rebase, or nothing — git's `pull.rebase`
- * the default; then pulled that way.
+ * the default; then pulled that way. While you type or answer something (`busy`), said instead: `p` asks again.
  */
 export function askDiverged(app: App, c: Checkout, branch: string, upstream: string): void {
+  if (busy(app))
+    return app.message(
+      "warn",
+      `${sanitize(branch)} and ${sanitize(upstream)} have both moved on — p in source control (:pull) asks how to bring them together`,
+    );
   const way = pullDefault(c, branch);
   const mark = (it: "merge" | "rebase") => (way === it ? " — the default (pull.rebase)" : "");
   app.overlays.openList({
@@ -262,20 +280,24 @@ export function gitSkip(app: App): void {
   );
 }
 
-/** `git.abort`: the merge or rebase under way given up, the branch back where it was. */
+/** `git.abort`: the merge or rebase under way given up, the branch back where it was — asked first, as a rebase is. */
 export function gitAbort(app: App): void {
   const now = underWayNow(app);
   if (!now) return;
   const { c, op } = now;
   const branch = op.branch ?? headOf(c).branch;
-  app.git.beforeCheckout(
+  app.overlays.confirm(
+    `Abort the ${op.kind}? ${branch ? sanitize(branch) : "The branch"} goes back as it was before it, and what's settled so far is lost.`,
     () =>
-      runInBackground(
-        app,
-        `aborting the ${op.kind}`,
-        () => abortLater(c, op),
-        (r) => after(app, r, `the ${op.kind} aborted${branch ? `: ${branch} as it was` : ""}`),
+      app.git.beforeCheckout(
+        () =>
+          runInBackground(
+            app,
+            `aborting the ${op.kind}`,
+            () => abortLater(c, op),
+            (r) => after(app, r, `the ${op.kind} aborted${branch ? `: ${branch} as it was` : ""}`),
+          ),
+        { verb: "abort", noun: `the ${op.kind}`, done: "aborted" },
       ),
-    { verb: "abort", noun: `the ${op.kind}`, done: "aborted" },
   );
 }

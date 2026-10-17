@@ -1962,7 +1962,9 @@ diff (a file the walk reads as a note) in every window a diff opens in, unless `
   a space before it, as the source diff's rows read — and each layout row's `src` its first word's unit; `enter` goes
   to the unit's line (a `before` line, or a removed block's: where its block is, or was, now). `tab`
   (`git.diff_view`, the diff window's own keymap, `DEFAULT_DIFF_KEYS`) switches between the blocks and the lines, the
-  cursor on the first line's row at or after the line it was on; a code file's diff says it has only its lines.
+  cursor on the first line's row at or after the line it was on; a code file's diff says it has only its lines. The
+  review's and the merge screen's keymaps have it too: there, `tab` switches each hunk, or each side against the
+  base, for the rest of the review or of the file's screen (`reviewSwitch`, `mergeSwitch`).
 
 **Side by side** (GIT-D7; `core/layout/splitdiff.ts` `layoutSplitDiff`): a code file's diff (anything not a note) where
 each side gets at least `SPLIT_MIN` (80) text columns — the window less a sign and a space before each text, ` │ `
@@ -2003,36 +2005,43 @@ against the file as it is (`hunkBlocks`), so its paragraphs are whole, no head a
 cursor (`srcAt`: a block's span carries its line's unit), as in the diff window; the window is as tall as its rows.
 
 - `y` (`git.review_keep`) stages the hunk as the git panel's `s` stages a change (`stageChange`): found again among
-  the file's changes now (`findChange`: the same lines as staged and now, the nearest to where it was), since the index
-  or the file may have moved under it; a new or deleted file is staged whole.
+  the file's changes now (`findChange`: the same lines as staged and now, where it was — at its line in the file, or
+  its place in what's staged, whichever didn't move; the same lines elsewhere are another change), since the index or
+  the file may have moved under it. Each hunk the review reverts or keeps moves the file's others with it (`movedBy`):
+  where they're looked for, and the lines drawn around them. A new or deleted file is staged whole.
 - `x` (`git.review_revert`) puts the hunk's lines back as staged, in the file's buffer, as one edit — the part of the
   text that differs — so one undo step there, and saves it at once (`Saving.save`, so `App.writeBuffer`); a save
   refused (the file changed on disk) leaves it unsaved, said (`reverted, but not saved — :w saves it`). A file with
-  unsaved typing is never written over: the hunk is skipped, said, and the review goes on. A new file goes to the
-  trash, asked first (`Files.deleteItem`); a deleted one comes back as staged (`discardFile`); a file outside the vault
-  is refused, as slipbox writes only inside it.
+  unsaved typing is never written over: the hunk is skipped, said, and the review goes on. The edit is made on the
+  disk's text: a buffer without unsaved typing that wasn't read again since the file changed (the watcher off, or not
+  yet run) is read first. A new file goes to the trash, asked first (`Files.deleteItem`); a deleted one comes back as
+  staged (`discardFile`); a file outside the vault is refused, as slipbox writes only inside it.
+- A file changed since the review read it is left as it is by `y` and `x`, and said (`changed since the review read
+  it`): the hunk not found where it was, a deleted file there again, a new file's lines not those shown.
 - `c` (`git.review_note`) asks for a note, then adds an entry to the scratch without opening it (`Scratch.add`): the
   file and the hunk's lines (`path:from-to`), its diff fenced, and the note (`hunkEntry`).
 - `n` and `p` (`git.review_next`, `git.review_prev`) move; `enter` (`git.review_go`) ends the review and opens the file
   at the line under the cursor, else the hunk's first (refused on a deleted file, `x` bringing it back, and outside the
-  vault); `esc` and `q` end it.
+  vault); `esc` and `q` end it. `tab` (`git.diff_view`) draws a note's hunk as its lines, or as its blocks again, as in
+  the diff window, for the rest of the review.
 
 After `y`, `x` or `c`, the review goes on to the next hunk not yet dealt with, after it and then from the start; with
 none left, it ends. Its end, however it comes, says what it did (`tallyText`): `review: 1 kept (staged), 1 reverted,
 1 note for the agent in the scratch — space s y copies it; 2 left as they were` — `space s y` named when a note was
 written, whatever the key is now. Nothing is committed.
 
-**The remote and stash** (`26.6`; GIT-D4; `core/gitremote.ts`, `tui/gitremote.ts`): the git panel's keys and buttons
-and the palette's commands, none of `space g`'s. `f` (`:fetch`, `git.fetch`) fetches — the branch's remote, else
-origin, git's own choice; `p` (`:pull`, `git.pull`) pulls, fast-forward only (`git pull --ff-only --no-rebase`), and
-where both sides moved asks merge or rebase (below); `shift+p` (`:push`, `git.push`) pushes the branch to its upstream
-(`git push <remote> refs/heads/<branch>:<its ref>`, the remote and ref as `%(upstream:remotename)` and
-`%(upstream:remoteref)` name them). A branch with no upstream is asked "Push it to origin/<branch>, and track it
-there?" (`-u`): origin, else the only remote; with none, or several and no origin, said how to set one. Each is asked
-for, none on a timer, nothing in the background reaching the network; each runs in the background, one at a time ("git
-is still fetching" to another), a message saying it's under way and how it went: "fetched: main is 3 commits behind
-origin/main — p pulls (:pull)", "pulled: main fast-forwarded to 1a2b3c4", "pushed main to origin/main". Before a pull,
-unsaved notes are saved or kept, as before a branch switch (`beforeCheckout`); HEAD moving on is then the feed's
+**The remote and stash** (`26.6`; GIT-D4; `core/gitremote.ts`, `tui/gitremote.ts`): the git panel's keys and buttons and
+the palette's commands, none of `space g`'s. `f` (`:fetch`, `git.fetch`) fetches — the branch's remote, else origin,
+git's own choice; `p` (`:pull`, `git.pull`) pulls, fast-forward only (`git pull --ff-only --no-rebase`), and where both
+sides moved asks merge or rebase (below); `shift+p` (`:push`, `git.push`) pushes the branch to its upstream (`git push
+--end-of-options <remote> refs/heads/<branch>:<its ref>`, the remote and ref as `%(upstream:remotename)` and
+`%(upstream:remoteref)` name them; a remote, branch or ref whose name starts with `-` is refused before git is run,
+said, as a base rebased onto is, `refusedName`). A branch with no upstream is asked "Push it to origin/<branch>, and
+track it there?" (`-u`): origin, else the only remote; with none, or several and no origin, said how to set one. Each is
+asked for, none on a timer, nothing in the background reaching the network; each runs in the background, one at a time
+("git is still fetching" to another), a message saying it's under way and how it went: "fetched: main is 3 commits
+behind origin/main — p pulls (:pull)", "pulled: main fast-forwarded to 1a2b3c4", "pushed main to origin/main". Before a
+pull, unsaved notes are saved or kept, as before a branch switch (`beforeCheckout`); HEAD moving on is then the feed's
 (`5.9`, `checkHead`): no switch, the tabs stay. A failure is git's own words (`gitReason`): a remote's refusal
 (`[rejected] main -> main (fetch first)`, with "fetch them (f) and pull (p) first"), else its `fatal:` or `error:` line
 and the files it names, else a conflict.
@@ -2041,9 +2050,13 @@ git runs without a terminal: `GIT_TERMINAL_PROMPT=0`, so a login git can't make 
 not read Username for '…': terminal prompts disabled") rather than wait at a prompt; and ssh in batch mode
 (`GIT_SSH_COMMAND="ssh -o BatchMode=yes"`), which asks no password or passphrase, unless you set your own
 (`GIT_SSH_COMMAND`, `GIT_SSH`, or `core.sshCommand` in any of git's config). Credential helpers still answer. A failure
-that's a login (`needsLogin`: prompts disabled, permission denied, a host's key) adds "git in a terminal can log in
-(git fetch), then try here again". In a vault not trusted, a push runs no hook, its pre-push neither, and the remote's
-commands refuse a program the repository's own config names for the remote ([trust.md](trust.md)).
+that's a login (`needsLogin`: prompts disabled, permission denied, a host's key) adds "git in a terminal can log in (git
+fetch), then try here again". git's words are read (a pull's "Not possible to fast-forward", "Everything up-to-date", a
+conflict), so the commands slipbox reads them from — the remote's, the stash's, a merge's and a rebase's, the branch
+merged in the git panel, the merge review — run in git's English (`inEnglish`: `LC_ALL=C`, no `LANGUAGE`). A command
+that prints more than slipbox reads (16 MiB) is stopped, and said so (`failureOf`). In a vault not trusted, a push runs
+no hook, its pre-push neither, and the remote's commands refuse a program the repository's own config names for the
+remote ([trust.md](trust.md)).
 
 `z` (`:stash`, `git.stash`) lists the stashes, newest first (`git stash list`), under "Stash the changes…" and
 "Stash the changes, untracked files too…" (`--include-untracked`), each asking a message (none: git's own, `WIP on
@@ -2074,15 +2087,20 @@ slipbox's), `MERGE_HEAD` and its `MERGE_MSG` — again when git has news or half
 keys: `(x)` the merge screen on a file still in conflict, `(c)` continue (`git.continue`, `:continue`: `git rebase
 --continue`, or `git commit --no-edit` for a merge; refused, said which, while a file is in conflict), `(s)` skip
 (`git.skip`, `:skip`: `git rebase --skip`, a rebase's alone), `(a)` abort (`git.abort`, `:abort`: `git rebase --abort`,
-`git merge --abort`). The git panel has the three as buttons meanwhile: Continue, Skip (a rebase's) and Abort.
+`git merge --abort`; asked first, as a rebase is: "Abort the rebase? agent goes back as it was before it, and what's
+settled so far is lost."). The git panel has the three as buttons meanwhile: Continue, Skip (a rebase's) and Abort.
 
 Each runs in the background, one git command at a time with the remote's (`runInBackground`), without a terminal or an
 editor (`GIT_TERMINAL_PROMPT=0`, `GIT_EDITOR=true`, `GIT_SEQUENCE_EDITOR=true`: a commit settled on the way keeps its
 message). After it, HEAD is seen and git asked again; a stop at a conflict says where (`the rebase stopped at commit 1
 of 2: 1 file in conflict (src/sync/retry.ts)`) and opens the merge screen on its first file; a stop for another reason
 is said in git's words, with `shift+r`'s choices named; the end is said (`rebased: the rebase is done`), a merge screen
-of git's still open closed. In a vault not trusted, `gitArgs`'s guards hold — no hook runs (a rebase's `pre-rebase`, a
-merge's `pre-merge-commit`), no merge driver — and nothing is signed (`commit.gpgSign=false`); said.
+of git's still open closed. Neither the merge screen nor the pull's question (above) opens over typing — in a note, a
+window or the git panel's message — or over a question or a list already open, whose keys would take letters meant for
+those (`busy`, as the conflict prompt waits, `5.5`): said instead, with the key that opens it (`x in source control
+opens the merge screen (:resolve)`; `p in source control (:pull) asks how to bring them together`). In a vault not
+trusted, `gitArgs`'s guards hold — no hook runs (a rebase's `pre-rebase`, a merge's `pre-merge-commit`), no merge driver
+— and nothing is signed (`commit.gpgSign=false`); said.
 
 **The merge screen** (GIT-D5; `core/conflicts.ts`, `tui/mergescreen.ts`): `x` on a file in conflict in the git panel
 (its `resolve`, or its Resolve button), `x` on a conflict in the Problems panel's All tab, `:resolve [file]` or
@@ -2090,14 +2108,22 @@ merge's `pre-merge-commit`), no merge driver — and nothing is signed (`commit.
 conflict, else the first that is — opens the file's buffer (read again first when git changed it on disk and it has no
 unsaved changes) and reads git's markers (`parseConflicts`): `<<<<<<< label`, yours, `||||||| label` and the base where
 git wrote it (diff3, zdiff3), `=======`, theirs, `>>>>>>> label`; a marker that doesn't close, or a `=======` outside a
-conflict (a setext heading's), is text. The markers give the conflicts, so what was settled by hand stays settled. Each
-conflict's base where the markers don't hold it comes from the index's stage 1 (`withStages`): yours is found in stage
-2, and theirs in stage 3, where the stretches before put it (else wherever it is), each mapped back onto stage 1
-through that side's changes (`toBase`, a boundary inside a change widened to the whole of it), the two ranges joined.
-Line endings and a byte order mark aren't compared, finding a side or diffing it against the base: the index holds LF
-where a checkout (`eol=crlf`) has CRLF. Where neither has it (the stages gone), there's no base. A file in conflict
-with no marker (one side deleted it) is said, with `s` in the git panel to mark it resolved. `enter` on a conflicted
-file in the panel shows its diff, not the screen.
+conflict (a setext heading's), is text. The markers give the conflicts, so what was settled by hand stays settled. git
+doesn't widen its markers for a side with a seven-character `=======` line in it (a setext heading's underline), so a
+conflict with more than one `=======` that could part the sides — after diff3's base marker, where there's one; one
+before it is yours — can be read more than one way (`Conflict.ambiguous`): the index's stages choose the one way whose
+yours is in stage 2 and theirs in stage 3 (and a marked base in stage 1). With no stage that does, or more than one
+way that fits, the conflict is ambiguous: its card shows it as marked, and `o`, `t`, `b` and `shift+b` are refused,
+said, `e` settling it by hand. A complete set of markers inside a fenced code block — the fence open from before the
+`<<<<<<<` to after the `>>>>>>>` — is an example of git's markers, text, unless neither side's stage holds those lines,
+which makes them git's own conflict in a code block (`readConflicts`). Each conflict's base where the markers don't hold
+it comes from the index's stage 1 (`withStages`): yours is found in stage 2, and theirs in stage 3, where the stretches
+before put it (else wherever it is), each mapped back onto stage 1 through that side's changes (`toBase`, a boundary
+inside a change widened to the whole of it), the two ranges joined. Line endings and a byte order mark aren't compared,
+finding a side or diffing it against the base: the index holds LF where a checkout (`eol=crlf`) has CRLF. Where neither
+has it (the stages gone), there's no base. A file in conflict with no marker (one side deleted it) is said, with `s` in
+the git panel to mark it resolved — its buffer unsaved, `:w` first, as `s` stages the file on disk. `enter` on a
+conflicted file in the panel shows its diff, not the screen.
 
 The screen, in the floating window as tall as a peek's, a conflict at a time: its number, its line in the result and
 how it's settled; the keys; while a rebase is under way, that yours is what's rebased onto and theirs the commit
@@ -2116,12 +2142,17 @@ marked, two lines around it, under a head naming it and how it's settled, the st
 - `a` (`git.merge_agent`) asks for a note and adds the conflict to the scratch (`conflictExcerpt`): its lines in the
   file, three lines around it, the base between the sides as diff3 writes it; a note left empty is "a merge conflict:
   settle it, keeping what each side meant".
-- `n`, `p` (`git.merge_next`, `_prev`) move between conflicts.
-- `w` (`git.merge_save`) once every conflict is settled: the result into the buffer as one edit, saved through
-  `App.writeBuffer`; refused, said, while one isn't, or when the buffer changed since the screen read it; a save
-  refused leaves the result in the buffer, unsaved.
-- `s` (`git.merge_stage`) once saved: `git add` the file, which marks it resolved; the next file in conflict opens,
-  else what comes next is said (`shift+r` continues the rebase, or concludes the merge).
+- `n`, `p` (`git.merge_next`, `_prev`) move between conflicts; `tab` (`git.diff_view`) draws a note's sides as their
+  lines, or as their blocks again, as in the diff window.
+- `w` (`git.merge_save`), and `ctrl+s` and `:w` there (`note.save` sends them to it, as the commit editor's), once
+  every conflict is settled: the result into the buffer as one edit, saved through `App.writeBuffer`; refused, said,
+  while one isn't, or when the buffer changed since the screen read it. A save refused (the file changed on disk) puts
+  the buffer back as the screen read it, so nothing's in it the screen doesn't show, and says `x` reads the file again;
+  the conflict prompt's merge (below) leaves the result in the note, unsaved, its prompt saying how.
+- `s` (`git.merge_stage`) once saved: the file read again first — one changed since it was saved, or with markers
+  still in it (a side's own lines can hold them), isn't staged, said — then `git add` the file, which marks it
+  resolved; the next file in conflict opens, else what comes next is said (`shift+r` continues the rebase, or
+  concludes the merge).
 - `esc` closes it; what's settled is kept for the file while its text is the same, and opening it again brings it back.
 
 The conflict prompt's (M)erge (`5.5`), where its three-way merge leaves a conflict, opens the same screen on the note's
@@ -2129,10 +2160,9 @@ text as loaded (the base), as typed (yours) and on disk (theirs) (`fromMerge`, f
 built on): `w` puts the result in the note, measured against the text on disk from then on (`NoteBuffer.rebase`), and
 saves it; `esc` goes back to the prompt; `s` is git's alone. A merge with no conflict is applied as before, unsaved.
 
-Not done: `ctrl+s` and `:w` don't save the merge screen as `w` does: they run `note.save`, which finds the screen's
-buffer unchanged and says it has no changes to save. The diff window's, the review's, the merge screen's and the
-peek's keymaps have no table in the config (`[keys.git]` is the git panel's): their commands are bound in `[keys]`
-only, as the reference set's full config does for `git.diff_view`.
+Not done: the diff window's, the review's, the merge screen's and the peek's keymaps have no table in the config
+(`[keys.git]` is the git panel's): their commands are bound in `[keys]` only, as the reference set's full config does
+for `git.diff_view`.
 
 **Settings** (the manual's configuration chapter lists them with the rest): `[git] base`, `[git] bases` (default
 `["main"]`, each branch's own base guessed among them, GIT-D10), `[git] diff = "blocks" | "source"` (a note's diff,

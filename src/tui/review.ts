@@ -3,15 +3,15 @@
 // in path order, an untracked one as wholly added. Each hunk is drawn as every diff is (GIT-D2), in the floating window,
 // its file, its place among all of them and the keys above it: `y` keeps it (stages it, as source control's `s` stages
 // a change), `x` reverts it (its lines put back as staged, in the file, saved at once, one undo step there — a file with
-// unsaved typing skipped, and said), `c` writes a note for the agent into the scratch with the file and its lines, `n`
-// and `p` move, `enter` goes to it in its file, `esc` ends. The end says what was kept, reverted and noted, and that
-// `space s y` copies the notes. Nothing is committed.
+// unsaved typing skipped, and said; one changed since the review read it left as it is, and said), `c` writes a note
+// for the agent into the scratch with the file and its lines, `n` and `p` move, `enter` goes to it in its file, `esc`
+// ends. The end says what was kept, reverted and noted, and that `space s y` copies the notes. Nothing is committed.
 
-import { readFileSync, statSync } from "node:fs";
+import { lstatSync, readFileSync, statSync } from "node:fs";
 import { join } from "node:path";
 import { type BlockDiff, blockDiff } from "../core/blockdiff.ts";
 import { inVault, showAt } from "../core/gitops.ts";
-import { findChange, hunkEntry, hunkLines, hunkView, type Tally, tallyText } from "../core/gitreview.ts";
+import { findChange, hunkEntry, hunkLines, hunkView, movedBy, type Tally, tallyText } from "../core/gitreview.ts";
 import { type GitChange, gitChanges } from "../core/gitsigns.ts";
 import { discardFile, replaceLines, sections, stageChange, stageFile } from "../core/gitstage.ts";
 import { layoutScreen, type ScreenPart, screenText } from "../core/layout/screen.ts";
@@ -21,7 +21,7 @@ import { TOP } from "../core/position.ts";
 import { sanitize } from "../core/sanitize.ts";
 import type { App } from "./app.ts";
 import { NoteBuffer } from "./buffer.ts";
-import { asBlocks, diffLanguage, sideBySide } from "./diffview.ts";
+import { asBlocks, diffLanguage, isNote, LINES_ONLY, sideBySide, switchedText } from "./diffview.ts";
 
 /** A note's change as its blocks before and after: the file with this change undone against the file as it is. */
 function hunkBlocks(it: Item): BlockDiff {
@@ -52,6 +52,8 @@ export interface Review {
   items: Item[];
   at: number;
   lines: (number | null)[];
+  /** `tab` switched a note's hunks from what `[git] diff` draws them as: its lines for its blocks, or back. */
+  switched?: boolean;
 }
 
 /** The rows above a hunk's diff: its file and place, the keys, a blank one. */
@@ -161,7 +163,7 @@ function show(app: App, r: Review): void {
   // Drawn as every diff is (GIT-D2): a note's as its blocks before and after — the file as staged against as it is,
   // this change alone, so its paragraphs are whole — a code file's as its lines, side by side where there's room.
   const view = hunkView(it.change, it.now);
-  const drawn = asBlocks(app, it.abs) ? hunkBlocks(it) : null;
+  const drawn = asBlocks(app, it.abs, r.switched) ? hunkBlocks(it) : null;
   const blocks = drawn?.units.length ? drawn : null; // a change of blank lines alone: its lines
   r.lines = blocks
     ? blocks.units.map((u) => u.line)
@@ -206,13 +208,46 @@ function onward(app: App, r: Review): void {
   endReview(app);
 }
 
-/** The hunk among its file's changes now — the index or the file may have moved — and the index's text. */
-function fresh(app: App, it: Item): { staged: string; change: GitChange } | null {
+/** The hunk among its file's changes now — the index or the file may have moved — the index's text, and the file's. */
+function fresh(app: App, it: Item): { staged: string; change: GitChange; text: string } | null {
   const staged = showAt(app.git.checkout!, "", it.path);
   const text = onDisk(it.abs);
   if (staged === null || text === null) return null;
   const change = findChange(gitChanges(staged, text), it.change);
-  return change ? { staged, change } : null;
+  return change ? { staged, change, text } : null;
+}
+
+/** Whether something is at `abs`, a file or not. */
+function there(abs: string): boolean {
+  try {
+    lstatSync(abs);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Why a whole file's hunk isn't as the review read it any more — a deleted file there again, a new one changed — or
+ * null when it is (or the hunk is a changed file's, found again by its lines).
+ */
+function notAsRead(it: Item): string | null {
+  if (it.kind === "deleted") return there(it.abs) ? `${it.path} is there again since the review read it` : null;
+  if (it.kind !== "untracked") return null;
+  const text = onDisk(it.abs);
+  const now = text === null ? null : linesOf(text);
+  return now && now.length === it.now.length && now.every((l, i) => l === it.now[i])
+    ? null
+    : `${it.path} changed since the review read it`;
+}
+
+/** The file's other hunks once `done` was reverted or kept: where the review looks for them now, and their lines. */
+function moveOthers(r: Review, it: Item, done: GitChange, how: "reverted" | "kept", now?: string[]): void {
+  for (const x of r.items) {
+    if (x === it || x.path !== it.path) continue;
+    x.change = movedBy(x.change, done, how);
+    if (now) x.now = now;
+  }
 }
 
 /** The review asked for, and its hunk: null (said) when none is open. */
@@ -238,7 +273,12 @@ export function reviewKeep(app: App): void {
     const now = fresh(app, it);
     if (!now) return app.message("warn", `${it.path} changed since the review read it: that change isn't there now`);
     why = stageChange(c, it.path, now.staged, now.change);
-  } else why = stageFile(c, it.path);
+    if (!why) moveOthers(r, it, now.change, "kept");
+  } else {
+    const moved = notAsRead(it);
+    if (moved) return app.message("warn", `${moved}: left as it is`);
+    why = stageFile(c, it.path);
+  }
   if (why) return app.message("warn", `git: ${why}`);
   it.state = "kept";
   app.message("info", `kept: staged a change of ${it.path}`);
@@ -255,7 +295,9 @@ function skip(app: App, r: Review, it: Item): void {
 
 /**
  * `x`: the hunk reverted — its lines put back as staged, in the file, saved at once; one undo step there. A file with
- * unsaved typing is skipped, and said; a new file goes to the trash (asked first); a deleted one comes back.
+ * unsaved typing is skipped, and said; a new file goes to the trash (asked first); a deleted one comes back. Each only
+ * while the file is as the review read it — the hunk where it was, a deleted file still gone, a new one unchanged —
+ * else it's left as it is, and said.
  */
 export function reviewRevert(app: App): void {
   const cur = current(app, "x", "reverts a change");
@@ -266,6 +308,9 @@ export function reviewRevert(app: App): void {
   if (it.rel === null) return app.message("warn", `${it.path} is outside this vault: slipbox writes only inside it`);
   const open = [...app.buffers.values()].find((b) => b.abs === it.abs);
   if (open?.dirty) return skip(app, r, it);
+  // A whole file's: only while it's as the review read it — a deleted one not made again, a new one not changed.
+  const moved = notAsRead(it);
+  if (moved) return app.message("warn", `${moved}: left as it is`);
   if (it.kind === "deleted") {
     const why = discardFile(app.git.checkout!, it.path);
     if (why) return app.message("warn", `git: ${why}`);
@@ -281,6 +326,12 @@ export function reviewRevert(app: App): void {
   const buf = app.buffer(it.rel);
   if (!buf) return;
   if (buf.dirty) return skip(app, r, it);
+  // The hunk's lines are the disk's: a buffer not read again since the file changed (the watcher off, or not yet run)
+  // is read again first, so the edit lands on the lines the review found.
+  const disk = now.text.replace(/^\uFEFF/, "");
+  if (buf.source !== disk) app.watch.reloadBuffer(buf);
+  if (buf.dirty || buf.source !== disk)
+    return app.message("warn", `${it.path} changed since the review read it: left as it is`);
   // The text with the hunk's lines as staged, made as one edit of what differs: one undo step in the file.
   const ch = now.change;
   const next = replaceLines(buf.source, ch.from - 1, ch.now.length, ch.was);
@@ -291,6 +342,7 @@ export function reviewRevert(app: App): void {
   while (z < was.length - a && z < next.length - a && was[was.length - 1 - z] === next[next.length - 1 - z]) z++;
   buf.edit(a, was.length - a - z, next.slice(a, next.length - z));
   for (const v of app.allViews()) if (v.buf === buf) v.layoutKey = "";
+  moveOthers(r, it, ch, "reverted", linesOf(buf.source));
   if (!app.saving.save(buf, true)) return app.message("warn", `${it.path}: reverted, but not saved — :w saves it`);
   reverted(app, r, it, `reverted a change of ${it.path}, saved — u in the file brings it back`);
 }
@@ -325,6 +377,20 @@ export function reviewStep(app: App, by: 1 | -1): void {
     return app.message("info", by > 0 ? "the last change — esc ends the review" : "the first change");
   r.at = i;
   show(app, r);
+}
+
+/**
+ * `tab` (`git.diff_view`, as in the diff window): a note's hunks drawn as their lines, or as their blocks again — this
+ * one and the rest of the review's. A code file's has only its lines, and says so.
+ */
+export function reviewSwitch(app: App): void {
+  const cur = current(app, "tab", "switches a note's change between its blocks and its lines");
+  if (!cur) return;
+  const { r, it } = cur;
+  if (!isNote(app, it.abs)) return app.message("info", LINES_ONLY);
+  r.switched = !r.switched;
+  show(app, r);
+  app.message("info", switchedText(asBlocks(app, it.abs, r.switched)));
 }
 
 /** `enter`: the review ended, and the hunk opened in its file — at the cursor's line of it, else its first. */

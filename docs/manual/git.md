@@ -289,6 +289,7 @@ wide. Above the diff are the file, where the change is (`line 12 · change 2 of 
 | `x` | Reverts the change: its lines go back to what's staged, and the file is saved at once |
 | `c` | Asks for a note, and adds the change to the scratch for the agent: the file, its lines, the diff and your note |
 | `n` / `p` | Goes to the next / previous change |
+| `tab` | Draws a note's change as its lines, or as its blocks again |
 | `enter` | Ends the review, and opens the file at the change |
 | `esc` | Ends the review |
 
@@ -299,6 +300,10 @@ copies the scratch for the agent ([The scratch](editing.md#the-scratch)).
 A revert is one step of the file's undo: open the file and press `u` to bring the change back. slipbox doesn't revert a
 file with unsaved typing, since that would write over it. It says so, skips the change, and goes on. A file git doesn't
 track goes to slipbox's trash when you revert it, after asking. A deleted file comes back as staged.
+
+A file can change while the review is open, when an agent is still at work. `y` and `x` act only on what the review
+showed you. A change no longer where the review found it, a deleted file written again, or a new file changed since is
+left as it is, and a message says so. Press `v` again to review the files as they are now.
 
 The review commits nothing. Staging is how it marks what you kept, so a commit afterwards (`c` in the git panel)
 takes exactly what you reviewed.
@@ -316,7 +321,8 @@ slipbox reaches a remote only when you ask. Nothing runs on a timer.
 The palette (`:`) has them too, as Fetch, Pull and Push.
 
 Each runs in the background, so slipbox never waits on the network. A message says how it went, in git's words when it
-failed.
+failed. Those words are git's English, whatever your language settings: slipbox reads them to know what happened, such
+as a pull that can't fast-forward. A remote whose name starts with `-` is refused before git runs, and said.
 
 - **Fetch** gets the remote's new commits without touching your files. The status line then shows how far the branch is
   behind its upstream, as in `main ↓3`.
@@ -410,16 +416,29 @@ haven't.
 | `e` | Puts the result in the file, and opens it in the lens at this conflict, to settle by hand |
 | `a` | Asks for a note, and adds the conflict to the scratch for the agent, with its base and the lines around it |
 | `n` / `p` | Goes to the next / previous conflict |
-| `w` | Saves the file, once every conflict is settled |
+| `tab` | Draws a note's sides as their lines, or as their blocks again |
+| `w` | Saves the file, once every conflict is settled. `ctrl+s` and `:w` do the same |
 | `s` | Stages the saved file, which tells git it's resolved |
 | `esc` | Closes the screen. What you settled stays, as long as the file doesn't change |
 
 After you settle a conflict, the screen moves on to the next one you haven't. Once you've staged a file, the next file
 in conflict opens.
 
+The file can change while the screen is open, when an agent writes it. Then `w` doesn't write over it: the screen says
+so, and `x` reads the file again. `s` reads the file before staging it, and doesn't stage one that changed since you
+saved it, or that still has conflict markers.
+
 The base comes from git. Where git wrote the conflict with its base (`merge.conflictStyle` set to `diff3` or `zdiff3`),
 it's that. Otherwise it's the version git keeps of the file while the merge is under way. Where git doesn't have it,
 each side shows whole.
+
+A side can hold a line of seven `=` signs of its own, such as a heading's underline. Its conflict then has more than
+one `=======` line, and either could be where yours ends. slipbox asks git which, from its own copies of each side.
+When git can't say, the screen shows the conflict as marked, and says it's ambiguous. Taking a side is refused there,
+since it could keep the wrong lines: press `e` to settle it by hand.
+
+Markers inside a fenced code block, such as a note's example of a conflict, are text, not a conflict. Markers that git
+wrote into a code block are still a conflict: slipbox tells them apart by git's copies of each side.
 
 `e` writes the result into the file without saving it. The conflicts you haven't settled stay marked there, and
 autosave stays off until you save the file yourself. Edit them away, then save. Or press `x` again: the merge screen
@@ -452,6 +471,11 @@ has. Unsaved notes are handled as for a pull.
 When a commit doesn't replay cleanly, the rebase stops there, and the merge screen opens on its conflict. Settle it,
 save it and stage it, then continue.
 
+Git runs in the background, so you may be typing, or answering another question, when it stops. Then the merge screen
+doesn't open over what you're doing, since your keys would settle conflicts there. A message says where the rebase
+stopped instead: press `x` in the git panel, or run `:resolve`, when you're ready. The same goes for a pull's question
+about bringing both sides together: `p` asks it again.
+
 ## A merge or a rebase under way
 
 While a merge or a rebase is under way, the status line says so, and the git panel has Continue, Skip (for a rebase)
@@ -461,7 +485,7 @@ and Abort buttons. `shift+r` in the git panel, or `:rebase`, offers the same:
 | --- | --- | --- |
 | `c` | `:continue` | Continues: a rebase replays its next commit, and a merge makes its commit |
 | `s` | `:skip` | Leaves the rebase's current commit out, and goes on |
-| `a` | `:abort` | Gives up the merge or the rebase: the branch goes back to where it was |
+| `a` | `:abort` | Gives up the merge or the rebase, after asking: the branch goes back to where it was |
 | `x` | | Opens the merge screen on a file still in conflict |
 
 A continue waits until no file is in conflict. Each runs in the background, and a message says how it went, in git's
@@ -737,8 +761,8 @@ So a note's diff shows each changed block twice, as it was and as it is now:
 - A changed block less than half like any other is shown removed, then added, with no words marked. A note rewritten
   whole shows its blocks removed and added; slipbox compares by word only the blocks whose words could make them alike.
 
-`tab` switches to the diff's lines, drawn as the next section says, and back. `git.diff = "source"` opens a note's diff
-as its lines ([Configuration](configuration.md)).
+`tab` switches to the diff's lines, drawn as the next section says, and back. It does in a review's changes and on the
+merge screen too. `git.diff = "source"` opens a note's diff as its lines ([Configuration](configuration.md)).
 
 #### A diff's lines
 

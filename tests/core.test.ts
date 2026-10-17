@@ -75,13 +75,14 @@ import {
   pairLines,
   unseenChange,
 } from "../src/core/merge.ts";
-import { findChange, hunkEntry, hunkLines, hunkView, sameChange, tallyText } from "../src/core/gitreview.ts";
+import { findChange, hunkEntry, hunkLines, hunkView, movedBy, sameChange, tallyText } from "../src/core/gitreview.ts";
 import { gitChanges } from "../src/core/gitsigns.ts";
 import {
   conflictExcerpt,
   conflictsOf,
   fromMerge,
   parseConflicts,
+  readConflicts,
   resultParts,
   resultText,
   resultView,
@@ -5225,6 +5226,29 @@ describe("the remote's commands and stash (26.6)", () => {
     });
   });
 
+  test("a remote's name that starts with - isn't passed to git: the push refused, said why (regression)", async () => {
+    await isolated(async () => {
+      const { root, bare } = withRemote();
+      const { pushLater, upstreamOf } = await import("../src/core/gitremote.ts");
+      // The repository's own config names the branch's remote so.
+      git(root, "config", "remote.--dry-run.url", bare);
+      git(root, "config", "remote.--dry-run.fetch", "+refs/heads/*:refs/remotes/--dry-run/*");
+      git(root, "config", "branch.main.remote", "--dry-run");
+      commit(root, "a.md", "mine");
+      const up = upstreamOf({ root }, "main");
+      expect(up).toEqual({ remote: "--dry-run", ref: "refs/heads/main" });
+      const before = git(bare, "rev-parse", "main");
+      expect(await pushLater({ root }, "main", up!)).toEqual({
+        ok: false,
+        why: 'the remote\'s name "--dry-run" starts with "-": slipbox doesn\'t pass it to git',
+        login: false,
+      });
+      expect(git(bare, "rev-parse", "main")).toBe(before);
+      // An upstream's branch so named, likewise.
+      expect(await pushLater({ root }, "main", { remote: "origin", ref: "-x" })).toMatchObject({ ok: false });
+    });
+  });
+
   test("a push runs the repository's pre-push hook only where the vault is trusted (regression)", async () => {
     // A hook is the folder's own code (D172, D175): a push in a vault not trusted runs none, as a commit runs none.
     await isolated(async () => {
@@ -5397,6 +5421,39 @@ describe("reviewing a change, a hunk at a time (GIT-D3)", () => {
     // The same lines now, but others staged under them: another change.
     expect(findChange(gitChanges("z\n", "Y\n"), gitChanges("x\n", "Y\n")[0]!)).toBeNull();
   });
+  test("a hunk gone isn't found in the same lines elsewhere in the file: another change (regression)", () => {
+    const staged = Array.from({ length: 200 }, (_, i) => `l${i}`);
+    const t = (ls: string[]) => `${ls.join("\n")}\n`;
+    const with2 = [...staged];
+    with2.splice(10, 0, "TODO");
+    with2.splice(191, 0, "TODO");
+    const shown = gitChanges(t(staged), t(with2));
+    expect(shown.map((c) => c.from)).toEqual([11, 192]);
+    // The first gone (someone took it out); the other, the same line added, is still there, 180 lines on.
+    const with1 = [...staged];
+    with1.splice(190, 0, "TODO");
+    const fresh = gitChanges(t(staged), t(with1));
+    expect(findChange(fresh, shown[0]!)).toBeNull();
+    expect(findChange(fresh, shown[1]!)).toBe(fresh[0]!);
+  });
+  test("a hunk found again after the review reverted one before it and kept another (movedBy)", () => {
+    const staged = "a\nb\nc\nd\ne\nf\ng\nh\n";
+    const now = "a\nNEW\nb\nc\nd\nMORE\ne\nf\ng\nH\n";
+    const [first, second, third] = gitChanges(staged, now);
+    expect([first!.from, second!.from, third!.from]).toEqual([2, 6, 10]);
+    // The first reverted (the file loses its line), the second kept (what's staged gains its): the third moved in both.
+    const reverted = "a\nb\nc\nd\nMORE\ne\nf\ng\nH\n";
+    const kept = "a\nb\nc\nd\nMORE\ne\nf\ng\nh\n";
+    const fresh = gitChanges(kept, reverted);
+    expect(findChange(fresh, third!)).toBeNull();
+    let moved = movedBy(third!, first!, "reverted");
+    moved = movedBy(moved, movedBy(second!, first!, "reverted"), "kept");
+    expect(moved).toMatchObject({ from: 9, to: 9, wasAt: 8 });
+    expect(findChange(fresh, moved)).toBe(fresh[0]!);
+    // One before it moves nothing.
+    expect(movedBy(first!, third!, "reverted")).toBe(first!);
+    expect(movedBy(first!, third!, "kept")).toBe(first!);
+  });
   test("a note for the agent: where the hunk is, its diff, the note; what the review says at its end", () => {
     expect(hunkEntry("/v/docs/sync.md", changes[0]!, "keep the old wording", "/v")).toBe(
       "**At:** `docs/sync.md:3`\n\n```diff\n-three\n+THREE\n```\n\n**Note:** keep the old wording",
@@ -5468,9 +5525,89 @@ describe("a file in conflict, read for the merge screen (GIT-D5)", () => {
     const f = parseConflicts("<<<<<<< a\nx\n<<<<<<< b\ny\n=======\nz\n>>>>>>> c\n");
     expect(f.segments[0]).toEqual({ kind: "plain", lines: ["<<<<<<< a", "x"] });
     expect(conflictsOf(f)[0]).toMatchObject({ ours: ["y"], theirs: ["z"], line: 3 });
-    // A heading's ======= inside theirs is theirs: only the first one parts the sides.
+    // A heading's ======= inside a side: either could part them, so the conflict is ambiguous, read the first way and
+    // written back as it was.
     const setext = parseConflicts("<<<<<<< a\nMine\n=======\nTheirs\n=======\n>>>>>>> b\n");
     expect(conflictsOf(setext)[0]).toMatchObject({ ours: ["Mine"], theirs: ["Theirs", "======="] });
+    expect(conflictsOf(setext)[0]!.ambiguous!.map((w) => [w.ours, w.theirs])).toEqual([
+      [["Mine"], ["Theirs", "======="]],
+      [["Mine", "=======", "Theirs"], []],
+    ]);
+    expect(resultText(setext, [null])).toBe("<<<<<<< a\nMine\n=======\nTheirs\n=======\n>>>>>>> b\n");
+    expect(conflictsOf(parseConflicts("<<<<<<< a\nMine\n=======\nTheirs\n>>>>>>> b\n"))[0]!.ambiguous).toBeUndefined();
+  });
+
+  test("a ======= line inside yours: split where stages 2 and 3 have it, else ambiguous (regression)", () => {
+    // As git writes it: yours added a setext heading (its underline seven long) where theirs changed the line.
+    const text = "start\n<<<<<<< HEAD\nSummary\n=======\nours body\n=======\ntheirs body\n>>>>>>> theirs\nend\n";
+    const stages = {
+      base: "start\nold\nend\n",
+      ours: "start\nSummary\n=======\nours body\nend\n",
+      theirs: "start\ntheirs body\nend\n",
+    };
+    const [c] = conflictsOf(withStages(parseConflicts(text), stages));
+    expect(c).toMatchObject({ ours: ["Summary", "=======", "ours body"], theirs: ["theirs body"], base: ["old"] });
+    expect(c!.ambiguous).toBeUndefined();
+    const f = readConflicts(text, stages);
+    expect(resultText(f, ["ours"])).toBe("start\nSummary\n=======\nours body\nend\n");
+    expect(resultText(f, ["theirs"])).toBe("start\ntheirs body\nend\n");
+    // No stages, or none that holds one way alone: ambiguous, its base unknown.
+    expect(
+      conflictsOf(withStages(parseConflicts(text), { base: null, ours: null, theirs: null }))[0]!.ambiguous,
+    ).toHaveLength(2);
+    const edited = withStages(parseConflicts(text), { ...stages, theirs: "start\nsomething else\nend\n" });
+    expect(conflictsOf(edited)[0]).toMatchObject({ base: null, ambiguous: expect.any(Array) });
+  });
+
+  test("a ======= line in diff3's base: split where the stages have it, else ambiguous (regression)", () => {
+    const text = "start\n<<<<<<< HEAD\nours\n||||||| base\nTitle7\n=======\n=======\ntheirs\n>>>>>>> theirs\nend\n";
+    const [read] = conflictsOf(parseConflicts(text));
+    expect(read).toMatchObject({ ours: ["ours"], base: ["Title7"], theirs: ["=======", "theirs"], markedBase: true });
+    expect(read!.ambiguous).toHaveLength(2);
+    const stages = {
+      base: "start\nTitle7\n=======\nend\n",
+      ours: "start\nours\nend\n",
+      theirs: "start\ntheirs\nend\n",
+    };
+    const f = readConflicts(text, stages);
+    expect(conflictsOf(f)[0]).toMatchObject({ base: ["Title7", "======="], theirs: ["theirs"] });
+    expect(resultText(f, ["theirs"])).toBe("start\ntheirs\nend\n");
+    // Unsettled, written back as git wrote it.
+    expect(resultText(f, [null])).toBe(text);
+    // A ======= in yours, before the base's marker, is yours: no ambiguity.
+    const before = conflictsOf(parseConflicts("<<<<<<< a\nT\n=======\n||||||| b\nB\n=======\nX\n>>>>>>> c\n"))[0]!;
+    expect(before).toMatchObject({ ours: ["T", "======="], base: ["B"], theirs: ["X"] });
+    expect(before.ambiguous).toBeUndefined();
+  });
+
+  test("a fenced example of git's markers is text; git's own conflict in a code block is one (regression)", () => {
+    const example = "```\n<<<<<<< HEAD\nmine\n=======\nyours\n>>>>>>> b\n```\n";
+    expect(conflictsOf(parseConflicts(`# How to\n\n${example}`)).length).toBe(0);
+    expect(conflictsOf(parseConflicts(`# How to\n\n${example.replaceAll("```", "~~~~")}`)).length).toBe(0);
+    // A real one after the example is still read, and the example kept byte for byte.
+    const both = `# How to\n\n${example}\n<<<<<<< HEAD\nA\n=======\nB\n>>>>>>> x\n`;
+    const f = parseConflicts(both);
+    expect(conflictsOf(f)).toHaveLength(1);
+    expect(conflictsOf(f)[0]!.line).toBe(11);
+    expect(resultText(f, ["ours"])).toBe(`# How to\n\n${example}\nA\n`);
+    // Markers the fence's end falls between: a conflict across it, not an example.
+    expect(conflictsOf(parseConflicts("```\n<<<<<<< HEAD\na\n```\n=======\nb\n```\n>>>>>>> x\n")).length).toBe(1);
+    // With git's stages: an example both sides have is text; markers neither side has are git's, fence or not.
+    const inBlock = "```ts\n<<<<<<< HEAD\nconst a = 1;\n=======\nconst a = 2;\n>>>>>>> x\n```\n";
+    const code = readConflicts(inBlock, {
+      base: "```ts\nconst a = 0;\n```\n",
+      ours: "```ts\nconst a = 1;\n```\n",
+      theirs: "```ts\nconst a = 2;\n```\n",
+    });
+    expect(conflictsOf(code)).toHaveLength(1);
+    expect(resultText(code, ["theirs"])).toBe("```ts\nconst a = 2;\n```\n");
+    const doc = `# How to\n\n${example}\nend\n`;
+    const kept = readConflicts(`${doc.replace("end", "<<<<<<< HEAD\nend, mine\n=======\nend, theirs\n>>>>>>> x")}`, {
+      base: doc,
+      ours: doc.replace("end", "end, mine"),
+      theirs: doc.replace("end", "end, theirs"),
+    });
+    expect(conflictsOf(kept).map((c) => c.ours)).toEqual([["end, mine"]]);
   });
 
   test("settled: yours, theirs, both either way, or lines of your own; the rest still marked", () => {
@@ -5677,6 +5814,75 @@ describe("a merge or a rebase under way, and a pull where both sides moved (GIT-
     expect(merge).toMatchObject({ kind: "merge", merging: "main" });
     expect(operationText(merge)).toBe("merging");
     expect(operationText({ kind: "rebase", step: null, total: null, branch: null, merging: null })).toBe("rebasing");
+  });
+
+  test("a base whose name starts with - isn't passed to git: not compared, not rebased onto (regression)", async () => {
+    await isolated(async () => {
+      const root = behind();
+      const c = checkoutOf(root)!;
+      const head = git(root, "rev-parse", "HEAD");
+      expect(aheadBehind(c, "--all")).toBeNull();
+      expect(await rebaseLater(c, "--root")).toEqual({
+        ok: false,
+        why: 'the base "--root" starts with "-": slipbox doesn\'t pass it to git',
+        login: false,
+      });
+      expect(operationOf(c)).toBeNull();
+      expect(git(root, "rev-parse", "HEAD")).toBe(head);
+    });
+  });
+
+  test("git in English where slipbox reads its words; its options ended before names; a flood said as such (regression)", async () => {
+    await isolated(async () => {
+      const root = behind();
+      const c = checkoutOf(root)!;
+      const { stashSaveLater, pushLater } = await import("../src/core/gitremote.ts");
+      const { mergeLater } = await import("../src/core/gitbranches.ts");
+      const { reviewMerge } = await import("../src/core/mergereview.ts");
+      // A git that says what it was run with — its locale, its arguments — and fails; or prints too much.
+      const bin = mkdtempSync(join(sandbox, "saying-"));
+      writeFileSync(
+        join(bin, "git"),
+        [
+          "#!/bin/sh",
+          'case "$*" in',
+          "  *rev-parse*) echo 0123456789abcdef0123456789abcdef01234567; exit 0 ;;",
+          "  *show-scope*) exit 1 ;;",
+          "  *flood*) head -c 17000000 /dev/zero; exit 0 ;;",
+          "esac",
+          'echo "fatal: LC_ALL=${LC_ALL-unset} LANGUAGE=${LANGUAGE-unset} ARGS=$*" >&2',
+          "exit 128",
+          "",
+        ].join("\n"),
+      );
+      chmodSync(join(bin, "git"), 0o755);
+      const was = { PATH: process.env.PATH, LC_ALL: process.env.LC_ALL, LANGUAGE: process.env.LANGUAGE };
+      process.env.PATH = `${bin}:${process.env.PATH}`;
+      process.env.LC_ALL = "de_DE.UTF-8";
+      process.env.LANGUAGE = "de";
+      try {
+        const english = "LC_ALL=C LANGUAGE=unset";
+        const rebased = await rebaseLater(c, "main");
+        expect(!rebased.ok && rebased.why).toContain(english);
+        expect(!rebased.ok && rebased.why).toContain("rebase --end-of-options main");
+        const stashed = await stashSaveLater(c, "", false);
+        expect(!stashed.ok && stashed.why).toContain(english);
+        const pushed = await pushLater(c, "agent", { remote: "origin", ref: "refs/heads/agent" });
+        expect(!pushed.ok && pushed.why).toContain(english);
+        expect(!pushed.ok && pushed.why).toContain("--end-of-options origin refs/heads/agent:refs/heads/agent");
+        const merged = await mergeLater(root, "main");
+        expect(!merged.ok && merged.why).toContain(english);
+        expect(() => reviewMerge(c, root, "main", "agent")).toThrow(english);
+        // More output than slipbox reads: said so, not as a git that took too long.
+        const flood = { ok: false as const, why: "git printed more than slipbox reads, and was stopped", login: false };
+        expect(await stashSaveLater(c, "flood", false)).toEqual(flood);
+        expect(await rebaseLater(c, "flood")).toEqual(flood);
+      } finally {
+        for (const [k, v] of Object.entries(was))
+          if (v === undefined) delete process.env[k];
+          else process.env[k] = v;
+      }
+    });
   });
 
   test("a rebase stopped at its conflict, read; continued once settled; aborted; a commit skipped", async () => {

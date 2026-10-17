@@ -19407,6 +19407,104 @@ describe("git's review, merge screen, pull and rebase (GIT-D3, GIT-D5, GIT-D6)",
         expect(await said(h, "review: 2 reverted")).toBe(true);
       });
     });
+
+    test("tab in a review switches a note's change between its blocks and its lines, as in the diff window (regression)", async () => {
+      await isolated(async () => {
+        const para = "The queue is drained by a loop that wakes every thirty seconds.\n";
+        const { root } = repo({ "a.md": `# A\n\n${para}`, "b.ts": "const a = 1;\nconst b = 2;\nconst c = 3;\n" });
+        writeFileSync(join(root, "a.md"), `# A\n\n${para.replace("thirty seconds", "minute")}`);
+        writeFileSync(join(root, "b.ts"), "const a = 1;\nconst b = 22;\nconst c = 3;\n");
+        const h = await harness({ root, open: "a.md", width: 120, height: 40 });
+        await h.app.run("git.review");
+        expect(await until(() => h.app.floating?.kind === "review")).toBe(true);
+        const rows = () =>
+          h.app.currentLayout(h.app.floating!.view).lines.map((l) => l.spans.map((s) => s.text).join(""));
+        const frames = () => rows().filter((t) => t.startsWith("┌")).length;
+        expect(frames()).toBe(2);
+        // Its lines, as source: the line removed and the line it became.
+        await h.keys("tab");
+        expect(await said(h, "the diff's lines — tab: its blocks, before and after")).toBe(true);
+        expect(frames()).toBe(0);
+        expect(
+          rows().some((t) => t.startsWith("- The queue is drained by a loop that wakes every thirty seconds.")),
+        ).toBe(true);
+        expect(rows().some((t) => t.startsWith("+ The queue is drained by a loop that wakes every minute."))).toBe(
+          true,
+        );
+        // Back to its blocks.
+        await h.keys("tab");
+        expect(await said(h, "the diff's blocks, before and after — tab: its lines")).toBe(true);
+        expect(frames()).toBe(2);
+        // A code file's change has only its lines.
+        await h.keys("n");
+        await h.keys("tab");
+        expect(await said(h, "a code file's diff is drawn as its lines: only a note's has blocks")).toBe(true);
+        // The merge screen's sides likewise.
+        await h.keys("escape");
+        const merging = conflicted();
+        const m = await harness({ root: merging, open: "sync.md", width: 120, height: 50 });
+        await m.app.git.refreshNow();
+        await m.app.run("git.merge_screen");
+        const mergeRows = () =>
+          m.app.currentLayout(m.app.floating!.view).lines.map((l) => l.spans.map((s) => s.text).join(""));
+        expect(mergeRows().filter((t) => t.startsWith("┌")).length).toBe(4);
+        await m.keys("tab");
+        expect(mergeRows().filter((t) => t.startsWith("┌")).length).toBe(0);
+        expect(mergeRows()).toContain("- Retry forever.");
+        expect(mergeRows()).toContain("+ Retry up to a minute.");
+        expect(m.app.floating?.kind).toBe("merge");
+      });
+    });
+
+    test("a file made again or changed since the review read it: x and y leave it as it is (regression)", async () => {
+      await isolated(async () => {
+        const { root } = repo({ "a.md": "a\n", "b.md": "b as committed\n" });
+        rmSync(join(root, "b.md"));
+        writeFileSync(join(root, "new.md"), "brand new\n");
+        const h = await harness({ root, open: "a.md", width: 120, height: 40 });
+        await h.app.run("git.review");
+        expect(await until(() => h.app.floating?.kind === "review")).toBe(true);
+        expect(floatText(h)).toContain("b.md  line 1 · change 1 of 1 here, 1 of 2 in all  deleted");
+        // Written again meanwhile (an agent): neither brought back over it, nor staged as the deletion shown.
+        writeFileSync(join(root, "b.md"), "a new b, never in git\n");
+        await h.keys("x");
+        expect(await said(h, "b.md is there again since the review read it: left as it is")).toBe(true);
+        expect(readFileSync(join(root, "b.md"), "utf8")).toBe("a new b, never in git\n");
+        await h.keys("y");
+        expect(git(root, "diff", "--cached", "--name-only")).toBe("");
+        // A new file changed meanwhile: not sent to the trash, nor asked about.
+        await h.keys("n");
+        expect(floatText(h)).toContain("new.md  line 1");
+        writeFileSync(join(root, "new.md"), "brand new, and more\n");
+        await h.keys("x");
+        expect(await said(h, "new.md changed since the review read it: left as it is")).toBe(true);
+        expect(h.app.overlay).toBeNull();
+        expect(readFileSync(join(root, "new.md"), "utf8")).toBe("brand new, and more\n");
+      });
+    });
+
+    test("a revert on a note open, unchanged, but not read again since the file changed: the change shown reverted (regression)", async () => {
+      await isolated(async () => {
+        const { root } = repo({ "a.md": "a\nb\nc\nd\n" });
+        // Open as committed; then written on disk, the buffer not read again (the watcher off, or before it runs).
+        const h = await harness({ root, open: "a.md", width: 120, height: 40 });
+        const buf = h.app.buffers.get("a.md")!;
+        writeFileSync(join(root, "a.md"), "X\na\nb\nc\nD\n");
+        await h.app.run("git.review");
+        expect(await until(() => h.app.floating?.kind === "review")).toBe(true);
+        expect(floatText(h)).toContain("a.md  line 1 · change 1 of 2 here");
+        expect(floatText(h)).toContain("+ X");
+        await h.keys("x");
+        expect(readFileSync(join(root, "a.md"), "utf8")).toBe("a\nb\nc\nD\n");
+        expect(buf.source).toBe("a\nb\nc\nD\n");
+        expect(buf.dirty).toBe(false);
+        // The next change, a line up now that the one above is gone: shown there, and reverted there.
+        expect(floatText(h)).toContain("a.md  line 4 · change 2 of 2 here");
+        await h.keys("x");
+        expect(readFileSync(join(root, "a.md"), "utf8")).toBe("a\nb\nc\nd\n");
+        expect(await said(h, "review: 2 reverted")).toBe(true);
+      });
+    });
   });
 
   describe("the merge screen (GIT-D5)", () => {
@@ -19574,6 +19672,151 @@ describe("git's review, merge screen, pull and rebase (GIT-D3, GIT-D5, GIT-D6)",
       });
     });
 
+    test("ctrl+s and :w save the merge screen as w does (regression)", async () => {
+      await isolated(async () => {
+        for (const save of [["ctrl+s"], [":", "w", "enter"]]) {
+          const root = conflicted();
+          const h = await harness({ root, open: "sync.md", width: 120, height: 50 });
+          await h.app.git.refreshNow();
+          await h.app.run("git.merge_screen");
+          await h.keys("o", "t", ...save);
+          expect(readFileSync(join(root, "sync.md"), "utf8")).toBe(
+            `# Sync\n\nRetry up to a minute.\n\n${MIDDLE}\n\nA 409 drops the op.\nEnd.\n`,
+          );
+          expect(await said(h, "saved sync.md — s stages it, marking it resolved")).toBe(true);
+          expect(h.app.floating?.kind).toBe("merge");
+        }
+      });
+    });
+
+    test("a save refused by a change on disk: the buffer back as the screen read it, x reads the file again (regression)", async () => {
+      await isolated(async () => {
+        const root = conflicted();
+        const h = await harness({ root, open: "sync.md", width: 120, height: 50 });
+        await h.app.git.refreshNow();
+        await h.app.run("git.merge_screen");
+        await h.keys("o", "t");
+        // Written meanwhile (an agent), the buffer not read again yet.
+        const marked = readFileSync(join(root, "sync.md"), "utf8");
+        writeFileSync(join(root, "sync.md"), `${marked}An agent's line.\n`);
+        await h.keys("w");
+        expect(
+          await said(h, "sync.md: not saved — it changed on disk since the merge screen read it; x reads it again"),
+        ).toBe(true);
+        const buf = h.app.buffers.get("sync.md")!;
+        expect(buf.source).toBe(marked);
+        expect(buf.dirty).toBe(false);
+        expect(readFileSync(join(root, "sync.md"), "utf8")).toBe(`${marked}An agent's line.\n`);
+        // x: the file as it is now, its conflicts read again.
+        await h.keys("escape");
+        await h.app.run("git.merge_screen");
+        expect(h.app.floating?.kind).toBe("merge");
+        expect(floatText(h)).toContain("Conflict 1 of 2 · line 3 · not settled");
+        expect(buf.source).toContain("An agent's line.");
+      });
+    });
+
+    test("s reads the file again: one changed since w, or with markers still in it, isn't staged (regression)", async () => {
+      await isolated(async () => {
+        const root = conflicted();
+        const h = await harness({ root, open: "sync.md", width: 120, height: 50 });
+        await h.app.git.refreshNow();
+        await h.app.run("git.merge_screen");
+        await h.keys("o", "t", "w");
+        // Written again after w (an agent), markers and all.
+        writeFileSync(join(root, "sync.md"), "start\n<<<<<<< HEAD\nx\n=======\ny\n>>>>>>> z\nend\n");
+        await h.keys("s");
+        expect(await said(h, "sync.md changed since it was saved — x reads it again")).toBe(true);
+        expect(git(root, "status", "--porcelain")).toBe("UU sync.md");
+        // Yours holding marker lines of its own: settled and saved, they're still there, and s says so.
+        const { root: own } = repo({ "a.md": "start\nold\nend\n" });
+        git(own, "switch", "-q", "-c", "theirs");
+        commit(own, "a.md", "start\ntheirs\nend\n");
+        git(own, "switch", "-q", "main");
+        commit(own, "a.md", "start\n<<<<<<< a\nx\n=======\ny\n>>>>>>> b\nend\n");
+        git(own, "merge", "-q", "theirs");
+        const o = await harness({ root: own, open: "a.md", width: 120, height: 50 });
+        await o.app.git.refreshNow();
+        await o.app.run("git.merge_screen");
+        await o.keys("o", "w");
+        expect(readFileSync(join(own, "a.md"), "utf8")).toContain("<<<<<<< HEAD");
+        await o.keys("s");
+        expect(await said(o, "a.md still has conflict markers: not staged — e edits them by hand")).toBe(true);
+        expect(git(own, "status", "--porcelain")).toBe("UU a.md");
+      });
+    });
+
+    test("a ======= line inside yours: o and w keep yours whole, as git's index has it (regression)", async () => {
+      await isolated(async () => {
+        // Yours made the line a heading, its underline seven long, where theirs changed it.
+        const { root } = repo({ "a.md": "start\nold\nend\n" });
+        git(root, "switch", "-q", "-c", "theirs");
+        commit(root, "a.md", "start\ntheirs body\nend\n");
+        git(root, "switch", "-q", "main");
+        commit(root, "a.md", "start\nSummary\n=======\nours body\nend\n");
+        git(root, "merge", "-q", "theirs");
+        expect(readFileSync(join(root, "a.md"), "utf8")).toContain("Summary\n=======\nours body\n=======\ntheirs body");
+        const h = await harness({ root, open: "a.md", width: 120, height: 50 });
+        await h.app.git.refreshNow();
+        await h.app.run("git.merge_screen");
+        expect(floatText(h)).toContain("Yours · HEAD, against the base");
+        await h.keys("o", "w");
+        expect(readFileSync(join(root, "a.md"), "utf8")).toBe("start\nSummary\n=======\nours body\nend\n");
+      });
+    });
+
+    test("a conflict its markers and git's index can't part: o, t and b refused, e edits it by hand (regression)", async () => {
+      await isolated(async () => {
+        const { root } = repo({ "a.md": "start\nold\nend\n" });
+        git(root, "switch", "-q", "-c", "theirs");
+        commit(root, "a.md", "start\ntheirs\nend\n");
+        git(root, "switch", "-q", "main");
+        commit(root, "a.md", "start\nmine\nend\n");
+        git(root, "merge", "-q", "theirs");
+        // A ======= line written into it since (an agent): neither stage has either way of reading it.
+        const marked = "start\n<<<<<<< HEAD\nmine\n=======\ntheirs\n=======\nmore\n>>>>>>> theirs\nend\n";
+        writeFileSync(join(root, "a.md"), marked);
+        const h = await harness({ root, open: "a.md", width: 120, height: 50 });
+        await h.app.git.refreshNow();
+        await h.app.run("git.merge_screen");
+        expect(h.app.floating?.kind).toBe("merge");
+        expect(floatText(h)).toContain("Ambiguous · more than one ======= line could part yours from theirs");
+        for (const k of ["o", "t", "b", "shift+b"]) await h.keys(k);
+        expect(
+          await said(
+            h,
+            "conflict 1: more than one ======= line could part yours from theirs, and git's index doesn't say which — e edits it by hand",
+          ),
+        ).toBe(true);
+        expect(floatText(h)).toContain("Conflict 1 of 1 · line 2 · not settled");
+        await h.keys("w");
+        expect(readFileSync(join(root, "a.md"), "utf8")).toBe(marked);
+        await h.keys("e");
+        expect(h.app.floating).toBeNull();
+        expect(h.app.view!.buf.source).toBe(marked);
+        expect(h.app.view!.buf.markers).toBe(true);
+      });
+    });
+
+    test("a fenced example of git's markers in a note in conflict is text: kept byte for byte (regression)", async () => {
+      await isolated(async () => {
+        const example = "```\n<<<<<<< HEAD\nmine\n=======\nyours\n>>>>>>> branch\n```\n";
+        const doc = (end: string) => `# How to settle a conflict\n\n${example}\n${end}\n`;
+        const { root } = repo({ "a.md": doc("The end.") });
+        git(root, "switch", "-q", "-c", "theirs");
+        commit(root, "a.md", doc("Their end."));
+        git(root, "switch", "-q", "main");
+        commit(root, "a.md", doc("My end."));
+        git(root, "merge", "-q", "theirs");
+        const h = await harness({ root, open: "a.md", width: 120, height: 50 });
+        await h.app.git.refreshNow();
+        await h.app.run("git.merge_screen");
+        expect(floatText(h)).toContain("Conflict 1 of 1 · line 11");
+        await h.keys("o", "w");
+        expect(readFileSync(join(root, "a.md"), "utf8")).toBe(doc("My end."));
+      });
+    });
+
     test("the conflict prompt's (m)erge settles a conflict on the merge screen; esc goes back to the prompt", async () => {
       await isolated(async () => {
         const { root } = repo({ "a.md": "one\ntwo\nthree\n" });
@@ -19709,7 +19952,55 @@ describe("git's review, merge screen, pull and rebase (GIT-D3, GIT-D5, GIT-D6)",
       });
     });
 
-    test("a rebase aborted: the branch as it was; again, the conflicting commit skipped", async () => {
+    test("a rebase that stops while you type: the merge screen not opened over the text, x named (regression)", async () => {
+      await isolated(async () => {
+        const root = behind();
+        const h = await harness({ root, open: "b.md", width: 120, height: 50 });
+        await h.app.run("git.rebase");
+        await h.keys("y");
+        // Back to typing while git runs.
+        await h.keys("i");
+        expect(h.app.view!.insert).toBe(true);
+        expect(
+          await said(
+            h,
+            /^the rebase stopped at commit 1 of 2: 1 file in conflict \(a\.md\) — x in source control opens the merge screen \(:resolve\), s stages/,
+          ),
+        ).toBe(true);
+        expect(h.app.floating).toBeNull();
+        // The letters go into the note, none of them the merge screen's.
+        await h.keys("t", "w", "s");
+        expect(h.app.view!.buf.rel).toBe("b.md");
+        expect(h.app.view!.buf.source).toStartWith("tws");
+        expect(git(root, "status", "--porcelain")).toContain("UU a.md");
+        // Typing done: x opens it.
+        await h.keys("escape");
+        await h.app.run("git.merge_screen");
+        expect(h.app.floating?.kind).toBe("merge");
+      });
+    });
+
+    test("a pull where both sides moved, while a question is open: said, not asked over it (regression)", async () => {
+      await isolated(async () => {
+        const { root, other } = repo({ "a.md": "a\n" }, true);
+        commit(other, "b.md", "theirs\n");
+        git(other, "push", "-q");
+        commit(root, "c.md", "mine\n");
+        const h = await harness({ root, open: "a.md", width: 120, height: 40 });
+        await h.app.run("git.pull");
+        // A question of its own opened while git pulls: its letters aren't the pull's m, r and n.
+        h.app.overlays.confirm("Something else?", () => {});
+        expect(
+          await said(
+            h,
+            "main and origin/main have both moved on — p in source control (:pull) asks how to bring them together",
+          ),
+        ).toBe(true);
+        expect(h.app.overlay).toMatchObject({ kind: "prompt", label: "Something else?" });
+      });
+    });
+
+    test("a rebase aborted, asked first: the branch as it was; again, the conflicting commit skipped", async () => {
       await isolated(async () => {
         const root = behind();
         const was = git(root, "rev-parse", "agent");
@@ -19718,7 +20009,18 @@ describe("git's review, merge screen, pull and rebase (GIT-D3, GIT-D5, GIT-D6)",
         await h.keys("y");
         expect(await until(() => h.app.floating?.kind === "merge")).toBe(true);
         await h.keys("escape");
+        // Asked first, as a rebase is: n leaves it under way; y gives it up.
         await h.app.run("git.abort");
+        expect(h.app.overlay).toMatchObject({
+          kind: "prompt",
+          confirm: true,
+          label: "Abort the rebase? agent goes back as it was before it, and what's settled so far is lost.",
+        });
+        await h.keys("n");
+        expect(existsSync(join(root, ".git", "rebase-merge"))).toBe(true);
+        expect(git(root, "status", "--porcelain")).toBe("UU a.md");
+        await h.app.run("git.abort");
+        await h.keys("y");
         expect(await said(h, "the rebase aborted: agent as it was — this vault isn't trusted, so no hook ran")).toBe(
           true,
         );

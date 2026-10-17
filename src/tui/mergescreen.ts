@@ -17,11 +17,13 @@ import {
   conflictExcerpt,
   conflictsOf,
   fromMerge,
+  markersOf,
   parseConflicts,
+  readConflicts,
   resultText,
   resultView,
-  withStages,
 } from "../core/conflicts.ts";
+import { readText } from "../core/fsutil.ts";
 import { inCheckout, inVault, showAt } from "../core/gitops.ts";
 import { operationOf } from "../core/gitrebase.ts";
 import { sections, stageFile } from "../core/gitstage.ts";
@@ -33,7 +35,7 @@ import { sanitize } from "../core/sanitize.ts";
 import type { App } from "./app.ts";
 import { editable } from "./app.ts";
 import { NoteBuffer } from "./buffer.ts";
-import { asBlocks, diffLanguage, sideBySide } from "./diffview.ts";
+import { asBlocks, diffLanguage, isNote, LINES_ONLY, sideBySide, switchedText } from "./diffview.ts";
 import { keyRow } from "./review.ts";
 
 /** A file on the merge screen: its conflicts, how each is settled, the one shown. */
@@ -52,6 +54,8 @@ export interface MergeState {
   rebasing: boolean;
   /** The conflict prompt's: the note's buffer, and the text on disk its merge was made with. */
   prompt?: { buf: NoteBuffer; theirs: string };
+  /** `tab` switched a note's sides from what `[git] diff` draws them as: their lines for their blocks, or back. */
+  switched?: boolean;
 }
 
 /** Each file's merge screen as it was left, by vault path: opened again on the same text, its choices are back. */
@@ -90,20 +94,23 @@ export function openMergeScreen(app: App, rel?: string): void {
   const text = buf.source;
   const was = left.get(app)?.get(target);
   if (was?.read === text) return show(app, was);
-  const parsed = parseConflicts(text);
-  if (!conflictsOf(parsed).length)
-    return app.message(
-      "info",
-      conflicted.includes(target)
-        ? `no conflict marker left in ${target}: s in source control stages it, marking it resolved`
-        : `${target} has no conflict to settle`,
-    );
   const path = inCheckout(c, app.loc.root, target);
-  const file = withStages(parsed, {
+  // The markers read with git's stages: they choose between ways to read a conflict, and its base where it's not marked.
+  const file = readConflicts(text, {
     base: showAt(c, ":1", path),
     ours: showAt(c, ":2", path),
     theirs: showAt(c, ":3", path),
   });
+  if (!conflictsOf(file).length)
+    return app.message(
+      "info",
+      !conflicted.includes(target)
+        ? `${target} has no conflict to settle`
+        : buf.dirty
+          ? // `s` stages the file on disk: what's typed here isn't in it yet.
+            `no conflict marker left in ${target}, unsaved: :w saves it, then s in source control stages it`
+          : `no conflict marker left in ${target}: s in source control stages it, marking it resolved`,
+    );
   show(app, {
     rel: target,
     path,
@@ -162,7 +169,7 @@ function show(app: App, m: MergeState): void {
   const side = (ls: string[]): ScreenPart => {
     const from = comparable(c.base === null ? "" : text(c.base));
     const to = comparable(text(ls));
-    if (c.base !== null && asBlocks(app, path)) {
+    if (c.base !== null && asBlocks(app, path, m.switched)) {
       const blocks = blockDiff(from, to, new Set(), { heads: false, folds: false });
       if (blocks.units.length) return { blocks };
     }
@@ -196,14 +203,22 @@ function show(app: App, m: MergeState): void {
       ? [label("Rebasing: ", "yours is what's rebased onto; theirs, the commit being replayed", "dim")]
       : []),
     { spans: [] },
-    c.base === null
-      ? label("Base", " · not known: neither the markers nor git's index hold it")
-      : label("Base", c.base.length ? "" : " · empty: both sides added here"),
-    ...(c.base?.length ? [{ rows: plain(c.base), from: text(c.base), to: text(c.base) }] : []),
-    label(`Yours${named(c.oursLabel)}`, against),
-    side(c.ours),
-    label(`Theirs${named(c.theirsLabel)}`, against),
-    side(c.theirs),
+    // Its sides not known: the conflict as marked, for `e`.
+    ...(c.ambiguous
+      ? [
+          label("Ambiguous", ` · ${AMBIGUOUS}`),
+          { rows: plain(markersOf(c)), from: text(markersOf(c)), to: text(markersOf(c)) },
+        ]
+      : [
+          c.base === null
+            ? label("Base", " · not known: neither the markers nor git's index hold it")
+            : label("Base", c.base.length ? "" : " · empty: both sides added here"),
+          ...(c.base?.length ? [{ rows: plain(c.base), from: text(c.base), to: text(c.base) }] : []),
+          label(`Yours${named(c.oursLabel)}`, against),
+          side(c.ours),
+          label(`Theirs${named(c.theirsLabel)}`, against),
+          side(c.theirs),
+        ]),
     { spans: [] },
     label(
       "The result",
@@ -215,7 +230,7 @@ function show(app: App, m: MergeState): void {
   const { language, tabWidth } = diffLanguage(app, path, m.read);
   const buf = new NoteBuffer(null, `merge:${m.rel}`, `merge:${m.rel}`);
   buf.kind = { group: "text", format: "text" };
-  // `:w` and ctrl+s save the result, as `w` does.
+  // `w` and, through `note.save`, `:w` and ctrl+s: the file saved as settled.
   buf.virtual = { save: () => mergeSave(app) };
   buf.readOnly = "the merge screen is read-only: o, t and b settle a conflict, e edits it in the lens";
   let made: { key: string; layout: Layout } | null = null;
@@ -241,10 +256,15 @@ function current(app: App, key: string, what: string): MergeState | null {
   return m;
 }
 
-/** `o`, `t`, `b`, `shift+b`: the conflict settled so, and on to the next one that isn't. */
+/** Why an ambiguous conflict is settled only by hand. */
+const AMBIGUOUS =
+  "more than one ======= line could part yours from theirs, and git's index doesn't say which — e edits it by hand";
+
+/** `o`, `t`, `b`, `shift+b`: the conflict settled so, and on to the next one that isn't. An ambiguous one: refused. */
 export function mergeTake(app: App, choice: Exclude<Choice, { lines: string[] }>): void {
   const m = current(app, "o, t and b", "settle a conflict");
   if (!m) return;
+  if (conflictsOf(m.file)[m.at]?.ambiguous) return app.message("warn", `conflict ${m.at + 1}: ${AMBIGUOUS}`);
   m.choices[m.at] = choice;
   m.saved = false;
   const open = m.choices.filter((c) => !c).length;
@@ -259,6 +279,20 @@ export function mergeTake(app: App, choice: Exclude<Choice, { lines: string[] }>
       break;
     }
   show(app, m);
+}
+
+/**
+ * `tab` (`git.diff_view`, as in the diff window): a note's sides drawn against the base as their lines, or as their
+ * blocks again. A code file's has only its lines, and says so.
+ */
+export function mergeSwitch(app: App): void {
+  const m = current(app, "tab", "switches a note's sides between their blocks and their lines");
+  if (!m) return;
+  const path = m.prompt?.buf.abs ?? join(app.loc.root, m.rel);
+  if (!isNote(app, path)) return app.message("info", LINES_ONLY);
+  m.switched = !m.switched;
+  show(app, m);
+  app.message("info", switchedText(asBlocks(app, path, m.switched)));
 }
 
 /** `n` and `p`: the next conflict, or the one before. */
@@ -353,9 +387,24 @@ export function mergeSave(app: App): boolean {
   }
   const buf = target(app, m);
   if (!buf) return false;
+  const before = { text: buf.source, markers: buf.markers };
   put(app, m, buf);
   if (!app.saving.save(buf, true)) {
-    app.message("warn", `${m.rel}: not saved — it changed on disk meanwhile; :w in it says how`);
+    if (m.prompt) {
+      app.message("warn", `${m.rel}: not saved — it changed on disk meanwhile; :w in it says how`);
+      return false;
+    }
+    // Refused: the file as the screen read it again, so the screen, `w` and `x` go on from there — nothing in the
+    // buffer that the screen doesn't show.
+    buf.edit(0, buf.source.length, before.text);
+    buf.markers = before.markers;
+    for (const v of app.allViews()) if (v.buf === buf) v.layoutKey = "";
+    app.message(
+      "warn",
+      buf.changedOnDisk()
+        ? `${m.rel}: not saved — it changed on disk since the merge screen read it; x reads it again`
+        : `${m.rel}: not saved`,
+    );
     return false;
   }
   m.read = buf.source;
@@ -370,6 +419,15 @@ export function mergeSave(app: App): boolean {
   return true;
 }
 
+/** A file's text on disk, as a buffer reads it; null when it can't be read. */
+function onDisk(abs: string): string | null {
+  try {
+    return readText(abs).text;
+  } catch {
+    return null;
+  }
+}
+
 /** `s`: the saved file staged — git told it's resolved — and the next file in conflict opened, if there's one. */
 export function mergeStage(app: App): void {
   const m = current(app, "s", "stages the file");
@@ -380,6 +438,16 @@ export function mergeStage(app: App): void {
       "info",
       m.choices.some((c) => !c) ? "settle every conflict, then w saves it" : "w saves it first",
     );
+  // The file read again: one changed since it was saved (an agent, a terminal), or with markers still in it, isn't
+  // marked resolved.
+  const disk = onDisk(join(app.loc.root, m.rel));
+  if (disk !== m.read) {
+    m.saved = false;
+    show(app, m);
+    return app.message("warn", `${m.rel} changed since it was saved — x reads it again`);
+  }
+  if (conflictsOf(parseConflicts(disk)).length)
+    return app.message("warn", `${m.rel} still has conflict markers: not staged — e edits them by hand`);
   const c = app.git.checkout!;
   const why = stageFile(c, m.path);
   if (why) return app.message("warn", `git: ${why}`);

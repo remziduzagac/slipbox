@@ -13,6 +13,7 @@ import { urlPath } from "./convert.ts";
 import { folderIdentity, lookupFolder, type NamedFolder, readFolders } from "./folders.ts";
 import { type Checkout, headOf } from "./git.ts";
 import { branchesOf, changedBetween, gitArgs, inCheckout, inVault } from "./gitops.ts";
+import { inEnglish } from "./gitremote.ts";
 import { extractText } from "./graph.ts";
 import { checkoutRemotes, parseHosted, splitRef, withHostedPath } from "./hosting.ts";
 import { extensionless, homeDir, wikiPathCandidates } from "./links.ts";
@@ -62,7 +63,13 @@ function git(
   args: string[],
   input?: string,
 ): { status: number | null; out: Buffer; err: string } {
-  const r = spawnSync("git", gitArgs(c.root, args), { input, maxBuffer: 512 * 1024 * 1024, timeout: 120_000 });
+  // git's words in English: its refusals are matched (histories unrelated, a git too old).
+  const r = spawnSync("git", gitArgs(c.root, args), {
+    input,
+    maxBuffer: 512 * 1024 * 1024,
+    timeout: 120_000,
+    env: inEnglish(process.env),
+  });
   return {
     status: r.error ? null : r.status,
     out: r.stdout ?? Buffer.alloc(0),
