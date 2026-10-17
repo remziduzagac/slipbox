@@ -4,7 +4,7 @@
 // a code file's is its lines, side by side where each side has 80 columns (`[git] diff_layout`). The lines: a row a
 // line, `-` or `+` in its gutter, highlighted by the file's language, a changed line's changed words tinted; each group
 // under its `@@ line N`, the unchanged stretches folded; what changed that no line shows (the line endings, the final
-// newline) a dim row of its own (D240). A long line scrolls sideways as a code block does (D233): the cursor, a
+// newline) a dim row of its own (D245). A long line scrolls sideways as a code block does (D233): the cursor, a
 // sideways wheel or `shift` with the wheel; side by side, both sides together. `enter` on a fold opens it; on a line,
 // goes there (or back, where the window has nowhere to go); `esc` goes back where it came from.
 

@@ -1918,7 +1918,7 @@ margins.
 - **Compared:** the two texts without their line endings or a byte order mark (`comparable`): CRLF is LF, as git has
   it for a checkout that turns LF into CRLF and as the gutter's signs have it, so a CRLF file's diff against git's LF
   is its changed lines, not all of them. What changed of them, and of the final line break (when both texts have a
-  last line), is a dim row of its own, as git says `\ No newline at end of file` (`unseenRows`, D240): the line endings
+  last line), is a dim row of its own, as git says `\ No newline at end of file` (`unseenRows`, D245): the line endings
   (`\ line endings: CRLF → LF`, or `mixed`) and the mark (`\ byte order mark removed`) before the diff's first row, at
   line 1; the final line break (`\ no newline at end of file`, `\ newline at end of file added`) after its last, at
   the last line — whether or not a line changed too; alone, the diff's only rows. The command line's `git diff` says
@@ -1982,7 +1982,7 @@ diff (a file the walk reads as a note) in every window a diff opens in, unless `
   space is one, so a paragraph wrapped again differs only in its words), none less than half alike — within the pairs'
   budget of tokens (above), so a note rewritten whole shows its blocks removed and added at once. Two blocks past
   `MAX_TOKENS` together (a fence of about 150 lines) are compared by their lines instead (`diffByLines`: twice the
-  lines kept over the lines of both, each line a token of the budget; D240). A pair is a change, the rest removed or
+  lines kept over the lines of both, each line a token of the budget; D245). A pair is a change, the rest removed or
   added whole; the unchanged blocks in a group are shown between, unframed. Each pair's lines are diffed too
   (`pairDiff`): where each line before is now, and, for a pair compared by its lines, its changed lines (their runs of
   the block's text, `delLines` and `addLines`) and, in each changed line paired with one like it (`pairLines`), its
@@ -2009,7 +2009,7 @@ diff (a file the walk reads as a note) in every window a diff opens in, unless `
   a space before it, as the source diff's rows read, a `\ …` row — and each layout row's `src` its first word's unit;
   `enter` goes to the unit's line: a `before` line's, found by its pair's line diff, where it is in the `after` block
   if it's unchanged, else where its run of changes is (the line after it, inside the block), as the source diff's
-  removed lines go (D240); a removed block's, where it was. `tab`
+  removed lines go (D245); a removed block's, where it was. `tab`
   (`git.diff_view`, the diff window's own keymap, `DEFAULT_DIFF_KEYS`) switches between the blocks and the lines, the
   cursor on the first line's row at or after the line it was on; a code file's diff says it has only its lines. The
   review's and the merge screen's keymaps have it too: there, `tab` switches each hunk, or each side against the

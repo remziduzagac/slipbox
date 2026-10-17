@@ -445,7 +445,7 @@ a `before` and an `after` frame, the removed words marked in the first and the a
 diff by words, its changed lines and their words), a block added or removed whole laid out once, marked, the
 unchanged stretches folded; and a code file's **side by side** (`core/layout/splitdiff.ts`), its two texts scrolling
 sideways by one offset, as a code block does (D233). Each says in a dim row what changed that no line shows, the line
-endings or the final newline (D240). The layout's other users never see the marks. How each is found and drawn, its
+endings or the final newline (D245). The layout's other users never see the marks. How each is found and drawn, its
 roles and its window: [tui.md](tui.md) § Git.
 
 ## The ANSI writer

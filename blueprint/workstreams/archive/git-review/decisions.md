@@ -29,7 +29,7 @@ the agent runs `git` for it (D156).
 
 ## GIT-D2: One diff, drawn as slipbox draws notes (2026-10-14)
 
-> **Detailed by D240 (2026-10-17):** a block too big to diff by words is diffed by its lines, its changed lines and
+> **Detailed by D245 (2026-10-17):** a block too big to diff by words is diffed by its lines, its changed lines and
 > their changed words marked; `enter` on a `before` line goes to its line now, by the block's line diff; what changed
 > that no line shows (the line endings, the byte order mark, the final newline) is a dim row, `\ line endings: CRLF →
 > LF`, in every drawing.

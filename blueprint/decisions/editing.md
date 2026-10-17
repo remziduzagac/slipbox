@@ -517,7 +517,7 @@ the keys after it wait with it. The binary is about 0.7 MB bigger: the parse wor
 **Not chosen:** building the dictionaries in slices between frames: Hunspell builds one in a single call that can't be
 split; checking only in the visible rows: it is the build, not the checking, that blocks.
 
-## D240: A note's diff: a big block by its lines, a line before to its line, what no line shows a row (2026-10-17)
+## D245: A note's diff: a big block by its lines, a line before to its line, what no line shows a row (2026-10-17)
 
 **Decision:** Three edges of the block diff (GIT-D2). A changed block too big to diff by words (past `MAX_TOKENS`, 4,000
 tokens, about 150 lines of code) is paired with the block most like it by its lines — twice the lines kept over the
