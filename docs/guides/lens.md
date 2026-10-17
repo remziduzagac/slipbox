@@ -83,8 +83,8 @@ a heading and a paragraph.
 
 A section too long for that opens on the cursor's block instead, with the blocks around it, until the lens holds at
 least six rows. For example, in the window of these pictures, the gear checklist is too long for half of it. With the
-cursor on "Reflective ankle bands", the lens opens on that item and the items next to it, and the rest of the
-checklist stays rendered above and below.
+cursor on "Reflective ankle bands", the lens opens on that item and the blocks next to it, and the start of the
+checklist stays rendered above it.
 
 A neighbour comes in only if the lens still fits in half the window with it. So a short paragraph next to a long table
 doesn't take the table in with it.
@@ -129,19 +129,24 @@ line says `INSERT`.
 As you type, the lens grows with what you write. Each new line pushes its bottom rule down, and the rendered note below
 moves down with it.
 
-For example, to add two items to the gear checklist:
+For example, to add a sentence under the paragraph about food:
 
-1. Put the cursor on "Reflective ankle bands". The lens isn't open yet.
-2. Press `o`. The lens opens on that item and its neighbours, as written: `- [ ] Reflective ankle bands`.
-3. Press `o` again. A new task, `- [ ]`, starts on the line below, and you're typing.
-4. Type `Spare batteries for the rear light`, press `enter`, and type `Arm warmers for the night`. `enter` in a list
-   starts the next item for you.
+1. Open the lens on the Food section, as in the first picture: the cursor on the paragraph, then `space n l`.
+2. The paragraph's last line, "stays down at the services…", is four rows down: the counters' column says `4` beside
+   it. Press `4 j`.
+3. Press `shift+a` to type at the end of the line. The rules turn green, and the status line says `INSERT`.
+4. Press `enter` twice, and type `Next time: a second bottle cage for the long stretch after 171 km.`
 
-   ![The lens grown while typing: two new tasks typed into the gear checklist, the rules green, the label saying
-   editing, the status line reading INSERT](../images/lens-typing.png)
+   ![The lens grown while typing: a new paragraph typed under the one about food, the rules green, the label saying
+   editing, lines 30 to 37, the gear checklist moved down below it](../images/lens-typing.png)
 
+   The label says `editing · lines 30–37`: two lines more than the lens opened with. The gear checklist moved down to
+   make room.
 5. Press `esc` to stop typing. The rules lose their green, and the status line says `LENS`.
-6. Press `esc` again to close the lens. The checklist renders with its two new boxes.
+6. Press `esc` again to close the lens. The Food section renders with its new paragraph.
+
+In a list, `o` starts the next item for you. With the cursor on "Reflective ankle bands", `o` opens the lens, and `o`
+again starts a new task, `- [ ]`, on the line below.
 
 While you type, the arrow keys stop at the lens's rules, and `pageup` and `pagedown` go as far as its edge. To go
 further, stop typing first: `esc`, then move, and the lens comes along.
@@ -154,8 +159,8 @@ saves itself after 30 seconds without a key ([Saving](../manual/editing.md#savin
 When you're not typing, the keys work on the text in the lens, vim's commands included: `d d`, `c i w`, `y a p`, `.`
 and the rest ([The vim keys](../manual/editing.md#the-vim-keys)).
 
-The counters' column is there for those. To delete the cursor's line and the two below it, read the `2` off the
-column on the last of them, and press `d 2 j`.
+The counters' column is there for those. It counts rows as `j` and `k` move by them, so the number beside a row is
+the count that reaches it, as `4 j` did above.
 
 For example, to change "the big meal" in the food paragraph to "the hot meal":
 

@@ -213,7 +213,7 @@ The review goes through the uncommitted changes one at a time. They're in the ag
    Untracked. `ctrl+o` takes you back to your checkout.
 2. Press `v` in the git panel, or click Review. The first change opens in a floating window, drawn as its diff, with a
    few of the file's lines around it. Above it are the file, where the change is
-   (`line 17 · change 1 of 2 here, 1 of 3 in all`), and the keys.
+   (`line 9 · change 1 of 2 here, 1 of 3 in all`), and the keys.
 
    ![The review: one change to a note, as a before and an after frame, under its file, its place among the changes and
    the keys to keep, revert or note it](../images/code-and-git-review.png)
@@ -269,8 +269,8 @@ merge screen opens in a floating window, one conflict at a time:
 
 In a note, each side is drawn in blocks before and after, as a note's diff is.
 
-![The merge screen on a note: a conflict's base, then yours and theirs as diffs against it, the keys above and the
-result below](../images/code-and-git-merge-screen.png)
+![The merge screen on a note: the keys above, then a conflict's base, and yours and theirs as diffs against it, each
+in a before and an after frame](../images/code-and-git-merge-screen.png)
 
 | Key | What it does |
 | --- | --- |
