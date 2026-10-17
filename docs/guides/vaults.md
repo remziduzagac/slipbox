@@ -292,7 +292,7 @@ where the view is:
 ~ › work › ◈ kestrel › docs ›
 ```
 
-- `~` is your home folder. Outside it, the breadcrumb starts at `/`.
+- `~` is your home folder. With the view outside it, the breadcrumb starts at `/`, and your home folder has its name.
 - A vault has its mark, `◈`. The vault you are in is highlighted.
 - The view's own folder is bold.
 
@@ -372,7 +372,9 @@ Nothing in them is indexed, though:
 - A wikilink's name doesn't reach them.
 - They can't be renamed, moved or deleted from the explorer.
 
-A note kept in a folder named `build` or `vendor` isn't indexed either. Rename the folder to have it indexed.
+A note kept in a folder named `build` or `vendor` isn't indexed either. Rename the folder to have it indexed. And
+nothing new goes into one: a new note, a move or a copy there is refused, from the explorer, a typed path or the
+command line. A note already there can still be changed.
 
 ## Links into other vaults: the peek
 
