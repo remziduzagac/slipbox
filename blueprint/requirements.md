@@ -366,8 +366,9 @@ Each was decided after a wrong turn, and is not re-litigated:
 - **The network** (DF-D1, DF-D23): what reaches the network — a web picture fetched, a package installed, the update
   check — is yours alone to allow: a folder's settings never turn any of it on, and one that tries is ignored, with a
   warning. design/trust.md § What runs.
-- **Exports** (DF-D2, DF-D3, DF-D24): an export holds pictures of the vault only, and never writes over a note, of
-  this vault or any other. design/export.md § Asking for one, § The assembler.
+- **Exports** (DF-D2, DF-D3, DF-D24, D243): an export holds pictures of the vault only, and never writes over a note,
+  of this vault or any other; over another file only when it's an earlier export, or you say so. design/export.md §
+  Asking for one, § Earlier exports, § The assembler.
 
 ### Licences
 

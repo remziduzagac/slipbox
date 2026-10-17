@@ -1,7 +1,8 @@
 // The diff as slipbox draws it (GIT-D2): a row a line, `-` or `+` in its gutter; the line highlighted by its file's
 // language as source mode has it; a changed line tinted, and its changed words more strongly; each group under its
-// `@@ line N`, the unchanged stretches between folded to a row saying how many lines they hold. A line too long for the
-// window scrolls sideways, as a code block too wide does (D233) — never cut.
+// `@@ line N`, the unchanged stretches between folded to a row saying how many lines they hold; what changed that no
+// line shows (the line endings, the final newline) a dim row, `\ line endings: CRLF → LF`, as git's `\ No newline at
+// end of file`. A line too long for the window scrolls sideways, as a code block too wide does (D233) — never cut.
 
 import type { Glyphs } from "../glyphs.ts";
 import { type DiffViewRow, inRanges, type WordRange } from "../merge.ts";
@@ -38,6 +39,13 @@ export interface Cell {
   bg?: Role;
 }
 
+/** A row across the diff, no line's: a head, a fold, or what changed that no line shows (`\ …`) — as it reads. */
+export function acrossRow(r: DiffViewRow, g: Glyphs): Span {
+  if (r.kind === "@@") return { text: `@@ ${r.text}`, role: "diff_head", attrs: 0 };
+  if (r.kind === "\\") return { text: `\\ ${r.text}`, role: "dim", attrs: 0 };
+  return { text: `${g.foldClosed} ${r.count} unchanged line${r.count === 1 ? "" : "s"}`, role: "dim", attrs: 0 };
+}
+
 /**
  * The diff's rows (`diffView`) laid out, `from` and `to` the texts it compares. Each row is one line of the layout's
  * own text (its `src`, 1-based, the row's place): a line too long wraps to more rows when `[render] code_wrap` says so.
@@ -50,7 +58,7 @@ export function layoutDiff(rows: DiffViewRow[], from: string, to: string, opts: 
   const before = highlighted(from, want("from"), opts.language, tab);
   const after = highlighted(to, want("to"), opts.language, tab);
   const code: Cell[][] = rows.map((r) => {
-    if (r.kind === "@@" || r.kind === "fold") return [];
+    if (r.kind === "@@" || r.kind === "fold" || r.kind === "\\") return [];
     const tint = r.kind === " " ? null : TINT[r.kind];
     return cellsOf((r.kind === "+" ? after : before).get(r.own), r.words, tint);
   });
@@ -62,11 +70,9 @@ export function layoutDiff(rows: DiffViewRow[], from: string, to: string, opts: 
   const lines: Line[] = [];
   rows.forEach((r, i) => {
     const src = i + 1;
-    if (r.kind === "@@" || r.kind === "fold") {
-      const text =
-        r.kind === "@@" ? `@@ ${r.text}` : `${g.foldClosed} ${r.count} unchanged line${r.count === 1 ? "" : "s"}`;
+    if (r.kind === "@@" || r.kind === "fold" || r.kind === "\\") {
       lines.push({
-        spans: [{ text, role: r.kind === "@@" ? "diff_head" : "dim", attrs: 0 }],
+        spans: [acrossRow(r, g)],
         src,
         ...(scroll ? { scroll: { ...scroll, part: "top" } } : {}),
       });

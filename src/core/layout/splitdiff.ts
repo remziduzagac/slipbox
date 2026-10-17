@@ -1,11 +1,22 @@
 // A code file's diff side by side (GIT-D7): the two versions in two columns, `from` on the left and `to` on the right,
 // each line beside the one it became — a changed line beside the line it's paired with, its changed words tinted, as
-// the unified diff pairs them — and an unchanged line beside itself. The heads and folds span both. A line too long
-// for its column scrolls sideways, both columns by the one offset, as a code block's lines do (D233); with `[render]
-// code_wrap = "wrap"` each side wraps in its column; with wrapping off the rows are whole and the window scrolls.
+// the unified diff pairs them — and an unchanged line beside itself. The heads, the folds and what changed that no line
+// shows (`\ line endings: CRLF → LF`) span both, as the unified diff draws them. A line too long for its column
+// scrolls sideways, both columns by the one offset, as a code block's lines do (D233); with `[render] code_wrap =
+// "wrap"` each side wraps in its column; with wrapping off the rows are whole and the window scrolls.
 
 import type { DiffViewRow } from "../merge.ts";
-import { type Cell, cellsOf, chunks, DIFF_GUTTER, type DiffLayoutOptions, highlighted, spansOf, TINT } from "./diff.ts";
+import {
+  acrossRow,
+  type Cell,
+  cellsOf,
+  chunks,
+  DIFF_GUTTER,
+  type DiffLayoutOptions,
+  highlighted,
+  spansOf,
+  TINT,
+} from "./diff.ts";
 import type { CodeScroll, Layout, Line, Span } from "./ir.ts";
 
 /** Each side's text columns for `auto` (`[git] diff_layout`) to put the two side by side: at least this many. */
@@ -20,7 +31,7 @@ export function splitColumns(width: number): number {
   return Math.floor((width - 2 * DIFF_GUTTER - RULE - 1) / 2);
 }
 
-/** A row side by side: a head or a fold across both (`row`), else the unified rows shown on the left and on the right
+/** A row side by side: a head, a fold or a `\` row across both (`row`), else the unified rows on the left and the right
  *  (their indexes; either may be absent). `unit` is the row it stands for: the right's, else the left's. */
 export interface SplitRow {
   row?: number;
@@ -88,7 +99,7 @@ export function layoutSplitDiff(rows: DiffViewRow[], from: string, to: string, o
   // An unchanged line is `from`'s, on both sides.
   const code = (i: number | undefined): Cell[] => {
     const r = i === undefined ? undefined : rows[i];
-    if (!r || r.kind === "@@" || r.kind === "fold") return [];
+    if (!r || r.kind === "@@" || r.kind === "fold" || r.kind === "\\") return [];
     return cellsOf((r.kind === "+" ? after : before).get(r.own), r.words, r.kind === " " ? null : TINT[r.kind]);
   };
   const split = splitRows(rows);
@@ -117,11 +128,8 @@ export function layoutSplitDiff(rows: DiffViewRow[], from: string, to: string, o
   split.forEach((s, k) => {
     const src = s.unit + 1;
     if (s.row !== undefined) {
-      const r = rows[s.row]!;
-      const text =
-        r.kind === "@@" ? `@@ ${r.text}` : `${g.foldClosed} ${r.count} unchanged line${r.count === 1 ? "" : "s"}`;
       lines.push({
-        spans: [{ text, role: r.kind === "@@" ? "diff_head" : "dim", attrs: 0 }],
+        spans: [acrossRow(rows[s.row]!, g)],
         src,
         ...(scroll ? { scroll: { ...scroll, part: "top" } } : {}),
       });

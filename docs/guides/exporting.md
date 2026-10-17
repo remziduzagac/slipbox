@@ -30,8 +30,8 @@ To put the file elsewhere:
 - In the folder, `enter` goes into a folder and `left` goes up.
 - Or type a path as the name (`~/Desktop/coffee.docx`). A name ending in `/` is a folder, made if it isn't there.
 
-The next time, the window opens where you exported last. A file already there is replaced only after you answer `y`.
-A note is never written over.
+The next time, the window opens where you exported last. An earlier export already there is replaced. Any other file
+is replaced only after you answer `y`, and a note is never written over.
 
 An export reads the notes from disk, so unsaved changes are saved first.
 
@@ -58,7 +58,7 @@ slipbox export ideas/coffee -o ~/Desktop/sent/                # into a folder, m
 ```
 
 `--to` names the format. Without it, the extension of `-o`'s file names it. Without either, it's Word. Each run prints
-where the document went.
+where the document went. An earlier export there is replaced; any other file is left alone unless you add `--force`.
 
 An agent can export too ([Working with agents](agents.md)). The skill tells it to export only when you ask.
 

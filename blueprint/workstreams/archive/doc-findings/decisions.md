@@ -23,6 +23,10 @@ user's answer (A2).
 
 ## DF-D3: No export over a note, of any root (2026-10-11)
 
+> **Amended by D243 (2026-10-17):** nor over any other file that isn't an earlier export, in any format, unless you
+> say: `--force` on the CLI, `y` to the TUI's question. An earlier export is replaced without one, in the TUI too. A
+> note stays refused, even with `--force`.
+
 **Decision:** `slipbox export -o` never writes over a note, of this root or another (exit 5); an earlier Markdown
 export can still be replaced. The TUI's Save As keeps asking before replacing any other file.
 

@@ -12,7 +12,7 @@ dated notes later decisions left under it. Requirements and design say what hold
 - [editing.md](editing.md) (D134–D158): the editor and the hand-off, concurrent edits, write safety, renames, the
   explorer, git, editing fundamentals.
 - [code-intelligence.md](code-intelligence.md) (D159–D177): language servers and linters, diagnostics, trust.
-- [export.md](export.md) (D178–D190): notes as documents, in formats slipbox writes itself.
+- [export.md](export.md) (D178–D190, and later ones): notes as documents, in formats slipbox writes itself.
 - [distribution.md](distribution.md) (D191–D205, and later ones): platforms, releases, updates, licences, the supply
   chain.
 - [process.md](process.md) (D206–D210, and later ones): how the work is done and recorded, and the blueprint itself.
