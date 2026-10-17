@@ -1524,6 +1524,17 @@ describe("a diff's rows as drawn (GIT-D2)", () => {
     // A diff whose lines fit: no block at all.
     expect(diff(code, code.replace("= 2;", "= 3;")).lines.some((x) => x.scroll)).toBe(false);
   });
+
+  test("a tab before a combining mark shifts no mark: the changed word marked, unified and side by side", () => {
+    const before = "x\t\u0301ab cd\n";
+    const now = "x\t\u0301ab ce\n";
+    const opts = { width: 180, glyphs: unicode, language: "text", wrap: false, codeScroll: false };
+    const rows = diffView(before, now);
+    const words = (l: Layout) =>
+      l.lines.flatMap((r) => r.spans.filter((s) => String(s.bg ?? "").endsWith("_word")).map((s) => s.text));
+    expect(words(layoutDiff(rows, before, now, opts))).toEqual(["cd", "ce"]);
+    expect(words(layoutSplitDiff(rows, before, now, opts))).toEqual(["cd", "ce"]);
+  });
 });
 
 describe("a note's diff before and after, laid out (GIT-D2)", () => {
@@ -1673,6 +1684,78 @@ describe("a note's diff before and after, laid out (GIT-D2)", () => {
       "after: the rules (diff_add_word)",
       "after: The (diff_add_word)",
     ]);
+  });
+
+  /** The words on a word's tint, in order. */
+  const wordsMarked = (l: Layout) =>
+    l.lines.flatMap((r) => r.spans.filter((s) => String(s.bg ?? "").endsWith("_word")).map((s) => s.text.trim()));
+  const crlf = (s: string) => s.replace(/\n/g, "\r\n");
+
+  test("a CRLF note's fence, front matter, maths and rule: no CR shown, the changed word still marked", () => {
+    for (const [from, to, word] of [
+      ["intro\n\n```js\nlet a = 1;\n```\n", "intro\n\n```js\nlet a = 2;\n```\n", "2"],
+      ["---\ntitle: Hi\n---\n\nbody\n", "---\ntitle: Ho\n---\n\nbody\n", "Ho"],
+      ["$$\na+b\n$$\n", "$$\na+c\n$$\n", "c"],
+      ["a\n\n---\n\nb\n\n- - -\n\nc\n", "a\n\n---\n\nb\n\n***\n\nc\n", null],
+    ] as const) {
+      const d = blockDiff(crlf(from), crlf(to));
+      const l = layoutBlockDiff(d, { width: 50, glyphs: unicode });
+      expect(l.lines.filter((r) => rowText(r).includes("�")).map(rowText)).toEqual([]);
+      // The window's lines, under the drawing, carry no CR either.
+      expect(d.units.filter((u) => u.text.includes("\r"))).toEqual([]);
+      if (word) expect(wordsMarked(l).filter((w) => !/^[-─]/.test(w))).toContain(word);
+    }
+  });
+
+  test("a CRLF paragraph's line break reads as a space, as an LF one does", () => {
+    const from = "intro\n\nalpha beta\ngamma delta\n";
+    const to = "intro\n\nalpha beta\ngamma epsilon\n";
+    for (const [a, b] of [
+      [from, to],
+      [crlf(from), crlf(to)],
+    ])
+      expect(frames(layoutBlockDiff(blockDiff(a!, b!), { width: 50, glyphs: unicode }))).toEqual([
+        "@@ line 1",
+        "  intro",
+        "before: alpha beta gamma delta",
+        "after: alpha beta gamma epsilon",
+      ]);
+  });
+
+  test("a frame as wide as the window, however narrow: a deep list's indent goes before its text does", () => {
+    const from =
+      "- 一\n  - 二\n    - 三\n      - 四\n        - 五\n          - 你好 世界 and some words\n\nA paragraph here.\n";
+    const to = from.replace("世界", "地界").replace("A paragraph", "The paragraph");
+    const d = blockDiff(from, to, new Set(), { heads: false, folds: false });
+    for (let width = 8; width <= 16; width++) {
+      const l = layoutBlockDiff(d, { width, glyphs: unicode });
+      const wide = l.lines.map(rowText).filter((t) => stringWidth(t) > width);
+      expect([width, wide]).toEqual([width, []]);
+      expect(wordsMarked(l)).toContain("地");
+    }
+  });
+
+  test("a fence thousands of lines long lays out in time linear in its lines", () => {
+    const fence = (n: number) =>
+      `\`\`\`js\n${Array.from({ length: n }, (_, i) => `const v${i} = ${i}; // some comment`).join("\n")}\n\`\`\`\n`;
+    const timed = (n: number) => {
+      const d = blockDiff(fence(n), fence(n).replace("v5 =", "v5x ="));
+      let best = Number.POSITIVE_INFINITY;
+      let l: Layout | null = null;
+      for (let k = 0; k < 3; k++) {
+        const t = performance.now();
+        l = layoutBlockDiff(d, { width: 80, glyphs: unicode });
+        best = Math.min(best, performance.now() - t);
+      }
+      return { best, l: l!, d };
+    };
+    const small = timed(1000);
+    const big = timed(8000);
+    expect(big.best / Math.max(small.best, 1)).toBeLessThan(16);
+    // Each code row goes to its own line: its unit's.
+    const { l, d } = small;
+    const row = l.lines.find((r) => rowText(r).includes("const v700 = 700;"))!;
+    expect(d.units[row.src - 1]!.text).toContain("const v700 = 700;");
   });
 });
 

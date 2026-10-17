@@ -13,7 +13,7 @@ import {
   showAt,
   worktreeList,
 } from "../core/gitops.ts";
-import { diffRows } from "../core/merge.ts";
+import { comparable, diffRows, unseenChange } from "../core/merge.ts";
 import { sanitize } from "../core/sanitize.ts";
 import { readText } from "../core/fsutil.ts";
 import { describeBreak, type MergeReview, MergeReviewError, reviewMerge } from "../core/mergereview.ts";
@@ -67,13 +67,21 @@ export const GIT_COMMANDS: Record<string, Handler> = {
     const base = baseFor(s, c);
     const mergeBase = mergeBaseOf(c, base);
     if (!mergeBase) throw new CliError(`this branch and ${base} have no commit in common`, EXIT.notFound);
-    const before = showAt(c, mergeBase, inCheckout(c, s.loc.root, rel));
-    const now = readText(s.graph.abs(rel)).text;
-    const rows = diffRows(before ?? "", now);
+    const shown = showAt(c, mergeBase, inCheckout(c, s.loc.root, rel));
+    const before = shown ?? "";
+    const read = readText(s.graph.abs(rel));
+    // The file as git has it (its byte order mark too); line endings and the mark not compared, as the TUI's diff has it.
+    const now = (read.bom ? "\uFEFF" : "") + read.text;
+    const rows = diffRows(comparable(before), comparable(now));
     const human = rows.map((r) => (r.kind === "@@" ? `@@ ${r.text}` : `${r.kind} ${sanitize(r.text)}`)).join("\n");
+    const only = rows.length ? null : unseenChange(before, now);
     return {
-      data: { path: rel, base, mergeBase, new: before === null, rows },
-      human: rows.length ? `${human}\n` : `no differences from ${base}\n`,
+      data: { path: rel, base, mergeBase, new: shown === null, rows },
+      human: rows.length
+        ? `${human}\n`
+        : only
+          ? `only ${only} changed from ${base}\n`
+          : `no differences from ${base}\n`,
     };
   },
 

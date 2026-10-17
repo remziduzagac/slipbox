@@ -1850,7 +1850,9 @@ gets a column of its own and keeps it, so the text doesn't move; `gutter_left`, 
 margin before the problems bar and the line numbers, there with or without a gutter; `window_right`, a column kept at
 the window's right edge by the scrollbar once the file has had a change, the text a column narrower. What's staged is
 asked of git (`git show :path`, with `23.6`'s guards where the vault isn't trusted, D175) in the background, again
-whenever git has news; a file git hasn't is every line added, one it ignores has no signs; line endings don't count.
+whenever git has news; a file git hasn't is every line added, one it ignores has no signs; line endings don't count,
+nor does a byte order mark (git's text has it, the buffer keeps it apart): a change's lines never carry it, and staging
+one keeps the index's.
 `] c` / `[ c` go to the next and previous change (around the ends); the palette's Preview the change
 (`git.change_preview`) shows the one on the cursor's line as a diff in the floating window, and Undo the change
 (`git.change_undo`) undoes it — its lines as staged put back, one undo step, left unsaved. A click on a change's sign
@@ -1862,18 +1864,31 @@ another repository's file in the panel, a history entry's diff to now, the confl
 question's "(d) Show the differences first" draw one way, in the floating window, as wide as the screen less its
 margins.
 
-- **Found:** hunks of lines by the Myers diff, as before. Inside a hunk, the removed lines are paired with the added
-  ones, in order: the pairs that make the hunk most alike, none less than half alike. How alike two lines are is twice
-  the words kept over the words of both; punctuation is diffed but not counted, and two lines of punctuation alone are
-  alike. A hunk past 2,500 removed lines times added ones pairs in place, the first with the first; two lines past
-  4,000 tokens between them are never paired (`MAX_TOKENS`). A pair is diffed again by word: a word is letters, marks,
-  digits and `_` (a Chinese or Japanese character on its own), and white space and every other character are tokens of
-  their own. A changed run loses the white space at its ends, unless that's all it is, and runs with only white space
-  between them are one.
+- **Compared:** the two texts without their line endings or a byte order mark (`comparable`): CRLF is LF, as git has
+  it for a checkout that turns LF into CRLF and as the gutter's signs have it, so a CRLF file's diff against git's LF
+  is its changed lines, not all of them. Two texts whose lines are the same but whose line endings, mark or final line
+  break differ say which ("only the line endings (CRLF → LF) changed: no line to show"), never "nothing to show".
+- **Found:** hunks of lines by the Myers diff (`core/myers.ts`), as git's xdiff finds them, which every diff, the
+  gutter's signs, blame and the three-way merge use: the common head and tail trimmed; the lines only one side has set
+  aside as changed, whatever else is (a rewrite costs a read); the rest searched from both ends at once for the
+  shortest edit's middle, each half the same way (Myers' middle snake: O((N+M)·D) time, O(N+M) memory). Past a cost of
+  the square root of the lines (256 at the least), a search takes the furthest point either end reached as its middle:
+  a correct diff, coarser than the shortest; past a budget of work, what's left is replaced whole. Inside a hunk, the
+  removed lines are paired with the added ones, in order: the pairs that make the hunk most alike, none less than half
+  alike. How alike two lines are is twice the words kept over the words of both; punctuation is diffed but not counted,
+  and two lines of punctuation alone are alike. Only a pair whose words in common could make it half alike is diffed by
+  word, the likeliest first, until 100,000 tokens are spent (`PAIR_TOKENS`); the others aren't paired. A hunk past
+  2,500 removed lines times added ones pairs in place, the first with the first; two lines past 4,000 tokens between
+  them are never paired (`MAX_TOKENS`). A pair is diffed again by word: a word is letters, marks, digits and `_` (a
+  Chinese or Japanese character on its own), and white space and every other character are tokens of their own. A
+  changed run loses the white space at its ends, unless that's all it is, and runs with only white space between them
+  are one.
 - **Drawn** (`layoutDiff`): a row a line, its sign and a space before it (`-` in `diff_del`, `+` in `diff_add`), its
   text highlighted as source mode highlights it — a note's Markdown over the whole text, so a fence's or the front
   matter's lines read as theirs; code a line at a time, only the lines shown. A changed row is on its sign's tint (the
-  row's `fill`, each span's `bg`), its changed words on `diff_del_word` or `diff_add_word`; an unchanged row isn't
+  row's `fill`, each span's `bg`), its changed words on `diff_del_word` or `diff_add_word` — found cell by cell, by
+  the offset each of the highlighted row's cells shows (`srcMap`), so a tab and a combining mark after it shift no
+  mark; an unchanged row isn't
   tinted. Each group — hunks whose context meets, or leaves a line between, are one — is under `@@ line N`
   (`diff_head`), with up to three unchanged lines around it. The unchanged stretches between groups, before the first
   and after the last fold to `▸ N unchanged lines` (`dim`); a stretch of one line is shown instead. `enter` on a fold
@@ -1887,7 +1902,8 @@ margins.
   gutter, line numbers on or not, and no source mode or lens: switching says "a diff is drawn one way". `enter` on a
   line closes it and opens the file there, when the file is there and in the vault; the conflict prompt's, a branch's
   and another repository's go back instead. `esc`, `q` and `:q` go back to what opened it: the git panel, the changes'
-  list, the prompt. Two texts the same are said ("no differences from main"), and go back. The wheel over the floating
+  list, the prompt. Two texts the same are said ("no differences from main"), or what of them differs that no line
+  shows (above), and go back. The wheel over the floating
   window scrolls it, never the window or the side pane under it.
 - **Roles:** `diff_add` and `diff_del` have a `bg`, the line's tint: their colour 12% of the way from the page in a
   dark theme, 14% in a light one; `diff_add_word` and `diff_del_word` are the same colours 32% and 34% of the way. The
@@ -1907,14 +1923,18 @@ diff (a file the walk reads as a note) in every window a diff opens in, unless `
   before the next hunk joins the two. Groups with no more than a line of text between them are one, and a line of text
   before the first or after the last is taken in. In a group, the blocks the same on both sides are found by their
   text; between them each removed block is paired with the added one most like it (`pairLines` with `prose`: white
-  space is one, so a paragraph wrapped again differs only in its words), none less than half alike. A pair is a change,
-  the rest removed or added whole; the unchanged blocks in a group are shown between, unframed.
+  space is one, so a paragraph wrapped again differs only in its words), none less than half alike — within the pairs'
+  budget of tokens (above), so a note rewritten whole shows its blocks removed and added at once. A pair is a change,
+  the rest removed or added whole; the unchanged blocks in a group are shown between, unframed. The window finds the
+  blocks the first time it draws them: a diff opened on its lines (`[git] diff = "source"`) never pays for them.
 - **Drawn:** each group under `@@ <the heading it's under in to>  (line N)`, or `@@ line N` above the first heading
-  (`diff_head`). A change is two frames as wide as the window, `before` and `after` on their top rules
-  (`git_sign_delete`, `git_sign_add`), lightly formatted: a heading's text in its colour, emphasis, strong and struck
-  text in theirs, a link or a wikilink as it reads, inline code and maths without their marks, a list's marker (its
-  bullet, its number, a task's box) with its text hung under it, a table's row its cells between `│`, a quote with its
-  bar, a fence, the frontmatter and anything else as written. Each cell knows the offset in its block of what it shows,
+  (`diff_head`). A change is two frames as wide as the window, however narrow (the label cut to fit), `before` and
+  `after` on their top rules (`git_sign_delete`, `git_sign_add`), lightly formatted: a heading's text in its colour,
+  emphasis, strong and struck text in theirs, a link or a wikilink as it reads, inline code and maths without their
+  marks, a list's marker (its bullet, its number, a task's box) with its text hung under it — a lead too wide for the
+  frame loses its indent, then itself, before its text is cut — a table's row its cells between `│`, a quote with its
+  bar, a fence, the frontmatter and anything else as written. A CRLF note's CR isn't shown, and its line break in a
+  paragraph is a space, as an LF one is. Each cell knows the offset in its block of what it shows,
   so the words the pair doesn't share are on `diff_del_word` in the first and `diff_add_word` in the second; a node
   whose source changed where none of it shows (a link's target, `**` added) is marked whole. A block added or removed
   whole is one frame, `added` or `removed`, its text on `diff_add` or `diff_del`. The unchanged stretches between
@@ -2056,9 +2076,10 @@ conflict (a setext heading's), is text. The markers give the conflicts, so what 
 conflict's base where the markers don't hold it comes from the index's stage 1 (`withStages`): yours is found in stage
 2, and theirs in stage 3, where the stretches before put it (else wherever it is), each mapped back onto stage 1
 through that side's changes (`toBase`, a boundary inside a change widened to the whole of it), the two ranges joined.
-Where neither has it (the stages gone), there's no base. A file in conflict with no marker (one side deleted it) is
-said, with `s` in the git panel to mark it resolved. `enter` on a conflicted file in the panel shows its diff, not the
-screen.
+Line endings and a byte order mark aren't compared, finding a side or diffing it against the base: the index holds LF
+where a checkout (`eol=crlf`) has CRLF. Where neither has it (the stages gone), there's no base. A file in conflict
+with no marker (one side deleted it) is said, with `s` in the git panel to mark it resolved. `enter` on a conflicted
+file in the panel shows its diff, not the screen.
 
 The screen, in the floating window as tall as a peek's, a conflict at a time: its number, its line in the result and
 how it's settled; the keys; while a rebase is under way, that yours is what's rebased onto and theirs the commit

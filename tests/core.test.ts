@@ -65,7 +65,16 @@ import { blend, colorHex, hexToRgb, luminance } from "../src/core/theme/theme.ts
 import { glyphsFor } from "../src/core/glyphs.ts";
 import { WriteRefused, writeNote } from "../src/core/fsutil.ts";
 import { listTasks, toggleTask } from "../src/core/tasks.ts";
-import { diffLines, diffView, diffWords, merge3, pairLines } from "../src/core/merge.ts";
+import {
+  comparable,
+  diffLines,
+  diffView,
+  diffWords,
+  inRanges,
+  merge3,
+  pairLines,
+  unseenChange,
+} from "../src/core/merge.ts";
 import { findChange, hunkEntry, hunkLines, hunkView, sameChange, tallyText } from "../src/core/gitreview.ts";
 import { gitChanges } from "../src/core/gitsigns.ts";
 import {
@@ -1116,6 +1125,90 @@ describe("diff and three-way merge (5.5)", () => {
     // Both inserting at the same place differently: a conflict too.
     expect(merge3(base, "one\ntwo\nA\nthree\nfour\nfive\n", "one\ntwo\nB\nthree\nfour\nfive\n").conflicts).toBe(1);
   });
+
+  /** A seeded generator: the same inputs every run. */
+  const seeded = (seed: number) => () => {
+    seed = (Math.imul(seed, 1103515245) + 12345) & 0x7fffffff;
+    return seed / 0x80000000;
+  };
+  /** The hunks applied to `a`: `b`, when they're right. Each hunk in order, with an unchanged line before the next. */
+  const applied = (a: string[], b: string[], hunks: ReturnType<typeof diffLines>) => {
+    const out: string[] = [];
+    let i = 0;
+    for (const h of hunks) {
+      expect(h.aLen + h.bLen).toBeGreaterThan(0);
+      expect(h.aStart > i || (h.aStart === i && i === 0 && out.length === 0)).toBe(true);
+      expect(h.bStart - out.length).toBe(h.aStart - i);
+      out.push(...a.slice(i, h.aStart), ...b.slice(h.bStart, h.bStart + h.bLen));
+      i = h.aStart + h.aLen;
+    }
+    return [...out, ...a.slice(i)];
+  };
+  /** The longest common subsequence's length, the slow way. */
+  const lcs = (a: string[], b: string[]) => {
+    let prev = new Int32Array(b.length + 1);
+    for (const x of a) {
+      const cur = new Int32Array(b.length + 1);
+      for (let j = 1; j <= b.length; j++) cur[j] = x === b[j - 1] ? prev[j - 1]! + 1 : Math.max(prev[j]!, cur[j - 1]!);
+      prev = cur;
+    }
+    return prev[b.length]!;
+  };
+  const edits = (hunks: ReturnType<typeof diffLines>) => hunks.reduce((n, h) => n + h.aLen + h.bLen, 0);
+
+  test("diffLines on random pairs: the hunks turn one into the other, with as few lines removed and added as can be", () => {
+    const rnd = seeded(20261017);
+    const pick = (n: number, alphabet: number) =>
+      Array.from({ length: n }, () => `line ${Math.floor(rnd() * alphabet)}`);
+    // Small: few kinds of line, so many shortest diffs to choose from.
+    for (let t = 0; t < 3000; t++) {
+      const k = 1 + Math.floor(rnd() * 5);
+      const a = pick(Math.floor(rnd() * 20), k);
+      const b = pick(Math.floor(rnd() * 20), k);
+      const h = diffLines(a, b);
+      expect(applied(a, b, h)).toEqual(b);
+      expect(edits(h)).toBe(a.length + b.length - 2 * lcs(a, b));
+    }
+    // A few hundred lines, and edits below the search's cost: still the fewest.
+    for (let t = 0; t < 40; t++) {
+      const a = pick(100 + Math.floor(rnd() * 300), 2 + Math.floor(rnd() * 40));
+      const b = a.flatMap((l) => (rnd() < 0.1 ? [] : rnd() < 0.1 ? [l, `new ${rnd()}`] : rnd() < 0.05 ? ["x"] : [l]));
+      const h = diffLines(a, b);
+      expect(applied(a, b, h)).toEqual(b);
+      expect(edits(h)).toBe(a.length + b.length - 2 * lcs(a, b));
+    }
+    // Past the search's cost (thousands of lines of a few kinds, rewritten): coarser, but right.
+    for (const [n, k] of [
+      [3000, 3],
+      [6000, 20],
+    ] as const) {
+      const a = pick(n, k);
+      const b = pick(n, k);
+      const h = diffLines(a, b);
+      expect(applied(a, b, h)).toEqual(b);
+      expect(edits(h)).toBeLessThan(2 * n);
+    }
+  });
+
+  test("diffLines: a 10,000-line rewrite in bounded time and memory", () => {
+    // Every line different; then a reformat, every line changed but its blank lines and braces, which still match.
+    const n = 10_000;
+    const a = Array.from({ length: n }, (_, i) => `line ${i} as it was`);
+    const b = Array.from({ length: n }, (_, i) => `line ${i} as it is now`);
+    const braces = ["{", "}", "", "  return;"];
+    const c = Array.from({ length: n }, (_, i) => (i % 3 ? `code ${i}` : braces[(i * 7) % 4]!));
+    const d = Array.from({ length: n }, (_, i) => (i % 4 ? `rewritten ${i}` : braces[(i * 5) % 4]!));
+    Bun.gc(true);
+    const rss = process.memoryUsage().rss;
+    const t = performance.now();
+    expect(diffLines(a, b)).toEqual([{ aStart: 0, aLen: n, bStart: 0, bLen: n }]);
+    const h = diffLines(c, d);
+    const ms = performance.now() - t;
+    const grew = process.memoryUsage().rss - rss;
+    expect(applied(c, d, h)).toEqual(d);
+    expect(ms).toBeLessThan(1000);
+    expect(grew).toBeLessThan(256 * 1024 * 1024);
+  });
 });
 
 describe("changed words inside changed lines (GIT-D2)", () => {
@@ -1254,6 +1347,36 @@ describe("changed words inside changed lines (GIT-D2)", () => {
       7,
     ]);
     expect(diffView("same\n", "same\n")).toEqual([]);
+  });
+
+  test("line endings and a byte order mark aren't compared; what changed of them, and of the final line break, is said", () => {
+    const lf = "one line\ntwo line\nthree line\n";
+    const crlf = lf.replace(/\n/g, "\r\n");
+    expect(diffView(comparable(crlf), comparable(lf))).toEqual([]);
+    expect(diffView(comparable(`\uFEFF${lf}`), comparable(lf))).toEqual([]);
+    // One word changed, CRLF on one side: that line alone.
+    const one = diffView(comparable(lf), comparable(crlf.replace("two line", "two lines")));
+    expect(one.filter((r) => r.kind === "-" || r.kind === "+").map((r) => `${r.kind} ${r.text}`)).toEqual([
+      "- two line",
+      "+ two lines",
+    ]);
+    expect(unseenChange(crlf, lf)).toBe("the line endings (CRLF → LF)");
+    expect(unseenChange(lf, `\uFEFF${lf}`)).toBe("the byte order mark (added)");
+    expect(unseenChange("a\nb", "a\nb\n")).toBe("the final line break (added)");
+    expect(unseenChange("a\r\nb\r\n", "a\nb")).toBe("the line endings (CRLF → LF) and the final line break (removed)");
+    expect(unseenChange("a\r\nb\n", "a\nb\n")).toBe("the line endings (mixed → LF)");
+    expect(unseenChange(lf, lf)).toBeNull();
+  });
+
+  test("an offset in a word's ranges, found by halves", () => {
+    const ranges: [number, number][] = [
+      [2, 4],
+      [7, 8],
+      [10, 15],
+    ];
+    const inside = Array.from({ length: 17 }, (_, at) => inRanges(ranges, at));
+    expect(inside.flatMap((x, at) => (x ? [at] : []))).toEqual([2, 3, 7, 10, 11, 12, 13, 14]);
+    expect(inRanges([], 0)).toBe(false);
   });
 });
 
@@ -1408,6 +1531,80 @@ describe("a note's diff as blocks, before and after (GIT-D2)", () => {
           .map((i) => i.kind),
       ),
     ).toEqual(new Set(["removed"]));
+  });
+
+  /** A paragraph of `n` words: `seed` and a number, the numbers from `i`. */
+  const para = (seed: string, i: number, n: number) =>
+    Array.from({ length: n }, (_, k) => `${seed}${(i * 7919 + k * 104729) % 100003}`).join(" ");
+
+  test("a note rewritten whole: its blocks removed and added, at once — a pair diffed by word only if it could be alike", () => {
+    // Fifty paragraphs of 400 words, every word new.
+    const note = (seed: string) => `${Array.from({ length: 50 }, (_, i) => para(seed, i, 400)).join("\n\n")}\n`;
+    let t = performance.now();
+    const d = blockDiff(note("w"), note("v"));
+    expect(performance.now() - t).toBeLessThan(1000);
+    expect(new Set(d.items.map((i) => i.kind))).toEqual(new Set(["@@", "removed", "added"]));
+    // The same fifty words in every paragraph, in another order on each side: every pair could be alike by its words,
+    // and only so many are diffed.
+    let seed = 7;
+    const shuffled = () =>
+      `${Array.from({ length: 50 }, () =>
+        Array.from({ length: 400 }, () => {
+          seed = (Math.imul(seed, 1103515245) + 12345) & 0x7fffffff;
+          return `w${seed % 50}`;
+        }).join(" "),
+      ).join("\n\n")}\n`;
+    const [a, b] = [shuffled(), shuffled()];
+    t = performance.now();
+    blockDiff(a, b);
+    expect(performance.now() - t).toBeLessThan(1000);
+  });
+
+  test("a note rewritten whole but a paragraph changed by a word: that one still paired, its word marked", () => {
+    const from = Array.from({ length: 50 }, (_, i) => para("w", i, 60));
+    const to = from.map((p, i) => (i === 10 ? p.replace(/^w\d+/, "CHANGED") : para("v", i, 60)));
+    const a = `${from.join("\n\n")}\n`;
+    const b = `${to.join("\n\n")}\n`;
+    const changes = blockDiff(a, b).items.filter((i) => i.kind === "change");
+    expect(changes.length).toBe(1);
+    const c = changes[0]!;
+    if (c.kind !== "change") throw new Error("a change");
+    const text = (s: string, r: [number, number][]) => r.map(([x, y]) => s.slice(x, y));
+    expect([c.before.from, text(from[10]!, c.del), text(to[10]!, c.add)]).toEqual([
+      21,
+      [from[10]!.split(" ")[0]!],
+      ["CHANGED"],
+    ]);
+  });
+
+  test("pairLines pairs as diffing every pair by word would: the pairs its words rule out could never be half alike", () => {
+    let seed = 99;
+    const rnd = () => {
+      seed = (Math.imul(seed, 1103515245) + 12345) & 0x7fffffff;
+      return seed / 0x80000000;
+    };
+    const line = () =>
+      Array.from(
+        { length: 2 + Math.floor(rnd() * 8) },
+        () => ["a", "b", "c", "d", "e", "f", ","][Math.floor(rnd() * 7)],
+      )
+        .join(" ")
+        .replace(/ ,/g, ",");
+    for (let t = 0; t < 300; t++) {
+      const removed = Array.from({ length: 1 + Math.floor(rnd() * 6) }, line);
+      const added = Array.from({ length: 1 + Math.floor(rnd() * 6) }, line);
+      // Every pair diffed, the most alike pairs in order found as pairLines finds them.
+      const sim = removed.map((r) => added.map((x) => diffWords(r, x).alike));
+      const best = Array.from({ length: removed.length + 1 }, () => new Array(added.length + 1).fill(0));
+      for (let i = 1; i <= removed.length; i++)
+        for (let j = 1; j <= added.length; j++) {
+          const s = sim[i - 1]![j - 1]!;
+          best[i]![j] = Math.max(best[i - 1]![j]!, best[i]![j - 1]!, s >= 0.5 ? best[i - 1]![j - 1]! + s : 0);
+        }
+      const pairs = pairLines(removed, added);
+      expect(pairs.reduce((n, p) => n + sim[p.del]![p.add]!, 0)).toBeCloseTo(best[removed.length]![added.length]!);
+      for (const p of pairs) expect(sim[p.del]![p.add]!).toBeGreaterThanOrEqual(0.5);
+    }
   });
 });
 describe("find and replace (core/replace.ts)", () => {
@@ -4590,6 +4787,12 @@ describe("changes against what's staged (26.1)", () => {
     // Line endings aren't changes; the line after a final newline is no line.
     expect(gitChanges("a\nb\n", "a\r\nb\r\n")).toEqual([]);
     expect(gitChanges("a\n", "a")).toEqual([]);
+    // Nor is a byte order mark: git's text has it, a buffer's doesn't (it's kept apart). A change's lines never carry
+    // it, so one put back in a buffer doesn't double it.
+    expect(gitChanges("\uFEFF# T\nb\n", "# T\nb\n")).toEqual([]);
+    expect(gitChanges("\uFEFF# T\nb\n", "# U\nb\n")).toEqual([
+      { kind: "change", from: 1, to: 1, wasAt: 0, was: ["# T"], now: ["# U"] },
+    ]);
     // A file git doesn't have: every line added; an empty one, nothing.
     expect(gitChanges(null, "x\ny\n")).toEqual([{ kind: "add", from: 1, to: 2, wasAt: 0, was: [], now: ["x", "y"] }]);
     expect(gitChanges(null, "")).toEqual([]);
@@ -4650,6 +4853,9 @@ describe("staging, from the source control view (26.2)", () => {
     expect(replaceLines("a\nb", 0, 1, [])).toBe("b");
     expect(replaceLines("", 0, 0, ["x"])).toBe("x\n");
     expect(replaceLines("x\n", 0, 1, [])).toBe("");
+    // A byte order mark stays the text's, a first line replaced or not.
+    expect(replaceLines("\uFEFF# T\nb\n", 0, 1, ["# U"])).toBe("\uFEFF# U\nb\n");
+    expect(replaceLines("\uFEFFa\r\nb\r\n", 1, 1, [])).toBe("\uFEFFa\r\n");
   });
 
   test("a file staged, unstaged, discarded; all staged and unstaged; one change staged and unstaged, the others left", async () => {

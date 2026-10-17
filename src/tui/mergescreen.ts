@@ -27,7 +27,7 @@ import { operationOf } from "../core/gitrebase.ts";
 import { sections, stageFile } from "../core/gitstage.ts";
 import { layoutScreen, type ScreenPart, screenText } from "../core/layout/screen.ts";
 import type { Layout, Span } from "../core/layout/ir.ts";
-import { type DiffViewRow, diffView } from "../core/merge.ts";
+import { comparable, type DiffViewRow, diffView } from "../core/merge.ts";
 import { TOP } from "../core/position.ts";
 import { sanitize } from "../core/sanitize.ts";
 import type { App } from "./app.ts";
@@ -156,16 +156,18 @@ function show(app: App, m: MergeState): void {
   const result = resultView(m.file, m.choices);
   const named = (l: string) => (l ? ` · ${sanitize(l)}` : "");
   // A side against the base: its diff — a note's as its blocks before and after, a code file's lines side by side where
-  // there's room (GIT-D2, GIT-D7); unchanged, its lines as they are; no base known, the side whole.
+  // there's room (GIT-D2, GIT-D7); unchanged, its lines as they are; no base known, the side whole. Line endings and a
+  // byte order mark aren't compared (`openDiff`): the base from git's index can have LF where the file has CRLF.
   const path = m.prompt?.buf.abs ?? join(app.loc.root, m.rel);
   const side = (ls: string[]): ScreenPart => {
-    const from = c.base === null ? "" : text(c.base);
+    const from = comparable(c.base === null ? "" : text(c.base));
+    const to = comparable(text(ls));
     if (c.base !== null && asBlocks(app, path)) {
-      const blocks = blockDiff(from, text(ls), new Set(), { heads: false, folds: false });
+      const blocks = blockDiff(from, to, new Set(), { heads: false, folds: false });
       if (blocks.units.length) return { blocks };
     }
-    const rows = diffView(from, text(ls), new Set(), Number.MAX_SAFE_INTEGER).filter((r) => r.kind !== "@@");
-    return rows.length ? { rows, from, to: text(ls) } : { rows: plain(ls), from: text(ls), to: text(ls) };
+    const rows = diffView(from, to, new Set(), Number.MAX_SAFE_INTEGER).filter((r) => r.kind !== "@@");
+    return rows.length ? { rows, from, to } : { rows: plain(ls), from: text(ls), to: text(ls) };
   };
   const against = c.base === null ? "" : ", against the base";
   const parts: ScreenPart[] = [

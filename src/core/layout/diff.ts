@@ -4,7 +4,7 @@
 // window scrolls sideways, as a code block too wide does (D233) — never cut.
 
 import type { Glyphs } from "../glyphs.ts";
-import type { DiffViewRow, WordRange } from "../merge.ts";
+import { type DiffViewRow, inRanges, type WordRange } from "../merge.ts";
 import type { Role } from "../theme/theme.ts";
 import { graphemes, graphemeWidth } from "../width.ts";
 import type { CodeScroll, Layout, Line, Span } from "./ir.ts";
@@ -133,23 +133,37 @@ export function highlighted(
   return out;
 }
 
-/** A highlighted row's cells: on a changed line, each on the line's tint, its changed words on the stronger one. */
+/**
+ * A highlighted row's cells: on a changed line, each on the line's tint, its changed words on the stronger one. The
+ * cells are the layout's own, each found by its offset (`srcMap`): its text is as long as what it shows of the line —
+ * a tab's spaces and a control character's `�` one each — never the row's text cut into graphemes again, which would
+ * join a tab's last space to a combining mark after it and shift every mark past it.
+ */
 export function cellsOf(
   row: Line | undefined,
   words: WordRange[] | undefined,
   tint: { line: Role; word: Role } | null,
 ): Cell[] {
   if (!row) return [];
-  const map = row.srcMap?.cells ?? [];
   const out: Cell[] = [];
-  let i = 0;
+  const put = (g: string, role: Role, at: number) => {
+    const w = graphemeWidth(g);
+    if (!w) return;
+    const changed = !!words && inRanges(words, at);
+    out.push({ g, w, role, ...(tint ? { bg: changed ? tint.word : tint.line } : {}) });
+  };
+  const map = row.srcMap;
+  if (!map) {
+    for (const span of row.spans) for (const g of graphemes(span.text)) put(g, span.role, -1);
+    return out;
+  }
+  let k = 0;
   for (const span of row.spans)
-    for (const g of graphemes(span.text)) {
-      const at = map[i++] ?? -1;
-      const w = graphemeWidth(g);
-      if (!w) continue;
-      const changed = !!words?.some(([s, e]) => at >= s && at < e);
-      out.push({ g, w, role: span.role, ...(tint ? { bg: changed ? tint.word : tint.line } : {}) });
+    for (let p = 0; p < span.text.length && k < map.cells.length; k++) {
+      const at = map.cells[k]!;
+      const len = Math.max(1, (map.cells[k + 1] ?? map.end) - at);
+      put(span.text.slice(p, p + len), span.role, at);
+      p += len;
     }
   return out;
 }

@@ -124,6 +124,27 @@ export function noteBlocks(tree: Root, lines: string[]): NoteBlock[] {
   return kept.sort((a, b) => a.from - b.from);
 }
 
+/** The index of the first of `list` (in order) that `past` holds for — all after it hold too — found by halves; the
+ *  list's length when none does. */
+function firstAt<T>(list: readonly T[], past: (x: T) => boolean): number {
+  let lo = 0;
+  let hi = list.length;
+  while (lo < hi) {
+    const mid = (lo + hi) >> 1;
+    if (past(list[mid]!)) hi = mid;
+    else lo = mid + 1;
+  }
+  return lo;
+}
+
+/** The blocks (in order, apart) wholly inside lines [s, e), 0-based. */
+function inside(blocks: NoteBlock[], s: number, e: number): NoteBlock[] {
+  const out: NoteBlock[] = [];
+  for (let k = firstAt(blocks, (bl) => bl.from - 1 >= s); k < blocks.length && blocks[k]!.to <= e; k++)
+    out.push(blocks[k]!);
+  return out;
+}
+
 /** For each line (0-based), the index of the block holding it, or -1. */
 function blockAt(blocks: NoteBlock[], count: number): Int32Array {
   const at = new Int32Array(count).fill(-1);
@@ -209,12 +230,13 @@ export function blockDiff(
   );
   const unit = (text: string, line: number) => d.units.push({ text, line }) - 1;
   // A block's lines, a unit each, as the source diff's rows read: `-` before a line of `from`'s, `+` before one of
-  // `to`'s that changed, two spaces before one that didn't. A line of `from`'s goes to `line`.
+  // `to`'s that changed, two spaces before one that didn't (a CRLF line's CR not part of it). A line of `from`'s goes to
+  // `line`.
   const linesOf = (sign: "-" | "+" | " ", bl: NoteBlock, line?: number) => {
     const s = sign === "-" ? fs : ts;
     let first = -1;
     for (let l = bl.from; l <= bl.to; l++) {
-      const u = unit(`${sign} ${s.lines[l - 1] ?? ""}`, line ?? l);
+      const u = unit(`${sign} ${(s.lines[l - 1] ?? "").replace(/\r$/, "")}`, line ?? l);
       if (first < 0) first = u;
     }
     return first;
@@ -225,7 +247,7 @@ export function blockDiff(
   const stretch = (s: number, e: number, bs: number) => {
     if (e <= s || opts.folds === false) return;
     if (open.has(s + 1)) {
-      for (const bl of ts.blocks) if (bl.from - 1 >= bs && bl.to <= bs + (e - s)) same(bl);
+      for (const bl of inside(ts.blocks, bs, bs + (e - s))) same(bl);
       return;
     }
     d.items.push({
@@ -240,10 +262,10 @@ export function blockDiff(
   let shownB = 0;
   for (const g of groups) {
     stretch(shownA, g.a0, shownB);
-    const fb = fs.blocks.filter((bl) => bl.from - 1 >= g.a0 && bl.to <= g.a1);
-    const tb = ts.blocks.filter((bl) => bl.from - 1 >= g.b0 && bl.to <= g.b1);
+    const fb = inside(fs.blocks, g.a0, g.a1);
+    const tb = inside(ts.blocks, g.b0, g.b1);
     const line = Math.max(1, Math.min(tb[0]?.from ?? g.b0 + 1, b.length));
-    const heading = [...headings].reverse().find((h) => h.line < line)?.text ?? null;
+    const heading = headings[firstAt(headings, (h) => h.line >= line) - 1]?.text ?? null;
     if (opts.heads !== false) d.items.push({ kind: "@@", line, heading, unit: unit(headText(heading, line), line) });
     // Blocks the same on both sides, by their text; between them, each removed one paired with the added one most
     // like it, as a changed line is with a line (white space all one: a paragraph wrapped again is the same).

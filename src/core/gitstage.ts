@@ -188,14 +188,19 @@ export function lastMessage(c: Pick<Checkout, "root">): string | null {
   return r.ok ? r.out.replace(/\s+$/, "") : null;
 }
 
-/** `text` with one change made: lines `[at, at + count)` replaced by `put` — the line breaks and the final one its own. */
-export function replaceLines(text: string, at: number, count: number, put: string[]): string {
+/**
+ * `text` with one change made: lines `[at, at + count)` replaced by `put` — the line breaks, the final one and a byte
+ * order mark its own (a change's lines never carry the mark: `gitChanges`).
+ */
+export function replaceLines(raw: string, at: number, count: number, put: string[]): string {
+  const bom = raw.charCodeAt(0) === 0xfeff ? "\uFEFF" : "";
+  const text = raw.slice(bom.length);
   const eol = text.includes("\r\n") ? "\r\n" : "\n";
   // An empty text has no line; lines put in it end as a file's do.
   const final = !text || text.endsWith("\n");
   const lines = text ? text.replace(/\r?\n$/, "").split(/\r?\n/) : [];
   lines.splice(at, count, ...put);
-  return lines.length ? lines.join(eol) + (final ? eol : "") : "";
+  return bom + (lines.length ? lines.join(eol) + (final ? eol : "") : "");
 }
 
 /** The index's entry for a file: its mode (`100644`, `100755`), else a new file's. */

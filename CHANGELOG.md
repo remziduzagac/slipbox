@@ -140,6 +140,17 @@ The format is [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.1.0/); wh
   come once they're there.
 - A slipbox installed from a release parses a big note on background threads, as one run from source does. The release
   build had left those threads out, so a big note was parsed while keys waited.
+- A big file reformatted or regenerated, such as a lockfile, made typing slow while the gutter's git signs compared it
+  with what's staged, and could take gigabytes of memory at each key, enough past about 15,000 lines to end slipbox
+  with your typing unsaved. The diff behind the signs, `space g d` and the conflict prompt now needs memory only for
+  the two texts, and a file rewritten whole takes no longer than a few changes. Past a certain cost it shows a coarser
+  diff, still correct, as git does.
+- With line endings converted on checkout (`eol=crlf` in `.gitattributes`, or `core.autocrlf`), a file's diff showed
+  every line changed. Line endings aren't compared now. When only the line endings, the byte order mark or the final
+  line break changed, the diff says which, instead of showing every line, or nothing for a file git lists as changed.
+- In a note with a byte order mark, the gutter's git signs and `space g d` marked the first line changed when it
+  wasn't, and undoing that change wrote a second mark into the file. The mark is never a change now, and staging a
+  change keeps it.
 
 ## [0.3.0] - 2026-10-14
 

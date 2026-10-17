@@ -16,6 +16,7 @@ import { type GitChange, gitChanges } from "../core/gitsigns.ts";
 import { discardFile, replaceLines, sections, stageChange, stageFile } from "../core/gitstage.ts";
 import { layoutScreen, type ScreenPart, screenText } from "../core/layout/screen.ts";
 import { type Layout, type Span, srcAt } from "../core/layout/ir.ts";
+import { comparable } from "../core/merge.ts";
 import { TOP } from "../core/position.ts";
 import { sanitize } from "../core/sanitize.ts";
 import type { App } from "./app.ts";
@@ -62,9 +63,10 @@ export function reviewOf(app: App): Review | null {
   return f?.kind === "review" ? f.review : null;
 }
 
-/** A text's lines, its line breaks either kind, a final one ending the last line. */
+/** A text's lines as its changes have them (`gitChanges`): its line breaks either kind, a final one ending the last
+ *  line, no byte order mark. */
 function linesOf(text: string): string[] {
-  const ls = text.replace(/\r\n/g, "\n").split("\n");
+  const ls = comparable(text).split("\n");
   if (ls[ls.length - 1] === "") ls.pop();
   return ls;
 }

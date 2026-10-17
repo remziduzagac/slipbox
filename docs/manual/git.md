@@ -693,6 +693,14 @@ diff to now from a file's history, and the differences the conflict prompt shows
 a floating window as wide as the screen allows. A note's diff opens as its blocks before and after. A code file's
 opens as its lines, side by side when the window is wide enough.
 
+Line endings and a byte order mark are not compared, as git doesn't compare them in a checkout that turns LF into CRLF
+(`eol=crlf` in `.gitattributes`, or `core.autocrlf`): a file's diff shows the lines that changed, not every line. When
+only the line endings, the byte order mark or the final line break changed, slipbox says which instead of opening the
+diff: `only the line endings (CRLF → LF) changed: no line to show`.
+
+A big file reformatted or rewritten whole opens at once too. Past a certain cost slipbox stops looking for the smallest
+diff and shows a coarser one, still correct, as git does.
+
 #### A note's diff: before and after
 
 An agent often rewrites prose a sentence at a time. Shown as lines, a changed paragraph is all removed and all added.
@@ -721,7 +729,8 @@ So a note's diff shows each changed block twice, as it was and as it is now:
 - A block added or removed whole has one frame, `added` or `removed`, its text on the tint.
 - Each group of changes is under `@@`, with the heading it's under and its line. The unchanged lines between groups
   fold to one row that says how many there are. `enter` on it shows them.
-- A changed block less than half like any other is shown removed, then added, with no words marked.
+- A changed block less than half like any other is shown removed, then added, with no words marked. A note rewritten
+  whole shows its blocks removed and added; slipbox compares by word only the blocks whose words could make them alike.
 
 `tab` switches to the diff's lines, drawn as the next section says, and back. `git.diff = "source"` opens a note's diff
 as its lines ([Configuration](configuration.md)).

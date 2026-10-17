@@ -301,10 +301,15 @@ export class Git {
     const mergeBase = mergeBaseOf(c, base);
     if (!mergeBase) return this.app.message("warn", `this branch and ${base} have no commit in common`);
     const before = showAt(c, mergeBase, inCheckout(c, this.app.loc.root, rel)) ?? "";
+    // The file as it is, or would be written: with its byte order mark, as git has it.
     let now = "";
     const open = this.app.buffers.get(rel);
     try {
-      now = open ? open.source : readText(join(this.app.loc.root, rel)).text;
+      if (open) now = open.contentToSave();
+      else {
+        const read = readText(join(this.app.loc.root, rel));
+        now = (read.bom ? "\uFEFF" : "") + read.text;
+      }
     } catch {}
     this.showLineDiff(
       before,

@@ -1,88 +1,9 @@
 // Line diffs and a three-way merge (plan 5.5): what a diff window shows (5.13; changed words inside changed lines,
-// GIT-D2) and the conflict prompt's (M)erge does. Myers' diff over lines — O((N+M)·D), so a small change to a long note
-// stays cheap — after trimming the common head and tail.
+// GIT-D2) and the conflict prompt's (M)erge does, over the line diff of `myers.ts`.
 
-/** A run of lines in `a` (from `aStart`, `aLen` of them) replaced by lines of `b`. */
-export interface Hunk {
-  aStart: number;
-  aLen: number;
-  bStart: number;
-  bLen: number;
-}
+import { diffLines, type Hunk } from "./myers.ts";
 
-/** The hunks that turn lines `a` into lines `b`, in order. */
-export function diffLines(a: string[], b: string[]): Hunk[] {
-  let head = 0;
-  while (head < a.length && head < b.length && a[head] === b[head]) head++;
-  let tail = 0;
-  while (tail < a.length - head && tail < b.length - head && a[a.length - 1 - tail] === b[b.length - 1 - tail]) tail++;
-  const A = a.slice(head, a.length - tail);
-  const B = b.slice(head, b.length - tail);
-  return myers(A, B).map((h) => ({ aStart: h.aStart + head, aLen: h.aLen, bStart: h.bStart + head, bLen: h.bLen }));
-}
-
-function myers(a: string[], b: string[]): Hunk[] {
-  const n = a.length;
-  const m = b.length;
-  if (!n && !m) return [];
-  if (!n || !m) return [{ aStart: 0, aLen: n, bStart: 0, bLen: m }];
-  const max = n + m;
-  const v = new Int32Array(2 * max + 2);
-  const trace: Int32Array[] = [];
-  let found = false;
-  for (let d = 0; d <= max && !found; d++) {
-    trace.push(v.slice());
-    for (let k = -d; k <= d; k += 2) {
-      let x = k === -d || (k !== d && v[max + k - 1]! < v[max + k + 1]!) ? v[max + k + 1]! : v[max + k - 1]! + 1;
-      let y = x - k;
-      while (x < n && y < m && a[x] === b[y]) {
-        x++;
-        y++;
-      }
-      v[max + k] = x;
-      if (x >= n && y >= m) {
-        found = true;
-        break;
-      }
-    }
-  }
-  // Walk back through the trace, collecting the matched pairs.
-  const pairs: [number, number][] = [];
-  let x = n;
-  let y = m;
-  for (let d = trace.length - 1; d >= 0 && (x > 0 || y > 0); d--) {
-    const vd = trace[d]!;
-    const k = x - y;
-    const prevK = k === -d || (k !== d && vd[max + k - 1]! < vd[max + k + 1]!) ? k + 1 : k - 1;
-    const prevX = vd[max + prevK]!;
-    const prevY = prevX - prevK;
-    while (x > prevX && y > prevY) {
-      pairs.push([x - 1, y - 1]);
-      x--;
-      y--;
-    }
-    if (d > 0) {
-      x = prevX;
-      y = prevY;
-    }
-  }
-  while (x > 0 && y > 0) {
-    pairs.push([x - 1, y - 1]);
-    x--;
-    y--;
-  }
-  pairs.reverse();
-  // Between matched pairs: the hunks.
-  const hunks: Hunk[] = [];
-  let ai = 0;
-  let bi = 0;
-  for (const [pa, pb] of [...pairs, [n, m] as [number, number]]) {
-    if (pa > ai || pb > bi) hunks.push({ aStart: ai, aLen: pa - ai, bStart: bi, bLen: pb - bi });
-    ai = pa + 1;
-    bi = pb + 1;
-  }
-  return hunks;
-}
+export { diffLines, type Hunk };
 
 export function splitLines(text: string): string[] {
   const lines = text.split("\n");
@@ -95,6 +16,37 @@ export interface DiffRow {
   text: string;
   /** The line of `to` (1-based) the row is at — a removed line's: the line it was before. */
   line: number;
+}
+
+/**
+ * A text as a diff compares it: without a byte order mark, its CRLF line breaks LF — neither is the text's, as git has
+ * it for a checkout that turns LF into CRLF, and as the gutter's signs have it (26.1).
+ */
+export function comparable(text: string): string {
+  const t = text.charCodeAt(0) === 0xfeff ? text.slice(1) : text;
+  return t.includes("\r\n") ? t.replace(/\r\n/g, "\n") : t;
+}
+
+/**
+ * What changed between two texts whose lines are the same (`comparable`, and `textLines`): the line endings, the byte
+ * order mark, the final line break — said as "the line endings (CRLF → LF)"; null when nothing did.
+ */
+export function unseenChange(before: string, now: string): string | null {
+  if (before === now) return null;
+  const parts: string[] = [];
+  const eol = (t: string) => {
+    const crlf = t.split("\r\n").length - 1;
+    const lf = t.split("\n").length - 1 - crlf;
+    return crlf && lf ? "mixed" : crlf ? "CRLF" : lf ? "LF" : null;
+  };
+  const eb = eol(before);
+  const en = eol(now);
+  if (eb && en && eb !== en) parts.push(`the line endings (${eb} → ${en})`);
+  const bom = (t: string) => t.charCodeAt(0) === 0xfeff;
+  if (bom(before) !== bom(now)) parts.push(`the byte order mark (${bom(now) ? "added" : "removed"})`);
+  const final = (t: string) => t.endsWith("\n");
+  if (final(before) !== final(now)) parts.push(`the final line break (${final(now) ? "added" : "removed"})`);
+  return parts.length ? parts.join(" and ") : null;
 }
 
 /** A text's lines, to show: a final line break ends the last line; it doesn't start another one. */
@@ -139,6 +91,18 @@ export function diffRows(from: string, to: string, context = 3): DiffRow[] {
 /** A run of a line's text, as UTF-16 offsets, its end excluded: a changed word, or a few. */
 export type WordRange = [number, number];
 
+/** Whether offset `at` is in one of `ranges` (in order, apart, as `diffWords` gives them): found by halves. */
+export function inRanges(ranges: readonly WordRange[], at: number): boolean {
+  let lo = 0;
+  let hi = ranges.length;
+  while (lo < hi) {
+    const mid = (lo + hi) >> 1;
+    if (ranges[mid]![1] <= at) lo = mid + 1;
+    else hi = mid;
+  }
+  return lo < ranges.length && ranges[lo]![0] <= at;
+}
+
 /**
  * A line's tokens: each word (letters, marks, digits and `_`; a Chinese or Japanese character on its own, as their
  * words have no spaces between them), each run of white space, and each other character on its own.
@@ -159,9 +123,14 @@ const MAX_TOKENS = 4000;
  * punctuation only: 1). White space at a run's ends isn't part of it, and two runs with only white space between them
  * are one. `prose`: white space is one, whatever it is — a paragraph wrapped again, its line breaks moved, is the same.
  */
-export function diffWords(a: string, b: string, prose = false): { del: WordRange[]; add: WordRange[]; alike: number } {
-  const ta = tokens(a);
-  const tb = tokens(b);
+export function diffWords(a: string, b: string, prose = false): WordDiff {
+  return diffTokens(tokens(a), tokens(b), prose);
+}
+
+type WordDiff = { del: WordRange[]; add: WordRange[]; alike: number };
+
+/** `diffWords`, of two lines' tokens. */
+function diffTokens(ta: string[], tb: string[], prose: boolean): WordDiff {
   if (ta.length + tb.length > MAX_TOKENS) return { del: [], add: [], alike: 0 };
   const same = (t: string[]) => (prose ? t.map((x) => (white(x) ? " " : x)) : t);
   const hunks = diffLines(same(ta), same(tb));
@@ -216,30 +185,80 @@ export interface LinePair {
 const ALIKE = 0.5;
 /** Past this many removed lines times added ones, a hunk's lines pair in place, the first with the first. */
 const PAIR_LIMIT = 2500;
+/** The tokens a hunk's pairs may diff by word, the two lines' together: past them, the lines not yet tried pair with
+ *  none (a note rewritten whole shows its blocks removed and added, at once). */
+const PAIR_TOKENS = 100_000;
+
+/** A line's tokens, and how many times each word is in it. */
+interface Tokens {
+  all: string[];
+  words: Map<string, number>;
+  count: number;
+}
+
+function tokensOf(line: string): Tokens {
+  const all = tokens(line);
+  const words = new Map<string, number>();
+  let count = 0;
+  for (const t of all)
+    if (word(t)) {
+      words.set(t, (words.get(t) ?? 0) + 1);
+      count++;
+    }
+  return { all, words, count };
+}
+
+/** At most how alike two lines can be (`diffWords`): the words they have in common, twice, over the words of both —
+ *  those kept can be no more. Found without a diff. */
+function mostAlike(a: Tokens, b: Tokens): number {
+  if (!a.count && !b.count) return 1;
+  const [small, big] = a.words.size <= b.words.size ? [a.words, b.words] : [b.words, a.words];
+  let shared = 0;
+  for (const [w, k] of small) shared += Math.min(k, big.get(w) ?? 0);
+  return (2 * shared) / (a.count + b.count);
+}
 
 /**
  * Inside a hunk: each removed line paired with the added line most like it — the pairs, in order, that make the hunk
- * most alike — none less than half alike (`diffWords`; `prose`, its white space all one).
+ * most alike — none less than half alike (`diffWords`; `prose`, its white space all one). Only the pairs whose words
+ * could make them half alike are diffed, the likeliest first, until `PAIR_TOKENS` are spent.
  */
 export function pairLines(removed: string[], added: string[], prose = false): LinePair[] {
   const n = removed.length;
   const m = added.length;
   if (!n || !m) return [];
-  const pair = (i: number, j: number, w: ReturnType<typeof diffWords>): LinePair => ({
+  const pair = (i: number, j: number, w: WordDiff): LinePair => ({
     del: i,
     add: j,
     delWords: w.del,
     addWords: w.add,
   });
-  if (n * m > PAIR_LIMIT) {
-    const out: LinePair[] = [];
-    for (let i = 0; i < Math.min(n, m); i++) {
-      const w = diffWords(removed[i]!, added[i]!, prose);
-      if (w.alike >= ALIKE) out.push(pair(i, i, w));
+  const rt = removed.map(tokensOf);
+  const at = added.map(tokensOf);
+  const none: WordDiff = { del: [], add: [], alike: 0 };
+  // The pairs to try, each with how alike it could be: those that could be half alike, diffed likeliest first while
+  // the budget lasts; the rest none.
+  const tried = (pairs: [number, number][]): WordDiff[] => {
+    const could = pairs.map(([i, j]) => mostAlike(rt[i]!, at[j]!));
+    const order = pairs.map((_, k) => k).filter((k) => could[k]! >= ALIKE);
+    order.sort((x, y) => could[y]! - could[x]! || x - y);
+    const out: WordDiff[] = pairs.map(() => none);
+    let spent = 0;
+    for (const k of order) {
+      const [i, j] = pairs[k]!;
+      const size = rt[i]!.all.length + at[j]!.all.length;
+      if (size > MAX_TOKENS) continue;
+      if ((spent += size) > PAIR_TOKENS) break;
+      out[k] = diffTokens(rt[i]!.all, at[j]!.all, prose);
     }
     return out;
+  };
+  if (n * m > PAIR_LIMIT) {
+    const pairs = Array.from({ length: Math.min(n, m) }, (_, i): [number, number] => [i, i]);
+    return tried(pairs).flatMap((w, i) => (w.alike >= ALIKE ? [pair(i, i, w)] : []));
   }
-  const sim = removed.map((r) => added.map((x) => diffWords(r, x, prose)));
+  const all = tried(Array.from({ length: n * m }, (_, k): [number, number] => [Math.floor(k / m), k % m]));
+  const sim = removed.map((_, i) => added.map((_, j) => all[i * m + j]!));
   // best[i][j]: the most alike the first i removed lines and the first j added ones can be paired.
   const best = Array.from({ length: n + 1 }, () => new Float64Array(m + 1));
   for (let i = 1; i <= n; i++)
