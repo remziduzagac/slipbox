@@ -334,6 +334,7 @@ The status line describes the file in the focused window. From the left:
 - **The folder**, dimmed. It's the folder's name if it has one, or else its path (`~/notes`). In a git repository, the
   branch checked out comes after it (`~/notes · main`). [Links and vaults](links-and-vaults.md) explains names.
   A branch with an upstream shows how far it's ahead of it and behind it, as of the last fetch (`~/notes · main ↑2 ↓1`).
+  A merge or a rebase under way is said after it (`~/notes · main merging`, `~/notes · fix rebasing 2/5`).
 - **The file's path**, between `‹` and `›`. These two go back and forward in the window's history, as a browser's
   arrows do. Each is bright when there's somewhere to go. Hovering over one says where. Clicking the path lists the
   window's history above it, with **Copy path** first.

@@ -12,14 +12,16 @@ slipbox shows what git knows about the repository:
 - what each branch changed, and where its worktree is
 
 You can stage, commit, make and switch branches, and make worktrees for agents without leaving slipbox, by keys or by
-mouse. You can fetch, pull, push and stash. You can also review a branch before you merge it, including the links a
-merge would break, and merge it.
+mouse. You can fetch, pull, push and stash. You can review an agent's change one piece at a time, keeping, reverting or
+sending back each. You can also review a branch before you merge it, including the links a merge would break, merge
+it, and settle a merge's conflicts on a merge screen.
 
 slipbox runs the `git` on your `PATH`. Without it, none of this shows.
 
-slipbox fetches, pulls and pushes only when you ask, never on its own. It merges a branch only when you ask, and doesn't
-rebase. You run git yourself for the rest, and slipbox follows what it did. [Privacy](privacy.md) has the few cases
-where git itself reaches a remote.
+slipbox fetches, pulls and pushes only when you ask, never on its own. It merges or rebases only when you ask too: a
+branch merged from the git panel, a pull where both sides moved, or the branch rebased onto the base. For the rest of
+what git does, such as an interactive rebase or a cherry-pick, you run git yourself, and slipbox follows what it did.
+[Privacy](privacy.md) has the few cases where git itself reaches a remote.
 
 ## Git in slipbox
 
@@ -32,6 +34,9 @@ slipbox lists the branches, with pull, push and fetch first.
 
 When the branch has an upstream, the status line also shows how far the branch is ahead of it and behind it, as of the
 last fetch: `app · main ↑2 ↓1` has two commits to push and one to pull. Nothing shows when they're in step.
+
+While a merge or a rebase is under way, the status line says so after the branch: `app · main merging`, or
+`app · fix/retry rebasing 2/5` at the second of five commits.
 
 The examples in this chapter use that repository, `~/code/app`, as [Code](code.md) does.
 
@@ -58,8 +63,8 @@ Everything else is in the git panel:
 | `] c` / `[ c` | Goes to the next / previous changed line in this file |
 
 The rest are the panel's own keys, its buttons, and commands in the palette (`:`): `:changes`, `:diff`, `:worktrees`,
-`:merge-review`, `:fetch`, `:pull`, `:push`, `:stash`, and Branches, Who changed this line, This file's history,
-Preview the change and Undo the change, by their titles.
+`:merge-review`, `:fetch`, `:pull`, `:push`, `:stash`, `:review`, `:resolve`, `:rebase`, and Branches, Who changed this
+line, This file's history, Preview the change and Undo the change, by their titles.
 
 [Keys](keys.md) has every key. You can change these like any other.
 
@@ -67,15 +72,15 @@ Preview the change and Undo the change, by their titles.
 
 slipbox reads status, diffs, blame and history from git. It runs git to stage, unstage, discard, commit and switch
 branches. When you ask, it runs git to fetch, pull, push and stash, to make a branch or a worktree, to remove a
-worktree, and to merge.
+worktree, to merge or rebase, and to continue, skip or abort a merge or a rebase under way.
 
 What else git runs depends on whether you trust the vault. A repository you cloned can name programs for git to run.
 slipbox lets them run only in a vault you trust. [Code](code.md#trust) explains trust.
 
 In a vault you don't trust, git runs nothing of the repository's own:
 
-- No hooks. A commit or a push runs none, not even the `pre-push` hook. Neither is signed, since the repository's config
-  could name the program that signs.
+- No hooks. A commit, a push, a merge or a rebase runs none, not even the `pre-push` hook. None of them is signed,
+  since the repository's config could name the program that signs.
 - No program the repository's own config names for reaching a remote, such as an ssh command or a credential helper. A
   fetch, pull or push with one stops before it starts, and says which. `:trust` lets it run.
 - No `core.fsmonitor` command.
@@ -157,7 +162,9 @@ At its top:
   (`↑1 origin/main`), or that it has none yet (`not pushed`)
 - the message box, for a commit's message ([Committing](#committing))
 - the buttons: Commit (with how many files are staged), Amend, Pull (once there's an upstream), Push (Publish without
-  one), Fetch and Stash. Each does what its key does; under the pointer, the panel's foot says the key.
+  one), Fetch and Stash; Review while a change isn't staged, Resolve while a file is in conflict, and Continue, Skip
+  and Abort while a merge or a rebase is under way. Each does what its key does; under the pointer, the panel's foot
+  says the key.
 
 Under them are its sections, each under a heading that `enter` or a click folds and unfolds:
 
@@ -200,9 +207,12 @@ The panel's foot says the keys of the row selected. Its keys:
 | `a` / `shift+u` | Stages everything, untracked files too / unstages everything |
 | `i` | Types in the message box |
 | `c` / `shift+c` | Commits what's staged / amends the last commit ([Committing](#committing)) |
+| `v` | Reviews the changes, one at a time ([Reviewing a change](#reviewing-a-change)) |
 | `f` / `p` / `shift+p` | Fetches / pulls / pushes ([Fetching, pulling and pushing](#fetching-pulling-and-pushing)) |
 | `z` | Lists the stashes ([Stashes](#stashes)) |
 | `n` / `m` | A new branch / merges the branch selected ([Branches](#branches)) |
+| `x` | Opens the merge screen on a file in conflict ([The merge screen](#the-merge-screen)) |
+| `shift+r` | Rebases onto the base, or continues, skips or aborts one under way ([Rebasing](#rebasing-onto-the-base)) |
 | `.` | The row's menu |
 | `/` | Filters the files, branches and repositories by name. `enter` keeps the filter; `esc` clears it |
 | `q` / `esc` | Closes the git panel / goes back to the note, leaving it open |
@@ -256,6 +266,36 @@ staged, a commit says so.
 In a vault you don't trust, the commit's hooks don't run, and it isn't signed. The editor's first lines and a message
 say so.
 
+## Reviewing a change
+
+When an agent has changed files, you can go through what it did one change at a time. You keep each change, revert it,
+or send it back to the agent with a note.
+
+Press `v` in the git panel, or click Review, or run `:review`. The review walks every change in the working tree that
+isn't staged yet, file by file, in the order the panel lists them. A file git doesn't track yet counts as one change,
+all of it added. Each change shows in a floating window as a diff, with a few of the file's lines around it. Above the
+diff are the file, where the change is (`line 12 · change 2 of 3 here, 5 of 9 in all`), and the keys:
+
+| Key | What it does |
+| --- | --- |
+| `y` | Keeps the change: stages it, as `s` stages one change in the git panel |
+| `x` | Reverts the change: its lines go back to what's staged, and the file is saved at once |
+| `c` | Asks for a note, and adds the change to the scratch for the agent: the file, its lines, the diff and your note |
+| `n` / `p` | Goes to the next / previous change |
+| `enter` | Ends the review, and opens the file at the change |
+| `esc` | Ends the review |
+
+After `y`, `x` or `c`, the review moves on to the next change you haven't dealt with. When none is left, or when you
+press `esc`, a message says what you kept, reverted and noted. When you noted something, it names `space s y`, which
+copies the scratch for the agent ([The scratch](editing.md#the-scratch)).
+
+A revert is one step of the file's undo: open the file and press `u` to bring the change back. slipbox doesn't revert a
+file with unsaved typing, since that would write over it. It says so, skips the change, and goes on. A file git doesn't
+track goes to slipbox's trash when you revert it, after asking. A deleted file comes back as staged.
+
+The review commits nothing. Staging is how it marks what you kept, so a commit afterwards (`c` in the git panel)
+takes exactly what you reviewed.
+
 ## Fetching, pulling and pushing
 
 slipbox reaches a remote only when you ask. Nothing runs on a timer.
@@ -263,19 +303,19 @@ slipbox reaches a remote only when you ask. Nothing runs on a timer.
 | In the git panel | Command | What it does |
 | --- | --- | --- |
 | `f` | `:fetch` | Fetches the branch's remote, or `origin` when the branch has no upstream |
-| `p` | `:pull` | Pulls: brings the upstream's new commits into the branch, when it can fast-forward |
+| `p` | `:pull` | Pulls: brings the upstream's new commits into the branch, and asks first when both sides moved |
 | `shift+p` | `:push` | Pushes the branch to its upstream |
 
-The palette (`:`) has them too, as Fetch, Pull (fast-forward) and Push.
+The palette (`:`) has them too, as Fetch, Pull and Push.
 
 Each runs in the background, so slipbox never waits on the network. A message says how it went, in git's words when it
 failed.
 
 - **Fetch** gets the remote's new commits without touching your files. The status line then shows how far the branch is
   behind its upstream, as in `main ↓3`.
-- **Pull** brings those commits into the branch only when it can fast-forward, that is, when the branch has no commits
-  of its own that the upstream lacks. When both sides have new commits, git refuses, slipbox says so in git's words, and
-  nothing changes. You merge or rebase in a terminal then.
+- **Pull** brings those commits into the branch. When the branch has no commits of its own that the upstream lacks, it
+  fast-forwards. When both sides have new commits, slipbox asks how to bring them together
+  ([Pulling where both sides moved](#pulling-where-both-sides-moved)).
 - **Push** sends the branch to its upstream. A branch without one gets a question first: push it to `origin` under the
   same name, and track it there? A remote that refuses the push, because it has commits the branch lacks, is said so.
   Fetch and pull first.
@@ -326,19 +366,97 @@ the one you picked, rather than act on another, and `z` lists them again.
 
 ## Merge conflicts
 
-While a merge has conflicts, the files git couldn't merge show in several places:
+While a merge or a rebase has conflicts, the files git couldn't merge show in several places:
 
 - The explorer marks them `!`.
 - The git panel lists them under Conflicts.
 - The Problems panel's All tab (`space v p`) lists them under Conflicts, each at its first `<<<<<<<` line.
 - In a note, each conflict is an error among the note's problems: "a merge conflict: both sides are still here".
 
-To mark a conflict resolved:
-
-1. Resolve the conflict in the file, and save it.
-2. In the git panel, press `s` on the file, or click its `+`. It's marked resolved.
-
 [Code](code.md#problems) covers the Problems panel.
+
+To settle a file's conflicts by hand instead, edit its markers away and save it. Then press `s` on it in the git
+panel: it's marked resolved.
+
+### The merge screen
+
+Press `x` on a file in conflict, in the git panel or in the Problems panel's All tab, click Resolve, or run `:resolve`
+on a note in conflict. The merge screen opens in a floating window, one conflict at a time. For each conflict, it shows:
+
+- **Base**: the version both sides started from.
+- **Yours**: your side, as a diff against the base. In a merge, it's the branch you're on.
+- **Theirs**: the other side, as a diff against the base. In a merge, it's the branch coming in.
+
+Below the conflict is the file as it will be. Each conflict shows there as you settled it, or still marked if you
+haven't.
+
+| Key | What it does |
+| --- | --- |
+| `o` | Takes yours |
+| `t` | Takes theirs |
+| `b` | Takes both, yours first |
+| `shift+b` | Takes both, theirs first |
+| `e` | Puts the result in the file, and opens it in the lens at this conflict, to settle by hand |
+| `a` | Asks for a note, and adds the conflict to the scratch for the agent, with its base and the lines around it |
+| `n` / `p` | Goes to the next / previous conflict |
+| `w` | Saves the file, once every conflict is settled |
+| `s` | Stages the saved file, which tells git it's resolved |
+| `esc` | Closes the screen. What you settled stays, as long as the file doesn't change |
+
+After you settle a conflict, the screen moves on to the next one you haven't. Once you've staged a file, the next file
+in conflict opens.
+
+The base comes from git. Where git wrote the conflict with its base (`merge.conflictStyle` set to `diff3` or `zdiff3`),
+it's that. Otherwise it's the version git keeps of the file while the merge is under way. Where git doesn't have it,
+each side shows whole.
+
+`e` writes the result into the file without saving it. The conflicts you haven't settled stay marked there, and
+autosave stays off until you save the file yourself. Edit them away, then save. Or press `x` again: the merge screen
+reads the conflicts that are left.
+
+In a rebase, the sides are the other way round. Yours is the branch you're rebasing onto, and theirs is your commit
+being replayed. The screen says so.
+
+The conflict prompt's (M)erge uses the same screen, for a note that changed on disk while you typed in it, when its
+merge leaves a conflict. There, yours is what you typed, and theirs is the file on disk. `w` saves the result, and `esc`
+goes back to the prompt ([Editing](editing.md)).
+
+## Pulling where both sides moved
+
+When the branch and its upstream both have new commits, a pull can't fast-forward. slipbox asks what to do:
+
+- **Merge** the upstream into the branch, with a merge commit.
+- **Rebase** the branch onto the upstream: its own commits are replayed after the upstream's.
+- **Nothing**: both stay as they are.
+
+The one git's `pull.rebase` names is selected; without it, merge. A conflict on the way opens the merge screen.
+
+## Rebasing onto the base
+
+`shift+r` in the git panel, or `:rebase`, rebases the branch onto its base: its own commits are replayed after the
+base's new ones. That brings an agent's branch up to date. The base is the branch's own, as the git panel measures it
+against ([The base of each branch](#the-base-of-each-branch)). slipbox asks first, and says how many commits each side
+has. Unsaved notes are handled as for a pull.
+
+When a commit doesn't replay cleanly, the rebase stops there, and the merge screen opens on its conflict. Settle it,
+save it and stage it, then continue.
+
+## A merge or a rebase under way
+
+While a merge or a rebase is under way, the status line says so, and the git panel has Continue, Skip (for a rebase)
+and Abort buttons. `shift+r` in the git panel, or `:rebase`, offers the same:
+
+| Key | Command | What it does |
+| --- | --- | --- |
+| `c` | `:continue` | Continues: a rebase replays its next commit, and a merge makes its commit |
+| `s` | `:skip` | Leaves the rebase's current commit out, and goes on |
+| `a` | `:abort` | Gives up the merge or the rebase: the branch goes back to where it was |
+| `x` | | Opens the merge screen on a file still in conflict |
+
+A continue waits until no file is in conflict. Each runs in the background, and a message says how it went, in git's
+words when it failed. A commit made on the way keeps its message: git doesn't open an editor for it.
+
+In a vault you don't trust, a merge or a rebase runs none of the repository's hooks, and its commits aren't signed.
 
 ## Who changed a line
 
@@ -700,5 +818,5 @@ These commands exit with code 3:
 - with no base branch
 - with a branch or commit that isn't there
 
-The rest has no command: the gutter, source control, commits, blame, history, branches, the remote and stashes. An
-agent runs git itself for those.
+The rest has no command: the gutter, source control, commits, blame, history, branches, the remote and stashes, the
+review, the merge screen, merging and rebasing. An agent runs git itself for those.

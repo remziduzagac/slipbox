@@ -34,6 +34,8 @@ import type { Role, Theme } from "../core/theme/index.ts";
 import { Reach } from "../core/reach.ts";
 import { type Peek, vaultGraph } from "./peek.ts";
 import type { DiffWindow } from "./diffview.ts";
+import type { MergeState } from "./mergescreen.ts";
+import type { Review } from "./review.ts";
 import { rootLabel, tildePath } from "../core/names.ts";
 import { configFilesFor, isInside, vaultAt, vaultOf, recordLocation, type VaultLocation } from "../core/vault.ts";
 import { VaultFeed } from "../core/vault-feed.ts";
@@ -451,6 +453,9 @@ export class App {
   resizeKeys!: Keymap;
   /** The peek's own keys (VV-D7), over the note's while one is open: o, t, z. */
   peekKeys!: Keymap;
+  /** A review's own keys (GIT-D3), and the merge screen's (GIT-D5), over the note's while one is open. */
+  reviewKeys!: Keymap;
+  mergeKeys!: Keymap;
   aliases: Record<string, string> = {};
   groups = new Map<string, { name: string; desc: string }>();
   leader = "space";
@@ -503,8 +508,8 @@ export class App {
   readonly explicitTheme: string | undefined;
   /**
    * The floating window (3.20): a view over the windows, of text that isn't a file of its own — a note's frontmatter,
-   * a hover, a commit's message, the scratch, a diff, a peek — with every editing key there is; closed (esc, q, :q) or
-   * saved (ctrl+s, :w), its text goes back where it came from, as one undo step there.
+   * a hover, a commit's message, the scratch, a diff, a peek, a review, the merge screen — with every editing key there
+   * is; closed (esc, q, :q) or saved (ctrl+s, :w), its text goes back where it came from, as one undo step there.
    */
   floating:
     | ((
@@ -514,6 +519,8 @@ export class App {
         | { kind: "scratch" }
         | { kind: "diff"; diff: DiffWindow }
         | { kind: "peek"; peek: Peek }
+        | { kind: "review"; review: Review }
+        | { kind: "merge"; merge: MergeState }
       ) & { view: View; title: string })
     | null = null;
   /** Completion's popup while typing (19.16), and the signature being typed. */

@@ -290,12 +290,15 @@ export function openPalette(a: App, typed = ""): void {
  */
 export function openHelp(a: App): void {
   const commands: ListItem[] = inSpecOrder(a.registry.list()).map((c) => {
-    // Every keymap's keys: the reading ones, source mode's own ([keys.source]), visual mode's and a peek's.
+    // Every keymap's keys: the reading ones, source mode's own ([keys.source]), visual mode's, a peek's, a review's and
+    // the merge screen's.
     const plain = [
       ...a.keymap.keysFor(c.id),
       ...a.sourceKeys.keysFor(c.id),
       ...a.visualKeys.keysFor(c.id),
       ...a.peekKeys.keysFor(c.id),
+      ...a.reviewKeys.keysFor(c.id),
+      ...a.mergeKeys.keysFor(c.id),
     ].map(spellKey);
     // Bindings with an argument (e.g. "cursor.down extend") are variants: shown after the plain ones.
     const variants = a.keymap

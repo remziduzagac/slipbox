@@ -1771,6 +1771,13 @@ const RENAMES: Check[] = [
 ];
 
 const KESTREL = "~/work/kestrel";
+/** Who commits — a merge, a rebase: the set's home has no ~/.gitconfig, and git won't commit without a name. */
+const IDENTITY = {
+  GIT_AUTHOR_NAME: "Sam Rivera",
+  GIT_AUTHOR_EMAIL: "sam@kestrel.dev",
+  GIT_COMMITTER_NAME: "Sam Rivera",
+  GIT_COMMITTER_EMAIL: "sam@kestrel.dev",
+};
 const SYNC = "~/work/kestrel/docs/sync.md";
 
 /** kestrel's origin made a bare repository in the check's folder (no network) — main pushed there and tracked, if
@@ -2193,9 +2200,14 @@ const GIT: Check[] = [
   },
   {
     area: "links-and-files",
-    name: "git: a pull where both sides moved — ↑1 ↓1, refused in git's words, nothing moved",
+    name: "git: a pull where both sides moved — ↑1 ↓1, asked: nothing leaves both as they were, merge brings them together",
     covers: { cases: ["git"], commands: ["git.fetch", "git.pull"] },
-    options: { home: true, startAt: "home/work/kestrel/README.md", setup: (s) => void bareOrigin(s, true) },
+    options: {
+      home: true,
+      startAt: "home/work/kestrel/README.md",
+      setup: (s) => void bareOrigin(s, true),
+      env: IDENTITY,
+    },
     run: async (s) => {
       pushedElsewhere(s, "README.md", "A line from another clone.\n");
       s.write(SYNC, `${s.read(SYNC)}\nA line the agent committed.\n`);
@@ -2205,10 +2217,26 @@ const GIT: Check[] = [
       await s.ex("fetch");
       await s.status(/ · main ↑1 ↓1 {2}/, 8000);
       await s.ex("pull");
-      await s.message("Not possible to fast-forward", 8000);
+      await s.see("main and origin/main have both moved on — bring them together?", 8000);
+      await s.see("(r) Rebase main onto origin/main");
+      // Nothing: both as they were.
+      await s.keys("n");
+      await s.message("nothing pulled: main and origin/main");
       s.expect(git(s, KESTREL, "rev-parse", "HEAD").out === head, "HEAD where it was");
       s.expect(!s.read("~/work/kestrel/README.md").includes("A line from another clone."), "their line not here");
       await s.status(/ · main ↑1 ↓1 {2}/);
+      // Merge: their line here, a merge commit, two ahead of origin/main now.
+      await s.ex("pull");
+      await s.see("(m) Merge origin/main into main", 8000);
+      await s.keys("m");
+      await s.message("pulled: merged origin/main into main", 8000);
+      await s.file("~/work/kestrel/README.md", (t) => t.includes("A line from another clone."), "their line here");
+      await s.status(/ · main ↑2 {2}/, 8000);
+      s.expect(git(s, KESTREL, "log", "-1", "--format=%P").out.trim().split(" ").length === 2, "a merge commit");
+      s.expect(
+        (await lastMessage(s, "pulled: merged")).includes("this vault isn't trusted, so no hook ran"),
+        "said so",
+      );
     },
   },
   {
@@ -2711,4 +2739,35 @@ const PEEK: Check[] = [
 
 export const LINKS_AND_FILES: Check[] = [...LINKS, ...ROOTS, ...NAMED, ...FILES, ...RENAMES, ...GIT, ...NOTES, ...PEEK];
 
-export const LEFT_OUT_LINKS_AND_FILES: LeftOut = {};
+/** GIT's review, merge screen and rebase: their checks come in one pass once the workstream's parts are all in. */
+const GIT_LATER =
+  "GIT's terminal checks come in one pass at the workstream's end; tests/tui.test.ts drives it meanwhile";
+
+export const LEFT_OUT_LINKS_AND_FILES: LeftOut = {
+  commands: Object.fromEntries(
+    [
+      "git.review",
+      "git.review_keep",
+      "git.review_revert",
+      "git.review_note",
+      "git.review_next",
+      "git.review_prev",
+      "git.review_go",
+      "git.merge_screen",
+      "git.merge_ours",
+      "git.merge_theirs",
+      "git.merge_both",
+      "git.merge_both_theirs",
+      "git.merge_edit",
+      "git.merge_agent",
+      "git.merge_next",
+      "git.merge_prev",
+      "git.merge_save",
+      "git.merge_stage",
+      "git.rebase",
+      "git.continue",
+      "git.skip",
+      "git.abort",
+    ].map((c) => [c, GIT_LATER]),
+  ),
+};

@@ -6,6 +6,9 @@ import type { App } from "./app.ts";
 import { blameHere, historyHere } from "./githistory.ts";
 import { gitStep, gitPreview, gitReset } from "./gitchanges.ts";
 import { gitFetch, gitPull, gitPush, gitStash } from "./gitremote.ts";
+import { mergeAgent, mergeEdit, mergeSave, mergeStage, mergeStep, mergeTake, openMergeScreen } from "./mergescreen.ts";
+import { gitAbort, gitContinue, gitRebase, gitSkip } from "./rebase.ts";
+import { openReview, reviewGo, reviewKeep, reviewNote, reviewRevert, reviewStep } from "./review.ts";
 import * as E from "./editing.ts";
 
 /** Windows, tabs and panels: splits and tabs, each window's history, the side panels, the Problems panel and source control. */
@@ -174,6 +177,30 @@ export function paneActions(): Record<string, Run> {
     "git.pull": (a) => gitPull(a),
     "git.push": (a) => gitPush(a),
     "git.stash": (a) => gitStash(a),
+    // Reviewing a change (GIT-D3), the merge screen (GIT-D5), pull and rebase (GIT-D6).
+    "git.review": (a) => openReview(a),
+    "git.review_keep": (a) => reviewKeep(a),
+    "git.review_revert": (a) => reviewRevert(a),
+    "git.review_note": (a) => reviewNote(a),
+    "git.review_next": (a) => reviewStep(a, 1),
+    "git.review_prev": (a) => reviewStep(a, -1),
+    "git.review_go": (a) => reviewGo(a),
+    // `:resolve [file]`: the file named, else this note in conflict, else the first that is.
+    "git.merge_screen": (a, arg) => openMergeScreen(a, arg?.trim() || undefined),
+    "git.merge_ours": (a) => mergeTake(a, "ours"),
+    "git.merge_theirs": (a) => mergeTake(a, "theirs"),
+    "git.merge_both": (a) => mergeTake(a, "both"),
+    "git.merge_both_theirs": (a) => mergeTake(a, "both-theirs"),
+    "git.merge_edit": (a) => mergeEdit(a),
+    "git.merge_agent": (a) => mergeAgent(a),
+    "git.merge_next": (a) => mergeStep(a, 1),
+    "git.merge_prev": (a) => mergeStep(a, -1),
+    "git.merge_save": (a) => void mergeSave(a),
+    "git.merge_stage": (a) => mergeStage(a),
+    "git.rebase": (a) => gitRebase(a),
+    "git.continue": (a) => gitContinue(a),
+    "git.skip": (a) => gitSkip(a),
+    "git.abort": (a) => gitAbort(a),
     "tab.close_others": (a) => a.windows.closeOtherTabs(),
     "tab.close_all": (a) => a.windows.closeAllTabs(),
     "outline.pick": (a) =>

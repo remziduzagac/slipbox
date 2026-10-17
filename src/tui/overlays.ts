@@ -8,6 +8,8 @@ import { NoteBuffer } from "./buffer.ts";
 import { keyChar } from "./keys.ts";
 import type { App, View, ListItem, ListOverlay, Overlay } from "./app.ts";
 import { rank } from "./match.ts";
+import { mergeClosed } from "./mergescreen.ts";
+import { reviewEnded } from "./review.ts";
 
 /** Lists, prompts, dialogs, and the floating window's closing. */
 export class Overlays {
@@ -30,14 +32,20 @@ export class Overlays {
       this.app.message("info", f.amend ? "not amended" : "not committed");
       this.app.git.commitDone(f.from);
     }
+    // A review closed (GIT-D3): what it did, said.
+    if (f.kind === "review") reviewEnded(this.app, f.review);
     return true;
   }
 
-  /** The floating window closed by you (`esc`, `q`, `:q`): a diff's goes back to what it was opened from (GIT-D2). */
+  /**
+   * The floating window closed by you (`esc`, `q`, `:q`): a diff's goes back to what it was opened from (GIT-D2); the
+   * merge screen of the conflict prompt's (M)erge, to the prompt (GIT-D5).
+   */
   leaveFloating(): void {
     const f = this.app.floating;
     if (!this.closeFloating()) return;
     if (f?.kind === "diff") f.diff.back?.();
+    if (f?.kind === "merge") mergeClosed(this.app, f.merge);
   }
 
   /**

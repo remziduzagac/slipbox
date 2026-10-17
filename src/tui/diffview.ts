@@ -8,7 +8,7 @@
 import { isAbsolute, join } from "node:path";
 import { classify } from "../core/filetypes.ts";
 import { indentFor } from "../core/indent.ts";
-import { layoutDiff } from "../core/layout/diff.ts";
+import { diffText, layoutDiff } from "../core/layout/diff.ts";
 import type { Layout } from "../core/layout/ir.ts";
 import { type DiffViewRow, diffView } from "../core/merge.ts";
 import { TOP } from "../core/position.ts";
@@ -42,12 +42,15 @@ export interface DiffRequest {
 }
 
 /** The rows as the window's text: what its height counts, and what its cursor's lines are. */
-const textOf = (rows: DiffViewRow[]) =>
-  rows
-    .map((r) =>
-      r.kind === "@@" ? `@@ ${r.text}` : r.kind === "fold" ? `${r.count} unchanged lines` : `${r.kind} ${r.text}`,
-    )
-    .join("\n");
+const textOf = (rows: DiffViewRow[]) => diffText(rows).join("\n");
+
+/** How a file's diff is highlighted: its language (a note's, markdown's highlighter: null) and its tab's width. */
+export function diffLanguage(app: App, path: string, text: string): { language: string | null; tabWidth: number } {
+  const kind = classify(path, app.config.walk.extensions);
+  const language = kind.group === "note" ? readerFor(kind.format).language : kind.format;
+  const tabWidth = indentFor(isAbsolute(path) ? path : join(app.loc.root, path), text).tabWidth;
+  return { language, tabWidth };
+}
 
 /** A diff, `before` to `now`, in the floating window; nothing different: said, and back. */
 export function openDiff(app: App, d: DiffRequest): void {
@@ -58,9 +61,7 @@ export function openDiff(app: App, d: DiffRequest): void {
     return;
   }
   if (app.floating && !app.overlays.closeFloating()) return;
-  const kind = classify(d.path, app.config.walk.extensions);
-  const language = kind.group === "note" ? readerFor(kind.format).language : kind.format;
-  const tabWidth = indentFor(isAbsolute(d.path) ? d.path : join(app.loc.root, d.path), d.now).tabWidth;
+  const { language, tabWidth } = diffLanguage(app, d.path, d.now);
   const w: DiffWindow = { before: d.before, now: d.now, rows, open: new Set(), go: d.go, back: d.back };
   const buf = new NoteBuffer(null, `diff:${d.title}`, `diff:${d.title}`);
   // Not a note: never spell-checked, parsed or rendered as one.

@@ -468,7 +468,7 @@ export const EXPLORER_ACTIONS = [
 
 /**
  * Keys inside the git panel (GIT-D12): key → the panel's action, on the row selected. Its buttons and its footer say
- * them. The review (`v`), the merge screen (`x`) and rebasing onto the base (`shift+r`) come here with their actions.
+ * them. Continuing, skipping and aborting what's under way have no key of their own: their buttons, or `shift+r`.
  */
 export const DEFAULT_GIT_KEYS: Record<string, string> = {
   j: "down",
@@ -498,6 +498,9 @@ export const DEFAULT_GIT_KEYS: Record<string, string> = {
   z: "stash",
   n: "new_branch",
   m: "merge",
+  v: "review",
+  x: "resolve",
+  "shift+r": "rebase",
   "/": "filter",
   q: "close",
   escape: "leave",
@@ -527,6 +530,12 @@ export const GIT_ACTIONS = [
   "stash",
   "new_branch",
   "merge",
+  "review",
+  "resolve",
+  "rebase",
+  "continue",
+  "skip",
+  "abort",
   "filter",
   "close",
   "leave",
@@ -620,6 +629,30 @@ export const DEFAULT_PEEK_KEYS: Record<string, string> = {
   o: "peek.go",
   t: "peek.tab",
   z: "peek.fill",
+};
+
+/** A review's own keys (GIT-D3), over the note's while it's open: commands, as the note's keys are. */
+export const DEFAULT_REVIEW_KEYS: Record<string, string> = {
+  y: "git.review_keep",
+  x: "git.review_revert",
+  c: "git.review_note",
+  n: "git.review_next",
+  p: "git.review_prev",
+  enter: "git.review_go",
+};
+
+/** The merge screen's own keys (GIT-D5), over the note's while it's open. */
+export const DEFAULT_MERGE_KEYS: Record<string, string> = {
+  o: "git.merge_ours",
+  t: "git.merge_theirs",
+  b: "git.merge_both",
+  "shift+b": "git.merge_both_theirs",
+  e: "git.merge_edit",
+  a: "git.merge_agent",
+  n: "git.merge_next",
+  p: "git.merge_prev",
+  w: "git.merge_save",
+  s: "git.merge_stage",
 };
 
 /** What the explorer's and the outline's actions do, for help. */
@@ -754,8 +787,26 @@ export const GIT_ACTION_INFO: Record<string, { title: string; desc: string; acti
   fetch: { title: "Fetch", desc: "Fetches the branch's remote, in the background (:fetch)" },
   pull: {
     title: "Pull",
-    desc: "Brings in the upstream's new commits, fast-forward only; unsaved notes saved or kept first (:pull)",
+    desc: "Brings in the upstream's new commits; where both sides moved, asks: merge, rebase or nothing (:pull)",
   },
+  review: {
+    title: "Review",
+    desc: "The changes that aren't staged, a hunk at a time: y keeps one, x reverts it, c notes it for the agent (:review)",
+  },
+  resolve: {
+    title: "The merge screen",
+    desc: "A file in conflict settled a conflict at a time: yours, theirs or both, then saved and staged (:resolve)",
+  },
+  rebase: {
+    title: "Rebase onto the base",
+    desc: "Rebases the branch onto the base, after asking; while a merge or rebase is under way: continue, skip or abort (:rebase)",
+  },
+  continue: {
+    title: "Continue",
+    desc: "The merge or rebase under way, once nothing's in conflict: the merge committed, the rebase's next commit (:continue)",
+  },
+  skip: { title: "Skip the commit", desc: "Leaves out the commit the rebase stopped at, and replays the next (:skip)" },
+  abort: { title: "Abort", desc: "Gives up the merge or rebase under way: the branch back where it was (:abort)" },
   push: {
     title: "Push",
     desc: "Pushes the branch to its upstream; with none, asks to push it to origin and track it (:push)",
@@ -790,6 +841,7 @@ export const PROBLEMS_ACTION_INFO: Record<string, { title: string; desc: string;
   top: { title: "Top", desc: "Selects the first row" },
   bottom: { title: "Bottom", desc: "Selects the last row" },
   switch: { title: "Other tab", desc: "Between This file and All" },
+  cut: { title: "The merge screen", desc: "All: on a merge's conflict, its file settled on the merge screen" },
   filter: {
     title: "Filter",
     desc: "Type to narrow the problems (This file: by place, message or line; All: by note and link); enter goes there, esc clears",
@@ -961,6 +1013,13 @@ export const DEFAULT_ALIASES: Record<string, string> = {
   pull: "git.pull",
   push: "git.push",
   stash: "git.stash",
+  // The review, the merge screen, rebasing, and a merge or rebase under way (GIT-D3, GIT-D5, GIT-D6).
+  review: "git.review",
+  resolve: "git.merge_screen",
+  rebase: "git.rebase",
+  continue: "git.continue",
+  skip: "git.skip",
+  abort: "git.abort",
   "undo-rename": "rename.undo",
   delete: "note.delete",
   trash: "trash.open",

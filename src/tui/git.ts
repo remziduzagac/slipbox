@@ -37,6 +37,7 @@ import { type Track, trackText } from "../core/gitremote.ts";
 import { type GitChange, gitChanges } from "../core/gitsigns.ts";
 import { describeBreak, type MergeBreak, type MergeReview, reviewMerge } from "../core/mergereview.ts";
 import { openDiff } from "./diffview.ts";
+import { operationStatus } from "./rebase.ts";
 import { tildePath } from "../core/names.ts";
 import { checkoutAt, isInside, isVaultRoot, rootAt, rootMarkers } from "../core/vault.ts";
 import { isTrusted } from "../core/trust.ts";
@@ -577,13 +578,17 @@ export class Git {
    * upstream, how far ahead of it and behind it, as of the last fetch (26.6): `research · main ↑2 ↓1`.
    */
   vaultStatus(max = Number.POSITIVE_INFINITY): string {
-    const b = this.app.loc.mode !== "folder" ? this.branch() : null;
+    // A merge or a rebase under way, said after the branch (GIT-D6): a rebase's HEAD is detached, its branch named.
+    const op = this.app.loc.mode !== "folder" ? operationStatus(this.app) : null;
+    const b = this.app.loc.mode !== "folder" ? (op?.branch ?? this.branch()) : null;
     const named = this.app.loc.mode === "vault" ? this.app.loc.name : null;
     const where = named ?? tildePath(this.app.loc.root);
     const t = this.track;
     const track = b && t?.branch === b ? trackText(t, this.app.glyphs.gitAhead, this.app.glyphs.gitBehind) : "";
     const after =
-      (named && this.app.loc.worktree ? (b ? `@${b}` : "") : b ? ` · ${b}` : "") + (track ? ` ${track}` : "");
+      (named && this.app.loc.worktree ? (b ? `@${b}` : "") : b ? ` · ${b}` : "") +
+      (track ? ` ${track}` : "") +
+      (op ? ` ${op.text}` : "");
     // Short of room, a path is cut from the front: its last folders, and the branch, are kept.
     if (stringWidth(where + after) <= max) return where + after;
     return named ? truncate(where + after, max) : truncateStart(where, Math.max(4, max - stringWidth(after))) + after;

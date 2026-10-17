@@ -22,8 +22,10 @@ import {
   FOOTNOTE_ACTIONS,
   DEFAULT_INFO_KEYS,
   INFO_ACTIONS,
+  DEFAULT_MERGE_KEYS,
   DEFAULT_PEEK_KEYS,
   DEFAULT_RESIZE_KEYS,
+  DEFAULT_REVIEW_KEYS,
   DEFAULT_VISUAL_KEYS,
   DEFAULT_SOURCE_KEYS,
   EXPLORER_ACTIONS,
@@ -81,6 +83,8 @@ export class Settings {
     this.app.infoKeys = new Keymap(DEFAULT_INFO_KEYS, info ?? {}, this.app.leader);
     this.app.resizeKeys = new Keymap(DEFAULT_RESIZE_KEYS, resize ?? {}, this.app.leader);
     this.app.peekKeys = new Keymap(DEFAULT_PEEK_KEYS, {}, this.app.leader);
+    this.app.reviewKeys = new Keymap(DEFAULT_REVIEW_KEYS, {}, this.app.leader);
+    this.app.mergeKeys = new Keymap(DEFAULT_MERGE_KEYS, {}, this.app.leader);
     // No prototype: a typed :toString or :constructor is an unknown alias, not Object's.
     this.app.aliases = Object.assign(Object.create(null) as Record<string, string>, DEFAULT_ALIASES);
     for (const [k, v] of Object.entries(c.aliases)) {

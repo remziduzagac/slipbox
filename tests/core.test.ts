@@ -66,6 +66,31 @@ import { glyphsFor } from "../src/core/glyphs.ts";
 import { WriteRefused, writeNote } from "../src/core/fsutil.ts";
 import { listTasks, toggleTask } from "../src/core/tasks.ts";
 import { diffLines, diffView, diffWords, merge3, pairLines } from "../src/core/merge.ts";
+import { findChange, hunkEntry, hunkLines, hunkView, sameChange, tallyText } from "../src/core/gitreview.ts";
+import { gitChanges } from "../src/core/gitsigns.ts";
+import {
+  conflictExcerpt,
+  conflictsOf,
+  fromMerge,
+  parseConflicts,
+  resultParts,
+  resultText,
+  resultView,
+  toBase,
+  withStages,
+} from "../src/core/conflicts.ts";
+import { checkoutOf } from "../src/core/git.ts";
+import {
+  abortLater,
+  aheadBehind,
+  continueLater,
+  operationOf,
+  operationText,
+  pullDefault,
+  rebaseLater,
+  skipLater,
+} from "../src/core/gitrebase.ts";
+import { pullLater } from "../src/core/gitremote.ts";
 import {
   compilePattern,
   expandReplacement,
@@ -4852,6 +4877,469 @@ describe("the remote's commands and stash (26.6)", () => {
       expect(stashesOf(c)!.length).toBe(1);
       expect((await stashLater(c, "drop", stashesOf(c)![0]!)).ok).toBe(true);
       expect(stashesOf(c)).toEqual([]);
+    });
+  });
+});
+
+describe("reviewing a change, a hunk at a time (GIT-D3)", () => {
+  const now = ["one", "two", "THREE", "four", "five", "six", "seven", "eight"];
+  const changes = gitChanges("one\ntwo\nthree\nfour\nfive\nsix\neight\n", `${now.join("\n")}\n`);
+  test("a hunk with the file's lines around it, each row at its line in the file", () => {
+    expect(changes.map((c) => c.kind)).toEqual(["change", "add"]);
+    expect(hunkView(changes[1]!, now).rows.map((r) => `${r.kind}${r.line} ${r.text}`)).toEqual([
+      "@@7 line 7",
+      " 4 four",
+      " 5 five",
+      " 6 six",
+      "+7 seven",
+      " 8 eight",
+    ]);
+    expect(hunkView(changes[0]!, now).rows.map((r) => `${r.kind}${r.text}`)).toEqual([
+      "@@line 3",
+      " one",
+      " two",
+      "-three",
+      "+THREE",
+      " four",
+      " five",
+      " six",
+    ]);
+    const del = gitChanges("a\nb\nc\n", "a\nc\n")[0]!;
+    expect(hunkView(del, ["a", "c"]).rows.map((r) => `${r.kind}${r.text}`)).toEqual(["@@line 2", " a", "-b", " c"]);
+    expect(hunkLines(del)).toEqual({ from: 1, to: 1 });
+    const fresh = gitChanges(null, "x\ny\n")[0]!;
+    expect(hunkView(fresh, ["x", "y"]).rows.filter((r) => r.kind === "+").length).toBe(2);
+  });
+  test("a hunk found again once the index or the file moved: the same lines, the nearest", () => {
+    const after = gitChanges("one\ntwo\nTHREE\nfour\nfive\nsix\neight\n", `${now.join("\n")}\n`);
+    expect(after.length).toBe(1);
+    expect(findChange(after, changes[1]!)).toEqual(after[0]!);
+    expect(findChange(after, changes[0]!)).toBeNull();
+    const twice = gitChanges("a\nb\na\nb\n", "a\nX\na\nX\n");
+    expect(findChange(twice, { ...twice[1]!, from: 4 })).toBe(twice[1]!);
+    expect(sameChange(twice[0]!, twice[1]!)).toBe(true);
+    // The same lines now, but others staged under them: another change.
+    expect(findChange(gitChanges("z\n", "Y\n"), gitChanges("x\n", "Y\n")[0]!)).toBeNull();
+  });
+  test("a note for the agent: where the hunk is, its diff, the note; what the review says at its end", () => {
+    expect(hunkEntry("/v/docs/sync.md", changes[0]!, "keep the old wording", "/v")).toBe(
+      "**At:** `docs/sync.md:3`\n\n```diff\n-three\n+THREE\n```\n\n**Note:** keep the old wording",
+    );
+    expect(tallyText({ kept: 1, reverted: 1, noted: 1, skipped: 0, left: 0 })).toBe(
+      "review: 1 kept (staged), 1 reverted, 1 note for the agent in the scratch — space s y copies it",
+    );
+    expect(tallyText({ kept: 0, reverted: 0, noted: 0, skipped: 1, left: 2 })).toBe(
+      "review: nothing kept, reverted or noted; 1 skipped, 2 left as they were",
+    );
+  });
+});
+
+describe("a file in conflict, read for the merge screen (GIT-D5)", () => {
+  const TWO = [
+    "# Sync",
+    "",
+    "<<<<<<< HEAD",
+    "Retry up to a minute.",
+    "=======",
+    "Retry with a budget of five.",
+    ">>>>>>> agent/sync-retry",
+    "",
+    "Middle.",
+    "",
+    "<<<<<<< HEAD",
+    "A 409 parks the op.",
+    "=======",
+    "A 409 drops the op.",
+    ">>>>>>> agent/sync-retry",
+    "End.",
+    "",
+  ].join("\n");
+  const STAGES = {
+    base: "# Sync\n\nRetry forever.\n\nMiddle.\n\nA 409 retries the op.\nEnd.\n",
+    ours: "# Sync\n\nRetry up to a minute.\n\nMiddle.\n\nA 409 parks the op.\nEnd.\n",
+    theirs: "# Sync\n\nRetry with a budget of five.\n\nMiddle.\n\nA 409 drops the op.\nEnd.\n",
+  };
+
+  test("git's markers read: plain stretches and conflicts, their labels and lines; written back as they were", () => {
+    const f = parseConflicts(TWO);
+    expect(f.final).toBe(true);
+    expect(f.segments.map((s) => s.kind)).toEqual(["plain", "conflict", "plain", "conflict", "plain"]);
+    const [a, b] = conflictsOf(f);
+    expect(a).toMatchObject({
+      ours: ["Retry up to a minute."],
+      theirs: ["Retry with a budget of five."],
+      base: null,
+      oursLabel: "HEAD",
+      theirsLabel: "agent/sync-retry",
+      line: 3,
+    });
+    expect(b!.line).toBe(11);
+    expect(resultText(f, [null, null])).toBe(TWO);
+    const d3 = parseConflicts("<<<<<<<\r\nmine\r\n||||||| base\r\nold\r\n=======\r\ntheirs\r\n>>>>>>> x\r\n");
+    expect(conflictsOf(d3)[0]).toMatchObject({
+      ours: ["mine\r"],
+      base: ["old\r"],
+      markedBase: true,
+      theirs: ["theirs\r"],
+      oursLabel: "",
+      theirsLabel: "x",
+    });
+  });
+
+  test("markers that don't close are text, and a setext heading's ======= outside a conflict too", () => {
+    expect(conflictsOf(parseConflicts("Title\n=======\n\n<<<<<<< HEAD\nno end\n")).length).toBe(0);
+    expect(resultText(parseConflicts("Title\n=======\n"), [])).toBe("Title\n=======\n");
+    const f = parseConflicts("<<<<<<< a\nx\n<<<<<<< b\ny\n=======\nz\n>>>>>>> c\n");
+    expect(f.segments[0]).toEqual({ kind: "plain", lines: ["<<<<<<< a", "x"] });
+    expect(conflictsOf(f)[0]).toMatchObject({ ours: ["y"], theirs: ["z"], line: 3 });
+    // A heading's ======= inside theirs is theirs: only the first one parts the sides.
+    const setext = parseConflicts("<<<<<<< a\nMine\n=======\nTheirs\n=======\n>>>>>>> b\n");
+    expect(conflictsOf(setext)[0]).toMatchObject({ ours: ["Mine"], theirs: ["Theirs", "======="] });
+  });
+
+  test("settled: yours, theirs, both either way, or lines of your own; the rest still marked", () => {
+    const f = parseConflicts(TWO);
+    expect(resultText(f, ["ours", "theirs"])).toBe(
+      "# Sync\n\nRetry up to a minute.\n\nMiddle.\n\nA 409 drops the op.\nEnd.\n",
+    );
+    const both = resultText(f, ["both", "both-theirs"]).split("\n");
+    expect(both.slice(2, 4)).toEqual(["Retry up to a minute.", "Retry with a budget of five."]);
+    expect(both.slice(7, 9)).toEqual(["A 409 drops the op.", "A 409 parks the op."]);
+    expect(resultText(f, [{ lines: ["Mine."] }, null])).toContain("Mine.\n\nMiddle.\n\n<<<<<<< HEAD\n");
+    expect(
+      resultParts(f, ["ours", null])
+        .filter((p) => p.conflict !== undefined)
+        .map((p) => [p.line, p.settled]),
+    ).toEqual([
+      [3, true],
+      [7, false],
+    ]);
+  });
+
+  test("each conflict's base from the index's stage 1: yours found in stage 2, theirs in 3, mapped back", () => {
+    const f = withStages(parseConflicts(TWO), STAGES);
+    expect(conflictsOf(f).map((c) => c.base)).toEqual([["Retry forever."], ["A 409 retries the op."]]);
+    const edited = withStages(parseConflicts(`An added line.\n${TWO}`), STAGES);
+    expect(conflictsOf(edited).map((c) => c.base)).toEqual([["Retry forever."], ["A 409 retries the op."]]);
+    const gone = withStages(parseConflicts("a\n<<<<<<< HEAD\n=======\nB\n>>>>>>> x\nc\n"), {
+      base: "a\nb\nc\n",
+      ours: "a\nc\n",
+      theirs: "a\nB\nc\n",
+    });
+    expect(conflictsOf(gone)[0]!.base).toEqual(["b"]);
+    // Theirs gone from the index: the base from yours alone, its empty run placed where the stretches before put it.
+    const ours = withStages(parseConflicts("a\n<<<<<<< HEAD\n=======\nB\n>>>>>>> x\nc\n"), {
+      base: "a\nb\nc\n",
+      ours: "a\nc\n",
+      theirs: null,
+    });
+    expect(conflictsOf(ours)[0]!.base).toEqual(["b"]);
+    expect(conflictsOf(withStages(parseConflicts(TWO), { ...STAGES, base: null }))[0]!.base).toBeNull();
+    const d3 = "<<<<<<< a\nx\n||||||| b\nmarked\n=======\ny\n>>>>>>> c\n";
+    expect(conflictsOf(withStages(parseConflicts(d3), { base: "q\n", ours: "x\n", theirs: "y\n" }))[0]!.base).toEqual([
+      "marked",
+    ]);
+  });
+
+  test("a side's lines as the base's: a boundary inside a change widened to the whole of it", () => {
+    const h = diffLines(["a", "b", "c", "d"], ["a", "X", "d"]);
+    expect(toBase(h, 1, 2)).toEqual([1, 3]);
+    expect(toBase(h, 0, 1)).toEqual([0, 1]);
+    expect(toBase(h, 2, 3)).toEqual([3, 4]);
+    const del = diffLines(["a", "b", "c"], ["a", "c"]);
+    expect(toBase(del, 1, 1)).toEqual([1, 2]);
+  });
+
+  test("the conflict prompt's merge read the same way: each conflict with its base, labelled yours and theirs", () => {
+    const base = "one\ntwo\nthree\n";
+    const f = fromMerge(base, "one\nTWO\nthree\n", "one\ntwo-t\nthree\n");
+    expect(conflictsOf(f)[0]).toMatchObject({ ours: ["TWO"], theirs: ["two-t"], base: ["two"], line: 2 });
+    expect(resultText(f, [null])).toBe(merge3(base, "one\nTWO\nthree\n", "one\ntwo-t\nthree\n").text);
+    expect(resultText(f, ["theirs"])).toBe("one\ntwo-t\nthree\n");
+    // The final line break ends the last line: no empty line after it, in the result as drawn either.
+    expect(f.segments[f.segments.length - 1]).toEqual({ kind: "plain", lines: ["three"] });
+    expect(resultView(f, ["theirs"]).rows.at(-1)).toMatchObject({ kind: " ", text: "three" });
+    expect(fromMerge("a", "b", "c").final).toBe(false);
+  });
+
+  test("a conflict for the agent: its lines in the file, the base between the sides, three lines around", () => {
+    const f = withStages(parseConflicts(TWO), STAGES);
+    const ex = conflictExcerpt(f, 1)!;
+    expect([ex.from, ex.to]).toEqual([11, 15]);
+    expect(ex.text.split("\n")).toEqual([
+      "",
+      "Middle.",
+      "",
+      "<<<<<<< HEAD",
+      "A 409 parks the op.",
+      "||||||| base",
+      "A 409 retries the op.",
+      "=======",
+      "A 409 drops the op.",
+      ">>>>>>> agent/sync-retry",
+      "End.",
+    ]);
+    expect(conflictExcerpt(f, 2)).toBeNull();
+  });
+
+  test("the result as the merge screen draws it: each conflict under its head, the stretches between folded", () => {
+    const long = ["<<<<<<< a", "x", "=======", "y", ">>>>>>> b", ...Array.from({ length: 10 }, (_, i) => `l${i}`)];
+    const f = parseConflicts(`${long.join("\n")}\n<<<<<<< a\np\n=======\nq\n>>>>>>> b\n`);
+    const v = resultView(f, ["ours", null]);
+    expect(v.lines).toEqual([1, 12]);
+    expect(
+      v.rows.map((r) => (r.kind === "@@" || r.kind === "fold" ? `${r.kind} ${r.text}` : `${r.kind}${r.text}`)),
+    ).toEqual([
+      "@@ conflict 1, line 1: yours",
+      "+x",
+      " l0",
+      " l1",
+      "fold 6 unchanged lines",
+      "@@ conflict 2, line 12: not settled",
+      " l8",
+      " l9",
+      " <<<<<<< a",
+      " p",
+      " =======",
+      " q",
+      " >>>>>>> b",
+    ]);
+    // Two whose lines around them leave one line between: one group, both heads in it; a line alone at the end shown.
+    const near = parseConflicts(
+      "<<<<<<< a\nx\n=======\ny\n>>>>>>> b\nm1\nm2\nm3\nm4\nm5\n<<<<<<< a\np\n=======\nq\n>>>>>>> b\nz1\nz2\nz3\n",
+    );
+    const rows = resultView(near, ["ours", "theirs"]).rows.map((r) => `${r.kind}${r.text}`);
+    expect(rows).toEqual([
+      "@@conflict 1, line 1: yours · conflict 2, line 7: theirs",
+      "+x",
+      " m1",
+      " m2",
+      " m3",
+      " m4",
+      " m5",
+      "+q",
+      " z1",
+      " z2",
+      " z3",
+    ]);
+  });
+});
+
+describe("a merge or a rebase under way, and a pull where both sides moved (GIT-D6)", () => {
+  const git = (cwd: string, ...args: string[]) =>
+    new TextDecoder()
+      .decode(
+        Bun.spawnSync(["git", "-c", "user.email=t@example.invalid", "-c", "user.name=t", "-C", cwd, ...args]).stdout,
+      )
+      .trim();
+  /** Nobody's git config but the test's while it runs, its commits made by the test; the environment put back. */
+  const isolated = async (run: () => Promise<void>) => {
+    const keys = [
+      "GIT_CONFIG_GLOBAL",
+      "GIT_CONFIG_NOSYSTEM",
+      "GIT_AUTHOR_NAME",
+      "GIT_AUTHOR_EMAIL",
+      "GIT_COMMITTER_NAME",
+      "GIT_COMMITTER_EMAIL",
+    ];
+    const was = Object.fromEntries(keys.map((k) => [k, process.env[k]]));
+    process.env.GIT_CONFIG_GLOBAL = "/dev/null";
+    process.env.GIT_CONFIG_NOSYSTEM = "1";
+    process.env.GIT_AUTHOR_NAME = process.env.GIT_COMMITTER_NAME = "t";
+    process.env.GIT_AUTHOR_EMAIL = process.env.GIT_COMMITTER_EMAIL = "t@example.invalid";
+    try {
+      await run();
+    } finally {
+      for (const [k, v] of Object.entries(was))
+        if (v === undefined) delete process.env[k];
+        else process.env[k] = v;
+    }
+  };
+  const commit = (root: string, file: string, text: string, message = `${file}: ${text.trim()}`) => {
+    writeFileSync(join(root, file), text);
+    git(root, "add", "-A");
+    git(root, "commit", "-q", "-m", message);
+  };
+  /** A branch behind main, both having changed the same line. */
+  const behind = () => {
+    const root = realpathSync(mkdtempSync(join(sandbox, "rebase-")));
+    git(root, "init", "-q", "-b", "main");
+    commit(root, "a.md", "one\ntwo\nthree\n");
+    commit(root, "b.md", "b\n");
+    git(root, "switch", "-q", "-c", "agent");
+    commit(root, "a.md", "one\nagent's two\nthree\n", "Agent: two");
+    commit(root, "b.md", "b, the agent's\n", "Agent: b");
+    git(root, "switch", "-q", "main");
+    commit(root, "a.md", "one\nmain's two\nthree\n", "Main: two");
+    git(root, "switch", "-q", "agent");
+    return root;
+  };
+
+  test("read from git's own files: a rebase's step and steps, its branch; a merge's other side; git am none", () => {
+    const dir = mkdtempSync(join(sandbox, "gitdir-"));
+    expect(operationOf({ gitDir: dir })).toBeNull();
+    mkdirSync(join(dir, "rebase-merge"));
+    writeFileSync(join(dir, "rebase-merge", "msgnum"), "2\n");
+    writeFileSync(join(dir, "rebase-merge", "end"), "5\n");
+    writeFileSync(join(dir, "rebase-merge", "head-name"), "refs/heads/agent/sync-retry\n");
+    const op = operationOf({ gitDir: dir })!;
+    expect(op).toEqual({ kind: "rebase", step: 2, total: 5, branch: "agent/sync-retry", merging: null });
+    expect(operationText(op)).toBe("rebasing 2/5");
+    rmSync(join(dir, "rebase-merge"), { recursive: true });
+    mkdirSync(join(dir, "rebase-apply"));
+    writeFileSync(join(dir, "rebase-apply", "next"), "1");
+    writeFileSync(join(dir, "rebase-apply", "last"), "3");
+    writeFileSync(join(dir, "rebase-apply", "head-name"), "detached HEAD");
+    expect(operationOf({ gitDir: dir })).toMatchObject({ step: 1, total: 3, branch: null });
+    // git am's: none of slipbox's.
+    writeFileSync(join(dir, "rebase-apply", "applying"), "");
+    expect(operationOf({ gitDir: dir })).toBeNull();
+    rmSync(join(dir, "rebase-apply"), { recursive: true });
+    writeFileSync(join(dir, "MERGE_HEAD"), "0123\n");
+    writeFileSync(join(dir, "MERGE_MSG"), "Merge branch 'main' of /tmp/origin into main\n");
+    const merge = operationOf({ gitDir: dir })!;
+    expect(merge).toMatchObject({ kind: "merge", merging: "main" });
+    expect(operationText(merge)).toBe("merging");
+    expect(operationText({ kind: "rebase", step: null, total: null, branch: null, merging: null })).toBe("rebasing");
+  });
+
+  test("a rebase stopped at its conflict, read; continued once settled; aborted; a commit skipped", async () => {
+    await isolated(async () => {
+      const root = behind();
+      const c = checkoutOf(root)!;
+      expect(aheadBehind(c, "main")).toEqual({ ahead: 2, behind: 1 });
+      expect(operationOf(c)).toBeNull();
+      const r = await rebaseLater(c, "main");
+      expect(r.ok).toBe(false);
+      expect(!r.ok && r.why).toContain("CONFLICT (content): Merge conflict in a.md");
+      expect(operationOf(c)).toEqual({ kind: "rebase", step: 1, total: 2, branch: "agent", merging: null });
+      // Settled and staged: continued, the message kept (no editor).
+      writeFileSync(join(root, "a.md"), "one\nboth twos\nthree\n");
+      git(root, "add", "a.md");
+      const done = await continueLater(c, operationOf(c)!);
+      expect(done.ok).toBe(true);
+      expect(operationOf(c)).toBeNull();
+      expect(git(root, "log", "--format=%s", "main..agent")).toBe("Agent: b\nAgent: two");
+    });
+  });
+
+  test("aborted: the branch where it was; skipped: the commit left out", async () => {
+    await isolated(async () => {
+      const root = behind();
+      const c = checkoutOf(root)!;
+      const was = git(root, "rev-parse", "HEAD");
+      await rebaseLater(c, "main");
+      expect((await abortLater(c, operationOf(c)!)).ok).toBe(true);
+      expect(operationOf(c)).toBeNull();
+      expect(git(root, "rev-parse", "HEAD")).toBe(was);
+      await rebaseLater(c, "main");
+      expect((await skipLater(c)).ok).toBe(true);
+      expect(git(root, "log", "--format=%s", "main..agent")).toBe("Agent: b");
+    });
+  });
+
+  test("not trusted, a rebase runs no hook; trusted, it does", async () => {
+    await isolated(async () => {
+      const root = behind();
+      const c = checkoutOf(root)!;
+      const mark = join(root, "..", `${root.split("/").pop()}-hook-ran`);
+      const hook = join(root, ".git", "hooks", "pre-rebase");
+      mkdirSync(join(root, ".git", "hooks"), { recursive: true });
+      writeFileSync(hook, `#!/bin/sh\ntouch '${mark}'\n`);
+      chmodSync(hook, 0o755);
+      await rebaseLater(c, "main");
+      expect(existsSync(mark)).toBe(false);
+      await abortLater(c, operationOf(c)!);
+      setTrust(root, "trusted");
+      try {
+        await rebaseLater(c, "main");
+        expect(existsSync(mark)).toBe(true);
+        await abortLater(c, operationOf(c)!);
+      } finally {
+        setTrust(root, null);
+      }
+    });
+  });
+
+  test("not trusted, nothing a rebase or a pull commits is signed: the repository's own signing program never runs", async () => {
+    await isolated(async () => {
+      const root = behind();
+      const c = checkoutOf(root)!;
+      // The repository's config asks for every commit signed, by a program of its own.
+      const mark = join(root, "..", `${root.split("/").pop()}-signer-ran`);
+      const signer = join(root, "..", `${root.split("/").pop()}-signer`);
+      writeFileSync(signer, `#!/bin/sh\ntouch '${mark}'\nexit 1\n`);
+      chmodSync(signer, 0o755);
+      git(root, "config", "commit.gpgSign", "true");
+      git(root, "config", "gpg.program", signer);
+      await rebaseLater(c, "main");
+      writeFileSync(join(root, "a.md"), "one\nboth twos\nthree\n");
+      git(root, "add", "a.md");
+      expect((await continueLater(c, operationOf(c)!)).ok).toBe(true);
+      expect(operationOf(c)).toBeNull();
+      expect(existsSync(mark)).toBe(false);
+      // A pull's merge commit likewise.
+      const bare = join(root, "..", `${root.split("/").pop()}-origin.git`);
+      const other = join(root, "..", `${root.split("/").pop()}-other`);
+      Bun.spawnSync(["git", "init", "-q", "--bare", "-b", "agent", bare]);
+      git(root, "remote", "add", "origin", bare);
+      git(root, "-c", "commit.gpgSign=false", "push", "-q", "-u", "origin", "agent");
+      Bun.spawnSync(["git", "clone", "-q", "-b", "agent", bare, other]);
+      commit(other, "c.md", "theirs\n");
+      git(other, "push", "-q");
+      git(root, "-c", "commit.gpgSign=false", "commit", "-q", "--allow-empty", "-m", "mine");
+      expect((await pullLater(c, "merge")).ok).toBe(true);
+      expect(git(root, "log", "-1", "--format=%P").split(" ").length).toBe(2);
+      expect(existsSync(mark)).toBe(false);
+    });
+  });
+
+  test("a merge stopped at its conflict: read, committed with its own message", async () => {
+    await isolated(async () => {
+      const root = behind();
+      const c = checkoutOf(root)!;
+      git(root, "switch", "-q", "main");
+      git(root, "merge", "-q", "agent");
+      expect(operationOf(c)).toMatchObject({ kind: "merge", merging: "agent" });
+      writeFileSync(join(root, "a.md"), "one\ntwo\nthree\n");
+      git(root, "add", "a.md");
+      expect((await continueLater(c, operationOf(c)!)).ok).toBe(true);
+      expect(git(root, "log", "-1", "--format=%s")).toBe("Merge branch 'agent'");
+    });
+  });
+
+  test("a pull where both moved: merged, or rebased; pull.rebase the default", async () => {
+    await isolated(async () => {
+      const top = realpathSync(mkdtempSync(join(sandbox, "pull-")));
+      const root = join(top, "work");
+      const bare = join(top, "origin.git");
+      const other = join(top, "other");
+      mkdirSync(root);
+      git(root, "init", "-q", "-b", "main");
+      commit(root, "a.md", "a\n");
+      Bun.spawnSync(["git", "init", "-q", "--bare", "-b", "main", bare]);
+      git(root, "remote", "add", "origin", bare);
+      git(root, "push", "-q", "-u", "origin", "main");
+      Bun.spawnSync(["git", "clone", "-q", bare, other]);
+      const c = checkoutOf(root)!;
+      expect(pullDefault(c, "main")).toBe("merge");
+      commit(other, "b.md", "theirs\n");
+      git(other, "push", "-q");
+      commit(root, "c.md", "mine\n");
+      expect((await pullLater(c)).ok).toBe(false);
+      const m = await pullLater(c, "merge");
+      expect(m.ok).toBe(true);
+      expect(git(root, "log", "-1", "--format=%P").split(" ").length).toBe(2);
+      git(root, "config", "pull.rebase", "true");
+      expect(pullDefault(c, "main")).toBe("rebase");
+      git(root, "config", "branch.main.rebase", "false");
+      expect(pullDefault(c, "main")).toBe("merge");
+      commit(other, "d.md", "theirs again\n");
+      git(other, "push", "-q");
+      commit(root, "e.md", "mine again\n");
+      expect((await pullLater(c, "rebase")).ok).toBe(true);
+      expect(git(root, "log", "-1", "--format=%P").split(" ").length).toBe(1);
+      expect(readFileSync(join(root, "d.md"), "utf8")).toBe("theirs again\n");
     });
   });
 });

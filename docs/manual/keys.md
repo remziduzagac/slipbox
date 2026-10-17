@@ -759,8 +759,11 @@ pointer says its own. `[keys.git]` changes them ([Configuration](configuration.m
 | `i` | type the commit's message in the panel's message box |
 | `c` | commit what's staged, with the box's message, or one written in a floating editor |
 | `shift+c` | amend the last commit with what's staged |
+| `v` | review the changes not staged, one at a time (`:review`) |
+| `x` | the merge screen, on the file in conflict selected (`:resolve`) |
+| `shift+r` | rebase onto the base; while a merge or a rebase is under way, continue, skip or abort it (`:rebase`) |
 | `f` | fetch from the remote, in the background (`:fetch`) |
-| `p` | pull the upstream's new commits, fast-forward only, unsaved notes saved or kept first (`:pull`) |
+| `p` | pull the upstream's new commits, unsaved notes saved or kept first; where both sides moved, it asks (`:pull`) |
 | `shift+p` | push the branch to its upstream; with none, asks to push it to `origin` and track it (`:push`) |
 | `z` | the stashes: stash your changes with a message, or pop, apply or drop a stash (`:stash`) |
 | `n` | a new branch: its name, where it starts, and where it goes, in a new worktree by default |
@@ -774,6 +777,34 @@ pointer says its own. `[keys.git]` changes them ([Configuration](configuration.m
 In the message box, `ctrl+enter` commits, `enter` takes the message to the floating editor, and `esc` leaves the box,
 keeping what's typed. In the floating editor, every editing key works: `ctrl+s` (or `:w`) commits, and `esc` (or `q`)
 leaves it, committing nothing.
+
+### Inside a review
+
+`v` in the git panel walks the changes not staged, one at a time ([Reviewing a change](git.md#reviewing-a-change)).
+
+| Keys | What |
+| --- | --- |
+| `y` | keep the change: stage it |
+| `x` | revert it: its lines as staged again, the file saved |
+| `c` | a note for the agent: the change, its file and lines, into the scratch |
+| `n` / `p` | the next / previous change |
+| `enter` | end the review, and go to the change in its file |
+| `esc` | end the review: what you kept, reverted and noted, said |
+
+### Inside the merge screen
+
+`x` on a file in conflict settles its conflicts one at a time ([The merge screen](git.md#the-merge-screen)).
+
+| Keys | What |
+| --- | --- |
+| `o` / `t` | take yours / theirs |
+| `b` / `shift+b` | take both, yours first / theirs first |
+| `e` | the result in the file, the lens on this conflict, to settle by hand |
+| `a` | the conflict, its base and the lines around it, into the scratch for the agent |
+| `n` / `p` | the next / previous conflict |
+| `w` | save the file, once every conflict is settled (`ctrl+s` and `:w` too) |
+| `s` | stage the saved file, marking it resolved; the next file in conflict opens |
+| `esc` | close it, what's settled kept |
 
 ## Note, folder, app
 
@@ -850,6 +881,7 @@ The Problems panel lies across the bottom, in two tabs: This file (`space n q`) 
 | `j` / `k`, `down` / `up` | select the next / previous problem (in This file, the note shows it) |
 | `enter`, `l`, `right` | go there (from All, in a tab of its own, or the tab showing it) |
 | `o` / `s` | in All, open it in this window / in the split |
+| `x` | in All, on a merge's conflict: the merge screen on its file |
 | `h`, `left` | in All, fold the section, or go to its heading |
 | `tab`, `shift+tab` | the other tab |
 | `g g` / `shift+g` | the first / last row |
@@ -909,8 +941,12 @@ Your configuration's [`[aliases]`](configuration.md) adds more commands, or rena
 | `:export-notes` | export notes as one document |
 | `:changes` / `:diff` | the branch's changed files / this note's diff, against the base |
 | `:worktrees` / `:merge-review` | the worktrees / the links a merge would break |
-| `:fetch` / `:pull` / `:push` | fetch, pull (fast-forward only) or push, as source control's `f`, `p` and `shift+p` |
+| `:fetch` / `:pull` / `:push` | fetch, pull or push, as source control's `f`, `p` and `shift+p` |
 | `:stash` | the stashes, as source control's `z` |
+| `:review` | review the changes not staged, one at a time, as source control's `v` |
+| `:resolve [file]` | the merge screen on a file in conflict: the one named, this note, or the first |
+| `:rebase` | rebase onto the base, or the merge or rebase under way's choices, as source control's `shift+r` |
+| `:continue` / `:skip` / `:abort` | continue the merge or rebase under way, skip the rebase's commit, or abort it |
 | `:folders` | the named folders, to pick one to go into |
 | `:folders-default` | which copy a named folder's links open |
 | `:name [new]` | name this folder, as pointers name it |

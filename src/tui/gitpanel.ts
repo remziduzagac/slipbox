@@ -28,6 +28,7 @@ import {
   workRows,
 } from "./gitview.ts";
 import { pointedAt } from "./gitmouse.ts";
+import { operationNow } from "./rebase.ts";
 import type { App } from "./app.ts";
 
 /** A section of the panel: the working tree's four; the branch's, this file's; the branches, the merged and older among
@@ -180,14 +181,18 @@ export class GitPanel {
     return st?.base ? { ahead: st.ahead, behind: st.behind, base: st.base } : null;
   }
 
-  /** The buttons at the panel's top (GIT-D8), as the repository stands: commit with what's staged, the remote's. */
+  /** The buttons at the panel's top (GIT-D8), as the repository stands: commit with what's staged, the remote's; the
+   *  review while a change isn't staged, the merge screen while a file's in conflict; while a merge or a rebase is under
+   *  way, continue, skip (a rebase's) and abort. */
   buttons(): PanelButton[] {
     const app = this.app;
     const g = app.glyphs.git;
-    const staged = sections(app.git.entries ?? []).staged.length;
+    const work = sections(app.git.entries ?? []);
+    const staged = work.staged.length;
     const t = app.git.track;
     const up = !!t?.upstream && !t.gone;
     const label = (glyph: string, text: string) => (glyph ? `${glyph} ${text}` : text);
+    const op = operationNow(app);
     return [
       {
         id: "commit",
@@ -202,7 +207,7 @@ export class GitPanel {
               id: "pull",
               label: label(app.glyphs.gitBehind, `Pull${t!.behind ? ` ${t!.behind}` : ""}`),
               action: "pull",
-              desc: `brings in ${sanitize(t!.upstream!)}'s new commits (fast-forward)`,
+              desc: `brings in ${sanitize(t!.upstream!)}'s new commits; where both sides moved, asks how`,
             },
           ]
         : []),
@@ -214,7 +219,40 @@ export class GitPanel {
       },
       { id: "fetch", label: label(g.fetch, "Fetch"), action: "fetch", desc: "fetches the remote's new commits" },
       { id: "stash", label: "Stash", action: "stash", desc: "the stashes: the changes stashed, or one brought back" },
-      // The review (v), the merge screen (x) and rebasing onto the base (shift+r) come here, as buttons of their own.
+      // The review (GIT-D3), while there's a change not staged; the merge screen (GIT-D5), while a file's in conflict.
+      ...(work.unstaged.length || work.untracked.length
+        ? [{ id: "review", label: "Review", action: "review", desc: "the changes not staged, a hunk at a time" }]
+        : []),
+      ...(work.conflicted.length
+        ? [
+            {
+              id: "resolve",
+              label: `Resolve ${work.conflicted.length}`,
+              action: "resolve",
+              desc: "the files in conflict, on the merge screen: a conflict at a time",
+            },
+          ]
+        : []),
+      // A merge or a rebase under way (GIT-D6): carried on, a rebase's commit left out, or given up.
+      ...(op
+        ? [
+            {
+              id: "continue",
+              label: "Continue",
+              action: "continue",
+              desc: op.kind === "rebase" ? "commits what's settled, and replays the next" : "commits the merge",
+            },
+            ...(op.kind === "rebase"
+              ? [{ id: "skip", label: "Skip", action: "skip", desc: "leaves out this commit, and replays the next" }]
+              : []),
+            {
+              id: "abort",
+              label: "Abort",
+              action: "abort",
+              desc: `the branch back where it was before the ${op.kind}`,
+            },
+          ]
+        : []),
     ];
   }
 
@@ -237,7 +275,14 @@ export class GitPanel {
       return key ? [[key, what]] : [];
     };
     if (!row || row.kind === "note")
-      return this.app.git.checkout ? [...k("commit", "commit"), ...k("fetch", "fetch")] : k("go", "go in");
+      return this.app.git.checkout
+        ? [
+            ...k("commit", "commit"),
+            ...k("fetch", "fetch"),
+            // A merge or a rebase under way (GIT-D6): `shift+r` offers continue, skip and abort.
+            ...(operationNow(this.app) ? k("rebase", "continue…") : []),
+          ]
+        : k("go", "go in");
     switch (row.kind) {
       case "heading": {
         const s = row.section;
@@ -246,15 +291,19 @@ export class GitPanel {
           ...(s === "unstaged" || s === "untracked" ? k("stage", "stage all") : []),
           ...(s === "staged" ? k("unstage", "unstage all") : []),
           ...(s === "unstaged" ? k("discard", "discard all") : []),
+          ...(s === "unstaged" || s === "untracked" ? k("review", "review") : []),
+          ...(s === "conflicted" ? k("resolve", "merge screen") : []),
           ...(s === "branches" ? k("new_branch", "new branch") : []),
         ];
       }
       case "file":
       case "change":
         return [
+          ...(row.section === "conflicted" ? k("resolve", "merge screen") : []),
           ...(row.section === "staged" ? k("unstage", "unstage") : k("stage", "stage")),
           ...(row.section === "unstaged" || row.section === "untracked" ? k("discard", "discard") : []),
           ...k("open", "diff"),
+          ...(row.section === "unstaged" || row.section === "untracked" ? k("review", "review") : []),
           ...(row.kind === "file" ? k("expand", "changes") : []),
           ...k("go", "open"),
           ...k("menu", "more"),
@@ -270,6 +319,8 @@ export class GitPanel {
           ...k("open", row.open ? "fold" : "open up"),
           ...(row.branch.worktree && !row.branch.here ? k("go", "go in") : []),
           ...k("merge", "merge…"),
+          // The branch checked out here, rebased onto the base (GIT-D6).
+          ...(row.branch.here ? k("rebase", "rebase…") : []),
           ...(row.branch.worktree && !row.branch.here && !row.branch.worktree.main ? k("discard", "remove") : []),
           ...k("menu", "more"),
         ];
@@ -343,6 +394,23 @@ export class GitPanel {
         return void app.run("git.push");
       case "stash":
         return void app.run("git.stash");
+      // The review (GIT-D3): every change not staged, a hunk at a time.
+      case "review":
+        return void app.run("git.review");
+      // The merge screen (GIT-D5): the file in conflict selected, else this note when it's in conflict, else the first.
+      case "resolve": {
+        const rel = row?.kind === "file" && row.section === "conflicted" ? relOf(app, row.entry.path) : null;
+        return void app.run(rel === null ? "git.merge_screen" : `git.merge_screen ${rel}`);
+      }
+      // Rebasing onto the base (GIT-D6), or what's under way carried on, skipped or given up.
+      case "rebase":
+        return void app.run("git.rebase");
+      case "continue":
+        return void app.run("git.continue");
+      case "skip":
+        return void app.run("git.skip");
+      case "abort":
+        return void app.run("git.abort");
       case "stage_all":
         return sectionAction(app, "all", "stage");
       case "unstage_all":

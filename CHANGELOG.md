@@ -36,6 +36,19 @@ The format is [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.1.0/); wh
   from, else the nearest of `git.bases`. In a vault that isn't a repository, the panel lists the repositories in the
   view, by what needs attention. A click on the status line's branch lists the branches, and one on a change's sign in
   the gutter shows the change, with Revert and Stage.
+- Reviewing a change, one piece at a time: `v` in the git panel, its Review button, or `:review` walks the changes that
+  aren't staged, across every changed file, each drawn as a diff. `y` keeps one (stages it), `x` reverts it (saved at
+  once; `u` in the file brings it back), `c` sends it to the agent with a note, through the scratch. The end says what
+  you kept, reverted and noted. A file with unsaved typing is never written over.
+- A merge screen for git's conflicts: `x` on a file in conflict, in the git panel or Problems, its Resolve button, or
+  `:resolve`, shows each conflict with its base, and yours and theirs as diffs against it, the file as it will be below.
+  `o`, `t`, `b` and `shift+b` take a side or both, `e` settles one by hand in the lens, `a` hands it to the agent, `w`
+  saves and `s` stages. The conflict prompt's (M)erge settles its conflicts on the same screen.
+- A pull where both sides moved asks: merge, rebase, or nothing, git's `pull.rebase` the default. `shift+r` in the git
+  panel (or `:rebase`) rebases the branch onto the base, each conflict on the way opening the merge screen. While a
+  merge or a rebase is under way, the status line says so (`rebasing 2/5`), the panel has Continue, Skip and Abort
+  buttons, and `shift+r` offers the same (`:continue`, `:skip`, `:abort`). In a vault you don't trust, none of them
+  runs the repository's hooks.
 
 ### Changed
 
