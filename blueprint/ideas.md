@@ -158,15 +158,16 @@ idea without an outcome is still open. Nothing here is agreed: the decisions are
   tree. (2026-10-14) Not chosen (VV-D5): two trees becoming one confused; the whole home tree is noisy and deep, and the
   view reaches it by zooming out.
 - Busy folders left out by name only where they're a tool's: `build`, `vendor`, `target`, `dist` or `cache` in an
-  Obsidian vault or a `.slipbox/` folder are as likely a person's notes, and today they're never indexed there, nor
-  can a setting bring one back (design/roots.md § The walk). By the vault's kind, by what the folder holds, or a
-  setting. Until then, nothing new is put there: a new note, a move or a copy into one is refused. (2026-10-17) Open.
+  Obsidian vault or a `.slipbox/` folder are as likely a person's notes, and were never indexed there, nor could a
+  setting bring one back (design/roots.md § The walk). By the vault's kind, by what the folder holds, or a setting.
+  (2026-10-17) Chosen (D237): by what the folder holds and `.gitignore` — busy when ignored or holding no note at its
+  top, in every vault; the vault's kind and a setting not chosen.
 - The busy folders' case: a cache is one in any case (`Caches`, `PIP-CACHE`), the other names only as listed, so
   `Build/` or `Target/` is indexed where `build/` isn't. Exact as now, any case for all, or by git's `core.ignorecase`
   (insensitive on macOS) as `.gitignore` is (design/roots.md § The walk). (2026-10-17) Open.
-- A vault whose own folder is hidden or has a busy folder's name (`~/.dotfiles`, a repository cloned into `vendor/`)
-  is never found by the background index, nor indexed as a vault nested in another: the skip list and the busy
-  folders are checked before the markers. (2026-10-17) Open.
+- A vault whose own folder is hidden or is a busy folder (`~/.dotfiles`, a repository cloned into `vendor/` with no
+  note at its top) is never found by the background index, nor indexed as a vault nested in another: the skip list and
+  the busy folders are checked before the markers. (2026-10-17) Open.
 - Un-following a link: a followed link's answer is kept until the link leads elsewhere, with no command, menu or CLI
   to take it back; and a "no" kept asks again at every open, as no answer does. (2026-10-17) Open.
 - A link not followed still has its target statted on the main thread, by the walk, Elsewhere's listing and the

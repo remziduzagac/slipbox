@@ -13,6 +13,7 @@ import { type Keyed, stateDir } from "./paths.ts";
 import { openVault } from "./reach.ts";
 import { fileInTheWay, linksIntoFolder } from "./rename.ts";
 import { isInside, isVaultRoot } from "./vault.ts";
+import { holdsNotes } from "./walk.ts";
 
 export class FileOpError extends Error {}
 
@@ -235,7 +236,8 @@ export function copyPath(g: Graph, rel: string, toRel?: string): { from: string;
   if (to === p.rel || to.startsWith(`${p.rel}/`)) throw new FileOpError(`${p.rel} can't be copied into itself`);
   // Never where the vault doesn't index it (a busy folder, VV-D8): the copy would be found by nothing. A vault indexes
   // its own, as a move's does.
-  const never = p.dir && isVaultRoot(p.abs) ? null : g.neverIndexed(to, p.dir);
+  const notes = p.dir ? holdsNotes(p.abs, (n) => g.filter.isNoteName(n)) : undefined;
+  const never = p.dir && isVaultRoot(p.abs) ? null : g.neverIndexed(to, p.dir, notes);
   if (never) throw new FileOpError(`${to}: ${never}`);
   const toAbs = join(g.root, to);
   if (existsSync(toAbs)) throw new FileOpError(`${to} exists; not overwriting it`);

@@ -386,7 +386,7 @@ describe("writing", () => {
     ]);
     expect(readFileSync(join(other, "theirs.md"), "utf8")).toBe("# Theirs\n");
   });
-  test("a new note, a move or a copy into a busy folder is refused, exit 5, nothing written; a note there is edited", () => {
+  test("a busy name is busy when it looks generated: a new note, a move or a copy there refused, exit 5; a notes build/ written", () => {
     const dir = mkdtempSync(join(sandbox, "busy-"));
     const own = {
       XDG_STATE_HOME: join(dir, "state"),
@@ -394,35 +394,57 @@ describe("writing", () => {
       XDG_DATA_HOME: join(dir, "d"),
     };
     const root = join(dir, "root");
+    const w = (rel: string, text: string) => {
+      mkdirSync(join(root, rel, ".."), { recursive: true });
+      writeFileSync(join(root, rel), text);
+    };
     mkdirSync(join(root, ".slipbox"), { recursive: true });
-    mkdirSync(join(root, "build"));
-    mkdirSync(join(root, "docs"));
-    writeFileSync(join(root, "a.md"), "# A\n");
-    writeFileSync(join(root, "b.md"), "# B\n\nSee [[a]].\n");
-    writeFileSync(join(root, "docs", "d.md"), "# D\n");
-    writeFileSync(join(root, "build", "old.md"), "# Old\n");
+    w(".gitignore", "dist/\n");
+    w("a.md", "# A\n");
+    w("b.md", "# B\n\nSee [[a]].\n");
+    w("docs/d.md", "# D\n");
+    w("deep/sub/s.md", "# S\n"); // no note at its top
+    w("build/old.md", "# Old\n"); // a notes folder called build, not ignored
+    w("dist/d.md", "# D\n"); // ignored
+    w("target/debug/out.json", "{}\n"); // only folders at its top
+    w("node_modules/pkg/README.md", "# Pkg\n");
     const run = (args: string[]) => slipbox(args, { cwd: root, env: own });
-    const made = run(["write", "build/x.md", "text", "--create"]);
-    expect([made.code, made.err]).toEqual([
-      5,
-      "slipbox: build/x.md: build/ is a busy folder, which the vault doesn't index; not writing it\n",
-    ]);
-    expect(run(["write", "target/goal", "text", "--create"]).code).toBe(5); // not there yet: never made
-    expect([existsSync(join(root, "build", "x.md")), existsSync(join(root, "target"))]).toEqual([false, false]);
-    // Moved there, a note would leave every link to it broken: refused, the note where it was.
-    for (const to of ["target/a.md", "build/", "my-cache/a.md"]) expect(run(["mv", "a.md", to]).code).toBe(5);
-    expect(run(["mv", "docs", "dist"]).code).toBe(5); // a folder renamed to a busy name
-    expect(existsSync(join(root, "a.md"))).toBe(true);
+    const ls = () => run(["ls"]).out;
+    // A notes build/: walked, indexed, written into, moved into.
+    expect(ls()).toContain("build/old.md");
+    expect(run(["write", "build/x.md", "text", "--create"]).code).toBe(0);
+    expect(run(["mv", "a.md", "build/a.md"]).code).toBe(0);
+    expect(ls()).toContain("build/a.md");
     expect(run(["problems"]).out).toContain("broken links (0)");
-    for (const [from, to] of [
-      ["b.md", "build/b.md"],
-      ["docs", "vendor/docs"],
-    ])
-      expect(run(["cp", from!, to!]).code).toBe(5);
-    expect([existsSync(join(root, "build", "b.md")), existsSync(join(root, "vendor"))]).toEqual([false, false]);
-    // A note already there is edited, as the TUI edits it.
-    expect(run(["write", "build/old.md", "# Old\n\nmore"]).code).toBe(0);
-    expect(readFileSync(join(root, "build", "old.md"), "utf8")).toBe("# Old\n\nmore\n");
+    // Ignored, or no note at its top: refused, said why, nothing written.
+    const ignored = run(["write", "dist/new.md", "text", "--create"]);
+    expect([ignored.code, ignored.err]).toEqual([
+      5,
+      "slipbox: dist/new.md: dist/ is a busy folder (git ignores it), which the vault doesn't index; not writing it\n",
+    ]);
+    const generated = run(["write", "target/debug/x.md", "text", "--create"]);
+    expect([generated.code, generated.err]).toEqual([
+      5,
+      "slipbox: target/debug/x.md: target/ is a busy folder (no note at its top), which the vault doesn't index; not writing it\n",
+    ]);
+    expect(run(["mv", "b.md", "target/debug/b.md"]).code).toBe(5);
+    expect(run(["mv", "deep", "vendor"]).code).toBe(5); // it would hold no note at its top
+    expect(run(["cp", "b.md", "node_modules/pkg/b.md"]).code).toBe(5);
+    expect(run(["cp", "b.md", "dist/b.md"]).code).toBe(5);
+    expect(run(["cp", "deep", "pip-cache"]).code).toBe(5); // it would hold no note at its top
+    expect(existsSync(join(root, "b.md"))).toBe(true);
+    for (const rel of ["dist/new.md", "target/debug/x.md", "node_modules/pkg/b.md", "dist/b.md", "vendor", "pip-cache"])
+      expect(existsSync(join(root, rel))).toBe(false);
+    // A note it puts at a busy name's top, not ignored, makes a folder like any: written, indexed.
+    expect(run(["write", "vendor/plan.md", "text", "--create"]).code).toBe(0);
+    expect(run(["mv", "docs", "cache"]).code).toBe(0);
+    expect(run(["mv", "b.md", "Caches/b"]).code).toBe(0);
+    expect(ls()).toContain("vendor/plan.md");
+    expect(ls()).toContain("cache/d.md");
+    expect(ls()).toContain("Caches/b.md");
+    // A note already in a busy folder is edited.
+    expect(run(["write", "dist/d.md", "# D\n\nmore"]).code).toBe(0);
+    expect(readFileSync(join(root, "dist", "d.md"), "utf8")).toBe("# D\n\nmore\n");
   });
   test("export to PDF, a web page, an e-book; Markdown beside it apart from the note, its pictures in a folder, an earlier one replaced", () => {
     for (const [to, magic] of [
@@ -1282,7 +1304,7 @@ describe("the vault and the tool", () => {
     writeFileSync(join(vault, ".slipbox", "config.toml"), cfg);
     expect(slipbox(["write", ".slipbox/config.toml", "x"]).code).toBe(5);
     expect(readFileSync(join(vault, ".slipbox", "config.toml"), "utf8")).toBe(cfg);
-    for (const bad of [".slipbox/evil", ".git/hooks/x", "node_modules/x", "odd/"])
+    for (const bad of [".slipbox/evil", ".git/hooks/x", "node_modules/pkg/x", "odd/"])
       expect(slipbox(["write", bad, "x", "--create"]).code).toBe(5);
     // A dry run previews a note that couldn't be written; a bad --lines is a usage error.
     expect(slipbox(["replace", "home", "Halden", "H", "--lines", "999"]).code).toBe(2);

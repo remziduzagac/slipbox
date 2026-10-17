@@ -10,7 +10,8 @@ import { type Checkout, checkoutOf, headOf } from "./git.ts";
 import { repoKey } from "./gitbase.ts";
 import type { Track } from "./gitremote.ts";
 import { type StatusEntry, statusLater } from "./gitstage.ts";
-import { isBusyFolder } from "./walk.ts";
+import { type Config, DEFAULT_CONFIG } from "./config.ts";
+import { busyFolderAt } from "./walk.ts";
 
 /** A repository found: its checkouts in the folder looked in, the main one first. */
 export interface RepoFound {
@@ -27,10 +28,14 @@ const MAX_FOLDERS = 2000;
 
 /**
  * The repositories under `dir` (it among them when it is one), looked for `depth` levels down: hidden folders and busy
- * ones (`node_modules`, `target`…) aren't looked into, nor is a repository. A worktree found beside its main checkout is
- * listed under it.
+ * ones (`node_modules`, `target`… that look generated, D237; `walk` says what a note is) aren't looked into, nor is a
+ * repository. A worktree found beside its main checkout is listed under it.
  */
-export async function reposUnder(dir: string, depth = REPO_DEPTH): Promise<RepoFound[]> {
+export async function reposUnder(
+  dir: string,
+  depth = REPO_DEPTH,
+  walk: Config["walk"] = DEFAULT_CONFIG.walk,
+): Promise<RepoFound[]> {
   const found: Checkout[] = [];
   let seen = 0;
   const look = async (at: string, level: number): Promise<void> => {
@@ -50,7 +55,7 @@ export async function reposUnder(dir: string, depth = REPO_DEPTH): Promise<RepoF
     }
     if (level >= depth) return;
     const folders = entries
-      .filter((e) => e.isDirectory() && !e.name.startsWith(".") && !isBusyFolder(e.name))
+      .filter((e) => e.isDirectory() && !e.name.startsWith(".") && !busyFolderAt(join(at, e.name), walk))
       .map((e) => e.name)
       .sort();
     for (const name of folders) await look(join(at, name), level + 1);

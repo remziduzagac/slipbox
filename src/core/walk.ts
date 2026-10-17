@@ -6,14 +6,14 @@
 
 import { type Dirent, lstatSync, readdirSync, realpathSync, type Stats, statSync } from "node:fs";
 import { readRegular, SMALL_FILE } from "./fsutil.ts";
-import { join, relative, sep } from "node:path";
+import { basename, dirname, join, relative, sep } from "node:path";
 import ignore, { type Ignore } from "ignore";
 import type { Config } from "./config.ts";
 import { classify } from "./filetypes.ts";
 import { mountsIn } from "./mounts.ts";
 import { userFolders } from "./paths.ts";
 import { answered, linkAnswer } from "./symlinks.ts";
-import { isInside, isVaultRoot, MARKER, rootMarkers } from "./vault.ts";
+import { findVaultRoot, isInside, isVaultRoot, MARKER, rootMarkers } from "./vault.ts";
 
 export interface NoteFile {
   /** Vault-relative, always `/`-separated. */
@@ -40,13 +40,14 @@ export interface WalkResult {
   errors: string[];
 }
 
-const ALWAYS_SKIPPED = new Set([".git", MARKER, "node_modules"]);
+const ALWAYS_SKIPPED = new Set([".git", MARKER]);
 /** git's default `core.ignorecase`: true on macOS (case-insensitive filesystem), false on Linux. */
 const GIT_IGNORECASE = process.platform === "darwin" || process.platform === "win32";
 
 /**
- * The busy folders (VV-D8): tools' output, their environments and their caches — many files, none of them a person's
- * notes. Every walk leaves them out, a vault's as home's (VV-D2); the explorer lists them, never indexed.
+ * The busy folders' names (VV-D8): tools' output, their environments and their caches — many files, none of them a
+ * person's notes. A folder of such a name is busy when it looks generated (D237, `isBusyFolder`): every walk leaves it
+ * out, a vault's as home's (VV-D2); the explorer lists it, never indexed.
  */
 export const BUSY_FOLDERS: ReadonlySet<string> = new Set([
   "node_modules",
@@ -64,22 +65,55 @@ export const BUSY_FOLDERS: ReadonlySet<string> = new Set([
   ".tox",
 ]);
 
-/** A busy folder by its name (VV-D8): one of `BUSY_FOLDERS`, or a cache (`cache`, `.cache`, `Caches`, `pip-cache`). */
-export function isBusyFolder(name: string): boolean {
+/** A busy folder's name (VV-D8): one of `BUSY_FOLDERS`, or a cache's (`cache`, `.cache`, `Caches`, `pip-cache`). */
+export function isBusyName(name: string): boolean {
   return BUSY_FOLDERS.has(name) || /(^|[._-])caches?$/i.test(name);
+}
+
+/**
+ * The busy folders' rule (VV-D8, as D237 has it), the one place it's decided: a folder of a busy name (`name`) is busy
+ * when it looks generated — ignored by its repository's `.gitignore` (`ignored`), or holding no note directly in it
+ * (`notes`; its folders don't count). A notes folder called `build`, not ignored, is a folder like any. Each is asked
+ * only when the name is busy, `notes` only when it isn't ignored: a listing of the folder.
+ */
+export function isBusyFolder(name: string, ignored: () => boolean, notes: () => boolean): boolean {
+  return isBusyName(name) && (ignored() || !notes());
+}
+
+/** Whether the folder `abs` holds a note directly in it: a file named as a note, not hidden. One listing; none there, no. */
+export function holdsNotes(abs: string, isNoteName: (name: string) => boolean): boolean {
+  try {
+    return readdirSync(abs, { withFileTypes: true }).some(
+      (e) => !e.isDirectory() && !e.name.startsWith(".") && isNoteName(e.name),
+    );
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * The rule asked of a folder outside every walk at hand (the explorer's rows above or beside the vault open): ignored as
+ * the walk of the vault holding it reads its `.gitignore`s; home and Elsewhere read none.
+ */
+export function busyFolderAt(abs: string, walk: Config["walk"]): boolean {
+  if (!isBusyName(basename(abs))) return false;
+  const root = findVaultRoot(dirname(abs));
+  const filter = new WalkFilter(root ?? dirname(abs), walk, { home: !root });
+  return filter.busy(root ? relative(root, abs).split(sep).join("/") : basename(abs));
 }
 
 /** The system's folders at home's top, by platform (VV-D2): an application's, never a person's notes. */
 const SYSTEM_FOLDERS: Record<string, readonly string[]> = { darwin: ["Library"], win32: ["AppData"] };
 
 /** Why home's walk leaves a folder out (VV-D2). */
-export type HomeSkip = "hidden" | "system folder" | "Downloads" | "busy folder";
+export type HomeSkip = "hidden" | "system folder" | "Downloads";
 
 /**
  * Why home's walk leaves the folder `rel` (home's path for it) out, or null — home's skip list (VV-D2): a hidden folder
  * (`.cache`, `.config`, `.local`, every dot folder), the system's (`Library` on macOS, `AppData` on Windows),
- * `Downloads` (`downloads`: where the desktop keeps it, as home's path for it), a busy folder anywhere. Its files are
- * left out by `WalkFilter.exclusion`: what the explorer doesn't list as a note or a text file.
+ * `Downloads` (`downloads`: where the desktop keeps it, as home's path for it); a busy folder anywhere is
+ * `WalkFilter.exclusion`'s, which reads the disk (D237). Its files are left out by `exclusion` too: what the explorer
+ * doesn't list as a note or a text file.
  */
 export function homeSkip(rel: string, opts: { platform?: string; downloads?: string } = {}): HomeSkip | null {
   const name = rel.slice(rel.lastIndexOf("/") + 1);
@@ -87,7 +121,6 @@ export function homeSkip(rel: string, opts: { platform?: string; downloads?: str
   const top = !rel.includes("/");
   if (top && (SYSTEM_FOLDERS[opts.platform ?? process.platform] ?? []).includes(name)) return "system folder";
   if (rel === (opts.downloads ?? "Downloads")) return "Downloads";
-  if (isBusyFolder(name)) return "busy folder";
   return null;
 }
 
@@ -216,6 +249,8 @@ export class WalkFilter {
         if (why) return why;
         // Another disk: never looked into, nor for a marker — known from the mount table alone.
         if (this.onMount(rel)) return ANOTHER_DISK;
+        // A busy folder (D237): looked into for a note at its top, so after another disk, which never is.
+        if (this.busy(rel)) return "busy folder";
         return isVaultRoot(join(this.root, rel)) ? "nested vault" : null;
       }
       // What the explorer doesn't list as a note or a text file: a picture, an archive, a program.
@@ -223,11 +258,61 @@ export class WalkFilter {
         ? null
         : "not a note or text file";
     }
-    // A busy folder (VV-D8), whatever `.gitignore` says: listed in the explorer, never indexed.
-    if (isDir && isBusyFolder(name)) return "busy folder";
-    // git semantics: every .gitignore from the root down applies to the path relative to its own
-    // directory, and the last one with an opinion wins — so a deeper `!keep.md` re-includes.
-    // (A directory already excluded is never descended into, as with git.)
+    // A busy folder (VV-D8, D237): listed in the explorer, never indexed — ignored, it's busy rather than reached.
+    if (isDir && this.busy(rel)) return "busy folder";
+    if (this.ignoredByGit(rel, isDir)) return ".gitignore";
+    // A folder holding a root marker (`walk.root_markers`, 21.1: `.git`, `.slipbox/`, `.obsidian/`, `.zk/`…)
+    // inside: a root of its own (20.3).
+    if (isDir && isVaultRoot(join(this.root, rel))) return "nested vault";
+    return null;
+  }
+
+  /**
+   * Whether the folder `rel` is busy (VV-D8, D237): `isBusyFolder`, asked with what this walk knows — ignored by the
+   * `.gitignore`s it reads (a vault's; home reads none), and its notes, listed once a walk. `notes`: it holds one,
+   * whatever the disk says now (a write about to put one there).
+   */
+  busy(rel: string, notes?: boolean): boolean {
+    return isBusyFolder(
+      rel.slice(rel.lastIndexOf("/") + 1),
+      () => !this.home && this.ignoredByGit(rel, true),
+      () => notes ?? this.notesIn(rel),
+    );
+  }
+
+  /**
+   * Whether `rel` holds a note at its top: listed once a walk (`newWalk`), and again when its folder changed since (its
+   * mtime) — a note written there, by slipbox or not, is seen the next time it's asked.
+   */
+  private notesIn(rel: string): boolean {
+    const abs = join(this.root, rel);
+    let mtimeMs: number;
+    try {
+      mtimeMs = statSync(abs).mtimeMs;
+    } catch {
+      return false; // not there: no note in it
+    }
+    const known = this.notesAt.get(rel);
+    if (known?.mtimeMs === mtimeMs) return known.has;
+    const has = holdsNotes(abs, (n) => this.isNoteName(n));
+    this.notesAt.set(rel, { mtimeMs, has });
+    return has;
+  }
+
+  /** What the busy-named folders hold, by their path, and when they were listed: listed again in each walk. */
+  private readonly notesAt = new Map<string, { mtimeMs: number; has: boolean }>();
+
+  /** A walk begins: the busy-named folders are looked into again (D237). */
+  newWalk(): void {
+    this.notesAt.clear();
+  }
+
+  /**
+   * git semantics: every .gitignore from the root down applies to the path relative to its own directory, and the last
+   * one with an opinion wins — so a deeper `!keep.md` re-includes. (A directory already excluded is never descended
+   * into, as with git.)
+   */
+  private ignoredByGit(rel: string, isDir: boolean): boolean {
     let ignored = false;
     let dir = "";
     const parts = rel.split("/");
@@ -241,11 +326,7 @@ export class WalkFilter {
       }
       dir = dir ? `${dir}/${parts[i]}` : parts[i]!;
     }
-    if (ignored) return ".gitignore";
-    // A folder holding a root marker (`walk.root_markers`, 21.1: `.git`, `.slipbox/`, `.obsidian/`, `.zk/`…)
-    // inside: a root of its own (20.3).
-    if (isDir && isVaultRoot(join(this.root, rel))) return "nested vault";
-    return null;
+    return ignored;
   }
 
   /** Drop a cached .gitignore, e.g. when the watcher sees it change. */
@@ -290,6 +371,7 @@ function startWalk(root: string, filter: WalkFilter, sorted = false, maxAssets =
   } catch {}
   // Where other disks are mounted, read once for the walk (home's: never gone into, VV-D2).
   if (mounts) filter.readMounts();
+  filter.newWalk(); // the busy-named folders looked into again (D237)
   const out: WalkResult = { files: [], assets: [], dirs: [], skipped: [], errors: [] };
   return { root, realRoot, filter, out, links: new Map(), sorted, followed: new Set(), maxAssets };
 }

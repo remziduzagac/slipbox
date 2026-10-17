@@ -312,21 +312,31 @@ export class Graph {
   }
 
   /**
-   * Why a new file at `rel` — a folder, with `isDir` — would never be indexed, said (VV-D8: a busy folder is listed,
-   * never indexed), or null: a folder on its way the walk's filter leaves out whatever reaches it, a busy one or one
-   * always skipped. Asked of the filter, so it follows it: a root of its own on the way answers for itself, and
-   * Elsewhere indexes nothing to begin with. A new note, a move or a copy there is refused.
+   * Why a new file at `rel` — a folder, with `isDir` — would never be indexed once written, said (VV-D8: a busy folder
+   * is listed, never indexed), or null: a folder on its way the walk's filter leaves out whatever reaches it, a busy one
+   * (D237) or one always skipped. Asked of the filter, so it follows it: a root of its own on the way answers for
+   * itself, and Elsewhere indexes nothing to begin with. The folder the write puts it in holds a note after it when
+   * `notes` says so — by default when a file is named as a note; a moved or copied folder's, when it has one directly
+   * in it — so a busy name there, not ignored, is a folder like any. A new note, a move or a copy refused here would be
+   * found by nothing.
    */
-  neverIndexed(rel: string, isDir = false): string | null {
+  neverIndexed(rel: string, isDir = false, notes?: boolean): string | null {
     if (isListed(this.loc)) return null;
     // By the names on disk, where the filesystem folds case: `Build/` typed is the `build/` the walk lists.
     const parts = onDisk(this.root, rel).split("/");
-    for (let i = 1; i <= (isDir ? parts.length : parts.length - 1); i++) {
+    const last = isDir ? parts.length : parts.length - 1;
+    const holds = notes ?? (!isDir && this.filter.isNoteName(parts.at(-1)!));
+    for (let i = 1; i <= last; i++) {
       const dir = parts.slice(0, i).join("/");
       const why = this.filter.exclusion(dir, true);
       // A root of its own, named as a busy folder too (`build/` holding a `.slipbox/`): its walk starts there.
       if (why === "nested vault" || (why === "busy folder" && isVaultRoot(join(this.root, dir)))) return null;
-      if (why === "busy folder") return `${dir}/ is a busy folder, which the vault doesn't index`;
+      if (why === "busy folder") {
+        // Busy with a note in it too: ignored. Without, only for want of one, which this write gives it.
+        const ignored = this.filter.busy(dir, true);
+        if (i === last && holds && !ignored) continue;
+        return `${dir}/ is a busy folder (${ignored ? "git ignores it" : "no note at its top"}), which the vault doesn't index`;
+      }
       if (why === "always skipped") return `${dir}/ is a folder the vault never indexes`;
     }
     return null;

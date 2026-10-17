@@ -154,9 +154,10 @@ or retitle your window.
 - **The unsaved list is advice.** A command that writes a note you're editing still writes. The TUI then asks you what
   to keep.
 - **Big files and big folders.** A note larger than `walk.max_file_size` (4 MiB) is listed as skipped, not read.
-  Every vault's index leaves out the busy folders, such as `node_modules` and `build`, which the explorer lists all the
-  same. Home's index also leaves out hidden folders and `Downloads`, and holds 10,000 notes at most. `/` is never a
-  vault: if you open it, it's listed a level at a time, never indexed whole.
+  Every vault's index leaves out the busy folders a tool made, such as `node_modules` and `build`, ignored or with no
+  note at their top, which the explorer lists all the same. Home's index also leaves out hidden folders and `Downloads`,
+  and holds 10,000 notes at most. `/` is never a vault: if you open it, it's listed a level at a time, never indexed
+  whole.
 - **A change it can't see.** On a Windows drive under WSL, slipbox notices a Windows program's change only in the notes
   it has open ([Windows, through WSL](../guides/install.md#windows-through-wsl)).
 - **Most commands may still change before 1.0.** A stable few won't, and nor will the exit codes and the `--json`

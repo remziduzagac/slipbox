@@ -58,6 +58,9 @@ the file's directory.
 
 ## D40: One walk for the index and the watcher (0.11, 2026-09-25)
 
+> **Amended by D237 (2026-10-17):** `node_modules` is no longer always skipped: it is a busy folder like the others,
+> busy when it looks generated (ignored, or no note at its top). design/roots.md § The walk.
+>
 > **Partly superseded by VV-D6 (2026-10-14):** a symlink leading out of its vault, or out of home (any, in Elsewhere),
 > is followed once you say so, the answer kept in slipbox's state, never in the vault; one within is a second name,
 > never walked twice. "A symlinked directory is never followed" and "a symlinked file only inside the root" go.
@@ -940,3 +943,35 @@ decision record held it under `0.11`, which D40 left out.
 
 **Why:** A cloned or unpacked folder can hold a symlink to `/dev/zero`, or a FIFO, where a note or a config should
 be; a read of it would hang or never end. A hostile folder gets a warning, never a hang (6eb3b31, 2026-09-29).
+
+## D237: A busy folder is one that looks generated (0.11, 2026-10-17)
+
+**Decision:** A folder with a busy name (`node_modules`, `.venv`, `venv`, `__pycache__`, `target`, `build`, `dist`,
+`.next`, `vendor`, `Pods`, `DerivedData`, `.gradle`, `.tox`, a cache) is busy only when it looks generated: its
+repository's `.gitignore` ignores it, or it holds no note directly in it (a file of a note's extension at its top; its
+folders don't count). A notes folder called `build`, not ignored, with notes in it, is an ordinary folder: walked,
+indexed and written. One function decides it everywhere the name was decided alone: the walk's filter, a vault's and
+home's (home reads no `.gitignore`, so there only the notes count), the guards on a new note, a move and a copy, the
+explorer's marks, the repositories in the view and the merge review. `node_modules` leaves the always-skipped list
+for it. Whether a folder is ignored is read as the walk reads `.gitignore`, never with a `git check-ignore` per
+folder; whether it holds a note costs one listing of it, kept for the walk and read again once the folder changed. A
+note written at a busy name's top that isn't ignored makes it a notes folder, so the guards allow it; a note deeper in
+a generated-looking one, or in an ignored one, is still refused. A folder that changes kind is taken in, or left
+out, when the watcher next lists its parent or the vault is walked again. Amends VV-D8 and D40; D61 is unchanged: a
+folder `.gitignore` alone leaves out is still reached, an ignored busy-named one is busy. As built: design/roots.md
+§ The walk.
+
+**Why:** The maintainer's choice of 2026-10-17, for the question VV-D8 left open in notes vaults (ideas.md § Roots and
+vaults): an Obsidian vault or a `.slipbox/` folder can keep its notes in a folder called `build` or `vendor`, which
+VV-D8 never indexed, nor could a setting bring back. What a tool makes is ignored by the repository, or has no note
+at its top; a person's notes folder is neither. The vault's kind can't tell them apart: slipbox's own repository has
+both `.git` and `.slipbox/`, and many Obsidian vaults are repositories.
+
+**Cost:** A busy-named folder's top is listed once per walk, and asked again (a stat) when the explorer or a guard
+asks. A note dropped at the top of a generated folder that isn't ignored (a `target/` outside any repository) makes
+the walk take in all it holds. A busy folder isn't watched, so a note added inside one is seen only when its parent
+changes or the vault is walked again.
+
+**Not chosen:** the busy names only in code repositories, by the vault's markers; a setting or an allow-list
+(`walk.busy`, `walk.include`); `git check-ignore` per folder (a process per folder, and outside a repository nothing to
+ask). ideas.md § Roots and vaults.

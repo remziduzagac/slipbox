@@ -1,6 +1,8 @@
 // Vault watcher (plan 5.1, 5.2). One non-recursive watch per walked directory, so the watcher
-// subscribes to exactly what the walk includes (0.11 = 5.2): node_modules, target/ and anything
-// gitignored are never watched.
+// subscribes to exactly what the walk includes (0.11 = 5.2): a busy folder (`node_modules`, a
+// `target/` with no note at its top: D237) and anything gitignored are never watched. A busy folder
+// that changes kind — its first note, its line in a `.gitignore` gone — is taken in when its parent
+// is listed again (the filter asks the folder again once it changed) or the vault is walked again.
 //
 // Events are debounced — agents write in bursts, and editors save by temp-and-rename, which looks
 // like delete-then-create — and then settled by stat, so the consumer gets one clean list of

@@ -5,13 +5,13 @@
 // (`core/glyphs.ts`); none is an emoji.
 
 import { accessSync, constants as fsConstants, existsSync, lstatSync, statSync } from "node:fs";
-import { basename, join, relative, sep } from "node:path";
+import { join, relative, sep } from "node:path";
 import { checkoutOf, headOf } from "../core/git.ts";
 import type { Glyphs } from "../core/glyphs.ts";
 import { cacheDir, vaultKey } from "../core/paths.ts";
 import type { Role } from "../core/theme/theme.ts";
 import { isInside } from "../core/vault.ts";
-import { ANOTHER_DISK, isBusyFolder, LINK_REASON } from "../core/walk.ts";
+import { ANOTHER_DISK, busyFolderAt, LINK_REASON } from "../core/walk.ts";
 import type { App } from "./app.ts";
 import type { TreeRow } from "./explorer.ts";
 
@@ -66,6 +66,8 @@ interface Facts {
   big: boolean;
   /** A vault's row: whether its index is on the disk, and its branch when it's a repository's top. */
   vault?: { indexed: boolean; branch: string | null };
+  /** A folder outside the vault open's tree that is busy (VV-D8, D237): a busy name, and it looks generated. */
+  busy?: boolean;
 }
 
 /** Whether `abs` is there and you may not reach it so: `EACCES` or `EPERM`. */
@@ -145,7 +147,7 @@ export class Marks {
       if (row.kind === "note" && isInside(app.loc.root, abs) && abs !== app.loc.root)
         return app.graph.notes.has(relative(app.loc.root, abs).split(sep).join("/")) ? "indexed" : undefined;
       // Anywhere, a busy folder is never indexed.
-      return row.kind === "dir" && isBusyFolder(basename(abs)) ? "not-indexed" : undefined;
+      return f.busy ? "not-indexed" : undefined;
     }
     // The vault open's own tree.
     if (row.kind === "note") return f.big ? "not-indexed" : undefined;
@@ -195,6 +197,7 @@ export class Marks {
     } else {
       f.unreadable = denied(abs, fsConstants.R_OK | fsConstants.X_OK);
       if (row.kind === "root" && row.root) f.vault = this.vaultFacts(row.root.abs);
+      else if (row.outside && !row.leftOut) f.busy = busyFolderAt(abs, this.app.config.walk);
     }
     this.facts.set(row, f);
     return f;

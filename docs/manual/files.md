@@ -178,7 +178,9 @@ Some files are never listed:
 Some folders are listed, but nothing in them is indexed. They are marked `⊘`:
 
 - `node_modules` and the other folders tools fill: `venv`, `__pycache__`, `target`, `build`, `dist`, `vendor`, `Pods`,
-  `DerivedData` and caches, wherever they are
+  `DerivedData` and caches, wherever they are, when they look made by a tool: `.gitignore` leaves them out, or no note
+  is directly in them (the folders in them don't count). A folder of your notes called `build`, with notes at its top
+  and not ignored, is a folder like any.
 - what `.gitignore` and `walk.exclude` leave out
 - in your home folder, `Downloads`, the system's folders, and a folder where another disk is mounted
   ([Home](links-and-vaults.md#home))
@@ -186,8 +188,10 @@ Some folders are listed, but nothing in them is indexed. They are marked `⊘`:
 You can unfold them and open their files. Their notes have no backlinks, search doesn't find them, and a wikilink's name
 doesn't reach them. Nothing in them can be renamed, moved or deleted from the explorer.
 
-Nothing new goes into a folder tools fill, since nothing would find it there. A new note, a move or a copy into one is
-refused, typed as a path or from the command line. A note already there can still be changed.
+Nothing new goes where it would never be indexed. A new note, a move or a copy is refused, typed as a path or from the
+command line, into a folder tools fill that `.gitignore` leaves out, or deeper in one with no note at its top
+(`target/debug/plan.md`). A note put directly in a folder called `build` that isn't ignored makes it a folder of
+notes, indexed. A note already in a folder tools fill can still be changed.
 
 You can also open a hidden or git-ignored file by its path (`:e .drafts/plan.md`), or by following a link to it. It
 opens, and its links count from then on. A file in a busy folder, or in what `walk.exclude` leaves out, opens from the
@@ -217,7 +221,8 @@ explorer's selected folder instead, or beside the selected file. The question sa
 - **A new note starts with its title,** `# coffee`. It opens with you typing on the line after the blank one, in the
   lens. With `editor.edit_in = "source"`, it opens in source mode instead.
 - **A name that is already there** opens that file, and makes nothing.
-- **A name in a folder tools fill**, such as `build/plan`, is refused: slipbox would never find the note there.
+- **A name where slipbox would never find the note** is refused: in a folder tools fill that `.gitignore` leaves out,
+  or deeper in one with no note at its top, such as `target/debug/plan`.
 - **A name another note has**, in another folder, would make a wikilink by that name (`[[coffee]]`) reach either of
   them. So slipbox suggests a distinct name instead, from the new note's folder (`ideas-coffee`). It says where the
   other one is. Type the name again to keep it anyway.
@@ -299,7 +304,8 @@ A rename is refused, with nothing changed, when:
 
 - the new name is taken, even by a name differing only in case
 - it would leave the vault or go into a hidden folder
-- it would go into a folder tools fill, such as `build` or `target`, or give a folder such a name
+- it would go where nothing would find it: into a folder tools fill that `.gitignore` leaves out, deeper in one with
+  no note at its top, or a folder with no note at its top renamed `build` or `target`
 - a file it would rewrite or move has unsaved changes. Save first.
 
 Renaming a heading and the links to it is in [Links and vaults](links-and-vaults.md).

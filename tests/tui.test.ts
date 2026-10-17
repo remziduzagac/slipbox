@@ -13677,10 +13677,10 @@ describe("the index on demand in the TUI (20.8)", () => {
     writeFileSync(join(root, ".gitignore"), "tmp/\n");
     mkdirSync(join(root, "tmp"));
     mkdirSync(join(root, ".private"));
-    mkdirSync(join(root, "node_modules"), { recursive: true });
+    mkdirSync(join(root, "node_modules", "dep"), { recursive: true });
     writeFileSync(join(root, "tmp", "scratchpad.md"), "# Scratchpad\n\n[back](../index.md)\n");
     writeFileSync(join(root, ".private", "p.md"), "# P\n");
-    writeFileSync(join(root, "node_modules", "dep.md"), "# Dep\n");
+    writeFileSync(join(root, "node_modules", "dep", "dep.md"), "# Dep\n"); // no note at its top: busy (D237)
     const h = await harness({ root, open: "index.md" });
     expect(h.app.graph.notes.has("tmp/scratchpad.md")).toBe(false);
     await h.app.run("note.open tmp/scratchpad.md");
@@ -13689,9 +13689,9 @@ describe("the index on demand in the TUI (20.8)", () => {
     expect(h.app.graph.backlinks("index.md").map((b) => b.from)).toContain("tmp/scratchpad.md");
     await h.app.run("note.open .private/p.md");
     expect(h.app.view!.buf.rel).toBe(".private/p.md");
-    await h.app.run("note.open node_modules/dep.md");
+    await h.app.run("note.open node_modules/dep/dep.md");
     expect(h.app.view!.buf.rel).toBe(".private/p.md");
-    expect(h.app.messages.at(-1)?.text).toBe('no note or file "node_modules/dep.md"');
+    expect(h.app.messages.at(-1)?.text).toBe('no note or file "node_modules/dep/dep.md"');
   });
 });
 
@@ -16736,18 +16736,32 @@ describe("review (tui): the app's floating windows, new paths, roots and repeats
     expect(d.app.graph.dirs.filter((x) => x.startsWith("drafts"))).toEqual([]);
   });
 
-  test("a new note typed into a busy folder is refused, as the explorer's row is; a note already there opens", async () => {
+  test("a new note typed into a busy folder that looks generated is refused; at a busy name's top it makes a notes folder", async () => {
     const root = makeVault();
+    mkdirSync(join(root, "target", "debug"), { recursive: true }); // only folders at its top
+    writeFileSync(join(root, "target", "debug", "out.json"), "{}\n");
+    writeFileSync(join(root, ".gitignore"), "ignored/\n*.skip.md\ndist/\n");
+    mkdirSync(join(root, "dist")); // ignored
+    writeFileSync(join(root, "dist", "d.md"), "# D\n");
     const h = await harness({ root });
-    for (const typed of ["build/x", "notes/my-cache/c"]) expect(h.app.files.createNote(typed, "")).toBeNull();
+    for (const typed of ["dist/y", "target/debug/x", "notes/my-cache/sub/c"])
+      expect(h.app.files.createNote(typed, "")).toBeNull();
     expect(last(h)).toMatchObject({
       level: "warn",
-      text: "not creating notes/my-cache/c.md: notes/my-cache/ is a busy folder, which the vault doesn't index",
+      text: "not creating notes/my-cache/sub/c.md: notes/my-cache/ is a busy folder (no note at its top), which the vault doesn't index",
     });
-    expect([existsSync(join(root, "build")), existsSync(join(root, "notes", "my-cache"))]).toEqual([false, false]);
-    mkdirSync(join(root, "target"));
-    writeFileSync(join(root, "target", "old.md"), "# Old\n");
-    expect(h.app.files.createNote("target/old", "")).toMatchObject({ rel: "target/old.md", created: false });
+    for (const rel of ["dist/y.md", "target/debug/x.md", "notes/my-cache"])
+      expect(existsSync(join(root, rel))).toBe(false);
+    // At a busy name's top, not ignored: made, and the folder one like any — indexed, opened as the vault's.
+    expect(h.app.files.createNote("build/plan", "")).toMatchObject({
+      rel: "build/plan.md",
+      created: true,
+      open: "build/plan.md",
+    });
+    expect(h.app.graph.notes.has("build/plan.md")).toBe(true);
+    expect(h.app.graph.dirs).toContain("build");
+    // A note already in a busy folder opens.
+    expect(h.app.files.createNote("dist/d", "")).toMatchObject({ rel: "dist/d.md", created: false });
   });
 
   test("space v shift+m with another note unsaved: refused before anything changes, the .slipbox/ kept", async () => {

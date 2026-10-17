@@ -302,9 +302,10 @@ A few rules keep vaults predictable:
 - **A vault inside a vault is a vault of its own.** A repository cloned into your notes folder keeps its notes to
   itself. The outer vault doesn't index them, and its names don't reach them. The explorer shows such a folder with its
   own icon. The vaults in your home folder are their own the same way.
-- **A vault's index leaves out the busy folders,** `node_modules`, `build`, `vendor` and the like, whatever its
-  `.gitignore` says, and what `.gitignore` and `walk.exclude` leave out. The explorer lists them, marked `⊘`
-  ([What the explorer lists](files.md#what-the-explorer-lists)).
+- **A vault's index leaves out the busy folders,** `node_modules`, `build`, `vendor` and the like, when they look made
+  by a tool: `.gitignore` leaves them out, or no note is directly in them. It leaves out what `.gitignore` and
+  `walk.exclude` leave out too. The explorer lists them, marked `⊘` ([What the explorer
+  lists](files.md#what-the-explorer-lists)).
 - **Several markers in one folder make one vault.** Its settings and name come from `.slipbox/`.
 - **Which markers count** is `walk.root_markers`. Only your own config may set it, since it decides where vaults are.
 
@@ -328,7 +329,7 @@ Home's index leaves out what isn't your notes:
 - the system's folders: `Library` on macOS, `AppData` on Windows
 - `Downloads`, where your desktop keeps it
 - the busy folders, wherever they are: `node_modules`, `.venv`, `venv`, `__pycache__`, `target`, `build`, `dist`,
-  `.next`, `vendor`, `Pods`, `DerivedData`, `.gradle`, `.tox`, and caches
+  `.next`, `vendor`, `Pods`, `DerivedData`, `.gradle`, `.tox`, and caches, when no note is directly in them
 - a folder where another disk is mounted, such as a network share, a USB disk or an `sshfs` mount. slipbox knows it
   from the system's list of mounts and never looks into it, so a share that stops answering can't hold slipbox up
 - notes larger than `walk.max_file_size`, which are listed as skipped, not read

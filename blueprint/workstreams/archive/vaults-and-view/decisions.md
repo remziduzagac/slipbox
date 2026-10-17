@@ -110,6 +110,10 @@ confused us.
 
 ## VV-D8: Busy folders in the tree, not in the index (2026-10-14)
 
+> **Amended by D237 (2026-10-17):** a folder of a busy name is busy only when it looks generated: ignored by its
+> repository's `.gitignore`, or holding no note at its top. A notes folder called `build`, not ignored, is a folder
+> like any; `node_modules` is decided the same way. The maintainer's choice.
+
 **Decision:** `node_modules`, `.venv` and `venv`, `__pycache__`, `target`, `build`, `dist`, `.next`, `vendor`, `Pods`,
 `DerivedData`, `.gradle`, `.tox` and caches; in a vault, what its `.gitignore` leaves out; in home, its skip list. They
 are listed and browsed like any folder, nothing in them indexed, searched or linked to by name.

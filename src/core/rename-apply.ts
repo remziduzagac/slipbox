@@ -295,7 +295,7 @@ export function applyPlan(g: Graph, plan: RenamePlan): Applied {
     // What the walk leaves out (`.slipbox/config.toml`, a naming's) isn't one of the root's files —
     // unless a link reached it (20.8).
     const key = rel.split(sep).join("/");
-    if (walkSkips(key) && !g.notes.has(key) && !g.reached.has(key)) continue;
+    if ((walkSkips(key) || !g.admits(key)) && !g.notes.has(key) && !g.reached.has(key)) continue;
     try {
       const st = statSync(abs);
       if (classify(rel, g.config.walk.extensions).group === "note")

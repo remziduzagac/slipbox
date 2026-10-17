@@ -141,11 +141,12 @@ The format is [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.1.0/); wh
 - The explorer lists `node_modules`, the other folders tools fill (`build`, `dist`, `target`, `vendor`, `__pycache__`,
   caches…), what `.gitignore` and `walk.exclude` leave out, and home's `Downloads`, each marked `⊘`. You can unfold
   them and open their files; nothing in them is indexed. A folder you may not read is listed too, marked `⚿`. Every
-  vault's index now leaves those busy folders out, as home's did, even where its `.gitignore` doesn't: a note kept in a
-  folder named `build` or `vendor` is no longer indexed, so rename the folder to have it indexed again. Nothing new
-  goes into such a folder, where nothing would find it: a new note, a move or a copy into one is refused, in the
-  explorer, as a typed path, and on the command line (`write --create`, `mv`, `cp`: exit 5). A note already there can
-  still be changed.
+  vault's index now leaves those busy folders out, as home's did, when they look made by a tool: `.gitignore` leaves
+  them out, or no note is directly in them. A folder of notes named `build` or `vendor`, notes at its top and not
+  ignored, stays indexed. Nothing new goes where nothing would find it: a new note, a move or a copy into an ignored
+  busy folder, or deeper in one with no note at its top, is refused, in the explorer, as a typed path, and on the
+  command line (`write --create`, `mv`, `cp`: exit 5). A note already there can still be changed. `node_modules` is
+  decided the same way, so a note already in one can be changed too.
 
 ### Removed
 

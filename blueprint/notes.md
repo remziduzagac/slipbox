@@ -436,11 +436,11 @@ dates. Each says what was asked, decided, built and found, and cites the decisio
   D218 and D220; the renamed terms and sections in decisions/README.md; both workstreams archived, their docs tasks
   (VV-T9, GIT-T8) still being written. Every claim of the workstreams' design was checked against the code on `main`
   first; where they had come apart, the root says what the code does, with the gap in a "Not done" note.
-- **Open, for the user:** the questions in ideas.md § Roots and vaults (the busy folders' names in a notes vault and
-  their case, vaults in hidden or busy-named folders, un-following a link, a link not followed statted on the main
-  thread, a folder link going in from a peek, a peek's cost and stale backlinks, the git panel's files in a peek, asking
-  git again on the terminal's focus) and § Git (a first-run setup screen, key tables for the floating windows). And what
-  the check found in the code: `ctrl+s` and `:w` don't save the merge screen, which says it does
+- **Open, for the user:** the questions in ideas.md § Roots and vaults (the busy folders' case — their names in a notes
+  vault decided by D237 —, vaults in hidden or busy-named folders, un-following a link, a link not followed statted on
+  the main thread, a folder link going in from a peek, a peek's cost and stale backlinks, the git panel's files in a
+  peek, asking git again on the terminal's focus) and § Git (a first-run setup screen, key tables for the floating
+  windows). And what the check found in the code: `ctrl+s` and `:w` don't save the merge screen, which says it does
   (`tui/mergescreen.ts`); the description of `peek.go` says a file outside every vault opens beside the vault, where `o`
   goes into Elsewhere (`core/command-specs.ts`); and code comments still name the removed `space g` keys (`tui/git.ts`,
   `tui/githistory.ts`, `core/gitbranches.ts`) and the sections renamed (`core/registry.ts`, `core/names.ts`). VV-D9's

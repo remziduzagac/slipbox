@@ -688,7 +688,8 @@ keys.
 - **What the walk leaves out, listed** (VV-D8; `tui/explorer-disk.ts`). In each folder of the vault's own tree the
   explorer shows — the view's, and each unfolded under it — what's on the disk that the walk didn't give is read
   (`fromDisk`), a hidden name or a link aside (§ Links followed only when you say so, [roots.md](roots.md)). What the
-  walk leaves out — `node_modules` and the other busy folders, what `.gitignore` or `walk.exclude` leaves out, home's
+  walk leaves out — `node_modules` and the other busy folders (D237: ignored, or no note at their top; a notes `build/`
+  is the vault's own), what `.gitignore` or `walk.exclude` leaves out, home's
   skip list — is a row by its absolute path (`outside`, its `leftOut` the reason `exclusion` gives), listed a level at
   a time as a folder outside the vault, never this vault's to rename, move, delete or make a note in; a file of it
   opens from the explorer, never indexed; a note of it a link reached (`20.8`) is listed there, not under a folder of
@@ -715,7 +716,8 @@ keys.
   is indexed, or indexing while home is unwalked, while the walk hasn't reached it (`unwalked`; past home's cap, not
   indexed), or while a note in it waits to be parsed (`app.indexing`, `graph.pendingPaths`); what the walk leaves out
   (`leftOut`) and every folder in it, unfolded there or zoomed into (`outsideRows` carries `leftOut` down, to a vault
-  of its own), a busy folder anywhere, a link not followed or not answering, and a note too big
+  of its own), a busy folder anywhere (`busyFolderAt` for one outside the vault open: the rule of D237, asked once
+  per row drawn), a link not followed or not answering, and a note too big
   (`walk.max_file_size`) are not indexed; the vault open's row is indexing while its index is built, else indexed;
   another vault's is indexed when its index is on the disk, indexing while the background index builds it
   (`AutoIndex.status.current`), else unmarked; a note in what the walk leaves out that a link reached is indexed. A
@@ -841,7 +843,7 @@ keys.
   checked out nowhere, said so; Into another branch… among those checked out here or in a worktree.
 - **The repositories in the view** (VV-D10, GIT-D11; `tui/gitreposview.ts`, `core/gitrepos.ts`) are found under the
   explorer's view (`explorer.top`, else the vault) three folders down (`reposUnder`, `REPO_DEPTH`), 2,000 folders at
-  most, in the background: not into a hidden folder, a busy one (`isBusyFolder`, VV-D8) or a repository, whose folders
+  most, in the background: not into a hidden folder, a busy one (`busyFolderAt`, VV-D8, D237) or a repository, whose folders
   are its own; a checkout's `.git` makes it one, and a worktree found beside its main checkout is grouped under it, by
   its repository's shared git folder (`groupRepos`, `repoKey`). Found again each time the panel is shown
   (`RepoView.again`). **In a repository**, its own panel, and after it, folded, **Other repositories (n)**: the view's
@@ -1388,9 +1390,9 @@ the only one (`16.16`, `16.17`; D112): Org and AsciiDoc files open as text.
   (`[config](cfg/app.toml)`, `[run](run.py)`, `[editor](cfg/app.toml#editor)` at that section; binary links
   still copy their path). `:e path` opens a file written a moment ago too, before the watcher has told the index:
   the vault learns of it then, as the watcher would have it — if the walk takes it. One git-ignored or under a
-  hidden folder is reached (`20.8`): opened, and indexed from then on, as a link to it would; one in `node_modules`, a
-  busy folder, `walk.exclude` or, in home, what its skip list leaves out isn't the vault's: it opens, polled while it's
-  open, and is never indexed (VV-D8).
+  hidden folder is reached (`20.8`): opened, and indexed from then on, as a link to it would; one in a busy folder
+  (`node_modules`…), `walk.exclude` or, in home, what its skip list leaves out isn't the vault's: it opens, polled while
+  it's open, and is never indexed (VV-D8).
 - **Data files open rendered** (`16.11`–`16.13`, D108; [rendering.md](rendering.md) § Data files), with
   source mode a key away and the lens editing a card at a time: in YAML and JSON a key with the
   plain values listed right under it (`defaults` and its settings), in TOML and INI one key — never
