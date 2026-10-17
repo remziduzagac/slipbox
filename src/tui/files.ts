@@ -97,7 +97,7 @@ export class Files {
    * (`# Name`). An existing file is just opened. Its vault path, whether it was made, and the path
    * to open it by, or null. One the walk leaves out (`walk.exclude`) or in a root nested in this one
    * isn't this root's note: it's made, but not indexed here, and opened by its absolute path (into
-   * the nested root).
+   * the nested root). One in a busy folder (`build/`…), which nothing indexes, is refused.
    */
   createNote(input: string, base: string | null): { rel: string; created: boolean; open: string } | null {
     if (base === null) return this.refuseOtherRoot(), null;
@@ -115,6 +115,12 @@ export class Files {
       }
       this.app.message("info", `${rel} exists — opened`);
       return { rel, created: false, open };
+    }
+    // In a busy folder (VV-D8), as the explorer's `⊘` row is refused: the vault would never find it.
+    const never = this.app.graph.neverIndexed(rel);
+    if (never) {
+      this.app.message("warn", `not creating ${rel}: ${never}`);
+      return null;
     }
     const kind = classify(rel, this.app.config.walk.extensions);
     const name = posix.basename(rel).replace(/\.[^.]+$/, "");

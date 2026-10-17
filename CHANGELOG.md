@@ -119,7 +119,10 @@ The format is [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.1.0/); wh
   caches…), what `.gitignore` and `walk.exclude` leave out, and home's `Downloads`, each marked `⊘`. You can unfold
   them and open their files; nothing in them is indexed. A folder you may not read is listed too, marked `⚿`. Every
   vault's index now leaves those busy folders out, as home's did, even where its `.gitignore` doesn't: a note kept in a
-  folder named `build` or `vendor` is no longer indexed, so rename the folder to have it indexed again.
+  folder named `build` or `vendor` is no longer indexed, so rename the folder to have it indexed again. Nothing new
+  goes into such a folder, where nothing would find it: a new note, a move or a copy into one is refused, in the
+  explorer, as a typed path, and on the command line (`write --create`, `mv`, `cp`: exit 5). A note already there can
+  still be changed.
 
 ### Removed
 

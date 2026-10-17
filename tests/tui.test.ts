@@ -16463,6 +16463,20 @@ describe("review (tui): the app's floating windows, new paths, roots and repeats
     expect(d.app.graph.dirs.filter((x) => x.startsWith("drafts"))).toEqual([]);
   });
 
+  test("a new note typed into a busy folder is refused, as the explorer's row is; a note already there opens", async () => {
+    const root = makeVault();
+    const h = await harness({ root });
+    for (const typed of ["build/x", "notes/my-cache/c"]) expect(h.app.files.createNote(typed, "")).toBeNull();
+    expect(last(h)).toMatchObject({
+      level: "warn",
+      text: "not creating notes/my-cache/c.md: notes/my-cache/ is a busy folder, which the vault doesn't index",
+    });
+    expect([existsSync(join(root, "build")), existsSync(join(root, "notes", "my-cache"))]).toEqual([false, false]);
+    mkdirSync(join(root, "target"));
+    writeFileSync(join(root, "target", "old.md"), "# Old\n");
+    expect(h.app.files.createNote("target/old", "")).toMatchObject({ rel: "target/old.md", created: false });
+  });
+
   test("space v shift+m with another note unsaved: refused before anything changes, the .slipbox/ kept", async () => {
     const root = makeVault();
     writeFileSync(join(root, "nested-vault", "other.md"), "# Other\n");

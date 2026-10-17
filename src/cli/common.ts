@@ -350,7 +350,8 @@ export function readNoteFile(s: Session, abs: string, forWriting = true): NoteFi
 /**
  * What a writer (`write`, `replace`, `task`) may change: a note, data or text file of the root
  * (never a binary one, 16.4), inside it by its real path, and where the walk lists files — never
- * `.slipbox/`, `.git/`, a hidden folder the root hasn't reached, or `node_modules`. Refused, exit 5.
+ * `.slipbox/`, `.git/`, a hidden folder the root hasn't reached, or `node_modules`; a new one never
+ * in a busy folder (`build/`, `target/`…: VV-D8), which the vault doesn't index. Refused, exit 5.
  */
 export function checkWritable(s: Session, abs: string): void {
   const refuse = (why: string) => {
@@ -368,6 +369,9 @@ export function checkWritable(s: Session, abs: string): void {
   // .slipbox never are, nor node_modules.
   if (rel.split("/").some((part) => part.startsWith(".") || part === "node_modules") && !s.graph.reached.has(rel))
     refuse("in a folder the walk doesn't list");
+  // A new file where the vault never indexes it (VV-D8), found by nothing once written; one already there is edited.
+  const never = existsSync(abs) ? null : s.graph.neverIndexed(rel);
+  if (never) refuse(never);
   if (UNSAFE.test(rel) || /[\x1b\t\n]/.test(rel)) refuse("a control character in its name");
 }
 

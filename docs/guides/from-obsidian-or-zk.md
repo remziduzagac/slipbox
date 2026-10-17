@@ -17,7 +17,9 @@ To slipbox, a folder holding `.obsidian/` or `.zk/` is a vault: one collection o
 it, and slipbox opens the whole vault, the explorer showing the subfolder you named.
 
 The explorer (`space e`) lists its notes and folders. Hidden ones aren't listed, such as `.obsidian/` itself and
-Obsidian's `.trash/`.
+Obsidian's `.trash/`. A folder with a name tools give their output, such as `build`, `target`, `dist`, `vendor` or a
+`cache`, is listed but never indexed: search doesn't find its notes, and their links don't count. A new note isn't made
+there ([Files](../manual/files.md#what-the-explorer-lists)).
 
 To follow a link:
 
