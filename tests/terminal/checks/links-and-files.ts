@@ -62,7 +62,7 @@ function explorer(s: Session): string[] {
 }
 
 /** The explorer's breadcrumb (VV-D5): its row under the title, left of its border ("" when it's closed). */
-function crumbs(s: Session): string {
+export function crumbs(s: Session): string {
   const rows = s.screen();
   const title = rows.findIndex((r) => /Explorer/.test(r));
   if (title < 0) return "";
@@ -83,7 +83,7 @@ async function clickCrumb(s: Session, name: string): Promise<void> {
 }
 
 /** The explorer has a row that ends with `name` (a folder's or a file's, after its icon and marks). */
-const listed = (s: Session, name: RegExp) => explorer(s).some((r) => names(r, name));
+export const listed = (s: Session, name: RegExp) => explorer(s).some((r) => names(r, name));
 
 /** Whether an explorer row matches: its whole text, or what comes before a run of spaces — its name, the description
  *  and the marks at its right (VV-D9) left out. */
@@ -121,7 +121,7 @@ async function messagesSaying(s: Session, words: string, needle: RegExp): Promis
 }
 
 /** The newest message holding `needle`, whole (the list cuts it, its box wraps it): the list filtered, enter copies. */
-async function lastMessage(s: Session, needle: string): Promise<string> {
+export async function lastMessage(s: Session, needle: string): Promise<string> {
   await leader(s, "m");
   await s.see("Messages");
   await s.type(needle);
@@ -134,7 +134,7 @@ async function lastMessage(s: Session, needle: string): Promise<string> {
 const linkHere = (s: Session) => /→ (\S+)/.exec(s.statusLine())?.[1] ?? "";
 
 /** From the top, tab from link to link until the one under the cursor is `target` (as the status line names it). */
-async function toLink(s: Session, target: string | RegExp): Promise<void> {
+export async function toLink(s: Session, target: string | RegExp): Promise<void> {
   const is = () => (typeof target === "string" ? linkHere(s) === target : target.test(linkHere(s)));
   await s.keys("g", "g");
   for (let i = 0; i < 60 && !is(); i++) await s.keys("tab");
@@ -142,7 +142,7 @@ async function toLink(s: Session, target: string | RegExp): Promise<void> {
 }
 
 /** ~/notes/index.md's link into kestrel, as rendered. */
-const ARCHITECTURE = "architecture. The";
+export const ARCHITECTURE = "architecture. The";
 
 // The trees as they were before slipbox first opened them (setup runs at every start: taken once).
 const before = new WeakMap<Session, Record<string, string[]>>();
@@ -2600,7 +2600,7 @@ function peekTitleAt(s: Session, title: string): number {
 }
 
 /** A peek's hint, in its bottom border, while one is open. */
-const PEEK_HINT = "o go there · t keep as a tab";
+export const PEEK_HINT = "o go there · t keep as a tab";
 
 const PEEK: Check[] = [
   {

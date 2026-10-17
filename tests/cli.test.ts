@@ -13,6 +13,7 @@ import {
   mkdtempSync,
   readdirSync,
   readFileSync,
+  realpathSync,
   rmSync,
   symlinkSync,
   writeFileSync,
@@ -454,6 +455,63 @@ describe("writing", () => {
     // A note already in a busy folder is edited.
     expect(run(["write", "dist/d.md", "# D\n\nmore"]).code).toBe(0);
     expect(readFileSync(join(root, "dist", "d.md"), "utf8")).toBe("# D\n\nmore\n");
+  });
+  /** A vault of its own, its own state, and `data` in it a link to a folder outside it holding `far.md` and `sub/`. */
+  const linkedOut = () => {
+    const dir = realpathSync(mkdtempSync(join(sandbox, "linked-")));
+    const own = {
+      XDG_STATE_HOME: join(dir, "state"),
+      XDG_CACHE_HOME: join(dir, "cache"),
+      XDG_DATA_HOME: join(dir, "d"),
+    };
+    const root = join(dir, "root");
+    const out = join(dir, "out");
+    mkdirSync(join(root, ".slipbox"), { recursive: true });
+    mkdirSync(join(out, "sub"), { recursive: true });
+    writeFileSync(join(root, "a.md"), "# A\n\n[far](data/far.md)\n");
+    writeFileSync(join(out, "far.md"), "# Far\n\nKept out of the vault.\n");
+    writeFileSync(join(out, "sub", "s.md"), "# S\n");
+    symlinkSync(out, join(root, "data"));
+    return { dir, own, root, out, link: join(root, "data") };
+  };
+  test("a read through a link not followed is refused, exit 5, saying the link and where to choose (VV-D6)", () => {
+    const { own, root, out, link } = linkedOut();
+    // Named by its path in the vault or by its whole path, read or rendered: said by its path in the vault.
+    for (const args of [
+      ["read", "data/far.md"],
+      ["read", join(link, "far.md")],
+      ["render", "data/far.md"],
+    ]) {
+      const r = slipbox(args, { cwd: root, env: own });
+      expect([r.code, r.err]).toEqual([
+        5,
+        `slipbox: data/far.md is reached through a link that isn't followed (${link} → ${out}): open it in slipbox to choose\n`,
+      ]);
+      expect(r.out).not.toContain("Kept out of the vault");
+    }
+  });
+  test("a note or folder through a followed link out of the vault isn't moved out of it: mv refused, exit 5 (VV-D6)", () => {
+    const { dir, own, root, out, link } = linkedOut();
+    // Followed, as the TUI keeps the answer: by the link, and where it leads.
+    mkdirSync(join(dir, "state", "slipbox"), { recursive: true });
+    writeFileSync(
+      join(dir, "state", "slipbox", "links.json"),
+      JSON.stringify({ version: 1, links: [{ link, target: out, answer: "follow", at: new Date().toISOString() }] }),
+    );
+    const run = (args: string[]) => slipbox(args, { cwd: root, env: own });
+    // Read and indexed through it, being followed.
+    expect(run(["read", "data/far.md"]).out).toContain("Kept out of the vault");
+    expect(run(["ls"]).out).toContain("data/far.md");
+    for (const [from, to] of [
+      ["data/far.md", "far.md"],
+      ["data/sub", "sub"],
+    ] as const) {
+      const r = run(["mv", from, to]);
+      expect([r.code, r.err]).toEqual([5, `slipbox: ${from} resolves outside the vault\n`]);
+      expect(existsSync(join(root, to))).toBe(false);
+    }
+    expect(readFileSync(join(out, "far.md"), "utf8")).toBe("# Far\n\nKept out of the vault.\n");
+    expect(existsSync(join(out, "sub", "s.md"))).toBe(true);
   });
   test("export to PDF, a web page, an e-book; Markdown beside it apart from the note, its pictures in a folder, an earlier one replaced", () => {
     for (const [to, magic] of [
