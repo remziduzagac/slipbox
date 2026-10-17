@@ -214,7 +214,8 @@ from the start, and it keeps its own tabs. slipbox keeps the walk, so this happe
 at what changed.
 
 Home's index holds 10,000 notes at most, and its walk lists 5,000 folders, those nearest the top. slipbox says so when
-it stops there. [Home](../manual/links-and-vaults.md#home) has the rest.
+it stops there. A folder you open by name is indexed whole all the same, home's deepest notes making room for it.
+[Home](../manual/links-and-vaults.md#home) has the rest.
 
 ## Elsewhere
 

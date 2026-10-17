@@ -1009,3 +1009,25 @@ under the cursor (a link and its status).
 
 **Not chosen:** the reason on the row, after its name (no width; it would push out what describes the row); a
 different glyph per reason (one column each, and the user would have to learn them all).
+
+## D248: A folder of home opened by name is whole, and counts against home's cap (2026-10-17)
+
+**Decision:** A folder of home asked for by name (`slipbox ~/notes`, a note of it opened, a way into it from another
+vault) is walked whole, whatever it holds: no cap of notes or folders of its own. Its notes count against home's cap
+of 10,000, and the cap never leaves one of them out: home's other notes make room, the deepest left out first, as
+home's own walk leaves them. Home's walk, made before or after, so keeps as many fewer of its own as the folder holds.
+A folder that alone holds more than the cap is whole all the same: home holds its notes and none of its own. A note
+that comes into it while home is open is taken in, home's deepest other note leaving for it. When the cap is reached,
+its message says so in its usual words, and adds that the folder opened is whole. Details VV-D2. As built:
+`homeWalk` (`src/core/home.ts`); design/roots.md § Home.
+
+**Why:** The maintainer's choice, 2026-10-17, for a bug (#122): the folder opened was walked and capped on its own,
+then merged, so a full home went past its cap (10,005 notes). The folder opened is the one being worked in, so it is
+the last to leave out; home's deepest notes are the ones the cap leaves out already.
+
+**Cost:** Past the cap, the folder opened is walked whole each time home's graph is built, until home's walk covers
+it. A very large folder opened by name holds that many notes, as a vault of that size would.
+
+**Not chosen:** the folder opened capped with home, its own deepest notes left out; the docs saying the folder opened
+is an exception to the cap, home's index going past it.
+||||||| 61b0b3a

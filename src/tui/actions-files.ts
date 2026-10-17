@@ -226,7 +226,7 @@ export function fileActions(): Record<string, Run> {
           ? [
               [
                 "walk",
-                `${g.home.walked === null ? "not yet: home's top alone, the rest while nobody is working" : `home walked ${new Date(g.home.walked).toISOString().slice(0, 16).replace("T", " ")}`}${g.home.capped ? ` — ${describeCap(g.home.capped)}` : ""}`,
+                `${g.home.walked === null ? "not yet: home's top alone, the rest while nobody is working" : `home walked ${new Date(g.home.walked).toISOString().slice(0, 16).replace("T", " ")}`}${g.home.capped ? ` — ${describeCap(g.home.capped, g.home.asked)}` : ""}`,
               ] as [string, string],
             ]
           : []),

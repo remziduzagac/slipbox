@@ -13951,6 +13951,27 @@ describe("the background auto-index in the TUI (20.9)", () => {
     }
   });
 
+  test("home's walk done at its cap, a folder of it opened by name: the cap said as ever, the folder said to be whole (VV-D2)", async () => {
+    const { homeAt } = await import("../src/core/vault.ts");
+    const { walkHomeNow } = await import("../src/core/home.ts");
+    const home = homeWithFolders();
+    const loc = homeAt(home);
+    const before = process.env.HOME;
+    process.env.HOME = home;
+    try {
+      expect(walkHomeNow(loc, DEFAULT_CONFIG, { notes: 2, folders: 100 }).capped).toBe("notes");
+      const h = await harness({ loc, open: null, folder: join(home, "notes") });
+      expect(h.app.graph.notes.has("notes/ideas/coffee.md")).toBe(true);
+      // The walk just made and kept, home's graph built again from it: its cap said.
+      (h.app.watch as unknown as { homeIndexed(capped: "notes"): void }).homeIndexed("notes");
+      expect(h.app.messages.at(-1)?.text).toBe(
+        "home's index is full: it holds 10,000 notes, those nearest the top — the rest aren't indexed; ~/notes, the folder you opened, is whole",
+      );
+    } finally {
+      process.env.HOME = before;
+    }
+  });
+
   test("each folder of home opened by name has its own tabs, as before home was a vault; home's top keeps its own (VV-D2)", async () => {
     const { homeAt } = await import("../src/core/vault.ts");
     const { sessionFile } = await import("../src/core/position.ts");

@@ -25,7 +25,7 @@ import { changedBetween, inVault } from "./gitops.ts";
 import { contentHash, Redirects } from "./redirects.ts";
 import { dataLinks, parseData } from "./data.ts";
 import { classify, extensionOf } from "./filetypes.ts";
-import { type HomeWalk, homeWalk, walksInto } from "./home.ts";
+import { type AskedWhole, type HomeWalk, homeWalk, walksInto } from "./home.ts";
 import { checkoutAt, findVaultRoot, isListed, isVaultRoot, type VaultLocation } from "./vault.ts";
 import { listDirectory, type NoteFile, type Skipped, type WalkCap, WalkFilter, walkVault } from "./walk.ts";
 import { tagKey, tagName } from "./tags.ts";
@@ -132,9 +132,9 @@ export class Graph {
     this.asked = [...asked];
   }
 
-  /** Home's walk (VV-D2): when it was made (null: not yet, its top alone looked at), what its cap left out. Null in a
-   *  vault or a plain folder, which are walked whole at each build. */
-  home: { walked: number | null; capped: WalkCap | null } | null = null;
+  /** Home's walk (VV-D2): when it was made (null: not yet, its top alone looked at), what its cap left out, the folders
+   *  asked for by name walked into it whole. Null in a vault or a plain folder, which are walked whole at each build. */
+  home: { walked: number | null; capped: WalkCap | null; asked?: AskedWhole } | null = null;
 
   /** The folders of home asked for by name (VV-D2), home's paths for them: walked at each build its walk doesn't
    *  cover them. */
@@ -185,7 +185,9 @@ export class Graph {
     const home = this.loc.mode === "home" ? (given ?? homeWalk(this.loc, this.filter, this.asked)) : null;
     // What changed after home's walk began may be missing from it: the watcher looks at those folders again.
     if (home?.walked) this.walkedAt = home.walked;
-    this.home = home ? { walked: home.walked, capped: home.capped } : null;
+    this.home = home
+      ? { walked: home.walked, capped: home.capped, ...(home.asked ? { asked: home.asked } : {}) }
+      : null;
     const walk = home
       ? home.walk
       : isListed(this.loc)
