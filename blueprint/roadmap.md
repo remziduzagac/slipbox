@@ -668,6 +668,20 @@ and GIT.*
   changed words, a note's before and after, code's scrolling sideways and side by side; a merge screen, with pulling
   where both sides moved and rebasing onto the base (consolidated 2026-10-17).
 
+## Deferred maintenance review (`27.x`)
+
+Accepted for later evaluation, not implementation. Evidence, qualifications and design questions live in
+[the maintenance-gap review](research/maintenance-gaps.md). These items are separate from ENG and do not change
+current requirements or product behavior. Start any resulting design change through its own workstream.
+
+- [ ] **27.1** Evaluate a performance regression guard: small headless timing subset or comparable scheduled trends.
+- [ ] **27.2** Evaluate an accessible plain CLI follow workflow, including real screen-reader validation.
+- [ ] **27.3** Evaluate test-file size ratchets and splitting by owner with reusable fixtures.
+- [ ] **27.4** Evaluate a local diagnostics bundle, with explicit collection scope and privacy-preserving defaults.
+- [ ] **27.5** Review documented continuity and an isolated recovery drill; account-access changes remain owner choices.
+- [ ] **27.6** Evaluate a non-blocking screenshot-refresh reminder for relevant UI changes.
+
+
 ## Later
 
 Agreed, but not scheduled.
