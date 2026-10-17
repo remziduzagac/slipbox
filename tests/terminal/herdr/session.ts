@@ -1,7 +1,7 @@
 // One real-terminal check's slipbox, in a herdr pane: a fresh copy of the demo vault (or the reference set built, halden
-// beside it; or another sample folder as its home), its own config, state and cache, the app started in the pane, and
-// ways to drive and check it. Every check waits for the screen to agree (up to a timeout) rather than sleeping a fixed
-// time. The headless checks (tests/terminal/session.ts) are the rest; this is what needs a real terminal.
+// beside it), its own config, state and cache, the app started in the pane, and ways to drive and check it. Every check
+// waits for the screen to agree (up to a timeout) rather than sleeping a fixed time. The headless checks
+// (tests/terminal/session.ts) are the rest; this is what needs a real terminal.
 
 import { cpSync, existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { spawnSync } from "node:child_process";
@@ -18,8 +18,6 @@ export interface SessionOptions {
   open?: string;
   /** Extra user config, as TOML; `{vault}` is the scenario's copy of the vault. */
   config?: string;
-  /** A sample folder of examples/ (`guide`) copied as the check's home, `home/`, beside the demo vault. */
-  sample?: string;
   /** Run before slipbox starts, with the CLI at hand (`s.cli`): `init` another vault, say. */
   setup?: (s: Session) => void;
   /**
@@ -44,66 +42,6 @@ export interface SessionOptions {
 
 /** A word for sh: single-quoted. */
 const shq = (s: string) => `'${s.replaceAll("'", `'\\''`)}'`;
-
-/** One run of text in a style, from a row read with its colours (`Session.runs`). */
-export interface StyledRun {
-  text: string;
-  /** `31`, `5;208`, `#rrggbb`; null for the terminal's default. */
-  fg: string | null;
-  bg: string | null;
-  bold: boolean;
-}
-
-/** A row with its SGR sequences (`herdr pane read --format ansi`), as runs of one style each. */
-export function styledRuns(row: string): StyledRun[] {
-  const out: StyledRun[] = [];
-  let style = { fg: null as string | null, bg: null as string | null, bold: false };
-  let text = "";
-  const flush = () => {
-    if (text) out.push({ text, ...style });
-    text = "";
-  };
-  const color = (p: number[], i: number): [string, number] => {
-    if (p[i + 1] === 5) return [`5;${p[i + 2]}`, i + 2];
-    if (p[i + 1] === 2)
-      return [`#${[p[i + 2], p[i + 3], p[i + 4]].map((n) => (n ?? 0).toString(16).padStart(2, "0")).join("")}`, i + 4];
-    return ["", i];
-  };
-  for (let k = 0; k < row.length; k++) {
-    if (row[k] === "\x1b" && row[k + 1] === "[") {
-      const end = row.slice(k + 2).search(/[@-~]/);
-      if (end < 0) break;
-      const body = row.slice(k + 2, k + 2 + end);
-      const final = row[k + 2 + end];
-      k += 2 + end;
-      if (final !== "m") continue;
-      flush();
-      const p = body === "" ? [0] : body.split(/[;:]/).map(Number);
-      for (let i = 0; i < p.length; i++) {
-        const c = p[i]!;
-        if (c === 0) style = { fg: null, bg: null, bold: false };
-        else if (c === 1) style.bold = true;
-        else if (c === 22) style.bold = false;
-        else if ((c >= 30 && c <= 37) || (c >= 90 && c <= 97)) style.fg = String(c);
-        else if (c === 39) style.fg = null;
-        else if ((c >= 40 && c <= 47) || (c >= 100 && c <= 107)) style.bg = String(c);
-        else if (c === 49) style.bg = null;
-        else if (c === 38 || c === 48) {
-          const [v, j] = color(p, i);
-          if (c === 38) style.fg = v || null;
-          else style.bg = v || null;
-          i = j;
-        }
-      }
-    } else if (row[k] === "\x1b") {
-      // Another escape (an OSC): skipped to its end.
-      const end = row.slice(k).search(/\x07|\x1b\\/);
-      k = end < 0 ? row.length : k + end;
-    } else text += row[k];
-  }
-  flush();
-  return out;
-}
 
 export class CheckFailed extends Error {}
 
@@ -131,7 +69,6 @@ export class Session {
     // The reference set puts halden beside it as vault/ itself.
     if (opts.home) buildHome(this.dir);
     else cpSync(DEMO, this.vault, { recursive: true });
-    if (opts.sample) cpSync(join(REPO, "examples", opts.sample), this.home, { recursive: true });
     for (const d of ["config/slipbox", "state", "cache"]) mkdirSync(join(this.dir, d), { recursive: true });
     // {vault} in a scenario's config is this scenario's own copy of the vault.
     // The machine's own linter stays out of the scenarios unless one asks for it (3.21).
@@ -359,26 +296,6 @@ export class Session {
 
   topBar(): string {
     return this.screen()[0] ?? "";
-  }
-
-  /** The screen with its colours: each row as runs of one style. */
-  runs(): StyledRun[][] {
-    return this.pane.ansi().map(styledRuns);
-  }
-
-  /** The style of the first place `needle` shows on screen: the run its first character is in. */
-  styleOf(needle: string): StyledRun | null {
-    for (const row of this.runs()) {
-      const plain = row.map((r) => r.text).join("");
-      const at = plain.indexOf(needle);
-      if (at < 0) continue;
-      let n = 0;
-      for (const r of row) {
-        if (at < n + r.text.length) return r;
-        n += r.text.length;
-      }
-    }
-    return null;
   }
 
   /** The first row containing `needle`, or -1. */

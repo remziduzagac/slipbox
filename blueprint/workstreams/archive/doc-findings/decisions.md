@@ -151,6 +151,9 @@ and in search.
 
 ## DF-D19: Screenshots in the guides and the screen chapter (2026-10-11)
 
+> **Amended by D236 (2026-10-17):** made from slipbox in the headless terminal the terminal tests use, not in a herdr
+> pane: `bun run shots`.
+
 **Decision:** The docs get screenshots where words can't show it: the guides' key moments and the screen chapter,
 about 10 to 15. They're made by `scripts/screenshot.ts` from slipbox in a herdr pane (the screen read with its
 colours, drawn to PNG with DejaVu Sans Mono), on the reference set, so they're retaken in one go when the UI changes.

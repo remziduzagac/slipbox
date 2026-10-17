@@ -8,8 +8,8 @@ the work; the root's files change only when TT is consolidated.
 Rewritten: headless (`Bun.Terminal` and `@xterm/headless`, TT-D2) — how a check starts slipbox, sends keys, reads the
 screen and its colours, the title and the clipboard's OSC 52, and answers slipbox's queries; the checks, one per
 feature (TT-D3), and the coverage test (TT-D4); the parallel runner and its report (TT-D6); CI's runs; herdr's
-remainder (the screenshots, the real-terminal set). Previously: "a herdr pane … a developer's tool, not part of
-`bun run check` or CI".
+remainder (the real-terminal set; the screenshots are taken headless too since D236). Previously: "a herdr pane … a
+developer's tool, not part of `bun run check` or CI".
 
 The text, as TT-T1 to TT-T10 built it:
 
@@ -83,11 +83,11 @@ Intel), each runner running a check per core, inside the required `ci` check; a 
 log. A release's build runs them too, on each platform's runner, before it builds (`build.yml`).
 
 **What needs a real terminal** (`tests/terminal/herdr/`) runs in a herdr pane, as the terminal tests once all did:
-the docs' screenshots (`shots.ts`, in a 120×34 pane; the getting-started guide's `~/notes` is `examples/guide/`), and
 two checks of the emulator's word against a real terminal's (`bun run test:herdr --pane <id>`): the keys a real one
 sends (escape then a key, ctrl, alt, a bracketed paste), and the widths a real one draws (names in their own scripts,
 every row the pane's width, the explorer's border in one column down every page). Pictures drawn by the terminal
-(Kitty's graphics) aren't checked anywhere: the headless checks see what slipbox sends.
+(Kitty's graphics) aren't checked anywhere: the headless checks see what slipbox sends. The docs' screenshots are
+taken in the headless terminal (D236; `bun run shots`, the root's design/testing.md § The terminal tests).
 
 ## MODIFIED design/testing.md § Strategy (written)
 

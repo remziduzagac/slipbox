@@ -13,7 +13,7 @@ What users see, in the docs; the workstream folded into the root.
 
 - The manual's vaults and links chapter, the explorer, the peek, the configuration (home's skip list); the guides'
   words; the CHANGELOG.
-- Screenshots of the explorer and the peek retaken in herdr.
+- Screenshots of the explorer and the peek retaken, rendered from the headless terminal (`bun run shots`, D236).
 - A guide that explains vaults clearly and comprehensively, since slipbox's are unlike other tools' (the user's,
   2026-10-15, for once everything is built): what a vault is and how slipbox finds one; home and Elsewhere; every file
   in exactly one vault; going into a vault and its tabs; the view, the breadcrumb and zooming; links into other vaults
@@ -28,4 +28,5 @@ What users see, in the docs; the workstream folded into the root.
 ## Acceptance criteria
 
 - `bun run check` passes; the docs say it without the blueprint's IDs.
-- The vault guide and the lens's explanation each have worked examples and at least one screenshot taken in herdr.
+- The vault guide and the lens's explanation each have worked examples and at least one screenshot, rendered from the
+  headless terminal.

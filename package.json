@@ -17,6 +17,7 @@
     "test:docs": "bun test --timeout 30000 ./tests/docs.test.ts ./tests/site.test.ts",
     "test:terminal": "bun tests/terminal/run.ts",
     "test:herdr": "bun tests/terminal/herdr/run.ts",
+    "shots": "bun tests/terminal/shots.ts",
     "typecheck": "tsc --noEmit -p .",
     "check:boundary": "bun scripts/check-boundary.ts",
     "check:deps": "bun scripts/check-deps.ts",

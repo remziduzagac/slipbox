@@ -1,4 +1,4 @@
-// What the herdr checks and the screenshots share: a check's shape, opening a note, leader keys.
+// What the herdr checks share: a check's shape.
 
 import type { Session, SessionOptions } from "./session.ts";
 
@@ -10,15 +10,3 @@ export interface Scenario {
   needs?: { cols?: number; rows?: number };
   run: (s: Session) => Promise<void>;
 }
-
-/** Open a note with the quick switcher. */
-export async function open(s: Session, name: string): Promise<void> {
-  await s.keys("ctrl+p");
-  await s.see(/Open (note|\()/); // "Open (n notes, m files)" when the vault has files
-  await s.type(name);
-  await s.keys("enter");
-  await s.status(name);
-}
-
-/** Leader sequences: space, then the keys. */
-export const leader = (s: Session, ...keys: string[]) => s.keys("space", ...keys);

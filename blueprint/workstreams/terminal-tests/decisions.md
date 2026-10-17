@@ -9,6 +9,9 @@
 
 ## TT-D2: Headless: Bun's pseudo-terminal and a headless xterm (2026-10-13)
 
+> **Amended by D236 (2026-10-17):** the docs' screenshots are taken in the headless terminal too; herdr keeps the
+> real-terminal set alone.
+
 **Decision:** Each check runs slipbox in a pseudo-terminal of Bun's own (`Bun.Terminal`, Linux and macOS), its output
 fed to `@xterm/headless` (MIT, no dependencies, the emulator VS Code uses), which keeps the screen — text, colours,
 the cursor, the title — for the checks to read; keys go in as a terminal sends them, and the emulator's own replies to
