@@ -1396,7 +1396,8 @@ merging fix/retry into main: 1 link would break
   README.md:12:3  docs/plan.md — fix/retry moves docs/plan.md to docs/design/plan.md — the fix: docs/design/plan.md
 ```
 
-- `--into <ref>`: the branch merged into (by default, the one checked out).
+- `--into <ref>`: the branch merged into (by default, the one checked out). Unlike `:merge-review` in slipbox, which
+  offers a branch into its own base, the command merges into what you name, and nothing else.
 
 Each break says why:
 

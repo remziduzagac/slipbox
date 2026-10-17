@@ -1834,11 +1834,11 @@ worktree changed, ready to review (D154, GIT-D10):
   its branch. `enter` goes into the vault there, at the same note when that branch has it (VV-D4). The panel's
   Branches section has them on their branches, with what each holds (§ Side panes).
 - **`:merge-review`** (`git.merge_review`, `20.21`; D66): before a merge, the links it would break. A merge picked —
-  this branch into the base (`[git] base`, else `main`, else `master`), or another branch into this one — and git's
-  tentative result is checked (`slipbox merge-review`): each broken link by its note and line, what broke it ("`main`
-  moves `a.md` to `docs/a.md` — the fix: `docs/a.md`"), yellow when there's a fix, red when there isn't. `enter` goes to
-  the link (a note only the other branch has, said so); `esc` comes back to the branches. Nothing broken, a message
-  says so. A branch's Merge… in the panel offers the same, into the branch's own base.
+  this branch into its own base (GIT-D10, `Git.baseOf`; else `[git] base`, `main` or `master`), or another branch into
+  this one — and git's tentative result is checked (`slipbox merge-review`): each broken link by its note and line,
+  what broke it ("`main` moves `a.md` to `docs/a.md` — the fix: `docs/a.md`"), yellow when there's a fix, red when
+  there isn't. `enter` goes to the link (a note only the other branch has, said so); `esc` comes back to the branches.
+  Nothing broken, a message says so. A branch's Merge… in the panel offers the same, into the branch's own base.
 
 **Each branch's own base** (GIT-D10; `core/gitbase.ts`): a branch's base (`chooseBase`, `baseFor`) is the one kept for
 it in `bases.json` (slipbox's state, by repository: its shared git folder's real path, `repoKey`) — by a new branch's
@@ -1851,9 +1851,10 @@ itself. A base is a branch's name (or a tag's, or a commit's) before git is give
 `[git] base` and `[git] bases`, a vault's own config's too, are checked as the config is read, anything else left out
 and said; a kept one is checked before use; and git is given each after `--end-of-options`. `Git.baseOf` asks it once
 each time git has news, `Git.fallbackBase` `[git] base`, main or master the same — never on every frame that draws it;
-the panel, `:changes` (`openChanges`), `:diff` (`showDiff`), This branch against main, Merge… and the rebase onto the
-base use it. `:merge-review` keeps `[git] base`, as the CLI does: `changed` and `diff` take `--base`, else `[git] base`;
-`merge-review` merges a branch into `--into`, else HEAD.
+the panel, `:changes` (`openChanges`), `:diff` (`showDiff`), This branch against main, Merge…, `:merge-review`
+(`openMergeReview`: this branch into its own base, as D154's amendment of 2026-10-17 settles it) and the rebase onto
+the base use it. The CLI keeps its own: `changed` and `diff` take `--base`, else `[git] base`; `merge-review` merges
+the branch it names into `--into`, else HEAD.
 
 What's on request (the changes, a diff, the worktrees) asks git there and then; the explorer's marks and the panel's
 rows are asked in the background (D154; § Side panes).
@@ -2112,27 +2113,32 @@ the base's tip — the branch's own (GIT-D10, `baseOf`), else `[git] base`, main
 with how many commits each side has (`aheadBehind`); unsaved notes saved or kept first, as before a pull. On the base,
 detached, or with nothing new on the base: said, nothing run.
 
-**A merge or a rebase under way** (`core/gitrebase.ts` `operationOf`): read from git's own files, no git run —
-`rebase-merge/` (`msgnum`, `end`, `head-name`), `rebase-apply/` (`next`, `last`; `applying`, a `git am`, is none of
-slipbox's), `MERGE_HEAD` and its `MERGE_MSG` — again when git has news or half a second on (`operationNow` in
-`tui/rebase.ts`). The status line says it after the branch (§ Screen layout). `shift+r` then offers, as a question with
-keys: `(x)` the merge screen on a file still in conflict, `(c)` continue (`git.continue`, `:continue`: `git rebase
---continue`, or `git commit --no-edit` for a merge; refused, said which, while a file is in conflict), `(s)` skip
-(`git.skip`, `:skip`: `git rebase --skip`, a rebase's alone), `(a)` abort (`git.abort`, `:abort`: `git rebase --abort`,
-`git merge --abort`; asked first, as a rebase is: "Abort the rebase? agent goes back as it was before it, and what's
-settled so far is lost."). The git panel has the three as buttons meanwhile: Continue, Skip (a rebase's) and Abort.
+**A merge or a rebase under way** (`core/gitrebase.ts` `operationOf`), or a cherry-pick or a revert begun in a
+terminal: read from git's own files, no git run — `rebase-merge/` (`msgnum`, `end`, `head-name`), `rebase-apply/`
+(`next`, `last`; `applying`, a `git am`, is none of slipbox's), `MERGE_HEAD` and its `MERGE_MSG`, `CHERRY_PICK_HEAD` or
+`REVERT_HEAD` with the commit `MERGE_MSG` names (a revert's subject, unquoted), and `sequencer/` alone, a series
+between its commits, a cherry-pick or a revert as its `todo`'s next line says — again when git has news or half a
+second on (`operationNow` in `tui/rebase.ts`). The status line says it after the branch (§ Screen layout): `rebasing
+2/5`, `merging`, `cherry-picking`, `reverting` (`operationText`). `shift+r` then offers, as a question with keys
+titled by what's under way (`operationTitle`: `Cherry-picking "Retry with a budget"`): `(x)` the merge screen on a file
+still in conflict, `(c)` continue (`git.continue`, `:continue`: `git rebase --continue`, `git cherry-pick --continue`,
+`git revert --continue`, or `git commit --no-edit` for a merge; refused, said which, while a file is in conflict),
+`(s)` skip (`git.skip`, `:skip`: `git rebase --skip`, `git cherry-pick --skip`, `git revert --skip`; a merge has none),
+`(a)` abort (`git.abort`, `:abort`: `git <kind> --abort`; asked first, as a rebase is: "Abort the cherry-pick? main
+goes back as it was before it, and what's settled so far is lost."). The git panel has the three as buttons meanwhile:
+Continue, Skip (not a merge's) and Abort, each saying what it does (`OPERATIONS`).
 
 Each runs in the background, one git command at a time with the remote's (`runInBackground`), without a terminal or an
 editor (`GIT_TERMINAL_PROMPT=0`, `GIT_EDITOR=true`, `GIT_SEQUENCE_EDITOR=true`: a commit settled on the way keeps its
 message). After it, HEAD is seen and git asked again; a stop at a conflict says where (`the rebase stopped at commit 1
-of 2: 1 file in conflict (src/sync/retry.ts)`) and opens the merge screen on its first file; a stop for another reason
-is said in git's words, with `shift+r`'s choices named; the end is said (`rebased: the rebase is done`), a merge screen
-of git's still open closed. Neither the merge screen nor the pull's question (above) opens over typing — in a note, a
-window or the git panel's message — or over a question or a list already open, whose keys would take letters meant for
-those (`busy`, as the conflict prompt waits, `5.5`): said instead, with the key that opens it (`x in source control
-opens the merge screen (:resolve)`; `p in source control (:pull) asks how to bring them together`). In a vault not
-trusted, `gitArgs`'s guards hold — no hook runs (a rebase's `pre-rebase`, a merge's `pre-merge-commit`), no merge driver
-— and nothing is signed (`commit.gpgSign=false`); said.
+of 2: 1 file in conflict (src/sync/retry.ts)`, `the cherry-pick stopped: 1 file in conflict (b.md)`) and opens the merge
+screen on its first file; a stop for another reason is said in git's words, with `shift+r`'s choices named; the end is
+said (`rebased: the rebase is done`), a merge screen of git's still open closed. Neither the merge screen nor the pull's
+question (above) opens over typing — in a note, a window or the git panel's message — or over a question or a list
+already open, whose keys would take letters meant for those (`busy`, as the conflict prompt waits, `5.5`): said instead,
+with the key that opens it (`x in source control opens the merge screen (:resolve)`; `p in source control (:pull) asks
+how to bring them together`). In a vault not trusted, `gitArgs`'s guards hold — no hook runs (a rebase's `pre-rebase`, a
+merge's `pre-merge-commit`), no merge driver — and nothing is signed (`commit.gpgSign=false`); said.
 
 **The merge screen** (GIT-D5; `core/conflicts.ts`, `tui/mergescreen.ts`): `x` on a file in conflict in the git panel
 (its `resolve`, or its Resolve button), `x` on a conflict in the Problems panel's All tab, `:resolve [file]` or
