@@ -18432,6 +18432,12 @@ describe("source control (26.2)", () => {
     expect(await until(() => h.app.floating?.kind === "diff")).toBe(true);
     expect(h.app.floating!.title).toBe("a.md against what's staged — esc: source control");
     expect(h.app.floating!.view.buf.source).toContain("- two\n+ TWO");
+    // A note's: its blocks before and after (GIT-D2), as every diff window draws one.
+    const frames = h.app
+      .currentLayout(h.app.floating!.view)
+      .lines.map((l) => l.spans.map((s) => s.text).join(""))
+      .filter((t) => t.startsWith("┌"));
+    expect(frames.map((t) => t.split(" ")[1])).toEqual(["removed", "added"]);
     await h.keys("escape");
     expect([h.app.floating, h.app.region]).toEqual([null, "sidebar"]);
     select(h, "M a.md");

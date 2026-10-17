@@ -1,11 +1,11 @@
-// The diff window (GIT-D2, GIT-D7): one way of drawing a diff for every window that shows one — `space g d`, a file's
-// diff from `space g c`'s list, a history entry's diff to now, the conflict prompt's (D)iff. In the floating window. A
-// note's opens as its changed blocks before and after (`[git] diff`), `tab` switching to its lines and back; a code
-// file's is its lines, side by side where each side has 80 columns (`[git] diff_layout`). The lines: a row a line, `-`
-// or `+` in its gutter, highlighted by the file's language, a changed line's changed words tinted; each group under its
-// `@@ line N`, the unchanged stretches folded. A long line scrolls sideways as a code block does (D233): the cursor, a
-// sideways wheel or `shift` with the wheel; side by side, both sides together. `enter` on a fold opens it; on a line,
-// goes there (or back, where the window has nowhere to go); `esc` goes back where it came from.
+// The diff window (GIT-D2, GIT-D7): one way of drawing a diff for every window that shows one — `:diff`, a file's diff
+// from the git panel or `:changes`, a history entry's diff to now, the conflict prompt's (D)iff. In the floating
+// window. A note's opens as its changed blocks before and after (`[git] diff`), `tab` switching to its lines and back;
+// a code file's is its lines, side by side where each side has 80 columns (`[git] diff_layout`). The lines: a row a
+// line, `-` or `+` in its gutter, highlighted by the file's language, a changed line's changed words tinted; each group
+// under its `@@ line N`, the unchanged stretches folded. A long line scrolls sideways as a code block does (D233): the
+// cursor, a sideways wheel or `shift` with the wheel; side by side, both sides together. `enter` on a fold opens it; on
+// a line, goes there (or back, where the window has nowhere to go); `esc` goes back where it came from.
 
 import { isAbsolute, join } from "node:path";
 import { type BlockDiff, blockDiff } from "../core/blockdiff.ts";
