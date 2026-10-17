@@ -778,12 +778,14 @@ keys.
   Staged's all unstaged (by path, never `git reset`, so a merge under way stays one), Changes' discarded after asking
   (`Discard every change that isn't staged, in 2 files? …`; untracked files stay; refused while one is unsaved). A
   heading's buttons are always drawn at its end: `−` on Staged, `+ ↺` on Changes, `+` on Untracked, `+ New` on
-  Branches. Each file has its state letter in its colour (`M`, `A`, `D`, `R`, `U`, `?`) and its folder dim; `l` opens
-  a file up into its changes (a staged file's against the last commit, a changed one's against what's staged, as on
-  disk), `h` folds it. git takes each path as that file (`literalArgs`: `--literal-pathspecs` on the commands given
-  paths only, never in the environment, which a hook would inherit), so `Why?.md` or `:a.md` never names another. A
-  rename is unstaged whole, both its paths. A change is staged as `git add -p` does: the index given its text with that
-  change made (`hash-object`, `update-index`), so nothing else in it moves. A file unsaved here isn't
+  Branches. Each file has its state letter in its colour (`M`, `A`, `D`, `R`, `U`, `?`) and its folder dim; a rename
+  staged, `R old.md → new.md` (moved to another folder, both paths whole); `l` opens a file up into its changes (a
+  staged file's against the last commit — a staged rename's against the name it had there, `textsOf` reading the
+  last commit by `from` — a changed one's against what's staged, as on disk), `h` folds it; its diff (a click, `enter`)
+  and the review (`v`) read the same texts. git takes each path as that file (`literalArgs`: `--literal-pathspecs` on
+  the commands given paths only, never in the environment, which a hook would inherit), so `Why?.md` or `:a.md` never
+  names another. A rename is unstaged whole, both its paths. A change is staged as `git add -p` does: the index given
+  its text with that change made (`hash-object`, `update-index`), so nothing else in it moves. A file unsaved here isn't
   discarded: git works on the file on disk; an untracked file discarded goes to the trash, as the explorer's `d`. git's
   answer comes in the background, again whenever it has news; `23.6`'s guards apply in a vault not trusted (D175).
 - **Its keys** (`[keys.git]`, `DEFAULT_GIT_KEYS`, actions `GIT_ACTIONS`): `j`/`k`, `g g`/`shift+g` move; `enter`
