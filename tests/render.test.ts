@@ -645,26 +645,32 @@ describe("the allocator predicts exactly what is drawn (review cycle 2)", () => 
 });
 
 describe("wrapping ASCII by ranges gives the grapheme wrap's rows, exactly (15.1)", () => {
-  test("a long paragraph wraps in linear time: eight times the spans, about eight times the time (never each row scanning them all)", () => {
+  test("a long paragraph wraps in linear time: eight times the spans, eight times the spans read (never each row scanning them all)", () => {
     const spans = (n: number): Span[] =>
       Array.from({ length: n }, (_, i) => ({
         text: `lat=54.7425${i % 10} lon=-3.2049 `,
         role: i % 2 ? "text" : "link",
         attrs: 0,
       }));
-    const time = (n: number) => {
-      const s = spans(n);
-      const t = performance.now();
-      wrapSpans(s, 60);
-      return performance.now() - t;
+    // Counted, not timed: how often the wrap reads a span. A clock's ratio swung with a busy runner's pauses — 33 where
+    // 8 was linear and 64 quadratic, on CI's macOS (#40) — and a count is the same on every machine.
+    const reads = (n: number) => {
+      let count = 0;
+      const watched = new Proxy(spans(n), {
+        get: (target, key, receiver) => {
+          if (typeof key === "string" && /^\d+$/.test(key)) count++;
+          return Reflect.get(target, key, receiver);
+        },
+      });
+      expect(wrapSpans(watched, 60).length).toBe(n / 2);
+      return count;
     };
-    time(4000); // warmed up
-    // Eight times the spans: about 8 times the time when linear, 64 when quadratic. The bound sits between, far enough
-    // from both that a busy machine's noise (a small CI runner's) doesn't cross it; the best of three runs each.
-    const best = (n: number) => Math.min(time(n), time(n), time(n));
-    const small = best(10_000);
-    const large = best(80_000);
-    expect(large / small).toBeLessThan(24);
+    // Each span read a few times, whatever their number: a row scanning them all from the first reads hundreds, then
+    // thousands.
+    const few = reads(1000);
+    const many = reads(8000);
+    expect([few / 1000, many / 8000].map((r) => r < 5)).toEqual([true, true]);
+    expect(many / few).toBeCloseTo(8, 1);
   });
   test("random spans of words, runs of spaces, separators, long words, empty spans, at every width", () => {
     let seed = 11;
