@@ -2023,18 +2023,18 @@ none left, it ends. Its end, however it comes, says what it did (`tallyText`): `
 1 note for the agent in the scratch — space s y copies it; 2 left as they were` — `space s y` named when a note was
 written, whatever the key is now. Nothing is committed.
 
-**The remote and stash** (`26.6`; GIT-D4; `core/gitremote.ts`, `tui/gitremote.ts`): the git panel's keys and buttons
-and the palette's commands, none of `space g`'s. `f` (`:fetch`, `git.fetch`) fetches — the branch's remote, else
-origin, git's own choice; `p` (`:pull`, `git.pull`) pulls, fast-forward only (`git pull --ff-only --no-rebase`), and
-where both sides moved asks merge or rebase (below); `shift+p` (`:push`, `git.push`) pushes the branch to its upstream
-(`git push --end-of-options <remote> refs/heads/<branch>:<its ref>`, the remote and ref as `%(upstream:remotename)` and
+**The remote and stash** (`26.6`; GIT-D4; `core/gitremote.ts`, `tui/gitremote.ts`): the git panel's keys and buttons and
+the palette's commands, none of `space g`'s. `f` (`:fetch`, `git.fetch`) fetches — the branch's remote, else origin,
+git's own choice; `p` (`:pull`, `git.pull`) pulls, fast-forward only (`git pull --ff-only --no-rebase`), and where both
+sides moved asks merge or rebase (below); `shift+p` (`:push`, `git.push`) pushes the branch to its upstream (`git push
+--end-of-options <remote> refs/heads/<branch>:<its ref>`, the remote and ref as `%(upstream:remotename)` and
 `%(upstream:remoteref)` name them; a remote, branch or ref whose name starts with `-` is refused before git is run,
-said, as a base rebased onto is, `refusedName`). A branch with no upstream is asked "Push it to origin/<branch>, and track it
-there?" (`-u`): origin, else the only remote; with none, or several and no origin, said how to set one. Each is asked
-for, none on a timer, nothing in the background reaching the network; each runs in the background, one at a time ("git
-is still fetching" to another), a message saying it's under way and how it went: "fetched: main is 3 commits behind
-origin/main — p pulls (:pull)", "pulled: main fast-forwarded to 1a2b3c4", "pushed main to origin/main". Before a pull,
-unsaved notes are saved or kept, as before a branch switch (`beforeCheckout`); HEAD moving on is then the feed's
+said, as a base rebased onto is, `refusedName`). A branch with no upstream is asked "Push it to origin/<branch>, and
+track it there?" (`-u`): origin, else the only remote; with none, or several and no origin, said how to set one. Each is
+asked for, none on a timer, nothing in the background reaching the network; each runs in the background, one at a time
+("git is still fetching" to another), a message saying it's under way and how it went: "fetched: main is 3 commits
+behind origin/main — p pulls (:pull)", "pulled: main fast-forwarded to 1a2b3c4", "pushed main to origin/main". Before a
+pull, unsaved notes are saved or kept, as before a branch switch (`beforeCheckout`); HEAD moving on is then the feed's
 (`5.9`, `checkHead`): no switch, the tabs stay. A failure is git's own words (`gitReason`): a remote's refusal
 (`[rejected] main -> main (fetch first)`, with "fetch them (f) and pull (p) first"), else its `fatal:` or `error:` line
 and the files it names, else a conflict.
@@ -2043,12 +2043,13 @@ git runs without a terminal: `GIT_TERMINAL_PROMPT=0`, so a login git can't make 
 not read Username for '…': terminal prompts disabled") rather than wait at a prompt; and ssh in batch mode
 (`GIT_SSH_COMMAND="ssh -o BatchMode=yes"`), which asks no password or passphrase, unless you set your own
 (`GIT_SSH_COMMAND`, `GIT_SSH`, or `core.sshCommand` in any of git's config). Credential helpers still answer. A failure
-that's a login (`needsLogin`: prompts disabled, permission denied, a host's key) adds "git in a terminal can log in
-(git fetch), then try here again". git's words are read (a pull's "Not possible to fast-forward", "Everything
-up-to-date", a conflict), so the commands slipbox reads them from — the remote's, the stash's, a merge's and a
-rebase's, the branch merged in the git panel, the merge review — run in git's English (`inEnglish`: `LC_ALL=C`, no
-`LANGUAGE`). A command that prints more than slipbox reads (16 MiB) is stopped, and said so (`failureOf`). In a vault not trusted, a push runs no hook, its pre-push neither, and the remote's
-commands refuse a program the repository's own config names for the remote ([trust.md](trust.md)).
+that's a login (`needsLogin`: prompts disabled, permission denied, a host's key) adds "git in a terminal can log in (git
+fetch), then try here again". git's words are read (a pull's "Not possible to fast-forward", "Everything up-to-date", a
+conflict), so the commands slipbox reads them from — the remote's, the stash's, a merge's and a rebase's, the branch
+merged in the git panel, the merge review — run in git's English (`inEnglish`: `LC_ALL=C`, no `LANGUAGE`). A command
+that prints more than slipbox reads (16 MiB) is stopped, and said so (`failureOf`). In a vault not trusted, a push runs
+no hook, its pre-push neither, and the remote's commands refuse a program the repository's own config names for the
+remote ([trust.md](trust.md)).
 
 `z` (`:stash`, `git.stash`) lists the stashes, newest first (`git stash list`), under "Stash the changes…" and
 "Stash the changes, untracked files too…" (`--include-untracked`), each asking a message (none: git's own, `WIP on
@@ -2088,10 +2089,11 @@ message). After it, HEAD is seen and git asked again; a stop at a conflict says 
 of 2: 1 file in conflict (src/sync/retry.ts)`) and opens the merge screen on its first file; a stop for another reason
 is said in git's words, with `shift+r`'s choices named; the end is said (`rebased: the rebase is done`), a merge screen
 of git's still open closed. Neither the merge screen nor the pull's question (above) opens over typing — in a note, a
-window or the git panel's message — or over a question or a list already open, whose keys would take letters meant
-for those (`busy`, as the conflict prompt waits, `5.5`): said instead, with the key that opens it (`x in source control
-opens the merge screen (:resolve)`; `p in source control (:pull) asks how to bring them together`). In a vault not trusted, `gitArgs`'s guards hold — no hook runs (a rebase's `pre-rebase`, a
-merge's `pre-merge-commit`), no merge driver — and nothing is signed (`commit.gpgSign=false`); said.
+window or the git panel's message — or over a question or a list already open, whose keys would take letters meant for
+those (`busy`, as the conflict prompt waits, `5.5`): said instead, with the key that opens it (`x in source control
+opens the merge screen (:resolve)`; `p in source control (:pull) asks how to bring them together`). In a vault not
+trusted, `gitArgs`'s guards hold — no hook runs (a rebase's `pre-rebase`, a merge's `pre-merge-commit`), no merge driver
+— and nothing is signed (`commit.gpgSign=false`); said.
 
 **The merge screen** (GIT-D5; `core/conflicts.ts`, `tui/mergescreen.ts`): `x` on a file in conflict in the git panel
 (its `resolve`, or its Resolve button), `x` on a conflict in the Problems panel's All tab, `:resolve [file]` or
@@ -2151,8 +2153,9 @@ text as loaded (the base), as typed (yours) and on disk (theirs) (`fromMerge`, f
 built on): `w` puts the result in the note, measured against the text on disk from then on (`NoteBuffer.rebase`), and
 saves it; `esc` goes back to the prompt; `s` is git's alone. A merge with no conflict is applied as before, unsaved.
 
-Not done: the diff window's, the review's, the merge screen's and the peek's keymaps have no table in the config (`[keys.git]` is the git panel's): their commands are bound in `[keys]`
-only, as the reference set's full config does for `git.diff_view`.
+Not done: the diff window's, the review's, the merge screen's and the peek's keymaps have no table in the config
+(`[keys.git]` is the git panel's): their commands are bound in `[keys]` only, as the reference set's full config does
+for `git.diff_view`.
 
 **Settings** (the manual's configuration chapter lists them with the rest): `[git] base`, `[git] bases` (default
 `["main"]`, each branch's own base guessed among them, GIT-D10), `[git] diff = "blocks" | "source"` (a note's diff,

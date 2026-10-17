@@ -41,8 +41,9 @@ The format is [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.1.0/); wh
 - Fetch, pull and push, and the stashes: `f`, `p`, `shift+p` and `z` in source control, or
   `:fetch`, `:pull`, `:push` and `:stash`. Each runs in the background when you ask, never on its own. A branch with
   no upstream is asked whether to push to `origin` and track it there. git never waits for a password: a remote that
-  needs a login fails at once, in git's words. The status line shows how far the branch is ahead of its upstream and
-  behind it (`main ↑2 ↓1`). In a vault you don't trust, a push runs none of the repository's hooks.
+  needs a login fails at once, in git's words, which are git's English whatever your language settings. The status
+  line shows how far the branch is ahead of its upstream and behind it (`main ↑2 ↓1`). In a vault you don't trust, a
+  push runs none of the repository's hooks. A remote's name is checked before git uses it.
 - The explorer marks each row at its right, in columns that line up down the tree. The last says what slipbox has
   indexed: `●` indexed (dimmed), `◐` being indexed, `⊘` not indexed, `⚿` you may not read it, `⚠` a problem, such as a
   link whose target isn't there. git's mark is in the column before it, and before that, dimmed, a vault's branch, or a
@@ -61,17 +62,21 @@ The format is [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.1.0/); wh
   sign in the gutter shows the change, with Revert and Stage.
 - Reviewing a change, one piece at a time: `v` in the git panel, its Review button, or `:review` walks the changes that
   aren't staged, across every changed file, each drawn as a diff. `y` keeps one (stages it), `x` reverts it (saved at
-  once; `u` in the file brings it back), `c` sends it to the agent with a note, through the scratch. The end says what
-  you kept, reverted and noted. A file with unsaved typing is never written over.
+  once; `u` in the file brings it back), `c` sends it to the agent with a note, through the scratch. `tab` shows a
+  note's change as its lines. The end says what you kept, reverted and noted. A file with unsaved typing is never
+  written over, and a file that changed since the review read it is left as it is, and said.
 - A merge screen for git's conflicts: `x` on a file in conflict, in the git panel or Problems, its Resolve button, or
   `:resolve`, shows each conflict with its base, and yours and theirs as diffs against it, the file as it will be below.
   `o`, `t`, `b` and `shift+b` take a side or both, `e` settles one by hand in the lens, `a` hands it to the agent, `w`
-  saves and `s` stages. The conflict prompt's (M)erge settles its conflicts on the same screen.
+  (or `ctrl+s`, or `:w`) saves and `s` stages, once it has read the file again. The conflict prompt's (M)erge settles
+  its conflicts on the same screen. A side holding a `=======` line of its own is read as git's own copies of each side
+  have it; when they can't say, the conflict is settled by hand. A fenced example of git's markers in a note is text.
 - A pull where both sides moved asks: merge, rebase, or nothing, git's `pull.rebase` the default. `shift+r` in the git
-  panel (or `:rebase`) rebases the branch onto the base, each conflict on the way opening the merge screen. While a
-  merge or a rebase is under way, the status line says so (`rebasing 2/5`), the panel has Continue, Skip and Abort
-  buttons, and `shift+r` offers the same (`:continue`, `:skip`, `:abort`). In a vault you don't trust, none of them
-  runs the repository's hooks.
+  panel (or `:rebase`) rebases the branch onto the base, each conflict on the way opening the merge screen, unless
+  you're typing or answering something: then a message says `x` opens it. While a merge or a rebase is under way, the
+  status line says so (`rebasing 2/5`), the panel has Continue, Skip and Abort buttons, and `shift+r` offers the same
+  (`:continue`, `:skip`, `:abort`); Abort asks first. In a vault you don't trust, none of them runs the repository's
+  hooks.
 
 ### Changed
 
