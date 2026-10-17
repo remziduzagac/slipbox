@@ -7,7 +7,7 @@
 import { spawnSync } from "node:child_process";
 import { join } from "node:path";
 import { loadTheme, type Role } from "../../../src/core/theme/index.ts";
-import { type Check, leader, panelFocused } from "../check.ts";
+import { type Check, leader } from "../check.ts";
 import type { Session, SessionOptions } from "../session.ts";
 
 // ---------------------------------------------------------------------------------------------------------------
@@ -111,13 +111,27 @@ function pushedElsewhere(s: Session, other: string, files: Record<string, string
 const ROLES = loadTheme("tokyo-night", "/nonexistent").theme.roles;
 const bgOf = (role: Role) => ROLES[role].bg!.toLowerCase();
 
-/** The git panel open and focused: `space g` until the status line says GIT. */
-const toPanel = (s: Session) => panelFocused(s, "g", "GIT", /Source control/);
+/**
+ * The panel's own title, at its top: "Source control" and the spaces up to its border. Not the leader's which-key
+ * popup, on screen between `space` and `g`, whose line for `space g` says "Source control in the left panel…".
+ */
+const TITLE = /Source control +[│┃]/;
+
+/**
+ * The git panel open and focused: `space g` pressed once, unless it is already, then the panel's own title and the
+ * status line's GIT waited for. Never pressed again on a screen that hasn't caught up: a second press closes it.
+ */
+async function toPanel(s: Session): Promise<void> {
+  const focused = () => s.rowOf(TITLE) >= 0 && s.statusLine().includes(" GIT ");
+  if (focused()) return;
+  await leader(s, "g");
+  await s.until(focused, undefined, "space g to open the git panel and focus it");
+}
 
 /** The left panel's part of a screen row: up to its border, the first `│` or `┃` of its title's row. */
 function panelPart(s: Session, row: number): string {
   const rows = s.screen();
-  const title = rows.findIndex((r) => /Source control/.test(r));
+  const title = rows.findIndex((r) => TITLE.test(r));
   const border = title < 0 ? -1 : [...rows[title]!].findIndex((c) => c === "│" || c === "┃");
   return [...(rows[row] ?? "")].slice(0, border < 0 ? undefined : border).join("");
 }
@@ -159,11 +173,17 @@ function bgIn(s: Session, holding: string, piece: string): string | null {
 const isSelected = (s: Session, needle: string) =>
   rowWith(s, needle) >= 0 && bgIn(s, needle, needle) === bgOf("sidebar_selected");
 
-/** The panel's row showing `needle` selected, from the top down to it: its keys then act on it. */
+/**
+ * The panel's row showing `needle` selected, its keys then acting on it: from the top (`g g`, the panel's first
+ * heading) a `j` a row down to it — the rows counted on the screen and the keys pressed at once, never one decided on
+ * a screen that hasn't caught up with the last — then seen selected.
+ */
 async function selectRow(s: Session, needle: string): Promise<void> {
-  await panelRow(s, needle);
-  await s.keys("g", "g");
-  for (let i = 0; i < 40 && !isSelected(s, needle); i++) await s.keys("j");
+  const target = await panelRow(s, needle);
+  // Past the rail: a section's heading starts with its fold's glyph. Above the first, only lines that say something.
+  const first = s.screen().findIndex((_, i) => /^\s*[▾▸] /.test(panelPart(s, i).slice(3)));
+  s.expect(first >= 0 && first <= target, `the panel's first heading at or above ${needle}`);
+  await s.keys("g", "g", ...Array<string>(target - first).fill("j"));
   await s.until(() => isSelected(s, needle), undefined, `${needle} selected in the git panel`);
 }
 
@@ -447,7 +467,7 @@ const BRANCHES: Check[] = [
     }),
     run: async (s) => {
       await toPanel(s);
-      // Not merged: refused, said why; its worktree kept.
+      // Not merged: refused, said why — as git answers, nothing else drawing it — its worktree kept.
       await on(s, "agent/ahead");
       await panelRow(s, "~/work/trail-agent-ahead");
       await branchButton(s, "agent/ahead", "[Remove…]");
@@ -1178,6 +1198,7 @@ const REBASE: Check[] = [
       await rebaseOntoMain(s);
       await stopped();
       await s.keys("escape");
+      await s.notSee("Merge — route.md");
       await toPanel(s);
       await s.keys("shift+r");
       await s.see("(a) Abort");
