@@ -2,7 +2,9 @@
 // rebase, or a cherry-pick or a revert started in a terminal, read from git's own files, no git run, so the status line
 // can say it each frame ("rebasing 2/5") — continued, a commit skipped, or aborted. git runs without a terminal or an editor: a commit settled on the way keeps its message
 // (`GIT_EDITOR=true`). In a vault not trusted, `gitArgs`'s guards hold (no hook runs, no merge driver), and nothing is
-// signed: the repository's own config could name the program that signs.
+// signed: the repository's own config could name the program that signs. Tracked files changed, which git won't rebase
+// over, are stashed and put back after when you say so (`--autostash`, D243): git keeps them in the stash where putting
+// them back conflicts.
 
 import { execFile, execFileSync } from "node:child_process";
 import { existsSync, readFileSync } from "node:fs";
@@ -10,6 +12,7 @@ import { join } from "node:path";
 import type { Checkout } from "./git.ts";
 import { gitArgs } from "./gitops.ts";
 import { editorless, failureOf, inEnglish, type RemoteDone, refusedName } from "./gitremote.ts";
+import { parseEntries } from "./gitstage.ts";
 import { isTrusted } from "./trust.ts";
 
 /** What can be under way: a merge, a rebase, or a cherry-pick or a revert (started in a terminal). */
@@ -137,6 +140,7 @@ function ask(c: Pick<Checkout, "root">, args: string[]): string | null {
       encoding: "utf8",
       stdio: ["ignore", "pipe", "ignore"],
       timeout: 15_000,
+      maxBuffer: 64 * 1024 * 1024,
     });
   } catch {
     return null;
@@ -153,6 +157,23 @@ export function aheadBehind(c: Pick<Checkout, "root">, base: string): { ahead: n
   const m = /^(\d+)\s+(\d+)/.exec(out?.trim() ?? "");
   return m ? { ahead: Number(m[2]), behind: Number(m[1]) } : null;
 }
+
+/**
+ * The files changed that git won't start a rebase over (D243), from the checkout's top folder: tracked ones, staged or
+ * not. Not untracked files — git rebases past them, refusing in its words only where one would be overwritten, and
+ * leaves them where they are — nor a submodule's changes, which git doesn't look at either. Null without git.
+ */
+export function changedTracked(c: Pick<Checkout, "root">): string[] | null {
+  const out = ask(c, ["status", "--porcelain=v1", "-z", "--untracked-files=no", "--ignore-submodules=all"]);
+  return out === null ? null : parseEntries(out).map((e) => e.path);
+}
+
+/**
+ * Whether git kept the changes it stashed for a rebase (`--autostash`, D243) in the stash: putting them back at the
+ * rebase's end conflicted, and git says so ("Your changes are safe in the stash"), in its English (`inEnglish`).
+ */
+export const stashKept = (r: RemoteDone): boolean =>
+  r.ok && /Your changes are safe in the stash/.test(`${r.err}\n${r.out}`);
 
 /**
  * How a pull brings two sides together by default, as git's config says: a rebase where `branch.<name>.rebase`, else
@@ -182,11 +203,14 @@ function runLater(c: Pick<Checkout, "root">, args: string[]): Promise<RemoteDone
   });
 }
 
-/** This branch rebased onto `onto` (the base's tip): its own commits replayed after it. The name checked first. */
-export function rebaseLater(c: Pick<Checkout, "root">, onto: string): Promise<RemoteDone> {
+/**
+ * This branch rebased onto `onto` (the base's tip): its own commits replayed after it. The name checked first. With
+ * `autostash` (D243), the files changed stashed first and put back after (`--autostash`).
+ */
+export function rebaseLater(c: Pick<Checkout, "root">, onto: string, autostash = false): Promise<RemoteDone> {
   const why = refusedName("the base", onto);
   if (why) return Promise.resolve({ ok: false, why, login: false });
-  return runLater(c, ["rebase", "--end-of-options", onto]);
+  return runLater(c, ["rebase", ...(autostash ? ["--autostash"] : []), "--end-of-options", onto]);
 }
 
 /**

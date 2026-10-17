@@ -290,9 +290,14 @@ export function fetchLater(c: Pick<Checkout, "root">): Promise<RemoteDone> {
 
 /**
  * Pulled: fast-forward only (`ff`), git refusing in its words where both sides moved; or, asked (GIT-D6), the two
- * brought together by a merge or a rebase.
+ * brought together by a merge or a rebase — the files changed stashed for the rebase and put back after, asked
+ * (`autostash`, D243).
  */
-export function pullLater(c: Pick<Checkout, "root">, how: "ff" | "merge" | "rebase" = "ff"): Promise<RemoteDone> {
+export function pullLater(
+  c: Pick<Checkout, "root">,
+  how: "ff" | "merge" | "rebase" = "ff",
+  autostash = false,
+): Promise<RemoteDone> {
   const args =
     how === "ff"
       ? ["--ff-only", "--no-rebase"]
@@ -300,7 +305,7 @@ export function pullLater(c: Pick<Checkout, "root">, how: "ff" | "merge" | "reba
         ? // A merge where both moved (GIT-D6): its commit with git's own message, never an editor; `--ff` over a
           // `pull.ff = only` of yours, which would refuse it again.
           ["--no-rebase", "--ff", "--no-edit"]
-        : ["--rebase"];
+        : ["--rebase", ...(autostash ? ["--autostash"] : [])];
   return runLater(c, ["pull", ...args], true);
 }
 

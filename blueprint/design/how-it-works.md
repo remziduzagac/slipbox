@@ -232,7 +232,7 @@ The CLI's commands are the user's reference, [cli.md](../../docs/manual/cli.md);
 | `core/conflicts.ts` | GIT-D5 | a file in conflict for the merge screen: markers, the index's stages, the result |
 | `core/gitreview.ts` | GIT-D3 | the review's hunk shown, found again, a note's scratch entry, the end's tally |
 | `core/gitremote.ts` | 26.6, GIT-D4 | fetch, pull, push, stash, without a terminal; a pull merged or rebased |
-| `core/gitrebase.ts` | GIT-D6 | a rebase onto the base; what's under way, from git's files; continue, abort |
+| `core/gitrebase.ts` | GIT-D6, D243 | a rebase onto the base, over files changed; what's under way, from git's files |
 | `core/gitbranches.ts` | GIT-D9, GIT-D13 | the branches, where each is checked out; worktrees made, removed |
 | `core/gitbase.ts` | GIT-D10 | each branch's own base: kept (`bases.json`), else the nearest of `[git] bases` |
 | `core/gitrepos.ts` | VV-D10 | the repositories under a folder, each checkout grouped with its own, their state |
@@ -302,7 +302,7 @@ The CLI's commands are the user's reference, [cli.md](../../docs/manual/cli.md);
 | `tui/review.ts` | GIT-D3 | the review: a hunk at a time, kept, reverted, noted; its keys |
 | `tui/mergescreen.ts` | GIT-D5 | the merge screen: a card a conflict, the result, saved and staged; its keys |
 | `tui/gitremote.ts` | 26.6, GIT-D4 | fetch, pull, push and stash from the TUI, in the background, one at a time |
-| `tui/rebase.ts` | GIT-D6 | a diverged pull asked about, a rebase onto the base, what's under way |
+| `tui/rebase.ts` | GIT-D6, D243 | a diverged pull asked about, a rebase onto the base and its stash; what's under way |
 | `tui/explorer.ts` | 3.7, VV-D5 | the explorer: one tree and its view, the breadcrumb, zooming; rows, keys, menu |
 | `tui/explorer-disk.ts` | VV-D8 | the explorer's rows the walk doesn't give: what it leaves out or hasn't reached |
 | `tui/marks.ts` | VV-D9 | a row's marks: the index's state, what describes the row |

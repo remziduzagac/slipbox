@@ -516,3 +516,25 @@ the keys after it wait with it. The binary is about 0.7 MB bigger: the parse wor
 
 **Not chosen:** building the dictionaries in slices between frames: Hunspell builds one in a single call that can't be
 split; checking only in the visible rows: it is the build, not the checking, that blocks.
+
+## D243: A rebase over files changed asks to stash them and put them back (2026-10-17)
+
+**Decision:** When tracked files are changed, staged or not, `shift+r` in the git panel (`git.rebase`, `:rebase`) and
+a pull's "rebase" answer where both sides moved ask "Stash your changes, rebase …, put them back?" instead of saying
+git's refusal; `shift+r`'s own question becomes that one. Yes runs the rebase with `--autostash`; no runs nothing. A
+clean working tree asks and runs as before. Untracked files are left to git, as without slipbox: its autostash doesn't
+take them, and it refuses, in its words, only where one would be overwritten. Where putting the changes back
+conflicts, git keeps them in the stash, and slipbox says so, naming the entry (`stash@{0}`, "autostash") and the files
+in conflict. Amends GIT-D6. As built: `core/gitrebase.ts` `changedTracked`, `stashKept`; `tui/rebase.ts`;
+design/tui.md § Git. Decided by an issue (#137).
+
+**Why:** The maintainer's choice, 2026-10-17. An agent's worktree often has changes left when its branch is brought up
+to date; git's refusal sent you to stash by hand, rebase, then pop. git's own autostash does the three, and keeps the
+changes safe where they don't go back cleanly.
+
+**Cost:** What was staged comes back not staged (a new file stays staged): git's autostash puts the changes back
+without the index. While a rebase stopped at a conflict is under way, the changes are stashed, out of the files.
+
+**Not chosen:** stashing untracked files too (`git stash --include-untracked` around the rebase): git's autostash
+leaves them, and they're in the way only where git says so. Following `rebase.autoStash` without asking: the question
+says where the changes go.

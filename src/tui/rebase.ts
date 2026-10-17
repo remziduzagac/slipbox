@@ -5,12 +5,15 @@
 // `:continue`, `:skip`, `:abort`; the panel's buttons, which gitpanel.ts shows meanwhile), abort asked first. A stop at a conflict opens the merge screen on it — said instead,
 // `x` named, while you type or a question is open (the pull's question likewise); the status line says what's under way
 // ("rebasing 2/5"). Each runs in the background, one git command at a time with the remote's (gitremote.ts), unsaved
-// notes saved or kept first. In a vault not trusted, no hook runs and nothing is signed.
+// notes saved or kept first. In a vault not trusted, no hook runs and nothing is signed. A rebase over tracked files
+// changed asks to stash them and put them back after (`--autostash`, D243); where they conflict going back, git keeps
+// them in the stash, and the message names it.
 
 import { type Checkout, headOf } from "../core/git.ts";
 import {
   abortLater,
   aheadBehind,
+  changedTracked,
   continueLater,
   OPERATIONS,
   type Operation,
@@ -19,8 +22,9 @@ import {
   pullDefault,
   rebaseLater,
   skipLater,
+  stashKept,
 } from "../core/gitrebase.ts";
-import { pullLater, type RemoteDone } from "../core/gitremote.ts";
+import { pullLater, type RemoteDone, stashesOf } from "../core/gitremote.ts";
 import { sanitize } from "../core/sanitize.ts";
 import { isTrusted } from "../core/trust.ts";
 import type { App } from "./app.ts";
@@ -77,6 +81,7 @@ async function after(app: App, r: RemoteDone, done: string): Promise<void> {
     const m = mergeOf(app);
     if (m && m.path !== null) app.floating = null;
     if (!r.ok) return app.message("warn", `git: ${sanitize(r.why)}`);
+    if (stashKept(r)) return app.message("warn", `${done} — ${keptStash(app, c)}${trust}`);
     return app.message("info", `${done}${trust}`);
   }
   const files = conflictedFiles(app);
@@ -102,8 +107,44 @@ async function after(app: App, r: RemoteDone, done: string): Promise<void> {
 }
 
 /**
+ * Where your changes are when git, putting them back after a rebase (`--autostash`, D243), met a conflict: kept in the
+ * stash, as `autostash`, the newest of that name — named — and the files in conflict marked, settled as any are.
+ */
+function keptStash(app: App, c: Checkout): string {
+  const s = stashesOf(c)?.find((s) => s.message === "autostash");
+  const where = `the stash${s ? `, ${sanitize(s.ref)} ("autostash")` : ""}`;
+  const files = conflictedFiles(app);
+  if (!files.length) return `your changes couldn't go back: git kept them in ${where} — z in source control lists it`;
+  return `your changes conflicted going back, so git kept them in ${where}: ${plural(files.length, "file")} in conflict (${files.map(sanitize).join(", ")}) — x in source control settles ${files.length === 1 ? "it" : "them"} (:resolve), then drop the stash (z)`;
+}
+
+/** The question before a rebase over tracked files changed (D243); `more`, what the rebase's own question would say. */
+const stashQuestion = (branch: string, onto: string, changed: number, more = "") =>
+  `Stash your changes, rebase ${sanitize(branch)} onto ${sanitize(onto)}, put them back? ${plural(changed, "file")} changed${more}.`;
+
+/**
+ * A rebase about to run (`shift+r`'s, a pull's) where tracked files are changed, which git won't rebase over (D243):
+ * asked first whether to stash them and put them back after — yes, `go` with `--autostash`; no, nothing runs. A clean
+ * working tree runs as it is; untracked files are git's to judge, as without slipbox: it rebases past them, refusing in
+ * its words only where one would be overwritten. `agreed`: asked already, in the rebase's own question.
+ */
+function stashFirst(
+  app: App,
+  c: Checkout,
+  rebase: { branch: string; onto: string },
+  go: (autostash: boolean) => void,
+  agreed = false,
+): void {
+  if (agreed) return go(true);
+  const changed = changedTracked(c)?.length ?? 0;
+  if (!changed) return go(false);
+  app.overlays.confirm(stashQuestion(rebase.branch, rebase.onto, changed), () => go(true));
+}
+
+/**
  * A pull that couldn't fast-forward (26.6): both sides moved. Asked — merge, rebase, or nothing — git's `pull.rebase`
- * the default; then pulled that way. While you type or answer something (`busy`), said instead: `p` asks again.
+ * the default; then pulled that way, a rebase over tracked files changed asking to stash them first (D243). While you
+ * type or answer something (`busy`), said instead: `p` asks again.
  */
 export function askDiverged(app: App, c: Checkout, branch: string, upstream: string): void {
   if (busy(app))
@@ -135,27 +176,31 @@ export function askDiverged(app: App, c: Checkout, branch: string, upstream: str
     accept: (item) => {
       const how = item.data as "merge" | "rebase" | "nothing";
       if (how === "nothing") return app.message("info", `nothing pulled: ${branch} and ${upstream} as they were`);
-      runInBackground(
-        app,
-        how === "merge" ? `merging ${upstream}` : `rebasing onto ${upstream}`,
-        () => pullLater(c, how),
-        (r) =>
-          after(
-            app,
-            r,
-            how === "merge"
-              ? `pulled: merged ${upstream} into ${branch}`
-              : `pulled: ${branch} rebased onto ${upstream}`,
-          ),
-      );
+      const pull = (autostash: boolean) =>
+        runInBackground(
+          app,
+          how === "merge" ? `merging ${upstream}` : `rebasing onto ${upstream}`,
+          () => pullLater(c, how, autostash),
+          (r) =>
+            after(
+              app,
+              r,
+              how === "merge"
+                ? `pulled: merged ${upstream} into ${branch}`
+                : `pulled: ${branch} rebased onto ${upstream}`,
+            ),
+        );
+      // A rebase over files changed: asked to stash them first (D243). A merge is git's to judge, as it is.
+      if (how === "merge") return pull(false);
+      stashFirst(app, c, { branch, onto: upstream }, pull);
     },
   });
 }
 
 /**
- * `shift+r`: this branch rebased onto its base's tip (its own, GIT-D10) — asked first, unsaved notes saved or kept.
- * While a merge, a rebase, a cherry-pick or a revert is under way: continue, skip or abort it, or the merge screen on a
- * file still in conflict.
+ * `shift+r`: this branch rebased onto its base's tip (its own, GIT-D10) — asked first, unsaved notes saved or kept;
+ * tracked files changed, stashed and put back after, the question says so (D243). While a merge, a rebase, a
+ * cherry-pick or a revert is under way: continue, skip or abort it, or the merge screen on a file still in conflict.
  */
 export function gitRebase(app: App): void {
   const c = app.git.checkout;
@@ -171,16 +216,29 @@ export function gitRebase(app: App): void {
   const ab = aheadBehind(c, base);
   if (!ab) return app.message("warn", `git couldn't compare ${branch} with ${base}`);
   if (!ab.behind) return app.message("info", `${branch} has all of ${base} already: nothing to rebase`);
+  // Tracked files changed (D243): the question asks to stash them too. Asked again after unsaved notes are saved, when
+  // saving them is what changed the files.
+  const changed = changedTracked(c)?.length ?? 0;
+  const replayed = `${plural(ab.ahead, "commit")} replayed after ${base}'s ${ab.behind} new`;
   app.overlays.confirm(
-    `Rebase ${branch} onto ${base}? Its ${plural(ab.ahead, "commit")} replayed after ${base}'s ${ab.behind} new.`,
+    changed
+      ? stashQuestion(branch, base, changed, `; its ${replayed}`)
+      : `Rebase ${branch} onto ${base}? Its ${replayed}.`,
     () =>
       app.git.beforeCheckout(
         () =>
-          runInBackground(
+          stashFirst(
             app,
-            `rebasing onto ${base}`,
-            () => rebaseLater(c, base),
-            (r) => after(app, r, `rebased ${branch} onto ${base}`),
+            c,
+            { branch, onto: base },
+            (autostash) =>
+              runInBackground(
+                app,
+                `rebasing onto ${base}`,
+                () => rebaseLater(c, base, autostash),
+                (r) => after(app, r, `rebased ${branch} onto ${base}`),
+              ),
+            changed > 0,
           ),
         { verb: "rebase", noun: "the rebase", done: "rebased" },
       ),

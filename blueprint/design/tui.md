@@ -2105,13 +2105,31 @@ read from `git status --branch`'s first line, asked with the status in the backg
 **Pulling where both sides moved** (GIT-D6; `core/gitremote.ts` `pullLater`, `tui/rebase.ts`): a pull that can't
 fast-forward (git's "Not possible to fast-forward") asks: `(m)` merge the upstream into the branch (`git pull
 --no-rebase --ff --no-edit`: git's own message, never an editor; `--ff` over a `pull.ff = only`), `(r)` rebase the
-branch onto it (`git pull --rebase`), `(n)` nothing. Selected is what git's config says (`pullDefault`): a rebase where
-`branch.<name>.rebase`, else `pull.rebase`, is true or a kind of rebase, else a merge.
+branch onto it (`git pull --rebase`; over files changed, asked to stash them first, below), `(n)` nothing. Selected is
+what git's config says (`pullDefault`): a rebase where `branch.<name>.rebase`, else `pull.rebase`, is true or a kind of
+rebase, else a merge.
 
 **Rebasing onto the base** (`git.rebase`, `:rebase`, `shift+r` in the git panel — its `rebase`): the branch rebased onto
 the base's tip — the branch's own (GIT-D10, `baseOf`), else `[git] base`, main or master (`baseBranch`) — after asking,
 with how many commits each side has (`aheadBehind`); unsaved notes saved or kept first, as before a pull. On the base,
 detached, or with nothing new on the base: said, nothing run.
+
+**A rebase over files changed** (D243; `core/gitrebase.ts` `changedTracked`, `stashFirst` in `tui/rebase.ts`): git
+won't start a rebase over tracked files changed, staged or not, so slipbox asks first instead of saying git's refusal.
+`shift+r`'s question becomes "Stash your changes, rebase agent onto main, put them back? 2 files changed; its 3 commits
+replayed after main's 1 new."; the pull's `(r)` asks "Stash your changes, rebase main onto origin/main, put them back?
+1 file changed." Yes runs the rebase with `--autostash` (`git rebase --autostash`, `git pull --rebase --autostash`):
+git stashes them, rebases, and puts them back, as changes not staged (a new file stays staged). No: nothing runs. The
+files are read with `git status --untracked-files=no --ignore-submodules=all`, as git's own check sees them; a clean
+tree asks and runs as before. Unsaved notes saved after `shift+r`'s question may change a file: then the stash is asked
+about there. Untracked files stay git's to judge, as without slipbox: its autostash doesn't take them, and it rebases
+past them, refusing in its words only where one would be overwritten (`The following untracked working tree files
+would be overwritten by checkout: n.md`), the changes stashed put back first. A rebase that stops at a conflict keeps
+them stashed until it ends, continued or aborted. Where putting them back conflicts, git keeps them in the stash, as
+`autostash`, and marks the files in conflict ("Your changes are safe in the stash", `stashKept`): the end's message
+says so, naming the entry and the files (`rebased agent onto main — your changes conflicted going back, so git kept
+them in the stash, stash@{0} ("autostash"): 1 file in conflict (b.md) — x in source control settles it (:resolve), then
+drop the stash (z)`).
 
 **A merge or a rebase under way** (`core/gitrebase.ts` `operationOf`), or a cherry-pick or a revert begun in a
 terminal: read from git's own files, no git run — `rebase-merge/` (`msgnum`, `end`, `head-name`), `rebase-apply/`

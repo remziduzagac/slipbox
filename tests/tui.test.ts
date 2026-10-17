@@ -20212,6 +20212,186 @@ describe("git's review, merge screen, pull and rebase (GIT-D3, GIT-D5, GIT-D6)",
       });
     });
   });
+
+  describe("a rebase over files changed: stashed and put back, asked (D243)", () => {
+    /** A branch behind main, main having changed b.md and the branch made c.md: its rebase meets no conflict. */
+    const apart = () => {
+      const { root } = repo({ "a.md": "a\n", "b.md": "b\n" });
+      git(root, "switch", "-q", "-c", "agent");
+      commit(root, "c.md", "c\n", "Agent: c");
+      git(root, "switch", "-q", "main");
+      commit(root, "b.md", "b, main's\n", "Main: b");
+      git(root, "switch", "-q", "agent");
+      return root;
+    };
+    /** A message matching `text` said after the first `from` of them. */
+    const saidSince = (h: Harness, from: number, text: string) =>
+      until(() => h.app.messages.slice(from).some((m) => m.text === text));
+    const rebased = (root: string) => git(root, "merge-base", "main", "agent") === git(root, "rev-parse", "main");
+
+    test("shift+r with files changed asks to stash them too: no, nothing happens; yes, rebased and put back", async () => {
+      await isolated(async () => {
+        const root = apart();
+        const was = git(root, "rev-parse", "HEAD");
+        // A change not staged and one staged; an untracked file isn't one git refuses over.
+        writeFileSync(join(root, "a.md"), "a, mine\n");
+        writeFileSync(join(root, "c.md"), "c, staged\n");
+        git(root, "add", "c.md");
+        writeFileSync(join(root, "u.md"), "untracked\n");
+        const h = await harness({ root, open: "u.md", width: 120, height: 50 });
+        await h.app.run("git.rebase");
+        const asked = {
+          kind: "prompt",
+          confirm: true,
+          label:
+            "Stash your changes, rebase agent onto main, put them back? 2 files changed; its 1 commit replayed after main's 1 new.",
+        };
+        expect(h.app.overlay).toMatchObject(asked);
+        // No: nothing happens — no rebase, no stash, the changes where they were.
+        await h.keys("n");
+        expect(h.app.overlay).toBeNull();
+        expect(h.app.messages.some((m) => /rebasing|cannot rebase/.test(m.text))).toBe(false);
+        expect(git(root, "rev-parse", "HEAD")).toBe(was);
+        expect(git(root, "stash", "list")).toBe("");
+        expect(readFileSync(join(root, "a.md"), "utf8")).toBe("a, mine\n");
+        // Yes: rebased with them stashed, and they're back.
+        await h.app.run("git.rebase");
+        expect(h.app.overlay).toMatchObject(asked);
+        await h.keys("y");
+        expect(await said(h, "rebased agent onto main — this vault isn't trusted, so no hook ran")).toBe(true);
+        expect(rebased(root)).toBe(true);
+        expect(readFileSync(join(root, "a.md"), "utf8")).toBe("a, mine\n");
+        expect(readFileSync(join(root, "c.md"), "utf8")).toBe("c, staged\n");
+        expect(readFileSync(join(root, "u.md"), "utf8")).toBe("untracked\n");
+        expect(git(root, "stash", "list")).toBe("");
+      });
+    });
+
+    test("shift+r on a clean tree, a note unsaved: saving it changes a file, so the stash is asked about then", async () => {
+      await isolated(async () => {
+        const root = apart();
+        const h = await harness({ root, open: "a.md", width: 120, height: 50 });
+        const buf = h.app.view!.buf;
+        buf.edit(buf.source.indexOf("a"), 1, "A");
+        await h.app.run("git.rebase");
+        expect(h.app.overlay).toMatchObject({
+          kind: "prompt",
+          label: "Rebase agent onto main? Its 1 commit replayed after main's 1 new.",
+        });
+        await h.keys("y");
+        expect(list(h).title).toBe("Unsaved: a.md");
+        expect(list(h).items[0]!.label).toBe("Save them, then rebase");
+        await h.keys("enter");
+        expect(h.app.overlay).toMatchObject({
+          kind: "prompt",
+          label: "Stash your changes, rebase agent onto main, put them back? 1 file changed.",
+        });
+        await h.keys("y");
+        expect(await said(h, "rebased agent onto main — this vault isn't trusted, so no hook ran")).toBe(true);
+        expect(rebased(root)).toBe(true);
+        expect(readFileSync(join(root, "a.md"), "utf8")).toBe("A\n");
+        expect(git(root, "stash", "list")).toBe("");
+      });
+    });
+
+    test("shift+r: changes that conflict going back are kept in the stash, named, the file in conflict said", async () => {
+      await isolated(async () => {
+        const root = apart();
+        // main changed b.md's line; so did you.
+        writeFileSync(join(root, "b.md"), "b, mine\n");
+        const h = await harness({ root, open: "a.md", width: 120, height: 50 });
+        await h.app.run("git.rebase");
+        expect(h.app.overlay).toMatchObject({
+          label:
+            "Stash your changes, rebase agent onto main, put them back? 1 file changed; its 1 commit replayed after main's 1 new.",
+        });
+        await h.keys("y");
+        expect(
+          await said(
+            h,
+            `rebased agent onto main — your changes conflicted going back, so git kept them in the stash, stash@{0} ("autostash"): 1 file in conflict (b.md) — x in source control settles it (:resolve), then drop the stash (z) — this vault isn't trusted, so no hook ran`,
+          ),
+        ).toBe(true);
+        expect(rebased(root)).toBe(true);
+        expect(git(root, "stash", "list", "--format=%gd %gs")).toBe("stash@{0} autostash");
+        expect(git(root, "show", "stash@{0}:b.md")).toBe("b, mine");
+        expect(git(root, "status", "--porcelain", "--untracked-files=no")).toBe("UU b.md");
+      });
+    });
+
+    test("shift+r over untracked files alone: asked as ever, and git's to judge — its refusal said where one's in the way", async () => {
+      await isolated(async () => {
+        const root = apart();
+        // main makes n.md; here an untracked n.md is in its way.
+        git(root, "switch", "-q", "main");
+        commit(root, "n.md", "main's n\n", "Main: n");
+        git(root, "switch", "-q", "agent");
+        writeFileSync(join(root, "n.md"), "my n\n");
+        const h = await harness({ root, open: "a.md", width: 120, height: 50 });
+        await h.app.run("git.rebase");
+        expect(h.app.overlay).toMatchObject({
+          kind: "prompt",
+          label: "Rebase agent onto main? Its 1 commit replayed after main's 2 new.",
+        });
+        await h.keys("y");
+        expect(
+          await said(h, /^git: The following untracked working tree files would be overwritten by checkout: n\.md/),
+        ).toBe(true);
+        expect(rebased(root)).toBe(false);
+        expect(readFileSync(join(root, "n.md"), "utf8")).toBe("my n\n");
+        expect(git(root, "stash", "list")).toBe("");
+      });
+    });
+
+    test("a pull's rebase with files changed asks to stash them: no, nothing; yes, rebased and put back; clean, not asked", async () => {
+      await isolated(async () => {
+        const { root, other } = repo({ "a.md": "a\n" }, true);
+        commit(other, "b.md", "theirs\n");
+        git(other, "push", "-q");
+        commit(root, "c.md", "mine\n");
+        const h = await harness({ root, open: "a.md", width: 120, height: 40 });
+        const rebaseAnswer = async () => {
+          await h.app.run("git.pull");
+          expect(await until(() => h.app.overlay?.kind === "list")).toBe(true);
+          await h.keys("r");
+        };
+        const done = "pulled: main rebased onto origin/main — this vault isn't trusted, so no hook ran";
+        // A clean working tree: rebased at once, as ever.
+        await rebaseAnswer();
+        expect(h.app.overlay).toBeNull();
+        expect(await said(h, done)).toBe(true);
+        expect(existsSync(join(root, "b.md"))).toBe(true);
+        // Both moved again, and a.md changed here: asked.
+        commit(other, "d.md", "theirs again\n");
+        git(other, "push", "-q");
+        commit(root, "e.md", "mine again\n");
+        writeFileSync(join(root, "a.md"), "a, mine\n");
+        const head = git(root, "rev-parse", "HEAD");
+        await rebaseAnswer();
+        expect(h.app.overlay).toMatchObject({
+          kind: "prompt",
+          confirm: true,
+          label: "Stash your changes, rebase main onto origin/main, put them back? 1 file changed.",
+        });
+        // No: nothing pulled, the change where it was.
+        await h.keys("n");
+        expect(h.app.overlay).toBeNull();
+        expect(git(root, "rev-parse", "HEAD")).toBe(head);
+        expect(git(root, "stash", "list")).toBe("");
+        expect(readFileSync(join(root, "a.md"), "utf8")).toBe("a, mine\n");
+        // Yes: rebased with it stashed, and it's back.
+        const from = h.app.messages.length;
+        await rebaseAnswer();
+        await h.keys("y");
+        expect(await saidSince(h, from, done)).toBe(true);
+        expect(existsSync(join(root, "d.md"))).toBe(true);
+        expect(git(root, "log", "-1", "--format=%s")).toBe("e.md: mine again");
+        expect(git(root, "log", "-1", "--format=%P").split(" ").length).toBe(1);
+        expect(readFileSync(join(root, "a.md"), "utf8")).toBe("a, mine\n");
+        expect(git(root, "stash", "list")).toBe("");
+      });
+    });
+  });
 });
 
 describe("the remote's commands and stash (26.6)", () => {
