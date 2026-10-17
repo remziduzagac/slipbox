@@ -366,6 +366,7 @@ function drawTree(app: App, c: Canvas, list: Rect, bg: Color | null, geo: Geomet
         nameEnd: withButtons ? room : sv.cols - reserve,
         describeEnd: withButtons ? room - 1 : sv.cols - 4,
         bg: st.bg,
+        fit: marks.fit,
       });
     drawGuides(app, c, rect, y, row.depth, lines[s.scroll + i]!, st.bg, sv.left);
     // What the filter matched in a note's name (it matches the path: a word may be a folder's).
@@ -406,7 +407,7 @@ function drawDescribed(
   at: { x: number; y: number; w: number },
   vaultName: string | undefined,
   describe: string | undefined,
-  o: { nameEnd: number; describeEnd: number; bg: Color | null },
+  o: { nameEnd: number; describeEnd: number; bg: Color | null; fit?: (room: number) => string },
 ): void {
   const dim = { ...roleStyle(app.theme, "dim", o.bg), bg: o.bg };
   let after = at.w;
@@ -417,7 +418,8 @@ function drawDescribed(
   if (!describe) return;
   const room = o.describeEnd - after - 2;
   if (room < Math.min(stringWidth(describe), 6)) return;
-  const text = truncate(describe, room);
+  // Cut to fit as the row says (a link's place from its front, its state kept), else from the end.
+  const text = o.fit ? o.fit(room) : truncate(describe, room);
   const w = stringWidth(text);
   drawText(c, at.x + o.describeEnd - w, at.y, text, dim, w);
 }

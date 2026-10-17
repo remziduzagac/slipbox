@@ -4,7 +4,7 @@
 import { type Run, withView } from "./actions.ts";
 import { isPointer } from "../core/pointer.ts";
 import { fileLink } from "./actions-links.ts";
-import { join, dirname } from "node:path";
+import { join, dirname, isAbsolute } from "node:path";
 import { isInside, isNeverRoot, hasMarker, initVault, rootAt } from "../core/vault.ts";
 import { classify } from "../core/filetypes.ts";
 import { revert } from "./actions-edit.ts";
@@ -45,12 +45,16 @@ export function fileActions(): Record<string, Run> {
       const r = a.graph.findNote(arg, a.loc.root);
       if (r.status === "resolved") return a.open(r.path);
       if (r.status === "ambiguous") return a.message("warn", `"${arg}" matches ${r.candidates.join(", ")}`);
+      // A file by its whole path outside this vault: gone to, into its vault — Elsewhere's among them (VV-D3, VV-D4).
+      if (isAbsolute(arg) && (a.loc.mode === "folder" || !isInside(a.loc.root, arg)) && isFile(arg)) return a.open(arg);
       // Any other file of the vault, by its path with its extension (16.4), as :e opens it in vim.
       const rel = arg.replace(/^\.?\//, "");
       if (a.graph.filePaths().includes(rel)) return fileLink(a, rel);
+      const abs = join(a.loc.root, rel);
+      // Through a link not followed (VV-D6): never made the vault's unasked — opened, it asks first.
+      if (rel && isInside(a.loc.root, abs) && isFile(abs) && a.following.blocked(abs)) return a.open(rel);
       // There on disk, but the vault hasn't heard of it yet (written a moment ago, the watcher not yet
       // told): the vault told now, as the watcher would, and it opened as its own.
-      const abs = join(a.loc.root, rel);
       if (rel && isInside(a.loc.root, abs) && isFile(abs) && walked(a, rel)) {
         const isNote = classify(rel, a.config.walk.extensions).group === "note";
         a.watch.applyChanges({ changes: [{ rel, kind: "created", isNote }], rescan: false });

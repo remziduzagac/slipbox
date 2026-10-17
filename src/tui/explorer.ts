@@ -10,6 +10,8 @@ import { checkoutOf } from "../core/git.ts";
 import { readIdentity, vaultConfigFile } from "../core/registry.ts";
 import { tildePath } from "../core/names.ts";
 import { findVaultRoot, hasMarker, homeFolder, isInside, isListed, isVaultRoot, locationAt } from "../core/vault.ts";
+import { isLink, linkScope, linkState, linkTarget } from "../core/symlinks.ts";
+import { LINK_REASON } from "../core/walk.ts";
 import { match } from "./match.ts";
 import { prettyKey } from "./keys.ts";
 import type { App, ListItem } from "./app.ts";
@@ -47,8 +49,9 @@ export class Explorer {
     if (this.app.leftView !== "explorer") return null;
     const row = this.rows()[this.app.sidebar.selected];
     if (!row) return null;
-    // Above the vault, beside it, in another (VV-D5), the vault itself: not this one's to rename, move or delete here.
-    if (row.outside || row.root?.here) return null;
+    // Above the vault, beside it, in another (VV-D5), the vault itself: not this one's to rename, move or delete here;
+    // nor a link the walk didn't go through (VV-D6).
+    if (row.outside || row.root?.here || row.link?.reason) return null;
     if (row.kind === "root")
       return row.root?.kind === "vault" && this.app.loc.mode !== "folder"
         ? { rel: row.path, dir: true, vault: true }
@@ -285,14 +288,20 @@ export class Explorer {
    */
   rowPath(abs: string): string {
     const R = this.app.loc.root;
-    if (abs === R || !isInside(R, abs)) return abs;
-    // A folder only listed (`~`, `/`): its own rows are its folders, by their names.
-    if (isListed(this.app.loc)) return dirname(abs) === R ? basename(abs) : abs;
+    // Elsewhere (VV-D3) has no tree of its own: every row by its whole path.
+    if (abs === R || !isInside(R, abs) || isListed(this.app.loc)) return abs;
     const rel = relative(R, abs).split(sep).join("/");
     // What the walk leaves out (VV-D8: a busy folder, `.gitignore`'s, home's skip list) isn't in the vault's own
     // tree: listed a level at a time, by its path, as a folder outside the vault is.
     if (this.leftOut(rel, abs)) return abs;
-    return this.nestedRels().some((n) => rel.startsWith(`${n}/`)) ? abs : rel;
+    return [...this.nestedRels(), ...this.unwalkedRels()].some((n) => rel.startsWith(`${n}/`)) ? abs : rel;
+  }
+
+  /** The links to folders the walk didn't go through (VV-D6), by their path in the vault: looked at, listed a level at
+   *  a time. */
+  private unwalkedRels(): string[] {
+    if (isListed(this.app.loc)) return [];
+    return this.app.graph.skipped.filter((s) => s.link?.dir).map((s) => s.rel);
   }
 
   /**
@@ -322,10 +331,11 @@ export class Explorer {
 
   /** The view at `dir` shows the vault open's own tree from there: its path in it ("" its top); else null. */
   private ownView(dir: string): string | null {
-    if (dir === this.app.loc.root) return "";
+    // Elsewhere (VV-D3): every folder listed a level at a time, wherever the view is.
     if (isListed(this.app.loc)) return null;
+    if (dir === this.app.loc.root) return "";
     const p = this.rowPath(dir);
-    return isAbsolute(p) || this.nestedRels().includes(p) ? null : p;
+    return isAbsolute(p) || this.nestedRels().includes(p) || this.unwalkedRels().includes(p) ? null : p;
   }
 
   treeRows(): TreeRow[] {
@@ -368,7 +378,7 @@ export class Explorer {
     const shown = entries.filter((e) => !e.name.startsWith("."));
     for (const e of shown.filter(isDir).sort(byName)) {
       const abs = join(dir, e.name);
-      if (abs === R) {
+      if (abs === R && !isListed(this.app.loc)) {
         out.push({
           kind: "root",
           path: R,
@@ -393,7 +403,7 @@ export class Explorer {
           root: { kind: "vault", abs, name: this.rootName(abs) },
           outside: true,
         });
-      else out.push({ kind: "dir", path: abs, name: e.name, depth, outside: true });
+      else out.push({ kind: "dir", path: abs, name: e.name, depth, outside: true, ...this.linkOf(e, abs, true) });
       if (this.expanded.has(abs)) this.outsideRows(abs, depth + 1, out);
     }
     // Its files as their vault lists them: auto, every text file but in a notes vault.
@@ -405,8 +415,28 @@ export class Explorer {
       const { group } = classify(abs, this.app.config.walk.extensions);
       if (group === "binary" || (group !== "note" && (mode === "notes" || (mode === "renderable" && group !== "data"))))
         continue;
-      out.push({ kind: "note", path: abs, name: e.name, depth, outside: true, ...(group !== "note" ? { group } : {}) });
+      out.push({
+        kind: "note",
+        path: abs,
+        name: e.name,
+        depth,
+        outside: true,
+        ...(group !== "note" ? { group } : {}),
+        ...this.linkOf(e, abs, false),
+      });
     }
+  }
+
+  /**
+   * A row listed a level at a time that is a link (VV-D6): where it leads, and — in Elsewhere, where every link asks —
+   * whether it's followed. Elsewhere's rows of another vault's folders say where they lead, nothing more: going in, that
+   * vault's own tree says the rest.
+   */
+  private linkOf(e: Dirent, abs: string, dir: boolean): Pick<TreeRow, "link"> {
+    if (!e.isSymbolicLink()) return {};
+    const target = linkTarget(abs);
+    const asks = isListed(this.app.loc) && linkState(abs, null, target) !== "followed";
+    return { link: { target, dir, ...(asks ? { reason: LINK_REASON.out } : {}) } };
   }
 
   /**
@@ -536,12 +566,17 @@ export class Explorer {
       return false;
     };
     const notes = [...graph.notes.keys(), ...[...unwalked].filter((p) => !folders.has(p) && !groups.has(p))];
-    const isDir = (p: string) => folders.has(p) || roots.has(p) || !!leftOut.get(p)?.dir;
+    const isDir = (p: string) => folders.has(p) || roots.has(p) || !!leftOut.get(p)?.dir || !!links.get(p)?.dir;
+    // The links the walk didn't go through (VV-D6): a second name for a folder of the vault, one not followed, one
+    // whose target isn't answering — rows of their own, saying where they lead.
+    const links = new Map(
+      graph.skipped.flatMap((x) => (x.link ? [[x.rel, { ...x.link, reason: x.reason }] as const] : [])),
+    );
     const under = (p: string) => !sub || p.startsWith(`${sub}/`);
     const d0 = sub ? sub.split("/").length : 0;
     const paths = [...notes, ...groups.keys()]
       .filter((p) => !graph.reached.has(p) || !inLeftOut(p))
-      .concat([...folders, ...roots.keys(), ...leftOut.keys()])
+      .concat([...folders, ...roots.keys(), ...leftOut.keys(), ...links.keys()])
       .filter(under)
       .sort((a, b) => {
         const da = a.split("/");
@@ -567,7 +602,11 @@ export class Explorer {
         if (!seen.has(dir) && visible) {
           seen.add(dir);
           const fresh = unwalked.has(dir) ? { unwalked: true } : {};
-          rows.push({ kind: "dir", path: dir, name: parts[i]!, depth: i - d0, ...fresh });
+          // A folder you follow a link into (VV-D6): walked as the vault's, its row saying where it leads.
+          const link = isLink(join(this.app.loc.root, dir))
+            ? { link: { target: linkTarget(join(this.app.loc.root, dir)), dir: true } }
+            : {};
+          rows.push({ kind: "dir", path: dir, name: parts[i]!, depth: i - d0, ...fresh, ...link });
         }
         if (!this.expanded.has(dir)) {
           visible = false;
@@ -588,6 +627,11 @@ export class Explorer {
         rows.push({ kind: "root", path: p, name, depth, root });
         // Unfolded in place (VV-D5): its folder listed a level at a time, its rows another vault's.
         if (this.expanded.has(p)) this.outsideRows(root.abs, parts.length - d0, rows);
+      } else if (links.has(p)) {
+        // A link the walk didn't go through (VV-D6); unfolded — looked at — listed a level at a time, never walked.
+        const link = links.get(p)!;
+        rows.push({ kind: link.dir ? "dir" : "note", path: p, name, depth, link });
+        if (link.dir && this.expanded.has(p)) this.outsideRows(join(this.app.loc.root, p), depth + 1, rows);
       } else if (!folders.has(p))
         rows.push({
           kind: "note",
@@ -596,6 +640,10 @@ export class Explorer {
           depth,
           ...(groups.has(p) ? { group: groups.get(p) } : {}),
           ...(unwalked.has(p) ? { unwalked: true } : {}),
+          // A file a link leads to — within the vault, or out and followed (VV-D6): saying where.
+          ...(isLink(join(this.app.loc.root, p))
+            ? { link: { target: linkTarget(join(this.app.loc.root, p)), dir: false } }
+            : {}),
         });
     }
     return rows;
@@ -614,6 +662,30 @@ export class Explorer {
 
   invalidateTree(): void {
     this.tree = null;
+  }
+
+  /**
+   * A link to a folder, opened (VV-D6): one not followed asks — follow it, just look, no — then does what `action`
+   * asked; a second name for a folder of the vault shows that folder. True when it took the action over.
+   */
+  private linkFirst(row: TreeRow, action: string): boolean {
+    const link = row.link!;
+    if (link.reason === LINK_REASON.within && link.target) {
+      // Its target by the vault's real path (where the link's is), shown by its path in the vault.
+      const rel = relative(linkScope(this.app.loc) ?? this.app.loc.root, link.target)
+        .split(sep)
+        .join("/");
+      this.app.message("info", `${row.name} is a second name for ${rel || "the vault's top"}`);
+      this.reveal(rel || ".", true);
+      return true;
+    }
+    const abs = this.rowAbs(row);
+    return this.app.following.gate(abs, () => {
+      this.invalidateTree();
+      const at = this.rows().findIndex((r) => r.path === this.rowPath(abs));
+      if (at >= 0) this.app.sidebar.selected = at;
+      this.action(action);
+    });
   }
 
   /** The explorer's rows: the tree, or while filtering the matching notes under their folders
@@ -722,6 +794,9 @@ export class Explorer {
     }
     const rows = this.rows();
     const row = rows[this.app.sidebar.selected];
+    // A link to a folder not followed asks first (VV-D6); a second name for one of the vault's goes to it.
+    if (row?.link?.dir && ["open", "expand", "open_tab", "zoom_in"].includes(action) && this.linkFirst(row, action))
+      return;
     // A folder, or the vault open's row in a view above it: unfolded (or folded, `toggle`) in place.
     const unfold = (toggle = false) => {
       if (!row) return;
@@ -856,6 +931,15 @@ export class Explorer {
   }
 }
 
+/** A link's row opened (VV-D6): what it leads to, once you say so. */
+export interface LinkRow {
+  /** Where it leads, by its real path; null when it leads nowhere. */
+  target: string | null;
+  dir: boolean;
+  /** Why the walk didn't go through it (`LINK_REASON`), or — listed a level at a time in Elsewhere — that it asks. */
+  reason?: string;
+}
+
 /** What an explorer operation acts on (18.x): a note or file, a folder, or a nested vault's folder. */
 export interface ExplorerItem {
   rel: string;
@@ -887,6 +971,8 @@ export interface TreeRow {
   /** The vault open's, listed from the disk where its walk hasn't been (yet): a folder it couldn't read, home's
    *  before its walk, a folder or file come since. */
   unwalked?: boolean;
+  /** A symlink (VV-D6): where it leads, and why the walk didn't go through it, when it didn't. */
+  link?: LinkRow;
 }
 
 /** Whether the explorer lists every folder from `from` down to `to`, inside it: none of them hidden — a busy folder

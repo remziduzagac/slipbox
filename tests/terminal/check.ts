@@ -2,7 +2,7 @@
 // covers — the reference set's areas (`examples/home/CASES.md`'s `###` headings) and the commands it runs for their
 // effect (TT-D4) — and what the checks share: reading the cursor's place, opening a note, leader keys, an explorer row.
 
-import { cpSync, readFileSync } from "node:fs";
+import { cpSync, mkdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import type { Session, SessionOptions } from "./session.ts";
 
@@ -148,6 +148,16 @@ export async function problemListed(s: Session, needle: string | RegExp, timeout
  */
 export function downloadsElsewhere(s: Session): void {
   cpSync(s.path("~/Downloads"), join(s.dir, "elsewhere"), { recursive: true, verbatimSymlinks: true });
+}
+
+/**
+ * The reference set's Downloads, copied beside home and given a `.slipbox/`, to `downloads/` in the check's folder: a
+ * vault of its own, walked and indexed — where what Elsewhere has no index for (backlinks, a folder watched whole) is
+ * checked on Downloads' files (`startAt: "downloads/stray-note.md"`).
+ */
+export function downloadsVault(s: Session): void {
+  cpSync(s.path("~/Downloads"), join(s.dir, "downloads"), { recursive: true, verbatimSymlinks: true });
+  mkdirSync(join(s.dir, "downloads", ".slipbox"), { recursive: true });
 }
 
 /** Leader sequences: space, then the keys. */

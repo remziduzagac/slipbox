@@ -75,9 +75,9 @@ else from the folder you run it in.
 
 A file under no marker in your home folder is home's: your home folder is a vault without a marker, its index leaving
 out hidden folders, `Downloads` and the like. The first command in home walks it, as far as its cap, and the walk is
-kept for the next. A folder outside every vault and outside home works too: it stands in for one of its own. `/` is
-never a vault: opened as a folder, it's listed a level at a time, never walked or indexed.
-[Links and vaults](links-and-vaults.md) explains vaults, home, folders outside them and names.
+kept for the next. A file outside home and every vault is in Elsewhere, which has no index: its notes are read and its
+folder listed, but what needs an index (`backlinks`, `search`, `index`, `tags`, `problems`) is refused, exit 5. `/` is
+never a vault. [Links and vaults](links-and-vaults.md) explains vaults, home, Elsewhere and names.
 
 `--root <folder>` says which vault to work in instead. It must name a vault (exit 3 otherwise). A note you name is
 looked for there. A file still belongs to its nearest vault. So a note in a vault nested inside `--root` belongs to that
@@ -165,7 +165,9 @@ The shapes below use a short notation:
 Exit code 5 also covers:
 
 - a note or stdin that isn't valid UTF-8 (never rewritten, so no byte is lost)
-- a read of a symlink leading out of the vault
+- a path through a link that isn't followed: one leading out of the vault or home, or any in Elsewhere. The command
+  line never follows a link on its own ([Links that lead out](links-and-vaults.md#links-that-lead-out))
+- what needs an index, asked of Elsewhere
 
 `diagnostics` exits with 1 when it shows an error. `uninstall` exits with 1 when it couldn't remove something.
 
@@ -350,7 +352,7 @@ backlinks, sha, bom, crlf, invalidUtf8}`:
 
 - `properties` is the front matter, or `null`.
 - `headings`, `links`, `unresolved` and `backlinks` are counts. `unresolved` counts the links that reach nothing.
-- `root` is the vault's path, `null` in a folder outside every vault.
+- `root` is the vault's path, `null` in Elsewhere.
 - `name` is the vault's name.
 
 ### `outline`
@@ -532,8 +534,7 @@ slipbox index --refresh
 - `--rebuild`: start again from nothing.
 - `--refresh [path]`: bring a vault's link index up to date now. Every file's size and time is checked, and every
   folder listed again. Without `path`, it's this vault's index. With `path`, it's the index of the vault holding `path`,
-  opened before or not. In home, your home folder is walked again. A path outside every vault and outside home means
-  the folder it's in, standing in for one.
+  opened before or not. In home, your home folder is walked again. A path in Elsewhere is exit 5: it has no index.
 - `--home`: run the background index of your home folder now, in the foreground. It indexes home's own notes, then
   finds the vaults under your home folder and indexes each, so their links count as backlinks of the vaults they reach.
   With `--budget <ms>`, it stops after that long, and carries on from there next time. The default, 0, is the whole
@@ -544,7 +545,7 @@ With `--json`, the data is `{path, rebuilt, indexed, removed, files, ms}`. With 
 `{root, found, indexed, left, started, finished, home{indexed, notes, capped}}`: `home` says whether home's own index is
 built this pass, its notes, and `notes` or `folders` when its cap stopped it short.
 
-`/`, a folder listed a level at a time, has no index. `index` there is exit 5.
+Elsewhere has no index. `index` there is exit 5.
 
 ## Changing notes
 
@@ -552,7 +553,8 @@ built this pass, its notes, and `notes` or `folders` when its cap stopped it sho
 
 - atomically, never half-written
 - keeping its byte order mark and its line endings
-- only inside the note's vault, by its real path (a symlinked folder leading out is refused)
+- only inside the note's vault, by its real path: a link leading out is refused, even one you follow. In home, a
+  link you follow is written through, and in Elsewhere, one you follow
 - only where the vault's notes are, never in `.slipbox/`, `.git/`, `node_modules` or a hidden folder (unless you named a
   note there)
 - never a binary file
@@ -1196,11 +1198,10 @@ links     markdown links, relative, with .md — style: the notes, 100% of 382 l
 ```
 
 With `--json`, the data is `{version, release, root, mode, name, key, markerVersion, config{user, sources[], theme},
-cache, state, scratch, notes, index{…, written, reached}, background{…}, search{engine, index}, skipped[{rel, reason}],
-folder, links, stale[]}`:
+cache, state, scratch, notes, index{…, written, reached}, background{…}, search{engine, index}, skipped[{rel, reason,
+link}], folder, links, stale[]}`:
 
-- `mode` is `root` for a vault, `home` for your home folder's, and `folder` for a folder outside every vault, standing
-  in for one.
+- `mode` is `root` for a vault, `home` for your home folder's, and `folder` for Elsewhere.
 - In home, `index` also has `walked`, when home was last walked (`null`: not yet, its top folder alone), and `capped`,
   `notes` or `folders` when home's cap stopped its walk short, else `null`.
 - `release` is `null` when slipbox runs from its source.
@@ -1209,7 +1210,8 @@ folder, links, stale[]}`:
 - `links` is the convention, `{style, path, extension}`. Each of these is `{value, source, why}`. `source` is `setting`,
   `tool`, `notes` (with `share`, a percentage) or `default`.
 - `root` is the vault's path.
-- `skipped` lists what the walk left out, and why (too large, a symlink out of the vault, a nested vault).
+- `skipped` lists what the walk left out, and why (too large, a link not followed, a nested vault). A link has
+  `link`, `{target, dir}`: where it leads, and whether that's a folder.
 
 ### `init`
 
@@ -1276,7 +1278,7 @@ slipbox name journal
 These are refused (exit 5):
 
 - a name a different folder has here
-- a folder outside every vault (`init` makes it a vault first)
+- Elsewhere (`init` makes its folder a vault first)
 - a `.slipbox/config.toml` whose `[vault]` table the edit can't follow (edit it by hand)
 
 A clone may take its repository's name, as `init --name` may give it. A copy of the repository is no different folder
@@ -1411,8 +1413,8 @@ The scratch is a Markdown file per vault. You, your editor or an agent collect r
 agent. You read it in the screen with `space s s` ([The scratch](editing.md#the-scratch)).
 
 By default, the scratch is kept in slipbox's state, not among your notes. [`capture.location`](configuration.md)
-`= "root"` keeps it in the vault, as [`capture.file`](configuration.md) names it. A folder outside every vault always
-has its scratch in slipbox's state.
+`= "root"` keeps it in the vault, as [`capture.file`](configuration.md) names it. Elsewhere always has its scratch in
+slipbox's state, one for the machine.
 
 [Working with agents](../guides/agents.md) shows the scratch in use, and nvim keybindings that capture.
 

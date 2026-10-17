@@ -13,7 +13,7 @@ import { listThemes } from "../core/theme/index.ts";
 import { loadSession, PositionStore } from "../core/position.ts";
 import { frontmatterFindings, rootTypes } from "../core/diagnostics.ts";
 import { backgroundStatus, describeBackground } from "../core/autoindex.ts";
-import { rootLabel, tildePath } from "../core/names.ts";
+import { ELSEWHERE, rootLabel, tildePath } from "../core/names.ts";
 import { readVaultVersion } from "../core/vault.ts";
 import { describeCap } from "../core/home.ts";
 import { flag } from "./args.ts";
@@ -52,7 +52,7 @@ export const INFO_COMMANDS: Record<string, Handler> = {
       version: VERSION,
       // A release build's repository and platform (14.2); null: run from source, or built by hand.
       release: RELEASE,
-      // The vault (21.10): its path — a folder outside every vault opened, that folder's — and its name, when it
+      // The vault (21.10): its path — in Elsewhere, the folder opened's — and its name, when it
       // has one.
       root: s.loc.root,
       // "root" where the code says vault: the JSON's word since DF-D9, kept for the agents and scripts that read it;
@@ -92,7 +92,7 @@ export const INFO_COMMANDS: Record<string, Handler> = {
     const human = [
       `slipbox   ${VERSION}${RELEASE ? ` (${RELEASE.target}, released from ${RELEASE.repo})` : ""}`,
       data.mode === "folder"
-        ? `folder    ${data.root} (outside every vault)`
+        ? `vault     ${ELSEWHERE} — ${data.root} (outside home and every vault: no index)`
         : data.mode === "home"
           ? `vault     ${data.root} (home: its notes outside every other vault)`
           : `vault     ${data.root}${data.markerVersion ? ` (marker v${data.markerVersion})` : ""}`,
@@ -165,7 +165,7 @@ export const INFO_COMMANDS: Record<string, Handler> = {
       [
         "vault",
         s.loc.mode === "folder"
-          ? `none (${tildePath(s.loc.root)} is outside every vault)`
+          ? `${ELSEWHERE} (${tildePath(s.loc.root)} is outside home and every vault)`
           : s.loc.mode === "home"
             ? "home (~)"
             : rootLabel(s.loc),

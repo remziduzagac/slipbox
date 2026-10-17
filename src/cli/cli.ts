@@ -17,11 +17,11 @@ import { lookupFolder } from "../core/folders.ts";
 import { isPointer, parsePointer, resolvePointer } from "../core/pointer.ts";
 import { pathLink } from "../core/links.ts";
 import { sanitize, UNSAFE } from "../core/sanitize.ts";
-import { findVaultRoot, folderAt, isVaultRoot, locateVault, setRootMarkers, VaultError } from "../core/vault.ts";
+import { elsewhereAt, findVaultRoot, isVaultRoot, locateVault, setRootMarkers, VaultError } from "../core/vault.ts";
 import { setTrustedRoots } from "../core/trust.ts";
 import { type Args, flag, has, parseArgs, UsageError, VALUED } from "./args.ts";
 import { VERSION } from "../version.ts";
-import { EXIT, CliError, type Io, Session, type Handler } from "./common.ts";
+import { EXIT, CliError, type Io, Session, type Handler, probeLinks } from "./common.ts";
 import { RENDER_COMMANDS } from "./render.ts";
 import { READING_COMMANDS } from "./reading.ts";
 import { WRITING_COMMANDS } from "./writing.ts";
@@ -138,7 +138,7 @@ href, the relative path a link there carries. After --, nothing is an option:
 slipbox read -- -dash.md names a note that starts with a dash.
 Exit codes: 0 ok, 1 error, 2 usage, 3 not found, 4 ambiguous (a link; several nvims for send),
 5 refused (--if-unchanged, a write outside the vault or over an existing note, invalid UTF-8,
-  a read of a symlink leading out of the vault).
+  a link not followed, an index asked of Elsewhere).
 `;
 
 export const CLI_COMMANDS = new Set([
@@ -316,7 +316,7 @@ export async function runCli(argv: string[], io: Io): Promise<number> {
     }
     // init makes the vault: opening the folder as one first would name it before --name could.
     const loc =
-      command === "init" ? folderAt(io.cwd) : locateVault({ root: flag(args, "root"), path: pathArg, cwd: io.cwd });
+      command === "init" ? elsewhereAt(io.cwd) : locateVault({ root: flag(args, "root"), path: pathArg, cwd: io.cwd });
     session = new Session(args, loc, io);
     const handler = HANDLERS[command];
     if (!handler) throw new UsageError(`unknown command: ${command} (see slipbox help)`);
@@ -334,6 +334,8 @@ export async function runCli(argv: string[], io: Io): Promise<number> {
           `--${name} isn't an option of ${command}${own.length ? ` (it takes ${own.map((f) => `--${f}`).join(", ")})` : ""}`,
         );
     }
+    // Its followed links' targets asked whether they answer, before anything is read through them (VV-D6).
+    await probeLinks(session);
     const result = await handler(session, rest);
     const stale = command === "init" ? [] : session.stale();
     if (json) {

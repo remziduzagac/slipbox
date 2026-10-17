@@ -137,7 +137,7 @@ export class RepoView {
       const seen = new Set(repos.map((r) => r.key));
       const rest = (all ?? []).filter((r) => !seen.has(r.key) && r.key !== own && (!q || match(q, r.name)));
       if (rest.length) {
-        rows.push({ kind: "heading", section: "home", label: `Elsewhere in home (${rest.length})` });
+        rows.push({ kind: "heading", section: "home", label: `More in home (${rest.length})` });
         if (!p.folded.has("home") || q) for (const r of this.ordered(rest)) rows.push(...this.repoRows(r));
       }
     }

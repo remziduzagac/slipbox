@@ -11,7 +11,7 @@ import type { Glyphs } from "../core/glyphs.ts";
 import { cacheDir, vaultKey } from "../core/paths.ts";
 import type { Role } from "../core/theme/theme.ts";
 import { isInside } from "../core/vault.ts";
-import { isBusyFolder } from "../core/walk.ts";
+import { isBusyFolder, LINK_REASON } from "../core/walk.ts";
 import type { App } from "./app.ts";
 import type { TreeRow } from "./explorer.ts";
 
@@ -50,6 +50,8 @@ export const INDEX_ROLE: Record<IndexState, Role> = {
 export interface RowMarks {
   /** What describes the row, drawn dimmed between its name and its marks: a vault's branch, where a link points. */
   describe?: string;
+  /** It cut to `room` columns, when the row cuts it its own way (a link's place from its front, its state kept). */
+  fit?: (room: number) => string;
   /** Its index's state, in the last column. */
   index?: IndexState;
 }
@@ -91,6 +93,7 @@ export class Marks {
     const out: RowMarks = {};
     const describe = this.describe(row, f);
     if (describe) out.describe = describe;
+    if (row.link) out.fit = (room) => this.app.following.describe(row, room) ?? "";
     const index = this.index(row, f);
     if (index) out.index = index;
     return out;
@@ -98,10 +101,11 @@ export class Marks {
 
   /**
    * What describes the row (VV-D9): a vault's branch when it's a repository's top — a worktree's after ⎇, since every
-   * worktree has its repository's name and the branch is what tells them apart (17.19). A link's target goes here too
-   * (VV-D6).
+   * worktree has its repository's name and the branch is what tells them apart (17.19); a link's target, and whether
+   * it's followed (VV-D6: `→ /mnt/disk/data  not followed`).
    */
-  private describe(_row: TreeRow, f: Facts): string | undefined {
+  private describe(row: TreeRow, f: Facts): string | undefined {
+    if (row.link) return this.app.following.describe(row) ?? undefined;
     return f.vault?.branch ?? undefined;
   }
 
@@ -109,6 +113,9 @@ export class Marks {
   private index(row: TreeRow, f: Facts): IndexState | undefined {
     if (f.unreadable) return "unreadable";
     if (f.broken) return "problem";
+    // A link the walk didn't go through (VV-D6): not indexed — not followed, or its target not answering; a second
+    // name for a folder of the vault is that folder's.
+    if (row.link?.reason) return row.link.reason === LINK_REASON.within ? undefined : "not-indexed";
     const app = this.app;
     const home = app.graph.home;
     // The vault open, in a view above it: indexing while its index is built (home's walk first, VV-D2).
@@ -157,6 +164,12 @@ export class Marks {
     let f = this.facts.get(row);
     if (f) return f;
     const abs = this.app.explorer.rowAbs(row);
+    // A link the walk didn't go through (VV-D6): what it leads to is never gone near here — the walk said what it is.
+    if (row.link?.reason) {
+      f = { unreadable: false, broken: !row.link.target, big: false };
+      this.facts.set(row, f);
+      return f;
+    }
     f = { unreadable: false, broken: false, big: false };
     if (row.kind === "note") {
       try {

@@ -9,6 +9,7 @@ import { leadsOut, peekAt } from "./peek.ts";
 import { notesOfType, ofType, type TypedNote } from "../core/doctypes.ts";
 import { type Scope, SCOPES, searchOthers } from "../core/scope.ts";
 import { isListed } from "../core/vault.ts";
+import { ELSEWHERE } from "../core/names.ts";
 import { frontmatterFindings, rootTypes } from "../core/diagnostics.ts";
 import type { App, View, ListItem, ListOverlay, PromptOverlay } from "./app.ts";
 import type { Layout } from "../core/layout/ir.ts";
@@ -112,6 +113,12 @@ export class Search {
 
   /** The search list (6.5): notes ranked by the words as they're typed; enter opens one at its match. */
   open(seed = ""): void {
+    // Elsewhere has no index (VV-D3): nothing to search across, said so rather than shown empty.
+    if (this.app.loc.mode === "folder")
+      return this.app.message(
+        "info",
+        `${ELSEWHERE} has no index to search — search finds in a vault or home: space v v goes into one`,
+      );
     let list: ListOverlay | null = null;
     // By root (20.16, 21.10): here; ctrl+a widens to the folders linked to or from it, then to every one.
     let scope: Scope = "here";

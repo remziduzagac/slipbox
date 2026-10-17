@@ -173,8 +173,14 @@ function drawAllProblems(app: App, c: Canvas, rect: Rect, bg: Color | null, geo:
   const g = app.glyphs;
   geo.problemsPage = rect.h;
   panelScroll(s, rows.length, rect.h);
-  if (!rows.length)
-    drawText(c, rect.x + 2, rect.y, s.filter ? "no matches" : "no problems", roleStyle(theme, "dim", bg), rect.w - 2);
+  // Elsewhere has no index (VV-D3): said, not shown as nothing wrong.
+  const none =
+    app.loc.mode === "folder"
+      ? "Elsewhere has no index: no check of its notes' links"
+      : s.filter
+        ? "no matches"
+        : "no problems";
+  if (!rows.length) drawText(c, rect.x + 2, rect.y, none, roleStyle(theme, "dim", bg), rect.w - 2);
   const cols = rect.w - 1;
   for (let i = 0; i < rect.h; i++) {
     const at = s.scroll + i;

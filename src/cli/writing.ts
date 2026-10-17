@@ -18,7 +18,8 @@ import {
 } from "../core/footnotes.ts";
 import { parseNoteFile } from "../core/readers.ts";
 import { classify, extensionOf, isKnownExtension, noteFormat } from "../core/filetypes.ts";
-import { landsInside, WriteRefused, writeNote } from "../core/fsutil.ts";
+import { WriteRefused, writeNote } from "../core/fsutil.ts";
+import { blockingLink, writesThrough } from "../core/symlinks.ts";
 import { expandReplacement, findAll, firstPerLine, replaceMatches } from "../core/replace.ts";
 import { planReplace } from "../core/replace-files.ts";
 import { listTasks, toggleTask } from "../core/tasks.ts";
@@ -73,8 +74,8 @@ export const WRITING_COMMANDS: Record<string, Handler> = {
           : join(s.loc.root, noteArg);
       // A note unless the name says otherwise: `config.toml`, `run.py` keep their extension (16.4).
       const abs = isKnownExtension(extensionOf(base)) ? base : `${base}.md`;
-      // Outside by its path, or by a symlinked folder on the way: checked before any folder is made.
-      if (!isInside(s.loc.root, abs) || !landsInside(s.loc.root, abs))
+      // Outside by its path: checked before any folder is made — through a link, by checkWritable, next (VV-D6).
+      if (!isInside(s.loc.root, abs))
         throw new CliError(`${noteArg} is outside the vault (${s.loc.root})`, EXIT.refused);
       rel = relative(s.loc.root, abs);
       checkWritable(s, abs);
@@ -347,7 +348,7 @@ export const WRITING_COMMANDS: Record<string, Handler> = {
   mkdir(s, rest) {
     const arg = requireArg(rest, "path");
     const abs = arg.startsWith("/") ? arg : /^\.\.?\//.test(arg) ? join(s.io.cwd, arg) : join(s.loc.root, arg);
-    if (!isInside(s.loc.root, abs) || !landsInside(s.loc.root, abs))
+    if (!isInside(s.loc.root, abs) || blockingLink(s.loc, abs) || !writesThrough(s.loc, abs))
       throw new CliError(`${arg} is outside the vault (${s.loc.root})`, EXIT.refused);
     const rel = relative(s.loc.root, abs);
     if (existsSync(abs)) throw new CliError(`${rel} already exists`, EXIT.refused, { path: rel });

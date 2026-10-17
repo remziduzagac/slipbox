@@ -13,13 +13,15 @@ import { type Scope, SCOPES, searchScoped } from "../core/scope.ts";
 import { homeFolder, isListed, locationAt, recordLocation, configFilesFor } from "../core/vault.ts";
 import { describeCap, walkHomeNow } from "../core/home.ts";
 import { flag, has, UsageError } from "./args.ts";
-import { EXIT, CliError, type Session, type Handler, wholeFlag } from "./common.ts";
+import { EXIT, CliError, type Session, type Handler, needsIndex, wholeFlag } from "./common.ts";
+import { ELSEWHERE } from "../core/names.ts";
 
 /** Search (6.x), and its index brought up to date. */
 export const SEARCH_COMMANDS: Record<string, Handler> = {
   // Search (6.x): ranked by the words, from the index (caught up first) or a scan of the files.
   search(s, rest) {
     if (!rest.length) throw new UsageError("missing what to search for (search <words…>)");
+    needsIndex(s, "search across it");
     const query = rest.join(" ");
     const limit = wholeFlag(s, "limit", 20, 1, 500);
     // By root (20.16, 21.10): here by default, so an agent's results are predictable; linked, all.
@@ -64,7 +66,8 @@ export const SEARCH_COMMANDS: Record<string, Handler> = {
       if (!existsSync(at)) throw new CliError(`no such file or folder: ${rest[0]}`, EXIT.notFound);
       // Its vault — a marker's, or home (VV-D2) — else the plain folder it's in, or this one's (20.22): its own index.
       const loc = !rest[0] ? s.loc : locationAt(statSync(at).isDirectory() ? at : dirname(at));
-      if (isListed(loc)) throw new CliError(`${loc.root} is listed a folder at a time, never indexed`, EXIT.refused);
+      if (isListed(loc))
+        throw new CliError(`${ELSEWHERE} has no index: ${loc.root} is outside home and every vault`, EXIT.refused);
       const root = loc.root;
       recordLocation(loc); // known on this machine from now on, as reaching it would make it (17.6)
       const t = performance.now();
@@ -120,7 +123,8 @@ export const SEARCH_COMMANDS: Record<string, Handler> = {
         human: `home ${p.root}: ${p.home ? `${p.homeNotes} note${p.homeNotes === 1 ? "" : "s"} of its own indexed` : "being walked"}, ${p.found} vault${p.found === 1 ? "" : "s"} found, ${p.indexed} indexed${done ? ` — pass done ${p.passFinished!.slice(0, 16).replace("T", " ")}` : p.home ? ` — ${left} vault${left === 1 ? "" : "s"} left` : ""}${p.capped ? `\n${describeCap(p.capped)}` : ""}\n`,
       };
     }
-    if (isListed(s.loc)) throw new CliError(`${s.loc.root} is listed a folder at a time, never indexed`, EXIT.refused);
+    if (isListed(s.loc))
+      throw new CliError(`${ELSEWHERE} has no index: ${s.loc.root} is outside home and every vault`, EXIT.refused);
     const idx = SearchIndex.open(s.loc);
     if (!idx) throw new CliError("the search index can't be opened", 1);
     try {

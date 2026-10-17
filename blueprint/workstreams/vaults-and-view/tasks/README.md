@@ -5,10 +5,10 @@ VV-T2, VV-T4 and VV-T7 in parallel; VV-T3 and VV-T6 after VV-T2; VV-T5 and VV-T8
 
 - [VV-T1](archive/words.md): Vault, home and Elsewhere, in everything users read.
 - [VV-T2](archive/home.md): Home, a vault without a marker.
-- [VV-T3](elsewhere.md): No-vault, shown as Elsewhere.
+- [VV-T3](archive/elsewhere.md): No-vault, shown as Elsewhere.
 - [VV-T4](archive/view.md): The explorer as one tree, and the view.
 - [VV-T5](archive/marks.md): A row's marks, and busy folders listed.
-- [VV-T6](symlinks.md): Links followed only when the user says so.
+- [VV-T6](archive/symlinks.md): Links followed only when the user says so.
 - [VV-T7](archive/peek.md): The peek.
 - [VV-T8](archive/git-panel.md): The git panel following the vault. Done.
 - [VV-T9](docs.md): The docs, the screenshots, and consolidation.

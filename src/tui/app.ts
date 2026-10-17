@@ -15,7 +15,8 @@ import { onLoaded } from "../core/lazy.ts";
 import { classify, extensionOf } from "../core/filetypes.ts";
 import { accessSync, appendFileSync, constants as fsConstants, statSync } from "node:fs";
 import { dirname, join, relative } from "node:path";
-import { climbsOut, landsInside, WriteRefused, writeNote } from "../core/fsutil.ts";
+import { climbsOut, WriteRefused, writeNote } from "../core/fsutil.ts";
+import { linkSaid, writesThrough } from "../core/symlinks.ts";
 import { writeDirty } from "../core/stale.ts";
 import { placeAt, stopInsert } from "./editing.ts";
 import { newVimState } from "./vim.ts";
@@ -28,7 +29,7 @@ import type { Glyphs } from "../core/glyphs.ts";
 import type { Graph } from "../core/graph.ts";
 import { lintCommand } from "../core/lint.ts";
 import { type Layout, posOfSrc, srcAt } from "../core/layout/ir.ts";
-import { stateDir } from "../core/paths.ts";
+import { slipboxOwn, stateDir } from "../core/paths.ts";
 import { type Anchor, type CursorAnchor, loadSession, PositionStore, TOP } from "../core/position.ts";
 import type { Role, Theme } from "../core/theme/index.ts";
 import { Reach } from "../core/reach.ts";
@@ -36,7 +37,7 @@ import { type Peek, vaultGraph } from "./peek.ts";
 import type { DiffWindow } from "./diffview.ts";
 import type { MergeState } from "./mergescreen.ts";
 import type { Review } from "./review.ts";
-import { rootLabel, tildePath } from "../core/names.ts";
+import { ELSEWHERE, rootLabel, tildePath } from "../core/names.ts";
 import { configFilesFor, isInside, vaultAt, vaultOf, recordLocation, type VaultLocation } from "../core/vault.ts";
 import { VaultFeed } from "../core/vault-feed.ts";
 import type { VaultWatcher } from "../core/watch.ts";
@@ -82,6 +83,7 @@ import { Saving } from "./saving.ts";
 import { Vaults, carried } from "./vaults.ts";
 import { Renaming } from "./renaming.ts";
 import { Speller } from "./spelling.ts";
+import { Following } from "./following.ts";
 
 export interface Host {
   requestRender(): void;
@@ -610,6 +612,8 @@ export class App {
   readonly vaults = new Vaults(this);
   /** Renames and their previews. */
   readonly renaming = new Renaming(this);
+  /** Links out of the vault, followed only when you say so (VV-D6). */
+  readonly following = new Following(this);
 
   constructor(opts: AppOptions) {
     this.loc = opts.loc;
@@ -687,7 +691,13 @@ export class App {
     if (unreadable) this.message("warn", `can't read ${tildePath(opened!)}: ${unreadable}`);
     else if (opts.folder && opts.folder !== this.loc.root && isInside(this.loc.root, opts.folder))
       this.explorer.zoomTo(opts.folder);
-    if (!this.tabs.length && !unreadable) this.message("info", `no notes in ${this.loc.root}`);
+    if (!this.tabs.length && !unreadable)
+      this.message(
+        "info",
+        this.loc.mode === "folder"
+          ? `${ELSEWHERE} — ${tildePath(this.loc.root)}: open a file from the explorer`
+          : `no notes in ${this.loc.root}`,
+      );
     // Moved here by hand, its state along (21.8): the links the move broke, their fix previewed (20.17).
     if (carriedFrom) this.vaults.offerMovedRelink();
     // A second copy of this folder (21.6): which one links open, asked once.
@@ -709,6 +719,8 @@ export class App {
       this.watch.indexInBackground();
       this.git.refresh();
       this.watch.startAutoIndex();
+      // The followed links' targets asked whether they answer, in the background (VV-D6): walked once they do.
+      this.following.probe();
       this.loadCodeGrammars();
     }
   }
@@ -817,11 +829,17 @@ export class App {
     return notes[0] ?? null;
   }
 
+  /** A vault-relative or absolute path, absolute. */
+  absOf(pathOrRel: string): string {
+    return pathOrRel.startsWith("/") ? pathOrRel : join(this.loc.root, pathOrRel);
+  }
+
   /** Buffer for a vault-relative or absolute path. Keyed by path, not graph membership. */
   buffer(pathOrRel: string): NoteBuffer | null {
     const abs = pathOrRel.startsWith("/") ? pathOrRel : join(this.loc.root, pathOrRel);
     const relRaw = relative(this.loc.root, abs);
-    const inside = !climbsOut(relRaw);
+    // Elsewhere (VV-D3) is one place, wherever its files are: each by its whole path.
+    const inside = this.loc.mode !== "folder" && !climbsOut(relRaw);
     const key = inside ? relRaw : abs;
     let buf = this.buffers.get(key);
     if (!buf) {
@@ -833,10 +851,11 @@ export class App {
         this.message("warn", `${relRaw || abs} is a binary file; slipbox opens text`);
         return null;
       }
-      // A path in the vault that a symlink leads out of: not a file of the vault (the walk leaves
-      // it out, the CLI refuses it), so nothing from outside is read through it.
-      if (inside && !landsInside(this.loc.root, abs)) {
-        this.message("warn", `${relRaw} points outside the vault; not opening it`);
+      // A path a link not followed leads to (VV-D6): nothing is read through it — the walk leaves it out, the CLI
+      // refuses it — until you say so, opening it.
+      const blocked = this.following.blocked(abs);
+      if (blocked) {
+        this.message("warn", `${linkSaid(blocked.link, blocked.target)} isn't followed — open it to choose`);
         return null;
       }
       buf = new NoteBuffer(rel, abs, key);
@@ -859,6 +878,11 @@ export class App {
         buf.readOnly = `${tildePath(buf.key)} is read-only: ${locked}`;
         this.message("info", buf.readOnly);
       }
+      // Read through a link you're only looking at (VV-D6): read-only, and never indexed — it isn't the vault's.
+      const look = buf.elsewhere ? null : this.following.lookedAt(abs);
+      if (look) {
+        buf.readOnly = `just looking: ${tildePath(look)} isn't followed — read-only`;
+      }
       this.buffers.set(key, buf);
     }
     return buf;
@@ -869,10 +893,16 @@ export class App {
    * being going there, marked with its vault's name, its links read in its vault. The scratch is slipbox's own.
    */
   private markElsewhere(buf: NoteBuffer): void {
-    if (buf.abs === this.scratch.location().path) return;
-    // Its vault: a marker's, or home (VV-D2).
+    if (buf.abs === this.scratch.location().path || slipboxOwn(buf.abs)) return;
+    // Its vault: a marker's, or home (VV-D2); else Elsewhere's (VV-D3), read-only here as another vault's file is.
     const root = vaultOf(buf.abs);
-    if (!root || root === this.loc.root) return;
+    if (!root) {
+      if (this.loc.mode === "folder") return;
+      buf.elsewhere = { vault: ELSEWHERE, graph: null, rel: null };
+      buf.readOnly = `read-only here: ${ELSEWHERE}'s — o goes there, to edit it`;
+      return;
+    }
+    if (root === this.loc.root) return;
     const label = rootLabel(vaultAt(root));
     const graph = vaultGraph(this, root);
     buf.elsewhere = { vault: label, graph, rel: graph ? relative(root, buf.abs) : null };
@@ -927,6 +957,7 @@ export class App {
 
   openInNewTab(path: string, anchor?: Anchor): void {
     if (this.vaults.intoOther(path, anchor)) return;
+    if (this.following.gate(this.absOf(path), () => this.openInNewTab(path, anchor))) return;
     const buf = this.buffer(path);
     if (!buf) return;
     this.history.touchRecent(buf.key);
@@ -944,6 +975,7 @@ export class App {
   /** Switch to a tab already showing this note, or open it in a new one. */
   openOrSwitchTab(path: string): void {
     if (this.vaults.intoOther(path)) return;
+    if (this.following.gate(this.absOf(path), () => this.openOrSwitchTab(path))) return;
     const buf = this.buffer(path);
     if (!buf) return;
     const i = this.tabs.findIndex((t) => t.views.some((v) => v.buf === buf));
@@ -964,6 +996,7 @@ export class App {
     }
     if (!view) return this.openInNewTab(path, anchor);
     if (this.vaults.intoOther(path, anchor)) return;
+    if (this.following.gate(this.absOf(path), () => this.open(path, anchor))) return;
     const buf = this.buffer(path);
     if (!buf) return;
     // A pinned tab keeps its note: another one opens in a new tab.
@@ -1012,11 +1045,13 @@ export class App {
 
   /** Write a buffer's file and take the result back in; false (with a message) if refused. */
   writeBuffer(buf: NoteBuffer, content: string | Uint8Array, saving = false): boolean {
-    // A vault note stays inside the vault; a file from outside it (the scratch) inside its folder.
+    // A vault note stays inside the vault; a file from outside it (the scratch) inside its folder. Through a link
+    // you follow, home's and Elsewhere's are written where it leads; a vault's never out of it (VV-D6).
     const root = buf.rel !== null ? this.loc.root : dirname(buf.abs);
+    const through = this.loc.mode !== "vault" && !buf.elsewhere && writesThrough(this.loc, buf.abs);
     let written: ReturnType<typeof writeNote>;
     try {
-      written = writeNote(root, buf.abs, content);
+      written = writeNote(root, buf.abs, content, { through });
     } catch (err) {
       this.message(
         "error",

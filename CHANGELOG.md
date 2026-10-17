@@ -8,6 +8,15 @@ The format is [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.1.0/); wh
 
 ### Added
 
+- Links that lead out of a vault, or out of your home folder, are followed only when you say so. The explorer shows
+  such a link with where it leads, and `not followed`. Opening it asks: follow it (read and indexed as part of the
+  vault, and in home written through), just look (read-only, this once, nothing indexed), or no. The answer is kept for
+  that link and where it leads, in slipbox's state, never in the vault, and asked again when the link leads elsewhere.
+  In a vault, nothing is ever written through a link to outside it. When the link leads to a hidden folder or outside
+  your home folder, the question says that agents will see what's followed. A followed link on a disk that doesn't
+  answer within three seconds is given up on for now. On the command line, a path through a link not followed is
+  refused (exit 5). A link within its vault or home, like the ones `stow` makes, is never asked about.
+
 - Keys you already know, a page for those who don't use vim: the arrows and the shortcuts of other editors that slipbox
   has, the four keys that are new, and where slipbox's keys differ. The README, the quick start and getting started
   give the familiar key first.
@@ -58,6 +67,12 @@ The format is [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.1.0/); wh
 
 ### Changed
 
+- A file outside your home folder and outside every vault is in Elsewhere: one place for the whole machine, with one
+  set of tabs, your own settings, and no index. The status line names it `Elsewhere`. A folder there is listed a level
+  at a time instead of walked and indexed, and backlinks, search, tags and `slipbox problems` say Elsewhere has no
+  index (exit 5 on the command line). Choosing a file of Elsewhere's from a vault (`:e`, the explorer, `o` in a peek)
+  goes into Elsewhere instead of opening it beside the vault's notes. `slipbox info` and `stat` say `Elsewhere`; the
+  JSON's `mode` is still `folder`.
 - **Breaking:** `space g` opens the git panel, as `space e` the explorer, and its keys act there (`[keys.git]`). The
   keys under `space g` are gone: `space g c`, `d`, `w` and `m` are `:changes`, `:diff`, `:worktrees` and
   `:merge-review`, and the others are in the panel and the palette (Branches, Who changed this line, This file's

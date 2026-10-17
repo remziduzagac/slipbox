@@ -38,7 +38,7 @@ import { type GitChange, gitChanges } from "../core/gitsigns.ts";
 import { describeBreak, type MergeBreak, type MergeReview, reviewMerge } from "../core/mergereview.ts";
 import { openDiff } from "./diffview.ts";
 import { operationStatus } from "./rebase.ts";
-import { tildePath } from "../core/names.ts";
+import { ELSEWHERE, tildePath } from "../core/names.ts";
 import { checkoutAt, isInside, isVaultRoot, rootAt, rootMarkers } from "../core/vault.ts";
 import { isTrusted } from "../core/trust.ts";
 import type { Head } from "../core/vault-feed.ts";
@@ -582,7 +582,8 @@ export class Git {
     const op = this.app.loc.mode !== "folder" ? operationStatus(this.app) : null;
     const b = this.app.loc.mode !== "folder" ? (op?.branch ?? this.branch()) : null;
     const named = this.app.loc.mode === "vault" ? this.app.loc.name : null;
-    const where = named ?? tildePath(this.app.loc.root);
+    // Elsewhere (VV-D3) by its name: it's one place, wherever its folder.
+    const where = named ?? (this.app.loc.mode === "folder" ? ELSEWHERE : tildePath(this.app.loc.root));
     const t = this.track;
     const track = b && t?.branch === b ? trackText(t, this.app.glyphs.gitAhead, this.app.glyphs.gitBehind) : "";
     const after =

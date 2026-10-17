@@ -64,16 +64,22 @@ export class WriteRefused extends Error {}
 
 /**
  * Write a note in place (plan 4.6, 7.5): atomically, through a symlink to the file it points at
- * (the link stays a link), and never outside `root` — a symlink out of the vault is refused.
+ * (the link stays a link), and never outside `root` — a symlink out of the vault is refused, unless
+ * the caller vouches for the links on its way (`through`: home's followed links, Elsewhere's; VV-D6).
  */
-export function writeNote(root: string, path: string, content: string | Uint8Array): Stamp {
+export function writeNote(
+  root: string,
+  path: string,
+  content: string | Uint8Array,
+  opts: { through?: boolean } = {},
+): Stamp {
   const target = realTarget(path);
   let realRoot = root;
   try {
     realRoot = realpathSync(root);
   } catch {}
   const rel = relative(realRoot, target);
-  if (rel === ".." || rel.startsWith(`..${sep}`) || isAbsolute(rel))
+  if (!opts.through && (rel === ".." || rel.startsWith(`..${sep}`) || isAbsolute(rel)))
     throw new WriteRefused(`${path} resolves outside the vault (${target}) — not writing there`);
   return atomicWrite(target, content);
 }

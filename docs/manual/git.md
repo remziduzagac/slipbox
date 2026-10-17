@@ -621,7 +621,7 @@ attention:
 4. clean
 
 A worktree is listed under its repository, as one. In a folder of home, the repositories elsewhere in home are folded
-and counted under **Elsewhere in home**.
+and counted under **More in home**.
 
 Each says its state at its end: its uncommitted files (`✎3`), ahead of its upstream and behind it, or `clean`. git is
 asked only about the rows on screen, in the background, and again when you open the panel.

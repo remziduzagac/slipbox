@@ -158,8 +158,8 @@ slipbox link ideas/coffee --from inbox      # a link to write, the way this fold
 
 ## Hand the agent references: the scratch
 
-The scratch is a Markdown file where references collect for your next prompt. There's one per vault, or one per folder
-outside every vault. You and the agent both add to it. You read it, and paste it into the agent.
+The scratch is a Markdown file where references collect for your next prompt. There's one per vault, and one for
+Elsewhere. You and the agent both add to it. You read it, and paste it into the agent.
 
 1. In slipbox, open `ideas/coffee.md`.
 2. Put the cursor on the line `A ratio of 1 to 16 suits a pour-over.`, and press `space s a`. The scratch gets that
@@ -189,7 +189,7 @@ scratch is lost.
 
 The scratch lives in slipbox's own state folder, not among your notes. `slipbox scratch path` says where.
 `capture.location = "root"` keeps it in the vault instead, as `capture.file` names it. That setting never puts it in
-a folder outside every vault ([Configuration](../manual/configuration.md)).
+a folder of Elsewhere's ([Configuration](../manual/configuration.md)).
 
 ### From nvim
 
