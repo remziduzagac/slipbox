@@ -138,6 +138,9 @@ wide in some terminals.
 > **Amended (2026-10-17):** a link to a disk that doesn't answer is marked `⊘`, not indexed, and described
 > `not answering`, as the walk leaves it out until it answers (design/tui.md § A row's marks); `⚠` is a broken link
 > alone. A folder inside one marked `⊘` is marked `⊘` too.
+>
+> **Detailed by D244 (2026-10-17):** why a row is `⊘` is said in words, on the status line while the explorer's cursor
+> is on it and in Info for the file on screen; the row stays as it is.
 
 ## VV-D10: The git panel follows the vault (2026-10-14)
 

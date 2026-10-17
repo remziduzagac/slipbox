@@ -44,7 +44,9 @@ export class Info {
     const view = this.app.view;
     if (!view) return [];
     const b = view.buf;
-    const key = `${b.key}:${b.version}:${this.app.graph.generation}:${b.dirty}:${b.deleted}:${!!b.parsing}`;
+    // Why it isn't indexed (VV-D9): its row's `⊘` in the explorer, or its folder's.
+    const why = b.virtual ? null : this.app.explorer.marks.whyAt(b.abs);
+    const key = `${b.key}:${b.version}:${this.app.graph.generation}:${b.dirty}:${b.deleted}:${!!b.parsing}:${why}`;
     if (this.cache?.key === key) return this.cache.rows;
     const rows: Omit<InfoRow, "folded">[] = [];
     const head = (section: string) =>
@@ -123,6 +125,7 @@ export class Info {
             ? "unsaved changes"
             : "saved",
     );
+    if (why) row("File", "index", `not indexed: ${why}`);
     // Its properties: the frontmatter, nested maps under their keys.
     // Parsing on other threads (15.1): the properties and tasks when it's done.
     const parsed = note && !b.parsing ? b.parsed : null;

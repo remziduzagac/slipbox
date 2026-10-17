@@ -362,7 +362,11 @@ A row can end with marks, each in a column of its own, so they line up down the 
 - **Before the marks, dimmed,** is what describes the row: a vault's branch, a worktree's after `⎇`, or where a
   symlink leads.
 
-[A row's marks](../manual/files.md#a-rows-marks) has their ASCII and Nerd Font forms.
+With the cursor on a `⊘` row, the status line says why it isn't indexed, until the cursor moves off:
+`⊘ not indexed: generated (node_modules)` for a folder tools fill with no note at its top, `git-ignored`, both when
+both hold, `walk.exclude`, `on another disk`, `a link not followed`. The Info view says it too, of the file on screen.
+
+[A row's marks](../manual/files.md#a-rows-marks) has their ASCII and Nerd Font forms, and every reason.
 
 ### Busy folders: listed, not indexed
 
