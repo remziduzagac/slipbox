@@ -2,15 +2,28 @@
 // assembled document (`assemble.ts`), every one TypeScript or JavaScript under a permissive licence: no tool is run,
 // nothing is installed. Where one would need one (a headless browser, pandoc: 10.7, 10.8), it isn't a format.
 
-import { statSync } from "node:fs";
+import { lstatSync, statSync } from "node:fs";
 import { basename, dirname, extname, join, relative, resolve, sep } from "node:path";
 import { atomicWrite, climbsOut, landsInside, realTarget } from "../fsutil.ts";
 import type { Graph } from "../graph.ts";
 import { findVaultRoot } from "../vault.ts";
 import { assemble, type ExportDoc } from "./assemble.ts";
-import { isExport } from "./mark.ts";
+import { isExport, isMarkdownExport } from "./mark.ts";
 
-export { EXPORT_MARK, isExport } from "./mark.ts";
+export { EXPORT_MARK, isExport, isMarkdownExport } from "./mark.ts";
+
+/**
+ * An export refused because a file is there that isn't an earlier export (D243): written over only when you say —
+ * `--force`, or `y` in the TUI. `target` is where it would have gone.
+ */
+export class NotAnExport extends Error {
+  constructor(
+    readonly target: string,
+    shown: string,
+  ) {
+    super(`${shown} isn't an export — an export doesn't write over it without --force`);
+  }
+}
 
 /** What a writer makes: the document's bytes, and the files beside it (a Markdown export's pictures). */
 export interface ExportOutput {
@@ -118,7 +131,8 @@ function noteOfARoot(graph: Graph, abs: string): boolean {
 /**
  * Where an export of notes, `first` the first, goes: `typed` (from `base`) — a folder, one there or a path ending in
  * `/` (made when it's written), the default's name in it — else beside the first note, in a vault only when that's in
- * it. Never over a note of any root, but an earlier export: an error says so.
+ * it. Never over a note of any root, but an earlier Markdown export: an error says so. Over any other file only when
+ * it's an earlier export, in any format, or with `force`: else `NotAnExport` (D243).
  */
 export function exportTarget(
   graph: Graph,
@@ -126,6 +140,7 @@ export function exportTarget(
   format: ExportFormat,
   typed: string | null,
   base: string,
+  force = false,
 ): string {
   const suggested = defaultTarget(graph.abs(first), format);
   let target = typed ? resolve(base, typed) : suggested;
@@ -135,13 +150,16 @@ export function exportTarget(
       if (statSync(target).isDirectory()) target = join(target, basename(suggested));
     } catch {}
   }
-  if (noteOfARoot(graph, target) && !isExport(target))
+  if (noteOfARoot(graph, target) && !isMarkdownExport(target))
     throw new Error(`${graph.shownPath(target)} is a note — an export doesn't write over it`);
   // Beside a note a link leads out of the vault to: a place nobody named, outside the vault (VV-D6).
   if (!typed && graph.loc.mode === "vault" && !landsInside(graph.root, target))
     throw new Error(
       `${first} is reached through a link out of the vault: its export isn't written beside it — name a place with --out`,
     );
+  // Something there (a link that leads nowhere too) that isn't an earlier export: only when you say (D243).
+  if (!force && lstatSync(target, { throwIfNoEntry: false }) && !isExport(target))
+    throw new NotAnExport(target, graph.shownPath(target));
   return target;
 }
 

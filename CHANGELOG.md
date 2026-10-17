@@ -97,6 +97,13 @@ The format is [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.1.0/); wh
 
 ### Changed
 
+- **Breaking:** an export writes over a file that's there only when it's an earlier export. Any other file is left as
+  it is: `slipbox export` exits with 5 and says so, and `--force` writes over it. In slipbox, the Save As window asks
+  `Replace coffee.docx? It isn't an export.` An earlier export is replaced in every format, now without that question,
+  since each carries a mark that says slipbox wrote it ([Earlier exports](docs/manual/export.md#earlier-exports)).
+  Word documents carry theirs from this version on, so one exported before is asked about, or needs `--force`, once. A
+  note is still never written over, not even with `--force`. A script that exports over a file of its own adds
+  `--force`.
 - `:merge-review` offers this branch into its own base, the one the git panel measures it against, rather than `[git]
   base`. `slipbox merge-review` still merges into `--into`, or the branch checked out.
 

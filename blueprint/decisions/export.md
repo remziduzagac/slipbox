@@ -164,3 +164,28 @@ the name filled in, `enter` exports at once.
 
 **Not chosen:** places, then a folder from the root's tree or one browsed anywhere, then the name, one step after
 another (ideas.md § Export).
+
+## D243: An export writes over an earlier export only, else when you say; each format marked (2026-10-17)
+
+**Decision:** An export writes over a file that's there only when it's an earlier export of slipbox's, in any format.
+Any other file is left as it is: the CLI refuses (exit 5) unless `--force`; the TUI's Save As asks "Replace rep.docx?
+It isn't an export." (`n`: the window again). An earlier export is replaced without a question, in the TUI too. A note
+is refused as before, even with `--force` (DF-D3). A new file anywhere named is written as before, and a folder named
+still gets the default name in it. An earlier export is known by a mark every writer puts in its file: Markdown's
+frontmatter `generator: slipbox` (as before), the web page's and the e-book's `<meta name="generator"
+content="slipbox">`, the PDF's Creator `slipbox`, and, new, Word's custom property `generator`, `slipbox`. Detail:
+design/export.md § Asking for one, § Earlier exports.
+
+**Why:** The only guard was "never over a note": `-o` naming any other file replaced it, whatever it was, a document
+of the user's own included. Before, only a Markdown export could be told from another file; the web page, the e-book
+and the PDF carried a mark nothing read, and Word's carried none. Without reading them all, every export of those
+formats run again would have been refused.
+
+**Cost:** A mark says slipbox wrote a file, not that it's as slipbox left it: an export edited elsewhere that kept its
+mark is replaced without a question, and another tool's file with the same mark would be too. A Word export made
+before this decision has no mark: the first export over it asks, or needs `--force`. A script that exported over a
+file of its own needs `--force`.
+
+**Not chosen:** knowing earlier exports by a record in slipbox's state of what it wrote, and where (it would miss an
+export made on another machine, or by another vault's slipbox, and Markdown's mark already lives in the file); asking
+in the TUI before replacing an earlier export, as before.

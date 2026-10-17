@@ -11183,20 +11183,32 @@ describe("vaults in the TUI (17.x)", () => {
     expect(isDocx(join(root, "rep.docx"))).toBe(true);
   });
 
-  test("an export replaces a file only once you say so (no: the window back), never a note; a folder named goes into it", async () => {
+  test("an export replaces an earlier one at once, any other file only once you say so (no: the window back), never a note; a folder named goes into it", async () => {
     const root = makeVault();
     writeFileSync(join(root, "rep.md"), "# Rep\n");
     writeFileSync(join(root, "rep.docx"), "an older one");
     mkdirSync(join(root, "out"));
     const h = await harness({ root, open: "rep.md" });
     await h.keys("space", "n", "o", "enter", "enter");
-    expect(h.app.overlay).toMatchObject({ kind: "prompt", confirm: true, label: "rep.docx is there — replace it?" });
+    expect(h.app.overlay).toMatchObject({
+      kind: "prompt",
+      confirm: true,
+      label: "Replace rep.docx? It isn't an export.",
+    });
     await h.keys("n");
     expect(saveAs(h).name).toBe("rep.docx");
     await Bun.sleep(50);
     expect(readFileSync(join(root, "rep.docx"), "utf8")).toBe("an older one");
     await h.keys("enter", "y");
     expect(await until(() => isDocx(join(root, "rep.docx")))).toBe(true);
+    expect(await until(() => h.app.messages.at(-1)!.text.startsWith("exported"))).toBe(true);
+    // Now an earlier export: replaced without a question.
+    const first = statSync(join(root, "rep.docx")).mtimeMs;
+    await h.app.run("note.export docx");
+    await h.keys("enter");
+    expect(h.app.overlay).toBeNull();
+    expect(await until(() => statSync(join(root, "rep.docx")).mtimeMs !== first)).toBe(true);
+    expect(await until(() => h.app.messages.at(-1)!.text.startsWith("exported"))).toBe(true);
     // A note: refused, whatever its name says; the window stays.
     await h.app.run("note.export docx");
     saveAs(h).name = "index.md";

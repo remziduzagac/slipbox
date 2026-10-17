@@ -1,7 +1,7 @@
 // Export in the TUI (10.x): notes picked, a format chosen, a place to write it asked — beside the note, or where you
-// say — and written there, never over a note.
+// say — and written there, never over a note; over a file that isn't an earlier export only once you say so (D243).
 
-import { existsSync, statSync } from "node:fs";
+import { statSync } from "node:fs";
 import { basename, dirname, isAbsolute, join, relative, sep } from "node:path";
 import { climbsOut, readJson, writeJson } from "../core/fsutil.ts";
 import {
@@ -11,6 +11,7 @@ import {
   exportTarget,
   FORMATS,
   formatFor,
+  NotAnExport,
   writeExport,
 } from "../core/export/index.ts";
 import { stateDir, userFolders } from "../core/paths.ts";
@@ -119,23 +120,30 @@ export class Exporter {
     });
   }
 
-  /** The file picked for an export: never a note (said, the window back); a file there replaced once you say so. */
+  /**
+   * The file picked for an export: never a note (said, the window back); an earlier export replaced; any other file
+   * there only once you say so (`n`: the window back).
+   */
   private chosen(rels: string[], format: ExportFormat, path: string, o: SaveAsOverlay): void {
     let target: string;
     try {
       target = exportTarget(this.app.graph, rels[0]!, format, path, this.app.loc.root);
     } catch (err) {
+      if (err instanceof NotAnExport) {
+        const there = err.target;
+        return this.app.overlays.confirm(
+          `Replace ${this.app.graph.shownPath(there)}? It isn't an export.`,
+          () => void this.write(rels, format, there),
+          () => {
+            this.app.overlay = o;
+          },
+        );
+      }
       this.app.message("warn", `export: ${(err as Error).message}`);
       this.app.overlay = o;
       return;
     }
-    const go = () => void this.write(rels, format, target);
-    if (existsSync(target)) {
-      return this.app.overlays.confirm(`${this.app.graph.shownPath(target)} is there — replace it?`, go, () => {
-        this.app.overlay = o;
-      });
-    }
-    go();
+    void this.write(rels, format, target);
   }
 
   /** A folder as an export's places show it: from the root inside it, `~/` under home, else whole. */

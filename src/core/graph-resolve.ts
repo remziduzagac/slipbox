@@ -19,7 +19,7 @@ import {
   wikiPathCandidates,
 } from "./links.ts";
 import { checkoutOf } from "./git.ts";
-import { isExport } from "./export/mark.ts";
+import { isMarkdownExport } from "./export/mark.ts";
 import { classify } from "./filetypes.ts";
 import type { LinkRef, Target } from "./graph-types.ts";
 import type { Graph } from "./graph.ts";
@@ -126,7 +126,7 @@ export class LinkResolver {
     if (!e) return false;
     const known = this.exportMarks.get(rel);
     if (known?.mtimeMs === e.mtimeMs) return known.marked;
-    const marked = isExport(join(this.g.root, rel));
+    const marked = isMarkdownExport(join(this.g.root, rel));
     this.exportMarks.set(rel, { mtimeMs: e.mtimeMs, marked });
     return marked;
   }

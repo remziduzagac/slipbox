@@ -369,8 +369,28 @@ describe("writing", () => {
     // -o's extension says the format; a folder gets the note's name in it.
     expect(slipbox(["export", "dome-refit", "-o", "exports/upper.DOCX"]).code).toBe(0);
     expect(slipbox(["export", "dome-refit", "-o", "exports", "--json"]).json.data.path).toBe("exports/dome-refit.docx");
-    const over = slipbox(["export", "dome-refit", "-o", "home.md", "--to", "docx"]);
-    expect([over.code, over.err]).toEqual([5, "slipbox: home.md is a note — an export doesn't write over it\n"]);
+    // An earlier export there, beside the note: replaced.
+    expect(slipbox(["export", "dome-refit"]).code).toBe(0);
+    // A file there that isn't an export: refused, untouched; --force writes over it, and then it's one.
+    writeFileSync(join(vault, "exports", "mine.docx"), "mine\n");
+    const mine = slipbox(["export", "dome-refit", "-o", "exports/mine.docx"]);
+    expect([mine.code, mine.err]).toEqual([
+      5,
+      "slipbox: exports/mine.docx isn't an export — an export doesn't write over it without --force\n",
+    ]);
+    expect(readFileSync(join(vault, "exports", "mine.docx"), "utf8")).toBe("mine\n");
+    expect(slipbox(["export", "dome-refit", "-o", "exports/mine.docx", "--force"]).code).toBe(0);
+    expect(
+      readFileSync(join(vault, "exports", "mine.docx"))
+        .subarray(0, 4)
+        .toString("latin1"),
+    ).toBe("PK\x03\x04");
+    expect(slipbox(["export", "dome-refit", "-o", "exports/mine.docx"]).code).toBe(0);
+    // A note: never, --force or not.
+    for (const force of [[], ["--force"]]) {
+      const over = slipbox(["export", "dome-refit", "-o", "home.md", "--to", "docx", ...force]);
+      expect([over.code, over.err]).toEqual([5, "slipbox: home.md is a note — an export doesn't write over it\n"]);
+    }
     expect(note("home.md")).toStartWith("# Halden Ridge Observatory\n");
     const bad = slipbox(["export", "dome-refit", "--to", "odt"]);
     expect([bad.code, bad.err]).toEqual([2, "slipbox: --to must be one of: docx, pdf, html, epub, md\n"]);
@@ -526,6 +546,8 @@ describe("writing", () => {
           .subarray(0, magic.length)
           .toString("latin1"),
       ).toBe(magic);
+      // Again: the earlier export replaced, as it says it's one.
+      expect(slipbox(["export", "dome-refit", "--to", to]).code).toBe(0);
     }
     const md = slipbox(["export", "dome-refit", "--to", "markdown"]);
     expect(md.out).toBe(

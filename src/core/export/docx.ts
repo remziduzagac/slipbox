@@ -127,6 +127,8 @@ export async function toDocx(doc: ExportDoc): Promise<Uint8Array> {
   const file = new Document({
     title: doc.title,
     ...(doc.author ? { creator: doc.author } : {}),
+    // The mark that tells a later export this file is one of slipbox's, to replace (`mark.ts`).
+    customProperties: [{ name: "generator", value: "slipbox" }],
     styles: { default: { document: { run: { font: "Calibri", size: 22 } } } },
     numbering: { config: w.numbering },
     footnotes,
