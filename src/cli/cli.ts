@@ -109,6 +109,7 @@ Usage:
   slipbox send <note>               open it in a running editor   [--line N] [--server <socket>]
   slipbox history                   notes read lately, newest first, and what's open
   slipbox export <note…>            notes as one document, beside the first by its name  [--to docx|pdf|html|epub|md] [--out|-o <path>]
+                                    [--force: over a file there that isn't an earlier export]
   slipbox capture [text]            append to the scratch          [--ref path:L[-M] | path:L:C-D | path:L:C-M:D] [--snippet] [--stdin] [--lang L]
   slipbox scratch show|path|clear|copy                            [--if-unchanged <sha>]
   slipbox init [dir]                give <dir> a .slipbox/: settings, and a name with --name  [--name N] [--private] [--dry-run] [--plan]
@@ -459,7 +460,7 @@ export const GLOBAL_FLAGS = new Set(["root", "config", "json", "color", "plain",
 
 export const FLAGS: Record<string, string[]> = {
   render: ["width", "theme", "glyphs"],
-  export: ["to", "out"],
+  export: ["to", "out", "force"],
   links: ["all"],
   link: ["text", "style", "embed"],
   find: ["regex", "whole", "ignore-case", "files"],

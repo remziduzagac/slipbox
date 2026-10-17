@@ -1305,7 +1305,7 @@ export const OUTSIDE_AND_CODE: Check[] = [
   },
   {
     area: "outside-and-code",
-    name: "export: a file there replaced only on y — n brings the window back, the file as it was",
+    name: "export: an earlier export replaced at once; a file that isn't one only on y — n brings the window back, the file as it was",
     covers: { commands: ["note.export"] },
     run: async (s) => {
       // Exported once: home.docx there.
@@ -1313,18 +1313,24 @@ export const OUTSIDE_AND_CODE: Check[] = [
       await s.keys("enter");
       await exported(s, "home.docx", "PK\x03\x04");
       const first = statSync(s.path("home.docx")).mtimeMs;
-      // Again: asked; n, the window back and the file as it was; y, written again.
+      // Again: an earlier export, written over without a question.
       await format(s, "home.md", "word");
       await s.see("Name: home.docx");
       await s.keys("enter");
-      await s.see("home.docx is there — replace it?");
+      await s.until(() => statSync(s.path("home.docx")).mtimeMs !== first, 15000, "home.docx written again");
+      await exported(s, "home.docx", "PK\x03\x04");
+      // A file there that isn't an export: asked; n, the window back and the file as it was; y, written.
+      s.write("home.docx", "mine\n");
+      await format(s, "home.md", "word");
+      await s.see("Name: home.docx");
+      await s.keys("enter");
+      await s.see("Replace home.docx? It isn't an export.");
       await s.keys("n");
       await s.see("Name: home.docx");
-      s.expect(statSync(s.path("home.docx")).mtimeMs === first, "the file untouched after n");
+      s.expect(s.read("home.docx") === "mine\n", "the file untouched after n");
       await s.keys("enter");
-      await s.see("home.docx is there — replace it?");
+      await s.see("Replace home.docx? It isn't an export.");
       await s.keys("y");
-      await s.until(() => statSync(s.path("home.docx")).mtimeMs !== first, 15000, "home.docx written again");
       await exported(s, "home.docx", "PK\x03\x04");
     },
   },

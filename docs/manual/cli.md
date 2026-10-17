@@ -1589,14 +1589,17 @@ slipbox export coffee inbox -o exports/coffee.docx
 - `--to docx|pdf|html|epub|md`: the format. Without it, `-o`'s extension says, or else it's Word.
 - `--out <path>` (or `-o`): where to write it. A folder, or a path ending in `/`, puts it there under the first note's
   name. The folder is made if it isn't there.
+- `--force`: write over a file there that isn't an earlier export.
 
 Without `-o`, the document goes beside the first note, under its name (`ideas/coffee.docx`). A Markdown export goes
 there as `coffee.export.md`, with its pictures in `coffee.export.assets/`. Those are the vault's pictures only. Anything
 else stays a link. The other formats also hold only the vault's pictures. A picture from outside the vault is its alt
 text.
 
-A file already at the path is replaced without asking. A note is never replaced, of this vault or another (exit 5). The
-one exception is an earlier Markdown export ([Exporting](export.md#from-the-command-line)).
+An earlier export already at the path is replaced, whatever its format: each carries a mark that says slipbox wrote it
+([Earlier exports](export.md#earlier-exports)). Any other file there is left as it is (exit 5), unless `--force`. A
+note is never replaced, of this vault or another, not even with `--force` (exit 5). The one exception is an earlier
+Markdown export ([Exporting](export.md#from-the-command-line)).
 
 `export` fetches nothing from the network. With `--json`, the data is `{path, format, notes[], bytes, files[]}`. `files`
 are the pictures written beside it.

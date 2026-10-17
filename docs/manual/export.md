@@ -104,19 +104,20 @@ With the mouse:
 - The wheel scrolls.
 - A click outside the window cancels.
 
-If a file of that name is there already, slipbox asks:
+If an earlier export is there already, in any format, slipbox replaces it without asking. If another file of that name
+is there, slipbox asks:
 
-`ideas/coffee.docx is there — replace it?`
+`Replace ideas/coffee.docx? It isn't an export.`
 
-`y` replaces it, and `n` takes you back to the window.
+`y` replaces it, and `n` takes you back to the window. [Earlier exports](#earlier-exports) says how slipbox tells.
 
 A note is never replaced, in this vault or another. slipbox says so and keeps the window open. The one exception is an
-earlier Markdown export, which slipbox asks about as it does any file.
+earlier Markdown export, which is replaced like any earlier export.
 
 ## From the command line
 
 ```text
-slipbox export <note…> [--to <format>] [-o <path>]
+slipbox export <note…> [--to <format>] [-o <path>] [--force]
 ```
 
 ```bash
@@ -138,13 +139,33 @@ slipbox export inbox.md ideas/coffee.md -o both.epub  # one e-book, two chapters
   - Any other path is the file's name. Its folders are made as needed.
   - Without `-o`, the document goes beside the first note, under its name. In a vault, a note reached through a link
     out of the vault has no place beside it: slipbox asks you to name one with `-o`, and exits with 5.
-- **A file already there is replaced**, without asking, as `-o` does in any tool. A note is never replaced, of this
-  vault or any other. slipbox says `ideas/coffee.md is a note — an export doesn't write over it` and exits with 5. An
-  earlier Markdown export is the exception, and is replaced.
+- **An earlier export already there is replaced**, in any format ([Earlier exports](#earlier-exports)). Any other
+  file there is left as it is, and slipbox exits with 5, saying:
+  `ideas/coffee.docx isn't an export — an export doesn't write over it without --force`. `--force` writes over it.
+- **A note is never replaced**, of this vault or any other, not even with `--force`. slipbox says `ideas/coffee.md is
+  a note — an export doesn't write over it` and exits with 5. An earlier Markdown export is the exception, and is
+  replaced.
 - **What it says** is `exported ideas/coffee.md to ideas/coffee.docx (Word (.docx))`. It adds `, 3 files beside it`
   when it wrote some (a Markdown export's pictures). With `--json`, the data is `{path, format, notes, bytes, files}`.
 
 The command line exports any text file you name, read as Markdown. slipbox itself exports only notes.
+
+## Earlier exports
+
+Every export carries a mark that says slipbox wrote it, and a later export writes over a file with that mark. A file
+without one is replaced only when you say so: `y` to the question in slipbox, `--force` on the command line.
+
+| Format | Its mark |
+| --- | --- |
+| Word | a custom property, `generator`, set to `slipbox` (File, Properties in Word) |
+| PDF | its Creator, `slipbox` |
+| A web page | `<meta name="generator" content="slipbox">` in its head |
+| An e-book | `<meta name="generator" content="slipbox"/>` in its package file |
+| Markdown | the line `generator: slipbox` in its front matter |
+
+A mark says slipbox wrote the file. It doesn't prove the file is as slipbox left it: an export you edited and saved in
+another program usually keeps its mark, and is replaced like any other. A Word document an earlier version of slipbox
+exported has no mark, so the first export over it asks, or needs `--force`.
 
 ## The formats
 
@@ -292,6 +313,8 @@ What becomes of each part of a note:
 
 - **It never writes over a note**, of this vault or any other. The one exception is an earlier Markdown export, which
   its front matter marks.
+- **It never writes over another file without asking**, unless the file is an earlier export. On the command line,
+  `--force` is the answer.
 - **It never reaches the network.** A picture on the internet comes from slipbox's own copy, or stays a link. See
   [Privacy](privacy.md).
 - **It never takes in a file from outside the vault.** A note someone else wrote can name a picture elsewhere on your
@@ -301,8 +324,9 @@ What becomes of each part of a note:
 
 ## Limits
 
-- **From the command line, a file at `-o` is replaced without asking**, unless it's a note. A folder that isn't there
-  yet needs its `/` at the end. Without it, `-o` names a file.
+- **A folder that isn't there yet needs its `/` at the end** on the command line. Without it, `-o` names a file.
+- **An earlier export is known by its mark alone** ([Earlier exports](#earlier-exports)). One you changed in another
+  program is still replaced if it kept the mark.
 - **A footnote referred to inside an embedded section**, but written outside that section, isn't drawn in.
 - **Some pictures can't be read:** a BMP compressed with run-length encoding, or a damaged file. Each becomes its
   description.
