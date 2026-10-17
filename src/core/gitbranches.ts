@@ -22,7 +22,7 @@ import {
 } from "./gitops.ts";
 import { failureOf, inEnglish } from "./gitremote.ts";
 import { isTrusted } from "./trust.ts";
-import { isBusyFolder } from "./walk.ts";
+import { isBusyName } from "./walk.ts";
 
 const OPTS = { encoding: "utf8" as const, timeout: 15_000, maxBuffer: 64 * 1024 * 1024 };
 
@@ -164,7 +164,8 @@ export async function ignoredLater(path: string): Promise<Ignored | null> {
   ]);
   if (out === null) return null;
   const found: Ignored = { notes: [], others: [], more: false };
-  const busy = (rel: string) => rel.split("/").some((s) => s && isBusyFolder(s));
+  // Everything here is git-ignored, and an ignored folder with a busy name is busy (D237): its name decides.
+  const busy = (rel: string) => rel.split("/").some((s) => s && isBusyName(s));
   const add = (rel: string): boolean => {
     if (found.notes.length + found.others.length >= IGNORED_MAX) return !(found.more = true);
     (/\.(md|markdown)$/i.test(rel) ? found.notes : found.others).push(rel);
@@ -180,7 +181,7 @@ export async function ignoredLater(path: string): Promise<Ignored | null> {
     for (const e of entries.sort((a, b) => (a.name < b.name ? -1 : 1))) {
       const rel = `${dir}${e.name}`;
       if (e.isDirectory()) {
-        if (!isBusyFolder(e.name) && !(await look(`${rel}/`))) return false;
+        if (!isBusyName(e.name) && !(await look(`${rel}/`))) return false;
       } else if (!add(rel)) return false;
     }
     return true;
