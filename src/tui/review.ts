@@ -21,7 +21,7 @@ import { TOP } from "../core/position.ts";
 import { sanitize } from "../core/sanitize.ts";
 import type { App } from "./app.ts";
 import { NoteBuffer } from "./buffer.ts";
-import { asBlocks, diffLanguage, sideBySide } from "./diffview.ts";
+import { asBlocks, diffLanguage, isNote, LINES_ONLY, sideBySide, switchedText } from "./diffview.ts";
 
 /** A note's change as its blocks before and after: the file with this change undone against the file as it is. */
 function hunkBlocks(it: Item): BlockDiff {
@@ -52,6 +52,8 @@ export interface Review {
   items: Item[];
   at: number;
   lines: (number | null)[];
+  /** `tab` switched a note's hunks from what `[git] diff` draws them as: its lines for its blocks, or back. */
+  switched?: boolean;
 }
 
 /** The rows above a hunk's diff: its file and place, the keys, a blank one. */
@@ -161,7 +163,7 @@ function show(app: App, r: Review): void {
   // Drawn as every diff is (GIT-D2): a note's as its blocks before and after — the file as staged against as it is,
   // this change alone, so its paragraphs are whole — a code file's as its lines, side by side where there's room.
   const view = hunkView(it.change, it.now);
-  const drawn = asBlocks(app, it.abs) ? hunkBlocks(it) : null;
+  const drawn = asBlocks(app, it.abs, r.switched) ? hunkBlocks(it) : null;
   const blocks = drawn?.units.length ? drawn : null; // a change of blank lines alone: its lines
   r.lines = blocks
     ? blocks.units.map((u) => u.line)
@@ -375,6 +377,20 @@ export function reviewStep(app: App, by: 1 | -1): void {
     return app.message("info", by > 0 ? "the last change — esc ends the review" : "the first change");
   r.at = i;
   show(app, r);
+}
+
+/**
+ * `tab` (`git.diff_view`, as in the diff window): a note's hunks drawn as their lines, or as their blocks again — this
+ * one and the rest of the review's. A code file's has only its lines, and says so.
+ */
+export function reviewSwitch(app: App): void {
+  const cur = current(app, "tab", "switches a note's change between its blocks and its lines");
+  if (!cur) return;
+  const { r, it } = cur;
+  if (!isNote(app, it.abs)) return app.message("info", LINES_ONLY);
+  r.switched = !r.switched;
+  show(app, r);
+  app.message("info", switchedText(asBlocks(app, it.abs, r.switched)));
 }
 
 /** `enter`: the review ended, and the hunk opened in its file — at the cursor's line of it, else its first. */

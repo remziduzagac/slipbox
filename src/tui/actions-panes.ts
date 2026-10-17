@@ -7,9 +7,18 @@ import { diffSwitch } from "./diffview.ts";
 import { blameHere, historyHere } from "./githistory.ts";
 import { gitStep, gitPreview, gitReset } from "./gitchanges.ts";
 import { gitFetch, gitPull, gitPush, gitStash } from "./gitremote.ts";
-import { mergeAgent, mergeEdit, mergeSave, mergeStage, mergeStep, mergeTake, openMergeScreen } from "./mergescreen.ts";
+import {
+  mergeAgent,
+  mergeEdit,
+  mergeSave,
+  mergeStage,
+  mergeStep,
+  mergeSwitch,
+  mergeTake,
+  openMergeScreen,
+} from "./mergescreen.ts";
 import { gitAbort, gitContinue, gitRebase, gitSkip } from "./rebase.ts";
-import { openReview, reviewGo, reviewKeep, reviewNote, reviewRevert, reviewStep } from "./review.ts";
+import { openReview, reviewGo, reviewKeep, reviewNote, reviewRevert, reviewStep, reviewSwitch } from "./review.ts";
 import * as E from "./editing.ts";
 
 /** Windows, tabs and panels: splits and tabs, each window's history, the side panels, the Problems panel and source control. */
@@ -160,8 +169,9 @@ export function paneActions(): Record<string, Run> {
     "footnote.add": (a) => a.footnotes.add(),
     "git.changes": (a) => a.git.openChanges(),
     "git.diff": (a) => a.git.openDiff(),
-    // A note's diff: its blocks before and after, or its lines (GIT-D2).
-    "git.diff_view": (a) => diffSwitch(a),
+    // A note's diff: its blocks before and after, or its lines (GIT-D2) — in the diff window, a review, the merge screen.
+    "git.diff_view": (a) =>
+      a.floating?.kind === "review" ? reviewSwitch(a) : a.floating?.kind === "merge" ? mergeSwitch(a) : diffSwitch(a),
     // The working tree's changes against what's staged (26.1).
     "git.view": (a) => a.panels.openLeftView("git", "cycle"),
     "git.commit": (a) => a.git.openCommitEditor(false),

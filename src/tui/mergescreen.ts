@@ -35,7 +35,7 @@ import { sanitize } from "../core/sanitize.ts";
 import type { App } from "./app.ts";
 import { editable } from "./app.ts";
 import { NoteBuffer } from "./buffer.ts";
-import { asBlocks, diffLanguage, sideBySide } from "./diffview.ts";
+import { asBlocks, diffLanguage, isNote, LINES_ONLY, sideBySide, switchedText } from "./diffview.ts";
 import { keyRow } from "./review.ts";
 
 /** A file on the merge screen: its conflicts, how each is settled, the one shown. */
@@ -54,6 +54,8 @@ export interface MergeState {
   rebasing: boolean;
   /** The conflict prompt's: the note's buffer, and the text on disk its merge was made with. */
   prompt?: { buf: NoteBuffer; theirs: string };
+  /** `tab` switched a note's sides from what `[git] diff` draws them as: their lines for their blocks, or back. */
+  switched?: boolean;
 }
 
 /** Each file's merge screen as it was left, by vault path: opened again on the same text, its choices are back. */
@@ -167,7 +169,7 @@ function show(app: App, m: MergeState): void {
   const side = (ls: string[]): ScreenPart => {
     const from = comparable(c.base === null ? "" : text(c.base));
     const to = comparable(text(ls));
-    if (c.base !== null && asBlocks(app, path)) {
+    if (c.base !== null && asBlocks(app, path, m.switched)) {
       const blocks = blockDiff(from, to, new Set(), { heads: false, folds: false });
       if (blocks.units.length) return { blocks };
     }
@@ -277,6 +279,20 @@ export function mergeTake(app: App, choice: Exclude<Choice, { lines: string[] }>
       break;
     }
   show(app, m);
+}
+
+/**
+ * `tab` (`git.diff_view`, as in the diff window): a note's sides drawn against the base as their lines, or as their
+ * blocks again. A code file's has only its lines, and says so.
+ */
+export function mergeSwitch(app: App): void {
+  const m = current(app, "tab", "switches a note's sides between their blocks and their lines");
+  if (!m) return;
+  const path = m.prompt?.buf.abs ?? join(app.loc.root, m.rel);
+  if (!isNote(app, path)) return app.message("info", LINES_ONLY);
+  m.switched = !m.switched;
+  show(app, m);
+  app.message("info", switchedText(asBlocks(app, path, m.switched)));
 }
 
 /** `n` and `p`: the next conflict, or the one before. */

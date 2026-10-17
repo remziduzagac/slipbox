@@ -1955,7 +1955,9 @@ diff (a file the walk reads as a note) in every window a diff opens in, unless `
   a space before it, as the source diff's rows read — and each layout row's `src` its first word's unit; `enter` goes
   to the unit's line (a `before` line, or a removed block's: where its block is, or was, now). `tab`
   (`git.diff_view`, the diff window's own keymap, `DEFAULT_DIFF_KEYS`) switches between the blocks and the lines, the
-  cursor on the first line's row at or after the line it was on; a code file's diff says it has only its lines.
+  cursor on the first line's row at or after the line it was on; a code file's diff says it has only its lines. The
+  review's and the merge screen's keymaps have it too: there, `tab` switches each hunk, or each side against the
+  base, for the rest of the review or of the file's screen (`reviewSwitch`, `mergeSwitch`).
 
 **Side by side** (GIT-D7; `core/layout/splitdiff.ts` `layoutSplitDiff`): a code file's diff (anything not a note) where
 each side gets at least `SPLIT_MIN` (80) text columns — the window less a sign and a space before each text, ` │ `
@@ -2013,7 +2015,8 @@ cursor (`srcAt`: a block's span carries its line's unit), as in the diff window;
   file and the hunk's lines (`path:from-to`), its diff fenced, and the note (`hunkEntry`).
 - `n` and `p` (`git.review_next`, `git.review_prev`) move; `enter` (`git.review_go`) ends the review and opens the file
   at the line under the cursor, else the hunk's first (refused on a deleted file, `x` bringing it back, and outside the
-  vault); `esc` and `q` end it.
+  vault); `esc` and `q` end it. `tab` (`git.diff_view`) draws a note's hunk as its lines, or as its blocks again, as in
+  the diff window, for the rest of the review.
 
 After `y`, `x` or `c`, the review goes on to the next hunk not yet dealt with, after it and then from the start; with
 none left, it ends. Its end, however it comes, says what it did (`tallyText`): `review: 1 kept (staged), 1 reverted,
@@ -2130,7 +2133,8 @@ marked, two lines around it, under a head naming it and how it's settled, the st
 - `a` (`git.merge_agent`) asks for a note and adds the conflict to the scratch (`conflictExcerpt`): its lines in the
   file, three lines around it, the base between the sides as diff3 writes it; a note left empty is "a merge conflict:
   settle it, keeping what each side meant".
-- `n`, `p` (`git.merge_next`, `_prev`) move between conflicts.
+- `n`, `p` (`git.merge_next`, `_prev`) move between conflicts; `tab` (`git.diff_view`) draws a note's sides as their
+  lines, or as their blocks again, as in the diff window.
 - `w` (`git.merge_save`), and `ctrl+s` and `:w` there (`note.save` sends them to it, as the commit editor's), once
   every conflict is settled: the result into the buffer as one edit, saved through `App.writeBuffer`; refused, said,
   while one isn't, or when the buffer changed since the screen read it. A save refused (the file changed on disk) puts

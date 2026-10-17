@@ -19269,6 +19269,54 @@ describe("git's review, merge screen, pull and rebase (GIT-D3, GIT-D5, GIT-D6)",
       });
     });
 
+    test("tab in a review switches a note's change between its blocks and its lines, as in the diff window (regression)", async () => {
+      await isolated(async () => {
+        const para = "The queue is drained by a loop that wakes every thirty seconds.\n";
+        const { root } = repo({ "a.md": `# A\n\n${para}`, "b.ts": "const a = 1;\nconst b = 2;\nconst c = 3;\n" });
+        writeFileSync(join(root, "a.md"), `# A\n\n${para.replace("thirty seconds", "minute")}`);
+        writeFileSync(join(root, "b.ts"), "const a = 1;\nconst b = 22;\nconst c = 3;\n");
+        const h = await harness({ root, open: "a.md", width: 120, height: 40 });
+        await h.app.run("git.review");
+        expect(await until(() => h.app.floating?.kind === "review")).toBe(true);
+        const rows = () =>
+          h.app.currentLayout(h.app.floating!.view).lines.map((l) => l.spans.map((s) => s.text).join(""));
+        const frames = () => rows().filter((t) => t.startsWith("┌")).length;
+        expect(frames()).toBe(2);
+        // Its lines, as source: the line removed and the line it became.
+        await h.keys("tab");
+        expect(await said(h, "the diff's lines — tab: its blocks, before and after")).toBe(true);
+        expect(frames()).toBe(0);
+        expect(
+          rows().some((t) => t.startsWith("- The queue is drained by a loop that wakes every thirty seconds.")),
+        ).toBe(true);
+        expect(rows().some((t) => t.startsWith("+ The queue is drained by a loop that wakes every minute."))).toBe(
+          true,
+        );
+        // Back to its blocks.
+        await h.keys("tab");
+        expect(await said(h, "the diff's blocks, before and after — tab: its lines")).toBe(true);
+        expect(frames()).toBe(2);
+        // A code file's change has only its lines.
+        await h.keys("n");
+        await h.keys("tab");
+        expect(await said(h, "a code file's diff is drawn as its lines: only a note's has blocks")).toBe(true);
+        // The merge screen's sides likewise.
+        await h.keys("escape");
+        const merging = conflicted();
+        const m = await harness({ root: merging, open: "sync.md", width: 120, height: 50 });
+        await m.app.git.refreshNow();
+        await m.app.run("git.merge_screen");
+        const mergeRows = () =>
+          m.app.currentLayout(m.app.floating!.view).lines.map((l) => l.spans.map((s) => s.text).join(""));
+        expect(mergeRows().filter((t) => t.startsWith("┌")).length).toBe(4);
+        await m.keys("tab");
+        expect(mergeRows().filter((t) => t.startsWith("┌")).length).toBe(0);
+        expect(mergeRows()).toContain("- Retry forever.");
+        expect(mergeRows()).toContain("+ Retry up to a minute.");
+        expect(m.app.floating?.kind).toBe("merge");
+      });
+    });
+
     test("a file made again or changed since the review read it: x and y leave it as it is (regression)", async () => {
       await isolated(async () => {
         const { root } = repo({ "a.md": "a\n", "b.md": "b as committed\n" });

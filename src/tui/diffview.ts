@@ -77,10 +77,25 @@ export function diffLanguage(app: App, path: string, text: string): { language: 
   return { language, tabWidth };
 }
 
-/** Whether a file's diff is drawn as its blocks before and after (GIT-D2): a note's, unless `[git] diff` says lines. */
-export function asBlocks(app: App, path: string): boolean {
-  return app.config.git.diff === "blocks" && classify(path, app.config.walk.extensions).group === "note";
+/**
+ * Whether a file's diff is drawn as its blocks before and after (GIT-D2): a note's, unless `[git] diff` says lines —
+ * the other way round once `tab` switched it (`switched`).
+ */
+export function asBlocks(app: App, path: string, switched = false): boolean {
+  return isNote(app, path) && (app.config.git.diff === "blocks") !== switched;
 }
+
+/** Whether a file's diff can be drawn as its blocks: a note's. */
+export const isNote = (app: App, path: string): boolean => classify(path, app.config.walk.extensions).group === "note";
+
+/** What `tab` says once a note's diff is switched: what it's drawn as now, and what `tab` goes back to. */
+export const switchedText = (blocks: boolean): string =>
+  blocks
+    ? "the diff's blocks, before and after — tab: its lines"
+    : "the diff's lines — tab: its blocks, before and after";
+
+/** What `tab` says in a code file's diff. */
+export const LINES_ONLY = "a code file's diff is drawn as its lines: only a note's has blocks";
 
 /** Whether a code file's diff goes side by side at `width` (GIT-D7): as `[git] diff_layout` says — in `auto`, where each
  *  side has its 80 columns. A note's never does. */
@@ -190,7 +205,7 @@ export function diffSwitch(app: App): void {
   const f = app.floating;
   if (f?.kind !== "diff") return app.message("info", "no diff is open: a note's diff switches its drawing here");
   const w = f.diff;
-  if (!w.blocks) return app.message("info", "a code file's diff is drawn as its lines: only a note's has blocks");
+  if (!w.blocks) return app.message("info", LINES_ONLY);
   const view = f.view;
   const line = linesOf(w)[(app.currentLayout(view).lines[view.cur.row]?.src ?? 1) - 1] ?? 1;
   w.blocks.on = !w.blocks.on;
@@ -202,10 +217,5 @@ export function diffSwitch(app: App): void {
   const rows = app.currentLayout(view).lines;
   const row = rows.findIndex((l) => !l.decor && shown(l.src - 1));
   app.moveCursor(view, { row: row < 0 ? 0 : row, col: 0 });
-  app.message(
-    "info",
-    w.blocks.on
-      ? "the diff's blocks, before and after — tab: its lines"
-      : "the diff's lines — tab: its blocks, before and after",
-  );
+  app.message("info", switchedText(w.blocks.on));
 }

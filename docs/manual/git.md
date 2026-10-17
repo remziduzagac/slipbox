@@ -289,6 +289,7 @@ wide. Above the diff are the file, where the change is (`line 12 · change 2 of 
 | `x` | Reverts the change: its lines go back to what's staged, and the file is saved at once |
 | `c` | Asks for a note, and adds the change to the scratch for the agent: the file, its lines, the diff and your note |
 | `n` / `p` | Goes to the next / previous change |
+| `tab` | Draws a note's change as its lines, or as its blocks again |
 | `enter` | Ends the review, and opens the file at the change |
 | `esc` | Ends the review |
 
@@ -415,6 +416,7 @@ haven't.
 | `e` | Puts the result in the file, and opens it in the lens at this conflict, to settle by hand |
 | `a` | Asks for a note, and adds the conflict to the scratch for the agent, with its base and the lines around it |
 | `n` / `p` | Goes to the next / previous conflict |
+| `tab` | Draws a note's sides as their lines, or as their blocks again |
 | `w` | Saves the file, once every conflict is settled. `ctrl+s` and `:w` do the same |
 | `s` | Stages the saved file, which tells git it's resolved |
 | `esc` | Closes the screen. What you settled stays, as long as the file doesn't change |
@@ -759,8 +761,8 @@ So a note's diff shows each changed block twice, as it was and as it is now:
 - A changed block less than half like any other is shown removed, then added, with no words marked. A note rewritten
   whole shows its blocks removed and added; slipbox compares by word only the blocks whose words could make them alike.
 
-`tab` switches to the diff's lines, drawn as the next section says, and back. `git.diff = "source"` opens a note's diff
-as its lines ([Configuration](configuration.md)).
+`tab` switches to the diff's lines, drawn as the next section says, and back. It does in a review's changes and on the
+merge screen too. `git.diff = "source"` opens a note's diff as its lines ([Configuration](configuration.md)).
 
 #### A diff's lines
 
