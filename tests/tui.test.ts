@@ -12024,11 +12024,13 @@ describe("the explorer's file operations and buttons (18.x)", () => {
     await h.keys(".");
     const menu = h.app.overlay as ListOverlay;
     expect(menu.items.map((it) => [it.label, it.hint])).toEqual([
+      ["Zoom in here", "z"],
       ["Rename the folder", "r"],
       ["Name it", "R"], // beside its folder's
       ["Move to…", "m"],
       ["Copy", "y"],
       ["Cut", "x"],
+      ["Copy path", "Y"],
       ["Make it part of the vault holding it", "V"],
       ["Delete the vault", "d"],
     ]);
