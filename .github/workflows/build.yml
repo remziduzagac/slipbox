@@ -3,9 +3,10 @@ name: build
 # The build a release and a preview share (plan 14.2, GR-D13), called by release.yml for a tag v<version> and by
 # preview.yml for a push to `test`, so both are built, checked, packed, summed, attested and given their SBOMs alike.
 # Each platform is built on a runner of its own — where its OpenTUI package is installed, and a Mac's binary is signed
-# by Bun on a Mac — a release's after the whole suite passes there; a preview's straight away, its commit having passed
-# CI's check already (`test`'s ruleset takes no other), the binary run before it's packed either way. Each pack's SBOM is attested to
-# it; then the packs are summed, the installer (and a release's Homebrew formula) written, and every asset attested.
+# by Bun on a Mac — straight away, the commit tested already: a preview's passed CI's check before `test` took it, a
+# release's passed `full`, the whole suite, before `main` did (D251). The binary is run before it's packed either way.
+# Each pack's SBOM is attested to it; then the packs are summed, the installer (and a release's Homebrew formula)
+# written, and every asset attested.
 # The whole set is the `release` artifact, which the caller publishes: nothing here can write to the repository.
 # Every action pinned by its commit, a week old when taken (14.10); values reach the shell through env, never inline.
 on:
@@ -20,7 +21,7 @@ on:
         required: true
         type: string
       suite:
-        description: "Whether each platform runs the whole test suite before it's built: a release does, a preview not"
+        description: "Whether each platform runs the whole test suite before it's built: neither a release nor a preview"
         required: false
         type: boolean
         default: true
@@ -63,8 +64,9 @@ jobs:
           cache: false
           minimum_release_age: 7d
       - run: bun install --frozen-lockfile
-      # A release's, once per runner kind (a musl build's runner is a glibc build's too, which ran them), on the code as
-      # committed. A preview skips them: its commit passed CI on Linux and macOS before `test` would take it.
+      # Once per runner kind (a musl build's runner is a glibc build's too, which ran them), on the code as committed,
+      # when asked. Neither caller asks now: a preview's commit passed CI before `test` took it, a release's passed
+      # `full` before `main` did (D251).
       - name: tests
         if: ${{ inputs.suite && !endsWith(matrix.target, '-musl') }}
         run: bun run test

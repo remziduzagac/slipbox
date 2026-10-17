@@ -48,16 +48,18 @@ GitHub's releases are, with `SLIPBOX_RELEASES_URL`. A person able to take over w
 
 ## Merging a change
 
-Every change reaches `main` through a pull request: the rules on `main` require one, and require the `ci` check to
-pass. For a pull request, `ci` runs the tests and the terminal checks its change reaches, on Linux and macOS; after
-the merge, `main` runs everything (D239). No approval is required, since there is no second person to give one.
+Every change reaches `dev`, the default branch, through a pull request: the rules on `dev` require one, and require the
+`ci` check to pass. For a pull request, `ci` runs the lint, the typecheck, and the tests and the terminal checks its
+change reaches, on Linux and macOS (D239); a push to `dev` runs the same on the merged commit. No approval is required,
+since there is no second person to give one. From `dev`, work goes on to `test` and `main` (§ From dev to a release).
 
-- **Who:** agents and collaborators work on a branch and open the pull request; the maintainer merges it. Agents never
-  merge, release, tag, push `test` or change settings.
-- **How:** squash is the only merge method, so `main` has one commit per change. The branch is deleted once merged.
-- **Up to date:** a branch needn't be up to date with `main` to merge, and there's no merge queue (D242). When `main`
+- **Who:** agents and collaborators work on a branch and open the pull request; the maintainer merges it, or asks an
+  agent to review and merge it. Agents merge, run the full suite, move `test` or `main` and release only when the
+  maintainer asks, and never change settings.
+- **How:** squash is the only merge method, so `dev` has one commit per change. The branch is deleted once merged.
+- **Up to date:** a branch needn't be up to date with `dev` to merge, and there's no merge queue (D242). When `dev`
   has moved under the files a pull request changes, update its branch (`gh pr update-branch <n>`) and let CI run
-  again first. A failure on `main` that a pull request didn't reach gets a pull request of its own.
+  again first. A failure the full run finds gets a pull request of its own, into `dev`.
 - **The title** is a [Conventional Commit](https://www.conventionalcommits.org/en/v1.0.0/), and becomes the squashed
   commit's subject: `fix(export): …`, `feat(cli): …`, `docs: …`, `refactor`, `perf`, `test`, `build`, `ci`, `chore`; a
   `!` before the colon marks a breaking change (`feat(cli)!: …`).
@@ -65,7 +67,33 @@ the merge, `main` runs everything (D239). No approval is required, since there i
   the decisions'. A commit made with an agent ends with a `Co-Authored-By:` trailer naming it.
 - **Before merging,** the maintainer reads the diff, and checks that the change carries what it owes: a regression test
   for a bug fixed, the docs for what users will see, the blueprint for a change of behaviour.
-- **The changelog** isn't edited in a pull request: its entries are written at release time, from the commits.
+- **The changelog**'s Unreleased section takes a line for what users will notice, in the pull request that makes it;
+  at release time the entry is read over and dated.
+
+## From dev to a release
+
+Work moves through three branches, each a step further (D251). `test` and `main` take nothing but `dev`'s commits, by
+fast-forward: nothing is committed to them directly, and their rulesets forbid deleting them or forcing them back.
+
+- **`dev`**: every pull request, merged once its review and its `ci` check pass (§ Merging a change).
+- **`test`**, to try it: when a batch of work is ready, `dev` is moved to `test`. That publishes a preview to install
+  and try by hand (§ Previews), and runs again, on Linux and macOS, what changed since `test` last moved. What trying
+  it finds becomes an issue, fixed by a pull request into `dev`, and `test` moves again.
+
+  ```bash
+  git fetch origin && git push origin origin/dev:test
+  ```
+
+- **The full run**, to know where things stand: `ci` run by hand on `test` runs everything — every unit test on Linux
+  and macOS, every terminal check on all three runners — and reports `full` on the commit. Run it whenever you want,
+  and always before a release; a failure is fixed through `dev` as above.
+
+  ```bash
+  gh workflow run ci --ref test
+  ```
+
+- **`main`**, the released state: `test` is moved to `main` to release it, and the tag follows at once (§ Releasing).
+  Its ruleset takes only a commit that passed `full`, so nothing reaches a release untested.
 
 ## Releasing
 
@@ -79,7 +107,7 @@ and `.github/workflows/pages.yml` the installer's site once it's published. The 
    added or something kept changes, a patch for fixes alone.
 2. **Write the changelog's entry.** In `CHANGELOG.md`, `## [Unreleased]` becomes `## [0.3.0] - 2026-11-02` (the version,
    and the day), with a new empty `## [Unreleased]` above it, and the links at the end updated. Write it for users from
-   the commits since the last tag (`git log --oneline v0.2.0..main`), grouped as Added, Changed, Deprecated, Removed,
+   the commits since the last tag (`git log --oneline v0.2.0..dev`), grouped as Added, Changed, Deprecated, Removed,
    Fixed and Security; a breaking change marked **Breaking**, with what to do. CI takes the release's notes from this
    entry.
 3. **Bump the version** in `package.json` (`version`) and `src/version.ts` (`VERSION`), the same in both: `release.ts`
@@ -87,20 +115,23 @@ and `.github/workflows/pages.yml` the installer's site once it's published. The 
    bumped already ([Previews](#previews)); check it's the version chosen.
 4. **Check the rest is current:** the docs for what changed, and the skill, `skills/slipbox/SKILL.md`, for the command
    line. The blueprint is synced with the code (its README's `synced_with`).
-5. **Merge it** through a pull request, `chore(release): 0.3.0`, as any change.
-6. **Tag the merged commit,** and push the tag; only the maintainer may create a `v*` tag:
+5. **Merge it** into `dev` through a pull request, `chore(release): 0.3.0`, as any change.
+6. **Move it to `test` and run everything** (§ From dev to a release): `git push origin origin/dev:test`, then
+   `gh workflow run ci --ref test`, and wait for `full` to pass. A failure is fixed through `dev`, and this step again.
+7. **Move `test` to `main` and tag it at once;** only the maintainer may create a `v*` tag. `main`'s ruleset refuses a
+   commit that didn't pass `full`:
 
    ```bash
-   git switch main && git pull
-   git tag -a v0.3.0 -m "slipbox 0.3.0"
+   git fetch origin && git push origin origin/test:main
+   git tag -a v0.3.0 origin/main -m "slipbox 0.3.0"
    git push origin v0.3.0
    ```
 
-7. **CI drafts the release.** It checks the tag against the version and the changelog's entry first. On each platform's
-   runner it runs the tests, then builds and packs that platform; a Mac's binary has its signature checked, and a musl
-   build is run in Alpine. Then it writes `SHA256SUMS`, the installer and the formula, the SBOM, attests them all, and
-   drafts the release with its notes.
-8. **Check the draft** before anyone can see it: every pack is there (`darwin-arm64`, `linux-x64`, `linux-arm64`,
+8. **CI drafts the release.** It checks the tag against the version and the changelog's entry, and that its commit
+   passed `full`, first; the tests aren't run again. On each platform's runner it builds and packs that platform; a
+   Mac's binary has its signature checked, and a musl build is run in Alpine. Then it writes `SHA256SUMS`, the
+   installer and the formula, the SBOM, attests them all, and drafts the release with its notes.
+9. **Check the draft** before anyone can see it: every pack is there (`darwin-arm64`, `linux-x64`, `linux-arm64`,
    `linux-x64-musl`, `linux-arm64-musl`; none for Intel Macs, whose last was 0.3.0), with `SHA256SUMS`, `install.sh`,
    `slipbox.rb` and the SBOM; the notes read right. Then, in an empty folder:
 
@@ -115,13 +146,13 @@ and `.github/workflows/pages.yml` the installer's site once it's published. The 
 
    On a Mac, `shasum -a 256 -c SHA256SUMS` checks the sums, and the `darwin-arm64` pack runs. Each pack holds the
    binary, `LICENSE` and `NOTICES.txt`.
-9. **Publish the draft** on its page, or with `gh release edit v0.3.0 --repo remziduzagac/slipbox --draft=false`. A
-   published release can't be changed.
-10. **Homebrew and Pages follow:** publishing runs `homebrew.yml`, which copies the release's formula into the tap,
+10. **Publish the draft** on its page, or with `gh release edit v0.3.0 --repo remziduzagac/slipbox --draft=false`. A
+    published release can't be changed.
+11. **Homebrew and Pages follow:** publishing runs `homebrew.yml`, which copies the release's formula into the tap,
     through the `release` environment, and `pages.yml`, whose `stable` channel then names the release. Check the tap's
     new commit, then `brew upgrade slipbox` on a machine that has it; and that
     `https://remziduzagac.github.io/slipbox/stable` names the new tag.
-11. **Try it as a user would:** `curl -fsSL https://remziduzagac.github.io/slipbox/install.sh | sh` on a clean machine,
+12. **Try it as a user would:** `curl -fsSL https://remziduzagac.github.io/slipbox/install.sh | sh` on a clean machine,
     `slipbox upgrade --check` from the version before, and `slipbox --version` after.
 
 If the draft is wrong, delete it, fix the cause through a pull request, and release the next patch version. A tag is
@@ -129,15 +160,15 @@ never moved, and a version is never used twice.
 
 ## Previews
 
-A preview is what `main` has, built and published before it's released, for trying it on a machine as users get it
-(`.github/workflows/preview.yml`). Only the maintainer makes one, by moving the `test` branch to `main`:
+A preview is what `test` has, built and published before it's released, for trying it on a machine as users get it
+(`.github/workflows/preview.yml`). One is made whenever `test` moves to `dev`, by the maintainer or an agent they ask
+(§ From dev to a release):
 
 ```bash
-git switch main && git pull
-git push origin main:test
+git fetch origin && git push origin origin/dev:test
 ```
 
-`test`'s ruleset takes only a commit whose `ci` check passed, as every commit on `main` has once its run is done: push
+`test`'s ruleset takes only a commit whose `ci` check passed, as every commit on `dev` has once its run is done: push
 after it, never before. It refuses deleting `test` and pushing anything that isn't a fast-forward.
 
 - **Its version** is the release to come's, with the commit's UTC time and hash after it: `slipbox --version` says
@@ -157,7 +188,7 @@ after it, never before. It refuses deleting `test` and pushing anything that isn
   latest release. Stable installs, Homebrew and the `latest` release are untouched.
 
 `test` only moves forward: its ruleset forbids deleting it or forcing it back. A preview that went wrong is followed by
-another, from a fixed `main`.
+another, from a fixed `dev`.
 
 ## Dependencies
 
@@ -215,8 +246,9 @@ Reviewed twice a year, with the toolchains:
 ## Settings
 
 The repository's settings are committed in `.github/upkeep/`: `settings.json` holds them by the field names of GitHub's
-REST API, and `rulesets/main.json`, `rulesets/tags.json` and `rulesets/test.json` the rules on `main`, on `v*` tags and
-on `test`, as GitHub exports them. They say what the repository should be.
+REST API, and `rulesets/dev.json`, `rulesets/test.json`, `rulesets/main.json` and `rulesets/tags.json` the rules on
+`dev` (the default branch), `test`, `main` and `v*` tags, as GitHub exports them. They say what the repository should
+be.
 
 Pages is among them: its source is GitHub Actions (Settings → Pages), and its environment, `github-pages`, takes
 deployments from `main`, `test` and `v*` tags alone (Settings → Environments), the refs `pages.yml` runs from: by hand,
@@ -253,8 +285,9 @@ switched-off workflow can't report itself.
 - **Agents do alone:** read, run the checks, push branches, open draft pull requests.
 - **Agents propose, and wait for approval:** anything public addressed to people, such as a comment or a label on an
   issue or a pull request.
-- **The maintainer alone:** merging, releasing and tagging, previews (pushing `test`), the settings, closing issues,
-  security advisories.
+- **Agents do when the maintainer asks:** review and merge into `dev`, move `test` (a preview), run the full suite,
+  move `main` and tag a release (D251).
+- **The maintainer alone:** the settings, closing issues, security advisories.
 
 ### The calendar
 

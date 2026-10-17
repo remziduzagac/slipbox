@@ -194,8 +194,8 @@ bun run test:terminal:changed  # the terminal tests your change reaches: slipbox
                                # headless terminals
 ```
 
-Both compare your branch with where it left `origin/main`, as CI compares a pull request with its base; `bun run test`
-and `bun run test:terminal` run every one, as CI does after a merge.
+Both compare your branch with where it left `origin/dev`, as CI compares a pull request with its base; `bun run test`
+and `bun run test:terminal` run every one, as CI does before a release.
 
 [blueprint/design/testing.md](blueprint/design/testing.md) describes the test strategy, the demo folder
 (`examples/vault`) and the terminal tests.
