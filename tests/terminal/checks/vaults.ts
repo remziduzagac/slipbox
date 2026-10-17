@@ -448,6 +448,38 @@ const MARKED: Check[] = [
       await opened(s, "build/plan.md");
     },
   },
+  {
+    area: "navigating",
+    name: "marks: the cursor on a ⊘ row, the status line says why — generated, git-ignored, walk.exclude; moved off, nothing; Info says it of the file open",
+    covers: { cases: ["explorer", "index", "status", "info"], commands: ["note.info"] },
+    // kestrel, a repository: node_modules and tmp in its .gitignore, vendor and docs/generated in its walk.exclude. Info
+    // wide enough for its reason whole.
+    options: { home: true, startAt: "home/work/kestrel/README.md", config: "[ui]\noutline_width = 60\n" },
+    run: async (s) => {
+      const why = (reason: string) => `⊘ not indexed: ${reason}`;
+      await explorerOpen(s);
+      // Busy (no note at its top) and git-ignored, both said; git-ignored alone; left out by walk.exclude.
+      await explorerRow(s, "node_modules");
+      await s.status(why("generated (node_modules), git-ignored"));
+      await explorerRow(s, "tmp");
+      await s.status(why("git-ignored"));
+      await explorerRow(s, "vendor");
+      await s.status(why("walk.exclude"));
+      // A row that's indexed: nothing said; nor once the explorer has given up the keys.
+      await explorerRow(s, "docs");
+      await s.until(() => !s.statusLine().includes("not indexed"), undefined, "nothing said on docs, indexed");
+      await explorerRow(s, "vendor");
+      await s.status(why("walk.exclude"));
+      await s.keys("escape");
+      await s.until(() => !s.statusLine().includes("not indexed"), undefined, "nothing said, the note given the keys");
+      // A file open where walk.exclude leaves it out: Info's index row, its folder's reason.
+      await s.ex(`e ${s.path("~/work/kestrel/docs/generated/api.md")}`);
+      await opened(s, "docs/generated/api.md");
+      await leader(s, "n", "i");
+      await s.status("INFO");
+      await s.see(/index +not indexed: walk\.exclude/);
+    },
+  },
 ];
 
 // --- links ------------------------------------------------------------------------------------------------------
