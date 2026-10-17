@@ -14969,6 +14969,33 @@ describe("git in the TUI: marks, what changed, a note's diff, worktrees, conflic
     expect(h.app.messages.at(-1)!.text).toBe("merging main into quiet breaks no link");
   });
 
+  test(":merge-review: a branch made from dev is reviewed against dev, its own base, not main (GIT-D10)", async () => {
+    const root = repo();
+    if (!root) return;
+    git(root, "add", "-A");
+    git(root, "commit", "-q", "-m", "feat");
+    git(root, "checkout", "-q", "-b", "dev", "main");
+    writeFileSync(join(root, "d.md"), "# D\n");
+    git(root, "add", "-A");
+    git(root, "commit", "-q", "-m", "dev");
+    git(root, "checkout", "-q", "-b", "topic");
+    writeFileSync(join(root, "t.md"), "# T\n");
+    git(root, "add", "-A");
+    git(root, "commit", "-q", "-m", "topic");
+    const h = await harness({
+      root,
+      open: "t.md",
+      config: (c) => {
+        c.git.bases = ["main", "dev"];
+      },
+    });
+    await h.app.run("git.merge_review");
+    const list = h.app.overlay as ListOverlay;
+    const shown = list.items.map((i) => [i.label.replace(/^\S+ /, ""), i.detail]);
+    expect(shown[0]).toEqual(["topic → dev", "this branch into the base"]);
+    expect(shown.map(([label]) => label)).not.toContain("topic → main");
+  });
+
   test(":diff: this note's diff, as it is now (unsaved too); nothing different, said so", async () => {
     const root = repo();
     if (!root) return;
@@ -20066,14 +20093,120 @@ describe("git's review, merge screen, pull and rebase (GIT-D3, GIT-D5, GIT-D6)",
       });
     });
 
+    test("a cherry-pick begun in a terminal, stopped at a conflict: named, settled on the merge screen, continued, aborted", async () => {
+      await isolated(async () => {
+        const { root } = repo({ "a.md": "one\ntwo\nthree\n", "b.md": "b\n" });
+        git(root, "switch", "-q", "-c", "other");
+        commit(root, "a.md", "one\nother's two\nthree\n", "Other: two");
+        commit(root, "b.md", "b, other's\n", "Other: b");
+        git(root, "switch", "-q", "main");
+        commit(root, "a.md", "one\nmain's two\nthree\n", "Main: two");
+        commit(root, "b.md", "b, main's\n", "Main: b");
+        const was = git(root, "rev-parse", "HEAD");
+        // Both of other's commits, in a terminal: it stops at the first.
+        git(root, "cherry-pick", "other~1", "other");
+        expect(git(root, "status", "--porcelain")).toBe("UU a.md");
+        const h = await harness({ root, open: "a.md", width: 120, height: 50 });
+        await h.app.run("git.view");
+        await h.app.git.refreshNow();
+        expect(statusRow(h.frame())).toContain("main cherry-picking");
+        const ids = () => h.app.gitPanel.buttons().map((b) => b.id);
+        expect(ids()).toEqual(expect.arrayContaining(["resolve", "continue", "skip", "abort"]));
+        const desc = (id: string) => h.app.gitPanel.buttons().find((b) => b.id === id)?.desc;
+        expect(desc("continue")).toBe("commits what's settled, and picks the next, if there's one");
+        expect(desc("abort")).toBe("the branch back where it was before the cherry-pick");
+        await h.app.run("git.rebase");
+        expect(list(h).title).toBe('Cherry-picking "Other: two" — 1 file in conflict');
+        expect(list(h).items.map((i) => i.label)).toEqual([
+          "(x) Settle the conflicts",
+          "(c) Continue",
+          "(s) Skip this commit",
+          "(a) Abort",
+        ]);
+        // x: the merge screen on it; settled, saved, staged.
+        await h.keys("x");
+        expect(h.app.floating?.kind).toBe("merge");
+        await h.keys("t", "w", "s");
+        expect(
+          await said(h, "a.md staged, marked resolved — no conflict left: shift+r continues the cherry-pick"),
+        ).toBe(true);
+        // Continued: the first committed with its message, the second picked, stopped at its own conflict — the merge
+        // screen opens on it, as a rebase's stop does.
+        await h.app.run("git.continue");
+        expect(
+          await said(
+            h,
+            /^the cherry-pick stopped: 1 file in conflict \(b\.md\) — settle on the merge screen, s stages, then shift\+r continues/,
+          ),
+        ).toBe(true);
+        expect(await until(() => h.app.floating?.kind === "merge")).toBe(true);
+        expect(h.app.floating!.title).toBe("Merge — b.md");
+        expect(git(root, "log", "-1", "--format=%s")).toBe("Other: two");
+        // Aborted, asked first: main as it was before the series.
+        await h.keys("escape");
+        await h.app.run("git.abort");
+        expect(h.app.overlay).toMatchObject({
+          kind: "prompt",
+          confirm: true,
+          label: "Abort the cherry-pick? main goes back as it was before it, and what's settled so far is lost.",
+        });
+        await h.keys("y");
+        expect(await said(h, /^the cherry-pick aborted: main as it was/)).toBe(true);
+        expect(git(root, "rev-parse", "HEAD")).toBe(was);
+        expect(git(root, "status", "--porcelain")).toBe("");
+        expect(statusRow(h.frame())).not.toContain("cherry-picking");
+      });
+    });
+
+    test("a revert begun in a terminal, stopped at a conflict: named, settled, continued; another aborted", async () => {
+      await isolated(async () => {
+        const { root } = repo({ "a.md": "one\ntwo\nthree\n" });
+        commit(root, "a.md", "one\nTWO\nthree\n", "Shout two");
+        commit(root, "a.md", "one\nTWO, again\nthree\n", "Again");
+        // Reverting the first, the line changed again since: a conflict.
+        git(root, "revert", "--no-edit", "HEAD~1");
+        expect(git(root, "status", "--porcelain")).toBe("UU a.md");
+        const h = await harness({ root, open: "a.md", width: 120, height: 50 });
+        await h.app.git.refreshNow();
+        expect(statusRow(h.frame())).toContain("main reverting");
+        await h.app.run("git.rebase");
+        expect(list(h).title).toBe('Reverting "Shout two" — 1 file in conflict');
+        expect(list(h).items.map((i) => i.label)).toContain("(s) Skip this commit");
+        await h.keys("escape");
+        await h.app.run("git.merge_screen");
+        await h.keys("t", "w", "s");
+        expect(await said(h, "a.md staged, marked resolved — no conflict left: shift+r continues the revert")).toBe(
+          true,
+        );
+        await h.app.run("git.continue");
+        expect(await said(h, /^reverted: the revert is done/)).toBe(true);
+        expect(git(root, "log", "-1", "--format=%s")).toBe('Revert "Shout two"');
+        expect(readFileSync(join(root, "a.md"), "utf8")).toBe("one\ntwo\nthree\n");
+        // Another, aborted after asking: the branch as it was.
+        const was = git(root, "rev-parse", "HEAD");
+        git(root, "revert", "--no-edit", "HEAD~1");
+        await h.app.git.refreshNow();
+        expect(statusRow(h.frame())).toContain("main reverting");
+        await h.app.run("git.abort");
+        expect(h.app.overlay).toMatchObject({
+          kind: "prompt",
+          label: "Abort the revert? main goes back as it was before it, and what's settled so far is lost.",
+        });
+        await h.keys("y");
+        expect(await said(h, /^the revert aborted: main as it was/)).toBe(true);
+        expect(git(root, "rev-parse", "HEAD")).toBe(was);
+        expect(git(root, "status", "--porcelain")).toBe("");
+      });
+    });
+
     test("nothing under way: continue, skip and abort say so; shift+r on the base says there's nothing to rebase", async () => {
       await isolated(async () => {
         const { root } = repo({ "a.md": "a\n" });
         const h = await harness({ root, open: "a.md", width: 120, height: 40 });
         await h.app.run("git.continue");
-        expect(await said(h, "no merge or rebase under way")).toBe(true);
+        expect(await said(h, "no merge, rebase, cherry-pick or revert under way")).toBe(true);
         await h.app.run("git.skip");
-        expect(await said(h, "no rebase under way: only a rebase skips a commit")).toBe(true);
+        expect(await said(h, "no rebase, cherry-pick or revert under way: only they skip a commit")).toBe(true);
         await h.app.run("git.rebase");
         expect(await said(h, "main is the base: nothing to rebase it onto")).toBe(true);
       });

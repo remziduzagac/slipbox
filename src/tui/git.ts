@@ -475,15 +475,16 @@ export class Git {
   }
 
   /**
-   * `space g m` (20.21): before a merge, the links it would break — git's tentative result, the working
-   * tree untouched. A branch picked: this branch into the base, or another branch into this one.
+   * `:merge-review` (20.21): before a merge, the links it would break — git's tentative result, the working tree
+   * untouched. A branch picked: this branch into its base — its own (GIT-D10), else `[git] base`, main or master, as
+   * the git panel's Merge… and a rebase take it — or another branch into this one.
    */
   openMergeReview(): void {
     const c = this.checkout;
     if (!c) return this.app.message("info", "not in a git repository");
     const here = headOf(c).branch;
     if (!here) return this.app.message("info", "merge review: HEAD is detached — check out the branch to merge into");
-    const base = baseBranch(c, this.app.config.git.base);
+    const base = this.baseOf(c, here) ?? this.fallbackBase(c);
     const others = (branchesOf(c) ?? []).filter((b) => b !== here);
     const choices = [
       ...(base && base !== here ? [{ from: here, into: base }] : []),

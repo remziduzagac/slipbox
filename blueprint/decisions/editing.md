@@ -308,6 +308,11 @@ in the way of nothing, and the hash check would refuse it anyway.
 
 ## D154: Git, for reviewing (5.11–5.14, 2026-10-01)
 
+> **Amended (2026-10-17): GIT-D10 supersedes the part kept for `:merge-review`.** GIT-D10 is the later decision, and
+> its text has the merge review measured as everything else in the TUI is: `:merge-review` now offers this branch
+> into its own base (else `[git] base`, main or master), as the git panel's Merge… and a rebase take it. The CLI's
+> `merge-review` names what it merges and keeps `--into` (HEAD by default); its `changed` and `diff` keep `[git] base`.
+>
 > **Amended by GIT-D10 (2026-10-14):** in the TUI each branch is measured against its own base — the one it was made
 > from, else the nearest of `[git] bases` — not one base for the repository; the CLI's `changed` and `diff`, and the
 > TUI's `:merge-review`, keep `[git] base`.

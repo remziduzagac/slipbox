@@ -10,6 +10,7 @@ import { basename } from "node:path";
 import { headOf } from "../core/git.ts";
 import { type Changed, inVault } from "../core/gitops.ts";
 import { changedLater } from "../core/gitbranches.ts";
+import { OPERATIONS } from "../core/gitrebase.ts";
 import { commitLater, sections } from "../core/gitstage.ts";
 import { formatEntry } from "../core/capture.ts";
 import { sanitize } from "../core/sanitize.ts";
@@ -235,23 +236,19 @@ export class GitPanel {
             },
           ]
         : []),
-      // A merge or a rebase under way (GIT-D6): carried on, a rebase's commit left out, or given up.
+      // A merge, a rebase, a cherry-pick or a revert under way (GIT-D6): carried on, a commit left out (not a merge's),
+      // or given up.
       ...(op
         ? [
-            {
-              id: "continue",
-              label: "Continue",
-              action: "continue",
-              desc: op.kind === "rebase" ? "commits what's settled, and replays the next" : "commits the merge",
-            },
-            ...(op.kind === "rebase"
-              ? [{ id: "skip", label: "Skip", action: "skip", desc: "leaves out this commit, and replays the next" }]
+            { id: "continue", label: "Continue", action: "continue", desc: OPERATIONS[op.kind].carryOn },
+            ...(OPERATIONS[op.kind].skip
+              ? [{ id: "skip", label: "Skip", action: "skip", desc: OPERATIONS[op.kind].skip! }]
               : []),
             {
               id: "abort",
               label: "Abort",
               action: "abort",
-              desc: `the branch back where it was before the ${op.kind}`,
+              desc: `the branch back where it was before the ${OPERATIONS[op.kind].noun}`,
             },
           ]
         : []),
@@ -281,7 +278,7 @@ export class GitPanel {
         ? [
             ...k("commit", "commit"),
             ...k("fetch", "fetch"),
-            // A merge or a rebase under way (GIT-D6): `shift+r` offers continue, skip and abort.
+            // A merge, a rebase, a cherry-pick or a revert under way (GIT-D6): `shift+r` offers continue, skip and abort.
             ...(operationNow(this.app) ? k("rebase", "continue…") : []),
           ]
         : k("go", "go in");
