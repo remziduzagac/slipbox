@@ -463,6 +463,70 @@ describe("the branches (GIT-D9, GIT-D10, GIT-D13)", () => {
     expect(existsSync(join(done, "local", "draft.md"))).toBe(true);
   });
 
+  test("Remove…'s refusal and question, and Merge…'s menu, come from git in the background: each drawn as it comes (regression)", async () => {
+    // Found by the terminal checks: the refusal was said with no frame asked for, so it showed only once something
+    // else drew — another answer, or the next key — and on a slow machine, not before the check gave up.
+    const root = repo();
+    worktree(root, "agent/ahead", "main", true);
+    worktree(root, "agent/done", "main");
+    const { app, frame } = await panel(root);
+    const branch = (name: string) => {
+      const r = app.gitPanel.rows().find((x) => x.kind === "branch" && x.branch.name === name);
+      return r?.kind === "branch" ? r.branch : null;
+    };
+    expect(await until(() => (frame(), !!branch("agent/done")))).toBe(true);
+    // A frame asked for in the same turn as the answer lands (said, or a question opened): not left to whatever draws
+    // next. Each landing marks its turn, the mark gone with the turn's microtasks.
+    let landing = false;
+    let drawn = false;
+    const land = () => {
+      landing = true;
+      queueMicrotask(() => {
+        landing = false;
+      });
+    };
+    (app.host as { requestRender: () => void }).requestRender = () => {
+      if (landing) drawn = true;
+    };
+    const say = app.message.bind(app);
+    app.message = (...m: Parameters<App["message"]>) => {
+      say(...m);
+      land();
+    };
+    const open = app.overlays.openList.bind(app.overlays);
+    app.overlays.openList = (...o: Parameters<App["overlays"]["openList"]>) => {
+      open(...o);
+      land();
+    };
+    const title = () => (app.overlay as ListOverlay | null)?.title ?? "";
+    const answered = async (act: () => void, landed: () => boolean) => {
+      drawn = false;
+      act();
+      expect(await until(landed)).toBe(true);
+      return drawn;
+    };
+    const ahead = branch("agent/ahead")!;
+    expect(
+      await answered(
+        () => app.gitPanel.branches.button(ahead, "remove"),
+        () => app.messages.at(-1)?.text.startsWith("not removed:") ?? false,
+      ),
+    ).toBe(true);
+    expect(
+      await answered(
+        () => app.gitPanel.branches.button(branch("agent/done")!, "remove"),
+        () => title().startsWith("Remove the worktree"),
+      ),
+    ).toBe(true);
+    await app.input.handleKey("escape");
+    expect(
+      await answered(
+        () => app.gitPanel.branches.button(ahead, "merge"),
+        () => title() === "Merge agent/ahead into main",
+      ),
+    ).toBe(true);
+  });
+
   test("a branch's renamed file, one line changed: its diff against the base is that line, from the name it had", async () => {
     const root = repo();
     writeFileSync(join(root, "long.md"), `${Array.from({ length: 12 }, (_, i) => `line ${i + 1}`).join("\n")}\n`);
