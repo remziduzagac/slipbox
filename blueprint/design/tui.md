@@ -172,7 +172,10 @@ session keeps them.
   dropped when the line is too short.
 
 On the right it shows the link under the cursor and its status (`→ beta.md (resolved)`) in the rendered view
-(in source mode and the lens the row is the link's own text, so none is named), then
+(in source mode and the lens the row is the link's own text, so none is named), then, while the explorer has the
+keys and its cursor is on a `⊘` row, why that row isn't indexed (`⊘ not indexed: generated (node_modules),
+git-ignored`; VV-D9, D244: `Marks.selectedWhy`) — gone when the cursor moves off, cut to the room left after the
+words and the link are dropped, drawn after the mode chip when no file is open — then
 the note's words (`1,234 words`; the selection's in visual mode, `12 words selected`; frontmatter
 not counted, each Han or kana character a word; dropped first when short of room), then
 `tab N/M` when there are two or more tabs, then `L<source line>:<column>` and the percentage (`all`
@@ -729,7 +732,17 @@ keys.
   another vault's is indexed when its index is on the disk, indexing while the background index builds it
   (`AutoIndex.status.current`), else unmarked; a note in what the walk leaves out that a link reached is indexed. A
   folder you may not list and a file you may not read: can't read; a link whose target isn't there: a problem. A file's
-  row carries one only when it isn't its folder's. What the disk says of a row (`Facts`: access, a broken link, the
+  row carries one only when it isn't its folder's. **Why a row is `⊘`** (D244) is said in words, never on the row —
+  there's no width for it — but on the status line while the explorer's cursor is on it, and in Info for the file on
+  screen (its row's reason, or its folder's): the rule that marked it says which it is (`Marks.index` gives the rule
+  and what it read; `Marks.why` the words), never a second guess. A busy folder: `generated (node_modules)` when it
+  holds no note at its top, `git-ignored` when its repository ignores it, both when both hold (`busyWhy`, D237's two
+  things); a folder in it says the busy folder's name, carried down with the reason (`TreeRow.leftOutAt`). What
+  `.gitignore` leaves out, `git-ignored`; `walk.exclude`; home's skip list: `hidden`, `home's Downloads`, `a system
+  folder (Library)`, `git's own folder`; `on another disk`; a link: `a link not followed` (looked at or not), `a link
+  followed, its disk not answering`, `a link to a folder holding the vault`, `a second link to a folder followed
+  already`; a note `over walk.max_file_size`; a folder of home past its walk's cap, `past home's limit of 5,000
+  folders` (or its notes'). What the disk says of a row (`Facts`: access, a broken link, the
   size, a vault's index and branch) is read once per row drawn, again when the tree is built again: never for the rows
   out of sight, so the pane's width for its sideways scroll keeps the index's column for every folder and vault, and a
   file's mark only the disk gives may take a name's last columns. Never either for the row of a folder where another
@@ -914,18 +927,18 @@ keys.
   stays the flat quick-open across the vault.
 - **Info (right, `3.19`):** what the file on screen is — the right panel's views all show that file, and follow it.
   Sections that fold (`h`/`l`): **File** (its path, the vault it belongs to — home, or Elsewhere — its kind, size,
-  modified time, words and reading time, lines, encoding and line endings, saved or not), **Properties** (the
-  frontmatter's keys and values, nested maps indented under their key), **Tags** (its own, frontmatter's and text's),
-  **Links** (links and how many are unresolved, backlinks, headings, footnotes, tasks done; how links are written
-  here, `21.4` — `writes`, its `path` and `.md`, then `from` what said them, or each part's source after it, `y`
-  copying it whole). `enter` opens what
-  a row names: a property's line in the frontmatter (source mode: its own line; rendered, the row that shows it), a
-  tag's notes, the links or backlinks list, the outline or the footnotes view; any other row copies its value, as `y`
-  does. The vault's own information — its name and the other copies of it this machine knows (`21.6`), its notes,
-  index (when it was written, what was reached outside the walk, `20.10`; home's cap) and watcher, the background index
-  — is `space v i`'s window: a vault isn't a file. Names are a column a third of the pane at most, values
-  cut to it (no sideways scrolling). `/` filters (see Filter). `space n i`, the `ℹ` button, `slipbox stat` (its
-  `root`, `name` and `properties` too). `e` edits the properties (below).
+  modified time, words and reading time, lines, encoding and line endings, saved or not; `index`, only when it isn't
+  indexed: why, as the status line says it of its explorer row — its own `⊘`, or its folder's, D244), **Properties**
+  (the frontmatter's keys and values, nested maps indented under their key), **Tags** (its own, frontmatter's and
+  text's), **Links** (links and how many are unresolved, backlinks, headings, footnotes, tasks done; how links are
+  written here, `21.4` — `writes`, its `path` and `.md`, then `from` what said them, or each part's source after it,
+  `y` copying it whole). `enter` opens what a row names: a property's line in the frontmatter (source mode: its own
+  line; rendered, the row that shows it), a tag's notes, the links or backlinks list, the outline or the footnotes
+  view; any other row copies its value, as `y` does. The vault's own information — its name and the other copies of
+  it this machine knows (`21.6`), its notes, index (when it was written, what was reached outside the walk, `20.10`;
+  home's cap) and watcher, the background index — is `space v i`'s window: a vault isn't a file. Names are a column a
+  third of the pane at most, values cut to it (no sideways scrolling). `/` filters (see Filter). `space n i`, the `ℹ`
+  button, `slipbox stat` (its `root`, `name` and `properties` too). `e` edits the properties (below).
 - **The properties editor** (`3.20`; D151): `e` in the Info view, or `space n shift+p`, opens the note's frontmatter —
   YAML or TOML, as the note has it — in a floating window over the others: framed, titled "Properties — note (YAML)", as
   tall as its text. Inside is a window like any — a view of a buffer that isn't a file — in source mode, with every
@@ -2128,13 +2141,33 @@ read from `git status --branch`'s first line, asked with the status in the backg
 **Pulling where both sides moved** (GIT-D6; `core/gitremote.ts` `pullLater`, `tui/rebase.ts`): a pull that can't
 fast-forward (git's "Not possible to fast-forward") asks: `(m)` merge the upstream into the branch (`git pull
 --no-rebase --ff --no-edit`: git's own message, never an editor; `--ff` over a `pull.ff = only`), `(r)` rebase the
-branch onto it (`git pull --rebase`), `(n)` nothing. Selected is what git's config says (`pullDefault`): a rebase where
-`branch.<name>.rebase`, else `pull.rebase`, is true or a kind of rebase, else a merge.
+branch onto it (`git pull --rebase`; over files changed, asked to stash them first, below), `(n)` nothing. Selected is
+what git's config says (`pullDefault`): a rebase where `branch.<name>.rebase`, else `pull.rebase`, is true or a kind of
+rebase, else a merge.
 
 **Rebasing onto the base** (`git.rebase`, `:rebase`, `shift+r` in the git panel — its `rebase`): the branch rebased onto
 the base's tip — the branch's own (GIT-D10, `baseOf`), else `[git] base`, main or master (`baseBranch`) — after asking,
 with how many commits each side has (`aheadBehind`); unsaved notes saved or kept first, as before a pull. On the base,
 detached, or with nothing new on the base: said, nothing run.
+
+**A rebase over files changed** (D247; `core/gitrebase.ts` `changedTracked`, `stashFirst` in `tui/rebase.ts`): git
+won't start a rebase over tracked files changed, staged or not, so slipbox asks first instead of saying git's refusal.
+`shift+r`'s question becomes "Stash your changes, rebase agent onto main, put them back? 2 files changed; its 3 commits
+replayed after main's 1 new."; the pull's `(r)` asks "Stash your changes, rebase main onto origin/main, put them back?
+1 file changed." Yes runs the rebase with `--autostash` (`git rebase --autostash`, `git pull --rebase --autostash`):
+git stashes them, rebases, and puts them back, as changes not staged (a new file stays staged). No: nothing runs. The
+files are read with `git status --untracked-files=no --ignore-submodules=all`, as git's own check sees them; a clean
+tree asks and runs as before. Unsaved notes saved after `shift+r`'s question may change a file: then the stash is asked
+about there. Untracked files stay git's to judge, as without slipbox: its autostash doesn't take them, and it rebases
+past them, refusing in its words only where one would be overwritten (`The following untracked working tree files
+would be overwritten by checkout: n.md`), the changes stashed put back first. A rebase that stops at a conflict keeps
+them stashed until it ends, continued or aborted. Where putting them back conflicts, git keeps them in the stash, as
+`autostash`, and marks the files in conflict. slipbox knows it by the stash the rebase left behind — the newest
+stash's commit before and after (`withAutostash`, `stashKept`), never git's words, which change between its versions
+— and also when a continue, a skip or an abort ends the rebase: the end's message says so, naming the entry and the
+files (`rebased agent onto main — your changes conflicted going back, so git kept
+them in the stash, stash@{0} ("autostash"): 1 file in conflict (b.md) — x in source control settles it (:resolve), then
+drop the stash (z)`).
 
 **A merge or a rebase under way** (`core/gitrebase.ts` `operationOf`), or a cherry-pick or a revert begun in a
 terminal: read from git's own files, no git run — `rebase-merge/` (`msgnum`, `end`, `head-name`), `rebase-apply/`

@@ -67,6 +67,10 @@ The format is [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.1.0/); wh
   link whose target isn't there. git's mark is in the column before it, and before that, dimmed, a vault's branch, or a
   worktree's after `⎇`. Each mark is one column wide, with ASCII and Nerd Font forms ([A row's
   marks](docs/manual/files.md#a-rows-marks)). A new colour, `sidebar_mark`, is the indexed mark's.
+- With the explorer's cursor on a row marked `⊘`, the status line says why it isn't indexed, until the cursor moves
+  off: `⊘ not indexed: generated (node_modules), git-ignored`, `walk.exclude`, `on another disk`, `a link not
+  followed`, `over walk.max_file_size`, and the others. Where two things hold, both are said. The Info view says it
+  too, of the file on screen.
 - The git panel works by mouse as by keys, and says its keys: a message box where `ctrl+enter` commits; buttons to
   commit, amend, pull, push, fetch and stash; each row's buttons under the pointer to stage, unstage, discard or show
   its diff, and a menu on a right click. It shows what the branch changed against its base, so a branch whose work is
@@ -95,7 +99,9 @@ The format is [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.1.0/); wh
   status line says so (`rebasing 2/5`), the panel has Continue, Skip and Abort buttons, and `shift+r` offers the same
   (`:continue`, `:skip`, `:abort`); Abort asks first. A cherry-pick or a revert you started in a terminal is shown and
   handled the same way (`cherry-picking`, `reverting`). In a vault you don't trust, none of them runs the repository's
-  hooks.
+  hooks. A rebase over uncommitted changes, `shift+r`'s or a pull's, asks "Stash your changes, rebase, put them back?"
+  instead of failing; yes stashes them, rebases and puts them back. Where they clash with what the rebase brought in,
+  git keeps them in the stash, and the message names it and the files in conflict.
 
 ### Changed
 
@@ -154,9 +160,10 @@ The format is [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.1.0/); wh
   stops answering can't hold slipbox up), and what isn't a note or a text file; it holds 10,000 notes at most, and
   says so when it's full, `slipbox index --refresh ~` too. A folder of home you open, such as `slipbox ~/notes`, a note
   in one, or one you go into from another vault, has its notes and the vaults in it at once, and its own note opens;
-  each folder you open by name keeps its own tabs, as before. Changing `walk.extensions`, `walk.exclude` or
-  `walk.root_markers` walks home again. The background index indexes home's notes before the vaults in it.
-  `slipbox info` says `mode` `home` there ([Home](docs/manual/links-and-vaults.md#home)).
+  each folder you open by name keeps its own tabs, as before. That folder is indexed whole: its notes count toward the
+  10,000, home's deepest other notes making room for them, and the message says it's whole when home is full. Changing
+  `walk.extensions`, `walk.exclude` or `walk.root_markers` walks home again. The background index indexes home's notes
+  before the vaults in it. `slipbox info` says `mode` `home` there ([Home](docs/manual/links-and-vaults.md#home)).
 - The explorer lists `node_modules`, the other folders tools fill (`build`, `dist`, `target`, `vendor`, `__pycache__`,
   caches…), what `.gitignore` and `walk.exclude` leave out, and home's `Downloads`, each marked `⊘`. You can unfold
   them and open their files; nothing in them is indexed. A folder you may not read is listed too, marked `⚿`. Every

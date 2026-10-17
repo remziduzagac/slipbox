@@ -7,6 +7,7 @@ import { existsSync, statSync } from "node:fs";
 import { join } from "node:path";
 import { type Checkout, headCommit, headOf } from "./git.ts";
 import type { Graph } from "./graph.ts";
+import { deepestOutside, inFolders } from "./home.ts";
 import { HOME_LIMITS } from "./walk.ts";
 import type { WatchBatch } from "./watch.ts";
 
@@ -22,7 +23,8 @@ export const SWITCH_SETTLE_MS = 3000;
 /**
  * A batch applied to the graph: notes updated, added and removed, attachments, a rescan.
  * `structural` when notes came or went — every link's status may have changed — and warnings for
- * what was left out. `maxNotes`: home's cap (VV-D2) — a note that comes past it is left to home's walk, which holds it.
+ * what was left out. `maxNotes`: home's cap (VV-D2) — a note that comes past it is left to home's walk, which holds it,
+ * unless it's in a folder asked for by name.
  */
 export function applyToGraph(
   graph: Graph,
@@ -64,7 +66,16 @@ export function applyToGraph(
       }
       structural = true;
     } else {
-      if (!graph.notes.has(c.rel) && graph.notes.size >= maxNotes) continue;
+      if (!graph.notes.has(c.rel) && graph.notes.size >= maxNotes) {
+        // One in a folder of home asked for by name comes all the same (VV-D2): it's whole, home's deepest own note
+        // left out to make room — or, none of home's own left, past the cap.
+        if (!inFolders(c.rel, graph.askedFolders)) continue;
+        const out = deepestOutside(
+          [...graph.notes.keys()].filter((rel) => !graph.reached.has(rel)),
+          graph.askedFolders,
+        );
+        if (out) graph.removeFile(out);
+      }
       if (c.kind === "created" || !graph.notes.has(c.rel)) structural = true;
       graph.updateFile(c.rel, { rel: c.rel, abs, size: st.size, mtimeMs: st.mtimeMs });
     }

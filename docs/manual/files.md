@@ -139,6 +139,30 @@ The last column says what slipbox's index holds of the row, for links, backlinks
 Most folders are indexed, so a file has a mark there only when it isn't what its folder says. A folder inside a `⊘`
 folder is marked `⊘` too. With Nerd Font icons, `⚿` is a lock.
 
+Why a row is `⊘` is said on the status line while the explorer's cursor is on it, and goes when the cursor moves off:
+
+```text
+⊘ not indexed: generated (node_modules), git-ignored
+```
+
+The reasons are:
+
+| It says | Why |
+| --- | --- |
+| `generated (node_modules)` | a folder tools fill, with no note at its top; a folder in one says its name too |
+| `git-ignored` | `.gitignore` leaves it out; with the one above, both are said |
+| `walk.exclude` | your `walk.exclude` leaves it out |
+| `hidden`, `home's Downloads`, `a system folder (Library)` | home's index leaves it out |
+| `on another disk` | a folder of your home folder where a disk or a share is mounted |
+| `a link not followed` | a link out of the vault or home you haven't followed |
+| `a link followed, its disk not answering` | a link you follow, its disk not answering yet |
+| `a link to a folder holding the vault`, `a second link to a folder followed already` | a link not walked through |
+| `over walk.max_file_size` | a note too big to read |
+| `past home's limit of 5,000 folders` | a folder of your home folder past where its index stopped |
+
+The Info view (`space n i`) says it too, of the file on screen: `index: not indexed: walk.exclude`, for the file's own
+`⊘` or its folder's.
+
 The column before it is git's: `M`, `+`, `R` or `!` for a changed file, and `•` for a folder with a change in it, `o` in
 ASCII ([Git](git.md)).
 

@@ -80,6 +80,21 @@ export function isBusyFolder(name: string, ignored: () => boolean, notes: () => 
   return isBusyName(name) && (ignored() || !notes());
 }
 
+/** Which of the rule's two things make a busy folder busy (D237): `.gitignore` ignores it; no note at its top. */
+export interface BusyWhy {
+  ignored: boolean;
+  noNotes: boolean;
+}
+
+/**
+ * Why a folder is busy, when `isBusyFolder` says it is: which of its two things hold — both asked here, so that both
+ * are said where both hold (the explorer's `⊘`, VV-D9). Null when it isn't busy.
+ */
+export function busyWhy(name: string, ignored: () => boolean, notes: () => boolean): BusyWhy | null {
+  if (!isBusyFolder(name, ignored, notes)) return null;
+  return { ignored: ignored(), noNotes: !notes() };
+}
+
 /** Whether the folder `abs` holds a note directly in it: a file named as a note, not hidden. One listing; none there, no. */
 export function holdsNotes(abs: string, isNoteName: (name: string) => boolean): boolean {
   try {
@@ -97,9 +112,22 @@ export function holdsNotes(abs: string, isNoteName: (name: string) => boolean): 
  */
 export function busyFolderAt(abs: string, walk: Config["walk"]): boolean {
   if (!isBusyName(basename(abs))) return false;
+  const { filter, rel } = filterHolding(abs, walk);
+  return filter.busy(rel);
+}
+
+/** `busyFolderAt`, saying why (`busyWhy`): null when the folder `abs` isn't busy. */
+export function busyFolderWhyAt(abs: string, walk: Config["walk"]): BusyWhy | null {
+  if (!isBusyName(basename(abs))) return null;
+  const { filter, rel } = filterHolding(abs, walk);
+  return filter.busyWhy(rel);
+}
+
+/** The filter of the walk of the vault holding `abs`, and its path there; outside every vault, home's rules. */
+function filterHolding(abs: string, walk: Config["walk"]): { filter: WalkFilter; rel: string } {
   const root = findVaultRoot(dirname(abs));
   const filter = new WalkFilter(root ?? dirname(abs), walk, { home: !root });
-  return filter.busy(root ? relative(root, abs).split(sep).join("/") : basename(abs));
+  return { filter, rel: root ? relative(root, abs).split(sep).join("/") : basename(abs) };
 }
 
 /** The system's folders at home's top, by platform (VV-D2): an application's, never a person's notes. */
@@ -293,11 +321,21 @@ export class WalkFilter {
    * whatever the disk says now (a write about to put one there).
    */
   busy(rel: string, notes?: boolean): boolean {
-    return isBusyFolder(
+    return isBusyFolder(...this.busyAsked(rel, notes));
+  }
+
+  /** `busy`, saying why (`busyWhy`): which of the rule's two things hold. Null when `rel` isn't busy. */
+  busyWhy(rel: string): BusyWhy | null {
+    return busyWhy(...this.busyAsked(rel));
+  }
+
+  /** What the busy folders' rule is asked of `rel`: its name, whether it's ignored, whether it holds a note. */
+  private busyAsked(rel: string, notes?: boolean): [string, () => boolean, () => boolean] {
+    return [
       rel.slice(rel.lastIndexOf("/") + 1),
       () => !this.home && this.ignoredByGit(rel, true),
       () => notes ?? this.notesIn(rel),
-    );
+    ];
   }
 
   /**

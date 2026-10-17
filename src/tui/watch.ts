@@ -215,7 +215,8 @@ export class Watch {
 
   /**
    * Home's walk made and its index written (VV-D2): while home is the vault open, its graph built again from them —
-   * what came, what went — and its cap said when it's reached.
+   * what came, what went — and its cap said when it's reached: the walk's, or the one the folders asked for by name
+   * bring it to, those said to be whole.
    */
   private homeIndexed(capped: WalkCap | null): void {
     if (this.app.loc.mode !== "home" || this.app.quitting) return;
@@ -229,7 +230,9 @@ export class Watch {
     this.app.explorer.invalidateTree();
     for (const b of this.app.buffers.values()) b.invalidateLayouts();
     this.app.relayoutAll();
-    if (capped) this.app.message("warn", describeCap(capped));
+    const home = this.app.graph.home;
+    const cap = home?.capped ?? capped;
+    if (cap) this.app.message("warn", describeCap(cap, home?.asked));
     this.app.host.requestRender();
   }
 

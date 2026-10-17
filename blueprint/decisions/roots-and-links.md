@@ -991,6 +991,25 @@ so a capitalised one is more likely a person's folder of notes, which a busy nam
 
 **Not chosen:** every busy name in any case: a `Build/` of notes would be left out where nothing generated it.
 
+## D244: The explorer's `⊘` says why, on the status line and in Info (2026-10-17)
+
+**Decision:** A row marked `⊘` (not indexed, VV-D9) stays as it is. With the explorer's cursor on it, the status line
+says why, in words a user knows (`⊘ not indexed: generated (node_modules), git-ignored`), and stops when the cursor
+moves off; the Info view says it of the file on screen (`index`), its own row's reason or its folder's. The words come
+from the rule that marked the row, never a second guess: a busy folder says which of D237's two things hold —
+`generated (node_modules)` for no note at its top, `git-ignored` for ignored, both when both hold — and a folder in it
+names the busy one; what `.gitignore` or `walk.exclude` leaves out, home's skip list (`hidden`, `home's Downloads`, a
+system folder), another disk, a link not followed or whose disk isn't answering (VV-D6), a note over
+`walk.max_file_size`, a folder past home's cap, each its own. Details VV-D9. As built: `Marks.why` and `Marks.whyAt`
+(`src/tui/marks.ts`), `busyWhy` (`src/core/walk.ts`); design/tui.md § Side panes.
+
+**Why:** The maintainer's choice, 2026-10-17 (#138): every `⊘` looked the same whatever the reason, and a row has no
+width to spare for one. The cursor on a row is the question; the status line is where slipbox already says what's
+under the cursor (a link and its status).
+
+**Not chosen:** the reason on the row, after its name (no width; it would push out what describes the row); a
+different glyph per reason (one column each, and the user would have to learn them all).
+
 ## D246: A note written where walk.exclude leaves it out is written, and said not indexed (0.11, 2026-10-17)
 
 **Decision:** A note made, saved, moved, copied, exported as Markdown or captured into the scratch where `walk.exclude`
@@ -1017,3 +1036,26 @@ the way at each write, and a root nested on the way costs a look for its markers
 path was already allowed; saying it once per note or per session
 (a state to keep, and a save that reads as indexed); a message of its own after the write (the status line shows the
 last message, and the save's would hide it); text added to a bare-path output (`capture`, `mkdir`), which scripts read.
+||||||| 61b0b3a
+
+## D248: A folder of home opened by name is whole, and counts against home's cap (2026-10-17)
+
+**Decision:** A folder of home asked for by name (`slipbox ~/notes`, a note of it opened, a way into it from another
+vault) is walked whole, whatever it holds: no cap of notes or folders of its own. Its notes count against home's cap
+of 10,000, and the cap never leaves one of them out: home's other notes make room, the deepest left out first, as
+home's own walk leaves them. Home's walk, made before or after, so keeps as many fewer of its own as the folder holds.
+A folder that alone holds more than the cap is whole all the same: home holds its notes and none of its own. A note
+that comes into it while home is open is taken in, home's deepest other note leaving for it. When the cap is reached,
+its message says so in its usual words, and adds that the folder opened is whole. Details VV-D2. As built:
+`homeWalk` (`src/core/home.ts`); design/roots.md § Home.
+
+**Why:** The maintainer's choice, 2026-10-17, for a bug (#122): the folder opened was walked and capped on its own,
+then merged, so a full home went past its cap (10,005 notes). The folder opened is the one being worked in, so it is
+the last to leave out; home's deepest notes are the ones the cap leaves out already.
+
+**Cost:** Past the cap, the folder opened is walked whole each time home's graph is built, until home's walk covers
+it. A very large folder opened by name holds that many notes, as a vault of that size would.
+
+**Not chosen:** the folder opened capped with home, its own deepest notes left out; the docs saying the folder opened
+is an exception to the cap, home's index going past it.
+||||||| 61b0b3a

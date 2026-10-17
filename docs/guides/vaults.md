@@ -215,7 +215,8 @@ from the start, and it keeps its own tabs. slipbox keeps the walk, so this happe
 at what changed.
 
 Home's index holds 10,000 notes at most, and its walk lists 5,000 folders, those nearest the top. slipbox says so when
-it stops there. [Home](../manual/links-and-vaults.md#home) has the rest.
+it stops there. A folder you open by name is indexed whole all the same, home's deepest notes making room for it.
+[Home](../manual/links-and-vaults.md#home) has the rest.
 
 ## Elsewhere
 
@@ -362,7 +363,11 @@ A row can end with marks, each in a column of its own, so they line up down the 
 - **Before the marks, dimmed,** is what describes the row: a vault's branch, a worktree's after `⎇`, or where a
   symlink leads.
 
-[A row's marks](../manual/files.md#a-rows-marks) has their ASCII and Nerd Font forms.
+With the cursor on a `⊘` row, the status line says why it isn't indexed, until the cursor moves off:
+`⊘ not indexed: generated (node_modules)` for a folder tools fill with no note at its top, `git-ignored`, both when
+both hold, `walk.exclude`, `on another disk`, `a link not followed`. The Info view says it too, of the file on screen.
+
+[A row's marks](../manual/files.md#a-rows-marks) has their ASCII and Nerd Font forms, and every reason.
 
 ### Busy folders: listed, not indexed
 
