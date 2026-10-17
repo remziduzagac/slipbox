@@ -82,6 +82,7 @@ import {
   conflictsOf,
   fromMerge,
   parseConflicts,
+  readConflicts,
   resultParts,
   resultText,
   resultView,
@@ -5501,9 +5502,89 @@ describe("a file in conflict, read for the merge screen (GIT-D5)", () => {
     const f = parseConflicts("<<<<<<< a\nx\n<<<<<<< b\ny\n=======\nz\n>>>>>>> c\n");
     expect(f.segments[0]).toEqual({ kind: "plain", lines: ["<<<<<<< a", "x"] });
     expect(conflictsOf(f)[0]).toMatchObject({ ours: ["y"], theirs: ["z"], line: 3 });
-    // A heading's ======= inside theirs is theirs: only the first one parts the sides.
+    // A heading's ======= inside a side: either could part them, so the conflict is ambiguous, read the first way and
+    // written back as it was.
     const setext = parseConflicts("<<<<<<< a\nMine\n=======\nTheirs\n=======\n>>>>>>> b\n");
     expect(conflictsOf(setext)[0]).toMatchObject({ ours: ["Mine"], theirs: ["Theirs", "======="] });
+    expect(conflictsOf(setext)[0]!.ambiguous!.map((w) => [w.ours, w.theirs])).toEqual([
+      [["Mine"], ["Theirs", "======="]],
+      [["Mine", "=======", "Theirs"], []],
+    ]);
+    expect(resultText(setext, [null])).toBe("<<<<<<< a\nMine\n=======\nTheirs\n=======\n>>>>>>> b\n");
+    expect(conflictsOf(parseConflicts("<<<<<<< a\nMine\n=======\nTheirs\n>>>>>>> b\n"))[0]!.ambiguous).toBeUndefined();
+  });
+
+  test("a ======= line inside yours: split where stages 2 and 3 have it, else ambiguous (regression)", () => {
+    // As git writes it: yours added a setext heading (its underline seven long) where theirs changed the line.
+    const text = "start\n<<<<<<< HEAD\nSummary\n=======\nours body\n=======\ntheirs body\n>>>>>>> theirs\nend\n";
+    const stages = {
+      base: "start\nold\nend\n",
+      ours: "start\nSummary\n=======\nours body\nend\n",
+      theirs: "start\ntheirs body\nend\n",
+    };
+    const [c] = conflictsOf(withStages(parseConflicts(text), stages));
+    expect(c).toMatchObject({ ours: ["Summary", "=======", "ours body"], theirs: ["theirs body"], base: ["old"] });
+    expect(c!.ambiguous).toBeUndefined();
+    const f = readConflicts(text, stages);
+    expect(resultText(f, ["ours"])).toBe("start\nSummary\n=======\nours body\nend\n");
+    expect(resultText(f, ["theirs"])).toBe("start\ntheirs body\nend\n");
+    // No stages, or none that holds one way alone: ambiguous, its base unknown.
+    expect(
+      conflictsOf(withStages(parseConflicts(text), { base: null, ours: null, theirs: null }))[0]!.ambiguous,
+    ).toHaveLength(2);
+    const edited = withStages(parseConflicts(text), { ...stages, theirs: "start\nsomething else\nend\n" });
+    expect(conflictsOf(edited)[0]).toMatchObject({ base: null, ambiguous: expect.any(Array) });
+  });
+
+  test("a ======= line in diff3's base: split where the stages have it, else ambiguous (regression)", () => {
+    const text = "start\n<<<<<<< HEAD\nours\n||||||| base\nTitle7\n=======\n=======\ntheirs\n>>>>>>> theirs\nend\n";
+    const [read] = conflictsOf(parseConflicts(text));
+    expect(read).toMatchObject({ ours: ["ours"], base: ["Title7"], theirs: ["=======", "theirs"], markedBase: true });
+    expect(read!.ambiguous).toHaveLength(2);
+    const stages = {
+      base: "start\nTitle7\n=======\nend\n",
+      ours: "start\nours\nend\n",
+      theirs: "start\ntheirs\nend\n",
+    };
+    const f = readConflicts(text, stages);
+    expect(conflictsOf(f)[0]).toMatchObject({ base: ["Title7", "======="], theirs: ["theirs"] });
+    expect(resultText(f, ["theirs"])).toBe("start\ntheirs\nend\n");
+    // Unsettled, written back as git wrote it.
+    expect(resultText(f, [null])).toBe(text);
+    // A ======= in yours, before the base's marker, is yours: no ambiguity.
+    const before = conflictsOf(parseConflicts("<<<<<<< a\nT\n=======\n||||||| b\nB\n=======\nX\n>>>>>>> c\n"))[0]!;
+    expect(before).toMatchObject({ ours: ["T", "======="], base: ["B"], theirs: ["X"] });
+    expect(before.ambiguous).toBeUndefined();
+  });
+
+  test("a fenced example of git's markers is text; git's own conflict in a code block is one (regression)", () => {
+    const example = "```\n<<<<<<< HEAD\nmine\n=======\nyours\n>>>>>>> b\n```\n";
+    expect(conflictsOf(parseConflicts(`# How to\n\n${example}`)).length).toBe(0);
+    expect(conflictsOf(parseConflicts(`# How to\n\n${example.replaceAll("```", "~~~~")}`)).length).toBe(0);
+    // A real one after the example is still read, and the example kept byte for byte.
+    const both = `# How to\n\n${example}\n<<<<<<< HEAD\nA\n=======\nB\n>>>>>>> x\n`;
+    const f = parseConflicts(both);
+    expect(conflictsOf(f)).toHaveLength(1);
+    expect(conflictsOf(f)[0]!.line).toBe(11);
+    expect(resultText(f, ["ours"])).toBe(`# How to\n\n${example}\nA\n`);
+    // Markers the fence's end falls between: a conflict across it, not an example.
+    expect(conflictsOf(parseConflicts("```\n<<<<<<< HEAD\na\n```\n=======\nb\n```\n>>>>>>> x\n")).length).toBe(1);
+    // With git's stages: an example both sides have is text; markers neither side has are git's, fence or not.
+    const inBlock = "```ts\n<<<<<<< HEAD\nconst a = 1;\n=======\nconst a = 2;\n>>>>>>> x\n```\n";
+    const code = readConflicts(inBlock, {
+      base: "```ts\nconst a = 0;\n```\n",
+      ours: "```ts\nconst a = 1;\n```\n",
+      theirs: "```ts\nconst a = 2;\n```\n",
+    });
+    expect(conflictsOf(code)).toHaveLength(1);
+    expect(resultText(code, ["theirs"])).toBe("```ts\nconst a = 2;\n```\n");
+    const doc = `# How to\n\n${example}\nend\n`;
+    const kept = readConflicts(`${doc.replace("end", "<<<<<<< HEAD\nend, mine\n=======\nend, theirs\n>>>>>>> x")}`, {
+      base: doc,
+      ours: doc.replace("end", "end, mine"),
+      theirs: doc.replace("end", "end, theirs"),
+    });
+    expect(conflictsOf(kept).map((c) => c.ours)).toEqual([["end, mine"]]);
   });
 
   test("settled: yours, theirs, both either way, or lines of your own; the rest still marked", () => {

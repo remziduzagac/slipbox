@@ -19485,6 +19485,77 @@ describe("git's review, merge screen, pull and rebase (GIT-D3, GIT-D5, GIT-D6)",
       });
     });
 
+    test("a ======= line inside yours: o and w keep yours whole, as git's index has it (regression)", async () => {
+      await isolated(async () => {
+        // Yours made the line a heading, its underline seven long, where theirs changed it.
+        const { root } = repo({ "a.md": "start\nold\nend\n" });
+        git(root, "switch", "-q", "-c", "theirs");
+        commit(root, "a.md", "start\ntheirs body\nend\n");
+        git(root, "switch", "-q", "main");
+        commit(root, "a.md", "start\nSummary\n=======\nours body\nend\n");
+        git(root, "merge", "-q", "theirs");
+        expect(readFileSync(join(root, "a.md"), "utf8")).toContain("Summary\n=======\nours body\n=======\ntheirs body");
+        const h = await harness({ root, open: "a.md", width: 120, height: 50 });
+        await h.app.git.refreshNow();
+        await h.app.run("git.merge_screen");
+        expect(floatText(h)).toContain("Yours · HEAD, against the base");
+        await h.keys("o", "w");
+        expect(readFileSync(join(root, "a.md"), "utf8")).toBe("start\nSummary\n=======\nours body\nend\n");
+      });
+    });
+
+    test("a conflict its markers and git's index can't part: o, t and b refused, e edits it by hand (regression)", async () => {
+      await isolated(async () => {
+        const { root } = repo({ "a.md": "start\nold\nend\n" });
+        git(root, "switch", "-q", "-c", "theirs");
+        commit(root, "a.md", "start\ntheirs\nend\n");
+        git(root, "switch", "-q", "main");
+        commit(root, "a.md", "start\nmine\nend\n");
+        git(root, "merge", "-q", "theirs");
+        // A ======= line written into it since (an agent): neither stage has either way of reading it.
+        const marked = "start\n<<<<<<< HEAD\nmine\n=======\ntheirs\n=======\nmore\n>>>>>>> theirs\nend\n";
+        writeFileSync(join(root, "a.md"), marked);
+        const h = await harness({ root, open: "a.md", width: 120, height: 50 });
+        await h.app.git.refreshNow();
+        await h.app.run("git.merge_screen");
+        expect(h.app.floating?.kind).toBe("merge");
+        expect(floatText(h)).toContain("Ambiguous · more than one ======= line could part yours from theirs");
+        for (const k of ["o", "t", "b", "shift+b"]) await h.keys(k);
+        expect(
+          await said(
+            h,
+            "conflict 1: more than one ======= line could part yours from theirs, and git's index doesn't say which — e edits it by hand",
+          ),
+        ).toBe(true);
+        expect(floatText(h)).toContain("Conflict 1 of 1 · line 2 · not settled");
+        await h.keys("w");
+        expect(readFileSync(join(root, "a.md"), "utf8")).toBe(marked);
+        await h.keys("e");
+        expect(h.app.floating).toBeNull();
+        expect(h.app.view!.buf.source).toBe(marked);
+        expect(h.app.view!.buf.markers).toBe(true);
+      });
+    });
+
+    test("a fenced example of git's markers in a note in conflict is text: kept byte for byte (regression)", async () => {
+      await isolated(async () => {
+        const example = "```\n<<<<<<< HEAD\nmine\n=======\nyours\n>>>>>>> branch\n```\n";
+        const doc = (end: string) => `# How to settle a conflict\n\n${example}\n${end}\n`;
+        const { root } = repo({ "a.md": doc("The end.") });
+        git(root, "switch", "-q", "-c", "theirs");
+        commit(root, "a.md", doc("Their end."));
+        git(root, "switch", "-q", "main");
+        commit(root, "a.md", doc("My end."));
+        git(root, "merge", "-q", "theirs");
+        const h = await harness({ root, open: "a.md", width: 120, height: 50 });
+        await h.app.git.refreshNow();
+        await h.app.run("git.merge_screen");
+        expect(floatText(h)).toContain("Conflict 1 of 1 · line 11");
+        await h.keys("o", "w");
+        expect(readFileSync(join(root, "a.md"), "utf8")).toBe(doc("My end."));
+      });
+    });
+
     test("the conflict prompt's (m)erge settles a conflict on the merge screen; esc goes back to the prompt", async () => {
       await isolated(async () => {
         const { root } = repo({ "a.md": "one\ntwo\nthree\n" });

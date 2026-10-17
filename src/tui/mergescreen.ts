@@ -17,10 +17,10 @@ import {
   conflictExcerpt,
   conflictsOf,
   fromMerge,
-  parseConflicts,
+  markersOf,
+  readConflicts,
   resultText,
   resultView,
-  withStages,
 } from "../core/conflicts.ts";
 import { inCheckout, inVault, showAt } from "../core/gitops.ts";
 import { operationOf } from "../core/gitrebase.ts";
@@ -90,20 +90,20 @@ export function openMergeScreen(app: App, rel?: string): void {
   const text = buf.source;
   const was = left.get(app)?.get(target);
   if (was?.read === text) return show(app, was);
-  const parsed = parseConflicts(text);
-  if (!conflictsOf(parsed).length)
+  const path = inCheckout(c, app.loc.root, target);
+  // The markers read with git's stages: they choose between ways to read a conflict, and its base where it's not marked.
+  const file = readConflicts(text, {
+    base: showAt(c, ":1", path),
+    ours: showAt(c, ":2", path),
+    theirs: showAt(c, ":3", path),
+  });
+  if (!conflictsOf(file).length)
     return app.message(
       "info",
       conflicted.includes(target)
         ? `no conflict marker left in ${target}: s in source control stages it, marking it resolved`
         : `${target} has no conflict to settle`,
     );
-  const path = inCheckout(c, app.loc.root, target);
-  const file = withStages(parsed, {
-    base: showAt(c, ":1", path),
-    ours: showAt(c, ":2", path),
-    theirs: showAt(c, ":3", path),
-  });
   show(app, {
     rel: target,
     path,
@@ -196,14 +196,22 @@ function show(app: App, m: MergeState): void {
       ? [label("Rebasing: ", "yours is what's rebased onto; theirs, the commit being replayed", "dim")]
       : []),
     { spans: [] },
-    c.base === null
-      ? label("Base", " · not known: neither the markers nor git's index hold it")
-      : label("Base", c.base.length ? "" : " · empty: both sides added here"),
-    ...(c.base?.length ? [{ rows: plain(c.base), from: text(c.base), to: text(c.base) }] : []),
-    label(`Yours${named(c.oursLabel)}`, against),
-    side(c.ours),
-    label(`Theirs${named(c.theirsLabel)}`, against),
-    side(c.theirs),
+    // Its sides not known: the conflict as marked, for `e`.
+    ...(c.ambiguous
+      ? [
+          label("Ambiguous", ` · ${AMBIGUOUS}`),
+          { rows: plain(markersOf(c)), from: text(markersOf(c)), to: text(markersOf(c)) },
+        ]
+      : [
+          c.base === null
+            ? label("Base", " · not known: neither the markers nor git's index hold it")
+            : label("Base", c.base.length ? "" : " · empty: both sides added here"),
+          ...(c.base?.length ? [{ rows: plain(c.base), from: text(c.base), to: text(c.base) }] : []),
+          label(`Yours${named(c.oursLabel)}`, against),
+          side(c.ours),
+          label(`Theirs${named(c.theirsLabel)}`, against),
+          side(c.theirs),
+        ]),
     { spans: [] },
     label(
       "The result",
@@ -241,10 +249,15 @@ function current(app: App, key: string, what: string): MergeState | null {
   return m;
 }
 
-/** `o`, `t`, `b`, `shift+b`: the conflict settled so, and on to the next one that isn't. */
+/** Why an ambiguous conflict is settled only by hand. */
+const AMBIGUOUS =
+  "more than one ======= line could part yours from theirs, and git's index doesn't say which — e edits it by hand";
+
+/** `o`, `t`, `b`, `shift+b`: the conflict settled so, and on to the next one that isn't. An ambiguous one: refused. */
 export function mergeTake(app: App, choice: Exclude<Choice, { lines: string[] }>): void {
   const m = current(app, "o, t and b", "settle a conflict");
   if (!m) return;
+  if (conflictsOf(m.file)[m.at]?.ambiguous) return app.message("warn", `conflict ${m.at + 1}: ${AMBIGUOUS}`);
   m.choices[m.at] = choice;
   m.saved = false;
   const open = m.choices.filter((c) => !c).length;

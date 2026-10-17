@@ -2088,14 +2088,21 @@ merge's `pre-merge-commit`), no merge driver — and nothing is signed (`commit.
 conflict, else the first that is — opens the file's buffer (read again first when git changed it on disk and it has no
 unsaved changes) and reads git's markers (`parseConflicts`): `<<<<<<< label`, yours, `||||||| label` and the base where
 git wrote it (diff3, zdiff3), `=======`, theirs, `>>>>>>> label`; a marker that doesn't close, or a `=======` outside a
-conflict (a setext heading's), is text. The markers give the conflicts, so what was settled by hand stays settled. Each
-conflict's base where the markers don't hold it comes from the index's stage 1 (`withStages`): yours is found in stage
-2, and theirs in stage 3, where the stretches before put it (else wherever it is), each mapped back onto stage 1
-through that side's changes (`toBase`, a boundary inside a change widened to the whole of it), the two ranges joined.
-Line endings and a byte order mark aren't compared, finding a side or diffing it against the base: the index holds LF
-where a checkout (`eol=crlf`) has CRLF. Where neither has it (the stages gone), there's no base. A file in conflict
-with no marker (one side deleted it) is said, with `s` in the git panel to mark it resolved. `enter` on a conflicted
-file in the panel shows its diff, not the screen.
+conflict (a setext heading's), is text. The markers give the conflicts, so what was settled by hand stays settled. git
+doesn't widen its markers for a side with a seven-character `=======` line in it (a setext heading's underline), so a
+conflict with more than one `=======` that could part the sides — after diff3's base marker, where there's one; one
+before it is yours — can be read more than one way (`Conflict.ambiguous`): the index's stages choose the one way whose
+yours is in stage 2 and theirs in stage 3 (and a marked base in stage 1). With no stage that does, or more than one
+way that fits, the conflict is ambiguous: its card shows it as marked, and `o`, `t`, `b` and `shift+b` are refused,
+said, `e` settling it by hand. A complete set of markers inside a fenced code block — the fence open from before the
+`<<<<<<<` to after the `>>>>>>>` — is an example of git's markers, text, unless neither side's stage holds those lines,
+which makes them git's own conflict in a code block (`readConflicts`). Each conflict's base where the markers don't hold
+it comes from the index's stage 1 (`withStages`): yours is found in stage 2, and theirs in stage 3, where the stretches
+before put it (else wherever it is), each mapped back onto stage 1 through that side's changes (`toBase`, a boundary
+inside a change widened to the whole of it), the two ranges joined. Line endings and a byte order mark aren't compared,
+finding a side or diffing it against the base: the index holds LF where a checkout (`eol=crlf`) has CRLF. Where neither
+has it (the stages gone), there's no base. A file in conflict with no marker (one side deleted it) is said, with `s` in
+the git panel to mark it resolved. `enter` on a conflicted file in the panel shows its diff, not the screen.
 
 The screen, in the floating window as tall as a peek's, a conflict at a time: its number, its line in the result and
 how it's settled; the keys; while a rebase is under way, that yours is what's rebased onto and theirs the commit

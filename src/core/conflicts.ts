@@ -2,9 +2,18 @@
 // and the conflicts, each with its three versions — yours and theirs between the markers, the common base from diff3's
 // `|||||||` section or the index's stage 1 (found by where yours and theirs sit in stages 2 and 3), or from the
 // three-way merge that made it (the conflict prompt's) — and the file as it will be, each conflict settled or still
-// marked.
+// marked. Where the markers could be read more than one way (a `=======` line inside a side, or in diff3's base), the
+// stages 2 and 3 choose; with none that does, the conflict is ambiguous, settled only by hand. A complete set of
+// markers inside a fenced code block is an example of them, text, unless neither side's stage holds those lines.
 
 import { comparable, type DiffViewRow, diffLines, type Hunk, mergeChunks } from "./merge.ts";
+
+/** One way to read a conflict's markers: yours, the base between them (diff3's; null without), theirs. */
+export interface Split {
+  ours: string[];
+  base: string[] | null;
+  theirs: string[];
+}
 
 /** One of git's conflicts: yours, theirs, the base where it's known, and the markers' labels. */
 export interface Conflict {
@@ -21,6 +30,20 @@ export interface Conflict {
   baseLabel: string;
   /** Its `<<<<<<<` line in the text it was read from (from 1). */
   line: number;
+  /**
+   * The ways to read its markers, when more than one `=======` line could part the sides (one inside a side, or in
+   * diff3's base) and nothing chose: the conflict is ambiguous — `ours`, `base` and `theirs` the first way, written
+   * back as they were read — and taking a side would keep the wrong lines; only editing it by hand settles it.
+   * git's stages 2 and 3 choose one where they have the file (`withStages`).
+   */
+  ambiguous?: Split[];
+}
+
+/** git's stages of a file in conflict: 1 the common base, 2 yours, 3 theirs; null where the index hasn't one. */
+export interface Stages {
+  base: string | null;
+  ours: string | null;
+  theirs: string | null;
 }
 
 /** A stretch both sides agree on. */
@@ -57,15 +80,49 @@ function linesOf(text: string): { lines: string[]; final: boolean } {
 /** A marker line, read without the carriage return a CRLF file gives it. */
 const bare = (line: string) => line.replace(/\r$/, "");
 
+/** A code fence's line: up to three spaces, then three backticks or tildes or more. */
+const FENCE = /^ {0,3}(`{3,}|~{3,})/;
+
+/** The code fence open after `line` (its backticks or tildes), given the one open before it (null: none). */
+function fenceAfter(open: string | null, line: string): string | null {
+  const l = bare(line);
+  const f = FENCE.exec(l);
+  if (!f) return open;
+  if (open === null) return f[1]!;
+  const closes = f[1]![0] === open[0] && f[1]!.length >= open.length && !l.slice(f[0].length).trim();
+  return closes ? null : open;
+}
+
+/** Whether the code fence open before `ls` (null: none) is still open after each of them. */
+function staysFenced(open: string | null, ls: string[]): boolean {
+  let f = open;
+  for (const l of ls) {
+    if (f === null) return false;
+    f = fenceAfter(f, l);
+  }
+  return f !== null;
+}
+
+/** How `parseConflicts` reads a complete set of markers inside a fenced code block. */
+export interface ParseOptions {
+  /** Whether those lines, markers and all, are git's own conflict after all (`readConflicts` asks git's stages); else
+   *  they're an example of git's markers: text. */
+  fenced?: (lines: string[]) => boolean;
+}
+
 /**
  * A text with git's conflict markers read: `<<<<<<< label`, yours, optionally `||||||| label` and the base (diff3),
- * `=======`, theirs, `>>>>>>> label`. Markers that don't close are text like any.
+ * `=======`, theirs, `>>>>>>> label`. Markers that don't close are text like any, and so is a complete set inside a
+ * fenced code block (an example of them), unless `opts.fenced` says it's git's. More than one `=======` that could part
+ * the sides makes the conflict ambiguous, read the first way (`Conflict.ambiguous`).
  */
-export function parseConflicts(text: string): Conflicted {
+export function parseConflicts(text: string, opts: ParseOptions = {}): Conflicted {
   const { lines, final } = linesOf(text);
   const segments: Segment[] = [];
+  let fence: string | null = null;
   const plain = (ls: string[]) => {
     if (!ls.length) return;
+    for (const l of ls) fence = fenceAfter(fence, l);
     const last = segments[segments.length - 1];
     if (last?.kind === "plain") last.lines.push(...ls);
     else segments.push({ kind: "plain", lines: [...ls] });
@@ -78,51 +135,52 @@ export function parseConflicts(text: string): Conflicted {
       i++;
       continue;
     }
-    // A conflict, if it closes: yours, perhaps the base, theirs.
-    const c: Conflict = {
-      kind: "conflict",
-      ours: [],
-      theirs: [],
-      base: null,
-      markedBase: false,
-      oursLabel: open[1] ?? "",
-      theirsLabel: "",
-      baseLabel: "",
-      line: i + 1,
-    };
-    let part: "ours" | "base" | "theirs" = "ours";
+    // A conflict, if it closes: yours, perhaps the base (diff3's, after its marker), then a `=======` and theirs, up to
+    // the first `>>>>>>>` after one. A `=======` before the base's marker is yours.
+    let baseAt = -1;
+    let seps: number[] = [];
+    let end = -1;
     let j = i + 1;
-    let closed = false;
     for (; j < lines.length; j++) {
       const l = bare(lines[j]!);
       if (OURS.test(l)) break; // another opens before this one closed: this one is text
-      const base = part === "ours" ? BASE.exec(l) : null;
-      if (base) {
-        part = "base";
-        c.base = [];
-        c.markedBase = true;
-        c.baseLabel = base[1] ?? "";
-        continue;
-      }
-      if (part !== "theirs" && SEP.test(l)) {
-        part = "theirs";
-        continue;
-      }
-      const end = part === "theirs" ? THEIRS.exec(l) : null;
-      if (end) {
-        c.theirsLabel = end[1] ?? "";
-        closed = true;
+      if (baseAt < 0 && BASE.test(l)) {
+        baseAt = j;
+        seps = [];
+      } else if (SEP.test(l)) seps.push(j);
+      else if (seps.length && THEIRS.test(l)) {
+        end = j;
         break;
       }
-      (part === "ours" ? c.ours : part === "base" ? c.base! : c.theirs).push(lines[j]!);
     }
-    if (!closed) {
-      plain(lines.slice(i, j));
-      i = j;
+    // A complete set inside a fenced code block, the fence not closed between its markers: an example, unless it's git's.
+    const fenced = end >= 0 && staysFenced(fence, lines.slice(i, end + 1));
+    if (end < 0 || (fenced && !opts.fenced?.(lines.slice(i, end + 1).map(bare)))) {
+      plain(lines.slice(i, end < 0 ? j : end + 1));
+      i = end < 0 ? j : end + 1;
       continue;
     }
+    const splits = seps.map(
+      (s): Split => ({
+        ours: lines.slice(i + 1, baseAt >= 0 ? baseAt : s),
+        base: baseAt >= 0 ? lines.slice(baseAt + 1, s) : null,
+        theirs: lines.slice(s + 1, end),
+      }),
+    );
+    const c: Conflict = {
+      kind: "conflict",
+      ...splits[0]!,
+      markedBase: baseAt >= 0,
+      oursLabel: open[1] ?? "",
+      theirsLabel: THEIRS.exec(bare(lines[end]!))?.[1] ?? "",
+      baseLabel: baseAt >= 0 ? (BASE.exec(bare(lines[baseAt]!))?.[1] ?? "") : "",
+      line: i + 1,
+      ...(splits.length > 1 ? { ambiguous: splits } : {}),
+    };
     segments.push(c);
-    i = j + 1;
+    // Past it, the fence as yours leaves it.
+    for (const l of c.ours) fence = fenceAfter(fence, l);
+    i = end + 1;
   }
   return { segments, final };
 }
@@ -284,29 +342,37 @@ export function resultView(
   return { text, rows, lines };
 }
 
+/** A stage's text as lines, its line breaks either kind and a byte order mark not compared; null where there's none. */
+const stageLines = (t: string | null) => (t === null ? null : linesOf(comparable(t)).lines);
+
 /**
- * Each conflict's base where the markers didn't hold it, from the index's stages (`base` stage 1, `ours` 2, `theirs`
- * 3): where yours sits in stage 2, and theirs in 3, mapped back onto stage 1 through each side's changes. Yours is
- * looked for where the stretches before it put it, else wherever it is; a conflict found on neither side keeps none.
- * Line endings and a byte order mark aren't compared: git's index can hold LF where a checkout has CRLF.
+ * Each conflict settled by the index's stages (`base` stage 1, `ours` 2, `theirs` 3). An ambiguous one is read the one
+ * way whose yours is in stage 2 and theirs in 3 (and diff3's base in 1); with no such way, or more than one, it stays
+ * ambiguous. Then its base, where the markers didn't hold it: where yours sits in stage 2, and theirs in 3, mapped back
+ * onto stage 1 through each side's changes. Yours is looked for where the stretches before it put it, else wherever it
+ * is; a conflict found on neither side keeps none. Line endings and a byte order mark aren't compared: git's index can
+ * hold LF where a checkout has CRLF.
  */
-export function withStages(
-  f: Conflicted,
-  stages: { base: string | null; ours: string | null; theirs: string | null },
-): Conflicted {
-  if (stages.base === null) return f;
-  const norm = (t: string | null) => (t === null ? null : linesOf(comparable(t)).lines);
-  const B = norm(stages.base)!;
-  const O = norm(stages.ours);
-  const T = norm(stages.theirs);
-  const ho = O ? diffLines(B, O) : null;
-  const ht = T ? diffLines(B, T) : null;
+export function withStages(f: Conflicted, stages: Stages): Conflicted {
+  const B = stageLines(stages.base);
+  const O = stageLines(stages.ours);
+  const T = stageLines(stages.theirs);
+  if (B === null && (O === null || T === null)) return f;
+  const ho = B && O ? diffLines(B, O) : null;
+  const ht = B && T ? diffLines(B, T) : null;
   let atO = 0;
   let atT = 0;
-  const segments = f.segments.map((s): Segment => {
-    if (s.kind === "plain") {
-      atO += s.lines.length;
-      atT += s.lines.length;
+  const segments = f.segments.map((seg): Segment => {
+    if (seg.kind === "plain") {
+      atO += seg.lines.length;
+      atT += seg.lines.length;
+      return seg;
+    }
+    const s = seg.ambiguous ? settleSplit(seg, B, O, T, atO, atT) : seg;
+    if (s.ambiguous) {
+      // Where its sides end isn't known: the stretches after are looked for from where the first way puts them.
+      atO += s.ours.length;
+      atT += s.theirs.length;
       return s;
     }
     const ranges: [number, number][] = [];
@@ -316,12 +382,47 @@ export function withStages(
     if (t !== null) ranges.push(toBase(ht!, t, t + s.theirs.length));
     atO = (o ?? atO) + s.ours.length;
     atT = (t ?? atT) + s.theirs.length;
-    if (s.base !== null || !ranges.length) return s;
+    if (B === null || s.base !== null || !ranges.length) return s;
     const from = Math.min(...ranges.map((r) => r[0]));
     const to = Math.max(...ranges.map((r) => r[1]));
     return { ...s, base: B.slice(from, to) };
   });
   return { ...f, segments };
+}
+
+/**
+ * An ambiguous conflict read the one way git's stages hold — yours in 2, theirs in 3, a marked base in 1 — else as it
+ * was.
+ */
+function settleSplit(
+  c: Conflict,
+  B: string[] | null,
+  O: string[] | null,
+  T: string[] | null,
+  atO: number,
+  atT: number,
+): Conflict {
+  if (O === null || T === null) return c;
+  const fits = c.ambiguous!.filter(
+    (w) =>
+      locate(O, w.ours.map(bare), atO) !== null &&
+      locate(T, w.theirs.map(bare), atT) !== null &&
+      (w.base === null || B === null || locate(B, w.base.map(bare), 0) !== null),
+  );
+  if (fits.length !== 1) return c;
+  const { ambiguous: _, ...settled } = c;
+  return { ...settled, ...fits[0]! };
+}
+
+/**
+ * A file in conflict read with its stages, as the merge screen reads it: its markers parsed — a complete set inside a
+ * fenced code block git's own only where neither side's stage holds those lines, else an example of them, text — then
+ * settled by the stages (`withStages`).
+ */
+export function readConflicts(text: string, stages: Stages): Conflicted {
+  const sides = [stageLines(stages.ours), stageLines(stages.theirs)].filter((s): s is string[] => s !== null);
+  const gits = (ls: string[]) => sides.length > 0 && sides.every((side) => locate(side, ls, 0) === null);
+  return withStages(parseConflicts(text, { fenced: gits }), stages);
 }
 
 /** Where `want` sits in `lines`: at `at` when it's there, else its first place from there on, else anywhere; null. */

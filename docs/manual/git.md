@@ -425,6 +425,14 @@ The base comes from git. Where git wrote the conflict with its base (`merge.conf
 it's that. Otherwise it's the version git keeps of the file while the merge is under way. Where git doesn't have it,
 each side shows whole.
 
+A side can hold a line of seven `=` signs of its own, such as a heading's underline. Its conflict then has more than
+one `=======` line, and either could be where yours ends. slipbox asks git which, from its own copies of each side.
+When git can't say, the screen shows the conflict as marked, and says it's ambiguous. Taking a side is refused there,
+since it could keep the wrong lines: press `e` to settle it by hand.
+
+Markers inside a fenced code block, such as a note's example of a conflict, are text, not a conflict. Markers that git
+wrote into a code block are still a conflict: slipbox tells them apart by git's copies of each side.
+
 `e` writes the result into the file without saving it. The conflicts you haven't settled stay marked there, and
 autosave stays off until you save the file yourself. Edit them away, then save. Or press `x` again: the merge screen
 reads the conflicts that are left.
