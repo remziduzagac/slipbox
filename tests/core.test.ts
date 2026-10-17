@@ -103,7 +103,7 @@ import {
   skipLater,
   stashKept,
 } from "../src/core/gitrebase.ts";
-import { pullLater } from "../src/core/gitremote.ts";
+import { pullLater, withAutostash } from "../src/core/gitremote.ts";
 import { blockDiff, blockText, noteBlocks } from "../src/core/blockdiff.ts";
 import {
   compilePattern,
@@ -6142,7 +6142,7 @@ describe("a merge or a rebase under way, and a pull where both sides moved (GIT-
     });
   });
 
-  test("changes that conflict going back are kept in the stash: git's words say so (D247)", async () => {
+  test("changes that conflict going back are kept in the stash, known by the stash git left (D247)", async () => {
     await isolated(async () => {
       const root = apart();
       const c = checkoutOf(root)!;
@@ -6151,12 +6151,34 @@ describe("a merge or a rebase under way, and a pull where both sides moved (GIT-
       const r = await rebaseLater(c, "main", true);
       expect(r.ok).toBe(true);
       expect(stashKept(r)).toBe(true);
+      expect(r.ok && r.kept).toBe(git(root, "rev-parse", "refs/stash"));
       expect(aheadBehind(c, "main")).toEqual({ ahead: 1, behind: 0 });
       expect(git(root, "stash", "list", "--format=%gd %gs")).toBe("stash@{0} autostash");
       expect(git(root, "show", "stash@{0}:b.md")).toBe("b, mine");
       expect(git(root, "status", "--porcelain", "--untracked-files=no")).toBe("UU b.md");
       // A run that failed keeps nothing of the kind.
       expect(stashKept({ ok: false, why: "Your changes are safe in the stash.", login: false })).toBe(false);
+    });
+  });
+
+  test("a stash kept is the one a run left behind, whatever git printed: its words change between versions (regression)", async () => {
+    await isolated(async () => {
+      const root = apart();
+      const c = checkoutOf(root)!;
+      // git's words of one version, and no stash left: nothing kept.
+      const said = async () => ({ ok: true as const, out: "", err: "Your changes are safe in the stash.\n" });
+      expect(stashKept(await withAutostash(c, said))).toBe(false);
+      // A stash left, and nothing said (another version's words): kept, and which.
+      writeFileSync(join(root, "b.md"), "b, mine\n");
+      const quiet = async () => {
+        git(root, "stash", "push", "-q", "-m", "autostash");
+        return { ok: true as const, out: "", err: "" };
+      };
+      const r = await withAutostash(c, quiet);
+      expect(stashKept(r)).toBe(true);
+      expect(r.ok && r.kept).toBe(git(root, "rev-parse", "refs/stash"));
+      // One that was there before isn't the run's.
+      expect(stashKept(await withAutostash(c, async () => ({ ok: true as const, out: "", err: "" })))).toBe(false);
     });
   });
 

@@ -2142,8 +2142,10 @@ about there. Untracked files stay git's to judge, as without slipbox: its autost
 past them, refusing in its words only where one would be overwritten (`The following untracked working tree files
 would be overwritten by checkout: n.md`), the changes stashed put back first. A rebase that stops at a conflict keeps
 them stashed until it ends, continued or aborted. Where putting them back conflicts, git keeps them in the stash, as
-`autostash`, and marks the files in conflict ("Your changes are safe in the stash", `stashKept`): the end's message
-says so, naming the entry and the files (`rebased agent onto main — your changes conflicted going back, so git kept
+`autostash`, and marks the files in conflict. slipbox knows it by the stash the rebase left behind — the newest
+stash's commit before and after (`withAutostash`, `stashKept`), never git's words, which change between its versions
+— and also when a continue, a skip or an abort ends the rebase: the end's message says so, naming the entry and the
+files (`rebased agent onto main — your changes conflicted going back, so git kept
 them in the stash, stash@{0} ("autostash"): 1 file in conflict (b.md) — x in source control settles it (:resolve), then
 drop the stash (z)`).
 

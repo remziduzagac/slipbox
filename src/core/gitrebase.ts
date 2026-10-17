@@ -11,7 +11,7 @@ import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import type { Checkout } from "./git.ts";
 import { gitArgs } from "./gitops.ts";
-import { editorless, failureOf, inEnglish, type RemoteDone, refusedName } from "./gitremote.ts";
+import { editorless, failureOf, inEnglish, type RemoteDone, refusedName, withAutostash } from "./gitremote.ts";
 import { parseEntries } from "./gitstage.ts";
 import { isTrusted } from "./trust.ts";
 
@@ -170,10 +170,9 @@ export function changedTracked(c: Pick<Checkout, "root">): string[] | null {
 
 /**
  * Whether git kept the changes it stashed for a rebase (`--autostash`, D247) in the stash: putting them back at the
- * rebase's end conflicted, and git says so ("Your changes are safe in the stash"), in its English (`inEnglish`).
+ * rebase's end conflicted (`withAutostash`: a new stash left behind).
  */
-export const stashKept = (r: RemoteDone): boolean =>
-  r.ok && /Your changes are safe in the stash/.test(`${r.err}\n${r.out}`);
+export const stashKept = (r: RemoteDone): r is RemoteDone & { ok: true; kept: string } => r.ok && r.kept !== undefined;
 
 /**
  * How a pull brings two sides together by default, as git's config says: a rebase where `branch.<name>.rebase`, else
@@ -210,7 +209,8 @@ function runLater(c: Pick<Checkout, "root">, args: string[]): Promise<RemoteDone
 export function rebaseLater(c: Pick<Checkout, "root">, onto: string, autostash = false): Promise<RemoteDone> {
   const why = refusedName("the base", onto);
   if (why) return Promise.resolve({ ok: false, why, login: false });
-  return runLater(c, ["rebase", ...(autostash ? ["--autostash"] : []), "--end-of-options", onto]);
+  const rebase = () => runLater(c, ["rebase", ...(autostash ? ["--autostash"] : []), "--end-of-options", onto]);
+  return autostash ? withAutostash(c, rebase) : rebase();
 }
 
 /**
@@ -218,12 +218,16 @@ export function rebaseLater(c: Pick<Checkout, "root">, onto: string, autostash =
  * git prepared); a merge's commit, made with its own message.
  */
 export const continueLater = (c: Pick<Checkout, "root">, op: Operation): Promise<RemoteDone> =>
-  runLater(c, op.kind === "merge" ? ["commit", "--no-edit"] : [op.kind, "--continue"]);
+  ended(c, op, () => runLater(c, op.kind === "merge" ? ["commit", "--no-edit"] : [op.kind, "--continue"]));
 
 /** A rebase's, a cherry-pick's or a revert's commit left out, and it on to the next (a merge has none: git refuses). */
 export const skipLater = (c: Pick<Checkout, "root">, op: Operation): Promise<RemoteDone> =>
-  runLater(c, [op.kind, "--skip"]);
+  ended(c, op, () => runLater(c, [op.kind, "--skip"]));
 
 /** What's under way, aborted: the branch back where it was before it began. */
 export const abortLater = (c: Pick<Checkout, "root">, op: Operation): Promise<RemoteDone> =>
-  runLater(c, [op.kind, "--abort"]);
+  ended(c, op, () => runLater(c, [op.kind, "--abort"]));
+
+/** A rebase's step: where it ends the rebase, the changes it stashed are put back — or kept (`withAutostash`). */
+const ended = (c: Pick<Checkout, "root">, op: Operation, run: () => Promise<RemoteDone>): Promise<RemoteDone> =>
+  op.kind === "rebase" ? withAutostash(c, run) : run();

@@ -81,7 +81,7 @@ async function after(app: App, r: RemoteDone, done: string): Promise<void> {
     const m = mergeOf(app);
     if (m && m.path !== null) app.floating = null;
     if (!r.ok) return app.message("warn", `git: ${sanitize(r.why)}`);
-    if (stashKept(r)) return app.message("warn", `${done} — ${keptStash(app, c)}${trust}`);
+    if (stashKept(r)) return app.message("warn", `${done} — ${keptStash(app, c, r.kept)}${trust}`);
     return app.message("info", `${done}${trust}`);
   }
   const files = conflictedFiles(app);
@@ -108,11 +108,12 @@ async function after(app: App, r: RemoteDone, done: string): Promise<void> {
 
 /**
  * Where your changes are when git, putting them back after a rebase (`--autostash`, D247), met a conflict: kept in the
- * stash, as `autostash`, the newest of that name — named — and the files in conflict marked, settled as any are.
+ * stash — the one it left behind (`kept`, its commit), named as the list names it — and the files in conflict marked,
+ * settled as any are.
  */
-function keptStash(app: App, c: Checkout): string {
-  const s = stashesOf(c)?.find((s) => s.message === "autostash");
-  const where = `the stash${s ? `, ${sanitize(s.ref)} ("autostash")` : ""}`;
+function keptStash(app: App, c: Checkout, kept: string): string {
+  const s = stashesOf(c)?.find((s) => s.hash === kept);
+  const where = `the stash${s ? `, ${sanitize(s.ref)} ("${sanitize(s.message)}")` : ""}`;
   const files = conflictedFiles(app);
   if (!files.length) return `your changes couldn't go back: git kept them in ${where} — z in source control lists it`;
   return `your changes conflicted going back, so git kept them in ${where}: ${plural(files.length, "file")} in conflict (${files.map(sanitize).join(", ")}) — x in source control settles ${files.length === 1 ? "it" : "them"} (:resolve), then drop the stash (z)`;

@@ -224,7 +224,13 @@ function remoteConfig(c: Pick<Checkout, "root">): { sshCommandSet: boolean; own:
 }
 
 /** What a remote's command ended in: done, with what git printed; or why not, in git's words. */
-export type RemoteDone = { ok: true; out: string; err: string } | { ok: false; why: string; login: boolean };
+/**
+ * A git command run in the background: what it printed, or why not. `kept`: the commit of the stash git kept the
+ * changes in, where a rebase's `--autostash` couldn't put them back (`withAutostash`).
+ */
+export type RemoteDone =
+  | { ok: true; out: string; err: string; kept?: string }
+  | { ok: false; why: string; login: boolean };
 
 /** Long enough for a big repository over a slow line; a git that never answers isn't waited on for ever. */
 const NETWORK_MS = 10 * 60_000;
@@ -288,6 +294,23 @@ export function fetchLater(c: Pick<Checkout, "root">): Promise<RemoteDone> {
   return runLater(c, ["fetch"], true);
 }
 
+/** The newest stash's commit, or null: an autostash git kept is a new one (`withAutostash`). */
+function stashTip(c: Pick<Checkout, "root">): string | null {
+  return ask(c, ["rev-parse", "-q", "--verify", "refs/stash"])?.trim() || null;
+}
+
+/**
+ * `run`, a rebase or a pull with `--autostash` (D247): where putting the changes back conflicts, git keeps them in the
+ * stash, and `kept` is that stash's commit — known by a stash that wasn't there before, never by git's words, which
+ * change between its versions.
+ */
+export async function withAutostash(c: Pick<Checkout, "root">, run: () => Promise<RemoteDone>): Promise<RemoteDone> {
+  const before = stashTip(c);
+  const r = await run();
+  const after = r.ok ? stashTip(c) : null;
+  return r.ok && after !== null && after !== before ? { ...r, kept: after } : r;
+}
+
 /**
  * Pulled: fast-forward only (`ff`), git refusing in its words where both sides moved; or, asked (GIT-D6), the two
  * brought together by a merge or a rebase — the files changed stashed for the rebase and put back after, asked
@@ -306,7 +329,8 @@ export function pullLater(
           // `pull.ff = only` of yours, which would refuse it again.
           ["--no-rebase", "--ff", "--no-edit"]
         : ["--rebase", ...(autostash ? ["--autostash"] : [])];
-  return runLater(c, ["pull", ...args], true);
+  const pull = () => runLater(c, ["pull", ...args], true);
+  return autostash && how === "rebase" ? withAutostash(c, pull) : pull();
 }
 
 /**
