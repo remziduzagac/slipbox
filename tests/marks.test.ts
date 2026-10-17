@@ -274,6 +274,22 @@ describe("a row's marks (VV-D9)", () => {
     expect(index("d")).toBeUndefined();
   });
 
+  test("a busy name with a note at its top is a folder like any: walked, marked indexed; outside every vault, not ⊘", async () => {
+    const p = place();
+    if (!p) return;
+    mkdirSync(join(p.kestrel, "vendor"));
+    writeFileSync(join(p.kestrel, "vendor", "notes.md"), "# Notes\n");
+    mkdirSync(join(p.P, "dist"));
+    writeFileSync(join(p.P, "dist", "plan.md"), "# Plan\n");
+    const h = await zoomedOut(p.P, "unicode");
+    const g = glyphsFor("unicode");
+    expect(h.app.graph.notes.has("vendor/notes.md")).toBe(true);
+    expect(h.app.explorer.rows().find((r) => r.name === "vendor")).toMatchObject({ path: "vendor" }); // the vault's own
+    expect(drawn(h, "vendor").index).toBe(g.markIndexed);
+    expect(drawn(h, "dist", 0).index).toBe(" ");
+    expect(drawn(h, "node_modules", 0).index).toBe(g.markNotIndexed); // no note at its top: busy
+  });
+
   test("a draw reads the disk only for the rows drawn, however many the tree has", async () => {
     const root = mkdtempSync(join(sandbox, "many-"));
     mkdirSync(join(root, ".slipbox"));
@@ -339,18 +355,49 @@ describe("busy folders listed, not indexed (VV-D8)", () => {
     expect(h.app.explorer.rows().find((r) => r.root?.here)?.path).toBe(dep);
   });
 
-  test("a vault's walk leaves the busy folders out: build, dist, target, vendor, caches… whatever .gitignore says", () => {
+  test("a vault's walk leaves the busy folders out when they look generated: no note at their top, or ignored", () => {
     const root = mkdtempSync(join(sandbox, "busy-"));
-    for (const d of ["notes", "build", "dist", "target", "vendor", "__pycache__", "pip-cache", "Caches"]) {
-      mkdirSync(join(root, d), { recursive: true });
-      writeFileSync(join(root, d, "n.md"), "# N\n");
+    // Generated: only folders in it, or no note at its top; whatever .gitignore says.
+    for (const d of ["dist", "vendor", "__pycache__", "pip-cache", "Caches", "notes/vendor"]) {
+      mkdirSync(join(root, d, "pkg"), { recursive: true });
+      writeFileSync(join(root, d, "pkg", "n.md"), "# N\n");
+      writeFileSync(join(root, d, "data.json"), "{}\n");
     }
-    const filter = new WalkFilter(root, DEFAULT_CONFIG.walk);
-    expect(walkVault(root, filter).files.map((f) => f.rel)).toEqual(["notes/n.md"]);
-    expect(filter.exclusion("build", true)).toBe("busy folder");
-    expect(filter.exclusion("notes/vendor", true)).toBe("busy folder");
-    expect(filter.exclusion("build", false)).toBeNull(); // a file of that name is a file
-    expect(filter.reachable("build/n.md")).toBe(false); // named, it opens; never indexed
+    mkdirSync(join(root, "target", "debug", "deps"), { recursive: true }); // only folders in it
+    writeFileSync(join(root, "target", "debug", "deps", "x.md"), "# X\n");
+    mkdirSync(join(root, "node_modules", "dep"), { recursive: true });
+    writeFileSync(join(root, "node_modules", "dep", "README.md"), "# Dep\n");
+    writeFileSync(join(root, "notes", "n.md"), "# N\n");
+    // A notes folder called build, not ignored: a folder like any.
+    mkdirSync(join(root, "build"));
+    writeFileSync(join(root, "build", "plan.md"), "# Plan\n");
+    const walked = () => {
+      const filter = new WalkFilter(root, DEFAULT_CONFIG.walk);
+      return { filter, files: walkVault(root, filter).files.map((f) => f.rel) };
+    };
+    let { filter, files } = walked();
+    expect(files).toEqual(["build/plan.md", "notes/n.md"]);
+    for (const d of ["dist", "target", "node_modules", "notes/vendor", "Caches"])
+      expect(filter.exclusion(d, true)).toBe("busy folder");
+    expect(filter.exclusion("build", true)).toBeNull();
+    expect(filter.exclusion("dist", false)).toBeNull(); // a file of that name is a file
+    expect(filter.reachable("target/debug/deps/x.md")).toBe(false); // named, it opens; never indexed
+    expect(filter.reachable("build/plan.md")).toBe(true);
+    // Ignored, build is busy, reached by nothing; node_modules is busy ignored or not.
+    writeFileSync(join(root, ".gitignore"), "build/\nnode_modules/\n");
+    ({ filter, files } = walked());
+    expect(files).toEqual(["notes/n.md"]);
+    expect([filter.exclusion("build", true), filter.exclusion("node_modules", true)]).toEqual([
+      "busy folder",
+      "busy folder",
+    ]);
+    expect(filter.reachable("build/plan.md")).toBe(false);
+    // Its first note at its top makes a generated-looking folder one like any, asked again since it changed.
+    rmSync(join(root, ".gitignore"));
+    ({ filter } = walked());
+    expect(filter.exclusion("dist", true)).toBe("busy folder");
+    writeFileSync(join(root, "dist", "notes.md"), "# Notes\n");
+    expect(filter.exclusion("dist", true)).toBeNull();
   });
 
   test("listed in the explorer by their paths, browsed and opened, nothing in them indexed", async () => {
@@ -360,7 +407,7 @@ describe("busy folders listed, not indexed (VV-D8)", () => {
     const row = (name: string) => h.app.explorer.rows().find((r) => r.name === name);
     const at = (name: string) => h.app.explorer.rows().findIndex((r) => r.name === name);
     expect(row("node_modules")).toMatchObject({ kind: "dir", path: join(p.kestrel, "node_modules"), outside: true });
-    expect(row("node_modules")!.leftOut).toBe("always skipped");
+    expect(row("node_modules")!.leftOut).toBe("busy folder");
     expect(row("build")!.leftOut).toBe("busy folder");
     expect(row("out")!.leftOut).toBe(".gitignore");
     expect(row("drafts")!.leftOut).toBe("walk.exclude");

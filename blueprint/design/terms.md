@@ -16,8 +16,9 @@ what replaced them.
   the first and the added in the second (GIT-D2). [tui.md](tui.md) § Git.
 - **Buffer**: one open file, with its text, its parse and its layouts by width, shown in views.
   [tui.md](tui.md) § Buffers, views, tabs, windows.
-- **Busy folder**: a tool's output, environment or cache (`node_modules`, `build`, `target`, `.venv`…): listed in the
-  explorer, never indexed (VV-D8). [roots.md](roots.md) § The walk.
+- **Busy folder**: a tool's output, environment or cache (`node_modules`, `build`, `target`, `.venv`…) that looks
+  generated — ignored, or no note at its top: listed in the explorer, never indexed (VV-D8, D237). [roots.md](roots.md)
+  § The walk.
 - **Capture**: text appended to the scratch with its reference, by `slipbox capture` or from the TUI.
   [cli.md](../../docs/manual/cli.md) § The scratch and the context bundle.
 - **Cell**: in the code view, one definition's code under a header holding its buttons and its documentation.

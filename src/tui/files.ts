@@ -116,9 +116,9 @@ export class Files {
     const ext = extensionOf(rel);
     if (!ext || !isKnownExtension(ext)) rel = `${rel}.md`;
     const abs = join(this.app.loc.root, rel);
-    const ours = this.app.graph.admits(rel);
-    const open = ours ? rel : abs;
+    let ours = this.app.graph.admits(rel);
     if (existsSync(abs)) {
+      const open = ours ? rel : abs;
       if (statSync(abs).isDirectory()) {
         this.app.message("warn", `${rel} is a folder`);
         return null;
@@ -144,6 +144,9 @@ export class Files {
       return null;
     }
     this.app.watcher?.noteOwnWrite(rel, stamp);
+    // Asked again once it's there: a note at a busy-named folder's top makes it a folder like any (D237).
+    ours = this.app.graph.admits(rel);
+    const open = ours ? rel : abs;
     if (ours) {
       const dir = posix.dirname(rel);
       if (dir !== ".") this.addFolders(dir);

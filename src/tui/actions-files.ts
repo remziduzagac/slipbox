@@ -264,7 +264,7 @@ export function isFile(abs: string): boolean {
   }
 }
 
-/** Whether the vault's walk takes a path: it and each folder above it (a hidden folder, node_modules, an ignored one aren't). */
+/** Whether the vault's walk takes a path: it and each folder above it (a hidden folder, a busy one, an ignored one aren't). */
 function walked(a: App, rel: string): boolean {
   const parts = rel.split("/");
   return parts.every(

@@ -5519,7 +5519,7 @@ describe("the index on demand: what the walk leaves out, indexed when reached (2
   const make = () => {
     const dir = mkdtempSync(join(tmpdir(), "slipbox-reach-"));
     mkdirSync(join(dir, ".slipbox"));
-    writeFileSync(join(dir, ".gitignore"), "tmp/\n");
+    writeFileSync(join(dir, ".gitignore"), "tmp/\nnode_modules/\n"); // a note at its top: busy, being ignored (D237)
     for (const d of ["tmp", ".notes", "node_modules", "drafts"]) mkdirSync(join(dir, d));
     writeFileSync(
       join(dir, "index.md"),
@@ -5630,7 +5630,7 @@ describe("the index on demand: what the walk leaves out, indexed when reached (2
     expect(after.reached.has("tmp/local.md")).toBe(false);
     expect(after.notes.has("tmp/deeper.md")).toBe(true);
     // No longer left out (the .gitignore line gone): walked like any other, not "reached".
-    writeFileSync(join(dir, ".gitignore"), "");
+    writeFileSync(join(dir, ".gitignore"), "node_modules/\n");
     expect(openGraph(locateVault({ root: dir }), cfg(), true).reached.has("tmp/deeper.md")).toBe(false);
   });
 
@@ -5902,7 +5902,7 @@ describe("home, a vault without a marker (VV-D2)", () => {
   };
 
   test("its skip list: hidden folders, the system's, Downloads, the busy folders, and what isn't a note or a text file; large notes listed, not read; no .gitignore", async () => {
-    const { homeSkip, isBusyFolder, SlicedWalk, WalkFilter } = await import("../src/core/walk.ts");
+    const { homeSkip, isBusyName, SlicedWalk, WalkFilter } = await import("../src/core/walk.ts");
     const busy = ["node_modules", ".venv", "venv", "__pycache__", "target", "build", "dist", ".next", "vendor"];
     const busier = ["Pods", "DerivedData", ".gradle", ".tox", "cache", "Caches", ".cache", "pip-cache"];
     const files: Record<string, string> = {
@@ -5923,8 +5923,10 @@ describe("home, a vault without a marker (VV-D2)", () => {
       "work/sub/Downloads/kept.md": "# a Downloads below the top is a folder like any\n",
       "repo/.git/HEAD": "ref: refs/heads/main\n",
       "repo/r.md": "# R\n",
+      // A busy name with a note at its top is a folder like any (D237); home reads no .gitignore to say otherwise.
+      "notes/build/plan.md": "# Plan\n",
     };
-    for (const b of [...busy, ...busier]) files[`work/${b}/n.md`] = "# busy\n";
+    for (const b of [...busy, ...busier]) files[`work/${b}/pkg/n.md`] = "# busy\n";
     await withHome(files, (home) => {
       const config = structuredClone(DEFAULT_CONFIG);
       config.walk.max_file_size = 200;
@@ -5938,6 +5940,7 @@ describe("home, a vault without a marker (VV-D2)", () => {
         "AppData/x.md",
         "a.md",
         "docs/b.md",
+        "notes/build/plan.md",
         "work/sub/Downloads/kept.md",
         "work/w.md",
       ]);
@@ -5951,6 +5954,7 @@ describe("home, a vault without a marker (VV-D2)", () => {
         "Library/l.md",
         "a.md",
         "docs/b.md",
+        "notes/build/plan.md",
         "work/sub/Downloads/kept.md",
         "work/w.md",
       ]);
@@ -5959,12 +5963,15 @@ describe("home, a vault without a marker (VV-D2)", () => {
       expect(homeSkip("Downloads")).toBe("Downloads");
       expect(homeSkip("Library", { platform: "darwin" })).toBe("system folder");
       expect(homeSkip("work/Library", { platform: "darwin" })).toBeNull();
-      expect(homeSkip("x/dist")).toBe("busy folder");
-      for (const b of [...busy, ...busier]) expect(isBusyFolder(b)).toBe(true);
-      for (const b of ["notes", "docs", "src", "cached-notes", "Builds"]) expect(isBusyFolder(b)).toBe(false);
+      expect(homeSkip("x/dist")).toBeNull(); // the filter's, which looks into it
+      const filter = new WalkFilter(home, config.walk, { home: true });
+      expect(filter.exclusion("work/dist", true)).toBe("busy folder");
+      expect(filter.exclusion("notes/build", true)).toBeNull();
+      for (const b of [...busy, ...busier]) expect(isBusyName(b)).toBe(true);
+      for (const b of ["notes", "docs", "src", "cached-notes", "Builds"]) expect(isBusyName(b)).toBe(false);
       // Named, a file the skip list leaves out is opened, and nothing more: never indexed.
       const g = openGraph(homeAt(home), config, true);
-      for (const rel of [".config/c.md", "Downloads/d.md", "work/node_modules/n.md", "docs/photo.png"])
+      for (const rel of [".config/c.md", "Downloads/d.md", "work/node_modules/pkg/n.md", "docs/photo.png"])
         expect(g.reachFile(rel, { keep: true })).toBe(false);
       expect(g.reachFile("docs/big.md")).toBe(false);
     });
@@ -7887,6 +7894,31 @@ describe("the merge review (20.21)", () => {
     expect(brief(r)).toEqual([
       ["docs/c.md", "/docs/plan.md#Aims", "moved", "refactor", "docs/new/plan.md", "/docs/new/plan.md#Aims"],
       ["docs/c.md", "plan", "moved", "refactor", "docs/new/plan.md", "new/plan"],
+    ]);
+  });
+
+  test("the merge review leaves out a busy folder that looks generated, as the walk does; a notes build/ is read (D237)", async () => {
+    const root = mkdtempSync(join(tmpdir(), "slipbox-merge-busy-"));
+    if (git(root, "init", "-q", "-b", "main").exitCode !== 0) return;
+    const long = "long enough to be known by its text when it moves.\n";
+    put(root, "build/plan.md", `# Plan\n\nThe plan, ${long}`);
+    put(root, "build/keep.md", "# Keep\n");
+    put(root, "vendor/pkg/doc.md", `# Doc\n\nA vendored doc, ${long}`); // no note at vendor's top
+    put(root, "index.md", "# Index\n");
+    git(root, "add", "-A");
+    git(root, "commit", "-q", "-m", "base");
+    git(root, "checkout", "-q", "-b", "refactor");
+    mkdirSync(join(root, "build", "new"));
+    git(root, "mv", "build/plan.md", "build/new/plan.md");
+    git(root, "mv", "vendor/pkg/doc.md", "vendor/pkg/doc2.md");
+    git(root, "commit", "-q", "-m", "moved");
+    git(root, "checkout", "-q", "main");
+    put(root, "c.md", "# C\n\n[plan](build/plan.md) [doc](vendor/pkg/doc.md)\n");
+    git(root, "add", "-A");
+    git(root, "commit", "-q", "-m", "c");
+    const r = await cli(["merge-review", "refactor"], root);
+    expect(brief(r)).toEqual([
+      ["c.md", "build/plan.md", "moved", "refactor", "build/new/plan.md", "build/new/plan.md"],
     ]);
   });
 
@@ -11074,6 +11106,28 @@ describe("reading and writing keep to the links of the place a path is in (VV-D6
       // A note of home's where the walk lists it: written through the link followed.
       expect((await capture(["write", "docs/notes/n.md", "# Rewritten"], unpacked)).code).toBe(0);
       expect(readFileSync(join(home, "notes", "n.md"), "utf8")).toBe("# Rewritten\n");
+    }),
+  );
+
+  test(
+    "a new note that lands in a busy folder of home, through a link followed in Elsewhere, is refused as home refuses it",
+    homed(async (home) => {
+      const { top } = elsewhere();
+      put(join(home, "work", "node_modules", "pkg", "README.md"), "# Pkg\n"); // no note at its top: busy
+      put(join(home, "notes", "n.md"), "# N\n");
+      const unpacked = join(top, "unpacked");
+      put(join(unpacked, "README.md"), "# Readme\n");
+      symlinkSync(home, join(unpacked, "docs"));
+      setLinkAnswer(join(unpacked, "docs"), "follow");
+      const r = await capture(["write", "docs/work/node_modules/pkg/x.md", "text", "--create"], unpacked);
+      expect(r.code).toBe(5);
+      expect(r.err).toContain("it lands in a busy folder, which its vault doesn't index");
+      expect(existsSync(join(home, "work", "node_modules", "pkg", "x.md"))).toBe(false);
+      // As named in home itself.
+      expect((await capture(["write", "work/node_modules/pkg/x.md", "text", "--create"], home)).code).toBe(5);
+      // Where home indexes it: written through the link followed.
+      expect((await capture(["write", "docs/notes/m.md", "text", "--create"], unpacked)).code).toBe(0);
+      expect(existsSync(join(home, "notes", "m.md"))).toBe(true);
     }),
   );
 

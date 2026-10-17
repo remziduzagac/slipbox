@@ -18,8 +18,9 @@ it, and slipbox opens the whole vault, the explorer showing the subfolder you na
 
 The explorer (`space e`) lists its notes and folders. Hidden ones aren't listed, such as `.obsidian/` itself and
 Obsidian's `.trash/`. A folder with a name tools give their output, such as `build`, `target`, `dist`, `vendor` or a
-`cache`, is listed but never indexed: search doesn't find its notes, and their links don't count. A new note isn't made
-there ([Files](../manual/files.md#what-the-explorer-lists)).
+`cache`, is listed but not indexed when it looks made by a tool: your `.gitignore` leaves it out, or no note is directly
+in it. Search doesn't find its notes then, and their links don't count. A folder of your notes with such a name, notes
+at its top, is indexed as any other ([Files](../manual/files.md#what-the-explorer-lists)).
 
 To follow a link:
 

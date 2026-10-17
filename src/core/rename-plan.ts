@@ -210,9 +210,9 @@ export function dirtyTrees(paths: string[]): string[] {
   return out;
 }
 
-/** A path the walk never lists: something hidden on its way, or in `node_modules`. */
+/** A path the walk lists only when it's reached (20.8): something hidden on its way. A busy folder is the filter's. */
 export function walkSkips(rel: string): boolean {
-  return rel.split("/").some((s) => s.startsWith(".") || s === "node_modules");
+  return rel.split("/").some((s) => s.startsWith("."));
 }
 
 /** Whether two paths are one file (a case-only rename on a case-insensitive disk): by inode, not by name. */

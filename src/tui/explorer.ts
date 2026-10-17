@@ -11,7 +11,7 @@ import { readIdentity, vaultConfigFile } from "../core/registry.ts";
 import { tildePath } from "../core/names.ts";
 import { findVaultRoot, hasMarker, homeFolder, isInside, isListed, isVaultRoot, locationAt } from "../core/vault.ts";
 import { isLink, linkScope, linkState, linkTarget } from "../core/symlinks.ts";
-import { ANOTHER_DISK, LINK_REASON } from "../core/walk.ts";
+import { ANOTHER_DISK, busyFolderAt, LINK_REASON } from "../core/walk.ts";
 import { match } from "./match.ts";
 import { prettyKey } from "./keys.ts";
 import type { App, ListItem } from "./app.ts";
@@ -268,8 +268,9 @@ export class Explorer {
       entries = readdirSync(this.app.loc.root, { withFileTypes: true });
     } catch {}
     for (const e of entries) {
-      if (!e.isDirectory() || e.name.startsWith(".") || e.name === "node_modules") continue;
+      if (!e.isDirectory() || e.name.startsWith(".")) continue;
       const abs = join(this.app.loc.root, e.name);
+      if (busyFolderAt(abs, this.app.config.walk)) continue;
       out.set(e.name, isVaultRoot(abs) ? { kind: "vault", abs, name: named(abs) } : { kind: "folder", abs });
     }
     return out;

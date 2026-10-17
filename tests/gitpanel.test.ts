@@ -440,6 +440,17 @@ describe("the branches (GIT-D9, GIT-D10, GIT-D13)", () => {
 });
 
 describe("the repositories in the view (VV-D10)", () => {
+  test("a busy-named folder is looked into for repositories only when it holds a note at its top (D237)", async () => {
+    const top = mkdtempSync(join(sandbox, "busy-repos-"));
+    for (const d of ["vendor/lib", "node_modules/dep"]) {
+      mkdirSync(join(top, d), { recursive: true });
+      git(join(top, d), "init", "-q", "-b", "main");
+    }
+    writeFileSync(join(top, "vendor", "notes.md"), "# Notes\n");
+    const { reposUnder } = await import("../src/core/gitrepos.ts");
+    expect((await reposUnder(top)).map((r) => r.name)).toEqual(["lib"]);
+  });
+
   test("in a vault that isn't a repository, they're the panel: by what needs attention, opened up in place, gone into", async () => {
     const root = mkdtempSync(join(sandbox, "folder-"));
     mkdirSync(join(root, ".slipbox"));

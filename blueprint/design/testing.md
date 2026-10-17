@@ -126,7 +126,7 @@ read `plan (v2).md` or `plan [x].md` as a pattern matching nothing, and passed, 
 | `escapes.md` | a hostile note full of terminal escape sequences (`2.9`) |
 | `cjk/日本語.md` | a Unicode file name linking out |
 | `attachments/diagram.png` | `![[diagram.png]]` resolved by name from anywhere |
-| `node_modules/`, `ignored/`, `*.skip.md` | always-skipped and `.gitignore`d paths |
+| `node_modules/`, `ignored/`, `*.skip.md` | a busy folder (no note at its top) and `.gitignore`d paths |
 | `.hidden/`, `drafts/` | dot directories; `walk.exclude` from the vault's config |
 | `nested-vault/` | a nested `.slipbox/` is a boundary, not part of this vault |
 | `alias-link.md`, `outside-link.md`, `symlinked-dir` | symlinks: a duplicate (skipped), outside, directory |

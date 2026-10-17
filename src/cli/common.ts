@@ -32,6 +32,7 @@ import { activityFile } from "../core/autoindex.ts";
 import { ELSEWHERE, rootLabel } from "../core/names.ts";
 import { isHome, isInside, vaultOf, recordLocation, type VaultLocation, configFilesFor } from "../core/vault.ts";
 import { homeWalkKept, walkHomeNow } from "../core/home.ts";
+import { WalkFilter } from "../core/walk.ts";
 import { type Args, flag, has, UsageError } from "./args.ts";
 
 export const EXIT = { ok: 0, error: 1, usage: 2, notFound: 3, ambiguous: 4, refused: 5 } as const;
@@ -255,7 +256,7 @@ function noteArgRel(s: Session, arg: string, parse: boolean): string {
     // leaves it out), so naming a path through it reads nothing — refused before anything reads it.
     refuseUnfollowed(s, s.loc.file, rel);
     // An existing file the walk leaves out: named, it's reached (20.8) — git-ignored or under a
-    // hidden folder, it's indexed from now on, as the TUI does; under node_modules, excluded by
+    // hidden folder, it's indexed from now on, as the TUI does; in a busy folder, excluded by
     // walk.exclude, it's read without joining the vault.
     // The argument names s.loc.file (from here or from --root): whether it exists is that file's.
     if (arg && existsSync(s.loc.file)) {
@@ -366,9 +367,9 @@ export function readNoteFile(s: Session, abs: string, forWriting = true): NoteFi
 /**
  * What a writer (`write`, `replace`, `task`) may change: a note, data or text file of the root
  * (never a binary one, 16.4), inside it by its real path, and where the walk lists files — never
- * `.slipbox/`, `.git/`, a hidden folder the root hasn't reached, or `node_modules`, as the path is
- * reached and where it lands (in home's, or a vault's); a new one never in a busy folder (`build/`,
- * `target/`…: VV-D8), which the vault doesn't index. Refused, exit 5.
+ * `.slipbox/`, `.git/` or a hidden folder the root hasn't reached, as the path is reached and where it
+ * lands (in home's, or a vault's); a new one never in a busy folder (`node_modules`, `build/`… that
+ * look generated: VV-D8, D237), which the vault doesn't index, nor landing in one. Refused, exit 5.
  */
 export function checkWritable(s: Session, abs: string): void {
   const refuse = (why: string) => {
@@ -383,8 +384,8 @@ export function checkWritable(s: Session, abs: string): void {
   // Notes, data and text files are written (16.4); binary files never are.
   if (classify(rel, s.config.walk.extensions).group === "binary") refuse("a binary file");
   // A hidden folder's note the vault has reached (20.8) is the vault's like any other; .git and
-  // .slipbox never are, nor node_modules.
-  const unlisted = (r: string) => r.split("/").some((part) => part.startsWith(".") || part === "node_modules");
+  // .slipbox never are. A busy folder (`node_modules`…) is the walk's filter's, below.
+  const unlisted = (r: string) => r.split("/").some((part) => part.startsWith("."));
   if (unlisted(rel) && !s.graph.reached.has(rel)) refuse("in a folder the walk doesn't list");
   // Measured where the write lands, too (VV-D6): a link on the way can lead it into a hidden folder of home or of a
   // vault, which that place refuses as it refuses it named there.
@@ -392,8 +393,21 @@ export function checkWritable(s: Session, abs: string): void {
   const lands = vaultOf(real);
   if (lands) {
     const there = relative(lands, real).split(sep).join("/");
-    const ours = realTarget(s.loc.root) === realTarget(lands) && s.graph.reached.has(there);
+    const same = realTarget(s.loc.root) === realTarget(lands);
+    const ours = same && s.graph.reached.has(there);
     if (unlisted(there) && !ours) refuse("it lands in a folder the walk doesn't list");
+    // A new one landing, through a link, in a busy folder of that place (VV-D8, D237), as a new one named there is
+    // refused: the folder it's put in holds a note then, so it's busy only when ignored. Named here, it's
+    // `neverIndexed`'s, below.
+    if (!existsSync(abs) && (!same || there !== rel.split(sep).join("/"))) {
+      const filter = same ? s.graph.filter : new WalkFilter(lands, s.config.walk, { home: isHome(lands) });
+      const dirs = there.split("/").slice(0, -1);
+      const note = filter.isNoteName(there.slice(there.lastIndexOf("/") + 1));
+      const busy = dirs.find((_, i) =>
+        filter.busy(dirs.slice(0, i + 1).join("/"), i === dirs.length - 1 && note ? true : undefined),
+      );
+      if (busy !== undefined) refuse("it lands in a busy folder, which its vault doesn't index");
+    }
   }
   // A new file where the vault never indexes it (VV-D8), found by nothing once written; one already there is edited.
   const never = existsSync(abs) ? null : s.graph.neverIndexed(rel);

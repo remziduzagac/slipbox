@@ -556,10 +556,11 @@ Elsewhere has no index. `index` there is exit 5.
 - keeping its byte order mark and its line endings
 - only inside the note's vault, by its real path: a link leading out is refused, even one you follow. In home, a
   link you follow is written through, and in Elsewhere, one you follow
-- only where the vault's notes are, never in `.slipbox/`, `.git/`, `node_modules` or a hidden folder (unless you named a
-  note there)
-- a new note never in a folder tools fill (`build`, `target`, `dist`, `vendor`, a cache), which the vault lists but never
-  indexes ([Files](files.md#what-the-explorer-lists)). A note already there can still be changed
+- only where the vault's notes are, never in `.slipbox/`, `.git/` or a hidden folder (unless you named a note there)
+- a new note never where the vault won't index it: in a folder tools fill (`node_modules`, `build`, `target`, `dist`,
+  `vendor`, a cache) that `.gitignore` leaves out, or deeper in one with no note at its top
+  ([Files](files.md#what-the-explorer-lists)). A note directly in a `build/` that isn't ignored makes it a folder of
+  notes. A note already in a folder tools fill can still be changed
 - never a binary file
 - never a note that isn't valid UTF-8, since its bytes would be lost (a task can still be ticked)
 
@@ -949,7 +950,8 @@ written. It can't be done whole when there is:
 
 - a target that exists (or differs only in case)
 - a path outside the vault
-- a path in a folder tools fill (`build`, `target`…), which the vault never indexes: the links to it would break
+- a path in a folder tools fill (`build`, `target`…) that the vault never indexes, ignored or with no note at its top:
+  the links to it would break
 - a file changed between planning and writing
 
 A file that isn't valid UTF-8 is skipped and said, never rewritten.

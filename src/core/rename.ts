@@ -27,6 +27,7 @@ import {
 } from "./folders.ts";
 import { formatPointer, isPointer, parsePointer, resolvePointer } from "./pointer.ts";
 import { findVaultRoot, isHome, isInside } from "./vault.ts";
+import { holdsNotes } from "./walk.ts";
 import { RenameError, type RenamePlan, Collector, dirtyTrees, walkSkips, sameFile } from "./rename-plan.ts";
 import { type Site, NOTE_EXT, wikiTarget, rootOfPath, real, pathRetarget, mdTarget } from "./rename-links.ts";
 
@@ -40,14 +41,14 @@ export { planHeadingRename } from "./rename-heading.ts";
 /**
  * A vault path as the user typed it: normalized, inside the vault, and not somewhere hidden. `holds`: what moves there
  * — a note or file, or a folder of them, never where the vault doesn't index it (a busy folder, VV-D8); a vault indexes
- * its own.
+ * its own. `notes`: what moves puts a note directly in the folder it lands in (a note; a folder with one at its top).
  */
-function cleanTarget(g: Graph, input: string, holds: "file" | "folder" | "vault"): string {
+function cleanTarget(g: Graph, input: string, holds: "file" | "folder" | "vault", notes = false): string {
   const rel = posix.normalize(input.replace(/\\/g, "/").replace(/^\/+/, "").replace(/\/+$/, ""));
   if (rel.startsWith("../") || rel === ".." || rel === "." || isAbsolute(rel))
     throw new RenameError(`${input} isn't inside the vault`);
-  if (walkSkips(rel)) throw new RenameError(`${input}: the walk leaves hidden folders and node_modules out`);
-  const never = holds === "vault" ? null : g.neverIndexed(rel, holds === "folder");
+  if (walkSkips(rel)) throw new RenameError(`${input}: the walk leaves hidden folders out`);
+  const never = holds === "vault" ? null : g.neverIndexed(rel, holds === "folder", notes);
   if (never) throw new RenameError(`${input}: ${never}`);
   if (!landsInside(g.root, join(g.root, rel))) throw new RenameError(`${rel} would land outside the vault`);
   const where = fileInTheWay(g.root, rel);
@@ -108,7 +109,7 @@ export function planNoteRename(g: Graph, fromRel: string, toInput: string): Rena
   const isNote = g.notes.has(fromRel);
   if (!isNote && !g.filePaths().includes(fromRel)) throw new RenameError(`no note or file ${fromRel} in ${g.root}`);
   checkSource(g, fromRel);
-  let toRel = cleanTarget(g, toInput, "file");
+  let toRel = cleanTarget(g, toInput, "file", isNote);
   if (posix.extname(toRel) === "" || (isNote && !NOTE_EXT.test(toRel))) toRel += posix.extname(fromRel);
   if (toRel === fromRel) throw new RenameError(`${fromRel} is already there`);
   if (existsSync(join(g.root, toRel)) && !sameFile(join(g.root, fromRel), join(g.root, toRel)))
@@ -129,7 +130,12 @@ export function planFolderMove(g: Graph, fromDir: string, toInput: string): Rena
   const from = posix.normalize(fromDir.replace(/\/+$/, ""));
   if (!g.dirs.includes(from) || !from || from === ".") throw new RenameError(`no folder ${fromDir} in ${g.root}`);
   checkSource(g, from);
-  const to = cleanTarget(g, toInput, "folder");
+  const to = cleanTarget(
+    g,
+    toInput,
+    "folder",
+    holdsNotes(join(g.root, from), (n) => g.filter.isNoteName(n)),
+  );
   if (to === from) throw new RenameError(`${from} is already there`);
   if (to.startsWith(`${from}/`)) throw new RenameError(`${from} can't move into itself`);
   if (existsSync(join(g.root, to)) && !sameFile(join(g.root, from), join(g.root, to)))

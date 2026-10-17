@@ -73,7 +73,7 @@ export class RepoView {
     if (had?.key !== key) {
       const asked: Found = { key, repos: had?.repos ?? null };
       this[slot] = asked;
-      void reposUnder(dir).then((repos) => {
+      void reposUnder(dir, undefined, this.app.config.walk).then((repos) => {
         if (this[slot] !== asked) return;
         asked.repos = repos;
         this.app.host.requestRender();

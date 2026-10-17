@@ -70,16 +70,16 @@ state folder: nothing is written into `~` (D39).
 **Its skip list.** Home's walk (`WalkFilter` with `{ home: true }`) applies a skip list instead of `.gitignore`, since
 a dotfiles repository's `*` would empty it (`homeSkip` in `core/walk.ts`): hidden folders, the system's (`Library` on
 macOS, `AppData` on Windows, at the top), `Downloads` (where `user-dirs.dirs` says, else `Downloads`), and the busy
-folders anywhere (VV-D8; § The walk); and the files the explorer doesn't list, a note or a text file aside
-(`classify`'s binary group). A folder where another filesystem is mounted, a share, a USB disk, an sshfs or NFS mount,
-is left out as `another disk` (`ANOTHER_DISK`), known from the mount table alone (`core/mounts.ts`: `/proc/self/mounts`
-on Linux, one run of `mount` on macOS, read once per walk, `readMounts`), never looked at, nor for a marker: one that
-stops answering would hang whatever stats it. The skip is recorded in the walk, so a walk kept drops a folder mounted
-on since, and walks one whose disk is gone. The explorer lists it, `another disk` beside it, and only unfolding it
-looks in. A note over `walk.max_file_size` is listed as skipped, not read. `reachable` refuses all
-of it in home: named, such a file opens, and is never indexed. `exclusion` gives each reason, for the explorer's marks
-([tui.md](tui.md) § Side panes). No watcher sees such a file, so the TUI polls it while it's open, as it polls every
-open file the graph doesn't know.
+folders anywhere (VV-D8, D237; § The walk: in home, one with no note at its top, since home reads no `.gitignore`); and
+the files the explorer doesn't list, a note or a text file aside (`classify`'s binary group). A folder where another
+filesystem is mounted, a share, a USB disk, an sshfs or NFS mount, is left out as `another disk` (`ANOTHER_DISK`), known
+from the mount table alone (`core/mounts.ts`: `/proc/self/mounts` on Linux, one run of `mount` on macOS, read once per
+walk, `readMounts`), never looked at, nor for a marker: one that stops answering would hang whatever stats it. The skip
+is recorded in the walk, so a walk kept drops a folder mounted on since, and walks one whose disk is gone. The explorer
+lists it, `another disk` beside it, and only unfolding it looks in. A note over `walk.max_file_size` is listed as
+skipped, not read. `reachable` refuses all of it in home: named, such a file opens, and is never indexed. `exclusion`
+gives each reason, for the explorer's marks ([tui.md](tui.md) § Side panes). No watcher sees such a file, so the TUI
+polls it while it's open, as it polls every open file the graph doesn't know.
 
 **Its index, in slices.** Home is never walked when it's opened: its walk is made a slice at a time (`SlicedWalk`,
 breadth first, entries by name) while nobody is working, and kept in its cache folder (`walk.json`, `keepHomeWalk`;
@@ -145,14 +145,15 @@ it as at any vault's, titled `~ › todo.md`; slipbox's own files under `~` (`sl
 folder) are no note of home's, opened as they are, never gone into.
 
 Not done: the vaults inside a folder home's skip list leaves out (a clone in `~/Downloads`) are no longer found by the
-background index, only when opened, and nor is a vault whose own folder is hidden or has a busy folder's name
-(`~/.dotfiles`, `~/build`), in home or nested in a vault: the skip list and the busy folders are checked before the
-markers. Link completion offers other vaults' notes, not home's. Every walk of home runs on the main thread, a slice
-at a time: another disk is never walked, but a slow one that's home's own filesystem, or a mount you unfold in the
-explorer, holds the TUI up while it's read; a walk in a worker would not. Freshness is by a folder's time: a folder
-whose time is set back after its notes changed (an archive unpacked with its times, `cp -a`, `rsync -a`) isn't listed
-again, its notes waiting for home's next walk or `slipbox index --refresh ~` (the TUI's reindex reads the walk kept).
-Tabs of home's top restored in a folder its walk hasn't reached open as files the graph doesn't know, until it does.
+background index, only when opened, and nor is a vault whose own folder is hidden or is a busy folder (`~/.dotfiles`, a
+repository `~/build` with no note at its top), in home or nested in a vault: the skip list and the busy folders are
+checked before the markers. Link completion offers other vaults' notes, not home's. Every walk of home runs on the main
+thread, a slice at a time: another disk is never walked, but a slow one that's home's own filesystem, or a mount you
+unfold in the explorer, holds the TUI up while it's read; a walk in a worker would not. Freshness is by a folder's time:
+a folder whose time is set back after its notes changed (an archive unpacked with its times, `cp -a`, `rsync -a`) isn't
+listed again, its notes waiting for home's next walk or `slipbox index --refresh ~` (the TUI's reindex reads the walk
+kept). Tabs of home's top restored in a folder its walk hasn't reached open as files the graph doesn't know, until it
+does.
 
 ## Elsewhere
 
@@ -236,17 +237,28 @@ what the walk leaves out, the watcher doesn't subscribe to (D40).
 
 - **Extensions:** `.md` and `.markdown`, case-insensitive (`walk.extensions`), are notes. Other files the walk passes
   are listed as the vault's files (pictures, data, code), among which a wikilink finds an attachment by its name.
-- **Always skipped:** `.git`, `.slipbox`, `node_modules`, and every entry whose name starts with a dot.
-- **The busy folders** (VV-D8): `node_modules`, `.venv` and `venv`, `__pycache__`, `target`, `build`, `dist`, `.next`,
-  `vendor`, `Pods`, `DerivedData`, `.gradle`, `.tox`, and caches (`cache`, `Caches`, `pip-cache`, any case; the
-  others in their case alone, so `Build` is indexed: `BUSY_FOLDERS`, `isBusyFolder`, by the folder's own name at any
-  depth) are left out of every vault's walk, as home's:
-  `exclusion` says `busy folder`, after `walk.exclude` and before `.gitignore`, whatever `.gitignore` says
-  (`node_modules` stays `always skipped`); nothing turns the list off. Such a folder is never reached (below): a file of
-  it named opens, never indexed; the watcher doesn't watch it. The explorer lists it all the same, browsed, never
-  indexed ([tui.md](tui.md) § Side panes). The busy folders whose names start with a dot (`.venv`, `.next`, `.gradle`,
-  `.tox`, `.cache`) are left out as `hidden` first: the explorer doesn't list them, and in a vault a note in one, named
-  or linked, is reached as in any hidden folder (in home, never).
+- **Always skipped:** `.git`, `.slipbox`, and every entry whose name starts with a dot.
+- **The busy folders** (VV-D8, D237): a folder named `node_modules`, `.venv` or `venv`, `__pycache__`, `target`,
+  `build`, `dist`, `.next`, `vendor`, `Pods`, `DerivedData`, `.gradle`, `.tox`, or as a cache (`cache`, `Caches`,
+  `pip-cache`, any case; the others in their case alone, so `Build` is a folder like any: `BUSY_FOLDERS`,
+  `isBusyName`), at any depth, is busy when it looks generated: its `.gitignore`s ignore it, or it holds no note
+  directly in it (a file of a note's extension, not hidden; its folders don't count). A notes folder called `build`,
+  not ignored, is walked, indexed and written as any other. One function decides it (`isBusyFolder`), asked by the
+  walk's filter (`WalkFilter.busy`, for a vault's walk and home's alike), the guards, the explorer's marks
+  (`busyFolderAt`, for a folder outside the vault open), the repositories in the view, and the merge review (on a
+  tree: a folder with no note at its top in it; what's tracked isn't ignored). Ignored means as the walk reads
+  `.gitignore`, from the vault's top down, never a `git check-ignore` process; home reads none, so in home a busy
+  name is busy with no note at its top. Whether it holds a note costs one listing of it, kept for the walk
+  (`newWalk` forgets them) and asked again when the folder's mtime moved. A busy folder is left out of every walk:
+  `exclusion` says `busy folder`, after `walk.exclude` and before `.gitignore` — ignored, a busy folder is busy, not
+  reached (D61 still reaches what `.gitignore` alone leaves out). Such a folder is never reached (below): a file of it
+  named opens, never indexed; the watcher doesn't watch it. A folder that changes kind — its first note at its top, its
+  line in a `.gitignore` added or gone — is taken in or left out when the watcher next lists its parent (a change
+  there) or the vault is walked again (a `.gitignore` changed is a rescan); a note added inside a busy folder alone
+  moves no watched folder. The explorer lists it all the same, browsed, never indexed ([tui.md](tui.md) § Side
+  panes). The busy folders whose names start with a dot (`.venv`, `.next`, `.gradle`, `.tox`, `.cache`) are left out
+  as `hidden` first: the explorer doesn't list them, and in a vault a note in one, named or linked, is reached as in
+  any hidden folder (in home, never).
 - **`.gitignore` is honoured**, nested ones included, with git's own semantics: every `.gitignore` from the vault's top
   down applies, and the deepest one with an opinion wins, so `!keep.md` re-includes; a folder excluded is never
   descended into. Case follows git's default `core.ignorecase`: insensitive on macOS, sensitive on Linux. What git
@@ -254,14 +266,18 @@ what the walk leaves out, the watcher doesn't subscribe to (D40).
   gitignore-syntax patterns. Home has its skip list instead (§ Home).
 - **Reached, then indexed:** a git-ignored file, or one under a hidden folder, isn't walked, but is indexed when it is
   reached (a note's link points at it, and then its own links reach further; it is opened in the TUI or named to the
-  CLI) and stays indexed after, the list kept with the index (D61). `.git`, `.slipbox`, `node_modules`, a busy folder,
-  `walk.exclude`, a vault of its own and, in home, all its skip list leaves out are never reached: named, such a file is
-  read and nothing more. Nothing new is put where it would never be indexed: a new note (`write --create`, the TUI's
-  typed path), a move or rename (`mv`, a folder given a busy name) or a copy into a busy folder is refused — the CLI's
-  exit 5, the TUI's warning, as the explorer refuses a new note on a `⊘` row. The guards (`checkWritable`,
-  `cleanTarget`, `copyPath`, `Files.createNote`) ask the filter (`Graph.neverIndexed`: a folder on the way whose
-  `exclusion` is `busy folder` or `always skipped`, up to a root of its own), not a list of names, so the refusal
-  follows the filter. A file already there is edited as any other; `walk.exclude`'s folders and nested roots still take
+  CLI) and stays indexed after, the list kept with the index (D61). `.git`, `.slipbox`, a busy folder, `walk.exclude`,
+  a vault of its own and, in home, all its skip list leaves out are never reached: named, such a file is read and
+  nothing more. Nothing new is put where it would never be indexed: a new note (`write --create`, the TUI's typed
+  path), a move or rename (`mv`, a folder given a busy name) or a copy into a busy folder is refused — the CLI's exit
+  5, the TUI's warning, as the explorer refuses a new note on a `⊘` row. The guards (`checkWritable`, `cleanTarget`,
+  `copyPath`, `Files.createNote`) ask the filter (`Graph.neverIndexed`: a folder on the way whose `exclusion` is `busy
+  folder` or `always skipped`, up to a root of its own), not a list of names, so the refusal follows the filter. They
+  ask it of the folder as the write leaves it: the folder a note lands in holds a note then (a moved or copied folder's
+  own, when it has one at its top), so a busy name there that isn't ignored is a folder like any, and `write
+  build/plan.md` makes a notes `build/`; a note deeper in a generated-looking one (`target/debug/x.md`), or in an
+  ignored one, is refused, said why (`git ignores it`, `no note at its top`). A file already there is edited as any
+  other; `walk.exclude`'s folders and nested roots still take
   a new note (made, not indexed here). A folder listed a level at a time (Elsewhere's) reaches nothing. Reached files
   aren't watched: they are read again when the index is next built.
 - **Nested vaults are boundaries:** a subfolder holding a vault marker is a different vault, and is not walked (D69,
@@ -278,10 +294,6 @@ what the walk leaves out, the watcher doesn't subscribe to (D40).
 - **Errors never abort:** unreadable folders and files are collected and reported as warnings.
 - **Encoding:** UTF-8; invalid sequences decode to U+FFFD and the file is flagged; a BOM is noted and stripped for
   parsing only.
-
-Not done: the busy folders' names are left out by name in every vault, a notes vault's too: a folder of notes called
-`build`, `vendor`, `target`, `dist` or `cache` in an Obsidian vault or a `.slipbox/` folder is listed in the explorer,
-never indexed or searched (ideas.md § Roots and vaults).
 
 ## Links followed only when you say so
 

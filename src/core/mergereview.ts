@@ -17,6 +17,7 @@ import { inEnglish } from "./gitremote.ts";
 import { extractText } from "./graph.ts";
 import { checkoutRemotes, parseHosted, splitRef, withHostedPath } from "./hosting.ts";
 import { extensionless, homeDir, wikiPathCandidates } from "./links.ts";
+import { isBusyFolder } from "./walk.ts";
 import { formatPointer, isPointer, type Pointer, parsePointer } from "./pointer.ts";
 
 export interface MergeBreak {
@@ -82,19 +83,35 @@ function commitOf(c: Pick<Checkout, "root">, ref: string): string | null {
   return r.status === 0 ? r.out.toString("utf8").trim() : null;
 }
 
-/** The vault's files in a tree — not under a hidden folder or node_modules, as the walk has it — each vault path to its blob. */
+/**
+ * The vault's files in a tree — not under a hidden folder or a busy one, as the walk has it — each vault path to its
+ * blob. A busy-named folder is busy here when it holds no note at its top in the tree (D237): what's in a tree is
+ * tracked, never ignored.
+ */
 function filesIn(c: Checkout, root: string, tree: string): Map<string, string> {
   const r = git(c, ["ls-tree", "-r", "-z", "--full-tree", tree]);
   if (r.status !== 0) throw new MergeReviewError(`git ls-tree ${tree}: ${r.err.trim() || "failed"}`);
-  const out = new Map<string, string>();
+  const all = new Map<string, string>();
   for (const e of r.out.toString("utf8").split("\0")) {
     const tab = e.indexOf("\t");
     if (tab < 0) continue;
     const [, type, oid] = e.slice(0, tab).split(" ");
     const rel = type === "blob" ? inVault(c, root, e.slice(tab + 1)) : null;
-    if (rel && !rel.split("/").some((s) => s.startsWith(".") || s === "node_modules")) out.set(rel, oid!);
+    if (rel && !rel.split("/").some((s) => s.startsWith("."))) all.set(rel, oid!);
   }
-  return out;
+  const withNotes = new Set([...all.keys()].filter((p) => NOTE.test(p)).map((p) => posix.dirname(p)));
+  const busy = (rel: string) => {
+    const parts = rel.split("/");
+    return parts.slice(0, -1).some((name, i) => {
+      const dir = parts.slice(0, i + 1).join("/");
+      return isBusyFolder(
+        name,
+        () => false,
+        () => withNotes.has(dir),
+      );
+    });
+  };
+  return new Map([...all].filter(([rel]) => !busy(rel)));
 }
 
 /** Blobs' texts, by id, read in one `git cat-file --batch`. */

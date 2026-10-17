@@ -194,7 +194,7 @@ Home's skip list:
 - the system's folders at its top: `Library` on macOS, `AppData` on Windows
 - `Downloads`, where your desktop keeps it
 - the busy folders, wherever they are: `node_modules`, `.venv`, `venv`, `__pycache__`, `target`, `build`, `dist`,
-  `.next`, `vendor`, `Pods`, `DerivedData`, `.gradle`, `.tox`, and caches
+  `.next`, `vendor`, `Pods`, `DerivedData`, `.gradle`, `.tox`, and caches, when no note is directly in them
 - a folder where another disk is mounted, such as a network share: slipbox never looks into it, so one that stops
   answering can't hold it up
 - files that aren't notes or text, such as pictures and archives
@@ -365,9 +365,10 @@ A row can end with marks, each in a column of its own, so they line up down the 
 
 ### Busy folders: listed, not indexed
 
-Every vault's index leaves out the folders tools fill, wherever they are and whatever its `.gitignore` says:
-`node_modules`, `.venv`, `venv`, `__pycache__`, `target`, `build`, `dist`, `.next`, `vendor`, `Pods`, `DerivedData`,
-`.gradle`, `.tox`, and caches. It leaves out what `.gitignore` and `walk.exclude` leave out too, and home's skip list.
+Every vault's index leaves out the folders tools fill, wherever they are: `node_modules`, `.venv`, `venv`,
+`__pycache__`, `target`, `build`, `dist`, `.next`, `vendor`, `Pods`, `DerivedData`, `.gradle`, `.tox`, and caches. It
+leaves one out when it looks made by a tool: its `.gitignore` leaves it out, or no note is directly in it (the folders
+in it don't count). It leaves out what `.gitignore` and `walk.exclude` leave out too, and home's skip list.
 
 The explorer still lists them, marked `⊘`. You can unfold them and open their files, to read a build's output, say.
 Nothing in them is indexed, though:
@@ -376,9 +377,10 @@ Nothing in them is indexed, though:
 - A wikilink's name doesn't reach them.
 - They can't be renamed, moved or deleted from the explorer.
 
-A note kept in a folder named `build` or `vendor` isn't indexed either. Rename the folder to have it indexed. And
-nothing new goes into one: a new note, a move or a copy there is refused, from the explorer, a typed path or the
-command line. A note already there can still be changed.
+A folder of your notes called `build` or `vendor`, with notes at its top and not ignored, is a folder like any: indexed,
+searched, written. Nothing new goes where it would never be indexed: a new note, a move or a copy into an ignored busy
+folder, or deeper in one with no note at its top, is refused, from the explorer, a typed path or the command line. A
+note already there can still be changed.
 
 ## Links into other vaults: the peek
 
