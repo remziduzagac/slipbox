@@ -19,6 +19,14 @@ The format is [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.1.0/); wh
   seconds is given up on for now. On the command line, a path through a link not followed is refused (exit 5). A link
   within its vault or home, like the ones `stow` makes, is never asked about.
 
+- A link's rule holds wherever it's met. On the command line in Elsewhere, every link on a path's way from the folder
+  you're in asks, a linked note is refused however it's named, and `capture --snippet` doesn't read through a link
+  not followed. A write never lands in a hidden folder of home, or of a vault, through a link. In home, a new note or
+  folder is made through a followed link from the explorer as on the command line, and moving, copying or deleting
+  across one is refused in both. A peek at another vault's note through a link that vault hasn't followed says so
+  instead of reading it, and `o` goes there, where opening it asks. An explorer row's link in a folder outside the
+  vault you're in says whether it's followed there, and asks before it's unfolded.
+
 - Keys you already know, a page for those who don't use vim: the arrows and the shortcuts of other editors that slipbox
   has, the four keys that are new, and where slipbox's keys differ. The README, the quick start and getting started
   give the familiar key first.
@@ -182,6 +190,7 @@ The format is [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.1.0/); wh
 - In a note with a byte order mark, the gutter's git signs and `space g d` marked the first line changed when it
   wasn't, and undoing that change wrote a second mark into the file. The mark is never a change now, and staging a
   change keeps it.
+- `capture --ref … --snippet` reads only a regular file, as `read` does: a FIFO or a device is refused at once.
 
 ## [0.3.0] - 2026-10-14
 

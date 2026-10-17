@@ -188,14 +188,25 @@ export function unfollowedLink(
   return null;
 }
 
+/** A place, as the links on a path's way are looked at in it: a vault's, home's, Elsewhere's (`VaultLocation`'s). */
+export interface LinkPlace {
+  mode: string;
+  root: string;
+  /** Elsewhere's on the command line: the folder you work in. */
+  workDir?: string;
+}
+
 /**
- * Where the links on the way to `path` are looked at from (VV-D6): a vault's folder, home; in Elsewhere, the folder
- * opened, or — a path outside it, named outright — the file's own folder: what's above is yours to name, and only the
+ * Where the links on the way to `path` are looked at from (VV-D6): a vault's folder, home; in Elsewhere, the folder you
+ * work in (the command line's) or opened, when the path is under it — every link from there down asks — or, a path
+ * named outright outside both, the file's own folder: what's above the folder you work in is yours to name, and only the
  * file itself, a link, asks.
  */
-function wayFrom(loc: { mode: string; root: string }, path: string): string {
+function wayFrom(loc: LinkPlace, path: string): string {
   if (loc.mode !== "folder") return loc.root;
-  return within(loc.root, resolve(path)) ? loc.root : dirname(resolve(path));
+  const p = resolve(path);
+  for (const top of [loc.workDir, loc.root]) if (top && within(top, p)) return top;
+  return dirname(p);
 }
 
 /**
@@ -203,7 +214,7 @@ function wayFrom(loc: { mode: string; root: string }, path: string): string {
  * home, or any in Elsewhere, you haven't said to follow (`opts`: `unfollowedLink`'s); null when none.
  */
 export function blockingLink(
-  loc: { mode: string; root: string },
+  loc: LinkPlace,
   path: string,
   opts: WayOptions = {},
 ): { link: string; target: string | null } | null {
@@ -215,7 +226,7 @@ export function blockingLink(
  * Elsewhere, as the file system allows, once its links are followed; in a vault, never out of it, followed or not —
  * a link a pull can change could lead a save to `~/.bashrc`.
  */
-export function writesThrough(loc: { mode: string; root: string }, path: string): boolean {
+export function writesThrough(loc: LinkPlace, path: string): boolean {
   if (loc.mode === "vault") return within(real(loc.root), realTarget(path));
   return blockingLink(loc, path) === null;
 }

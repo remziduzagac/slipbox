@@ -4,6 +4,7 @@
 // A followed target is asked whether it answers before it's walked, in the background: one that doesn't is given up
 // on, said so.
 
+import { dirname } from "node:path";
 import { rootLabel, tildePath } from "../core/names.ts";
 import {
   agentsWarning,
@@ -16,7 +17,7 @@ import {
   probeFollowed,
   setLinkAnswer,
 } from "../core/symlinks.ts";
-import { isInside } from "../core/vault.ts";
+import { isInside, locationAt, type VaultLocation } from "../core/vault.ts";
 import { LINK_REASON } from "../core/walk.ts";
 import { stringWidth, truncate, truncateStart } from "../core/width.ts";
 import type { App, ListItem } from "./app.ts";
@@ -49,6 +50,18 @@ export class Following {
     return blockingLink(loc, abs, { looking: (k) => this.looking.has(k) });
   }
 
+  /**
+   * The link keeping `abs` from being read out of the vault open — in a peek, an outside folder of the explorer
+   * unfolded — by the rule of the place holding it (VV-D6): that vault's, home's, or Elsewhere's from its own folder
+   * (`there`, its location; else found by its folder). This vault's own links on its way are `blocked`'s.
+   */
+  blockedThere(
+    abs: string,
+    there: VaultLocation = locationAt(dirname(abs)),
+  ): { link: string; target: string | null } | null {
+    return blockingLink(there, abs, { looking: (k) => this.looking.has(k) });
+  }
+
   /** The link being looked at that `abs` is read through, when it is: the file read-only, never indexed. */
   lookedAt(abs: string): string | null {
     const loc = this.app.loc;
@@ -56,21 +69,25 @@ export class Following {
     return blockingLink(loc, abs)?.link ?? null;
   }
 
-  /** Opening `abs` (VV-D6): a link not followed on its way asks first — true when it does; `then`, once answered. */
-  gate(abs: string, then: Then): boolean {
-    const b = this.blocked(abs);
+  /**
+   * Opening `abs` (VV-D6): a link not followed on its way asks first — true when it does; `then`, once answered.
+   * `there`: a place out of the vault open whose rule it's opened by too (an outside folder of the explorer).
+   */
+  gate(abs: string, then: Then, there?: VaultLocation): boolean {
+    const own = this.blocked(abs);
+    const b = own ?? (there ? this.blockedThere(abs, there) : null);
     if (!b) return false;
-    this.ask(b.link, b.target, then);
+    this.ask(b.link, b.target, then, own ? undefined : there);
     return true;
   }
 
   /**
-   * The question (VV-D6): follow it, just look, or no — what a yes allows where you are, and, when what it leads to is
-   * hidden or outside home, that agents will see what's followed.
+   * The question (VV-D6): follow it, just look, or no — what a yes allows where you are (`there`: where the link is,
+   * out of the vault open), and, when what it leads to is hidden or outside home, that agents will see what's followed.
    */
-  ask(link: string, target: string | null, then?: Then): void {
+  ask(link: string, target: string | null, then?: Then, there?: VaultLocation): void {
     if (!target) return this.app.message("warn", `${linkSaid(link, null)}: nothing to follow`);
-    const loc = this.app.loc;
+    const loc = there ?? this.app.loc;
     const where = rootLabel(loc);
     const allows =
       loc.mode === "home"

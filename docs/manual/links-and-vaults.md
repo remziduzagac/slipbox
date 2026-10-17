@@ -404,6 +404,19 @@ What following allows depends on where the link is:
   out of it, and an export of one goes only where `-o` says.
 - **In Elsewhere,** it reads and writes as the file system allows.
 
+In home, writing through a link covers a note's text, a new note and a new folder. Moving, copying or deleting across
+it is refused, from the explorer and on the command line alike. In Elsewhere, every link on a path's way asks, from
+the folder you opened, or on the command line the folder you're in, down to the file. A path you name outside that
+folder asks only about the file itself.
+
+A write never lands in a hidden folder of your home folder, or of a vault, through a link: slipbox refuses it there as
+it refuses it named directly.
+
+A peek, and `t` and `ctrl+o` in one, read another vault's note only as that vault would. If a link there on the way
+isn't followed, the peek says so instead of reading it, and `o` goes there, where opening it asks. A link of the vault
+you're in asks first, as opening it would. In the explorer, a link in a folder outside the vault you're in says whether
+it's followed where it is, and unfolding one that isn't asks.
+
 The answer is kept for that link and the place it leads, in `links.json` in slipbox's own state folder, never in the
 vault. So a repository you clone can't bring its links already followed, and if a link later leads somewhere else,
 slipbox asks again.
@@ -419,8 +432,9 @@ A followed link on a slow disk, such as a network share, is read in the backgrou
 seconds, slipbox gives up on it for now and says so, and the explorer says `not answering` on its row. It's asked
 again a minute later.
 
-On the command line, a path through a link that isn't followed is refused (exit 5). The command line never follows a
-link on its own: answer in the TUI first.
+On the command line, a path through a link that isn't followed is refused (exit 5), however the note is named, and so
+is a snippet `capture --snippet` would read through one. The command line never follows a link on its own: answer in
+the TUI first.
 
 ### Giving a folder `.slipbox/`
 

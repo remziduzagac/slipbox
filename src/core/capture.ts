@@ -12,7 +12,7 @@
 // Reference format, GitHub-style, as prompt-buffer.lua emits it:
 //   `path:42`  `path:42-50`  `path:42:10-30`  `path:42:10-50:30`
 
-import { existsSync, lstatSync, readFileSync } from "node:fs";
+import { existsSync, lstatSync } from "node:fs";
 import { extname, isAbsolute, join, relative, resolve } from "node:path";
 import { type Config, isSafeRelative } from "./config.ts";
 import { atomicWrite, climbsOut, ensureDir, landsInside, readRegular } from "./fsutil.ts";
@@ -54,6 +54,9 @@ export function scratchLocation(owner: ScratchOwner, config: Config): ScratchLoc
 }
 
 export class CaptureError extends Error {}
+
+/** The most a snippet's file is read of: as much as `capture`'s check of a reference reads. */
+const SNIPPET_FILE = 64 << 20;
 
 export interface Ref {
   path: string;
@@ -164,7 +167,14 @@ export function formatEntry(input: CaptureInput, project: string): string {
       let body = input.snippetText;
       if (body === undefined) {
         if (!existsSync(abs)) throw new CaptureError(`${input.ref.path}: no such file for --snippet`);
-        const lines = readFileSync(abs, "utf8").split(/\r?\n/);
+        // A regular file, read with care: a FIFO or a device is never waited on, nor read without end.
+        let read: string;
+        try {
+          read = readRegular(abs, SNIPPET_FILE).toString("utf8");
+        } catch (err) {
+          throw new CaptureError(`${input.ref.path}: ${(err as Error).message.replace(`${abs}: `, "")} — no --snippet`);
+        }
+        const lines = read.split(/\r?\n/);
         // A final newline ends the last line; it doesn't start another.
         if (lines.length > 1 && lines[lines.length - 1] === "") lines.pop();
         const last = input.ref.endLine ?? input.ref.startLine;

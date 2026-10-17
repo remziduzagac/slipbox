@@ -4,7 +4,7 @@
 
 import { createHash } from "node:crypto";
 import { existsSync, writeFileSync } from "node:fs";
-import { join, relative, resolve } from "node:path";
+import { join, relative, resolve, sep } from "node:path";
 import { type Config, loadConfig } from "../core/config.ts";
 import { folderIdentity } from "../core/folders.ts";
 import { type Graph, openGraph, type Retarget } from "../core/graph.ts";
@@ -15,7 +15,15 @@ import { classify } from "../core/filetypes.ts";
 import { stateHome } from "../core/paths.ts";
 import { readStale, type StaleEntry } from "../core/stale.ts";
 import { UNSAFE } from "../core/sanitize.ts";
-import { type DecodedFile, decodeText, ensureDir, readRegular, WriteRefused, writeNote } from "../core/fsutil.ts";
+import {
+  type DecodedFile,
+  decodeText,
+  ensureDir,
+  readRegular,
+  realTarget,
+  WriteRefused,
+  writeNote,
+} from "../core/fsutil.ts";
 import { blockingLink, linkSaid, PROBE_MS, probeFollowed, writesThrough } from "../core/symlinks.ts";
 import { compilePattern } from "../core/replace.ts";
 import { openVault, Reach } from "../core/reach.ts";
@@ -225,6 +233,14 @@ export function resolveNote(s: Session, arg: string, parse = true): string {
 }
 
 function findNoteArg(s: Session, arg: string, parse: boolean): string {
+  const rel = noteArgRel(s, arg, parse);
+  // However it was found — Elsewhere lists a linked note as any other, a listing can be older than a link — reading
+  // follows the place's rule (VV-D6): a link on its way not followed is refused.
+  refuseUnfollowed(s, join(s.loc.root, rel), rel);
+  return rel;
+}
+
+function noteArgRel(s: Session, arg: string, parse: boolean): string {
   // The file that said which vault this is: only the argument naming it (context takes several).
   const root = flag(s.args, "root");
   // Named from here, or from --root (`noteArgPath`): the file that said which root this is.
@@ -350,8 +366,9 @@ export function readNoteFile(s: Session, abs: string, forWriting = true): NoteFi
 /**
  * What a writer (`write`, `replace`, `task`) may change: a note, data or text file of the root
  * (never a binary one, 16.4), inside it by its real path, and where the walk lists files — never
- * `.slipbox/`, `.git/`, a hidden folder the root hasn't reached, or `node_modules`; a new one never
- * in a busy folder (`build/`, `target/`…: VV-D8), which the vault doesn't index. Refused, exit 5.
+ * `.slipbox/`, `.git/`, a hidden folder the root hasn't reached, or `node_modules`, as the path is
+ * reached and where it lands (in home's, or a vault's); a new one never in a busy folder (`build/`,
+ * `target/`…: VV-D8), which the vault doesn't index. Refused, exit 5.
  */
 export function checkWritable(s: Session, abs: string): void {
   const refuse = (why: string) => {
@@ -367,8 +384,17 @@ export function checkWritable(s: Session, abs: string): void {
   if (classify(rel, s.config.walk.extensions).group === "binary") refuse("a binary file");
   // A hidden folder's note the vault has reached (20.8) is the vault's like any other; .git and
   // .slipbox never are, nor node_modules.
-  if (rel.split("/").some((part) => part.startsWith(".") || part === "node_modules") && !s.graph.reached.has(rel))
-    refuse("in a folder the walk doesn't list");
+  const unlisted = (r: string) => r.split("/").some((part) => part.startsWith(".") || part === "node_modules");
+  if (unlisted(rel) && !s.graph.reached.has(rel)) refuse("in a folder the walk doesn't list");
+  // Measured where the write lands, too (VV-D6): a link on the way can lead it into a hidden folder of home or of a
+  // vault, which that place refuses as it refuses it named there.
+  const real = realTarget(abs);
+  const lands = vaultOf(real);
+  if (lands) {
+    const there = relative(lands, real).split(sep).join("/");
+    const ours = realTarget(s.loc.root) === realTarget(lands) && s.graph.reached.has(there);
+    if (unlisted(there) && !ours) refuse("it lands in a folder the walk doesn't list");
+  }
   // A new file where the vault never indexes it (VV-D8), found by nothing once written; one already there is edited.
   const never = existsSync(abs) ? null : s.graph.neverIndexed(rel);
   if (never) refuse(never);

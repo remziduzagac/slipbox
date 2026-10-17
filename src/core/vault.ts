@@ -85,6 +85,11 @@ export interface VaultLocation {
   worktree?: Worktree | null;
   /** Said once when the root was found, when there is something to say. */
   note?: string;
+  /**
+   * Elsewhere's on the command line (VV-D6): the folder you work in. The links on the way to a path under it are looked
+   * at from there down, every one asking, whatever folder the path's file is in.
+   */
+  workDir?: string;
 }
 
 export class VaultError extends Error {}

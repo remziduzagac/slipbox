@@ -222,7 +222,9 @@ explorer's selected folder instead, or beside the selected file. The question sa
   them. So slipbox suggests a distinct name instead, from the new note's folder (`ideas-coffee`). It says where the
   other one is. Type the name again to keep it anyway.
 
-Nothing is ever made outside the vault, through a symbolic link or otherwise.
+In a vault, nothing is ever made outside it, through a symbolic link or otherwise. In your home folder, a note or a
+folder can be made through a link you follow, as a note's text is written through one; never through one you don't
+([Links that lead out](links-and-vaults.md#links-that-lead-out)).
 
 ### A new folder
 

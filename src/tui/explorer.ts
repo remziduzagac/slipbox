@@ -452,14 +452,16 @@ export class Explorer {
   }
 
   /**
-   * A row listed a level at a time that is a link (VV-D6): where it leads, and — in Elsewhere, where every link asks —
-   * whether it's followed. Elsewhere's rows of another vault's folders say where they lead, nothing more: going in, that
-   * vault's own tree says the rest.
+   * A row listed a level at a time that is a link (VV-D6): where it leads, and whether it's followed, by the rule of the
+   * place it's in — in Elsewhere every link asks; a vault's or home's, one leading out of it. Unfolded, one not followed
+   * asks first (`linkFirst`), wherever it is.
    */
   private linkOf(e: Dirent, abs: string, dir: boolean): Pick<TreeRow, "link"> {
     if (!e.isSymbolicLink()) return {};
     const target = linkTarget(abs);
-    const asks = isListed(this.app.loc) && linkState(abs, null, target) !== "followed";
+    const scope = isListed(this.app.loc) ? null : linkScope(locationAt(dirname(abs)));
+    const state = linkState(abs, scope, target);
+    const asks = state !== "followed" && state !== "within";
     return { link: { target, dir, ...(asks ? { reason: LINK_REASON.out } : {}) } };
   }
 
@@ -752,12 +754,18 @@ export class Explorer {
       return true;
     }
     const abs = this.rowAbs(row);
-    return this.app.following.gate(abs, () => {
-      this.invalidateTree();
-      const at = this.rows().findIndex((r) => r.path === this.rowPath(abs));
-      if (at >= 0) this.app.sidebar.selected = at;
-      this.action(action);
-    });
+    // Out of the vault open, by the rule of the place it's in too (VV-D6): never listed unasked.
+    const there = row.outside ? locationAt(dirname(abs)) : undefined;
+    return this.app.following.gate(
+      abs,
+      () => {
+        this.invalidateTree();
+        const at = this.rows().findIndex((r) => r.path === this.rowPath(abs));
+        if (at >= 0) this.app.sidebar.selected = at;
+        this.action(action);
+      },
+      there,
+    );
   }
 
   /** The explorer's rows: the tree, or while filtering the matching notes under their folders

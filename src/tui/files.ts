@@ -2,9 +2,10 @@
 // restored from it — each one a preview of the links it changes first.
 
 import { classify, extensionOf, isKnownExtension } from "../core/filetypes.ts";
-import { existsSync, mkdirSync, realpathSync, statSync } from "node:fs";
-import { basename, dirname, join, posix, relative } from "node:path";
-import { climbsOut, realTarget, writeNote } from "../core/fsutil.ts";
+import { existsSync, mkdirSync, statSync } from "node:fs";
+import { basename, dirname, join, posix } from "node:path";
+import { writeNote } from "../core/fsutil.ts";
+import { blockingLink, linkSaid, writesThrough } from "../core/symlinks.ts";
 import { insertText, startInsert } from "./editing.ts";
 import { normKey } from "../core/links.ts";
 import { openVault } from "../core/reach.ts";
@@ -57,17 +58,26 @@ export class Files {
       this.app.message("warn", `${typed}: not inside the vault`);
       return null;
     }
-    // Through a symlinked folder or not, never outside the vault.
-    const target = realTarget(join(this.app.loc.root, rel));
-    let root = this.app.loc.root;
-    try {
-      root = realpathSync(root);
-    } catch {}
-    if (climbsOut(relative(root, target))) {
-      this.app.message("warn", `${typed} resolves outside the vault — not creating it`);
+    // Where a note's text may be written (VV-D6), and so the command line's `write --create` and `mkdir`: in a vault,
+    // never outside it, through a symlinked folder or not; in home, through a link it follows; never through one not
+    // followed.
+    const abs = join(this.app.loc.root, rel);
+    if (!writesThrough(this.app.loc, abs)) {
+      const b = this.app.loc.mode === "vault" ? null : blockingLink(this.app.loc, abs);
+      this.app.message(
+        "warn",
+        b
+          ? `${typed} is reached through a link that isn't followed (${linkSaid(b.link, b.target)}) — not creating it`
+          : `${typed} resolves outside the vault — not creating it`,
+      );
       return null;
     }
     return rel;
+  }
+
+  /** A new file's write, as `writeNote` takes it: through the links home follows, Elsewhere's (VV-D6). */
+  private through(abs: string): { through: boolean } {
+    return { through: this.app.loc.mode !== "vault" && writesThrough(this.app.loc, abs) };
   }
 
   /** The folders a new path makes, known to the walk and the watcher (and the explorer shows); not
@@ -128,7 +138,7 @@ export class Files {
     let stamp: { mtimeMs: number; size: number };
     try {
       mkdirSync(dirname(abs), { recursive: true });
-      stamp = writeNote(this.app.loc.root, abs, content);
+      stamp = writeNote(this.app.loc.root, abs, content, this.through(abs));
     } catch (err) {
       this.app.message("error", `can't create ${rel}: ${(err as Error).message}`);
       return null;
