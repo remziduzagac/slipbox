@@ -704,13 +704,16 @@ keys.
   folder's (`17.13`); a row with its menu's button shows no marks. The index's state: a folder of the vault's own tree
   is indexed, or indexing while home is unwalked, while the walk hasn't reached it (`unwalked`; past home's cap, not
   indexed), or while a note in it waits to be parsed (`app.indexing`, `graph.pendingPaths`); what the walk leaves out
-  (`leftOut`), a busy folder anywhere, a link not followed or not answering, and a note too big
+  (`leftOut`) and every folder in it, unfolded there or zoomed into (`outsideRows` carries `leftOut` down, to a vault
+  of its own), a busy folder anywhere, a link not followed or not answering, and a note too big
   (`walk.max_file_size`) are not indexed; the vault open's row is indexing while its index is built, else indexed;
   another vault's is indexed when its index is on the disk, indexing while the background index builds it
   (`AutoIndex.status.current`), else unmarked; a note in what the walk leaves out that a link reached is indexed. A
   folder you may not list and a file you may not read: can't read; a link whose target isn't there: a problem. A file's
   row carries one only when it isn't its folder's. What the disk says of a row (`Facts`: access, a broken link, the
-  size, a vault's index and branch) is read once per row, again when the tree is built again. git is asked for its
+  size, a vault's index and branch) is read once per row drawn, again when the tree is built again: never for the rows
+  out of sight, so the pane's width for its sideways scroll keeps the index's column for every folder and vault, and a
+  file's mark only the disk gives may take a name's last columns. git is asked for its
   marks in the background, a moment after anything changed (a save, the watcher, a file operation, a branch switch,
   going into another vault — which drops the old vault's marks at once); asked while a question is still out, it's
   asked again once that one's answered, so a stage or a commit is never answered by a question from before it.

@@ -136,8 +136,8 @@ The last column says what slipbox's index holds of the row, for links, backlinks
 | `⚿` | `#` | you may not read it |
 | `⚠` | `!` | a problem, such as a link whose target isn't there |
 
-Most folders are indexed, so a file has a mark there only when it isn't what its folder says. With Nerd Font icons,
-`⚿` is a lock.
+Most folders are indexed, so a file has a mark there only when it isn't what its folder says. A folder inside a `⊘`
+folder is marked `⊘` too. With Nerd Font icons, `⚿` is a lock.
 
 The column before it is git's: `M`, `+`, `R` or `!` for a changed file, and `•` for a folder with a change in it, `o` in
 ASCII ([Git](git.md)).

@@ -286,7 +286,11 @@ function drawTree(app: App, c: Canvas, list: Rect, bg: Color | null, geo: Geomet
   const gitOf = (row: TreeRow) => (row.kind === "note" ? app.git.states?.get(row.path) : app.git.folders.get(row.path));
   const marksOf = (row: TreeRow) => app.explorer.marks.of(row);
   const reserveOf = (git: unknown, index: unknown) => (git ? 4 : index ? 2 : 0);
-  const measured = (row: TreeRow) => `${text(row)}${" ".repeat(reserveOf(gitOf(row), marksOf(row).index))}`;
+  // Measured without the disk, which `Marks` reads for the rows drawn alone, never for every row of a big folder: the
+  // index's column kept for a folder or a vault, nearly always marked, and a link the walk didn't go through; a file's
+  // mark only the disk says (can't read, a broken link, too big) takes the last columns of a name as wide as the pane.
+  const mayMark = (row: TreeRow) => row.kind !== "note" || !!row.link?.reason;
+  const measured = (row: TreeRow) => `${text(row)}${" ".repeat(reserveOf(gitOf(row), mayMark(row)))}`;
   // The selected note, file, folder or nested vault: a button at the row's end opening its menu
   // (18.1) — rename, move, delete… — its right edge under the title's buttons'.
   const buttonsOf = (row: TreeRow) => {

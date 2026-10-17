@@ -307,9 +307,9 @@ export class Explorer {
   /**
    * A path of the vault open (its path in it, and absolute) that its walk leaves out: at, or under, what it excludes
    * (VV-D8) — a hidden folder only in home, whose tree lists none; in a vault, a hidden note reached by a link is in
-   * its tree (20.8).
+   * its tree (20.8). Why, or null.
    */
-  private leftOut(rel: string, abs: string): boolean {
+  private leftOut(rel: string, abs: string): string | null {
     const filter = this.app.graph.filter;
     const parts = rel.split("/");
     for (let i = 1; i <= parts.length; i++) {
@@ -319,9 +319,19 @@ export class Explorer {
           dir = statSync(abs).isDirectory();
         } catch {}
       const why = filter.exclusion(parts.slice(0, i).join("/"), dir);
-      if (why !== null && why !== "nested vault" && (filter.home || why !== "hidden")) return true;
+      if (why !== null && why !== "nested vault" && (filter.home || why !== "hidden")) return why;
     }
-    return false;
+    return null;
+  }
+
+  /** Why the vault open's walk leaves out the view's folder `abs` (VV-D8), when it's in its own tree; else null. */
+  private leftOutView(abs: string): string | null {
+    const R = this.app.loc.root;
+    if (abs === R || !isInside(R, abs) || isListed(this.app.loc)) return null;
+    const rel = relative(R, abs).split(sep).join("/");
+    // In a vault nested in it, or through a link the walk didn't take: that vault's, or not the walk's at all.
+    if ([...this.nestedRels(), ...this.unwalkedRels()].some((n) => rel === n || rel.startsWith(`${n}/`))) return null;
+    return this.leftOut(rel, abs);
   }
 
   /** A row's path, absolute. */
@@ -345,7 +355,7 @@ export class Explorer {
     const rows: TreeRow[] = [];
     // The view (VV-D5): the vault's own tree from it, or, anywhere else, its folder listed a level at a time.
     const own = this.ownView(T);
-    if (own === null) this.outsideRows(T, 0, rows);
+    if (own === null) this.outsideRows(T, 0, rows, this.leftOutView(T));
     else rows.push(...this.rootTree(own));
     this.tree = rows;
     return rows;
@@ -355,9 +365,10 @@ export class Explorer {
    * A folder outside the vault open's own tree — above it, beside it, in another vault, one its walk
    * leaves out — listed a level at a time (never walked): its folders — the vault open marked and
    * highlighted, its tree under it while unfolded; other vaults by their icon and name — then its files,
-   * as `files.show` would list them in their vault.
+   * as `files.show` would list them in their vault. `leftOut`: in what the vault open's walk leaves out (VV-D8), why —
+   * its folders carry it, down to a vault of their own.
    */
-  private outsideRows(dir: string, depth: number, out: TreeRow[]): void {
+  private outsideRows(dir: string, depth: number, out: TreeRow[], leftOut: string | null = null): void {
     let entries: Dirent[] = [];
     try {
       entries = readdirSync(dir, { withFileTypes: true });
@@ -395,7 +406,8 @@ export class Explorer {
         if (this.expanded.has(R)) for (const r of this.rootTree()) out.push({ ...r, depth: r.depth + depth + 1 });
         continue;
       }
-      if (isVaultRoot(abs))
+      const vault = isVaultRoot(abs);
+      if (vault)
         out.push({
           kind: "root",
           path: abs,
@@ -404,8 +416,17 @@ export class Explorer {
           root: { kind: "vault", abs, name: this.rootName(abs) },
           outside: true,
         });
-      else out.push({ kind: "dir", path: abs, name: e.name, depth, outside: true, ...this.linkOf(e, abs, true) });
-      if (this.expanded.has(abs)) this.outsideRows(abs, depth + 1, out);
+      else
+        out.push({
+          kind: "dir",
+          path: abs,
+          name: e.name,
+          depth,
+          outside: true,
+          ...(leftOut ? { leftOut } : {}),
+          ...this.linkOf(e, abs, true),
+        });
+      if (this.expanded.has(abs)) this.outsideRows(abs, depth + 1, out, vault ? null : leftOut);
     }
     // Its files as their vault lists them: auto, every text file but in a notes vault.
     const show = this.app.sidebar.allFiles ? "all" : this.app.config.files.show;
@@ -624,7 +645,8 @@ export class Explorer {
         rows.push(this.leftOutRow(out, name, depth));
         // Unfolded in place: listed a level at a time, as a folder outside the vault's own tree.
         const abs = join(this.app.loc.root, p);
-        if (out.dir && this.expanded.has(abs)) this.outsideRows(abs, depth + 1, rows);
+        if (out.dir && this.expanded.has(abs))
+          this.outsideRows(abs, depth + 1, rows, isVaultRoot(abs) ? null : out.leftOut);
       } else if (roots.has(p)) {
         const root = roots.get(p)!;
         rows.push({ kind: "root", path: p, name, depth, root });
@@ -1007,7 +1029,7 @@ export interface TreeRow {
    *  as a link does (VV-D4). */
   outside?: boolean;
   /** What the vault open's walk leaves out (VV-D8), listed from the disk: why (`busy folder`, `.gitignore`,
-   *  `walk.exclude`, `Downloads`…). Never indexed. */
+   *  `walk.exclude`, `Downloads`…). Never indexed. A folder in it carries it too; a file, only `outside`. */
   leftOut?: string;
   /** The vault open's, listed from the disk where its walk hasn't been (yet): a folder it couldn't read, home's
    *  before its walk, a folder or file come since. */
