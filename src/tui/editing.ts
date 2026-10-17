@@ -174,13 +174,16 @@ function insertStop(view: View, lineStart: number, at: number): number {
  *  while typing goes. */
 export function stopInsert(app: App, view: View): void {
   if (!view.insert) return;
+  // Where typing stopped, read while still typing: a new layout pending (the index done, a grammar loaded) puts the
+  // cursor back by typing's rule, past a line's last character. Read after, by normal mode's, it would be on that
+  // character, and the cursor and gi one short.
+  const at = offsetOf(app, view);
   view.insert = false;
   if (!view.visual) view.sel = null;
   // Completion's popup and the signature are typing's (19.16); so is a snippet's stops (25.8).
   app.completion = null;
   app.signature = null;
   endSnippet(app);
-  const at = offsetOf(app, view);
   view.buf.lastInsert = at; // gi comes back here
   view.buf.endStep(at);
   const start = view.buf.lineStarts()[lineOf(view, at) - 1] ?? 0;

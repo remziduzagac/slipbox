@@ -107,10 +107,14 @@ export async function open(s: Session, name: string): Promise<void> {
   await s.status(name);
 }
 
-/** The status line naming `path` as the file open — not the link under the cursor (`→ /x.md`). */
+/**
+ * The status line naming `path` as the file open: where it draws it, before the window's forward arrow (`‹ x.md ›`;
+ * `< x.md >` in ASCII). Not the link under the cursor (`→ x.md (resolved)`), which names a link by its text while the
+ * note it's in is still open: a link out of the vault, followed once its target answers (VV-D6), opens a moment later.
+ */
 export async function opened(s: Session, path: string | RegExp): Promise<void> {
   const p = typeof path === "string" ? path.replace(/[.*+?^${}()|[\]\\]/g, "\\$&") : path.source;
-  await s.status(new RegExp(`\\s${p}(\\s|$)`));
+  await s.status(new RegExp(`\\s${p} [›>]`));
 }
 
 /** Follow the link whose text shows `text`: found, the find row closed, enter. */

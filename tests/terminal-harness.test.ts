@@ -2,6 +2,7 @@
 // reading back what a program draws and answering what it asks (TT-T1).
 
 import { describe, expect, test } from "bun:test";
+import { opened } from "./terminal/check.ts";
 import { encodeKey } from "./terminal/keys.ts";
 import { Session } from "./terminal/session.ts";
 import { HeadlessTerminal } from "./terminal/terminal.ts";
@@ -266,6 +267,39 @@ describe("frames read whole (synchronized output)", () => {
       s.term.write("\n");
       await settled;
       expect(seen).toBe("half whole");
+    } finally {
+      s.cleanup();
+    }
+  });
+});
+
+describe("what the checks share (check.ts)", () => {
+  const env = { PATH: process.env.PATH ?? "/usr/bin:/bin" };
+
+  test("opened waits for the file open, not for the link under the cursor that names it", async () => {
+    // The status line on a link to shelf/far.md, its note still open, as while a link out of the vault is followed only
+    // once its target answers (VV-D6); a line from the test, then far.md open.
+    const statusLines = [
+      "stty -echo",
+      "printf 'READ  notes  ‹ to-shelf.md ›  ● watching  → shelf/far.md (resolved)  L3:16 all'",
+      "read a",
+      // Not String.raw: Bun writes a raw template's ‹ as `‹`.
+      "printf '\\r\\033[2KREAD  notes  ‹ shelf/far.md ›  ● watching  L1:1 all'",
+      "read b",
+    ].join("; ");
+    const s = new Session();
+    try {
+      s.term.spawn(["sh", "-c", statusLines], { cwd: "/", env });
+      await until(() => s.statusLine().includes("‹ to-shelf.md ›"), "the link's note on the status line");
+      let done = false;
+      const waited = opened(s, "shelf/far.md").then(() => {
+        done = true;
+      });
+      await Bun.sleep(200); // a wait looks every 20 ms: it has looked many times
+      expect(done).toBe(false);
+      s.term.write("\n");
+      await waited;
+      expect(s.statusLine()).toContain("‹ shelf/far.md ›");
     } finally {
       s.cleanup();
     }

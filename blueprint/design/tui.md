@@ -313,7 +313,10 @@ Notes open as buffers, shown in tabs, with one split (D141):
 
 Rows are re-derived on every re-layout (a resize, a reload), and the anchors are then refreshed
 from where they landed. So text an agent inserts above doesn't move you, and removing your
-heading later falls back to a current line, not a stale one.
+heading later falls back to a current line, not a stale one. While typing, a cursor past a line's last character stays
+past it through a re-layout; leaving insert mode reads where typing stopped (`g i`'s place) before it lets go of that,
+so a re-layout still pending at `esc` (the index done, a grammar loaded, in the background) can't put it a character
+short.
 
 **Saved state:**
 
