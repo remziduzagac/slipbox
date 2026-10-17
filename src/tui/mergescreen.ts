@@ -372,7 +372,10 @@ export function mergeAgent(app: App): void {
       app.loc.root,
     );
     if (app.scratch.add(entry) !== null)
-      app.message("info", `conflict ${k + 1} in the scratch for the agent — space s y copies it`);
+      app.message(
+        "info",
+        `conflict ${k + 1} in the scratch${app.scratch.notIndexed()} for the agent — space s y copies it`,
+      );
   });
 }
 
@@ -411,10 +414,10 @@ export function mergeSave(app: App): boolean {
   m.saved = true;
   if (m.prompt) {
     app.floating = null;
-    app.message("info", `merged and saved ${app.displayName(buf)}`);
+    app.message("info", `merged and saved ${app.displayName(buf)}${app.files.notIndexed(buf.abs)}`);
     return true;
   }
-  app.message("info", `saved ${m.rel} — s stages it, marking it resolved`);
+  app.message("info", `saved ${m.rel}${app.files.notIndexed(buf.abs)} — s stages it, marking it resolved`);
   show(app, m);
   return true;
 }

@@ -236,12 +236,32 @@ export class WalkFilter {
     return true;
   }
 
+  /** Whether `walk.exclude` names `rel` itself — a folder, with `isDir` — whatever leaves it out before. */
+  excludes(rel: string, isDir: boolean): boolean {
+    return this.configIgnore.ignores(isDir ? `${rel}/` : rel);
+  }
+
+  /**
+   * Why a file written at `rel` — a folder, with `isDir` — is never indexed though the write is allowed (D246): its name,
+   * or a folder's on its way, is one `walk.exclude` names. Not refused, as a busy folder's new note is — the setting is
+   * yours — but said after the write. Null where it's indexed, and under a root nested on its way (indexed there, by
+   * its own settings). Elsewhere, which indexes nothing, is `Graph.notIndexed`'s to leave out.
+   */
+  notIndexed(rel: string, isDir = false): "walk.exclude" | null {
+    const parts = rel.split("/");
+    if (!parts.some((_, i) => this.excludes(parts.slice(0, i + 1).join("/"), isDir || i < parts.length - 1)))
+      return null;
+    for (let i = 1; i < parts.length + (isDir ? 1 : 0); i++)
+      if (isVaultRoot(join(this.root, parts.slice(0, i).join("/")))) return null;
+    return "walk.exclude";
+  }
+
   /** Why `rel` is excluded, or null when it is part of the vault. Ancestors are assumed walked. */
   exclusion(rel: string, isDir: boolean): string | null {
     const name = rel.slice(rel.lastIndexOf("/") + 1);
     if (ALWAYS_SKIPPED.has(name)) return "always skipped";
     if (name.startsWith(".")) return "hidden";
-    if (this.configIgnore.ignores(isDir ? `${rel}/` : rel)) return "walk.exclude";
+    if (this.excludes(rel, isDir)) return "walk.exclude";
     // Home (VV-D2): its skip list, never a `.gitignore` — a dotfiles repository's `*` would leave home empty.
     if (this.home) {
       if (isDir) {

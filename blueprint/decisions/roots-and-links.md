@@ -990,3 +990,27 @@ compared as the folder has it. Clarifies D237. As built: `isBusyName` (`src/core
 so a capitalised one is more likely a person's folder of notes, which a busy name would leave out.
 
 **Not chosen:** every busy name in any case: a `Build/` of notes would be left out where nothing generated it.
+
+## D246: A note written where walk.exclude leaves it out is written, and said not indexed (0.11, 2026-10-17)
+
+**Decision:** A note made, saved, moved, copied, exported as Markdown or captured into the scratch where `walk.exclude`
+leaves it out — the path or a folder on its way named by it, no root nested on the way — is written, never refused,
+and the message the write gives anyway ends with `(not indexed: walk.exclude)` after the path it names: `created
+drafts/x.md (not indexed: walk.exclude)`, `saved …`, `autosaved …`, a move's, a copy's, a Markdown export's. It is said
+at every write of the note, never as a message of its own. On the command line, `write`, `mv`, `cp` and `export` end
+their line so and add `notIndexed` to their JSON; `capture` and `mkdir`, whose human output is a bare path, say it as
+a warning. One function decides it (`WalkFilter.notIndexed`), asked of the walk's settings, not the index. As built:
+design/roots.md § The walk.
+
+**Why:** The maintainer's choice of 2026-10-17 (#139): the setting is the user's own, and a busy folder's top takes a
+note too (D237), so nothing is refused; but a note saved where nothing will find it, with nothing said, looks indexed
+until a search misses it. Every save already says `saved`, so the words ride on that message and add none; said on the
+first save alone, the next save's `saved drafts/x.md` would read as indexed, and the first after a restart would say it
+again anyway.
+
+**Cost:** A save's message is longer for such a note, every time. The walk's patterns are matched once per folder on
+the way at each write, and a root nested on the way costs a look for its markers.
+
+**Not chosen:** refusing the write, as a busy folder's is (the setting is yours); saying it once per note or per session
+(a state to keep, and a save that reads as indexed); a message of its own after the write (the status line shows the
+last message, and the save's would hide it); text added to a bare-path output (`capture`, `mkdir`), which scripts read.

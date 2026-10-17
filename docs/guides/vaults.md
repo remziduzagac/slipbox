@@ -201,7 +201,8 @@ Home's skip list:
 - notes larger than `walk.max_file_size`, listed as skipped and not read
 
 `walk.exclude` in your config leaves out more. Home reads no `.gitignore`, since a dotfiles repository's `*` would
-leave it empty.
+leave it empty. A note you write where `walk.exclude` leaves it out is saved, and the message says so:
+`not indexed: walk.exclude`.
 
 A file there still opens, and it's read again when it changes on disk. It's never indexed. The explorer lists those
 folders, marked `⊘`, all but the hidden ones.

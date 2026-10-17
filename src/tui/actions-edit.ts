@@ -169,12 +169,12 @@ export function editActions(): Record<string, Run> {
           return void v.buf.virtual.save(v.buf.source);
         if (!v.buf.dirty && !v.buf.changedOnDisk())
           return a.message("info", `${a.displayName(v.buf)} has no changes to save`);
-        if (a.saving.save(v.buf)) a.message("info", `saved ${a.displayName(v.buf)}`);
+        if (a.saving.save(v.buf)) a.message("info", `saved ${a.displayName(v.buf)}${a.files.notIndexed(v.buf.abs)}`);
       }),
     "note.save_force": (a) =>
       withView(a, (v) => {
         if (a.writeBuffer(v.buf, v.buf.contentToSave(), true))
-          a.message("info", `saved ${a.displayName(v.buf)} over the file on disk`);
+          a.message("info", `saved ${a.displayName(v.buf)}${a.files.notIndexed(v.buf.abs)} over the file on disk`);
       }),
     "note.revert": (a) => withView(a, (v) => revert(a, v.buf)),
     "note.resolve": (a) =>
@@ -189,8 +189,14 @@ export function editActions(): Record<string, Run> {
       const f = a.floating?.kind === "properties" && a.floating.view.buf.dirty ? a.floating : null;
       const dirty = [...(f ? [f.view.buf] : []), ...a.dirtyBuffers().filter((b) => b !== f?.note)];
       if (!dirty.length) return a.message("info", "nothing to save");
-      const saved = dirty.filter((b) => a.saving.save(b, true)).length;
-      if (saved === dirty.length) a.message("info", `saved ${saved} note${saved === 1 ? "" : "s"}`);
+      const done = dirty.filter((b) => a.saving.save(b, true));
+      const saved = done.length;
+      // Those the vault never indexes (D246): the one named, or how many.
+      const left = done.filter((b) => a.files.leftOut(b.abs));
+      const said = left.length
+        ? ` (${left.length === 1 ? a.displayName(left[0]!) : left.length} not indexed: ${a.files.leftOut(left[0]!.abs)})`
+        : "";
+      if (saved === dirty.length) a.message("info", `saved ${saved} note${saved === 1 ? "" : "s"}${said}`);
       else a.message("warn", `saved ${saved} of ${dirty.length} — the others say why above`);
     },
     "note.send": (a) => withView(a, (v) => a.handoff.sendToEditor(v)),

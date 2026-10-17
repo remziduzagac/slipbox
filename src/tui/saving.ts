@@ -71,7 +71,10 @@ export class Saving {
       ],
       accept: (item) => {
         if (item.data === "y" && this.app.writeBuffer(buf, buf.contentToSave(), true))
-          this.app.message("info", `saved ${this.app.displayName(buf)} over the file on disk`);
+          this.app.message(
+            "info",
+            `saved ${this.app.displayName(buf)}${this.app.files.notIndexed(buf.abs)} over the file on disk`,
+          );
         else if (item.data === "d") this.showDiff(buf, () => this.confirmOverwrite(buf));
       },
     });
@@ -207,7 +210,7 @@ export class Saving {
         continue;
       }
       if (this.app.writeBuffer(buf, buf.contentToSave(), true))
-        this.app.message("info", `autosaved ${this.app.displayName(buf)}`);
+        this.app.message("info", `autosaved ${this.app.displayName(buf)}${this.app.files.notIndexed(buf.abs)}`);
     }
     if (later) this.scheduleAutosave();
     this.app.session.publishDirty();

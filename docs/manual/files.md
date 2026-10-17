@@ -193,6 +193,12 @@ command line, into a folder tools fill that `.gitignore` leaves out, or deeper i
 (`target/debug/plan.md`). A note put directly in a folder called `build` that isn't ignored makes it a folder of
 notes, indexed. A note already in a folder tools fill can still be changed.
 
+What `walk.exclude` leaves out is your own choice, so you can write there. A new note there, typed as a path, is made.
+A note there saved, or one moved, copied, exported as Markdown or captured there, is written. The message each write
+gives says it isn't indexed: `saved drafts/plan.md (not indexed: walk.exclude)`. It says so at every write, not the
+first alone, and adds no message of its own. On the command line, `write`, `mv`, `cp` and `export` say it in their
+line, and their `--json` has `notIndexed`. `capture` and `mkdir`, whose output is a path, say it as a warning.
+
 You can also open a hidden or git-ignored file by its path (`:e .drafts/plan.md`), or by following a link to it. It
 opens, and its links count from then on. A file in a busy folder, or in what `walk.exclude` leaves out, opens from the
 explorer only, and its links never count.

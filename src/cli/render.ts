@@ -3,7 +3,7 @@
 
 import { loadMermaid } from "../core/diagrams.ts";
 import { statSync } from "node:fs";
-import { extname, resolve } from "node:path";
+import { basename, extname, resolve } from "node:path";
 import type { Config } from "../core/config.ts";
 import { glyphsFor, isGlyphMode } from "../core/glyphs.ts";
 import { detectColorDepth, layoutToAnsi, type ColorDepth } from "../core/layout/ansi.ts";
@@ -12,7 +12,16 @@ import { applyColorOverrides, loadTheme } from "../core/theme/index.ts";
 import { readText } from "../core/fsutil.ts";
 import { exportNotes, exportTarget, FORMATS, formatFor, namesFolder, writeExport } from "../core/export/index.ts";
 import { flag, has, UsageError } from "./args.ts";
-import { EXIT, CliError, type Session, parseFile, type Handler, requireArg, resolveNote } from "./common.ts";
+import {
+  EXIT,
+  CliError,
+  type Session,
+  parseFile,
+  type Handler,
+  requireArg,
+  resolveNote,
+  notIndexed,
+} from "./common.ts";
 
 /** A note drawn for the terminal, and notes made one document. */
 export const RENDER_COMMANDS: Record<string, Handler> = {
@@ -91,9 +100,18 @@ export const RENDER_COMMANDS: Record<string, Handler> = {
     const files = writeExport(target, written).map((f) => s.graph.shownPath(f));
     const shown = s.graph.shownPath(target);
     const beside = files.length ? `, ${files.length} file${files.length === 1 ? "" : "s"} beside it` : "";
+    // A note written where the vault never indexes it (D246): Markdown into a folder `walk.exclude` names.
+    const left = s.graph.filter.isNoteName(basename(target)) ? notIndexed(s, target) : null;
     return {
-      data: { path: shown, format: format.name, notes: rels, bytes: written.data.length, files },
-      human: `exported ${rels.length === 1 ? rels[0] : `${rels.length} notes`} to ${shown} (${format.title})${beside}\n`,
+      data: {
+        path: shown,
+        format: format.name,
+        notes: rels,
+        bytes: written.data.length,
+        files,
+        ...(left ? { notIndexed: left } : {}),
+      },
+      human: `exported ${rels.length === 1 ? rels[0] : `${rels.length} notes`} to ${shown} (${format.title}${left ? `, not indexed: ${left}` : ""})${beside}\n`,
     };
   },
 };

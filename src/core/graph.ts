@@ -342,6 +342,15 @@ export class Graph {
     return null;
   }
 
+  /**
+   * Why a file written at `rel` — a folder, with `isDir` — is never indexed though the write is allowed (D246,
+   * `WalkFilter.notIndexed`): `walk.exclude` names it, or a folder on its way. Not refused, as `neverIndexed`'s are,
+   * but said after the write (`notIndexedSaid`). Null in Elsewhere, which indexes nothing.
+   */
+  notIndexed(rel: string, isDir = false): "walk.exclude" | null {
+    return isListed(this.loc) ? null : this.filter.notIndexed(rel, isDir);
+  }
+
   /** `rel` as a file to index when reached: there, a file inside the vault, and only left out softly. */
   private reachable(rel: string): NoteFile | null {
     if (isListed(this.loc) || !this.filter.reachable(rel)) return null;
@@ -1242,6 +1251,14 @@ export class Graph {
     this.resolver.forgetNames();
     this.emit({ kind: "changed", path: rel });
   }
+}
+
+/**
+ * What the message about a write adds for a file the vault never indexes (`Graph.notIndexed`, D246): ` (not indexed:
+ * walk.exclude)`, after the path it names; else nothing. The TUI's status line and the command line's output alike.
+ */
+export function notIndexedSaid(why: string | null): string {
+  return why ? ` (not indexed: ${why})` : "";
 }
 
 export function openGraph(loc: VaultLocation, config: Config, useCache = true, parse: "all" | "lazy" = "all"): Graph {

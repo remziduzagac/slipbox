@@ -362,7 +362,7 @@ export function reviewNote(app: App): void {
   app.overlays.prompt("note for the agent: ", (note) => {
     if (app.scratch.add(hunkEntry(it.abs, it.change, note.trim(), app.loc.root)) === null) return;
     it.noted = true;
-    app.message("info", `noted: ${it.path} in the scratch for the agent`);
+    app.message("info", `noted: ${it.path} in the scratch${app.scratch.notIndexed()} for the agent`);
     if (reviewOf(app) === r) onward(app, r);
   });
 }

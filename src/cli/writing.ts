@@ -43,7 +43,9 @@ import {
   checkWritable,
   checkUnchanged,
   writeNoteText,
+  notIndexed,
 } from "./common.ts";
+import { notIndexedSaid } from "../core/graph.ts";
 import { renameResult } from "./files.ts";
 
 /** A note written: its text, a task ticked, a find replaced, its footnotes; a folder made. */
@@ -127,6 +129,8 @@ export const WRITING_COMMANDS: Record<string, Handler> = {
     }
     if (created) mkdirSync(dirname(abs), { recursive: true });
     const written = writeNoteText(s, abs, content, previous);
+    // Where `walk.exclude` leaves it out (D246): written, and said that the vault never indexes it.
+    const left = notIndexed(s, abs);
     return {
       data: {
         path: rel,
@@ -135,8 +139,9 @@ export const WRITING_COMMANDS: Record<string, Handler> = {
         appended: !!previous && has(s.args, "append"),
         previousSha: previous?.sha ?? null,
         sha: written,
+        ...(left ? { notIndexed: left } : {}),
       },
-      human: `${created ? "created" : "wrote"} ${rel}\n`,
+      human: `${created ? "created" : "wrote"} ${rel}${notIndexedSaid(left)}\n`,
     };
   },
 
@@ -353,7 +358,10 @@ export const WRITING_COMMANDS: Record<string, Handler> = {
     const rel = relative(s.loc.root, abs);
     if (existsSync(abs)) throw new CliError(`${rel} already exists`, EXIT.refused, { path: rel });
     mkdirSync(abs, { recursive: true });
-    return { data: { path: rel, created: true }, human: `${rel}/\n` };
+    // Its human output a bare path, for scripts: where the vault never indexes it, a warning says so (D246).
+    const left = notIndexed(s, abs, true);
+    if (left && !has(s.args, "json")) s.warnings.push(`${rel}/ is not indexed: ${left} leaves it out`);
+    return { data: { path: rel, created: true, ...(left ? { notIndexed: left } : {}) }, human: `${rel}/\n` };
   },
 };
 

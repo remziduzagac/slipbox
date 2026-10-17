@@ -166,9 +166,11 @@ export class Exporter {
       return this.app.message("error", `export: ${shown} not written — ${(err as Error).message}`);
     }
     const beside = files.length ? `, ${files.length} file${files.length === 1 ? "" : "s"} beside it` : "";
+    // A note written where the vault never indexes it (D246): Markdown into a folder `walk.exclude` names.
+    const why = this.app.graph.filter.isNoteName(basename(target)) ? this.app.files.leftOut(target) : null;
     this.app.message(
       "info",
-      `exported ${rels.length === 1 ? rels[0] : `${rels.length} notes`} to ${shown} (${format.title})${beside}`,
+      `exported ${rels.length === 1 ? rels[0] : `${rels.length} notes`} to ${shown} (${format.title}${why ? `, not indexed: ${why}` : ""})${beside}`,
     );
     // Where it went, for "Where you exported last".
     try {

@@ -4,7 +4,7 @@
 import { createHash } from "node:crypto";
 import { spawnSync } from "node:child_process";
 import { existsSync } from "node:fs";
-import { isAbsolute, join, resolve } from "node:path";
+import { isAbsolute, join, relative, resolve } from "node:path";
 import {
   appendScratch,
   CaptureError,
@@ -31,6 +31,7 @@ import {
   requireArg,
   resolveNote,
   wholeFlag,
+  notIndexed,
 } from "./common.ts";
 
 /** For an agent at work: a context bundle, the scratch, a note sent to a running editor. */
@@ -121,7 +122,15 @@ export const AGENT_COMMANDS: Record<string, Handler> = {
         s.warnings.push(`--ref ${ref.path}: line ${last} is past the end (${lines} lines)`);
     }
     appendScratch(loc, entry);
-    return { data: { scratch: loc.path, project, entry }, human: `${loc.path}\n` };
+    // In the vault (`capture.location = "root"`) where `walk.exclude` leaves it out (D246): its human output is the
+    // scratch's path alone, for scripts, so a warning says it.
+    const left = notIndexed(s, loc.path);
+    if (left && !has(s.args, "json"))
+      s.warnings.push(`the scratch, ${relative(project, loc.path)}, is not indexed: ${left} leaves it out`);
+    return {
+      data: { scratch: loc.path, project, entry, ...(left ? { notIndexed: left } : {}) },
+      human: `${loc.path}\n`,
+    };
   },
 
   scratch(s, rest) {

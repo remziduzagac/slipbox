@@ -1481,7 +1481,9 @@ the only one (`16.16`, `16.17`; D112): Org and AsciiDoc files open as text.
   making it was the editing key's first press); an existing file just opens. Nothing is made outside the vault, through
   a symlink or otherwise. A note in a vault
   nested in this one is made there and opens in that vault; one under a folder the walk leaves out (`walk.exclude`)
-  is made and opens, but isn't one of the vault's notes (nor its folder one of its folders), as the walk would say.
+  is made and opens, but isn't one of the vault's notes (nor its folder one of its folders), as the walk would say —
+  and its message says so, as every later save's does (`created drafts/x.md (not indexed: walk.exclude)`, D246;
+  [roots.md](roots.md) § The walk).
   **A name another note has** (`17.5`) would make `[[name]]` reach either: the prompt comes back
   with a distinct one from the new note's folder (`projects-alpha`, then `-2`…), and says where the
   other is; typing the name again makes it anyway — a suggestion, not a rule.
