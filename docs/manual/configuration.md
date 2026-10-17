@@ -85,8 +85,8 @@ Each file overrides the ones before it. A setting no file names keeps its defaul
 
 So a folder's settings reach the vaults nested inside it too.
 
-A vault without `.slipbox/`, such as a git repository or an Obsidian vault, has no file of its own. A folder outside
-every vault takes only your file.
+A vault without `.slipbox/`, such as a git repository or an Obsidian vault, has no file of its own. Home and
+Elsewhere take only your file ([Home and Elsewhere](#home-and-elsewhere)).
 
 `slipbox info` lists the files that applied, in this order, on its `config` line.
 
@@ -210,7 +210,8 @@ math = "text"                  # a display's maths: text (Unicode) | picture (ty
 
 [walk]                         # which files a vault holds
 extensions = ["md", "markdown"] # a note's extensions; never empty
-exclude = []                   # left out, in .gitignore's syntax, besides what .gitignore leaves out
+exclude = []                   # left out, in .gitignore's syntax, besides what .gitignore (in home, its skip
+                               # list) leaves out
 max_file_size = 4194304        # bytes (4 MiB), 1 to 1 GiB: a larger note is listed as skipped, not read
 root_markers = [".git", ".slipbox", ".obsidian", ".zk"]   # a folder holding one is a vault; your file only
 
@@ -223,7 +224,7 @@ extension = "auto"             # auto | keep | drop: the .md
 roots = []                     # paths and globs, each with what's inside it: ["~/Projects/*", "~/notes"]
 
 [files]                        # files besides notes, in the explorer and the switcher
-show = "auto"                  # auto (renderable in a vault with .slipbox/, all elsewhere) | notes
+show = "auto"                  # auto (renderable in a vault with .slipbox/, else all) | notes
                                # | renderable (notes and data files) | all (every text file)
 include = []                   # always listed, in .gitignore's syntax: ["*.ts", "scripts/"]
 exclude = []                   # never listed, in .gitignore's syntax
@@ -555,6 +556,33 @@ A vault's `.slipbox/config.toml` may set them, and wins over your own file there
 - what applies in Elsewhere
 - how to see the convention a folder has
 
+## Home and Elsewhere
+
+Home, your home folder's own vault, and Elsewhere, everything outside home and every vault, have no `.slipbox/`. So
+they take your own file alone ([Vaults, home and Elsewhere](../guides/vaults.md)).
+
+Home's index leaves out a skip list: hidden folders, the system's folders (`Library`, `AppData`), `Downloads`, the busy
+folders such as `node_modules`, and files that aren't notes or text ([Home](links-and-vaults.md#home)). No setting
+changes the list, but these settings reach home too:
+
+| Setting | In home |
+| --- | --- |
+| `walk.exclude` | leaves out more, in `.gitignore`'s syntax. Home reads no `.gitignore` of its own |
+| `walk.max_file_size` | a larger note is listed as skipped, not read |
+| `index.background` | `false` stops the background index. With home open, the TUI still indexes it |
+| `index.idle_seconds` | how long nobody works before home is indexed, a little at a time |
+
+Elsewhere has no index, so no setting about indexing applies there.
+
+### Links that lead out
+
+Your answers about symlinks that lead out of a vault, or out of home, aren't settings
+([Links that lead out](links-and-vaults.md#links-that-lead-out)). No config file can follow one, a vault's least of
+all, so a folder can't bring its links already followed. slipbox keeps the answers in `links.json`, in its state
+folder ([State](#state)). Removing that file forgets them all: each link asks again.
+
+They're a trust apart from `[trust] roots`, which says whose own tools may run ([Code](code.md#trust)).
+
 ## Colours
 
 ### Themes
@@ -857,7 +885,8 @@ For the machine:
 
 | File | What it holds |
 | --- | --- |
-| `roots.json` | Every vault seen, home among them, and every folder outside one opened; the moves of those that moved |
+| `roots.json` | Every vault seen, home among them; the moves of those that moved |
+| `links.json` | Your answers about symlinks that lead out: each followed or not, with where it led then |
 | `folders.json` | Named folders: their names, copies and defaults |
 | `trust.json` | Your answers when asked whether to trust a vault |
 | `positions.json` | Where you were in each note, the newest 5,000 |

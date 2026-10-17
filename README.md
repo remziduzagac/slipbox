@@ -121,6 +121,7 @@ The lens shows the Markdown around the cursor between two rules, with the rest l
 
 [Getting started](docs/guides/getting-started.md) walks through a first session.
 [Links and vaults](docs/manual/links-and-vaults.md) explains how links find their notes, across folders too.
+[Vaults, home and Elsewhere](docs/guides/vaults.md) explains the folders slipbox works in, with examples.
 
 ## For agents
 

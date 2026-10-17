@@ -20,6 +20,8 @@ Each one walks through a job from start to end.
 
 - [Working with agents](guides/agents.md): slipbox beside a coding agent, on the same files.
 - [Code and git](guides/code-and-git.md): a repository's code, its problems and its changes.
+- [Vaults, home and Elsewhere](guides/vaults.md): the folders slipbox works in, how it finds them, and how you move
+  between them.
 - [Coming from Obsidian or zk](guides/from-obsidian-or-zk.md): opening a vault or a notebook as it is.
 - [Exporting notes](guides/exporting.md): a note, or several, as Word, PDF, a web page, an e-book or Markdown.
 - [Making it yours](guides/making-it-yours.md): themes, keys and settings.

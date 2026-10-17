@@ -21,7 +21,27 @@ holds. Its index leaves out hidden folders, `Downloads` and other folders that a
 The vault decides how links resolve, what is searched together, and which settings apply. Opening any file in a vault
 opens the whole vault. The status line shows which vault you're in.
 
-[Links and vaults](links-and-vaults.md#vaults)
+Each vault has its own tabs. Going into another vault, from the explorer or a peek, brings back that vault's tabs, and
+`ctrl+o` comes back. A folder holding a marker inside a vault is a vault of its own, so every file belongs to exactly
+one vault.
+
+[Vaults, home and Elsewhere](../guides/vaults.md) and [Links and vaults](links-and-vaults.md#vaults)
+
+## Elsewhere
+
+A file outside your home folder that no vault holds is in Elsewhere: `/etc`, another drive, a share. Elsewhere is one
+place for the whole machine, with one set of tabs and your own settings. It has no index, so it has no backlinks and
+no search. slipbox says so when you ask, rather than showing an empty list.
+
+[Links and vaults](links-and-vaults.md#elsewhere)
+
+## The explorer's view
+
+The explorer shows your files as one tree, from `/` down. The view is the part of it shown: one folder and what's in
+it. A breadcrumb above it says where it is (`~ › work › ◈ kestrel ›`). `z` zooms in on a folder, and `-` zooms out a
+level. Other vaults are where they are in the tree, marked `◈`.
+
+[Files](files.md#the-view)
 
 ## The index
 
@@ -71,6 +91,14 @@ to it.
 
 [Links and vaults](links-and-vaults.md)
 
+## The peek
+
+A peek is another vault's file read where you are: a large floating window over your note, read-only, your tabs left
+as they were. A link into another vault opens one, and so do a backlink or a search hit from there. `o` goes there,
+`t` keeps it as a tab, and `esc` closes it.
+
+[Links and vaults](links-and-vaults.md#a-peek-at-another-vault)
+
 ## Pointers
 
 A pointer is a link that reaches a note in another vault, by that vault's name: `slipbox://notes/ideas/coffee.md`. It
@@ -106,7 +134,10 @@ one Markdown document.
 A folder can bring code with it: tools, build scripts, git hooks. slipbox runs none of it until you trust that vault.
 It asks the first time it matters. `:trust` and `:untrust` change your answer.
 
-[Code](code.md#trust)
+A symlink that leads out of a vault, or out of your home folder, asks too, the first time you open it: follow it, just
+look, or no. Until you follow it, slipbox doesn't read through it.
+
+[Code](code.md#trust) and [Links that lead out](links-and-vaults.md#links-that-lead-out)
 
 ## Settings
 

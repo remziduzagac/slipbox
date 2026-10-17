@@ -29,7 +29,9 @@ files, so neither ever sees a stale copy.
 5. **Editing.** `i` opens the lens (the Markdown around the cursor), `i` again types, `esc` steps back out, `ctrl+s`
    saves. `ctrl+k` shows the whole note as Markdown.
 6. **Vaults.** A vault is a folder whose notes belong together: a git repository, an Obsidian vault, a zk notebook, or
-   a folder with `.slipbox/`. Links resolve and search works within the vault.
+   a folder with `.slipbox/`. Links resolve and search works within the vault. The home folder is a vault too, home,
+   and everything outside home and every vault is Elsewhere, with no index. A link into another vault opens a peek;
+   `o` goes there ([Vaults, home and Elsewhere](https://remziduzagac.github.io/slipbox/docs/guides/vaults/)).
 7. **Working with an agent.** The scratch collects places to hand to an agent (`space s a` adds one, `space s y`
    copies the scratch). `space s c` copies a note with what it links to and what links to it.
 8. **Trust.** A folder's own tools, scripts and hooks run only once the person trusts that vault.

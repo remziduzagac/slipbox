@@ -20,6 +20,9 @@ The format is [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.1.0/); wh
 - Keys you already know, a page for those who don't use vim: the arrows and the shortcuts of other editors that slipbox
   has, the four keys that are new, and where slipbox's keys differ. The README, the quick start and getting started
   give the familiar key first.
+- [Vaults, home and Elsewhere](docs/guides/vaults.md), a guide to the folders slipbox works in: what makes a folder a
+  vault and how slipbox finds it, home and Elsewhere, going from one vault into another, the explorer's view, the
+  peek, and symlinks followed only when you say so, with four worked examples drawn out.
 - Diffs mark the words that changed inside a changed line. A diff (`space g d`, a file's from `space g c`, a commit's
   to now, the conflict prompt's) opens in a floating window, its lines highlighted by the file's language, removed and
   added lines tinted and the changed words more strongly. The unchanged lines between changes fold to a row saying how
@@ -48,9 +51,10 @@ The format is [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.1.0/); wh
   marked `⎇` on its branch with its folder, each opened up in place to see its files and diffs, open its worktree,
   check it out, merge it or remove a merged worktree. `n` makes a branch from where you say, in a new worktree by
   default, in the folder `git.worktrees` names. Each branch is measured against its own base: the branch it was made
-  from, else the nearest of `git.bases`. In a vault that isn't a repository, the panel lists the repositories in the
-  view, by what needs attention. A click on the status line's branch lists the branches, and one on a change's sign in
-  the gutter shows the change, with Revert and Stage.
+  from, else the nearest of `git.bases`. The panel follows the vault you're in: in a repository, the other
+  repositories in the explorer's view are folded under its own; in a vault that isn't one, they're the panel, by what
+  needs attention, `o` going into one. A click on the status line's branch lists the branches, and one on a change's
+  sign in the gutter shows the change, with Revert and Stage.
 - Reviewing a change, one piece at a time: `v` in the git panel, its Review button, or `:review` walks the changes that
   aren't staged, across every changed file, each drawn as a diff. `y` keeps one (stages it), `x` reverts it (saved at
   once; `u` in the file brings it back), `c` sends it to the agent with a note, through the scratch. The end says what

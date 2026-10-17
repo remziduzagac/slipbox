@@ -13,8 +13,8 @@ shows two things you may want later: a name other folders can link to it by, and
 slipbox ~/notes
 ```
 
-To slipbox, a folder holding `.obsidian/` or `.zk/` is a vault: one collection of notes. It opens from its top,
-whichever note or subfolder you name.
+To slipbox, a folder holding `.obsidian/` or `.zk/` is a vault: one collection of notes. Name any note or subfolder in
+it, and slipbox opens the whole vault, the explorer showing the subfolder you named.
 
 The explorer (`space e`) lists its notes and folders. Hidden ones aren't listed, such as `.obsidian/` itself and
 Obsidian's `.trash/`.
@@ -88,6 +88,19 @@ it, each in the form it was written. A wikilink stays a wikilink, and a name sta
 - **Writing into the folder** of its own accord. slipbox keeps its own state in its own folders: where you were, the
   scratch and its trash. A note deleted in slipbox goes to slipbox's trash (`space v t`), not Obsidian's `.trash/`.
 
+## A vault ends where another begins
+
+In Obsidian, everything under the vault's folder is in the vault. In slipbox, a folder inside it that holds a marker of
+its own is a vault of its own: a git repository you cloned there (`.git`), a zk notebook (`.zk/`), a folder you gave
+`.slipbox/`. Its notes aren't your vault's:
+
+- Search in your vault doesn't find them, until you widen it with `ctrl+a`.
+- A wikilink by name doesn't reach them. Write a path, `[[clone/README]]`, and following it opens a peek: the note read
+  in a floating window, your vault left as it was. `o` goes into the inner vault.
+- The explorer marks its folder `◈`. `enter` on it goes into it, with its own tabs, and `ctrl+o` comes back.
+
+[Vaults, home and Elsewhere](vaults.md) explains vaults, the peek and the rest with examples.
+
 ## Name it, if other folders link to it
 
 A note in another folder links into your vault by a relative path, such as `../notes/inbox.md`. That link breaks if
@@ -148,5 +161,6 @@ style = "markdown"
 ## Where next
 
 - [Getting started](getting-started.md): a first session, if you haven't had one.
+- [Vaults, home and Elsewhere](vaults.md): how slipbox's vaults differ from Obsidian's, with examples.
 - [Links and vaults](../manual/links-and-vaults.md): every link form, vaults, named folders and backlinks.
 - [Making it yours](making-it-yours.md): a theme, your keys and settings.
