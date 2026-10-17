@@ -11925,6 +11925,7 @@ describe("the explorer's file operations and buttons (18.x)", () => {
       ["Move to…", "m"],
       ["Copy", "y"],
       ["Cut", "x"],
+      ["Copy path", "Y"],
       ["Delete", "d"],
     ]);
     h.frame();
@@ -11932,7 +11933,7 @@ describe("the explorer's file operations and buttons (18.x)", () => {
     expect({ x: m.x, y: m.y }).toEqual({ x: button.x, y: button.y + 1 });
     expect(h.frame().split("\n")[m.y]).toContain("alpha.md");
     // A click on an entry does it.
-    click(m.x + 2, m.listY + 4);
+    click(m.x + 2, m.listY + 5);
     expect(prompt(h)).toMatchObject({ confirm: true, label: expect.stringMatching(/^Delete notes\/alpha\.md\?/) });
     await h.keys("escape");
     // `.` opens it by key; an entry's key picks it there.
@@ -11943,23 +11944,37 @@ describe("the explorer's file operations and buttons (18.x)", () => {
     await h.keys("escape", ".", "m");
     expect(menu().title).toStartWith("Move notes/alpha.md to…");
     await h.keys("escape");
-    // A folder's: new note and folder in it, and, with something copied, paste.
+    // Copy path: the row's whole path, from the menu and by its key, said by where it is.
+    await h.keys(".", "Y");
+    expect(h.copied.at(-1)).toBe(join(root, "notes", "alpha.md"));
+    expect(h.app.messages.at(-1)?.text).toStartWith(`copied ${tildePath(join(root, "notes", "alpha.md"))}`);
+    h.copied.length = 0;
+    await h.keys("shift+y");
+    expect(h.copied).toEqual([join(root, "notes", "alpha.md")]);
+    // A folder's: zoom in here first, new note and folder in it, and, with something copied, paste.
     await h.keys("y");
     h.app.explorer.select("projects");
     await h.keys(".");
     expect(menu().items.map((it) => it.label)).toEqual([
+      "Zoom in here",
       "New note here",
       "New folder here",
       "Rename",
       "Move to…",
       "Copy",
       "Cut",
+      "Copy path",
       "Give it .slipbox/",
       "Paste a copy of alpha.md here",
       "Delete",
     ]);
     await h.keys("p");
     expect(existsSync(join(root, "projects", "alpha.md"))).toBe(true);
+    // Zoom in here: the view shows the folder, as `z` does.
+    h.app.explorer.select("projects");
+    await h.keys(".", "z");
+    expect(h.app.explorer.top).toBe(join(root, "projects"));
+    await h.keys("-");
     // Not focused: no row button.
     h.app.region = "content";
     expect(
@@ -12009,11 +12024,13 @@ describe("the explorer's file operations and buttons (18.x)", () => {
     await h.keys(".");
     const menu = h.app.overlay as ListOverlay;
     expect(menu.items.map((it) => [it.label, it.hint])).toEqual([
+      ["Zoom in here", "z"],
       ["Rename the folder", "r"],
       ["Name it", "R"], // beside its folder's
       ["Move to…", "m"],
       ["Copy", "y"],
       ["Cut", "x"],
+      ["Copy path", "Y"],
       ["Make it part of the vault holding it", "V"],
       ["Delete the vault", "d"],
     ]);

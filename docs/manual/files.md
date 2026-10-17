@@ -47,7 +47,8 @@ While it has the keys:
 | `/` | Filter: type to narrow the tree, the folders kept. `enter` opens, `esc` clears |
 | `a` | Show every text file, or back to what it shows by default (below) |
 | `shift+h` | Show hidden files and folders too, or hide them again (below) |
-| `.` | The selected row's menu |
+| `shift+y` | Copy the selected row's whole path |
+| `.` | The selected row's menu: for a folder, Zoom in here first; Copy path among the rest |
 | `esc` | Back to the note. The explorer stays open |
 | `q` | Close the explorer |
 
