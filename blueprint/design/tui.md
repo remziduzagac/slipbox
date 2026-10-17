@@ -1996,14 +1996,19 @@ against the file as it is (`hunkBlocks`), so its paragraphs are whole, no head a
 cursor (`srcAt`: a block's span carries its line's unit), as in the diff window; the window is as tall as its rows.
 
 - `y` (`git.review_keep`) stages the hunk as the git panel's `s` stages a change (`stageChange`): found again among
-  the file's changes now (`findChange`: the same lines as staged and now, the nearest to where it was), since the index
-  or the file may have moved under it; a new or deleted file is staged whole.
+  the file's changes now (`findChange`: the same lines as staged and now, where it was — at its line in the file, or
+  its place in what's staged, whichever didn't move; the same lines elsewhere are another change), since the index or
+  the file may have moved under it. Each hunk the review reverts or keeps moves the file's others with it (`movedBy`):
+  where they're looked for, and the lines drawn around them. A new or deleted file is staged whole.
 - `x` (`git.review_revert`) puts the hunk's lines back as staged, in the file's buffer, as one edit — the part of the
   text that differs — so one undo step there, and saves it at once (`Saving.save`, so `App.writeBuffer`); a save
   refused (the file changed on disk) leaves it unsaved, said (`reverted, but not saved — :w saves it`). A file with
-  unsaved typing is never written over: the hunk is skipped, said, and the review goes on. A new file goes to the
-  trash, asked first (`Files.deleteItem`); a deleted one comes back as staged (`discardFile`); a file outside the vault
-  is refused, as slipbox writes only inside it.
+  unsaved typing is never written over: the hunk is skipped, said, and the review goes on. The edit is made on the
+  disk's text: a buffer without unsaved typing that wasn't read again since the file changed (the watcher off, or not
+  yet run) is read first. A new file goes to the trash, asked first (`Files.deleteItem`); a deleted one comes back as
+  staged (`discardFile`); a file outside the vault is refused, as slipbox writes only inside it.
+- A file changed since the review read it is left as it is by `y` and `x`, and said (`changed since the review read
+  it`): the hunk not found where it was, a deleted file there again, a new file's lines not those shown.
 - `c` (`git.review_note`) asks for a note, then adds an entry to the scratch without opening it (`Scratch.add`): the
   file and the hunk's lines (`path:from-to`), its diff fenced, and the note (`hunkEntry`).
 - `n` and `p` (`git.review_next`, `git.review_prev`) move; `enter` (`git.review_go`) ends the review and opens the file

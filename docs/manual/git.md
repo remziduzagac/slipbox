@@ -300,6 +300,10 @@ A revert is one step of the file's undo: open the file and press `u` to bring th
 file with unsaved typing, since that would write over it. It says so, skips the change, and goes on. A file git doesn't
 track goes to slipbox's trash when you revert it, after asking. A deleted file comes back as staged.
 
+A file can change while the review is open, when an agent is still at work. `y` and `x` act only on what the review
+showed you. A change no longer where the review found it, a deleted file written again, or a new file changed since is
+left as it is, and a message says so. Press `v` again to review the files as they are now.
+
 The review commits nothing. Staging is how it marks what you kept, so a commit afterwards (`c` in the git panel)
 takes exactly what you reviewed.
 

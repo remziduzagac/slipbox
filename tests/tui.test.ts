@@ -19268,6 +19268,56 @@ describe("git's review, merge screen, pull and rebase (GIT-D3, GIT-D5, GIT-D6)",
         expect(await said(h, "review: 2 reverted")).toBe(true);
       });
     });
+
+    test("a file made again or changed since the review read it: x and y leave it as it is (regression)", async () => {
+      await isolated(async () => {
+        const { root } = repo({ "a.md": "a\n", "b.md": "b as committed\n" });
+        rmSync(join(root, "b.md"));
+        writeFileSync(join(root, "new.md"), "brand new\n");
+        const h = await harness({ root, open: "a.md", width: 120, height: 40 });
+        await h.app.run("git.review");
+        expect(await until(() => h.app.floating?.kind === "review")).toBe(true);
+        expect(floatText(h)).toContain("b.md  line 1 · change 1 of 1 here, 1 of 2 in all  deleted");
+        // Written again meanwhile (an agent): neither brought back over it, nor staged as the deletion shown.
+        writeFileSync(join(root, "b.md"), "a new b, never in git\n");
+        await h.keys("x");
+        expect(await said(h, "b.md is there again since the review read it: left as it is")).toBe(true);
+        expect(readFileSync(join(root, "b.md"), "utf8")).toBe("a new b, never in git\n");
+        await h.keys("y");
+        expect(git(root, "diff", "--cached", "--name-only")).toBe("");
+        // A new file changed meanwhile: not sent to the trash, nor asked about.
+        await h.keys("n");
+        expect(floatText(h)).toContain("new.md  line 1");
+        writeFileSync(join(root, "new.md"), "brand new, and more\n");
+        await h.keys("x");
+        expect(await said(h, "new.md changed since the review read it: left as it is")).toBe(true);
+        expect(h.app.overlay).toBeNull();
+        expect(readFileSync(join(root, "new.md"), "utf8")).toBe("brand new, and more\n");
+      });
+    });
+
+    test("a revert on a note open, unchanged, but not read again since the file changed: the change shown reverted (regression)", async () => {
+      await isolated(async () => {
+        const { root } = repo({ "a.md": "a\nb\nc\nd\n" });
+        // Open as committed; then written on disk, the buffer not read again (the watcher off, or before it runs).
+        const h = await harness({ root, open: "a.md", width: 120, height: 40 });
+        const buf = h.app.buffers.get("a.md")!;
+        writeFileSync(join(root, "a.md"), "X\na\nb\nc\nD\n");
+        await h.app.run("git.review");
+        expect(await until(() => h.app.floating?.kind === "review")).toBe(true);
+        expect(floatText(h)).toContain("a.md  line 1 · change 1 of 2 here");
+        expect(floatText(h)).toContain("+ X");
+        await h.keys("x");
+        expect(readFileSync(join(root, "a.md"), "utf8")).toBe("a\nb\nc\nD\n");
+        expect(buf.source).toBe("a\nb\nc\nD\n");
+        expect(buf.dirty).toBe(false);
+        // The next change, a line up now that the one above is gone: shown there, and reverted there.
+        expect(floatText(h)).toContain("a.md  line 4 · change 2 of 2 here");
+        await h.keys("x");
+        expect(readFileSync(join(root, "a.md"), "utf8")).toBe("a\nb\nc\nd\n");
+        expect(await said(h, "review: 2 reverted")).toBe(true);
+      });
+    });
   });
 
   describe("the merge screen (GIT-D5)", () => {

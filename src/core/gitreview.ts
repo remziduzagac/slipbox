@@ -44,14 +44,25 @@ export const sameChange = (a: GitChange, b: GitChange): boolean =>
   a.now.every((l, i) => l === b.now[i]);
 
 /**
- * A hunk found again among a file's changes now (after the index or the file moved): the same change, the one nearest
- * where it was when there are several; null when it's gone.
+ * A hunk found again among a file's changes now (after the index or the file moved): the same change where it was —
+ * at its line in the file, or at its place in what's staged, whichever didn't move under it. Null when it isn't there:
+ * gone, or the same lines elsewhere, which are another change.
  */
 export function findChange(fresh: GitChange[], old: GitChange): GitChange | null {
-  let best: GitChange | null = null;
-  for (const c of fresh)
-    if (sameChange(c, old) && (!best || Math.abs(c.from - old.from) < Math.abs(best.from - old.from))) best = c;
-  return best;
+  return fresh.find((c) => sameChange(c, old) && (c.from === old.from || c.wasAt === old.wasAt)) ?? null;
+}
+
+/**
+ * A hunk where it is once another of its file was dealt with: `done` reverted (the file's lines after it moved) or kept
+ * (what's staged after it moved). Each hunk after it is where the review looks for it again.
+ */
+export function movedBy(c: GitChange, done: GitChange, how: "reverted" | "kept"): GitChange {
+  if (how === "reverted") {
+    if (c.from <= done.from) return c;
+    const by = done.was.length - done.now.length;
+    return { ...c, from: c.from + by, to: c.to + by };
+  }
+  return c.wasAt > done.wasAt ? { ...c, wasAt: c.wasAt + done.now.length - done.was.length } : c;
 }
 
 /**

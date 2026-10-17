@@ -75,7 +75,7 @@ import {
   pairLines,
   unseenChange,
 } from "../src/core/merge.ts";
-import { findChange, hunkEntry, hunkLines, hunkView, sameChange, tallyText } from "../src/core/gitreview.ts";
+import { findChange, hunkEntry, hunkLines, hunkView, movedBy, sameChange, tallyText } from "../src/core/gitreview.ts";
 import { gitChanges } from "../src/core/gitsigns.ts";
 import {
   conflictExcerpt,
@@ -5396,6 +5396,39 @@ describe("reviewing a change, a hunk at a time (GIT-D3)", () => {
     expect(sameChange(twice[0]!, twice[1]!)).toBe(true);
     // The same lines now, but others staged under them: another change.
     expect(findChange(gitChanges("z\n", "Y\n"), gitChanges("x\n", "Y\n")[0]!)).toBeNull();
+  });
+  test("a hunk gone isn't found in the same lines elsewhere in the file: another change (regression)", () => {
+    const staged = Array.from({ length: 200 }, (_, i) => `l${i}`);
+    const t = (ls: string[]) => `${ls.join("\n")}\n`;
+    const with2 = [...staged];
+    with2.splice(10, 0, "TODO");
+    with2.splice(191, 0, "TODO");
+    const shown = gitChanges(t(staged), t(with2));
+    expect(shown.map((c) => c.from)).toEqual([11, 192]);
+    // The first gone (someone took it out); the other, the same line added, is still there, 180 lines on.
+    const with1 = [...staged];
+    with1.splice(190, 0, "TODO");
+    const fresh = gitChanges(t(staged), t(with1));
+    expect(findChange(fresh, shown[0]!)).toBeNull();
+    expect(findChange(fresh, shown[1]!)).toBe(fresh[0]!);
+  });
+  test("a hunk found again after the review reverted one before it and kept another (movedBy)", () => {
+    const staged = "a\nb\nc\nd\ne\nf\ng\nh\n";
+    const now = "a\nNEW\nb\nc\nd\nMORE\ne\nf\ng\nH\n";
+    const [first, second, third] = gitChanges(staged, now);
+    expect([first!.from, second!.from, third!.from]).toEqual([2, 6, 10]);
+    // The first reverted (the file loses its line), the second kept (what's staged gains its): the third moved in both.
+    const reverted = "a\nb\nc\nd\nMORE\ne\nf\ng\nH\n";
+    const kept = "a\nb\nc\nd\nMORE\ne\nf\ng\nh\n";
+    const fresh = gitChanges(kept, reverted);
+    expect(findChange(fresh, third!)).toBeNull();
+    let moved = movedBy(third!, first!, "reverted");
+    moved = movedBy(moved, movedBy(second!, first!, "reverted"), "kept");
+    expect(moved).toMatchObject({ from: 9, to: 9, wasAt: 8 });
+    expect(findChange(fresh, moved)).toBe(fresh[0]!);
+    // One before it moves nothing.
+    expect(movedBy(first!, third!, "reverted")).toBe(first!);
+    expect(movedBy(first!, third!, "kept")).toBe(first!);
   });
   test("a note for the agent: where the hunk is, its diff, the note; what the review says at its end", () => {
     expect(hunkEntry("/v/docs/sync.md", changes[0]!, "keep the old wording", "/v")).toBe(
