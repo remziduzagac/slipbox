@@ -3067,6 +3067,8 @@ Wide tables and code blocks to edit in place.
   (command-specs.ts)
 - `vault.init` — Give a folder .slipbox/ — `notes/index.md`, `hobbies/cooking/Home.md`, `hobbies/photography/index.md`
   (command-specs.ts)
+- `vault.links` — Symlinks you've answered — `notes/research/outside.md`, `.build/extras.toml` (its link to
+  /etc/hosts, answered when it's opened, then listed and forgotten; command-specs.ts, VV-D6)
 
 ### trash
 

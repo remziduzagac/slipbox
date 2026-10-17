@@ -20904,4 +20904,73 @@ describe("links followed only when you say so (VV-D6)", () => {
       process.env.HOME = before;
     }
   });
+
+  test("the symlinks answered, listed with where they lead and what was said; one forgotten asks again, and one followed is followed no more", async () => {
+    const { top, root, out, link } = linked();
+    const before = process.env.HOME;
+    const state = process.env.XDG_STATE_HOME;
+    process.env.HOME = mkdtempSync(join(sandbox, "home-")); // a home of the test's own
+    process.env.XDG_STATE_HOME = mkdtempSync(join(sandbox, "state-")); // and answers of its own
+    const { linkKey } = await import("../src/core/symlinks.ts");
+    mkdirSync(join(top, "other"));
+    writeFileSync(join(top, "other", "o.md"), "# O\n");
+    symlinkSync(join(top, "other"), join(root, "no"));
+    mkdirSync(join(top, "seen"));
+    symlinkSync(join(top, "seen"), join(root, "seen"));
+    setLinkAnswer(link, "follow");
+    setLinkAnswer(join(root, "no"), "no");
+    await probe(out);
+    const h = await harness({ root, open: "index.md", watch: true });
+    try {
+      await h.app.following.settled();
+      h.app.following.looking.add(linkKey(join(root, "seen")));
+      h.app.open("data/far.md");
+      const far = h.app.view!.buf;
+      expect(far.readOnly).toBeNull();
+      const watched = () => (h.app.watcher as unknown as { watchers: Map<string, unknown> }).watchers.has("data");
+      expect(watched()).toBe(true);
+      await h.app.run("vault.links");
+      const list = h.app.overlay as ListOverlay;
+      expect(list.title).toBe("Symlinks you've answered (3) — enter forgets one: asked again when it's next opened");
+      expect(list.items.map((i) => `${i.label}  ${i.detail}`).sort()).toEqual(
+        [
+          `${tildePath(link)} → ${out}  followed`,
+          `${tildePath(join(root, "no"))} → ${join(top, "other")}  not followed`,
+          `${tildePath(join(root, "seen"))} → ${join(top, "seen")}  just looking, this once`,
+        ].sort(),
+      );
+      // Forgotten: followed no more, at once — out of the index, no longer watched, its open tab read-only, its row
+      // marked — and asked again when it's opened.
+      list.selected = list.items.findIndex((i) => i.detail === "followed");
+      await h.keys("enter");
+      expect(linkAnswer(link)).toBeNull();
+      expect(h.app.messages.at(-1)!.text).toBe(
+        `forgot ${tildePath(link)} → ${out} (followed): asked again when it's next opened`,
+      );
+      expect(h.app.graph.notes.has("data/far.md")).toBe(false);
+      expect(watched()).toBe(false);
+      expect(far.readOnly).toContain("isn't followed now — read-only");
+      // Never read again through it: changed out there, the vault walked again, the tab keeps what it showed.
+      writeFileSync(join(out, "far.md"), "# Changed out there\n");
+      h.app.following.walkAgain();
+      expect(far.source).toBe("# Far\n\nFrom far away.\n");
+      expect(h.app.following.describe(h.app.explorer.rows().find((r) => r.name === "data")!)).toBe(
+        `→ ${out}  not followed`,
+      );
+      h.app.open("data/far.md");
+      expect((h.app.overlay as ListOverlay).title).toContain("leads out of");
+      await h.keys("escape");
+      // The others: forgotten, the "no" asks again, and the look is over.
+      h.app.following.forget(join(root, "no"));
+      h.app.following.forget(join(root, "seen"));
+      expect(h.app.following.looking.size).toBe(0);
+      await h.app.run("vault.links");
+      expect(h.app.overlay).toBeNull();
+      expect(h.app.messages.at(-1)!.text).toBe("no symlink answered yet: one leading out asks when it's first opened");
+    } finally {
+      h.app.watcher?.close();
+      process.env.HOME = before;
+      process.env.XDG_STATE_HOME = state;
+    }
+  });
 });

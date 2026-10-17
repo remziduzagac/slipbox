@@ -1321,6 +1321,32 @@ the names it had. `folders default` gives `{name, default}`.
 
 A path that isn't a copy of the folder (or of its repository) is refused (exit 5). An unknown name is exit 3.
 
+### `symlinks`
+
+Lists the symlinks you've answered in slipbox, newest first: each link, where it led when you answered, and whether you
+said to follow it ([Links that lead out](links-and-vaults.md#links-that-lead-out)). One that leads somewhere else now,
+or is gone, says so: its answer no longer holds, and opening it asks again. `symlinks forget <link>` forgets the answer
+for a link, named by its path. Opening it in slipbox asks again, and a link you followed is followed no more.
+
+```bash
+slipbox symlinks
+slipbox symlinks forget notes/data
+```
+
+```text
+$ slipbox symlinks
+~/notes/data → /mnt/disk/data  followed
+~/notes/old → /tmp/old  not followed  (gone)
+$ slipbox symlinks forget ~/notes/data
+forgot ~/notes/data → /mnt/disk/data (followed): asked again when it's next opened
+```
+
+The command line forgets an answer, but never gives one: following a link is answered in slipbox. A link nothing was
+said of is exit 3.
+
+With `--json`, the data is `[{link, target, answer, at, now}]`, where `answer` is `follow` or `no` and `now` is where
+the link leads now (null when it's gone). `symlinks forget` gives `{link, target, answer, forgotten}`.
+
 ## Git
 
 These commands compare what this branch changed with its base, as a pull request does. The comparison starts where the

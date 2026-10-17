@@ -173,6 +173,8 @@ export function fileActions(): Record<string, Run> {
       a.languages.trustRoot(a.languages.trustTarget(a.view ? dirname(a.view.buf.abs) : a.loc.root), true),
     "root.untrust": (a) =>
       a.languages.trustRoot(a.languages.trustTarget(a.view ? dirname(a.view.buf.abs) : a.loc.root), false),
+    // The symlinks you've answered (VV-D6): one forgotten is asked about again; one followed, followed no more.
+    "vault.links": (a) => a.following.list(),
     "folder.name": (a, arg) => {
       // The explorer's selected root (one nested here), when it has focus.
       const item = a.explorer.focused() ? a.explorer.item() : null;

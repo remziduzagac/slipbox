@@ -95,7 +95,9 @@ once, read-only, nothing indexed), or no — and keeps the answer by the link an
 links trusted, and a link a pull points elsewhere is asked about again. The prompt says agents will see what's followed
 (search, the context bundle, the CLI's answers) when the target is hidden or outside home. A yes allows reading and the
 index; writing through it in home, never out of a vault, and in Elsewhere what the file system allows. The CLI never
-asks: it refuses a path through a link not followed. How the walk, the watcher and writes take it:
+asks: it refuses a path through a link not followed. An answer can be forgotten, in slipbox (`space v l`) or by the CLI
+(`slipbox symlinks forget <link>`): asked again when it's next opened, and one followed is followed no more at once.
+Forgetting only takes trust away, so the CLI may; it never gives one. How the walk, the watcher and writes take it:
 [roots.md](roots.md) § Links followed only when you say so.
 
 ## What's said

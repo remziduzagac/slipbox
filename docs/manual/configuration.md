@@ -579,7 +579,8 @@ Elsewhere has no index, so no setting about indexing applies there.
 Your answers about symlinks that lead out of a vault, or out of home, aren't settings
 ([Links that lead out](links-and-vaults.md#links-that-lead-out)). No config file can follow one, a vault's least of
 all, so a folder can't bring its links already followed. slipbox keeps the answers in `links.json`, in its state
-folder ([State](#state)). Removing that file forgets them all: each link asks again.
+folder ([State](#state)). `space v l` lists them and forgets one, as `slipbox symlinks forget <link>` does; removing
+that file forgets them all. A link forgotten asks again.
 
 They're a trust apart from `[trust] roots`, which says whose own tools may run ([Code](code.md#trust)).
 

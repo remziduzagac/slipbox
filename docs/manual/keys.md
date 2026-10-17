@@ -876,6 +876,7 @@ A vault is the folder slipbox works in. [Links and vaults](links-and-vaults.md) 
 | `space v shift+u` | undo the last rename, move, relink or replace in every note, after a preview |
 | `space v p` | the Problems panel's All tab: this vault's broken links, lint, conflicts |
 | `space v r` | reindex the vault |
+| `space v l` | the symlinks you've answered, followed or not: `enter` forgets one, and opening it asks again |
 | `space v i` | about this folder: its vault, name and copies, notes, what's skipped, the watcher |
 | `space v c` | read the configuration again (saving it does that too) |
 
@@ -967,6 +968,7 @@ Your configuration's [`[aliases]`](configuration.md) adds more commands, or rena
 | `:name [new]` | name this folder, as pointers name it |
 | `:init` | give the folder opened in Elsewhere a `.slipbox/` |
 | `:trust`, `:untrust` | trust this vault, so its own tools run, or stop trusting it ([Code](code.md)) |
+| `:symlinks` | the symlinks you've answered, to forget an answer |
 | `:theme <name>` | set the theme |
 | `:glyphs <set>` | set the glyphs: `nerd`, `unicode`, `ascii` or `auto` |
 | `:zen` / `:wrap` | zen mode / wrapping, on or off |
