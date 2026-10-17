@@ -78,20 +78,27 @@ interface Texts {
 /** Each opened-up file's texts, read from git in the background. */
 const texts = new WeakMap<App, Map<string, Texts>>();
 
-function textsOf(app: App, path: string): Texts | null {
+/**
+ * A file's texts: the last commit's — a staged rename's (or copy's) under the name it had there (`from`), so its diff is
+ * what changed, not the whole file added — and the index's, under the name it has now.
+ */
+function textsOf(app: App, e: Pick<StatusEntry, "path" | "from">): Texts | null {
   const c = app.git.checkout;
   if (!c) return null;
   let all = texts.get(app);
   if (!all) texts.set(app, (all = new Map()));
-  const t = all.get(path);
+  const key = `${e.from ?? ""}\0${e.path}`;
+  const t = all.get(key);
   if (t?.generation === app.git.generation) return t;
   const fresh: Texts = { generation: app.git.generation, head: undefined, index: undefined, ready: Promise.resolve() };
-  all.set(path, fresh);
-  fresh.ready = Promise.all([showLater(c, "HEAD", path), showLater(c, "", path)]).then(([head, index]) => {
-    fresh.head = head;
-    fresh.index = index;
-    app.host.requestRender();
-  });
+  all.set(key, fresh);
+  fresh.ready = Promise.all([showLater(c, "HEAD", e.from ?? e.path), showLater(c, "", e.path)]).then(
+    ([head, index]) => {
+      fresh.head = head;
+      fresh.index = index;
+      app.host.requestRender();
+    },
+  );
   return fresh;
 }
 
@@ -128,7 +135,7 @@ function onDisk(app: App, path: string): string {
 /** A file's changes in a section — a staged file's against the last commit, a changed one's against the index — or null while git reads. */
 export function fileChanges(app: App, e: StatusEntry, section: GitSection): GitChange[] | null {
   if (section !== "staged" && section !== "unstaged") return [];
-  const t = textsOf(app, e.path);
+  const t = textsOf(app, e);
   if (!t || t.head === undefined || t.index === undefined) return null;
   return section === "staged"
     ? gitChanges(t.head ?? "", t.index ?? "")
@@ -150,12 +157,15 @@ export function workRows(app: App): (HeadingRow | WorkRow)[] {
     if (app.gitPanel.folded.has(section) && !q) continue;
     for (const e of files) {
       const dir = dirname(e.path);
+      // A rename staged says so: `R old.md → new.md`, the folder after it; moved to another folder, both paths whole.
+      const was = section === "staged" && e.from ? e.from : null;
+      const same = was !== null && dirname(was) === dir;
       rows.push({
         kind: "file",
         section,
         entry: e,
-        label: `${stateLetter(e, section)} ${sanitize(basename(e.path))}`,
-        hint: dir === "." ? "" : sanitize(dir),
+        label: `${stateLetter(e, section)} ${sanitize(was === null ? basename(e.path) : same ? `${basename(was)} → ${basename(e.path)}` : `${was} → ${e.path}`)}`,
+        hint: dir === "." || (was !== null && !same) ? "" : sanitize(dir),
       });
       if (!app.git.opened.has(`${section}:${e.path}`)) continue;
       for (const change of fileChanges(app, e, section) ?? []) {
@@ -215,7 +225,7 @@ function stage(app: App, row: WorkRow): void {
   const e = row.entry;
   if (row.kind === "change") {
     if (row.section !== "unstaged") return app.message("info", "that change is staged already — u unstages it");
-    const t = textsOf(app, e.path);
+    const t = textsOf(app, e);
     if (t?.index === undefined) return app.message("info", "git hasn't answered yet");
     return after(app, stageChange(c, e.path, t.index ?? "", row.change), `staged a change of ${e.path}`, e.path);
   }
@@ -234,7 +244,7 @@ function unstage(app: App, row: WorkRow): void {
   const e = row.entry;
   if (row.section !== "staged") return app.message("info", `${e.path} has nothing staged`);
   if (row.kind === "change") {
-    const t = textsOf(app, e.path);
+    const t = textsOf(app, e);
     if (t?.index === undefined) return app.message("info", "git hasn't answered yet");
     return after(app, unstageChange(c, e.path, t.index ?? "", row.change), `unstaged a change of ${e.path}`, e.path);
   }
@@ -286,12 +296,12 @@ export function backToPanel(app: App): () => void {
 
 /**
  * `enter`: the selected file's diff, or a change's, in the diff window (GIT-D2) — a staged one's against the last
- * commit, a changed one's against what's staged, an untracked file all added; `enter` on a line there opens the file at
- * it, `esc` comes back here.
+ * commit (a rename's against the name it had there, titled `old → new`), a changed one's against what's staged, an
+ * untracked file all added; `enter` on a line there opens the file at it, `esc` comes back here.
  */
 export function showWorkDiff(app: App, row: WorkRow): void {
   const e = row.entry;
-  const t = textsOf(app, e.path);
+  const t = textsOf(app, e);
   if (!t) return;
   if (t.head === undefined || t.index === undefined) {
     void t.ready.then(() => {
@@ -307,11 +317,13 @@ export function showWorkDiff(app: App, row: WorkRow): void {
   if (typeof disk !== "string") return app.message("info", `${e.path}: ${disk.why}`);
   const now = staged ? (t.index ?? "") : disk;
   const against = staged ? "the last commit" : row.section === "untracked" ? "nothing: it's new" : "what's staged";
+  // A rename staged: from the name it had in the last commit.
+  const named = staged && e.from ? `${e.from} → ${e.path}` : e.path;
   openDiff(app, {
     before,
     now,
     path: rel ?? join(app.git.checkout!.root, e.path),
-    title: `${e.path} against ${against} — esc: source control`,
+    title: `${sanitize(named)} against ${against} — esc: source control`,
     none: `${e.path}: nothing to show`,
     back: backToPanel(app),
     go: (line) => {
@@ -338,7 +350,7 @@ export function openWorkFile(app: App, row: WorkRow): void {
   const now = fileChanges(app, e, row.section);
   if (now) return place(now[0]);
   // Git still reading: there once it has.
-  void textsOf(app, e.path)?.ready.then(() => {
+  void textsOf(app, e)?.ready.then(() => {
     place(fileChanges(app, e, row.section)?.[0]);
     app.host.requestRender();
   });
