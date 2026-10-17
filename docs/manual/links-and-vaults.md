@@ -422,6 +422,12 @@ The answer is kept for that link and the place it leads, in `links.json` in slip
 vault. So a repository you clone can't bring its links already followed, and if a link later leads somewhere else,
 slipbox asks again.
 
+To take an answer back, press `space v l` (`:symlinks`). It lists the links you've answered, each with where it leads
+and what you said: `followed`, `not followed`, or `just looking, this once`. `enter` forgets the one selected, and
+opening it asks again. A link you followed is followed no more at once: its notes leave the index and search, its
+folder is no longer watched, a tab you had open through it turns read-only, and the explorer marks it `not followed`.
+On the command line, `slipbox symlinks` lists them and `slipbox symlinks forget <link>` forgets one.
+
 Agents see what is followed: it's in search, in the context bundle and in the command line's answers. When a link leads
 to a hidden folder (`~/.ssh`, `~/.aws`) or outside your home folder, the question says so.
 

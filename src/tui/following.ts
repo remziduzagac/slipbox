@@ -9,9 +9,12 @@ import { rootLabel, tildePath } from "../core/names.ts";
 import {
   agentsWarning,
   answered,
+  answersKept,
   blockingLink,
+  forgetLinkAnswer,
   linkKey,
   linkSaid,
+  linkTarget,
   PROBE_MS,
   probe,
   probeFollowed,
@@ -156,6 +159,60 @@ export class Following {
   walkAgain(): void {
     if (this.app.loc.mode !== "folder") this.app.watch.applyChanges({ changes: [], rescan: true });
     this.app.explorer.invalidateTree();
+  }
+
+  /**
+   * What you said of links (VV-D6), for the list: the answers kept, newest first, then the links you're just looking
+   * at, this once — each by its own path, where it leads, and how it's taken.
+   */
+  answers(): { link: string; target: string | null; said: string }[] {
+    const kept = answersKept().map((a) => ({
+      link: a.link,
+      target: a.target,
+      said: `${a.answer === "follow" ? "followed" : "not followed"}${
+        a.now === a.target ? "" : a.now ? `: it leads to ${tildePath(a.now)} now, and asks` : ": gone"
+      }`,
+    }));
+    const keys = new Set(kept.map((k) => k.link));
+    const looked = [...this.looking]
+      .filter((k) => !keys.has(k))
+      .map((link) => ({ link, target: linkTarget(link), said: "just looking, this once" }));
+    return [...kept, ...looked];
+  }
+
+  /** `vault.links`: the symlinks you've answered, each where it leads and what you said; enter forgets the answer. */
+  list(): void {
+    const rows = this.answers();
+    if (!rows.length)
+      return this.app.message("info", "no symlink answered yet: one leading out asks when it's first opened");
+    this.app.overlays.openList({
+      title: `Symlinks you've answered (${rows.length}) — enter forgets one: asked again when it's next opened`,
+      items: rows.map((r) => ({ label: linkSaid(r.link, r.target), detail: r.said, data: r.link })),
+      accept: (item) => this.forget(item.data as string),
+    });
+  }
+
+  /**
+   * Forget what you said of `link` (VV-D6): asked again when it's next opened. One followed, or looked at, is no more at
+   * once: the vault walked again without it — its notes out of the index, its folder no longer watched — a tab read
+   * through it left read-only, and the explorer's rows marked again.
+   */
+  forget(link: string): void {
+    const looked = this.looking.delete(linkKey(link)) || this.looking.delete(link);
+    const was = forgetLinkAnswer(link);
+    if (!was && !looked) return this.app.message("info", `${tildePath(link)}: nothing said of it to forget`);
+    if (looked || was?.answer === "follow") {
+      this.walkAgain();
+      for (const buf of this.app.buffers.values()) {
+        const b = buf.elsewhere ? null : this.blocked(buf.abs);
+        if (b) buf.readOnly = `${linkSaid(b.link, b.target)} isn't followed now — read-only; open it again to choose`;
+      }
+    } else this.app.explorer.invalidateTree();
+    const said = was ? (was.answer === "follow" ? "followed" : "not followed") : "just looking";
+    this.app.message(
+      "info",
+      `forgot ${linkSaid(link, was?.target ?? linkTarget(link))} (${said}): asked again when it's next opened`,
+    );
   }
 
   /**

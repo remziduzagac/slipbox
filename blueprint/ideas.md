@@ -169,7 +169,9 @@ idea without an outcome is still open. Nothing here is agreed: the decisions are
   note at its top) is never found by the background index, nor indexed as a vault nested in another: the skip list and
   the busy folders are checked before the markers. (2026-10-17) Open.
 - Un-following a link: a followed link's answer is kept until the link leads elsewhere, with no command, menu or CLI
-  to take it back; and a "no" kept asks again at every open, as no answer does. (2026-10-17) Open.
+  to take it back; and a "no" kept asks again at every open, as no answer does. (2026-10-17) Built, the un-following:
+  the symlinks answered, listed and each forgotten (`space v l`, `slipbox symlinks forget`; design/roots.md § Links
+  followed only when you say so). The "no" asking again stays open.
 - A link not followed still has its target statted on the main thread, by the walk, Elsewhere's listing and the
   explorer: a mount that hangs behind it can hold them up; only followed links are probed off the thread.
   (2026-10-17) Open.
