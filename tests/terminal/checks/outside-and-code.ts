@@ -15,6 +15,8 @@ import {
   writeFileSync,
 } from "node:fs";
 import { join } from "node:path";
+import { newParseCache } from "../../../src/core/parse.ts";
+import { parseNoteFile } from "../../../src/core/readers.ts";
 import { loadTheme } from "../../../src/core/theme/index.ts";
 import {
   explorerOpen,
@@ -111,6 +113,22 @@ const themeFg = (name: string, role: "h2") => loadTheme(name, "/nonexistent").th
 
 /** The check's own config file (SLIPBOX_CONFIG), as Session wrote it. */
 const configFile = (s: Session) => join(s.dir, "config", "slipbox", "config.toml");
+
+/**
+ * How long this runner takes to parse a note on one thread (ms): a sixteenth of it parsed here, times sixteen. Less
+ * than the whole takes (a long note's parse grows faster than its length), so a bound it sets is no looser than the
+ * work it stands for.
+ */
+function parseEstimate(file: string): number {
+  const text = readFileSync(file, "utf8");
+  const part = text.slice(0, text.lastIndexOf("\n", text.length / 16) + 1);
+  const t0 = performance.now();
+  parseNoteFile(file, part, newParseCache());
+  return (performance.now() - t0) * 16;
+}
+
+/** The kitchen-sink check's measure of its 6 MB note's parse on this runner (ms), taken before slipbox starts. */
+let bigParse = 0;
 
 /** A child of `pid` whose command line matches: a server slipbox started (ps's columns as Linux and macOS have them). */
 function childOf(pid: number, match: RegExp): number | null {
@@ -981,6 +999,9 @@ export const OUTSIDE_AND_CODE: Check[] = [
         );
         mkdirSync(join(s.dir, "config", "slipbox", "themes"), { recursive: true });
         cpSync(join(dot, "themes"), join(s.dir, "config", "slipbox", "themes"), { recursive: true });
+        // What a key would wait for if that note were parsed where keys are read: measured here, before slipbox
+        // starts, on this runner as it is now.
+        bigParse = parseEstimate(s.path("~/notes/research/gps-traces.md"));
       },
     },
     run: async (s) => {
@@ -1009,9 +1030,13 @@ export const OUTSIDE_AND_CODE: Check[] = [
       const bad = s.screen().filter((r) => /\b(warn|error) \d\d:\d\d:\d\d\b/.test(r));
       s.expect(!bad.length, `no warning among the messages:\n${bad.join("\n")}`);
       await s.keys("escape");
-      // Within three seconds: CI's slowest runner (an Intel Mac) answers in about two; a key waiting for the 6 MB note's
-      // parse on the main thread would wait several.
-      s.expect(answered < 3000, `keys answered within 3 s while it indexes (took ${answered} ms)`);
+      // Sooner than the 6 MB note's parse: it's parsed on other threads, and a key waiting for it on the main thread
+      // would wait as long as this runner takes to parse it on one. Measured on this runner, not a fixed bound: a
+      // shared one's speed comes and goes (CI's Intel Mac has answered in two seconds, and in five).
+      s.expect(
+        answered < bigParse,
+        `keys answered while it indexes, before its big note's parse (${answered} ms; ${Math.round(bigParse)} ms)`,
+      );
     },
   },
   {

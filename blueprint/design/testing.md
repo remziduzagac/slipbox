@@ -78,7 +78,10 @@ asserted.
 loads lazily (`16.6`), Mermaid or MathJax, is loaded by whichever file asked first. A file whose output depends on one
 loads it before it renders: `tests/render.test.ts` loads Mermaid first, so the samples' snapshots show their diagrams
 as the TUI draws them once it's in, whichever file ran before. What's drawn while a library loads is tested in a
-process of its own.
+process of its own. Nor does a test lean on the tests before it in its file: it makes the state it needs (a vault opened
+first, a state folder), so it passes alone, filtered or in order. The vaults a file's tests open stay on the machine's
+list, hundreds by its end: a test whose work reads them all (a link's target offered from every vault) runs with only
+its own listed (`onlyRootsUnder` in `tests/tui.test.ts`), or it slows with each test added before it.
 
 **Flaky tests are fixed, or quarantined by name; never retried.** No test is retried, by the runner or by itself: one
 that fails at random has a cause, in the code or in the test. It is fixed, the failure shown before the fix (in the bad
@@ -191,7 +194,10 @@ bun run e2e find replace     # only the scenarios whose names contain these
   that something *doesn't* happen — no autosave mid-insert, no popup before its delay — waits out a
   stated while. A wait, and the quiet after a key, hold only between frames: slipbox marks each frame
   with synchronized output (mode 2026), and a screen read before a frame ends is part the last one,
-  part the next (#73). A frame not ended within a second is read as it is.
+  part the next (#73). A frame not ended within a second is read as it is. A program a check runs beside slipbox is
+  paced by what the screen shows, not by the clock: the agent replay script's first pause is held until the explorer
+  shows its note. The few checks timed against the clock (`alone`) take their bound from the runner they're on: the
+  kitchen-sink check's key must be answered sooner than that runner parses, on one thread, the 6 MB note being indexed.
 - **The terminal itself.** A scenario reads what the terminal draws with its colours (`styleOf`,
   `runs`), its title, the pid of slipbox in it (`signal` sends it SIGTERM or SIGHUP), pastes as a
   terminal does (bracketed), quits and starts again on the same state (`restart`), and resizes the

@@ -1,7 +1,17 @@
 // Reading: rendering, content, data files, footnotes, hostile names, the code view, themes, glyphs, pictures (by
 // what's sent), start, info, privacy, trust (TT-T3).
 
-import { cpSync, existsSync, lstatSync, readdirSync, readFileSync, readlinkSync, realpathSync } from "node:fs";
+import {
+  cpSync,
+  existsSync,
+  lstatSync,
+  readdirSync,
+  readFileSync,
+  readlinkSync,
+  realpathSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
 import { join } from "node:path";
 import { UNSAFE } from "../../../src/core/sanitize.ts";
 import { loadTheme } from "../../../src/core/theme/index.ts";
@@ -1633,9 +1643,20 @@ export const READING: Check[] = [
       const dir = join(s.dir, "downloads");
       const plan = s.read(join(dir, "plan.md"));
       const script = s.path("~/work/kestrel/scripts/dev/agent-replay.sh");
-      const env = { PATH: process.env.PATH ?? "", PAUSE: "0.3" };
+      // Its first pause, after it writes the note, held until the explorer shows it: on a slow runner the watcher
+      // reports late, and paced by the clock alone, the note could come and go before slipbox is told. bash reads
+      // BASH_ENV first, and a function named sleep comes before the command; every other pause is the clock's.
+      const hold = join(s.dir, "tmp", "hold");
+      const held = join(s.dir, "tmp", "held.bash");
+      writeFileSync(hold, "");
+      writeFileSync(held, 'sleep() { while [ -e "$HOLD" ]; do command sleep 0.05; done; command sleep "$@"; }\n');
+      const env = { PATH: process.env.PATH ?? "", PAUSE: "0.3", BASH_ENV: held, HOLD: hold };
       const run = Bun.spawn(["bash", script, dir], { env, stdout: "pipe" });
-      await s.see("agent-scratch.md", 10_000);
+      try {
+        await s.see("agent-scratch.md");
+      } finally {
+        rmSync(hold, { force: true }); // on its way, seen or not
+      }
       await run.exited;
       s.expect(run.exitCode === 0, `the script ran to its end (exit ${run.exitCode})`);
       await s.notSee("agent-scratch", 5000);

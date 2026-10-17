@@ -3272,6 +3272,9 @@ describe("nested vaults, known to each other without being opened (17.17)", () =
   });
 
   test("a second copy (a second clone): each one's names mean its own nested vault, and its links stay its own", async () => {
+    // The first copy opened before the second came (as the tests before this one do): its nested vault recorded, and
+    // the first known, the default.
+    await cli(["links", "index"], parent);
     const second = mkdtempSync(join(tmpdir(), "slipbox-nest-copy-"));
     cpSync(parent, second, { recursive: true });
     // Its nested vault not yet recorded, the first one's is, by the same name: its own still meant.

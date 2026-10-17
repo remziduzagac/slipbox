@@ -72,6 +72,8 @@ export interface SessionOptions {
   keyboard?: Keyboard;
   /** A terminal that draws Kitty's graphics: slipbox's pictures as placeholder cells (the docs' screenshots). */
   graphics?: boolean;
+  /** The longest a frame is waited for (ms; a second unless said): the harness's own tests hold one open at will. */
+  frameMax?: number;
 }
 
 export class CheckFailed extends Error {}
@@ -112,6 +114,7 @@ export class Session {
       rows: size.rows,
       keyboard: opts.keyboard,
       graphics: opts.graphics,
+      frameMax: opts.frameMax,
     });
   }
 

@@ -18006,13 +18006,17 @@ describe("spelling (25.6)", () => {
     expect(h.app.view!.buf.source.slice(offsetOf(h.app, h.app.view!), offsetOf(h.app, h.app.view!) + 7)).toBe(
       "recieve",
     );
-    // A link's address with the misspelt word in it isn't marked, its text is; nor a word that only holds it.
-    await h.keys(
-      "shift+g",
-      "o",
-      "enter",
-      ...[..."[recieve](recieve.md) and likely lik"].map((k) => (k === " " ? "space" : k)),
-      "escape",
+    // A link's address with the misspelt word in it isn't marked, its text is; nor a word that only holds it. Typed
+    // with no other vault known: a link's target offers every vault this machine knows, read again at each key that
+    // matches none, and this file's tests leave hundreds.
+    await onlyRootsUnder(root, () =>
+      h.keys(
+        "shift+g",
+        "o",
+        "enter",
+        ...[..."[recieve](recieve.md) and likely lik"].map((k) => (k === " " ? "space" : k)),
+        "escape",
+      ),
     );
     expect(await until(() => (h.frame(), (h.app.speller.misspelt(h.app.view!) ?? []).length === 5))).toBe(true);
     expect(

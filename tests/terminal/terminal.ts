@@ -48,9 +48,13 @@ export interface TerminalOptions {
    * on the screen. The pictures themselves aren't kept (the docs' screenshots draw them over their cells).
    */
   graphics?: boolean;
+  /** The longest a frame is waited for (ms; a second unless said): one begun and not ended so long is read as it is. */
+  frameMax?: number;
+  /** The clock a frame is timed by (`performance.now` unless said): a test's own times one exactly. */
+  clock?: () => number;
 }
 
-/** The longest a frame is waited for (ms): one begun and not ended this long is read as it is. */
+/** The longest a frame is waited for (ms) unless said: one begun and not ended this long is read as it is. */
 const FRAME_MAX = 1000;
 
 /** `#rrggbb` as an OSC colour answer: `rgb:rrrr/gggg/bbbb`. */
@@ -114,12 +118,14 @@ export class HeadlessTerminal {
   output = "";
   /** When the program last wrote anything (performance.now()). */
   lastOutput = 0;
-  /** When the frame being drawn began (synchronized output, mode 2026), as xterm has read it: 0 between frames. */
-  private frameSince = 0;
+  /** When the frame being drawn began (synchronized output, mode 2026), as xterm has read it: null between frames. */
+  private frameSince: number | null = null;
+  private readonly clock: () => number;
 
   constructor(readonly opts: TerminalOptions) {
     const keyboard = opts.keyboard ?? "kitty";
     const colors = opts.colors ?? { fg: "#c0caf5", bg: "#1a1b26" };
+    this.clock = opts.clock ?? (() => performance.now());
     this.xterm = new XTerm({ cols: opts.cols, rows: opts.rows, allowProposedApi: true, scrollback: 1000 });
     this.xterm.unicode.register(graphemeWidths());
     this.xterm.unicode.activeVersion = "graphemes";
@@ -143,7 +149,7 @@ export class HeadlessTerminal {
     // A frame's start and end (`CSI ? 2026 h`, `l`): a frame's bytes arrive in several chunks, and between them the
     // screen is part old, part new. Noted, and left to xterm too (false: not consumed).
     const frame = (ps: (number | number[])[], begun: boolean) => {
-      if (ps.includes(2026)) this.frameSince = begun ? performance.now() : 0;
+      if (ps.includes(2026)) this.frameSince = begun ? this.clock() : null;
       return false;
     };
     p.registerCsiHandler({ prefix: "?", final: "h" }, (ps) => frame(ps, true));
@@ -181,7 +187,7 @@ export class HeadlessTerminal {
   /** Start a program in it (one at a time). */
   spawn(argv: string[], opts: { cwd: string; env: Record<string, string> }): Bun.Subprocess {
     this.kitty = [];
-    this.frameSince = 0;
+    this.frameSince = null;
     const decoder = new TextDecoder();
     this.pty = new Bun.Terminal({
       cols: this.opts.cols,
@@ -247,11 +253,11 @@ export class HeadlessTerminal {
   }
 
   /**
-   * Whether the screen is part of a frame: the program began one and hasn't ended it. For a second at most, as a
-   * terminal waits before drawing anyway: a program that never ends one doesn't stop every check.
+   * Whether the screen is part of a frame: the program began one and hasn't ended it. For a second at most
+   * (`frameMax`), as a terminal waits before drawing anyway: a program that never ends one doesn't stop every check.
    */
   get midFrame(): boolean {
-    return this.frameSince > 0 && performance.now() - this.frameSince < FRAME_MAX;
+    return this.frameSince !== null && this.clock() - this.frameSince < (this.opts.frameMax ?? FRAME_MAX);
   }
 
   /** The visible screen, one string per row (wide characters once, as they show). */

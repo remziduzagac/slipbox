@@ -481,8 +481,9 @@ describe("editors and state", () => {
     expect(slipbox(["send", "home", "--line", "0"]).code).toBe(2);
   });
   test("history lists what the TUI read, newest first", () => {
-    mkdirSync(join(sandbox, "state"), { recursive: true });
+    // The vault's state folder, as the TUI makes it: whether a test before this one made it or not.
     const r = slipbox(["info", "--json"]).json.data;
+    mkdirSync(r.state, { recursive: true });
     writeFileSync(
       join(r.state, "positions.json"),
       JSON.stringify({
