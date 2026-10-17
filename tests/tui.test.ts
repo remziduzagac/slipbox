@@ -19518,14 +19518,18 @@ describe("links followed only when you say so (VV-D6)", () => {
 
   test("a link out of the vault: shown where it leads, not followed; opened, asked — and followed, read and indexed", async () => {
     const { root, out } = linked();
-    const h = await harness({ root, open: "index.md" });
+    const h = await harness({ root, open: "index.md", config: (c) => (c.ui.sidebar_width = 50) });
     expect(h.app.graph.notes.has("data/far.md")).toBe(false);
     expect(row(h, "data")?.link).toMatchObject({ target: out, dir: true });
     expect(h.app.following.describe(row(h, "data")!)).toBe(`→ ${out}  not followed`);
     select(h, "data");
-    // Drawn after its name, where it leads cut from the front: its last folder and its state kept.
+    // Drawn in the description column, where it leads cut from the front: its last folder and its state kept; not
+    // indexed, its mark says.
     h.app.region = "content"; // no buttons over the row's end
-    expect(h.frame()).toMatch(/ data → …\S*out {2}not followed/);
+    expect(h.frame()).toMatch(/ data +→ …\S*out {2}not followed +⊘/);
+    expect(h.app.explorer.marks.of(row(h, "data")!).index).toBe("not-indexed");
+    // Short of room for even its state, cut from its end: never wider than its room.
+    expect(stringWidth(h.app.following.describe(row(h, "data")!, 10)!)).toBeLessThanOrEqual(10);
     h.app.region = "sidebar";
     await h.keys("enter");
     const o = h.app.overlay as ListOverlay;

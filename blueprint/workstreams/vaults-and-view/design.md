@@ -179,10 +179,11 @@ look, `n` no, saying what a yes allows here; when the target is hidden (a dot fo
 home, a line over them says agents see what's followed (`agentsWarning`). Follow: kept, the target probed, the vault
 walked again (`walkAgain`), then what was asked done. Just look: read-only (`just looking: … isn't followed —
 read-only`), never indexed; a folder listed a level at a time. No: kept; opening it again asks again. A path through
-a link not followed opened otherwise (a session's tab) isn't read, said so. **In the explorer**, a link row says where
-it leads, dimmed after its name (`Following.describe`): `→ /mnt/disk/data`, then `not followed`, `just looking` or
-`not answering` while the walk doesn't go through it; a second name for a folder of the vault, opened, shows that
-folder. VV-T5's columns take these.
+a link not followed opened otherwise (a session's tab, `:e`) isn't read, said so or asked. **In the explorer**, a
+link row says where it leads in the description column of its marks (`Marks.describe`, from `Following.describe`):
+`→ /mnt/disk/data`, then `not followed`, `just looking` or `not answering` while the walk doesn't go through it, its
+place cut from the front to fit, the state kept (`RowMarks.fit`); its index's mark `⊘` then. What it leads to isn't
+gone near to mark it. A second name for a folder of the vault, opened, shows that folder.
 
 ## MODIFIED design/roots.md
 
@@ -267,9 +268,10 @@ Done in VV-T4, the busy folders and the marks in VV-T5. The explorer bullet beco
   indexing `◐` (`info`), not indexed `⊘` (`sidebar`), can't read `⚿` (a lock in nerd; `warn`), a problem `⚠` (`warn`);
   git's mark two columns before it, a file's letter or a folder's `markGitFolder` (`•`, `o` in ascii, where `*` says
   indexed); and, between the name and those, dimmed and ending a space short of git's column, what describes the row
-  (`describe`): a vault's branch when it's a repository's top, a worktree's after `⎇` — where VV-T6 puts a link's
-  target. Each glyph is one column wide in every set (`core/glyphs.ts`, `mark…`); none is an emoji. A vault's other name
-  stays after its folder's (17.13); a row with its menu's button shows no marks, as git's mark wasn't. The index's
+  (`describe`): a vault's branch when it's a repository's top, a worktree's after `⎇`, a link's target and whether
+  it's followed (VV-T6). Each glyph is one column wide in every set (`core/glyphs.ts`, `mark…`); none is an emoji. A
+  vault's other name stays after its folder's (17.13); a row with its menu's button shows no marks, as git's mark wasn't.
+  The index's
   state: a folder of the vault's own tree is indexed, or indexing while home is unwalked, while the walk hasn't reached
   it (`unwalked`; past home's cap, not indexed), or while a note in it waits to be parsed (`app.indexing`,
   `graph.pendingPaths`); what the walk leaves out (`leftOut`), a busy folder anywhere and a note too big

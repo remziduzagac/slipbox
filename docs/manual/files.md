@@ -120,7 +120,7 @@ The last column says what slipbox's index holds of the row, for links, backlinks
 | --- | --- | --- |
 | `●`, dimmed | `*` | indexed |
 | `◐` | `~` | being indexed now |
-| `⊘` | `-` | not indexed: a busy folder, or what `.gitignore` or `walk.exclude` leaves out (below), or a note too big |
+| `⊘` | `-` | not indexed: busy folders, what `.gitignore` or `walk.exclude` leaves out, big notes, links not followed |
 | `⚿` | `#` | you may not read it |
 | `⚠` | `!` | a problem, such as a link whose target isn't there |
 
@@ -130,7 +130,8 @@ Most folders are indexed, so a file has a mark there only when it isn't what its
 The column before it is git's: `M`, `+`, `R` or `!` for a changed file, and `•` for a folder with a change in it, `o` in
 ASCII ([Git](git.md)).
 
-Before the marks, dimmed, is what describes the row: a vault's branch, or a worktree's after `⎇`.
+Before the marks, dimmed, is what describes the row: a vault's branch, a worktree's after `⎇`, or where a link
+leads.
 
 ## What the explorer lists
 
@@ -179,10 +180,10 @@ explorer only, and its links never count.
 A folder that is a vault of its own is listed with its own icon, and its files are its own.
 [Links and vaults](links-and-vaults.md) has what that means.
 
-A link (a symlink) says where it leads after its name, dimmed: `data → /mnt/disk/data`. One that leads out of the vault,
-or out of home, isn't followed until you say so, and says that too: `not followed`. Opening it asks whether to follow
-it, just look, or leave it ([Links that lead out](links-and-vaults.md#links-that-lead-out)). In Elsewhere, every link
-asks.
+A link (a symlink) says where it leads, dimmed, before its marks: `→ /mnt/disk/data`. One that leads out of the vault,
+or out of home, isn't followed until you say so, and says that too: `not followed`, marked `⊘`. Opening it asks whether
+to follow it, just look, or leave it ([Links that lead out](links-and-vaults.md#links-that-lead-out)). In Elsewhere,
+every link asks.
 
 ## Making notes and folders
 
