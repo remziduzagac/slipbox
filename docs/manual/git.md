@@ -320,7 +320,8 @@ slipbox reaches a remote only when you ask. Nothing runs on a timer.
 The palette (`:`) has them too, as Fetch, Pull and Push.
 
 Each runs in the background, so slipbox never waits on the network. A message says how it went, in git's words when it
-failed.
+failed. Those words are git's English, whatever your language settings: slipbox reads them to know what happened, such
+as a pull that can't fast-forward. A remote whose name starts with `-` is refused before git runs, and said.
 
 - **Fetch** gets the remote's new commits without touching your files. The status line then shows how far the branch is
   behind its upstream, as in `main ↓3`.

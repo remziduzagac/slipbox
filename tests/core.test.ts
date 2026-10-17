@@ -5226,6 +5226,29 @@ describe("the remote's commands and stash (26.6)", () => {
     });
   });
 
+  test("a remote's name that starts with - isn't passed to git: the push refused, said why (regression)", async () => {
+    await isolated(async () => {
+      const { root, bare } = withRemote();
+      const { pushLater, upstreamOf } = await import("../src/core/gitremote.ts");
+      // The repository's own config names the branch's remote so.
+      git(root, "config", "remote.--dry-run.url", bare);
+      git(root, "config", "remote.--dry-run.fetch", "+refs/heads/*:refs/remotes/--dry-run/*");
+      git(root, "config", "branch.main.remote", "--dry-run");
+      commit(root, "a.md", "mine");
+      const up = upstreamOf({ root }, "main");
+      expect(up).toEqual({ remote: "--dry-run", ref: "refs/heads/main" });
+      const before = git(bare, "rev-parse", "main");
+      expect(await pushLater({ root }, "main", up!)).toEqual({
+        ok: false,
+        why: 'the remote\'s name "--dry-run" starts with "-": slipbox doesn\'t pass it to git',
+        login: false,
+      });
+      expect(git(bare, "rev-parse", "main")).toBe(before);
+      // An upstream's branch so named, likewise.
+      expect(await pushLater({ root }, "main", { remote: "origin", ref: "-x" })).toMatchObject({ ok: false });
+    });
+  });
+
   test("a push runs the repository's pre-push hook only where the vault is trusted (regression)", async () => {
     // A hook is the folder's own code (D172, D175): a push in a vault not trusted runs none, as a commit runs none.
     await isolated(async () => {
@@ -5791,6 +5814,75 @@ describe("a merge or a rebase under way, and a pull where both sides moved (GIT-
     expect(merge).toMatchObject({ kind: "merge", merging: "main" });
     expect(operationText(merge)).toBe("merging");
     expect(operationText({ kind: "rebase", step: null, total: null, branch: null, merging: null })).toBe("rebasing");
+  });
+
+  test("a base whose name starts with - isn't passed to git: not compared, not rebased onto (regression)", async () => {
+    await isolated(async () => {
+      const root = behind();
+      const c = checkoutOf(root)!;
+      const head = git(root, "rev-parse", "HEAD");
+      expect(aheadBehind(c, "--all")).toBeNull();
+      expect(await rebaseLater(c, "--root")).toEqual({
+        ok: false,
+        why: 'the base "--root" starts with "-": slipbox doesn\'t pass it to git',
+        login: false,
+      });
+      expect(operationOf(c)).toBeNull();
+      expect(git(root, "rev-parse", "HEAD")).toBe(head);
+    });
+  });
+
+  test("git in English where slipbox reads its words; its options ended before names; a flood said as such (regression)", async () => {
+    await isolated(async () => {
+      const root = behind();
+      const c = checkoutOf(root)!;
+      const { stashSaveLater, pushLater } = await import("../src/core/gitremote.ts");
+      const { mergeLater } = await import("../src/core/gitbranches.ts");
+      const { reviewMerge } = await import("../src/core/mergereview.ts");
+      // A git that says what it was run with — its locale, its arguments — and fails; or prints too much.
+      const bin = mkdtempSync(join(sandbox, "saying-"));
+      writeFileSync(
+        join(bin, "git"),
+        [
+          "#!/bin/sh",
+          'case "$*" in',
+          "  *rev-parse*) echo 0123456789abcdef0123456789abcdef01234567; exit 0 ;;",
+          "  *show-scope*) exit 1 ;;",
+          "  *flood*) head -c 17000000 /dev/zero; exit 0 ;;",
+          "esac",
+          'echo "fatal: LC_ALL=${LC_ALL-unset} LANGUAGE=${LANGUAGE-unset} ARGS=$*" >&2',
+          "exit 128",
+          "",
+        ].join("\n"),
+      );
+      chmodSync(join(bin, "git"), 0o755);
+      const was = { PATH: process.env.PATH, LC_ALL: process.env.LC_ALL, LANGUAGE: process.env.LANGUAGE };
+      process.env.PATH = `${bin}:${process.env.PATH}`;
+      process.env.LC_ALL = "de_DE.UTF-8";
+      process.env.LANGUAGE = "de";
+      try {
+        const english = "LC_ALL=C LANGUAGE=unset";
+        const rebased = await rebaseLater(c, "main");
+        expect(!rebased.ok && rebased.why).toContain(english);
+        expect(!rebased.ok && rebased.why).toContain("rebase --end-of-options main");
+        const stashed = await stashSaveLater(c, "", false);
+        expect(!stashed.ok && stashed.why).toContain(english);
+        const pushed = await pushLater(c, "agent", { remote: "origin", ref: "refs/heads/agent" });
+        expect(!pushed.ok && pushed.why).toContain(english);
+        expect(!pushed.ok && pushed.why).toContain("--end-of-options origin refs/heads/agent:refs/heads/agent");
+        const merged = await mergeLater(root, "main");
+        expect(!merged.ok && merged.why).toContain(english);
+        expect(() => reviewMerge(c, root, "main", "agent")).toThrow(english);
+        // More output than slipbox reads: said so, not as a git that took too long.
+        const flood = { ok: false as const, why: "git printed more than slipbox reads, and was stopped", login: false };
+        expect(await stashSaveLater(c, "flood", false)).toEqual(flood);
+        expect(await rebaseLater(c, "flood")).toEqual(flood);
+      } finally {
+        for (const [k, v] of Object.entries(was))
+          if (v === undefined) delete process.env[k];
+          else process.env[k] = v;
+      }
+    });
   });
 
   test("a rebase stopped at its conflict, read; continued once settled; aborted; a commit skipped", async () => {

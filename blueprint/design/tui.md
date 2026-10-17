@@ -2024,8 +2024,9 @@ written, whatever the key is now. Nothing is committed.
 and the palette's commands, none of `space g`'s. `f` (`:fetch`, `git.fetch`) fetches — the branch's remote, else
 origin, git's own choice; `p` (`:pull`, `git.pull`) pulls, fast-forward only (`git pull --ff-only --no-rebase`), and
 where both sides moved asks merge or rebase (below); `shift+p` (`:push`, `git.push`) pushes the branch to its upstream
-(`git push <remote> refs/heads/<branch>:<its ref>`, the remote and ref as `%(upstream:remotename)` and
-`%(upstream:remoteref)` name them). A branch with no upstream is asked "Push it to origin/<branch>, and track it
+(`git push --end-of-options <remote> refs/heads/<branch>:<its ref>`, the remote and ref as `%(upstream:remotename)` and
+`%(upstream:remoteref)` name them; a remote, branch or ref whose name starts with `-` is refused before git is run,
+said, as a base rebased onto is, `refusedName`). A branch with no upstream is asked "Push it to origin/<branch>, and track it
 there?" (`-u`): origin, else the only remote; with none, or several and no origin, said how to set one. Each is asked
 for, none on a timer, nothing in the background reaching the network; each runs in the background, one at a time ("git
 is still fetching" to another), a message saying it's under way and how it went: "fetched: main is 3 commits behind
@@ -2040,7 +2041,10 @@ not read Username for '…': terminal prompts disabled") rather than wait at a p
 (`GIT_SSH_COMMAND="ssh -o BatchMode=yes"`), which asks no password or passphrase, unless you set your own
 (`GIT_SSH_COMMAND`, `GIT_SSH`, or `core.sshCommand` in any of git's config). Credential helpers still answer. A failure
 that's a login (`needsLogin`: prompts disabled, permission denied, a host's key) adds "git in a terminal can log in
-(git fetch), then try here again". In a vault not trusted, a push runs no hook, its pre-push neither, and the remote's
+(git fetch), then try here again". git's words are read (a pull's "Not possible to fast-forward", "Everything
+up-to-date", a conflict), so the commands slipbox reads them from — the remote's, the stash's, a merge's and a
+rebase's, the branch merged in the git panel, the merge review — run in git's English (`inEnglish`: `LC_ALL=C`, no
+`LANGUAGE`). A command that prints more than slipbox reads (16 MiB) is stopped, and said so (`failureOf`). In a vault not trusted, a push runs no hook, its pre-push neither, and the remote's
 commands refuse a program the repository's own config names for the remote ([trust.md](trust.md)).
 
 `z` (`:stash`, `git.stash`) lists the stashes, newest first (`git stash list`), under "Stash the changes…" and

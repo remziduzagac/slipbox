@@ -102,6 +102,32 @@ export function editorless(env: NodeJS.ProcessEnv): NodeJS.ProcessEnv {
 }
 
 /**
+ * git's environment where slipbox reads its words (a refusal, a conflict, "Everything up-to-date"): git's own
+ * English, whatever your locale — `LC_ALL=C`, and no `LANGUAGE`, which would win over it.
+ */
+export function inEnglish(env: NodeJS.ProcessEnv): NodeJS.ProcessEnv {
+  const out: NodeJS.ProcessEnv = { ...env, LC_ALL: "C" };
+  delete out.LANGUAGE;
+  return out;
+}
+
+/** Why a git run in the background failed: what it printed, else that it printed too much, or took too long. */
+export function failureOf(err: unknown, stderr: string, stdout: string): string {
+  const e = err as { code?: unknown; killed?: boolean };
+  if (e.code === "ERR_CHILD_PROCESS_STDIO_MAXBUFFER") return "git printed more than slipbox reads, and was stopped";
+  if (e.killed) return "git took too long, and was stopped";
+  return gitReason(stderr, stdout);
+}
+
+/**
+ * A name slipbox hands git — a remote's, a branch's, a ref's — checked first: one that starts with `-` is refused,
+ * said why (null: it's fine). No remote or branch git makes is named so; git is also told where its options end.
+ */
+export function refusedName(what: string, name: string): string | null {
+  return name.startsWith("-") ? `${what} "${name}" starts with "-": slipbox doesn't pass it to git` : null;
+}
+
+/**
  * The environment git reaches a remote with: never a terminal prompt — a login git can't make with what it has fails
  * at once — and ssh in batch mode, which asks for no password or passphrase, unless you set your own ssh command
  * (`GIT_SSH_COMMAND`, `GIT_SSH`, or `core.sshCommand`, `sshCommandSet`).
@@ -242,11 +268,11 @@ function runLater(c: Pick<Checkout, "root">, args: string[], network: boolean): 
     execFile(
       "git",
       [...signing, ...gitArgs(c.root, guarded)],
-      { encoding: "utf8", env, timeout: network ? NETWORK_MS : 120_000, maxBuffer: 16 * 1024 * 1024 },
+      // git's words in English: what it said is matched (a pull's "Not possible to fast-forward", a conflict).
+      { encoding: "utf8", env: inEnglish(env), timeout: network ? NETWORK_MS : 120_000, maxBuffer: 16 * 1024 * 1024 },
       (err, out, stderr) => {
         if (!err) return done({ ok: true, out, err: stderr });
-        const killed = (err as { killed?: boolean }).killed;
-        const why = killed ? "git took too long, and was stopped" : gitReason(stderr, out);
+        const why = failureOf(err, stderr, out);
         done({ ok: false, why, login: network && needsLogin(why) });
       },
     );
@@ -276,7 +302,7 @@ export function pullLater(c: Pick<Checkout, "root">, how: "ff" | "merge" | "reba
 
 /**
  * Pushed to the branch's upstream (`to`), or, asked first, to a remote's branch of the same name, which becomes its
- * upstream (`track`).
+ * upstream (`track`). The remote's name and the refs are checked first (`refusedName`), and passed after git's options.
  */
 export function pushLater(
   c: Pick<Checkout, "root">,
@@ -284,7 +310,16 @@ export function pushLater(
   to: { remote: string; ref: string },
   track = false,
 ): Promise<RemoteDone> {
-  return runLater(c, ["push", ...(track ? ["-u"] : []), to.remote, `refs/heads/${branch}:${to.ref}`], true);
+  const why =
+    refusedName("the remote's name", to.remote) ??
+    refusedName("the branch", branch) ??
+    refusedName("the upstream's branch", to.ref);
+  if (why) return Promise.resolve({ ok: false, why, login: false });
+  return runLater(
+    c,
+    ["push", ...(track ? ["-u"] : []), "--end-of-options", to.remote, `refs/heads/${branch}:${to.ref}`],
+    true,
+  );
 }
 
 /** A stash: its name now (`stash@{0}`), its commit (the name moves as others are saved), its message, when. */
