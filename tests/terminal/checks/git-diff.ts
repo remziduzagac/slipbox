@@ -124,7 +124,8 @@ export const GIT_DIFF: Check[] = [
         "\\ no newline at end of file",
       ].map((r) => s.rowOf(r));
       s.expect(rows[0]! >= 0 && rows.every((r, i) => i === 0 || r > rows[i - 1]!), `in order: ${rows}`);
-      for (const said of ["\\ byte order mark removed", "\\ no newline at end of file"]) {
+      // Read by their words: the diff opens with its cursor on the first row, whose first cell is the cursor's.
+      for (const said of ["byte order mark removed", "no newline at end of file"]) {
         const fg = s.styleOf(said)?.fg?.toLowerCase();
         s.expect(fg === DIM, `${said}: dim (${fg}, not ${DIM})`);
       }

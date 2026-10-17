@@ -472,8 +472,15 @@ const MARKED: Check[] = [
       await s.status(why("walk.exclude"));
       await s.keys("escape");
       await s.until(() => !s.statusLine().includes("not indexed"), undefined, "nothing said, the note given the keys");
-      // A file open where walk.exclude leaves it out: Info's index row, its folder's reason.
-      await s.ex(`e ${s.path("~/work/kestrel/docs/generated/api.md")}`);
+      // A file open where walk.exclude leaves it out — opened from the explorer, as :e doesn't open what the walk
+      // leaves out: Info's index row, its folder's reason.
+      await explorerOpen(s);
+      await explorerRow(s, "docs");
+      await s.keys("l");
+      await explorerRow(s, "generated");
+      await s.keys("l");
+      await explorerRow(s, "api.md");
+      await s.keys("enter");
       await opened(s, "docs/generated/api.md");
       await leader(s, "n", "i");
       await s.status("INFO");
