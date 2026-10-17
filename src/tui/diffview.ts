@@ -13,7 +13,7 @@ import { classify } from "../core/filetypes.ts";
 import { indentFor } from "../core/indent.ts";
 import { layoutBlockDiff } from "../core/layout/blockdiff.ts";
 import { diffText, layoutDiff } from "../core/layout/diff.ts";
-import type { Layout } from "../core/layout/ir.ts";
+import { type Layout, srcAt } from "../core/layout/ir.ts";
 import { layoutSplitDiff, SPLIT_MIN, splitColumns } from "../core/layout/splitdiff.ts";
 import { type DiffViewRow, diffView } from "../core/merge.ts";
 import { TOP } from "../core/position.ts";
@@ -66,6 +66,19 @@ export function diffLanguage(app: App, path: string, text: string): { language: 
   return { language, tabWidth };
 }
 
+/** Whether a file's diff is drawn as its blocks before and after (GIT-D2): a note's, unless `[git] diff` says lines. */
+export function asBlocks(app: App, path: string): boolean {
+  return app.config.git.diff === "blocks" && classify(path, app.config.walk.extensions).group === "note";
+}
+
+/** Whether a code file's diff goes side by side at `width` (GIT-D7): as `[git] diff_layout` says — in `auto`, where each
+ *  side has its 80 columns. A note's never does. */
+export function sideBySide(app: App, path: string, width: number): boolean {
+  if (classify(path, app.config.walk.extensions).group === "note") return false;
+  const layout = app.config.git.diff_layout;
+  return layout === "split" || (layout === "auto" && splitColumns(width) >= SPLIT_MIN);
+}
+
 /** A diff, `before` to `now`, in the floating window; nothing different: said, and back. */
 export function openDiff(app: App, d: DiffRequest): void {
   const rows = diffView(d.before, d.now);
@@ -93,9 +106,7 @@ export function openDiff(app: App, d: DiffRequest): void {
   buf.readOnly = "the floating window is read-only";
   let made: { key: string; layout: Layout } | null = null;
   buf.drawn = (width, how) => {
-    // A code file's side by side where each side has its columns, or as `[git] diff_layout` says.
-    const layout = app.config.git.diff_layout;
-    const split = !w.blocks && (layout === "split" || (layout === "auto" && splitColumns(width) >= SPLIT_MIN));
+    const split = !w.blocks && sideBySide(app, d.path, width);
     const mode = w.blocks?.on ? "blocks" : split ? "split" : "lines";
     const key = `${mode}:${width}:${how.glyphs.mode}:${how.wrap}:${how.codeScroll}:${buf.version}`;
     if (made?.key !== key) {
@@ -122,7 +133,9 @@ export function diffEnter(app: App, view: View): boolean {
   const f = app.floating;
   if (f?.kind !== "diff" || f.view !== view) return false;
   const w = f.diff;
-  const at = (app.currentLayout(view).lines[view.cur.row]?.src ?? 0) - 1;
+  // The line of what's under the cursor: in a paragraph laid out again, its word's own.
+  const row = app.currentLayout(view).lines[view.cur.row];
+  const at = (row ? srcAt(row, view.cur.col) : 0) - 1;
   if (w.blocks?.on) {
     const fold = w.blocks.diff.items.find((i) => i.kind === "fold" && i.unit === at);
     if (fold?.kind === "fold") {

@@ -184,9 +184,9 @@ export function drawFloating(app: App, c: Canvas, mainY: number, mainH: number, 
     : peek
       ? Math.max(24, W - 4 - Math.max(4, Math.floor(W / 8)))
       : Math.max(24, wide ? W - 8 : Math.min(100, scratch ? Math.floor((W * 3) / 4) : W - 8));
-  // A diff is as tall as its rows, not its text's lines: a block's frame, a paragraph laid out again (GIT-D2). Laid out
-  // at its pane's width less the scrollbar's column, as the pane will lay it out.
-  const drawn = f.kind === "diff" ? f.view.buf.drawn : undefined;
+  // A diff (a review's too) is as tall as its rows, not its text's lines: a block's frame, a paragraph laid out again
+  // (GIT-D2). Laid out at its pane's width less the scrollbar's column, as the pane will lay it out.
+  const drawn = f.kind === "diff" || f.kind === "review" ? f.view.buf.drawn : undefined;
   const lines = drawn
     ? drawn(Math.max(10, w - 3), { glyphs: app.glyphs, wrap: app.ui.wrap, codeScroll: app.code.scrolls() }).lines.length
     : f.view.buf.lineStarts().length;

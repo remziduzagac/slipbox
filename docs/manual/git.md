@@ -273,8 +273,10 @@ or send it back to the agent with a note.
 
 Press `v` in the git panel, or click Review, or run `:review`. The review walks every change in the working tree that
 isn't staged yet, file by file, in the order the panel lists them. A file git doesn't track yet counts as one change,
-all of it added. Each change shows in a floating window as a diff, with a few of the file's lines around it. Above the
-diff are the file, where the change is (`line 12 · change 2 of 3 here, 5 of 9 in all`), and the keys:
+all of it added. Each change shows in a floating window as a diff, with a few of the file's lines around it. It's drawn
+as every diff is ([How a diff is drawn](#how-a-diff-is-drawn)): a note's change as its paragraphs before and after, the
+words that changed marked; a code file's as its lines, side by side when the window is wide. Above the diff are the
+file, where the change is (`line 12 · change 2 of 3 here, 5 of 9 in all`), and the keys:
 
 | Key | What it does |
 | --- | --- |
@@ -386,6 +388,10 @@ on a note in conflict. The merge screen opens in a floating window, one conflict
 - **Base**: the version both sides started from.
 - **Yours**: your side, as a diff against the base. In a merge, it's the branch you're on.
 - **Theirs**: the other side, as a diff against the base. In a merge, it's the branch coming in.
+
+Each side's diff is drawn as every diff is ([How a diff is drawn](#how-a-diff-is-drawn)): in a note, its paragraphs as
+the base had them and as the side has them, the words that changed marked; in a code file, the base's lines beside the
+side's when the window is wide.
 
 Below the conflict is the file as it will be. Each conflict shows there as you settled it, or still marked if you
 haven't.

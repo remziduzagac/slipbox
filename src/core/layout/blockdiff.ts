@@ -31,6 +31,8 @@ interface Cell {
   at: number;
   bg?: Role;
   mark?: boolean;
+  /** The unit (1-based) of the line it's from: `enter` there goes to that line, not the row's first's. */
+  src?: number;
 }
 
 /** A line of a block as shown: what goes before its first row (a list's marker, a quote's bar) and before the rows it
@@ -170,6 +172,7 @@ function rowsOf(
   for (const p of piecesOf(side, b, text, starts, marks, opts)) {
     for (const c of [...p.lead, ...p.cells]) {
       if (c.at < 0) continue;
+      c.src = unit + lineOf(c.at) - b.from + 1;
       if (f?.all) c.bg = f.all;
       else if (f?.word && (c.mark || marks.some(([s, e]) => c.at >= s && c.at < e))) c.bg = f.word;
     }
@@ -218,8 +221,16 @@ function spansOf(cells: Cell[]): Span[] {
   const out: Span[] = [];
   for (const c of cells) {
     const last = out[out.length - 1];
-    if (last && last.role === c.role && last.attrs === c.attrs && last.bg === c.bg) last.text += c.g;
-    else out.push({ text: c.g, role: c.role, attrs: c.attrs, ...(c.bg ? { bg: c.bg } : {}) });
+    if (last && last.role === c.role && last.attrs === c.attrs && last.bg === c.bg && last.src === c.src)
+      last.text += c.g;
+    else
+      out.push({
+        text: c.g,
+        role: c.role,
+        attrs: c.attrs,
+        ...(c.bg ? { bg: c.bg } : {}),
+        ...(c.src !== undefined ? { src: c.src } : {}),
+      });
   }
   return out;
 }

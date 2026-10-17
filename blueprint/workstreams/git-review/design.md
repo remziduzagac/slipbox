@@ -181,8 +181,15 @@ in the floating window, as wide as a diff's: a row with its file, its lines (a d
 place (`change 2 of 3 here, 5 of 9 in all`, a new or deleted file said, what was done with it), a row of its keys, then
 its diff as every diff is drawn (`layoutDiff`): its lines as staged and as they are, with up to three of the file's
 lines on each side (`hunkView`), each row at its line in the file. The window is a screen of parts (`layoutScreen`,
-`layout/diff.ts`): text rows and diffs, a line of its text each, the review's own keys over the note's (`reviewKeys`,
+`layout/screen.ts`): text rows and diffs, a line of its text each, the review's own keys over the note's (`reviewKeys`,
 `DEFAULT_REVIEW_KEYS`, as a peek has its own).
+
+As built with GIT-T4 and GIT-T7: a note's hunk is its blocks before and after (`asBlocks`, `[git] diff`) — the file with
+this change undone against the file as it is (`hunkBlocks`), so its paragraphs are whole, no head and no folds
+(`blockDiff`'s `heads` and `folds` off) — and its lines where only blank lines changed; a code file's lines go side by
+side where there's room (`sideBySide`, `layoutScreen`'s `split`, a part that changes something). `enter` goes to the
+line of what's under the cursor (`srcAt`: a block's span carries its line's unit), as in the diff window; the window is
+as tall as its rows.
 
 - `y` (`git.review_keep`) stages the hunk as the git panel's `s` stages a change (`stageChange`): found again among
   the file's changes now (`findChange`: the same lines as staged and now, the nearest to where it was), since the index
@@ -222,8 +229,9 @@ resolved.
 The screen, in the floating window as tall as a peek's, a conflict at a time: its number, its line in the result and
 how it's settled; the keys; while a rebase is under way, that yours is what's rebased onto and theirs the commit
 replayed; the base's lines; yours, then theirs, each under its marker's label as a diff against the base (with no base,
-whole); then the file as it will be (`resultView`): each conflict settled (its lines `+`) or still marked, two lines
-around it, under a head naming it and how it's settled, the stretches between folded. Its own keys (`mergeKeys`,
+whole) — a note's as its blocks before and after (no head, no folds), a code file's side by side where there's room
+(GIT-T4, GIT-T7); then the file as it will be (`resultView`): each conflict settled (its lines `+`) or still marked, two
+lines around it, under a head naming it and how it's settled, the stretches between folded. Its own keys (`mergeKeys`,
 `DEFAULT_MERGE_KEYS`):
 
 - `o`, `t`, `b`, `shift+b` (`git.merge_ours`, `_theirs`, `_both`, `_both_theirs`) settle the conflict — yours, theirs,

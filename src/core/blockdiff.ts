@@ -141,8 +141,15 @@ function cuts(at: Int32Array, i: number): boolean {
  * both sides, its blocks paired by how alike they are (`pairLines`, white space all one), each pair a change, the
  * others removed or added whole. The unchanged lines between, before the first and after the last fold to a row —
  * unless they're blank, or the stretch's first line (`from`'s, 1-based) is in `open`: then its blocks are shown.
+ * `heads` and `folds` off (a review's hunk, a merge's card: GIT-D3, GIT-D5): the changes alone, no head over a group
+ * and nothing of the stretches between.
  */
-export function blockDiff(from: string, to: string, open: ReadonlySet<number> = new Set()): BlockDiff {
+export function blockDiff(
+  from: string,
+  to: string,
+  open: ReadonlySet<number> = new Set(),
+  opts: { heads?: boolean; folds?: boolean } = {},
+): BlockDiff {
   const a = textLines(from);
   const b = textLines(to);
   const fs: BlockSide = { lines: a, blocks: noteBlocks(parseMarkdown(from).tree, a) };
@@ -216,7 +223,7 @@ export function blockDiff(from: string, to: string, open: ReadonlySet<number> = 
   // `from`'s lines [s, e) unchanged — `to`'s from `bs` on: folded, or shown when opened. (Never blank alone: the groups
   // around took it in.)
   const stretch = (s: number, e: number, bs: number) => {
-    if (e <= s) return;
+    if (e <= s || opts.folds === false) return;
     if (open.has(s + 1)) {
       for (const bl of ts.blocks) if (bl.from - 1 >= bs && bl.to <= bs + (e - s)) same(bl);
       return;
@@ -237,7 +244,7 @@ export function blockDiff(from: string, to: string, open: ReadonlySet<number> = 
     const tb = ts.blocks.filter((bl) => bl.from - 1 >= g.b0 && bl.to <= g.b1);
     const line = Math.max(1, Math.min(tb[0]?.from ?? g.b0 + 1, b.length));
     const heading = [...headings].reverse().find((h) => h.line < line)?.text ?? null;
-    d.items.push({ kind: "@@", line, heading, unit: unit(headText(heading, line), line) });
+    if (opts.heads !== false) d.items.push({ kind: "@@", line, heading, unit: unit(headText(heading, line), line) });
     // Blocks the same on both sides, by their text; between them, each removed one paired with the added one most
     // like it, as a changed line is with a line (white space all one: a paragraph wrapped again is the same).
     const ft = fb.map((bl) => blockText(fs, bl));

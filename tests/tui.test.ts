@@ -14962,18 +14962,14 @@ describe("the diff window (GIT-D2)", () => {
     h.app.moveCursor(h.app.floating!.view, { row: fold, col: 0 });
     await h.keys("enter");
     expect([has("unchanged lines"), has("  More three."), h.app.floating?.kind]).toEqual([false, true, "diff"]);
-    // enter on the after frame's second row: the line its first word is on, in the file ("a 409", line 3).
-    const rows = h.app.currentLayout(h.app.floating!.view).lines;
-    const at = rows.findIndex((r) =>
-      r.spans
-        .map((s) => s.text)
-        .join("")
-        .includes("a 409 parks the op"),
-    );
-    h.app.moveCursor(h.app.floating!.view, { row: at, col: 4 });
+    // enter on a word of the after frame's second row: the line that word is on, in the file — "parks", line 4, though
+    // the row starts on line 3 ("a 409").
+    const rows = h.app.currentLayout(h.app.floating!.view).lines.map((r) => r.spans.map((s) => s.text).join(""));
+    const at = rows.findIndex((r) => r.includes("a 409 parks the op"));
+    h.app.moveCursor(h.app.floating!.view, { row: at, col: rows[at]!.indexOf("parks") });
     await h.keys("enter");
     expect([h.app.floating, h.app.view!.buf.rel]).toEqual([null, "n.md"]);
-    expect(statusRow(h.frame())).toMatch(/ L3:\d+ /);
+    expect(statusRow(h.frame())).toMatch(/ L4:\d+ /);
   });
 
   test("[git] diff = \"source\": a note's diff opens as its lines, tab its blocks; a code file's has only its lines", async () => {
@@ -18999,11 +18995,12 @@ describe("git's review, merge screen, pull and rebase (GIT-D3, GIT-D5, GIT-D6)",
         writeFileSync(join(root, "a.md"), "one\nTWO\nTHREE\n");
         await h.keys("v");
         expect(await until(() => h.app.floating?.kind === "review")).toBe(true);
-        // enter on the change's second line: there, in the file, not at its first; the review ended.
-        const row = h.app
-          .currentLayout(h.app.floating!.view)
-          .lines.findIndex((l) => l.spans.some((s) => s.text.includes("THREE")));
-        h.app.moveCursor(h.app.floating!.view, { row, col: 2 });
+        // enter on the change's second line: there, in the file, not at its first; the review ended. A note's change is
+        // its paragraph before and after, laid out again: its word's own line, though its row starts on another.
+        const rows = h.app.currentLayout(h.app.floating!.view).lines.map((l) => l.spans.map((s) => s.text).join(""));
+        const row = rows.findIndex((t) => t.includes("THREE"));
+        expect(rows[row]).toContain("│ one TWO THREE");
+        h.app.moveCursor(h.app.floating!.view, { row, col: rows[row]!.indexOf("THREE") });
         await h.keys("enter");
         expect(h.app.floating).toBeNull();
         expect(h.app.view!.buf.rel).toBe("a.md");
@@ -19012,6 +19009,36 @@ describe("git's review, merge screen, pull and rebase (GIT-D3, GIT-D5, GIT-D6)",
       });
     });
 
+    test("a note's change drawn before and after, its words marked; a code file's side by side where there's room (GIT-D2, GIT-D7)", async () => {
+      await isolated(async () => {
+        const para = "The queue is drained by a loop that wakes every thirty seconds.\n";
+        const { root } = repo({ "a.md": `# A\n\n${para}`, "b.ts": "const a = 1;\nconst b = 2;\nconst c = 3;\n" });
+        writeFileSync(join(root, "a.md"), `# A\n\n${para.replace("thirty seconds", "minute")}`);
+        writeFileSync(join(root, "b.ts"), "const a = 1;\nconst b = 22;\nconst c = 3;\n");
+        const h = await harness({ root, open: "a.md", width: 200, height: 40 });
+        await h.app.run("git.review");
+        expect(await until(() => h.app.floating?.kind === "review")).toBe(true);
+        const rows = () => h.app.currentLayout(h.app.floating!.view).lines;
+        const text = (l: typeof rows extends () => (infer L)[] ? L : never) => l.spans.map((s) => s.text).join("");
+        // The paragraph whole, before and after, only the words that changed marked.
+        expect(
+          rows()
+            .filter((l) => text(l).startsWith("┌"))
+            .map((l) => text(l).split(" ")[1]),
+        ).toEqual(["before", "after"]);
+        const after = rows().find((l) => text(l).includes("every minute"))!;
+        expect(after.spans.find((s) => s.text.includes("minute"))?.bg).toBe("diff_add_word");
+        expect(after.spans.find((s) => s.text.includes("drained"))?.bg).toBeUndefined();
+        // The window as tall as its rows, its frames' rules too: none of it cut off.
+        h.frame();
+        expect(h.app.geometry!.panes.find((p) => p.view === h.app.floating!.view)!.h).toBeGreaterThanOrEqual(
+          rows().length,
+        );
+        // The code file's: its lines side by side, the line removed beside the line it became.
+        await h.keys("n");
+        expect(rows().some((l) => /- const b = 2; +│ \+ const b = 22;/.test(text(l)))).toBe(true);
+      });
+    });
     test("a review's revert: a deleted file comes back as staged; a new one goes to the trash, after asking", async () => {
       await isolated(async () => {
         const { root } = repo({ "a.md": "a\n", "b.md": "b\n" });
@@ -19036,6 +19063,39 @@ describe("git's review, merge screen, pull and rebase (GIT-D3, GIT-D5, GIT-D6)",
   });
 
   describe("the merge screen (GIT-D5)", () => {
+    test("a note's sides drawn before and after against the base; a code file's side by side where there's room (GIT-D2, GIT-D7)", async () => {
+      await isolated(async () => {
+        const root = conflicted();
+        const h = await harness({ root, open: "sync.md", width: 200, height: 50 });
+        await h.app.git.refreshNow();
+        await h.app.run("git.merge_screen");
+        const text = (l: { spans: { text: string }[] }) => l.spans.map((s) => s.text).join("");
+        const frames = () =>
+          h.app
+            .currentLayout(h.app.floating!.view)
+            .lines.map(text)
+            .filter((t) => t.startsWith("┌"))
+            .map((t) => t.split(" ")[1]);
+        // Each side against the base: its line removed, and the one it became added (less than half alike).
+        expect(frames()).toEqual(["removed", "added", "removed", "added"]);
+        await h.keys("escape");
+        // A code file in conflict: each side's lines beside the base's.
+        const base = "const a = 1;\nconst b = 2;\nconst c = 3;\n";
+        const { root: code } = repo({ "x.ts": base });
+        git(code, "switch", "-q", "-c", "theirs");
+        commit(code, "x.ts", base.replace("b = 2", "b = 22"));
+        git(code, "switch", "-q", "main");
+        commit(code, "x.ts", base.replace("b = 2", "b = 3"));
+        git(code, "merge", "-q", "theirs");
+        const c = await harness({ root: code, open: "x.ts", width: 200, height: 50 });
+        await c.app.git.refreshNow();
+        await c.app.run("git.merge_screen");
+        expect(c.app.floating?.kind).toBe("merge");
+        const lines = c.app.currentLayout(c.app.floating!.view).lines.map(text);
+        expect(lines.some((t) => /- const b = 2; +│ \+ const b = 3;/.test(t))).toBe(true);
+        expect(lines.some((t) => /- const b = 2; +│ \+ const b = 22;/.test(t))).toBe(true);
+      });
+    });
     test("the merge screen: two conflicts, one taken from each side, saved, staged — git resolved", async () => {
       await isolated(async () => {
         const root = conflicted();

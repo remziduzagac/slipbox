@@ -11,6 +11,7 @@ import { blockDiff } from "../src/core/blockdiff.ts";
 import { layoutBlockDiff } from "../src/core/layout/blockdiff.ts";
 import { layoutDiff } from "../src/core/layout/diff.ts";
 import { layoutSplitDiff, splitColumns, splitRows } from "../src/core/layout/splitdiff.ts";
+import { layoutScreen, type ScreenPart, screenText } from "../src/core/layout/screen.ts";
 import { diffView } from "../src/core/merge.ts";
 import { type PictureSource, renderMarkdown, renderTree } from "../src/core/layout/render.ts";
 import { dataLinks, parseData } from "../src/core/data.ts";
@@ -1753,5 +1754,55 @@ describe("a code file's diff side by side (GIT-D7)", () => {
     const at = wrapped.lines.findIndex((r) => rowText(r).includes("line 18,"));
     expect(rowText(wrapped.lines[at + 1]!)).toMatch(/^ {98} │ ↪ /);
     expect(wrapped.lines.every((r) => stringWidth(rowText(r)) <= 200)).toBe(true);
+  });
+});
+
+describe("a screen of diffs: the review's and the merge screen's (GIT-D3, GIT-D5)", () => {
+  const rowText = (r: Line) => r.spans.map((s) => s.text).join("");
+  test("a note's part as its blocks, a code file's side by side, each row's line counted on from the parts before it", () => {
+    const before = "A paragraph that the agent reworded a little.\n";
+    const after = "A paragraph that the agent changed a little.\n";
+    const blocks = blockDiff(before, after, new Set(), { heads: false, folds: false });
+    const code = "const a = 1;\nconst b = 2;\n";
+    const now = code.replace("= 2", "= 22");
+    const parts: ScreenPart[] = [
+      { spans: [{ text: "a head", role: "strong", attrs: 0 }] },
+      { blocks },
+      { rows: diffView(code, now), from: code, to: now },
+    ];
+    // The text: a line a row, the blocks' units, then the diff's rows.
+    expect(screenText(parts).split("\n")).toEqual([
+      "a head",
+      "- A paragraph that the agent reworded a little.",
+      "+ A paragraph that the agent changed a little.",
+      "@@ line 2",
+      "  const a = 1;",
+      "- const b = 2;",
+      "+ const b = 22;",
+    ]);
+    const l = layoutScreen(parts, {
+      width: 200,
+      glyphs: unicode,
+      language: "typescript",
+      wrap: true,
+      codeScroll: true,
+      split: true,
+    });
+    const at = (piece: string) => l.lines.find((r) => rowText(r).includes(piece))!;
+    expect(at("┌ before").decor).toBe(true);
+    expect(at("reworded").src).toBe(2);
+    expect(at("changed a little").src).toBe(3);
+    expect(at("changed a little").spans.find((s) => s.text.includes("changed"))?.src).toBe(3);
+    // Side by side: the pair on one row, standing for the added line; one column, unsplit, without `split`.
+    expect(rowText(at("- const b = 2;"))).toMatch(/- const b = 2; +│ \+ const b = 22;/);
+    expect(at("- const b = 2;").src).toBe(7);
+    const one = layoutScreen(parts, {
+      width: 200,
+      glyphs: unicode,
+      language: "typescript",
+      wrap: true,
+      codeScroll: true,
+    });
+    expect(rowText(one.lines.find((r) => rowText(r).includes("- const b"))!).trim()).toBe("- const b = 2;");
   });
 });
