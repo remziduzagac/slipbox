@@ -53,13 +53,27 @@ describe("keys as a terminal sends them", () => {
   });
 });
 
+/** Until `ok`, or ten seconds (a loaded machine's start too): said if it never comes. */
+async function until(ok: () => boolean, what: string): Promise<void> {
+  for (const end = Date.now() + 10_000; !ok(); await Bun.sleep(5))
+    if (Date.now() > end) throw new Error(`timed out waiting for ${what}`);
+}
+
 describe("the headless terminal", () => {
-  /** Run `script` (sh) in a terminal of `cols`×`rows` until it exits; the terminal, drawn. */
+  const env = { PATH: process.env.PATH ?? "/usr/bin:/bin" };
+  /**
+   * What a script prints last, its end: an OSC no terminal knows, which draws nothing. Its exit is no sign its output
+   * has been read: what it printed last can still be in the pseudo-terminal, and the quiet before it, already there.
+   */
+  const END = "\x1b]7777;end\x07";
+  const printEnd = String.raw`printf '\033]7777;end\007'`;
+  /** Until everything the script printed has been read and drawn: its end read, nothing left to draw. */
+  const ended = (t: HeadlessTerminal) => until(() => t.output.includes(END) && t.drawn, "the script's end");
+  /** Run `script` (sh) in a terminal of `cols`×`rows` to its end; the terminal, drawn. */
   const run = async (script: string, cols = 40, rows = 6) => {
     const t = new HeadlessTerminal({ cols, rows });
-    const p = t.spawn(["sh", "-c", script], { cwd: "/", env: { PATH: process.env.PATH ?? "/usr/bin:/bin" } });
-    await p.exited;
-    for (let i = 0; i < 100 && (!t.drawn || performance.now() - t.lastOutput < 30); i++) await Bun.sleep(10);
+    t.spawn(["sh", "-c", `${script}\n${printEnd}`], { cwd: "/", env });
+    await ended(t);
     return t;
   };
   test("text and its colours read back: true colour, the palette, bold; wide characters once", async () => {
@@ -91,12 +105,12 @@ describe("the headless terminal", () => {
       printf '\033_Gi=31337,s=1,v=1,a=q,t=d,f=24;AAAA\033\\\033[6n'
       a=""; c=""
       while [ "$c" != "R" ]; do a="$a$c"; c=$(dd bs=1 count=1 2>/dev/null); done
-      printf '%s' "$a" | od -An -c | tr -d ' \n'`;
+      printf '%s' "$a" | od -An -c | tr -d ' \n'
+      ${printEnd}`;
     const said = async (graphics: boolean) => {
       const t = new HeadlessTerminal({ cols: 80, rows: 4, graphics });
-      const p = t.spawn(["sh", "-c", asker], { cwd: "/", env: { PATH: process.env.PATH ?? "/usr/bin:/bin" } });
-      await p.exited;
-      for (let i = 0; i < 100 && (!t.drawn || performance.now() - t.lastOutput < 30); i++) await Bun.sleep(10);
+      t.spawn(["sh", "-c", asker], { cwd: "/", env });
+      await ended(t);
       const text = t.screen().join("");
       t.dispose();
       return text;
@@ -126,13 +140,12 @@ describe("the headless terminal", () => {
       stty raw -echo
       printf '\033[?u\033]11;?\007\033[>5u\033[?u'
       a=$(dd bs=1 count=42 2>/dev/null | od -An -c | tr -s ' ')
-      printf '\033[2J\033[H%s' "$a"`;
-    const p = t.spawn(["sh", "-c", asker], { cwd: "/", env: { PATH: process.env.PATH ?? "/usr/bin:/bin" } });
-    for (let i = 0; i < 100 && !t.kittyKeys; i++) await Bun.sleep(10);
-    expect(t.kittyKeys).toBe(true);
+      printf '\033[2J\033[H%s' "$a"
+      ${printEnd}`;
+    t.spawn(["sh", "-c", asker], { cwd: "/", env });
+    await until(() => t.kittyKeys, "the Kitty keyboard flags pushed");
     t.key("ctrl+q"); // the last of the 42 bytes
-    await p.exited;
-    for (let i = 0; i < 100 && (!t.drawn || performance.now() - t.lastOutput < 30); i++) await Bun.sleep(10);
+    await ended(t);
     const said = t.screen().join("").replace(/\s+/g, "");
     expect(said).toContain("[?0u"); // no flags yet
     expect(said).toContain("]11;rgb:1a1a/1b1b/2626");
@@ -142,19 +155,20 @@ describe("the headless terminal", () => {
   });
   test("a legacy terminal leaves the Kitty question unanswered, and keys go the old way", async () => {
     const t = new HeadlessTerminal({ cols: 60, rows: 4, keyboard: "legacy" });
-    const p = t.spawn(
+    t.spawn(
       [
         "sh",
         "-c",
-        String.raw`stty raw -echo; printf '\033[>5u'; a=$(dd bs=1 count=1 2>/dev/null | od -An -tx1); printf '%s' "$a"`,
+        String.raw`stty raw -echo; printf '\033[>5u'; a=$(dd bs=1 count=1 2>/dev/null | od -An -tx1); printf '%s' "$a"
+        ${printEnd}`,
       ],
-      { cwd: "/", env: { PATH: process.env.PATH ?? "/usr/bin:/bin" } },
+      { cwd: "/", env },
     );
-    for (let i = 0; i < 100 && !t.output.includes("\x1b[>5u"); i++) await Bun.sleep(10);
+    // The push read: unanswered, keys still go the old way.
+    await until(() => t.output.includes("\x1b[>5u") && t.drawn, "the Kitty keyboard flags pushed");
     expect(t.kittyKeys).toBe(false);
     t.key("ctrl+q");
-    await p.exited;
-    for (let i = 0; i < 100 && (!t.drawn || performance.now() - t.lastOutput < 30); i++) await Bun.sleep(10);
+    await ended(t);
     expect(t.screen().join("").trim()).toBe("11");
     t.dispose();
   });
@@ -162,59 +176,96 @@ describe("the headless terminal", () => {
 
 describe("frames read whole (synchronized output)", () => {
   const env = { PATH: process.env.PATH ?? "/usr/bin:/bin" };
-  /** Until the first row shows `text`, or a second goes by. */
-  const shows = async (t: HeadlessTerminal, text: string) => {
-    for (let i = 0; i < 100 && !t.screen()[0]!.includes(text); i++) await Bun.sleep(10);
-  };
+  /**
+   * A frame in two halves, each drawn when the test sends a line: half drawn for as long as the test holds it, however
+   * slow the machine. `>` first, once it listens (what's sent not echoed); the frame over it.
+   */
+  const halves = [
+    "stty -echo",
+    "printf '>'",
+    "read a",
+    String.raw`printf '\r\033[?2026hhalf'`,
+    "read b",
+    String.raw`printf ' whole\033[?2026l'`,
+    "read c",
+  ].join("; ");
+  /** A frame waited for as long as the test holds it. */
+  const HELD = Number.POSITIVE_INFINITY;
 
   test("a frame begun and not yet ended is said, until it ends", async () => {
-    const t = new HeadlessTerminal({ cols: 40, rows: 4 });
-    t.spawn(["sh", "-c", String.raw`printf '\033[?2026hhalf'; sleep 0.4; printf ' whole\033[?2026l'; sleep 2`], {
-      cwd: "/",
-      env,
-    });
-    await shows(t, "half");
-    expect(t.screen()[0]).toBe("half");
-    expect(t.midFrame).toBe(true);
-    await shows(t, "whole");
-    expect(t.midFrame).toBe(false);
-    t.dispose();
+    const t = new HeadlessTerminal({ cols: 40, rows: 4, frameMax: HELD });
+    try {
+      t.spawn(["sh", "-c", halves], { cwd: "/", env });
+      await until(() => t.screen()[0] === ">", "the program to listen");
+      t.write("\n");
+      await until(() => t.screen()[0] === "half", "the frame's first half");
+      expect(t.midFrame).toBe(true);
+      t.write("\n");
+      await until(() => !t.midFrame, "the frame's end");
+      expect(t.screen()[0]).toBe("half whole");
+    } finally {
+      t.dispose();
+    }
   });
 
   test("one never ended is read as it is after a second: a program that never ends a frame stops no check", async () => {
-    const t = new HeadlessTerminal({ cols: 40, rows: 4 });
-    t.spawn(["sh", "-c", String.raw`printf '\033[?2026hstuck'; sleep 3`], { cwd: "/", env });
-    await shows(t, "stuck");
-    expect(t.midFrame).toBe(true);
-    await Bun.sleep(1100);
-    expect(t.midFrame).toBe(false);
-    t.dispose();
+    let now = 5000; // the frames' clock, moved by hand
+    const t = new HeadlessTerminal({ cols: 40, rows: 4, clock: () => now });
+    try {
+      t.spawn(["sh", "-c", String.raw`printf '\033[?2026hstuck'; read a`], { cwd: "/", env });
+      await until(() => t.screen()[0] === "stuck", "the frame begun");
+      expect(t.midFrame).toBe(true);
+      now += 999;
+      expect(t.midFrame).toBe(true);
+      now += 1;
+      expect(t.midFrame).toBe(false);
+    } finally {
+      t.dispose();
+    }
   });
 
   test("a check's wait holds only between frames: what it waited for, with the rest of its frame", async () => {
-    const s = new Session();
+    const s = new Session({ frameMax: HELD });
     try {
-      s.term.spawn(["sh", "-c", String.raw`printf '\033[?2026hhalf'; sleep 0.4; printf ' whole\033[?2026l'; sleep 3`], {
-        cwd: "/",
-        env,
-      });
-      await s.until(() => s.text().includes("half"), undefined, "the frame's first half");
-      expect(s.screen()[0]).toBe("half whole");
+      s.term.spawn(["sh", "-c", halves], { cwd: "/", env });
+      await until(() => s.screen()[0] === ">", "the program to listen");
+      s.term.write("\n");
+      // Waiting for the first half: over only once its frame is whole, the screen read as it ends.
+      let seen: string | undefined;
+      const waited = s
+        .until(() => s.text().includes("half"), undefined, "the frame's first half")
+        .then(() => {
+          seen = s.screen()[0];
+        });
+      await until(() => s.screen()[0] === "half", "the frame's first half");
+      await Bun.sleep(200); // the wait looks every 20 ms: it has looked, mid-frame, many times
+      expect(seen).toBeUndefined();
+      s.term.write("\n");
+      await waited;
+      expect(seen).toBe("half whole");
     } finally {
       s.cleanup();
     }
   });
 
   test("the quiet after a key isn't a pause in the middle of a frame", async () => {
-    const s = new Session();
+    const s = new Session({ frameMax: HELD });
     try {
+      s.term.spawn(["sh", "-c", halves], { cwd: "/", env });
+      await until(() => s.screen()[0] === ">", "the program to listen");
       const sent = performance.now();
-      s.term.spawn(["sh", "-c", String.raw`printf '\033[?2026hhalf'; sleep 0.4; printf ' whole\033[?2026l'; sleep 3`], {
-        cwd: "/",
-        env,
+      s.term.write("\n"); // a key: its answer, a frame in two halves
+      await until(() => s.screen()[0] === "half", "the answer's first half");
+      // Settling (as long as it takes: its own limit isn't what's checked), the frame half drawn meanwhile.
+      let seen: string | undefined;
+      const settled = s.settle(sent, 60_000).then(() => {
+        seen = s.screen()[0];
       });
-      await s.settle(sent);
-      expect(s.screen()[0]).toBe("half whole");
+      await Bun.sleep(200); // quiet, mid-frame, five times as long as settle's 40 ms
+      expect(seen).toBeUndefined();
+      s.term.write("\n");
+      await settled;
+      expect(seen).toBe("half whole");
     } finally {
       s.cleanup();
     }
