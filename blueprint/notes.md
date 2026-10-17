@@ -456,3 +456,11 @@ dates. Each says what was asked, decided, built and found, and cites the decisio
   the formula asks for arm64 on macOS. The required check was already the aggregate `ci` on `main`'s and `test`'s
   rulesets, so no setting names the Intel runner. The lockfiles keep their `darwin-x64` entries: they are tools'
   optional packages, as are the language servers' lockfiles slipbox ships (`core/servers/locks.ts`).
+
+## Deferred maintenance and accessibility review (2026-10-16)
+
+- Verified six proposed gaps against the local checkout; evidence and qualifications are in
+  [research/maintenance-gaps.md](research/maintenance-gaps.md).
+- Recorded roadmap `27.1`–`27.6` for later evaluation outside ENG. Existing design remains current truth; these
+  proposals do not authorize implementation or repository-access changes.
+- Runtime performance/accessibility validation and a complete isolated recovery exercise remain outstanding.

@@ -17,3 +17,5 @@ obtained. Research informs the decisions but decides nothing; each file's summar
   feedback back: adjacent, with real overlap; their ideas for slipbox and its agent.
 - [search-improvements.md](search-improvements.md): where slipbox's search falls short, and what would improve it,
   cheapest first: partial matches, links, word forms, typos, sections, vectors; and how to know a change helped.
+
+- [maintenance-gaps.md](maintenance-gaps.md): verified local gaps and deferred maintenance/accessibility proposals.
