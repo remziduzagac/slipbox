@@ -326,6 +326,9 @@ heading later falls back to a current line, not a stale one.
   (the 30 left most recently). Started on a branch, slipbox opens its tabs; a switch to another branch while it runs
   brings that branch's back — unless a note is unsaved, which stays open (said so). A branch it has none for keeps
   what's open.
+- **Each folder of home's tabs** (VV-D2): home's session keeps the tabs of each folder of it opened by name
+  (`slipbox ~/notes`, a folder revealed; the 30 left most recently) beside its top's, so each brings back its own; one
+  it has none for opens its own note ([roots.md](roots.md) § Home).
 
 ## History (plan `3.6`)
 
@@ -699,7 +702,8 @@ keys.
   those, dimmed and ending a space short of git's column, what describes the row (`describe`): a vault's branch when
   it's a repository's top, a worktree's after `⎇`, a link's target and whether it's followed (`→ /mnt/disk/data`, then
   `not followed`, `just looking` or `not answering` while the walk doesn't go through it; `Marks.describe`, from
-  `Following.describe`), its place cut from the front to fit, the state kept (`RowMarks.fit`). Each glyph is one
+  `Following.describe`), its place cut from the front to fit, the state kept (`RowMarks.fit`); a folder of home where
+  another disk is mounted, `another disk` (VV-D2, [roots.md](roots.md) § Home). Each glyph is one
   column wide in every set (`core/glyphs.ts`, `mark…`); none is an emoji. A vault's other name stays after its
   folder's (`17.13`); a row with its menu's button shows no marks. The index's state: a folder of the vault's own tree
   is indexed, or indexing while home is unwalked, while the walk hasn't reached it (`unwalked`; past home's cap, not
@@ -713,10 +717,13 @@ keys.
   row carries one only when it isn't its folder's. What the disk says of a row (`Facts`: access, a broken link, the
   size, a vault's index and branch) is read once per row drawn, again when the tree is built again: never for the rows
   out of sight, so the pane's width for its sideways scroll keeps the index's column for every folder and vault, and a
-  file's mark only the disk gives may take a name's last columns. git is asked for its
-  marks in the background, a moment after anything changed (a save, the watcher, a file operation, a branch switch,
-  going into another vault — which drops the old vault's marks at once); asked while a question is still out, it's
-  asked again once that one's answered, so a stage or a commit is never answered by a question from before it.
+  file's mark only the disk gives may take a name's last columns. Never either for the row of a folder where another
+  disk is mounted (VV-D2), nor by `rowPath` or a left-out row's check for a marker: one that stops answering would hang
+  the tree. Unfolded, what's in it carries `another disk` down as any left-out folder's rows carry its reason, read as
+  you asked; only a mount point's row says `another disk`. git is asked for its marks in the background, a moment after
+  anything changed (a save, the watcher, a file operation, a branch switch, going into another vault — which drops the
+  old vault's marks at once); asked while a question is still out, it's asked again once that one's answered, so a
+  stage or a commit is never answered by a question from before it.
 - **History (left, `◷`, `space h h`):** the active window's timeline, newest first: each place's
   note name and line, the current one marked `here` and selected when the view opens. A click
   selects an entry; `enter` or a double-click jumps there, the places before it becoming back and

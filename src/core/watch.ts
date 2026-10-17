@@ -67,6 +67,9 @@ export interface WatcherOptions {
   /** A folder listed, not walked (`~` or `/`, 20.22): its subdirectories aren't the vault's, so a
    *  second look at it takes in none of them, nor any file but a note. */
   listed?: boolean;
+  /** Home's cap (VV-D2): how many folders it watches at most — a folder that comes past it isn't taken in, left to
+   *  home's walk, which holds the cap. */
+  maxDirs?: number;
 }
 
 /**
@@ -162,7 +165,10 @@ export class VaultWatcher {
    *  below it; return the files already inside — notes and attachments — which are new to us. */
   private adoptTree(dirRel: string): string[] {
     const files: string[] = [];
+    const max = this.opts.maxDirs ?? Number.POSITIVE_INFINITY;
     const visit = (d: string) => {
+      // Past home's cap (VV-D2): left to its walk, never listed here.
+      if (this.watchers.size + this.polled.size >= max) return;
       this.watchDir(d);
       let entries: Dirent[] = [];
       try {

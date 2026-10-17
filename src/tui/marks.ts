@@ -11,7 +11,7 @@ import type { Glyphs } from "../core/glyphs.ts";
 import { cacheDir, vaultKey } from "../core/paths.ts";
 import type { Role } from "../core/theme/theme.ts";
 import { isInside } from "../core/vault.ts";
-import { isBusyFolder, LINK_REASON } from "../core/walk.ts";
+import { ANOTHER_DISK, isBusyFolder, LINK_REASON } from "../core/walk.ts";
 import type { App } from "./app.ts";
 import type { TreeRow } from "./explorer.ts";
 
@@ -102,11 +102,23 @@ export class Marks {
   /**
    * What describes the row (VV-D9): a vault's branch when it's a repository's top — a worktree's after ⎇, since every
    * worktree has its repository's name and the branch is what tells them apart (17.19); a link's target, and whether
-   * it's followed (VV-D6: `→ /mnt/disk/data  not followed`).
+   * it's followed (VV-D6: `→ /mnt/disk/data  not followed`); a folder of home where another disk is mounted, why its
+   * walk leaves it out (VV-D2: `another disk`).
    */
   private describe(row: TreeRow, f: Facts): string | undefined {
     if (row.link) return this.app.following.describe(row) ?? undefined;
+    if (this.mountPoint(row)) return ANOTHER_DISK;
     return f.vault?.branch ?? undefined;
+  }
+
+  /**
+   * Whether the row is a folder of home where another disk is mounted (VV-D2) — the mount point itself, not a folder
+   * in it, which carries its reason down (`outsideRows`) once you unfold it.
+   */
+  private mountPoint(row: TreeRow): boolean {
+    if (row.leftOut !== ANOTHER_DISK) return false;
+    const rel = relative(this.app.loc.root, this.app.explorer.rowAbs(row)).split(sep).join("/");
+    return this.app.graph.filter.mountAt(rel);
   }
 
   /** The row's index's state, or none: a file's only when it isn't its folder's. */
@@ -165,8 +177,10 @@ export class Marks {
     if (f) return f;
     const abs = this.app.explorer.rowAbs(row);
     // A link the walk didn't go through (VV-D6): what it leads to is never gone near here — the walk said what it is.
-    if (row.link?.reason) {
-      f = { unreadable: false, broken: !row.link.target, big: false };
+    // Where another disk is mounted (VV-D2) neither: one that stops answering would hang the tree. What's in it, once
+    // you unfold it, is read as you asked.
+    if (row.link?.reason || this.mountPoint(row)) {
+      f = { unreadable: false, broken: !!row.link && !row.link.target, big: false };
       this.facts.set(row, f);
       return f;
     }

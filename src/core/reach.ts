@@ -55,7 +55,7 @@ export function openVault(root: string): Graph {
   recordLocation(loc); // seen, like every open (17.6)
   const config = loadConfig({ ...configFilesFor(loc) }).config;
   // Home never walked yet (VV-D2): walked now, as far as its cap — a plan across it needs every folder of it.
-  if (loc.mode === "home" && !homeWalkKept(loc)) walkHomeNow(loc, config);
+  if (loc.mode === "home" && !homeWalkKept(loc, config)) walkHomeNow(loc, config);
   const g = openGraph(loc, config, true, "lazy");
   g.thorough = true;
   g.reach = new Reach(loc);

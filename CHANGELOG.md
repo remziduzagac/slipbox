@@ -112,9 +112,12 @@ The format is [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.1.0/); wh
 - Your home folder is a vault, home: its notes outside every other vault have backlinks, are searched together, and
   have their own tabs. Starting slipbox in `~` starts in home, instead of a folder listed a level at a time. Home is
   indexed a little at a time while nobody is working, leaving out hidden folders, `Downloads`, the system's folders,
-  busy folders such as `node_modules`, and what isn't a note or a text file; it holds 10,000 notes at most, and says so
-  when it's full. A folder of home you open, such as `slipbox ~/notes`, or a note in one, has its notes at once, and
-  the folder's first note opens, as before. The background index indexes home's notes before the vaults in it.
+  busy folders such as `node_modules`, folders where another disk or a share is mounted (never looked into, so one that
+  stops answering can't hold slipbox up), and what isn't a note or a text file; it holds 10,000 notes at most, and
+  says so when it's full, `slipbox index --refresh ~` too. A folder of home you open, such as `slipbox ~/notes`, a note
+  in one, or one you go into from another vault, has its notes and the vaults in it at once, and its own note opens;
+  each folder you open by name keeps its own tabs, as before. Changing `walk.extensions`, `walk.exclude` or
+  `walk.root_markers` walks home again. The background index indexes home's notes before the vaults in it.
   `slipbox info` says `mode` `home` there ([Home](docs/manual/links-and-vaults.md#home)).
 - The explorer lists `node_modules`, the other folders tools fill (`build`, `dist`, `target`, `vendor`, `__pycache__`,
   caches…), what `.gitignore` and `walk.exclude` leave out, and home's `Downloads`, each marked `⊘`. You can unfold

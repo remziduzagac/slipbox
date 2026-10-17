@@ -5,6 +5,7 @@
 
 import { existsSync, readFileSync, realpathSync } from "node:fs";
 import { join } from "node:path";
+import { parseProcMounts } from "./mounts.ts";
 
 function read(file: string): string {
   try {
@@ -22,18 +23,13 @@ export function isWsl(
   return !!env.WSL_DISTRO_NAME || /microsoft/i.test(osrelease);
 }
 
-/** A mount point as /proc/mounts writes it: a space, a tab, a backslash as octal escapes. */
-const unescape = (s: string) =>
-  s.replace(/\\([0-7]{3})/g, (_, o: string) => String.fromCharCode(Number.parseInt(o, 8)));
-
 /** Windows' drives as WSL mounts them — `C:` at `/mnt/c` — from /proc/mounts: drvfs, or 9p naming it. */
 export function windowsDrives(mounts = read("/proc/mounts")): { drive: string; at: string }[] {
   const out: { drive: string; at: string }[] = [];
-  for (const line of mounts.split("\n")) {
-    const [device = "", at = "", type = "", options = ""] = line.split(" ");
+  for (const { device, at, type, options } of parseProcMounts(mounts)) {
     if (type !== "drvfs" && !(type === "9p" && /\baname=drvfs\b/.test(options))) continue;
-    const drive = /^([A-Za-z]):/.exec(unescape(device))?.[1];
-    if (drive) out.push({ drive: `${drive.toUpperCase()}:`, at: unescape(at) });
+    const drive = /^([A-Za-z]):/.exec(device)?.[1];
+    if (drive) out.push({ drive: `${drive.toUpperCase()}:`, at });
   }
   return out;
 }

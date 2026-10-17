@@ -238,8 +238,11 @@ export class Settings {
       this.app.relayoutAll();
     }
     if (changed.includes("walk")) {
-      this.app.graph = new Graph(this.app.loc, this.app.config).build(true, "lazy");
+      // The folders of home asked for by name keep their notes (VV-D2).
+      this.app.graph = new Graph(this.app.loc, this.app.config, this.app.graph.askedFolders).build(true, "lazy");
       this.app.graph.reach = this.app.reach;
+      // Home's walk kept under the settings before is none now (VV-D2): made again while nobody is working.
+      if (this.app.live && this.app.graph.home?.walked === null) this.app.watch.walkHomeAgain();
       this.app.watch.followGraph();
       this.app.watch.indexInBackground();
       this.app.explorer.invalidateTree();

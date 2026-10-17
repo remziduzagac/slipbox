@@ -541,7 +541,8 @@ slipbox index --refresh
   pass. `--rebuild` starts a new pass.
 
 With `--json`, the data is `{path, rebuilt, indexed, removed, files, ms}`. With `--refresh`, it's
-`{root, notes, changed, unchanged, gone, reached, indexed, ms}`. With `--home`, it's
+`{root, notes, changed, unchanged, gone, reached, indexed, capped, ms}`: `capped` is `notes` or `folders` when home's
+walk stopped at its cap, said in words too, else null. With `--home`, it's
 `{root, found, indexed, left, started, finished, home{indexed, notes, capped}}`: `home` says whether home's own index is
 built this pass, its notes, and `notes` or `folders` when its cap stopped it short.
 

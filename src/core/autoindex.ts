@@ -15,7 +15,7 @@ import { describeCap, homeFilter, keepHomeWalk } from "./home.ts";
 import { stateHome, vaultKey } from "./paths.ts";
 import { noteIndexed, readRoots, recordRoot } from "./registry.ts";
 import { configFilesFor, homeAt, isVaultRoot, knownWorktree, rootAt } from "./vault.ts";
-import { SlicedWalk, type WalkCap, type WalkFilter } from "./walk.ts";
+import { SlicedWalk, type WalkCap, type WalkFilter, type WalkLimits } from "./walk.ts";
 
 /** A pass finished: the next starts this long after. */
 export const REPASS_MS = 24 * 60 * 60 * 1000;
@@ -69,14 +69,18 @@ export interface AutoIndexOptions {
   /** Home's index built: its walk kept, its notes parsed and written. */
   onHome?: (capped: WalkCap | null) => void;
   /** Home's cap, `HOME_LIMITS` unless a test says otherwise. */
-  limits?: { notes: number; folders: number };
+  limits?: WalkLimits;
+  /** Home's settings — yours alone (VV-D2) — as the one who asks has them (the TUI's, `--config` and all); your config
+   *  file's by default. */
+  config?: () => Config;
 }
 
 export class AutoIndex {
   private progress: AutoIndexProgress;
   private graph: Graph | null = null;
-  /** Home's walk under way, and when it began; then home's graph, being parsed. */
+  /** Home's walk under way, its filter, and when it began; then home's graph, being parsed. */
   private walk: SlicedWalk | null = null;
+  private walkFilter: WalkFilter | null = null;
   private walkStarted = 0;
   private homeGraph: Graph | null = null;
   /** Home walked again within a pass (`homeAgain`): the vaults' place in it kept. */
@@ -173,14 +177,18 @@ export class AutoIndex {
     if (!this.homeGraph) {
       if (!this.walk) {
         this.walkStarted = this.now();
-        this.walk = new SlicedWalk(this.root, homeFilter(loc, loadConfig().config), this.opts.limits);
+        this.walkFilter = homeFilter(loc, this.config());
+        this.walk = new SlicedWalk(this.root, this.walkFilter, this.opts.limits);
       }
       if (this.walk.step(left())) return true;
       const walk = this.walk.result!;
       const capped = this.walk.capped;
       const rest = this.walk.rest().map((rel) => join(this.root, rel));
+      const filter = this.walkFilter!;
       this.walk = null;
-      keepHomeWalk(loc, walk, capped, this.walkStarted);
+      // [walk] changed while it was under way (VV-D2): made again, under what it says now — never kept under the old.
+      if (filter.signature() !== homeFilter(loc, this.config()).signature()) return true;
+      keepHomeWalk(loc, walk, capped, this.walkStarted, filter);
       // The vaults in home, each indexed in turn after it — the pass's own, not a walk made again within it; and,
       // past its cap, the folders it left, still looked in for vaults.
       if (!this.again) {
@@ -212,6 +220,11 @@ export class AutoIndex {
 
   private seekFilter: WalkFilter | null = null;
 
+  /** Home's settings: your config's alone (VV-D2). */
+  private config(): Config {
+    return this.opts.config?.() ?? loadConfig().config;
+  }
+
   /**
    * A folder home's cap left unlisted, looked in for vaults (20.9): a vault in it indexed next, its other folders looked
    * in later — home's skip list held, as its walk holds it.
@@ -224,7 +237,7 @@ export class AutoIndex {
     } catch {
       return;
     }
-    this.seekFilter ??= homeFilter(homeAt(this.root), loadConfig().config);
+    this.seekFilter ??= homeFilter(homeAt(this.root), this.config());
     for (const e of entries.sort((a, b) => (a.name < b.name ? -1 : a.name > b.name ? 1 : 0))) {
       if (!e.isDirectory()) continue;
       const abs = join(dir, e.name);
@@ -240,7 +253,7 @@ export class AutoIndex {
       const loc = homeAt(this.root);
       if (!readRoots().some((v) => v.key === loc.key && v.kind === "home"))
         recordRoot({ kind: "home", path: this.root, found: true });
-      return new Graph(loc, loadConfig({ ...configFilesFor(loc) }).config).build(true, "lazy", {
+      return new Graph(loc, this.config()).build(true, "lazy", {
         walk,
         walked: this.walkStarted,
         capped,

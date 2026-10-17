@@ -316,8 +316,10 @@ the vault you are in. The status line names it `~`. A link from another vault to
 as any other vault's does: `~ › todo.md`, and `o` goes into home.
 
 Home is a vault as the others are. Its notes have backlinks, `/` starts from your home folder, and a wikilink's name
-matches its notes. It has its own session, with its tabs. Its settings are your own config, since it has no
-`.slipbox/` to hold any. It has git only when your home folder is itself a repository.
+matches its notes. It has its own session, with its tabs, and each folder of it you open by name, such as
+`slipbox ~/notes`, keeps tabs of its own there: open `~/work` and `~/notes` in turn, and each brings back what you had
+open in it. `slipbox ~` brings back home's own. Its settings are your own config, since it has no `.slipbox/` to hold
+any. It has git only when your home folder is itself a repository.
 
 Home's index leaves out what isn't your notes:
 
@@ -327,20 +329,27 @@ Home's index leaves out what isn't your notes:
 - `Downloads`, where your desktop keeps it
 - the busy folders, wherever they are: `node_modules`, `.venv`, `venv`, `__pycache__`, `target`, `build`, `dist`,
   `.next`, `vendor`, `Pods`, `DerivedData`, `.gradle`, `.tox`, and caches
+- a folder where another disk is mounted, such as a network share, a USB disk or an `sshfs` mount. slipbox knows it
+  from the system's list of mounts and never looks into it, so a share that stops answering can't hold slipbox up
 - notes larger than `walk.max_file_size`, which are listed as skipped, not read
 
 A file there still opens, and is read again when it changes on disk, but it is never indexed. The explorer lists those
-folders, marked `⊘`, except the hidden ones.
+folders, marked `⊘`, except the hidden ones, and says `another disk` beside a mounted one. Unfolding it looks in.
+`slipbox ~/Downloads` says why its notes aren't indexed: `~/Downloads: left out of home's index (Downloads)`.
 
 Home is walked a little at a time while nobody is working, by the background index (see [Backlinks](#backlinks)), or
 by the TUI while home is open and the background index is off. Until then, home is its top folder alone, and the folder
-you opened: `slipbox ~/notes` walks `~/notes` at once, so its notes are there and its first note opens, and
-`slipbox ~/notes/inbox.md` walks the note's folder the same way. The walk is kept, so opening home never walks it
-again: the files it found are looked at, and a folder that changed is listed again. The command line walks home the
-first time it needs to, and `slipbox index --refresh ~` walks it again.
+you opened: `slipbox ~/notes` walks `~/notes` at once, so its notes, and the vaults in it, are there, and its own note
+opens, one directly in it before one in a folder of it. `slipbox ~/notes/inbox.md` walks the note's folder the same
+way, and so does going into a folder of home from another vault, by opening a note of it or following a link to it.
+The walk is kept, so opening home never walks it again: the files it found are looked at, and a folder that changed is
+listed again. A folder whose time was set back after its notes changed, as unpacking an archive with its times does,
+isn't, and its notes wait for the next walk. The command line walks home the first time it needs to, and
+`slipbox index --refresh ~` walks it again. Changing `walk.extensions`, `walk.exclude` or `walk.root_markers` walks
+home again too.
 
 Home's index holds 10,000 notes at most, and its walk lists 5,000 folders at most, those nearest the top first.
-slipbox says so when it stops there, in a message and in `slipbox info`.
+slipbox says so when it stops there, in a message, in `slipbox info` and in `slipbox index --refresh ~`.
 
 ### Elsewhere
 

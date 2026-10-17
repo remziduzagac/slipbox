@@ -13790,10 +13790,11 @@ describe("the background auto-index in the TUI (20.9)", () => {
     }
   });
 
-  test("home's Downloads opened (VV-D2): left out of home's index, listed in the explorer a level at a time", async () => {
+  test("home's Downloads opened (VV-D2): left out of home's index, and said so; listed in the explorer a level at a time", async () => {
     const { homeAt } = await import("../src/core/vault.ts");
     const home = realpathSync(mkdtempSync(join(sandbox, "home-")));
     mkdirSync(join(home, "Downloads", "sub"), { recursive: true });
+    mkdirSync(join(home, "empty"));
     writeFileSync(join(home, "a.md"), "# A\n");
     writeFileSync(join(home, "Downloads", "d.md"), "# D\n");
     const before = process.env.HOME;
@@ -13801,15 +13802,22 @@ describe("the background auto-index in the TUI (20.9)", () => {
     try {
       const h = await harness({ loc: homeAt(home), open: null, folder: join(home, "Downloads") });
       expect(h.app.graph.notes.has("Downloads/d.md")).toBe(false);
+      // Not "no notes": they're there, and home's index leaves them out.
+      expect(h.app.messages.map((m) => m.text)).toContain(
+        "~/Downloads: left out of home's index (Downloads) — its files are listed in the explorer, not indexed",
+      );
       const names = h.app.explorer.treeRows().map((r) => r.name);
       expect(names).toContain("d.md");
       expect(names).toContain("sub");
+      // A folder of home with no notes says so, by its path from home.
+      const empty = await harness({ loc: homeAt(home), open: null, folder: join(home, "empty") });
+      expect(empty.app.messages.at(-1)?.text).toBe("no notes in ~/empty");
     } finally {
       process.env.HOME = before;
     }
   });
 
-  test("a folder of home opened by name (VV-D2): its notes there at once, home never walked — its first note open, the switcher listing them; a file's folder too", async () => {
+  test("a folder of home opened by name (VV-D2): its notes there at once, home never walked — its own note open, before one of a folder in it, the switcher listing them; a file's folder too", async () => {
     const { homeAt } = await import("../src/core/vault.ts");
     const { homeWalkKept } = await import("../src/core/home.ts");
     const home = realpathSync(mkdtempSync(join(sandbox, "home-")));
@@ -13828,7 +13836,7 @@ describe("the background auto-index in the TUI (20.9)", () => {
       const h = await harness({ loc, open: null, folder: join(home, "notes") });
       expect(h.app.graph.home?.walked).toBeNull();
       expect(homeWalkKept(loc)).toBe(false);
-      expect(h.app.view?.buf.rel).toBe("notes/ideas/coffee.md");
+      expect(h.app.view?.buf.rel).toBe("notes/inbox.md"); // its own, before a note of a folder in it;
       expect(h.app.explorer.top).toBe(join(home, "notes"));
       await h.keys("ctrl+p");
       const o = h.app.overlay as ListOverlay;
@@ -13861,9 +13869,140 @@ describe("the background auto-index in the TUI (20.9)", () => {
       expect(again.app.graph.home?.walked).not.toBeNull();
       expect(again.app.graph.notes.has("notes/inbox.md")).toBe(true);
       expect(again.app.graph.notes.has("notes/late.md")).toBe(false);
-      expect(again.app.view?.buf.rel).toBe("notes/ideas/coffee.md");
+      expect(again.app.view?.buf.rel).toBe("notes/inbox.md");
       await again.app.run("vault.reindex");
       expect(again.app.graph.notes.has("notes/late.md")).toBe(false);
+    } finally {
+      process.env.HOME = before;
+    }
+  });
+
+  /** A home of its own: a note at its top, `notes` (a note in it, one in a folder of it), `other` (two notes). */
+  const homeWithFolders = () => {
+    const home = realpathSync(mkdtempSync(join(sandbox, "home-")));
+    mkdirSync(join(home, "notes", "ideas"), { recursive: true });
+    mkdirSync(join(home, "other"));
+    writeFileSync(join(home, "README.md"), "# Home\n");
+    writeFileSync(join(home, "notes", "inbox.md"), "# Inbox\n\nIdeas so far: [coffee](ideas/coffee.md).\n");
+    writeFileSync(join(home, "notes", "ideas", "coffee.md"), "# Coffee\n");
+    writeFileSync(join(home, "other", "o.md"), "# O\n");
+    writeFileSync(join(home, "other", "p.md"), "# P\n");
+    return home;
+  };
+
+  test("a folder of home gone into from a vault — a note of it opened, the folder revealed — has its notes at once, home never walked (VV-D2)", async () => {
+    const { homeAt } = await import("../src/core/vault.ts");
+    const { homeWalkKept } = await import("../src/core/home.ts");
+    const home = homeWithFolders();
+    const vault = makeVault();
+    const before = process.env.HOME;
+    process.env.HOME = home;
+    try {
+      const h = await harness({ root: vault, open: "index.md" });
+      // A note of it opened by choice (`:e`, the explorer, a peek's `o`): into home, its folder's notes known.
+      expect(h.app.vaults.intoOther(join(home, "notes", "inbox.md"))).toBe(true);
+      expect(h.app.loc).toMatchObject({ mode: "home", root: home });
+      expect(homeWalkKept(homeAt(home))).toBe(false);
+      expect(h.app.view?.buf.rel).toBe("notes/inbox.md");
+      expect(h.app.graph.linksOf("notes/inbox.md").map((l) => [l.resolvedKind, l.path])).toEqual([
+        ["note", "notes/ideas/coffee.md"],
+      ]);
+      // Back in the vault, the folder revealed (a link to it): its notes there, its own note open.
+      h.app.vaults.back();
+      expect(h.app.loc.root).toBe(vault);
+      h.app.explorer.revealFolder(join(home, "notes"));
+      expect(h.app.loc.mode).toBe("home");
+      expect(h.app.homeFolder).toBe("notes");
+      expect(h.app.graph.notes.has("notes/ideas/coffee.md")).toBe(true);
+      expect(h.app.view?.buf.rel).toBe("notes/inbox.md");
+    } finally {
+      process.env.HOME = before;
+    }
+  });
+
+  test("a [walk] setting changed in a folder of home opened by name: its notes stay (VV-D2)", async () => {
+    const { homeAt } = await import("../src/core/vault.ts");
+    const home = homeWithFolders();
+    const cfg = join(mkdtempSync(join(sandbox, "cfg-")), "config.toml");
+    writeFileSync(cfg, "");
+    const before = process.env.HOME;
+    process.env.HOME = home;
+    try {
+      const h = await harness({ loc: homeAt(home), open: null, folder: join(home, "notes"), configFile: cfg });
+      writeFileSync(cfg, '[walk]\nexclude = ["scratch/"]\n');
+      h.app.settings.reload("file changed");
+      expect(h.app.messages.at(-1)?.text).toMatch(/changed: .*\bwalk\b/);
+      expect(h.app.graph.notes.has("notes/inbox.md")).toBe(true);
+      expect(h.app.graph.notes.has("notes/ideas/coffee.md")).toBe(true);
+    } finally {
+      process.env.HOME = before;
+    }
+  });
+
+  test("each folder of home opened by name has its own tabs, as before home was a vault; home's top keeps its own (VV-D2)", async () => {
+    const { homeAt } = await import("../src/core/vault.ts");
+    const { sessionFile } = await import("../src/core/position.ts");
+    const home = homeWithFolders();
+    const loc = homeAt(home);
+    const on = (c: Config) => (c.ui.restore_session = true);
+    // Each tab's note by its path in home: one of a folder home's walk hasn't reached is no note of its graph yet.
+    const open = (h: Harness) => h.app.tabs.map((t) => relative(home, t.views[t.active]!.buf.abs));
+    const before = process.env.HOME;
+    process.env.HOME = home;
+    try {
+      const top = await harness({ loc, open: null, config: on });
+      expect(open(top)).toEqual(["README.md"]);
+      top.app.openInNewTab("notes/ideas/coffee.md");
+      top.app.session.save();
+      // Kept before folders kept their own tabs: home's top's, as they were.
+      const file = sessionFile(loc);
+      const kept = JSON.parse(readFileSync(file, "utf8"));
+      delete kept.folders;
+      writeFileSync(file, JSON.stringify(kept));
+      const other = await harness({ loc, open: null, folder: join(home, "other"), config: on });
+      expect(open(other)).toEqual(["other/o.md"]);
+      other.app.openInNewTab("other/p.md");
+      other.app.session.save();
+      // Another folder: its own note, not the tabs left in the one before.
+      const notes = await harness({ loc, open: null, folder: join(home, "notes"), config: on });
+      expect(open(notes)).toEqual(["notes/inbox.md"]);
+      notes.app.session.save();
+      // Each brought back as it was left.
+      expect(open(await harness({ loc, open: null, folder: join(home, "other"), config: on }))).toEqual([
+        "other/o.md",
+        "other/p.md",
+      ]);
+      expect(open(await harness({ loc, open: null, config: on }))).toEqual(["README.md", "notes/ideas/coffee.md"]);
+    } finally {
+      process.env.HOME = before;
+    }
+  });
+
+  test("a folder of home opened by name lists the vaults in it at once, home never walked: a repository's row, one deeper's (VV-D2)", async () => {
+    const { homeAt } = await import("../src/core/vault.ts");
+    const home = realpathSync(mkdtempSync(join(sandbox, "home-")));
+    mkdirSync(join(home, "work", "kestrel", ".git"), { recursive: true });
+    mkdirSync(join(home, "work", "clients", "heron", ".slipbox"), { recursive: true });
+    writeFileSync(join(home, "work", "plan.md"), "# Plan\n");
+    const vault = makeVault();
+    const before = process.env.HOME;
+    process.env.HOME = home;
+    try {
+      const roots = (h: Harness) =>
+        h.app.explorer
+          .rows()
+          .filter((r) => r.kind === "root")
+          .map((r) => r.name);
+      const h = await harness({ loc: homeAt(home), open: null, folder: join(home, "work") });
+      expect(h.app.graph.home?.walked).toBeNull();
+      expect(roots(h)).toEqual(["kestrel"]);
+      h.app.explorer.expanded.add("work/clients");
+      h.app.explorer.invalidateTree();
+      expect(roots(h)).toEqual(["heron", "kestrel"]);
+      // Gone into from a vault, revealed: the same.
+      const v = await harness({ root: vault, open: "index.md" });
+      v.app.explorer.revealFolder(join(home, "work"));
+      expect(v.app.graph.nestedRoots().sort()).toEqual(["work/clients/heron", "work/kestrel"]);
     } finally {
       process.env.HOME = before;
     }

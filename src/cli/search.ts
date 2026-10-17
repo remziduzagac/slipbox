@@ -77,6 +77,8 @@ export const SEARCH_COMMANDS: Record<string, Handler> = {
       noteIndexed(loc.key);
       const ms = Math.round(performance.now() - t);
       const st = g.stats;
+      // Home's walk stopped at its cap (VV-D2): said, as the TUI and `info` say it.
+      const capped = g.home?.capped ?? null;
       return {
         data: {
           root,
@@ -86,9 +88,10 @@ export const SEARCH_COMMANDS: Record<string, Handler> = {
           gone: st.gone,
           reached: g.reached.size,
           indexed: g.indexedAt()?.toISOString() ?? null,
+          capped,
           ms,
         },
-        human: `refreshed ${root}: ${st.notes} note${st.notes === 1 ? "" : "s"} — ${st.parsed} read again, ${st.gone} gone (${ms} ms)\n`,
+        human: `refreshed ${root}: ${st.notes} note${st.notes === 1 ? "" : "s"} — ${st.parsed} read again, ${st.gone} gone (${ms} ms)\n${capped ? `${describeCap(capped)}\n` : ""}`,
       };
     }
     // A path names what --refresh brings up to date; otherwise it would be dropped, the root indexed.

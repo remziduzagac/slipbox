@@ -122,11 +122,14 @@ export class Graph {
    */
   thorough = false;
 
+  /** `asked`: the folders of home asked for by name in the graph this one replaces (`askedFolders`), carried over. */
   constructor(
     readonly loc: VaultLocation,
     readonly config: Config,
+    asked: readonly string[] = [],
   ) {
     this.filter = new WalkFilter(loc.root, config.walk, { home: loc.mode === "home" });
+    this.asked = [...asked];
   }
 
   /** Home's walk (VV-D2): when it was made (null: not yet, its top alone looked at), what its cap left out. Null in a
@@ -135,7 +138,13 @@ export class Graph {
 
   /** The folders of home asked for by name (VV-D2), home's paths for them: walked at each build its walk doesn't
    *  cover them. */
-  private readonly asked: string[] = [];
+  private readonly asked: string[];
+
+  /** The folders of home asked for by name (VV-D2): a graph built anew for home (a `[walk]` setting changed) carries
+   *  them over, so what was asked for keeps its notes. */
+  get askedFolders(): readonly string[] {
+    return this.asked;
+  }
 
   /**
    * A folder of home asked for by name (VV-D2: `slipbox ~/notes`, or a file in it), by its whole path: its notes known
@@ -149,7 +158,8 @@ export class Graph {
     if (!rel || climbsOut(rel) || isAbsolute(rel)) return null;
     if (this.asked.includes(rel)) return rel;
     this.asked.push(rel);
-    const covered = this.home?.walked != null && this.dirs.includes(rel);
+    // A walk that stopped at its cap covers no folder whole: one it listed may hold folders it didn't.
+    const covered = this.home?.walked != null && !this.home.capped && this.dirs.includes(rel);
     if (!covered && walksInto(this.root, this.filter, rel)) this.build(this.useCache, "lazy");
     return rel;
   }

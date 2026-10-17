@@ -4,11 +4,13 @@
 import { writeDirty } from "../core/stale.ts";
 import {
   SESSION_BRANCHES,
+  SESSION_FOLDERS,
   type SessionTab,
   loadSession,
   SESSION_HISTORY,
   saveSession,
   type SessionState,
+  type TabSet,
 } from "../core/position.ts";
 import { listThemes } from "../core/theme/index.ts";
 import type { App, View, UiState } from "./app.ts";
@@ -94,9 +96,9 @@ export class Session {
   restore(): boolean {
     const s = loadSession(this.app.loc);
     if (!s) return false;
-    // This branch's tabs, when it has kept some (5.9); else the last ones.
-    const mine = this.app.git.head?.branch ? s.branches?.[this.app.git.head.branch] : undefined;
-    this.openTabs(mine?.tabs.length ? mine.tabs : s.tabs, mine?.tabs.length ? mine.activeTab : s.activeTab);
+    const set = this.tabsOf(s);
+    if (!set) return false;
+    this.openTabs(set.tabs, set.activeTab);
     if (!this.app.tabs.length) return false;
     this.app.sidebar.visible = s.sidebar;
     if (s.outline !== undefined) this.app.outline.visible = s.outline;
@@ -105,6 +107,19 @@ export class Session {
     if (s.outline_width) this.app.panels.outW = s.outline_width;
     this.app.explorer.reveal();
     return true;
+  }
+
+  /**
+   * The tabs `s` brings back: this branch's, when it has kept some (5.9), else the last ones. In home (VV-D2), a folder
+   * opened by name has its own — none yet, none: its own note opens — and home's top its own, once folders keep theirs.
+   */
+  private tabsOf(s: SessionState): Pick<TabSet, "tabs" | "activeTab"> | undefined {
+    const home = this.app.loc.mode === "home";
+    if (home && this.app.homeFolder !== null) return s.folders?.[this.app.homeFolder];
+    const b = this.app.git.head?.branch;
+    const mine = b ? s.branches?.[b] : undefined;
+    if (mine?.tabs.length) return mine;
+    return (home ? s.folders?.[""] : undefined) ?? s;
   }
 
   /** Tabs from the session opened, after any there are; the active one as it was. */
@@ -163,14 +178,31 @@ export class Session {
       recent_notes: this.app.history.recentNotes,
       ...(this.app.handoff.remoteServer ? { remote_server: this.app.handoff.remoteServer } : {}),
     };
+    const before = loadSession(this.app.loc);
+    const at = new Date(this.app.now()).toISOString();
+    const set = { tabs: s.tabs, activeTab: s.activeTab, at };
+    // A folder of home opened by name keeps its own tabs (VV-D2); home's top keeps its own beside them — what it had
+    // before folders kept theirs, the first time one does. A branch's are its top's.
+    const folder = this.app.loc.mode === "home" ? this.app.homeFolder : null;
+    if (this.app.loc.mode === "home") {
+      const folders = { ...(before?.folders ?? {}) };
+      if (folder !== null && !folders[""])
+        folders[""] = { tabs: before?.tabs ?? [], activeTab: before?.activeTab ?? 0, at: "" };
+      folders[folder ?? ""] = set;
+      s.folders = recent(folders, SESSION_FOLDERS, "");
+    }
     // Each branch's tabs, as it was left (5.9): the most recent few kept.
-    const branches = { ...(loadSession(this.app.loc)?.branches ?? {}) };
-    if (branch) branches[branch] = { tabs: s.tabs, activeTab: s.activeTab, at: new Date(this.app.now()).toISOString() };
-    s.branches = Object.fromEntries(
-      Object.entries(branches)
-        .sort((a, b) => (a[1].at < b[1].at ? 1 : -1))
-        .slice(0, SESSION_BRANCHES),
-    );
+    const branches = { ...(before?.branches ?? {}) };
+    if (branch && folder === null) branches[branch] = set;
+    s.branches = recent(branches, SESSION_BRANCHES);
     saveSession(this.app.loc, s);
   }
+}
+
+/** The `n` sets of tabs left most recently, `keep`'s always among them. */
+function recent(sets: Record<string, TabSet>, n: number, keep?: string): Record<string, TabSet> {
+  const sorted = Object.entries(sets).sort((a, b) =>
+    a[0] === keep ? -1 : b[0] === keep ? 1 : a[1].at < b[1].at ? 1 : -1,
+  );
+  return Object.fromEntries(sorted.slice(0, n));
 }

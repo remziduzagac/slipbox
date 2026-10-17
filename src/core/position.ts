@@ -303,13 +303,23 @@ export interface SessionTab {
   pinned?: boolean;
 }
 
+/** A set of tabs kept apart, and when it was left: a branch's (5.9), a folder of home's (VV-D2). */
+export interface TabSet {
+  tabs: SessionTab[];
+  activeTab: number;
+  at: string;
+}
+
 export interface SessionState {
   version: 1;
-  /** The tabs as they were last — whatever the branch. */
+  /** The tabs as they were last — whatever the branch, or the folder of home. */
   tabs: SessionTab[];
   activeTab: number;
   /** The tabs each branch had when it was left (5.9): a switch back brings them back. */
-  branches?: Record<string, { tabs: SessionTab[]; activeTab: number; at: string }>;
+  branches?: Record<string, TabSet>;
+  /** Home's (VV-D2): the tabs of each folder of it opened by name (`slipbox ~/notes`), by home's path for it, and of
+   *  its top (`""`) — each brought back when it's opened again. */
+  folders?: Record<string, TabSet>;
   sidebar: boolean;
   outline?: boolean;
   sidebar_width?: number;
@@ -348,22 +358,13 @@ export function loadSession(place: StatePlace): SessionState | null {
   const s = readJson<SessionState | null>(sessionFile(place), null);
   if (!s || typeof s !== "object" || s.version !== 1 || !Array.isArray(s.tabs)) return null;
   const tabs = sessionTabs(s.tabs);
-  const branches: NonNullable<SessionState["branches"]> = {};
-  if (s.branches && typeof s.branches === "object" && !Array.isArray(s.branches)) {
-    for (const [b, v] of Object.entries(s.branches)) {
-      if (!v || typeof v !== "object" || !Array.isArray(v.tabs)) continue;
-      branches[b] = {
-        tabs: sessionTabs(v.tabs),
-        activeTab: Number.isInteger(v.activeTab) ? v.activeTab : 0,
-        at: typeof v.at === "string" ? v.at : "",
-      };
-    }
-  }
+  const folders = tabSets(s.folders);
   return {
     version: 1,
     tabs,
     activeTab: Number.isInteger(s.activeTab) ? s.activeTab : 0,
-    branches,
+    branches: tabSets(s.branches) ?? {},
+    ...(folders ? { folders } : {}),
     sidebar: typeof s.sidebar === "boolean" ? s.sidebar : true,
     outline: typeof s.outline === "boolean" ? s.outline : undefined,
     sidebar_width: validWidth(s.sidebar_width),
@@ -381,6 +382,21 @@ export function loadSession(place: StatePlace): SessionState | null {
     recent_notes: Array.isArray(s.recent_notes) ? s.recent_notes.filter((x) => typeof x === "string") : [],
     remote_server: typeof s.remote_server === "string" ? s.remote_server : undefined,
   };
+}
+
+/** Sets of tabs by name as the session holds them (a branch's, a folder's), anything malformed dropped; none, null. */
+function tabSets(v: unknown): Record<string, TabSet> | null {
+  if (!v || typeof v !== "object" || Array.isArray(v)) return null;
+  const out: Record<string, TabSet> = {};
+  for (const [k, x] of Object.entries(v as Record<string, TabSet>)) {
+    if (!x || typeof x !== "object" || !Array.isArray(x.tabs)) continue;
+    out[k] = {
+      tabs: sessionTabs(x.tabs),
+      activeTab: Number.isInteger(x.activeTab) ? x.activeTab : 0,
+      at: typeof x.at === "string" ? x.at : "",
+    };
+  }
+  return out;
 }
 
 /** Tabs as the session holds them, anything malformed dropped. */
@@ -408,6 +424,9 @@ function sessionTabs(list: unknown[]): SessionTab[] {
 
 /** How many branches' tabs a session keeps: the ones left most recently. */
 export const SESSION_BRANCHES = 30;
+
+/** How many folders of home a session keeps the tabs of (VV-D2): its top's, and those left most recently. */
+export const SESSION_FOLDERS = 30;
 
 function validWidth(v: unknown): number | undefined {
   return typeof v === "number" && Number.isInteger(v) && v >= 12 && v <= 200 ? v : undefined;

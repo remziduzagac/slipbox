@@ -93,9 +93,9 @@ export class Session {
 
   get graph(): Graph {
     if (!this._graph) {
-      // Home never walked yet (VV-D2): walked now, as far as its cap — an agent's answer is now, not after the
-      // background index; kept for the next command and the TUI.
-      if (this.loc.mode === "home" && !homeWalkKept(this.loc)) walkHomeNow(this.loc, this.config);
+      // Home never walked yet, or under other [walk] settings (VV-D2): walked now, as far as its cap — an agent's
+      // answer is now, not after the background index; kept for the next command and the TUI.
+      if (this.loc.mode === "home" && !homeWalkKept(this.loc, this.config)) walkHomeNow(this.loc, this.config);
       this._graph = openGraph(this.loc, this.config, true, "lazy");
       // One process, one answer: an alias in a note not parsed yet still counts (17.7), and other
       // vaults are reached through the machine's list (17.8).
