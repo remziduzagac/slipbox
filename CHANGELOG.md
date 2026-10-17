@@ -12,10 +12,12 @@ The format is [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.1.0/); wh
   such a link with where it leads, and `not followed`. Opening it asks: follow it (read and indexed as part of the
   vault, and in home written through), just look (read-only, this once, nothing indexed), or no. The answer is kept for
   that link and where it leads, in slipbox's state, never in the vault, and asked again when the link leads elsewhere.
-  In a vault, nothing is ever written through a link to outside it. When the link leads to a hidden folder or outside
-  your home folder, the question says that agents will see what's followed. A followed link on a disk that doesn't
-  answer within three seconds is given up on for now. On the command line, a path through a link not followed is
-  refused (exit 5). A link within its vault or home, like the ones `stow` makes, is never asked about.
+  In a vault, nothing is ever written through a link to outside it: a rename, a replace across files and
+  `convert-links` leave a note out there as it is and say so, a note or folder there isn't moved out of it, and an
+  export of one goes only where `-o` says. When the link leads to a hidden folder or outside your home folder, the
+  question says that agents will see what's followed. A followed link on a disk that doesn't answer within three
+  seconds is given up on for now. On the command line, a path through a link not followed is refused (exit 5). A link
+  within its vault or home, like the ones `stow` makes, is never asked about.
 
 - Keys you already know, a page for those who don't use vim: the arrows and the shortcuts of other editors that slipbox
   has, the four keys that are new, and where slipbox's keys differ. The README, the quick start and getting started
@@ -151,6 +153,9 @@ The format is [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.1.0/); wh
 - Amending a commit whose message has a line starting with `#` keeps that line. The commit editor's own lines start
   with `;` then, as git's do. The git panel's message box commits what you typed, a line starting with `#` too.
 - Staging or discarding a section of the git panel at once runs git once, not once a file.
+- An undo puts what a rename moved back only inside the vault: where a link out of the vault stands now, it's refused
+  and nothing moves. `slipbox apply` takes a plan by the id `--plan` printed, never a file's path, and shows each file
+  by where it is.
 - Following a link to a picture in another vault copied a wrong path, the current vault's folder before the picture's
   own. It copies the picture's path.
 - A file created, renamed or moved while slipbox started watching its folder could stay missing until a reindex: on

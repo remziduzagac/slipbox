@@ -313,9 +313,14 @@ of every read through a link out of the root; D220's writes stay for vaults.
   target that answered is walked as the vault is.
 - **What a yes allows** (`writesThrough`, `writeNote`'s `through`): in home, reading, the index and writing through it;
   in a vault, reading and the index, never a write that lands outside the vault, followed or not (D220); in Elsewhere,
-  what the file system allows. Where links are looked at on a path's way (`blockingLink`): from the vault's or home's
-  folder; in Elsewhere, from the folder opened, or — a path named outright outside it — its own folder, the file itself
-  asking.
+  what the file system allows. Plans keep to it (`mayRewrite` in `core/rename-plan.ts`): a rename's relinking, a
+  replace across files, the converter and a heading's rename leave a file whose write would land out of its vault as
+  it is, a `skipped` row saying so, and `applyPlan` refuses a plan holding one, or moving anything from or to outside
+  the vault (`outside`), before it writes: an undo and a saved plan are checked as they're carried out. A move's
+  source is checked as its destination is, in home too: a move, copy or delete across a link is refused. An export's
+  default place, beside a note reached through a link out of the vault, is refused; `--out` names one. Where links are
+  looked at on a path's way (`blockingLink`): from the vault's or home's folder; in Elsewhere, from the folder opened,
+  or — a path named outright outside it — its own folder, the file itself asking.
 - **The CLI** refuses a read through a link not followed (`refuseUnfollowed`, exit 5: `… is reached through a link
   that isn't followed (~/notes/data → /mnt/disk/data): open it in slipbox to choose`), a write through one
   (`checkWritable`, exit 5: `…: reached through a link that isn't followed (…); not writing it`), and a vault's write

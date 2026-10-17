@@ -12,6 +12,7 @@ import {
   applyPlan,
   loggedRenames,
   moveTarget,
+  outside,
   planFolderMove,
   planHeadingRename,
   planNoteRename,
@@ -188,6 +189,8 @@ export const FILE_COMMANDS: Record<string, Handler> = {
     const saved = loadPlan(rest[0]);
     if (!saved) throw new CliError(`no plan ${rest[0]} (slipbox apply lists those waiting)`, EXIT.notFound);
     const g = openVault(saved.root);
+    // Each file shown by where it is, never by what the plan says of it.
+    for (const f of saved.plan.files) f.shown = g.shownPath(f.abs);
     const stale = saved.plan.files.filter((f) => {
       try {
         return readText(f.abs).text !== f.text;
@@ -200,6 +203,8 @@ export const FILE_COMMANDS: Record<string, Handler> = {
         s.warnings.push(
           `stale: ${stale.map((f) => f.shown).join(", ")} changed since it was planned — applying it would be refused`,
         );
+      const out = outside(g, saved.plan);
+      if (out) s.warnings.push(`${out} — applying it would be refused`);
       return renameResult(s, () => saved.plan, g);
     }
     // A saved `name` applied: the machine's list learns the new name, as `name` itself teaches it.

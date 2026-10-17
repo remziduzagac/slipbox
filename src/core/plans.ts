@@ -5,7 +5,7 @@
 
 import { randomBytes } from "node:crypto";
 import { readdirSync, rmSync } from "node:fs";
-import { isAbsolute, join } from "node:path";
+import { join } from "node:path";
 import { ensureDir, readJson, writeJson } from "./fsutil.ts";
 import { stateHome } from "./paths.ts";
 import type { RenamePlan } from "./rename.ts";
@@ -45,17 +45,18 @@ function planFile(id: string): string {
   return join(plansDir(), `${id}.json`);
 }
 
-/** A saved plan by its id (or its file's path); null when there's none. */
-export function loadPlan(idOrPath: string): SavedPlan | null {
-  const file =
-    isAbsolute(idOrPath) || idOrPath.endsWith(".json")
-      ? idOrPath
-      : /^[0-9a-f]{8}$/.test(idOrPath)
-        ? planFile(idOrPath)
-        : null;
-  if (!file) return null;
-  const p = readJson<SavedPlan | null>(file, null);
-  return p?.version === 1 && typeof p.root === "string" && p.plan && Array.isArray(p.plan.files) ? p : null;
+const PLAN_ID = /^[0-9a-f]{8}$/;
+
+/**
+ * A saved plan by its id, from slipbox's own plans folder — never a file named by its path: a plan says what to
+ * write, so only one slipbox saved is applied. Null when there's none, or it isn't one.
+ */
+export function loadPlan(id: string): SavedPlan | null {
+  if (!PLAN_ID.test(id)) return null;
+  const p = readJson<SavedPlan | null>(planFile(id), null);
+  return p?.version === 1 && p.id === id && typeof p.root === "string" && p.plan && Array.isArray(p.plan.files)
+    ? p
+    : null;
 }
 
 /** A plan applied (or given up): gone. */
@@ -70,7 +71,7 @@ export function listPlans(): SavedPlan[] {
     names = readdirSync(plansDir()).filter((n) => /^[0-9a-f]{8}\.json$/.test(n));
   } catch {}
   return names
-    .map((n) => loadPlan(join(plansDir(), n)))
+    .map((n) => loadPlan(n.slice(0, -".json".length)))
     .filter((p): p is SavedPlan => !!p)
     .sort((a, b) => (a.made < b.made ? 1 : -1));
 }

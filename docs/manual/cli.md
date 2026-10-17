@@ -1163,9 +1163,9 @@ slipbox apply <id> --dry-run
 slipbox apply <id>
 ```
 
-`<id>` is the id `--plan` printed. If any file in the plan changed since the plan was made, `apply` is refused (exit 5),
-and nothing is written. A stale plan is never applied. `--dry-run` shows the plan again, and warns when it's stale. A
-plan that isn't there is exit 3.
+`<id>` is the id `--plan` printed: `apply` takes only a plan slipbox saved, never a file's path. If any file in the plan
+changed since the plan was made, `apply` is refused (exit 5), and nothing is written. A stale plan is never applied.
+`--dry-run` shows the plan again, and warns when it's stale. A plan that isn't there is exit 3.
 
 With `--json`, the data is the plan's [change](#moving-copying-and-deleting). A listing gives
 `[{id, made, root, command, kind, from, to, files}]`, where `files` is a count.

@@ -37,7 +37,8 @@ it, and fetches nothing. Every writer is loaded when it's first used, not at sta
 - The file goes to `--out` (or `-o`), from the working folder; a folder, one there or a path ending in `/` (made when
   the export is written), gets the first note's name in it, and its own name says no format (DF-D5). Without `-o`, it
   goes beside the first note, under its name (D185): `notes/report.md` gives `notes/report.docx`. Markdown's is
-  `notes/report.export.md`, apart from the note it's of.
+  `notes/report.export.md`, apart from the note it's of. In a vault, beside a note reached through a link out of it
+  is outside the vault, a place nobody named: refused (exit 5), saying to name one with `--out` (VV-D6).
 - Several notes make one document, a chapter each, in the order given.
 - A file already there is replaced, as `-o` does in any tool. A note never is (exit 5), of this vault or any other
   (DF-D3): this vault's as its index has them; another's, a file of a note's name in a folder that is a vault, where it

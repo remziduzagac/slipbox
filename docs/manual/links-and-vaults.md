@@ -399,7 +399,9 @@ What following allows depends on where the link is:
 
 - **In home,** slipbox reads, indexes and writes through it.
 - **In a vault,** it reads and indexes through it, but never writes to a file it leads to outside the vault. A link
-  that a pull can change could otherwise lead a save to `~/.bashrc`.
+  that a pull can change could otherwise lead a save to `~/.bashrc`. So a rename, a replace across files and
+  `convert-links` leave a note out there as it is, and their preview says so. A note or folder out there isn't moved
+  out of it, and an export of one goes only where `-o` says.
 - **In Elsewhere,** it reads and writes as the file system allows.
 
 The answer is kept for that link and the place it leads, in `links.json` in slipbox's own state folder, never in the

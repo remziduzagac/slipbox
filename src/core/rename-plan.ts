@@ -8,10 +8,30 @@ import { classify } from "./filetypes.ts";
 import { readText } from "./fsutil.ts";
 import type { Graph } from "./graph.ts";
 import { gitArgs } from "./gitops.ts";
-import { findVaultRoot } from "./vault.ts";
+import { writesThrough } from "./symlinks.ts";
+import { findVaultRoot, homeOf, isInside } from "./vault.ts";
 import { type Site, replaceAt } from "./rename-links.ts";
 
 export class RenameError extends Error {}
+
+/** Why a plan leaves a file as it is when a link leads it out of its vault (VV-D6). */
+export const LEADS_OUT = "a link leads it out of the vault: not rewritten";
+
+/**
+ * Whether a plan may write the file at `abs` (VV-D6): it lands where each place holding it allows — this vault, when
+ * it's under it, and the nearest vault holding it, else home: a vault's never out of it by its real path, followed or
+ * not; home's through the links home follows. A note reached through a link out of its vault is read, never written.
+ * Elsewhere's only while it's the place open: it has no index for another's plan to find it by.
+ */
+export function mayRewrite(g: Graph, abs: string): boolean {
+  const here = isInside(g.root, abs);
+  if (here && !writesThrough(g.loc, abs)) return false;
+  const own = findVaultRoot(abs);
+  if (own) return own === g.root || writesThrough({ mode: "vault", root: own }, abs);
+  const home = homeOf(abs);
+  if (home) return home === g.root || writesThrough({ mode: "home", root: home }, abs);
+  return here && g.loc.mode === "folder";
+}
 
 export interface Edit {
   line: number;
@@ -94,6 +114,12 @@ export class Collector {
   file(abs: string, vault: string | null): FileChange | null {
     let f = this.files.get(abs);
     if (!f) {
+      if (this.why.has(abs)) return null;
+      // Read through a link out of its vault, never written there: left as it is, and said (VV-D6).
+      if (!mayRewrite(this.g, abs)) {
+        this.why.set(abs, LEADS_OUT);
+        return null;
+      }
       let text: string;
       try {
         const d = readText(abs);

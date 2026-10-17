@@ -7026,6 +7026,233 @@ describe("generated edits as plans, in two steps (20.18)", () => {
   });
 });
 
+describe("plans write only inside the vault (VV-D6)", () => {
+  const out: string[] = [];
+  const cli = async (args: string[], cwd: string) => {
+    out.length = 0;
+    const code = await runCli([...args, "--json"], {
+      out: (x: string) => out.push(x),
+      err: () => {},
+      stdin: async () => "",
+      isTTY: false,
+      columns: 80,
+      cwd,
+      env: process.env,
+    });
+    return { code, json: JSON.parse(out.join("")) };
+  };
+  /** A test run with a home of its own: nothing it does is near the real one. */
+  const homed = (fn: (home: string) => Promise<void>) => async () => {
+    const before = process.env.HOME;
+    const home = realpathSync(mkdtempSync(join(tmpdir(), "slipbox-home-")));
+    process.env.HOME = home;
+    try {
+      await fn(home);
+    } finally {
+      process.env.HOME = before;
+    }
+  };
+  /** A vault, a folder outside it with notes, and a link to it from the vault that you follow. */
+  const linked = async () => {
+    const top = realpathSync(mkdtempSync(join(tmpdir(), "slipbox-inside-")));
+    const vault = join(top, "vault");
+    const outer = join(top, "out");
+    mkdirSync(join(vault, ".slipbox"), { recursive: true });
+    mkdirSync(join(outer, "sub"), { recursive: true });
+    writeFileSync(join(vault, "a.md"), "# A\n\n## H\n");
+    writeFileSync(join(outer, "x.md"), "# X\n\nsee [[a]] and [h](../a.md#h) TOKEN\n");
+    writeFileSync(join(outer, "s.md"), "# S\n");
+    writeFileSync(join(outer, "sub", "t.md"), "# T\n");
+    const link = join(vault, "outdir");
+    symlinkSync(outer, link);
+    setLinkAnswer(link, "follow");
+    await probe(outer);
+    return { top, vault, outer, link };
+  };
+
+  test(
+    "a rename's relinking, a replace across files, the converter and a heading's rename leave a note through a followed link out of the vault as it is, and say so",
+    homed(async () => {
+      const { vault, outer } = await linked();
+      const x = readFileSync(join(outer, "x.md"), "utf8");
+      const skipped = "outdir/x.md:3: a link leads it out of the vault: not rewritten";
+      expect(JSON.stringify((await cli(["backlinks", "a.md"], vault)).json.data.backlinks)).toContain("outdir/x.md");
+      for (const argv of [
+        ["replace", "--all", "TOKEN", "CHANGED"],
+        ["convert-links"],
+        ["rename-heading", "a.md", "H", "Renamed"],
+        ["mv", "a.md", "b.md"],
+      ]) {
+        const r = await cli(argv, vault);
+        expect(r.code).toBe(0);
+        expect(r.json.warnings).toContain(skipped);
+        expect(readFileSync(join(outer, "x.md"), "utf8")).toBe(x);
+      }
+      // The rename itself went ahead in the vault.
+      expect(existsSync(join(vault, "b.md"))).toBe(true);
+    }),
+  );
+
+  test(
+    "applying a plan writes nothing when any file of it, or what it moves, lands out of the vault",
+    homed(async () => {
+      const { vault, outer, link } = await linked();
+      const g = openGraph(locateVault({ root: vault }), DEFAULT_CONFIG, false);
+      type Plan = Parameters<typeof applyPlan>[1];
+      const change = (abs: string, from: string, to: string) => {
+        const text = readFileSync(abs, "utf8");
+        return { abs, shown: "a.md", vault: null, edits: [], text, next: text.replace(from, to) };
+      };
+      const a = readFileSync(join(vault, "a.md"), "utf8");
+      const x = readFileSync(join(outer, "x.md"), "utf8");
+      const plan: Plan = {
+        kind: "replace",
+        from: "TOKEN",
+        to: "CHANGED",
+        move: null,
+        files: [change(join(vault, "a.md"), "# A", "# CHANGED"), change(join(link, "x.md"), "TOKEN", "CHANGED")],
+        warnings: [],
+        skipped: [],
+      };
+      expect(() => applyPlan(g, plan)).toThrow(
+        "outdir/x.md: a link leads it out of the vault, where nothing is written; nothing changed",
+      );
+      expect(readFileSync(join(vault, "a.md"), "utf8")).toBe(a);
+      expect(readFileSync(join(outer, "x.md"), "utf8")).toBe(x);
+      // A move out of the link's target, or into it.
+      const moving = (from: string, to: string): Plan => ({
+        kind: "note",
+        from,
+        to,
+        move: { from: join(vault, from), to: join(vault, to), dir: false },
+        files: [],
+        warnings: [],
+        skipped: [],
+      });
+      expect(() => applyPlan(g, moving("outdir/s.md", "s.md"))).toThrow("outdir/s.md resolves outside the vault");
+      expect(() => applyPlan(g, moving("a.md", "outdir/a.md"))).toThrow("outdir/a.md resolves outside the vault");
+      expect(existsSync(join(outer, "s.md"))).toBe(true);
+      expect(existsSync(join(vault, "s.md"))).toBe(false);
+      expect(existsSync(join(vault, "a.md"))).toBe(true);
+    }),
+  );
+
+  test(
+    "a note or folder reached through a followed link out of the vault isn't moved out of it, in a vault or in home",
+    homed(async (home) => {
+      const { vault, outer } = await linked();
+      const { planFolderMove, planNoteRename } = await import("../src/core/rename.ts");
+      const g = openGraph(locateVault({ root: vault }), DEFAULT_CONFIG, false);
+      expect(() => planNoteRename(g, "outdir/s.md", "moved.md")).toThrow("outdir/s.md resolves outside the vault");
+      expect(() => planFolderMove(g, "outdir/sub", "insub")).toThrow("outdir/sub resolves outside the vault");
+      const note = await cli(["mv", "outdir/s.md", "moved.md"], vault);
+      expect(note.code).toBe(5);
+      expect(note.json.error.message).toBe("outdir/s.md resolves outside the vault");
+      expect((await cli(["mv", "outdir/sub", "insub"], vault)).code).toBe(5);
+      expect(existsSync(join(outer, "s.md"))).toBe(true);
+      expect(existsSync(join(outer, "sub", "t.md"))).toBe(true);
+      expect(existsSync(join(vault, "moved.md"))).toBe(false);
+      expect(existsSync(join(vault, "insub"))).toBe(false);
+      // Home writes a note's text through a link it follows; a move across the link, never.
+      writeFileSync(join(home, "n.md"), "# N\n");
+      symlinkSync(outer, join(home, "data"));
+      setLinkAnswer(join(home, "data"), "follow");
+      const homeMove = await cli(["mv", "data/s.md", "s.md"], home);
+      expect(homeMove.code).toBe(5);
+      expect(homeMove.json.error.message).toBe("data/s.md resolves outside the vault");
+      expect(existsSync(join(outer, "s.md"))).toBe(true);
+      expect(existsSync(join(home, "s.md"))).toBe(false);
+    }),
+  );
+
+  test(
+    "undo moves a note back only inside the vault: where a link out of it stands now, nothing is moved",
+    homed(async () => {
+      const top = realpathSync(mkdtempSync(join(tmpdir(), "slipbox-inside-")));
+      const vault = join(top, "vault");
+      const ext = join(top, "ext");
+      mkdirSync(join(vault, ".slipbox"), { recursive: true });
+      mkdirSync(join(vault, "notes"));
+      mkdirSync(ext);
+      writeFileSync(join(vault, "notes", "a.md"), "# A\n");
+      expect((await cli(["mv", "notes/a.md", "b.md"], vault)).code).toBe(0);
+      // The folder it came from is a link out of the vault now (a pull made it one).
+      rmSync(join(vault, "notes"), { recursive: true });
+      symlinkSync(ext, join(vault, "notes"));
+      const r = await cli(["undo"], vault);
+      expect(r.code).toBe(5);
+      expect(r.json.error.message).toBe(
+        "notes/a.md resolves outside the vault: the rename of notes/a.md can't be undone",
+      );
+      expect(existsSync(join(vault, "b.md"))).toBe(true);
+      expect(readdirSync(ext)).toEqual([]);
+      const g = openGraph(locateVault({ root: vault }), DEFAULT_CONFIG, false);
+      expect(() => planUndo(g)).toThrow("resolves outside the vault");
+    }),
+  );
+
+  test(
+    "apply takes a plan by its id, from slipbox's plans only: each file shown where it is, and one out of the vault refused",
+    homed(async () => {
+      const { plansDir } = await import("../src/core/plans.ts");
+      const { top, vault } = await linked();
+      const loose = join(top, "loose.txt");
+      writeFileSync(loose, "before\n");
+      const saved = {
+        version: 1,
+        id: "0123abcd",
+        made: new Date().toISOString(),
+        root: vault,
+        command: "mv",
+        plan: {
+          kind: "replace",
+          from: "before",
+          to: "after",
+          move: null,
+          files: [
+            {
+              abs: loose,
+              shown: "a.md",
+              vault: null,
+              edits: [{ line: 1, before: "before", after: "after" }],
+              text: "before\n",
+              next: "after\n",
+            },
+          ],
+          warnings: [],
+          skipped: [],
+        },
+      };
+      // A plan file named by its path isn't one.
+      writeFileSync(join(vault, "plan.json"), JSON.stringify(saved));
+      expect((await cli(["apply", join(vault, "plan.json")], vault)).code).toBe(3);
+      expect((await cli(["apply", "plan.json"], vault)).code).toBe(3);
+      // Among slipbox's plans: shown by where it is, and refused, nothing written.
+      mkdirSync(plansDir(), { recursive: true });
+      writeFileSync(join(plansDir(), "0123abcd.json"), JSON.stringify(saved));
+      const dry = await cli(["apply", "0123abcd", "--dry-run"], vault);
+      expect(dry.json.data.files[0].path).toBe(loose);
+      expect(dry.json.warnings.join()).toContain(`${loose}: a link leads it out of the vault`);
+      const r = await cli(["apply", "0123abcd"], vault);
+      expect(r.code).toBe(5);
+      expect(readFileSync(loose, "utf8")).toBe("before\n");
+    }),
+  );
+
+  test(
+    "an export of a note through a followed link out of the vault isn't written beside it unless --out names a place",
+    homed(async () => {
+      const { vault, outer } = await linked();
+      const r = await cli(["export", "outdir/s.md", "--to", "md"], vault);
+      expect(r.code).toBe(5);
+      expect(r.json.error.message).toContain("name a place with --out");
+      expect(readdirSync(outer).sort()).toEqual(["s.md", "sub", "x.md"]);
+      expect((await cli(["export", "outdir/s.md", "--to", "md", "--out", "s.md"], vault)).code).toBe(0);
+      expect(readFileSync(join(vault, "s.md"), "utf8")).toContain("# S");
+    }),
+  );
+});
+
 describe("renames and moves on paths (20.19)", () => {
   test("a note moved: every file linking in — a note, a reached one, a data file's value, a code comment — and its own links out", async () => {
     const dir = mkdtempSync(join(tmpdir(), "slipbox-mv19-"));

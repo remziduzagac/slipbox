@@ -365,13 +365,15 @@ once indexed, and the repair applies (§ Repairs). Keys and the preview: [tui.md
 - **Every generated edit is a plan:** a preview tied to each file's content hash, refused when any of them has
   changed since; in the TUI, an undo step per file, files no window shows saved; in the CLI, planned and applied as
   two explicit steps (`--plan`, `slipbox apply`), so an agent reviews before it writes (D63; `core/plans.ts`). A plan
-  warns when a git tree it writes to already has changes; a file that isn't valid UTF-8 is never rewritten, and a link
-  no longer where the index had it is skipped and reported. Plans are saved in the state folder until applied
-  ([how-it-works.md](how-it-works.md) § Storage). A code action (the fragile link's, the old form's) edits the open
+  warns when a git tree it writes to already has changes; a file that isn't valid UTF-8 is never rewritten, a file
+  reached through a link out of its vault isn't either ([roots.md](roots.md) § Links followed only when you say so),
+  and a link no longer where the index had it is skipped and reported. Plans are saved in the state folder until
+  applied ([how-it-works.md](how-it-works.md) § Storage); `slipbox apply` takes one by its id from there, never a file
+  by its path, and shows each file by where it is. A code action (the fragile link's, the old form's) edits the open
   note, as typing does.
 - **Undo:** each rename, move, naming, heading rename, relink, conversion or replace applied is logged with what each
-  file held before, and `slipbox undo` (`space v shift+u`) gives that back, refused when a file has changed since
-  (D152; [tui.md](tui.md) § Renames).
+  file held before, and `slipbox undo` (`space v shift+u`) gives that back, refused when a file has changed since, or
+  when what moved would go back through a link out of the vault (D152; [tui.md](tui.md) § Renames).
 
 ## The merge review
 
