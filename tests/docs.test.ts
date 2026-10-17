@@ -3,7 +3,7 @@
 import { describe, expect, test } from "bun:test";
 import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import { dirname, join, relative, resolve } from "node:path";
-import { parseAnsi, toSvg } from "../scripts/screenshot.ts";
+import { fromCells, parseAnsi, toSvg } from "../scripts/screenshot.ts";
 import { CLI_COMMANDS, FLAGS } from "../src/cli/cli.ts";
 import { canonSeq } from "../src/core/commands.ts";
 import { extractText } from "../src/core/graph.ts";
@@ -26,6 +26,7 @@ import {
 } from "../src/tui/keys.ts";
 import { MOUSE_HELP } from "../src/tui/mouse-help.ts";
 import { placeholderRow } from "../src/tui/placeholders.ts";
+import { allShots } from "./terminal/shot.ts";
 
 const TOP = join(import.meta.dir, "..");
 const DOCS = join(TOP, "docs");
@@ -451,6 +452,41 @@ describe("the docs' screenshots (scripts/screenshot.ts)", () => {
     // 120×90 drawn 30 columns wide: 30 × 6.02 × 0.75 / 11.64, so 12 rows; 2 of them shown.
     const svg = toSvg(parseAnsi(cells([0, 1], 30)), { cols: 40, rows: 3, fontSize: 10, pictures: [PICTURE] });
     expect(svg).toContain(`<image x="${at(2 * W)}" y="${at(H)}" width="${at(30 * W)}" height="${at(12 * H)}"`);
+  });
+  test("the headless terminal's cells are drawn as the same screen read as text with its escapes", () => {
+    const plain = { bold: false, dim: false, italic: false, underline: false, strike: false, inverse: false };
+    const picture = [...new Intl.Segmenter().segment(placeholderRow(0, 2))].map(({ segment }) => segment);
+    const row = [
+      { text: "a", width: 1, fg: 4, bg: null, ...plain, bold: true },
+      { text: "字", width: 2, fg: "#010203", bg: 208, ...plain, italic: true, underline: true },
+      { text: "b", width: 1, fg: null, bg: null, ...plain, dim: true, strike: true, inverse: true },
+      ...picture.map((text) => ({ text, width: 1, fg: "#00002a", bg: null, ...plain })),
+      { text: "─", width: 1, fg: null, bg: null, ...plain },
+    ];
+    const ansi = `\x1b[1;34ma\x1b[0;3;4;38;2;1;2;3;48;5;208m字\x1b[0;2;9;7mb\x1b[0;38;2;0;0;42m${picture.join("")}\x1b[0m─`;
+    const o = { cols: 10, rows: 1, fontSize: 10, pictures: [PICTURE] };
+    expect(toSvg(fromCells([row]), o)).toBe(toSvg(parseAnsi(ansi), o));
+    expect(toSvg(fromCells([row]), o)).toContain("<image");
+  });
+  test("⧉ and ⚿, which neither DejaVu face has, are drawn as shapes, never as the font's empty box", () => {
+    const svg = toSvg(parseAnsi("⧉ ⚿"), { cols: 4, rows: 1, fontSize: 10 });
+    expect(svg).not.toMatch(/>[⧉⚿]</);
+    expect(svg.match(/<rect [^>]*fill="none"/g)).toHaveLength(3);
+    expect(svg).toContain("<circle");
+  });
+  test("every screenshot in the docs is a shot's, which `bun run shots` takes, and every shot's picture is shown", async () => {
+    const shots = (await allShots()).map((s) => s.name).sort();
+    const images = readdirSync(join(DOCS, "images"))
+      .filter((f) => f.endsWith(".png"))
+      .map((f) => f.slice(0, -".png".length))
+      .sort();
+    expect(images).toEqual(shots);
+    const shown = new Set(
+      [...userDocs(), join(TOP, "README.md")].flatMap((f) =>
+        [...read(f).matchAll(/images\/([\w-]+)\.png/g)].map((m) => m[1]!),
+      ),
+    );
+    expect(shots.filter((n) => !shown.has(n))).toEqual([]);
   });
   test("placeholder cells with no picture named are left blank, never drawn as boxes", () => {
     const svg = toSvg(parseAnsi(cells([0, 1], 4)), { cols: 20, rows: 3, fontSize: 10 });

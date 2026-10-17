@@ -133,3 +133,19 @@ the maintainer has no email address for it.
 **Not chosen:** a code of conduct of the project's own, shorter: the Covenant is the one people know, and GitHub's
 profile recognises it. Waiting until pull requests open, as GR-D5 had it.
 
+## D236: The docs' screenshots taken in the headless terminal (2026-10-17)
+
+**Decision:** The docs' screenshots are taken in the headless terminal the terminal tests use (TT-D2), not in a herdr
+pane: `bun run shots [name…]` drives slipbox at 120×34 and draws each screen, read cell by cell with its colours, into
+`docs/images/<name>.png`. The shots are a file per doc, `tests/terminal/shots/<doc>.ts`, so docs written side by side
+add theirs apart, and a test holds the pictures and the shots to each other. For them the headless terminal answers
+Kitty's graphics query, so a note's pictures are placeholder cells the shot draws its pictures over. Amends DF-D19
+(made in a herdr pane) and TT-D2 (herdr kept for the screenshots).
+
+**Why:** The maintainer's choice, for the docs of VV and GIT (VV-T9, GIT-T8), over retaking them in herdr: anyone can
+retake them with one command, with no multiplexer and no real terminal, from the screen the terminal tests already
+read. Drawn from it, a screen comes out as herdr's did, cell for cell.
+
+**Cost:** A picture shows the headless terminal's screen, not a real one's: its widths and its answers are the ones the
+terminal tests trust (TT-D2), which the real-terminal set checks in herdr.
+

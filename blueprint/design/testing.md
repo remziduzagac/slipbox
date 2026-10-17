@@ -226,20 +226,26 @@ bun run e2e find replace     # only the scenarios whose names contain these
 | `tests/e2e/world-links.ts` | links as `21.x` reads them: `/` from a vault's top, no extension, folders, wikilinks |
 | `tests/e2e/world-export.ts` | the export window: formats, the window's keys, replacing, notes in order, `:export` |
 | `tests/e2e/world-fixes.ts` | what writing the docs found, fixed (below) |
-| `tests/e2e/shots.ts` | the docs' screenshots (DF-D19): slipbox in a 120×34 pane, each screen brought about and read |
+| `tests/terminal/shots.ts` | the docs' screenshots (DF-D19, D236): slipbox headless at 120×34, its screens drawn |
 | `scripts/screenshot.ts` | a screen read with its colours, drawn as a PNG into `docs/images/` |
 
 `world-fixes.ts` covers what writing the docs found, fixed: typing without vim, reload, the trash, moves, clones, the
 code view's links and errors, Obsidian's highlights and comments, a folder's network settings, the Save As window's
 folders.
 
-**The docs' screenshots** (DF-D19): `tests/e2e/shots.ts` drives slipbox in a herdr pane sized 120×34, as the terminal
-tests do, on the reference set or the getting-started guide's own folder, and `scripts/screenshot.ts` draws each
-screen, read with its colours, into `docs/images/<name>.png` (DejaVu Sans Mono, DejaVu Sans for the symbols it lacks;
-the Unicode glyph set). A picture is in the pane's text only as Kitty's placeholder cells: a shot names the pictures on
-its screen, and each is drawn over its cells as the terminal draws it, fitted to its box and clipped to the rows shown;
-placeholders with no picture named are left blank. Retaken in one run when the UI changes: `bun tests/e2e/shots.ts
---pane <id>`, the pane at a shell prompt; a name filter after it retakes only those.
+**The docs' screenshots** (DF-D19, D236): `bun run shots` (`tests/terminal/shots.ts`) drives slipbox in the
+headless terminal (`tests/terminal/terminal.ts`) sized 120×34, as the terminal tests do, on the reference set or the
+getting-started guide's own folder (`examples/guide/`), and `scripts/screenshot.ts` draws each screen, read cell by cell
+with its colours, into `docs/images/<name>.png`: DejaVu Sans Mono, DejaVu Sans for the symbols it lacks, the two
+neither has (`⧉`, `⚿`) drawn as shapes, as box-drawing and block characters are; the Unicode glyph set; the default
+theme. No multiplexer and no real terminal: anyone retakes them in one run when the UI changes, a name filter retaking
+only those, `--out <dir>` writing them elsewhere to compare. A run says a character no font draws. The shots are a
+file per doc, `tests/terminal/shots/<doc>.ts`, each exporting its `SHOTS` (`tests/terminal/shot.ts` says what a shot
+is, and gathers them), so two docs' shots are added apart; `tests/docs.test.ts` holds the pictures in `docs/images/`
+and the shots to each other, each shown in a doc. The terminal answers Kitty's graphics query as kitty does
+(`graphics`), so a picture is on the screen only as Kitty's placeholder cells: a shot names the pictures on its screen,
+and each is drawn over its cells as the terminal draws it, fitted to its box and clipped to the rows shown;
+placeholders with no picture named are left blank.
 
 ## Timings (`bun scripts/bench.ts`)
 

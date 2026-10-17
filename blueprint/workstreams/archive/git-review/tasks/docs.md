@@ -13,7 +13,8 @@ What users see, in the docs; the workstream folded into the root (GIT-D1).
 
 - The manual's git chapter, keys, configuration; a guide's section on reviewing an agent's change; the README's features
   if they change; the CHANGELOG.
-- Screenshots of the git panel, the review, the before-and-after diff and the merge screen, retaken in herdr.
+- Screenshots of the git panel, the review, the before-and-after diff and the merge screen, rendered from the headless
+  terminal (`bun run shots`, D236).
 - The design and requirements changes moved into the root; the workstream archived.
 
 ## Acceptance criteria

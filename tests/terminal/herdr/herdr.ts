@@ -1,5 +1,5 @@
 // A herdr pane, driven: keys and text in, the screen out. Only what needs a real terminal uses it (tests/terminal/herdr:
-// the docs' screenshots, the real-terminal checks); slipbox itself never needs herdr.
+// the real-terminal checks); slipbox itself never needs herdr.
 
 import { spawnSync } from "node:child_process";
 
@@ -128,11 +128,6 @@ export class Pane {
   /** The visible screen, one string per row. */
   screen(): string[] {
     return herdr("pane", "read", this.id, "--source", "visible").replace(/\n$/, "").split("\n");
-  }
-
-  /** The visible screen with its colours (SGR sequences kept). */
-  ansi(): string[] {
-    return herdr("pane", "read", this.id, "--source", "visible", "--format", "ansi").replace(/\n$/, "").split("\n");
   }
 
   /** Recent output, soft wraps joined: for the shell around the app. */

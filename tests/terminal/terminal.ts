@@ -19,6 +19,23 @@ export interface StyledRun {
   bold: boolean;
 }
 
+/** One cell of the screen with its whole style: what a picture of the screen needs (the docs' screenshots). */
+export interface ScreenCell {
+  /** Its characters (a placeholder's with its marks), or a space. */
+  text: string;
+  /** 1, or 2 for a wide character: the cell after it isn't listed. */
+  width: number;
+  /** `#rrggbb`, a palette index, or null for the terminal's default. */
+  fg: string | number | null;
+  bg: string | number | null;
+  bold: boolean;
+  dim: boolean;
+  italic: boolean;
+  underline: boolean;
+  strike: boolean;
+  inverse: boolean;
+}
+
 export interface TerminalOptions {
   cols: number;
   rows: number;
@@ -26,6 +43,11 @@ export interface TerminalOptions {
   keyboard?: Keyboard;
   /** The colours it answers OSC 10 and 11 with: a dark scheme unless said. */
   colors?: { fg: string; bg: string };
+  /**
+   * Kitty's graphics, as kitty answers a query of them: slipbox then draws its pictures as Unicode placeholders, text
+   * on the screen. The pictures themselves aren't kept (the docs' screenshots draw them over their cells).
+   */
+  graphics?: boolean;
 }
 
 /** The longest a frame is waited for (ms): one begun and not ended this long is read as it is. */
@@ -139,6 +161,23 @@ export class HeadlessTerminal {
     this.pty?.write(s);
   }
 
+  /** How far the output has been read for Kitty's graphics commands. */
+  private graphicsRead = 0;
+
+  /**
+   * Kitty's graphics queries in what the program wrote (`ESC _ G …a=q… ESC \`), each answered OK as kitty answers.
+   * xterm reads the commands as strings it ignores, so the placeholders slipbox then draws are all the screen has.
+   */
+  private answerGraphics(): void {
+    const command = /\x1b_G([^;\x1b]*)[^\x1b]*\x1b\\/g;
+    command.lastIndex = this.graphicsRead;
+    for (let m = command.exec(this.output); m; m = command.exec(this.output)) {
+      this.graphicsRead = command.lastIndex;
+      const keys = new Map(m[1]!.split(",").map((kv) => kv.split("=") as [string, string]));
+      if (keys.get("a") === "q") this.reply(`\x1b_Gi=${keys.get("i") ?? 0};OK\x1b\\`);
+    }
+  }
+
   /** Start a program in it (one at a time). */
   spawn(argv: string[], opts: { cwd: string; env: Record<string, string> }): Bun.Subprocess {
     this.kitty = [];
@@ -149,6 +188,7 @@ export class HeadlessTerminal {
       rows: this.opts.rows,
       data: (_t, data) => {
         this.output += decoder.decode(data, { stream: true });
+        if (this.opts.graphics) this.answerGraphics();
         this.lastOutput = performance.now();
         this.pending++;
         // A copy: xterm parses later, and the pseudo-terminal's buffer is read into again before then.
@@ -250,6 +290,35 @@ export class HeadlessTerminal {
         const last = out.at(-1);
         if (last && last.fg === fg && last.bg === bg && last.bold === bold) last.text += text;
         else out.push({ text, fg, bg, bold });
+      }
+      return out;
+    });
+  }
+
+  /** The visible screen cell by cell, each with its whole style (wide characters once, as they show). */
+  cells(): ScreenCell[][] {
+    const b = this.xterm.buffer.active;
+    const cell = b.getNullCell();
+    const rgb = (n: number) => `#${n.toString(16).padStart(6, "0")}`;
+    return Array.from({ length: this.opts.rows }, (_, i) => {
+      const line = b.getLine(b.viewportY + i);
+      const out: ScreenCell[] = [];
+      if (!line) return out;
+      for (let x = 0; x < this.opts.cols; x++) {
+        const c = line.getCell(x, cell);
+        if (!c || c.getWidth() === 0) continue; // the second half of a wide character
+        out.push({
+          text: c.getChars() || " ",
+          width: c.getWidth(),
+          fg: c.isFgRGB() ? rgb(c.getFgColor()) : c.isFgPalette() ? c.getFgColor() : null,
+          bg: c.isBgRGB() ? rgb(c.getBgColor()) : c.isBgPalette() ? c.getBgColor() : null,
+          bold: c.isBold() !== 0,
+          dim: c.isDim() !== 0,
+          italic: c.isItalic() !== 0,
+          underline: c.isUnderline() !== 0,
+          strike: c.isStrikethrough() !== 0,
+          inverse: c.isInverse() !== 0,
+        });
       }
       return out;
     });

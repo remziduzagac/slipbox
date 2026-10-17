@@ -70,6 +70,8 @@ export interface SessionOptions {
   size?: { cols: number; rows: number };
   /** Keys as Kitty's protocol has them (the default), or as a terminal without it. */
   keyboard?: Keyboard;
+  /** A terminal that draws Kitty's graphics: slipbox's pictures as placeholder cells (the docs' screenshots). */
+  graphics?: boolean;
 }
 
 export class CheckFailed extends Error {}
@@ -105,7 +107,12 @@ export class Session {
     this.trace = join(this.dir, "trace");
     writeFileSync(this.trace, "");
     const size = opts.size ?? SIZE;
-    this.term = new HeadlessTerminal({ cols: size.cols, rows: size.rows, keyboard: opts.keyboard });
+    this.term = new HeadlessTerminal({
+      cols: size.cols,
+      rows: size.rows,
+      keyboard: opts.keyboard,
+      graphics: opts.graphics,
+    });
   }
 
   get cols(): number {

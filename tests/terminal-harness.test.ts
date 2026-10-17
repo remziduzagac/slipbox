@@ -71,6 +71,40 @@ describe("the headless terminal", () => {
     expect(row.find((r) => r.text === "o")?.fg).toBe("5;208");
     t.dispose();
   });
+  test("each cell with its whole style, for the docs' screenshots: dim, italic, underline, struck, inverse; the palette by index", async () => {
+    const t = await run("printf '\\033[2;3;4ma\\033[0;9;7;31mb\\033[0;48;5;208mc\\033[0;1;38;2;1;2;3m字\\033[0m'");
+    const [a, b, c, wide, after] = t.cells()[0]!;
+    const plain = { bold: false, dim: false, italic: false, underline: false, strike: false, inverse: false };
+    expect(a).toEqual({ text: "a", width: 1, fg: null, bg: null, ...plain, dim: true, italic: true, underline: true });
+    expect(b).toEqual({ text: "b", width: 1, fg: 1, bg: null, ...plain, strike: true, inverse: true });
+    expect(c).toEqual({ text: "c", width: 1, fg: null, bg: 208, ...plain });
+    // A wide character once, two cells wide; the empty cells after it, spaces.
+    expect(wide).toEqual({ text: "字", width: 2, fg: "#010203", bg: null, ...plain, bold: true });
+    expect(after).toEqual({ text: " ", width: 1, fg: null, bg: null, ...plain });
+    expect(t.cells()[0]!.length).toBe(40 - 1);
+    t.dispose();
+  });
+  test("Kitty's graphics, when it draws them: a query answered OK, as kitty answers it; otherwise left unanswered", async () => {
+    // The query OpenTUI sends, then the cursor's place asked: what came back before that answer, printed.
+    const asker = String.raw`
+      stty raw -echo
+      printf '\033_Gi=31337,s=1,v=1,a=q,t=d,f=24;AAAA\033\\\033[6n'
+      a=""; c=""
+      while [ "$c" != "R" ]; do a="$a$c"; c=$(dd bs=1 count=1 2>/dev/null); done
+      printf '%s' "$a" | od -An -c | tr -d ' \n'`;
+    const said = async (graphics: boolean) => {
+      const t = new HeadlessTerminal({ cols: 80, rows: 4, graphics });
+      const p = t.spawn(["sh", "-c", asker], { cwd: "/", env: { PATH: process.env.PATH ?? "/usr/bin:/bin" } });
+      await p.exited;
+      for (let i = 0; i < 100 && (!t.drawn || performance.now() - t.lastOutput < 30); i++) await Bun.sleep(10);
+      const text = t.screen().join("");
+      t.dispose();
+      return text;
+    };
+    // od's way: the escape as 033.
+    expect(await said(true)).toMatch(/^033_Gi=31337;OK033\\+033\[1;1$/);
+    expect(await said(false)).toBe("033[1;1");
+  });
   test("clusters kept whole, as a modern terminal does: an emoji and its selector, a flag, a ZWJ family two cells; a letter and its mark one", async () => {
     const text = "☄\ufe0fa🇯🇵b👩\u200d🔬ce\u0301d🔭e";
     const t = await run(`printf '%s' '${text}'`);

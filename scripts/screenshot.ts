@@ -1,15 +1,16 @@
-// A terminal screen as a PNG, for the docs: the cells a herdr pane shows, with their colours
-// (`herdr pane read <pane> --source visible --format ansi`), drawn into an SVG cell by cell and rasterised by resvg
-// with DejaVu Sans Mono. Box-drawing and block characters are drawn as shapes, so borders join across cells. A picture
-// shows in the pane's text only as Kitty's placeholder cells (src/tui/placeholders.ts): named, it's drawn over them as
-// the terminal draws it; not, they're left blank.
+// A terminal screen as a PNG, for the docs: its cells with their colours — the headless terminal's own (`fromCells`,
+// as the docs' screenshots read them: tests/terminal/shots.ts), or a screen's text with its escapes (`parseAnsi`) —
+// drawn into an SVG cell by cell and rasterised by resvg with DejaVu Sans Mono. Box-drawing and block characters are
+// drawn as shapes, so borders join across cells. A picture shows in the screen's text only as Kitty's placeholder
+// cells (src/tui/placeholders.ts): named, it's drawn over them as the terminal draws it; not, they're left blank.
 //
-//   herdr pane read w1:p2H --source visible --format ansi | bun scripts/screenshot.ts - docs/images/screen.png
 //   bun scripts/screenshot.ts screen.ansi screen.png [--cols 120] [--rows 36] [--scale 2] [--picture a.png…]
+//   (a screen read with its escapes, as a terminal multiplexer's `--format ansi` gives it; `-` reads it from stdin)
 
 import { readFileSync, writeFileSync } from "node:fs";
 import { initWasm, Resvg } from "@resvg/resvg-wasm";
 import wasm from "@resvg/resvg-wasm/index_bg.wasm" with { type: "file" };
+import { openSync } from "fontkit";
 import { graphemes, graphemeWidth } from "../src/core/width.ts";
 import { PLACEHOLDER, placeholderCell } from "../src/tui/placeholders.ts";
 
@@ -142,6 +143,32 @@ export function parseAnsi(text: string): Cell[][] {
   return rows;
 }
 
+/** A cell as a terminal emulator keeps it (tests/terminal/terminal.ts's `cells`): a colour `#rrggbb` or by index. */
+export interface TerminalCell {
+  text: string;
+  width: number;
+  fg: string | number | null;
+  bg: string | number | null;
+  bold: boolean;
+  dim: boolean;
+  italic: boolean;
+  underline: boolean;
+  strike: boolean;
+  inverse: boolean;
+}
+
+/** The screen's rows of cells, from a terminal emulator's own: as `parseAnsi` reads the same screen written out. */
+export function fromCells(rows: TerminalCell[][]): Cell[][] {
+  const colour = (c: string | number | null) => (typeof c === "number" ? indexed(c) : c);
+  return rows.map((row) =>
+    row.map(({ text, width, fg, bg, inverse, ...rest }) => ({
+      text,
+      width,
+      style: { ...rest, fg: colour(fg), bg: colour(bg), reverse: inverse },
+    })),
+  );
+}
+
 const esc = (s: string) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 
 /** Mix two colours: `t` of the way from `a` to `b`. */
@@ -245,7 +272,46 @@ function shape(ch: string, x: number, y: number, w: number, h: number, fill: str
   if (ch === "▐") return rect(x + w / 2, y, w / 2, h);
   if (ch === "▔") return rect(x, y, w, h / 8);
   if (ch === "▕") return rect(x + (w * 7) / 8, y, w / 8, h);
+  // Symbols neither DejaVu face has, drawn as their shapes rather than as the font's empty box.
+  const outline = (ox: number, oy: number, side: number) =>
+    `<rect x="${ox.toFixed(2)}" y="${oy.toFixed(2)}" width="${side.toFixed(2)}" height="${side.toFixed(2)}" fill="none" stroke="${fill}" stroke-width="${t}"/>`;
+  if (ch === "⧉") {
+    // Two joined squares: the cell's copy and diff buttons.
+    const side = w * 0.55;
+    return outline(x + w * 0.1, cy - side * 0.8, side) + outline(x + w * 0.35, cy - side * 0.35, side);
+  }
+  if (ch === "⚿") {
+    // A squared key: a row that can't be read.
+    const side = w * 0.84;
+    const kx = x + w * 0.3;
+    const line = (x1: number, y1: number, x2: number, y2: number) =>
+      `<line x1="${x1.toFixed(2)}" y1="${y1.toFixed(2)}" x2="${x2.toFixed(2)}" y2="${y2.toFixed(2)}" stroke="${fill}" stroke-width="${t}"/>`;
+    return (
+      outline(x + w * 0.08, cy - side / 2, side) +
+      `<circle cx="${kx.toFixed(2)}" cy="${cy.toFixed(2)}" r="${(w * 0.11).toFixed(2)}" fill="none" stroke="${fill}" stroke-width="${t}"/>` +
+      line(kx + w * 0.11, cy, x + w * 0.76, cy) +
+      line(x + w * 0.66, cy, x + w * 0.66, cy + w * 0.16)
+    );
+  }
   return null;
+}
+
+let faces: { hasGlyphForCodePoint(cp: number): boolean }[] | null = null;
+
+/**
+ * The characters on a screen that neither face has and no shape draws: the picture would show the font's empty box.
+ * Read from the fonts themselves, so on the machine that takes the pictures.
+ */
+export function undrawable(screen: Cell[][]): string[] {
+  faces ??= FACES.map((f) => openSync(`${FONT_DIR}/${f}`) as unknown as { hasGlyphForCodePoint(cp: number): boolean });
+  const out = new Set<string>();
+  for (const row of screen)
+    for (const { text } of row) {
+      const cp = text.codePointAt(0)!;
+      if (cp < 0x80 || text.startsWith(PLACEHOLDER) || shape(text, 0, 0, 8, 16, "#000") !== null) continue;
+      if (!faces.some((f) => f.hasGlyphForCodePoint(cp))) out.add(text);
+    }
+  return [...out];
 }
 
 export interface Options {

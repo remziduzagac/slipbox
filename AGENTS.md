@@ -64,8 +64,8 @@ a change users will see updates it in the same piece of work, without the bluepr
   check per feature, many at once (`blueprint/design/testing.md`); CI runs them on Linux and macOS. `bun run
   test:herdr --pane <id>` runs the few that need a real terminal, in a herdr pane.
 - `bun test -u` updates snapshots; read the diff before accepting it.
-- `bun tests/terminal/herdr/shots.ts --pane <id>` retakes the docs' screenshots (`docs/images/`) in a 120×34 herdr
-  pane: after a UI change.
+- `bun run shots [name…]` retakes the docs' screenshots (`docs/images/`): slipbox in a 120×34 headless terminal, no
+  multiplexer needed; after a UI change. A doc's shots are `tests/terminal/shots/<doc>.ts`; look at each PNG taken.
 - `bun src/main.ts <path>` runs the TUI; `bun src/main.ts help` lists CLI commands.
 - The toolchain is pinned in `mise.toml` (Bun and the check's tools): `mise install` once; where mise isn't active in
   the shell, `mise x -- bun run check`. Tooling lives on a login-shell PATH: use `zsh -lc '…'` in non-interactive

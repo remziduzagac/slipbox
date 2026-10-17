@@ -258,7 +258,7 @@ How: design/distribution.md; the workflows that build and publish: design/reposi
   words, each subject explained in one chapter and linked from the rest. The agent skill stays the agents' guide,
   checked against the CLI chapter (DOC-D4).
 - The guides and the screen chapter carry screenshots, made by a script from slipbox itself on the reference set and
-  retaken when the UI changes (DF-D19).
+  retaken when the UI changes, by anyone, in one command (DF-D19, D236).
 - The manual opens with a how-it-works chapter, the ideas and promises users rely on, linking the chapters rather than
   repeating them, and has a versions chapter, the versioning policy (GR-D16). Troubleshooting's "Reporting a problem"
   names the issue tracker and its bug form, sends questions and ideas to Discussions (GR-D17), and security problems
