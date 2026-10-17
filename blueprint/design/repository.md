@@ -104,20 +104,35 @@ step a package.json script, never a command of its own:
   and the site's tests, D230).
 - **`changes`**, on `ubuntu-24.04`: what a pull request changed (`bun run ci:scope`, its merge commit against its
   base). When every file is the docs' (`docs/`, `blueprint/`, `site/src/`, a Markdown file at the top), `test` and
-  `terminal` are skipped: no test reads those files but the docs' own, which `lint` runs. A push to `main`, a merge
-  group, a run by hand and a diff that can't be read run everything (D230). A test holds every test that reads the
-  docs to `test:docs`'s list, so a new one can't be skipped with them.
+  `terminal` are skipped: no test reads those files but the docs' own, which `lint` runs (D230). Otherwise it says
+  whether any terminal check reaches the change (`checks`); `terminal` is skipped when none does (D239). A push to
+  `main`, a merge group, a run by hand and a diff that can't be read run everything. A test holds every test that
+  reads the docs to `test:docs`'s list, so a new one can't be skipped with them.
 - **`test`**, on `ubuntu-24.04` and `macos-15` (arm64), neither stopping the other: the typecheck, the boundary, the
-  supply chain's gates (this platform's OpenTUI package's licence among them) and the tests. On macOS the SQLite is
-  Apple's, so the index's FTS5 (`unicode61`, `remove_diacritics 2`) and its `bm25` ranking are tested there on every
-  change (`tests/core.test.ts`, `tests/vault.test.ts`, `tests/cli.test.ts`; `14.13`).
-- **`terminal`**, on `ubuntu-24.04`, `ubuntu-24.04-arm` and `macos-15`: the terminal tests (`bun run test:terminal`,
-  TT-D6). No job runs on an Intel Mac, for which nothing is built after 0.3.0 (D238); a test holds every workflow to
-  it.
+  supply chain's gates (this platform's OpenTUI package's licence among them) and the tests a pull request's files
+  reach (`bun run test:changed`; every one on `main`). On macOS the SQLite is Apple's, so the index's FTS5
+  (`unicode61`, `remove_diacritics 2`) and its `bm25` ranking are tested there whenever a change reaches them, and
+  after every merge (`tests/core.test.ts`, `tests/vault.test.ts`, `tests/cli.test.ts`; `14.13`).
+- **`terminal`**, on `ubuntu-24.04`, `ubuntu-24.04-arm` and `macos-15`: the terminal checks a pull request's files
+  reach (`bun run test:terminal:changed`; every one on `main`, TT-D6). No job runs on an Intel Mac, for which nothing
+  is built after 0.3.0 (D238); a test holds every workflow to it.
 - **`site`**, on `ubuntu-24.04`: the docs' site built (`bun run site`), every link within it landing (DS).
 - **`ci`**, the aggregator and the one required check: it always runs, waits for every other job, and fails unless
   each passed or was skipped. A job skipped by its `if:` counts as passed; one that failed, was cancelled or never
   started doesn't. A test holds it to waiting for every job, so a job added can't be left out of the required check.
+
+**What a change reaches** (D239, `scripts/ci-scope.ts`). The tests: each that uses a changed file — imports it, at
+any depth, statically or not, code or not (the skill's text, a dictionary), or names it by its path from the
+repository (`join(ROOT, "examples", "home")`, the entry point a test runs) — and a changed snapshot's own. The
+terminal checks, which drive slipbox as a process and import none of it: a changed check file's (`bun run
+test:terminal <file>`); for a changed file of the app's, the features `CHECKS_FOR` names it under (`git`, `export`,
+`spelling`…, pieces of the checks' names), or every check for one it doesn't list (the app, drawing, the parser, the
+index, the config — shared by all); every check for the harness and the samples the checks' home is built from. The
+two samples changed most, the reference set's cases and its kitchen-sink config, run what reads them (`SAMPLES_FOR`).
+The packages, the lockfile, the toolchain, the workflows, the tests' preload and a file nothing names run everything;
+the lint's own configs, only the lint. A test holds `CHECKS_FOR` to the files and the checks there are. Locally,
+`bun run test:changed` and `bun run test:terminal:changed` run the same against where the branch left `origin/main`;
+`bun run check` runs the first.
 
 No permission by default (`permissions: {}`): each job grants its own with a comment saying why — `contents: read` to
 check out, the aggregator nothing. Every job has a timeout. A pull request's superseded run is cancelled; every other

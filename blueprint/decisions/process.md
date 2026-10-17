@@ -92,6 +92,9 @@ say who maintains it.
 
 ## D230: A pull request of the docs alone skips the tests (2026-10-14)
 
+> **Amended by D239 (2026-10-17):** a pull request of code runs the tests and the terminal checks its files reach,
+> no longer all of them; one of the docs alone still runs only the docs' tests.
+
 **Decision:** CI's `changes` job reads what a pull request changed (its merge commit against its base). When every
 file is the docs' (`docs/`, `blueprint/`, `site/src/`, a Markdown file at the top), the `test` and `terminal` jobs are
 skipped, and `lint` runs the tests that read the docs (`bun run test:docs`: the docs' and the site's tests). The two
@@ -149,3 +152,33 @@ read. Drawn from it, a screen comes out as herdr's did, cell for cell.
 **Cost:** A picture shows the headless terminal's screen, not a real one's: its widths and its answers are the ones the
 terminal tests trust (TT-D2), which the real-terminal set checks in herdr.
 
+## D239: A pull request runs the tests and the terminal checks its change reaches; main runs them all (2026-10-17)
+
+**Decision:** CI runs, for a pull request, only the tests and the terminal checks its files reach; every push to
+`main`, and every release, still runs them all, on every runner. The tests: each that uses a changed file — imports
+it at any depth, or names it by its path from the repository — and a changed snapshot's own. The terminal checks,
+which drive slipbox as a process and so import none of it: a changed check file's; for a changed file of the app's,
+the checks of the features a table (`CHECKS_FOR`, `scripts/ci-scope.ts`) names it under, and every check for one it
+doesn't list; every check for a change to their harness or the samples. The packages, the lockfile, the toolchain,
+the workflows and a file nothing names run everything, as a push does. The terminal job is skipped when no check is
+reached; the test job still runs the typecheck, the boundary and the supply chain's gates. `bun run test:changed` and
+`bun run test:terminal:changed` run the same locally, against where the branch left `origin/main`, and `bun run
+check` runs the first: test while working, what the change reaches. A failure on `main` that a pull request didn't
+reach gets a pull request of its own. Amends GR-D9 (the tests on every change) and D230. Detail:
+design/repository.md § CI.
+
+**Why:** The maintainer's call, 2026-10-17: a pull request waited on, and was blocked by, every test and check,
+though most never touch what it changed. A check failing at random elsewhere stopped an unrelated merge (removing the
+Intel Mac's build waited on a symlink check's race, already fixed on `main`), and every runner ran the whole set for a
+one-file fix. Testing while working, and the whole set after each merge, keeps both.
+
+**Cost:** A break that only two pull requests together make, or one a check the table doesn't tie to the file would
+catch, reaches `main` before CI says so — after the merge, not before. The table is kept by hand: a file put under
+a feature whose checks don't exercise it, or one exercised by checks elsewhere, narrows the run wrongly; a test holds
+it to the files and the checks there are, not to what each check runs. A file nothing names runs everything, so a
+gap costs time, not cover.
+
+**Not chosen:** Bun's own `bun test --changed`, which follows imports only: not a path a test runs or reads, a
+snapshot, or the terminal checks. Requiring a branch up to date with `main` before it merges, or a merge queue (an
+organisation's repository): each still runs everything, more often. Checks chosen by the commands they declare: a
+changed file can't be tied to the commands it serves without running them.

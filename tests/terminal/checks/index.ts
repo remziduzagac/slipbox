@@ -9,17 +9,20 @@ import { LEFT_OUT_READING, READING } from "./reading.ts";
 import { SOURCE_CONTROL } from "./source-control.ts";
 import { VAULTS } from "./vaults.ts";
 
-export const CHECKS: Check[] = [
-  ...READING,
-  ...EDITING,
-  ...NAVIGATING,
-  ...LINKS_AND_FILES,
+/** Each file's checks, by its name: `bun run test:terminal <name>` runs them. */
+export const CHECK_FILES: Record<string, Check[]> = {
+  reading: READING,
+  editing: EDITING,
+  navigating: NAVIGATING,
+  "links-and-files": LINKS_AND_FILES,
   // Vaults, home and Elsewhere, the view, marks, links, the peek: their own file, in the areas they belong to.
-  ...VAULTS,
-  ...OUTSIDE_AND_CODE,
+  vaults: VAULTS,
+  "outside-and-code": OUTSIDE_AND_CODE,
   // Source control's, in the outside-and-code area: their own file.
-  ...SOURCE_CONTROL,
-];
+  "source-control": SOURCE_CONTROL,
+};
+
+export const CHECKS: Check[] = Object.values(CHECK_FILES).flat();
 
 const AREAS: LeftOut[] = [
   LEFT_OUT_READING,

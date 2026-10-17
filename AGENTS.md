@@ -53,16 +53,20 @@ a change users will see updates it in the same piece of work, without the bluepr
 
 - `bun run check` — the typecheck, the boundary, the files' sizes (`check:size`), the supply chain's gates
   (`check:deps`), Biome's format and lint, zizmor and actionlint over the workflows (`check:actions`; zizmor's online
-  audits only with `GH_TOKEN` set), the docs' lint, spelling and links between files (`check:docs`), the tests. Run
-  before proposing a change; CI runs the same.
+  audits only with `GH_TOKEN` set), the docs' lint, spelling and links between files (`check:docs`), the tests your
+  change reaches (`test:changed`). Run before proposing a change; CI runs the same.
+- `bun run test:changed` and `bun run test:terminal:changed` — the tests and the terminal checks your change reaches:
+  the tests that import or name a changed file, the checks of the features it's in (`scripts/ci-scope.ts`, D239),
+  against where your branch left `origin/main`. What CI runs for a pull request; `bun run test` and `bun run
+  test:terminal` run them all, as CI does on `main` after a merge. Test as you go with these.
 - `bun run format` — Biome formats the code; `bun run lint` checks it.
 - `bun run audit` — the dependencies' known vulnerabilities (`bun audit`); an advisory accepted is listed in
   `scripts/audit.ts` with why and the date to look again. CI runs it weekly and when `bun.lock` changes.
 - `bun run test:docs` — the tests that read the docs; CI runs only these (and the lint) for a pull request of the docs
   alone.
-- `bun run test:terminal [area or name…]` — the terminal tests: slipbox driven by keys in headless terminals, a
-  check per feature, many at once (`blueprint/design/testing.md`); CI runs them on Linux and macOS. `bun run
-  test:herdr --pane <id>` runs the few that need a real terminal, in a herdr pane.
+- `bun run test:terminal [area, check file or name…]` — the terminal tests: slipbox driven by keys in headless
+  terminals, a check per feature, many at once (`blueprint/design/testing.md`); CI runs them on Linux and macOS.
+  `bun run test:herdr --pane <id>` runs the few that need a real terminal, in a herdr pane.
 - `bun test -u` updates snapshots; read the diff before accepting it.
 - `bun run shots [name…]` retakes the docs' screenshots (`docs/images/`): slipbox in a 120×34 headless terminal, no
   multiplexer needed; after a UI change. A doc's shots are `tests/terminal/shots/<doc>.ts`; look at each PNG taken.

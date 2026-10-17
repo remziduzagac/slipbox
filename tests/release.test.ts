@@ -15,6 +15,7 @@ import {
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { sbom } from "../scripts/check-deps.ts";
+import { scriptFor } from "../scripts/ci-scope.ts";
 import {
   assetName,
   changelogNotes,
@@ -498,7 +499,14 @@ describe("the workflows: one build for releases and previews, previews from test
       JSON.parse(readFileSync(join(ROOT, "package.json"), "utf8")) as { scripts: Record<string, string> }
     ).scripts;
     expect(scripts.test).toBe("bun test --timeout 30000");
-    expect(scripts.check).toEndWith("&& bun run test");
+    // The check and CI run the tests a change reaches (D239), each through `bun run test`.
+    expect(scripts.check).toEndWith("&& bun run test:changed");
+    expect(scripts["test:changed"]).toBe("bun scripts/ci-scope.ts test");
+    expect(scriptFor("test", { all: "everything" })).toEqual(["test"]);
+    expect(scriptFor("test", { all: null, tests: ["tests/a.test.ts"], checks: [], why: [] })).toEqual([
+      "test",
+      "./tests/a.test.ts",
+    ]);
     for (const name of ["build.yml", "ci.yml"])
       for (const job of Object.values(workflow(name).jobs))
         for (const step of job.steps ?? []) expect(step.run ?? "").not.toMatch(/(^|[^-])\bbun test\b/);

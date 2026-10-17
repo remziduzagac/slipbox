@@ -3,9 +3,10 @@ name: ci
 # GR-D9: the check on every change — what `bun run check` runs, split into jobs CI can run side by side: the lint
 # (Biome, the workflows), and the code's checks and tests on Linux and on macOS (slipbox ships for both; on macOS
 # its SQLite is Apple's, 14.13); and the terminal tests on each system it ships for (TT-D6). A pull request that
-# changes only the docs skips the tests and the terminal tests; the lint job runs the docs' own (D230). One job, `ci`,
-# is the required check: it always runs and fails unless every job it waits for passed or was skipped. Each job calls
-# package.json's scripts, never commands of its own.
+# changes only the docs skips the tests and the terminal tests; the lint job runs the docs' own (D230). Any other runs
+# the tests and the terminal checks its files reach (D239, scripts/ci-scope.ts); a push to main runs them all. One job,
+# `ci`, is the required check: it always runs and fails unless every job it waits for passed or was skipped. Each job
+# calls package.json's scripts, never commands of its own.
 on:
   pull_request:
   push:
@@ -71,6 +72,7 @@ jobs:
       contents: read # to check out the commit and its base
     outputs:
       code: ${{ steps.scope.outputs.code }}
+      checks: ${{ steps.scope.outputs.checks }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -100,6 +102,7 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
+          fetch-depth: 2 # a pull request's merge commit and its base: the tests its change reaches
       # Every tool: the docs check's own tests run typos and lychee.
       - uses: jdx/mise-action@2d8d4cafcbd33be2ea37d2b6f5ad595363d1f1ca # v5.1.1
         with:
@@ -115,14 +118,15 @@ jobs:
       # actions.
       - name: dependencies
         run: bun run check:deps
+      # A pull request's: the tests its files reach (D239); a push to main's, every one.
       - name: tests
-        run: bun run test
+        run: bun run test:changed
 
   # TT-D6: the terminal tests — slipbox driven by keys in a headless terminal, read off the screen — on each system
   # slipbox ships for, each runner running a check per core. A failing check's screen is in the job's log.
   terminal:
     needs: changes
-    if: ${{ needs.changes.outputs.code == 'true' }}
+    if: ${{ needs.changes.outputs.checks == 'true' }}
     strategy:
       fail-fast: false
       matrix:
@@ -136,17 +140,18 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
+          fetch-depth: 2 # a pull request's merge commit and its base: the checks its change reaches
       - uses: jdx/mise-action@2d8d4cafcbd33be2ea37d2b6f5ad595363d1f1ca # v5.1.1
         with:
           cache: false
           minimum_release_age: 7d
       - run: bun install --frozen-lockfile
       - name: terminal tests
-        # A runner is slower than the machine a check was written on: each wait gets at least 30 s (a wait that passes
-        # returns at once).
+        # A pull request's: the checks its files reach (D239); a push to main's, every one. A runner is slower than the
+        # machine a check was written on: each wait gets at least 30 s (a wait that passes returns at once).
         env:
           SLIPBOX_TERMINAL_WAIT: "30000"
-        run: bun run test:terminal
+        run: bun run test:terminal:changed
 
   # The docs' site (site/), built from docs/ as the pages workflow builds it: every page gathered, every link within it
   # landing. Its own packages, under its own install gates (site/bunfig.toml).
