@@ -472,8 +472,9 @@ The explorer makes and changes files by keys and by buttons, on the selected row
   preview, links fixed). Going into another vault forgets what was copied or cut, and `u`'s last delete.
 - **The selected row's menu:** while the explorer has focus, the selected row has one button at its end, under the
   title's buttons: `…` (Nerd: three dots; ascii `...`). It opens a menu hanging from it (`.` opens it by key, from the
-  row), titled with the row's name, each entry with its key in the explorer, which picks it there too: for a folder "New
-  note here" and "New folder here", then "Rename", "Move to…", "Copy", "Cut", for a folder "Give it .slipbox/" (a nested
+  row), titled with the row's name, each entry with its key in the explorer, which picks it there too: for a folder "Zoom
+  in here" (`z`), "New note here" and "New folder here", then "Rename", "Move to…", "Copy", "Cut", "Copy path"
+  (`shift+y`, the row's whole path), for a folder "Give it .slipbox/" (a nested
   vault's: "Make it part of the vault holding it"), "Paste … here" (when something is copied or cut), "Delete" (a nested
   vault's: "Delete the vault"). `enter` or a click does the selected one; `esc` or a click outside closes it. A name
   that doesn't fit beside the button widens the tree: the explorer's horizontal scrollbar appears, and scrolled to its

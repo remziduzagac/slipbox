@@ -364,6 +364,7 @@ Moving selects a row and opens nothing. [Files](files.md) explains what each of 
 | `shift+u` | undo the last rename, move or relink, after a preview |
 | `y` / `x` | copy / cut it, to paste |
 | `p` | paste in the selected folder (a copy of what was copied, or what was cut, moved there) |
+| `shift+y` | copy the selected row's whole path |
 | `v` | give the selected folder a `.slipbox/` folder, making it a vault of its own (it asks for a name) |
 | `shift+v` | make the selected nested vault part of the vault holding it again |
 | `.` | the row's menu, as its `…` button opens it (each entry's key picks it there) |

@@ -76,10 +76,11 @@ export class Explorer {
     const item = this.item();
     if (!item) return this.app.message("info", "menu: select a note, file or folder first");
     const actions: [string, string][] = [];
+    if (item.dir) actions.push(["zoom_in", "Zoom in here"]);
     if (item.dir && !item.vault) actions.push(["new_note", "New note here"], ["new_folder", "New folder here"]);
     actions.push(["rename", item.vault ? "Rename the folder" : "Rename"]);
     if (item.vault) actions.push(["rename_root", "Name it"]);
-    actions.push(["move", "Move to…"], ["copy", "Copy"], ["cut", "Cut"]);
+    actions.push(["move", "Move to…"], ["copy", "Copy"], ["cut", "Cut"], ["copy_path", "Copy path"]);
     if (item.dir)
       actions.push(
         item.vault ? ["unmake_root", "Make it part of the vault holding it"] : ["make_root", "Give it .slipbox/"],
@@ -127,6 +128,10 @@ export class Explorer {
   itemAction(action: string, item: ExplorerItem): void {
     const folder = item.dir ? item.rel : posix.dirname(item.rel) === "." ? "" : posix.dirname(item.rel);
     switch (action) {
+      // On the selected row, as their keys are (`z`, `shift+y`): the menu leaves the selection where it was.
+      case "zoom_in":
+      case "copy_path":
+        return this.action(action);
       case "rename":
         return this.app.files.renameItem(item);
       case "rename_root":
@@ -987,6 +992,12 @@ export class Explorer {
       }
       case "paste":
         return this.app.files.pasteItem();
+      case "copy_path": {
+        // Any row's whole path, one above or beside the vault too: what a terminal or another program takes.
+        if (!row) return this.app.message("info", "copy path: select a note, file or folder first");
+        const abs = this.rowAbs(row);
+        return void this.app.copy(abs, true, tildePath(abs));
+      }
       case "menu":
         return this.openItemMenu();
       case "restore":

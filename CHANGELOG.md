@@ -6,6 +6,11 @@ The format is [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.1.0/); wh
 
 ## [Unreleased]
 
+### Added
+
+- The explorer's row menu (its `…` button, or `.`) has "Zoom in here" first for a folder, and "Copy path" for every
+  row, which copies its whole path. `shift+y` in the explorer copies it too.
+
 ## [0.4.1] - 2026-10-17
 
 ### Added
