@@ -71,7 +71,7 @@ will hold.
 
 `slipbox upgrade` keeps it current. `slipbox channel` says whether it follows previews, and changes that.
 
-With Homebrew, from 0.3.0 on, run `brew install remziduzagac/tap/slipbox`. Intel Macs aren't supported any more:
+With Homebrew, run `brew install remziduzagac/tap/slipbox`. Intel Macs aren't supported any more:
 0.3.0 was the last release built for them.
 
 [Installation](docs/guides/install.md) has the rest: previews, Windows through WSL, upgrading and removing it,

@@ -1,3 +1,2 @@
 # Commits git blame skips (git config blame.ignoreRevsFile .git-blame-ignore-revs; GitHub reads it itself).
-# GR-T4: the code formatted by Biome, nothing else changed.
-de86bcffbf74e73098a5da8ddbcb3d8370ac2208
+# None yet: the code was formatted by Biome (GR-T4) before the history kept starts, on 2026-10-22.

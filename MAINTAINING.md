@@ -104,7 +104,8 @@ and `.github/workflows/pages.yml` the installer's site once it's published. The 
 `blueprint/design/distribution.md` § Releases.
 
 1. **Choose the version,** as [Versions](docs/manual/versions.md) says: before 1.0, a minor release when something is
-   added or something kept changes, a patch for fixes alone.
+   added or something kept changes, a patch for fixes alone. Never 0.4.0 or an earlier one: those were released
+   before the history started afresh (2026-10-22), and GitHub keeps their tags from being used again.
 2. **Write the changelog's entry.** In `CHANGELOG.md`, `## [Unreleased]` becomes `## [0.3.0] - 2026-11-02` (the version,
    and the day), with a new empty `## [Unreleased]` above it, and the links at the end updated. Write it for users from
    the commits since the last tag (`git log --oneline v0.2.0..dev`), grouped as Added, Changed, Deprecated, Removed,
