@@ -1,19 +1,38 @@
-# Getting started
+# Working with slipbox
 
-A first session with slipbox, in a folder of your own. You'll open it, move around, open notes, follow a link and come
-back, search, change a line and save it, tick a task, and quit. It takes about ten minutes.
+<a id="getting-started"></a>
+<a id="a-folder-to-start-in"></a>
+<a id="open-the-folder"></a>
+<a id="the-screen"></a>
+<a id="move"></a>
+<a id="open-a-note"></a>
+<a id="search"></a>
+<a id="change-a-line-and-save"></a>
+<a id="quit"></a>
+<a id="where-to-go-next"></a>
 
-You need slipbox installed ([Installing slipbox](install.md)). You also need a terminal at least 90 columns wide, so
-the explorer has room beside the note.
+This guide walks through a first session: open two linked notes, find your way, change a line and save it. By the
+end you will know how to return to a note and where to look for the next action.
 
-## A folder to start in
+You need [slipbox installed](install.md) and a terminal wide enough for a note beside the explorer. No agent is
+needed. Use a new practice folder so the steps do not change notes you already keep.
 
-Any folder of Markdown notes will do. This guide calls it `~/notes`. To follow the steps exactly, make two small notes
-in it, `inbox.md` and `ideas/coffee.md`:
+## Make two practice notes
 
+The examples use a new `~/slipbox-tour` folder. The block below stops if that folder already exists, so it will not
+replace your existing notes. Choose another unused path throughout the guide if needed.
+
+Paste this block into your shell. It creates two notes and gives their folder a `.slipbox/` marker, making it a
+vault of its own. Search and the explorer will then show this practice vault.
+
+<!-- example: tour-setup -->
 ```bash
-mkdir -p ~/notes && cd ~/notes
-slipbox write inbox.md --create --stdin <<'EOF'
+(
+  set -e
+  mkdir ~/slipbox-tour
+  cd ~/slipbox-tour
+  mkdir ideas
+  cat > inbox.md <<'EOF'
 # Inbox
 
 Things to sort out this week.
@@ -23,7 +42,7 @@ Things to sort out this week.
 
 Ideas so far: [coffee](ideas/coffee.md).
 EOF
-slipbox write ideas/coffee.md --create --stdin <<'EOF'
+  cat > ideas/coffee.md <<'EOF'
 # Coffee
 
 ## Brewing
@@ -34,153 +53,92 @@ A ratio of 1 to 16 suits a pour-over.
 
 Washed beans taste cleaner than natural ones.
 EOF
+  slipbox init .
+)
 ```
 
-Each command prints `created` and the note's name. `slipbox write` is how scripts and agents write a note. With
-`--create`, it refuses to write over a note that's already there, so it never touches notes of yours.
+The notes are ordinary Markdown files. `slipbox init .` adds `.slipbox/` for this tour; it does not import the notes
+or change their format. The parentheses keep the setup's directory change inside the block.
 
-## Open the folder
+```text
+slipbox-tour/
+├── .slipbox/
+├── inbox.md
+└── ideas/
+    └── coffee.md
+```
+
+## Open the first note
 
 ```bash
-slipbox ~/notes
+slipbox ~/slipbox-tour/inbox.md
 ```
 
-slipbox fills the terminal. It opens the folder's `index.md` or `README.md` if there is one. Otherwise it opens the
-first note by path, here `ideas/coffee.md`.
+This opens Inbox directly. Opening a folder instead can restore the note you last read there.
 
-## The screen
+The document is rendered on the right. The explorer lists files on the left. The tab names `inbox.md`, and the
+status line says `READ`. Click a row or use the arrow keys to put the reading cursor there.
 
-- On the left, the explorer lists the folder's notes.
-- On the right is the note, rendered, with its line numbers. Above it is a tab, `1 coffee.md`.
-- Along the bottom, the status line shows the mode (`READ`), the note's path, its word count and where the cursor is
-  (`L1:1`).
+![slipbox open on Inbox in ~/slipbox-tour: the explorer on the left, inbox.md rendered with its two tasks and the coffee
+link, the status line reading READ](../images/getting-started-first.png)
 
-![slipbox open on ~/notes: the explorer on the left, coffee.md rendered in its tab, the status line reading READ](../images/getting-started-first.png)
-
-The arrow keys move, and the shortcuts of other editors work: `ctrl+f` finds, `ctrl+s` saves, `ctrl+z` undoes. vim's
-keys work too. This tour gives the familiar key first, and [Keys you already know](keys-you-know.md) lists them all.
-
-Two keys help while you learn the rest:
-
-- Press `space`. A popup lists the keys that can follow it, in groups: `f` for find, `n` for note, and so on. `esc`
-  closes it.
-- Press `?`. It lists every key, with a filter to type into. `esc` closes it too.
-
-The mouse works as well: click a note, a link or a tab. [The screen](../manual/screen.md) describes each part.
-
-## Move
-
-A cursor sits on the text, at the top of the note.
-
-| To move | Press |
-| --- | --- |
-| Down or up a row | `down` and `up`, or `j` and `k` |
-| A page down or up | `pagedown` and `pageup`, or `ctrl+d` and `ctrl+u` for half a page |
-| To the top or the bottom | `ctrl+home` and `ctrl+end`, or `g g` and `shift+g` |
-| To the next or previous heading | `alt+down` and `alt+up`, or `] ]` and `[ [` |
-
-The mouse wheel scrolls.
-
-## Open a note
-
-The switcher finds a note by its name.
-
-1. Press `ctrl+p`. A list opens, "Open note (2)".
-2. Type `inbox`. The list narrows to `inbox.md`.
-3. Press `enter`. inbox.md opens in place of coffee.md.
-
-![The switcher, Open note, with inbox typed and inbox.md listed](../images/getting-started-switcher.png)
-
-The explorer is for browsing.
-
-1. Press `space e`. The explorer takes the keys: the status line says `FILES`, and `inbox.md` is selected.
-2. Press `up` to move to `coffee.md`, then `enter`. coffee.md opens in a second tab, `2 coffee.md`, and the keys go
-   back to the note.
-3. Press `q` to close that tab. You're back in inbox.md.
-
-Some terminals and multiplexers take a `ctrl` key for themselves: zellij takes `ctrl+p` and `ctrl+o`. Each of those
-keys has another way in, under `space`. For the switcher, it's `space f f`. The [keys chapter](../manual/keys.md)
-lists them all.
+Two discovery keys are worth trying now: `space` opens the action groups, and `?` lists bindings. Press `esc` to
+close either. There is no need to memorize the full keymap.
 
 ## Follow a link and come back
 
-1. In inbox.md, press `tab`. The cursor jumps to the link, `coffee`. The right of the status line shows where it goes:
-   `→ ideas/coffee.md (resolved)`.
-2. Press `enter`. coffee.md opens.
-3. Press `ctrl+o`. You're back in inbox.md, where you were.
+1. Click the coffee link, or move to it with `tab` and press `enter`.
+2. Check that `coffee.md` is open and its Brewing and Beans headings are rendered.
+3. Press `ctrl+o` to return to the place you left in Inbox.
 
-A click on a link follows it too. `space h p` goes back, like `ctrl+o`.
+This is reading history, rather than undo. It brings you back after following a link or opening a search result.
 
-## Search
+## Find a note by name
 
-To find something in this note:
+Press `ctrl+p`, type `coffee`, select `ideas/coffee.md` and press `enter`. You should be in Coffee again. The
+switcher filters by path and title; you do not need to type the whole name. Search stays within this practice vault
+unless you explicitly widen it.
 
-1. Press `ctrl+f` and type `grinder`. The cursor moves to the match as you type, and a find row above the note counts
-   the matches, `1/1`.
-2. Press `enter` to keep the search. `n` and `shift+n` then go to the next and previous match.
-3. Press `esc` to close the row.
+![The switcher, Open note, with coffee typed and ideas/coffee.md listed beside its title,
+Coffee](../images/getting-started-switcher.png)
 
-To search every note:
+To find a word in that note, press `ctrl+f`, type `Washed`, and press `enter`. To search the vault's files instead,
+press `space f s` and type `coffee`. `esc` leaves the results without opening one.
 
-1. Press `space f s` and type `beans`. The list shows each place it's found, the note and the line first:
-   `ideas/coffee.md:7`.
-2. Press `enter` to open coffee.md there, and `ctrl+o` to come back.
+## Make a small edit
 
-The first time you open a folder, slipbox builds its search index in the background. In a large folder, the list says
-how far it has got.
+Return to `inbox.md` with `ctrl+p`. Find `Try the new` with `ctrl+f` and press `enter`.
 
-## Change a line and save
+1. Press `i` to open the lens around the task.
+2. Press `o` to insert a new line below it. You are now typing; the status says `INSERT`.
+3. Type `Order more beans`. A list can continue its marker for you; inspect the source in the lens.
+4. Press `esc` to stop typing, then `ctrl+s` to save.
+5. Look for `saved inbox.md` and check that the tab's unsaved mark disappears. Press `esc` to close the lens.
 
-1. Put the cursor on "Try the new grinder setting". After the search, it's there already.
-2. Press `o`. The lens opens: the part of the note around the cursor shows its Markdown as written, between two
-   rules. The rest of the note stays rendered. The status line says `LENS`.
-3. Press `o` again. A new task, `- [ ]`, starts on the line below, and the status line says `INSERT`.
-4. Type `Order more beans`.
+![inbox.md with the lens open, a new task, Order more beans, typed in it, the status line reading INSERT and
+unsaved](../images/getting-started-editing.png)
 
-   ![inbox.md with the lens open, a new task line typed in it, the status line reading INSERT and unsaved](../images/getting-started-editing.png)
-
-5. Press `esc` to stop typing. The status line says `LENS` again. A dot (`•`) by the tab's name means the note has
-   unsaved changes.
-6. Press `ctrl+s` to save. The message says `saved inbox.md`, and the dot goes.
-7. Press `esc` once more to close the lens. The whole note is rendered again.
-
-`i` and `a` start typing before and after the cursor, in the same way: the first press opens the lens, the second
-types.
-
-While you type, the keys of any editor work. `shift` with an arrow selects, typing replaces the selection, and
-`ctrl+z` and `ctrl+y` undo and redo. When you're not typing, the vim keys you may know work too: `dd`, `cw`, `u` to
-undo, `.` to repeat.
-
-If you forget `ctrl+s`, slipbox saves a changed note by itself after half a minute without a key.
-
-The [editing chapter](../manual/editing.md) has the rest. That includes source mode, which shows the whole note as
-Markdown: `ctrl+k` switches to it and back.
+The next guide explains the lens, source mode and typing as separate parts of the workflow. For now, check that
+your saved change is visible when you open the file in another editor. The file itself changed, not a private copy.
 
 ## Tick a task
 
-1. With the note rendered, put the cursor on "Buy filter papers".
-2. Press `ctrl+l`. Its box is ticked, and a message says `done ✓`. The note is saved at once: the line is now
-   `- [x] Buy filter papers`.
+Move the reading cursor onto Buy filter papers and press `ctrl+l` (`space n t` does the same). The checkbox changes.
+On a saved note, this toggle writes to disk immediately; when the note already has unsaved edits, it joins those
+edits instead. `ctrl+s` saves them. `ctrl+z` undoes a change if you want to restore it; save again after undoing.
 
-`ctrl+l` again unticks it. `space n t` does the same, and so does a click on the box.
+## If something else changes the file
 
-## Quit
+A file changed by another program reloads when you have no unsaved edits. If both you and the other program changed
+it, slipbox asks which text to keep. Do not guess: the
+[external-change explanation](../manual/editing.md#when-a-file-changes-on-disk) describes the choices.
 
-Press `ctrl+q` to quit. `space q q` and `:qa` quit too.
+CLI commands and other programs see saved files. They cannot read the text you have left unsaved in the lens.
 
-If a note has unsaved changes, slipbox stays open and names it: `unsaved changes in inbox.md`. Then `ctrl+s` (or `:w`)
-saves it, or `:q!` quits without saving.
+## Leave and continue
 
-Plain `q` closes a tab or a split, but never quits.
+Press `ctrl+q` to quit. When you open the folder again, slipbox can restore its session. Your notes remain normal
+files and can be used by any editor.
 
-Next time you run `slipbox ~/notes`, your tabs come back, each note where you left it.
-
-## Where to go next
-
-- [Making it yours](making-it-yours.md): a theme, your own keys, your editor, settings for a folder.
-- [Working with agents](agents.md): slipbox beside a coding agent, both on the same files.
-- [Coming from Obsidian or zk](from-obsidian-or-zk.md): opening a vault or a notebook as it is.
-- [Finding things](../manual/finding.md), [Links and vaults](../manual/links-and-vaults.md) and
-  [Editing](../manual/editing.md): the chapters behind this session's steps.
-- [Keys](../manual/keys.md): every key, as `?` lists them.
-- [How slipbox works](../manual/how-it-works.md): the ideas behind what you just did, and what slipbox promises.
+**Next:** [Reading and editing in slipbox](lens.md), a deliberate walkthrough of rendered reading, the lens,
+source mode, typing and saving. After that, [work across folders and vaults](vaults.md).

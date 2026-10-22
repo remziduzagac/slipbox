@@ -15,6 +15,7 @@ import type { Checkout } from "./git.ts";
 import {
   type Changed,
   gitArgs,
+  gitReadLater,
   parseNameStatus,
   type WorktreeRecord,
   worktreeRecords,
@@ -28,9 +29,7 @@ const OPTS = { encoding: "utf8" as const, timeout: 15_000, maxBuffer: 64 * 1024 
 
 /** git in `root`, not waited on: its output, or null when it failed. */
 export function gitLater(root: string, args: string[]): Promise<string | null> {
-  return new Promise((done) => {
-    execFile("git", gitArgs(root, args), OPTS, (err, out) => done(err ? null : out));
-  });
+  return gitReadLater({ root }, args);
 }
 
 /** git's words for a failure: its `fatal:` or `error:` line, else its first. */

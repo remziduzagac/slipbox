@@ -6,7 +6,9 @@
 import { createHash } from "node:crypto";
 import type { Element, ElementContent, Root as HastRoot } from "hast";
 import { toHtml as serialise } from "hast-util-to-html";
-import { strToU8, type Zippable, zipSync } from "fflate";
+import { strToU8 } from "fflate";
+import type { ExportSink } from "./spool.ts";
+import { ZipWriter } from "./zip.ts";
 import { loadRasterizer } from "../svg.ts";
 import type { ExportDoc } from "./assemble.ts";
 import { convertPictures } from "./convert.ts";
@@ -20,7 +22,7 @@ const XML = '<?xml version="1.0" encoding="UTF-8"?>\n';
 const esc = (s: string) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 
 /** The document as an EPUB's bytes. */
-export async function toEpub(doc: ExportDoc): Promise<Uint8Array> {
+export async function toEpub(doc: ExportDoc, sink?: ExportSink): Promise<Uint8Array> {
   const r = await loadRasterizer();
   // An e-book's pictures are PNG, JPEG, GIF, WebP and SVG: a BMP made a PNG first.
   await convertPictures(doc, ["png", "jpg", "gif", "webp"], r);
@@ -38,32 +40,41 @@ export async function toEpub(doc: ExportDoc): Promise<Uint8Array> {
     };
     visit(ch.nodes);
   });
-  // Pictures, a file each, the same picture once.
-  const images = new Map<string, { path: string; type: string; data: Uint8Array }>();
+  const chunks: Uint8Array[] = [];
+  const write = sink ?? ((chunk: Uint8Array) => chunks.push(chunk));
+  // Each entry written as it's made, its sizes in its own header (`zip.ts`).
+  const zip = new ZipWriter(write);
+  const add = (name: string, bytes: Uint8Array, stored = false) => zip.add(name, bytes, stored);
+  // First and stored: how a reader knows it's an EPUB.
+  add("mimetype", strToU8("application/epub+zip"), true);
+  add(
+    "META-INF/container.xml",
+    strToU8(
+      `${XML}<container version="1.0" xmlns="urn:oasis:names:tc:opendocument:xmlns:container"><rootfiles><rootfile full-path="OEBPS/content.opf" media-type="application/oebps-package+xml"/></rootfiles></container>\n`,
+    ),
+  );
+  // Pictures are emitted as met and retained only as names for the manifest, never as a book-sized byte map.
+  const images = new Map<string, { path: string; type: string }>();
   const src = (data: Uint8Array, type: Parameters<typeof mediaType>[0]) => {
     const hash = createHash("sha256").update(data).digest("hex").slice(0, 16);
     let image = images.get(hash);
-    if (!image) images.set(hash, (image = { path: `images/${hash}.${type}`, type: mediaType(type), data }));
+    if (!image) {
+      images.set(hash, (image = { path: `images/${hash}.${type}`, type: mediaType(type) }));
+      add(`OEBPS/${image.path}`, data);
+    }
     return image.path;
   };
   const chapters = doc.chapters.map((ch) => {
     const section = chapterHast(ch, { r, src, href: (anchor) => `${fileOf.get(anchor) ?? ""}#${anchor}` });
-    return { ch, section, file: fileOf.get(ch.anchor)!, title: ch.title, sections: subHeadings(section) };
+    const chapter = { file: fileOf.get(ch.anchor)!, title: ch.title, sections: subHeadings(section) };
+    add(`OEBPS/${chapter.file}`, strToU8(xhtml(chapter.title, lang, [section])));
+    return chapter;
   });
-
-  const files: Zippable = {
-    // First and stored: how a reader knows it's an EPUB.
-    mimetype: [strToU8("application/epub+zip"), { level: 0 }],
-    "META-INF/container.xml": strToU8(
-      `${XML}<container version="1.0" xmlns="urn:oasis:names:tc:opendocument:xmlns:container"><rootfiles><rootfile full-path="OEBPS/content.opf" media-type="application/oebps-package+xml"/></rootfiles></container>\n`,
-    ),
-  };
-  for (const c of chapters) files[`OEBPS/${c.file}`] = strToU8(xhtml(c.title, lang, [c.section]));
-  for (const image of images.values()) files[`OEBPS/${image.path}`] = image.data;
-  files["OEBPS/style.css"] = strToU8(CSS);
-  files["OEBPS/nav.xhtml"] = strToU8(nav(chapters, lang));
-  files["OEBPS/content.opf"] = strToU8(opf(doc, lang, chapters, [...images.values()]));
-  return zipSync(files, { level: 6 });
+  add("OEBPS/style.css", strToU8(CSS));
+  add("OEBPS/nav.xhtml", strToU8(nav(chapters, lang)));
+  add("OEBPS/content.opf", strToU8(opf(doc, lang, chapters, [...images.values()])));
+  zip.end();
+  return sink ? new Uint8Array() : Buffer.concat(chunks);
 }
 
 /** A chapter's sections, for the contents page: its second-level headings, each with its id and words. */

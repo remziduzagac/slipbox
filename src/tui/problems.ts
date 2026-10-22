@@ -374,7 +374,11 @@ export class Problems {
         out.push({
           section: "Lint",
           heading: true,
-          label: all ? `Lint (${all.length})${this.app.languages.vaultLint.running ? " …" : ""}` : "Lint — linting…",
+          label: all
+            ? `Lint (${all.length})${this.app.languages.vaultLint.running ? " …" : ""}`
+            : this.app.languages.vaultLint.skipped && !this.app.languages.vaultLint.running
+              ? `Lint — not shown: ${this.app.languages.vaultLint.skipped}`
+              : "Lint — linting…",
           detail: "",
           text: "Lint",
           folded,

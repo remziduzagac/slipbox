@@ -116,6 +116,9 @@ const MAX_YAML = 64 * 1024;
  * buffer keeps one): only the chunks an edit touched are parsed again (plan 15.1).
  */
 export interface ParseCache {
+  /** The other threads couldn't parse `source` (15.1): it reads as its source until the text changes or a parse is
+   *  tried again. `transient`: why was the worker's (the deadline, a crash), not the note's. */
+  backgroundFailure?: { source: string; why: string; transient: boolean };
   chunks: Map<string, { children: Root["children"]; shift: number; stubbed?: boolean }>;
 }
 
@@ -464,6 +467,18 @@ export function parseMarkdown(
   cache?: ParseCache,
   opts: { whole?: boolean; chunkLines?: number } = {},
 ): ParsedNote {
+  if (cache?.backgroundFailure?.source === source) {
+    const lines = source.split("\n");
+    const end = { line: lines.length, column: lines[lines.length - 1]!.length + 1, offset: source.length };
+    const position = { start: { line: 1, column: 1, offset: 0 }, end };
+    return {
+      source,
+      frontmatter: null,
+      error: cache.backgroundFailure.why,
+      tree: { type: "root", children: [{ type: "code", lang: "text", value: source, position }] },
+    };
+  }
+  if (cache) cache.backgroundFailure = undefined;
   const tamed = tame(source);
   const lines = tamed.split("\n");
   // `whole`: one parse of the whole note; `chunkLines`: smaller chunks (tests compare both).

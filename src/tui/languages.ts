@@ -2,14 +2,7 @@
 // a root needs before anything it brings runs.
 
 import { fileURLToPath, pathToFileURL } from "node:url";
-import {
-  commentLinks,
-  grammarFor,
-  grammarNow,
-  parseSyntax,
-  type Span as SyntaxSpan,
-  type OutlineEntry,
-} from "../core/syntax.ts";
+import { grammarFor, type OutlineEntry, type Span as SyntaxSpan } from "../core/syntax.ts";
 import type {
   DocumentSymbol,
   SymbolInformation,
@@ -17,6 +10,8 @@ import type {
   WorkspaceEdit,
 } from "vscode-languageserver-protocol";
 import { TextDocument } from "vscode-languageserver-textdocument";
+import { SYNTAX_SOURCE_LIMIT, syntaxOnThread } from "../core/syntax-thread.ts";
+import { WorkerRequestError } from "../core/worker-requests.ts";
 import { extensionOf } from "../core/filetypes.ts";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
@@ -41,51 +36,101 @@ export class Languages {
   constructor(readonly app: App) {}
 
   /**
-   * A source file's tree-sitter pass (16.7–16.9), kept current: at once the first time, then
-   * 150 ms after edits stop (a big file's parse takes tens of milliseconds, never paid per key).
-   * The grammar loads lazily; until it lands, highlight.js colours alone.
+   * A source file's tree-sitter pass (16.7–16.9): grammar loading, parsing and model extraction in a worker.
+   * Edits debounce for 150 ms; old replies never replace a newer revision.
    */
   ensureSyntax(buf: NoteBuffer): void {
-    if (buf.kind.group !== "text" || buf.syntax?.version === buf.version || this.syntaxTimers.has(buf)) return;
+    if (
+      this.app.quitting ||
+      buf.kind.group !== "text" ||
+      buf.syntax?.version === buf.version ||
+      this.syntaxFailed.get(buf)?.version === buf.version ||
+      this.syntaxTimers.has(buf)
+    )
+      return;
+    const previous = this.syntaxPending.get(buf);
+    if (previous?.version === buf.version) return;
+    previous?.abort.abort();
     const g = grammarFor(buf.kind.format, extensionOf(buf.name));
-    const loaded = g ? grammarNow(g) : null;
-    if (!loaded) return; // loading: onLoaded draws again, and this runs then
+    if (!g) return;
     const run = () => {
       this.syntaxTimers.delete(buf);
-      const tree = parseSyntax(loaded, buf.source);
-      if (!tree) return;
-      const spans = new Map<number, SyntaxSpan[]>();
-      for (const s of tree.spans()) spans.set(s.line, [...(spans.get(s.line) ?? []), s]);
-      // Links in its comments (16.10): URLs, and paths that name a file of the vault — where each goes, for the code view.
-      const rel = buf.rel;
-      const links = commentLinks(tree.comments()).flatMap((l) => {
-        if (l.url) return [l];
-        const path = rel ? this.app.graph.commentPath(l.target, rel) : null;
-        return path ? [{ ...l, href: `/${path}${l.at ? `#L${l.at}` : ""}` }] : [];
-      });
-      // A part in another language (16.22): its lines highlighted in it.
-      buf.syntax = {
-        version: buf.version,
-        spans,
-        outline: tree.outline(),
-        errors: tree.errors(),
-        links,
-        languages: tree.languages(),
-        code: tree.codeModel(),
-      };
-      tree.delete();
-      buf.invalidateLayouts();
-      for (const v of this.app.allViews()) {
-        if (v.buf !== buf) continue;
-        v.layoutKey = "";
-        // The code view's lens, not being typed into: its document made again on this parse (24.8).
-        if (v.live && !v.insert && this.app.isCodeDocument(buf)) v.liveBase = undefined;
+      if (this.app.quitting) return;
+      const version = buf.version;
+      if (Buffer.byteLength(buf.source) > SYNTAX_SOURCE_LIMIT) {
+        this.syntaxFailed.set(buf, { version, transient: false });
+        this.app.message("warn", "code structure unavailable: source exceeds parsing budget");
+        this.app.host.requestRender(); // said after the frame that asked: drawn now, not at the next key
+        return;
       }
-      this.app.host.requestRender();
+      const abort = new AbortController();
+      const pending = { version, abort };
+      this.syntaxPending.set(buf, pending);
+      void syntaxOnThread(g, buf.source, abort.signal)
+        .then((value) => {
+          if (
+            abort.signal.aborted ||
+            this.app.quitting ||
+            buf.version !== version ||
+            this.syntaxPending.get(buf) !== pending
+          )
+            return;
+          const spans = new Map<number, SyntaxSpan[]>();
+          for (const span of value.spans) spans.set(span.line, [...(spans.get(span.line) ?? []), span]);
+          const rel = buf.rel;
+          const links = value.links.flatMap((link) => {
+            if (link.url) return [link];
+            const path = rel ? this.app.graph.commentPath(link.target, rel) : null;
+            return path ? [{ ...link, href: `/${path}${link.at ? `#L${link.at}` : ""}` }] : [];
+          });
+          buf.syntax = { ...value, version, spans, links, languages: new Map(value.languages) };
+          buf.invalidateLayouts();
+          for (const view of this.app.allViews()) {
+            if (view.buf !== buf) continue;
+            view.layoutKey = "";
+            if (view.live && !view.insert && this.app.isCodeDocument(buf)) view.liveBase = undefined;
+          }
+          this.app.host.requestRender();
+        })
+        .catch((error) => {
+          if (!abort.signal.aborted && !this.app.quitting && buf.version === version) {
+            // The thread's own answer is about the code; the rest (the deadline, a crash) about the thread.
+            const transient = !(error instanceof WorkerRequestError && error.kind === "failed");
+            this.syntaxFailed.set(buf, { version, transient });
+            this.app.message(
+              "warn",
+              `code structure unavailable: ${(error as Error).message}${transient ? " — open it again to retry" : ""}`,
+            );
+            this.app.host.requestRender();
+          }
+        })
+        .finally(() => {
+          if (this.syntaxPending.get(buf) === pending) this.syntaxPending.delete(buf);
+          if (!this.app.quitting && buf.version !== version) this.ensureSyntax(buf);
+        });
     };
-    const t = setTimeout(run, buf.syntax ? 150 : 0);
-    (t as { unref?: () => void }).unref?.();
-    this.syntaxTimers.set(buf, t);
+    const timer = setTimeout(run, buf.syntax ? 150 : 0);
+    timer.unref();
+    this.syntaxTimers.set(buf, timer);
+  }
+
+  private readonly syntaxPending = new Map<NoteBuffer, { version: number; abort: AbortController }>();
+  /** The text a pass failed on, until it changes; `transient`: why was the thread's (the deadline, a crash), not the
+   *  code's, and opening the file again tries once more. */
+  private readonly syntaxFailed = new WeakMap<NoteBuffer, { version: number; transient: boolean }>();
+
+  /** Opened again (16.7): a pass the thread failed for its own reason is tried again. */
+  retrySyntax(buf: NoteBuffer): void {
+    if (this.syntaxFailed.get(buf)?.transient) this.syntaxFailed.delete(buf);
+  }
+
+  /** Every pass let go of: those waiting for typing to pause, and those asked of the thread (its own, shared by the
+   *  process, `stopSyntaxThread` stops). */
+  stopSyntax(): void {
+    for (const timer of this.syntaxTimers.values()) clearTimeout(timer);
+    this.syntaxTimers.clear();
+    for (const pending of this.syntaxPending.values()) pending.abort.abort();
+    this.syntaxPending.clear();
   }
 
   private readonly syntaxTimers = new Map<NoteBuffer, ReturnType<typeof setTimeout>>();
@@ -402,9 +447,12 @@ export class Languages {
           due.map(async (d) => {
             const root = linterRoot(d, buf.abs, project);
             if (!root) return void buf.linterProblems.delete(d.name); // the project doesn't ask for it
-            const r = await runLinter(d, buf.abs, text, root);
+            const r = await runLinter(d, buf.abs, text, root, undefined, this.tools.signal);
             if ("problems" in r) buf.linterProblems.set(d.name, { version, list: r.problems });
-            else this.linterCouldNot(d, r.failed, r.detail);
+            else if ("skipped" in r) {
+              buf.linterProblems.delete(d.name); // none shown for this text, and the linter kept
+              this.saySkipped(`linter ${d.name}`, buf, r.skipped);
+            } else this.linterCouldNot(d, r.failed, r.detail);
           }),
         ).then(() => {
           this.linterRuns.delete(buf);
@@ -421,6 +469,7 @@ export class Languages {
   /** Linters tried again, and every open file linted again: the config changed. */
   relint(): void {
     this.linterFailed.clear();
+    this.skippedSaid.clear();
     for (const b of this.app.buffers.values()) {
       b.linted = { typed: -1, saved: -1 };
       b.linterProblems.clear();
@@ -439,14 +488,39 @@ export class Languages {
     this.app.message("warn", text);
   }
 
+  /** Cancels the lint, linter and install runs under way when the screen quits: none is left running behind it. */
+  private readonly tools = new AbortController();
+  /** Runs whose findings weren't shown, by linter and file: said once. */
+  private readonly skippedSaid = new Set<string>();
+
+  /** The screen quitting: every lint, linter and install run under way stopped. */
+  stopTools(): void {
+    this.tools.abort();
+    this.servers?.cancelInstalls();
+  }
+
+  /**
+   * A run whose findings aren't shown though its linter works — its output past slipbox's limit: said once for that
+   * linter and file, the linter kept. Cancelled by quitting: nothing to say.
+   */
+  private saySkipped(who: string, buf: NoteBuffer | null, why: string): void {
+    if (this.tools.signal.aborted) return;
+    const where = buf ? this.app.displayName(buf) : "the vault";
+    const key = `${who}\0${where}`;
+    if (this.skippedSaid.has(key)) return;
+    this.skippedSaid.add(key);
+    this.app.message("warn", `${who}: ${where}: ${why} — this run's findings aren't shown`);
+  }
+
   // The lint surface (3.21): your markdownlint-cli2 run on a note once it's saved — its findings
   // beside their lines, on the status line, in the Problems panel — and on the vault for that view.
 
   /** The linter (`[lint]`), or null: lint off, or it couldn't run. */
   lintCmd: LintCmd | null = null;
   private readonly lintRuns = new Map<NoteBuffer, ReturnType<typeof setTimeout> | "running">();
-  /** The whole vault's findings, as last linted (the Problems panel's All tab): null until it's run. */
-  vaultLint: { running: boolean; issues: LintIssue[] | null } = { running: false, issues: null };
+  /** The whole vault's findings, as last linted (the Problems panel's All tab): null until it's run, or when a run's
+   *  findings weren't shown (`skipped` says why). */
+  vaultLint: { running: boolean; issues: LintIssue[] | null; skipped?: string } = { running: false, issues: null };
 
   /** Lint a note when its text is the file's (saved) and hasn't been linted as it is: at once the
    *  first time, then 300 ms after it's saved again. */
@@ -458,9 +532,16 @@ export class Languages {
     const t = setTimeout(
       () => {
         this.lintRuns.set(buf, "running");
-        void runLint(cmd, [buf.abs], this.app.loc.root, undefined, this.sayInstalling).then((issues) => {
+        const signal = this.tools.signal;
+        void runLint(cmd, [buf.abs], this.app.loc.root, undefined, this.sayInstalling, signal).then((issues) => {
           this.lintRuns.delete(buf);
           if (issues === null) return this.lintFailed();
+          if (!Array.isArray(issues)) {
+            // None shown for this text, and not linted again until it's saved again: lint stays on.
+            buf.lint = { version, issues: [], skipped: issues.skipped };
+            this.saySkipped("lint", buf, issues.skipped);
+            return this.app.host.requestRender();
+          }
           buf.lint = { version, issues: issues.filter((i) => i.file === buf.abs) };
           // The vault's list follows this note's.
           if (this.vaultLint.issues)
@@ -490,10 +571,17 @@ export class Languages {
     void (async () => {
       const all: LintIssue[] = [];
       for (let i = 0; i < files.length; i += 300) {
-        const got = await runLint(cmd, files.slice(i, i + 300), this.app.loc.root, undefined, this.sayInstalling);
+        const batch = files.slice(i, i + 300);
+        const got = await runLint(cmd, batch, this.app.loc.root, undefined, this.sayInstalling, this.tools.signal);
         if (got === null) {
           this.vaultLint = { running: false, issues: null };
           this.lintFailed();
+          return this.app.host.requestRender();
+        }
+        if (!Array.isArray(got)) {
+          // A list missing some notes' findings would pass for whole: none is shown, and lint stays on.
+          this.vaultLint = { running: false, issues: null, skipped: got.skipped };
+          this.saySkipped("lint", null, got.skipped);
           return this.app.host.requestRender();
         }
         all.push(...got);

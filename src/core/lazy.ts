@@ -3,6 +3,8 @@
 // loads — and whoever wants to know (the TUI, to draw again) hears when it arrives. The CLI can
 // wait for it instead.
 
+import { AsyncResource } from "node:async_hooks";
+
 type State<T> =
   | { status: "loading"; promise: Promise<T | null> }
   | { status: "ready"; value: T }
@@ -35,8 +37,10 @@ export function loadError(name: string): string | null {
 
 /** Hear when anything lazy finishes loading (or fails): the TUI draws again. */
 export function onLoaded(fn: (name: string) => void): () => void {
-  listeners.add(fn);
-  return () => listeners.delete(fn);
+  // A loader may finish inside an export's asynchronous context; observers belong to their subscriber instead.
+  const listener = AsyncResource.bind(fn);
+  listeners.add(listener);
+  return () => listeners.delete(listener);
 }
 
 function start<T>(name: string, loader: () => Promise<T>): Promise<T | null> {
@@ -54,4 +58,9 @@ function start<T>(name: string, loader: () => Promise<T>): Promise<T | null> {
   );
   states.set(name, { status: "loading", promise });
   return promise;
+}
+
+/** A background asset changed after its first load. */
+export function notifyLoaded(name: string): void {
+  for (const fn of listeners) fn(name);
 }

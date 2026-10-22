@@ -2,7 +2,8 @@
 // the base, the links a merge would break (20.21), the repository's worktrees.
 
 import { join, relative } from "node:path";
-import { type Checkout, checkoutOf } from "../core/git.ts";
+import { type Checkout, checkoutOf, headOf } from "../core/git.ts";
+import { type BaseHow, baseFor as branchBase, resolveBase } from "../core/gitbase.ts";
 import {
   baseBranch,
   changedSince,
@@ -25,7 +26,7 @@ export const GIT_COMMANDS: Record<string, Handler> = {
   // Git (5.11–5.14): what this branch changed against the base, a note's diff, the worktrees.
   changed(s) {
     const c = checkoutFor(s);
-    const base = baseFor(s, c);
+    const { base, how } = baseFor(s, c);
     const r = changedSince(c, base);
     if (!r) throw new CliError("git couldn't say what changed", 1);
     const files = r.files
@@ -38,7 +39,10 @@ export const GIT_COMMANDS: Record<string, Handler> = {
     const human = files
       .map((f) => `${STATE_LETTER[f.state]} ${f.path}${f.from ? `  (from ${f.from})` : ""}\n`)
       .join("");
-    return { data: { base, mergeBase: r.mergeBase, files }, human: human || `nothing changed against ${base}\n` };
+    return {
+      data: { base, baseChosen: how, mergeBase: r.mergeBase, files },
+      human: human || `nothing changed against ${base}\n`,
+    };
   },
 
   "merge-review"(s, rest) {
@@ -64,7 +68,7 @@ export const GIT_COMMANDS: Record<string, Handler> = {
   diff(s, rest) {
     const rel = resolveNote(s, requireArg(rest, "note"), false);
     const c = checkoutFor(s);
-    const base = baseFor(s, c);
+    const { base, how } = baseFor(s, c);
     const mergeBase = mergeBaseOf(c, base);
     if (!mergeBase) throw new CliError(`this branch and ${base} have no commit in common`, EXIT.notFound);
     const shown = showAt(c, mergeBase, inCheckout(c, s.loc.root, rel));
@@ -76,7 +80,7 @@ export const GIT_COMMANDS: Record<string, Handler> = {
     const human = rows.map((r) => (r.kind === "@@" ? `@@ ${r.text}` : `${r.kind} ${sanitize(r.text)}`)).join("\n");
     const only = rows.length ? null : unseenChange(before, now);
     return {
-      data: { path: rel, base, mergeBase, new: shown === null, rows },
+      data: { path: rel, base, baseChosen: how, mergeBase, new: shown === null, rows },
       human: rows.length
         ? `${human}\n`
         : only
@@ -113,18 +117,30 @@ function checkoutFor(s: Session): Checkout {
   return c;
 }
 
-/** The base branch: `--base`, else `[git] base`, else main or master (exit 3 when there's none). */
-function baseFor(s: Session, c: Checkout): string {
-  const asked = flag(s.args, "base") ?? s.config.git.base;
-  const base = baseBranch(c, asked);
+/**
+ * The base, as the screen chooses it (D255): `--base` (a revision such as `HEAD~3` as its commit); else the branch's
+ * own (GIT-D10) — kept, else the nearest of `[git] bases`; else `[git] base`, main or master. Exit 3 when there's none.
+ */
+function baseFor(s: Session, c: Checkout): { base: string; how: BaseHow | "given" } {
+  const given = flag(s.args, "base");
+  if (given !== undefined) {
+    const asked = resolveBase(c, given);
+    if ("error" in asked) throw new CliError(asked.error, EXIT.notFound);
+    return { base: asked.base, how: "given" };
+  }
+  const branch = headOf(c).branch;
+  const own = branch ? branchBase(c, branch, s.config.git) : null;
+  if (own) return own;
+  const configured = s.config.git.base;
+  const base = baseBranch(c, configured);
   if (!base)
     throw new CliError(
-      asked
-        ? `no branch or commit "${asked}" in the repository`
+      configured
+        ? `no branch or commit "${configured}" in the repository`
         : "no base branch: neither main nor master is there — --base <ref>, or [git] base",
       EXIT.notFound,
     );
-  return base;
+  return { base, how: "configured" };
 }
 
 /** A file's state as one letter: what the explorer marks it with. */

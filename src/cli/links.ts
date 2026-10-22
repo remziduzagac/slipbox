@@ -326,9 +326,12 @@ export const LINK_COMMANDS: Record<string, Handler> = {
         .map((rel) => s.graph.abs(rel));
       const found: LintIssue[] = [];
       let ran = !!cmd;
-      for (let i = 0; cmd && ran && i < files.length; i += 300) {
+      // Its output past slipbox's limit: no findings shown, since a list missing some would pass for whole.
+      let skipped: string | undefined;
+      for (let i = 0; cmd && ran && !skipped && i < files.length; i += 300) {
         const got = await runLint(cmd, files.slice(i, i + 300), s.loc.root, undefined, (text) => s.io.err(`${text}\n`));
         if (got === null) ran = false;
+        else if (!Array.isArray(got)) skipped = got.skipped;
         else found.push(...got);
       }
       if (!cmd)
@@ -338,6 +341,7 @@ export const LINK_COMMANDS: Record<string, Handler> = {
             : "lint is off: no markdownlint config (~/.markdownlint-cli2.jsonc, or the folder's) and [lint] enabled isn't \"on\"",
         );
       else if (!ran) s.warnings.push(`lint: ${lintFailure(s.config)}`);
+      else if (skipped) s.warnings.push(`lint: ${skipped} — its findings aren't shown`);
       else {
         lint = found.map((x) => ({ ...x, file: relative(s.loc.root, x.file) }));
         human.push(

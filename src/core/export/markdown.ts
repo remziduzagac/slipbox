@@ -6,7 +6,9 @@
 // Only pictures are copied, and only the root's: anything else a picture link names stays a link, nothing of it copied.
 // Its frontmatter carries the mark that lets a later export replace it, though it's a note.
 
-import { readFileSync } from "node:fs";
+import type { ExportSpool } from "./spool.ts";
+import { utf8 } from "./stream.ts";
+import { readExportAsset } from "./reads.ts";
 import { basename, dirname, extname, isAbsolute, relative, sep } from "node:path";
 import type {
   Blockquote,
@@ -51,7 +53,7 @@ function isPicture(data: Uint8Array): boolean {
 type Placed = { url: string } | { link: string } | null;
 
 /** The document as Markdown for `target`, its pictures in `<name>.assets/` beside it. */
-export async function toMarkdown(doc: ExportDoc, target: string): Promise<ExportOutput> {
+export async function toMarkdown(doc: ExportDoc, target: string, spool?: ExportSpool): Promise<ExportOutput> {
   const assets = `${basename(target, extname(target))}.assets`;
   const files: ExportOutput["files"] = [];
   const placed = new Map<string, Placed>();
@@ -76,7 +78,7 @@ export async function toMarkdown(doc: ExportDoc, target: string): Promise<Export
     else {
       let data: Uint8Array | null = null;
       try {
-        data = readFileSync(file);
+        data = readExportAsset(file);
       } catch {}
       if (!data) out = null;
       else if (!isPicture(data)) out = linkTo(pic);
@@ -88,7 +90,8 @@ export async function toMarkdown(doc: ExportDoc, target: string): Promise<Export
         let name = own;
         for (let k = 1; names.has(name.toLowerCase()); k++) name = `${stem}-${k}${ext}`;
         names.add(name.toLowerCase());
-        files.push({ path: `${assets}/${name}`, data });
+        if (spool) spool.attachment(`${assets}/${name}`, (sink) => sink(data));
+        else files.push({ path: `${assets}/${name}`, data });
         out = { url: `${assets}/${encodeURIComponent(name)}` };
       }
     }
@@ -138,6 +141,13 @@ export async function toMarkdown(doc: ExportDoc, target: string): Promise<Export
     // A callout's marker as written: `[!tip]`, never escaped into text; a highlight as Obsidian writes it.
     handlers: { calloutMarker: (node: { value: string }) => node.value, highlight: highlightMarkdown } as never,
   });
+  if (spool) {
+    await spool.document(async (sink) => {
+      utf8(`${fm}\n`, sink);
+      utf8(body, sink);
+    });
+    return { data: new Uint8Array(), files: [] };
+  }
   return { data: new TextEncoder().encode(`${fm}\n${body}`), files };
 }
 

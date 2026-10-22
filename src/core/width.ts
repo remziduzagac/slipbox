@@ -182,3 +182,23 @@ export function splitAtWidth(text: string, width: number): [string, string] {
   }
   return [head, gs.slice(i).join("")];
 }
+
+/** Prefix widths at sorted UTF-16 offsets, without rescanning a long row for every search match. */
+export function prefixWidths(text: string, offsets: number[]): number[] {
+  if (isPrintableAscii(text)) return offsets.map((offset) => Math.min(offset, text.length));
+  const widths: number[] = [];
+  let at = 0;
+  let width = 0;
+  let next = 0;
+  for (const cluster of graphemes(text)) {
+    while (next < offsets.length && offsets[next]! <= at + cluster.length) {
+      widths.push(width + stringWidth(cluster.slice(0, Math.max(0, offsets[next]! - at))));
+      next++;
+    }
+    if (next === offsets.length) return widths;
+    at += cluster.length;
+    width += graphemeWidth(cluster);
+  }
+  while (next++ < offsets.length) widths.push(width);
+  return widths;
+}

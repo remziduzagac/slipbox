@@ -8,7 +8,22 @@ import { tmpdir } from "node:os";
 import { delimiter, join } from "node:path";
 import { DEFAULT_CONFIG, loadConfig } from "../src/core/config.ts";
 import { type Checkout, checkoutOf } from "../src/core/git.ts";
-import { baseFor, chooseBase, keepBase, keptBases, nearest } from "../src/core/gitbase.ts";
+import {
+  agoSaid,
+  askedBase,
+  baseAtOpen,
+  baseFor,
+  baseForLater,
+  chooseBase,
+  isRemoteTracking,
+  keepBase,
+  keptBases,
+  nearest,
+  remoteBranchesLater,
+  remoteMovedAt,
+  resolveBase,
+  resolveBaseLater,
+} from "../src/core/gitbase.ts";
 import {
   aheadBehindLater,
   branchChangedLater,
@@ -78,6 +93,11 @@ describe("each branch's own base (GIT-D10)", () => {
     else process.env.XDG_STATE_HOME = state;
   });
 
+  test("asynchronous base selection preserves the synchronous policy", async () => {
+    for (const branch of ["main", "dev", "feature"])
+      expect(await baseForLater(c, branch, config)).toEqual(baseFor(c, branch, config));
+  });
+
   test("guessed: the nearest of [git] bases, the one that leaves the branch fewest commits of its own", () => {
     expect(baseFor(c, "feature", config)).toEqual({ base: "dev", how: "nearest" });
     expect(baseFor(c, "hotfix", config)).toEqual({ base: "main", how: "nearest" });
@@ -135,6 +155,131 @@ describe("each branch's own base (GIT-D10)", () => {
     };
     expect(chooseBase("x", q)).toEqual({ base: "main", how: "nearest" });
     expect(chooseBase("main", { ...q, bases: ["main"] })).toBeNull();
+  });
+});
+
+describe("a base asked for: --base, remote branches, tags and commits (D255)", () => {
+  let dir = "";
+  let origin = "";
+  let clone = "";
+  const state = process.env.XDG_STATE_HOME;
+  const config = { base: "", bases: ["origin/main", "origin/dev"] };
+
+  beforeAll(() => {
+    dir = mkdtempSync(join(tmpdir(), "asked-"));
+    process.env.XDG_STATE_HOME = join(dir, "state");
+    // origin: main, dev two past it, feature one past dev; a clone with only main of its own, the rest remote.
+    origin = join(dir, "origin");
+    mkdirSync(origin);
+    git(origin, "init", "-q", "-b", "main");
+    commit(origin, "a.md", "one");
+    git(origin, "switch", "-qc", "dev");
+    commit(origin, "b.md", "two");
+    commit(origin, "c.md", "three");
+    git(origin, "switch", "-qc", "feature");
+    commit(origin, "d.md", "four");
+    git(origin, "switch", "-q", "main");
+    clone = join(dir, "clone");
+    git(dir, "clone", "-q", origin, clone);
+    // A pull request's worktree, as a workspace opens it: a local branch made from the remote one.
+    git(clone, "switch", "-qc", "work", "origin/feature");
+  });
+
+  afterAll(() => {
+    if (state === undefined) delete process.env.XDG_STATE_HOME;
+    else process.env.XDG_STATE_HOME = state;
+  });
+
+  test("a ref's name is kept as it is; another revision as its commit; nothing else reaches git", async () => {
+    const c = checkoutOf(clone)!;
+    expect(resolveBase(c, "origin/dev")).toEqual({
+      base: "origin/dev",
+      commit: false,
+      full: "refs/remotes/origin/dev",
+    });
+    expect(resolveBase(c, " main ")).toEqual({ base: "main", commit: false, full: "refs/heads/main" });
+    const tip = git(clone, "rev-parse", "HEAD~1").trim();
+    expect(resolveBase(c, "HEAD~1")).toEqual({ base: tip, commit: true, full: "" });
+    expect(resolveBase(c, tip)).toEqual({ base: tip, commit: false, full: "" });
+    expect(resolveBase(c, tip.slice(0, 9))).toEqual({ base: tip, commit: true, full: "" });
+    // One branch however it's spelt, by its plain name: HEAD is the branch checked out's, origin its default branch's.
+    for (const spelt of ["work", "heads/work", "refs/heads/work", "HEAD"])
+      expect(resolveBase(c, spelt)).toEqual({ base: "work", commit: false, full: "refs/heads/work" });
+    expect(resolveBase(c, "origin")).toEqual({ base: "origin/main", commit: false, full: "refs/remotes/origin/main" });
+    expect(resolveBase(c, "no-such-branch")).toEqual({
+      error: 'no branch or commit "no-such-branch" in the repository',
+    });
+    expect(await resolveBaseLater(c, "HEAD~1")).toEqual(resolveBase(c, "HEAD~1"));
+    expect(await resolveBaseLater(c, "origin/dev")).toEqual(resolveBase(c, "origin/dev"));
+    // An option, a space, a control character: refused before git is asked.
+    let asked = 0;
+    const commitOf = () => (asked++, { commit: "c0ffee", full: "" });
+    for (const bad of ["--output=x", "-h", "a b", "a\tb", ""]) expect("error" in askedBase(bad, commitOf)).toBe(true);
+    expect(asked).toBe(0);
+  });
+
+  test("a remote-tracking branch is a base as a local one is: kept, guessed among [git] bases, compared from", async () => {
+    const c = checkoutOf(clone)!;
+    // Guessed: work is one past origin/dev, three past origin/main.
+    expect(baseFor(c, "work", config)).toEqual({ base: "origin/dev", how: "nearest" });
+    keepBase(c, "work", "origin/main");
+    expect(baseFor(c, "work", config)).toEqual({ base: "origin/main", how: "kept" });
+    expect(await baseForLater(c, "work", config)).toEqual(baseFor(c, "work", config));
+    keepBase(c, "work", null);
+    expect(isRemoteTracking(c, "origin/dev")).toBe(true);
+    expect(isRemoteTracking(c, "main")).toBe(false);
+    expect(isRemoteTracking(c, "origin/nope")).toBe(false);
+    // Packed by git, still found.
+    git(clone, "pack-refs", "--all");
+    expect(isRemoteTracking(c, "origin/dev")).toBe(true);
+    expect(await remoteBranchesLater(c)).toEqual(["origin/dev", "origin/feature", "origin/main"]);
+  });
+
+  test("slipbox [path] --base: kept for the branch checked out there; a ref that names nothing, an error", () => {
+    const c = checkoutOf(clone)!;
+    expect(baseAtOpen(clone, "origin/dev")).toEqual({ note: "work is compared against origin/dev now" });
+    expect(keptBases(c)).toEqual({ work: "origin/dev" });
+    expect(baseFor(c, "work", { base: "", bases: ["main"] })).toEqual({ base: "origin/dev", how: "kept" });
+    const parent = git(clone, "rev-parse", "HEAD~1").trim();
+    expect(baseAtOpen(clone, "HEAD~1")).toEqual({ note: `work is compared against ${parent} (HEAD~1) now` });
+    expect(baseAtOpen(clone, "no-such-ref")).toEqual({
+      error: '--base: no branch or commit "no-such-ref" in the repository',
+    });
+    for (const self of ["work", "HEAD", "refs/heads/work"])
+      expect(baseAtOpen(clone, self)).toEqual({
+        warn: `--base ${self}: that's the branch itself, so its base is guessed`,
+      });
+    const loose = mkdtempSync(join(tmpdir(), "asked-loose-"));
+    expect(baseAtOpen(loose, "dev")).toEqual({ warn: "--base dev: not in a git repository, so it's ignored" });
+    git(clone, "switch", "-q", "--detach");
+    try {
+      expect(baseAtOpen(clone, "origin/dev")).toEqual({
+        warn: "--base origin/dev: HEAD is detached, so there's no branch to keep it for",
+      });
+    } finally {
+      git(clone, "switch", "-q", "work");
+    }
+    keepBase(c, "work", null);
+  });
+
+  test("how fresh a remote base is: when the fetch that moved it ran, said in a few words", () => {
+    const c = checkoutOf(clone)!;
+    // As the clone left them: no record of when.
+    expect(remoteMovedAt(c, "origin/dev")).toBeNull();
+    git(origin, "switch", "-q", "dev");
+    commit(origin, "e.md", "five");
+    git(origin, "switch", "-q", "main");
+    git(clone, "fetch", "-q");
+    const at = remoteMovedAt(c, "origin/dev");
+    expect(at).not.toBeNull();
+    expect(Math.abs(Date.now() - at!)).toBeLessThan(60_000);
+    // A fetch that found nothing new for it: still none.
+    expect(remoteMovedAt(c, "origin/main")).toBeNull();
+    const now = Date.UTC(2026, 9, 20, 12);
+    expect(agoSaid(now - 20_000, now)).toBe("just now");
+    expect(agoSaid(now - 5 * 60_000, now)).toBe("5 min ago");
+    expect(agoSaid(now - 3 * 3_600_000, now)).toBe("3 h ago");
+    expect(agoSaid(now - 3 * 86_400_000, now)).toBe("3 days ago");
   });
 });
 
@@ -386,3 +531,41 @@ describe("worktrees made and removed (GIT-D9)", () => {
     expect(ignoredText({ notes: [], others: [], more: false })).toBe("");
   });
 });
+
+test.skipIf(process.platform === "win32")(
+  "cancelling a cold asynchronous Git read also stops its capability probe",
+  async () => {
+    const dir = mkdtempSync(join(tmpdir(), "git-probe-"));
+    const pid = join(dir, "pid");
+    const fake = join(dir, "git");
+    writeFileSync(fake, '#!/bin/sh\nprintf "%s" "$$" > "$GIT_PROBE_PID"\nexec sleep 10\n');
+    chmodSync(fake, 0o755);
+    const script = join(dir, "probe.ts");
+    writeFileSync(
+      script,
+      `
+    import {existsSync,readFileSync} from "node:fs";
+    import {gitReadLater} from ${JSON.stringify(new URL("../src/core/gitops.ts", import.meta.url).pathname)};
+    const abort = new AbortController();
+    const pending = gitReadLater({root: ${JSON.stringify(dir)}}, ["status"], false, abort.signal);
+    while (!existsSync(process.env.GIT_PROBE_PID!)) await Bun.sleep(5);
+    abort.abort();
+    await pending;
+    await Bun.sleep(50);
+    const pid = Number(readFileSync(process.env.GIT_PROBE_PID!,"utf8"));
+    let alive = true;
+    try {process.kill(pid,0);} catch {alive = false;}
+    if (alive) process.kill(-pid,"SIGKILL");
+    console.log(alive ? "probe survived cancellation" : "stopped");
+  `,
+    );
+    const child = Bun.spawn([process.execPath, script], {
+      env: { ...process.env, PATH: `${dir}${delimiter}${process.env.PATH}`, GIT_PROBE_PID: pid },
+      stdin: "ignore",
+      stdout: "pipe",
+      stderr: "pipe",
+    });
+    expect(await child.exited).toBe(0);
+    expect((await new Response(child.stdout).text()).trim()).toBe("stopped");
+  },
+);

@@ -308,6 +308,9 @@ in the way of nothing, and the hash check would refuse it anyway.
 
 ## D154: Git, for reviewing (5.11–5.14, 2026-10-01)
 
+> **Amended by D255 (2026-10-20):** the CLI's `changed` and `diff` measure each branch against its own base, as the
+> screen does; `--base` still wins, and `--json` says how the base was chosen.
+>
 > **Amended (2026-10-17): GIT-D10 supersedes the part kept for `:merge-review`.** GIT-D10 is the later decision, and
 > its text has the merge review measured as everything else in the TUI is: `:merge-review` now offers this branch
 > into its own base (else `[git] base`, main or master), as the git panel's Merge… and a rebase take it. The CLI's
@@ -564,3 +567,37 @@ without the index. While a rebase stopped at a conflict is under way, the change
 **Not chosen:** stashing untracked files too (`git stash --include-untracked` around the rebase): git's autostash
 leaves them, and they're in the way only where git says so. Following `rebase.autoStash` without asking: the question
 says where the changes go.
+
+## D255: A branch's base given on opening, from a remote too; the CLI measures as the screen does (26.7, 2026-10-20)
+
+**Decision:** Opening the screen takes `--base <ref>` (`slipbox [path] --base origin/dev`): the branch checked out there
+is measured against it, kept in `bases.json` as Compare against… keeps it (GIT-D10), so the next session, the panel,
+`:changes`, `:diff` and Merge… use it. It's checked before the screen is taken: a ref that names no commit is said in a
+line, exit 3, as a missing path is; on a detached HEAD, for the branch itself or outside a repository nothing is kept,
+and the screen says why. A base may be a remote-tracking branch (`origin/dev`), a tag or a commit, wherever one is
+taken: `[git] base`, `[git] bases`, a kept base, `--base` and Compare against…, which lists the remote-tracking branches
+after the local ones and ends with an entry to type one. A branch, remote branch or tag is kept by its plain name,
+however it was spelt (`refs/heads/dev` is `dev`, `HEAD` the branch checked out, `origin` its default branch); anything
+else (`HEAD~3`, `ORIG_HEAD`, a short hash) as the commit it names. So a kept base never moves with HEAD, and the branch
+itself, by any spelling, is refused. With a remote-tracking base, This branch against says when the fetch that last
+moved it ran, from its reflog. The CLI's `changed` and `diff` choose the base as the screen does —
+`--base`, else the branch's own (kept, else the nearest of `[git] bases`), else `[git] base`, main or master — and their
+`--json` says how (`baseChosen`: `given`, `kept`, `nearest`, `configured`). Amends GIT-D10 and D154. As built:
+`core/gitbase.ts` (`resolveBase`, `baseAtOpen`, `remoteBranchesLater`, `isRemoteTracking`, `remoteMovedAt`),
+`tui/run.ts` (`prepare`), `tui/gitbranchview.ts` (`compare`), `tui/gitpanel.ts`, `cli/git.ts`; design/tui.md § Git.
+Decided by an issue (#210).
+
+**Why:** An agent works in a worktree of its own, often for a pull request, and slipbox opens beside it, from a
+terminal workspace's preset as often as by hand. Whoever opens the worktree knows its base (the pull request's target,
+or a value the preset was given), and a guess among `[git] bases` can be wrong: a branch made from `dev` in a worktree
+slipbox didn't make was measured against `main`, every commit of `dev`'s looking like its own. A forge compares a pull
+request with the remote branch, `origin/dev`, not the local `dev`, which may be behind or ahead. And an agent running
+`slipbox changed` there saw a different list than the panel showed.
+
+**Cost:** A remote branch is only as fresh as the last fetch of its remote: said, not fetched for you; a fetch that
+found nothing new leaves no record, and a branch a clone made has none, so then it says only "as of the last fetch".
+`changed` and `diff` give a different base than before for a branch whose own isn't `[git] base`; `--json` says which. A
+typed revision is kept as a commit, so it doesn't move with the branch it was typed against.
+
+**Not chosen:** asking GitHub or another forge for a pull request's base: whoever opens slipbox passes it, and slipbox
+stays independent of any forge. Several bases at once, or comparing two arbitrary commits on the screen.

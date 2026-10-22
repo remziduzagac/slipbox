@@ -1,5 +1,10 @@
 # Keys you already know
 
+For the learning path, start with [Working with slipbox](getting-started.md), then
+[Reading and editing in slipbox](lens.md). This page introduces familiar shortcuts;
+[Keyboard and mouse shortcuts](../manual/keys.md) lists every binding.
+
+
 You can use slipbox without learning anything first. The arrow keys move, `shift` with an arrow selects, and `ctrl+s`
 saves. Many shortcuts from VS Code and Obsidian do what you expect. This page lists them, and the few keys that are
 new.
@@ -126,4 +131,4 @@ A few keys do something else here than in a desktop editor.
 - [Quick start](quick-start.md): open a folder, find your way, edit a note.
 - [Editing](../manual/editing.md): typing, the lens and source mode.
 - [Keys](../manual/keys.md): every key, vim's among them.
-- [Making it yours](making-it-yours.md): change any key.
+- [Making slipbox yours](making-it-yours.md): change any key.

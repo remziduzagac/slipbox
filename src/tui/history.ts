@@ -71,6 +71,11 @@ export class History {
 
   showLoc(view: View, buf: NoteBuffer, loc: Loc): void {
     const before = view.buf;
+    // Opened again (15.1, 16.7).
+    if (buf !== before) {
+      buf.retryParse();
+      this.app.languages.retrySyntax(buf);
+    }
     if (view.insert && buf !== before) stopInsert(this.app, view);
     this.touchRecent(buf.key);
     Object.assign(view, {

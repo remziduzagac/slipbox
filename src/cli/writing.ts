@@ -6,6 +6,7 @@ import { createHash } from "node:crypto";
 import { existsSync, mkdirSync } from "node:fs";
 import { dirname, join, relative } from "node:path";
 import { parseAround } from "../core/parse.ts";
+import { matchText } from "../core/regex-jobs.ts";
 import {
   addFootnote,
   applyEdits,
@@ -20,8 +21,8 @@ import { parseNoteFile } from "../core/readers.ts";
 import { classify, extensionOf, isKnownExtension, noteFormat } from "../core/filetypes.ts";
 import { WriteRefused, writeNote } from "../core/fsutil.ts";
 import { blockingLink, writesThrough } from "../core/symlinks.ts";
-import { expandReplacement, findAll, firstPerLine, replaceMatches } from "../core/replace.ts";
-import { planReplace } from "../core/replace-files.ts";
+import { expandReplacement, firstPerLine, replaceMatches } from "../core/replace.ts";
+import { planReplaceLater } from "../core/replace-files.ts";
 import { listTasks, toggleTask } from "../core/tasks.ts";
 import { isInside } from "../core/vault.ts";
 import { flag, has, UsageError } from "./args.ts";
@@ -202,7 +203,7 @@ export const WRITING_COMMANDS: Record<string, Handler> = {
     };
   },
 
-  replace(s, rest) {
+  async replace(s, rest) {
     if (has(s.args, "all")) return replaceAll(s, rest);
     if (has(s.args, "files") || has(s.args, "plan"))
       throw new UsageError("--files and --plan go with --all: replace in every note");
@@ -229,7 +230,14 @@ export const WRITING_COMMANDS: Record<string, Handler> = {
         throw new UsageError(`--lines starts past the end (${rel} has ${count} line${count === 1 ? "" : "s"})`);
       range = [starts[a - 1] ?? file.text.length, starts[b] ?? file.text.length];
     }
-    let ms = findAll(file.text, re, range[0], range[1], has(s.args, "regex")); // ^ and $ insert
+    let ms = (
+      await matchText(file.text, re, {
+        from: range[0],
+        to: range[1],
+        empty: has(s.args, "regex"),
+        regex: has(s.args, "regex"),
+      })
+    ).matches; // ^ and $ insert
     if (has(s.args, "first") && has(s.args, "first-per-line"))
       throw new UsageError("--first or --first-per-line, not both");
     if (has(s.args, "first")) ms = ms.slice(0, 1);
@@ -380,5 +388,5 @@ function replaceAll(s: Session, rest: string[]): Promise<Result> {
   for (const k of s.graph.skipped)
     if (/^larger than/.test(k.reason)) s.warnings.push(`${k.rel}: not searched (${k.reason})`);
   const opts = { regex: has(s.args, "regex"), whole: has(s.args, "whole"), ignoreCase: has(s.args, "ignore-case") };
-  return renameResult(s, () => planReplace(s.graph, query, replacement, rels, opts));
+  return renameResult(s, () => planReplaceLater(s.graph, query, replacement, rels, opts));
 }

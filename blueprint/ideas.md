@@ -490,3 +490,11 @@ idea without an outcome is still open. Nothing here is agreed: the decisions are
 
 - User documentation for people: guides for the tasks a newcomer meets, and a manual covering everything, in
   `docs/`. (2026-10-11) Taken up in (DOC); done, consolidated 2026-10-11.
+
+
+## Maintenance and accessibility follow-ups
+
+Six proposals are accepted for later evaluation under roadmap `27.1`–`27.6`, not selected implementations. Their
+verified gaps, alternatives and outstanding validation are recorded once in
+[research/maintenance-gaps.md](research/maintenance-gaps.md). No performance threshold, follow format, test size
+limit, support-bundle schema or collaborator-access change is agreed yet.

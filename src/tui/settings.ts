@@ -161,6 +161,7 @@ export class Settings {
     if (key === "theme") this.applyTheme();
     else if (key === "glyphs") this.app.glyphs = this.glyphSet(this.app.ui.glyphs);
     else if (key === "mouse") this.app.host.setMouse?.(this.app.ui.mouse);
+    else if (key === "hidden_files") this.app.explorer.invalidateTree();
     this.app.relayoutAll();
   }
 
@@ -207,6 +208,7 @@ export class Settings {
     const before = this.app.config;
     const next = loaded.config;
     this.app.config = next;
+    if (next.render.images_remote === "never") this.app.pictures.remote.cancelAll();
     setRootMarkers(next.walk.root_markers); // where roots are, from now on (21.1): your config only
     setTrustedRoots(next.trust.roots); // and which may run their own code (23.x): yours only too
     this.app.languages.lintCmd = lintCommand(next.lint, this.app.loc.root, undefined, next.lsp.auto_install);

@@ -7,8 +7,8 @@ export class Windows {
   constructor(readonly app: App) {}
 
   /** `:q`: this window, or its tab; the very last one quits. */
-  closeOrQuit(): void {
-    if (this.app.floating) return void this.app.overlays.leaveFloating();
+  closeOrQuit(): void | Promise<void> {
+    if (this.app.floating) return this.app.overlays.leaveFloating();
     const t = this.app.tab;
     if (!t || (t.views.length <= 1 && this.app.tabs.length <= 1)) return this.app.saving.requestQuit();
     this.close();
@@ -40,8 +40,8 @@ export class Windows {
     else t.active = 1 - t.active;
   }
 
-  close(): void {
-    if (this.app.floating) return void this.app.overlays.leaveFloating();
+  close(): void | Promise<void> {
+    if (this.app.floating) return this.app.overlays.leaveFloating();
     const t = this.app.tab;
     if (!t) return;
     if (t.views.length > 1) {

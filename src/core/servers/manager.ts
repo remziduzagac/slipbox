@@ -33,13 +33,16 @@ export interface ManagerOptions {
   problems: (path: string, server: string, version: number | null, problems: Problem[], raw: Diagnostic[]) => void;
   /** An edit a server asks slipbox to make: true when it was. */
   applyEdit?: (edit: WorkspaceEdit) => boolean;
-  /** Something for the user: a server installed, missing, or crashing. */
+  /** Something for the user: a server installed, missing, or crashing; a request it didn't answer in time, its
+   *  diagnostics cut short. */
   message: (level: "info" | "warn" | "error", text: string) => void;
   /** Servers' own log lines. */
   log?: (text: string) => void;
   /** A root you haven't answered for, where its own code would otherwise run (what's left out): the TUI
    *  asks whether you trust it (23.x). Without it, the CLI's way: said, never asked. */
   ask?: (root: string, limits: string[]) => void;
+  /** How long a request waits for its answer (`slipbox diagnostics --timeout`); else the client's own (client.ts). */
+  requestTimeoutMs?: number;
 }
 
 interface Doc {
@@ -128,6 +131,8 @@ export class ServerManager {
   /** Roots said not to be trusted (23.8): each said once. */
   private readonly untrustedSaid = new Set<string>();
   private closed = false;
+  /** Aborted by `cancelInstalls`: an install under way is stopped. */
+  private readonly ending = new AbortController();
 
   constructor(private readonly o: ManagerOptions) {}
 
@@ -161,7 +166,7 @@ export class ServerManager {
         // The file as it is when the server is ready: the latest text, if it changed meanwhile.
         const now = this.docs.get(path);
         if (client && now && !client.isOpen(uriOf(path)))
-          void client.didOpen(uriOf(path), now.languageId, now.version, now.text);
+          quietly(client.didOpen(uriOf(path), now.languageId, now.version, now.text));
       });
     }
   }
@@ -210,20 +215,20 @@ export class ServerManager {
     const doc = this.docs.get(path);
     if (!doc) return;
     Object.assign(doc, { version, text });
-    for (const key of doc.servers) void this.running.get(key)?.client?.didChange(uriOf(path), version, text);
+    for (const key of doc.servers) quietly(this.running.get(key)?.client?.didChange(uriOf(path), version, text));
   }
 
   save(path: string, text: string): void {
     const doc = this.docs.get(path);
     if (!doc) return;
-    for (const key of doc.servers) void this.running.get(key)?.client?.didSave(uriOf(path), text);
+    for (const key of doc.servers) quietly(this.running.get(key)?.client?.didSave(uriOf(path), text));
   }
 
   close(path: string): void {
     const doc = this.docs.get(path);
     if (!doc) return;
     this.docs.delete(path);
-    for (const key of doc.servers) void this.running.get(key)?.client?.didClose(uriOf(path));
+    for (const key of doc.servers) quietly(this.running.get(key)?.client?.didClose(uriOf(path)));
   }
 
   isOpen(path: string): boolean {
@@ -325,6 +330,14 @@ export class ServerManager {
     for (const r of this.running.values()) r.client?.kill();
   }
 
+  /**
+   * Installs under way stopped: the screen is quitting, and none is left running behind it. The command line doesn't,
+   * so an install it began finishes for the next run.
+   */
+  cancelInstalls(): void {
+    this.ending.abort();
+  }
+
   /** A server for a project: the running one, or one started (after installing it when it must be). */
   private server(def: ServerDef, root: string, found: Found | null, language: string): Running | null {
     const key = `${def.name}\0${root}`;
@@ -359,6 +372,7 @@ export class ServerManager {
         settings: settingsFor(r.def, r.root, yours),
         initOptions,
         root: r.root,
+        timeoutMs: this.o.requestTimeoutMs,
       },
       {
         diagnostics: (uri, diagnostics, version) => {
@@ -376,8 +390,9 @@ export class ServerManager {
           );
         },
         log: (text) => this.o.log?.(text),
-        exited: (expected, why) => {
-          if (!expected) this.crashed(r, why);
+        notice: (text) => this.o.message("warn", text),
+        exited: (expected, why, stoppedByClient) => {
+          if (!expected) this.crashed(r, why, stoppedByClient);
         },
         applyEdit: (edit) => this.o.applyEdit?.(edit) ?? false,
       },
@@ -408,9 +423,9 @@ export class ServerManager {
           ? `updating ${def.name} (${behind.installed} → ${npm.version}) in slipbox's own folder…`
           : `installing ${def.name} again from slipbox's lockfile (${spec})…`;
       this.o.message("info", said);
-      done = installTool(npm).then((r) => {
+      done = installTool(npm, { signal: this.ending.signal }).then((r) => {
         if (r.ok) this.o.message("info", `${behind ? "updated" : "installed"} ${def.name}`);
-        else
+        else if (!this.ending.signal.aborted)
           this.o.message(
             "error",
             `couldn't install ${def.name}: ${r.output.split("\n").at(-1) || "bun install failed"}`,
@@ -422,27 +437,35 @@ export class ServerManager {
     return done;
   }
 
-  private crashed(r: Running, why: string): void {
+  /** It ended unasked: it crashed, or slipbox stopped it (`byClient`: what it sent couldn't be read). Started again,
+   *  a few times. */
+  private crashed(r: Running, why: string, byClient = false): void {
     if (this.closed) return;
     const now = Date.now();
     r.crashes = [...r.crashes.filter((t) => now - t < CRASH_WINDOW_MS), now];
+    const what = byClient ? `was stopped: ${why}` : `crashed (${why})`;
     if (r.crashes.length > CRASHES_ALLOWED) {
-      this.o.message("error", `${r.def.name} keeps crashing (${why}); not started again`);
+      this.o.message(
+        "error",
+        byClient
+          ? `${r.def.name} ${what}, again; not started again`
+          : `${r.def.name} keeps crashing (${why}); not started again`,
+      );
       return;
     }
     // Its program gone (a venv recreated, an upgrade moving it): left stopped, unless it's npm's to install.
     const found = findServer(r.def, r.root);
     if (!found && !(r.def.npm && this.o.autoInstall())) {
-      this.o.message("error", `${r.def.name} crashed (${why}) and its program is gone; not started again`);
+      this.o.message("error", `${r.def.name} ${what} and its program is gone; not started again`);
       return;
     }
-    this.o.message("warn", `${r.def.name} crashed (${why}); starting it again`);
+    this.o.message("warn", `${r.def.name} ${what}; starting it again`);
     // The same server again, its files told again once it's ready.
     r.ready = this.start(r, found);
     void r.ready.then((client) => {
       if (!client) return;
       for (const d of this.docs.values())
-        if (d.servers.includes(r.key)) void client.didOpen(uriOf(d.path), d.languageId, d.version, d.text);
+        if (d.servers.includes(r.key)) quietly(client.didOpen(uriOf(d.path), d.languageId, d.version, d.text));
     });
   }
 
@@ -458,4 +481,10 @@ export class ServerManager {
 
 function uriOf(path: string): string {
   return pathToFileURL(path).href;
+}
+
+/** A file's news for a server, not waited on: one that can't be written means the server is going, and its exit (a
+ *  crash, started again) says so — never an error of slipbox's own. */
+function quietly(told: Promise<void> | undefined): void {
+  told?.catch(() => {});
 }

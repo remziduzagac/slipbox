@@ -3,8 +3,9 @@
 // and `space g h`, the file's commits (followed through renames), each opened to read as it was or diffed to now.
 
 import { join, relative } from "node:path";
-import { blameLine, type CommitInfo, fileLog, lineInHead, messageOf } from "../core/gitlog.ts";
-import { showAt } from "../core/gitops.ts";
+import { blameLineLater, type CommitInfo, fileLogLater, lineInHead, messageLater } from "../core/gitlog.ts";
+import { showLater } from "../core/gitops.ts";
+import { beginGitRead } from "./gitquery.ts";
 import { climbsOut } from "../core/fsutil.ts";
 import { sanitize } from "../core/sanitize.ts";
 import type { App, View } from "./app.ts";
@@ -30,19 +31,23 @@ function cursorLine(app: App, view: View): number {
 }
 
 /** `space g b`: who last changed the cursor's line, in the floating window: the commit, its author and date, its message. */
-export function blameHere(app: App): void {
+export async function blameHere(app: App): Promise<void> {
   const view = app.view;
   const path = fileHere(app, view);
   if (path === null) return;
   const c = app.git.checkout!;
   const line = cursorLine(app, view!);
-  const head = showAt(c, "HEAD", path);
+  const query = beginGitRead(app, "Reading blame");
+  const head = await showLater(c, "HEAD", path, query.signal);
+  if (!query.current()) return;
   if (head === null) return app.message("info", `${path} isn't in the last commit: every line is new`);
   const at = lineInHead(head, view!.buf.source, line);
   if (at === null) return app.message("info", `line ${line} is changed since the last commit: not committed yet`);
-  const b = blameLine(c, path, at);
+  const b = await blameLineLater(c, path, at, query.signal);
+  if (!query.current()) return;
   if (!b) return app.message("warn", `git couldn't blame line ${line}`);
-  const message = messageOf(c, b.hash) || b.subject;
+  const message = (await messageLater(c, b.hash, query.signal)) || b.subject;
+  if (!query.current()) return;
   app.overlays.openHover(
     `**${b.hash.slice(0, 8)}** · ${b.author} · ${day(b.time)}\n\n\`\`\`text\n${message}\n\`\`\`\n\n\`space g h\`: the file's history`,
     `line ${line}, last changed in ${b.hash.slice(0, 8)}`,
@@ -50,11 +55,13 @@ export function blameHere(app: App): void {
 }
 
 /** `space g h`: the file's commits, newest first; one picked, read as it was or diffed to the text now. */
-export function historyHere(app: App): void {
+export async function historyHere(app: App): Promise<void> {
   const view = app.view;
   const path = fileHere(app, view);
   if (path === null) return;
-  const log = fileLog(app.git.checkout!, path);
+  const query = beginGitRead(app, "Reading history");
+  const log = await fileLogLater(app.git.checkout!, path, 500, query.signal);
+  if (!query.current()) return;
   if (log === null) return app.message("warn", "git couldn't read its history");
   if (!log.length) return app.message("info", `${path} has no commits yet`);
   app.overlays.openList({
@@ -69,9 +76,11 @@ export function historyHere(app: App): void {
 }
 
 /** A version picked: read it, as it was — or its diff to the text as it is now. */
-function pickVersion(app: App, view: View, path: string, x: CommitInfo): void {
+async function pickVersion(app: App, view: View, path: string, x: CommitInfo): Promise<void> {
   const c = app.git.checkout!;
-  const text = showAt(c, x.hash, x.path);
+  const query = beginGitRead(app, "Reading version");
+  const text = await showLater(c, x.hash, x.path, query.signal);
+  if (!query.current()) return;
   if (text === null) return app.message("warn", `git has no ${x.path} at ${x.hash.slice(0, 7)}`);
   const at = `${x.path} at ${x.hash.slice(0, 7)} (${day(x.time)})`;
   app.overlays.openList({

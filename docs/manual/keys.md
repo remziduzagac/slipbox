@@ -1,4 +1,6 @@
-# Keys
+# Keyboard and mouse shortcuts
+
+<a id="keys"></a>
 
 This chapter lists every key slipbox has out of the box. The keys are grouped as help (`?`) lists them. The other
 chapters explain what these keys do, and link here for the full lists.
@@ -185,7 +187,7 @@ from.
 | backlinks: the notes that link here | | `space l b` |
 | relink: point this note's links that a move broke to where the files are now | | `space l r` |
 
-[Links and vaults](links-and-vaults.md) explains where a link lands.
+[Links and backlinks](links-and-vaults.md) explains where a link lands.
 
 ### Inside a peek
 
@@ -354,6 +356,7 @@ Moving selects a row and opens nothing. [Files](files.md) explains what each of 
 | `g g` / `shift+g` | the first / last row |
 | `/` | filter the tree, keeping its folders ([Filtering a panel](#filtering-a-panel)) |
 | `a` | show every text file, or go back to what [`files.show`](configuration.md) lists |
+| `shift+h` | show hidden files and folders too (`⊘`, not indexed), or hide them again ([Files](files.md)) |
 | `n` / `shift+n` | a new note / a new folder in the selected folder (beside a selected file) |
 | `r` | rename the selected note, file or folder in its folder, fixing every link to it after a preview |
 | `shift+r` | on a nested vault's row, name it, as pointers name it |
@@ -363,6 +366,7 @@ Moving selects a row and opens nothing. [Files](files.md) explains what each of 
 | `shift+u` | undo the last rename, move or relink, after a preview |
 | `y` / `x` | copy / cut it, to paste |
 | `p` | paste in the selected folder (a copy of what was copied, or what was cut, moved there) |
+| `shift+y` | copy the selected row's whole path |
 | `v` | give the selected folder a `.slipbox/` folder, making it a vault of its own (it asks for a name) |
 | `shift+v` | make the selected nested vault part of the vault holding it again |
 | `.` | the row's menu, as its `…` button opens it (each entry's key picks it there) |
@@ -372,7 +376,7 @@ Moving selects a row and opens nothing. [Files](files.md) explains what each of 
 Below [`ui.narrow_width`](configuration.md) columns (90), the explorer and the outline open over the note.
 
 Opening a symlink that leads out of the vault, or out of home, asks first: `f` follows it, `l` just looks, read-only,
-and `n` doesn't ([Links that lead out](links-and-vaults.md#links-that-lead-out)).
+and `n` doesn't ([Links that lead out](vaults.md#links-that-lead-out)).
 
 ### Filtering a panel
 
@@ -862,7 +866,7 @@ act on this note's folder.
 
 ### Vaults and named folders: `space v`
 
-A vault is the folder slipbox works in. [Links and vaults](links-and-vaults.md) explains vaults and their names.
+A vault is the folder slipbox works in. [Vaults, home and Elsewhere](vaults.md) explains vaults and their names.
 
 | Keys | What |
 | --- | --- |
@@ -972,6 +976,7 @@ Your configuration's [`[aliases]`](configuration.md) adds more commands, or rena
 | `:theme <name>` | set the theme |
 | `:glyphs <set>` | set the glyphs: `nerd`, `unicode`, `ascii` or `auto` |
 | `:zen` / `:wrap` | zen mode / wrapping, on or off |
+| `:hidden` | hidden files and folders in the explorer, shown or not, as its `shift+h` |
 | `:messages` | the messages slipbox has shown |
 | `:reload` / `:reindex` | read the note from disk again / reindex the vault |
 | `:config` | read the configuration again |

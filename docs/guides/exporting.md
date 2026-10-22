@@ -1,4 +1,9 @@
-# Exporting notes
+# Exporting and sharing notes
+
+<a id="exporting-notes"></a>
+
+Choose a saved practice note, export it and inspect the result before sharing. You need a writable destination outside
+the notes you want to keep. This guide ends with a file you have checked, not an automatic upload.
 
 When a note has to go to someone who doesn't use slipbox, export it. It can be a Word document, a PDF, a web page, an
 e-book, or Markdown to take elsewhere. You can export one note, or several as one document.
@@ -17,7 +22,8 @@ slipbox writes every format itself. Nothing needs installing, and nothing is fet
    - On the right are the folder's contents.
    - At the bottom is the file's name, filled in. The first time, it's `coffee.docx`, in the note's folder.
 
-   ![The Save As window: places on the left, the folder on the right, the file name filled in](../images/exporting-save-as.png)
+   ![The Save As window: places on the left, the folder on the right, the file name filled
+   in](../images/exporting-save-as.png)
 
 4. Press `enter` to export there. A message says `exporting to ideas/coffee.docx…`, then
    `exported ideas/coffee.md to ideas/coffee.docx (Word (.docx))`.
@@ -101,3 +107,5 @@ Open the document once yourself before you send it.
 
 - [Exporting](../manual/export.md): every format, what each keeps, and the limits.
 - [The command line](../manual/cli.md): `slipbox export` and its options.
+
+**Next:** [Working with agents](agents.md).

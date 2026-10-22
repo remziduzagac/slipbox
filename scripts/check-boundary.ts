@@ -6,6 +6,7 @@
 //   src/core/  may not import src/tui/, src/cli/, or @opentui/*
 //   src/cli/   may not import src/tui/ or @opentui/*
 // src/main.ts may import src/tui/ lazily — the dynamic import is how the CLI avoids loading it.
+// And by module: what runs only in a worker is imported, for more than its types, by that worker alone.
 
 import { readdirSync, readFileSync, statSync } from "node:fs";
 import { dirname, join, relative, resolve } from "node:path";
@@ -16,6 +17,12 @@ const RULES: Record<string, string[]> = {
   "src/cli": ["src/tui", "@opentui"],
 };
 
+/** Modules only some files may import, but for types: the diagram library draws in its worker alone (#164), since a
+ *  diagram it never finished, drawn on the screen's thread, froze slipbox. */
+export const OWNERS: Record<string, string[]> = {
+  "src/core/diagram-render.ts": ["src/core/diagram-worker.ts"],
+};
+
 // `… from "x"`, `import("x")`, `require("x")`, and a side-effect `import "x"`.
 const IMPORT =
   /(?:import|export)\s[^'"]*?from\s*["']([^"']+)["']|import\s*\(\s*["']([^"']+)["']\s*\)|require\(\s*["']([^"']+)["']\s*\)|import\s*["']([^"']+)["']/g;
@@ -23,6 +30,13 @@ const IMPORT =
 /** What a file's text imports, by the specifiers as written. */
 export function importsOf(text: string): string[] {
   return [...text.matchAll(IMPORT)].map((m) => (m[1] ?? m[2] ?? m[3] ?? m[4])!);
+}
+
+/** What a file's text imports for what runs: `importsOf`, less `import type` and `export type`, which load nothing. */
+export function valueImportsOf(text: string): string[] {
+  return [...text.matchAll(IMPORT)]
+    .filter((m) => !/^(?:import|export)\s+type\s/.test(m[0]))
+    .map((m) => (m[1] ?? m[2] ?? m[3] ?? m[4])!);
 }
 
 function files(dir: string): string[] {
@@ -57,9 +71,20 @@ if (import.meta.main) {
     }
   }
 
+  for (const file of files(join(ROOT, "src"))) {
+    const from = relative(ROOT, file);
+    for (const spec of valueImportsOf(readFileSync(file, "utf8"))) {
+      if (!spec.startsWith(".")) continue;
+      const target = relative(ROOT, resolve(dirname(file), spec));
+      const owners = OWNERS[target];
+      if (owners && !owners.includes(from))
+        violations.push(`${from}: imports ${spec} (only ${owners.join(", ")} may: it runs there alone)`);
+    }
+  }
+
   if (violations.length) {
     console.error(`boundary check failed:\n  ${violations.join("\n  ")}`);
     process.exit(1);
   }
-  console.log("boundary check ok: core and cli import nothing from the TUI");
+  console.log("boundary check ok: core and cli import nothing from the TUI; workers' modules stay in their workers");
 }

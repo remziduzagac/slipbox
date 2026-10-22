@@ -117,15 +117,19 @@ export function drawPane(
     const rep = typing?.replace;
     const count = !text
       ? ""
-      : f?.error
-        ? "not a regex"
-        : rep
-          ? rep.total
-            ? `${rep.current + 1}/${rep.total}`
-            : "no matches"
-          : f?.matches.length
-            ? `${f.current + 1}/${f.matches.length}`
-            : "no matches";
+      : f?.pending || rep?.pending
+        ? "searching"
+        : f?.error
+          ? f.failed
+            ? "search failed"
+            : "not a regex"
+          : rep
+            ? rep.total
+              ? `${rep.current + 1}/${rep.total}`
+              : "no matches"
+            : f?.matches.length
+              ? `${f.current + 1}/${f.matches.length}${f.limited ? "+" : ""}`
+              : "no matches";
     // What goes right of the query, while at least QUERY_ROOM columns stay for it: the count, then
     // the toggles; in a narrow window the ones that don't fit are left out (⇄ first), never drawn
     // over the next pane.

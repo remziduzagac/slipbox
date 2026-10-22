@@ -41,6 +41,11 @@ export function readMap(text: string): { label: string; pages: string[] }[] {
   return groups.filter((g) => g.pages.length);
 }
 
+/** Earlier addresses stay published without becoming extra sidebar destinations. The map owns both lists. */
+export function readLegacyPages(text: string): string[] {
+  return [...text.matchAll(/^<!-- legacy-page: ((?:guides|manual)\/[\w-]+\.md) -->$/gm)].map((m) => m[1]!);
+}
+
 /** A page's address on the site, from its path in docs/ (`guides/install.md`), with an anchor kept. */
 export function pageUrl(docPath: string, anchor = ""): string {
   const slug = `${docPath.replace(/\.md$/, "").replace(/(^|\/)README$/, "")}/`; // a folder's README is the folder's
@@ -103,7 +108,9 @@ export function splitPage(text: string): { title: string; description: string; b
   const rest = lines.slice(at + 1);
   while (rest.length && !rest[0]!.trim()) rest.shift();
   const para: string[] = [];
-  for (const l of rest) {
+  // Compatibility anchors belong in the body, but are not a page's introductory description.
+  const first = rest.findIndex((line) => line.trim() && !/^<a id="[^"]+"><\/a>$/.test(line));
+  for (const l of rest.slice(first < 0 ? rest.length : first)) {
     if (!l.trim() || /^(#|```|\||[-*] |\d+\. |>)/.test(l)) break;
     para.push(l.trim());
   }
@@ -123,12 +130,15 @@ function q(s: string): string {
 }
 
 function gather(): void {
-  const map = readMap(readFileSync(join(DOCS, "README.md"), "utf8"));
+  const mapText = readFileSync(join(DOCS, "README.md"), "utf8");
+  const map = readMap(mapText);
+  const legacy = readLegacyPages(mapText);
   for (const entry of readdirSync(OUT)) if (entry !== "index.mdx") rmSync(join(OUT, entry), { recursive: true });
   const isDir = (p: string) => existsSync(join(REPO, p)) && statSync(join(REPO, p)).isDirectory();
   const sidebar: { label: string; items: { slug: string }[] }[] = [];
   let pages = 0;
-  for (const group of map) {
+  const groups = [...map, { label: "", pages: legacy }];
+  for (const group of groups) {
     const items: { slug: string }[] = [];
     for (const page of group.pages) {
       const { title, description, body } = splitPage(readFileSync(join(DOCS, page), "utf8"));
@@ -146,7 +156,7 @@ function gather(): void {
       items.push({ slug: page.replace(/\.md$/, "") });
       pages++;
     }
-    sidebar.push({ label: group.label, items });
+    if (group.label) sidebar.push({ label: group.label, items });
   }
   writeFileSync(join(SITE, "src", "sidebar.json"), `${JSON.stringify(sidebar, null, 2)}\n`);
   const images = join(SITE, "public", "images");

@@ -1,8 +1,9 @@
 name: release
 
-# Plan 14.2: a tag v<version> pushed is built by build.yml — the build a preview shares (GR-D13): each platform on a
-# runner of its own after the tests pass there, each pack's SBOM attested to it, the packs summed and attested — then
-# the release drafted with its notes from CHANGELOG.md: nothing is published until a person publishes the draft.
+# Plan 14.2: a tag v<version> pushed on `main` — whose commits passed `full`, the whole suite (D251) — is built by
+# build.yml, the build a preview shares (GR-D13): each platform on a runner of its own, each pack's SBOM attested to
+# it, the packs summed and attested — then the release drafted with its notes from CHANGELOG.md: nothing is published
+# until a person publishes the draft.
 # Publishing it runs homebrew.yml and pages.yml. Every action pinned by its commit, a week old when taken (14.10);
 # values reach the shell through env, never inline.
 on:
@@ -14,13 +15,14 @@ on:
 permissions: {}
 
 jobs:
-  # Before anything is built: the tag is the version's (package.json's and src/version.ts's), and the changelog has
-  # its section, which the draft's notes are made from.
+  # Before anything is built: the tag is the version's (package.json's and src/version.ts's), the changelog has its
+  # section, which the draft's notes are made from, and the commit passed `full`, the whole suite run by hand (D251).
   plan:
     runs-on: ubuntu-24.04
     timeout-minutes: 10
     permissions:
       contents: read # to check out the code
+      checks: read # to read whether the commit passed `full`
     outputs:
       version: ${{ steps.version.outputs.version }}
     steps:
@@ -38,6 +40,20 @@ jobs:
         run: |
           bun --no-install scripts/release.ts notes --tag "$TAG" >/dev/null
           echo "version=${TAG#v}" >>"$GITHUB_OUTPUT"
+      # D251: `main` takes no commit that hasn't passed `full`, so a release isn't tested again; a tag on any other
+      # commit is refused here, before anything is built.
+      - name: passed in full
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          SHA: ${{ github.sha }}
+        run: |
+          passed=$(gh api "repos/$REPO/commits/$SHA/check-runs?check_name=full" \
+            --jq '[.check_runs[] | select(.conclusion == "success")] | length')
+          if [ "$passed" = "0" ]; then
+            echo "$SHA hasn't passed full: run ci by hand on test (gh workflow run ci --ref test) before releasing"
+            exit 1
+          fi
 
   # A reusable workflow named `./`, read from this run's own commit, never from the workspace. zizmor asks for GitHub's
   # newer `$/`, which means the same; actionlint 1.7.12 doesn't read it yet (rhysd/actionlint#711), and checks this
@@ -53,8 +69,8 @@ jobs:
     with:
       tag: ${{ github.ref_name }}
       version: ${{ needs.plan.outputs.version }}
-      # The whole suite on every platform released, ARM Linux among them, before anything is built.
-      suite: true
+      # Tested already: the commit passed `full` (D251), the step above says so. Built and run, not tested again.
+      suite: false
 
   # The draft, from build.yml's `release` artifact: the packs, their SBOMs, `SHA256SUMS`, `install.sh` and
   # `slipbox.rb`, each attested already. Nothing built runs here.
@@ -73,7 +89,7 @@ jobs:
           install_args: bun
           cache: false
           minimum_release_age: 7d
-      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
           name: release
           path: dist/release

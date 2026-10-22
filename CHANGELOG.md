@@ -6,6 +6,98 @@ The format is [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.1.0/); wh
 
 ## [Unreleased]
 
+### Added
+
+- `slipbox [path] --base <ref>` opens the screen with the branch checked out there measured against `<ref>`, kept for
+  that branch as Compare against… keeps it: a worktree opened for a pull request measured as the pull request is
+  (`slipbox . --base origin/dev`). A ref that names nothing exits 3 before the screen opens.
+
+- Remote branches such as `origin/dev`, tags and commits work as a branch's base: in `[git] base` and `[git] bases`,
+  with `--base`, and in Compare against…, which lists the remote branches and takes a typed branch, tag or commit
+  (`HEAD~3` kept as its commit). With a remote branch as the base, This branch against says when a fetch last moved
+  it.
+
+- Tokyo Night Moon and Storm themes, alongside Night (the default) and Day. All four use official upstream palettes.
+
+- The explorer's row menu (its `…` button, or `.`) has "Zoom in here" first for a folder, and "Copy path" for every
+  row, which copies its whole path. `shift+y` in the explorer copies it too.
+
+### Changed
+
+- `slipbox changed` and `slipbox diff` measure the branch against its own base, as the screen does: the one kept for
+  it, else the nearest of `[git] bases`, else `[git] base`, main or master. `--base` still wins. Their `--json` adds
+  `baseChosen`: `given`, `kept`, `nearest` or `configured`.
+
+- Documentation follows a new learning path, with Working with slipbox first and a dedicated reading/editing guide
+  second. Feature explanations, task guides and exact references have distinct homes. Existing page addresses and
+  section links are retained, and the screenshots are retaken for the new guides.
+
+- Tokyo Night uses the official Night background and foreground, replacing the darker, softer custom colours.
+  Night and Day also use upstream colours for strong text and syntax accents; user colour overrides still apply.
+
+- Export output is staged on disk, in slipbox's cache folder, and published with bounded copying, keeping large
+  documents and Markdown's attachments out of the interface's memory. PDF releases completed pages, EPUB writes its
+  entries as they're made, and HTML writes one chapter at a time. Cancellation remains available while output is copied
+  into place.
+
+- Remote pictures download incrementally with bounded active and waiting requests. Quitting cancels transfers and
+  removes partial cache files; completed pictures and existing consent choices work as before.
+
+- Pending Mermaid diagrams label their source `mermaid — drawing…`. Completed text and SVG drawings are cached on
+  disk for reuse by later sessions, command rendering and export; the cache is bounded and optional.
+
+- Code parsing and structure extraction run in the background, keeping large source files responsive while their
+  outline and code view prepare. Replies from superseded revisions are ignored. If the structure can't be had, a
+  message says why; when its thread ran out of time or stopped, opening the file again tries once more.
+
+- Linters and tool installs are stopped cleanly. slipbox reads up to 16 MiB of what a linter prints, and 1 MiB of an
+  install's output. A linter run that prints more shows none of that run's findings and says why once, and linting
+  stays on. A run that takes too long, or that a signal ends, shows no partial findings either. Quitting slipbox, or
+  ending it with Ctrl-C or by closing its terminal, stops the linters and installs it started.
+
+- Language servers: a request not answered in ten seconds (a diagnostics request: sixty; `slipbox diagnostics
+  --timeout` sets both) is cancelled, and the server keeps running. Past 64 unanswered requests, more wait their turn.
+  Diagnostics are asked for a few files at a time, and again after a save or the server's refresh. Malformed or excess
+  diagnostics are left out, with a message. Only a response slipbox can't read stops a server, which is started again.
+
+- Big notes and spelling checks running in the background take their turn: when many big notes wait at once, as
+  when a vault is first indexed, none is turned away. A note whose thread runs out of time or stops is shown as its
+  source, with a message saying why. Opening it again tries once more, and the index reads its links, tags and
+  headings all the same. A spelling check that fails leaves its words unmarked and checks them again a moment later.
+
+- Git history, blame and old versions load asynchronously and discard results for obsolete views or revisions.
+
+- SVG processing, math conversion and image decoding run in the background, keeping their text visible while
+  pictures prepare. Large previews use bounded pixel caches.
+
+- Exports prepare in the background with progress stages and a Cancel export command. The destination is checked
+  again before the completed output is written.
+
+- Clipboard helpers run in the background with a timeout, keeping slow system clipboard tools off the UI thread.
+
+- Regex find and replace run in the background: a regex that never finishes no longer stops the screen. The find row
+  says `searching` while it works and `search failed` if it can't finish, and `enter` tries again. A replace, and
+  `slipbox find`, still take every match, however many; a replace that can't finish changes nothing.
+
+- Diagram layout runs in the background, with a rendering deadline and a bounded result cache. Diagrams that exceed
+  the rendering limits remain readable as source, with a specific reason. Notes with many diagrams are processed in
+  batches; CLI rendering and export allow five seconds per diagram without automatic retries, independently of the screen.
+
+### Fixed
+
+- A language server that never finishes starting is stopped even if it ignores graceful termination.
+
+## [0.4.1] - 2026-10-17
+
+### Added
+
+- Hidden files and folders in the explorer. `shift+h` there lists the files and folders whose names start with a dot,
+  such as `.github` and `.env`, and hides them again; `:hidden` and the UI settings (`space u u`) do the same, and
+  `files.hidden = true` lists them from the start, in your configuration or a vault's own. They are marked `⊘`, not
+  indexed, and the status line says `hidden` with the cursor on one. A hidden file you open from the explorer is
+  indexed from then on, as one opened by its path is, except in your home folder. `.git` is never listed, home's index
+  still leaves hidden folders out, and the switcher and search list only what's indexed.
+
 ## [0.4.0] - 2026-10-17
 
 ### Added
@@ -335,7 +427,8 @@ The first release. 0.2.0 was tagged but never released: its build failed a test 
   `slipbox uninstall`; Windows through WSL.
 - `slipbox skill`: the skill for agents carried by the binary, printed or installed where an agent reads skills.
 
-[Unreleased]: https://github.com/remziduzagac/slipbox/compare/v0.4.0...HEAD
+[Unreleased]: https://github.com/remziduzagac/slipbox/compare/v0.4.1...HEAD
+[0.4.1]: https://github.com/remziduzagac/slipbox/compare/v0.4.0...v0.4.1
 [0.4.0]: https://github.com/remziduzagac/slipbox/compare/v0.3.0...v0.4.0
 [0.3.0]: https://github.com/remziduzagac/slipbox/compare/v0.2.2...v0.3.0
 [0.2.2]: https://github.com/remziduzagac/slipbox/compare/v0.2.1...v0.2.2

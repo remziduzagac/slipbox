@@ -18,7 +18,7 @@ import { addToDictionaries, openDictionary, threadDictionaries } from "../core/s
 import { dataOutline } from "../core/data.ts";
 import { classify, extensionOf } from "../core/filetypes.ts";
 import { readText } from "../core/fsutil.ts";
-import { findAll } from "../core/replace.ts";
+import { matchText } from "../core/regex-jobs.ts";
 import { flag, has, UsageError } from "./args.ts";
 import {
   EXIT,
@@ -125,7 +125,7 @@ export const READING_COMMANDS: Record<string, Handler> = {
     return { data, human: lines.map((l) => `${l}\n`).join("") };
   },
 
-  find(s, rest) {
+  async find(s, rest) {
     const query = requireArg(rest, "query");
     const re = pattern(s, query);
     // --files: the vault's data and text files are searched too (16.4).
@@ -145,7 +145,10 @@ export const READING_COMMANDS: Record<string, Handler> = {
       }
       const starts = lineStarts(text);
       let [colLine, colAt, col] = [0, 0, 0];
-      for (const m of findAll(text, re)) {
+      // Every match; only a regex whose captures outgrow the text many times over is cut short, and said.
+      const result = await matchText(text, re, { regex: has(s.args, "regex"), partial: true });
+      if (result.limited) s.warnings.push(`${rel}: the matches' captures outgrow the text; the first ones shown`);
+      for (const m of result.matches) {
         const line = lineAt(starts, m.from);
         const lineStart = starts[line - 1]!;
         const lineEnd = (starts[line] ?? text.length + 1) - 1;

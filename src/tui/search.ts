@@ -1,8 +1,9 @@
 // Finding in the TUI: the vault's search index kept as the app runs (6.5, 6.9) and the list ranked as you type;
 // notes by tag and by type; find's replace row, and a replace across every note.
 
+import { layoutMatches, matchText } from "../core/regex-jobs.ts";
 import { compilePattern, findAll } from "../core/replace.ts";
-import { planReplace } from "../core/replace-files.ts";
+import { planReplaceLater } from "../core/replace-files.ts";
 import * as R from "./replacing.ts";
 import { IndexJob, indexFile, search, type SearchHit, SearchIndex, type SearchResult } from "../core/search.ts";
 import { leadsOut, peekAt } from "./peek.ts";
@@ -14,7 +15,7 @@ import { frontmatterFindings, rootTypes } from "../core/diagnostics.ts";
 import type { App, View, ListItem, ListOverlay, PromptOverlay } from "./app.ts";
 import type { Layout } from "../core/layout/ir.ts";
 import type { FindState } from "./app.ts";
-import { stringWidth } from "../core/width.ts";
+import { stringWidth, prefixWidths } from "../core/width.ts";
 import { refilter } from "./overlays.ts";
 
 /** Search: the index and its list, tags and types, replace across notes. */
@@ -297,14 +298,22 @@ export class Search {
     view.findOpts = o;
     const typing = this.app.overlay?.kind === "prompt" && this.app.overlay.view === view;
     if (view.find && !typing) {
-      const f = computeFind(this.app.currentLayout(view), view.find.query, view.find.current, o.whole, o.regex);
+      const f = computeFind(
+        this.app.currentLayout(view),
+        view.find.query,
+        view.find.current,
+        o.whole,
+        o.regex,
+        false,
+        view,
+      );
       view.find = f;
     }
     this.app.message("info", `${key === "regex" ? "regex" : "whole words"}: ${o[key] ? "on" : "off"}`);
   }
 
   /** Keys in the replace field: its text, enter replaces one, alt+enter (alt+a) all, ctrl+n/p move. */
-  replaceFieldKey(o: PromptOverlay, view: View, key: string, typed: string | null): void {
+  async replaceFieldKey(o: PromptOverlay, view: View, key: string, typed: string | null): Promise<void> {
     const r = o.replace!;
     switch (key) {
       case "enter":
@@ -357,22 +366,41 @@ export class Search {
       const re = compilePattern(query, opts());
       if (typeof re === "string") return this.app.message("warn", `not a regex: ${re}`);
       const withLabel = said(`replace ${JSON.stringify(query)} in every note with`);
-      this.app.overlays.prompt(withLabel(), (replacement) => {
+      this.app.overlays.prompt(withLabel(), async (replacement) => {
         // The toggles as they are now: flipped here, the query may be no regex.
         const o = opts();
         const re = compilePattern(query, o);
         if (typeof re === "string") return this.app.message("warn", `not a regex: ${re}`);
+        const graph = this.app.graph;
+        const versions = [...this.app.buffers.values()].map((b) => [b, b.version] as const);
         const rels = [...this.app.graph.notes.keys(), ...this.app.explorer.shownFiles().map((f) => f.path)];
         const abs = new Set(rels.map((r) => this.app.graph.abs(r)));
-        const dirty = this.app
-          .dirtyBuffers()
-          .filter((b) => abs.has(b.abs) && findAll(b.source, re, 0, b.source.length, o.regex).length);
+        const dirty = [];
+        try {
+          for (const b of this.app.dirtyBuffers()) {
+            if (abs.has(b.abs) && (await matchText(b.source, re, { regex: o.regex, empty: o.regex })).matches.length)
+              dirty.push(b);
+          }
+        } catch (error) {
+          return this.app.message("warn", `search failed: ${(error as Error).message}`);
+        }
         if (dirty.length)
           return this.app.message(
             "warn",
             `unsaved: ${dirty.map((b) => this.app.displayName(b)).join(", ")} — save first: the replace rewrites ${dirty.length === 1 ? "it" : "them"}`,
           );
-        this.app.renaming.preview(() => planReplace(this.app.graph, query, replacement, rels, o));
+        try {
+          const plan = await planReplaceLater(this.app.graph, query, replacement, rels, o);
+          if (
+            !this.app.quitting &&
+            this.app.graph === graph &&
+            this.app.overlay === null &&
+            versions.every(([b, version]) => b.version === version)
+          )
+            this.app.renaming.preview(() => plan);
+        } catch (error) {
+          this.app.message("warn", `search failed: ${(error as Error).message}`);
+        }
       });
       if (view) (this.app.overlay as PromptOverlay).toggles = { view, label: withLabel };
     });
@@ -381,6 +409,7 @@ export class Search {
   }
 }
 
+const findReady = new WeakMap<FindState, Promise<FindState>>();
 export function computeFind(
   layout: Layout,
   query: string,
@@ -388,22 +417,82 @@ export function computeFind(
   whole = false,
   regex = false,
   ignoreCase = false,
+  owner: object = layout,
 ): FindState {
   const matches: FindState["matches"] = [];
   let error: string | undefined;
   if (query) {
-    // Match on the original text (never a lowercased copy, whose length can differ: "İ"), with
-    // smart case, plain text unless regex is on, whole words when asked (core/replace.ts).
     const re = compilePattern(query, { regex, whole, ignoreCase });
     if (typeof re === "string") error = re;
-    else {
+    else if (regex) {
+      const lines = layout.lines.map((line) => (line.decor ? "" : line.spans.map((span) => span.text).join("")));
+      const entry = layoutMatches(lines, re, owner);
+      const finish = (): FindState => {
+        if (!entry.value)
+          return {
+            query,
+            matches: [],
+            current: 0,
+            whole,
+            regex,
+            error: entry.error ?? "search cancelled",
+            failed: true,
+          };
+        const columns = new Map<number, number[]>();
+        const offsets = new Map<number, number[]>();
+        for (const match of entry.value.matches) {
+          const row = offsets.get(match.row) ?? [];
+          row.push(match.from);
+          offsets.set(match.row, row);
+        }
+        for (const [row, starts] of offsets) columns.set(row, prefixWidths(lines[row]!, starts));
+        const indices = new Map<number, number>();
+        const matches = entry.value.matches.map((match) => {
+          const index = indices.get(match.row) ?? 0;
+          indices.set(match.row, index + 1);
+          return {
+            row: match.row,
+            col: columns.get(match.row)![index]!,
+            len: stringWidth(lines[match.row]!.slice(match.from, match.to)),
+          };
+        });
+        return {
+          query,
+          matches,
+          current: Math.min(current, Math.max(0, matches.length - 1)),
+          whole,
+          regex,
+          limited: entry.value.limited,
+        };
+      };
+      if (entry.value || entry.error || entry.abort.signal.aborted) return finish();
+      const pending: FindState = { query, matches: [], current: 0, whole, regex, pending: true };
+      findReady.set(pending, entry.pending.then(finish));
+      return pending;
+    } else {
+      // Plain text, worked out at once: every match, as many as there are (n reaches the last).
       layout.lines.forEach((line, row) => {
         if (line.decor) return; // the lens's rules aren't the note's text
-        const text = line.spans.map((s) => s.text).join("");
-        for (const m of findAll(text, re))
-          matches.push({ row, col: stringWidth(text.slice(0, m.from)), len: stringWidth(text.slice(m.from, m.to)) });
+        const text = line.spans.map((span) => span.text).join("");
+        for (const match of findAll(text, re))
+          matches.push({
+            row,
+            col: stringWidth(text.slice(0, match.from)),
+            len: stringWidth(text.slice(match.from, match.to)),
+          });
       });
     }
   }
-  return { query, matches, current: Math.min(current, Math.max(0, matches.length - 1)), whole, regex, error };
+  return {
+    query,
+    matches,
+    current: Math.min(current, Math.max(0, matches.length - 1)),
+    whole,
+    regex,
+    error,
+  };
+}
+export async function computeFindReady(...args: Parameters<typeof computeFind>): Promise<FindState> {
+  const state = computeFind(...args);
+  return (await findReady.get(state)) ?? state;
 }

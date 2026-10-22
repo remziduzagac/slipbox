@@ -42,8 +42,8 @@ import { flattenVars, loadRasterizer, looksLikeSvg } from "../src/core/svg.ts";
 import { loadMermaid, mermaidSvg } from "../src/core/diagrams.ts";
 import { loadTypesetter } from "../src/core/typeset.ts";
 import { extractFromSource } from "../src/core/graph.ts";
-import { lintCommand, lintLoadsCode, MARKDOWNLINT, parseLint, runLint } from "../src/core/lint.ts";
-import { lockKey, toolFolder, toolManifest } from "../src/core/servers/install.ts";
+import { type LintIssue, lintCommand, lintLoadsCode, MARKDOWNLINT, parseLint, runLint } from "../src/core/lint.ts";
+import { installTool, lockKey, toolFolder, toolManifest } from "../src/core/servers/install.ts";
 import { LOCKS } from "../src/core/servers/locks.ts";
 import { isTrusted, setTrust, setTrustedRoots, trustFile, trustOf } from "../src/core/trust.ts";
 import {
@@ -511,7 +511,7 @@ describe("themes (2.6)", () => {
   test("the lens while it's typed into is green: its rules and label, a green tint on its rows", () => {
     const { theme } = loadTheme("tokyo-night");
     expect(theme.roles.lens_edit.fg).toBe("#9ece6a"); // the palette's green
-    expect(theme.roles.lens_band_edit.bg).toBe(blend("#9ece6a", "#16161e", 0.07)); // over the page's background
+    expect(theme.roles.lens_band_edit.bg).toBe(blend("#9ece6a", "#1a1b26", 0.07)); // over the page's background
   });
   test("unknown theme falls back to tokyo-night with a warning", () => {
     const r = loadTheme("no-such-theme");
@@ -2546,6 +2546,8 @@ describe("SVG drawn (12.15), and what slipbox draws as pictures (12.16, 12.17)",
       const d = await import(${JSON.stringify(join(import.meta.dir, "../src/core/diagrams.ts"))});
       await d.loadMermaid();
       const colors = { bg: "#ffffff", fg: "#000000", line: "#888888", accent: "#0000ff", muted: "#999999" };
+      d.mermaidSvg("graph TD\\n  A-->B", colors, "DejaVu Sans");
+      await d.loadMermaid();
       const svg = d.mermaidSvg("graph TD\\n  A-->B", colors, "DejaVu Sans");
       const fired = await Promise.race([new Promise((r) => setTimeout(() => r(true), 5)), Bun.sleep(2000).then(() => false)]);
       console.log(JSON.stringify({ svg: typeof svg === "string" && svg.startsWith("<svg"), fired, window: "window" in globalThis }));
@@ -2610,6 +2612,8 @@ describe("SVG drawn (12.15), and what slipbox draws as pictures (12.16, 12.17)",
   test("a Mermaid diagram as an SVG in the theme's colours, nothing left for resvg to resolve; maths typeset in its colour", async () => {
     await loadMermaid();
     const colors = { bg: "#101010", fg: "#e0e0e0", line: "#707070", accent: "#3080f0", muted: "#909090" };
+    mermaidSvg("graph TD\n  A --> B", colors, "DejaVu Sans");
+    await loadMermaid();
     const svg = mermaidSvg("graph TD\n  A --> B", colors, "DejaVu Sans")!;
     expect(svg).not.toMatch(/var\(|color-mix/);
     expect(svg).toContain("#e0e0e0");
@@ -2884,7 +2888,7 @@ describe("big notes: parsed on other threads, rendered faster (15.1)", () => {
     stopParsePool();
   });
 
-  test("threads that can't start, or a worker that fails: false (the main thread parses), and the pool starts afresh", async () => {
+  test("threads that can't start, or a worker that fails: false with source fallback, and a failed worker starts afresh", async () => {
     const { parseInBackground, stopParsePool } = await import("../src/core/parse-pool.ts");
     const text = await demo();
     const real = globalThis.Worker;
@@ -2921,7 +2925,7 @@ describe("big notes: parsed on other threads, rendered faster (15.1)", () => {
       const first = made;
       expect(first).toBeGreaterThan(0);
       expect(await parseInBackground(text, cache)).toBe(false);
-      expect(made).toBe(first * 2); // the failed pool was dropped: started again
+      expect(made).toBe(first * 2); // each worker that failed was let go of: started again
     } finally {
       (globalThis as { Worker: unknown }).Worker = real;
       stopParsePool();
@@ -3809,14 +3813,14 @@ describe("trust (23.x)", () => {
     const said: string[] = [];
     const files = ["plain/a.md", "js/deep/b.md", "rules/c.md"].map((f) => join(root, f));
     const got = await runLint({ argv: [fake], literal: true }, files, root, undefined, (t) => said.push(t));
-    expect(got!.map((i) => i.file)).toEqual([join(root, "plain/a.md")]);
+    expect((got as LintIssue[]).map((i) => i.file)).toEqual([join(root, "plain/a.md")]);
     expect(said).toEqual([
       `markdownlint-cli2 not run on 2 file(s): a markdownlint config there is code, or names code to load, and ${root} isn't a vault you trust — [trust] roots in your config`,
     ]);
     await runLint({ argv: [fake], literal: true }, files, root, undefined, (t) => said.push(t));
     expect(said.length).toBe(1); // said once
     setTrustedRoots([root]);
-    expect((await runLint({ argv: [fake], literal: true }, files, root))!.length).toBe(3);
+    expect(((await runLint({ argv: [fake], literal: true }, files, root)) as LintIssue[]).length).toBe(3);
   });
 });
 
@@ -3960,6 +3964,53 @@ describe("the lint surface (3.21)", () => {
     }
   });
 
+  test("a lint run cancelled while markdownlint-cli2 waits to be installed: the install stops too, and the next run installs it", async () => {
+    const pkg = mkdtempSync(join(sandbox, "fake-mdl-cancel-"));
+    writeFileSync(
+      join(pkg, "package.json"),
+      JSON.stringify({ name: "fake-mdl-cancel", version: "1.0.0", bin: { "markdownlint-cli2": "bin.mjs" } }),
+    );
+    writeFileSync(
+      join(pkg, "bin.mjs"),
+      "#!/usr/bin/env node\nfor (const f of process.argv.slice(2)) console.log(`${f.slice(1)}:1 error MD001/heading-increment Heard`);\nprocess.exit(1);\n",
+    );
+    const npm = { package: "fake-mdl-cancel", version: `file:${pkg}`, bin: "markdownlint-cli2" };
+    const lockDir = mkdtempSync(join(sandbox, "mdl-cancel-lock-"));
+    writeFileSync(join(lockDir, "package.json"), toolManifest(npm));
+    expect(
+      Bun.spawnSync([process.execPath, "install", "--lockfile-only", "--ignore-scripts"], {
+        cwd: lockDir,
+        env: { ...process.env, BUN_BE_BUN: "1" },
+      }).exitCode,
+    ).toBe(0);
+    LOCKS[lockKey(npm)] = readFileSync(join(lockDir, "bun.lock"), "utf8").replace(
+      /@file:([^"/][^"]*)"/g,
+      (_, rel: string) => `@file:${resolve(lockDir, rel)}"`,
+    );
+    const v = mkdtempSync(join(sandbox, "lint-"));
+    const cmd = { argv: [], literal: true, install: npm };
+    const was = process.env.PATH;
+    process.env.PATH = "/usr/bin:/bin";
+    try {
+      const controller = new AbortController();
+      const run = runLint(cmd, ["/v/a.md"], v, undefined, undefined, controller.signal);
+      controller.abort();
+      expect(await run).toEqual({ skipped: "tool cancelled" });
+      // Once the installs queued before it are done, nothing of this one is there.
+      await installTool({ package: "none", version: "0", bin: "none" }, { locks: {} });
+      expect(existsSync(toolFolder(npm)!)).toBe(false);
+      // The next run installs it. One cancelled while waiting on that install stops waiting at once.
+      const next = runLint(cmd, ["/v/a.md"], v);
+      const waiting = runLint(cmd, ["/v/b.md"], v, undefined, undefined, AbortSignal.abort());
+      expect(await waiting).toEqual({ skipped: "tool cancelled" });
+      expect(existsSync(toolFolder(npm)!)).toBe(false); // the install it waited on not done yet
+      expect(await next).toMatchObject([{ file: "/v/a.md", rule: "MD001" }]);
+    } finally {
+      process.env.PATH = was;
+      delete LOCKS[lockKey(npm)];
+    }
+  });
+
   test("run: the files given (literal paths for markdownlint-cli2), the findings read; a linter that isn't there, or fails saying nothing, is null", async () => {
     const v = mkdtempSync(join(sandbox, "lint-"));
     const echo = {
@@ -3976,7 +4027,7 @@ describe("the lint surface (3.21)", () => {
       { file: "/v/b [x].md", line: 2, rule: "MD001" },
     ]);
     const said = { argv: ["sh", "-c", 'printf "x.md:1 error MD001/said %s\\n" "$1"', "lint"], literal: true };
-    expect((await runLint(said, ["/v/a[1].md"], v))![0]!.description).toBe(":/v/a[1].md"); // a literal path, never a glob
+    expect(((await runLint(said, ["/v/a[1].md"], v)) as LintIssue[])[0]!.description).toBe(":/v/a[1].md"); // a literal path, never a glob
     expect(await runLint({ argv: ["no-such-linter-slipbox-test"], literal: false }, ["/v/a.md"], v)).toBeNull();
     expect(await runLint({ argv: ["sh", "-c", "exit 2"], literal: false }, ["/v/a.md"], v)).toBeNull();
   });
@@ -4032,6 +4083,29 @@ describe("the boundary check (0.3, scripts/check-boundary.ts)", () => {
     expect(r.err).toBe("");
     expect(r.code).toBe(0);
     expect(r.out).toContain("boundary check ok");
+  });
+
+  test("the diagram renderer imported for what runs, outside its worker: reported; its types anywhere (#164)", () => {
+    const render = "export type Drawn = { rows: string[] };\nexport const renderText = () => null;\n";
+    const r = check({
+      "src/core/diagram-render.ts": render,
+      "src/core/diagram-worker.ts": 'import { renderText } from "./diagram-render.ts";\nexport const w = renderText;\n',
+      "src/core/diagrams.ts":
+        'import type { Drawn } from "./diagram-render.ts";\nexport type { Drawn } from "./diagram-render.ts";\n',
+      "src/core/layout/render.ts": 'import { renderText } from "../diagram-render.ts";\nexport const l = renderText;\n',
+      "src/tui/app.ts": 'export { renderText } from "../core/diagram-render.ts";\n',
+    });
+    expect(r.code).toBe(1);
+    expect(
+      r.err
+        .split("\n")
+        .filter((l) => l.startsWith("  "))
+        .map((l) => l.trim())
+        .sort(),
+    ).toEqual([
+      "src/core/layout/render.ts: imports ../diagram-render.ts (only src/core/diagram-worker.ts may: it runs there alone)",
+      "src/tui/app.ts: imports ../core/diagram-render.ts (only src/core/diagram-worker.ts may: it runs there alone)",
+    ]);
   });
 });
 
@@ -4582,15 +4656,34 @@ describe("spelling (25.6)", () => {
     expect((await c.misspeltAll([w("one"), w("www")])).map((x) => x.word)).toEqual(["www"]);
     // No dictionary: nothing is misspelt.
     expect(await new Checker(null).misspeltAll([w("zzz")])).toEqual([]);
-    // Dictionaries that fail: why kept, the words taken as right — not asked again at every frame.
+    // Dictionaries that fail: why kept, the words unknown — never taken as right — and not asked again at every frame,
+    // but once a while has passed; answered then, marked.
     let tries = 0;
-    const failing = new Checker({
-      check: async () => (tries++, Promise.reject(new Error("the thread stopped"))),
-      suggest: async () => [],
-    });
+    let fail = true;
+    let now = 1000;
+    const failing = new Checker(
+      {
+        check: async (words) => (
+          tries++, fail ? Promise.reject(new Error("the thread stopped")) : words.map(() => false)
+        ),
+        suggest: async () => [],
+      },
+      undefined,
+      () => now,
+    );
     expect(await failing.misspeltAll([w("zzz")])).toEqual([]);
     expect(failing.misspelt([w("zzz")])).toEqual([]);
-    expect([failing.error, tries]).toEqual(["the thread stopped", 1]);
+    expect([failing.error, tries, failing.correct("zzz"), failing.retryDue()]).toEqual([
+      "the thread stopped",
+      1,
+      undefined,
+      false,
+    ]);
+    now += Checker.RETRY_MS;
+    fail = false;
+    expect(failing.retryDue()).toBe(true);
+    expect((await failing.misspeltAll([w("zzz")])).map((x) => x.word)).toEqual(["zzz"]);
+    expect([tries, failing.correct("zzz"), failing.retryDue()]).toEqual([2, false, false]);
   });
 
   test("the spell checker's thread: dictionaries built there and asked; your word put in; stopped or failed, the next request starts it again", async () => {
@@ -4659,13 +4752,21 @@ describe("spelling (25.6)", () => {
     expect(importers).toEqual(["src/core/spell-worker.ts ./hunspell.ts"]);
   });
 
-  test("a worker's script: beside its module from the source; in the compiled binary, under core/ beside the entry point", async () => {
+  test("a worker's script: beside its module from the source; in the compiled binary, under core/ from its root, whichever entry point starts it", async () => {
     const { workerUrl } = await import("../src/core/workers.ts");
     expect(workerUrl("spell-worker.ts")).toBe(
       Bun.pathToFileURL(join(import.meta.dir, "../src/core/spell-worker.ts")).href,
     );
     expect(workerUrl("spell-worker.ts", "file:///$bunfs/root/slipbox")).toBe(
       "file:///$bunfs/root/core/spell-worker.ts",
+    );
+    // From a module bundled into a worker's entry point (the export's, starting the diagrams'): the same place, not
+    // core/core/, where Bun finds no module and the worker never starts.
+    expect(workerUrl("diagram-worker.ts", "file:///$bunfs/root/core/export-worker.js")).toBe(
+      "file:///$bunfs/root/core/diagram-worker.ts",
+    );
+    expect(workerUrl("../tui/opentui.ts", "file:///$bunfs/root/core/export-worker.js")).toBe(
+      "file:///$bunfs/root/tui/opentui.ts",
     );
   });
 });
@@ -4727,10 +4828,17 @@ describe("commands run by your shell (25.7)", () => {
     process.env.SHELL = "/bin/sh";
     try {
       const dir = mkdtempSync(join(tmpdir(), "slipbox-shell-"));
-      // Apart in time, so the order they came in is the one written.
-      const r = await runShell("pwd; echo out; sleep 0.1; echo err >&2; sleep 0.1; echo $SLIPBOX_X; exit 3", {
+      // Each line written once the one before has been read (a file the test makes), so the order they came in is the
+      // one written, however busy the machine: two pipes read at once could come either way. At most three seconds.
+      const wait = (go: string) => `i=0; while [ ! -f ${go} ] && [ $i -lt 300 ]; do sleep 0.01; i=$((i+1)); done`;
+      const r = await runShell(`pwd; echo out; ${wait("1")}; echo err >&2; ${wait("2")}; echo $SLIPBOX_X; exit 3`, {
         cwd: dir,
         env: { SLIPBOX_X: "x1" },
+        onOutput: (text) => {
+          const lines = text.split("\n");
+          if (lines.includes("out")) writeFileSync(join(dir, "1"), "");
+          if (lines.includes("err")) writeFileSync(join(dir, "2"), "");
+        },
       }).done;
       expect(r).toMatchObject({ code: 3, signal: null, truncated: false });
       expect(r.output).toBe(`${realpathSync(dir)}\nout\nerr\nx1\n`);

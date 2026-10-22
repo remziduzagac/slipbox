@@ -134,7 +134,7 @@ export async function toDocx(doc: ExportDoc): Promise<Uint8Array> {
     footnotes,
     sections: [{ children: body }],
   });
-  return new Uint8Array(await Packer.toBuffer(file));
+  return Packer.toBuffer(file);
 }
 
 /** Blocks as Word's paragraphs and tables; `quote`: how deep in quotes they are, `bar` the colour of the quote's bar. */

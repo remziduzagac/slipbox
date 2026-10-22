@@ -2,11 +2,12 @@
 // keys; the floating window closed or left.
 
 import * as R from "./replacing.ts";
+import { cancelGitRead } from "./gitquery.ts";
 import { TOP } from "../core/position.ts";
 import { saveAsKey } from "./saveas.ts";
 import { NoteBuffer } from "./buffer.ts";
 import { keyChar } from "./keys.ts";
-import type { App, View, ListItem, ListOverlay, Overlay } from "./app.ts";
+import type { App, View, ListItem, ListOverlay, Overlay, PromptOverlay } from "./app.ts";
 import { rank } from "./match.ts";
 import { mergeClosed } from "./mergescreen.ts";
 import { reviewEnded } from "./review.ts";
@@ -41,10 +42,11 @@ export class Overlays {
    * The floating window closed by you (`esc`, `q`, `:q`): a diff's goes back to what it was opened from (GIT-D2); the
    * merge screen of the conflict prompt's (M)erge, to the prompt (GIT-D5).
    */
-  leaveFloating(): void {
+  leaveFloating(): void | Promise<void> {
     const f = this.app.floating;
     if (!this.closeFloating()) return;
-    if (f?.kind === "diff") f.diff.back?.();
+    // Back to what it was opened from, which may be read again from git: the key's turn waits for it.
+    if (f?.kind === "diff") return f.diff.back?.();
     if (f?.kind === "merge") mergeClosed(this.app, f.merge);
   }
 
@@ -71,13 +73,13 @@ export class Overlays {
   openList(opts: {
     title: string;
     items: ListItem[];
-    accept: (item: ListItem) => void;
+    accept: (item: ListItem) => unknown;
     move?: (item: ListItem) => void;
     cancel?: () => void;
     filterable?: boolean;
     selected?: number;
     source?: (input: string) => ListItem[] | null;
-    submit?: (input: string) => boolean;
+    submit?: (input: string) => boolean | Promise<boolean>;
     footer?: boolean;
     keepGroups?: boolean;
     alignKeysAcrossList?: boolean;
@@ -118,8 +120,8 @@ export class Overlays {
 
   prompt(
     label: string,
-    accept: (text: string) => void,
-    change?: (text: string) => void,
+    accept: (text: string) => unknown,
+    change?: (text: string) => unknown,
     cancel?: () => void,
     view?: View,
   ): void {
@@ -141,18 +143,23 @@ export class Overlays {
   }
 
   close(cancelled: boolean): void {
+    if (cancelled) cancelGitRead(this.app);
     const o = this.app.overlay;
     this.app.overlay = null;
     if (cancelled) o?.cancel?.();
   }
 
-  key(o: Overlay, key: string): void {
+  private changed(o: PromptOverlay): void {
+    void Promise.resolve(o.change?.(o.text)).finally(() => this.app.host.requestRender());
+  }
+
+  async key(o: Overlay, key: string): Promise<void> {
     if (o.kind === "saveas") return saveAsKey(this.app, o, key);
     // Replacing: closing the rows keeps the search, the cursor and the edits (nothing to cancel).
     if (o.kind === "prompt" && o.replace?.confirm && o.view) return R.confirmKey(this.app, o, o.view, key);
     if (o.kind === "prompt" && o.replace && (key === "escape" || key === "ctrl+c" || key === "ctrl+g")) {
       this.app.overlay = null;
-      return o.accept(o.text);
+      return void (await o.accept(o.text));
     }
     if (key === "escape" || key === "ctrl+c" || key === "ctrl+g") return this.close(true);
     const typed = keyChar(key);
@@ -171,8 +178,8 @@ export class Overlays {
       // The find row's toggles, while typing in it.
       if (o.view && (key === "alt+r" || key === "alt+w")) {
         this.app.search.toggleFindOpt(o.view, key === "alt+r" ? "regex" : "whole");
-        if (o.replace) R.refresh(this.app, o, o.view);
-        else o.change?.(o.text);
+        if (o.replace) void R.refresh(this.app, o, o.view).finally(() => this.app.host.requestRender());
+        else this.changed(o);
         return;
       }
       if (o.view && key === "alt+h") return void this.app.search.toggleReplaceRow(o.view);
@@ -186,19 +193,19 @@ export class Overlays {
       if (o.view && o.replace && key === "enter") {
         // Closing the pair keeps the search (and what was replaced); it doesn't undo anything.
         this.app.overlay = null;
-        return o.accept(o.text);
+        return void (await o.accept(o.text));
       }
       if (key === "enter") {
         this.app.overlay = null;
-        return o.accept(o.text);
+        return void (await o.accept(o.text));
       }
       if (key === "backspace") o.text = [...o.text].slice(0, -1).join("");
       else if (key === "ctrl+w" || key === "ctrl+backspace") o.text = o.text.replace(/\S*\s*$/, "");
       else if (key === "ctrl+u") o.text = "";
       else if (typed !== null) o.text += typed;
       else return;
-      o.change?.(o.text);
-      if (o.replace && o.view) R.refresh(this.app, o, o.view); // the count of what enter would replace, as you type
+      this.changed(o);
+      if (o.replace && o.view) void R.refresh(this.app, o, o.view).finally(() => this.app.host.requestRender()); // the count of what enter would replace, as you type
       return;
     }
     // A tree (the folder picker): ← folds, → unfolds; the selection stays on its item.
@@ -221,14 +228,16 @@ export class Overlays {
     };
     switch (key) {
       case "enter": {
-        if (o.submit?.(o.input)) {
+        // Awaited only when it's a promise: an ordinary list's enter (a click's too) acts at once, as it did.
+        const submitted = o.submit?.(o.input);
+        if (submitted instanceof Promise ? await submitted : submitted) {
           if (this.app.overlay === o) this.app.overlay = null;
           return;
         }
         const item = o.filtered[o.selected];
         if (!item) return this.close(true); // nothing to accept: undo any live preview
         this.app.overlay = null;
-        o.accept(item.item);
+        await o.accept(item.item);
         return;
       }
       case "down":

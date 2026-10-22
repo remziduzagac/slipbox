@@ -154,3 +154,86 @@ export function readClipboard(fallbackDir: string): string | null {
   }
   return null;
 }
+
+/** External clipboard helpers run asynchronously; callbacks keep their existing file/OSC 52 fallback. */
+async function clipboardTool(
+  argv: string[],
+  input: Uint8Array | undefined,
+  signal?: AbortSignal,
+): Promise<string | null> {
+  const { spawn } = await import("node:child_process");
+  const bin = Bun.which(argv[0]!, { PATH: process.env.PATH ?? "" });
+  if (!bin || signal?.aborted || (input?.byteLength ?? 0) > 32 * 1024 * 1024) return null;
+  return new Promise<string | null>((resolve) => {
+    const child = spawn(bin, argv.slice(1), {
+      stdio: [input ? "pipe" : "ignore", input ? "ignore" : "pipe", "ignore"],
+      detached: process.platform !== "win32",
+    });
+    let output: Buffer[] = [];
+    let bytes = 0;
+    let settled = false;
+    const finish = (value: string | null) => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timer);
+      signal?.removeEventListener("abort", stop);
+      child.stdout?.destroy();
+      child.stdin?.destroy();
+      output = [];
+      resolve(value);
+    };
+    const stop = () => {
+      try {
+        if (process.platform !== "win32" && child.pid) process.kill(-child.pid, "SIGKILL");
+        else child.kill("SIGKILL");
+      } catch {
+        child.kill("SIGKILL");
+      }
+      finish(null);
+    };
+    const timer = setTimeout(stop, argv[0] === "powershell.exe" ? 5000 : 1000);
+    signal?.addEventListener("abort", stop, { once: true });
+    child.on("error", () => finish(null));
+    child.on("close", (code) => finish(code === 0 ? Buffer.concat(output).toString("utf8") : null));
+    child.stdout?.on("data", (chunk: Buffer) => {
+      bytes += chunk.length;
+      if (bytes > 32 * 1024 * 1024) stop();
+      else output.push(chunk);
+    });
+    child.stdin?.on("error", () => stop());
+    if (input) child.stdin?.write(input);
+    child.stdin?.end();
+    if (signal?.aborted) stop();
+  }).catch(() => null);
+}
+
+export async function copyTextAsync(text: string, opts: CopyOptions & { signal?: AbortSignal }): Promise<CopyResult> {
+  if (opts.signal?.aborted) return { methods: [], file: null, confirmed: false };
+  if (process.env.SLIPBOX_CLIPBOARD === "file") return copyText(text, opts);
+  const methods: string[] = [];
+  const osc52 = opts.osc52 ?? osc52ToTty;
+  if (osc52Sequence(text) && osc52(text)) methods.push("osc52");
+  for (const tool of localTools()) {
+    if (opts.signal?.aborted) break;
+    const input =
+      tool[0] === "clip.exe"
+        ? Buffer.concat([Buffer.from([0xff, 0xfe]), Buffer.from(text, "utf16le")])
+        : Buffer.from(text);
+    if ((await clipboardTool(tool, input, opts.signal)) !== null)
+      return { methods: [...methods, tool[0]!], file: null, confirmed: true };
+  }
+  if (methods.length || opts.signal?.aborted) return { methods, file: null, confirmed: false };
+  const file = join(opts.fallbackDir, "clipboard.txt");
+  atomicWrite(file, text);
+  return { methods: ["file"], file, confirmed: false };
+}
+
+export async function readClipboardAsync(fallbackDir: string, signal?: AbortSignal): Promise<string | null> {
+  if (process.env.SLIPBOX_CLIPBOARD === "file") return readClipboard(fallbackDir);
+  for (const tool of readTools()) {
+    if (signal?.aborted) return null;
+    const result = await clipboardTool(tool, undefined, signal);
+    if (result !== null) return tool[0] === "powershell.exe" ? fromPowerShell(result) : result;
+  }
+  return null;
+}

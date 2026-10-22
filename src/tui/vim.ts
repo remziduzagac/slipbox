@@ -245,7 +245,8 @@ async function operatorKey(app: App, view: View, key: string): Promise<void> {
     const f = view.find;
     const q = f?.query;
     // The search's own flags: after `*`, whole words only, as n has them.
-    const ms = q ? textMatches(view, q, undefined, { regex: f?.regex ?? false, whole: f?.whole ?? false }) : [];
+    const ms = q ? await textMatches(view, q, undefined, { regex: f?.regex ?? false, whole: f?.whole ?? false }) : [];
+    if (ms === null) return; // overtaken by a newer matching in the window
     if (typeof ms === "string" || !ms.length)
       return app.message("info", q ? `not found: ${q}` : "no search yet for gn");
     const at = E.offsetOf(app, view);
@@ -666,10 +667,12 @@ export function textObject(view: View, at: number, kind: "i" | "a", ch: string, 
 }
 
 /** p / P: the register after or before the cursor (a line register: under or over its line). */
-export function put(app: App, view: View, after: boolean, pasted?: string): void {
+export async function put(app: App, view: View, after: boolean, pasted?: string): Promise<void> {
+  const version = view.buf.version;
   // The system clipboard's text (or the register): see App.pasteText. A terminal paste in normal
   // mode brings its own text.
-  const reg = pasted !== undefined ? { text: pasted, linewise: false } : app.pasteText();
+  const reg = pasted !== undefined ? { text: pasted, linewise: false } : await app.pasteText();
+  if (app.quitting || view.buf.version !== version || app.view !== view) return;
   if (!reg) return app.message("info", "nothing to put — copy something (y, d, x or your system's copy)");
   const why = E.cannotEdit(view);
   if (why) return app.message("warn", `${why} — not editing`);

@@ -4,7 +4,7 @@
 // from the nearest folder holding one of its root-markers (else, unless it requires one, the file's
 // project), the project's own copy first; findings read from what it prints.
 
-import { spawn } from "node:child_process";
+import { LINT_OUTPUT_BYTES, runTool, toolFailure } from "../tool-process.ts";
 import { existsSync } from "node:fs";
 import { homedir } from "node:os";
 import { delimiter, dirname, join, resolve } from "node:path";
@@ -280,19 +280,28 @@ export function commandFor(def: LinterDef, file: string): string {
   return def.stdin ? def.command : `${def.command} ${quote(file)}`;
 }
 
-export type LintRun = { problems: Problem[] } | { failed: "missing" | "timeout" | "error"; detail: string };
+/**
+ * A linter's run: what it found; or it couldn't run (not there, too slow, failing); or this run's findings aren't
+ * shown though the linter works (`skipped`, saying why: its output past slipbox's limit, or the run cancelled).
+ */
+export type LintRun =
+  | { problems: Problem[] }
+  | { failed: "missing" | "timeout" | "error"; detail: string }
+  | { skipped: string };
 
 /**
  * Run a linter on a file (`text` on its input, when it reads it) from `root`, as efm does: through
  * the shell, output and errors read together; an exit of 0 is nothing found, unless it's told to
- * ignore its exit code. `missing`: the shell couldn't find it (127).
+ * ignore its exit code. `missing`: the shell couldn't find it (127). Output cut short — past the
+ * limit, cancelled, timed out, or a signal ending it — is never read as findings.
  */
-export function runLinter(
+export async function runLinter(
   def: LinterDef,
   file: string,
   text: string,
   root: string,
   timeoutMs = 30_000,
+  signal?: AbortSignal,
 ): Promise<LintRun> {
   const formats: Format[] = [];
   for (const f of def.formats) {
@@ -300,31 +309,22 @@ export function runLinter(
     if (typeof c === "string") return Promise.resolve({ failed: "error", detail: `${def.name}: ${c}` });
     formats.push(c);
   }
-  return new Promise((done) => {
-    let out = "";
-    const child = spawn("sh", ["-c", commandFor(def, file)], {
-      cwd: root,
-      env: { ...process.env, PATH: projectPath(root) },
-      stdio: ["pipe", "pipe", "pipe"],
-    });
-    const timer = setTimeout(() => {
-      child.kill("SIGKILL");
-      done({ failed: "timeout", detail: `${def.name} took longer than ${timeoutMs / 1000} s` });
-    }, timeoutMs);
-    (timer as { unref?: () => void }).unref?.();
-    child.stdout.on("data", (d) => (out += d));
-    child.stderr.on("data", (d) => (out += d));
-    child.stdin.on("error", () => {}); // it exited without reading
-    child.stdin.end(def.stdin ? text : "");
-    child.on("error", (err) => {
-      clearTimeout(timer);
-      done({ failed: "error", detail: `${def.name}: ${err.message}` });
-    });
-    child.on("close", (code) => {
-      clearTimeout(timer);
-      if (code === 127) return done({ failed: "missing", detail: out.trim().split("\n").at(-1) ?? "" });
-      if (code === 0 && !def.ignoreExitCode) return done({ problems: [] });
-      done({ problems: parseFindings(out, formats, def, file, root) });
-    });
+  const r = await runTool(["sh", "-c", commandFor(def, file)], {
+    cwd: root,
+    env: { ...process.env, PATH: projectPath(root) },
+    timeoutMs,
+    signal,
+    input: def.stdin ? text : "",
+    outputBytes: LINT_OUTPUT_BYTES,
   });
+  if (r.failure === "deadline")
+    return { failed: "timeout", detail: `${def.name} took longer than ${timeoutMs / 1000} s` };
+  if (r.failure === "overflow" || r.failure === "cancelled") return { skipped: `${def.name}: ${toolFailure(r)}` };
+  // It couldn't start (in its own words), its pipes failed, or a signal ended it: the linter's failure.
+  const failed = toolFailure(r);
+  if (failed) return { failed: "error", detail: `${def.name}: ${failed}` };
+  const output = r.stdout + r.stderr;
+  if (r.code === 127) return { failed: "missing", detail: output.trim().split("\n").at(-1) ?? "" };
+  if (r.code === 0 && !def.ignoreExitCode) return { problems: [] };
+  return { problems: parseFindings(output, formats, def, file, root) };
 }

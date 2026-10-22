@@ -5,7 +5,15 @@ import { describe, expect, test } from "bun:test";
 import { mkdtempSync, readdirSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { copyLogo, pageUrl, readMap, rewriteLinks, rewriteTarget, splitPage } from "../site/scripts/gather.ts";
+import {
+  copyLogo,
+  pageUrl,
+  readLegacyPages,
+  readMap,
+  rewriteLinks,
+  rewriteTarget,
+  splitPage,
+} from "../site/scripts/gather.ts";
 
 const DOCS = join(import.meta.dir, "..", "docs");
 const noDirs = () => false;
@@ -46,13 +54,52 @@ describe("the docs' site: its pages gathered from docs/ (DS-D2)", () => {
       ),
       "agent-guide.md",
     ];
-    expect([...pages].sort()).toEqual(files.sort());
+    const legacy = readLegacyPages(readFileSync(join(DOCS, "README.md"), "utf8"));
+    expect([...pages, ...legacy].sort()).toEqual(files.sort());
+    expect(legacy.every((page) => !pages.includes(page))).toBe(true);
+  });
+
+  test("earlier page addresses are explicit in the map without becoming extra sidebar entries", () => {
+    const text = "## Guides\n- [Tour](guides/getting-started.md)\n\n<!-- legacy-page: guides/keys-you-know.md -->\n";
+    expect(readMap(text)).toEqual([{ label: "Guides", pages: ["guides/getting-started.md"] }]);
+    expect(readLegacyPages(text)).toEqual(["guides/keys-you-know.md"]);
+    expect(readLegacyPages("<!-- legacy-page: ../private.md -->\n")).toEqual([]);
+  });
+
+  test("the learning path and guide sequence follow the documentation map", () => {
+    const map = readMap(readFileSync(join(DOCS, "README.md"), "utf8"));
+    expect(map.map((group) => group.label)).toEqual([
+      "Start here",
+      "Guides",
+      "Using slipbox",
+      "Reference",
+      "Help and project information",
+      "For agents",
+    ]);
+    expect(map[0]!.pages).toEqual(["manual/introduction.md", "guides/install.md", "guides/quick-start.md"]);
+    expect(map[1]!.pages).toEqual([
+      "guides/getting-started.md",
+      "guides/lens.md",
+      "guides/vaults.md",
+      "guides/from-obsidian-or-zk.md",
+      "guides/code-and-git.md",
+      "guides/exporting.md",
+      "guides/agents.md",
+      "guides/making-it-yours.md",
+    ]);
   });
 
   test("a page's address: its path without .md, under the site's base; the map is the home", () => {
     expect(pageUrl("guides/install.md")).toBe("/slipbox/docs/guides/install/");
     expect(pageUrl("manual/keys.md", "#leader")).toBe("/slipbox/docs/manual/keys/#leader");
     expect(pageUrl("README.md")).toBe("/slipbox/docs/");
+  });
+
+  test("compatibility anchors stay published without becoming the page description", () => {
+    const page = splitPage('# New title\n\n<a id="earlier-title"></a>\n\nA useful introduction.\n\n## Details\n');
+    expect(page.title).toBe("New title");
+    expect(page.description).toBe("A useful introduction.");
+    expect(page.body).toContain('<a id="earlier-title"></a>');
   });
 
   test("a link's target: another page's address, a picture in the site, a repository file on GitHub; the rest as it is", () => {

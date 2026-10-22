@@ -254,8 +254,9 @@ describe("the git panel by mouse as by keys (GIT-D8)", () => {
       label: "This branch against main (1)",
     });
     const i = rowOf(app, (r) => r.kind === "ahead" && r.file.path === "c.md");
+    // A click isn't a key: nothing waits for the diff git is read for, so the test does.
     click(`git:row:${i}`);
-    expect(app.floating?.title).toBe("c.md against main — esc: source control");
+    expect(await until(() => app.floating?.title === "c.md against main — esc: source control")).toBe(true);
     // On the base itself: none.
     git(root, "switch", "-q", "main");
     app.git.checkHead();
@@ -557,6 +558,66 @@ describe("the branches (GIT-D9, GIT-D10, GIT-D13)", () => {
   });
 });
 
+describe("a base from a remote, a tag or a commit (D255)", () => {
+  test("Compare against… lists the remote-tracking branches and takes a typed ref; a remote base says when it was fetched", async () => {
+    const root = repo();
+    // An origin with main and dev, fetched: origin/dev, origin/main, origin/feature here.
+    const bare = join(sandbox, `origin-${Date.now()}.git`);
+    spawnSync("git", ["init", "-q", "--bare", "-b", "main", bare]);
+    git(root, "remote", "add", "origin", bare);
+    git(root, "push", "-q", "origin", "main", "feature", "main:dev");
+    git(root, "fetch", "-q", "origin");
+    const { app, frame, keys } = await panel(root);
+    const branch = () => {
+      const r = app.gitPanel.rows().find((x) => x.kind === "branch" && x.branch.name === "feature");
+      return r?.kind === "branch" ? r.branch : null;
+    };
+    expect(await until(() => (frame(), !!branch()))).toBe(true);
+    const listed = () => app.overlay as ListOverlay | null;
+    app.gitPanel.branches.button(branch()!, "compare");
+    expect(await until(() => listed()?.title === "Compare feature against…")).toBe(true);
+    expect(listed()!.items.map((i) => [i.label, i.detail])).toEqual([
+      ["main", ""],
+      ["origin/dev", "remote"],
+      ["origin/feature", "remote"],
+      ["origin/main", "remote"],
+      ["A branch, tag or commit…", "typed: v2.3, a commit, HEAD~3"],
+    ]);
+    await keys(...typed("origin/dev"), "enter");
+    const said = (text: string) => until(() => app.messages.at(-1)?.text === text);
+    expect(await said("feature is compared against origin/dev now")).toBe(true);
+    // The heading: against the remote branch, as of the fetch.
+    await app.git.refreshNow();
+    const heading = () =>
+      app.gitPanel.rows().find((r) => r.kind === "heading" && r.section === "ahead") as { label: string } | undefined;
+    expect(
+      await until(() => (frame(), /^This branch against origin\/dev \(1\) · updated /.test(heading()?.label ?? ""))),
+    ).toBe(true);
+    expect(heading()!.label).toEndWith(" · updated just now");
+    // A commit typed (HEAD~1): kept as the commit it names.
+    app.gitPanel.branches.button(branch()!, "compare");
+    expect(await until(() => listed()?.title === "Compare feature against…")).toBe(true);
+    expect(listed()!.items[0]!.label).toBe("The base guessed from [git] bases");
+    await keys(...typed("tag or commit"), "enter");
+    expect(await until(() => app.overlay?.kind === "prompt")).toBe(true);
+    await keys(...typed("HEAD~1"), "enter");
+    const parent = git(root, "rev-parse", "HEAD~1").trim();
+    expect(await said(`feature is compared against ${parent} (HEAD~1) now`)).toBe(true);
+    // A local base says nothing of fetching.
+    await app.git.refreshNow();
+    expect(await until(() => (frame(), (heading()?.label ?? "").startsWith(`This branch against ${parent} (1)`)))).toBe(
+      true,
+    );
+    expect(heading()!.label).not.toContain(" · ");
+    // One that names nothing: said, nothing kept.
+    app.gitPanel.branches.button(branch()!, "compare");
+    expect(await until(() => listed()?.title === "Compare feature against…")).toBe(true);
+    await keys(...typed("tag or commit"), "enter");
+    await keys(...typed("no-such"), "enter");
+    expect(await said('no branch or commit "no-such" in the repository')).toBe(true);
+  });
+});
+
 describe("a diff's file read from disk", () => {
   test("a link read as git keeps it, where it leads, never followed; a file past the cap not read; one not there, empty", () => {
     const dir = mkdtempSync(join(sandbox, "read-"));
@@ -803,8 +864,8 @@ describe("the review, the merge screen and the rebase, from the panel (GIT-D3, G
     expect(app.gitPanel.buttons().find((b) => b.id === "resolve")?.label).toBe("Resolve 2");
     expect(pointedAt(app, "git:btn:resolve")?.key).toBe("x");
     click("git:btn:resolve");
-    // The note on screen is in conflict: it's the one.
-    expect(app.floating?.kind).toBe("merge");
+    // The note on screen is in conflict: it's the one (read from git's stages, once the click's read is in).
+    expect(await until(() => app.floating?.kind === "merge")).toBe(true);
     expect(app.floating!.title).toBe("Merge — a.md");
     await keys("escape");
     // The other selected: x takes it, not this note; its footer says so.
@@ -834,7 +895,7 @@ describe("the review, the merge screen and the rebase, from the panel (GIT-D3, G
     git(root, "-c", "merge.conflictStyle=merge", "merge", "-q", "other");
     const { app, click } = await panel(root, "m.md");
     click("git:btn:resolve");
-    expect(app.floating?.kind).toBe("merge");
+    expect(await until(() => app.floating?.kind === "merge")).toBe(true);
     const shown = app.floating!.view.buf.source.split("\n");
     expect(shown.filter((l) => /^Base/.test(l))).toEqual(["Base"]);
     // Yours and theirs against the base: what each changed; yours left "two" as it was.

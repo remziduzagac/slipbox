@@ -10,15 +10,16 @@ import { statSync } from "node:fs";
 import { basename } from "node:path";
 import type { Blockquote, Image, Link, PhrasingContent, RootContent, Text } from "mdast";
 import { cachedImage } from "../imagecache.ts";
-import { loadMermaid, mermaidSvg } from "../diagrams.ts";
-import { landsInside, readText } from "../fsutil.ts";
+import { loadMermaid, mermaidSvg, withMermaidBatch } from "../diagrams.ts";
+import { landsInside } from "../fsutil.ts";
 import type { Graph } from "../graph.ts";
 import { embedder, pictureLocator } from "../note.ts";
 import { onlyComments, withoutComments } from "../obsidian.ts";
-import { headingText, noteTitle, parseMarkdown, slugify } from "../parse.ts";
+import { headingText, noteTitle, slugify } from "../parse.ts";
 import { loadRasterizer } from "../svg.ts";
 import { loadTypesetter } from "../typeset.ts";
 import type { WikiLink } from "../wikilink.ts";
+import { embeddedNote, parseExportNote, withExportReads } from "./reads.ts";
 import { PRINT } from "./style.ts";
 
 /** A note exported: a chapter of the document. */
@@ -90,12 +91,16 @@ export function headingAnchor(chapter: string, heading: string): string {
 }
 
 /** The notes at `rels` (in this root), assembled for a writer. */
-export async function assemble(graph: Graph, rels: string[]): Promise<ExportDoc> {
+export function assemble(graph: Graph, rels: string[]): Promise<ExportDoc> {
+  return withExportReads(() => withMermaidBatch(() => assembleDocument(graph, rels)));
+}
+
+async function assembleDocument(graph: Graph, rels: string[]): Promise<ExportDoc> {
   const chapters = new Map(rels.map((r) => [r, chapterAnchor(r)]));
   const doc: ExportDoc = { title: "", author: null, date: null, lang: null, chapters: [] };
   for (const rel of rels) {
     const abs = graph.abs(rel);
-    const parsed = parseMarkdown(readText(abs).text);
+    const parsed = structuredClone(parseExportNote(abs));
     const anchor = chapters.get(rel)!;
     const ctx: Ctx = { graph, rel, abs, chapters, chain: [abs], ids: new Map(), anchor };
     const title = noteTitle(parsed, basename(rel).replace(/\.(md|markdown)$/i, ""));
@@ -224,7 +229,7 @@ async function embeds(children: PhrasingContent[], c: Ctx): Promise<RootContent[
     } else if (!(k.type === "break" || (k.type === "text" && !k.value.trim()))) return null;
   }
   if (!refs.length || !c.rel) return null;
-  const embed = embedder(c.graph, c.rel);
+  const embed = embedder(c.graph, c.rel, embeddedNote);
   const found = refs.map((r) => ({ r, e: embed?.(r.target, r.heading, r.block, r.kind) ?? null }));
   if (!found.some((f) => f.e?.nodes)) return null;
   const out: RootContent[] = [];
@@ -414,7 +419,10 @@ function isFile(file: string): boolean {
 /** A Mermaid diagram as an SVG, print's colours — null where it isn't drawn (a kind it doesn't draw, no font). */
 async function diagram(source: string): Promise<string | null> {
   const [m, r] = await Promise.all([loadMermaid(), loadRasterizer()]);
-  return m && r ? mermaidSvg(source, PRINT, r.family) : null;
+  if (!m || !r) return null;
+  mermaidSvg(source, PRINT, r.family);
+  await loadMermaid();
+  return mermaidSvg(source, PRINT, r.family);
 }
 
 /** Maths as an SVG, print's colour — a display's, or `inline` a line's; null where MathJax can't read it. */

@@ -135,6 +135,8 @@ export const SERVER_COMMANDS: Record<string, Handler> = {
           news = Date.now();
         },
         message: (_level, text) => s.io.err(`${text}\n`),
+        // Each request waits as long as the whole command does: a server still at its first analysis is waited for.
+        requestTimeoutMs: seconds * 1000,
       });
       const deadline = Date.now() + seconds * 1000;
       m.open(abs, 1, text);
@@ -161,10 +163,11 @@ export const SERVER_COMMANDS: Record<string, Handler> = {
       }
       const r = s.config.lint.enabled === "off" ? null : await runLinter(def!, abs, text, root);
       if (r && "problems" in r) problems.push(...r.problems);
+      if (r && "skipped" in r) s.warnings.push(`${r.skipped} — its findings aren't shown`);
       sources.push({
         name: def!.name,
         kind: "linter",
-        status: r === null ? "off" : "problems" in r ? "ran" : r.failed,
+        status: r === null ? "off" : "problems" in r ? "ran" : "skipped" in r ? "skipped" : r.failed,
       });
     }
     // Its syntax errors, when no server has spoken for the text (a server has them then).
@@ -193,8 +196,10 @@ export const SERVER_COMMANDS: Record<string, Handler> = {
       const cmd = lintCommand(s.config.lint, s.loc.root, undefined, s.config.lsp.auto_install);
       if (cmd) {
         const issues = await runLint(cmd, [abs], s.loc.root, undefined, (t) => s.io.err(`${t}\n`));
-        if (issues) problems.push(...lintProblems(issues.filter((i) => i.file === abs)));
-        sources.push({ name: "markdownlint", kind: "lint", status: issues ? "ran" : "failed" });
+        if (Array.isArray(issues)) problems.push(...lintProblems(issues.filter((i) => i.file === abs)));
+        else if (issues) s.warnings.push(`markdownlint: ${issues.skipped} — its findings aren't shown`);
+        const status = Array.isArray(issues) ? "ran" : issues ? "skipped" : "failed";
+        sources.push({ name: "markdownlint", kind: "lint", status });
       }
     }
     for (const src of sources)

@@ -14,7 +14,7 @@ import {
   readScratch,
   scratchLocation,
 } from "../core/capture.ts";
-import { copyText } from "../core/clipboard.ts";
+import { copyTextAsync } from "../core/clipboard.ts";
 import { buildContext } from "../core/context.ts";
 import { stateDir } from "../core/paths.ts";
 import { readRegular } from "../core/fsutil.ts";
@@ -54,7 +54,7 @@ export const AGENT_COMMANDS: Record<string, Handler> = {
     const files = b.items.map(({ text: _, ...i }) => i);
     const data = { start, ...opts, files, left: b.left, chars: b.text.length, text: b.text };
     if (!has(s.args, "copy")) return { data, human: b.text };
-    const r = copyText(b.text, { fallbackDir: stateDir(s.loc) });
+    const r = await copyTextAsync(b.text, { fallbackDir: stateDir(s.loc) });
     const how = r.file
       ? `wrote ${r.file}`
       : `copied via ${r.methods.join(" + ")}${r.confirmed ? "" : " (OSC 52 is unconfirmed)"}`;
@@ -133,7 +133,7 @@ export const AGENT_COMMANDS: Record<string, Handler> = {
     };
   },
 
-  scratch(s, rest) {
+  async scratch(s, rest) {
     const sub = rest[0] ?? "show";
     const loc = scratchLocation(s.loc, s.config);
     const content = readScratch(loc);
@@ -153,7 +153,7 @@ export const AGENT_COMMANDS: Record<string, Handler> = {
       }
       case "copy": {
         if (!content.trim()) throw new CliError("scratch is empty", EXIT.notFound);
-        const r = copyText(content, { fallbackDir: stateDir(s.loc) });
+        const r = await copyTextAsync(content, { fallbackDir: stateDir(s.loc) });
         const how = r.file
           ? `wrote ${r.file}`
           : `copied via ${r.methods.join(" + ")}${r.confirmed ? "" : " (OSC 52 is unconfirmed)"}`;

@@ -74,6 +74,12 @@ export const FILE_SPECS: CommandSpec[] = [
     desc: "The note (the explorer's selected one, when it has focus) as a document — Word, PDF, a web page, an e-book, Markdown: its format picked, then where (beside it, its name); unsaved notes saved first",
   },
   {
+    id: "note.export_cancel",
+    title: "Cancel export",
+    cli: I,
+    desc: "Stops the exports running in the background, and those waiting their turn, before their output is written",
+  },
+  {
     id: "note.export_many",
     title: "Export notes as one document…",
     cli: "slipbox export <note> <note>… --to <format>",

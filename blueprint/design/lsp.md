@@ -21,7 +21,8 @@ loads, is empty, and without `cargo check` (a vault you don't trust) it asks not
 doesn't know gets an empty answer, never an error — pyright crashed on that error, unhandled. Stopping it is
 `shutdown` then `exit`, then a kill; an exit that wasn't asked for, once it is running, is a crash, said with its last
 error line. One that exits before it answers `initialize`, or doesn't answer in 20 s, failed to start: said once, with
-its last error line, and not started again.
+its last error line, and not started again. The failed start kills the child immediately, closes its three pipes,
+and disposes the connection, including when it ignores graceful termination.
 
 **Which servers** (`19.2`, `core/servers/languages.ts`; D162, D165, D166): a file's language is its whole name
 (`Dockerfile`), else its extension, and each language has root markers and servers — the first that applies and is found
@@ -151,7 +152,8 @@ and errors read together, each line by the first format matching it whole; and a
 `lint-ignore-exit-code`. A finding about another file is passed over; one about `-`, `stdin` or `<stdin>` is this
 file's. Built in, each only where the project has its config: **hadolint** for Dockerfiles (`.hadolint.yaml`) and
 **yamllint** for YAML (`.yamllint`). One not installed is said once (`linter hadolint: hadolint not found — …`), and
-tried again when the config changes; `[lint] enabled = "off"` runs none.
+tried again when the config changes; `[lint] enabled = "off"` runs none. One printing more than slipbox reads for a
+file (§ Finite tool runs) has none of that run's findings shown, said once for that linter and file, and still runs.
 
 The errorformat read is the part linters use: `%f %l %c %v %e %k %t %n %m %r %p %s`; `%-G` for a line to pass over;
 `%E %W %I %N` on one line, setting the severity where there's no `%t`; and the pattern items `%.`, `%#`, `%*\d`,
@@ -169,3 +171,54 @@ own quirks, not slipbox's:
 - **ruby-lsp** installs its own gems with Bundler at each start: with a system Ruby (`/usr/bin/ruby`) they must already
   be installed, since your user can't write its gem folder; and in a project with a `Gemfile` it wants its
   `Gemfile.lock`.
+
+## Finite tool runs
+
+Linters (the lint surface's and those above) and tool installs run through `core/tool-process.ts`. A linter's output
+is read up to 16 MiB a stream, as git's is ([tui.md](tui.md)); an install's, 1 MiB. A run past that limit, past its
+deadline (a linter's 30 s, markdownlint-cli2's 60 s, an install's three minutes), cancelled, or ended by a signal —
+whoever sent it — is never read as findings: partial output never passes for a whole run.
+
+- **Past the limit, or cancelled**, a linter's run is skipped: none of its findings are shown, the reason is said once
+  for that linter and file, and the linter stays on. A list missing some findings would pass for complete, and a
+  linter that prints a lot for one file still works for the next.
+- **Too slow, or ended by a signal**, it's a linter that couldn't run, as one failing is.
+- **"partial output discarded"** is said only for slipbox's own limit, deadline or cancel, and only when the tool had
+  printed something. One that couldn't start says so in its own words.
+
+Each tool starts in a process group of its own (a new session). A stop is `SIGTERM` to the group, then `SIGKILL`
+250 ms later, and its readers close 100 ms after that, even when a helper in another session still holds its pipes.
+When a run ends, whatever of its group is left is killed.
+
+A group of its own doesn't get the terminal's signals, so the groups still running are tracked, and none outlives
+slipbox. Its `exit` stops them (`SIGTERM`, the 250 ms, `SIGKILL`), and so do `SIGINT`, `SIGTERM` and `SIGHUP`. Where
+another handler of the signal ends slipbox (the screen's, which saves first), the runs are cancelled and that handler
+goes on. Alone, the groups are stopped and the signal raised again, so slipbox ends by it as before. The screen's quit
+cancels its lint, linter and install runs under way. The command line's installs finish, for the next run, unless it's
+interrupted. Installs still use frozen lockfiles and run no package scripts.
+
+## Language server request budgets
+
+The client's limits (`19.1`, `core/servers/limits.ts`) keep a broken server from costing slipbox; they never stop a
+server that is only slow or busy, and never end slipbox. A request waits ten seconds for its answer, a diagnostics pull
+sixty (a server may hold one through its first analysis), and `slipbox diagnostics --timeout` sets both. Past that, the
+request is cancelled (`$/cancelRequest`), its caller gets no answer, and the server runs on; the first time for each
+kind of request, a message says so. A newer hover, completion or signature help about a file supersedes the one before,
+which is cancelled. An answer about an older text of the file than the last sent is dropped, except completion's and
+signature help's: their callers keep only their last ask's answer, and signature help asked at a `(` still answers
+while the argument is typed. Past 64 unanswered requests, or sixteen MiB of their parameters, more wait their turn,
+said once. A cancelled request counts until it's answered or for two seconds, so a server that never answers one isn't
+waited for. A request with over eight MiB of parameters isn't sent.
+
+A diagnostics pull asked again about the same text is the one on its way. Asked because the server's state changed —
+the file saved, its refresh, some of its work done — the one on its way is cancelled and a new one asked, so the
+newest state's answer stands. At most eight pulls are on their way at once: a refresh, or a restart, with many files
+open asks them a few at a time. An answer, or a push, keeps at most 10,000 diagnostics and two MiB of them, and leaves
+out malformed ones (a markup message is kept, as LSP 3.18 has it); each is said once. Pushed diagnostics for an older
+text, or for a closed file, are dropped.
+
+A response's framing is checked before anything of it is buffered: eight KiB of headers, sixteen MiB a message. One that
+can't be read stops the server, the only limit that does: the manager starts it again as after a crash, and says it was
+stopped for a protocol error. Output cut off mid-message as the server exits is its crash, said with its exit code. What
+a server is told (a file opened, changed, saved, closed) is never an error of slipbox's once the server has gone. These
+limits concern slipbox's own work, and don't sandbox the server process.

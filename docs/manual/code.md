@@ -1,4 +1,4 @@
-# Code
+# Code and language tools
 
 slipbox opens code as well as notes. This chapter covers how it shows code, the language servers and linters behind
 it, the problems they find, and trust.
@@ -19,6 +19,9 @@ Last comes trust: a folder's own code never runs unless you say so.
 The examples use a project in `~/code/app`. It's a git repository, with its code in `src/` and its notes in `docs/`.
 
 ## The code view
+
+![A TypeScript file in the code view: its doc comment as prose, the imports folded, each definition a
+cell](../images/code-and-git-code-view.png)
 
 A code file opens in the code view when slipbox maps its language. The languages it maps are TypeScript, TSX,
 JavaScript (JSX too), Python, Go, Rust, Swift, PHP, Ruby, C, C++, Lua and Bash.
@@ -232,7 +235,11 @@ In source mode, a code file is the file as written, highlighted by its language.
 slipbox parses these languages itself: TypeScript, TSX, JavaScript, Python, Bash, Lua, Go, Rust, Swift, PHP, Ruby, C,
 C++, HTML, CSS, SCSS, Dockerfiles, and Vue, Svelte and Astro components. Others are highlighted line by line.
 
-For a language it parses, slipbox gives the file an outline and a check for syntax errors.
+For a language it parses, slipbox gives the file an outline and a check for syntax errors. This structure prepares
+in the background; editing and reading continue while it is updated. A pass that takes more than twenty seconds
+leaves the readable source and reports why structure is unavailable. When its thread was at fault, by running out of
+time or stopping, opening the file again tries once more. Editing or reloading always does. Source files above 4 MiB
+keep their text without this structure.
 
 **An outline**: the file's definitions, nested as they are, in the outline (`space o`) and the breadcrumb. `] ]` and
 `[ [` move between them. The definitions are:
@@ -271,7 +278,7 @@ source mode.
 Code has no wikilinks.
 
 A path in a comment counts as a backlink of the file it names. Moving or renaming that file rewrites the path, as it
-does a note's links ([Links and vaults](links-and-vaults.md)).
+does a note's links ([Links and backlinks](links-and-vaults.md)).
 
 ## Language servers
 
@@ -437,8 +444,12 @@ Given a note, `slipbox doctor` says slipbox serves no language of it. Notes are 
 A server that crashes is started again, and told its files again. If it crashes more than three times in five minutes,
 it's left stopped, and a message says so.
 
+A server that sends something slipbox can't read is stopped, and started again in the same way. The message says it was
+stopped for a protocol error. A server that's only slow isn't stopped: see
+[Language server request budgets](#language-server-request-budgets).
+
 If a server doesn't start, or doesn't answer in 20 seconds, slipbox says so once, with the last thing it printed. The
-server isn't started again.
+server is stopped and isn't started again, even if it ignores a normal request to terminate.
 
 ### Settings for servers
 
@@ -474,7 +485,7 @@ language-servers = ["jdtls"]
 
 Only your own config can set `command`, `args` and `environment`, or name any server slipbox doesn't build in. A
 folder's `.slipbox/config.toml` comes with whatever you clone. So it may tune a known server's `config`, but it never
-names a program to run. [Configuration](configuration.md) explains the files and their order.
+names a program to run. [Customization](customization.md#the-order-they-apply-in) explains the files and their order.
 
 In a vault you trust, a project's `.vscode/settings.json` sets its servers' settings too, as VS Code would read it:
 
@@ -514,7 +525,7 @@ A definition outside the vault, in a dependency's types for instance, opens as a
 
 `esc` or `q` closes the floating window.
 
-In a note, these keys work on links ([Links and vaults](links-and-vaults.md)):
+In a note, these keys work on links ([Links and backlinks](links-and-vaults.md)):
 
 - `shift+k` shows where the link under the cursor lands.
 - `g d` follows it.
@@ -702,7 +713,8 @@ problem. `enter` goes to it and gives the note the keys.
 - Ambiguous links
 - Fragile links
 - Frontmatter: a note breaking its document type's rules
-- Lint: the note linter's findings, when it runs
+- Lint: the note linter's findings, when it runs. When it prints more than slipbox reads, its heading says why
+  instead ([Stopping linters and installs](#stopping-linters-and-installs)).
 - Conflicts: during a merge
 - Orphans: notes nothing links to
 
@@ -716,7 +728,7 @@ Each time the All tab opens, it checks the vault again. In the All tab:
 | `l` and `h` | Unfold and fold a section |
 | `/` | Keeps the problems whose note, line or link matches what you type |
 
-[Links and vaults](links-and-vaults.md) explains broken, ambiguous and fragile links. [Git](git.md#merge-conflicts)
+[Links and backlinks](links-and-vaults.md) explains broken, ambiguous and fragile links. [Git](git.md#merge-conflicts)
 explains conflicts.
 
 ### From the command line
@@ -746,104 +758,47 @@ It exits 1 when an error is shown, so a script can stop on one.
 `slipbox problems` lists the vault's link problems, its orphans and a merge's conflicts, as the All tab does. `--lint`
 adds the note linter's findings. [The command line](cli.md) has both commands in full.
 
+<a id="code"></a>
+<a id="what-runs-anyway"></a>
+<a id="what-a-vault-you-dont-trust-leaves-out"></a>
+<a id="trusting-a-vault"></a>
+
 ## Trust
 
-Opening a folder never runs code it brings with it, unless you trust it. A repository you clone can hold:
+The vault trust policy, prompts, trusted settings and program-execution boundaries are explained in
+[Privacy and trust](privacy.md#trust). This chapter covers the language tools themselves. Only trust a vault whose
+project code you are willing to allow; naming a server in your own settings does not make project code trustworthy.
 
-- programs (`node_modules/.bin`)
-- settings that name programs
-- build scripts a server would run
-- git hooks
+## Stopping linters and installs
 
-In a vault you don't trust, slipbox runs none of them.
+slipbox reads up to 16 MiB of what a linter prints, and 1 MiB of what an install prints.
 
-You trust a vault, such as a git repository, and everything in it. [Links and vaults](links-and-vaults.md) explains
-vaults.
+- A linter run that prints more shows none of its findings, since a list missing some would look complete. A warning
+  says why, once for that file, and the linter runs again on your next change.
+- A linter that takes too long, fails, or is ended by a signal shows no findings from that run either. slipbox says
+  so once, and doesn't run it again until your configuration changes.
+- A linter or install that slipbox stops gets a quarter of a second to finish. Then it's killed, along with anything
+  it started.
+- Quitting slipbox, or ending it with Ctrl-C or by closing its terminal, stops the linters and installs still running.
 
-### What runs anyway
+Installs use slipbox's lockfiles and run no package scripts.
 
-The programs you chose run anyway:
+## Language server request budgets
 
-- your editor
-- git
-- the servers and linters named in your config, found on your `PATH`, in your install folders, or installed by
-  slipbox
+slipbox limits what a language server can cost it. The limits never stop a server that's only slow or busy.
 
-Each runs as you set it up.
+- A request waits ten seconds for its answer, and a diagnostics request sixty, since a server may hold one through its
+  first analysis. `slipbox diagnostics --timeout` sets both. Past that, the request is cancelled and the server keeps
+  running. The first time for each kind of request, a message says so.
+- A newer hover, completion or signature help about a file replaces the one before. Signature help answered late still
+  shows while you type the argument.
+- A server has at most 64 requests unanswered at a time. More wait their turn, and a message says so once. A request
+  the server was asked to cancel stops counting after two seconds, even if the server never answers it.
+- Diagnostics are asked for a few files at a time. They're asked for again after a save, or when the server says
+  something changed, so the newest answer is the one shown.
+- An answer keeps at most 10,000 diagnostics, and two MiB of them. Malformed diagnostics are left out. Either way, a
+  message says so once.
+- A response is at most sixteen MiB, its headers eight KiB. A response slipbox can't read stops the server: it's
+  started again, as after a crash, and the message says it was stopped for a protocol error.
 
-Trusted or not, a folder's own config never names a program for slipbox to run. Only your own config can set these:
-
-- `editor.command` and `editor.remote`
-- `lint.command`
-- a server's `command`, `args` and `environment`
-- a linter's `lint-command`
-- a server or linter slipbox doesn't build in
-- `[trust]` itself
-
-Nor can a folder bind a key or alias to a command that runs a program or throws work away
-([Configuration](configuration.md) lists them).
-
-### What a vault you don't trust leaves out
-
-- **Its programs**: the project's own copies in `node_modules/.bin`, `.venv/bin`, `venv/bin` and `vendor/bin` aren't
-  used, for servers and linters alike. Nor is a program its settings name.
-- **Its settings**: a server's settings are its defaults and yours. They're never the folder's `.slipbox/config.toml`
-  or its `.vscode/settings.json`.
-- **Servers in a safe mode**:
-  - `rust-analyzer` runs without build scripts, procedural macros or `cargo check`.
-  - `gopls` runs without downloading the toolchain a `go.mod` names, and without cgo.
-  - `vtsls` never switches to the project's TypeScript. TypeScript 7's server is taken only from slipbox's install.
-  - `pyright` is given the virtual environment's packages, without running its Python.
-- **Servers not run**, as they can't work without running the project's code:
-  - the ESLint and stylelint servers, since their config is code
-  - `ruby-lsp`, where there's a `Gemfile`
-  - `sourcekit-lsp`, where there's a `Package.swift`
-  - `lua-language-server`, where `.luarc.json` names a plugin
-- **The note linter** skips a note under a markdownlint config that is code (`.cjs`, `.mjs`) or loads code.
-- **git** runs none of the repository's hooks, filters or other programs ([Git](git.md#what-slipbox-runs)).
-
-This has a cost. In a vault you don't trust:
-
-- a Rust project's macros show errors
-- ESLint finds nothing
-- the project's own TypeScript isn't used
-- a Ruby or Swift package gets no server
-
-### Trusting a vault
-
-You never edit a file to trust a vault. slipbox asks the first time it matters, when a file's servers there would run
-with something left out:
-
-```text
-Trust ~/code/app? Its own tools would run code it holds — eslint not run (its config is code). Only a folder you
-know (y trusts it; n keeps it safe)
-```
-
-- `y` trusts it. Its servers start again at once, as they'd run anywhere.
-- `n` or `esc` keeps it safe.
-
-Either answer is kept in slipbox's own state, never in the folder, so it isn't asked again.
-
-slipbox asks about the vault you opened, with one answer for every project in it. Else it asks about the file's
-project. It never asks while you're typing, but after your next key. A folder of notes alone is never asked.
-
-| Command | In the palette | What it does |
-| --- | --- | --- |
-| `:trust` | "Trust this vault" | Trusts the vault of the file on screen |
-| `:untrust` | "Stop trusting this vault" | Stops trusting it |
-
-An answer holds for the folders under it. The nearest answer counts.
-
-To trust folders ahead of time, list them in your own config's `trust.roots`:
-
-```toml
-[trust]
-roots = ["~/code/*", "~/notes"]   # paths, ~, globs; each with what's inside it
-```
-
-A vault listed there is trusted whatever you answered. A folder's own `[trust]` is ignored, since a folder can't trust
-itself.
-
-The command line never asks, and has no way to trust a vault, since an agent could be talked into it. In a vault you
-don't trust, its commands say on standard error what they left out. `slipbox doctor` says whether a vault is trusted,
-and what that limits.
+These limits are about slipbox's own work. They don't sandbox the server.

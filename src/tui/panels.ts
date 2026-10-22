@@ -354,7 +354,7 @@ export class Panels {
   }
 
   /** Keys while the left panel's filter has them: type, move, open, clear. */
-  filterKey(key: string): void {
+  filterKey(key: string): void | Promise<void> {
     const s = this.app.sidebar;
     const rows: unknown[] =
       this.app.leftView === "explorer"

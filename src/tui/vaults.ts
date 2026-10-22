@@ -1,6 +1,7 @@
 // Vaults in the TUI (17.x, VV): switching into another and back, a folder made a vault or unmade, the named folders
 // and their copies (21.x).
 
+import { cancelGitRead } from "./gitquery.ts";
 import { existsSync } from "node:fs";
 import { dirname, isAbsolute, join, posix, relative } from "node:path";
 import { writeDirty } from "../core/stale.ts";
@@ -211,6 +212,7 @@ export class Vaults {
     how: { back?: boolean; folder?: string } = {},
   ): boolean {
     if (!this.app.saving.canLeave()) return false;
+    cancelGitRead(this.app);
     const v = this.app.view;
     const folder = this.app.homeFolder !== null ? join(this.app.loc.root, this.app.homeFolder) : undefined;
     const from = v
@@ -264,6 +266,8 @@ export class Vaults {
     for (const e of this.app.graph.errors) this.app.message("warn", e);
     this.app.positions = new PositionStore(target);
     for (const b of this.app.buffers.values()) this.app.languages.servers?.close(b.abs);
+    for (const buffer of this.app.buffers.values()) buffer.cancelParse();
+    this.app.languages.stopSyntax(); // its code files' passes too: the thread's for the next vault's
     this.app.buffers.clear();
     this.app.tabs = [];
     this.app.activeTab = 0;

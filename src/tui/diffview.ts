@@ -37,7 +37,7 @@ export interface DiffWindow {
   /** `enter` on a line: there (its line in `now`). Without, `enter` goes back as `esc` does. */
   go?: (line: number) => void;
   /** Where `esc` goes: the list or the question the diff was opened from. */
-  back?: () => void;
+  back?: () => void | Promise<void>;
 }
 
 export interface DiffRequest {
@@ -49,7 +49,7 @@ export interface DiffRequest {
   /** Said when the two are the same: no window opens. */
   none?: string;
   go?: (line: number) => void;
-  back?: () => void;
+  back?: () => void | Promise<void>;
 }
 
 /** The window's text: a line a row of its drawing's (a unit of the blocks'), each saying what it is — what its height

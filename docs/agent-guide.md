@@ -1,4 +1,6 @@
-# slipbox agent guide
+# Helping someone use slipbox
+
+<a id="slipbox-agent-guide"></a>
 
 Use this guide to help a person understand, set up or troubleshoot slipbox. It gives you slipbox's ideas in the order
 to teach them, the setup path, and the fixes for common problems.
@@ -13,11 +15,12 @@ This guide teaches you to guide a person. To use slipbox yourself, from its comm
 
 slipbox is a terminal app for reading, reviewing and editing Markdown and code. It is made to sit beside a coding
 agent. The person uses its full-screen view; an agent or a script uses its command line. Both work on the same plain
-files, so neither ever sees a stale copy.
+saved files. Unsaved TUI changes remain in its buffer until saved.
 
 ## Teach these, in this order
 
-1. **Notes are files.** A note is a Markdown file in a folder. slipbox has no database. Opening a folder writes nothing
+1. **Notes are files.** A note is a Markdown file in a folder. slipbox has no proprietary database of notes; indexes
+   are rebuildable caches. Opening a folder writes nothing
    into it.
 2. **The screen.** The explorer is on the left, the note on the right, the status line at the bottom. The mouse works
    everywhere: click a note, a link, a tab.
@@ -31,14 +34,19 @@ files, so neither ever sees a stale copy.
 6. **Vaults.** A vault is a folder whose notes belong together: a git repository, an Obsidian vault, a zk notebook, or
    a folder with `.slipbox/`. Links resolve and search works within the vault. The home folder is a vault too, home,
    and everything outside home and every vault is Elsewhere, with no index. A link into another vault opens a peek;
-   `o` goes there ([Vaults, home and Elsewhere](https://remziduzagac.github.io/slipbox/docs/guides/vaults/)).
+   `o` goes there ([Working across folders and vaults](https://remziduzagac.github.io/slipbox/docs/guides/vaults/)).
 7. **Working with an agent.** The scratch collects places to hand to an agent (`space s a` adds one, `space s y`
    copies the scratch). `space s c` copies a note with what it links to and what links to it.
 8. **Trust.** A folder's own tools, scripts and hooks run only once the person trusts that vault.
 
-The full list of terms is the [Concepts](https://remziduzagac.github.io/slipbox/docs/manual/concepts/) page.
+The full list of terms is the [Glossary](https://remziduzagac.github.io/slipbox/docs/manual/concepts/) page.
 
 ## Install
+
+Use the learning path in order: [What is slipbox?](manual/introduction.md), [Installation](guides/install.md),
+[Quick start](guides/quick-start.md), [Working with slipbox](guides/getting-started.md), then
+[Reading and editing in slipbox](guides/lens.md). Explain the view/typing distinction before adding agent setup.
+The person may use slipbox independently; do not require an agent skill merely to read and edit a note.
 
 macOS and Linux, and Windows through WSL:
 
@@ -53,7 +61,7 @@ slipbox --version
 slipbox doctor
 ```
 
-[Installing slipbox](https://remziduzagac.github.io/slipbox/docs/guides/install/) covers previews, running from source,
+[Installation](https://remziduzagac.github.io/slipbox/docs/guides/install/) covers previews, running from source,
 upgrading and removing it.
 
 ## A first session
@@ -65,7 +73,7 @@ slipbox ~/notes
 ```
 
 Then walk them through the [Quick start](https://remziduzagac.github.io/slipbox/docs/guides/quick-start/). For a longer
-tour, use [Getting started](https://remziduzagac.github.io/slipbox/docs/guides/getting-started/).
+tour, use [Working with slipbox](https://remziduzagac.github.io/slipbox/docs/guides/getting-started/).
 
 If they come from Obsidian or zk, their vault or notebook opens as it is. See
 [Coming from Obsidian or zk](https://remziduzagac.github.io/slipbox/docs/guides/from-obsidian-or-zk/).
@@ -77,7 +85,7 @@ If they come from Obsidian or zk, their vault or notebook opens as it is. See
 - `space u u` lists the settings that change for the session, and `space u t` picks a theme.
 
 Every setting is in [Configuration](https://remziduzagac.github.io/slipbox/docs/manual/configuration/). Themes, keys
-and fonts are in [Making it yours](https://remziduzagac.github.io/slipbox/docs/guides/making-it-yours/).
+and fonts are in [Making slipbox yours](https://remziduzagac.github.io/slipbox/docs/guides/making-it-yours/).
 
 ## When something is wrong
 

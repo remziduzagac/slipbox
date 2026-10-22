@@ -127,12 +127,14 @@ export function editActions(): Record<string, Run> {
         });
       }),
     "edit.paste": (a) =>
-      withView(a, (v) => {
+      withView(a, async (v) => {
         if (!v.sel) return sourceEdit(a, (w) => V.put(a, w, true));
         if (!editable(v)) return a.message("info", "editing is in the lens (space n l) or source mode (ctrl+k)");
         const why = E.cannotEdit(v);
         if (why) return a.message("warn", `${why} — not editing`);
-        const reg = a.pasteText();
+        const version = v.buf.version;
+        const reg = await a.pasteText();
+        if (a.quitting || a.view !== v || v.buf.version !== version) return;
         if (!reg) return a.message("info", "nothing to paste — copy something first");
         const r = selectionRange(a, v).range;
         Object.assign(v, { visual: null, sel: null });

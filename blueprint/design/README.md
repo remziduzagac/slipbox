@@ -28,3 +28,10 @@ change of behaviour changes the matching file in the same commit (D206). Why eac
 The user's references are outside the blueprint, in [docs/](../../docs/): [keys.md](../../docs/manual/keys.md),
 [configuration.md](../../docs/manual/configuration.md) and [cli.md](../../docs/manual/cli.md). The keys beside vim's, VS
 Code's and Obsidian's are research: [keymap-comparison.md](../research/keymap-comparison.md).
+
+
+## Deferred review note
+
+The [maintenance and accessibility review](../research/maintenance-gaps.md) records verified gaps and proposals
+awaiting evaluation under roadmap `27.1`–`27.6`. It is reference material, not part of the current design contract.
+Any accepted behavior or policy change follows the workstream process before updating the design here.

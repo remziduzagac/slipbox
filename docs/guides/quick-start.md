@@ -1,70 +1,55 @@
 # Quick start
 
-Install slipbox, open a folder of notes, and read, find and edit in it. It takes two minutes. You don't need to learn
-the keys first.
+<a id="install"></a>
+<a id="open-a-folder"></a>
+<a id="look-around"></a>
+<a id="edit"></a>
+<a id="next"></a>
 
-## Install
+Open a note, make a small change and save it. You need [slipbox installed](install.md), a terminal and a Markdown
+file you are happy to edit. No agent, configuration or knowledge of vim is required.
+
+## Open a note
+
+For example, if you keep notes in `~/notes`:
 
 ```bash
-curl -fsSL https://remziduzagac.github.io/slipbox/install.sh | sh
+slipbox ~/notes/inbox.md
 ```
 
-slipbox runs in a terminal on a Mac with Apple silicon, Linux, and Windows through WSL.
-[Installing slipbox](install.md) has the other ways to install it, and how to upgrade.
+Replace that path with an existing note of yours. You can also open a folder, such as `slipbox ~/notes`, and pick a
+file in the explorer. The following steps work in either case.
 
-## Open a folder
+The explorer is on the left, the document on the right, and the status line below. `READ` means you are navigating
+the rendered document. Click in the note or use the arrow keys to move its reading cursor.
 
-```bash
-slipbox ~/notes
-```
+![A note, ~/notes/inbox.md, open in READ: the explorer on the left, the note rendered in its tab, the status line
+below](../images/quick-start-reading.png)
 
-Any folder of Markdown files works. slipbox writes nothing into it until you save a note.
+## Find something
 
-The explorer is on the left and a note is on the right, rendered. The status line runs along the bottom. It shows the
-mode (`READ`), the note's path, and where the cursor is.
+Press `ctrl+f`, type a word from the note and press `enter`. The cursor moves to a match. `esc` closes an active
+prompt or search display; it also helps you return from a panel to the note.
 
-## Look around
+`ctrl+p` finds another file by name. `space` shows the available action groups; `?` shows all key bindings.
 
-Use the mouse to start. Click a note in the explorer, a link, or a tab. Scroll with the wheel.
+## Change a line
 
-The arrow keys move, and the shortcuts you know from other editors work: `ctrl+f`, `ctrl+s`, `ctrl+z`. You don't need
-vim's keys, though they work too. [Keys you already know](keys-you-know.md) lists the familiar ones.
+1. Put the reading cursor on a line and press `i`. The lens shows that part's Markdown; the status says `LENS`.
+2. Press `i` again. The status says `INSERT`, and keys now insert text.
+3. Type your change, then press `esc` to stop typing.
+4. Press `ctrl+s` to save. Look for the saved message and the disappearance of the unsaved mark on the tab.
+5. Press `esc` again to close the lens and read the rendered result.
 
-Two keys teach you the rest:
+The first `i` opens a view of the source; the second starts typing. That distinction keeps a reading action from
+immediately changing your file. [Reading and editing in slipbox](lens.md) walks through it in detail.
 
-- `space` shows the keys that can follow it, in groups. `esc` closes it.
-- `?` lists every key. Type to filter the list.
+To inspect the whole file's Markdown, use `ctrl+k`. Press it again to return to rendered reading. If you are typing,
+press `esc` first.
 
-These are the keys you'll use most:
+## Finish
 
-| To | Press |
-| --- | --- |
-| Move | The arrow keys, or `h` `j` `k` `l` |
-| Open a note by its name | `ctrl+p`, then type part of the name |
-| Jump to the next link | `tab` |
-| Follow the link at the cursor | `enter` |
-| Go back | `ctrl+o` |
-| Find in this note | `ctrl+f` and type, then `enter`; `n` goes to the next match |
-| Search every note | `space f s` |
-| Close a tab | `q` |
-| Quit | `ctrl+q` |
+Press `ctrl+q` to quit. A changed note also autosaves after 30 seconds without a key press by default, but saving
+explicitly here makes the result easy to check.
 
-## Edit
-
-1. Put the cursor on a line and press `i`. The lens opens: that part of the note shows its Markdown, and the rest stays
-   rendered.
-2. Press `i` again and type.
-3. Press `esc` to stop typing, and `ctrl+s` to save.
-4. Press `esc` again to close the lens.
-
-You don't have to save by hand. A changed note saves itself after 30 seconds without a key pressed.
-
-To see the whole note as Markdown instead, press `ctrl+k`. Press it again to go back.
-
-## Next
-
-- [Getting started](getting-started.md): a ten-minute tour of the same steps, in more detail.
-- [Concepts](../manual/concepts.md): the words slipbox uses, each in a few lines.
-- [Working with agents](agents.md): slipbox beside a coding agent, on the same files.
-- [Keys you already know](keys-you-know.md): the arrows and the shortcuts from other editors.
-- [Keys](../manual/keys.md): every key.
+**Next:** [Working with slipbox](getting-started.md), a first session with two linked notes, search and a saved edit.

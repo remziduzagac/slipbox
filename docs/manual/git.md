@@ -26,7 +26,7 @@ what git does, such as an interactive rebase or a cherry-pick, you run git yours
 ## Git in slipbox
 
 A git repository is a vault by itself. Open any file in it, and slipbox opens the repository from its top folder.
-[Links and vaults](links-and-vaults.md) explains vaults.
+[Vaults, home and Elsewhere](vaults.md) explains vaults.
 
 The status line shows the vault and the branch checked out. For example, it shows `app · main` for a repository named
 `app` by its remote. A worktree of a named folder shows as its name and branch, as in `app@fix/retry`. Click them, and
@@ -75,7 +75,7 @@ branches. When you ask, it runs git to fetch, pull, push and stash, to make a br
 worktree, to merge or rebase, and to continue, skip or abort a merge or a rebase under way.
 
 What else git runs depends on whether you trust the vault. A repository you cloned can name programs for git to run.
-slipbox lets them run only in a vault you trust. [Code](code.md#trust) explains trust.
+slipbox lets them run only in a vault you trust. [Code](privacy.md#trust) explains trust.
 
 In a vault you don't trust, git runs nothing of the repository's own:
 
@@ -291,7 +291,8 @@ say so.
 ## Reviewing a change
 
 When an agent has changed files, you can go through what it did one change at a time. You keep each change, revert it,
-or send it back to the agent with a note. [Code and git](../guides/code-and-git.md#review-an-agents-change) walks
+or send it back to the agent with a note. [Reviewing changes with
+Git](../guides/code-and-git.md#review-an-agents-change) walks
 through one review, from the git panel to the merge.
 
 Press `v` in the git panel, or click Review, or run `:review`. The review walks every change in the working tree that
@@ -313,7 +314,7 @@ wide. Above the diff are the file, where the change is (`line 12 · change 2 of 
 
 After `y`, `x` or `c`, the review moves on to the next change you haven't dealt with. When none is left, or when you
 press `esc`, a message says what you kept, reverted and noted. When you noted something, it names `space s y`, which
-copies the scratch for the agent ([The scratch](editing.md#the-scratch)).
+copies the scratch for the agent ([The scratch](scratch-and-context.md#the-scratch)).
 
 A revert is one step of the file's undo: open the file and press `u` to bring the change back. slipbox doesn't revert a
 file with unsaved typing, since that would write over it. It says so, skips the change, and goes on. A file git doesn't
@@ -645,7 +646,7 @@ Unsaved notes stay open, and a message says so.
 ## Worktrees
 
 A worktree, made with `git worktree add` or from the git panel, is a vault of its own. It has its own tabs, positions
-and scratch. [Links and vaults](links-and-vaults.md#worktrees) has the rest.
+and scratch. [Vaults, home and Elsewhere](vaults.md#worktrees) has the rest.
 
 The git panel shows each worktree on its branch, in Branches ([Branches](#branches)).
 
@@ -730,12 +731,24 @@ looking like its own. A branch's base is:
 3. else `main`, else `master`
 
 `git.bases` is `["main"]` as it comes ([Configuration](configuration.md)). A vault's own configuration may set its
-bases too. Each must be a branch's name, a tag's or a commit's. Any other value is left out, and slipbox says so.
-The git panel shows each branch's base at
-its row's end, as in `↑3 on dev`, and the panel's top shows this branch's. Compare against…, in a branch's menu (`.`
-or a right click on it), picks another base, kept; or goes back to the one guessed.
+bases too. Each must be a branch's name, a remote branch's such as `origin/dev`, a tag's or a commit's. Any other value
+is left out, and slipbox says so. The git panel shows each branch's base at its row's end, as in `↑3 on dev`, and the
+panel's top shows this branch's.
 
-The panel's diffs, This branch against main, `:changes`, `:diff` and Merge… all use it.
+Compare against…, in a branch's menu (`.` or a right click on it), picks another base, kept; or goes back to the one
+guessed. It lists the branches, then the remote branches (`origin/dev`), then **A branch, tag or commit…**, to type one.
+A branch, remote branch or tag is kept by its name; a revision such as `HEAD~3` (counted from what's checked out) as the
+commit it names, so it doesn't move. Opening the screen with `--base` does the same for the branch checked out there:
+`slipbox . --base origin/dev` ([The command line](cli.md#opening-the-screen)).
+
+A pull request is compared with the remote branch it targets, `origin/dev`, not your `dev`, which may be behind or
+ahead. To see what the pull request shows, measure against the remote branch. It's as fresh as your last fetch of its
+remote: with a remote branch as the base, This branch against says when a fetch last moved it (`· updated 2 h ago`), or
+`· as of the last fetch` where git kept no record. Fetch, in the panel, fetches the current branch's remote, else
+`origin`; `git fetch upstream` fetches another.
+
+The panel's diffs, This branch against main, `:changes`, `:diff` and Merge… all use it, and so do `slipbox changed` and
+`slipbox diff`.
 
 ### The files a branch changed
 
@@ -874,8 +887,9 @@ In the terminal's theme and without colour, the changed words are bold and under
 
 ### Another base
 
-`git.base` takes any branch or commit, so you can measure changes since a commit too. On the command line, `--base`
-does the same for one command; the command line uses `git.base`, else `main` or `master`, for every branch.
+`git.base` takes any branch, remote branch or commit, so you can measure changes since a commit too. On the command
+line, `--base` does the same for one command. Without it, the command line measures each branch against its own base, as
+the screen does, and `--json` says how that was chosen ([The command line](cli.md#git)).
 
 ## Reviewing a merge
 
@@ -915,8 +929,8 @@ The review checks:
 - links to this repository's own hosting
 - pointers to this folder
 
-[Links and vaults](links-and-vaults.md) explains each. A link to another repository or another folder isn't the merge's
-to check.
+[Links and backlinks](links-and-vaults.md) explains each. A link to another repository or another folder isn't the
+merge's to check.
 
 Only committed work is reviewed, since what isn't committed is in neither branch.
 
@@ -944,7 +958,7 @@ and when you follow the link.
 - `space l r` rewrites a note's broken links to where their files are now.
 - `slipbox relink` does it for every note.
 
-[Links and vaults](links-and-vaults.md#repairs) covers relinking.
+[Links and backlinks](links-and-vaults.md#repairs) covers relinking.
 
 Two things it can't repair:
 
@@ -987,3 +1001,9 @@ These commands exit with code 3:
 
 The rest has no command: the gutter, source control, commits, blame, history, branches, the remote and stashes, the
 review, the merge screen, merging and rebasing. An agent runs git itself for those.
+
+## Waiting for history and versions
+
+History, blame and old versions load in the background. A loading message leaves the current content in place.
+A newer request or Escape cancels a pending read; changing the document or repository prevents an obsolete result
+from opening. Each git read allows fifteen seconds and 64 MiB of output, then reports that git could not supply it.

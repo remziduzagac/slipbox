@@ -1,4 +1,6 @@
-# Installing slipbox
+# Installation
+
+<a id="installing-slipbox"></a>
 
 slipbox runs in a terminal, on a Mac with Apple silicon, on Linux, and on Windows through WSL. Intel Macs aren't
 supported any more ([Intel Macs](#intel-macs)). This guide covers the two ways to install it, then checking that it
@@ -16,11 +18,12 @@ works, upgrading it and removing it.
 That is all slipbox needs. These make it better:
 
 - **True colour.** The themes are drawn in 24-bit colour, which most current terminals have. If yours shows them
-  wrong, use the `terminal` theme. It takes the terminal's own colours instead ([Making it yours](making-it-yours.md)).
+  wrong, use the `terminal` theme. It takes the terminal's own colours instead ([Making slipbox
+  yours](making-it-yours.md)).
 - **A Nerd Font**, for icons. They show on headings and tasks, beside the explorer's files and folders, and on
   buttons. Ghostty, kitty and WezTerm carry these icons themselves, and slipbox uses them there. In other terminals,
   slipbox draws plain symbols every font has, until you tell it your font has the icons
-  ([Making it yours](making-it-yours.md)).
+  ([Making slipbox yours](making-it-yours.md)).
 - **Pictures.** A terminal that draws images with kitty's graphics protocol (kitty, Ghostty) or with sixel shows the
   pictures in your notes. In any other terminal, a picture shows as its caption.
 - **A clipboard tool, on Linux.** slipbox copies through the terminal first. For copies to always arrive, and for
@@ -198,7 +201,7 @@ slipbox ~/notes
 ```
 
 slipbox fills the terminal with the folder's notes. `ctrl+q` quits. If you have no notes yet, or want a tour,
-[Getting started](getting-started.md) makes a small folder and goes on from here.
+[Working with slipbox](getting-started.md) makes a small folder and goes on from here.
 
 In a folder, `slipbox info` lists what slipbox found there: the folder, how many notes, the settings files it read,
 and where it keeps its own files for that folder. If something looks wrong, the
@@ -245,8 +248,8 @@ It removes what the installer put in place:
 
 slipbox's own four folders stay, listed as kept: your settings, its state with the scratch and the trash, its data
 with your words, and its cache. `--purge` removes these too.
-[Where slipbox keeps things](../manual/configuration.md#where-slipbox-keeps-things) says where they are and what each
-holds.
+[Where slipbox keeps things](../manual/environment-and-storage.md#where-slipbox-keeps-things) says where they are and
+what each holds.
 
 Your notes are never touched, nor the `.slipbox/` folders in them.
 

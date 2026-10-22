@@ -98,11 +98,12 @@ assertions as they were. `bun test` counts it as skipped, and `grep -rn "quarant
 back with its fix. An assertion is never deleted or loosened to make a test pass.
 
 **CI runs the suite on Linux and macOS** (GR-D9): for a pull request, the tests and the terminal checks its files
-reach (D239), the docs' tests only for one of the docs alone (D230); every test and check on `main`, after each merge.
-The scripts `bun run check` runs, split into jobs ([repository.md](repository.md) § CI). A release runs everything
-again on every platform it builds, ARM Linux among them, before anything is built ([distribution.md](distribution.md)
-§ Releases). While working, `bun run test:changed` and `bun run test:terminal:changed` run what the change so far
-reaches; a failure on `main` that a pull request didn't reach is fixed by a pull request of its own.
+reach (D239), the docs' tests only for one of the docs alone (D230), and a push to `dev` or `test` the same for its
+commits; every test and check in the full run, `ci` run by hand on `test` (`full`), which a commit needs before `main`
+takes it and a release builds it (D251). The scripts `bun run check` runs, split into jobs ([repository.md](repository.md)
+§ CI). While working: your change's own tests and its feature's terminal check (`bun run test:terminal <its name>`),
+then `bun run test:changed` for what else it reaches — never the whole suite. A failure the full run finds is fixed
+by a pull request of its own, into `dev`.
 
 **Biome formats and lints the code** (`biome.jsonc`: 120 columns, the recommended rules but the code's idioms, each
 turned off with its reason); `bun run lint` fails on a warning, `bun run format` writes (GR-D7).

@@ -1,4 +1,6 @@
-# Files
+# Files and folders
+
+<a id="files"></a>
 
 slipbox's notes are plain files in a folder, and you can manage them from slipbox itself. This chapter covers:
 
@@ -46,7 +48,9 @@ While it has the keys:
 | `s` | Open it in the other window of a split, splitting first |
 | `/` | Filter: type to narrow the tree, the folders kept. `enter` opens, `esc` clears |
 | `a` | Show every text file, or back to what it shows by default (below) |
-| `.` | The selected row's menu |
+| `shift+h` | Show hidden files and folders too, or hide them again (below) |
+| `shift+y` | Copy the selected row's whole path |
+| `.` | The selected row's menu: for a folder, Zoom in here first; Copy path among the rest |
 | `esc` | Back to the note. The explorer stays open |
 | `q` | Close the explorer |
 
@@ -101,18 +105,18 @@ Zoomed out past the vault you are in, the explorer lists folders one level at a 
 
 - The vault you are in is highlighted, with its tree under it.
 - Another vault has its icon. `l` unfolds it in place. `enter`, or opening one of its files, goes into it
-  ([Links and vaults](links-and-vaults.md#switching-vaults)).
+  ([Vaults, home and Elsewhere](vaults.md#switching-vaults)).
 - Nothing outside the vault you are in can be renamed, moved or deleted from there.
 
 You can open any folder you may read, inside your home folder or not. Outside home and every vault, it's
-[Elsewhere](links-and-vaults.md#elsewhere), whose folders are listed a level at a time:
+[Elsewhere](vaults.md#elsewhere), whose folders are listed a level at a time:
 
 - A file you may not write opens read-only, and slipbox says so:
   `/etc/hosts is read-only: you may not write it (no permission)`.
 - A folder you may not read says why when you open it, unfold it or zoom into it:
   `can't read ~/private: you may not read it (no permission)`.
 
-[Vaults, home and Elsewhere](../guides/vaults.md) shows the view at work, with examples.
+[Working across folders and vaults](../guides/vaults.md) shows the view at work, with examples.
 
 ### A row's marks
 
@@ -197,7 +201,19 @@ The switcher (`ctrl+p`) lists the same files, except those in a folder slipbox d
 Some files are never listed:
 
 - pictures, archives and other binary files, which slipbox doesn't open
-- hidden files and folders, whose names start with `.`
+- `.git`, git's own folder
+- hidden files and folders, whose names start with `.`, unless you ask for them
+
+`shift+h` in the explorer lists the hidden files and folders too, such as `.github` and `.env`, and hides them again.
+`:hidden` does the same, and so does the UI settings list (`space u u`). Your choice is remembered for the folder. To
+list them from the start, set `files.hidden = true` in your configuration, or in a vault's own `.slipbox/config.toml`
+([Configuration](configuration.md)).
+
+Hidden files and folders are not indexed, so they are marked `⊘`, and the status line says `hidden` while the cursor is
+on one. `.slipbox` says `slipbox's own folder`. A hidden file you open from the explorer is indexed from then on, and
+listed even while hidden files aren't, as when you open it by its path (below), except in your home folder and in
+`.slipbox`. The switcher (`ctrl+p`) and search
+list only what is indexed, so a hidden file shows there only once you've opened it.
 
 Some folders are listed, but nothing in them is indexed. They are marked `⊘`:
 
@@ -207,7 +223,7 @@ Some folders are listed, but nothing in them is indexed. They are marked `⊘`:
   and not ignored, is a folder like any.
 - what `.gitignore` and `walk.exclude` leave out
 - in your home folder, `Downloads`, the system's folders, and a folder where another disk is mounted
-  ([Home](links-and-vaults.md#home))
+  ([Home](vaults.md#home))
 
 You can unfold them and open their files. Their notes have no backlinks, search doesn't find them, and a wikilink's name
 doesn't reach them. Nothing in them can be renamed, moved or deleted from the explorer, and only what `walk.exclude`
@@ -231,11 +247,12 @@ explorer or by its path (`:e node_modules/pkg/README.md`), the same either way, 
 why it isn't indexed.
 
 A folder that is a vault of its own is listed with its own icon, and its files are its own: opening one, from the
-explorer or by its path, goes into that vault. [Links and vaults](links-and-vaults.md) has what that means.
+explorer or by its path, goes into that vault. [Vaults, home and Elsewhere](vaults.md#switching-vaults) has what that
+means.
 
 A link (a symlink) says where it leads, dimmed, before its marks: `→ /mnt/disk/data`. One that leads out of the vault,
 or out of home, isn't followed until you say so, and says that too: `not followed`, marked `⊘`. Opening it asks whether
-to follow it, just look, or leave it ([Links that lead out](links-and-vaults.md#links-that-lead-out)). In Elsewhere,
+to follow it, just look, or leave it ([Links that lead out](vaults.md#links-that-lead-out)). In Elsewhere,
 every link asks.
 
 ## Making notes and folders
@@ -262,7 +279,7 @@ explorer's selected folder instead, or beside the selected file. The question sa
 
 In a vault, nothing is ever made outside it, through a symbolic link or otherwise. In your home folder, a note or a
 folder can be made through a link you follow, as a note's text is written through one; never through one you don't
-([Links that lead out](links-and-vaults.md#links-that-lead-out)).
+([Links that lead out](vaults.md#links-that-lead-out)).
 
 ### A new folder
 
@@ -341,7 +358,7 @@ A rename is refused, with nothing changed, when:
   no note at its top, or a folder with no note at its top renamed `build` or `target`
 - a file it would rewrite or move has unsaved changes. Save first.
 
-Renaming a heading and the links to it is in [Links and vaults](links-and-vaults.md).
+Renaming a heading and the links to it is in [Links and backlinks](links-and-vaults.md).
 
 ## Copying
 
@@ -438,8 +455,8 @@ A folder can become a vault of its own, with its own `.slipbox/`.
 | `v` on the folder in the explorer, or `space v m` | Makes it a vault of its own |
 | `shift+v` (or `space v shift+m`) on such a folder | Makes it part of the vault holding it again |
 
-Both show a preview of the links they fix. [Links and vaults](links-and-vaults.md) says what a vault is, and what this
-changes.
+Both show a preview of the links they fix. [Vaults, home and Elsewhere](vaults.md#giving-a-folder-slipbox) says what a
+vault is, and what this changes.
 
 ## From the command line
 

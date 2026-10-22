@@ -7,11 +7,11 @@
 
 **The terminal companion for coding agents.**
 
-Read, review and edit what your agent writes. Markdown and code are rendered cleanly, the editor is necessary and
-sufficient, and agent integration is built in.
+Read, review and edit notes and code in your terminal. Keep documents readable while making focused edits with the
+lens. Use slipbox on your own files, and add agent integration when it helps.
 
-![slipbox on a repository's design doc: the agent's change marked beside its lines, the lens open on its new line
-while you type, and the scratch on the right holding the code and the decision it cited](docs/images/readme-hero.png)
+![slipbox on a repository's design doc: the agent's change marked beside its lines, the lens open on its new line while
+you type, and the scratch on the right holding the code and the decision it cited](docs/images/readme-hero.png)
 
 slipbox sits beside Claude Code, Codex, or any agent that runs shell commands. Follow an idea from the first plan to
 the code that implements it. Read comfortably, review what changed, and make edits of your own. Tables fit the window,
@@ -28,8 +28,8 @@ want more.
 Use the arrow keys and the shortcuts you know from other editors, or vim's keys, and discover the rest as you go.
 `space` opens a menu of actions, `?` shows every key, and `:` opens the command palette. Everything is clickable too.
 
-The agent works on the same files, through slipbox's command line and bundled skill. It searches, follows links and
-makes changes. Its writes are guarded: they refuse to replace a file changed since the agent read it. What the agent
+An agent works on saved files through slipbox's command line and bundled skill. It searches, follows links and makes
+changes. A write guarded with `--if-unchanged` refuses to replace a file changed since the agent read it. What the agent
 saves appears at once. If a file changes while you have unsaved edits, slipbox asks what to keep.
 
 Gather references and excerpts in the scratch, each with its file path and line numbers. Build your next prompt while
@@ -42,7 +42,7 @@ conflicts on a merge screen, and see which links a merge would break before you 
 Open the folder you already have: a repository, an Obsidian vault, a zk notebook or an ordinary folder. Opening it
 writes nothing there. Your notes and code stay in their files, alongside the tools you already use.
 
-- **Start here:** get slipbox on your machine with [Installing slipbox](docs/guides/install.md). Then the
+- **Start here:** [What is slipbox?](docs/manual/introduction.md), then [Installation](docs/guides/install.md). The
   [Quick start](docs/guides/quick-start.md) takes two minutes. The documentation is a website, with search:
   <https://remziduzagac.github.io/slipbox/docs/>.
 - **Status:** every phase on the [roadmap](blueprint/roadmap.md) is built: reading, editing, search, vaults and named
@@ -74,10 +74,13 @@ will hold.
 With Homebrew, from 0.3.0 on, run `brew install remziduzagac/tap/slipbox`. Intel Macs aren't supported any more:
 0.3.0 was the last release built for them.
 
-[Installing slipbox](docs/guides/install.md) has the rest: previews, Windows through WSL, upgrading and removing it,
+[Installation](docs/guides/install.md) has the rest: previews, Windows through WSL, upgrading and removing it,
 and running it from source.
 
 ## Try it
+
+Follow [Working with slipbox](docs/guides/getting-started.md), then
+[Reading and editing in slipbox](docs/guides/lens.md), for the complete introductory walkthroughs.
 
 Open a folder you already have, your notes or a repository your agent works in:
 
@@ -122,16 +125,16 @@ Everything is clickable too.
 
 The lens shows the Markdown around the cursor between two rules, with the rest left rendered. The vim commands work
 (`dw`, `ciw`, `p`, `u`, `.`), and autosave saves after a pause. When you quit, slipbox remembers where you were.
-[The lens](docs/guides/lens.md) shows it with pictures and examples.
+[Reading and editing in slipbox](docs/guides/lens.md) walks through it with examples.
 
 [Keys you already know](docs/guides/keys-you-know.md) lists the shortcuts from other editors. Every key is in
-[Keys](docs/manual/keys.md), and all of them are configurable
-([Configuration](docs/manual/configuration.md)). The configuration reloads itself when you save it.
+[Keyboard and mouse shortcuts](docs/manual/keys.md), and all of them are configurable
+([Configuration settings](docs/manual/configuration.md)). The configuration reloads itself when you save it.
 
-[Getting started](docs/guides/getting-started.md) walks through a first session.
-[Code and git](docs/guides/code-and-git.md) reviews an agent's change, from its diff to its merge.
-[Links and vaults](docs/manual/links-and-vaults.md) explains how links find their notes, across folders too.
-[Vaults, home and Elsewhere](docs/guides/vaults.md) explains the folders slipbox works in, with examples.
+[Working with slipbox](docs/guides/getting-started.md) walks through a first session.
+[Reviewing changes with Git](docs/guides/code-and-git.md) reviews an agent's change, from its diff to its merge.
+[Links and backlinks](docs/manual/links-and-vaults.md) explains how links find their notes, across folders too.
+[Working across folders and vaults](docs/guides/vaults.md) explains the folders slipbox works in, with examples.
 
 ## For agents
 
@@ -194,8 +197,8 @@ bun run test:terminal:changed  # the terminal tests your change reaches: slipbox
                                # headless terminals
 ```
 
-Both compare your branch with where it left `origin/main`, as CI compares a pull request with its base; `bun run test`
-and `bun run test:terminal` run every one, as CI does after a merge.
+Both compare your branch with where it left `origin/dev`, as CI compares a pull request with its base; `bun run test`
+and `bun run test:terminal` run every one, as CI does before a release.
 
 [blueprint/design/testing.md](blueprint/design/testing.md) describes the test strategy, the demo folder
 (`examples/vault`) and the terminal tests.
@@ -205,6 +208,22 @@ and `bun run test:terminal` run every one, as CI does after a merge.
 slipbox's rendering was measured against [leaf](https://github.com/RivoLink/leaf), RivoLink's lightweight Markdown
 reader for the terminal: it set the bar for how Markdown should look there. If reading is all you need, leaf is the
 one to use.
+
+## Use at your own risk
+
+slipbox changes files and runs programs on your machine, and a coding agent can do the same through its command line
+and skill. slipbox makes no guarantee about what it, or an agent using it, does.
+
+You use slipbox entirely at your own risk. You alone are responsible for using it and for everything that results,
+including what an agent does with it for you. So:
+
+- review what an agent proposes and does before you accept it;
+- keep backups, and keep your notes and code under version control;
+- trust only folders whose code you would run yourself, and use your agent's own permission settings.
+
+slipbox is provided "as is", without warranties or conditions of any kind. To the extent the law allows, its authors
+and contributors are not liable for any damages arising from its use. Sections 7 and 8 of the [licence](LICENSE) set
+out these terms.
 
 ## Licence
 

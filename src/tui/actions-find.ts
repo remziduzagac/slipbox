@@ -1,11 +1,12 @@
 // The commands that find (`find.*`, `search.*`, `switcher.*`, `type.*`, `tag.*`): find in a note and its matches
 // stepped through, search across the vault, the switcher with its symbols, notes by type and by tag.
 
+import { cancelRegex, matchText, retryRegex } from "../core/regex-jobs.ts";
 import { type Run, withView, lay } from "./actions.ts";
 import * as V from "./vim.ts";
-import { computeFind } from "./search.ts";
-import { compilePattern, findAll } from "../core/replace.ts";
-import type { ListItem, PromptOverlay, App, View } from "./app.ts";
+import { computeFind, computeFindReady } from "./search.ts";
+import { compilePattern } from "../core/replace.ts";
+import type { FindState, ListItem, PromptOverlay, App, View } from "./app.ts";
 import { readText, climbsOut } from "../core/fsutil.ts";
 import { sanitize } from "../core/sanitize.ts";
 import * as E from "./editing.ts";
@@ -19,6 +20,8 @@ import { KIND_NAMES } from "./languages.ts";
 import { rank } from "./match.ts";
 
 /** Finding: find in a note and replace, search, the switcher, notes by type and by tag. */
+const vaultFindOwners = new WeakMap<App, AbortController>();
+
 export function findActions(): Record<string, Run> {
   return {
     // Spelling (25.6): vim's keys, on the words its marks show.
@@ -32,23 +35,27 @@ export function findActions(): Record<string, Run> {
         const start = { ...v.cur };
         a.overlays.prompt(
           "/",
-          (text) => {
+          async (text) => {
             // An empty search clears the find rather than leaving "/ 0/0" behind.
             if (!text) {
               v.find = null;
               return V.finishSearchOp(a, v, false);
             }
-            const o = v.findOpts ?? { regex: false, whole: false };
-            v.find = computeFind(lay(a, v), text, v.find?.current ?? 0, o.whole, o.regex);
-            if (v.find.error) a.message("warn", `not a regex: ${v.find.error}`);
+            retryRegex(v); // asked for again: one that failed is tried afresh
+            const ready = await settledFind(a, v, text, v.find?.current ?? 0);
+            if (!ready) return;
+            v.find = ready;
+            if (v.find.error) a.message("warn", `${v.find.failed ? "search failed" : "not a regex"}: ${v.find.error}`);
             else if (!v.find.matches.length) a.message("info", `not found: ${text}`);
             if (v.find.error || !v.find.matches.length) a.moveCursor(v, start);
             // After an operator (d/foo): it covers the text up to the match.
             V.finishSearchOp(a, v, v.find.matches.length > 0);
           },
-          (text) => {
-            const o = v.findOpts ?? { regex: false, whole: false };
-            v.find = computeFind(lay(a, v), text, 0, o.whole, o.regex);
+          async (text) => {
+            const ready = await settledFind(a, v, text, 0);
+            const overlay = a.overlay;
+            if (!ready || overlay?.kind !== "prompt" || overlay.text !== text) return;
+            v.find = ready;
             const first = v.find.matches.findIndex(
               (m) => m.row > start.row || (m.row === start.row && m.col >= start.col),
             );
@@ -60,6 +67,7 @@ export function findActions(): Record<string, Run> {
             } else a.moveCursor(v, start); // nothing matches (yet): back where the search began, as vim
           },
           () => {
+            cancelRegex(v);
             v.find = prev;
             a.moveCursor(v, start);
             V.finishSearchOp(a, v, false);
@@ -71,14 +79,21 @@ export function findActions(): Record<string, Run> {
     // open one as it is now (unsaved changes and all); enter opens it at the match.
     "search.open": (a, arg) => a.search.open(arg ?? ""),
     "find.vault": (a, arg) => {
-      const run = (query: string) => {
+      const run = async (query: string) => {
         if (!query.trim()) return;
+        vaultFindOwners.get(a)?.abort();
+        const abort = new AbortController();
+        vaultFindOwners.set(a, abort);
+        const graph = a.graph;
+        const overlay = a.overlay;
+        const versions = [...a.buffers.values()].map((b) => [b, b.version] as const);
         const o = a.view?.findOpts ?? { regex: false, whole: false };
         const re = compilePattern(query, o);
         if (typeof re === "string") return a.message("warn", `not a regex: ${re}`);
         const paths = [...a.graph.notes.keys(), ...a.explorer.shownFiles().map((f) => f.path)].sort();
         const items: ListItem[] = [];
         let total = 0;
+        let limited = false;
         for (const rel of paths) {
           let text: string;
           try {
@@ -90,7 +105,22 @@ export function findActions(): Record<string, Run> {
           // Lines counted on from the last match, never from the top again.
           let line = 1;
           let counted = 0;
-          for (const m of findAll(text, re)) {
+          let result: Awaited<ReturnType<typeof matchText>>;
+          try {
+            result = await matchText(text, re, { regex: o.regex, show: true, signal: abort.signal });
+          } catch (error) {
+            return a.message("warn", `search failed: ${(error as Error).message}`);
+          }
+          if (
+            a.quitting ||
+            abort.signal.aborted ||
+            a.graph !== graph ||
+            a.overlay !== overlay ||
+            versions.some(([b, version]) => b.version !== version)
+          )
+            return;
+          limited ||= result.limited;
+          for (const m of result.matches) {
             total++;
             for (let i = text.indexOf("\n", counted); i >= 0 && i < m.from; i = text.indexOf("\n", i + 1)) line++;
             counted = m.from;
@@ -108,7 +138,7 @@ export function findActions(): Record<string, Run> {
         }
         if (!items.length) return a.message("info", `not found here: ${query}`);
         a.overlays.openList({
-          title: `"${query}" — ${total} match${total === 1 ? "" : "es"} in ${new Set(items.map((i) => (i.data as { rel: string }).rel)).size} files${items.length >= VAULT_SEARCH_MAX ? ` (the first ${VAULT_SEARCH_MAX} lines)` : ""}`,
+          title: `"${query}" — ${total}${limited ? "+" : ""} match${total === 1 ? "" : "es"} in ${new Set(items.map((i) => (i.data as { rel: string }).rel)).size} files${items.length >= VAULT_SEARCH_MAX ? ` (the first ${VAULT_SEARCH_MAX} lines)` : ""}`,
           items,
           accept: (item) => {
             const { rel, line } = item.data as { rel: string; line: number };
@@ -150,11 +180,11 @@ export function findActions(): Record<string, Run> {
         await a.run("find.open");
         const o = a.overlay;
         if (o?.kind !== "prompt" || o.view !== v) return;
-        R.openReplace(a, o, v, range);
+        await R.openReplace(a, o, v, range);
         if (seed) {
           o.text = seed;
-          o.change?.(seed);
-          R.refresh(a, o, v);
+          await o.change?.(seed);
+          await R.refresh(a, o, v);
         } else o.replace!.focus = false; // nothing to find yet: type it first
       }),
     // n always forward, N always backward (not vim's "the way the search went").
@@ -163,7 +193,7 @@ export function findActions(): Record<string, Run> {
     "find.substitute": (a, arg) =>
       withView(a, (v) => {
         if (!arg) return a.message("info", "type it on the command line: :s/old/new/ or :%s/old/new/g");
-        R.substitute(a, v, arg);
+        return R.substitute(a, v, arg);
       }),
     "find.word_next": (a) => findWord(a, 1),
     "find.word_prev": (a) => findWord(a, -1),
@@ -215,6 +245,23 @@ export function findActions(): Record<string, Run> {
   };
 }
 
+/**
+ * A find typed in a window, once it's worked out (a regex's in the worker): for the window as it's laid out then. Laid
+ * out anew meanwhile (a resize, a picture arriving), its rows are another layout's, so it's worked out again. Null when
+ * it no longer counts: the query or the note changed.
+ */
+async function settledFind(a: App, v: View, text: string, current: number): Promise<FindState | null> {
+  const o = v.findOpts ?? { regex: false, whole: false };
+  const version = v.buf.version;
+  for (;;) {
+    const layout = lay(a, v);
+    v.find = computeFind(layout, text, current, o.whole, o.regex, false, v);
+    const ready = await computeFindReady(layout, text, v.find.current, o.whole, o.regex, false, v);
+    if (a.quitting || v.buf.version !== version || v.find?.query !== text) return null;
+    if (lay(a, v) === layout) return ready;
+  }
+}
+
 /** The cursor to a find's match; in a code block that scrolls sideways, the match in sight whole where it fits. */
 function toMatch(a: App, v: View, m: { row: number; col: number; len: number }): void {
   a.moveCursor(v, { row: m.row, col: m.col });
@@ -227,6 +274,8 @@ function toMatch(a: App, v: View, m: { row: number; col: number; len: number }):
  */
 function findStep(a: App, dir: 1 | -1, from?: { row: number; col: number }): void {
   const v = a.view;
+  if (v?.find?.pending) return a.message("info", "searching…");
+  if (v?.find?.failed) return a.message("warn", `search failed: ${v.find.error}`);
   if (!v?.find?.matches.length) return a.message("info", "no search — ctrl+f or / starts one");
   const ms = v.find.matches;
   const n = ms.length;

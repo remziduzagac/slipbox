@@ -9,6 +9,7 @@
 import { createHash } from "node:crypto";
 import { existsSync, mkdirSync, readdirSync, renameSync, rmSync, writeFileSync } from "node:fs";
 import { basename, join } from "node:path";
+import { runTool, toolFailure } from "../tool-process.ts";
 import { dataHome } from "../paths.ts";
 import type { ServerDef } from "./languages.ts";
 import { LOCKS } from "./locks.ts";
@@ -69,9 +70,10 @@ let queue: Promise<unknown> = Promise.resolve();
  */
 export function installTool(
   npm: NpmSpec,
-  opts: { base?: string; locks?: Record<string, string>; timeoutMs?: number } = {},
+  opts: { base?: string; locks?: Record<string, string>; timeoutMs?: number; signal?: AbortSignal } = {},
 ): Promise<InstallResult> {
   const run = async (): Promise<InstallResult> => {
+    if (opts.signal?.aborted) return { ok: false, output: "tool cancelled" };
     const base = opts.base ?? toolsDir();
     const locks = opts.locks ?? LOCKS;
     const dir = toolFolder(npm, base, locks);
@@ -83,23 +85,18 @@ export function installTool(
     mkdirSync(work, { recursive: true });
     writeFileSync(join(work, "package.json"), toolManifest(npm));
     writeFileSync(join(work, "bun.lock"), locks[lockKey(npm)]!);
-    const p = Bun.spawn([process.execPath, ...INSTALL_ARGS], {
+    const result = await runTool([process.execPath, ...INSTALL_ARGS], {
       cwd: work,
       env: { ...process.env, BUN_BE_BUN: "1" },
-      stdin: "ignore",
-      stdout: "pipe",
-      stderr: "pipe",
+      timeoutMs: opts.timeoutMs ?? 180_000,
+      signal: opts.signal,
     });
-    const timer = setTimeout(() => p.kill(), opts.timeoutMs ?? 180_000);
-    const [out, err, code] = await Promise.all([
-      new Response(p.stdout).text(),
-      new Response(p.stderr).text(),
-      p.exited,
-    ]);
-    clearTimeout(timer);
-    if (code !== 0 || !existsSync(join(work, "node_modules", ".bin", npm.bin))) {
+    const output = `${result.stdout}${result.stderr}`.trim();
+    // Past the limit, too slow, cancelled, not started, or a signal ended it: said so, rather than what it printed.
+    const failed = toolFailure(result);
+    if (failed || result.code !== 0 || !existsSync(join(work, "node_modules", ".bin", npm.bin))) {
       rmSync(work, { recursive: true, force: true });
-      return { ok: false, output: `${out}${err}`.trim() || `${npm.bin} isn't in it` };
+      return { ok: false, output: failed ?? (output || `${npm.bin} isn't in it`) };
     }
     rmSync(dir, { recursive: true, force: true });
     renameSync(work, dir);
@@ -108,9 +105,16 @@ export function installTool(
     for (const other of readdirSync(parent))
       if (other !== basename(dir) && !other.includes(".new-"))
         rmSync(join(parent, other), { recursive: true, force: true });
-    return { ok: true, output: `${out}${err}`.trim() };
+    return { ok: true, output };
   };
   const next = queue.then(run, run);
   queue = next.catch(() => {});
-  return next;
+  if (!opts.signal) return next;
+  const signal = opts.signal;
+  return new Promise<InstallResult>((resolve, reject) => {
+    const abort = () => resolve({ ok: false, output: "tool cancelled" });
+    signal.addEventListener("abort", abort, { once: true });
+    if (signal.aborted) abort();
+    next.then(resolve, reject).finally(() => signal.removeEventListener("abort", abort));
+  });
 }

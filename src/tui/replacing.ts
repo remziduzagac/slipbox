@@ -2,10 +2,10 @@
 // the note's text — its markdown — found by core/replace.ts with the window's find toggles. The
 // window edits (source mode or the lens), so every match is a real place in the file.
 
+import { confirmRest, matchText } from "../core/regex-jobs.ts";
 import {
   compilePattern,
   expandReplacement,
-  findAll,
   firstPerLine,
   nextLine,
   parseSubstitute,
@@ -16,6 +16,7 @@ import * as E from "./editing.ts";
 import { computeFind } from "./search.ts";
 
 export interface ReplaceState {
+  pending?: boolean;
   text: string;
   /** Typing in the replace field (else in the find field above it). */
   focus: boolean;
@@ -42,6 +43,7 @@ export interface Confirm {
   lastEnd?: number;
   asked: number;
   replaced: number;
+  error?: string;
 }
 
 /** A replacement's line breaks as the note's own (\r and \n in :s are one, and a CRLF note stays CRLF). */
@@ -49,43 +51,80 @@ function eol(view: View, text: string): string {
   return view.buf.eol === "\n" ? text : text.replace(/\r?\n/g, view.buf.eol);
 }
 
+const matching = new WeakMap<View, AbortController>();
+
 /** The query's matches in the note's text, within the replace's range; with the find row's
- *  toggles, or with `opts` (gn: the search's own, which `*` made whole words). */
-export function textMatches(
+ *  toggles, or with `opts` (gn: the search's own, which `*` made whole words). Why there are none
+ *  when the matching failed, or null when a newer matching in the window overtook it: no failure,
+ *  the newer one answers instead. */
+export async function textMatches(
   view: View,
   query: string,
   range?: [number, number],
   opts = view.findOpts ?? { regex: false, whole: false },
-): TextMatch[] | string {
+): Promise<TextMatch[] | string | null> {
   if (!query) return [];
+  const followOptions = opts === view.findOpts;
+  opts = { ...opts };
   const re = compilePattern(query, opts);
   if (typeof re === "string") return re;
-  return findAll(view.buf.source, re, range?.[0] ?? 0, range?.[1] ?? view.buf.source.length);
+  const version = view.buf.version;
+  matching.get(view)?.abort();
+  const abort = new AbortController();
+  matching.set(view, abort);
+  try {
+    const result = await matchText(view.buf.source, re, {
+      regex: opts.regex,
+      signal: abort.signal,
+      from: range?.[0],
+      to: range?.[1],
+    });
+    if (abort.signal.aborted) return null;
+    return view.buf.version === version &&
+      (!followOptions || (view.findOpts?.regex === opts.regex && view.findOpts?.whole === opts.whole))
+      ? result.matches
+      : "document changed; no replacement made";
+  } catch (error) {
+    return abort.signal.aborted ? null : (error as Error).message;
+  }
 }
 
 /** Open the replace field on a window's find prompt (the window switched to editing first). */
-export function openReplace(app: App, o: PromptOverlay, view: View, range?: [number, number]): void {
+export async function openReplace(app: App, o: PromptOverlay, view: View, range?: [number, number]): Promise<void> {
   if (!editable(view)) {
     app.lens.setViewMode(view, app.lens.editMode(view));
     app.message("info", "replacing in the markdown");
   }
   o.replace ??= { text: "", focus: true, range, current: 0, total: 0 };
   o.replace.focus = true;
-  refresh(app, o, view);
+  await refresh(app, o, view);
 }
 
-/** Recount the matches and where the cursor is among them; the find highlights follow. */
-export function refresh(app: App, o: PromptOverlay, view: View): void {
+/** Recount the matches and where the cursor is among them; the find highlights follow. Drawn once it's counted:
+ *  the count may come after the key that asked for it was drawn. (The replacement typed meanwhile counts for nothing.) */
+export async function refresh(app: App, o: PromptOverlay, view: View): Promise<void> {
   const r = o.replace;
   if (!r) return;
-  const ms = textMatches(view, o.text, r.range);
-  const list = typeof ms === "string" ? [] : ms;
+  const query = o.text;
+  r.pending = true;
+  const ms = await textMatches(view, query, r.range);
+  // Overtaken by a newer matching (a step, a replace, a newer count): that one counts instead.
+  if (ms === null || app.quitting || app.overlay !== o || o.text !== query) return;
+  r.pending = false;
+  app.host.requestRender();
+  if (typeof ms === "string") {
+    view.find = { query, matches: [], current: 0, error: ms, failed: true };
+    return;
+  }
+  const list = ms;
   const at = E.offsetOf(app, view);
   const i = list.findIndex((m) => m.to > at);
   r.total = list.length;
   r.current = list.length ? (i < 0 ? 0 : i) : 0;
   const f = view.findOpts ?? { regex: false, whole: false };
-  view.find = o.text ? computeFind(app.currentLayout(view), o.text, view.find?.current ?? 0, f.whole, f.regex) : null;
+  view.find = o.text
+    ? computeFind(app.currentLayout(view), o.text, view.find?.current ?? 0, f.whole, f.regex, false, view)
+    : null;
 }
 
 /**
@@ -98,22 +137,27 @@ function goTo(app: App, view: View, at: number): void {
 }
 
 /** Move to the next (or previous) match without replacing, wrapping around. */
-export function stepMatch(app: App, o: PromptOverlay, view: View, dir: 1 | -1): void {
-  const ms = textMatches(view, o.text, o.replace?.range);
+export async function stepMatch(app: App, o: PromptOverlay, view: View, dir: 1 | -1): Promise<void> {
+  const query = o.text;
+  const ms = await textMatches(view, query, o.replace?.range);
+  if (ms === null || app.quitting || app.overlay !== o || o.text !== query) return;
   if (typeof ms === "string" || !ms.length) return app.message("info", "no matches");
   const at = E.offsetOf(app, view);
   let i = dir === 1 ? ms.findIndex((m) => m.from > at) : ms.findLastIndex((m) => m.from < at);
   if (i < 0) i = dir === 1 ? 0 : ms.length - 1;
   goTo(app, view, ms[i]!.from);
-  refresh(app, o, view);
+  await refresh(app, o, view);
 }
 
 /** Replace the match at or after the cursor, then go to the next one. */
-export function replaceOne(app: App, o: PromptOverlay, view: View): void {
+export async function replaceOne(app: App, o: PromptOverlay, view: View): Promise<void> {
   const r = o.replace;
   if (!r) return;
-  const ms = textMatches(view, o.text, r.range);
-  if (typeof ms === "string") return app.message("warn", `not a regex: ${ms}`);
+  const query = o.text;
+  const replacement = r.text;
+  const ms = await textMatches(view, query, r.range);
+  if (ms === null || app.quitting || app.overlay !== o || o.text !== query || r.text !== replacement) return;
+  if (typeof ms === "string") return app.message("warn", `search failed: ${ms}`);
   if (!ms.length) return app.message("info", "no matches left");
   const at = E.offsetOf(app, view);
   // The match under the cursor or the next one (wrapping round).
@@ -124,10 +168,12 @@ export function replaceOne(app: App, o: PromptOverlay, view: View): void {
   if (r.range) r.range = [r.range[0], r.range[1] + text.length - (m.to - m.from)];
   // On to the next match after this one (wrapping), if there is one.
   const after = m.from + text.length;
-  const rest = textMatches(view, o.text, r.range);
+  const version = view.buf.version;
+  const rest = await textMatches(view, o.text, r.range);
+  if (rest === null || app.quitting || app.overlay !== o || view.buf.version !== version) return;
   const next = typeof rest === "string" ? undefined : (rest.find((x) => x.from >= after) ?? rest[0]);
   goTo(app, view, next ? next.from : after);
-  refresh(app, o, view);
+  await refresh(app, o, view);
   if (!next) app.message("info", "replaced the last one");
 }
 
@@ -143,27 +189,28 @@ function applyMatches(app: App, view: View, ms: TextMatch[], replacement: string
 }
 
 /** Replace every match (within the range): one undo step. */
-export function replaceAll(app: App, o: PromptOverlay, view: View): void {
+export async function replaceAll(app: App, o: PromptOverlay, view: View): Promise<void> {
   const r = o.replace;
   if (!r) return;
   const before = view.buf.source.length;
-  const n = replaceEvery(app, view, o.text, r.text, r.range);
-  if (typeof n === "string") return app.message("warn", `not a regex: ${n}`);
+  const n = await replaceEvery(app, view, o.text, r.text, r.range);
+  if (typeof n === "string") return app.message("warn", `search failed: ${n}`);
   // The selection's end moves with what was replaced inside it, as replaceOne keeps it.
   if (r.range) r.range = [r.range[0], r.range[1] + view.buf.source.length - before];
-  refresh(app, o, view);
+  await refresh(app, o, view);
   app.message("info", n ? `replaced ${n} match${n === 1 ? "" : "es"}` : "no matches");
 }
 
 /** Replace every match of `query` in `range` with `replacement`, as one undo step: how many. */
-export function replaceEvery(
+export async function replaceEvery(
   app: App,
   view: View,
   query: string,
   replacement: string,
   range?: [number, number],
-): number | string {
-  const ms = textMatches(view, query, range);
+): Promise<number | string> {
+  const ms = await textMatches(view, query, range);
+  if (ms === null || app.quitting) return "search cancelled";
   if (typeof ms === "string") return ms;
   applyMatches(app, view, ms, replacement, view.findOpts?.regex ?? false);
   return ms.length;
@@ -204,7 +251,7 @@ export function exLines(
  * `'<,'>s` on the last selection's lines; `g` every match on a line, `i` ignoring case, `c` asking
  * at each. The pattern is a regex; the edits are one undo step.
  */
-export function substitute(app: App, view: View, input: string): void {
+export async function substitute(app: App, view: View, input: string): Promise<void> {
   const sub = parseSubstitute(input);
   if (!sub) return app.message("warn", "a substitute is s/old/new/ with g, i, c flags after it");
   // The cursor's line before the window changes mode.
@@ -217,7 +264,14 @@ export function substitute(app: App, view: View, input: string): void {
   const range: [number, number] = [starts[a - 1]!, starts[b] ?? text.length];
   const re = compilePattern(sub.pattern, { regex: true, whole: false, ignoreCase: sub.ignoreCase });
   if (typeof re === "string") return app.message("warn", `not a regex: ${re}`);
-  const all = findAll(text, re, range[0], range[1], true); // :s/^/> / inserts at an empty match
+  const version = view.buf.version;
+  let all: TextMatch[];
+  try {
+    all = (await matchText(text, re, { regex: true, from: range[0], to: range[1], empty: true })).matches;
+  } catch (error) {
+    return app.message("warn", `search failed: ${(error as Error).message}`);
+  }
+  if (app.quitting || app.view !== view || view.buf.version !== version) return; // :s/^/> / inserts at an empty match
   const ms = sub.global ? all : firstPerLine(text, all);
   if (!ms.length) return app.message("warn", `not found: ${sub.pattern}`);
   if (sub.confirm)
@@ -236,7 +290,7 @@ export function substitute(app: App, view: View, input: string): void {
 }
 
 /** The confirm prompt: the find and replace rows, asking `replace? y n a q` at each match. */
-function startConfirm(app: App, view: View, pattern: string, c: Confirm): void {
+async function startConfirm(app: App, view: View, pattern: string, c: Confirm): Promise<void> {
   view.buf.beginStep(E.offsetOf(app, view));
   app.overlays.prompt(
     "/",
@@ -248,23 +302,36 @@ function startConfirm(app: App, view: View, pattern: string, c: Confirm): void {
   const o = app.overlay as PromptOverlay;
   o.text = pattern;
   o.replace = { text: c.replacement, focus: true, current: 0, total: 0, confirm: c };
-  if (!nextConfirm(app, o, view)) {
+  if (!(await nextConfirm(app, o, view))) {
     app.overlay = null;
     finishConfirm(app, view, c);
   }
 }
 
 /** The remaining matches from `c.pos` on (the first per line without `g`). */
-function remaining(view: View, c: Confirm): TextMatch[] {
+async function remaining(view: View, c: Confirm): Promise<TextMatch[]> {
   const text = view.buf.source;
-  const all = findAll(text, c.re, c.pos, c.range[1], true).filter((m) => !(m.from === m.to && m.from === c.lastEnd));
+  const all = (await matchText(text, c.re, { regex: true, from: c.pos, to: c.range[1], empty: true })).matches.filter(
+    (m) => !(m.from === m.to && m.from === c.lastEnd),
+  );
   return c.global ? all : firstPerLine(text, all);
 }
 
 /** Onto the next match to ask about: false when there are none left. */
-function nextConfirm(app: App, o: PromptOverlay, view: View): boolean {
+async function nextConfirm(app: App, o: PromptOverlay, view: View): Promise<boolean> {
   const c = o.replace!.confirm!;
-  const left = remaining(view, c);
+  const version = view.buf.version;
+  let left: TextMatch[];
+  o.replace!.pending = true;
+  try {
+    left = await remaining(view, c);
+  } catch (error) {
+    c.error = (error as Error).message;
+    return false;
+  } finally {
+    o.replace!.pending = false;
+  }
+  if (app.quitting || view.buf.version !== version || app.overlay !== o) return false;
   c.match = left[0];
   if (!c.match) return false;
   goTo(app, view, c.match.from);
@@ -272,7 +339,7 @@ function nextConfirm(app: App, o: PromptOverlay, view: View): boolean {
   o.replace!.total = c.asked + left.length;
   // The highlights: this pattern, the match being asked about current.
   // Case as the pattern has it (:s…/i ignores it), so the highlights are the matches it asks about.
-  const f = computeFind(app.currentLayout(view), o.text, 0, false, true, c.re.flags.includes("i"));
+  const f = computeFind(app.currentLayout(view), o.text, 0, false, true, c.re.flags.includes("i"), view);
   const i = f.matches.findIndex((m) => m.row > view.cur.row || (m.row === view.cur.row && m.col >= view.cur.col));
   f.current = i < 0 ? 0 : i;
   view.find = f;
@@ -294,8 +361,9 @@ function confirmReplace(view: View, c: Confirm): void {
 }
 
 /** y replace, n skip, a this and the rest, l this and stop, q (esc) stop. */
-export function confirmKey(app: App, o: PromptOverlay, view: View, key: string): void {
+export async function confirmKey(app: App, o: PromptOverlay, view: View, key: string): Promise<void> {
   const c = o.replace!.confirm!;
+  if (o.replace!.pending && !["q", "escape", "ctrl+c", "ctrl+g"].includes(key)) return;
   const stop = () => {
     app.overlay = null;
     o.accept(o.text);
@@ -312,12 +380,20 @@ export function confirmKey(app: App, o: PromptOverlay, view: View, key: string):
     case "l":
       confirmReplace(view, c);
       return stop();
-    case "a":
-      for (let m: TextMatch | undefined = c.match; m; m = remaining(view, c)[0]) {
-        c.match = m;
-        confirmReplace(view, c);
+    case "a": {
+      o.replace!.pending = true;
+      const version = view.buf.version;
+      try {
+        const edits = await confirmRest(view.buf.source, c, view.buf.eol);
+        if (app.quitting || app.overlay !== o || view.buf.version !== version) return;
+        for (const edit of edits) view.buf.edit(edit.from, edit.length, edit.text);
+        c.replaced += edits.length;
+      } catch (error) {
+        c.error = (error as Error).message;
       }
+      o.replace!.pending = false;
       return stop();
+    }
     case "q":
     case "escape":
     case "ctrl+c":
@@ -327,11 +403,16 @@ export function confirmKey(app: App, o: PromptOverlay, view: View, key: string):
       return;
   }
   c.asked++;
-  if (!nextConfirm(app, o, view)) stop();
+  if (!(await nextConfirm(app, o, view))) stop();
 }
 
 /** The confirm's end: its edits one undo step, and how many. */
 function finishConfirm(app: App, view: View, c: Confirm): void {
   view.buf.endStep(E.offsetOf(app, view));
-  app.message("info", `${c.replaced} substitution${c.replaced === 1 ? "" : "s"}`);
+  app.message(
+    c.error ? "warn" : "info",
+    c.error
+      ? `search failed: ${c.error}; ${c.replaced} substitutions made`
+      : `${c.replaced} substitution${c.replaced === 1 ? "" : "s"}`,
+  );
 }

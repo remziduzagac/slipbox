@@ -9,10 +9,11 @@
 import type { Heading, Nodes, Parents, PhrasingContent, Root, RootContent } from "mdast";
 import type { Glyphs } from "../glyphs.ts";
 import type { DataComment, DataField } from "../data.ts";
-import { type DrawingColors, drawMermaid, MERMAID, mermaidSvg } from "../diagrams.ts";
+import { type DrawingColors, drawMermaid, mermaidPending, MERMAID, mermaidSvg } from "../diagrams.ts";
 import { RESVG, rasterizer } from "../svg.ts";
 import { MATHJAX, typesetter } from "../typeset.ts";
 import { mathRows } from "../math.ts";
+import { paintRevision } from "../paint-jobs.ts";
 import { onlyComments } from "../obsidian.ts";
 import { headingLabel, ORIGIN, parseMarkdown, type Frontmatter } from "../parse.ts";
 import { expandTabs, sanitize } from "../sanitize.ts";
@@ -331,6 +332,13 @@ function joined(prev: RootContent | undefined, node: RootContent): boolean {
 }
 
 function block(node: RootContent, ctx: Ctx, width: number, base: Style, fm?: Frontmatter | null): Line[] | null {
+  const before = paintRevision;
+  const result = blockNow(node, ctx, width, base, fm);
+  if (paintRevision !== before) ctx.pending.add("pictures");
+  return result;
+}
+
+function blockNow(node: RootContent, ctx: Ctx, width: number, base: Style, fm?: Frontmatter | null): Line[] | null {
   switch (node.type) {
     case "heading":
       return heading(
@@ -382,6 +390,7 @@ function block(node: RootContent, ctx: Ctx, width: number, base: Style, fm?: Fro
           const r = rasterizer();
           const svg = r ? mermaidSvg(sanitize(node.value), ctx.opts.drawings.colors, r.family) : null;
           if (!r) ctx.pending.add(RESVG);
+          if (r && !svg && mermaidPending()) ctx.pending.add(MERMAID);
           const rows = svg ? drawing(svg, "diagram", srcOf(node), ctx, width) : null;
           if (rows) return rows;
         }
@@ -393,7 +402,7 @@ function block(node: RootContent, ctx: Ctx, width: number, base: Style, fm?: Fro
           const rows = diagram(d.rows, srcOf(node), ascii);
           return d.wide ? scrollingDiagram(rows, srcOf(node), width) : rows;
         }
-        return codeBlock(node.value, node.lang, srcOf(node), ctx, width, fenced ? 1 : 0, d?.why);
+        return codeBlock(node.value, node.lang, srcOf(node), ctx, width, fenced ? 1 : 0, d?.why ?? "drawing…");
       }
       return codeBlock(node.value, node.lang ?? null, srcOf(node), ctx, width, fenced ? 1 : 0);
     }

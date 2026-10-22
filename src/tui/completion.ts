@@ -90,6 +90,9 @@ export function completionKey(app: App, view: View, key: string): boolean {
 let timer: ReturnType<typeof setTimeout> | null = null;
 /** Each ask's number: an answer to an older one than the last is dropped. */
 let asked = 0;
+/** Each signature help ask's number, likewise — and `)` closing it drops the answer on its way. An answer for an
+ *  older text stands (the server's for the text at the `(`, the argument typed since): only the last ask's counts. */
+let signatureAsked = 0;
 
 /** A word of the open files, to complete one with (25.5): two of a word's characters or more. */
 const WORDS = /[\p{L}\p{N}_$]{2,}/gu;
@@ -179,7 +182,10 @@ export function afterInsertKey(app: App, view: View, key: string): void {
   const from = wordStart(view.buf.source, at);
   const t = app.languages.triggers(view.buf.abs);
   if (typed !== null && t.signature.includes(typed)) void signature(app, view);
-  if (typed === ")") app.signature = null;
+  if (typed === ")") {
+    signatureAsked++;
+    app.signature = null;
+  }
   if (typed !== null && t.completion.includes(typed)) return void ask(app, view, typed);
   const c = app.completion;
   if (key === "backspace" || (typed !== null && WORD.test(typed))) {
@@ -434,6 +440,7 @@ function applyElsewhere(app: App, view: View, edits: TextEdit[]): void {
 /** The signature being typed, from the file's servers: its label, its active parameter marked. */
 async function signature(app: App, view: View): Promise<void> {
   const s = app.languages.servers!;
+  const mine = ++signatureAsked;
   app.languages.sync(view.buf);
   const r = await s.request<SignatureHelp>(
     view.buf.abs,
@@ -442,6 +449,7 @@ async function signature(app: App, view: View): Promise<void> {
     "signatureHelpProvider",
     "signature-help",
   );
+  if (mine !== signatureAsked) return;
   const help = r?.result;
   const sig = help?.signatures[help.activeSignature ?? 0];
   if (!sig || !view.insert) {

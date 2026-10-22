@@ -1,8 +1,30 @@
-// README.md's first picture (and the docs site's home page).
+// README.md's first picture, and the docs site's home page's.
 
 import { HOME, leader, quiet, type Shot } from "../shot.ts";
 
 export const SHOTS: Shot[] = [
+  {
+    // The site's first picture: a long note beside its explorer, the lens open on one paragraph, the training table
+    // above it and the gear checklist below still rendered.
+    name: "documentation-home",
+    options: HOME("notes/projects/brevet-300.md"),
+    take: async (s) => {
+      await s.status("brevet-300.md");
+      // The explorer zoomed in on the note's folder, projects: its notes, not the reference set's odd names.
+      await leader(s, "shift+e");
+      await s.status("FILES");
+      await s.keys("z");
+      await s.see("› projects ›");
+      await s.keys("escape");
+      await s.status("READ");
+      await s.keys("ctrl+f");
+      await s.type("Eat before hungry");
+      await s.keys("enter", "escape", "z", "z");
+      await leader(s, "n", "l");
+      await s.status("LENS");
+      await s.notSee("the lens: the markdown", 8000);
+    },
+  },
   {
     // An agent's change to a design doc, read, reviewed and edited where it stands. The agent rewords a sentence and
     // adds one (git's signs beside them), gathers two references in the scratch (on the right), and you type in the

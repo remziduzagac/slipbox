@@ -1,7 +1,9 @@
-# Finding things
+# Finding and replacing
+
+<a id="finding-things"></a>
 
 This chapter covers every way to find something in slipbox, from a note by its name to a command by its name.
-Following links and backlinks, the other way to get around, is in [Links and vaults](links-and-vaults.md).
+Following links and backlinks, the other way to get around, is in [Links and backlinks](links-and-vaults.md).
 
 | To find | Keys |
 | --- | --- |
@@ -245,6 +247,22 @@ A substitute is one undo step. It works on the Markdown, as replacing does.
 From the command line, `slipbox replace <note> <old> <new>` replaces in one note. Add `--dry-run` to see each change
 first.
 
+### Regex work in the background
+
+A regular expression is matched in the background, so a slow one never stops the screen. The find row says `searching`
+while it works and `search failed` if it can't finish; typing on cancels the earlier work, and `enter` tries a failed
+search again. A regular expression's highlights stop at its first 10,000 matches, and a `+` after the count says there
+are more. Plain text finds every match.
+
+A replace takes every match, however many, and so does `slipbox find`. Only a regular expression whose groups add up to
+many times the text is cut short, such as one capturing the rest of the line at every place: a replace then changes
+nothing, and `slipbox find` warns that it shows the first matches.
+
+A regular expression has 1.5 seconds once its turn comes, and a second more for each million characters it searches;
+waiting behind another search doesn't count. Past that it stops, `search failed`, and a replace changes nothing.
+Confirming `a` works out the remaining replacements before it makes any of them; those already made with `y` stay, and
+`u` undoes them all together.
+
 ## Find in every note
 
 Press `ctrl+shift+f` (or `space f g`), and type what to find. slipbox lists every line that has it, in every note and
@@ -404,7 +422,7 @@ Pick a tag to list its notes. A parent's list includes the notes of the tags und
 `:tag coffee` goes straight to a tag's notes.
 
 To find notes by a tag and words at once, search for both, such as `#coffee grinder`. Following a tag in a note lists
-its notes too. What counts as a tag is in [Links and vaults](links-and-vaults.md#tags).
+its notes too. What counts as a tag is in [Links and backlinks](links-and-vaults.md#tags).
 
 From the command line, `slipbox tags` lists the tags, and `slipbox tags coffee` lists a tag's notes.
 

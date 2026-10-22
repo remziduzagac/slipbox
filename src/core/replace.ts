@@ -71,13 +71,51 @@ export interface TextMatch {
   groups: string[];
 }
 
+/** `findAll` stopped at its limits: the matches up to there. */
+export class MatchLimitError extends Error {
+  constructor(readonly matches: TextMatch[]) {
+    super("search match limit reached; results are incomplete");
+  }
+}
+
+/** How much of an answer `findAll` keeps: a count of matches, and their size (48 bytes each, and their groups'). */
+export interface MatchLimits {
+  count?: number;
+  bytes?: number;
+}
+
+/** What a find shows: its first 10,000 matches, and 2 MiB of them; its count says when there are more. */
+export const SHOWN_MATCHES: MatchLimits = { count: 10_000, bytes: 2 * 1024 * 1024 };
+
+/**
+ * Every match, however many: a replace's, the command line's. Matches can't outgrow their text (`chars` long) many
+ * times over; only captures can, as a lookahead capturing on to the line's end at every place does, its answer growing
+ * as the square of the line. That alone is cut short.
+ */
+export const everyMatch = (chars: number): MatchLimits => ({ bytes: 2 * 1024 * 1024 + 64 * 2 * chars });
+
 /**
  * Every match in `text` (within [from, to) when given). Empty matches (`^`, `$`, a lookahead) are
  * kept only when `empty` is set — a replacement inserts there (`:s/^/> /`); a search skips them.
- * The empty "line" after a final newline is never one.
+ * The empty "line" after a final newline is never one. Past `limits`, it throws `MatchLimitError`.
  */
-export function findAll(text: string, re: RegExp, from = 0, to = text.length, empty = false): TextMatch[] {
+export function findAll(
+  text: string,
+  re: RegExp,
+  from = 0,
+  to = text.length,
+  empty = false,
+  limits: MatchLimits = {},
+): TextMatch[] {
   const out: TextMatch[] = [];
+  let bytes = 0;
+  const keep = (match: TextMatch) => {
+    const size = 48 + match.groups.reduce((n, group) => n + group.length * 2, 0);
+    if (out.length >= (limits.count ?? Infinity) || bytes + size > (limits.bytes ?? Infinity))
+      throw new MatchLimitError(out);
+    bytes += size;
+    out.push(match);
+  };
   const g = new RegExp(re.source, re.flags.includes("g") ? re.flags : `${re.flags}g`);
   g.lastIndex = from;
   let lastEnd = -1;
@@ -91,12 +129,12 @@ export function findAll(text: string, re: RegExp, from = 0, to = text.length, em
       if (text[at - 1] === "\r" && text[at] === "\n") continue; // inside a CRLF: the line ended before \r
       // An empty match at `to` is the next line's start, unless the note ends there unterminated.
       const inside = at < to || (at === text.length && to === text.length && !text.endsWith("\n"));
-      if (empty && inside) out.push({ from: at, to: at, groups: [m[0], ...m.slice(1).map((x) => x ?? "")] });
+      if (empty && inside) keep({ from: at, to: at, groups: [m[0], ...m.slice(1).map((x) => x ?? "")] });
       if (at >= to) break;
       continue;
     }
     if (at >= to || at + m[0].length > to) break;
-    out.push({ from: at, to: at + m[0].length, groups: [m[0], ...m.slice(1).map((x) => x ?? "")] });
+    keep({ from: at, to: at + m[0].length, groups: [m[0], ...m.slice(1).map((x) => x ?? "")] });
     lastEnd = at + m[0].length;
   }
   return out;

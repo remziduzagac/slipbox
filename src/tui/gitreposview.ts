@@ -5,10 +5,11 @@
 // repositories folded and counted under them. git is asked only about the rows on screen, in the background, again
 // when it has news and when the panel is opened.
 
+import { beginGitRead } from "./gitquery.ts";
 import { existsSync } from "node:fs";
 import { join } from "node:path";
 import type { Checkout } from "../core/git.ts";
-import { showAt } from "../core/gitops.ts";
+import { showLater } from "../core/gitops.ts";
 import type { StatusEntry } from "../core/gitstage.ts";
 import { attention, type CheckoutState, checkoutStateLater, type RepoFound, reposUnder } from "../core/gitrepos.ts";
 import { repoKey } from "../core/gitbase.ts";
@@ -180,7 +181,7 @@ export class RepoView {
   }
 
   /** The panel's action on a repository's rows. */
-  action(row: RepoViewRow, action: string): void {
+  action(row: RepoViewRow, action: string): void | Promise<void> {
     const r = row.repo;
     switch (action) {
       case "open":
@@ -237,13 +238,13 @@ export class RepoView {
       accept: (item) => {
         if (item.data === "copy")
           return void app.copy(row.kind === "rfile" ? join(row.checkout.root, row.entry.path) : c.root);
-        this.action(row, item.data as string);
+        return this.action(row, item.data as string);
       },
     });
   }
 
   /** A checkout's uncommitted file, its diff against the last commit in the diff window. */
-  private fileDiff(row: RepoFileRow): void {
+  private async fileDiff(row: RepoFileRow): Promise<void> {
     const app = this.app;
     const c = row.checkout;
     const abs = join(c.root, row.entry.path);
@@ -251,7 +252,9 @@ export class RepoView {
     if (typeof now !== "string") return app.message("info", `${row.entry.path}: ${now.why}`);
     // A rename: before, under the name it had.
     const was = row.entry.from ?? row.entry.path;
-    const before = row.entry.x === "?" ? "" : (showAt(c, "HEAD", was) ?? "");
+    const query = beginGitRead(app, "Reading repository version");
+    const before = row.entry.x === "?" ? "" : ((await showLater(c, "HEAD", was, query.signal)) ?? "");
+    if (!query.current()) return;
     const from = app.region;
     const named = row.entry.from ? `${row.entry.from} → ${row.entry.path}` : row.entry.path;
     openDiff(app, {
@@ -264,6 +267,7 @@ export class RepoView {
         if (from === "sidebar" && app.panels.sidebarShown) app.region = "sidebar";
       },
     });
+    app.host.requestRender();
   }
 
   /** A checkout's line, opened up: the main one or a worktree, its branch and where it is. */

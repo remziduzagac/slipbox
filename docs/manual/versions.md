@@ -1,4 +1,6 @@
-# Versions
+# Versions, updates and compatibility
+
+<a id="versions"></a>
 
 A slipbox version says what changed since the one before. It also says which changes can break a script, an agent or
 your settings.
@@ -37,7 +39,7 @@ Scripts, agents and your own files rely on these. So they change only as
   - the names of the commands your keys and aliases call
   - slipbox's own environment variables
 - **What slipbox writes into your files:** the links it writes, and the `.slipbox/` folder. The links are Markdown
-  links, wikilinks and `slipbox://` pointers, in [Links and vaults](links-and-vaults.md)'s forms.
+  links, wikilinks and `slipbox://` pointers, in [Links and backlinks](links-and-vaults.md)'s forms.
 
 ### What may change in any release
 
@@ -105,7 +107,7 @@ A command, a flag or a setting that is to be renamed or removed is deprecated fi
 - **The changelog says so** in its Deprecated section, with what to use instead. It does so at least one minor release
   before it goes.
 - **It keeps working** while it's deprecated, and slipbox warns when you use it:
-  - a setting, among the config's warnings ([Mistakes in a file](configuration.md#mistakes-in-a-file))
+  - a setting, among the config's warnings ([Mistakes in a file](customization.md#mistakes-in-a-file))
   - a command or a flag, on stderr, and in `warnings` with `--json`
 - **Once it's gone,** a setting is named and ignored, with a warning saying what replaced it, as a retired one is now.
   A command or a flag is a usage error, exit code 2. Its message says what to use instead.

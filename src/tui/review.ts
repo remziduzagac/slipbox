@@ -7,10 +7,11 @@
 // for the agent into the scratch with the file and its lines, `n` and `p` move, `enter` goes to it in its file, `esc`
 // ends. The end says what was kept, reverted and noted, and that `space s y` copies the notes. Nothing is committed.
 
+import { beginGitRead } from "./gitquery.ts";
 import { lstatSync, readFileSync, statSync } from "node:fs";
 import { join } from "node:path";
 import { type BlockDiff, blockDiff } from "../core/blockdiff.ts";
-import { inVault, showAt } from "../core/gitops.ts";
+import { inVault, showLater } from "../core/gitops.ts";
 import { findChange, hunkEntry, hunkLines, hunkView, movedBy, type Tally, tallyText } from "../core/gitreview.ts";
 import { type GitChange, gitChanges } from "../core/gitsigns.ts";
 import { discardFile, replaceLines, sections, stageChange, stageFile } from "../core/gitstage.ts";
@@ -89,7 +90,10 @@ export function openReview(app: App): void {
   const c = app.git.checkout;
   if (!c) return app.message("info", "not a git checkout");
   if (reviewOf(app)) return;
-  void app.git.refreshNow().then(() => {
+  const view = app.view;
+  void app.git.refreshNow().then(async () => {
+    if (app.quitting || app.git.checkout?.root !== c.root || app.view !== view) return;
+    const query = beginGitRead(app, "Reading review versions", true);
     const s = sections(app.git.entries ?? []);
     const files = [
       ...s.unstaged.map((e) => ({ e, untracked: false })),
@@ -101,7 +105,8 @@ export function openReview(app: App): void {
       const deleted = e.y === "D";
       const text = deleted ? "" : onDisk(abs);
       if (text === null) continue;
-      const staged = untracked ? null : showAt(c, "", e.path);
+      const staged = untracked ? null : await showLater(c, "", e.path, query.signal);
+      if (!query.current()) return;
       if (!untracked && staged === null) continue;
       const now = linesOf(text);
       const kind = untracked ? "untracked" : deleted ? "deleted" : "changed";
@@ -209,8 +214,11 @@ function onward(app: App, r: Review): void {
 }
 
 /** The hunk among its file's changes now — the index or the file may have moved — the index's text, and the file's. */
-function fresh(app: App, it: Item): { staged: string; change: GitChange; text: string } | null {
-  const staged = showAt(app.git.checkout!, "", it.path);
+async function fresh(app: App, it: Item): Promise<{ staged: string; change: GitChange; text: string } | null> {
+  const query = beginGitRead(app, "Reading staged version", true);
+  const review = reviewOf(app);
+  const staged = await showLater(app.git.checkout!, "", it.path, query.signal);
+  if (!query.current() || reviewOf(app) !== review || review?.items[review.at] !== it) return null;
   const text = onDisk(it.abs);
   if (staged === null || text === null) return null;
   const change = findChange(gitChanges(staged, text), it.change);
@@ -261,7 +269,7 @@ function current(app: App, key: string, what: string): { r: Review; it: Item } |
 }
 
 /** `y`: the hunk kept — staged, as source control's `s` stages a change (a new or deleted file, whole). */
-export function reviewKeep(app: App): void {
+export async function reviewKeep(app: App): Promise<void> {
   const cur = current(app, "y", "keeps a change");
   if (!cur) return;
   const { r, it } = cur;
@@ -270,7 +278,7 @@ export function reviewKeep(app: App): void {
   const c = app.git.checkout!;
   let why: string | null;
   if (it.kind === "changed") {
-    const now = fresh(app, it);
+    const now = await fresh(app, it);
     if (!now) return app.message("warn", `${it.path} changed since the review read it: that change isn't there now`);
     why = stageChange(c, it.path, now.staged, now.change);
     if (!why) moveOthers(r, it, now.change, "kept");
@@ -299,7 +307,7 @@ function skip(app: App, r: Review, it: Item): void {
  * while the file is as the review read it — the hunk where it was, a deleted file still gone, a new one unchanged —
  * else it's left as it is, and said.
  */
-export function reviewRevert(app: App): void {
+export async function reviewRevert(app: App): Promise<void> {
   const cur = current(app, "x", "reverts a change");
   if (!cur) return;
   const { r, it } = cur;
@@ -321,7 +329,7 @@ export function reviewRevert(app: App): void {
     return app.files.deleteItem({ rel: it.rel, dir: false }, () =>
       reverted(app, r, it, `${it.path} went to the trash`),
     );
-  const now = fresh(app, it);
+  const now = await fresh(app, it);
   if (!now) return app.message("warn", `${it.path} changed since the review read it: that change isn't there now`);
   const buf = app.buffer(it.rel);
   if (!buf) return;

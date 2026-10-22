@@ -7,8 +7,8 @@ dated notes later decisions left under it. Requirements and design say what hold
   phases, the agent surface.
 - [roots-and-links.md](roots-and-links.md) (D38–D87): the vault root and the vaults of 2026-09-30, plain paths and
   virtual vaults, then paths inside and conventions at the edges; storage, the walk, links, tags, worktrees.
-- [reading.md](reading.md) (D88–D133): rendering, themes, keys and modes, images, files beyond markdown, embeds,
-  search, big notes, code as a notebook, document types.
+- [reading.md](reading.md) (D88–D133, and later ones): rendering, themes, keys and modes, images, files beyond markdown,
+  embeds, search, big notes, code as a notebook, document types.
 - [editing.md](editing.md) (D134–D158): the editor and the hand-off, concurrent edits, write safety, renames, the
   explorer, git, editing fundamentals.
 - [code-intelligence.md](code-intelligence.md) (D159–D177): language servers and linters, diagnostics, trust.

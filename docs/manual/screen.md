@@ -1,4 +1,6 @@
-# The screen
+# The screen and navigation
+
+<a id="the-screen"></a>
 
 This chapter is a tour of slipbox's screen. It says what each part is for, what it tells you, and how to show, hide,
 move and resize it.
@@ -10,7 +12,8 @@ How a note itself is drawn is in [Reading](reading.md). Every key is listed in [
 Here is slipbox with a folder of notes open, two notes in tabs, the explorer on the left and the outline on the
 right:
 
-![slipbox with the explorer, two tabs, a note with its breadcrumb, the outline and the status line](../images/screen-map.png)
+![slipbox with the explorer, two tabs, a note with its breadcrumb, the outline and the status
+line](../images/screen-map.png)
 
 From the top:
 
@@ -262,7 +265,8 @@ its own: press `space v i`.
 The Problems panel runs across the bottom of the screen, under the windows and the side panes. It takes a third of the
 rows.
 
-![The Problems panel under the note: its This file and All tabs, broken links grouped by note](../images/screen-problems.png)
+![The Problems panel under the note: its This file and All tabs, broken links grouped by
+note](../images/screen-problems.png)
 
 It has two tabs:
 
@@ -294,7 +298,7 @@ Pressing the panel's key again while it has the keys closes it.
 To make it taller or shorter, drag its top rule. Or give it the keys and use resize mode's `j` and `k`.
 
 What the problems are and where they come from is in [Code](code.md). Broken links, and how to repair them, are in
-[Links and vaults](links-and-vaults.md).
+[Links and backlinks](links-and-vaults.md).
 
 ## The breadcrumb
 
@@ -333,7 +337,7 @@ The status line describes the file in the focused window. From the left:
   `space l`, `C-w` after `ctrl+w`, `2d` after `2 d`.
 - **The vault**, dimmed. It's the vault's name if it has one, or else its path (`~/notes`). Home is `~`, and a file
   outside home and every vault says `Elsewhere`. In a git repository, the branch checked out comes after it
-  (`~/notes · main`). [Links and vaults](links-and-vaults.md) explains names.
+  (`~/notes · main`). [Vaults, home and Elsewhere](vaults.md#names-and-pointers) explains names.
   A branch with an upstream shows how far it's ahead of it and behind it, as of the last fetch (`~/notes · main ↑2 ↓1`).
   A merge or a rebase under way is said after it (`~/notes · main merging`, `~/notes · fix rebasing 2/5`).
 - **The file's path**, between `‹` and `›`. These two go back and forward in the window's history, as a browser's
@@ -533,6 +537,7 @@ change it.
 | Code cells | `space u c` | the code view's cells in boxes, or on tinted bands |
 | Code blocks | (only in the list) | a code block too wide scrolls sideways, or wraps |
 | Scratch opens | (only in the list) | floating in the middle, or in the window on the right |
+| Hidden files in the explorer | `shift+h` in the explorer | lists the files and folders whose names start with `.` |
 
 How the theme, glyphs, wrapping, code blocks and URLs change a note is in [Reading](reading.md). Spelling and the
 scratch are in [Editing](editing.md). Problems and code cells are in [Code](code.md).
@@ -589,4 +594,4 @@ back the new branch's tabs. A note with unsaved changes keeps everything as it i
 `ui.restore_session` on.
 
 The session is the folder's own. Another folder has its own. Where slipbox keeps it on your machine is in
-[Where slipbox keeps things](configuration.md#where-slipbox-keeps-things).
+[Where slipbox keeps things](environment-and-storage.md#where-slipbox-keeps-things).

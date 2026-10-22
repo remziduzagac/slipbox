@@ -6,10 +6,11 @@
 // starts where it's asked to, in a new worktree if ticked, its base kept. git is asked in the background, a branch's
 // figures only for the rows on screen.
 
+import { beginGitRead } from "./gitquery.ts";
 import { existsSync } from "node:fs";
 import { join, relative, sep } from "node:path";
 import { checkoutOf, headOf } from "../core/git.ts";
-import { branchesOf, type Changed, inVault, refName, showAt } from "../core/gitops.ts";
+import { branchesOf, type Changed, inVault, refName, showLater } from "../core/gitops.ts";
 import type { StatusEntry } from "../core/gitstage.ts";
 import { backToPanel, readForDiff } from "./gitview.ts";
 import { GIT_MARK } from "./draw-overlays.ts";
@@ -36,7 +37,7 @@ import {
   switchLater,
   worktreeFolder,
 } from "../core/gitbranches.ts";
-import { candidates, keepBase, keptBases, nearest } from "../core/gitbase.ts";
+import { candidates, keepBase, keptBases, nearest, remoteBranchesLater, resolveBaseLater } from "../core/gitbase.ts";
 import { checkoutStateLater } from "../core/gitrepos.ts";
 import { tildePath } from "../core/names.ts";
 import { sanitize } from "../core/sanitize.ts";
@@ -45,6 +46,9 @@ import { openDiff } from "./diffview.ts";
 import { match } from "./match.ts";
 import type { App } from "./app.ts";
 import type { HeadingRow, PanelRow } from "./gitpanel.ts";
+
+/** "Compare against…"'s entry for a branch, tag or commit typed: no ref's name, so never mistaken for one. */
+const TYPED = Symbol("typed");
 
 /** A branch's row; `open` while it's opened up in place. */
 export interface BranchRow {
@@ -304,9 +308,9 @@ export class BranchView {
   // What a branch's row does
 
   /** The panel's action on a branch's rows. */
-  action(row: BranchViewRow, action: string): void {
+  action(row: BranchViewRow, action: string): void | Promise<void> {
     const b = row.branch;
-    if (row.kind === "bfile" && (action === "open" || action === "expand")) return void this.fileDiff(row);
+    if (row.kind === "bfile" && (action === "open" || action === "expand")) return this.fileDiff(row);
     if (row.kind === "bbuttons" && (action === "open" || action === "go"))
       return this.button(b, row.buttons[0]?.action ?? "");
     switch (action) {
@@ -430,21 +434,23 @@ export class BranchView {
     const app = this.app;
     const c = app.git.checkout;
     if (!c) return;
+    const query = beginGitRead(app, "Reading branch version");
     const b = row.branch;
     let before = "";
     let now = "";
     const back = backToPanel(app);
     if (row.against === "uncommitted" && b.worktree) {
-      before = showAt({ root: b.worktree.path }, "HEAD", row.path) ?? "";
+      before = (await showLater({ root: b.worktree.path }, "HEAD", row.path, query.signal)) ?? "";
       const read = readForDiff(join(b.worktree.path, row.path));
       if (typeof read !== "string") return app.message("info", `${row.path}: ${read.why}`);
       now = read;
     } else if (row.base) {
-      const from = await mergeBaseLater(c.root, row.base, b.name);
+      const from = await mergeBaseLater(c.root, row.base, b.tip);
       // A rename: before, under the name it had.
-      before = from ? (showAt(c, from, row.from ?? row.path) ?? "") : "";
-      now = showAt(c, b.name, row.path) ?? "";
+      before = from ? ((await showLater(c, from, row.from ?? row.path, query.signal)) ?? "") : "";
+      now = (await showLater(c, b.tip, row.path, query.signal)) ?? "";
     }
+    if (!query.current()) return;
     const against = row.against === "base" ? `against ${sanitize(row.base ?? "")}` : "not committed";
     openDiff(app, {
       before,
@@ -457,31 +463,67 @@ export class BranchView {
     app.host.requestRender();
   }
 
-  /** "Compare against…" (GIT-D10): another base for a branch, kept; or back to the one guessed. */
+  /**
+   * "Compare against…" (GIT-D10, D255): another base for a branch, kept; or back to the one guessed. The local branches,
+   * then the remote-tracking ones (`origin/dev`, a pull request's base as the forge compares it, as of the last fetch),
+   * then any branch, tag or commit typed.
+   */
   private compare(b: Branch): void {
     const app = this.app;
     const c = app.git.checkout;
     const got = this.branches();
     if (!c || !got) return;
-    const kept = keptBases(c)[b.name];
-    const others = got.branches.map((x) => x.name).filter((n) => n !== b.name);
-    app.overlays.openList({
-      title: `Compare ${sanitize(b.name)} against…`,
-      items: [
-        ...(kept ? [{ label: "The base guessed from [git] bases", detail: `now ${kept}, kept`, data: null }] : []),
-        ...others.map((n) => ({ label: sanitize(n), detail: n === kept ? "kept" : "", data: n })),
-      ],
-      accept: (item) => {
-        keepBase(c, b.name, item.data as string | null);
-        this.stats.delete(b.name);
-        this.files.delete(b.name);
-        app.git.forgetBase();
-        app.message(
-          "info",
-          item.data ? `${b.name} is compared against ${item.data} now` : `${b.name}'s base is guessed again`,
-        );
-      },
+    void remoteBranchesLater(c).then((remotes) => {
+      // Moved on meanwhile (another repository, another question open): nothing pops up over it.
+      if (app.git.checkout !== c || app.overlay) return;
+      const kept = keptBases(c)[b.name];
+      const others = got.branches.map((x) => x.name).filter((n) => n !== b.name);
+      app.overlays.openList({
+        title: `Compare ${sanitize(b.name)} against…`,
+        items: [
+          ...(kept ? [{ label: "The base guessed from [git] bases", detail: `now ${kept}, kept`, data: null }] : []),
+          ...others.map((n) => ({ label: sanitize(n), detail: n === kept ? "kept" : "", data: n })),
+          ...remotes.map((n) => ({ label: sanitize(n), detail: n === kept ? "remote, kept" : "remote", data: n })),
+          { label: "A branch, tag or commit…", detail: "typed: v2.3, a commit, HEAD~3", data: TYPED },
+        ],
+        accept: (item) =>
+          item.data === TYPED ? this.compareTyped(b) : this.compareWith(b, item.data as string | null),
+      });
+      app.host.requestRender();
     });
+  }
+
+  /** "Compare against…"'s last entry: a branch, tag or commit typed, checked as `--base` is (a revision as its commit). */
+  private compareTyped(b: Branch): void {
+    const app = this.app;
+    const c = app.git.checkout;
+    if (!c) return;
+    app.overlays.prompt(`compare ${sanitize(b.name)} against: `, (typed) => {
+      void resolveBaseLater(c, typed).then((asked) => {
+        if (app.git.checkout !== c) return;
+        if ("error" in asked) app.message("warn", asked.error);
+        else if (asked.full === `refs/heads/${b.name}`) app.message("info", `${b.name} can't be its own base`);
+        else this.compareWith(b, asked.base, asked.commit ? typed.trim() : undefined);
+        app.host.requestRender();
+      });
+    });
+  }
+
+  /** A branch's base kept (or, null, guessed again), what was read against the old one dropped, and said. */
+  private compareWith(b: Branch, base: string | null, typed?: string): void {
+    const app = this.app;
+    const c = app.git.checkout;
+    if (!c) return;
+    keepBase(c, b.name, base);
+    this.stats.delete(b.name);
+    this.files.delete(b.name);
+    app.git.forgetBase();
+    app.message(
+      "info",
+      base
+        ? `${b.name} is compared against ${base}${typed ? ` (${typed})` : ""} now`
+        : `${b.name}'s base is guessed again`,
+    );
   }
 
   /**

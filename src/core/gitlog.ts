@@ -7,7 +7,7 @@
 import { execFileSync } from "node:child_process";
 import { posix, sep } from "node:path";
 import type { Checkout } from "./git.ts";
-import { gitArgs, literalArgs, literalEnv } from "./gitops.ts";
+import { gitArgs, gitReadLater, literalArgs, literalEnv } from "./gitops.ts";
 import { diffLines } from "./merge.ts";
 
 const OPTS = {
@@ -108,6 +108,49 @@ export function fileLog(c: Pick<Checkout, "root">, path: string, max = 500): Com
       posixPath(path),
     ],
     true,
+  );
+  return out === null ? null : parseLog(out);
+}
+
+/** Async forms for UI reads; the synchronous forms remain available to noninteractive callers. */
+export async function blameLineLater(
+  c: Pick<Checkout, "root">,
+  path: string,
+  line: number,
+  signal?: AbortSignal,
+): Promise<CommitInfo | null> {
+  const out = await gitReadLater(
+    c,
+    ["blame", "--porcelain", "-L", `${line},${line}`, "HEAD", "--", posixPath(path)],
+    true,
+    signal,
+  );
+  return out === null ? null : parseBlame(out, path);
+}
+export async function messageLater(c: Pick<Checkout, "root">, hash: string, signal?: AbortSignal): Promise<string> {
+  return (
+    (await gitReadLater(c, ["show", "-s", "--format=%B", "--end-of-options", hash], false, signal)) ?? ""
+  ).trimEnd();
+}
+export async function fileLogLater(
+  c: Pick<Checkout, "root">,
+  path: string,
+  max = 500,
+  signal?: AbortSignal,
+): Promise<CommitInfo[] | null> {
+  const out = await gitReadLater(
+    c,
+    [
+      "log",
+      "--follow",
+      `--max-count=${max}`,
+      "--format=%x01%H%x00%an%x00%at%x00%s",
+      "--name-only",
+      "--",
+      posixPath(path),
+    ],
+    true,
+    signal,
   );
   return out === null ? null : parseLog(out);
 }

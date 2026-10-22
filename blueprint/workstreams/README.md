@@ -3,7 +3,8 @@
 Contained parts of the work, each a folder with its key in its README's H1: active and complete ones here, consolidated,
 dropped and superseded ones in `archive/`. The roadmap gives their order.
 
-- Active: [TT](terminal-tests/README.md), the terminal tests headless and by feature.
+- Active: [TT](terminal-tests/README.md), the terminal tests headless and by feature;
+  [DOCS](documentation/README.md), the documentation learning path, topic ownership and reference.
 - Consolidated, in `archive/`: [DOC](archive/user-docs/README.md), the user documentation;
   [DF](archive/doc-findings/README.md), what writing it found; [GR](archive/greenrepo/README.md), the repository to
   greenrepo; [DS](archive/docs-site/README.md), the documentation site; [VV](archive/vaults-and-view/README.md), vaults

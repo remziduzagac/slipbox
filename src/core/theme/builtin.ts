@@ -1,60 +1,8 @@
-// Built-in themes. Tokyo Night is the default and carries the nvim readability adjustments from
-// <dotfiles>/shared/config/nvim/lua/plugins/colorscheme.lua (D96).
-// The rest reduce to a Palette, hand-tuned or from base16 data.
+// Built-in themes reduce to a Palette, from upstream colours or base16 data.
 
 import { base16ToPalette, type Base16Scheme } from "./base16.ts";
-import { type Palette, type RoleOverrides, type Theme, themeFromPalette } from "./theme.ts";
-
-const tokyoNight: Palette = {
-  // Darker ground than stock, softer foreground.
-  bg: "#16161e",
-  bg_dark: "#0f0f17",
-  surface: "#292e42",
-  surface2: "#3b4261",
-  fg: "#aab3d4",
-  fg_dim: "#8c95b0",
-  fg_strong: "#bcc5e6",
-  comment: "#565f89",
-  red: "#f7768e",
-  orange: "#ff9e64",
-  yellow: "#e0af68",
-  green: "#9ece6a",
-  teal: "#1abc9c",
-  cyan: "#7dcfff",
-  blue: "#7aa2f7",
-  magenta: "#bb9af7",
-  purple: "#9d7cd8",
-  border: "#7aa2f7",
-};
-
-const tokyoNightOverrides: RoleOverrides = {
-  // Inline code: #c0caf5 on #292e42, italic.
-  code_inline: { fg: "#c0caf5", bg: "#292e42", italic: true },
-  syn_keyword: { fg: "#ff9ed1", bold: true },
-  syn_function: { fg: "#82dfff", bold: true },
-  border: { fg: "#3b4261" },
-};
-
-const tokyoNightDay: Palette = {
-  bg: "#e1e2e7",
-  bg_dark: "#d0d5e3",
-  surface: "#c4c8da",
-  surface2: "#a8aecb",
-  fg: "#3760bf",
-  fg_dim: "#6172b0",
-  fg_strong: "#1f3a8a",
-  comment: "#848cb5",
-  red: "#f52a65",
-  orange: "#b15c00",
-  yellow: "#8c6c3e",
-  green: "#587539",
-  teal: "#118c74",
-  cyan: "#007197",
-  blue: "#2e7de9",
-  magenta: "#9854f1",
-  purple: "#7847bd",
-  border: "#2e7de9",
-};
+import { type Palette, type Theme, themeFromPalette } from "./theme.ts";
+import { tokyoNightPalettes } from "./tokyo-night.ts";
 
 const catppuccinMocha: Palette = {
   bg: "#1e1e2e",
@@ -138,8 +86,9 @@ function scheme(name: string, slots: string): Base16Scheme {
 
 export function builtinThemes(): Map<string, () => Theme> {
   const m = new Map<string, () => Theme>();
-  m.set("tokyo-night", () => themeFromPalette("tokyo-night", tokyoNight, "builtin", tokyoNightOverrides));
-  m.set("tokyo-night-day", () => themeFromPalette("tokyo-night-day", tokyoNightDay, "builtin"));
+  for (const [name, palette] of Object.entries(tokyoNightPalettes)) {
+    m.set(name, () => themeFromPalette(name, palette, "builtin"));
+  }
   m.set("catppuccin-mocha", () => themeFromPalette("catppuccin-mocha", catppuccinMocha, "builtin"));
   m.set("catppuccin-latte", () => themeFromPalette("catppuccin-latte", catppuccinLatte, "builtin"));
   for (const [name, slots] of Object.entries(BASE16)) {

@@ -49,7 +49,7 @@ export class Input {
     return this.handleKey(`${PASTE}${text}`);
   }
 
-  private pasteNow(text: string): void {
+  private async pasteNow(text: string): Promise<void> {
     const o = this.app.overlay;
     const iv = this.app.view;
     if (!o && this.app.region === "content" && iv?.insert) {
@@ -62,7 +62,7 @@ export class Input {
     // a change `.` repeats (the paste a key of its own).
     if (!o && this.app.region === "content" && iv && editable(iv)) {
       const before = iv.buf.version;
-      put(this.app, iv, true, text.replace(/\r\n?/g, "\n"));
+      await put(this.app, iv, true, text.replace(/\r\n?/g, "\n"));
       const s = this.app.vim;
       if (!s.replaying && iv.buf.version !== before) {
         s.seq = [`${PASTE}${text}`];
@@ -352,7 +352,7 @@ export class Input {
       }
       // A snippet's stops (25.8): tab and shift+tab between them; the first key at one replacing its placeholder.
       if (snippetKey(this.app, iv, key)) return;
-      insertKey(this.app, iv, key);
+      await insertKey(this.app, iv, key);
       afterInsertKey(this.app, iv, key);
       afterSnippetKey(this.app, iv);
       return insertRecord(this.app, iv, key);

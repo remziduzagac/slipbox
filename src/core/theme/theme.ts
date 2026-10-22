@@ -189,7 +189,7 @@ export interface Palette {
   surface2: Color;
   fg: Color;
   fg_dim: Color;
-  /** Bold text needs an explicit lighter foreground or it does not read as bold (2.7). */
+  /** Foreground for bold text; a theme may use its normal foreground or a stronger one (2.7). */
   fg_strong: Color;
   comment: Color;
   red: Color;

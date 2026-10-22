@@ -27,8 +27,10 @@ const STATE_OPEN = "<!-- repository-health:state ";
 const STATE_CLOSE = " -->";
 /** Who the workflow's token writes as: an issue it made is found by its author too, should the label be missing. */
 export const BOT = "github-actions[bot]";
-/** The branch whose workflow runs count. */
+/** The branch the health workflow and its links are read from: the released one. */
 const MAIN = "main";
+/** The branches whose workflow runs count (D251): `dev`'s CI, and `main`'s pages and release. */
+const BRANCHES = ["dev", MAIN];
 /** A renewal is listed this many days ahead, and is critical (a comment) this many. */
 export const RENEWAL_DAYS = 30;
 export const URGENT_DAYS = 7;
@@ -438,7 +440,7 @@ export function workflowsOff(workflows: unknown[]): WorkflowOff[] {
 
 const BAD = new Set(["failure", "timed_out", "startup_failure"]);
 
-/** Workflows whose last finished run on the main branch failed: runs newest first, as GitHub lists them. */
+/** Workflows whose last finished run on `dev` or `main` failed: runs newest first, as GitHub lists them. */
 export function failingOnMain(workflows: unknown[], runs: unknown[]): Failing[] {
   const out: Failing[] = [];
   for (const w of workflows.map(obj)) {
@@ -722,7 +724,7 @@ export function items(r: Report): { items: Item[]; watch: Watch[] } {
         add(
           "agent",
           `failing:${f.path}`,
-          `Failing on \`${MAIN}\`: \`${f.name}\` (\`${f.path}\`), its last run: [${f.conclusion.replace(/_/g, " ")}](${f.url}).`,
+          `Failing on ${BRANCHES.map((b) => `\`${b}\``).join(" or ")}: \`${f.name}\` (\`${f.path}\`), its last run: [${f.conclusion.replace(/_/g, " ")}](${f.url}).`,
         );
     for (const p of s.problems) add("agent", `upkeep:${p}`, `Upkeep file: ${p}.`);
   }
@@ -1085,10 +1087,13 @@ export function collect(repo: string): Signals {
     failing: got(() =>
       failingOnMain(
         listWorkflows(),
-        arr(
-          obj(api(`repos/${repo}/actions/runs?branch=${MAIN}&status=completed&exclude_pull_requests=true&per_page=100`))
-            .workflow_runs,
-        ),
+        // Each branch's runs, newest first across them: a workflow's last run is its last on either.
+        BRANCHES.flatMap((b) =>
+          arr(
+            obj(api(`repos/${repo}/actions/runs?branch=${b}&status=completed&exclude_pull_requests=true&per_page=100`))
+              .workflow_runs,
+          ),
+        ).sort((a, b) => cmp(str(obj(b).created_at), str(obj(a).created_at))),
       ),
     ),
     rulesets: got(() => compareRulesets(expected.rulesets, liveRulesets(repo))),

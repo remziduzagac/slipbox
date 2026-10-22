@@ -5,10 +5,12 @@
 
 import { readText } from "./fsutil.ts";
 import type { Graph } from "./graph.ts";
+import { matchText } from "./regex-jobs.ts";
 import { dirtyTrees, type Edit, type FileChange, RenameError, type RenamePlan } from "./rename.ts";
 import { LEADS_OUT, mayRewrite } from "./rename-plan.ts";
 import {
   compilePattern,
+  everyMatch,
   expandReplacement,
   findAll,
   type PatternOptions,
@@ -17,13 +19,13 @@ import {
 } from "./replace.ts";
 
 /** Plan replacing `query` with `replacement` in the files at `rels` (paths from the root): the ones it changes. */
-export function planReplace(
+function* replacementPlan(
   g: Graph,
   query: string,
   replacement: string,
   rels: string[],
   opts: PatternOptions,
-): RenamePlan {
+): Generator<{ text: string; re: RegExp; regex: boolean }, RenamePlan, TextMatch[]> {
   if (!query) throw new RenameError("nothing to find: an empty pattern matches nothing");
   const re = compilePattern(query, opts);
   if (typeof re === "string") throw new RenameError(`not a regex: ${re}`);
@@ -40,7 +42,7 @@ export function planReplace(
       continue;
     }
     // With regex, `^` and `$` insert, as `:s` and `slipbox replace` have them.
-    const ms = findAll(d.text, re, 0, d.text.length, opts.regex);
+    const ms = yield { text: d.text, re, regex: opts.regex };
     if (!ms.length) continue;
     const edits = lineEdits(d.text, ms, replacement, opts.regex);
     // Written back, its invalid bytes would be U+FFFD.
@@ -66,6 +68,28 @@ export function planReplace(
     warnings: dirtyTrees(files.map((f) => f.abs)),
     skipped,
   };
+}
+
+/** Synchronous matching for callers already running outside an interactive thread. */
+export function planReplace(...args: Parameters<typeof replacementPlan>): RenamePlan {
+  const plan = replacementPlan(...args);
+  let step = plan.next();
+  while (!step.done) {
+    const { text, re, regex } = step.value;
+    step = plan.next(findAll(text, re, 0, text.length, regex, everyMatch(text.length)));
+  }
+  return step.value;
+}
+
+/** The plan with every match, a regex's matched in its worker: matching doesn't block the caller's event loop. */
+export async function planReplaceLater(...args: Parameters<typeof replacementPlan>): Promise<RenamePlan> {
+  const plan = replacementPlan(...args);
+  let step = plan.next();
+  while (!step.done) {
+    const { text, re, regex } = step.value;
+    step = plan.next((await matchText(text, re, { regex, empty: regex })).matches);
+  }
+  return step.value;
 }
 
 /** Where the line holding `at` ends: its newline, or the text's end. */

@@ -3,6 +3,10 @@
 // for the upgrade policy) — if the API churns, this file and run.ts are what change.
 
 import { readFileSync, statSync } from "node:fs";
+import { isMainThread } from "node:worker_threads";
+import { PaintJobs, type PaintRequest, type PaintResult } from "../core/paint-jobs.ts";
+import { workerUrl } from "../core/workers.ts";
+import { notifyLoaded } from "../core/lazy.ts";
 import {
   imageInfo,
   NativeImage,
@@ -48,6 +52,10 @@ function attrs(s: CellStyle): number {
  * never in blocks of colour: where it speaks neither, there are no pictures, `▣ alt` the floor.
  */
 export class Pictures {
+  private readonly jobs = new PaintJobs(
+    () => notifyLoaded("pictures"),
+    () => new Worker(workerUrl("../tui/opentui.ts")),
+  );
   private readonly sizes = new Map<string, { at: number; size: { width: number; height: number } | null }>();
   private readonly images = new Map<string, { at: number; image: NativeImage | null }>();
   /** The pictures sent as Unicode placeholders (12.7), by id, the oldest first. */
@@ -74,12 +82,22 @@ export class Pictures {
     if (hit?.at === at) return hit.size;
     let size: { width: number; height: number } | null = null;
     try {
-      const info = imageInfo(readFileSync(path));
-      size = { width: info.width, height: info.height };
+      const info = this.jobs.get({ kind: "image-size", source: path, at });
+      if (info === undefined) return null;
+      if (info && typeof info === "object" && !(info instanceof Uint8Array))
+        size = { width: info.width, height: info.height };
     } catch {}
     if (this.sizes.size >= 500) this.sizes.delete(this.sizes.keys().next().value!);
     this.sizes.set(path, { at, size });
     return size;
+  }
+
+  /** Prepare an image without making a drawing callback wait for decoding. */
+  async prepare(src: string): Promise<void> {
+    this.size(src);
+    await this.jobs.settle();
+    this.image(src);
+    await this.jobs.settle();
   }
 
   draw(
@@ -143,6 +161,9 @@ export class Pictures {
 
   /** Every picture sent let go: slipbox is quitting, and the terminal keeps what it's sent until told. */
   releaseAll(): void {
+    this.jobs.dispose();
+    for (const kept of this.images.values()) kept.image?.dispose();
+    this.images.clear();
     for (const id of this.sent) this.placeholders?.write(release(id));
     this.sent.clear();
   }
@@ -151,13 +172,23 @@ export class Pictures {
     const at = modified(src);
     if (at === null) return null;
     const hit = this.images.get(src);
-    if (hit?.at === at) return hit.image;
+    if (hit?.at === at) {
+      // Drawn again: the newest, so the ones on screen are never the ones let go (each would be decoded again, its
+      // arrival drawing a frame that lets another go — for as long as the note is open).
+      this.images.delete(src);
+      this.images.set(src, hit);
+      return hit.image;
+    }
     hit?.image?.dispose();
+    this.images.delete(src);
     let image: NativeImage | null = null;
     try {
-      image = NativeImage.decode(readFileSync(src));
+      const decoded = this.jobs.get({ kind: "image", source: src, at });
+      if (decoded === undefined) return null;
+      if (decoded && typeof decoded === "object" && "pixels" in decoded && decoded.pixels)
+        image = NativeImage.fromRgba(decoded.pixels, decoded.width, decoded.height);
     } catch {}
-    // The last few decoded: a note's pictures, and the ones before it.
+    // The last few drawn: a note's pictures, and the ones before it.
     if (this.images.size >= 24) {
       const [old, kept] = this.images.entries().next().value!;
       kept.image?.dispose();
@@ -224,4 +255,59 @@ export class AppRenderable extends Renderable {
   protected override renderSelf(buffer: OptimizedBuffer): void {
     this.paint(new BufferCanvas(buffer, this.pictures));
   }
+}
+
+// The same adapter module is a worker entry so OpenTUI remains confined to its two integration files.
+if (!isMainThread) {
+  const worker = self as unknown as Worker;
+  worker.onmessage = (event: MessageEvent<{ id: number; request: PaintRequest }>) => {
+    const { id, request } = event.data;
+    let value: PaintResult = null;
+    try {
+      if (request.kind === "image-size" || request.kind === "image") {
+        const st = statSync(request.source);
+        if (st.mtimeMs === request.at && st.size <= 20 * 1024 * 1024) {
+          const bytes = readFileSync(request.source);
+          const info = imageInfo(bytes);
+          if (
+            info.width > 0 &&
+            info.height > 0 &&
+            info.width <= 16384 &&
+            info.height <= 16384 &&
+            info.width * info.height <= 16_000_000
+          ) {
+            if (request.kind === "image-size") value = { width: info.width, height: info.height };
+            else {
+              const image = NativeImage.decode(bytes);
+              let sized = image;
+              try {
+                const scale = Math.min(
+                  1,
+                  2048 / image.width,
+                  2048 / image.height,
+                  Math.sqrt(1_000_000 / (image.width * image.height)),
+                );
+                if (scale < 1)
+                  sized = image.resize({
+                    width: Math.max(1, Math.floor(image.width * scale)),
+                    height: Math.max(1, Math.floor(image.height * scale)),
+                  });
+                const raw = sized.raw("rgba8");
+                value = {
+                  width: sized.width,
+                  height: sized.height,
+                  pixels: packRows(raw.data, raw.stride, sized.width, sized.height),
+                };
+              } finally {
+                if (sized !== image) sized.dispose();
+                image.dispose();
+              }
+            }
+          }
+        }
+      }
+    } catch {}
+    worker.postMessage({ id, value });
+  };
+  worker.postMessage({ ready: true });
 }

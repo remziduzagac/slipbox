@@ -151,6 +151,8 @@ export function paneActions(): Record<string, Run> {
     // panes
     // Closed (or showing the history) → open on the tree and focus; open elsewhere → focus; focused → close.
     "explorer.cycle": (a) => a.panels.openLeftView("explorer", "cycle"),
+    // Hidden files and folders listed, or not (`files.hidden`): the explorer's shift+h, :hidden, the UI settings.
+    "explorer.toggle_hidden": (a) => a.explorer.toggleHidden(),
     "explorer.reveal": (a) => {
       a.panels.switchLeftView("explorer");
       a.sidebar.filter = "";

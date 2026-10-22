@@ -4,7 +4,7 @@
 // markdownlint-cli2 is found as a server is (the vault's own copy, PATH, your installs), else
 // installed into slipbox's own folder when first needed (19.21), and run on slipbox's Bun.
 
-import { spawn } from "node:child_process";
+import { LINT_OUTPUT_BYTES, runTool, toolFailure } from "./tool-process.ts";
 import { existsSync, readFileSync } from "node:fs";
 import { homedir } from "node:os";
 import { dirname, join, resolve } from "node:path";
@@ -129,21 +129,40 @@ export function lintFailure(config: Pick<Config, "lint" | "lsp">): string {
 /** Each install asked for, by its spec: one at a time, shared by every run waiting for it. */
 const installs = new Map<string, Promise<boolean>>();
 
-/** A command ready to run: markdownlint-cli2 installed first, once however many ask; null when that failed. */
-async function ready(cmd: LintCmd, cwd: string, say?: (text: string) => void): Promise<LintCmd | null> {
+/** `p`'s answer, or false as soon as `signal` aborts: a run cancelled doesn't wait on an install another started. */
+function unlessAborted(p: Promise<boolean>, signal?: AbortSignal): Promise<boolean> {
+  if (!signal) return p;
+  return new Promise((resolve, reject) => {
+    const abort = () => resolve(false);
+    if (signal.aborted) return abort();
+    signal.addEventListener("abort", abort, { once: true });
+    p.then(resolve, reject).finally(() => signal.removeEventListener("abort", abort));
+  });
+}
+
+/**
+ * A command ready to run: markdownlint-cli2 installed first, once however many ask; null when that failed. `signal`
+ * cancels an install this run started, and this run's wait for one.
+ */
+async function ready(
+  cmd: LintCmd,
+  cwd: string,
+  say?: (text: string) => void,
+  signal?: AbortSignal,
+): Promise<LintCmd | null> {
   const npm = cmd.install;
   if (!npm) return cmd;
   const key = lockKey(npm);
   let installing = installs.get(key);
   if (!installing) {
     say?.(`installing ${npm.package}@${npm.version} into slipbox's own folder…`);
-    installing = installTool(npm).then((r) => {
+    installing = installTool(npm, { signal }).then((r) => {
       if (!r.ok) installs.delete(key); // tried again next time
       return r.ok;
     });
     installs.set(key, installing);
   }
-  if (!(await installing)) return null;
+  if (!(await unlessAborted(installing, signal))) return null;
   const found = findServer({ ...MARKDOWNLINT, npm, args: cmd.argv }, cwd);
   return found ? { argv: found.argv, literal: true, env: found.env } : null;
 }
@@ -170,10 +189,14 @@ export function parseLint(output: string, cwd: string): LintIssue[] {
   );
 }
 
+/** A run whose findings aren't shown though the linter works: its output past slipbox's limit, or cancelled. */
+export type LintSkipped = { skipped: string };
+
 /**
- * Lint `files` (absolute) with `cmd`, from `cwd`: the findings, or null when the linter couldn't
- * run (not installed, or it failed on its own). markdownlint-cli2 takes globs, so the default
- * command gets each path as a literal (`:path`). `say`: told when it's installed first.
+ * Lint `files` (absolute) with `cmd`, from `cwd`: the findings; null when the linter couldn't run
+ * (not installed, or it failed on its own); `skipped`, saying why, when this run's output can't be
+ * read whole but the linter works. markdownlint-cli2 takes globs, so the default command gets each
+ * path as a literal (`:path`). `say`: told when it's installed first, and why a run failed.
  */
 export async function runLint(
   given: LintCmd,
@@ -181,7 +204,8 @@ export async function runLint(
   cwd: string,
   timeoutMs = 60_000,
   say?: (text: string) => void,
-): Promise<LintIssue[] | null> {
+  signal?: AbortSignal,
+): Promise<LintIssue[] | LintSkipped | null> {
   // markdownlint-cli2's own configs, in a root you don't trust: none of them run as code (23.5).
   if (given.literal && !isTrusted(cwd)) {
     const seen = new Map<string, boolean>();
@@ -195,32 +219,25 @@ export async function runLint(
     if (!kept.length) return [];
     files = kept;
   }
-  const cmd = await ready(given, cwd, say);
+  const cmd = await ready(given, cwd, say, signal);
+  if (signal?.aborted) return { skipped: "tool cancelled" };
   if (!cmd) return null;
-  return new Promise((done) => {
-    let out = "";
-    let child: ReturnType<typeof spawn>;
-    try {
-      child = spawn(cmd.argv[0]!, [...cmd.argv.slice(1), ...files.map((f) => (cmd.literal ? `:${f}` : f))], {
-        cwd,
-        env: { ...process.env, ...cmd.env },
-        stdio: ["ignore", "pipe", "pipe"],
-      });
-    } catch {
-      return done(null);
-    }
-    const timer = setTimeout(() => child.kill(), timeoutMs);
-    child.stdout?.on("data", (d) => (out += d));
-    child.stderr?.on("data", (d) => (out += d));
-    child.on("error", () => {
-      clearTimeout(timer);
-      done(null);
-    });
-    child.on("close", (code) => {
-      clearTimeout(timer);
-      // 0: clean, 1: findings; anything else is the linter's own failure — unless it said what it found.
-      const issues = parseLint(out, cwd);
-      done(code === 0 || code === 1 || issues.length ? issues : null);
-    });
+  const result = await runTool([...cmd.argv, ...files.map((f) => (cmd.literal ? `:${f}` : f))], {
+    cwd,
+    env: { ...process.env, ...cmd.env },
+    timeoutMs,
+    signal,
+    outputBytes: LINT_OUTPUT_BYTES,
   });
+  // Past the limit, or cancelled: this run's findings aren't shown, and the linter is still there for the next.
+  if (result.failure === "overflow" || result.failure === "cancelled") return { skipped: toolFailure(result)! };
+  if (result.failure === "spawn") return null; // not there: the caller says the linter couldn't run
+  // Too slow, its pipes failed, or a signal ended it: what it printed is never a whole run.
+  const failed = toolFailure(result);
+  if (failed) {
+    say?.(`linter: ${failed}`);
+    return null;
+  }
+  const issues = parseLint(result.stdout + result.stderr, cwd);
+  return result.code === 0 || result.code === 1 || issues.length ? issues : null;
 }

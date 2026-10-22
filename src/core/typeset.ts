@@ -2,7 +2,8 @@
 // picture, chosen where pictures are (`[render] math = "picture"`); text (12.11) otherwise. Loaded the first time it's
 // asked for (16.6). A command MathJax doesn't know is an error here, not red ink: then it's text, or as written.
 
-import { lazy, load as loadLazy } from "./lazy.ts";
+import { load as loadLazy } from "./lazy.ts";
+import { paintJobs } from "./paint-jobs.ts";
 
 /** The name it loads under: what a layout drawn without it waited for. */
 export const MATHJAX = "mathjax";
@@ -33,8 +34,10 @@ async function load(): Promise<Convert> {
 /** What typesets a display's maths (a line's, `inline`) as an SVG in `color` (`#rrggbb`), its size in `ex` — null where
  *  it can't; or null itself while MathJax loads (what waited for it is laid out again when it's in). */
 export function typesetter(): Typeset | null {
-  const convert = lazy(MATHJAX, load);
-  return convert ? colored(convert) : null;
+  return (tex, color, inline = false) => {
+    const value = paintJobs.get({ kind: "math", source: tex, color, inline });
+    return typeof value === "string" ? value : null;
+  };
 }
 
 /** Wait for MathJax (what has no frame to draw again). */

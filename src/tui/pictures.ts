@@ -24,7 +24,14 @@ export class Pictures {
 
   /** Whether the terminal draws images, or its cell's size, changed (12.x): every note laid out again. */
   changed(): void {
+    if (this.app.config.render.images_remote === "never") this.remote.cancelAll();
     this.app.widthsChanged();
+  }
+
+  dispose(): void {
+    if (this.timer) clearTimeout(this.timer);
+    this.timer = null;
+    this.remote.dispose();
   }
 
   /**
@@ -71,8 +78,8 @@ export class Pictures {
     const site = RemoteImages.site(url);
     if (!site || mode === "never" || this.remote.cached(url)) return false;
     if (mode === "show" || this.remote.sites.has(site)) {
-      this.remote.fetch(url, true);
-      this.app.message("info", `fetching ${url}`);
+      if (this.remote.fetch(url, true)) this.app.message("info", `fetching ${url}`);
+      else this.app.message("warn", "image download queue full — try again");
       return true;
     }
     this.app.overlays.openList({
@@ -86,8 +93,8 @@ export class Pictures {
       accept: (item) => {
         if (item.data === "no") return;
         if (item.data === "site") this.remote.sites.add(site);
-        this.remote.fetch(url, true);
-        this.app.message("info", `fetching ${url}`);
+        if (this.remote.fetch(url, true)) this.app.message("info", `fetching ${url}`);
+        else this.app.message("warn", "image download queue full — try again");
       },
     });
     return true;

@@ -3,14 +3,14 @@
 // and the terminal checks its files reach (D239): a test that uses a changed file — imports it, at any depth, or names
 // it by its path — and, of the terminal checks, a changed check file's, or those `CHECKS_FOR` names for a changed
 // file of the app's; all of them for a file of the app's it doesn't list, or for the checks' harness and samples. The
-// packages, the toolchain, the workflows, and a file nothing names run everything; so do a push to main, a merge
-// group, a run by hand and a diff that can't be read; the lint's own configs, only the lint. The full suites run on main after every merge, and before a
-// release.
+// packages, the toolchain, the workflows, and a file nothing names run everything; so do a merge group, a run by hand
+// (the `full` run `main` requires, D251) and a diff that can't be read; the lint's own configs, only the lint. A push
+// to `dev` or `test` is scoped as a pull request is, by its commits since the branch's last head.
 //
 // `bun run ci:scope` writes what CI's jobs need to $GITHUB_OUTPUT (`code`, `checks`), and says it either way.
 // `bun run test:changed` and `bun run test:terminal:changed [runner's flags…]` run what a change reaches: a pull
-// request's merge commit against its base in CI; here, your branch, committed or not, against where it left
-// `origin/main` (or `--base <ref>`).
+// request's merge commit against its base in CI, a push's commits; here, your branch, committed or not, against where
+// it left `origin/dev` (or `--base <ref>`).
 
 import { appendFileSync, existsSync, readdirSync, readFileSync } from "node:fs";
 import { dirname, join, normalize } from "node:path";
@@ -270,14 +270,23 @@ export function scriptFor(what: "test" | "terminal", s: Scope): string[] | null 
   return s.checks.length ? ["test:terminal", ...s.checks] : null;
 }
 
-/** A pull request's files in CI (its merge commit against its base); here, the branch against `base`'s fork point. */
-export function changedFiles(root = ROOT, base = "origin/main"): string[] | null {
+/**
+ * A change's files. In CI: a pull request's merge commit against its base; a push's commits against the branch's head
+ * before it (`SCOPE_BEFORE`, the event's `before`: none, or a branch just made, and it's everything). Here: the branch
+ * against `base`'s fork point.
+ */
+export function changedFiles(root = ROOT, base = "origin/dev"): string[] | null {
   const git = (...args: string[]) => {
     const r = Bun.spawnSync(["git", "-C", root, ...args]);
     return r.exitCode === 0 ? r.stdout.toString().split("\n").filter(Boolean) : null;
   };
   const event = process.env.GITHUB_EVENT_NAME;
-  if (event !== undefined) return event === "pull_request" ? git("diff", "--name-only", "HEAD^1", "HEAD") : null;
+  if (event === "pull_request") return git("diff", "--name-only", "HEAD^1", "HEAD");
+  if (event === "push") {
+    const before = process.env.SCOPE_BEFORE ?? "";
+    return /^[0-9a-f]{7,40}$/.test(before) && !/^0+$/.test(before) ? git("diff", "--name-only", before, "HEAD") : null;
+  }
+  if (event !== undefined) return null;
   const fork = git("merge-base", base, "HEAD")?.[0];
   if (!fork) return null;
   const changed = git("diff", "--name-only", fork);

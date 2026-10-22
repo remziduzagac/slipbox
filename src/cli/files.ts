@@ -262,14 +262,18 @@ function folderArg(s: Session, arg: string): string | null {
 }
 
 /** A rename's plan (7.2), or, without --dry-run, the rename done. */
-export async function renameResult(s: Session, plan: () => RenamePlan, g = s.graph): Promise<Result> {
+export async function renameResult(
+  s: Session,
+  plan: () => RenamePlan | Promise<RenamePlan>,
+  g = s.graph,
+): Promise<Result> {
   // A code file links from its comments (16.10): its grammar loaded first, so a move finds those too (20.19).
   await g.loadGrammars();
   let p: RenamePlan;
   let applied: Applied | null = null;
   let saved: SavedPlan | null = null;
   try {
-    p = plan();
+    p = await plan();
     // Two steps (20.18): the plan saved, tied to each file as it is now, for `slipbox apply` to write.
     if (has(s.args, "plan")) saved = savePlan(g.root, s.args.positional[0] ?? "", p);
     else if (!has(s.args, "dry-run")) {
