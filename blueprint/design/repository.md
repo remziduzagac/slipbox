@@ -46,7 +46,8 @@ with no approval (there is no second person to give it) and the `ci` check passe
 method, the squashed commit titled and described by the pull request, and the branch deleted once merged. The title
 is a Conventional Commit (`fix(export): …`, `feat(cli)!: …` for a breaking change), so `dev` has one commit per
 change, titled for the changelog; the workstream's or task's IDs, the roadmap's steps and the decisions go in the
-body, and a commit made with an agent ends with a `Co-Authored-By:` trailer naming it.
+body. A contributor's commit made with an agent ends with a `Co-Authored-By:` trailer naming it; the maintainer's
+commits and pull requests name no agent (D256).
 
 From `dev`, work moves on by fast-forward, never committed to directly (D251): to `test`, which publishes a preview to
 try by hand (§ CI), and where `ci` run by hand runs everything and reports `full`; then to `main`, the released state,
