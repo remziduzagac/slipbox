@@ -14,9 +14,10 @@ review.
 
 ## Where to start
 
-1. [requirements.md](requirements.md): proposed outcomes, constraints, acceptance criteria and parent dependencies.
-2. [design/](design/README.md): the architecture as a whole, its parts and the changes proposed to the parent.
-3. [ideas.md](ideas.md): alternatives, costs and choices still to settle.
+1. [ideas/architecture.md](ideas/architecture.md): the new top-down architecture proposal, awaiting review.
+2. [requirements.md](requirements.md): proposed outcomes, constraints, acceptance criteria and parent dependencies.
+3. [design/](design/README.md): the architecture as a whole, its parts and the changes proposed to the parent.
+4. [ideas/](ideas/README.md): alternatives, costs and choices still to settle.
 
 ## Review status
 

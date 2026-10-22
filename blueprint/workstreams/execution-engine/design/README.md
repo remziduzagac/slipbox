@@ -4,7 +4,7 @@ The engine architecture, split by responsibility. The overall design remains dra
 [decisions.md](../decisions.md). At consolidation, the
 architecture becomes a new `design/execution/` part in the parent blueprint; existing parent sections are reconciled
 through [changes.md](changes.md). Requirements are in [requirements.md](../requirements.md), and unsettled choices
-remain in [ideas.md](../ideas.md).
+remain in [ideas/](../ideas/README.md).
 
 1. [how-it-works.md](how-it-works.md): the whole system, dependency direction, module ownership and feature services.
 2. [contracts.md](contracts.md): operation definitions, named actions, content sources, snapshots and events.
