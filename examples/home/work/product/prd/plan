@@ -1,0 +1,28 @@
+PRD PROCESS - CHECKLIST (exported from the old wiki, 2026-03)
+
+Owner: Sam Rivera
+Last edit on the wiki: 2026-03-11
+
+1. Idea
+   - One paragraph, a customer quote, a link to where it came from.
+   - Goes on the roadmap board as "Candidate".
+
+2. Draft
+   - Copy the last PRD. Fill problem, goals, non-goals.
+   - Goals need numbers. No number: move it to open questions.
+
+3. Review
+   - Design review with Tomas (screens, copy).
+   - Engineering review with Priya (cost, risk, who).
+   - Two working days for comments, no meeting needed.
+
+4. Commit
+   - Moves to "Planned" on the board, gets a key result.
+   - Release plan started by Jo.
+
+5. Ship
+   - Release notes drafted by Jo, read by Sam.
+   - Metrics checked 30 days after release.
+
+NOTE (added 2026-08): the wiki is being retired. This list moved to prd/plan.md in the product repo
+and has grown a step: "Close". Keep this export until the wiki is deleted.

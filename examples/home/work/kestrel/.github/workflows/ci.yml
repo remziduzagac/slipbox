@@ -1,0 +1,102 @@
+---
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main, "release/**"]
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  NODE_VERSION: "22"
+  CARGO_TERM_COLOR: always
+
+jobs:
+  lint:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+      - name: Install
+        run: npm ci
+      - name: Lint everything
+        run: |
+          npm run lint
+          npx tsc --noEmit -p tsconfig.json
+          python -m ruff check api/
+          cargo fmt --all -- --check
+      - name: Lint prose and configs
+        run: >
+          npx markdownlint-cli2 "docs/**/*.md" "*.md"
+          && yamllint -c .yamllint .github config mkdocs.yml docker-compose.yml
+
+  test:
+    needs: lint
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 25
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-24.04]
+        node: ["20", "22"]
+        include:
+          - os: macos-14
+            node: "22"
+            experimental: false
+          - os: ubuntu-24.04
+            node: "24"
+            experimental: true
+          - os: windows-2022
+            node: "22"
+            experimental: true
+    continue-on-error: ${{ matrix.experimental || false }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node }}
+      - run: npm ci
+      - name: Unit tests
+        run: npm test -- --coverage
+      - name: API tests
+        if: runner.os != 'Windows'
+        run: |
+          pip install -e "api/[test]"
+          pytest api/ -q
+      - name: Route engine tests
+        run: cargo test --workspace --locked
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: test-logs-${{ matrix.os }}-${{ matrix.node }}
+          path: |
+            coverage/
+            tmp/*.log
+
+  build:
+    needs: test
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build web and engine
+        run: |
+          make web
+          make engine
+      - name: Build and push the API image
+        run: |
+          docker build -t ghcr.io/kestrel-labs/api:${GITHUB_SHA::8} .
+          echo "pushing ghcr.io/kestrel-labs/api:${GITHUB_SHA::8}"

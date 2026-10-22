@@ -1,0 +1,28 @@
+#+TITLE: Planning sync with the infra contractors
+#+DATE: 2026-09-10
+#+AUTHOR: Priya Nair
+
+* Attendees
+- Priya Nair
+- Malik Haddad
+- Sam Rivera
+
+* Agenda
+** TODO Capacity for the 2.3 launch
+   DEADLINE: <2026-09-25 Fri>
+** DONE Review the staging bill
+   CLOSED: [2026-09-10 Thu 15:02]
+** Open questions
+   - Do we need a second region before the launch?
+   - Who owns the sync dashboards? See [[https://grafana.kestrel.dev/d/sync][the board]].
+
+* Decisions
+| Item        | Owner  | When       |
+|-------------+--------+------------|
+| Add replica | Malik  | 2026-09-12 |
+| Alert rules | Aiko   | 2026-09-18 |
+
+#+BEGIN_SRC yaml
+replicas: 3
+region: eu-west
+#+END_SRC

@@ -1,0 +1,11 @@
+[package]
+name = "tiles"
+version = "0.4.2"
+edition = "2021"
+
+[dependencies]
+serde = { version = "1", features = ["derive"] }
+
+[lib]
+name = "tiles"
+path = "src/lib.rs"

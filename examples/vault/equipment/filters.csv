@@ -1,0 +1,8 @@
+filter,telescope,centre_nm,width_nm,installed,notes
+L,Aster,550,300,2024-03-02,"luminance, the default"
+R,Aster,640,100,2024-03-02,
+G,Aster,530,100,2024-03-02,
+B,Aster,450,100,2024-03-02,"slightly vignetted, see ""Aster pointing model"""
+Ha,Brill,656.3,7,2025-06-11,narrowband
+OIII,Brill,500.7,7,2025-06-11,narrowband
+V,Lyra,551,88,2026-01-20,photometric: VSS only

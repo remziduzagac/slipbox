@@ -1,0 +1,6 @@
+﻿backup_before = 2026-13-01T02:00:00Z
+[cluster]
+name = "kestrel-prod"
+region = "eu-west-1"
+zones = ["a", "b", "c"]
+replicas = 3

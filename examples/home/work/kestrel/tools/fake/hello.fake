@@ -1,0 +1,11 @@
+# Kestrel's toy route language. My slipbox config (../../../infra/dotfiles/slipbox/config.toml) wires a language server for .fake files.
+fn hello(name)
+  say "hello, " + name
+end
+
+fn main()
+  hello("Aiko")
+  hello("Tomás")
+end
+
+type Rider { name, km }

@@ -1,0 +1,7 @@
+# fixture vault config
+[walk]
+exclude = ["drafts/"]
+
+[vault]
+id = "f1c7a09e3d52b486"
+name = "fixture"

@@ -1,0 +1,657 @@
+# The team's recommended slipbox settings: every key once, with a value you may well want to change.
+# Copy to ~/.config/slipbox/config.toml (see README.md), then delete what you don't care about.
+# A key that is absent takes slipbox's default, so a short file is a fine file.
+
+theme = "kestrel-dark"          # our own, in themes/kestrel-dark.yaml; slipbox's built-ins work too
+
+[render]
+inset = 3
+max_width = 110                 # the text column in the TUI; 0 would be the full pane
+glyphs = "unicode"              # our terminal font has no Nerd glyphs
+show_urls = "always"
+code = "document"               # code opens as a document (24.x) where its language is mapped
+code_cells = "box"              # the code view's cells in boxes, or on bands
+code_wrap = "scroll"            # a code block too wide scrolls sideways (our trees and logs keep their columns)
+images = "auto"                 # pictures in notes, where the terminal draws them
+images_remote = "ask"           # pictures online: asked for on enter
+mermaid = "picture"             # diagrams as pictures where the terminal draws them; text elsewhere
+math = "text"                   # a display's maths as Unicode text
+
+[walk]
+extensions = ["md", "markdown", "mdx"]
+exclude = ["drafts/", "*.bak", "node_modules/"]
+max_file_size = 8388608         # 8 MiB: the GPX exports are big
+root_markers = [".git", ".slipbox", ".obsidian", ".zk", "book.toml"]   # book.toml: our mdBook docs count as roots
+
+[links]                         # the links slipbox makes, said outright rather than found from each root
+style = "markdown"              # mdBook reads no wikilinks
+path = "relative"               # a link that still works on GitHub and in the book
+extension = "keep"              # mdBook turns foo.md into foo.html; a link without .md breaks there
+
+[files]
+show = "all"                    # every text file; ctrl+n with a name like deploy.toml or run.py makes that file
+include = ["*.ts", "scripts/"]
+exclude = ["*.lock", "dist/"]
+
+[ui]
+sidebar = false                 # opened with the rail's button when I want it
+sidebar_width = 36
+outline = true
+outline_width = 36
+split_ratio = 0.6
+top_bar = false
+lines = "heavy"
+breadcrumb = false
+left_rail = false
+right_rail = false
+mouse = false
+narrow_width = 110
+restore_session = false         # I like starting clean
+cursorline = false
+line_numbers = true
+relative_numbers = "lens"       # the lens's counters, each row's distance from the cursor's
+wrap = false
+readable_width = true
+readable_max = 88
+zen = true
+scrolloff = 5
+history_limit = 250
+
+[input]
+leader = "\\"                   # the key `leader` means below; backslash, because nothing else uses it
+which_key = true
+which_key_delay_ms = 300
+
+[trust]
+roots = ["~/work/kestrel", "~/work/infra"]   # the team's own repositories: their tools run as they would anywhere
+
+[capture]
+location = "vault"
+file = "inbox/scratch.md"
+open_in = "right"                # beside the note, not floating over it
+
+[git]
+base = "release"
+signs = true                    # changed lines in the gutter, against what's staged
+signs_at = "gutter_left"        # before the line numbers, away from the text
+bases = ["main", "release"]     # a branch made from release is measured against it, not main
+worktrees = "~/work/worktrees/{repo}/{branch}" # the agents' worktrees in one folder, not beside each repository
+diff = "source"                 # a note's diff as its lines; tab shows its blocks before and after
+diff_layout = "split"           # a code file's diff side by side, however narrow the window
+
+[search]
+engine = "index"
+
+[index]
+background = false
+idle_seconds = 60
+
+[diagnostics]
+bar = "on"
+marks = false
+severity = "info"
+
+[lsp]
+enabled = true
+auto_install = false            # the laptops have the servers from Homebrew
+
+[types.memory]                  # my agents' memory files: what they must say
+paths = ["**/memory/*.md"]
+required = ["name", "description", "metadata.type"]
+values = { "metadata.type" = ["user", "feedback", "project", "reference"] }
+
+[update]
+check = false                   # the laptops are updated from the fleet's own mirror, not by each one asking
+
+[language-server.pyright]
+command = "/opt/homebrew/bin/pyright-langserver"   # the program is mine to name, never a folder's
+args = ["--stdio"]
+environment = { PYTHONPATH = "api" }
+config = { python = { analysis = { typeCheckingMode = "strict", autoSearchPaths = true } } }
+
+[language-server.fake-lsp]      # the fake server slipbox's own tests use, to see problems without a real one
+command = "bun"
+args = ["tests/fixtures/fake-lsp.ts"]
+config = { fake = { greeting = "hello from the kestrel config" } }
+
+[[language]]
+name = "python"
+language-servers = ["pyright", { name = "ruff", only-features = ["diagnostics", "format"] }]
+linters = ["todo"]
+
+[[language]]
+name = "fake"
+file-types = ["fake"]
+language-servers = ["fake-lsp"]
+roots = [".git"]
+language-id = "fake"
+
+[linter.todo]                   # a linter without a server: what the notes and code still owe
+lint-command = "rg --vimgrep -e TODO -e FIXME"
+lint-stdin = false
+lint-formats = ['%f:%l:%c:%m']        # rg --vimgrep: no space after the column
+lint-source = "todo"
+lint-severity = 3
+lint-ignore-exit-code = true
+root-markers = [".git"]
+require-marker = false
+
+[context]
+depth = 2
+backlinks = false
+limit = 40
+
+[editor]
+command = "nvim +{line} {file}"
+autosave_ms = 10000
+edit_in = "live"
+lens_min_rows = 8
+lens_max = 0.4
+auto_pairs = true                # typing ( [ { " ' ` puts its closing half after the cursor
+remote = [                      # run in order, each after the last; the first failure stops
+  "nvim --server {server} --remote {file}",
+  "nvim --server {server} --remote-send '<C-\\><C-N>:{line}<CR>'",
+]
+
+[spell]                         # misspelt words marked in notes (25.6)
+enabled = true
+languages = ["en", "tr"]        # a note's own lang: in its front matter wins
+dictionaries = { de = "~/.local/share/hunspell/de_DE.dic" }   # yours, by language: its .aff beside it
+
+[lint]
+enabled = "on"
+command = ["markdownlint-cli2", "--config", "~/.markdownlint-cli2.jsonc"]
+
+[watch]
+enabled = true
+debounce_ms = 200
+poll_ms = 5000
+
+[colors]                        # a role in each form
+tree_guide = "#3b4261"          # a string: the foreground
+pane_title = { fg = "#8c95b0", bold = true }
+scrollbar = 244                 # a terminal palette number
+scrollbar_track = "236"
+border = "ansi:8"
+rail = { bg = "default" }
+lens = { fg = "#e0af68", italic = true, underline = false }
+breadcrumb_band = { bg = "#1d1e2b", dim = true }
+h1 = { fg = "#7aa2f7" }
+
+[colors.kestrel-dark]           # the roles we tune by hand, only while our theme is active
+h1 = { fg = "#7aa2f7", bold = true }
+h2 = { fg = "#e0af68", bold = true }
+h3 = { fg = "#9ece6a", bold = true }
+strong = { fg = "#e6ebf8", bold = true }
+emphasis = { fg = "#c9d1e8", italic = true }
+strike = { fg = "#5b627b" }
+code_inline = { fg = "#e6ebf8", bg = "#262a38", italic = true }
+code_block = { fg = "#c9d1e8", bg = "#1b1e28" }
+link = { fg = "#7aa2f7", underline = true }
+link_unresolved = { fg = "#f7768e", underline = true }
+link_ambiguous = { fg = "#ff9e64", underline = true }
+wikilink = "#7dcfff"
+embed = "#c0956b"
+quote = { fg = "#8c95b0", italic = true }
+footnote = "#bb9af7"
+tag = "#bb9af7"
+check_done = "#9ece6a"
+check_todo = "#e0af68"
+syn_keyword = "#bb9af7"
+syn_function = "#7aa2f7"
+syn_string = "#9ece6a"
+syn_number = "#ff9e64"
+syn_comment = { fg = "#5b627b", italic = true }
+syn_type = "#e0af68"
+error = { fg = "#f7768e", bold = true }
+tree_guide = "#3b4261"
+
+[colors.nord]                   # only while the nord theme is active
+link = "#88c0d0"
+link_unresolved = { fg = "#bf616a", underline = true }
+topbar_chip = { fg = "#2e3440", bg = "#88c0d0", bold = true }
+
+[colors.mono]
+sidebar_vault = { bold = true, underline = true }
+
+[keys]                          # one binding per command, ctrl+j, and some real ones
+"ctrl+j" = "cursor.down"
+"alt+down" = "window.focus_down"
+"ctrl+alt+h" = "history.back"
+"ctrl+shift+e" = "note.edit"
+"ctrl+s" = "note.save_force"
+"leader n n" = "switcher.open"
+"leader n r" = "note.revert"
+"leader n x" = "scratch.clear"
+"leader q q" = "app.quit_force"
+"leader g g" = "git.changes"
+"leader g d" = "git.diff"
+"leader t n" = "tab.new"
+"leader t g" = "tab.goto 3"
+"leader v c" = "config.reload"
+"ctrl+o" = ""
+
+# every command id, by namespace: leader ; <namespace> <nth command>
+"leader ; b a" = "cursor.left"
+"leader ; b b" = "cursor.right"
+"leader ; b c" = "cursor.up"
+"leader ; b d" = "cursor.down"
+"leader ; b e" = "cursor.word_prev"
+"leader ; b f" = "cursor.word_next"
+"leader ; b g" = "cursor.word_end"
+"leader ; b h" = "cursor.line_start"
+"leader ; b i" = "cursor.line_end"
+"leader ; b j" = "cursor.first_nonblank"
+"leader ; b k" = "cursor.top"
+"leader ; b l" = "cursor.bottom"
+"leader ; b m" = "cursor.heading_prev"
+"leader ; b n" = "cursor.heading_next"
+"leader ; b o" = "cursor.paragraph_prev"
+"leader ; b p" = "cursor.paragraph_next"
+"leader ; b q" = "cursor.find_char"
+"leader ; b r" = "cursor.find_repeat"
+"leader ; b s" = "cursor.half_down"
+"leader ; b t" = "cursor.half_up"
+"leader ; b u" = "cursor.page_down"
+"leader ; b v" = "cursor.page_up"
+"leader ; b w" = "cursor.screen_top"
+"leader ; b x" = "cursor.screen_middle"
+"leader ; b y" = "cursor.screen_bottom"
+"leader ; b z" = "cursor.goto_line"
+"leader ; U a" = "cursor.match_bracket"
+"leader ; t a" = "scroll.center"
+"leader ; t b" = "scroll.top"
+"leader ; t c" = "scroll.bottom"
+"leader ; h a" = "visual.char"
+"leader ; h b" = "visual.line"
+"leader ; h c" = "visual.swap"
+"leader ; h d" = "visual.yank"
+"leader ; h e" = "visual.exit"
+"leader ; n a" = "app.escape"
+"leader ; m a" = "copy.smart"
+"leader ; m b" = "copy.selection"
+"leader ; m c" = "copy.path"
+"leader ; m d" = "copy.ref"
+"leader ; m e" = "copy.link"
+"leader ; k a" = "link.next"
+"leader ; k b" = "link.prev"
+"leader ; k c" = "link.follow"
+"leader ; k d" = "link.follow_split"
+"leader ; k h" = "link.follow_tab"
+"leader ; k g" = "link.insert"
+"leader ; k i" = "link.go"
+"leader ; J a" = "links.open"
+"leader ; B a" = "backlinks.open"
+"leader ; Z a" = "peek.go"
+"leader ; Z b" = "peek.tab"
+"leader ; Z c" = "peek.fill"
+"leader ; l a" = "lsp.hover"
+"leader ; l b" = "lsp.definition"
+"leader ; l g" = "lsp.type_definition"
+"leader ; l h" = "lsp.implementation"
+"leader ; l c" = "lsp.references"
+"leader ; l d" = "lsp.rename"
+"leader ; l e" = "lsp.code_action"
+"leader ; l f" = "lsp.format"
+"leader ; u a" = "change.prev"
+"leader ; u b" = "change.next"
+"leader ; a a" = "edit.move_line_up"
+"leader ; a b" = "edit.move_line_down"
+"leader ; a c" = "edit.insert_last"
+"leader ; q a" = "history.back"
+"leader ; q b" = "history.forward"
+"leader ; q c" = "history.list"
+"leader ; c a" = "window.split_side"
+"leader ; c b" = "window.split_stacked"
+"leader ; c c" = "window.focus_left"
+"leader ; c d" = "window.focus_down"
+"leader ; c e" = "window.focus_up"
+"leader ; c f" = "window.focus_right"
+"leader ; c g" = "window.other"
+"leader ; c h" = "window.move_left"
+"leader ; c i" = "window.move_down"
+"leader ; c j" = "window.move_up"
+"leader ; c k" = "window.move_right"
+"leader ; c l" = "window.swap"
+"leader ; c m" = "window.close"
+"leader ; c n" = "window.close_or_quit"
+"leader ; c o" = "window.only"
+"leader ; c p" = "window.resize_mode"
+"leader ; C a" = "breadcrumb.path"
+"leader ; c q" = "window.equalize"
+"leader ; c r" = "window.wider"
+"leader ; c s" = "window.narrower"
+"leader ; c t" = "window.taller"
+"leader ; c u" = "window.shorter"
+"leader ; f a" = "tab.new"
+"leader ; f b" = "tab.list"
+"leader ; f c" = "tab.next"
+"leader ; f d" = "tab.prev"
+"leader ; f e" = "tab.goto"
+"leader ; f f" = "tab.move_left"
+"leader ; f g" = "tab.move_right"
+"leader ; f h" = "tab.close"
+"leader ; f i" = "tab.pin"
+"leader ; f j" = "tab.close_others"
+"leader ; f k" = "tab.close_all"
+"leader ; v a" = "explorer.cycle"
+"leader ; v b" = "explorer.reveal"
+"leader ; s a" = "outline.cycle"
+"leader ; s b" = "outline.toggle"
+"leader ; w a" = "footnotes.cycle"
+"leader ; F a" = "footnote.add"
+"leader ; w b" = "footnotes.toggle"
+"leader ; g a" = "find.open"
+"leader ; g b" = "find.replace"
+"leader ; g c" = "find.vault"
+"leader ; o a" = "git.changes"
+"leader ; o b" = "git.diff"
+"leader ; o c" = "git.worktrees"
+"leader ; o d" = "git.merge_review"
+"leader ; O a" = "search.open"
+"leader ; g d" = "find.substitute"
+"leader ; g e" = "find.next"
+"leader ; g f" = "find.prev"
+"leader ; g g" = "find.word_next"
+"leader ; g h" = "find.word_prev"
+"leader ; g i" = "find.clear"
+"leader ; g j" = "find.replace_vault"
+"leader ; R a" = "task.toggle"
+"leader ; a d" = "edit.insert"
+"leader ; a e" = "edit.append"
+"leader ; a f" = "edit.insert_line_start"
+"leader ; a g" = "edit.append_line_end"
+"leader ; a h" = "edit.open_below"
+"leader ; a i" = "edit.open_above"
+"leader ; a j" = "edit.delete_char"
+"leader ; a k" = "edit.op_delete"
+"leader ; a l" = "edit.op_change"
+"leader ; a m" = "edit.op_yank"
+"leader ; a n" = "edit.op_indent"
+"leader ; a o" = "edit.op_outdent"
+"leader ; a p" = "edit.delete_to_end"
+"leader ; a q" = "edit.change_to_end"
+"leader ; a r" = "edit.substitute"
+"leader ; a s" = "edit.substitute_line"
+"leader ; a t" = "edit.replace_char"
+"leader ; a u" = "edit.join"
+"leader ; a v" = "edit.paste_after"
+"leader ; a w" = "edit.paste_before"
+"leader ; a x" = "edit.toggle_case"
+"leader ; a y" = "edit.repeat"
+"leader ; h f" = "visual.delete"
+"leader ; h g" = "visual.change"
+"leader ; h h" = "visual.indent"
+"leader ; h i" = "visual.outdent"
+"leader ; h l" = "edit.op_comment"
+"leader ; h m" = "edit.comment_line"
+"leader ; h n" = "visual.comment"
+"leader ; h j" = "edit.cut"
+"leader ; h k" = "edit.paste"
+"leader ; a z" = "edit.undo"
+"leader ; a A" = "edit.redo"
+"leader ; d a" = "note.save"
+"leader ; d b" = "note.save_all"
+"leader ; d c" = "note.save_force"
+"leader ; d d" = "note.revert"
+"leader ; d e" = "note.resolve"
+"leader ; n b" = "app.save_quit"
+"leader ; n c" = "app.quit_force"
+"leader ; P a" = "switcher.open"
+"leader ; s c" = "outline.pick"
+"leader ; L a" = "palette.open"
+"leader ; d f" = "note.open"
+"leader ; e a" = "ui.list"
+"leader ; y a" = "theme.pick"
+"leader ; y b" = "theme.set"
+"leader ; x a" = "glyphs.pick"
+"leader ; x b" = "glyphs.set"
+"leader ; e b" = "ui.readable"
+"leader ; e c" = "ui.zen"
+"leader ; e d" = "ui.cursorline"
+"leader ; e e" = "ui.line_numbers"
+"leader ; e f" = "ui.wrap"
+"leader ; e g" = "ui.breadcrumb"
+"leader ; e h" = "ui.top_bar"
+"leader ; e i" = "ui.problems_bar"
+"leader ; e j" = "ui.problem_marks"
+"leader ; e k" = "ui.urls"
+"leader ; e l" = "ui.mouse"
+"leader ; e m" = "ui.code_cells"
+"leader ; e n" = "ui.spell"
+"leader ; e o" = "ui.scratch_in"
+"leader ; e p" = "ui.code_wrap"
+"leader ; V a" = "spell.next"
+"leader ; V b" = "spell.prev"
+"leader ; V c" = "spell.suggest"
+"leader ; V d" = "spell.add"
+"leader ; W a" = "shell.run"
+"leader ; W b" = "shell.filter"
+"leader ; W c" = "shell.stop"
+"leader ; X a" = "git.change_next"
+"leader ; X b" = "git.change_prev"
+"leader ; X c" = "git.change_preview"
+"leader ; X d" = "git.change_undo"
+"leader ; X e" = "git.view"
+"leader ; X f" = "git.commit"
+"leader ; X g" = "git.amend"
+"leader ; X h" = "git.blame"
+"leader ; X i" = "git.history"
+"leader ; X j" = "git.branches"
+"leader ; X k" = "git.fetch"
+"leader ; X l" = "git.pull"
+"leader ; X m" = "git.push"
+"leader ; X n" = "git.stash"
+"leader ; X o" = "git.review"
+"leader ; X p" = "git.review_keep"
+"leader ; X q" = "git.review_revert"
+"leader ; X r" = "git.review_note"
+"leader ; X s" = "git.review_next"
+"leader ; X t" = "git.review_prev"
+"leader ; X u" = "git.review_go"
+"leader ; X v" = "git.merge_screen"
+"leader ; X w" = "git.merge_ours"
+"leader ; X x" = "git.merge_theirs"
+"leader ; X y" = "git.merge_both"
+"leader ; X z" = "git.merge_both_theirs"
+# git's, past z: the merge screen's other keys, rebasing and what's under way
+"leader ; 1 a" = "git.merge_edit"
+"leader ; 1 b" = "git.merge_agent"
+"leader ; 1 c" = "git.merge_next"
+"leader ; 1 d" = "git.merge_prev"
+"leader ; 1 e" = "git.merge_save"
+"leader ; 1 f" = "git.merge_stage"
+"leader ; 1 g" = "git.rebase"
+"leader ; 1 h" = "git.continue"
+"leader ; 1 i" = "git.skip"
+"leader ; 1 j" = "git.abort"
+"leader ; 1 k" = "git.diff_view"
+"leader ; Y a" = "type.list"
+"leader ; Y b" = "type.next"
+"leader ; Y c" = "type.prev"
+"leader ; p a" = "scratch.open"
+"leader ; p b" = "scratch.add"
+"leader ; p c" = "scratch.copy"
+"leader ; E a" = "context.copy"
+"leader ; p d" = "scratch.clear"
+"leader ; p e" = "scratch.open_right"
+"leader ; d g" = "note.create"
+"leader ; j a" = "folder.create"
+"leader ; d h" = "note.reload"
+"leader ; d i" = "note.edit"
+"leader ; A a" = "view.source"
+"leader ; A b" = "view.live"
+"leader ; r a" = "lens.grow"
+"leader ; r b" = "lens.shrink"
+"leader ; r c" = "lens.reset"
+"leader ; d j" = "note.send"
+"leader ; d k" = "note.send_pick"
+"leader ; d t" = "note.export"
+"leader ; d u" = "note.export_many"
+"leader ; d l" = "note.info"
+"leader ; d m" = "note.properties"
+"leader ; I a" = "info.toggle"
+"leader ; i a" = "vault.reindex"
+"leader ; i b" = "vault.info"
+"leader ; d n" = "note.delete"
+"leader ; d o" = "note.copy"
+"leader ; d p" = "note.move"
+"leader ; d q" = "note.yank"
+"leader ; d r" = "note.cut"
+"leader ; j b" = "folder.rename"
+"leader ; j c" = "folder.move"
+"leader ; j d" = "folder.delete"
+"leader ; j e" = "folder.yank"
+"leader ; j f" = "folder.cut"
+"leader ; j g" = "folder.paste"
+"leader ; z a" = "trash.restore"
+"leader ; i c" = "vault.unmake"
+"leader ; z b" = "trash.open"
+"leader ; z c" = "trash.empty"
+"leader ; d s" = "note.rename"
+"leader ; G a" = "heading.rename"
+"leader ; j h" = "folder.name"
+"leader ; k e" = "link.relink"
+"leader ; k f" = "link.convert"
+"leader ; N a" = "rename.undo"
+"leader ; i e" = "vault.init"
+"leader ; M a" = "problems.open"
+"leader ; M b" = "problems.file"
+"leader ; Q a" = "tag.list"
+"leader ; S a" = "folders.open"
+"leader ; S b" = "folders.default"
+"leader ; S c" = "root.trust"
+"leader ; S d" = "root.untrust"
+"leader ; S e" = "vault.links"
+"leader ; T a" = "cell.fold"
+"leader ; T b" = "cell.edit"
+"leader ; T c" = "cell.copy"
+"leader ; T d" = "cell.references"
+"leader ; T e" = "cell.problems"
+"leader ; T f" = "cell.scratch"
+"leader ; T g" = "cell.fold_unchanged"
+"leader ; D a" = "config.reload"
+"leader ; K a" = "messages.open"
+"leader ; H a" = "help.open"
+"leader ; n d" = "app.quit"
+
+[keys.source]
+"ctrl+d" = "edit.delete_char"
+
+[keys.visual]
+"Y" = "visual.yank"
+
+[keys.explorer]
+"p" = "open"
+"l" = "expand"
+"h" = "collapse"
+"s" = "open_split"
+"t" = "open_tab"
+"g g" = "top"
+"G" = "bottom"
+"/" = "filter"
+"q" = "close"
+"escape" = "leave"
+"j" = "down"
+"k" = "up"
+
+[keys.git]
+"S" = "stage_all"
+"b" = "new_branch"
+
+[keys.outline]
+"z a" = "fold"
+"z o" = "unfold"
+"enter" = "jump"
+"g g" = "top"
+"G" = "bottom"
+"/" = "filter"
+"q" = "close"
+"escape" = "leave"
+
+[keys.footnotes]
+"x" = "delete"
+"r" = "rename"
+"a" = "add"
+"e" = "edit"
+
+[keys.info]
+"c" = "copy"
+"q" = "close"
+
+[keys.resize]
+"<" = "narrower"
+">" = "wider"
+"+" = "taller"
+"-" = "shorter"
+"=" = "equalize"
+"escape" = "leave"
+
+[aliases]
+wq = "app.quit"
+g = "git.changes"
+gd = "git.diff"
+kd = "theme.set kestrel-dark"
+nord = "theme.set nord"
+ro = "ui.readable"
+fh = "history.list"
+cfg = "config.reload"
+"w!" = "note.save_force"
+sc = "scratch.open"
+
+[groups]
+"leader n" = "notes: reload, info"
+"leader g" = "git: changes and diffs"
+"leader t" = "tabs"
+"leader q" = "quit"
+"leader v" = "vault"
+"leader ;" = "everything: a binding for every command"
+"leader ; a" = "edit"
+"leader ; b" = "cursor"
+"leader ; c" = "window"
+"leader ; d" = "note"
+"leader ; e" = "ui"
+"leader ; f" = "tab"
+"leader ; g" = "find"
+"leader ; h" = "visual"
+"leader ; i" = "vault"
+"leader ; j" = "folder"
+"leader ; k" = "link"
+"leader ; l" = "lsp"
+"leader ; m" = "copy"
+"leader ; n" = "app"
+"leader ; o" = "git"
+"leader ; p" = "scratch"
+"leader ; q" = "history"
+"leader ; r" = "lens"
+"leader ; s" = "outline"
+"leader ; t" = "scroll"
+"leader ; u" = "change"
+"leader ; v" = "explorer"
+"leader ; w" = "footnotes"
+"leader ; x" = "glyphs"
+"leader ; y" = "theme"
+"leader ; z" = "trash"
+"leader ; A" = "view"
+"leader ; B" = "backlinks"
+"leader ; C" = "breadcrumb"
+"leader ; D" = "config"
+"leader ; E" = "context"
+"leader ; F" = "footnote"
+"leader ; G" = "heading"
+"leader ; H" = "help"
+"leader ; I" = "info"
+"leader ; J" = "links"
+"leader ; K" = "messages"
+"leader ; L" = "palette"
+"leader ; M" = "problems"
+"leader ; N" = "rename"
+"leader ; O" = "search"
+"leader ; P" = "switcher"
+"leader ; Q" = "tag"
+"leader ; R" = "task"
+"leader ; V" = "spelling"
+"leader ; W" = "shell"
+"leader ; X" = "git changes"
+"leader ; Y" = "types"
+"leader ; Z" = "peek"

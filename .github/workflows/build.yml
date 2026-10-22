@@ -1,0 +1,201 @@
+name: build
+
+# The build a release and a preview share (plan 14.2, GR-D13), called by release.yml for a tag v<version> and by
+# preview.yml for a push to `test`, so both are built, checked, packed, summed, attested and given their SBOMs alike.
+# Each platform is built on a runner of its own — where its OpenTUI package is installed, and a Mac's binary is signed
+# by Bun on a Mac — a release's after the whole suite passes there; a preview's straight away, its commit having passed
+# CI's check already (`test`'s ruleset takes no other), the binary run before it's packed either way. Each pack's SBOM is attested to
+# it; then the packs are summed, the installer (and a release's Homebrew formula) written, and every asset attested.
+# The whole set is the `release` artifact, which the caller publishes: nothing here can write to the repository.
+# Every action pinned by its commit, a week old when taken (14.10); values reach the shell through env, never inline.
+on:
+  workflow_call:
+    inputs:
+      tag:
+        description: "The release's tag: v<version>, or a preview's preview-<time>-<hash>"
+        required: true
+        type: string
+      version:
+        description: "The version its binaries say: package.json's for a release; a preview's, stamped in the checkout"
+        required: true
+        type: string
+      suite:
+        description: "Whether each platform runs the whole test suite before it's built: a release does, a preview not"
+        required: false
+        type: boolean
+        default: true
+
+# No permission by default; each job grants what it needs, and says why (GR-D9). The caller's grants are the most
+# any job here can have. No cache is restored anywhere in it: a cache can be written by a pull request's run.
+permissions: {}
+
+jobs:
+  build:
+    strategy:
+      fail-fast: true
+      matrix:
+        include:
+          - target: linux-x64
+            runner: ubuntu-24.04
+          - target: linux-arm64
+            runner: ubuntu-24.04-arm
+          # A Mac is Apple silicon: 0.3.0 was the last release built for Intel Macs (D238).
+          - target: darwin-arm64
+            runner: macos-15
+          # musl, for Alpine (14.5): built on the same runners, their OpenTUI package installed there too.
+          - target: linux-x64-musl
+            runner: ubuntu-24.04
+          - target: linux-arm64-musl
+            runner: ubuntu-24.04-arm
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 45
+    permissions:
+      contents: read # to check out the code
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      # GR-D11: mise.toml's toolchain, each download checked against mise.lock: Bun, and the tools the tests run (the
+      # docs check's own tests run typos and lychee). mise its newest release a week old, checked against its signed
+      # sums. Nothing cached.
+      - uses: jdx/mise-action@2d8d4cafcbd33be2ea37d2b6f5ad595363d1f1ca # v5.1.1
+        with:
+          cache: false
+          minimum_release_age: 7d
+      - run: bun install --frozen-lockfile
+      # A release's, once per runner kind (a musl build's runner is a glibc build's too, which ran them), on the code as
+      # committed. A preview skips them: its commit passed CI on Linux and macOS before `test` would take it.
+      - name: tests
+        if: ${{ inputs.suite && !endsWith(matrix.target, '-musl') }}
+        run: bun run test
+      # And the terminal tests (TT-D6): slipbox driven in a headless terminal on this runner, as CI's are.
+      - name: terminal tests
+        if: ${{ inputs.suite && !endsWith(matrix.target, '-musl') }}
+        env:
+          SLIPBOX_TERMINAL_WAIT: "30000"
+        run: bun run test:terminal
+      # A preview's version written into this checkout's package.json and src/version.ts, never committed, so the
+      # binary, its pack, notices and SBOM say it (GR-D13); a release's is package.json's already: nothing changes.
+      - name: version
+        env:
+          VERSION: ${{ inputs.version }}
+        run: bun scripts/release.ts stamp --version "$VERSION"
+      # The pack, and its SBOM beside it, from the walk its notices come from.
+      - name: build
+        env:
+          TARGET: ${{ matrix.target }}
+          REPO: ${{ github.repository }}
+          TAG: ${{ inputs.tag }}
+        run: bun scripts/release.ts build --target "$TARGET" --repo "$REPO" --tag "$TAG"
+      # A Mac's binary was signed ad hoc again by release.ts (codesign, on this Mac); one whose signature is broken isn't
+      # run at all (14.13).
+      - name: signature
+        if: startsWith(matrix.target, 'darwin-')
+        env:
+          TARGET: ${{ matrix.target }}
+          VERSION: ${{ inputs.version }}
+        run: |
+          mkdir -p unpacked
+          tar -xzf "dist/release/slipbox-$VERSION-$TARGET.tar.gz" -C unpacked
+          codesign --verify --verbose "unpacked/slipbox-$VERSION-$TARGET/slipbox"
+      # A musl build run where musl is the C library, in Alpine (14.5), pinned by digest: its version, an index and a
+      # search (its SQLite), and the TUI started in a terminal and still running after five seconds (its OpenTUI
+      # library loaded).
+      - name: alpine
+        if: endsWith(matrix.target, '-musl')
+        env:
+          TARGET: ${{ matrix.target }}
+          VERSION: ${{ inputs.version }}
+        run: |
+          mkdir -p unpacked
+          tar -xzf "dist/release/slipbox-$VERSION-$TARGET.tar.gz" -C unpacked
+          docker run --rm -v "$PWD/unpacked/slipbox-$VERSION-$TARGET:/w:ro" -e VERSION="$VERSION" \
+            alpine:3.24.2@sha256:294b683cb724975bec92580e1e685676bd4b50bda910ddb8c51d4cabeaec77e6 sh -euc '
+              # Without the C++ runtime it says so, and how to add it, as the installer does; with it, it runs.
+              if /w/slipbox --version >/dev/null 2>&1; then echo "ran without libstdc++"; exit 1; fi
+              apk add --no-cache libstdc++ libgcc >/dev/null
+              test "$(/w/slipbox --version)" = "slipbox $VERSION"
+              mkdir -p /tmp/n/.slipbox
+              printf "# A\n\nThe zorvexian word.\n" >/tmp/n/a.md
+              cd /tmp/n
+              /w/slipbox index --refresh >/dev/null
+              /w/slipbox search zorvexian --json | grep -q "\"a.md\""
+              apk add --no-cache util-linux >/dev/null
+              script -qfc "/w/slipbox /tmp/n" /tmp/tui.log >/dev/null 2>&1 &
+              pid=$!
+              sleep 5
+              if kill -0 "$pid" 2>/dev/null; then kill "$pid"; else cat /tmp/tui.log; exit 1; fi
+            '
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: pack-${{ matrix.target }}
+          path: |
+            dist/release/*.tar.gz
+            dist/release/*.cdx.json
+          if-no-files-found: error
+
+  # Each pack's SBOM attested to it, apart from the build — whose tests run every dependency's code — so that no job
+  # holding the signing token runs any: `gh attestation verify <pack> --repo <owner/name> --predicate-type
+  # https://cyclonedx.org/bom`.
+  sbom:
+    needs: build
+    strategy:
+      matrix:
+        target: [linux-x64, linux-arm64, darwin-arm64, linux-x64-musl, linux-arm64-musl]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      id-token: write # to sign the attestation, with a certificate for this workflow (Sigstore)
+      attestations: write # to store it with the repository's attestations
+    steps:
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: pack-${{ matrix.target }}
+          path: dist/release
+      - uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6 # v4.2.2
+        with:
+          subject-path: dist/release/slipbox-${{ inputs.version }}-${{ matrix.target }}.tar.gz
+          sbom-path: dist/release/slipbox-${{ inputs.version }}-${{ matrix.target }}.cdx.json
+
+  # The packs summed, the installer (and a release's formula) written from them, every asset attested, and the set
+  # handed to the caller. Only slipbox's own scripts run here, no dependency's: nothing is installed.
+  finish:
+    needs: [build, sbom]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    permissions:
+      contents: read # to check out the code: the scripts and the templates
+      id-token: write # to sign the attestation, with a certificate for this workflow (Sigstore)
+      attestations: write # to store it with the repository's attestations
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: jdx/mise-action@2d8d4cafcbd33be2ea37d2b6f5ad595363d1f1ca # v5.1.1
+        with:
+          install_args: bun
+          cache: false
+          minimum_release_age: 7d
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          pattern: pack-*
+          path: dist/release
+          merge-multiple: true
+      - name: finish
+        env:
+          REPO: ${{ github.repository }}
+          TAG: ${{ inputs.tag }}
+          VERSION: ${{ inputs.version }}
+        run: |
+          bun --no-install scripts/release.ts stamp --version "$VERSION"
+          bun --no-install scripts/release.ts finish --repo "$REPO" --tag "$TAG"
+      # Who built each asset — the packs, their SBOMs, the sums, the installer, a release's formula — from which commit,
+      # by which workflow: `gh attestation verify <file> --repo <owner/name>`.
+      - uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6 # v4.2.2
+        with:
+          subject-path: dist/release/*
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: release
+          path: dist/release/*
+          if-no-files-found: error

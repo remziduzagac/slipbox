@@ -1,0 +1,22 @@
+# Contact card for Aiko Tanaka, exported from the phone
+name: Aiko Tanaka
+display_name: 田中愛子
+aliases:
+  - Aiko
+  - 田中愛子
+role: Backend engineer
+team: Kestrel Labs
+birthday: 1994-11-02
+email: aiko@kestrel.dev
+timezone: Asia/Tokyo
+languages: [ja, en]
+address: {city: Osaka, country: JP}
+tags: [people, kestrel, backend]
+active: true
+score: 4.5
+overlap_hours: 4
+notes: null
+since: 2024-02-12
+phones:
+  - mobile: "+81 90 5550 0142"
+  - work: "+81 6 5550 0198"

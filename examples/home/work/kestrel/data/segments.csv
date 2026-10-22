@@ -1,0 +1,60 @@
+segment_id,name,surface,length_m,grade_pct,quiet_score,notes,source
+seg-1001,Nieuwe Herengracht,gravel,1599,0.2,9,,osm-2026-08
+seg-1002,Plantage Middenlaan,brick,1409,-1.7,3,,osm-2026-08
+seg-1003,Vondelpark path,cobble,1858,-0.5,9,,osm-2026-08
+seg-1004,Nieuwe Herengracht,brick,106,2.4,7,bike lane both sides,osm-2026-08
+seg-1005,Singel,cobble,406,2.6,2,,osm-2026-08
+seg-1006,Nieuwe Herengracht,cobble,339,-1.2,1,,osm-2026-08
+seg-1007,Amstelveenseweg,brick,1866,-1.0,6,,osm-2026-08
+seg-1008,Sarphatipark loop,brick,452,3.6,4,one-way for cars,osm-2026-08
+seg-1009,Overtoom,asphalt,819,0.5,3,bike lane both sides,osm-2026-08
+seg-1010,Keizersgracht,gravel,697,2.9,10,,osm-2026-08
+seg-1011,Nieuwe Herengracht,gravel,215,-0.1,5,one-way for cars,osm-2026-08
+seg-1012,Zeeburgerdijk,gravel,458,0.9,3,,osm-2026-08
+seg-1013,Overtoom,asphalt,1615,0.1,7,,osm-2026-08
+seg-1014,Sarphatipark loop,cobble,829,0.3,1,one-way for cars,osm-2026-08
+seg-1015,Prinsengracht,brick,1357,3.7,4,,osm-2026-08
+seg-1016,Amstelveenseweg,cobble,785,1.1,9,bike lane both sides,osm-2026-08
+seg-1017,Plantage Middenlaan,asphalt,1287,2.5,6,bike lane both sides,osm-2026-08
+seg-1018,Prinsengracht,cobble,266,-0.7,9,tram tracks: cross at an angle,osm-2026-08
+seg-1019,Vondelpark path,brick,776,-0.3,9,,osm-2026-08
+seg-1020,Overtoom,gravel,707,-0.9,2,,osm-2026-08
+seg-1021,Zeeburgerdijk,gravel,1070,-1.0,1,,osm-2026-08
+seg-1022,Nieuwe Herengracht,cobble,145,-0.6,10,bike lane both sides,osm-2026-08
+seg-1023,Overtoom,cobble,1413,0.5,1,,osm-2026-08
+seg-1024,Plantage Middenlaan,gravel,1797,-0.8,10,,osm-2026-08
+seg-1025,Oosterpark route,cobble,298,-1.0,6,,osm-2026-08
+seg-1026,Prinsengracht,cobble,683,-1.2,10,,osm-2026-08
+seg-1027,Sarphatipark loop,cobble,1079,2.1,6,one-way for cars,osm-2026-08
+seg-1028,Overtoom,gravel,1042,0.4,3,,osm-2026-08
+seg-1029,Weesperstraat,brick,1364,3.6,6,,osm-2026-08
+seg-1030,Keizersgracht,cobble,637,1.1,9,tram tracks: cross at an angle,osm-2026-08
+seg-1031,Vondelpark path,asphalt,1689,2.8,6,tram tracks: cross at an angle,osm-2026-08
+seg-1032,Oosterpark route,asphalt,1635,-0.2,9,bike lane both sides,osm-2026-08
+seg-1033,Plantage Middenlaan,gravel,1656,3.9,5,bike lane both sides,osm-2026-08
+seg-1034,Oosterpark route,brick,1269,3.1,8,tram tracks: cross at an angle,osm-2026-08
+seg-1035,Overtoom,gravel,1455,-0.4,5,tram tracks: cross at an angle,osm-2026-08
+seg-1036,Oosterpark route,gravel,792,-0.4,6,one-way for cars,osm-2026-08
+seg-1037,Vondelpark path,brick,1861,3.2,8,bike lane both sides,osm-2026-08
+seg-1038,Vondelpark path,brick,1164,3.9,4,bike lane both sides,osm-2026-08
+seg-1039,Plantage Middenlaan,gravel,1496,-1.5,7,,osm-2026-08
+seg-1040,Nieuwe Herengracht,cobble,699,1.7,5,,osm-2026-08
+seg-2001,"Herengracht, west side",brick,640,0.2,8,"He said ""slow down"" at the bridge",survey
+seg-2002,Sarphatipark loop,asphalt,1210,0.0,9,"say ""hi"" to the ducks",survey
+seg-2003,Kleine-Gartmanplantsoen,cobble,230,0.4,4,"line one of the note
+line two of the note",survey
+seg-2004,Wibautstraat,asphalt,980,0.1,5,"first line
+second line
+third line",survey
+seg-2005,Amstel towpath,gravel,3100,0.0,10,closed on race days: https://kestrel.dev/routes/amstel?closed=1,support
+seg-2006,Westerpark,asphalt,760,0.3,9,see ./notes/westerpark.md and ../docs/architecture.md,jo
+seg-2007,Rembrandtpark,asphalt,1500,0.0,9,"**bold claim**, `code`, <b>x</b>, [[wiki]], [md](x.md)",jo
+seg-2008,Ferdinand Bolstraat,asphalt,100,0.0,1,=SUM(A1:A9),import
+seg-2009,Utrechtsestraat,asphalt,100,0.0,1,- [ ] resurvey after the bridge reopens,sam
+seg-2010,  Tweede Weteringdwarsstraat  ,brick,100,0.0,1,trailing spaces   ,sam
+seg-2011,Café 'De Pijp',brick,410,0.0,6,unicode: 京都 مقلوبة 🚲,sam
+seg-2012,Frederiksplein,asphalt
+seg-2013,"Amstel
+(east bank)",gravel,1200,0.0,9,"closed
+until November",survey
+seg-3001,Mauritskade,asphalt,410,0.0,6,mailto:ops@kestrel.dev,import

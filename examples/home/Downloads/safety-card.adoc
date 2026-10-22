@@ -1,0 +1,21 @@
+= Ride safety card
+Sam Rivera
+2026-08-02
+:toc:
+
+== Before you go
+
+* Tell someone the route and when you expect to be back.
+* Check the lights: front, rear, charged.
+* Carry two tubes, a pump and a multi-tool.
+
+== Emergency
+
+[cols="1,2"]
+|===
+|Number |Use
+|112 |Anywhere in the EU
+|+32 2 555 0100 |Club ride captain
+|===
+
+NOTE: The brevet organisers want the card in the saddle bag, not the pocket.

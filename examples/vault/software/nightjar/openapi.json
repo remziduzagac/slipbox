@@ -1,0 +1,77 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "nightjar",
+    "version": "2.4.0",
+    "description": "The observatory's frame archive over HTTP. How to call it: ../pipeline-cookbook.md",
+    "contact": { "name": "Kenji Mori", "url": "https://halden-ridge.invalid/people/kenji" }
+  },
+  "servers": [
+    { "url": "https://nightjar.halden-ridge.invalid/v2", "description": "production" },
+    { "url": "http://ridge-arch.local:8080/v2", "description": "on the ridge LAN" }
+  ],
+  "paths": {
+    "/nights/{night}/frames": {
+      "get": {
+        "summary": "List a night's frames",
+        "parameters": [
+          { "$ref": "#/components/parameters/Night" },
+          { "name": "telescope", "in": "query", "required": false, "schema": { "type": "string", "enum": ["Aster", "Brill", "Lyra"] } }
+        ],
+        "responses": {
+          "200": {
+            "description": "the frames, oldest first",
+            "content": {
+              "application/json": {
+                "schema": { "type": "array", "items": { "$ref": "#/components/schemas/Frame" } }
+              }
+            }
+          },
+          "404": { "$ref": "#/components/responses/NotFound" }
+        }
+      }
+    },
+    "/frames/{id}": {
+      "get": {
+        "summary": "One frame's metadata",
+        "parameters": [{ "name": "id", "in": "path", "required": true, "schema": { "type": "string" } }],
+        "responses": {
+          "200": {
+            "description": "the frame",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Frame" } } }
+          },
+          "404": { "$ref": "#/components/responses/NotFound" }
+        }
+      }
+    }
+  },
+  "components": {
+    "parameters": {
+      "Night": { "name": "night", "in": "path", "required": true, "schema": { "type": "string", "format": "date" } }
+    },
+    "schemas": {
+      "Frame": {
+        "type": "object",
+        "required": ["id", "telescope", "exposure_s"],
+        "properties": {
+          "id": { "type": "string" },
+          "telescope": { "type": "string" },
+          "exposure_s": { "type": "number", "minimum": 0 },
+          "filter": { "type": "string", "description": "see ../../equipment/filters.csv" },
+          "calibrated": { "type": "boolean", "default": false },
+          "wcs": {
+            "type": "object",
+            "properties": {
+              "ra_deg": { "type": "number" },
+              "dec_deg": { "type": "number" },
+              "rotation": { "type": "number" }
+            }
+          }
+        }
+      }
+    },
+    "responses": {
+      "NotFound": { "description": "no such night or frame" }
+    }
+  }
+}

@@ -1,0 +1,42 @@
+#+TITLE: Dome log
+#+FILETAGS: :dome:maintenance:
+
+Org notes live next to the markdown ones: this one is the dome crew's log. The refit plan is
+[[file:../projects/dome-refit.md][the dome refit]], and the safety card is
+[[file:../handbook/safety-card.adoc][the safety card]].
+
+* DONE [#A] Replace the shutter belt :shutter:
+CLOSED: [2026-09-02 Wed 16:40]
+:PROPERTIES:
+:PART: GT3-2160
+:COST: 184 EUR
+:END:
+The old belt had stretched 11 mm. Tension now 42 N at the midpoint.
+- [X] order the belt
+- [X] fit and tension
+- [X] run the shutter 20 times
+
+* TODO Grease the azimuth ring :rotation:
+SCHEDULED: <2026-10-05 Mon>
+Needs two people and the long ladder. See [[Shutter log]] for the last torque readings.
+- [ ] buy lithium grease
+- [ ] book Rosa for a Saturday
+- [ ] check the drive motor current before and after
+
+* Shutter log
+| Date       | Opens | Faults | Note            |
+|------------+-------+--------+-----------------|
+| 2026-08-30 |    14 |      2 | belt slipping   |
+| 2026-09-03 |    21 |      0 | new belt        |
+| 2026-09-10 |    18 |      0 |                 |
+
+** Torque check
+#+begin_src bash
+halley dome torque --samples 50 --out /srv/logs/torque.csv
+#+end_src
+
+#+begin_quote
+Never open the dome above 40 km/h wind, whatever the forecast said an hour ago.
+#+end_quote
+
+# An Org comment: dimmed in the render.

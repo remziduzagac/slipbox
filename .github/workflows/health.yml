@@ -1,0 +1,146 @@
+name: health
+
+# The weekly health check (greenrepo UPK-03, UPK-04, CI-13): what this workflow's own token can read — alerts, pull
+# requests, workflows switched off or failing, the rulesets and settings against .github/upkeep/, the renewals due —
+# and the links checked online, into the one issue labelled `repository-health`, rewritten only when its text
+# changed (scripts/health.ts). What only an admin reads waits for the monthly `bun scripts/health.ts --admin`.
+# On its schedule and by hand only: nothing from outside starts it. No cache anywhere; every action pinned by its
+# commit, a week old when taken; values reach the shell through env, never inline.
+on:
+  schedule:
+    # Mondays, 06:17 UTC: off the hour, when GitHub's busy scheduler delays runs and may drop some.
+    - cron: "17 6 * * 1"
+  workflow_dispatch:
+
+permissions: {}
+
+# One run at a time, each finishing: two writing the issue at once could each create one.
+concurrency:
+  group: health
+  cancel-in-progress: false
+
+# bash with pipefail: a pipeline fails when any part of it does.
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  collect:
+    name: collect the signals
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      contents: read # the checkout: the script and the expected rulesets and settings
+      actions: read # the workflows' states, their last runs on main, the `release` and `github-pages` environments
+      pages: read # the Pages site's settings: built by a workflow, at its address (GR-D14)
+      pull-requests: read # the open pull requests
+      security-events: read # the code scanning alerts, counted
+      vulnerability-alerts: read # the Dependabot alerts, counted (actionlint doesn't know it yet: actionlint.yaml)
+    outputs:
+      signals: ${{ steps.collect.outputs.signals }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: jdx/mise-action@2d8d4cafcbd33be2ea37d2b6f5ad595363d1f1ca # v5.1.1
+        with:
+          install_args: bun
+          cache: false
+          minimum_release_age: 7d
+      - id: collect
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          signals=$(bun --no-install scripts/health.ts collect)
+          echo "signals=$signals" >> "$GITHUB_OUTPUT"
+
+  # The links in the tracked Markdown checked online: the check on every change is offline, and links outside break
+  # with no change here. The examples and the tests' fixtures are left out: their addresses are made up.
+  links:
+    name: check the links online
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    permissions:
+      contents: read # the checkout: the Markdown checked
+    outputs:
+      links: ${{ steps.check.outputs.links }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: jdx/mise-action@2d8d4cafcbd33be2ea37d2b6f5ad595363d1f1ca # v5.1.1
+        with:
+          # By its name in mise.toml and mise.lock: the short name has no locked download.
+          install_args: aqua:lycheeverse/lychee
+          cache: false
+          minimum_release_age: 7d
+      - id: check
+        env:
+          # lychee reads github.com's links through the API, within its rate limit for a token.
+          GITHUB_TOKEN: ${{ github.token }}
+        run: |
+          status=0
+          git -c core.quotePath=false ls-files '*.md' ':!:examples/' ':!:tests/' |
+            lychee --files-from - --offline=false --no-progress --format json --output lychee.json || status=$?
+          # What the issue shows of each broken link, kept small: an output reaches the next job as one variable.
+          if [ -s lychee.json ]; then
+            links=$(jq -c --argjson status "$status" --arg root "$PWD" '
+              def slim: (. // {}) | map_values(map({url, status: {text: .status.text}, span: {line: .span.line}}));
+              {status: $status, root: $root, error_map: (.error_map | slim), timeout_map: (.timeout_map | slim)}
+            ' lychee.json)
+          else
+            links="{\"status\": $status}"
+          fi
+          echo "links=$links" >> "$GITHUB_OUTPUT"
+
+  # The one job that writes: the issue found by its label and marker, created, edited when its text changed,
+  # reopened, its duplicates closed, one comment when something critical first appears. It runs whatever the
+  # others' results: a failed collection is itself reported.
+  issue:
+    name: write the issue
+    needs: [collect, links]
+    if: ${{ !cancelled() }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    permissions:
+      contents: read # the checkout: the script, the renewals and the deviations
+      issues: write # the health issue: written, labelled, locked; its duplicates closed; a comment
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: jdx/mise-action@2d8d4cafcbd33be2ea37d2b6f5ad595363d1f1ca # v5.1.1
+        with:
+          install_args: bun
+          cache: false
+          minimum_release_age: 7d
+      - env:
+          GH_TOKEN: ${{ github.token }}
+          SIGNALS: ${{ needs.collect.outputs.signals }}
+          COLLECT_RESULT: ${{ needs.collect.result }}
+          LINKS: ${{ needs.links.outputs.links }}
+          LINKS_RESULT: ${{ needs.links.result }}
+        run: bun --no-install scripts/health.ts issue
+
+  # GitHub switches a public repository's scheduled workflows off after 60 days without activity. This job runs
+  # whatever happened before it, after the collection saw the workflows' states: it switches this workflow on again,
+  # first, which keeps it running, then any other GitHub switched off for inactivity. One switched off by hand is
+  # left alone: the issue reports it. Plain gh, no checkout or toolchain, so nothing it needs can be what broke.
+  keepalive:
+    name: keep the schedules on
+    needs: collect
+    if: ${{ always() }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    permissions:
+      actions: write # the workflows switched on again
+    steps:
+      - env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh api -X PUT "repos/$GITHUB_REPOSITORY/actions/workflows/health.yml/enable"
+          gh api --paginate "repos/$GITHUB_REPOSITORY/actions/workflows?per_page=100" \
+            --jq '.workflows[] | select(.state == "disabled_inactivity") | .id' |
+            while read -r id; do
+              gh api -X PUT "repos/$GITHUB_REPOSITORY/actions/workflows/$id/enable"
+            done

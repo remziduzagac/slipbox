@@ -1,0 +1,10 @@
+# What the build makes: the packages, Astro's own files, the site, and the pages gathered from ../docs.
+/node_modules
+/.astro
+/dist
+/src/content/docs/*
+!/src/content/docs/index.mdx
+/public/images
+/public/agent-guide.md
+/public/logo.svg
+/src/sidebar.json

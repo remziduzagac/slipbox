@@ -1,0 +1,43 @@
+name: audit
+
+# GR-D9 (greenrepo DEP-04): the dependencies' known vulnerabilities, `bun run audit` — `bun audit` over bun.lock,
+# with the advisories accepted in scripts/audit.ts, each with why and the date to look again. Weekly, before the
+# health check reads it; and when a pull request or a push to main changes the lockfile or that list. Never a
+# required check: a new advisory fails this run, not unrelated work.
+on:
+  schedule:
+    - cron: "17 4 * * 1"
+  pull_request:
+    paths: [bun.lock, scripts/audit.ts, .github/workflows/audit.yml]
+  push:
+    branches: [main]
+    paths: [bun.lock, scripts/audit.ts, .github/workflows/audit.yml]
+  workflow_dispatch:
+
+# No permission by default; the job grants what it needs, and says why. Every action pinned by its commit (14.10).
+permissions: {}
+
+# A pull request's superseded run is cancelled; every other run finishes.
+concurrency:
+  group: audit-${{ github.event.pull_request.number || github.run_id }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  audit:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      contents: read # to check out the lockfile
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      # GR-D11: Bun alone, at mise.toml's version; mise its newest release a week old. Nothing cached. `bun audit`
+      # reads bun.lock: nothing is installed.
+      - uses: jdx/mise-action@2d8d4cafcbd33be2ea37d2b6f5ad595363d1f1ca # v5.1.1
+        with:
+          install_args: bun
+          cache: false
+          minimum_release_age: 7d
+      - name: advisories
+        run: bun run audit

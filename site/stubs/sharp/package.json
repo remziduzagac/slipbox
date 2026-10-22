@@ -1,0 +1,6 @@
+{
+  "name": "sharp",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Stands in for sharp, Astro's optional image processing, which the site turns off (astro.config.mjs): neither it nor libvips is installed."
+}

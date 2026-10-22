@@ -1,0 +1,10 @@
+# The design docs are opened in Obsidian (Tomás) but must also render on GitHub, so links in this folder are written
+# as relative markdown paths whatever the tool's convention says.
+
+[links]
+style = "markdown"
+
+# Its identity, committed with it.
+[vault]
+id = "9c41f07e2b5d8a63"
+name = "design"

@@ -1,0 +1,64 @@
+2026-09-22T11:50:00.331Z DEBUG auth token refreshed for user 8841
+2026-09-22T11:51:38.404Z INFO  sync queue depth=4997
+2026-09-22T11:52:50.074Z [31mERROR[0m sync worker: queue depth 5012 is over the 5000 alert threshold, head msg 7f3a [1;33m(retry 14 failed, next attempt in 612s)[0m
+Error: lease expired for msg 7f3a
+    at SyncQueue.flush (src/sync/queue.ts:76:27)
+    at processTicksAndRejections (node:internal/process/task_queues:95:5)
+2026-09-22T11:54:14.374Z WARN  slow request GET /api/routes 200 2279ms
+2026-09-22T11:55:28.931Z INFO  tile cache hit z=11 x=1088 y=715
+2026-09-22T11:58:37.219Z INFO  tile cache hit z=11 x=1088 y=715
+2026-09-22T11:59:46.088Z INFO  route 5503 saved
+2026-09-22T12:02:37.428Z INFO  route 5503 saved
+2026-09-22T12:03:54.246Z WARN  sync queue depth=5113 is above the alert threshold
+2026-09-22T12:05:17.564Z INFO  push registered device=pixel-8
+2026-09-22T12:08:05.060Z INFO  tile cache hit z=11 x=1088 y=715
+2026-09-22T12:09:36.970Z INFO  push registered device=pixel-8
+2026-09-22T12:11:33.645Z INFO  route 5503 saved
+2026-09-22T12:12:48.590Z INFO  route 5503 saved
+2026-09-22T12:12:48.593Z INFO  sync queue depth=5197
+2026-09-22T12:15:29.050Z INFO  tile cache hit z=11 x=1088 y=715
+2026-09-22T12:15:29.053Z INFO  sync queue depth=5223
+2026-09-22T12:17:25.047Z WARN  sync queue depth=5241 is above the alert threshold
+2026-09-22T12:18:59.296Z WARN  slow request GET /api/routes 200 2755ms
+2026-09-22T12:21:46.147Z [31mERROR[0m unhandled rejection in api/kestrel_api/sync.py: msg 7f3a will be retried in 2448s
+Traceback (most recent call last):
+  File "api/kestrel_api/sync.py", line 89, in drain
+    raise SyncError(f"{len(result.rejected)} rejected")
+api.kestrel_api.sync.SyncError: 1 rejected
+2026-09-22T12:23:16.584Z INFO  tile cache hit z=11 x=1088 y=715
+2026-09-22T12:25:34.573Z INFO  request GET /api/routes 200 41ms
+2026-09-22T12:27:20.105Z WARN  slow request GET /api/routes 200 3989ms
+2026-09-22T12:29:08.381Z INFO  push registered device=pixel-8
+2026-09-22T12:30:32.560Z INFO  tile cache hit z=11 x=1088 y=715
+2026-09-22T12:31:48.577Z INFO  push registered device=pixel-8
+2026-09-22T12:33:03.633Z INFO  request GET /api/routes 200 41ms
+2026-09-22T12:33:03.636Z INFO  sync queue depth=5389
+2026-09-22T12:34:55.508Z INFO  push registered device=pixel-8
+2026-09-22T12:37:44.795Z INFO  route 5503 saved
+2026-09-22T12:40:04.476Z INFO  route 5503 saved
+2026-09-22T12:43:00.370Z INFO  request GET /api/routes 200 41ms
+2026-09-22T12:45:16.254Z INFO  tile cache hit z=11 x=1088 y=715
+2026-09-22T12:47:02.715Z INFO  request GET /api/routes 200 41ms
+2026-09-22T12:49:04.083Z [33mWARN[0m  workers restarted, msg 7f3a is still at the head [2m(retry 17 of msg 7f3a: next attempt in 4896s)[0m
+2026-09-22T12:51:20.537Z WARN  sync queue depth=5563 is above the alert threshold
+2026-09-22T12:54:26.896Z WARN  sync queue depth=5593 is above the alert threshold
+2026-09-22T12:56:53.746Z WARN  slow request GET /api/routes 200 2215ms
+2026-09-22T12:59:47.294Z INFO  push registered device=pixel-8
+2026-09-22T12:59:47.297Z INFO  sync queue depth=5643
+2026-09-22T13:01:05.120Z WARN  sync queue depth=5656 is above the alert threshold
+2026-09-22T13:03:52.168Z INFO  push registered device=pixel-8
+2026-09-22T13:06:19.155Z DEBUG auth token refreshed for user 8841
+2026-09-22T13:09:24.431Z INFO  push registered device=pixel-8
+2026-09-22T13:09:24.434Z INFO  sync queue depth=5735
+2026-09-22T13:10:34.985Z INFO  request GET /api/routes 200 41ms
+2026-09-22T13:11:53.782Z WARN  sync queue depth=5758 is above the alert threshold
+2026-09-22T13:14:13.348Z INFO  route 5503 saved
+2026-09-22T13:16:42.608Z DEBUG auth token refreshed for user 8841
+2026-09-22T13:19:49.593Z WARN  sync queue depth=5834 is above the alert threshold
+2026-09-22T13:22:45.070Z WARN  sync queue depth=5862 is above the alert threshold
+2026-09-22T13:24:08.967Z DEBUG auth token refreshed for user 8841
+2026-09-22T13:26:17.485Z INFO  tile cache hit z=11 x=1088 y=715
+2026-09-22T13:27:33.062Z INFO  tile cache hit z=11 x=1088 y=715
+2026-09-22T13:29:52.662Z INFO  push registered device=pixel-8
+2026-09-22T13:29:52.665Z INFO  sync queue depth=5929
+2026-09-22T13:31:03.291Z [32mINFO[0m  [2mmsg 7f3a skipped by hand, queue draining (depth=5957)[0m

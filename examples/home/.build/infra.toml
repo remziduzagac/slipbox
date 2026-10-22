@@ -1,0 +1,724 @@
+# Infra's history, 2026-08-18 to 2026-09-30, replayed by scripts/build-home.ts (format: README.md, "The build").
+#
+#   main                  linear; k8s/sync-worker.yaml becomes k8s/workers/sync-worker.yaml on 2026-09-23, the day after
+#                         the queue stalled
+#   malik/hpa-tuning      Malik, NOT merged: edits the HorizontalPodAutoscaler in k8s/api.yaml
+#
+# config/local/* is never added: local overrides stay untracked, which is what git marks in the explorer show.
+# k8s/tiles.yaml is edited locally by .build/extras.toml after the replay, so git shows it as modified (M).
+
+remote = "git@github.com:kestrel-labs/infra.git"
+
+[[commit]]
+branch = "main"
+date = "2026-08-18T10:00:00+02:00"
+author = "Malik Haddad <malik@kestrel.dev>"
+message = "Infra repository: README, state backend, cert rotation, API and tiles manifests"
+add = [
+  "README.md",
+  "terraform/backend.toml",
+  "scripts/rotate-certs.sh",
+  "k8s/tiles.yaml",
+]
+[commit.write]
+"k8s/api.yaml" = '''
+---
+# The Kestrel API, with the sync worker next door (sync-worker.yaml).
+# Rendered and applied by CI; edit here, never with kubectl edit.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: kestrel-api
+  namespace: kestrel
+  labels:
+    app: kestrel-api
+    tier: backend
+    # this one was added by a kustomize patch and nobody removed the old line
+    app: api
+spec:
+  replicas: 4
+  revisionHistoryLimit: 5
+  selector:
+    matchLabels:
+      app: kestrel-api
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+  template:
+    metadata:
+      labels:
+        app: kestrel-api
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "9102"
+    spec:
+      terminationGracePeriodSeconds: 45
+      containers:
+        # the API itself
+        - name: api
+          image: ghcr.io/kestrel-labs/kestrel-api:2.3.0
+          args: ["--port=8080", "--workers=4"]
+          imagePullPolicy: IfNotPresent
+        # a sidecar: health: is expanded into probes by our kustomize plugin
+        - name: metrics
+          image: ghcr.io/kestrel-labs/metrics-sidecar:1.4.2
+          ports:
+            - containerPort: 9102
+              name: metrics
+          health:
+            path: /healthz
+            port: 9102
+            interval: 10s
+          resources:
+            requests: {cpu: 50m, memory: 64Mi}
+            limits: {cpu: 200m, memory: 128Mi}
+---
+# Service in front of the API pods
+apiVersion: v1
+kind: Service
+metadata:
+  name: kestrel-api
+  namespace: kestrel
+spec:
+  type: ClusterIP
+  selector:
+    app: kestrel-api
+  ports:
+    - name: http
+      port: 80
+      targetPort: 8080
+---
+# Runtime settings.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: kestrel-api-config
+  namespace: kestrel
+data:
+  LOG_LEVEL: info
+  TILE_URL: https://tiles.kestrel.dev/{z}/{x}/{y}.pbf
+  FEATURE_ROUTE_SHARING: "true"
+---
+# Scale on CPU between 4 and 12 pods
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: kestrel-api
+  namespace: kestrel
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: kestrel-api
+  minReplicas: 4
+  maxReplicas: 12
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 70
+---
+# Never take more than one API pod down at a time during a node drain
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: kestrel-api
+  namespace: kestrel
+spec:
+  maxUnavailable: 1
+  selector:
+    matchLabels:
+      app: kestrel-api
+---
+# Public entry point
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: kestrel-api
+  namespace: kestrel
+  annotations:
+    nginx.ingress.kubernetes.io/proxy-body-size: 20m
+spec:
+  ingressClassName: nginx
+  tls:
+    - hosts: [api.kestrel.dev]
+      secretName: kestrel-api-tls
+  rules:
+    - host: api.kestrel.dev
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: kestrel-api
+                port:
+                  number: 80
+---
+# Only the ingress controller and the sync worker may talk to the API pods
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: kestrel-api
+  namespace: kestrel
+spec:
+  podSelector:
+    matchLabels:
+      app: kestrel-api
+  policyTypes: [Ingress]
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: ingress-nginx
+        - podSelector:
+            matchLabels:
+              app: kestrel-sync-worker
+      ports:
+        - protocol: TCP
+          port: 8080
+'''
+
+[[commit]]
+branch = "main"
+date = "2026-08-25T15:20:00+02:00"
+author = "Malik Haddad <malik@kestrel.dev>"
+message = "Helm chart and the proxy configuration"
+add = [
+  "config/archive.properties",
+  "config/broken.ini",
+  "config/broken/bad-date.toml",
+  "config/broken/duplicate-key.toml",
+  "config/broken/unclosed-string.toml",
+  "config/haproxy.cfg",
+  "config/legacy-archive.properties",
+  "config/nginx.conf",
+  "config/prod.env",
+  "config/sysctl.ini",
+  "helm/kestrel/Chart.yaml",
+  "helm/kestrel/values.yaml",
+]
+
+[[commit]]
+branch = "main"
+date = "2026-08-27T09:50:00+02:00"
+author = "Malik Haddad <malik@kestrel.dev>"
+message = "Dotfiles the team shares, and the first sync worker"
+add = [
+  "dotfiles/.bashrc",
+  "dotfiles/.profile",
+  "dotfiles/.zshrc",
+  "dotfiles/slipbox/README.md",
+  "dotfiles/slipbox/bad-values.toml",
+  "dotfiles/slipbox/config.toml",
+  "dotfiles/slipbox/minimal.toml",
+  "dotfiles/slipbox/themes/broken.yaml",
+  "dotfiles/slipbox/themes/kestrel-dark.yaml",
+  "dotfiles/slipbox/themes/nord.yaml",
+  "dotfiles/slipbox/typo.toml",
+]
+[commit.write]
+"k8s/sync-worker.yaml" = '''
+---
+# yaml-language-server: $schema=../schemas/kestrel-worker.json
+# The sync worker: drains the op queue for the offline sync.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: kestrel-sync-worker
+  namespace: kestrel
+  labels:
+    app: kestrel-sync-worker
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: kestrel-sync-worker
+  template:
+    metadata:
+      labels:
+        app: kestrel-sync-worker
+    spec:
+      containers:
+        - name: worker
+          image: ghcr.io/kestrel-labs/kestrel-sync-worker:2.3.0
+          envFrom:
+            - configMapRef:
+                name: kestrel-sync-worker-config
+          resources:
+            requests:
+              cpu: 250m
+              memory: 256Mi
+            limits:
+              memory: 512Mi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: kestrel-sync-worker
+  namespace: kestrel
+spec:
+  selector:
+    app: kestrel-sync-worker
+  ports:
+    - name: http
+      port: 80
+      targetPort: 8090
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: kestrel-sync-worker-config
+  namespace: kestrel
+data:
+  QUEUE_URL: redis://cache.kestrel.internal:6379/1
+  SYNC_DEPTH_ALERT: "5000"
+'''
+
+[[commit]]
+branch = "main"
+date = "2026-09-01T14:00:00+02:00"
+author = "Malik Haddad <malik@kestrel.dev>"
+message = "More manifests: allowed IPs, banner, an ingress in progress"
+add = [
+  "k8s/allowed-ips.yaml",
+  "k8s/motd.yaml",
+  "k8s/tabs.yaml",
+  "k8s/broken-ingress.yaml",
+]
+
+[[commit]]
+branch = "main"
+date = "2026-09-22T22:50:00+02:00"
+author = "Malik Haddad <malik@kestrel.dev>"
+message = "Sync worker: more memory while the queue drains"
+[commit.write]
+"k8s/sync-worker.yaml" = '''
+---
+# yaml-language-server: $schema=../schemas/kestrel-worker.json
+# The sync worker: drains the op queue for the offline sync. Memory raised on 2026-09-22.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: kestrel-sync-worker
+  namespace: kestrel
+  labels:
+    app: kestrel-sync-worker
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: kestrel-sync-worker
+  template:
+    metadata:
+      labels:
+        app: kestrel-sync-worker
+    spec:
+      containers:
+        - name: worker
+          image: ghcr.io/kestrel-labs/kestrel-sync-worker:2.3.0
+          envFrom:
+            - configMapRef:
+                name: kestrel-sync-worker-config
+          resources:
+            requests:
+              cpu: 250m
+              memory: 256Mi
+            limits:
+              memory: 1Gi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: kestrel-sync-worker
+  namespace: kestrel
+spec:
+  selector:
+    app: kestrel-sync-worker
+  ports:
+    - name: http
+      port: 80
+      targetPort: 8090
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: kestrel-sync-worker-config
+  namespace: kestrel
+data:
+  QUEUE_URL: redis://cache.kestrel.internal:6379/1
+  SYNC_DEPTH_ALERT: "5000"
+'''
+
+[[commit]]
+branch = "main"
+date = "2026-09-23T10:00:00+02:00"
+author = "Malik Haddad <malik@kestrel.dev>"
+message = "Move the sync worker under workers/, away from the request path; memory back to 512Mi, the queue is drained"
+add = [
+  "k8s/workers/sync-worker.yaml",
+  "k8s/api.yaml",
+]
+rename = { "k8s/sync-worker.yaml" = "k8s/workers/sync-worker.yaml" }
+
+[[commit]]
+branch = "malik/hpa-tuning"
+from = "main"
+date = "2026-09-28T11:30:00+02:00"
+author = "Malik Haddad <malik@kestrel.dev>"
+message = "HPA: a higher floor and ceiling for the API"
+[commit.write]
+"k8s/api.yaml" = '''
+---
+# The Kestrel API: request path only. The sync worker is in workers/sync-worker.yaml.
+# Rendered and applied by CI; edit here, never with kubectl edit.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: kestrel-api
+  namespace: kestrel
+  labels:
+    app: kestrel-api
+    tier: backend
+    # this one was added by a kustomize patch and nobody removed the old line
+    app: api
+spec:
+  replicas: 4
+  revisionHistoryLimit: 5
+  selector:
+    matchLabels:
+      app: kestrel-api
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+  template:
+    metadata:
+      labels:
+        app: kestrel-api
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "9102"
+    spec:
+      terminationGracePeriodSeconds: 45
+      containers:
+        # the API itself
+        - name: api
+          image: ghcr.io/kestrel-labs/kestrel-api:2.3.0
+          args: ["--port=8080", "--workers=4"]
+          imagePullPolicy: IfNotPresent
+        # a sidecar: health: is expanded into probes by our kustomize plugin
+        - name: metrics
+          image: ghcr.io/kestrel-labs/metrics-sidecar:1.4.2
+          ports:
+            - containerPort: 9102
+              name: metrics
+          health:
+            path: /healthz
+            port: 9102
+            interval: 10s
+          resources:
+            requests: {cpu: 50m, memory: 64Mi}
+            limits: {cpu: 200m, memory: 128Mi}
+---
+# Service in front of the API pods
+apiVersion: v1
+kind: Service
+metadata:
+  name: kestrel-api
+  namespace: kestrel
+spec:
+  type: ClusterIP
+  selector:
+    app: kestrel-api
+  ports:
+    - name: http
+      port: 80
+      targetPort: 8080
+---
+# Runtime settings. SYNC_RETRY_BUDGET came with the 2026-09-22 incident (kestrel ADR 0004).
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: kestrel-api-config
+  namespace: kestrel
+data:
+  LOG_LEVEL: info
+  SYNC_RETRY_BUDGET: "5"
+  TILE_URL: https://tiles.kestrel.dev/{z}/{x}/{y}.pbf
+  FEATURE_ROUTE_SHARING: "true"
+---
+# Scale on CPU between 6 and 20 pods
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: kestrel-api
+  namespace: kestrel
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: kestrel-api
+  minReplicas: 6
+  maxReplicas: 20
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 70
+---
+# Never take more than one API pod down at a time during a node drain
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: kestrel-api
+  namespace: kestrel
+spec:
+  maxUnavailable: 1
+  selector:
+    matchLabels:
+      app: kestrel-api
+---
+# Public entry point
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: kestrel-api
+  namespace: kestrel
+  annotations:
+    nginx.ingress.kubernetes.io/proxy-body-size: 20m
+spec:
+  ingressClassName: nginx
+  tls:
+    - hosts: [api.kestrel.dev]
+      secretName: kestrel-api-tls
+  rules:
+    - host: api.kestrel.dev
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: kestrel-api
+                port:
+                  number: 80
+---
+# Only the ingress controller and the sync worker may talk to the API pods
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: kestrel-api
+  namespace: kestrel
+spec:
+  podSelector:
+    matchLabels:
+      app: kestrel-api
+  policyTypes: [Ingress]
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: ingress-nginx
+        - podSelector:
+            matchLabels:
+              app: kestrel-sync-worker
+      ports:
+        - protocol: TCP
+          port: 8080
+'''
+
+[[commit]]
+branch = "malik/hpa-tuning"
+date = "2026-09-30T09:00:00+02:00"
+author = "Malik Haddad <malik@kestrel.dev>"
+message = "HPA: scale down slowly, target 60 percent CPU"
+[commit.write]
+"k8s/api.yaml" = '''
+---
+# The Kestrel API: request path only. The sync worker is in workers/sync-worker.yaml.
+# Rendered and applied by CI; edit here, never with kubectl edit.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: kestrel-api
+  namespace: kestrel
+  labels:
+    app: kestrel-api
+    tier: backend
+    # this one was added by a kustomize patch and nobody removed the old line
+    app: api
+spec:
+  replicas: 4
+  revisionHistoryLimit: 5
+  selector:
+    matchLabels:
+      app: kestrel-api
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+  template:
+    metadata:
+      labels:
+        app: kestrel-api
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "9102"
+    spec:
+      terminationGracePeriodSeconds: 45
+      containers:
+        # the API itself
+        - name: api
+          image: ghcr.io/kestrel-labs/kestrel-api:2.3.0
+          args: ["--port=8080", "--workers=4"]
+          imagePullPolicy: IfNotPresent
+        # a sidecar: health: is expanded into probes by our kustomize plugin
+        - name: metrics
+          image: ghcr.io/kestrel-labs/metrics-sidecar:1.4.2
+          ports:
+            - containerPort: 9102
+              name: metrics
+          health:
+            path: /healthz
+            port: 9102
+            interval: 10s
+          resources:
+            requests: {cpu: 50m, memory: 64Mi}
+            limits: {cpu: 200m, memory: 128Mi}
+---
+# Service in front of the API pods
+apiVersion: v1
+kind: Service
+metadata:
+  name: kestrel-api
+  namespace: kestrel
+spec:
+  type: ClusterIP
+  selector:
+    app: kestrel-api
+  ports:
+    - name: http
+      port: 80
+      targetPort: 8080
+---
+# Runtime settings. SYNC_RETRY_BUDGET came with the 2026-09-22 incident (kestrel ADR 0004).
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: kestrel-api-config
+  namespace: kestrel
+data:
+  LOG_LEVEL: info
+  SYNC_RETRY_BUDGET: "5"
+  TILE_URL: https://tiles.kestrel.dev/{z}/{x}/{y}.pbf
+  FEATURE_ROUTE_SHARING: "true"
+---
+# Scale on CPU between 6 and 20 pods
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: kestrel-api
+  namespace: kestrel
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: kestrel-api
+  minReplicas: 6
+  maxReplicas: 20
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 60
+  behavior:
+    scaleDown:
+      stabilizationWindowSeconds: 600
+      policies:
+        - type: Pods
+          value: 1
+          periodSeconds: 120
+---
+# Never take more than one API pod down at a time during a node drain
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: kestrel-api
+  namespace: kestrel
+spec:
+  maxUnavailable: 1
+  selector:
+    matchLabels:
+      app: kestrel-api
+---
+# Public entry point
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: kestrel-api
+  namespace: kestrel
+  annotations:
+    nginx.ingress.kubernetes.io/proxy-body-size: 20m
+spec:
+  ingressClassName: nginx
+  tls:
+    - hosts: [api.kestrel.dev]
+      secretName: kestrel-api-tls
+  rules:
+    - host: api.kestrel.dev
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: kestrel-api
+                port:
+                  number: 80
+---
+# Only the ingress controller and the sync worker may talk to the API pods
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: kestrel-api
+  namespace: kestrel
+spec:
+  podSelector:
+    matchLabels:
+      app: kestrel-api
+  policyTypes: [Ingress]
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: ingress-nginx
+        - podSelector:
+            matchLabels:
+              app: kestrel-sync-worker
+      ports:
+        - protocol: TCP
+          port: 8080
+'''
+
+[[commit]]
+branch = "main"
+date = "2026-10-03T09:40:00+02:00"
+author = "Malik Haddad <malik@kestrel.dev>"
+message = "Key rotation script; shell and editor helpers for zsh, fish and vim"
+add = [
+  "dotfiles/fish/config.fish",
+  "dotfiles/vim/ftplugin/markdown.vim",
+  "dotfiles/zsh/kestrel.zsh",
+  "scripts/rotate-keys.bash",
+]

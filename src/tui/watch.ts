@@ -1,0 +1,412 @@
+// Keeping up with the disk (5.1–5.4): the graph indexed in the background, the watcher's batches applied, what it
+// can't see polled, the background auto-index (20.9), and a note changed on disk reloaded.
+
+import { existsSync, statSync } from "node:fs";
+import { readText } from "../core/fsutil.ts";
+import { offsetOf } from "./editing.ts";
+import { planRelink } from "../core/rename.ts";
+import { activityFile, AutoIndex, autoIndexFile } from "../core/autoindex.ts";
+import { loadConfig } from "../core/config.ts";
+import { describeCap } from "../core/home.ts";
+import { HOME_LIMITS, type WalkCap } from "../core/walk.ts";
+import { homeFolder, isListed } from "../core/vault.ts";
+import { applyToGraph } from "../core/vault-feed.ts";
+import { VaultWatcher, type WatchBatch } from "../core/watch.ts";
+import { newParseCache } from "../core/parse.ts";
+import { parseInBackground } from "../core/parse-pool.ts";
+import { BACKGROUND_PARSE, type NoteBuffer } from "./buffer.ts";
+import type { App } from "./app.ts";
+
+/** The watcher, polling, indexing in the background, and reloads. */
+export class Watch {
+  constructor(readonly app: App) {}
+
+  /** A batch from the watcher: applied now — or, while git writes, held with the rest it writes. */
+  receiveBatch(b: WatchBatch): void {
+    this.app.feed.receive(b);
+  }
+
+  private stopEmbedFeed: (() => void) | null = null;
+  private stopRetargetFeed: (() => void) | null = null;
+
+  /** A new graph (the vault opened, switched, walked again): the search index and embeds follow it. */
+  followGraph(): void {
+    this.app.search.start();
+    // A note coming or going sent links by name elsewhere: said, never silent.
+    this.stopRetargetFeed?.();
+    this.stopRetargetFeed = this.app.graph.onRetarget((rs) => {
+      const first = rs[0]!;
+      this.app.message(
+        "warn",
+        `${rs.length === 1 ? `[[${first.target}]] in ${first.from}` : `${rs.length} links by name`} reach${rs.length === 1 ? "es" : ""} ${first.now} now, not ${first.was}`,
+      );
+    });
+    // A note drawn inside another (1.11) changed: whatever shows it lays out again.
+    this.stopEmbedFeed?.();
+    const g = this.app.graph;
+    this.stopEmbedFeed = g.onChange((c) => {
+      const paths = c.kind === "moved" ? [c.from, c.to] : [c.path];
+      const abs = new Set(paths.map((p) => g.abs(p)));
+      let again = false;
+      for (const b of this.app.buffers.values()) {
+        if (![...b.embedded].some((p) => abs.has(p))) continue;
+        b.invalidateLayouts();
+        again = true;
+      }
+      if (again) {
+        for (const v of this.app.allViews()) v.layoutKey = "";
+        this.app.host.requestRender();
+      }
+    });
+  }
+
+  // -------------------------------------------------------------------------------------------
+  // Background indexing, watching (5.1–5.4), polling outside files and the config.
+
+  indexInBackground(): void {
+    if (this.app.indexing) return; // a pass is already running; it picks up the new stubs
+    const total = this.app.graph.pendingCount;
+    if (!total) return;
+    this.app.indexing = total;
+    const t0 = this.app.now();
+    // A big note parses on other threads first (15.1), the main thread only putting its chunks
+    // together: parsed here whole, one would hold every key for seconds. Where threads can't
+    // start, it's parsed here after all.
+    const elsewhere = new Set<string>();
+    const failed = new Set<string>();
+    const tick = () => {
+      if (this.app.quitting) return;
+      for (const f of this.app.graph.unparsedOver(BACKGROUND_PARSE)) {
+        if (elsewhere.has(f.rel) || failed.has(f.rel)) continue;
+        let text: string;
+        try {
+          text = readText(f.abs).text;
+        } catch {
+          continue; // unreadable: the parse here says so
+        }
+        const chunks = newParseCache();
+        elsewhere.add(f.rel);
+        void parseInBackground(text, chunks)
+          .catch(() => false)
+          .then((ok) => {
+            elsewhere.delete(f.rel);
+            if (!ok) failed.add(f.rel);
+            else if (!this.app.quitting) this.app.graph.entry(f.rel, chunks);
+          });
+      }
+      const left = this.app.graph.parseSome(12, elsewhere);
+      this.app.indexing = left;
+      if (left) {
+        // Only notes parsing elsewhere left: look again in a while, not every millisecond.
+        setTimeout(tick, left > elsewhere.size ? 1 : 50);
+        if (total > 200) this.app.host.requestRender();
+        return;
+      }
+      this.app.explorer.invalidateTree();
+      // A link that reaches a note by its alias resolves only now that every note is parsed (17.7).
+      for (const b of this.app.buffers.values()) b.invalidateLayouts();
+      this.app.relayoutAll();
+      if (total > 200)
+        this.app.message("info", `indexed ${total} notes in ${((this.app.now() - t0) / 1000).toFixed(1)} s`);
+      this.app.host.requestRender();
+    };
+    setTimeout(tick, 1);
+  }
+
+  /** Once the background pass over this vault's notes is done, however long it takes (tests). */
+  async whenIndexed(): Promise<void> {
+    while (this.app.indexing) await new Promise((r) => setTimeout(r, 5));
+  }
+
+  knownFromGraph(): Map<string, number> {
+    return new Map([...this.app.graph.notes.values()].map((n) => [n.rel, n.mtimeMs] as [string, number]));
+  }
+
+  sizesFromGraph(): Map<string, number> {
+    return new Map([...this.app.graph.notes.values()].map((n) => [n.rel, n.size] as [string, number]));
+  }
+
+  startWatcher(): void {
+    this.app.watcher = new VaultWatcher({
+      root: this.app.loc.root,
+      filter: this.app.graph.filter,
+      dirs: isListed(this.app.loc) ? [""] : this.app.graph.dirs,
+      debounceMs: this.app.config.watch.debounce_ms,
+      pollMs: this.app.config.watch.poll_ms,
+      known: this.knownFromGraph(),
+      sizes: this.sizesFromGraph(),
+      attachments: this.app.graph.filePaths(),
+      walkedAt: () => this.app.graph.walkedAt,
+      listed: isListed(this.app.loc),
+      // Home's cap held by what comes while it's open too (VV-D2).
+      ...(this.app.loc.mode === "home" ? { maxDirs: HOME_LIMITS.folders } : {}),
+      onBatch: (b) => this.receiveBatch(b),
+      onDegraded: (reason) => {
+        this.app.message("error", `watching degraded: ${reason}`);
+        this.app.host.requestRender();
+      },
+      onWarn: (text) => {
+        this.app.message("warn", text);
+        this.app.host.requestRender();
+      },
+      pollTargets: () => [...this.app.buffers.values()].filter((b) => b.rel).map((b) => b.rel!),
+    });
+  }
+  autoIndex: AutoIndex | null = null;
+  /** Home's own walk and index (VV-D2), while home is the vault open and the background index is off. */
+  homeIndex: AutoIndex | null = null;
+
+  /**
+   * Whether the background auto-index may work now (20.9): it's on, and nobody is working (`nobodyWorking`).
+   */
+  autoIndexDue(now = this.app.now()): boolean {
+    return this.app.config.index.background && this.nobodyWorking(now);
+  }
+
+  /**
+   * Whether nobody is working (20.9): this vault's own index is done, and no key or click here, no CLI command from an
+   * agent, for `idle_seconds`.
+   */
+  nobodyWorking(now = this.app.now()): boolean {
+    if (this.app.indexing) return false;
+    const quiet = this.app.config.index.idle_seconds * 1000;
+    if (now - this.app.lastInputAt < quiet) return false;
+    try {
+      if (now - statSync(activityFile()).mtimeMs < quiet) return false;
+    } catch {}
+    return true;
+  }
+
+  /**
+   * What works while nobody is: the background auto-index of home (20.9) — home's walk and index first (VV-D2), then
+   * the vaults in it — or, that off and home the vault open, home's own walk and index alone. Null: neither.
+   */
+  indexJob(): AutoIndex | null {
+    const onHome = (capped: WalkCap | null) => this.homeIndexed(capped);
+    // Home's settings, as this TUI has them: its own in home, your config's (`--config` too) in a vault.
+    const config = () =>
+      this.app.loc.mode === "home" ? this.app.config : loadConfig({ configFile: this.app.configFile }).config;
+    if (this.app.config.index.background)
+      return (this.autoIndex ??= new AutoIndex(homeFolder(), autoIndexFile(), () => Date.now(), { onHome, config }));
+    if (this.app.loc.mode !== "home") return null;
+    if (this.homeIndex?.root !== this.app.loc.root)
+      this.homeIndex = new AutoIndex(this.app.loc.root, null, () => Date.now(), { vaults: false, onHome, config });
+    return this.homeIndex;
+  }
+
+  /** Home's walk made again while nobody is working (VV-D2): never made yet, or a folder came that only a walk finds. */
+  walkHomeAgain(): void {
+    if (this.app.loc.mode === "home") this.indexJob()?.homeAgain();
+  }
+
+  /** The background auto-index (20.9, VV-D2): a slice of it every quarter second while nobody is working. */
+  startAutoIndex(): void {
+    this.app.lastInputAt = this.app.now();
+    if (this.app.graph.home?.walked === null) this.walkHomeAgain();
+    const t = setInterval(() => {
+      if (this.app.quitting) return clearInterval(t);
+      if (!this.nobodyWorking()) return;
+      const job = this.indexJob();
+      if (!job || job.idle) return;
+      job.step(15);
+    }, 250);
+    (t as { unref?: () => void }).unref?.();
+  }
+
+  /**
+   * Home's walk made and its index written (VV-D2): while home is the vault open, its graph built again from them —
+   * what came, what went — and its cap said when it's reached: the walk's, or the one the folders asked for by name
+   * bring it to, those said to be whole.
+   */
+  private homeIndexed(capped: WalkCap | null): void {
+    if (this.app.loc.mode !== "home" || this.app.quitting) return;
+    const keep = this.rememberSelections();
+    this.app.graph.build(true, "lazy");
+    keep();
+    this.app.watcher?.sync(this.app.graph.dirs, this.knownFromGraph(), this.sizesFromGraph());
+    this.indexInBackground();
+    // The notes the walk found, searched too: the search index caught up with them.
+    this.app.search.start();
+    this.app.explorer.invalidateTree();
+    for (const b of this.app.buffers.values()) b.invalidateLayouts();
+    this.app.relayoutAll();
+    const home = this.app.graph.home;
+    const cap = home?.capped ?? capped;
+    if (cap) this.app.message("warn", describeCap(cap, home?.asked));
+    this.app.host.requestRender();
+  }
+
+  /** Poll what the vault watcher cannot see: files open from outside the vault (the scratch), or from
+   *  what home's index leaves out, and the config files, which reload automatically when saved. */
+  startPolling(): void {
+    const t = setInterval(
+      () => {
+        if (this.app.quitting) return clearInterval(t);
+        let changed = false;
+        for (const buf of this.app.buffers.values()) {
+          // Not the graph's, so no watcher sees it: outside the vault (the scratch), or a file of it the walk leaves
+          // out — in home, one in Downloads or a hidden folder (VV-D2).
+          if (buf.rel !== null) continue;
+          if (buf.changedOnDisk()) {
+            this.reloadBuffer(buf);
+            changed = true;
+          }
+        }
+        if (this.app.settings.changedOnDisk()) {
+          this.app.settings.reload("file changed");
+          changed = true;
+        }
+        // HEAD moved without a file changing with it (5.9): a switch between branches alike.
+        if (this.app.git.checkHead()) changed = true;
+        if (changed) this.app.host.requestRender();
+      },
+      Math.min(this.app.config.watch.poll_ms, 1000),
+    );
+    (t as { unref?: () => void }).unref?.();
+  }
+
+  applyChanges(batch: WatchBatch): void {
+    // The panes' selections are row indexes: an agent's new or deleted note, or a heading added
+    // above, would move them to another item. Kept by what they select, not where.
+    const keep = this.rememberSelections();
+    // Files moved elsewhere (an editor, a file manager, git), seen by their content as they went and came.
+    const moves: [string, string][] = [];
+    const stop = this.app.graph.onChange((c) => {
+      if (c.kind === "moved") moves.push([c.from, c.to]);
+    });
+    try {
+      this.applyChangesNow(batch);
+    } finally {
+      stop();
+      keep();
+    }
+    if (moves.length) this.offerRelink(moves);
+  }
+
+  /**
+   * A batch of moves made elsewhere broke links (21.11): the relink offered once for it — its preview,
+   * nothing written unasked. Typing, or something else open: said instead, with where to find it.
+   */
+  private offerRelink(moves: [string, string][]): void {
+    const plan = planRelink(this.app.graph, undefined, { pointers: false });
+    if (!plan.files.length) return;
+    const what = moves.length === 1 ? `${moves[0]![0]} moved to ${moves[0]![1]}` : `${moves.length} files moved`;
+    const links = plan.files.reduce((n, f) => n + f.edits.length, 0);
+    if (this.app.overlay || this.app.view?.insert)
+      return this.app.message(
+        "warn",
+        `${what}: ${links} line${links === 1 ? "" : "s"} of links broke — space v p shows them, space l r relinks a note's`,
+      );
+    this.app.message(
+      "info",
+      `${what}: ${links} line${links === 1 ? "" : "s"} of links broke — the relink, to look over`,
+    );
+    this.app.renaming.preview(() => plan);
+  }
+
+  /** What the explorer and the outline have selected; the function puts them back on it. */
+  private rememberSelections(): () => void {
+    const explorer =
+      this.app.leftView === "explorer" ? this.app.explorer.rows()[this.app.sidebar.selected]?.path : undefined;
+    const rows = this.app.panels.outlineShown && this.app.rightView === "outline" ? this.app.outlineView.rows() : [];
+    const heading = rows[this.app.outline.selected];
+    const nth = heading ? rows.slice(0, this.app.outline.selected).filter((r) => r.text === heading.text).length : 0;
+    return () => {
+      if (explorer !== undefined) {
+        const i = this.app.explorer.rows().findIndex((r) => r.path === explorer);
+        if (i >= 0) this.app.sidebar.selected = i;
+      }
+      if (heading) {
+        const now = this.app.outlineView.rows();
+        const same = now.map((r, i) => ({ r, i })).filter((x) => x.r.text === heading.text);
+        const hit = same[Math.min(nth, same.length - 1)];
+        if (hit) this.app.outline.selected = hit.i;
+      }
+    };
+  }
+
+  private applyChangesNow(batch: WatchBatch): void {
+    const { structural: setChanged, warnings } = applyToGraph(
+      this.app.graph,
+      batch,
+      this.app.config.walk.max_file_size,
+    );
+    for (const w of warnings) this.app.message("warn", w);
+    if (batch.rescan) {
+      this.indexInBackground();
+      this.app.watcher?.sync(
+        isListed(this.app.loc) ? [""] : this.app.graph.dirs,
+        this.knownFromGraph(),
+        this.sizesFromGraph(),
+      );
+      // Home's graph is built from its walk kept (VV-D2): a folder that came is walked with the rest, while nobody works.
+      this.walkHomeAgain();
+      // The walk itself changed: any open note may have changed, appeared or gone — never read again through a link
+      // not followed now (VV-D6: one forgotten).
+      for (const buf of this.app.buffers.values())
+        if (buf.changedOnDisk() && (buf.elsewhere || !this.app.following.blocked(buf.abs))) this.reloadBuffer(buf);
+    }
+    for (const c of batch.changes) {
+      // An open note reloads — a data or text file too, like a note (16.4) — and a big one still
+      // does when it's out of the index. One gone again before it was looked at comes as deleted.
+      const buf = this.app.buffers.get(c.rel);
+      if (!buf || (c.isNote && c.kind !== "deleted" && !existsSync(buf.abs))) continue;
+      this.reloadBuffer(buf, c.kind === "deleted");
+    }
+    if (setChanged) {
+      // New or removed notes change link statuses everywhere and the explorer.
+      this.app.explorer.invalidateTree();
+      for (const b of this.app.buffers.values()) b.invalidateLayouts();
+      this.app.relayoutAll();
+    } else if (batch.changes.length) {
+      // Only changed notes: their own buffers reloaded above; others re-lay out only when they
+      // link to one (its headings, and so a [[note#heading]]'s status, may have changed).
+      const changed = new Set(batch.changes.map((c) => c.rel));
+      for (const b of this.app.buffers.values()) {
+        if (!b.rel || changed.has(b.rel)) continue;
+        if (this.app.graph.linksOf(b.rel).some((l) => l.path !== null && l.path !== undefined && changed.has(l.path)))
+          b.invalidateLayouts();
+      }
+    }
+  }
+
+  reloadBuffer(buf: NoteBuffer, deleted = false): void {
+    // Back after being deleted (recreated): not deleted any more, whatever happens next.
+    if (!deleted && buf.deleted && existsSync(buf.abs)) buf.deleted = false;
+    if (buf.dirty && !deleted) {
+      // Unsaved changes here and a new version there: the conflict prompt decides (5.5).
+      if (!buf.conflictKept) this.app.saving.conflictPrompt(buf);
+      return;
+    }
+    if (deleted || !buf.load()) {
+      buf.deleted = true;
+      buf.changedAt = this.app.now();
+      this.app.message("warn", `${buf.key} was deleted on disk — still showing the last version`);
+      return;
+    }
+    buf.changedAt = this.app.now();
+    for (const v of this.app.allViews()) {
+      if (v.buf !== buf) continue;
+      // Keep the anchors (3.5): the heading above the viewport and the cursor's source line.
+      v.layoutKey = "";
+      v.sel = null;
+      v.visual = null;
+    }
+    // A selection the replace row keeps to was offsets into the old text: they mean nothing now.
+    const o = this.app.overlay;
+    if (o?.kind === "prompt" && o.replace?.range && o.view?.buf === buf) {
+      // Closed rather than widened: replace-all must never reach text you didn't select.
+      o.replace = undefined;
+      o.change?.(o.text);
+      this.app.message(
+        "warn",
+        `${this.app.displayName(buf)} changed on disk — the replace row closed (its selection is gone); select again`,
+      );
+    }
+    // The reload was an undo step of its own: typing going on in it continues as one step again.
+    const typing = this.app.allViews().find((v) => v.buf === buf && v.insert);
+    if (typing) buf.beginStep(offsetOf(this.app, typing));
+    this.app.message("info", `↻ ${this.app.displayName(buf)} changed on disk — reloaded`);
+    setTimeout(() => this.app.host.requestRender(), 3100).unref?.();
+  }
+}

@@ -1,0 +1,11 @@
+partner_id,partner,route_name,distance_km,imported_at
+p-001,Velo Verde,Canal ring,42.5,2026-09-02
+p-002,Velo Verde,Dune crossing,61.0,2026-09-02
+p-003,Pedal & Co,"Lakeside, east shore",38.2,2026-09-03
+p-004,Pedal & Co,Hill loop,27.9,2026-09-03
+p-005,Ride Nord,Harbour tour,19.4,2026-09-04
+p-006,Ride Nord,Old town,12.0,2026-09-04
+p-008,Velo Verde,Forest road,54.3,2026-09-05
+p-007,Ride Nord,"The ""long"" way home,88.1,2026-09-05
+p-009,Pedal & Co,Night ride,33.0,2026-09-06
+p-010,Ride Nord,Ferry hop,25.5,2026-09-06

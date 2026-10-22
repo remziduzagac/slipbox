@@ -1,0 +1,6 @@
+# A vault nested two deep: in outreach, itself in the observatory's. Its name is the one
+# `slipbox init` suggests for a vault made inside `outreach`.
+
+[vault]
+id = "e05b6d2a9c4f7318"
+name = "outreach-school-visits"

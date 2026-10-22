@@ -1,0 +1,27 @@
+{
+  "name": "@halden-ridge/nightjar",
+  "version": "2.4.0",
+  "private": true,
+  "description": "The frame archive's HTTP service",
+  "homepage": "https://halden-ridge.invalid/pipeline/nightjar",
+  "type": "module",
+  "main": "dist/server.js",
+  "scripts": {
+    "build": "tsc -p .",
+    "start": "node dist/server.js",
+    "test": "node --test",
+    "openapi:check": "redocly lint openapi.json"
+  },
+  "dependencies": {
+    "fastify": "^5.2.0",
+    "@fastify/static": "^8.0.0",
+    "better-sqlite3": "^11.7.0",
+    "sharp": "^0.33.5"
+  },
+  "devDependencies": {
+    "typescript": "^5.7.0",
+    "@types/node": "^22.10.0"
+  },
+  "engines": { "node": ">=22" },
+  "files": ["dist", "openapi.json"]
+}

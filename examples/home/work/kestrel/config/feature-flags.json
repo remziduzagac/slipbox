@@ -1,0 +1,69 @@
+{
+  "route_sharing": {
+    "enabled": true,
+    "since": "2026-09-30",
+    "rollout": 1.0,
+    "owner": "tomas",
+    "description": "Share a route with a signed link."
+  },
+  "offline_sync": {
+    "enabled": true,
+    "since": "2026-09-30",
+    "rollout": 1.0,
+    "owner": "aiko",
+    "description": "Edits are written to an op log first."
+  },
+  "retry_budget": {
+    "enabled": false,
+    "since": null,
+    "rollout": 0,
+    "owner": "aiko",
+    "description": "Cap retries per op (ADR 4)."
+  },
+  "dark_map": {
+    "enabled": true,
+    "since": "2026-07-28",
+    "rollout": 0.5,
+    "owner": null
+  },
+  "elevation_profile_v2": {
+    "enabled": false,
+    "since": null,
+    "rollout": 0.25,
+    "owner": "tomas",
+    "description": "Rollout of the new elevation profile: the redesigned graph, grade colouring and a climb summary. Tomás owns it. It stays at 25% of web users until the Safari crash rate is below 0.1% and the tile cache hit rate holds above 90%, then goes to everyone the week after 2.3 ships. We watch the share rate."
+  },
+  "debug_overlay": {
+    "enabled": false,
+    "description": "Dev only. Copied from a crash report: \u001b[31mERROR\u001b[0m route ‮name‬ reversed; do not enable in prod."
+  },
+  "enable_experimental_gradient_aware_routing_for_alpine_regions_beta": true,
+  "thresholds": {
+    "max_age_days": 30,
+    "ratio": 0.75,
+    "tiny": 1e-09,
+    "huge": 1.5e+300,
+    "negative": -4,
+    "zero": 0
+  },
+  "allowed_regions": [
+    "nl",
+    "dk",
+    "at",
+    "ch"
+  ],
+  "ramp": [
+    {
+      "day": "2026-09-28",
+      "percent": 10
+    },
+    {
+      "day": "2026-09-30",
+      "percent": 100
+    }
+  ],
+  "labels": [
+    "beta",
+    "web"
+  ]
+}

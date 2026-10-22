@@ -1,0 +1,12 @@
+# Halden Ridge Observatory demo vault. Settings here override ~/.config/slipbox/config.toml.
+# See docs/manual/configuration.md for every key.
+
+[walk]
+# Extra gitignore-syntax patterns to leave out of the vault, on top of .gitignore.
+exclude = ["scratch/trash/"]
+
+# The folder's identity (docs/manual/configuration.md): the name pointers name it by
+# (slipbox://halden/…), and the id that tells its copies from a different folder of that name.
+[vault]
+id = "4a1d3e5c7b9f0261"
+name = "halden"

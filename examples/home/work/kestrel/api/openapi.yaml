@@ -1,0 +1,142 @@
+# yaml-language-server: $schema=https://spec.openapis.org/oas/3.1/schema/2022-10-07
+openapi: 3.1.0
+info:
+  title: Kestrel API
+  version: 2.3.0
+  description: Routes, shares and the offline sync queue for the Kestrel cycling app.
+servers:
+  - url: https://api.kestrel.example/v2
+    description: production
+  - url: http://localhost:8080
+    description: local
+paths:
+  /routes:
+    get:
+      operationId: listRoutes
+      summary: List the caller's routes
+      parameters:
+        - name: limit
+          in: query
+          schema: { type: integer, default: 50, maximum: 200 }
+      responses:
+        "200":
+          description: A page of routes
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Route'
+    post:
+      operationId: createRoute
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: './schemas/route.json'
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Route'
+        "422":
+          $ref: '#/components/responses/ValidationError'
+  /routes/{id}/shares:
+    post:
+      operationId: shareRoute
+      x-sync: false
+      parameters:
+        - $ref: '#/components/parameters/RouteId'
+      responses:
+        "200":
+          description: A share link
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Share'
+  /shares/{id}:
+    get:
+      operationId: getShare
+      x-sync: false
+      parameters:
+        - $ref: '#/components/parameters/RouteId'
+      responses:
+        "200":
+          description: A share link
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Share'
+    delete:
+      operationId: revokeShare
+      x-sync: false
+      parameters:
+        - $ref: '#/components/parameters/RouteId'
+      responses:
+        "204":
+          description: The link no longer works
+  /sync:
+    post:
+      operationId: applyChanges
+      x-sync: true
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ChangeBatch'
+      responses:
+        "200":
+          description: Highest accepted sequence per device
+        "409":
+          description: Duplicate sequence number
+components:
+  parameters:
+    RouteId:
+      name: id
+      in: path
+      required: true
+      schema:
+        type: string
+  responses:
+    ValidationError:
+      description: The body did not validate
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              errors:
+                type: array
+                items: { type: string }
+  schemas:
+    Route:
+      type: object
+      required: [id, name, km]
+      properties:
+        id: { type: string }
+        name: { type: string }
+        km: { type: number }
+        tags:
+          type: array
+          items: { type: string }
+    Share:
+      type: object
+      properties:
+        token: { type: string }
+        route:
+          $ref: '#/components/schemas/Route'
+        expires_at: { type: integer }
+    ChangeBatch:
+      type: object
+      properties:
+        changes:
+          type: array
+          items:
+            type: object
+            properties:
+              seq: { type: integer }
+              device: { type: string }
+              kind: { type: string, enum: [create, update, delete] }

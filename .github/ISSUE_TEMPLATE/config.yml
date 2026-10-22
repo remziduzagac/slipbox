@@ -1,0 +1,11 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Questions and ideas
+    url: https://github.com/remziduzagac/slipbox/discussions
+    about: How to do something, an idea for slipbox, or anything that isn't a bug.
+  - name: Documentation
+    url: https://github.com/remziduzagac/slipbox/blob/main/docs/README.md
+    about: Installing, a first session, and the manual's every key, setting and command, with troubleshooting.
+  - name: Report a vulnerability
+    url: https://github.com/remziduzagac/slipbox/security/advisories/new
+    about: Privately, as the security policy says. Never in a public issue.

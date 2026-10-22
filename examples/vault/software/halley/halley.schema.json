@@ -1,0 +1,18 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "halley settings",
+  "type": "object",
+  "properties": {
+    "docs": { "type": "string", "description": "the note that explains the settings" },
+    "reduce": { "$ref": "#/$defs/reduce" }
+  },
+  "$defs": {
+    "reduce": {
+      "type": "object",
+      "properties": {
+        "workers": { "type": "integer", "minimum": 1, "maximum": 8 },
+        "bias_frames": { "type": "integer" }
+      }
+    }
+  }
+}

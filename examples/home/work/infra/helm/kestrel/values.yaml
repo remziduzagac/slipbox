@@ -1,0 +1,135 @@
+# Values for the kestrel chart. Defaults are for a preview environment; production overrides
+# live in k8s/ and are applied by CI, not by `helm install`.
+
+# Shared defaults, reused below through anchors and merge keys
+defaults: &defaults
+  image:
+    registry: ghcr.io
+    repository: kestrel-labs
+    pullPolicy: IfNotPresent
+  resources:
+    requests: {cpu: 100m, memory: 128Mi}
+    limits: {memory: 256Mi}
+  nodeSelector:
+    kestrel.dev/pool: general
+
+global:
+  environment: preview
+  domain: preview.kestrel.dev
+  # Where the chart's own cloud settings are:
+  # one level per concern, five deep at the bottom
+  cloud:
+    provider: aws
+    region: eu-west-1
+    network:
+      vpc:
+        subnets:
+          private:
+            cidr: 10.30.0.0/20
+            zones: [a, b, c]
+          public:
+            cidr: 10.30.16.0/22
+            zones: [a, b]
+
+api:
+  <<: *defaults
+  name: kestrel-api
+  replicaCount: 2
+  image:
+    registry: ghcr.io
+    repository: kestrel-labs/kestrel-api
+    tag: "2.3.0"
+  env:
+    LOG_LEVEL: info
+    SYNC_RETRY_BUDGET: "5"
+    DATABASE_URL: postgres://kestrel@postgresql:5432/kestrel
+  # The one place a name appears twice: the second one wins, nobody noticed for a month
+  labels:
+    name: api
+    tier: backend
+    name: kestrel-api
+  podAnnotations: &annotations
+    prometheus.io/scrape: "true"
+    prometheus.io/port: "9102"
+
+syncWorker:
+  <<: *defaults
+  name: kestrel-sync-worker
+  replicaCount: 1
+  podAnnotations: *annotations
+  queue:
+    url: redis://redis-master:6379/1
+    retryBudget: 5
+    backoff: {base: 0.5, max: 60}
+
+tiles:
+  <<: *defaults
+  name: kestrel-tiles
+  cacheGb: 40
+  origins:
+    - name: tiles-eu
+      url: https://tiles-eu.kestrel.dev
+      weight: 3
+    - name: tiles-us
+      url: https://tiles-us.kestrel.dev
+      weight: 1
+    - name: tiles-lab
+      url: https://tiles.lab.kestrel.internal
+      weight: 0
+
+postgresql:
+  enabled: true
+  auth:
+    username: kestrel
+    database: kestrel
+    existingSecret: kestrel-postgresql
+
+redis:
+  enabled: true
+  architecture: standalone
+
+ingress:
+  managed: false
+  # cert-manager issuer for preview hosts
+  issuer: letsencrypt-staging
+
+  # The hosts are given as a list, and every host gets its own
+  # certificate from cert-manager unless tls.shared is true.
+  hosts:
+    - host: api.preview.kestrel.dev
+      path: /
+    - host: tiles.preview.kestrel.dev
+      path: /
+  tls:
+    shared: false
+
+# Keys that are not plain words, as the chart's lookup tables have them
+statusMessages:
+  200: ok
+  404: "route not found"
+  'a: b': c
+  ? [x, y]
+  : z
+  yes: 1
+  route not found because the shared link expired before it was opened: expired
+
+# Text blocks the templates paste in verbatim
+notes:
+  # literal: line breaks kept
+  motd: |
+    Kestrel preview environment.
+    Data is wiped every night at 03:00.
+  # folded: lines joined into one
+  description: >
+    A preview environment holds a whole Kestrel stack for one pull request:
+    the API, the sync worker and the tile server, with seeded data.
+  # literal, last newline stripped
+  footer: |-
+    Questions: #infra
+  # literal, trailing newlines kept
+  banner: |+
+    === preview ===
+
+alerts:
+  alertText: "The sync queue has not moved for 10 minutes on any worker; a worker is likely stuck on a poisoned item"
+  runbook: "https://github.com/kestrel-labs/kestrel/blob/main/docs/runbooks/sync-queue.md#fixes"

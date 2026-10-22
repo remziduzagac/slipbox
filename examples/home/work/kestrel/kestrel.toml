@@ -1,0 +1,109 @@
+# Kestrel's main configuration.
+# Environment overrides live in config/app.toml; shared defaults in config/base.yaml.
+# Everything here is safe to commit. Secrets come from the environment (see .env.example).
+
+name = "kestrel"
+version = "2.3.0"
+max_route_points_before_simplification_kicks_in = 5000   # beyond this a route is simplified
+include = "config/base.yaml"       # reference key: the shared defaults
+schema = "config/schema.json"      # and the shape they must have
+
+# The window the app uses for its first map view.
+# Lat/lon of the centre of Amsterdam; zoom 11 shows the whole ring.
+#
+# Change it per region in config/regions.yaml, not here.
+# (Note for support: customers asking about "zeitgeber" mean the sync heartbeat below.)
+[map]
+center = [52.3676, 4.9041]
+zoom = 11
+style = "light"                   # light | dark | satellite
+
+[server]
+host = "0.0.0.0"
+port = 8080
+workers = 4                       # per container
+
+[server.tls]
+enabled = true
+cert = "/etc/ssl/kestrel/fullchain.pem"
+key = "/etc/ssl/kestrel/privkey.pem"
+
+[server.tls.ciphers]
+min_version = "1.2"
+allowed = [
+    "TLS_AES_256_GCM_SHA384",     # first choice
+    "TLS_CHACHA20_POLY1305_SHA256",
+    # "TLS_AES_128_GCM_SHA256",   # disabled: we do not need it
+    "ECDHE-RSA-AES256-GCM-SHA384",
+    "ECDHE-ECDSA-AES256-GCM-SHA384",
+    # the next four are for clients older than 2020 (the 2.0 Android app, mostly)
+    "ECDHE-RSA-AES128-GCM-SHA256",
+    "ECDHE-ECDSA-AES128-GCM-SHA256",
+    "ECDHE-RSA-CHACHA20-POLY1305",
+    "ECDHE-ECDSA-CHACHA20-POLY1305",
+]
+
+# The 2.0 Android app speaks TLS 1.2 with a short list of ciphers. We kept it working until the end of Q4.
+[server.tls.ciphers.legacy.clients.android.v1]
+note = "2.0 app, before the 2.2 update; remove once usage is under 1%"
+enabled = false
+
+[sync]
+heartbeat_seconds = 15            # the "zeitgeber"
+retry_budget = 5
+endpoints = [
+    "https://api.kestrel.dev/v1/sync",
+    "https://api-eu.kestrel.dev/v1/sync",
+]
+matrix = [[1, 2], [3, 4], ["a", "b"],]
+limits = { max_batch = 50, max_bytes = 1_048_576,
+           timeout_seconds = 30 }
+
+[sync.window]
+# How much history one sync request may cover.
+# Both fields are minutes: the window is size_minutes long and slides by slide_minutes
+# (zero means unlimited).
+size_minutes = 10
+slide_minutes = 2
+
+[i18n]
+# Which language a locale falls back to when the app has no strings for it.
+"pt-BR" = "pt"
+'zh_Hans' = "zh"
+fallback.de.at = "de"          # Austrian German is German
+"Русский" = "ru"               # the app's language picker lists languages by their own name
+site."docs.kestrel.dev" = true # the docs site is translated too
+
+[strings]
+basic = "tab\there, quote \" and backslash \\"
+literal = 'C:\no\escapes\here'
+motd = """
+Kestrel 2.3 is out: share a route with a link. \
+Edits you make offline sync when you are back online."""
+raw = '''
+# not a comment, in a literal block
+done = "yes"
+'''
+bracket = "a ] inside a string, then [ again"
+
+# one [[region]] per supported region; keep ids in step with config/regions.yaml
+[[region]]
+id = "nl"
+name = "Netherlands"
+tiles = "nl-2026-08.pbf"
+
+[[region]]
+# Denmark was added in 2.1
+id = "dk"
+name = "Denmark"
+tiles = "dk-2026-08.pbf"
+
+[[region]]
+id = "at"
+name = "Austria"
+tiles = "at-2026-06.pbf"
+altitude_aware = true     # the extra key: only the Alps need it
+
+[[region]]
+id = "ch"
+tiles = "ch-2026-06.pbf"  # the missing key: no name yet

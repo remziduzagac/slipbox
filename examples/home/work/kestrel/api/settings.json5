@@ -1,0 +1,16 @@
+// Local API settings. JSON5, because Sam likes comments in config.
+{
+  host: '0.0.0.0',
+  port: 0x1F90, // 8080
+  env: 'dev',
+  sync: {
+    batchSize: 50,
+    maxPending: 5000,
+    retry: [250, 500, 1000, 2000,],
+  },
+  features: {
+    routeSharing: true,
+    offlineSync: true,
+  },
+  cors: ['http://localhost:5173', 'https://app.kestrel.example',],
+}

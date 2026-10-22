@@ -1,0 +1,25 @@
+// Design tokens, pulled in by app.css's palette: `@use "tokens";`
+$kestrel: #c2410c;
+$ink: #1c1917;
+$breakpoints: (phone: 600px, tablet: 960px);
+
+@mixin phone {
+  @media (max-width: map-get($breakpoints, phone)) {
+    @content;
+  }
+}
+
+.route-map {
+  min-height: 320px;
+  border: 1px solid rgba($ink, 0.12);
+
+  &__legend {
+    color: $kestrel;
+
+    &:hover { text-decoration: underline; }
+  }
+
+  @include phone {
+    min-height: 200px;
+  }
+}

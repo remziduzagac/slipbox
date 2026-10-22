@@ -1,0 +1,104 @@
+# yaml-language-server: $schema=https://json.schemastore.org/compose.json
+# The local stack. `docker compose up -d postgres redis tiles` is enough for most work; `up` starts everything.
+name: kestrel
+
+x-common: &common
+  restart: unless-stopped
+  environment: &common-env
+    LOG_LEVEL: debug
+    TZ: Europe/Amsterdam
+  logging:
+    driver: json-file
+    options:
+      max-size: "10m"
+      max-file: "3"
+
+services:
+  api:
+    <<: *common
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: ghcr.io/kestrel-labs/api:dev
+    ports:
+      - "8080:8080"
+      - "8443:8443"
+    env_file: [.env]
+    depends_on:
+      - postgres
+      - redis
+      - tiles
+    deploy:
+      resources:
+        limits:
+          cpus: "2.0"
+          memory: 1g
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request as u; u.urlopen('http://localhost:8080/healthz')"]   
+      interval: 15s
+
+  web:
+    <<: *common
+    image: node:22-alpine
+    working_dir: /app
+    command: ["npx", "vite", "--host", "--port", "5173"]
+    volumes:
+      - .:/app
+      - /app/node_modules
+    ports:
+      - "5173:5173"
+
+  postgres:
+    <<: *common
+    image: postgis/postgis:16-3.4
+    environment:
+      <<: *common-env
+      POSTGRES_USER: kestrel
+      POSTGRES_PASSWORD: change-me
+      POSTGRES_DB: kestrel
+    ports: ["5432:5432"]
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./db/schema.sql:/docker-entrypoint-initdb.d/schema.sql:ro
+
+  redis:
+    <<: *common
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+
+  worker:
+    <<: *common
+    image: ghcr.io/kestrel-labs/api:dev
+    command: ["python", "-m", "kestrel_api.worker"]
+    depends_on: [postgres, redis]
+    healthcheck:
+      test: ["CMD-SHELL", "python -m kestrel_api.worker --ping"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+  tiles:
+    <<: *common
+    image: ghcr.io/kestrel-labs/tiles:0.9.2
+    ports:
+      - "8081:8081"
+    volumes:
+      - ./data/tiles:/tiles:ro
+
+  mailhog:
+    image: mailhog/mailhog:v1.0.1
+    ports:
+      - "1025:1025"
+      - "8025:8025"
+
+  grafana:
+    image: grafana/grafana:11.2.0
+    profiles: [observability]
+    ports:
+      - "3000:3000"
+    environment:
+      GF_AUTH_ANONYMOUS_ENABLED: "true"
+
+volumes:
+  pgdata: {}
