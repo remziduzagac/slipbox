@@ -6,7 +6,16 @@ The format is [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.1.0/); wh
 
 ## [Unreleased]
 
+## [0.5.0] - 2026-10-22
+
 ### Added
+
+- Hidden files and folders in the explorer. `shift+h` there lists the files and folders whose names start with a dot,
+  such as `.github` and `.env`, and hides them again; `:hidden` and the UI settings (`space u u`) do the same, and
+  `files.hidden = true` lists them from the start, in your configuration or a vault's own. They are marked `⊘`, not
+  indexed, and the status line says `hidden` with the cursor on one. A hidden file you open from the explorer is
+  indexed from then on, as one opened by its path is, except in your home folder. `.git` is never listed, home's index
+  still leaves hidden folders out, and the switcher and search list only what's indexed.
 
 - `slipbox [path] --base <ref>` opens the screen with the branch checked out there measured against `<ref>`, kept for
   that branch as Compare against… keeps it: a worktree opened for a pull request measured as the pull request is
@@ -24,9 +33,10 @@ The format is [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.1.0/); wh
 
 ### Changed
 
-- `slipbox changed` and `slipbox diff` measure the branch against its own base, as the screen does: the one kept for
-  it, else the nearest of `[git] bases`, else `[git] base`, main or master. `--base` still wins. Their `--json` adds
-  `baseChosen`: `given`, `kept`, `nearest` or `configured`.
+- **Breaking:** `slipbox changed` and `slipbox diff` measure the branch against its own base, as the screen does: the
+  one kept for it, else the nearest of `[git] bases`, else `[git] base`, main or master. `--base` still wins: a script
+  that wants the old answer passes `--base main`. Their `--json` adds `baseChosen`: `given`, `kept`, `nearest` or
+  `configured`.
 
 - Documentation follows a new learning path, with Working with slipbox first and a dedicated reading/editing guide
   second. Feature explanations, task guides and exact references have distinct homes. Existing page addresses and
@@ -85,23 +95,12 @@ The format is [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.1.0/); wh
 
 ### Removed
 
-- The releases up to 0.4.0 aren't published any more: their downloads are gone, so the installer, `slipbox upgrade`
-  and Homebrew find nothing to install until the next release is out. A slipbox already installed keeps working.
+- The releases up to 0.4.0 aren't published any more, and their downloads are gone: 0.5.0 is the first release since.
+  A slipbox already installed keeps working, and `slipbox upgrade` or `brew upgrade` brings it to 0.5.0.
 
 ### Fixed
 
 - A language server that never finishes starting is stopped even if it ignores graceful termination.
-
-## [0.4.1] - 2026-10-17
-
-### Added
-
-- Hidden files and folders in the explorer. `shift+h` there lists the files and folders whose names start with a dot,
-  such as `.github` and `.env`, and hides them again; `:hidden` and the UI settings (`space u u`) do the same, and
-  `files.hidden = true` lists them from the start, in your configuration or a vault's own. They are marked `⊘`, not
-  indexed, and the status line says `hidden` with the cursor on one. A hidden file you open from the explorer is
-  indexed from then on, as one opened by its path is, except in your home folder. `.git` is never listed, home's index
-  still leaves hidden folders out, and the switcher and search list only what's indexed.
 
 ## [0.4.0] - 2026-10-17
 
@@ -432,5 +431,5 @@ The first release. 0.2.0 was tagged but never released: its build failed a test 
   `slipbox uninstall`; Windows through WSL.
 - `slipbox skill`: the skill for agents carried by the binary, printed or installed where an agent reads skills.
 
-[Unreleased]: https://github.com/remziduzagac/slipbox/compare/v0.4.1...HEAD
-[0.4.1]: https://github.com/remziduzagac/slipbox/releases/tag/v0.4.1
+[Unreleased]: https://github.com/remziduzagac/slipbox/compare/v0.5.0...HEAD
+[0.5.0]: https://github.com/remziduzagac/slipbox/releases/tag/v0.5.0
