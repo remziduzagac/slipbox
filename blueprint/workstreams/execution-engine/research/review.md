@@ -86,7 +86,7 @@ See [requirements](../requirements.md) and [integration inventory](../design/cha
 ## Deliberately open
 
 Initial profile/exposure policy, exact CLI syntax/protocol limits, shared undo acceptance, D156 git-session exposure,
-headless resident-host timing and migration activation remain listed in [ideas.md](../ideas.md). Concrete resource
+headless resident-host timing and migration activation remain listed in [ideas/](../ideas/README.md). Concrete resource
 budgets and any process-isolation/packaging choice still need measurements. Parent design replacement text must be
 completed and reconciled before consolidation. These are explicit decision gates, not silently selected defaults.
 

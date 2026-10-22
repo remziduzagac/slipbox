@@ -67,3 +67,33 @@
   preflight versus irreversible shutdown, bounded draining, and finite readiness versus resident server ownership.
 - Follow-up reviewers confirmed original findings resolved; the plan-claim release/inspection clarification was
   also applied. Existing accepted decisions and deliberate open choices remain unchanged. Only ENG was edited.
+
+## Overall architecture proposal (2026-10-18)
+
+- Authorized drafting a top-down backend architecture proposal in ideas before applying it to the detailed design.
+  The reviewed execution-engine design remains its foundation and retains its contracts and accepted decisions.
+- Proposed fitting ports/adapters, application services, command/query separation, single-owner state, a functional
+  core, small state machines, dependency inversion, resource scopes and incremental replacement. Their concrete
+  roles, costs and adoption questions are in [ideas/architecture.md](ideas/architecture.md).
+- Organized existing alternatives and dependency/upkeep proposals under [ideas/](ideas/README.md), preserving them
+  as proposals and updating their links. No new decision, implementation or parent consolidation was made.
+- Next: review the overall proposal, record agreed choices, then reconcile them into the existing design pieces.
+
+
+## Architecture proposal explanation (2026-10-18)
+
+- Expanded [ideas/architecture.md](ideas/architecture.md) into a top-down reading path: system shape, running
+  instances, state ownership, dependency direction, patterns, workflows, testing and adoption.
+- Added diagrams for call flow, separate/attached instances, documents/views, source dependencies, background
+  delivery, saving with newer edits, incremental replacement, the shared save path and checked rename.
+- Explained patterns through concrete responsibilities and save/rename/language-edit examples. The detailed ENG
+  contracts remain authoritative; the proposal is still awaiting review and has not been applied to them.
+
+## Architecture diagram responsiveness (2026-10-18)
+
+- The ownership diagram passed SVG rendering but triggered excessive allocation in an isolated text-rendering probe.
+  Changed its arrows to an equivalent acyclic form. All nine diagrams now complete through the actual text-renderer
+  wrapper across 108 width/glyph/scroll cases; evidence and limitations are in
+  [research/diagram-rendering.md](research/diagram-rendering.md).
+- This is a document workaround, not a dependency/runtime fix. Diagram execution bounds and a retained-reproducer
+  regression belong in follow-up implementation. No application source or running instance was changed.

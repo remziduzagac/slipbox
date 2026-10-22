@@ -1,7 +1,7 @@
 # Ideas and alternatives
 
 The alternatives and choices below remain proposals for ENG, dated 2026-10-16. Accepted research-based choices
-are recorded once in [decisions.md](decisions.md); they do not settle the broader architecture choices here.
+are recorded once in [decisions.md](../decisions.md); they do not settle the broader architecture choices here.
 
 ## Alternatives and limits
 
@@ -38,21 +38,3 @@ targets and typed discovery are agreed, while initial exposure, exact syntax and
    plan. Prove a socket client on these before migrating every feature. Coordinate pending VV/GIT work by ownership.
 7. **Compatibility and limits:** choose initial protocol version, conservative message/task/event limits and measured
    responsiveness budgets during the first slice. Do not add new dependencies before checking D3 and D192.
-
-
-## Dependency execution and packaging
-
-- Assess isolation for parsing, spelling, typesetting and export from actual input exposure, authority and required
-  termination guarantees. Assessment agreed in ENG-D12; specific process/sandbox choices remain open.
-- Consider optional components or smaller distributions only after inspecting shipped artifacts and reachability.
-  No feature removal or packaging change is selected by dependency count alone (ENG-D12).
-
-
-## Repository upkeep follow-ups
-
-- S1: a reviewed runtime package-set baseline in the dependency gate, derived counts and reasons for additions.
-  Accepted as upkeep follow-up; scheduling and implementation belong with repository maintenance.
-- S5: audit the site's actual lockfile and trigger on its changes; check build dependency licences without adding
-  them to binary notices. Accepted as upkeep follow-up; no parent files changed by ENG.
-- S7: optional deduplicated measurements of parser/export closure contributions, startup cost and actual use.
-  No dependency replacement selected; any change must respect D184 and the settled-design process in D210.

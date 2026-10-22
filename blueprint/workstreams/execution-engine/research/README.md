@@ -11,3 +11,4 @@ not a runtime evaluation. Proposed adaptations remain draft unless recorded as a
 - [dependency-boundaries.md](dependency-boundaries.md): service exposure, resource controls and artifact-review gaps.
 
 - [review.md](review.md): consolidated 2026-10-17 review findings, fixes and remaining decision gates.
+- [diagram-rendering.md](diagram-rendering.md): reproduced text-rendering memory growth and the diagram workaround.

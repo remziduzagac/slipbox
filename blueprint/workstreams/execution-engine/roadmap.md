@@ -160,7 +160,7 @@ and new distributions require a separate justified choice.
 S1: record a reviewed runtime package-set baseline, with reasons for additions and counts derived from it, in the
 dependency gate. S5: actually audit the site's lockfile, trigger on its changes and cover its build dependency
 licences separately from binary notices. These are recorded follow-ups in
-[ideas.md](ideas.md#repository-upkeep-follow-ups),
+[dependency proposals](ideas/dependencies.md#repository-upkeep-follow-ups),
 not prerequisites for moving the first engine handler; do not silently add them to unrelated migration slices.
 
 S7: optionally measure unique bundled size, startup cost and feature usage of parser and export closures. Deduplicate
