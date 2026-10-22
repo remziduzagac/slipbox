@@ -1,7 +1,8 @@
 # Roadmap
 
 Status: **initial design settled** (D210, 2026-10-11); phases 0–6+ built. The repository is public on GitHub and kept
-to greenrepo (GR, consolidated 2026-10-13); 0.2.1 was the first release (2026-10-12), 0.4.1 the latest (2026-10-17).
+to greenrepo (GR, consolidated 2026-10-13). Its history starts afresh on 2026-10-22, with no release published yet;
+0.2.1 (2026-10-12) to 0.4.0 (2026-10-17) were released before, and aren't published any more.
 Vaults and the explorer's view (VV) and reviewing, diffing and merging (GIT) are built, consolidated and documented
 (2026-10-17), and in 0.4.0. Next: native Windows
 (`14.14`–`14.17`); and, open in ideas.md, the skill as an npx package for common harnesses and how agents and slipbox

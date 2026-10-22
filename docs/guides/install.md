@@ -68,7 +68,7 @@ The installer stops if there's already a `slipbox` in `~/.local/bin` that it did
 launcher. It stops before downloading anything. Remove that one first (`rm ~/.local/bin/slipbox`), then run the
 installer again.
 
-**Homebrew**, on a Mac with Apple silicon and on Linux, from 0.3.0 on:
+**Homebrew**, on a Mac with Apple silicon and on Linux:
 
 ```bash
 brew install remziduzagac/tap/slipbox
@@ -174,17 +174,12 @@ slipbox doesn't run on Windows outside WSL.
 ## Intel Macs
 
 slipbox isn't built for Intel Macs any more. Apple has stopped making macOS for them: macOS 26 Tahoe is the last one
-they get. 0.3.0 was the last release of slipbox built for them.
+they get. 0.3.0 was the last release of slipbox built for them, and it isn't published any more.
 
-On an Intel Mac, the installer says so and stops, before downloading anything. Homebrew won't install a later release
-either: it says the arm64 architecture is required. 0.3.0 still installs from its own installer:
-
-```bash
-curl -fsSL https://github.com/remziduzagac/slipbox/releases/download/v0.3.0/install.sh | sh
-```
-
-There, `slipbox upgrade` says it couldn't find the latest release's `darwin-x64` build, and the daily update check
-finds nothing newer. Running slipbox from source may still work on an Intel Mac, but nothing tests it there.
+On an Intel Mac, the installer says so and stops, before downloading anything. Homebrew won't install a release
+either: it says the arm64 architecture is required. A 0.3.0 already installed keeps working: there, `slipbox upgrade`
+says it couldn't find the latest release's `darwin-x64` build, and the daily update check finds nothing newer. Running
+slipbox from source may still work on an Intel Mac, but nothing tests it there.
 
 ## Checking it works
 

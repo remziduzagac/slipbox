@@ -83,6 +83,11 @@ The format is [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.1.0/); wh
   the rendering limits remain readable as source, with a specific reason. Notes with many diagrams are processed in
   batches; CLI rendering and export allow five seconds per diagram without automatic retries, independently of the screen.
 
+### Removed
+
+- The releases up to 0.4.0 aren't published any more: their downloads are gone, so the installer, `slipbox upgrade`
+  and Homebrew find nothing to install until the next release is out. A slipbox already installed keeps working.
+
 ### Fixed
 
 - A language server that never finishes starting is stopped even if it ignores graceful termination.
@@ -428,8 +433,4 @@ The first release. 0.2.0 was tagged but never released: its build failed a test 
 - `slipbox skill`: the skill for agents carried by the binary, printed or installed where an agent reads skills.
 
 [Unreleased]: https://github.com/remziduzagac/slipbox/compare/v0.4.1...HEAD
-[0.4.1]: https://github.com/remziduzagac/slipbox/compare/v0.4.0...v0.4.1
-[0.4.0]: https://github.com/remziduzagac/slipbox/compare/v0.3.0...v0.4.0
-[0.3.0]: https://github.com/remziduzagac/slipbox/compare/v0.2.2...v0.3.0
-[0.2.2]: https://github.com/remziduzagac/slipbox/compare/v0.2.1...v0.2.2
-[0.2.1]: https://github.com/remziduzagac/slipbox/releases/tag/v0.2.1
+[0.4.1]: https://github.com/remziduzagac/slipbox/releases/tag/v0.4.1

@@ -252,14 +252,14 @@ is 0.3.0's; 0.2.1 and 0.2.2 have none.
 
 ## D238: No build for Intel Macs; 0.3.0 was the last (14.2, 14.18, 2026-10-17)
 
-**Decision:** The maintainer's call: slipbox stops supporting Intel Macs, completely. From 0.4.0 no `darwin-x64` pack
-is built, attested, summed or put in the Homebrew formula, and no CI job runs on an Intel Mac (`macos-15-intel` leaves
-the terminal tests and the release's build). 0.3.0 was the last release built for them; its packs stay published.
-On an Intel Mac the installer says so, naming 0.3.0, and stops before downloading anything; `slipbox upgrade` on that
-platform says the same before it asks for anything; the formula asks for arm64 on macOS. The platforms retired and
-the last release for each are one table, `core/release.ts`'s `RETIRED`, which the installer's message is held to by a
-test. A Mac terminal under Rosetta on Apple silicon still gets the arm64 build. Detail: design/distribution.md
-§ Releases, § Installing, § Homebrew, § Updates.
+**Decision:** The maintainer's call: slipbox stops supporting Intel Macs, completely. From 0.4.0 no `darwin-x64` pack is
+built, attested, summed or put in the Homebrew formula, and no CI job runs on an Intel Mac (`macos-15-intel` leaves the
+terminal tests and the release's build). 0.3.0 was the last release built for them; its packs stayed published until the
+history started afresh (2026-10-22), and aren't any more. On an Intel Mac the installer says so, naming 0.3.0, and stops
+before downloading anything; `slipbox upgrade` on that platform says the same before it asks for anything; the formula
+asks for arm64 on macOS. The platforms retired and the last release for each are one table, `core/release.ts`'s
+`RETIRED`, which the installer's message is held to by a test. A Mac terminal under Rosetta on Apple silicon still gets
+the arm64 build. Detail: design/distribution.md § Releases, § Installing, § Homebrew, § Updates.
 
 **Why:** Apple has stopped making macOS for Intel Macs: macOS 26 Tahoe is the last they get. And CI's Intel Mac was
 the slowest and flakiest of its four terminal-test runners: the release of 0.2.0 failed on it (GR-D18), and waits and

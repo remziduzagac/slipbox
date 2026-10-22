@@ -81,8 +81,8 @@ use. mise reads them locally (`mise install`, once; where mise isn't active in a
 
 **Biome** formats and lints TypeScript and JSON (GR-D7): `biome.jsonc` at 120 columns, two spaces, double quotes,
 trailing commas, the recommended rules but the code's own idioms, each turned off with its reason; a deliberate
-exception in place is a `biome-ignore` with its reason. The code was reformatted once, in a commit
-`.git-blame-ignore-revs` lists, so blame skips it.
+exception in place is a `biome-ignore` with its reason. The code was reformatted once, before the history kept starts
+(2026-10-22); a later reformatting is a commit of its own, listed in `.git-blame-ignore-revs` so blame skips it.
 
 **`check:docs`** runs three tools over the text files git tracks, less what is wrong on purpose (`LEFT_OUT`: the
 reference set, the demo vault, the tests' fixtures, each with its reason): markdownlint-cli2, an exact dev dependency

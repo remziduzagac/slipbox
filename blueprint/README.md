@@ -1,5 +1,5 @@
 ---
-synced_with: dev@5b4618a
+synced_with: dev@ae25e8a
 ---
 
 # slipbox blueprint
@@ -9,9 +9,10 @@ person in the TUI reads, reviews and edits what an agent on the CLI writes, both
 and the same answers (D33, D226). It is TypeScript on Bun,
 one core with two faces, compiled into one binary (D5, D8). Every phase on the roadmap is built, extensibility aside,
 deferred (D37), and the initial design was declared settled on 2026-10-11 (D210). The repository is public on GitHub
-under Apache-2.0, kept to the user's greenrepo standard ([design/repository.md](design/repository.md)), and 0.4.1 is
-the latest release (2026-10-17), 0.2.1 the first (2026-10-12). Next: native Windows (`14.14`–`14.17`), and the
-ideas left open: the skill as an npx package, how agents and slipbox work together, search's improvements.
+under Apache-2.0, kept to the user's greenrepo standard ([design/repository.md](design/repository.md)). Its history
+starts afresh on 2026-10-22: the releases made before, 0.2.1 to 0.4.0, aren't published any more, and a commit hash
+cited from before that day names a commit that isn't kept. Next: native Windows (`14.14`–`14.17`), and the ideas left
+open: the skill as an npx package, how agents and slipbox work together, search's improvements.
 
 ## Where to start
 
