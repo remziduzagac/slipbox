@@ -64,7 +64,8 @@ since there is no second person to give one. From `dev`, work goes on to `test` 
   commit's subject: `fix(export): …`, `feat(cli): …`, `docs: …`, `refactor`, `perf`, `test`, `build`, `ci`, `chore`; a
   `!` before the colon marks a breaking change (`feat(cli)!: …`).
 - **The body** says what changed and why, with the blueprint's IDs: the workstream's or the task's, the roadmap's step,
-  the decisions'. A commit made with an agent ends with a `Co-Authored-By:` trailer naming it.
+  the decisions'. A contributor's commit made with an agent ends with a `Co-Authored-By:` trailer naming it; the
+  maintainer's own name no agent, in the commit or in the pull request, whose description the squash takes (D256).
 - **Before merging,** the maintainer reads the diff, and checks that the change carries what it owes: a regression test
   for a bug fixed, the docs for what users will see, the blueprint for a change of behaviour.
 - **The changelog**'s Unreleased section takes a line for what users will notice, in the pull request that makes it;

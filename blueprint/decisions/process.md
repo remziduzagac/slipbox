@@ -116,6 +116,9 @@ files kept by hand in the workflow: the test on `test:docs` keeps it in one plac
 
 ## D234: A contributing guide, a code of conduct and a pull request template, before contributions open (2026-10-14)
 
+> **Amended by D256 (2026-10-23):** the `Co-Authored-By:` trailer is a contributor's; the maintainer's commits and
+> pull requests name no agent.
+
 **Decision:** The repository has `CONTRIBUTING.md`, `CODE_OF_CONDUCT.md` and `.github/pull_request_template.md`, while
 pull requests still come from collaborators only (GR-D5). The guide says where each thing goes (bugs to the issue form,
 questions and ideas to Discussions, a vulnerability to private reporting), that pull requests are collaborators' for
@@ -252,3 +255,21 @@ and the full run are started by hand, so a batch nobody moves isn't tried.
 button away); a release that tests again on every platform (the commit passed `full`, and the release's own runs
 failed on unrelated flaky checks); a separate workflow for the full run (the same jobs, named `full` when run by
 hand, keep one definition).
+
+## D256: The maintainer's commits and pull requests name no agent (2026-10-23)
+
+**Decision:** A commit or a pull request of the maintainer's carries no agent's name, however much of it an agent
+wrote: no `Co-Authored-By:` trailer naming Claude, Codex or another, and no "Generated with" line in the description.
+Both are left out because a squash merge takes the pull request's description and its commits' `Co-authored-by:`
+trailers into the commit on `dev`. A contributor's commit made with an agent still names it in that trailer (D234,
+`CONTRIBUTING.md`). The history that started afresh on 2026-10-22 was written again before 0.5.0 without the trailers
+it had, its files, authors and dates the same; a hash of one of its first four commits cited elsewhere names a commit
+that isn't kept. Amends D234. Detail: `AGENTS.md` § Working here, `MAINTAINING.md` § Merging a change.
+
+**Why:** The maintainer's call, 2026-10-22: the history reads as the maintainer's own work, whatever tools made it.
+
+**Cost:** The history doesn't say which of the maintainer's changes an agent wrote. The rule is the maintainer's alone:
+nothing checks a commit for a trailer, so a contributor's keep theirs.
+
+**Not chosen:** no trailer for anyone (a contributor's agent stays named, as D234 asks); a check in CI refusing the
+trailer (it would refuse a contributor's).

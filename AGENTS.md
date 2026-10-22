@@ -55,8 +55,9 @@ a change users will see updates it in the same piece of work, without the bluepr
   notice, and the design file where behaviour changes; a decision in `blueprint/decisions/` only for a choice someone
   could have made otherwise.
 - **Commits and pull requests.** A pull request's title is a Conventional Commit (`fix(export): …`, `feat(cli): …`,
-  `!` for a breaking change), the squashed commit's subject; the workstream or task IDs go in its body. A commit made
-  with an agent ends with a `Co-Authored-By:` trailer naming it.
+  `!` for a breaking change), the squashed commit's subject; the workstream or task IDs go in its body. The
+  maintainer's commits and pull requests name no agent: no `Co-Authored-By:` trailer for one, no "Generated with" line
+  (D256). A contributor's commit made with an agent names it in that trailer, as `CONTRIBUTING.md` asks.
 - **Vulnerabilities** are discussed only through the private channel in `SECURITY.md`; public issues, pull requests
   and commit messages carry no details.
 
