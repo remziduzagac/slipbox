@@ -34,7 +34,7 @@ jobs:
           persist-credentials: false
       # GR-D11: Bun alone, at mise.toml's version; mise its newest release a week old. Nothing cached. `bun audit`
       # reads bun.lock: nothing is installed.
-      - uses: jdx/mise-action@2d8d4cafcbd33be2ea37d2b6f5ad595363d1f1ca # v5.1.1
+      - uses: jdx/mise-action@08ae2a091c038e1e05ec6f5115dc5c69d5a2a6b8 # v5.1.2
         with:
           install_args: bun
           cache: false
