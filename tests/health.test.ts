@@ -124,9 +124,9 @@ describe("the committed upkeep files", () => {
     expect(health.jobs.collect.permissions.pages).toBe("read");
   });
 
-  test("the rulesets, as GitHub exports them: main through a pull request and the ci check; v* tags admins only; test kept", () => {
+  test("the rulesets, as GitHub exports them: dev through a pull request and the ci check, main only what passed full; v* tags admins only; test kept", () => {
     const files = readdirSync(join(UPKEEP, "rulesets")).sort();
-    expect(files).toEqual(["main.json", "tags.json", "test.json"]);
+    expect(files).toEqual(["dev.json", "main.json", "tags.json", "test.json"]);
     // GR-D13: `test`, which previews are made from, is never deleted or forced back, and takes only a commit whose
     // ci check passed.
     const kept = JSON.parse(readFileSync(join(UPKEEP, "rulesets", "test.json"), "utf8")) as Ruleset;
@@ -135,14 +135,22 @@ describe("the committed upkeep files", () => {
     expect(kept.rules?.map((r) => r.type)).toEqual(["deletion", "non_fast_forward", "required_status_checks"]);
     expect(JSON.stringify(kept)).toContain('"context":"ci","integration_id":15368');
     expect(kept.bypass_actors).toEqual([]);
-    const main = JSON.parse(readFileSync(join(UPKEEP, "rulesets", "main.json"), "utf8")) as Ruleset;
-    expect(main.rules?.map((r) => r.type)).toEqual([
+    // D251: `dev`, the default branch, takes a pull request whose ci check passed; `main` only a commit that passed
+    // `full`, the whole suite, never deleted or forced back.
+    const dev = JSON.parse(readFileSync(join(UPKEEP, "rulesets", "dev.json"), "utf8")) as Ruleset;
+    expect(dev.conditions).toEqual({ ref_name: { include: ["~DEFAULT_BRANCH"], exclude: [] } });
+    expect(dev.rules?.map((r) => r.type)).toEqual([
       "deletion",
       "non_fast_forward",
       "pull_request",
       "required_status_checks",
     ]);
-    expect(JSON.stringify(main)).toContain('"context":"ci","integration_id":15368');
+    expect(JSON.stringify(dev)).toContain('"context":"ci","integration_id":15368');
+    expect(dev.bypass_actors).toEqual([]);
+    const main = JSON.parse(readFileSync(join(UPKEEP, "rulesets", "main.json"), "utf8")) as Ruleset;
+    expect(main.conditions).toEqual({ ref_name: { include: ["refs/heads/main"], exclude: [] } });
+    expect(main.rules?.map((r) => r.type)).toEqual(["deletion", "non_fast_forward", "required_status_checks"]);
+    expect(JSON.stringify(main)).toContain('"context":"full","integration_id":15368');
     expect(main.bypass_actors).toEqual([]);
     const tags = JSON.parse(readFileSync(join(UPKEEP, "rulesets", "tags.json"), "utf8")) as Ruleset;
     expect(tags.conditions).toEqual({ ref_name: { include: ["refs/tags/v*"], exclude: [] } });
@@ -251,7 +259,7 @@ describe("comparing", () => {
   });
 
   const expected = JSON.parse(readFileSync(join(UPKEEP, "rulesets", "tags.json"), "utf8")) as Ruleset;
-  const main = JSON.parse(readFileSync(join(UPKEEP, "rulesets", "main.json"), "utf8")) as Ruleset;
+  const dev = JSON.parse(readFileSync(join(UPKEEP, "rulesets", "dev.json"), "utf8")) as Ruleset;
   /** A ruleset as GitHub answers: its id and source added, a rule's defaults filled in. */
   const live = (r: Ruleset): Ruleset =>
     structuredClone({
@@ -265,25 +273,25 @@ describe("comparing", () => {
     }) as Ruleset;
 
   test("the rulesets as GitHub answers them: no drift", () => {
-    expect(compareRulesets([main, expected], [live(expected), live(main)])).toEqual([]);
+    expect(compareRulesets([dev, expected], [live(expected), live(dev)])).toEqual([]);
   });
 
   test("a rule's parameter changed, a rule gone, one added, a ruleset missing and one unexpected", () => {
-    const changed = live(main);
+    const changed = live(dev);
     const pr = changed.rules?.find((r) => r.type === "pull_request");
     (pr?.parameters as Record<string, unknown>).required_approving_review_count = 1;
     changed.rules = changed.rules?.filter((r) => r.type !== "deletion");
     changed.rules?.push({ type: "required_signatures" });
-    expect(compareRulesets([main, expected], [changed, { ...live(expected), name: "old" }])).toEqual([
-      { where: "ruleset main", path: "rules.deletion", kind: "missing" },
+    expect(compareRulesets([dev, expected], [changed, { ...live(expected), name: "old" }])).toEqual([
+      { where: "ruleset dev", path: "rules.deletion", kind: "missing" },
       {
-        where: "ruleset main",
+        where: "ruleset dev",
         path: "rules.pull_request.parameters.required_approving_review_count",
         kind: "differs",
         expected: 0,
         actual: 1,
       },
-      { where: "ruleset main", path: "rules.required_signatures", kind: "unexpected" },
+      { where: "ruleset dev", path: "rules.required_signatures", kind: "unexpected" },
       { where: "ruleset tags", path: "", kind: "missing" },
       { where: "ruleset old", path: "", kind: "unexpected" },
     ]);

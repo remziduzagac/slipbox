@@ -153,9 +153,9 @@ slipbox resolve slipbox://notes/inbox.md --json   # a pointer into a named folde
 slipbox folders --json                   # the named folders pointers use: each name, its copies, the one links open
 slipbox search dome shutter --json       # notes ranked by the words: hits[{path, line, column, heading, snippet}]
 slipbox search dome --scope linked --json   # and the vaults linked to or from this one (all: every vault; no worktree)
-slipbox changed --json                   # what this branch changed against its base (main): files[{path, state, from?}]
+slipbox changed --json                   # what this branch changed against its own base: base, baseChosen, files[]
 slipbox merge-review feat --json         # before merging feat here: breaks[{path, line, target, cause, by, fix}]
-slipbox diff <note> --json               # the note's diff against where the branch left main: rows[{kind, text, line}]
+slipbox diff <note> --json               # the note's diff from where the branch left its base: rows[{kind, text, line}]
 slipbox search '"exact phrase" -draft #project path:notes/'   # phrases, -not, a tag, a folder; prefix* too
 slipbox context <note>                   # the note, what it links to and what links to it: one markdown document
 slipbox context <note> --depth 2 --limit 40 --no-backlinks   # further out, more files, nothing linking in

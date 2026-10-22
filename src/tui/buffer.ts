@@ -74,8 +74,9 @@ export class NoteBuffer {
   /** The render's blocks, reused across edits and reloads (only a changed block renders again). */
   private renderCache = newRenderCache();
 
-  /** The linter's findings (3.21), and the version of the text they're for (the file as saved). */
-  lint: { version: number; issues: LintIssue[] } | null = null;
+  /** The linter's findings (3.21), and the version of the text they're for (the file as saved); `skipped`: that run's
+   *  findings weren't shown (its output past slipbox's limit), and why. */
+  lint: { version: number; issues: LintIssue[]; skipped?: string } | null = null;
   /** Its problems bar is kept (19.9): it has had problems, and the text keeps its place as they go. */
   problemBar = false;
   /** Its git signs' column is kept (26.1): it has had changes against what's staged, and the text keeps its place. */
@@ -93,8 +94,33 @@ export class NoteBuffer {
 
   /** The text's parse, running on other threads (15.1): until it lands, a view shows it's reading. */
   parsing: Promise<void> | null = null;
-  /** The threads couldn't parse this note: the main thread does, as for any note. */
+  /** The threads couldn't parse this text: it reads as its source (the cache's `backgroundFailure`), never parsed
+   *  here in one long block, until the text changes — or, when why was the worker's, the note is opened again. */
   private parseFailed = false;
+  /** Why, until the app has said it (once a failure). */
+  private parseWhy: { why: string; transient: boolean } | null = null;
+  private parseAbort: AbortController | null = null;
+
+  /** The parse running on other threads let go of: the text changed, or the buffer is dropped. */
+  cancelParse(): void {
+    this.parseAbort?.abort();
+  }
+
+  /** Opened again (15.1): a parse that failed for the worker's reason — the deadline, a crash — is tried again. */
+  retryParse(): void {
+    if (!this.parseFailed || !this.parseCache.backgroundFailure?.transient) return;
+    this.parseFailed = false;
+    this.parseCache.backgroundFailure = undefined;
+    this.parsedVersion = -1;
+    this.invalidateLayouts();
+  }
+
+  /** Why the threads last couldn't parse it, once: the app says it, then it's gone. */
+  takeParseFailure(): { why: string; transient: boolean } | null {
+    const why = this.parseWhy;
+    this.parseWhy = null;
+    return why;
+  }
 
   /** A buffer that isn't a file of its own (3.20): its text given, saved by `save` (into a note's
    *  frontmatter), never read from or compared with the disk. */
@@ -148,6 +174,8 @@ export class NoteBuffer {
 
   /** A virtual buffer's text, as if just read (3.20): clean, its own undo history from here. */
   loadText(text: string): void {
+    this.cancelParse();
+    this.parseFailed = false;
     this.source = text;
     this.version++;
     this.loaded = true;
@@ -224,15 +252,20 @@ export class NoteBuffer {
     let missing = 0;
     for (const c of noteChunks(this.source)) if (!this.parseCache.chunks.has(c.text)) missing += c.text.length;
     if (missing < BACKGROUND_PARSE) return false;
-    this.parsing = parseInBackground(this.source, this.parseCache)
+    this.parseAbort = new AbortController();
+    this.parsing = parseInBackground(this.source, this.parseCache, this.parseAbort.signal)
       .then((ok) => {
-        if (!ok) this.parseFailed = true;
+        // Failed for this text, not cancelled for an edit: it reads as its source, and why is said.
+        const failure = this.parseCache.backgroundFailure;
+        if (!ok && failure?.source === this.source) {
+          this.parseFailed = true;
+          this.parseWhy = { why: failure.why, transient: failure.transient };
+        }
       })
-      .catch(() => {
-        this.parseFailed = true;
-      })
+      .catch(() => {})
       .finally(() => {
         this.parsing = null;
+        this.parseAbort = null;
       });
     return true;
   }
@@ -360,6 +393,8 @@ export class NoteBuffer {
     this.changes = this.changes.map(shift);
     if (this.lastInsert !== null) this.lastInsert = shift(this.lastInsert);
     this.moveMarks(at, length, text);
+    this.cancelParse();
+    this.parseFailed = false;
     this.source = this.source.slice(0, at) + text + this.source.slice(at + length);
     const last = this.changes[this.changes.length - 1];
     if (last !== undefined && !this.source.slice(Math.min(last, at), Math.max(last, at)).includes("\n"))
@@ -418,6 +453,8 @@ export class NoteBuffer {
 
   private replace(at: number, length: number, text: string): void {
     this.moveMarks(at, length, text);
+    this.cancelParse();
+    this.parseFailed = false;
     this.source = this.source.slice(0, at) + text + this.source.slice(at + length);
     this.version++;
     this.layouts.clear();

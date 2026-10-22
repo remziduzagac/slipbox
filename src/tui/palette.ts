@@ -223,7 +223,7 @@ export function openPalette(a: App, typed = ""): void {
       }
       return ranked;
     },
-    submit: (input) => {
+    submit: async (input) => {
       // :2,5s/…, :.,$s/…: ranges :s doesn't take — said, never a silent nothing.
       if (/^\s*[\d.$,+-]+s[^\w\s\\]/.test(input)) {
         a.overlay = null;
@@ -232,7 +232,8 @@ export function openPalette(a: App, typed = ""): void {
       }
       if (parseSubstitute(input)) {
         a.overlay = null;
-        void a.run(`find.substitute ${input.trim()}`).then(() => a.host.requestRender());
+        await a.run(`find.substitute ${input.trim()}`);
+        a.host.requestRender();
         return true;
       }
       // Run as the commands they are, as :s and :42 are: the trace of commands run counts them.

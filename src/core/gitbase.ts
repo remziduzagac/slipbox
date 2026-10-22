@@ -4,11 +4,11 @@
 // fewest commits of its own — `[git] base` among them when you set it; else main or master, as before.
 
 import { execFileSync } from "node:child_process";
-import { realpathSync } from "node:fs";
+import { existsSync, readFileSync, realpathSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { ensureDir, readJson, writeJson } from "./fsutil.ts";
-import type { Checkout } from "./git.ts";
-import { baseBranch, gitArgs, refName } from "./gitops.ts";
+import { type Checkout, checkoutOf, headOf } from "./git.ts";
+import { baseBranch, gitArgs, gitReadLater, refName } from "./gitops.ts";
 import { stateHome } from "./paths.ts";
 
 /** Where the kept bases are: one file for the machine, by repository. */
@@ -146,4 +146,200 @@ export function baseFor(
     },
     fallback: () => baseBranch(c, config.base),
   });
+}
+
+/** The same base policy with asynchronous, cancellable lookups for a foreground read. */
+export async function baseForLater(
+  c: Pick<Checkout, "root" | "common">,
+  branch: string,
+  config: { base: string; bases: string[] },
+  signal?: AbortSignal,
+): Promise<{ base: string; how: BaseHow } | null> {
+  const kept = keptBases(c);
+  const refs = [
+    ...new Set([
+      ...candidates(branch, config),
+      ...(kept[branch] ? [kept[branch]!] : []),
+      ...(config.base ? [config.base] : ["main", "master"]),
+    ]),
+  ].filter(refName);
+  const present = new Map(
+    await Promise.all(
+      refs.map(
+        async (ref) =>
+          [
+            ref,
+            (await gitReadLater(
+              c,
+              ["rev-parse", "--verify", "--quiet", "--end-of-options", `${ref}^{commit}`],
+              false,
+              signal,
+            )) !== null,
+          ] as const,
+      ),
+    ),
+  );
+  const selected = kept[branch];
+  if (selected && selected !== branch && present.get(selected)) return { base: selected, how: "kept" };
+  const listed = candidates(branch, config).filter((ref) => present.get(ref));
+  const counts = new Map<string, number | null>();
+  if (listed.length > 1)
+    await Promise.all(
+      listed.map(async (base) => {
+        const count = await gitReadLater(
+          c,
+          ["rev-list", "--count", "--end-of-options", `${base}..${branch}`],
+          false,
+          signal,
+        );
+        counts.set(base, count === null ? null : Number(count.trim()));
+      }),
+    );
+  return chooseBase(branch, {
+    ...config,
+    kept,
+    exists: (ref) => !!present.get(ref),
+    ahead: (base) => counts.get(base) ?? null,
+    fallback: () => (config.base ? [config.base] : ["main", "master"]).find((ref) => present.get(ref)) ?? null,
+  });
+}
+
+/**
+ * A base asked for by name (`--base`, "Compare against…" typed): a branch, remote branch or tag by its plain name
+ * (`dev`, `origin/dev`, `v2.3`), whichever way it was spelt; anything else — a commit, `HEAD~3`, `ORIG_HEAD` — as the
+ * commit it names, so a kept base never moves with HEAD. `commit`: kept as a commit other than what was typed. `full`:
+ * the ref's full name (`refs/heads/dev`), "" for a commit. An error when it names no commit, or can't be a revision.
+ */
+export type AskedBase = { base: string; commit: boolean; full: string } | { error: string };
+
+/** What git says a ref typed is: the commit it names, and its full name — "" when it's no branch, remote or tag. */
+export interface FoundRef {
+  commit: string;
+  full: string;
+}
+
+/** A branch's, remote branch's or tag's plain name from its full name (`refs/remotes/origin/dev`); null for the rest. */
+export function plainName(full: string): string | null {
+  for (const at of ["refs/heads/", "refs/remotes/", "refs/tags/"])
+    if (full.startsWith(at)) return refName(full.slice(at.length)) ? full.slice(at.length) : null;
+  return null;
+}
+
+/** Why `rev` can't be handed to git as a revision — an option, a space, a control character — or null. */
+function notARevision(rev: string): string | null {
+  return !rev || rev.startsWith("-") || /[\u0000- \u007f]/.test(rev) ? `"${rev}" isn't a branch or commit` : null;
+}
+
+/**
+ * `AskedBase` from what was typed and git's answer (`find`): null when it names no commit. `heads/dev`, `refs/heads/dev`
+ * and `dev` are one base, `dev`; `HEAD` is the branch checked out's; `origin`, its default branch's.
+ */
+export function askedBase(rev: string, find: (rev: string) => FoundRef | null): AskedBase {
+  const r = rev.trim();
+  const bad = notARevision(r);
+  if (bad) return { error: bad };
+  // Handed to git after `--end-of-options` alone.
+  const found = find(r);
+  if (!found) return { error: `no branch or commit "${r}" in the repository` };
+  const name = plainName(found.full);
+  return name
+    ? { base: name, commit: false, full: found.full }
+    : { base: found.commit, commit: found.commit !== r, full: "" };
+}
+
+const commitArgs = (rev: string) => ["rev-parse", "--verify", "--quiet", "--end-of-options", `${rev}^{commit}`];
+const fullArgs = (rev: string) => ["rev-parse", "--verify", "--quiet", "--symbolic-full-name", "--end-of-options", rev];
+
+/** `askedBase`, asking git now. */
+export function resolveBase(c: Pick<Checkout, "root">, rev: string): AskedBase {
+  return askedBase(rev, (r) => {
+    const commit = ask(c.root, commitArgs(r))?.trim();
+    return commit ? { commit, full: ask(c.root, fullArgs(r))?.trim() ?? "" } : null;
+  });
+}
+
+/** `askedBase`, without waiting on git: the screen's. */
+export async function resolveBaseLater(
+  c: Pick<Checkout, "root">,
+  rev: string,
+  signal?: AbortSignal,
+): Promise<AskedBase> {
+  const r = rev.trim();
+  const bad = notARevision(r);
+  if (bad) return { error: bad };
+  const [commit, full] = await Promise.all([
+    gitReadLater(c, commitArgs(r), false, signal),
+    gitReadLater(c, fullArgs(r), false, signal),
+  ]);
+  return askedBase(r, () => (commit?.trim() ? { commit: commit.trim(), full: full?.trim() ?? "" } : null));
+}
+
+/**
+ * `slipbox [path] --base <ref>`: the base of the branch checked out at `root`, kept as "Compare against…" keeps it, so
+ * the screen and the next session measure the branch against it. `error`: the ref names no commit, and the screen isn't
+ * opened. `warn`: kept for nothing — not a repository, a detached HEAD, the branch itself. `note`: kept, and said.
+ */
+export function baseAtOpen(root: string, rev: string): { error: string } | { warn: string } | { note: string } {
+  const c = checkoutOf(root);
+  if (!c) return { warn: `--base ${rev}: not in a git repository, so it's ignored` };
+  const asked = resolveBase(c, rev);
+  if ("error" in asked) return { error: `--base: ${asked.error}` };
+  const branch = headOf(c).branch;
+  if (!branch) return { warn: `--base ${asked.base}: HEAD is detached, so there's no branch to keep it for` };
+  if (asked.full === `refs/heads/${branch}`)
+    return { warn: `--base ${rev.trim()}: that's the branch itself, so its base is guessed` };
+  keepBase(c, branch, asked.base);
+  return { note: `${branch} is compared against ${asked.base}${asked.commit ? ` (${rev.trim()})` : ""} now` };
+}
+
+/** Whether `ref` is a remote-tracking branch (`origin/dev`): only as fresh as the last fetch. */
+export function isRemoteTracking(c: Pick<Checkout, "common">, ref: string): boolean {
+  if (!refName(ref) || !ref.includes("/")) return false;
+  if (existsSync(join(c.common, "refs", "remotes", ref))) return true;
+  try {
+    return readFileSync(join(c.common, "packed-refs"), "utf8").includes(` refs/remotes/${ref}\n`);
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * When a remote-tracking branch last moved here (its reflog's last entry, written by the fetch that moved it); null
+ * where git keeps no such record, as for a branch a clone made. A fetch that finds nothing new doesn't move it.
+ */
+export function remoteMovedAt(c: Pick<Checkout, "common">, ref: string): number | null {
+  try {
+    const lines = readFileSync(join(c.common, "logs", "refs", "remotes", ref), "utf8")
+      .trimEnd()
+      .split("\n");
+    const when = / (\d+) [+-]\d{4}\t/.exec(lines.at(-1) ?? "");
+    return when ? Number(when[1]) * 1000 : null;
+  } catch {
+    return null;
+  }
+}
+
+/** How long ago `at` was, in a few words: `just now`, `5 min ago`, `3 h ago`, `2 days ago`. */
+export function agoSaid(at: number, now = Date.now()): string {
+  const min = Math.floor((now - at) / 60_000);
+  if (min < 1) return "just now";
+  if (min < 60) return `${min} min ago`;
+  const h = Math.floor(min / 60);
+  if (h < 48) return `${h} h ago`;
+  return `${Math.floor(h / 24)} days ago`;
+}
+
+/** The remote-tracking branches (`origin/dev`), not their `HEAD`s, without waiting on git. */
+export async function remoteBranchesLater(c: Pick<Checkout, "root">, signal?: AbortSignal): Promise<string[]> {
+  const out = await gitReadLater(
+    c,
+    ["for-each-ref", "--format=%(refname:short)%00%(symref)", "refs/remotes/"],
+    false,
+    signal,
+  );
+  return (out ?? "")
+    .split("\n")
+    .map((line) => line.split("\0"))
+    .filter(([name, symref]) => !!name && !symref && name.includes("/") && refName(name))
+    .map(([name]) => name!);
 }

@@ -3,6 +3,7 @@
 // and the writers see only what they take. BMP is decoded here, GIF by resvg, WebP by libwebp as WebAssembly
 // (@jsquash/webp, Apache-2.0; libwebp BSD-3-Clause), loaded the first time a WebP is met.
 
+import { readExportAsset } from "./reads.ts";
 import { readFileSync } from "node:fs";
 import { crc32, deflateSync } from "node:zlib";
 import wasm from "@jsquash/webp/codec/dec/webp_dec.wasm" with { type: "file" };
@@ -177,7 +178,7 @@ export async function convertPictures(doc: ExportDoc, kinds: Raster["type"][], r
         if (!done.has(pic.file)) {
           let bytes: Uint8Array | null = null;
           try {
-            bytes = readFileSync(pic.file);
+            bytes = readExportAsset(pic.file);
           } catch {}
           const info = bytes ? rasterInfo(bytes) : null;
           done.set(pic.file, bytes && info && !kinds.includes(info.type) ? await toPng(bytes, r) : null);

@@ -1,4 +1,6 @@
-# The command line
+# Commands and flags
+
+<a id="the-command-line"></a>
 
 Most of what slipbox does is also a command you can type in a shell. With the commands, you can:
 
@@ -23,6 +25,8 @@ This chapter covers every command, for all three. For each command, it says what
 it prints. [Working with agents](../guides/agents.md) walks through a session beside an agent.
 
 ## Running a command
+
+For an introduction, read [The command line](command-line.md). This page keeps the exact syntax, flags and output.
 
 A command is `slipbox`, the command's name, its arguments and its flags:
 
@@ -50,12 +54,26 @@ slipbox help
 ### Opening the screen
 
 `slipbox` with no command, or with a path, opens the screen. You can also spell it `slipbox open [path]`. The screen
-opens on the folder or note you name, or else on the current folder. [Getting started](../guides/getting-started.md)
+opens on the folder or note you name, or else on the current folder. [Working with
+slipbox](../guides/getting-started.md)
 shows a first session.
 
-It takes `--root`, `--config` and `--theme` (a theme for this session). With `--json`, `--help` or `--version`, it runs
-the command line instead. Other flags are ignored, and an unknown one is a usage error. A path that isn't there is said
-in a line, with exit code 3, before the screen is taken.
+It takes `--root`, `--config`, `--theme` (a theme for this session) and `--base`. With `--json`, `--help` or
+`--version`, it runs the command line instead. Other flags are ignored, and an unknown one is a usage error. A path that
+isn't there is said in a line, with exit code 3, before the screen is taken.
+
+`--base <ref>` measures the branch checked out there against `<ref>`, and keeps it for that branch, as Compare against…
+in the git panel does ([The base of each branch](git.md#the-base-of-each-branch)). A worktree opened for a pull request
+can so be measured as the pull request is:
+
+```bash
+slipbox ~/Projects/worktrees/app/fix-retry --base origin/dev
+```
+
+`<ref>` is a branch, a remote branch such as `origin/dev`, a tag or a commit. A revision such as `HEAD~3`, or `HEAD`'s
+own name, is kept as the commit it names. A ref that names nothing is said in a line, with exit code 3, before the
+screen is taken. On a detached HEAD, for the branch itself, or outside a git repository, nothing is kept, and the screen
+says so as it opens.
 
 The screen needs a terminal. Started from a script, with stdin or stdout not a terminal, slipbox doesn't start the
 screen. It prints a hint to use a command instead, and exits with 2. It never paints escape codes into a pipe.
@@ -77,14 +95,15 @@ A file under no marker in your home folder is home's: your home folder is a vaul
 out hidden folders, `Downloads` and the like. The first command in home walks it, as far as its cap, and the walk is
 kept for the next. A file outside home and every vault is in Elsewhere, which has no index: its notes are read and its
 folder listed, but what needs an index (`backlinks`, `search`, `index`, `tags`, `problems`) is refused, exit 5. `/` is
-never a vault. [Links and vaults](links-and-vaults.md) explains vaults, home, Elsewhere and names.
+never a vault. [Vaults, home and Elsewhere](vaults.md) explains vaults, home, Elsewhere and names.
 
 `--root <folder>` says which vault to work in instead. It must name a vault (exit 3 otherwise). A note you name is
 looked for there. A file still belongs to its nearest vault. So a note in a vault nested inside `--root` belongs to that
 nested vault.
 
 Running a command writes nothing into your folders. slipbox keeps its index, the scratch, the trash and the rest in
-folders of its own, each vault's apart ([Where slipbox keeps things](configuration.md#where-slipbox-keeps-things)).
+folders of its own, each vault's apart ([Where slipbox keeps
+things](environment-and-storage.md#where-slipbox-keeps-things)).
 `slipbox info` says where. Only the commands that change files on purpose write, and only inside the note's vault.
 
 ## Naming a note
@@ -166,7 +185,7 @@ Exit code 5 also covers:
 
 - a note or stdin that isn't valid UTF-8 (never rewritten, so no byte is lost)
 - a path through a link that isn't followed: one leading out of the vault or home, or any in Elsewhere. The command
-  line never follows a link on its own ([Links that lead out](links-and-vaults.md#links-that-lead-out))
+  line never follows a link on its own ([Links that lead out](vaults.md#links-that-lead-out))
 - what needs an index, asked of Elsewhere
 
 `diagnostics` exits with 1 when it shows an error. `uninstall` exits with 1 when it couldn't remove something.
@@ -464,7 +483,8 @@ matched, and `text` is its line.
 
 ### `search`
 
-Ranks the vault's notes and data files by the words you give, as the screen's search does. Each hit is where the note has
+Ranks the vault's notes and data files by the words you give, as the screen's search does. Each hit is where the note
+has
 most of the words.
 
 You write the query as in the screen ([What you can type](finding.md#what-you-can-type)). It can hold:
@@ -754,8 +774,8 @@ These commands read links as the screen does, with the same rules. A link can be
 - a wikilink, looked up within the vault
 - a pointer to a named folder's file
 
-[Links and vaults](links-and-vaults.md) explains every form, and how slipbox picks among notes a wikilink's name could
-mean.
+[Links and backlinks](links-and-vaults.md) explains every form, and how slipbox picks among notes a wikilink's name
+could mean.
 
 **What a link reaches.** `links` reports it as one of these:
 
@@ -841,8 +861,9 @@ Prints a link to a note or file, written as slipbox would write it in a note. It
 - its path form
 - with or without `.md`
 
-The link is written from where `--from` is, or else from the vault's top. This is how the screen's link picker and completion
-write links, and how an agent should write one. [Links and vaults](links-and-vaults.md) explains the convention.
+The link is written from where `--from` is, or else from the vault's top. This is how the screen's link picker and
+completion
+write links, and how an agent should write one. [Links and backlinks](links-and-vaults.md) explains the convention.
 `slipbox info` says what it is here, and why.
 
 ```bash
@@ -864,7 +885,8 @@ followed.
 
 ### `links`
 
-Lists a note's links, each with what it reaches. `--all` lists every note's links in the vault at once, each with `from`.
+Lists a note's links, each with what it reaches. `--all` lists every note's links in the vault at once, each with
+`from`.
 It's a way to find the broken ones.
 
 ```bash
@@ -915,7 +937,8 @@ slipbox problems --lint
 ```
 
 - `--lint`: your Markdown linter's findings on every note too. That's markdownlint-cli2 with your configuration, as the
-  screen runs it ([`lint.enabled`](configuration.md)). When lint is off or fails, a warning says why.
+  screen runs it ([`lint.enabled`](configuration.md)). When lint is off, fails, or prints more than slipbox reads
+  (16 MiB), a warning says why, and no findings are listed.
 
 With `--json`, the data is `{broken[], ambiguous[], fragile[], orphans[], conflicts[{path, line}], frontmatter[{path,
 line, message}], lint[{file, line, column, rule, name, description}]?}`.
@@ -972,7 +995,8 @@ In a git repository, a vault with uncommitted changes is named in the warnings. 
 A change is
 `{kind, from, to, dryRun, move, notIndexed?, files[], warnings[], skipped[], ambiguous[]?, written[], undo?, plan?}`:
 
-- `kind` is `note`, `folder`, `root` (a vault's name), `heading`, `relink`, `convert`, `replace`, `make-root` (`init`) or
+- `kind` is `note`, `folder`, `root` (a vault's name), `heading`, `relink`, `convert`, `replace`, `make-root` (`init`)
+  or
   `unmake-root` (`deinit`).
 - `move` is `{from, to, dir}`, the absolute paths moved, when something moves.
 - `notIndexed` is `walk.exclude` when a note or folder moves where the vault doesn't index it.
@@ -997,7 +1021,8 @@ The new path is from the vault's top, or from the current folder when it is `.` 
 It can also be absolute. It must stay in the vault.
 
 A folder that's there, or a path ending in `/`, is moved into, as the shell's `mv` does, keeping the name. So `archive/`
-makes `archive/coffee.md`, and makes the folder if need be. `./` from the top of the vault moves it there. Any other path
+makes `archive/coffee.md`, and makes the folder if need be. `./` from the top of the vault moves it there. Any other
+path
 is the file's whole new path. A note's extension is kept when the new path has none.
 
 A note's own relative links are rewritten to work from its new folder. So are the paths in a code file's comments and a
@@ -1096,15 +1121,16 @@ Fixes links a move broke. These are links that reach nothing, whose file slipbox
 where the file is now.
 
 Given no note, it does every note. It also fixes what a move of the whole vault by hand broke: its links out, and other
-vaults' links into it. And it offers a pointer for a relative link into a named folder that doesn't travel with this one.
+vaults' links into it. And it offers a pointer for a relative link into a named folder that doesn't travel with this
+one.
 
 ```bash
 slipbox relink --dry-run
 slipbox relink inbox
 ```
 
-A move slipbox saw is one it made, or one git recorded between two commits of the same branch (after a pull or a merge).
-[Links and vaults](links-and-vaults.md) covers repairs.
+A move slipbox saw is one it made, or one git recorded between two commits of the same branch (after a pull or a
+merge). [Links and backlinks](links-and-vaults.md) covers repairs.
 
 `relink` takes `--dry-run` and `--plan`, and `undo` takes it back. With `--json`, the data is [a
 change](#moving-copying-and-deleting), with `kind` `relink`.
@@ -1186,8 +1212,8 @@ A vault can have a name. Other folders' links use it to reach the vault, whereve
 `slipbox://notes/ideas/coffee.md`.
 
 The name is its `.slipbox/` folder's. Failing that, it's its git remote's last part: a repository cloned from
-`github.com/me/research` is `research`. It's never the folder's own name. [Links and vaults](links-and-vaults.md)
-explains names and pointers.
+`github.com/me/research` is `research`. It's never the folder's own name. [Vaults, home and
+Elsewhere](vaults.md#names-and-pointers) explains names and pointers.
 
 ### `info`
 
@@ -1297,7 +1323,7 @@ These are refused (exit 5):
 - a `.slipbox/config.toml` whose `[vault]` table the edit can't follow (edit it by hand)
 
 A clone may take its repository's name, as `init --name` may give it. A copy of the repository is no different folder
-([Copies of a folder](links-and-vaults.md#copies-of-a-folder)).
+([Copies of a folder](vaults.md#copies-of-a-folder)).
 
 `name` takes `--dry-run`. It takes `--plan` where a `.slipbox/` exists. Making one has nothing to plan, so `--plan`
 there is exit 2.
@@ -1332,7 +1358,7 @@ A path that isn't a copy of the folder (or of its repository) is refused (exit 5
 ### `symlinks`
 
 Lists the symlinks you've answered in slipbox, newest first: each link, where it led when you answered, and whether you
-said to follow it ([Links that lead out](links-and-vaults.md#links-that-lead-out)). One that leads somewhere else now,
+said to follow it ([Links that lead out](vaults.md#links-that-lead-out)). One that leads somewhere else now,
 or is gone, says so: its answer no longer holds, and opening it asks again. `symlinks forget <link>` forgets the answer
 for a link, named by its path. Opening it in slipbox asks again, and a link you followed is followed no more.
 
@@ -1360,8 +1386,12 @@ the link leads now (null when it's gone). `symlinks forget` gives `{link, target
 These commands compare what this branch changed with its base, as a pull request does. The comparison starts where the
 branch left the base (the merge base). It takes in changes committed or not.
 
-The base is `--base <ref>`, else [`git.base`](configuration.md), else `main`, else `master`. Outside a git repository,
-or with no base, these commands are exit 3. [Git](git.md) covers git in the screen.
+The base is `--base <ref>`, else the branch's own, as the screen chooses it
+([The base of each branch](git.md#the-base-of-each-branch)): the one kept for it, else the nearest of
+[`git.bases`](configuration.md), else `git.base`, `main` or `master`. With `--json`, `baseChosen` says which: `given`
+(`--base`), `kept`, `nearest` or `configured`. `--base` takes a branch, a remote branch (`origin/dev`), a tag or a
+commit, and a revision such as `HEAD~3` as the commit it names. Outside a git repository, or with no base, these
+commands are exit 3. [Git](git.md) covers git in the screen.
 
 ### `changed`
 
@@ -1380,8 +1410,8 @@ slipbox changed
 slipbox changed --base main
 ```
 
-With `--json`, the data is `{base, mergeBase, files[{path, state, from?}]}`. `state` is `new`, `modified`, `renamed`,
-`deleted` or `conflict`.
+With `--json`, the data is `{base, baseChosen, mergeBase, files[{path, state, from?}]}`. `state` is `new`, `modified`,
+`renamed`, `deleted` or `conflict`.
 
 ### `diff`
 
@@ -1395,7 +1425,7 @@ slipbox diff README.md
 
 - `--base <ref>`: compare with this instead.
 
-With `--json`, the data is `{path, base, mergeBase, new, rows[{kind, text, line}]}`:
+With `--json`, the data is `{path, base, baseChosen, mergeBase, new, rows[{kind, text, line}]}`:
 
 - `kind` is `@@` (a group's head), `-`, `+`, or a space (a line both have).
 - `line` is the line in the note as it is now. For a removed line, it's where the line was.
@@ -1409,7 +1439,8 @@ marks the one you're in.
 slipbox worktrees
 ```
 
-With `--json`, the data is `[{path, branch, head, main, root, current}]`. `root` is this vault's folder in that checkout.
+With `--json`, the data is `[{path, branch, head, main, root, current}]`. `root` is this vault's folder in that
+checkout.
 
 ### `merge-review`
 
@@ -1452,7 +1483,7 @@ lists the files git couldn't merge.
 ## The scratch and the context bundle
 
 The scratch is a Markdown file per vault. You, your editor or an agent collect references and notes in it, to hand to an
-agent. You read it in the screen with `space s s` ([The scratch](editing.md#the-scratch)).
+agent. You read it in the screen with `space s s` ([The scratch](scratch-and-context.md#the-scratch)).
 
 By default, the scratch is kept in slipbox's state, not among your notes. [`capture.location`](configuration.md)
 `= "root"` keeps it in the vault, as [`capture.file`](configuration.md) names it. Elsewhere always has its scratch in
@@ -1679,6 +1710,8 @@ exit 3.
 
 With `--json`, the data is `{path, language, problems[{line, column, endLine, endColumn, severity, source, code,
 message}], sources[{name, kind, status}]}`. Each source's `kind` is `server`, `linter`, `syntax`, `slipbox` or `lint`.
+A linter's `status` is `skipped` when it printed more than slipbox reads (16 MiB): none of its findings are listed,
+and a warning says why.
 
 ## slipbox itself
 
@@ -1709,7 +1742,7 @@ Installs the latest release, when slipbox was put here by its installer. The rel
 version it replaces is kept.
 
 When slipbox follows previews ([`channel`](#channel)), `upgrade` installs the newest of the latest release and the
-newest preview. [Installing slipbox](../guides/install.md) covers installing.
+newest preview. [Installation](../guides/install.md) covers installing.
 
 ```bash
 slipbox upgrade --check

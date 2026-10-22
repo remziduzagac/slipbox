@@ -21,6 +21,8 @@ import {
 import { tmpdir } from "node:os";
 import { basename, join } from "node:path";
 import { CLI_COMMANDS, FLAGS } from "../src/cli/cli.ts";
+import { checkoutOf } from "../src/core/git.ts";
+import { keepBase } from "../src/core/gitbase.ts";
 import { isSlipboxSkill } from "../src/core/skill.ts";
 import { VERSION } from "../src/version.ts";
 
@@ -117,6 +119,32 @@ describe("reading", () => {
     expect(r.code).toBe(0);
     expect(r.out).toMatch(/│\s+Write\s+│/);
     expect(r.out).not.toContain("A[Write]");
+  });
+  test("render draws forty distinct diagrams across queue and cache boundaries", () => {
+    const dir = join(sandbox, "many-diagrams");
+    mkdirSync(dir, { recursive: true });
+    const source = Array.from(
+      { length: 40 },
+      (_, n) => `\`\`\`mermaid\ngraph TD\n  A[Diagram ${n}] --> B[Done]\n\`\`\`\n`,
+    ).join("\n");
+    writeFileSync(join(dir, "many.md"), source);
+    const r = slipbox(["render", join(dir, "many.md"), "--width", "80", "--plain"]);
+    expect(r.code).toBe(0);
+    expect(r.out).not.toContain("graph TD");
+    for (let n = 0; n < 40; n++) expect(r.out).toMatch(new RegExp(`│\\s+Diagram ${n}\\s+│`));
+  });
+  test("render gives up on a diagram the library never finishes: its source, saying why, within its limit (#164)", () => {
+    const dir = join(sandbox, "never-finishes");
+    mkdirSync(dir, { recursive: true });
+    const diagram = readFileSync(join(import.meta.dir, "fixtures", "diagram", "never-finishes.mmd"), "utf8");
+    writeFileSync(join(dir, "hangs.md"), `${"```"}mermaid\n${diagram}${"```"}\n`);
+    const started = performance.now();
+    const r = slipbox(["render", join(dir, "hangs.md"), "--width", "100", "--plain"]);
+    expect(r.code).toBe(0);
+    expect(r.out).toContain("took too long to draw");
+    expect(r.out).toContain("Workspace owner");
+    // One attempt of five seconds, not one per redraw, nor a retry.
+    expect(performance.now() - started).toBeLessThan(20_000);
   });
   // util-linux's script: a terminal for the TUI's start (a pipe never gets one).
   test.skipIf(!Bun.spawnSync(["script", "--version"]).stdout.toString().includes("util-linux"))(
@@ -239,6 +267,22 @@ describe("find and replace", () => {
       expect(w).toEqual({ line: expect.any(Number), column: expect.any(Number), word: expect.any(String) });
     expect(slipbox(["spell", "kenji-mori"]).out).toMatch(/^(people\/kenji-mori\.md:\d+:\d+: \S+\n)*$/);
   });
+  test("spell --suggest: a dozen misspelt words, each one's suggestions asked at once — every one answered", () => {
+    // A vault of its own: the demo's notes stay as the other tests count them.
+    const root = join(sandbox, "typos");
+    mkdirSync(join(root, ".slipbox"), { recursive: true });
+    // typos: off
+    const typos =
+      "teh recieve seperate occured definately untill wierd acommodate neccessary goverment beleive tommorow";
+    // typos: on
+    writeFileSync(join(root, "typos.md"), `# Typos\n\n${typos}.\n`);
+    const r = slipbox(["spell", "typos", "--suggest", "--lang", "en", "--json"], { cwd: root });
+    expect([r.code, r.err]).toEqual([0, ""]);
+    const words = r.json.data.words as { word: string; suggestions: string[] }[];
+    expect(words.map((x) => x.word)).toEqual(typos.split(" "));
+    expect(words.find((x) => x.word === typos.split(" ")[1])!.suggestions).toContain("receive");
+    for (const x of words) expect(x.suggestions).toEqual(expect.any(Array));
+  });
   test("find: the vault or one note; plain by default; regex, whole words, smart case", () => {
     const all = slipbox(["find", "Aster", "--json"]).json.data;
     expect(all.count).toBeGreaterThan(10);
@@ -266,6 +310,18 @@ describe("find and replace", () => {
         new RegExp(`(^|[^\\p{L}\\p{N}_])${m.match}([^\\p{L}\\p{N}_]|$)`, "iu").test(m.text),
       ),
     ).toBe(true);
+  });
+  test("find: every match, however many — none left out, nothing warned", () => {
+    writeFileSync(join(vault, "many-finds.md"), "Zephyrine and Zephyrine\n".repeat(6_000));
+    try {
+      for (const regex of [[], ["--regex"]]) {
+        const r = slipbox(["find", "Zephyrine", ...regex, "--json"]);
+        expect(r.json.data.count).toBe(12_000);
+        expect(r.json.warnings).toEqual([]);
+      }
+    } finally {
+      rmSync(join(vault, "many-finds.md"));
+    }
   });
   test("replace: dry run, all, first, a line range, groups; --if-unchanged refuses a stale sha", () => {
     const before = note("people/kenji-mori.md");
@@ -1251,6 +1307,14 @@ describe("the vault and the tool", () => {
     expect(slipbox(["problems", "--lint", "--json", "--config", cfg]).json.warnings).toContain(
       "lint: [lint] command couldn't run",
     );
+    // Its output past 16 MiB: no findings, since some would be missing, and why — not that it couldn't run.
+    const flood = `yes x | head -c 17000000; ${fake}`;
+    writeFileSync(cfg, `[lint]\nenabled = "on"\ncommand = ["sh", "-c", ${JSON.stringify(flood)}, "lint"]\n`);
+    const over = slipbox(["problems", "--lint", "--json", "--config", cfg]).json;
+    expect(over.data.lint).toBeUndefined();
+    expect(over.warnings).toContain(
+      "lint: stdout output limit (16 MiB) exceeded; partial output discarded — its findings aren't shown",
+    );
     writeFileSync(cfg, `[lint]\nenabled = "off"\n`);
     expect(slipbox(["problems", "--lint", "--json", "--config", cfg]).json.warnings).toContain(
       'lint is off: [lint] enabled = "off"',
@@ -1328,6 +1392,53 @@ describe("the vault and the tool", () => {
     writeFileSync(join(dir, "ny.md"), "new york is new\n");
     expect(slipbox(["search", "new", '"new york"'], { cwd: dir }).out).toBe("ny.md:1:1  [new york] is [new]\n");
   });
+  test("changed and diff measure the branch against its own base, as the screen does, and say how it was chosen (D255)", () => {
+    const dir = join(sandbox, "gitcli-base");
+    mkdirSync(dir, { recursive: true });
+    const git = (...args: string[]) =>
+      Bun.spawnSync(["git", "-c", "user.email=t@example.invalid", "-c", "user.name=t", "-C", dir, ...args]);
+    writeFileSync(join(dir, "plan.md"), "# Plan\n\nfirst\n");
+    expect(slipbox(["init", dir, "--name", "gitcli-base"]).code).toBe(0);
+    if (git("init", "-q", "-b", "main").exitCode !== 0) return;
+    git("add", "-A");
+    git("commit", "-q", "-m", "start");
+    git("checkout", "-q", "-b", "dev");
+    writeFileSync(join(dir, "dev.md"), "# Dev\n");
+    git("add", "-A");
+    git("commit", "-q", "-m", "dev");
+    git("checkout", "-q", "-b", "feat");
+    writeFileSync(join(dir, "plan.md"), "# Plan\n\nsecond\n");
+    const changed = (...more: string[]) => {
+      const d = slipbox(["changed", "--json", ...more], { cwd: dir }).json.data as {
+        base: string;
+        baseChosen: string;
+        files: { path: string }[];
+      };
+      return [d.base, d.baseChosen, d.files.map((f) => f.path).sort()];
+    };
+    // Guessed among [git] bases, main as it comes: dev's commit counted as feat's.
+    expect(changed()).toEqual(["main", "nearest", ["dev.md", "plan.md"]]);
+    // Kept for the branch, as --base on opening or Compare against… keeps it: the screen's base, here too.
+    const was = process.env.XDG_STATE_HOME;
+    process.env.XDG_STATE_HOME = env.XDG_STATE_HOME;
+    try {
+      keepBase(checkoutOf(dir)!, "feat", "dev");
+    } finally {
+      if (was === undefined) delete process.env.XDG_STATE_HOME;
+      else process.env.XDG_STATE_HOME = was;
+    }
+    expect(changed()).toEqual(["dev", "kept", ["plan.md"]]);
+    expect(slipbox(["diff", "plan.md", "--json"], { cwd: dir }).json.data).toMatchObject({
+      base: "dev",
+      baseChosen: "kept",
+    });
+    // --base still wins; a revision given as the commit it names (feat has no commit of its own: HEAD~1 is main's).
+    expect(changed("--base", "main")).toEqual(["main", "given", ["dev.md", "plan.md"]]);
+    const parent = git("rev-parse", "HEAD~1").stdout.toString().trim();
+    expect(changed("--base", "HEAD~1")).toEqual([parent, "given", ["dev.md", "plan.md"]]);
+    expect(slipbox(["changed", "--base", "-x"], { cwd: dir }).code).toBe(3);
+  });
+
   test("changed, diff, worktrees: this branch against main (5.13, 5.14)", () => {
     const dir = join(sandbox, "gitcli");
     mkdirSync(dir, { recursive: true });

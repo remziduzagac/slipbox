@@ -2757,6 +2757,8 @@ The same notes, one per tab.
 
 - `explorer.cycle` — Explorer: open, focus, close — `notes/projects/`, `notes/index.md` (command-specs.ts)
 - `explorer.reveal` — Reveal note in explorer — `notes/projects/`, `notes/index.md` (command-specs.ts)
+- `explorer.toggle_hidden` — Show or hide hidden files — `work/kestrel/.github/`, `work/kestrel/.env.example`
+  (command-specs.ts)
 
 ### outline
 
@@ -2941,6 +2943,8 @@ The same notes, one per tab.
   `notes/projects/sync-rewrite.md` (command-specs.ts)
 - `note.export_many` — Export notes as one document… — `notes/projects/sync-rewrite.md`,
   `notes/projects/route-sharing.md` (command-specs.ts)
+- `note.export_cancel` — Cancel export — `notes/projects/sync-rewrite.md`, `notes/research/route-cost-models.md`
+  (command-specs.ts)
 - `note.info` — Info: open, focus, close — `notes/inbox.md`, `notes/projects/home-office.md`, `notes/projects/`
   (command-specs.ts)
 - `note.properties` — Edit the properties — `notes/inbox.md`, `notes/projects/home-office.md`, `notes/projects/`

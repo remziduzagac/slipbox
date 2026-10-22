@@ -1,67 +1,73 @@
 ---
 title: slipbox documentation
-description: The terminal companion for coding agents. Read, review and edit what your agent writes, with Markdown and code rendered cleanly.
+description: Read, review and edit notes and code in your terminal. Learn slipbox, then explore its features and workflows.
 template: splash
 editUrl: false
 hero:
-  tagline: Read, review and edit what your coding agent writes, in your terminal. Start on the path that fits you; no prior knowledge needed.
+  tagline: Read comfortably, edit where you are, and keep your files yours.
   image:
-    html: '<img src="/slipbox/docs/images/readme-hero.png" alt="slipbox on a design doc: the agent''s change marked beside its lines, the lens open while you type, the scratch on the right" width="867" height="475" style="border-radius: 6px">'
+    html: '<img src="/slipbox/docs/images/documentation-home.png" alt="A long note beside the explorer, the lens open on its Food section: that section as Markdown between two rules, the training table rendered above and the gear checklist below" width="867" height="475" style="border-radius: 6px">'
   actions:
-    - text: Install slipbox
-      link: /slipbox/docs/guides/install/
+    - text: Start here
+      link: /slipbox/docs/manual/introduction/
     - text: Quick start
       link: /slipbox/docs/guides/quick-start/
       variant: secondary
 ---
 
-import { Card, CardGrid, LinkCard } from "@astrojs/starlight/components";
+import { LinkCard, CardGrid } from "@astrojs/starlight/components";
 
-## Pick your path
+<a id="slipbox-documentation"></a>
+<a id="start-here"></a>
 
-<CardGrid>
-  <Card title="New to slipbox?" icon="rocket">
-    Open a folder of Markdown and use the mouse, the arrow keys and the shortcuts you know: `ctrl+f`, `ctrl+s`,
-    `ctrl+z`. Two keys teach you the rest: `space` shows what can follow it, and `?` lists every key.
+## Your first session
 
-    [Quick start →](/slipbox/docs/guides/quick-start/) · [Keys you already know →](/slipbox/docs/guides/keys-you-know/)
-  </Card>
-  <Card title="Working beside a coding agent?" icon="seti:terminal">
-    You and your agent work on the same files. It writes; you read, review and edit, and hand it places to look at.
+slipbox reads your existing notes and code. You can use it on your own or beside an agent; no agent setup is required
+for the first session.
 
-    [Working with agents →](/slipbox/docs/guides/agents/)
-  </Card>
-  <Card title="Coming from Obsidian or zk?" icon="document">
-    Your vault or notebook opens as it is: its links, tags and aliases read the way Obsidian and zk read them.
+1. [See what slipbox does](/slipbox/docs/manual/introduction/).
+2. [Install it](/slipbox/docs/guides/install/) and verify the command.
+3. [Try the quick start](/slipbox/docs/guides/quick-start/): open, read, edit and save a note.
+4. Follow [Working with slipbox](/slipbox/docs/guides/getting-started/) for a complete tour.
+5. Learn [Reading and editing in slipbox](/slipbox/docs/guides/lens/): rendered view, the lens, source mode and typing.
 
-    [Coming from Obsidian or zk →](/slipbox/docs/guides/from-obsidian-or-zk/)
-  </Card>
-  <Card title="Reviewing code?" icon="github">
-    A repository's code reads like a document, with its problems, its changes and git beside it.
+<a id="guides"></a>
 
-    [Code and git →](/slipbox/docs/guides/code-and-git/)
-  </Card>
-</CardGrid>
-
-## Or let your agent introduce you
-
-If you already use a coding agent, let it walk you through slipbox. Paste this prompt:
-
-```text
-Help me understand and set up slipbox. Read https://remziduzagac.github.io/slipbox/docs/agent-guide.md first, then walk me through it step by step.
-```
-
-The guide gives your agent slipbox's ideas in order, the setup steps and the usual fixes, so it answers from the docs
-instead of guessing.
-
-## Learn more
+## Choose your next workflow
 
 <CardGrid>
-  <LinkCard title="Concepts" description="The words slipbox uses, each in a few lines." href="/slipbox/docs/manual/concepts/" />
-  <LinkCard title="Getting started" description="A ten-minute first session in a folder of your own notes." href="/slipbox/docs/guides/getting-started/" />
-  <LinkCard title="Vaults, home and Elsewhere" description="The folders slipbox works in, and how you move between them." href="/slipbox/docs/guides/vaults/" />
-  <LinkCard title="Making it yours" description="Themes, keys and settings." href="/slipbox/docs/guides/making-it-yours/" />
-  <LinkCard title="Exporting notes" description="Word, PDF, a web page, an e-book or Markdown." href="/slipbox/docs/guides/exporting/" />
-  <LinkCard title="Keys" description="Every key, in one place." href="/slipbox/docs/manual/keys/" />
-  <LinkCard title="The command line" description="Every command, its output and exit codes, for agents and scripts." href="/slipbox/docs/manual/cli/" />
+  <LinkCard title="Folders and vaults" description="Move between places without losing your reading context." href="/slipbox/docs/guides/vaults/" />
+  <LinkCard title="Coming from Obsidian or zk" description="Open the notes you already have and check their links." href="/slipbox/docs/guides/from-obsidian-or-zk/" />
+  <LinkCard title="Reviewing changes with Git" description="Inspect a change or a branch before accepting it." href="/slipbox/docs/guides/code-and-git/" />
+  <LinkCard title="Exporting and sharing notes" description="Make an export and inspect it before sharing." href="/slipbox/docs/guides/exporting/" />
+  <LinkCard title="Working with agents" description="Use saved files, guarded writes, scratch references and context." href="/slipbox/docs/guides/agents/" />
+  <LinkCard title="Making slipbox yours" description="Try themes, keys and settings, then keep your choices." href="/slipbox/docs/guides/making-it-yours/" />
 </CardGrid>
+
+<a id="the-manual"></a>
+
+## Using slipbox
+
+The **Using slipbox** sidebar group explains the screen, reading, editing, files, links, vaults, scratch, code, Git,
+export and the command line. Begin with [How slipbox works](/slipbox/docs/manual/how-it-works/) for the file and vault model.
+
+## Reference
+
+Look up [shortcuts](/slipbox/docs/manual/keys/), [commands and flags](/slipbox/docs/manual/cli/),
+[settings](/slipbox/docs/manual/configuration/), [environment and storage](/slipbox/docs/manual/environment-and-storage/),
+and the [glossary](/slipbox/docs/manual/concepts/).
+
+<a id="about-slipbox"></a>
+
+For problems, use [Troubleshooting](/slipbox/docs/manual/troubleshooting/). Read
+[Accessibility and terminal support](/slipbox/docs/manual/accessibility/) for input/output choices and limitations,
+and [Privacy and trust](/slipbox/docs/manual/privacy/) for network and tool-execution behavior.
+
+<a id="for-agents"></a>
+
+## Help from your agent
+
+If you want an agent to help you learn, give it the
+[onboarding guide](/slipbox/docs/agent-guide/), also available as
+[plain Markdown](/slipbox/docs/agent-guide.md). To operate slipbox's CLI, it should read the bundled skill from your
+installed version with `slipbox skill`.

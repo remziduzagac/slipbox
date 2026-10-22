@@ -34,6 +34,7 @@ import {
   NotAnExport,
   writeExport,
 } from "../src/core/export/index.ts";
+import { prepareExport } from "../src/core/export/jobs.ts";
 import { pdfDocument, splitByFont, toPdf, words } from "../src/core/export/pdf.ts";
 import { TINT } from "../src/core/export/style.ts";
 import { slugify } from "../src/core/parse.ts";
@@ -195,8 +196,17 @@ async function exportOf(
   target = `out.${formatFor(format)!.ext}`,
 ) {
   const abs = join(r.dir, target);
-  const out = await exportNotes(r.graph, rels, formatFor(format)!, abs);
-  return { ...out, abs, text: new TextDecoder().decode(out.data) };
+  const prepared = await prepareExport(r.graph, rels, format, abs);
+  try {
+    const data = readFileSync(join(prepared.dir, "document"));
+    const files = prepared.manifest.files.map((file, i) => ({
+      path: file.path,
+      data: readFileSync(join(prepared.dir, `asset-${i}`)),
+    }));
+    return { data, files, abs, text: new TextDecoder().decode(data) };
+  } finally {
+    await prepared.dispose();
+  }
 }
 
 /** Why `doc` isn't well-formed XML — a tag never closed, a `<` or an `&` loose, an attribute with no value — or null. */
@@ -420,6 +430,16 @@ describe("export: the assembler (10.1)", () => {
     expect(links(doc).map((l) => [textOf(l.children), l.url, l.data?.remoteImage])).toEqual([
       ["remote", "https://example.com/x.png", true],
     ]);
+  });
+
+  test("export assembles forty distinct diagrams without queue fallbacks", async () => {
+    const source = Array.from(
+      { length: 40 },
+      (_, n) => `\`\`\`mermaid\ngraph TD\n A[Export ${n}] --> B\n\`\`\`\n`,
+    ).join("\n");
+    const { graph } = root({ "many.md": source });
+    const doc = await assemble(graph, ["many.md"]);
+    expect(pictures(doc).filter((p) => p.picture?.kind === "diagram")).toHaveLength(40);
   });
 
   test("a Mermaid diagram and a display's maths drawn as SVG in print's colours; a diagram not drawn stays code", async () => {
@@ -1070,6 +1090,19 @@ describe("export: an e-book (10.6)", () => {
     const z = unzip(data);
     expect([...z.keys()][0]).toBe("mimetype");
     expect(xml(z, "mimetype")).toBe("application/epub+zip");
+    // Read as a stream, header after header from the start, as a reader without the central directory does: each
+    // entry's sizes are in its own header, no data descriptor after it (a stored one with one is refused by some).
+    const streamed: string[] = [];
+    let at = 0;
+    while (v.getUint32(at, true) === 0x04034b50) {
+      expect(v.getUint16(at + 6, true) & 8).toBe(0);
+      const [size, name, extra] = [v.getUint32(at + 18, true), v.getUint16(at + 26, true), v.getUint16(at + 28, true)];
+      streamed.push(new TextDecoder().decode(data.subarray(at + 30, at + 30 + name)));
+      at += 30 + name + extra + size;
+    }
+    expect(v.getUint32(at, true)).toBe(0x02014b50);
+    expect(streamed).toEqual([...z.keys()]);
+    expect(v.getUint32(18, true)).toBe("application/epub+zip".length);
     expect(xml(z, "META-INF/container.xml")).toContain('full-path="OEBPS/content.opf"');
     for (const name of z.keys())
       if (/\.(xhtml|opf|xml)$/.test(name)) expect([name, notWellFormed(xml(z, name))]).toEqual([name, null]);

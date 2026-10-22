@@ -68,7 +68,13 @@ export const STDOUT_MAX = 32 * 1024 * 1024;
  */
 export function runShell(
   command: string,
-  opts: { cwd: string; input?: string; env?: Record<string, string> },
+  opts: {
+    cwd: string;
+    input?: string;
+    env?: Record<string, string>;
+    /** Each piece of its output as it's read, and from which stream: in the order the output keeps. */
+    onOutput?: (text: string, stream: "stdout" | "stderr") => void;
+  },
 ): { done: Promise<ShellResult>; stop: () => void } {
   const t0 = performance.now();
   const shell = process.env.SHELL || "/bin/sh";
@@ -84,6 +90,7 @@ export function runShell(
   let truncated = false;
   const take = (chunk: Buffer, out: boolean) => {
     const text = chunk.toString("utf8");
+    opts.onOutput?.(text, out ? "stdout" : "stderr");
     if (output.length < OUTPUT_MAX) output += text;
     else truncated = true;
     if (!out) return;

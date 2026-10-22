@@ -33,6 +33,8 @@ If you'd like to change something, start a discussion first.
 
 A pull request:
 
+- is made into `dev`, the default branch, from a branch of it. `dev` goes on to `test`, where previews are made, and
+  then to `main`, which is what's released ([MAINTAINING.md](MAINTAINING.md));
 - has a Conventional Commit for its title (`fix(export): …`, `feat(cli): …`, `!` for a breaking change). It becomes the
   subject of the squashed commit;
 - makes one change, and updates [the documentation](docs/README.md) and the README where users will see it, and

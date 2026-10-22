@@ -117,10 +117,11 @@ function events() {
 }
 
 /** The fake server as a client starts it, and what it hears. */
-function fake(opts: { pull?: boolean; settings?: Record<string, unknown> } = {}) {
+function fake(opts: { pull?: boolean; settings?: Record<string, unknown>; timeoutMs?: number } = {}) {
   const heard = new Map<string, { diagnostics: Diagnostic[]; version: number | null }>();
   const logs: string[] = [];
-  const exits: { expected: boolean; why: string }[] = [];
+  const notices: string[] = [];
+  const exits: { expected: boolean; why: string; byClient?: boolean }[] = [];
   const e = events();
   const spec: ServerSpec = {
     name: "fake",
@@ -128,16 +129,297 @@ function fake(opts: { pull?: boolean; settings?: Record<string, unknown> } = {})
     env: opts.pull ? { FAKE_PULL: "1" } : {},
     settings: opts.settings,
     root: sandbox,
+    timeoutMs: opts.timeoutMs,
   };
   const client = new LanguageClient(spec, {
     diagnostics: (uri, diagnostics, version) => (heard.set(uri, { diagnostics, version }), e.heard()),
     log: (m) => (logs.push(m), e.heard()),
-    exited: (expected, why) => (exits.push({ expected, why }), e.heard()),
+    notice: (m) => (notices.push(m), e.heard()),
+    exited: (expected, why, byClient) => (exits.push({ expected, why, byClient }), e.heard()),
   });
-  return { client, heard, logs, exits, when: e.when };
+  return { client, heard, logs, notices, exits, when: e.when };
 }
 
 const uri = pathToFileURL(join(sandbox, "a.ts")).href;
+
+describe("the client's limits (19.1): they keep a broken server from costing slipbox, never stop a working one", () => {
+  const hover = (f: ReturnType<typeof fake>, line: number, at = uri) =>
+    f.client.request<{ contents: { value: string } }>("textDocument/hover", {
+      textDocument: { uri: at },
+      position: { line, character: 0 },
+    });
+  const pulls = (f: ReturnType<typeof fake>) => f.client.request<number>("fake/pullCount", {});
+  /** Until `ok` holds, asked again and again (what the server counts): false when it never does in `ms`. */
+  const eventually = async (ok: () => Promise<boolean>, ms = 25_000) => {
+    for (const t = Date.now(); Date.now() - t < ms; await Bun.sleep(20)) if (await ok()) return true;
+    return false;
+  };
+
+  test.skipIf(process.platform === "win32")(
+    "initialize timeout disposes a helper that ignores graceful termination",
+    async () => {
+      const pidFile = join(sandbox, `starting-server-${Date.now()}.pid`);
+      const program =
+        'process.on("SIGTERM", () => {}); require("node:fs").writeFileSync(process.argv[1], String(process.pid)); setInterval(() => {}, 1000);';
+      const client = new LanguageClient({
+        name: "unready",
+        argv: [process.execPath, "-e", program, pidFile],
+        root: sandbox,
+      });
+      let pid = 0;
+      try {
+        const failed = client.start(2000).catch((error) => error.message);
+        expect(await until(() => existsSync(pidFile))).toBe(true);
+        pid = Number(readFileSync(pidFile, "utf8"));
+        expect(await failed).toContain("initialize");
+        const alive = () => {
+          try {
+            process.kill(pid, 0);
+            return true;
+          } catch {
+            return false;
+          }
+        };
+        expect(await until(() => !alive())).toBe(true);
+        expect(client.state).toBe("failed");
+      } finally {
+        if (pid) {
+          try {
+            process.kill(pid, "SIGKILL");
+          } catch {}
+        }
+        client.kill();
+      }
+    },
+  );
+
+  test("given up on — the caller's signal, the deadline — a request is cancelled alone: the server runs on", async () => {
+    const f = fake({ timeoutMs: 300 });
+    await f.client.start();
+    try {
+      const cancelled = new AbortController();
+      const request = f.client.request("fake/awaitCancellation", {}, { signal: cancelled.signal });
+      cancelled.abort();
+      expect(await Promise.race([request, Bun.sleep(300).then(() => "not cancelled")])).toBeNull();
+      // Answered at 800 ms, past its 300: null, said once; the server told, still running, answering the next.
+      await f.client.didOpen(uri, "typescript", 1, "LATEHOVER here\nsecond\n");
+      expect(await hover(f, 0)).toBeNull();
+      expect(f.notices).toEqual(["fake: no answer to textDocument/hover in 0.3 s: it was cancelled"]);
+      expect((await hover(f, 1))?.contents.value).toBe("line 1: second");
+      expect(await f.client.request("fake/awaitCancellation", {})).toBeNull();
+      expect(await f.client.request<number>("fake/cancellations", {})).toBe(2); // `$/cancelRequest`, both times
+      expect(f.client.state).toBe("running");
+      expect(f.exits).toEqual([]);
+    } finally {
+      await f.client.stop();
+    }
+  });
+
+  test("past its deadline while a change is still being written: no error, the server runs on and gets it", async () => {
+    const f = fake();
+    await f.client.start();
+    try {
+      await f.client.didOpen(uri, "typescript", 1, "x\n");
+      await f.client.request("fake/stall", { ms: 1000, after: "resume" }); // it reads nothing for a second
+      // Not waited on, as the manager sends it: a rejection here would end slipbox (an unhandled one).
+      void f.client.didChange(uri, 2, `${"y".repeat(4_000_000)}\nsecond\n`);
+      expect(await f.client.request("fake/awaitCancellation", {}, { timeoutMs: 300 })).toBeNull();
+      expect(f.client.state).toBe("running");
+      expect((await hover(f, 1))?.contents.value).toBe("line 1: second"); // the change arrived
+      expect(f.exits).toEqual([]);
+    } finally {
+      await f.client.stop();
+    }
+  });
+
+  test("past 64 unanswered, requests wait their turn; a cancelled one never answered stops counting", async () => {
+    const f = fake();
+    await f.client.start();
+    try {
+      await f.client.didOpen(uri, "typescript", 1, "DROP here\n");
+      // Each hover supersedes the one before: cancelled, and this server never answers a cancelled one (DROP).
+      const asked = Array.from({ length: 70 }, () => hover(f, 0));
+      const answers = await Promise.all(asked);
+      expect(answers.slice(0, -1).every((a) => a === null)).toBe(true);
+      expect(answers.at(-1)?.contents.value).toBe("line 0: DROP here"); // its turn came, after the grace period
+      expect(f.notices).toContain("fake: 64 requests unanswered: the next ones wait their turn");
+      expect(f.client.state).toBe("running");
+      expect(f.exits).toEqual([]);
+    } finally {
+      await f.client.stop();
+    }
+  });
+
+  test("a refresh with 70 files open: each asked again, a few at a time — the server runs on", async () => {
+    const f = fake({ pull: true });
+    await f.client.start();
+    const files = Array.from({ length: 70 }, (_, i) => pathToFileURL(join(sandbox, `many-${i}.ts`)).href);
+    try {
+      for (const file of files) {
+        await f.client.didOpen(file, "typescript", 1, "ok\n");
+        await f.when(() => f.heard.has(file)); // answered: none on its way when the refresh comes
+      }
+      await f.client.didChange(files[0]!, 2, "REFRESH\n"); // it asks for a refresh 300 ms later
+      const refreshed = () => f.heard.get(files[0]!)?.diagnostics.some((d) => d.message === "after a refresh");
+      await f.when(() => f.exits.length > 0 || refreshed() === true);
+      expect(f.exits).toEqual([]);
+      expect(await eventually(async () => ((await pulls(f)) ?? 0) >= 70 + 1 + 70)).toBe(true); // all asked again
+      expect(f.client.state).toBe("running");
+      expect(f.notices).toEqual([]); // a few at a time: none waited for the 64 unanswered to go down
+    } finally {
+      await f.client.stop();
+    }
+  });
+
+  // The server's state changed, not the text: a pull already on its way answers for the state before. Its HELD answers
+  // (given on fake/release) are computed when asked, so the first is the old state's.
+  for (const [what, text, why, act] of [
+    ["its work done ($/progress end)", "LOADING HELD BAD\n", "bad, with null", () => {}],
+    ["its refresh", "REFRESH HELD\n", "after a refresh", () => {}],
+    ["a save", "ONSAVE HELD\n", "after a save", (f: ReturnType<typeof fake>) => f.client.didSave(uri)],
+  ] as const)
+    test(`a pull on its way for the same text is asked again after ${what}: the newest state's answer stands`, async () => {
+      const f = fake({ pull: true });
+      await f.client.start();
+      try {
+        await f.client.didOpen(uri, "typescript", 1, text);
+        await eventually(async () => (await pulls(f)) === 1);
+        await act(f);
+        expect(await eventually(async () => (await pulls(f)) === 2, 5000)).toBe(true);
+        await f.client.request("fake/release", {});
+        await f.when(() => f.heard.get(uri)?.diagnostics.some((d) => d.message.toString().startsWith(why)) === true);
+        await f.client.request("fake/release", {}); // anything still held, then nothing newer comes
+        expect(f.heard.get(uri)?.diagnostics.some((d) => d.message.toString().startsWith(why))).toBe(true);
+      } finally {
+        await f.client.stop();
+      }
+    });
+
+  test("an answer's malformed diagnostics are left out and said once; markup messages and the rest kept", async () => {
+    const f = fake();
+    await f.client.start();
+    const range = { start: { line: 0, character: 0 }, end: { line: 0, character: 1 } };
+    try {
+      await f.client.request("fake/publish", {
+        uri,
+        diagnostics: [
+          { range, message: "plain" },
+          { message: "no range" },
+          { range, message: { kind: "markdown", value: "**markup**" } },
+          { range },
+        ],
+      });
+      expect(f.heard.get(uri)?.diagnostics.map((d) => d.message)).toEqual([
+        "plain",
+        { kind: "markdown", value: "**markup**" },
+      ]);
+      await f.client.request("fake/publish", { uri, diagnostics: [{ range: { start: 1 }, message: "bad range" }] });
+      expect(f.heard.get(uri)?.diagnostics).toEqual([]);
+      await f.client.request("fake/publish", {
+        uri: `${uri}.many`,
+        diagnostics: Array(10_001).fill({ range, message: "x" }),
+      });
+      expect(f.heard.get(`${uri}.many`)?.diagnostics).toHaveLength(10_000);
+      expect(f.notices).toEqual([
+        `fake: left out diagnostics it sent malformed (${uri})`,
+        `fake: kept the first 10000 of 10001 diagnostics for ${uri}.many (the count slipbox keeps)`,
+      ]);
+      expect(f.client.state).toBe("running");
+    } finally {
+      await f.client.stop();
+    }
+  });
+
+  test("what it sends can't be read: stopped, said as a protocol error — a change being written settles quietly", async () => {
+    const f = fake();
+    await f.client.start();
+    try {
+      await f.client.didOpen(uri, "typescript", 1, "x\n");
+      await f.client.request("fake/stall", { ms: 300, after: "junk" });
+      // Still being written (it reads nothing) when the client stops it.
+      await f.client.didChange(uri, 2, "y".repeat(8_000_000));
+      await f.when(() => f.exits.length > 0);
+      expect(f.client.state).toBe("stopped");
+      expect(f.exits).toEqual([
+        { expected: false, why: "protocol error (server response message limit exceeded)", byClient: true },
+      ]);
+    } finally {
+      f.client.kill();
+    }
+  });
+
+  test("its output cut off mid-message as it exits: a crash, said with its exit code, not a protocol error", async () => {
+    const f = fake();
+    await f.client.start();
+    await f.client.request("fake/stall", { ms: 50, after: "partial" });
+    await f.when(() => f.exits.length > 0);
+    expect(f.exits).toEqual([{ expected: false, why: "it exited (code 9)", byClient: undefined }]);
+  });
+
+  test("stopped for a protocol error, it doesn't wait for a helper holding its pipes", async () => {
+    const f = fake();
+    await f.client.start();
+    const helper = await f.client.request<number>("fake/holdPipes", {});
+    try {
+      await f.client.request("fake/stall", { ms: 50, after: "junk" });
+      await f.when(() => f.exits.length > 0);
+      expect(f.client.state).toBe("stopped");
+    } finally {
+      if (helper)
+        try {
+          process.kill(helper, "SIGKILL");
+        } catch {}
+      f.client.kill();
+    }
+  });
+
+  test("pulls coalesce for the same text; a newer hover supersedes an older one", async () => {
+    const f = fake({ pull: true });
+    await f.client.start();
+    try {
+      await f.client.didOpen(uri, "typescript", 1, "HELD BAD\nsecond\n");
+      const asked = Array.from({ length: 20 }, () => f.client.pull(uri));
+      expect(await pulls(f)).toBe(1);
+      await f.client.request("fake/release", {});
+      await Promise.all(asked);
+      const older = hover(f, 0);
+      const newer = hover(f, 1);
+      expect(await older).toBeNull();
+      expect(await newer).toHaveProperty("contents");
+    } finally {
+      await f.client.stop();
+    }
+  });
+
+  test("a large answer is kept whole", async () => {
+    const f = fake();
+    await f.client.start();
+    try {
+      expect(await f.client.request<unknown[]>("fake/bulk", {})).toHaveLength(5000);
+    } finally {
+      await f.client.stop();
+    }
+  });
+
+  test("a closed file's diagnostics are dropped, another file's kept; an older text's are ignored", async () => {
+    const f = fake();
+    const other = `${uri}.workspace`;
+    await f.client.start();
+    try {
+      await f.client.request("fake/publish", { uri: other, version: 1, diagnostics: [] });
+      expect(f.heard.has(other)).toBe(true);
+      await f.client.didOpen(uri, "typescript", 4, "ok");
+      await f.client.request("fake/publish", { uri, version: 3, diagnostics: [] });
+      expect(f.heard.get(uri)?.version).not.toBe(3);
+      await f.client.didClose(uri);
+      f.heard.delete(uri);
+      await f.client.request("fake/publish", { uri, version: 4, diagnostics: [] });
+      expect(f.heard.has(uri)).toBe(false);
+    } finally {
+      await f.client.stop();
+    }
+  });
+});
 
 describe("the client (19.1)", () => {
   test("started in the project's folder, a file opened and changed: the diagnostics it sends, with the settings it asked for", async () => {
@@ -774,7 +1056,7 @@ describe("the servers of open files (19.1)", () => {
     servers,
     languages: [{ name: "fake", languageId: "fake", fileTypes: ["fk"], roots: [".git"], servers: names }],
   });
-  const managed = (t: ServerTable, autoInstall = false) => {
+  const managed = (t: ServerTable, autoInstall = false, requestTimeoutMs?: number) => {
     const problems = new Map<string, { version: number | null; list: Problem[] }>();
     const messages: string[] = [];
     const e = events();
@@ -783,6 +1065,7 @@ describe("the servers of open files (19.1)", () => {
       autoInstall: () => autoInstall,
       problems: (path, _s, version, list) => (problems.set(path, { version, list }), e.heard()),
       message: (_l, text) => (messages.push(text), e.heard()),
+      requestTimeoutMs,
     });
     return { m, problems, messages, when: e.when };
   };
@@ -791,6 +1074,72 @@ describe("the servers of open files (19.1)", () => {
     mkdirSync(join(root, ".git"), { recursive: true });
     return root;
   };
+
+  describe("a server's limits as the manager has them: slipbox goes on, the server too, the user told", () => {
+    const pulling = (name: string) =>
+      table({ fake: { name: "fake", command: launcher(name, 'process.env.FAKE_PULL = "1";\n'), args: ["--stdio"] } });
+
+    test("crashed with 70 files open: started again, each file told again and answered — no burst stops it", async () => {
+      const { m, problems, messages, when } = managed(pulling("fake-reopen"));
+      const root = project("reopen");
+      const files = Array.from({ length: 70 }, (_, i) => join(root, `f${i}.fk`));
+      for (const file of files) {
+        m.open(file, 1, "ok\n");
+        await when(() => problems.has(file));
+      }
+      m.change(files[0]!, 2, "CRASH\n");
+      await when(() => messages.some((x) => x.startsWith("fake crashed")));
+      m.change(files[0]!, 3, "ok\n"); // as it is when the new one is told
+      problems.clear();
+      await when(() => files.every((file) => problems.has(file)));
+      expect(m.list()[0]?.state).toBe("running");
+      expect(messages.filter((x) => x.startsWith("fake"))).toEqual([
+        expect.stringMatching(/^fake crashed \(it exited \(code 3\)\); starting it again$/),
+      ]);
+      await m.stopAll();
+    }, 60_000);
+
+    test("gone while a change is still being written to it: the write's failure is no error of slipbox's", async () => {
+      const { m, messages, when } = managed(
+        table({ fake: { name: "fake", command: launcher("fake-gone-writing"), args: ["--stdio"] } }),
+      );
+      const file = join(project("gone-writing"), "a.fk");
+      m.open(file, 1, "x\n");
+      await m.requestOf(file, "fake", "fake/stall", { ms: 300, after: "exit" }); // it reads nothing, then exits
+      m.change(file, 2, "y".repeat(8_000_000));
+      await when(() => messages.some((x) => x.startsWith("fake crashed")));
+      await m.stopAll();
+    });
+
+    test("a request not answered in time (requestTimeoutMs): cancelled and said; the server runs on", async () => {
+      const { m, messages } = managed(
+        table({ fake: { name: "fake", command: launcher("fake-deadline"), args: ["--stdio"] } }),
+        false,
+        300,
+      );
+      const file = join(project("deadline"), "a.fk");
+      m.open(file, 1, "x\n");
+      expect(await m.requestOf(file, "fake", "fake/awaitCancellation", {})).toBeNull();
+      expect(messages).toEqual(["fake: no answer to fake/awaitCancellation in 0.3 s: it was cancelled"]);
+      expect(m.list()[0]?.state).toBe("running");
+      await m.stopAll();
+    });
+
+    test("what it sends can't be read: said as stopped by slipbox for a protocol error, not a crash; started again", async () => {
+      const { m, messages, when } = managed(
+        table({ fake: { name: "fake", command: launcher("fake-junk"), args: ["--stdio"] } }),
+      );
+      const file = join(project("junk"), "a.fk");
+      m.open(file, 1, "x\n");
+      await m.requestOf(file, "fake", "fake/stall", { ms: 50, after: "junk" });
+      await when(() => messages.length > 0);
+      expect(messages).toEqual([
+        "fake was stopped: protocol error (server response message limit exceeded); starting it again",
+      ]);
+      expect(await until(() => m.list()[0]?.state === "running")).toBe(true);
+      await m.stopAll();
+    });
+  });
 
   test("one server per project, its files sharing it; their problems as the core's; a request answered", async () => {
     const fakeDef = { name: "fake", command: launcher("fake-ls"), args: ["--stdio"] };

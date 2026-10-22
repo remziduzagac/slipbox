@@ -41,15 +41,19 @@ the health issue, who does what, the calendar, and the steps behind `SECURITY.md
 
 ## How a change lands
 
-Every change reaches `main` through a pull request (GR-D6). `main`'s ruleset requires one, with no approval (there is
-no second person to give it) and the `ci` check passed (§ CI); squash is the only merge method, the squashed commit
-titled and described by the pull request, and the branch deleted once merged. The title is a Conventional Commit
-(`fix(export): …`, `feat(cli)!: …` for a breaking change), so `main` has one commit per change, titled for the
-changelog; the workstream's or task's IDs, the roadmap's steps and the decisions go in the body, and a commit made
-with an agent ends with a `Co-Authored-By:` trailer naming it. The changelog itself is written at release time.
+Every change reaches `dev`, the default branch, through a pull request (GR-D6, D251). `dev`'s ruleset requires one,
+with no approval (there is no second person to give it) and the `ci` check passed (§ CI); squash is the only merge
+method, the squashed commit titled and described by the pull request, and the branch deleted once merged. The title
+is a Conventional Commit (`fix(export): …`, `feat(cli)!: …` for a breaking change), so `dev` has one commit per
+change, titled for the changelog; the workstream's or task's IDs, the roadmap's steps and the decisions go in the
+body, and a commit made with an agent ends with a `Co-Authored-By:` trailer naming it.
 
-Agents work on branches and open pull requests; merging, releasing, tagging, moving `test` (§ CI) and changing the
-settings are the maintainer's. No one bypasses `main`'s rules, the maintainer included.
+From `dev`, work moves on by fast-forward, never committed to directly (D251): to `test`, which publishes a preview to
+try by hand (§ CI), and where `ci` run by hand runs everything and reports `full`; then to `main`, the released state,
+whose ruleset takes only a commit that passed `full`, and on which releases are tagged. Agents work on branches and
+open pull requests; reviewing and merging into `dev`, moving `test` or `main`, the full run and releasing happen when
+the maintainer asks; changing the settings is the maintainer's alone. No one bypasses the rulesets, the maintainer
+included.
 
 ## The check
 
@@ -95,31 +99,35 @@ workflow: actionlint 1.7.12 doesn't know the token's `vulnerability-alerts` scop
 
 ## CI
 
-`.github/workflows/ci.yml` runs on every pull request, every push to `main`, a merge queue's group (listed for later:
-a merge queue needs an organisation's repository) and by hand (GR-D9). Its jobs are `bun run check`'s parts, each
-step a package.json script, never a command of its own:
+`.github/workflows/ci.yml` runs on every pull request, every push to `dev` or `test`, a merge queue's group (listed for
+later: a merge queue needs an organisation's repository) and by hand (GR-D9, D251). A pull request and a push run what
+their change reaches; a run by hand runs everything, and its aggregator reports `full` instead of `ci`. Its jobs are
+`bun run check`'s parts, each step a package.json script, never a command of its own:
 
 - **`lint`**, on `ubuntu-24.04`: Biome (`bun run lint`), the workflows (`bun run check:actions`, zizmor online with
   the job's token), the docs (`bun run check:docs`) and the tests that read the docs (`bun run test:docs`: the docs'
   and the site's tests, D230).
 - **`changes`**, on `ubuntu-24.04`: what a pull request changed (`bun run ci:scope`, its merge commit against its
-  base). When every file is the docs' (`docs/`, `blueprint/`, `site/src/`, a Markdown file at the top), `test` and
-  `terminal` are skipped: no test reads those files but the docs' own, which `lint` runs (D230). Otherwise it says
-  whether any terminal check reaches the change (`checks`); `terminal` is skipped when none does (D239). A push to
-  `main`, a merge group, a run by hand and a diff that can't be read run everything. A test holds every test that
-  reads the docs to `test:docs`'s list, so a new one can't be skipped with them.
+  base), or a push to `dev` or `test` (its commits since the branch's head before it, the event's `before`). When every
+  file is the docs' (`docs/`, `blueprint/`, `site/src/`, a Markdown file at the top), `test` and `terminal` are
+  skipped: no test reads those files but the docs' own, which `lint` runs (D230). Otherwise it says whether any
+  terminal check reaches the change (`checks`); `terminal` is skipped when none does (D239). A merge group, a run by
+  hand, a branch just made and a diff that can't be read run everything. A test holds every test that reads the docs
+  to `test:docs`'s list, so a new one can't be skipped with them.
 - **`test`**, on `ubuntu-24.04` and `macos-15` (arm64), neither stopping the other: the typecheck, the boundary, the
-  supply chain's gates (this platform's OpenTUI package's licence among them) and the tests a pull request's files
-  reach (`bun run test:changed`; every one on `main`). On macOS the SQLite is Apple's, so the index's FTS5
-  (`unicode61`, `remove_diacritics 2`) and its `bm25` ranking are tested there whenever a change reaches them, and
-  after every merge (`tests/core.test.ts`, `tests/vault.test.ts`, `tests/cli.test.ts`; `14.13`).
-- **`terminal`**, on `ubuntu-24.04`, `ubuntu-24.04-arm` and `macos-15`: the terminal checks a pull request's files
-  reach (`bun run test:terminal:changed`; every one on `main`, TT-D6). No job runs on an Intel Mac, for which nothing
+  supply chain's gates (this platform's OpenTUI package's licence among them) and the tests a change's files reach
+  (`bun run test:changed`; every one in the full run). On macOS the SQLite is Apple's, so the index's FTS5
+  (`unicode61`, `remove_diacritics 2`) and its `bm25` ranking are tested there whenever a change reaches them, and in
+  every full run (`tests/core.test.ts`, `tests/vault.test.ts`, `tests/cli.test.ts`; `14.13`).
+- **`terminal`**, on `ubuntu-24.04`, `ubuntu-24.04-arm` and `macos-15`: the terminal checks a change's files reach
+  (`bun run test:terminal:changed`; every one in the full run, TT-D6). No job runs on an Intel Mac, for which nothing
   is built after 0.3.0 (D238); a test holds every workflow to it.
 - **`site`**, on `ubuntu-24.04`: the docs' site built (`bun run site`), every link within it landing (DS).
 - **`ci`**, the aggregator and the one required check: it always runs, waits for every other job, and fails unless
   each passed or was skipped. A job skipped by its `if:` counts as passed; one that failed, was cancelled or never
   started doesn't. A test holds it to waiting for every job, so a job added can't be left out of the required check.
+  Run by hand, its name is `full` (D251): `dev`'s and `test`'s rulesets require `ci`, `main`'s requires `full`, and a
+  release refuses a tag whose commit didn't pass it.
 
 **What a change reaches** (D239, `scripts/ci-scope.ts`). The tests: each that uses a changed file — imports it, at
 any depth, statically or not, code or not (the skill's text, a dictionary), or names it by its path from the
@@ -131,12 +139,12 @@ index, the config — shared by all); every check for the harness and the sample
 two samples changed most, the reference set's cases and its kitchen-sink config, run what reads them (`SAMPLES_FOR`).
 The packages, the lockfile, the toolchain, the workflows, the tests' preload and a file nothing names run everything;
 the lint's own configs, only the lint. A test holds `CHECKS_FOR` to the files and the checks there are. Locally,
-`bun run test:changed` and `bun run test:terminal:changed` run the same against where the branch left `origin/main`;
+`bun run test:changed` and `bun run test:terminal:changed` run the same against where the branch left `origin/dev`;
 `bun run check` runs the first.
 
 No permission by default (`permissions: {}`): each job grants its own with a comment saying why — `contents: read` to
 check out, the aggregator nothing. Every job has a timeout. A pull request's superseded run is cancelled; every other
-run, a push to `main` among them, finishes (its concurrency group is the run's own). The toolchain comes from
+run, a push or a run by hand among them, finishes (its concurrency group is the run's own). The toolchain comes from
 `mise.toml` through `jdx/mise-action`, nothing cached: both jobs install every tool, since the docs check's own tests
 run typos and lychee. `scripts/check-deps.ts` holds every workflow to the pins, `permissions: {}` and the timeouts
 ([distribution.md](distribution.md) § The supply chain). How a flaky test is handled: [testing.md](testing.md)
@@ -154,21 +162,22 @@ The other workflows keep the same rules:
 | `audit.yml` | weekly; `bun.lock` or the accepted list changed; by hand | `bun run audit` |
 | `health.yml` | weekly; by hand | the health issue (§ The weekly health check) |
 
-`build.yml` is reusable (`workflow_call`, its inputs the tag, the version and `suite`): `release.yml` and
-`preview.yml` call it, a release with `suite: true`, the whole suite on every platform before it's built, a preview
-with `suite: false`, its commit having passed `ci` on Linux and macOS, which `test`'s ruleset requires (GR-D13's
-note). `preview.yml` calls `pages.yml`, which is reusable too. A calling job grants the most the called workflow's
-jobs may take, since GitHub caps them by it (a test holds each call to granting at least what its jobs ask). A
-same-repository call is `./.github/workflows/<file>`: zizmor's `self-repository` audit asks for GitHub's newer `$/`
-form, which means the same, but actionlint 1.7.12 doesn't read it yet (rhysd/actionlint#711), and checks a call's
-inputs and permissions against the workflow called only in the `./` form, which for a reusable workflow is read from
-the run's own commit, never the workspace; the finding is ignored inline, with that reason. A release run is never
-cancelled; `preview.yml` and `pages.yml` each run one at a time (`preview`, `pages`), never cancelled; `pages.yml`'s
-Pages grants are its `deploy` job's alone. What each builds and publishes: [distribution.md](distribution.md)
-§ Releases, § Previews, § Channels.
+`build.yml` is reusable (`workflow_call`, its inputs the tag, the version and `suite`): `release.yml` and `preview.yml`
+call it, both with `suite: false` (D251): a preview's commit passed `ci` on Linux and macOS, which `test`'s ruleset
+requires (GR-D13's note), and a release's passed `full`, the whole suite, which `main`'s requires and `release.yml`'s
+first job checks before anything is built. `preview.yml` calls `pages.yml`, which is reusable too. A calling job grants
+the most the called workflow's jobs may take, since GitHub caps them by it (a test holds each call to granting at least
+what its jobs ask). A same-repository call is `./.github/workflows/<file>`: zizmor's `self-repository` audit asks for
+GitHub's newer `$/` form, which means the same, but actionlint 1.7.12 doesn't read it yet (rhysd/actionlint#711), and
+checks a call's inputs and permissions against the workflow called only in the `./` form, which for a reusable workflow
+is read from the run's own commit, never the workspace; the finding is ignored inline, with that reason. A release run
+is never cancelled; `preview.yml` and `pages.yml` each run one at a time (`preview`, `pages`), never cancelled;
+`pages.yml`'s Pages grants are its `deploy` job's alone. What each builds and publishes:
+[distribution.md](distribution.md) § Releases, § Previews, § Channels.
 
 Beside the workflows, GitHub's own: CodeQL's default setup scans the code (`javascript-typescript`) and the workflows
-(`actions`) on every pull request and push to `main`; secret scanning, with push protection, watches what's pushed;
+(`actions`) on every pull request and push to the default branch, `dev`; secret scanning, with push protection, watches
+what's pushed;
 Dependabot raises alerts and opens security updates (§ Dependencies).
 
 ## Dependencies
@@ -187,7 +196,7 @@ greenrepo UPK-01).
 **The scanner** is `bun run audit` (`scripts/audit.ts`): `bun audit`, which reads `bun.lock` and asks npm's advisory
 database about every package in it, the dev tools too, since they run here and in CI. It was chosen over
 OSV-Scanner because it reads `bun.lock` itself and Bun is already pinned: no tool or action to add.
-`.github/workflows/audit.yml` runs it weekly (Mondays, 04:17 UTC), on a pull request or a push to `main` that changes
+`.github/workflows/audit.yml` runs it weekly (Mondays, 04:17 UTC), on a pull request or a push to `dev` that changes
 `bun.lock`, the list or the workflow, and by hand. It's never in `bun run check` nor a required check: a new advisory
 fails its own run, not unrelated work, and the health issue reports it.
 
@@ -214,7 +223,8 @@ UPK-03, UPK-04, UPK-15, UPK-16):
   updates, CodeQL's default setup, the Actions policy (SHA pinning required) and the workflow token's defaults
   (read-only, unable to approve), immutable releases, no webhooks, two-factor sign-in. Only the fields named are
   compared, so a field GitHub adds is no drift.
-- `rulesets/main.json`, `rulesets/tags.json` and `rulesets/test.json`: the three rulesets as GitHub exports them.
+- `rulesets/dev.json`, `rulesets/test.json`, `rulesets/main.json` and `rulesets/tags.json`: the four rulesets as GitHub
+  exports them (D251).
   `main`: no deletion, no force push, changes through a pull request with no approval required and squash merges
   only, the `ci` check from GitHub Actions required, no one bypassing. `tags`: `v*` tags created, moved and deleted
   only by the admin role. `test`, the branch previews are made from: never deleted or forced back, the `ci` check
@@ -242,7 +252,7 @@ CI-13). It starts from no permission; each job's grants are commented:
   read (the last a scope actionlint doesn't know yet: § The check): the Dependabot and code scanning alerts, counted,
   the example projects' Dependabot alerts apart, as fixtures to dismiss; the open pull requests, Dependabot's
   included; the workflows switched off, GitHub's `disabled_inactivity` told from `disabled_manually`; each workflow's
-  last finished run on `main`; the rulesets and the `workflow` settings against the expected ones.
+  last finished run on `dev` or `main` (D251); the rulesets and the `workflow` settings against the expected ones.
 - `links` checks the tracked Markdown's links online with lychee, the examples and the tests' fixtures left out
   (their addresses are made up). The check on every change is offline; this one finds the links outside that broke
   with no change here. Its result goes into the issue, not an issue of its own.
@@ -261,7 +271,7 @@ locks its conversation. Its first line is the date of the last run and a link to
 old means the check has stopped, and counts as red. Its sections go by who acts: what needs the maintainer (renewals
 due within 30 days, credentials planned but not created, settings and rulesets drifted, workflows switched off, pull
 requests waiting, deviations whose review date has come), what an agent can propose (alerts, workflows failing on
-`main`, broken links, mistakes in the upkeep files, a job that failed), the accepted deviations, and what isn't
+`dev` or `main`, broken links, mistakes in the upkeep files, a job that failed), the accepted deviations, and what isn't
 available here, with why. Alerts are counts with a link to the Security tab, never a package; text others control
 (a pull request's title, a server's error) is quoted in a code span, its mentions and comment openers defused; long
 lists stop at ten and link to the rest. A hidden block at the end keeps when each item was first seen, for the

@@ -1,18 +1,18 @@
 // Export in the TUI (10.x): notes picked, a format chosen, a place to write it asked — beside the note, or where you
 // say — and written there, never over a note; over a file that isn't an earlier export only once you say so (D243).
 
+import { prepareExport } from "../core/export/jobs.ts";
+import type { PreparedExport } from "../core/export/spool.ts";
 import { statSync } from "node:fs";
 import { basename, dirname, isAbsolute, join, relative, sep } from "node:path";
 import { climbsOut, readJson, writeJson } from "../core/fsutil.ts";
 import {
   defaultTarget,
   type ExportFormat,
-  exportNotes,
   exportTarget,
   FORMATS,
   formatFor,
   NotAnExport,
-  writeExport,
 } from "../core/export/index.ts";
 import { stateDir, userFolders } from "../core/paths.ts";
 import { openSaveAs, type SaveAsOverlay, type SavePlace } from "./saveas.ts";
@@ -22,6 +22,19 @@ import type { App, ListItem, ListOverlay } from "./app.ts";
 /** Export: notes, a format, a place. */
 export class Exporter {
   constructor(readonly app: App) {}
+
+  /** The exports running, or waiting their turn: each one's own cancel. */
+  private jobs = new Set<AbortController>();
+
+  /** Every export running or waiting stopped before it's written; false where there's none (`quiet`: nothing said). */
+  cancel(quiet = false): boolean {
+    if (!this.jobs.size) {
+      if (!quiet) this.app.message("info", "no export is running");
+      return false;
+    }
+    for (const job of this.jobs) job.abort();
+    return true;
+  }
 
   /**
    * Export a note (10.x): the explorer's selected one, or this one. Its format picked — or named, `:export docx` — then
@@ -133,7 +146,7 @@ export class Exporter {
         const there = err.target;
         return this.app.overlays.confirm(
           `Replace ${this.app.graph.shownPath(there)}? It isn't an export.`,
-          () => void this.write(rels, format, there),
+          () => void this.write(rels, format, there, true),
           () => {
             this.app.overlay = o;
           },
@@ -162,27 +175,56 @@ export class Exporter {
   }
 
   /** The notes at `rels` exported as one document to `target`, unsaved ones saved first (4.10): what's on screen. */
-  async write(rels: string[], format: ExportFormat, target: string): Promise<void> {
+  async write(rels: string[], format: ExportFormat, target: string, force = false): Promise<void> {
     if (!this.app.handoff.savedForHandoff("export", "not exporting")) return;
     const shown = this.app.graph.shownPath(target);
     this.app.message("info", `exporting to ${shown}…`);
     this.app.host.requestRender();
     let files: string[];
+    const controller = new AbortController();
+    this.jobs.add(controller);
+    const graph = this.app.graph;
+    let output: PreparedExport | undefined;
     try {
-      files = writeExport(target, await exportNotes(this.app.graph, rels, format, target));
+      output = await prepareExport(graph, rels, format.name, target, {
+        signal: controller.signal,
+        progress: (stage) => {
+          if (this.app.quitting || controller.signal.aborted) return;
+          this.app.message("info", `exporting to ${shown}: ${stage}… — Cancel export stops it`);
+          this.app.host.requestRender();
+        },
+      });
+      if (controller.signal.aborted || this.app.quitting) return;
+      files = await output.publish(
+        target,
+        () => {
+          exportTarget(graph, rels[0]!, format, target, graph.root, force);
+        },
+        controller.signal,
+      );
     } catch (err) {
-      return this.app.message("error", `export: ${shown} not written — ${(err as Error).message}`);
+      if (!this.app.quitting)
+        this.app.message(
+          controller.signal.aborted ? "info" : "error",
+          controller.signal.aborted ? "export cancelled" : `export: ${shown} not written — ${(err as Error).message}`,
+        );
+      return;
+    } finally {
+      await output?.dispose().catch((error) => this.app.message("warn", `export cleanup: ${error.message}`));
+      this.jobs.delete(controller);
+      this.app.host.requestRender();
     }
     const beside = files.length ? `, ${files.length} file${files.length === 1 ? "" : "s"} beside it` : "";
     // A note written where the vault never indexes it (D246): Markdown into a folder `walk.exclude` names.
-    const why = this.app.graph.filter.isNoteName(basename(target)) ? this.app.files.leftOut(target) : null;
+    const why =
+      this.app.graph === graph && graph.filter.isNoteName(basename(target)) ? this.app.files.leftOut(target) : null;
     this.app.message(
       "info",
       `exported ${rels.length === 1 ? rels[0] : `${rels.length} notes`} to ${shown} (${format.title}${why ? `, not indexed: ${why}` : ""})${beside}`,
     );
     // Where it went, for "Where you exported last".
     try {
-      writeJson(join(stateDir(this.app.loc), "export.json"), { dir: dirname(target) });
+      writeJson(join(stateDir(graph.loc), "export.json"), { dir: dirname(target) });
     } catch {}
     this.app.host.requestRender();
   }

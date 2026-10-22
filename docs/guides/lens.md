@@ -1,221 +1,140 @@
-# The lens
+# Reading and editing in slipbox
 
-The lens is how you edit a note without leaving the page you're reading. The part you're working on shows as its
-Markdown, between two rules. Everything above and below it stays rendered: the headings, the tables, the links and
-the pictures, as you were reading them.
+<a id="the-lens"></a>
+<a id="how-much-it-holds"></a>
+<a id="vims-keys-in-the-lens"></a>
 
-This guide shows what the lens is, when to use it rather than source mode, how it opens and grows, and how you type in
-it. Each part has an example. [Editing](../manual/editing.md#the-lens) is the reference.
+slipbox lets you read a rendered document, expose part of its source with the lens, or see the whole file in source
+mode. Typing is a separate state. This guide follows one note through all three views so you can choose where to work.
 
-The examples use a note from a folder of notes, `projects/brevet-300.md`: a plan for a 300 km bike ride, with a
-table of training weeks, a paragraph on food and a checklist of gear.
+You need an installed slipbox and a small Markdown note. The Coffee note from
+[Working with slipbox](getting-started.md#make-two-practice-notes) is suitable. Save any existing edits before starting.
 
 ## What the lens is
 
-A rendered note hides its Markdown: you see a heading, not `## Food`, a link's text, not its target, a table's
-columns, not its pipes. That's what you want while you read. To change the text, you need to see what's written.
+Think of two choices:
 
-The lens shows what's written only where you are. Put the cursor on the paragraph about food, and press `space n l`.
+| Choice | Options |
+| --- | --- |
+| How much source do I want to see? | None: rendered; part: lens; all: source mode |
+| Am I typing? | Navigate/inspect first, then enter INSERT to change text |
 
-![The lens open on the note's Food section: its heading and paragraph as Markdown between two rules, the training
-table rendered above and the gear checklist rendered below, the status line reading LENS](../images/lens-open.png)
+The lens is a section of source inside the rendered document. It is not a separate file or a second version of the
+note. Source mode changes the whole window's presentation; it does not by itself start typing either.
 
-- The heading and the paragraph show as written, `## Food` and all, between two heavy rules. The rows between the
-  rules are tinted, so the lens stands out from the page.
-- The top rule says which lines of the file the lens holds: `source · lines 30–35`.
-- The table above and the checklist below stay rendered.
-- A narrow column before the lens's rows counts each row's distance from the cursor's. The cursor's row shows `0`.
-  The gutter keeps the lines' own numbers.
-- The status line says `LENS`.
+![The Coffee note in two windows: on the left rendered, the lens open on Brewing showing its Markdown and Beans still
+rendered below it; on the right the whole file in source mode](../images/reading-editing-views.png)
 
-The lens always holds whole blocks. A block is a paragraph, a heading, a list item, a table, a code block or a quote.
-So what you see between the rules is always a piece of Markdown that makes sense alone, and the page around it is
-never half rendered.
+## Read the rendered document
 
-`esc` closes the lens, and the whole note renders again.
+Open the note directly:
 
-## When to use it, and when source mode
+```bash
+slipbox ~/slipbox-tour/ideas/coffee.md
+```
 
-slipbox has two ways to edit a note's Markdown. The lens shows the part you're working on. Source mode (`ctrl+k`, or
-`space n v`) shows the whole note as Markdown. Both edit the same text with the same keys, and you can switch between
-them at any time.
+The status says `READ`. Headings and paragraphs are drawn as document elements. Markdown markers such as `##` do not
+have to be visible to navigate the text. Move with arrows or click a sentence. The reading cursor identifies where
+your next action applies.
 
-Use the lens for changes that sit in one place, while you read:
-
-- fixing a word or a sentence in a paragraph
-- adding a task to a list
-- changing a table's cell, with the other rows' pipes in view
-- changing a link's target, which the rendered page hides
-- writing a new paragraph under the one you just read
-
-The rest of the note stays as you read it, so you keep your place. When you close the lens, you're where you were.
-
-Use source mode when the change is the note's shape:
-
-- moving sections around, or cutting from one end and pasting at the other
-- a replace across the whole note, such as `:%s/old/new/g`
-- reading the Markdown of the whole note at once, to check its links or its front matter
-- a long paste you want to see all of
-
-For example, to swap the Food and Gear checklist sections, press `ctrl+k`. The whole note shows as Markdown, and `d`
-and `p` move the lines. `ctrl+k` again renders it.
-
-The editing keys, `i`, `a` and `o`, open the lens on a rendered note. If you'd rather they went to source mode,
-`editor.edit_in = "source"` says so ([Make it yours](#make-it-yours)).
+Selection, copying, following links and searching are available while reading. Pressing ordinary typing keys may
+run commands in this state. For example, `u` undoes your last change and `q` closes the current window. If you undo
+by mistake, `shift+u` or `ctrl+y` redoes it. Enter INSERT before typing text.
 
 ## Open it
 
-There are two ways in:
+Put the cursor on the sentence under Brewing and press `i` once.
 
-- **Start editing.** Press `i`, `a` or `o` on a rendered note. The first press opens the lens at the cursor, and a
-  message says `the lens: the markdown around the cursor — the key again edits it, esc closes it`. The second press
-  types: `i` before the cursor, `a` after it, `o` on a new line below.
-- **Just look.** `space n l` (or `:lens`) opens the lens without typing. You can read the Markdown, move about in it,
-  and use vim's commands on it.
+The status says `LENS`. Source lines appear between two rules. Its top label says `source · lines …`. The Markdown
+around your cursor is visible; the rest of a longer document remains rendered. A short note may fit entirely inside
+the lens.
 
-`esc` steps back out, one level at a time. From typing, the first `esc` stops typing and the second closes the lens.
+Nothing has changed in the file. You can inspect markers, move the cursor, or press `esc` to return to reading.
+`space n l` also toggles the lens without beginning to type.
 
-### How much it holds
-
-The lens opens on the section the cursor is in: its heading and everything under it, up to the next heading of its
-level or above. It does so when the section fits in half the window. That's why the Food section opened whole above:
-a heading and a paragraph.
-
-A section too long for that opens on the cursor's block instead, with the blocks around it, until the lens holds at
-least six rows. For example, in the window of these pictures, the gear checklist is too long for half of it. With the
-cursor on "Reflective ankle bands", the lens opens on that item and the blocks next to it, and the start of the
-checklist stays rendered above it.
-
-A neighbour comes in only if the lens still fits in half the window with it. So a short paragraph next to a long table
-doesn't take the table in with it.
-
-`editor.lens_max` and `editor.lens_min_rows` change the half and the six ([Make it yours](#make-it-yours)).
-
-## Move it, and grow it
-
-When you're not typing, the cursor moves through the lens as it does through the page, and the lens comes along:
-
-- **Past its edge.** Moving past a rule, with `j` and `k` or the arrows, takes the next block in. If that block's
-  section fits whole, the lens moves onto the section. Blocks far from the cursor drop out as the lens passes the
-  half-window limit.
-- **A jump.** `g g`, a search, or a heading picked in the outline moves the lens to where you land.
-- **A click.** A click in the rendered text outside the lens moves the lens there. The line you clicked stays under the
-  pointer.
-- **The wheel.** It scrolls the page, and the lens rides along with its text.
-- **Another note.** Following a link from the lens, or going back with `ctrl+o`, opens the lens on the note you land
-  on.
-
-The lens keeps its place on the screen as it moves, and the page scrolls under it. Your eyes stay where they were.
-
-To choose its size yourself:
-
-| Key | What it does |
-| --- | --- |
-| `+` | Takes the next block in. At the note's end, the one above |
-| `-` | Drops the block farthest from the cursor |
-| `=` | Lets the lens size itself again |
-
-After `+` or `-`, the lens keeps that size as it moves. For example, when the lens opened on a paragraph alone and
-you'd like the list under it in view as you write, press `+` until the list is in.
-
-A block taller than the lens, such as a very long table or code block, scrolls inside it. The rules count the rows out
-of sight: `↑ 21 lines` above, `↓ 8 lines` below.
+![The Coffee note with the lens open on Brewing: its heading and sentence as Markdown between two rules labelled source
+· lines 3–6, the Beans section rendered below, the status line reading LENS](../images/lens-open.png)
 
 ## Type in it
 
-With the lens open, `i`, `a` or `o` types. The rules and the tint turn green, the label says `editing`, and the status
-line says `INSERT`.
+With the lens open, press `end` (or `ctrl+e`) to reach the sentence's end, then `a` to type after it. The status now
+says `INSERT`.
+Add a space followed by `Try a little finer tomorrow.`
 
-As you type, the lens grows with what you write. Each new line pushes its bottom rule down, and the rendered note below
-moves down with it.
+The lens's label changes to `editing · lines …`, and its rules and row tint change while you type. A dot marks the
+note as unsaved. Arrow keys still move the typing cursor inside the editing area.
 
-For example, to add a sentence under the paragraph about food:
+Press `esc` once. You stop typing but keep the lens open: the status returns to `LENS`. This gives you a chance to
+inspect the change before closing the source view.
 
-1. Open the lens on the Food section, as in the first picture: the cursor on the paragraph, then `space n l`.
-2. The paragraph's last line, "stays down at the services…", is four rows down: the counters' column says `4` beside
-   it. Press `4 j`.
-3. Press `shift+a` to type at the end of the line. The rules turn green, and the status line says `INSERT`.
-4. Press `enter` twice, and type `Next time: a second bottle cage for the long stretch after 171 km.`
+![Typing in the lens: a sentence added after Brewing's, the rules green and labelled editing · lines 3–6, the status
+line reading INSERT and unsaved](../images/lens-typing.png)
 
-   ![The lens grown while typing: a new paragraph typed under the one about food, the rules green, the label saying
-   editing, lines 30 to 37, the gear checklist moved down below it](../images/lens-typing.png)
+## Save and return to reading
 
-   The label says `editing · lines 30–37`: two lines more than the lens opened with. The gear checklist moved down to
-   make room.
-5. Press `esc` to stop typing. The rules lose their green, and the status line says `LENS`.
-6. Press `esc` again to close the lens. The Food section renders with its new paragraph.
+Press `ctrl+s`. Look for the saved message and check that the unsaved mark disappears. Press `esc` again to close
+the lens. You are back in `READ`, looking at the rendered result.
 
-In a list, `o` starts the next item for you. With the cursor on "Reflective ankle bands", `o` opens the lens, and `o`
-again starts a new task, `- [ ]`, on the line below.
+Leaving INSERT or closing the lens does not mean the file was saved. Saving does. Autosave normally runs after
+30 seconds without a key press; explicit saving makes the boundary clear when another editor or an agent is involved.
 
-While you type, the arrow keys stop at the lens's rules, and `pageup` and `pagedown` go as far as its edge. To go
-further, stop typing first: `esc`, then move, and the lens comes along.
+`ctrl+z` undoes and `ctrl+y` redoes. Save after undoing if the file on disk should reflect the undo.
 
-Everything you type between `i` and `esc` is one step for `u` to undo. `ctrl+s` saves at any time, and a changed note
-saves itself after 30 seconds without a key ([Saving](../manual/editing.md#saving)).
+## When to use it, and when source mode
 
-### vim's keys in the lens
+Use the lens for a local change while keeping a long document in view: a paragraph, list item, table or code block.
+Use source mode to inspect or edit Markdown across the whole file.
 
-When you're not typing, the keys work on the text in the lens, vim's commands included: `d d`, `c i w`, `y a p`, `.`
-and the rest ([The vim keys](../manual/editing.md#the-vim-keys)).
+1. From reading, press `ctrl+k`. The status says `SOURCE`, and the whole note shows its Markdown.
+2. Move to the text to change. You are still navigating; no edit happened merely by switching views.
+3. Press `i` or `a` to start typing. In source mode, this goes straight into INSERT.
+4. Type, press `esc` to stop, and `ctrl+s` to save.
+5. Press `ctrl+k` again to return to rendered reading.
 
-The counters' column is there for those. It counts rows as `j` and `k` move by them, so the number beside a row is
-the count that reaches it, as `4 j` did above.
+If the lens is open when you switch, source mode takes its place; the two are not nested editors. Cursor positions
+refer to the file's source lines across the views.
 
-For example, to change "the big meal" in the food paragraph to "the hot meal":
+![Inbox in two windows: rendered on the left, and on the right in source mode, its heading's #, the tasks' - [ ] and the
+link's destination showing, the status line reading SOURCE](../images/reading-editing-source.png)
 
-1. Put the cursor on the paragraph, and press `space n l`. The lens opens on the Food section.
-2. Type `/big` and press `enter`. The cursor goes to "big", inside the lens.
-3. Press `c i w`, type `hot`, and press `esc`. The word is changed, and you're not typing any more.
-4. Press `esc` to close the lens, and `esc` again to close the find row.
+## Move it, and grow it
+
+When you are not typing, moving beyond the lens's boundary moves it with you. While typing, arrows stay inside it.
+`+` grows the lens by a block, `-` shrinks it, and `=` restores its chosen size. A block can be a paragraph, heading,
+list item, table or code block.
+
+Try growth on a practice note with several paragraphs. This lets you edit two adjacent blocks without opening the
+whole file. The [editing chapter](../manual/editing.md#the-lens) explains sizing and movement in detail.
 
 ## Its keys
 
-| Key | What it does |
+| To | Press |
 | --- | --- |
-| `i`, `a`, `o` (and `shift+i`, `shift+a`, `shift+o`) | On a rendered note, opens the lens. In the lens, types |
-| `space n l` (or `:lens`) | Opens the lens without typing, and closes it |
-| `esc` | Stops typing. When you're not typing, closes the lens |
-| `j`, `k`, the arrows | Move. Past an edge, the lens moves with you |
-| The arrows while you type | Move, and stop at the rules |
-| `+` / `-` / `=` | A block more / a block less / the lens's own size again |
-| `ctrl+k` | Source mode instead: the whole note as Markdown |
-| `ctrl+s` | Saves |
+| Open the lens from reading | `i`, or `space n l` |
+| Start typing in the lens | `i`, `a` or `o` |
+| Stop typing | `esc` |
+| Close the lens when not typing | `esc` |
+| Switch to/from whole source | `ctrl+k`, after stopping typing |
+| Save | `ctrl+s` |
+| Undo / redo | `ctrl+z` / `ctrl+y` |
 
-[Keys](../manual/keys.md) has every key, and you can change any of them.
+The [shortcut reference](../manual/keys.md) is exhaustive. The [editing chapter](../manual/editing.md) explains
+operator commands, selections, completion, spelling, autosave and changes made by another program.
 
 ## Beyond notes
 
-The lens works wherever slipbox renders something you can edit:
-
-- **Data files.** JSON, YAML, TOML and the like open rendered. The lens edits them a card at a time: a key and the
-  values under it. A CSV's lens is a few of its rows.
-- **Code.** In the code view, the editing keys open the lens on the cursor's cell, a function or a class, highlighted
-  as code. `space k e` opens it on a whole cell however tall ([Code](../manual/code.md)).
-- **The scratch.** The scratch is a note like any other, and the lens edits it. `esc` leaves the lens first, and then
-  closes the scratch ([Working with agents](agents.md#hand-the-agent-references-the-scratch)).
-- **A merge's conflict.** On the merge screen, `e` puts the result in the file and opens the lens on the conflict, to
-  settle it by hand ([Code and git](code-and-git.md#settle-a-conflict-on-the-merge-screen)).
+These ideas also apply to rendered data and code. Data files expose their source around a card or row; the code view
+can open a cell's source in the lens. The scratch is editable Markdown too. See
+[Code and language tools](../manual/code.md), [Scratch and context](../manual/scratch-and-context.md), and
+[Editing](../manual/editing.md) before applying a familiar key in a different panel.
 
 ## Make it yours
 
-In your configuration ([Configuration](../manual/configuration.md)):
-
-```toml
-[editor]
-edit_in = "live"        # where i, a and o take a rendered note: live (the lens), or source
-lens_min_rows = 6       # the lens takes in the blocks around the cursor up to at least this many rows…
-lens_max = 0.5          # …and stops at this share of the window
-
-[ui]
-relative_numbers = "lens"   # the counters' column in the lens; "off" hides it
-```
-
-The lens's colours are `lens` (its rules and label), `lens_band` (its rows) and, while you type, `lens_edit` and
-`lens_band_edit`, under `[colors]`.
+Once the default workflow feels comfortable, lens size, presentation and keys can be customized. Start with
+[Customization](../manual/customization.md); exact settings remain in [Configuration
+settings](../manual/configuration.md).
 
 ## Where next
 
-- [Editing](../manual/editing.md): the lens and source mode in full, typing, undo, the vim keys, saving.
-- [Keys you already know](keys-you-know.md): the shortcuts from other editors that work while you type.
-- [Getting started](getting-started.md): a first session, with a line typed in the lens.
+Continue with [Working across folders and vaults](vaults.md). You now know which view you are in, when keys are
+commands or text, and how to put a change on disk.

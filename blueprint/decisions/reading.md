@@ -100,6 +100,8 @@ and some people prefer it, but the named themes need true colour, so both.
 
 ## D96: Readability defaults carried over from nvim (2.7, 2026-09-25)
 
+> **Amended by D254 (2026-10-18):** Tokyo Night uses upstream palette colours; typography and layout defaults remain.
+
 **Decision:** slipbox starts from the settings that made markdown readable in the user's nvim (render-markdown and
 the Tokyo Night adjustments) rather than rediscovering them:
 
@@ -667,3 +669,67 @@ cursor, find and a copy still reach all of it.
 
 **Not chosen:** wrapping, as before (kept as the setting); the whole window scrolling sideways for a wide block, which
 wrapping off does: the paragraphs around it would move too, and the block would scroll twice (ideas.md § Reading).
+
+## D252: A code file's structure up to 4 MiB, on a thread of its own (16.7, 2026-10-18)
+
+**Decision:** A code file's syntax pass (its grammar loaded, its tree parsed, and its spans, outline, syntax errors,
+comment links, embedded languages and code model taken from it) runs on one background thread for the process, and
+only for a source of at most 4 MiB of UTF-8 (`SYNTAX_SOURCE_LIMIT`). A bigger one keeps its text, as any text file
+shows, without that structure, and says once why. A pass has twenty seconds on the thread. As built: design/tui.md §
+Files beyond notes, Source code through tree-sitter (#187).
+
+**Why:** A pass is one source's, whole: tree-sitter parses a file at once, and it can't be cut into batches as a big
+note's parse is (15.1). A 3.7 MiB minified bundle took 4.3 s on a fast machine, idle, and missed a five-second deadline
+with its cores busy; one many times bigger would hold the thread past any deadline worth having on a slow machine,
+and every other code file's pass waits behind it. A file that big is nearly always made by a tool (a bundle, a dump, a
+generated table): read or searched, rarely navigated by its outline. Before, any size was parsed on the main thread,
+which held the keys for as long as it took (#177).
+
+**Cost:** A source over 4 MiB written by hand has no outline, syntax errors or comment links in slipbox.
+
+**Not chosen:** parsing any size on the thread with a deadline that grows with the source, as a big note's parse
+batch's does: one 40 MB file would hold the thread, and the files behind it, for minutes; parsing big ones on the main
+thread, as before, which froze the screen.
+
+## D253: Drawn diagrams remembered on disk, a diagram too slow to draw as well (12.10, 2026-10-18)
+
+**Decision:** A Mermaid diagram's finished drawing, as text or as SVG, is kept in one SQLite cache for the machine,
+`diagrams.db` in slipbox's cache folder beside the parse cache, and the screen, `slipbox render` and export all read and
+write it. Its key is everything that decides the drawing: the source, the width and glyphs or the colours and font,
+slipbox's version, the drawing library's version and an epoch of slipbox's own. It keeps at most 2,048 drawings and
+32 MiB, the least recently used going first. A failure the inputs decide is kept too, a timeout among them, under a key
+that also names the deadline it had: a timeout on the screen never stops `slipbox render` or export trying with their
+longer one. A worker that couldn't start or didn't start in time isn't kept. `SLIPBOX_DIAGRAM_CACHE=off` goes without
+it. As built: design/rendering.md § Blocks and inlines (#180).
+
+**Why:** Since diagrams are drawn in a background worker (#164), they were kept in memory for a session. A note opened
+in a new session drew each one again: its source first, then the drawing a moment later, so the page jumped, and a slow
+diagram took its whole time again. A drawing depends on its source and options, not on the vault it's in, so one store
+for the machine serves every vault, as the parse cache does; render and export, drawing whole documents, gain the most.
+
+**Cost:** A diagram that timed out on a busy machine stays as its source on the screen, labelled, until slipbox or the
+library is upgraded, without being tried again; render and export still try it. The drawings, made from notes'
+diagrams, are kept outside the vault in the cache folder, as parsed notes are.
+
+**Not chosen:** a cache in each vault's cache folder (the same diagram in two vaults would be drawn twice); keeping
+drawings alone (a diagram known to be too slow would cost the worker a second at every opening, on the screen's two
+tries); keying on the library's version alone (a change to slipbox's own handling of a drawing would show stale ones
+after an upgrade).
+
+## D254: All four Tokyo Night variants use upstream colours (2.6, 2.7, 2026-10-18)
+
+**Decision:** Ship `tokyo-night` (Night, still the default), `tokyo-night-storm`, `tokyo-night-moon` and
+`tokyo-night-day`, with base colours from the official folke/tokyonight.nvim palettes. This amends D96's darker
+backgrounds, softer text and custom syntax accents. Strong text uses the upstream foreground with bold; inline code
+retains its own background and italics; syntax keywords and functions retain bold, with upstream magenta and blue.
+All variants use the same semantic-role mapping and the existing heading-band blends. Provenance and the mapping
+are in [the palette research](../research/tokyo-night-palettes.md).
+
+**Why:** A named variant should match its upstream colours, and switching among the four should provide their
+intended backgrounds and accents consistently. Keeping role styling separate preserves slipbox's readable layout
+without silently substituting a different base palette.
+
+**Cost:** The default Night background and foreground change visibly; existing user colour overrides still apply.
+
+**Not chosen:** keeping the customized palette under the upstream Night name, or applying Night's custom accent
+colours to Moon and Storm.

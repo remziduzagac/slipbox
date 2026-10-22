@@ -19,6 +19,7 @@ import { classify } from "../src/core/filetypes.ts";
 import { loadMermaid } from "../src/core/diagrams.ts";
 import { loadRasterizer } from "../src/core/svg.ts";
 import { loadTypesetter } from "../src/core/typeset.ts";
+import { paintJobs } from "../src/core/paint-jobs.ts";
 import { parseNoteFile } from "../src/core/readers.ts";
 import { findHeading, headingFragment } from "../src/core/landing.ts";
 import { headingsOf, parseMarkdown } from "../src/core/parse.ts";
@@ -50,6 +51,12 @@ beforeAll(async () => {
 const SAMPLES = join(import.meta.dir, "..", "examples", "vault");
 const samples = (readdirSync(SAMPLES, { recursive: true }) as string[]).filter((f) => f.endsWith(".md")).sort();
 const unicode = glyphsFor("unicode");
+async function renderReady(...args: Parameters<typeof renderMarkdown>): Promise<Layout> {
+  renderMarkdown(...args);
+  await loadMermaid();
+  return renderMarkdown(...args);
+}
+
 const text = (l: Layout) =>
   l.lines
     .map((line) =>
@@ -62,11 +69,11 @@ const text = (l: Layout) =>
 
 describe("no rendered row ever exceeds the layout width", () => {
   for (const file of samples) {
-    test(file, () => {
+    test(file, async () => {
       const src = readFileSync(join(SAMPLES, file), "utf8");
       for (const width of [24, 37, 60, 80, 101, 140]) {
         for (const glyphs of [unicode, glyphsFor("ascii")]) {
-          const layout = renderMarkdown(src, { width, glyphs, showUrls: false });
+          const layout = await renderReady(src, { width, glyphs, showUrls: false });
           // The renderer cuts any row to the width as a last defence; a cut is a block's bug and
           // lost text, so none may happen (the width check alone could never fail).
           if (layout.clipped) throw new Error(`${file} @${width}: ${layout.clipped} row(s) had to be clipped`);
@@ -88,7 +95,7 @@ describe("no rendered row ever exceeds the layout width: the reference set", () 
   const notes = (readdirSync(HOME, { recursive: true }) as string[]).filter((f) => f.endsWith(".md")).sort();
   test("its notes are there", () => expect(notes.length).toBeGreaterThan(150));
   for (const file of notes) {
-    test(file, () => {
+    test(file, async () => {
       const src = readFileSync(join(HOME, file), "utf8");
       for (const [width, glyphs] of [
         [24, unicode],
@@ -96,7 +103,7 @@ describe("no rendered row ever exceeds the layout width: the reference set", () 
         [80, unicode],
         [140, unicode],
       ] as const) {
-        const layout = renderMarkdown(src, { width, glyphs, showUrls: false });
+        const layout = await renderReady(src, { width, glyphs, showUrls: false });
         if (layout.clipped) throw new Error(`${file} @${width}: ${layout.clipped} row(s) had to be clipped`);
         for (const [i, line] of layout.lines.entries()) {
           const w = line.spans.reduce((a, s) => a + stringWidth(s.text), 0);
@@ -141,9 +148,9 @@ describe("no rendered row exceeds the layout width but a scrolling code block's 
 
 describe("snapshots of the layout IR as text", () => {
   for (const file of samples) {
-    test(`${file} @ 80`, () => {
+    test(`${file} @ 80`, async () => {
       const src = readFileSync(join(SAMPLES, file), "utf8");
-      expect(text(renderMarkdown(src, { width: 80, glyphs: unicode, showUrls: true }))).toMatchSnapshot();
+      expect(text(await renderReady(src, { width: 80, glyphs: unicode, showUrls: true }))).toMatchSnapshot();
     });
   }
   // The samples beyond markdown, each read by its own reader (16.11–16.13, 16.16, 16.17).
@@ -159,7 +166,7 @@ describe("snapshots of the layout IR as text", () => {
     expect(others.length).toBeGreaterThanOrEqual(6);
   });
   for (const file of others) {
-    test(`${file} @ 80`, () => {
+    test(`${file} @ 80`, async () => {
       const src = readFileSync(join(SAMPLES, file), "utf8");
       const kind = classify(file, ["md"]);
       const parsed = kind.group === "data" ? parseData(kind.format, src) : { ...parseNoteFile(file, src), error: null };
@@ -185,9 +192,9 @@ describe("snapshots of the layout IR as text", () => {
     );
     expect(cells).toContain('"comparison star C3, not C2"'); // doubled quotes read as one
   });
-  test("wrap-probe @ 44 (narrow)", () => {
+  test("wrap-probe @ 44 (narrow)", async () => {
     const src = readFileSync(join(SAMPLES, "scratch", "wrap-probe.md"), "utf8");
-    expect(text(renderMarkdown(src, { width: 44, glyphs: unicode, showUrls: false }))).toMatchSnapshot();
+    expect(text(await renderReady(src, { width: 44, glyphs: unicode, showUrls: false }))).toMatchSnapshot();
   });
 });
 
@@ -1143,7 +1150,7 @@ describe("what rendering.md promises (review: docs against the tests)", () => {
   });
   test("readability defaults (2.7): Tokyo Night's bold and inline code; every theme's heading bands blended 14% (dark) or 16% (light)", () => {
     const tn = loadTheme("tokyo-night").theme;
-    expect(tn.roles.strong).toMatchObject({ fg: "#bcc5e6", bold: true });
+    expect(tn.roles.strong).toMatchObject({ fg: "#c0caf5", bold: true });
     expect(tn.roles.code_inline).toMatchObject({ fg: "#c0caf5", bg: "#292e42", italic: true });
     const kinds = new Set<string>();
     for (const { name } of listThemes()) {
@@ -1162,14 +1169,30 @@ describe("what rendering.md promises (review: docs against the tests)", () => {
   });
 });
 
-describe("Mermaid (12.10)", () => {
+describe("Mermaid (12.10)", async () => {
   beforeAll(async () => {
     await loadMermaid();
   });
   const rows = (l: Layout) => l.lines.map((x) => x.spans.map((s) => s.text).join(""));
   const md = "# D\n\n```mermaid\ngraph TD\n  A[Write] --> B[Disk-cache]\n```\n\nafter\n";
-  test("a diagram drawn in box drawing, every row at its block's line: its lines in the border colour, its words text", () => {
-    const l = renderMarkdown(md, { width: 60, glyphs: unicode, showUrls: false });
+  test("forty diagrams settle across repeated screen layouts and remain cached", async () => {
+    const source = Array.from(
+      { length: 40 },
+      (_, n) => `\`\`\`mermaid\ngraph TD\n A[Screen ${n}] --> B\n\`\`\`\n`,
+    ).join("\n");
+    let layout = renderMarkdown(source, { width: 60, glyphs: unicode, showUrls: false });
+    for (let pass = 0; pass < 10 && layout.pending?.includes("mermaid"); pass++) {
+      await loadMermaid();
+      layout = renderMarkdown(source, { width: 60, glyphs: unicode, showUrls: false });
+    }
+    expect(layout.pending ?? []).not.toContain("mermaid");
+    expect(rows(layout).join("\n")).not.toContain("graph TD");
+    const again = renderMarkdown(source, { width: 60, glyphs: unicode, showUrls: false });
+    expect(again.pending ?? []).not.toContain("mermaid");
+    expect(rows(again)).toEqual(rows(layout));
+  });
+  test("a diagram drawn in box drawing, every row at its block's line: its lines in the border colour, its words text", async () => {
+    const l = await renderReady(md, { width: 60, glyphs: unicode, showUrls: false });
     const drawn = l.lines.filter(
       (x) => x.spans.some((s) => s.text.includes("┌")) || x.spans.some((s) => s.text.includes("Write")),
     );
@@ -1186,14 +1209,14 @@ describe("Mermaid (12.10)", () => {
     expect(spans.filter((s) => /[┌─│▼]/.test(s.text)).every((s) => s.role === "table_border")).toBe(true);
     expect(rows(l).at(-1)).toBe("after");
   });
-  test("with ASCII glyphs: drawn in ASCII, its `+ - |` the lines", () => {
+  test("with ASCII glyphs: drawn in ASCII, its `+ - |` the lines", async () => {
     const ascii = glyphsFor("ascii", {});
-    const l = renderMarkdown(md, { width: 60, glyphs: ascii, showUrls: false });
+    const l = await renderReady(md, { width: 60, glyphs: ascii, showUrls: false });
     expect(rows(l).join("\n")).toMatch(/\|\s+Write\s+\|/);
     expect(rows(l).join("\n")).not.toMatch(/[┌│]/);
     expect(l.lines.flatMap((x) => x.spans).find((s) => s.text.startsWith("+"))!.role).toBe("table_border");
   });
-  test("drawn while its library loads: its code, the layout saying it waited, the block not kept — drawn once it's in", () => {
+  test("drawn while its library loads: its code, the layout saying it waited, the block not kept — drawn once it's in", async () => {
     // A process of its own: here the library is in already.
     const script = `
       import { parseMarkdown } from "./src/core/parse.ts";
@@ -1221,8 +1244,8 @@ describe("Mermaid (12.10)", () => {
       drawn: true,
     });
   });
-  test("its rows as the text has them: no blank row after, no spaces at their ends", () => {
-    const l = renderMarkdown("```mermaid\nclassDiagram\n  class Graph\n```\n\nafter\n", {
+  test("its rows as the text has them: no blank row after, no spaces at their ends", async () => {
+    const l = await renderReady("```mermaid\nclassDiagram\n  class Graph\n```\n\nafter\n", {
       width: 60,
       glyphs: unicode,
       showUrls: false,
@@ -1231,17 +1254,17 @@ describe("Mermaid (12.10)", () => {
     expect(drawn.at(-1)).toMatch(/└─+┘/);
     expect(drawn.every((r) => r === r.trimEnd())).toBe(true);
   });
-  test("one too wide at the library's spacing is drawn closer together, before it's given up on", () => {
+  test("one too wide at the library's spacing is drawn closer together, before it's given up on", async () => {
     // 51 columns at its own spacing, 45 a little closer, 42 closest.
     const md = "```mermaid\ngraph LR\n  A[Read] --> B[Parse] --> C[Lay out] --> D[Draw]\n```\n";
     for (const width of [46, 43]) {
-      const r = rows(renderMarkdown(md, { width, glyphs: unicode, showUrls: false }));
+      const r = rows(await renderReady(md, { width, glyphs: unicode, showUrls: false }));
       expect(r.some((x) => /│\s+Draw\s+│/.test(x))).toBe(true);
       expect(Math.max(...r.map(stringWidth))).toBeLessThanOrEqual(width);
     }
   });
-  test("a kind it doesn't draw, or a diagram wider than the text: its code, the label saying why", () => {
-    const pie = renderMarkdown('```mermaid\npie title X\n  "a": 1\n```\n', {
+  test("a kind it doesn't draw, or a diagram wider than the text: its code, the label saying why", async () => {
+    const pie = await renderReady('```mermaid\npie title X\n  "a": 1\n```\n', {
       width: 60,
       glyphs: unicode,
       showUrls: false,
@@ -1249,7 +1272,7 @@ describe("Mermaid (12.10)", () => {
     expect(rows(pie)[0]).toMatch(/mermaid — not drawn: pie $/);
     expect(rows(pie)[1]).toContain("pie title X");
     const chain = Array.from({ length: 8 }, (_, i) => `N${i}[Node number ${i}]`).join(" --> ");
-    const wide = renderMarkdown(`\`\`\`mermaid\ngraph LR\n  ${chain}\n\`\`\`\n`, {
+    const wide = await renderReady(`\`\`\`mermaid\ngraph LR\n  ${chain}\n\`\`\`\n`, {
       width: 60,
       glyphs: unicode,
       showUrls: false,
@@ -1257,9 +1280,9 @@ describe("Mermaid (12.10)", () => {
     expect(rows(wide)[0]).toMatch(/mermaid — too wide to draw $/);
     for (const r of rows(wide)) expect(stringWidth(r)).toBeLessThanOrEqual(60);
   });
-  test("where it scrolls sideways (codeScroll), one wider than the text is drawn all the same, closest together, a column in from each edge and a row under it for its scrollbar", () => {
+  test("where it scrolls sideways (codeScroll), one wider than the text is drawn all the same, closest together, a column in from each edge and a row under it for its scrollbar", async () => {
     const chain = Array.from({ length: 8 }, (_, i) => `N${i}[Node number ${i}]`).join(" --> ");
-    const wide = renderMarkdown(`\`\`\`mermaid\ngraph LR\n  ${chain}\n\`\`\`\n`, {
+    const wide = await renderReady(`\`\`\`mermaid\ngraph LR\n  ${chain}\n\`\`\`\n`, {
       width: 60,
       glyphs: unicode,
       showUrls: false,
@@ -1317,6 +1340,10 @@ describe("maths (12.11)", () => {
 describe("drawn as pictures, by choice (12.16, 12.17)", () => {
   beforeAll(async () => {
     await Promise.all([loadMermaid(), loadRasterizer(), loadTypesetter()]);
+    draw(mermaid, { mermaid: true, math: false });
+    await loadMermaid();
+    draw(mermaid, { mermaid: false, math: true });
+    await loadMermaid();
   });
   const colors = {
     bg: "#101010",
@@ -1377,14 +1404,19 @@ describe("drawn as pictures, by choice (12.16, 12.17)", () => {
       expect(text(l).some((r) => /│\s+A\s+│/.test(r))).toBe(true);
     }
   });
-  test("a display's maths as a picture: typeset in the maths colour, centred; inline maths stays text; not chosen, text", () => {
+  test("a display's maths as a picture: typeset in the maths colour, centred; inline maths stays text; not chosen, text", async () => {
     const md = "Inline $x^2$.\n\n$$\n\\frac{a}{b}\n$$\n";
+    // Typeset on the painting worker: text until it's in, then the picture.
+    expect(draw(md, { mermaid: false, math: true }).asked).toEqual([]);
+    await paintJobs.settle();
     const { l, asked } = draw(md, { mermaid: false, math: true });
     expect(asked).toEqual([{ from: { svg: expect.stringContaining('fill="#ff00ff"'), kind: "math" }, width: 39 }]);
     expect(text(l)[0]).toBe("Inline x².");
     expect(l.lines.find((x) => x.image)).toMatchObject({ src: 3, spans: [{ text: " ".repeat(15) }] });
     expect(draw(md, { mermaid: true, math: false }).l.lines.some((x) => x.image)).toBe(false);
     // One MathJax can't read: the text of it, as without pictures.
+    draw("$$\n\\nope\n$$\n", { mermaid: false, math: true });
+    await paintJobs.settle();
     const bad = draw("$$\n\\nope\n$$\n", { mermaid: false, math: true });
     expect(bad.asked).toEqual([]);
     expect(text(bad.l)[0]).toMatch(/math — as written $/);
@@ -1406,10 +1438,12 @@ describe("drawn as pictures, by choice (12.16, 12.17)", () => {
     const MD = JSON.stringify(["```mermaid\ngraph TD\n  A --> B\n```\n", "$$\nx\n$$\n", "![d](d.svg)\n"]);
     const r = Bun.spawnSync(["bun", "-e", script], { cwd: join(import.meta.dir, ".."), env: { ...process.env, MD } });
     expect(r.stderr.toString()).toBe("");
+    // The display waits for its painting job; an SVG file's picture is its callback's to wait for (the TUI's asks the
+    // rasteriser's job: tui.test.ts), and this one asks nothing.
     expect(JSON.parse(r.stdout.toString())).toEqual([
-      { pending: ["mermaid", "resvg"], images: 0 },
-      { pending: ["mathjax", "resvg"], images: 0 },
-      { pending: ["resvg"], images: 0 },
+      { pending: ["mermaid"], images: 0 },
+      { pending: ["pictures"], images: 0 },
+      { pending: [], images: 0 },
     ]);
   });
 });

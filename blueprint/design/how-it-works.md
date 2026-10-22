@@ -259,6 +259,7 @@ The CLI's commands are the user's reference, [cli.md](../../docs/manual/cli.md);
 | `core/servers/doctor.ts` | 19.7 | each language's servers and where each is; a file's, in its project |
 | `core/servers/client.ts` | 19.1 | a language server as slipbox's client: started, files synced, diagnostics, stopped |
 | `core/servers/linters.ts` | 19.19 | linters with no language server, in efm-langserver's keys, via the lint surface |
+| `core/tool-process.ts` | 3.21, 19.5, 19.19 | a linter's or install's run: its output bounded, its group stopped |
 | `core/servers/vscode.ts` | 19.20 | a project's `.vscode/settings.json` answering its servers' settings |
 | `core/diagnostics.ts` | 19.8, 11.5 | a file's problems from every source, one shape: links, conflicts, syntax, lint |
 | `core/clipboard.ts` | 8.5 | OSC 52 (up to 100 KB of base64), then pbcopy / clip.exe / wl-copy / xclip, then a file |
@@ -374,6 +375,11 @@ and Hunspell (MPL-1.1, in `hunspell-asm`) (D192, D194). What a distributed binar
 [distribution.md](distribution.md) § Notices.
 
 No external binary is required (D3). The clipboard tools are used when present and never needed.
+Clipboard copies and reads use asynchronous helpers with a one-second deadline per helper (five for PowerShell),
+32 MiB input/output limits, cancellation on quit and Unix process-group cleanup. The TUI writes OSC 52 at once and
+runs at most eight copies' helpers, one after another (a ninth is refused, said); paste waits for preceding copies and
+rejects a result if its view or buffer revision changed while waiting.
+The synchronous clipboard functions remain available for file-only callers and compatibility tests (#172).
 
 ### OpenTUI upgrade policy (`0.6`)
 

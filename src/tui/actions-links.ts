@@ -51,21 +51,21 @@ export function linkActions(): Record<string, Run> {
             said.length ? `no link here · ${said.join(" or ")} goes to the next one` : "no link here",
           );
         }
-        followLink(a, link, "here");
+        return followLink(a, link, "here");
       }),
     "link.follow_split": (a) =>
       withView(a, (v) => {
         const i = a.linking.linkForFollow(v);
         const link = i >= 0 ? lay(a, v).links[i]! : sourceLinkAt(a, v);
         if (!link) return a.message("info", "no link here");
-        followLink(a, link, "split");
+        return followLink(a, link, "split");
       }),
     "link.follow_tab": (a) =>
       withView(a, (v) => {
         const i = a.linking.linkForFollow(v);
         const link = i >= 0 ? lay(a, v).links[i]! : sourceLinkAt(a, v);
         if (!link) return a.message("info", "no link here");
-        followLink(a, link, "tab");
+        return followLink(a, link, "tab");
       }),
     // ctrl+click (VV-D7): out of this vault, gone into at once, without a peek; within it, as a click.
     "link.go": (a) =>
@@ -73,7 +73,7 @@ export function linkActions(): Record<string, Run> {
         const i = a.linking.linkForFollow(v);
         const link = i >= 0 ? lay(a, v).links[i]! : sourceLinkAt(a, v);
         if (!link) return a.message("info", "no link here");
-        followLink(a, link, "here", true);
+        return followLink(a, link, "here", true);
       }),
     // The peek (VV-D7): o goes there, t keeps it as a tab, z fills the screen.
     "peek.go": (a) => peekGo(a),
@@ -97,7 +97,7 @@ export function linkActions(): Record<string, Run> {
           accept: (item) => {
             const l = layout.links[item.data as number]!;
             if (l.line >= 0) a.moveCursor(v, { row: l.line, col: l.col });
-            followLink(a, l, "here");
+            return followLink(a, l, "here");
           },
         });
       }),
@@ -197,7 +197,7 @@ function openInto(a: App, into: Into, path: string, anchor?: Anchor, go = false)
   a.open(path, anchor);
 }
 
-function followLink(a: App, link: LayoutLink, into: Into, goOut = false): void {
+function followLink(a: App, link: LayoutLink, into: Into, goOut = false): void | Promise<void> {
   const view = a.view;
   if (!view) return;
   // Another vault's file read here — a peek, a tab kept from one: its links read in its own vault (VV-D7), its paths

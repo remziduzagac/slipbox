@@ -97,6 +97,34 @@ without asking (until slipbox quits); `show` — fetched as the note's laid out;
 `enter` copying its address. Fetched (into the cache, a file per address: an image's content type, at most 20 MB, within
 15 s), it's drawn as a local one, without asking again; a fetch that fails says why and isn't tried again until `enter`.
 Inline tags such as `<kbd>` and `<sup>` are dropped and their text kept.
+Downloads in `tui/images.ts` stream to unique partial cache files; each chunk is written before the next is read,
+with the 20 MiB limit enforced during consumption. Three transfers run at once, with 32 queued. Active and queued
+addresses deduplicate within the picture session. Automatic admission retries on later redraws when saturated;
+explicit admission reports a full queue. Failed addresses require explicit retry, and failure metadata is bounded.
+The session owns transfers across tab navigation, so a shared URL is not cancelled just because one view leaves it.
+Quitting or changing the remote policy to `never` aborts pending work; partial files are removed and only completed
+files are atomically published. Existing request consent and redirect behavior are unchanged (issue #171).
+
+On screen, math conversion and SVG size/rasterization are bounded background jobs (`core/paint-jobs.ts`,
+`core/paint-worker.ts`); native image inspection, decoding and downscaling use the same job protocol in the OpenTUI
+adapter, which is also a compiled worker entry. Drawing callbacks read completed results or keep the textual
+fallback. Completion invalidates layouts that waited, without announcing a grammar change. Source and options
+identify results; native files also include their modification time, so late replies cannot replace current input.
+Each owner admits eight jobs, deduplicates them, has a three-second deadline including startup, and discards replies
+from replaced workers. Saturation is temporary, never a remembered failure. Completed failures stay cached rather
+than retrying each frame. Idle workers are unreferenced and stop after 30 seconds; closing the native picture owner
+clears its queued jobs and retained images. CLI/export retain their explicit awaited loaders.
+
+Math input is at most 32 KiB, SVG input 8 MiB, generated output 8 MiB, and each completed-job cache 16 MiB or 512
+entries. Native files are at most 20 MiB; inspection accepts dimensions up to 16,384 per side and 16 million pixels.
+Screen decoding returns at most one million pixels, with sides no larger than 2,048; the adapter retains the 24 such
+decoded images drawn last (96 MB of pixels), so the pictures on screen are never decoded again while they show. SVG
+rasterization targets at most four million pixels and width 4,096. These are application budgets, not an
+operating-system memory sandbox or native-fault containment.
+
+A local ordinary 549,252-byte SVG took 163 ms to size/rasterize synchronously versus 3.2 ms to submit the background
+jobs; a 180-term math display took 46.6 ms synchronously versus 2.45 ms to submit (2026-10-18, one local run). The
+conversion still takes background time; these measurements describe time removed from the UI thread (#168, #169).
 
 **Mermaid** (12.10, D127): a ` ```mermaid ` block is drawn in the terminal's own characters — box drawing, arrows, its
 words in the text's colour and its lines in the table's border colour; in ASCII where the glyphs are — by
@@ -105,8 +133,41 @@ spacing, it's drawn closer together; still too wide, with `codeScroll`, drawn at
 as code too wide does (D233), a column of margin either side for its marks and a row under it for its scrollbar; too
 wide without it, a kind it doesn't draw (`pie`, `gantt`), or one it can't read: its code, the label saying why
 (`mermaid — too wide to draw`, `mermaid — not drawn: pie`). Every row is at the
-block's line, so the lens opens on its source. The library loads the first time a note holds a diagram; until it's in
-(a moment), the block is its code, then drawn — and `slipbox render` waits for it. Where pictures are drawn,
+block's line, so the lens opens on its source. The library loads in a worker the first time a note holds a diagram.
+`diagrams.ts` reads completed results from
+`diagram-jobs.ts`; until a result arrives, the block is its code with `mermaid — drawing…` in its header (#179). Arrival
+invalidates waiting layouts through
+`lazy.ts`. Lazy-load subscribers run in their registration context, so an asset finishing during export cannot
+move a screen relayout into the export's worker or lifetime. `slipbox render` and export wait for requested results
+before producing their output. Text and SVG layout run in `diagram-worker.ts`, and only there: the renderer
+(`diagram-render.ts`) is imported for more than its types by the worker alone, which `bun run check:boundary` holds;
+one active request and at most eight outstanding. Temporary queue saturation
+leaves the block pending: subsequent layouts admit it as capacity becomes available. The CLI repeats layout and drains
+until there is no pending work. Worker startup has a two-second deadline; each screen render has 500 ms. A timeout
+terminates the screen worker and retries the request once, then remembers a specific fallback reason without
+retrying on every redraw. Source is limited to 32,768 UTF-16 code units, each result to one MiB, and the screen result
+cache to two MiB
+and 2,048 entries. Cache keys include source and rendering options; failures are cached too. An idle worker is stopped
+after 30 seconds; its idle timer and worker are unreferenced so they do not delay exit. CLI rendering and export
+assembly each own a separate worker and cache through `withMermaidBatch`, with five seconds per diagram, no automatic
+retry, and a 32 MiB,
+2,048-entry result budget. At that document budget, new diagrams stay as source with a specific reason, preserving
+completed results instead of eviction and repeated rendering. The batch disposes its worker and cache when finished.
+Completed results also use `core/diagram-cache.ts`, a machine-shared SQLite cache at `cacheHome()/diagrams.db`, never in
+the vault (#180; D39, D253). Text and SVG keys include the rendering implementation epoch, slipbox's and the Mermaid
+library's versions and all rendering inputs: source, width, glyph/scroll mode or colours and font. Warm cache hits are
+synchronous and shared by the screen, CLI and export. The store keeps at most 2,048 rows and 32 MiB of serialized
+results; SQLite pages/WAL add storage overhead. Old least-recently-used entries are evicted. Reads and writes are
+best-effort with a short lock wait; a missing, corrupt or unavailable store falls back to rendering.
+`SLIPBOX_DIAGRAM_CACHE=off` bypasses disk reuse. Supported rendering failures and timeouts are retained, but
+deadline/retry policy partitions failure keys so a screen timeout cannot suppress the longer batch attempt.
+Startup/worker availability failures stay session-only.
+
+Deadlines apply per diagram, not to the whole note: screen jobs allow two attempts, batch jobs one, plus worker startup
+and queue wait. Three timed-out batch diagrams can therefore spend fifteen seconds rendering in total. These are work
+and
+cache limits, not a hard memory limit on the worker; the longer noninteractive deadline also permits longer allocation
+before termination. Where pictures are drawn,
 `[render] mermaid = "picture"` (12.16) draws it as one instead: `beautiful-mermaid`'s SVG in the theme's colours (its
 text, the table's border, a link's accent, `dim`; `ansi:N` as xterm has it), the terminal's background showing
 through, its words in a sans font found on the machine (DejaVu, Liberation, Noto, Arial, Helvetica) — as big as the
@@ -352,7 +413,7 @@ Carried over from the nvim configuration, where they were arrived at by trial (D
 - **Inset.** `render.inset` (default 4) columns are held back from the pane width, so a table's
   right border never sits on the edge. It is capped at 5% of narrow panes and is never below 1.
 - **Inline code** has its own background: `#c0caf5` on `#292e42`, italic, in Tokyo Night.
-- **Bold** has an explicit lighter foreground: `#bcc5e6` in Tokyo Night.
+- **Bold** uses the theme's strong foreground, `#c0caf5` in Tokyo Night, and the bold attribute (D254).
 - **Borders** are light (`│`, `─`) by default, heavy (`┃`, `━`) with `ui.lines = "heavy"`, in the
   one `border` colour whatever has focus; focus shows as brightness in titles and tabs
   ([tui.md](tui.md) § Side panes). Where two lines meet a rule at one column, the joint is one glyph from all
@@ -372,13 +433,18 @@ ANSI writer. Single roles can be overridden from config, for every theme or one 
 
 | Kind | Themes |
 | --- | --- |
-| hand-tuned | `tokyo-night` (default, D94, with the nvim adjustments), `tokyo-night-day` |
+| upstream colours | `tokyo-night` (Night, default), `tokyo-night-storm`, `tokyo-night-moon`, `tokyo-night-day` (D254) |
 | hand-tuned | `catppuccin-mocha`, `catppuccin-latte` |
 | base16 data | `catppuccin-frappe`, `catppuccin-macchiato`, `dracula`, `gruvbox-dark` |
 | base16 data | `gruvbox-light`, `nord`, `solarized-dark`, `solarized-light`, `rose-pine` |
 | base16 data | `everforest`, `kanagawa`, `one-dark`, `monokai` |
 | special | `terminal` (ANSI indexed colours: the terminal's own theme flows through) |
 | special | `mono` (attributes only: links underlined, unresolved dim too, code bold; used under `NO_COLOR`) |
+
+Tokyo Night's four palettes live in `core/theme/tokyo-night.ts`, mapped from the pinned upstream exports recorded in
+[the palette research](../research/tokyo-night-palettes.md). Night remains the default (D94). All four use the same
+semantic mapping and typography: strong text uses `fg`, inline code uses `fg` on `bg_highlight`, dim text uses
+`fg_dark`, and borders use `fg_gutter`; syntax accents come from each variant's own palette (D254, amending D96).
 
 Themes are built in (D91), hand-tuned or from base16 data (D92). In the TUI, `NO_COLOR` wins over any theme setting,
 session or picker choice (D95). Without colour the
@@ -455,3 +521,32 @@ whether stdout is a TTY, `COLORTERM` and `TERM`: truecolor, 256, 16, or none. Th
 paths approximate the theme's colours. With `--plain`, `--color never`, or when stdout is piped, the
 output contains no escape sequences at all. A 256-colour palette entry (from `[colors]`, say)
 becomes the nearest of the 16 on a 16-colour terminal.
+
+## Background parsing and spelling limits
+
+Each parse worker, and the spelling worker, has a bounded mailbox (`worker-requests.ts`). At most eight requests and
+eight MiB of their input are held for it at once; sizes are counted from string lengths, never by serializing. The
+worker is handed them one at a time. A caller past that room waits in line, and none is refused: one request bigger than
+the budget is held alone. A request's deadline counts from when its worker is handed it, not from the wait. It is twenty
+seconds for a spelling request. A parse batch's is thirty seconds and 50 ms a KiB of it: a net for a worker that's
+stuck, not a budget, since one block (a long list) is never split and a slow machine parses a dense one at over 25 ms a
+KiB (`batchDeadline`). A request may bring its own deadline. A deadline, a crash or a send that fails ends that request
+alone; its worker is terminated and started afresh for the requests behind it. Cancellation settles a request at once,
+held or waiting, and stops the worker if it had it. Disposal and shutdown settle every request.
+
+A big note's chunks go in contiguous batches of at most 256 KiB (one block bigger alone), at least one a worker, so each
+deadline covers a bounded piece of work whatever the note's size or the machine's cores. Answers have no size cap: a
+tree's size follows its text, which the batch bounds. A failed batch records why in the note's parse cache
+(`backgroundFailure`), and whether the worker was at fault (`transient`: a deadline, a crash, threads that can't start,
+the pool stopped) or the note was (the worker's own error answer). The batches that parsed are kept. The buffer then
+reads as its source, and the app says why once. Opening the note again retries a transient failure, and an edit always
+parses again. A newer parse sharing a cache supersedes the older. An edit, a reload and leaving the vault cancel a
+buffer's parse.
+
+The background index's parses aren't cancelled. A result for a file that changed meanwhile is dropped, and the new
+text goes to the threads. A note whose parse failed is parsed on the main thread, as before the threads; its entry is
+never made, or cached, from the fallback. The pool's workers stop after a minute with no parse running.
+
+A spelling check that fails leaves its words unknown, never taken as right, and its warning is said once. The words
+are asked again on a draw two seconds or more later. These are budgets for requests and held input, not OS-enforced
+limits on a worker's memory.

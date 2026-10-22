@@ -30,6 +30,9 @@ export function fileActions(): Record<string, Run> {
     "folder.create": (a, arg) =>
       arg ? void a.files.createFolder(arg, a.files.newItemBase()) : a.files.promptNewFolder(),
     "note.export": (a, arg) => a.exporter.exportNote(arg || undefined),
+    "note.export_cancel": (a) => {
+      a.exporter.cancel();
+    },
     "note.export_many": (a) => a.exporter.compose(),
     "note.open": (a, arg) => {
       if (!arg) return void a.run("switcher.open");

@@ -11,10 +11,10 @@
     {
       "endpoint": "repos/{repo}",
       "reader": "workflow",
-      "about": "Public; issues open, pull requests from collaborators (GR-D2, GR-D5); Discussions for questions and ideas (GR-D17); no wiki or projects",
+      "about": "Public; issues open, pull requests from collaborators (GR-D2, GR-D5), into dev, the default branch (D251); Discussions for questions and ideas (GR-D17); no wiki or projects",
       "expect": {
         "visibility": "public",
-        "default_branch": "main",
+        "default_branch": "dev",
         "archived": false,
         "has_issues": true,
         "has_pull_requests": true,

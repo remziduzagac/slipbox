@@ -6,10 +6,15 @@
 const COMPILED = "file:///$bunfs/";
 
 /**
- * A worker's script, by its file in `src/core/`: beside this module when slipbox runs from its source; in a compiled
- * binary, in `core/` beside the entry point, as Bun lays out the build's entry points by their paths under `src/` —
- * and a module bundled into the binary has the entry point's URL, not its own.
+ * A worker's script, by its file in `src/core/` (`../tui/opentui.ts`, the pictures' decoder: OpenTUI stays in its
+ * adapter): beside this module when slipbox runs from its source; in a compiled
+ * binary, in `core/` beside the entry point, as Bun lays out the build's entry points by their paths under `src/`
+ * (package.json's `--root=src`: left to itself, Bun keeps `src/` in their paths once there are nine of them) —
+ * and a module bundled into the binary has its entry point's URL, not its own. That entry point may be a worker's,
+ * in `core/` itself (the export's starts the diagrams'): the path is from the binary's root, not from it.
  */
 export function workerUrl(file: string, here = import.meta.url): string {
-  return new URL(here.startsWith(COMPILED) ? `./core/${file}` : `./${file}`, here).href;
+  if (!here.startsWith(COMPILED)) return new URL(`./${file}`, here).href;
+  const root = here.slice(0, here.indexOf("/", COMPILED.length) + 1);
+  return new URL(`./core/${file}`, root).href;
 }

@@ -2,6 +2,8 @@
 // diagrams and maths as SVG, its stylesheet — so it can be mailed, opened anywhere, and printed (a chapter a page).
 // Nothing in it reaches the network: a picture on the web it has no copy of is a link.
 
+import type { ExportSink } from "./spool.ts";
+import { utf8 } from "./stream.ts";
 import type { Element, Root as HastRoot } from "hast";
 import { toHtml as serialise } from "hast-util-to-html";
 import { loadRasterizer } from "../svg.ts";
@@ -18,15 +20,8 @@ const el = (tagName: string, properties: Element["properties"], children: Elemen
 });
 
 /** The document as one HTML file's bytes. */
-export async function toHtml(doc: ExportDoc): Promise<Uint8Array> {
+export async function toHtml(doc: ExportDoc, sink?: ExportSink): Promise<Uint8Array> {
   const r = await loadRasterizer();
-  const sections = doc.chapters.map((ch) =>
-    chapterHast(ch, {
-      r,
-      src: (data, type) => `data:${mediaType(type)};base64,${Buffer.from(data).toString("base64")}`,
-      href: (anchor) => `#${anchor}`,
-    }),
-  );
   const head = el("head", {}, [
     el("meta", { charSet: "utf-8" }),
     el("meta", { name: "viewport", content: "width=device-width, initial-scale=1" }),
@@ -36,12 +31,30 @@ export async function toHtml(doc: ExportDoc): Promise<Uint8Array> {
     el("title", {}, [{ type: "text", value: doc.title }]),
     el("style", {}, [{ type: "text", value: CSS }]),
   ]);
-  const tree: HastRoot = {
+  const chunks: Uint8Array[] = [];
+  const write = sink ?? ((chunk: Uint8Array) => chunks.push(Buffer.from(chunk)));
+  // Serialize a skeleton to preserve the normal serializer's escaping, then chapters one at a time.
+  const shell: HastRoot = {
     type: "root",
     children: [
       { type: "doctype" },
-      el("html", doc.lang ? { lang: doc.lang } : {}, [head, el("body", {}, [el("main", {}, sections)])]),
+      el("html", doc.lang ? { lang: doc.lang } : {}, [head, el("body", {}, [el("main", {}, [])])]),
     ],
   };
-  return new TextEncoder().encode(`${serialise(tree)}\n`);
+  const marker = "</main></body></html>";
+  const start = serialise(shell);
+  // The chapters go where the empty main closes: a serializer that ends it otherwise would misplace them.
+  if (!start.endsWith(marker)) throw Error("HTML export: unexpected document shell");
+  utf8(start.slice(0, -marker.length), write);
+  for (const ch of doc.chapters) {
+    const section = chapterHast(ch, {
+      r,
+      src: (data, type) =>
+        `data:${mediaType(type)};base64,${Buffer.from(data.buffer, data.byteOffset, data.byteLength).toString("base64")}`,
+      href: (anchor) => `#${anchor}`,
+    });
+    utf8(serialise(section), write);
+  }
+  utf8(`${marker}\n`, write);
+  return sink ? new Uint8Array() : Buffer.concat(chunks);
 }

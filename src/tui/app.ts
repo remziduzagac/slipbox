@@ -10,7 +10,13 @@
 // This module does not import OpenTUI. It draws through `Canvas` and talks to the terminal
 // through `Host`; tui/run.ts binds both to OpenTUI. That keeps the whole model testable.
 
+import { cancelGitRead } from "./gitquery.ts";
 import { DOCUMENT_GRAMMARS, grammarFor } from "../core/syntax.ts";
+import { MERMAID } from "../core/diagrams.ts";
+import { REGEX, stopRegexJobs } from "../core/regex-jobs.ts";
+import { stopParsePool } from "../core/parse-pool.ts";
+import { stopSpellThread } from "../core/spell-thread.ts";
+import { stopSyntaxThread } from "../core/syntax-thread.ts";
 import { onLoaded } from "../core/lazy.ts";
 import { classify, extensionOf } from "../core/filetypes.ts";
 import { accessSync, appendFileSync, constants as fsConstants, statSync } from "node:fs";
@@ -22,7 +28,7 @@ import { placeAt, stopInsert } from "./editing.ts";
 import { newVimState } from "./vim.ts";
 import type { ReplaceState } from "./replacing.ts";
 import { homedir } from "node:os";
-import { copyText, readClipboard } from "../core/clipboard.ts";
+import { copyTextAsync, osc52Sequence, readClipboardAsync } from "../core/clipboard.ts";
 import { CommandRegistry, type Keymap } from "../core/commands.ts";
 import { type Config, loadConfig } from "../core/config.ts";
 import type { Glyphs } from "../core/glyphs.ts";
@@ -146,6 +152,9 @@ export interface FindState {
   whole?: boolean;
   /** A regular expression (`alt+r`), not plain text. */
   regex?: boolean;
+  pending?: boolean;
+  limited?: boolean;
+  failed?: boolean;
   /** Why the regex isn't one, when it isn't. */
   error?: string;
 }
@@ -263,9 +272,9 @@ export interface ListOverlay {
   filtered: { item: ListItem; positions: number[] }[];
   selected: number;
   scroll: number;
-  accept: (item: ListItem) => void;
+  accept: (item: ListItem) => unknown;
   /** Enter with the raw input, before `accept`; return true when handled (exact `:` aliases). */
-  submit?: (input: string) => boolean;
+  submit?: (input: string) => boolean | Promise<boolean>;
   move?: (item: ListItem) => void;
   cancel?: () => void;
   /** Show the selected item's `detail` in a footer line instead of beside its label. */
@@ -293,8 +302,8 @@ export interface PromptOverlay {
   text: string;
   /** A yes-or-no question: `y` answers yes (`accept`), `n` or `esc` no (`cancel`); nothing typed. */
   confirm?: boolean;
-  change?: (text: string) => void;
-  accept: (text: string) => void;
+  change?: (text: string) => unknown;
+  accept: (text: string) => unknown;
   cancel?: () => void;
   /** Find's prompt: typed in that window's own find row, not on the bottom line. */
   view?: View;
@@ -349,6 +358,8 @@ export interface UiState {
   spell: boolean;
   /** Where the scratch shows (#43): floating over the windows, or in the window on the right. */
   scratch_in: "float" | "right";
+  /** The explorer lists hidden files and folders (`files.hidden`; its `shift+h`), `.git` aside. */
+  hidden_files: boolean;
   theme: string;
   glyphs: string;
 }
@@ -370,6 +381,7 @@ export function uiDefaults(c: Config): UiState {
     code_wrap: c.render.code_wrap,
     spell: c.spell.enabled,
     scratch_in: c.capture.open_in,
+    hidden_files: c.files.hidden,
     // "auto": URLs where colour can't mark links (NO_COLOR), as in `slipbox render`.
     urls: c.render.show_urls === "always" || (c.render.show_urls === "auto" && !!process.env.NO_COLOR),
     theme: c.theme,
@@ -419,6 +431,8 @@ export interface AppOptions {
   graph: Graph;
   host: Host;
   warnings?: string[];
+  /** Said on opening, as information: what `--base` kept (D255). */
+  notes?: string[];
   open?: string | null;
   themeName?: string;
   /** `--config`, remembered for reloads. */
@@ -673,6 +687,7 @@ export class App {
     registerActions(this);
     this.settings.applyKeys();
     for (const w of opts.warnings ?? []) this.message("warn", w);
+    for (const n of opts.notes ?? []) this.message("info", n);
     for (const e of this.graph.errors) this.message("warn", e);
     if (carriedFrom) this.message("info", carried(this.loc, carriedFrom));
 
@@ -710,7 +725,7 @@ export class App {
     if (!this.overlay) this.vaults.askDefaultCopy();
     // A grammar (or anything lazy) that finished loading: lay out again and draw.
     this.stopLazy = onLoaded((name) => {
-      this.graph.grammarsChanged(); // code files' comment links can be read now (16.10)
+      if (name !== MERMAID && name !== "pictures" && name !== REGEX) this.graph.grammarsChanged(); // code files' comment links can be read now (16.10)
       // Notes drawn while it loaded (a Mermaid diagram as its code, 12.10): drawn again — those only.
       for (const b of this.buffers.values()) b.arrived(name);
       this.relayoutAll();
@@ -923,6 +938,10 @@ export class App {
   }
 
   makeView(buf: NoteBuffer, anchor?: Anchor, cursor?: CursorAnchor): View {
+    // Opened again: a big note its threads failed on for their own reason is parsed again (15.1), a code file's
+    // structure likewise (16.7).
+    buf.retryParse();
+    this.languages.retrySyntax(buf);
     const topAnchor = anchor ?? this.positions.get(buf.key) ?? { ...TOP };
     const curAnchor =
       cursor ??
@@ -987,6 +1006,7 @@ export class App {
 
   /** Switch to a tab already showing this note, or open it in a new one. */
   openOrSwitchTab(path: string): void {
+    cancelGitRead(this);
     if (this.vaults.intoOther(path)) return;
     if (this.following.gate(this.absOf(path), () => this.openOrSwitchTab(path))) return;
     const buf = this.buffer(path);
@@ -1204,33 +1224,67 @@ export class App {
   // -------------------------------------------------------------------------------------------
   // The clipboard, every view and buffer, quitting.
 
+  private clipboardTask: Promise<unknown> = Promise.resolve();
+  private clipboardAbort = new AbortController();
+  private clipboardPending = 0;
+
   /**
    * What `p` puts: the system clipboard when it can be read and holds something else than the
    * register (text copied in another app); else the register — whose line-wise-ness a clipboard
    * that holds the same text keeps.
    */
-  pasteText(): { text: string; linewise: boolean } | null {
+  async pasteText(): Promise<{ text: string; linewise: boolean } | null> {
+    await this.clipboardTask;
     const reg = this.vim.register;
-    const clip = readClipboard(stateDir(this.loc));
+    const clip = await readClipboardAsync(stateDir(this.loc), this.clipboardAbort.signal);
     if (clip === null || clip === "" || (reg && clip === reg.text)) return reg;
     return { text: clip, linewise: false };
   }
 
   /** Text on the clipboard; said so (`what` names it: "copied <what>"), unless `announce` is false. */
-  copy(text: string, announce = true, what = `${text.length} characters`): boolean {
-    const r = copyText(text, { osc52: (t) => this.host.osc52(t), fallbackDir: stateDir(this.loc) });
-    // SLIPBOX_CLIPBOARD=file sends copies to the file on purpose; otherwise the file means no clipboard answered.
-    const onPurpose = process.env.SLIPBOX_CLIPBOARD === "file";
-    if (announce)
-      this.message(
-        "info",
-        r.file
-          ? onPurpose
-            ? `copied ${what} to ${r.file}`
-            : `clipboard unavailable — wrote ${r.file} (${what})`
-          : `copied ${what}`,
-      );
-    return !r.file;
+  copy(text: string, announce = true, what = `${text.length} characters`): Promise<boolean> {
+    // Said whether or not the caller announces: its own "copied" or "yanked" would claim a copy that never happens.
+    if (this.clipboardPending >= 8) {
+      this.message("warn", "clipboard busy — copy again after it finishes");
+      return Promise.resolve(false);
+    }
+    // OSC 52 now, in the order copies are made, as it was when copying waited for the helpers: the terminal's
+    // clipboard never waits for them, only the system's.
+    const osc52 = osc52Sequence(text) !== null && this.host.osc52(text);
+    const run = async () => {
+      if (this.quitting) return false;
+      const r = await copyTextAsync(text, {
+        osc52: () => osc52,
+        fallbackDir: stateDir(this.loc),
+        signal: this.clipboardAbort.signal,
+      });
+      if (this.quitting) return false;
+      // SLIPBOX_CLIPBOARD=file sends copies to the file on purpose; otherwise the file means no clipboard answered.
+      const onPurpose = process.env.SLIPBOX_CLIPBOARD === "file";
+      if (announce) {
+        this.message(
+          "info",
+          r.file
+            ? onPurpose
+              ? `copied ${what} to ${r.file}`
+              : `clipboard unavailable — wrote ${r.file} (${what})`
+            : `copied ${what}`,
+        );
+        // The helper answered after the key's frame was drawn: drawn now, not at the next key.
+        this.host.requestRender();
+      }
+      return !r.file;
+    };
+    this.clipboardPending++;
+    const task = this.clipboardTask.then(run).catch((err) => {
+      if (this.quitting) return false;
+      this.message("warn", `clipboard: ${(err as Error).message}`);
+      this.host.requestRender();
+      return false;
+    });
+    task.finally(() => this.clipboardPending--);
+    this.clipboardTask = task;
+    return task;
   }
 
   allViews(): View[] {
@@ -1252,13 +1306,23 @@ export class App {
   quit(): void {
     if (this.quitting) return;
     this.quitting = true;
+    this.clipboardAbort.abort();
+    this.pictures.dispose();
+    this.languages.stopSyntax();
+    this.languages.stopTools();
     this.languages.servers?.killAll();
     this.shellJob?.stop();
+    cancelGitRead(this);
     try {
       writeDirty(this.loc, []);
     } catch {}
     this.watcher?.close();
+    this.exporter.cancel(true);
     this.stopLazy?.();
+    stopParsePool();
+    stopSpellThread();
+    stopSyntaxThread();
+    stopRegexJobs();
     if (this.session.stateTimer) clearTimeout(this.session.stateTimer);
     this.session.save();
     this.host.quit();

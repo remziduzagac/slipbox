@@ -3,8 +3,9 @@
 slipbox is made to sit beside a coding agent: Claude Code, Codex, or any agent that runs shell commands. You read and
 edit in slipbox's TUI, and the agent uses slipbox's command line.
 
-Both work on the same files on disk, so there is nothing to sync. What the agent writes, you see at once. What you save
-is what the agent reads.
+Both work on saved files on disk. If you have no unsaved edits, the screen reloads a file changed by another
+program. If you have unsaved edits, slipbox asks which text to keep.
+The agent reads what you have saved, not text still unsaved in the lens.
 
 This guide sets that up. Then it walks through a session:
 
@@ -14,8 +15,11 @@ This guide sets that up. Then it walks through a session:
 
 ## Give the agent the skill
 
-You need slipbox installed ([Installing slipbox](install.md)) and a folder of notes. This guide uses `~/notes`, with
-the two notes that [Getting started](getting-started.md) makes in it: `inbox.md` and `ideas/coffee.md`.
+Start here after [Working with slipbox](getting-started.md) and the [reading/editing guide](lens.md). Review
+[Scratch and context](../manual/scratch-and-context.md) for the capture tools used later in this workflow.
+
+You need slipbox installed ([Installation](install.md)) and a folder of notes. This guide uses `~/slipbox-tour`,
+with the two notes that [Working with slipbox](getting-started.md) makes in it: `inbox.md` and `ideas/coffee.md`.
 
 slipbox comes with a skill for agents. It's a short Markdown file, built into slipbox, that teaches an agent the
 command line:
@@ -51,10 +55,13 @@ scripts/install-local.sh --skill
 It puts a `slipbox` launcher in `~/.local/bin`, and says so if that folder isn't on your `PATH`. It links the source's
 `skills/slipbox/` folder to `~/.claude/skills/slipbox`. So the skill there follows the source as you update it.
 
-To check that slipbox answers in your folder, run this, or ask the agent to run it:
+The first tour already made `~/slipbox-tour` a vault. Check it before using the short note names below; `root` should
+name this practice folder. If you use your own notes instead, open their existing vault.
+
+<!-- example: agent-context -->
 
 ```bash
-cd ~/notes
+cd ~/slipbox-tour
 slipbox info
 ```
 
@@ -68,20 +75,22 @@ You see:
 ## Open slipbox beside the agent
 
 Split your terminal, using your terminal's own panes, tmux or zellij. Run slipbox in one pane and the agent in the
-other, both in `~/notes`.
+other, both in `~/slipbox-tour`.
 
 ```bash
-slipbox ~/notes
+slipbox ~/slipbox-tour
 ```
 
-The agent's commands find the same folder by themselves. It's the nearest folder above where they run that holds `.git`,
-`.slipbox/`, `.obsidian/` or `.zk/`, which slipbox calls a vault ([Links and vaults](../manual/links-and-vaults.md)). If
-there's none, it's the folder they run in, standing in for one.
+Both now use the vault marked by `~/slipbox-tour/.slipbox/`. In general, the nearest `.git`, `.slipbox/`,
+`.obsidian/` or `.zk/` determines the vault. Without a marker, files under your home folder belong to home; files
+outside home and all marked vaults belong to Elsewhere. An unmarked subfolder is not an isolated vault. See
+[Vaults, home and Elsewhere](../manual/vaults.md).
 
 ## Watch the agent write
 
 Open `inbox.md` in slipbox, and ask the agent to add a task to it. The agent runs something like this:
 
+<!-- example: agent-first-write -->
 ```bash
 slipbox write inbox --append --paragraph -- '- [ ] Call the plumber'
 ```
@@ -100,7 +109,8 @@ If you have unsaved changes to that note, slipbox keeps both versions and asks w
 
 [When a file changes on disk](../manual/editing.md#when-a-file-changes-on-disk) explains each answer.
 
-![The conflict prompt: inbox.md changed on disk while it had unsaved changes, with its four answers](../images/agents-conflict.png)
+![The conflict prompt: inbox.md changed on disk while it had unsaved changes, with its four
+answers](../images/agents-conflict.png)
 
 The agent hears about your unsaved changes too. While slipbox holds them, every command the agent runs warns
 `unsaved changes in a running slipbox: inbox.md`. With `--json`, the note is listed in `stale`. The skill tells the
@@ -264,8 +274,11 @@ nvim, as `space n s` does from slipbox. The skill tells the agent to do so only 
 
 ## Where next
 
+**Next guide:** [Making slipbox yours](making-it-yours.md).
+
 - [The command line](../manual/cli.md): every command, its JSON and its exit codes.
 - [Editing](../manual/editing.md): saving, autosave and the conflict prompt.
 - [Configuration](../manual/configuration.md): the scratch's place, the context's defaults, your editor.
-- [Code and git](code-and-git.md): reviewing what an agent changed, a change at a time, and its branch before you
+- [Reviewing changes with Git](code-and-git.md): reviewing what an agent changed, a change at a time, and its branch
+  before you
   merge it.

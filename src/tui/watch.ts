@@ -90,8 +90,18 @@ export class Watch {
           .catch(() => false)
           .then((ok) => {
             elsewhere.delete(f.rel);
-            if (!ok) failed.add(f.rel);
-            else if (!this.app.quitting) this.app.graph.entry(f.rel, chunks);
+            if (this.app.quitting) return;
+            // The threads couldn't: parsed here after all (parseSome) — never indexed from a parse that failed.
+            if (!ok) return void failed.add(f.rel);
+            let now: string;
+            try {
+              now = readText(f.abs).text;
+            } catch {
+              return void failed.add(f.rel); // unreadable now: the parse here says so
+            }
+            // Changed while it parsed: its new text goes to the threads on the next tick, not parsed here with
+            // chunks of the old.
+            if (now === text) this.app.graph.entry(f.rel, chunks);
           });
       }
       const left = this.app.graph.parseSome(12, elsewhere);

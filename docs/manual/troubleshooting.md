@@ -1,4 +1,6 @@
-# Troubleshooting
+# Troubleshooting and diagnostics
+
+<a id="troubleshooting"></a>
 
 This chapter helps when something in slipbox doesn't work as you expect. Each section says what you see, why, and what
 to do.
@@ -18,7 +20,7 @@ you report a problem.
 Run it in your notes folder, or name a folder with `--root ~/notes`. It shows slipbox's version, then:
 
 - **vault** and **name**: the folder slipbox takes as the top of your notes, and its name
-  ([Links and vaults](links-and-vaults.md)).
+  ([Vaults, home and Elsewhere](vaults.md)).
 - **notes**: how many notes it found, and how long that took.
 - **index**: whether the search index has been built, and when.
 - **links**: how the folder writes links, as slipbox has worked it out.

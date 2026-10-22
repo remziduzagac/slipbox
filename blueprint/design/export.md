@@ -23,9 +23,83 @@ The code is in `src/core/export/`:
 | `style.ts` | the look on paper: print's colours, a callout's, code's; the stylesheet |
 | `index.ts` | the formats, by name; where an export goes; writing it |
 | `mark.ts` | each format's mark, that slipbox wrote it: read by `index.ts`; Markdown's also by the graph's lookups |
+| `jobs.ts` | an export as a job in a worker of its own (`src/core/export-worker.ts`), its turn, its cancel |
+| `spool.ts` | private staged files, bounded copying and atomic publication by the owner |
+| `stream.ts` | format dispatch into a disk sink and bounded UTF-8 encoding |
+| `zip.ts` | EPUB's ZIP, an entry at a time, each with its sizes in its own header |
+| `reads.ts` | what a job reads: regular files only, each note parsed once in a job |
 
 `src/core/imagecache.ts` is where a picture on the web is kept once the TUI has fetched it (`12.12`). An export reads
 it, and fetches nothing. Every writer is loaded when it's first used, not at start.
+
+## Background jobs
+
+`core/export/jobs.ts` runs a whole export in a worker of its own (`core/export-worker.ts`): its graph, the assembly
+and the writer. The request carries the location, configuration, asked home folders, thorough-link behavior, known
+aliases and whether the owner's graph reads the persisted index; the worker's reads it too, so notes parsed already
+aren't parsed again. Cross-root reach is recreated only where the parent had it. The worker is given the environment
+as the owner has it when the job starts (Bun would give it the one the process started with), so it finds the cache
+and state the owner does. It reads saved files and fetches nothing; `reads.ts` reads notes and pictures only when they
+are regular files, and parses each note once in a job. An embedded note that can't be read stays its name, as on the
+screen. The worker reports stages (reading, assembling, writing), streams output into a private staging directory
+created by its owner, and returns only a manifest of lengths and attachment names. It never writes the destination.
+CLI callers await the same job. The buffered `exportNotes` helper remains available for callers that need bytes; the
+CLI and TUI use `prepareExport` and `PreparedExport.publish`.
+
+Two jobs run at once; another waits its turn, in order, and is never refused. A job has no deadline: a long book, or
+many pictures to convert, takes as long as it needs. Cancellation or a worker failure settles it, terminates its worker
+and removes its staged files. The named `note.export_cancel` command cancels every TUI job, running or waiting; quitting
+cancels them too. The target's note/overwrite checks run again in the owning CLI/TUI immediately before publication. The
+check runs again after copying and immediately before each rename. The TUI keeps the original graph and its state
+directory even if the user changes roots while the job runs. A queued progress message or result cannot revive a settled
+job.
+
+### Output streaming and publication
+
+`spool.ts` writes each encoder chunk through at most a 64 KiB synchronous write on the worker, handling partial writes.
+The staging directory is in slipbox's cache folder, `exports/<pid>-<random>` — on disk, where the system's temporary
+folder may be memory (a tmpfs) — owner-only (0700 on Unix), its files 0600, with generated names unrelated to the
+attachment paths. Staging left by a process that's gone (killed, crashed) is removed the next time one stages. No
+document bytes cross the worker boundary in the production path. The owner validates manifest paths, regular files and
+actual lengths, then copies through one reusable 64 KiB buffer per publication with awaited reads and writes.
+Cancellation is checked between operations; individual OS filesystem operations are not preempted.
+
+Destination copies are exclusive temporary files beside their final paths, 0600 while copying. Each is synced, given the
+replaced file's permissions (else 0644), and renamed atomically after rechecking destination policy. Attachments publish
+before the document; the set of files is not a filesystem transaction. Cancellation or failure leaves the previous
+document intact until its final rename; attachments already published may remain, as with the earlier writer. Private
+staging and unpublished destination temporaries are removed on success, failure or cancellation, and on normal process
+exit. CLI termination signals cancel the job, await cleanup, then retain their usual process-ending effect. Staging uses
+additional disk space, up to the output plus its destination copies, while the previous destination may still exist.
+
+PDF emits output as it is produced, finishes quote/callout bars and adds each page number before that page is flushed,
+and retains at most one page for layout. EPUB writes each ZIP entry as it's made (`zip.ts`): compressed whole by fflate,
+its checksum and sizes in its own header, no data descriptor after it, so a reader that streams the archive reads it as
+one that uses the central directory does (Java's `ZipInputStream` refuses a stored entry with a descriptor, and the
+first, `mimetype`, is stored, as EPUB asks). It keeps only picture names/types for its manifest; chapters are serialized
+individually, and one entry's compressed copy is held at a time. HTML serializes one chapter at a time, UTF-8 encoded
+through a 64 KiB window. Markdown stages pictures individually rather than returning their byte arrays together. Its
+Markdown serializer still makes a document-sized string, and a picture header read still loads one picture. Word's
+public `Packer.toStream` in the pinned docx version itself buffers the whole archive: its encoder therefore remains
+buffered inside the worker, without an additional copy into the owner or a private-library hook.
+
+These are bounds on output transport and publication, not on the assembled tree, an individual raster decode or
+third-party encoder allocations. No total-process memory ceiling is claimed. Nothing an export reads or makes is capped
+by its size: a note, a picture, all of them together, the document and its output are as big as they are, as an export
+on the main thread had them. Worker isolation keeps their CPU work away from input; it is not an OS memory sandbox or
+independent native-fault containment. Existing writers are JavaScript/WebAssembly; a helper process is unnecessary for
+the measured CPU scheduling problem, but remains an option for stronger future containment. A worker the export's starts
+(the diagrams') is found from the compiled binary's root, whichever entry point starts it (`core/workers.ts`).
+
+A local 279,890-byte document measured before/after this boundary (2026-10-18, single runs; #176): PDF 763/778 ms,
+DOCX 277/370 ms, EPUB 251/363 ms total. Maximum sampled event-loop gaps were 478/8 ms, 175/8 ms, 169/8 ms. Sampled peak
+RSS was 321/368 MiB, 188/235 MiB, 179/216 MiB; workers add startup and memory overhead. Output sizes matched in each
+pair (764,837, 36,016 and 22,152 bytes). These are local measurements, not portable performance budgets.
+
+A second local check (2026-10-18, one fresh process per path; eight 8 MiB picture attachments exported to Markdown)
+compared buffered output/publication with staging: 185/251 ms total, maximum sampled event-loop gaps 36/5 ms, sampled
+peak RSS 314/130 MiB. Both produced 67,109,301 bytes, with identical document hashes. The additional disk work buys
+lower retained output memory; these single-run timings are evidence of the tradeoff, not CI thresholds.
 
 ## Asking for one
 

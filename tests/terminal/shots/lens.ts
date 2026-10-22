@@ -1,52 +1,80 @@
-// docs/guides/lens.md: the lens opened on a paragraph (its section whole), and grown while typing a paragraph under it.
+// docs/guides/lens.md: the tour's Coffee note read, in the lens, typed in, and beside its whole source; Inbox in
+// source mode beside its rendered self.
 
 import type { Session } from "../session.ts";
-import { HOME, leader, type Shot } from "../shot.ts";
+import { GUIDE, type Shot } from "../shot.ts";
 
-/** A plan for a long ride, with no explorer beside it: a training table, a paragraph on food, a checklist of gear. */
-const BREVET = { ...HOME("notes/projects/brevet-300.md"), config: "[ui]\nsidebar = false\n" };
+const COFFEE = { ...GUIDE, startAt: "home/slipbox-tour/ideas/coffee.md" };
 
-/** The cursor on the line holding `text`, that line in the middle of the window, the find row closed. */
+/** Two windows on one note need the width: no explorer. */
+const SPLIT = { config: "[ui]\nsidebar = false\n" };
+
+/** The cursor on the line holding `text`, the find row closed. */
 async function at(s: Session, text: string): Promise<void> {
-  await s.status("brevet-300.md");
-  await s.keys("/");
+  await s.keys("ctrl+f");
   await s.type(text);
-  await s.keys("enter", "escape", "z", "z");
+  await s.keys("enter", "escape");
 }
 
 /** What the lens said as it opened, gone: the page under it in the picture, not the message. */
 const unsaid = (s: Session) => s.notSee("the lens: the markdown", 8000);
 
+/** The lens opened on Brewing's sentence: its section as Markdown, Beans still rendered under it. */
+async function lensOnBrewing(s: Session): Promise<void> {
+  await s.status("coffee.md");
+  await at(s, "A ratio of 1 to 16");
+  await s.keys("i");
+  await s.status("LENS");
+  await s.see("source · lines");
+}
+
 export const SHOTS: Shot[] = [
   {
-    name: "lens-open",
-    options: BREVET,
+    name: "reading-editing-views",
+    options: { ...COFFEE, ...SPLIT },
     take: async (s) => {
-      // The paragraph about food: the lens opened there without typing, on its section whole.
-      await at(s, "Eat before hungry");
-      await leader(s, "n", "l");
-      await s.status("LENS");
-      await s.see("source · lines 30–35");
+      // The right window in source mode, the left with the lens open: the note's three views at once.
+      await s.status("coffee.md");
+      await s.keys("ctrl+w", "v");
+      await s.keys("ctrl+k");
+      await s.status("SOURCE");
+      await s.keys("ctrl+w", "w");
+      await lensOnBrewing(s);
+      await unsaid(s);
+    },
+  },
+  {
+    name: "lens-open",
+    options: COFFEE,
+    take: async (s) => {
+      await lensOnBrewing(s);
       await unsaid(s);
     },
   },
   {
     name: "lens-typing",
-    options: BREVET,
+    options: COFFEE,
     take: async (s) => {
-      // The lens on the food paragraph, as lens-open has it; `4 j` (its counters' column says so) to the paragraph's
-      // last line, `shift+a` at its end, and a new paragraph typed under it: the lens grown by two lines.
-      await at(s, "Eat before hungry");
-      await leader(s, "n", "l");
-      await s.status("LENS");
-      await s.keys("4", "j");
-      await s.status(/L34:/);
-      await s.keys("shift+a");
+      // As the guide has it: to the sentence's end, `a`, a sentence added; not saved.
+      await lensOnBrewing(s);
+      await s.keys("end", "a");
       await s.status("INSERT");
-      await s.keys("enter", "enter");
-      await s.type("Next time: a second bottle cage for the long stretch after 171 km.");
-      await s.see("editing · lines 30–37");
+      await s.type(" Try a little finer tomorrow.");
+      await s.see("editing · lines");
       await unsaid(s);
+    },
+  },
+  {
+    name: "reading-editing-source",
+    options: { ...GUIDE, startAt: "home/slipbox-tour/inbox.md", ...SPLIT },
+    take: async (s) => {
+      // Both windows on the link's line; the second shows the whole file's Markdown, the first the rendered page.
+      await s.status("inbox.md");
+      await at(s, "Ideas so far");
+      await s.keys("ctrl+w", "v");
+      await s.keys("ctrl+k");
+      await s.status("SOURCE");
+      await s.notSee("the note's markdown", 8000);
     },
   },
 ];

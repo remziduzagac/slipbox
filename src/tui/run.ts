@@ -24,6 +24,7 @@ import {
   type VaultLocation,
 } from "../core/vault.ts";
 import { setTrustedRoots } from "../core/trust.ts";
+import { baseAtOpen } from "../core/gitbase.ts";
 import { App, type AppOptions } from "./app.ts";
 import { keyName } from "./keys.ts";
 import type { Canvas } from "./canvas.ts";
@@ -56,8 +57,21 @@ export function prepare(argv: string[]): Start | number {
     return 3;
   }
   const loaded = loadConfig({ ...configFilesFor(loc), configFile: flag(args, "config") });
-  const recorded = recordLocation(loc);
   const warnings = [...loaded.warnings];
+  const notes: string[] = [];
+  // `--base <ref>` (GIT-D10, D255): the branch here measured against it, kept as "Compare against…" keeps it. A ref
+  // that names no commit is said in a line, as a missing path is, before the screen is taken.
+  const base = flag(args, "base");
+  if (base !== undefined) {
+    const kept = baseAtOpen(loc.root, base);
+    if ("error" in kept) {
+      process.stderr.write(sanitize(`slipbox: ${kept.error}\n`));
+      return 3;
+    }
+    if ("warn" in kept) warnings.push(kept.warn);
+    else notes.push(kept.note);
+  }
+  const recorded = recordLocation(loc);
   if (loc.note) warnings.push(loc.note);
   // In WSL, notes on a Windows drive (14.12): what's noticed there, and what isn't, said once.
   const onWindows = windowsDriveNote(loc.root);
@@ -67,6 +81,7 @@ export function prepare(argv: string[]): Start | number {
     config: loaded.config,
     graph: openGraph(loc, loaded.config, true, "lazy"),
     warnings,
+    notes,
     open: loc.file ?? null,
     themeName: flag(args, "theme"),
     configFile: flag(args, "config"),

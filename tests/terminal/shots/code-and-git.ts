@@ -33,6 +33,9 @@ function agentEdits(s: Session): void {
 }
 
 /** git in a repository of the check's home, as its owner, none of your own config read; it must end as `ok` says. */
+/** What git's versions said while they were read, gone: the screen they make in the picture, not the message. */
+const settled = (s: Session) => s.notSee(/Reading (diff|review|merge) versions?…/, 15000);
+
 function git(s: Session, ok: boolean, repo: string, ...args: string[]): void {
   const r = spawnSync(
     "git",
@@ -76,6 +79,7 @@ export const SHOTS: Shot[] = [
       await s.ex("diff");
       await s.see("before");
       await s.see("after");
+      await settled(s);
     },
   },
   {
@@ -89,6 +93,7 @@ export const SHOTS: Shot[] = [
       // The review's first change: the sync doc's, its paragraph before and after.
       await s.keys("v");
       await s.see(/change 1 of 2 here, 1 of 3 in all/, 10000);
+      await settled(s);
     },
   },
   {
@@ -103,6 +108,7 @@ export const SHOTS: Shot[] = [
       await quiet(s);
       await s.ex("resolve");
       await s.see(/Conflict 1 of \d/, 10000);
+      await settled(s);
     },
   },
   {

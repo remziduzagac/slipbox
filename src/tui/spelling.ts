@@ -252,7 +252,14 @@ export class Speller {
     const key = langs.join(" ");
     const m = this.memo;
     const same = m?.buf === buf && m.version === buf.version;
-    if (same && m.key === key && m.generation === this.generation && m.answers === checker.answers) return m.words;
+    if (
+      same &&
+      m.key === key &&
+      m.generation === this.generation &&
+      m.answers === checker.answers &&
+      !checker.retryDue()
+    )
+      return m.words;
     const prose = same ? m.prose : proseWords(buf.parsed.tree, buf.source);
     // The words answered so far: one the thread hasn't answered yet is marked when its answer comes.
     const words = checker.misspelt(prose);

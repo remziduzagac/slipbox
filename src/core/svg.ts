@@ -5,7 +5,8 @@
 
 import { readFileSync } from "node:fs";
 import wasm from "@resvg/resvg-wasm/index_bg.wasm" with { type: "file" };
-import { lazy, load as loadLazy } from "./lazy.ts";
+import { load as loadLazy } from "./lazy.ts";
+import { paintJobs } from "./paint-jobs.ts";
 
 type ResvgModule = typeof import("@resvg/resvg-wasm");
 
@@ -84,7 +85,17 @@ async function load(): Promise<Rasterizer> {
 
 /** The rasteriser, or null while it loads (what waited for it is laid out again when it's in). */
 export function rasterizer(): Rasterizer | null {
-  return lazy(RESVG, load);
+  return {
+    family: "sans-serif",
+    size(svg) {
+      const value = paintJobs.get({ kind: "size", source: svg });
+      return value && !(value instanceof Uint8Array) && typeof value !== "string" ? value : null;
+    },
+    png(svg, width) {
+      const value = paintJobs.get({ kind: "png", source: svg, width });
+      return value instanceof Uint8Array ? value : null;
+    },
+  };
 }
 
 /** Wait for it (what has no frame to draw again). */

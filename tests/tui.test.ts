@@ -45,9 +45,10 @@ import { crumbLayout } from "../src/tui/draw.ts";
 import { A_BOLD, A_DIM, type Layout, srcAt } from "../src/core/layout/ir.ts";
 import { codeKind } from "../src/core/syntax.ts";
 import { load } from "../src/core/lazy.ts";
-import { loadRasterizer } from "../src/core/svg.ts";
-import { loadMermaid, mermaidSvg } from "../src/core/diagrams.ts";
+import { loadRasterizer, rasterizer } from "../src/core/svg.ts";
+import { loadMermaid, mermaidPending, mermaidSvg } from "../src/core/diagrams.ts";
 import { loadTypesetter } from "../src/core/typeset.ts";
+import { paintJobs } from "../src/core/paint-jobs.ts";
 import { colorHex } from "../src/core/theme/theme.ts";
 import { svgText } from "../src/tui/images.ts";
 import { idColor, pictureId, placeholderCell, placeholderRow, release, transmit } from "../src/tui/placeholders.ts";
@@ -2056,8 +2057,10 @@ describe("vim-shaped normal mode in source (step 3c)", () => {
     expect(v.find!.matches.length).toBe(3); // a literal dot: not axb
     await h.keys("alt+r");
     expect(v.findOpts!.regex).toBe(true);
+    for (let i = 0; i < 100 && v.find?.pending; i++) await Bun.sleep(10);
     expect(v.find!.matches.length).toBe(4); // the dot is any character now
     await h.keys("alt+w");
+    for (let i = 0; i < 100 && v.find?.pending; i++) await Bun.sleep(10);
     expect(v.find!.matches.length).toBe(3); // not inside foo_a.b
     h.frame();
     const hot = (id: string) => h.app.geometry!.hot.find((r) => r.id === id)!;
@@ -2111,6 +2114,7 @@ describe("vim-shaped normal mode in source (step 3c)", () => {
     const all = h.app.geometry!.hot.find((r) => r.id === "findrep:all:0")!;
     h.app.mouse.handle({ type: "down", x: all.x + 1, y: all.y, button: 0 });
     h.app.mouse.handle({ type: "up", x: all.x + 1, y: all.y, button: 0 });
+    for (let i = 0; i < 100 && !v.buf.source.includes("cub"); i++) await Bun.sleep(10);
     expect(v.buf.source).toBe("# R\n\ncow dog cub\n\n**cub** here\n");
     await h.keys("escape");
   });
@@ -4540,6 +4544,8 @@ describe("code blocks that scroll sideways ([render] code_wrap)", () => {
     const nodes = Array.from({ length: 9 }, (_, i) => `N${i}[node number ${i}]`).join(" --> ");
     writeFileSync(join(root, "wide.md"), `# Wide\n\n${"```"}mermaid\nflowchart LR\n  ${nodes}\n${"```"}\n`);
     const h = await harness({ root, open: "wide.md", width: 70, config: (c) => (c.ui.sidebar = false) });
+    h.canvas();
+    await loadMermaid();
     const v = h.app.view!;
     const layout = h.app.currentLayout(v);
     const row = layout.lines.findIndex((l) => l.spans.some((s) => s.text.includes("node number 0")));
@@ -4552,7 +4558,32 @@ describe("code blocks that scroll sideways ([render] code_wrap)", () => {
     expect(h.frame()).toContain("node number 8");
     // Wrapping instead (the setting): its code, saying why, as before.
     await h.app.run("ui.code_wrap");
+    h.canvas();
+    await loadMermaid();
     expect(h.frame()).toContain("too wide to draw");
+  });
+});
+
+// A diagram the library never finishes laying out: drawn on the screen's thread, it froze slipbox (#164). Should a
+// newer library draw it, this test says so: find another that it doesn't.
+describe("a diagram the library never finishes (#164)", () => {
+  test("its source while it's being drawn, the keys answered meanwhile, then its source saying it took too long", async () => {
+    const root = makeVault();
+    const diagram = readFileSync(join(import.meta.dir, "fixtures", "diagram", "never-finishes.mmd"), "utf8");
+    writeFileSync(join(root, "hangs.md"), `# Hangs\n\nBefore.\n\n${"```"}mermaid\n${diagram}${"```"}\n\nAfter.\n`);
+    const h = await harness({ root, open: "hangs.md", width: 100, config: (c) => (c.ui.sidebar = false) });
+    h.canvas();
+    expect(mermaidPending()).toBe(true);
+    expect(h.frame()).toContain("Workspace owner");
+    const row = h.app.view!.cur.row;
+    await h.keys("j");
+    expect(h.app.view!.cur.row).toBe(row + 1);
+    expect(mermaidPending()).toBe(true); // still being drawn, elsewhere
+    const started = performance.now();
+    await loadMermaid();
+    expect(performance.now() - started).toBeLessThan(10_000);
+    expect(h.frame()).toContain("took too long to draw");
+    expect(h.frame()).toContain("Workspace owner");
   });
 });
 
@@ -9474,6 +9505,7 @@ describe("pictures (12.x)", () => {
         );
         return Array.from({ length: buf.height }, (_, y) => cells.slice(y * buf.width, (y + 1) * buf.width).join(""));
       };
+      await pictures.prepare(file);
       pictures.draw(buf, 2, 1, 4, 2, file, { skip: 0, total: 2 });
       expect(written).toHaveLength(1);
       // 64 × 32 pixels into 4 × 2 cells of 8 × 16: sent at the 32 × 16 it's drawn.
@@ -9508,9 +9540,14 @@ describe("pictures (12.x)", () => {
       const files = Array.from({ length: 49 }, (_, i) => join(dir, `p${i}.png`));
       for (const f of files) writeFileSync(f, png);
       const idOf = (f: string) => pictureId(`${f}\u0000${statSync(f).mtimeMs}`, 1, 1);
-      for (const f of files.slice(0, 48)) pictures.draw(buf, 0, 0, 1, 1, f, { skip: 0, total: 1 });
+      for (const f of files.slice(0, 48)) {
+        await pictures.prepare(f);
+        pictures.draw(buf, 0, 0, 1, 1, f, { skip: 0, total: 1 });
+      }
       // The first drawn again is the newest: the second is the oldest when the 49th comes.
+      await pictures.prepare(files[0]!);
       pictures.draw(buf, 0, 0, 1, 1, files[0]!, { skip: 0, total: 1 });
+      await pictures.prepare(files[48]!);
       pictures.draw(buf, 0, 0, 1, 1, files[48]!, { skip: 0, total: 1 });
       expect(written.filter((w) => w.startsWith("\x1b_Ga=d"))).toEqual([release(idOf(files[1]!))]);
       // Wider than its columns can be numbered: OpenTUI's own path.
@@ -9579,7 +9616,14 @@ describe("pictures (12.x)", () => {
         config,
         images: { ...terminal(true, {})!, cell: () => cell },
       });
-      return { h, layout: h.app.currentLayout(h.app.view!) };
+      h.app.currentLayout(h.app.view!);
+      await loadMermaid();
+      let layout = h.app.currentLayout(h.app.view!);
+      for (let i = 0; i < 10 && (layout.pending?.includes("pictures") || layout.pending?.includes("mermaid")); i++) {
+        await Promise.all([paintJobs.settle(), loadMermaid()]);
+        layout = h.app.currentLayout(h.app.view!);
+      }
+      return { h, layout };
     };
     test("an SVG picture: rasterised into the cache at the size it's drawn, from its own size — as a PNG would be", async () => {
       const { layout } = await at("# D\n\n![chart](chart.svg)\n", undefined, { "chart.svg": SVG });
@@ -9632,7 +9676,7 @@ describe("pictures (12.x)", () => {
       const drawn = retina.layout.lines.find((l) => l.image)!.image!;
       const r = (await loadRasterizer())!;
       const colors = retina.h.app.pictures.forBuffer(retina.h.app.view!.buf)!.drawings!.colors;
-      const own = r.size(mermaidSvg("graph TD\n  A --> B", colors, r.family)!)!;
+      const own = r.size(mermaidSvg("graph TD\n  A --> B", colors, rasterizer()!.family)!)!;
       expect(drawn.cols).toBe(Math.ceil((own.width * 34 * 0.8) / 13 / 16));
       const text = await at(mermaid);
       expect(text.layout.lines.some((l) => l.image)).toBe(false);
@@ -9672,6 +9716,40 @@ describe("pictures (12.x)", () => {
     });
   });
   describe("on the internet (12.12)", () => {
+    test("reloading never cancels pending downloads without publishing their partial files", async () => {
+      const root = makeVault();
+      const cfg = join(root, "user-config.toml");
+      writeFileSync(cfg, '[render]\nimages_remote = "show"\n[lsp]\nenabled = false\n[lint]\nenabled = "off"\n');
+      let cancelled = false;
+      let read = false;
+      const h = await harness({
+        root,
+        configFile: cfg,
+        fetch: async () =>
+          new Response(
+            new ReadableStream({
+              pull() {
+                read = true;
+              },
+              cancel() {
+                cancelled = true;
+              },
+            }),
+            { headers: { "content-type": "image/png" } },
+          ),
+      });
+      const url = "https://pictures.example/config-cancel.png";
+      h.app.pictures.remote.fetch(url);
+      for (const t = performance.now(); performance.now() - t < 10_000 && !read; ) await Bun.sleep(2);
+      expect(read).toBe(true);
+      writeFileSync(cfg, '[render]\nimages_remote = "never"\n[lsp]\nenabled = false\n[lint]\nenabled = "off"\n');
+      h.app.settings.reload();
+      await h.app.pictures.remote.settle();
+      expect(cancelled).toBe(true);
+      expect(h.app.pictures.remote.cached(url)).toBeNull();
+      expect(h.app.messages.some((m) => m.text.startsWith("couldn't fetch"))).toBe(false);
+    });
+
     const sizes: Host["images"] = {
       supported: () => true,
       size: () => ({ width: 400, height: 200 }),
@@ -11175,7 +11253,8 @@ describe("vaults in the TUI (17.x)", () => {
     await h.keys("enter");
     expect(saveAs(h)).toMatchObject({ title: "Export 3 notes as Markdown (.md)", name: "one.export.md" });
     await h.keys("enter");
-    expect(await until(() => existsSync(join(root, "one.export.md")))).toBe(true);
+    // Said once publishing is done, which ends with the file renamed into place: the message is what's waited for.
+    expect(await until(() => h.app.messages.at(-1)?.text.startsWith("exported") ?? false)).toBe(true);
     expect(h.app.messages.at(-1)!.text).toBe("exported 3 notes to one.export.md (Markdown (.md))");
     const md = readFileSync(join(root, "one.export.md"), "utf8");
     expect(
@@ -11925,6 +12004,7 @@ describe("the explorer's file operations and buttons (18.x)", () => {
       ["Move to…", "m"],
       ["Copy", "y"],
       ["Cut", "x"],
+      ["Copy path", "Y"],
       ["Delete", "d"],
     ]);
     h.frame();
@@ -11932,7 +12012,7 @@ describe("the explorer's file operations and buttons (18.x)", () => {
     expect({ x: m.x, y: m.y }).toEqual({ x: button.x, y: button.y + 1 });
     expect(h.frame().split("\n")[m.y]).toContain("alpha.md");
     // A click on an entry does it.
-    click(m.x + 2, m.listY + 4);
+    click(m.x + 2, m.listY + 5);
     expect(prompt(h)).toMatchObject({ confirm: true, label: expect.stringMatching(/^Delete notes\/alpha\.md\?/) });
     await h.keys("escape");
     // `.` opens it by key; an entry's key picks it there.
@@ -11943,23 +12023,37 @@ describe("the explorer's file operations and buttons (18.x)", () => {
     await h.keys("escape", ".", "m");
     expect(menu().title).toStartWith("Move notes/alpha.md to…");
     await h.keys("escape");
-    // A folder's: new note and folder in it, and, with something copied, paste.
+    // Copy path: the row's whole path, from the menu and by its key, said by where it is.
+    await h.keys(".", "Y");
+    expect(h.copied.at(-1)).toBe(join(root, "notes", "alpha.md"));
+    expect(h.app.messages.at(-1)?.text).toStartWith(`copied ${tildePath(join(root, "notes", "alpha.md"))}`);
+    h.copied.length = 0;
+    await h.keys("shift+y");
+    expect(h.copied).toEqual([join(root, "notes", "alpha.md")]);
+    // A folder's: zoom in here first, new note and folder in it, and, with something copied, paste.
     await h.keys("y");
     h.app.explorer.select("projects");
     await h.keys(".");
     expect(menu().items.map((it) => it.label)).toEqual([
+      "Zoom in here",
       "New note here",
       "New folder here",
       "Rename",
       "Move to…",
       "Copy",
       "Cut",
+      "Copy path",
       "Give it .slipbox/",
       "Paste a copy of alpha.md here",
       "Delete",
     ]);
     await h.keys("p");
     expect(existsSync(join(root, "projects", "alpha.md"))).toBe(true);
+    // Zoom in here: the view shows the folder, as `z` does.
+    h.app.explorer.select("projects");
+    await h.keys(".", "z");
+    expect(h.app.explorer.top).toBe(join(root, "projects"));
+    await h.keys("-");
     // Not focused: no row button.
     h.app.region = "content";
     expect(
@@ -12009,11 +12103,13 @@ describe("the explorer's file operations and buttons (18.x)", () => {
     await h.keys(".");
     const menu = h.app.overlay as ListOverlay;
     expect(menu.items.map((it) => [it.label, it.hint])).toEqual([
+      ["Zoom in here", "z"],
       ["Rename the folder", "r"],
       ["Name it", "R"], // beside its folder's
       ["Move to…", "m"],
       ["Copy", "y"],
       ["Cut", "x"],
+      ["Copy path", "Y"],
       ["Make it part of the vault holding it", "V"],
       ["Delete the vault", "d"],
     ]);
@@ -13392,6 +13488,71 @@ describe("the lint surface: your linter's findings in notes (3.21)", () => {
     await until(() => bad.h.app.languages.lintCmd === null);
     expect(bad.h.app.messages.filter((m) => m.text.includes("couldn't run"))).toHaveLength(1);
   });
+
+  test("a run printing past slipbox's limit: its findings aren't shown, said once why, and lint stays on", async () => {
+    // Its first three runs print 17 MB (past 16 MiB); every run after, a finding a file.
+    const count = join(mkdtempSync(join(sandbox, "lint-thrice-")), "runs");
+    const thrice = `n=$(cat '${count}' 2>/dev/null || echo 0); echo $((n + 1)) > '${count}'; if [ "$n" -ge 3 ]; then ${FAKE[2]}; fi; yes x | head -c 17000000; exit 1`;
+    const { h } = await setup(["sh", "-c", thrice, "lint"]);
+    h.frame();
+    const buf = h.app.view!.buf;
+    const said = () => h.app.messages.filter((m) => m.text.includes("16 MiB")).map((m) => m.text);
+    await until(() => buf.lint !== null || h.app.languages.lintCmd === null);
+    expect(h.app.languages.lintCmd).not.toBeNull();
+    expect(buf.lint).toMatchObject({ issues: [], skipped: expect.stringContaining("16 MiB") });
+    expect(h.app.problems.ofView(h.app.view!)).toEqual([]);
+    expect(said()).toEqual([
+      "lint: l.md: stdout output limit (16 MiB) exceeded; partial output discarded — this run's findings aren't shown",
+    ]);
+    expect(h.app.messages.filter((m) => m.text.includes("couldn't run"))).toHaveLength(0);
+    // The vault's run: its Lint heading says why, none listed.
+    await h.keys("space", "v", "p");
+    await until(() => !h.app.languages.vaultLint.running);
+    expect(
+      h.app.problems
+        .rows()
+        .filter((r) => r.section === "Lint")
+        .map((r) => r.label),
+    ).toEqual(["Lint — not shown: stdout output limit (16 MiB) exceeded; partial output discarded"]);
+    expect(said()).toHaveLength(2); // the vault's, once
+    h.app.problems.close();
+    // Saved again: linted again — past the limit again, not said again; then its findings shown.
+    const saveAgain = () => {
+      buf.edit(0, 0, "x");
+      h.app.saving.save(buf);
+      h.frame();
+    };
+    saveAgain();
+    await until(() => buf.lint?.version === buf.version);
+    expect(buf.lint?.skipped).toContain("16 MiB");
+    expect(said()).toHaveLength(2);
+    saveAgain();
+    await until(() => h.app.problems.ofView(h.app.view!).length > 0);
+  });
+
+  test("quitting stops a lint run under way: nothing of it outlives the screen", async () => {
+    const pidFile = join(mkdtempSync(join(sandbox, "lint-quit-")), "pid");
+    const { h } = await setup(["sh", "-c", `echo $$ > '${pidFile}'; exec sleep 30`, "lint"]);
+    h.frame();
+    await until(() => existsSync(pidFile) && readFileSync(pidFile, "utf8").trim() !== "");
+    const tool = Number(readFileSync(pidFile, "utf8").trim());
+    const alive = () => {
+      try {
+        process.kill(-tool, 0);
+        return true;
+      } catch {
+        return false;
+      }
+    };
+    try {
+      expect(alive()).toBe(true);
+      h.app.quit();
+      await until(() => !alive());
+      expect(h.app.messages.filter((m) => /couldn't run|aren't shown/.test(m.text))).toHaveLength(0);
+    } finally {
+      if (alive()) process.kill(-tool, "SIGKILL");
+    }
+  });
 });
 
 describe("big notes (15.1)", () => {
@@ -13546,6 +13707,209 @@ describe("code files' links in the TUI (20.19)", () => {
       if (!found) await Bun.sleep(25);
     }
     expect(found).toBe(true);
+  });
+});
+
+describe("hidden files in the explorer (files.hidden, shift+h)", () => {
+  /**
+   * A notes vault in a repository: index.md, docs/a.md; hidden, .github/workflows/ci.yml, .notes/todo.md (linking
+   * index.md), .prettierrc.json; inner/, a repository of its own holding .cache/x.json.
+   */
+  const hiddenVault = () => {
+    const root = realpathSync(mkdtempSync(join(sandbox, "hidden-")));
+    const w = (rel: string, text: string) => {
+      mkdirSync(dirname(join(root, rel)), { recursive: true });
+      writeFileSync(join(root, rel), text);
+    };
+    w(".slipbox/config.toml", `[vault]\nid = "hid${randomBytes(4).toString("hex")}"\n`);
+    w("index.md", "# Index\n");
+    w("docs/a.md", "# A\n");
+    w(".github/workflows/ci.yml", "on: push\n");
+    w(".notes/todo.md", "# Todo\n\n[index](../index.md)\n");
+    w(".prettierrc.json", "{}\n");
+    w("inner/b.md", "# B\n");
+    w("inner/.cache/x.json", "{}\n");
+    for (const dir of [root, join(root, "inner")]) Bun.spawnSync(["git", "init", "-q"], { cwd: dir });
+    return root;
+  };
+  const names = (h: Harness) => h.app.explorer.rows().map((r) => `${"  ".repeat(r.depth)}${r.name}`);
+  const rowOf = (h: Harness, name: string) => h.app.explorer.rows().findIndex((r) => r.name === name);
+  /** The status line with the explorer's cursor on the row named `name`. */
+  const statusOn = (h: Harness, name: string) => {
+    h.app.region = "sidebar";
+    h.app.sidebar.selected = rowOf(h, name);
+    return statusRow(h.frame());
+  };
+
+  test("off by default, nothing hidden listed; files.hidden lists them ⊘, said hidden, .slipbox slipbox's own, .git never", async () => {
+    expect(DEFAULT_CONFIG.files.hidden).toBe(false);
+    const root = hiddenVault();
+    const off = await harness({ root, open: "index.md" });
+    expect(off.app.ui.hidden_files).toBe(false);
+    expect(names(off)).toEqual(["docs", "inner", "index.md"]);
+    const h = await harness({ root, open: "index.md", config: (c) => (c.files.hidden = true) });
+    expect(names(h)).toEqual([".github", ".notes", ".slipbox", "docs", "inner", ".prettierrc.json", "index.md"]);
+    // By their paths, as the busy folders are: not this vault's to change, never indexed.
+    expect(h.app.explorer.rows()[rowOf(h, ".github")]).toMatchObject({
+      kind: "dir",
+      path: join(root, ".github"),
+      outside: true,
+      leftOut: "hidden",
+    });
+    h.app.sidebar.selected = rowOf(h, ".notes");
+    expect(h.app.explorer.item()).toBeNull();
+    expect(statusOn(h, ".github")).toContain("⊘ not indexed: hidden");
+    expect(statusOn(h, ".prettierrc.json")).toContain("⊘ not indexed: hidden");
+    expect(statusOn(h, ".slipbox")).toContain("⊘ not indexed: slipbox's own folder");
+    expect(statusOn(h, "docs")).not.toContain("not indexed");
+    // Unfolded, a level at a time, the reason carried down; a repository's own unfolded in place: its hidden ones
+    // too, its .git never.
+    for (const name of [".github", "inner"]) {
+      h.app.sidebar.selected = rowOf(h, name);
+      h.app.explorer.action("expand");
+    }
+    expect(names(h)).toEqual([
+      ".github",
+      "  workflows",
+      ".notes",
+      ".slipbox",
+      "docs",
+      "inner",
+      "  .cache",
+      "  b.md",
+      ".prettierrc.json",
+      "index.md",
+    ]);
+    expect(statusOn(h, "workflows")).toContain("⊘ not indexed: hidden");
+    expect(statusOn(h, ".cache")).toContain("⊘ not indexed: hidden");
+    // Nothing of them indexed by being listed.
+    expect([...h.app.graph.notes.keys()].filter((p) => p.startsWith("."))).toEqual([]);
+  });
+
+  test("shift+h shows and hides them, said, the selection on its row; :hidden and the UI settings toggle it too", async () => {
+    const h = await harness({ root: hiddenVault(), open: "index.md" });
+    await h.keys("space", "e"); // focus the explorer
+    h.app.sidebar.selected = rowOf(h, "docs");
+    await h.keys("shift+h");
+    expect(h.app.messages.at(-1)?.text).toBe("explorer: hidden files shown");
+    expect(h.app.ui.hidden_files).toBe(true);
+    expect(names(h)).toContain(".github");
+    expect(h.app.explorer.rows()[h.app.sidebar.selected]?.name).toBe("docs");
+    await h.keys("shift+h");
+    expect(h.app.messages.at(-1)?.text).toBe("explorer: hidden files not shown");
+    expect(names(h)).not.toContain(".github");
+    expect(h.app.explorer.rows()[h.app.sidebar.selected]?.name).toBe("docs");
+    // Kept for the vault as a UI setting is, against its config value.
+    await h.keys("shift+h");
+    expect(h.app.settings.uiOverrides.hidden_files).toEqual({ value: true, base: false });
+    // :hidden, from the note.
+    expect(h.app.aliases.hidden).toBe("explorer.toggle_hidden");
+    await h.keys("escape", ":", ...[..."hidden"], "enter");
+    expect(h.app.messages.at(-1)?.text).toBe("explorer: hidden files not shown");
+    expect(names(h)).not.toContain(".github");
+    // The UI settings list it with its value; picked, it changes.
+    await h.keys("space", "u", "u");
+    expect(h.frame()).toMatch(/Hidden files in the explorer +off/);
+    await h.keys(...[..."hidden"], "enter");
+    expect(h.app.ui.hidden_files).toBe(true);
+    expect(names(h)).toContain(".github");
+  });
+
+  test("hidden again, a view zoomed into a hidden folder goes out to the folder holding it", async () => {
+    const root = hiddenVault();
+    const h = await harness({ root, open: "index.md", config: (c) => (c.files.hidden = true) });
+    h.app.explorer.zoomTo(join(root, ".github", "workflows"));
+    expect(names(h)).toEqual(["ci.yml"]);
+    await h.app.run("explorer.toggle_hidden");
+    expect(h.app.explorer.top).toBe(root);
+    expect(names(h)).toEqual(["docs", "inner", "index.md"]);
+  });
+
+  test("a vault's own config can turn it on, read again live", async () => {
+    const root = hiddenVault();
+    const cfg = join(root, "user.toml");
+    writeFileSync(cfg, "");
+    const h = await harness({ root, open: "index.md", configFile: cfg });
+    h.app.settings.reload();
+    expect(names(h)).not.toContain(".github");
+    writeFileSync(join(root, ".slipbox", "config.toml"), "[files]\nhidden = true\n");
+    h.app.settings.reload();
+    expect(h.app.messages.filter((m) => m.level === "warn").map((m) => m.text)).toEqual([]);
+    expect(h.app.config.files.hidden).toBe(true);
+    expect(names(h)).toContain(".github");
+  });
+
+  test("a hidden file opened from its row joins the vault's index (20.8); one of .slipbox opens, never indexed", async () => {
+    const root = hiddenVault();
+    const h = await harness({ root, open: "index.md", config: (c) => (c.files.hidden = true) });
+    const open = async (...path: string[]) => {
+      h.app.region = "sidebar"; // the explorer's keys
+      for (const name of path.slice(0, -1)) {
+        h.app.sidebar.selected = rowOf(h, name);
+        if (!h.app.explorer.expanded.has(h.app.explorer.rows()[h.app.sidebar.selected]!.path)) await h.keys("l");
+      }
+      h.app.sidebar.selected = rowOf(h, path.at(-1)!);
+      await h.keys("o");
+    };
+    expect(h.app.graph.notes.has(".notes/todo.md")).toBe(false);
+    await open(".notes", "todo.md");
+    expect(h.app.view!.buf.rel).toBe(".notes/todo.md");
+    expect(h.app.graph.notes.has(".notes/todo.md")).toBe(true);
+    expect(h.app.graph.backlinks("index.md").map((b) => b.from)).toContain(".notes/todo.md");
+    expect(h.app.info.rows().find((r) => r.key === "index")).toBeUndefined();
+    // Its row, revealed, by its path in the hidden folder's; the folder still ⊘.
+    expect(h.app.explorer.rows()[h.app.sidebar.selected]?.path).toBe(join(root, ".notes", "todo.md"));
+    expect(statusOn(h, "todo.md")).not.toContain("not indexed");
+    expect(statusOn(h, ".notes")).toContain("⊘ not indexed: hidden");
+    // A data file: the vault's file now, as a link would make it.
+    await open(".github", "workflows", "ci.yml");
+    expect(h.app.view!.buf.rel).toBe(".github/workflows/ci.yml");
+    expect(h.app.graph.known(".github/workflows/ci.yml")).toBe(true);
+    expect(h.app.info.rows().find((r) => r.key === "index")).toBeUndefined(); // not its folder's ⊘ any more
+    // A note made in a hidden folder by its path: listed once, in that folder's rows, its folder still the row by its
+    // path.
+    await h.app.run("note.create /.notes/later");
+    expect(h.app.view!.buf.rel).toBe(".notes/later.md");
+    expect(names(h).filter((n) => n.trim() === ".notes")).toHaveLength(1);
+    expect(
+      h.app.explorer
+        .rows()
+        .filter((r) => r.name === "later.md")
+        .map((r) => r.path),
+    ).toEqual([join(root, ".notes", "later.md")]);
+    // slipbox's own: opened, never the vault's.
+    await open(".slipbox", "config.toml");
+    expect(h.app.view!.buf.abs).toBe(join(root, ".slipbox", "config.toml"));
+    expect(h.app.view!.buf.rel).toBeNull();
+    expect(h.app.graph.known(".slipbox/config.toml")).toBe(false);
+    expect(h.app.info.rows().find((r) => r.key === "index")?.value).toBe("not indexed: slipbox's own folder");
+  });
+
+  test("home as before: its walk leaves hidden folders out; listed, ⊘ hidden, nothing in them indexed, opened or not", async () => {
+    const { homeAt } = await import("../src/core/vault.ts");
+    const home = realpathSync(mkdtempSync(join(sandbox, "home-")));
+    mkdirSync(join(home, ".config", "tool"), { recursive: true });
+    writeFileSync(join(home, "a.md"), "# A\n");
+    writeFileSync(join(home, ".config", "tool", "t.md"), "# T\n\n[a](../../a.md)\n");
+    const before = process.env.HOME;
+    process.env.HOME = home;
+    try {
+      const h = await harness({ loc: homeAt(home), open: "a.md", config: (c) => (c.files.hidden = true) });
+      expect(h.app.graph.filter.exclusion(".config", true)).toBe("hidden");
+      expect(names(h)).toEqual([".config", "a.md"]);
+      expect(statusOn(h, ".config")).toContain("⊘ not indexed: hidden");
+      await h.keys("l");
+      h.app.sidebar.selected = rowOf(h, "tool");
+      await h.keys("l");
+      h.app.sidebar.selected = rowOf(h, "t.md");
+      await h.keys("o");
+      expect(h.app.view!.buf.abs).toBe(join(home, ".config", "tool", "t.md"));
+      expect(h.app.view!.buf.rel).toBeNull();
+      expect(h.app.graph.known(".config/tool/t.md") || h.app.graph.reached.has(".config/tool/t.md")).toBe(false);
+      expect(h.app.info.rows().find((r) => r.key === "index")?.value).toBe("not indexed: hidden");
+    } finally {
+      process.env.HOME = before;
+    }
   });
 });
 
@@ -15089,6 +15453,29 @@ describe("completion while typing (19.16)", () => {
     await h.keys("enter", ",");
     expect(h.app.view!.buf.source).toMatch(/^LATESIG start\nfn\(\n *,\n$/); // indented as after a `(`
     expect(await until(() => h.app.signature === null)).toBe(true);
+    await h.app.languages.servers!.stopAll();
+  });
+
+  test("signature help answered late, the first argument typed meanwhile: shown all the same", async () => {
+    const root = makeVault();
+    writeFileSync(join(root, "a.fk"), "LATESIG start\n");
+    const h = await harness({ root, open: "a.fk", config: served });
+    await ready(h);
+    // `x` typed before the answer (300 ms) comes: the word's pause tells the server the newer text first.
+    await h.keys("o", "f", "n", "(", "x");
+    expect(await until(() => h.app.signature !== null, 3000)).toBe(true);
+    expect(h.app.signature!.label).toBe("fn(a: number, b: string)");
+    await h.app.languages.servers!.stopAll();
+  });
+
+  test("signature help answered late, after `)` closed it: it stays closed", async () => {
+    const root = makeVault();
+    writeFileSync(join(root, "a.fk"), "LATESIG start\n");
+    const h = await harness({ root, open: "a.fk", config: served });
+    await ready(h);
+    await h.keys("o", "f", "n", "(", ")");
+    await Bun.sleep(600); // its answer come and gone
+    expect(h.app.signature).toBeNull();
     await h.app.languages.servers!.stopAll();
   });
 
@@ -17064,16 +17451,16 @@ describe("spelling (25.6)", () => {
     expect(h.app.messages.at(-1)?.text).toBe("spelling is a note's");
   });
 
-  test("a dictionary is built on the spell checker's thread, never here: the main thread keeps its turns meanwhile; typing keeps the marks (#40)", async () => {
+  /** A Turkish dictionary (9 MB) under a path of the test's own, so it's built now whatever was built before, and a
+   *  note in its language open. */
+  const turkish = async () => {
     const { dictionaryFiles } = await import("../src/core/spell.ts");
-    const { dictionariesBuilt } = await import("../src/core/hunspell.ts");
-    // Turkish's (9 MB), under a path of this test's own: built now, whatever was built before.
     const tr = dictionaryFiles("tr", {})!;
     const dict = mkdtempSync(join(sandbox, "dict-"));
     cpSync(tr.aff, join(dict, "zz.aff"));
     cpSync(tr.dic, join(dict, "zz.dic"));
     const root = vault({ "s6.md": "---\nlang: zz\n---\nBugün evlerinzde kitap okuyorum.\n" });
-    const h = await harness({
+    return harness({
       root,
       open: "s6.md",
       width: 120,
@@ -17082,7 +17469,32 @@ describe("spelling (25.6)", () => {
         c.spell.dictionaries = { zz: join(dict, "zz.dic") };
       },
     });
+  };
+
+  test("a dictionary is built on the spell checker's thread, never here: counted; typing keeps the marks (#40)", async () => {
+    const { dictionariesBuilt } = await import("../src/core/hunspell.ts");
+    const h = await turkish();
     const built = dictionariesBuilt();
+    await h.keys("space", "u", "s");
+    expect(await until(() => (h.frame(), h.app.speller.misspelt(h.app.view!) !== null))).toBe(true);
+    expect(dictionariesBuilt()).toBe(built); // none here: the thread built it
+    expect(await checked(h)).toBe(true);
+    expect(h.app.speller.misspelt(h.app.view!)!.map((w) => w.word)).toEqual(["evlerinzde"]);
+    // Typing a word the thread hasn't answered: the marks it has answered stay, at every key.
+    await h.keys("shift+g", "shift+a");
+    for (const k of ["space", ..."kitpa"]) {
+      await h.keys(k);
+      expect(h.app.speller.misspelt(h.app.view!)!.map((w) => w.word)).toContain("evlerinzde");
+    }
+    expect(await checked(h)).toBe(true);
+    expect(h.app.speller.misspelt(h.app.view!)!.map((w) => w.word)).toEqual(["evlerinzde", "kitpa"]);
+  });
+
+  // quarantined: #126 — on a loaded CI runner the main thread's longest gap ran past half the loading time (716 ms
+  // against 473, linux-x64, 2026-10-17), though the build was the thread's (counted above): the clock measures the
+  // runner's scheduling as much as slipbox. Back once its turns are counted, not timed.
+  test.skip("while the thread builds a dictionary, the main thread keeps its turns (#40)", async () => {
+    const h = await turkish();
     // The longest the main thread went without a turn while the dictionary loaded: on it, as long as the build.
     let last = performance.now();
     let longest = 0;
@@ -17099,18 +17511,7 @@ describe("spelling (25.6)", () => {
       clearInterval(tick);
     }
     const loading = performance.now() - asked;
-    expect(dictionariesBuilt()).toBe(built); // none here
     expect(longest).toBeLessThan(loading / 2);
-    expect(await checked(h)).toBe(true);
-    expect(h.app.speller.misspelt(h.app.view!)!.map((w) => w.word)).toEqual(["evlerinzde"]);
-    // Typing a word the thread hasn't answered: the marks it has answered stay, at every key.
-    await h.keys("shift+g", "shift+a");
-    for (const k of ["space", ..."kitpa"]) {
-      await h.keys(k);
-      expect(h.app.speller.misspelt(h.app.view!)!.map((w) => w.word)).toContain("evlerinzde");
-    }
-    expect(await checked(h)).toBe(true);
-    expect(h.app.speller.misspelt(h.app.view!)!.map((w) => w.word)).toEqual(["evlerinzde", "kitpa"]);
   });
 });
 // typos: on
@@ -17976,6 +18377,39 @@ describe("blame and a file's history (26.4, 22.1)", () => {
     git(root, "commit", "-q", "-am", "Shout two");
     return git(root, "rev-parse", "HEAD") ? root : null;
   };
+
+  test("delayed history, blame and version reads leave timers running and discard changed revisions", async () => {
+    const root = repo();
+    if (!root) return;
+    const real = Bun.which("git")!;
+    const h = await harness({ root, open: "new.md", width: 120, height: 40 });
+    const folder = mkdtempSync(join(sandbox, "slow-history-"));
+    writeFileSync(join(folder, "git"), `#!/bin/sh\nsleep 0.08\nexec '${real.replaceAll("'", "'\\''")}' "$@"\n`);
+    chmodSync(join(folder, "git"), 0o755);
+    const path = process.env.PATH;
+    process.env.PATH = `${folder}:${path}`;
+    let ticks = 0;
+    const timer = setInterval(() => ticks++, 5);
+    try {
+      await h.app.run("git.history");
+      expect(ticks).toBeGreaterThan(1);
+      const before = ticks;
+      await h.keys("enter");
+      expect(ticks).toBeGreaterThan(before + 1);
+      await h.keys("escape");
+      const blaming = ticks;
+      await h.app.run("git.blame");
+      expect(ticks).toBeGreaterThan(blaming + 1);
+      await h.keys("escape");
+      const pending = h.app.run("git.history");
+      h.app.view!.buf.edit(0, 0, "changed\n");
+      await pending;
+      expect(h.app.overlay).toBeNull();
+    } finally {
+      clearInterval(timer);
+      process.env.PATH = path;
+    }
+  });
 
   test("who changed the cursor's line: the commit, author, date, message; a line changed since: not committed yet", async () => {
     const root = repo();

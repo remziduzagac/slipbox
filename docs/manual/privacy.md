@@ -1,7 +1,9 @@
-# Privacy
+# Privacy and trust
 
-slipbox works on files on your machine. It has no account and no telemetry. It collects nothing about you, and sends
-nothing about you or your notes anywhere.
+<a id="privacy"></a>
+
+slipbox works on files on your machine. It has no account and no telemetry, and collects nothing about you. Its
+network requests and the programs it runs are described below, including explicit Git operations and external tools.
 
 This chapter lists:
 
@@ -12,7 +14,7 @@ This chapter lists:
 
 ## When slipbox reaches the network
 
-It does in three cases, and only these:
+Built-in requests include:
 
 - [the update check](#the-update-check)
 - installing [a language server](#language-servers-installed-from-npm)
@@ -26,8 +28,11 @@ It does in three cases, and only these:
 
 The settings are in your config file ([Configuration](configuration.md)).
 
-Beyond these, slipbox downloads only when you ask it to: installing it, and `slipbox upgrade` ([Installing
-slipbox](../guides/install.md)).
+Installing slipbox and `slipbox upgrade` also download files when you ask them to
+([Installation](../guides/install.md)). Explicit Git fetch, pull and push contact your repositories
+[as described below](#git-and-your-repositories-remotes). Git can also fetch missing objects or LFS files as part
+of another operation. Language servers and other external programs may make their own requests; see
+[Programs slipbox runs](#what-slipbox-runs).
 
 ### The update check
 
@@ -139,8 +144,9 @@ same from your shell. For example:
 
 ## What slipbox never sends
 
-- **No telemetry, no analytics, no crash reports.** Nothing about how you use slipbox, or what your notes hold, leaves
-  your machine through it. What does leave is what you send yourself: an export, or text you copy.
+- **No telemetry, no analytics, no crash reports.** slipbox does not collect telemetry or send analytics. Explicit
+  operations can send data: Git push sends commits to a remote, and programs you run have their own behavior. Review
+  exports and copied text before sharing.
 - **Bun's crash reports are off.** slipbox runs on Bun. When Bun crashes, it can send a report to Bun's developers.
   slipbox turns this off as it starts.
 
@@ -195,9 +201,14 @@ Opening a folder writes nothing into it. slipbox writes into your folders only w
 - the `.slipbox/` folder `slipbox init` makes
 - the scratch, if you set `capture.location = "root"`
 
-Everything else it keeps is in four folders of its own, all on your machine (in WSL, inside WSL). They're for your
-settings, its state, its data and its cache. [Where slipbox keeps things](configuration.md#where-slipbox-keeps-things)
-says where they are, and lists every file in them.
+Exports also use temporary copies in slipbox's cache folder (`exports/`), in a directory only your user can open, and
+beside the destination while publishing. These are removed when the export finishes, is cancelled or slipbox quits
+normally; any a crash left are removed by the next export.
+
+Everything else it keeps long term is in four folders of its own, all on your machine (in WSL, inside WSL). They're for
+your settings, its state, its data and its cache.
+[Where slipbox keeps things](environment-and-storage.md#where-slipbox-keeps-things) says where they are, and lists
+every file in them.
 
 Some of it is as personal as your notes:
 
@@ -246,3 +257,105 @@ What slipbox wrote into your folders at your asking stays:
 - a scratch kept in a folder
 
 Remove them by hand if you want them gone.
+
+## Trust
+
+Opening a folder never runs code it brings with it, unless you trust it. A repository you clone can hold:
+
+- programs (`node_modules/.bin`)
+- settings that name programs
+- build scripts a server would run
+- git hooks
+
+In a vault you don't trust, slipbox runs none of them.
+
+You trust a vault, such as a git repository, and everything in it. [Vaults, home and Elsewhere](vaults.md) explains
+vaults.
+
+### What runs anyway
+
+The programs you chose run anyway:
+
+- your editor
+- git
+- the servers and linters named in your config, found on your `PATH`, in your install folders, or installed by
+  slipbox
+
+Each runs as you set it up.
+
+Trusted or not, a folder's own config never names a program for slipbox to run. Only your own config can set these:
+
+- `editor.command` and `editor.remote`
+- `lint.command`
+- a server's `command`, `args` and `environment`
+- a linter's `lint-command`
+- a server or linter slipbox doesn't build in
+- `[trust]` itself
+
+Nor can a folder bind a key or alias to a command that runs a program or throws work away
+([Configuration](configuration.md) lists them).
+
+### What a vault you don't trust leaves out
+
+- **Its programs**: the project's own copies in `node_modules/.bin`, `.venv/bin`, `venv/bin` and `vendor/bin` aren't
+  used, for servers and linters alike. Nor is a program its settings name.
+- **Its settings**: a server's settings are its defaults and yours. They're never the folder's `.slipbox/config.toml`
+  or its `.vscode/settings.json`.
+- **Servers in a safe mode**:
+  - `rust-analyzer` runs without build scripts, procedural macros or `cargo check`.
+  - `gopls` runs without downloading the toolchain a `go.mod` names, and without cgo.
+  - `vtsls` never switches to the project's TypeScript. TypeScript 7's server is taken only from slipbox's install.
+  - `pyright` is given the virtual environment's packages, without running its Python.
+- **Servers not run**, as they can't work without running the project's code:
+  - the ESLint and stylelint servers, since their config is code
+  - `ruby-lsp`, where there's a `Gemfile`
+  - `sourcekit-lsp`, where there's a `Package.swift`
+  - `lua-language-server`, where `.luarc.json` names a plugin
+- **The note linter** skips a note under a markdownlint config that is code (`.cjs`, `.mjs`) or loads code.
+- **git** runs none of the repository's hooks, filters or other programs ([Git](git.md#what-slipbox-runs)).
+
+This has a cost. In a vault you don't trust:
+
+- a Rust project's macros show errors
+- ESLint finds nothing
+- the project's own TypeScript isn't used
+- a Ruby or Swift package gets no server
+
+### Trusting a vault
+
+You never edit a file to trust a vault. slipbox asks the first time it matters, when a file's servers there would run
+with something left out:
+
+```text
+Trust ~/code/app? Its own tools would run code it holds — eslint not run (its config is code). Only a folder you
+know (y trusts it; n keeps it safe)
+```
+
+- `y` trusts it. Its servers start again at once, as they'd run anywhere.
+- `n` or `esc` keeps it safe.
+
+Either answer is kept in slipbox's own state, never in the folder, so it isn't asked again.
+
+slipbox asks about the vault you opened, with one answer for every project in it. Else it asks about the file's
+project. It never asks while you're typing, but after your next key. A folder of notes alone is never asked.
+
+| Command | In the palette | What it does |
+| --- | --- | --- |
+| `:trust` | "Trust this vault" | Trusts the vault of the file on screen |
+| `:untrust` | "Stop trusting this vault" | Stops trusting it |
+
+An answer holds for the folders under it. The nearest answer counts.
+
+To trust folders ahead of time, list them in your own config's `trust.roots`:
+
+```toml
+[trust]
+roots = ["~/code/*", "~/notes"]   # paths, ~, globs; each with what's inside it
+```
+
+A vault listed there is trusted whatever you answered. A folder's own `[trust]` is ignored, since a folder can't trust
+itself.
+
+The command line never asks, and has no way to trust a vault, since an agent could be talked into it. In a vault you
+don't trust, its commands say on standard error what they left out. `slipbox doctor` says whether a vault is trusted,
+and what that limits.

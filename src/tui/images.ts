@@ -2,6 +2,7 @@
 // yes (this once, or for its site) — into the cache, a file per address, and drawn from there as a local one is. A fetch
 // is an image's or nothing: a timeout, a size cap, an image's content type.
 
+import { randomUUID } from "node:crypto";
 import {
   closeSync,
   existsSync,
@@ -10,8 +11,9 @@ import {
   readFileSync,
   readSync,
   renameSync,
+  rmSync,
   statSync,
-  writeFileSync,
+  writeSync,
 } from "node:fs";
 import { extname, join } from "node:path";
 import { remoteImageName } from "../core/imagecache.ts";
@@ -63,25 +65,44 @@ export function svgText(path: string): string | null {
   }
 }
 
-/** The most an image may weigh, and how long its fetch may take. */
-const MAX_BYTES = 20 * 1024 * 1024;
-const TIMEOUT_MS = 15_000;
+/** The most an image may weigh, how many fetches run at once and wait their turn, and how long one may take. */
+export interface RemoteImageLimits {
+  bytes: number;
+  concurrent: number;
+  queued: number;
+  timeout: number;
+}
+const DEFAULT_LIMITS: RemoteImageLimits = {
+  bytes: 20 * 1024 * 1024,
+  concurrent: 3,
+  queued: 32,
+  timeout: 15_000,
+};
+type Transfer = { retry: boolean; url: string; abort: AbortController; done: () => void; promise: Promise<void> };
 
+/** Downloads belong to the picture session, shared across its views until cancelled or disposed. */
 export class RemoteImages {
-  /** Fetches under way, by address; and the ones that failed this run — not tried again by themselves (a note laid
-   *  out again would ask the site at every frame), only when asked for (`enter`). */
-  private readonly pending = new Set<string>();
+  /** Fetches under way or waiting, by address; and the ones that failed this run — not tried again by themselves (a
+   *  note laid out again would ask the site at every frame), only when asked for (`enter`). */
+  private readonly pending = new Map<string, Transfer>();
   private readonly failed = new Set<string>();
+  private queue: Transfer[] = [];
+  private active = 0;
+  private closed = false;
+  private readonly limits: RemoteImageLimits;
   /** The sites said yes to for this run (`ask`'s "this site"). */
   readonly sites = new Set<string>();
 
   constructor(
     /** How an image is fetched: the host's network. */
     private readonly fetcher: (url: string, init: RequestInit) => Promise<Response>,
-    /** Told when a fetch ends: the image there (the notes laid out again), or why not. */
+    /** Told when a fetch ends: the image there (the notes laid out again), or why not. Not told of one cancelled. */
     private readonly done: (url: string, error?: string) => void,
     private readonly dir = join(cacheHome(), "images"),
-  ) {}
+    limits: Partial<RemoteImageLimits> = {},
+  ) {
+    this.limits = { ...DEFAULT_LIMITS, ...limits };
+  }
 
   /** Where an address's image is kept: one file per address. */
   file(url: string): string {
@@ -104,33 +125,147 @@ export class RemoteImages {
     }
   }
 
-  /** Fetch an image into the cache, once at a time per address; `done` when it's there or it failed. One that failed
-   *  this run only `again` (asked for). */
-  fetch(url: string, again = false): void {
+  /** Deduplicate active/queued addresses. Saturated automatic requests can be admitted on the next redraw. */
+  fetch(url: string, again = false): boolean {
     if (again) this.failed.delete(url);
-    if (this.pending.has(url) || this.failed.has(url) || this.cached(url) || !RemoteImages.site(url)) return;
-    this.pending.add(url);
-    void this.get(url)
-      .then(() => this.done(url))
-      .catch((err: Error) => {
-        this.failed.add(url);
-        this.done(url, err.message);
-      })
-      .finally(() => this.pending.delete(url));
+    if (this.closed || this.failed.has(url) || this.cached(url) || !RemoteImages.site(url)) return false;
+    const pending = this.pending.get(url);
+    if (pending) {
+      if (pending.abort.signal.aborted) pending.retry = true;
+      return true;
+    }
+    if (this.active >= this.limits.concurrent && this.queue.length >= this.limits.queued) return false;
+    let done!: () => void;
+    const promise = new Promise<void>((resolve) => {
+      done = resolve;
+    });
+    const job = { retry: false, url, abort: new AbortController(), done, promise };
+    this.pending.set(url, job);
+    this.queue.push(job);
+    this.pump();
+    return true;
   }
 
-  private async get(url: string): Promise<void> {
-    const res = await this.fetcher(url, { signal: AbortSignal.timeout(TIMEOUT_MS), redirect: "follow" });
-    if (!res.ok) throw new Error(`the site answered ${res.status}`);
-    const type = res.headers.get("content-type") ?? "";
-    if (!type.startsWith("image/")) throw new Error(`not an image (${type || "no content type"})`);
-    if (Number(res.headers.get("content-length") ?? 0) > MAX_BYTES) throw new Error("larger than 20 MB");
-    const bytes = new Uint8Array(await res.arrayBuffer());
-    if (bytes.byteLength > MAX_BYTES) throw new Error("larger than 20 MB");
-    ensureCacheHome(join(this.dir, ".."));
-    mkdirSync(this.dir, { recursive: true });
-    const f = this.file(url);
-    writeFileSync(`${f}.part`, bytes);
-    renameSync(`${f}.part`, f);
+  cancel(url: string): void {
+    const job = this.pending.get(url);
+    if (!job) return;
+    job.retry = false;
+    job.abort.abort();
+    const at = this.queue.indexOf(job);
+    if (at !== -1) {
+      this.queue.splice(at, 1);
+      this.pending.delete(url);
+      job.done();
+    }
+  }
+
+  cancelAll(): void {
+    for (const url of this.pending.keys()) this.cancel(url);
+  }
+
+  dispose(): void {
+    this.closed = true;
+    this.cancelAll();
+  }
+
+  async settle(): Promise<void> {
+    while (this.pending.size) await Promise.all([...this.pending.values()].map((job) => job.promise));
+  }
+
+  private pump(): void {
+    while (!this.closed && this.active < this.limits.concurrent && this.queue.length) {
+      const job = this.queue.shift()!;
+      this.active++;
+      void this.get(job)
+        .then(
+          () => {
+            if (!job.abort.signal.aborted && !this.closed) this.done(job.url);
+          },
+          (err: Error) => {
+            if (job.abort.signal.aborted || this.closed) return;
+            if (this.failed.size >= 2048) this.failed.delete(this.failed.values().next().value!);
+            this.failed.add(job.url);
+            this.done(job.url, err.message);
+          },
+        )
+        .finally(() => {
+          this.pending.delete(job.url);
+          this.active--;
+          job.done();
+          if (job.retry && !this.closed) this.fetch(job.url, true);
+          this.pump();
+        });
+    }
+  }
+
+  private async get(job: Transfer): Promise<void> {
+    const signal = AbortSignal.any([job.abort.signal, AbortSignal.timeout(this.limits.timeout)]);
+    let abortFetch!: () => void;
+    const aborted = new Promise<never>((_, reject) => {
+      abortFetch = () => reject(signal.reason);
+      signal.addEventListener("abort", abortFetch, { once: true });
+    });
+    let res: Response;
+    try {
+      signal.throwIfAborted();
+      res = await Promise.race([
+        this.fetcher(job.url, { signal, redirect: "follow" }).then((answer) => {
+          if (signal.aborted) {
+            void answer.body?.cancel().catch(() => {});
+            signal.throwIfAborted();
+          }
+          return answer;
+        }),
+        aborted,
+      ]);
+    } finally {
+      signal.removeEventListener("abort", abortFetch);
+    }
+    let reader: ReadableStreamDefaultReader<Uint8Array> | undefined;
+    let fd: number | undefined;
+    const file = this.file(job.url);
+    const part = `${file}.${randomUUID()}.part`;
+    const tooLarge = () => new Error(`larger than ${this.limits.bytes / 1024 / 1024} MB`);
+    const cancelBody = () => {
+      if (reader) void reader.cancel().catch(() => {});
+      else void res.body?.cancel().catch(() => {});
+    };
+    signal.addEventListener("abort", cancelBody, { once: true });
+    try {
+      signal.throwIfAborted();
+      if (!res.ok) throw new Error(`the site answered ${res.status}`);
+      const type = res.headers.get("content-type") ?? "";
+      if (!type.startsWith("image/")) throw new Error(`not an image (${type || "no content type"})`);
+      if (Number(res.headers.get("content-length") ?? 0) > this.limits.bytes) throw tooLarge();
+      if (!res.body) throw new Error("empty image response");
+      ensureCacheHome(join(this.dir, ".."));
+      mkdirSync(this.dir, { recursive: true });
+      fd = openSync(part, "wx", 0o600);
+      reader = res.body.getReader();
+      let size = 0;
+      while (true) {
+        const { done, value } = await reader.read();
+        signal.throwIfAborted();
+        if (done) break;
+        size += value.byteLength;
+        if (size > this.limits.bytes) throw tooLarge();
+        let at = 0;
+        while (at < value.byteLength) {
+          const written = writeSync(fd, value, at, value.byteLength - at);
+          if (!written) throw new Error("image cache write made no progress");
+          at += written;
+        }
+      }
+      closeSync(fd);
+      fd = undefined;
+      signal.throwIfAborted();
+      renameSync(part, file);
+    } finally {
+      signal.removeEventListener("abort", cancelBody);
+      cancelBody();
+      reader?.releaseLock();
+      if (fd !== undefined) closeSync(fd);
+      rmSync(part, { force: true });
+    }
   }
 }

@@ -250,14 +250,26 @@ describe("the supply chain's gates (14.10)", () => {
     expect(workflowShapeProblems("w.yml", "jobs: [\n")[0]).toStartWith("w.yml: not YAML that parses");
   });
 
-  test("the required check, `ci`, always runs and waits for every other job", () => {
+  test("the required check, `ci`, always runs and waits for every other job; run by hand, it's `full` (D251)", () => {
     const ci = Bun.YAML.parse(readFileSync(join(ROOT, ".github", "workflows", "ci.yml"), "utf8")) as {
-      jobs: Record<string, { needs?: string[]; if?: string }>;
+      on: Record<string, { branches?: string[] } | null>;
+      jobs: Record<string, { needs?: string[]; if?: string; name?: string }>;
     };
     const others = Object.keys(ci.jobs).filter((j) => j !== "ci");
     expect(others.length).toBeGreaterThan(1);
     expect([...(ci.jobs.ci?.needs ?? [])].sort()).toEqual(others.sort());
     expect(ci.jobs.ci?.if).toBe("${{ always() }}");
+    // `dev`'s ruleset requires `ci`; `main`'s requires `full`, which only a run by hand, of everything, reports.
+    expect(ci.jobs.ci?.name).toBe("${{ github.event_name == 'workflow_dispatch' && 'full' || 'ci' }}");
+    expect(ci.on.push?.branches).toEqual(["dev", "test"]);
+    expect(Object.keys(ci.on)).toContain("workflow_dispatch");
+    const ruleset = (name: string) =>
+      JSON.parse(readFileSync(join(ROOT, ".github", "upkeep", "rulesets", `${name}.json`), "utf8")) as {
+        rules: { type: string; parameters?: { required_status_checks?: { context: string }[] } }[];
+      };
+    const checks = (name: string) =>
+      ruleset(name).rules.flatMap((r) => r.parameters?.required_status_checks?.map((c) => c.context) ?? []);
+    expect([checks("dev"), checks("test"), checks("main")]).toEqual([["ci"], ["ci"], ["full"]]);
   });
 
   test("a pull request of the docs alone skips the tests and the terminal tests; lint runs the docs' tests (D230)", () => {
@@ -298,14 +310,15 @@ describe("the supply chain's gates (14.10)", () => {
     const git = (...args: string[]) => Bun.spawnSync(["git", "-C", repo, ...args], { env: gitEnv });
     const gitEnv = { ...process.env, GIT_AUTHOR_NAME: "t", GIT_AUTHOR_EMAIL: "t@t", GIT_COMMITTER_NAME: "t" };
     let runs = 0;
-    const scope = (event: string) => {
+    const scope = (event: string, before = "") => {
       const out = join(sandbox, `scope-out-${++runs}`);
       Bun.spawnSync([process.execPath, join(ROOT, "scripts", "ci-scope.ts")], {
         cwd: repo,
-        env: { ...gitEnv, GITHUB_EVENT_NAME: event, GITHUB_OUTPUT: out },
+        env: { ...gitEnv, GITHUB_EVENT_NAME: event, GITHUB_OUTPUT: out, SCOPE_BEFORE: before },
       });
       return readFileSync(out, "utf8");
     };
+    const head = () => Bun.spawnSync(["git", "-C", repo, "rev-parse", "HEAD"]).stdout.toString().trim();
     const commit = (message: string) => {
       git("add", ".");
       git("-c", "user.email=t@t", "commit", "-qm", message);
@@ -313,15 +326,22 @@ describe("the supply chain's gates (14.10)", () => {
     git("init", "-q");
     writeFileSync(join(repo, "a.ts"), "1\n");
     commit("base");
+    const base = head();
     expect(scope("pull_request")).toBe("code=true\nchecks=true\n"); // no parent: the diff can't be read
     mkdirSync(join(repo, "docs"));
     writeFileSync(join(repo, "docs", "x.md"), "# x\n");
     commit("docs");
     expect(scope("pull_request")).toBe("code=false\nchecks=false\n");
+    // A push to `dev` or `test`: its commits since the branch's head before it (D251); a branch just made has none, and
+    // a run by hand is everything.
+    expect(scope("push", base)).toBe("code=false\nchecks=false\n");
     expect(scope("push")).toBe("code=true\nchecks=true\n");
+    expect(scope("push", "0000000000000000000000000000000000000000")).toBe("code=true\nchecks=true\n");
+    expect(scope("workflow_dispatch", base)).toBe("code=true\nchecks=true\n");
     writeFileSync(join(repo, "a.ts"), "2\n");
     commit("code");
     expect(scope("pull_request")).toBe("code=true\nchecks=true\n"); // a file nothing names: everything
+    expect(scope("push", base)).toBe("code=true\nchecks=true\n");
   });
 
   test("the import graph: what a file imports, a worker it starts, what it imports that isn't code, a path it names", () => {
@@ -754,10 +774,12 @@ describe("a release (14.2)", () => {
       const text = readFileSync(join(ROOT, f), "utf8");
       // A worker started otherwise would be looked for where a compiled binary hasn't got it.
       for (const m of text.matchAll(/new Worker\(([^)]*)/g)) expect(`${f}: ${m[1]}`).toMatch(/: workerUrl\("/);
-      for (const m of text.matchAll(/workerUrl\("([^"]+)"\)/g)) started.add(`src/core/${m[1]}`);
+      for (const m of text.matchAll(/workerUrl\("([^"]+)"\)/g)) started.add(join("src/core", m[1]!));
     }
     expect(started.size).toBeGreaterThan(0);
     expect(entries).toEqual(["src/main.ts", ...[...started].sort()]);
+    // Laid out from src/ whatever their number: past eight, Bun kept src/ in their paths, and workerUrl found none.
+    expect(script).toContain(" --root=src ");
     for (const e of entries) expect(existsSync(join(ROOT, e))).toBe(true);
   });
 

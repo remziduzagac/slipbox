@@ -122,7 +122,15 @@ export class Views {
       view.top = this.clampTop(view, layout, this.rowFromAnchor(layout, view.topAnchor, view.topSub ?? 0));
       this.ensureCursorVisible(view, layout);
       if (view.find)
-        view.find = computeFind(layout, view.find.query, view.find.current, view.find.whole, view.find.regex);
+        view.find = computeFind(
+          layout,
+          view.find.query,
+          view.find.current,
+          view.find.whole,
+          view.find.regex,
+          false,
+          view,
+        );
       // (While typing, its end may be past a row's last character, as the cursor may.)
       if (view.sel)
         view.sel.anchor = view.sel.src
@@ -140,6 +148,13 @@ export class Views {
       this.parses.add(parse);
       void parse.finally(() => {
         this.parses.delete(parse);
+        // The threads couldn't: the note reads as its source, and why is said once.
+        const failed = buf.takeParseFailure();
+        if (failed)
+          this.app.message(
+            "warn",
+            `${this.app.displayName(buf)} is shown as its source: its parse on another thread failed (${failed.why})${failed.transient ? " — open it again to retry" : ""}`,
+          );
         for (const v of this.app.allViews()) if (v.buf === buf) v.layoutKey = "";
         this.app.host.requestRender();
       });

@@ -7,6 +7,7 @@
 // Opened by `x` on a conflicted file in source control or Problems (`git.merge_screen`, `:resolve`); the conflict
 // prompt's (M)erge opens it where its three-way merge leaves a conflict, `esc` going back to the prompt.
 
+import { beginGitRead } from "./gitquery.ts";
 import { join } from "node:path";
 import { blockDiff } from "../core/blockdiff.ts";
 import { fenceLanguage, formatEntry } from "../core/capture.ts";
@@ -24,7 +25,7 @@ import {
   resultView,
 } from "../core/conflicts.ts";
 import { readText } from "../core/fsutil.ts";
-import { inCheckout, inVault, showAt } from "../core/gitops.ts";
+import { inCheckout, inVault, showLater } from "../core/gitops.ts";
 import { OPERATIONS, operationOf } from "../core/gitrebase.ts";
 import { sections, stageFile } from "../core/gitstage.ts";
 import { layoutScreen, type ScreenPart, screenText } from "../core/layout/screen.ts";
@@ -80,7 +81,7 @@ export function conflictedFiles(app: App): string[] {
  * `x` on a file in conflict (source control, Problems), or `:resolve` — this note when it's in conflict, else the first
  * that is: its conflicts read from its markers, each one's base from the index's stage 1 where they don't hold it.
  */
-export function openMergeScreen(app: App, rel?: string): void {
+export async function openMergeScreen(app: App, rel?: string): Promise<void> {
   const c = app.git.checkout;
   if (!c) return app.message("info", "not a git checkout");
   const conflicted = conflictedFiles(app);
@@ -96,11 +97,12 @@ export function openMergeScreen(app: App, rel?: string): void {
   if (was?.read === text) return show(app, was);
   const path = inCheckout(c, app.loc.root, target);
   // The markers read with git's stages: they choose between ways to read a conflict, and its base where it's not marked.
-  const file = readConflicts(text, {
-    base: showAt(c, ":1", path),
-    ours: showAt(c, ":2", path),
-    theirs: showAt(c, ":3", path),
-  });
+  const query = beginGitRead(app, "Reading merge versions", true);
+  const [base, ours, theirs] = await Promise.all(
+    [":1", ":2", ":3"].map((ref) => showLater(c, ref, path, query.signal)),
+  );
+  if (!query.current() || buf.source !== text) return;
+  const file = readConflicts(text, { base: base!, ours: ours!, theirs: theirs! });
   if (!conflictsOf(file).length)
     return app.message(
       "info",
@@ -121,6 +123,7 @@ export function openMergeScreen(app: App, rel?: string): void {
     saved: false,
     rebasing: operationOf(c)?.kind === "rebase",
   });
+  app.host.requestRender();
 }
 
 /**

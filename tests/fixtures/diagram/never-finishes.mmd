@@ -1,0 +1,10 @@
+flowchart TD
+    Workspace[Workspace owner: scope and lifetime] --> Document
+    Document[Document owner: text, history and saved state]
+    ViewA[TUI view A] -. references .-> Document
+    ViewB[TUI view B] -. references .-> Document
+    Agent[Agent with document identity] --> Checked[Checked document operation]
+    Checked --> Document
+    Document --> Notice[Revision and source-change observation]
+    Notice --> ViewA
+    Notice --> ViewB

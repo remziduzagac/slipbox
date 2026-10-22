@@ -103,6 +103,12 @@ export const WINDOW_SPECS: CommandSpec[] = [
   },
   { id: "explorer.reveal", title: "Reveal note in explorer", cli: I, desc: "Selects this note in the file tree" },
   {
+    id: "explorer.toggle_hidden",
+    title: "Show or hide hidden files",
+    cli: I,
+    desc: "The explorer lists the files and folders whose names start with a dot, not indexed (⊘), or stops (files.hidden)",
+  },
+  {
     id: "outline.cycle",
     title: "Outline: open, focus, close",
     cli: "slipbox outline <note>",

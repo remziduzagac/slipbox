@@ -1,189 +1,34 @@
-# Configuration
+# Configuration settings
+
+<a id="configuration"></a>
 
 slipbox works with no configuration at all. Every setting has a default, and you write down only what you change.
 
 Settings are TOML. They are in a file of your own. A folder that wants its own settings has them in its
 `.slipbox/config.toml`.
 
-This chapter covers:
-
-- where those files are, and the order they apply in
-- what a folder's file may not set
-- how mistakes in a file are handled
-- every setting, with its default
-- colours
-- indentation
-- spelling dictionaries
-- reloading
-- the environment variables slipbox reads
-- where slipbox keeps its own files
+This reference lists every setting and default, colours, indentation, spelling dictionaries and reloading.
+For file locations, precedence and a first change, see [Customization](customization.md). Environment variables and
+state paths are in [Environment and storage locations](environment-and-storage.md).
 
 ## Changing a setting
 
-Your settings are in `~/.config/slipbox/config.toml`. slipbox doesn't make the file. Create it, and its folder,
-yourself. Write in it only what you want different.
+For creating a file, understanding precedence and checking a live change, follow
+[Customization](customization.md#changing-a-setting). The complete defaults and setting syntax are below.
 
-A setting lives in a table, named in brackets. The few settings at the top level come before any table:
-
-```toml
-theme = "nord"
-
-[ui]
-scrolloff = 5
-wrap = false
-
-[editor]
-autosave_ms = 10000
-```
-
-Save the file, and a running TUI applies the change ([Reloading](#reloading)).
-
-This manual writes a setting in dotted form. `ui.scrolloff` is `scrolloff` in the `[ui]` table. A top-level setting is
-bare, such as `theme`.
-
-Your file is the first of these:
-
-1. the file `--config <file>` names, given to the TUI or to any command
-2. else the file the environment variable `SLIPBOX_CONFIG` names
-3. else `config.toml` in slipbox's config folder, `$XDG_CONFIG_HOME/slipbox/`. When `XDG_CONFIG_HOME` isn't set, that
-   is `~/.config/slipbox/`, on macOS too.
-
-If the `--config` file doesn't exist, slipbox says so in a warning and runs on the defaults. It never falls back to one
-of the others.
+<a id="the-order-they-apply-in"></a>
+<a id="what-only-your-own-file-can-set"></a>
+<a id="a-folders-name"></a>
 
 ## A folder's settings
 
-A vault can carry settings of its own, for everyone who opens it. For example:
-
-- a team's notes that keep their scratch in the folder
-- a repository that leaves its generated files out
-
-These settings go in `.slipbox/config.toml` at the vault's top. `slipbox init ~/notes` makes `.slipbox/` with a
-`config.toml` that holds a couple of settings, commented out. You can make it by hand too.
-
-A vault is a folder slipbox treats as one collection of files. A `.slipbox/` folder is one of the things that make a
-folder a vault ([Links and vaults](links-and-vaults.md)).
-
-```toml
-# ~/notes/.slipbox/config.toml
-[capture]
-location = "root"              # the scratch in the folder, as ~/notes/inbox.md
-file = "inbox.md"
-
-[walk]
-exclude = ["archive/"]
-```
-
-### The order they apply in
-
-Each file overrides the ones before it. A setting no file names keeps its default.
-
-1. the built-in defaults
-2. your own file
-3. the `.slipbox/config.toml` of each vault enclosing this one, the outermost first
-4. the vault's own `.slipbox/config.toml`
-
-So a folder's settings reach the vaults nested inside it too.
-
-A vault without `.slipbox/`, such as a git repository or an Obsidian vault, has no file of its own. Home and
-Elsewhere take only your file ([Home and Elsewhere](#home-and-elsewhere)).
-
-`slipbox info` lists the files that applied, in this order, on its `config` line.
-
-### What only your own file can set
-
-A folder's `.slipbox/config.toml` arrives with whatever you clone or download. So it never chooses what runs on your
-machine, or what reaches the network.
-
-These come from your own file only. In a folder's file, each is ignored, with a warning:
-
-- **The programs slipbox runs for you:** `editor.command`, `editor.remote` and `lint.command`.
-- **A language server's `command`, `args` and `environment`, and a linter's `lint-command`.** A folder's file may tune
-  the servers and linters slipbox knows, but never add one. Its name would be the program run.
-- **What reaches the network:** `render.images_remote`, `lsp.auto_install` and `update.check`. A folder can't have
-  slipbox fetch its notes' pictures from the web, which tells their sites who read them. It can't have slipbox install
-  from npm, or ask whether there's a newer release. Nor can it turn any of them off for you. What reaches the network
-  is yours to allow.
-- **`[trust]`.** A folder can't trust itself.
-- **`walk.root_markers`.** Where vaults are is settled before any folder's file is read.
-- **`git.worktrees`.** Where slipbox makes a worktree's folder, outside the vault, is yours to say.
-- **A key or alias bound to a command that throws work away or runs a program:** `app.quit_force`, `note.revert`,
-  `note.save_force`, `scratch.clear`, `shell.run` and `shell.filter`. A clone can't put a quit without saving on
-  `ctrl+s`, or a program of its choosing on `:wq`. Your own file may: `"g m" = "shell.run make"`.
-
-A folder's file may give a language server only its settings (`config`). They reach the server only in a vault you
-trust, as a project's `.vscode/settings.json` would. Some servers' settings name programs to run.
-
-In a vault you haven't trusted, a server gets its own defaults and your settings. On top of those come the settings that
-keep it from running the project's code. Nothing of the folder's own runs.
-
-Trust is explained in [Code](code.md).
-
-### A folder's name
-
-The `[vault]` table of a folder's `.slipbox/config.toml` is its identity, not a setting. It holds:
-
-- its `name`, which pointers such as `slipbox://notes/inbox.md` find it by
-- an `id` that tells its copies from another folder of the same name
-- any `aliases` and `previous_names`
-
-The table is read on its own, and never merged into the settings. In your own file it is ignored, with a warning.
-
-Only `slipbox init --name` and `slipbox name` write it. Opening the folder never does. Names and pointers are in
-[Links and vaults](links-and-vaults.md).
-
-```toml
-[vault]
-id = "3f9c2a7be1d04c55"        # random, written with the name, never changed
-name = "notes"                 # what pointers name it by: slipbox://notes/inbox.md
-aliases = ["n"]                # other names it answers to
-previous_names = ["old-notes"] # names it had: a pointer by one still finds it
-```
+See [A folder's settings](customization.md#a-folders-settings) for scope, precedence and which settings a vault
+cannot set. The [trust policy](privacy.md) describes the boundary around programs and network access.
 
 ## Mistakes in a file
 
-No mistake in a settings file stops slipbox. Each mistake is a warning, and the rest of the file still applies. You see
-the warning in one of two places:
-
-- in the TUI's messages (`space m` lists them all)
-- on the command line's standard error
-
-What each mistake does:
-
-- **A file that isn't valid TOML** is left out whole. While the TUI runs, a file saved half-typed keeps what it said
-  before, its last good contents, until it parses again. Your theme and keys stay as they were.
-- **An unknown setting** is named and ignored. So is a retired one (`[rename]`), with the reason.
-- **A value that doesn't fit** keeps the default. That is a value:
-  - of the wrong type, such as text where `true` or `false` goes, or a list with something other than text in it
-  - outside its set (`ui.lines = "thick"`)
-  - outside its range (`ui.sidebar_width = 7`)
-
-  Numbers are whole, except for `ui.split_ratio` and `editor.lens_max`.
-- **An empty `walk.extensions`** keeps the default, since no note would be found.
-- **A `capture.file` that isn't a relative `.md` path** keeps `scratch.md`. So does one that climbs out with `..`, or
-  has a hidden part (`.notes/inbox.md`).
-- **A mode's key table written as text** (`[keys]` with `source = "…"`) is ignored.
-- **In a language server's, a language's, a linter's or a document type's table,** a field of the wrong type is
-  dropped. The rest of the entry is kept. A known field spelled with underscores (`lint_command`, `file_types`) is
-  dropped too. Any other field slipbox doesn't read (`scope`, `comment-token`) is kept quietly. So a section of
-  Helix's `languages.toml`, or of efm-langserver's settings, pastes in as it is.
-
-Some mistakes only show where the setting is used, and are said there:
-
-- a key bound to a command that doesn't exist
-- a key with a modifier slipbox doesn't know (`hyper+x`)
-- a role or colour `[colors]` can't use
-
-The TUI says these. `slipbox render` says the colours' mistakes too. `slipbox info` doesn't.
-
-An older file may use the names some settings had before:
-
-- `capture.location = "vault"`, now `"root"`
-- the explorer's actions `rename_vault`, `make_vault` and `unmake_vault`, now `rename_root`, `make_root` and
-  `unmake_root`
-- the colour role `sidebar_vault`, now `sidebar_root`
-
-Each still works, as its name now does, and isn't warned of.
+A setting with an invalid value keeps its default and produces a warning. See
+[Mistakes in a file](customization.md#mistakes-in-a-file) for an example and diagnostic steps.
 
 ## Every key
 
@@ -228,6 +73,7 @@ show = "auto"                  # auto (renderable in a vault with .slipbox/, els
                                # | renderable (notes and data files) | all (every text file)
 include = []                   # always listed, in .gitignore's syntax: ["*.ts", "scripts/"]
 exclude = []                   # never listed, in .gitignore's syntax
+hidden = false                 # hidden files and folders listed too, never indexed (.git never); shift+h there
 
 [ui]                           # the screen
 sidebar = true                 # the explorer open beside the text on a wide terminal
@@ -267,9 +113,10 @@ open_in = "float"              # where it opens: float (in the middle, over the 
                                # the right); space u u switches
 
 [git]
-base = ""                      # the branch or commit changes are measured against; "": main, else master
+base = ""                      # the branch or commit changes are measured against (origin/dev, a remote branch,
+                               # too); "": main, else master
 bases = ["main"]               # the bases a branch's own is guessed among: the nearest; each listed is measured
-                               # against those before it, the first against none
+                               # against those before it, the first against none; remote branches too
 worktrees = "{parent}/{repo}-{branch}" # where a worktree slipbox makes goes: {parent} the folder holding the
                                # repository, {repo} its name, {branch} the branch's, made safe; ~ home; your file only
 signs = true                   # the lines changed from what's staged, marked in the gutter
@@ -445,9 +292,9 @@ Each of the other tables holds the keys of one place, and is tried before `[keys
 - `[keys.source]` holds source mode's own keys.
 - `[keys.visual]` holds visual mode's.
 - `[keys.explorer]` holds the explorer's, and the Problems panel's. They are bound to its actions: `down`, `up`,
-  `open_tab`, `expand`, `open`, `collapse`, `open_split`, `top`, `bottom`, `filter`, `all_files`, `new_note`,
-  `new_folder`, `rename`, `rename_root`, `move`, `delete`, `restore`, `undo_rename`, `copy`, `cut`, `paste`,
-  `make_root`, `unmake_root`, `menu`, `zoom_in`, `zoom_out`, `close`, `leave`.
+  `open_tab`, `expand`, `open`, `collapse`, `open_split`, `top`, `bottom`, `filter`, `all_files`, `toggle_hidden`,
+  `new_note`, `new_folder`, `rename`, `rename_root`, `move`, `delete`, `restore`, `undo_rename`, `copy`, `cut`,
+  `paste`, `make_root`, `unmake_root`, `menu`, `zoom_in`, `zoom_out`, `close`, `leave`.
 - `[keys.git]` holds the git panel's. Its actions are `down`, `up`, `top`, `bottom`, `expand`, `collapse`, `open`,
   `go`, `menu`, `stage`, `unstage`, `discard`, `stage_all`, `unstage_all`, `message`, `commit`, `amend`, `fetch`,
   `pull`, `push`, `stash`, `new_branch`, `merge`, `filter`, `close`, `leave`.
@@ -559,10 +406,10 @@ A vault's `.slipbox/config.toml` may set them, and wins over your own file there
 ## Home and Elsewhere
 
 Home, your home folder's own vault, and Elsewhere, everything outside home and every vault, have no `.slipbox/`. So
-they take your own file alone ([Vaults, home and Elsewhere](../guides/vaults.md)).
+they take your own file alone ([Working across folders and vaults](../guides/vaults.md)).
 
 Home's index leaves out a skip list: hidden folders, the system's folders (`Library`, `AppData`), `Downloads`, the busy
-folders such as `node_modules`, and files that aren't notes or text ([Home](links-and-vaults.md#home)). No setting
+folders such as `node_modules`, and files that aren't notes or text ([Home](vaults.md#home)). No setting
 changes the list, but these settings reach home too:
 
 | Setting | In home |
@@ -577,12 +424,13 @@ Elsewhere has no index, so no setting about indexing applies there.
 ### Links that lead out
 
 Your answers about symlinks that lead out of a vault, or out of home, aren't settings
-([Links that lead out](links-and-vaults.md#links-that-lead-out)). No config file can follow one, a vault's least of
+([Links that lead out](vaults.md#links-that-lead-out)). No config file can follow one, a vault's least of
 all, so a folder can't bring its links already followed. slipbox keeps the answers in `links.json`, in its state
-folder ([State](#state)). `space v l` lists them and forgets one, as `slipbox symlinks forget <link>` does; removing
+folder ([State](environment-and-storage.md#state)). `space v l` lists them and forgets one, as `slipbox symlinks
+forget <link>` does; removing
 that file forgets them all. A link forgotten asks again.
 
-They're a trust apart from `[trust] roots`, which says whose own tools may run ([Code](code.md#trust)).
+They're a trust apart from `[trust] roots`, which says whose own tools may run ([Code](privacy.md#trust)).
 
 ## Colours
 
@@ -771,157 +619,20 @@ replaced. So editing the setting always wins. The TUI never writes your settings
 With `ui.restore_session` on, the session also brings back whether the explorer and the outline are open, and their
 widths.
 
+<a id="slipboxs-own-variables"></a>
+<a id="variables-slipbox-reads"></a>
+<a id="variables-slipbox-sets"></a>
+
 ## Environment
 
-### slipbox's own variables
+Variables and their exact meanings are in [Environment and storage locations](environment-and-storage.md#environment).
 
-| Variable | What it does |
-| --- | --- |
-| `SLIPBOX_CONFIG` | Names your settings file, when `--config` doesn't name one |
-| `SLIPBOX_GLYPHS` | `nerd`, `unicode` or `ascii`: the icons used where `render.glyphs` is `auto` |
-| `SLIPBOX_CLIPBOARD` | `file` keeps copies off the system's clipboard and the terminal's |
-| `SLIPBOX_DEBUG` | When set, an unexpected error on the command line prints its stack trace |
-| `SLIPBOX_PARSE_CACHE` | `off` goes without the shared parse cache. Every note is parsed afresh |
-| `SLIPBOX_RELEASES_URL` | Releases are fetched from another place laid out as GitHub's releases are, such as a mirror |
-| `SLIPBOX_CHANNELS_URL` | The files naming each channel's newest release are read from another place |
-| `SLIPBOX_CHANNEL` | Which releases the installer installs, and the install follows: `preview` or `stable` |
-| `SLIPBOX_BIN_DIR` | Where the installer puts its `slipbox` link, instead of `~/.local/bin` |
-
-Some of them need a few more words:
-
-- A set `render.glyphs` wins over `SLIPBOX_GLYPHS`. Any other value of `SLIPBOX_GLYPHS` is ignored.
-- With `SLIPBOX_CLIPBOARD` set to `file`, copies go only to `clipboard.txt` in the vault's state folder. Pasting reads
-  it back.
-- `SLIPBOX_RELEASES_URL` and `SLIPBOX_CHANNELS_URL` are for the installer, `slipbox upgrade` and the update check.
-- Without `SLIPBOX_CHANNELS_URL`, the channels' files are read from slipbox's site on GitHub Pages.
-- `SLIPBOX_CHANNEL=preview` has the installer install the newest preview, and the install follow previews, as
-  `--preview` does. `stable`, the default, means releases only.
-
-### Variables slipbox reads
-
-| Variable | What slipbox reads it for |
-| --- | --- |
-| `NO_COLOR` | When set, and not empty: no colour |
-| `DO_NOT_TRACK` | When set, and not `0` or `false`: no update check |
-| `XDG_CONFIG_HOME` | slipbox's config folder |
-| `XDG_CACHE_HOME` | slipbox's cache folder |
-| `XDG_STATE_HOME` | slipbox's state folder |
-| `XDG_DATA_HOME` | slipbox's data folder |
-| `VISUAL`, `EDITOR` | Your editor, when `editor.command` is empty |
-| `SHELL` | The shell that runs a command given with `:!` (else `/bin/sh`) |
-| `TERM`, `COLORTERM`, `TERM_PROGRAM` | How many colours the command line uses, and the icons (below) |
-| `LC_ALL`, `LC_CTYPE`, `LANG` | A locale that isn't UTF-8 makes `render.glyphs = "auto"` plain ASCII |
-| `WAYLAND_DISPLAY`, `DISPLAY` | The clipboard tools tried on Linux (`wl-copy`, `xclip`, `xsel`) |
-| `WSL_DISTRO_NAME` | slipbox is in WSL, and uses Windows' clipboard |
-| `XDG_RUNTIME_DIR`, `TMPDIR`, `USER` | Where the running nvims are looked for |
-| `HOME` and `PATH` | Your home folder, and where programs are found (below) |
-| `BUN_ENABLE_CRASH_REPORTING`, `BUN_CRASH_REPORT_URL` | slipbox sets the first to `0`, unless you have set either |
-
-What some of them do in more detail:
-
-- **`NO_COLOR`.** The TUI uses the `mono` theme. The command line prints plain text unless `--color always`. With
-  `render.show_urls = "auto"`, a link's address shows after its text.
-- **`XDG_CONFIG_HOME`, `XDG_CACHE_HOME`, `XDG_STATE_HOME` and `XDG_DATA_HOME`** set slipbox's four folders, described
-  [below](#where-slipbox-keeps-things). One that isn't an absolute path is ignored.
-- **`TERM`, `COLORTERM` and `TERM_PROGRAM`** also say which icons `render.glyphs = "auto"` picks. It picks Nerd Font
-  icons in Ghostty, kitty and WezTerm.
-- **`TERM=linux`** makes `render.glyphs = "auto"` plain ASCII too.
-- **`PATH`** is where slipbox finds programs: language servers, linters, git, the clipboard's tools.
-- **`BUN_ENABLE_CRASH_REPORTING` at `0`** means a crash sends no report.
-
-### Variables slipbox sets
-
-A command run with `:!` gets two variables:
-
-| Variable | Its value |
-| --- | --- |
-| `SLIPBOX_ROOT` | The vault's top folder |
-| `SLIPBOX_FILE` | The path of the file in the window |
+<a id="config"></a>
+<a id="cache"></a>
+<a id="state"></a>
+<a id="data"></a>
 
 ## Where slipbox keeps things
 
-slipbox writes nothing derived or personal into your folders. It writes nothing at all by opening one.
-
-What it keeps, it keeps in four folders of its own, XDG's, on macOS too:
-
-| Folder | Where | What it holds |
-| --- | --- | --- |
-| config | `$XDG_CONFIG_HOME/slipbox`, else `~/.config/slipbox` | your settings and your themes |
-| cache | `$XDG_CACHE_HOME/slipbox`, else `~/.cache/slipbox` | indexes and pictures: rebuilt when missing |
-| state | `$XDG_STATE_HOME/slipbox`, else `~/.local/state/slipbox` | sessions, the scratch, the trash, your answers |
-| data | `$XDG_DATA_HOME/slipbox`, else `~/.local/share/slipbox` | tools installed, your words, slipbox itself |
-
-A vault has a folder of its own in the cache folder, and another in the state folder. Both are named by the vault's
-key. The key is the vault's folder name and twelve characters of a hash of its path, such as `notes-84ec07632af6`.
-
-Home gets its folders the same way. Elsewhere has one state folder for the machine, `elsewhere`, and no cache.
-`slipbox info` prints the two folders.
-
-In a vault itself there is only `.slipbox/`, where a vault has one. It holds:
-
-- `config.toml`
-- `version`, the version of its format
-
-### Config
-
-| File | What it holds |
-| --- | --- |
-| `config.toml` | Your settings |
-| `themes/` | Your themes, each a `.yaml` file |
-
-### Cache
-
-| File | What it holds |
-| --- | --- |
-| `CACHEDIR.TAG` | It tells backup tools to skip the folder |
-| `parsed.db` | Notes as parsed, by their content, shared by every copy of a folder on the machine |
-| `images/` | Pictures fetched from the internet, a file each, and SVG pictures, diagrams and maths as drawn |
-| `<key>/index.json` | The vault's links |
-| `<key>/search.db` | The vault's search index |
-| `<key>/walk.json` | Home's walk, kept: the notes, files and folders it found, so opening home never walks it |
-
-### State
-
-For the machine:
-
-| File | What it holds |
-| --- | --- |
-| `roots.json` | Every vault seen, home among them; the moves of those that moved |
-| `links.json` | Your answers about symlinks that lead out: each followed or not, with where it led then |
-| `folders.json` | Named folders: their names, copies and defaults |
-| `trust.json` | Your answers when asked whether to trust a vault |
-| `positions.json` | Where you were in each note, the newest 5,000 |
-| `autoindex.json` | How far the background index has got |
-| `activity` | When the command line last ran |
-| `plans/` | Plans saved with `--plan`, for `slipbox apply`. Each is removed once applied |
-| `update.json` | When the update check last asked, and what it found |
-
-For each vault, in `<key>/`:
-
-| File | What it holds |
-| --- | --- |
-| `session.json` | Tabs, splits and panes, the settings changed in the TUI, the notes and commands used lately |
-| `scratch.md` | The scratch, unless `capture.location` puts it in the vault |
-| `trash/` | What you deleted, to restore, for 30 days. `trash.json` lists it |
-| `renames.json` | The last 20 renames and moves, to undo |
-| `redirects.json` | Moves seen, to repair the links that pointed at the old place |
-| `heads.json` | Each branch's last commit seen |
-| `export.json` | Where an export last went |
-| `clipboard.txt` | A copy no clipboard could take |
-| `dirty/` | The notes with unsaved changes in a running TUI, so the command line can say a file is out of date |
-
-### Data
-
-| File | What it holds |
-| --- | --- |
-| `tools/` | Language servers and markdownlint-cli2 installed from npm, each at the version slipbox pins |
-| `spell/words.txt` | Your own words |
-| `versions/`, `current` | slipbox itself, when its installer installed it |
-| `channel` | The releases it follows (`slipbox channel`) |
-
-The cache can be deleted while slipbox isn't running. All of it is rebuilt.
-
-The state folder holds what you would miss, the scratch and the trash among it.
-
-`slipbox uninstall --purge` removes slipbox with all four folders. It lists every path first
-([Installing slipbox](../guides/install.md)).
+Paths for configuration, cache, state and data are listed in
+[Environment and storage locations](environment-and-storage.md#where-slipbox-keeps-things).

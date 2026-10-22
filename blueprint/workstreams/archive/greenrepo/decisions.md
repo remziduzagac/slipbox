@@ -142,6 +142,9 @@ commits already use the noreply one. The secret scan found nothing to remove.
 
 ## GR-D13: Previews from a `test` branch, as herdsman's (2026-10-12)
 
+> **Amended by D251 (2026-10-17):** `test` is fast-forwarded from `dev`, the default branch, not `main`; `main` is
+> what's released, fast-forwarded from `test` once its commit passed `full`.
+
 **Decision:** Fast-forwarding `test` from `main` publishes a preview: every platform built as a release is, its
 version `<package.json's>-preview.<UTC commit time>.g<short hash>` (`0.2.0-preview.202610121530.g1a2b3c4`), published
 as the GitHub pre-release `preview-<time>-<hash>` with its packs, sums, SBOMs, installer and attestations. `test` is a

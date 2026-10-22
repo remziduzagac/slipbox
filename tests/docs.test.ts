@@ -1,8 +1,9 @@
 // The user documentation, docs/: whole, every link landing, every command and key in the manual, and free of the
 // blueprint's IDs (DOC-D3). The configuration chapter's defaults are checked in core.test.ts.
 import { describe, expect, test } from "bun:test";
-import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
+import { existsSync, mkdtempSync, readdirSync, readFileSync, rmSync, statSync, writeFileSync } from "node:fs";
 import { dirname, join, relative, resolve } from "node:path";
+import { tmpdir } from "node:os";
 import { fromCells, parseAnsi, toSvg } from "../scripts/screenshot.ts";
 import { CLI_COMMANDS, FLAGS } from "../src/cli/cli.ts";
 import { canonSeq } from "../src/core/commands.ts";
@@ -27,6 +28,8 @@ import {
 import { MOUSE_HELP } from "../src/tui/mouse-help.ts";
 import { placeholderRow } from "../src/tui/placeholders.ts";
 import { allShots } from "./terminal/shot.ts";
+import legacyAnchors from "./fixtures/documentation/legacy-anchors.json";
+import { readLegacyPages, readMap } from "../site/scripts/gather.ts";
 
 const TOP = join(import.meta.dir, "..");
 const DOCS = join(TOP, "docs");
@@ -41,6 +44,16 @@ function userDocs(): string[] {
 }
 
 const read = (file: string) => readFileSync(file, "utf8");
+/** Runnable examples have stable markers so prose and code can be edited independently. */
+function shellExample(file: string, name: string): string {
+  const text = read(file);
+  const marker = `<!-- example: ${name} -->`;
+  const at = text.indexOf(marker);
+  const code = at < 0 ? null : /^\s*```bash\n([\s\S]*?)\n```(?:\n|$)/.exec(text.slice(at + marker.length));
+  if (!code) throw new Error(`Missing bash example "${name}" in ${relative(TOP, file)}`);
+  return code[1]!;
+}
+
 /** The text outside fenced code, where an example may show anything. */
 const prose = (text: string) => text.replace(/^(```|~~~)[^\n]*\n[\s\S]*?^\1[ \t]*$/gm, "");
 
@@ -53,6 +66,7 @@ function slugsOf(file: string): string[] {
     slugs = githubSlugs(
       extractText({ rel: relative(TOP, file), abs: file, size: t.length, mtimeMs: 0 }, t, [], null).headings,
     );
+    slugs.push(...[...t.matchAll(/<a id="([^"]+)"><\/a>/g)].map((m) => m[1]!));
     slugCache.set(file, slugs);
   }
   return slugs;
@@ -241,9 +255,92 @@ function commandsLeftOut(chapter: string): string[] {
 describe("the user documentation (DOC)", () => {
   test("every document is there, and the map links each", () => {
     const map = read(join(DOCS, "README.md"));
+    const pages = [...readMap(map).flatMap((group) => group.pages), ...readLegacyPages(map)];
     const docs = userDocs();
     expect(docs.length).toBeGreaterThanOrEqual(22);
-    for (const file of docs.slice(1)) expect(map).toContain(`(${relative(DOCS, file)}`);
+    for (const file of docs.slice(1)) expect(pages).toContain(relative(DOCS, file));
+  });
+
+  test("earlier page and section addresses still land after the documentation reorganization", () => {
+    const missing = Object.entries(legacyAnchors).flatMap(([file, anchors]) => {
+      const current = slugsOf(join(DOCS, file));
+      return anchors.filter((anchor) => !current.includes(anchor)).map((anchor) => `${file}#${anchor}`);
+    });
+    expect(missing).toEqual([]);
+  });
+
+  test("the site home retains the documentation map's earlier section addresses", () => {
+    const file = join(TOP, "site/src/content/docs/index.mdx");
+    const text = read(file);
+    const headings = extractText(
+      { rel: "index.md", abs: file, size: text.length, mtimeMs: 0 },
+      text,
+      [],
+      null,
+    ).headings;
+    const anchors = [
+      ...githubSlugs(headings),
+      ...[...text.matchAll(/<a id="([^"]+)"><\/a>/g)].map((match) => match[1]!),
+    ];
+    expect(legacyAnchors["README.md"].filter((anchor) => !anchors.includes(anchor))).toEqual([]);
+  });
+
+  test("the tour and agent examples work in their own practice vault without replacing existing notes", () => {
+    const tour = shellExample(join(DOCS, "guides/getting-started.md"), "tour-setup");
+    const context = shellExample(join(DOCS, "guides/agents.md"), "agent-context");
+    const write = shellExample(join(DOCS, "guides/agents.md"), "agent-first-write");
+    const sandbox = mkdtempSync(join(tmpdir(), "slipbox-docs-tour-"));
+    const vault = join(sandbox, "tour");
+    const config = join(sandbox, "config.toml");
+    writeFileSync(config, "[index]\nbackground = false\n");
+    const runExample = (script: string) =>
+      Bun.spawnSync(
+        [
+          "sh",
+          "-ec",
+          'slipbox() { bun "$SLIPBOX_DOCS_MAIN" "$@"; }\n' +
+            script.replaceAll("~/slipbox-tour", '"$SLIPBOX_DOCS_TOUR"'),
+        ],
+        {
+          cwd: sandbox,
+          stdin: "ignore",
+          timeout: 25_000,
+          env: {
+            ...process.env,
+            SLIPBOX_DOCS_MAIN: join(TOP, "src/main.ts"),
+            SLIPBOX_DOCS_TOUR: vault,
+            SLIPBOX_CONFIG: config,
+            XDG_CONFIG_HOME: join(sandbox, "config"),
+            XDG_CACHE_HOME: join(sandbox, "cache"),
+            XDG_STATE_HOME: join(sandbox, "state"),
+            XDG_DATA_HOME: join(sandbox, "data"),
+          },
+        },
+      );
+    try {
+      const run = runExample([tour, context].join("\n"));
+      expect({ code: run.exitCode, stderr: run.stderr.toString() }).toEqual({ code: 0, stderr: "" });
+      expect(existsSync(join(vault, ".slipbox"))).toBe(true);
+      expect(run.stdout.toString()).toContain(vault);
+      // The screenshots start from this sample vault; keep its notes and marker identical to the guide's setup.
+      for (const file of ["inbox.md", "ideas/coffee.md", ".slipbox/config.toml", ".slipbox/version"])
+        expect(read(join(vault, file))).toBe(read(join(TOP, "examples/guide/slipbox-tour", file)));
+      const edited = runExample('cd "$SLIPBOX_DOCS_TOUR"\n' + write);
+      expect({ code: edited.exitCode, stderr: edited.stderr.toString() }).toEqual({ code: 0, stderr: "" });
+      expect(read(join(vault, "inbox.md"))).toContain("- [ ] Call the plumber");
+      expect(read(join(vault, "ideas/coffee.md"))).toContain("A ratio of 1 to 16");
+      const before = read(join(vault, "inbox.md"));
+      expect(runExample(tour).exitCode).not.toBe(0);
+      expect(read(join(vault, "inbox.md"))).toBe(before);
+    } finally {
+      rmSync(sandbox, { recursive: true, force: true });
+    }
+  }, 30_000);
+
+  test("the sibling repository example reaches the repository beside the current checkout", () => {
+    const guide = read(join(DOCS, "guides/vaults.md"));
+    const target = /A link in kestrel's docs to `([^`]+)`/.exec(guide)![1]!;
+    expect(resolve("/work/kestrel/docs", target)).toBe("/work/product/prd/route-sharing.md");
   });
 
   test("every relative link and anchor lands", () => {
@@ -493,19 +590,29 @@ describe("the docs' screenshots (scripts/screenshot.ts)", () => {
     expect(svg.match(/<rect [^>]*fill="none"/g)).toHaveLength(3);
     expect(svg).toContain("<circle");
   });
-  test("every screenshot in the docs is a shot's, which `bun run shots` takes, and every shot's picture is shown", async () => {
+  test("every retained screenshot recipe has an image or descriptive placeholder in the docs", async () => {
     const shots = (await allShots()).map((s) => s.name).sort();
     const images = readdirSync(join(DOCS, "images"))
       .filter((f) => f.endsWith(".png"))
       .map((f) => f.slice(0, -".png".length))
       .sort();
     expect(images).toEqual(shots);
+    // The site's home is its own page (site/), its picture beside the docs'.
     const shown = new Set(
-      [...userDocs(), join(TOP, "README.md")].flatMap((f) =>
-        [...read(f).matchAll(/images\/([\w-]+)\.png/g)].map((m) => m[1]!),
+      [...userDocs(), join(TOP, "README.md"), join(TOP, "site/src/content/docs/index.mdx")].flatMap((f) =>
+        [...read(f).matchAll(/(?:images\/([\w-]+)\.png|<!-- screenshot: ([\w-]+) -->)/g)].map((m) => m[1] ?? m[2]!),
       ),
     );
     expect(shots.filter((n) => !shown.has(n))).toEqual([]);
+  });
+  test("screenshot placeholders describe the intended capture rather than linking missing images", () => {
+    const files = [...userDocs(), join(TOP, "README.md")];
+    const missing = files.flatMap((file) =>
+      [...read(file).matchAll(/<!-- screenshot: ([\w-]+) -->\n([^\n]*)/g)]
+        .filter((match) => !/^\s*> \*\*Screenshot placeholder:\*\* .{20,}/.test(match[2]!))
+        .map((match) => `${relative(TOP, file)}: ${match[1]}`),
+    );
+    expect(missing).toEqual([]);
   });
   test("placeholder cells with no picture named are left blank, never drawn as boxes", () => {
     const svg = toSvg(parseAnsi(cells([0, 1], 4)), { cols: 20, rows: 3, fontSize: 10 });

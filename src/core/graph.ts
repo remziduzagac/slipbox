@@ -265,6 +265,11 @@ export class Graph {
   private useCache = false;
   private cacheDirty = false;
 
+  /** Whether it reads and refreshes the persisted index (`build`'s `useCache`): a graph made again from it does too. */
+  get usesCache(): boolean {
+    return this.useCache;
+  }
+
   private get cachePath(): string {
     return join(cacheDir(this.loc), "index.json");
   }

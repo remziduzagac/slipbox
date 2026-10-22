@@ -3,7 +3,7 @@
 // These run git — unlike `git.ts`, which only reads `.git` — since status and history aren't in
 // files slipbox could read cheaply. A git that isn't there, or fails, is "nothing known".
 
-import { execFile, execFileSync, spawnSync } from "node:child_process";
+import { execFileSync, spawn, spawnSync } from "node:child_process";
 import { accessSync, constants, statSync } from "node:fs";
 import { delimiter, join, posix, relative, sep } from "node:path";
 import { climbsOut } from "./fsutil.ts";
@@ -45,11 +45,11 @@ function takesAttrSource(): boolean {
  * tree instead; git 2.42 and later), no textconv or external diff, no index written by a read. In one
  * you trust, git as the repository has it — its LFS filters too.
  */
-export function gitArgs(root: string, args: string[]): string[] {
+export function gitArgs(root: string, args: string[], attributes?: boolean): string[] {
   if (isTrusted(root)) return ["-C", root, ...args];
   const [cmd, ...rest] = args;
   const diffs = cmd === "diff" || cmd === "show" ? ["--no-textconv", "--no-ext-diff"] : [];
-  const attrs = takesAttrSource() ? [`--attr-source=${EMPTY_TREE}`] : [];
+  const attrs = (attributes ?? takesAttrSource()) ? [`--attr-source=${EMPTY_TREE}`] : [];
   return [
     "-c",
     "core.fsmonitor=false",
@@ -72,8 +72,8 @@ export function gitArgs(root: string, args: string[]): string[] {
  * `a*.md` and `:a.md` name themselves, never a pattern or git's pathspec magic. Only for those commands: git passes the
  * setting on to the hooks it runs, which may expect their own patterns.
  */
-export function literalArgs(root: string, args: string[]): string[] {
-  return ["--literal-pathspecs", ...gitArgs(root, args)];
+export function literalArgs(root: string, args: string[], attributes?: boolean): string[] {
+  return ["--literal-pathspecs", ...gitArgs(root, args, attributes)];
 }
 
 /** The environment for those: git refuses literal paths beside a setting of the user's for patterns. */
@@ -101,7 +101,7 @@ function run(c: Pick<Checkout, "root">, args: string[]): string | null {
 
 /** The same, not waiting on git. */
 function runLater(root: string, args: string[]): Promise<string | null> {
-  return new Promise((done) => execFile("git", gitArgs(root, args), OPTS, (err, out) => done(err ? null : out)));
+  return gitReadLater({ root }, args);
 }
 
 /** git's porcelain status (v1, `-z`): each path (from the checkout's top folder) and its state. */
@@ -231,16 +231,80 @@ export function showAt(c: Pick<Checkout, "root">, ref: string, path: string): st
   return run(c, ["show", "--end-of-options", `${ref}:${path.split(sep).join(posix.sep)}`]);
 }
 
-/** The same, not waiting on git (the TUI's gutter, 26.1). */
-export function showLater(c: Pick<Checkout, "root">, ref: string, path: string): Promise<string | null> {
-  return new Promise((done) => {
-    execFile(
-      "git",
-      gitArgs(c.root, ["show", "--end-of-options", `${ref}:${path.split(sep).join(posix.sep)}`]),
-      OPTS,
-      (err, out) => done(err ? null : out),
-    );
+/** A finite read process; its deadline also covers descendants retaining stdout. */
+function readProcess(args: string[], env: NodeJS.ProcessEnv, signal?: AbortSignal): Promise<string | null> {
+  if (signal?.aborted) return Promise.resolve(null);
+  return new Promise((resolve) => {
+    let child: ReturnType<typeof spawn>;
+    let done = false;
+    let timer: ReturnType<typeof setTimeout>;
+    const chunks: Buffer[] = [];
+    let size = 0;
+    const finish = (value: string | null) => {
+      if (done) return;
+      done = true;
+      clearTimeout(timer);
+      signal?.removeEventListener("abort", cancel);
+      try {
+        if (process.platform !== "win32" && child.pid) process.kill(-child.pid, "SIGKILL");
+        else child.kill("SIGKILL");
+      } catch {}
+      child.stdout?.destroy();
+      child.stderr?.destroy();
+      resolve(value);
+    };
+    const cancel = () => finish(null);
+    try {
+      child = spawn("git", args, { env, stdio: ["ignore", "pipe", "ignore"], detached: process.platform !== "win32" });
+    } catch {
+      resolve(null);
+      return;
+    }
+    timer = setTimeout(cancel, 15000);
+    signal?.addEventListener("abort", cancel, { once: true });
+    child.stdout!.on("data", (chunk: Buffer) => {
+      size += chunk.length;
+      if (size > 64 * 1024 * 1024) return cancel();
+      chunks.push(chunk);
+    });
+    child.stdout!.on("error", cancel);
+    child.once("error", cancel);
+    child.once("close", (code) => {
+      if (!done) finish(code === 0 ? Buffer.concat(chunks).toString() : null);
+    });
   });
+}
+/** Guard discovery and git itself both run asynchronously, including the first request. */
+export async function gitReadLater(
+  c: Pick<Checkout, "root">,
+  args: string[],
+  literal = false,
+  signal?: AbortSignal,
+): Promise<string | null> {
+  if (signal?.aborted) return null;
+  let attributes: boolean | undefined;
+  if (attrSource === null) {
+    const version = await readProcess(["--version"], process.env, signal);
+    if (signal?.aborted) return null;
+    const match = /git version (\d+)\.(\d+)/.exec(version ?? "");
+    if (match) attrSource = Number(match[1]) > 2 || (Number(match[1]) === 2 && Number(match[2]) >= 42);
+    attributes = attrSource ?? true;
+  }
+  return readProcess(
+    literal ? literalArgs(c.root, args, attributes) : gitArgs(c.root, args, attributes),
+    literal ? literalEnv() : process.env,
+    signal,
+  );
+}
+
+/** A file read without waiting on git (the TUI's gutter and history). */
+export function showLater(
+  c: Pick<Checkout, "root">,
+  ref: string,
+  path: string,
+  signal?: AbortSignal,
+): Promise<string | null> {
+  return gitReadLater(c, ["show", "--end-of-options", `${ref}:${path.split(sep).join(posix.sep)}`], false, signal);
 }
 
 export interface WorktreeEntry {
@@ -374,4 +438,42 @@ export function inVault(c: Pick<Checkout, "root">, vaultRoot: string, path: stri
 /** A vault path as the checkout's (from its top folder). */
 export function inCheckout(c: Pick<Checkout, "root">, vaultRoot: string, rel: string): string {
   return relative(c.root, join(vaultRoot, rel)).split(sep).join("/");
+}
+
+/** Asynchronous fallback base and branch changes, with the same literal and trust guards. */
+export async function baseBranchLater(
+  c: Pick<Checkout, "root">,
+  configured = "",
+  signal?: AbortSignal,
+): Promise<string | null> {
+  for (const ref of configured ? [configured] : ["main", "master"])
+    if (
+      refName(ref) &&
+      (await gitReadLater(
+        c,
+        ["rev-parse", "--verify", "--quiet", "--end-of-options", `${ref}^{commit}`],
+        false,
+        signal,
+      )) !== null
+    )
+      return ref;
+  return null;
+}
+export async function changedSinceLater(
+  c: Pick<Checkout, "root">,
+  base: string,
+  signal?: AbortSignal,
+): Promise<{ mergeBase: string; files: Changed[] } | null> {
+  const mergeBase = (await gitReadLater(c, ["merge-base", "--end-of-options", base, "HEAD"], false, signal))?.trim();
+  if (!mergeBase) return null;
+  const [diff, status] = await Promise.all([
+    gitReadLater(c, ["diff", "--name-status", "-z", "-M", "--end-of-options", mergeBase], false, signal),
+    gitReadLater(c, STATUS_ARGS, false, signal),
+  ]);
+  if (diff === null || status === null) return null;
+  const states = parseStatus(status);
+  const files = new Map(parseNameStatus(diff).map((file) => [file.path, file]));
+  for (const [path, state] of states)
+    if ((state === "new" && !files.has(path)) || state === "conflict") files.set(path, { path, state });
+  return { mergeBase, files: [...files.values()].sort((a, b) => a.path.localeCompare(b.path)) };
 }

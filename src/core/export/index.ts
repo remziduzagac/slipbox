@@ -7,7 +7,8 @@ import { basename, dirname, extname, join, relative, resolve, sep } from "node:p
 import { atomicWrite, climbsOut, landsInside, realTarget } from "../fsutil.ts";
 import type { Graph } from "../graph.ts";
 import { findVaultRoot } from "../vault.ts";
-import { assemble, type ExportDoc } from "./assemble.ts";
+import type { ExportDoc } from "./assemble.ts";
+import { backgroundExport, type ExportJobOptions } from "./jobs.ts";
 import { isExport, isMarkdownExport } from "./mark.ts";
 
 export { EXPORT_MARK, isExport, isMarkdownExport } from "./mark.ts";
@@ -169,8 +170,9 @@ export async function exportNotes(
   rels: string[],
   format: ExportFormat,
   target: string,
+  options?: ExportJobOptions,
 ): Promise<ExportOutput> {
-  return format.write(await assemble(graph, rels), target);
+  return backgroundExport(graph, rels, format.name, target, options);
 }
 
 /** An export written: each file beside the document, then the document (atomically, folders made); their paths. */

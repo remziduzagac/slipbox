@@ -1,6 +1,6 @@
 name: preview
 
-# GR-D13: `test` fast-forwarded from `main` (`git push origin main:test`) publishes a preview. Its version is
+# GR-D13, D251: `test` fast-forwarded from `dev` (`git push origin dev:test`) publishes a preview. Its version is
 # package.json's with the commit's UTC time and hash after it, <x.y.z>-preview.<YYYYMMDDHHMM>.g<hash>, stamped into
 # the build's checkouts and never committed; refused when v<x.y.z> is released already (bump the version first). It
 # is built by build.yml exactly as a release is, then published as the pre-release preview-<time>-<hash>: drafted, its
@@ -79,7 +79,7 @@ jobs:
           install_args: bun
           cache: false
           minimum_release_age: 7d
-      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
           name: release
           path: dist/release

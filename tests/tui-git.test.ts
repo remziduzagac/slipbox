@@ -3,8 +3,17 @@
 // review, the merge screen, pull and rebase.
 
 import { describe, expect, test } from "bun:test";
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, renameSync, rmSync, writeFileSync } from "node:fs";
-import { basename, dirname, join, relative } from "node:path";
+import {
+  chmodSync,
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  renameSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
+import { basename, delimiter, dirname, join, relative } from "node:path";
 import { type ListOverlay, App } from "../src/tui/app.ts";
 import type { Line } from "../src/core/layout/ir.ts";
 import { makeSandbox, makeVault, harness, onlyRootsUnder, statusRow, topRow, type Harness } from "./tui-harness.ts";
@@ -732,6 +741,44 @@ describe("git in the TUI: marks, what changed, a note's diff, worktrees, conflic
     expect(statusRow(h.frame())).toMatch(/ L4:\d+ /); // on that line, inside its paragraph
   });
 
+  test(":changes without its base: a [git] base that isn't there named; on a detached HEAD, the fallback base", async () => {
+    const root = repo();
+    if (!root) return;
+    const h = await harness({ root, open: "c.md", config: (c) => Object.assign(c.git, { base: "nope", bases: [] }) });
+    await h.app.run("git.changes");
+    expect(h.app.overlay).toBeNull();
+    expect(h.app.messages.at(-1)!.text).toBe('no branch or commit "nope" ([git] base)');
+    // HEAD detached (a rebase, a checkout of a commit): against [git] base or main, never a guess among [git] bases —
+    // here dev, at HEAD itself, which would leave nothing changed.
+    git(root, "add", "-A");
+    git(root, "commit", "-q", "-m", "feat");
+    git(root, "branch", "dev");
+    git(root, "checkout", "-q", "--detach");
+    const d = await harness({ root, open: "c.md", config: (c) => (c.git.bases = ["dev", "main"]) });
+    await d.app.run("git.changes");
+    expect((d.app.overlay as ListOverlay).title).toBe("Changed against main (3) — enter: the diff");
+  });
+
+  test("a key after enter in :changes waits for the diff git is read for: with git slow, enter's diff is open", async () => {
+    const root = repo();
+    if (!root) return;
+    const h = await harness({ root, open: "c.md", config: (c) => (c.git.diff = "source") });
+    await h.app.run("git.changes");
+    // git answering slowly: the key's turn ends once the diff window is open, as the keys after it expect.
+    const dir = mkdtempSync(join(sandbox, "slow-git-"));
+    writeFileSync(join(dir, "git"), `#!/bin/sh\nsleep 0.2\nexec ${JSON.stringify(Bun.which("git")!)} "$@"\n`);
+    chmodSync(join(dir, "git"), 0o755);
+    const path = process.env.PATH;
+    process.env.PATH = `${dir}${delimiter}${path}`;
+    try {
+      await h.keys("enter");
+      expect(h.app.floating?.kind).toBe("diff");
+      expect(h.app.floating?.title).toBe("a.md against main — esc: the changes");
+    } finally {
+      process.env.PATH = path;
+    }
+  });
+
   test(":merge-review: a branch picked, the links its merge would break; enter goes to one; esc back to the branches (20.21)", async () => {
     const root = repo();
     if (!root) return;
@@ -1045,7 +1092,7 @@ describe("the diff window (GIT-D2)", () => {
     const root = makeVault();
     const h = await harness({ root, open: "index.md" });
     let back = 0;
-    h.app.git.showLineDiff(code, code, "x.ts", "x.ts: none", "no differences from main", () => back++);
+    h.app.git.showLineDiff(code, code, "x.ts", "x.ts: none", "no differences from main", () => void back++);
     expect([h.app.floating, h.app.messages.at(-1)?.text, back]).toEqual([null, "no differences from main", 1]);
   });
 
@@ -1289,6 +1336,44 @@ describe("git's review, merge screen, pull and rebase (GIT-D3, GIT-D5, GIT-D6)",
     git(root, "merge", "-q", "theirs");
     return root;
   };
+
+  test("opened with --base: the branch here kept against it, said on opening; a ref that names nothing, exit 3 before the screen (D255)", async () => {
+    await isolated(async () => {
+      const { prepare } = await import("../src/tui/run.ts");
+      const { keptBases } = await import("../src/core/gitbase.ts");
+      const { checkoutOf } = await import("../src/core/git.ts");
+      const { root } = repo({ "a.md": "# A\n" }, true);
+      git(root, "fetch", "-q", "origin");
+      git(root, "switch", "-q", "-c", "fix-retry");
+      const said: string[] = [];
+      const write = process.stderr.write;
+      process.stderr.write = ((s: string) => (said.push(s), true)) as typeof process.stderr.write;
+      let bad: ReturnType<typeof prepare>;
+      try {
+        bad = prepare([root, "--base", "origin/no-such"]);
+      } finally {
+        process.stderr.write = write;
+      }
+      expect(bad).toBe(3);
+      expect(said).toEqual(['slipbox: --base: no branch or commit "origin/no-such" in the repository\n']);
+      expect(keptBases(checkoutOf(root)!)).toEqual({});
+      const start = prepare([root, "--base", "origin/main"]);
+      if (typeof start === "number") throw new Error(`exit ${start}`);
+      expect(start.notes).toEqual(["fix-retry is compared against origin/main now"]);
+      expect(keptBases(checkoutOf(root)!)).toEqual({ "fix-retry": "origin/main" });
+      const app = new App({ ...start, watch: false, host: { requestRender() {}, osc52: () => true, quit: () => {} } });
+      expect(app.messages.map((m) => [m.level, m.text])).toContainEqual([
+        "info",
+        "fix-retry is compared against origin/main now",
+      ]);
+      // Outside a repository: ignored, said, and the screen opens.
+      const loose = mkdtempSync(join(sandbox, "loose-base-"));
+      writeFileSync(join(loose, "a.md"), "# A\n");
+      const plain = prepare([loose, "--base", "dev"]);
+      if (typeof plain === "number") throw new Error(`exit ${plain}`);
+      expect(plain.warnings).toContain("--base dev: not in a git repository, so it's ignored");
+    });
+  });
 
   describe("reviewing a change (GIT-D3)", () => {
     test("a review: three files' changes, one kept (staged), one reverted (saved, one undo), one noted (the scratch)", async () => {
@@ -1691,7 +1776,7 @@ describe("git's review, merge screen, pull and rebase (GIT-D3, GIT-D5, GIT-D6)",
           .rows()
           .findIndex((r) => r.kind === "file" && r.section === "conflicted" && r.entry.path === "sync.md");
         await h.keys("x");
-        expect(h.app.floating?.kind).toBe("merge");
+        expect(await until(() => h.app.floating?.kind === "merge")).toBe(true);
         expect(h.app.floating!.title).toBe("Merge — sync.md");
         await h.keys("o", "escape");
         expect(await said(h, "sync.md: 1 of 2 settled, not saved — x opens the merge screen as you left it")).toBe(
@@ -1701,7 +1786,7 @@ describe("git's review, merge screen, pull and rebase (GIT-D3, GIT-D5, GIT-D6)",
         h.app.region = "problems";
         h.app.problems.panel.all.selected = h.app.problems.rows().findIndex((r) => r.conflict?.path === "sync.md");
         await h.keys("x");
-        expect(h.app.floating?.kind).toBe("merge");
+        expect(await until(() => h.app.floating?.kind === "merge")).toBe(true);
         expect(floatText(h)).toContain("Conflict 2 of 2");
         expect(floatText(h)).toContain("conflict 1, line 3: yours");
         // The note changed meanwhile: not written over.

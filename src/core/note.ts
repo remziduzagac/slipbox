@@ -199,7 +199,7 @@ function blockOf(tree: Root, id: string): RootContent[] | null {
  * all of it (no frontmatter), a heading's section or a block — its own links and embeds resolved
  * from where it is. Null for a picture or any file that isn't a note: those stay references.
  */
-export function embedder(g: Graph, fromRel: string): RenderOptions["embed"] {
+export function embedder(g: Graph, fromRel: string, read = parsedAt): RenderOptions["embed"] {
   return (target, heading, block, kind = "embed") => {
     if (!target) return null;
     // A path's (`![…](note.md)`, 20.1) from the note's folder; a wikilink's by its name.
@@ -207,7 +207,7 @@ export function embedder(g: Graph, fromRel: string): RenderOptions["embed"] {
     if (r.resolvedKind !== "note" || !r.path) return null;
     const abs = isAbsolute(r.path) ? r.path : g.abs(r.path);
     if (!/\.(md|markdown)$/i.test(abs)) return null;
-    const parsed = parsedAt(abs);
+    const parsed = read(abs);
     if (!parsed) return null;
     const name = basename(abs).replace(/\.(md|markdown)$/i, "");
     // Another vault's: its own graph, from its own root.

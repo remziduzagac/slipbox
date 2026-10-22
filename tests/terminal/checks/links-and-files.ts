@@ -2586,6 +2586,37 @@ const NOTES: Check[] = [
   },
   {
     area: "links-and-files",
+    name: "notes: an export cancelled — a long note as a PDF, stopped from the palette before it's written",
+    covers: { commands: ["note.export_cancel"] },
+    options: {
+      open: "long.md",
+      // Long enough that its PDF takes seconds: the cancel comes first.
+      setup: (s) =>
+        s.write(
+          "long.md",
+          `# Long\n\n${Array.from({ length: 24_000 }, (_, i) => `Paragraph ${i} of a long note, a while as a PDF.\n`).join("\n")}`,
+        ),
+    },
+    run: async (s) => {
+      await s.keys(":");
+      await s.type("Cancel export");
+      await s.keys("enter");
+      await s.message("no export is running");
+      await leader(s, "n", "o");
+      await s.see("Export long.md as");
+      await s.type("pdf");
+      await s.keys("enter");
+      await s.see("Name: long.pdf");
+      await s.keys("enter");
+      await s.keys(":");
+      await s.type("Cancel export");
+      await s.keys("enter");
+      await s.message("export cancelled");
+      s.expect(!s.exists("long.pdf"), "the PDF not written");
+    },
+  },
+  {
+    area: "links-and-files",
     name: "info: the folder's own window; a note's properties edited in theirs, written back",
     covers: { cases: ["links/state"], commands: ["vault.info", "note.properties"] },
     options: { open: "people/kenji-mori.md" },

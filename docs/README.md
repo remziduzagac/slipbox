@@ -1,61 +1,73 @@
 # slipbox documentation
 
-**The terminal companion for coding agents.** Read, review and edit what your agent writes, with Markdown and code
-rendered cleanly. You use its full-screen view; your agent, or a script, uses its command line. Both work on the same
-plain files, so neither ever sees a stale copy.
+Read, review and edit notes and code in your terminal. Start on your own files, then add Git review, exports or a
+coding-agent workflow when useful. The full-screen terminal interface (TUI) can hold unsaved edits; the command-line
+interface (CLI) reads the files you have saved.
 
-These pages are also a website, with search: <https://remziduzagac.github.io/slipbox/docs/>.
+The [documentation website](https://remziduzagac.github.io/slipbox/docs/) has the same pages with search.
 
 ## Start here
 
-- [Installing slipbox](guides/install.md): what you need, how to install it, and how to upgrade or remove it.
-- [Quick start](guides/quick-start.md): open a folder, find your way, edit a note. Two minutes.
-- [Keys you already know](guides/keys-you-know.md): the arrows and other editors' shortcuts. Nothing to learn first.
-- [Concepts](manual/concepts.md): the words slipbox uses, each in a few lines.
-- [Getting started](guides/getting-started.md): a ten-minute first session in a folder of your own notes.
+- [What is slipbox?](manual/introduction.md): what it offers and how it fits beside your existing files and tools.
+- [Installation](guides/install.md): install, verify, upgrade or remove slipbox on a supported platform.
+- [Quick start](guides/quick-start.md): open a note, find a word, edit, save and quit.
 
 ## Guides
 
-Each one walks through a job from start to end.
+Follow a practical workflow from its prerequisites to a checked result. Begin with the first two.
 
-- [Working with agents](guides/agents.md): slipbox beside a coding agent, on the same files.
-- [The lens](guides/lens.md): editing a note in place, the Markdown where you are and the rest rendered.
-- [Code and git](guides/code-and-git.md): a repository's code, its problems, and reviewing an agent's change.
-- [Vaults, home and Elsewhere](guides/vaults.md): the folders slipbox works in, how it finds them, and how you move
-  between them.
-- [Coming from Obsidian or zk](guides/from-obsidian-or-zk.md): opening a vault or a notebook as it is.
-- [Exporting notes](guides/exporting.md): a note, or several, as Word, PDF, a web page, an e-book or Markdown.
-- [Making it yours](guides/making-it-yours.md): themes, keys and settings.
+- [Working with slipbox](guides/getting-started.md): a first session with two linked notes and a saved change.
+- [Reading and editing in slipbox](guides/lens.md): rendered reading, the lens, source mode, typing and saving.
+- [Working across folders and vaults](guides/vaults.md): look elsewhere, enter another vault and return.
+- [Coming from Obsidian or zk](guides/from-obsidian-or-zk.md): check your existing notes and link conventions.
+- [Reviewing changes with Git](guides/code-and-git.md): inspect changes, review a branch and check the result.
+- [Exporting and sharing notes](guides/exporting.md): make and inspect an export before sending it.
+- [Working with agents](guides/agents.md): collaborate on saved files, use guarded writes and hand over context.
+- [Making slipbox yours](guides/making-it-yours.md): try settings, themes and keys, then keep your choices.
 
-## The manual
+<a id="the-manual"></a>
 
-Everything slipbox does, a chapter for each part.
+## Using slipbox
 
-- [How slipbox works](manual/how-it-works.md): the ideas the rest rests on, and what slipbox promises.
-- [The screen](manual/screen.md): tabs, windows, the side panels, the status line, the mouse.
-- [Reading](manual/reading.md): how notes and other files are drawn, pictures and diagrams among them.
-- [Links and vaults](manual/links-and-vaults.md): the links slipbox reads and writes, and the folders they reach.
-- [Finding things](manual/finding.md): the switcher, search, find and replace, the outline, history.
-- [Editing](manual/editing.md): the lens and source mode, the keys, saving, completion, spelling.
-- [Files](manual/files.md): the explorer, and making, moving, renaming and removing files with their links kept.
-- [Git](manual/git.md): changes, source control, commits, blame, branches, fetch, pull, push and stash, reviewing a
-  change, the merge screen, rebasing, reviewing a merge.
-- [Code](manual/code.md): the code view, language servers, problems, and trusting a folder.
-- [Exporting](manual/export.md): every format, and what each keeps.
+Understand a part of the product: how it works, ordinary operations and important limits.
+
+- [How slipbox works](manual/how-it-works.md): files, buffers, vaults, caches and the saved-file boundary.
+- [The screen and navigation](manual/screen.md): focus, modes, panels, tabs, windows, mouse and history.
+- [Reading notes and documents](manual/reading.md): rendered text, selection, tables, images, math and diagrams.
+- [Editing: the lens and source mode](manual/editing.md): editing behavior, saving, undo and external changes.
+- [Finding and replacing](manual/finding.md): switcher, search, find/replace, tags, document types and outline.
+- [Files and folders](manual/files.md): explorer, create, copy, rename, move, trash and link updates.
+- [Links and backlinks](manual/links-and-vaults.md): forms, resolution, backlinks, repairs and conventions.
+- [Vaults, home and Elsewhere](manual/vaults.md): boundaries, sessions, names, worktrees and symlink consent.
+- [Scratch and context](manual/scratch-and-context.md): gather references, excerpts and related files to share.
+- [Code and language tools](manual/code.md): code cells, servers, linters, completion and diagnostics.
+- [Git](manual/git.md): changes, staging, commits, branches, review, merge and rebase.
+- [Exporting](manual/export.md): formats, combined documents, attachments, destinations and limits.
+- [Customization](manual/customization.md): configuration scope, overrides, live changes and themes.
+- [The command line](manual/command-line.md): using commands, saved files, output and safe writes.
 
 ## Reference
 
-- [Keys](manual/keys.md): every key.
-- [Configuration](manual/configuration.md): every setting and environment variable.
-- [The command line](manual/cli.md): every command, its output and exit codes.
-- [Troubleshooting](manual/troubleshooting.md): `slipbox doctor`, and the usual problems with their fixes.
+Look up exact keys, syntax, defaults, variables and terms.
 
-## About slipbox
+- [Keyboard and mouse shortcuts](manual/keys.md): the complete binding reference.
+- [Commands and flags](manual/cli.md): every command, argument, flag, output and exit code.
+- [Configuration settings](manual/configuration.md): setting names, defaults and accepted values.
+- [Environment and storage locations](manual/environment-and-storage.md): variables and on-disk paths.
+- [Glossary](manual/concepts.md): short definitions with links to their explanations.
 
-- [Privacy](manual/privacy.md): what slipbox sends, what it runs, what it keeps.
-- [Versions](manual/versions.md): what a version number promises, what previews are, and where to read what changed.
+<a id="about-slipbox"></a>
+
+## Help and project information
+
+- [Troubleshooting and diagnostics](manual/troubleshooting.md): diagnose symptoms and report a reproducible problem.
+- [Accessibility and terminal support](manual/accessibility.md): input/output choices and known limitations.
+- [Privacy and trust](manual/privacy.md): network requests, tool execution, trust and local data.
+- [Versions, updates and compatibility](manual/versions.md): channels, compatibility promises and updates.
 
 ## For agents
 
-- [Agent guide](agent-guide.md): for an agent helping a person set up and learn slipbox. To use slipbox itself, an
-  agent reads its skill: `slipbox skill`.
+- [Helping someone use slipbox](agent-guide.md): an agent's route through setup and learning. To operate the CLI,
+  read the installed version's bundled skill with `slipbox skill`.
+
+<!-- legacy-page: guides/keys-you-know.md -->

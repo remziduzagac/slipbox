@@ -1,8 +1,8 @@
 // A language server for the client's tests (plan 19.1): a warning on each line holding BAD — sent, or
 // asked for with FAKE_PULL=1 (late for a text with SLOW) — that says the settings it was given; it exits
 // on CRASH; on REFRESH it asks the client to ask again, as pyright does; on LOADING it has nothing to say until its
-// work is done a moment later, said by `$/progress` and no refresh, as rust-analyzer does; hover says the line; SHOW,
-// REGISTER and SAVED below.
+// work is done a moment later, said by `$/progress` and no refresh, as rust-analyzer does; on ONSAVE, saved, it finds
+// one more; hover says the line; SHOW, REGISTER and SAVED below.
 //
 // What a test waits for happens when it says so, never after a while: on WORKING the work is done, and on HELD an
 // answer asked for is given, only when the client asks `fake/release` — answered once they are. And it says nothing
@@ -69,10 +69,14 @@ const problems = (doc: TextDocument | undefined) => [
     line.includes("BAD") ? [{ range: { start: { line: i, character: line.indexOf("BAD") }, end: { line: i, character: line.indexOf("BAD") + 3 } }, severity: DiagnosticSeverity.Warning, source: "fake", message: `bad, with ${JSON.stringify(settings)}` }] : [],
   ),
   ...(doc && refreshed.has(doc.uri) ? [{ range: { start: { line: 0, character: 0 }, end: { line: 0, character: 1 } }, severity: DiagnosticSeverity.Hint, source: "fake", message: "after a refresh" }] : []),
+  ...(doc && saved.has(doc.uri) ? [{ range: { start: { line: 0, character: 0 }, end: { line: 0, character: 1 } }, severity: DiagnosticSeverity.Hint, source: "fake", message: "after a save" }] : []),
 ];
+/** Files holding ONSAVE that were saved: they get one more problem, as a server that checks on save has. */
+const saved = new Set<string>();
 
 docs.onDidChangeContent((e) => {
   refreshed.delete(e.document.uri); // the refresh's problem is the text's it came with
+  saved.delete(e.document.uri);
   // LOADING: work begun at once and done 1.2 s later — longer than a pause in what it says — said by
   // `$/progress` alone, no refresh asked.
   // WORKING: the same, its work done when the client says so (`fake/release`).
@@ -114,7 +118,10 @@ docs.onDidChangeContent((e) => {
   const now = TextDocument.create(e.document.uri, e.document.languageId, e.document.version, text);
   if (!pull) void settingsReady.then(() => conn.sendDiagnostics({ uri: now.uri, version: now.version, diagnostics: problems(now) }));
 });
+let pullCount = 0;
+conn.onRequest("fake/pullCount", () => pullCount);
 conn.languages.diagnostics.on((p) => {
+  pullCount++;
   const answer = (async () => {
     await settingsReady;
     const doc = docs.get(p.textDocument.uri);
@@ -127,7 +134,17 @@ conn.languages.diagnostics.on((p) => {
   answers.push(answer);
   return answer;
 });
-conn.onHover((p) => ({ contents: { kind: "markdown", value: `line ${p.position.line}: ${docs.get(p.textDocument.uri)?.getText().split("\n")[p.position.line] ?? ""}` } }));
+// Hover: the line. On a line holding LATEHOVER, answered 800 ms late; on one holding DROP, answered at once unless
+// cancelled first — a cancelled one is never answered, as some servers do.
+conn.onHover(async (p, token) => {
+  const line = docs.get(p.textDocument.uri)?.getText().split("\n")[p.position.line] ?? "";
+  if (line.includes("LATEHOVER")) await new Promise((r) => setTimeout(r, 800));
+  if (line.includes("DROP")) {
+    await new Promise((r) => setTimeout(r, 20));
+    if (token.isCancellationRequested) await new Promise(() => {});
+  }
+  return { contents: { kind: "markdown" as const, value: `line ${p.position.line}: ${line}` } };
+});
 // The definition: the first line holding DEF; the references: each line holding REF.
 const linesWith = (uri: string, word: string) =>
   (docs.get(uri)?.getText().split("\n") ?? []).flatMap((l, i) => (l.includes(word) ? [{ uri, range: { start: { line: i, character: l.indexOf(word) }, end: { line: i, character: l.indexOf(word) + word.length } } }] : []));
@@ -254,7 +271,41 @@ docs.listen(conn);
 // file it doesn't have open, too (no client should save one).
 conn.onDidSaveTextDocument((p) => {
   const doc = docs.get(p.textDocument.uri);
+  if (doc?.getText().includes("ONSAVE")) saved.add(doc.uri);
   if (doc && !doc.getText().includes("SAVED")) return;
   conn.console.log(`saved ${p.textDocument.uri}${p.text === undefined ? ", no text" : ` with ${JSON.stringify(p.text)}`}`);
 });
 conn.listen();
+
+// A controlled request whose response is deliberately withheld until its cancellation is observed; how many were.
+let cancellations = 0;
+conn.onRequest("fake/awaitCancellation", (_params, token) => new Promise((resolve) => {
+  const seen = () => (cancellations++, resolve({ cancelled: true }));
+  // Cancelled before it was handled: its token is cancelled already, and tells no one.
+  if (token.isCancellationRequested) seen();
+  else token.onCancellationRequested(seen);
+}));
+conn.onRequest("fake/cancellations", () => cancellations);
+
+// It stops reading what the client sends (busy, as a server at a long piece of work is), then after `ms`: reads again
+// ("resume"), says something no client can read ("junk": a length over any limit), exits ("exit"), or exits halfway
+// through a message ("partial").
+conn.onRequest("fake/stall", (p: { ms: number; after: "resume" | "junk" | "exit" | "partial" }) => {
+  process.stdin.pause();
+  setTimeout(() => {
+    if (p.after === "resume") process.stdin.resume();
+    else if (p.after === "junk") process.stdout.write("Content-Length: 99999999999\r\n\r\n");
+    else if (p.after === "partial") process.stdout.write("Content-Length: 100\r\n\r\n{", () => process.exit(9));
+    else process.exit(7);
+  }, p.ms);
+  return null;
+});
+
+conn.onRequest("fake/bulk", () => Array.from({ length: 5000 }, (_, index) => ({ name: `symbol ${index}`, kind: 12, location: { uri: "file:///example.ts", range: { start: { line: index, character: 0 }, end: { line: index, character: 20 } } } })));
+
+conn.onRequest("fake/publish", (params: import("vscode-languageserver").PublishDiagnosticsParams) => conn.sendDiagnostics(params));
+
+conn.onRequest("fake/holdPipes", () => {
+  const helper = require("node:child_process").spawn(process.execPath, ["-e", "setTimeout(()=>{},10000)"], { stdio: ["ignore", 1, 2] });
+  helper.unref(); return helper.pid;
+});

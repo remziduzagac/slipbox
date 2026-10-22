@@ -667,8 +667,8 @@ export class Mouse {
         const [which] = arg.split(":");
         const o = this.app.overlay;
         if (o?.kind !== "prompt" || !o.view || !o.replace || o.replace.confirm) break;
-        if (which === "all") R.replaceAll(this.app, o, o.view);
-        else R.replaceOne(this.app, o, o.view);
+        const replacing = which === "all" ? R.replaceAll(this.app, o, o.view) : R.replaceOne(this.app, o, o.view);
+        void replacing.finally(() => this.app.host.requestRender());
         break;
       }
       case "findopt": {

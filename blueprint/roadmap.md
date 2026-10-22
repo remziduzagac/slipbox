@@ -1,7 +1,7 @@
 # Roadmap
 
 Status: **initial design settled** (D210, 2026-10-11); phases 0–6+ built. The repository is public on GitHub and kept
-to greenrepo (GR, consolidated 2026-10-13); 0.2.1 was the first release (2026-10-12), 0.4.0 the latest (2026-10-17).
+to greenrepo (GR, consolidated 2026-10-13); 0.2.1 was the first release (2026-10-12), 0.4.1 the latest (2026-10-17).
 Vaults and the explorer's view (VV) and reviewing, diffing and merging (GIT) are built, consolidated and documented
 (2026-10-17), and in 0.4.0. Next: native Windows
 (`14.14`–`14.17`); and, open in ideas.md, the skill as an npx package for common harnesses and how agents and slipbox
@@ -593,6 +593,8 @@ was added 2026-10-09 at the user's asking.*
 - [x] **26.6** Stash; fetch, pull (fast-forward), push: asked for, never automatic; ahead and behind on the status
   line. Deferred 2026-10-10 (D158), taken up by GIT (GIT-D4, GIT-T3); a conflict's ours, theirs or both is GIT's merge
   screen (GIT-D5).
+- [x] **26.7** A branch's base given on opening (`--base`), a remote branch, tag or commit as a base, and the CLI's
+  `changed` and `diff` measuring as the screen does (D255, #210).
 
 ## User documentation
 
@@ -667,6 +669,27 @@ and GIT.*
   the branches and their worktrees, each against its own base; fetch, pull, push and stash (`26.6`); diffs with their
   changed words, a note's before and after, code's scrolling sideways and side by side; a merge screen, with pulling
   where both sides moved and rebasing onto the base (consolidated 2026-10-17).
+
+## Deferred maintenance review (`27.x`)
+
+Accepted for later evaluation, not implementation. Evidence, qualifications and design questions live in
+[the maintenance-gap review](research/maintenance-gaps.md). These items are separate from ENG and do not change
+current requirements or product behavior. Start any resulting design change through its own workstream.
+
+- [ ] **27.1** Evaluate a performance regression guard: small headless timing subset or comparable scheduled trends.
+- [ ] **27.2** Evaluate an accessible plain CLI follow workflow, including real screen-reader validation.
+- [ ] **27.3** Evaluate test-file size ratchets and splitting by owner with reusable fixtures.
+- [ ] **27.4** Evaluate a local diagnostics bundle, with explicit collection scope and privacy-preserving defaults.
+- [ ] **27.5** Review documented continuity and an isolated recovery drill; account-access changes remain owner choices.
+- [ ] **27.6** Evaluate a non-blocking screenshot-refresh reminder for relevant UI changes.
+
+
+## Documentation people can follow
+
+*Not a phase. Accepted 2026-10-19 (DOCS-D2); implementation and review in progress.*
+
+- [ ] **[Documentation people can follow](workstreams/documentation/README.md)** (DOCS): implement and review the
+  agreed learning path, guides, topic pages and reference, then retake the screenshots for it (DOCS-T2).
 
 ## Later
 

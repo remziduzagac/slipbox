@@ -1,7 +1,8 @@
 // The CLI's render and export: a note drawn as the TUI draws it, for a width, in colour or plain (2.x); notes made
 // one document — Word, PDF, HTML, EPUB or Markdown — beside the first, or where `--out` says (10.x).
 
-import { loadMermaid } from "../core/diagrams.ts";
+import { prepareExport } from "../core/export/jobs.ts";
+import { loadMermaid, mermaidPending, withMermaidBatch } from "../core/diagrams.ts";
 import { statSync } from "node:fs";
 import { basename, extname, resolve } from "node:path";
 import type { Config } from "../core/config.ts";
@@ -10,7 +11,7 @@ import { detectColorDepth, layoutToAnsi, type ColorDepth } from "../core/layout/
 import { layoutNote, layoutWidth } from "../core/note.ts";
 import { applyColorOverrides, loadTheme } from "../core/theme/index.ts";
 import { readText } from "../core/fsutil.ts";
-import { exportNotes, exportTarget, FORMATS, formatFor, namesFolder, writeExport } from "../core/export/index.ts";
+import { exportTarget, FORMATS, formatFor, namesFolder } from "../core/export/index.ts";
 import { flag, has, UsageError } from "./args.ts";
 import {
   EXIT,
@@ -29,8 +30,6 @@ export const RENDER_COMMANDS: Record<string, Handler> = {
     const rel = resolveNote(s, requireArg(rest, "note"));
     const abs = s.graph.abs(rel);
     const decoded = readText(abs);
-    // A Mermaid diagram is drawn (12.10): its library loaded first, as the TUI's arrives on its own.
-    if (/^ {0,3}(`{3,}|~{3,})\s*mermaid\s*$/im.test(decoded.text)) await loadMermaid();
     const depth = colorDepth(s);
     const widthArg = flag(s.args, "width");
     if (widthArg !== undefined && !/^\d+$/.test(widthArg))
@@ -50,10 +49,20 @@ export const RENDER_COMMANDS: Record<string, Handler> = {
     const glyphMode = (glyphArg as Config["render"]["glyphs"] | undefined) ?? s.config.render.glyphs;
     const showUrls =
       s.config.render.show_urls === "always" || (s.config.render.show_urls === "auto" && depth === "none");
-    const layout = layoutNote(parseFile(s, rel, decoded.text), s.graph, rel, {
-      width,
-      glyphs: glyphsFor(glyphMode, s.io.env),
-      showUrls,
+    const parsed = parseFile(s, rel, decoded.text);
+    const draw = () =>
+      layoutNote(parsed, s.graph, rel, {
+        width,
+        glyphs: glyphsFor(glyphMode, s.io.env),
+        showUrls,
+      });
+    const layout = await withMermaidBatch(async () => {
+      let ready = draw();
+      while (mermaidPending()) {
+        await loadMermaid();
+        ready = draw();
+      }
+      return ready;
     });
     if (decoded.invalidUtf8) s.warnings.push(`${rel}: not valid UTF-8; invalid bytes shown as U+FFFD`);
     return {
@@ -97,8 +106,43 @@ export const RENDER_COMMANDS: Record<string, Handler> = {
     } catch (err) {
       throw new CliError((err as Error).message, EXIT.refused);
     }
-    const written = await exportNotes(s.graph, rels, format, target);
-    const files = writeExport(target, written).map((f) => s.graph.shownPath(f));
+    const abort = new AbortController();
+    let interrupted: NodeJS.Signals | null = null;
+    const endings = ["SIGINT", "SIGTERM", "SIGHUP"] as const;
+    const handlers = endings.map((sig) => {
+      const handler = () => {
+        interrupted = sig;
+        abort.abort(Error("export cancelled"));
+      };
+      process.prependListener(sig, handler);
+      return [sig, handler] as const;
+    });
+    let written: Awaited<ReturnType<typeof prepareExport>> | undefined;
+    let files: string[];
+    try {
+      written = await prepareExport(s.graph, rels, format.name, target, { signal: abort.signal });
+      files = (
+        await written.publish(
+          target,
+          () => {
+            try {
+              exportTarget(s.graph, rels[0]!, format, target, s.io.cwd, has(s.args, "force"));
+            } catch (error) {
+              throw new CliError((error as Error).message, EXIT.refused);
+            }
+          },
+          abort.signal,
+        )
+      ).map((f) => s.graph.shownPath(f));
+    } finally {
+      try {
+        await written?.dispose();
+      } finally {
+        for (const [sig, handler] of handlers) process.off(sig, handler);
+        // Cleanup first, then keep the signal's usual effect (including another handler's).
+        if (interrupted) process.kill(process.pid, interrupted);
+      }
+    }
     const shown = s.graph.shownPath(target);
     const beside = files.length ? `, ${files.length} file${files.length === 1 ? "" : "s"} beside it` : "";
     // A note written where the vault never indexes it (D246): Markdown into a folder `walk.exclude` names.
@@ -108,7 +152,7 @@ export const RENDER_COMMANDS: Record<string, Handler> = {
         path: shown,
         format: format.name,
         notes: rels,
-        bytes: written.data.length,
+        bytes: written!.manifest.bytes,
         files,
         ...(left ? { notIndexed: left } : {}),
       },

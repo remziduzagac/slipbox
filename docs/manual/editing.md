@@ -1,4 +1,4 @@
-# Editing
+# Editing: the lens and source mode
 
 slipbox edits the Markdown itself. What you change is the text of the file, and nothing else.
 
@@ -98,8 +98,8 @@ The Markdown is lightly highlighted:
 
 ### The lens
 
-The lens edits a note in place. Press `space n l` (or `:lens`) to open it. [The lens](../guides/lens.md) walks
-through it, with pictures and examples.
+The lens edits a note in place. Press `space n l` (or `:lens`) to open it. [Reading and editing in
+slipbox](../guides/lens.md) walks through it with examples.
 
 The blocks around the cursor are shown as their Markdown, between two heavy rules. A block is a paragraph, a heading, a
 table, a code block or a list item. The rest of the note stays rendered above and below. Where you are looking is
@@ -308,6 +308,10 @@ slipbox copies two ways at once:
 A paste reads the clipboard back, with `pbpaste`, `wl-paste`, `xclip`, `xsel`, or PowerShell in WSL. Where the
 clipboard can't be read (over SSH, say), slipbox pastes what it last copied or cut itself.
 
+Clipboard helpers run in the background. A helper has one second to answer (five seconds for PowerShell);
+if none answers, copying uses the fallback file and pasting uses the register. Closing slipbox cancels pending helpers.
+At most eight copies wait or run; if the clipboard is busy, a message asks you to copy again.
+
 [Troubleshooting](troubleshooting.md#copying-over-ssh) has the clipboard's problems.
 
 ## The vim keys
@@ -506,7 +510,7 @@ A list shows under the cursor. While it shows:
 | `esc` | Closes the list and stops typing |
 
 In a note, typing a link's target (after `](` or `[[`) lists the notes and files it could reach. The one you pick is
-written as the folder writes its links ([Links and vaults](links-and-vaults.md)).
+written as the folder writes its links ([Links and backlinks](links-and-vaults.md)).
 
 In code, the language server offers its own completions. One that puts in a snippet leaves the cursor on the snippet's
 first blank. `tab` and `shift+tab` go to the next and previous blank ([Code](code.md)).
@@ -531,7 +535,8 @@ slipbox uses Hunspell dictionaries, the ones LibreOffice and most systems have. 
 Turkish. The words you add count in every language.
 
 The dictionaries load in the background the first time a note needs them, and slipbox answers your keys meanwhile.
-The marks come once they're loaded, and a word you've just typed is marked a moment after you type it.
+The marks come once they're loaded, and a word you've just typed is marked a moment after you type it. If a check
+can't be done, a message says why. Its words aren't marked either way, and they're checked again a moment later.
 
 [Spelling dictionaries](configuration.md#spelling-dictionaries) says:
 
@@ -555,7 +560,8 @@ By default (`lint.enabled = "auto"`), it lints only where there is a markdownlin
 `"on"` lints every note, and `"off"` none.
 
 The linter reads the file. So a note is linted when it opens and just after each save, never while it is unsaved.
-Typing hides its findings until the next save.
+Typing hides its findings until the next save. If it prints more than slipbox reads (16 MiB) for a note, none of that
+run's findings show, a warning says why once, and the next save lints it again.
 
 Each finding is a warning:
 
@@ -679,71 +685,13 @@ These two settings name programs to run. So only your own configuration can set 
 
 From the command line, `slipbox send inbox.md --line 42` does what `space n s` does.
 
+<a id="editing"></a>
+
 ## The scratch
 
-The scratch is a Markdown file where you collect references and snippets to hand to an agent. It holds lines of your
-notes and code, each with its `path:line`. You paste it into a prompt when you are ready.
-
-Each vault has its own scratch, kept in slipbox's own state folder. It is outside your notes, and never committed. With
-`capture.location = "root"`, it is a note in the vault instead: `scratch.md`, or the name in `capture.file`.
-
-| Key | What it does |
-| --- | --- |
-| `space s a` | Adds the selection with its lines (`ideas/coffee.md:12-18`), or the cursor row's `path:line` |
-| `space s s` | Opens the scratch. It updates as things are added |
-| `space s r` | Opens the scratch in the window on the right |
-| `space s y` | Copies the whole scratch |
-| `space s d` | Clears the scratch, after asking |
-| `space s c` | Copies the note's context for an agent: the note, what it links to, what links to it |
-
-The scratch opens in a window floating in the middle of the screen. Use it to jot something down, or to read what
-you have gathered.
-
-It's a window like any other. The scratch is rendered, the lens edits it, and `ctrl+k` shows its Markdown. Every key
-you move and edit with works there.
-
-- `q` closes it and takes you back where you were. What you typed is saved.
-- `esc` stops typing and leaves the lens, as it always does. Then it closes the scratch.
-
-It opens when it's empty too.
-
-With `capture.open_in = "right"`, or Scratch opens in the [UI settings](screen.md#ui-settings), it opens in the window
-on the right instead, beside your note. `ctrl+w w` goes back and forth.
-
-Each time you add to it, it opens on what you added, ready for you to type a note about it:
-
-````markdown
-**At:** `ideas/coffee.md:5`
-
-**Note:** check the ratio for the small pot
-
----
-
-**At:** `ideas/coffee.md:3-5`
-
-```markdown
-## Brewing
-
-A ratio of 1 to 16 suits a pour-over.
-```
-
-**Note:** ▌
-````
-
-`esc` then `q` takes you back to the note. If you close it without typing, the empty **Note:** goes. So you can add a
-few places quickly and write one note at the last. A line divides each entry from the one before.
-
-Other programs add to the scratch with `slipbox capture`. That is how your editor or an agent puts things there:
-
-```bash
-slipbox capture 'check the grind size'            # a line of text
-slipbox capture --ref ideas/coffee.md:12-18       # a reference
-slipbox capture --ref ideas/coffee.md:5 'check it'   # a reference, and a note on it
-slipbox capture --snippet --ref ideas/coffee.md:12-18   # the reference and its lines
-slipbox scratch show                              # what it holds; also: path, copy, clear
-```
-
-[Working with agents](../guides/agents.md) shows how to capture from nvim, and the context bundle.
+The scratch is editable Markdown for collecting references. Its scope, capture keys, location and context bundles
+are explained in [Scratch and context](scratch-and-context.md). The
+[agent workflow](../guides/agents.md#hand-the-agent-references-the-scratch) shows it in use.
 
 ## From the command line
 

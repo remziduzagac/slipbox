@@ -154,6 +154,9 @@ terminal tests trust (TT-D2), which the real-terminal set checks in herdr.
 
 ## D239: A pull request runs the tests and the terminal checks its change reaches; main runs them all (2026-10-17)
 
+> **Amended by D251 (2026-10-17):** a push to `dev` or `test` runs what its commits reach, as a pull request does;
+> everything runs in the full run, by hand on `test`, which `main` requires; a release isn't tested again.
+
 **Decision:** CI runs, for a pull request, only the tests and the terminal checks its files reach; every push to
 `main`, and every release, still runs them all, on every runner. The tests: each that uses a changed file — imports
 it at any depth, or names it by its path from the repository — and a changed snapshot's own. The terminal checks,
@@ -201,6 +204,9 @@ files.
 
 ## D242: No merge queue, and no branch kept up to date before merging (2026-10-17)
 
+> **Amended by D251 (2026-10-17):** pull requests merge into `dev`, which a branch is kept up to date with; a break two
+> of them make together is found on `dev`'s push or in the full run, before `main`, not after.
+
 **Decision:** `main`'s rules don't require a pull request's branch to be up to date with `main`, and there's no merge
 queue. When `main` has moved under the files a pull request changes, its branch is updated (`gh pr update-branch`) and
 its CI runs again before it merges. A break two pull requests make together is found by `main`'s full run after the
@@ -213,3 +219,36 @@ to date runs CI again for every open pull request each time `main` moves, mostly
 typecheck together (2026-10-17), fixed within the hour.
 
 **Not chosen:** a merge queue (an organisation's repository first); branches required up to date.
+
+## D251: dev, test, then main: tested as it moves, everything before a release (2026-10-17)
+
+**Decision:** Work moves through three branches. Every pull request merges into `dev`, now the default branch, once
+reviewed and its `ci` check passed; `ci` runs the lint, the typecheck, and the tests and terminal checks the change
+reaches (D239), and a push to `dev` the same on the merged commit. `dev` is moved to `test` (a fast-forward) when a
+batch of work is ready to try: that publishes a preview to try by hand (GR-D13) and runs, again, what changed since
+`test` last moved. `ci` run by hand on `test` runs everything — every unit test on Linux and macOS, every terminal
+check on all three runners — and reports `full`; it's run whenever the maintainer wants to know where things stand,
+and always before a release. `main`, the released state, is moved to `test`'s commit and tagged at once; its ruleset
+takes only a commit that passed `full`, and `release.yml` refuses a tag whose commit didn't, before building without
+testing again. What trying a preview or the full run finds becomes an issue, fixed by a pull request into `dev`.
+Agents review and merge into `dev`, move `test` and `main`, run the full suite and release when the maintainer asks;
+settings stay the maintainer's. While working, a change runs its own tests and its feature's terminal check, never
+the whole suite; a pull request carries a test for the change (a bug fix's checked by undoing the fix once), the user
+docs and a CHANGELOG line where users notice, the design where behaviour changes, and a decision only for a real
+choice. Amends GR-D6, GR-D13, D239 and D242. Detail: `MAINTAINING.md` § From dev to a release, design/repository.md
+§ CI.
+
+**Why:** The maintainer's call, 2026-10-17: every pull request carried every test and check, and every agent the
+whole ceremony around them, so a small change took twenty-five minutes and an unrelated flaky check blocked merges and
+a release (0.4.0's build failed twice on checks no change had touched). A flow where each step tests what it's for —
+the change in its pull request, the batch in a preview tried by hand, everything before a release — keeps `main`
+tested whole while the day's work stays light.
+
+**Cost:** A break two pull requests make together, or one only the full suite catches, sits on `dev` and `test` until
+a push or a full run finds it — before `main`, never after. A release waits for a full run on its commit. The previews
+and the full run are started by hand, so a batch nobody moves isn't tried.
+
+**Not chosen:** the full suite on every move to `test` (most batches are tried, not released; the full run is a
+button away); a release that tests again on every platform (the commit passed `full`, and the release's own runs
+failed on unrelated flaky checks); a separate workflow for the full run (the same jobs, named `full` when run by
+hand, keep one definition).

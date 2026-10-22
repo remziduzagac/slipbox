@@ -1,7 +1,7 @@
 // Pictures for an export (plan 10.x): a picture's bytes, kind and size — read from its file's own header, nothing
 // decoded — and an SVG (a file, a diagram, a display's maths) rasterised to PNG for the formats that hold no SVG.
 
-import { readFileSync } from "node:fs";
+import { readExportAsset } from "./reads.ts";
 import { looksLikeSvg, type Rasterizer } from "../svg.ts";
 import type { ExportPicture } from "./assemble.ts";
 
@@ -15,6 +15,12 @@ export interface Raster {
 
 /** A raster image's kind and size from its header, or null where it isn't one of these. */
 export function rasterInfo(b: Uint8Array): Omit<Raster, "data"> | null {
+  const info = headerInfo(b);
+  // A header saying no width or no height is no picture; any size it says is taken, as big as it is.
+  return info && info.width > 0 && info.height > 0 ? info : null;
+}
+
+function headerInfo(b: Uint8Array): Omit<Raster, "data"> | null {
   const v = new DataView(b.buffer, b.byteOffset, b.byteLength);
   if (b.length > 24 && b[0] === 0x89 && b[1] === 0x50 && b[2] === 0x4e && b[3] === 0x47)
     return { type: "png", width: v.getUint32(16), height: v.getUint32(20) };
@@ -87,7 +93,7 @@ export function pictureData(pic: ExportPicture, r: Rasterizer | null, maxWidth: 
   if (!svg && (pic.data || pic.file)) {
     let bytes: Uint8Array;
     try {
-      bytes = pic.data ?? readFileSync(pic.file!);
+      bytes = pic.data ?? readExportAsset(pic.file!);
     } catch {
       return null;
     }

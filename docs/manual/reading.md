@@ -1,4 +1,6 @@
-# Reading
+# Reading notes and documents
+
+<a id="reading"></a>
 
 slipbox shows a note drawn as a page. This chapter covers how that page is drawn, how you move through it, and what
 slipbox does with files that aren't notes.
@@ -56,7 +58,7 @@ where you click. A click on a link follows it.
 Every movement key, with the editors' alternatives, is in [Keys](keys.md).
 
 `enter` follows the link under the cursor. When the cursor isn't on a link, `enter` follows the row's first link.
-Following links, and coming back with `ctrl+o`, is in [Links and vaults](links-and-vaults.md).
+Following links, and coming back with `ctrl+o`, is in [Links and backlinks](links-and-vaults.md).
 
 The numbers down the left side are the note's line numbers in its Markdown. Each one sits on the row where its line
 starts, so a long line wrapped over several rows has one number. `space u n` hides them, and
@@ -158,7 +160,7 @@ web address in the text is a link too.
 A web link's address can follow its text. `space u r` shows the addresses, and `render.show_urls = "always"` always
 does. By default they show only where there's no colour to mark links.
 
-How links resolve, and what each kind does when followed, is [Links and vaults](links-and-vaults.md).
+How links resolve, and what each kind does when followed, is [Links and backlinks](links-and-vaults.md).
 
 ### Lists and tasks
 
@@ -331,6 +333,10 @@ characters. In a terminal that speaks neither, a picture is its `▣` line alone
 
 With sixel, pictures can disappear while you scroll quickly, and come back when you stop.
 
+Pictures and mathematical displays prepare in the background; their text stays visible until they are ready.
+A drawing that takes more than three seconds or exceeds the display limits keeps its text instead.
+Large bitmap previews are reduced to at most one million pixels before reaching the screen.
+
 `render.images = "never"` turns pictures off. When a terminal you expect to draw them doesn't, see
 [Troubleshooting](troubleshooting.md).
 
@@ -342,6 +348,11 @@ With sixel, pictures can disappear while you scroll quickly, and come back when 
 - `never`: it's never fetched, and `enter` copies its address.
 
 A fetched picture is kept in slipbox's cache, one file per address. From then on it's drawn from there, without asking.
+
+Downloads share a queue: at most three run at once, with 32 waiting. They stream into temporary cache files rather
+than collecting whole responses in memory. Automatic requests wait for a later redraw when the queue is full;
+pressing `enter` reports when you need to try again. Changing the remote policy to `never`, or quitting, cancels
+pending downloads and removes partial files. Switching tabs leaves session-owned downloads running for cache reuse.
 
 A fetch gives up:
 
@@ -391,7 +402,19 @@ scrolls sideways, as a code block does. It stays a code block when:
 
 Its label then says why, such as "too wide to draw" or "not drawn: pie".
 
-The first diagram you open takes a moment. Until it's ready, it shows as its code.
+Diagrams render in the background. Until one is ready, its source remains visible with `mermaid — drawing…` in the
+header; you can keep reading and editing. Completed diagrams are remembered on disk, so the same source and rendering
+options can appear immediately in a later session. The screen, `slipbox render` and export share this bounded cache.
+Changing width, glyphs, colours, font, the drawing library or slipbox's version uses a different cache entry. The disk
+cache holds at most 2,048 results and 32 MiB of drawing data, with database overhead; older results are discarded. Set
+`SLIPBOX_DIAGRAM_CACHE=off` to bypass it. A missing or unavailable cache does not prevent rendering.
+A diagram that took too long to draw on screen is remembered as well: later sessions show its source with that label
+without trying again, until slipbox or its drawing library is upgraded. `slipbox render` and export still try it with
+their own, longer limit.
+A diagram that exceeds a rendering limit stays as code. Its label says why, such as "took too long to draw",
+"source too large to draw" or "drawing output too large". On screen, a timeout gets one retry. Waiting diagrams are
+drawn as capacity becomes available. `slipbox render` and export allow five seconds per diagram without an automatic
+retry, then leave it as source. This is a limit for each diagram, not the entire note; startup and queue wait add time.
 
 Where the terminal draws pictures, `render.mermaid = "picture"` draws diagrams as pictures instead. They're in the
 theme's colours and a font found on your machine, centred, and at most 60 rows tall. Without such a font, or where
@@ -485,7 +508,7 @@ were ([Editing](editing.md)).
 
 A value that is a web address is a link, and so is a path that names a file in the folder. Keys that name another
 file, such as `$ref`, `$schema`, `extends`, `include` and `import`, are links too. They're shown as broken when they
-reach nothing. [Links and vaults](links-and-vaults.md) has how such links count.
+reach nothing. [Links and backlinks](links-and-vaults.md) has how such links count.
 
 A data file that doesn't parse can't be drawn. It opens as text, with the error in a message. Once it parses again,
 `ctrl+k` draws it.
@@ -502,7 +525,12 @@ A data file that doesn't parse can't be drawn. It opens as text, with the error 
 Which of these the explorer and the switcher list is in [Files](files.md).
 
 **Big notes.** When you open a note of more than 128 KB for the first time, the window says it's reading it. That
-lasts a moment at most. Then it draws the note where you left it.
+lasts a moment at most. Then it draws the note where you left it. Big notes are read on other threads, so slipbox
+answers your keys meanwhile. When many are waiting at once, such as when a vault is first indexed, each takes its turn.
+
+If a note can't be read there, it is shown as its source, and a message says why. When its thread was at fault, by
+running out of time or stopping, opening the note again tries once more. Editing the note always does. Your vault's
+index isn't affected: the note's links, tags and headings are read all the same.
 
 **Text that isn't UTF-8.** Bytes that aren't valid UTF-8 are drawn as `�`, and a message says so.
 
@@ -512,31 +540,9 @@ invisible characters that reverse the direction of text, so a line can't disguis
 
 ## Themes
 
-The theme sets every colour on the screen. slipbox has these built in:
-
-- `tokyo-night` (the default) and `tokyo-night-day`
-- `catppuccin-mocha`, `catppuccin-latte`, `catppuccin-frappe` and `catppuccin-macchiato`
-- `dracula`, `gruvbox-dark`, `gruvbox-light`, `nord`, `solarized-dark`, `solarized-light`, `rose-pine`,
-  `everforest`, `kanagawa`, `one-dark` and `monokai`
-- `terminal`, which uses your terminal's own sixteen colours, so its theme shows through
-- `mono`, with no colours at all: bold, dim, italics and underlines only, with links underlined
-
-To choose a theme:
-
-1. Press `space u t`. It lists the themes, with the ones you've added.
-2. Move through the list. The theme changes as you move.
-3. Press `enter` to keep it, or `esc` to put the old one back.
-
-| To | Use |
-| --- | --- |
-| switch straight to a theme | `:theme nord` |
-| choose the default | the `theme` setting |
-| list the themes on the command line | `slipbox themes` |
-
-When `NO_COLOR` is set, slipbox uses `mono` whatever the theme says.
-
-Your own themes, base16 and base24 schemes, and colour changes to single parts of the screen, are in
-[Configuration](configuration.md). [Making it yours](../guides/making-it-yours.md) walks through them.
+Theme selection, built-ins, user themes and the terminal/mono choices are explained in
+[Customization](customization.md#themes). Exact colour overrides are in [Configuration
+settings](configuration.md#colours).
 
 ## Glyphs
 

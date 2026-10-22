@@ -1,5 +1,8 @@
 # Coming from Obsidian or zk
 
+Open an existing vault or notebook and verify its links before changing anything. Keep a backup or use a copy for
+experiments. This guide does not require converting your files to a new format.
+
 slipbox opens an Obsidian vault or a zk notebook as it is. There's no import and no conversion, and nothing is written
 into it. slipbox reads their links the way they do, and writes new links the way they would. So you can keep using
 either app on the same files.
@@ -59,7 +62,7 @@ In a zk notebook, it says `markdown links, relative, without .md — zk's .zk/co
 ![An Obsidian vault's home note: its properties as a table, wikilinks, a callout and tags](../images/obsidian-home.png)
 
 The rest is Markdown: tables, code, maths and diagrams. [Reading](../manual/reading.md) shows how each is drawn.
-[Links and vaults](../manual/links-and-vaults.md) shows every link form.
+[Links and backlinks](../manual/links-and-vaults.md) shows every link form.
 
 ## Links written their way
 
@@ -102,7 +105,7 @@ its own is a vault of its own: a git repository you cloned there (`.git`), a zk 
   in a floating window, your vault left as it was. `o` goes into the inner vault.
 - The explorer marks its folder `◈`. `enter` on it goes into it, with its own tabs, and `ctrl+o` comes back.
 
-[Vaults, home and Elsewhere](vaults.md) explains vaults, the peek and the rest with examples.
+[Working across folders and vaults](vaults.md) explains vaults, the peek and the rest with examples.
 
 ## Name it, if other folders link to it
 
@@ -163,7 +166,10 @@ style = "markdown"
 
 ## Where next
 
-- [Getting started](getting-started.md): a first session, if you haven't had one.
-- [Vaults, home and Elsewhere](vaults.md): how slipbox's vaults differ from Obsidian's, with examples.
-- [Links and vaults](../manual/links-and-vaults.md): every link form, vaults, named folders and backlinks.
-- [Making it yours](making-it-yours.md): a theme, your keys and settings.
+- [Working with slipbox](getting-started.md): a first session, if you haven't had one.
+- [Working across folders and vaults](vaults.md): how slipbox's vaults differ from Obsidian's, with examples.
+- [Links and backlinks](../manual/links-and-vaults.md): every link form and backlinks.
+- [Vaults, home and Elsewhere](../manual/vaults.md): vault boundaries, names and pointers.
+- [Making slipbox yours](making-it-yours.md): a theme, your keys and settings.
+
+**Next:** [Reviewing changes with Git](code-and-git.md).

@@ -7,7 +7,7 @@ An export turns a note, or several notes, into a document for someone who doesn'
 - what each format keeps
 - the limits
 
-For a walk through a first export, see [Exporting notes](../guides/exporting.md).
+For a walk through a first export, see [Exporting and sharing notes](../guides/exporting.md).
 
 The document can be:
 
@@ -23,6 +23,17 @@ slipbox writes every format itself. No other program runs, nothing is installed,
 internet.
 
 Your notes are only read. The export is a new file, beside the note unless you say where.
+
+An export prepares in the background, so you can keep reading and editing. Its message shows the current stage: reading,
+assembling or writing. It takes as long as it needs: a long book, or many photos to convert, can take minutes. Two
+exports prepare at once, and one you start while two are preparing waits its turn. To stop unfinished exports before the
+completed document is published, open the command palette (`:`) and choose **Cancel export**. Quitting stops them too.
+The command line waits for its export to finish.
+
+Export output is prepared in temporary files in slipbox's cache folder, then copied into place without holding a second
+complete copy in the interface's memory. This needs extra disk space there; the temporary files are removed when the job
+finishes or is cancelled. Individual pictures and Word's encoder can still need substantial memory. Large notes and
+books are not rejected by a fixed export-size or time limit.
 
 ## Exporting a note
 
@@ -53,7 +64,7 @@ Settle the change with `space n c` (see [Editing](editing.md)), then export agai
 3. Press `enter` on the first row, "Export these 3 notes…". slipbox asks for the format and where the document goes,
    as for one note.
 
-The vault is the folder slipbox treats as the top of your notes ([Links and vaults](links-and-vaults.md)).
+The vault is the folder slipbox treats as the top of your notes ([Vaults, home and Elsewhere](vaults.md)).
 
 Type to filter the list. What you typed, and where you were, stay between picks. The first row is "Export these 3
 notes…", whatever you've typed.

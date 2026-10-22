@@ -2,7 +2,7 @@ name: audit
 
 # GR-D9 (greenrepo DEP-04): the dependencies' known vulnerabilities, `bun run audit` — `bun audit` over bun.lock,
 # with the advisories accepted in scripts/audit.ts, each with why and the date to look again. Weekly, before the
-# health check reads it; and when a pull request or a push to main changes the lockfile or that list. Never a
+# health check reads it; and when a pull request or a push to `dev` changes the lockfile or that list. Never a
 # required check: a new advisory fails this run, not unrelated work.
 on:
   schedule:
@@ -10,7 +10,7 @@ on:
   pull_request:
     paths: [bun.lock, scripts/audit.ts, .github/workflows/audit.yml]
   push:
-    branches: [main]
+    branches: [dev]
     paths: [bun.lock, scripts/audit.ts, .github/workflows/audit.yml]
   workflow_dispatch:
 

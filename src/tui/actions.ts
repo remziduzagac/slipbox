@@ -3,6 +3,7 @@
 // done here (the app's own: escape, copying, the UI settings, the theme, the scratch, quitting) or
 // in the actions-*.ts module of its area (D235). The keys are in keys.ts and docs/manual/keys.md.
 
+import { cancelGitRead } from "./gitquery.ts";
 import { clearScratch, dropEmptyAsks, formatEntry, readScratch } from "../core/capture.ts";
 import { COMMAND_SPECS } from "../core/command-specs.ts";
 import type { Command } from "../core/commands.ts";
@@ -117,6 +118,7 @@ export function registerActions(app: App): void {
     ...fileActions(),
     ...lspActions(),
     "app.escape": (a) => {
+      cancelGitRead(a);
       const v = a.view;
       if (!v) return;
       const floating = a.floating && v === a.floating.view;
@@ -124,7 +126,7 @@ export function registerActions(app: App): void {
       // The floating scratch is a window like any (#43): esc leaves its lens first, and closes it last.
       else if (floating && a.floating?.kind === "scratch" && v.live) a.lens.setViewMode(v, "rendered");
       else if (floating && !v.find)
-        a.overlays.leaveFloating(); // the floating editor: closed, written back (3.20); a diff's, back where it was opened
+        return a.overlays.leaveFloating(); // the floating editor: closed, written back (3.20); a diff's, back where it was opened
       else if (v.live)
         a.lens.setViewMode(v, "rendered"); // esc in normal mode closes the lens
       else if (v.find) v.find = null;
@@ -181,6 +183,7 @@ export function registerActions(app: App): void {
         { label: "Code cells", hint: a.ui.code_cells === "box" ? "boxes" : "bands", data: "ui.code_cells" },
         { label: "Code blocks", hint: CODE_WRAP_SAID[a.ui.code_wrap], data: "ui.code_wrap" },
         { label: "Scratch opens", hint: SCRATCH_SAID[a.ui.scratch_in], data: "ui.scratch_in" },
+        { label: "Hidden files in the explorer", hint: onOff(a.ui.hidden_files), data: "explorer.toggle_hidden" },
       ];
       a.overlays.openList({
         title: "UI settings — enter changes one",

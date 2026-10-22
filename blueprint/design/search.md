@@ -78,3 +78,33 @@ trailscout's SDK, once that exists; until then slipbox's search is the only engi
 ## Find
 
 `find` is the other tool: every match of a literal or a regex, unranked (D119).
+
+## Native regex matching
+
+Find and replace (`25.4`) keep JavaScript's regex syntax, captures, smart case, whole-word matching and CRLF positions.
+`core/regex-jobs.ts` owns the native matcher worker (`core/regex-worker.ts`); rendered find, source replacement,
+confirming substitutes, search operators, vault find and CLI find/replace use it. Plain text is matched at once, on the
+thread that asks. `core/replace-files.ts` builds a complete plan before any write, with asynchronous matching through
+`planReplaceLater`; its synchronous entry is for callers already outside an interactive thread.
+
+Its mailbox (`core/worker-requests.ts`) holds eight requests and 8 MiB of input for the worker; a caller past that waits
+its turn. A request's deadline is 1.5 seconds and one more for each million characters it matches in, counted from when
+the worker is handed it, not from the wait: a regex that never finishes still stops within 1.5 seconds on a short note,
+and a big note's every match has the time to be found and sent. A deadline terminates the worker and fails that request
+alone; the requests behind it go to a fresh worker. Superseded find queries cancel the old owner, and edits discard
+answers from an earlier document revision. A find typed while the window is laid out anew (a resize, a picture arriving)
+is worked out again for the new layout before the cursor moves to it. There is no synchronous regex fallback after
+failure; `enter` in the find row tries a failed search again, which the cache otherwise keeps. Workers share the
+process's address space; deadlines and the bound below are resource controls, not OS memory containment.
+
+What's shown and what's written differ. A rendered regex find, and vault find, keep their first 10,000 matches and 2 MiB
+of them (`SHOWN_MATCHES`), the count marked `+` when there are more; plain text in a note has every match. A replace, a
+confirm's `all` and CLI find take every match (`everyMatch`): matches can't outgrow their text, so the only bound is on
+answers past 64 times their input, which only captures reach (a lookahead capturing on to the line's end at every place
+grows as the square of the line). A replace then refuses, writing nothing, and CLI find warns. The mailbox takes answers
+of any size, the worker having bounded them. The rendered cache retains at most 32 entries and 4 MiB, with a separate
+owner per view. Pending and failed searches have distinct states rather than an empty-match result, and the replace
+row's count, settling after the key that asked for it was drawn, asks for a frame; a matching overtaken by a newer one
+in the window (a step, a replace, a newer count) is no failure, the newer one answering. Confirming `all` finds the next
+match alone at each step, in the worker, and computes the remaining sequence before applying its edits, so a failed
+computation makes no additional changes; previously accepted individual replacements remain in their shared undo step.

@@ -239,14 +239,19 @@ export class Checker {
   private readonly known = new Map<string, boolean>();
   private readonly asking = new Set<string>();
   private readonly inFlight = new Set<Promise<void>>();
+  /** Words the dictionaries didn't answer, and when: unknown — never marked, never taken as right — and asked again
+   *  once `RETRY_MS` has passed, so a thread that keeps failing isn't asked at every frame. */
+  private readonly unanswered = new Map<string, number>();
+  static readonly RETRY_MS = 2_000;
   /** Answers had so far: a list made before the last came may be out of date. */
   answers = 0;
-  /** Why the dictionaries didn't answer, the last time they didn't (the words asked then taken as right). */
+  /** Why the dictionaries didn't answer, the last time they didn't. */
   error: string | null = null;
 
   constructor(
     readonly dictionaries: Dictionaries | null,
     private readonly onAnswer: () => void = () => {},
+    private readonly now: () => number = Date.now,
   ) {}
 
   /** Whether a word is spelt right; undefined until its answer has come. */
@@ -254,10 +259,22 @@ export class Checker {
     return this.known.get(word);
   }
 
-  /** The words none of its dictionaries knows, of those answered; the rest asked. */
+  /** The words none of its dictionaries knows, of those answered; the rest asked (one unanswered, once it's due). */
   misspelt(words: SpellWord[]): SpellWord[] {
-    this.ask([...new Set(words.map((w) => w.word))].filter((w) => !this.known.has(w) && !this.asking.has(w)));
+    const before = this.now() - Checker.RETRY_MS;
+    this.ask(
+      [...new Set(words.map((w) => w.word))].filter(
+        (w) => !this.known.has(w) && !this.asking.has(w) && !((this.unanswered.get(w) ?? -Infinity) > before),
+      ),
+    );
     return words.filter((w) => this.known.get(w.word) === false);
+  }
+
+  /** Whether a word the dictionaries didn't answer is due to be asked again: a list made since may be out of date. */
+  retryDue(): boolean {
+    const before = this.now() - Checker.RETRY_MS;
+    for (const at of this.unanswered.values()) if (at <= before) return true;
+    return false;
   }
 
   /** Whether words are still waiting for their answers. */
@@ -288,7 +305,10 @@ export class Checker {
 
   private ask(words: string[]): void {
     if (!words.length) return;
-    for (const w of words) this.asking.add(w);
+    for (const w of words) {
+      this.asking.add(w);
+      this.unanswered.delete(w);
+    }
     const answer = this.dictionaries
       ? this.dictionaries.check(words.map(asked))
       : Promise.resolve(words.map(() => true));
@@ -298,9 +318,10 @@ export class Checker {
           for (const [i, w] of words.entries()) this.known.set(w, oks[i] ?? true);
         },
         (err: unknown) => {
-          // Taken as right, not asked again: a thread that keeps failing isn't asked at every frame.
+          // Unknown, not right: asked again a while later (a word's mark never decided by a thread's failure).
           this.error = (err as Error)?.message ?? String(err);
-          for (const w of words) this.known.set(w, true);
+          const at = this.now();
+          for (const w of words) if (!this.known.has(w)) this.unanswered.set(w, at);
         },
       )
       .finally(() => {

@@ -379,7 +379,16 @@ const OPENS: Record<string, string> = { "{": "}", "[": "]", "(": ")" };
  * Keys in insert mode: text goes in; the arrows and friends move; esc leaves. As in a desktop editor (DF-D15), a move
  * with `shift` selects, and what's typed next replaces the selection (`selectionKey`).
  */
-export function insertKey(app: App, view: View, key: string): void {
+export async function insertKey(app: App, view: View, key: string): Promise<void> {
+  if (key === "ctrl+v") {
+    const version = view.buf.version;
+    const reg = await app.pasteText();
+    if (reg && !app.quitting && app.view === view && view.buf.version === version) {
+      deleteTypedSelection(app, view);
+      insertText(app, view, reg.text.replace(/\r\n?/g, "\n").replaceAll("\n", view.buf.eol));
+    }
+    return;
+  }
   const move = selectingMove(key);
   if (move) selectTo(app, view, move);
   else if (!view.sel || !selectionKey(app, view, key)) insertKeyNow(app, view, key);
@@ -565,12 +574,6 @@ function insertKeyNow(app: App, view: View, key: string): void {
       return deleteWordBack(app, view);
     case "ctrl+u":
       return deleteToLineStart(app, view);
-    case "ctrl+v": {
-      // The clipboard, as the terminal's own paste (cmd+v) puts it: into the text, its line breaks the note's own.
-      const reg = app.pasteText();
-      if (reg) insertText(app, view, reg.text.replace(/\r\n?/g, "\n").replaceAll("\n", view.buf.eol));
-      return;
-    }
     case "ctrl+/":
     case "ctrl+_":
       return commentLine(app, view);

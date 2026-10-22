@@ -10,6 +10,7 @@ import { basename } from "node:path";
 import { headOf } from "../core/git.ts";
 import { type Changed, inVault } from "../core/gitops.ts";
 import { changedLater } from "../core/gitbranches.ts";
+import { agoSaid, isRemoteTracking, remoteMovedAt } from "../core/gitbase.ts";
 import { OPERATIONS } from "../core/gitrebase.ts";
 import { commitLater, sections } from "../core/gitstage.ts";
 import { formatEntry } from "../core/capture.ts";
@@ -152,12 +153,31 @@ export class GitPanel {
     const files = a.files.filter((f) => !q || match(q, f.path));
     if (!files.length) return [];
     const rows: PanelRow[] = [
-      { kind: "heading", section: "ahead", label: `This branch against ${sanitize(a.base)} (${files.length})` },
+      {
+        kind: "heading",
+        section: "ahead",
+        label: `This branch against ${sanitize(a.base)} (${files.length})${this.fetched(a.base)}`,
+      },
     ];
     if (this.folded.has("ahead") && !q) return rows;
     for (const file of files)
       rows.push({ kind: "ahead", file, rel: inVault(c, this.app.loc.root, file.path), base: a.base });
     return rows;
+  }
+
+  private remoteMemo: { key: string; remote: boolean } | null = null;
+
+  /**
+   * A remote-tracking base's freshness (D255): `origin/dev` is as the last fetch of its remote left it, so the heading
+   * says when it last moved here; nothing for a local base. Whether it's remote is asked once each time git has news.
+   */
+  private fetched(base: string): string {
+    const c = this.app.git.checkout!;
+    const key = `${this.app.git.generation}\0${c.common}\0${base}`;
+    if (this.remoteMemo?.key !== key) this.remoteMemo = { key, remote: isRemoteTracking(c, base) };
+    if (!this.remoteMemo.remote) return "";
+    const at = remoteMovedAt(c, base);
+    return at === null ? " · as of the last fetch" : ` · updated ${agoSaid(at)}`;
   }
 
   /** "This file": its diff against the base, its history, who changed the cursor's line — the note on screen's. */
@@ -335,7 +355,7 @@ export class GitPanel {
   }
 
   /** The rows' actions, run by the panel's keys (`[keys.git]`): moving, folding, the row's own, the panel's. */
-  action(action: string): void {
+  action(action: string): void | Promise<void> {
     const app = this.app;
     const s = app.sidebar;
     const rows = this.rows();
@@ -399,7 +419,8 @@ export class GitPanel {
       // The merge screen (GIT-D5): the file in conflict selected, else this note when it's in conflict, else the first.
       case "resolve": {
         const rel = row?.kind === "file" && row.section === "conflicted" ? relOf(app, row.entry.path) : null;
-        return void app.run(rel === null ? "git.merge_screen" : `git.merge_screen ${rel}`);
+        // Read from git's stages: the key's turn waits for the screen, as the keys after it expect.
+        return app.run(rel === null ? "git.merge_screen" : `git.merge_screen ${rel}`);
       }
       // Rebasing onto the base (GIT-D6), or what's under way carried on, skipped or given up.
       case "rebase":
@@ -463,7 +484,7 @@ export class GitPanel {
   }
 
   /** A file the branch changed: its diff against the base (in the diff window), or the file opened. */
-  private aheadAction(row: AheadRow, action: string): void {
+  private aheadAction(row: AheadRow, action: string): void | Promise<void> {
     const app = this.app;
     switch (action) {
       case "open":

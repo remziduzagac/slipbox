@@ -410,6 +410,8 @@ export const DEFAULT_EXPLORER_KEYS: Record<string, string> = {
   "shift+g": "bottom",
   "/": "filter",
   a: "all_files",
+  // Hidden files and folders listed, or not (`files.hidden`): `.` is the row's menu.
+  "shift+h": "toggle_hidden",
   // Making and changing files (18.x), in the selected folder or on the selected row. nvim-tree's
   // keys where they fit: r renames, d deletes (to the trash), y x p copy, cut and paste; n makes a
   // note (space n n too, as everywhere), N a folder.
@@ -424,6 +426,8 @@ export const DEFAULT_EXPLORER_KEYS: Record<string, string> = {
   y: "copy",
   x: "cut",
   p: "paste",
+  // The row's whole path to the clipboard: nvim-tree's Y copies a path too.
+  "shift+y": "copy_path",
   // A folder given .slipbox/, a root of its own; a root nested here made a plain folder again (18.11).
   v: "make_root",
   "shift+v": "unmake_root",
@@ -448,6 +452,7 @@ export const EXPLORER_ACTIONS = [
   "bottom",
   "filter",
   "all_files",
+  "toggle_hidden",
   "new_note",
   "new_folder",
   "rename",
@@ -459,6 +464,7 @@ export const EXPLORER_ACTIONS = [
   "copy",
   "cut",
   "paste",
+  "copy_path",
   "make_root",
   "unmake_root",
   "menu",
@@ -683,6 +689,10 @@ export const EXPLORER_ACTION_INFO: Record<string, { title: string; desc: string 
     title: "All files",
     desc: "Shows every text file, or back to what files.show lists (auto: notes and data files in a notes vault)",
   },
+  toggle_hidden: {
+    title: "Hidden files",
+    desc: "Lists the files and folders whose names start with a dot, not indexed (⊘), or stops; .git never (files.hidden)",
+  },
   new_note: {
     title: "New note here",
     desc: "Asks for a name and makes the note in the selected folder (or beside the selected file)",
@@ -715,6 +725,7 @@ export const EXPLORER_ACTION_INFO: Record<string, { title: string; desc: string 
     title: "Paste",
     desc: "Into the selected folder (or beside the selected file): a copy, or what was cut, moved",
   },
+  copy_path: { title: "Copy path", desc: "Copies the selected row's whole path: a note's, a file's or a folder's" },
   make_root: {
     title: "Give it .slipbox/",
     desc: "The selected folder becomes a vault of its own (its .slipbox/, a name if given); links that would stop reaching across fixed after a preview",
@@ -986,6 +997,7 @@ export const DEFAULT_ALIASES: Record<string, string> = {
   glyphs: "glyphs.set",
   zen: "ui.zen",
   wrap: "ui.wrap",
+  hidden: "explorer.toggle_hidden",
   vs: "window.split_side",
   sp: "window.split_stacked",
   tabnew: "tab.new",

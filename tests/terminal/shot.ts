@@ -30,10 +30,20 @@ export interface Shot {
   pictures?: string[];
 }
 
-/** The getting-started guide's own folder: `~/notes`, two notes, as the guide makes them (examples/guide). */
+/** The tour's own vault: `~/slipbox-tour`, two notes and `.slipbox/`, as getting started makes it (examples/guide). */
 export const GUIDE: SessionOptions = {
   setup: (s) => cpSync(join(REPO, "examples", "guide"), s.home, { recursive: true }),
-  startAt: "home/notes",
+  startAt: "home/slipbox-tour",
+};
+
+/** The quick start's `~/notes`: the tour's two notes in an ordinary folder of home, no vault of their own. */
+export const NOTES: SessionOptions = {
+  setup: (s) =>
+    cpSync(join(REPO, "examples", "guide", "slipbox-tour"), join(s.home, "notes"), {
+      recursive: true,
+      filter: (from) => !from.includes(".slipbox"),
+    }),
+  startAt: "home/notes/inbox.md",
 };
 
 /** The reference set (examples/home), started on one of its files: `HOME("notes/index.md")`. */

@@ -62,17 +62,20 @@ Dependabot and the scanner keep the dependencies current and watched: [repositor
 this machine's when none is named — with package.json's own `build`, so Bun's autoloading is always off: the binary
 reads no `bunfig.toml`, `.env`, `tsconfig.json` or `package.json` of the folder it starts in (`14.1`, D195;
 [trust.md](trust.md) § Bun's own reading). Its entry points are `src/main.ts` and each worker's script
-(`core/parse-worker.ts`, `core/spell-worker.ts`): Bun puts a worker in the binary only when it is named, and
-`core/workers.ts` finds it there by its path under `src/`; a test holds the list to the workers started, and the
-compiled binary's test runs its spelling, on its thread (D232). It defines the release in it (`core/release.ts`,
-`RELEASE`: the repository releases come from and the platform it's for). A Mac's binary built on a Mac is signed ad hoc
-again (§ Signing). A target built for this machine is run once (`--version`) first. Each is packed, with slipbox's
-`LICENSE` and the third-party notices, as `slipbox-<version>-<target>.tar.gz`, a folder of that name inside. Beside each
-pack, `build` writes its SBOM, `slipbox-<version>-<target>.cdx.json` (CycloneDX 1.6, JSON), from the same walk as its
-notices (`check-deps.ts`' `sbom`): slipbox; each package bundled, with its licence, its source and the packages it
-depends on; the code compiled into packages (Hunspell, libwebp); and Bun, the runtime. There's one per pack because the
-walk differs by platform: a platform's OpenTUI package is installed only there. `finish` writes `SHA256SUMS` over the
-packs, refusing another version's packs or SBOMs beside them, and the installer.
+(`core/diagram-worker.ts`, `core/export-worker.ts`, `core/paint-worker.ts`, `core/parse-worker.ts`,
+`core/regex-worker.ts`, `core/spell-worker.ts`, `core/syntax-worker.ts`, and `tui/opentui.ts`, the pictures' decoder),
+laid out from `src/` (`--root=src`; left to itself, Bun keeps `src/` in their paths past eight entries): Bun puts a
+worker in the binary only when it is named, and `core/workers.ts` finds it there by its path under `src/`; a test holds
+the list to the workers started, and the compiled binary's test runs its spelling, on its thread (D232). It defines the
+release in it (`core/release.ts`, `RELEASE`: the repository releases come from and the platform it's for). A Mac's
+binary built on a Mac is signed ad hoc again (§ Signing). A target built for this machine is run once (`--version`)
+first. Each is packed, with slipbox's `LICENSE` and the third-party notices, as `slipbox-<version>-<target>.tar.gz`, a
+folder of that name inside. Beside each pack, `build` writes its SBOM, `slipbox-<version>-<target>.cdx.json` (CycloneDX
+1.6, JSON), from the same walk as its notices (`check-deps.ts`' `sbom`): slipbox; each package bundled, with its
+licence, its source and the packages it depends on; the code compiled into packages (Hunspell, libwebp); and Bun, the
+runtime. There's one per pack because the walk differs by platform: a platform's OpenTUI package is installed only
+there. `finish` writes `SHA256SUMS` over the packs, refusing another version's packs or SBOMs beside them, and the
+installer.
 
 | Asset | Bun's target |
 | --- | --- |
@@ -115,26 +118,26 @@ agent reads skills is the user's to say. `tests/distribution.test.ts` checks the
 file.
 
 CI does it on a tag `v<version>`. `.github/workflows/release.yml` checks first that the tag is the version's and that
-the changelog has its section, then calls `.github/workflows/build.yml`, the build it shares with previews
-(§ Previews), and drafts the release from what that made. Each starts from no permission, each job granting its own;
-the job calling `build.yml` grants the most its jobs may take, and none of them can write to the repository. Nothing
-restores a cache, and a release run is never cancelled. In `build.yml`, each platform is built on a runner of its
-own, with the toolchain `mise.toml` pins (the tests run typos and lychee too). For a release, the whole suite runs
-there first, once per runner kind (a musl build's runner is a glibc build's too), on the code as committed; a preview
-skips it (its `suite` input), its commit having passed CI's check on Linux and macOS already (GR-D13). `build` runs
-the supply chain's gates itself. Then the version is stamped (a release's is package.json's already: nothing changes)
-and the platform built. That platform's OpenTUI package is installed only there, and a Mac's binary is built on a Mac
-(§ Signing), its signature checked (`codesign --verify`). A musl build is run in Alpine (a container pinned by
-digest): first shown not to start without the C++ runtime, as the installer says, then, with it added, its version,
-an index and a search, and the TUI started in a terminal and still running five seconds later. Then each pack's SBOM
-is attested to it, in a job per pack that runs no dependency's code — the build's tests run every dependency's, so
-the signing token stays out of the build (`gh attestation verify <pack> --repo <owner/name> --predicate-type
-https://cyclonedx.org/bom`). Last, `finish` sums the packs and writes the installer and the formula; every asset —
-the packs, their SBOMs, `SHA256SUMS`, `install.sh`, `slipbox.rb` — is attested (who built it, from which commit, by
-which workflow: `gh attestation verify <file> --repo <owner/name>`), and the set is handed back as the run's
+the changelog has its section, then calls `.github/workflows/build.yml`, the build it shares with previews (§ Previews),
+and drafts the release from what that made. Each starts from no permission, each job granting its own; the job calling
+`build.yml` grants the most its jobs may take, and none of them can write to the repository. Nothing restores a cache,
+and a release run is never cancelled. In `build.yml`, each platform is built on a runner of its own, with the toolchain
+`mise.toml` pins (the tests run typos and lychee too). Neither a release nor a preview runs the whole suite there (its
+`suite` input, D251): a release's commit passed `full`, the whole suite run by hand on `test`, which `main`'s ruleset
+requires and `release.yml`'s first job checks before anything is built; a preview's passed CI's check on Linux and macOS
+(GR-D13). `build` runs the supply chain's gates itself. Then the version is stamped (a release's is package.json's
+already: nothing changes) and the platform built. That platform's OpenTUI package is installed only there, and a Mac's
+binary is built on a Mac (§ Signing), its signature checked (`codesign --verify`). A musl build is run in Alpine (a
+container pinned by digest): first shown not to start without the C++ runtime, as the installer says, then, with it
+added, its version, an index and a search, and the TUI started in a terminal and still running five seconds later. Then
+each pack's SBOM is attested to it, in a job per pack that runs no dependency's code — the build's tests run every
+dependency's, so the signing token stays out of the build (`gh attestation verify <pack> --repo <owner/name>
+--predicate-type https://cyclonedx.org/bom`). Last, `finish` sums the packs and writes the installer and the formula;
+every asset — the packs, their SBOMs, `SHA256SUMS`, `install.sh`, `slipbox.rb` — is attested (who built it, from which
+commit, by which workflow: `gh attestation verify <file> --repo <owner/name>`), and the set is handed back as the run's
 `release` artifact. `release.yml`'s last job, the only one that may write (`contents: write`), runs nothing built: it
-drafts the release with that set and its notes. Nothing is published until a person publishes the draft; publishing
-runs `homebrew.yml` (§ Homebrew) and `pages.yml` (§ Previews).
+drafts the release with that set and its notes. Nothing is published until a person publishes the draft; publishing runs
+`homebrew.yml` (§ Homebrew) and `pages.yml` (§ Previews).
 
 The maintainer's steps around it are `MAINTAINING.md` § Releasing: the version chosen by the versioning policy, the
 changelog's entry written (CI takes the notes from it), `package.json` and `src/version.ts` bumped, merged through a
@@ -257,9 +260,9 @@ slipbox's own folders).
 
 ## Previews
 
-A preview is `main` built and published before it's released, for trying it as users get it (GR-D13). Pushing the
-`test` branch makes one (`git push origin main:test`): `.github/workflows/preview.yml`, on a push to `test` and nothing
-else, never a fork's. `test`'s ruleset takes only a commit whose `ci` check passed, and only moves forward.
+A preview is `test` built and published before it's released, for trying it as users get it (GR-D13, D251). Moving
+`test` to `dev` makes one (`git push origin origin/dev:test`): `.github/workflows/preview.yml`, on a push to `test` and
+nothing else, never a fork's. `test`'s ruleset takes only a commit whose `ci` check passed, and only moves forward.
 
 **Its version** is the release to come's, package.json's `x.y.z`, with its commit's UTC committer time to the minute
 and its hash after it: `0.3.0-preview.202610121530.g1a2b3c4`, a pre-release of 0.3.0, so it sorts after the previews
@@ -272,8 +275,8 @@ the binary, its pack, its notices and its SBOM all say it.
 
 **Built as a release is,** by `build.yml` (§ Releases): every platform, each binary run before it's packed, each pack's
 SBOM, `SHA256SUMS` and `install.sh` — the installer with the preview's version, tag and sums written in — all attested.
-It doesn't run the whole suite on each platform first, as a release does (GR-D13's note). `finish` writes it no
-Homebrew formula.
+It doesn't run the whole suite on each platform first (GR-D13's note); `full`, run by hand on `test`, does. `finish`
+writes it no Homebrew formula.
 
 **Published** as the GitHub pre-release `preview-<time>-<hash>`, titled with its version, at the commit pushed: drafted
 with every asset, then published, since an immutable release takes no asset once published; a step failing deletes the

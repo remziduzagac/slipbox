@@ -2,7 +2,7 @@
 // into another vault; a folder's symlinks as the explorer shows them, and the question one leading out asks.
 
 import { explorerOpen, follow } from "../check.ts";
-import { HOME, leader, quiet, type Shot } from "../shot.ts";
+import { HOME, quiet, type Shot } from "../shot.ts";
 
 /** A wider explorer, so a row's marks and what describes it (a branch, where a link leads) fit beside its name. */
 const WIDE = "[ui]\nsidebar_width = 50\n";
@@ -41,18 +41,19 @@ export const SHOTS: Shot[] = [
   },
   {
     name: "vaults-links",
-    options: { ...HOME("notes/research/link-styles.md"), config: WIDE },
+    options: { ...HOME("notes/index.md"), config: NO_EXPLORER },
     take: async (s) => {
-      await s.status("link-styles.md");
-      // The note shown in the explorer, then z: the view zoomed in on its folder, research — its symlinks, each saying
-      // where it leads, the one out of notes not followed; a vault nested in it.
-      await leader(s, "shift+e");
-      await s.status("FILES");
-      await s.keys("z");
-      await s.see("› research ›");
-      await s.see("not followed");
-      await s.keys("escape");
-      await s.status("READ");
+      await s.status("index.md");
+      // The link into kestrel followed, then `o` from the peek: kestrel's note in a tab of its own, the status line
+      // naming kestrel and its branch, and its back arrow the way home to notes.
+      await follow(s, "architecture. The");
+      await s.see("o go there · t keep as a tab", 5000);
+      await s.keys("o");
+      await s.status("kestrel");
+      await s.status("architecture.md");
+      // What going in says, gone: kestrel's own config's warnings, and the message naming where it is.
+      await quiet(s);
+      await s.notSee("kestrel —", 15000);
     },
   },
   {

@@ -1,10 +1,11 @@
 // Source control in the TUI (5.9–5.14, 26.x): the checkout the vault is in, each file's state as git sees it,
 // asked in the background; the changes, the diffs, branches, worktrees and merges; committing.
 
+import { beginGitRead } from "./gitquery.ts";
 import { existsSync } from "node:fs";
 import { basename, join, posix, relative, sep } from "node:path";
 import { readText } from "../core/fsutil.ts";
-import { baseFor } from "../core/gitbase.ts";
+import { baseFor, baseForLater } from "../core/gitbase.ts";
 import { startInsert } from "./editing.ts";
 import { fence, fenceLanguage } from "../core/capture.ts";
 import { loadSession, TOP } from "../core/position.ts";
@@ -12,13 +13,13 @@ import type { Role } from "../core/theme/index.ts";
 import { type Checkout, checkoutOf, headOf } from "../core/git.ts";
 import {
   baseBranch,
+  baseBranchLater,
+  gitReadLater,
   branchesOf,
-  changedSince,
+  changedSinceLater,
   type GitState,
   inCheckout,
   inVault,
-  mergeBaseOf,
-  showAt,
   showLater,
   stateOf,
   worktreeList,
@@ -251,26 +252,36 @@ export class Git {
     this.fallbackMemo = null;
   }
 
-  /** The base branch here: this branch's own (GIT-D10), on the base itself the base; null (said) when there's none. */
-  private base(c: Checkout): string | null {
-    const base = this.baseOf(c, headOf(c).branch) ?? this.fallbackBase(c);
+  /**
+   * The base branch here, not waiting on git: this branch's own (GIT-D10); on a detached HEAD, or where it has none, the
+   * fallback (`[git] base`, else main or master). Null when the read is no longer wanted, or there's none: then said.
+   */
+  private async baseLater(c: Checkout, query: { signal: AbortSignal; current: () => boolean }): Promise<string | null> {
+    const branch = headOf(c).branch;
+    const config = this.app.config.git;
+    const base =
+      (branch ? (await baseForLater(c, branch, config, query.signal))?.base : null) ??
+      (await baseBranchLater(c, config.base, query.signal));
+    if (!query.current()) return null;
     if (!base)
       this.app.message(
         "warn",
-        this.app.config.git.base
-          ? `no branch or commit "${this.app.config.git.base}" ([git] base)`
+        config.base
+          ? `no branch or commit "${config.base}" ([git] base)`
           : "no base branch: neither main nor master is there — [git] base sets one",
       );
     return base;
   }
 
   /** `space g c` (5.13): what this branch changed against the base, committed or not; enter: its diff. */
-  openChanges(): void {
+  async openChanges(): Promise<void> {
     const c = this.checkout;
     if (!c) return this.app.message("info", "not in a git repository");
-    const base = this.base(c);
+    const query = beginGitRead(this.app, "Reading branch changes");
+    const base = await this.baseLater(c, query);
     if (!base) return;
-    const r = changedSince(c, base);
+    const r = await changedSinceLater(c, base, query.signal);
+    if (!query.current()) return;
     if (!r) return this.app.message("warn", "git couldn't say what changed");
     const files = r.files
       .map((f) => ({ ...f, rel: inVault(c, this.app.loc.root, f.path) }))
@@ -294,27 +305,32 @@ export class Git {
       })),
       accept: (item) => {
         const f = item.data as { rel: string; path: string; state: GitState };
-        this.showDiff(f.rel, () => this.openChanges());
+        return this.showDiff(f.rel, () => this.openChanges());
       },
     });
   }
 
   /** `space g d` (5.13): this note's changes on the branch — against where it left the base. */
-  openDiff(): void {
+  openDiff(): void | Promise<void> {
     const rel = this.app.view?.buf.rel;
     if (!rel) return this.app.message("info", "diff: open a note first");
-    this.showDiff(rel);
+    return this.showDiff(rel);
   }
 
   /** A file's diff against the merge base, a row a line, coloured; enter goes to the line; esc: `back`, titled so. */
-  showDiff(rel: string, back?: () => void, title?: string): void {
+  async showDiff(rel: string, back?: () => void | Promise<void>, title?: string): Promise<void> {
     const c = this.checkout;
     if (!c) return this.app.message("info", "not in a git repository");
-    const base = this.base(c);
+    const query = beginGitRead(this.app, "Reading diff version");
+    const base = await this.baseLater(c, query);
     if (!base) return;
-    const mergeBase = mergeBaseOf(c, base);
+    const mergeBase = (
+      await gitReadLater(c, ["merge-base", "--end-of-options", base, "HEAD"], false, query.signal)
+    )?.trim();
+    if (!query.current()) return;
     if (!mergeBase) return this.app.message("warn", `this branch and ${base} have no commit in common`);
-    const before = showAt(c, mergeBase, inCheckout(c, this.app.loc.root, rel)) ?? "";
+    const before = (await showLater(c, mergeBase, inCheckout(c, this.app.loc.root, rel), query.signal)) ?? "";
+    if (!query.current()) return;
     // The file as it is, or would be written: with its byte order mark, as git has it.
     let now = "";
     const open = this.app.buffers.get(rel);
@@ -333,6 +349,7 @@ export class Git {
       `no differences from ${base}`,
       back,
     );
+    this.app.host.requestRender();
   }
 
   /** A diff, `before` to `now`, in the diff window (GIT-D2); enter goes to the line in `rel`; esc: `back`. */
@@ -342,7 +359,7 @@ export class Git {
     rel: string,
     title: string,
     none = "no differences",
-    back?: () => void,
+    back?: () => void | Promise<void>,
   ): void {
     openDiff(this.app, {
       before,
@@ -698,15 +715,18 @@ export class Git {
    * A pointer to a branch not checked out here (21.7): the file as it is there, from git, read-only,
    * in the floating window — a note rendered, any other file as its text.
    */
-  showFromGit(ref: { root: string; rel: string; branch: string }, link: string): void {
+  async showFromGit(ref: { root: string; rel: string; branch: string }, link: string): Promise<void> {
     const c = checkoutOf(ref.root);
-    const text = c ? showAt(c, ref.branch, ref.rel) : null;
+    const query = beginGitRead(this.app, "Reading branch version");
+    const text = c ? await showLater(c, ref.branch, ref.rel, query.signal) : null;
+    if (!query.current()) return;
     if (text === null) return this.app.message("warn", `${link}: no ${ref.rel} on ${ref.branch}`);
     const note = /\.(md|markdown)$/i.test(ref.rel);
     this.app.overlays.openHover(
       note ? text : fence(text, fenceLanguage(ref.rel)),
       `${ref.rel} on ${ref.branch}, read-only from git`,
     );
+    this.app.host.requestRender();
   }
 }
 

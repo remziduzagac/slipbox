@@ -6,6 +6,7 @@
 // go to; pictures at their size up to the text's width; code on a tint, coloured; tables drawn, their header again on a
 // new page; quotes behind a bar, a callout's in its colour; the page's number at its foot.
 
+import type { ExportSink } from "./spool.ts";
 import type { Font } from "fontkit";
 import LineBreaker from "linebreak";
 import type { Blockquote, Heading, List, PhrasingContent, RootContent, Table } from "mdast";
@@ -88,21 +89,21 @@ interface Line {
 }
 
 /** The document as a PDF's bytes. */
-export async function toPdf(doc: ExportDoc, fonts: Fonts = findFonts()): Promise<Uint8Array> {
+export async function toPdf(doc: ExportDoc, fonts: Fonts = findFonts(), sink?: ExportSink): Promise<Uint8Array> {
   const r = await loadRasterizer();
   // A PDF holds PNG and JPEG: a GIF, a BMP, a WebP made a PNG first.
   await convertPictures(doc, ["png", "jpg"], r);
-  return new PdfWriter(doc, fonts, r).write();
+  return new PdfWriter(doc, fonts, r, !!sink).write(sink);
 }
 
 /** The PDF a document is written into: A4, its pages kept until the end (for their numbers), its title and author. */
-export function pdfDocument(doc: ExportDoc): PDFKit.PDFDocument {
+export function pdfDocument(doc: ExportDoc, bufferPages = true): PDFKit.PDFDocument {
   return new PDFDocument({
     size: "A4",
     margins: MARGIN,
     // No default font loaded (Helvetica, which a compiled slipbox hasn't got): every run names its own.
     font: null as unknown as string,
-    bufferPages: true,
+    bufferPages,
     displayTitle: true,
     info: { Title: doc.title, ...(doc.author ? { Author: doc.author } : {}), Creator: "slipbox" },
     ...(doc.lang ? { lang: doc.lang } : {}),
@@ -176,8 +177,9 @@ class PdfWriter {
     private readonly doc: ExportDoc,
     private readonly fonts: Fonts,
     private readonly r: Rasterizer | null,
+    private readonly streaming = false,
   ) {
-    this.pdf = pdfDocument(doc);
+    this.pdf = pdfDocument(doc, !streaming);
     const faces: [string, Face][] = [
       ["regular", fonts.regular],
       ["bold", fonts.bold],
@@ -219,16 +221,25 @@ class PdfWriter {
     this.boxes = this.covered("☐☑");
   }
 
-  async write(): Promise<Uint8Array> {
+  async write(sink?: ExportSink): Promise<Uint8Array> {
     const pdf = this.pdf;
     const chunks: Buffer[] = [];
-    pdf.on("data", (c: Buffer) => chunks.push(c));
-    const done = new Promise<void>((resolve) => pdf.on("end", () => resolve()));
+    pdf.on("data", (c: Buffer) => {
+      if (sink) sink(c);
+      else chunks.push(c);
+    });
+    const done = new Promise<void>((resolve, reject) => {
+      pdf.on("end", resolve);
+      pdf.on("error", reject);
+    });
+    // Let the readable enter flowing mode before generating pages, so its output isn't queued until rendering ends.
+    await new Promise<void>((resolve) => setImmediate(resolve));
     this.doc.chapters.forEach((ch, k) => {
-      if (k > 0) pdf.addPage();
+      if (k > 0) this.addPage();
       this.writeChapter(ch);
     });
-    this.pageNumbers();
+    if (sink) this.pageNumber(this.page());
+    else this.pageNumbers();
     pdf.end();
     await done;
     return new Uint8Array(Buffer.concat(chunks));
@@ -527,9 +538,33 @@ class PdfWriter {
     this.draw(this.lines(content, box.width, { size: o.size, color: box.color }), box, o);
   }
 
+  private readonly bars: { colour: string; x: number; top: number }[] = [];
+
+  /** Finish decorations before the next page releases this one. Nested quotes each keep their own start. */
+  private addPage(): void {
+    for (const bar of this.bars) {
+      this.drawBar(bar, this.pdf.page.height - MARGIN.bottom);
+      bar.top = MARGIN.top;
+    }
+    if (this.streaming) this.pageNumber(this.page());
+    this.pdf.addPage();
+  }
+
+  private drawBar(bar: { colour: string; x: number; top: number }, bottom: number): void {
+    if (bottom > bar.top)
+      this.pdf
+        .save()
+        .moveTo(bar.x, bar.top)
+        .lineTo(bar.x, bottom)
+        .lineWidth(2.5)
+        .strokeColor(bar.colour)
+        .stroke()
+        .restore();
+  }
+
   /** Room for `h` points down the page, or a new page. */
   private ensure(h: number): void {
-    if (this.pdf.y + h > this.pdf.page.height - MARGIN.bottom) this.pdf.addPage();
+    if (this.pdf.y + h > this.pdf.page.height - MARGIN.bottom) this.addPage();
   }
 
   /** The page being written: the last there is. */
@@ -719,6 +754,17 @@ class PdfWriter {
   /** What `body` writes, with a bar down its left at `x`, page by page. */
   private barred(colour: string, x: number, body: () => void): void {
     const pdf = this.pdf;
+    if (this.streaming) {
+      const bar = { colour, x, top: pdf.y };
+      this.bars.push(bar);
+      try {
+        body();
+        this.drawBar(bar, pdf.y - 4);
+      } finally {
+        this.bars.pop();
+      }
+      return;
+    }
     const [startPage, startY] = [this.page(), pdf.y];
     body();
     const [endPage, endY] = [this.page(), pdf.y - 4];
@@ -896,7 +942,7 @@ class PdfWriter {
     rows.forEach((row, i) => {
       const cells = i === 0 ? header! : laid(row);
       if (pdf.y + heightOf(cells) > pdf.page.height - MARGIN.bottom) {
-        pdf.addPage();
+        this.addPage();
         // The header again, on the new page.
         if (i > 0 && header) drawRow(header, true);
       }
@@ -944,7 +990,18 @@ class PdfWriter {
     const range = pdf.bufferedPageRange();
     for (let i = range.start; i < range.start + range.count; i++) {
       pdf.switchToPage(i);
-      // Written below the margin: no new page for it.
+      this.pageNumber(i);
+    }
+  }
+
+  /** A page's footer before it's flushed, preserving the body cursor and margins. */
+  private pageNumber(i: number): void {
+    const pdf = this.pdf;
+    const x = pdf.x,
+      y = pdf.y,
+      bottom = pdf.page.margins.bottom;
+    pdf.save();
+    try {
       pdf.page.margins.bottom = 0;
       pdf.y = pdf.page.height - 44 - 8;
       this.flow(
@@ -952,6 +1009,11 @@ class PdfWriter {
         { x: MARGIN.left, width: pdf.page.width - MARGIN.left - MARGIN.right },
         { align: "center", size: 8.5, keep: true },
       );
+    } finally {
+      pdf.restore();
+      pdf.page.margins.bottom = bottom;
+      pdf.x = x;
+      pdf.y = y;
     }
   }
 }
