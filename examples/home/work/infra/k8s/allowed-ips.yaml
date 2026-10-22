@@ -1,0 +1,11 @@
+# Who may reach the admin endpoints. Reviewed by Malik at the start of every quarter.
+# Documentation ranges (RFC 5737) stand in for the real office and VPN addresses in this copy.
+- 10.20.0.0/16            # the cluster's pod network
+- 10.21.0.0/20            # the office VPN
+- 203.0.113.7             # the bastion
+- 203.0.113.0/28          # the CI runners
+# Contractor, until the end of Q4
+- 198.51.100.14
+- 198.51.100.15
+- 192.0.2.0/24
+- 2001:db8:1f00::/48      # the same VPN over IPv6

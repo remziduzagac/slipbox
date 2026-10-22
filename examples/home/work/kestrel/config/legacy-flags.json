@@ -1,0 +1,6 @@
+{
+  'route_sharing': false,
+  'offline_sync': false,
+  'sample_rate': NaN,
+  'max_routes': 50,
+}

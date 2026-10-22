@@ -1,0 +1,4 @@
+# a vault nested in the fixture vault: a boundary the walk doesn't cross
+[vault]
+id = "0d9b3e6a27c4f851"
+name = "fixture-nested"

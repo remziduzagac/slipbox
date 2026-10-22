@@ -1,0 +1,23 @@
+# Work in progress: the palette Tomás exported from Figma, not yet cleaned up.
+name: "kestrel-light"
+author: "Tomás Ruiz"
+variant: "light"
+
+palette:
+  base00: "#fbfaf7"
+  base01: "#f0eee8"
+  base02: "#e4e1d8"
+  base03: "#9a968a"
+  base04: "#6f6b61"
+  base05: "#3b3933"
+  base06: "#24231f"
+  base07: "#000000"
+  base08: "#c4314b"
+  base09: "#d9701f"
+  base0A: "#b8860b"
+  base0B: "#3d8b40"
+  base0C: "#0e8a9a"
+  base0D: "#2f6fdb"
+  base0E: "#7e57c2"
+  base0F: "brown"
+  base10: "#12345"

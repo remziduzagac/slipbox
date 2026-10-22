@@ -1,0 +1,8 @@
+# The outreach programme's own vault, nested in the observatory's (examples/vault): a boundary. Its
+# notes aren't the observatory's; each side links to the other by path (`../home.md`,
+# `outreach/index.md`). See ../about-this-vault.md, "Nested vaults".
+
+[vault]
+id = "7c2e9b4f18a3d605"
+name = "outreach"
+aliases = ["public"]

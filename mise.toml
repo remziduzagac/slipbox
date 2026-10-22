@@ -1,0 +1,13 @@
+# The toolchain, pinned once: mise reads it here, and jdx/mise-action in CI. Each version a week old at least, as
+# packages are (bunfig.toml's minimumReleaseAge). package.json's `engines` stays the floor for running from source.
+[tools]
+bun = "1.4.2"
+# The check's tools beyond the dependencies: the workflows' audit and lint, spelling, the links between files, and
+# the history's search for secrets.
+"aqua:zizmorcore/zizmor" = "1.30.1"
+"aqua:rhysd/actionlint" = "1.7.12"
+"aqua:crate-ci/typos" = "1.50.3"
+"aqua:lycheeverse/lychee" = "0.24.2"
+"aqua:gitleaks/gitleaks" = "8.30.1"
+# ShellCheck, which actionlint runs over the workflows' scripts: the same version here as in CI.
+"aqua:koalaman/shellcheck" = "0.11.0"

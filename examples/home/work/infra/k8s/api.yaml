@@ -1,0 +1,160 @@
+---
+# The Kestrel API: request path only. The sync worker is in workers/sync-worker.yaml.
+# Rendered and applied by CI; edit here, never with kubectl edit.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: kestrel-api
+  namespace: kestrel
+  labels:
+    app: kestrel-api
+    tier: backend
+    # this one was added by a kustomize patch and nobody removed the old line
+    app: api
+spec:
+  replicas: 4
+  revisionHistoryLimit: 5
+  selector:
+    matchLabels:
+      app: kestrel-api
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+  template:
+    metadata:
+      labels:
+        app: kestrel-api
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "9102"
+    spec:
+      terminationGracePeriodSeconds: 45
+      containers:
+        # the API itself
+        - name: api
+          image: ghcr.io/kestrel-labs/kestrel-api:2.3.0
+          args: ["--port=8080", "--workers=4"]
+          imagePullPolicy: IfNotPresent
+        # a sidecar: health: is expanded into probes by our kustomize plugin
+        - name: metrics
+          image: ghcr.io/kestrel-labs/metrics-sidecar:1.4.2
+          ports:
+            - containerPort: 9102
+              name: metrics
+          health:
+            path: /healthz
+            port: 9102
+            interval: 10s
+          resources:
+            requests: {cpu: 50m, memory: 64Mi}
+            limits: {cpu: 200m, memory: 128Mi}
+---
+# Service in front of the API pods
+apiVersion: v1
+kind: Service
+metadata:
+  name: kestrel-api
+  namespace: kestrel
+spec:
+  type: ClusterIP
+  selector:
+    app: kestrel-api
+  ports:
+    - name: http
+      port: 80
+      targetPort: 8080
+---
+# Runtime settings. SYNC_RETRY_BUDGET came with the 2026-09-22 incident (kestrel ADR 0004).
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: kestrel-api-config
+  namespace: kestrel
+data:
+  LOG_LEVEL: info
+  SYNC_RETRY_BUDGET: "5"
+  TILE_URL: https://tiles.kestrel.dev/{z}/{x}/{y}.pbf
+  FEATURE_ROUTE_SHARING: "true"
+---
+# Scale on CPU between 4 and 12 pods
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: kestrel-api
+  namespace: kestrel
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: kestrel-api
+  minReplicas: 4
+  maxReplicas: 12
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 70
+---
+# Never take more than one API pod down at a time during a node drain
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: kestrel-api
+  namespace: kestrel
+spec:
+  maxUnavailable: 1
+  selector:
+    matchLabels:
+      app: kestrel-api
+---
+# Public entry point
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: kestrel-api
+  namespace: kestrel
+  annotations:
+    nginx.ingress.kubernetes.io/proxy-body-size: 20m
+spec:
+  ingressClassName: nginx
+  tls:
+    - hosts: [api.kestrel.dev]
+      secretName: kestrel-api-tls
+  rules:
+    - host: api.kestrel.dev
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: kestrel-api
+                port:
+                  number: 80
+---
+# Only the ingress controller and the sync worker may talk to the API pods
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: kestrel-api
+  namespace: kestrel
+spec:
+  podSelector:
+    matchLabels:
+      app: kestrel-api
+  policyTypes: [Ingress]
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: ingress-nginx
+        - podSelector:
+            matchLabels:
+              app: kestrel-sync-worker
+      ports:
+        - protocol: TCP
+          port: 8080

@@ -1,0 +1,15 @@
+# A copy of the notes folder, made 2026-07-30, the day after the rename. Same vault identity as ~/notes: the id and
+# the name match, so slipbox sees two folders claiming to be one vault.
+
+[vault]
+id = "7c20b94e1fa35d68"
+name = "notes"
+aliases = ["kb"]
+previous_names = ["inbox"]
+
+[capture]
+location = "vault"
+file = "inbox.md"
+
+[walk]
+extensions = ["md", "markdown"]

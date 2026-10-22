@@ -1,0 +1,34 @@
+# Sam's notes. Settings here sit between ~/.config/slipbox/config.toml and nothing: no vault is nested above this one.
+# See docs/manual/configuration.md for every key.
+
+# The vault's identity, read on its own. The folder was `inbox` until August; old pointers (slipbox://inbox/...) still land
+# here, as a fallback only.
+[vault]
+id = "7c20b94e1fa35d68"
+name = "notes"
+aliases = ["kb"]
+previous_names = ["inbox"]
+
+# Quick captures from the editor and the agent land in notes/inbox.md, where the notes are, not in the state folder.
+[capture]
+location = "vault"
+file = "inbox.md"
+
+[walk]
+extensions = ["md", "markdown"]
+# The abandoned OKR draft stays on disk, out of every list and search. Private scratch files too, except the one
+# I keep on purpose.
+exclude = ["templates/drafts/**", "*.private.md", "!reading-log.private.md"]
+
+[files]
+show = "renderable"            # notes and data files, the default
+
+[context]
+depth = 2                      # a bundle follows links twice: note, what it links to, what those link to
+backlinks = true
+
+[search]
+engine = "auto"                # the index once built, else a scan
+
+[lint]
+enabled = "auto"               # no markdownlint config in this vault, so lint stays off

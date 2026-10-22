@@ -1,0 +1,14 @@
+# Photography: gear notes, EXIF exports, photo walks and the Kyoto trip. A folder of its own, outside the notes vault,
+# so its links are plain relative paths and slipbox:// pointers go in from `notes`. No [capture] section: scratch and
+# captures stay in the state folder, keyed by this root.
+
+[vault]
+id = "3a91d4f07be2c685"
+name = "photography"
+previous_names = ["photos"]     # until September the folder was called photos; old pointers still land here
+
+[walk]
+exclude = ["exports/*.tmp"]
+
+[files]
+show = "renderable"

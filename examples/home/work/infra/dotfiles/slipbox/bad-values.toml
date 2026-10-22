@@ -1,0 +1,63 @@
+# Aiko's first attempt at a config, assembled from three blog posts and a colleague's laptop.
+theme = "nord\u001b[31m"            # pasted from a terminal; the colour code came along
+sparkle = true                      # from a plugin she has not installed
+
+[render]
+inset = 99
+max_width = "wide"
+glyphs = "emoji"
+show_urls = "sometimes"
+
+[walk]
+extensions = []
+max_file_size = -1
+
+[files]
+show = "everything"
+include = ["*.ts", 7]
+
+[ui]
+sidebar = "yes"
+sidebar_width = 400
+split_ratio = 0.9
+lines = "double"
+scrolloff = 2.5
+history_limit = 5000
+mouse = 1
+
+[input]
+which_key_delay_ms = "fast"
+
+[watch]
+poll_ms = 10
+debounce_ms = 0.5
+
+[context]
+depth = 9
+limit = 0
+
+[editor]
+edit_in = "both"
+lens_max = 3
+
+[keys]
+"hyper+x" = "note.save"
+"leader z" = "no.such.command"
+
+[keys.source]
+"x" = "edit.delete_char"
+
+[keys.visual]
+Y = 12
+
+[colors]
+border = "#12345"                   # five digits
+h1 = "ansi:300"
+link = 300
+tree_guide = { fg = "#zzzzzz" }
+pane_title = { fg = "#8c95b0", sparkle = true }
+sparkle_role = "#ffffff"
+rail = { bg = 12, bold = "yes" }
+
+[colors.nord]
+link_unresolved = "red"

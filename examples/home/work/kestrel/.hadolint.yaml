@@ -1,0 +1,25 @@
+# hadolint: https://github.com/hadolint/hadolint#configure
+failure-threshold: warning
+format: tty
+
+ignored:
+  - DL3008   # we pin the base image, not every apt package
+  - DL3015   # --no-install-recommends is applied in the base stage
+
+trustedRegistries:
+  - docker.io
+  - ghcr.io/kestrel-labs
+  - gcr.io
+
+override:
+  error:
+    - DL3001
+  warning:
+    - DL3042
+  info:
+    - DL3059
+
+strict-labels: false
+label-schema:
+  maintainer: text
+  org.opencontainers.image.source: url

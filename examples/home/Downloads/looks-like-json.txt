@@ -1,0 +1,6 @@
+{"event": "share.created", "route_id": 5503, "owner": "aiko", "note": "Route preview card for the share link: the climbing profile shows 1,320 m over 84 km with the steepest part, 11 percent, after the reservoir; the card also lists the surface mix (72 percent paved, 28 percent gravel), the estimated riding time of four hours and ten minutes at a relaxed pace, the start and finish points, and the three sharing options (link only, anyone with the link can view, or invite by email). Recipients without the app see a web preview with the map, and the owner can switch the link off at any time from the sheet. ", "yaml_example": "- name: sync\n  replicas: 3\n  image: kestrel/sync:2.3.0", "tags": ["share", "preview", "2.3"], "ok": true}
+# the same, as pasted in yaml:
+event: share.created
+route_id: 5503
+owner: aiko
+note: Route preview card for the share link: the climbing profile shows 1,320 m over 84 km with the steepest part, 11 percent, after the reservoir; the card also lists the surface mix (72 percent paved, 28 percent gravel), the estimated riding time of four hours and ten minutes at a relaxed pace, the start and finish points, and the three sharing options (link only, anyone with the link can view, or invite by email). Recipients without the app see a web preview with the map, and the owner can switch the link off at any time from the sheet. 

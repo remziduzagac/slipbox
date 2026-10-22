@@ -1,0 +1,31 @@
+From 5b1c9de0a41f Mon Sep 17 00:00:00 2001
+From: Sam Rivera <sam@kestrel.dev>
+Date: Wed, 9 Sep 2026 14:02:11 +0200
+Subject: [PATCH] tiles: clamp latitude before projecting
+
+Web mercator is undefined at the poles; the vendored crate panicked on a
+route that touched 90 degrees north. Clamp to the +-85.0511 limit.
+
+---
+ src/lib.rs | 3 +++
+ 1 file changed, 3 insertions(+)
+
+diff --git a/src/lib.rs b/src/lib.rs
+index 3f2a1c4..9d0e7b2 100644
+--- a/src/lib.rs
++++ b/src/lib.rs
+@@ -12,9 +12,12 @@ pub struct TileCoord {
+     pub z: u8,
+ }
+ 
++const MAX_LAT: f64 = 85.0511287798;
++
+ pub fn lonlat_to_tile(lon: f64, lat: f64, z: u8) -> TileCoord {
+     let n = f64::from(1u32 << z);
+     let x = ((lon + 180.0) / 360.0 * n).floor() as u32;
++    let lat = lat.clamp(-MAX_LAT, MAX_LAT);
+     let y = ((1.0 - lat.to_radians().tan().asinh() / std::f64::consts::PI) / 2.0 * n).floor() as u32;
+     TileCoord { x, y, z }
+ }
+-- 
+2.46.0

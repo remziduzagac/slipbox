@@ -1,0 +1,39 @@
+{
+  // Team settings. Personal ones go in your user settings, not here.
+  "$schema": "../config/schema.json",
+  "editor.formatOnSave": true,
+  "editor.rulers": [88, 100, 120],
+  "editor.tabSize": 2,
+  "files.insertFinalNewline": true,
+  "files.trimTrailingWhitespace": true,
+  "files.exclude": {
+    "**/node_modules": true,
+    "**/target": true, // rust build output
+    "**/__pycache__": true
+  },
+  "python.defaultInterpreterPath": "${workspaceFolder}/api/.venv/bin/python",
+  "python.analysis.typeCheckingMode": "strict",
+  "python.analysis.extraPaths": ["api"],
+  "python.testing.pytestEnabled": "yes",
+  "typescript.tsdk": "node_modules/typescript/lib",
+  "typescript.preferences.importModuleSpecifier": "non-relative",
+  "rust-analyzer.cargo.features": "all",
+  "rust-analyzer.check.command": "clippy",
+  "eslint.useFlatConfig": true,
+  "[python]": {
+    "editor.tabSize": 4,
+    "editor.defaultFormatter": "charliermarsh.ruff",
+    /* ruff organises imports too */
+    "editor.codeActionsOnSave": {
+      "source.organizeImports": "explicit",
+    },
+  },
+  "[markdown]": {
+    "editor.wordWrap": "wordWrapColumn",
+    "editor.wordWrapColumn": 120,
+  },
+  "search.exclude": {
+    "package-lock.json": true,
+    "Cargo.lock": true,
+  },
+}

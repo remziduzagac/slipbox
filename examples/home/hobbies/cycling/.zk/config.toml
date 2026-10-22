@@ -1,0 +1,21 @@
+# zk notebook config (https://zk-org.github.io/zk/config/config.html), trimmed.
+
+[note]
+# Notes are named "<id>-<slug of the title>", like 202608201000-bike-fit.md.
+filename = "{{id}}-{{slug title}}"
+extension = "md"
+template = "default.md"
+id-charset = "numbers"
+id-length = 12
+
+[format.markdown]
+# Plain markdown links, no wikilinks, and no ".md" at the end of the path.
+link-format = "markdown"
+link-drop-extension = true
+
+[tool]
+editor = "nvim"
+
+[lsp.diagnostics]
+wiki-title = "hint"
+dead-link = "error"

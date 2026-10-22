@@ -1,0 +1,5 @@
+# Gems for the ride tools: gpx_split.rb reads GPX and writes a file per day.
+source "https://rubygems.org"
+
+gem "nokogiri", "~> 1.16"
+gem "csv"

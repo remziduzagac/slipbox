@@ -1,0 +1,8 @@
+# Added by Tomás from his new editor, which indents with tabs
+apiVersion: v1
+kind: ConfigMap
+metadata:
+	name: kestrel-banner
+	namespace: kestrel
+data:
+	message: "Welcome to the cluster"

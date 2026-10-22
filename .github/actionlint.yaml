@@ -1,0 +1,7 @@
+# actionlint's settings. Its 1.7.12 doesn't know the workflow token's `vulnerability-alerts` scope, with which the
+# health workflow counts the Dependabot alerts (GitHub's docs list it; rhysd/actionlint#666 asks for it): that one
+# message is ignored, in that one workflow. The exception goes once actionlint knows the scope.
+paths:
+  .github/workflows/health.yml:
+    ignore:
+      - 'unknown permission scope "vulnerability-alerts"'

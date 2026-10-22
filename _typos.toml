@@ -1,0 +1,38 @@
+# typos's config for the spelling check, which `bun run check:docs` (scripts/check-docs.ts) runs over the files git
+# tracks: the code and the docs alike. typos knows misspellings, not words, so what it flags is a misspelling or one of
+# the project's own words; a word is allowed here only once it's been read where it stands.
+
+# Left out of the spelling alone; what's wrong on purpose for all three checks is scripts/check-docs.ts's LEFT_OUT.
+[files]
+extend-exclude = [
+  # Third parties' licence texts, kept word for word: `declatory` is MPL-1.1's own.
+  "notices/",
+  # Rendered screens, their words cut at a column's edge: `anually`, `righ`.
+  "tests/__snapshots__/",
+]
+
+[default]
+extend-ignore-re = [
+  # A line misspelt on purpose, a test's typed prefix or a flag spelt wrong to be refused, marked at its end:
+  # `// typos: ignore-line`.
+  "(?Rm)^.*//\\s*typos: ignore-line$",
+  # A block misspelt on purpose, the spell checker's tests, between `// typos: off` and `// typos: on`.
+  "(?s)//\\s*typos: off.*?//\\s*typos: on",
+  # Keys after the leader, `␣fo` or `␣tQ`: keys, not words.
+  "␣[A-Za-z]+",
+  # A theme's palette, sixteen colours in hex (src/core/theme/builtin.ts): `dcd7ba` is no word.
+  "\\b[0-9a-f]{6}(?: [0-9a-f]{6}){15}\\b",
+]
+
+# The project's own words, each where it's from.
+[default.extend-words]
+alikes = "alikes" # look-alikes, a character drawn as another
+bre = "bre" # `cof bre`, a search typed in parts (docs/manual/finding.md)
+devlop = "devlop" # an npm package, in a language server's lockfile (src/core/servers/locks.ts)
+flate = "flate" # PDF's FlateDecode
+hom = "hom" # LaTeX's \hom
+multline = "multline" # LaTeX's multline environment
+opf = "opf" # EPUB's package document, content.opf
+ratatui = "ratatui" # a Rust library for terminal interfaces
+sav = "sav" # the save dialog's id, as `dlg` is a dialog's (src/tui/draw.ts)
+viw = "viw" # Vim's keys for the word under the cursor

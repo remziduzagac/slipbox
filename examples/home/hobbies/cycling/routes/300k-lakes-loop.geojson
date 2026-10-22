@@ -1,0 +1,437 @@
+{
+  "type": "FeatureCollection",
+  "name": "300k-lakes-loop",
+  "features": [
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "300k Lakes loop",
+        "distance_km": 301.4,
+        "climb_m": 2860,
+        "date": "2026-09-13",
+        "notes": "../rides/202609131900-300k-brevet.md",
+        "gpx": "300k-lakes-loop.gpx",
+        "source": "exported from Kestrel 2.2, trimmed by hand"
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            -2.5,
+            54.47
+          ],
+          [
+            -2.49374,
+            54.50301
+          ],
+          [
+            -2.49439,
+            54.5348
+          ],
+          [
+            -2.50265,
+            54.56507
+          ],
+          [
+            -2.51902,
+            54.59354
+          ],
+          [
+            -2.54369,
+            54.62
+          ],
+          [
+            -2.57651,
+            54.64427
+          ],
+          [
+            -2.617,
+            54.66621
+          ],
+          [
+            -2.66434,
+            54.68572
+          ],
+          [
+            -2.71745,
+            54.70271
+          ],
+          [
+            -2.775,
+            54.71713
+          ],
+          [
+            -2.83557,
+            54.72895
+          ],
+          [
+            -2.89767,
+            54.73816
+          ],
+          [
+            -2.95992,
+            54.74474
+          ],
+          [
+            -3.02104,
+            54.74868
+          ],
+          [
+            -3.08,
+            54.75
+          ],
+          [
+            -3.13602,
+            54.74868
+          ],
+          [
+            -3.18862,
+            54.74474
+          ],
+          [
+            -3.23759,
+            54.73816
+          ],
+          [
+            -3.28298,
+            54.72895
+          ],
+          [
+            -3.325,
+            54.71713
+          ],
+          [
+            -3.36401,
+            54.70271
+          ],
+          [
+            -3.40039,
+            54.68572
+          ],
+          [
+            -3.43446,
+            54.66621
+          ],
+          [
+            -3.46643,
+            54.64427
+          ],
+          [
+            -3.49631,
+            54.62
+          ],
+          [
+            -3.52392,
+            54.59354
+          ],
+          [
+            -3.54881,
+            54.56507
+          ],
+          [
+            -3.57035,
+            54.5348
+          ],
+          [
+            -3.58772,
+            54.50301
+          ],
+          [
+            -3.6,
+            54.47
+          ],
+          [
+            -3.60626,
+            54.43611
+          ],
+          [
+            -3.60561,
+            54.40174
+          ],
+          [
+            -3.59735,
+            54.36729
+          ],
+          [
+            -3.58098,
+            54.33323
+          ],
+          [
+            -3.55631,
+            54.3
+          ],
+          [
+            -3.52349,
+            54.26809
+          ],
+          [
+            -3.483,
+            54.23797
+          ],
+          [
+            -3.43566,
+            54.2101
+          ],
+          [
+            -3.38255,
+            54.18493
+          ],
+          [
+            -3.325,
+            54.16287
+          ],
+          [
+            -3.26443,
+            54.14428
+          ],
+          [
+            -3.20233,
+            54.12948
+          ],
+          [
+            -3.14008,
+            54.11872
+          ],
+          [
+            -3.07896,
+            54.11219
+          ],
+          [
+            -3.02,
+            54.11
+          ],
+          [
+            -2.96398,
+            54.11219
+          ],
+          [
+            -2.91138,
+            54.11872
+          ],
+          [
+            -2.86241,
+            54.12948
+          ],
+          [
+            -2.81702,
+            54.14428
+          ],
+          [
+            -2.775,
+            54.16287
+          ],
+          [
+            -2.73599,
+            54.18493
+          ],
+          [
+            -2.69961,
+            54.2101
+          ],
+          [
+            -2.66554,
+            54.23797
+          ],
+          [
+            -2.63357,
+            54.26809
+          ],
+          [
+            -2.60369,
+            54.3
+          ],
+          [
+            -2.57608,
+            54.33323
+          ],
+          [
+            -2.55119,
+            54.36729
+          ],
+          [
+            -2.52965,
+            54.40174
+          ],
+          [
+            -2.51228,
+            54.43611
+          ],
+          [
+            -2.5,
+            54.47
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "Control 1: Aldworth bakery",
+        "km": 86,
+        "kind": "control"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -3.20493,
+          54.74255
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "Control 2: Lower lake car park",
+        "km": 171,
+        "kind": "control"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -3.54054,
+          54.28466
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "Control 3: Bridge services",
+        "km": 238,
+        "kind": "control"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -2.88111,
+          54.12537
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "Stop: Mill Lane petrol station",
+        "km": 30,
+        "kind": "stop"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -2.59476,
+          54.65416
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "Stop: Market square cafe",
+        "km": 124,
+        "kind": "stop"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -3.53138,
+          54.585
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "Stop: Hollin Cross garage",
+        "km": 150,
+        "kind": "stop"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -3.60592,
+          54.4182
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "Stop: Village hall",
+        "km": 212,
+        "kind": "stop"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -3.17247,
+          54.12432
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "Stop: Upper lake boat house",
+        "km": 272,
+        "kind": "stop"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -2.61678,
+          54.28602
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "Detour: closed bridge at Aldworth",
+        "km": 84,
+        "kind": "detour"
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            -3.18221,
+            54.74522
+          ],
+          [
+            -3.17662,
+            54.75074
+          ],
+          [
+            -3.23881,
+            54.73791
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "Detour: flooded ford below the lower lake",
+        "km": 172,
+        "kind": "detour"
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            -3.53463,
+            54.27892
+          ],
+          [
+            -3.56831,
+            54.294
+          ],
+          [
+            -3.50142,
+            54.25168
+          ]
+        ]
+      }
+    }
+  ]
+}

@@ -1,0 +1,30 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Route",
+  "type": "object",
+  "required": ["id", "name", "points"],
+  "properties": {
+    "id": { "$ref": "common.json#/definitions/id" },
+    "name": { "type": "string", "minLength": 1 },
+    "points": {
+      "type": "array",
+      "items": { "$ref": "#/definitions/point" },
+      "minItems": 2
+    },
+    "start": { "$ref": "#/definitions/point" },
+    "created": { "$ref": "common.json#/definitions/timestamp" },
+    "elevation_profile": { "$ref": "./elevation-profile.json" },
+    "tags": { "type": "array", "items": { "type": "string" } },
+    "meta": { "$ref": "#/definitions/surface~1type" }
+  },
+  "definitions": {
+    "point": {
+      "type": "object",
+      "properties": {
+        "lat": { "type": "number" },
+        "lon": { "type": "number" }
+      }
+    },
+    "surface/type": { "type": "object", "additionalProperties": true }
+  }
+}

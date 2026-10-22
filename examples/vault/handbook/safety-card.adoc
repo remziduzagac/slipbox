@@ -1,0 +1,49 @@
+= Dome safety card
+:author: Rosa Lind
+:revdate: 2026-09-01
+:tags: safety, dome
+
+// Printed and taped inside the dome door. Keep it to one page.
+
+The rules for anyone working in the dome, in the order they matter. The long version is
+xref:operations-handbook.md[the operations handbook]; the dome's repair history is
+xref:../logs/dome-log.org[the dome log].
+
+[[before]]
+== Before you go up
+
+WARNING: Never work alone in the dome after dark.
+
+* [ ] tell someone in the control room
+* [ ] check the wind: <<limits,the limits table>>
+* [x] wear the head torch, red mode
+** spare batteries are in the blue box
+
+[[limits]]
+== Wind and weather limits
+
+.When to close
+|===
+| Condition | Limit | Action
+
+| Wind | 40 km/h | close the shutter
+| Humidity | 85 % | close, cap the optics
+| Rain | any | close at once
+|===
+
+[TIP]
+====
+The weather station's page is at https://halden-ridge.invalid/weather[the weather page];
+it updates every minute.
+====
+
+== After
+
+. Park the telescope.
+. Close the shutter and check it latched.
+. Log the session: see <<before>> for what to check next time.
+
+[source,bash]
+----
+halley dome close --verify
+----

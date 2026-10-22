@@ -1,0 +1,105 @@
+---
+synced_with: main@b84705f
+---
+
+# slipbox blueprint
+
+slipbox is the terminal companion for coding agents: a shared workspace for humans and agents over plain files, where a
+person in the TUI reads, reviews and edits what an agent on the CLI writes, both seeing the same files, the same links
+and the same answers (D33, D226). It is TypeScript on Bun,
+one core with two faces, compiled into one binary (D5, D8). Every phase on the roadmap is built, extensibility aside,
+deferred (D37), and the initial design was declared settled on 2026-10-11 (D210). The repository is public on GitHub
+under Apache-2.0, kept to the user's greenrepo standard ([design/repository.md](design/repository.md)), and 0.4.0 is
+the latest release (2026-10-17), 0.2.1 the first (2026-10-12). Next: native Windows (`14.14`–`14.17`), and the
+ideas left open: the skill as an npx package, how agents and slipbox work together, search's improvements.
+
+## Where to start
+
+1. [design/how-it-works.md](design/how-it-works.md): how it works, end to end.
+2. [roadmap.md](roadmap.md): what is done, what comes next, what waits.
+3. [requirements.md](requirements.md): what slipbox must do and be, and the constraints it keeps.
+
+## The strands
+
+- [roadmap.md](roadmap.md): the order of work: the steps by their stable IDs, the phases, and Later.
+- [ideas.md](ideas.md): ideas and alternatives, and what became of them.
+- [notes.md](notes.md): how each topic was discussed.
+- [research/](research/README.md): what was learned from outside, and from where.
+- [decisions/](decisions/README.md): every decision with its reasons, D1 onward, and the terms since renamed.
+- [requirements.md](requirements.md): what slipbox must do and be.
+- [design/](design/README.md): how it works now.
+
+- [tasks/](tasks/README.md): small work not worth a workstream; open tasks are its files.
+- [workstreams/](workstreams/README.md): contained parts of the work; the roadmap gives their order. Active:
+  [TT](workstreams/terminal-tests/README.md), the terminal tests headless and by feature. DOC, the user
+  documentation, DF, what writing it found, [GR](workstreams/archive/greenrepo/README.md), the repository to
+  greenrepo, published and released, [DS](workstreams/archive/docs-site/README.md), the documentation site and docs
+  a newcomer can follow, [VV](workstreams/archive/vaults-and-view/README.md), vaults and the explorer's view, and
+  [GIT](workstreams/archive/git-review/README.md), reviewing, diffing and merging what an agent changed, are
+  consolidated, in `workstreams/archive/` (VV's and GIT's docs tasks still being written).
+
+## How things are recorded
+
+- Requirements and design are the current truth; decisions say why; workstreams propose changes, are consolidated
+  into their parents when complete, and are then archived.
+- Decisions are append-only: a change is a new entry, and a note goes under each earlier entry it changes.
+- Work goes top-down, from the goals to the tasks; corrections go back up to the level they belong to.
+- The blueprint and the code are synced both ways; `synced_with` is the last commit reconciled.
+
+This blueprint is public, so a contributor's agent needs nothing but this README to work in it:
+
+- Read this README and the roadmap's status line first, then only what the job needs: the requirement and design
+  sections it touches, and the decisions they cite (`grep -n '^## D39:' decisions/*.md`).
+- The initial design is settled (D210): a change to requirements or design goes through a workstream, unless it's
+  small: then an issue and one pull request that changes the design file with the code (D223). A workstream is a
+  folder in `workstreams/` with a short key (`WG`) that prefixes its IDs (`WG-D1`, `WG-T1`): a README with front matter
+  (`status: draft`, then `active`, `complete`, `consolidated`; `created`), a `requirements.md` and a `design.md`
+  holding its changes to the root's sections as ADDED, MODIFIED (with the text as it was, "Previously: …") or REMOVED,
+  each named by path and section, and its `tasks/`. It writes only inside its own folder; the root's files change when
+  it is consolidated, with the person's approval.
+- Work that changes neither requirements nor design is a task: one file in `tasks/`, its ID in its H1 (`# T1: …`),
+  its front matter `status` (`todo`, `doing`, `review`, `done`, `dropped`), `assignee`, `blocked_by` and `created`.
+- A decision is recorded only once the person agrees: in its workstream, or, for what belongs to none, as the next D
+  number at the end of its theme's file in `decisions/`. An entry is never rewritten; a dated note goes under it.
+- Ideas go to ideas.md by topic, each with its outcome once settled; what was learned from outside goes to research/,
+  every claim with its provenance; each discussion is added to notes.md.
+- A change that alters what the blueprint describes updates it in the same piece of work. Where the code and the
+  blueprint disagree, say so and let the person decide; never quietly change either to match.
+
+## Conventions
+
+- **Provenance** of a claim: *read*, seen in a named source; *ran*, executed; *summary*, through a fetched page's
+  summary; *memory*, unverified knowledge; *ours*, a value of our own with no source.
+- **Step IDs.** Plan items (`0.11`, `3.3`, `21.x`) are the roadmap's step IDs, and stable: cite them rather than
+  restate the work. A decision's title names its items: `grep -n '(0.10[,)]' decisions/*.md`.
+- **History stays in history.** Requirements and design say what holds now, and cite the decisions behind it; how it
+  came to be lives in decisions, as dated notes under the entries a change touched (D210), and in ideas and notes.
+- **Markdown** is wrapped at 120 columns, tables and code included. `bun run check:docs` checks it: markdownlint by
+  the project's `.markdownlint-cli2.jsonc`, spelling by typos, the links between files by lychee. markdownlint-cli2
+  reads its config from the directory it runs in only, so it runs from the repository's top. A clean lint is no proof
+  an edit landed where it was meant to: read the result.
+- **User documentation** lives in `docs/` (guides and a manual, mapped by `docs/README.md`) and the project's README,
+  written for users and never copied from here; the design may link to it, never the reverse.
+- **`<dotfiles>`** means `~/Projects/dotfiles` on the user's machine: the nvim render-markdown config, the herdr config
+  and the workslate theme files are there.
+- **The toolchain** is mise's, pinned in `mise.toml` (GR-D11), on a login shell's `PATH`: a non-interactive shell
+  finds no `bun`, which looks exactly like bun missing. Use `zsh -lc '…'` before concluding a tool is absent.
+- **Checks.** `bun run check` (the typecheck, the boundary, the supply chain's gates, Biome, zizmor and actionlint, the
+  docs' lint, spelling and links, the tests) runs freely, and CI runs the same on Linux and macOS. Terminal tests and
+  live checks against real servers are listed for the person's approval before they run (D207). A feature just built
+  is tried live by the agent, in a herdr tab of its own on the reference set, and marked done once it works (D209).
+- **Changes land** through a pull request that passes CI's `ci` check, merged by the maintainer, its title a
+  Conventional Commit and the IDs in its body; agents propose, never merge, release or change settings (GR-D6;
+  design/repository.md § How a change lands).
+- **Every bug fixed gets a regression test** that fails without the fix.
+- **The examples.** The reference set, `examples/home/`, holds every case of every feature, listed in its `CASES.md`:
+  use it to test a feature. The demo vault, `examples/vault/`, holds the rendering fixtures (its `about-this-vault.md`
+  says what each note exercises): use it when touching rendering.
+- **Before changing what others rely on:**
+  - Storage (D39), the walk (D40) and the CLI's commands (D18) are relied on by the index, the watcher and agents:
+    change them through a decision.
+  - A dependency is checked against D3 (an external binary may be optional, never required) and D192 (its licence, and
+    its own dependencies') before it is added.
+  - A settled decision is read before it is reopened: most were decided against an alternative that looks obvious from
+    outside.
+  - The phases were reasoned, not decreed: they move only deliberately, saying why (D24).

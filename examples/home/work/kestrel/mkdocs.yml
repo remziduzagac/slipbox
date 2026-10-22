@@ -1,0 +1,36 @@
+site_name: Kestrel docs
+site_url: https://docs.kestrel.dev
+repo_url: https://github.com/kestrel-labs/kestrel
+docs_dir: docs
+
+theme:
+  name: material
+  palette:
+    scheme: slate
+  features: [navigation.sections, content.code.copy]
+
+plugins:
+  - search
+  - mermaid2
+
+markdown_extensions: [admonition, toc, footnotes, tables]
+
+nav:
+  # TODO(aiko): these two still use repo paths from before docs_dir; --strict fails until fixed
+  - Home: architecture.md
+  - Architecture: docs/architecture.md
+  - Developer setup: dev-setup.md
+  - Sync:
+      - How it works: sync.md
+      - Runbook: docs/runbooks/sync-queue.md
+  - Decisions:
+      - Offline-first sync: adr/0001-offline-first-sync.md
+      - Route engine in Rust: adr/0002-route-engine-in-rust.md
+      - Share links: adr/0003-sharing-links.md
+      - Retry budget: adr/0004-retry-budget.md
+  - Features:
+      - Route sharing: features/route-sharing.md
+  - Runbooks:
+      - Deploy: runbooks/deploy.md
+      - Support escalation: runbooks/support-escalation.md
+  - Reference: generated/api.md

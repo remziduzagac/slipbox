@@ -1,0 +1,78 @@
+name: Bug report
+description: Something slipbox does wrong, or that stops you using it.
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: >-
+        Thanks for reporting it. Show it on a small example note, never on your own private notes: an issue is
+        public. A security problem goes privately, as
+        [the security policy](https://github.com/remziduzagac/slipbox/security/policy) says, never here.
+  - type: input
+    id: version
+    attributes:
+      label: Version
+      description: What `slipbox --version` prints.
+      placeholder: slipbox 0.2.0
+    validations:
+      required: true
+  - type: dropdown
+    id: install
+    attributes:
+      label: Installed with
+      options:
+        - the installer (install.sh)
+        - Homebrew
+        - from source
+    validations:
+      required: true
+  - type: input
+    id: platform
+    attributes:
+      label: Platform
+      description: The operating system and its version, and the processor; WSL's distribution if it's there.
+      placeholder: macOS 15.6, arm64
+    validations:
+      required: true
+  - type: input
+    id: terminal
+    attributes:
+      label: Terminal
+      description: The terminal and its version, and any multiplexer (tmux, zellij) or SSH between it and slipbox.
+      placeholder: Ghostty 1.2, inside tmux 3.5, over SSH
+    validations:
+      required: true
+  - type: textarea
+    id: happened
+    attributes:
+      label: What happened
+      description: >-
+        What slipbox did, and what it said. `space m` lists its messages; a command's output with
+        `SLIPBOX_DEBUG=1` shows the error's trace.
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: What you expected
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to make it happen
+      description: From starting slipbox, with the note or the folder it needs, as small as you can make it.
+      placeholder: |
+        1. slipbox ~/example
+        2. open inbox.md
+        3. press …
+    validations:
+      required: true
+  - type: textarea
+    id: output
+    attributes:
+      label: What slipbox sees
+      description: >-
+        For language servers, `slipbox doctor <file>`; for a folder's behaviour, `slipbox info`. Remove any path
+        you'd rather not share.
+      render: text

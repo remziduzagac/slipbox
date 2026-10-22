@@ -1,0 +1,38 @@
+# The Rust workspace: the route engine and the tile maths. The API and the web app are not built by cargo.
+[workspace]
+resolver = "2"
+members = [
+    "crates/route-engine",
+    "crates/tiles",
+]
+exclude = ["vendor/geo-tiles"]
+
+[workspace.package]
+version = "2.3.0"
+edition = "2021"
+authors = ["Kestrel Labs <dev@kestrel.dev>"]
+license = "MIT"
+repository = "https://github.com/kestrel-labs/kestrel"
+rust-version = "1.82"
+
+[workspace.dependencies]
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+thiserror = "1.0"
+rayon = "1.10"
+tracing = "0.1"
+route-engine = { path = "crates/route-engine" }
+
+[profile.release]
+opt-level = 3
+lto = "thin"
+codegen-units = 1
+panic = "abort"
+strip = true
+
+[profile.dev]
+opt-level = 1      # the A* search is unusably slow at 0
+
+[profile.bench]
+inherits = "release"
+debug = true

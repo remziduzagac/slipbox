@@ -1,0 +1,120 @@
+# Architecture
+
+A short map of slipbox's code, for whoever changes it: its layers and the rule between them, where things live, the
+invariants every change keeps, and how a change is checked. It changes rarely; the details are in the design (last
+section).
+
+slipbox is TypeScript on Bun, compiled into one binary by `bun build --compile`. It is one core with two faces: a TUI
+for a person, and a command line for agents and scripts, both over the same plain files.
+
+## The layers
+
+```text
+              ┌──────────────────────────────────────────────┐
+              │ src/core: pure TypeScript, no terminal       │
+              │ roots · walk · parse · links · graph · index │
+              │ layout · themes · search · git · export · …  │
+              └────────┬───────────────────────┬─────────────┘
+                       ▼                       ▼
+                   src/tui                  src/cli
+                   OpenTUI,                 commands,
+                   the full screen          --json
+```
+
+- **`src/main.ts`** picks the face. A known command runs the command line; anything else opens the TUI, and only when
+  stdin and stdout are a terminal. The TUI is imported lazily, so a command never loads OpenTUI's native renderer.
+- **`src/core/`** is everything that doesn't draw: finding a file's root, walking it, parsing notes, resolving and
+  rewriting links, the graph and its indexes, search, laying a note out for a width, themes and glyphs, git, language
+  servers, export, installing and updating. Both faces call it.
+- **`src/cli/`** is the command line: `cli.ts` parses a command line and runs the command, each group of commands in a
+  module of its own (`links.ts`, `files.ts`, `git.ts`, …) and what they share in `common.ts`; `args.ts` parses flags.
+- **`src/tui/`** is the TUI: `app.ts` is the model (the shared state and the wiring), each feature a controller of its
+  own beside it; `draw.ts` and its `draw-*.ts` paint it on an abstract `Canvas`; `actions.ts` and its `actions-*.ts`
+  implement the commands; `keys.ts` holds the default keys.
+
+**The boundary.** `src/core/` never imports `src/tui/`, `src/cli/` or `@opentui/*`, and `src/cli/` never imports
+`src/tui/`. Inside the TUI, only `src/tui/opentui.ts` (the `Canvas` over OpenTUI's buffer) and `src/tui/run.ts` (the
+renderer, input, shutdown) touch OpenTUI; everything else is driven in tests through a text canvas, with no terminal.
+`bun run check:boundary` (`scripts/check-boundary.ts`) fails on any import that crosses.
+
+**The size of a file.** No source file is over 1,500 lines (D235): a feature lives in a module of its own, and `App`
+keeps the shared state and the wiring. `bun run check:size` (`scripts/check-size.ts`) fails on a file past the limit.
+Since the big files were split, none is past it; a file that ever must be is capped in `CAPPED` and may only shrink.
+
+## Where things live
+
+| Path | What |
+| --- | --- |
+| `src/core/` | the core; `layout/` (a note laid out), `theme/`, `export/` (formats), `servers/` (language servers) |
+| `src/cli/` | the command line: `cli.ts` dispatches, a module per group of commands, `common.ts` what they share |
+| `src/tui/` | `app.ts` the model, a controller per feature (`explorer.ts`: `app.explorer`), `draw*.ts`, `actions*.ts` |
+| `src/version.ts` | the version, one source; `package.json`'s must match |
+| `tests/` | the headless tests by area (`core`, `render`, `vault`, `cli`, `tui`, …), their snapshots, fixtures |
+| `tests/terminal/` | the terminal tests: slipbox driven by keys in headless terminals; `herdr/`, a real terminal's |
+| `examples/vault/` | the demo folder, which the render tests draw at several widths |
+| `examples/home/` | the reference set: every case of every feature, listed in its `CASES.md` |
+| `scripts/` | the checks, the release build and its templates, the builders of grammars, locks and the reference set |
+| `skills/slipbox/` | the skill that teaches agents the command line |
+| `grammars/`, `notices/` | built tree-sitter grammars and the licence texts a release ships |
+| `docs/` | the user documentation: guides and the manual |
+| `blueprint/` | the design, its decisions and the roadmap |
+
+A few modules to know first:
+
+- `core/command-specs.ts` (the list, from `core/commands/*.ts`) and `core/commands.ts`: every user action, by its id,
+  with its command-line equivalent.
+- `core/graph.ts`: the notes of a root, their links and backlinks, parsed lazily and cached; how a link resolves is
+  `graph-resolve.ts`'s, a note's entry from its text `graph-extract.ts`'s, their shapes `graph-types.ts`'s.
+- `core/rename.ts`: renames and moves as plans of byte-range edits, previewed first; a plan's shape is
+  `rename-plan.ts`'s, carrying one out and undoing it `rename-apply.ts`'s.
+- `core/note.ts` and `core/layout/`: a note from its text to rows for a width, the same for `slipbox render` and the
+  TUI; `layout/render.ts` lays out its blocks, `render-inline.ts`, `render-table.ts` and `render-data.ts` the rest.
+- `cli/cli.ts`: the command line's dispatcher, its help and flags; each command's code is in its group's module, the
+  session and the helpers they share in `cli/common.ts`.
+- `core/fsutil.ts`: atomic writes, and `writeNote`, which never writes outside the root.
+- `core/width.ts` and `core/sanitize.ts`: how wide text is, and text made safe for a terminal.
+- `core/paths.ts`: slipbox's own config, cache, state and data folders.
+
+## Invariants
+
+What every change keeps. Each is checked by a test or a script where it can be.
+
+- **Every user action is a named command.** Its id and its command-line equivalent (or `null`, for a pure interaction)
+  are in `core/commands/*.ts`, by area; the TUI implements it in `tui/actions.ts` or the `tui/actions-*.ts` of its
+  area, all registered by `registerActions`. A command implemented without a spec, or specified without an
+  implementation, fails at start-up and fails a test.
+- **Disk is the contract.** A command reads saved files only, writes atomically, and is never blocked by an open editor.
+  The TUI takes a command's write as any program's: it reloads, or asks when the note has unsaved changes. It lists the
+  notes it holds unsaved for commands to warn about (`core/stale.ts`): advice, never a lock.
+- **The TUI writes notes only through `App.writeBuffer`:** atomic, inside the root, the watcher told. Besides notes it
+  writes only its own state and cache, the scratch, and an export where the user said (`writeExport`, never over a
+  note).
+- **Nothing is written outside a note's root,** and nothing at all into a folder by opening it. What slipbox keeps goes
+  into its own folders (`core/paths.ts`).
+- **Nothing measures text but `core/width.ts`,** and every string entering the layout passes through `sanitize`. The
+  command line's human output is sanitised too.
+- **Rendering is pure.** A note's layout depends on its text, the width, the glyph set and a link resolver passed in,
+  never on the terminal; the render tests hold every demo note to its width.
+- **Nothing a folder brings runs unless its root is trusted** (`core/trust.ts`), and a folder's own config never names a
+  program to run or turns on a network request.
+- **A program slipbox runs is optional,** found when present and never required, and is given an argument vector, never
+  a shell string (`core/editor.ts`).
+- **The command line's contract:** one JSON object per call with `--json`, its `schema` versioned apart from slipbox
+  (`JSON_SCHEMA` in `cli/cli.ts`); stable exit codes (`EXIT`); `tests/cli.test.ts` runs every command as an agent meets
+  it.
+- **The docs follow the code.** A change users will see updates `docs/` in the same change; `tests/docs.test.ts` holds
+  every command, flag and default key to the manual.
+
+## Checking a change
+
+- `bun run check` runs everything CI runs: the typecheck, the boundary, the supply chain's gates
+  (`scripts/check-deps.ts`), Biome, the tests and the rest. `package.json`'s `check` script is the list.
+- `bun test <file>` runs one area's tests; `bun test -u` updates snapshots, to be read before they're accepted.
+- `bun run test:terminal` runs the terminal tests, slipbox driven in headless terminals, many at once.
+- Every bug fixed gets a regression test that fails without the fix; new behaviour gets a test that exercises it.
+
+## Going deeper
+
+The design, in `blueprint/design/`, says how each part works and why: `how-it-works.md` walks through the whole system
+and holds the full module map, and a file per part (links, roots, rendering, the TUI, search, language servers, trust,
+export, distribution, testing) follows. `blueprint/README.md` says how the blueprint is kept.

@@ -1,0 +1,14 @@
+From Malik, 23 September: "the cap we talked about, before I open the PR". The queue sat stalled for 86 minutes on
+the 22nd because nothing bounded the backoff; this bounds it at 60 s, the same as the client (src/sync/retry.ts).
+
+diff --git a/api/kestrel_api/sync.py b/api/kestrel_api/sync.py
+--- a/api/kestrel_api/sync.py
++++ b/api/kestrel_api/sync.py
+@@ -90,5 +90,6 @@ class Sync:
+             await asyncio.sleep(0)
+ 
+     def retry_after(self, attempt):
+-        return (2**attempt) * 0.5
++        # mirrors the client: min(60s, 2^attempt * 500ms)  -- see retry.ts
++        return min(60.0, (2**attempt) * 0.5)
+ 

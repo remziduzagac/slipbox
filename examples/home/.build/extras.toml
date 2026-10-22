@@ -1,0 +1,422 @@
+# Files that can't be committed to this repository, or that a checkout can't carry: made by scripts/build-home.ts in
+# the built copy of home/. Format: README.md, "The build". Each entry says where it goes and why.
+
+# ---------------------------------------------------------------------------------------------------------------
+# notes/: symlinks in and out of the root, names that begin with a dash, Unicode names, a big and an unreadable note
+# ---------------------------------------------------------------------------------------------------------------
+
+[[file]]
+path = "notes/projects/kestrel-current.md"
+kind = "symlink"
+target = "kestrel-v2-3.md"
+why = "Sam keeps 'whatever is current' as a symlink: a symlinked note inside the root, read and written through"
+
+[[file]]
+path = "notes/research/outside.md"
+kind = "symlink"
+target = "/etc/hosts"
+why = "a symlink leading out of the root: read refuses it (exit 5), the walk never indexes it"
+
+[[file]]
+path = "notes/research/zero.md"
+kind = "symlink"
+target = "/dev/zero"
+why = "a note that is /dev/zero: a device behind a symlink must never be opened by the walk"
+
+[[file]]
+path = "notes/research/loop"
+kind = "symlink"
+target = ".."
+why = "a directory symlink back up the tree: never followed, so the walk cannot loop"
+
+[[file]]
+path = "notes/research/offline-drive"
+kind = "symlink"
+target = "/mnt/offline-drive/halden-archive"
+why = "the external drive with the Halden archive is not plugged in: a link into it is unavailable, not broken"
+
+[[file]]
+path = "notes/research/gps-traces.md"
+kind = "big"
+size = 6000000
+head = "# GPS traces, brevet 2026-09-13\n\ntime,lat,lon,elevation_m\n"
+content = """2026-09-13T06:02:11Z,47.37690,8.54170,412
+2026-09-13T06:02:12Z,47.37693,8.54178,412
+2026-09-13T06:02:13Z,47.37697,8.54187,413
+2026-09-13T06:02:14Z,47.37702,8.54195,413
+2026-09-13T06:02:15Z,47.37706,8.54204,414
+2026-09-13T06:02:16Z,47.37711,8.54212,414
+"""
+why = "GPS traces pasted in as text: over walk.max_file_size, listed as skipped, never parsed or searched"
+
+[[file]]
+path = "notes/locked.md"
+kind = "unreadable"
+content = """# Locked
+
+My draft for the salary conversation with Priya. chmod 000 on purpose,
+so nothing syncs it by accident.
+"""
+why = "an unreadable note: warned about by find and stat, never a crash"
+
+[[file]]
+path = "notes/-dash.md"
+content = """# A file that starts with a dash
+
+Made by an export script that named the note after a bullet. Every tool that takes a file name has to be told it is
+a name and not an option: `read -- -dash`, `cat ./-dash.md`.
+
+It links to [the index](index.md), which is how most notes get found in the first place.
+"""
+why = "a name that begins with a dash is read after --, and never taken for a flag"
+
+[[file]]
+path = "notes/--flag.md"
+content = """# --flag
+
+Two dashes this time. The file is named like a long option (`--flag`), which is the version of the mistake that
+actually bit me: `rm --flag.md` is an error about a flag, not a deletion.
+
+Back to [the inbox](inbox.md).
+"""
+why = "a name shaped like a long option"
+
+[[file]]
+path = "notes/Caf\u00E9.md"
+content = """# Café (NFC)
+
+The café on the corner of Kyoto's Karasuma street, with the é as one character (U+00E9), which is how macOS Finder
+and most editors save it. See also [the NFD twin](Café.md), written with a combining accent.
+
+I keep both on purpose: the same name typed two ways is two different files on Linux and one on macOS.
+"""
+why = "NFC and NFD file names that look identical: two notes, one displayed name"
+
+[[file]]
+path = "notes/Cafe\u0301.md"
+content = """# Café (NFD)
+
+The same café with the é as e followed by a combining acute (U+0065 U+0301), which is how an old rsync from a Mac
+leaves it. The other one is [the NFC twin](Café.md).
+
+Searching for "cafe" in my notes finds both, which is the only way I notice the second one exists.
+"""
+why = "the decomposed twin of Café.md"
+
+[[file]]
+path = "notes/🚲 ride.md"
+content = """# 🚲 ride
+
+A note named with an emoji and a space, from the Sunday-ride template on my phone. Today's ride was the usual loop
+past the reservoir: 62 km, 4:05 moving, [the route](../hobbies/cycling/202608151900-index.md) as always.
+
+- [ ] oil the chain
+- [x] pump the tyres to 5.5 bar
+"""
+why = "an emoji and a space in a file name: width, quoting and links by name"
+
+# ---------------------------------------------------------------------------------------------------------------
+# notes/research/route-engine-spike/: a repository inside the notes folder, its .git a file
+# ---------------------------------------------------------------------------------------------------------------
+
+[[file]]
+path = "notes/research/route-engine-spike/.git"
+content = "gitdir: ../../../work/kestrel/.git\n"
+why = "a hand-made checkout whose .git file points at kestrel's repository: the spike is its own root (git there lists kestrel's files as deleted)"
+
+# ---------------------------------------------------------------------------------------------------------------
+# Downloads/: the casual folder: hostile names, odd encodings, big files, repositories with broken markers
+# ---------------------------------------------------------------------------------------------------------------
+
+[[file]]
+path = "Downloads/invoice‮fdp.md"
+content = """# Invoice 2026-0914
+
+Studio rental, one day. Total 180.00 EUR, due 2026-10-14.
+
+The file name carries a right-to-left override (U+202E) before "fdp.md": in a terminal that does not strip it, the
+name reads "invoicedm.pdf". It is a note, not a PDF.
+"""
+why = "a bidi override in a file name never reaches the terminal as one"
+
+[[file]]
+path = "Downloads/esc\u001b[31mred.md"
+content = """# Escape in the name
+
+Saved from a log viewer that put the colour code into the title: the file name contains ESC [ 3 1 m. Printed raw,
+it turns the rest of the terminal red.
+
+[stray note](stray-note.md)
+"""
+why = "an ESC sequence in a file name is shown as visible text, never sent to the terminal"
+
+[[file]]
+path = "Downloads/osc\u001b]0;PWNED\u0007title.md"
+content = """# A title in the name
+
+Saved by a terminal recorder that took the window's title for the file's name, escape and all: ESC ] 0 ; then the
+title, then BEL. Printed raw, the name would retitle the terminal.
+
+[stray note](stray-note.md)
+"""
+why = "an OSC in a file name: neither its sequence nor its text reaches the terminal, the title stays slipbox's"
+
+[[file]]
+path = "Downloads/line\nbreak.md"
+content = """# A name with a newline
+
+The file name has a line feed between "line" and "break". A listing that prints one name per line sees two names.
+"""
+why = "a newline in a file name must not split a row or a record"
+
+[[file]]
+path = "Downloads/c1\u009bcsi.md"
+content = """# C1 in the name
+
+Terminal log saved from the serial console of the old build box, the day its disk filled up:
+
+```text
+[ 4172.331] EXT4-fs warning (device sda1): ext4_dx_add_entry: Directory index full!
+[ 4172.332] EXT4-fs error (device sda1): ext4_find_entry: reading directory lblock 0
+[ 4180.017] systemd[1]: Failed to start Daily apt download activities.
+```
+
+Moved the build cache to the big disk afterwards; nothing has filled up since.
+"""
+why = "a C1 control character in a file name"
+
+[[file]]
+path = "Downloads/plan⁦hidden⁩.md"
+content = """# Plan for the week
+
+- Monday: finish the sync notes for the review
+- Tuesday: 1:1 with Priya, then the design review with Tomás
+- Thursday: outreach night at Halden, bring the tripod
+- Friday: no meetings, long ride if the weather holds
+"""
+why = "bidi isolates, the second kind of directional control, in a file name"
+
+[[file]]
+path = "Downloads/trailing-dot."
+content = """# camera-scripts
+
+Downloaded with the archive of the trail-camera scripts, saved under whatever name the server sent.
+
+Install: copy `snap.sh` to `~/bin` and add a cron entry. It takes one frame a minute from the shed camera and
+deletes anything older than a week.
+"""
+why = "a trailing dot in a name: no extension, never a note by extension"
+
+[[file]]
+path = "Downloads/Todo.md"
+content = """# Todo
+
+- [ ] answer the forum thread
+- [ ] move the old exports into the notes backup
+"""
+why = "a case twin of todo.md: two files a case-insensitive filesystem would merge"
+
+[[file]]
+path = "Downloads/todo.md"
+content = """# todo
+
+- [x] pay the studio invoice
+- [ ] file the receipts in the [Q3 budget](Q3%20budget%20(final).csv)
+"""
+why = "the lowercase twin of Todo.md"
+
+[[file]]
+path = "Downloads/lone-cr.md"
+content = "# Old Mac notes\rSaved by the editor I used on the old laptop.\rPacking list for the 2019 ride to Lake Constance.\r\r- panniers\r- spare tube\r- rain jacket\r"
+why = "line endings that are a lone CR: read as lines, never as one long line"
+
+[[file]]
+path = "Downloads/nul-inside.md"
+content = "# NUL inside\n\nPasted from the team chat, where the bot had a bad moment halfway through a line:\n\n> deploy bot: staging rollout of 2.3.0-rc2 fini\u0000shed, 3 of 3 regions healthy\n\nEverything after that line pasted cleanly. Rollout finished at 17:42.\n"
+why = "a NUL byte in a note: shown as a replacement mark, not truncated, not a binary file"
+
+[[file]]
+path = "Downloads/big-notes.txt"
+kind = "big"
+size = 300000
+head = "Forum thread export, route-planning board\n\n"
+content = """[2026-09-02 19:14] rolf_m: anyone know why the elevation profile drops to zero in the Black Forest tiles?
+[2026-09-02 19:21] sam_r: Known, the tile set has a hole there. Fix is in the next release.
+[2026-09-02 19:26] rolf_m: ok thanks, riding it anyway, the climbs are fine
+[2026-09-02 20:02] annika: does the export keep waypoints names with umlauts?
+[2026-09-02 20:05] sam_r: Yes, GPX is UTF-8 all the way through.
+"""
+why = "a 300 KB pasted text, over the 256 KB cap for a text file"
+
+[[file]]
+path = "Downloads/huge-note.md"
+kind = "big"
+size = 2097152
+head = "# All-hands archive\n\n"
+content = """## All-hands notes
+
+Roadmap review first, then the support numbers from Jo: tickets are down a fifth since the sync fixes. Priya
+reminded everyone about the review cycle, and Malik showed the new dashboards for the tile servers.
+
+- action: Tomás to share the sharing mock-ups
+- action: Aiko to write up the retry numbers
+
+"""
+why = "a 2 MB markdown note: under max_file_size, so indexed, but very large to open"
+
+[[file]]
+path = "Downloads/kestrel-mirror/README.md"
+content = """# kestrel-mirror
+
+A mirror clone Malik set up for the build farm. The working tree was copied here without the bare repository it was
+made from, so its `.git` file points nowhere: `gitdir: /srv/git/kestrel-mirror.git`, which is not on this machine.
+"""
+why = "a note inside a folder whose git marker is broken"
+
+[[file]]
+path = "Downloads/kestrel-mirror/.git"
+content = "gitdir: /srv/git/kestrel-mirror.git\n"
+why = "a gitdir pointing at a bare repository that is not there: not a root"
+
+[[file]]
+path = "Downloads/kestrel-mirror/.obsidian"
+kind = "symlink"
+target = "../nowhere"
+why = "a broken symlink as a marker: neither a file nor a folder, never a root"
+
+# ---------------------------------------------------------------------------------------------------------------
+# work/kestrel/: what a developer's checkout has that the repository does not: ignored files, node_modules, twins
+# ---------------------------------------------------------------------------------------------------------------
+
+[[file]]
+path = "work/kestrel/vendor/geo-tiles/.git"
+content = "gitdir: ../../.git/modules/geo-tiles\n"
+why = "a submodule that was never initialised: .git is a file pointing at modules that are not there"
+
+[[file]]
+path = "work/kestrel/vendor/.gitignore"
+kind = "symlink"
+target = "/dev/zero"
+why = "a .gitignore that is /dev/zero: ignore files are read by the walk and must never block on a device"
+
+[[file]]
+path = "work/kestrel/docs/plan.md"
+content = """# Plan
+
+The lowercase one. Not to be confused with [Plan.md](Plan.md): the two names differ only by case, so a checkout on a
+case-insensitive filesystem would merge them. This file is the short checklist the QA team uses for the release
+week; the real planning document is the other one.
+
+- [x] freeze the branch
+- [x] run the smoke tests on staging
+- [ ] sign off the release notes
+"""
+why = "the case twin of docs/Plan.md, made here so a case-insensitive checkout of this repository has no clash"
+
+[[file]]
+path = "work/kestrel/src/a.test.ts"
+content = """import { expect, test } from "bun:test";
+import { backoff } from "./sync/retry";
+
+test("backoff never goes past the cap", () => {
+  expect(backoff(20)).toBeLessThanOrEqual(60_000);
+});
+"""
+why = "a *.test.ts file: a test runner's file, a plain text file to slipbox"
+
+[[file]]
+path = "work/kestrel/.env"
+content = """# local settings, never committed (see .env.example)
+KESTREL_ENV=development
+export KESTREL_API_URL="http://localhost:8080"
+export KESTREL_TILE_KEY='dev-key-not-a-secret'
+DATABASE_URL=postgres://kestrel:kestrel@localhost:5432/kestrel?sslmode=disable
+EMPTY_ON_PURPOSE=
+SYNC_DRAIN_SECONDS=30   # inline comment after a value
+"""
+why = "the developer's own .env: git-ignored, export prefixes, both quote kinds, an empty value"
+
+[[file]]
+path = "work/kestrel/node_modules/left-pad/package.json"
+content = """{
+  "name": "left-pad",
+  "version": "1.3.0",
+  "description": "String left pad",
+  "main": "index.js",
+  "license": "WTFPL"
+}
+"""
+why = "a dependency's package.json: node_modules is ignored and never walked"
+
+[[file]]
+path = "work/kestrel/node_modules/left-pad/README.md"
+content = """# left-pad
+
+String left pad.
+
+## Install
+
+```sh
+npm install left-pad
+```
+
+## Usage
+
+```js
+const leftPad = require("left-pad");
+leftPad("5", 3, "0"); // "005"
+```
+"""
+why = "a README inside node_modules: a markdown file the walk must skip"
+
+[[file]]
+path = "work/kestrel/build/out.json"
+content = """{
+  "builtAt": "2026-10-06T07:55:12Z",
+  "version": "2.3.0",
+  "chunks": [
+    { "name": "app", "bytes": 482113 },
+    { "name": "vendor", "bytes": 1291840 }
+  ]
+}
+"""
+why = "build output: ignored by .gitignore, shown dimmed in the explorer when ignored files are shown"
+
+[[file]]
+path = "work/kestrel/tmp/scratch.md"
+content = """# Scratch
+
+A throwaway list for the first build on a new machine, never committed (tmp/ is ignored).
+
+- try `make web` twice: the second run should do nothing
+- compare the bundle size against [last week's notes](more.md)
+- ask Aiko whether the queue drains in the background tab
+"""
+why = "a git-ignored file reached by a link from docs/dev-setup.md: indexed because a link names it"
+
+[[file]]
+path = "work/kestrel/tmp/more.md"
+content = """# More scratch
+
+Reached only through [the scratch list](scratch.md), never walked on its own. Bundle sizes from Tuesday:
+
+| chunk | KB |
+| --- | --- |
+| app | 471 |
+| vendor | 1262 |
+"""
+why = "the second ignored file: reached by a link from a reached ignored file"
+
+# ---------------------------------------------------------------------------------------------------------------
+# Local edits to tracked files: made after the replay, so git shows them as modified (the M mark)
+# ---------------------------------------------------------------------------------------------------------------
+
+[[file]]
+path = "work/kestrel/.editorconfig"
+content = "# EditorConfig: https://editorconfig.org\nroot = true\n\n[*]\ncharset = utf-8\nend_of_line = lf\nindent_style = space\nindent_size = 2\ninsert_final_newline = true\nmax_line_length = 120\ntrim_trailing_whitespace = true\n\n[*.{py,pyi}]\nindent_size = 4\nmax_line_length = 88\n\n[*.{go,mk}]\nindent_style = tab\n\n[Makefile]\nindent_style = tab\n\n[*.rs]\nindent_size = 4\nmax_line_length = 100\n\n[*.md]\n# trailing double spaces are hard breaks in Markdown\ntrim_trailing_whitespace = false\nmax_line_length = 120\n\n[{package.json,package-lock.json}]\nindent_size = 2\n\n[*.{yml,yaml}]\nindent_size = 2\n\n[*.sh]\nindent_size = 2\nswitch_case_indent = true\n\n[docs/qa/render-torture.md]\nmax_line_length = off\n"
+why = "a local edit of a tracked file, for the M git mark: a line length I try before proposing it to the team"
+
+[[file]]
+path = "work/infra/k8s/tiles.yaml"
+content = "# Tile server and its cache. Three small documents, then the CDN origins as a bare list.\n---\napiVersion: apps/v1\nkind: Deployment\nmetadata:\n  name: kestrel-tiles\n  namespace: kestrel\nspec:\n  replicas: 2\n  selector:\n    matchLabels:\n      app: kestrel-tiles\n  template:\n    metadata:\n      labels:\n        app: kestrel-tiles\n    spec:\n      containers:\n        - name: tiles\n          image: ghcr.io/kestrel-labs/kestrel-tiles:2.3.0\n          args: [\"--cache-dir=/var/cache/tiles\", \"--cache-gb=20\"]\n...\n---\n---\n# The CDN rules lived here until August; the CDN reads its own config now.\n---\n- name: tiles-eu\n  url: https://tiles-eu.kestrel.dev\n  zoom: [0, 16]\n- name: tiles-us\n  url: https://tiles-us.kestrel.dev\n- name: tiles-lab\n  url: https://tiles.lab.kestrel.internal\n  zoom: [8, 14]\n  attribution: OpenStreetMap contributors\n...\n"
+why = "a local edit of a tracked file in infra, for the M git mark: a smaller tile cache for the staging box"

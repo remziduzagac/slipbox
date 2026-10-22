@@ -1,0 +1,141 @@
+name: preview
+
+# GR-D13: `test` fast-forwarded from `main` (`git push origin main:test`) publishes a preview. Its version is
+# package.json's with the commit's UTC time and hash after it, <x.y.z>-preview.<YYYYMMDDHHMM>.g<hash>, stamped into
+# the build's checkouts and never committed; refused when v<x.y.z> is released already (bump the version first). It
+# is built by build.yml exactly as a release is, then published as the pre-release preview-<time>-<hash>: drafted, its
+# assets uploaded, then published (immutable releases take no asset once published). Only the newest ten previews are
+# kept; then Pages is deployed, so its `preview` channel names this one (GR-D14). Homebrew never gets a preview.
+# Every action pinned by its commit, a week old when taken (14.10); values reach the shell through env, never inline.
+on:
+  push:
+    branches: [test]
+
+# No permission by default; each job grants what it needs, and says why (GR-D9). No cache is restored anywhere in it.
+permissions: {}
+
+# One preview at a time, never cancelled half-made: a newer push waits, and replaces one still waiting.
+concurrency:
+  group: preview
+  cancel-in-progress: false
+
+jobs:
+  # The preview's version and tag, from the commit pushed; refused before anything is built when its version is
+  # released already, or the preview made already.
+  plan:
+    # Never in a fork: a fork's `test` publishes nothing.
+    if: ${{ !github.event.repository.fork }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      contents: read # to check out the code, and read the repository's tags
+    outputs:
+      version: ${{ steps.plan.outputs.version }}
+      tag: ${{ steps.plan.outputs.tag }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: jdx/mise-action@2d8d4cafcbd33be2ea37d2b6f5ad595363d1f1ca # v5.1.1
+        with:
+          install_args: bun
+          cache: false
+          minimum_release_age: 7d
+      - id: plan
+        run: bun --no-install scripts/release.ts preview >>"$GITHUB_OUTPUT"
+
+  # A reusable workflow named `./`, read from this run's own commit, never from the workspace: as release.yml's.
+  build:
+    needs: plan
+    uses: ./.github/workflows/build.yml # zizmor: ignore[self-repository]
+    # The most build.yml's jobs may have; each takes only its own share.
+    permissions:
+      contents: read # to check out the code
+      id-token: write # to sign the attestations, with a certificate for the workflow (Sigstore)
+      attestations: write # to store them with the repository's attestations
+    with:
+      tag: ${{ needs.plan.outputs.tag }}
+      version: ${{ needs.plan.outputs.version }}
+      # The commit passed CI's check (test's ruleset takes no other): built and run, not tested again.
+      suite: false
+
+  # The pre-release, from build.yml's `release` artifact: the packs, their SBOMs, `SHA256SUMS` and `install.sh`, each
+  # attested already. Drafted with every asset, then published; a draft left by a step failing is deleted.
+  publish:
+    needs: [plan, build]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    permissions:
+      contents: write # to make the pre-release, upload its assets and publish it, which creates its tag
+    env:
+      TAG: ${{ needs.plan.outputs.tag }}
+      VERSION: ${{ needs.plan.outputs.version }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: jdx/mise-action@2d8d4cafcbd33be2ea37d2b6f5ad595363d1f1ca # v5.1.1
+        with:
+          install_args: bun
+          cache: false
+          minimum_release_age: 7d
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: release
+          path: dist/release
+      - name: notes
+        run: |
+          bun --no-install scripts/release.ts notes --tag "$TAG" --repo "$GITHUB_REPOSITORY" >"$RUNNER_TEMP/notes.md"
+      - name: draft
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "$TAG" --repo "$GITHUB_REPOSITORY" --draft --prerelease --target "$GITHUB_SHA" \
+            --title "slipbox $VERSION" --notes-file "$RUNNER_TEMP/notes.md" dist/release/*
+      - name: publish
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release edit "$TAG" --repo "$GITHUB_REPOSITORY" --draft=false --prerelease
+      - name: discard the draft
+        if: ${{ failure() }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if [ "$(gh release view "$TAG" --repo "$GITHUB_REPOSITORY" --json isDraft --jq .isDraft || true)" = true ]; then
+            gh release delete "$TAG" --repo "$GITHUB_REPOSITORY" --yes
+          fi
+
+  # The newest ten previews kept. An immutable release can be deleted, and then its tag, which is never used again.
+  prune:
+    needs: publish
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      contents: write # to delete the older pre-releases and their tags
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: jdx/mise-action@2d8d4cafcbd33be2ea37d2b6f5ad595363d1f1ca # v5.1.1
+        with:
+          install_args: bun
+          cache: false
+          minimum_release_age: 7d
+      - name: prune
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          stale=$(bun --no-install scripts/release.ts stale --repo "$GITHUB_REPOSITORY" --keep 10)
+          for tag in $stale; do
+            gh release delete "$tag" --repo "$GITHUB_REPOSITORY" --cleanup-tag --yes
+          done
+
+  # The site redeployed, so its `preview` channel names the preview just published.
+  pages:
+    needs: publish
+    uses: ./.github/workflows/pages.yml # zizmor: ignore[self-repository]
+    # The most pages.yml's jobs may have: its build reads, its deploy alone deploys.
+    permissions:
+      contents: read # to check out main, and list the releases
+      pages: write # to deploy the site
+      id-token: write # to prove to Pages which workflow and ref the deployment comes from (OIDC)

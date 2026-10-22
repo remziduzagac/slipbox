@@ -1,0 +1,24 @@
+# Every credential and renewal the repository depends on (greenrepo SET-08, UPK-03, UPK-09). GitHub shows no expiry
+# for a personal account's tokens, and deploy keys can't expire, so the dates are kept here. The weekly health check
+# (scripts/health.ts) lists in the health issue each one due within 30 days, and comments once when one is due within
+# 7; the monthly admin comparison (`bun scripts/health.ts --admin`) checks that every secret and deploy key on GitHub
+# is listed here, and prints its age.
+#
+# An entry: `name`; `kind` (token, deploy-key, domain, certificate, account); `what` it is; its `purpose`; where it
+# `lives`; `secret = { name, environment }` for a secret Actions holds (no environment: the repository's), or
+# `deploy_key` (its title) for a deploy key; `status`: planned (not created yet, so no date), active, or retired (kept
+# until it's revoked); its date: `expires` for what expires, `rotate_by` for a deploy key; and what's `due` then.
+
+[[renewal]]
+name = "HOMEBREW_TAP_DEPLOY_KEY"
+kind = "deploy-key"
+what = "An SSH key pair: its public half the tap's deploy key \"slipbox release workflow\", with write access."
+purpose = "homebrew.yml pushes each published release's formula to the tap, remziduzagac/homebrew-tap (D228)."
+lives = """The private half: the `release` environment's secret, which only `v*` tags reach. The public half: a \
+deploy key on remziduzagac/homebrew-tap, beside herdsman's own."""
+secret = { name = "HOMEBREW_TAP_DEPLOY_KEY", environment = "release" }
+status = "active"
+rotate_by = "2027-10-13"
+due = """A new key pair: its public half added to the tap as a deploy key with write access, the secret replaced \
+with its private half, the old deploy key deleted, and `rotate_by` moved a year on. Lost or leaked: the same, at \
+once."""

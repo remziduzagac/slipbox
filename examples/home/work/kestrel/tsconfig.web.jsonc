@@ -1,0 +1,17 @@
+// The web build's config, in a file that says it is JSONC.
+{
+  "$schema": "https://json.schemastore.org/tsconfig",
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    /* build output goes outside the source tree */
+    "outDir": "build/web",
+    "rootDir": "src",
+    "sourceMap": true,
+    "tsBuildInfoFile": "build/.tsbuildinfo",
+    "lib": ["ES2022", "DOM", "DOM.Iterable"],
+    "types": ["vite/client"], // https://vite.dev/guide/features.html#client-types
+    "paths": { "@/*": ["src/*"] },
+  },
+  "include": ["src/**/*", "public/**/*.d.ts"],
+  "references": [{ "path": "./tsconfig.json" }]
+} // a closing comment, and no newline after it

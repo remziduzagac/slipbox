@@ -1,0 +1,44 @@
+// markdownlint-cli2's config for the repository's Markdown, run by `bun run check:docs` (scripts/check-docs.ts), which
+// names the files: the tracked ones, less what is wrong on purpose. The tool reads this file from the directory it runs
+// in; an editor's markdownlint run from the root reads it too.
+//
+// The rules: 120 columns everywhere, paragraphs, headings, tables and code alike (a table that would be wider breaks
+// its cells); every rule that catches a real fault on, the rules that are only a matter of style off.
+{
+  "config": {
+    // Rules with their parameters.
+    "MD013": {
+      "line_length": 120,
+      "heading_line_length": 120,
+      "code_block_line_length": 120,
+      "code_blocks": true,
+      "tables": true,
+      "headings": true
+    },
+    "MD009": { "br_spaces": 2 }, // two trailing spaces are a line break
+    "MD012": { "maximum": 2 }, // up to two blank lines in a row
+    "MD024": { "siblings_only": true }, // the same heading under different parents
+    "MD029": { "style": "one_or_ordered" }, // a list numbered 1. 1. 1. or 1. 2. 3.
+
+    // Rules off: a matter of style, not a fault.
+    "MD004": false, // the bullet's character (- or *)
+    "MD007": false, // a nested list's indent
+    "MD014": false, // $ before shell commands
+    "MD026": false, // punctuation ending a heading
+    "MD028": false, // a blank line inside a block quote
+    "MD033": false, // inline HTML (<details>, <br>, <kbd>)
+    "MD035": false, // the horizontal rule's style
+    "MD036": false, // emphasis instead of a heading
+    "MD041": false, // a top-level heading on the first line
+    "MD043": false, // a required heading structure (for templates)
+    "MD044": false, // proper names' capitals (needs a list)
+    "MD046": false, // the code block's style (fenced or indented)
+    "MD048": false, // the code fence's character (``` or ~~~)
+    "MD049": false, // the emphasis character (* or _)
+    "MD050": false, // the strong emphasis characters (** or __)
+    "MD054": false, // the link's or image's style
+    "MD055": false, // a table's leading and trailing pipes
+    "MD059": false, // descriptive link text
+    "MD060": false // a table's column style
+  }
+}

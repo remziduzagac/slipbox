@@ -1,0 +1,1131 @@
+# Kestrel's history, 2026-08-15 to 2026-10-02, replayed by scripts/build-home.ts (format: README.md, "The build").
+#
+#   main                        linear, with two merges: docs/glossary-move (2026-09-27) and feature/route-sharing
+#                               (2026-09-29); docs/runbook-sync.md becomes docs/runbooks/sync-queue.md on 2026-09-23
+#   feature/route-sharing       merged: docs/sharing.md moves to docs/features/route-sharing.md
+#   docs/glossary-move          merged cleanly: docs/glossary-terms.md becomes docs/glossary.md, every link rewritten
+#   refactor/docs-layout        Aiko, NOT merged: docs/sync.md moves to docs/architecture/sync.md; main's ADR 0004,
+#                               written later, links the old path
+#   cleanup/remove-legacy       Priya, NOT merged: deletes docs/legacy.md and legacy/route_import.rb; main's ADR 0004,
+#                               written later, links docs/legacy.md
+#   jo/release-notes-wording    Jo, NOT merged: edits the lines of docs/release-notes/2.3.md that main edits too, so
+#                               merging it conflicts
+#   agent/sync-retry            an agent, NOT merged, checked out as a worktree at ../kestrel-agent-sync-retry:
+#                               M src/sync/retry.ts and docs/sync.md (three hunks against its branch point),
+#                               R wip-backoff.ts, A a runbook, D stray-token.ts
+#
+# Files are written at the date their content is true: a file that mentions a later event is first written as the
+# earlier draft it was, and the final file is added in a commit after that event (README, ADR 1, Plan, sync.md and
+# route-sharing.md are examples).
+#
+# Git's marks after the build: M comes from .build/extras.toml (a local edit of .editorconfig, and one in infra), ?
+# from files no commit adds. R and ! come from steps in the tests: `git mv` a tracked file for R, and merging
+# jo/release-notes-wording into main for the conflict (!).
+#
+# Files no commit adds stay untracked (the __pycache__ folder, ignored anyway).
+
+remote = "git@github.com:kestrel-labs/kestrel.git"
+
+[[commit]]
+branch = "main"
+date = "2026-08-15T09:10:00+02:00"
+author = "Sam Rivera <sam@kestrel.dev>"
+message = "Start the repository: README, licence, editor config"
+add = [
+  ".editorconfig",
+  ".gitignore",
+  ".prettierrc",
+  "CONTRIBUTING.md",
+  "LICENSE",
+]
+[commit.write]
+"README.md" = '''
+# Kestrel
+
+Kestrel plans cycling routes. Give it where you are and where you want to be, and it finds a route that prefers quiet
+streets, bike paths and gentle gradients over the shortest line. Routes are saved to your account and work offline.
+
+- A web app (TypeScript, React) in `src/`
+- An API (Python) in `api/`
+- A route engine (Rust) in `crates/`
+
+## Quick start
+
+```bash
+git clone git@github.com:kestrel-labs/kestrel.git
+cd kestrel
+cp .env.example .env
+npm ci
+make dev
+```
+
+Open `http://localhost:5173`. The API listens on port 8080.
+
+Contributions are welcome: see [CONTRIBUTING.md](CONTRIBUTING.md).
+
+## License
+
+[MIT](LICENSE). Copyright Kestrel Labs.
+'''
+
+[[commit]]
+branch = "main"
+date = "2026-08-16T11:25:00+02:00"
+author = "Sam Rivera <sam@kestrel.dev>"
+message = "Web app skeleton: App, tsconfig, lint, styles"
+add = [
+  "biome.json",
+  "eslint.config.js",
+  "package-lock.json",
+  "package.json",
+  "public/index.html",
+  "public/logo.svg",
+  "src/App.tsx",
+  "src/modern.ts",
+  "src/styles/_tokens.scss",
+  "src/styles/app.css",
+  "src/types.d.ts",
+  "src/util/compat.cjs",
+  "src/util/format.mts",
+  "src/util/geo.mjs",
+  "tsconfig.json",
+  "tsconfig.web.jsonc",
+]
+
+[[commit]]
+branch = "main"
+date = "2026-08-17T10:12:00+02:00"
+author = "Sam Rivera <sam@kestrel.dev>"
+message = "Route engine: first draft of the A* search"
+add = [
+  "Cargo.lock",
+  "Cargo.toml",
+  "crates/route-engine/Cargo.toml",
+  "crates/route-engine/build.rs",
+  "crates/route-engine/src/graph.rs",
+  "crates/route-engine/src/lib.rs",
+  "crates/route-engine/src/main.rs",
+  "crates/tiles/Cargo.toml",
+  "crates/tiles/src/lib.rs",
+]
+
+[[commit]]
+branch = "main"
+date = "2026-08-19T15:40:00+02:00"
+author = "Aiko Tanaka <aiko@kestrel.dev>"
+message = "API: skeleton, models and the sync endpoint"
+add = [
+  "api/README.md",
+  "api/kestrel_api/app.py",
+  "api/kestrel_api/half_written.py",
+  "api/kestrel_api/models.py",
+  "api/kestrel_api/models.pyi",
+  "api/kestrel_api/sync.py",
+  "api/openapi.yaml",
+  "api/pyproject.toml",
+  "api/requirements.txt",
+  "api/schemas/common.json",
+  "api/schemas/route.json",
+  "api/scripts/migrate_v1.py",
+  "api/settings.json5",
+]
+
+[[commit]]
+branch = "main"
+date = "2026-08-20T17:05:00+02:00"
+author = "Sam Rivera <sam@kestrel.dev>"
+message = "Docs: architecture, ADR 1 and 2, dev setup, glossary"
+add = [
+  "docs/adr/0002-route-engine-in-rust.md",
+  "docs/dev-setup.md",
+  "mkdocs.yml",
+]
+[commit.write]
+"docs/adr/0001-offline-first-sync.md" = '''
+# ADR 1: Offline-first sync with an op log
+
+- Status: accepted
+- Date: 2026-01-20
+- Deciders: Priya Nair, Sam Rivera, Aiko Tanaka
+
+## Context
+
+Cyclists plan routes on a train, in a basement flat, in a field. A planner that stops working when the network
+does is not much of a planner. The 1.x apps stored routes on the server and cached the last response; two devices
+editing the same route overwrote each other, and nobody could say which edit had won.
+
+We want every edit to work with no network and to arrive on the other devices later, in order, without losing either
+person's work.
+
+## Decision
+
+Every edit on a device is written first to a local **op log** (IndexedDB in the web app). A sync loop sends the
+log to the server in batches and applies the server's ops back. The details of the loop, the queue and the conflict
+rules are in [the sync document](../sync.md); the rest of the system is in [the architecture](../architecture.md).
+
+Ops are small and idempotent: each has a ULID, the device that made it and a payload. The server stores them in
+`sync_ops` and applies them in ULID order. Two ops that touch the same field are resolved by the later ULID; the
+loser is kept in the log so a human can look.
+
+## Consequences[^1]
+
+- Edits never block on the network. The UI always reads from the local store.
+- The server is no longer the source of truth for what the user sees right now, only for what every device will
+  eventually see.
+- We need a queue, a retry policy and a way to see that the queue is stuck. The first version had none of the last.
+- Support questions change from "why did it not save" to "why did it not arrive".
+
+### Alternatives considered
+
+- **CRDTs everywhere.** Right for text, heavy for a route that is a list of waypoints. We use last-writer-wins on
+  fields and keep the loser.
+- **Server-first with a cache.** What 1.x did. It is exactly the thing we are leaving.
+
+[^1]: This list is a summary. Aiko's longer write-up is in the notes.
+'''
+"docs/architecture.md" = '''
+# Architecture
+
+How Kestrel fits together, from the browser to the database. Terms in italics are in the
+[glossary](/docs/glossary-terms.md). Decisions behind the shape are in [ADR 1](adr/0001-offline-first-sync.md) (sync)
+and [ADR 2](/docs/adr/0002-route-engine-in-rust.md) (the engine).
+
+## Components
+
+| Component | Where | Language | Job |
+| --- | --- | --- | --- |
+| Web app | `src/` | TypeScript | the map, route editing, the local store |
+| API | `api/` | Python | accounts, routes, shares, the server side of sync |
+| Route engine | `crates/route-engine/` | Rust | A* search, edge costs |
+| Tiles | `crates/tiles/` | Rust | tile maths and the tile server |
+| Worker | `api/` | Python | emails, cleanup, parked-op reports |
+| Database | `db/schema.sql` | Postgres | everything durable |
+
+The API's own README, with how to run it and where the OpenAPI spec lives, is [here](../api/README.md). The route
+engine's manifest is [/crates/route-engine/Cargo.toml](/crates/route-engine/Cargo.toml).
+
+## Data flow
+
+A route edit takes this path. The web app writes the edit to its local op log first and shows it at once. The sync
+loop sends the log to the API. The API stores the ops and tells the other devices. Planning a route is a different
+path: the web app asks the API, the API runs the engine and returns a polyline.
+
+```mermaid
+flowchart LR
+    Browser[Web app] -->|ops| API
+    Browser -->|plan route| API
+    API -->|search| Engine[Route engine]
+    API --> DB[(Postgres)]
+    API -->|pub/sub| Redis
+    Redis --> Worker
+    Worker --> DB
+    Browser -->|tiles| Tiles
+```
+
+## Where things live
+
+- The **op log** is in IndexedDB on the device, and in `sync_ops` on the server. How it is drained is in
+  [sync.md](sync.md).
+- **Share links** are signed by the API with a secret from the environment, and verified on every view; see
+  [route sharing](features/route-sharing.md).
+- **Config** is `kestrel.toml` for the app and `config/` for environments. The shape is `config/schema.json`.
+
+## Moving this repository
+
+Everything above refers to paths from the root of this repository: `/docs/glossary-terms.md`, `/crates/...`. If the
+repository moves, those links keep working inside it, and the few that leave it do not. The ones that leave:
+
+- Sam's design notes for the sync rewrite live outside the repo, in
+  [sync-rewrite](../../../notes/projects/sync-rewrite.md) in his notes.
+- The Kubernetes manifests for the workers are in the infra repository (`slipbox://infra/k8s/sync-worker.yaml`).
+
+## Reading order
+
+1. This page.
+2. [sync.md](sync.md), if you work on the client or the queue.
+3. The ADRs, in order.
+4. The runbooks, before your first on-call week.
+'''
+"docs/glossary-terms.md" = '''
+# Glossary
+
+Words we use, and what we mean by them. Alphabetical.
+
+| Term | 意味 | Meaning |
+| --- | --- | --- |
+| Edge | エッジ | one street segment between two nodes in the graph |
+| Op | 操作 | one edit in the sync log |
+| Park | 保留 | take an op out of the queue and keep it for a human |
+| Quiet score | 静けさ | 1 to 10: how calm a segment is for a rider |
+| Region | 地域 | a tile set and its config, such as `nl` or `ch` |
+| Route | ルート | an ordered list of waypoints and the path between them |
+| Segment | 区間 | a row of `data/segments.csv`; an edge with its surveyed attributes |
+| Share | 共有 | a signed, expiring link to a route |
+| 京都 | Kyoto | where the Japanese-speaking half of the team sometimes works from |
+
+## Notes on the table
+
+The second column came from Aiko, who keeps the glossary in two languages so the Japanese-speaking contractors can
+read it. Cells wrap between characters, not between words, when a column gets narrow.
+
+For where these words show up in the system, see [the architecture](architecture.md).
+'''
+
+[[commit]]
+branch = "main"
+date = "2026-08-21T16:30:00+02:00"
+author = "Aiko Tanaka <aiko@kestrel.dev>"
+message = "Sync queue: the first version, with a short doc"
+add = [
+  "src/sync/queue.ts",
+]
+[commit.write]
+"src/sync/retry.ts" = '''
+// Retry and backoff policy for the sync queue.
+// First version: retry anything that is not a 4xx, forever.
+
+export function backoff(attempt: number): number {
+  return Math.min(60_000, 500 * 2 ** attempt);
+}
+
+export function shouldRetry(status: number): boolean {
+  return status >= 500 || status === 0;
+}
+'''
+"docs/sync.md" = '''
+# Sync
+
+How an edit gets from one device to the others. The reasoning is in [ADR 1](adr/0001-offline-first-sync.md); this
+page is how it works today, so far.
+
+## The queue
+
+Every edit becomes an **op** and goes into the local queue (`src/sync/queue.ts`). The queue is drained by a loop
+that wakes every 30 seconds, or at once when the browser comes back online. A drain takes at most 50 ops, sends
+them in one request and removes the ones the server accepted.
+
+The queue is ordered. An op is never sent before the ones ahead of it, which is what makes replaying them on the
+server safe, and also what makes one bad op dangerous.
+
+## Retry
+
+An op the server rejects with a 5xx or a network error is retried with exponential backoff: 0.5 s, 1 s, 2 s, and
+so on up to a minute. An op is retried forever.
+The backoff is in [retry.ts](../src/sync/retry.ts).
+
+A conflict (409) is not transient, so retrying it never helps; we do not treat it differently yet.
+
+## Conflict rules
+
+- Two ops on the same field: the later ULID wins; the loser stays in the log.
+- A delete beats an edit made later by a device that had not seen the delete.
+- An op for something the server does not know (a route that was deleted) is dropped, with a log line.
+
+## Looking at the queue
+
+From the app: Settings, then Sync, then "Queue".
+
+| State | Meaning |
+| --- | --- |
+| pending | waiting its turn |
+| inflight | in a request right now |
+| parked | taken out after a conflict; needs a human |
+
+The same queue code is in `src/sync/queue.ts`, and it is worth reading before you change anything here:
+[queue.ts](../src/sync/queue.ts), the [queue](../src/sync/queue.ts), and once more [`queue.ts`](../src/sync/queue.ts)
+where the three mentions of it in this paragraph are the same link. A copy of this
+text was kept in a note and has the same
+paragraph with its [queue](../src/sync/queue.ts) link wrapping across a line,
+as people paste it.
+
+## Edge cases
+
+```text
+[a] -> [b] -> [c]     the queue; [b] is rejected with 409
+[a] -> [c]            [b] is parked, the rest goes on
+```
+
+A corpus of awkward text, for the editor that people use to fix this page: "quotes", (parens), [brackets], `code`,
+{braces}, 'single', and a [link](../src/sync/queue.ts) next to (a [bracketed link](../README.md)).
+'''
+
+[[commit]]
+branch = "main"
+date = "2026-08-23T10:00:00+02:00"
+author = "Aiko Tanaka <aiko@kestrel.dev>"
+message = "Config, data, database schema and CI"
+add = [
+  ".env.example",
+  ".github/workflows/ci.yml",
+  ".hadolint.yaml",
+  ".slipbox/config.toml",
+  ".vscode/settings.json",
+  ".yamllint",
+  "Dockerfile",
+  "Makefile",
+  "build.mk",
+  "config/app.toml",
+  "config/base.yaml",
+  "config/blocked-tiles.json",
+  "config/broken-flags.json",
+  "config/feature-flags.json",
+  "config/legacy-flags.json",
+  "config/logging.ini",
+  "config/maintenance.json",
+  "config/regions.yaml",
+  "config/schema.json",
+  "config/settings.conf",
+  "data/import-2026-09.csv",
+  "data/segments.csv",
+  "db/schema.sql",
+  "docker-compose.yml",
+  "go.work",
+  "kestrel.toml",
+  "patches/tiles-fix.patch",
+  "scripts/deploy.sh",
+  "scripts/dev/.luarc.json",
+  "scripts/dev/agent-replay.sh",
+  "scripts/dev/broken.lua",
+  "scripts/dev/kestrel.lua",
+  "scripts/dev/stylua.toml",
+  "scripts/lib.sh",
+  "scripts/release.sh",
+]
+
+[[commit]]
+branch = "main"
+date = "2026-08-26T14:20:00+02:00"
+author = "Malik Haddad <malik@kestrel.dev>"
+message = "Tools: the uploader and the greeter samples"
+add = [
+  "tools/fake/hello.fake",
+  "tools/greeter/greeter.go",
+  "tools/greeter/greeter.js",
+  "tools/greeter/greeter.lua",
+  "tools/greeter/greeter.py",
+  "tools/greeter/greeter.rs",
+  "tools/greeter/greeter.sh",
+  "tools/greeter/greeter.ts",
+  "tools/greeter/greeter.tsx",
+  "tools/uploader/broken.go",
+  "tools/uploader/go.mod",
+  "tools/uploader/main.go",
+  "tools/uploader/server.go",
+  ".gitmodules",
+]
+
+[[commit]]
+branch = "main"
+date = "2026-08-27T09:45:00+02:00"
+author = "Priya Nair <priya@kestrel.dev>"
+message = "Keep the 2019 prototype in legacy/ for reference"
+add = [
+  "docs/legacy.md",
+  "legacy/GpxParser.java",
+  "legacy/haversine.c",
+  "legacy/route_import.rb",
+]
+
+[[commit]]
+branch = "main"
+date = "2026-08-28T13:15:00+02:00"
+author = "Tomás Ruiz <tomas@kestrel.dev>"
+message = "Sharing doc: first draft"
+[commit.write]
+"docs/sharing.md" = '''
+# Route sharing (draft)
+
+For 2.3, a rider will be able to share a route with a link. This page is the feature: what the rider sees, what the
+API does and where the code is. The decision behind it is [ADR 3](adr/0003-sharing-links.md).
+
+## What the rider sees
+
+1. Open a saved route and press **Share**.
+2. The share dialog shows a link and how long it lasts (72 hours).
+3. Copy the link, or press **Stop sharing** to revoke it.
+
+Whoever opens the link sees the route on the map, with its length and elevation, and cannot change it.
+
+![A shared route on the map](img/route-map.png)
+
+## The API
+
+| Method | Path | Does |
+| --- | --- | --- |
+| POST | `/v1/routes/{id}/shares` | creates a share, returns the link |
+| GET | `/v1/shares/{id}` | the shared route, if the signature holds |
+| DELETE | `/v1/shares/{id}` | revokes the share |
+
+A link looks like `https://kestrel.dev/s/<id>?exp=<unix>&sig=<hmac>`. The signature covers the id and the expiry.
+
+## Code
+
+- `src/routes/share.ts` creates the links.
+- `src/routes/sign.ts` holds the signing helpers.
+- `src/routes/share-dialog.wip.tsx` is the dialog, still in progress.
+
+## Open items
+
+- Showing "expires in 3 hours" in the dialog instead of a date.
+- A way to share a route read-write with a friend, not planned.
+'''
+
+[[commit]]
+branch = "main"
+date = "2026-08-29T18:00:00+02:00"
+author = "Aiko Tanaka <aiko@kestrel.dev>"
+message = "Assets and the demo ride"
+add = [
+  "assets/demo-ride.mp4",
+]
+
+[[commit]]
+branch = "main"
+date = "2026-08-31T10:00:00+02:00"
+author = "Priya Nair <priya@kestrel.dev>"
+message = "Planning doc for the quarter"
+[commit.write]
+"docs/Plan.md" = '''
+# Plan
+
+Planning notes for Q4, kept in the repository so they travel with the code. The product repository holds the
+roadmap; this is the engineering side of it.
+
+## Q4 engineering
+
+1. Ship route sharing and the offline sync rewrite as 2.3.
+2. Retire the unsigned `?route=` links on 2026-12-31.
+3. Finish the Biome trial and decide: keep ESLint, keep both, or switch.
+4. Move the docs under `docs/architecture/`, once 2.3 has settled.
+
+## Not in Q4
+
+- A native app. The offline web app is enough for now.
+- Turn-by-turn navigation.
+
+## Risks
+
+| Risk | Plan |
+| --- | --- |
+| Sync regressions after the rewrite | a weekly queue-depth review |
+| One person knows the engine | pair on `crates/route-engine` every other Thursday |
+| Tile costs rise | measure in October, decide in November |
+'''
+
+[[commit]]
+branch = "feature/route-sharing"
+from = "main"
+date = "2026-09-04T10:30:00+02:00"
+author = "Sam Rivera <sam@kestrel.dev>"
+message = "Share links: signing and the share endpoint"
+add = [
+  "src/routes/expiry.ts",
+  "src/routes/name.ts",
+  "src/routes/share.ts",
+  "src/routes/sign.ts",
+]
+
+[[commit]]
+branch = "feature/route-sharing"
+date = "2026-09-09T16:10:00+02:00"
+author = "Tomás Ruiz <tomas@kestrel.dev>"
+message = "Share dialog and the route map (work in progress)"
+add = [
+  "src/routes/RouteMap.tsx",
+  "src/routes/share-dialog.wip.tsx",
+]
+
+[[commit]]
+branch = "refactor/docs-layout"
+from = "main"
+date = "2026-09-11T11:00:00+02:00"
+author = "Aiko Tanaka <aiko@kestrel.dev>"
+message = "Move the sync doc under architecture/"
+rename = { "docs/sync.md" = "docs/architecture/sync.md" }
+
+[[commit]]
+branch = "docs/glossary-move"
+from = "main"
+date = "2026-09-14T13:40:00+02:00"
+author = "Sam Rivera <sam@kestrel.dev>"
+message = "Glossary: one file, one name"
+add = [
+  "docs/glossary.md",
+  "docs/architecture.md",
+]
+rename = { "docs/glossary-terms.md" = "docs/glossary.md" }
+
+[[commit]]
+branch = "feature/route-sharing"
+date = "2026-09-16T17:20:00+02:00"
+author = "Sam Rivera <sam@kestrel.dev>"
+message = "Sharing doc moves under features/"
+add = [
+  "docs/img/route-map.png",
+  "docs/adr/0003-sharing-links.md",
+  "docs/generated/api.md",
+]
+rename = { "docs/sharing.md" = "docs/features/route-sharing.md" }
+[commit.write]
+"docs/features/route-sharing.md" = '''
+# Route sharing
+
+In 2.3 a rider will be able to share a route with a link. This page is the feature: what the rider sees, what the
+API does and where the code is. The decision behind it is [ADR 3](../adr/0003-sharing-links.md).
+
+This page was `docs/sharing.md` until the `feature/route-sharing` branch moved it here. Links to `docs/sharing.md`
+need rewriting once it merges.
+
+## What the rider sees
+
+1. Open a saved route and press **Share**.
+2. The share dialog shows a link and how long it lasts (72 hours).
+3. Copy the link, or press **Stop sharing** to revoke it.
+
+Whoever opens the link sees the route on the map, with its length and elevation, and cannot change it.
+
+![A shared route on the map](../img/route-map.png)
+
+## The API
+
+| Method | Path | Does |
+| --- | --- | --- |
+| POST | `/v1/routes/{id}/shares` | creates a share, returns the link |
+| GET | `/v1/shares/{id}` | the shared route, if the signature holds |
+| DELETE | `/v1/shares/{id}` | revokes the share |
+
+A link looks like `https://kestrel.dev/s/<id>?exp=<unix>&sig=<hmac>`. The signature covers the id and the expiry.
+
+## Code
+
+- `src/routes/share.ts` creates the links.
+- `src/routes/sign.ts` holds the signing helpers.
+- `src/routes/share-dialog.wip.tsx` is the dialog, still in progress.
+
+## Open items
+
+- Showing "expires in 3 hours" in the dialog instead of a date.
+- A way to share a route read-write with a friend, not planned.
+'''
+
+[[commit]]
+branch = "cleanup/remove-legacy"
+from = "main"
+date = "2026-09-19T10:05:00+02:00"
+author = "Priya Nair <priya@kestrel.dev>"
+message = "Remove the 2019 prototype's docs and importer"
+delete = ["docs/legacy.md", "legacy/route_import.rb"]
+
+[[commit]]
+branch = "main"
+date = "2026-09-22T18:50:00+02:00"
+author = "Malik Haddad <malik@kestrel.dev>"
+message = "drain-queue: a script for the night we needed it"
+add = [
+  "scripts/drain-queue.sh",
+]
+
+[[commit]]
+branch = "main"
+date = "2026-09-22T19:45:00+02:00"
+author = "Aiko Tanaka <aiko@kestrel.dev>"
+message = "Park an op on 409 instead of retrying it forever"
+add = [
+  "src/sync/retry.ts",
+  "src/sync/wip-backoff.ts",
+]
+[commit.write]
+"docs/runbook-sync.md" = '''
+# Runbook: the sync queue stalls (draft)
+
+Use this when users report that edits do not arrive on their other devices, or when the queue-depth graph climbs and
+does not come down. It was written during the incident of 2026-09-22 and tidied after. The background is in
+[sync](sync.md).
+
+> [!danger] Do not clear the queue table
+> `TRUNCATE sync_ops` loses every user's unsent edits. If you are thinking about it, call Aiko or Malik first.
+
+## Symptoms
+
+- The queue-depth graph on the sync dashboard rises steadily, with no drops.
+- Support hears "my edit is not on my phone" from several people in one region.
+- `GET /v1/sync/status` shows `oldest_pending_seconds` above 600.
+- One op has `attempts` in the hundreds.
+
+The one-op case is the one from the incident: a single op rejected with a 409 at the head of a queue, retried
+forever, with everything behind it waiting.
+
+## Checks
+
+1. Look at the head of the queue for the affected account:
+
+   ```sql
+   SELECT id, status, attempts, op->>'type' AS type
+   FROM sync_ops
+   WHERE account_id = :account AND status = 'pending'
+   ORDER BY id
+   LIMIT 5;
+   ```
+
+2. If the first row has a large `attempts`, it is the stuck op. Note its id.
+3. Check the worker is alive. Its manifest is in the infra repository:
+   [slipbox://infra/k8s/sync-worker.yaml](slipbox://infra/k8s/sync-worker.yaml).
+
+> [!bug] A known cause
+> Before 2.3.0 a 409 was treated like a network error and put back at the head. If the account is still on an old
+> client, it will do it again after you fix the queue.
+
+> [!check] What good looks like
+> - `oldest_pending_seconds` under 60
+> - no op with `attempts` over 5
+>
+> ```bash
+> curl -s "$BASE/v1/sync/status" | jq '.oldest_pending_seconds'
+> ```
+>
+> | Metric | Healthy |
+> | --- | --- |
+> | queue depth | under 100 |
+> | parked ops | any, but each looked at |
+
+## Fixes
+
+Run the drain script (a copy is in this repository: [drain-queue.sh](../scripts/drain-queue.sh)):
+
+```bash
+./scripts/drain-queue.sh "$DEVICE"
+```
+
+The script replays the device's spooled ops; park the stuck op first, by hand:
+
+```bash
+# not a heading, only a comment in a fence
+## also not a heading
+psql "$DATABASE_URL" -c "UPDATE sync_ops SET status = 'parked' WHERE id = $STUCK_ID"
+```
+
+- If the worker is down, restart it.
+- If one region is affected, check the tile service before you blame the queue.
+- If it keeps coming back, turn on the `retry_budget` flag for the account.
+
+## After
+
+Write the account and the op id in the incident channel. A parked op needs a person: ask the user which of the two
+conflicting edits to keep.
+
+See also: the [Symptoms](#symptoms) above, the section called [symptoms](#Symptoms), the angle-bracket form
+[the same section](<#symptoms>), and [jump to Fixes](#fixes). The incident review links to the first section as
+`docs/runbooks/sync-queue.md#symptoms`.
+'''
+
+[[commit]]
+branch = "main"
+date = "2026-09-23T10:30:00+02:00"
+author = "Aiko Tanaka <aiko@kestrel.dev>"
+message = "Move the sync runbook next to the others, with the lessons"
+add = [
+  "docs/runbooks/sync-queue.md",
+  "docs/runbooks/deploy.md",
+  "docs/runbooks/support-escalation.md",
+]
+rename = { "docs/runbook-sync.md" = "docs/runbooks/sync-queue.md" }
+
+[[commit]]
+branch = "main"
+date = "2026-09-25T09:20:00+02:00"
+author = "Sam Rivera <sam@kestrel.dev>"
+message = "Release notes for 2.3: first draft"
+[commit.write]
+"docs/release-notes/2.3.md" = '''
+# Kestrel 2.3
+
+Released 2026-09-30. Route sharing, and the offline sync rewrite that makes editing work without a network. This
+page is for customers and support; the engineering list is in the [changelog](../../CHANGELOG.md).
+
+## Highlights
+
+Share a route with anyone. Press **Share** on a saved route, copy the link and send it; the link works for three
+days and you can stop it sooner. Details in [route sharing](../features/route-sharing.md).
+
+Edit offline. Changes you make with no connection are kept on your device and sent when you are back online, in the
+order you made them.
+
+## Before you upgrade
+
+- Browsers older than Safari 16 or Chrome 110 are no longer supported.
+- Old `?route=` links keep working until 2026-12-31 and then stop.
+
+## What to tell customers
+
+Shared links expire after seven days. This is on purpose. If a customer needs a longer one, send them to the owner of
+the route, who can share again.
+
+## Known issues
+
+- The "needs attention" list for parked sync ops is not in the app yet; support sees them in the admin tool.
+- Elevation graphs on routes shorter than 500 m look flat.
+
+## Thanks
+
+Aiko Tanaka for the sync rewrite, Tomás Ruiz for the share dialog, Malik Haddad for the rollout, and Jo Becker for
+reading every support thread before we shipped.
+'''
+
+[[commit]]
+branch = "main"
+date = "2026-09-26T09:30:00+02:00"
+author = "Aiko Tanaka <aiko@kestrel.dev>"
+message = "Sync doc after the incident; ADR 4 proposes a retry budget"
+add = [
+  "docs/adr/0001-offline-first-sync.md",
+  "docs/adr/0004-retry-budget.md",
+  "src/sync/stray-token.ts",
+]
+[commit.write]
+"docs/sync.md" = '''
+# Sync
+
+How an edit gets from one device to the others. The reasoning is in [ADR 1](adr/0001-offline-first-sync.md); this
+page is how it works today.
+
+## The queue
+
+Every edit becomes an **op** and goes into the local queue (`src/sync/queue.ts`). The queue is drained by a loop
+that wakes every 30 seconds, or at once when the browser comes back online. A drain takes at most 50 ops, sends
+them in one request and removes the ones the server accepted.
+
+The queue is ordered. An op is never sent before the ones ahead of it, which is what makes replaying them on the
+server safe, and also what makes one bad op dangerous.
+
+## Retry
+
+An op the server rejects with a 5xx or a network error is retried with exponential backoff: 0.5 s, 1 s, 2 s, and
+so on up to a minute. Until the retry budget of [ADR 4](adr/0004-retry-budget.md) is on, an op is retried forever.
+The numbers are `DEFAULT_POLICY` in [lines 17 to 21 of retry.ts](../src/sync/retry.ts#L17-L21).
+
+The 409 case is the one that bit us: a conflict is not transient, so retrying it never helps. Since the incident a 409
+parks the op (`park_on_conflict` in `config/app.toml`), and the loop goes on.
+
+## Conflict rules
+
+- Two ops on the same field: the later ULID wins; the loser stays in the log.
+- A delete beats an edit made later by a device that had not seen the delete.
+- An op for something the server does not know (a route that was deleted) is dropped, with a log line.
+
+## Looking at the queue
+
+From the app: Settings, then Sync, then "Queue". From support: [the queue runbook](runbooks/sync-queue.md).
+
+| State | Meaning |
+| --- | --- |
+| pending | waiting its turn |
+| inflight | in a request right now |
+| parked | taken out after a conflict; needs a human |
+
+The same queue code is in `src/sync/queue.ts`, and it is worth reading before you change anything here:
+[queue.ts](../src/sync/queue.ts), the [queue](../src/sync/queue.ts), and once more [`queue.ts`](../src/sync/queue.ts)
+where the three mentions of it in this paragraph are the same link. A copy of this
+text was kept in a note and has the same
+paragraph with its [queue](../src/sync/queue.ts) link wrapping across a line,
+as people paste it.
+
+## Edge cases
+
+```text
+[a] -> [b] -> [c]     the queue; [b] is rejected with 409
+[a] -> [c]            [b] is parked, the rest goes on
+```
+
+A corpus of awkward text, for the editor that people use to fix this page: "quotes", (parens), [brackets], `code`,
+{braces}, 'single', and a [link](../src/sync/queue.ts) next to (a [bracketed link](../README.md)).
+'''
+
+[[commit]]
+branch = "jo/release-notes-wording"
+from = "main"
+date = "2026-09-26T11:15:00+02:00"
+author = "Jo Becker <jo@kestrel.dev>"
+message = "Release notes: say the 72 hours in plain words"
+[commit.write]
+"docs/release-notes/2.3.md" = '''
+# Kestrel 2.3
+
+Released 2026-09-30. Route sharing, and the offline sync rewrite that makes editing work without a network. This
+page is for customers and support; the engineering list is in the [changelog](../../CHANGELOG.md).
+
+## Highlights
+
+Share a route with anyone. Press **Share** on a saved route, copy the link and send it; the link works for three
+days and you can stop it sooner. Details in [route sharing](../features/route-sharing.md).
+
+Edit offline. Changes you make with no connection are kept on your device and sent when you are back online, in the
+order you made them.
+
+## Before you upgrade
+
+- Browsers older than Safari 16 or Chrome 110 are no longer supported.
+- Old `?route=` links keep working until 2026-12-31 and then stop.
+
+## What to tell customers
+
+A shared link stops working after 72 hours, on purpose, so nothing lingers. If a customer needs a longer one, send
+them to the owner of the route, who can share again.
+
+## Known issues
+
+- The "needs attention" list for parked sync ops is not in the app yet; support sees them in the admin tool.
+- Elevation graphs on routes shorter than 500 m look flat.
+
+## Thanks
+
+Aiko Tanaka for the sync rewrite, Tomás Ruiz for the share dialog, Malik Haddad for the rollout, and Jo Becker for
+reading every support thread before we shipped.
+'''
+
+[[commit]]
+branch = "agent/sync-retry"
+from = "main"
+date = "2026-09-27T10:00:00+02:00"
+author = "sync-retry agent <agent@kestrel.dev>"
+message = "Retry budget: a ceiling per op, with jitter"
+delete = ["src/sync/stray-token.ts"]
+rename = { "src/sync/wip-backoff.ts" = "src/sync/backoff.ts" }
+[commit.write]
+"src/sync/retry.ts" = '''
+// Retry and backoff policy for the sync queue, with a budget per op.
+// The server mirrors this in api/kestrel_api/sync.py (retry_after); keep the two in step.
+// Decision: ../../docs/adr/0004-retry-budget.md
+
+import { decorrelated, type Jitter } from "./backoff";
+
+export interface RetryPolicy {
+  jitter: Jitter;
+  budget: number;
+}
+
+export const DEFAULT_POLICY: RetryPolicy = {
+  jitter: { base: 500, cap: 60_000 },
+  budget: 5,
+};
+
+export type Verdict = "retry" | "park" | "drop";
+
+/** What to do with an op the server answered with `status`, after `attempt` tries. */
+export function verdict(attempt: number, status: number, p: RetryPolicy = DEFAULT_POLICY): Verdict {
+  if (status === 404 || status === 410) return "drop";
+  if (status === 409) return "park";
+  if (attempt >= p.budget) return "park";
+  return status === 0 || status === 429 || status >= 500 ? "retry" : "park";
+}
+
+export async function withRetry<T>(fn: () => Promise<T>, p: RetryPolicy = DEFAULT_POLICY): Promise<T> {
+  let attempt = 0;
+  let wait = p.jitter.base;
+  for (;;) {
+    try {
+      return await fn();
+    } catch (err) {
+      const status = (err as { status?: number }).status ?? 0;
+      if (verdict(attempt++, status, p) !== "retry") throw err;
+      wait = decorrelated(wait, p.jitter);
+      await new Promise((r) => setTimeout(r, wait));
+    }
+  }
+}
+'''
+"src/sync/backoff.ts" = '''
+// Decorrelated jitter backoff, used by retry.ts.
+export interface Jitter {
+  base: number;
+  cap: number;
+}
+
+export function decorrelated(prev: number, j: Jitter): number {
+  const next = Math.random() * (prev * 3 - j.base) + j.base;
+  return Math.min(j.cap, next);
+}
+
+export function schedule(j: Jitter, attempts: number): number[] {
+  const out: number[] = [];
+  let prev = j.base;
+  for (let i = 0; i < attempts; i++) {
+    prev = decorrelated(prev, j);
+    out.push(prev);
+  }
+  return out;
+}
+'''
+
+[[commit]]
+branch = "agent/sync-retry"
+date = "2026-09-27T10:40:00+02:00"
+author = "sync-retry agent <agent@kestrel.dev>"
+message = "Describe the retry budget in the sync doc and add a tuning runbook"
+[commit.write]
+"docs/sync.md" = '''
+# Sync
+
+How an edit gets from one device to the others. The reasoning is in [ADR 1](adr/0001-offline-first-sync.md); this
+page is how it works today.
+
+## The queue
+
+Every edit becomes an **op** and goes into the local queue (`src/sync/queue.ts`). The queue is drained by a loop
+that wakes every 30 seconds, or at once when the browser comes back online. A drain takes at most 50 ops, sends
+them in one request and removes the ones the server accepted.
+
+The queue is ordered. An op is never sent before the ones ahead of it, which is what makes replaying them on the
+server safe, and also what makes one bad op dangerous.
+
+## Retry
+
+An op the server rejects with a 5xx or a network error is retried with exponential backoff: 0.5 s, 1 s, 2 s, and
+so on up to a minute. Each op has a retry budget of five attempts
+([ADR 4](adr/0004-retry-budget.md)); the sixth failure parks it, so one bad op can no longer hold the whole queue.
+The numbers are `DEFAULT_POLICY` in [lines 12 to 15 of retry.ts](../src/sync/retry.ts#L12-L15).
+
+The 409 case is the one that bit us: a conflict is not transient, so retrying it never helps. Since the incident a 409
+parks the op (`park_on_conflict` in `config/app.toml`), and the loop goes on.
+
+## Conflict rules
+
+- Two ops on the same field: the later ULID wins; the loser stays in the log.
+- A delete beats an edit made later by a device that had not seen the delete.
+- An op for something the server does not know (a route that was deleted) is dropped, with a log line.
+
+## Looking at the queue
+
+From the app: Settings, then Sync, then "Queue". From support: [the queue runbook](runbooks/sync-queue.md).
+
+| State | Meaning |
+| --- | --- |
+| pending | waiting its turn |
+| inflight | in a request right now |
+| parked | taken out after a conflict; needs a human |
+| spent | out of retry budget; kept in the log, never sent again |
+
+The same queue code is in `src/sync/queue.ts`, and it is worth reading before you change anything here:
+[queue.ts](../src/sync/queue.ts), the [queue](../src/sync/queue.ts), and once more [`queue.ts`](../src/sync/queue.ts)
+where the three mentions of it in this paragraph are the same link. A copy of this
+text was kept in a note and has the same
+paragraph with its [queue](../src/sync/queue.ts) link wrapping across a line,
+as people paste it.
+
+## Edge cases
+
+```text
+[a] -> [b] -> [c]     the queue; [b] is rejected with 409
+[a] -> [c]            [b] is parked, the rest goes on
+[a] -> [c]            [b] failed five times: spent, and support sees it
+```
+
+A corpus of awkward text, for the editor that people use to fix this page: "quotes", (parens), [brackets], `code`,
+{braces}, 'single', and a [link](../src/sync/queue.ts) next to (a [bracketed link](../README.md)).
+'''
+"docs/runbooks/retry-budget.md" = '''
+# Runbook: tuning the retry budget
+
+The budget is `sync.retry_budget` in `kestrel.toml`: five attempts by default. Use this page when support reports
+many "spent" ops after a bad hour on the server, and before you change the number.
+
+## Check first
+
+1. Is the server healthy? See [the queue runbook](sync-queue.md).
+2. How many ops are spent, and since when? The admin tool has the count; the log line is `op spent`.
+3. Were they all one error? One 409 in a loop is a bug in a client; many 503s are a server problem the budget should
+   have survived.
+
+## Change the number
+
+Raise it only for a known outage, and put it back afterwards. A higher budget means a bad op holds the queue longer,
+which is what [ADR 4](../adr/0004-retry-budget.md) was written to stop.
+
+| Situation | Budget | Why |
+| --- | --- | --- |
+| normal | 5 | about thirty seconds of trying |
+| known server outage | 8 | rides out a few minutes |
+| debugging one device | 1 | parks at once, so the op can be read |
+'''
+
+[[commit]]
+branch = "main"
+date = "2026-09-27T15:00:00+02:00"
+author = "Priya Nair <priya@kestrel.dev>"
+message = "Merge branch 'docs/glossary-move'"
+merge = "docs/glossary-move"
+
+[[commit]]
+branch = "main"
+date = "2026-09-28T16:45:00+02:00"
+author = "Priya Nair <priya@kestrel.dev>"
+message = "Release notes for 2.3: the numbers are final; the sync doc catches up with the retry budget"
+add = [
+  "docs/release-notes/2.3.md",
+  "docs/sync.md",
+]
+
+[[commit]]
+branch = "main"
+date = "2026-09-29T17:40:00+02:00"
+author = "Priya Nair <priya@kestrel.dev>"
+message = "Merge branch 'feature/route-sharing'"
+merge = "feature/route-sharing"
+
+[[commit]]
+branch = "main"
+date = "2026-09-30T08:30:00+02:00"
+author = "Sam Rivera <sam@kestrel.dev>"
+message = "Release 2.3: changelog, README status, and the docs that look back at it"
+add = [
+  "CHANGELOG.md",
+  "README.md",
+  "docs/Plan.md",
+  "docs/features/route-sharing.md",
+]
+
+[[commit]]
+branch = "main"
+date = "2026-10-01T10:00:00+02:00"
+author = "Jo Becker <jo@kestrel.dev>"
+message = "QA pages: plan, links, glyphs, theme and rendering checks"
+add = [
+  "docs/qa/glyphs.md",
+  "docs/qa/links.md",
+  "docs/qa/plan (v2).md",
+  "docs/qa/plan [draft].md",
+  "docs/qa/render-torture.md",
+  "docs/qa/theme-showcase.md",
+]
+
+[[commit]]
+branch = "main"
+date = "2026-10-02T15:30:00+02:00"
+author = "Sam Rivera <sam@kestrel.dev>"
+message = "Markdown fixtures, generated routes and the legacy web code"
+add = [
+  "src/generated/routes-big.ts",
+  "src/legacy/app.js",
+  "src/legacy/widgets.jsx",
+  "src/web/markdown/__fixtures__/escapes.md",
+  "src/web/markdown/__fixtures__/nesting.md",
+  "src/web/markdown/__fixtures__/quadratic.md",
+]
+
+[[commit]]
+branch = "main"
+date = "2026-10-05T16:20:00+02:00"
+author = "Aiko Tanaka <aiko@kestrel.dev>"
+message = "Native shells: the route engine's C header; a geodesic check for the tile builder; share sheet styles; changelog script"
+add = [
+  "crates/route-engine/ffi/kestrel_route.h",
+  "public/sitemap.xml",
+  "scripts/changelog.cts",
+  "src/styles/share-sheet.scss",
+  "tools/geodesic/geodesic.cpp",
+  "tools/geodesic/geodesic.hpp",
+  "tools/geodesic/geodesic_test.cc",
+]
+
+[[worktree]]
+branch = "agent/sync-retry"
+path = "../kestrel-agent-sync-retry"

@@ -1,0 +1,109 @@
+# Terraform state backend for the Kestrel clusters. Read by scripts/state-init (private repo) and by humans.
+
+# the name shown in the state lock table
+name = "kestrel-state"
+version = 3                       # bump when the layout of the bucket changes
+description = "State for kestrel-prod, kestrel-stage and kestrel-lab"
+enabled = true
+created = 2026-03-14
+rotated = 2026-09-18T02:30:00Z
+maintenance_window = 03:30:00
+last_audit = 2026-09-01T09:15:00+02:00
+next_review = 2026-12-01T10:00:00
+retries = 1_000
+lock_timeout_seconds = 12.5
+fill_ratio = 0.75
+max_ratio = inf
+min_ratio = -inf
+unknown_ratio = nan
+mask = 0xFF00
+token_prefix = 0xDEADBEEF
+mode = 0o640
+flags = 0b1010
+regions = ["eu-west-1", "eu-central-1"]
+limits = { cpu = 2, memory_gb = 4, burst = true }
+tags_by_env = { prod = "kestrel-prod", stage = "kestrel-stage" }
+
+[backend]
+type = "s3"
+bucket = "kestrel-tfstate"
+key = "clusters/kestrel.tfstate"
+region = "eu-west-1"
+profile = "kestrel-admin"
+# the table that holds the lock
+dynamodb_table = "kestrel-tf-lock"       # one item per state file
+dynamodb_lock_table_arn_name = "arn:aws:dynamodb:eu-west-1:000000000000:table/kestrel-tf-lock"
+dynamodb_lock_table_arn_names = "kestrel-tf-lock,kestrel-tf-lock-dr"
+force_path_style = false
+
+# Anything in here is read by the init script and nothing else.
+# The path values are relative to this file;
+# they are checked at init time, not here.
+include = "../helm/kestrel/values.yaml"
+path = "../state/legacy.tfstate"
+
+[backend.s3]
+endpoint = "https://s3.eu-west-1.amazonaws.com"
+max_retries = 5
+skip_region_validation = false
+acl = "private"
+
+[backend.s3.encryption]
+enabled = true
+algorithm = "aws:kms"
+kms_key_id = "alias/kestrel-state"
+
+[strings]
+basic = "a \"quoted\" word, a tab:\there, a newline:\nthere, \u00e9 and \U0001F6B4"
+literal = 'C:\ProgramData\kestrel\no\escapes'
+empty = ""
+multi_basic = """
+Kestrel state backend.
+Only the infra team may \
+change it; ask in #infra."""
+multi_literal = '''
+echo "$HOME" and \n stay as they are
+second line'''
+url = "https://github.com/kestrel-labs/infra"
+
+[labels]
+"tag=env" = "prod"
+"owner team" = "platform"
+"cost-centre" = "eng-042"
+site.name = "eu-west-1a"
+site.rack = 12
+
+[notifications]
+channels = [
+  "#infra",
+  "#deploys",
+  "#oncall",
+]
+severities = [
+  { level = "warn", channel = "#infra" },
+  { level = "page", channel = "#oncall" },
+  { level = "info", channel = "#deploys" },
+]
+
+# The state lock is released automatically after this long.
+# Do not raise it above ten minutes:
+# a stuck apply would hold up every deploy behind it.
+lock_ttl_seconds = 600
+
+[[workspace]]
+name = "kestrel-prod"
+region = "eu-west-1"
+nodes = 12
+protected = true
+
+[[workspace]]
+name = "kestrel-stage"
+region = "eu-west-1"
+nodes = 3
+protected = false
+
+[[workspace]]
+name = "kestrel-lab"
+region = "eu-west-1"
+nodes = 2
+protected = false

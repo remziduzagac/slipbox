@@ -1,0 +1,17 @@
+# Benchmark settings for the A* heuristic spike.
+# Extends the main engine's config: a path, not a name, so it only works while the repositories sit side by side.
+extends = "../../../work/kestrel/kestrel.toml"
+
+[bench]
+graph = "data/segments.csv"
+heuristic = ["euclidean", "landmarks", "alt"]
+queries = 5000
+seed = 42
+warmup = 200
+
+[output]
+dir = "target/bench"
+format = "csv"
+
+[notes]
+summary = "src/notes.md"

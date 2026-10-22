@@ -1,0 +1,941 @@
+# Product's history, 2026-08-17 to 2026-10-05, replayed by scripts/build-home.ts (format: README.md, "The build").
+#
+#   main                    linear except one merge: design/share-flow (2026-09-02); okrs/q4-draft.md becomes
+#                           okrs/2026-q4.md on 2026-09-12
+#   design/share-flow       merged: Tomás's design notes
+#   tomas/sharing-copy      NOT merged: moves prd/route-sharing.md to prd/sharing/route-sharing.md, with copy edits
+#   cleanup/old-roadmaps    NOT merged: deletes roadmap/2027-themes.md
+#
+# Files are written at the date their content is true: a file that mentions a later event (results, the incident,
+# a branch made later) is first written as the earlier draft it was, and the final file is added on 2026-10-05,
+# after the last event it mentions.
+
+remote = "git@github.com:kestrel-labs/product.git"
+
+[[commit]]
+branch = "main"
+date = "2026-08-17T09:30:00+02:00"
+author = "Priya Nair <priya@kestrel.dev>"
+message = "Start the product repository: README, lint config, handbook"
+add = [
+  ".markdownlint-cli2.jsonc",
+  "docs/README.md",
+  "handbook/.slipbox/config.toml",
+  "handbook/glossary.md",
+  "handbook/how-we-review.md",
+  "handbook/how-we-write.md",
+]
+[commit.write]
+"README.md" = '''
+# Kestrel product
+
+<!-- markdownlint-disable MD013 -->
+<p align="center"><img src="assets/share-sheet.png" alt="The Kestrel share sheet on a phone" width="320" height="213"></p>
+<!-- markdownlint-enable MD013 -->
+
+Everything the product team decides, writes down and ships lives here: requirements, the roadmap, OKRs, release plans
+and what customers told us. The code is in [kestrel](https://github.com/kestrel-labs/kestrel); this repository is the
+reasons for it.
+
+## What lives where
+
+| Folder | What it holds | Owner |
+| --- | --- | --- |
+| `prd/` | Product requirement documents, one per feature | Sam |
+| `roadmap/` | The quarter's themes and capacity | Sam, Priya |
+| `okrs/` | Objectives and key results, one file per quarter | Priya |
+| `releases/` | Release plans and customer-facing notes | Jo |
+| `research/` | Interview and survey syntheses | Jo, Tomás |
+| `design/` | Component inventory and flow notes (open in Obsidian) | Tomás |
+| `handbook/` | How we write, how we review: a vault of its own | everyone |
+| `drafts/` | Unpolished notes; move them out once they are read twice | whoever wrote them |
+
+## Writing a PRD
+
+1. Copy the headings of [route sharing](/prd/route-sharing.md): problem, goals, non-goals, stories, metrics, questions.
+2. Write the problem as something a customer said, and link the research it came from.
+3. Keep goals measurable. If a goal has no number, it goes under open questions.
+4. Add the feature to the quarter's [roadmap](/roadmap/q4.md) and tie it to a key result in
+   [the Q4 OKRs](okrs/2026-q4.md).
+5. Ask Tomás for a design review before engineering reads it.
+
+The process itself is in [prd/plan.md](prd/plan.md); the house style is in
+[how we write](/handbook/how-we-write.md).
+
+## Links in this repository
+
+Links are GitHub's, so they render on github.com and in any editor:
+
+- A path starting with `/` is from the root of this repository: `/prd/route-sharing.md`.
+- A path without it is from the file's own folder: `../roadmap/q4.md`.
+- Docs for the docs: [the docs index](docs/README.md).
+
+Quick pointers:
+
+- Where we are: [Q4 roadmap](/roadmap/q4.md)
+- What we promised: [Q4 OKRs](okrs/2026-q4.md)
+- What we will ship: [2.3 notes](/releases/2.3-notes.md)
+- Why: [synthesis](/research/synthesis-2026-09.md)
+
+## Moving things
+
+A folder of documents moves as a whole (`git mv prd docs/prd`), and its links should move with it, so prefer relative
+links inside a folder. Links across folders use the root form.
+
+<!-- markdownlint-disable MD013 -->
+<details>
+<summary>Build and preview the docs site</summary>
+
+<p align="center"><img
+  src="https://raw.githubusercontent.com/kestrel-labs/product/main/assets/share-sheet.png" alt="Share sheet" width="480"></p>
+
+<a href="https://kestrel-labs.github.io/product/prd/route-sharing/" target="_blank" rel="noopener noreferrer" title="Route sharing PRD, rendered">Preview</a>
+<div class="preview-note" data-owner="product" data-reviewed="2026-09-30" data-source="README.md" role="note">
+
+Previews build on every push to `main`; branches build a preview under `/pr/<number>/`.
+
+</div>
+
+</details>
+'''
+
+[[commit]]
+branch = "main"
+date = "2026-08-21T14:00:00+02:00"
+author = "Sam Rivera <sam@kestrel.dev>"
+message = "PRDs: process plan, offline sync, route sharing (draft)"
+add = [
+  "prd/plan.md",
+  "prd/plan",
+]
+[commit.write]
+"prd/offline-sync.md" = '''
+# PRD: offline sync v2
+
+<!-- markdownlint-disable MD013 -->
+
+| ID | Requirement | Description | Status |
+| ---: | :--- | --- | :---: |
+| R1 | Local-first queue | Every edit a rider makes while offline is written to a durable on-device queue first and shown in the UI immediately, never held in memory. | in progress |
+| R2 | Ordered replay | When the network returns, queued changes are sent in the order they were made, and a change that depends on an earlier one is never sent before it. | in progress |
+| R3 | Retry budget | A failed send is retried with exponential back-off and jitter, up to a budget of six attempts in ten minutes, after which the queue pauses and says so. | in review |
+| R4 | Conflict rule | When two devices changed the same route, the later edit to each field wins, and the earlier value is kept in the route's history for thirty days. | in progress |
+| R5 | Visible state | The app shows one of four states at all times (synced, pending, offline, stalled) with a count of waiting changes and the time of the last good sync. | in progress |
+| R6 | Stall detection | A queue that has not drained for fifteen minutes while the network is up counts as stalled, raises the banner and reports to the server without waiting. | planned |
+| R7 | Safe upgrade | Riders on 2.2 with unsent changes keep them: the first launch of 2.3 migrates the old queue file before anything is sent, or does nothing at all. | in progress |
+| R8 | Data cap | The queue holds at most 5,000 changes or 50 MB, whichever comes first; beyond that the oldest GPS traces are thinned, never the route edits. | dropped |
+
+<!-- markdownlint-enable MD013 -->
+
+## Problem
+
+> "I rode four hours through the hills with no signal and when I got home half my edits had vanished. I did not know
+> whether to trust it again." (Interview P3, 2026-08-19)
+
+The v1 sync sent changes in a single request when it noticed a connection. A request that failed was dropped, and the
+rider was never told. Support saw it in 31 tickets between June and August, the largest single cause of "lost route"
+reports.
+
+## Goals
+
+- Zero silent losses: every change is either synced or visibly pending (R1, R5).
+- A stalled queue is noticed by the app within fifteen minutes, not by a customer in a ticket (R6).
+- At least 99.5% of queued changes reach the server within five minutes of the network coming back.
+
+Non-goals: real-time collaboration, and syncing the map tiles themselves (tiles have their own cache).
+
+<!-- markdownlint-disable MD013 -->
+
+## When a device reconnects after a long period without signal, the retry budget pauses the queue after six failed attempts, reports the pause to the server at once and resumes in the order the edits were made, never dropping or reordering one
+
+<!-- markdownlint-enable MD013 -->
+
+The retry budget (R3) is the part with the most argument. Six attempts in ten minutes is a guess based on how the v1
+worker behaves, which retries without a limit and can fill the queue; Aiko wants it configurable per region, Malik
+wants it fixed. We ship fixed and revisit with data. ^retry-budget
+
+## Design notes
+
+The client keeps the queue in SQLite, and the worker drains it with this loop:
+
+```ts
+async function drain(queue: Queue, send: (c: Change) => Promise<void>): Promise<DrainResult> {
+  let attempts = 0;
+  for (const change of queue.pending()) {
+    while (true) {
+      try { await send(change); queue.ack(change.id); break; }
+      catch (err) { if (++attempts > BUDGET) return { paused: true }; await backoff(attempts); }
+    }
+  }
+  return { paused: false };
+}
+```
+
+See the engineering write-up in [the sync doc](slipbox://kestrel/docs/sync.md) for the server side.
+
+### Pending state names
+
+The states are written exactly as they appear in the app:
+
+> **synced** every change is on the server.
+> **pending** some changes are waiting; the count is shown.
+> **offline** no network; changes are being queued.
+> **stalled** the network is up but the queue is not draining.
+
+<!-- markdownlint-disable MD013 -->
+
+### SyncQueueDrainPausedAfterRetryBudgetExhaustedEventV2PayloadForRegionalWorkerReplayAuditAndStalledBannerTelemetryExportRecord
+
+<!-- markdownlint-enable MD013 -->
+
+The event the worker logs when R3's budget runs out, spelled as it appears in the sync logs.
+
+## Rollout
+
+Staged over three weeks from 2026-09-09, tied to the 2.3 release; the plan and owners are in the Q4 roadmap under
+[route sharing and offline sync](../roadmap/q4.md). A change of the retry budget is a config flip, not a release.
+
+## Metrics
+
+| Measure | Baseline (Aug) | Target | Now (Oct 5) |
+| --- | ---: | ---: | ---: |
+| Silent losses per week | 7 | 0 | 0 |
+| Queue drain, p95 (minutes) | 38 | 5 | 6.2 |
+| "Lost route" tickets per week | 11 | 2 | 3 |
+| Riders with a stalled queue | not measured | < 0.1% | 0.04% |
+
+## Open questions
+
+- Should a paused queue ask the rider to retry, or retry on its own when the app is next opened? Owner: Tomás.
+- Do we thin GPS traces at all before the data cap is back on the table? Owner: Aiko.
+'''
+"prd/route-sharing.md" = '''
+# PRD: route sharing
+
+**Status:** draft, in review · **Owner:** Sam Rivera · **Design:** Tomás Ruiz · **Engineering:** Aiko
+
+> [!NOTE]
+> This PRD is the record of what we decide before building. The metrics table below gets its results once 2.3 has
+> shipped.
+
+## Problem
+
+Riders plan a route and then describe it to their friends in a chat message: a screenshot, a place name, "we turn left
+at the church". Three of the ten riders we interviewed in August did exactly that, and two of them said their friends
+then planned a different route and arrived somewhere else.
+
+> "I made the perfect loop, sent a screenshot, and my brother rode the other way round. It was fine, but it was not
+> the loop." (P2)
+
+The research that led here will be in [the September synthesis](/research/synthesis-2026-09.md); the quarter's plan
+for it is under [route sharing in the Q4 roadmap](../roadmap/q4.md#route-sharing).
+
+## Goals
+
+- A rider can send a route as a link in under ten seconds from the route card.
+- Someone without the app sees the route, read-only, in a browser, without signing in.
+- A rider with the app can open the link and save the route to their own library in two taps.
+- Shared links expire after 30 days unless the owner renews them.
+
+## Non-goals
+
+- Editing a route together. That is a 2027 theme.
+- Public discovery of routes: a link is private to whoever has it.
+- Sharing rides (what you did) as opposed to routes (what you plan); rides have a different privacy model.
+
+## User stories
+
+- [ ] As a rider, I tap **Share** on a route card and get a link.
+- [ ] As a rider, I copy the link with one tap and see that it was copied.
+- [ ] As a friend without the app, I open the link and see the route on a map.
+- [ ] As a friend with the app, I open the link and the app shows the route with a **Save** button.
+- [ ] As a rider, I see who opened my link. (Not decided.)
+- [ ] As a rider, I can turn a link off before it expires.
+
+## Metrics
+
+| Measure | Baseline | Target |
+| --- | ---: | ---: |
+| Routes shared per active rider per month | 0.0 | 0.6 |
+| Links opened by non-members | n/a | 30% |
+| Non-member to sign-up within 7 days | n/a | 8% |
+| Support tickets about sharing | n/a | < 5/week |
+
+## Notes for engineering
+
+> [!TIP]
+> A link in a chat app shows a preview card. Make sure the route's name and distance are in the page title.
+
+> [!IMPORTANT]
+> A shared link exposes the route's start point. For routes starting at someone's home, offer to trim the first 200 m.
+
+> [!WARNING]
+> Links must not be guessable. The short code is 10 characters from a 32-letter alphabet, and the server rate-limits
+> lookups.
+
+> [!CAUTION]
+> Do not log the full link in the app's analytics: the code is a credential for the route.
+
+> [!faq]- What happens to a link when the route is deleted?
+> The link keeps working for seven days with a banner saying the owner removed the route, then returns a 410.
+
+> [!question]+ Should viewers see the owner's name?
+> Current design says no, only "Shared by a Kestrel rider". Jo hears the opposite from customers who share with clubs.
+
+<!-- markdownlint-disable-next-line MD013 -->
+> [!tip] Test the preview card in the three chat apps riders named most often before raising the rollout past 10%
+> Jo has the list from the interviews; the card's title and image are what people judge it by.
+
+## Review comments
+
+Pasted from the design review thread, as written:
+
+> Priya: we agreed in review that
+> [!note] means the banner, not the sheet.
+
+> [!] still open: who renews?
+
+> [ !note] from the design crit, pasted as is
+
+## Open questions
+
+- Who can renew a link, the owner only or anyone with edit rights on the route? Owner: Tomás.
+- Does a link opened in the in-app browser of a chat app count as a non-member visit? Owner: Malik.
+- Is 30 days right? The median rider plans a trip about three weeks ahead, so a link made for it could expire the week
+  before the trip. Owner: Sam.
+
+## Implementation
+
+The decision on link format is recorded as [ADR 0003](slipbox://kestrel/docs/adr/0003-sharing-links.md). The engineering
+view, with the endpoints and the data model, is in
+[the feature doc](../../kestrel/docs/features/route-sharing.md) in the app repository, which is a sibling checkout of
+this one.
+
+### Rollout
+
+1. Internal dogfood from 2026-09-14.
+2. 10% of riders from 2026-09-22.
+3. Everyone with 2.3 on 2026-09-30.
+   1. Android and web first.
+   2. iOS after review.
+'''
+
+[[commit]]
+branch = "main"
+date = "2026-08-28T12:10:00+02:00"
+author = "Priya Nair <priya@kestrel.dev>"
+message = "Roadmap for Q4, the OKR draft and a first 2027 sketch"
+add = [
+  "roadmap/2027-themes.md",
+]
+[commit.write]
+"roadmap/q4.md" = '''
+Q4 2026 roadmap
+===============
+
+Three months, three themes, one person-week at a time. The objectives behind it are in [the OKRs](../okrs/2026-q4.md);
+the requirement documents are linked from each theme. "W" is the ISO week: W41 starts on 2026-10-05.
+
+Themes
+------
+
+1. **Route sharing** reaches everyone: 2.3 on 2026-09-30, iOS on 2026-10-03 (planned), then the numbers.
+2. **Offline sync** gets its retry budget (R3) and stall detection (R6), then the follow-up work of the incident.
+3. **Hiring** one backend engineer: the loop starts in September, and the start depends on a notice period.
+
+A theme that slips pushes the one after it, not the one before. The release plan for the first is in
+[the 2.3 plan](/releases/2.3-plan.md).
+
+Capacity by theme
+-----------------
+
+Person-weeks per theme, with the owners and the main risk.
+
+<!-- markdownlint-disable MD013 -->
+
+| Theme | Owner | Oct | Nov | Dec | Eng | Design | QA | Data | Total | Risk | Status |
+| :--- | :--- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | :--- | :---: |
+| Route sharing follow-ups | Tomás | 1.5 | 0.5 | 0 | 0.5 | 1 | 0.5 | 0 | 2 | iOS review may take longer than the week we planned for it, and the share sheet must be re-tested after each build | on track |
+| Offline sync: retry budget and stall detection | Aiko<br>Malik | 3 | 3 | 1 | 5 | 0 | 1.5 | 0.5 | 7 | Needs a decision before W44: either `max_attempts \| window_s` as one setting or two, and whether the budget is per device \| per region, because the v1 worker has no limit at all | at risk |
+| Hiring | Priya | 1 | 1.5 | 0.5 | 0 | 0 | 0 | 0 | 3 | A new hire's notice period is likely eight weeks | at risk |
+| Cue sheet research | Sam<br>Jo | 0.5 | 0.5 | 0 | 0 | 1 | 0 | 0 | 1 | none | planned |
+| Gravel spike | Malik | 0 | 1 | 1 | 1.5 | 0 | 0 | 0.5 | 2 | The surface layer may not fit in the tile budget | planned |
+
+In the risk column, `a | b` means "a or b": the two options still open.
+
+Who is on what, week by week
+----------------------------
+
+| Person | Team | W41 | W42 | W43 | W44 | W45 | W46 | W47 | W48 | W49 | W50 | W51 | W52 | Total | Notes |
+| :--- | :--- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | :--- |
+| Aiko | Backend | 1 | 1 | 1 | 1 | 1 | 1 | 0.5 | 0.5 | 0.5 | 0 | 0 | 0 | 7.5 | sync + sharing API |
+| Malik | Data/Infra | 0.5 | 0.5 | 1 | 1 | 0.5 | 0.5 | 0.5 | 0.5 | 1 | 0.5 | 0 | 0 | 6.5 | worker, on call W44 |
+| Tomás | Design | 1 | 1 | 0.5 | 0.5 | 0.5 | 0.5 | 0.5 | 0 | 0 | 0 | 0 | 0 | 4.5 | cue sheet explore |
+| Priya | Eng mgr | 0.2 | 0.2 | 0.2 | 0.2 | 0.2 | 0.2 | 0.2 | 0.2 | 0.2 | 0.2 | 0.2 | 0.2 | 2.4 | hiring loop |
+| Sam | Product | 0.5 | 0.5 | 0.5 | 0.5 | 0.5 | 0.5 | 0.5 | 0.5 | 0.5 | 0.5 | 0.5 | 0.5 | 6 | PRDs, interviews |
+| Jo | Success | 0.3 | 0.3 | 0.3 | 0.5 | 0.5 | 0.5 | 0.3 | 0.3 | 0.3 | 0.3 | 0 | 0 | 3.6 | 2.3 follow-ups |
+| New hire | Backend | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0.5 | 1 | 1.5 | starts mid-Dec |
+
+<!-- markdownlint-enable MD013 -->
+
+Totals are person-weeks, and Priya's and Sam's rows are the share of their time that goes to the roadmap, not their
+whole week. Anyone over 1.0 in a week tells Priya.
+
+Route sharing
+-------------
+
+Sharing reaches riders with 2.3. What is left after that is measuring it and finishing the follow-ups: the expiry
+date in the sheet, the Android share target and a decision on whether a link shows its views. The requirements are in
+[the PRD](../prd/route-sharing.md); the key results (KR1.1 to KR1.3) in [the OKRs](../okrs/2026-q4.md).
+
+| When | What |
+| --- | --- |
+| 2026-10-03 | iOS release (planned) |
+| 2026-10-14 | First 30-day numbers |
+| 2026-10-28 | Decide on view counts |
+
+Offline sync
+------------
+
+The retry budget goes to review in W42 and ships in 2.4. See the [offline sync PRD](../prd/offline-sync.md).
+
+Hiring
+------
+
+The loop runs in September; with eight weeks' notice a new hire starts by mid-December, and a second loop runs only
+if it falls through.
+'''
+"okrs/q4-draft.md" = '''
+# Q4 2026 OKRs (draft)
+
+To be set at the planning meeting in September. These are drafts until Priya signs them off. Scores are updated
+every Friday, 0.0 to 1.0, and anything below 0.4 at week six gets a conversation. The
+[roadmap](../roadmap/q4.md) says when each piece lands.
+
+Jump to: [Key results](#key-results), [O1: Ship route sharing (2.3)](#o1-ship-route-sharing-23),
+[O2: Offline that earns trust](#o2-offline-that-earns-trust), [What we dropped](#what-we-dropped).
+
+## Key results
+
+| Objective | Key result | Owner | Target | — |
+| :--- | :--- | :---: | ---: | ---: |
+| O1 | **KR1.1** Share links created per active rider, monthly | Sam | 0.6 | — |
+| O1 | **KR1.2** Non-member link opens (`/r/<code>`) | Tomás | 30% | — |
+| O1 | **KR1.3** Sign-ups within 7 days of a link open | Jo | 8% | — |
+| O2 | **KR2.1** Silent losses per week, see [offline sync](../prd/offline-sync.md) | Aiko | 0 | — |
+| O2 | **KR2.2** *p95* queue drain in minutes | Malik | 5 | — |
+| O3 | **KR3.1** Hire a backend engineer by ~~November~~ December 15 | Priya | 1 | — |
+
+## O1: Ship route sharing (2.3)
+
+Riders can send a route to anyone with a link, and the link works without the app. We ship it with **2.3** on 2026-09-30
+and measure over the following 30 days.
+
+- KR1.1 to KR1.3 above, as `shared per rider`, `non-member opens` and `sign-up rate`.
+- Anything we learn that changes a goal goes in the PRD first, then here.
+- Show riders who opened their link: needs a privacy review of the design first.
+
+## O2: Offline that earns trust
+
+The rider should never wonder whether a change was kept. The *queue* is durable, the *state* is visible, a stall is
+detected by the app. KR2.2 is the one at risk: the v1 drain is slow when a worker restarts, about 9 minutes
+against a target of 5.
+
+### Markup in cells and text
+
+The key results table uses **bold** for ids, *italics* for measures, `code` for paths and ~~strike~~ for what moved.
+Score meanings:
+
+| Score | Meaning | Example |
+| ---: | :--- | :---: |
+| 1.0 | Hit the target | KR2.1 |
+| 0.7 | Meaningful progress | KR1.1 |
+| 0.3 | Slipped | KR3.1 |
+
+## O3: Grow the team carefully
+
+One hire this quarter, on purpose. The loop starts in September; the candidate's notice period is likely eight
+weeks, so the date is December, not November.
+
+## What we dropped
+
+- A web editor refresh (O4 in the draft), because the web editor is 4% of edits.
+- A printed cue sheet, from the research: only 22% of the survey wanted it.
+'''
+
+[[commit]]
+branch = "design/share-flow"
+from = "main"
+date = "2026-08-31T10:00:00+02:00"
+author = "Tomás Ruiz <tomas@kestrel.dev>"
+message = "Design notes: the share flow"
+add = [
+  "design/share-flow.md",
+  "design/.obsidian/app.json",
+]
+
+[[commit]]
+branch = "design/share-flow"
+date = "2026-09-01T16:45:00+02:00"
+author = "Tomás Ruiz <tomas@kestrel.dev>"
+message = "Design notes: component inventory"
+[commit.write]
+"design/components.md" = '''
+# Component inventory
+
+The pieces the app is built from, as designed. Update this page when a component changes, not when a screen does.
+
+## Sheets
+
+The share sheet slides up from the bottom, covers at most two thirds of the screen and carries a link, a copy button and
+the system share targets. The link field runs the full width of the sheet less 16 on each side. How it behaves from
+first tap to sent link is in [[share-flow]].
+
+## Buttons
+
+| Component | Where | States |
+| --- | --- | --- |
+| Primary button | Share sheet, save route | rest, pressed, disabled, busy |
+| Quiet button | Route card, sheet footer | rest, pressed |
+| Icon button | Map toolbar | rest, pressed, toggled |
+| Copy chip | Share sheet link field | rest, copied (2 s), failed |
+
+## Banners
+
+A banner sits under the status bar and never covers the map controls.
+
+- **Offline** shows while the device has no network and the queue has pending changes.
+- **Sync stalled** appears after three failed retries and offers a retry.
+- **Link expired** replaces the route card when a shared link is past its 30 days.
+
+## Tokens
+
+Spacing is a 4-point scale, corner radius is 12 for sheets and 8 for chips, and the accent is the same blue in light
+and dark. Type is the system face at 13, 15 and 20.
+'''
+
+
+[[commit]]
+branch = "main"
+date = "2026-09-02T09:15:00+02:00"
+author = "Priya Nair <priya@kestrel.dev>"
+message = "Merge branch 'design/share-flow'"
+merge = "design/share-flow"
+
+[[commit]]
+branch = "main"
+date = "2026-09-05T15:30:00+02:00"
+author = "Jo Becker <jo@kestrel.dev>"
+message = "Research synthesis for September"
+[commit.write]
+"research/synthesis-2026-09.md" = '''
+# Research synthesis, September 2026
+
+Ten interviews (2026-08-18 to 2026-09-02) and a survey of 212 riders, synthesised by Jo and Tomás on 2026-09-05.
+Sam's own notes from the interviews are in
+[user-interviews-2026-08](../../../notes/research/user-interviews-2026-08.md), and the contacts for follow-ups are at
+[notes/research/contacts](slipbox://notes/research/contacts.md); neither is part of this repository.
+
+## Method
+
+We spoke to four commuters, two weekend riders, a brevet rider, a gravel rider, a new rider and a club organiser.
+The survey went to the newsletter list; 9% replied.
+
+## Themes
+
+| Theme | Participants | Survey agreement | Strength |
+| --- | :---: | ---: | :--- |
+| Losing edits when offline | 7 of 10 | 71% | *strong* |
+| Describing a route to friends | 3 of 10 | 48% | *moderate* |
+| Not knowing whether sync worked | 6 of 10 | 64% | **strong** |
+| Wanting a printed cue sheet | 2 of 10 | 22% | *weak* |
+
+### Losing edits when offline
+
+Most riders edit on the move and expect the app to cope. What surprised us was how quickly trust goes: one lost edit
+and the rider checks everything twice from then on.
+
+> "I stopped planning in the app on tours. I plan at home, screenshot it, and ride the screenshot."
+>
+> "The worst part is not the loss. It is that it did not tell me."
+>
+> — P5, brevet rider
+
+> Things P5 asked us to do:
+>
+> - Say plainly when changes are waiting.
+> - Never throw a change away without asking.
+> - Show the last time it synced.
+
+### Describing a route to friends
+
+Two riders pasted what they send friends today. One, from the survey's free text:
+
+> Send the finished route to this address too:  
+> 14 Quayside Lane  
+> Bristol BS1 4QA  
+> and mark it urgent
+
+And a club organiser's message, copied from their group chat:
+
+> Club ride start:<br>The Old Mill car park<br>Saturday 8:30
+
+Three participants told us a screenshot was how they share. P2's version is in the [PRD](../prd/route-sharing.md).
+
+### Not knowing whether sync worked
+
+> **P4 on what she wants to see**
+>
+> 1. A word: synced, waiting, offline.
+> 2. A number, if something is waiting.
+> 3. A time.
+>
+> | State | What she wants |
+> | --- | --- |
+> | Synced | Nothing, stay out of the way |
+> | Waiting | A small count |
+> | Stalled | A button to retry[^1] |
+>
+> ![Mock-up of the share sheet with a sync count](../assets/share-sheet.png)
+
+### A participant in Seoul
+
+P7 rides for work in Seoul and tried the app on a trip to Bristol:
+
+> 공유 링크를 눌렀는데 지도가 열리지 않고 앱 스토어로 이동했어요 그래서 친구가 경로를 볼 수 없었고 저는 스크린샷을 다시 보내야 했습니다 링크는 편한데 열리는 방식이 헷갈려요
+
+(Roughly: I tapped the share link and it did not open the map but took me to the app store, so my friend could not see
+the route and I had to send the screenshot again. The link is convenient but how it opens is confusing.)
+
+## What we recommend
+
+- Ship the visible queue state (offline sync, R5) before anything that adds more edits.
+- Ship sharing with a web view for people without the app.
+- Add a cue sheet to the 2027 list, but not before.
+
+## Sources
+
+The interview transcripts, with their customer names, are kept outside this repository and deliberately not copied
+here.
+
+[^1]: P4 was shown the stalled banner from the design review on 2026-08-26 and asked for the button to be larger.
+'''
+
+
+[[commit]]
+branch = "main"
+date = "2026-09-10T11:00:00+02:00"
+author = "Tomás Ruiz <tomas@kestrel.dev>"
+message = "Design folder renders on GitHub: links as markdown"
+add = [
+  "design/.slipbox/config.toml",
+]
+
+[[commit]]
+branch = "main"
+date = "2026-09-12T17:00:00+02:00"
+author = "Priya Nair <priya@kestrel.dev>"
+message = "Q4 OKRs: the numbers are final"
+rename = { "okrs/q4-draft.md" = "okrs/2026-q4.md" }
+[commit.write]
+"okrs/2026-q4.md" = '''
+# Q4 2026 OKRs
+
+Set at the planning meeting of 2026-09-10 and agreed with Priya on 2026-09-12. This file began life as
+`okrs/q4-draft.md`; it was renamed when the numbers were final. Scores are updated every Friday, 0.0 to 1.0, and
+anything below 0.4 at week six gets a conversation. The [roadmap](../roadmap/q4.md) says when each piece lands.
+
+Jump to: [Key results](#key-results), [O1: Ship route sharing (2.3)](#o1-ship-route-sharing-23),
+[O2: Offline that earns trust](#o2-offline-that-earns-trust), [What we dropped](#what-we-dropped).
+
+## Key results
+
+| Objective | Key result | Owner | Target | — |
+| :--- | :--- | :---: | ---: | ---: |
+| O1 | **KR1.1** Share links created per active rider, monthly | Sam | 0.6 | — |
+| O1 | **KR1.2** Non-member link opens (`/r/<code>`) | Tomás | 30% | — |
+| O1 | **KR1.3** Sign-ups within 7 days of a link open | Jo | 8% | — |
+| O2 | **KR2.1** Silent losses per week, see [offline sync](../prd/offline-sync.md) | Aiko | 0 | — |
+| O2 | **KR2.2** *p95* queue drain in minutes | Malik | 5 | — |
+| O3 | **KR3.1** Hire a backend engineer by ~~November~~ December 15 | Priya | 1 | — |
+
+## O1: Ship route sharing (2.3)
+
+Riders can send a route to anyone with a link, and the link works without the app. We ship it with **2.3** on 2026-09-30
+and measure over the following 30 days.
+
+- KR1.1 to KR1.3 above, as `shared per rider`, `non-member opens` and `sign-up rate`.
+- Anything we learn that changes a goal goes in the PRD first, then here.
+- Show riders who opened their link: waiting for a privacy review of the design.
+
+## O2: Offline that earns trust
+
+The rider should never wonder whether a change was kept. The *queue* is durable, the *state* is visible, a stall is
+detected by the app. KR2.2 is the one at risk: the v1 drain is slow when a worker restarts, about 9 minutes
+against a target of 5.
+
+### Markup in cells and text
+
+The key results table uses **bold** for ids, *italics* for measures, `code` for paths and ~~strike~~ for what moved.
+Score meanings:
+
+| Score | Meaning | Example |
+| ---: | :--- | :---: |
+| 1.0 | Hit the target | KR2.1 |
+| 0.7 | Meaningful progress | KR1.1 |
+| 0.3 | Slipped | KR3.1 |
+
+## O3: Grow the team carefully
+
+One hire this quarter, on purpose. The debrief of 2026-09-09 took two of four candidates to the final; the offer is
+planned for early October, and the date moved to December because the candidate's notice period is eight weeks.
+
+## What we dropped
+
+- A web editor refresh (O4 in the draft), because the web editor is 4% of edits.
+- A printed cue sheet, from the research: only 22% of the survey wanted it.
+'''
+
+
+[[commit]]
+branch = "tomas/sharing-copy"
+from = "main"
+date = "2026-09-16T10:20:00+02:00"
+author = "Tomás Ruiz <tomas@kestrel.dev>"
+message = "Route sharing PRD: move under sharing/ and edit the copy"
+rename = { "prd/route-sharing.md" = "prd/sharing/route-sharing.md" }
+[commit.write]
+"prd/sharing/route-sharing.md" = '''
+# PRD: route sharing
+
+**Status:** copy edit, in review · **Owner:** Sam Rivera · **Design:** Tomás Ruiz · **Engineering:** Aiko
+
+> [!NOTE]
+> This PRD is the record of what we decide before building. The metrics table below gets its results once 2.3 has
+> shipped.
+
+## Problem
+
+Riders plan a route and then describe it to their friends in a chat message: a screenshot, a place name, "we turn left
+at the church". Three of the ten riders we interviewed in August did exactly that, and two of them said their friends
+then planned a different route and arrived somewhere else.
+
+> "I made the perfect loop, sent a screenshot, and my brother rode the other way round. It was fine, but it was not
+> the loop." (P2)
+
+The research that led here will be in [the September synthesis](/research/synthesis-2026-09.md); the quarter's plan
+for it is under [route sharing in the Q4 roadmap](../../roadmap/q4.md#route-sharing).
+
+## Goals
+
+- A rider can send a route from the route card in one tap, and the link is ready in under ten seconds.
+- Anyone with the link sees the route in a browser, read-only, with no app and no sign-in.
+- A rider with the app can open the link and save the route to their own library in two taps.
+- Shared links expire after 30 days unless the owner renews them.
+
+## Non-goals
+
+- Editing a route together. That is a 2027 theme.
+- Public discovery of routes: a link is private to whoever has it.
+- Sharing rides (what you did) as opposed to routes (what you plan); rides have a different privacy model.
+
+## User stories
+
+- [ ] As a rider, I tap **Share** on a route card and get a link.
+- [ ] As a rider, I copy the link with one tap and see that it was copied.
+- [ ] As a friend without the app, I open the link and see the route on a map.
+- [ ] As a friend with the app, I open the link and the app shows the route with a **Save** button.
+- [ ] As a rider, I see who opened my link. (Not decided.)
+- [ ] As a rider, I can turn a link off before it expires.
+
+## Metrics
+
+| Measure | Baseline | Target |
+| --- | ---: | ---: |
+| Routes shared per active rider per month | 0.0 | 0.6 |
+| Links opened by non-members | n/a | 30% |
+| Non-member to sign-up within 7 days | n/a | 8% |
+| Support tickets about sharing | n/a | < 5/week |
+
+## Notes for engineering
+
+> [!TIP]
+> Chat apps turn a link into a preview card, and that card is the first thing a friend sees. Put the route's name
+> and distance in the page title so the card says something worth tapping.
+
+> [!IMPORTANT]
+> A shared link exposes the route's start point. For routes starting at someone's home, offer to trim the first 200 m.
+
+> [!WARNING]
+> Links must not be guessable. The short code is 10 characters from a 32-letter alphabet, and the server rate-limits
+> lookups.
+
+> [!CAUTION]
+> Do not log the full link in the app's analytics: the code is a credential for the route.
+
+> [!faq]- What happens to a link when the route is deleted?
+> The link keeps working for seven days with a banner saying the owner removed the route, then returns a 410.
+
+> [!question]+ Should viewers see the owner's name?
+> Current design says no, only "Shared by a Kestrel rider". Jo hears the opposite from customers who share with clubs.
+
+<!-- markdownlint-disable-next-line MD013 -->
+> [!tip] Test the preview card in the three chat apps riders named most often before raising the rollout past 10%
+> Jo has the list from the interviews; the card's title and image are what people judge it by.
+
+## Review comments
+
+Pasted from the design review thread, as written:
+
+> Priya: we agreed in review that
+> [!note] means the banner, not the sheet.
+
+> [!] still open: who renews?
+
+> [ !note] from the design crit, pasted as is
+
+## Open questions
+
+- Who can renew a link, the owner only or anyone with edit rights on the route? Owner: Tomás.
+- Does a link opened in the in-app browser of a chat app count as a non-member visit? Owner: Malik.
+- Is 30 days right? The median rider plans a trip about three weeks ahead, so a link made for it could expire the week
+  before the trip. Owner: Sam.
+
+## Implementation
+
+The decision on link format is recorded as [ADR 0003](slipbox://kestrel/docs/adr/0003-sharing-links.md). The engineering
+view, with the endpoints and the data model, is in
+[the feature doc](../../../kestrel/docs/features/route-sharing.md) in the app repository, which is a sibling checkout of
+this one.
+
+### Rollout
+
+1. Internal dogfood from 2026-09-14.
+2. 10% of riders from 2026-09-22.
+3. Everyone with 2.3 on 2026-09-30.
+   1. Android and web first.
+   2. iOS after review.
+'''
+
+[[commit]]
+branch = "cleanup/old-roadmaps"
+from = "main"
+date = "2026-09-18T13:45:00+02:00"
+author = "Priya Nair <priya@kestrel.dev>"
+message = "Drop the 2027 themes sketch; it is not going anywhere"
+delete = ["roadmap/2027-themes.md"]
+
+[[commit]]
+branch = "main"
+date = "2026-09-20T09:40:00+02:00"
+author = "Sam Rivera <sam@kestrel.dev>"
+message = "Release plan for 2.3"
+[commit.write]
+"releases/2.3-plan.md" = '''
+# Release plan: Kestrel 2.3
+
+**Release manager:** Jo Becker · **Engineering lead:** Aiko Tanaka · **Date:** 2026-09-30
+
+Customer-facing text is in [the release notes](2.3-notes.md). The engineering changelog is
+[CHANGELOG.md in the app repository](slipbox://kestrel/CHANGELOG.md).
+
+## Dates
+
+| Date | What | Owner |
+| --- | --- | --- |
+| 2026-09-14 | Feature freeze, internal dogfood starts | Aiko |
+| 2026-09-22 | 10% rollout of sharing | Priya |
+| 2026-09-26 | Release candidate on TestFlight and the Play beta | Aiko |
+| 2026-09-28 | Release notes draft | Jo |
+| 2026-09-30 | Everyone, web and Android | Priya |
+| 2026-10-03 | iOS after review | Aiko |
+
+## Checklist
+
+- [x] Feature freeze
+- [ ] Migration of the old sync queue tested on 40 real devices
+  - [ ] Android 12 to 15
+    - [ ] Pixel
+      - [ ] Pixel 6 (low storage)
+      - [ ] Pixel 8
+    - [ ] Samsung
+  - [ ] iOS 17 and 18
+- [ ] Share link analytics reviewed
+- [ ] Release notes read by Sam
+- [ ] Status page text for the iOS delay
+- [ ] Support macros updated
+
+## Order of work on release day
+
+1. [ ] Merge the release branch
+2. [ ] Tag `v2.3.0`
+3. [ ] Deploy the API (the migration runs first)
+4. [ ] Raise rollout to 100% on Android
+   1. [ ] 25%
+   2. [ ] 50%
+   3. [ ] 100%
+5. [ ] Turn off the v1 sync endpoint (after 14 days)
+   1. [ ] Announce the date in the status page text
+   2. [ ] Stop accepting v1 requests
+   3. [ ] Remove the v1 handlers from the API
+6. [ ] Post in #releases
+
+## Rollout
+
+| Stage | Share of riders | Hold for | Rollback if |
+| --- | ---: | --- | --- |
+| Dogfood | staff | 5 days | any lost change |
+| Canary | 1% | 1 day | crash rate over 0.5% |
+| Early | 10% | 2 days | stalled queues over 0.1% |
+| Half | 50% | 1 day | support tickets double |
+| All | 100% | none | n/a |
+
+## Risks
+
+The migration of the old queue is the part most likely to hurt a rider, so the plan holds the 10% stage until the
+stalled-queue rate is below 0.1%.
+'''
+
+
+[[commit]]
+branch = "main"
+date = "2026-09-21T17:30:00+02:00"
+author = "Jo Becker <jo@kestrel.dev>"
+message = "Notes from the offsite"
+add = [
+  "drafts/notes-from-offsite.md",
+]
+
+[[commit]]
+branch = "main"
+date = "2026-09-28T15:00:00+02:00"
+author = "Jo Becker <jo@kestrel.dev>"
+message = "Release notes for customers; the share sheet screenshot"
+add = [
+  "releases/2.3-notes.md",
+  "assets/share-sheet.png",
+]
+
+[[commit]]
+branch = "main"
+date = "2026-10-05T10:30:00+02:00"
+author = "Sam Rivera <sam@kestrel.dev>"
+message = "PRD: route sharing is shipped, with the first results"
+add = [
+  "prd/route-sharing.md",
+]
+
+[[commit]]
+branch = "main"
+date = "2026-10-05T16:00:00+02:00"
+author = "Priya Nair <priya@kestrel.dev>"
+message = "Close out 2.3: roadmap, OKR scores, synthesis, release plan, component inventory, offline sync PRD"
+add = [
+  "README.md",
+  "design/components.md",
+  "okrs/2026-q4.md",
+  "prd/offline-sync.md",
+  "releases/2.3-plan.md",
+  "research/synthesis-2026-09.md",
+  "roadmap/q4.md",
+]
