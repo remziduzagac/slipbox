@@ -10088,7 +10088,7 @@ describe("vaults in the TUI (17.x)", () => {
     await h.keys("shift+g", "o");
     for (const k of "[x](") await h.keys(k);
     const shown = (h: Harness) => h.app.completion?.shown.map((i) => i.label) ?? [];
-    expect(h.app.completion?.links).toBe(true);
+    expect(h.app.completion?.links).toBe("markdown");
     expect(shown(h)).toContain("todo.md");
     expect(shown(h)).toContain(join(app, "design.md"));
     expect(shown(h)).not.toContain("sub/here.md"); // not the note itself
@@ -10125,6 +10125,7 @@ describe("vaults in the TUI (17.x)", () => {
       const { cacheDir } = await import("../src/core/paths.ts");
       const { readRoots } = await import("../src/core/registry.ts");
       const { foldersFile } = await import("../src/core/folders.ts");
+      const match = await import("../src/tui/match.ts");
       const index = join(cacheDir(readRoots().find((v) => v.path === app)!), "index.json");
       const h = await harness({ root: notes, open: "index.md" });
       await h.app.run("view.source");
@@ -10132,31 +10133,43 @@ describe("vaults in the TUI (17.x)", () => {
       const read = fs.readFileSync;
       let reads = 0;
       let named = 0;
-      // The list's own reads: a frame's (backlinks across vaults, a pointer followed) aren't the question.
+      // The list's own reads: a frame's (backlinks across vaults, a pointer followed) aren't the question. The whole
+      // stack, as the read is some frames below `linkItems`.
       const spy = spyOn(fs, "readFileSync").mockImplementation(((path: fs.PathOrFileDescriptor, ...rest: never[]) => {
-        if ((path === index || path === foldersFile()) && new Error().stack?.includes("linkItems")) {
-          if (path === index) reads++;
-          else named++;
+        if (path === index || path === foldersFile()) {
+          const limit = Error.stackTraceLimit;
+          Error.stackTraceLimit = Number.POSITIVE_INFINITY;
+          const stack = new Error().stack;
+          Error.stackTraceLimit = limit;
+          if (stack?.includes("linkItems")) {
+            if (path === index) reads++;
+            else named++;
+          }
         }
         return read(path, ...rest);
       }) as typeof fs.readFileSync);
+      const ranked = spyOn(match, "rank");
       const shown = () => h.app.completion?.shown.map((i) => i.label) ?? [];
       try {
         for (const k of "[x](tod") await h.keys(k);
         expect(shown()).toEqual(["todo.md"]);
         // The named folders read once for the list, not once per other vault's note.
         expect(named).toBe(1);
-        // Past any match: nothing shown, and typing on reads nothing again.
+        // Past any match: nothing shown, and typing on reads nothing again, nor matches again what can't match.
+        ranked.mockClear();
         for (const k of "qqqq") await h.keys(k);
         expect(shown()).toEqual([]);
         expect(reads).toBe(1);
+        expect(ranked).toHaveBeenCalledTimes(1);
         // Back to a match, it shows again from the same list.
         for (let i = 0; i < 4; i++) await h.keys("backspace");
         expect(shown()).toEqual(["todo.md"]);
         expect(reads).toBe(1);
-        // tab while nothing shows isn't the popup's: it indents the line, as with no popup.
+        // tab while nothing shows isn't the popup's: it indents the line, as with no popup. The target moved, the
+        // same list.
         await h.keys("q", "tab");
         expect(h.app.view!.buf.source).toEndWith("\n  [x](todq\n");
+        expect(reads).toBe(1);
         // The link ended, the next one reads them again: a note indexed since is offered.
         await h.keys("backspace", "backspace", ")", "space");
         expect(h.app.completion).toBeNull();
@@ -10168,6 +10181,7 @@ describe("vaults in the TUI (17.x)", () => {
         expect(shown()).toContain(join(app, "later.md"));
       } finally {
         spy.mockRestore();
+        ranked.mockRestore();
       }
       await h.keys("escape");
     });
@@ -10289,7 +10303,7 @@ describe("vaults in the TUI (17.x)", () => {
     await h.keys("shift+g", "o");
     const shown = () => h.app.completion?.shown.map((i) => [i.label, i.detail]) ?? [];
     for (const k of "[[") await h.keys(k);
-    expect(h.app.completion?.links).toBe(true);
+    expect(h.app.completion?.links).toBe("wiki");
     // Each as it would be written: beside this note a name; the other b by its path.
     expect(shown()).toContainEqual(["b", "sub/b.md"]);
     expect(shown()).toContainEqual(["other/b", "other/b.md"]);

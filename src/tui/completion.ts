@@ -36,8 +36,10 @@ export interface CompletionState {
   selected: number;
   /** The server said its list was partial: typing asks it again. */
   incomplete: boolean;
-  /** A link's target being completed (20.13): slipbox's list, no server's. */
-  links?: boolean;
+  /** A link's target being completed (20.13), in this style: slipbox's list, no server's. */
+  links?: LinkStyle;
+  /** A link's word that matched nothing: one typed on from it matches nothing either. */
+  none?: string;
   /** A word completed from the open files' words (25.5): narrowed by how it starts, kept in their order. */
   words?: boolean;
 }
@@ -157,15 +159,20 @@ export function afterInsertKey(app: App, view: View, key: string): void {
     const from = md ?? wiki;
     const c = app.completion;
     if (from !== null) {
-      if (c?.links && c.view === view && c.from === from) return narrow(app, c);
+      const style: LinkStyle = md !== null ? "markdown" : "wiki";
+      // The list is the note's and the style's alone: kept where the target's start moved (an indent).
+      if (c?.links === style && c.view === view) {
+        c.from = from;
+        return narrow(app, c);
+      }
       app.completion = {
         view,
         from,
-        items: linkItems(app, view, md !== null ? "markdown" : "wiki"),
+        items: inOrder(linkItems(app, view, style)),
         shown: [],
         selected: 0,
         incomplete: false,
-        links: true,
+        links: style,
       };
       return narrow(app, app.completion);
     }
@@ -328,12 +335,22 @@ function narrow(app: App, c: CompletionState): void {
     if (!c.shown.length) app.completion = null;
     return;
   }
-  const byServer = [...c.items].sort((a, b) => (a.sortText ?? a.label).localeCompare(b.sortText ?? b.label));
+  // A link's word typed on from one that matched nothing matches nothing either, each word being matched whole (3.16),
+  // unless a capital makes it match as typed: nothing to rank, however many notes the list holds.
+  if (c.links && c.none !== undefined && word.startsWith(c.none) && !/\p{Lu}/u.test(word)) return;
+  // A link's list is in order since it was built; a server's is put in order here.
+  const byServer = c.links ? c.items : inOrder(c.items);
   c.shown = word ? rank(word, byServer, (i) => i.filterText ?? i.label).map((r) => r.item) : byServer;
   c.selected = 0;
+  if (c.links) c.none = c.shown.length ? undefined : word;
   // A link's list is kept while nothing matches, showing nothing, until its target ends: built again per key, it
   // would read every vault's index each time. A backspace back to a match shows it again.
   if (!c.shown.length && !c.links) app.completion = null;
+}
+
+/** The items in the server's order: by `sortText`, else the label. */
+function inOrder(items: CompletionItem[]): CompletionItem[] {
+  return [...items].sort((a, b) => (a.sortText ?? a.label).localeCompare(b.sortText ?? b.label));
 }
 
 /** What a snippet (25.8) is expanded with here: the line's indentation, the file's unit, the file's variables. */

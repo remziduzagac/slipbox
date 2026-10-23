@@ -111,3 +111,38 @@ link being typed, matched or not, so the keys that match nothing cost the same h
 - 2026-10-23: A last review of the pull request: no correctness bug. Taken: the design said the list is kept until
   the target ends, but closing it (`ctrl+e`), accepting or `ctrl+n` drops it, and the next key in the target builds it
   again; `design/tui.md` says so now.
+- 2026-10-23: Review loop, round 1: two independent reviews of the whole diff, merged; one found nothing, the other
+  twelve points, each checked against the code. Verified and fixed:
+  - Past a non-match, each key still copied and sorted the whole list and ranked every item: no read, but a cost
+    that grows with the notes of every vault, where the issue asks for typing to cost the same however many vaults.
+    Now a link's list is put in order once, when built; and a word typed on from one that matched nothing isn't
+    ranked again: each word of a query matches whole (`match.ts`), so a longer one can't match where its start
+    didn't. A word with a capital (matched as typed) is ranked as before. Test: over `qqqq` the ranking runs once
+    (four times without). At 10,000 other notes (250 vaults of 40, the machine's load 10 to 14, so high), median
+    per key: matching nothing 178 ms before, 9.5 ms after (the first such key still ranks once); matching, 190 ms
+    before, 145 ms after. A key that matches still ranks every item, the matcher folding each item's text per key,
+    as every filter does: that cost was there before this change, and making the matcher cheaper is a change of its
+    own.
+  - An edit before the target, an indent (tab while nothing shows), moved its start, and the list, kept by its
+    start, was built again: the test's reads went from 1 to 2. The list is the note's and the style's alone, so it's
+    kept by those now (`links` holds the style), its start moved along. Test: no read after the tab.
+  - The test's stack check: Bun keeps 10 frames (`Error.stackTraceLimit`), and the named folders' read found
+    `linkItems` at the ninth; a helper or two more between them would have lost the count, and the test failed with
+    no regression. The spy takes the whole stack (checked: cut at 8 frames, the count is lost).
+  - The CHANGELOG and the manual said the list is built once, when the link starts; accepting, `ctrl+e` or `ctrl+n`
+    drops it and the next key in the target builds it again. Reworded: kept while you type.
+  Mutation-checked, each alone: the old `narrow`, no memo, ranking past a non-match, kept only at the same start, a
+  stack cut at 8: each fails the test. Ran: the completion tests (25 pass), the terminal checks of links written and
+  of a server's completion. Tried live on the scratch home: past a match nothing shows, tab indents with nothing
+  shown, two backspaces show the list again. Rejected:
+  - A note made while the target is typed isn't offered until the next link: the maintainer agreed to keep it so.
+  - A build after accepting, `ctrl+e` or `ctrl+n`, at the next key in the target (`#` doesn't end a markdown
+    target): one build per such action, not per key, as logged; a list kept apart from the popup is a larger change.
+  - The named folders cached in `folders.ts` for every caller, or `Reach`'s caches used: the other loops are out of
+    scope, and a cache across lists needs its own invalidation; the memo lives for one list.
+  - `app.completion` set with nothing shown: every reader checks for an item shown, or clears it (as logged).
+  - The vault test's 7 reads without a memo pin the slow path: they're what shows the memo matters; a cache of the
+    named folders later would rightly change that test.
+  - `findVaultRoot` per note and `checkoutOf` per folder: 8 ms of the 56 ms build at 454 vaults, as logged.
+  - The memo's root checked when used, not bound by a factory: the same results; a memo of another root is ignored,
+    giving the right pointers, only slower.
