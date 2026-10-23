@@ -340,3 +340,7 @@ folder asked for by name, which is whole, and once home's walk is kept, a folder
   the copy step with another note gone at the real time — removing the per-note guard then failed it, so it stays).
   Five separate runs of each file pass; the neighbouring tests (66, 132), tests/home.test.ts, the terminal-coverage and
   docs tests, the eleven home and marks terminal checks, the typecheck, the lint, `check:boundary` and `check:size`.
+- 2026-10-24: CI on 3c91025: every job passed but the terminal checks on ubuntu-24.04-arm, where C2 timed out on
+  `space e` the second time: the explorer, shown but not focused, while home's walk built the graph again. The step
+  needs no key: the explorer still shown says when home is walked, and with no key pressed nobody is working. C2 now
+  waits for `cloned`'s `●` without one; three runs pass here.

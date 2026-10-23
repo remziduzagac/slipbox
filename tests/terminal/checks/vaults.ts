@@ -376,9 +376,8 @@ const UNWALKED_HOME: Check[] = [
       // Nobody working for a second: home walked, and everything in cloned there.
       const config = join(s.dir, "config", "slipbox", "config.toml");
       writeFileSync(config, readFileSync(config, "utf8").replace("idle_seconds = 86400", "idle_seconds = 1"));
-      await explorerOpen(s);
+      // No key pressed meanwhile: the explorer, still shown, says when it's done.
       await s.until(() => markOf(s, "cloned") === "●", 30_000, "home walked while nobody works: cloned ●");
-      await s.keys("escape");
       await untilListed(s, "Deep in", "cloned/x/deep.md");
       await untilListed(s, "2025-01-01", "journal/2025/m01/day-1.md");
     },
