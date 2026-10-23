@@ -60,17 +60,16 @@ link being typed, matched or not, so the keys that match nothing cost the same h
   a wikilink's list is the same state through no match and back, and ends with `]`. Mutation-checked: with the old
   line, 4 reads; restored, it passes. After the fix, at 454 vaults: a key that matches nothing 6 ms; opening the link
   still 914 ms (the build, once per link).
-- 2026-10-23: Agreed with the maintainer to make the build cheap too: `pointerAt` takes an optional `PointerMemo`, and
-  `linkEnds` passes it on. Each folder's pointer name (whether it travels with the root, its identity, its clash with
-  the machine's named folders) is worked out once per list, and the named folders read once; the pointer itself still
-  per file. Test in `tests/vault.test.ts` ("pointers to many files from one root, with a memo"): the same pointers,
-  names and warnings as one by one, for plain names, a name two folders share, a private name and a repository's
-  qualified name; one folder's files share their naming, another folder has its own; the named folders read 7 times
-  one by one, once with the memo. The TUI test also checks the named folders are read once for the list.
-  Mutation-checked: without the folders kept, the unit test reads them twice; without the naming map's reuse, its
-  files' namings differ; without the memo passed in `linkItems`, the TUI test reads them twice. At 454 vaults,
-  `pointerAt` for the 1,816 notes: 748 ms one by one, 54 ms with the memo; opening the link (`](`) 914 ms → 85 ms; a
-  key matching nothing 6 ms.
+- 2026-10-23: The build made cheap too: `pointerAt` takes an optional `PointerMemo`, and `linkEnds` passes it on. Each
+  folder's pointer name (whether it travels with the root, its identity, its clash with the machine's named folders) is
+  worked out once per list, and the named folders read once; the pointer itself still per file. Test in
+  `tests/vault.test.ts` ("pointers to many files from one root, with a memo"): the same pointers, names and warnings as
+  one by one, for plain names, a name two folders share, a private name and a repository's qualified name; one folder's
+  files share their naming, another folder has its own; the named folders read 7 times one by one, once with the memo.
+  The TUI test also checks the named folders are read once for the list. Mutation-checked: without the folders kept, the
+  unit test reads them twice; without the naming map's reuse, its files' namings differ; without the memo passed in
+  `linkItems`, the TUI test reads them twice. At 454 vaults, `pointerAt` for the 1,816 notes: 748 ms one by one, 54 ms
+  with the memo; opening the link (`](`) 914 ms → 85 ms; a key matching nothing 6 ms.
 - 2026-10-23: Tried live: a scratch build of the reference home with 300 more vaults of four notes, its own config,
   state and cache. A first build inside this repository's checkout failed as a setup: `checkoutOf` walks up to `/`,
   so every vault there sat in the repository, travelled together and got relative paths, not pointers; rebuilt in a
@@ -111,8 +110,7 @@ link being typed, matched or not, so the keys that match nothing cost the same h
 - 2026-10-23: A last review of the pull request: no correctness bug. Taken: the design said the list is kept until
   the target ends, but closing it (`ctrl+e`), accepting or `ctrl+n` drops it, and the next key in the target builds it
   again; `design/tui.md` says so now.
-- 2026-10-23: Review loop, round 1: two independent reviews of the whole diff, merged; one found nothing, the other
-  twelve points, each checked against the code. Verified and fixed:
+- 2026-10-23: The whole diff reviewed again, each point checked against the code. Verified and fixed:
   - Past a non-match, each key still copied and sorted the whole list and ranked every item: no read, but a cost
     that grows with the notes of every vault, where the issue asks for typing to cost the same however many vaults.
     Now a link's list is put in order once, when built; and a word typed on from one that matched nothing isn't
@@ -135,7 +133,7 @@ link being typed, matched or not, so the keys that match nothing cost the same h
   stack cut at 8: each fails the test. Ran: the completion tests (25 pass), the terminal checks of links written and
   of a server's completion. Tried live on the scratch home: past a match nothing shows, tab indents with nothing
   shown, two backspaces show the list again. Rejected:
-  - A note made while the target is typed isn't offered until the next link: the maintainer agreed to keep it so.
+  - A note made while the target is typed isn't offered until the next link: kept so, as logged above.
   - A build after accepting, `ctrl+e` or `ctrl+n`, at the next key in the target (`#` doesn't end a markdown
     target): one build per such action, not per key, as logged; a list kept apart from the popup is a larger change.
   - The named folders cached in `folders.ts` for every caller, or `Reach`'s caches used: the other loops are out of
@@ -146,3 +144,26 @@ link being typed, matched or not, so the keys that match nothing cost the same h
   - `findVaultRoot` per note and `checkoutOf` per folder: 8 ms of the 56 ms build at 454 vaults, as logged.
   - The memo's root checked when used, not bound by a factory: the same results; a memo of another root is ignored,
     giving the right pointers, only slower.
+- 2026-10-23: Reviewed again, the whole diff and this round's change. Verified and fixed:
+  - Kept by the note and the style alone, the list went with the cursor from one link's target straight into
+    another's (an arrow up or down onto another line's), the first link's list offered for the second. Now kept by
+    its line too: an indent doesn't move the line's start, another line's target gets its own list. Test: up from
+    a wikilink's target onto another's builds a list of its own.
+  - The shortcut past a non-match skipped words with a capital, needlessly: a capital only makes a word match as
+    typed, stricter, so a word typed on from one that matched nothing can't match either way. A target like
+    `](Meetings/zz` ranked every item per key. Dropped; a test of the matcher (capitals, more words, characters
+    never drawn, a capital whose lowercase is longer) holds the property the shortcut counts on, and the completion's
+    test types `qQqq` past the match: the ranking runs once.
+  - The Log named its agreements and reviews as conversations; it says what was decided and found.
+  Mutation-checked, each alone: the capital guard back, kept across lines, and the earlier five, each failing the
+  test. Ran the completion and matcher tests (26 pass) and the two terminal checks; tried live: `[x](READ` shows
+  README, `zZ` past it nothing, two backspaces bring it back; up from another line's target into `[x](REA` shows
+  that target's matches. Rejected:
+  - A key that still matches ranks every item; narrowing from the last key's matches would rank fewer. That cost was
+    there before this change and is the matcher's, the same for every filter: a change of its own.
+  - Raised again, as logged: the list dropped by accepting, `ctrl+e` or `ctrl+n` (one build per action; with no word
+    found, `ctrl+n` drops the hidden list too: one build); a note made meanwhile not offered; `findVaultRoot` per
+    note.
+  - `inOrder` copies the array it sorts: an array of references, beside the sort and the build, not measurable.
+  - A pointer item keeps its style in its data, beside the list's `links`: both set from one build, they can't
+    differ, and accepting worked that way before.

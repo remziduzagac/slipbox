@@ -38,6 +38,8 @@ export interface CompletionState {
   incomplete: boolean;
   /** A link's target being completed (20.13), in this style: slipbox's list, no server's. */
   links?: LinkStyle;
+  /** A link's: where its target's line starts, which an indent before the target doesn't move. */
+  line?: number;
   /** A link's word that matched nothing: one typed on from it matches nothing either. */
   none?: string;
   /** A word completed from the open files' words (25.5): narrowed by how it starts, kept in their order. */
@@ -160,8 +162,9 @@ export function afterInsertKey(app: App, view: View, key: string): void {
     const c = app.completion;
     if (from !== null) {
       const style: LinkStyle = md !== null ? "markdown" : "wiki";
-      // The list is the note's and the style's alone: kept where the target's start moved (an indent).
-      if (c?.links === style && c.view === view) {
+      const line = view.buf.source.lastIndexOf("\n", from - 1) + 1;
+      // The same target's list, kept where an indent moved its start; another line's target gets its own.
+      if (c?.links === style && c.view === view && c.line === line) {
         c.from = from;
         return narrow(app, c);
       }
@@ -173,6 +176,7 @@ export function afterInsertKey(app: App, view: View, key: string): void {
         selected: 0,
         incomplete: false,
         links: style,
+        line,
       };
       return narrow(app, app.completion);
     }
@@ -335,9 +339,9 @@ function narrow(app: App, c: CompletionState): void {
     if (!c.shown.length) app.completion = null;
     return;
   }
-  // A link's word typed on from one that matched nothing matches nothing either, each word being matched whole (3.16),
-  // unless a capital makes it match as typed: nothing to rank, however many notes the list holds.
-  if (c.links && c.none !== undefined && word.startsWith(c.none) && !/\p{Lu}/u.test(word)) return;
+  // A link's word typed on from one that matched nothing matches nothing either: each word is matched whole (3.16), and
+  // a capital only makes it match as typed. Nothing to rank, however many notes the list holds.
+  if (c.links && c.none !== undefined && word.startsWith(c.none)) return;
   // A link's list is in order since it was built; a server's is put in order here.
   const byServer = c.links ? c.items : inOrder(c.items);
   c.shown = word ? rank(word, byServer, (i) => i.filterText ?? i.label).map((r) => r.item) : byServer;

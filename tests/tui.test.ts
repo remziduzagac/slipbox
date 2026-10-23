@@ -4077,6 +4077,26 @@ describe("review round 3", () => {
     ]);
     expect(rank("move trash", items, (i) => [i.label, i.detail]).map((r) => r.item.label)).toEqual(["Delete the note"]);
   });
+  test("matching: a query typed on from one that matched nothing matches nothing either — capitals, words, as drawn", () => {
+    // What a link's completion counts on to rank nothing past a non-match (20.13).
+    const texts = [
+      "handbook/operations-handbook.md",
+      "tel-Scope.md",
+      "Telescope.md",
+      "İİstanbul.md",
+      "Café notes.md",
+      "ǅ notes.md",
+      "bell\x07ring.md",
+      "a\u202e/ring.md",
+    ];
+    const starts = ["x", "q", "hanx", "tels", "TelX", "cafx", "i̇x", "ǆx", "bellx", "ring z", "oper xyz"];
+    const more = ["", "a", "S", "x", "e", " hand", " Scope", "İ", "é", "ǅ", "\x07ring"];
+    for (const text of texts)
+      for (const q of starts) {
+        if (match(q, text)) continue;
+        for (const m of more) expect([text, q + m, match(q + m, text)]).toEqual([text, q + m, null]);
+      }
+  });
   const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
   test("the scratch's own writes never read as external changes (polled directories included)", async () => {
     const root = makeVault();
@@ -10157,7 +10177,7 @@ describe("vaults in the TUI (17.x)", () => {
         expect(named).toBe(1);
         // Past any match: nothing shown, and typing on reads nothing again, nor matches again what can't match.
         ranked.mockClear();
-        for (const k of "qqqq") await h.keys(k);
+        for (const k of "qQqq") await h.keys(k);
         expect(shown()).toEqual([]);
         expect(reads).toBe(1);
         expect(ranked).toHaveBeenCalledTimes(1);
@@ -10198,9 +10218,22 @@ describe("vaults in the TUI (17.x)", () => {
     await h.keys("backspace", "backspace");
     expect(h.app.completion).toBe(list);
     expect(list?.shown.map((i) => i.detail)).toEqual(["todo.md"]);
+    // An indent (tab while nothing shows) moves the target: the same list.
+    await h.keys("q", "tab");
+    expect(h.app.view!.buf.source).toEndWith("\n  [[toq\n");
+    expect(h.app.completion).toBe(list);
     // Its target ended: gone.
-    await h.keys("]");
+    await h.keys("backspace", "]");
     expect(h.app.completion).toBeNull();
+    // Another line's target gets its own list, the cursor gone there straight from one kept.
+    await h.keys("enter");
+    for (const k of "[[zz") await h.keys(k);
+    const next = h.app.completion;
+    expect(next?.shown).toEqual([]);
+    await h.keys("up");
+    expect(h.app.completion?.links).toBe("wiki");
+    expect(h.app.completion).not.toBe(next);
+    expect(h.app.completion!.from).toBeLessThan(next!.from);
     await h.keys("escape");
   });
 
