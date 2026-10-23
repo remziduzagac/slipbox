@@ -11,7 +11,7 @@
 import { existsSync, statSync } from "node:fs";
 import { dirname, isAbsolute, join, posix, relative, sep } from "node:path";
 import { classify } from "./filetypes.ts";
-import { landsInside } from "./fsutil.ts";
+import { entryInside, landsInside } from "./fsutil.ts";
 import type { Backlink, Graph, NoteEntry, ResolvedLink } from "./graph.ts";
 import { extensionless, formatPathLink, normKey, pathForm, pathLink, type PathForm, pathNamed } from "./links.ts";
 import { readRoots } from "./registry.ts";
@@ -26,6 +26,7 @@ import {
   travelTogether,
 } from "./folders.ts";
 import { formatPointer, isPointer, parsePointer, resolvePointer } from "./pointer.ts";
+import { isLink, movedLinkText } from "./symlinks.ts";
 import { findVaultRoot, isHome, isInside } from "./vault.ts";
 import { holdsNotes } from "./walk.ts";
 import { RenameError, type RenamePlan, Collector, dirtyTrees, walkSkips, sameFile } from "./rename-plan.ts";
@@ -58,10 +59,11 @@ function cleanTarget(g: Graph, input: string, holds: "file" | "folder" | "vault"
 
 /**
  * What moves, by its real path inside the vault (VV-D6): nothing is moved out of where a link leads, followed or
- * not, as nothing is moved into it — in home too, as a copy or a delete there.
+ * not, as nothing is moved into it — in home too, as a copy or a delete there. A link named itself moves as a link,
+ * its target staying where it is (D?1): its entry is checked, in its folder (`entryInside`).
  */
 function checkSource(g: Graph, rel: string): void {
-  if (!landsInside(g.root, join(g.root, rel))) throw new RenameError(`${rel} resolves outside the vault`);
+  if (!entryInside(g.root, join(g.root, rel))) throw new RenameError(`${rel} resolves outside the vault`);
 }
 
 /**
@@ -258,6 +260,10 @@ function planMove(
   const vaults = roots?.(c) ?? [];
   const files = c.result();
   const warnings = dirtyTrees([head.move!.from, ...files.map((f) => f.abs)]);
+  // A relative link moved itself, to another folder, is written again there (D?1): said, as it's no link's edit.
+  const text = mv && isLink(mv.from) ? movedLinkText(mv.from, mv.to) : null;
+  if (text)
+    warnings.push(`${head.from} is a relative link: written again at ${head.to} to lead where it did (${text})`);
   return { ...head, moves: [...moves], ...(vaults.length ? { vaults } : {}), files, warnings, skipped: c.skipped };
 }
 

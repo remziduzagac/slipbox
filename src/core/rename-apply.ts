@@ -5,7 +5,7 @@ import { randomUUID } from "node:crypto";
 import { existsSync, mkdirSync, renameSync, rmdirSync, statSync, unlinkSync } from "node:fs";
 import { dirname, join, relative, sep } from "node:path";
 import { classify } from "./filetypes.ts";
-import { atomicWrite, landsInside, readText } from "./fsutil.ts";
+import { atomicWrite, entryInside, landsInside, readText, realTarget } from "./fsutil.ts";
 import type { Graph } from "./graph.ts";
 import { trashVaultMarker } from "./files.ts";
 import { contentHash } from "./redirects.ts";
@@ -24,6 +24,7 @@ import {
   sameFile,
 } from "./rename-plan.ts";
 import { real } from "./rename-links.ts";
+import { isLink, moveLink } from "./symlinks.ts";
 
 // -------------------------------------------------------------------------------------------
 // Undoing (7.4)
@@ -118,8 +119,8 @@ export interface Applied {
 
 /**
  * What of a plan would land out of where it may (VV-D6), said; null when nothing would. Every file it writes where
- * `mayRewrite` allows; what moves, from and to, inside the vault by its real path, as a folder made a vault or a vault
- * made a plain folder.
+ * `mayRewrite` allows; what moves, from and to, inside the vault by its real path — a link named itself by its entry
+ * (`entryInside`, D?1) — as a folder made a vault or a vault made a plain folder.
  */
 export function outside(
   g: Graph,
@@ -128,7 +129,9 @@ export function outside(
   for (const f of plan.files)
     if (!mayRewrite(g, f.abs))
       return `${g.shownPath(f.abs)}: a link leads it out of the vault, where nothing is written`;
-  const ends = [plan.move?.from, plan.move?.to, plan.makeVault?.root, plan.unmakeVault?.root];
+  if (plan.move && !entryInside(g.root, plan.move.from))
+    return `${g.shownPath(plan.move.from)} resolves outside the vault`;
+  const ends = [plan.move?.to, plan.makeVault?.root, plan.unmakeVault?.root];
   for (const end of ends) if (end && !landsInside(g.root, end)) return `${g.shownPath(end)} resolves outside the vault`;
   return null;
 }
@@ -168,11 +171,14 @@ export function applyPlan(g: Graph, plan: RenamePlan): Applied {
   const written: string[] = [];
   /** The first folder the move made to hold it, if it made any: an undo takes it away again, empty. */
   let made: string | null = null;
+  /** A link named itself moves as a link (D?1): its entry, its answer with it, what it leads to staying. */
+  const link = !!mv && isLink(mv.from);
   // A folder moves whole — everything in it, whatever the walk lists — before its files' edits. A
   // file's folder is made first too: if it can't be (a file is in the way), nothing is written.
   if (mv?.dir) {
     made = mkdirSync(dirname(mv.to), { recursive: true }) ?? null;
-    renameSync(mv.from, mv.to);
+    if (link) moveLink(mv.from, mv.to);
+    else renameSync(mv.from, mv.to);
   }
   /** A case-only rename on a case-insensitive disk: the file written at its new name is the old one. */
   const oneFile = !!mv && !mv.dir && sameFile(mv.from, mv.to);
@@ -185,14 +191,18 @@ export function applyPlan(g: Graph, plan: RenamePlan): Applied {
       );
     }
   }
+  // A file reached through a link is written where it is, through the link, never over it.
   for (const f of plan.files) {
     if (mv && !mv.dir && f.abs === mv.from) continue; // written at its new place, below
-    atomicWrite(dest(f.abs), text(f));
+    atomicWrite(realTarget(dest(f.abs)), text(f));
     written.push(dest(f.abs));
   }
   if (mv && !mv.dir) {
     const own = plan.files.find((f) => f.abs === mv.from);
-    if (own) {
+    if (link) {
+      moveLink(mv.from, mv.to);
+      if (own) atomicWrite(realTarget(mv.to), text(own));
+    } else if (own) {
       atomicWrite(mv.to, text(own));
       if (!oneFile) unlinkSync(mv.from);
     } else renameSync(mv.from, mv.to);

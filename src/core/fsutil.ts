@@ -8,6 +8,7 @@ import {
   constants,
   fstatSync,
   fsyncSync,
+  lstatSync,
   mkdirSync,
   openSync,
   readFileSync,
@@ -134,6 +135,17 @@ export function landsInside(root: string, path: string): boolean {
     realRoot = realpathSync(root);
   } catch {}
   return !climbsOut(relative(realRoot, realTarget(path)));
+}
+
+/**
+ * Whether what a move takes at `path` is inside `root` (D?1): a symlink named itself is its own entry, in its folder
+ * (by that folder's real path), wherever it leads; anything else by its real path, as `landsInside`.
+ */
+export function entryInside(root: string, path: string): boolean {
+  try {
+    if (lstatSync(path).isSymbolicLink()) return landsInside(root, dirname(resolve(path)));
+  } catch {}
+  return landsInside(root, path);
 }
 
 export interface Stamp {

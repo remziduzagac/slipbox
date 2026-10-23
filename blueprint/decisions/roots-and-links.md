@@ -1111,3 +1111,28 @@ reached (one index lookup) for a path at a hidden name.
 **Not chosen:** `files.show` or `files.include` naming them (a pattern for each, and still left out of the walk);
 indexing what's listed (a dotfiles folder's every file); `.git` listed with the rest (git's own, thousands of files);
 the switcher and find following the setting (they'd list files the index doesn't hold, which no search finds).
+
+## D?1: A link renamed or moved itself moves as a link, its answer with it (#11, 2026-10-23)
+
+**Decision:** A symlink named itself in a rename or a move — the explorer's `r` and `m`, `space n m`, `slipbox mv` —
+is renamed or moved as a link, in a vault or home, whatever it leads to: its entry is what's checked to be inside the
+vault, in its folder by that folder's real path, and what it leads to stays where it is. The answer kept for it (VV-D6)
+goes with it, in place of any kept for where it goes: the same link, leading to the same place, isn't asked about
+again; an undo moves the answer there is then, never an older one. A relative link moved to another folder is written
+again there to lead where it did, from its own text, so a link to a link stays one; the plan says so. Unchanged: what
+is reached through a link out of the vault is never moved out of it, nor anything into it; a link inside a folder that
+moves is left as the folder's move leaves it; a copy or a delete of a link out is refused. As built: `entryInside`
+(`src/core/fsutil.ts`), `moveLink` and `movedLinkText` (`src/core/symlinks.ts`), called by `applyPlan`; design/roots.md
+§ Links followed only when you say so.
+
+**Why:** The maintainer's choice, 2026-10-23 (#11): a rename of the link changes only its entry in its folder, so
+refusing it as `… resolves outside the vault` refused what never crossed the vault's edge. Moved without its answer, the
+link would stop being followed, and the links the move had just rewritten would lead through one that isn't; moved as
+it is, a relative link would lead elsewhere, or nowhere, with the plan saying `0 changes`.
+
+**Cost:** A relative link moved is two steps, the new link made and the old one taken away, rather than one rename:
+when the second fails, the first is taken back.
+
+**Not chosen:** the renamed link asked about again (the move undoing what you said of it); a relative link's move
+refused, or made as the shell's `mv` makes it, with a warning; the answers of links inside a moved folder carried too
+(wider than #11, and a relative link inside may lead elsewhere after the move).

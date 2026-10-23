@@ -29,7 +29,11 @@ The format is [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.1.0/); wh
   you're in. Both read the disk in the background now: a folder being listed says `listing…` until it answers, and
   says `can't read: no answer in time` if it hasn't within ten minutes; home's walk, given up on after five minutes, says
   so and tries again ten minutes later.
-
+- A followed link that leads out of the vault can be renamed or moved itself, from the explorer or with `slipbox mv`.
+  The link moves and stays followed, what it leads to stays where it is, and a relative link moved to another folder
+  still leads to the same place. Before, the move was refused as `… resolves outside the vault`.
+- In home, a rename that rewrote a link in a note reached through a followed file link wrote the note over the link,
+  as a copy, and left the note the link leads to unchanged. It's written through the link now.
 - A release is on the installer's site as soon as it's published, so `curl … | sh` and `slipbox upgrade` on the stable
   channel find it at once. 0.5.0's wasn't until the site was deployed again, an hour later.
 - With `render.mermaid = "picture"` on a machine without a sans font (DejaVu, Liberation, Noto, Arial or Helvetica), a

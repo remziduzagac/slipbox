@@ -9,9 +9,18 @@
 // Elsewhere, what the file system allows. A followed target is asked whether it answers before it's walked, off the
 // main thread: one on a disk that doesn't answer is given up on (`probe`).
 
-import { lstatSync, promises, realpathSync, statSync } from "node:fs";
+import {
+  lstatSync,
+  promises,
+  readlinkSync,
+  realpathSync,
+  renameSync,
+  statSync,
+  symlinkSync,
+  unlinkSync,
+} from "node:fs";
 import { homedir } from "node:os";
-import { basename, dirname, join, relative, resolve, sep } from "node:path";
+import { basename, dirname, isAbsolute, join, relative, resolve, sep } from "node:path";
 import { climbsOut, ensureDir, readJson, realTarget, writeJson } from "./fsutil.ts";
 import { stateHome, tildePath } from "./paths.ts";
 
@@ -146,6 +155,68 @@ export function forgetLinkAnswer(link: string): KeptLink | null {
   writeJson(linksFile(), { version: 1, links: list.filter((e) => e !== hit) });
   cache = null;
   return hit;
+}
+
+/**
+ * Move the symlink `from` to `to` as a link (D?1): its own entry, never what it leads to. A relative one moved to
+ * another folder is made anew at `to` (`movedLinkText`); nothing has changed when it can't be. The answer kept for it
+ * is kept for `to` then, in place of whatever was kept there: the same link, leading to the same place. `to`'s folder
+ * is there already.
+ */
+export function moveLink(from: string, to: string): void {
+  const was = linkKey(from);
+  const text = movedLinkText(from, to);
+  if (text === null) renameSync(from, to);
+  else {
+    let dir = false;
+    try {
+      dir = statSync(from).isDirectory();
+    } catch {}
+    symlinkSync(text, to, dir ? "dir" : "file");
+    try {
+      unlinkSync(from);
+    } catch (err) {
+      unlinkSync(to);
+      throw err;
+    }
+  }
+  // Moved, the link keeps its answer; if it can't be kept, it asks again.
+  try {
+    const now = linkKey(to);
+    const list = kept();
+    const hit = list.find((e) => e.link === was);
+    const rest = list.filter((e) => e.link !== was && e.link !== now);
+    if (!hit && rest.length === list.length) return;
+    writeJson(linksFile(), { version: 1, links: hit ? [...rest, { ...hit, link: now }] : rest });
+    cache = null;
+  } catch {}
+}
+
+/**
+ * What the symlink `from` says once it's moved to `to` (D?1), when it says something else: a relative one moved to
+ * another folder, written from there to lead where it did, from its own text (a link to a link stays one). Null when
+ * it moves as it is: an absolute one, or one staying in its folder.
+ */
+export function movedLinkText(from: string, to: string): string | null {
+  const text = readlinkSync(from);
+  const fromDir = real(dirname(from));
+  const toDir = realTarget(dirname(to)); // made by the move, maybe
+  return isAbsolute(text) || fromDir === toDir ? null : relinked(text, fromDir, toDir);
+}
+
+/**
+ * A relative link's `text`, written in the real folder `fromDir`, as written in `toDir` to lead to the same place:
+ * the way from `toDir` back to `fromDir`, then the text, each `..` of the text taking back a folder of that way — a
+ * real folder's, so the same step. What the text says past that is kept as it is.
+ */
+function relinked(text: string, fromDir: string, toDir: string): string {
+  const way = relative(toDir, fromDir).split(sep).filter(Boolean);
+  const rest = text.split(/[\\/]/).filter((s) => s && s !== ".");
+  while (way.length && way.at(-1) !== ".." && rest[0] === "..") {
+    way.pop();
+    rest.shift();
+  }
+  return [...way, ...rest].join(sep) || ".";
 }
 
 /**
