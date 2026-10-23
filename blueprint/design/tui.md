@@ -664,19 +664,26 @@ keys.
   most 256 folders besides those the tree last showed (let go of once a tree is built, never while it's being built),
   a listing is read again in the background as the tree is built again once it's a second old, or under other
   settings (`[walk]`, `files.hidden`), its rows replaced only when it says something new (compared by a digest the
-  thread makes), the selection kept on the row it was on — and a row the explorer meant to select in a folder not
+  thread makes of all they're built from: its entries, whether its vault is a notes vault, its links' scope), the
+  selection kept on the row it was on — and a row the explorer meant to select in a folder not
   listed yet (`-`'s folder it came from, a note revealed: `Explorer.wanted`) selected when it comes, unless you moved
   the selection since. A folder moved is let go of, the folders it left and came into read again, and a file
   operation in the vault reads its folders listed this way again: an answer read before is dropped; one read under
   settings changed since (another vault gone into) is read again at once. Each entry is asked one access check, a
   folder its markers and, a busy name, whether it holds a note; another disk mounted there (the mount table, read at
-  most every five seconds) is listed by its name alone, never looked at. A listing has a whole walk's ten minutes;
-  of the two threads, one whose oldest request is over a second old is taken for stuck, and a listing goes to the
-  other. Until a folder's first listing answers, nothing is under it; after 150 ms a dim `listing…` row says it's
-  being read, and one that can't be listed says why (`can't read: ENOENT`; `can't read: no answer in time`): rows that
-  only say something, never opened or marked, answering moving and folding alone. One that failed is read again a
-  minute later (`RETRY_MS`), not at every rebuild; a folder listed before whose thread gives no answer when it's read
-  again stays as it was listed. A test's App, not the TUI's, lists at once here
+  most every five seconds) is listed by its name alone, never looked at — a folder or a file as its folder's entry
+  says (a file bind-mounted, a container's `/etc/hosts`). A listing has a whole walk's ten minutes, counted from when
+  a thread takes it: one at a time on each thread, the others wait in one line, each going to a thread once it's
+  free — never behind a folder that doesn't answer while the other thread is free. Until a folder's first listing
+  answers, nothing is under it; after 150 ms a dim `listing…` row says it's being read, and one that can't be listed
+  says why, in `l`'s words (`can't read: it isn't there`; `can't read: no answer in time`): rows that only say
+  something, never opened or marked. On one, nothing acts on its own path (opening, zooming, copying its path,
+  renaming, moving, deleting, copying or cutting it, a vault made of it: `ON_THE_ROW`); the rest does as on any row of
+  its folder (moving, folding it, a new note or folder there, a paste, a restore, the menu). One that failed is read
+  again a minute later (`RETRY_MS`), not at every rebuild; a folder listed before whose thread gives no answer when
+  it's read again stays as it was listed. A folder `l` refuses as its folder's listing said it (you may not read it)
+  has that listing, and its own, read again (`Listings.again`), nothing else in its folder: one you may read now
+  unfolds at the next `l`. A test's App, not the TUI's, lists at once here
   (`AppOptions.listOffThread`). There the vault open is a row,
   highlighted (`sidebar_active`), its tree under it while unfolded; another vault is a row with the vault's icon (`◈`,
   Nerd: a bookshelf; `17.13`, D51) in a folder's blue (`sidebar_root`, for `[colors]` to set; `sidebar_vault`, its old

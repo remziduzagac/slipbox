@@ -451,6 +451,10 @@ describe("the supply chain's gates (14.10)", () => {
     }
     expect(of("scripts/release.ts")).toMatchObject({ tests: ["tests/distribution.test.ts", "tests/release.test.ts"] });
     expect(of("scripts/release.ts")).toMatchObject({ checks: [] });
+    // The explorer's listings, every folder a level at a time and the facts its rows' marks read: those features' checks.
+    expect(of("src/core/listing.ts")).toMatchObject({
+      checks: expect.arrayContaining(["Elsewhere", "marks", "slow disk", "view"]),
+    });
     // A command of the command line's: its tests, no check.
     expect(of("src/cli/git.ts")).toMatchObject({ checks: [] });
     // A check file: its checks. A file of the app's with no feature of its own, the harness, a sample: every check.

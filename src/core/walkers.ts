@@ -51,8 +51,9 @@ export interface Pending<T> {
 /** The folders past home's cap that one holds (`vaultsPastCap`). */
 export type PastCap = { vaults: string[]; folders: string[] };
 
-/** Home's walk for its index: the walk itself, or the one kept on the walk's thread, by its number there. */
-export type HomeOf = HomeWalk | { walkOn: number; walked: number; capped: WalkCap | null };
+/** Home's walk for its index: the walk itself, with its filter's signature (what it was walked under), or the one kept
+ *  on the walk's thread, by its number there. */
+export type HomeOf = (HomeWalk & { signature: string }) | { walkOn: number; walked: number; capped: WalkCap | null };
 
 /** What an index is asked of: a vault found, or home from its walk (`HomeOf`). */
 export type IndexAsk = { root: string } | { root: string; home: HomeOf; config: Config };
@@ -78,9 +79,12 @@ function now<T>(make: () => T): Pending<T> {
 /** Home's walk made here: `SlicedWalk`, what's asked of it read off its walk. */
 class WalkHere implements SteppedWalk {
   private readonly walk: SlicedWalk;
+  private readonly signature: string;
 
   constructor(settings: FilterSettings, limits?: WalkLimits) {
-    this.walk = new SlicedWalk(settings.root, filterFrom(settings), limits);
+    const filter = filterFrom(settings);
+    this.signature = filter.signature();
+    this.walk = new SlicedWalk(settings.root, filter, limits);
   }
 
   step(budgetMs: number): boolean {
@@ -104,7 +108,7 @@ class WalkHere implements SteppedWalk {
   }
 
   handOver(walked: number): HomeOf {
-    return { walk: this.walk.result!, walked, capped: this.walk.capped };
+    return { walk: this.walk.result!, walked, capped: this.walk.capped, signature: this.signature };
   }
 }
 

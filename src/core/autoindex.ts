@@ -57,6 +57,7 @@ function fresh(root: string): AutoIndexProgress {
     queue: [],
     seek: [],
     current: null,
+    counted: null,
     found: 0,
     indexed: 0,
     homeNotes: 0,
@@ -85,9 +86,10 @@ export interface AutoIndexOptions {
 
 export class AutoIndex {
   private progress: AutoIndexProgress;
-  /** A vault's index under way, and whether it's recorded as found yet. */
+  /** A vault's index under way, and whether it's recorded as found yet; home's own the same. */
   private vaultIndex: SteppedIndex | null = null;
   private recorded = false;
+  private homeRecorded = false;
   /** Home's walk under way, the settings it's made under, and when it began; then home's index, being built. */
   private walk: SteppedWalk | null = null;
   private walkSettings: { filter: FilterSettings; said: string } | null = null;
@@ -123,13 +125,15 @@ export class AutoIndex {
   }
 
   /**
-   * Home's walk made again at the next slice (VV-D2): a folder came in home, which only a walk finds. The vaults' pass
-   * stays where it is.
+   * Home's walk made again at the next slice (VV-D2): a folder came in home, which only a walk finds — or, `later`, ten
+   * minutes from now (T12: its graph's build from the last one given up on). The vaults' pass stays where it is, and
+   * goes on meanwhile.
    */
-  homeAgain(): void {
+  homeAgain(later = false): void {
     if (!this.progress.passStarted || !this.progress.home) return;
     this.progress.home = false;
     this.again = true;
+    if (later) this.walkRetry = this.now() + WALK_RETRY_MS;
   }
 
   /** Work for up to `budgetMs`; false when the pass is done (or none is due). The place is kept. */
@@ -142,11 +146,13 @@ export class AutoIndex {
     try {
       do {
         // Home first (VV-D2): its walk, a slice at a time, then its index; the vaults it found are next. Its walk given
-        // up on is tried again later: until then there's nothing to do.
+        // up on is tried again later: until then there's nothing to do — but the vaults of a pass it's walked again in.
         if (!p.home) {
-          if (this.now() < this.walkRetry) return false;
-          if (this.stepHome(end)) return true;
-          continue;
+          if (this.now() >= this.walkRetry) {
+            if (this.stepHome(end)) return true;
+            continue;
+          }
+          if (!this.again) return false;
         }
         // A vault's index, built a slice at a time where the walker builds it — opened, walked, its notes parsed; done,
         // the vaults nested in it are next. Not a vault, or not one that can be opened: let go of.
@@ -248,18 +254,20 @@ export class AutoIndex {
     const index = this.homeIndex;
     for (;;) {
       const more = index.step(left());
-      if (index.opened && !this.recorded) {
-        this.recorded = true;
+      if (index.opened && !this.homeRecorded) {
+        this.homeRecorded = true;
         this.recordFound(this.root, index.opened);
       }
       if (!more) break;
       if (index.waiting || performance.now() >= end) return true;
     }
     this.homeIndex = null;
-    this.recorded = false;
+    this.homeRecorded = false;
+    const r = index.result;
+    // Walked under settings home's are no longer (where Downloads is, read where the walk is): walked again.
+    if (r?.vault && r.again) return true;
     p.home = true;
     this.again = false;
-    const r = index.result;
     if (!r?.vault) {
       this.opts.onGaveUp?.("index", index.failed ?? "no answer");
       return false;
@@ -319,8 +327,10 @@ export class AutoIndex {
           new Date(),
           opened.key,
         );
-      if (!opened.home)
-        recordFolder(root, { found: true, known: { ident: opened.ident ?? null, real: opened.real ?? root } });
+      if (!opened.home) {
+        const known = { ident: opened.ident ?? null, real: opened.real ?? root, copies: opened.copies };
+        recordFolder(root, { found: true, known });
+      }
     } catch {}
   }
 
@@ -329,13 +339,18 @@ export class AutoIndex {
     if (v) noteIndexed(v.key, new Date(this.now()));
   }
 
+  /** The place kept — when it changed since it was last kept: a tick waiting on a thread, or a retry, writes nothing. */
   private save(): void {
     if (!this.file) return;
+    const now = JSON.stringify(this.progress);
+    if (now === this.saved) return;
     try {
       ensureDir(stateHome());
       writeJson(this.file, this.progress);
+      this.saved = now;
     } catch {}
   }
+  private saved = "";
 }
 
 /** When an agent last ran a command (the CLI notes it): the auto-index waits while one works. */

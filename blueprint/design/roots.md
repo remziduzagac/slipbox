@@ -440,19 +440,27 @@ deleted (D61). Each vault's is in its cache folder (the link index, the search i
   (`AutoIndex` takes a walker, `core/walkers.ts`: `HERE` for the CLI, whose command waits for its answer either way),
   given what the thread can't see for itself (`core/worker-context.ts`): the environment naming slipbox's folders, the
   root markers, the probe's answers. `AutoIndex` reads nothing of home itself: home's walk is told by its settings
-  alone (`FilterSettings`), its filter made, and its location read, where it walks. The machine's lists are written on
-  the main thread alone, from what the thread read of a vault it opened (`Opened`: its key, worktree, identity and real
-  path; `recordRoot`'s `key`, `recordFolder`'s `known`) — a vault counted found once, its count kept with the place
-  (`counted`), so one being indexed when the TUI quit isn't counted again. Nor does the thread write the walk a
-  refresh makes: what changed in home's walk kept comes back unkept (`homeWalk`'s `keep`), kept by the TUI once it
-  takes the answer — dropped when the graph was built since (`Graph.builds`), the folders asked for changed, or the
-  vault open did; a file that came, went or changed in the graph meanwhile (the watcher's, slipbox's own write) taken
-  in again over it, as the watcher takes one in. A slice or a seek has a minute on the thread, a whole walk (a vault
-  opened and walked) ten; past that the thread is started afresh and the work given up on, never made on the main
-  thread instead: home's walk tried again ten minutes later (`WALK_RETRY_MS`), the pass waiting for it, and said
-  (`home's walk gave up: a folder didn't answer in time; it's tried again in ten minutes`); a vault left for the next
-  pass; home's index said (`home's index gave up: …; it's made again at the next pass`). The explorer's listings have
-  two threads of their own ([tui.md](tui.md) § Side panes).
+  alone (`FilterSettings`), its filter made, and its location read, where it walks — and its walk, made under a filter
+  other than home's when it's kept (Downloads moved meanwhile, a root marker added: the filter's signature, compared
+  where the walk is), walked again, never kept under the new. The machine's lists are written on the main thread
+  alone, from what the thread read of a vault it opened (`Opened`: its key, worktree, identity and real path, and the
+  real path and presence of each copy the list of named folders records, `copyFacts`; `recordRoot`'s `key`,
+  `recordFolder`'s `known`) — a vault counted found once, its count kept with the place (`counted`, set afresh with
+  each pass), so one being indexed when the TUI quit isn't counted again; home recorded as found apart from the
+  vault being indexed, when it's walked again meanwhile. The place is written only when it changed: a tick waiting
+  on the thread writes nothing. Nor does the thread write the walk a refresh makes: what changed in home's walk kept
+  comes back unkept (`homeWalk`'s `keep`), kept by the TUI once it takes the answer — dropped when the graph was built
+  since (`Graph.builds`), the folders asked for changed, or the vault open did; a file that came, went or changed in
+  the graph meanwhile (the watcher's, slipbox's own write) taken in again over it, as the watcher takes one in, and one
+  reached (20.8) that the build didn't keep reached again, never one of home's own. A slice or a seek has five minutes
+  on the thread (a folder that always takes long, a share's thousands of files, still read), a whole walk (a vault
+  opened and walked, home's walk kept brought up to now) ten; past that the thread is started afresh and the work given
+  up on, never made on the main thread instead: home's walk tried again ten minutes later (`WALK_RETRY_MS`), the pass
+  waiting for it, and said (`home's walk gave up: a folder didn't answer in time; it's tried again in ten minutes`) —
+  so is home's walk kept brought up to now for its graph, home walked again ten minutes later (`homeAgain(true)`), the
+  vaults of the pass indexed meanwhile; a vault left for the next pass; home's index said (`home's index gave up: …;
+  it's made again at the next pass`). The explorer's listings have two threads of their own ([tui.md](tui.md) § Side
+  panes).
 
   Not done: the rest of what reads a slow disk on the main thread still holds the TUI up while it's read — the
   watcher's polling of the vault open (a stat per watched folder every two seconds, per note every thirty; its folders

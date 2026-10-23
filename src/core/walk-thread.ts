@@ -27,11 +27,12 @@ import { workerUrl } from "./workers.ts";
 
 /**
  * How long the thread has for a request, the wait for it not counted: a slice of home's walk, or a folder looked in
- * past its cap — a folder that doesn't answer in a minute is given up on — and a whole walk (a vault's, home's kept
- * brought up to now), far longer, for a big one on a slow disk.
+ * past its cap — a folder that doesn't answer in five minutes is given up on: long enough for one that always takes
+ * long (a network share's thousands of files) to be read, a hung disk still found out — and a whole walk (a vault's,
+ * home's kept brought up to now), far longer, for a big one on a slow disk.
  */
 export const WALK_DEADLINES = {
-  step: slowDisk()?.deadline ?? 60_000,
+  step: slowDisk()?.deadline ?? 5 * 60_000,
   whole: slowDisk()?.deadline ?? 10 * 60_000,
 };
 
@@ -182,12 +183,17 @@ class ThreadedWalk implements SteppedWalk {
   }
 }
 
+type ListThread = { requests: WorkerRequests; busy: boolean };
+
 /**
  * The explorer's listings' threads (T12): two, apart from the walk's, so a folder is never listed behind home's walk,
- * nor every folder behind one that answers slowly; one listing at a time on each, the next on the one with less to do.
+ * nor every folder behind one that answers slowly. One listing at a time on each: the others wait in one line, each
+ * going to a thread once it's free — never behind a folder that doesn't answer while another thread is free.
  */
 export class ListThreads {
-  private readonly pool: { requests: WorkerRequests; asked: number[] }[];
+  private readonly pool: ListThread[];
+  /** Listings waiting for a thread, in the order asked. */
+  private readonly line: { resolve: (t: ListThread) => void; reject: (err: Error) => void }[] = [];
 
   /** `deadline`: a whole walk's, a folder of many entries on a slow disk asked of each. */
   constructor(
@@ -197,38 +203,43 @@ export class ListThreads {
   ) {
     this.pool = Array.from({ length: size }, () => ({
       requests: new WorkerRequests(factory, { result: Infinity }),
-      asked: [],
+      busy: false,
     }));
   }
 
   /**
    * The folder `dir` listed (`listFolder`), `walk` the settings a busy folder is decided by, `hidden` `files.hidden` —
-   * on the thread with the least to do of those answering: one whose oldest request is over a second old is taken
-   * for stuck on a folder that doesn't answer, and asked only when every one is.
+   * on a thread that's free, once one is; its deadline counted from then.
    */
   async list(dir: string, walk: Config["walk"], hidden: boolean): Promise<FolderListing> {
-    const now = Date.now();
-    const stuck = (t: (typeof this.pool)[number]) => t.asked.length > 0 && now - Math.min(...t.asked) > STUCK_MS;
-    const answering = this.pool.filter((t) => !stuck(t));
-    const on = (answering.length ? answering : this.pool).reduce((a, b) => (b.asked.length < a.asked.length ? b : a));
-    const at = Date.now();
-    on.asked.push(at);
+    const on = await this.free();
     const request = { op: "list", dir, walk, hidden, context: walkContext() };
     try {
       return (await on.requests.request<{ listing: FolderListing }>(request, { deadline: this.deadline, bytes: 0 }))
         .listing;
     } finally {
-      on.asked.splice(on.asked.indexOf(at), 1);
+      // Handed on to the next in line, or free.
+      const next = this.line.shift();
+      if (next) next.resolve(on);
+      else on.busy = false;
     }
+  }
+
+  /** A thread that's free, taken; or the line's place, until one is. */
+  private free(): Promise<ListThread> {
+    const t = this.pool.find((x) => !x.busy);
+    if (t) {
+      t.busy = true;
+      return Promise.resolve(t);
+    }
+    return new Promise((resolve, reject) => this.line.push({ resolve, reject }));
   }
 
   stop(): void {
     for (const t of this.pool) t.requests.stop();
+    for (const w of this.line.splice(0)) w.reject(new WorkerRequestError("worker request cancelled", "stopped"));
   }
 }
-
-/** A listing thread whose oldest request is this old is taken for stuck: a fast folder isn't sent behind it. */
-export const STUCK_MS = 1000;
 
 /** An index on the walk's thread (`IndexJob`): each `step` asks for a slice there — the first opens and walks the
  *  vault, a whole walk's time — and says there's more until it's answered. */

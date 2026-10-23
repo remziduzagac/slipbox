@@ -18,10 +18,11 @@ import { type HomeWalk, homeFilter, homeWalk, homeWalkFile, keepHomeWalk } from 
 import { probe, setLinkAnswer } from "../src/core/symlinks.ts";
 import { homeAt, setRootMarkers } from "../src/core/vault.ts";
 import { SlicedWalk, setFolderReader } from "../src/core/walk.ts";
-import { listThreads, setWalkWorker, STUCK_MS, WalkThread } from "../src/core/walk-thread.ts";
+import { listThreads, setWalkWorker, WalkThread } from "../src/core/walk-thread.ts";
 import { listFolder } from "../src/core/listing.ts";
+import { tildePath } from "../src/core/names.ts";
 import { HERE, type IndexAsk, type Pending, type SteppedWalk, type Walker } from "../src/core/walkers.ts";
-import { SLOW_MS, slowFolders } from "./fixtures/walk/slow.ts";
+import { SLOW_MS, STUCK_MS, slowFolders } from "./fixtures/walk/slow.ts";
 import type { TreeRow } from "../src/tui/explorer.ts";
 import { Listings, PENDING_MS, REREAD_MS } from "../src/tui/listings.ts";
 import { type Harness, harness, makeSandbox, stepToEnd } from "./tui-harness.ts";
@@ -211,6 +212,31 @@ describe("the TUI's walks on their own thread (T12, #9)", () => {
     });
   });
 
+  test("home's graph built again from a walk on the thread keeps a file reached meanwhile as reached, never one of home's own", async () => {
+    // Home past its cap of folders: a note in a folder below its top's is one its walk leaves out.
+    const home = tree({ "a.md": "# A\n", "slow/s.md": "# S\n", "z0000/deep/r.md": "# R\n" });
+    for (let i = 1; i < 5_000; i++) mkdirSync(join(home, `z${String(i).padStart(4, "0")}`));
+    const far = "z0000/deep/r.md";
+    setWalkWorker(slowWorker);
+    await inHome(home, async () => {
+      const h = await harness({ loc: homeAt(home), open: "a.md" });
+      await stepToEnd(h.app.watch.indexJob()!);
+      await h.app.watch.homeRefreshed;
+      expect(h.app.graph.home?.capped).toBe("folders");
+      expect(h.app.graph.notes.has(far)).toBe(false);
+      (h.app.watch as unknown as { homeIndexed(capped: null): void }).homeIndexed(null);
+      await Bun.sleep(SLOW_MS / 4);
+      // Reached while the thread reads home (20.8), as a link to it reaches it.
+      expect(h.app.graph.reachFile(far)).toBe(true);
+      expect(h.app.graph.reached.has(far)).toBe(true);
+      const builds = h.app.graph.builds;
+      await h.app.watch.homeRefreshed;
+      expect(h.app.graph.builds).toBe(builds + 1);
+      expect(h.app.graph.notes.has(far)).toBe(true);
+      expect(h.app.graph.reached.has(far)).toBe(true);
+    });
+  });
+
   test("the background index writes the machine's lists on the thread that asks alone; home is never read there", async () => {
     const vaultMod = await import("../src/core/vault.ts");
     const homeMod = await import("../src/core/home.ts");
@@ -254,6 +280,46 @@ describe("the TUI's walks on their own thread (T12, #9)", () => {
       } finally {
         for (const s of Object.values(spies)) s.mockRestore();
       }
+    });
+  });
+
+  test("a found vault recorded with nothing read of the named folders' copies on the thread that asks: read where it was opened", async () => {
+    const fs = await import("node:fs");
+    const folders = await import("../src/core/folders.ts");
+    const { AutoIndex } = await import("../src/core/autoindex.ts");
+    const { walkThread } = await import("../src/core/walk-thread.ts");
+    // One folder by its id, in two copies.
+    const TWICE = '[vault]\nname = "twice"\nid = "0b6f1c2e-twice"\n';
+    const home = tree({ "a.md": "# A\n", "proj/.slipbox/config.toml": TWICE, "proj/p.md": "# P\n" });
+    // Copies recorded before, elsewhere — on a disk that might answer slowly: another folder's, and this one's.
+    const elsewhere = tree({
+      "c1/.slipbox/config.toml": '[vault]\nname = "other"\n',
+      "c2/.slipbox/config.toml": TWICE,
+    });
+    folders.recordFolder(join(elsewhere, "c1"));
+    folders.recordFolder(join(elsewhere, "c2"));
+    await inHome(home, async () => {
+      const spies = [spyOn(fs, "realpathSync"), spyOn(fs, "existsSync"), spyOn(fs, "statSync")];
+      try {
+        const job = new AutoIndex(home, null, () => Date.now(), {
+          walker: walkThread(),
+          config: () => structuredClone(DEFAULT_CONFIG),
+        });
+        await stepToEnd(job, 15);
+        expect(job.status).toMatchObject({ found: 1, indexed: 1 });
+        const here = spies.flatMap((s) => s.mock.calls.map((c) => String(c[0])));
+        expect(here.filter((p) => p.startsWith(elsewhere))).toEqual([]);
+      } finally {
+        for (const s of spies) s.mockRestore();
+      }
+      // Recorded as before: the second copy of `twice` a choice to make, both there; the other folder left as it was.
+      const list = folders.readFolders();
+      expect(list.find((f) => f.name === "twice")).toMatchObject({ ask: true });
+      expect(list.find((f) => f.name === "twice")?.copies.map((c) => c.path)).toEqual([
+        join(elsewhere, "c2"),
+        join(home, "proj"),
+      ]);
+      expect(list.find((f) => f.name === "other")?.copies.map((c) => c.path)).toEqual([join(elsewhere, "c1")]);
     });
   });
 
@@ -315,6 +381,172 @@ describe("the TUI's walks on their own thread (T12, #9)", () => {
       // Never walked on the main thread instead: home is still its top alone, and the pass waits for its walk.
       expect(h.app.graph.home?.walked).toBeNull();
       expect(job.status).toMatchObject({ home: false, passFinished: null });
+    });
+  });
+
+  test("home's graph built again from a walk the thread doesn't answer in time: said as the walk's, home walked again ten minutes later", async () => {
+    const home = tree({ "a.md": "# A\n" });
+    setWalkWorker(slowWorker, { step: 1000, whole: 1000 });
+    await inHome(home, async () => {
+      const h = await harness({ loc: homeAt(home), open: "a.md" });
+      const job = h.app.watch.indexJob()!;
+      await stepToEnd(job);
+      await h.app.watch.homeRefreshed;
+      expect(job.status.home).toBe(true);
+      // A folder that hangs comes in home: bringing the walk kept up to now reads it, and isn't answered in time.
+      mkdirSync(join(home, "stuck"));
+      writeFileSync(join(home, "stuck", "s.md"), "# S\n");
+      (h.app.watch as unknown as { homeIndexed(capped: null): void }).homeIndexed(null);
+      await h.app.watch.homeRefreshed;
+      expect(h.app.messages.at(-1)?.text).toBe(
+        "home's walk gave up: a folder didn't answer in time; it's tried again in ten minutes",
+      );
+      // Home's walk to be made again — not before it's due.
+      expect(job.status.home).toBe(false);
+      expect(job.step(15)).toBe(false);
+    });
+  });
+
+  test("home walked again later: nothing of home until it's due, the vaults of the pass indexed meanwhile", async () => {
+    const { AutoIndex, WALK_RETRY_MS } = await import("../src/core/autoindex.ts");
+    const home = tree({ "a.md": "# A\n", "proj/.slipbox/config.toml": "", "proj/p.md": "# P\n" });
+    let clock = Date.now();
+    let homes = 0;
+    await inHome(home, async () => {
+      const job: InstanceType<typeof AutoIndex> = new AutoIndex(home, null, () => clock, {
+        config: () => structuredClone(DEFAULT_CONFIG),
+        // As the TUI asks when home's graph couldn't be built from the walk: walked again ten minutes later.
+        onHome: () => {
+          if (++homes === 1) job.homeAgain(true);
+        },
+      });
+      await stepToEnd(job, 15);
+      expect(homes).toBe(1);
+      expect(job.status).toMatchObject({ home: false, found: 1, indexed: 1 });
+      expect(job.status.passFinished).not.toBeNull();
+      expect(job.step(15)).toBe(false);
+      clock += WALK_RETRY_MS + 1;
+      await stepToEnd(job, 15);
+      expect(homes).toBe(2);
+      expect(job.status).toMatchObject({ home: true, found: 1, indexed: 1 });
+      expect(job.idle).toBe(true);
+    });
+  });
+
+  test("home's walk made while Downloads moved is walked again where it is now, never kept under where it was", async () => {
+    const { AutoIndex } = await import("../src/core/autoindex.ts");
+    const before = process.env.XDG_CONFIG_HOME;
+    for (const on of ["here", "thread"] as const) {
+      const home = tree({
+        "a.md": "# A\n",
+        "f1/x.md": "# X\n",
+        "Downloads/d.md": "# D\n",
+        "Téléchargements/t.md": "# T\n",
+      });
+      const config = `${home}-config`;
+      mkdirSync(config);
+      process.env.XDG_CONFIG_HOME = config;
+      const thread = on === "thread" ? new WalkThread() : null;
+      try {
+        await inHome(home, async () => {
+          const job = new AutoIndex(home, null, () => Date.now(), {
+            walker: thread ?? HERE,
+            vaults: false,
+            config: () => structuredClone(DEFAULT_CONFIG),
+          });
+          // Its first folder walked, Downloads where it always is: then the desktop says it's elsewhere.
+          expect(job.step(0)).toBe(true);
+          await Bun.sleep(on === "thread" ? 300 : 0);
+          expect(job.step(0)).toBe(true);
+          writeFileSync(join(config, "user-dirs.dirs"), 'XDG_DOWNLOAD_DIR="$HOME/Téléchargements"\n');
+          await stepToEnd(job, 0);
+          expect(job.status.home).toBe(true);
+          const kept = JSON.parse(readFileSync(homeWalkFile(homeAt(home)), "utf8"));
+          expect(kept.notes.sort()).toEqual(["Downloads/d.md", "a.md", "f1/x.md"]);
+        });
+      } finally {
+        thread?.stop();
+        process.env.XDG_CONFIG_HOME = before;
+      }
+    }
+  });
+
+  test("a slice has five minutes on the thread: a folder that always takes longer than a minute is read, never given up on", async () => {
+    const { WALK_DEADLINES } = await import("../src/core/walk-thread.ts");
+    // A share's folder of thousands of files may take minutes every time: given up on at a minute, home was never walked.
+    expect(WALK_DEADLINES.step).toBe(5 * 60_000);
+    expect(WALK_DEADLINES.whole).toBe(10 * 60_000);
+  });
+
+  test("a new pass counts the vaults it finds afresh: none left uncounted for the last pass's", async () => {
+    const { AutoIndex, REPASS_MS } = await import("../src/core/autoindex.ts");
+    const home = tree({ "a.md": "# A\n", "proj/.slipbox/config.toml": "", "proj/p.md": "# P\n" });
+    let clock = Date.now();
+    await inHome(home, async () => {
+      const job = new AutoIndex(home, null, () => clock, { config: () => structuredClone(DEFAULT_CONFIG) });
+      await stepToEnd(job, 15);
+      expect(job.status).toMatchObject({ found: 1, indexed: 1 });
+      clock += REPASS_MS + 1;
+      await stepToEnd(job, 15);
+      expect(job.status).toMatchObject({ found: 1, indexed: 1 });
+      expect(Date.parse(job.status.passStarted!)).toBeGreaterThan(clock - 1000);
+    });
+  });
+
+  test("home walked again while a vault is indexed: home recorded as found, the vault after it, each once", async () => {
+    const registry = await import("../src/core/registry.ts");
+    const { AutoIndex } = await import("../src/core/autoindex.ts");
+    const notes: Record<string, string> = { "a.md": "# A\n", "proj/.slipbox/config.toml": "" };
+    for (let i = 0; i < 400; i++) notes[`proj/n${i}.md`] = `# N${i}\n\n${"word ".repeat(50)}\n`;
+    const home = tree(notes);
+    await inHome(home, async () => {
+      const job = new AutoIndex(home, null, () => Date.now(), { config: () => structuredClone(DEFAULT_CONFIG) });
+      // The vault opened and recorded, its notes being parsed.
+      while (!(job.status.current && job.status.found === 1)) expect(job.step(1)).toBe(true);
+      // Home let go of from the lists meanwhile, then walked again: recorded again once it's indexed.
+      registry.writeRoots(registry.readRoots().filter((v) => v.kind !== "home"));
+      const spy = spyOn(registry, "recordRoot");
+      try {
+        job.homeAgain();
+        await stepToEnd(job, 1);
+        expect(spy.mock.calls.map((c) => [c[0].kind, c[0].path])).toEqual([["home", home]]);
+        expect(job.status).toMatchObject({ found: 1, indexed: 1 });
+      } finally {
+        spy.mockRestore();
+      }
+    });
+  });
+
+  test("a tick waiting on the walk's thread writes nothing: the place kept only when it changed", async () => {
+    const fsutil = await import("../src/core/fsutil.ts");
+    const { AutoIndex } = await import("../src/core/autoindex.ts");
+    const home = tree({ "a.md": "# A\n", "slow/s.md": "# S\n" });
+    const file = join(tree({}), "autoindex.json");
+    const thread = new WalkThread(slowWorker);
+    await inHome(home, async () => {
+      const spy = spyOn(fsutil, "writeJson");
+      try {
+        const job = new AutoIndex(home, file, () => Date.now(), {
+          walker: thread,
+          config: () => structuredClone(DEFAULT_CONFIG),
+        });
+        const writes = () => spy.mock.calls.filter((c) => c[0] === file).length;
+        // Started, then waiting on the thread while it lists `slow`: a tick at a time, nothing new to keep.
+        while (job.step(15) && writes() === 0) await Bun.sleep(1);
+        await Bun.sleep(50);
+        const before = writes();
+        for (let i = 0; i < 10; i++) {
+          expect(job.step(15)).toBe(true);
+          await Bun.sleep(10);
+        }
+        expect(writes()).toBe(before);
+        await stepToEnd(job, 15);
+        expect(job.status.home).toBe(true);
+        expect(JSON.parse(readFileSync(file, "utf8"))).toMatchObject({ home: true });
+      } finally {
+        spy.mockRestore();
+        thread.stop();
+      }
     });
   });
 
@@ -689,21 +921,27 @@ describe("the explorer's listings off the main thread (T12, #9)", () => {
     expect(h.app.sidebar.selected).toBe(moved);
   });
 
-  test("another disk mounted in a folder listed is never looked at; a folder you may not read says why", async () => {
+  test("another disk mounted in a folder listed is never looked at — a folder, or a file mounted alone; a folder you may not read says why", async () => {
     const { setMountTable } = await import("../src/core/mounts.ts");
     const top = tree({
       "disk/.slipbox/config.toml": "",
       "disk/d.md": "# D\n",
       "plain/p.md": "# P\n",
       "locked/l.md": "# L\n",
+      hosts: "127.0.0.1 localhost\n",
     });
     const locked = process.getuid?.() !== 0;
     if (locked) chmodSync(join(top, "locked"), 0o000);
-    setMountTable(() => [{ device: "share:/x", at: join(top, "disk"), type: "nfs", options: "rw" }]);
+    // A container's `/etc/hosts`: a file bind-mounted from another disk.
+    setMountTable(() => [
+      { device: "share:/x", at: join(top, "disk"), type: "nfs", options: "rw" },
+      { device: "/dev/vda1", at: join(top, "hosts"), type: "ext4", options: "rw" },
+    ]);
     try {
       const listing = listFolder(top, DEFAULT_CONFIG.walk, false);
       const of = (name: string) => listing.entries.find((e) => e.name === name);
       expect(of("disk")).toEqual({ name: "disk", dir: true, file: false, denied: false, mount: true });
+      expect(of("hosts")).toEqual({ name: "hosts", dir: false, file: true, denied: false, mount: true });
       expect(of("plain")).toMatchObject({ dir: true, denied: false, unreadable: null });
       if (locked)
         expect(of("locked")).toMatchObject({ denied: true, unreadable: "you may not read it (no permission)" });
@@ -711,6 +949,71 @@ describe("the explorer's listings off the main thread (T12, #9)", () => {
       setMountTable(null);
       if (locked) chmodSync(join(top, "locked"), 0o755);
     }
+  });
+
+  test("a listing's digest covers what its rows are built from: a folder become a notes vault's lists anew", () => {
+    const repo = tree({ ".git/HEAD": "ref: refs/heads/main\n", "a.md": "# A\n", "b.png": "png\n" });
+    const before = listFolder(repo, DEFAULT_CONFIG.walk, false);
+    expect(before.notes).toBe(false);
+    // `.slipbox/` given it: hidden, nothing of its entries changes — but which of its files the explorer lists does.
+    mkdirSync(join(repo, ".slipbox"));
+    writeFileSync(join(repo, ".slipbox", "config.toml"), "");
+    const after = listFolder(repo, DEFAULT_CONFIG.walk, false);
+    expect(after.entries).toEqual(before.entries);
+    expect(after.notes).toBe(true);
+    expect(after.digest).not.toBe(before.digest);
+  });
+
+  test("a folder whose listing fails says why in its row, in the words `l` says it in", async () => {
+    if (process.getuid?.() === 0) return; // root reads every folder
+    setWalkWorker(slowWorker);
+    const { top, h } = await besideSlow();
+    const ex = h.app.explorer;
+    const quick = join(top, "quick");
+    ex.expanded.add(quick);
+    await listed(h);
+    expect(names(h)).toContain("  q.md");
+    chmodSync(quick, 0o000);
+    try {
+      ex.listings.stale(quick);
+      await listed(h);
+      expect(names(h)).toContain("  can't read: you may not read it (no permission)");
+    } finally {
+      chmodSync(quick, 0o755);
+    }
+  });
+
+  test("a folder refused for no permission is read again, nothing else in its folder: once you may, it unfolds", async () => {
+    if (process.getuid?.() === 0) return; // root reads every folder
+    setWalkWorker(slowWorker);
+    const { top, h } = await besideSlow();
+    const ex = h.app.explorer;
+    const quick = join(top, "quick");
+    const slow = join(top, "slow");
+    ex.expanded.add(slow);
+    await listed(h);
+    const asked = spyOn(listThreads(), "list");
+    chmodSync(quick, 0o000);
+    try {
+      ex.listings.again(top);
+      await listed(h);
+      h.app.region = "sidebar";
+      h.app.sidebar.selected = ex.rows().findIndex((r) => r.name === "quick");
+      await ex.action("expand");
+      expect(h.app.messages.at(-1)?.text).toBe(`can't read ${tildePath(quick)}: you may not read it (no permission)`);
+      expect(ex.expanded.has(quick)).toBe(false);
+    } finally {
+      chmodSync(quick, 0o755);
+    }
+    // Let in: its folder's listing read again since the refusal, `l` unfolds it — `slow`, beside it, never read again.
+    await listed(h);
+    expect(asked.mock.calls.map((c) => c[0])).toEqual([top, top]);
+    asked.mockRestore();
+    h.app.sidebar.selected = ex.rows().findIndex((r) => r.name === "quick");
+    await ex.action("expand");
+    expect(ex.expanded.has(quick)).toBe(true);
+    await listed(h);
+    expect(names(h)).toContain("  q.md");
   });
 
   test("a folder that couldn't be listed is read again a minute later, not at every rebuild", async () => {
@@ -734,14 +1037,14 @@ describe("the explorer's listings off the main thread (T12, #9)", () => {
     expect(ex.listings.get(gone)?.error).toBeNull();
   });
 
-  test("a listing thread stuck on a folder that doesn't answer: the folders listed next go to the other, at once", async () => {
+  test("a listing thread held up on a folder that doesn't answer: the folders listed next go to the other, never behind it", async () => {
     setWalkWorker(slowWorker);
     const top = tree({ "stuck/s.md": "# S\n", "one/a.md": "# A\n", "two/b.md": "# B\n" });
     const threads = listThreads();
     await Promise.all([0, 1].map(() => threads.list(top, DEFAULT_CONFIG.walk, false)));
-    const stuck = threads.list(join(top, "stuck"), DEFAULT_CONFIG.walk, false);
-    await Bun.sleep(1200);
+    // Asked at once after it: none of them sent behind it, whichever thread it's on.
     const at = performance.now();
+    const stuck = threads.list(join(top, "stuck"), DEFAULT_CONFIG.walk, false);
     await Promise.all(["one", "two"].map((d) => threads.list(join(top, d), DEFAULT_CONFIG.walk, false)));
     expect(performance.now() - at).toBeLessThan(STUCK_MS / 3);
     await stuck;
@@ -764,6 +1067,13 @@ describe("the explorer's listings off the main thread (T12, #9)", () => {
     expect(h.copied).toEqual([]);
     expect(ex.top).toBe(top);
     expect(h.app.overlay).toBeNull();
+    // What doesn't act on the row does as on any row of its folder: said, never dropped.
+    for (const a of ["new_note", "new_folder", "restore", "undo_rename", "paste"]) {
+      const said = h.app.messages.length;
+      await ex.action(a);
+      expect([a, h.app.messages.length > said || h.app.overlay !== null]).toEqual([a, true]);
+      h.app.overlay = null;
+    }
     // Folded: the folder it's listed in.
     await ex.action("collapse");
     expect(ex.expanded.has(slow)).toBe(false);

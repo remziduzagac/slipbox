@@ -3,6 +3,7 @@
 // slipbox's own stand-in (`SLIPBOX_SLOW_DISK=<folder name>:<ms>[:<deadline ms>]`): a folder of that name takes so long
 // to list, on whichever thread lists it. Each check builds a small home of its own.
 
+import { chmodSync } from "node:fs";
 import { type Check, explorerOpen, explorerRow, follow, leader, open } from "../check.ts";
 import type { Session } from "../session.ts";
 import { crumbs, lastMessage, listed } from "./links-and-files.ts";
@@ -225,7 +226,7 @@ export const SLOW_DISK: Check[] = [
   },
   {
     area: "links-and-files",
-    name: "slow disk: the explorer — rows that come above the selected one leave it where it was; a `listing…` row answers moving and folding alone",
+    name: "slow disk: the explorer — rows that come above the selected one leave it where it was; a `listing…` row answers moving and folding alone, what doesn't act on a row as any row of its folder",
     covers: { cases: ["explorer"], commands: [] },
     options: { startAt: "home/notes/index.md", env: { SLIPBOX_SLOW_DISK: `${SLOW}:2500` }, setup: (s) => smallHome(s) },
     run: async (s) => {
@@ -238,6 +239,9 @@ export const SLOW_DISK: Check[] = [
       await s.keys("shift+y");
       await s.settle();
       s.expect(!s.clipboard().includes("listing"), `nothing of the row copied: ${s.clipboard()}`);
+      // A new note: refused there, as on any row of a folder outside the vault — said, never dropped.
+      await s.keys("n");
+      await s.message("another vault's folder", 3000);
       await s.keys("z");
       s.expect(crumbs(s).startsWith("~ ›"), `the view where it was: ${crumbs(s)}`);
       await s.keys("h");
@@ -263,8 +267,82 @@ export const SLOW_DISK: Check[] = [
     run: async (s) => {
       await viewAtHome(s);
       await explorerRow(s, "mixed");
+      const at = performance.now();
       await s.keys("l");
-      await s.until(() => listed(s, /\sa\.md$/), 1000, "mixed listed at once, .cache never read");
+      await s.until(() => listed(s, /\sa\.md$/), 9000, "mixed listed");
+      const ms = Math.round(performance.now() - at);
+      s.expect(ms < 2000, `mixed listed at once, .cache never read: ${ms} ms`);
+    },
+  },
+  {
+    area: "links-and-files",
+    name: "slow disk: the explorer — a folder beside the vault you may no longer read: its row says why in words, `l` refuses it, and unfolds it once you may",
+    covers: { cases: ["explorer"], commands: ["explorer.toggle_hidden"] },
+    options: {
+      startAt: "home/notes/index.md",
+      // Room for the row's words.
+      config: "[ui]\nsidebar_width = 60\n",
+      setup: (s) => smallHome(s, { "~/locked/l.md": "# L\n" }),
+    },
+    run: async (s) => {
+      if (process.getuid?.() === 0) return; // root reads every folder
+      const locked = s.path("~/locked");
+      await viewAtHome(s);
+      await explorerRow(s, "locked");
+      await s.keys("l");
+      await s.until(() => listed(s, /\sl\.md$/), 5000, "locked listed");
+      chmodSync(locked, 0o000);
+      try {
+        // Every folder shown read again (hidden files shown): its row says why, in the words `l` says it in.
+        await s.keys("shift+h");
+        await s.see("can't read: you may not read it (no permission)", 5000);
+        await s.keys("h");
+        await s.notSee("can't read: you may not read it", 3000);
+        await s.keys("l");
+        await s.message("can't read ~/locked", 3000);
+        const said = await lastMessage(s, "can't read ~/locked");
+        s.expect(said === "can't read ~/locked: you may not read it (no permission)", `said whole: ${said}`);
+      } finally {
+        chmodSync(locked, 0o755);
+      }
+      // Let in: unfolded at the next `l`, its folder read again since the refusal.
+      await explorerRow(s, "locked");
+      await s.retry(
+        () => s.keys("l"),
+        () => listed(s, /\sl\.md$/),
+        "locked unfolded once you may read it",
+        1000,
+        10_000,
+      );
+    },
+  },
+  {
+    area: "links-and-files",
+    name: "slow disk: the explorer — every folder shown read again while one is listed slowly: none waits behind it",
+    covers: { cases: ["explorer"], commands: ["explorer.toggle_hidden"] },
+    options: {
+      startAt: "home/notes/index.md",
+      env: { SLIPBOX_SLOW_DISK: `${SLOW}:8000` },
+      setup: (s) => smallHome(s, { "~/aaa/.ha.md": "# Hidden A\n", "~/zzz/.hz.md": "# Hidden Z\n" }),
+    },
+    run: async (s) => {
+      await viewAtHome(s);
+      for (const d of ["aaa", "zzz"]) {
+        await explorerRow(s, d);
+        await s.keys("l");
+      }
+      await s.until(() => listed(s, /\sa\.md$/) && listed(s, /\sz\.md$/), 5000, "aaa and zzz listed");
+      // The slow folder unfolded, its listing asked; at once every folder shown read again (hidden files shown): the
+      // others answer at once, beside the one that hangs.
+      await explorerRow(s, SLOW);
+      await s.keys("l");
+      await s.see("listing…", 2000);
+      const at = performance.now();
+      await s.keys("shift+h");
+      await s.until(() => listed(s, /\s\.ha\.md$/) && listed(s, /\s\.hz\.md$/), 9000, "aaa and zzz listed again");
+      const ms = Math.round(performance.now() - at);
+      s.expect(ms < 3000, `aaa and zzz listed again at once, not behind the slow folder: ${ms} ms`);
+      await s.see("listing…", 3000);
     },
   },
   {

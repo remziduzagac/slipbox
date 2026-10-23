@@ -267,7 +267,11 @@ export class Watch {
     try {
       home = await walkThread().homeWalk(loc, graph.filter.settings, asked);
     } catch (err) {
-      if (at === this.homeRefresh) this.gaveUp("index", walkFailure(err as Error));
+      // Given up on: said as the walk's, and home walked again ten minutes later, its graph built again at its end.
+      if (at === this.homeRefresh && this.app.loc === loc) {
+        this.gaveUp("walk", walkFailure(err as Error));
+        this.indexJob()?.homeAgain(true);
+      }
       return;
     } finally {
       stop();
@@ -285,16 +289,23 @@ export class Watch {
   homeRefreshed: Promise<void> = Promise.resolve();
 
   /** Home's graph built again from its walk, made on the walk's thread (`homeIndexed`); the files that changed in the
-   *  graph while it was made (`since`) taken in again over it, as the watcher takes a change in. */
+   *  graph while it was made (`since`) taken in again over it, as the watcher takes a change in — one reached (20.8)
+   *  reached again. */
   private homeBuilt(walk: HomeWalk, capped: WalkCap | null, since: string[]): void {
     const keep = this.rememberSelections();
     const graph = this.app.graph;
+    const reached = new Set(graph.reached);
     graph.build(true, "lazy", walk);
-    if (since.length)
+    // A file the walk leaves out, reached by a link or by being opened, that the build didn't keep: reached as it was,
+    // never taken in as one of home's own.
+    const changed = since.filter(
+      (rel) => !(reached.has(rel) && !graph.known(rel) && existsSync(join(graph.root, rel)) && graph.reachFile(rel)),
+    );
+    if (changed.length)
       applyToGraph(
         graph,
         {
-          changes: since.map((rel) => ({
+          changes: changed.map((rel) => ({
             rel,
             kind: existsSync(join(graph.root, rel)) ? "changed" : "deleted",
             isNote: graph.filter.isNoteName(basename(rel)),

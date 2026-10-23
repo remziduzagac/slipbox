@@ -242,10 +242,14 @@ export function folderUnreadable(dir: string): string | null {
     accessSync(dir, constants.R_OK | constants.X_OK);
     return null;
   } catch (err) {
-    const code = (err as NodeJS.ErrnoException).code;
-    if (code === "EACCES" || code === "EPERM") return "you may not read it (no permission)";
-    if (code === "ENOENT") return "it isn't there";
-    if (code === "ENOTDIR") return "it isn't a folder";
-    return code ?? (err as Error).message;
+    return unreadableWords((err as NodeJS.ErrnoException).code ?? (err as Error).message);
   }
+}
+
+/** Why a folder couldn't be read, by its error's code, in `folderUnreadable`'s words (a listing's too, T12). */
+export function unreadableWords(code: string): string {
+  if (code === "EACCES" || code === "EPERM") return "you may not read it (no permission)";
+  if (code === "ENOENT") return "it isn't there";
+  if (code === "ENOTDIR") return "it isn't a folder";
+  return code;
 }

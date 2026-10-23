@@ -6,7 +6,7 @@ import ignore from "ignore";
 import { classify, type FileGroup } from "../core/filetypes.ts";
 import { type Dirent, readdirSync, statSync } from "node:fs";
 import { basename, dirname, isAbsolute, join, posix, relative, sep } from "node:path";
-import { folderUnreadable } from "../core/fsutil.ts";
+import { folderUnreadable, unreadableWords } from "../core/fsutil.ts";
 import { MARKER } from "../core/registry.ts";
 import { tildePath } from "../core/names.ts";
 import { hasMarker, homeFolder, isInside, isListed, isVaultRoot, locationAt } from "../core/vault.ts";
@@ -424,7 +424,13 @@ export class Explorer {
   private outsideRows(dir: string, depth: number, out: TreeRow[], leftOut: LeftOut | null = null): void {
     const listing = this.listings.get(dir);
     if (!listing || listing.error !== null) {
-      const said = listing ? `can't read: ${listing.error}` : this.listings.pending(dir) ? "listing…" : null;
+      // Why it couldn't be: a code (`EACCES`) in `folderUnreadable`'s words; a thread's own already in words.
+      const error = listing?.error;
+      const said = error
+        ? `can't read: ${error.includes(" ") ? error : unreadableWords(error)}`
+        : this.listings.pending(dir)
+          ? "listing…"
+          : null;
       if (said)
         out.push({ kind: "note", path: `${dir}/\0${said}`, name: said, depth, outside: true, placeholder: true });
       return;
@@ -953,8 +959,9 @@ export class Explorer {
     }
     const rows = this.rows();
     const row = rows[this.app.sidebar.selected];
-    // A row that only says something of its folder (T12: `listing…`): moved past, or its folder folded, nothing else.
-    if (row?.placeholder && !PLACEHOLDER_ACTIONS.has(action)) return;
+    // A row that only says something of its folder (T12: `listing…`): nothing acts on its own path — what doesn't act
+    // on the row (moving, folding its folder, restoring, a new note) does as on any row of its folder.
+    if (row?.placeholder && ON_THE_ROW.has(action)) return;
     // A link to a folder not followed asks first (VV-D6); a second name for one of the vault's goes to it.
     if (row?.link?.dir && ["open", "expand", "open_tab", "zoom_in"].includes(action) && this.linkFirst(row, action))
       return;
@@ -971,7 +978,16 @@ export class Explorer {
             : row.listed
               ? (row.listed.unreadable ?? null)
               : folderUnreadable(this.rowAbs(row));
-        if (why) return this.app.message("warn", `can't read ${tildePath(this.rowAbs(row))}: ${why}`);
+        if (why) {
+          // As its folder's listing read it: that listing read again, and its own, so one you may read now (a chmod since)
+          // unfolds next time, its rows there — nothing else in its folder read again.
+          if (row.listed) {
+            this.listings.again(dirname(this.rowAbs(row)));
+            this.listings.again(this.rowAbs(row));
+            this.invalidateTree();
+          }
+          return this.app.message("warn", `can't read ${tildePath(this.rowAbs(row))}: ${why}`);
+        }
         this.expanded.add(row.path);
       }
       this.invalidateTree();
@@ -1161,19 +1177,23 @@ export interface TreeRow {
   placeholder?: true;
 }
 
-/** What a row that only says something of its folder (`listing…`, `can't read: …`) answers: moving, and folding it. */
-const PLACEHOLDER_ACTIONS: ReadonlySet<string> = new Set([
-  "down",
-  "up",
-  "top",
-  "bottom",
-  "collapse",
-  "filter",
-  "all_files",
-  "toggle_hidden",
-  "zoom_out",
-  "close",
-  "leave",
+/** What acts on the selected row's own path: never on a row that only says something of its folder (`listing…`,
+ *  `can't read: …`). */
+const ON_THE_ROW: ReadonlySet<string> = new Set([
+  "open",
+  "open_tab",
+  "open_split",
+  "expand",
+  "zoom_in",
+  "copy_path",
+  "rename",
+  "rename_root",
+  "move",
+  "delete",
+  "copy",
+  "cut",
+  "make_root",
+  "unmake_root",
 ]);
 
 /** What the vault open's walk leaves out (VV-D8), carried down what's listed in it: why, and where it was decided. */

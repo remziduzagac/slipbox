@@ -9,6 +9,7 @@
 import { accessSync, constants, type Dirent, realpathSync, statSync } from "node:fs";
 import { basename, join } from "node:path";
 import type { Config } from "./config.ts";
+import { unreadableWords } from "./fsutil.ts";
 import { checkoutOf, headOf } from "./git.ts";
 import { mountsIn, recentMountTable } from "./mounts.ts";
 import { vaultKey } from "./paths.ts";
@@ -49,7 +50,8 @@ export interface FolderListing {
   notes: boolean;
   /** Where its links are taken from (`linkScope`): its vault's real path, home's, none in Elsewhere. */
   scope: string | null;
-  /** Its entries' digest: two listings that say the same have the same, compared without reading them through. */
+  /** Its digest — its entries, whether it's a notes vault's, its links' scope: what its rows are built from — the same
+   *  for two listings that say the same, compared without reading them through. */
   digest?: string;
 }
 
@@ -73,15 +75,6 @@ function accessCode(abs: string, mode: number): string | null {
 export function denied(abs: string, mode: number): boolean {
   const code = accessCode(abs, mode);
   return code === "EACCES" || code === "EPERM";
-}
-
-/** A folder's access check's code, in `folderUnreadable`'s words; null when it can be read. */
-function unreadableWords(code: string | null): string | null {
-  if (code === null) return null;
-  if (code === "EACCES" || code === "EPERM") return "you may not read it (no permission)";
-  if (code === "ENOENT") return "it isn't there";
-  if (code === "ENOTDIR") return "it isn't a folder";
-  return code;
 }
 
 /** A vault's name beside its folder's, when it has another (17.13); none for a worktree's: its branch tells it apart. */
@@ -139,9 +132,10 @@ export function listFolder(dir: string, walk: Config["walk"], hidden: boolean): 
   const mounted = mountsIn(dir, real, recentMountTable(5000));
   for (const e of names) {
     if (!listsName(e.name, hidden)) continue;
-    // Another disk mounted here: one that stops answering would hang whatever looks at it.
+    // Another disk mounted here: one that stops answering would hang whatever looks at it — a folder or a file as its
+    // folder's entry says (a file bind-mounted: a container's `/etc/hosts`), nothing more.
     if (mounted.has(e.name)) {
-      out.entries.push({ name: e.name, dir: true, file: false, denied: false, mount: true });
+      out.entries.push({ name: e.name, dir: e.isDirectory(), file: !e.isDirectory(), denied: false, mount: true });
       continue;
     }
     const abs = join(dir, e.name);
@@ -159,13 +153,13 @@ export function listFolder(dir: string, walk: Config["walk"], hidden: boolean): 
     };
     if (e.isSymbolicLink()) entry.link = { target: linkTarget(abs), key: linkKey(abs) };
     if (isDir) {
-      entry.unreadable = unreadableWords(code);
+      entry.unreadable = code === null ? null : unreadableWords(code);
       if (isVaultRoot(abs)) entry.vault = { key: vaultKey(abs), ...nameOf(abs), head: vaultHead(abs) };
       const busy = busyFolderWhyAt(abs, walk);
       if (busy) entry.busy = busy;
     }
     out.entries.push(entry);
   }
-  out.digest = Bun.hash(JSON.stringify(out.entries)).toString(36);
+  out.digest = Bun.hash(JSON.stringify([out.entries, out.notes, out.scope])).toString(36);
   return out;
 }

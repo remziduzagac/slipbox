@@ -26,10 +26,11 @@ export type StepAnswer =
 
 /** Home's walks under way here, and the indexes, by their number: a few at most, the oldest let go (its asker gone, or
  *  started over). */
-const walks = new Map<number, SlicedWalk>();
+const walks = new Map<number, { walk: SlicedWalk; signature: string }>();
 const indexes = new Map<number, IndexJob>();
-/** Home's walks done, kept here for the index built from them (`walkOn`): never sent across and back. */
-const done = new Map<number, { walk: WalkResult; capped: SlicedWalk["capped"] }>();
+/** Home's walks done, kept here for the index built from them (`walkOn`): never sent across and back. With each, its
+ *  filter's signature: what it was walked under. */
+const done = new Map<number, { walk: WalkResult; capped: SlicedWalk["capped"]; signature: string }>();
 const KEPT = 4;
 
 /** `job` kept under `n`, the oldest let go of past the few kept. */
@@ -45,7 +46,8 @@ function homeWalkOf(of: IndexAsk): IndexOf {
   const kept = done.get(of.home.walkOn);
   if (!kept) throw new Error("the walk was let go of on its thread");
   done.delete(of.home.walkOn);
-  return { root: of.root, home: { walk: kept.walk, walked: of.home.walked, capped: kept.capped }, config: of.config };
+  const home = { walk: kept.walk, walked: of.home.walked, capped: kept.capped, signature: kept.signature };
+  return { root: of.root, home, config: of.config };
 }
 
 /** A request answered: what it asked for, walked here. */
@@ -55,17 +57,17 @@ export function answerWalk(
   enterContext(req.context);
   switch (req.op) {
     case "step": {
-      let walk = walks.get(req.walk);
-      if (!walk && req.start)
-        walk = keep(
-          walks,
-          req.walk,
-          new SlicedWalk(req.start.filter.root, filterFrom(req.start.filter), req.start.limits),
-        );
-      if (!walk) throw new Error("the walk was let go of on its thread");
+      let made = walks.get(req.walk);
+      if (!made && req.start) {
+        const filter = filterFrom(req.start.filter);
+        const walk = new SlicedWalk(req.start.filter.root, filter, req.start.limits);
+        made = keep(walks, req.walk, { walk, signature: filter.signature() });
+      }
+      if (!made) throw new Error("the walk was let go of on its thread");
+      const { walk, signature } = made;
       if (walk.step(req.budget)) return { done: false };
       walks.delete(req.walk);
-      keep(done, req.walk, { walk: walk.result!, capped: walk.capped });
+      keep(done, req.walk, { walk: walk.result!, capped: walk.capped, signature });
       return { done: true, capped: walk.capped, rest: walk.rest(), nested: nestedIn(walk.result) };
     }
     case "index": {

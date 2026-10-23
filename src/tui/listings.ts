@@ -33,7 +33,7 @@ interface Kept {
   tree: number;
 }
 
-/** Why a listing's thread gave no answer, as its row says it. */
+/** Why a listing's thread gave no answer, as its row says it — of the folder (`walkFailure` says it of the walk). */
 function noAnswer(err: Error): string {
   const kind = err instanceof WorkerRequestError ? err.kind : null;
   if (kind === "deadline") return "no answer in time";
@@ -120,6 +120,16 @@ export class Listings {
         k.at = 0;
         k.reading = null;
       }
+  }
+
+  /** The listing of `dir` alone read again when next shown, never the folders in it (`stale` reads them too): what an
+   *  entry of it says may be old — a folder refused, its permission changed since. */
+  again(dir: string): void {
+    const k = this.kept.get(dir);
+    if (k) {
+      k.at = 0;
+      k.reading = null;
+    }
   }
 
   private read(dir: string, k: Kept, settings: string): void {

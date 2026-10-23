@@ -234,3 +234,47 @@ still blocks.
   11 ms and the timer's longest gap 6 ms (were 21 and 50; 90 and 91 in the release); home on the slow mount (its
   `hobbies/` listing in a second), 6 and 9 ms. Memory: the main heap 6 MB either way; RSS grows 52 MB at 10,000 notes
   (the walk's thread with its index), 24 MB on the slow mount.
+- 2026-10-24: CI on round 2's commit (`92b5c99`): green on every runner, the ten slow-disk terminal checks among them
+  on Linux, Linux on ARM and macOS.
+- 2026-10-24: Review round 3, `/code-review` on the two commits (Codex's half waits for its usage limit). Each finding
+  checked against the code; all fifteen hold, and are fixed: (r1) the listing threads' choice could still send a
+  folder behind a hung read under a second old — listings now wait in one line and go to a thread only when it's
+  free; (r2) recording a found vault still realpaths and stats every recorded copy of every named folder on the main
+  thread — the thread reads them with the vault and hands them over (`known.copies`); (r3) a new pass kept the last
+  pass's `counted`, so its first vault went uncounted (reproduced there) — reset with the pass; (r4) a folder that
+  always takes longer than a slice's minute kept home's walk from ever finishing — a slice has five minutes, a hung
+  disk still given up on; (r5) a folder refused for no permission stayed refused from the cached listing after a
+  chmod — the refusal reads its folder again; (r6) home's refresh failing left home's graph unrebuilt for the
+  session, said as the index's — said as the walk's, and home walked again ten minutes later; (r7) a file bind-mounted
+  in a folder (Docker's `/etc/hosts`) was listed as a folder — its kind is the folder's entry's, nothing read; (r8)
+  one `recorded` flag served both the vault's and home's index — two; (r9) on a `listing…` row, actions that don't
+  act on the row (restore, undo a rename, paste, a new note or folder, the menu) were dropped silently — only those
+  acting on the row's path are; (r10) a listing's digest covered its entries alone, so a folder become a notes vault,
+  or its links' scope changing, drew nothing — it covers what the rows are built from; (r11) the refresh's replay
+  turned a file reached by a link (20.8) into one of home's own notes — reached again as reached; (r12) the check that
+  home's settings changed mid-walk lost where Downloads is — the walk's own filter's signature is compared where the
+  walk is kept; (r13) `AutoIndex.step` wrote its place (an fsync) at every tick, waiting on a thread or a retry —
+  only when it changed; (r14) `ci-scope.ts` mapped `core/listing.ts` short of Elsewhere's and the marks' checks — now
+  to them; (r15) a listing's error words copied `folderUnreadable`'s, and its row said the bare code where `l` said
+  the words — one table (`unreadableWords` in `core/fsutil.ts`), the row saying the words.
+- 2026-10-24: Round 3's tests. Each fix has a unit test (`tests/walk-thread.test.ts`; r14's in
+  `tests/distribution.test.ts`), and each was checked by undoing its fix once: all seventeen undoings (r6 three of them)
+  fail their test. Four cases are seen on the screen, and have terminal checks (`slow-disk.ts`), each failing with its
+  fix undone: r15 and r5 (a folder made unreadable once unfolded: its row's words, `l`'s refusal, unfolded once let
+  in), r9 (a new note on a `listing…` row: said), r1 (every folder shown read again while one is listed slowly: aaa's
+  and zzz's rows within 3 s, 7.9 s with the old choice). The others aren't seen on a screen in a check's time (r3: a day
+  between passes; r4: minutes; r6: a refresh failing where its walk didn't; r7: a disk mounted; r8, r13, r2, r12: the
+  lists' and the place's writes; r10: covered by its unit test, the rows of a folder become a notes vault's coming
+  with no other change; r11: a reached file looks the same as an own one).
+- 2026-10-24: Tried live (a home of its own, `slowdisk` listed in 8 s): `n` on a `listing…` row says `another vault's
+  folder: select a folder of this vault`; a folder made unreadable once unfolded says `can't read: you may not read it
+  (no permission)` in its place, `l` refuses it, and once let in it unfolded at the next `l` — after seconds: the
+  refusal read again every folder listed in its folder (`stale`), the slow one among them, which held up the second
+  thread. Narrowed: the refusal reads again the folder's listing and its own alone (`Listings.again`); tried again,
+  unfolded 0.8 s after the chmod, the slow folder's one read going on.
+- 2026-10-24: The terminal checks' waits: `Session.until` waits at least `SLIPBOX_TERMINAL_WAIT` (10 s) whatever it's
+  asked, so a check saying a folder comes "at once" said nothing short of ten seconds — round 2's hidden-folder check
+  passed with `.cache` read (4.1 s), r1's with the old choice (7.9 s). Both time it themselves now, and fail so.
+- 2026-10-24: Each test run took over a minute here meanwhile: `bun test` looks for test files under the worktree, and
+  went through the slow FUSE mounts the live tries had left under `tmp/issue/live/`. Unmounted, the runs took their
+  usual time; the round's live try used a home with `SLIPBOX_SLOW_DISK` instead.
