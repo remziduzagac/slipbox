@@ -323,7 +323,9 @@ describe("what the checks share (check.ts)", () => {
     "  if [ $shown = 1 ]; then printf ' ≡  Explorer   +  +  │ home.md'; else printf '    home.md'; fi",
     "  if [ $pending = 1 ]; then printf '\\033[4;1H  │ e   → %s  │' \"$LABEL\"; chip='␣'",
     "  elif [ $focused = 1 ]; then chip=FILES; else chip=READ; fi",
-    "  printf '\\033[8;1H %s  notes  ‹ home.md ›  L1:1\\033[?2026l' \"$chip\"",
+    // No status line in zen: the frame's end alone.
+    "  if [ $zen = 1 ]; then printf '\\033[?2026l'",
+    "  else printf '\\033[8;1H %s  notes  ‹ home.md ›  L1:1\\033[?2026l' \"$chip\"; fi",
     "}",
     "draw",
     'while c=$(dd bs=1 count=1 2>/dev/null) && [ -n "$c" ]; do',
@@ -338,8 +340,8 @@ describe("what the checks share (check.ts)", () => {
     "done",
   ].join("\n");
   const STARTS = { closed: [0, 0], open: [1, 0], focused: [1, 1] } as const;
-  /** The fake explorer, started `closed`, `open` or `focused`; `presses()`, the `space e`s it has taken. */
-  const explorer = async (start: keyof typeof STARTS) => {
+  /** The fake explorer, started `closed`, `open` or `focused`, in zen or not; `presses()`, the `space e`s it took. */
+  const explorer = async (start: keyof typeof STARTS, zen = false) => {
     const s = new Session({ size: { cols: 60, rows: 10 } });
     const pressed = join(s.dir, "pressed");
     const [shown, focused] = STARTS[start];
@@ -354,10 +356,11 @@ describe("what the checks share (check.ts)", () => {
           LAG: String(LAG / 1000),
           shown: `${shown}`,
           focused: `${focused}`,
+          zen: zen ? "1" : "0",
         },
       });
-      // Its first frame whole: the mode on the status line, drawn last.
-      await s.until(() => mode(s) !== null, undefined, "the fake explorer's first frame");
+      // Its first frame, read whole (its frames are marked).
+      await s.until(() => s.rowOf("home.md") >= 0, undefined, "the fake explorer's first frame");
     } catch (err) {
       s.cleanup(); // the test's own cleanup is in the try it never reaches
       throw err;
@@ -369,6 +372,7 @@ describe("what the checks share (check.ts)", () => {
   test("the status line's mode is its chip when it names one, never the keys pending or an operator's", () => {
     for (const m of ["READ", "SOURCE", "INSERT", "V-LINE", "FILES", "GIT", "OUTLINE"])
       expect(modeOf(` ${m}  notes  ‹ home.md ›  L1:1`)).toBe(m);
+    expect(modeOf(" FILES")).toBe("FILES"); // the chip alone, nothing drawn after it
     // The leader pending (Unicode's ␣, ASCII's SPC), F waiting for its character, an operator, a prompt, a file name.
     for (const line of [
       " ␣  notes  L1:1",
@@ -389,8 +393,8 @@ describe("what the checks share (check.ts)", () => {
       expect(OUTLINE.test(popup("outline.cycle"))).toBe(false);
     }
     // As slipbox draws them: the explorer's buttons before its border (the Nerd Font's, ASCII's, none in a narrow
-    // pane); the outline after the right panel's border, the right rail beside it or not (the screen's rows are read
-    // with their trailing spaces gone).
+    // pane); the outline after the right panel's border, the right rail beside it, or blank to the edge, or nothing
+    // drawn after it.
     expect(EXPLORER.test(" ≡  Explorer               󰝒  󰉗  │ 1 operations-handbook.md × │")).toBe(true);
     expect(EXPLORER.test(" =  Explorer               +  +>  | 1 operations-handbook.md x |")).toBe(true);
     expect(EXPLORER.test(" ≡  Explorer   │ 1 operations-handbook.md × │")).toBe(true);
@@ -439,4 +443,16 @@ describe("what the checks share (check.ts)", () => {
       }
     },
   );
+
+  test("explorerClosed with no status line (zen) leaves a closed explorer as it is", async () => {
+    const { s, presses } = await explorer("closed", true);
+    try {
+      await explorerClosed(s);
+      await Bun.sleep(LAG + 200);
+      expect(presses()).toBe(0);
+      expect(s.rowOf(/Explorer/)).toBe(-1);
+    } finally {
+      s.cleanup();
+    }
+  });
 });

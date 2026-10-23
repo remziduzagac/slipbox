@@ -6,6 +6,7 @@ import { GIT_DIFF } from "./git-diff.ts";
 import { LEFT_OUT_LINKS_AND_FILES, LINKS_AND_FILES } from "./links-and-files.ts";
 import { LEFT_OUT_NAVIGATING, NAVIGATING } from "./navigating.ts";
 import { LEFT_OUT_OUTSIDE_AND_CODE, OUTSIDE_AND_CODE } from "./outside-and-code.ts";
+import { PANELS } from "./panels.ts";
 import { LEFT_OUT_READING, READING } from "./reading.ts";
 import { SOURCE_CONTROL } from "./source-control.ts";
 import { VAULTS } from "./vaults.ts";
@@ -24,6 +25,9 @@ export const CHECK_FILES: Record<string, Check[]> = {
   // The diff window's later edges (a block by its lines, enter on a line before, what no line shows): source
   // control's too, in a file of their own, source-control.ts being near the size limit.
   "git-diff": GIT_DIFF,
+  // The panels as the checks' shared helpers drive them (#18): the which-key popup, the explorer, the outline, the git
+  // panel; in the navigating area, navigating.ts being past the size limit.
+  panels: PANELS,
 };
 
 export const CHECKS: Check[] = Object.values(CHECK_FILES).flat();

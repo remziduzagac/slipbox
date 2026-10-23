@@ -181,7 +181,7 @@ const MODES = new Set(
  * operator's, a prompt over the line.
  */
 export function modeOf(statusLine: string): string | null {
-  const chip = /^ (\S+) /.exec(statusLine)?.[1];
+  const chip = /^ (\S+)(?: |$)/.exec(statusLine)?.[1];
   return chip && MODES.has(chip) ? chip : null;
 }
 
@@ -197,8 +197,9 @@ export const mode = (s: Session) => modeOf(s.statusLine());
 export const EXPLORER = /Explorer {2,}(?:\S{1,2} +)*[│┃|]/;
 
 /**
- * The outline's own title, after the right panel's border: spaces after it, or the row's end when no rail is right of
- * it. Not the which-key popup's "Outline: open, focus, close", nor a note's line that starts "Outline".
+ * The outline's own title, after the right panel's border: then the panel's blank, to the right rail or the screen's
+ * edge, or nothing drawn at all. Not the which-key popup's "Outline: open, focus, close", nor a note's line that starts
+ * "Outline".
  */
 export const OUTLINE = /[│┃|] Outline(?: {2,}|$)/;
 
@@ -220,12 +221,13 @@ export async function panelFocused(s: Session, key: string, panelMode: string, t
 export const explorerOpen = (s: Session) => panelFocused(s, "e", "FILES", EXPLORER);
 
 /**
- * The explorer closed: focused first (`explorerOpen`), then space e once, its title gone and a mode other than FILES
- * on the status line waited for — each press seen taking effect before the next, never on the which-key popup. Called
- * as `panelFocused` is, with nothing else taking the keys.
+ * The explorer closed: focused first (`explorerOpen`), then space e once, its title gone and the status line off FILES
+ * waited for — each press seen taking effect before the next, never on the which-key popup, under which the title
+ * still shows. Called as `panelFocused` is, with nothing else taking the keys; with no status line (zen), a closed
+ * explorer is left as it is.
  */
 export async function explorerClosed(s: Session): Promise<void> {
-  const closed = () => s.rowOf(EXPLORER) < 0 && mode(s) !== null && mode(s) !== "FILES";
+  const closed = () => s.rowOf(EXPLORER) < 0 && mode(s) !== "FILES";
   if (closed()) return;
   await explorerOpen(s);
   await leader(s, "e");

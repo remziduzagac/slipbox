@@ -34,6 +34,8 @@ and the status line's mode waited for together. Never pressed again on a screen 
   status line. It fails with the old helper (checked by undoing the fix once).
 - The checks that use it (`explorerOpen`'s, the outline's) pass: `SLIPBOX_TERMINAL_JOBS=2 bun run test:terminal …`.
 - `explorerClosed`, beside it, read for the same mistake.
+- Every case fixed, the reviews' included, has a terminal check driving slipbox through it too
+  (`tests/terminal/checks/panels.ts`).
 
 ## Out of scope
 
@@ -162,4 +164,46 @@ and the status line's mode waited for together. Never pressed again on a screen 
     to this one.
   - Rejected, as before: `Session.keys` and the stale screen; the title and border logic written five times.
 - 2026-10-23: After round 2: the tests of what the checks share, 9 pass; the 59 terminal checks pass, 165 s.
+- 2026-10-23: Round 3, two independent reviews of the new diff: one found nothing; the other nine findings, checked:
+  - Taken: `explorerClosed` wanted a mode on the chip to call the explorer closed, so with no status line (zen) it
+    opened a closed explorer, then waited for FILES forever. The mode adds nothing against the popup — under it the
+    explorer's title still shows — so closed is the title gone and the status line off FILES.
+  - Taken: `modeOf` wanted a space after the chip; a status line of the chip alone, nothing drawn after it, is a mode
+    too.
+  - Rejected, as in round 1: "the old helper pressed again when nothing changed" — it didn't.
+  - Rejected: `leader()` waiting for the chip to come back after every press: a leader sequence that opens a prompt
+    keeps the chip away, and every check's leader keys would change.
+  - Rejected: the fake's `sleep 0.4`, fractional, not POSIX: the `sleep` of every system the tests run on (Linux's,
+    macOS's) takes it.
+  - Rejected, as before: a left panel on git taken for the explorer closed; herdr's check; the title and border logic
+    written five times; `Session.keys` and the stale screen; the six cases' time. The second reading of the screen in
+    `closed()` went with the first fix.
+- 2026-10-23: A check failed outside this change: `links: in Elsewhere every link asks` found slipbox started in
+  `/tmp` as its root, with a note there that isn't the repository's (`/tmp/blueprint-framework-example.md`), on its
+  first wait, before any helper ran. Alone, under `nice`, at a load under 10: passed.
+- 2026-10-23: Every case with a terminal check too, as the maintainer asked: `tests/terminal/checks/panels.ts`, seven
+  checks driving slipbox through the helpers, each press of a panel's key counted from the trace (`explorer.cycle`,
+  `outline.cycle`, `git.view`):
+  - the leader's popup names the explorer and the outline (`Explorer: open, focus, close`), the titles' patterns find
+    the explorer's own row and no outline, and the chip is ` ␣ `, no mode (the first live try's case);
+  - `explorerOpen` and `explorerClosed` from every start — open, focused, closed, open again — 1, 0, 1, 0, 1 and 2
+    presses;
+  - the outline by `panelFocused`, one press, with no right rail, its title then blank to the screen's edge;
+  - a tab, a heading, the explorer's own row and a note's line saying "Explorer" or "Outline" in passing
+    (`notes/reading/Explorer of the North.md`, added to the reference set with its `CASES.md` entry, TT-D5), never
+    the titles: the explorer closed in two presses, then none; the note's line `│ Outline of the book` drawn past the
+    explorer's border with line numbers off, not the outline's title;
+  - ASCII: the title's border `|`, the leader pending as ` SPC `, no mode; the helpers one press a step;
+  - zen: no status line, `explorerClosed` presses nothing;
+  - the git panel's `toPanel`: one press, none once focused.
+  All seven pass. With the code each review changed put back: round 0's titles fail the in-passing check (a tab taken
+  for the explorer's title; the note's line for the outline's), round 1's `mode()` fails ASCII's, round 2's `closed()`
+  fails zen's.
+- 2026-10-23: The outline check found round 1's premise wrong: the screen's rows aren't read with their trailing spaces
+  gone where slipbox draws blanks, and a panel's are drawn; the outline's title with no rail is followed by its blank
+  to the edge, which `OUTLINE`'s spaces take. Its "nothing after it" branch stays, for a row nothing is drawn past.
+  Comments corrected.
+- 2026-10-23: After round 3: the unit tests of what the checks share and the coverage's, 33 pass; `home.test.ts` and
+  the new note's rendering pass; the 59 terminal checks that use the helpers pass (one, the `/tmp` failure above, run
+  again alone); the seven of `panels.ts` pass, 23 s.
 - 2026-10-23: The typecheck, the lint and `check:docs` pass. Done; the pull request's merge is the acceptance.
