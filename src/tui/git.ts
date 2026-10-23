@@ -452,9 +452,12 @@ export class Git {
     });
   }
 
-  /** A checkout done — the switch handled as one event (5.9) — or git's refusal said. */
+  /**
+   * A checkout done — the switch handled as one event (5.9) — or git's refusal said. Refused or not, HEAD may have
+   * moved (a hook refusing once it's switched, a checkout stopped partway): read again, and the files with it.
+   */
   private checkedOut(why: GitDone): void {
-    if (why) return this.app.message("warn", `git: ${why}`);
+    if (why) this.app.message("warn", `git: ${why}`);
     this.checkHead();
     void this.refreshNow().then(() => this.app.host.requestRender());
   }

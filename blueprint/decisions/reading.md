@@ -733,3 +733,23 @@ without silently substituting a different base palette.
 
 **Not chosen:** keeping the customized palette under the upstream Night name, or applying Night's custom accent
 colours to Moon and Storm.
+
+## D263: A message asks for its own frame (2026-10-23)
+
+**Decision:** `App.message` asks the host for a frame each time something is said, so a message is drawn as it's said
+wherever it comes from: a key's command, or an answer in the background (git, a helper, a thread). One said while a
+frame is painted (`App.whileDrawing`, around the host's whole paint) asks for none, and shows on the next. Agreed with
+the maintainer while fixing #17.
+
+**Why:** A message said in the background, once git had answered, asked for no frame, so it showed only when something
+else drew: the next key, another answer, or the message before it going away. #17 named three such paths in the branch
+view, a fourth was found beside them, its reviews two more (the status line's switch, a branch file's diff), and each
+one fixed by hand left the next one to be found. Asking in one place closes them all. OpenTUI draws one frame for any
+number of requests made before it, so a key that says three things still draws once.
+
+**Cost:** Every message asks for a frame, even one a key's own frame would have drawn; one more request, coalesced.
+A list opened in the background still asks for its own (Remove…'s question, Merge…'s menu, Compare against…).
+
+**Not chosen:** a frame asked for at each place that says something in the background (`BranchView.answered`, as the
+issue proposed), which leaves every new path to remember it; a frame after a message said inside a frame, which could
+keep drawing if something were said on every frame.

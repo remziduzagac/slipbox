@@ -357,22 +357,33 @@ export function makeBranch(root: string, name: string, from: string): Done {
 /** How long a checkout may take (a switch, a worktree made or removed): a big tree, or LFS's filters, take a while. */
 export const CHECKOUT_MS = 10 * 60_000;
 
-/** A failure `failureOf` says is git stopped partway (too long, or too much printed): what it did may be half done. */
-const stoppedPartway = (why: string) => why.endsWith("and was stopped");
+/** What a checkout git ran did: null when it went, else why; and whether git was stopped partway (too long, too much
+ *  printed), what it did then maybe half done. */
+export interface Checked {
+  why: Done;
+  stopped: boolean;
+}
 
 /**
  * A command that checks files out or deletes them, in the background: null when it went, else why — git's words, or,
- * stopped after `CHECKOUT_MS`, that it was and what it may have left (`left`).
+ * stopped after `CHECKOUT_MS` (or printing more than slipbox reads), that it was and what it may have left (`left`).
  */
-export function checkoutLater(root: string, args: string[], left: string, ms = CHECKOUT_MS): Promise<Done> {
+export function checkedOutLater(root: string, args: string[], left: string, ms = CHECKOUT_MS): Promise<Checked> {
   return new Promise((done) => {
     // git's words in English, as the remote's commands have them (`failureOf`).
     execFile("git", gitArgs(root, args), { ...OPTS, timeout: ms, env: inEnglish(process.env) }, (err, out, stderr) => {
-      if (!err) return done(null);
+      if (!err) return done({ why: null, stopped: false });
+      const e = err as { code?: unknown; killed?: boolean };
+      const stopped = !!e.killed || e.code === "ERR_CHILD_PROCESS_STDIO_MAXBUFFER";
       const said = failureOf(err, stderr, out);
-      done(stoppedPartway(said) ? `${said}: ${left}` : said);
+      done({ why: stopped ? `${said}: ${left}` : said, stopped });
     });
   });
+}
+
+/** `checkedOutLater`'s why alone. */
+export function checkoutLater(root: string, args: string[], left: string, ms = CHECKOUT_MS): Promise<Done> {
+  return checkedOutLater(root, args, left, ms).then((r) => r.why);
 }
 
 /** Another branch checked out in `root` (26.5), in the background; git's own refusal — a change it would overwrite — said. */
@@ -388,24 +399,33 @@ export function addWorktreeLater(root: string, folder: string, branch: string): 
   return checkoutLater(root, ["worktree", "add", "--", folder, branch], halfMade(folder));
 }
 
+/** What making a new branch in a new worktree did: git's refusal, if it refused, and whether the branch it made is left. */
+export interface NewWorktree {
+  why: Done;
+  /** Refused, the branch this made is still there: stopped partway, or a hook refusing once it was checked out. */
+  left: boolean;
+}
+
 /**
  * A new branch made at `from` in a new worktree in `folder`, not tracking anything, in the background — or, when git
  * refuses the worktree (a folder that's taken), no branch: git makes the branch before it looks at the folder, so one
- * it made is deleted again.
+ * it made is deleted again. Unless it can't be: stopped partway, its worktree may be there, and the branch stays with
+ * it; a hook refusing once it's checked out leaves the worktree, which git won't delete the branch of. A branch that
+ * was there before is never one this made.
  */
-export async function newWorktreeLater(root: string, folder: string, name: string, from: string): Promise<Done> {
+export async function newWorktreeLater(root: string, folder: string, name: string, from: string): Promise<NewWorktree> {
   const bad = badBranchName(root, name);
-  if (bad) return bad;
+  if (bad) return { why: bad, left: false };
   const had = () => gitNow(root, ["rev-parse", "--verify", "--quiet", "--end-of-options", `refs/heads/${name}`]).ok;
   const before = had();
-  const r = await checkoutLater(
+  const { why, stopped } = await checkedOutLater(
     root,
     ["worktree", "add", "--no-track", "-b", name, "--", folder, from],
     halfMade(folder),
   );
-  // Stopped partway, its worktree may be there: the branch stays with it.
-  if (r && !before && !stoppedPartway(r) && had()) gitNow(root, ["branch", "-D", "--", name]);
-  return r;
+  if (!why || before || !had()) return { why, left: false };
+  if (stopped) return { why, left: true };
+  return { why, left: !gitNow(root, ["branch", "-D", "--", name]).ok };
 }
 
 /**

@@ -30,6 +30,7 @@ import {
   branchesLater,
   CHECKOUT_MS,
   changedLater,
+  checkedOutLater,
   checkoutLater,
   folderSafe,
   ignoredLater,
@@ -43,6 +44,7 @@ import {
 } from "../src/core/gitbranches.ts";
 import { baseBranch, refName, worktreeList } from "../src/core/gitops.ts";
 import { refusedName } from "../src/core/gitremote.ts";
+import { setTrust } from "../src/core/trust.ts";
 
 /** git in `repo`, as a test runs it: its own name and no system config. */
 function git(repo: string, ...args: string[]): string {
@@ -461,12 +463,56 @@ describe("worktrees made and removed (GIT-D9)", () => {
     const taken = join(dir, "taken");
     mkdirSync(taken);
     writeFileSync(join(taken, "x"), "x");
-    expect(await newWorktreeLater(root, taken, "nb", "main")).toMatch(/already exists/);
+    const refused = await newWorktreeLater(root, taken, "nb", "main");
+    expect(refused.why).toMatch(/already exists/);
+    expect(refused.left).toBe(false);
     expect(git(root, "branch", "--list", "nb")).toBe("");
-    expect(await newWorktreeLater(root, join(dir, "free"), "nb", "main")).toBeNull();
+    expect(await newWorktreeLater(root, join(dir, "free"), "nb", "main")).toEqual({ why: null, left: false });
     expect(git(join(dir, "free"), "branch", "--show-current")).toBe("nb\n");
     // Made from a branch, it doesn't track it.
     expect(spawnSync("git", ["-C", root, "config", "branch.nb.merge"]).status).not.toBe(0);
+  });
+
+  test("git stopped partway, as checkoutLater says it — what it may have left after it — is stopped, whatever git's words are", async () => {
+    const { root } = repo();
+    // git waiting for what it's never sent: stopped when its time is up.
+    const stopped = await checkedOutLater(root, ["hash-object", "--stdin"], "the checkout may be half done", 100);
+    expect(stopped).toEqual({
+      why: "git took too long, and was stopped: the checkout may be half done",
+      stopped: true,
+    });
+    // git's own refusal, its words quoting what says so: refused, not stopped.
+    const refused = await checkedOutLater(root, ["rev-parse", "--verify", "and was stopped: x"], "half done");
+    expect(refused.stopped).toBe(false);
+    expect(refused.why).not.toBeNull();
+  });
+
+  test("a name there is already: refused, that branch left as it was; a hook refusing once it's checked out: the branch it made left", async () => {
+    const { dir, root } = repo();
+    git(root, "branch", "nb");
+    const tip = git(root, "rev-parse", "nb");
+    const there = await newWorktreeLater(root, join(dir, "a"), "nb", "main");
+    expect(there.why).toMatch(/already exists/);
+    expect(there.left).toBe(false);
+    expect(git(root, "rev-parse", "nb")).toBe(tip);
+    // A hook runs only where the root is trusted (gitArgs): its trust this test's own state.
+    const state = process.env.XDG_STATE_HOME;
+    process.env.XDG_STATE_HOME = join(dir, "state");
+    try {
+      setTrust(root, "trusted");
+      // The repository's own hooks, whatever a global `core.hooksPath` says (a hook manager's).
+      git(root, "config", "core.hooksPath", join(root, ".git", "hooks"));
+      writeFileSync(join(root, ".git", "hooks", "post-checkout"), "#!/bin/sh\nexit 1\n", { mode: 0o755 });
+      const hooked = await newWorktreeLater(root, join(dir, "b"), "hooked", "main");
+      expect(hooked.why).not.toBeNull();
+      // Checked out in its worktree: `git branch -D` won't delete it.
+      expect(hooked.left).toBe(true);
+      expect(git(root, "branch", "--list", "hooked")).toBe("+ hooked\n");
+    } finally {
+      setTrust(root, null);
+      if (state === undefined) delete process.env.XDG_STATE_HOME;
+      else process.env.XDG_STATE_HOME = state;
+    }
   });
 
   test("a git before 2.36 refuses worktree list -z: the list read as lines instead, -z asked of it once", async () => {

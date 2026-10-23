@@ -53,6 +53,18 @@ The format is [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.1.0/); wh
 - In your home folder, a folder slipbox couldn't read when it walked home has its notes found once it can be read, at
   the next command or start. They used to wait for home's next walk. A home walked by an earlier version gets this once
   it's walked again, as above.
+- A message said once git answers in the background shows at once: git refusing to make or remove a worktree, open a
+  branch in one or switch branches, from the git panel's Branches or the status line, and a branch file too big for a
+  diff. 0.5.0 showed it only once something else was drawn, such as the next key or the message before it going away.
+- In the git panel's Branches, what git did before it refused shows at once: a worktree removed while its branch was
+  kept, a new branch made but not checked out, or one whose new worktree was stopped or refused by a hook, which now
+  keeps its base too. A new branch is selected once it's listed, its section unfolded to it, so `o` goes into its
+  worktree when it has one; not if you've moved the selection meanwhile, or the filter hides it.
+- Remove…'s question and Merge…'s menu no longer open over what you turned to while git was answering — another
+  question, a note or the commit's message being typed in, a filter, a key sequence — where your next key would have
+  answered them; slipbox says so instead, to ask again. An answer that comes after you've gone into another vault no
+  longer takes you into a new worktree or selects anything there, and a branch file's diff you've moved past no longer
+  says anything.
 
 ## [0.5.0] - 2026-10-22
 

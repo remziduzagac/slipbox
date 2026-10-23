@@ -17101,6 +17101,49 @@ describe("what keymap.md and tui.md promise (review: docs against the tests)", (
     expect(h.app.toasts.map((t) => t.text)).toEqual(["then gone"]);
   });
 
+  test("a message asks for its frame as it's said, wherever from; one said while a frame is drawn asks for none, the next one does", async () => {
+    const h = await harness({ width: 80, height: 24 });
+    // The frames asked for by a message itself, not by whatever else is going on.
+    let saying = false;
+    let frames = 0;
+    h.app.host.requestRender = () => void (saying && frames++);
+    const say = h.app.message.bind(h.app);
+    h.app.message = (...m: Parameters<typeof h.app.message>) => {
+      saying = true;
+      try {
+        say(...m);
+      } finally {
+        saying = false;
+      }
+    };
+    h.app.message("info", "said in the background");
+    expect(frames).toBe(1);
+    // A frame that fails says so while it's drawn: it asks for no other frame from inside one.
+    const canvas = new TextCanvas(80, 24);
+    let broken = true;
+    for (const k of ["cell", "ascii"] as const) {
+      const real = canvas[k].bind(canvas) as (...a: unknown[]) => void;
+      (canvas as unknown as Record<string, (...a: unknown[]) => void>)[k] = (...a) => {
+        if (broken) {
+          broken = false;
+          throw new Error("a broken cell");
+        }
+        real(...a);
+      };
+    }
+    frames = 0;
+    h.app.draw(canvas);
+    expect(h.app.messages.at(-1)?.text).toBe("drawing failed: a broken cell");
+    expect(frames).toBe(0);
+    // The frame over, a message asks for one again.
+    h.app.message("info", "said after it");
+    expect(frames).toBe(1);
+    // Said anywhere a frame is painted (the host paints around App.draw too): none.
+    frames = 0;
+    h.app.whileDrawing(() => h.app.message("info", "said while painting"));
+    expect(frames).toBe(0);
+  });
+
   test("selection keys: shift+ctrl+end / home to the note's ends, shift+ctrl+down by paragraph, shift+pagedown by page", async () => {
     const root = makeVault();
     writeFileSync(join(root, "long.md"), Array.from({ length: 60 }, (_, i) => `Line ${i + 1}.`).join("\n\n") + "\n");

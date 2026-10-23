@@ -56,6 +56,10 @@ export class Vaults {
    *  had open by name (VV-D2), when it had one. */
   trail: { root: string; path: string; anchor: Anchor; cursor: CursorAnchor; folder?: string }[] = [];
 
+  /** Counted each time a vault is gone into: an answer that comes later, from git, knows whether it's still where it
+   *  was asked (`BranchView.still`), the same vault never left — gone into again, it's another visit. */
+  visits = 0;
+
   /**
    * What's asked for, entering the vault open (VV-D2) — the one way in, from the start or a switch, a folder revealed
    * alike: a folder of home, by name (`folder`) or a file's (`open`; both absolute), its notes there at once
@@ -237,6 +241,7 @@ export class Vaults {
     const unfolded = [...this.app.explorer.expanded].map((k) => this.app.explorer.rowAbs({ path: k }));
     // Enter.
     this.app.loc = target;
+    this.visits++;
     this.app.feed.reset();
     const { carriedFrom } = recordLocation(target);
     this.app.settings.lastGood.clear();

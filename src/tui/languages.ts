@@ -59,8 +59,8 @@ export class Languages {
       const version = buf.version;
       if (Buffer.byteLength(buf.source) > SYNTAX_SOURCE_LIMIT) {
         this.syntaxFailed.set(buf, { version, transient: false });
+        // Said after the frame that asked: drawn now, as a message is (D263), not at the next key.
         this.app.message("warn", "code structure unavailable: source exceeds parsing budget");
-        this.app.host.requestRender(); // said after the frame that asked: drawn now, not at the next key
         return;
       }
       const abort = new AbortController();
