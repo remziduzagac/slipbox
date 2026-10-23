@@ -108,3 +108,6 @@ link being typed, matched or not, so the keys that match nothing cost the same h
     of its own.
   - The other loops that read the named folders once per link: out of scope, above.
 - 2026-10-23: Done, in a pull request into `dev`; its merge is the maintainer's acceptance.
+- 2026-10-23: A last review of the pull request: no correctness bug. Taken: the design said the list is kept until
+  the target ends, but closing it (`ctrl+e`), accepting or `ctrl+n` drops it, and the next key in the target builds it
+  again; `design/tui.md` says so now.
