@@ -78,13 +78,12 @@ watcher's event, `app.watch.whenIndexed`, `app.views.whenParsed`, `app.search.wh
 timeout, which is a backstop for a stuck test and not a measure. Where a test guards against work done in the wrong
 place, it counts that work: the background index's test (`15.1`) checks that the main thread parsed none of a big
 note's chunks, not how long its slices took. Where it guards that the main thread keeps its turns while another thread
-works, it holds that thread at a point it controls and counts the turns taken meanwhile: the spell checker's thread
-reads a dictionary from a named pipe the test writes into only once the main thread has answered its keys (T18). A
-gap between turns, against how long the work took, measures the runner and the test process as much as slipbox: on
-CI's runners the main thread went without a turn for most of a load built on the other thread. A test about a time
-itself, a timeout that must stop something, bounds it
-with a wide margin (stopped at 0.2 s, checked under 3 s). Timings are the benchmark's (§ Timings), read and not
-asserted.
+works, it holds that thread at a point it controls and counts the turns taken meanwhile, since a gap between turns,
+against how long the work took, measures the runner and the test process as much as slipbox: the spell checker's thread
+reads a dictionary from a named pipe the test writes into once the main thread has answered its keys. What lets a held
+main thread go, so that it fails rather than hangs, is bounded inside the test's timeout and past any passing run. A
+test about a time itself, a timeout that must stop something, bounds it with a wide margin (stopped at 0.2 s, checked
+under 3 s). Timings are the benchmark's (§ Timings), read and not asserted.
 
 **Nothing a test file leaves behind changes another's results.** `bun test` runs every file in one process, so what
 loads lazily (`16.6`), Mermaid or MathJax, is loaded by whichever file asked first. A file whose output depends on one
