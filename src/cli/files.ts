@@ -375,7 +375,7 @@ export async function renameResult(
       move: p.move,
       ...(left ? { notIndexed: left } : {}),
       files: p.files.map((f) => ({ path: f.shown, abs: f.abs, ...s.rootOf(f.abs), edits: f.edits })),
-      warnings: p.warnings,
+      warnings: [...p.warnings, ...(applied?.warnings ?? [])],
       skipped: p.skipped,
       ...(p.ambiguous ? { ambiguous: p.ambiguous } : {}),
       written: applied?.written ?? [],

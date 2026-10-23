@@ -30,13 +30,20 @@ export const notRewritten = (g: Graph, abs: string): string => `${whereItLeads(g
  */
 export function landsHidden(g: Graph, abs: string): boolean {
   const real = realTarget(abs);
-  const named = isInside(g.root, abs) ? g.root : vaultOf(abs);
-  if (named && join(realTarget(named), relative(named, abs)) === real) return false;
+  if (asNamed(g.root, abs, real)) return false;
+  // Past a link, the place it's named in by its path: a vault reached through one has its own config.toml.
+  const named = vaultOf(abs);
+  if (named && asNamed(named, abs, real)) return false;
   const place = vaultOf(real);
   if (!place) return false;
   const there = relative(realTarget(place), real);
   if (!there.split(sep).some((part) => part.startsWith("."))) return false;
   return !(realTarget(place) === realTarget(g.root) && g.reached.has(there.split(sep).join("/")));
+}
+
+/** Whether `abs`, under `root`, lands where it's named, `real` its real path: no link on the way past `root`. */
+function asNamed(root: string, abs: string, real: string, rootReal = realTarget(root)): boolean {
+  return isInside(root, abs) && join(rootReal, relative(root, abs)) === real;
 }
 
 /**
@@ -73,6 +80,8 @@ export interface FileChange {
   /** The text as planned from, and as it will be. */
   text: string;
   next: string;
+  /** Other names the file has here, in its folder, that edited it alike (D?1): written once, indexed again each. */
+  also?: string[];
 }
 
 export interface RenamePlan {
@@ -124,12 +133,15 @@ export class Collector {
   private readonly why = new Map<string, string>();
   /** The vault's indexed names, by the real path of what each is: made once, when a link is met (D?1). */
   private names: Map<string, string[]> | null = null;
+  /** The vault's root, by its real path: read once. */
+  private rootReal: string | null = null;
 
   constructor(readonly g: Graph) {}
 
   /** Whether a link on the way, past the vault's root, leads `abs` elsewhere. */
   private throughLink(abs: string): boolean {
-    return isInside(this.g.root, abs) && join(realTarget(this.g.root), relative(this.g.root, abs)) !== realTarget(abs);
+    this.rootReal ??= realTarget(this.g.root);
+    return isInside(this.g.root, abs) && !asNamed(this.g.root, abs, realTarget(abs), this.rootReal);
   }
 
   /** The other names the vault's index has for what a link leads `abs` to (D?1), vault paths; none without one. */
@@ -244,7 +256,7 @@ export class Collector {
     const out: FileChange[] = [];
     for (const [first, ...rest] of byReal.values()) {
       if (rest.every((f) => f.next === first!.next)) {
-        out.push(first!);
+        out.push(rest.length ? { ...first!, also: rest.map((f) => f.abs) } : first!);
         continue;
       }
       for (const f of [first!, ...rest]) {

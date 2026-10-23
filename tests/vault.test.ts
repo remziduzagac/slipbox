@@ -46,7 +46,7 @@ import {
   setRootMarkers,
   vaultOf,
 } from "../src/core/vault.ts";
-import { cacheDir, vaultKey } from "../src/core/paths.ts";
+import { cacheDir, stateDir, vaultKey } from "../src/core/paths.ts";
 import { readRoots } from "../src/core/registry.ts";
 import {
   agentsWarning,
@@ -8094,6 +8094,18 @@ describe("plans write only inside the vault (VV-D6)", () => {
       expect(readFileSync(join(vault, "shelf", "t.md"), "utf8")).toBe("# T\n\n[a](../../a.md)\n");
       expect((await cli(["undo"], vault)).code).toBe(0);
       expect(readFileSync(join(vault, "shelf", "t.md"), "utf8")).toBe("# T\n\n[a](../a.md)\n");
+      // Written once, through one name: the other's links indexed again too, as an undo's.
+      const g = openGraph(locateVault({ root: vault }), loadConfig({ vaultRoot: vault }).config, false);
+      const { planNoteRename } = await import("../src/core/rename.ts");
+      applyPlan(g, planNoteRename(g, "a.md", "b.md"));
+      const from = (rel: string) =>
+        g
+          .backlinks(rel)
+          .map((b) => b.from)
+          .sort();
+      expect(from("b.md")).toEqual(["box/e3.md", "box/e4.md"]);
+      applyPlan(g, planUndo(g));
+      expect(from("a.md")).toEqual(["box/e3.md", "box/e4.md", "e1.md"]);
       // Two names in one folder edited otherwise each: neither is written, both said.
       const { Collector } = await import("../src/core/rename-plan.ts");
       const c = new Collector(openGraph(locateVault({ root: vault }), loadConfig({ vaultRoot: vault }).config, false));
@@ -8208,6 +8220,80 @@ describe("plans write only inside the vault (VV-D6)", () => {
       }
       expect(readFileSync(join(home, "c.md"), "utf8")).toBe("# C\n\n[a](a.md)\n");
       expect([existsSync(join(home, "a.md")), existsSync(join(home, "new2"))]).toEqual([true, false]);
+      // Planned, then its folder made one that can be written but not searched: refused as it's carried out.
+      mkdirSync(join(home, "src"));
+      writeFileSync(join(home, "src", "s.md"), "# S\n");
+      writeFileSync(join(home, "ref.md"), "# Ref\n\n[s](src/s.md)\n");
+      const { planNoteRename } = await import("../src/core/rename.ts");
+      const plan = planNoteRename(openGraph(locateVault({ root: home }), DEFAULT_CONFIG, false), "src/s.md", "s.md");
+      chmodSync(join(home, "src"), 0o600);
+      try {
+        expect(() => applyPlan(openGraph(locateVault({ root: home }), DEFAULT_CONFIG, false), plan)).toThrow(
+          "src/s.md can't be moved (EACCES); nothing changed",
+        );
+      } finally {
+        chmodSync(join(home, "src"), 0o755);
+      }
+      expect(readFileSync(join(home, "ref.md"), "utf8")).toBe("# Ref\n\n[s](src/s.md)\n");
+    }),
+  );
+
+  test(
+    "a followed link moved where its answer can't be kept: said, in the CLI's data too, and nothing read through it at its new name",
+    homed(async () => {
+      const { vault, outer, link } = await linked();
+      writeFileSync(join(vault, "b.md"), "# B\n\n[s](outdir/s.md)\n");
+      const shared = join(process.env.XDG_STATE_HOME!, "slipbox");
+      const g = openGraph(locateVault({ root: vault }), DEFAULT_CONFIG, false);
+      mkdirSync(stateDir(g.loc), { recursive: true }); // the vault's own, there from its first use: its log written
+      const { planFolderMove } = await import("../src/core/rename.ts");
+      const plan = planFolderMove(g, "outdir", "outlink");
+      chmodSync(shared, 0o500);
+      try {
+        expect(applyPlan(g, plan).warnings).toEqual([
+          expect.stringContaining("the link moved, but its answer couldn't be kept for its new place (EACCES)"),
+        ]);
+      } finally {
+        chmodSync(shared, 0o755);
+      }
+      expect(lstatSync(join(vault, "outlink")).isSymbolicLink()).toBe(true);
+      expect([...g.notes.keys()].filter((r) => r.startsWith("outlink/"))).toEqual([]);
+      expect(g.dirs.filter((d) => d === "outlink" || d.startsWith("outlink/"))).toEqual([]);
+      expect(g.skipped.some((x) => x.rel === "outlink")).toBe(true); // a link of its own, not followed
+      expect(linkAnswer(link, outer)).toBe("follow"); // where it was
+      // Not followed at its new name, it isn't the index's to move: undone, it's back where its answer is, followed.
+      expect((await cli(["undo"], vault)).code).toBe(0);
+      expect(linkAnswer(link)).toBe("follow");
+      // The command line's JSON says it in its data, as the plan's own warnings.
+      chmodSync(shared, 0o500);
+      try {
+        const r = await cli(["mv", "outdir", "outlink"], vault);
+        expect(r.code).toBe(0);
+        expect(r.json.data.warnings).toEqual([
+          expect.stringContaining("its answer couldn't be kept for its new place"),
+        ]);
+      } finally {
+        chmodSync(shared, 0o755);
+      }
+    }),
+  );
+
+  test(
+    "a vault reached through a followed link is named as before: its own config.toml written, not taken for a hidden folder",
+    homed(async (home) => {
+      const top = realpathSync(mkdtempSync(join(tmpdir(), "slipbox-inside-")));
+      mkdirSync(join(top, "proj", ".slipbox"), { recursive: true });
+      writeFileSync(join(top, "proj", ".slipbox", "config.toml"), '[vault]\nname = "proj"\n');
+      writeFileSync(join(top, "proj", "n.md"), "# N\n");
+      writeFileSync(join(home, "h.md"), "# H\n");
+      symlinkSync(join(top, "proj"), join(home, "work"));
+      setLinkAnswer(join(home, "work"), "follow");
+      await probe(join(top, "proj"));
+      const { planVaultRename } = await import("../src/core/rename.ts");
+      const g = openGraph(locateVault({ root: home }), DEFAULT_CONFIG, false);
+      applyPlan(g, planVaultRename(rootAt(join(home, "work")), "proj2"));
+      expect(readFileSync(join(top, "proj", ".slipbox", "config.toml"), "utf8")).toContain('name = "proj2"');
+      expect(lstatSync(join(top, "proj", ".slipbox", "config.toml")).isFile()).toBe(true);
     }),
   );
 
@@ -12412,6 +12498,7 @@ describe("the symlinks you've answered: listed, and forgotten (VV-D6)", () => {
 
   test("a link moved as a link: a relative one leads where it did, from its own text; its answer goes with it, and only its", () => {
     const state = process.env.XDG_STATE_HOME;
+    const answers = () => JSON.parse(readFileSync(linksFile(), "utf8")).links as { link: string }[];
     process.env.XDG_STATE_HOME = realpathSync(mkdtempSync(join(tmpdir(), "slipbox-state-")));
     try {
       const top = realpathSync(mkdtempSync(join(tmpdir(), "slipbox-move-link-")));
@@ -12438,13 +12525,21 @@ describe("the symlinks you've answered: listed, and forgotten (VV-D6)", () => {
       expect(readlinkSync(join(w, "a"))).toBe("b");
       moveLink(join(w, "lnk"), join(w, "sub", "lnk"));
       expect(readlinkSync(join(w, "sub", "lnk"))).toBe(join(top, "deep", "inner"));
-      // Moved where an answer was kept for another link once, it has none: the one it had.
+      // Moved, without an answer, where one was kept once: one for where it leads holds (an answer is a place and where
+      // it leads, as a link made there by hand would find it); one for elsewhere goes.
       symlinkSync("../../far", join(w, "sub", "d"));
       setLinkAnswer(join(w, "sub", "d"), "follow");
       rmSync(join(w, "sub", "d"));
       symlinkSync("../far", join(w, "d"));
       moveLink(join(w, "d"), join(w, "sub", "d"));
-      expect(linkAnswer(join(w, "sub", "d"))).toBeNull();
+      expect(linkAnswer(join(w, "sub", "d"))).toBe("follow");
+      symlinkSync(join(top, "deep"), join(w, "sub", "f"));
+      setLinkAnswer(join(w, "sub", "f"), "follow");
+      rmSync(join(w, "sub", "f"));
+      symlinkSync("../far", join(w, "f"));
+      moveLink(join(w, "f"), join(w, "sub", "f"));
+      expect(linkAnswer(join(w, "sub", "f"))).toBeNull();
+      expect(answers().filter((e) => e.link === join(w, "sub", "f"))).toEqual([]);
       // Where it can't be made, nothing has changed.
       writeFileSync(join(w, "sub", "taken"), "x");
       symlinkSync("../far", join(w, "taken"));
@@ -12472,7 +12567,9 @@ describe("the symlinks you've answered: listed, and forgotten (VV-D6)", () => {
         chmodSync(stateDir, 0o755);
       }
       expect(readlinkSync(join(w, "sub", "e"))).toBe(join("..", "..", "far"));
+      // Its answer stayed where it was: moved back there (an undo), the link is followed again.
       expect(moveLink(join(w, "sub", "e"), join(w, "e"))).toBeNull();
+      expect(linkAnswer(join(w, "e"))).toBe("follow");
     } finally {
       process.env.XDG_STATE_HOME = state;
     }

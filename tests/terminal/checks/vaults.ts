@@ -81,7 +81,7 @@ function rowEnd(s: Session, name: string): { describe: string; mark: string } | 
 }
 
 /** The index's mark at the end of the explorer's row named `name`. */
-const markOf = (s: Session, name: string) => rowEnd(s, name)?.mark ?? null;
+export const markOf = (s: Session, name: string) => rowEnd(s, name)?.mark ?? null;
 
 /** A tab in the tab strip: its number, its file's name, its close button. */
 const tab = (n: number | string, name: string) => new RegExp(` ${n} ${escaped(name)}\\s+×`);
@@ -1000,6 +1000,8 @@ const LINKED: Check[] = [
       ]) {
         await leader(s, "v", "shift+u");
         await s.see(`undo: ${from}/ → ${to}/`);
+        // The relative one written again as it moves back, and said.
+        if (from === "box/attic") await s.see("box/attic is a relative link: written again at attic");
         await s.keys("enter");
         await s.message(`moved ${from}/ back to`); // the toast wraps the rest
       }

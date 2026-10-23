@@ -11,7 +11,7 @@
 import { existsSync, statSync } from "node:fs";
 import { dirname, isAbsolute, join, posix, relative, sep } from "node:path";
 import { classify } from "./filetypes.ts";
-import { entryAt, entryInside, landsInside } from "./fsutil.ts";
+import { entryAt, landsInside } from "./fsutil.ts";
 import type { Backlink, Graph, NoteEntry, ResolvedLink } from "./graph.ts";
 import { extensionless, formatPathLink, normKey, pathForm, pathLink, type PathForm, pathNamed } from "./links.ts";
 import { readRoots } from "./registry.ts";
@@ -68,14 +68,14 @@ function cleanTarget(g: Graph, input: string, holds: "file" | "folder" | "vault"
 /**
  * What moves, by its real path inside the vault (VV-D6): nothing is moved out of where a link leads, followed or
  * not, as nothing is moved into it — in home too, as a copy or a delete there. A link named itself moves as a link,
- * its target staying where it is (D?1): its entry is checked, in its folder (`entryInside`) — but one leading to a
+ * its target staying where it is (D?1): its entry is checked, in its folder by its real path — but one leading to a
  * vault, or to a folder holding one (`vaults`), whose place is known by its real path: no link's name moves it.
  * Whether it moves as a link, for its plan's `move.link`.
  */
 function checkSource(g: Graph, rel: string, vaults = false): boolean {
   const abs = join(g.root, rel);
   const link = !vaults && isLink(abs);
-  if (!entryInside(g.root, abs, link)) throw new RenameError(`${rel} resolves outside the vault`);
+  if (!landsInside(g.root, link ? dirname(abs) : abs)) throw new RenameError(`${rel} resolves outside the vault`);
   return link;
 }
 

@@ -203,3 +203,43 @@ to lead where it did (D?1).
   previews, then says `✗ zd.md can't be moved (EACCES); nothing changed`, the note linking to it as it was. Reached unit
   tests (`renam|move|undo|plans|VV-D6|replace|convert|symlink|relink` in vault, cli and tui tests): 295 pass; the 14
   terminal checks of the explorer's files, renames and links: pass.
+- 2026-10-23: Reviewed twice again, independently (round 2): fifteen findings, none found by both, each tried against
+  the code. Taken, each reproduced by a test that fails without its fix: (1) a plan's folder was checked for writing but
+  not for search, so a saved plan applied after `chmod 600` on its note's folder stopped half done: `W_OK | X_OK`; (2)
+  round 1's quicker `landsHidden` took the vault open for where a path is named, so naming a vault reached through a
+  followed link (`~/work → /proj`, `shift+r`) was refused, its own `config.toml` taken for a hidden folder: the vault
+  holding it by its path is asked, after a quick look at whether any link is on the way; (3) a file two names in one
+  folder edit alike, written once, left the second name's index entry as it was, so the renamed note's backlinks missed
+  it: the change keeps its other names (`also`), indexed again with it, its undo's too; (4) a link moved without its
+  answer (the state folder unwritable), moved back by an undo, lost the answer left at its old place: a link without an
+  answer leaves one where it goes that leads where it does — an answer being a place and where it leads, as a link made
+  there by hand would find it; one for elsewhere goes. This turns round 0's choice that a moved link carries only its
+  own answer, for an answer that is this link's; (5) that link was read through at its new name into the index, its
+  folders listed there: the index is walked again then, the link a row of its own, not followed; (6) the CLI's JSON gave
+  that warning in its envelope only: its data's `warnings` too; (7) `outside` and `applyPlan` decided moving as a link
+  each their own way: one rule, `movesAsLink`; (8, 9) one test for a path landing where it's named (`asNamed`), the
+  root's real path read once a plan, one real path a file in `applyPlan`, one `lstat` in `checkSource`. Not taken:
+  recording a file's written place in the root's form (only a file the moved name no longer leads to is recorded by its
+  real path, and such a file is reached by that link alone: no index entry or open note has it by another name, and the
+  undo reads it back); one predicate for `checkWritable`, `mayRewrite` and the TUI's save (they measure a path named, a
+  file found and an edit you made, and agree where they meet; the save is out of this change); the other-name lookup
+  limited to names through links (the walk's knowledge of its links isn't in the index: once a plan, only when a link is
+  met); keying the Collector by real path (as round 1); `entryAt` merged with `install.ts`'s and `review.ts`'s own
+  (theirs, before this change); citing `D?1` (a root decision is numbered when it's merged).
+- 2026-10-23: At the maintainer's word, every case has a terminal check too: tests/terminal/checks/moving-links.ts,
+  thirteen, beside the one in vaults.ts (its undo now sees the relative link said). Each fix was undone in turn and its
+  check found failing (thirty-two). Three cases have none, each said in the pull request: a link inside a followed
+  target (the walk never lists one: a link to a file it lists already is skipped, and `probeFollowed` asks only about
+  links inside the vault's own real path, so one inside a followed folder outside it waits — noticed, not this
+  change's), two names in one folder editing a file otherwise (no plan makes it from the index), and a plan both moving
+  a link and carrying vaults (no plan slipbox makes). Found writing them: a moved file link's own note out of the vault
+  is never written, said, as D220 has it; a link to a note the walk lists is no row of the explorer, so an image link
+  onto its image is tried with the CLI.
+- 2026-10-23: Round 2's fixes tried live, this worktree's CLI in a scratch home: two links in one folder to one note
+  (`box/e3.md`, `box/e4.md`), `slipbox mv a.md z.md` writes it once, and `slipbox backlinks z.md` lists both; `slipbox
+  mv lnk lnk2 --json` with the state folder unwritable says in `data.warnings` that the answer couldn't be kept,
+  `slipbox symlinks` keeps `~/vault/lnk … followed (gone)`, and `slipbox undo` brings it back followed; a plan saved
+  with `--plan`, its note's folder then `chmod 600`, `slipbox apply` says `src/s.md can't be moved (EACCES); nothing
+  changed`, its other file as it was. The TUI's cases are the terminal checks'. Reached unit tests: all but two pass —
+  cli.test's `stat` (a linked worktree's name, by design) and render.test's `Mermaid … drawn while its library loads`,
+  which fails alone too, the library loading before the first frame asks (a timing test; nothing here draws).

@@ -19,6 +19,8 @@ export interface LoggedFile {
   at: number;
   length: number;
   was: string;
+  /** Its other names, in its folder, that the rename wrote through once (D?1): indexed again with it. */
+  also?: string[];
 }
 
 export interface LoggedRename {

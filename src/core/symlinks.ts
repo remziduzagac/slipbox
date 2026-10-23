@@ -166,8 +166,10 @@ export function forgetLinkAnswer(link: string): KeptLink | null {
 /**
  * Move the symlink `from` to `to` as a link (D?1): its own entry, never what it leads to. A relative one moved to
  * another folder is made anew at `to` (`movedLinkText`); nothing has changed when it can't be. The answer kept for it
- * is kept for `to` then, in place of whatever was kept there: the same link, leading to the same place. `to`'s folder
- * is there already. Moved, but its answer not kept there (the state folder can't be written): said, as a warning.
+ * is kept for `to` then, in place of whatever was kept there: the same link, leading to the same place. One without an
+ * answer leaves `to`'s as it is when that leads where the link does — an answer is a place and where it leads, and
+ * one a move that couldn't keep it left behind is this link's — and any other there goes. `to`'s folder is there
+ * already. Moved, but its answer not kept there (the state folder can't be written): said, as a warning.
  */
 export function moveLink(from: string, to: string): string | null {
   const was = linkKey(from);
@@ -192,7 +194,8 @@ export function moveLink(from: string, to: string): string | null {
   const now = linkKey(to);
   const list = kept();
   const hit = list.find((e) => e.link === was);
-  const rest = list.filter((e) => e.link !== was && e.link !== now);
+  const leads = hit ? null : linkTarget(to);
+  const rest = list.filter((e) => e.link !== was && (e.link !== now || (!hit && e.target === leads)));
   if (!hit && rest.length === list.length) return null;
   try {
     keep(hit ? [...rest, { ...hit, link: now }] : rest);
