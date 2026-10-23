@@ -8,6 +8,7 @@
 import { type Dirent, readdirSync } from "node:fs";
 import { join } from "node:path";
 import { classify, type FileGroup } from "../core/filetypes.ts";
+import { listsName } from "../core/listing.ts";
 import type { App } from "./app.ts";
 
 /** An entry of a folder of the vault's own tree that the walk didn't give. */
@@ -84,8 +85,4 @@ export function fromDisk(
   return out;
 }
 
-/** Whether the explorer lists an entry by its name: a hidden one (`.github`) only while `files.hidden` is on, and `.git`,
- *  git's own folder, never. */
-export function listsName(name: string, showHidden: boolean): boolean {
-  return name !== ".git" && (showHidden || !name.startsWith("."));
-}
+export { listsName };

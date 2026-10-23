@@ -218,6 +218,12 @@ bun run e2e find replace     # only the scenarios whose names contain these
   `runs`), its title, the pid of slipbox in it (`signal` sends it SIGTERM or SIGHUP), pastes as a
   terminal does (bracketed), quits and starts again on the same state (`restart`), and resizes the
   pane for real (`zoom`, which needs the pane sized by its tab's layout: a client attached).
+- **A slow disk, stood in for** (T12): `SLIPBOX_SLOW_DISK=<folder name>:<ms>[:<deadline ms>]` makes a folder of that
+  name take so long to list, on whichever thread lists it (`slowDisk` in `core/walk.ts`), and shortens the walk's and
+  the listings' threads' deadlines to the third: the disk a check can't mount. `tests/terminal/checks/slow-disk.ts`
+  drives the TUI with it; the unit tests hold a folder up on a thread of their own (`setFolderReader`, a worker of
+  their own: `tests/fixtures/walk/`). What such a check says comes at once is timed by the check itself, against a
+  bound short of the slow folder's time: `Session.until` waits at least `SLIPBOX_TERMINAL_WAIT`, whatever it's asked.
 - **Coverage is measured.** slipbox appends each command it runs to `SLIPBOX_TRACE`; the runner
   lists the commands no scenario ran (a run split over panes adds them to `SLIPBOX_E2E_RAN`, read
   together after), and every command is run today. That says a command was

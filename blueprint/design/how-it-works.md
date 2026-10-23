@@ -92,9 +92,10 @@ that order:
   `.slipbox/`, `.obsidian/`, `.zk/`), else home (`~`, a vault without one), else Elsewhere, which has no index (D69,
   VV-D1–VV-D4). The vault says what is indexed and searched first, what a leading `/` means, which link convention is
   followed, its settings, and where its state is kept. Nothing is written into a folder by opening it (D58). One walk
-  lists its files for the index and the watcher alike (D40). A link out of the vault or home is followed only when you
-  say so (VV-D6). Code: `core/vault.ts`, `core/home.ts`, `core/walk.ts`, `core/symlinks.ts`, `core/registry.ts`,
-  `core/folders.ts`.
+  lists its files for the index and the watcher alike (D40); the TUI makes its own walks, and lists the explorer's
+  folders, on threads of their own (T12). A link out of the vault or home is followed only when you say so (VV-D6).
+  Code: `core/vault.ts`, `core/home.ts`, `core/walk.ts`, `core/walk-thread.ts`, `core/symlinks.ts`,
+  `core/registry.ts`, `core/folders.ts`.
 - **Links** ([links.md](links.md)): every link, whatever its written form, is read as a file and a fragment; each
   tool's forms are read and written at the edges (D68). The graph (`core/graph.ts`) holds the notes, their links and
   backlinks, parsed lazily; renames, repairs, plans and the merge review work on paths.
@@ -135,6 +136,11 @@ The CLI's commands are the user's reference, [cli.md](../../docs/manual/cli.md);
 | `core/config.ts` | 0.9, 20.7 | TOML: defaults ← yours ← each enclosing vault's ← its own; warnings, never crashes |
 | `core/vault.ts` | 1.1, 1.10, 0.12, 17.1, 20.3, 21.8 | a file's vault, home or Elsewhere; recorded; state moved |
 | `core/home.ts` | VV-D2 | home's walk, made in slices and kept (`walk.json`); its graph built from it; the cap |
+| `core/walkers.ts` | T12 | where a walk is made: here (the CLI's), or on the walk's thread (the TUI's) |
+| `core/walk-thread.ts` | T12 | the walk's thread and the listings' two (`walk-worker.ts`, `list-worker.ts`): asked |
+| `core/walk-jobs.ts` | T12 | what the walk's thread does: the same walks and indexes as here, slice by slice |
+| `core/worker-context.ts` | T12 | what those threads can't see for themselves: the environment, markers, probe |
+| `core/listing.ts` | T12, VV-D5 | a folder listed for the explorer: its entries, what its rows and marks say of each |
 | `core/mounts.ts` | VV-D2 | the mount table, read without touching a mount: home's walk never goes into another disk |
 | `core/symlinks.ts` | VV-D6 | links followed only when you say so: the answers, a link's scope, writes, the probe |
 | `core/registry.ts` | 17.3–17.6, 21.8 | `[vault]` identity; the machine's vaults by path (`roots.json`) |
@@ -322,6 +328,7 @@ The CLI's commands are the user's reference, [cli.md](../../docs/manual/cli.md);
 | `tui/rebase.ts` | GIT-D6, D247 | a diverged pull asked about, a rebase onto the base and its stash; what's under way |
 | `tui/explorer.ts` | 3.7, VV-D5 | the explorer: one tree and its view, the breadcrumb, zooming; rows, keys, menu |
 | `tui/explorer-disk.ts` | VV-D8 | the explorer's rows the walk doesn't give: what it leaves out or hasn't reached |
+| `tui/listings.ts` | T12 | the folders the explorer lists a level at a time: read off the main thread, kept, again |
 | `tui/marks.ts` | VV-D9, D244 | a row's marks: the index's state, what describes the row; why it isn't indexed |
 | `tui/peek.ts` | VV-D7 | the peek: another vault's file read in place; `o`, `t`, `z`; its backlinks |
 | `tui/following.ts` | VV-D6 | the question a link not followed asks; follow, just look, no; the probe |

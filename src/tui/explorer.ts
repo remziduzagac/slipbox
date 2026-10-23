@@ -6,22 +6,28 @@ import ignore from "ignore";
 import { classify, type FileGroup } from "../core/filetypes.ts";
 import { type Dirent, readdirSync, statSync } from "node:fs";
 import { basename, dirname, isAbsolute, join, posix, relative, sep } from "node:path";
-import { checkoutOf } from "../core/git.ts";
-import { MARKER, readIdentity, vaultConfigFile } from "../core/registry.ts";
+import { folderUnreadable, unreadableWords } from "../core/fsutil.ts";
+import { MARKER } from "../core/registry.ts";
 import { tildePath } from "../core/names.ts";
-import { findVaultRoot, hasMarker, homeFolder, isInside, isListed, isVaultRoot, locationAt } from "../core/vault.ts";
-import { isLink, linkScope, linkState, linkTarget } from "../core/symlinks.ts";
+import { hasMarker, homeFolder, isInside, isListed, isVaultRoot, locationAt } from "../core/vault.ts";
+import { isLink, linkScope, linkStateAt, linkTarget } from "../core/symlinks.ts";
+import { type FolderListing, type ListedEntry, vaultName } from "../core/listing.ts";
 import { ANOTHER_DISK, busyFolderAt, LINK_REASON } from "../core/walk.ts";
 import { match } from "./match.ts";
 import { prettyKey } from "./keys.ts";
 import type { App, ListItem } from "./app.ts";
-import { folderUnreadable } from "./app.ts";
 import { type DiskEntry, fromDisk, listsName } from "./explorer-disk.ts";
+import { Listings } from "./listings.ts";
 import { Marks } from "./marks.ts";
 
 /** The explorer: its tree, its view and breadcrumb, its keys. */
 export class Explorer {
-  constructor(readonly app: App) {}
+  /** The folders it lists a level at a time, as read off the main thread (T12); read here, at once, in a test's App. */
+  listings: Listings;
+
+  constructor(readonly app: App) {
+    this.listings = new Listings(app);
+  }
 
   /** Its rows' marks (VV-D9). */
   get marks(): Marks {
@@ -57,6 +63,23 @@ export class Explorer {
         ? { rel: row.path, dir: true, vault: true }
         : null;
     return { rel: row.path, dir: row.kind === "dir" };
+  }
+
+  /**
+   * A row to select once it's listed (T12): one the explorer meant to select in a folder still being read — the folder
+   * zoomed out from, a note revealed. Selected by `Listings` when the rows come, unless the selection moved since.
+   */
+  wanted: { path: string; at: number } | null = null;
+
+  /** Select the row at `path` (a row path): now, or once its folder's listing comes (`wanted`); `fallback` meanwhile. */
+  selectRow(path: string, fallback?: number): void {
+    const at = this.rows().findIndex((r) => r.path === path);
+    this.wanted = null;
+    if (at >= 0) this.app.sidebar.selected = at;
+    else {
+      if (fallback !== undefined) this.app.sidebar.selected = fallback;
+      this.wanted = { path, at: this.app.sidebar.selected };
+    }
   }
 
   /** Select a path in the explorer, unfolding its folders. */
@@ -238,9 +261,7 @@ export class Explorer {
   /** A vault's name beside its folder's, when it has another one (17.13); none for a worktree, every one of which has
    *  its repository's: its branch tells them apart (17.19), among the row's marks (VV-D9, `marks.ts`). */
   private rootName(abs: string): string | undefined {
-    if (checkoutOf(abs)?.worktree) return undefined;
-    const n = readIdentity(vaultConfigFile(abs)).name;
-    return n && n !== basename(abs) ? n : undefined;
+    return vaultName(abs);
   }
 
   /**
@@ -379,6 +400,7 @@ export class Explorer {
 
   treeRows(): TreeRow[] {
     if (this.tree) return this.tree;
+    this.listings.newTree();
     this.keepToWhatsThere();
     const T = this.top;
     const rows: TreeRow[] = [];
@@ -386,6 +408,7 @@ export class Explorer {
     const own = this.ownView(T);
     if (own === null) this.outsideRows(T, 0, rows, this.leftOutAt(T));
     else rows.push(...this.rootTree(own));
+    this.listings.endTree();
     this.tree = rows;
     return rows;
   }
@@ -395,29 +418,28 @@ export class Explorer {
    * leaves out — listed a level at a time (never walked): its folders — the vault open marked and
    * highlighted, its tree under it while unfolded; other vaults by their icon and name — then its files,
    * as `files.show` would list them in their vault. `leftOut`: in what the vault open's walk leaves out (VV-D8), why and
-   * where — its folders carry it, down to a vault of their own.
+   * where — its folders carry it, down to a vault of their own. From its listing (`Listings`, T12): read off the main
+   * thread, a row saying so while it's read, or why it couldn't be.
    */
   private outsideRows(dir: string, depth: number, out: TreeRow[], leftOut: LeftOut | null = null): void {
-    let entries: Dirent[] = [];
-    try {
-      entries = readdirSync(dir, { withFileTypes: true });
-    } catch {
+    const listing = this.listings.get(dir);
+    if (!listing || listing.error !== null) {
+      // Why it couldn't be: a code (`EACCES`) in `folderUnreadable`'s words; a thread's own already in words.
+      const error = listing?.error;
+      const said = error
+        ? `can't read: ${error.includes(" ") ? error : unreadableWords(error)}`
+        : this.listings.pending(dir)
+          ? "listing…"
+          : null;
+      if (said)
+        out.push({ kind: "note", path: `${dir}/\0${said}`, name: said, depth, outside: true, placeholder: true });
       return;
     }
     const R = this.app.loc.root;
-    const byName = (a: Dirent, b: Dirent) => a.name.localeCompare(b.name, undefined, { sensitivity: "base" });
-    const isDir = (e: Dirent) => {
-      if (e.isDirectory()) return true;
-      if (!e.isSymbolicLink()) return false;
-      try {
-        return statSync(join(dir, e.name)).isDirectory();
-      } catch {
-        return false;
-      }
-    };
+    const byName = (a: ListedEntry, b: ListedEntry) => a.name.localeCompare(b.name, undefined, { sensitivity: "base" });
     // Hidden names only while `files.hidden` is on, `.git` never; the busy folders are (VV-D8). Neither is indexed.
-    const shown = entries.filter((e) => listsName(e.name, this.app.ui.hidden_files));
-    for (const e of shown.filter(isDir).sort(byName)) {
+    const shown = listing.entries.filter((e) => listsName(e.name, this.app.ui.hidden_files));
+    for (const e of shown.filter((e) => e.dir).sort(byName)) {
       const abs = join(dir, e.name);
       const why = leftOut ?? hiddenOut(e.name, abs);
       if (abs === R && !isListed(this.app.loc)) {
@@ -436,15 +458,16 @@ export class Explorer {
         if (this.expanded.has(R)) for (const r of this.rootTree()) out.push({ ...r, depth: r.depth + depth + 1 });
         continue;
       }
-      const vault = isVaultRoot(abs);
-      if (vault)
+      const vault = !!e.vault;
+      if (e.vault)
         out.push({
           kind: "root",
           path: abs,
           name: e.name,
           depth,
-          root: { kind: "vault", abs, name: this.rootName(abs) },
+          root: { kind: "vault", abs, ...(e.vault.name ? { name: e.vault.name } : {}) },
           outside: true,
+          listed: e,
         });
       else
         out.push({
@@ -454,15 +477,15 @@ export class Explorer {
           depth,
           outside: true,
           ...(why ? { leftOut: why.why, leftOutAt: why.at } : {}),
-          ...this.linkOf(e, abs, true),
+          ...this.linkOf(e, listing, true),
+          listed: e,
         });
       if (this.expanded.has(abs)) this.outsideRows(abs, depth + 1, out, vault ? null : why);
     }
     // Its files as their vault lists them: auto, every text file but in a notes vault.
     const show = this.app.sidebar.allFiles ? "all" : this.app.config.files.show;
-    const own = findVaultRoot(dir);
-    const mode = show === "auto" ? (own && hasMarker(own) ? "renderable" : "all") : show;
-    for (const e of shown.filter((e) => !isDir(e) && (e.isFile() || e.isSymbolicLink())).sort(byName)) {
+    const mode = show === "auto" ? (listing.notes ? "renderable" : "all") : show;
+    for (const e of shown.filter((e) => e.file).sort(byName)) {
       const abs = join(dir, e.name);
       const { group } = classify(abs, this.app.config.walk.extensions);
       if (group === "binary" || (group !== "note" && (mode === "notes" || (mode === "renderable" && group !== "data"))))
@@ -477,7 +500,8 @@ export class Explorer {
         outside: true,
         ...(group !== "note" ? { group } : {}),
         ...(hidden ? { leftOut: hidden.why, leftOutAt: hidden.at } : {}),
-        ...this.linkOf(e, abs, false),
+        ...this.linkOf(e, listing, false),
+        listed: e,
       });
     }
   }
@@ -485,13 +509,12 @@ export class Explorer {
   /**
    * A row listed a level at a time that is a link (VV-D6): where it leads, and whether it's followed, by the rule of the
    * place it's in — in Elsewhere every link asks; a vault's or home's, one leading out of it. Unfolded, one not followed
-   * asks first (`linkFirst`), wherever it is.
+   * asks first (`linkFirst`), wherever it is. As its listing read it: the answers kept are all that's read here.
    */
-  private linkOf(e: Dirent, abs: string, dir: boolean): Pick<TreeRow, "link"> {
-    if (!e.isSymbolicLink()) return {};
-    const target = linkTarget(abs);
-    const scope = isListed(this.app.loc) ? null : linkScope(locationAt(dirname(abs)));
-    const state = linkState(abs, scope, target);
+  private linkOf(e: ListedEntry, listing: FolderListing, dir: boolean): Pick<TreeRow, "link"> {
+    if (!e.link) return {};
+    const { target, key } = e.link;
+    const state = linkStateAt(key, isListed(this.app.loc) ? null : listing.scope, target);
     const asks = state !== "followed" && state !== "within";
     return { link: { target, dir, ...(asks ? { reason: LINK_REASON.out } : {}) } };
   }
@@ -513,12 +536,8 @@ export class Explorer {
     this.invalidateTree();
     this.app.sidebar.pinned = false;
     this.app.sidebar.scroll = 0;
-    this.app.sidebar.selected = out
-      ? Math.max(
-          0,
-          this.rows().findIndex((r) => r.path === this.rowPath(from)),
-        )
-      : 0;
+    if (out) this.selectRow(this.rowPath(from), 0);
+    else this.app.sidebar.selected = 0;
   }
 
   /** `-`: the view a folder up (VV-D5), the folder it showed unfolded in it and selected. */
@@ -761,6 +780,10 @@ export class Explorer {
 
   /** A folder moved (18.3, 18.7): the view and the trail in it go with it, as its folds do. */
   followMove(from: string, to: string): void {
+    // Its listings let go of, and the folders it left and came into listed again (T12): none is as it was listed.
+    this.listings.forget(from);
+    this.listings.stale(dirname(from));
+    this.listings.stale(dirname(to));
     const shift = (abs: string) => (abs && isInside(from, abs) ? to + abs.slice(from.length) : abs);
     this.top = shift(this.top);
     this.trail = shift(this.trail);
@@ -900,8 +923,8 @@ export class Explorer {
     for (let d = open ? abs : dirname(abs); d !== view && isInside(view, d); d = dirname(d))
       this.expanded.add(this.rowPath(d));
     this.invalidateTree();
-    const idx = abs === view ? 0 : this.treeRows().findIndex((r) => r.path === this.rowPath(abs));
-    if (idx >= 0) this.app.sidebar.selected = idx;
+    if (abs === view) this.app.sidebar.selected = 0;
+    else this.selectRow(this.rowPath(abs));
   }
 
   /**
@@ -926,6 +949,8 @@ export class Explorer {
 
   action(action: string): void | Promise<void> {
     this.app.sidebar.pinned = false;
+    // Moved by you: a row meant to be selected once listed isn't any more.
+    this.wanted = null;
     if (this.app.leftView === "history") return this.app.history.action(action);
     if (this.app.leftView === "git") return this.app.gitPanel.action(action);
     if (action === "filter") {
@@ -934,23 +959,41 @@ export class Explorer {
     }
     const rows = this.rows();
     const row = rows[this.app.sidebar.selected];
+    // A row that only says something of its folder (T12: `listing…`): nothing acts on its own path — what doesn't act
+    // on the row (moving, folding its folder, restoring, a new note) does as on any row of its folder.
+    if (row?.placeholder && ON_THE_ROW.has(action)) return;
     // A link to a folder not followed asks first (VV-D6); a second name for one of the vault's goes to it.
     if (row?.link?.dir && ["open", "expand", "open_tab", "zoom_in"].includes(action) && this.linkFirst(row, action))
       return;
     // A folder, or the vault open's row in a view above it: unfolded (or folded, `toggle`) in place.
     const unfold = (toggle = false) => {
-      if (!row) return;
+      if (!row || row.placeholder) return;
       if (toggle && this.expanded.has(row.path)) this.expanded.delete(row.path);
       else if (!this.expanded.has(row.path)) {
-        // One you may not read, wherever it is: one the vault's walk couldn't read is listed too (VV-D9).
-        const why = row.kind !== "note" ? folderUnreadable(this.rowAbs(row)) : null;
-        if (why) return this.app.message("warn", `can't read ${tildePath(this.rowAbs(row))}: ${why}`);
+        // One you may not read, wherever it is: one the vault's walk couldn't read is listed too (VV-D9) — one listed off
+        // the main thread as its listing read it (T12).
+        const why =
+          row.kind === "note"
+            ? null
+            : row.listed
+              ? (row.listed.unreadable ?? null)
+              : folderUnreadable(this.rowAbs(row));
+        if (why) {
+          // As its folder's listing read it: that listing read again, and its own, so one you may read now (a chmod since)
+          // unfolds next time, its rows there — nothing else in its folder read again.
+          if (row.listed) {
+            this.listings.again(dirname(this.rowAbs(row)));
+            this.listings.again(this.rowAbs(row));
+            this.invalidateTree();
+          }
+          return this.app.message("warn", `can't read ${tildePath(this.rowAbs(row))}: ${why}`);
+        }
         this.expanded.add(row.path);
       }
       this.invalidateTree();
     };
     const openNote = (where: "here" | "tab" | "split") => {
-      if (!row) return;
+      if (!row || row.placeholder) return;
       if (row.kind === "dir" || row.root?.here) return unfold();
       // Another vault's folder, chosen: into it, its tabs (VV-D4); a file of one, opened, goes into it too.
       if (row.kind === "root") return this.app.vaults.enterRoot(row);
@@ -1127,7 +1170,31 @@ export interface TreeRow {
   unwalked?: boolean;
   /** A symlink (VV-D6): where it leads, and why the walk didn't go through it, when it didn't. */
   link?: LinkRow;
+  /** A row listed a level at a time: what its folder's listing read of it, off the main thread (T12) — its marks'. */
+  listed?: ListedEntry;
+  /** A row that only says something of its folder — still being listed (`listing…`), or why it couldn't be: never
+   *  opened, nothing to mark. */
+  placeholder?: true;
 }
+
+/** What acts on the selected row's own path: never on a row that only says something of its folder (`listing…`,
+ *  `can't read: …`). */
+const ON_THE_ROW: ReadonlySet<string> = new Set([
+  "open",
+  "open_tab",
+  "open_split",
+  "expand",
+  "zoom_in",
+  "copy_path",
+  "rename",
+  "rename_root",
+  "move",
+  "delete",
+  "copy",
+  "cut",
+  "make_root",
+  "unmake_root",
+]);
 
 /** What the vault open's walk leaves out (VV-D8), carried down what's listed in it: why, and where it was decided. */
 export interface LeftOut {

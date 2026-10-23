@@ -54,6 +54,15 @@ export const CHECKS_FOR: [RegExp, string[]][] = [
   // Spelling, off unless asked for.
   [/^src\/core\/(spell|spell-thread|spell-worker|hunspell)\.ts$/, ["spelling"]],
   [/^src\/tui\/spelling\.ts$/, ["spelling"]],
+  // A slow disk read off the main thread (T12): the walk's and the listings' threads, the explorer's listings.
+  [
+    /^src\/core\/(walk-thread|walk-jobs|walk-worker|worker-context|walkers|index-job)\.ts$/,
+    ["slow disk", "home", "view"],
+  ],
+  // Every folder listed a level at a time (Elsewhere's among them), and the vault and permission facts every row's
+  // marks read.
+  [/^src\/core\/(listing|list-worker)\.ts$/, ["slow disk", "home", "view", "Elsewhere", "marks"]],
+  [/^src\/tui\/listings\.ts$/, ["slow disk", "view", "Elsewhere", "marks"]],
   // Vaults, home and Elsewhere; a link followed out; the peek (VV).
   [/^src\/core\/(home|mounts)\.ts$/, ["home", "Elsewhere"]],
   [/^src\/tui\/vaults\.ts$/, ["vaults", "home", "Elsewhere", "roots", "named folders"]],

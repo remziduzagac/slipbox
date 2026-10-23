@@ -181,6 +181,7 @@ export class Graph {
    */
   build(useCache = true, parse: "all" | "lazy" = "all", given?: HomeWalk): this {
     const t0 = performance.now();
+    this.builds++;
     this.walkedAt = Date.now();
     const home = this.loc.mode === "home" ? (given ?? homeWalk(this.loc, this.filter, this.asked)) : null;
     // What changed after home's walk began may be missing from it: the watcher looks at those folders again.
@@ -261,6 +262,8 @@ export class Graph {
     return this;
   }
 
+  /** How many times it's been built: a walk made elsewhere since the last (T12) is older than what it holds. */
+  builds = 0;
   private readonly unparsed = new Map<string, NoteFile>();
   private useCache = false;
   private cacheDirty = false;

@@ -2,6 +2,7 @@
 // in the same directory, so a crash or a full disk never truncates a note.
 
 import {
+  accessSync,
   chmodSync,
   closeSync,
   constants,
@@ -16,6 +17,7 @@ import {
   unlinkSync,
   writeSync,
 } from "node:fs";
+import { randomBytes } from "node:crypto";
 import { basename, dirname, isAbsolute, join, relative, resolve, sep } from "node:path";
 
 export function ensureDir(dir: string): void {
@@ -30,7 +32,12 @@ export function ensureDir(dir: string): void {
 export function atomicWrite(path: string, content: string | Uint8Array): Stamp {
   const dir = dirname(path);
   ensureDir(dir);
-  const tmp = join(dir, `.${basename(path)}.slipbox-${process.pid}-${Date.now()}.tmp`);
+  // Its own name, whatever else writes there in the same millisecond: another process, or another thread of this one
+  // (the walk's, T12), which shares its process id.
+  const tmp = join(
+    dir,
+    `.${basename(path)}.slipbox-${process.pid}-${Date.now()}-${randomBytes(4).toString("hex")}.tmp`,
+  );
   // A file being replaced keeps its permissions.
   let mode = 0o644;
   try {
@@ -225,4 +232,24 @@ export function carryPaths(file: string, from: string, to: string): void {
   };
   const next = carry(data);
   if (changed) writeJson(file, next);
+}
+
+/** Why a folder can't be read, in a few words (VV-D5); null when it can. */
+export function folderUnreadable(dir: string): string | null {
+  try {
+    if (!statSync(dir).isDirectory()) return "it isn't a folder";
+    // Listed (read) and gone into (searched): both, as the account running slipbox may.
+    accessSync(dir, constants.R_OK | constants.X_OK);
+    return null;
+  } catch (err) {
+    return unreadableWords((err as NodeJS.ErrnoException).code ?? (err as Error).message);
+  }
+}
+
+/** Why a folder couldn't be read, by its error's code, in `folderUnreadable`'s words (a listing's too, T12). */
+export function unreadableWords(code: string): string {
+  if (code === "EACCES" || code === "EPERM") return "you may not read it (no permission)";
+  if (code === "ENOENT") return "it isn't there";
+  if (code === "ENOTDIR") return "it isn't a folder";
+  return code;
 }

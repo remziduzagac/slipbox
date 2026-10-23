@@ -72,6 +72,7 @@ import {
   statusRow,
   topRow,
   rowStarting,
+  stepToEnd,
   type Harness,
   type Opts,
 } from "./tui-harness.ts";
@@ -14317,7 +14318,8 @@ describe("the background auto-index in the TUI (20.9)", () => {
       expect(h.app.graph.backlinks("a.md")).toEqual([]);
       const job = h.app.watch.indexJob();
       expect(job?.root).toBe(home);
-      while (job!.step(50)) {}
+      await stepToEnd(job!);
+      await h.app.watch.homeRefreshed;
       expect(h.app.graph.home?.walked).not.toBeNull();
       expect(h.app.graph.backlinks("a.md").map((b) => b.from)).toEqual(["deep/er/b.md"]);
       // In a vault, the background index off: nothing works while nobody does.
@@ -14444,7 +14446,8 @@ describe("the background auto-index in the TUI (20.9)", () => {
       // Home walked and kept: the folder's in that walk, never walked a second time — a note come since, its folder's
       // time set back as if nothing had, isn't seen.
       const job = h.app.watch.indexJob()!;
-      while (job.step(50)) {}
+      await stepToEnd(job);
+      await h.app.watch.homeRefreshed;
       expect(homeWalkKept(loc)).toBe(true);
       writeFileSync(join(home, "notes", "late.md"), "# Late\n");
       const hour = new Date(Date.now() - 3_600_000);
@@ -14536,6 +14539,7 @@ describe("the background auto-index in the TUI (20.9)", () => {
       expect(h.app.graph.notes.has("notes/ideas/coffee.md")).toBe(true);
       // The walk just made and kept, home's graph built again from it: its cap said.
       (h.app.watch as unknown as { homeIndexed(capped: "notes"): void }).homeIndexed("notes");
+      await h.app.watch.homeRefreshed;
       expect(h.app.messages.at(-1)?.text).toBe(
         "home's index is full: it holds 10,000 notes, those nearest the top — the rest aren't indexed; ~/notes, the folder you opened, is whole",
       );

@@ -116,6 +116,14 @@ You can open any folder you may read, inside your home folder or not. Outside ho
 - A folder you may not read says why when you open it, unfold it or zoom into it:
   `can't read ~/private: you may not read it (no permission)`.
 
+A folder listed a level at a time is read in the background, so one on a slow disk, such as a network share or a
+drive that's asleep, never stops the screen or the keys. While it's read, a dimmed `listing…` under it says so; its
+rows come when it answers. One that can't be listed says why in their place, in the words opening it says:
+`can't read: you may not read it (no permission)`, or `can't read: no answer in time` when it didn't answer within ten
+minutes. It's read again a minute later, not before; a folder `l` refuses is read again at once, so it unfolds at the
+next `l` once you may read it. Another disk mounted in a folder, such as a network share, is listed by its name alone:
+nothing of it is read until you unfold it.
+
 [Working across folders and vaults](../guides/vaults.md) shows the view at work, with examples.
 
 ### A row's marks

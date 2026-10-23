@@ -15,13 +15,15 @@ import { DOCUMENT_GRAMMARS, grammarFor } from "../core/syntax.ts";
 import { MERMAID } from "../core/diagrams.ts";
 import { REGEX, stopRegexJobs } from "../core/regex-jobs.ts";
 import { stopParsePool } from "../core/parse-pool.ts";
+import { stopWalkThreads } from "../core/walk-thread.ts";
+import { Listings } from "./listings.ts";
 import { stopSpellThread } from "../core/spell-thread.ts";
 import { stopSyntaxThread } from "../core/syntax-thread.ts";
 import { onLoaded } from "../core/lazy.ts";
 import { classify, extensionOf } from "../core/filetypes.ts";
-import { accessSync, appendFileSync, constants as fsConstants, statSync } from "node:fs";
+import { accessSync, appendFileSync, constants as fsConstants } from "node:fs";
 import { dirname, join, relative } from "node:path";
-import { climbsOut, WriteRefused, writeNote } from "../core/fsutil.ts";
+import { climbsOut, folderUnreadable, WriteRefused, writeNote } from "../core/fsutil.ts";
 import { linkSaid, writesThrough } from "../core/symlinks.ts";
 import { writeDirty } from "../core/stale.ts";
 import { placeAt, stopInsert } from "./editing.ts";
@@ -389,22 +391,6 @@ export function uiDefaults(c: Config): UiState {
   };
 }
 
-/** Why a folder can't be read, in a few words (VV-D5); null when it can. */
-export function folderUnreadable(dir: string): string | null {
-  try {
-    if (!statSync(dir).isDirectory()) return "it isn't a folder";
-    // Listed (read) and gone into (searched): both, as the account running slipbox may.
-    accessSync(dir, fsConstants.R_OK | fsConstants.X_OK);
-    return null;
-  } catch (err) {
-    const code = (err as NodeJS.ErrnoException).code;
-    if (code === "EACCES" || code === "EPERM") return "you may not read it (no permission)";
-    if (code === "ENOENT") return "it isn't there";
-    if (code === "ENOTDIR") return "it isn't a folder";
-    return code ?? (err as Error).message;
-  }
-}
-
 /** Why a file can't be written, when it can be read (VV-D5): not by you, or not in its folder; null when it can. */
 export function fileUnwritable(path: string): string | null {
   try {
@@ -446,6 +432,8 @@ export interface AppOptions {
    * the graph opens, so a moved folder's cache is adopted first. Left out, the App records it itself.
    */
   recorded?: { carriedFrom: string | null };
+  /** The explorer's listings read off the main thread (T12): the TUI's; a test's App reads them at once. */
+  listOffThread?: boolean;
 }
 
 export class App {
@@ -635,6 +623,7 @@ export class App {
   constructor(opts: AppOptions) {
     this.loc = opts.loc;
     this.explorer.top = this.explorer.trail = opts.loc.root;
+    if (opts.listOffThread) this.explorer.listings = new Listings(this, true);
     this.config = opts.config;
     this.graph = opts.graph;
     // A folder of home opened by name, or a file's (VV-D2): what was asked for, its notes there at once, home walked
@@ -1320,6 +1309,7 @@ export class App {
     this.exporter.cancel(true);
     this.stopLazy?.();
     stopParsePool();
+    stopWalkThreads();
     stopSpellThread();
     stopSyntaxThread();
     stopRegexJobs();

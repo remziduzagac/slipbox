@@ -163,6 +163,11 @@ export async function harness(opts: Opts = {}): Promise<Harness> {
   return { app, copied, quit, keys, frame, canvas, root };
 }
 
+/** An idle job stepped to its end as the TUI steps it, the answers of its walks awaited (made on their own thread). */
+export async function stepToEnd(job: { step(budgetMs: number): boolean }, budgetMs = 50): Promise<void> {
+  while (job.step(budgetMs)) await Bun.sleep(1);
+}
+
 /**
  * The machine's list of roots narrowed to those under `base` while `run` runs, then the others put back:
  * a search of every root and a moved folder's relink read them all, and a test file leaves hundreds,

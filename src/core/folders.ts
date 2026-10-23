@@ -198,13 +198,24 @@ function writeFolders(folders: NamedFolder[]): void {
  */
 export function recordFolder(
   root: string,
-  opts: { found?: boolean; now?: Date; replaces?: string | null } = {},
+  opts: {
+    found?: boolean;
+    now?: Date;
+    replaces?: string | null;
+    /** Its identity and real path, and the copies recorded (`copyFacts`), read where it was opened (T12: another
+     *  thread): nothing read again here — a copy recorded since taken as it was recorded, by its real path, there. */
+    known?: { ident: FolderIdentity | null; real: string; copies?: CopyFacts };
+  } = {},
 ): NamedFolder | null {
-  const ident = folderIdentity(root);
+  const ident = opts.known ? opts.known.ident : folderIdentity(root);
   const list = readFolders();
   // By its real path: reached through a symlink, it's the same copy, not a second one.
-  const at = ident?.copy ?? realPath(root);
-  const here = (c: FolderCopy) => c.path === at || realPath(c.path) === at;
+  const at = ident?.copy ?? opts.known?.real ?? realPath(root);
+  const facts = opts.known?.copies;
+  const realOf = (p: string) => (facts ? (facts[p]?.real ?? p) : realPath(p));
+  const there = (p: string) => (facts ? (facts[p]?.available ?? true) : copyAvailable(p));
+  const here = (c: FolderCopy) => c.path === at || realOf(c.path) === at;
+  const available = (path: string) => path === at || there(path);
   // A copy moved here by hand (21.8, `movedFrom`): the one it was, gone.
   if (opts.replaces) {
     const f = list.find((x) => x.key === ident?.key);
@@ -242,13 +253,13 @@ export function recordFolder(
     if (entry.default === mine.path) entry.default = at;
     mine.path = at;
     entry.copies = entry.copies.filter((c) => c === mine || !here(c));
-    if (entry.ask && entry.copies.filter((c) => copyAvailable(c.path)).length < 2) delete entry.ask;
+    if (entry.ask && entry.copies.filter((c) => available(c.path)).length < 2) delete entry.ask;
     mine.seen = now;
     if (!opts.found) delete mine.found;
   } else {
     entry.copies.push({ path: at, seen: now, ...(opts.found ? { found: true } : {}) });
     // A second copy here: a choice to make. One gone (moved here, a drive unplugged) isn't one.
-    if (entry.copies.filter((c) => copyAvailable(c.path)).length > 1 && !entry.asked) entry.ask = true;
+    if (entry.copies.filter((c) => available(c.path)).length > 1 && !entry.asked) entry.ask = true;
   }
   entry.default ??= at;
   writeFolders(list.filter((f) => f.copies.length));
@@ -324,6 +335,18 @@ export function setDefaultCopy(key: string, path: string | null): void {
 /** Whether a copy is here now: its folder there (a drive unplugged, a folder deleted: not). */
 export function copyAvailable(path: string): boolean {
   return existsSync(path);
+}
+
+/** Each copy the list records: its real path, and whether it's there (`copyAvailable`). */
+export type CopyFacts = Record<string, { real: string; available: boolean }>;
+
+/** What `recordFolder` reads of the copies recorded, read beforehand: where a vault is opened on another thread (T12),
+ *  so that a copy on a disk that answers slowly holds up nothing on the one that records it. */
+export function copyFacts(): CopyFacts {
+  const out: CopyFacts = {};
+  for (const f of readFolders())
+    for (const c of f.copies) out[c.path] ??= { real: realPath(c.path), available: copyAvailable(c.path) };
+  return out;
 }
 
 export type FolderLookup =

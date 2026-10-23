@@ -515,6 +515,8 @@ export class Files {
   /** After files moved, came or went: the tree, the watcher and the layouts follow. */
   afterFileOp(): void {
     this.app.git.refresh();
+    // The vault's folders listed a level at a time (what its walk leaves out, the vaults in it) listed again (T12).
+    this.app.explorer.listings.stale(this.app.loc.root);
     this.app.explorer.invalidateTree();
     this.app.watcher?.sync(
       isListed(this.app.loc) ? [""] : this.app.graph.dirs,

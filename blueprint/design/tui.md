@@ -656,7 +656,36 @@ keys.
   vault, beside it, in another vault, a nested one's folder — the folder is listed a level at a time, never walked
   (`outsideRows`): its folders, then its files as this vault's `files.show` lists them (`auto` worked out from the
   listed folder's own vault), hidden ones left out unless `files.hidden` is on, `.git` always (a busy folder is
-  listed, VV-D8; below). There the vault open is a row,
+  listed, VV-D8; below). Such a folder is read off the main thread (T12; `Listings` in `tui/listings.ts`,
+  `core/listing.ts`), so one on a disk that answers slowly never freezes the keys or the screen: on one of two listing
+  threads, apart from the walk's, its entries the explorer lists (a hidden name, while they aren't listed, never read)
+  and what its rows and marks say of each (a folder or a file, where a link leads, a vault's key, name and branch, one
+  you may not read, a busy folder) — a link's answer, and so its mark, still read here from the answers kept. Kept, at
+  most 256 folders besides those the tree last showed (let go of once a tree is built, never while it's being built),
+  a listing is read again in the background as the tree is built again once it's a second old, or under other
+  settings (`[walk]`, `files.hidden`), its rows replaced only when it says something new (compared by a digest the
+  thread makes of all they're built from: its entries, whether its vault is a notes vault, its links' scope), the
+  selection kept on the row it was on — and a row the explorer meant to select in a folder not
+  listed yet (`-`'s folder it came from, a note revealed: `Explorer.wanted`) selected when it comes, unless you moved
+  the selection since. A folder moved is let go of, the folders it left and came into read again, and a file
+  operation in the vault reads its folders listed this way again: an answer read before is dropped; one read under
+  settings changed since (another vault gone into) is read again at once. Each entry is asked one access check, a
+  folder its markers and, a busy name, whether it holds a note; another disk mounted there (the mount table, read at
+  most every five seconds) is listed by its name alone, never looked at — a folder or a file as its folder's entry
+  says (a file bind-mounted, a container's `/etc/hosts`). A listing has a whole walk's ten minutes, counted from when
+  a thread takes it: one at a time on each thread, the others wait in one line, each going to a thread once it's
+  free — never behind a folder that doesn't answer while the other thread is free. Stopped (the TUI quitting), a
+  listing asked or waiting is refused, never a thread started again for it. Until a folder's first listing
+  answers, nothing is under it; after 150 ms a dim `listing…` row says it's being read, and one that can't be listed
+  says why, in `l`'s words (`can't read: it isn't there`; `can't read: no answer in time`): rows that only say
+  something, never opened or marked. On one, nothing acts on its own path (opening, zooming, copying its path,
+  renaming, moving, deleting, copying or cutting it, a vault made of it: `ON_THE_ROW`); the rest does as on any row of
+  its folder (moving, folding it, a new note or folder there, a paste, a restore, the menu). One that failed is read
+  again a minute later (`RETRY_MS`), not at every rebuild; a folder listed before whose thread gives no answer when
+  it's read again stays as it was listed. A folder `l` refuses as its folder's listing said it (you may not read it)
+  has that listing, and its own, read again (`Listings.again`), nothing else in its folder: one you may read now
+  unfolds at the next `l`. A test's App, not the TUI's, lists at once here
+  (`AppOptions.listOffThread`). There the vault open is a row,
   highlighted (`sidebar_active`), its tree under it while unfolded; another vault is a row with the vault's icon (`◈`,
   Nerd: a bookshelf; `17.13`, D51) in a folder's blue (`sidebar_root`, for `[colors]` to set; `sidebar_vault`, its old
   name, read as it: DF-D22), its name dimmed after the folder's when they differ, its branch among its marks (below). A

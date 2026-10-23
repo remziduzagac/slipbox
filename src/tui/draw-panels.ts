@@ -268,15 +268,18 @@ function drawTree(app: App, c: Canvas, list: Rect, bg: Color | null, geo: Geomet
   // side by side, and the extension says which.
   const nameOf = (row: TreeRow) => row.name;
   const icon = (row: TreeRow) =>
-    row.root
-      ? row.root.kind === "vault"
-        ? g.vault
-        : g.dirClosed
-      : row.group === "data"
-        ? g.dataFile
-        : row.group === "text"
-          ? g.textFile
-          : g.file;
+    // A row saying its folder is being listed, or why it couldn't be (T12): no icon, nothing to open.
+    row.placeholder
+      ? " "
+      : row.root
+        ? row.root.kind === "vault"
+          ? g.vault
+          : g.dirClosed
+        : row.group === "data"
+          ? g.dataFile
+          : row.group === "text"
+            ? g.textFile
+            : g.file;
   const prefix = (row: TreeRow) =>
     `${" ".repeat(1 + row.depth * 2)}${row.kind === "dir" ? (q || app.explorer.expanded.has(row.path) ? g.dirOpen : g.dirClosed) : icon(row)} `;
   const text = (row: TreeRow) => prefix(row) + nameOf(row);
@@ -317,15 +320,17 @@ function drawTree(app: App, c: Canvas, list: Rect, bg: Color | null, geo: Geomet
     const y = rect.y + i;
     const selected = s.scroll + i === s.selected && app.region === "sidebar";
     // The vault open, in a view above it (VV-D5): highlighted, as the note open is.
-    let role: Role = row.root?.here
-      ? "sidebar_active"
-      : row.root?.kind === "vault"
-        ? "sidebar_root"
-        : row.kind !== "note"
-          ? "sidebar_dir"
-          : row.path === current || (row.outside && row.path === currentAbs)
-            ? "sidebar_active"
-            : "sidebar";
+    let role: Role = row.placeholder
+      ? "dim"
+      : row.root?.here
+        ? "sidebar_active"
+        : row.root?.kind === "vault"
+          ? "sidebar_root"
+          : row.kind !== "note"
+            ? "sidebar_dir"
+            : row.path === current || (row.outside && row.path === currentAbs)
+              ? "sidebar_active"
+              : "sidebar";
     if (selected) role = "sidebar_selected";
     const st = roleStyle(theme, role, bg);
     if (selected) c.fill(rect.x, y, rect.w, 1, st.bg);

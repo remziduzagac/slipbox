@@ -5,8 +5,8 @@
 // asked for by name (`slipbox ~/notes`) walked at once when that walk doesn't cover it. Nothing is written into `~`
 // itself (D39).
 
-import { realpathSync, statSync } from "node:fs";
-import { join } from "node:path";
+import { type Dirent, readdirSync, realpathSync, statSync } from "node:fs";
+import { join, relative, sep } from "node:path";
 import type { Config } from "./config.ts";
 import { ensureDir, readJson, writeJson } from "./fsutil.ts";
 import { cacheDir, ensureCacheHome, type Keyed } from "./paths.ts";
@@ -51,6 +51,9 @@ export interface HomeWalk {
   capped: WalkCap | null;
   /** The folders asked for by name walked into it whole (VV-D2); none when home's walk covers them. */
   asked?: AskedWhole;
+  /** Home's own walk, brought up to now and changed, not kept yet (`homeWalk`'s `keep` false, T12): kept by whoever
+   *  takes it (`keepHomeWalk`), so an answer dropped as obsolete writes nothing. */
+  unkept?: { walk: WalkResult; capped: WalkCap | null; walked: number };
 }
 
 /** Folders of home asked for by name, walked whole (VV-D2): home's paths for them, and how many notes they hold. */
@@ -117,14 +120,17 @@ const isDir = (abs: string) => {
  * cap: home's own make room for them, the deepest left out first, as home's walk leaves them (`nearer`). So home's
  * walk, made before or after, holds as many fewer of its own as the folders asked for hold; and those alone past the
  * cap are whole all the same, home's own all left out. Its other files are held so too.
+ *
+ * `keep` false: what changed isn't kept, but handed back (`unkept`) — a walk on another thread (T12).
  */
 export function homeWalk(
   loc: Pick<VaultLocation, "root" | "key">,
   filter: WalkFilter,
   asked: readonly string[] = [],
   limits: WalkLimits = HOME_LIMITS,
+  keep = true,
 ): HomeWalk {
-  const home = keptWalk(loc, filter, limits);
+  const home = keptWalk(loc, filter, limits, keep);
   // Never walked, home's top lists its folders without looking into them: none of them is covered.
   const covered = new Set(home.walked === null || home.capped ? [] : home.walk.dirs);
   /** One asked for that home's walk goes into, in none other asked for. */
@@ -240,7 +246,12 @@ export function walksInto(root: string, filter: WalkFilter, rel: string): boolea
  * Never walked, or walked under other settings (`walk.extensions`, `walk.exclude`, the root markers: its filter's
  * signature), home is its top alone, looked at now (`walkTop`).
  */
-function keptWalk(loc: Pick<VaultLocation, "root" | "key">, filter: WalkFilter, limits: WalkLimits): HomeWalk {
+function keptWalk(
+  loc: Pick<VaultLocation, "root" | "key">,
+  filter: WalkFilter,
+  limits: WalkLimits,
+  persist: boolean,
+): HomeWalk {
   const kept = readJson<KeptWalk | null>(homeWalkFile(loc), null);
   if (!fits(kept, filter)) return { walk: walkTop(loc.root, filter), walked: null, capped: null };
   // Where other disks are mounted now, read once for this walk: none of them is looked at.
@@ -396,8 +407,13 @@ function keptWalk(loc: Pick<VaultLocation, "root" | "key">, filter: WalkFilter, 
     !same(dirs, strings(kept.dirs)) ||
     !same(said(skipped), said(kept.skipped)) ||
     capped !== (kept.capped ?? null);
-  if (changed) keepHomeWalk(loc, walk, capped, now, filter);
-  return { walk, walked: changed ? now : walked, capped };
+  if (changed && persist) keepHomeWalk(loc, walk, capped, now, filter);
+  return {
+    walk,
+    walked: changed ? now : walked,
+    capped,
+    ...(changed && !persist ? { unkept: { walk, capped, walked: now } } : {}),
+  };
 }
 
 /** Two lists holding the same strings, in any order. */
@@ -406,6 +422,29 @@ function same(a: string[], b: string[]): boolean {
   const x = [...a].sort();
   const y = [...b].sort();
   return x.every((v, i) => v === y[i]);
+}
+
+/**
+ * A folder home's cap left unlisted, looked in for vaults (20.9): its vaults, to index, and its other folders, to
+ * look in later — home's skip list held, as its walk holds it (`filter`, home's). By their whole paths, by name;
+ * nothing when it can't be read.
+ */
+export function vaultsPastCap(dir: string, filter: WalkFilter): { vaults: string[]; folders: string[] } {
+  const out = { vaults: [] as string[], folders: [] as string[] };
+  let entries: Dirent[] = [];
+  try {
+    entries = readdirSync(dir, { withFileTypes: true });
+  } catch {
+    return out;
+  }
+  for (const e of entries.sort((a, b) => (a.name < b.name ? -1 : a.name > b.name ? 1 : 0))) {
+    if (!e.isDirectory()) continue;
+    const abs = join(dir, e.name);
+    const why = filter.exclusion(relative(filter.root, abs).split(sep).join("/"), true);
+    if (why === "nested vault") out.vaults.push(abs);
+    else if (why === null) out.folders.push(abs);
+  }
+  return out;
 }
 
 /** Whether `kept` is a walk of home's made under `filter`'s settings (its signature), to build from. */

@@ -5,10 +5,10 @@
 // (`core/glyphs.ts`); none is an emoji. Why a row isn't indexed is said in words, from the rule that made it so: on
 // the status line while the cursor is on it, and in Info for the file on screen (`why`, `whyAt`).
 
-import { accessSync, constants as fsConstants, existsSync, lstatSync, statSync } from "node:fs";
+import { constants as fsConstants, existsSync, lstatSync, statSync } from "node:fs";
 import { basename, join, relative, sep } from "node:path";
-import { checkoutOf, headOf } from "../core/git.ts";
 import type { Glyphs } from "../core/glyphs.ts";
+import { denied, type ListedEntry, type VaultHead, vaultHead } from "../core/listing.ts";
 import { cacheDir, vaultKey } from "../core/paths.ts";
 import type { Role } from "../core/theme/theme.ts";
 import { isInside } from "../core/vault.ts";
@@ -98,17 +98,6 @@ interface Facts {
   busy?: BusyWhy | null;
 }
 
-/** Whether `abs` is there and you may not reach it so: `EACCES` or `EPERM`. */
-function denied(abs: string, mode: number): boolean {
-  try {
-    accessSync(abs, mode);
-    return false;
-  } catch (err) {
-    const code = (err as NodeJS.ErrnoException).code;
-    return code === "EACCES" || code === "EPERM";
-  }
-}
-
 /** The explorer's rows' marks (VV-D9). */
 export class Marks {
   private readonly facts = new WeakMap<TreeRow, Facts>();
@@ -119,6 +108,8 @@ export class Marks {
 
   /** A row's marks. */
   of(row: TreeRow): RowMarks {
+    // A row that only says something of its folder (`listing…`, T12): nothing to mark.
+    if (row.placeholder) return {};
     const f = this.factsOf(row);
     const out: RowMarks = {};
     const describe = this.describe(row, f);
@@ -131,6 +122,7 @@ export class Marks {
 
   /** Why a row isn't indexed (VV-D9) — its `⊘` — in words a user knows; null when it has no `⊘`. */
   why(row: TreeRow): string | null {
+    if (row.placeholder) return null;
     const n = this.index(row, this.factsOf(row));
     return typeof n === "object" ? this.words(n) : null;
   }
@@ -299,6 +291,12 @@ export class Marks {
       this.facts.set(row, f);
       return f;
     }
+    // Listed off the main thread (T12): what its listing read, nothing read here but the index's own folder.
+    if (row.listed) {
+      f = this.listedFacts(row, row.listed);
+      this.facts.set(row, f);
+      return f;
+    }
     f = { unreadable: false, broken: false, big: false };
     if (row.kind === "note") {
       try {
@@ -316,13 +314,22 @@ export class Marks {
     return f;
   }
 
+  /** `factsOf` a row listed a level at a time, from what its listing read (`ListedEntry`), as `factsOf` reads them. */
+  private listedFacts(row: TreeRow, l: ListedEntry): Facts {
+    const broken = !!l.link && !l.link.target;
+    const f: Facts = { unreadable: !broken && l.denied, broken: row.kind === "note" && broken, big: false };
+    if (row.kind === "root" && row.root && l.vault) f.vault = this.vaultMarks(l.vault.key, l.vault.head);
+    else if (row.kind !== "note" && row.outside && !row.leftOut) f.busy = l.busy ?? null;
+    return f;
+  }
+
   private vaultFacts(abs: string): NonNullable<Facts["vault"]> {
-    const indexed = existsSync(join(cacheDir({ key: vaultKey(abs) }), "index.json"));
-    const c = checkoutOf(abs);
-    if (!c || c.root !== abs) return { indexed, branch: null };
-    const h = headOf(c);
-    const head = h.branch ?? h.commit?.slice(0, 7) ?? null;
-    if (!head) return { indexed, branch: null };
-    return { indexed, branch: c.worktree ? `${this.app.glyphs.branch} ${head}` : head };
+    return this.vaultMarks(vaultKey(abs), vaultHead(abs));
+  }
+
+  /** A vault's row's facts: whether its index is on the disk, and its branch, a worktree's said with its glyph. */
+  private vaultMarks(key: string, h: VaultHead | null): NonNullable<Facts["vault"]> {
+    const indexed = existsSync(join(cacheDir({ key }), "index.json"));
+    return { indexed, branch: h ? (h.worktree ? `${this.app.glyphs.branch} ${h.name}` : h.name) : null };
   }
 }

@@ -92,8 +92,12 @@ export function isLink(path: string): boolean {
  * it led elsewhere then — asked again.
  */
 export function linkAnswer(link: string, target: string | null = linkTarget(link)): LinkAnswer | null {
-  if (!target) return null;
-  const key = linkKey(link);
+  return target ? answerAt(linkKey(link), target) : null;
+}
+
+/** What you answered for the link known by `key` (`linkKey`) while it leads to `target`: `linkAnswer`, read nowhere
+ *  near the link. */
+function answerAt(key: string, target: string): LinkAnswer | null {
   const k = kept().find((e) => e.link === key);
   return k?.target === target ? k.answer : null;
 }
@@ -167,9 +171,15 @@ export type LinkState =
 
 /** How the link at `link` is taken from `scope` (`linkScope`'s): within it, followed, to ask about, refused, broken. */
 export function linkState(link: string, scope: string | null, target = linkTarget(link)): LinkState {
+  return linkStateAt(target ? linkKey(link) : "", scope, target);
+}
+
+/** `linkState` of the link known by `key` (`linkKey`), leading to `target`: from what was read of it elsewhere (T12: a
+ *  listing on its own thread), nothing read here but the answers kept. */
+export function linkStateAt(key: string, scope: string | null, target: string | null): LinkState {
   if (!target) return "broken";
   if (scope !== null && within(scope, target)) return "within";
-  const a = linkAnswer(link, target);
+  const a = answerAt(key, target);
   return a === "follow" ? "followed" : a === "no" ? "no" : "ask";
 }
 
@@ -318,6 +328,17 @@ export async function probe(target: string, ms = PROBE_MS, read = readTarget): P
 /** What the targets answered, forgotten (a test's clean start). */
 export function forgetProbes(): void {
   probed.clear();
+}
+
+/** What the targets answered, and when: for a walk on another thread, which has no answers of its own (T12). */
+export function probeAnswers(): [string, { ok: boolean; at: number }][] {
+  return [...probed];
+}
+
+/** The answers another thread had (`probeAnswers`), taken as this thread's: a walk there reads them as here. */
+export function takeProbeAnswers(answers: readonly [string, { ok: boolean; at: number }][]): void {
+  probed.clear();
+  for (const [target, p] of answers) probed.set(target, p);
 }
 
 /**
